@@ -640,6 +640,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
 function doAct(world, p) {
   const act = findInteraction(world, p);
+  if (act && act.card && phone.offerCard(world, p, act.card)) return;   // (a job's place: its card first - what it pays, the first step, Accept: phone.js)
   if (act && act.run && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();   // (a passive line has nothing to run)
 }
 

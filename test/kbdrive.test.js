@@ -27,7 +27,7 @@ test('keyboard driving: car-style is the default (W gas, S brake / reverse, A/D 
   const input = src('client/input.js'), page = src('index.html');
   assert.match(input, /settings = \{ kbDrive: 'car'/, 'the default');
   assert.match(input, /kbDriveV !== 2\) \{ settings\.kbDrive = 'car'/, 'everyone starts this build on it, once');
-  assert.match(page, /<option value="car">Car: W gas, S brake\/reverse, A\/D steer<\/option><option value="direction">/, 'Settings: car first, then Controls 2');
+  assert.match(page, /<option value="car">Controls 1: W gas, S brake, A\/D steer<\/option><option value="direction">Controls 2: /, 'Settings: car first (Controls 1), then Controls 2 - short enough not to be cut off (UI-3)');
   assert.equal(KB.gas, 'W'); assert.equal(KB.brake, 'S');
   // W + D: full gas AND full lock (the two axes are separate - no diagonal shrinking either)
   const both = driveInput({ x: 0, y: 0, a: 0, vx: 0, vy: 0 }, { bits: IN.TANK, mx: 1, my: -1, aim: 0 });

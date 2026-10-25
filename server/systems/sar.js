@@ -346,7 +346,7 @@ export function interaction(world, p) {
   const m = world.map, hq = (m.pois || []).find((q) => q && q.kind === 'sar' && Math.hypot(q.x - ped.x, q.y - ped.y) < (q.r || 44) + 30);
   const pad = hq ? nearestBase(m, hq.x, hq.y) : basePads(m).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
   if (!pad) return null;
-  return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', card: { id: 'sar', where: pad.name || null, start: () => start(world, p, pad) }, run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // the hospital yard pad a shift starts from: the nearest to p (the phone's job list)

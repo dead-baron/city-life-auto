@@ -15,6 +15,8 @@ export const PAD = {
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
+  climb: ['RT', 'bumper'], descend: ['LT', 'bumper'],   // (flying: shared/flight.js)
+  hub: ['MENU', 'sys'], hubtab: ['LB / RB', 'bumper'],   // (the hub - map, phone, bag, people, settings: Menu opens it on the last tab, the bumpers change tab)
 };
 // (back: the death screen's choices folded away to watch the scene, and opened again - task #403)
 export const TOUCH = {
@@ -23,13 +25,20 @@ export const TOUCH = {
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
   trick: 'TRICK',
+  climb: 'CLIMB', descend: 'DOWN',
+  hub: 'MENU', hubtab: 'TAP A TAB',
 };
+// (UI-3, the hub: the HUD's row is MENU · PHONE · MAP and a tap of ITEMS opens the bag, held the quick wheel - set here
+// rather than in the lines above, which the touch controls' own work keeps)
+Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE' });
 export const KB = {
   action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
   move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',
   steer: 'A/D', block: 'RMB',
   dance: 'G',
   trick: 'CLICK',
+  climb: 'SPACE', descend: 'SHIFT',
+  hub: 'ESC', hubtab: 'TAB',
 };
 export const ACTIONS = Object.keys(KB);
 

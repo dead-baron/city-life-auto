@@ -14,7 +14,7 @@ import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../s
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
-import { createInventory, createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
+import { createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
 import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
@@ -340,7 +340,7 @@ function onText(m) {
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
       bag.refresh(); wheel.refresh(); wpick.refresh(); wwheel.refresh();
-      if (m.dead) { wheel.close(); wpick.close(); wwheel.close(); if (topOverlay() === 'inv') closeOverlay('inv'); }
+      if (m.dead) { wheel.close(); wpick.close(); wwheel.close(); if (inHub()) closeHub(); if (topOverlay() === 'jobcard') closeOverlay('jobcard'); }
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
@@ -352,10 +352,11 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
-    case 'board': phone.on('Board', m); break;
+    case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
+    case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
-    case 'crew': phone.on('Crew', m); break;   // the Crew app (server crews.js)
+    case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
       (m.game === 'race' ? import('./racebook.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
@@ -509,11 +510,11 @@ function fixedStep() {
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
-  if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
+  if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub();
   if (!inOverlay && !S.playing) titlePad();
   const ch = !!(DIR && DIR.holds()), padUI = !spec && !ch && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
   if (up && input.padCall && S.me && S.me.cruiser) callCruiser();   // (D-pad down: the cop car)
-  if (up && input.padPhone) openPhone();
+  if (up && input.padPhone) openHub('phone');
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (padUI && input.padRight) toggleBag();
   if (!spec && !ch && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
@@ -1376,8 +1377,6 @@ setInterval(() => { const el = document.getElementById('dev-sound'); if (el && e
 let devMenu = null, devMenuP = null;
 function setupDev() {
   const on = S.dev || S.devMode;
-  $('b-dev').classList.toggle('on', !!on);
-  $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { $('dev').classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
   devMenuP ||= import('./devmenu.js').then((m) => { m.init({ S, $, send, closeOverlay, topOverlay, requestPlayers, enterSpectate, openCreator, freshPress, openMap }); devMenu = m; }).catch((e) => { devMenuP = null; console.warn('[dev]', e); });
   devMenuP.then(() => { if (devMenu && (S.dev || S.devMode)) devMenu.setupDev(); });
@@ -1388,7 +1387,6 @@ function renderPlayers() {
   const el = $('pl-list');
   if (!el) return;
   const ps = (S.plist && S.plist.l) || [];
-  optText($('p-players'), `Players online${ps.length ? ` (${ps.length})` : ''}`);
   if (topOverlay() !== 'players') return;
   $('pl-sub').textContent = S.practice ? 'Offline practice - just you in this city.' : `${ps.length} in the city right now.`;
   el.innerHTML = '';
@@ -1397,7 +1395,7 @@ function renderPlayers() {
     row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
     if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
       const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
-      b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') { closeOverlay('players'); closeOverlay('pause'); } setTimeout(requestPlayers, 300); };
+      b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeHub(); setTimeout(requestPlayers, 300); };
       row.appendChild(b);
     }
     el.appendChild(row);
@@ -1415,7 +1413,7 @@ function syncTaxiDest() {
 }
 // keep the lists fresh while one is on screen
 setInterval(() => {
-  if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev' || o === 'pause')) requestPlayers();
+  if (S.playing && overlays.some((o) => o === 'players' || o === 'bigmap' || o === 'dev')) requestPlayers();
   if (S.playing && S.bigmap) requestTransit();
 }, 2500);
 function submitDevPw() {
@@ -1456,6 +1454,8 @@ initInput(canvas, {
     }
     if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1, /Up|Down|W|S/.test(k) ? 'v' : 'h'); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
+    if (k === 'Escape' && topOverlay() === 'inv' && bag.back()) return;   // (a thing's details: back to the bag's grid)
+    if (k === 'Tab' && S.playing && HUB_IDS.includes(topOverlay())) { hubStep(1); return; }   // (the hub: the next tab)
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
     if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
       if (k === 'Equal' || k === 'NumpadAdd') { S.hud.zoomMap(1.5); return; }
@@ -1478,21 +1478,22 @@ initInput(canvas, {
       return;
     }
     if (k === 'Escape' && wheel.open) { wheel.close(); return; }
-    if (k === 'KeyP' && S.playing && !topOverlay()) { openPhone(); return; }
-    if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
-    if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
+    if (k === 'KeyP' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) { hubToggle('phone'); return; }
+    if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openHub(); }
+    if (k === 'KeyM' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) hubToggle('map');
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
   onKeyUp(k) { if (DIR) DIR.key(k, false); if (S.spec) S.spec.key(k, false); if (k === 'KeyX' && wheel.open) wheel.release(performance.now() - (S.wheelAt || 0) < 250); },
   onItems() { if (S.spec && S.spec.on) return; if (canWheel()) { if (wheel.open) wheel.close(); else wheel.show(true); } },
+  onBag() { if (S.playing) toggleBag(); },   // (touch: a tap of ITEMS - the hub's bag; held, the quick wheel)
   onWeaponPick() { openWeaponPick(); },
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
-  onMap() { if (S.playing) toggleMap(!S.bigmap); },
+  onMap() { if (S.playing) hubToggle('map'); },
   onCruiser() { if (S.playing) callCruiser(); },
-  onPhone() { if (S.playing) openPhone(); },
-  onSettings() { openSettings(true); },
+  onPhone() { if (S.playing) hubToggle('phone'); },
+  onSettings() { openOverlay('settings'); },
   onFullscreen() { toggleFullscreen(); },
 });
 input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
@@ -1533,7 +1534,17 @@ function deathPad() {
 }
 
 // ---- the bag + quick wheel ----------------------------------------------------------------------
-const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
+// the bag: the hub's BAG tab (client/bag.js), loaded the first time it opens
+let bagMod = null, bagP = null;
+const bag = {
+  show() {
+    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); } }))))
+      .then((b) => { if (topOverlay() === 'inv') b.show(); }).catch((e) => { bagP = null; console.warn('[bag]', e); });
+  },
+  hide() { if (bagMod) bagMod.hide(); },
+  refresh() { if (bagMod) bagMod.refresh(); },
+  back() { return !!bagMod && bagMod.back(); },
+};
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
 // the weapon picker (touch: hold the weapon plate): every weapon you carry, tap one to take it out
 const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
@@ -1542,13 +1553,10 @@ const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: ()
 function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
 function toggleBag() {
-  if (topOverlay() === 'inv') { closeOverlay('inv'); return; }
-  if (!S.playing || !S.me || S.me.dead || topOverlay() || (S.hud && S.hud.menuOpen)) return;
-  if (S.bigmap) toggleMap(false);
-  wheel.close();
-  openOverlay('inv');
+  if (topOverlay() === 'inv') { closeHub(); return; }
+  if (!S.playing || !S.me || S.me.dead) return;
+  openHub('bag');
 }
-$('b-bag').onclick = () => toggleBag();
 // a sticky (touch) wheel: tap off the slots to put it away; with the mouse it follows the pointer
 $('wheel').addEventListener('pointerdown', (e) => { if (e.target === $('wheel')) wheel.close(); });
 $('wheel').addEventListener('pointermove', (e) => { if (wheel.open && e.pointerType === 'mouse') wheel.point(e.clientX - innerWidth / 2, e.clientY - innerHeight / 2); });
@@ -1743,8 +1751,14 @@ const phoneCtx = {
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
   waypoint: () => S.waypoint,
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
-  refocus: () => { if (topOverlay() === 'phone') { ovFocus = 0; focusOverlay(); } },   // (not another screen's focus: the phone renders while closed too)
-  close: () => closeOverlay('phone'),
+  refocus: () => { if (topOverlay() === 'phone') { ovFocus = startFocus(); focusOverlay(); } },   // (not another screen's focus: the phone renders while closed too)
+  close: () => closeHub(),
+  job: () => S.me && S.me.job,
+  showOnMap: (x, y) => { openHub('map'); if (S.hud) S.hud.centerMap(x, y); },
+  cine: () => { closeHub(); cine('F4'); },
+  canCruiser: () => !!(S.me && S.me.cruiser),
+  cruiser: () => { closeHub(); callCruiser(); },
+  title: (t) => { $('ph-clock').textContent = t; },
 };
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();
@@ -1778,7 +1792,69 @@ const mapwp = createMapWaypoints({
   job: () => S.me && S.me.job,
   center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
-function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
+function openPhone() { if (S.playing && S.map) openHub('phone'); }
+// ---- the hub (UI-3): one panel - MAP, PHONE, BAG, PEOPLE, SETTINGS - with RESUME first; Esc / Start / MENU open it on
+// the last tab, P / M / I (D-pad left / right, the HUD's PHONE and MAP) a tab straight away. Each tab is one of the
+// overlays (only one at a time), shown in the hub's frame (index.html #hub); the game runs on behind it.
+const HUB_TABS = { map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' };
+const HUB_IDS = Object.values(HUB_TABS);
+const inHub = () => overlays.some((o) => HUB_IDS.includes(o));
+let hubTab = 'map', hubP = null, hubMod = null;
+function openHub(tab = hubTab, app) {
+  if (!HUB_TABS[tab]) tab = 'map';
+  const id = HUB_TABS[tab], top = topOverlay();
+  if (tab !== 'settings' && (!S.playing || !S.map)) return;
+  if (top && !HUB_IDS.includes(top) && top !== 'jobcard') return;   // (the creator, the debug menu, a cabinet: theirs first)
+  if (top === 'jobcard') closeOverlay('jobcard');
+  if (S.hud && S.hud.menuOpen) S.hud.closeMenu();
+  if (wheel.open) wheel.close();
+  if (wpick.open) wpick.close();
+  if (top !== id) sfx('click', 0.5);
+  for (const ov of [...overlays]) if (HUB_IDS.includes(ov) && ov !== id) closeOverlay(ov);
+  hubTab = tab;
+  if (tab === 'map') toggleMap(true);
+  else {
+    if (topOverlay() !== id) openOverlay(id);
+    if (tab === 'phone') { if (app) phone.openApp(app); else phone.open(); }
+  }
+}
+function closeHub() { for (const ov of [...overlays].reverse()) if (HUB_IDS.includes(ov)) closeOverlay(ov); }
+// a tab's key or button: that tab, or the hub away if it's the one showing
+function hubToggle(tab) { if (topOverlay() === HUB_TABS[tab]) closeHub(); else openHub(tab); }
+function hubStep(d) { const ks = Object.keys(HUB_TABS); openHub(ks[(ks.indexOf(hubTab) + d + ks.length) % ks.length]); }
+// the frame shows while a tab is in the stack (an install help or a password box may sit over it); on the title
+// screen Settings shows on its own
+function syncHub() {
+  const id = [...overlays].reverse().find((o) => HUB_IDS.includes(o));
+  $('hub').classList.toggle('hidden', !id);
+  if (!id) return;
+  const tab = Object.keys(HUB_TABS).find((k) => HUB_TABS[k] === id);
+  $('hub').classList.toggle('solo', !S.playing);
+  $('hub-title').textContent = tab.toUpperCase();
+  for (const b of $('hub-tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+}
+const hubCtx = {
+  $, S, input, send, toast: (t, tone) => S.hud && S.hud.toast(t, tone), setWaypoint: phoneCtx.setWaypoint,
+  closeOverlay: () => closeHub(), topOverlay, refocus: () => { if (inHub()) { ovFocus = startFocus(); focusOverlay(); } },
+  unstuck: () => send({ t: 'unstuck' }), surrender, cine: () => cine('F4'), fullscreen: () => toggleFullscreen(), exitToTitle, openDebug: () => { sfx('click', 0.8); openDebug(); },
+  leaveDev: () => { sfx('click', 0.8); send({ t: 'devmode', leave: true }); }, openInstall: () => openInstall(), openCreator: () => openCreator('edit'), crew: () => S.crewMsg,
+};
+const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
+for (const b of $('hub-tabs').querySelectorAll('[data-tab]')) b.onclick = () => openHub(b.dataset.tab);
+$('hub-resume').onclick = () => closeHub();
+$('hub-close').onclick = () => closeHub();
+$('hub').addEventListener('pointerdown', (e) => { if (e.target === $('hub')) closeHub(); });   // (a desktop's big panel: a click round it closes it)
+// Surrender (the hub's Settings > Help): press twice - dying (or, wanted, turning yourself in) isn't done by accident
+function surrender(b) {
+  const t = b.querySelector('.t') || b;
+  if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; t.textContent = 'Surrender'; closeHub(); send({ t: 'surrender' }); }
+  else { b.dataset.armed = String(performance.now()); t.textContent = S.me && S.me.wanted > 0 ? 'Press again: turn yourself in (a fine)' : 'Press again: give up and respawn'; }
+}
+function exitToTitle() { closeHub(); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
+// the job card at a job's place (client/jobcard.js, with the first card)
+let JC = null, jcP = null;
+const loadJobCard = () => (jcP ||= import('./jobcard.js').then((m) => (JC = m)).catch((e) => { jcP = null; throw e; }));
+const jcCtx = { send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay, setWaypoint: (w) => phoneCtx.setWaypoint(w) };
 // arrive at a phone waypoint -> it clears itself
 // a predicted smash the server never confirmed (rare: it decided we missed) is put back
 function expirePredictedBreaks() {
@@ -1927,11 +2003,11 @@ function toggleFullscreen(force, auto = false) {
     Promise.resolve(req).then(followRotation).catch(() => {});
   } else if (!want && isFullscreen()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
 }
-for (const id of ['b-fs', 't-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
-$('b-map').onclick = () => { if (S.playing) toggleMap(!S.bigmap); };
-$('b-phone').onclick = () => openPhone();
-$('b-menu').onclick = () => { if (S.playing) { sfx('click', 0.6); if (topOverlay() === 'pause') closeOverlay('pause'); else openOverlay('pause'); } };
-$('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
+for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
+// the HUD's row: MENU (the hub on its last tab), PHONE, MAP - each closes the hub when it's on that tab
+$('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
+$('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
+$('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub(); };
 $('ph-back').onclick = () => phone.back();
 for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
@@ -2076,19 +2152,13 @@ function topOverlay() { return overlays[overlays.length - 1] || null; }
 function openOverlay(id) {
   if (topOverlay() === id) return;
   if (id === 'settings') { syncSettings(); syncAccount(); }
-  if (id === 'controls') $('c-body').innerHTML = $('help-tpl').innerHTML;
   if (id === 'players' || id === 'bigmap' || id === 'dev') requestPlayers();
   if (id === 'bigmap') requestTransit();
-  if (id === 'pause') {
-    requestPlayers();
-    document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
-    // (the debug menu the last line - it switches Dev Debug Mode on if needed - leaving dev mode above it)
-    $('p-devmode').classList.toggle('hidden', !S.devMode || !!S.practice);
-  }
-  if (id === 'pause') { buildHubs('sys'); S.uiTopKey = ''; }
-  if (id === 'pause') { document.querySelectorAll('#pause .cop-only').forEach((b) => b.classList.toggle('hidden', !(S.me && S.me.cruiser))); $('p-sub').textContent = S.practice ? 'Offline practice - the city keeps running while this menu is open.' : 'Online - the city keeps running while this menu is open.'; }
+  if (id === 'players' && S.welcomed) send({ t: 'phone', a: 'crew' });   // (the People tab: your crew)
   overlays.push(id);
   $(id).classList.remove('hidden');
+  syncHub();
+  if (id === 'settings' || id === 'players') loadHub().then((h) => { if (topOverlay() !== id) return; if (id === 'settings') h.settings(); else { h.people(); renderPlayers(); } }).catch((e) => console.warn('[hub]', e));
   if (id === 'inv') bag.show();
   if (id === 'dev') $('dev').classList.add('as-overlay');
   if (id === 'bigmap') S.bigmap = true;
@@ -2097,7 +2167,7 @@ function openOverlay(id) {
   if (id === 'dev' && S.devNav) S.devNav.opened();   // (its home page, laid out for what you hold: client/devmenu.js)
 }
 // where a pad's focus starts in a screen: its first menu line or panel button, not the hub's tabs along the top
-function startFocus() { const i = focusables().findIndex((el) => !el.closest('.hub')); return i >= 0 ? i : 0; }
+function startFocus() { const i = focusables().findIndex((el) => !el.closest('#hub-bar')); return i >= 0 ? i : 0; }
 function closeOverlay(id = topOverlay()) {
   if (!id) return;
   const i = overlays.lastIndexOf(id);
@@ -2110,13 +2180,15 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
   if (id === 'phone' && S.welcomed) send({ t: 'phone', a: 'out', on: false });
+  syncHub();
   S.inputMuteUntil = performance.now() + 300; // the A press that closed the menu shouldn't roll you
   ovFocus = 0; focusOverlay();
 }
 function focusables() {
   const id = topOverlay();
   if (!id) return [];
-  return [...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
+  const bar = HUB_IDS.includes(id) && S.playing ? [...$('hub-bar').querySelectorAll('button')] : [];   // (a hub tab: RESUME and the tabs first)
+  return [...bar, ...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
 }
 function menuKey(k) {
   const f = focusables();
@@ -2129,6 +2201,8 @@ function menuKey(k) {
     if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + d + el.options.length) % el.options.length; el.dispatchEvent(new Event('change')); return true; }
     if (el.type === 'checkbox') { el.checked = d > 0; el.dispatchEvent(new Event('change')); return true; }
     if (el.type === 'range') { el.value = String(Number(el.value) + d * (Number(el.step) || 5)); el.dispatchEvent(new Event('input')); return true; }   // (the volume sliders)
+    const j = padStep(f, el, d, 0);
+    if (j >= 0) { ovFocus = j; focusOverlay(); return true; }
     return false;
   }
   if (k === 'Enter' || k === 'Space' || k === 'KeyE') {
@@ -2159,6 +2233,7 @@ function focusOverlay() {
   if (!f.length) return;
   ovFocus = (ovFocus + f.length) % f.length;
   const el = f[ovFocus];
+  if (input.device === 'touch') return;   // (a finger needs no focus ring: it would read as the picked tab)
   (el.closest('.srow') || el).classList.add('pfocus');
   el.scrollIntoView({ block: 'nearest' });
 }
@@ -2168,10 +2243,12 @@ function overlayPad() {
   if (topOverlay() === 'dev' && S.devNav) return S.devNav.pad(input);   // (the debug menu moves between its buttons as they sit: client/devmenu.js)
   const f = focusables();
   const el = f[ovFocus];
+  if (HUB_IDS.includes(topOverlay()) && input.menuTab && S.playing) { hubStep(input.menuTab); return true; }   // (LB / RB: the hub's tabs)
+  if (topOverlay() === 'inv' && input.menuBack && bag.back()) return true;
   if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
   if (topOverlay() === 'bigmap' && input.menuBack && mapwp.inGroup) { mapwp.back(); return true; }
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
-  if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-check'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
+  if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-chip'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   // up and down, left and right: to the nearest button that way as they sit (a grid of apps, a row of tabs); up or
   // down past the end wraps round the list; a choice box or a tick box takes left and right for itself
@@ -2270,46 +2347,6 @@ $('s-code-back').onclick = () => {
   if (prev) switchAccount(prev, 'Going back to your previous character...');
 };
 
-function openSettings(on) { if (on) openOverlay('settings'); else closeOverlay('settings'); }
-
-// ---- UI v2 (the concepts U1 / U7): the hub's round tabs, icons by the menu lines, the top bar, the hints ------------
-// an icon (client/pixicons.js) in front of every [data-icon] menu line; the line's words in a span of their own
-function decorate(root = document) {
-  for (const el of root.querySelectorAll('[data-icon]')) {
-    if (el.querySelector(':scope > img.pi')) continue;
-    const t = document.createElement('span'); t.className = 't';
-    while (el.firstChild && !(el.firstChild.nodeType === 1 && el.firstChild.classList.contains('note'))) t.appendChild(el.firstChild);
-    el.prepend(t);
-    t.insertAdjacentHTML('beforebegin', iconImg(el.dataset.icon, Number(el.dataset.iconSize) || 22));
-  }
-}
-function optText(el, text) { const t = el && el.querySelector('.t'); if (t) t.textContent = text; else if (el) el.textContent = text; }
-decorate();
-// the HUD's round buttons: pixel icons (the debug one keeps its bug)
-for (const [id, ic] of [['b-menu', 'menu'], ['b-phone', 'phone'], ['b-bag', 'bag'], ['b-map', 'map'], ['b-settings', 'sys'], ['b-fs', 'full']]) if ($(id)) $(id).innerHTML = iconImg(ic, 18);
-// the hub: MAP, JOBS (the phone's job board), PEOPLE (who's online), GEAR (your bag), SYS (the pause menu)
-const HUB = [['map', 'map', 'MAP'], ['jobs', 'jobs', 'JOBS'], ['people', 'people', 'PEOPLE'], ['gear', 'bag', 'GEAR'], ['sys', 'sys', 'SYS']];
-function buildHubs(active) {
-  for (const nav of document.querySelectorAll('.hub')) {
-    if (!nav.childElementCount) {
-      nav.innerHTML = HUB.map(([id, ic, lbl]) => `<button data-hub="${id}" title="${lbl}"><span class="ring">${iconImg(ic, 26)}</span><span class="lbl">${lbl}</span></button>`).join('');
-      for (const b of nav.querySelectorAll('[data-hub]')) b.onclick = (e) => { e.stopPropagation(); hubGo(b.dataset.hub); };
-    }
-    for (const b of nav.querySelectorAll('[data-hub]')) b.classList.toggle('on', b.dataset.hub === active);
-  }
-}
-function hubGo(id) {
-  if (!S.playing) return;
-  sfx('click', 0.6);
-  // leave whatever is open, then open the tab's screen
-  for (const ov of [...overlays].reverse()) if (ov !== 'settings') closeOverlay(ov);
-  if (S.bigmap) toggleMap(false);
-  if (id === 'map') toggleMap(true);
-  else if (id === 'jobs') { if (topOverlay() !== 'phone') openOverlay('phone'); phone.openApp('jobs'); }
-  else if (id === 'people') { openOverlay('players'); renderPlayers(); }
-  else if (id === 'gear') toggleBag();
-  else if (id === 'sys') openOverlay('pause');
-}
 // the hints along the bottom: [glyph, what it does] - 'pad:A' a pad button, 'key:M' a key, else a word
 function footHints(list) {
   return list.map(([k, what]) => {
@@ -2317,50 +2354,8 @@ function footHints(list) {
     return `<span class="hint">${g} ${what}</span>`;
   }).join('');
 }
-// the top bar (clock, health and stamina, the weapon) and the money corner, while the map or the pause menu is up
-function uiTop() {
-  const me = S.me;
-  if (!me) return;
-  const c = gameClock(S.loopTime), hh = Math.floor(c.minutes / 60), mm = Math.floor(c.minutes % 60);
-  const st = S.uiSt ?? 100, key = `${hh}:${mm}|${me.hp}|${st}|${me.cash}|${me.bank}|${me.wanted}|${$('w-name').textContent}|${$('w-ammo').textContent}`;
-  if (key === S.uiTopKey) return;
-  S.uiTopKey = key;
-  const time = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-  for (const el of document.querySelectorAll('.ui-clock')) el.innerHTML = `<span style="color:${c.isNight ? '#9fbaff' : '#ffd34a'}">${c.isNight ? '☾' : '☀'}</span>${time}`;
-  const hp = Math.max(0, Math.round((me.hp / me.maxHp) * 100));
-  for (const el of document.querySelectorAll('.ui-bar.hp')) { el.firstChild.style.width = hp + '%'; el.lastChild.textContent = Math.round(me.hp); }
-  for (const el of document.querySelectorAll('.ui-bar.st')) { el.firstChild.style.width = Math.min(100, st) + '%'; el.lastChild.textContent = Math.round(st); }
-  let stars = '';
-  for (let i = 1; i <= 5; i++) stars += i <= (me.wanted || 0) ? '★' : '<i>★</i>';
-  for (const el of document.querySelectorAll('.ui-money')) el.innerHTML = `<span class="c">$${me.cash.toLocaleString('en-US')}</span><span class="b">🏦 $${me.bank.toLocaleString('en-US')}</span><span class="st">${stars}</span>`;
-  for (const el of document.querySelectorAll('.pz-foot')) el.innerHTML = footHints(input.device === 'gamepad' ? [['pad:A', 'Select'], ['pad:B', 'Back']] : input.device === 'touch' ? [['Tap', 'select'], ['Tap outside', 'close']] : [['key:Enter', 'Select'], ['key:Esc', 'Back']]);
-}
-for (const b of document.querySelectorAll('#pause [data-p]')) {
-  b.onclick = () => {
-    const a = b.dataset.p;
-    if (a === 'resume') closeOverlay('pause');
-    else if (a === 'map') { closeOverlay('pause'); toggleMap(true); }
-    else if (a === 'phone') { closeOverlay('pause'); openPhone(); }
-    else if (a === 'cruiser') { closeOverlay('pause'); callCruiser(); }
-    else if (a === 'settings') openOverlay('settings');
-    else if (a === 'controls') openOverlay('controls');
-    else if (a === 'look') { closeOverlay('pause'); openCreator('edit'); }
-    else if (a === 'unstuck') { closeOverlay('pause'); send({ t: 'unstuck' }); }
-    else if (a === 'cine') { closeOverlay('pause'); cine('F4'); }   // (the cinematic mode's panel: client/director.js)
-    else if (a === 'surrender') {
-      // press twice: dying (or, when wanted, turning yourself in) isn't something to do by accident
-      if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; optText(b, 'Surrender'); closeOverlay('pause'); send({ t: 'surrender' }); }
-      else { b.dataset.armed = String(performance.now()); optText(b, S.me && S.me.wanted > 0 ? 'Tap again: turn yourself in (fine)' : 'Tap again: give up and respawn'); }
-    }
-    else if (a === 'fullscreen') toggleFullscreen();
-    else if (a === 'dev') { closeOverlay('pause'); sfx('click', 0.8); openDebug(); }
-    else if (a === 'players') { closeOverlay('pause'); openOverlay('players'); renderPlayers(); }
-    else if (a === 'devmode') { closeOverlay('pause'); sfx('click', 0.8); if (S.devMode) send({ t: 'devmode', leave: true }); else { send({ t: 'devmode', pw: '' }); S.openDevOnEnter = true; } }
-    else if (a === 'title') { closeOverlay('pause'); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
-  };
-}
 for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = () => closeOverlay(x.closest('.overlay').id);
-for (const id of ['pause', 'settings', 'controls', 'players', 'devpw']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
+$('devpw').addEventListener('click', (e) => { if (e.target.id === 'devpw') closeOverlay('devpw'); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
@@ -2375,7 +2370,7 @@ $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.ta
 $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettings(); if (!settings.smooth && GOV.scale !== 1) { GOV.scale = 1; onResize(); } };
 // graphics: high on desktops, medium on phones and tablets unless chosen
 function gfxQuality() { return gfx.lighting; }
-for (const id of ['b-settings', 't-settings']) $(id).onclick = () => openSettings(true);
+$('t-settings').onclick = () => openOverlay('settings');
 
 const openMap = () => toggleMap(true);   // (the debug menu's teleport: "Anywhere: the world map")
 function toggleMap(on) {
@@ -2385,17 +2380,16 @@ function toggleMap(on) {
     $('bigmap-hint').innerHTML = footHints(input.device === 'touch' ? [['Pinch', 'zoom'], ['Drag', 'look around'], ['Tap', 'set a waypoint']]
       : input.device === 'gamepad' ? [['pad:A', 'Select'], ['pad:B', 'Back'], ['pad:Y', 'Set waypoint'], ['RT / LT', 'Zoom'], ['R stick', 'Look around']]
         : [['Click', 'set a waypoint'], ['Wheel', 'zoom'], ['Drag', 'look around'], ['key:C', 'find me'], ['key:M', 'close']]);
-    buildHubs('map');
     // the map's own module, the first time (client/worldmap.js: kept out of the page's first load)
     if (S.hud && !S.hud.worldmap) {
       import('./worldmap.js').then((M) => { if (S.hud && !S.hud.worldmap) { S.hud.worldmap = M.createWorldMap(S.map); const me = selfPos(); S.hud.centerMap(me.x, me.y); } }).catch((e) => console.warn('[map]', e));
     }
     if (S.hud && S.hud.mapView) { S.hud.resetMap(); const me = selfPos(); S.hud.centerMap(me.x, me.y); }
     mapwp.open();
-    S.uiTopKey = '';
   } else if (overlays.includes('bigmap')) closeOverlay('bigmap');
 }
-$('bm-close').onclick = () => toggleMap(false);
+// the zoom and find-me buttons on the map
+for (const b of document.querySelectorAll('.bm-zoom [data-z]')) b.onclick = () => { const z = b.dataset.z; if (z === 'me') mapFindMe(); else if (S.hud) S.hud.zoomMap(z === '+' ? 1.6 : 1 / 1.6); };
 function mapFindMe() { if (!S.hud || !S.hud.mapView) return; const me = selfPos(); if (S.hud.mapView.z < 2.5) S.hud.zoomMap(3 / S.hud.mapView.z); S.hud.centerMap(me.x, me.y); }
 // a waypoint where the cross in the middle of the map is (a pad's Y, the panel's Set Waypoint): snapped to a place there
 function mapMarkCentre() {
@@ -3504,8 +3498,7 @@ function drawOverlays(F, v2) {
     if (input.device === 'touch') { if (S.slots) S.slots.tick(inVeh, inAir, onBoard); else if (!S.slotsAsk) { S.slotsAsk = 1; import('./touchslots.js').then((m) => { S.slots = m.makeSlots(undefined, { ctx: { S, CTRL, WEAPONS, VEHICLE_BY_INDEX, PF } }); setTouchAim(m.touchAim); }).catch((e) => { S.slotsAsk = 0; console.warn('[touchslots]', e); }); } }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
-  if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); uiTop(); }
-  else if (topOverlay() === 'pause') uiTop();
+  if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); }
   if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);
 }
 

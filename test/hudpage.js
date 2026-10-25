@@ -121,7 +121,7 @@ function measure() {
   keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
   for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
-  document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) keep.push(box(el, el.id)); });
+  document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns button').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));

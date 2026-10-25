@@ -182,13 +182,11 @@ export function setupDev() {
   wire();
   const box = $('dev');
   const on = S.dev || S.devMode;
-  $('b-dev').classList.toggle('on', !!on);
-  $('b-dev').title = on ? 'Debug menu' : 'Debug menu (switches Dev Debug Mode on)';
   if (!on) { box.classList.add('hidden'); $('dev-btn').classList.add('hidden'); if (topOverlay() === 'dev') closeOverlay('dev'); return; }
   render();
   if (topOverlay() !== 'dev') box.classList.add('hidden');   // (left open when it was opened while this loaded)
   $('dev-btn').classList.remove('hidden');
-  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. Tap 🐞 (or press `) for the cheats panel.' : 'Dev mode: tap 🐞 or press ` (backtick) for the playtest panel.', 'info');
+  if (S.playing && S.dev) S.hud.toast(S.practice ? 'Offline practice: nothing here is saved. The DEV button (or `) opens the cheats panel.' : 'Dev mode: the DEV button, ` (backtick) or MENU → Settings › Help → Debug menu opens the playtest panel.', 'info');
 }
 // opened (main.js openOverlay): the home page, laid out for what you hold, the first button lit for a pad or keys
 function onOpen() {

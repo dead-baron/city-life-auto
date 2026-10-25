@@ -83,13 +83,15 @@ export function createMapWaypoints(ctx) {
     if (!group) {
       ctx.setFilter(null);
       const mine = ctx.myHomes(), ps = ctx.players();
-      el.innerHTML = `<h2 class="bm-title">${ctx.police() ? 'DISPATCH' : 'MAP'}</h2>`
-        + (ctx.job && ctx.job() ? `<div class="bm-wp" data-job="1">${iconImg('jobs', 18)}<span>${esc(ctx.job().text)}<small>${fmt(dist(ctx.job()))}</small></span></div>` : '')   // (your job: the arrows on the map - picked, the map goes to it)
-        + (wp ? `<div class="bm-wp">${iconImg('pin', 18)}<span>${esc(wp.label)}<small>${fmt(dist(wp))}</small></span><button class="bm-x" data-clear="1" title="Clear the waypoint">${iconImg('close', 12)}</button></div>` : '')
-        + '<div class="bm-cats">' + MAP_CATS.map((c) => `<div class="bm-cat"><button class="bm-catname" data-group="${c.id}">${iconImg(c.icon, 20)}<span>${c.title}</span></button><button class="bm-check${cats.has(c.id) ? ' on' : ''}" data-toggle="${c.id}" title="Show on the map" aria-pressed="${cats.has(c.id)}"></button></div>`).join('') + '</div>'
+      // (LandHub: the waypoint first, then what's shown - a chip a category, the colour of its marks - then the places by
+      // kind, nearest first; zoom and find-me sit on the map itself)
+      const j = ctx.job && ctx.job();
+      el.innerHTML = (j ? `<div class="bm-card job" data-job="1"><small>${ctx.police() ? 'DISPATCH' : 'YOUR JOB'}</small><b>${esc(j.text)}</b><div class="bm-cr"><span>${fmt(dist(j))}</span><button class="btn" data-jobgo="1">Show</button></div></div>` : '')
+        + (wp ? `<div class="bm-card"><small>WAYPOINT</small><b>${esc(wp.label)}</b><div class="bm-cr"><span>${fmt(dist(wp))}</span><button class="btn" data-clear="1">Clear</button></div></div>` : '')
+        + '<div class="bm-h">SHOW</div><div class="bm-show">' + MAP_CATS.map((c) => `<button class="bm-chip${cats.has(c.id) ? ' on' : ''}" data-toggle="${c.id}" aria-pressed="${cats.has(c.id)}">${iconImg(c.icon, 16)}${c.title}</button>`).join('') + '</div>'
+        + '<div class="bm-h">FIND A PLACE</div><div class="bm-cats">' + MAP_CATS.map((c) => `<div class="bm-cat"><button class="bm-catname" data-group="${c.id}">${iconImg(c.icon, 20)}<span>${c.title}</span></button></div>`).join('') + '</div>'
+        + (ctx.device() === 'gamepad' ? `<button class="bm-setwp" data-mark="1">${padGlyph('Y', 'Set Waypoint')}</button>` : '')
         + legend()
-        + `<div class="bm-zoomrow"><button class="bm-zb" data-zoom="-1" title="Zoom out">${iconImg('minus', 6)}</button><button class="bm-zb" data-zoom="1" title="Zoom in">${iconImg('plus', 14)}</button><span>Zoom</span><button class="bm-zb me" data-me="1" title="Find me">${iconImg('find', 18)}</button></div>`
-        + `<button class="bm-setwp" data-mark="1">${padGlyph('Y', 'Set Waypoint')}</button>`
         + '<div class="bm-more">'
         + (mine.length ? `<button class="bm-row" data-mine="1">${iconImg('home', 16)}My homes (${mine.length})</button>` : '')
         + `<button class="bm-row" data-players="1">${iconImg('people', 16)}Players online${ps.length ? ` (${ps.length})` : ''}</button>`
@@ -117,7 +119,7 @@ export function createMapWaypoints(ctx) {
     el.querySelectorAll('[data-mine]').forEach((b) => { b.onclick = () => { group = 'mine'; render(); }; });
     el.querySelectorAll('[data-players]').forEach((b) => { b.onclick = () => { group = 'players'; render(); }; });
     el.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => { group = null; render(); }; });
-    el.querySelectorAll('[data-job]').forEach((b) => { b.onclick = () => { const j = ctx.job(); if (j) ctx.center(j.x, j.y); }; });
+    el.querySelectorAll('[data-jobgo]').forEach((b) => { b.onclick = () => { const j = ctx.job(); if (j) ctx.center(j.x, j.y); }; });
     el.querySelectorAll('[data-clear]').forEach((b) => { b.onclick = () => { ctx.setWaypoint(null); render(); }; });
     el.querySelectorAll('[data-zoom]').forEach((b) => { b.onclick = () => ctx.zoom(Number(b.dataset.zoom) > 0 ? 1.6 : 1 / 1.6); });
     el.querySelectorAll('[data-me]').forEach((b) => { b.onclick = () => ctx.findMe(); });
@@ -128,7 +130,7 @@ export function createMapWaypoints(ctx) {
     if (cats.has(id)) cats.delete(id); else cats.add(id);
     save();
     const b = $('bm-list').querySelector(`[data-toggle="${id}"]`);
-    if (b) { b.classList.toggle('on', cats.has(id)); b.setAttribute('aria-pressed', cats.has(id)); }
+    if (b) { b.classList.toggle('on', cats.has(id)); b.setAttribute('aria-pressed', String(cats.has(id))); }
   }
 
   return {

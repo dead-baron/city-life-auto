@@ -47,7 +47,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const y = yardsOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!y) return null;
-  return { label: 'Sign on as a tow truck driver (a truck is issued)', run: () => { const err = start(world, p, y); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a tow truck driver (a truck is issued)', card: { id: 'towjob', where: y.name, start: () => start(world, p, y) }, run: () => { const err = start(world, p, y); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------

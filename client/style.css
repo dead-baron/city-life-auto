@@ -65,6 +65,7 @@ html, body { margin: 0; height: 100%; background: var(--ink); color: var(--cream
 #world { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; pointer-events: none; transition: filter .8s; }   /* (art v2, WebGL2: #view carries only the overlays) */
 body.dead #view, body.dead #world { filter: grayscale(.92) brightness(.75) contrast(1.1); }
 .hidden { display: none !important; }
+[hidden] { display: none !important; }
 .dim { color: var(--dim); }
 .bad { color: var(--danger); }
 button, input, select { font-family: var(--ui); }
@@ -94,13 +95,14 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 .btn:active, .sbtn:active { transform: scale(.97); }
 .btn[disabled], .sbtn[disabled] { opacity: .45; cursor: default; filter: none; transform: none; }
 .btn-1 { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+.btn-1.pfocus { background: var(--gold) !important; color: var(--ink) !important; box-shadow: 0 0 0 3px var(--cream); }   /* (focused, still the primary)  */
 .btn-x, #s-fresh { background: transparent; color: var(--danger); border-color: var(--danger); }
 .ibtn { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: var(--tap); min-height: var(--tap); padding: var(--s1) var(--s2); border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); cursor: pointer; }
 .ibtn svg, .ibtn img { color: var(--gold); }
 .sbtn { display: flex; width: calc(100% - 2 * var(--s4)); margin: var(--s3) var(--s4) var(--s4); }
 /* the close button: a square of the icon button's shape */
-.x, #m-close, #s-close, .ui-x { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font-size: var(--fs-3); cursor: pointer; }
-.x:hover, #m-close:hover, #s-close:hover, .ui-x:hover { background: var(--navy3); }
+.x, #m-close, #s-close { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font-size: var(--fs-3); cursor: pointer; }
+.x:hover, #m-close:hover, #s-close:hover { background: var(--navy3); }
 
 /* chips: a tag (CITIZEN), a key (E, ACT), a pad's button */
 .chip { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border-radius: var(--r1); background: var(--navy3); color: var(--cream); font: 600 var(--fs-2) var(--ui); }
@@ -179,7 +181,7 @@ body.practice #faction::after { content: ' · PRACTICE'; color: var(--heat); }
 /* the prompt and the notes: right of the minimap, in one column (#hud-msg) so a prompt that wraps pushes the notes down */
 #hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw, calc(100vw - 494px)); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 #hud-msg > #rob, #hud-msg > #trainbar { position: static; transform: none; max-width: 100%; flex-wrap: wrap; }   /* (the robbery, train and custody bars at the column's head) */
-body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(244px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
+body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(282px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
 body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
 .touch #hud-msg > #rob, .touch #hud-msg > #trainbar { padding: 5px 10px; gap: 6px var(--s2); } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: var(--fs-2); }
 #helpbox { position: relative; max-width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); font: 600 var(--fs-4) var(--ui); line-height: 1.25; color: var(--cream); animation: hin var(--t2) var(--ease); }
@@ -233,17 +235,7 @@ body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
 body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame rate and the lag: Dev Debug Mode only) */
 
 /* the round buttons (menu, phone, bag, map, settings, fullscreen, debug: the hub replaces them, UI-3) */
-#hud-btns { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; opacity: .9; }
-#hud-btns button { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); box-shadow: 0 0 0 2px var(--ink); font-size: var(--fs-3); cursor: pointer; }
-#hud-btns button img.pi { width: 18px; height: auto; }
-.touch #hud-btns { top: max(4px, var(--cam-top)); gap: 0; }
-.touch #hud-btns button { width: var(--tap); height: var(--tap); border: 5px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--gold); }   /* (44 px to tap, the 34 px circle inside a clear border) */
 body.kbm #b-fs { display: none; }
-#hud-btns #b-dev { display: inline-flex; align-items: center; justify-content: center; padding: 0; border-color: var(--edge); color: var(--dim); opacity: .45; transition: opacity var(--t1); }   /* (quiet till Dev Debug Mode is on: never louder than the game's own) */
-#hud-btns #b-dev.on { opacity: 1; border-color: var(--heat); color: var(--heat); }
-#hud-btns #b-dev:hover { opacity: .9; }
-.touch #hud-btns #b-dev { border-color: transparent; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--edge); }
-.touch #hud-btns #b-dev.on { box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--heat); }
 
 /* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): as wide as
    their words up to the screen less a margin, two balanced lines past it */
@@ -273,7 +265,7 @@ body.kbm #b-fs { display: none; }
 #trainbar.ferry { border-color: var(--info); color: var(--info); }
 #trainbar.warn { border-color: var(--heat); color: var(--heat); }
 #trainbar.custody { top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); border-color: var(--danger); color: var(--danger); }   /* (arrested: server custody.js) */
-body.portrait.touch #trainbar.custody { bottom: auto; top: calc(244px + var(--corner-top)); max-width: calc(100vw - 140px); }
+body.portrait.touch #trainbar.custody { bottom: auto; top: calc(282px + var(--corner-top)); max-width: calc(100vw - 140px); }
 #trainbar.custody.brk { border-color: var(--gold); color: var(--gold); animation: brk-pulse 1.2s ease-in-out infinite; }
 #trainbar.custody.fight { border-color: var(--heat); color: var(--heat); animation: brk-pulse .6s ease-in-out infinite; }   /* (fighting an officer off: server struggle.js) */
 #trainbar.fight #tb-fill { background: linear-gradient(90deg, var(--danger), var(--gold) 70%, var(--cream)); transition: width .1s; } #trainbar.fight .rob-bar { width: 140px; height: 10px; }
@@ -346,7 +338,7 @@ body.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0;
 /* ==== the panels over the game ==== */
 /* the interaction menu (a shop, a counter, an ATM): on the left */
 #menu { position: absolute; inset: 0; display: flex; align-items: flex-start; justify-content: flex-start; z-index: 20; padding: 70px 0 0 max(24px, env(safe-area-inset-left)); background: linear-gradient(90deg, var(--scrim), transparent 60%); }
-#menu .panel, #settings .panel { width: min(440px, 92vw); max-height: 82vh; overflow: auto; }
+#menu .panel { width: min(440px, 92vw); max-height: 82vh; overflow: auto; }
 #menu .panel { animation: enter-l var(--t2) var(--ease); }
 #m-sub { margin: 0; padding: var(--s2) 14px; background: var(--shade); color: var(--dim); font: 600 var(--fs-3) var(--ui); line-height: 1.35; border-bottom: 1px solid var(--line); }
 #m-money { padding: 6px 14px; background: var(--shade); font: 700 var(--fs-3) var(--pixel); color: var(--money); }
@@ -381,16 +373,13 @@ body.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0;
 #m-board b.pocket { width: 46px; height: 46px; border-radius: var(--r3); color: var(--cream); font-size: var(--fs-4); box-shadow: inset 0 0 0 3px var(--gold); }
 #m-board b.pocket.red { background: var(--card-red); } #m-board b.pocket.black { background: var(--pocket-black); } #m-board b.pocket.green { background: var(--pocket-green); }
 
-/* pause, controls, players online, the dev password, the bag (gamepad focus: .pfocus) */
-#pause, #controls, #players, #devpw, #inv { position: absolute; inset: 0; z-index: 40; background: var(--scrim); display: flex; align-items: flex-start; justify-content: flex-start; padding: 60px 0 0 max(24px, env(safe-area-inset-left)); }
-#pause .panel, #controls .panel, #players .panel, #devpw .panel { width: min(440px, 92vw); max-height: 86vh; overflow: auto; }
+/* the dev password, the install help: over the hub (gamepad focus: .pfocus) */
+#devpw { position: absolute; inset: 0; z-index: 45; background: var(--scrim); display: flex; align-items: flex-start; justify-content: flex-start; padding: 60px 0 0 max(24px, env(safe-area-inset-left)); }
+#devpw .panel { width: min(440px, 92vw); max-height: 86vh; overflow: auto; }
 .overlay .panel { animation: enter var(--t2) var(--ease); }
-.cbody { padding: var(--s3) var(--s4); font: 500 var(--fs-3) var(--ui); line-height: 1.6; color: var(--cream); }
-.cbody b { display: block; margin-top: 6px; font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 1px; }
 #title button.pfocus { outline: 3px solid var(--cream); outline-offset: 4px; filter: brightness(1.15); }
 .srow.pfocus span { color: var(--cream); }
 /* settings */
-#settings { position: absolute; inset: 0; z-index: 41; background: var(--scrim); display: flex; align-items: center; justify-content: center; }   /* (41: over the pause menu it's opened from) */
 .srow { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap-l); padding: 10px var(--s4); font: 600 var(--fs-3) var(--ui); color: var(--cream); border-bottom: 1px solid var(--line); }
 .srow select { max-width: 220px; min-height: 36px; padding: var(--s1) 6px; font: 600 var(--fs-3) var(--ui); background: var(--navy); color: var(--cream); border: 2px solid var(--gold-a); border-radius: var(--r1); }
 .srow.sub span { padding-left: var(--s3); opacity: .9; }
@@ -418,7 +407,7 @@ body.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0;
 #pl-list .pl-btn:hover, #pl-list .pl-btn.pfocus { border-color: var(--gold); }
 .touch #pl-list .pl-btn { min-height: var(--tap); }
 /* install help, the tour's question, the graphics question */
-#install { position: absolute; inset: 0; z-index: 42; background: var(--scrim); display: flex; align-items: center; justify-content: center; }
+#install { position: absolute; inset: 0; z-index: 45; background: var(--scrim); display: flex; align-items: center; justify-content: center; }
 #install .panel { width: min(460px, 92vw); max-height: 86vh; overflow: auto; }
 .ibody { padding: 6px var(--s4) 0; color: var(--cream); font: 500 var(--fs-3) var(--ui); line-height: 1.45; }
 .ibody h3 { margin: var(--s3) 0 var(--s1); font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
@@ -464,7 +453,6 @@ body.kbm #t-fs { display: none; }
 #t-ver { font-size: var(--fs-1); color: var(--dim); letter-spacing: 1px; }
 
 /* ==== the phone ==== */
-#phone { position: absolute; inset: 0; z-index: 41; background: var(--ink-a); display: flex; align-items: center; justify-content: flex-end; padding-right: max(24px, env(safe-area-inset-right)); }
 .ph-body { width: min(340px, 92vw); height: min(620px, 88vh); display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter var(--t2) var(--ease); }
 .ph-top { display: flex; align-items: center; gap: var(--s2); padding: 6px var(--s2); background: var(--navy); border-bottom: 2px solid var(--gold); color: var(--dim); font: 700 var(--fs-2) var(--pixel); }
 .ph-top #ph-clock { flex: 1; text-align: center; letter-spacing: 1px; }
@@ -509,40 +497,8 @@ div.ph-row { cursor: default; }
 .ph-card.skl i { display: block; height: 5px; margin-top: 6px; border-radius: var(--r1); background: var(--navy3); overflow: hidden; }   /* (the Skills app: a bar to the next level) */
 .ph-card.skl i::after { content: ''; display: block; height: 100%; width: var(--w); background: var(--gold); }
 .ph-hint, .ph-empty { color: var(--dim); font-size: var(--fs-2); margin: 6px 2px; }
-body.portrait #phone { justify-content: center; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
-body.portrait .ph-body { max-height: 100%; }
 
 /* ==== the bag, the quick wheel, the weapon wheel ==== */
-#inv .panel { width: min(620px, 94vw); max-height: 88vh; overflow-y: auto; }
-#inv .inv-body { padding: 2px 14px 14px; }
-#inv h3 { margin: 14px 0 6px; font: 700 var(--fs-2) var(--pixel); letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
-#inv h3 small { margin-left: 6px; font: 500 var(--fs-2) var(--ui); text-transform: none; letter-spacing: 0; color: var(--dim); }
-#inv .inv-cash { color: var(--money); font: 700 var(--fs-3) var(--pixel); }
-#inv .inv-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-#inv .inv-slot { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2) var(--s1); background: var(--navy2); border: 2px solid var(--gold-a); color: var(--cream); border-radius: var(--r2); font: 600 var(--fs-2) var(--ui); cursor: pointer; }
-#inv .inv-slot.empty { color: var(--dim); border-style: dashed; cursor: default; }
-#inv .inv-slot.out { border-color: var(--danger); }
-#inv .inv-slot small, #inv .inv-weapon small { display: block; color: var(--dim); font-size: var(--fs-1); }
-#inv .ic { font-size: var(--fs-4); line-height: 1; }
-#inv .inv-sec { display: flex; flex-wrap: wrap; gap: 6px; }
-#inv .inv-weapon { display: flex; align-items: center; gap: var(--s2); min-height: var(--tap); padding: 6px 10px; background: var(--navy2); border: 2px solid var(--gold-a); color: var(--cream); border-radius: var(--r2); font: 600 var(--fs-2) var(--ui); text-align: left; cursor: pointer; }
-#inv .inv-weapon.on { border-color: var(--gold); background: var(--pick), var(--navy2); }
-#inv .inv-weapon canvas { width: 40px; height: auto; }
-#inv .inv-item { flex-basis: 100%; display: flex; align-items: center; gap: 6px; padding: 6px var(--s2); background: var(--shade); border-radius: var(--r2); }
-#inv .inv-item .nm { flex: 1; font: 600 var(--fs-3) var(--ui); color: var(--cream); }
-#inv .inv-item .nm small { color: var(--dim); }
-#inv .inv-item em { display: block; font-style: normal; font-size: var(--fs-1); color: var(--dim); font-weight: 500; }
-#inv .inv-use, #inv .inv-pin { min-height: 36px; padding: 0 var(--s3); border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font: 700 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; }
-#inv .inv-use { background: var(--gold); color: var(--ink); }
-#inv .inv-use.lit { background: var(--pick), var(--navy); color: var(--gold); }   /* (the flashlight, while it's on) */
-#inv .inv-pin { min-width: 36px; padding: 0 var(--s2); border-color: var(--gold-a); }
-#inv .inv-pin.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
-#inv .inv-none { color: var(--dim); font-size: var(--fs-2); margin: 0; }
-#inv button.pfocus { outline: 3px solid var(--cream); outline-offset: 1px; }
-#inv .inv-blade { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; width: 100%; padding: 2px var(--s1) var(--s1); }   /* (the plasma blade's colours) */
-#inv .inv-blade small { color: var(--dim); font-size: var(--fs-1); margin-right: 2px; }
-#inv .inv-blade .sw { width: 24px; height: 24px; padding: 0; border-radius: var(--r3); border: 2px solid var(--cream-a); cursor: pointer; }
-#inv .inv-blade .sw.on { border-color: var(--cream); box-shadow: 0 0 0 2px var(--gold); }
 #wheel { position: fixed; inset: 0; z-index: 30; background: radial-gradient(circle at 50% 50%, var(--scrim) 0, var(--ink-a) 200px, transparent 320px); touch-action: none; }
 #wheel .wheel-slot { position: absolute; left: 50%; top: 50%; width: 112px; height: 84px; margin: -42px 0 0 -56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--glass); color: var(--cream); border: 2px solid var(--gold-a); border-radius: var(--r2); font: 600 var(--fs-2) var(--ui); cursor: pointer; transition: transform var(--t1) var(--ease), border-color var(--t1); }
 #wheel .wheel-slot .ic { font-size: var(--fs-5); line-height: 1.1; }
@@ -567,33 +523,6 @@ body.portrait .ph-body { max-height: 100%; }
 #wwheel .ww-mid small { display: block; color: var(--dim); font-size: var(--fs-1); font-weight: 600; }
 
 /* ==== the map screen and the pause menu (U7, U1) ==== */
-.hub { display: flex; justify-content: center; gap: var(--s3); }
-.hub button { display: flex; flex-direction: column; align-items: center; gap: var(--s1); background: none; border: none; padding: 0; cursor: pointer; color: var(--cream); font: 700 var(--fs-1) var(--ui); letter-spacing: 1px; touch-action: manipulation; }
-.hub .ring { width: 48px; height: 48px; border-radius: var(--r3); display: grid; place-items: center; background: var(--navy2); border: 2px solid var(--edge); box-shadow: 0 0 0 2px var(--ink); }
-.hub .lbl { padding: 2px 6px; border-radius: var(--r1); text-shadow: var(--lift); }
-.hub button:hover .ring, .hub button.pfocus .ring { border-color: var(--cream); }
-.hub button.pfocus { background: none !important; box-shadow: none; }
-.hub button.on .ring { border-color: var(--gold); box-shadow: 0 0 0 2px var(--ink), 0 0 14px var(--gold-a); }
-.hub button.on .lbl { color: var(--ink); background: var(--gold); }
-.hub-float { position: absolute; top: max(10px, calc(var(--cam-top) + 4px)); left: 50%; transform: translateX(-50%); z-index: 2; }
-.ui-top { display: flex; align-items: center; gap: 14px; flex: none; padding: max(6px, var(--cam-top)) max(12px, env(safe-area-inset-right)) 6px max(12px, env(safe-area-inset-left)); background: var(--navy); border-bottom: 2px solid var(--gold); }
-.ui-logo { height: 54px; width: auto; filter: drop-shadow(var(--lift)); }
-.ui-top .hub { flex: 1; }
-.ui-stat { display: flex; flex-direction: column; gap: var(--s1); min-width: 150px; margin-right: 34px; }   /* (room for the bars' numbers) */
-.ui-clock { display: flex; align-items: center; justify-content: center; gap: var(--s2); padding: 3px 10px; font: 700 var(--fs-3) var(--pixel); color: var(--cream); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r1); }
-.ui-bars { display: flex; flex-direction: column; gap: 3px; }
-.ui-bar { position: relative; height: 9px; background: var(--navy); border: 1px solid var(--ink); border-radius: var(--r1); }
-.ui-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: var(--r1); }
-.ui-bar.hp i { background: var(--danger); } .ui-bar.st i { background: var(--info); }
-.ui-bar b { position: absolute; right: -34px; top: -4px; width: 30px; font: 700 var(--fs-1) var(--pixel); color: var(--cream); }
-.ui-foot { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex: none; padding: 5px max(14px, env(safe-area-inset-left)); background: var(--navy); border-top: 1px solid var(--gold-a); font: 600 var(--fs-2) var(--ui); color: var(--dim); }
-.ui-foot .hint { display: inline-flex; align-items: center; gap: 6px; margin-right: var(--s4); }
-.ui-foot .g-pad, .ui-foot .g-key, .ui-foot .g-touch { transform: scale(.85); }
-.ui-city { font: 700 var(--fs-2) var(--pixel); color: var(--dim); letter-spacing: 3px; text-align: right; }
-.ui-city small { display: block; font: 400 var(--fs-1) var(--pixel); letter-spacing: 2px; color: var(--edge); }
-.ui-money { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font: 700 var(--fs-4) var(--pixel); text-shadow: var(--halo); pointer-events: none; }
-.ui-money .c { color: var(--money); } .ui-money .b { color: var(--info); font-size: var(--fs-3); } .ui-money .st { color: var(--heat); letter-spacing: 2px; font-size: var(--fs-3); } .ui-money .st i { font-style: normal; color: var(--cream-a); }
-.ui-x { position: absolute; top: 10px; left: 10px; z-index: 2; }
 #bigmap { position: absolute; inset: 0; z-index: 18; display: flex; flex-direction: column; background: var(--ink); }
 #bm-body { flex: 1; display: flex; min-height: 0; gap: 10px; padding: 10px max(10px, env(safe-area-inset-right)) 10px max(10px, env(safe-area-inset-left)); }
 #bm-panel { width: 252px; flex: none; overflow-y: auto; padding: 10px 10px var(--s3); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); }
@@ -634,34 +563,9 @@ body.portrait .ph-body { max-height: 100%; }
 .bm-row.back { color: var(--gold); font-weight: 700; }
 .bm-hint { margin: var(--s2) var(--s1); color: var(--dim); font: 500 var(--fs-2) var(--ui); }
 #bm-tp { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 3; min-height: var(--tap); padding: 0 14px; border-radius: var(--r2); background: var(--navy); border: 2px solid var(--heat); color: var(--heat); font: 700 var(--fs-2) var(--ui); cursor: pointer; }   /* (debug: teleport to the waypoint just set) */
-body.portrait #bigmap .ui-logo, body.portrait #bigmap .ui-stat { display: none; }
 body.portrait #bm-body { flex-direction: column-reverse; }
 body.portrait #bm-panel { width: auto; max-height: 34vh; }
 body.portrait #bm-mapwrap { min-height: 40vh; }
-body.portrait #bm-foot .hint { display: none; }
-body.touch .hub { gap: 6px; } body.touch .hub .ring { width: 42px; height: 42px; }
-@media (max-height: 520px) { .ui-logo { height: 40px; } .hub .ring { width: 38px; height: 38px; } .ui-top, .ui-foot { padding-top: 3px; padding-bottom: 3px; } #bm-panel { width: 220px; } .bm-catname { padding: 5px 6px; } .bm-title { font-size: var(--fs-4); margin-bottom: 6px; } }
-#pause { background: linear-gradient(90deg, var(--scrim-hi), var(--scrim) 55%, var(--ink-a)); padding-top: calc(74px + var(--cam-top)); }
-#pause .panel.pz { width: min(400px, 92vw); max-height: calc(100vh - 90px); display: flex; flex-direction: column; overflow: hidden; }
-.pz-head { position: relative; display: flex; flex-direction: column; align-items: center; padding: 10px 14px var(--s2); background: radial-gradient(ellipse at 50% 100%, var(--gold-t), transparent 70%), var(--navy); border-bottom: 2px solid var(--gold); border-radius: var(--r2) var(--r2) 0 0; }
-.pz-head img { height: 92px; width: auto; filter: drop-shadow(var(--lift)); }
-.pz-paused { margin-top: 2px; font: 700 var(--fs-4) var(--pixel); letter-spacing: 6px; color: var(--gold); text-shadow: var(--lift); }
-.pz-head .x { position: absolute; right: 10px; top: 10px; }
-#pause .m-opts { overflow-y: auto; flex: 1; padding: 6px var(--s2); }
-#pause .opt { justify-content: flex-start; gap: 14px; border-radius: var(--r1); border-bottom: none; padding: var(--s2) var(--s3); }
-#pause .opt img.pi { width: 22px; height: auto; }
-#pause .opt .note { margin-left: auto; text-align: right; }
-.pz-foot { justify-content: center; border-radius: 0 0 var(--r2) var(--r2); }
-#pause #p-sub { font-size: var(--fs-2); text-align: center; letter-spacing: .5px; }
-@media (max-height: 560px) {
-  #pause { padding-top: 64px; }
-  .pz-head { flex-direction: row; justify-content: center; gap: 14px; padding: 6px 54px 6px var(--s3); }
-  .pz-head img { height: 40px; }
-  .pz-paused { font-size: var(--fs-3); letter-spacing: 4px; margin: 0; }
-  #pause #p-sub { display: none; }
-  #pause .opt { padding: 6px var(--s3); }
-  .pz-head .x { top: 4px; }
-}
 
 /* ==== down / wasted (U11): red at the edges round the scene; the title alone first, then a compact panel docked at the
    bottom (hud.js adds .reveal), folded to a slim bar by Esc / B / its hide button (.fold) - a tap on the bar opens it ==== */
@@ -946,8 +850,6 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
   body:not(.touch) #helpbox { font-size: var(--fs-3); padding: 6px 10px; }
   body:not(.touch) #job { font-size: var(--fs-2); }
   body:not(.touch) #hud-sub { bottom: 8px; }
-  body:not(.touch) #hud-btns { left: calc(max(16px, env(safe-area-inset-left)) + 188px); transform: none; gap: var(--s1); }   /* (beside the minimap, clear of the weapon) */
-  body:not(.touch) #hud-btns button { width: 30px; height: 30px; font-size: var(--fs-2); }
   .touch #job { padding: var(--s1) 10px; }
   /* with a prompt or a bar over the notes: the newest note only, so the column ends above you */
   .touch #hud-msg:has(> #helpbox:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; }
@@ -956,7 +858,7 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
 /* a narrow phone (740 px on its side, or upright): the robbery bar on one line; on its side the round buttons start
    beside the small pills, the 🐞 off the row till Dev Debug Mode is on (the pause menu's Debug menu line opens it) */
 @media (max-width: 800px) { .touch #rob > b { display: none; } }
-@media (max-width: 800px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 176px); transform: none; } .touch #hud-tr { right: max(10px, env(safe-area-inset-right)); } .touch #hud-btns #b-dev:not(.on) { display: none; } }
+@media (max-width: 800px) and (orientation: landscape) { .touch #hud-tr { right: max(10px, env(safe-area-inset-right)); } }
 /* a narrow, tall window with a keyboard: the prompt and the notes under the minimap */
 body.portrait:not(.touch) #hud-msg { left: max(16px, env(safe-area-inset-left)); top: 236px; width: calc(100vw - 32px); }
 body.portrait:not(.touch) #hud-sub { max-width: 90vw; }
@@ -969,7 +871,7 @@ body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
 body.portrait.touch :is(#w-name, #w-ammo) { font-size: var(--fs-hud); }
 body.portrait.touch #hud-tr #clock { display: none; }
 body.portrait.touch #hud-msg { display: contents; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(296px + var(--corner-top)); max-width: 80vw; width: auto; }
+body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(334px + var(--corner-top)); max-width: 80vw; width: auto; }
 body.portrait.touch #toasts { top: calc(148px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; max-width: none; }   /* (one note at a time, beside the minimap - the user, 2026-10-08) */
 body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
 body.portrait.touch .toast > .tx { max-height: 2.4em; }   /* (two lines beside the minimap: a longer note pages) */
@@ -978,8 +880,7 @@ body.portrait.touch #radar-wrap { top: calc(8px + var(--corner-top)); }
 body.portrait.touch #rclock { display: flex; top: 112px; }   /* (straddling the foot of the minimap's ring) */
 body.portrait.touch #vitals { margin-top: 13px; }
 body.portrait.touch #status { width: max-content; max-width: calc(100vw - 76px); letter-spacing: 0; }   /* (one line where it fits) */
-body.portrait.touch #hud-btns { left: auto; right: max(10px, env(safe-area-inset-right)); top: calc(152px + var(--corner-top)); transform: none; flex-direction: column; }
-body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(244px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (clear of the HUD at the top and the column of buttons) */
+body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(282px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (clear of the HUD at the top and the column of buttons) */
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: calc(1.5 * var(--fs-6)); } #district { font-size: var(--fs-5); } }
 /* narrow screens (a portrait phone): last, so they win over the rules above */
 @media (max-width: 520px) {
@@ -1001,11 +902,282 @@ body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(244px + var(
   #t-tools button { padding: 0 var(--s3); }
 }
 
+/* ==== the HUD row (UI-3): MENU · PHONE · MAP, labelled, their keys on a keyboard ==== */
+#hud-btns { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
+#hud-btns button { display: inline-flex; align-items: center; gap: var(--s2); height: var(--tap-l); padding: 0 14px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; transition: background var(--t1) var(--ease), transform var(--t1) var(--ease); }
+#hud-btns button:hover { background: var(--navy3); }
+#hud-btns button:active { transform: scale(.96); }
+#hud-btns svg { flex: none; width: 20px; height: 20px; color: var(--gold); }
+#hud-btns .kchip { min-width: 24px; height: 24px; font-size: var(--fs-1); }
+.touch #hud-btns { top: max(4px, var(--cam-top)); gap: 6px; }
+.touch #hud-btns button { height: var(--tap); padding: 0 12px; gap: 6px; font-size: var(--fs-3); }
+.touch #hud-btns svg { width: 18px; height: 18px; }
+body:not(.touch) #hud-msg { top: 74px; }   /* (the prompt and the notes under the row) */
+@media (max-height: 430px) {
+  body:not(.touch) #hud-btns { left: calc(max(16px, env(safe-area-inset-left)) + 188px); transform: none; gap: 6px; top: 8px; }
+  body:not(.touch) #hud-btns button { height: 40px; padding: 0 10px; }
+  body:not(.touch) #hud-btns svg { display: none; }
+  body:not(.touch) #hud-msg { top: 56px; }
+}
+@media (max-width: 800px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 176px); transform: none; } }
+/* upright: one row under the minimap, the notes under it */
+body.portrait.touch #hud-btns { left: max(12px, env(safe-area-inset-left)); top: calc(166px + var(--corner-top)); transform: none; }
+body.portrait.touch #toasts { top: calc(218px + var(--corner-top)); left: max(10px, env(safe-area-inset-left)); right: 54px; }
+
+/* ==== the hub (UI-3): one panel for the map, the phone, the bag, the people and the settings; the game runs on ==== */
+#hub { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: var(--scrim); }
+.hub-frame { position: relative; display: flex; flex-direction: column; width: min(1160px, calc(100vw - 48px)); height: min(760px, calc(100vh - 48px)); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); overflow: hidden; animation: enter var(--t2) var(--ease); }
+body.touch .hub-frame { width: 100%; height: 100%; border: 0; border-radius: 0; box-shadow: none; }
+@media (max-width: 900px), (max-height: 560px) { .hub-frame { width: 100%; height: 100%; border: 0; border-radius: 0; } }
+#hub-bar { flex: none; display: flex; align-items: center; gap: var(--s2); min-height: 68px; padding: 0 var(--s4); background: var(--navy); border-bottom: 2px solid var(--gold); }
+.hub-resume { min-height: var(--tap-l); padding: 0 18px; font-size: var(--fs-4); }
+.hub-resume svg { width: 16px; height: 16px; }
+.hub-resume .kchip { background: var(--ink); color: var(--cream); box-shadow: none; font-size: var(--fs-1); }
+#hub-title { display: none; margin: 0 0 0 var(--s1); font: 700 var(--fs-4) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+#hub-tabs { display: flex; gap: var(--s1); margin-left: var(--s3); align-self: stretch; align-items: flex-end; }
+#hub-tabs .tab { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-4); }
+#hub-tabs .tab .kchip { min-width: 20px; height: 20px; font-size: var(--fs-1); background: var(--navy3); color: var(--dim); box-shadow: none; }
+#hub-tabs .tab.pfocus { box-shadow: inset 0 0 0 2px var(--gold); }
+#hub-bar .pad-only { flex: none; }
+#hub-close { margin-left: auto; width: var(--tap-l); height: var(--tap-l); }
+#hub-close svg { width: 20px; height: 20px; }
+#hub-body { position: relative; flex: 1; min-height: 0; }
+#hub-body > .hubtab { position: absolute; inset: 0; z-index: auto; display: flex; padding: 0; background: none; overflow: hidden; }
+#hub-body > .hubtab .panel { animation: none; }
+#hub.solo #hub-tabs, #hub.solo .hub-resume { display: none; }
+#hub.solo #hub-title { display: block; }
+.touch #hub-bar { min-height: 56px; padding: 0 max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left)); gap: 6px; }
+.touch .hub-resume { min-height: var(--tap); padding: 0 14px; font-size: var(--fs-3); }
+.touch #hub-tabs { margin-left: var(--s2); }
+.touch #hub-tabs .tab { min-height: var(--tap); padding: 0 12px; font-size: var(--fs-3); }
+.touch #hub-close { width: var(--tap); height: var(--tap); }
+@media (max-height: 560px) { #hub-bar { min-height: 56px; } #hub-tabs .tab { min-height: var(--tap); padding: 0 12px; } }
+body.portrait #hub-bar { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "res title x" "tabs tabs tabs"; row-gap: var(--s1); padding: calc(6px + var(--cam-top)) var(--s4) 0; }
+body.portrait .hub-resume { grid-area: res; }
+body.portrait #hub-title { display: block; grid-area: title; }
+body.portrait #hub-close { grid-area: x; }
+body.portrait #hub-tabs { grid-area: tabs; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0 calc(-1 * var(--s4)); }
+body.portrait #hub-tabs .tab { justify-content: center; padding: 0; border-radius: 0; min-height: var(--tap-l); font-size: var(--fs-3); }
+body.portrait #hub-bar .pad-only { display: none; }
+
+/* the Map tab: the map, the waypoint and what's shown beside it (LandHub) */
+#hub #bigmap { background: none; }
+#hub #bm-body { padding: var(--s3); gap: var(--s3); }
+#hub #bm-panel { order: 2; width: 252px; background: none; border: 0; box-shadow: none; padding: 0; display: flex; flex-direction: column; }
+#hub #bm-list { flex: 1; overflow-y: auto; }
+#hub #bm-mapwrap { border-color: var(--navy3); }
+.bm-zoom { position: absolute; right: 10px; bottom: 10px; z-index: 2; display: flex; flex-direction: column; gap: 6px; }
+.bm-zoom button { width: var(--tap); height: var(--tap); display: grid; place-items: center; padding: 0; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font: 700 var(--fs-4) var(--ui); cursor: pointer; touch-action: manipulation; }
+.bm-zoom button.pfocus { box-shadow: 0 0 0 2px var(--cream); }
+.bm-card { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s2); padding: 10px; border-radius: var(--r2); background: var(--navy3); }
+.bm-card > small { font: 700 var(--fs-2) var(--pixel); color: var(--info); }
+.bm-card.job > small { color: var(--gold); }
+.bm-card > b { font: 600 var(--fs-4) var(--ui); line-height: 1.2; }
+.bm-card .bm-cr { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.bm-card .bm-cr span { font: 700 var(--fs-2) var(--pixel); color: var(--dim); }
+.bm-card .btn { min-height: var(--tap); padding: 0 14px; }
+.bm-h { margin: var(--s2) 0 6px; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.bm-show { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.bm-chip { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: var(--tap); padding: 0 6px; border-radius: var(--r2); border: 2px solid var(--edge); background: transparent; color: var(--dim); font: 600 var(--fs-3) var(--ui); cursor: pointer; touch-action: manipulation; }
+.bm-chip img.pi { width: 16px; opacity: .6; }
+.bm-chip.on { border-color: var(--gold); background: var(--navy2); color: var(--cream); }
+.bm-chip.on img.pi { opacity: 1; }
+.bm-chip.pfocus { box-shadow: 0 0 0 2px var(--cream); }
+#bigmap-hint { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: var(--s2); color: var(--dim); font: 500 var(--fs-2) var(--ui); }
+body.portrait #hub #bm-body { flex-direction: column; }
+body.portrait #hub #bm-panel { width: auto; max-height: 44%; }
+body.portrait #hub #bm-mapwrap { min-height: 46%; }
+@media (max-height: 560px) { #hub #bm-panel { width: 228px; } #hub #bm-body { padding: var(--s2); gap: var(--s2); } .bm-card > b { font-size: var(--fs-3); } }
+
+/* the Phone tab: the job first, every app on one screen, an app's name and a 44 px Back */
+#hub #phone { flex-direction: column; }
+#hub .ph-body { width: 100%; max-width: 820px; height: 100%; margin: 0 auto; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
+#hub .ph-top { min-height: 56px; padding: 6px var(--s3); background: none; border-bottom: 1px solid var(--navy3); }
+#hub .ph-top #ph-clock { flex: 1; text-align: left; font: 700 var(--fs-4) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+#hub .ph-top #ph-back { min-width: var(--tap); min-height: var(--tap); display: inline-flex; align-items: center; gap: 4px; padding: 0 12px; font: 700 var(--fs-3) var(--ui); }
+#hub .ph-top .x { display: none; }
+#phone.at-home .ph-top { display: none; }
+#ph-screen { flex: 1; overflow-y: auto; padding: var(--s4); }
+.ph-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; margin: var(--s3) 0; }
+.ph-grid .ph-app { flex-direction: column; justify-content: center; gap: 6px; height: 96px; min-height: 0; padding: var(--s2); border: 2px solid var(--edge); text-align: center; font-size: var(--fs-3); }
+.ph-grid .ph-app svg { width: 30px; height: 30px; color: var(--gold); }
+.ph-quick { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--s2); }
+.ph-quick > small { width: 100%; font: 700 var(--fs-2) var(--pixel); color: var(--dim); letter-spacing: 1px; }
+.ph-quick .btn { min-height: var(--tap); padding: 0 14px; font-size: var(--fs-3); }
+.ph-quick .btn svg { width: 18px; height: 18px; color: var(--gold); }
+.ph-cur { display: flex; flex-direction: column; gap: 6px; padding: var(--s3); border-radius: var(--r2); background: var(--navy3); border: 2px solid var(--gold); }
+.ph-cur-top { display: flex; justify-content: space-between; gap: var(--s2); font: 700 var(--fs-2) var(--pixel); color: var(--gold); }
+.ph-cur-top span + span { color: var(--money); }
+.ph-cur > b { font: 600 var(--fs-4) var(--ui); line-height: 1.25; }
+.ph-cur-acts { display: flex; gap: var(--s2); margin-top: var(--s1); }
+.ph-cur-acts .btn-1 { flex: 1; }
+.ph-log { display: flex; flex-direction: column; }
+.ph-log .lg-row { display: flex; gap: 10px; padding: 10px var(--s1); border-bottom: 1px solid var(--line); font: 500 var(--fs-3) var(--ui); line-height: 1.35; }
+.ph-log .lg-row i { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: var(--r3); background: var(--info); }
+.ph-log .lg-row.good i { background: var(--money); } .ph-log .lg-row.warn i { background: var(--heat); } .ph-log .lg-row.bad i { background: var(--danger); }
+.ph-log .lg-row small { display: block; color: var(--dim); font-size: var(--fs-2); }
+@media (max-height: 560px) { #ph-screen { padding: var(--s2) var(--s3); } .ph-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--s2); } .ph-grid .ph-app { height: 76px; gap: 2px; } .ph-grid .ph-app svg { width: 24px; height: 24px; } #hub .ph-top { min-height: 48px; padding: 2px var(--s3); } }
+body.portrait .ph-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* a job's card (client/jobcard.js): what it is, what it pays, how far, the first step - and Accept */
+.jc { display: flex; flex-direction: column; gap: var(--s2); margin: 0 0 var(--s2); padding: var(--s3); border-radius: var(--r2); background: var(--navy2); border: 2px solid var(--edge); }
+.jc-top { display: flex; align-items: flex-start; gap: 10px; }
+.jc-ic { flex: none; color: var(--gold); }
+.jc-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.jc-t b { font: 600 var(--fs-4) var(--ui); line-height: 1.2; }
+.jc-t small { color: var(--dim); font: 500 var(--fs-2) var(--ui); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.jc-pay { flex: none; text-align: right; font: 700 var(--fs-3) var(--pixel); color: var(--money); white-space: nowrap; }
+.jc-pay small { display: block; font: 500 var(--fs-2) var(--ui); color: var(--dim); }
+.jc-row { display: flex; align-items: center; gap: var(--s2); font: 600 var(--fs-3) var(--ui); }
+.jc-step { flex: 1; min-width: 0; }
+.jc-step i { margin-right: 6px; font: 700 var(--fs-1) var(--pixel); font-style: normal; color: var(--gold); }
+.jc-d { flex: none; font: 700 var(--fs-2) var(--pixel); color: var(--info); }
+.jc-go { width: 100%; }
+.jc.compact .jc-row .jc-go { width: auto; flex: none; padding: 0 18px; }
+.jc-err { margin: 0; color: var(--danger); font: 600 var(--fs-3) var(--ui); }
+#jobcard { position: absolute; inset: 0; z-index: 42; display: flex; align-items: flex-end; justify-content: center; padding: var(--s3) var(--s3) max(var(--s3), env(safe-area-inset-bottom)); background: linear-gradient(transparent 35%, var(--scrim)); }
+.jc-pop { width: min(480px, 100%); max-height: 100%; overflow-y: auto; animation: enter var(--t2) var(--ease); }
+.jc-pop .mhead h2 { font-size: var(--fs-4); }
+.jc-pop .jc { margin: 0; border: 0; background: none; }
+.jc-pop .jc-no { display: flex; width: calc(100% - 2 * var(--s3)); margin: 0 var(--s3) var(--s3); }
+@media (max-height: 430px) { .jc-pop .jc-t small { display: none; } .jc-pop .jc { padding: var(--s2) var(--s3); } }
+
+/* the Bag tab (client/bag.js): a grid by category, one thing's details beside it */
+.bag { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "tools tools" "grid detail" "wheel detail"; gap: 10px 14px; padding: var(--s3) var(--s4); }
+.bag-tools { grid-area: tools; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.bag-cash { flex: none; font: 600 var(--fs-2) var(--ui); color: var(--dim); }
+.bag-cash b { font: 700 var(--fs-3) var(--pixel); color: var(--money); }
+.bag-cats { flex: 1; display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.bag-cats::-webkit-scrollbar { display: none; }
+.bag-cats .chip { flex: none; height: var(--tap); padding: 0 14px; border: 2px solid var(--edge); background: transparent; color: var(--dim); font-size: var(--fs-3); cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+.bag-cats .chip.on { background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 700; }
+.bag-cats .chip.pfocus { box-shadow: 0 0 0 2px var(--cream); }
+.bag-sort { flex: none; display: flex; align-items: center; gap: 6px; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
+.bag-sort select { min-height: var(--tap); padding: 0 var(--s2); border-radius: var(--r1); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
+.bag-grid { grid-area: grid; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); align-content: start; gap: var(--s2); padding: 2px; }
+.bag-h { grid-column: 1 / -1; margin: 6px 0 0; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100px; padding: var(--s3) 6px 6px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
+.bag-cell:hover { border-color: var(--gold-a); }
+.bag-cell.sel, .bag-cell.pfocus { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.bag-cell.on { background: var(--pick), var(--navy2); }
+.bc-ic { display: grid; place-items: center; height: 38px; font-size: var(--fs-5); line-height: 1; }
+.bc-ic canvas { max-width: 64px; max-height: 36px; image-rendering: pixelated; }
+.bc-nm { max-width: 100%; text-align: center; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bc-n { position: absolute; right: 6px; top: 4px; font: 700 var(--fs-1) var(--pixel); color: var(--gold); }
+.bc-tag { position: absolute; left: 4px; top: 4px; padding: 1px 4px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-1) var(--pixel); }
+.bag-detail { grid-area: detail; overflow-y: auto; padding: 14px; border-radius: var(--r2); background: var(--navy3); }
+.bag-hint { margin: 0; color: var(--dim); font: 500 var(--fs-3) var(--ui); line-height: 1.4; }
+.bd-head { display: flex; align-items: center; gap: var(--s3); }
+.bd-head > div { flex: 1; min-width: 0; }
+.bd-head h3 { margin: 0; font: 700 var(--fs-4) var(--ui); line-height: 1.15; }
+.bd-head small { color: var(--gold); font: 700 var(--fs-1) var(--pixel); letter-spacing: 1px; text-transform: uppercase; }
+.bd-ic { display: grid; place-items: center; flex: none; width: 64px; height: 64px; border-radius: var(--r2); background: var(--navy2); font-size: var(--fs-6); line-height: 1; }
+.bd-ic canvas { max-width: 60px; max-height: 40px; image-rendering: pixelated; }
+.bd-x { display: none; }
+.bd-what { margin: var(--s3) 0 var(--s1); font: 500 var(--fs-3) var(--ui); line-height: 1.4; }
+.bd-n { margin: 0 0 var(--s3); color: var(--dim); font: 600 var(--fs-2) var(--ui); }
+.bd-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.bd-acts .btn { flex: 1 1 auto; padding: 0 14px; }
+.bag-pins, .bag-blade { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+.bag-pins small, .bag-blade small { width: 100%; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
+.bag-pins .bag-pin { flex: 1; min-width: var(--tap); padding: 0; }
+.bag-pin.on { background: var(--gold); color: var(--ink); }
+.bag-blade .sw { width: var(--tap); height: var(--tap); padding: 0; border-radius: var(--r3); border: 2px solid var(--cream-a); background: radial-gradient(circle, var(--swc) 0 30%, var(--sw) 60%); cursor: pointer; }
+.bag-blade .sw.on { border-color: var(--cream); box-shadow: 0 0 0 2px var(--gold); }
+.bag-wheel { grid-area: wheel; display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.bag-wheel > small { flex: none; font: 700 var(--fs-1) var(--pixel); color: var(--dim); letter-spacing: 1px; }
+.bag-slot { flex: 1; min-width: 0; min-height: var(--tap); display: flex; align-items: center; gap: 6px; padding: 0 var(--s2); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.bag-slot b { font: 700 var(--fs-2) var(--pixel); color: var(--gold); }
+.bag-slot.empty { border-style: dashed; color: var(--dim); cursor: default; }
+.bag-slot.pfocus { border-color: var(--gold); }
+.bag-craft { grid-area: craft; }   /* (crafting's place, for later) */
+.cue-down { -webkit-mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); }
+@media (max-height: 560px) {
+  .bag { grid-template-columns: minmax(0, 1fr) 260px; padding: var(--s2) var(--s3); gap: var(--s2) 10px; }
+  .bag-cash { display: none; }
+  .bag-wheel > small { display: none; }
+  .bag-cell { height: 84px; padding-top: 10px; }
+  .bc-ic { height: 30px; font-size: var(--fs-4); }
+  .bag-detail { padding: 10px; }
+  .bd-ic { width: 48px; height: 48px; font-size: var(--fs-5); }
+  .bd-what { margin-top: var(--s2); font-size: var(--fs-2); }
+}
+body.portrait .bag { grid-template-columns: minmax(0, 1fr); grid-template-areas: "tools" "grid" "wheel"; }
+body.portrait .bag-tools { flex-wrap: wrap; }
+body.portrait .bag-cats { order: 3; flex-basis: 100%; }
+body.portrait .bag-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.portrait .bag-detail { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 64%; display: none; padding: var(--s4) var(--s4) max(var(--s4), env(safe-area-inset-bottom)); border-radius: var(--r2) var(--r2) 0 0; border-top: 2px solid var(--gold); box-shadow: var(--shadow); }
+body.portrait .bag.has-sel .bag-detail { display: block; animation: enter var(--t2) var(--ease); }
+body.portrait .bd-x { display: inline-grid; width: var(--tap); height: var(--tap); }
+body.portrait .bag-wheel { flex-wrap: wrap; } body.portrait .bag-wheel > small { width: 100%; }
+body.portrait .bag-slot { flex: 1 1 40%; }
+
+/* the People tab: who's online, your crew */
+.people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); width: 100%; padding: var(--s4); overflow-y: auto; align-content: start; }
+.people h2 { margin: 0 0 var(--s2); font: 700 var(--fs-4) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.people h2 small { margin-left: var(--s2); font: 500 var(--fs-2) var(--ui); color: var(--dim); letter-spacing: 0; }
+body.portrait .people { grid-template-columns: minmax(0, 1fr); }
+#pp-crew .ph-row { background: var(--navy2); }
+
+/* the Settings tab: sections, the Danger zone apart; the controls of the device you're on */
+#hub #settings .panel { width: 100%; max-height: none; border: 0; border-radius: 0; box-shadow: none; background: none; overflow: hidden; }
+.set-wrap { display: flex; width: 100%; height: 100%; }
+#set-nav { flex: none; width: 240px; display: flex; flex-direction: column; gap: 6px; padding: var(--s4); border-right: 1px solid var(--navy3); overflow-y: auto; }
+#set-nav button { min-height: var(--tap-l); padding: 0 14px; border: 0; border-radius: var(--r2); background: transparent; color: var(--dim); font: 600 var(--fs-4) var(--ui); text-align: left; cursor: pointer; touch-action: manipulation; }
+#set-nav button.on { background: var(--navy3); color: var(--cream); }
+#set-nav button.pfocus { box-shadow: inset 0 0 0 2px var(--gold); }
+#set-nav .danger { margin-top: auto; color: var(--danger); border-top: 1px solid var(--navy3); border-radius: 0 0 var(--r2) var(--r2); }
+#set-body { flex: 1; min-width: 0; overflow-y: auto; padding: 20px 28px; }
+#set-body section > h2 { margin: 0 0 var(--s3); font: 700 var(--fs-5) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+#set-body section > h3 { margin: var(--s4) 0 var(--s1); font: 700 var(--fs-2) var(--pixel); color: var(--dim); letter-spacing: 1px; }
+.set-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s3); margin-bottom: var(--s3); }
+.set-head h2 { margin: 0; font: 700 var(--fs-5) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+#set-binds { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 28px; }
+.set-binds h4 { margin: var(--s2) 0 var(--s1); font: 700 var(--fs-2) var(--pixel); color: var(--dim); letter-spacing: 1px; }
+.set-bind { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: var(--tap); border-bottom: 1px solid var(--navy3); font: 500 var(--fs-3) var(--ui); }
+.set-bind .kchip { height: 28px; padding: 0 8px; white-space: nowrap; }
+.set-bind .kchip.off { background: var(--navy3); color: var(--dim); box-shadow: none; }
+#set-note, .set-note { margin: var(--s3) 0 0; color: var(--dim); font: 500 var(--fs-2) var(--ui); }
+#set-body .srow { padding: 6px 0; min-height: var(--tap-l); }
+#set-body .srow select { min-height: var(--tap); max-width: 300px; }
+#set-body .sbtn { width: 100%; margin: var(--s2) 0; justify-content: flex-start; }
+#set-body .opt { border-radius: var(--r1); padding: var(--s2) var(--s3); }
+#set-body .opt.quiet { min-height: var(--tap); color: var(--dim); font-size: var(--fs-3); opacity: .7; }
+#set-body .sacct .msub { padding: var(--s2) 0; background: none; border: 0; }
+#set-body .gfxbox > h3:first-child, #set-body .snd-h { display: none; }   /* (the section's own title says it) */
+#set-body section[data-sec=danger] p { color: var(--dim); font: 500 var(--fs-3) var(--ui); }
+@media (max-height: 560px) {
+  #set-nav { width: 168px; padding: var(--s2); gap: 2px; }
+  #set-nav button { min-height: var(--tap); font-size: var(--fs-3); }
+  #set-body { padding: var(--s2) var(--s4); }
+  #set-body section > h2, .set-head h2 { font-size: var(--fs-4); }
+  .set-head .seg > button { padding: 0 10px; font-size: var(--fs-2); }
+}
+body.portrait .set-wrap { flex-direction: column; }
+body.portrait #set-nav { width: auto; flex-direction: row; overflow-x: auto; padding: var(--s2) var(--s3); border-right: 0; border-bottom: 1px solid var(--navy3); scrollbar-width: none; }
+body.portrait #set-nav button { flex: none; min-height: var(--tap); padding: 0 12px; font-size: var(--fs-3); }
+body.portrait #set-nav .danger { margin: 0 0 0 auto; border-top: 0; }
+body.portrait #set-body { padding: var(--s3) var(--s4) var(--s5); }
+body.portrait .set-head .seg { width: 100%; } body.portrait .set-head .seg > button { flex: 1; padding: 0 6px; font-size: var(--fs-2); }
+
+/* a shop's menu on a sideways phone: a compact head, the list from high up, a cue when there's more */
+@media (max-height: 430px) {
+  #menu { padding-top: var(--s2); }
+  #menu .panel { max-height: calc(100vh - 2 * var(--s2)); display: flex; flex-direction: column; }
+  #menu .mhead { padding: 2px var(--s2) 2px var(--s3); min-height: var(--tap); }
+  #menu .mhead h2 { font-size: var(--fs-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #m-sub { padding: 2px var(--s3); font-size: var(--fs-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  #m-money { padding: 2px var(--s3); font-size: var(--fs-2); }
+  #m-opts { flex: 1; min-height: 0; overflow-y: auto; }
+  #menu .opt { min-height: var(--tap); padding: 6px var(--s3); }
+}
+#menu .panel { display: flex; flex-direction: column; }
+#m-opts { overflow-y: auto; min-height: 0; }
+
 /* ==== a finger's targets, 44 px or more (the UI review, 2026-10-24): a clear border round small art makes the target ==== */
-.touch :is(.x, #m-close, #s-close, .ui-x) { width: var(--tap); height: var(--tap); }
+.touch :is(.x, #m-close, #s-close) { width: var(--tap); height: var(--tap); }
 .touch .bm-x { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 1px var(--gold); }
 .touch #ph-back { min-width: var(--tap); min-height: var(--tap); }
-.touch .hub button { min-width: var(--tap-l); }
 .touch :is(.srow select, #creator .cc-tab, #creator .cc-chip, #creator .cc-btn, #creator .cc-name, #inv .inv-use, #inv .inv-pin, #d-help .help-btn, #d-hide, .bm-zb, .bm-catname, .bm-row, #d-map button, #jail button, #tut-btns button) { min-height: var(--tap); }
 .touch :is(#creator .cc-turn button, .bm-zb, #inv .inv-pin, #d-map header button) { min-width: var(--tap); }
 .touch #creator .cc-turn button { height: var(--tap); }

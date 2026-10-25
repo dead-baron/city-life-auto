@@ -126,7 +126,8 @@ function initTouch(hooks) {
       e.preventDefault(); e.stopPropagation();
       if (name === 'dev') { hooks.onDev?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
-      if (name === 'use') { hooks.onItems?.(); return; } // the quick wheel (stays open until you tap a slot)
+      // ITEMS: a tap the bag (the hub's BAG tab), held the quick wheel (it stays open until you tap a slot)
+      if (name === 'use') { b.classList.add('on'); clearTimeout(b.holdT); b.held = false; b.down = true; b.holdT = setTimeout(() => { if (!b.down) return; b.held = true; b.classList.remove('on'); buzz(15); hooks.onItems?.(); }, 380); return; }
       touch.btn.add(name); touch.tapped.add(name); b.classList.add('on');
       if (aims && b.dataset.drag !== '0') { const t = e.changedTouches ? e.changedTouches[0] : e; dr.id = t.identifier ?? 'm'; dr.x = t.clientX; dr.y = t.clientY; dr.a = null; dr.name = name; }
       buzz(6);
@@ -141,6 +142,7 @@ function initTouch(hooks) {
     };
     const up = (e) => {
       e.preventDefault(); touch.btn.delete(name); b.classList.remove('on');
+      if (name === 'use') { if (b.down && !b.held && e.type !== 'mouseleave' && e.type !== 'touchcancel') { buzz(6); hooks.onBag?.(); } b.down = false; clearTimeout(b.holdT); return; }
       if (aims && dr.name === name) { if (dr.a !== null) touch.aimAt = performance.now(); dr.id = null; dr.a = null; dr.name = ''; }
     };
     b.addEventListener('touchstart', down, { passive: false });

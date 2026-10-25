@@ -92,7 +92,7 @@ export function init(hooks) {
     </div>
     <div class="cc-foot"></div>
   </div>`;
-  const host = document.getElementById('pause')?.parentNode || document.body;
+  const host = document.getElementById('game') || document.body;
   host.appendChild(root);
   const css = document.createElement('style'); css.textContent = START_CSS; document.head.appendChild(css);   // (the starting look's, U18: only here)
   root.addEventListener('click', (e) => {

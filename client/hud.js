@@ -1,5 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
+import { logNote } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -329,6 +330,7 @@ export class HUD {
       return;
     }
     const msg = localizeText(text);
+    logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
     // up for as long as it takes to read (a short note goes sooner; one too long for its box - three lines on a phone -
     // a page at a time, client/notepages.js); the same note again while it's still up isn't stacked: it moves to the
     // front with its time restarted and a count (the user, 2026-10-08: fewer, smaller notes)
@@ -385,6 +387,8 @@ export class HUD {
       box.appendChild(b);
     });
     if (this.menuFocus >= m.opts.length) this.menuFocus = 0;
+    const cue = () => box.classList.toggle('cue-down', box.scrollTop + box.clientHeight < box.scrollHeight - 4);   // (more below: a fade at the foot)
+    box.onscroll = cue; requestAnimationFrame(cue);
   }
   choose(i) {
     const o = this.menu && this.menu.opts[i];

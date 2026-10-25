@@ -68,7 +68,7 @@ export function interaction(world, p) {
   if (j) return null;
   const h = hospitals(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!h) return null;
-  return { label: 'Sign on as a paramedic (an ambulance is issued)', run: () => { const err = start(world, p, h); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a paramedic (an ambulance is issued)', card: { id: 'medic', where: h.label, start: () => start(world, p, h) }, run: () => { const err = start(world, p, h); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------

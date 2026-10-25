@@ -28,8 +28,8 @@ test('the notes sit over the district title card, under the bars and the panels'
     const v = z(sel);
     assert.ok(v !== null && v > toasts, `${sel} (${v}) over the notes (${toasts})`);
   }
-  const pause = /#pause, #controls, #players, #devpw, #inv \{[^}]*z-index:\s*(\d+)/.exec(CSS);
-  assert.ok(pause && Number(pause[1]) > toasts, 'the pause menu over the notes');
+  const hub = z('#hub');   // (the hub: the map, the phone, the bag, the people, the settings - UI-3)
+  assert.ok(hub !== null && hub > toasts, 'the hub over the notes');
   // the notes never take a tap or a click from the game (or the touch buttons under them)
   assert.match(CSS, /#hud \{[^}]*pointer-events:\s*none/);
 });

@@ -72,7 +72,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const n = lineFor(world, p);
   if (!n || n.d > 130) return null;
-  return { label: `Sign on to drive the ${n.L.name} (a bus is issued)`, run: () => { const err = start(world, p, n.L, n.k); if (err) world.notify(p, err, 'bad'); } };
+  return { label: `Sign on to drive the ${n.L.name} (a bus is issued)`, card: { id: 'bus', where: `the ${n.L.stops[n.k].name} stop`, title: `Bus driver - the ${n.L.name}`, step: `Take the bus out at the ${n.L.stops[n.k].name} stop`, start: () => start(world, p, n.L, n.k) }, run: () => { const err = start(world, p, n.L, n.k); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the passengers ----------------------------------------------------------------------------------------------------

@@ -47,7 +47,7 @@
     <div id="w-carry"></div>
     <div id="fishbar" class="hidden"></div>
     <div id="net"></div>
-    <div id="hud-btns"><button id="b-menu" title="Menu (players online, debug, settings)">☰</button><button id="b-phone" title="Phone">📱</button><button id="b-bag" title="Bag (inventory)">🎒</button><button id="b-map" title="World map">▦</button><button id="b-settings" title="Settings">⚙</button><button id="b-fs" title="Fullscreen">⛶</button><button id="b-dev" title="Debug menu"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round"><path d="M9.5 5.2 8 3.4M14.5 5.2 16 3.4M5.4 9.6 3.2 8.6M18.6 9.6l2.2-1M5 13.6H2.6M19 13.6h2.4M5.6 17.6l-2.2 1.4M18.4 17.6l2.2 1.4"/></g><ellipse cx="12" cy="7.4" rx="3.2" ry="2.6" fill="#fff"/><ellipse cx="12" cy="14.2" rx="5.6" ry="6.6" fill="#fff"/><path d="M12 8.6v12" stroke="#e8559a" stroke-width="1.3"/></svg></button></div>
+    <div id="hud-btns"><button id="b-menu" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>MENU<span class="kchip kbm-only">ESC</span></button><button id="b-phone" type="button" aria-label="Phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>PHONE<span class="kchip kbm-only">P</span></button><button id="b-map" type="button" aria-label="Map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>MAP<span class="kchip kbm-only">M</span></button></div>
   </div>
   <span id="hp-text" class="hidden"></span>
 
@@ -77,7 +77,6 @@
 
   <div id="interior" class="hidden"><canvas id="int-cv"></canvas><button id="int-open">▲ Front desk</button></div>
   <div id="jail" class="hidden"><h2>IN A CELL</h2><p id="j-at"></p><p id="j-time"></p><button id="j-bail" class="sbtn"></button><small id="j-note"></small></div>
-  <div id="inv" class="hidden overlay"><div class="panel"><div class="mhead"><h2>BAG</h2><button class="x" data-close>✕</button></div><p class="msub inv-cash"></p><div class="inv-body"></div></div></div>
   <div id="wheel" class="hidden"></div>
   <div id="wpick" class="hidden"></div>
   <div id="wwheel" class="hidden"></div>
@@ -90,27 +89,7 @@
     <div id="d-panel"><div id="d-head"><b id="d-tag">WASTED</b><span id="d-cause"></span><span id="d-timer"></span><span id="d-fold"></span><button id="d-hide" type="button" title="Hide the choices to watch"></button></div><div id="d-acts"><div id="d-help"></div><div id="d-spawn"></div></div></div></div>
   <div id="district"></div>
 
-  <div id="bigmap" class="hidden">
-    <div id="bm-top" class="ui-top">
-      <img class="ui-logo" src="assets/logo.png" alt="City Life Auto">
-      <nav class="hub"></nav>
-      <div class="ui-stat"><div class="ui-clock"></div><div class="ui-bars"><div class="ui-bar hp"><i></i><b></b></div><div class="ui-bar st"><i></i><b></b></div></div></div>
-    </div>
-    <div id="bm-body">
-      <div id="bm-panel"><div id="bm-list"></div></div>
-      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="ui-money"></div><button id="bm-close" class="ui-x" title="Close the map">✕</button><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
-    </div>
-    <div id="bm-foot" class="ui-foot"><span id="bigmap-hint"></span><span class="ui-city">METRO CITY<small>EST. 1992</small></span></div>
-  </div>
-
   <div id="dev" class="hidden"></div>
-  <!-- the controls (the pause menu's Controls page shows them; the title screen no longer does) -->
-  <template id="help-tpl">
-      <div class="kbm-only"><b>Keyboard + mouse</b> WASD / arrows move · driving: W gas, S brake / reverse, A/D steer (Settings: Controls 2 points the way) · Mouse aim · Click shoot / punch · hold right mouse block (fists, bat, sword, katana, plasma blade) · Shift sprint · C or Ctrl walk · Space roll / handbrake · E interact · F get in/out · Q throw · R reload · X heal · L flashlight (once you have one) · H horn / siren · V call cruiser (police) · Tab / wheel / 1-9 weapons · M map · Esc pause menu</div>
-      <div class="pad-only"><b>Gamepad</b> On foot: left stick move (push further = faster, all the way out to sprint) · right stick aim · RT fire · LT block (fists, a bat, a blade) · A roll · B interact · X get in/out · Y throw · RB / LB tap: next / previous weapon (LB from fists: the plasma blade) · hold RB or LB: weapon wheel (point a stick, let go) · R3 reload · View heal · D-pad up flashlight<br>Driving: RT gas · LT brake / reverse · left stick steer · A handbrake · right stick aim, R3 (click it) fires a drive-by · D-pad up horn / siren · D-pad down call cruiser (police) · Menu pause menu (map, settings, controls, debug)</div>
-      <div class="touch-only"><b>Touch</b> Left thumb anywhere on the left side moves &amp; drives (push further = faster) · tap FIRE to fire at the nearest person ahead, or press and drag it to aim and fire that way (let go to stop) · AIM (a gun out) the same without firing · hold BLOCK to guard (fists, a bat, a blade) · ACT interact · CAR get in/out · tap the weapon plate for the next weapon, hold it to pick · LIGHT flashlight (once you have one) · the buttons change with what you're doing: BRAKE, EXIT, HORN at the wheel, CLIMB / DOWN flying, GALLOP on a horse, OLLIE / TRICK on a board</div>
-  </template>
-
   <div id="title">
     <img id="logo" src="assets/logo.png" alt="City Life Auto">
     <div id="t-status">Connecting to the city...</div>
@@ -125,36 +104,104 @@
     <div id="t-ver"></div>
     <div id="t-note">Online progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
   </div>
-  <div id="settings" class="hidden overlay"><div class="panel">
-    <div class="mhead"><h2>SETTINGS</h2><button id="s-close" class="x" data-close>✕</button></div>
-    <label class="srow"><span>Keyboard driving</span><select id="s-kbdrive"><option value="car">Car: W gas, S brake/reverse, A/D steer</option><option value="direction">Controls 2: WASD points the way (W up, S down)</option></select></label>
-    <label class="srow"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake, stick steers</option><option value="stick">Point the left stick where to go</option></select></label>
-    <label class="srow"><span>Gamepad: pushing the right stick all the way also fires (RT always does; R3 at the wheel)</span><input type="checkbox" id="s-padfire"></label>
-    <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
-    <label class="srow"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
-    <label class="srow"><span>Shop symbols over doors near you</span><input type="checkbox" id="s-shopmarks"></label>
-    <label class="srow"><span>Safety mode: before stealing a car or another crime, ask me to press again</span><input type="checkbox" id="s-safety"></label>
-    <div id="s-soundbox"></div>
-    <div id="s-gfxbox" class="gfxbox"></div>
-    <label class="srow"><span>Keep it smooth (ease the sharpness off when the frame rate drops)</span><input type="checkbox" id="s-smooth"></label>
-    <label class="srow"><span>Performance overlay (for bug reports)</span><input type="checkbox" id="s-diag"></label>
-    <label class="srow"><span>Fullscreen when playing on mobile</span><input type="checkbox" id="s-autofs"></label>
-    <button id="s-fs" class="sbtn">⛶ Toggle fullscreen</button>
-    <button id="s-install" class="sbtn">⬇ Install app / install help</button>
-    <button id="s-repair" class="sbtn">↻ Repair install (clear offline data)</button>
-    <button id="s-fresh" class="sbtn">⟲ Start fresh (erase my character)</button>
-    <p class="msub" id="s-fresh-msg"></p>
-    <div class="sacct">
-      <p class="msub">Your name - what other players see over your head and in their crews:</p>
-      <div class="m-opts devpw-row"><input id="s-name-in" type="text" maxlength="16" placeholder="Your name" autocomplete="off" spellcheck="false"><button class="opt" id="s-name-use">Save</button></div>
-      <p class="msub" id="s-name-msg"></p>
-      <p class="msub">Your character lives in this browser - no sign-up. To play it on another phone or computer, copy your transfer code here and paste it there.</p>
-      <button id="s-code-copy" class="sbtn">⧉ Copy my transfer code</button>
-      <div class="m-opts devpw-row"><input id="s-code-in" type="text" placeholder="Paste a transfer code" autocomplete="off" spellcheck="false"><button class="opt" id="s-code-use">Use it</button></div>
-      <button id="s-code-back" class="sbtn hidden">↶ Back to the character I had before</button>
-      <p class="msub" id="s-code-msg"></p>
+  <!-- the hub (UI-3): RESUME, then MAP, PHONE, BAG, PEOPLE, SETTINGS - one tab at a time (client/main.js openHub) -->
+  <div id="hub" class="hidden">
+    <div class="hub-frame" role="dialog" aria-label="Menu">
+      <div id="hub-bar">
+        <button id="hub-resume" class="btn btn-1 hub-resume" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>RESUME<span class="kchip kbm-only">ESC</span></button>
+        <h1 id="hub-title">MAP</h1>
+        <span class="g-pad g-bumper pad-only">LB</span>
+        <div id="hub-tabs" class="tabs" role="tablist" aria-label="Menu">
+          <button class="tab" role="tab" data-tab="map">MAP<span class="kchip kbm-only">M</span></button>
+          <button class="tab" role="tab" data-tab="phone">PHONE<span class="kchip kbm-only">P</span></button>
+          <button class="tab" role="tab" data-tab="bag">BAG<span class="kchip kbm-only">I</span></button>
+          <button class="tab" role="tab" data-tab="people">PEOPLE</button>
+          <button class="tab" role="tab" data-tab="settings">SETTINGS</button>
+        </div>
+        <span class="g-pad g-bumper pad-only">RB</span>
+        <button id="hub-close" class="x" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+      </div>
+      <div id="hub-body">
+  <div id="bigmap" class="hidden hubtab">
+    <div id="bm-body">
+      <div id="bm-panel"><div id="bm-list"></div><div id="bigmap-hint"></div></div>
+      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="bm-zoom"><button type="button" data-z="+" aria-label="Zoom in">+</button><button type="button" data-z="-" aria-label="Zoom out">−</button><button type="button" data-z="me" aria-label="Find me">⌖</button></div><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
+    </div>
+  </div>
+  <div id="phone" class="hidden overlay hubtab at-home"><div class="ph-body">
+    <div class="ph-top"><button id="ph-back" class="btn hidden" type="button">◀ Back</button><span id="ph-clock">Phone</span></div>
+    <div id="ph-screen"></div>
+  </div></div>
+  <div id="inv" class="hidden overlay hubtab"></div>
+  <div id="players" class="hidden overlay hubtab"><div class="people">
+    <section><h2>PLAYERS ONLINE<small id="pl-sub"></small></h2><div class="m-opts" id="pl-list"></div></section>
+    <section><h2>CREW</h2><div id="pp-crew"></div></section>
+  </div></div>
+  <div id="settings" class="hidden overlay hubtab"><div class="panel set-wrap">
+    <nav id="set-nav" role="tablist" aria-label="Settings sections">
+      <button role="tab" data-sec="controls">Controls</button><button role="tab" data-sec="sound">Sound</button><button role="tab" data-sec="graphics">Graphics</button><button role="tab" data-sec="account">Account</button><button role="tab" data-sec="help">Help</button>
+      <button role="tab" data-sec="danger" class="danger">Danger zone</button>
+    </nav>
+    <div id="set-body">
+      <section data-sec="controls">
+        <div class="set-head"><h2>CONTROLS</h2><div id="set-dev" class="seg" role="tablist" aria-label="Device"><button role="tab" data-dev="kbm">Keyboard and mouse</button><button role="tab" data-dev="pad">Gamepad</button><button role="tab" data-dev="touch">Touch</button></div></div>
+        <div id="set-binds"></div>
+        <h3>OPTIONS</h3>
+        <label class="srow" data-for="kbm"><span>Keyboard driving</span><select id="s-kbdrive"><option value="car">Controls 1: W gas, S brake, A/D steer</option><option value="direction">Controls 2: WASD points the way</option></select></label>
+        <label class="srow" data-for="pad"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake</option><option value="stick">Point the left stick</option></select></label>
+        <label class="srow" data-for="pad"><span>The right stick pushed all the way fires too</span><input type="checkbox" id="s-padfire"></label>
+        <label class="srow" data-for="pad touch"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
+        <label class="srow"><span>Safety mode: ask again before a crime</span><input type="checkbox" id="s-safety"></label>
+        <label class="srow"><span>Shop symbols over doors near you</span><input type="checkbox" id="s-shopmarks"></label>
+        <p id="set-note"></p>
+      </section>
+      <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>
+      <section data-sec="graphics" hidden><h2>GRAPHICS</h2>
+        <div id="s-gfxbox" class="gfxbox"></div>
+        <label class="srow"><span>Keep it smooth (ease off the sharpness when the frame rate drops)</span><input type="checkbox" id="s-smooth"></label>
+        <label class="srow"><span>Fullscreen when playing on a phone</span><input type="checkbox" id="s-autofs"></label>
+        <label class="srow"><span>Performance overlay (for bug reports)</span><input type="checkbox" id="s-diag"></label>
+        <button id="s-fs" class="sbtn">⛶ Fullscreen on or off</button>
+      </section>
+      <section data-sec="account" hidden><h2>ACCOUNT</h2>
+        <div class="sacct">
+          <p class="msub">Your name - what other players see over your head and in their crews:</p>
+          <div class="m-opts devpw-row"><input id="s-name-in" type="text" maxlength="16" placeholder="Your name" autocomplete="off" spellcheck="false"><button class="btn" id="s-name-use">Save</button></div>
+          <p class="msub" id="s-name-msg"></p>
+          <button class="sbtn play-only" data-h="look">Change how you look</button>
+          <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
+          <p class="msub">Your character lives in this browser - no sign-up. To play it on another phone or computer, copy your transfer code here and paste it there.</p>
+          <button id="s-code-copy" class="sbtn">⧉ Copy my transfer code</button>
+          <div class="m-opts devpw-row"><input id="s-code-in" type="text" placeholder="Paste a transfer code" autocomplete="off" spellcheck="false"><button class="btn" id="s-code-use">Use it</button></div>
+          <button id="s-code-back" class="sbtn hidden">↶ Back to the character I had before</button>
+          <p class="msub" id="s-code-msg"></p>
+        </div>
+      </section>
+      <section data-sec="help" hidden><h2>HELP</h2>
+        <div class="m-opts">
+          <button class="opt play-only" data-h="unstuck"><span class="t">Stuck? Get unstuck</span></button>
+          <button class="opt play-only" data-h="surrender"><span class="t">Surrender</span><span class="note">respawn, or turn yourself in</span></button>
+          <button class="opt play-only" data-h="cine"><span class="t">Cinematic mode</span><span class="note">clean screen, cameras, time of day</span></button>
+          <button class="opt" data-h="fullscreen"><span class="t">Fullscreen</span></button>
+          <button class="opt play-only" data-h="title"><span class="t">Exit to the title screen</span></button>
+        </div>
+        <button id="s-install" class="sbtn">⬇ Install the app / install help</button>
+        <button id="s-repair" class="sbtn">↻ Repair install (clear offline data)</button>
+        <div class="m-opts">
+          <button class="opt quiet" data-h="devmode" id="h-devmode"><span class="t">Leave Dev Debug Mode (keep my progress)</span></button>
+          <button class="opt quiet play-only" data-h="dev"><span class="t">Debug menu</span></button>
+        </div>
+      </section>
+      <section data-sec="danger" hidden><h2>DANGER ZONE</h2>
+        <p>This erases your character for good: money, homes, cars, clothes, weapons, your record. It can't be undone.</p>
+        <button id="s-fresh" class="sbtn">⟲ Start fresh (erase my character)</button>
+        <p class="msub" id="s-fresh-msg"></p>
+      </section>
     </div>
   </div></div>
+      </div>
+    </div>
+  </div>
   <div id="install" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>INSTALL APP</h2><button class="x" data-close>✕</button></div>
     <p class="msub" id="i-sub">Install City Life Auto as its own app.</p>
@@ -187,47 +234,10 @@
     </div>
     <div id="tut-chapters"></div>
   </div>
-  <div id="phone" class="hidden overlay"><div class="ph-body">
-    <div class="ph-top"><button id="ph-back" class="hidden">◀</button><span id="ph-clock">CityPhone</span><button class="x" data-close>✕</button></div>
-    <div id="ph-screen"></div>
-  </div></div>
-  <div id="pause" class="hidden overlay">
-    <nav class="hub hub-float"></nav>
-    <div class="panel pz">
-    <div class="pz-head"><img src="assets/logo.png" alt="City Life Auto"><div class="pz-paused">PAUSED</div><button class="x" data-close>✕</button></div>
-    <p class="msub" id="p-sub">Game menu</p>
-    <div class="m-opts">
-      <button class="opt" data-p="resume" data-icon="play">Resume</button>
-      <button class="opt" data-p="map" data-icon="map">Map</button>
-      <button class="opt" data-p="phone" data-icon="phone">Phone<span class="note">places, jobs, waypoints</span></button>
-      <button class="opt" data-p="players" id="p-players" data-icon="people">Players online</button>
-      <button class="opt cop-only" data-p="cruiser" data-icon="car">Call police cruiser</button>
-      <button class="opt" data-p="look" data-icon="people">Appearance<span class="note">your look, saved looks</span></button>
-      <button class="opt" data-p="settings" data-icon="sys">Options</button>
-      <button class="opt" data-p="controls" data-icon="pad">Controls</button>
-      <button class="opt" data-p="cine" data-icon="sys">Cinematic mode<span class="note">clean screen, cameras, time of day - for videos and pictures</span></button>
-      <button class="opt" data-p="unstuck" data-icon="ring">Stuck? Get unstuck</button>
-      <button class="opt" data-p="surrender" id="p-surrender" data-icon="flag">Surrender<span class="note">respawn</span></button>
-      <button class="opt" data-p="fullscreen" data-icon="full">Fullscreen</button>
-      <button class="opt online-only hidden" data-p="devmode" id="p-devmode" data-icon="exit">Leave Dev Debug Mode (keep my progress)</button>
-      <button class="opt" data-p="title" data-icon="exit">Exit to title</button>
-      <button class="opt" data-p="dev" data-icon="bug">Debug menu</button>
-    </div>
-    <div class="ui-foot pz-foot"></div>
-  </div></div>
-  <div id="players" class="hidden overlay"><div class="panel">
-    <div class="mhead"><h2>PLAYERS ONLINE</h2><button class="x" data-close>✕</button></div>
-    <p class="msub" id="pl-sub">Everyone in the city right now.</p>
-    <div class="m-opts" id="pl-list"></div>
-  </div></div>
   <div id="devpw" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>DEV DEBUG MODE</h2><button class="x" data-close>✕</button></div>
     <p class="msub">For testing on the live server. Your progress carries on as normal: whatever you do or get in dev mode stays when you leave it (or quit) - only the debug powers go.</p>
     <div class="m-opts devpw-row"><input id="devpw-in" type="password" placeholder="Password" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="opt" id="devpw-go">Unlock</button></div>
-  </div></div>
-  <div id="controls" class="hidden overlay"><div class="panel">
-    <div class="mhead"><h2>CONTROLS</h2><button class="x" data-close>✕</button></div>
-    <div id="c-body" class="cbody"></div>
   </div></div>
 </div>
 <script type="module" src="client/boot.js"></script>

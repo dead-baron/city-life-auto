@@ -46,6 +46,23 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   }
   assert.ok(all.some((r) => r.sc.st === 'air' && r.keep.some((k) => k.name === 'tb.climb')), 'the rocker measured');
   assert.deepEqual(ctl, [], ctl.slice(0, 30).join('\n'));
+  // the HUD row (UI-3): MENU · PHONE · MAP, labelled, nothing else; 44 px on touch; the keys on a keyboard (Esc / P / M),
+  // none on a pad or a phone; side by side, not on each other; upright, in the top band and clear of the middle
+  const row = [];
+  for (const r of all) {
+    const { w, h, dev, st } = r.sc, tag = `${w}x${h} ${dev} ${st}`, bs = r.keep.filter((k) => k.name.startsWith('b-'));
+    if (bs.map((b) => b.name).join() !== 'b-menu,b-phone,b-map') { row.push(`${tag}: the row is ${bs.map((b) => b.name)}`); continue; }
+    if (bs.map((b) => b.label).join() !== 'MENU,PHONE,MAP') row.push(`${tag}: labels ${bs.map((b) => b.label)}`);
+    const keys = bs.map((b) => b.key).join();
+    if (dev === 'kbm' ? keys !== 'ESC,P,M' : keys !== ',,') row.push(`${tag}: key badges ${keys}`);
+    for (const [i, a] of bs.entries()) {
+      if (dev === 'touch' && (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44)) row.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);
+      if (a.y1 - a.y0 < 40) row.push(`${tag}: ${a.name} ${a.y1 - a.y0} px tall`);
+      for (const b of bs.slice(i + 1)) if (on(a, b)) row.push(`${tag}: ${a.name} on ${b.name}`);
+      if (h > w && (a.y1 > h * 0.3 || on(a, { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 }))) row.push(`${tag}: ${a.name} out of the top band`);
+    }
+  }
+  assert.deepEqual(row, [], row.slice(0, 20).join('\n'));
   const you = all.filter((r) => !/^740x360|^844x390 (kbm|pad)|^1024x768 (kbm|pad)/.test(`${r.sc.w}x${r.sc.h} ${r.sc.dev}`)).flatMap((r) => problems(r, { you: true }));
   assert.deepEqual(you, [], you.join('\n'));
 });

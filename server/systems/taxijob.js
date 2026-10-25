@@ -57,7 +57,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const r = ranksOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!r) return null;
-  return { label: 'Sign on as a taxi driver (a cab is issued)', run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a taxi driver (a cab is issued)', card: { id: 'cab', where: r.name, start: () => start(world, p, r) }, run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the fares ---------------------------------------------------------------------------------------------------------

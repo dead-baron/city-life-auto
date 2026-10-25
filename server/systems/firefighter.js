@@ -237,7 +237,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const st = sitesOf(world.map).stations.find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 170);
   if (!st) return null;
-  return { label: 'Sign on as a firefighter (a fire engine is issued)', run: () => { const err = start(world, p, st); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a firefighter (a fire engine is issued)', card: { id: 'fire', where: st.name, start: () => start(world, p, st) }, run: () => { const err = start(world, p, st); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------
