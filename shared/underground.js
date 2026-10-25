@@ -327,7 +327,7 @@ function build(map) {
     cave.region = cr;
   }
   const L = { routes, regions, sewer, caves, cave: caves[0] || null, seed };
-  for (const cave of caves) (cave.kind === 'cavern' ? CAV.dressCavern : dressCave)(L, cave);
+  for (const cave of caves) { (cave.kind === 'cavern' ? CAV.dressCavern : dressCave)(L, cave); if (CAV) CAV.lightCave(L, cave); }   // (lightCave: the shafts, hung lanterns, timbers, finds - shared/caverns.js)
   if (sewer) dressSewers(L);
   L.veins = veins(map, L);
   L.phys = physMap(L, F);
@@ -494,16 +494,18 @@ export function ugAt(L, x, y) {
 // ---- light down there ------------------------------------------------------------------------------------------------------
 // How lit a spot is (0 pitch dark .. 1): only lights and glowing things. lights: [{ x, y, r, k }] (the carried lights:
 // flashlights, lamps - the client gathers them the way it does above ground); day: 0..1 daylight up on the street (it
-// comes down the sewer grates; the cave gets none). The client draws the darkness from the same sources.
+// comes down the sewer grates and the caves' shafts). The client draws the darkness from the same sources.
 export const UG_AMBIENT = { [UG.SEWER]: 0.06, [UG.CAVE]: 0 };
 // a cavern's lanterns (on its docks, by its mouths, in its treasure chamber): how far their light carries, how bright
 export const LANTERN = { r: 150, k: 0.75 };
+// daylight down a shaft in the roof (K.shafts: its own r), as bright as day up top - a little moonlight at night
+export const SHAFT = { k: 0.9, moon: 0.12 };
 export function lightAt(L, x, y, lights = [], day = 0) {
   const ug = ugAt(L, x, y);
   let v = UG_AMBIENT[ug] || 0;
   const add = (sx, sy, r, k) => { const d = len(x - sx, y - sy); if (d < r) v += k * (1 - d / r); };
   for (const l of lights) add(l.x, l.y, l.r, l.k ?? 1);
-  if (ug === UG.CAVE) for (const K of L.caves) { for (const g of K.glow) add(g.x, g.y, g.r, g.k * 0.6); for (const l of K.lanterns || []) add(l.x, l.y, LANTERN.r, LANTERN.k); }
+  if (ug === UG.CAVE) for (const K of L.caves) { for (const g of K.glow) add(g.x, g.y, g.r, g.k * 0.6); for (const l of K.lanterns || []) add(l.x, l.y, LANTERN.r, LANTERN.k); for (const s of K.shafts || []) add(s.x, s.y, s.r, SHAFT.k * (SHAFT.moon + (1 - SHAFT.moon) * day)); }
   if (ug === UG.SEWER) for (const g of L.grates || []) add(g.x, g.y, 90, 0.5 * day + 0.12);
   return Math.min(1, v);
 }

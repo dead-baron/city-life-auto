@@ -82,6 +82,13 @@ test('a cavern underground: its chambers joined from both ways in, the river cut
   const l0 = K.lanterns[0];
   assert.ok(lightAt(L, l0.x, l0.y) > 0.5, 'by a lantern: light');
   assert.ok(K.glow.some((g) => g.kind === 'crystal') && K.glow.some((g) => g.kind === 'worms') && K.glow.some((g) => g.kind === 'mush'), 'crystals, glow-worms, mushrooms');
+  // (notes 2) daylight down shafts in the gallery and over the lake, lanterns hung along the ways in - and dark reaches
+  assert.ok(K.shafts.length >= 2 && K.lanterns.some((l) => l.hung), `shafts of daylight (${K.shafts.length}), hung lanterns (${K.lanterns.filter((l) => l.hung).length})`);
+  let fl = 0, lit = 0, dark = 0;
+  const R = K.region;
+  for (let ty = R.y0; ty < R.y0 + R.h; ty += 2) for (let tx = R.x0; tx < R.x0 + R.w; tx += 2) { const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE; if (cellAtPx(L, x, y) !== C.FLOOR) continue; fl++; const v = lightAt(L, x, y, [], 1); if (v >= 0.25) lit++; if (v === 0) dark++; }
+  assert.ok(lit / fl > 0.15 && dark / fl > 0.15, `lit stretches and dark ones (${(lit / fl * 100).toFixed(0)}% lit, ${(dark / fl * 100).toFixed(0)}% pitch dark)`);
+  assert.ok(K.finds.length >= 4 && K.finds.every((f) => lightAt(L, f.x, f.y, [], 1) >= 0.2), 'the finds\' spots in the light');
   assert.ok(K.moss.length && K.cobbles.length && K.den && K.roosts.length, 'the den\'s moss, the sea cave\'s cobbles, the bear\'s den, the bats');
   // the ore face's veins: its own ores
   const face = L.veins.filter((v) => v.where.startsWith('the Ore Face'));

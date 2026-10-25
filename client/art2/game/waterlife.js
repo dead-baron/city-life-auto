@@ -5,7 +5,8 @@
 //   the marsh with the gar, a big shadow now and then out over a lake's deep water (a pike) or a river's (a catfish),
 //   chub and bass in the rivers, the reef's bright fish round the southern keys (tangs, clownfish, parrotfish), silver
 //   shoals and mullet in the sea's shallows, moon jellies drifting off the beaches and in the harbours. Nature-A1
-//   (2026-10-20): sockeye salmon holding in the white water at a falls' foot, leaping at the falls (and falling back);
+//   (2026-10-20): sockeye salmon holding in the white water at a falls' foot, leaping at the falls - most fall back, and
+//   (notes 2) some make it: up the face in an arc and into the water above, then on upstream (CLIMB);
 //   bluegill and bass shoaling under a lake's dock; now and then a golden koi gone wild among a pond's carp; in the
 //   tidepools a sculpin or two and a shore crab scuttling sideways over the bed; (rivers part 2) trout and a bass holding
 //   in each river's calm pockets. Each is a flat
@@ -33,6 +34,10 @@ const TAU = Math.PI * 2;
 const CELL = 6 * TILE;              // the patches of water fish are placed by (px)
 const MAXF = [30, 64, 72, 80];      // fish at once, by the renderer's quality tier
 const MAXR = 96, MAXP = 260, MAXW = 240;   // rings on the water, puffs of mist and foam, swimmers' wake points
+// a salmon's leap at a falls that makes it (the owner, notes 2: "I'd like to see them eventually make it up the waterfall
+// and make it to the next pool"): ok the share of leaps that do, s how long the arc takes (and per px of drop), up how
+// far (px past the falls' drop) it looks for the water above, swim how long it swims on upstream before it's gone
+export const CLIMB = { ok: 0.4, s: 0.9, perPx: 0.006, up: [24, 150], swim: [6, 11] };
 const ART = 2;                      // world px per art pixel of these sprites
 // the height the fish and the rings are drawn at: a decal is tested at 3.5 px over its z0 (engine.js DECAL_H), the water
 // at 0 and a lily pad at 1 (groundbake.js LILY_Z less the ground's sink) - so the pads cover what swims under them
@@ -291,7 +296,7 @@ function shoreOf(m, x, y, r) {
 const SITE_MIST = { rainforest: 0.6, tarn: 0.45, river: 0.85, towncreek: 0.3, creek: 0.4, gorge: 0.6 };
 function fallsOf(m) {
   const out = [];
-  const add = (x, y, w, h, k) => out.push({ x, y, w, h, k, out: 6 + h * 0.15, acc: 0, facc: 0 });   // (out: how far the plunge's own white water reaches in front of its foot)
+  const add = (x, y, w, h, k) => out.push({ x, y, w, h, k, out: 6 + h * 0.15, acc: 0, facc: 0, racc: 0, cacc: 0 });   // (out: how far the plunge's own white water reaches in front of its foot)
   for (const s of m.natureSites || []) {
     const f = s.falls;
     if (f && Number.isFinite(f.x) && Number.isFinite(f.y)) add(f.x, f.y + 8, f.w || 64, f.drop || 40, SITE_MIST[s.kind] ?? 0.5);
@@ -488,7 +493,7 @@ export class WaterLife {
         const p = this._puff();
         if (!p) break;
         const out = 30 + 110 * a.k * (0.6 + this.rnd() * 0.6), c = Math.cos(t), sn = Math.sin(t);
-        p.on = true; p.foam = this.rnd() < 0.5; p.t0 = now; p.life = 0.7 + this.rnd() * (0.5 + 0.6 * a.k);
+        p.on = true; p.foam = this.rnd() < 0.5; p.churn = false; p.t0 = now; p.life = 0.7 + this.rnd() * (0.5 + 0.6 * a.k);
         p.x = x; p.y = y; p.z = p.foam ? 0 : 2 + this.rnd() * 8 * a.k; p.vx = c * out; p.vy = sn * out * 0.85; p.vz = p.foam ? 0 : 4 + this.rnd() * 10 * a.k;
         p.k = 0.6 + 0.4 * a.k; p.s = p.foam ? 1 + Math.floor(this.rnd() * 2) : Math.floor(this.rnd() * 2 * a.k); p.lift = 0;
       }
@@ -564,7 +569,7 @@ export class WaterLife {
     f.s = s; f.S = S; f.x = x; f.y = y; f.c = c; f.g = g; f.a = this.rnd() * TAU; f.tA = f.a; f.v = 0; f.tv = S.cruise * 0.6;
     f.ph = this.rnd() * 4; f.st = CRUISE; f.until = 0; f.next = this.now + this.rnd() * 2; f.hide = 0; f.vis = 0; f.vk = 0;
     f.rise = this.now + (S.rise ? S.rise * (0.3 + this.rnd()) : 1e9); f.air = -1; f.ax = x; f.ay = y; f.flash = 0;
-    f.hx = x; f.hy = y; f.ox = 0; f.oy = 0; f.taker = null; f.gone = false;
+    f.hx = x; f.hy = y; f.ox = 0; f.oy = 0; f.taker = null; f.gone = false; f.mig = 0; f.climb = null; f.az = 0;
     this.fish.push(f);
     return f;
   }
@@ -606,6 +611,15 @@ export class WaterLife {
   }
   _fishStep(m, f, now, dt, movers) {
     const S = f.S, g = f.g;
+    if (f.mig) {   // (over the falls: on upstream a while, then gone - and back in its pool below, the next one up)
+      if (now > f.mig || g.out) { f.vis -= dt; if (f.vis <= 0) { f.mig = 0; f.vis = 0; f.x = f.hx; f.y = f.hy; f.c = g.c.c; } return; }
+      f.vis = Math.min(1, f.vis + dt);
+      f.tA = -Math.PI / 2 + Math.sin(now * 0.7 + f.ox) * 0.3; f.a += Math.max(-dt * 3, Math.min(dt * 3, angd(f.tA, f.a)));
+      const sp = S.cruise * 2.2, nx = f.x + Math.cos(f.a) * sp * dt, ny = f.y + Math.sin(f.a) * sp * dt;
+      if (clearAt(m, nx, ny, f.c, 6)) { f.x = nx; f.y = ny; } else f.a += (this.rnd() < 0.5 ? 1 : -1) * 0.9;
+      f.ph += dt * 4;
+      return;
+    }
     f.vis = Math.max(0, Math.min(1, f.vis + (g.out ? -dt : dt)));
     if (f.air >= 0) { this._airStep(m, f, now, dt); return; }
     // startled: anyone in the water close by, anyone running along the bank (walking, right at its edge), a boat or
@@ -697,7 +711,15 @@ export class WaterLife {
   _leap(m, f, now) {
     const S = f.S, T0 = 0.42 + S.L * 0.02, sp = 55 + S.L * 4, c = Math.cos(f.a), s = Math.sin(f.a);
     f.airBack = null;
-    if (S.climb && f.g && f.g.c.k === 'falls') {   // (a salmon at the falls: up at the white water - and back down into the pool)
+    f.climb = null;
+    if (S.climb && f.g && f.g.c.k === 'falls') {   // (a salmon at the falls: up at the white water - and back down into the pool, or over)
+      const up = this.rnd() < CLIMB.ok && this._above(m, f);
+      if (up) {
+        f.air = now; f.airT = CLIMB.s + up.h * CLIMB.perPx; f.airV = 0; f.climb = up; f.az = 0;
+        this._ring(f.x, f.y, 6, 1);
+        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        return true;
+      }
       f.air = now; f.airT = 0.7 + this.rnd() * 0.25; f.airV = 0; f.airBack = { x: f.x, y: f.y, r: 18 + this.rnd() * 16 };
       this._ring(f.x, f.y, 5, 0.9);
       if (this.onSplash) this.onSplash(f.x, f.y, 4);
@@ -709,8 +731,32 @@ export class WaterLife {
     if (this.onSplash) this.onSplash(f.x, f.y, 3);
     return true;
   }
+  // the water above the falls a salmon at its foot leaps for: { x0, y0 (where it leaves), x1, y1, c1 (its class), h } or null
+  _above(m, f) {
+    const F = this.falls || (this.falls = fallsOf(m));
+    let q = null;
+    for (const o of F) if (Math.abs(f.x - o.x) < o.w / 2 + 48 && f.y > o.y - 12 && f.y < o.y + 150 && (!q || Math.abs(f.x - o.x) < Math.abs(f.x - q.x))) q = o;
+    if (!q) return null;
+    const x1 = Math.max(q.x - q.w / 2 + 8, Math.min(q.x + q.w / 2 - 8, f.x));
+    for (let d = q.h + CLIMB.up[0]; d <= q.h + CLIMB.up[1]; d += 8) { const y = q.y - d, c = wcls(m, x1, y); if (c && clearAt(m, x1, y, c, 8)) return { x0: f.x, y0: f.y, x1, y1: y, c1: c, h: f.y - y }; }
+    return null;
+  }
   _airStep(m, f, now, dt) {
-    const k = (now - f.air) / f.airT, B = f.airBack;
+    const k = (now - f.air) / f.airT, B = f.airBack, U = f.climb;
+    if (U) {
+      // up the face: kept at the foot in front of the falls, raised by its height on the way (so it's drawn over the
+      // curtain), the arc easing in at the top - then into the water above, and on upstream
+      const e = 1 - (1 - Math.min(1, k)) * (1 - Math.min(1, k)), sy = U.y0 + (U.y1 - U.y0) * e - Math.sin(Math.min(1, k) * Math.PI) * 14;
+      f.x = U.x0 + (U.x1 - U.x0) * e; f.y = U.y0; f.az = Math.max(0, U.y0 - sy); f.a = -Math.PI / 2 + Math.sin(k * 9) * 0.25;
+      if (k >= 1) {
+        f.air = -1; f.climb = null; f.x = U.x1; f.y = U.y1; f.c = U.c1; f.az = 0;
+        f.mig = now + CLIMB.swim[0] + this.rnd() * (CLIMB.swim[1] - CLIMB.swim[0]); f.v = f.S.cruise * 2;
+        this._ring(f.x, f.y, 7, 1);
+        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        this.n.up = (this.n.up || 0) + 1; (this.ups ||= []).push({ x: f.x, y: f.y, c: f.c, h: U.h }); if (this.ups.length > 20) this.ups.shift();
+      }
+      return;
+    }
     if (B) { const o = Math.sin(Math.min(1, k) * Math.PI) * B.r; f.x = B.x + Math.cos(f.a) * o; f.y = B.y + Math.sin(f.a) * o; }
     else { f.x += Math.cos(f.a) * f.airV * dt; f.y += Math.sin(f.a) * f.airV * dt; }
     if (k >= 1) {
@@ -811,7 +857,20 @@ export class WaterLife {
         const p = this._puff();
         if (!p) break;
         p.on = true; p.foam = true; p.t0 = now; p.life = 2 + this.rnd() * 1.6;
-        p.x = x; p.y = y; p.z = 0; p.vx = (this.rnd() - 0.5) * 16; p.vy = 12 + this.rnd() * 14; p.vz = 0; p.k = 1; p.s = Math.floor(this.rnd() * 3); p.lift = 50;
+        p.x = x; p.y = y; p.z = 0; p.vx = (this.rnd() - 0.5) * 16; p.vy = 12 + this.rnd() * 14; p.vz = 0; p.k = 1; p.s = Math.floor(this.rnd() * 3); p.lift = 50; p.churn = false;
+      }
+      // (notes 2) rings breaking all over the plunge pool, and its churned water spreading off downstream in the current
+      q.racc += dt * (0.8 + q.w / 40);
+      while (q.racc >= 1) { q.racc -= 1; const x = q.x + (this.rnd() - 0.5) * q.w * 1.3, y = q.y + q.out + 4 + this.rnd() * (14 + q.h * 0.35); if (wcls(m, x, y)) this._ring(x, y, 3 + this.rnd() * 4.5, 0.75); }
+      q.cacc += dt * (0.4 + q.w / 50) * Math.min(1, 0.4 + q.k);
+      while (q.cacc >= 1) {
+        q.cacc -= 1;
+        const x = q.x + (this.rnd() - 0.5) * q.w * 0.9, y = q.y + q.out + 16 + this.rnd() * 34;
+        if (!wcls(m, x, y + 6)) continue;
+        const p = this._puff();
+        if (!p) break;
+        p.on = true; p.foam = true; p.churn = true; p.t0 = now; p.life = 4 + this.rnd() * 3.5;
+        p.x = x; p.y = y; p.z = 0; p.vx = (this.rnd() - 0.5) * 12; p.vy = 6 + this.rnd() * 8; p.vz = 0; p.k = 0.7; p.s = Math.floor(this.rnd() * 2); p.lift = 50;
       }
     }
     let n = 0;
@@ -821,7 +880,7 @@ export class WaterLife {
       if (age > p.life) { p.on = false; continue; }
       n++;
       p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
-      if (p.foam) { p.vx *= 1 - dt * 0.5; p.vy *= 1 - dt * 0.45; if (!wcls(m, p.x, p.y + 4)) { p.vy = 0; p.vx *= 0.5; } }
+      if (p.foam) { p.vx *= 1 - dt * 0.5; p.vy *= 1 - dt * 0.45; if (p.churn) { const fl = flowAt(m, p.x, p.y + 4); if (fl) { p.x += fl[0] * 0.8 * dt; p.y += fl[1] * 0.8 * dt; } } if (!wcls(m, p.x, p.y + 4)) { p.vy = 0; p.vx *= 0.5; } }
       else { p.vz *= 1 - dt * 0.35; p.vx += e.wx * e.ws * 6 * dt; }
     }
     this.n.puffs = n;
@@ -847,7 +906,7 @@ export class WaterLife {
       if (f.vis <= 0) continue;
       if (f.air >= 0) {
         // in the air: the fish itself, up over the water, its shadow down on it
-        const k = Math.min(1, (now - f.air) / f.airT), z = Math.sin(k * Math.PI) * (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;   // (a salmon at the falls: higher, up the white water)
+        const k = Math.min(1, (now - f.air) / f.airT), z = f.climb ? f.az : Math.sin(k * Math.PI) * (8 + S.L * 1.2) * (f.airBack ? 1.7 : 1), d8 = ((Math.round(f.a / (Math.PI / 4)) % 8) + 8) % 8;   // (a salmon at the falls: higher, up the white water)
         const key = conv(`wlj|${f.s}|${f.vk}|${d8}`, () => leapSprite(S, S.flash ? 1 : f.vk, d8));
         if (key && E.drawSprite) { const o = this.jo || (this.jo = { alpha: 1, flipX: false, flash: 0, xray: false, shadow: true, tint: null, air: true }); E.drawSprite(key, f.x, f.y, z, o); }
         continue;

@@ -514,7 +514,7 @@ function run(world, p, c, msg) {
       if (!ped || ped.dead || ped.vehId) break;
       const L = undergroundOf(world.map);
       if (ped.ug) break;
-      if (msg.k === 'cave') { const K2 = L.caves[msg.cave] || caveNear(L, ped.x, ped.y); if (K2) { ped.x = K2.mouth.x; ped.y = K2.mouth.y; underground.enterCave(world, p, K2); const c = K2.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den; cave: which, else the nearest)
+      if (msg.k === 'cave') { const K2 = L.caves[msg.cave] || caveNear(L, ped.x, ped.y); if (K2) { ped.x = K2.mouth.x; ped.y = K2.mouth.y; underground.enterCave(world, p, K2); const c = K2.ch[msg.at], sh = msg.shaft !== undefined && K2.shafts && K2.shafts[msg.shaft]; if (c) { ped.x = c.x; ped.y = c.y; } if (sh) { ped.x = sh.x; ped.y = sh.y + 40; } if (msg.find && (p.caveFind = underground.rollFind(world, p, K2, true))) { if (msg.find === 'here') { p.caveFind.x = Math.round(ped.x + 30); p.caveFind.y = Math.round(ped.y); } underground.sendLayer(world, p); } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den; shaft: stand under its shaft n; find: a light left lying in its light ('here': beside you); cave: which, else the nearest)
       let best = null, bd = Infinity;
       for (const r of L.routes) for (const m of r.manholes) { const d = Math.hypot(m.x - ped.x, m.y - ped.y); if (d < bd) { bd = d; best = m; } }
       if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }

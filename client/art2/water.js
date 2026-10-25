@@ -53,7 +53,7 @@ const PEB = R('#9a9286', 6, 3, { dark: 0.5, light: 0.45, shift: 0.15 }), PEBW = 
 const BAR = R('#c8b896', 6, 3, { dark: 0.42, light: 0.4, shift: 0.15 }), MUD = R('#6a4e36', 6, 3, { dark: 0.55, light: 0.4 });
 const SOIL = R('#7a5838', 6, 3, { dark: 0.55, light: 0.4 }), ROCKG = R('#77706a', 7, 3, { dark: 0.6, light: 0.45, shift: 0.18 });
 const SAND = R('#dcc49a', 6, 3, { dark: 0.42, light: 0.5, shift: 0.18 });
-const BASALT = R('#9a948a', 7, 3, { dark: 0.6, light: 0.5, shift: 0.12 }), MOSS = R('#6a8a34', 6, 3, { dark: 0.6, light: 0.5, shift: 0.3 });
+const MOSS = R('#6a8a34', 6, 3, { dark: 0.6, light: 0.5, shift: 0.3 });
 const CONC = R('#b8b2a8', 6, 3, { dark: 0.5, light: 0.45, shift: 0.15 }), STONE = R('#948a7c', 7, 3, { dark: 0.58, light: 0.48, shift: 0.18 });
 const UP = [0, 0, 1];
 
@@ -422,13 +422,37 @@ export function wake(G, x, y, hd, len = 60, phase = 0) {
   }
 }
 
-// columnar basalt: each column lit down its left (sunward) side, dark seams between columns, cross cracks
-function basaltShade(x, y, z, seed) {
-  const c = cellPt(x, y, 11, seed + 7), crack = 8 + Math.floor(c[1] * 7);
-  return (c[4] - c[0] < 1.3 ? -1.3 : 0) - c[2] / 5.5 * 0.75 + (c[1] - 0.5) * 0.8 + (Math.round(z + c[1] * 20) % crack === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0);
+// ---- layered rock (the owner, notes 2: "random looking rock columns doesn't look great ... the cliffs they come off of
+// look hand crafted and embedded into the environment"): beds of stone in courses - a dark seam under each, a lighter lip
+// along its top, its own tone, a crack now and then down it - in ledges stepping down from the falls, moss on their tops
+// with ferns in it, roots hanging down the faces, the rock dark and glistening by the water. The falls' walls, the
+// cliffs and the cave mouths share it.
+const LAYER = R('#9c8e7a', 7, 3, { dark: 0.6, light: 0.5, shift: 0.14 }), WETR = R('#4c4842', 6, 2, { dark: 0.6, light: 0.6 });
+const FERN = R('#4e7c2c', 5, 2, { dark: 0.55, light: 0.5, shift: 0.3 }), ROOTR = R('#5c4028', 5, 2, { dark: 0.5, light: 0.4 });
+function rockKit(m, seed, sand) {
+  const bed = (x, y, z) => { const u = z + (vnoise(x, y, 23, seed + 31) - 0.5) * 5, b = Math.floor(u / 6), f = u - b * 6; return (hash(b, Math.floor(x / 37), seed) - 0.5) * 1.2 + (f < 1 ? -1 : f > 5 ? 0.55 : 0) + (hash(Math.floor(x / 3), b, seed + 2) < 0.05 ? -1.1 : 0) + (vnoise(x, z, 4, seed + 3) - 0.5) * 0.7; };
+  const mm = (r, k, f) => m.mat({ ramp: r, k, shade: f });
+  return {
+    rock: mm(sand ? SANDROCK : LAYER, 4, bed),
+    wet: mm(WETR, 3, (x, y, z) => bed(x, y, z) * 0.6 + (hash(Math.round(x), Math.round(z), seed + 4) > 0.9 ? 1.6 : 0)),
+    moss: mm(MOSS, 3, (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4),
+    fern: mm(FERN, 2, (x, y, z) => (Math.round(z) % 2 ? 0.8 : -0.2)),
+    root: mm(ROOTR, 2, (x, y, z) => (hash(Math.round(x), Math.round(z), 5) - 0.5) * 1.2),
+  };
 }
+// a column of it at (x, y) H high: wet below wz, moss on top where mossy (noise 0..1) - now and then a fern up out of it
+function rockCol(m, K, x, y, H, wz, mossy, seed) {
+  if (H < 1) return;
+  if (wz > 0) m.box(x, y, 0, x + 1, y + 1, Math.min(H, wz), K.wet);
+  if (H > wz) m.box(x, y, Math.max(0, wz), x + 1, y + 1, H, K.rock);
+  if (mossy > 0.45 && wz < H) { m.box(x, y, H - 1, x + 1, y + 1, H + 1, K.moss); if (hash(x, y, seed + 40) > 0.972) m.box(x, y, H + 1, x + 1, y + 1, H + 3 + hash(y, x, seed) * 4, K.fern); }
+}
+// roots hanging down a face: from z down len voxels, just proud of it at y
+function roots(m, K, x, y, z, len) { for (let k = 0; k < len; k++) if (!m.get(x, y, z - k)) m.set(x + (k % 5 === 4 ? 1 : 0), y, z - k, K.root); }
+// a fall's water split into strands across its width w (px from its middle: [lo, hi]) - rock breaking the lip between
+const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0; x < w / 2 - 10; i++) { const hi = Math.min(w / 2 - 2, x + Math.round(16 + hash(i, w, sd) * w * 0.42)); if (hi - x >= 8) out.push([Math.round(x), hi]); x = hi + Math.round(3 + hash(i, 7, sd) * 6); } return out; };
 // ---- waterfalls ------------------------------------------------------------------------------------------
-// A cliff of columnar basalt (or a concrete weir) with water pouring over a notch in it. Built facing the
+// A cliff of layered rock (or a concrete weir) with water pouring over a notch in it. Built facing the
 // camera: model y runs north -> south, the falling sheets are on the south faces.
 //   o.kind   'ledge' (a small fall over a step) | 'twoTier' (a fall into a shelf pool, then a second, split
 //            fall) | 'cliff' (one tall narrow fall from a high wall, with mist) | 'weir' (a concrete sill)
@@ -447,48 +471,60 @@ export function fallModel(o = {}) {
   const m = new Vox(W, Dp, Hh);
   const frame = { v: o.frame || 0 };
   // basalt: columns from a jittered grid (Voronoi), each with its own top; seams between columns
-  const CC = new Map(), colAt = (x, y) => { const k = (x | 0) * 4096 + (y | 0); let c = CC.get(k); if (!c) { c = cellPt((x | 0) + 0.5, (y | 0) + 0.5, 11, seed + 7); CC.set(k, c); } return c; };
   // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
   const sand = o.stone === 'sand';
-  const rock = m.mat({ ramp: kind === 'weir' ? CONC : sand ? SANDROCK : BASALT, k: kind === 'weir' ? 3 : 4, shade: (x, y, z) => {
-    if (sand) return (Math.round(z) % 9 === 0 ? -0.6 : 0) + (hash(Math.round(x / 5), Math.round(z / 4), seed) - 0.5) * 0.8 + (hash(Math.round(x), Math.round(y), seed + 3) > 0.9 ? 0.3 : 0);
-    if (kind === 'weir') return (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5;
-    return basaltShade(x, y, z, seed);
-  } });
-  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
-  const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 });
+  const RK = rockKit(m, seed, sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
+  const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
   const sheet = m.mat({ ramp: WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
     const col = Math.round(x), h = hash(col, 3, seed), u = (Hh - z) / (7 + h * 7) + frame.v / frames * (2 + Math.floor(h * 2)) * -1;
-    const band = Math.sin(TAU * (u + h * 5)), top = z > (sheetTop(x) - 4) ? -1.1 : 0;
-    return (band > 0.2 ? 1.6 : band < -0.6 ? -0.7 : 0.5) + (h > 0.7 ? 0.8 : h < 0.2 ? -0.5 : 0) + top + (Hh - z) / Hh * 0.6;
+    const band = Math.sin(TAU * (u + h * 5)), top = z > sheetTop(x) - 3 - vnoise(x, 0, 7, seed + 71) * 9 ? -1.1 : 0;   // (the glassy tongue over the lip, ragged)
+    return (band > 0.2 ? 1.6 : band < -0.6 ? -0.7 : 0.5) + (h > 0.7 ? 0.8 : h < 0.2 ? -0.5 : 0) + top + (Hh - z) / Hh * 0.6 + (vnoise(x, z * 0.3, 5, seed + 74) < 0.22 ? -1.4 : 0);   // (thin places: the wet rock dark through it)
   } });
   const foam = m.mat({ ramp: WATER.foam, k: 2, flag: F_WATER | F_NOCAST, shade: (x, y, z) => (hash(Math.round(x), Math.round(y) + Math.round(frame.v * 3), Math.round(z)) - 0.4) * 2 });
   let sheetTop = () => drop;
   // the rock mass
   const inNotch = (x, lo = -width / 2, hi = width / 2) => x - cx >= lo && x - cx < hi;
   const edgeWob = (x, y) => (vnoise(x, y, 9, seed + 5) - 0.5) * 8;
+  const sideAt = (x, y) => { const k = y < d1 - 3 ? 2 : 0.9; return !inNotch(x, -width / 2 - edgeWob(y, 1) * k + (y < d1 - 3 ? 3 : 0), width / 2 + edgeWob(y, 2) * k - (y < d1 - 3 ? 3 : 0)); };   // (the banks of the water above wander more)
+  const lipY = (x) => d1 + Math.round((vnoise(x, 0, 11, seed + 50) - 0.5) * 9), backY = (x) => Math.round(vnoise(x, 9, 13, seed + 73) * 8);   // (the lip's edge wanders, and the water's back: no ruled lines)
   m.fill((x, y, z) => {
-    const c = colAt(x, y), colTop = (c[1] - 0.5) * 16;
-    const sideRock = !inNotch(x, -width / 2 - edgeWob(y, 1) * 0.3, width / 2 + edgeWob(y, 2) * 0.3);
     if (kind === 'weir') {
       if (y >= d1) return -1;
       if (!inNotch(x)) return z < drop + 10 ? rock : -1;      // the end piers
       return z < drop - 1 ? rock : -1;                        // the sill
     }
-    if (sideRock) {
-      // the cliff wings stand a little proud of the water, stepping down toward the front
-      const front = y > d2 - 4 - c[1] * 12 + edgeWob(x, y) * 0.5 ? -1e9 : y > d1 + edgeWob(x, 9) && tier2 ? drop - 6 + colTop : drop + 4 + colTop;
-      if (z < front) return z > front - 2 && hash(Math.round(x), Math.round(y), seed + 9) > 0.55 ? moss : rock;
-      return -1;
-    }
-    if (y < d1) return z < drop - 2 ? rock : -1;               // under the upper water
+    if (sideAt(x, y)) return -1;                              // (the walls: below, in ledges)
+    if (y < lipY(x)) return z < drop - 2 && y >= backY(x) ? rock : -1;   // under the upper water
     if (tier2 && y < d2) return z < mid - 2 ? rock : -1;      // the shelf
     return -1;
   }, 0, 0, 0, W, d2, Hh);
-  // the lower face is ragged: a few columns stand forward of it, beside the falls
-  for (let i = 0; i < 6; i++) {
-    const r = 4 + hash(i, 3, seed) * 4, sx = hash(i, 1, seed) < 0.5 ? cx - width / 2 - r - 5 - hash(i, 2, seed) * (side - 16) : cx + width / 2 + r + 5 + hash(i, 2, seed) * (side - 16), top = (tier2 ? mid : drop) * (0.4 + hash(i, 4, seed) * 0.5);
-    if (kind !== 'weir') m.cyl('z', sx, d2 - 2 + hash(i, 5, seed) * 6, 0, r, 0, top, rock);
+  if (kind !== 'weir') {
+    // the walls either side: layered rock standing to the lip by the water and stepping down in ledges away from it into
+    // the ground, a low ledge at their foot here and there, dark and wet by the falls, moss and ferns on top, roots down
+    // the faces; boulders at the foot
+    const LV = [1, 0.84, 0.66, 0.46];
+    for (let x = 0; x < W; x++) {
+      const dn = Math.abs(x + 0.5 - cx) - width / 2, fr = Math.max(dn < 6 ? d2 - 2 : 0, d2 - 3 - vnoise(x, 1, 15, seed + 33) * 10), tp = drop + 4 + (vnoise(x, 2, 19, seed + 34) - 0.5) * 8;
+      const foot = vnoise(x, 5, 13, seed + 38) > 0.4;
+      let yF = -1, HF = 0;
+      for (let y = 0; y <= fr; y++) {
+        if (!sideAt(x + 0.5, y + 0.5)) continue;
+        const lv = Math.max(0, Math.min(3, Math.floor(dn / Math.max(8, side / 3.3) + (vnoise(x, y, 11, seed + 35) - 0.5) * 0.9)));
+        let H = Math.round(tp * LV[lv]);
+        if (tier2 && y > d1 + edgeWob(x, 9)) H = Math.min(H, drop - 6);
+        if (y > fr - 6) { if (!foot) continue; H = Math.min(H, Math.round(4 + vnoise(x, y, 6, seed + 39) * 7)); } else { yF = y; HF = H; }
+        rockCol(m, RK, x, y, H, dn < 7 ? H : dn < 16 || y > fr - 6 ? Math.round(H * 0.45) : 0, vnoise(x, y, 8, seed + 36) + (dn > 10 ? 0.15 : -0.2), seed);
+      }
+      if (yF >= 0 && dn > 6 && hash(x, 0, seed + 37) < 0.09) roots(m, RK, x, yF + 1, HF - 1, 5 + Math.floor(hash(x, 1, seed + 37) * 12));
+    }
+    for (let i = 0, n = Math.floor(width / 45); i < n; i++) {   // (rocks breaking the water above the lip)
+      const r = 2.5 + hash(i, 13, seed) * 2.5, bx = cx + (hash(i, 11, seed) - 0.5) * width * 0.8, by = d1 * (0.35 + hash(i, 12, seed) * 0.4);
+      m.ell(bx, by, drop - 2, r * 1.3, r, r * 0.8, RK.wet); m.ell(bx - 0.5, by - 0.5, drop - 1 + r * 0.4, r * 0.9, r * 0.7, r * 0.35, RK.moss);
+    }
+    for (let i = 0; i < 5; i++) {
+      const r = 3 + hash(i, 3, seed) * 4, sd = hash(i, 1, seed) < 0.5 ? -1 : 1, bx = cx + sd * (width / 2 + r + 2 + hash(i, 2, seed) * Math.max(4, side - 12)), by = d2 + 1 + hash(i, 5, seed) * 6;
+      m.ell(bx, by, r * 0.5, r, r * 0.75, r * 0.85, Math.abs(bx - cx) - width / 2 < 14 ? RK.wet : RK.rock); m.ell(bx - 1, by - 1, r * 0.95, r * 0.6, r * 0.45, r * 0.3, RK.moss);
+    }
   }
   // water on the lip(s) and the falling sheets
   const sheetX = (x, z, lo, hi) => inNotch(x, lo, hi);
@@ -497,20 +533,21 @@ export function fallModel(o = {}) {
     m.fill((x, y, z) => (inNotch(x) && z < drop + 1 && y >= d1 && y < d1 + 2 + (drop - z) * 0.25 ? sheet : -1), 0, d1, 0, W, d1 + 8, drop + 1);
   } else {
     // upper water runs to the edge of the top step
-    m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && z >= drop - 2 && z < drop ? wtop : -1), 0, 0, drop - 2, W, d1, drop);
+    m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && !sideAt(x, y) && y < lipY(x) && y >= backY(x) && z >= drop - 2 && z < drop ? wtop : -1), 0, 0, drop - 2, W, d1 + 3, drop);
     // the upper (or only) fall: a sheet that leaves the lip and curves out a little as it falls
     const lo1 = tier2 ? mid - 2 : 0, w1 = kind === 'cliff' ? width : width - 4;
     sheetTop = () => drop;
-    const ups = o.upper || null;   // (o.upper: the top fall split into strands [lo, hi] across the notch, basalt between)
+    const ups = o.upper || (width >= 34 ? autoUps(width, seed) : null);   // (o.upper: the top fall split into strands [lo, hi] across the notch, rock between; else strands of its own)
     // (a strand fans out as it falls - its edges ragged - so the rocks that split it at the lip are hidden below: they
     // break the water near the top and the strands join into one curtain further down, not posts down the face)
     const spr = (z, top, k) => Math.max(0, (top - z) * 0.24 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
     m.fill((x, y, z) => {
-      if (!inNotch(x, -w1 / 2 + Math.sin(z * 0.2 + x) * 0.6, w1 / 2)) return -1;
-      if (ups && !ups.some(([lo, hi], k) => inNotch(x, lo - spr(z, drop, k * 2) + Math.sin(z * 0.3 + lo) * 0.8, hi + spr(z, drop, k * 2 + 1)))) return -1;
-      const out = (drop - z) * 0.12 + Math.min(3, (drop - z) * 0.04);
-      return y >= d1 + out - 1 && y < d1 + out + 2 ? sheet : -1;
-    }, 0, d1 - 2, lo1, W, d1 + Math.ceil(drop * 0.2) + 4, drop);
+      if (!inNotch(x, -w1 / 2 + Math.sin(z * 0.2 + x) * 0.6 + (vnoise(z, 3, 7, seed + 70) - 0.5) * 6, w1 / 2 - (vnoise(z, 4, 7, seed + 70) - 0.5) * 6)) return -1;
+      const sk = ups ? ups.findIndex(([lo, hi], k) => inNotch(x, lo - spr(z, drop, k * 2) + Math.sin(z * 0.3 + lo) * 0.8, hi + spr(z, drop, k * 2 + 1))) : 0;
+      if (sk < 0) return -1;
+      const out = ((drop - z) * 0.12 + Math.min(3, (drop - z) * 0.04)) * (0.7 + hash(sk, 2, seed + 72) * 0.7), ly = lipY(x);   // (each strand thrown out its own way)
+      return y >= ly + out - 1 && y < ly + out + 2 ? sheet : -1;
+    }, 0, d1 - 4, lo1, W, d1 + Math.ceil(drop * 0.2) + 7, drop);
     if (ups) for (let i = 0; i < ups.length - 1; i++) {
       const a = ups[i][1], b = ups[i + 1][0];
       m.fill((x, y, z) => {
@@ -544,7 +581,7 @@ export function fallModel(o = {}) {
   const footW = kind === 'cliff' ? width * 1.6 : width;
   m.fill((x, y, z) => {
     const dx = (x - cx) / (footW / 2 + 4), dy = (y - d2) / apron, q = dx * dx + dy * dy * 1.4;
-    if (q > 1 || y < d2 + 1) return -1;
+    if (q > 1 + (vnoise(x, y, 5, seed + 60) - 0.5) * 0.8 || y < d2 + 1) return -1;   // (its edge ragged)
     const hgt = (1 - q) * (kind === 'weir' ? 4 : kind === 'cliff' ? 9 : 7) * (0.6 + vnoise(x, y + frame.v * 3, 4, seed) * 0.8);
     return z < hgt ? foam : -1;
   }, 0, d2, 0, W, Dp, 12);
@@ -579,18 +616,30 @@ export function waterfall(o = {}, model = null) {
 export function waterfallFrames(o = {}, n = 4) { const m = fallModel({ ...o, frames: n }); return Array.from({ length: n }, (_, f) => waterfall({ ...o, frame: f }, m)); }
 
 // ---- bridges and river works ----------------------------------------------------------------------------
-// a length of columnar basalt cliff (len along x, `depth` deep, h tall) with mossy tops and a ragged foot
-// (the moss on the columns' tops is the rock's crust: it holds still in the wind with the rock - gbuf.js "What sways";
-// task #425)
-export function cliffWall(len = 120, h = 60, depth = 40, seed = 1) {
-  const m = new Vox(len, depth, h + 8);
-  const rock = m.mat({ ramp: BASALT, k: 4, shade: (x, y, z) => basaltShade(x, y, z, seed) });
-  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
-  for (let y = 0; y < depth; y++) for (let x = 0; x < len; x++) {
-    const c = cellPt(x + 0.5, y + 0.5, 11, seed + 7), top = Math.round(h + (c[1] - 0.5) * 20 - (y > depth - 18 ? (y - depth + 18) * 1.6 * c[1] : 0));
-    const front = depth - 3 - c[1] * 14 + (vnoise(x, 1, 13, seed) - 0.5) * 6;
-    if (y > front) continue;
-    m.box(x, y, 0, x + 1, y + 1, top - 2, rock); m.box(x, y, top - 2, x + 1, y + 1, top, hash(x, y, seed + 9) > 0.5 ? moss : rock);
+// a length of cliff (len along x, `depth` deep, h tall) in layered rock (rockKit): its face in beds that step back in
+// ledges as they rise - a low ledge along its foot in places - its top uneven, its ends stepping down into the ground,
+// moss and ferns on the ledges, roots hanging down the face, boulders at its foot; wet: the end by the falls (-1 the
+// left, 1 the right) dark and wet with spray. (The moss is the rock's crust: it holds still in the wind with the rock -
+// gbuf.js "What sways"; task #425)
+export function cliffWall(len = 120, h = 60, depth = 40, seed = 1, wet = 0) {
+  const m = new Vox(len, depth, h + 12), K = rockKit(m, seed, false), LV = [1, 0.72, 0.42];
+  for (let x = 0; x < len; x++) {
+    const end = Math.min(x, len - 1 - x), fr = depth - 3 - vnoise(x, 1, 17, seed) * 10, tp = h - 6 + vnoise(x, 2, 29, seed + 1) * 8;
+    const taper = 0.3 + 0.7 * sstep(0, 26, end + (vnoise(x, 3, 7, seed) - 0.5) * 10), lvE = 0, wz = wet && (wet < 0 ? x : len - 1 - x) < 24 + vnoise(x, 4, 9, seed) * 16;
+    const foot = vnoise(x, 7, 15, seed + 4) > 0.42;
+    let yF = -1, HF = 0;
+    for (let y = 0; y <= fr; y++) {
+      const b = fr - y, lv = Math.max(lvE, b < 6 ? 2 : b < 13 + (vnoise(x, y, 9, seed + 2) - 0.5) * 8 ? 1 : 0);
+      if (b < 6 && !foot) continue;
+      const H = Math.round(tp * LV[lv] * taper);
+      if (lv === lvE) { yF = Math.max(yF, y); HF = H; }
+      rockCol(m, K, x, y, H, wz ? H : b < 6 ? 3 : 0, vnoise(x, y, 8, seed + 3) + 0.1, seed);
+    }
+    if (yF >= 0 && hash(x, 0, seed + 37) < 0.08) roots(m, K, x, yF + 1, HF - 1, 5 + Math.floor(hash(x, 1, seed + 37) * 14));
+  }
+  for (let i = 0, n = 2 + Math.floor(len / 50); i < n; i++) {
+    const r = 3 + hash(i, 3, seed) * 5, bx = 8 + hash(i, 1, seed) * (len - 16), by = depth - 4 - hash(i, 2, seed) * 6;
+    m.ell(bx, by, r * 0.5, r, r * 0.75, r * 0.85, K.rock); m.ell(bx - 1, by - 1, r * 0.95, r * 0.6, r * 0.45, r * 0.3, K.moss);
   }
   m.smooth = 1;
   return m;
@@ -600,17 +649,16 @@ export function cliffWall(len = 120, h = 60, depth = 40, seed = 1) {
 // ferns at its foot), 1 'sea' (a sea cave's - a dark wet band of barnacles along its foot, a glint of water inside)
 export function caveMouth(w = 96, h = 72, style = 0) {
   const depth = 46, m = new Vox(w, depth, h + 8), sea = style === 1, seed = 7 + style;
-  const rock = m.mat({ ramp: BASALT, k: 4, shade: (x, y, z) => basaltShade(x, y, z, seed) });
-  const moss = m.mat({ ramp: MOSS, k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4 });
+  const K = rockKit(m, seed, false), rock = K.rock, moss = K.moss;
   const wet = m.mat({ ramp: R('#3a3834', 6, 2), k: 3, shade: (x, y, z) => (hash(Math.round(x / 2), Math.round(z / 2), 5) > 0.8 ? 1.2 : 0) + (hash(Math.round(x), Math.round(z), 6) - 0.5) * 0.8 });
   const dark = m.mat({ ramp: R('#0c0a0e', 5, 1), k: 0, flag: F_NOCAST });
   const glint = m.mat({ ramp: R('#1a2e38', 5, 2), k: 2, flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x), Math.round(y), 9) - 0.5) * 1.2 - 0.4 });
   const ow = w * 0.48, oh = h * 0.66, cx = w / 2;
   const inArch = (x, z) => { const u = (x - cx) / (ow / 2); if (Math.abs(u) > 1) return false; const top = oh * 0.62 + oh * 0.38 * Math.sqrt(Math.max(0, 1 - u * u)); return z < top - Math.abs(u) * 3; };
   for (let y = 0; y < depth; y++) for (let x = 0; x < w; x++) {
-    const c = cellPt(x + 0.5, y + 0.5, 10, seed), shoulder = Math.abs(x - cx) / (w / 2);
-    const top = Math.round(h * (1 - shoulder * shoulder * 0.28) + (c[1] - 0.5) * 14);
-    const front = depth - 4 - c[1] * 10 - shoulder * 8 + (vnoise(x, 1, 11, seed) - 0.5) * 5;
+    const nz = vnoise(x, y, 13, seed), shoulder = Math.abs(x - cx) / (w / 2);
+    const top = Math.round(h * (1 - shoulder * shoulder * 0.28) + (nz - 0.5) * 10 - (shoulder > 0.7 && y > depth * 0.55 ? 10 : 0));   // (its shoulders stepping down in a ledge)
+    const front = depth - 4 - vnoise(x, 2, 17, seed) * 10 - shoulder * 8;
     if (y > front) continue;
     for (let z = 0; z < top; z++) {
       if (inArch(x, z)) {   // (the way in: hollow back to a black wall; its floor dark, a sea cave's wet)
