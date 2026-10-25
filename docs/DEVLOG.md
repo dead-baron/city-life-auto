@@ -16227,3 +16227,11 @@ in the middle where the wide road from the south comes in - and they were on:
 - test/trafficwalls.test.js: a car out of its lane nose to nose with one in its own edges back and they pass (the
   make-room test now starts after the sidestep's tries); a tanker and a car round a tight bend the two ways both get
   round, the tanker's claim seen; a kerb bay at the street's end takes a car, not a van or a flatbed.
+- 2026-10-24, the batch 4 merge (b4b-2): the ambulance crew get round a vehicle they're held up against. With the
+  siren clearing the road (b4a), a car that pulls over for it can end up stopped beside the ambulance at the scene,
+  across the crew's way to the patient. pedStep held the medic at its side, and sidestep sent them back and forth along
+  it till the scene timed out ("every step in turn": no treat, no lift - test/ems.test.js, and the collapse's ambulance
+  in test/happenings.test.js). server/systems/ems.js walkTo: a medic with next to no headway in half a second, up
+  against a vehicle standing still, takes the shortest way round it by its corners - each in sight of the next, on open
+  ground, not one pressed against another vehicle - and keeps to it till round, then on as before. Not the vehicle
+  they're walking to (boarding); only when held up, so a walk that slides past as it did is unchanged.
