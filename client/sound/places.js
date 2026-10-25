@@ -1,15 +1,17 @@
 // The places with a sound of their own (shared/map.js walk-ins: a building's walkIn.units, each a POI kind):
 // - a nightclub, open after dark: its four-on-the-floor heard through the walls outside (the bass, muffled, from
 //   its door) and loud and clear inside - until the server winds it down after sunrise (S.clubLive);
-// - some shops play light music inside, the bank and the hospital an elevator-style tune in the lobby; the old
-//   ma-and-pa shops (bait and tackle, hardware, the pawn shop, the fish market) play none, but a little brass bell
-//   over the door rings when anyone goes in or out;
-// - the other shops' sliding doors sigh open.
+// - some shops play light music inside, the bank and the hospital an elevator-style tune in the lobby;
+// - the small shops (shared/doors.js rings: the corner store, the pawn shop, the diner and the cafe, the barber, the
+//   hardware store, bait and tackle, the fish market, a bakery) have a little brass bell over the door that rings when
+//   anyone - you or one of the city's people - goes in or out (the owner's notes 2, p16: "in some stores (that it would
+//   match the vibe of) we can have a bell ring when you walk in");
+// - the others' doors as they are drawn (client/art2/game/doorart.js): sliding glass sighs open, a hinged door clicks.
 // And it tells the rest whether you're indoors (ambience and distant sounds come through the walls).
 import { T, TILE, PF } from '../../shared/constants.js';
+import { rings, unitDoor } from '../../shared/doors.js';
 
 export const SONG_FOR = { clothing: 'shop', sports: 'shop', coffee: 'shop', convenience: 'shop', grocery: 'shop', pharmacy: 'shop', gasstation: 'shop', bank: 'lobby', hospital: 'lobby', courthouse: 'lobby', bowling: 'shop', cinema: 'lobby' };
-export const BELL_SHOPS = new Set(['tackle', 'hardware', 'pawn', 'fishmarket']);
 const QUIET_SOME = new Set(['convenience', 'gasstation', 'grocery']);   // (only some of these have the radio on)
 const CLUB_HEAR = 820;
 
@@ -26,6 +28,9 @@ export function unitAt(map, x, y) {
   for (let i = 0; i < us.length; i++) if (tx >= us[i].x0 - 0 && tx <= us[i].x1) return { b, u: us[i], i };
   return null;
 }
+
+// what a walk-in's door sounds like going through it: its bell, or as the door is drawn - sliding glass or swinging
+export const doorSound = (u) => (rings(u) ? 'doorbell' : unitDoor(u) === 'slide' ? 'slidingdoor' : 'housedoor');
 
 export class Places {
   constructor(E, music) {
@@ -102,8 +107,8 @@ export class Places {
       const dk = u.door.tx * 4096 + u.door.ty;   // (a door rings again only after a moment: a busy shop doesn't jangle)
       if (t - (this.rang.get(dk) ?? -9) < 2.5) continue;
       this.rang.set(dk, t);
-      if (BELL_SHOPS.has(u.kind)) this.E.play('doorbell', dx, dy, 0.9, { f: 1500 + 500 * hash(u.poi) });
-      else if (u.kind !== 'club' && Math.hypot(dx - L.x, dy - L.y) < 420) this.E.play('slidingdoor', dx, dy, 0.7);
+      if (rings(u)) this.E.play('doorbell', dx, dy, 0.9, { f: 1500 + 500 * hash(u.poi) });
+      else if (u.kind !== 'club' && Math.hypot(dx - L.x, dy - L.y) < 420) this.E.play(doorSound(u), dx, dy, 0.7);
     }
   }
   unitByKey(map, key) {

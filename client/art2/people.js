@@ -1206,12 +1206,14 @@ function buildFigure(A, D, P, S, X, kind, acc, seed) {
     B(vadd(S.pel, mv(S.PF, [0, D.pelR[1] + 0.9, cz - S.pel[2]])), S.PF, [D.pelR[0] * 0.92, 0.5, (hi - lo) / 2], GR.SKIRT, 'apron', W.apron);
   }
   // things carried on the body
-  if (A.back === 'backpack' && !A.backBig) B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
+  if (A.backBox) B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.8), 0.8])), S.SP, [5.0, 2.9, 5.0], GR.ACC, 'pack', (Q) => { if (Math.abs(Q.l2 - 0.5) < 0.1) Q.k += 0.25; return W.pack(Q); });   // (a courier's insulated box)
+  else if (A.back === 'backpack' && !A.backBig) B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 1.3), -0.6])), S.SP, [4.4, 1.7, 5.0], GR.ACC, 'pack', W.pack);
   if (A.back === 'backpack' && A.backBig) {   // a backpacker's trekking pack (Nature-C4): tall, up over the shoulders, the rolled bedroll strapped on top
     B(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.0), 0.6])), S.SP, [4.6, 2.4, 7.4], GR.ACC, 'pack', (Q) => { if (Math.abs(Q.l2 + 0.35) < 0.06 || Math.abs(Q.l0) > 0.9) Q.k -= 0.22; return W.pack(Q); });
     C(vadd(S.chest, mv(S.SP, [-4.8, -(D.chestR[1] + 2.0), 9.0])), vadd(S.chest, mv(S.SP, [4.8, -(D.chestR[1] + 2.0), 9.0])), 1.7, 1.7, GR.ACC, 'bedroll', MAT('#3a6a9a'));
   }
   if (A.back === 'guitarcase') E(vadd(S.chest, mv(S.SP, [1.0, -(D.chestR[1] + 1.7), -1.6])), mmul(S.SP, ry(0.38)), [3.3, 1.5, 11.5], GR.ACC, 'gcase', (Q) => { Q.gloss = 0.4; if (Math.abs(Q.l2 + 0.25) < 0.05) Q.k -= 0.25; return cloth(A.backColor || 'black'); });
+  if (A.jewel && A.jewel.bow) for (const s of [-1, 1]) E(vadd(S.chest, mv(S.SP, [s * 0.75, D.chestR[1] + 0.45, D.chestR[2] - 0.7])), S.SP, [0.85, 0.5, 0.6], GR.ACC, 'bow', MAT(A.jewel.color));   // (a bow tie at the collar)
   if (A.rig) B(vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.8, -0.6])), S.SP, [3.8, 1.0, 2.3], GR.ACC, 'rig', (Q) => { if (Math.abs(Q.l0) < 0.05 || Math.abs(Q.l2 - 0.2) < 0.08) Q.k -= 0.25; return cloth(A.rig); });
   // a robbery's takings (server hotmoney.js; game/host.js puts back 'moneybag' on while the descriptor's mb): a canvas sack, tied off
   if (A.back === 'moneybag') { const sack = (Q) => { if (Q.l2 > 0.6) Q.k -= 0.14; return cloth('#9a8a5c'); }; E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.3), -1.4])), S.SP, [3.5, 2.4, 3.7], GR.ACC, 'sack', sack); E(vadd(S.chest, mv(S.SP, [0, -(D.chestR[1] + 2.1), 2.5])), S.SP, [1.2, 1.0, 1.1], GR.ACC, 'sack', (Q) => { Q.k -= 0.22; return cloth('#7a6a44'); }); }
@@ -1481,6 +1483,11 @@ function hatPrims(E, C, A, D, S, W, at, k) {
     const b0 = at([0, -0.05, 0.5]);
     C(b0, vadd(b0, mv(HD, [0, -0.2, 2.4])), hr[0] * 0.9, hr[0] * 0.9, GR.HAT, 'band', W.hat);
     E(vadd(b0, mv(HD, [0, -0.3, 6.2])), HD, [hr[0] * 1.1, hr[1] * 1.08, 4.4], GR.HAT, 'crown', W.hat);
+  } else if (k === 'paper') {   // the diner's paper hat: a folded garrison cap, front to back on top
+    E(at([0, 0, 0.8]), HD, [hr[0] * 0.5, hr[1] * 1.02, 1.7], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.3);
+  } else if (k === 'veil') {   // a bride's veil: back from a comb on the crown, down over the shoulders behind
+    E(at([0, -0.45, 0.35]), HD, [hr[0] + 0.9, hr[1] + 0.5, hr[2] + 0.6], GR.HAT, 'crown', W.hat, (a, b, c) => b < -0.1);
+    E(vadd(S.neck, mv(S.SP, [0, -1.6, -1.8])), S.SP, [D.shX * 0.75, 0.9, 3.8], GR.HAT, 'drape', W.hat);
   } else if (k === 'sailor') {   // a round white cap, a stripe round it, the brim turned up all round
     E(at([0, -0.05, 0.62]), HD, [hr[0] + 0.8, hr[1] + 0.8, hr[2] * 0.62], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.2);
     E(at([0, -0.05, 0.42]), HD, [hr[0] + 1.3, hr[1] + 1.3, 1.3], GR.HAT, 'band', W.band);

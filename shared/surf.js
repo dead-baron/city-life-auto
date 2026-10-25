@@ -6,24 +6,35 @@
 // ny (out to sea), half (px along the beach either side of the middle), ph (its sets' phase, s), side (+1 or -1: which
 // end the waves start to break from) }; the page gets the ones near you in your 'me'.
 //
-// The waves (wavesAt, from the world's tick, so the page and the server agree to the frame): sets of SURF.waves, gapS
-// apart, a lull between sets; each rises SURF.start px out and rolls in at SURF.speed, steepens, starts to break at
-// SURF.brk px out - from one end of the beach, the break peeling along the crest at SURF.peel px/s toward the other -
-// and washes up at SURF.shore. Surfing it (surf.js): paddle for the beach as a wave comes (in front of its crest,
-// where it hasn't broken) and you're up; ride it along the face ahead of the peel; the white water behind the peel
-// catches you if you stay in it.
+// The waves (wavesAt, from the world's tick, so the page and the server agree to the frame): sets of up to SURF.waves,
+// gapS apart, a lull between sets - a set small or big (its own strength), its waves building to the biggest in the
+// middle and easing off. Each rises SURF.start px out as a swell and rolls in at SURF.speed, steepens, starts to break
+// at its own break line (brk: a bigger wave further out) - from one end of the beach, the break peeling along the crest
+// at SURF.peel px/s toward the other, the lip curling over just ahead of it - and the white water rolls in to the
+// beach, runs up the sand as a thin swash and drains back. The crest isn't a ruler line: it bows back at the ends and
+// wanders (crestD), and it stands higher in some places than others (heightAt) - the low sections are gaps in the lip
+// you can't catch. Surfing it (surf.js): paddle for the beach as a wave comes (in front of its crest, where it hasn't
+// broken and stands high enough) and you're up; ride it along the face ahead of the peel; the white water behind the
+// peel catches you if you stay in it.
 // Arithmetic only (no Math.sin and the like): the page and the server must agree.
 import { TILE, T } from './constants.js';
 import { SURFBOARD_PRICE } from './rules-base.js';
 
 export const SURF = {
   price: SURFBOARD_PRICE,   // a surfboard at the surf shops and the sports shops
-  waves: 3, gapS: 4.5, lullS: 13,    // a set: three waves 4.5 s apart, then 13 s of calm
+  waves: 5, gapS: 4.2, lullS: 11,   // a set: three to five waves 4.2 s apart, then 11 s of calm
   speed: 84,           // px/s a wave rolls in - faster than you paddle, so paddling in ahead of one, it catches you up
   start: 22 * TILE,    // px out where a wave rises
-  brk: 11 * TILE,      // px out where it starts to break
-  shore: 42,           // px out where it washes up
+  brk: 11 * TILE,      // px out where a wave of size 1 starts to break (a bigger one further out, a smaller one nearer in)
+  shore: 42,           // px out where its white water reaches the beach (the swash runs on up the sand: the page's)
   peel: 100,           // px/s the break runs along the crest
+  size: [0.45, 1.6],   // the smallest wave and the biggest
+  bend: 22,            // px the crest wanders out and in along its length (a wave of size 1, far out)
+  bow: 22,             // px the crest lags at the beach's ends behind its middle
+  knot: 150,           // px along the crest between its wanders
+  minH: 0.42,          // how high the crest must stand (heightAt) to be caught; and lower than gapK of the wave's size there
+  gapK: 0.7,           // it's a gap in the lip (gapAt)
+  swashUp: 1.5, swashDown: 2.2, runup: 54,   // s the swash runs up the sand, s it drains back, px it runs (size 1)
   catch: [-26, 18],    // you catch a wave with its crest this far behind (-) / in front of you (px across it)
   paddle: 70,          // px/s lying on the board, paddling (half again as fast as you swim)
   along: 230,          // px/s the fastest you carve along the face
@@ -36,26 +47,54 @@ export const SURF = {
   near: 2600,          // px: a break this near you is in your 'me'
 };
 export const SET_S = SURF.waves * SURF.gapS + SURF.lullS;
-export const LIFE_S = (SURF.start - SURF.shore) / SURF.speed;
+// s from rising to washing up at SURF.shore; and on, through the swash up the sand and back (LIFE_S: the whole of it)
+export const RIDE_S = (SURF.start - SURF.shore) / SURF.speed;
+export const LIFE_S = RIDE_S + SURF.swashUp + SURF.swashDown + 0.5;
 
 const ih = (a, b, s) => { let h = (a * 374761393 + b * 668265263 + s * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+// a smooth wander 0..1 along a (px), knots k px apart (smoothstep between hashed knots: arithmetic only)
+const wob = (a, k, s1, s2) => { const u = a / k, i = Math.floor(u), f = u - i, g = f * f * (3 - 2 * f), h0 = ih(i, s1, s2); return h0 + (ih(i + 1, s1, s2) - h0) * g; };
+// where wave size v starts to break (px out)
+export const brkOf = (v) => SURF.brk * (0.72 + 0.3 * v);
+// set n of break B: how many waves (3-5) and how big a set (0.55 small .. 1.4 big)
+export function setOf(B, n) { return { count: 3 + Math.floor(ih(B.id, n, 4) * 3), k: 0.55 + ih(B.id, n, 3) * 0.85 }; }
 
-// the waves on break B at time t (s): [{ id, d (px out from the waterline: its crest), age (s), size (0.75 .. 1.2), edge
-// (along the beach, px from the middle: the break's front - behind it, toward the end it started from, it's white
-// water; null before it breaks), green (not yet breaking) }]
+// the waves on break B at time t (s): [{ id, d (px out from the waterline: its crest at the middle of the beach, before
+// its bend - crestD), age (s), size (0.45 .. 1.6), brk (px out where it breaks), edge (along the beach, px from the
+// middle: the break's front - behind it, toward the end it started from, it's white water; null before it breaks), green
+// (not yet breaking), wash (past SURF.shore: running up the beach and back - no riding it) }]
 export function wavesAt(B, t, out = []) {
   out.length = 0;
   const n1 = Math.floor((t - B.ph) / SET_S);
-  for (let n = n1 - 1; n <= n1; n++) for (let j = 0; j < SURF.waves; j++) {
-    const t0 = B.ph + n * SET_S + j * SURF.gapS, age = t - t0;
-    if (age < 0 || age > LIFE_S) continue;
-    const d = SURF.start - age * SURF.speed, id = n * SURF.waves + j, aBrk = (SURF.start - SURF.brk) / SURF.speed;
-    const size = 0.75 + ih(B.id, id, 7) * 0.45;
-    const edge = age < aBrk ? null : -B.side * B.half + B.side * SURF.peel * (age - aBrk);
-    out.push({ id, d, age, size, edge, green: age < aBrk });
+  for (let n = n1 - 1; n <= n1; n++) {
+    const st = setOf(B, n), mid = (st.count - 1) * 0.55;
+    for (let j = 0; j < st.count; j++) {
+      const t0 = B.ph + n * SET_S + j * SURF.gapS, age = t - t0;
+      if (age < 0 || age > LIFE_S) continue;
+      const id = n * SURF.waves + j, env = 1 - 0.12 * Math.abs(j - mid);
+      const size = Math.max(SURF.size[0], Math.min(SURF.size[1], Math.round(st.k * env * (0.88 + ih(B.id, id, 7) * 0.24) * 100) / 100));
+      const brk = brkOf(size), aBrk = (SURF.start - brk) / SURF.speed, d = SURF.start - age * SURF.speed;
+      const edge = age < aBrk ? null : -B.side * B.half + B.side * SURF.peel * (age - aBrk);
+      out.push({ id, d, age, size, brk, edge, green: age < aBrk, wash: d < SURF.shore });
+    }
   }
   return out;
 }
+// how far the crest straightens as it comes in (1 far out .. 0.4 at the beach)
+const inK = (w) => Math.max(0.4, Math.min(1, (w.d - SURF.shore) / (SURF.start - SURF.shore)));
+// wave w's crest a px along break B: px out from the waterline - its line, bowed back at the beach's ends and wandering
+// out and in along its length (less as it comes in and the beach straightens it)
+export function crestD(B, w, a) {
+  const k = inK(w), q = a / B.half;
+  return w.d + SURF.bow * q * q * k + SURF.bend * (0.5 + 0.5 * w.size) * k * (wob(a + B.half, SURF.knot, B.id * 131 + w.id, 17) * 2 - 1);
+}
+// how high wave w's crest stands a px along break B (its size, higher and lower along it): under SURF.minH, a gap
+export const heightAt = (B, w, a) => w.size * (0.58 + 0.42 * wob(a + B.half, SURF.knot * 0.7, B.id * 71 + w.id, 23));
+// a low section of wave w's crest a px along break B: a gap in the lip - drawn so, and no catching it there
+export const gapAt = (B, w, a) => heightAt(B, w, a) < Math.max(SURF.minH, w.size * SURF.gapK);
+// how far wave w's swash runs up the sand a px along break B (px past the water's edge): further for a bigger wave, in
+// tongues and scallops along the beach (the page draws it: client/art2/game/surfart.js)
+export const runupAt = (B, w, a) => SURF.runup * (0.5 + 0.5 * w.size) * (0.45 + 0.55 * wob(a + B.half, 64, B.id * 53 + w.id, 29));
 // where (x, y) is on break B: { a (px along the beach from its middle), d (px out from the waterline) }
 export function onBreak(B, x, y) {
   const dx = x - B.x, dy = y - B.y;

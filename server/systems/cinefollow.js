@@ -22,7 +22,7 @@ import { WATER_T } from '../../shared/mapcore.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { SPECIES } from '../../shared/fauna.js';
 import { FARM } from '../../shared/rules.js';
-import { SURF, wavesAt, onBreak, breakPt, broken } from '../../shared/surf.js';
+import { SURF, wavesAt, onBreak, breakPt, broken, crestD, gapAt } from '../../shared/surf.js';
 import { CINE_KIND, CINE_TOUR, CINE_TOUR_S, CINE_SUBJECT_S } from '../../shared/cinekinds.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, snatchEvent } from './npc.js';
@@ -346,8 +346,9 @@ function stepSurfer(world, A, ped, dt) {
     // a wave's crest reaching the line-up where it hasn't broken: up on it
     const q = onBreak(B, ped.x, ped.y);
     for (const w of wavesAt(B, t, s.ws)) {
-      const rel = w.d - q.d;
-      if (rel < SURF.catch[0] || rel > SURF.catch[1] || broken(B, w, q.a) || Math.abs(q.a) > B.half - 24) continue;
+      if (w.wash) continue;
+      const rel = crestD(B, w, q.a) - q.d;
+      if (rel < SURF.catch[0] || rel > SURF.catch[1] || broken(B, w, q.a) || Math.abs(q.a) > B.half - 24 || gapAt(B, w, q.a)) continue;
       s.st = 'ride'; s.w = w.id; s.a = q.a; s.va = B.side * 60; surfPose(ped, 2);
       world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 8 });
       return;
@@ -357,11 +358,11 @@ function stepSurfer(world, A, ped, dt) {
   // riding: carried in on the wave, carving along its face ahead of the break (away from where it started breaking)
   const w = wavesAt(B, t, s.ws).find((q) => q.id === s.w);
   const back = (why) => { s.st = why === 'wipe' ? 'wipe' : 'pad'; s.until = world.time + SURF.wipeS; surfPose(ped, why === 'wipe' ? 4 : 1); if (why === 'wipe') world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 14 }); A.line.a = Math.max(-B.half * 0.7, Math.min(B.half * 0.7, -B.side * B.half * (0.2 + ((A.id + world.tick) % 5) * 0.12))); };
-  if (!w || w.d - SURF.face < SURF.shore + 20) { back('in'); return; }
+  if (!w || w.wash || crestD(B, w, s.a) - SURF.face < SURF.shore + 20) { back('in'); return; }
   const carve = Math.sin(t * 1.25 + A.id) * 0.55, want = B.side * SURF.along * (0.55 + carve);
   s.va += (want - s.va) * (1 - Math.exp(-(s.st === 'air' ? 0.5 : 3.2) * dt));
   s.a = Math.max(-B.half - 40, Math.min(B.half + 40, s.a + s.va * dt));
-  const P = breakPt(B, s.a, w.d - SURF.face);
+  const P = breakPt(B, s.a, crestD(B, w, s.a) - SURF.face);
   if (WATER_T[m.tileAtPx(P.x, P.y)] !== 1 || Math.abs(s.a) > B.half) { back('in'); return; }
   put(P.x, P.y);
   ped.a = Math.atan2((s.va >= 0 ? B.nx : -B.nx) * 0.85 - B.ny * 0.5, (s.va >= 0 ? -B.ny : B.ny) * 0.85 - B.nx * 0.5);

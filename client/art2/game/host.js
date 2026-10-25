@@ -2177,6 +2177,7 @@ export class World2 {
     const x0 = this.vx0 - 120, x1 = this.vx1 + 120, y0 = this.vy0 - 40, y1 = this.vy1 + 160;
     o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.tint = null; o.shadow = false;
     const heads = this.liveHeads; heads.length = 0; this.nfL = 0;
+    const DL = this.doorL || (this.doorL = []); DL.length = 0;
     this._flagStep(F);
     for (const [k, st] of this.chunkState) {
       const lv = st.live;
@@ -2196,7 +2197,9 @@ export class World2 {
       }
       if (lv.flags) for (const fl of lv.flags) if (fl[1] > x0 && fl[1] < x1 && fl[2] > y0 && fl[2] < y1) this._flag(fl);
       if (lv.fnt) for (const fn of lv.fnt) if (fn[0] > x0 && fn[0] < x1 && fn[1] > y0 && fn[1] < y1) this._fountain(fn);
+      if (lv.doors) for (const dr of lv.doors) if (dr[0] > x0 - 60 && dr[0] < x1 && dr[1] > y0 && dr[1] < y1 + 60) DL.push(dr);
     }
+    if (DL.length) this._doors(F, DL);
     o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
     const xs = M.railXings || (M.rail && M.rail.crossings) || [];   // (World v3: every loop's crossings, once each)
@@ -2245,6 +2248,11 @@ export class World2 {
         if (key) E.drawDecal(key, s.x, s.y, s.a || 0, 1, this._gz(s.x, s.y));
       }
     }
+  }
+  // the street fronts' doors opening as someone comes up to them (doorart.js: loaded the first time one is in view)
+  _doors(F, L) {
+    if (!this.DA) { if (!this.daP) this.daP = import('./doorart.js').then((m) => { this.DA = m; }, (e) => { console.warn('[art2] doors', e); setTimeout(() => { this.daP = null; }, 30e3); }); return; }
+    this.DA.drawDoors(this, F, L);
   }
   // Flags in the wind (task #426: liveart.js, the chunks' live.flags): out as far as the wind says, flapping at its pace,
   // the phase summed frame by frame (task #388); still with Settings' wind sway off.
