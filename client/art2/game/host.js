@@ -1239,9 +1239,10 @@ export class World2 {
   // ---- see-through buildings --------------------------------------------------------------------------------
   // A building whose picture covers you (or the vehicle you're in, all of it) eases to a ghost and back - a smoothstep
   // over FADE_IN / FADE_OUT s, not a snap - clear round you and the players near you (engine.js STATIC_FS: GHOST, uClr,
-  // its edge feathered over CLR_SOFT); its footprint never fades; a tall thin one fades less (GHOST_THIN). The owner,
-  // 10-23 and 10-24 ("make the circle around the player much bigger (so it shows an entire vehicle) ... ease in and out
-  // of transparency ... feather the border").
+  // its edge feathered over CLR_SOFT); its footprint never fades; a tall thin one fades less (GHOST_THIN); whatever is
+  // behind it shows through (GHOST_FS). The owner, 10-23 and 10-24 ("make the circle around the player much bigger (so
+  // it shows an entire vehicle) ... ease in and out of transparency ... feather the border"; "vehicles and NPCs and
+  // things disappeared entirely behind the building").
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
@@ -1985,12 +1986,12 @@ export class World2 {
     lit.length = 0;
     if (!list || !list.length || !A || !A.forageKey) return;
     let g = this._fgrid;
-    if (!g) { g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
+    if (!g || this._fgList !== list || this._fgN !== list.length) { this._fgList = list; this._fgN = list.length; g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
     const gone = this.S.forageGone, o = this.opts;
     o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false; o.air = false;
     for (let cy = Math.floor((this.vy0 - 40) / 512); cy <= Math.floor((this.vy1 + 60) / 512); cy++) for (let cx = Math.floor((this.vx0 - 40) / 512); cx <= Math.floor((this.vx1 + 40) / 512); cx++) {
       for (const i of g.get(cy * 4096 + cx) || []) {
-        const f = list[i], K = FORAGE_KINDS[f.k];
+        const f = list[i], K = f && FORAGE_KINDS[f.k];
         if (!K || (gone && gone.has(i)) || f.x < this.vx0 - 30 || f.x > this.vx1 + 30 || f.y < this.vy0 - 10 || f.y > this.vy1 + 40) continue;
         const v = i & 3, key = this._spr('actors', 'forage', A.forageKey(K.art, v), [K.art, v]);
         if (K.glow) lit.push(f.x, f.y, K.glow);

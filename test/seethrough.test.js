@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { World2, FADE_IN, FADE_OUT, CLR_FOOT, CLR_OTHER, CLR_VEH_MAX } from '../client/art2/game/host.js';
-import { seeThrough, GHOST, GHOST_THIN } from '../client/art2/game/engine.js';
+import { seeThrough, seenBehind, GHOST, GHOST_THIN } from '../client/art2/game/engine.js';
 
 // a host with buildings in one chunk: [b, x0, y0, x1, y1 (its picture), base y]
 function host(blds, pred = null) {
@@ -81,4 +81,21 @@ test('the ghost: fully clear only round you (and the players near you), the edge
   const edge = seeThrough(f, 1200 + CLR_FOOT * 0.7, 778, C);
   assert.ok(edge > ghost + 0.05 && edge < 0.95, `a soft edge (${edge})`);
   assert.ok(seeThrough(-f, 1100, 650, C) < ghost, 'a thin one: lighter still');
+});
+
+test('whatever is behind a faded building still shows through it, at a visible alpha, never cut at its edge', () => {
+  const h = host([WIDE]);
+  step(h, 1200, 800, 20);
+  const C = h.clr, f = h.fades.get(7);
+  // (a car or a passer-by out in the ghost, well clear of you: most of it, more than the street shows)
+  const far = seenBehind(f, 1100, 650, C);
+  assert.ok(far >= 0.75 && far > seeThrough(f, 1100, 650, C), `behind the ghost (${far})`);
+  assert.equal(seenBehind(0, 1100, 650, C), 0, 'behind one that is not fading: hidden, as behind any wall');
+  // as it eases in, and from the ghost into your clear space: no step
+  let prev = 0, maxStep = 0;
+  for (let a = 0.004; a <= 1; a += 0.02) { const v = seenBehind(a, 1100, 650, C); maxStep = Math.max(maxStep, Math.abs(v - prev)); prev = v; }
+  assert.ok(maxStep < 0.06, `eased in, not popped (${maxStep})`);
+  prev = seenBehind(f, 1200, 778, C); maxStep = 0;
+  for (let d = 0; d <= CLR_FOOT * 2; d += 4) { const v = seenBehind(f, 1200 + d, 778, C); maxStep = Math.max(maxStep, Math.abs(v - prev)); prev = v; }
+  assert.ok(maxStep < 0.06 && seenBehind(f, 1200, 778, C) > 0.95, `clear round you, feathered (${maxStep})`);
 });
