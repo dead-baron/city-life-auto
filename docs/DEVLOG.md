@@ -16307,3 +16307,41 @@ and two workers behind it, the street through the ghost, no blob. Phone 390x844 
 - `test/seethrough.test.js`: b5a's easing, vehicle-sized clear space and feathering, plus `seenBehind`: what's behind
   shows at 75 %+ (more than the street does), nothing while it isn't fading, no step as it eases in or across the
   feathered edge.
+## 2026-10-25 - Batch 4a fix: the Sandpiper Coastguard Station's drive off Sandpiper Bay's boardwalk
+
+- test/world3townmodels.test.js on batch 4 found three of Sandpiper Bay's boardwalk rails standing on paving (LOT) where
+  their planks should have been, at tiles (5464-5466, 2777-2779) - and so "outside the towns". The cause was the new
+  Sandpiper Coastguard Station (shared/world3-sarhq.js, batch 4a). Its drive ran straight west from the station's
+  apron, along the apron's row 14 (tiles 2777-2779), to the nearest road. That road was the beach town's, so the drive
+  went across the boardwalk's ground. It was paved and marked RES (32, kept open), so the town's boardwalk, laid later,
+  left those tiles alone while its rail ran on over them.
+- A base out in the wild (SAR_HQS' wild ones) now stands wholly in its planned spot's own district, 6 tiles in from any
+  other (TOWN_GAP), so it is never on or up against a town's ground. It gets no drive if the drive would leave that
+  district, cross paving (PLAZA) or ground another pass has reserved, or run along a cliff band. The helicopters don't
+  need one. The airport's base is built as before.
+- Tests: world3townmodels, world3scenes (the five bases, their pads, the calls near each), world3server and
+  world3towns.
+## 2026-10-25 - Batch 4d, part 2: the follow scenes on batch 4 as merged
+
+On batch 4's merge (c4c59f74) test/world3scenes.test.js failed two of the follow-scene tests now and then. Neither
+came from another slice's change. Both were weaknesses in cinefollow.js that the merged world's different random state
+(World's rand is Math.random) uncovered:
+
+- **"mugging: a live subject, never a player"**: the purse snatcher the camera was on was taken away (arrested and
+  driven off, or cleared up) in the same tick, after cinefollow had run. The follow scenes looked again only every 5
+  ticks, and ran in the middle of the tick (after boats), so for up to 5 ticks `p.cineF.sub` (and the view, which
+  follows it) pointed at an entity that was gone. Fixed: cinefollow now runs **last** in the tick (server/world.js
+  SYSTEMS, after devplay), so it sees what every other system did that tick. A subject removed or downed is handed off
+  in that same tick; the full "still at it?" look stays every 5 ticks.
+- **"it harvests as it goes"**: the combine started for the camera took the middle rows of the field nearest you,
+  whole length. World v3's fields are cut by a wandering edge (their rects hold trees and tracks; farming.js row.ok has
+  a bit for each segment that's crop). Checked on World v3: from Downtown (where the second test starts one, its first part
+  having ended early) the old choice was field 134's rows 13-18, with no crop in four of them and one segment in the
+  other two, so nothing was harvested. From Midtown only the first of its three passes was on crop. The combine drove
+  where nothing grows. Fixed: `combinePlan` picks the nearest field with 1-3 passes (pairs of rows) whose crop runs together for at
+  least 5 of the 10 segments, and keeps each pass to that stretch (the header ends at the crop's end). The ripening is
+  only those rows. And a driven actor (the combine, the horse) that gets no nearer where it's going for 8 s skips to the
+  next point, or is done at the last one, so the camera moves on instead of watching a stuck machine.
+- Neither test was loosened.
+- Now: from Downtown field 138, one pass over segments 1-6; from Midtown field 95, rows 14-15 over the whole length.
+- test/world3scenes.test.js under the lock, twice: 6/6 both times; test/director.test.js + test/farming.test.js 15/15.
