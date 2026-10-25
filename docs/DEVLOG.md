@@ -16512,3 +16512,11 @@ run as a whole file on batch 4 as it was (it passes alone) - not this change.
 
 Perf: page 497.6 of 498 KB, renderer 400.4 of 400 (the firewood model; actors.js's header trimmed to fit), bake 874.6
 of 875 - no budget raised.
+- 2026-10-24, the batch 4 merge (b4b-2): the ambulance crew get round a vehicle they're held up against. With the
+  siren clearing the road (b4a), a car that pulls over for it can end up stopped beside the ambulance at the scene,
+  across the crew's way to the patient. pedStep held the medic at its side, and sidestep sent them back and forth along
+  it till the scene timed out ("every step in turn": no treat, no lift - test/ems.test.js, and the collapse's ambulance
+  in test/happenings.test.js). server/systems/ems.js walkTo: a medic with next to no headway in half a second, up
+  against a vehicle standing still, takes the shortest way round it by its corners - each in sight of the next, on open
+  ground, not one pressed against another vehicle - and keeps to it till round, then on as before. Not the vehicle
+  they're walking to (boarding); only when held up, so a walk that slides past as it did is unchanged.
