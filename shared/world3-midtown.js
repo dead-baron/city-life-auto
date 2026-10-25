@@ -1435,10 +1435,10 @@ function commons(K, x, y, w, h, out) {
     prop('boulder', bx, by, 8, { s: 22 + (k % 3) * 5 });
   }
   for (const [dx, dy] of [[-12.5, -2], [-13, 2], [-11, 4.5]]) prop('flowers_a', P.cx + dx, P.cy + dy, 0, { sp: pick(['cattails', 'reeds'], rnd(dx, dy, 905)), k: 1 });
-  // the arched footbridge over the pond's east end (WC342), the deck under it; the little jetty on the north shore
+  // the arched footbridge over the pond's east end (WC342), bridge tiles under it; the little jetty on the north shore
   {
     const bx = P.cx + 11, by0 = P.cy - P.ry, by1 = P.cy + P.ry;
-    for (let ty = by0; ty <= by1; ty++) for (const tx of [bx, bx + 1]) { const t = tileAt(tx, ty); if (t === T.WATER || t === T.DEEP) m.tiles[ty * m.w + tx] = T.DOCK; }
+    for (let ty = by0; ty <= by1; ty++) for (const tx of [bx, bx + 1]) { const t = tileAt(tx, ty); if (t === T.WATER || t === T.DEEP) m.tiles[ty * m.w + tx] = T.BRIDGE; }   // (bridge tiles under it: walked over, swum under - notes 2)
     prop('archbridge', bx + 1, P.cy + 0.5, 0, { len: (P.ry * 2 + 2) * TILE, a: Math.PI / 2 });
     path([[bx + 1, by1 + 1], [bx + 1, Y1 - 6]], 2);
     const jx = P.cx - 6;

@@ -265,7 +265,7 @@ export function busLines(world) {
         id: lines.length, name, paint, zone: z, steps, len: Math.round(len),
         stops: order.map((s) => { const n = seen.get(s.name) > 1 ? `${s.name} ${(count.set(s.name, (count.get(s.name) || 0) + 1)).get(s.name)}` : s.name; return { ...s, name: n }; }),
         // (a shelter it doesn't call at, across the street from one it does: where you wait, and that stop)
-        across: pick.drop && order.includes(pick.drop.for) ? [{ sx: pick.drop.stop.sx, sy: pick.drop.stop.sy, k: order.indexOf(pick.drop.for) }] : [],
+        across: pick.drop && order.includes(pick.drop.for) ? [{ sx: pick.drop.stop.sx, sy: pick.drop.stop.sy, k: order.indexOf(pick.drop.for), pi: pick.drop.stop.pi }] : [],
       };
       lines.push(L);
     }
@@ -411,6 +411,7 @@ function arriveAt(world, v, k) {
 
 export function update(world, dt) {
   void dt;
+  if (world.tick % 20 === 17 && world.players.size) world.broadcast({ e: 'bt', ...stopBoards(world) });   // (the shelters' arrival boards)
   if (world.tick % 20 !== 7) return;
   updateTaxis(world);
   if (world.opts.transit === false || (!world.npcBudget && !world.opts.transit) || !world.players.size) return;
@@ -473,6 +474,20 @@ export function stopEta(world, L, k) {
     if (best === null || t < best) best = t;
   }
   return best === null ? null : Math.round(best);
+}
+
+// The shelters' arrival boards (the owner, notes 2: "stylize bus stops better so they look like actual bus stops and
+// might have a clock or information saying when the next bus should be there"): every shelter a line calls at (or
+// passes across the street from), its next bus in seconds - the page counts it down between these, as it does the
+// platform clocks (client/render/busboard.js). { l: [[the shelter's prop index, s (-1: no bus out), line], ...], c: the
+// lines' colours }
+export function stopBoards(world) {
+  const lines = busLines(world), l = [];
+  lines.forEach((L, li) => {
+    L.stops.forEach((s, k) => { if (s.pi !== undefined) { const e = stopEta(world, L, k); l.push([s.pi, e === null ? -1 : e, li]); } });
+    for (const a of L.across || []) if (a.pi !== undefined) { const e = stopEta(world, L, a.k); l.push([a.pi, e === null ? -1 : e, li]); }
+  });
+  return { l, c: lines.map((L) => PAINTS[L.paint]) };
 }
 
 // ---- riding -------------------------------------------------------------------------------------------------------

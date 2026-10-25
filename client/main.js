@@ -896,6 +896,7 @@ function onEvent(ev) {
     case 'forage': if (ev.up) S.forageGone.delete(ev.i); else S.forageGone.add(ev.i); break;
     case 'xing': S.xing[ev.i] = { d: ev.d, b: ev.b }; break;
     case 'tt': S.tt = { l: ev.l, at: performance.now() / 1000 }; break; // station clocks
+    case 'bt': S.bt = { l: ev.l, c: ev.c, at: performance.now() / 1000 }; break; // the bus shelters' boards
     case 'gatebreak': fx.sparks(ev.x, ev.y, 6); for (let k = 0; k < 6; k++) fx.spawn(4, ev.x, ev.y, Math.cos(ev.a + (Math.random() - 0.5)) * 160, Math.sin(ev.a + (Math.random() - 0.5)) * 160, 0.5, 3, k % 2 ? '#f4f4f4' : '#c8262b'); sfx('crash', distVol(ev.x, ev.y) * 0.6); break;
     case 'trainhorn': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y); sfx(ev.s === 2 ? 'trainhorn' : 'trainhornshort', Math.max(0, 1 - d / 2400)); break; }
     case 'kick': sfx('thud', distVol(ev.x, ev.y) * 0.6); break;
@@ -3357,7 +3358,7 @@ function drawWorldV1(F) {
     drawAtmMarks(view, now);
     drawGates(view);
     drawCrossings(view, now);
-    drawStationClocks(view, now);
+    drawStationClocks(view, now); drawBusBoards(view, now);
     drawTrainSigns(F);
     drawSkyShadows(F, false);
     drawBuoys(view, now);
@@ -3411,7 +3412,7 @@ function drawOverlays(F, v2) {
   if (v2 && !F.sub) {   // (none of the city's marks down in the subway's tunnel)
     if (!clean) drawAtmMarks(F.view, now);
     if (!clean && settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
-    drawStationClocks(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
+    drawStationClocks(F.view, now); drawBusBoards(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawTrainSigns(F);
     drawSkyShadows(F, true);
     drawBuoys(F.view, now);
@@ -3959,6 +3960,12 @@ function drawTrainSigns(F) {
     const d = Math.hypot(e.rx - F.sp.x, e.ry - F.sp.y), k = d < near ? 1 : 1 - (d - near) / (far - near);
     if (k > 0.02) M.drawTrainSign(g, e, S.map, F.now, k);
   }
+}
+// the bus shelters' arrival boards (client/render/busboard.js, loaded once the server sends them)
+function drawBusBoards(view, now) {
+  if (!S.bt || !S.map) return;
+  if (!S.busMod) { if (!S.busP) S.busP = import('./render/busboard.js').then((m) => { S.busMod = m; }).catch(() => setTimeout(() => { S.busP = null; }, 30e3)); return; }
+  S.busMod.drawBusBoards(g, S.map, S.bt, view, now);
 }
 function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 }, R = S.map.rails, by = new Map();
