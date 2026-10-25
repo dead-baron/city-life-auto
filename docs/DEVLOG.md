@@ -16630,3 +16630,401 @@ came from another slice's change. Both were weaknesses in cinefollow.js that the
 - Neither test was loosened.
 - Now: from Downtown field 138, one pass over segments 1-6; from Midtown field 95, rows 14-15 over the whole length.
 - test/world3scenes.test.js under the lock, twice: 6/6 both times; test/director.test.js + test/farming.test.js 15/15.
+## 2026-10-25 - Batch 6a: the Neon Strip overhauled - the owner's neon signs, lantern alleys, the flagship arcade
+
+The owner's notes, part 2: "The Neon Strip region isn't looking as good as it could be yet ... lantern (or hanging
+lights) don't connect to anything ... custom buildings and lantern alleyways ... at night it really comes alive, but
+still looks great during the day"; the panther and the tiger "could look a lot cooler"; "way more neon signs with cool
+designs all around the neon district"; "a really awesome arcade in the neon district (... the points from all the
+arcades in the game transfer ... so they're all tied together)".
+
+**His signs, as pixel neon (client/art2/neonpics.js, new).** His two sign sheets (notes part 2, im-023 and im-024)
+are now the district's picture signs: 27 of them, each cropped from his sheet, shrunk to game size and set on one small
+palette (nine neon hues at four strengths: the tube's white-hot core, the tube, its fill, the deep edge) over the
+sign's dark backing. The **panther** is cut out of the dark, like his. The **tiger** striding over the crown and
+STREETWEAR replaces the old orange tiger (Afterglow's sign). The rest: the ramen bowl, SORA SUSHI, LUCKY PAW, the
+PIXEL ARCADE game pad, JET BURGER, the palm CLUB, the Rooftop BAR cocktail, 24H CITY MART, the tattoo rose, GAME ZONE,
+the vertical BAR, HOTEL, OPEN and cocktail blades, DUMPLING, SORA NOODLES, the dragon, the katakana words (karaoke,
+club, nightlife), NIGHTCLUB, the oni, the maneki-neko and the two red paper lanterns. The old roaring head
+(`tigerHead`) is the panther now.
+- The glow keeps batch 2's tone. Each pixel glows by its strength: tubes 170-200, fill 60, deep and backing not at
+  all. Inside a broad lit shape only its edge is a tube, and a sign whose whole panel was lit in the sheet has its fill
+  as paint. So the strokes read and no sign glows as one block.
+- The name sign on a Strip front keeps the shop's own name, smaller when it won't fit at the big size (it used to fall
+  back to DINER or EAT).
+
+**The fronts (shared/world3-neon.js, client/art2/neonsigns.js handNeon).**
+- Every lit front gets a picture sign over its shopfront from a deck: its own by name (a ramen bar the bowl, the karaoke
+  bar the katakana, the tattoo parlour the rose and the oni) or by trade. A tall front stacks one or two more of the
+  district's up its face where there's room.
+- The deck deals the least-used sign first and never the one the front next door has. On the built map that's 313
+  fronts and about 30 designs, the commonest under a tenth of them.
+- Low fronts (up to three floors) and the backs on the boulevard have a **picture sign standing on the roof's edge**
+  (the kit's new `npic|key`, a y < 0 counted from the roof's south edge).
+- The dressing round the signs (neonpics.js dressFace) gives each front light strips up its corners, holo panels with
+  scanlines and a glyph, AC units dripping down the wall, a conduit with cables slung across, and a tube on the blink
+  now and then.
+- The backs on the alleys get a tagged **roll shutter** over the ground floor, with a lantern or small sign beside it.
+
+**Strings of lights made fast at both ends.** Every string in the district now says what each end is fixed to: a post
+of its own (drawn with it, from the ground up past the string, with a cap), a bracket on a building's wall, a palm or a
+lamp (`ends`, and test/neonstrip.test.js checks each against the map).
+- Blossom Plaza's strings used to stop in the air short of the fountain (his screenshot). They now run post to post
+  round the fountain's ring and out from each post to the corner lamps.
+- Lantern Lane's strings stand on posts behind the stalls and carry red paper lanterns.
+- The festoon art (game/statics.js) draws the posts, the brackets, the lanterns (round red bodies with ribs, a gold cap
+  and a tassel, lit inside) and a bare-cable kind.
+
+**Lantern alleys.** Two new walkways, five tiles wide, run through the blocks from street to street, with red lanterns
+zig-zagging wall to wall every two tiles:
+- **Lantern Alley**, from the boulevard (facing Blossom Plaza across it) through to Lantern Street;
+- **Red Lantern Row**, from Lantern Street to Crosstown Avenue.
+
+Each has a gate at both mouths with its name lit, paper-lantern posts, vending machines (now in five colours), steam
+off the grates and crates. Lanterns also zig-zag across both service alleys (Glow Alley, Neon Back Alley) from the
+backs' walls to the rows', and across the passages between fronts.
+
+**At night.** On the Neon Strip after dark the streets keep a sheen of wet (art2/game/host.js `_slick`, eased in and out
+as you come and go). The engine's puddle mirror and light streaks then lay the signs' colour on the ground, with no
+rain. Some signs' light flickers ('neonf' lights). By day the signs stay his painted colours on the dark walls.
+
+**The flagship arcade.** The Pixel Arcade on the boulevard is now 24 tiles wide (from 16), with the game pad sign, GAME
+ZONE on its roof and its POI flagged `flagship`.
+- Its floor is `arcadeflag` (shared/homelayout.js): eighteen cabinets (a row along the back wall and an island down the
+  middle, the four games round again) and the long 2x4 prize counter by the east wall. Every other arcade's floor has
+  four cabinets.
+- **The tickets are one balance** (`profile.tickets`). Checked: they already were, but nothing said so. Every arcade
+  now says it at the door, on the floor, at the counter and in the score's message ("good at every arcade's prize
+  counter").
+
+**Budgets (tools/perf.mjs).**
+- Bake: 875 -> 895 KB, 75 -> 76 files. The new module is about 19 KB of it, 14 KB of that the pictures. To make room, the
+  old tigers' rows went, seven signs were cut (the sushi blade, pizza, boba, the koi, the sakura branch, the skewers,
+  NIGHT CITY), most signs were shrunk by 8%, and orphaned comments in statics.js were removed. Measured 894.9.
+- Renderer: 400 -> 401 KB for `_slick` and the blinking lights. Measured 400.6.
+- The page is untouched.
+
+**Tests.**
+- test/neonstrip.test.js (new, under the heavy lock) checks on World v3:
+  - every string's ends against the map;
+  - the signs: at least 24 designs, the owner's named ones present, spread out, none twice on a front or side by side;
+  - the two walkways: paved between walls, lanterns over them, always passable;
+  - the flagship: one, its door onto its floor, more cabinets than any other arcade, the long counter;
+  - no solid prop on the Strip's roads, and the doors onto the street.
+- test/neonart.test.js (new) checks:
+  - every picture decodes, with tubes lit and never the whole sign;
+  - a front's signs and dressing don't overlap and nothing over 210 is blown out;
+  - a back's shutter has its sign beside it;
+  - the posts, brackets and lanterns are drawn.
+- test/arcade.test.js gains "one balance at every arcade": tickets won at a corner arcade are spent at the flagship's
+  counter, and the flagship's floor has its cabinets and counter and is reachable from the door.
+
+**Also fixed.** One of Harbor Lights' lamps stood on Harborview Avenue (the new road check found it). It now stays off
+the avenue.
+
+**Checks.**
+- Before and after shots, day and night: the area shots (tools/area-shot.mjs) at district and street scale, and in-game
+  shots at 1280x720 and 390x844, are in scratchpad/b6a-shots/before and after.
+- Under the heavy lock, these all pass: world3server 13/13, world3world, world3townmodels, world3scenes 6/6,
+  world3shops 3/3, world3clutter 4/4, mapwindow 12/12, perf 6/6 and neonstrip.
+- Light tests pass: arcade, neonart, worldbuild, pinkmile, arts, shoprooms, homeart, homewalls, dmath and devtp.
+- perf: page 498/498, renderer 401/401, bake 895/895 KB. Building the city is 28x (budget 40), the bakes 60x (90).
+## 2026-10-25 - Batch 6b: the caves' own art and light, the falls and cliffs by hand, the salmon going up
+
+The owner's notes, part 2: "caves are still placeholder art inside ... dark inside for sure but there should be some
+natural light ... lanterns hung up or bioluminescent plants/fungi/creatures, or light shining through the ceiling ... areas
+that are completely dark ... a lantern or low level flashlight ... kind of rare"; "random looking rock columns doesn't look
+great ... the waterfalls themselves across the world aren't all perfectly rectangular ... salmon ... make it up the
+waterfall and make it to the next pool".
+
+### The caves (the mines' caves and the Redwood Caverns)
+- **Art** (new client/underground/caveart.js, loaded with the cave view - nothing of it on the page or in the renderer):
+  each 512 px tile of a cave is painted pixel by pixel at 2 px a pixel. The walls' outline is worn round (the cells'
+  edges with noise in them, ±10 px; the physics still walks the cells). The rock's top is dark and mottled. The south
+  faces stand up 26 px in layered strata with ledge lines, cracks, flowstone streaks, drip teeth under the rim, dark and
+  glistening by the water, with roots and moss hanging in where the chambers are shallow. The floor is mottled and
+  shadowed at the walls' feet, with rubble and pebbles thicker toward the walls, puddles, cracks, the den's moss, the
+  sea cave's cobbles, and grass and ferns where daylight comes down. The water is deep and dark in the middle and
+  pebbled and clear at its edge. Each cave has its own stone: a mine's grey granite, a cavern's brown basalt, a crystal
+  chamber's blue-violet, the sea cave's black. The things in it are drawn new: stalagmites with growth rings and drip
+  pools (a stalactite hangs over the tall ones), glowing mushrooms with glow ferns round them, glow-worms' beaded
+  threads, faceted crystal clusters, lanterns (on posts, or hung from iron brackets on the walls), the miners' timber
+  sets (posts, cap beam, braces). A cave tile now takes ~25 ms to paint, so after the first four the view paints one a
+  frame.
+- **Light** (shared/caverns.js `lightCave`, run on every cave once its dressing is done; the server and the view both
+  load it):
+  - **Shafts of daylight** come down through the roof (`K.shafts`): in a mine's river hall and onto its still pool, and in
+    a cavern's gallery, great lake and stalactite hall. In the view each is a leaning beam in the sky's colour, with
+    dust turning in it and a pool of light on the floor. By night only a little moonlight comes down (`SHAFT` in
+    shared/underground.js; `lightAt` counts them).
+  - **Lanterns hung on the walls**: a mine's along its way in, in its hall and along the passages off it. A cavern's go
+    along the paths in from its mouths, in the gallery, lake, stalactite hall, sea cave and treasure chamber, and at
+    the foot of its stairs. These are in addition to the docks' lanterns.
+  - **Timber sets** across a mine's way in and its first passages (`K.timbers`), and the ore face's passage in a cavern.
+  - **The dark** is everything else: a mine's den, its glow-worm and crystal caves (lit only by their own glow), and the
+    passages between. In a cavern: the echo hall, the den, the ore face, and the river's long reaches between docks. On
+    the test mine about 33% of the floor is lit by day without a light of your own, and 45% is pitch dark.
+- **The rare find** (`CAVE_FIND` in shared/rules.js; server/systems/underground.js `rollFind` / `takeFind`). Each time you
+  go into a cave there is a 12% chance that an old lantern or flashlight lies at one of its lit spots (`K.finds`: dry
+  floor in a shaft's pool or by a lantern, away from the way in). You get a light you don't own yet if there is one.
+  The find is yours alone and goes when you leave. The view draws it lying there with a glint now and then ('ug'
+  message: `find`). "Pick up the old lantern lying here" puts it in the bag at 35% batteries. If you already own both,
+  you take a set of batteries. Dev: `{c:'ug', k:'cave', shaft: n, find: 'here'}`.
+
+### The falls and the cliffs (all of them: client/art2/water.js `fallModel`, `cliffWall`, `caveMouth`)
+- **Layered rock** (`rockKit`) replaces the columnar basalt everywhere: beds of stone in courses, a dark seam under each
+  bed, a light lip along its top, each bed's own tone, cracks. On top there is moss with ferns standing out of it, roots
+  hang down the faces, and the rock is dark and glistening wet by the water.
+- **A fall's walls** stand to its lip beside the water and step down in ledges away from it into the ground. A low
+  ledge runs along their foot in places, mossy boulders sit at the foot, and rocks break the water above the lip.
+  The six stray columns in front of every fall are gone.
+- **Not rectangular**:
+  - The lip's edge wanders (±4 px) and so does the water's back.
+  - The banks above the lip jut in and out.
+  - Every fall over 34 px is split into strands of different widths with rock between (as the ledge falls already
+    were). Each strand is thrown out its own way. The glassy tongue over the lip has a ragged edge, there are thin
+    places where the dark wet rock shows through, and the edge of the churn at the foot is ragged.
+  - The small curtains (props-wild.js `waterfall`) got ragged edges, an uneven brink, and a rock splitting the top.
+  - The ledge falls' pieces (Twin Falls, Long Ledge Falls and the rest) no longer stand in one ruled row: each sits a
+    little forward or back of the next (±7 px) and a little higher or lower (±4 px of drop).
+  - The cave view's puddles are smaller and its cracks rarer, and the shafts' beams have soft edges.
+- **The cliffs**: a cliff steps back in ledges as it rises, and its ends come down into the ground. The end by a fall
+  is wet (`cliffWall`'s new `wet`).
+- **Set into the land**: a falls' gorge walls (Redwood Creek's; Willow River's) are drawn on toward the falls until they
+  meet the falls' own rock (statics.js `fallWalls`). Redwood Creek's fall has 56 px of rock either side
+  (`FALLS_LOOK.creek.rock`), so the cliff runs unbroken past the cave mouth and the falls. The escarpment the relief
+  raises at each falls (world3-relief.js) is unchanged, and the walls now read as its face.
+- **The water round them** (client/art2/game/waterlife.js, which loads lazily and is outside the budgets): rings break
+  all over the plunge pool, and its churned foam spreads off downstream in the current (`flowAt`).
+
+### The salmon going up (waterlife.js `CLIMB`)
+40% of a salmon's leaps at a falls now make it. `_above` finds the water above the falls (24-150 px past its drop). The
+salmon arcs up the face over the curtain: it stays at the foot for depth-sorting, and is raised by the height it
+climbs.
+It lands in the water above with a ring and a splash, and swims on upstream for 6-11 s. Then it is gone, and the next
+one turns up in the pool below. The rest fall back into the pool as before.
+
+### Budgets
+- The bake budget goes 875 -> 878 KB (877.2 measured). The cause is the layered rock and the falls' irregular water in
+  water.js, plus the small curtains and the walls' meeting. The columns' code (`basaltShade`, the column map) was
+  taken out first.
+- The renderer and the page are unchanged: page 498 KB, renderer 400 KB. The caves' art loads with the cave view, and
+  the salmon, ripples and churn are in waterlife.js, which loads lazily.
+
+### Tests
+- New **test/fallart.test.js**: a fall's lip wanders, its water comes over in strands of different widths, its walls
+  stand to the lip by the water and step down away from it, and a cliff has ledges and its ends come down.
+- **test/cavelight.test.js**: a cave has lit stretches and dark ones. The shafts light the floor by day, with only a
+  little moonlight at night. The den is pitch dark. The finds lie on dry floor in the light, and the layout is
+  deterministic.
+- **test/underground.test.js**:
+  - The rare find: about 12% of visits, a lantern or a flashlight at a lit spot, gone when you leave. It is picked up
+    into the bag on low batteries, or as batteries if you own both.
+  - "Pitch dark with no light" now looks for a chamber that nothing lights.
+- **test/world3caves.test.js**: the cavern's shafts and hung lanterns, lit and dark stretches, and finds in the light.
+- **test/waterlife.test.js**: salmon make it up the face into the water above the falls and swim on upstream.
+- Run under the lock after stamping: world3server, world3world, world3woods, world3rivers, world3peaks, nature, biolum
+  and waterbake, 69/69. world3caves, underground, cavelight, waterlife, fallart, fallscenter, cedarfalls, ledges and
+  fishing, 38/38. After the last tweaks: world3rapids, world3rivers, world3relief, waterbake, nature, art2, dmath,
+  mapwindow, fallart, cavelight and world3caves, 91/91, and perf 6/6. Also wind 8/8, which checks that the new rock's
+  ferns and roots hold still with the rock.
+
+### Second pass (the coordinator's review: the curtain still read as a bright rectangle, the ledge falls as dams)
+- **A fall's curtain from above** (client/art2/water.js `fallModel`; every fall drawn through it - Redwood Creek, the tarn,
+  Cedar Creek, the rainforest's, each ledge fall's piece, Twin Falls):
+  - It fans out as it falls: each side spreads 0.3 px for every px of drop, so a 56 px fall is about 34 px wider at its
+    foot than at its lip. The outermost tongues
+    spread past the notch, out over the walls' foot.
+  - The water comes over in **two or three uneven tongues** (20-62% of the width each) with rock ribs between them. The
+    ribs close at 0.28 px per px of drop, so a 5-13 px gap lasts 18-46 px down before the tongues join.
+  - The lip **steps**: each tongue's stretch of it sits up to 7 px forward or back of the next, and 0, 3 or 6 px lower,
+    as well as wandering.
+  - The **spray** (the baked veil) spills past the walls, and the live mist sends 30% of its puffs out beside the
+    curtain at mid-height, drifting outward.
+  - The **foam at the foot** is as wide as the spread curtain and lobed.
+- **The ledge falls** (shared/world3-ledgefalls.js, a world change):
+  - Each piece's stretch of lip is a row up or down from the next. At a step both rows are rock, so the lip is
+    unbroken and still one-way (shared/ledges.js takes runs of 1-3 rows).
+  - Each piece is 82-112% of the falls' drop.
+  - In a lip of three or more pieces, about a third of the middle pieces are **dry**: a bluff of the layered rock the
+    river parts round (statics.js draws a `cliffWall` there; `seg.dry`). The ends always pour.
+  - The first-pass ±7 px stagger in statics.js stays on top.
+- **The caves read better lit** (the dark stays dark):
+  - The lanterns light further and warmer: `LANTERN` 150 -> 190 px, 0.75 -> 0.85. The view lights a broad, flickering
+    amber pool round each (`hole`'s new `flat`) instead of a tight spot.
+  - The fungi's, worms' and crystals' halos are twice as strong and a little wider.
+  - The floor is a shade lighter.
+  - The echo hall, the den and the passages between still have no light of their own.
+- Budgets: the bake is 878.05 KB of the 878 set in the first pass. The page and the renderer are unchanged.
+- Tests for the second pass:
+  - test/fallart.test.js now also checks that the lip steps and wanders on the screen (over 6 px) and that the curtain
+    is wider at its foot than its notch.
+  - test/world3rapids.test.js now reads a ledge lip as rock right across in the rows round its line, every bit of it a
+    one-way drop. Water pours over every lip, some stretches are dry rock (under a third), a lip of three or more pieces
+    is not one ruled row, and the pieces come in six or more heights.
+  - test/underground.test.js's dark chamber is clear of the wider lantern light.
+- Run under the lock after stamping:
+  - world3server, world3world, world3west, world3wild, world3woods, world3rivers, world3peaks, world3rapids,
+    world3relief, nature, biolum and waterbake: 77/77.
+  - ledges, fallscenter, cedarfalls, world3caves, underground, cavelight, waterlife, fallart, fishing, art2, dmath,
+    mapwindow and wind: 73/73.
+  - perf: 6/6.
+## 2026-10-25 - Batch 6c: waves that swell and curl, doors that open, dressed-up facades, the world concepts' people
+
+From the owner's notes, part 2 (pages 7 and 16, and two of the general notes).
+
+**Surf** ("more natural looking waves for surfing, not just a straight line that disappears at the shoreline ... smaller
+waves and bigger waves, have them swell and curl over"):
+- **Sets of different sizes** (shared/surf.js). A set has three to five waves, building to the biggest in the middle.
+  Each set has its own strength, so some sets are small and some are big. A wave's size runs from 0.45 to 1.6, and a
+  bigger wave breaks further out (`brkOf`).
+- **The crest is a curve, not a ruler line.** It bows back toward the ends of the beach and wanders in and out along its
+  length (`crestD`), less so as it comes in. It also stands higher in some places than others (`heightAt`). The low
+  sections (under 70 % of the wave's size: `gapAt`) show as gaps in the lip, and you can't catch the wave there.
+- **Its life, as client/art2/game/surfart.js draws it:**
+  - far out, a low swell (the light back, a faint face, no lip yet);
+  - nearer its break line, the face darkens and stands up, the lip forms, and spray feathers off the highest sections;
+  - just ahead of the break as it peels along, the lip throws forward over a dark tube;
+  - behind the break, churning white water with an uneven front and foam lace trailing behind it;
+  - a wave that reaches the beach unbroken breaks on it (a shorebreak);
+  - at the sand, a thin uneven swash that runs up the beach in tongues and scallops (`runupAt`), slows, drains back and
+    leaves the sand dark and wet for a moment. Where the water ends is found on the map, piece by piece, so the swash
+    follows the real waterline.
+  - Each piece is turned along the crest's own line. The pieces come in three sizes with four variants each, and they
+    thin out toward their ends, so the pieces along a crest blend into one line instead of a row of blocks.
+- **The server rides you on the same crest the page draws** (server/systems/surf.js and the follow scenes' surfer,
+  cinefollow.js). You can't catch a wave in a gap in its lip. A wave in its swash can't be ridden. Your points scale
+  with how high the crest stood where you caught it.
+
+**Doors** ("better than a glowing square, can we create sliding doors or doors that open ... a bell ring when you walk
+in?"):
+- The doors on street fronts are now baked shut (client/art2/buildings.js `liveDoor`): sliding glass in a steel frame,
+  or a painted door with a glass light, a brass knob and a kick plate. Before, they were baked open as a lit square.
+- The chunk bakes record where each door is (statics.js `liveDoors`, the chunk's `live.doors`). The page opens each
+  door as someone comes up to it and closes it behind them (client/art2/game/doorart.js, loaded the first time a door
+  is in view). That someone can be you, another player or anyone in the city.
+  - A sliding door's two leaves part into the wall.
+  - A hinged door swings in, narrowing as it turns. A wide doorway has a pair of doors that part in the middle.
+  - A sliding door's sensor sees anyone near it. A hinged door opens only for someone in line with it coming in or out,
+    not for someone walking past along the pavement.
+  - From inside a walk-in seen cut away, its doors aren't drawn.
+- **The door is drawn at the doorway now** ("Some building entrances are still not put in correctly"). A hand-planned
+  front (b.art.shop: 'left' / 'right') put a walk-in's door a tile or more away from the doorway you walk through, and
+  so did the banks, whose doors sat in the middle of the front. Now the walk-in's own doorway decides. On World v3, 945
+  of 958 walk-ins' doors are at their doorways; before, about 1 in 50 was. The other 13 are strip malls whose row of
+  shops still shares one front.
+- **Which slide and which swing** (shared/doors.js): sliding glass for the grocery, the gas station's mart, the
+  pharmacy, the bank, the hospital, the police station, the sports and clothes shops, the lobbies, and the fronts that
+  look like a mart. Hinged doors for the corner store, the pawn shop, the barber, the hardware store, bait and tackle,
+  the fish market, the diners and cafes, the bars, the homes and the halls.
+- **The bell** rings as anyone goes in or out of the small shops: the corner store, the pawn shop, the diner and the
+  cafe, the barber, the hardware store, bait and tackle, the fish market, a bakery. The sound system already had a brass
+  shop bell that rang for four of these (client/sound/places.js, from the walk-ins' doorways). It now uses
+  shared/doors.js for which shops ring. A sliding door sighs open, and a hinged door without a bell clicks (the
+  `housedoor` latch).
+- **Doors never block anyone.** They are only a picture, and the doorway's tiles are the walk-in's floor as before.
+
+**Facade dressing by the district** ("graffiti or street art or fire escape stairs or vines or things in the window or
+balconies"). client/art2/facadedress.js is seeded by each building (its id and section), so the street looks the same
+in every bake and browser. It never uses Math.random.
+- `dressPlan` (statics.js, per street-facing section) uses more of what buildings.js already painted, where the district
+  wants it:
+  - fire escapes up most of the brick walk-ups (two floors and up);
+  - balconies on the flats;
+  - ivy and vines in the old town and the leafy streets;
+  - tags in the rough districts, now and then in the low ones and the arts district (never over a shop's sign, never in
+    the rich districts);
+  - murals and tags on the blank side walls in the arts district, the rough streets, by the beach and the clubs.
+- `dressFacade` (buildings.js, after the walls and windows) paints new pieces:
+  - drainpipes down a corner;
+  - striped canvas awnings over the windows (the beach, the rich streets, the old town);
+  - window AC units, more of them in the rough and dense districts;
+  - satellite dishes;
+  - washing strung between windows;
+  - geraniums and ferns in pots on the sills;
+  - posters pasted on the ground floor (rough streets, the arts district, the clubs);
+  - roller shutters pulled part or all the way down over the closed shops on the rough streets;
+  - planters either side of a front door.
+- **Things in the windows** (buildings.js `sash`): blinds half down, a plant on the inside sill, a cat, a lamp, a flag
+  or a poster on the glass, and curtains drawn to one side or both.
+
+**The world concepts' people** ("Have we added all the player and NPC human customizations for outfits that we can pull
+from all of the concepts?"):
+- **The audit.** The character sheets (CB1-5, CC1-10, CP1-4, SF/SM) were already covered in full (the devlog's
+  2026-10-08/09 entries, 236 pieces). The world concepts (docs/art-v2/world-concepts/CATALOGUE.md) show people the
+  wardrobe had nothing for:
+  - lifeguards (on 26 of the beach concepts);
+  - the tennis club's players;
+  - mail carriers and delivery couriers;
+  - the cooks and the diner's counter staff;
+  - nurses;
+  - cyclists;
+  - anglers in the rivers;
+  - weddings;
+  - valets at the hotels;
+  - gardeners.
+  The owner's notes 2 also name the mailman.
+- **Seventeen pieces added** (shared/lookcore.js, appended, so every old id is kept). Each is sold where it belongs and
+  drawn at game size:
+  - a tennis dress and a tennis skirt;
+  - a cycling jersey and cycling shorts;
+  - chest waders;
+  - a postal shirt and a mail satchel;
+  - chef whites and a diner's paper hat (the chef's toque was already there);
+  - a striped poncho;
+  - a lifeguard's whistle and a rescue tube;
+  - a stethoscope;
+  - a bow tie;
+  - work gloves;
+  - a courier's insulated delivery pack;
+  - a bridal veil.
+
+  New drawing in client/art2/people.js: the courier's box on the back, the bow tie at the collar, the paper hat's fold
+  and the veil falling behind. The rest reuse shapes the renderer already draws.
+- **Eleven new kinds of people walk the city** (server/systems/personas.js), dressed from these pieces:
+  - lifeguards on the beaches;
+  - mail carriers in the neighbourhoods by day;
+  - couriers with their boxes downtown and in the nightlife, day and night;
+  - cooks leaning on a wall on their break;
+  - diner servers;
+  - nurses near the civic center;
+  - tennis players in the rich districts and the parks;
+  - cyclists doing laps of the parks and the beachfront;
+  - valets outside the towers and the clubs;
+  - gardeners in the suburbs;
+  - now and then a bride and groom (a pair: he in a tux and bow tie, she in the wedding dress and veil).
+
+  Anglers sometimes wear chest waders and wellies. The debug dummies can wear the new looks
+  (`{ t: 'dev', c: 'dummy', looks: 'new' | 'new2' }`).
+
+**Budgets:**
+- The renderer went from 400 to 402 KB (401.1 measured), for the new pieces' drawing (people.js) and their catalogue
+  entries (lookcore.js): every figure is drawn from those two files.
+- The bake went from 875 to 883 KB and 75 to 77 files (882.7 measured), for client/art2/facadedress.js and
+  shared/doors.js, the doors baked shut, the window contents, and the same people pieces (the bake draws people in its
+  scenes).
+- The doors' and the waves' drawing load lazily (doorart.js, surfart.js) and cost neither budget.
+- The page is unchanged (497.9 KB).
+
+**Tests:**
+- New:
+  - test/doors.test.js: which slide and which swing; the bell on the right shops; a door opening for someone coming up
+    and shutting behind them, and not opening for a passer-by; each opening step showing more of the doorway; baked
+    shut.
+  - test/doorsbake.test.js (builds the city): the bakes' door records at the walk-ins' doorways, none cut away; walking
+    in through a doorway.
+  - test/world3doors.test.js (builds World v3): every walk-in's door is drawn at its doorway (over 97%) and is of its
+    trade's kind.
+  - test/facades.test.js: deterministic and varied dressing; by the district; painted on the wall.
+  - test/outfits.test.js: the new pieces appended and drawn; the new people wearing them.
+  - test/surf.test.js, four more: small and big sets, a big wave breaking further out; the curved, broken crest that
+    straightens; a wave through every stage to the swash and back; the server riding you on the drawn crest, and no
+    catching it in a gap.
+- Passing: surf, doors, doorsbake, world3doors, facades, outfits, sound, shoprooms, homeart, dmath, mapwindow, art2, look, wardrobe,
+  peoplelook, doorways, npcpeople, passersby, view, director, gameplay, skate and ambience.
+
+## 2026-10-25 - Batch 6 together: the bake budget 905 KB
+- The three slices of batch 6 each raised the chunk bake's code budget on their own (the Neon Strip's signs 875 -> 895,
+  the falls' rock 875 -> 878, the doors, facades and outfits 875 -> 883); together the bake worker loads 905 KB in 78
+  files, so the budget is 905 KB / 78 files (tools/perf.mjs). The bake's time stays well inside its budget (about 60x
+  against 90x): the new art is drawn only where it stands.
