@@ -72,12 +72,12 @@ function show() {
   }
   cv.style.display = '';
   if (!raf) raf = requestAnimationFrame(frame);
-  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no FIRE / ROLL / CAR, no aim
-  // stick and no district card in here
+  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no district card in here, and
+  // the touch slots hold only ACT and the items (shared/controls.js TOUCH_STATES.home)
   S.homeIn = true;
   if (!document.getElementById('home-css')) {
     const css = document.createElement('style'); css.id = 'home-css';
-    css.textContent = 'body.home-in #tbtns [data-b=fire],body.home-in #tbtns [data-b=vehicle],body.home-in #tbtns [data-b=dive],body.home-in #tbtns [data-b=throw],body.home-in #tbtns [data-b=reload],body.home-in #stick-r,body.home-in #firetog,body.home-in #district{display:none!important}';
+    css.textContent = 'body.home-in #district{display:none!important}';
     document.head.appendChild(css);
   }
   document.body.classList.add('home-in');
@@ -222,7 +222,7 @@ function drawArt(L, me, u, now) {
       if (p.pose !== 'down' && !st.shower) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
       g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
       if (p.nm) {
-        g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+        g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
         g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.nm, p.x + 1, p.y - c.ay - 3);
         g.fillStyle = '#bfe3ff'; g.fillText(p.nm, p.x, p.y - c.ay - 4);
       }
@@ -494,7 +494,7 @@ function editMarks(L, me, now) {
     const cx = (t.tx + t.w / 2) * T, cy = (t.ty + t.h / 2) * T, a = [Math.PI / 2, Math.PI, -Math.PI / 2, 0][e.r & 3];
     g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath();
     g.moveTo(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12); g.lineTo(cx + Math.cos(a + 2.5) * 7, cy + Math.sin(a + 2.5) * 7); g.lineTo(cx + Math.cos(a - 2.5) * 7, cy + Math.sin(a - 2.5) * 7); g.fill();
-    g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     g.fillStyle = 'rgba(0,0,0,.7)'; g.fillText(PIECES[e.k].name, cx + 1, t.ty * T - 2 + 1);
     g.fillStyle = '#fff'; g.fillText(PIECES[e.k].name, cx, t.ty * T - 2);
   } else {
@@ -579,14 +579,14 @@ function friend(L, o, now) {
   g.rotate(a); g.imageSmoothingEnabled = false;
   g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
   g.restore();
-  g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(o.n, x + 1, y - 21);
   g.fillStyle = '#bfe3ff'; g.fillText(o.n, x, y - 22);
 }
 // the place's name, and the night passing while you sleep
 function hudText(W, H, dpr, now) {
   const fs = Math.round(15 * dpr), ny = H - Math.round(30 * dpr);   // (the name along the bottom: the prompt and the buttons are up top)
-  g.font = `bold ${fs}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(st.name || '', W / 2 + 2, ny + 2);
   g.fillStyle = '#f2e6c8'; g.fillText(st.name || '', W / 2, ny);
   if (st.sleepT0) {
@@ -595,9 +595,9 @@ function hudText(W, H, dpr, now) {
     g.fillStyle = `rgba(4,6,14,${0.92 * dark})`; g.fillRect(0, 0, W, H);
     const m = sleepMinutes(), hh = Math.floor(m / 60), mm = Math.floor(m % 60);
     g.globalAlpha = dark;
-    g.font = `bold ${Math.round(40 * dpr)}px monospace`; g.textBaseline = 'middle';
+    g.font = `700 ${Math.round(40 * dpr)}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textBaseline = 'middle';
     g.fillStyle = '#9fb7ff'; g.fillText(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, W / 2, H / 2);
-    g.font = `bold ${Math.round(22 * dpr)}px monospace`;
+    g.font = `700 ${Math.round(22 * dpr)}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     g.fillText('z'.repeat(1 + (Math.floor(now / 500) % 3)), W / 2 + 80 * dpr, H / 2 - 40 * dpr);
     g.globalAlpha = 1;
   }

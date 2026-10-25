@@ -18,11 +18,32 @@ const TOUCH = cut('<div id="touch"', '<div id="interior"');
 export const SIZES = [[1280, 720], [1920, 1080], [844, 390], [740, 360], [390, 844], [1024, 768]];
 export const DEVICES = ['kbm', 'touch', 'pad'];
 export const STATES = ['foot', 'veh', 'air', 'police', 'rob', 'custody'];   // (on foot armed with a flashlight and a crate; driving; flying; the police with the cruiser's hint; robbing a shop; arrested)
+// and on touch every state the slots have (shared/controls.js TOUCH_STATES): unarmed, on a horse, a board, at a boat's
+// wheel, swimming, a passenger, surfing, at home
+export const TOUCH_STATES = ['unarmed', 'horse', 'board', 'boat', 'swim', 'ride', 'surf', 'home'];
+// what the page tells the touch slots in each (client/main.js touchFlags), each with everything it can show
+export const FLAGS = {
+  foot: { items: true, carrying: true, armed: true, light: true, prompt: true },
+  veh: { items: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true },
+  air: { items: true, air: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true },
+  police: { items: true, armed: true, light: true, call: true, prompt: true },
+  rob: { items: true, armed: true, prompt: true },
+  custody: {},
+  unarmed: { items: true, guard: true, light: true, call: true, prompt: true },
+  horse: { items: true, inVeh: true, driver: true, horse: true, armed: true, shoot: true, prompt: true },
+  board: { items: true, board: true, prompt: true },
+  boat: { items: true, inVeh: true, driver: true, boat: true, armed: true, shoot: true, prompt: true, siren: true },
+  swim: { items: true, swim: true, prompt: true },
+  ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true },
+  surf: { items: true, surf: true, prompt: true },
+  home: { items: true, home: true, light: true, prompt: true },
+};
 export function scenarios() {
   const out = [];
   // (upright, the touch controls only: the keyboard's HUD wants a window wider than ~450 px - its minimap and weapon
   // plate alone fill 390)
   for (const [w, h] of SIZES) for (const dev of DEVICES) for (const st of STATES) if (w > h || dev === 'touch') out.push({ w, h, dev, st });
+  for (const [w, h] of SIZES) for (const st of TOUCH_STATES) out.push({ w, h, dev: 'touch', st });
   return out;
 }
 
@@ -43,14 +64,14 @@ export const TEXT = {
 // the page's own script: set the scenario up, wait for the fonts, measure, hand the boxes to the parent page
 const FRAME_JS = `
 const sc = JSON.parse(decodeURIComponent(location.hash.slice(1)));
-const T = ${JSON.stringify(TEXT)};
+const T = ${JSON.stringify(TEXT)}, FL = ${JSON.stringify(FLAGS)}[sc.st] || {};
 const $ = (id) => document.getElementById(id);
 const b = document.body;
 b.classList.add(sc.dev);
 if (sc.h > sc.w) b.classList.add('portrait');
 b.classList.add('armed', 'multi-wpn');
 if (sc.st === 'foot') b.classList.add('has-light', 'carrying');
-if (sc.st === 'veh' || sc.st === 'air') b.classList.add('in-veh');
+if (FL.inVeh) b.classList.add('in-veh');
 if (sc.st === 'air') b.classList.add('in-air');
 if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
@@ -61,6 +82,9 @@ if (sc.st === 'custody') pr.classList.add('hidden');   // (held: nothing to Act 
 // (the notes as client/hud.js lays them: the words in a .tx box, paged by client/notepages.js when they don't fit -
 // imported with the page's script, not after it: the headless page's clock doesn't wait for an import made later)
 import * as NP from '/client/notepages.js';
+import * as TS from '/client/touchslots.js';
+const slots = sc.dev === 'touch' ? TS.makeSlots($('tbtns')) : null;
+if (slots) slots.set(FL);
 for (const [i, n] of (sc.notes || T.notes).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = n; $('toasts').appendChild(el); }
 $('job').textContent = T.job; $('job').classList.remove('hidden');
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
@@ -99,10 +123,10 @@ function measure() {
   for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
   document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) keep.push(box(el, el.id)); });
   if (sc.dev === 'touch') {
-    document.querySelectorAll('#tbtns button').forEach((el) => { if (shown(el)) keep.push(box(el, 'tb.' + el.className.split(' ')[0])); });
-    for (const id of ['stick-l', 'stick-r', 'firetog']) if (shown($(id))) keep.push(box($(id), id));
+    document.querySelectorAll('#tbtns button').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
+    if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
   }
-  parent.postMessage({ sc, read, keep }, '*');
+  parent.postMessage({ sc, read, keep, state: slots && slots.state }, '*');
 }
 document.fonts.ready.then(() => setTimeout(measure, 100));
 `;
@@ -122,12 +146,64 @@ for (const sc of list) { const f = document.createElement('iframe'); f.style.css
 </script></body></html>`;
 }
 
+// The touch FIRE / AIM buttons for real (test/touchslots.test.js): the page's touch controls with client/input.js
+// bound to them, armed, the slots placed; touches on FIRE and AIM, and what sample() would send after each
+const DRAG_JS = `
+import { initInput, sample, setTouchAim } from '/client/input.js';
+import * as TS from '/client/touchslots.js';
+const $ = (id) => document.getElementById(id);
+document.body.classList.add('touch');
+$('touch').classList.remove('hidden');
+TS.makeSlots($('tbtns')).set({ armed: true, prompt: true });
+initInput($('cv'), {});
+setTouchAim(TS.touchAim);   // (as client/main.js does when the touch controls load)
+const at = (b) => { const r = $('tbtns').querySelector('[data-b=' + b + ']').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+const ev = (type, el, x, y) => { const t = new Touch({ identifier: 5, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], targetTouches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); };
+const view = (target) => ({ selfScreen: { x: 400, y: 200 }, inVehicle: false, armed: true, lastAim: 0.25, face: 0.5, target: () => target });
+const out = {};
+const step = (name, b, moves, target, end) => {
+  const el = $('tbtns').querySelector('[data-b=' + b + ']'), [x, y] = at(b);
+  ev('touchstart', el, x, y);
+  for (const [dx, dy] of moves) ev('touchmove', el, x + dx, y + dy);
+  out[name] = sample(view(target));
+  out[name + 'Held'] = sample(view(target));
+  ev('touchend', el, x + (moves.length ? moves[moves.length - 1][0] : 0), y + (moves.length ? moves[moves.length - 1][1] : 0));
+  out[name + 'After'] = sample(view(target));
+};
+dispatchEvent(new TouchEvent('touchstart', { bubbles: true }));   // (the page in touch mode)
+step('tap', 'fire', [], 1.0);
+await new Promise((r) => setTimeout(r, 800));   // (past the drag's aim keeping a moment: shared/input.js AIM_KEEP_MS)
+step('tapNone', 'fire', [], null);
+step('drag', 'fire', [[-20, -16], [-50, -40]], 1.0);
+await new Promise((r) => setTimeout(r, 800));
+step('aim', 'aim', [[0, 30]], null);
+document.getElementById('out').textContent = JSON.stringify(out);
+`;
+export function dragPage() {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="/client/style.css"></head>
+<body><div id="game"><canvas id="cv" width="10" height="10"></canvas>${TOUCH}</div><pre id="out"></pre><script type="module">${DRAG_JS}</script></body></html>`;
+}
+export async function measureDrag() {
+  const chrome = findChrome();
+  if (!chrome) return null;
+  const srv = await serve();
+  try {
+    const out = await new Promise((ok, no) => execFile(chrome, ['--headless', '--no-sandbox', '--disable-gpu', '--touch-events=enabled', '--force-device-scale-factor=1',
+      '--virtual-time-budget=20000', '--window-size=844,390', '--dump-dom', `http://127.0.0.1:${srv.port}/__hud/drag.html`], { maxBuffer: 8 << 20, timeout: 60000 }, (e, so) => (e ? no(e) : ok(so))));
+    const m = /<pre id="out">(\{.*?)<\/pre>/s.exec(out);
+    if (!m) throw new Error('the drag page gave nothing: ' + out.slice(-400));
+    return JSON.parse(m[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'));
+  } finally { srv.close(); }
+}
+
 const TYPES = { '.css': 'text/css', '.woff': 'font/woff', '.woff2': 'font/woff2', '.png': 'image/png', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
 // a static server for the checkout plus the two pages; resolves to { port, close }
 export function serve(port = 0) {
   const srv = createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     if (u.pathname === '/__hud/frame.html') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(framePage()); }
+    if (u.pathname === '/__hud/drag.html') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(dragPage()); }
     if (u.pathname === '/__hud/all.html') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(allPage(u.searchParams.get('only') ? JSON.parse(u.searchParams.get('only')) : undefined)); }
     try {
       const p = decodeURIComponent(u.pathname).replace(/^\/+/, '');

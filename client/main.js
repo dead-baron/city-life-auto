@@ -15,7 +15,7 @@ import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createInventory, createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -503,7 +503,8 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
+  const inVehicle = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, ce = S.ents.get(S.ctrlId);
+  let inp = sample({ selfScreen, inVehicle, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, face: S.pred ? S.pred.s.a : ce && ce.ra !== undefined ? ce.ra : S.lastAim, target: () => (S.slots ? S.slots.target(inVehicle, wcur) : null), air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
@@ -1315,7 +1316,7 @@ function drawArt2Marks(F) {
   fx.drawTexts(g);
   for (const v of F.vehs) if (v.d.fs) {
     const txt = `$${v.d.fs.toLocaleString()}`;
-    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     const w = g.measureText(txt).width + 10;
     g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
@@ -1534,7 +1535,7 @@ function deathPad() {
 // ---- the bag + quick wheel ----------------------------------------------------------------------
 const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
-// the weapon picker (touch: hold WPN or the weapon box): every weapon you carry, tap one to take it out
+// the weapon picker (touch: hold the weapon plate): every weapon you carry, tap one to take it out
 const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
 // the weapon wheel (a pad: hold RB or LB, point a stick, let go): every weapon you carry round a circle
 const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
@@ -2216,7 +2217,6 @@ function markTitle(btns) {
 function syncSettings() {
   $('s-kbdrive').value = settings.kbDrive;
   $('s-paddrive').value = settings.padDrive || 'triggers';
-  $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
@@ -2363,7 +2363,6 @@ for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = 
 for (const id of ['pause', 'settings', 'controls', 'players', 'devpw']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
-$('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); input.showFireToggle?.(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 // the plasma blade's colour (task #411): kept with your character, so it's the server's to keep (server looks.js setBlade)
 $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.name}${i ? '' : ' (its own)'}</option>`).join('');
@@ -2641,7 +2640,7 @@ function drawEventArrows(g, list, z, now) {
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
       // (U17: a speech bubble - the navy plate, a light edge, its tail down to them - with a paw at its left)
       const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 24 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x, u = 1 / z;   // (clear above the head: drawWorldLabels)
-      g.font = `700 ${13 * u}px "CLA Pixel", Rubik, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.font = `700 ${13 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
       const tw = g.measureText(t).width + 34 * u, bx = ox - tw / 2;
       tagPlate(ox, oy, tw, u);
       g.fillStyle = '#ffb43c'; g.beginPath(); g.ellipse(bx + 14 * u, oy + 3 * u, 4.2 * u, 3.4 * u, 0, 0, 6.28);   // (the paw: its pad and four toes)
@@ -2665,7 +2664,7 @@ function drawEventArrows(g, list, z, now) {
       g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.8); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.8); g.closePath(); g.fill(); g.stroke();
       g.restore();
       const txt = `${kind.label} · ${Math.round(d / 32)}m`;
-      g.font = `600 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `600 ${12 / z}px "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       const ly = (Math.sin(a) > 0 ? 1 : -1) * 22 / z;
       g.lineWidth = 3 / z; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(txt, 0, ly);
       g.fillStyle = kind.color; g.fillText(txt, 0, ly);
@@ -3436,15 +3435,15 @@ function drawOverlays(F, v2) {
   drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
-    const ta = touchAimState();
-    const fire = S.lastFire || ta.firing;
+    const fire = S.lastFire;
     const a = S.lastAim, x0 = sp.x + Math.cos(a) * 22, y0 = sp.y + Math.sin(a) * 22;
     g.save();
     g.strokeStyle = fire ? 'rgba(255,70,60,.85)' : 'rgba(255,255,255,.55)';
     g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = -now * 40;
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190); g.stroke();
+    const L = input.device === 'touch' ? 110 : 190;   // (touch: a short line from you while FIRE / AIM is dragged)
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L); g.stroke();
     g.setLineDash([]);
-    g.beginPath(); g.arc(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190, fire ? 7 : 5, 0, 6.28); g.stroke();
+    g.beginPath(); g.arc(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L, fire ? 7 : 5, 0, 6.28); g.stroke();
     g.restore();
   }
 
@@ -3501,6 +3500,8 @@ function drawOverlays(F, v2) {
     if (inAir !== S.uiInAir) { S.uiInAir = inAir; document.body.classList.toggle('in-air', inAir); }
     const dead = !!(S.me && S.me.dead);
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
+    // the touch slots: what each holds for what you're doing (shared/controls.js; client/touchslots.js, loaded the first time)
+    if (input.device === 'touch') { if (S.slots) S.slots.tick(inVeh, inAir, onBoard); else if (!S.slotsAsk) { S.slotsAsk = 1; import('./touchslots.js').then((m) => { S.slots = m.makeSlots(undefined, { ctx: { S, CTRL, WEAPONS, VEHICLE_BY_INDEX, PF } }); setTouchAim(m.touchAim); }).catch((e) => { S.slotsAsk = 0; console.warn('[touchslots]', e); }); } }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
   if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); uiTop(); }
@@ -3688,7 +3689,7 @@ function drawBays(view) {
     g.fillStyle = '#7a7f88'; g.fillRect(x - 2, cy, w + 4, ch);
     g.fillStyle = 'rgba(0,0,0,.25)';
     for (let yy = cy + 3; yy < cy + ch; yy += 6) g.fillRect(x - 2, yy, w + 4, 2);
-    g.fillStyle = '#ffd400'; g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.fillStyle = '#ffd400'; g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     if (k > 0.7) g.fillText('SPRAY & GO', x + w / 2, cy + ch / 2 + 4);
   }
 }
@@ -3822,7 +3823,7 @@ function drawBuoys(view, now) {
       g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(c.x, c.y + 4, 14, 6, 0, 0, 6.28); g.fill();
       g.fillStyle = k % 2 ? '#ffffff' : '#e8382b'; g.beginPath(); g.arc(c.x, c.y + bob(k), 9, 0, 6.28); g.fill();
       g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
+      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
     });
     const s = race.start;
     if (!inView(s)) continue;
@@ -3831,9 +3832,9 @@ function drawBuoys(view, now) {
     g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
     g.fillStyle = '#1b2333'; g.fillRect(s.x - 1, s.y - 30, 2, 28);
     for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
-    g.font = 'bold 12px monospace'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
     g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
-    g.font = 'bold 10px monospace'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
+    g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
   }
 }
 
@@ -3881,7 +3882,7 @@ function drawClubShutter(gt, k) {
   if (h > 1) {
     g.fillStyle = '#8a8d94'; g.fillRect(x0, y0, w, h);
     g.fillStyle = 'rgba(0,0,0,.25)'; for (let yy = 2; yy < h; yy += 3) g.fillRect(x0, y0 + yy, w, 1);
-    if (k < 0.2) { g.fillStyle = '#ff4fd8'; g.font = 'bold 7px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('OPENS AT DUSK', gt.x, gt.y); }
+    if (k < 0.2) { g.fillStyle = '#ff4fd8'; g.font = '700 7px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('OPENS AT DUSK', gt.x, gt.y); }
   }
   g.restore();
 }
@@ -4217,12 +4218,12 @@ function drawVehicleEnt(v, now, dt) {
   g.restore();
   if (v.d.fs) { // dealership price tag on the windscreen
     const txt = `$${v.d.fs.toLocaleString()}`;
-    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     const w = g.measureText(txt).width + 10;
     g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
-    g.font = 'bold 8px monospace'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
+    g.font = '700 8px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
   }
   // riders on bikes and jet skis sit in the open: driver up front, a passenger behind; in an open boat at its seats
   // (def.crew: the driver's, the one beside it, then the back seats in turn - task #420)
@@ -4697,7 +4698,7 @@ function drawAtmMarks(view, now) {
     g.fillStyle = 'rgba(61,220,132,.25)'; g.beginPath(); g.arc(a.x, y, r + 5, 0, 6.28); g.fill();
     g.fillStyle = '#17803f'; g.beginPath(); g.arc(a.x, y, r, 0, 6.28); g.fill();
     g.strokeStyle = '#7ff0a8'; g.lineWidth = target ? 2.5 : 1.5; g.stroke();
-    g.fillStyle = '#eafff1'; g.font = `800 ${target ? 20 : 11}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#eafff1'; g.font = `700 ${target ? 20 : 12}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('$', a.x, y + 1);
     g.restore();
   }
@@ -4822,7 +4823,7 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
     g.strokeStyle = c; g.globalAlpha = 0.95; g.lineWidth = 2.5 * u; g.stroke();
   }
   g.setLineDash([]); g.globalAlpha = 1;
-  g.font = `700 ${13 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${13 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const ty = y - hh - 26 * u;
   tagPlate(x, ty, g.measureText(plate).width + 20 * u, u);
   g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
@@ -4837,7 +4838,7 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';
-  g.font = `bold ${fs}px monospace`;
+  g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
@@ -4846,16 +4847,16 @@ function drawWorldLabels(peds, vehs, now, z) {
     if (p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `bold ${30 / z}px monospace`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
+      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
       g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
-      g.font = `bold ${fs}px monospace`;
+      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     }
     if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
       const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
-      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `bold ${11 / z}px monospace`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `bold ${fs}px monospace`; }
+      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;

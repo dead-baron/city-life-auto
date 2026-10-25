@@ -57,7 +57,7 @@ export function showHomes(map, go) {
     }
     if (hover) {
       const x = (hover.h.x - fx0) * sc, y = (hover.h.y - fy0) * sc;
-      g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+      g.font = '600 12px "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
       g.lineWidth = 3; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(hover.h.name, x, y - 6); g.fillStyle = '#fff'; g.fillText(hover.h.name, x, y - 6);
     }
   };
