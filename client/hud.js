@@ -229,7 +229,7 @@ export class HUD {
       if (ch.dataset.h !== html) { ch.dataset.h = html; ch.innerHTML = html; }
       ch.classList.remove('hidden');
     } else ch.classList.add('hidden');
-    cb.textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';
+    (cb.querySelector('.l') || cb).textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';   // (the slot's label: client/touchslots.js)
     cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
     // the flashlight's touch button: there while you own one, lit while it's on
     document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
@@ -241,9 +241,6 @@ export class HUD {
     $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
-    // the touch WPN button shows what's in your hands (tap: the next one, hold: the picker)
-    const bwi = $('b-wpn')?.querySelector('.wi');
-    if (bwi && bwi.dataset.w !== wk) { bwi.dataset.w = wk; bwi.innerHTML = ''; bwi.appendChild(weaponIcon(w.i, me.blade)); }
     document.body.classList.toggle('multi-wpn', me.weapons.length > 1 && !me.dead);
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);

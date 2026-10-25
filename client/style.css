@@ -283,71 +283,57 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(244px + var(--co
 /* the way out of a walk-in while its inside is still being drawn (main.js exitHint) */
 #exithint { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); z-index: 6; padding: var(--s1) 10px; background: var(--glass); border: 1px solid var(--gold-a); border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; pointer-events: none; }
 
-/* ==== the touch controls (their places come with the slot layout, UI-2; here their look: navy with a gold rim, FIRE red) ==== */
+/* ==== the touch controls by slots (UI-2): client/touchslots.js places them, shared/controls.js says what each holds ====
+   The left 40% is the move stick's (it comes up where the thumb lands); on the right 1 FIRE (red, big), 2 ROLL, 3 ACT
+   (gold), 4 CAR, the context slots C1 / C2 (an orange rim) and the small utility slots U1-U3. Each an icon and a label. */
 #touch { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-#zone-l { position: absolute; left: 0; top: 34%; bottom: 0; width: 46%; pointer-events: auto; touch-action: none; }
+#zone-l { position: absolute; left: 0; top: 36%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
+body.portrait #zone-l { top: 50%; }
 .stick { position: absolute; border-radius: var(--r3); pointer-events: none; }
-#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 66px); top: calc(100% - 100px); width: 132px; height: 132px; margin: -66px 0 0 -66px; border: 2px solid var(--cream-a); background: var(--ink-a); opacity: .6; transition: opacity var(--t1); }
+#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 2px solid var(--cream-a); background: var(--ink-a); opacity: .6; transition: opacity var(--t2); }
 #stick-l.active { opacity: 1; }
-#stick-r { right: max(22px, env(safe-area-inset-right)); bottom: max(22px, env(safe-area-inset-bottom)); width: 132px; height: 132px; pointer-events: auto; touch-action: none; border: 2px solid var(--cream-a); background: var(--ink-a); }
-#stick-r .ring { position: absolute; inset: 6px; border-radius: var(--r3); border: 9px solid var(--danger-t); }
-#stick-r.aiming { border-color: var(--cream); }
-#stick-r.firing .ring { border-color: var(--danger); }
-#stick-r.firing .knob { background: var(--danger); }
-#stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
-body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
-.stick .knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: var(--r3); background: var(--cream-a); border: 2px solid var(--ink-a); box-shadow: 0 3px 8px var(--ink-a); }
-/* the small pills (ITEMS, FIRE ON, the flashlight, COP CAR): 44 px to tap, drawn 30 px tall inside a clear border */
-#tbtns .heal, #tbtns .light, #tbtns .cruiser, #firetog { position: absolute; left: calc(max(10px, env(safe-area-inset-left)) + 116px); top: 2px; width: 52px; height: 44px; padding: 0; border: solid transparent !important; border-width: 7px 0 !important; border-radius: var(--r3); background-clip: padding-box !important; box-shadow: inset 0 0 0 2px var(--gold); font-size: var(--fs-1); }
-#firetog { top: 48px; width: 56px; pointer-events: auto; touch-action: none; background-color: var(--glass); color: var(--cream); font-weight: 700; }
-#firetog.on { background-color: var(--danger); color: var(--ink); box-shadow: inset 0 0 0 2px var(--cream); }
+.stick .knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); background: var(--cream-a); box-shadow: 0 3px 8px var(--ink-a); }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
-#tbtns button { position: absolute; pointer-events: auto; touch-action: none; width: 56px; height: 56px; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); font-size: var(--fs-2); font-weight: 700; letter-spacing: .5px; transition: transform var(--t1) var(--ease), background-color var(--t1); }
+#tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); font: 700 var(--fs-1)/1 var(--ui); letter-spacing: .5px; transition: transform var(--t1) var(--ease), background-color var(--t1), opacity var(--t2); }
+#tbtns button[data-slot] { display: flex; }
+#tbtns svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #tbtns button:active { transform: scale(.94); }
-#tbtns button.on { background: var(--cream); color: var(--ink); }
+#tbtns [data-slot=fire] { background: var(--danger); color: var(--ink); border: 3px solid var(--ink); font-size: var(--fs-3); }
+#tbtns [data-slot=act] { background: var(--gold); color: var(--ink); }
+#tbtns :is([data-slot=fire], [data-slot=act]) svg { stroke: var(--ink); stroke-width: 2.2; }
+#tbtns [data-slot=fire] svg { width: 26px; height: 26px; }
+#tbtns :is([data-slot=c1], [data-slot=c2]) { border: 2px dashed var(--heat); border-radius: var(--r2); color: var(--heat); letter-spacing: 0; }   /* (C and U: rounded squares - the words fit) */
+#tbtns :is([data-slot=c1], [data-slot=c2]) svg { stroke: var(--heat); }
+#tbtns [data-slot] .l { white-space: nowrap; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) { border-color: var(--gold-a); border-radius: var(--r2); letter-spacing: 0; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) svg { width: 16px; height: 16px; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) .l { white-space: normal; text-align: center; }
+#tbtns [data-rk] { border: 2px solid var(--gold); color: var(--cream); }   /* (CLIMB / DOWN: one rocker, the arrows blue) */
+#tbtns [data-rk] svg { width: 26px; height: 26px; stroke: var(--info); stroke-width: 2.5; }
+#tbtns [data-rk=top] { border-radius: var(--r3) var(--r3) var(--r1) var(--r1); border-bottom-color: var(--edge); }
+#tbtns [data-rk=bot] { border-radius: var(--r1) var(--r1) var(--r3) var(--r3); flex-direction: column-reverse; border-top: 0; }
+#tbtns button.on, #tbtns [data-slot].on { background: var(--cream); color: var(--ink); }
+#tbtns button.on svg { stroke: var(--ink); }
+#tbtns .light.lit, #b-light.lit { background: var(--gold); color: var(--ink); } #b-light.lit svg { stroke: var(--ink); }
+#b-cruiser.cooling { color: var(--dim); border-color: var(--edge); }
+#tbtns [data-slot=fire].hint::after { content: 'DRAG TO AIM'; position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); white-space: nowrap; color: var(--cream); font: 600 var(--fs-1) var(--ui); text-shadow: var(--halo-s); pointer-events: none; }
+/* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
+#touch.idle #tbtns button:not(.pulse) { opacity: .5; }
+#touch.idle #stick-l:not(.active) { opacity: .25; }
 /* what Act would do now: green (red if it's a crime, with the "!" badge; a felony a ring as well - the owner, 2026-10-15) */
 #tbtns button.pulse { border-color: var(--cream); background: var(--money); color: var(--ink); animation: pulse 1s ease-in-out infinite; }
+#tbtns button.pulse svg { stroke: var(--ink); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 7px var(--money-t); } }
 #tbtns button.pulse.crime { background: var(--danger); border-color: var(--cream); animation-name: pulsebad; }
 @keyframes pulsebad { 50% { box-shadow: 0 0 0 7px var(--danger-t); } }
 #tbtns button.pulse.felony { outline: 2px solid var(--danger); outline-offset: 3px; }
 #tbtns button.pulse.armed { animation-duration: .4s; }
-#tbtns .fire { width: 78px; height: 78px; right: calc(max(22px, env(safe-area-inset-right)) + 146px); bottom: 84px; background: var(--danger); color: var(--ink); border: 3px solid var(--ink); font-size: var(--fs-3); }
-#tbtns .dive { right: calc(max(22px, env(safe-area-inset-right)) + 150px); bottom: max(10px, env(safe-area-inset-bottom)); width: 66px; height: 54px; border-radius: var(--r3); }
-#tbtns .act { right: calc(max(22px, env(safe-area-inset-right)) + 8px); bottom: 166px; }
-#tbtns .car { right: calc(max(22px, env(safe-area-inset-right)) + 74px); bottom: 186px; }
-#tbtns .throw { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }
-#tbtns .horn, #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; width: 58px; height: 50px; border-radius: var(--r3); font-size: var(--fs-1); }
-body.in-veh #tbtns .reload { right: calc(max(22px, env(safe-area-inset-right)) + 140px); bottom: 176px; }   /* (armed at the wheel: THROW's place) */
-/* WPN: next weapon (tap) or the weapon picker (hold), while you carry more than fists */
-#tbtns .wpn { right: calc(max(22px, env(safe-area-inset-right)) + 254px); bottom: 128px; width: 62px; height: 50px; border-radius: var(--r2); padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
-#tbtns .wpn .wi canvas { width: 44px; height: 22px; image-rendering: pixelated; display: block; }
-#tbtns .wpn .wl { font-size: var(--fs-1); line-height: 1; letter-spacing: .5px; }
-body:not(.multi-wpn) #tbtns .wpn { display: none; }
+/* the weapon plate is the weapon button on touch: a tap the next one, held the picker */
 body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: 6px; font-size: var(--fs-2); opacity: .75; }
-body.touch #weapon { pointer-events: auto; cursor: pointer; }
-#tbtns .map { display: none; }
-#tbtns .cruiser { top: 140px; width: 56px; background-color: var(--glass); color: var(--info); box-shadow: inset 0 0 0 2px var(--info); }
-#tbtns .cruiser.cooling { color: var(--dim); box-shadow: inset 0 0 0 2px var(--edge); }
-body:not(.can-call) #tbtns .cruiser { display: none; }
-#dev-btn { display: none !important; }   /* (the debug button in the round buttons opens the debug menu on every device) */
-#tbtns .light { top: 94px; font-size: var(--fs-2); }   /* (the flashlight: while you own one, on foot; lit while it's on) */
-#tbtns .light.lit { background-color: var(--gold); color: var(--ink); box-shadow: inset 0 0 0 2px var(--cream); }
-body:not(.has-light) #tbtns .light, body.in-veh #tbtns .light { display: none; }
-#tbtns .veh { display: none; }
-body.in-veh #tbtns .dive .foot { display: none; } body.in-veh #tbtns .dive .veh { display: inline; }
-#tbtns .brd { display: none; }
-body.on-board #tbtns .dive .foot, body.on-board #tbtns .car .nb, body.on-board #tbtns .fire .nb { display: none; } body.on-board #tbtns .brd { display: inline; }   /* (on a skateboard: OLLIE, OFF, TRICK) */
-body:not(.in-veh) #tbtns .horn, body:not(.carrying) #tbtns .throw, body:not(.armed) #tbtns .reload { display: none; }
-/* at the controls of an aircraft (shared/flight.js): climb and descend */
-#tbtns .climb, #tbtns .descend { display: none; width: 66px; height: 54px; border-radius: var(--r3); font-size: var(--fs-1); line-height: 1; padding: 0; border-color: var(--info); }
-#tbtns .climb b, #tbtns .descend b { display: block; font-size: var(--fs-3); color: var(--info); }
-#tbtns .climb { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: 74px; }   /* (over the descend button, clear of FIRE - H69) */
-#tbtns .descend { right: calc(max(22px, env(safe-area-inset-right)) + 232px); bottom: max(10px, env(safe-area-inset-bottom)); }
-body.in-air #tbtns .climb, body.in-air #tbtns .descend { display: block; }
-body.in-air #tbtns .horn, body.in-air #tbtns .reload { display: none; }
-body.in-air #tbtns .dive { display: none; }
-/* the weapon picker (hold WPN): a grid of what you carry */
+body.touch #weapon { position: relative; pointer-events: auto; cursor: pointer; }
+body.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--tap)); transform: translateY(-50%); }   /* (44 px to tap whatever its height) */
+#dev-btn { display: none !important; }
+/* the weapon picker (hold the weapon plate): a grid of what you carry */
 #wpick { position: fixed; inset: 0; z-index: 31; background: var(--ink-a); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding: max(8px, env(safe-area-inset-top)) 0 max(14px, env(safe-area-inset-bottom)); }
 #wpick .wp-box { width: min(780px, 96vw); max-height: min(86vh, 100%); overflow-y: auto; padding: 6px var(--s2) var(--s2); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); touch-action: pan-y; animation: enter var(--t2) var(--ease); }
 #wpick .wp-h { margin: 2px 0 6px 2px; font: 700 var(--fs-2) var(--pixel); letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
@@ -909,7 +895,7 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
 .touch #hud-msg { left: calc(max(10px, env(safe-area-inset-left)) + 186px); top: 52px; width: min(380px, calc(100vw - 482px)); }
 .touch #helpbox { font-size: var(--fs-2); padding: 6px 10px; }
 .touch #helpbox > .g-touch { height: 22px; }
-.touch #hud-sub { bottom: max(8px, env(safe-area-inset-bottom)); left: calc(max(20px, env(safe-area-inset-left)) + 140px); right: calc(max(22px, env(safe-area-inset-right)) + 316px); width: fit-content; max-width: none; margin: 0 auto; transform: none; }
+.touch #hud-sub { bottom: max(8px, env(safe-area-inset-bottom)); left: calc(max(20px, env(safe-area-inset-left)) + 140px); right: var(--arc-w, 324px); width: fit-content; max-width: none; margin: 0 auto; transform: none; }
 /* phones: notes of three lines at most - a longer one a page of three at a time (client/notepages.js) */
 .touch #toasts { gap: 3px; }
 .touch .toast { padding: var(--s1) 7px; font-size: var(--fs-1); line-height: 1.2; }
@@ -944,7 +930,6 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
   #t-gfxseg button { min-width: 0; padding: 2px var(--s2); }
   #t-gfxseg button.on { padding-left: 18px; }
   #t-practice { font-size: var(--fs-1); line-height: 1.3; }
-  .touch #stick-r, #tbtns button:not(.heal, .light, .cruiser) { transform: scale(.9); }
   /* the top-right column in three short rows (weapon; cash and bank; stars, clock and status), clear of the buttons */
   .touch #hud-tr { display: grid; grid-template-columns: auto auto auto; justify-items: end; align-items: baseline; column-gap: var(--s2); }
   .touch #weapon { grid-column: 1 / 4; grid-row: 1; min-height: 32px; padding: 1px var(--s1) 1px var(--s2); }
@@ -989,29 +974,12 @@ body.portrait.touch #toasts { top: calc(148px + var(--corner-top)); left: calc(m
 body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
 body.portrait.touch .toast > .tx { max-height: 2.4em; }   /* (two lines beside the minimap: a longer note pages) */
 body.portrait.touch #hud-sub { bottom: 176px; left: max(10px, env(safe-area-inset-left)); right: calc(50% + 6px); margin: 0 auto; transform: none; width: fit-content; max-width: none; }   /* (the left half, over the move stick) */
-/* the right-hand controls all right of the middle (the left half is the move stick's): FIRE and ACT over the aim stick,
-   WPN, CAR and THROW over them; beside the stick ROLL / BRAKE and HORN / RELOAD - CLIMB and DOWN there in the air */
-body.portrait.touch { --pr: max(10px, env(safe-area-inset-right)); }
-body.portrait.touch #stick-r { right: var(--pr); }
-body.portrait.touch #tbtns .fire { right: calc(var(--pr) + 103px); bottom: 158px; }
-body.portrait.touch #tbtns .act { right: calc(var(--pr) + 8px); }
-body.portrait.touch #tbtns .wpn { right: calc(var(--pr) + 121px); bottom: 244px; width: 60px; }
-body.portrait.touch #tbtns .car { right: calc(var(--pr) + 59px); bottom: 240px; }
-body.portrait.touch #tbtns .throw, body.portrait.touch.in-veh #tbtns .reload { right: var(--pr); bottom: 240px; }
-body.portrait.touch #tbtns :is(.dive, .descend, .horn, .reload, .climb) { right: calc(var(--pr) + 135px); width: 46px; height: 50px; border-radius: var(--r3); font-size: var(--fs-1); }
-body.portrait.touch #tbtns :is(.dive, .descend) { bottom: max(22px, env(safe-area-inset-bottom)); height: 56px; }
-body.portrait.touch #tbtns :is(.horn, .reload, .climb) { bottom: calc(max(22px, env(safe-area-inset-bottom)) + 66px); }
-body.portrait.touch #tbtns .heal, body.portrait.touch #firetog, body.portrait.touch #tbtns .light, body.portrait.touch #tbtns .cruiser { left: max(10px, env(safe-area-inset-left)); top: calc(192px + var(--corner-top)); }
-body.portrait.touch #firetog { left: calc(max(10px, env(safe-area-inset-left)) + 56px); }
-body.portrait.touch #tbtns .light { left: calc(max(10px, env(safe-area-inset-left)) + 116px); }
-body.portrait.touch #tbtns .cruiser { left: calc(max(10px, env(safe-area-inset-left)) + 172px); }
 body.portrait.touch #radar-wrap { top: calc(8px + var(--corner-top)); }
 body.portrait.touch #rclock { display: flex; top: 112px; }   /* (straddling the foot of the minimap's ring) */
 body.portrait.touch #vitals { margin-top: 13px; }
 body.portrait.touch #status { width: max-content; max-width: calc(100vw - 76px); letter-spacing: 0; }   /* (one line where it fits) */
 body.portrait.touch #hud-btns { left: auto; right: max(10px, env(safe-area-inset-right)); top: calc(152px + var(--corner-top)); transform: none; flex-direction: column; }
 body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(244px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (clear of the HUD at the top and the column of buttons) */
-body.portrait.touch #zone-l { top: 50%; width: 50%; }
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: calc(1.5 * var(--fs-6)); } #district { font-size: var(--fs-5); } }
 /* narrow screens (a portrait phone): last, so they win over the rules above */
 @media (max-width: 520px) {

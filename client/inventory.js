@@ -214,15 +214,15 @@ export function createWheel({ el, send, me }) {
   };
 }
 
-// ---- the weapon picker (touch: hold WPN or the weapon box) ----------------------------------------------
+// ---- the weapon picker (touch: hold the weapon plate) -----------------------------------------------------
 // Every weapon you carry in a tray at the bottom of the screen, the one in your hands marked: tap one to take it
-// out. Tapping off the tray, or picking, closes it. (A tap on WPN or the weapon box just takes out the next one.)
+// out. Tapping off the tray, or picking, closes it. (A tap on the weapon plate just takes out the next one.)
 export function createWeaponPicker({ el, send, me }) {
   let open = false, sig = '', press = null;
   function render() {
     const m = me();
     if (!open || !m) return;
-    const by = new Map((m.weapons || []).map((w) => [w.id, w])), ws = weaponOrder([...by.keys()]).map((id) => by.get(id));   // (the order WPN steps through them)
+    const by = new Map((m.weapons || []).map((w) => [w.id, w])), ws = weaponOrder([...by.keys()]).map((id) => by.get(id));   // (the order a tap steps through them)
     const s = m.weapon + '|' + (m.blade | 0) + '|' + ws.map((w) => `${w.id}:${w.mag}:${w.ammo}`).join(',');
     if (s === sig) return;
     sig = s;
@@ -254,7 +254,7 @@ export function createWeaponPicker({ el, send, me }) {
   function close() { open = false; sig = ''; press = null; el.classList.add('hidden'); }
   // a tap off the tray closes it (the tray's own touches stop before here)
   const off = (e) => { if (e.target === el) { e.preventDefault(); close(); } };
-  // (a touch that began before the tray opened - the hold on WPN - picks nothing when it lifts)
+  // (a touch that began before the tray opened - the hold on the weapon plate - picks nothing when it lifts)
   el.addEventListener('touchend', (e) => { if (!press) e.preventDefault(); }, { passive: false });
   el.addEventListener('touchstart', off, { passive: false });
   el.addEventListener('mousedown', off);

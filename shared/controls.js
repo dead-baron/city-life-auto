@@ -18,9 +18,9 @@ export const PAD = {
 };
 // (back: the death screen's choices folded away to watch the scene, and opened again - task #403)
 export const TOUCH = {
-  action: 'ACT', vehicle: 'CAR', throw: 'THROW', dive: 'ROLL', reload: 'RELOAD', use: 'ITEMS', bag: '🎒', horn: 'HORN', nextw: 'WPN', prevw: 'WPN', wpnwheel: 'HOLD WPN', map: 'MAP', fire: 'FIRE', drivefire: 'FIRE', sprint: 'FULL THUMB', cruiser: 'COP CAR', phone: '📱', light: '🔦',
-  move: 'LEFT THUMB', aim: 'AIM STICK', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
-  steer: 'LEFT THUMB', block: 'HOLD AIM STICK',
+  action: 'ACT', vehicle: 'CAR', throw: 'THROW', dive: 'ROLL', reload: 'RELOAD', use: 'ITEMS', bag: '🎒', horn: 'HORN', nextw: 'TAP WEAPON', prevw: 'TAP WEAPON', wpnwheel: 'HOLD WEAPON', map: 'MAP', fire: 'FIRE', drivefire: 'FIRE', sprint: 'FULL THUMB', cruiser: 'COP CAR', phone: '📱', light: 'LIGHT',
+  move: 'LEFT THUMB', aim: 'DRAG FIRE', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
+  steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
   trick: 'TRICK',
 };
@@ -32,3 +32,7 @@ export const KB = {
   trick: 'CLICK',
 };
 export const ACTIONS = Object.keys(KB);
+
+// The touch controls by slots (UI-2): which button each slot holds in each state - TOUCH_STATES, touchSlots - and how
+// FIRE aims when dragged, are this table's other half, shared/touchcontrols.js (loaded with the touch controls, out of
+// the page's first load); client/touchslots.js places them.

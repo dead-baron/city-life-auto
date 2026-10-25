@@ -194,7 +194,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .touch #cine-panel .dirs { grid-template-columns: repeat(3, var(--tap)); }
 .touch #cine-ctl { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; max-width: min(320px, calc(50vw - 16px)); justify-content: flex-end; }
 .touch #cine-ctl .who { max-width: 100%; }
-body.touch.cine-bar #tbtns, body.touch.cine-bar #stick-r, body.touch.cine-bar #firetog, body.dead #cine-ctl { display: none !important; }`;
+body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   document.head.appendChild(css);
   const bars = [0, 1].map((k) => { const b = document.createElement('div'); b.className = 'cine-bar'; b.style[k ? 'bottom' : 'top'] = '0'; document.body.appendChild(b); return b; });
   const fadeEl = document.createElement('div'); fadeEl.id = 'cine-fade'; document.body.appendChild(fadeEl);

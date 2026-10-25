@@ -15,7 +15,7 @@ import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createInventory, createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -502,7 +502,8 @@ function fixedStep() {
   const selfScreen = worldToScreen(selfPos());
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
-  let inp = sample({ selfScreen, inVehicle: S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
+  const inVehicle = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, ce = S.ents.get(S.ctrlId);
+  let inp = sample({ selfScreen, inVehicle, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, face: S.pred ? S.pred.s.a : ce && ce.ra !== undefined ? ce.ra : S.lastAim, target: () => (S.slots ? S.slots.target(inVehicle, wcur) : null), air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad();
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
@@ -1531,7 +1532,7 @@ function deathPad() {
 // ---- the bag + quick wheel ----------------------------------------------------------------------
 const bag = createInventory({ el: $('inv'), send: (o) => send(o), me: () => S.me });
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
-// the weapon picker (touch: hold WPN or the weapon box): every weapon you carry, tap one to take it out
+// the weapon picker (touch: hold the weapon plate): every weapon you carry, tap one to take it out
 const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
 // the weapon wheel (a pad: hold RB or LB, point a stick, let go): every weapon you carry round a circle
 const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
@@ -2213,7 +2214,6 @@ function markTitle(btns) {
 function syncSettings() {
   $('s-kbdrive').value = settings.kbDrive;
   $('s-paddrive').value = settings.padDrive || 'triggers';
-  $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
@@ -2360,7 +2360,6 @@ for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = 
 for (const id of ['pause', 'settings', 'controls', 'players', 'devpw']) $(id).addEventListener('click', (e) => { if (e.target.id === id) closeOverlay(id); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
-$('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); input.showFireToggle?.(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 // the plasma blade's colour (task #411): kept with your character, so it's the server's to keep (server looks.js setBlade)
 $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.name}${i ? '' : ' (its own)'}</option>`).join('');
@@ -3432,15 +3431,15 @@ function drawOverlays(F, v2) {
   drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
-    const ta = touchAimState();
-    const fire = S.lastFire || ta.firing;
+    const fire = S.lastFire;
     const a = S.lastAim, x0 = sp.x + Math.cos(a) * 22, y0 = sp.y + Math.sin(a) * 22;
     g.save();
     g.strokeStyle = fire ? 'rgba(255,70,60,.85)' : 'rgba(255,255,255,.55)';
     g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = -now * 40;
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190); g.stroke();
+    const L = input.device === 'touch' ? 110 : 190;   // (touch: a short line from you while FIRE / AIM is dragged)
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L); g.stroke();
     g.setLineDash([]);
-    g.beginPath(); g.arc(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190, fire ? 7 : 5, 0, 6.28); g.stroke();
+    g.beginPath(); g.arc(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L, fire ? 7 : 5, 0, 6.28); g.stroke();
     g.restore();
   }
 
@@ -3497,6 +3496,8 @@ function drawOverlays(F, v2) {
     if (inAir !== S.uiInAir) { S.uiInAir = inAir; document.body.classList.toggle('in-air', inAir); }
     const dead = !!(S.me && S.me.dead);
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
+    // the touch slots: what each holds for what you're doing (shared/controls.js; client/touchslots.js, loaded the first time)
+    if (input.device === 'touch') { if (S.slots) S.slots.tick(inVeh, inAir, onBoard); else if (!S.slotsAsk) { S.slotsAsk = 1; import('./touchslots.js').then((m) => { S.slots = m.makeSlots(undefined, { ctx: { S, CTRL, WEAPONS, VEHICLE_BY_INDEX, PF } }); setTouchAim(m.touchAim); }).catch((e) => { S.slotsAsk = 0; console.warn('[touchslots]', e); }); } }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
   }
   if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); uiTop(); }

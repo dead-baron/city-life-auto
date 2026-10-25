@@ -312,7 +312,7 @@ export function paintCharacter(out, scale, app, pose, fr, weapon, bc = 0) {
 export const CHAR_GRID = G;
 
 // HUD weapon icon: the same pixel weapon the characters hold, drawn large with an outline (the plasma blade in your
-// colour, bc). Each call gets its own copy: the HUD's weapon box, the touch WPN button, the bag, the tray and the pad's
+// colour, bc). Each call gets its own copy: the HUD's weapon box, the bag, the tray and the pad's
 // weapon wheel can all show the same weapon at once (one shared canvas was moved from one to the next).
 const iconCache = new Map();
 export function weaponIcon(wIndex, bc = 0) {

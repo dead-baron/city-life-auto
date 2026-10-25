@@ -1,11 +1,10 @@
-// Car-style keyboard driving and the touch FIRE toggle (the owner's notes, 2026-10-10): on a keyboard at the wheel W is
-// the gas, S brakes then reverses, A / D steer - the wheel eased over, not snapped - and the old point-the-way scheme is
-// "Controls 2" in Settings; on touch the aim stick fires from its outer ring only with the FIRE toggle on (on by
-// default), otherwise it aims - and with something to block with in hand, it guards.
+// Car-style keyboard driving (the owner's notes, 2026-10-10): on a keyboard at the wheel W is the gas, S brakes then
+// reverses, A / D steer - the wheel eased over, not snapped - and the old point-the-way scheme is "Controls 2" in
+// Settings. (Touch's aim stick and its FIRE toggle went with UI-2: FIRE is dragged to aim - test/touchslots.test.js.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { IN, easeSteer, KB_STEER, touchStick } from '../shared/input.js';
+import { IN, easeSteer, KB_STEER } from '../shared/input.js';
 import { vehStep, driveInput, vehForwardSpeed } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { KB } from '../shared/controls.js';
@@ -81,22 +80,11 @@ test('keyboard driving: W drives off, S brakes to a stop and then reverses; stee
   assert.ok(Math.sin(s.a) > 0.5 || vehForwardSpeed(s) < -20, 'Controls 2: S points it down the screen');
 });
 
-test('touch: the aim stick fires from its outer ring only with the FIRE toggle on; off, it aims (and guards)', () => {
-  // toggle on (the default): the outer ring fires, with a little hysteresis; short of it, it aims and guards
-  assert.deepEqual(touchStick(0.95, false, true), { firing: true, aiming: true, guard: false });
-  assert.equal(touchStick(0.85, true, true).firing, true, 'stays firing just inside the edge');
-  assert.equal(touchStick(0.85, false, true).firing, false, 'not until the ring');
-  assert.deepEqual(touchStick(0.5, false, true), { firing: false, aiming: true, guard: true });
-  // toggle off: never fires, all the way out it only aims - and guards with fists or a blade (server: combat.js)
-  assert.deepEqual(touchStick(1, false, false), { firing: false, aiming: true, guard: true });
-  assert.deepEqual(touchStick(1, true, false), { firing: false, aiming: true, guard: true });
-  // let go: nothing
-  assert.deepEqual(touchStick(0.1, false, true), { firing: false, aiming: false, guard: false });
-  // the toggle (a small pill top left, off the stick's ring): on by default, remembered with the other settings, kept in
-  // step with Settings' checkbox
+test('touch: the aim stick and its FIRE toggle are gone, cleanly - FIRE is dragged to aim (UI-2)', () => {
   const page = src('index.html'), input = src('client/input.js'), main = src('client/main.js');
-  assert.match(page, /<button id="firetog" class="on"[^>]*>FIRE ON<\/button>/);
-  assert.match(input, /touchEdgeFire: true/);
-  assert.match(input, /settings\.touchEdgeFire = !settings\.touchEdgeFire; saveSettings\(\)/);
-  assert.match(main, /settings\.touchEdgeFire = e\.target\.checked; saveSettings\(\); input\.showFireToggle\?\.\(\)/);
+  assert.doesNotMatch(page, /id="firetog"|id="stick-r"|id="s-edgefire"/);
+  assert.doesNotMatch(input, /touchEdgeFire: true|fixedStick|showFireToggle/);
+  assert.match(input, /delete settings\.touchEdgeFire;/, 'the old setting dropped from what a browser kept');
+  assert.doesNotMatch(main, /touchEdgeFire|s-edgefire/);
+  assert.equal(typeof IN.BLOCK, 'number', 'the guard: a BLOCK button now (shared/controls.js TOUCH_STATES)');
 });

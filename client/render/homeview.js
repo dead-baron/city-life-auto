@@ -72,12 +72,12 @@ function show() {
   }
   cv.style.display = '';
   if (!raf) raf = requestAnimationFrame(frame);
-  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no FIRE / ROLL / CAR, no aim
-  // stick and no district card in here
+  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no district card in here, and
+  // the touch slots hold only ACT and the items (shared/controls.js TOUCH_STATES.home)
   S.homeIn = true;
   if (!document.getElementById('home-css')) {
     const css = document.createElement('style'); css.id = 'home-css';
-    css.textContent = 'body.home-in #tbtns [data-b=fire],body.home-in #tbtns [data-b=vehicle],body.home-in #tbtns [data-b=dive],body.home-in #tbtns [data-b=throw],body.home-in #tbtns [data-b=reload],body.home-in #stick-r,body.home-in #firetog,body.home-in #district{display:none!important}';
+    css.textContent = 'body.home-in #district{display:none!important}';
     document.head.appendChild(css);
   }
   document.body.classList.add('home-in');
