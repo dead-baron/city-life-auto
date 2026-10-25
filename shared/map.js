@@ -1712,7 +1712,7 @@ function placePrefab(m, row, key, x, special, rand, dims = null) {
   // dress the leftover strip behind a shorter building (back lots, yards, gardens)
   const left = row.h - pf.th;
   if (left >= 2 && STYLE[DISTRICTS[row.d].style]) {
-    const back = { d: row.d, y: row.face === 'S' ? row.y : row.y + pf.th, h: left, face: row.face === 'S' ? 'N' : 'S' };
+    const back = { d: row.d, y: row.face === 'S' ? row.y : row.y + pf.th, h: left, face: row.face === 'S' ? 'N' : 'S', house: key.startsWith('house') || key.startsWith('shanty') };   // (house: its garden - fillerInner)
     filler(m, back, x, pf.tw, STYLE[DISTRICTS[row.d].style], rand, true);
   }
   // the lot sits on the district's own paving/lawn so its feathered edges melt into the block
@@ -3903,8 +3903,10 @@ function fillerInner(m, row, x, w, st, rand, backLot = false) {
   const x0 = x, y0 = row.y, h = row.h;
   // (behind a house on the winding drives, its garden. World v3: behind every house, its garden - a plain roof block
   // there stood right behind the house, the house's roof drawn over it and its own over the next row's front: the owner,
-  // 2026-10-23, "The way some buildings overlap each other doesn't look very good")
-  const garden = backLot && (DRIVE_HOUSES[row.d] || (WD && HOME_STYLES.has(DISTRICTS[row.d].style)));
+  // 2026-10-23, "The way some buildings overlap each other doesn't look very good". Only a house's: behind a beach
+  // town's diners and stores on its main street the back block stays - Sandpiper Bay's were all gardens, more asphalt
+  // than building - test/world3towns.test.js)
+  const garden = backLot && (DRIVE_HOUSES[row.d] || (WD && row.house && HOME_STYLES.has(DISTRICTS[row.d].style)));
   if (st.roof && w >= 4 && h >= 4 && !garden && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
   let kind = garden && WD ? 'park' : w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;
   if (backLot && kind === 'parking' && h < 4) kind = st.filler === 'parking' ? 'plaza' : st.filler;
