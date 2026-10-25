@@ -3,6 +3,17 @@
 // place - pois, landmarks, nature places, race starts, pitches). Commands starting with '@' only change your own
 // screen (fog, a lightning strike). An entry: [label, command, extra fields for the message].
 import { FISH, RARITY, WATER_NAME } from '../shared/fish.js';
+import { VEHICLES } from '../shared/vehicles.js';
+
+// Every vehicle there is, beside you (the owner's notes 2: "Art dirtbikes available to spawn in the debug menu? Or other
+// vehicles we've added in like golf carts, etc."): made from shared/vehicles.js, so a new type turns up here by itself,
+// in its group by its kind - the work vehicles and the odd ones by name. The 'car' command (server/dev.js) keeps the
+// one-of-a-kind rule: a new one takes your last car, boat or aircraft away.
+const WORK = new Set(['flatbed', 'van', 'bus', 'police', 'swat', 'ambulance', 'armored', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck', 'fbi', 'army', 'tractor', 'combine', 'movingvan', 'icecream', 'rescue4x4', 'taxi', 'policebike', 'policeboat', 'rescueboat', 'ferry', 'waterbus', 'trawler']);
+const ODD = new Set(['horse', 'cart', 'skateboard', 'golfcart', 'tank']);
+export const vehGroup = (id) => { const d = VEHICLES[id]; return ODD.has(id) ? 'other' : WORK.has(id) ? 'work' : d.kind === 'air' ? 'air' : d.kind === 'boat' ? 'boats' : d.kind === 'bike' ? 'bikes' : 'cars'; };
+export const VEH_GROUPS = [['cars', '🚗 Spawn: cars'], ['bikes', '🏍 Spawn: bikes & motorbikes'], ['boats', '🚤 Spawn: boats'], ['air', '🚁 Spawn: aircraft'], ['work', '🚚 Spawn: work & emergency vehicles'], ['other', '🐴 Spawn: horses, carts, boards & the rest']];
+const spawnSections = () => VEH_GROUPS.map(([g, title]) => ({ id: 'v' + g, title, items: Object.keys(VEHICLES).filter((id) => vehGroup(id) === g).sort((a, b) => VEHICLES[a].name.localeCompare(VEHICLES[b].name)).map((id) => [`${VEHICLES[id].name} (${id})`, 'car', { m: id }]) }));
 export const DEV_SECTIONS = [
   { id: 'wx', title: '🌦 Weather & time', items: [
     ['🌧 Rain (10 min)', 'rain', { s: 600 }], ['☀ Clear skies', 'clear'], ['🔒 Hold the weather (toggle)', 'wxhold'],
@@ -70,13 +81,9 @@ export const DEV_SECTIONS = [
     ['⚖ Courthouse', 'near', { k: 'courthouse' }], ['💥 Gang vs police shootout', 'shootout'],
     ['💀 A test bounty on me (the golden skull)', 'bounty'], ['🎯 Licensed bounty hunter', 'hunter'], ['💀 Let me put a bounty on the nearest player', 'revenge'],
   ] },
-  { id: 'veh', title: '🚗 Vehicles', items: [
-    ['🏎 Sports car', 'car', { m: 'sports' }], ['🛻 Pickup', 'car', { m: 'pickup' }], ['🏍 Motorbike', 'car', { m: 'bike' }],
-    ['🚤 Speedboat', 'car', { m: 'speedboat' }], ['⛳ Golf cart', 'car', { m: 'golfcart' }],
-    // the batch-4 fleet
-    ['🚗 Vintage convertible', 'car', { m: 'convertible' }], ['🚗 Lowrider', 'car', { m: 'lowrider' }], ['🏎 Muscle car', 'car', { m: 'muscle' }], ['🚗 Hot hatch', 'car', { m: 'hothatch' }],
-    ['🚙 Open-top 4x4', 'car', { m: 'jeep' }], ['🚚 Moving van', 'car', { m: 'movingvan' }], ['🍦 Ice-cream van', 'car', { m: 'icecream' }],
-    ['⛵ Sailboat', 'car', { m: 'sailboat' }], ['🛥 Pontoon', 'car', { m: 'pontoon' }], ['🚢 Fishing trawler', 'car', { m: 'trawler' }], ['🛥 Cabin cruiser', 'car', { m: 'cabincruiser' }], ['🚤 Sport RIB', 'car', { m: 'rib' }], ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
+  ...spawnSections(),
+  { id: 'veh', title: '🚗 Vehicles: cargo & places', items: [
+    ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
     ['🎨 Paint shop', 'near', { k: 'paint' }], ['🚘 Car dealer', 'near', { k: 'dealer' }], ['🔑 Rentals', 'near', { k: 'rental' }],
     ['⛽ Filling station', 'near', { k: 'gasstation' }], ['⚓ Marina', 'near', { k: 'marina' }],
   ] },
@@ -85,17 +92,9 @@ export const DEV_SECTIONS = [
     ['💥 Ultra blast ahead', 'blast', { k: 'ultra' }], ['🚗 A car goes up', 'blast', { k: 'car' }], ['🛢 A tanker goes up', 'blast', { k: 'tanker' }],
     ['🧨 An explosives truck goes up', 'blast', { k: 'truck' }], ['🔗 A tanker by a row of cars', 'blast', { k: 'row' }], ['🧍 A crowd round a tanker', 'blast', { k: 'crowd' }],
   ] },
-  { id: 'bikes', title: '🚲 Bicycles', items: [
-    ['🚲 Commuter bike', 'car', { m: 'bicycle' }], ['🏖 Beach cruiser', 'car', { m: 'cruiser' }], ['🚵 Mountain bike', 'car', { m: 'mtb' }],
-    ['🚴 Road bike', 'car', { m: 'roadbike' }], ['🛞 BMX', 'car', { m: 'bmx' }], ['📦 Cargo bike (two crates)', 'car', { m: 'cargobike' }],
+  { id: 'bikes', title: '🚲 Bike racks & horses', items: [
     ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
-    ['🐴 A horse beside me', 'car', { m: 'horse' }], ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to hire, buy; the farm horses)', 'near', { k: 'farm' }],
-  ] },
-  { id: 'motos', title: '🏍 Motorcycles', items: [
-    ['🏍 Dustwing cruiser', 'car', { m: 'vtwin' }], ['🧳 Longhaul tourer', 'car', { m: 'tourer' }], ['🔱 Hellfork chopper', 'car', { m: 'chopper' }],
-    ['🏍 Stubtail bobber', 'car', { m: 'bobber' }], ['☕ Ton-Up racer', 'car', { m: 'caferacer' }], ['🏁 Sport bike', 'car', { m: 'bike' }],
-    ['🌄 Clodhopper dirt bike', 'car', { m: 'dirtbike' }], ['🛵 Zuzu scooter', 'car', { m: 'scooter' }], ['🔺 Tribuck trike', 'car', { m: 'trike' }],
-    ['🚓 Police tourer', 'car', { m: 'policebike' }], ['🦴 Rustbucket rat bike', 'car', { m: 'ratbike' }], ['💼 Saddlebag bagger', 'car', { m: 'bagger' }],
+    ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to hire, buy; the farm horses)', 'near', { k: 'farm' }],
   ] },
   { id: 'rail', title: '🚆 Trains', items: [
     ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'], ['🚇 Hop on the nearest subway', 'train', { sub: 1 }],
@@ -183,9 +182,8 @@ export const DEV_SECTIONS = [
     ['🗡 Cut in two (plasma blade)', 'vdmg', { s: 'cut' }], ['🛻 Pickup at its worst', 'vdmg', { s: 4, m: 'pickup' }], ['🚐 Van at its worst', 'vdmg', { s: 4, m: 'van' }],
   ] },
   // flying (shared/flight.js, server/systems/aircraft.js): an aircraft beside you; the airport's runway and the airstrip
-  { id: 'air', title: '🚁 Aircraft', items: [
-    ['🚁 Helicopter', 'car', { m: 'heli' }], ['✈ Light plane', 'car', { m: 'plane' }], ['🚁 Attack helicopter (missiles)', 'car', { m: 'gunship' }],
-    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['📺 News helicopter', 'car', { m: 'newsheli' }], ['🚑 Air ambulance', 'car', { m: 'medheli' }], ['🛩 Floatplane', 'car', { m: 'seaplane' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
+  { id: 'air', title: '🚁 Flying', items: [
+    ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
     ['🪂 Skydive: high over here, a parachute in your bag', 'sky', { alt: 900, chute: 1 }], ['🪂 Skydive with no parachute (steer for the water)', 'sky', { alt: 900 }], ['🪂 A parachute in my bag', 'give', { kind: 'item', id: 'parachute', n: 1 }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
   ] },
   // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)

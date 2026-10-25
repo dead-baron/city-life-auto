@@ -269,7 +269,7 @@ function greenfieldPark(K, m, out) {
     let b = a; while (inPark(b + dir, y) && isW(b + dir, y) && isW(b + dir, y + 1)) b += dir;
     if (!inPark(b + dir, y) || Math.abs(b - a) > 30) return;
     const lo = Math.min(a, b), hi = Math.max(a, b);
-    for (let x = lo; x <= hi; x++) for (const yy of [y, y + 1]) if (isW(x, yy)) m.set(x, yy, T.DOCK);
+    for (let x = lo; x <= hi; x++) for (const yy of [y, y + 1]) if (isW(x, yy)) m.set(x, yy, T.BRIDGE);   // (bridge tiles: walked over, the water under it swum - no plank deck drawn under the arch: notes 2)
     prop('archbridge', (lo + hi + 1) / 2, y + 1, 0, { len: (hi - lo + 1) * TILE, a: 0 });
   };
   bridge(ISL[0].cx, MY - 1, -1);          // the west shore to the west island: the way in from Park West Avenue

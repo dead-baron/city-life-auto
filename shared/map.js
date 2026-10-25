@@ -338,8 +338,18 @@ function buildCity(seed, opts = null, frame = null) {
       // (a strip along the north side stays open: it may be the only way to a door across it)
       const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'N' };
       const rr = mulberry32(seed ^ (LX(b.x) * 173 + LY(b.y) * 11));
+      const s0 = m.stalls.length;
       filler(m, row, b.x, b.w, { ...st, roof: 0 }, rr);
-      if (st.roof && !drives && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof)) roofBuilding(m, row, b.x + 1, b.y + 3, b.w - 2, b.h - 4, st, rr);
+      // (World v3 - the owner, notes 2: "parking lots ... aligned with the roof of a building below it, makes it
+      // confusing to pull out": a car park the filler laid stays one open lot, unless the block is deep enough for the
+      // building to stand behind its row of bays and an aisle - and the bays it would cover go)
+      const lot = WD && m.stalls.length > s0, ry = lot ? b.y + LOT_FRONT : b.y + 3;
+      if (st.roof && !drives && b.w >= 6 && b.h >= 8 && rr() < Math.max(0.5, st.roof) && b.y + b.h - 1 - ry >= 4) {
+        const b0 = m.buildings.length;
+        roofBuilding(m, row, b.x + 1, ry, b.w - 2, b.y + b.h - 1 - ry, st, rr);
+        // (and low - one storey, its roof not drawn up over the bays in front: the owner's "lower the building below it")
+        if (lot) { dropBays(m, s0, (b.x + 1) * TILE, ry * TILE, (b.x + b.w - 1) * TILE, (b.y + b.h - 1) * TILE); for (let k = b0; k < m.buildings.length; k++) m.buildings[k].art = { spec: { floors: 1 } }; }
+      }
     }
   }
   claimEstates(m, rows, estateRows, rand); // beach houses first: the beach blocks are few
@@ -1097,11 +1107,71 @@ function repairRoads(m, lines, seed) {
     if (!add.length) break;
     lines.push(...add);
   }
-  if (WD && setBulbsBack(lines, net)) net = buildNetwork(lines, seed);
+  if (WD && joinDeadEnds(lines, net, wetAt) + setBulbsBack(lines, net)) net = buildNetwork(lines, seed);
   fixOneWays(net);
   return net;
 }
 
+// Two town streets' dead ends within JOIN_REACH of each other, neither pointing away from the other (World v3): one
+// street through - the two lines joined end to end (a jog where they were offset; a hand plan's street left as drawn,
+// the other carried on to meet it) - instead of two turning circles side by side. -> how many were joined (the caller rebuilds the network).
+const JOIN_REACH = 14 * TILE;
+function joinDeadEnds(lines, net, wetAt) {
+  const ends = [];
+  for (const n of net.nodes) {
+    if (n.lvl !== 0 || n.edges.length !== 1) continue;
+    const e = net.edges[n.edges[0]];
+    if (!e || e.lvl !== 0 || !CITY_KINDS.has(e.kind) || BIG_ROAD.has(e.kind)) continue;
+    const near = (p) => Math.abs(p.x - n.x) < 2 && Math.abs(p.y - n.y) < 2;
+    const l = lines.find((q) => q.lvl === 0 && q.kind === e.kind && q.pts.length >= 2 && (near(q.pts[0]) || near(q.pts[q.pts.length - 1])));
+    if (!l || l.culdesac) continue;   // (a mews or a court ends in its circle)
+    const atStart = near(l.pts[0]), p0 = atStart ? l.pts[1] : l.pts[l.pts.length - 2], d = Math.hypot(n.x - p0.x, n.y - p0.y) || 1;
+    ends.push({ n, l, atStart, ux: (n.x - p0.x) / d, uy: (n.y - p0.y) / d });
+  }
+  let joined = 0;
+  const used = new Set();
+  for (let i = 0; i < ends.length; i++) {
+    const A = ends[i];
+    if (used.has(A.l)) continue;
+    let best = null;
+    for (let j = 0; j < ends.length; j++) {
+      const B = ends[j];
+      if (j === i || B.l === A.l || used.has(B.l) || B.l.kind !== A.l.kind || (A.l.hand && B.l.hand)) continue;
+      const dx = B.n.x - A.n.x, dy = B.n.y - A.n.y, D = Math.hypot(dx, dy);
+      if (D < 1 || D > JOIN_REACH || A.ux * dx + A.uy * dy < -0.2 * D || -(B.ux * dx + B.uy * dy) < -0.2 * D) continue;
+      let dry = true;
+      for (let t = 16; t < D; t += 16) if (wetAt(A.n.x + dx * t / D, A.n.y + dy * t / D)) { dry = false; break; }
+      // (across no other road)
+      if (dry) for (const o of lines) {
+        if (o === A.l || o === B.l || o.lvl !== 0 || o.pts.some((q) => Math.hypot(q.x - A.n.x, q.y - A.n.y) < 6 || Math.hypot(q.x - B.n.x, q.y - B.n.y) < 6)) continue;   // (a line ending at either end too: the same street's)
+        for (let k = 0; k + 1 < o.pts.length && dry; k++) if (segX(A.n, B.n, o.pts[k], o.pts[k + 1])) dry = false;
+        if (!dry) break;
+      }
+      if (dry && (!best || D < best.D)) best = { B, D };
+    }
+    if (!best) continue;
+    const B = best.B;
+    if (A.l.hand || B.l.hand) {
+      // (a hand plan's street stays as drawn: the other is carried on to its end, the two meeting there)
+      const [G, H] = A.l.hand ? [B, A] : [A, B];
+      if (G.atStart) G.l.pts.unshift({ x: H.n.x, y: H.n.y }); else G.l.pts.push({ x: H.n.x, y: H.n.y });
+      measure(G.l.pts);
+    } else {
+      const P1 = A.atStart ? A.l.pts.slice().reverse() : A.l.pts.slice(), P2 = B.atStart ? B.l.pts.slice() : B.l.pts.slice().reverse();
+      A.l.pts = [...P1, ...P2].map((p) => ({ x: p.x, y: p.y }));
+      measure(A.l.pts);
+      lines.splice(lines.indexOf(B.l), 1);
+    }
+    used.add(A.l); used.add(B.l);
+    joined++;
+  }
+  return joined;
+}
+
+// (notes 2, the owner: "I like the random cul-de-sac or turnouts in the city but this formation seems off": a turning
+// circle jammed against a side street - a stub a few tiles long off a street with its bulb lying over that street's
+// asphalt, or two streets' dead ends side by side, their circles overlapping): a side street's ring must leave a tile
+// of verge to any other street's asphalt too, cut back the same way - and two dead ends that close are joined first)
 // World v3 (the owner, 2026-10-23: "Weird intersection formation here with two cul-de-sacs touching the major arterial
 // road"): a town street's dead end whose turning circle - rasterRoads' bulb and its pavement ring - would reach a bigger
 // road (the highway, an avenue, an arterial) is cut back along itself until 3 tiles of verge are left between the ring
@@ -1109,14 +1179,15 @@ function repairRoads(m, lines, seed) {
 // (a T). -> how many ends were moved (the caller rebuilds the network).
 const BIG_ROAD = new Set(['hwy', 'ramp', 'ave', 'blvd', 'front', 'art', 'drive']);
 function setBulbsBack(lines, net) {
-  const big = lines.filter((l) => l.lvl === 0 && BIG_ROAD.has(l.kind));
+  const big = lines.filter((l) => l.lvl === 0 && (BIG_ROAD.has(l.kind) || CITY_KINDS.has(l.kind)));
+  const verge = (o) => (BIG_ROAD.has(o.kind) ? 3 : 1) * TILE;
   const box = new Map(big.map((l) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of l.pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; } return [l, [x0, y0, x1, y1]]; }));
   const hwOf = (l) => ((l.w || (ROAD_KINDS[l.kind] || ROAD_KINDS.st).w) * TILE) / 2;
   // the big road whose verge the ring at q would cut into, and how near (null: clear)
   const blocker = (own, q, R) => {
     for (const o of big) {
       if (o === own) continue;
-      const bb = box.get(o), need = hwOf(o) + R + 3 * TILE;
+      const bb = box.get(o), need = hwOf(o) + R + verge(o);
       if (q.x < bb[0] - need || q.x > bb[2] + need || q.y < bb[1] - need || q.y > bb[3] + need) continue;
       const pr = project(o.pts, q);
       if (pr && pr.d < need) return { o, pr };
@@ -1133,6 +1204,7 @@ function setBulbsBack(lines, net) {
     for (const l of lines.filter((q) => q.lvl === 0 && q.kind === e.kind && q.pts.length >= 2 && (near(q.pts[0]) || near(q.pts[q.pts.length - 1])))) {
       const R = bulbRing(l);
       if (!blocker(l, n, R)) continue;
+      if (l.hand && !BIG_ROAD.has(blocker(l, n, R).o.kind)) continue;   // (a hand plan's street ends where it was drawn: only a big road moves it)
       const atStart = near(l.pts[0]);
       const pts = (atStart ? l.pts.slice().reverse() : l.pts.slice()).map((p) => ({ x: p.x, y: p.y }));
       const L = measure(pts);
@@ -1536,13 +1608,15 @@ function clearDoorways(m) {
 }
 
 function splitBlock(m, b, st, rand) {
-  const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' };
+  const row = { b, d: b.d, x: b.x, y: b.y, w: b.w, h: b.h, face: 'S' }, s0 = m.stalls.length;
   filler(m, row, b.x, b.w, { ...st, roof: 0 }, rand);
   if (st.roof) {
     const w = Math.min(10, Math.floor(b.w / 3)), h = Math.min(10, Math.floor(b.h / 3));
     if (w >= 4 && h >= 4) {
       roofBuilding(m, { d: b.d }, b.x + 1, b.y + 1, w, h, st, rand);
       roofBuilding(m, { d: b.d }, b.x + b.w - w - 1, b.y + b.h - h - 1, w, h, st, rand);
+      // (World v3: no bay left under them - notes 2)
+      if (WD) for (const [x, y] of [[b.x + 1, b.y + 1], [b.x + b.w - w - 1, b.y + b.h - h - 1]]) dropBays(m, s0, x * TILE, y * TILE, (x + w) * TILE, (y + h) * TILE);
     }
   }
 }
@@ -1818,6 +1892,15 @@ function placePrefab(m, row, key, x, special, rand, dims = null) {
   return b;
 }
 
+// (a back block's car park: its row of bays along the street - 4 tiles - and an aisle of 4 behind them before a
+// building may stand: World v3)
+const LOT_FRONT = 8;
+// the parking bays laid since stalls[s0] that a building now stands on (px rect): gone, with their parked cars
+function dropBays(m, s0, x0, y0, x1, y1) {
+  const over = (x, y, w, h) => x < x1 && x + w > x0 && y < y1 && y + h > y0;
+  m.stalls.splice(s0, m.stalls.length - s0, ...m.stalls.slice(s0).filter((q) => !over(q.x, q.y, q.w, q.h)));
+  m.parking = m.parking.filter((q) => !(q.x > x0 && q.x < x1 && q.y > y0 - 2 * TILE && q.y < y1));
+}
 // Procedural flat-roof building filling a leftover lot (GTA-style dense blocks). The renderer
 // draws the roof (parapet, texture, AC units, vents, skylights, helipads) from r.kind + r.seed.
 function roofBuilding(m, row, x, y, w, h, st, rand) {
@@ -2993,8 +3076,8 @@ function buildInteriors(m) {
     const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk;
     const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
     if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
-    const south = m.prefabs[b.prefab].rot === 0;
     const x0 = b.tx + 1, x1 = b.tx + b.tw - 2; // inside the side walls (inclusive)
+    const south = walkInSouth(m, b, x0, x1);
     main.sort((a, c) => a.x - c.x);
     // the units along the front, split halfway between their doors (a walk-in's spot, once laid out, is in front of its
     // counter: where the next one along splits from it); other storefronts in the row stay closed
@@ -3015,11 +3098,16 @@ function buildInteriors(m) {
     const back = south ? y0 : y1, dir = south ? 1 : -1;
     const counterRow = back + dir * Math.max(1, Math.min(3, Math.floor(depth * 0.3)));
     const units = [];
-    for (const { p, dc, ux0, ux1 } of spans) {
+    for (const sp of spans) {
+      const { p, ux0, ux1 } = sp;
+      let dc = sp.dc;
       for (let ty = y0; ty <= y1; ty++) for (let tx = ux0; tx <= ux1; tx++) m.set(tx, ty, T.FLOOR);
       // the doorway: two tiles of the front wall
       const fy = south ? b.ty + b.th - 1 : b.ty;
-      const d2 = dc - 1 >= ux0 ? dc - 1 : dc + 1;
+      // (World v3: the doorway where it opens onto ground you can walk on - along the unit's front from its sign)
+      const oy = south ? fy + 1 : fy - 1, open = (x) => !WD || walkable(m.tileAt(x, oy));
+      if (!open(dc)) for (let k = 1; k <= ux1 - ux0; k++) { if (dc - k >= ux0 && open(dc - k)) { dc = dc - k; break; } if (dc + k <= ux1 && open(dc + k)) { dc = dc + k; break; } }
+      const d2 = dc - 1 >= ux0 && open(dc - 1) ? dc - 1 : dc + 1 <= ux1 ? dc + 1 : dc - 1;
       const dx0 = Math.min(dc, d2);
       m.set(dc, fy, T.FLOOR); if (d2 <= ux1) m.set(d2, fy, T.FLOOR);
       // the counter, with a gap at the far end so staff could get round (not on tiny units)
@@ -3027,7 +3115,7 @@ function buildInteriors(m) {
       for (let tx = ux0; tx <= ux1; tx++) if (cw < 4 || tx !== ux1) m.set(tx, counterRow, T.COUNTER);
       const cx = (ux0 + ux1 + 1) / 2 * TILE;
       const staffY = (counterRow - dir + 0.5) * TILE, frontY = (counterRow + dir + 0.55) * TILE;
-      p.outside = { x: p.x, y: p.y };
+      p.outside = { x: p.x, y: (p.y < b.ty * TILE) === !south ? p.y : (south ? fy + 1.7 : fy - 0.7) * TILE };   // (the door turned to the other side: out of it there)
       p.x = cx; p.y = frontY; p.r = Math.max(p.r || 40, 40);
       units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 }, ...(p.walk ? { trade: p.store || 'mart' } : null) });
       if (p.kind === 'club') {
@@ -3041,8 +3129,43 @@ function buildInteriors(m) {
       for (const q of list) if (q.kind === 'reception') { q.x = cx - 48; q.y = frontY + dir * 10; }
     }
     b.walkIn = { south, units, x0, x1, y0, y1 };
+    if (WD && b.door && (b.door.ty < b.ty) === south) { b.door = { tx: units[0].door.tx, ty: south ? b.ty + b.th : b.ty - 1 }; if (b.hand && !south) b.back = true; }
     m.walkIns.push(bid);
   }
+}
+
+// Which wall a walk-in's doorway goes in: its front as its prefab is drawn (south, or north for a back row turned
+// round). World v3 (the owner, notes 2: "some building entrances are still not put in correctly"): a hand plan's
+// building faces where its own door is (b.door - a front on the north is drawn as its back), and a front whose doorway
+// would open onto another building, or into a yard no street can be walked to from, gives way to the other side when
+// that one can (walkReach) - the walk-in, its POI and b.door all on that side.
+function walkInSouth(m, b, x0, x1) {
+  const rot0 = m.prefabs[b.prefab].rot === 0;
+  if (!WD) return rot0;
+  const want = b.door ? b.door.ty >= b.ty + b.th : rot0;
+  if (walkReach(m, x0, x1, want ? b.ty + b.th : b.ty - 1) >= 0) return want;
+  return walkReach(m, x0, x1, want ? b.ty - 1 : b.ty + b.th) >= 0 ? !want : want;
+}
+// How many steps on foot from the row ty outside a building's wall (columns x0..x1) to the nearest road, over what a
+// pedestrian walks on (no building, wall, water or counter): -1 when no road is that near (WALK_REACH steps).
+const WALK_REACH = 160, WALK_SEEN = 9000;
+const walkable = (t) => !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP && t !== T.BUILDING && t !== T.FLOOR && t !== T.COUNTER;
+function walkReach(m, x0, x1, ty) {
+  const seen = new Map(), q = [];
+  for (let tx = x0; tx <= x1; tx++) if (m.inside(tx, ty) && walkable(m.tiles[m.idx(tx, ty)])) { const i = m.idx(tx, ty); seen.set(i, 0); q.push(tx, ty); }
+  for (let h = 0; h < q.length && seen.size < WALK_SEEN; h += 2) {
+    const tx = q[h], ty0 = q[h + 1], i = m.idx(tx, ty0), d = seen.get(i);
+    if (m.tiles[i] === T.ROAD) return d;
+    if (d >= WALK_REACH) continue;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = tx + dx, ny = ty0 + dy;
+      if (!m.inside(nx, ny)) continue;
+      const j = m.idx(nx, ny);
+      if (seen.has(j) || !walkable(m.tiles[j])) continue;
+      seen.set(j, d + 1); q.push(nx, ny);
+    }
+  }
+  return -1;
 }
 
 // Dealership display lots: parking spaces on the open lot around each dealership where cars

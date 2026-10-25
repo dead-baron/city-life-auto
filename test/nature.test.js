@@ -22,10 +22,10 @@ test('Redwood Creek: Highland Road crosses the creek on a railed bridge; falls, 
   // the pool below the falls is water you can swim in; the ledge above it is solid
   assert.equal(tileAt(s.pool.x, s.pool.y), T.WATER);
   assert.ok(solidNear(s.falls.x, s.falls.y - 8, 12), 'the ledge is solid');
-  // the footbridge: planks you walk across
+  // the footbridge: bridge tiles you walk across - and swim under (no plank deck under it: the owner's notes 2)
   let planks = 0;
-  for (let t = -80; t <= 80; t += 8) if (tileAt(s.footbridge.x + Math.cos(s.footbridge.a) * t, s.footbridge.y + Math.sin(s.footbridge.a) * t) === T.DOCK) planks++;
-  assert.ok(planks >= 3, `the footbridge has planks (${planks})`);
+  for (let t = -80; t <= 80; t += 8) if (tileAt(s.footbridge.x + Math.cos(s.footbridge.a) * t, s.footbridge.y + Math.sin(s.footbridge.a) * t) === T.BRIDGE) planks++;
+  assert.ok(planks >= 3, `the footbridge has its bridge tiles (${planks})`);
   // the camp: a lit fire, tents; the pull-off: a gravel lot with a picnic table
   const near = (t, p, r) => m.props.some((q) => q && q.t === t && Math.hypot(q.x - p.x, q.y - p.y) < r);
   assert.ok(near('campfire', s.camp, 40) && m.props.some((q) => q && q.t === 'campfire' && q.lit && Math.hypot(q.x - s.camp.x, q.y - s.camp.y) < 40), 'a lit campfire');
@@ -301,9 +301,9 @@ test('Pine Lake: a lake in the Highland pines with a boathouse and dock, a lakes
   // the camp: tents and a fire on dirt, reached by a dirt track
   for (const k of ['tent', 'campfire', 'picnic', 'woodpile']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.camp.x, q.y - s.camp.y) < 200), k);
   assert.equal(tileAt(s.camp.x, s.camp.y), T.DIRT, 'the camp is on dirt');
-  // the creek runs out to the sea and the trail crosses it on planks
+  // the creek runs out to the sea and the trail crosses it on a footbridge
   assert.ok(s.bridge, 'the footbridge');
-  assert.equal(tileAt(s.bridge.x, s.bridge.y), T.DOCK, 'planks under the footbridge');
+  assert.equal(tileAt(s.bridge.x, s.bridge.y), T.BRIDGE, 'bridge tiles under the footbridge');
   assert.ok(m.props.some((q) => q && q.t === 'fbridge' && Math.hypot(q.x - s.bridge.x, q.y - s.bridge.y) < 8));
   // no tree in the water, and nothing tall at the water's edge from the wild woods
   for (const q of m.props) if (q && (q.t === 'tree_a' || q.t === 'tree_b') && Math.hypot(q.x - s.x, q.y - s.y) < 700) assert.ok(![T.WATER, T.DEEP].includes(tileAt(q.x, q.y)), 'a tree in the lake');
@@ -338,8 +338,8 @@ test('Cedar Creek: a creek joins the Lake District ponds over a little falls, un
   let below = 0; for (let dx = -3; dx <= 3; dx++) if (tileAt(s.falls.x + dx * TILE, s.falls.y + 2 * TILE) === T.WATER) below++;
   assert.ok(below >= 1, 'the creek below the falls');
   assert.equal(tileAt(s.bridge.x, s.bridge.y), T.ROAD, 'Falls Road still crosses it');
-  assert.equal(tileAt(s.arch.x, s.arch.y), T.DOCK, 'planks under the arch footbridge');
-  assert.ok(s.footbridge && tileAt(s.footbridge.x, s.footbridge.y) === T.DOCK, 'planks under the timber footbridge');
+  assert.equal(tileAt(s.arch.x, s.arch.y), T.BRIDGE, 'bridge tiles under the arch footbridge');
+  assert.ok(s.footbridge && tileAt(s.footbridge.x, s.footbridge.y) === T.BRIDGE, 'bridge tiles under the timber footbridge');
   for (const k of ['fbridge', 'archbridge']) assert.ok(m.props.some((q) => q && q.t === k && Math.hypot(q.x - s.x, q.y - s.y) < 1400), k);
   // nothing stands on the road from the creek's dressing
   for (const q of m.props) if (q && ['boulder', 'log', 'lamp', 'pbench', 'tree_a'].includes(q.t) && Math.hypot(q.x - s.bridge.x, q.y - s.bridge.y) < 300) assert.ok(![T.ROAD].includes(tileAt(q.x, q.y)), `${q.t} on the road`);

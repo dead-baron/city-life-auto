@@ -16227,6 +16227,291 @@ in the middle where the wide road from the south comes in - and they were on:
 - test/trafficwalls.test.js: a car out of its lane nose to nose with one in its own edges back and they pass (the
   make-room test now starts after the sidestep's tries); a tanker and a car round a tight bend the two ways both get
   round, the tanker's claim seen; a kerb bay at the street's end takes a car, not a van or a flatbed.
+## 2026-10-24 - b5a: how things are drawn - see-through buildings, the tank's turret, lake glints, wet and foggy weather, standing wheat
+
+The owner's notes, part 2: five drawing fixes.
+
+### See-through buildings (client/art2/game/host.js `_fades`, engine.js STATIC_FS)
+"Make the circle around the player much bigger (so it shows an entire vehicle) and have the building slightly more
+transparent. Have it ease in and out of transparency. And feather the border."
+- **A bigger clear space**: 64 px round you on foot (40 before); in a vehicle half its length + 34 px, up to 130 px
+  (a car about 84, a tanker 114; 66 before for every vehicle). Which buildings fade is worked out from the whole
+  vehicle too (half its length either side), so the building over a car's bonnet fades, not only the one over its
+  driver. Getting in or out, the space grows or shrinks smoothly (eased over a quarter second or so), not in a jump.
+- **More see-through**: the ghost shows 60 % of the street behind it (45 % before); a tall thin one (a mast's hut, a
+  tree) 30 % (20 %).
+- **Eased in and out**: each building's fade runs linearly over `FADE_IN` 0.35 s in and `FADE_OUT` 0.5 s out and is
+  drawn through a smoothstep, so it starts and stops gently (it was an exponential that snapped in at the start).
+- **Feathered**: the clear space's soft edge is 65 % of its radius (45 %), and the band where whoever is behind the
+  building starts drawing over it is dithered over a wide stretch of the clear space (`CLR_SWAP` 0.3 + up to
+  `CLR_SWAP_W` 0.55 of it), not a narrow ring - the hole fades into the ghost instead of showing a rim.
+
+### The tank's turret drawn see-through ("the tank top is looking invisible")
+The turret is a sprite of its own over the hull. Your own vehicle is outlined where something taller hides it (the
+x-ray silhouettes), and the turret, standing taller than the hull, counted as hiding it: the hull's pale blue outline
+was drawn over the whole turret. The x-ray now takes a height (`o.xrayTop`, engine.js): only something taller than
+that hides the sprite. The hull is drawn with the turret's top (47 px), so the turret no longer counts, while a
+building in front of the tank still outlines it.
+
+### Lakes ("water fx is super bugged still")
+Reproduced on a big lake in the wind: a regular lattice of glints over the whole lake, lined up into diagonal bands
+(the herringbone in the owner's shot) as the wind turns. Lakes and ponds took the three straight swells crossing at
+fixed angles that the sea was cured of on 10-23; their glints were never bent or broken up. Now inland still water
+does as the sea does - a slow noise bends the swells' crests out of line, the sun catches them only in drifting
+patches - and on top only the odd pixel twinkles (a per-art-pixel hash changing three times a second), so a lake
+glitters here and there instead of wearing a pattern (client/art2/game/lightgame.js waterSurf).
+
+### Rain, wet streets and fog (lightgame.js)
+"A very greyed out surface and very reflective". The wet look darkened every ground texel by 30 % and laid the
+sky's grey over all of it, and every bit of ground mirrored what stood on it - the forest floor and the grass came
+out a grey mirror.
+- **By surface**: how much a wet surface shines goes by how grey it is (`hardOf`: asphalt and paving shine; grass,
+  earth, crops, sand and brick hardly). Grass and earth darken a little (to 84 %) and their colour deepens (+30 %
+  saturation); paving darkens to 66 % and takes the sky's sheen.
+- **Puddles**: patches on the world (`puddle`, value noise repeating over the 8192 px wrap) where paving darkens a
+  little more and the sky and the lamps shine in it most; the mirror reflection is strongest there and a fifth of
+  that elsewhere on paving.
+- **The rain preset** keeps colour and contrast (saturation 0.92 -> 1.04, contrast 1.04 -> 1.1, haze 0.1 -> 0.05,
+  sky sheen 0.45 -> 0.35).
+- **Fog**: thinner round you and thicker and darker toward the view's edges (the screen position's distance from
+  the middle), its base veil thinner (0.1 -> 0.05) so the clear ground between the banks keeps its contrast; the fog
+  presets no longer wash the colour out (saturation 0.9 -> 1.0-1.02, contrast 0.95 -> 1.04, lift a third), and the
+  day fog is a little less pink.
+
+### Standing wheat that parts and lies flat
+"Still not seeing wheatfields or crops of grass or vegetation" - the field's clumps stood 3 px apart in rows 5 px
+apart, the same height everywhere, over a bright ground: a golden carpet, read as a flat texture.
+- **Clumps** (client/art2/ground.js coverSprite 'wheat'): 4-5 stalks 2 px wide and 2 px apart fanning out from the
+  root, the stems dark near the ground, a 5 px golden ear on each brightening to its tip; 10-12 px tall, 13-15 in the
+  tall variants. Laid 6 px apart in rows 8 px apart (groundbake.js crops), so each row's ears stand over the stems of
+  the row behind: the field reads as rows of standing wheat, bright ears over dark stems, instead of a speckled
+  carpet. In patches (a 90 px noise) the wheat stands a head taller, so the field undulates and the gusts roll over
+  something with depth. The ground under the crop is a step darker.
+- **Parting round you** (engine.js STATIC_FS `uPush`, host.js `_push`): you and up to three people near you push the
+  grass and the crops aside - ground cover within 22 px of you (20 of someone else, a vehicle's half width + 16) leans
+  away by its tips and is bent over into a darker hollow round you; trees never. Medium and up (Low has no leaning).
+- **Lying flat where you went**: the flattened swaths and trodden tracks (render/fx.js crush, since 10-21) were drawn
+  at the ground's height, under the standing stalks, so they barely showed. They now lie over the crop
+  (`zt` 18 px, as farmart.js CROP_Z), so a track through the wheat shows until it stands back up.
+- Cost: the bake code 874.6 KB of 875 (a third as many clumps are stamped, so the bake is no slower).
+
+Renderer code: held at 400 KB - the new code's room came from condensing comments in engine.js, host.js and
+lightgame.js (the memory and cost notes, the sway and fog notes, the bake planning notes).
+
+Tests: test/seethrough.test.js (eased in and out with a smoothstep; the clear space round a car and a tanker, the
+building over the bonnet, shrinking smoothly when you get out; no hard edge - no step over 4 px larger than 0.06);
+test/wind.test.js (a push leans ground cover away, never a crown or bare ground).
+## 2026-10-24 - b5b: the owner's notes, part 2 - the world's layout (crossings, footbridges, back lots, odd dead ends, doors, signs and street trees, bus stops, street parking)
+
+The owner's second set of notes (the page renders with his screenshots) had eight things about how World v3 is laid
+out. Where each screenshot is: the crossings over grass and the club's door are on Neon Boulevard by Club Ultraviolet
+(the Neon Strip); the palms in front of the signs are the Neon Strip's north pavement (Laser Karaoke, Moondog); the
+bus stop is the shelter on that pavement; the footbridge with the platform under it is Redwood Creek's in Highland
+Woods, below the falls by Highland Road's stone bridge; the car park on the roof is a back block's lot with a row of
+buildings laid over its middle (Quick Stop's strip in the Lake District / Falls Center, Southside's and the Old
+Quarter's back blocks); the odd road is a street's dead end with its turning circle jammed against the next street.
+
+### Crossings painted over grass (shared/roadcore.js, client/art2/game/groundbake.js)
+- A zebra across a boulevard ran straight over its planted median: the median is drawn on the boulevard's asphalt,
+  so the stripes went over the grass. Each crossing now knows its refuge (`ref`: the median and its kerbs, half
+  width); across it the bake lays a paved strip of concrete slabs through the planting - a pedestrian refuge - and the
+  stripes stop at the kerbs either side. Every boulevard with a median (Neon Boulevard, Midtown Boulevard, the Pink
+  Mile, Ocean Drive, Mesa Road, the 14 px medians of the avenues-as-boulevards).
+
+### Footbridges with a wooden platform under them (shared/naturesites.js, world3-downtown.js, world3-midtown.js)
+- Redwood Creek's footbridge stood on a 3 x 2 rectangle of dock planks laid square to the map under its slanting deck:
+  the "platform". The planks were how the old builder made a crossing walkable. Now it's bridge tiles under the deck,
+  as the trails' and the ledge falls' footbridges already were: walked onto from the bank you're on the deck, swum in
+  under it you stay in the water (shared/physics.js `under`), the water drawn under it. The same for the Pine Lake
+  trail's footbridge, the park creek's timber and stone arch footbridges, Downtown park's two arch bridges and
+  Midtown pond's arch bridge, which all stood on plank decks.
+
+### Car parks on a building's roof (shared/map.js)
+- A back block (reached only from the north) got a car park from the filler, then a row of roofed buildings laid over
+  its middle three rows in: the bays (4 deep) ran onto the roof, the second row of bays and their parked cars were
+  under it. Now (World v3) a back block's car park stays one open lot unless the block is deep enough for the
+  buildings to stand behind its row of bays and an aisle (`LOT_FRONT`, 8 rows) - and then they're one storey, their
+  roofs not drawn up over the bays (the owner's "lower the building below it"); the bays a building covers go, with
+  their cars. The same for a split block's two corner buildings. 745 of 5265 bays were under a roof; none now.
+
+### The odd dead end (shared/map.js)
+- The class: a street's dead end whose turning circle overlapped another street - a stub a few tiles long off a street
+  with its bulb lying over that street (Northshore Beaches' Shell Street), or two streets ending side by side, their
+  circles overlapping (the Stadium District's 3rd Street and Gameday Drive). setBulbsBack only kept the circles clear
+  of the big roads. Now two town streets' dead ends within 14 tiles of each other, neither pointing away from the other
+  and nothing between, are joined into one street (`joinDeadEnds`: a jog where they were offset); and every side
+  street's turning circle keeps a tile of verge to any other street's asphalt (three to a big road's, as before), cut
+  back along itself - a stub that can't is cut back to its junction. A hand plan's streets stay as drawn: a street
+  meeting one of their dead ends is carried on to it (the Stadium District's case: 3rd Street now runs on into
+  Gameday Drive with a jog, one street where there were two turning circles). Bulbs crowding a road: 5 -> 2 (Summit
+  Road's by a dirt trail, Shell Street's a tile and a third from Dune Street).
+
+### Doors (shared/map.js buildInteriors) - about twenty walk-ins' doors were wrong, none now
+- A walk-in's doorway always went in the south wall (its prefab drawn facing south) - but a hand plan's building that
+  faces north has its door, its POI and its front on the north (face 'N': the Old Town's Pescheria del Molo, Il Faro,
+  Galleria San Marco, Merletti Anna, Old Quay Bait & Tackle, the Yards' Urgent Care, the Stadium District's Gas 'n
+  Go): the walk-in's door was in its back wall. And some fronts opened straight onto the next building (the Arts
+  District's row on 2452: Teal Coffee, Moth Laundromat, Linden Cafe, Moth Donuts, Slate Bakery; Olive & Oil; Spezie &
+  Sale) or into a yard no street reaches (Ramen Studio, Falls Center's Corner Deli). Now (World v3, `walkInSouth`) the
+  door goes on the side the building's own door is; a front whose doorway would open onto a building or into a yard
+  with no walk to a street (`walkReach`: 160 steps) gives way to the other side, and the walk-in, its POI's outside
+  spot and b.door go with it (a hand building turned to the north has its plain back drawn to the south); and along
+  the front the doorway sits where the ground outside is walkable (Olive & Oil, Spezie & Sale: their sign's column
+  opened onto the next building, a passage a tile along didn't).
+
+### Signs behind trees, palms everywhere (shared/world3-greens.js, new)
+- The palms on the city's pavements and plazas become the district's own street trees and planters (`PALETTE`): plane
+  trees, ginkgos, maples, flowering trees, cherries and magnolias, cypress and olive in the rich districts, flower,
+  box and green planters - with a share of palms kept (a third on the Neon Strip, half on the Pink Mile, a tenth
+  downtown). Palms stay on the beaches, in the desert towns (Lucky Mesa's Strip), by the sea and down the boulevards'
+  medians (Neon Boulevard's royal palms with their lights).
+- A tree on the pavement in front of a storefront's sign (within 6 tiles of the facade, its crown over the sign's
+  span) moves along the pavement to the nearest gap - the end of a front, or between two signs - clear of the doors
+  and the other furniture, its strung lights following it; with no gap within 8 tiles it gives way to a low planter
+  (the lights strung to it come down). A front 12 tiles wide or less counts as all sign (the art lays its lettering
+  and neon where the door leaves room, near enough the whole width), a wider one its lettering's width and a tile.
+  `signsBlocked(m)` is the check: 317 trees stood in front of signs (Neon Strip 52, Midtown 50, Downtown 44...); none
+  now - 186 moved to a gap, 146 lowered to planters. Of 463 palms on the pavements 98 kept.
+
+### Bus stops (client/art2/props-district.js, server/systems/transit.js, client/render/busboard.js)
+- The shelter: a navy canopy with a lit white fascia, glass back and side, the bench and the advert panel - and past
+  its end the stop's pole with a round blue BUS sign and an arrivals board.
+- The board is live: the server sends every shelter's next bus about once a second (`bt`: the shelter's prop, the
+  seconds, the line; `stopBoards`), the page counts down between (as it does the platform clocks) and draws the
+  board on the pole - the line's colour, NEXT BUS, "3 MIN", "DUE" in flashing green as it comes in, "--" with no bus
+  out. Loaded only once the first board message comes (render/busboard.js).
+
+### Street parking (shared/world3-kerbs.js, new)
+- About half the plain two-way side streets of the city's houses, apartment, old town and Southside districts - West
+  Hills, Pine Hills, Cedar Falls, the Old Quarter, Old Town, Northgate, North Point, Southside (whole streets, by name;
+  not the small towns, whose lots are laid tight to their streets: Timber Bend's clinic lost its lot) are laid 8 tiles
+  wide with a 44 px parking lane by each kerb - the traffic lane inside as wide as a normal street's - its line and
+  bays painted. Never an avenue, a boulevard, an arterial, a one-way street or a hand plan's.
+- A bay every 150 px along them, each a kerb parking spot (traffic.js parks a car in most, when nothing is passing):
+  none within 4 tiles of a junction box or a turning circle, 5 of a zebra, 2.5 of a hydrant, 6 of a bus stop, 3.5 of a
+  driveway or a garage, on a bend, a bridge or beside a cut in the pavement.
+
+### Tests
+test/world3server.test.js: crossings only on the asphalt (a refuge across every median); no plank deck under any
+footbridge, bridge tiles under them, Redwood Creek's walked over and swum under; every walk-in's door on its
+building's door side, a doorway opening onto walkable ground with a walk to a street; no tree in front of a sign and
+the Neon Strip's pavements more than palms; no parking bay under a building; the street parking's bays on the
+asphalt, clear of the junctions, crossings, hydrants and bus stops, the traffic lane clear.
+## 2026-10-24 - b5c: the owner's notes 2, gameplay - campfires, police dogs on leads, riders knocked off, nobody parked in, every vehicle in the debug menu, felled trees cut up into firewood
+
+Six of the owner's second set of notes (10-24), the gameplay ones. The server decides all of it; the page only draws
+what it's told.
+
+### Campfires take a moment (server/systems/burning.js)
+"You can catch on fire standing in a campfire but I think it should take a few seconds of standing in it." Standing in
+a lit fire's flames (within BURN.campPx) now runs a clock on you: **BURN.campS, 2.5 s**, and you go up (shared/rules.js).
+Step out and it cools off twice as fast (BURN.campCool) - a quick step through is safe. The city's people still step
+round their fires; only one knocked down into the flames and lying there long enough catches.
+
+### Police dogs (server/systems/k9.js)
+"Way too aggressive and fast ... glitch out back and forth ... police officers holding them on leash and getting close
+before they let them go ... you can't kill a k9 dog but if you injure it the dog will limp off ... you should be able to
+knock it off and run away, it is just meant to slow you down a bit and take a little health." The dog now has modes:
+- **On the lead**: out of the car it walks at its handler's side, straining toward you, the lead no longer than
+  K9.leash. On the wire the dog's parent field is its handler's id, and both views draw the lead from the handler's hand
+  to its collar (client/render/carryfx.js), slack when close, taut when it pulls. It barks every couple of seconds while
+  it's after you.
+- **Let go only near you**: within K9.release (260 px) of you (or within 1.6x that after the handler's been out 10 s) -
+  a bark and a word on your screen ("The officer lets the police dog off the lead") are the heads-up.
+- **A little faster than you**: K9.speed 1.36 x a run is about 240 px/s against a sprint's 222 (it was 2.7 x a walk,
+  over 480). Closing in it never takes a step past its mark.
+- **It gets hold, it doesn't bring you down**: the dog holds on at your side - placed there each step, not stepped,
+  so no more back and forth - for up to K9.latchS (4 s). You're slowed to K9.drag (45%: players.js pedMods, sent to
+  your page in the self record so prediction agrees), and it takes K9.dps (3) health a second, never below K9.floor
+  (35%) of yours. **Mash attack** (K9.mash presses) or hit it and it's knocked off, slowed a while (K9.slowMul for
+  K9.slowS), and it can't take hold again for K9.every seconds.
+- **Never killed**: combat.js hands any damage to a police dog to k9.hurt (health floors at 1; kill() refuses it).
+  Below half its health it yelps and **limps off** away from whoever hurt it (K9.limpMul), drawn limping in art v2 (a
+  pet with low health and moving: the animals' own 'limp' pose, client/art2/game/host.js), then heels and sits the rest
+  of the call out; back in the car it's rested. Every other pet is untouched by blows, as before.
+- The numbers moved to shared/rules-play.js (below).
+
+### Riders knocked off (server/systems/vehicles.js openRide, riderHit, throwRider)
+"If they're in the open and you shoot at them it should knock them off the vehicle ... they should fall off if they get
+injured enough or die while on a vehicle." Open is what draws its rider: kind 'bike' (motorbikes, bicycles, the horse,
+the shopping cart, the skateboard) and every boat with a crew layout (the jet ski, the rowboat, the kayak, the RIB, the
+pontoon, the sailboat...). The convertible and the 4x4 don't draw who's in them and keep them in, as the closed cars do.
+- A hit of RIDER_KNOCK.big (30%) of their health or more, or one that leaves them under RIDER_KNOCK.hp (45%), throws
+  them off: the vehicle's momentum and a push the way the hit came, and a tumble (vehicles.fling). Off a boat they go
+  over the side into the water beside it with a splash. A skateboard's rider bails off the board (skate.bail).
+- Dying on one always throws them (combat.kill): they fall with the speed they had, so reactions.died lays them down
+  sliding or rolling.
+- The vehicle carries on with nobody's hand on the throttle and rolls to a stop (traffic drops its AI).
+- A shot that hits an open vehicle hits someone on it, any seat, for half the shot (it was a motorbike's driver only),
+  a player's shot weighing on the city's people as a direct one does.
+
+### Nobody parked in (server/systems/doorways.js)
+"Make sure players can't just park a car outside the entrance of a building (like a hospital) and block people from
+getting out." The chosen way: **walk through vehicles at the doors**. Every way in and out is a doorway point - each
+place's door and its outside spot (shops, lobbies, the hospitals, the police, the stations), every walk-in's doorway,
+each home's front and back doors, its garage and garage door, the garages, the subway kiosks. On foot within DOORWAY.r
+(56 px) of one, the vehicle-vs-people step doesn't push you out of a vehicle standing there; you walk on through, and
+keep walking through that one vehicle until you're clear of it (ped.passVeh), so a bus across a door is no wall
+either. Players and NPCs alike; a vehicle moving at speed still hits you as ever. The page never predicted pushes off
+vehicles, so it agrees. The vehicles are the only things anyone can set down that a person on foot is pushed out of
+(crates and bags are walked over), so that is all it needs.
+
+### Every vehicle in the debug menu (client/devcats.js)
+"Art dirtbikes available to spawn in the debug menu? Or other vehicles we've added in like golf carts." Six spawn
+sections are made from shared/vehicles.js: **cars, bikes & motorbikes, boats, aircraft, work & emergency vehicles,
+horses, carts, boards & the rest** - every type once, by name, sorted. A new type falls into its group by its kind (the
+work vehicles and the odd ones by name), so it turns up without touching the menu. The 'car' command keeps batch 1's
+rule: one of a kind at a time per class (a new car takes your last car away, unless someone's in it). The old hand-made
+Vehicles, Bicycles and Motorcycles lists kept only their non-spawning buttons (the shops, the bike rack, me up on a horse).
+- **Fixed on the way**: the skateboard (b4c) and the Riviera Convertible (b4e) both had wire index 52, so one was drawn
+  as the other; the convertible is 76 now (test/fleet.test.js "indexes unique" was failing on batch 4).
+
+### Felled trees cut up into firewood (server/systems/felling.js, client/render/carryfx.js)
+"Trees falling still has placeholder animation ... when the tree hits the ground it explodes into crates ... chop the
+whole tree up and then it puts the wood into bundles that looks like stacked wood (but still acts like a crate) ...
+deliver that somewhere that purchases wood ... or take it to your home ... store that wood there."
+- **The fall** (both views now - it was art v2 only): the tree tips over faster and faster through the server's FALL_S,
+  bounces up off the ground and back, settles, and the crown shakes a moment; dust and leaves where it lands.
+- **The trunk stays** (world.logs, a bit per round still uncut; a player joining gets [index, size, mask, ...] in the
+  welcome) with no crates out of nowhere. TREE_SIZES.logs is its rounds now: 2, 3, 5, 9 by size.
+- **Cut it up**: facing it with any cutting tool, hold Act - a few strokes (FIREWOOD.work: an axe about 1.5 s, the
+  chainsaw a breath) and a round comes off, then straight on to the next one in reach while you hold. The trunk shows
+  its cut faces as it shortens ('logcut'), the crown going with the last round.
+- **Each round is a firewood bundle**: a tier-1 crate labelled Firewood, carried, loaded onto a pickup or a flatbed and
+  knocked off it like any crate, drawn as split logs stacked three and two with pale cut ends, roped round - art v2's
+  own voxel model (client/art2/game/actors.js), the classic view's drawing (client/render/sprites.js drawCrate).
+- **Sold** at a hardware store (LOG_BUNDLE_PRICE, $45) or for more at a sawmill or lumber yard (FIREWOOD.mill, $65 -
+  World v3's Timber Bend Sawmill), carried in, or driven up with them on the bed: one Act sells the load.
+- **Stored at home**: carried or driven up to your own home's garage, "Stack the firewood in your garage" keeps them
+  there as a count per home (profile.homeWood[home id]) for the home upgrades to come.
+
+### Sound
+'logcut' (a round off a trunk) thuds; 'yelp' (the police dog hurt) is a quiet bark. The skateboard had no engine class
+(client/sound/vehicles.js - test/sound.test.js was failing on batch 4): 'pedal', never voiced (the rider's board is
+skate.js's).
+
+### Where the numbers live
+BURN.campS / campCool are in shared/rules.js. K9, RIDER_KNOCK, DOORWAY and FIREWOOD - numbers only the server plays
+out - are in the new **shared/rules-play.js**, out of the page's code like shared/rules-games.js (the page was at its
+498 KB budget).
+
+### Controls
+README: two rows - cutting a felled trunk (hold E / B / ACT facing it; E at the wheel by a buyer or your garage) and
+knocking a police dog off (mash attack).
+
+### Tests
+test/campfires.test.js (the 2.5 s), test/k9.test.js (rewritten: the lead and its length, the release distance, a little
+faster than a sprint, the hold without jitter, the slowing and the health floor, mashing and a blow knocking it off,
+the limp at low health, never killed, other pets as they were), test/riders.test.js (new), test/doorways.test.js
+(new: out of your home's door and a hospital's with a van across it, a player and an NPC; a car away from doors still
+solid), test/devplay.test.js (every type listed once in its group, each spawns, still one at a time),
+test/felling.test.js (felling to rounds to bundles, carried, loaded, sold at the hardware store; sold off the bed,
+the sawmill's better price, stored at your garage by truck and on foot; the clients' fall, trunk, cuts, lead and the
+bundle's art in both views), test/fleet.test.js (reads the generated menu). test/ems.test.js "the stretcher" fails
+run as a whole file on batch 4 as it was (it passes alone) - not this change.
+
+Perf: page 497.6 of 498 KB, renderer 400.4 of 400 (the firewood model; actors.js's header trimmed to fit), bake 874.6
+of 875 - no budget raised.
 - 2026-10-24, the batch 4 merge (b4b-2): the ambulance crew get round a vehicle they're held up against. With the
   siren clearing the road (b4a), a car that pulls over for it can end up stopped beside the ambulance at the scene,
   across the crew's way to the patient. pedStep held the medic at its side, and sidestep sent them back and forth along

@@ -241,3 +241,14 @@ test('what sways: foliage only - never rock; the plants on a rock as on their ow
     else assert.equal(leafy, 0, `${name}: holds still, moss and all`);
   }
 });
+
+// The grass and the crops part round whoever walks or drives through them (engine.js uPush, host.js _push: the owner,
+// 10-24, "pressed down where you walk or drive"): a push leans ground cover away, by its tips, never a tree's crown.
+test('a push parts the ground cover, away from the one pushing, and leaves the trees be', () => {
+  const crop = F_GROUND | F_WET | F_LEAF;
+  assert.equal(leanOf(0, 0, 12, crop, 2, 2, 3.5), 2, 'pushed east: leans east, as far as it goes');
+  assert.equal(leanOf(0, 0, 12, crop, 2, 2, -3.5), -2, 'pushed west: leans west');
+  assert.equal(leanOf(0, 0, 1, crop, 2, 2, 3.5), 0, 'a stubble barely moves');
+  assert.equal(leanOf(0, 0, 80, F_LEAF, 2, 2, 3.5), 0, 'a crown: not pushed');
+  assert.equal(leanOf(0, 0, 12, F_GROUND, 2, 2, 3.5), 0, 'bare ground: never');
+});

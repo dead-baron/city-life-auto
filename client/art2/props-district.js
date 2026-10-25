@@ -154,18 +154,26 @@ export function powerPole(h = 120, arm = 16) {
 }
 export const poleTops = (h = 120, arm = 16) => [[-arm, h - 1], [-6, h - 1], [6, h - 1], [arm, h - 1]];
 
-// a bus shelter: glass back and sides, a slim roof, a bench and a lit advert panel at one end
+// a bus shelter (the owner, notes 2: "stylize bus stops better so they look like actual bus stops"): a canopy roof with
+// a lit fascia, glass back and sides, a bench, an advert panel at one end - and past the other the stop's pole with
+// its round BUS sign and the arrivals board (its minutes drawn live over it: client/render/busboard.js)
 export function busShelter(len = 64, on = 0) {
-  const m = new Vox(len, 22, 46);
+  const m = new Vox(len + 14, 22, 64), px = len + 8;
   const fr = m.mat({ ramp: MAT.metalDark, k: 3 }), gl = m.mat({ ramp: MAT.glass, k: 4, flag: F_GLASS | F_NOCAST });
-  const roof = m.mat({ ramp: R('#3a4e5e'), k: 3 }), ad = m.mat({ ramp: R('#e8c070'), k: 4, emi: [255, 220, 150, 60 + on * 180], shade: (x, y, z) => (z > 30 ? 1 : z < 14 ? -1 : 0) });
-  const wood = m.mat({ ramp: MAT.woodDock, k: 3 });
-  m.box(0, 1, 42, len, 22, 45, roof);
+  const roof = m.mat({ ramp: R('#2e4a66'), k: 3 }), fascia = m.mat({ ramp: R('#f2f0e8'), k: 3, emi: [255, 250, 235, 30 + on * 120], shade: (x) => ((x >> 2) & 1 ? 0.6 : 0) });
+  const ad = m.mat({ ramp: R('#e8c070'), k: 4, emi: [255, 220, 150, 60 + on * 180], shade: (x, y, z) => (z > 30 ? 1 : z < 14 ? -1 : 0) });
+  const wood = m.mat({ ramp: MAT.woodDock, k: 3 }), pole = m.mat({ ramp: R('#c8ccd2'), k: 2, flag: F_THIN });
+  const sign = m.mat({ ramp: R('#2a5ab8'), k: 3, shade: (x, y, z) => (Math.abs(z - 57) < 1.6 ? 3 : 0) });   // (the white band across the blue disc: BUS)
+  const led = m.mat({ ramp: R('#14161a'), k: 3, emi: [255, 170, 40, 40 + on * 110], shade: (x, y, z) => ((x + z) & 1 && z > 33 && z < 39 ? 2.4 : 0) });
+  m.box(0, 0, 42, len, 22, 45, roof); m.box(0, 20, 39, len, 22, 42, fascia);
   for (const x of [0, len - 2]) for (const y of [1, 20]) m.box(x, y, 0, x + 2, y + 2, 42, fr);
   m.box(2, 1, 4, len - 2, 2, 40, gl);
   m.box(0, 3, 4, 1, 20, 40, gl);
   m.box(len - 2, 3, 2, len - 1, 20, 40, ad);
   m.box(6, 3, 10, len - 8, 9, 12, wood); for (const x of [8, len - 12]) m.box(x, 4, 0, x + 2, 8, 10, fr);
+  m.cyl('z', px, 18, 0, 1.4, 0, 62, pole);
+  m.cyl('y', px, 17, 57, 5.5, 17, 19, sign);
+  m.box(px - 5, 16, 30, px + 5, 18, 42, led);
   return m;
 }
 // a street lamp with a hanging banner (downtown) - lantern style, banner colour

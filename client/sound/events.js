@@ -128,6 +128,7 @@ export const EVENT_SOUNDS = {
   spikes: at('spikes'),
   spikesgone: null,                              // (the strip picked up: the deploy was heard)
   // bank heists (heist.js): the thermal drill's whine at the vault door, a jam's clunk, the door swinging open
+  bt: null,   // (the bus shelters' arrival boards, said again every second: drawn by client/render/busboard.js)
   vault: null, vaultgone: null,                  // (the vault's state, said again every few seconds: drawn by client/vault.js)
   drill: at('chainsaw', 0.5),
   drilljam: (ev, A) => { A.at('clang', ev.x, ev.y, 0.8); A.at('thud', ev.x, ev.y, 0.6); },
@@ -145,6 +146,7 @@ export const EVENT_SOUNDS = {
   chop: at('chop'),
   saw: at('chainsaw', 0.9),
   treefall: (ev, A) => A.at('treecrack', ev.x, ev.y, 0.55 + 0.12 * (ev.s || 2)),
+  logcut: (ev, A) => { if (ev.x !== undefined) A.at('thud', ev.x, ev.y, 0.45); },   // (a round off a felled trunk: felling.js)
   treecrash: (ev, A) => { A.at('treefall', ev.x, ev.y, 0.55 + 0.15 * (ev.s || 2), { s: ev.s }); A.at('foliage', ev.x, ev.y, 0.8); },
   treeup: null,
   fire: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) A.at(ev.lit ? 'ignite' : 'douse', p.x, p.y); },
@@ -212,8 +214,9 @@ export const EVENT_SOUNDS = {
   cast: at('cast'),
   nibble: (ev, A) => A.at('splash', ev.x, ev.y, 0.3, { n: 3 }),   // (a fish at the bait: the bobber twitches)
   bite: at('bite'),
-  bark: at('dog'),   // (a police dog let out of the car: server k9.js)
-  k9bite: (ev, A) => { A.at('dog', ev.x, ev.y, 1); A.at('punch', ev.x, ev.y, 0.7); },   // (the police dog brings someone down: k9.js)
+  bark: at('dog'),   // (a police dog let out of the car, straining at the lead, let go: server k9.js)
+  yelp: at('dog', 0.45),   // (the police dog hurt: it lets go, limps off)
+  k9bite: (ev, A) => { A.at('dog', ev.x, ev.y, 1); A.at('punch', ev.x, ev.y, 0.7); },   // (the police dog gets hold of someone: k9.js)
   hook: (ev, A) => A.at('splash', ev.x, ev.y, ev.leg ? 1 : 0.8, { n: ev.leg ? 16 : 10 }),   // (struck: it's on)
   flost: (ev, A) => A.at('splash', ev.x, ev.y, 0.5, { n: 5 }),   // (it got away, or the line snapped)
   catch: (ev, A) => { A.at('splash', ev.x, ev.y, 0.8, { n: 12 }); A.ui('good', 0.7); },

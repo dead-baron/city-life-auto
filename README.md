@@ -131,6 +131,8 @@ private window) to get a second player. Other phones/PCs on your Wi-Fi can join 
 | Dance where you stand: each press the next move (the two-step, the bounce, the fist pump, the disco point, the spin, the robot, the sway, jumping), then stop; walking off, a punch or a car stops it too. Everyone sees it | G, or P → Dance | L3 (click the left stick), or D-pad ← → Dance | 📱 → Dance |
 | Strike and throw a flare · snap and drop a glow stick · set a lit lantern down (it stays lit; E picks it up again) | the bag / quick wheel · E | the bag / quick wheel · B | the bag / ITEMS · ACT |
 | Fell a tree (a hatchet, an axe, a felling axe or a chainsaw in your bag; the tree falls away from you - stand clear; in town it's vandalism) · pick up a bundle of logs, load it onto a pickup or a flatbed, sell it at the hardware store | hold E facing the tree · E | hold B · B | hold ACT · ACT |
+| Cut a felled trunk into rounds (any cutting tool; each round is a bundle of firewood) · carry or load the bundles · sell them at a hardware store (more at a sawmill), on foot or off the truck bed · stack them in your own home's garage (kept there for its upgrades) | hold E facing the trunk · E with a bundle, or E at the wheel by the buyer / your garage | hold B · B | hold ACT · ACT |
+| Knock off a police dog that has hold of you (it slows you; mash attack, or hit it - hurt, it limps off) | mash left click | mash RT | mash FIRE |
 | Quick wheel (med kits, bandages, drinks) | hold X, point, let go (tap: last used) | hold View, right stick, let go | ITEMS, then tap a slot |
 | Revive a downed player (kit: full health, bare-handed: low) / hand them a bandage or med kit after | hold E | hold B | hold ACT |
 | Finish off a downed player | hold F (or just hit them) | hold X | hold CAR |

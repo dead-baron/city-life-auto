@@ -16,6 +16,7 @@ import * as wildlife from './systems/wildlife.js';
 import * as players from './systems/players.js';
 import * as vehicles from './systems/vehicles.js';
 import * as tank from './systems/tank.js';
+import * as k9 from './systems/k9.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
@@ -66,7 +67,7 @@ function fields(world, e) {
     // (an animal: extra bits 0-4 what it's doing - fauna.js APOSE - and bit 7 in the water; a pet: its mood - APOSE.happy
     // home with its owner, pets.js)
     case K.PED: if (e.wild) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, (wildlife.poseOf(e) & 31) | (WATER_T[(e.ug ? ugMapOf(world.map) : world.map).tileAtPx(e.x, e.y)] === 1 ? 128 : 0)];
-      if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), 0, ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
+      if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), k9.leashOf(e), ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
       return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0) || (e.sky ? skyWord(e) : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : e.board ? (e.board.code || 0) & 31 : handIndex(e.weapon)) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
     // still being winched up: tow.js; the clients draw it tilted)

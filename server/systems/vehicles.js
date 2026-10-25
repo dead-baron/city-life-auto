@@ -18,6 +18,7 @@ import * as explosions from './explosions.js';   // (task #363: the blast by the
 import * as carhits from './carhits.js';         // (task #361: run over, onto the hood)
 import * as aircraft from './aircraft.js';       // (helicopters and planes: up in the air, nothing on the ground touches them)
 import * as crews from './crews.js';             // (a crewmate at the wheel: shoved aside, not run down)
+import * as doorways from './doorways.js';       // (nobody parked in at a door: the owner's notes 2)
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -138,6 +139,7 @@ export function update(world, dt) {
       if (spd > 120 && vn > 120 && ped.rollT <= 0 && world.time > (ped.hitImmuneUntil || 0) && !crewCar(world, v, ped)) {
         strikePed(world, v, ped, vn, h);
       } else {
+        if (doorways.passes(world, ped, v)) continue;   // (by a way in or out: walked through, never walled in - doorways.js)
         ped.x += h.nx * h.depth; ped.y += h.ny * h.depth;
         if (spd > 40) carhits.pinned(world, v, ped, dt);   // (pinned rolling against its front: move another way to get off)
         if ((ped.lz || 0) > 0.3) levelStep(world.map, ped, 11);
@@ -429,6 +431,7 @@ export function explode(world, v, attackerPed) {
 // longer you tumble and the more it hurts; hitting something on the way (players.tumbleImpact)
 // can finish you off.
 import { BAIL_SPEED, BAIL_HURT_SPEED, BAIL_HURT_PER_PX, VEHICLE_TOUGH, CRASH_BOOM_IMPACT, CRASH_BOOM_HP, DEAD_FIRE_S, DEAD_BOOM_S, PLASMA_CUT, CART } from '../../shared/rules.js';
+import { RIDER_KNOCK } from '../../shared/rules-play.js';
 import { VDMG, VZ, VPART, damageStage, packVehDamage, hitZone } from '../../shared/vehicles.js';
 import * as ferries from './ferries.js';
 import * as burning from './burning.js';   // (thrown out of it on fire: H58)
@@ -443,6 +446,39 @@ function bail(world, ped, v, spd, seat = ped.seat) {
   const side = a + Math.PI / 2 * (seat % 2 === 1 ? 1 : -1);
   ped.bailFrom = v.id; ped.bailFromUntil = world.time + 1.5;
   fling(world, ped, v.vx * 0.8 + Math.cos(side) * 70, v.vy * 0.8 + Math.sin(side) * 70, null, 'bail');
+}
+
+// Riders out in the open (the owner's notes 2, 10-24: "You should be able to knock off riders of open vehicles like bikes,
+// motorcycles, boats, etc. ... they should fall off if they get injured enough or die while on a vehicle"): whoever sits
+// in the open on it - a bike or motorbike, a horse, a cart, the open boats' crews (def.crew: a jet ski, a rowboat, a
+// RIB...). The closed cars, and the convertible and the 4x4, which don't draw who's in them, keep them in.
+export const openRide = (def) => def.kind === 'bike' || !!def.crew;
+// combat.damage, a hit landed on someone riding (amount: what it took, cause): thrown off when it was a big one or it
+// left them badly hurt (rules.js RIDER_KNOCK); a skateboard's rider bails off the board
+const NO_KNOCK = new Set(['crash', 'bail', 'fall', 'bleed', 'fire', 'tree', 'train']);
+export function riderHit(world, ped, amount, cause, dir, attacker) {
+  if (NO_KNOCK.has(cause) || ped.dead || !(amount >= ped.maxHp * RIDER_KNOCK.big || ped.hp < ped.maxHp * RIDER_KNOCK.hp)) return false;
+  if (ped.board && !ped.vehId) { skate.bail(world, ped); return true; }
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (!v || !openRide(v.def) || v.fly || aircraft.airborne(v)) return false;
+  return throwRider(world, ped, v, dir, attacker);
+}
+// thrown off: carried on by the vehicle's momentum, pushed the way the hit came, a tumble - off a boat into the water
+// beside it. The vehicle carries on a little and stops (ejectPed: no hand on the throttle). dead: falling as they died
+// (reactions.died lays them down from the speed they're thrown at)
+export function throwRider(world, ped, v, dir = 0, attacker = null, dead = false) {
+  const boat = v.def.kind === 'boat', wet = boat ? sideSpot(v, ped) : null;
+  ejectPed(world, ped, true);
+  ped.bailFrom = v.id; ped.bailFromUntil = world.time + 1.5;   // (not straight into its own bike)
+  const k = RIDER_KNOCK.push, vx = v.vx * 0.85 + Math.cos(dir) * k, vy = v.vy * 0.85 + Math.sin(dir) * k;
+  if (boat && wet && WATER_T[world.map.tileAtPx(wet.x, wet.y)]) {
+    ped.x = wet.x; ped.y = wet.y; ped.under = true; world.place(ped);
+    ped.vx = vx * 0.3; ped.vy = vy * 0.3;
+    world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 14 });
+  } else if (dead) { ped.vx = vx; ped.vy = vy; }
+  else fling(world, ped, vx, vy, attacker, 'crash', 0);
+  if (ped.player && !dead) world.notify(ped.player, boat ? 'Knocked into the water!' : 'Knocked off!', 'bad');
+  return true;
 }
 
 // Thrown through the air: a short arc (airborne, barely slowing), then one of a few landings -

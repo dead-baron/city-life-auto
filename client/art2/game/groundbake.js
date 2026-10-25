@@ -1240,6 +1240,7 @@ function crossings(C, G) {
       const m = b.mat[i];
       if (m !== M_.ROAD && m !== M_.ROADOLD) return;
       const X = gx + C.X0, Y = gy + C.Y0;
+      if (Math.abs(w) < xc.ref) { setC(G, gi, GSHADE.slabConcrete(X, Y, seed)); G.z[gi] = 2; return; }   // (across a planted median: a paved refuge)
       if (lux) { if (Math.abs(Math.abs(u) - HL + 1.5) < 1.5) setC(G, gi, sd(WHITE, 0.6, X, Y, 0)); else setC(G, gi, GSHADE.brickHerring(X, Y, seed)); return; }
       const st = ((w + HW) % 14 + 14) % 14;
       if (st < 8 && hh(X, Y, seed + 5) > 0.05 && (vnc(X, Y, 9, seed + 7) > 0.08 || hh(X, Y, seed + 9) > 0.5)) setC(G, gi, sd(WHITE, 0.6 + (st < 1 ? 0.12 : st > 6 ? -0.1 : 0), X, Y, 0));
@@ -1666,12 +1667,12 @@ function turf(C, G, dens) {
     }
   }
 }
-// standing wheat: rows of clumps 3 px apart, rows 5 px apart, stamped north to south so nearer stalks cover
+// standing wheat: rows of clumps 6 px apart, rows 8 px apart (each row's ears over the stems of the one behind), stamped north to south so nearer stalks cover
 // farther ones (corn is drawn by its ground shader, plants seen from above). The ears are F_LEAF: they sway in
 // the wind (engine STATIC_FS) and gusts roll across the field as bands of brighter ears.
 function crops(C, G, dens) {
   const { b, seed } = C;
-  for (const [mats, kind, RY, RX, nv] of [[[M_.WHEAT], 'wheat', 5, 3, 8]]) {
+  for (const [mats, kind, RY, RX, nv] of [[[M_.WHEAT], 'wheat', 8, 6, 8]]) {
     const r0 = Math.floor((C.Y0 - 2) / RY), r1 = Math.ceil((C.Y0 + CHUNK + 16) / RY);
     for (let r = r0; r < r1; r++) {
       const ox = (r & 1) * (RX >> 1);
@@ -1681,7 +1682,7 @@ function crops(C, G, dens) {
         const X = c * RX + ox + (hh(r, c, seed + 133) - 0.5) * 1.5, Y = r * RY + (h0 - 0.5);
         const px = Math.floor(X - C.WX0), py = Math.floor(Y - C.WY0);
         if (px < 0 || py < 0 || px >= WN || py >= WN || !mats.includes(b.mat[py * WN + px])) continue;
-        stamp(C, G, coverSprite(kind, (hh(c, r, seed + 137) * nv) | 0), X, Y, b.zb[py * WN + px]);
+        stamp(C, G, coverSprite(kind, ((hh(c, r, seed + 137) * nv) | 0) + (vnc(X, Y, 90, seed + 141) > 0.5 ? nv : 0)), X, Y, b.zb[py * WN + px]);   // (in patches a head taller)
       }
     }
   }

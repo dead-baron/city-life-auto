@@ -7,7 +7,7 @@
 //   footbridge below it; a picnic pull-off by the road with a trail to the falls; giant redwoods round it all.
 //
 // What the map gets: water tiles for the creek and pool (river water: land 0, river 1), dirt for the trail and the
-// clearing, a gravel lot for the pull-off, dock planks for the footbridge, solid props (redwoods, boulders in the
+// clearing, a gravel lot for the pull-off, bridge tiles under the footbridge, solid props (redwoods, boulders in the
 // creek, the bridge parapets, the falls' rocks) and decoration props (camp furniture). m.natureSites lists each
 // place with what the renderer draws on top (statics.js addNature): the bridge, the falls, the footbridge.
 // Reserve bit 32 keeps the wilds' random trees off it.
@@ -1055,12 +1055,12 @@ function pineLake(m, H) {
   let bridge = null;
   if (camp && near(camp)) {
     const tp = way([[camp.x + camp.w - 2, camp.y + 0.5], [camp.x + camp.w + 4, camp.y - 7], [LX - RX - 24.5, LY - 1], [LX - RX - 23.5, LY - 10], [LX - RX - 14, LY - 11.5], [LX - RX - 2, LY - 10.5], [BX - 4, BY - 2.5]], 22);
-    // where it crosses the creek: planks over the water, the footbridge over them
+    // where it crosses the creek: the footbridge, bridge tiles under it (walked over, swum under)
     const cross = tp.filter(([x, y]) => wet.has(at(x / TILE, y / TILE)) && m.river[at(x / TILE, y / TILE)]);
     if (cross.length) {
       const mx = cross.reduce((s, q) => s + q[0], 0) / cross.length, my = cross.reduce((s, q) => s + q[1], 0) / cross.length;
       const k = tp.findIndex((q) => q === cross[0]), a = Math.atan2(tp[Math.min(tp.length - 1, k + 4)][1] - tp[Math.max(0, k - 4)][1], tp[Math.min(tp.length - 1, k + 4)][0] - tp[Math.max(0, k - 4)][0]);
-      for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((mx + Math.cos(a) * d - Math.sin(a) * o) / TILE, (my + Math.sin(a) * d + Math.cos(a) * o) / TILE); if (wet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } }
+      for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((mx + Math.cos(a) * d - Math.sin(a) * o) / TILE, (my + Math.sin(a) * d + Math.cos(a) * o) / TILE); if (wet.has(i)) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES; } }
       add('fbridge', mx / TILE, my / TILE, 0, { len: 150, a });
       bridge = { x: Math.round(mx), y: Math.round(my) };
     }
@@ -1139,12 +1139,12 @@ function cedarCreek(m, H) {
   const t2 = trailPts([[AX - 5, cy - 12], [AX + 0, cy - 12.2], [AX + 5.5, cy - 12.4]]);   // (over the creek: the footbridge)
   trailPts([[AX + 5.5, cy - 12.4], [AX + 6.5, cy - 8.5], [AX + 5.5, cy - 5.5]]);          // (to the road's sidewalk)
   trailPts([[AX + 5.5, cy + 5.5], [AX + 6.5, cy + 10], [AX + 2.5, by - 2.5], [BX + 6, by + 0.5]]);
-  // planks where the trail crosses the water (the footbridge stands on them)
+  // bridge tiles where the trail crosses the water under the footbridge (walked over, swum under)
   let fb = null;
-  { const cross = t2.filter(([x, y]) => wetSet.has(at(x / TILE, y / TILE))); if (cross.length) { const mx = cross.reduce((a, q) => a + q[0], 0) / cross.length, my = cross.reduce((a, q) => a + q[1], 0) / cross.length; for (let d = -80; d <= 80; d += 8) for (const o of [-12, 12]) { const i = at((mx + d) / TILE, (my + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } } fb = { x: mx, y: my }; add('fbridge', mx / TILE, my / TILE, 0, { len: 130, a: 0 }); } }
+  { const cross = t2.filter(([x, y]) => wetSet.has(at(x / TILE, y / TILE))); if (cross.length) { const mx = cross.reduce((a, q) => a + q[0], 0) / cross.length, my = cross.reduce((a, q) => a + q[1], 0) / cross.length; for (let d = -80; d <= 80; d += 8) for (const o of [-12, 12]) { const i = at((mx + d) / TILE, (my + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES; } } fb = { x: mx, y: my }; add('fbridge', mx / TILE, my / TILE, 0, { len: 130, a: 0 }); } }
   // the stone arch footbridge below the road (a path across from the east trail to the west lawn)
   const sb = ptAt(0.78), ab = { x: sb[0], y: sb[1] };
-  { for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((ab.x + d) / TILE, (ab.y + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; } } add('archbridge', ab.x / TILE, ab.y / TILE, 0, { len: 5 * TILE }); trailPts([[ab.x / TILE - 2.6, ab.y / TILE], [ab.x / TILE - 6, ab.y / TILE + 1.5], [ab.x / TILE - 10, ab.y / TILE + 1]]); trailPts([[ab.x / TILE + 2.6, ab.y / TILE], [ab.x / TILE + 5.4, ab.y / TILE + 0.4]]); }
+  { for (let d = -64; d <= 64; d += 8) for (const o of [-12, 12]) { const i = at((ab.x + d) / TILE, (ab.y + o) / TILE); if (wetSet.has(i)) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES; } } add('archbridge', ab.x / TILE, ab.y / TILE, 0, { len: 5 * TILE }); trailPts([[ab.x / TILE - 2.6, ab.y / TILE], [ab.x / TILE - 6, ab.y / TILE + 1.5], [ab.x / TILE - 10, ab.y / TILE + 1]]); trailPts([[ab.x / TILE + 2.6, ab.y / TILE], [ab.x / TILE + 5.4, ab.y / TILE + 0.4]]); }
   // the banks: mossy rocks and stepping stones, logs, reeds and cattails, ferns and flowering shrubs
   const grass = (x, y) => m.tiles[at(x, y)] === T.GRASS || m.tiles[at(x, y)] === T.DIRT;
   for (const [s, off, r] of [[0.1, -40, 12], [0.14, 44, 14], [0.2, -38, 10], [0.33, 40, 11], [0.37, -42, 13], [0.6, 40, 12], [0.66, -44, 10], [0.86, 42, 12], [0.9, -40, 11]]) { const [x, y] = side(s, off); if (grass(x, y)) add('boulder', x, y, r, { s: r * 2 + 4, moss: 1 }); }
@@ -2602,12 +2602,14 @@ function redwoodCreek(m, H) {
   for (const [s, off, r] of [[0.25, -10, 12], [0.55, 14, 11], [0.8, -6, 13]]) { const p = up[Math.floor(s * (up.length - 1))]; H.addProp(m, 'boulder', p[0] + off, p[1], r, { s: r * 2 + 4, moss: 1 }); }
   // a mossy log fallen across the creek above the falls
   { const p = up[Math.floor(up.length * 0.45)]; H.addProp(m, 'log', p[0], p[1], 0, { a: 0.18, len: 130, moss: 1 }); for (const k of [-0.36, 0, 0.36]) m.addSolidProp(p[0] + Math.cos(0.18) * 130 * k, p[1] + Math.sin(0.18) * 130 * k * 0.7, 11); }
-  // the footbridge below the pool: dock planks across the creek, a trail at both ends
+  // the footbridge below the pool: bridge tiles across the creek under its deck - walked over from the banks, the water
+  // drawn under it and swum beneath (the owner, notes 2: "should just be a bridge that goes across, doesn't need the
+  // wooden platform under it") - a trail at both ends
   const fbI = Math.floor(down.length * 0.08) + 2, fb = down[Math.min(down.length - 1, fbI)], fbN = down[Math.min(down.length - 1, fbI + 1)];
   const ca = Math.atan2(fbN[1] - fb[1], fbN[0] - fb[0]), bx = -Math.sin(ca), by = Math.cos(ca);   // across the creek
   for (let s = -84; s <= 84; s += 12) for (let t = -14; t <= 14; t += 12) {
     const i = at(m, fb[0] + bx * s + Math.cos(ca) * t, fb[1] + by * s + Math.sin(ca) * t);
-    if (m.tiles[i] === T.WATER) { m.tiles[i] = T.DOCK; m.reserve[i] |= RES; }
+    if (m.tiles[i] === T.WATER) { m.tiles[i] = T.BRIDGE; m.reserve[i] |= RES; }
   }
   // the clearing by the pool (east), the campsite in it
   const camp = [pool[0] + 300, pool[1] + 30];

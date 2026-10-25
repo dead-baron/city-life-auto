@@ -32,6 +32,7 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
+const TURRET_TOP = 47;   // (_turret)
 import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
@@ -622,7 +623,7 @@ export class World2 {
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    if (!sub) this._fades(F, sp);
+    if (!sub) { this._fades(F, sp); this._push(F, sp); }
     // the wind the vegetation sways in (render/flora/wind.js, from the shared world clock); Settings' "Wind sway"
     // switch turns the swaying off
     E.swayOn = this.gfx.wind !== false;
@@ -630,7 +631,7 @@ export class World2 {
     Wd[0] = wind.strength; Wd[1] = wind.gust; Wd[2] = wind.dx; Wd[3] = wind.dy;
     // the sea's sparkle tonight (render/atmos.js bioAt: some nights, along some shores; the day from the server)
     const bio = S.bioForce || bioAt((S.day || 0) * DAY_LOOP_S + (S.loopTime || 0), F.sky.minutes, this.bioArr || (this.bioArr = [0, 0]));   // (S.bioForce: the debug menu's)
-    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
+    if (E.beginFrame({ camX, camY, zoom: z, viewW: this.W / z, viewH: this.H / z, time: F.now, preset, wet: sub ? 0 : wet, quality: this.q, flash: sub ? 0 : flash, fog: sub ? 0 : fog, fades: this.fades, clear: this.clr || null, push: sub ? null : this.pushA, wind: Wd, gd: wind.gd, ft: wind.ft, air: wind.air, bio: sub ? null : bio, layer: sub ? this.TN.TUNNEL.layer : 0 }) === false) return;
     this.n.drawn = 0;
     mk('begin');
     this._uploadSprites(); mk('upload');
@@ -1292,6 +1293,18 @@ export class World2 {
       }
     }
   }
+  // the grass and the crops part round you and the people near you (engine.js uPush): [x, y, radius, strength] each
+  _push(F, sp) {
+    const P = this.pushA || (this.pushA = new Float32Array(16)), S = this.S, v = S.pred && S.pred.kind === 'veh' ? S.pred.def : null;
+    P.fill(0);
+    P[0] = sp.x; P[1] = sp.y - 4; P[2] = v ? Math.min(64, (v.W || 40) * 0.5 + 16) : 22; P[3] = v ? 5 : 4;
+    let n = 1;
+    for (const p of F.peds || []) {
+      if (n >= 4) break;
+      if (p.id === S.myPedId || (p.flags & PF.DEAD) || Math.abs(p.rx - sp.x) > 260 || Math.abs(p.ry - sp.y) > 200) continue;
+      P[n * 4] = p.rx; P[n * 4 + 1] = p.ry - 4; P[n * 4 + 2] = 20; P[n * 4 + 3] = 4; n++;
+    }
+  }
   // does the redwood (its prop index) stand in front of you? Your figure on screen - 12 px either side of you
   // (30 in a car), from your feet to 46 px up (40) - against the tree's outline at those heights on it (RW_OUTLINE).
   // pad: a little more once it's fading, so it doesn't flicker at the edge.
@@ -1500,6 +1513,7 @@ export class World2 {
   // the nearest heading already made (within an eighth of a turn either way), for a thing seen the first time
   // a tank's turret (H58: server tank.js): its own model at the hull's angle plus the turret's from it (the damage word's
   // top byte), over the pivot
+  // (TURRET_TOP: the turret's top over the tank's ground - art2/vehicles.js 'tankturret', its aerial at 24 + 22)
   _turret(v, f, N, z0) {
     const A = this.A, a = v.ra + ((v.parent >>> 24) & 255) / 256 * TAU, hi = quant(a, N), st = A.vehState(f & (VF.WRECK | VF.BURN), 1, 1, 0);
     const d = v._tud || (v._tud = { m: v.d.m, p: v.d.p, vr: v.d.vr, tn: v.d.tn, tt: 1 });
@@ -1657,9 +1671,9 @@ export class World2 {
     const happy = !S2 && ((p.extra || 0) & 31) === APOSE.happy && !(p.flags & (PF.DEAD | PF.DOWN));
     // a wild animal: what it's doing comes from the server (fauna.js APOSE in the extra byte; bit 7 in the water);
     // a pet or a farm animal: standing still a while it sits, or puts its head down and grazes (now and then looking
-    // up); down or dead: lying on its side
+    // up); down or dead: lying on its side; hurt (a police dog: server k9.js), limping
     const pose = S2 ? wildPose(p, S2, base, sp, now, this.map)
-      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
+      : p.flags & (PF.DEAD | PF.DOWN) ? 'lie' : sp > 12 && p.hp < 0.5 ? 'limp' : sp > 70 ? 'run' : sp > 12 ? 'walk' : !still || happy ? 'idle'
         : GRAZERS.has(kind) ? ((Math.floor(now / 3.3) + p.id) % 4 ? 'graze' : 'idle') : WILD_IDLE.has(kind) ? 'idle' : 'sit';
     const n = (A.ANIMAL_FRAMES && A.ANIMAL_FRAMES[pose]) || 1, d8 = dir8(p.ra);
     // cut in two by the plasma blade: the carcass in two halves, the cut edges seared (actors.js 'cutA' / 'cutB')
@@ -1762,9 +1776,10 @@ export class World2 {
       }
     }
     o.under = under ? UNDER_Z : 0;
+    o.xrayTop = def.turret ? TURRET_TOP : 0;   // (a tank: its turret over the hull is no reason to outline the hull)
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     o.air = false;
-    o.under = 0;
+    o.under = 0; o.xrayTop = 0;
     this.n.drawn++;
     if (def.turret) this._turret(v, f, N, z0);   // (a tank: its turret at its own angle - H58)
     // riders on bikes and jet skis sit in the open; in an open boat at its seats (def.crew: the driver's, the one beside
@@ -2481,7 +2496,7 @@ export class World2 {
       const age = now - c.born, a = c.alpha * (age > 150 ? 1 - (age - 150) / 40 : 1);
       if (a <= 0.02) { c.on = false; continue; }
       const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
-      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0);
+      E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)
     }
     for (let i = 0; i < fx.d.length; i++) {
       const d = fx.d[i];

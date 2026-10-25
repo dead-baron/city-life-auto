@@ -660,6 +660,9 @@ export const BURN = {
   secs: 9, dps: 6, run: 1.6, roll: 9, rain: 2.2, blast: 0.85, touch: 1.6, campPx: 20, vehPx: 12, pedPx: 18,
   npc: { run: 0.44, roll: 0.44, fall: 0.12 }, rollAfter: [1.2, 2.6], rollS: 2.4, fallAfter: [0.6, 1.4], fallDps: 14,
   water: 0.7, waterPx: 380, screamS: [1.6, 3.4],
+  // a lit campfire takes campS seconds of standing in its flames (within campPx) before you go up; stepping out cools
+  // it off campCool times as fast (the owner's notes 2, 10-24: "it should take a few seconds of standing in it")
+  campS: 2.5, campCool: 2,
 };
 // ---- the tank (H58; the owner: "Add a tank you can drive and shoot and blow things up with, can spawn in debug"):
 // the turret turns to the driver's aim at turretRate rad/s, independently of the hull; a shell every reload s, flying at
@@ -832,10 +835,6 @@ export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0
 // proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
 // between s between points; a serve not hit in serveWait s ends it
 export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6, serveWait: 45 };
-// K9 units (server/systems/k9.js): share of the patrol cars sent after someone on foot at stars..maxStars that carry a
-// dog; the dog runs at speed x a walk, after anyone wanted within sight px of its handler (the leash); a bite within reach px puts them down for
-// downS s, no more than once every `every` s
-export const K9 = { share: 0.3, stars: 2, maxStars: 3, speed: 2.7, sight: 800, reach: 24, downS: 2.4, every: 5, hp: 70 };
 // Prison Island (server/systems/prison.js): a booking at `stars` or more, or the `repeat`th within repeatMs (wall-clock
 // ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
 // each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars

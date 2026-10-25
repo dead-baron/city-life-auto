@@ -31,7 +31,9 @@
 //     sprite to the art grid (whole art pixels of the world). o.alpha < 1 is an ordered-dither fade (a G-buffer
 //     cannot blend), in whole art pixels.
 //   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
-//     up in the air (birds: no mirror image in wet ground or water).
+//     up in the air (birds: no mirror image in wet ground or water). o.xray: what hides it is outlined over the frame;
+//     o.xrayTop (px over z0): only what stands taller than that hides it - a tank's hull under its own turret (a sprite
+//     of its own) is not hidden by it (the owner, 10-24: "the tank top is looking invisible").
 //   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog; f.air (render/flora/wind.js
 //     air: how far the air has carried things - the canopy's leaf clumps, the fog), f.bio (the sea's sparkle tonight:
 //     render/atmos.js bioAt).
@@ -49,26 +51,14 @@
 // Memory (GPU, RGBA8 everywhere): a chunk slot 1.69 MiB at ap 2 (+0.56 for its "under" layer, the building fades),
 //   an atlas page 12 MiB, the frame ~21 B per scene texel (~27 MiB at 1280x720, ~52 at 1080p); slots and pages are
 //   made on demand up to the tier's cap and reused (docs/art-v2/GAME-RENDERER.md has the sums).
-// Sprite atlas: shelf packing (heights rounded to 4 px) on 1024 px pages; when full it evicts the least
-//   recently drawn shelf that fits (then the least recently drawn page), never one drawn this frame;
-//   evicted keys report hasSprite() false. Sprites larger than 1024 px are refused.
-// Frame: beginFrame snaps the camera to whole texels and sizes the scene: the view + 2 px, plus margins
-//   on the side the sun is (the shadow reach of the tier: 300 High/Ultra, 200 Medium, 36 Low), 64 px on
-//   top when wet (reflections), 8 px elsewhere. endFrame: clear -> static chunks (one draw each) ->
-//   decals (instanced, albedo only) -> sprites (one instanced draw, depth tested and written) -> lights
-//   (culled to the scene, best k*r kept up to the tier's 16/32/64/96, uniform buffer, binned into 64 px
-//   tiles so a pixel only visits the lights that reach it) -> lit (Low: lights at half size, composed per
-//   texel with a height-aware pick) -> bloom -> god rays -> final (into the scene's albedo plane) ->
-//   present -> x-ray silhouettes on top. See lightgame.js for the lighting itself.
-// Present: t = pixel / (zoom * DPR) + offset (the camera's fractional part). Scale 0.92-1.1 or a whole
-//   number: nearest, offset snapped to device px (crisp); other scales >= 1: sharp bilinear (1 device px
-//   edge blend, even texel sizes, so no shimmer at 1.26, 1.44 or 2.52); scale < 0.92 (phones at 0.72 and
-//   DPR 1, zoomed out): 4-tap area filter. Vignette here. presentMode (0 / 1 / 2) overrides, for tests.
+// Sprite atlas: shelves on 1024 px pages, the least recently drawn evicted (hasSprite() false after), never this frame's.
+// Frame: the camera snapped to whole texels, the scene the view plus margins (the sun's shadow reach, room on top for
+//   reflections); endFrame: chunks -> decals -> sprites -> lights (culled, binned in 64 px tiles) -> lit -> bloom ->
+//   god rays -> final -> present (nearest at whole scales, sharp bilinear above 1, a 4-tap area filter below 0.92;
+//   presentMode overrides) -> x-ray silhouettes. See lightgame.js for the lighting.
 // Cost: the lit pass is most of a frame (the sun march by day, the lights at night), final 15-35 % when wet or foggy.
-// Integration notes: sprites snap to the art grid (engine.ap world px) while the camera scrolls with sub-texel
-//   precision, so pass camX/camY as the player's position rounded to that grid (+ the smooth look-ahead) to keep
-//   the player steady.
-//   Decals on decks need z0. Lights are world px; static lights from chunks must be added each frame.
+// Pass camX/camY as the player's position rounded to the art grid (+ the look-ahead), so the player holds still; decals
+//   on decks need z0; static lights from chunks are added each frame.
 import { F_GROUND, F_LEAF, F_WET, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
 import { canopyReach } from './canopy.js';
@@ -197,9 +187,10 @@ export function leanAmp(h, f) {
   if (!(f & F_LEAF)) return 0;
   return f & LOW_SWAY ? Math.min(1, Math.max(0, h / SW.tipH)) * SW.tipAmp : Math.min(SW.crownMax, Math.max(0, (h - SW.crown0) / SW.crownH)) * SW.crownAmp;
 }
-export function leanOf(pw, pi, h, f, R, ap = ART_PX) {
+// pp: the push of someone in the grass (STATIC_FS uPush: ground cover only, away from them - the crop parts round you)
+export function leanOf(pw, pi, h, f, R, ap = ART_PX, pp = 0) {
   if (!(f & F_LEAF)) return 0;
-  const k = f & LOW_SWAY ? SW.lowIdle : 1, v = Math.round((pw + pi * k) * leanAmp(h, f) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
+  const lo = f & LOW_SWAY, k = lo ? SW.lowIdle : 1, v = Math.round((pw + pi * k + (lo ? pp : 0)) * leanAmp(h, f) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
   return Math.max(-R, Math.min(R, v));
 }
 // a texel's fade (STATIC_FS, GHOST_FS): 0 if none, else how far to the under layer u; fa its building's, fc that x the
@@ -241,7 +232,7 @@ const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
 uniform sampler2D t0, t1, t2, tN; uniform vec2 uOff; uniform float uFadeOn;
-uniform vec4 uWind, uGust; uniform float uFlut; uniform int uSway;
+uniform vec4 uWind, uGust, uPush[4]; uniform float uFlut; uniform int uSway;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
 ${FADE_GLSL}
@@ -253,14 +244,14 @@ float gustAt(vec2 w){
 // how far a leaf texel at height h leans for a push of 1 (world px): ground cover and the plants on rock at their
 // tips, foliage more the higher it stands (leanAmp, leanOf)
 float ampOf(float h, int f){ return (f & ${LOW_SWAY}) != 0 ? clamp(h / ${glf(SW.tipH)}, 0.0, 1.0) * ${glf(SW.tipAmp)} : clamp((h - ${glf(SW.crown0)}) / ${glf(SW.crownH)}, 0.0, ${glf(SW.crownMax)}) * ${glf(SW.crownAmp)}; }
-int leanOf(float pw, float pi, float h, int f, int R){
-  float k = (f & ${LOW_SWAY}) != 0 ? ${glf(SW.lowIdle)} : 1.0;
-  return clamp(int(round((pw + pi * k) * ampOf(h, f) / float(AP))), -R, R);
+int leanOf(float pw, float pi, float pp, float h, int f, int R){
+  bool lo = (f & ${LOW_SWAY}) != 0;
+  return clamp(int(round((pw + pi * (lo ? ${glf(SW.lowIdle)} : 1.0) + (lo ? pp : 0.0)) * ampOf(h, f) / float(AP))), -R, R);
 }
 void main(){
   ivec2 q = ivec2(gl_FragCoord.xy - uOff), t = q / AP, src = t;   // the chunk's world px, its art texel
   vec4 b = texelFetch(t1, t, 0);
-  float gb = 0.0;
+  float gb = 0.0, gp = 0.0;   // (gp: how near someone pushing it aside - bent over, in their shade)
   if (uSway > 0) {
     vec2 w = uChunk + vec2(t * AP) + 0.5 * float(AP);
     int fl0 = flOf(b), R = (uSway - 1 + AP - 1) / AP;
@@ -278,8 +269,11 @@ void main(){
         float tp = st.b, tq = smoothstep(0.2, 0.8, st.a), cp = wn(w / 26.0 + 61.5).b, am = 0.4 + 1.2 * tq;
         float pw = s * ((1.0 - uWind.y) * 0.6 + uWind.y * g * 1.4) * uWind.z * (0.7 + 0.45 * am);
         float pi = ((sin(uFlut * ${FLUT(37)} + tp * 12.6) * (1.0 - tq) + sin(uFlut * ${FLUT(59)} + tp * 8.4 + 1.7) * tq) * 0.3 * am + sin(uFlut * ${FLUT(29)} + tp * 6.3 + cp * 6.28) * 0.12 + sin(uFlut * ${FLUT(131)} + cp * 25.1) * 0.06) * (0.6 + s);
+        // (pushed aside round the people in it: uPush x, y, radius, strength - an upright ellipse)
+        float pp = 0.0;
+        for (int i = 0; i < 4; i++) { vec4 P = uPush[i]; if (P.z > 0.0) { vec2 d = (w - P.xy) * vec2(1.0, 1.6); float l = length(d); if (l < P.z) { pp += sign(d.x) * P.w * (1.0 - l / P.z); gp = max(gp, 1.0 - l / P.z); } } }
         float h0 = zOf(b);
-        int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, h0, fl0, R) : 0;
+        int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, pp, h0, fl0, R) : 0;
         float bestH = own == 0 ? h0 : -1.0;
         int bestK = own == 0 ? 0 : 99;
         for (int k = -3; k <= 3; k++) {
@@ -290,7 +284,7 @@ void main(){
           int sf = flOf(sb);
           if ((sf & ${F_LEAF}) == 0) continue;
           float sh = zOf(sb);
-          if (sh > bestH && leanOf(pw, pi, sh, sf, R) == k) { bestH = sh; bestK = k; }
+          if (sh > bestH && leanOf(pw, pi, pp, sh, sf, R) == k) { bestH = sh; bestK = k; }
         }
         if (bestK == 99) {
           ivec2 s2 = ivec2(clamp(t.x - own, 0, CTX - 1), t.y);
@@ -307,6 +301,7 @@ void main(){
   int fl = flOf(b);
   bool ground = (fl & ${F_GROUND}) != 0;
   if (gb > 0.0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 + gb * (ground ? 0.2 : 0.08);
+  if (gp > 0.0 && (fl & ${LOW_SWAY}) != 0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 - 0.35 * smoothstep(0.0, 0.6, gp);
   if (uFadeOn > 0.5) {
     vec4 u; float fa, fc, f = fadeOf(src, u, fa, fc);
     if (f > 0.0) {
@@ -421,14 +416,14 @@ export function vegHides(at, x, y, h0) {
 const XRAY_VS = `#version 300 es
 in vec2 c; in vec4 iDst; in vec4 iSrc; in vec4 iPar; in vec4 iTint;
 uniform vec2 uCanvas, uOff; uniform float uS;
-flat out vec4 vDst; flat out vec4 vSrc; flat out vec4 vPar;
+flat out vec4 vDst; flat out vec4 vSrc; flat out vec4 vPar; flat out float vTop;
 void main(){
-  vDst = iDst; vSrc = iSrc; vPar = iPar;
+  vDst = iDst; vSrc = iSrc; vPar = iPar; vTop = iTint.w;
   vec2 e = (iDst.xy + c * iDst.zw - uOff) * uS;
   gl_Position = vec4(e.x / uCanvas.x * 2.0 - 1.0, 1.0 - e.y / uCanvas.y * 2.0, 0.0, 1.0);
 }`;
 const XRAY_FS = HDR + `
-flat in vec4 vDst; flat in vec4 vSrc; flat in vec4 vPar;
+flat in vec4 vDst; flat in vec4 vSrc; flat in vec4 vPar; flat in float vTop;
 uniform sampler2DArray tA, tB; uniform sampler2D tS;
 uniform vec2 uCanvas, uOff, uMax; uniform float uInvS; uniform vec4 uCol;
 layout(location=0) out vec4 o;
@@ -456,7 +451,7 @@ void main(){
   if (cov(l, w, h, bits) < 0.5) discard;
   vec4 sb = texelFetch(tS, tq, 0);
   float hs = zOf(sb), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
-  if (hs <= h0 + 0.5 || veg(tq, flOf(sb), h0)) discard;
+  if (hs <= h0 + 0.5 || (vTop > 0.0 && hs <= vPar.x + vTop) || veg(tq, flOf(sb), h0)) discard;   // (vTop: o.xrayTop)
   float rim = (cov(l + ivec2(1, 0), w, h, bits) < 0.5 || cov(l - ivec2(1, 0), w, h, bits) < 0.5 || cov(l + ivec2(0, 1), w, h, bits) < 0.5 || cov(l - ivec2(0, 1), w, h, bits) < 0.5) ? 1.0 : 0.0;
   o = vec4(mix(uCol.rgb, vec3(1.0), rim * 0.45), min(1.0, uCol.a + rim * 0.35));
 }`;
@@ -856,6 +851,7 @@ export class Art2Engine {
     if (f.fades !== undefined) this.fades = f.fades;
     this.clr = f.clear || null;                                    // the clear spaces round figures in a see-through building (uClr)
     this.wind = f.wind || null;                                    // [strength, gustiness, dir x, dir y]
+    this.push = f.push || null;                                    // who parts the grass (uPush: 4 x [x, y, radius, strength])
     this.gd = f.gd || null; this.ft = f.ft || 0;                   // the gust patches' travel, the flutter clock (wind.js)
     this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
     this.bio = f.bio || null;                                      // the sea's sparkle tonight: [strength, seed] (atmos.js bioAt)
@@ -901,6 +897,7 @@ export class Art2Engine {
       if (this.nXr * FL >= this.xr.length) this.xr = this._grow(this.xr, this.ibXr);
       const X = this.xr, xb = this.nXr++ * FL;
       for (let i = 0; i < FL; i++) X[xb + i] = A[b + i];
+      X[xb + 15] = o.xrayTop || 0;   // (the x-ray's copy: its own parts drawn on their own stand this tall over z0)
     }
     return true;
   }
@@ -1027,7 +1024,7 @@ export class Art2Engine {
     const W = this.wind, sway = W && this.swayOn !== false ? QUALITY[this.q].sway : 0; // (swayOn: Settings' "Wind sway")
     gl.uniform1i(u.uSway, sway);
     gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
-    if (sway) { const G = this.gd; gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform4f(u.uGust, G ? G[0] : 0, G ? G[1] : 0, G ? G[2] : 0, G ? G[3] : 0); gl.uniform1f(u.uFlut, this.ft); }
+    if (sway) { const G = this.gd; gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform4f(u.uGust, G ? G[0] : 0, G ? G[1] : 0, G ? G[2] : 0, G ? G[3] : 0); gl.uniform1f(u.uFlut, this.ft); gl.uniform4fv(u.uPush, this.push || CLR0); }
     const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;

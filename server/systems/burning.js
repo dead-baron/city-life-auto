@@ -8,7 +8,8 @@
 // Someone on fire has ped.burnT > 0 (the seconds the fire has left in it, standing still in the dry) and is in
 // world.burning. What sets people alight (ignite): a blast (combat.blast: the nearer its heart the likelier - blastCatch),
 // their vehicle blowing up with them in it (vehicles.js blownOut), a fire arrow (combat.js stepArrow), and brushing
-// against fire - a burning vehicle or wreck, a lit campfire, someone else alight (contacts, every few ticks). While it
+// against fire - a burning vehicle or wreck, a lit campfire (after BURN.campS standing in it), someone else alight
+// (contacts, every few ticks). While it
 // burns it takes BURN.dps a second (shared/rules.js; a player's grit divides it) and goes out by itself in BURN.secs -
 // faster running about (run), much faster with a dive roll on the ground (roll), faster again in the rain (rain), and
 // at once in the water. A player's death by it says so on the death screen (combat.js kill: 'fire').
@@ -130,12 +131,25 @@ function contacts(world, dt) {
       if (!burning(q) && !q.vehId && moving(q) && (q.player || knocked(q, now)) && explosions.bodyDist(v, q.x, q.y) < BURN.vehPx && world.rand() < p) ignite(world, q, null);
     }
   }
-  // (a campfire: a player who walks into it, or someone knocked into it - not the campers and hikers going about round it,
-  // who step round their fire: the owner, 10-16, "NPCs randomly catching fire" - they'd wander through it and go up)
+  // (a campfire: a player who stands in it, or someone knocked into it - not the campers and hikers going about round it,
+  // who step round their fire: the owner, 10-16, "NPCs randomly catching fire" - they'd wander through it and go up.
+  // Not at once: BURN.campS seconds in the flames (ped.campHeat), cooling off out of them - the owner's notes 2, 10-24)
+  const heat = world.campHeat ||= new Set(), hot = new Set();
   for (const i of campfires.fireIdx(world.map)) {
     const c = world.map.props[i];
     if (!c || c.broken || !campfires.isLit(world, i)) continue;
-    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) if (!burning(q) && !q.sit && moving(q) && (q.player || now < (q.downUntil || 0) + 0.5) && Math.hypot(q.x - c.x, q.y - c.y) < BURN.campPx && world.rand() < p) ignite(world, q, null, BURN.secs * 0.6);
+    for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) {
+      if (burning(q) || q.sit || hot.has(q) || !(q.player || now < (q.downUntil || 0) + 0.5) || Math.hypot(q.x - c.x, q.y - c.y) >= BURN.campPx) continue;
+      if (!(q.kind === K.PED && !q.dead && !q.vehId && !q.hidden && !q.interior)) continue;
+      hot.add(q); heat.add(q);
+      q.campHeat = (q.campHeat || 0) + dt;
+      if (q.campHeat >= BURN.campS && ignite(world, q, null, BURN.secs * 0.6)) q.campHeat = 0;
+    }
+  }
+  for (const q of heat) {
+    if (hot.has(q)) continue;
+    q.campHeat = (q.campHeat || 0) - dt * BURN.campCool;
+    if (q.campHeat <= 0 || q.removed) { q.campHeat = 0; heat.delete(q); }
   }
   for (const b of world.burning) {
     if (b.dead) continue;

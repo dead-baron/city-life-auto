@@ -74,6 +74,8 @@ import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS,
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
+import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
+import { streetGreens3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
 import { squareCrossings3, planStations3, stampStations3, underpassLeft } from './world3-stations.js';   // (2026-10-15: the level crossings square on, the stations' streets and car parks)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -307,6 +309,8 @@ export function worldOpts(asked) {
       m.world3.forageSight = forageInSight3(m);   // (...and the woods' finds moved where you can see them)
       m.world3.wrecks = sunkenWrecks3(m);   // (sunken boats on the bed where the water's clear: rowboats in the lakes, a skiff and a sloop in the sea's shallows - world3-wrecks.js)
       m.world3.mansions = moreMansions3(m);   // (the finest villa of each rich district a mansion too - the owner, 10-16: "More than one mansion": world3-mansions.js)
+      if (H3 && city) m.world3.greens = streetGreens3(m, H3);   // (notes 2: the street trees off the signs, and not palms everywhere - world3-greens.js)
+      if (city) m.world3.kerbBays = kerbBays3(m, (tx, ty) => !!handPlanAt(tx, ty));   // (notes 2: the parked cars' bays along those streets' kerbs - world3-kerbs.js)
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
@@ -377,6 +381,7 @@ export function worldOpts(asked) {
     // (shared/world3-stations.js). Its own hook, called at the end of `lines`.
     roadsDone(lines, m) {
       const loops = mainLineLoops();
+      if (city) m.world3.kerbStreets = kerbStreets3(lines, m, (tx, ty) => !!handPlanAt(tx, ty));   // (notes 2: some side streets of the older and residential districts with a parking lane by each kerb - world3-kerbs.js)
       m.world3.squared = squareCrossings3(lines, m, loops);
       m.world3.stations = planStations3(lines, m, loops);
     },

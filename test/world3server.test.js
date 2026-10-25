@@ -23,6 +23,9 @@ import { shopCoverage, homesList } from '../tools/world3b/shops.mjs';
 import { placeKind3, SHOP_REACH, NEED_KEYS, WILD_SHOPS3 } from '../shared/world3-shops.js';
 import { POSTS3 } from '../shared/world3-medics.js';
 import { clutterOn } from '../shared/world3-clutter.js';
+import { signsBlocked } from '../shared/world3-greens.js';
+import { zebraCrossings, laneOffset, nearestEdge } from '../shared/roadcore.js';
+import { PED_BLOCK, isSwimming } from '../shared/mapcore.js';
 import * as economy from '../server/systems/economy.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
@@ -225,4 +228,117 @@ test('World v3\'s skateboards: a rack at every skate park, a sparse few elsewher
     assert.ok(p.ped.home && p.ped.home.arcade && p.ped.home.id === arcade.hallOf(w, poi).id, `${poi.label}: onto its floor`);
     (await import('../server/systems/homeinside.js')).leave(w, p);
   }
+});
+
+// (the owner's notes, part 2: the world's layout - b5b)
+test('zebra crossings only on the asphalt: a paved refuge across a boulevard\'s planted median, never stripes over grass', () => {
+  const xs = [...zebraCrossings(M).values()];
+  assert.ok(xs.length > 1000, `the crossings (${xs.length})`);
+  const bad = [];
+  for (const c of xs) {
+    const e = M.edges[c.edge], nx = -Math.sin(c.a), ny = Math.cos(c.a);
+    if (e.kind === 'blvd' && e.median > 0 && !(c.ref >= Math.max(6, e.median / 2 - 1))) bad.push(`${e.name}: no refuge over its median`);
+    for (let w = -(c.hw - 16); w <= c.hw - 16; w += 8) {   // (its stripes: the outer 16 px are the kerb's rounding)
+      if (Math.abs(w) < c.ref) continue;
+      const t = M.tileAtPx(c.x + nx * w, c.y + ny * w);
+      if (t !== T.ROAD && t !== T.BRIDGE) { bad.push(`${e.name} at ${Math.round(c.x / TILE)},${Math.round(c.y / TILE)}: stripes on tile ${t}`); break; }
+    }
+  }
+  assert.deepEqual(bad.slice(0, 8), [], `${bad.length} crossings off the road`);
+  delete M._xings;
+});
+
+test('a footbridge is a bridge across: no plank platform under it, walked over and swum under', () => {
+  const decks = [];
+  for (const p of M.props) if (/^(fbridge|logbridge|ropebridge|archbridge)$/.test(p.t)) decks.push({ x: p.x, y: p.y, a: p.a || 0, len: p.len || 140, t: p.t });
+  for (const s of M.natureSites || []) if (s.footbridge && s.footbridge.x !== undefined) decks.push({ ...s.footbridge, a: s.footbridge.a || 0, len: s.footbridge.len || 140, t: s.name });
+  assert.ok(decks.length >= 10, `the footbridges (${decks.length})`);
+  let over = 0;
+  for (const d of decks) {
+    const ux = Math.cos(d.a), uy = Math.sin(d.a);
+    for (let k = -d.len / 2 + 16; k <= d.len / 2 - 16; k += 8) for (const o of [-12, 0, 12]) {
+      const t = M.tileAtPx(d.x + ux * k - uy * o, d.y + uy * k + ux * o);
+      assert.notEqual(t, T.DOCK, `${d.t} at ${Math.round(d.x / TILE)},${Math.round(d.y / TILE)}: a plank deck under it`);
+      if (t === T.BRIDGE) over++;
+    }
+  }
+  assert.ok(over > 100, `bridge tiles under the decks (${over})`);
+  // on one, the Redwood Creek footbridge: on foot onto it from the bank you're on it; swimming in under it you swim on
+  const fb = (M.natureSites || []).find((s) => s.kind === 'creek').footbridge;
+  let bt = null;
+  for (let k = -60; k <= 60 && !bt; k += 4) { const x = fb.x + Math.cos(fb.a) * k, y = fb.y + Math.sin(fb.a) * k; if (M.tileAtPx(x, y) === T.BRIDGE) bt = { x, y }; }
+  assert.ok(bt, 'bridge tiles under the Redwood Creek footbridge');
+  assert.ok(!isSwimming(M, { x: bt.x, y: bt.y, under: false }), 'walked onto from the bank: on the deck');
+  assert.ok(isSwimming(M, { x: bt.x, y: bt.y, under: true }), 'swum in under it: still in the water');
+});
+
+test('every walk-in\'s door on its building\'s front, opening onto ground a street can be walked to - never into a wall', () => {
+  const walk = (t) => !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP && t !== T.BUILDING && t !== T.FLOOR && t !== T.COUNTER;
+  // steps on foot from (tx, ty) to the nearest road (-1: none within 200)
+  const reach = (tx, ty) => {
+    const seen = new Map([[M.idx(tx, ty), 0]]), q = [tx, ty];
+    for (let h = 0; h < q.length && seen.size < 20000; h += 2) {
+      const x = q[h], y = q[h + 1], d = seen.get(M.idx(x, y));
+      if (M.tiles[M.idx(x, y)] === T.ROAD) return d;
+      if (d >= 200) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = x + dx, Y = y + dy; if (!M.inside(X, Y) || seen.has(M.idx(X, Y)) || !walk(M.tiles[M.idx(X, Y)])) continue; seen.set(M.idx(X, Y), d + 1); q.push(X, Y); }
+    }
+    return -1;
+  };
+  const bad = [];
+  let n = 0;
+  for (const bid of M.walkIns) {
+    const b = M.buildings[bid], W = b.walkIn;
+    if (b.door) assert.equal(b.door.ty >= b.ty + b.th, W.south, `${b.name}: its walk-in on the side its door is`);
+    for (const u of W.units) {
+      n++;
+      const oy = u.door.ty + (W.south ? 1 : -1), out = [u.door.tx, u.door.tx + 1].filter((x) => walk(M.tileAt(x, oy)));
+      if (M.tileAt(u.door.tx, u.door.ty) !== T.FLOOR) bad.push(`${b.name}: no doorway in its front wall`);
+      else if (!out.length) bad.push(`${b.name}: its door opens onto tile ${M.tileAt(u.door.tx, oy)}`);
+      else if (reach(out[0], oy) < 0) bad.push(`${b.name}: no street can be walked to from its door`);
+    }
+  }
+  assert.ok(n > 500, `the walk-ins' doors (${n})`);
+  assert.deepEqual(bad.slice(0, 10), [], `${bad.length} doors`);
+});
+
+test('no street tree in front of a storefront\'s sign; the pavements\' greens more than palms', () => {
+  const left = signsBlocked(M);
+  assert.deepEqual(left.slice(0, 8).map(({ p, s }) => `${p.t} at ${Math.round(p.x / TILE)},${Math.round(p.y / TILE)} before ${s.b.name}`), [], `${left.length} trees in front of signs`);
+  const g = M.world3.greens;
+  assert.ok(g && g.trees + g.planters > 200 && g.moved > 50, `the pass ran: ${JSON.stringify(g)}`);
+  const neon = DISTRICTS.find((d) => d.name === 'Neon Strip').id;
+  let palms = 0, other = 0;
+  for (const p of M.props) {
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);
+    if (!M.inside(tx, ty) || M.dist[M.idx(tx, ty)] !== neon || M.tiles[M.idx(tx, ty)] !== T.SIDEWALK) continue;
+    if (/^palm_/.test(p.t)) palms++; else if (/^(tree_|planter_)/.test(p.t)) other++;
+  }
+  assert.ok(other > palms, `the Neon Strip's pavements: ${palms} palms, ${other} other trees and planters`);
+});
+
+test('back lots: no parking bay under a building', () => {
+  const bad = M.stalls.filter((s) => { for (let x = s.x + 8; x < s.x + s.w; x += 16) for (let y = s.y + 8; y < s.y + s.h; y += 16) if (M.tileAtPx(x, y) === T.BUILDING) return true; return false; });
+  assert.deepEqual(bad.slice(0, 6).map((s) => `${Math.round(s.x / TILE)},${Math.round(s.y / TILE)}`), [], `${bad.length} bays under a roof`);
+});
+
+test('street parking in some neighbourhoods: bays by the kerb, clear of the junctions, the crossings, the hydrants and the bus stops, the lanes open', () => {
+  const bays = M.parking.filter((q) => q.street);
+  assert.ok(M.world3.kerbStreets > 20 && bays.length > 300, `streets ${M.world3.kerbStreets}, bays ${bays.length}`);
+  const xs = [...zebraCrossings(M).values()], junc = M.nodes.filter((n) => n.lvl === 0 && n.edges.length >= 3);
+  const near = (t, q, r) => M.props.some((p) => p.t === t && Math.abs(p.x - q.x) < r && Math.abs(p.y - q.y) < r && Math.hypot(p.x - q.x, p.y - q.y) < r);
+  for (const q of bays) {
+    const at = `${Math.round(q.x / TILE)},${Math.round(q.y / TILE)}`;
+    assert.equal(M.tileAtPx(q.x, q.y), T.ROAD, `${at}: on the asphalt`);
+    assert.ok(!junc.some((n) => Math.hypot(n.x - q.x, n.y - q.y) < (n.half || 0) + 3 * TILE), `${at}: clear of the junction`);
+    assert.ok(!xs.some((c) => Math.hypot(c.x - q.x, c.y - q.y) < 4 * TILE), `${at}: clear of the crossing`);
+    assert.ok(!near('hydrant', q, 2 * TILE) && !near('busstop', q, 5 * TILE), `${at}: clear of a hydrant and a bus stop`);
+    // in its parking lane: beyond the traffic lane on its side (a car's half width inside the kerb)
+    const ne = nearestEdge(M.net, q.x, q.y, (e) => e.kind === 'st');
+    assert.ok(ne && ne.e.park && ne.d >= ne.e.hw - ne.e.park - 2 && ne.d <= ne.e.hw, `${at}: by the kerb (${ne && Math.round(ne.d)} px out)`);
+    const lane = laneOffset(ne.e, 0);
+    assert.ok(ne.d - 24 > lane + 26, `${at}: the traffic lane clear (${Math.round(ne.d)} px out, the lane's middle ${Math.round(lane)})`);
+  }
+  delete M._xings;
+  for (const e of M.edges) delete e.bb;
 });
