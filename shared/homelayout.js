@@ -116,6 +116,23 @@ PLANS.arcade = [
   '#cccccccccccccc#',
   '#######D########',
 ];
+// (2026-10-25, the owner: "a really awesome arcade in the neon district") the flagship's floor - the Neon Strip's Pixel
+// Arcade (server/systems/arcade.js hallOf: poi.flagship): twice the floor, a row of cabinets along the back wall and
+// an island of them down the middle (each a game in arcade.js GAMES's order, round again), the long prize counter by
+// the east wall, plants by the door
+PLANS.arcadeflag = [
+  '########################',
+  '#jcjcjcjcjcjcjcjcjcjcjc#',
+  '#cccccccccccccccccccccc#',
+  '#cccccccccccccccccccccc#',
+  '#ccjcjcjcjcccccjcjcjcGG#',
+  '#ccccccccccccccccccccGG#',
+  '#PcccccccccccccccccccGG#',
+  '#ccccccccccccccccccccGG#',
+  '#cccccccccccccccccccccc#',
+  '#PccccccccccccccccccccP#',
+  '###########D############',
+];
 // (H71) an apartment block's lobby (HO5), lobby4 .. lobby8 by its number of flats: in by the front door, the tiled hall -
 // the mailboxes on the back wall, the lift beside them, the stairs up in the corner, a plant by the door - and the
 // landing's carpet runner along the back wall with the flats' doors, unit 1 first (U, numbered in order), each one's

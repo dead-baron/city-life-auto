@@ -93,6 +93,46 @@ function composeNeon(used, cat, r) {
   return null;
 }
 
+// ---- the picture signs (the owner's notes part 2, 2026-10-25: "way more neon signs with cool designs all around the
+// neon district"): his two sign sheets drawn as pixel neon - client/art2/neonpics.js NP. What a front may hang by its
+// trade (a name that says what it is picks its own: a ramen bar the bowl, the karaoke bar the katakana), then the
+// district's own to stack up a tall front; dealt the least used first, never one the front next door has (neonDeck)
+const PICS_OF = { bar: ['barv', 'cocktailv', 'rooftop', 'sake', 'matsuri', 'luckypaw', 'nightlifev'], lounge: ['karaokev', 'rooftop', 'cocktailv', 'nightlifev', 'sake'],
+  club: ['club', 'clubv', 'nightclub', 'panther', 'nightlifev', 'dragon'], diner: ['ramen', 'sushi', 'burger', 'dumpling', 'noodles'], cafe: ['maneki', 'luckypaw', 'matsuri'],
+  arcade: ['gamepad', 'gamezone'], mart: ['citymart', 'openv'], liquor: ['sake', 'openv', 'barv'], pawn: ['openv', 'citymart'], hotel: ['hotelv'], lobby: ['hotelv', 'openv'], salon: ['tattoo', 'oni', 'dragon'],
+  clothes: ['panther', 'dragon', 'maneki', 'oni'], records: ['nightlifev', 'karaokev', 'clubv'], books: ['maneki', 'openv'] };
+const PIC_NAME = [[/ramen|pho\b|noodle/i, 'ramen', 'noodles'], [/sushi/i, 'sushi'], [/burger/i, 'burger'], [/dumpling|gyoza|bao\b/i, 'dumpling'], [/karaoke|mic drop/i, 'karaokev'], [/tattoo|\bink\b/i, 'tattoo', 'oni'], [/hotel|\binn\b/i, 'hotelv'], [/arcade|games|hi score|video/i, 'gamepad', 'gamezone'], [/lucky cat/i, 'maneki', 'luckypaw'],
+  [/mart\b|24/i, 'citymart', 'openv'], [/club/i, 'clubv']];
+const PIC_DECO = ['openv', 'matsuri', 'sake', 'nightlifev', 'karaokev', 'clubv', 'maneki', 'dragon', 'luckypaw', 'barv', 'cocktailv', 'oni', 'panther'];
+const ROOF_PICS = ['panther', 'dragon', 'nightlifev', 'karaokev', 'clubv', 'barv', 'hotelv', 'openv', 'maneki', 'rooftop', 'gamezone', 'ramen', 'sushi', 'burger'];
+const PIC_BACK = ['matsuri', 'sake', 'openv', 'maneki', 'clubv', 'luckypaw', 'barv'];   // (small enough for a back wall over its shutter)
+export const NEON_PICS = [...new Set([...Object.values(PICS_OF).flat(), ...PIC_DECO, ...PIC_BACK, 'tiger'])];
+function neonDeck() {
+  const n = new Map();
+  const take = (k) => { n.set(k, (n.get(k) || 0) + 1); return k; };
+  // (the least dealt of `list` not in `not`; a tie to the draw r)
+  const least = (list, not, r) => { let best = null, bc = 1e9; list.forEach((k, i) => { if (not.has(k)) return; const c = (n.get(k) || 0) + ((i + Math.floor(r * list.length)) % list.length) * 0.01; if (c < bc) { bc = c; best = k; } }); return best ? take(best) : null; };
+  let prev = new Set();
+  return {
+    // a front's signs: its own (fixed, or by its name or trade), then `extra` more of the district's to stack
+    deal(name, trade, extra, r, fixed = null, pool = null) {
+      const own = (PIC_NAME.find(([re]) => re.test(name || '')) || []).slice(1), not = new Set(prev);
+      const main = fixed ? take(fixed) : least(pool || (own.length ? own : PICS_OF[trade] || PIC_DECO), not, r) || least(PIC_DECO, not, r);
+      const out = main ? [main] : [];
+      if (main) not.add(main);
+      for (let i = 0; i < extra; i++) { const k = least(pool || (i === 0 && own.length > 1 && !own.slice(1).every((q) => not.has(q)) ? own.slice(1) : PIC_DECO), not, (r * 7 + i * 0.37) % 1); if (k) { out.push(k); not.add(k); } }
+      if (!pool) prev = new Set(out);   // (a roof's or a back's sign from its own pool: not the front next door's)
+      return out;
+    },
+    counts: n,
+  };
+}
+// lights strung from (x, y) to (x + dx, y + dy) (tiles) h px up, each end made fast to something (the owner, 10-25:
+// "lantern (or hanging lights) don't connect to anything"): 'pole' (a post of its own, drawn with it), 'wall' (a bracket
+// on the building there), 'palm' / 'tree' / 'lamp' / 'stall' (the one standing there); k 'lantern': red paper lanterns,
+// 'cable': a bare cable (test/neonstrip.test.js holds every end to it)
+function fest(K, x, y, dx, dy, h, a0, a1, k = null) { K.prop('festoon', x, y, 0, { tx: Math.round(dx * TILE), ty: Math.round(dy * TILE), h, ends: [a0, a1], ...(k ? { k } : {}) }); }
+
 const band = (yN, kN, yS, kS) => [yN + EXT[kN] + 1, yS - EXT[kS] - 1];
 const span = (xW, kW, xE, kE) => [xW + EXT[kW] + 1, xE - EXT[kE]];
 
@@ -100,7 +140,7 @@ function build(m, api, K) {
   const { rnd, pick, prop } = K;
   const poi0 = m.pois.length;
   const out = { homes: 0, shops: 0, clubs: 0 };
-  const used = new Set();
+  const used = new Set(), deck = neonDeck();
   let lastWin = null, ci = 0;
   // one of the strip's businesses not used yet
   const biz = (list, x, y, k) => { for (let t = 0; t < 30; t++) { const q = list[Math.floor(rnd(x + t, y, k) * list.length) % list.length]; if (!used.has(q[0])) { used.add(q[0]); return q; } } return null; };
@@ -118,12 +158,19 @@ function build(m, api, K) {
     if (floors >= 3 && w >= 8 && rnd(x, y, 38) < 0.3) spec.fireEscape = [Math.max(8, Math.round(w * TILE * 0.5) - 25), 50];
     const shop = { kind: o.store || 'bar', door: side, open: true, people: o.people ?? 2 + Math.floor(rnd(x, y, 39) * 3), sign: null, awning: o.awning !== undefined ? o.awning : rnd(x, y, 40) < 0.4 ? ['#1e1a2a', '#1e1a2a'] : null };
     if (o.grille) shop.grille = true;
-    const neon = { name: o.sign ?? o.name, kind: o.neon || 'bar', col, ...(o.pic ? { pic: o.pic } : {}), ...(o.blade ? { blade: o.blade } : {}), ...(o.picV ? { picV: o.picV } : {}) };
+    // (its picture signs off the deck: one over the shopfront, more stacked up a tall front - client/art2/neonpics.js
+    // lays them where the face has room; its dressing: light strips, holo panels, AC units, a conduit and its cables)
+    const extra = o.extra ?? (floors >= 4 && w >= 10 ? 2 : floors >= 3 && w >= 7 ? 1 : 0);
+    const [p0, ...more] = o.pic === null ? [] : deck.deal(o.name, o.store || 'bar', extra, rnd(x, y, 42), o.pic || null);
+    const neon = { name: o.sign ?? o.name, kind: o.neon || 'bar', col, ...(p0 ? { pic: p0 } : {}), ...(more.length ? { pics: more } : {}), ...(o.blade ? { blade: o.blade } : {}), ...(o.picV ? { picV: o.picV } : {}), dress: true, ...(rnd(x, y, 43) < 0.3 ? { flick: 1 } : {}) };
     const st = shop.kind, food = st === 'cafe' || st === 'diner';
     let poi = o.poi === undefined ? (food ? { kind: 'coffee', label: o.name, food: st === 'diner' } : { kind: 'delivery', label: o.name }) : o.poi;
     if (poi && poi.kind === 'delivery' && o.walk && !o.key) poi = { ...poi, walk: true, store: st };
     const home = o.home !== undefined ? o.home : floors >= 3 && w >= 6 && rnd(x, y, 41) < 0.4 ? { kind: 'apartment' } : null;
-    return { arch: o.arch || 'nightrow', ...(o.key ? { key: o.key } : food ? { key: 'rest2' } : {}), art: { spec, shop, neon, ...(o.kit ? { kit: o.kit } : {}) }, name: o.name, poi, ...(home ? { home } : {}), door: side === 'left' ? x : x + w - 1, whole: true };
+    // (a low front's roof: a picture sign standing at its front edge over the street - a y < 0 from the roof's south
+    // edge: client/art2/game/statics.js - its AC and vents behind)
+    const kit = o.kit || (!o.garden && floors <= 3 && w >= 6 && rnd(x, y, 44) < (floors <= 2 ? 0.7 : 0.4) ? [[`npic|${deck.deal(null, null, 0, rnd(x, y, 45), null, ROOF_PICS)[0]}`, Math.round(w * TILE / 2), -26], ['ac', Math.round(w * TILE * 0.25), 90], ['vent', Math.round(w * TILE * 0.7), 140], ['acs', Math.round(w * TILE * 0.55), 60]] : null);
+    return { arch: o.arch || 'nightrow', ...(o.key ? { key: o.key } : food ? { key: 'rest2' } : {}), art: { spec, shop, neon, ...(kit ? { kit } : {}) }, name: o.name, poi, ...(home ? { home } : {}), door: side === 'left' ? x : x + w - 1, whole: true };
   };
   // a back facing a street to its north (its front unseen): one or two floors, a sign standing on its roof over that
   // street (the kit's 'neon|WORD|colour' at the roof's north edge), the AC and vents round it
@@ -131,10 +178,13 @@ function build(m, api, K) {
     const f = faceOf(rnd(x, y, 50)), floors = o.floors ?? (rnd(x, y, 51) < 0.6 ? 2 : 1);
     const words = ['BAR', 'KARAOKE', 'HOTEL', 'LIVE', 'RAMEN', 'OPEN 24', 'DANCE', 'GAMES', 'SUSHI', 'COCKTAILS', 'TATTOO', 'LOUNGE', 'NOODLES', 'CLUB', 'VIDEO', 'PLAY'];
     const kit = [];
-    if (w >= 6 && rnd(x, y, 52) < 0.7) kit.push([`neon|${pick(words, rnd(x, y, 53))}|${Math.floor(rnd(x, y, 54) * 7)}`, Math.round(w * TILE / 2), 12]);
+    // (its roof's sign over the boulevard: half of them a picture of the owner's sheets - client/art2/game/statics.js 'npic')
+    if (w >= 6 && rnd(x, y, 52) < 0.75) kit.push(rnd(x, y, 58) < 0.5 ? [`npic|${deck.deal(null, null, 0, rnd(x, y, 59), null, ROOF_PICS)[0]}`, Math.round(w * TILE / 2), 12] : [`neon|${pick(words, rnd(x, y, 53))}|${Math.floor(rnd(x, y, 54) * 7)}`, Math.round(w * TILE / 2), 12]);
     kit.push(['ac', Math.round(w * TILE * 0.3), 80], ['vent', Math.round(w * TILE * 0.7), 120], ['acs', Math.round(w * TILE * 0.5), 160]);
     if (rnd(x, y, 55) < 0.4) kit.push(['dish', Math.round(w * TILE * 0.8), 60]);
-    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [] }, noShop: true, kit }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
+    // (the back wall on the alley, the camera's side: its roll shutter, a lantern or a small sign beside it, the AC)
+    const neon = { name: null, trim: false, col: Math.floor(rnd(x, y, 55) * 7), dress: { back: 1 }, top: 8, ...(rnd(x, y, 49) < 0.7 ? { pics: deck.deal(null, null, 0, rnd(x, y, 48), null, PIC_BACK) } : {}) };
+    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [] }, noShop: true, kit, neon }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
   };
   const place = (L) => { const b = K.building(L); if (b) { if (L.home) out.homes++; if (L.poi) out.shops++; } return b; };
 
@@ -184,11 +234,11 @@ function build(m, api, K) {
     { w: 12, name: 'Mic Drop Karaoke', store: 'bar', neon: 'lounge', blade: 'KARAOKE', sign: 'MIC DROP', floors: 4 },
     { w: 8, name: 'Lucky Cat', store: 'bar', neon: 'bar', blade: 'BAR' },
     { w: 8, name: 'Dumpling Moon', store: 'diner', neon: 'diner' },
-    { w: 10, name: 'Ink Tiger Tattoo', store: 'salon', neon: 'club', pic: 'tigerHead', sign: 'TIGER INK', walk: false },
+    { w: 10, name: 'Ink Tiger Tattoo', store: 'salon', neon: 'club', sign: 'TIGER INK', walk: false },
     { w: 9, name: 'Rooftop 88', store: 'bar', neon: 'lounge', garden: true },
   ], { depth: 14, floors: 3 });
   litRow(PLAZA[1], bx1, ly0, ly1, [
-    { w: 18, lot: clubLot('clubeclipse', 'The Midnight', 4, 'club', 'tigerHead'), depth: 16 },
+    { w: 18, lot: clubLot('clubeclipse', 'The Midnight', 4, 'club', 'panther'), depth: 16 },
     { w: 10, name: 'Vinyl Vault', store: 'records', neon: 'bar', blade: 'VINYL', walk: true },
     { w: 8, name: 'Bao Bar', store: 'diner', neon: 'diner', blade: 'BAO' },
   ], { depth: 14, floors: 3 });
@@ -207,13 +257,16 @@ function build(m, api, K) {
   const ry0 = LANE[1] + 1;
   litRow(bx0, PLAZA[0], ry0, by1, [
     { w: 20, lot: clubLot('clubnova', 'Club Ultraviolet', 5, 'club', null, 'CROWN'), depth: 22 },
-    { w: 11, name: 'Afterglow', store: 'clothes', neon: 'bar', pic: 'tiger', sign: 'STREETWEAR', poi: { kind: 'clothing', label: 'Afterglow' }, floors: 4 },
+    { w: 11, name: 'Afterglow', store: 'clothes', neon: 'bar', pic: 'tiger', sign: 'AFTERGLOW', poi: { kind: 'clothing', label: 'Afterglow' }, floors: 4 },
     { w: 8, name: 'Moon Burger 24', store: 'diner', neon: 'diner', blade: 'OPEN 24', floors: 4 },
     { w: 10, name: 'Nite Mart', store: 'mart', neon: 'mart', sign: 'NITE MART 24/7', poi: { kind: 'convenience', label: 'Nite Mart 24/7' }, floors: 4 },
     { w: 9, name: 'Neon Pawn', store: 'pawn', neon: 'mart', sign: 'PAWN & GUNS', poi: { kind: 'pawn', label: 'Neon Pawn & Guns' }, floors: 4 },   // (2026-10-23: the shops where you need them)
   ], { depth: 22, floors: 4 });
   litRow(PLAZA[1], bx1, ry0, by1, [
-    { w: 16, lot: { arch: 'arcade', key: 'arcade', name: 'Pixel Arcade', poi: { kind: 'delivery', label: 'Pixel Arcade' }, whole: true, art: litArt(5, 'arcade', 'PIXEL ARCADE', 'arcade', 1, null, 'GAMES') }, depth: 22 },
+    // (the owner, 10-25: "a really awesome arcade in the neon district" - the flagship: the biggest floor of them all,
+    // its cabinets in rows and the long prize counter - shared/homelayout.js 'arcadeflag', server/systems/arcade.js)
+    { w: 24, lot: { arch: 'arcade', key: 'arcade', name: 'Pixel Arcade', poi: { kind: 'delivery', label: 'Pixel Arcade', flagship: true }, whole: true,
+      art: { ...litArt(5, 'arcade', 'PIXEL ARCADE', 'arcade', 3, 'gamepad', 'GAMES'), kit: [['npic|gamezone', 384, 680], ['hvac', 120, 200], ['ac', 560, 260], ['vent', 300, 120], ['acs', 640, 420], ['dish', 80, 520]] } }, depth: 22 },
     { w: 14, lot: clubLot('club', 'Luna Lounge', 4, 'lounge', null, 'LOUNGE'), depth: 22 },
     { w: 9, name: 'Night Owl Ramen', store: 'diner', neon: 'diner', blade: 'RAMEN', floors: 4 },
   ], { depth: 22, floors: 4 });
@@ -244,15 +297,25 @@ function build(m, api, K) {
   const [ay0, ay1] = band(NY.blvd, 'blvd', NY.lantern, 'st');      // 2208..2243
   const [cy0, cy1] = band(NY.lantern, 'st', NY.cross, 'ave');       // 2257..2292
   const blocks = [[NX.westside, 'ave', NX.parkW, 'ave'], [NX.parkW, 'ave', NX.parkE, 'ave'], [NX.parkE, 'ave', NX.civic, 'ave'], [NX.civic, 'ave', NX.harborview, 'ave']];
+  // (the owner, 10-25: "lantern alleyways") two walkways through the blocks, red lanterns strung wall to wall over them:
+  // Lantern Alley from the boulevard (facing Blossom Plaza across it) through to Lantern Street, Red Lantern Row from
+  // Lantern Street to Crosstown Avenue
+  const walks = [lanternAlley(K, 3066, ay0, ay1, 'Lantern Alley', out), lanternAlley(K, 3250, cy0, cy1, 'Red Lantern Row', out)];
+  const rows = [];
   for (const [a, ka, b, kb] of blocks) {
     const [x0, x1] = span(a, ka, b, kb);
     // (the crossroads' south-west corner: the 24/7 mart's car park on the boulevard, its vending machines - D8)
     if (a === NX.parkW) crossroadsLot(K, x1 - 26, ay0, 26, AL.a - 2 - ay0 + 1, out);
     backRow(x0, x1, ay0, AL.a - 2);
-    litRow(x0, x1, AL.a + 2, ay1, [], { depth: 99, floors: a === NX.parkE ? 3 : 2 + (rnd(x0, ay1, 80) < 0.5 ? 1 : 0) });
+    rows.push(litRow(x0, x1, AL.a + 2, ay1, [], { depth: 99, floors: a === NX.parkE ? 3 : 2 + (rnd(x0, ay1, 80) < 0.5 ? 1 : 0) }));
     backRow(x0, x1, cy0, AL.b - 2);
-    litRow(x0, x1, AL.b + 2, cy1, a === NX.parkE ? [{ w: 18, lot: { arch: 'theatre', key: 'theatre', name: 'The Starlight', poi: { kind: 'delivery', label: 'The Starlight' }, whole: true } }] : [], { depth: 99, floors: 3 });
+    rows.push(litRow(x0, x1, AL.b + 2, cy1, a === NX.parkE ? [{ w: 18, lot: { arch: 'theatre', key: 'theatre', name: 'The Starlight', poi: { kind: 'delivery', label: 'The Starlight' }, whole: true } }] : [], { depth: 99, floors: 3 }));
   }
+  // the lanterns: zig-zagging across the two service alleys from the backs' walls to the rows', across the walkways
+  // and the passages between fronts, wall to wall
+  for (const ya of [AL.a, AL.b]) alleyLanterns(K, ya, NX.westside + EXT.ave + 1, NX.harborview - EXT.ave, out);
+  for (const W of walks) dressWalk(K, W, out);
+  for (const made of rows) passageLanterns(K, made, out);
   // Harbor Lights, the festival ground where the boulevard meets the water (NE3-NE8's waterfront festival): the big
   // wheel, the stage and its screen, food stalls, a lawn under strings of lights, the pier out into the bay
   harborLights(K, 3422, out);
@@ -264,6 +327,7 @@ function build(m, api, K) {
   K.landscape({ bare: 0.35, tree: (x, y, r) => r < 0.55 ? ['palm_a', pick(['royal', 'coconut'], rnd(x, y, 820)), 1.15 + rnd(x, y, 821) * 0.2] : r < 0.85 ? ['tree_a', pick(['cherry', 'magnolia', 'cherry'], rnd(x, y, 822)), 1.1] : [pick(['shrub_a', 'bush_c', 'flowers_big'], rnd(x, y, 823)), null, 1] });
   dressing(K, out, poi0);
   out.named = used.size;
+  out.pics = Object.fromEntries(deck.counts);   // (how often each picture sign was dealt: test/neonstrip.test.js)
   return out;
 
   // a club's lot: its key (the generator's club kinds: the dance floor inside, the line and the bouncers -
@@ -275,8 +339,9 @@ function build(m, api, K) {
   // the art of a lit building placed whole (a club, the arcade): dark walls, its neon
   function litArt(floors, store, name, neonKind, people = 3, pic = null, blade = null) {
     const f = faceOf(rnd(floors, name.length, 90));
+    const [p0, ...more] = deck.deal(name, neonKind === 'arcade' ? 'arcade' : 'club', floors >= 4 ? 2 : 1, rnd(floors, name.length, 92), pic);
     return { spec: { floors, ...f, win: pick(WINS, rnd(name.length, floors, 91)), parapet: 12, grime: 0.2, roofMat: 'rubber', lip: 10, rimW: 4, blades: [] }, shop: { kind: store, door: 'right', open: true, people, sign: null, awning: ['#16121e', '#16121e'] },
-      neon: { name, kind: neonKind, col: (ci++ * 3) % 7, ...(pic ? { pic } : {}), ...(blade ? { blade } : {}) } };
+      neon: { name, kind: neonKind, col: (ci++ * 3) % 7, pic: p0, ...(more.length ? { pics: more } : {}), ...(blade ? { blade } : {}), dress: true, flick: 1 } };
   }
 }
 
@@ -315,7 +380,7 @@ function waterfront(K, x0, x1, yS, out) {
   for (let x = x0 + 3; x < x1 - 2; x += 8) {
     if (!K.m.land[(yS - 2) * K.m.w + x] || K.m.tiles[(yS - 2) * K.m.w + x] !== T.PLAZA) { last = null; continue; }
     prop('palm_a', x + 0.5, yS - 1.6, 10, { sp: 'royal', k: 1.15 });
-    if (last !== null) prop('festoon', last + 0.5, yS - 2.2, 0, { tx: Math.round((x - last) * TILE), ty: 0, h: 60 });
+    if (last !== null) fest(K, last + 0.5, yS - 2.2, x - last, 0, 60, 'palm', 'palm');
     last = x;
   }
   for (let k = 0; k < 5; k++) { prop('cafetable', 3054 + k * 8, yS - 5, 0); prop(k % 2 ? 'umbrella_b' : 'umbrella_r', 3054 + k * 8, yS - 5.1, 0); }
@@ -360,8 +425,12 @@ function blossomPlaza(K, x, y, w, h, out) {
   prop('foodcart', x + 3, y + h - 3, 14);
   prop('flowers_big', x + 2, cy, 0); prop('flowers_big', x + w - 2, cy, 0);
   for (const [fx, fy] of [[0.06, 0.4], [0.94, 0.4], [0.06, 0.95], [0.94, 0.95], [0.3, 0.12], [0.7, 0.12]]) prop('lamp', x + w * fx, y + h * fy, 0);
-  // strings of lights from the corners in over the plaza to the fountain's ring
-  for (const [fx, fy] of [[0.06, 0.12], [0.94, 0.12], [0.06, 0.95], [0.94, 0.95]]) { const sx = x + w * fx, sy = y + h * fy; prop('festoon', sx, sy, 0, { tx: Math.round((cx - sx) * 0.7 * TILE), ty: Math.round((cy - sy) * 0.7 * TILE), h: 70 }); }
+  // strings of lights over the fountain (the owner, 10-25: they "don't connect to anything" - they hung in the air,
+  // ending short of the fountain): a post at each corner of its ring, the lights strung post to post round it and out
+  // from each post to the lamp at the plaza's corner
+  const posts = [[cx - 7, cy - 4.6], [cx + 7, cy - 4.6], [cx + 7, cy + 4.6], [cx - 7, cy + 4.6]];
+  for (let k = 0; k < 4; k++) { const [ax, ay] = posts[k], [bx, by] = posts[(k + 1) % 4]; fest(K, ax, ay, bx - ax, by - ay, 62, 'pole', 'pole'); }
+  for (const [k, fx, fy] of [[0, 0.3, 0.12], [1, 0.7, 0.12], [2, 0.94, 0.95], [3, 0.06, 0.95]]) { const lx = x + w * fx, ly = y + h * fy, [px, py] = posts[k]; fest(K, lx, ly, px - lx, py - ly, 58, 'lamp', 'pole'); }
   // the billboard: the eye-patch woman at the plaza's north edge, facing the plaza and the boulevard
   prop('picboard', cx, y + 1.5, 0, { pic: 'lucy', z: 60, col: [255, 80, 200] });
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(cx) - 7, y: Math.round(cy) - 6, w: 14, h: 12, name: 'Blossom Plaza' });
@@ -387,7 +456,7 @@ function lanternLane(K, x0, x1, out) {
     if (rnd(x, y0, 3) < 0.5) prop(pick(['crates', 'cooler', 'fruitcrate', 'crates'], rnd(x, y0, 4)), x + 2.6, sN - 1.4, 0);
     if (rnd(x, y1, 5) < 0.5) prop(pick(['crates', 'cooler', 'fruitcrate', 'bags'], rnd(x, y1, 6)), x + 2.6, sS + 1.6, 0);
     // the lanterns strung across the lane, every other stall; the tables down the middle between
-    if ((x - x0) % 8 === 3) prop('festoon', x + 0.5, sN + 1.2, 0, { tx: 0, ty: Math.round((sS - sN - 2.4) * TILE), h: 54 });
+    if ((x - x0) % 8 === 3) fest(K, x + 0.5, sN + 1.2, 0, sS - sN - 2.4, 54, 'pole', 'pole', 'lantern');
     else if ((x - x0) % 8 === 7) { const ty = (y0 + y1) / 2 + 0.5; prop('cafetable', x + 0.5, ty, 0); prop(pick(['umbrella_r', 'umbrella_y', 'umbrella_g'], rnd(x, ty, 7)), x + 0.5, ty - 0.1, 0); prop('chair', x - 0.4, ty + 0.1, 0, { v: 1, a: 0 }); prop('chair', x + 1.4, ty + 0.1, 0, { v: 1, a: 3.1416 }); }
   }
   // a gate at each end (where the lane meets the bridges' avenues), the market's sign over the west one
@@ -418,7 +487,7 @@ function westPoint(K, out, lit) {
   const w = x1 - x0;
   K.building({ x: x0, y: 2160, w, h: yB - 2160 + 1, arch: 'hotel', key: 'hotel', name: 'Neon Palms Hotel', poi: { kind: 'delivery', label: 'Neon Palms Hotel' }, whole: true,
     art: { spec: { floors: 10, style: 'glass', parapet: 14, roofMat: 'paver', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'lobby', door: 'right', open: true, people: 3, sign: null, awning: ['#16121e', '#16121e'] },
-      neon: { name: 'NEON PALMS', kind: 'hotel', col: 5, blade: 'HOTEL', pic: 'tigerHead', picV: 200 },
+      neon: { name: 'NEON PALMS', kind: 'hotel', col: 5, blade: 'HOTEL', pic: 'panther', picV: 200, pics: ['hotelv', 'rooftop', 'nightlifev'], dress: true },
       kit: [['palm', 60, 60], ['palm', 200, 60], ['lounge', 100, 130], ['lounge', 150, 130], ['umb', 240, 140], ['plant', 40, 200], ['plant', 300, 200], ['string', 160, 90], ['hut', 300, 300], ['ac', 80, 400]] } });
   void lit; (out.places ||= []).push({ name: 'Glow Beach', x0, y0: 2088, x1, y1: 2158 });
 }
@@ -430,7 +499,7 @@ function eastHeadland(K, out, lit) {
   const x0 = NX.bridgeE + EXT.art + 1, yB = NY.blvd - EXT.blvd - 1;
   K.building({ x: x0, y: 2150, w: 22, h: yB - 2150 + 1, arch: 'club', key: 'club', name: 'The Violet Room', poi: { kind: 'delivery', label: 'The Violet Room' }, whole: true,
     art: { spec: { floors: 7, style: 'concrete', wallColor: '#2a2436', win: 'tall', parapet: 14, grime: 0.15, roofMat: 'rubber', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'bar', door: 'left', open: true, people: 4, sign: null, awning: ['#16121e', '#16121e'] },
-      neon: { name: 'VIOLET ROOM', kind: 'club', col: 3, pic: 'lucy', picV: 150, blade: 'DANCE' } } });
+      neon: { name: 'VIOLET ROOM', kind: 'club', col: 3, pic: 'lucy', picV: 150, blade: 'DANCE', pics: ['clubv', 'nightclub', 'sake'], dress: true } } });
   out.clubs++;
   // beside it on the boulevard: Afterdark, then a lit front or two
   let k = 0;
@@ -446,7 +515,7 @@ function eastHeadland(K, out, lit) {
   let kk = 0;
   const lb = K.row(x0, 3236, 2104, 2128, (x, room) => { if (room < 8) return room >= 1 ? { gap: room, kind: 'plaza' } : null; const w = Math.min(room, kk === 0 ? 24 : 18); const L = kk++ === 0 ? lit(x, 2128, w, { name: 'Bayview Lounge', store: 'bar', neon: 'lounge', floors: 2, garden: true }) : lit(x, 2128, w, { name: 'Seaglass Grill', store: 'diner', neon: 'diner', blade: 'GRILL', floors: 2, garden: true }); return { w, depth: 99, ...L }; });
   for (let x = x0 + 2; x < 3232; x += 5) { prop('cafetable', x, 2131.5, 0); prop(x % 2 ? 'umbrella_r' : 'umbrella_b', x, 2131.4, 0); }
-  prop('festoon', x0 + 1, 2130, 0, { tx: Math.round((3232 - x0 - 2) * TILE), ty: 0, h: 44 });
+  fest(K, x0 + 1, 2130, 3232 - x0 - 2, 0, 44, 'pole', 'pole');
   void lb;
 }
 
@@ -502,15 +571,15 @@ function harborLights(K, x0, out) {
   for (const [x, y] of [[3540, 2240], [3560, 2234], [3580, 2246], [3600, 2250], [3556, 2252]]) if (m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.PLAZA || m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.GRASS) prop('palm_a', x, y, 10, { sp: 'coconut', k: 1.3 });
   for (const [x, y] of [[3494, 2246], [3506, 2244], [3488, 2250]]) prop('picnic', x, y, 0);
   for (let k = 0; k < 6; k++) if (m.tiles[2254 * m.w + 3530 + k * 5] === T.PLAZA) prop('mstall', 3531 + k * 5, 2254, 0, { v: (k + 2) % 4, c: k % 4, a: 0 });
-  prop('festoon', 3528, 2252, 0, { tx: Math.round(30 * TILE), ty: 0, h: 50 });
+  fest(K, 3528, 2252, 30, 0, 50, 'pole', 'pole');
   prop('dscreen', 3500, 2234.5, 0); prop('dspeaker', 3490, 2235.5, 0); prop('dspeaker', 3510, 2235.5, 0);
   prop('textsign', 3500, 2232.5, 0, { text: 'HARBOR LIGHTS', bg: '#16121e', fg: [255, 110, 200], z: 96, sx: 2, lit: true });
-  for (let x = 3474; x < 3530; x += 7) prop('lamp', x, 2257, 0);
+  for (let x = 3474; x < 3530; x += 7) if (m.tiles[2257 * m.w + x] !== T.ROAD) prop('lamp', x, 2257, 0);   // (none out on Harborview Avenue)
   for (let k = 0; k < 8; k++) prop('cafetable', 3556 + (k % 4) * 4, 2252 + (k >> 2) * 3.5, 0);
-  prop('festoon', 3554, 2250, 0, { tx: Math.round(16 * TILE), ty: 0, h: 50 }); prop('festoon', 3554, 2254, 0, { tx: Math.round(16 * TILE), ty: 0, h: 50 });
+  fest(K, 3554, 2250, 16, 0, 50, 'pole', 'pole'); fest(K, 3554, 2254, 16, 0, 50, 'pole', 'pole');
   for (let k = 0; k < 6; k++) prop('mstall', 3444 + k * 4, 2238, 0, { v: k % 4, c: (k + 1) % 4, a: Math.PI });
   for (let k = 0; k < 5; k++) { prop('cafetable', 3446 + k * 4.4, 2232, 0); prop(k % 2 ? 'umbrella_r' : 'umbrella_y', 3446 + k * 4.4, 2231.9, 0); }
-  prop('festoon', 3442, 2230, 0, { tx: Math.round(24 * TILE), ty: 0, h: 50 });
+  fest(K, 3442, 2230, 24, 0, 50, 'pole', 'pole');
   for (const [x, y] of [[3446, 2240], [3482, 2244], [3512, 2236], [3530, 2244], [3520, 2228]]) if (m.tiles[Math.floor(y) * m.w + Math.floor(x)] !== T.WATER) prop('palm_a', x, y, 10, { sp: 'royal', k: 1.3 });
   prop('foodcart', 3444, 2246, 14); prop('foodcart', 3500, 2246, 14);
   // the pier: north-east into the bay from the shore
@@ -522,6 +591,68 @@ function harborLights(K, x0, out) {
   void rnd;
   (out.places ||= []).push({ name: 'Harbor Lights', x0, y0, x1: 3640, y1 });
   (K.m.partySpots ||= []).push({ x: Math.round(3464 * TILE), y: Math.round(2235 * TILE), name: 'Harbor Lights' });
+}
+
+// ---- the lantern alleys ------------------------------------------------------------------------------------------
+// A walkway 5 tiles wide through a block from street to street (carved before the block's rows, so they stop either
+// side of it): paved, its name on the map
+function lanternAlley(K, x, y0, y1, name, out) {
+  K.fill(x, y0, 5, y1 - y0 + 1, T.PLAZA); K.take(x, y0, 5, y1 - y0 + 1);
+  (out.places ||= []).push({ name, x0: x, y0, x1: x + 5, y1: y1 + 1 });
+  return { x, y0, y1, w: 5, name };
+}
+const bldAt = (m, x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && m.bld[y * m.w + x] >= 0;
+// a walkway dressed: lanterns strung wall to wall every two tiles where it runs between buildings (zig-zagging), a gate
+// at each mouth with its name, paper-lantern posts, vending machines, steam off a grate, crates by the back doors
+function dressWalk(K, W, out) {
+  const { m, prop, rnd } = K, { x, y0, y1 } = W;
+  let n = 0;
+  for (let y = y0 + 1; y < y1; y += 2) {
+    if (!bldAt(m, x - 1, y) || !bldAt(m, x + 5, y) || !bldAt(m, x - 1, y + 1) || !bldAt(m, x + 5, y + 1)) continue;
+    const dy = n % 2 ? 0.8 : -0.8;
+    fest(K, x, y + 0.6, 5, dy, 54 + (n % 3) * 4, 'wall', 'wall', 'lantern');
+    n++;
+  }
+  // the mouths: where the walkway meets a street's pavement (its first and last rows)
+  for (const [my, up] of [[y0, 1], [y1, -1]]) {
+    prop('gatearch', x + 2.5, my + (up > 0 ? 0.6 : 0.4), 0, { w: Math.round(4.4 * TILE), a: 0 });
+    prop('textsign', x + 2.5, my + (up > 0 ? 0.7 : 0.5), 0, { text: W.name.toUpperCase(), bg: '#7a1e2a', fg: [255, 214, 120], z: 62, sx: 1, lit: true });
+    for (const dx of [0.5, 4.5]) prop('lantern', x + dx, my + up * 1.5 + 0.5, 4);
+  }
+  for (let y = y0 + 3, k = 0; y < y1 - 2; y += 5, k++) {
+    const side = k % 2 ? x + 0.6 : x + 4.4;
+    if (m.tiles[y * m.w + Math.floor(side)] !== T.PLAZA) continue;
+    const r = rnd(x, y, 95);
+    if (r < 0.3) { prop('vend_cola', side, y + 0.5, 8, { c: Math.floor(rnd(x, y, 96) * 5) }); m.pois.push({ id: m.pois.length, kind: 'vending', label: 'Vending Machine', x: side * TILE, y: (y + 1.1) * TILE, r: 32 }); }
+    else if (r < 0.55) prop('steam', x + 2.5, y + 0.5, 0, { w: 40, h: 70, s: 1 + (k % 2) });
+    else if (r < 0.8) prop(rnd(x, y, 97) < 0.5 ? 'crates' : 'acunit', side, y + 0.5, 0);
+    else prop('lantern', side, y + 0.5, 4);
+  }
+  out.walkLanterns = (out.walkLanterns || 0) + n;
+}
+// the service alleys behind the rows: lanterns zig-zagging across, from the backs' walls on the north to the walls of
+// the row behind on the south (where there are walls both sides), steam off the grates between
+function alleyLanterns(K, ya, x0, x1, out) {
+  const { m, prop, rnd } = K;
+  let n = 0;
+  const wallN = (x) => { for (let y = ya; y > ya - 5; y--) if (bldAt(m, x, y)) return y; return -1; };
+  const wallS = (x) => { for (let y = ya; y < ya + 5; y++) if (bldAt(m, x, y)) return y; return -1; };
+  for (let x = x0 + 2; x < x1 - 3; x += 3) {
+    const x2 = x + (n % 2 ? -1 : 2), yN = wallN(x), yS = wallS(x2);
+    if (yN < 0 || yS < 0 || wallN(x + 1) !== yN || wallS(x2 + 1) !== yS || rnd(x, ya, 91) < 0.15) continue;
+    fest(K, x + 0.5, yN + 1.05, x2 - x, yS - yN - 1.05, 46 + (n % 2) * 6, 'wall', 'wall', 'lantern');
+    if (n % 4 === 1) prop('steam', x + 1, ya + 0.5, 0, { w: 36, h: 60, s: 1 });
+    n++;
+  }
+  out.alleyLanterns = (out.alleyLanterns || 0) + n;
+}
+// the passages between a row's fronts (K.row's gaps): two or three strings across each, wall to wall
+function passageLanterns(K, made, out) {
+  for (let i = 1; i + 1 < made.length; i++) {
+    const g = made[i];
+    if (!g.gap || g.gap !== 'passage' || made[i - 1].gap || made[i + 1].gap) continue;
+    for (let k = 0; k < 3 && k * 2.5 + 1 < g.h; k++) { const y = g.y + g.h - 0.7 - k * 2.5; if (bldAt(K.m, g.x - 1, Math.floor(y)) && bldAt(K.m, g.x + g.w, Math.floor(y))) { fest(K, g.x, y, g.w, k % 2 ? 0.5 : -0.5, 52, 'wall', 'wall', 'lantern'); out.passLanterns = (out.passLanterns || 0) + 1; } }
+  }
 }
 
 // A promenade along the shore from x0 to x1, down to row yS: paving, palms, benches, the rail at the edge
@@ -563,13 +694,13 @@ function docks(K, x0, out, lit) {
   // the warehouse club on Lantern Street's line
   const wb = K.building({ x: x0 + 1, y: 2262, w: 26, h: 16, arch: 'club', key: 'club', name: 'Dock 9', poi: { kind: 'delivery', label: 'Dock 9' }, whole: true,
     art: { spec: { floors: 2, style: 'corrugated', wallColor: '#3a3e48', parapet: 6, roofMat: 'metal', lip: 6, rimW: 3, blades: [], grime: 0.4 }, shop: { kind: 'bar', door: 'left', open: true, people: 4, sign: null, awning: null },
-      neon: { name: 'DOCK 9', kind: 'club', col: 1, blade: 'LIVE' } } });
+      neon: { name: 'DOCK 9', kind: 'club', col: 1, blade: 'LIVE', pics: ['dragon', 'barv'], dress: true } } });
   if (wb) out.clubs++;
   // the container bar and the containers
   for (let k = 0; k < 6; k++) prop('container', x0 + 32 + (k % 3) * 7, 2268 + Math.floor(k / 3) * 4, 30, { v: k, c: Math.floor(rnd(k, 1, 7) * 5) });
   prop('textsign', x0 + 38, 2265, 0, { text: 'BOX BAR', bg: '#16121e', fg: [255, 190, 60], z: 70, sx: 2, lit: true });
   for (let k = 0; k < 4; k++) prop('cafetable', x0 + 32 + k * 3, 2276.5, 0);
-  prop('festoon', x0 + 31, 2276, 0, { tx: Math.round(14 * TILE), ty: 0, h: 44 });
+  fest(K, x0 + 31, 2276, 14, 0, 44, 'pole', 'pole');
   prop('foodcart', x0 + 30, 2285, 14);
   for (let y = 2280; y < y1 - 1; y++) for (let x = x0; x < x0 + 60; x++) if (K.free(x, y)) { m.tiles[y * m.w + x] = T.LOT; K.take(x, y, 1, 1); }
   for (let k = 0; k < 5; k++) prop('container', x0 + 4 + k * 6.5, y1 - 3, 30, { v: k + 6, c: k % 5 });
@@ -588,7 +719,7 @@ function dressing(K, out, poi0) {
     if (Math.abs(x - NX.bridgeW) < 10 || Math.abs(x - NX.bridgeE) < 10 || Math.abs(x - NX.parkW) < 10 || Math.abs(x - NX.parkE) < 10 || Math.abs(x - NX.civic) < 10) { last = null; continue; }
     if (!onWalk(x, yN)) { last = null; continue; }
     prop('palm_a', x + 0.5, yN, 10, { sp: 'royal', k: 1.15 });
-    if (last !== null) prop('festoon', last + 0.5, yN - 0.6, 0, { tx: Math.round((x - last) * TILE), ty: 0, h: 64 });
+    if (last !== null) fest(K, last + 0.5, yN - 0.6, x - last, 0, 64, 'palm', 'palm');
     last = x;
   }
   // the median: royal palms down it with lights strung between them, clear of the junctions (where it stops for the
@@ -597,7 +728,7 @@ function dressing(K, out, poi0) {
   for (let x = NX.westside + 14; x < 3408; x += 9) {
     if ([NX.parkW, NX.parkE, NX.civic, NX.bridgeW, NX.bridgeE].some((c) => Math.abs(x - c) < 14)) { lastM = null; continue; }
     prop('palm_a', x + 0.5, NY.blvd + 0.5, 10, { sp: 'royal', k: 1.2 });
-    if (lastM !== null) prop('festoon', lastM + 0.5, NY.blvd - 0.1, 0, { tx: Math.round((x - lastM) * TILE), ty: 0, h: 70 });
+    if (lastM !== null) fest(K, lastM + 0.5, NY.blvd - 0.1, x - lastM, 0, 70, 'palm', 'palm');
     lastM = x;
   }
   for (let i = poi0; i < m.pois.length; i++) {

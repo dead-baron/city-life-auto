@@ -369,3 +369,65 @@ test('the arcade screen: as many pixels as it covers on the device, pixel art at
     assert.equal(small.width, 256, 'never below its own size');
   } finally { delete globalThis.devicePixelRatio; }
 });
+
+// (2026-10-25, the owner: "a really awesome arcade in the neon district (we can have the points from all the arcades in
+// the game transfer from different arcades around the world so they're all tied together") - one ticket balance, every
+// arcade's: won on one floor, spent at another's prize counter; the flagship's floor (the Neon Strip's Pixel Arcade:
+// shared/homelayout.js 'arcadeflag') with more cabinets than any other and the long prize counter
+test('the tickets are one balance at every arcade: won at one, spent at the flagship\'s counter; the flagship\'s big floor', async () => {
+  const players = await import('../server/systems/players.js'), homeinside = await import('../server/systems/homeinside.js');
+  const { TILE_IN } = await import('../shared/homelayout.js');
+  const w = makeWorld();
+  const { p, conn, prof } = joinPlayer(w, { cash: 500, bank: 0 });
+  const b = w.map.buildings.find((q) => q && q.tw >= 2);
+  b.key = 'arcade';
+  const mk = (label, dx, flagship) => { const poi = { id: w.map.pois.length, kind: 'delivery', label, x: p.ped.x + dx, y: p.ped.y, r: 40, b: w.map.buildings.indexOf(b), ...(flagship ? { flagship: true } : {}) }; w.map.pois.push(poi); return poi; };
+  const A = mk('Corner Arcade', 10, false), F = mk('Pixel Arcade', 900, true);
+  const said = [];
+  { const n0 = w.notify.bind(w); w.notify = (q, text, tone) => { if (q === p) said.push(text); return n0(q, text, tone); }; }
+  // the flagship's floor: its own plan, more cabinets than a plain arcade's, the prize counter, all in reach from the door
+  const LA = arcade.hallLayout(arcade.hallOf(w, A)), LF = arcade.hallLayout(arcade.hallOf(w, F));
+  assert.equal(LA.key, 'arcade'); assert.equal(LF.key, 'arcadeflag');
+  const cabsF = LF.pieces.filter((q) => q.ch === 'j'), counter = LF.pieces.filter((q) => q.use === 'prizes');
+  assert.ok(cabsF.length >= 16 && cabsF.length > 3 * LA.pieces.filter((q) => q.ch === 'j').length, `the flagship's cabinets (${cabsF.length})`);
+  assert.equal(counter.length, 1); assert.ok(counter[0].th >= 3 && counter[0].tw >= 2, 'the long prize counter');
+  assert.ok(LF.w > LA.w && LF.h > LA.h, 'a bigger floor');
+  for (const g of arcade.GAMES) assert.ok(cabsF.filter((c) => arcade.cabinetAt(LF, c.x + c.w / 2, c.y + c.h + 14).game === g).length >= 4, `${g}: four cabinets of it or more`);
+  const seen = new Set(), q = [[Math.floor(LF.spawn.x / TILE_IN), Math.floor(LF.spawn.y / TILE_IN)]];
+  while (q.length) { const [x, y] = q.pop(); if (seen.has(x + ',' + y) || LF.solid(x, y)) continue; seen.add(x + ',' + y); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+  const near = (c) => [...seen].some((k) => { const [x, y] = k.split(',').map(Number); return Math.hypot(Math.max(c.x - (x + 0.5) * TILE_IN, 0, (x + 0.5) * TILE_IN - c.x - c.w), Math.max(c.y - (y + 0.5) * TILE_IN, 0, (y + 0.5) * TILE_IN - c.y - c.h)) < 28; });
+  for (const c of [...cabsF, ...counter]) assert.ok(near(c), `${c.ch} at ${c.tx},${c.ty}: walkable up to`);
+  // tickets won at the corner arcade
+  teleport(w, p.ped, A.x, A.y);
+  players.findInteraction(w, p).run();
+  assert.equal(lastOf(conn, 'home').plan, 'arcade');
+  arcade.credit(w, p, A, 'starfall');
+  const cr = lastOf(conn, 'arcade');
+  run(w, 120);
+  arcade.onScore(w, p, { id: cr.id, score: 3000, secs: 120 });
+  assert.equal(prof.tickets, 30);
+  assert.match(said[said.length - 1], /30 in all, good at every arcade/, 'it says so');
+  homeinside.leave(w, p); run(w, 0.2);
+  // ...good at the flagship's counter across town
+  teleport(w, p.ped, F.x, F.y);
+  const door = players.findInteraction(w, p);
+  assert.match(door.label, /Pixel Arcade/);
+  door.run();
+  assert.equal(lastOf(conn, 'home').plan, 'arcadeflag', 'onto the flagship\'s floor');
+  assert.equal(p.ped.home.id, arcade.hallOf(w, F).id);
+  const G = counter[0];
+  await walkTo(w, p, G.x - 14, G.y + G.h / 2);
+  const pc = players.findInteraction(w, p);
+  assert.match(pc.label, /prize counter - 30 tickets - good at every arcade/);
+  pc.run();
+  assert.match(lastOf(conn, 'menu').sub, /30 tickets/);
+  const i = ARCADE.prizes.findIndex((z) => z.item === 'glowstick');
+  economy.handleMenu(w, p, F.id, `ar:prize:${i}`);
+  assert.equal(prof.tickets, 30 - ARCADE.prizes[i].t, 'spent here what was won there');
+  assert.equal(prof.inventory.glowstick, 1);
+  // and a cabinet on the flagship's floor plays (its credit, the tickets added to the same balance)
+  const c = cabsF[cabsF.length - 1];
+  await walkTo(w, p, c.x + c.w / 2, c.y + c.h + 14);
+  const a = players.findInteraction(w, p);
+  assert.match(a.label, /^Play /);
+});

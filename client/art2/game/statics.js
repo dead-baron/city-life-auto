@@ -51,7 +51,7 @@ import * as TN from '../props-towns.js';
 import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
-import { nightFront, paintSigns, handNeon, picSize } from '../neonsigns.js';   // (the night's big neon signs)
+import { nightFront, paintSigns, handNeon, picSize, picGlow } from '../neonsigns.js';   // (the night's big neon signs)
 import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
@@ -556,7 +556,7 @@ function sectionsOf(c, b, A) {
 const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [10, 10, 12], pipe: [8, 8, 22], sky: [24, 18, 7], dish: [18, 14, 18], tank: [26, 26, 44],
   plant: [30, 12, 10], palm: [22, 22, 40], solar: [30, 20, 8], heli: [82, 82, 3], hut: [34, 26, 36], ant: [14, 14, 63], stack: [18, 18, 72], bill: [130, 12, 118],
   hatch: [16, 16, 9], chim: [12, 12, 39], line: [60, 4, 30], umb: [30, 30, 30], table: [14, 14, 12], lounge: [34, 14, 16], cool: [36, 36, 36], duct: [64, 10, 11],
-  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48],
+  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48], npic: [110, 6, 130],
   // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
   bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102], cdome: [94, 94, 97] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
@@ -577,6 +577,7 @@ function kitModel(k) {
 // (a roof garden's bed is painted for its roof alone - props-garden.js roofBed, about a millisecond - so it isn't kept)
 const kitSprite = (k) => (kitBase(k) === 'bed' ? GD.roofBed(...k.split('|').slice(1).map((q, i) => (i === 3 || i === 4 ? q : +q))) : memo('kit:' + k, () => {
   if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, sx: 2, bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
+  if (kitBase(k) === 'npic') return makeSignBoard({ t: 'sign', k: 'pic', pic: k.split('|')[1], z: 14 });   // ('npic|key': a picture sign on posts at the roof's edge - neonpics.js)
   if (kitBase(k) === 'tree') { const a = k.split('|'); return GD.roofTree(a[1], a[2], +a[3]); }
   return voxSprite(kitModel(kitBase(k)), k.endsWith('@') ? PI / 2 : 0);
 }));
@@ -1275,13 +1276,14 @@ function specOf(c, b, A, s, D) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
-    const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
+    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
     const zD = roofDeckZ(spec), kl = (list, ox, oy, z) => { for (const [k, rx, ry] of list) { const b = kitBase(k), X = ox + rx, Y = oy + ry - d;
       if (b === 'string') lights.push([X, Y, z + 26, 110, [1, 0.76, 0.42], 1.1, 'lamp']);
       else if (b === 'neon') lights.push([X, Y + 6, z + 40, 160, NEONC[+k.split('|')[2] % NEONC.length].map((q) => q / 255), 1.4, 'neon']);
+      else if (b === 'npic') lights.push([X, Y + 6, z + 60, 220, picGlow(k.split('|')[1]).map((q) => q / 255), 1.4, 'neon']);
       else if (b === 'skyL') lights.push([X, Y, z + 8, 56, [1, 0.84, 0.6], 0.45, 'window']);
       else if (b === 'perg') lights.push([X, Y, z + 26, 96, [1, 0.76, 0.42], 1, 'lamp']);
       else if (b === 'lant') lights.push([X, Y, z + 13, 44, [1, 0.78, 0.48], 0.7, 'lamp']); } };
@@ -1691,18 +1693,43 @@ function tikiTorch() {
   m.fill((x, y, z) => (Math.hypot(x - 4, y - 4) < 2.2 - (z - 42) * 0.3 ? fl : -1), 1, 1, 42, 7, 7, 48);
   return m;
 }
-// a plain timber post (festoon lights hang from these)
 // a desert road's delineator (world3-roadside.js): a white post, a red reflector near its top
 function delineatorPost() { const m = new Vox(4, 4, 28), w = m.mat({ ramp: ramp('#ecebe6', 6, 3), k: 3, flag: F_THIN }), r = m.mat({ ramp: ramp('#d02a1e', 5, 2), k: 2, emi: [255, 60, 40, 60] }); m.box(0.5, 0.5, 0, 3.5, 3.5, 27, w); m.box(0.5, 0.5, 19, 3.5, 3.5, 24, r); return m; }
 function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, flag: F_THIN }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
-// festoon lights: a sagging wire from the item's anchor (height h) to (tx, ty) (height h), warm bulbs every 10 px
+// lights strung between two points h px up (tx, ty: the far end, px). r.k: 0 bulbs, 1 red paper lanterns, 2 a bare
+// cable; r.e: what each end is made fast to - bit 0 / 1 a post of its own at the near / far end (from the ground up past
+// the string, a cap on top), bit 2 / 3 a bracket on a wall there (the owner, 10-25: "lantern (or hanging lights) don't
+// connect to anything")
 function makeFestoon(r) {
-  const { tx, ty, h } = r, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 24); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 12;
-  wireLine(G, 0, 0, h, tx, ty, h, 10, [40, 36, 34]);
-  const n = Math.max(2, Math.round(Math.hypot(tx, ty) / 10)), cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  const { tx, ty, h } = r, k = r.k || 0, e = r.e || 0, sag = k === 1 ? 14 : k === 2 ? 18 : 10, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 30); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 18;
+  const P = (x, y, z, c, em = null) => { const px = Math.round(G.ax + x), py = Math.round(G.ay + y - z); if (G.inside(px, py)) G.put(px, py, c, [0, 0.3, 0.95], z, em, F_NOCAST); };
+  // the posts and the brackets
+  for (const [bit, x, y] of [[1, 0, 0], [2, tx, ty]]) {
+    if (e & bit) {
+      for (let z = 0; z <= h + 5; z++) { P(x, y, z, [44, 46, 54]); P(x + 1, y, z, z % 11 === 0 ? [60, 62, 70] : [74, 78, 88]); }
+      for (let dx = -1; dx <= 2; dx++) P(x + dx, y, h + 6, [92, 96, 106]);
+      P(x - 1, y, 1, [36, 36, 42]); P(x + 2, y, 1, [36, 36, 42]);
+    }
+    if (e & (bit << 2)) for (let i = 0; i < 4; i++) { P(x + (i - 1), y, h + 3, [58, 60, 68]); P(x, y, h + i, [70, 72, 80]); P(x + 1, y, h + i, [52, 54, 60]); }
+  }
+  wireLine(G, 0, 0, h, tx, ty, h, sag, k === 2 ? [26, 24, 30] : [40, 36, 34]);
+  if (k === 2) return G;
+  const len = Math.hypot(tx, ty), n = Math.max(2, Math.round(len / (k === 1 ? 15 : 10)));
+  const cols = k === 1 ? [[232, 52, 40], [255, 120, 40], [232, 52, 40], [255, 70, 110]] : [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
   for (let i = 1; i < n; i++) {
-    const t = i / n, X = tx * t, Y = ty * t, Z = h - 10 * 4 * t * (1 - t) - 2, px = Math.round(G.ax + X), py = Math.round(G.ay + Y - Z), c = cols[i % 3];
-    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (G.inside(px + dx, py + dy)) G.put(px + dx, py + dy, c, [0, 0.3, 0.95], Z, [c[0], c[1], c[2], 255], F_NOCAST);
+    const t = i / n, X = tx * t, Y = ty * t, Z = h - sag * 4 * t * (1 - t) - 2, c = cols[i % cols.length];
+    if (k === 1) {
+      // a paper lantern: a round body 5 wide, 7 tall, hanging from the line - its ribs, a gold cap and tassel, lit within
+      const hc = c.map((q) => Math.min(255, q + 60)), gold = [255, 200, 90];
+      for (let dz = 0; dz < 9; dz++) for (let dx = -2; dx <= 2; dx++) {
+        const zz = Z - 1 - dz;
+        if (dz === 0 || dz === 8) { if (Math.abs(dx) <= 1) P(X + dx, Y, zz, gold, [255, 190, 90, 140]); continue; }
+        if (Math.abs(dx) === 2 && (dz === 1 || dz === 7)) continue;
+        const rib = dz === 3 || dz === 5, core = Math.abs(dx) <= 1 && dz > 1 && dz < 7;
+        P(X + dx, Y, zz, rib ? c.map((q) => q * 0.7) : core ? hc : c, [c[0], c[1], c[2], core ? 230 : 150]);
+      }
+      P(X, Y, Z - 11, gold, [255, 190, 90, 90]);
+    } else for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) P(X + dx, Y - dy, Z, c, [c[0], c[1], c[2], 255]);
   }
   return G;
 }
@@ -1725,16 +1752,6 @@ function makeBlanket(r) {
   }
   return G;
 }
-// An old two-arch stone bridge carrying a country road over a river (Willow River; concept W1). The water kit's model
-// (water.js stoneBridge) stands its deck faceH above the water; here the road is the map's own (flat) and the river
-// runs beside it at the same level, so: the deck is taken off (the road's surface shows through), every height comes
-// down by faceH (the parapets stand 11 px off the road, the face lies flat), and the picture is anchored faceH below
-// the road's centre - the deck edge lands on the road edge, the arched face hangs below it over the water like a
-// bridge seen from downstream, and cars on the road draw over it.
-// a painted half court on the ground (concept G2): w x d px, the hoop's baseline at the north edge. Worn blue
-// paint with a red key, white lines (the sidelines and baseline, the key, the free-throw circle, the three-point
-// arc, the half-court line with its circle at the south edge), cracks and scuffs. Flat ground (anchor: the middle
-// of the north edge).
 // the skate spot's slab (Midtown, by the El): smooth troweled concrete in saw-cut squares, scuffed with wheel and wax
 // marks, a crack or two, an old oil stain - flat on the ground, anchored at its north edge's middle like a court
 function makeSkatePad(r) {
@@ -2146,7 +2163,7 @@ function propItems(c, p, pi, I) {
     case 'fountain': V('fnt:0', 'fountain', [30, 2, false], 0, null, { fnt: [x, y, p.lift || 0] }); return;   // (the stone and still water: its water moves live - liveart.js)
     case 'cone': V('cone', 'cone', []); return;
     case 'turbine': V(`trb:${Math.floor((p.ph || 0) * 6)}`, 'turbine', [230, 70, (p.ph || 0) * TAU]); lightAt(I, x, y, 236, 60, [1, 0.15, 0.1], 1.2, 'sign', 1); return;
-    case 'vend_cola': V('vend', 'vending', ['#c8242a', 1]); lightAt(I, x, y + 6, 30, 60, [1, 0.6, 0.55], 0.9, 'sign'); return;
+    case 'vend_cola': { const c = (p.c || 0) % 5, col = ['#c8242a', '#2a6ad8', '#e8e6e0', '#22a05a', '#e89a20'][c]; V(c ? `vend:${c}` : 'vend', 'vending', [col, 1]); lightAt(I, x, y + 6, 30, 60, [[1, 0.6, 0.55], [0.55, 0.75, 1], [0.95, 0.95, 1], [0.55, 1, 0.7], [1, 0.8, 0.5]][c], 0.9, 'sign'); return; }   // (p.c: the Neon Strip's machines in their colours)
     case 'wheelbarrow': V('whb', 'wheelbarrow', [], qa(u * TAU, 4)); return;
     case 'plane': V(`pln:${qa(p.a ?? -PI / 2, 8).toFixed(2)}`, 'airliner', [300, 270, pick(['#c83a30', '#2a5aa8', '#2a8a6a'], u)], qa(p.a ?? -PI / 2, 8)); return;
     case 'radiotower': V('rt', 'cellTower', [190]); lightAt(I, x, y, 196, 70, [1, 0.15, 0.1], 1.4, 'sign', 1); return;
@@ -2357,10 +2374,10 @@ function propItems(c, p, pi, I) {
     case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
-    case 'festoon': {
-      const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;
-      put(I, { key: `fest:${tx}:${ty}:${h}`, recipe: { t: 'festoon', tx, ty, h }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 16, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
-      for (let k = 1; k < 4; k++) lightAt(I, x + tx * k / 4, y + ty * k / 4, h - 6, 90, [1, 0.8, 0.5], 0.9, 'window');
+    case 'festoon': {   // (p.k: 'lantern' | 'cable'; p.ends: what each end is made fast to - the Neon Strip's: shared/world3-neon.js fest)
+      const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40, k = p.k === 'lantern' ? 1 : p.k === 'cable' ? 2 : 0, en = p.ends || [], e = (en[0] === 'pole' ? 1 : 0) | (en[1] === 'pole' ? 2 : 0) | (en[0] === 'wall' ? 4 : 0) | (en[1] === 'wall' ? 8 : 0);
+      put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}`, recipe: { t: 'festoon', tx, ty, h, k, e }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 22, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
+      if (k !== 2) for (let q = 1; q < 4; q++) lightAt(I, x + tx * q / 4, y + ty * q / 4, h - 6, k ? 100 : 90, k ? [1, 0.42, 0.3] : [1, 0.8, 0.5], k ? 1.1 : 0.9, 'window');
       return;
     }
     case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}:${p.log ? 1 : 0}`, 'cottage', [p.w || 84, p.d || 54, 0.6, p.log ? 1 : 0]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;   // (p.log: the hunting lodge's log cabin)

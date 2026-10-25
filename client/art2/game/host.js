@@ -620,7 +620,7 @@ export class World2 {
     if (!F.sub && !F.spec) F.nearB = F.insideB ? null : walkInSoon(S, F.sp);   // (a walk-in ahead: _precut)
     this._fetchAhead(F); if (!sub) this._precut(F); this._prebake(F); mk('prebake');
     const preset = sub ? this._tunnelPreset() : this._preset(F);
-    const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
+    const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8, this._slick(F, camX, camY));
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
     if (!sub) { this._fades(F, sp); this._push(F, sp); }
@@ -1342,6 +1342,13 @@ export class World2 {
     this.t.lastBake = r.bake;
     if (this.failed) return;
     this.results.set(jk, { jk, key, cx, cy, mode, r, prio, ver });
+  }
+  // the Neon Strip after dark (the owner, 10-25): a sheen of wet on its streets, the signs' colour lying in it
+  _slick(F, x, y) {
+    const M = this.map, tx = Math.floor(x / 32), ty = Math.floor(y / 32), d = M.inside && M.inside(tx, ty) ? DISTRICTS[M.dist[M.idx(tx, ty)]] : null;
+    const want = d && d.tier === 'neon' ? 0.5 * smooth((F.sky.night - 0.2) / 0.5) : 0;
+    this.slickK = (this.slickK || 0) + (want - (this.slickK || 0)) * 0.03;
+    return this.slickK < 0.01 ? 0 : this.slickK;
   }
   // static lights of a chunk: lamps matched to the v1 lamps (for their warm-up, flicker and breakage)
   _prepLights(list) {
@@ -2568,6 +2575,7 @@ export class World2 {
         let kk = L.k;
         if (L.kind === 'lamp' && L._lamp) { if (L._lamp.broken) continue; kk *= L._lamp._lv ?? (night > 0.05 ? 1 : 0); }
         else if (L.night) kk *= nightK;
+        if (L.kind === 'neonf') { const ph = (now * 0.43 + L.x * 0.0017 + L.y * 0.0031) % 5; if (ph < 0.5) kk *= (Math.floor(now * 23 + L.x) % 3) ? 0.3 : 1; }   // (a tube on the blink)
         this._light(L.x, L.y, L.z || 0, L.r, L.col, kk);
       }
     }
