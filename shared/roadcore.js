@@ -175,7 +175,10 @@ export function zebraCrossings(m) {
       const far = m.nodes[fwd ? e.b : e.a];
       if (t + 16 + XING_HL + 24 > L - (far.trim[e.id] || 0)) continue; // no room on a short link
       const c = pointAt(pp, t + 16);
-      cands.push({ key: `${e.id}:${end}`, edge: e.id, node: end, x: c.x, y: c.y, a: Math.atan2(c.ty, c.tx), hl: XING_HL, hw: e.hw - 4, rank: n.edges.length * 1e4 + e.w });
+      // ref: the half width of a boulevard's planted median and its kerbs across the crossing's middle - a paved refuge,
+      // never stripes over the grass (the owner, notes 2: "crosswalks painted over the grass")
+      const ref = e.kind === 'blvd' && e.median > 0 ? Math.max(6, e.median / 2 - 1) + 2 : 0;
+      cands.push({ key: `${e.id}:${end}`, edge: e.id, node: end, x: c.x, y: c.y, a: Math.atan2(c.ty, c.tx), hl: XING_HL, hw: e.hw - 4, ref, rank: n.edges.length * 1e4 + e.w });
     }
   }
   cands.sort((a, b) => b.rank - a.rank);
