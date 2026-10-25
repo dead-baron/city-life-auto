@@ -56,12 +56,12 @@
     <div id="stick-l" class="stick"><div class="knob"></div></div>
     <!-- one button per action; client/touchslots.js puts the ones what you're doing needs in their slots (shared/controls.js TOUCH_STATES) -->
     <div id="tbtns">
+      <div id="stick-r" class="stick" data-b="stick"><div class="ring"></div><div class="knob"></div><span class="lbl">AIM</span></div>
       <button data-b="fire">FIRE</button>
       <button data-b="dive">ROLL</button>
       <button data-b="action">ACT</button>
       <button data-b="vehicle">CAR</button>
       <button data-b="throw">THROW</button>
-      <button data-b="aim">AIM</button>
       <button data-b="block">BLOCK</button>
       <button data-b="reload">RELOAD</button>
       <button data-b="horn">HORN</button>
@@ -71,6 +71,7 @@
       <button data-b="use">ITEMS</button>
       <button data-b="light" id="b-light">LIGHT</button>
       <button data-b="cruiser" id="b-cruiser">COP CAR</button>
+      <button data-b="firetog" id="firetog" class="lit" title="Aim stick fires when pushed all the way">FIRE ON</button>
       <button data-b="dev" id="dev-btn" class="hidden">DEV</button>
     </div>
   </div>
@@ -149,6 +150,7 @@
         <h3>OPTIONS</h3>
         <label class="srow" data-for="kbm"><span>Keyboard driving</span><select id="s-kbdrive"><option value="car">Controls 1: W gas, S brake, A/D steer</option><option value="direction">Controls 2: WASD points the way</option></select></label>
         <label class="srow" data-for="pad"><span>Gamepad driving</span><select id="s-paddrive"><option value="triggers">Classic: RT gas, LT brake</option><option value="stick">Point the left stick</option></select></label>
+        <label class="srow" data-for="touch"><span>The aim stick pushed into its red ring fires (the FIRE ON button)</span><input type="checkbox" id="s-edgefire"></label>
         <label class="srow" data-for="pad"><span>The right stick pushed all the way fires too</span><input type="checkbox" id="s-padfire"></label>
         <label class="srow" data-for="pad touch"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
         <label class="srow"><span>Safety mode: ask again before a crime</span><input type="checkbox" id="s-safety"></label>

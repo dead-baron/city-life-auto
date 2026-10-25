@@ -2,20 +2,20 @@
 // into one action state { bits, mx, my, aim } (GDD §13).
 //
 //   move  : WASD / arrows · left stick · floating left thumb-stick   (analog: how far = how fast)
-//   aim   : mouse cursor  · right stick · drag FIRE (or AIM, without firing)  (independent of movement)
-//   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE: a tap fires at the auto-target, a drag aims
+//   aim   : mouse cursor  · right stick · right thumb-stick          (independent of movement)
+//   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE (a tap: where the stick aims, else at the
+//           auto-target), or push the aim stick into its outer ring (with the FIRE ON toggle on)
 //           (on a pad the stick-ring fire is a Settings option, off by default: shared/input.js padFires)
 //   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · the weapon plate (tap: next, hold: pick)
 //
 // Driving: keyboard W gas, S brake / reverse, A/D steer (Settings' Controls 2: WASD points the way); touch points the way.
-import { IN, padFires, createTapHold, easeSteer } from '../shared/input.js';
+import { IN, padFires, createTapHold, easeSteer, touchStick } from '../shared/input.js';
 
 const keys = new Set();
 const mouse = { x: 0, y: 0, down: false, rdown: false, clicked: false, movedAt: -1e9, wheel: 0 };
 const touch = {
-  lx: 0, ly: 0, aimAt: -1e9, aim: 0,
+  lx: 0, ly: 0, rx: 0, ry: 0, rOn: false, firing: false, aimAt: -1e9, aim: 0,
   btn: new Set(), tapped: new Set(),
-  drag: { id: null, x: 0, y: 0, a: null },   // (FIRE or AIM held: its touch, where it began, the drag's angle once past the dead zone)
 };
 const pressedOnce = new Set();
 const tappedKeys = new Set(); // keys pressed since the last sample (so quick taps are never missed)
@@ -32,8 +32,8 @@ export const input = {
 };
 
 // ---- player settings (per browser) ----------------------------------------------------------
-export const settings = { kbDrive: 'car', padDrive: 'triggers', padStickFire: false, vibrate: true };
-try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); delete settings.touchEdgeFire; } catch { /* private mode */ }   // (the aim stick's fire ring went with the stick: UI-2)
+export const settings = { kbDrive: 'car', padDrive: 'triggers', touchEdgeFire: true, padStickFire: false, vibrate: true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem('cla.settings') || '{}')); } catch { /* private mode */ }
 export function saveSettings() { try { localStorage.setItem('cla.settings', JSON.stringify(settings)); } catch { /* ignore */ } }
 // (task #301: the pad's stick-ring fire is off by default and now covers drive-bys too - and moving down Settings with a
 // pad could switch it on unseen: everyone starts this build with it off, once; switched on again, it stays on)
@@ -114,39 +114,44 @@ export function initInput(canvas, hooks) {
   initTouch(hooks);
 }
 
-// ---- touch: floating left stick, the slot buttons (client/touchslots.js places them), FIRE / AIM dragged to aim ----
+// ---- touch: floating left stick, the aim stick with its fire ring, the slot buttons (client/touchslots.js places them) ----
 function initTouch(hooks) {
   addEventListener('touchstart', () => { input.activeAt = performance.now(); setDevice('touch'); }, { passive: true, capture: true });
   floatingStick(document.getElementById('zone-l'), document.getElementById('stick-l'), (x, y) => { touch.lx = x; touch.ly = y; });
   const buzz = (n) => { if (settings.vibrate && navigator.vibrate) navigator.vibrate(n); };
-  const dr = touch.drag;
-  for (const b of document.querySelectorAll('#tbtns [data-b]')) {
-    const name = b.dataset.b, aims = name === 'fire' || name === 'aim';
+  const stickR = document.getElementById('stick-r');
+  fixedStick(stickR, (x, y, on) => {
+    touch.rx = x; touch.ry = y; touch.rOn = on;
+    const m = Math.hypot(x, y);
+    if (on && m > 0.2) { touch.aim = Math.atan2(y, x); touch.aimAt = performance.now(); }
+    const was = touch.firing;
+    const st = touchStick(on ? m : 0, touch.firing, settings.touchEdgeFire);
+    touch.firing = st.firing; touch.guard = st.guard;
+    if (touch.firing && !was) buzz(12);
+    stickR.classList.toggle('firing', touch.firing);
+    stickR.classList.toggle('aiming', on && m > 0.2);
+  });
+  // the FIRE ON toggle (a utility slot, off the stick's ring): the ring fires or not (settings.touchEdgeFire)
+  const ft = document.getElementById('firetog');
+  input.showFireToggle = () => { const on = !!settings.touchEdgeFire, l = `FIRE ${on ? 'ON' : 'OFF'}`; ft.classList.toggle('lit', on); ft.dataset.lbl = l; (ft.querySelector('.l') || ft).textContent = l; };
+  input.showFireToggle();
+  for (const b of document.querySelectorAll('#tbtns button[data-b]')) {
+    const name = b.dataset.b;
     const down = (e) => {
       e.preventDefault(); e.stopPropagation();
+      if (name === 'firetog') { settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); buzz(10); return; }
       if (name === 'dev') { hooks.onDev?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
       // ITEMS: a tap the bag (the hub's BAG tab), held the quick wheel (it stays open until you tap a slot)
       if (name === 'use') { b.classList.add('on'); clearTimeout(b.holdT); b.held = false; b.down = true; b.holdT = setTimeout(() => { if (!b.down) return; b.held = true; b.classList.remove('on'); buzz(15); hooks.onItems?.(); }, 380); return; }
       touch.btn.add(name); touch.tapped.add(name); b.classList.add('on');
-      if (aims && b.dataset.drag !== '0') { const t = e.changedTouches ? e.changedTouches[0] : e; dr.id = t.identifier ?? 'm'; dr.x = t.clientX; dr.y = t.clientY; dr.a = null; dr.name = name; }
       buzz(6);
-    };
-    const move = (e) => {
-      if (!aims || dr.name !== name || dr.id === null) return;
-      e.preventDefault();
-      for (const t of e.changedTouches || [e]) if ((t.identifier ?? 'm') === dr.id) {
-        const dx = t.clientX - dr.x, dy = t.clientY - dr.y, a = Math.hypot(dx, dy) >= (dr.a === null ? 12 : 3) ? Math.atan2(dy, dx) : null;   // (past the dead zone: shared/touchcontrols.js DRAG_DEAD)
-        if (a !== null) { if (dr.a === null) buzz(10); dr.a = a; touch.aim = a; touch.aimAt = performance.now(); }
-      }
     };
     const up = (e) => {
       e.preventDefault(); touch.btn.delete(name); b.classList.remove('on');
-      if (name === 'use') { if (b.down && !b.held && e.type !== 'mouseleave' && e.type !== 'touchcancel') { buzz(6); hooks.onBag?.(); } b.down = false; clearTimeout(b.holdT); return; }
-      if (aims && dr.name === name) { if (dr.a !== null) touch.aimAt = performance.now(); dr.id = null; dr.a = null; dr.name = ''; }
+      if (name === 'use') { if (b.down && !b.held && e.type !== 'mouseleave' && e.type !== 'touchcancel') { buzz(6); hooks.onBag?.(); } b.down = false; clearTimeout(b.holdT); }
     };
     b.addEventListener('touchstart', down, { passive: false });
-    b.addEventListener('touchmove', move, { passive: false });
     b.addEventListener('touchend', up, { passive: false });
     b.addEventListener('touchcancel', up, { passive: false });
     b.addEventListener('mousedown', down);
@@ -219,6 +224,36 @@ function floatingStick(zone, el, cb) {
   };
   zone.addEventListener('touchend', end);
   zone.addEventListener('touchcancel', end);
+}
+
+function fixedStick(el, cb) {
+  const knob = el.querySelector('.knob');
+  let id = null, cx = 0, cy = 0;
+  const move = (t) => {
+    const R = el.clientWidth / 2 - 6;
+    let dx = t.clientX - cx, dy = t.clientY - cy;
+    const d = Math.hypot(dx, dy);
+    if (d > R) { dx = (dx / d) * R; dy = (dy / d) * R; }
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+    cb(dx / R, dy / R, true);
+  };
+  el.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    id = t.identifier;
+    const r = el.getBoundingClientRect();
+    cx = r.left + r.width / 2; cy = r.top + r.height / 2;
+    move(t);
+  }, { passive: false });
+  el.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const t of e.changedTouches) if (t.identifier === id) move(t);
+  }, { passive: false });
+  const end = (e) => {
+    for (const t of e.changedTouches) if (t.identifier === id) { id = null; knob.style.transform = ''; cb(0, 0, false); }
+  };
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', end);
 }
 
 // ---- gamepad ---------------------------------------------------------------------------------
@@ -372,10 +407,11 @@ export function sample(view) {
     if (Math.abs(touch.lx) + Math.abs(touch.ly) > 0.04) { mx = touch.lx; my = touch.ly; }
     const tb = touch.btn, tt = touch.tapped;
     // FIRE: a tap at the auto-target, a drag aims and fires while held; AIM the same without firing (shared/input.js)
-    const tf = { fire: tb.has('fire') || tt.has('fire'), aim: tb.has('aim') || tt.has('aim'), drag: touch.drag.a, last: touch.aim, lastAt: touch.aimAt };
-    const ta = touchAim ? touchAim(tf, view, performance.now()) : { bits: tf.fire ? IN.FIRE : 0 };   // (till the touch controls' module is in)
+    const held = touch.rOn && Math.hypot(touch.rx, touch.ry) > 0.2;
+    const tf = { fire: tb.has('fire') || tt.has('fire'), stick: held ? touch.aim : null, ring: touch.firing, last: touch.aim, lastAt: touch.aimAt };
+    const ta = touchAim ? touchAim(tf, view, performance.now()) : { bits: (tf.fire || tf.ring ? IN.FIRE : 0) | (held ? IN.AIMING : 0), aim: touch.aim };   // (till the touch controls' module is in)
     bits |= ta.bits; if (ta.bits & IN.AIMING) aim = ta.aim;
-    if (tb.has('block') && !view.inVehicle) bits |= IN.BLOCK;   // (FIRE with BLOCK held: a blow from the guard, then back up - server players.js)
+    if (((held && touch.guard) || tb.has('block')) && !view.inVehicle) bits |= IN.BLOCK;   // (the stick held short of its ring, or BLOCK: the guard; FIRE from it, a blow - server players.js)
     if ((!view.inVehicle || view.horse) && (Math.hypot(touch.lx, touch.ly) > FULL_STICK || tb.has('sprint'))) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out; on a horse GALLOP too)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
@@ -397,9 +433,10 @@ export function sample(view) {
 
 export function takeNumberPick() { const n = numberPick; numberPick = null; return n; }
 export function mouseScreen() { return mouse; }
-// the touch FIRE / AIM's aiming (shared/touchcontrols.js touchAim), handed over when the touch controls load
+// touch aiming (the stick, FIRE's auto-target: shared/touchcontrols.js touchAim), handed over when the touch controls load
 let touchAim = null;
 export function setTouchAim(fn) { touchAim = fn; }
+export function touchAimState() { return { on: touch.rOn, firing: touch.firing, aim: touch.aim, recent: performance.now() - touch.aimAt < 1200 }; }
 // on-screen elements other than #tbtns (e.g. tapping the weapon box) can press a touch action
 export function virtualTap(name) { touch.tapped.add(name); }
 

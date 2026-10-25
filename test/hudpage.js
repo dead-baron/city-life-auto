@@ -123,7 +123,7 @@ function measure() {
   for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
   document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
-    document.querySelectorAll('#tbtns button').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
+    document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
   }
   parent.postMessage({ sc, read, keep, state: slots && slots.state }, '*');
@@ -146,10 +146,11 @@ for (const sc of list) { const f = document.createElement('iframe'); f.style.css
 </script></body></html>`;
 }
 
-// The touch FIRE / AIM buttons for real (test/touchslots.test.js): the page's touch controls with client/input.js
-// bound to them, armed, the slots placed; touches on FIRE and AIM, and what sample() would send after each
+// The touch aim stick and FIRE for real (test/touchslots.test.js): the page's touch controls with client/input.js bound
+// to them, armed, the slots placed; touches on the stick (short of its ring, into it with FIRE ON on and off) and on
+// FIRE, and what sample() would send after each
 const DRAG_JS = `
-import { initInput, sample, setTouchAim } from '/client/input.js';
+import { initInput, sample, setTouchAim, settings, input } from '/client/input.js';
 import * as TS from '/client/touchslots.js';
 const $ = (id) => document.getElementById(id);
 document.body.classList.add('touch');
@@ -157,26 +158,28 @@ $('touch').classList.remove('hidden');
 TS.makeSlots($('tbtns')).set({ armed: true, prompt: true });
 initInput($('cv'), {});
 setTouchAim(TS.touchAim);   // (as client/main.js does when the touch controls load)
-const at = (b) => { const r = $('tbtns').querySelector('[data-b=' + b + ']').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
-const ev = (type, el, x, y) => { const t = new Touch({ identifier: 5, target: el, clientX: x, clientY: y }); el.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], targetTouches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); };
+const el = (b) => $('tbtns').querySelector('[data-b=' + b + ']');
+const mid = (b) => { const r = el(b).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r.width / 2]; };
+const ev = (type, t0, x, y, id) => { const t = new Touch({ identifier: id, target: t0, clientX: x, clientY: y }); t0.dispatchEvent(new TouchEvent(type, { touches: type === 'touchend' ? [] : [t], targetTouches: type === 'touchend' ? [] : [t], changedTouches: [t], bubbles: true, cancelable: true })); };
 const view = (target) => ({ selfScreen: { x: 400, y: 200 }, inVehicle: false, armed: true, lastAim: 0.25, face: 0.5, target: () => target });
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const out = {};
-const step = (name, b, moves, target, end) => {
-  const el = $('tbtns').querySelector('[data-b=' + b + ']'), [x, y] = at(b);
-  ev('touchstart', el, x, y);
-  for (const [dx, dy] of moves) ev('touchmove', el, x + dx, y + dy);
-  out[name] = sample(view(target));
-  out[name + 'Held'] = sample(view(target));
-  ev('touchend', el, x + (moves.length ? moves[moves.length - 1][0] : 0), y + (moves.length ? moves[moves.length - 1][1] : 0));
-  out[name + 'After'] = sample(view(target));
-};
 dispatchEvent(new TouchEvent('touchstart', { bubbles: true }));   // (the page in touch mode)
-step('tap', 'fire', [], 1.0);
-await new Promise((r) => setTimeout(r, 800));   // (past the drag's aim keeping a moment: shared/input.js AIM_KEEP_MS)
-step('tapNone', 'fire', [], null);
-step('drag', 'fire', [[-20, -16], [-50, -40]], 1.0);
-await new Promise((r) => setTimeout(r, 800));
-step('aim', 'aim', [[0, 30]], null);
+// the stick: short of the ring (down, half way), then out into the ring (up and left)
+const stick = (name, dx, dy) => { const [x, y, r] = mid('stick'); ev('touchstart', el('stick'), x, y, 3); ev('touchmove', el('stick'), x + dx * r, y + dy * r, 3); out[name] = sample(view(1.0)); ev('touchend', el('stick'), x + dx * r, y + dy * r, 3); out[name + 'After'] = sample(view(1.0)); };
+stick('aim', 0, 0.5);
+stick('ring', -0.8, -0.8);
+el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE OFF
+out.toggle = { on: settings.touchEdgeFire, label: el('firetog').textContent };
+stick('ringOff', -0.8, -0.8);
+el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE ON again
+// FIRE tapped with the stick held: where the stick aims
+{ const [x, y, r] = mid('stick'); ev('touchstart', el('stick'), x, y, 3); ev('touchmove', el('stick'), x, y - r * 0.5, 3);
+  const [fx, fy] = mid('fire'); ev('touchstart', el('fire'), fx, fy, 4); out.fireStick = sample(view(1.0)); ev('touchend', el('fire'), fx, fy, 4); ev('touchend', el('stick'), x, y - r * 0.5, 3); sample(view(1.0)); }
+await wait(1400);   // (past the stick's aim staying a moment: shared/touchcontrols.js AIM_KEEP_MS)
+// FIRE tapped alone: at the auto-target; with nobody about, where you face
+{ const [fx, fy] = mid('fire'); ev('touchstart', el('fire'), fx, fy, 4); out.tap = sample(view(1.0)); ev('touchend', el('fire'), fx, fy, 4); out.tapAfter = sample(view(1.0));
+  ev('touchstart', el('fire'), fx, fy, 4); out.tapNone = sample(view(null)); ev('touchend', el('fire'), fx, fy, 4); }
 document.getElementById('out').textContent = JSON.stringify(out);
 `;
 export function dragPage() {

@@ -147,8 +147,9 @@ phone and the keys. Now there is one way in, and every old entry has a home.
 - **Taxi ranks at stations.** In the built city a rank's Act is the station's own (its timetable, boarding), which
   takes precedence over the taxi sign-on, so the card is tested at a fire station. Signing on as a taxi driver from the
   Jobs app works.
-- **The touch aim stick is coming back** on fix-ui2, by the owner's call. Nothing here depends on dragging FIRE or on
-  the AIM button. The touch slot code is untouched, and the TOUCH table's existing lines are left as they were, so that
-  merge stays clean. Its touch option row (if it returns) goes in Settings › Controls with `data-for="touch"`.
+- **Merged with the aim stick's return (fix-ui2, ff0eaac4).** The right aim stick, its ring-fire and the FIRE ON
+  toggle (a utility slot) are back. Their setting, "The aim stick pushed into its red ring fires", is in Settings ›
+  Controls with `data-for="touch"`, so it shows on the Touch tab only. TOUCH.aim reads AIM STICK in the bindings.
+  ITEMS keeps its tap (the bag) and its hold (the quick wheel) beside the stick's handlers in client/input.js.
 - **Captured** before and after, every screen at desk 1440x900, land 844x390 and port 390x844, on the dev server: the
   session's scratchpad ui3-shots.

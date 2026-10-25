@@ -15,7 +15,7 @@ import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -2294,6 +2294,7 @@ function markTitle(btns) {
 function syncSettings() {
   $('s-kbdrive').value = settings.kbDrive;
   $('s-paddrive').value = settings.padDrive || 'triggers';
+  $('s-edgefire').checked = settings.touchEdgeFire;
   $('s-padfire').checked = settings.padStickFire;
   $('s-blade').value = String((S.me && S.me.blade) | 0); $('s-blade').disabled = !S.welcomed;   // (kept with your character: the server's)
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
@@ -2358,6 +2359,7 @@ for (const x of document.querySelectorAll('.overlay [data-close]')) x.onclick = 
 $('devpw').addEventListener('click', (e) => { if (e.target.id === 'devpw') closeOverlay('devpw'); });
 $('s-kbdrive').onchange = (e) => { settings.kbDrive = e.target.value; saveSettings(); };
 $('s-paddrive').onchange = (e) => { settings.padDrive = e.target.value; saveSettings(); };
+$('s-edgefire').onchange = (e) => { settings.touchEdgeFire = e.target.checked; saveSettings(); input.showFireToggle?.(); };
 $('s-padfire').onchange = (e) => { settings.padStickFire = e.target.checked; saveSettings(); };
 // the plasma blade's colour (task #411): kept with your character, so it's the server's to keep (server looks.js setBlade)
 $('s-blade').innerHTML = BLADE_COLORS.map((b, i) => `<option value="${i}">${b.name}${i ? '' : ' (its own)'}</option>`).join('');
@@ -3429,15 +3431,15 @@ function drawOverlays(F, v2) {
   drawVault(F);
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
-    const fire = S.lastFire;
+    const ta = touchAimState();
+    const fire = S.lastFire || ta.firing;
     const a = S.lastAim, x0 = sp.x + Math.cos(a) * 22, y0 = sp.y + Math.sin(a) * 22;
     g.save();
     g.strokeStyle = fire ? 'rgba(255,70,60,.85)' : 'rgba(255,255,255,.55)';
     g.lineWidth = 2; g.setLineDash([6, 6]); g.lineDashOffset = -now * 40;
-    const L = input.device === 'touch' ? 110 : 190;   // (touch: a short line from you while FIRE / AIM is dragged)
-    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L); g.stroke();
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190); g.stroke();
     g.setLineDash([]);
-    g.beginPath(); g.arc(sp.x + Math.cos(a) * L, sp.y + Math.sin(a) * L, fire ? 7 : 5, 0, 6.28); g.stroke();
+    g.beginPath(); g.arc(sp.x + Math.cos(a) * 190, sp.y + Math.sin(a) * 190, fire ? 7 : 5, 0, 6.28); g.stroke();
     g.restore();
   }
 

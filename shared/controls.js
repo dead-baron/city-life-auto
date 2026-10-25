@@ -30,7 +30,7 @@ export const TOUCH = {
 };
 // (UI-3, the hub: the HUD's row is MENU · PHONE · MAP and a tap of ITEMS opens the bag, held the quick wheel - set here
 // rather than in the lines above, which the touch controls' own work keeps)
-Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE' });
+Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE', aim: 'AIM STICK' });   // (the aim stick: back, by the owner's call)
 export const KB = {
   action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
   move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',

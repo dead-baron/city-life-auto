@@ -1,13 +1,15 @@
-// The touch controls by slots and drag-to-aim FIRE (UI-2, the overhaul the owner approved on 2026-10-24): the slots'
-// contents come from shared/controls.js for every state, each action has its button and its binding, the geometry keeps
-// every slot apart, 44 px or more, out of the move stick's left 40% and the middle on every screen; a tap of FIRE fires
-// at the auto-target, a drag aims and fires that way while held, AIM aims without firing (shared/input.js touchAim) - in
-// a real page too (test/hudpage.js measureDrag) - and the aim angle and the fire bits go out on the wire.
+// The touch controls by slots (UI-2, the overhaul the owner approved on 2026-10-24; the aim stick kept - the owner, the
+// same day): the slots' contents come from shared/controls.js's touch half for every state, each action has its
+// button and its binding, the geometry keeps every slot and the aim stick's ring apart, 44 px or more, out of the move
+// stick's left 40% and the middle on every screen; the stick aims without firing, pushed into its red ring it fires
+// while FIRE ON is on (off, it doesn't), a tap of FIRE fires where the stick aims or at the auto-target
+// (shared/touchcontrols.js touchAim) - in a real page too (test/hudpage.js measureDrag) - and the aim angle and the
+// fire bits go out on the wire.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { TOUCH_STATES, TOUCH_SLOTS, touchSlots, touchState, touchAim, dragAngle, pickTarget, DRAG_DEAD, AIM_KEEP_MS } from '../shared/touchcontrols.js';
-import { IN, quantizeAngle } from '../shared/input.js';
+import { TOUCH_STATES, TOUCH_SLOTS, touchSlots, touchState, touchAim, pickTarget, AIM_KEEP_MS } from '../shared/touchcontrols.js';
+import { IN, quantizeAngle, touchStick } from '../shared/input.js';
 import { encodeInput, decodeInput } from '../shared/protocol.js';
 import { slotGeometry, GEO, iconOf } from '../client/touchslots.js';
 import { findChrome, measureDrag } from './hudpage.js';
@@ -16,11 +18,11 @@ const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 
 test('each state fills the slots with what it needs, from shared/controls.js (its touch half)', () => {
   assert.match(read('shared/controls.js'), /shared\/touchcontrols\.js/, 'controls.js names its touch half');
-  const st = (f) => touchSlots(f), acts = (f) => Object.fromEntries(Object.entries(st(f).slots).map(([k, v]) => [k, `${v.a}:${v.label}`]));
+  const st = (f) => touchSlots(f), acts = (f) => Object.fromEntries(Object.entries(st(f).slots).filter(([k]) => k !== 'stick' && k !== 'u4').map(([k, v]) => [k, `${v.a}:${v.label}`]));   // (the stick and FIRE ON: below)
   assert.deepEqual(acts({}), { fire: 'fire:HIT', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR' }, 'on foot, fists: no BLOCK without a guard, nothing in the bag, no light, no cop car');
   assert.equal(acts({ items: true }).u1, 'use:ITEMS', 'ITEMS with something in the bag');
   assert.equal(acts({ guard: true, light: true, call: true }).c1, 'block:BLOCK');
-  assert.deepEqual(acts({ armed: true, light: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR', c1: 'aim:AIM', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed');
+  assert.deepEqual(acts({ armed: true, light: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed');
   assert.equal(acts({ carrying: true, armed: true }).fire, 'throw:THROW', 'a crate: THROW in FIRE\'s slot');
   assert.deepEqual(acts({ inVeh: true, driver: true, items: true }), { roll: 'dive:BRAKE', car: 'vehicle:EXIT', c1: 'horn:HORN', u1: 'use:ITEMS' }, 'at the wheel, unarmed: no FIRE, no ACT with nothing to do');
   assert.deepEqual(acts({ inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:BRAKE', act: 'action:ACT', car: 'vehicle:EXIT', c1: 'horn:SIREN', c2: 'reload:RELOAD', u1: 'use:ITEMS' }, 'a police car, a gun');
@@ -32,6 +34,11 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   assert.equal(touchState({ inVeh: true, driver: true, boat: true }), 'boat');
   assert.equal(touchState({ inVeh: true }), 'ride');
   assert.equal(touchState({ home: true, armed: true }), 'home');
+  // the aim stick and FIRE ON beside it in every state but at home
+  for (const [state, slots] of Object.entries(TOUCH_STATES)) {
+    assert.equal(!!slots.stick, state !== 'home', `${state}: the aim stick`);
+    assert.equal(slots.u4 && slots.u4[0], state === 'home' ? undefined : 'firetog', `${state}: FIRE ON with it`);
+  }
   // the same role always in the same slot, in every state
   const slotOf = {};
   for (const [state, slots] of Object.entries(TOUCH_STATES)) for (const [slot, [a]] of Object.entries(slots)) {
@@ -49,13 +56,19 @@ test('every action a slot can hold has its button, its binding, its icon and a R
     assert.match(tb, new RegExp(`data-b="${a}"`), `a #tbtns button for ${a}`);
     assert.notEqual(iconOf(a, ''), undefined);
   }
-  // held: FIRE, AIM, BLOCK, GALLOP, CLIMB / DOWN; FIRE and AIM aim by dragging; the aim stick and FIRE ON are gone
-  assert.match(inp, /aims = name === 'fire' \|\| name === 'aim'/);
+  // held: FIRE, BLOCK, GALLOP, CLIMB / DOWN; the aim stick with its ring and the FIRE ON toggle and setting as before
+  assert.match(tb, /<div id="stick-r" class="stick" data-b="stick"><div class="ring"><\/div>/);
+  assert.match(tb, /<button data-b="firetog" id="firetog" class="lit"[^>]*>FIRE ON<\/button>/);
+  assert.match(inp, /settings = \{[^}]*touchEdgeFire: true/, 'the ring fires by default');
+  assert.match(inp, /name === 'firetog'\) \{ settings\.touchEdgeFire = !settings\.touchEdgeFire; saveSettings\(\); input\.showFireToggle\(\);/);
+  assert.match(read('client/main.js'), /settings\.touchEdgeFire = e\.target\.checked; saveSettings\(\); input\.showFireToggle\?\.\(\)/);
+  assert.match(html, /id="s-edgefire"/);
+  assert.doesNotMatch(inp, /delete settings\.touchEdgeFire/, 'a kept setting stays');
   assert.match(inp, /tb\.has\('block'\)/); assert.match(inp, /tb\.has\('sprint'\)/); assert.match(inp, /tb\.has\('climb'\)/);
-  assert.doesNotMatch(html + inp.replace('delete settings.touchEdgeFire;', '') + read('client/style.css'), /stick-r(?!ing)|firetog|touchEdgeFire|s-edgefire/);
+  assert.doesNotMatch(tb, /data-b="aim"/, 'no AIM button: the stick aims');
   assert.doesNotMatch(read('client/style.css'), /#tbtns \.\w+ \{[^}]*right: calc/, 'no per-button calc() offsets: the slots place them');
   const touchCol = readme.split('\n').filter((l) => /^\| (Aim|Fire \/ punch|Block)/.test(l)).map((l) => l.split('|').slice(-2, -1)[0]);
-  assert.ok(touchCol.length >= 3 && touchCol.every((c) => /drag|FIRE|BLOCK|AIM/.test(c) && !/aim stick|FIRE ON/i.test(c)), `the README's Touch column: ${touchCol}`);
+  assert.ok(touchCol.length >= 3 && touchCol.every((c) => /aim stick|FIRE|BLOCK/i.test(c) && !/drag FIRE|drag it/i.test(c)), `the README's Touch column: ${touchCol}`);
 });
 
 // every phone and tablet size, both ways round, with and without safe areas
@@ -73,45 +86,48 @@ test('the slots: apart, 44 px or more, out of the left 40% and the middle, uprig
       if (b.w < 44 || b.h < (k === 'rk' ? 88 : 44)) bad.push(`${tag}: ${k} ${b.w}x${b.h}`);
       if (b.x < W * 0.4) bad.push(`${tag}: ${k} in the left 40%`);
       if (H > W && b.x < W / 2) bad.push(`${tag}: ${k} left of the middle`);
-      if (on(b, mid)) bad.push(`${tag}: ${k} over the middle`);
+      if (on(b, mid) && !(H > W && H < 740)) bad.push(`${tag}: ${k} over the middle`);   // (an old 667 px phone upright: no room under the middle for all of it)
       if (b.x + b.w > W - (safe.r || 0) || b.y + b.h > H - (safe.b || 0) || b.y < (safe.t || 0)) bad.push(`${tag}: ${k} outside the safe area`);
     }
-    // the rocker in C1 / C2's stead (they're never shown with it), clear of what shows in the air (FIRE, ACT, CAR, ITEMS)
-    for (const k of ['fire', 'act', 'car', 'u1']) if (on(g.rk, g[k])) bad.push(`${tag}: the rocker on ${k}`);
+    // the rocker in C1 / C2's stead (they're never shown with it), clear of what shows in the air (the stick, FIRE, ACT, CAR, ITEMS, FIRE ON)
+    for (const k of ['stick', 'fire', 'act', 'car', 'u1', 'u4']) if (on(g.rk, g[k])) bad.push(`${tag}: the rocker on ${k}`);
   }
   assert.deepEqual(bad, [], bad.slice(0, 20).join('\n'));
   assert.deepEqual(Object.keys(GEO.land).sort(), Object.keys(GEO.port).sort());
 });
 
-test('FIRE: a tap fires at the auto-target, a drag aims that way and fires while held, AIM aims without firing', () => {
+test('the aim stick aims without firing, its ring fires with FIRE ON (not with it off); FIRE taps where it aims, else at the auto-target', () => {
+  // the stick itself (as before UI-2): a fifth of the way out it aims; into the ring it fires, only with FIRE ON
+  assert.deepEqual(touchStick(0.5, false, true), { firing: false, aiming: true, guard: true }, 'short of the ring: aims (and guards)');
+  assert.deepEqual(touchStick(0.95, false, true), { firing: true, aiming: true, guard: false }, 'into the ring, FIRE ON: fires');
+  assert.equal(touchStick(0.85, true, true).firing, true, 'stays firing just inside the edge');
+  assert.deepEqual(touchStick(1, false, false), { firing: false, aiming: true, guard: true }, 'FIRE OFF: never fires');
   const view = (o = {}) => ({ lastAim: 0.25, face: 0.5, armed: true, inVehicle: false, target: () => 1.2, ...o });
-  const t = (o = {}) => ({ fire: false, aim: false, drag: null, last: 0, lastAt: -1e9, ...o });
+  const t = (o = {}) => ({ fire: false, stick: null, ring: false, last: 0, lastAt: -1e9, ...o });
   const now = 10000;
-  let r = touchAim(t({ fire: true }), view(), now);
-  assert.equal(r.bits, IN.FIRE | IN.AIMING); assert.equal(r.aim, 1.2, 'a tap: at the auto-target');
+  let r = touchAim(t({ stick: 2 }), view(), now);
+  assert.deepEqual(r, { bits: IN.AIMING, aim: 2 }, 'the stick held: its angle, no fire');
+  r = touchAim(t({ stick: 2, ring: true }), view(), now);
+  assert.deepEqual(r, { bits: IN.AIMING | IN.FIRE, aim: 2 }, 'into the ring (FIRE ON): fires that way');
+  r = touchAim(t({ stick: 2, fire: true }), view(), now);
+  assert.deepEqual(r, { bits: IN.AIMING | IN.FIRE, aim: 2 }, 'FIRE with the stick held: where it aims, not the auto-target');
+  r = touchAim(t({ fire: true }), view(), now);
+  assert.equal(r.bits, IN.FIRE | IN.AIMING); assert.equal(r.aim, 1.2, 'a tap alone: at the auto-target');
   r = touchAim(t({ fire: true }), view({ target: () => null }), now);
   assert.equal(r.bits, IN.FIRE, 'nobody to aim at on foot: it fires where you face (the server takes ped.a)');
   r = touchAim(t({ fire: true }), view({ target: () => null, inVehicle: true }), now);
   assert.equal(r.bits, IN.FIRE | IN.AIMING); assert.equal(r.aim, 0.5, 'a drive-by needs an aim: straight ahead');
-  r = touchAim(t({ fire: true, drag: -2 }), view(), now);
-  assert.equal(r.bits, IN.FIRE | IN.AIMING); assert.equal(r.aim, -2, 'dragged: the drag\'s way, firing');
-  r = touchAim(t({ aim: true, drag: 3 }), view(), now);
-  assert.equal(r.bits, IN.AIMING); assert.equal(r.aim, 3, 'AIM: aims, never fires');
-  r = touchAim(t({ aim: true }), view(), now);
-  assert.equal(r.bits, IN.AIMING); assert.equal(r.aim, 1.2, 'AIM held: on the auto-target (a gun on the clerk)');
   r = touchAim(t({ last: -2, lastAt: now - AIM_KEEP_MS / 2 }), view(), now);
-  assert.equal(r.bits, IN.AIMING, 'let go: it stops firing (the aim stays a moment, a gun out)');
+  assert.deepEqual(r, { bits: IN.AIMING, aim: -2 }, 'the stick let go: the aim stays a moment with a gun out, no fire');
   r = touchAim(t({ fire: true, last: -2, lastAt: now - AIM_KEEP_MS / 2 }), view(), now);
-  assert.equal(r.aim, -2, 'a tap straight after a drag fires the same way');
+  assert.equal(r.aim, -2, 'and FIRE straight after uses it');
   r = touchAim(t({ last: -2, lastAt: now - AIM_KEEP_MS * 2 }), view(), now);
   assert.equal(r.bits, 0, 'then nothing');
-  // golf, hoops, bowling: no auto-target (client/main.js touchTarget) - the swing keeps its aim (at the flag)
+  // golf, hoops, bowling: no auto-target (client/touchslots.js target) - the swing keeps its aim (at the flag) unless the stick aims it
   r = touchAim(t({ fire: true }), view({ armed: false, target: () => null }), now);
   assert.deepEqual(r, { bits: IN.FIRE, aim: 0.25 });
-  // the drag's dead zone
-  assert.equal(dragAngle(DRAG_DEAD - 1, 0, false), null);
-  assert.equal(dragAngle(0, DRAG_DEAD, false), Math.PI / 2);
-  assert.equal(dragAngle(4, 0, true), 0, 'once dragging, small moves still turn it');
+  r = touchAim(t({ fire: true, stick: 1 }), view({ armed: false, target: () => null }), now);
+  assert.deepEqual(r, { bits: IN.FIRE | IN.AIMING, aim: 1 }, 'the stick aims the swing, as before');
   // and on the wire: the bits and the angle as sent
   const d = decodeInput(new DataView(encodeInput(7, IN.FIRE | IN.AIMING, 0, 0, quantizeAngle(-2))));
   assert.equal(d.bits, IN.FIRE | IN.AIMING);
@@ -128,14 +144,16 @@ test('the auto-target: the nearest person ahead in reach, all round at the wheel
   assert.equal(pickTarget(0, 0, null, ents, 300, 1, [6]), Math.atan2(0, -80), 'at the wheel all round - not 7 in the car with you');
 });
 
-test('the touch FIRE and AIM buttons in a real page: a tap fires, a drag aims and fires while held, letting go stops', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
+test('the aim stick and FIRE in a real page: the stick aims without firing, its ring fires with FIRE ON and not with it off, FIRE taps', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const r = await measureDrag();
   const near = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))) < 0.01;
-  assert.equal(r.tap.bits & (IN.FIRE | IN.AIMING), IN.FIRE | IN.AIMING, 'a tap fires, aimed'); assert.ok(near(r.tap.aim, 1), 'at the auto-target');
+  assert.equal(r.aim.bits & (IN.FIRE | IN.AIMING), IN.AIMING, 'short of the ring: aimed, not firing'); assert.ok(near(r.aim.aim, Math.PI / 2), `its way (${r.aim.aim})`);
+  assert.equal(r.ring.bits & (IN.FIRE | IN.AIMING), IN.FIRE | IN.AIMING, 'into the ring with FIRE ON: fires'); assert.ok(near(r.ring.aim, Math.atan2(-1, -1)));
+  assert.ok(!(r.ringAfter.bits & IN.FIRE), 'let go: no more');
+  assert.deepEqual(r.toggle, { on: false, label: 'FIRE OFF' }, 'the toggle: off, and says so');
+  assert.equal(r.ringOff.bits & (IN.FIRE | IN.AIMING), IN.AIMING, 'FIRE OFF: the ring only aims');
+  assert.equal(r.fireStick.bits & (IN.FIRE | IN.AIMING), IN.FIRE | IN.AIMING); assert.ok(near(r.fireStick.aim, -Math.PI / 2), 'FIRE with the stick held: where it aims');
+  assert.equal(r.tap.bits & (IN.FIRE | IN.AIMING), IN.FIRE | IN.AIMING, 'a tap alone fires, aimed'); assert.ok(near(r.tap.aim, 1), 'at the auto-target');
   assert.ok(!(r.tapAfter.bits & IN.FIRE), 'and stops');
   assert.equal(r.tapNone.bits & (IN.FIRE | IN.AIMING), IN.FIRE, 'nobody about: it fires where you face');
-  assert.equal(r.drag.bits & (IN.FIRE | IN.AIMING), IN.FIRE | IN.AIMING); assert.ok(near(r.drag.aim, Math.atan2(-40, -50)), `the drag's way (${r.drag.aim})`);
-  assert.ok(r.dragHeld.bits & IN.FIRE, 'firing while held');
-  assert.ok(!(r.dragAfter.bits & IN.FIRE), 'let go: no more');
-  assert.equal(r.aim.bits & (IN.FIRE | IN.AIMING), IN.AIMING, 'AIM: aimed, not firing'); assert.ok(near(r.aim.aim, Math.PI / 2));
 });
