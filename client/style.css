@@ -284,8 +284,9 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(244px + var(--co
 #exithint { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); z-index: 6; padding: var(--s1) 10px; background: var(--glass); border: 1px solid var(--gold-a); border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; pointer-events: none; }
 
 /* ==== the touch controls by slots (UI-2): client/touchslots.js places them, shared/controls.js says what each holds ====
-   The left 40% is the move stick's (it comes up where the thumb lands); on the right 1 FIRE (red, big), 2 ROLL, 3 ACT
-   (gold), 4 CAR, the context slots C1 / C2 (an orange rim) and the small utility slots U1-U3. Each an icon and a label. */
+   The left 40% is the move stick's (it comes up where the thumb lands); on the right the aim stick in the corner and round
+   it 1 FIRE (red, big), 2 ROLL, 3 ACT (gold), 4 CAR, the context slots C1 / C2 (an orange rim) and the small utility
+   slots U1-U4 (U4: FIRE ON). Each an icon and a label. */
 #touch { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 #zone-l { position: absolute; left: 0; top: 36%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
 body.portrait #zone-l { top: 50%; }
@@ -294,6 +295,16 @@ body.portrait #zone-l { top: 50%; }
 #stick-l.active { opacity: 1; }
 .stick .knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); background: var(--cream-a); box-shadow: 0 3px 8px var(--ink-a); }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
+/* the aim stick (the owner, 2026-10-24: kept): drag to aim; pushed into its red ring it fires, while FIRE ON is on */
+#stick-r { display: none; pointer-events: auto; touch-action: none; border: 2px solid var(--cream-a); background: var(--ink-a); transition: opacity var(--t2); }
+#stick-r[data-slot] { display: block; }
+#stick-r .ring { position: absolute; inset: 6px; border-radius: var(--r3); border: 9px solid var(--danger-t); }
+#stick-r.aiming { border-color: var(--cream); }
+#stick-r.firing .ring { border-color: var(--danger); }
+#stick-r.firing .knob { background: var(--danger); }
+#stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
+body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
+#firetog.lit { background: var(--danger); color: var(--ink); border-color: var(--cream); } #firetog.lit svg { stroke: var(--ink); }
 #tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); font: 700 var(--fs-1)/1 var(--ui); letter-spacing: .5px; transition: transform var(--t1) var(--ease), background-color var(--t1), opacity var(--t2); }
 #tbtns button[data-slot] { display: flex; }
 #tbtns svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -305,9 +316,9 @@ body.portrait #zone-l { top: 50%; }
 #tbtns :is([data-slot=c1], [data-slot=c2]) { border: 2px dashed var(--heat); border-radius: var(--r2); color: var(--heat); letter-spacing: 0; }   /* (C and U: rounded squares - the words fit) */
 #tbtns :is([data-slot=c1], [data-slot=c2]) svg { stroke: var(--heat); }
 #tbtns [data-slot] .l { white-space: nowrap; }
-#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) { border-color: var(--gold-a); border-radius: var(--r2); letter-spacing: 0; }
-#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) svg { width: 16px; height: 16px; }
-#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3]) .l { white-space: normal; text-align: center; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) { border-color: var(--gold-a); border-radius: var(--r2); letter-spacing: 0; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) svg { width: 16px; height: 16px; }
+#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) .l { white-space: normal; text-align: center; }
 #tbtns [data-rk] { border: 2px solid var(--gold); color: var(--cream); }   /* (CLIMB / DOWN: one rocker, the arrows blue) */
 #tbtns [data-rk] svg { width: 26px; height: 26px; stroke: var(--info); stroke-width: 2.5; }
 #tbtns [data-rk=top] { border-radius: var(--r3) var(--r3) var(--r1) var(--r1); border-bottom-color: var(--edge); }
@@ -316,10 +327,10 @@ body.portrait #zone-l { top: 50%; }
 #tbtns button.on svg { stroke: var(--ink); }
 #tbtns .light.lit, #b-light.lit { background: var(--gold); color: var(--ink); } #b-light.lit svg { stroke: var(--ink); }
 #b-cruiser.cooling { color: var(--dim); border-color: var(--edge); }
-#tbtns [data-slot=fire].hint::after { content: 'DRAG TO AIM'; position: absolute; top: calc(100% + 2px); left: 50%; transform: translateX(-50%); white-space: nowrap; color: var(--cream); font: 600 var(--fs-1) var(--ui); text-shadow: var(--halo-s); pointer-events: none; }
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
 #touch.idle #tbtns button:not(.pulse) { opacity: .5; }
 #touch.idle #stick-l:not(.active) { opacity: .25; }
+#touch.idle #stick-r:not(.aiming) { opacity: .6; }
 /* what Act would do now: green (red if it's a crime, with the "!" badge; a felony a ring as well - the owner, 2026-10-15) */
 #tbtns button.pulse { border-color: var(--cream); background: var(--money); color: var(--ink); animation: pulse 1s ease-in-out infinite; }
 #tbtns button.pulse svg { stroke: var(--ink); }

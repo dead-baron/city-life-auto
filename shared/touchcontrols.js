@@ -2,28 +2,30 @@ import { IN } from './input.js';
 
 // The touch controls by slots (UI-2, the overhaul the owner approved on 2026-10-24): shared/controls.js's touch half,
 // loaded with the touch controls (client/touchslots.js) rather than with the page. The left 40% of the screen is the
-// move stick's (it comes up where the thumb lands). On the right an arc of fixed slots - 1 FIRE (big), 2 ROLL, 3 ACT,
-// 4 CAR - two context slots C1 / C2 and three small utility slots U1-U3. Each state fills them with what it needs,
-// the same role always in the same slot, a button only while it does something. client/touchslots.js places them (on
-// its side or upright, a short screen, the safe areas) with an icon and the label; FIRE and AIM aim by dragging them
-// (client/input.js, touchAim below). An entry: [action, label, the flag it needs, { flag: the label then }].
-export const TOUCH_SLOTS = ['fire', 'roll', 'act', 'car', 'c1', 'c2', 'u1', 'u2', 'u3'];
-const UT = { u1: ['use', 'ITEMS', 'items'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'] };
-const AT = { act: ['action', 'ACT', 'prompt'], u1: UT.u1 };   // (in a vehicle ACT only with something to do)
+// move stick's (it comes up where the thumb lands). On the right the aim stick in the bottom-right corner (it aims
+// without firing; pushed into its red ring it fires, while the FIRE ON toggle is on - the owner, 2026-10-24) and round
+// it an arc of fixed slots - 1 FIRE (big), 2 ROLL, 3 ACT, 4 CAR - two context slots C1 / C2 and four small utility slots
+// U1-U4 (U4 the FIRE ON toggle, with the stick). Each state fills them with what it needs, the same role always in the
+// same slot, a button only while it does something. client/touchslots.js places them (on its side or upright, a short
+// screen, the safe areas) with an icon and the label. An entry: [action, label, the flag it needs, { flag: the label then }].
+export const TOUCH_SLOTS = ['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4'];
+const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'], u4: ['firetog', 'FIRE ON'] };
+const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4 };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON)
+const AT = { act: ['action', 'ACT', 'prompt'], ...UV };   // (in a vehicle ACT only with something to do)
 const VFIRE = ['fire', 'FIRE', 'shoot'], VRELOAD = ['reload', 'RELOAD', 'armed'], HORN = ['horn', 'HORN', 0, { siren: 'SIREN' }];
 export const TOUCH_STATES = {
   foot: { fire: ['fire', 'HIT'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], c1: ['block', 'BLOCK', 'guard'], ...UT },
-  armed: { fire: ['fire', 'FIRE'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], c1: ['aim', 'AIM'], c2: ['reload', 'RELOAD'], ...UT },
+  armed: { fire: ['fire', 'FIRE'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], c2: ['reload', 'RELOAD'], ...UT },
   carry: { fire: ['throw', 'THROW'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UT },
   drive: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
   ride: { fire: VFIRE, car: ['vehicle', 'EXIT'], c2: VRELOAD, ...AT },   // (a passenger)
   air: { fire: VFIRE, car: ['vehicle', 'EXIT'], c1: ['descend', 'DOWN'], c2: ['climb', 'CLIMB'], ...AT },   // (C1 and C2 one rocker)
   boat: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
   horse: { fire: VFIRE, roll: ['dive', 'STOP'], car: ['vehicle', 'OFF'], c1: ['sprint', 'GALLOP'], c2: VRELOAD, ...AT },
-  board: { fire: ['fire', 'TRICK'], roll: ['dive', 'OLLIE'], act: ['action', 'ACT'], car: ['vehicle', 'OFF'], u1: UT.u1 },   // (no drag: the stick picks the trick)
-  surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], u1: UT.u1 },
-  swim: { act: ['action', 'ACT'], car: ['vehicle', 'CAR'], u1: UT.u1 },
-  home: { act: ['action', 'ACT'], u1: UT.u1, u2: UT.u2 },   // (walking round your home)
+  board: { fire: ['fire', 'TRICK'], roll: ['dive', 'OLLIE'], act: ['action', 'ACT'], car: ['vehicle', 'OFF'], ...UV },
+  surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
+  swim: { act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
+  home: { act: ['action', 'ACT'], u1: UT.u1, u2: UT.u2 },   // (walking round your home: no stick)
 };
 // what you're doing, from the page's flags: { home, air, inVeh, driver, horse, boat, surf, swim, board, carrying, armed }
 export function touchState(f) {
@@ -48,30 +50,27 @@ export function touchSlots(f) {
   return { state, slots };
 }
 
-// The touch FIRE button (UI-2: the aim stick and its FIRE ON toggle are gone). A tap fires at the auto-target (else
-// where you face); pressed and dragged it aims the way you drag and fires while held; let go and it stops. AIM (a gun
-// out) does the same without firing - a gun held on a shop's clerk. t: { fire, aim (each held or tapped), drag (the
-// drag's angle while dragging, else null), last, lastAt (the last drag's angle, when) }; view: { target() (the
-// auto-target's angle or null), face (where you face), inVehicle, armed, lastAim }. -> { bits, aim }
-// (a drag's aim stays a moment after it ends - the next tap fires the same way; at the wheel a drive-by needs an aim:
-// straight ahead with nobody to aim at; nothing to aim at on foot and the server swings where you face)
-export const DRAG_DEAD = 12, AIM_KEEP_MS = 700;
+// Aiming on touch: the aim stick held (past a fifth of the way out) aims, without firing; pushed into its red ring it
+// fires too, while FIRE ON is on (client/input.js, shared/input.js touchStick). The FIRE button: a tap fires where
+// the stick aims while it's held, else at the auto-target (else where you face). t: { fire (FIRE held or tapped),
+// stick (the stick's angle while it's held, else null), ring (the stick firing from its ring), last, lastAt (the
+// stick's last aim, when) }; view: { target() (the auto-target's angle or null), face (where you face), inVehicle,
+// armed, lastAim }. -> { bits, aim }
+// (the stick's aim stays a moment after it's let go - with a gun out you keep facing it, and FIRE uses it; at the
+// wheel a drive-by needs an aim: straight ahead with nobody to aim at; nothing to aim at on foot and the server swings
+// where you face)
+export const AIM_KEEP_MS = 1200;
 export function touchAim(t, view, now) {
   let bits = 0, aim = view.lastAim || 0;
-  const pressed = !!(t.fire || t.aim);
-  if (t.drag !== null && t.drag !== undefined) { aim = t.drag; bits |= IN.AIMING; }
-  else if (now - (t.lastAt ?? -1e9) < AIM_KEEP_MS && (pressed || view.armed)) { aim = t.last; bits |= IN.AIMING; }
-  else if (pressed) {
+  if (t.stick !== null && t.stick !== undefined) { aim = t.stick; bits |= IN.AIMING; }
+  else if (now - (t.lastAt ?? -1e9) < AIM_KEEP_MS && (t.fire || view.armed)) { aim = t.last; bits |= IN.AIMING; }
+  else if (t.fire) {
     const ta = view.target ? view.target() : null;
     if (ta !== null && ta !== undefined) { aim = ta; bits |= IN.AIMING; }
-    else if (t.aim || view.inVehicle) { aim = view.face ?? aim; bits |= IN.AIMING; }
+    else if (view.inVehicle) { aim = view.face ?? aim; bits |= IN.AIMING; }
   }
-  if (t.fire) bits |= IN.FIRE;
+  if (t.fire || t.ring) bits |= IN.FIRE;
   return { bits, aim };
-}
-// a drag from (0, 0) to (dx, dy): its angle once it's past DRAG_DEAD px (or already dragging), else null
-export function dragAngle(dx, dy, dragging) {
-  return Math.hypot(dx, dy) >= (dragging ? 3 : DRAG_DEAD) ? Math.atan2(dy, dx) : null;
 }
 // The auto-target: the nearest person standing (not you, not your crew), in reach - within TARGET_CONE of where you
 // face (face null: all round, at the wheel - not anyone in the vehicle with you), nearer the line first. ents: the

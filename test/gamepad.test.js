@@ -28,10 +28,10 @@ test('a pad fires with RT; the right stick only aims unless Settings says otherw
   assert.equal(padFires({ rt: 1, r3: false, rx: 1, ry: 0 }, true, false), false, 'aiming a drive-by does not shoot by itself');
   assert.equal(padFires({ rt: 1, r3: true, rx: 1, ry: 0 }, true, false), true, 'R3 shoots it');
   assert.equal(padFires({ rt: 0, r3: false, rx: 1, ry: 0 }, true, true), true, 'the ring option covers drive-bys too');
-  // the client: off by default (and switched off once for everyone); touch has no stick ring any more (UI-2: FIRE dragged)
+  // the client: off by default (and switched off once for everyone), the touch fire ring left as it was
   const inp = SRC('client/input.js');
   assert.match(inp, /settings = \{[^}]*padStickFire: false/, 'the stick-ring fire is off by default on a pad');
-  assert.doesNotMatch(inp, /settings = \{[^}]*touchEdgeFire/, 'touch has no fire ring (FIRE is dragged to aim)');
+  assert.match(inp, /settings = \{[^}]*touchEdgeFire: true/, 'touch keeps its fire ring (the FIRE button is the other way)');
   assert.match(inp, /if \(settings\.padFireV !== 2\) \{ settings\.padStickFire = false;/, 'a stick-fire switched on before this build (maybe by accident) starts off');
   assert.match(inp, /padFires\(p, driving, settings\.padStickFire\)/, 'sample() fires a pad through padFires');
   assert.doesNotMatch(inp, /rmag > 0\.9\) bits \|= IN\.FIRE/, 'no stick-ring fire of its own any more');
