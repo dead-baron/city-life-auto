@@ -41,7 +41,7 @@ const STONE = {
   crystal: { top: ramp('#26243a', 5, 0.5, 1.5), face: [ramp('#4c4866'), ramp('#5a4a70'), ramp('#3e4a66')], flow: ramp('#8a86b0', 4, 0.7, 1.3) },
   sea: { top: ramp('#222428', 5, 0.5, 1.4), face: [ramp('#3e4044'), ramp('#46443e'), ramp('#363a40')], flow: ramp('#6a7076', 4, 0.7, 1.3) },
 };
-const FLOOR = ramp('#463e35', 6, 0.5, 1.45), MOSSF = ramp('#36482a', 6, 0.5, 1.5), COB = ramp('#4c4e52', 6, 0.5, 1.5), GRASS = ramp('#4e6a30', 6, 0.5, 1.5);
+const FLOOR = ramp('#524638', 6, 0.5, 1.45), MOSSF = ramp('#36482a', 6, 0.5, 1.5), COB = ramp('#4c4e52', 6, 0.5, 1.5), GRASS = ramp('#4e6a30', 6, 0.5, 1.5);
 const PEB = ramp('#6a6258', 5, 0.55, 1.45), WATER = ramp('#16394a', 7, 0.45, 1.9), FOAM = ramp('#c8dce2', 4, 0.8, 1.15), ROOT = ramp('#4a3422', 3, 0.6, 1.3), MOSS = ramp('#4a6a2a', 4, 0.6, 1.4);
 const PUD = ramp('#1a2e38', 4, 0.6, 1.6);
 

@@ -45,6 +45,7 @@ const PIECE = 440;         // px of lip to a piece of the falls (each drawn with
 const SEEDS = [31, 37, 41, 43];
 const BRIDGE = { max: 26 };   // (tiles: the widest outlet a footbridge spans)
 const LIP = 96;            // (reserve on the lip's rock: drawn as the water over it - client/art2/game/groundbake.js)
+const LEDGE_DRY = 0.34;    // (the share of a long lip's middle pieces that are dry rock, the river parting round them)
 // the water of a piece split into strands across its width w (px from its middle: [lo, hi], ...), low rock between -
 // the same for the same width and seed (the art keeps one picture of each)
 const strands = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0; x < w / 2 - 14; i++) { const hi = Math.min(w / 2 - 2, x + Math.round(34 + hh(w, i, sd) * 76)); if (hi - x >= 14) out.push([Math.round(x), Math.round(hi)]); x = hi + Math.round(8 + hh(i, w, sd + 1) * 18); } return out; };
@@ -225,16 +226,28 @@ export function ledgeFalls3(m, H3) {
       const ly = Math.round(cy), lips = arms || [[x0, x1]];
       lastLy = ly;
       lips.forEach(([x0, x1], j2) => {
-        for (let x = x0; x <= x1; x++) { const i = idx(x, ly); m.tiles[i] = T.WALL; if (m.lake) m.lake[i] = 0; m.reserve[i] |= LIP | 4; out.lip++; }
         // the falls over it: a few wide pieces along it, each its water split into strands by low ribs of rock (and the
         // taller ones in two tiers, a shelf pool between), the line bowed back upstream in the middle (a horseshoe, as
-        // water wears a ledge) and a little ragged; boulders in the white water at the joins and the ends
+        // water wears a ledge) and a little ragged; boulders in the white water at the joins and the ends. (Notes 2, the
+        // owner: no straight dams - each piece's stretch of lip a row up or down from the next, the steps joined in rock,
+        // each piece its own height, and in a long lip some pieces dry rock the river parts round, the rest pouring.)
         const xa = x0 * TILE - 8, xb = (x1 + 1) * TILE + 8, segs = [], drop = Math.round(F.drop * (1 - k * 0.14)), bow = Math.min(1, (xb - xa) / TILE / 40) * TILE;
         const footAt = (xx, j) => { const u = (xx - xa) / (xb - xa); return Math.round((ly + 1) * TILE - bow * (1 - (2 * u - 1) * (2 * u - 1)) + (hh(j, ly, 7) - 0.4) * 12); };
         const n = Math.max(1, Math.round((xb - xa) / PIECE)), span = (xb - xa) / n, w = Math.max(48, Math.round((span - 36) / 16) * 16);
+        const off = [], dry = [];
+        for (let j = 0; j < n; j++) { off.push(n < 2 ? 0 : [-1, 0, 1][Math.floor(hh(j + j2 * 5, ly, 8101) * 3)]); dry.push(n >= 3 && j > 0 && j < n - 1 && hh(j + j2 * 5, ly, 8103) < LEDGE_DRY); }
+        const pieceOf = (x) => Math.max(0, Math.min(n - 1, Math.floor(((x + 0.5) * TILE - xa) / span)));
+        // (each column's row: its piece's, or the lip's own where the water there doesn't reach that row; at a step both
+        // rows, so the rock runs on unbroken from bank to bank)
+        for (let x = x0, prev = ly; x <= x1; x++) {
+          const yr = wet(x, ly + off[pieceOf(x)]) ? ly + off[pieceOf(x)] : ly, ya = x > x0 ? Math.min(prev, yr) : yr, yb = x > x0 ? Math.max(prev, yr) : yr;
+          for (let y = ya; y <= yb; y++) { const i = idx(x, y); if (y !== yr && !wet(x, y) && !(m.reserve[i] & LIP)) continue; m.tiles[i] = T.WALL; if (m.lake) m.lake[i] = 0; m.reserve[i] |= LIP | 4; out.lip++; }
+          prev = yr;
+        }
         for (let j = 0; j < n; j++) {
-          const mx = Math.round(xa + span * (j + 0.5)), sd = SEEDS[(j * 3 + k + j2) % SEEDS.length], two = drop >= 52 && hh(j + j2 * 7, ly, 13) < 0.5;
-          segs.push({ x: mx, y: footAt(mx, j), w, d: drop, s: sd, k: two ? 'twoTier' : 'ledge', up: strands(w, sd), ...(two ? { st: strands(w, sd + 5) } : {}) });
+          const mx = Math.round(xa + span * (j + 0.5)), sd = SEEDS[(j * 3 + k + j2) % SEEDS.length], two = drop >= 52 && hh(j + j2 * 7, ly, 13) < 0.5, d = Math.round(drop * (0.82 + hh(j + j2 * 5, ly, 8102) * 0.3));
+          if (dry[j]) { segs.push({ x: mx, y: footAt(mx, j) + off[j] * TILE, w, d, s: sd, k: 'dry', dry: 1 }); out.dry = (out.dry || 0) + 1; continue; }
+          segs.push({ x: mx, y: footAt(mx, j) + off[j] * TILE, w, d, s: sd, k: two ? 'twoTier' : 'ledge', up: strands(w, sd), ...(two ? { st: strands(w, sd + 5) } : {}) });
         }
         for (let j = 0; j <= n; j++) {
           const bx = Math.round(xa + span * j + (j === 0 ? 10 : j === n ? -10 : 0)), s2 = Math.round(24 + hh(j, ly, 11) * 16);
@@ -243,7 +256,7 @@ export function ledgeFalls3(m, H3) {
         const fx = Math.round((xa + xb) / 2), fy = (ly + 1) * TILE;
         m.natureSites.push({ kind: 'ledgefall', name: F.name, step: k + j2, x: fx, y: fy, falls: { x: fx, y: fy - 8, w: Math.round(xb - xa), drop }, segs, ...(F.stone ? { stone: F.stone } : {}) });
         // (what stood where the rock reaches onto the banks goes)
-        for (let x2 = x0 - 3; x2 <= x1 + 3; x2++) for (let y = ly - 2; y <= ly + 1; y++) if (inF(x2, y)) clear.add(idx(x2, y));
+        for (let x2 = x0 - 3; x2 <= x1 + 3; x2++) for (let y = ly - 3; y <= ly + 2; y++) if (inF(x2, y)) clear.add(idx(x2, y));
         out.steps++;
       });
       if (arms) knoll(F, c, arms, ly);

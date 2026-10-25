@@ -3247,7 +3247,8 @@ function addNature(c, I) {
     }
     if (s.kind === 'ledgefall') {   // (the falls chain, part 2: a river over a band of rock in pieces, its water in strands - shared/world3-ledgefalls.js)
       // (notes 2: not one ruled row - each piece a little forward or back of the next, a little higher or lower)
-      for (const g of s.segs) { const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; put(I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
+      for (const g of s.segs) { if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
+        const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; put(I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge

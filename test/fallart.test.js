@@ -12,15 +12,21 @@ const isWater = (m, x, y, z) => { const v = m.get(x, y, z); return v && (m.mats[
 
 test('a fall\'s lip is not a straight line, and its water comes over in strands', () => {
   for (const o of [{ kind: 'ledge', width: 100, drop: 56, seed: 5 }, { kind: 'ledge', width: 220, drop: 64, seed: 31 }, { kind: 'twoTier', width: 128, drop: 90, seed: 17 }]) {
-    const m = fallModel(o), cx = Math.round(m.w / 2), z = o.drop - 1;
-    // the front edge of the water at the lip, column by column across the notch
+    const m = fallModel(o), cx = Math.round(m.w / 2);
+    // where the lip is on the screen (y - z: the projection) column by column across the notch: the front edge of the
+    // topmost water in each
     const edge = [];
-    for (let x = cx - o.width / 2 + 6; x < cx + o.width / 2 - 6; x++) { let e = -1; for (let y = 0; y < m.d; y++) if (isWater(m, x, y, z) || isWater(m, x, y, z - 1)) e = y; if (e >= 0) edge.push(e); }
+    for (let x = cx - o.width / 2 + 6; x < cx + o.width / 2 - 6; x++) {
+      let zt = -1; for (let z = o.drop + 2; z > o.drop - 12 && zt < 0; z--) for (let y = 0; y < m.d; y++) if (isWater(m, x, y, z)) { zt = z; break; }
+      if (zt < 0) continue;
+      let e = -1; for (let y = 0; y < m.d; y++) if (isWater(m, x, y, zt) || isWater(m, x, y, zt - 1)) e = y;
+      edge.push(e - zt);
+    }
     assert.ok(edge.length > o.width * 0.5, `${o.kind} ${o.width}: water over the lip`);
     const lo = Math.min(...edge), hi = Math.max(...edge);
-    assert.ok(hi - lo >= 3, `${o.kind} ${o.width}: the lip wanders (${lo}..${hi})`);
+    assert.ok(hi - lo >= 6, `${o.kind} ${o.width}: the lip steps and wanders on the screen (${lo}..${hi})`);
     // a little way down the face: strands, with gaps between them, of different widths
-    const zz = Math.round(o.kind === 'twoTier' ? o.drop - 6 : o.drop - 4), runs = [];
+    const zz = o.drop - 10, runs = [];
     let run = 0;
     for (let x = cx - o.width / 2; x <= cx + o.width / 2; x++) {
       let w = false; for (let y = 0; y < m.d; y++) if (isWater(m, x, y, zz)) { w = true; break; }
@@ -29,6 +35,10 @@ test('a fall\'s lip is not a straight line, and its water comes over in strands'
     if (run) runs.push(run);
     assert.ok(runs.length >= 2, `${o.kind} ${o.width}: strands (${runs})`);
     assert.ok(Math.max(...runs) - Math.min(...runs) >= 4, `${o.kind} ${o.width}: of different widths (${runs})`);
+    // wider at the foot than at the lip: the curtain fans out
+    const span = (z) => { let a = 1e9, b = -1e9; for (let x = 0; x < m.w; x++) for (let y = m.face - 4; y < m.face + 16; y++) if (y >= 0 && y < m.d && isWater(m, x, y, z)) { a = Math.min(a, x); b = Math.max(b, x); } return b - a; };
+    const zFoot = o.kind === 'twoTier' ? 4 : 6;
+    assert.ok(span(zFoot) > o.width + 8, `${o.kind} ${o.width}: fanned out at the foot (${span(zFoot)} > ${o.width})`);
   }
 });
 

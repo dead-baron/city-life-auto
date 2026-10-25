@@ -450,7 +450,7 @@ function rockCol(m, K, x, y, H, wz, mossy, seed) {
 // roots hanging down a face: from z down len voxels, just proud of it at y
 function roots(m, K, x, y, z, len) { for (let k = 0; k < len; k++) if (!m.get(x, y, z - k)) m.set(x + (k % 5 === 4 ? 1 : 0), y, z - k, K.root); }
 // a fall's water split into strands across its width w (px from its middle: [lo, hi]) - rock breaking the lip between
-const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0; x < w / 2 - 10; i++) { const hi = Math.min(w / 2 - 2, x + Math.round(16 + hash(i, w, sd) * w * 0.42)); if (hi - x >= 8) out.push([Math.round(x), hi]); x = hi + Math.round(3 + hash(i, 7, sd) * 6); } return out; };
+const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0; x < w / 2 - 10; i++) { const hi = Math.min(w / 2 - 2, x + Math.round(w * (0.2 + hash(i, w, sd) * 0.42))); if (hi - x >= 8) out.push([Math.round(x), hi]); x = hi + Math.round(5 + hash(i, 7, sd) * 8); } return out; };   // (two or three uneven tongues)
 // ---- waterfalls ------------------------------------------------------------------------------------------
 // A cliff of layered rock (or a concrete weir) with water pouring over a notch in it. Built facing the
 // camera: model y runs north -> south, the falling sheets are on the south faces.
@@ -486,7 +486,11 @@ export function fallModel(o = {}) {
   const inNotch = (x, lo = -width / 2, hi = width / 2) => x - cx >= lo && x - cx < hi;
   const edgeWob = (x, y) => (vnoise(x, y, 9, seed + 5) - 0.5) * 8;
   const sideAt = (x, y) => { const k = y < d1 - 3 ? 2 : 0.9; return !inNotch(x, -width / 2 - edgeWob(y, 1) * k + (y < d1 - 3 ? 3 : 0), width / 2 + edgeWob(y, 2) * k - (y < d1 - 3 ? 3 : 0)); };   // (the banks of the water above wander more)
-  const lipY = (x) => d1 + Math.round((vnoise(x, 0, 11, seed + 50) - 0.5) * 9), backY = (x) => Math.round(vnoise(x, 9, 13, seed + 73) * 8);   // (the lip's edge wanders, and the water's back: no ruled lines)
+  const ups = kind === 'weir' ? null : o.upper || (width >= 34 ? autoUps(width, seed) : null);   // (o.upper: the top fall split into strands [lo, hi] across the notch, rock between; else strands of its own)
+  // (each tongue's stretch of lip a step forward or back of the next: the lip steps and curves across)
+  const kOf = (x) => { if (!ups) return 0; const u = x - cx; for (let k = 0; k < ups.length; k++) if (u < ups[k][1] + 3) return k; return ups.length; };
+  const stepOf = (x) => Math.round((hash(kOf(x), 5, seed + 80) - 0.5) * 14), zsOf = (x) => (ups ? [0, 3, 6][Math.floor(hash(kOf(x), 6, seed + 81) * 3)] : 0);   // (and a little higher or lower)
+  const lipY = (x) => d1 + stepOf(x) + Math.round((vnoise(x, 0, 11, seed + 50) - 0.5) * 7), backY = (x) => Math.round(vnoise(x, 9, 13, seed + 73) * 8);   // (the lip's edge wanders, and the water's back: no ruled lines)
   m.fill((x, y, z) => {
     if (kind === 'weir') {
       if (y >= d1) return -1;
@@ -494,10 +498,10 @@ export function fallModel(o = {}) {
       return z < drop - 1 ? rock : -1;                        // the sill
     }
     if (sideAt(x, y)) return -1;                              // (the walls: below, in ledges)
-    if (y < lipY(x)) return z < drop - 2 && y >= backY(x) ? rock : -1;   // under the upper water
+    if (y < lipY(x)) return z < drop - 2 - zsOf(x) && y >= backY(x) ? rock : -1;   // under the upper water
     if (tier2 && y < d2) return z < mid - 2 ? rock : -1;      // the shelf
     return -1;
-  }, 0, 0, 0, W, d2, Hh);
+  }, 0, 0, 0, W, d2 + 10, Hh);
   if (kind !== 'weir') {
     // the walls either side: layered rock standing to the lip by the water and stepping down in ledges away from it into
     // the ground, a low ledge at their foot here and there, dark and wet by the falls, moss and ferns on top, roots down
@@ -533,28 +537,31 @@ export function fallModel(o = {}) {
     m.fill((x, y, z) => (inNotch(x) && z < drop + 1 && y >= d1 && y < d1 + 2 + (drop - z) * 0.25 ? sheet : -1), 0, d1, 0, W, d1 + 8, drop + 1);
   } else {
     // upper water runs to the edge of the top step
-    m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && !sideAt(x, y) && y < lipY(x) && y >= backY(x) && z >= drop - 2 && z < drop ? wtop : -1), 0, 0, drop - 2, W, d1 + 3, drop);
+    m.fill((x, y, z) => (inNotch(x, -width / 2 + 2, width / 2 - 2) && !sideAt(x, y) && y < lipY(x) && y >= backY(x) && z >= drop - 2 - zsOf(x) && z < drop - zsOf(x) ? wtop : -1), 0, 0, drop - 8, W, d1 + 10, drop);
     // the upper (or only) fall: a sheet that leaves the lip and curves out a little as it falls
     const lo1 = tier2 ? mid - 2 : 0, w1 = kind === 'cliff' ? width : width - 4;
-    sheetTop = () => drop;
-    const ups = o.upper || (width >= 34 ? autoUps(width, seed) : null);   // (o.upper: the top fall split into strands [lo, hi] across the notch, rock between; else strands of its own)
+    sheetTop = (x) => drop - zsOf(x);
     // (a strand fans out as it falls - its edges ragged - so the rocks that split it at the lip are hidden below: they
     // break the water near the top and the strands join into one curtain further down, not posts down the face)
-    const spr = (z, top, k) => Math.max(0, (top - z) * 0.24 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
+    const spr = (z, top, k) => Math.max(0, (top - z) * 0.14 + (hash(Math.round(z / 4), k, seed + 11) - 0.5) * 2.6);
     m.fill((x, y, z) => {
-      if (!inNotch(x, -w1 / 2 + Math.sin(z * 0.2 + x) * 0.6 + (vnoise(z, 3, 7, seed + 70) - 0.5) * 6, w1 / 2 - (vnoise(z, 4, 7, seed + 70) - 0.5) * 6)) return -1;
-      const sk = ups ? ups.findIndex(([lo, hi], k) => inNotch(x, lo - spr(z, drop, k * 2) + Math.sin(z * 0.3 + lo) * 0.8, hi + spr(z, drop, k * 2 + 1))) : 0;
+      const zt = drop - zsOf(x);
+      if (z >= zt) return -1;
+      const fan = (drop - z) * 0.3;   // (the curtain spreads as it falls, out past the notch: wider at the foot)
+      if (!inNotch(x, -w1 / 2 - fan + Math.sin(z * 0.2 + x) * 0.6 + (vnoise(z, 3, 7, seed + 70) - 0.5) * 7, w1 / 2 + fan - (vnoise(z, 4, 7, seed + 70) - 0.5) * 7)) return -1;
+      const sk = ups ? ups.findIndex(([lo, hi], k) => inNotch(x, lo - (k ? spr(z, drop, k * 2) : fan * 0.9) + Math.sin(z * 0.3 + lo) * 0.8, hi + (k < ups.length - 1 ? spr(z, drop, k * 2 + 1) : fan * 0.9))) : 0;
       if (sk < 0) return -1;
-      const out = ((drop - z) * 0.12 + Math.min(3, (drop - z) * 0.04)) * (0.7 + hash(sk, 2, seed + 72) * 0.7), ly = lipY(x);   // (each strand thrown out its own way)
+      const out = ((zt - z) * 0.12 + Math.min(3, (zt - z) * 0.04)) * (0.7 + hash(sk, 2, seed + 72) * 0.7), ly = lipY(x);   // (each strand thrown out its own way)
       return y >= ly + out - 1 && y < ly + out + 2 ? sheet : -1;
-    }, 0, d1 - 4, lo1, W, d1 + Math.ceil(drop * 0.2) + 7, drop);
+    }, 0, d1 - 10, lo1, W, d1 + Math.ceil(drop * 0.2) + 14, drop);
     if (ups) for (let i = 0; i < ups.length - 1; i++) {
       const a = ups[i][1], b = ups[i + 1][0];
       m.fill((x, y, z) => {
-        if (y < d1 - 4 || y >= d1 + 2 || z < lo1 || z >= drop + 1 + hash(Math.round(x / 3), 2, seed) * 2) return -1;
+        const ly = lipY(x);
+        if (y < ly - 4 || y >= ly + 2 || z < lo1 || z >= drop + 1 + hash(Math.round(x / 3), 2, seed) * 2) return -1;
         const l = a + spr(z, drop, i * 2 + 1) + (hash(Math.round(z / 3), i, seed + 5) - 0.5) * 2, r = b - spr(z, drop, i * 2 + 2) - (hash(Math.round(z / 3), i + 9, seed + 5) - 0.5) * 2;
         return inNotch(x, l, r) ? rock : -1;
-      }, 0, d1 - 4, lo1, W, d1 + 2, drop + 3);
+      }, 0, d1 - 10, lo1, W, d1 + 10, drop + 3);
     }
     if (tier2) {
       // the shelf pool, its foam, then the split lower falls
@@ -578,10 +585,10 @@ export function fallModel(o = {}) {
     }
   }
   // the churn at the foot
-  const footW = kind === 'cliff' ? width * 1.6 : width;
+  const footW = kind === 'cliff' ? width * 1.6 : width + drop * 0.34 + 6;   // (as wide as the curtain has spread)
   m.fill((x, y, z) => {
     const dx = (x - cx) / (footW / 2 + 4), dy = (y - d2) / apron, q = dx * dx + dy * dy * 1.4;
-    if (q > 1 + (vnoise(x, y, 5, seed + 60) - 0.5) * 0.8 || y < d2 + 1) return -1;   // (its edge ragged)
+    if (q > 1 + (vnoise(x, y, 5, seed + 60) - 0.5) * 0.8 + Math.sin(Math.atan2(dy, dx) * 3 + seed) * 0.3 || y < d2 + 1) return -1;   // (its edge ragged, lobed)
     const hgt = (1 - q) * (kind === 'weir' ? 4 : kind === 'cliff' ? 9 : 7) * (0.6 + vnoise(x, y + frame.v * 3, 4, seed) * 0.8);
     return z < hgt ? foam : -1;
   }, 0, d2, 0, W, Dp, 12);
@@ -599,7 +606,7 @@ export function waterfall(o = {}, model = null) {
   for (let i = 0; i < G.w * G.h; i++) if (G.col[i * 4 + 3] && (G.flag[i] & F_WATER)) { const j = i * 4; G.nrm[j] = (tip[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (tip[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (tip[2] * 0.5 + 0.5) * 255; }
   const mist = o.mist ?? (m.kind === 'cliff' ? 1 : m.kind === 'twoTier' ? 0.5 : 0.2);
   if (mist > 0) {
-    const seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = m.width * (m.kind === 'cliff' ? 1.6 : 0.8) + 10, ry = 10 + mist * 34;
+    const seed = o.seed ?? 3, f = m.frameRef.v, cx = G.ax, cy = G.ay - 4, rx = m.width * (m.kind === 'cliff' ? 1.6 : 0.72) + 30 + m.lip * 0.2, ry = 10 + mist * 34;   // (the spray spilling out past the walls)
     for (let y = Math.floor(cy - ry * 1.6); y < Math.min(G.h, cy + ry * 0.5); y++) for (let x = Math.floor(cx - rx); x < cx + rx; x++) {
       if (!G.inside(x, y)) continue;
       const q = ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2; if (q > 1.4) continue;

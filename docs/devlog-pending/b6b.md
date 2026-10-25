@@ -97,3 +97,44 @@ one turns up in the pool below. The rest fall back into the pool as before.
   fishing, 38/38. After the last tweaks: world3rapids, world3rivers, world3relief, waterbake, nature, art2, dmath,
   mapwindow, fallart, cavelight and world3caves, 91/91, and perf 6/6. Also wind 8/8, which checks that the new rock's
   ferns and roots hold still with the rock.
+
+### Second pass (the coordinator's review: the curtain still read as a bright rectangle, the ledge falls as dams)
+- **A fall's curtain from above** (client/art2/water.js `fallModel`; every fall drawn through it - Redwood Creek, the tarn,
+  Cedar Creek, the rainforest's, each ledge fall's piece, Twin Falls):
+  - It fans out as it falls: each side spreads 0.3 px for every px of drop, so a 56 px fall is about 34 px wider at its
+    foot than at its lip. The outermost tongues
+    spread past the notch, out over the walls' foot.
+  - The water comes over in **two or three uneven tongues** (20-62% of the width each) with rock ribs between them. The
+    ribs close at 0.28 px per px of drop, so a 5-13 px gap lasts 18-46 px down before the tongues join.
+  - The lip **steps**: each tongue's stretch of it sits up to 7 px forward or back of the next, and 0, 3 or 6 px lower,
+    as well as wandering.
+  - The **spray** (the baked veil) spills past the walls, and the live mist sends 30% of its puffs out beside the
+    curtain at mid-height, drifting outward.
+  - The **foam at the foot** is as wide as the spread curtain and lobed.
+- **The ledge falls** (shared/world3-ledgefalls.js, a world change):
+  - Each piece's stretch of lip is a row up or down from the next. At a step both rows are rock, so the lip is
+    unbroken and still one-way (shared/ledges.js takes runs of 1-3 rows).
+  - Each piece is 82-112% of the falls' drop.
+  - In a lip of three or more pieces, about a third of the middle pieces are **dry**: a bluff of the layered rock the
+    river parts round (statics.js draws a `cliffWall` there; `seg.dry`). The ends always pour.
+  - The first-pass ±7 px stagger in statics.js stays on top.
+- **The caves read better lit** (the dark stays dark):
+  - The lanterns light further and warmer: `LANTERN` 150 -> 190 px, 0.75 -> 0.85. The view lights a broad, flickering
+    amber pool round each (`hole`'s new `flat`) instead of a tight spot.
+  - The fungi's, worms' and crystals' halos are twice as strong and a little wider.
+  - The floor is a shade lighter.
+  - The echo hall, the den and the passages between still have no light of their own.
+- Budgets: the bake is 878.05 KB of the 878 set in the first pass. The page and the renderer are unchanged.
+- Tests for the second pass:
+  - test/fallart.test.js now also checks that the lip steps and wanders on the screen (over 6 px) and that the curtain
+    is wider at its foot than its notch.
+  - test/world3rapids.test.js now reads a ledge lip as rock right across in the rows round its line, every bit of it a
+    one-way drop. Water pours over every lip, some stretches are dry rock (under a third), a lip of three or more pieces
+    is not one ruled row, and the pieces come in six or more heights.
+  - test/underground.test.js's dark chamber is clear of the wider lantern light.
+- Run under the lock after stamping:
+  - world3server, world3world, world3west, world3wild, world3woods, world3rivers, world3peaks, world3rapids,
+    world3relief, nature, biolum and waterbake: 77/77.
+  - ledges, fallscenter, cedarfalls, world3caves, underground, cavelight, waterlife, fallart, fishing, art2, dmath,
+    mapwindow and wind: 73/73.
+  - perf: 6/6.

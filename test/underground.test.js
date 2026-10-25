@@ -140,7 +140,7 @@ test('the cave: chambers joined from the way in; dark but for lights and glowing
   let dark = null;
   for (const c of K2.chambers) {
     if (c.glow) continue;
-    if (K2.glow.every((g) => Math.hypot(g.x - c.x, g.y - c.y) > g.r) && K2.lanterns.every((l) => Math.hypot(l.x - c.x, l.y - c.y) > 150) && K2.shafts.every((q) => Math.hypot(q.x - c.x, q.y - c.y) > q.r)) { dark = c; break; }
+    if (K2.glow.every((g) => Math.hypot(g.x - c.x, g.y - c.y) > g.r) && K2.lanterns.every((l) => Math.hypot(l.x - c.x, l.y - c.y) > 200) && K2.shafts.every((q) => Math.hypot(q.x - c.x, q.y - c.y) > q.r)) { dark = c; break; }
   }
   assert.ok(dark, 'a chamber with nothing lighting it');
   assert.equal(lightAt(L, dark.x, dark.y, []), 0, 'pitch dark with no light');

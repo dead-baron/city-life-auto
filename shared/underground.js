@@ -497,7 +497,7 @@ export function ugAt(L, x, y) {
 // comes down the sewer grates and the caves' shafts). The client draws the darkness from the same sources.
 export const UG_AMBIENT = { [UG.SEWER]: 0.06, [UG.CAVE]: 0 };
 // a cavern's lanterns (on its docks, by its mouths, in its treasure chamber): how far their light carries, how bright
-export const LANTERN = { r: 150, k: 0.75 };
+export const LANTERN = { r: 190, k: 0.85 };
 // daylight down a shaft in the roof (K.shafts: its own r), as bright as day up top - a little moonlight at night
 export const SHAFT = { k: 0.9, moon: 0.12 };
 export function lightAt(L, x, y, lights = [], day = 0) {

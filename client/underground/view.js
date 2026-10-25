@@ -498,10 +498,10 @@ class UgView {
     d.fillRect(0, 0, cv.width, cv.height);
     d.setTransform(...S.worldTf);
     d.globalCompositeOperation = 'destination-out';
-    const hole = (x, y, r, k) => {
+    const hole = (x, y, r, k, flat = 0.55) => {   // (flat: how much of it is left halfway out - a lantern's pool is broad, a spark's tight)
       if (k <= 0.01) return;
       const gr = d.createRadialGradient(x, y, 0, x, y, r);
-      gr.addColorStop(0, `rgba(0,0,0,${Math.min(1, k)})`); gr.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, k) * 0.55})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      gr.addColorStop(0, `rgba(0,0,0,${Math.min(1, k)})`); gr.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, k) * flat})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
       d.fillStyle = gr; d.beginPath(); d.arc(x, y, r, 0, 6.283); d.fill();
     };
     // carried lights: whatever main.js's carriedLights records (the flashlight's cone and every light item)
@@ -527,7 +527,7 @@ class UgView {
     const day = F.sky ? 1 - (F.sky.night || 0) : 1;
     if (ug === UG.SEWER) for (const gr of L.grates || []) hole(gr.x, gr.y, 90, 0.18 + 0.55 * day);
     // the glowing things
-    if (ug === UG.CAVE) for (const K2 of L.caves || []) { for (const gl of K2.glow) hole(gl.x, gl.y, gl.r, gl.k * (0.85 + 0.15 * Math.sin(now * 1.3 + gl.x * 0.01))); for (const l of K2.lanterns || []) hole(l.x, l.y - 24, LANTERN.r, LANTERN.k * (0.92 + 0.08 * Math.sin(now * 9 + l.x))); }
+    if (ug === UG.CAVE) for (const K2 of L.caves || []) { for (const gl of K2.glow) hole(gl.x, gl.y, gl.r * 1.15, gl.k * (0.95 + 0.15 * Math.sin(now * 1.3 + gl.x * 0.01)), 0.7); for (const l of K2.lanterns || []) hole(l.x, l.y - 16, LANTERN.r, LANTERN.k * (0.92 + 0.08 * Math.sin(now * 9 + l.x)), 0.8); }
     // the light in at a cave's mouth and down its shafts: day's, or a little moonlight
     if (ug === UG.CAVE) { const sk = SHAFT.k * (SHAFT.moon + (1 - SHAFT.moon) * day) * 1.1; for (const K2 of L.caves) for (const s of K2.shafts || []) hole(s.x, s.y, s.r * 1.25, sk); }
     if (ug === UG.CAVE) { const lk = mouthLevel(F.sky); for (const s of this.mouthSpots()) if (s.x > F.view.x0 - s.r && s.x < F.view.x1 + s.r && s.y > F.view.y0 - s.r && s.y < F.view.y1 + s.r) hole(s.x, s.y, s.r, s.k * lk); }
@@ -574,16 +574,16 @@ class UgView {
     for (const K2 of L.caves) for (const s of K2.shafts || []) if (s.x > view.x0 - 300 && s.x < view.x1 + 300 && s.y > view.y0 - 100 && s.y < view.y1 + 400) shaftBeam(g, s, now, SHAFT.moon + (1 - SHAFT.moon) * day, tint);   // (the daylight down its shafts)
     for (const K2 of L.caves) for (const l of K2.lanterns || []) {   // the lanterns' warm light
       if (l.x < view.x0 - 160 || l.x > view.x1 + 160 || l.y < view.y0 - 160 || l.y > view.y1 + 160) continue;
-      const gr = g.createRadialGradient(l.x, l.y - 24, 0, l.x, l.y - 24, 120);
-      gr.addColorStop(0, 'rgba(255,180,90,.22)'); gr.addColorStop(1, 'rgba(255,180,90,0)');
-      g.fillStyle = gr; g.beginPath(); g.arc(l.x, l.y - 24, 120, 0, 6.283); g.fill();
+      const R = LANTERN.r, gr = g.createRadialGradient(l.x, l.y - 16, 0, l.x, l.y - 16, R), fl = 0.92 + 0.08 * Math.sin(now * 9 + l.x);   // (a warm pool, flickering)
+      gr.addColorStop(0, `rgba(255,190,100,${0.42 * fl})`); gr.addColorStop(0.45, `rgba(255,150,70,${0.16 * fl})`); gr.addColorStop(1, 'rgba(255,140,60,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(l.x, l.y - 16, R, 0, 6.283); g.fill();
     }
     for (const K2 of L.caves) for (const gl of K2.glow) {
       if (gl.x < view.x0 - gl.r || gl.x > view.x1 + gl.r || gl.y < view.y0 - gl.r || gl.y > view.y1 + gl.r) continue;
       const pulse = 0.8 + 0.2 * Math.sin(now * 1.3 + gl.x * 0.01), col = gl.kind === 'crystal' ? '150,110,255' : gl.kind === 'worms' ? '90,200,255' : '60,230,200';
-      const gr = g.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r * 0.7);
-      gr.addColorStop(0, `rgba(${col},${0.22 * gl.k * pulse})`); gr.addColorStop(1, `rgba(${col},0)`);
-      g.fillStyle = gr; g.beginPath(); g.arc(gl.x, gl.y, gl.r * 0.7, 0, 6.283); g.fill();
+      const gr = g.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r);
+      gr.addColorStop(0, `rgba(${col},${0.42 * gl.k * pulse})`); gr.addColorStop(0.4, `rgba(${col},${0.14 * gl.k * pulse})`); gr.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(gl.x, gl.y, gl.r, 0, 6.283); g.fill();
     }
     g.restore();
   }

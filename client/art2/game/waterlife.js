@@ -846,6 +846,7 @@ export class WaterLife {
         p.on = true; p.foam = false; p.t0 = now; p.life = 2.6 + this.rnd() * 1.8;
         p.x = q.x + u * q.w * 1.4; p.y = q.y + q.out * (0.6 + this.rnd() * 1.4); p.z = this.rnd() * Math.min(12, q.h * 0.15);
         p.vx = u * 10 + e.wx * e.ws * 16; p.vy = 4 + this.rnd() * 8 + e.wy * e.ws * 10; p.vz = 7 + this.rnd() * 9 + q.h * 0.06;
+        if (this.rnd() < 0.3) { const sd = u < 0 ? -1 : 1; p.x = q.x + sd * (q.w / 2 + 6 + this.rnd() * 26); p.z = q.h * (0.25 + this.rnd() * 0.5); p.vx = sd * (8 + this.rnd() * 14) + e.wx * e.ws * 16; }   // (clouds of it spilling out past the walls)
         p.k = q.k; p.s = Math.min(2, (this.rnd() < 0.35 ? 0 : 1) + (q.h > 90 ? 1 : 0)); p.lift = q.h + 60;   // (a high fall's spray in bigger puffs)
       }
       // the foam churned out over the pool
