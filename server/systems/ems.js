@@ -192,10 +192,72 @@ function stretcher(c, kind, patient = null) {
 // a medic on foot heading for (x, y): through a shop's door when it's in the way, along the way round what's between
 // out in the wilds (tr: arrive's ai.foot), round what they bump into
 function walkTo(world, c, x, y, dt, run, tr = null) {
-  const wp = (tr && trailWay(world, c, tr, x, y)) || footWay(world, c, x, y);
+  let wp = (tr && trailWay(world, c, tr, x, y)) || footWay(world, c, x, y);
+  // held up: next to no headway in half a second (pedStep holds them at a car's side) - then round whatever's standing in the way
+  const now = world.time, P = (c.walkP ||= { x: c.x, y: c.y, t: now });
+  if (now - P.t >= 0.5) { if (Math.hypot(c.x - P.x, c.y - P.y) < 12 && Math.hypot(x - c.x, y - c.y) > 30) c.heldAt = now; P.x = c.x; P.y = c.y; P.t = now; }
+  if (c.vehWay || now - (c.heldAt ?? -9) < 0.6) wp = roundVehicle(world, c, wp, x, y) || wp;
   const inp = seek(c, wp.x, wp.y, run);
   if (Math.hypot(x - c.x, y - c.y) < 6) { inp.mx = 0; inp.my = 0; }
   pedStep(c, sidestep(world, c, inp, dt), dt, world.map, players.pedMods(world, c));
+}
+// A vehicle a medic is held up against - a car queued beside the ambulance (one that pulled over for its siren), the
+// ambulance itself: round it by its corners, the shortest way, kept till they're round (pedStep stops them at a car's
+// side, and sidestep alone takes them back and forth along it).
+// Not the vehicle they're walking to (boarding).
+const ROUND_PAD = 9, ROUND_OUT = 12;   // (a body's half-width off its sides counts as in the way; its corners are passed this much further out)
+const inBox = (v, x, y, pad) => { const c = Math.cos(v.a), s = Math.sin(v.a), dx = x - v.x, dy = y - v.y; return Math.abs(dx * c + dy * s) < v.def.L / 2 + pad && Math.abs(-dx * s + dy * c) < v.def.W / 2 + pad; };
+const inSight = (v, x0, y0, x1, y1) => { const L = Math.hypot(x1 - x0, y1 - y0); for (let d = 6; d < L - 6; d += 6) if (inBox(v, x0 + (x1 - x0) * d / L, y0 + (y1 - y0) * d / L, ROUND_PAD)) return false; return true; };
+const openWalk = (m, x0, y0, x1, y1) => { const L = Math.hypot(x1 - x0, y1 - y0); for (let d = 8; d < L; d += 8) if (!m.isWalkable(x0 + (x1 - x0) * d / L, y0 + (y1 - y0) * d / L)) return false; return true; };
+// someone up against its side, inside its margin: where they'd be stepping straight out of it (to look from)
+function outOf(v, x, y) {
+  const c = Math.cos(v.a), s = Math.sin(v.a), dx = x - v.x, dy = y - v.y, hl = v.def.L / 2 + ROUND_PAD + 1, hw = v.def.W / 2 + ROUND_PAD + 1;
+  let lx = dx * c + dy * s, ly = -dx * s + dy * c;
+  if (Math.abs(lx) >= hl || Math.abs(ly) >= hw) return { x, y };
+  if (hl - Math.abs(lx) < hw - Math.abs(ly)) lx = Math.sign(lx || 1) * hl; else ly = Math.sign(ly || 1) * hw;
+  return { x: v.x + lx * c - ly * s, y: v.y + lx * s + ly * c };
+}
+function roundVehicle(world, c, wp, x, y) {
+  const now = world.time, k = c.vehWay;
+  if (k) {   // on the way round one: corner to corner, then on as before (the whole way round, or the way they're following pulls them back)
+    const kv = world.get(k.v);
+    while (k.pts.length && Math.hypot(k.pts[0].x - c.x, k.pts[0].y - c.y) < 10) k.pts.shift();
+    if (k.pts.length && now < k.until && kv && !kv.removed && Math.hypot(kv.vx, kv.vy) <= 30) return k.pts[0];
+    c.vehWay = null;
+  }
+  const dx = wp.x - c.x, dy = wp.y - c.y, L = Math.hypot(dx, dy);
+  if (L < 4) return null;
+  const look = Math.min(L, 100), ux = dx / L, uy = dy / L;
+  const vs = [...world.query(c.x, c.y, 320, K.VEH)].filter((v) => v.def && !v.removed && sameLevel(v.lz, c.lz));
+  for (const v of vs) {
+    if (Math.hypot(v.x - c.x, v.y - c.y) > 220 || v.removed || Math.hypot(v.vx, v.vy) > 30 || !inBox(v, c.x, c.y, ROUND_PAD + 6) || inBox(v, x, y, ROUND_PAD + ROUND_OUT)) continue;   // (one they're up against, not the one they're walking to)
+    let hit = false;
+    for (let d = 8; d <= look && !hit; d += 8) hit = inBox(v, c.x + ux * d, c.y + uy * d, ROUND_PAD);
+    if (!hit) continue;
+    // the shortest way round it: from them, by its corners (each in sight of the next along its sides), to the waypoint
+    const ca = Math.cos(v.a), sa = Math.sin(v.a), hl = v.def.L / 2 + ROUND_PAD + ROUND_OUT, hw = v.def.W / 2 + ROUND_PAD + ROUND_OUT;
+    const N = [outOf(v, c.x, c.y)];
+    for (const [sx, sy] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) N.push({ x: v.x + sx * hl * ca - sy * hw * sa, y: v.y + sx * hl * sa + sy * hw * ca });
+    N.push({ x: wp.x, y: wp.y });
+    const open = N.map((q, i) => i === 0 || i === 5 || (world.map.isWalkable(q.x, q.y) && !vs.some((o) => o !== v && inBox(o, q.x, q.y, ROUND_PAD)))),   // (not a corner up against another)
+          dist = N.map(() => Infinity), from = N.map(() => -1), done = N.map(() => false);
+    dist[0] = 0;
+    for (let it = 0; it < N.length; it++) {
+      let u = -1;
+      for (let i = 0; i < N.length; i++) if (!done[i] && open[i] && dist[i] < Infinity && (u < 0 || dist[i] < dist[u])) u = i;
+      if (u < 0 || u === 5) break;
+      done[u] = true;
+      for (let i = 1; i < N.length; i++) {
+        if (done[i] || !open[i] || !inSight(v, N[u].x, N[u].y, N[i].x, N[i].y) || !openWalk(world.map, N[u].x, N[u].y, N[i].x, N[i].y)) continue;   // (and no wall or water in the way)
+        const d = dist[u] + Math.hypot(N[i].x - N[u].x, N[i].y - N[u].y);
+        if (d < dist[i]) { dist[i] = d; from[i] = u; }
+      }
+    }
+    const pts = [];
+    if (from[5] >= 0) for (let i = from[5]; i > 0; i = from[i]) pts.unshift(N[i]);   // (the corners on the way)
+    if (pts.length) { c.vehWay = { v: v.id, pts, until: now + 3 + pts.length * 2 }; return pts[0]; }
+  }
+  return null;
 }
 // where to head along a way on foot for (x, y) at its one end or the other: straight there when that's clear, else the
 // farthest point on along it toward (x, y) in a clear line from the trail point nearest them (looked at four times a second)

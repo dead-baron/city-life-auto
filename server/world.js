@@ -126,7 +126,6 @@ const SYSTEMS = [
   ['transit', transit.update],      // the bus lines: buses into service round their loops, the doors closing
   ['ferries', ferries.update],      // the island ferries to their timetable, the cars on their decks
   ['boats', boats.update],          // NPC boaters + harbor police patrol boats
-  ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors (cinefollow.js)
   ['rentals', rentals.update],      // boat hire clocks: warnings, tow-backs, overdue = stolen
   ['horses', horses.update],        // hired horses' clocks; bolted horses gone once nobody's watching (#325)
   ['racebook', racebook.update],    // the race book's races: the off, the result, the winners paid (#310)
@@ -200,6 +199,8 @@ const SYSTEMS = [
   ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
   ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
   ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
+  ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors - last, so it sees
+                                    // what every other system did this tick (a subject taken away: off them before it's sent)
 ];
 
 export class World {

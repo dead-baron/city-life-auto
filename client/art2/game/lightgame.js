@@ -2,23 +2,10 @@
 // client/art2/light.js in game mode: the same lit / bloom / final look, run every frame on the packed
 // G-buffer the engine composes from chunk textures and sprite atlases (three RGBA8 planes, gbuf.js
 // packGBuf: A [albedo, coverage], B [z lo, z hi, flags, oct normal x], C [emissive, oct normal y]).
-//   - targets are allocated once per capacity size and reused; the engine renders a sub-rectangle;
-//   - every pattern (dither, rain speckles, fog, streak wobble) is anchored to the world, not the
-//     screen (org = scene origin mod 8192), so nothing crawls when the camera moves;
-//   - point AND cone lights (headlights, flashlights) from a uniform buffer, 16/32/64/96 per tier, binned
-//     on the CPU into 64 px tiles (an R8UI index texture) so each pixel loops over its tile's lights only;
-//   - tiered sun shadows: Ultra 3 rays x 110 steps, High 1 x 64, Medium 1 x 32 without light bands,
-//     Low a 4-tap soft contact shade; the march start is dithered so coarse steps read as pixel dither;
-//   - Low lights at half resolution (lighth: one texel per 2 x 2 block) and composes per texel (albedo,
-//     normal, glow stay exact; each texel takes the neighbouring block whose height matches its own);
-//   - wet ground: darkening, a wobbling streak under every light, and a mirror: the reflected view ray
-//     marched through the height map (a lamp's image hangs below its foot), sky sheen, rain speckles;
-//     open water (F_WATER) mirrors what stands in and beside it in any weather;
-//   - fog in layers drifting with the wind - low banks with clear ground between them and wisps aloft, worked
-//     out at a quarter of the size (SHAFT_FS) - thick at the foot of tall things, clear on the roofs, that the
-//     wide bloom lights up around lamps; a lightning flash, haze toward the top of the view, colour grade
-//     (the vignette is applied by the engine's present);
-//   - god rays at a low sun (High/Ultra): sunlit ground smeared toward the sun over the shade.
+//   targets made once and reused; every pattern anchored to the world (org = scene origin mod 8192); point and cone
+//   lights binned into 64 px tiles; tiered sun shadows (Ultra 3 x 110 steps .. Low a 4-tap contact shade); Low lights
+//   at half size, composed per texel by height; wet ground (darker paving, light streaks, a mirror in the puddles),
+//   open water mirroring in any weather; fog in drifting layers (SHAFT_FS); lightning, haze, grade; god rays.
 //
 // PRESETS_GAME: dawn morning noon afternoon golden dusk (alias blue) night rain storm fog indoor - plain
 // uniform objects; light.js PRESETS entries work too (missing keys take PRESET_DEFAULTS).

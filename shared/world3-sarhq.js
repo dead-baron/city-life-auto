@@ -22,7 +22,7 @@ export const SAR_HQS = [
   { name: 'Sandpiper Coastguard Station', at: [5492, 2764], w: 34, h: 28, wild: true },   // (on the east coast's shore, west of the point)
 ];
 const OPEN = new Set([T.GRASS, T.DIRT, T.SAND, T.FIELD, T.LOT, T.PLAZA]);
-const RES = 32, CLIFF_GAP = 3;
+const RES = 32, CLIFF_GAP = 3, TOWN_GAP = 6;
 
 // every base of SAR_HQS that finds its ground -> [{ poi, building, hangar, pad, at }]
 export function buildSarHqs3(m, H) { return SAR_HQS.map((plan) => buildSarHq3(m, H, plan)).filter(Boolean); }
@@ -33,7 +33,11 @@ export function buildSarHq3(m, H, plan = SAR_HQ) {
   const ok = (x, y) => m.inside(x, y) && m.land[m.idx(x, y)] && OPEN.has(m.tiles[m.idx(x, y)]) && m.bld[m.idx(x, y)] < 0 && !(m.reserve[m.idx(x, y)] & keep) && !m.deck[m.idx(x, y)];
   // (out in the wild: clear of the relief's cliff bands by CLIFF_GAP too - shared/world3-relief.js lays them first)
   const cliffNear = (x0, y0, x1, y1) => { for (let y = y0 - CLIFF_GAP; y < y1 + CLIFF_GAP; y++) for (let x = x0 - CLIFF_GAP; x < x1 + CLIFF_GAP; x++) if (m.inside(x, y) && m.tiles[m.idx(x, y)] === T.WALL) return true; return false; };
-  const fits = (x0, y0) => { for (let y = y0; y < y0 + plan.h; y++) for (let x = x0; x < x0 + plan.w; x++) if (!ok(x, y)) return false; return !plan.wild || !cliffNear(x0, y0, x0 + plan.w, y0 + plan.h); };
+  // (and wholly in the planned spot's own district, TOWN_GAP tiles in: never on a town's ground or up against it - the
+  // Sandpiper Coast's station is a short way from Sandpiper Bay's boardwalk)
+  const home = plan.wild && m.inside(plan.at[0], plan.at[1]) ? m.dist[m.idx(plan.at[0], plan.at[1])] : -1;
+  const ownGround = (x0, y0, x1, y1) => { for (let y = y0 - TOWN_GAP; y < y1 + TOWN_GAP; y++) for (let x = x0 - TOWN_GAP; x < x1 + TOWN_GAP; x++) if (m.inside(x, y) && m.dist[m.idx(x, y)] !== home) return false; return true; };
+  const fits = (x0, y0) => { for (let y = y0; y < y0 + plan.h; y++) for (let x = x0; x < x0 + plan.w; x++) if (!ok(x, y)) return false; return !plan.wild || (!cliffNear(x0, y0, x0 + plan.w, y0 + plan.h) && ownGround(x0, y0, x0 + plan.w, y0 + plan.h)); };
   let at = null;
   for (let d = 0; d <= 240 && !at; d += 2) for (let dy = -d; dy <= d && !at; dy += 2) for (let dx = -d; dx <= d; dx += (Math.abs(dy) === d ? 2 : 2 * d || 2)) if (fits(plan.at[0] + dx, plan.at[1] + dy)) { at = [plan.at[0] + dx, plan.at[1] + dy]; break; }
   if (!at) return null;
@@ -57,7 +61,9 @@ export function buildSarHq3(m, H, plan = SAR_HQ) {
       }
     }
   }
-  if (plan.wild && drive.some((i) => { const x = m.x0 + (i % m.w), y = m.y0 + Math.floor(i / m.w); return cliffNear(x, y, x + 1, y + 1); })) drive.length = 0;   // (up against a cliff: no drive - the helicopters don't need one)
+  // (out in the wild, no drive - the helicopters don't need one - where it would run along a cliff, or leave the base's
+  // district: across a town's ground it paved the boardwalk out from under Sandpiper Bay's rail - or over its paving)
+  if (plan.wild && drive.some((i) => { const x = m.x0 + (i % m.w), y = m.y0 + Math.floor(i / m.w); return m.dist[i] !== home || m.tiles[i] === T.PLAZA || (m.reserve[i] & ~RES) || cliffNear(x, y, x + 1, y + 1); })) drive.length = 0;
   const onDrive = new Set(drive);
   if (H.removeProps) H.removeProps(m, (px, py) => (px >= x0 * TILE && px < x1 * TILE && py >= y0 * TILE && py < y1 * TILE) || (plan.wild && onDrive.has(m.idx(Math.floor(px / TILE), Math.floor(py / TILE)))));
   // the ground: a paved apron, a lawn strip along the front of the HQ
