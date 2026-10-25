@@ -42,7 +42,7 @@ test('World v3: NPC boats only on real water - never a park\'s pond, a plaza\'s 
   for (const v of w2.entities.values()) if (v.kind === K.VEH && v.def.kind === 'boat' && v.ai) assert.ok(boats.waterSize(M, v.x, v.y, 2500) >= 300, `an NPC boat (${v.ai.kind}, ${v.model}) on a pond at (${Math.round(v.x / TILE)}, ${Math.round(v.y / TILE)})`);
 });
 
-test('World v3: a player standing still on a calm street (Midtown) for eight in-game minutes - it stays calm', { timeout: 900000 }, () => {
+test('World v3: a player standing still on a calm street (Midtown) for eight in-game minutes - it stays calm', { timeout: 900000 }, (t0) => {
   const w = new World(M, { npcBudget: 700, throwErrors: true });
   w.loopTime = 120;   // (the morning)
   const { p } = joinPlayer(w);
@@ -84,6 +84,7 @@ test('World v3: a player standing still on a calm street (Midtown) for eight in-
   // off in a panic after every knock, fights spreading, a dozen cars locked at the corner by the station for minutes;
   // after, 8 minutes: none set alight, nobody dead, 46 knocks, no panics or fights, 0.7 cars stuck on average - see
   // docs/devlog-pending/b1b.md)
+  t0.diagnostic(`round the player: ${JSON.stringify(got)}`);   // (the numbers in the report, passing or not)
   assert.ok(got.ignite <= 2, `people set alight: ${JSON.stringify(got)}`);
   assert.ok(got.death <= 4, `deaths: ${JSON.stringify(got)}`);
   assert.ok(got.crash <= 100 && got.explode <= 1, `crashes: ${JSON.stringify(got)}`);
