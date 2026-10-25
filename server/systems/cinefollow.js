@@ -40,7 +40,8 @@ import * as surf from './surf.js';
 const NEAR_PX = 9000;        // "near me": within this of you first
 const RETRY_S = 3;           // nobody doing the kind asked for: looked for again this often
 const START_GAP_S = 60;      // a kind started for the camera at most this often (each viewer)
-const ACTOR_S = 300;         // the camera's own actors keep at it this long at most
+const ACTOR_S = 300;
+const STUCK_S = 8;           // an actor's vehicle no nearer where it's going for this long: it's stuck         // the camera's own actors keep at it this long at most
 const TOUR_TRIES = 6;        // the tour: kinds looked at in one go before it waits for the next look
 const CUT_PX = 900;          // a hand-off further than this is a cut (through black on the page), nearer a glide
 
@@ -219,19 +220,48 @@ function vehicleActor(world, k, model, x, y, a, who, extra = {}, opts = {}) {
   return addActor(world, { k, main: v.id, ids: [v.id, d.id], ...extra });
 }
 
-// a combine harvesting a field: two ripe rows a pass (its header's width), down and back, the stubble behind it
+// a combine harvesting a field: two ripe rows a pass (its header's width), down and back, the stubble behind it - over
+// the stretch of the rows that's crop (World v3's fields are cut by a wandering edge: their rects hold trees and
+// tracks too - farming.js row.ok, a bit a segment), the field nearest you with a long enough one
+const CROP_SEGS = 5;   // at least this many of a row's FARM.segs in a row, crop in every row the combine takes
+function cropRun(F, r0, rows) {
+  let ok = (1 << FARM.segs) - 1;
+  for (let r = r0; r < r0 + rows; r++) ok &= F.rows[r].ok;
+  let best = null;
+  for (let k = 0; k < FARM.segs; k++) {
+    if (!(ok & (1 << k))) continue;
+    let e = k;
+    while (e + 1 < FARM.segs && ok & (1 << (e + 1))) e++;
+    if (!best || e - k > best.k1 - best.k0) best = { k0: k, k1: e };
+    k = e;
+  }
+  return best && best.k1 - best.k0 + 1 >= CROP_SEGS ? best : null;
+}
+export function combinePlan(world, x, y) {
+  const fields = farming.fieldsOf(world).filter((fd) => fd.n >= 2 && fd.len >= 400);
+  fields.sort((a, b) => Math.hypot(a.f.x + a.f.w / 2 - x, a.f.y + a.f.h / 2 - y) - Math.hypot(b.f.x + b.f.w / 2 - x, b.f.y + b.f.h / 2 - y));
+  for (const F of fields) {
+    for (let passes = Math.min(3, Math.floor(F.n / 2)); passes >= 1; passes--) {
+      let pick = null;
+      for (let r0 = 0; r0 + passes * 2 <= F.n; r0++) { const run = cropRun(F, r0, passes * 2); if (run && (!pick || run.k1 - run.k0 > pick.run.k1 - pick.run.k0)) pick = { r0, run }; }
+      if (pick) return { F, passes, ...pick };
+    }
+  }
+  return null;
+}
 function startCombine(world, p) {
-  const at = p.ped, F = farming.fieldsOf(world).filter((fd) => fd.n >= 4).sort((a, b) => Math.hypot(a.f.x + a.f.w / 2 - at.x, a.f.y + a.f.h / 2 - at.y) - Math.hypot(b.f.x + b.f.w / 2 - at.x, b.f.y + b.f.h / 2 - at.y))[0];
-  if (!F || F.len < 400) return null;
-  const passes = Math.min(3, Math.floor(F.n / 2)), r0 = Math.max(0, Math.min(F.n - passes * 2, Math.floor((F.n - passes * 2) / 2)));
+  const P = combinePlan(world, p.ped.x, p.ped.y);
+  if (!P) return null;
+  const { F, passes, r0, run } = P, seg = F.len / FARM.segs, head = VEHICLES.combine.L / 2 - 12;   // (its header: that far ahead of its middle)
   for (let r = r0; r < r0 + passes * 2; r++) { const row = F.rows[r]; row.s = farming.ROW.RIPE; row.g = 0; row.m = 0; }
   F.dirty = true;
+  const lo = run.k0 * seg, hi = (run.k1 + 1) * seg;
   const f = F.f, side = (r) => (F.v ? f.x : f.y) + (r + 1) * FARM.rowW, pt = (lat, s) => (F.v ? { x: lat, y: f.y + s } : { x: f.x + s, y: lat });
   const route = [];
   for (let i = 0; i < passes; i++) {
-    const lat = side(r0 + i * 2), fwd = i % 2 === 0, s0 = fwd ? 70 : F.len - 70, s1 = fwd ? F.len - 70 : 70;
+    const lat = side(r0 + i * 2), fwd = i % 2 === 0, s0 = fwd ? lo + 10 : hi - 10, s1 = fwd ? hi - head - 8 : lo + head + 8;
     route.push({ ...pt(lat, s0), work: false }, { ...pt(lat, s1), work: true });
-    if (i < passes - 1) route.push({ ...pt(lat + FARM.rowW, fwd ? F.len - 8 : 8), work: false });
+    if (i < passes - 1) route.push({ ...pt(lat + FARM.rowW, fwd ? Math.min(F.len - 8, s1 + 70) : Math.max(8, s1 - 70)), work: false });
   }
   const a0 = Math.atan2(route[1].y - route[0].y, route[1].x - route[0].x);
   return vehicleActor(world, 'combine', 'combine', route[0].x, route[0].y, a0, 'farmer', { route, wi: 1 }, { paint: 0 });
@@ -287,7 +317,13 @@ function stepDriven(world, A, v) {
   if (!d || d.dead || d.player || v.ai?.kind !== 'cine') { A.done = true; if (v.ai && v.ai.kind === 'cine') v.ai = null; v.despawnable = true; return; }   // (someone took it: theirs now)
   const R = A.route;
   while (A.wi < R.length - 1 && Math.hypot(R[A.wi].x - v.x, R[A.wi].y - v.y) < (A.k === 'combine' ? 40 : 70)) A.wi++;
-  const wp = R[A.wi], left = Math.hypot(wp.x - v.x, wp.y - v.y);
+  let wp = R[A.wi], left = Math.hypot(wp.x - v.x, wp.y - v.y);
+  // getting no nearer for a while (up against something): on to the next point - or, at the last, done
+  if (A.bestWi !== A.wi || left < A.best - 20) { A.bestWi = A.wi; A.best = left; A.bestAt = world.time; }
+  else if (world.time - A.bestAt > STUCK_S) {
+    if (A.wi >= R.length - 1) { A.done = true; v.input = { throttle: 0, steer: 0, hb: true }; return; }
+    A.wi++; wp = R[A.wi]; left = Math.hypot(wp.x - v.x, wp.y - v.y);
+  }
   if (A.wi >= R.length - 1 && left < 60) { A.done = true; v.input = { throttle: 0, steer: 0, hb: true }; return; }
   if (A.k === 'combine') {
     driveToward(world, v, wp.x, wp.y, wp.work ? 95 : 60, { ignoreObstacles: true });
@@ -450,7 +486,14 @@ function watch(world, p) {
 
 export function update(world, dt) {
   stepActors(world, dt);
-  if (world.tick % 5 === 2) for (const p of world.players.values()) if (p.cineF) { try { watch(world, p); } catch (e) { world.reportError('cinefollow', e); p.cineF = null; tell(p, { off: 1 }); } }
+  // (every few ticks: still at it? - and straight away when who it's on was taken away or went down this tick)
+  for (const p of world.players.values()) {
+    const C = p.cineF;
+    if (!C) continue;
+    const e = C.sub && world.get(C.sub.id);
+    if (world.tick % 5 !== 2 && !(C.sub && (!e || e.removed || e.dead))) continue;
+    try { watch(world, p); } catch (err) { world.reportError('cinefollow', err); p.cineF = null; tell(p, { off: 1 }); }
+  }
   if (world.tick % 40 === 7) tidyActors(world);
 }
 export function leave(p) { p.cineF = null; }
