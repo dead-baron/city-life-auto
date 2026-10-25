@@ -13,6 +13,36 @@
 import { T, TILE } from '../shared/constants.js';
 import { teleportPlaces } from './devtp.js';
 
+// its look (moved here from client/style.css, 2026-10-24: only a page that spectates loads it), on the game's tokens
+const CSS = `body.spectating #hud > :not(#hud-msg), body.spectating #hud-msg > :not(#toasts), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
+body.spectating #hud-msg { display: contents; }
+body.spectating #toasts { position: absolute; left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
+body.spectating #view { filter: none !important; cursor: grab; }
+#spec-pad { position: absolute; inset: 0; z-index: 10; touch-action: none; cursor: grab; }
+#spec-pad.drag { cursor: grabbing; }
+#spec { position: absolute; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top)); z-index: 11; width: 250px; max-height: calc(100vh - 20px); overflow-y: auto; padding: var(--s2) 10px; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); color: var(--cream); font: 500 var(--fs-3)/1.25 var(--ui); }
+#spec h2 { margin: 0 0 var(--s1); font: 700 var(--fs-4) var(--pixel); color: var(--gold); }
+#spec .sp-read { margin-bottom: 6px; color: var(--heat); font: 400 var(--fs-2) var(--pixel); }
+#spec .sp-read small { display: block; color: var(--dim); font: 500 var(--fs-2) var(--ui); }
+#spec label { display: flex; align-items: center; gap: 7px; padding: 2px 0; cursor: pointer; }
+#spec label input { width: 18px; height: 18px; margin: 0; accent-color: var(--gold); }
+#spec .sp-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: var(--s2) 0 6px; }
+#spec .sp-btns button, #spec.min .sp-mini { min-height: 36px; padding: 0 var(--s1); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 700 var(--fs-2) var(--ui); cursor: pointer; }
+#spec .sp-btns button:hover, #spec .sp-btns button.pfocus { border-color: var(--gold); }
+#spec .sp-btns .sp-exit { border-color: var(--danger); color: var(--danger); }
+#spec .sp-key { display: grid; grid-template-columns: 1fr 1fr; gap: 2px var(--s2); margin: var(--s1) 0; font-size: var(--fs-2); }
+#spec .sp-key span { display: flex; align-items: center; gap: 5px; }
+#spec .sp-key i { width: 12px; height: 12px; flex: none; border: 1px solid var(--ink); }
+#spec .sp-hint { margin: 6px 0 0; color: var(--dim); font-size: var(--fs-2); }
+#spec.min { width: auto; padding: 6px var(--s2); }
+#spec.min > :not(.sp-mini) { display: none; }
+#spec .sp-mini { display: none; }
+#spec.min .sp-mini { display: block; }
+body.touch #spec :is(.sp-btns button, .sp-mini) { min-height: var(--tap); }
+body.portrait #spec { width: 210px; }
+@media (max-height: 500px) { #spec { width: 215px; padding: 6px var(--s2); } #spec h2 { font-size: var(--fs-3); } #spec label { padding: 0; } #spec .sp-btns { margin: 5px 0 var(--s1); gap: var(--s1); } }`;
+if (typeof document !== 'undefined') document.head.appendChild(Object.assign(document.createElement('style'), { textContent: CSS }));
+
 export const SPEC_LAYERS = [
   ['labels', 'Names (districts, streets, places)'], ['grid', 'Tile grid'], ['schematic', 'Schematic: flat shapes'],
 ];
@@ -160,7 +190,7 @@ export function createSpectator({ map, players, mobile }) {
     }
     // tile coordinates along the edges, so a drawing can be matched back to the map
     const lab = step * 10;
-    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '600 11px Rubik, sans-serif'; g.textBaseline = 'top'; g.textAlign = 'left';
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = '600 12px "Barlow Condensed", sans-serif'; g.textBaseline = 'top'; g.textAlign = 'left';
     for (let tx = Math.ceil(view.x0 / TILE / lab) * lab; tx * TILE < view.x1; tx += lab) g.fillText(String(tx), Math.round(ox + tx * TILE * z) + 3, 3);
     for (let ty = Math.ceil(view.y0 / TILE / lab) * lab; ty * TILE < view.y1; ty += lab) g.fillText(String(ty), 3, Math.round(oy + ty * TILE * z) + 3);
     g.restore();
@@ -171,7 +201,7 @@ export function createSpectator({ map, players, mobile }) {
     places ||= teleportPlaces(map);
     g.save();
     g.textAlign = 'center'; g.textBaseline = 'middle';
-    const text = (s, x, y, size, col) => { g.font = `${size}px Anton, Impact, sans-serif`; g.lineWidth = Math.max(2, size / 5); g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y); };
+    const text = (s, x, y, size, col) => { g.font = `700 ${size}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.lineWidth = Math.max(2, size / 5); g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y); };
     // street names along the middle of each named stretch (once per name per ~1.5 km)
     if (z >= 0.1) {
       if (!streets) {
@@ -189,7 +219,7 @@ export function createSpectator({ map, players, mobile }) {
         }
       }
       const fs = Math.max(9, Math.min(16, 40 * z));
-      g.font = `600 ${fs}px Rubik, sans-serif`;
+      g.font = `600 ${fs}px "Barlow Condensed", sans-serif`;
       for (const s of streets) {
         if (s.x < view.x0 || s.x > view.x1 || s.y < view.y0 || s.y > view.y1) continue;
         g.save(); g.translate(ox + s.x * z, oy + s.y * z); g.rotate(s.a);
@@ -199,7 +229,7 @@ export function createSpectator({ map, players, mobile }) {
     }
     // business names on their buildings when close enough to read
     if (z >= 0.3) {
-      g.font = '600 11px Rubik, sans-serif';
+      g.font = '600 12px "Barlow Condensed", sans-serif';
       for (const b of map.buildings) {
         if (!b || !b.business || b.gone) continue;
         const x = (b.tx + b.tw / 2) * TILE, y = (b.ty + b.th / 2) * TILE;
@@ -220,7 +250,7 @@ export function createSpectator({ map, players, mobile }) {
   function drawPlayers(g, z, ox, oy) {
     const list = players() || [];
     g.save();
-    g.font = '700 12px Rubik, sans-serif'; g.textAlign = 'center';
+    g.font = '700 12px "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     for (const q of list) {
       if (q.x === undefined) continue;
       const x = ox + q.x * z, y = oy + q.y * z;

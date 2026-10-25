@@ -145,19 +145,21 @@ function pick(H, o) {
 let SM = null;
 const CSS = `
 #d-map { position: absolute; z-index: 16; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: min(46vw, 600px); height: min(56vh, 460px);
-  display: flex; flex-direction: column; box-sizing: border-box; pointer-events: auto; background: var(--panel-bg, #0d1630); border: 2px solid var(--rim, #e2bd57); border-radius: 8px;
-  box-shadow: 0 0 0 2px var(--ink, #070b16), 0 8px 24px rgba(0,0,0,.5); color: var(--cream, #f6ecd0); font: 13px var(--pixel, monospace); overflow: hidden; }
+  display: flex; flex-direction: column; box-sizing: border-box; pointer-events: auto; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2);
+  box-shadow: var(--shadow); color: var(--cream); font: 600 var(--fs-2) var(--ui); overflow: hidden; }
 #d-map.hidden { display: none; }
-#d-map header { display: flex; align-items: center; gap: 8px; padding: 4px 8px; font-weight: 700; letter-spacing: 1px; }
+#d-map header { display: flex; align-items: center; gap: var(--s2); padding: var(--s1) var(--s2); background: var(--navy); border-bottom: 2px solid var(--gold); font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; }
 #d-map header span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#d-map header small { font-weight: 400; letter-spacing: 0; color: #c9d0e4; }
-#d-map header button { flex: none; font: 13px var(--pixel, monospace); color: var(--cream, #f6ecd0); background: #0b1226; border: 1px solid rgba(226,189,87,.6); border-radius: 5px; padding: 1px 8px; cursor: pointer; }
+#d-map header small { font: 500 var(--fs-2) var(--ui); letter-spacing: 0; color: var(--dim); }
+#d-map header button { flex: none; min-height: 30px; padding: 0 10px; font: 600 var(--fs-2) var(--ui); color: var(--cream); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r2); cursor: pointer; }
 #d-map canvas { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; cursor: crosshair; }
 #d-map .dm-list { display: flex; gap: 6px; overflow-x: auto; padding: 6px 8px; flex: none; scrollbar-width: thin; }
-#d-map .dm-list button { flex: none; font: 12px var(--pixel, monospace); color: #fff; background: #0b1226; border: 2px solid rgba(226,189,87,.35); border-radius: 6px; padding: 4px 8px; cursor: pointer; white-space: nowrap; }
-#d-map .dm-list button.on { border-color: #ffd34a; background: rgba(226,189,87,.28); }
-#d-map .dm-list button.near::after { content: ' · nearest'; color: #7dffa8; }
-#d-map .dm-list button small { color: #c9d0e4; }
+#d-map .dm-list button { flex: none; min-height: 36px; padding: 0 10px; font: 600 var(--fs-2) var(--ui); color: var(--cream); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r2); cursor: pointer; white-space: nowrap; }
+#d-map .dm-list button.on { border-color: var(--gold); background: var(--gold); color: var(--ink); }
+#d-map .dm-list button.near::after { content: ' · nearest'; color: var(--money); }
+#d-map .dm-list button.on.near::after { color: var(--ink); }
+#d-map .dm-list button small { color: var(--dim); }
+#d-map .dm-list button.on small { color: var(--ink); }
 @media (max-aspect-ratio: 1/1) { #d-map { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); width: auto; height: 46vh; } }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { #d-map { top: 8px; right: 8px; width: 46vw; height: calc(100vh - 128px); } }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { .touch #d-map { height: calc(100vh - 182px); } }   /* (clear of the panel's 44 px buttons) */
@@ -294,7 +296,7 @@ function render(H) {
   for (const o of [SM.near, ch]) {
     if (!o || o.x === undefined) continue;
     const [x, y] = P(o.x, o.y), lab = (o === ch ? '' : 'NEAREST · ') + o.label;
-    g.font = '12px "CLA Pixel", monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = '14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(lab).width + 12, lx = Math.max(w / 2 + 2, Math.min(c.clientWidth - w / 2 - 2, x)), ly = o === ch ? y - 26 : y + 24;
     g.fillStyle = 'rgba(12,18,34,.9)'; g.fillRect(lx - w / 2, ly - 9, w, 18);
     g.fillStyle = o === ch ? '#ffd34a' : '#7dffa8'; g.fillText(lab, lx, ly + 1);

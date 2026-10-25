@@ -29,7 +29,7 @@ function mapIcon(g, k, x, y, big) {
     g.fillStyle = '#ffb43c'; g.beginPath(); g.moveTo(0, -7); g.lineTo(7, -0.5); g.lineTo(5, -0.5); g.lineTo(5, 6); g.lineTo(-5, 6); g.lineTo(-5, -0.5); g.lineTo(-7, -0.5); g.closePath(); g.fill(); g.stroke();
     g.fillStyle = '#5a2e08'; g.fillRect(-1.5, 1.5, 3, 4.5);
   } else if (k === 'job') {
-    g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3;
+    g.font = '700 16px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3;
     g.strokeText('$', 0, 1); g.fillStyle = '#3ddc5a'; g.fillText('$', 0, 1);
   } else if (k === 'car') {
     g.fillStyle = '#45b8ff'; g.beginPath(); g.moveTo(-7, 4); g.lineTo(-7, 0); g.lineTo(-5, -1); g.lineTo(-3.5, -5); g.lineTo(3.5, -5); g.lineTo(5, -1); g.lineTo(7, 0); g.lineTo(7, 4); g.closePath(); g.fill(); g.stroke();
@@ -354,7 +354,7 @@ export class HUD {
     this.toastEls.push(el);
     while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); clearInterval(old._pg); old.remove(); }
     clearInterval(el._pg); el._pg = 0; el.classList.remove('paged');
-    const gone = () => { clearInterval(el._pg); el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); };
+    const gone = () => { clearInterval(el._pg); this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
     el._t = setTimeout(gone, Math.min(6500, 2400 + shown.length * 45));
     // (too long for its box: paged, notepages.js loaded the first time one is - not with the page)
     if (tx.scrollHeight > tx.clientHeight + 1) (this.notesP ||= import('./notepages.js')).then((NP) => { if (!el.isConnected || tx.textContent !== shown) return; clearTimeout(el._t); el._t = setTimeout(gone, NP.layNote(el, tx, shown)); }).catch(() => { this.notesP = null; });
@@ -430,7 +430,7 @@ export class HUD {
       g.strokeStyle = '#ffd34a'; g.lineWidth = big ? 4 : 2.6; g.stroke();
     }
     // POIs
-    g.font = `bold ${big ? 14 : 9}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map);
     for (const p of this.map.pois) {
       const icon = p && POI_ICON[p.kind];

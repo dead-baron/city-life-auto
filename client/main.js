@@ -1312,7 +1312,7 @@ function drawArt2Marks(F) {
   fx.drawTexts(g);
   for (const v of F.vehs) if (v.d.fs) {
     const txt = `$${v.d.fs.toLocaleString()}`;
-    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     const w = g.measureText(txt).width + 10;
     g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
@@ -2638,7 +2638,7 @@ function drawEventArrows(g, list, z, now) {
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
       // (U17: a speech bubble - the navy plate, a light edge, its tail down to them - with a paw at its left)
       const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 24 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x, u = 1 / z;   // (clear above the head: drawWorldLabels)
-      g.font = `700 ${13 * u}px "CLA Pixel", Rubik, sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.font = `700 ${13 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'left'; g.textBaseline = 'middle';
       const tw = g.measureText(t).width + 34 * u, bx = ox - tw / 2;
       tagPlate(ox, oy, tw, u);
       g.fillStyle = '#ffb43c'; g.beginPath(); g.ellipse(bx + 14 * u, oy + 3 * u, 4.2 * u, 3.4 * u, 0, 0, 6.28);   // (the paw: its pad and four toes)
@@ -2662,7 +2662,7 @@ function drawEventArrows(g, list, z, now) {
       g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.7, -s * 0.8); g.lineTo(-s * 0.3, 0); g.lineTo(-s * 0.7, s * 0.8); g.closePath(); g.fill(); g.stroke();
       g.restore();
       const txt = `${kind.label} · ${Math.round(d / 32)}m`;
-      g.font = `600 ${12 / z}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.font = `600 ${12 / z}px "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
       const ly = (Math.sin(a) > 0 ? 1 : -1) * 22 / z;
       g.lineWidth = 3 / z; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(txt, 0, ly);
       g.fillStyle = kind.color; g.fillText(txt, 0, ly);
@@ -3684,7 +3684,7 @@ function drawBays(view) {
     g.fillStyle = '#7a7f88'; g.fillRect(x - 2, cy, w + 4, ch);
     g.fillStyle = 'rgba(0,0,0,.25)';
     for (let yy = cy + 3; yy < cy + ch; yy += 6) g.fillRect(x - 2, yy, w + 4, 2);
-    g.fillStyle = '#ffd400'; g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.fillStyle = '#ffd400'; g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     if (k > 0.7) g.fillText('SPRAY & GO', x + w / 2, cy + ch / 2 + 4);
   }
 }
@@ -3818,7 +3818,7 @@ function drawBuoys(view, now) {
       g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(c.x, c.y + 4, 14, 6, 0, 0, 6.28); g.fill();
       g.fillStyle = k % 2 ? '#ffffff' : '#e8382b'; g.beginPath(); g.arc(c.x, c.y + bob(k), 9, 0, 6.28); g.fill();
       g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = 'bold 10px monospace'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
+      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
     });
     const s = race.start;
     if (!inView(s)) continue;
@@ -3827,9 +3827,9 @@ function drawBuoys(view, now) {
     g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
     g.fillStyle = '#1b2333'; g.fillRect(s.x - 1, s.y - 30, 2, 28);
     for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
-    g.font = 'bold 12px monospace'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
     g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
-    g.font = 'bold 10px monospace'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
+    g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
   }
 }
 
@@ -3877,7 +3877,7 @@ function drawClubShutter(gt, k) {
   if (h > 1) {
     g.fillStyle = '#8a8d94'; g.fillRect(x0, y0, w, h);
     g.fillStyle = 'rgba(0,0,0,.25)'; for (let yy = 2; yy < h; yy += 3) g.fillRect(x0, y0 + yy, w, 1);
-    if (k < 0.2) { g.fillStyle = '#ff4fd8'; g.font = 'bold 7px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('OPENS AT DUSK', gt.x, gt.y); }
+    if (k < 0.2) { g.fillStyle = '#ff4fd8'; g.font = '700 7px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('OPENS AT DUSK', gt.x, gt.y); }
   }
   g.restore();
 }
@@ -4207,12 +4207,12 @@ function drawVehicleEnt(v, now, dt) {
   g.restore();
   if (v.d.fs) { // dealership price tag on the windscreen
     const txt = `$${v.d.fs.toLocaleString()}`;
-    g.font = 'bold 12px monospace'; g.textAlign = 'center';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     const w = g.measureText(txt).width + 10;
     g.fillStyle = '#fff8d0'; g.fillRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.strokeStyle = '#c8262b'; g.lineWidth = 2; g.strokeRect(v.rx - w / 2, v.ry - 9, w, 18);
     g.fillStyle = '#c8262b'; g.fillText(txt, v.rx, v.ry + 4);
-    g.font = 'bold 8px monospace'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
+    g.font = '700 8px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#1b2333'; g.fillText('FOR SALE', v.rx, v.ry - 12);
   }
   // riders on bikes and jet skis sit in the open: driver up front, a passenger behind; in an open boat at its seats
   // (def.crew: the driver's, the one beside it, then the back seats in turn - task #420)
@@ -4687,7 +4687,7 @@ function drawAtmMarks(view, now) {
     g.fillStyle = 'rgba(61,220,132,.25)'; g.beginPath(); g.arc(a.x, y, r + 5, 0, 6.28); g.fill();
     g.fillStyle = '#17803f'; g.beginPath(); g.arc(a.x, y, r, 0, 6.28); g.fill();
     g.strokeStyle = '#7ff0a8'; g.lineWidth = target ? 2.5 : 1.5; g.stroke();
-    g.fillStyle = '#eafff1'; g.font = `800 ${target ? 20 : 11}px Rubik, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#eafff1'; g.font = `700 ${target ? 20 : 12}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('$', a.x, y + 1);
     g.restore();
   }
@@ -4812,7 +4812,7 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
     g.strokeStyle = c; g.globalAlpha = 0.95; g.lineWidth = 2.5 * u; g.stroke();
   }
   g.setLineDash([]); g.globalAlpha = 1;
-  g.font = `700 ${13 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${13 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const ty = y - hh - 26 * u;
   tagPlate(x, ty, g.measureText(plate).width + 20 * u, u);
   g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
@@ -4827,7 +4827,7 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';
-  g.font = `bold ${fs}px monospace`;
+  g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
     const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
@@ -4836,16 +4836,16 @@ function drawWorldLabels(peds, vehs, now, z) {
     if (p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
-      g.fillStyle = '#000'; g.font = `bold ${30 / z}px monospace`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
+      g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
       g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
-      g.font = `bold ${fs}px monospace`;
+      g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     }
     if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
       const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
-      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `bold ${11 / z}px monospace`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `bold ${fs}px monospace`; }
+      if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;

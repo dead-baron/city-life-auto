@@ -169,7 +169,7 @@ export function drawStarView(g, w, h, st, t) {
     g.fillRect(x0 + sx * k, y0 + sy * k, k, k);
   }
   // tonight's sight, named
-  g.font = `${Math.max(14, Math.round(size / 22))}px Anton, "Barlow Condensed", sans-serif`;
+  g.font = `700 ${Math.max(14, Math.round(size / 22))}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   g.textAlign = 'center';
   g.fillStyle = 'rgba(220,226,255,0.85)';
   g.fillText(NAMES[st.what] || '', w / 2, y0 + size - size * 0.08);

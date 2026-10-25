@@ -32,7 +32,7 @@ function person(g, app, x, y, a, scale = 2.2) {
   g.restore();
 }
 function label(g, text, x, y, c = '#fff', size = 13) {
-  g.font = `bold ${size}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${size}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(text, x + 1, y + 1);
   g.fillStyle = c; g.fillText(text, x, y);
 }

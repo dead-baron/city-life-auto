@@ -170,29 +170,28 @@ export function makeDirector(S, api) {
   const css = document.createElement('style');
   css.textContent = `body.cine-clean #hud, body.cine-clean #touch, body.cine-clean #wheel, body.cine-clean #menu, body.cine-clean #toasts { display: none !important; }
 body.cine-clean #view, body.cine-clean #world { cursor: none; }
-.cine-bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 60; pointer-events: none; transition: height .5s ease; }
-#cine-fade { position: fixed; inset: 0; background: #000; opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
-#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; background: rgba(14,16,22,.94); color: #e8eaf0; font: 12px/1.35 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
-#cine-panel h3 { margin: 10px 0 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9aa6c0; }
-#cine-panel .row { display: flex; flex-wrap: wrap; gap: 4px; }
-#cine-panel button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 4px 7px; font: inherit; cursor: pointer; }
-#cine-panel button.on { background: #ffd23a; color: #1a1a1a; border-color: #ffd23a; }
+.cine-bar { position: fixed; left: 0; right: 0; height: 0; background: var(--ink); z-index: 60; pointer-events: none; transition: height .5s ease; }
+#cine-fade { position: fixed; inset: 0; background: var(--ink); opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
+#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; padding: 10px var(--s3); background: var(--panel-bg); color: var(--cream); font: 600 var(--fs-2)/1.35 var(--ui); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter var(--t2) var(--ease); }
+#cine-panel h3 { margin: var(--s3) 0 var(--s1); font: 700 var(--fs-1) var(--pixel); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+#cine-panel .row { display: flex; flex-wrap: wrap; gap: var(--s1); }
+#cine-panel button, #cine-ctl button { min-height: 32px; min-width: 32px; padding: 0 var(--s2); background: var(--navy2); color: var(--cream); border: 1px solid var(--edge); border-radius: var(--r1); font: inherit; cursor: pointer; transition: background var(--t1) var(--ease); }
+#cine-panel button:hover, #cine-ctl button:hover { border-color: var(--gold); }
+#cine-panel button.on, #cine-ctl button.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 #cine-panel .sc { display: block; width: 100%; text-align: left; margin: 2px 0; }
-#cine-panel .sc small { color: #9aa6c0; }
-#cine-panel .tip { color: #9aa6c0; margin: 6px 0 0; }
+#cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
+#cine-panel .tip { margin: 6px 0 0; }
 #cine-panel input[type=range] { width: 100%; }
-#cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: 8px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; background: rgba(14,16,22,.82); color: #e8eaf0; font: 12px/1.3 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 12px; padding: 7px 10px; transition: opacity .4s ease; touch-action: none; user-select: none; }
-#cine-ctl button, #cine-panel .dirs button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 5px 8px; font: inherit; cursor: pointer; min-width: 30px; }
-#cine-ctl button.on { background: #ffd23a; color: #1a1a1a; border-color: #ffd23a; }
+#cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: var(--s2); max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; padding: 7px 10px; background: var(--glass); color: var(--cream); font: 600 var(--fs-2)/1.3 var(--ui); border: 2px solid var(--gold-a); border-radius: var(--r2); transition: opacity .4s ease; touch-action: none; user-select: none; }
 #cine-ctl .lbl { min-width: 56px; text-align: center; }
-#cine-ctl .who { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ffd23a; }
-.cine-dial { position: relative; width: 58px; height: 58px; border-radius: 50%; border: 2px solid #4a5366; background: radial-gradient(circle, #262c38 0 30%, #1a1e27 31%); cursor: grab; flex: none; touch-action: none; }
-.cine-dial i { position: absolute; left: 50%; top: 50%; width: 3px; height: 24px; margin-left: -1.5px; background: #ffd23a; border-radius: 2px; transform-origin: 50% 0; }
-.cine-dial b { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ffd23a; }
+#cine-ctl .who { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gold); }
+.cine-dial { position: relative; flex: none; width: 58px; height: 58px; border-radius: var(--r3); border: 2px solid var(--gold-a); background: radial-gradient(circle, var(--navy3) 0 30%, var(--navy) 31%); cursor: grab; touch-action: none; }
+.cine-dial i { position: absolute; left: 50%; top: 50%; width: 3px; height: 24px; margin-left: -1.5px; background: var(--gold); border-radius: var(--r1); transform-origin: 50% 0; }
+.cine-dial b { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: var(--r3); background: var(--gold); }
 .cine-dial.sm { width: 34px; height: 34px; } .cine-dial.sm i { height: 13px; }
 #cine-panel .dirs { display: grid; grid-template-columns: repeat(3, 34px); gap: 3px; }
-.touch #cine-panel button, .touch #cine-ctl button { min-width: 44px; min-height: 44px; }
-.touch #cine-panel .dirs { grid-template-columns: repeat(3, 44px); }
+.touch #cine-panel button, .touch #cine-ctl button { min-width: var(--tap); min-height: var(--tap); }
+.touch #cine-panel .dirs { grid-template-columns: repeat(3, var(--tap)); }
 .touch #cine-ctl { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; max-width: min(320px, calc(50vw - 16px)); justify-content: flex-end; }
 .touch #cine-ctl .who { max-width: 100%; }
 body.touch.cine-bar #tbtns, body.touch.cine-bar #stick-r, body.touch.cine-bar #firetog, body.dead #cine-ctl { display: none !important; }`;
