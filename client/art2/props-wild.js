@@ -433,8 +433,9 @@ export function waterfall(w = 40, h = 120, seed = 1, opt = {}) {
   G.ax = cx; G.ay = foot;
   const Wt = ramp('#4a94b8', 7, 3, { dark: 0.5, light: 0.8, shift: 0.1 });
   for (let y = 0; y <= h; y++) {
-    const t = y / h, half = w / 2 * (1 + t * 0.15);
-    for (let x = Math.floor(cx - half); x <= cx + half; x++) {
+    const t = y / h, hl = w / 2 * (1 + t * 0.15) + (vnoise(y, 0, 9, seed) - 0.5) * w * 0.2, hr = w / 2 * (1 + t * 0.15) + (vnoise(y, 5, 9, seed) - 0.5) * w * 0.2, half = (hl + hr) / 2;   // (notes 2: its edges ragged, its brink uneven, a rock splitting it near the top)
+    for (let x = Math.floor(cx - hl); x <= cx + hr; x++) {
+      if (y < vnoise(x, 3, 6, seed) * 4 || (w >= 24 && t < 0.35 - Math.abs(x - cx - w * 0.12) * 0.08 && Math.abs(x - cx - w * 0.12) < 2.5)) continue;
       const u = (x - cx) / half, col = Math.floor(x * 0.7 + hash(x >> 1, 0, seed) * 3), str = hash(col, Math.floor((y + hash(col, 1, seed) * 40) / (6 + hash(col, 2, seed) * 14)), seed);
       let k = 0.5 + (str > 0.4 ? 0.32 : 0) + (str > 0.75 ? 0.2 : 0) - Math.abs(u) * 0.15 + t * 0.12;
       if (y < 3) k = 0.95 - y * 0.08;

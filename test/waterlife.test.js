@@ -157,6 +157,30 @@ test('salmon hold in the white water under a falls and leap at it; bluegill and 
   for (const f of life) { assert.equal(cls(f.x, f.y), 1, `the ${f.s} in the pool's water`); assert.ok(Math.hypot(f.x - tp.x, f.y - tp.y) < 80, `the ${f.s} in its pool`); }
 });
 
+// notes 2: "I'd like to see them eventually make it up the waterfall and make it to the next pool as if they're really
+// travelling upstream" - some of the salmon's leaps carry them up the face and into the water above, and on upstream
+test('salmon at a falls: some make it up the face into the water above it, and swim on upstream', () => {
+  const fa = waterView('falls', 2);
+  const wl = new WaterLife(2), V = view(fa.x, fa.y);
+  let climbing = 0, moved = 0;
+  const track = new Map();
+  for (let now = 0, i = 0; i < 150 * 30; i++, now += 1 / 30) {
+    wl.update(M, V, now, 1 / 30, [], [], ENV);
+    for (const f of wl.fish) {
+      if (f.s !== 'salmon') continue;
+      if (f.air >= 0 && f.climb) { climbing++; assert.ok(f.az >= 0, 'up the face in front of the falls'); }
+      if (f.mig) { const t = track.get(f); if (!t) track.set(f, { y: f.y }); else if (t.y - f.y > 20 && !t.done) { t.done = true; moved++; } } else track.delete(f);
+    }
+  }
+  assert.ok(wl.n.up >= 1 && climbing > 0, `some made it over (${wl.n.up})`);
+  for (const u of wl.ups) {
+    const q = wl.falls.reduce((b, o) => (!b || Math.abs(o.x - u.x) + Math.abs(o.y - u.y) < Math.abs(b.x - u.x) + Math.abs(b.y - u.y) ? o : b), null);
+    assert.ok(u.y < q.y - q.h, 'landing above the falls');
+    assert.ok(cls(u.x, u.y) > 0 && cls(u.x, u.y) === u.c, 'in the water up there');
+  }
+  assert.ok(moved >= 1, `and on upstream (${moved})`);
+});
+
 test("the renderer's glue: who's about from the frame, the bobbers from the fishing view, a step and a frame drawn", () => {
   const at = waterView('lake') || waterView('shore');
   const made = new Map(), decals = [];
