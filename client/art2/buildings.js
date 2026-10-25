@@ -26,6 +26,8 @@
 import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
+import { DOOR_COLS } from '../../shared/doors.js';
+import { dressFacade } from './facadedress.js';
 
 const S_N = [0, 1, 0], UP = [0, 0, 1];
 // ramp() is pure but not free, and the painters below call it per pixel: memoise the plain calls
@@ -94,7 +96,7 @@ const GLASS_WARM = ramp('#4a4038', 6, 3);     // glass with a warm room behind i
 // a sash window: frame, two panes with a reflection streak (or warm light when lit), a curtain
 function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
   const fr = opt.frame || MAT.metalDark, warm = hash(x0, y0, seed) > 0.22;
-  const curtain = hash(x0, y0, seed + 3);
+  const curtain = hash(x0, y0, seed + 3), thing = hash(x0, y0, seed + 9);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const X = x0 + x, Y = y0 + y;
     if (!G.inside(X, Y)) continue;
@@ -111,8 +113,15 @@ function sash(G, x0, y0, w, h, lit, seed, opt = {}) {
       const e = warm ? [255, 200, 120] : [150, 210, 255];
       glow(G, X, Y, [e[0], e[1], e[2], 90 + (y / h) * 60]);
     } else c = step(MAT.glassDark, 0.3 + (streak ? 0.45 : 0) + (y < 3 ? 0.18 : 0), X, Y, 0.4);
-    // curtains drawn to one side
-    if (curtain > 0.5 && (curtain > 0.75 ? x < 3 : x > w - 4)) c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3);
+    // curtains drawn to one side (or both: open in the middle)
+    if (curtain > 0.5 && (curtain > 0.93 ? x < 3 || x > w - 4 : curtain > 0.75 ? x < 3 : x > w - 4)) c = step(curtain > 0.85 ? ramp('#c86a6a', 5, 2) : ramp('#e0d8c8', 5, 2), lit ? 0.75 : 0.45, X, Y, 0.3);
+    // what's in the window (facadedress.js has the rest of the dressing): blinds half down, a plant, a cat on the sill,
+    // a lamp, a flag or a poster stuck to the glass
+    else if (thing < 0.14 && y < h * 0.45 && y % 3) c = step(ramp('#e8e2d2', 5, 2), lit ? 0.8 : 0.5, X, Y, 0.3);
+    else if (thing < 0.24 && y > h - 7 && Math.abs(x - w / 2) < (y > h - 3 ? 2 : 3 + (x & 1))) c = y > h - 3 ? MAT.terracotta[3] : MAT.leaf[2 + ((x + y) & 3)];
+    else if (thing < 0.31 && y > h - 7 && x > 1 && x < 7 && !(y === h - 7 && (x === 3 || x === 4)) && !(y < h - 4 && x > 5)) c = [30, 26, 30];
+    else if (thing < 0.38 && x > w - 7 && x < w - 2 && (y > h - 4 || (y > h - 10 && y < h - 6))) c = y > h - 4 ? [60, 50, 44] : [250, 220, 160];
+    else if (thing < 0.44 && y > 2 && y < 8 && x > 1 && x < 9) c = thing < 0.41 ? [[200, 50, 50], [240, 240, 236], [50, 80, 160]][Math.floor((y - 3) / 2) % 3] : [226, 190, 80];
     setC(G, X, Y, c);
     G.flag[Y * G.w + X] |= F_GLASS;
   }
@@ -307,6 +316,7 @@ export function makeBuilding(spec) {
   const WIN = spec.win || 'even';
   let bay = null;
   if (WIN === 'bay' && floors > 1 && w >= 110 && style !== 'glass') { const bw = w >= 220 ? 62 : 50; bay = [Math.round(w / 2 - bw / 2), bw]; }
+  const WL = [];   // (the upper floors' windows, for the dressing: facadedress.js)
   for (let f = 1; f < floors && style !== 'glass' && !spec.motel; f++) {
     const base = gH + (f - 1) * FLOOR;
     let ww = style === 'brick' ? 18 : 16, wh = style === 'brick' ? 30 : 26, gap = style === 'brick' ? 20 : 22;
@@ -327,6 +337,7 @@ export function makeBuilding(spec) {
       const py = fy(base + 12 + wh);
       const lit = hash(i, f, seed + 13) < night * 0.75 + (night > 0 ? 0.08 : 0);
       if (spec.boarded && hash(i, f, seed + 41) < spec.boarded) { boards(G, px, py, pw, wh, seed + i * 5 + f); return; }
+      WL.push([px, py, pw, wh, f]);
       if (WIN === 'loft') loftWin(G, px, py, pw, wh, lit, seed + f * 7 + i);
       else if (WIN === 'triple') { for (let k = 0; k < 3; k++) sash(G, px + k * 13 + (k ? 1 : 0), py, 13 + (k === 1 ? 0 : 0), wh, lit, seed + f * 7 + i * 3 + k, { noLintel: k > 0 }); lintel(G, px - 2, py - 3, pw + 4); }
       else sash(G, px, py, pw, wh, lit, seed + f * 7 + i, WIN === 'arch' || style === 'adobe' ? { noLintel: true, ...(style === 'adobe' ? { frame: MAT.woodDark } : {}) } : undefined);
@@ -349,6 +360,7 @@ export function makeBuilding(spec) {
     for (const dd of spec.doors) {
       const dh = dd.h || (dd.kind === 'garage' || dd.kind === 'roller' ? 48 : 46);
       if (dd.kind === 'garage' || dd.kind === 'roller') bigDoor(G, dd.x, fy(dh), dd.w, dh, dd.kind, dd.open, night);
+      else if (dd.live) liveDoor(G, dd.x, fy(dh), dd.w || 18, dh, dd.live, night, dd.c | 0);
       else door(G, dd.x, fy(dh), dd.w || 18, dh, !!dd.open, night, seed);
     }
     for (const wx of spec.windows || []) {
@@ -370,6 +382,7 @@ export function makeBuilding(spec) {
   if (spec.graffiti) for (let i = 0; i < spec.graffiti; i++) tag(G, Math.floor(hash(i, 1, seed + 61) * Math.max(1, w - 60)) + 4, d + H - 10 - Math.floor(hash(i, 2, seed + 61) * 18), seed + i * 17, spec.tagText && i === 0 ? spec.tagText : null);
   if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
   if (spec.mural) mural(G, spec.mural, d + H, seed);
+  if (spec.dress) dressFacade(G, spec, WL, w, d, H, gH, fy, seed);
   if (spec.portico) portico(G, spec.portico, d, H, cornice);
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
@@ -739,6 +752,32 @@ function door(G, x0, y0, w, h, open, night, seed, gated = false) {
   }
 }
 
+// A door that opens live (shared/doors.js: spec.shop.live / spec.doors[i].live 'slide' | 'hinge'), baked shut - the page
+// draws it opening over this as someone comes up to it (client/art2/game/doorart.js, the same leaves): sliding glass in
+// a steel frame, the shop dim behind it; or a painted door (DOOR_COLS[c]) with a glass light, a brass knob, a kick plate
+export function liveDoor(G, x0, y0, w, h, style, night, c = 0) {
+  const P = ramp(DOOR_COLS[c % DOOR_COLS.length], 5, 2), slide = style === 'slide', mid = w >> 1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const X = x0 + x, Y = y0 + y;
+    if (x < 2 || x >= w - 2 || y < 2) { setC(G, X, Y, step(slide ? MAT.metal : MAT.stone, x < 2 || y < 2 ? 0.75 : 0.45, X, Y, 0)); continue; }
+    if (slide) {
+      const rail = y < 5 || y >= h - 3 || x < 4 || x >= w - 4 || Math.abs(x - mid + 0.5) < 1.5;
+      if (rail) { setC(G, X, Y, step(MAT.metal, y < 5 ? 0.35 : Math.abs(x - mid + 0.5) < 0.6 ? 0.15 : 0.55, X, Y, 0)); continue; }
+      const streak = ((x + (h - y)) % 17) < 3, back = y > h * 0.62 ? 0.5 : 0.3;
+      setC(G, X, Y, step(MAT.glass, back + (streak ? 0.3 : 0) - (y / h) * 0.1, X, Y, 0.3)); glow(G, X, Y, [255, 200, 130, 12 + night * 60]);
+    } else {   // (a wide doorway: a pair, meeting in the middle - the hinges at the sides)
+      const dbl = w >= 34, lx = dbl && x >= mid ? w - 1 - x : x, LW = dbl ? mid : w;
+      if (dbl && Math.abs(x - mid + 0.5) < 1) { setC(G, X, Y, step(P, 0.1, X, Y, 0)); continue; }
+      const pane = y >= 6 && y < Math.round(h * 0.46) && lx >= 5 && lx < LW - (dbl ? 3 : 5), knob = lx === LW - (dbl ? 3 : 6) && Math.abs(y - Math.round(h * 0.56)) < 1;
+      if (pane) { setC(G, X, Y, step(MAT.glassDark, 0.4 + (y === 6 ? 0.3 : 0), X, Y, 0.3)); glow(G, X, Y, [255, 196, 120, 18 + night * 80]); continue; }
+      if (knob) { setC(G, X, Y, [214, 176, 80]); continue; }
+      if (y >= h - 5) { setC(G, X, Y, step(MAT.metal, 0.5, X, Y, 0)); continue; }   // (the kick plate)
+      const inset = (lx === 4 || lx === LW - 5) && y > h * 0.5 || y === Math.round(h * 0.5) || y === Math.round(h * 0.75) && lx > 3 && lx < LW - 4;
+      setC(G, X, Y, step(P, inset ? 0.25 : lx === 2 || lx === 3 ? 0.35 : 0.6, X, Y, 0.3));
+    }
+  }
+}
+
 function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const shop = spec.shop, y0 = d + H;
   const winTop = fy(gH - 18), winBot = y0 - 7;
@@ -853,7 +892,8 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
   // stall riser under the windows
   for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
-  door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
+  if (shop.live) liveDoor(G, doorX, y0 - 50, doorW, 50, shop.live, night, shop.doorC | 0);
+  else door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
   if (shop.sign) signBoard(G, shop.sign, shop.sign.x ?? 4, winTop - 24, shop.sign.w ?? w - 8, 22, night);
   // striped fascia band above the windows
   else if (shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }

@@ -141,12 +141,45 @@ export const LOOKS = {
   vendor: { styles: Wt('casual:1'), fem: 0.35, age: [1, 2, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,
     fix(L, r) { L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item(r() < 0.5 ? 'Polo shirt' : 'Plain tee', pick(r, ['white', 'red', 'yellow'])); L.outfit.bottoms = item(r() < 0.5 ? 'Chinos' : 'Jeans', pick(r, ['black', 'khaki', 'denim'])); L.outfit.shoes = item('Sneakers', pick(r, ['white', 'black'])); L.outfit.hat = r() < 0.7 ? item('Baseball cap', pick(r, ['red', 'white', 'yellow'])) : null; L.outfit.glasses = null; L.outfit.bag = null; L.outfit.jewel = null; } },
   fisher: { styles: Wt('outdoors:3 casual:1'), fem: 0.15, age: [0.5, 1, 2, 3, 3, 2], shade: 0, builds: 'casual', pool: 6,
-    fix(L, r) { L.outfit.set = null; L.outfit.top = item(r() < 0.5 ? 'Flannel shirt' : 'Thermal top', pick(r, ['red', 'forest', 'navy', 'cream'])); L.outfit.jacket = r() < 0.5 ? item(r() < 0.5 ? 'Puffer vest' : 'Rain jacket', pick(r, ['olive', 'navy', 'yellow', 'khaki'])) : null; L.outfit.bottoms = item('Cargo pants', pick(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item(r() < 0.5 ? 'Rain boots' : 'Work boots', pick(r, ['yellow', 'olive', 'brown'])); L.outfit.hat = r() < 0.8 ? item(pick(r, ['Bucket hat', 'Trucker cap', 'Beanie']), pick(r, ['khaki', 'olive', 'red', 'navy'])) : null; L.outfit.glasses = r() < 0.3 ? item('Sport shades') : null; L.outfit.bag = null; L.outfit.jewel = null; } },
+    fix(L, r) { L.outfit.set = null; if (r() < 0.3) { fisherLook(L, r); return; } L.outfit.top = item(r() < 0.5 ? 'Flannel shirt' : 'Thermal top', pick(r, ['red', 'forest', 'navy', 'cream'])); L.outfit.jacket = r() < 0.5 ? item(r() < 0.5 ? 'Puffer vest' : 'Rain jacket', pick(r, ['olive', 'navy', 'yellow', 'khaki'])) : null; L.outfit.bottoms = item('Cargo pants', pick(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item(r() < 0.5 ? 'Rain boots' : 'Work boots', pick(r, ['yellow', 'olive', 'brown'])); L.outfit.hat = r() < 0.8 ? item(pick(r, ['Bucket hat', 'Trucker cap', 'Beanie']), pick(r, ['khaki', 'olive', 'red', 'navy'])) : null; L.outfit.glasses = r() < 0.3 ? item('Sport shades') : null; L.outfit.bag = null; L.outfit.jewel = null; } },
   statue: { styles: Wt('business:1'), fem: 0.3, age: [2, 3, 2, 1, 0, 0], shade: 0, builds: 'casual', pool: 4,   // (a living statue: a suit and a fedora, all of it painted bronze - client/art2/people.js statueApp)
     fix(L, r) { L.outfit.set = null; L.outfit.jacket = item('Suit jacket'); L.outfit.bottoms = item('Suit trousers'); L.outfit.shoes = item('Oxfords'); L.outfit.hat = item('Fedora'); L.outfit.bag = null; L.outfit.glasses = null; L.outfit.jewel = null; void r; } },
   busker: { styles: Wt('retro:2 alt:2 casual:1 western:1'), fem: 0.35, age: [2, 3, 2, 1, 1, 0], shade: 0, builds: 'casual', pool: 6,
     fix(L, r) { L.outfit.hat = r() < 0.6 ? item(r() < 0.5 ? 'Fedora' : 'Beanie', pick(r, ['brown', 'charcoal', 'black', 'mustard'])) : null; if (r() < 0.5) L.outfit.jacket = item(r() < 0.5 ? 'Denim jacket' : 'Leather jacket'); L.outfit.bag = null; if (L.body.base === 'm' && r() < 0.6) L.hair.facial = pick(r, [1, 2, 3, 5]); } },
+  // (the owner's notes 2: "Any more NPCs or customizations we can include with what we have?" - the people of the world
+  // concepts the city didn't have yet, dressed from the catalogue's new pieces: shared/lookcore.js)
+  lifeguard: { styles: Wt('beach:1'), fem: 0.4, age: [4, 3, 1, 0, 0, 0], shade: 0, builds: 'athlete', pool: 6,
+    fix(L, r) {
+      const f = L.body.base === 'f'; L.outfit.jacket = null;
+      if (f) { L.outfit.top = L.outfit.bottoms = null; L.outfit.set = item('Swimsuit', 'red'); } else { L.outfit.set = null; L.outfit.top = r() < 0.5 ? item('Tank top', 'red') : item('Bare chest'); L.outfit.bottoms = item('Swim trunks', 'red', 'red'); }
+      L.outfit.hat = r() < 0.6 ? item('Visor', pick(r, ['white', 'red', 'navy'])) : null; L.outfit.glasses = r() < 0.6 ? item('Sport shades') : null;
+      L.outfit.jewel = item('Lifeguard whistle'); L.outfit.bag = r() < 0.6 ? item('Rescue tube') : null; L.outfit.shoes = item('Flip-flops', pick(r, ['red', 'black', 'white']));
+    } },
+  postal: { styles: Wt('casual:1'), fem: 0.45, age: [1, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = r() < 0.2 ? item('Rain jacket', 'navy') : null; L.outfit.top = item('Postal shirt'); L.outfit.bottoms = item(r() < 0.6 ? 'Shorts' : 'Uniform trousers', 'navy'); L.outfit.hat = r() < 0.7 ? item(r() < 0.6 ? 'Baseball cap' : 'Sun hat', r() < 0.7 ? 'navy' : 'khaki') : null; L.outfit.bag = item('Mail satchel'); L.outfit.shoes = item(r() < 0.5 ? 'Running shoes' : 'Work boots', 'black'); L.outfit.glasses = null; L.outfit.jewel = r() < 0.4 ? item('Watch') : null; } },
+  courier: { styles: Wt('streetwear:2 athletic:2'), fem: 0.3, age: [4, 3, 1, 0, 0, 0], shade: 0, builds: 'athlete', pool: 8,
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = r() < 0.5 ? item('Cycling jersey', pick(r, ['yellow', 'orange', 'lime', 'red', 'teal']), 'black') : item(r() < 0.5 ? 'Hoodie' : 'Plain tee', pick(r, ['black', 'grey', 'orange', 'teal'])); L.outfit.bottoms = item(r() < 0.5 ? 'Cycling shorts' : 'Joggers', 'black'); L.outfit.hat = item(r() < 0.7 ? 'Bike helmet' : 'Cap backwards', pick(r, ['black', 'white', 'red'])); L.outfit.bag = item('Delivery pack', pick(r, ['orange', 'red', 'teal', 'lime', 'black'])); L.outfit.shoes = item('Running shoes', pick(r, ['black', 'white'])); L.outfit.glasses = r() < 0.3 ? item('Sport shades') : null; } },
+  chef: { styles: Wt('casual:1'), fem: 0.35, age: [2, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.top = item('Chef whites'); L.outfit.jacket = r() < 0.6 ? item('Apron', pick(r, ['white', 'black', 'navy', 'burgundy'])) : null; L.outfit.bottoms = item('Chinos', r() < 0.5 ? 'black' : 'charcoal', 'white', r() < 0.4 ? 2 : 0); L.outfit.hat = r() < 0.55 ? item("Chef's hat") : r() < 0.5 ? item('Head bandana', pick(r, ['black', 'red', 'navy'])) : null; L.outfit.shoes = item('Clogs', pick(r, ['black', 'white'])); L.outfit.bag = null; L.outfit.glasses = null; L.outfit.jewel = null; } },
+  server: { styles: Wt('casual:1 retro:1'), fem: 0.6, age: [4, 3, 1, 1, 0, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = item('Apron', pick(r, ['white', 'red', 'mint', 'black'])); L.outfit.top = item(r() < 0.5 ? 'Polo shirt' : 'Button-up shirt', pick(r, ['white', 'red', 'mint', 'pink'])); L.outfit.bottoms = item(L.body.base === 'f' && r() < 0.5 ? 'Skirt' : 'Chinos', 'black'); L.outfit.hat = r() < 0.6 ? item('Paper hat') : null; L.outfit.shoes = item('Sneakers', pick(r, ['white', 'black'])); L.outfit.bag = null; L.outfit.glasses = null; } },
+  nurse: { styles: Wt('casual:1'), fem: 0.6, age: [2, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 8,
+    fix(L, r) { L.outfit.top = L.outfit.bottoms = L.outfit.jacket = null; L.outfit.set = item('Scrubs', pick(r, ['teal', 'navy', 'sky', 'mint', 'royal blue', 'lavender'])); if (r() < 0.25) L.outfit.jacket = item('Lab coat'); L.outfit.jewel = r() < 0.7 ? item('Stethoscope') : item('Smartwatch'); L.outfit.glasses = r() < 0.25 ? item('Medical mask', 'sky') : r() < 0.3 ? item('Square glasses') : null; L.outfit.shoes = item(r() < 0.5 ? 'Clogs' : 'Running shoes', pick(r, ['white', 'black', 'navy'])); L.outfit.hat = null; L.outfit.bag = r() < 0.4 ? item('Coffee to go') : null; } },
+  tennis: { styles: Wt('athletic:1 preppy:1'), fem: 0.5, age: [3, 3, 2, 2, 1, 0], shade: 0, builds: 'athlete', pool: 6,
+    fix(L, r) { const f = L.body.base === 'f'; L.outfit.jacket = r() < 0.2 ? item('Cardigan', 'cream') : null; if (f && r() < 0.6) { L.outfit.top = L.outfit.bottoms = null; L.outfit.set = item('Tennis dress', 'white', pick(r, ['navy', 'forest', 'burgundy', 'sky'])); } else { L.outfit.set = null; L.outfit.top = item('Polo shirt', 'white'); L.outfit.bottoms = item(f ? 'Tennis skirt' : 'Shorts', 'white'); } L.outfit.hat = r() < 0.5 ? item(r() < 0.6 ? 'Visor' : 'Headband', 'white') : null; L.outfit.shoes = item('Sneakers', 'white'); L.outfit.jewel = r() < 0.5 ? item('Watch') : null; L.outfit.bag = r() < 0.3 ? item('Duffel bag', 'navy') : null; L.outfit.glasses = null; } },
+  cyclist: { styles: Wt('athletic:1'), fem: 0.4, age: [2, 3, 3, 2, 1, 0], shade: 0, builds: 'athlete', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.jacket = null; L.outfit.top = item('Cycling jersey', pick(r, ['yellow', 'royal blue', 'red', 'teal', 'white', 'black']), pick(r, ['black', 'white', 'red'])); L.outfit.bottoms = item('Cycling shorts'); L.outfit.hat = item('Bike helmet', pick(r, ['white', 'black', 'red', 'yellow'])); L.outfit.glasses = item(r() < 0.7 ? 'Sport shades' : 'Shield shades'); L.outfit.shoes = item('Running shoes', pick(r, ['white', 'black'])); L.outfit.bag = null; L.outfit.jewel = r() < 0.5 ? item('Smartwatch') : null; } },
+  valet: { styles: Wt('formal:1'), fem: 0.3, age: [3, 3, 2, 1, 0, 0], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.set = null; L.outfit.top = item('Button-up shirt', 'white'); L.outfit.jacket = item('Waistcoat', pick(r, ['black', 'burgundy', 'navy'])); L.outfit.bottoms = item('Suit trousers', 'black'); L.outfit.jewel = item('Bow tie', pick(r, ['black', 'burgundy'])); L.outfit.shoes = item('Oxfords', 'black'); L.outfit.hat = null; L.outfit.bag = null; L.outfit.glasses = null; } },
+  gardener: { styles: Wt('outdoors:1 work:1'), fem: 0.4, age: [1, 2, 3, 3, 2, 1], shade: 0, builds: 'casual', pool: 6,
+    fix(L, r) { L.outfit.jacket = null; if (r() < 0.5) { L.outfit.top = L.outfit.bottoms = null; L.outfit.set = item('Overalls', pick(r, ['denim', 'olive', 'khaki'])); } else { L.outfit.set = null; L.outfit.top = item(r() < 0.5 ? 'Work shirt' : 'Flannel shirt', pick(r, ['khaki', 'forest', 'red', 'cream'])); L.outfit.bottoms = item('Work trousers', pick(r, ['khaki', 'olive', 'brown'])); L.outfit.jacket = r() < 0.4 ? item('Apron', 'forest', 'cream') : null; } L.outfit.hat = item(pick(r, ['Sun hat', 'Bucket hat', 'Trucker cap']), pick(r, ['sand', 'khaki', 'olive'])); L.outfit.jewel = item('Work gloves', pick(r, ['tan', 'green', 'yellow'])); L.outfit.shoes = item(r() < 0.5 ? 'Wellies' : 'Work boots', pick(r, ['forest', 'brown', 'black'])); L.outfit.bag = null; L.outfit.glasses = null; } },
+  groom: { styles: Wt('formal:1'), fem: 0, age: [3, 3, 1, 0.5, 0, 0], shade: 0, builds: 'casual', pool: 4,
+    fix(L, r) { L.outfit.top = L.outfit.bottoms = L.outfit.jacket = null; L.outfit.set = item('Tuxedo', r() < 0.8 ? 'black' : 'navy'); L.outfit.jewel = item('Bow tie', 'black'); L.outfit.shoes = item('Oxfords', 'black'); L.outfit.hat = null; L.outfit.bag = null; L.outfit.glasses = null; } },
+  bride: { styles: Wt('formal:1'), fem: 1, age: [3, 3, 1, 0.5, 0, 0], shade: 0, builds: 'casual', pool: 4,
+    fix(L, r) { L.outfit.top = L.outfit.bottoms = L.outfit.jacket = null; L.outfit.set = item('Wedding dress'); L.outfit.hat = r() < 0.75 ? item('Bridal veil') : item('Flower crown'); L.outfit.jewel = item('Pearl necklace'); L.outfit.shoes = item('Heels', 'white'); L.outfit.bag = r() < 0.4 ? item('Clutch', 'white') : null; L.outfit.glasses = null; } },
 };
+// an angler in chest waders over a flannel shirt, the bucket hat, wellies
+function fisherLook(L, r) { L.outfit.top = item('Flannel shirt', pick(r, ['red', 'forest', 'navy'])); L.outfit.bottoms = null; L.outfit.set = item('Chest waders'); L.outfit.jacket = r() < 0.5 ? item('Field vest', 'khaki') : null; L.outfit.shoes = item('Wellies', 'olive'); L.outfit.hat = item('Bucket hat', pick(r, ['khaki', 'olive'])); L.outfit.glasses = r() < 0.4 ? item('Sport shades') : null; L.outfit.bag = null; L.outfit.jewel = null; }
 const CI = {}; CLOTH.forEach(([, n], i) => { CI[n.toLowerCase()] = i; });
 function col(n) { return CI[n] ?? 0; }
 
@@ -181,6 +214,18 @@ export const PERSONAS = {
   tourists: { arche: 'casual', look: 'tourist', pp: 'map', speed: 0.8, where: 'civic:2 beach:2 oldtown:2 towers:1 park:1 commercial:1', day: 1.5, night: 0.3, pair: true, cap: 1 },
   vendor:   { arche: 'casual', look: 'vendor', where: 'commercial:2 civic:2 park:2 beach:2 towers:1', day: 2, night: 0.6, cap: 1, cart: true },
   fisher:   { arche: 'casual', look: 'fisher', where: 'beach:2 harbor:3 park:1', day: 2, night: 0.7, fish: true },
+  // the world concepts' people the city hadn't met yet (the owner's notes 2)
+  lifeguard: { arche: 'athlete', look: 'lifeguard', where: 'beach:4', day: 1.5, night: 0, cap: 2 },
+  postal:   { arche: 'casual', look: 'postal', speed: 0.9, where: 'houses:2 apartments:2 commercial:2 oldtown:2 civic:1 luxury:1', day: 1.2, night: 0, cap: 1 },
+  courier:  { arche: 'athlete', look: 'courier', speed: 1.15, where: 'commercial:2 towers:2 apartments:1 nightlife:2 civic:1', day: 1, night: 1, cap: 2 },
+  chef:     { arche: 'casual', look: 'chef', gt: 'lean', where: 'commercial:1 nightlife:2 oldtown:1 redlight:1', day: 0.5, night: 0.8, cap: 1, lean: true },
+  server:   { arche: 'casual', look: 'server', where: 'commercial:1 beach:1 oldtown:1', day: 0.6, night: 0.3, cap: 1 },
+  nurse:    { arche: 'casual', look: 'nurse', where: 'civic:2 commercial:1 towers:1 apartments:1', day: 1, night: 0.8, cap: 2 },
+  tennis:   { arche: 'athlete', look: 'tennis', where: 'luxury:2 park:1', day: 0.8, night: 0, cap: 2 },
+  cyclist:  { arche: 'athlete', look: 'cyclist', jog: true, where: 'park:2 beach:2 luxury:1', day: 1, night: 0, cap: 2 },
+  valet:    { arche: 'casual', look: 'valet', where: 'towers:2 luxury:1 nightlife:1', day: 0.6, night: 1, cap: 1 },
+  gardener: { arche: 'casual', look: 'gardener', speed: 0.8, where: 'houses:2 luxury:2 park:1', day: 1, night: 0, cap: 1 },
+  wedding:  { arche: 'casual', look: 'groom', partner: 'bride', where: 'civic:1 oldtown:1 park:1', day: 0.15, night: 0.05, pair: true, cap: 1 },
   leaner:   { arche: 'casual', look: 'casual', gt: 'lean', where: 'commercial:2 apartments:2 southside:2 nightlife:2 towers:1 oldtown:1 redlight:1', day: 1, night: 1.4, lean: true },
 };
 for (const P of Object.values(PERSONAS)) P.w = Wt(P.where);
@@ -289,7 +334,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     if (p2) {
       apply(world, p2, key, night, ped);
       p2.npc.with = ped.id; ped.npc.with2 = p2.id;
-      if (P.look !== 'couple') p2.pp = 'phone';
+      if (P.look !== 'couple' && !P.partner) p2.pp = 'phone';
     }
   }
   if (P.dogs) {
@@ -360,7 +405,7 @@ export function apply(world, ped, key, night = false, partner = null) {
   const P = PERSONAS[key], n = ped.npc;
   let g;
   if (P.look === 'couple') g = coupleLook(world, ped, partner);
-  else g = lookFor(world, P, key, ped.x, ped.y, night);
+  else g = lookFor(world, partner && P.partner ? { look: P.partner } : P, key, ped.x, ped.y, night);   // (a pair dressed as two: the groom, then his bride)
   if (g) {   // (the body comes with its build: the hit points and the fight follow the new one)
     const old = ped.build, nb = BUILDS[g.bi] || old;
     ped.app = g.app; ped.app.bd = g.bi; ped.appVer = (ped.appVer || 0) + 1;

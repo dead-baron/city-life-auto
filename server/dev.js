@@ -37,6 +37,7 @@ import * as sharks from './systems/sharks.js';
 import * as prison from './systems/prison.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
+import { dress as dressNpc } from './systems/npclooks.js';
 import * as activities from './systems/activities.js';
 import { isArcade } from './systems/arcade.js';
 import { isCasino } from './systems/casino.js';
@@ -170,6 +171,8 @@ function railStops(m, keep) {
   }
   return out;
 }
+// the debug dummies dressed as the people the world concepts showed the city didn't have (msg.looks)
+const DUMMY_LOOKS = { new: ['lifeguard', 'postal', 'courier', 'chef', 'nurse', 'tennis'], new2: ['cyclist', 'valet', 'gardener', 'groom', 'bride', 'server'] };
 export function nearTargets(m, k) {
   if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);
   const pois = m.pois.filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.label || q.name || k }));   // (walk-ins: at the desk inside)
@@ -678,6 +681,8 @@ function run(world, p, c, msg) {
         if (!q) continue;
         q.npc.desk = { x, y, a: a + Math.PI }; q.npc.keep = true; q.a = a + Math.PI;
         if (Number(msg.hp) > 0) q.hp = q.maxHp = Number(msg.hp);
+        const lk = DUMMY_LOOKS[msg.looks] && DUMMY_LOOKS[msg.looks][i];   // (msg.looks: the people of the world concepts, b6c - personas.js LOOKS)
+        if (lk) { const g = dressNpc(world, 'p:' + lk, x, y, false, Math.random, personas.LOOKS[lk]); if (g) { q.app = { ...g.app, bd: q.app.bd }; q.appVer = (q.appVer || 0) + 1; } }
         made++;
       }
       world.notify(p, `[dev] ${made} practice ${made === 1 ? 'dummy' : 'dummies'} in front of you.`, 'info');

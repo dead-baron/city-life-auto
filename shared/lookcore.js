@@ -357,6 +357,24 @@ add('jacket', 'Life vest', 'mf', 'outdoors beach athletic', 60, 'outdoor', { k: 
 add('top', 'MX jersey', 'mf', 'athletic outdoors streetwear', 60, 'sports', { k: 'jersey' }, 'red', 'white');
 add('hat', 'Climbing helmet', 'mf', 'outdoors athletic', 55, 'outdoor', { k: 'skatehelmet' }, 'orange');
 add('bag', 'Trekking pack', 'mf', 'outdoors', 150, 'outdoor', { back: 1, big: 1 }, 'orange');
+// (notes 2: the world concepts' people the catalogue had no clothes for - server/systems/personas.js dresses them)
+add('set', 'Tennis dress', 'f', 'athletic preppy', 70, 'sports', { k: 'dress', len: 1 }, 'white', 'navy');
+add('bottoms', 'Tennis skirt', 'f', 'athletic preppy', 40, 'sports', { k: 'skirt', len: 1 }, 'white');
+add('top', 'Cycling jersey', 'mf', 'athletic', 55, 'sports', { k: 'jersey' }, 'yellow', 'black');
+add('bottoms', 'Cycling shorts', 'mf', 'athletic', 40, 'sports', { k: 'shorts' }, 'black');
+add('set', 'Chest waders', 'mf', 'outdoors work', 90, 'outdoor', { k: 'overalls', bk: 'pants' }, 'olive', 'brown');
+add('top', 'Postal shirt', 'mf', 'work', 30, 'workwear', { k: 'uniform', plain: 1 }, 'sky', 'navy');
+add('bag', 'Mail satchel', 'mf', 'work retro', 55, 'workwear', { carry: 'bag', big: 1 }, 'brown');
+add('top', 'Chef whites', 'mf', 'work', 40, 'workwear', { k: 'uniform', plain: 1 }, 'white', 'black');
+add('hat', 'Paper hat', 'mf', 'work retro', 5, 'workwear', { k: 'paper' }, 'white', 'red');
+add('jacket', 'Poncho', 'mf', 'outdoors festival western', 45, 'outdoor', { k: 'coat', p: 1 }, 'rust', 'mustard');
+add('jewel', 'Lifeguard whistle', 'mf', 'beach athletic work', 12, 'beach', { chain: 1, pendant: 1 }, 'red', 'silver');
+add('jewel', 'Stethoscope', 'mf', 'work', 60, 'workwear', { chain: 1, pendant: 1 }, 'charcoal', 'silver');
+add('jewel', 'Bow tie', 'mf', 'formal business retro', 35, 'boutique', { bow: 1 }, 'black');
+add('jewel', 'Work gloves', 'mf', 'work outdoors', 18, 'workwear', { gloves: 1 }, 'tan');
+add('bag', 'Rescue tube', 'mf', 'beach work', 40, 'beach', { carry: 'bag', big: 1 }, 'red');
+add('bag', 'Delivery pack', 'mf', 'work streetwear', 45, 'workwear', { back: 1, box: 1 }, 'orange');
+add('hat', 'Bridal veil', 'f', 'formal', 120, 'boutique', { k: 'veil' }, 'white');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
@@ -554,7 +572,7 @@ export function lookArt(L, opt = {}) {
   if (jw && jw.d.gloves) A.gloves = HEX(O.jewel.c);
   const bg = P('bag');
   if (bg) {
-    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; }
+    if (bg.d.back) { A.back = bg.d.back === 2 ? 'guitarcase' : 'backpack'; A.backColor = HEX(O.bag.c); if (bg.d.big) A.backBig = 1; if (bg.d.box) A.backBox = 1; }
     else if (bg.d.belt) A.beltBag = HEX(O.bag.c);
     else if (bg.d.rig) A.rig = HEX(O.bag.c);
     else { A.carry = bg.d.carry; A.bagColor = HEX(O.bag.c); if (bg.d.small) A.bagSmall = 1; if (bg.d.big) A.bagBig = 1; }

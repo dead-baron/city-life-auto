@@ -35,6 +35,7 @@
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ } from '../buildings.js';
+import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
 import * as D from '../props-district.js';
@@ -68,6 +69,7 @@ import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
 import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
+import { unitDoor, DOOR_COLS } from '../../../shared/doors.js';   // (the doors that open live)
 import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
 import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
@@ -1161,7 +1163,7 @@ function specOf(c, b, A, s, D) {
       const pw = clamp(Math.round(w * 0.46), 90, 160);
       const museum = /MUSEUM/i.test(b.name || '');
       if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : museum ? 'MUSEUM' : 'BANK' };
-      spec.doors = [{ x: Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];
+      spec.doors = [{ x: s.walk && s.doorX !== undefined ? clamp(Math.round(s.doorX + ((s.doorW || 56) - 28) / 2), 6, w - 34) : Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];   // (a walk-in's: at its doorway)
       spec.windows = winXs(w, [[w / 2 - pw / 2, w / 2 + pw / 2]], 30);
       if (A === 'bank' && named && w >= 120) spec.plaques = [{ text: clean(museum ? 'MUSEUM OF ART' : named, 18), x: 6, v: 70, sx: 1, bg: museum ? '#5a1e24' : '#2a3a2a', fg: [236, 214, 150], lit: true }];
       if (museum) spec.doors[0].open = true;
@@ -1264,6 +1266,7 @@ function specOf(c, b, A, s, D) {
     if (ART.noShop) delete spec.shop;
     else if (ART.shop) {
       spec.shop = { ...(spec.shop || {}), ...ART.shop };
+      if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }   // (a walk-in's door where its doorway is, whatever side the hand plan's front put it - the owner's notes 2, p16: "some building entrances are still not put in correctly")
       if (ART.shop.sign === null) delete spec.shop.sign;
       if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
     }
@@ -1349,6 +1352,7 @@ function addBuildings(c, I) {
     for (const s of secs) {
       const { spec, kit, lights, up } = specOf(c, b, A, s, D);
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;
+      if (!s.vox && !s.frame && s.south) dressPlan(spec, { id: b.id, k: s.k, st: D.style, tier: D.tier, A, H: buildingH(spec), w, walkIn: !!s.walk });   // (the facade's dressing by the district: facadedress.js)
       let it;
       if (s.vox) {   // the lighthouse: a voxel tower on its rock
         it = { key: 'lh', recipe: { t: 'v', m: 'lighthouse', a: [170, 1] }, x: x0 + w / 2, y: y1 - d / 2, ext: [46, 250, 46, 46] };
@@ -1369,11 +1373,12 @@ function addBuildings(c, I) {
         if (b.walkIn) {
           const sec = s, bld = b, base = it;
           it.cut = () => {
-            if (base._cut === undefined) { const r = cutRecipe(c, bld, sec, spec, base.recipe); base._cut = r ? { ...base, key: 'cut:' + base.key, recipe: r, ext: [2, r.back ? base.ext[1] + 12 : d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] } : null; }
+            if (base._cut === undefined) { const r = cutRecipe(c, bld, sec, spec, base.recipe); base._cut = r ? { ...base, door: null, key: 'cut:' + base.key, recipe: r, ext: [2, r.back ? base.ext[1] + 12 : d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] } : null; }
             return base._cut || base;
           };
         }
       }
+      if (!s.vox && !s.frame) { const dr = liveDoors(spec, s, bi, x0, y1, w, A); if (dr) it.door = dr; }   // (the doors that open live: doorart.js)
       it.b = bi; it.fp = [x0, y1 - d, x0 + w, y1];   // (fp: the section's footprint; a fading building keeps it covered)
       put(I, it);
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
@@ -1382,6 +1387,27 @@ function addBuildings(c, I) {
       if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi }); }
     }
   });
+}
+
+// The doors on a street front that open live (shared/doors.js; the owner's notes 2, p16): its shop's door or its own,
+// baked shut (buildings.js liveDoor), and their records for the page - [x, y (the wall's foot), w, h (inside the frame),
+// 1 sliding | 0 hinged, the paint, the building] (client/art2/game/doorart.js draws them opening). Sliding glass by the
+// trade (a walk-in's kind, or the front's look); the civic halls by theirs. Not inside a walk-in seen cut away.
+const CIVIC_SLIDE = new Set(['bank', 'hospital', 'police']);
+function liveDoors(spec, s, bi, x0, y1, w, A) {
+  if (!s.south || spec.blank || spec.motel) return null;
+  const out = [], u = s.walk || null, c = (bi * 7 + s.k * 3) % DOOR_COLS.length;
+  if (spec.shop) {
+    const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10;
+    if (dw < 12) return null;
+    sh.live = unitDoor(u, sh.kind); sh.doorC = c;
+    out.push([x0 + dx + 2, y1, dw - 4, 48, sh.live === 'slide' ? 1 : 0, c, bi]);
+  } else for (const q of spec.doors || []) {
+    if (q.kind !== 'door' || (q.w || 18) < 12) continue;
+    q.live = u ? unitDoor(u) : CIVIC_SLIDE.has(A) ? 'slide' : 'hinge'; q.c = c;
+    out.push([x0 + q.x + 2, y1, (q.w || 18) - 4, (q.h || 46) - 2, q.live === 'slide' ? 1 : 0, c, bi]);
+  }
+  return out.length ? out : null;
 }
 
 // ---- the building sprite: makeBuilding plus the rooftop kit, or an unfinished frame -------------------------

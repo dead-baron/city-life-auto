@@ -13,7 +13,7 @@
 import { TILE, T, DT } from '../../shared/constants.js';
 import { WATER_T, PED_BLOCK, isSwimming } from '../../shared/mapcore.js';
 import { IN } from '../../shared/input.js';
-import { SURF, wavesAt, onBreak, breakPt, broken, findBreaks } from '../../shared/surf.js';
+import { SURF, wavesAt, onBreak, breakPt, broken, findBreaks, crestD, heightAt, gapAt } from '../../shared/surf.js';
 import { store } from '../store.js';
 import * as skills from './skills.js';
 
@@ -151,14 +151,18 @@ function step(world, p, ped, s, dt) {
     world.place(ped);
     if (!isSwimming(m, ped)) { stop(world, p); return; }
     if (Math.hypot(ped.vx, ped.vy) > 30) skills.gain(world, p, 'swim', dt);
-    // a wave coming: paddling for the beach as its crest reaches you (where it hasn't broken), you're up
+    // a wave coming: paddling for the beach as its crest reaches you (where it hasn't broken and stands high enough - not
+    // in a gap in its lip: shared/surf.js heightAt), you're up
     if (s.st === 'pad' && B2) {
       const q = onBreak(B2, ped.x, ped.y), inward = -(s.mx * B2.nx + s.my * B2.ny);
       if (inward > 0.35 && Math.abs(q.a) < B2.half - 24 && q.d > SURF.shore + 60) {
         for (const w of wavesAt(B2, t, s.ws || (s.ws = []))) {
-          const rel = w.d - q.d;
+          if (w.wash) continue;
+          const rel = crestD(B2, w, q.a) - q.d;
           if (rel < SURF.catch[0] || rel > SURF.catch[1] || broken(B2, w, q.a)) continue;
-          s.st = 'ride'; s.w = w.id; s.a = q.a; s.pts = 0; s.va = (ped.vx * -B2.ny + ped.vy * B2.nx) * 0.5; s.sign = 0; s.carveAt = 0; s.size = w.size;
+          if (gapAt(B2, w, q.a)) continue;   // (a gap in its lip)
+          const h = heightAt(B2, w, q.a);
+          s.st = 'ride'; s.w = w.id; s.a = q.a; s.pts = 0; s.va = (ped.vx * -B2.ny + ped.vy * B2.nx) * 0.5; s.sign = 0; s.carveAt = 0; s.size = Math.max(0.5, h);
           descOn(ped, 'ride'); p.meDirty = true;
           world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 8 });
           if (!(p.profile.surfRides > 2)) world.notify(p, 'Up! Carve along the face, ahead of the white water.', 'good');
@@ -171,12 +175,12 @@ function step(world, p, ped, s, dt) {
   // riding (or up in the air off the lip): the wave carries you in, the stick carves you along it
   if (!B) { endRide(world, p, null); return; }
   const w = wavesAt(B, t, s.ws || (s.ws = [])).find((q) => q.id === s.w);
-  if (!w || w.d - SURF.face < SURF.shore) { endRide(world, p, 'Rode it in'); return; }
+  if (!w || w.wash || crestD(B, w, s.a) - SURF.face < SURF.shore) { endRide(world, p, 'Rode it in'); return; }
   const tan = s.mx * -B.ny + s.my * B.nx, want = Math.abs(tan) > 0.15 ? tan * SURF.along : B.side * SURF.along * 0.3;   // (no stick: it trims along, away from where it broke)
   const k = 1 - Math.exp(-(s.st === 'air' ? 0.5 : 3.2) * dt);
   s.va += (want - s.va) * k;
   s.a = Math.max(-B.half - 40, Math.min(B.half + 40, s.a + s.va * dt));   // (never carried far past the beach's end)
-  const P = breakPt(B, s.a, w.d - SURF.face);
+  const P = breakPt(B, s.a, crestD(B, w, s.a) - SURF.face);   // (on the face of the crest where you are along it: as the page draws it)
   if (WATER_T[m.tileAtPx(P.x, P.y)] !== 1) { endRide(world, p, Math.abs(s.a) > B.half - 60 ? 'Off the end of the wave' : 'Rode it in'); return; }   // (the beach not quite straight: never carried up onto it)
   ped.vx = (P.x - ped.x) / dt; ped.vy = (P.y - ped.y) / dt;
   ped.x = P.x; ped.y = P.y;
