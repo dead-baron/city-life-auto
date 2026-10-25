@@ -19,7 +19,7 @@ import * as cargo from './cargo.js';
 import * as vehicles from './vehicles.js';
 import * as trains from './trains.js';
 import * as wildlife from './wildlife.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
 import * as activities from './activities.js';
@@ -318,7 +318,7 @@ function wander(world, ped, now) {
     n.until = now + 8;
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10) { n.state = 'idle'; n.until = now + 1 + rng() * 2; n.lookAt = now; return NO_INPUT; }
   }
-  return seek(ped, n.wx, n.wy, false);
+  return seek(ped, n.wx, n.wy, now < (n.hurryUntil || 0));   // (out of a siren's way: at a run - clearWay)
 }
 
 const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); return t === T.ROAD || t === T.BRIDGE; };
@@ -328,7 +328,7 @@ const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); ret
 // in a jam, the car behind waiting for them for ever: a headless run in Midtown had a dozen cars locked that way round
 // one corner for minutes). Only someone at a loose end - not in a fight, running, at work, filming a scene...
 const SHOO_STATES = new Set(['wander', 'idle', 'watch', 'audience', 'waitHelp']);
-export function shoo(world, ped, v) {
+export function shoo(world, ped, v, hurry = false) {
   const n = ped.npc;
   if (!n || ped.dead || ped.vehId || n.desk || n.guard || n.keep || n.driven || n.role !== 'civ' || !SHOO_STATES.has(n.state)) return false;
   const c = Math.cos(v.a), s = Math.sin(v.a), side = (-(ped.x - v.x) * s + (ped.y - v.y) * c) >= 0 ? 1 : -1;
@@ -336,9 +336,29 @@ export function shoo(world, ped, v) {
     const x = ped.x + (-s * sd * r + c * along) * TILE, y = ped.y + (c * sd * r + s * along) * TILE, t = world.map.tileAtPx(x, y);
     if (!WALK_TILES.has(t) || t === T.FLOOR || PED_BLOCK[t]) continue;
     n.state = 'wander'; n.wx = x; n.wy = y; n.until = world.time + 6; n.target = 0;
+    if (hurry) n.hurryUntil = world.time + 4;
     return true;
   }
   return false;
+}
+
+// A siren coming (the owner, 10-23: "There should be a siren for the ambulance that makes people get out of the way
+// faster so it's easier to drive") - or a player's horn: whoever's in the road ahead of it gets out of the way, as when
+// honked at (shoo). The horn: someone just in front, at a walk. The siren: everyone in the road a long way ahead and
+// either side of its way - the faster it comes the further ahead - and at a run. vehicles.js calls it a few times a
+// second for a vehicle running its siren, and for a player's car while they hold the horn.
+const CLEAR = { horn: { reach: 170, side: 30 }, siren: { reach: 380, perSpeed: 0.6, side: 80 } };
+export function clearWay(world, v, siren) {
+  const C = siren ? CLEAR.siren : CLEAR.horn, c = Math.cos(v.a), s = Math.sin(v.a);
+  const fwd = Math.max(0, v.vx * c + v.vy * s), reach = C.reach + (siren ? fwd * C.perSpeed : 0), side = v.def.W / 2 + C.side, nose = v.def.L / 2;
+  for (const q of world.query(v.x + c * (nose + reach / 2), v.y + s * (nose + reach / 2), reach / 2 + side, K.PED)) {
+    const n = q.npc;
+    if (!n || q.dead || q.vehId || Math.abs((q.lz || 0) - (v.lz || 0)) > 0.5 || !onRoad(world, q)) continue;
+    const lx = (q.x - v.x) * c + (q.y - v.y) * s, ly = -(q.x - v.x) * s + (q.y - v.y) * c;
+    if (lx < nose - 20 || lx > nose + reach || Math.abs(ly) > side) continue;
+    if (n.clearFor === v.id && n.state === 'wander' && world.time < n.until) continue;   // (on their way already)
+    if (shoo(world, q, v, siren)) n.clearFor = v.id;
+  }
 }
 
 // Standing around: glance one way, then another, then wander off somewhere new (never just
@@ -759,6 +779,7 @@ function manageDensity(world) {
   world.npcCount = nc;
   const anchors = [];
   for (const p of world.players.values()) if (p.ped && !p.ped.dead) anchors.push(p.ped);
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   // despawn far NPCs
   for (const e of world.entities.values()) {
     if (e.kind !== K.PED || !e.npc || e.vehId) continue;

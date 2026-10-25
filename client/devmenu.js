@@ -79,7 +79,7 @@ function devLocal(c, extra) {
 // a section's command, as its button runs it
 function runItem([, c, extra]) {
   if (c[0] === '@') devLocal(c, extra); else send({ t: 'dev', c, ...(extra || {}) });
-  if (c === 'near' || c === 'train' || c === 'home' || c === 'sky' || c === 'cart') closeOverlay('dev');   // (the carts: out of the way to watch - the head-on crash sets off a few seconds later, server/devplay.js)
+  if (c === 'near' || c === 'train' || c === 'home' || c === 'sky' || c === 'cart' || c === 'arcade') closeOverlay('dev');   // (the carts: out of the way to watch - the head-on crash sets off a few seconds later, server/devplay.js)
 }
 function teleport(pl) {
   sfx('click', 0.8);

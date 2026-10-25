@@ -20,9 +20,9 @@ import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as homes from './homes.js';
 
-export const COATS = 6;
+export const COATS = 8;
 export const BARE = 8;
-export const COAT_NAMES = ['chestnut', 'bay', 'black', 'grey', 'palomino', 'paint'];
+export const COAT_NAMES = ['chestnut', 'bay', 'black', 'grey', 'palomino', 'paint', 'dun', 'appaloosa'];   // (client/art2/horse.js HORSE_COATS)
 const BOLT_S = 5;           // s it gallops off for before it slows (gone once nobody's watching)
 const RETURN_R = 340;       // a hired horse ridden within this of a co-op can be handed back
 const WARN_BEFORE_S = 60;

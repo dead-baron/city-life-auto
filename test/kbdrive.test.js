@@ -92,9 +92,10 @@ test('touch: the aim stick fires from its outer ring only with the FIRE toggle o
   assert.deepEqual(touchStick(1, true, false), { firing: false, aiming: true, guard: true });
   // let go: nothing
   assert.deepEqual(touchStick(0.1, false, true), { firing: false, aiming: false, guard: false });
-  // the toggle by the stick: on by default, remembered with the other settings, kept in step with Settings' checkbox
+  // the toggle (a small pill top left, off the stick's ring): on by default, remembered with the other settings, kept in
+  // step with Settings' checkbox
   const page = src('index.html'), input = src('client/input.js'), main = src('client/main.js');
-  assert.match(page, /<button id="firetog" class="on"[^>]*>FIRE<br>ON<\/button>/);
+  assert.match(page, /<button id="firetog" class="on"[^>]*>FIRE ON<\/button>/);
   assert.match(input, /touchEdgeFire: true/);
   assert.match(input, /settings\.touchEdgeFire = !settings\.touchEdgeFire; saveSettings\(\)/);
   assert.match(main, /settings\.touchEdgeFire = e\.target\.checked; saveSettings\(\); input\.showFireToggle\?\.\(\)/);

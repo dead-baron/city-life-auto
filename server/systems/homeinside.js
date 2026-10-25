@@ -55,9 +55,9 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 export function enter(world, p, h, at) {
   const ped = p.ped;
   const L = planFor(h), sp = at || L.spawn;   // (at: out of a flat's door into its lobby - H71)
-  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : null) };
+  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : h.isArcade ? { arcade: 1 } : null) };
   p.homeMenu = null;
-  if (!h.isLobby && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
+  if (!h.isLobby && !h.isArcade && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
     petIn(world, p, h);
     const n = homes.blockOf(world, h) == null ? mail.unread(p.profile) : 0;
     if (n) world.notify(p, `You pick up the mail on the way in: ${n} new - read it at the hall table.`, 'info');
@@ -263,6 +263,7 @@ export function interaction(world, p) {
   if (s.shower) return { label: 'In the shower...', passive: true, run: () => {} };
   if (s.cook) return { label: 'Cooking... something smells good', passive: true, run: () => {} };
   if (s.lobby) return lobbyInteraction(world, p, h, s);   // (H71: a block's lobby)
+  if (s.arcade) return arcade.hallInteraction(world, p, h, s);   // (an arcade's floor: its cabinets, its prize counter - arcade.js)
   if (s.edit) return editPrompt(world, p, h);   // (H67: decorating - the action button is the menu for the spot in front of you)
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
   if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
@@ -728,7 +729,7 @@ export function update(world) {
     if (!s) continue;
     const h = homes.homeById(world, s.id);
     // out some other way (the home menu's Step outside, the garage, the boathouse, dead, a dev command): gone from here
-    const ok = s.lobby ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
+    const ok = s.lobby || s.arcade ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
     if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || !ok) {
       if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) { homes.leaveHome(world, p); if (s.tour) world.notify(p, `${h.name} has just been sold - you're shown out.`, 'warn'); }   // (sold under a guest or a visitor: out they go)
       ped.home = null; p.homeMenu = null;
@@ -802,7 +803,7 @@ export function send(world, p, full) {
     m.edit = s.edit ? { k: heldKind(world, h, s), r: s.edit.r, mv: s.edit.mv } : null;   // (decorating: what you hold - the page shows where it'd go)
     if (s.lobby) m.doors = (world.unitsOf.get(h.block) || []).map((id) => { const o = world.homeOwner.get(id); return o === p.pid ? 2 : o ? (someoneIn(world, homes.homeById(world, id)) ? 3 : 1) : 0; });   // (H71: each flat's door - 0 for sale, 1 taken, 2 yours, 3 someone's in)
     if (s.lobby) m.mail = ownsIn(world, p, h.block) ? mail.unread(p.profile) : 0;   // (H71: new mail in your box - the page flags it)
-    m.cars = s.tour || s.lobby ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air' && !VEHICLES[ov.model].horse).slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
+    m.cars = s.tour || s.lobby || s.arcade ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air' && !VEHICLES[ov.model].horse).slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
   p.conn.sendJSON(m);

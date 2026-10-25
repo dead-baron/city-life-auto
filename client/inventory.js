@@ -16,7 +16,7 @@ import { weaponIcon } from './render/peds.js';
 import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', skateboard: '🛹', surfboard: '🏄', parachute: '🪂', drill: '🛠',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', parachute: '🪂', drill: '🛠',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨', crickets: '🦗', minnows: '🐟', doughballs: '⚪', chum: '🪣', dryfly: '🪰',
   caneRod: '🎣', baitcaster: '🎣', flyRod: '🎣', surfRod: '🎣', gameRod: '🎣',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
@@ -30,7 +30,7 @@ export const ITEM_ICON = {
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].board)); // (the flashlight: switched on / off; the skateboard: on / off)
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;
 
 export function createInventory({ el, send, me, onClose }) {
@@ -146,7 +146,6 @@ function bladeSwatches(cur, send) {
 function describe(id) {
   const it = ITEMS[id];
   if (id === 'revivekit') return 'revive a downed player to full health - never used up';
-  if (id === 'skateboard') return `${keyName('vehicle')} hops you on and off where there's no car to get into (or use it here) - push and steer with the stick, pull back to brake, ${keyName('dive')} ollies; roads, pavements and plazas only`;
   if (id === 'surfboard') return 'in the sea you lie on it and paddle; at a surf break (a straight sandy beach facing the open sea) paddle for the beach as a wave comes to catch it, then carve along the face ahead of the white water - the action button for an air';
   if (id === 'parachute') return `jump out of a helicopter or a plane up in the air, then ${keyName('action')} opens it and you float down, steering where to land - one jump`;
   if (id === 'drill') return 'a bank job: take it behind a bank\'s counter to the vault door and set it there - the alarm goes at once, and it works through in about a minute while you hold them off';

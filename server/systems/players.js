@@ -128,6 +128,7 @@ export function join(world, conn, profile, opts = {}) {
     p.meDirty = true;
     noteClientBuild(world, p, opts);
     if (p.spectating) { p.spectating = false; p.invincible = p.specWasGod; } // a new page starts out of the free camera
+    p.cineF = null;   // (and out of the cinematic mode's follow scenes: cinefollow.js)
     // (inside a home: the new page has never seen its rooms - all of it again, the menu you had open closed; the owner,
     // 10-16: "Reconnecting inside a home leaves you stuck")
     if (p.ped && p.ped.home) { p.homeMenu = null; p.ped.home.mv = false; homeinside.send(world, p, true); }
@@ -160,6 +161,7 @@ export function join(world, conn, profile, opts = {}) {
     store.touch();
   }
   spawnPlayerPed(world, p, !fresh);
+  skate.convert(world, p);   // (a skateboard in an old bag: your own board now - skate.js)
   if (profile.worldNote) {
     // the world was rebuilt since they last played (homes.checkWorld): say what happened to their homes, once
     world.notify(p, homes.worldNoteText(profile.worldNote), 'warn');
@@ -247,7 +249,7 @@ export function savePos(p, ped) {
   if (!ped || ped.onTrain || ped.sub) return;
   // (inside your own home: which - you're back in it next time; players.backInside)
   const s = ped.home;
-  if (s && ped.hidden && !s.tour && !s.guest && !s.lobby && ped.inside === s.id) p.profile.inHome = s.id; else delete p.profile.inHome;
+  if (s && ped.hidden && !s.tour && !s.guest && !s.lobby && !s.arcade && ped.inside === s.id) p.profile.inHome = s.id; else delete p.profile.inHome;
   const back = rides.savedSpot(ped); // (up in a balloon or on the wheel: you come back where you boarded)
   if (back) { p.profile.pos = { x: Math.round(back.x), y: Math.round(back.y), lz: 0 }; return; }
   p.profile.pos = { x: Math.round(ped.x), y: Math.round(ped.y), lz: (ped.lz || 0) > 0.5 ? 1 : 0 };
@@ -621,15 +623,10 @@ function applyInput(world, p, ped, inp, pressed, dt) {
     }
   }
   if (pressed & IN.THROW) { if (ped.carrying) cargo.throwCrate(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a); }
-  // the vehicle button: into a vehicle in reach; with none, on or off your skateboard (off it, into the vehicle by you)
+  // the vehicle button: into a vehicle in reach - a skateboard on the ground: up on it (skate.js mount); on a board, off it
+  // (left at your feet), and into the vehicle by you if there's one
   if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) {
-    if (ped.board) { skate.hopOff(world, ped); if (vehicles.nearestVehicle(world, ped, 56)) vehicles.playerEnter(world, ped); }
-    else if (!vehicles.nearestVehicle(world, ped, 56) && skate.has(p)) {
-      // (indoors there's no riding - and the vehicle button by the pool table, the bar, a counter does what Act would
-      // rather than say so: the owner, 10-23, "Tried playing pool and it said you can't do it indoors")
-      const act = skate.indoors(world, ped) ? findInteraction(world, p) : null;
-      if (act && act.run && !act.passive) doAct(world, p); else skate.hopOn(world, p, ped);
-    }
+    if (ped.board) { const car = vehicles.nearestVehicle(world, ped, 56, true); skate.hopOff(world, ped); if (car) vehicles.playerEnter(world, ped, true); }
     else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
   }
   if (pressed & IN.ACTION) {   // (step off to do it - but at a skate spot, the session there: on the board)
@@ -791,6 +788,8 @@ export function findInteraction(world, p) {
   const below = underground.interaction(world, p);   // a manhole over the sewers, the cave's mouth, an ore vein
   if (below) return below;
 
+  const hall = arcade.doorInteraction(world, p);   // an arcade's door: onto its floor - the cabinets, the prize counter (arcade.js)
+  if (hall) return hall;
   const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
   if (door) return door;
   const poi = world.map.poiNear(ped.x, ped.y);
@@ -851,7 +850,7 @@ export function findInteraction(world, p) {
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
   const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
   if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
-  return transit.stopNote(world, p);   // at a bus stop with nothing else to do: the line and when its next bus comes
+  return pets.letGo(world, p) || transit.stopNote(world, p);   // a lost pet at your heel: let it go (pets.js); at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
 export function crateName(c) {

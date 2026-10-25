@@ -333,8 +333,8 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
-      if ((m.inv && m.inv.skateboard > 0) || m.sk) loadSkate();
-      if (m.fishing) loadFish();   // (a line out: client/fishing.js)   // (a board in your bag: riding it and its tricks - client/skate.js)
+      if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
+      if (m.fishing) loadFish();   // (a line out: client/fishing.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
@@ -350,6 +350,7 @@ function onText(m) {
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
+    case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
     case 'board': phone.on('Board', m); break;
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
@@ -508,17 +509,17 @@ function fixedStep() {
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) { if (S.bigmap) toggleMap(false); openOverlay('pause'); }
   if (!inOverlay && !S.playing) titlePad();
-  const padUI = !spec && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
-  if (up && input.padCall) { if (S.me && S.me.cruiser) callCruiser(); else quickBoard(); }   // (D-pad down: the cop car, else the skateboard)
+  const ch = !!(DIR && DIR.holds()), padUI = !spec && !ch && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
+  if (up && input.padCall && S.me && S.me.cruiser) callCruiser();   // (D-pad down: the cop car)
   if (up && input.padPhone) openPhone();
   // the bag (D-pad →) and the quick wheel (hold View, point with the right stick, let go)
   if (padUI && input.padRight) toggleBag();
-  if (!spec && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
+  if (!spec && !ch && input.padView && !S.padViewHeld && canWheel() && !wheel.open && !wwheel.open) { wheel.show(); S.wheelAt = performance.now(); S.padWheel = true; }
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
   // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
-  if (!spec && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
+  if (!spec && !ch && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
   const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
@@ -862,7 +863,8 @@ function onEvent(ev) {
       else if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
       break;
     }
-    case 'hop': { const e = S.ents.get(ev.id); if (e) e.hopAt = S.loopClock; break; }   // (over a fence: shared/fences.js; pedLook lifts them)
+    case 'hop': { const e = S.ents.get(ev.id); if (e) e.hopAt = S.loopClock; break; }
+    case 'collapse': { const e = S.ents.get(ev.id); if (e) { if (ev.k === 's') { e.reactAt = S.loopClock; e.reactD = ev.d; e.reactA = ev.a; } else { e.runAt = now; e.runK = 'F'; e.runD = ev.d; } } break; }   // (over a fence: shared/fences.js; pedLook lifts them)
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
     case 'bang': { const e = S.ents.get(ev.id); if (e) { e.bangAt = S.loopClock; e.bangK = ev.k; } break; }   // (fight in a cell: the bars rattled, a fist on the wall - server cells.js; the clang or thud: sound/events.js)
     case 'knockdown': {
@@ -1158,10 +1160,10 @@ function keepWindow(job) {
   clearInterval(S.winTimer);
   S.winTimer = setInterval(() => {
     if (!S.welcomed || !S.map || !S.win) return;
-    const me = selfPos();
+    const me = selfPos(), eye = (DIR && DIR.eye()) || me;   // (the cinematic mode's camera off you: the window goes with it)
     if (!me || !Number.isFinite(me.x)) return;
     const at = [Math.floor(me.x / TILE), Math.floor(me.y / TILE)];
-    try { job.worker.postMessage({ where: at }); } catch { /* gone */ }
+    try { job.worker.postMessage({ where: [Math.floor(eye.x / TILE), Math.floor(eye.y / TILE)] }); } catch { /* gone */ }
     if (performance.now() - saved > 5000) { saved = performance.now(); try { localStorage.setItem('cla.at3', JSON.stringify(at)); } catch { /* blocked */ } }
   }, 300);
 }
@@ -1476,7 +1478,6 @@ initInput(canvas, {
     if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openOverlay('pause'); }
     if (k === 'KeyM' && S.playing) toggleMap(!S.bigmap);
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
-    if (k === 'KeyB' && S.playing && !topOverlay() && !inCell()) quickBoard();
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
     if (k === 'Enter' && !S.playing && S.welcomed) $('play').click();
   },
@@ -1486,7 +1487,6 @@ initInput(canvas, {
   onDev() { if (!S.playing) return; if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); },
   onMap() { if (S.playing) toggleMap(!S.bigmap); },
   onCruiser() { if (S.playing) callCruiser(); },
-  onBoard() { if (S.playing) quickBoard(); },
   onPhone() { if (S.playing) openPhone(); },
   onSettings() { openSettings(true); },
   onFullscreen() { toggleFullscreen(); },
@@ -1772,6 +1772,7 @@ const mapwp = createMapWaypoints({
   markHere: () => mapMarkCentre(),
   device: () => input.device,
   job: () => S.me && S.me.job,
+  center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
 function openPhone() { if (!S.playing || !S.map) return; if (topOverlay() !== 'phone') openOverlay('phone'); phone.open(); }
 // arrive at a phone waypoint -> it clears itself
@@ -2077,7 +2078,7 @@ function openOverlay(id) {
   if (id === 'pause') {
     requestPlayers();
     document.querySelectorAll('#pause .online-only').forEach((b) => b.classList.toggle('hidden', !!S.practice));
-    // the debug menu is the top option (it switches Dev Debug Mode on if needed); leaving dev mode lower down
+    // (the debug menu the last line - it switches Dev Debug Mode on if needed - leaving dev mode above it)
     $('p-devmode').classList.toggle('hidden', !S.devMode || !!S.practice);
   }
   if (id === 'pause') { buildHubs('sys'); S.uiTopKey = ''; }
@@ -2326,7 +2327,6 @@ function uiTop() {
   const hp = Math.max(0, Math.round((me.hp / me.maxHp) * 100));
   for (const el of document.querySelectorAll('.ui-bar.hp')) { el.firstChild.style.width = hp + '%'; el.lastChild.textContent = Math.round(me.hp); }
   for (const el of document.querySelectorAll('.ui-bar.st')) { el.firstChild.style.width = Math.min(100, st) + '%'; el.lastChild.textContent = Math.round(st); }
-  for (const el of document.querySelectorAll('.ui-wpn')) el.innerHTML = `${$('w-icon').innerHTML}<span>${$('w-ammo').textContent || $('w-name').textContent}</span>`;
   let stars = '';
   for (let i = 1; i <= 5; i++) stars += i <= (me.wanted || 0) ? '★' : '<i>★</i>';
   for (const el of document.querySelectorAll('.ui-money')) el.innerHTML = `<span class="c">$${me.cash.toLocaleString('en-US')}</span><span class="b">🏦 $${me.bank.toLocaleString('en-US')}</span><span class="st">${stars}</span>`;
@@ -2606,15 +2606,6 @@ function baseZoom() {
   return long / (viewH * 16 / 9) * (S.camScale || 1); // (S.camScale: a closer camera, for trying framings)
 }
 
-// ---- the skateboard straight out of the bag (the owner, 2026-10-18: "pulling it out of the inventory is a hassle") ----
-// B, the touch 🛹 pill (there while you own a board, on foot) or D-pad down (when there's no cop car to call): on it
-// where you stand, or off - the bag's own use (server economy.js useItem -> skate.js toggle), which says why not
-function quickBoard() {
-  const me = S.me;
-  if (!me || me.dead || !(me.inv && me.inv.skateboard > 0)) return;
-  if (S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) return;
-  send({ t: 'inv', a: 'use', id: 'skateboard' });
-}
 // ---- personal police cruiser: radio dispatch, then an arrow leads you to it ------------------
 function callCruiser() {
   const c = S.me && S.me.cruiser;
@@ -2626,6 +2617,7 @@ function callCruiser() {
 // when it's on screen). Each arrow shows for ARROW_SHOW_S seconds from when it first appeared
 // and then fades, so an ignored event doesn't nag forever; the radar blip stays.
 const evSeen = new Map();
+let lostArt = 0;
 function drawEventArrows(g, list, z, now) {
   const me = selfPos();
   const tNow = performance.now() / 1000;
@@ -2639,6 +2631,10 @@ function drawEventArrows(g, list, z, now) {
     const age = tNow - evSeen.get(ev.id);
     const alpha = kind.stay || age < ARROW_SHOW_S - ARROW_FADE_S ? 1 : Math.max(0, (ARROW_SHOW_S - age) / ARROW_FADE_S);   // (stay: a lost pet's, till you have it or it's home)
     if (alpha <= 0) continue;
+    if (ev.k === 'poster' || ev.r) {
+      if (lostArt && lostArt !== 1) lostArt.mark(g, ev, kind, z, now); else if (!lostArt) { lostArt = 1; import('./lostposter.js').then((m) => { lostArt = m; }, () => { lostArt = 0; }); }
+      if (ev.k === 'poster') continue;
+    }
     if (ev.w) {   // a lost pet's owner: "Lost my dog!" over them (server/systems/pets.js targetFor)
       // (U17: a speech bubble - the navy plate, a light edge, its tail down to them - with a paw at its left)
       const o = S.ents.get(ev.e), on = o && o.rx !== undefined, t = `Lost my ${ev.w}!`, oy = (on ? o.ry : ev.y) - 50 - 24 / z + Math.sin(now * 4) * 2 / z, ox = on ? o.rx : ev.x, u = 1 / z;   // (clear above the head: drawWorldLabels)
@@ -2744,7 +2740,7 @@ function interp(e, rt) {
 }
 
 // Skateboarding on the page (client/skate.js: the board's step and its tricks for the prediction, how riders look, the
-// combo and the score on the screen): loaded once, when you get a board or first see someone ride one
+// combo and the score on the screen): loaded once, when a board's in sight or someone rides one
 function loadFish() {
   if (S.fish || S.fishAsk) return;
   S.fishAsk = 1;
@@ -2756,7 +2752,7 @@ function loadSkate() {
   S.skateAsk = 1;
   import('./skate.js').then((k) => { S.skate = new k.SkateView(S); }).catch((e) => { S.skateAsk = 0; console.warn('[skate]', e); });
 }
-// a skateboard on its own, seen from above (the deck along x, the wheels at each end): flying off after a bail
+// a skateboard on its own, seen from above (the deck along x, the wheels at each end): flying off after a bail, lying about
 let BOARD_IMG = null;
 function boardImg() {
   if (BOARD_IMG || typeof document === 'undefined') return BOARD_IMG;
@@ -3166,7 +3162,7 @@ function tickVisuals(F) {
     birdsTick(dt, view, F.vehs, F.peds);
   }
   S.lastPeds = F.peds; S.lastVehs = F.vehs;
-  for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; } }
+  for (const v of F.vehs) { const d = VEHICLE_BY_INDEX[v.d.m]; if (d) { v._L = d.L; v._W = d.W; if (d.board) loadSkate(); } }   // (a board lying about: its riding ready - client/skate.js)
   S.trainCars = F.cars;
   fx.update(dt);
   soundFrame(F, S);   // engines, footsteps, the ambience, the places' music (client/sound/)
@@ -3456,6 +3452,7 @@ function drawOverlays(F, v2) {
   // name tags + public flares + rumor marker
   if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
+  if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
   if (edge && edge.d > 0 && !clean) drawEdgeArrow(sp, edge, now);
@@ -3485,9 +3482,9 @@ function drawOverlays(F, v2) {
     if (area) { S.district = area.name; S.hud.showDistrict(area.name, area.isl); } }
   S.hud.setClock(S.loopTime, S.weather);
   { const mp = S.ents.get(S.myPedId); S.hud.calm(!!(S.playing && mp && mp.d && mp.d.st && S.me && !S.me.dead), performance.now(), !!(S.homeIn && input.device === 'touch')); }   // (#375; at home on a phone, the prompt fades when you're still)
-  // the GPS route to your waypoint along the roads, on the radar and the map (client/route.js; worked out again only
-  // when you stray from it or the waypoint changes)
-  if (S.router) S.hud.route = S.waypoint && S.playing && S.me && !S.me.dead ? S.router.update(sp, S.waypoint, S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER) : null;
+  // the GPS route to your waypoint (else your job's) along the roads, on the radar and the map (client/route.js; worked
+  // out again only when you stray from it or the waypoint changes)
+  if (S.router) { const dv = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, to = S.waypoint || (S.jobWay && S.jobWay.routeTo(S, dv)); S.hud.route = to && S.playing && S.me && !S.me.dead ? S.router.update(sp, to, dv) : null; }
   S.hud.drawRadar(sp.x, sp.y, sp.a);
   {
     const showTouch = input.device === 'touch' && S.playing;
@@ -4162,6 +4159,7 @@ function drawVehicleEnt(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def || def.kind === 'air') return;   // (aircraft: over everything - render/aircraft.js)
   if (def.horse) { drawHorseV1(v, now, def); return; }   // (a horse: the animal and its rider - #325)
+  if (def.board) { const im = boardImg(); if (im) { g.save(); g.translate(v.rx, v.ry); g.rotate(v.ra); g.drawImage(im, -13, -5, 26, 10); g.restore(); } return; }   // (a skateboard lying on the ground)
   const f = v.flags;
   // a land vehicle in the water is sinking: it settles, darkens and fades, bubbling (vehVisual)
   const sinking = vehSinking(v, def);

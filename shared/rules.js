@@ -447,7 +447,7 @@ export const BARRIER_REPAIR_S = 300;       // the road crew puts a smashed barri
 // Boats
 export const BOAT_RENTAL_S = 300;          // a hired boat or jet ski is yours this long; bring it back to any rental dock
 export const BOAT_RENTAL_GRACE_S = 45;     // overdue this long and the hire company reports it stolen
-export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350, rowboat: 40, kayak: 30 }; // per hire (the rowboat and the kayak: Silver Thread Lake's hire, the Redwood River run)
+export const BOAT_RENTAL_PRICE = { jetski: 120, dinghy: 150, speedboat: 350, rowboat: 40, kayak: 30, rib: 300, pontoon: 280, sailboat: 260 }; // per hire (the rowboat and the kayak: Silver Thread Lake's hire, the Redwood River run)
 
 // Police gear
 export const SPIKE_STRIP_S = 45;           // a deployed spike strip stays across the road this long (one per officer)
@@ -475,11 +475,15 @@ export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
 export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
 
-// Lost pets
-export const PET_EVERY_S = 480;            // roughly how often a pet goes missing somewhere near a player (was 150: too often)
-export const PET_OWNER_PX = [1600, 2800];  // how far from the pet its owner is out looking (a real walk home, not round the corner)
-export const PET_REWARD = 220;             // the owner's thank-you (cash) for bringing it home...
-export const PET_SAMARITAN = 8;            // ...and the Samaritan points
+// Lost pets (server/systems/pets.js)
+export const PET_EVERY_S = 480;            // about how often one goes missing near a player
+export const PET_MAX_LOST = 3;             // at most this many at once
+export const PET_LOST_PX = [900, 2200];    // its last-seen area this far from home
+export const PET_AREA_R = 320;             // ...this big
+export const PET_POSTERS = 4;
+export const PET_LOST_S = 1800;            // not home by then: it finds its own way back
+export const PET_REWARD = { base: 300, perM: 8, max: 1200 };   // + perM a metre from where you found it to its door
+export const PET_SAMARITAN = 12;
 
 // Nightclubs (server/systems/nightclubs.js, task #432): open from dusk; at the end of the night the music stops, the
 // dancers walk out and the line breaks up, and the shutter comes down once the floor's empty
@@ -508,6 +512,8 @@ export const CALM_STREETS = { fightShare: 0.2, snatchShare: 0.5, incidents: 2, i
 export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight
 export const FAINT_HELP_REWARD = 40;       // helping someone who collapsed back on their feet (cash, from them)...
 export const FAINT_HELP_SAMARITAN = 6;     // ...and the Samaritan points
+export const FAINT_HELP_HOLD_S = 1.5;      // hold ACT this long to help them up
+export const FAINT_EMS_S = 30;             // left lying this long: an ambulance is called
 export const WALLET_TIP = [40, 90];        // handing a dropped wallet back: their thank-you
 export const WALLET_SAMARITAN = 8;
 
@@ -668,7 +674,8 @@ export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launc
 // respond to calls of missing or hurt hikers out in nature spots, and you get a general idea where they may be but you
 // gotta go out and search for them and retrieve them") - server/systems/sar.js. A shift of calls, one after another:
 // firstS after signing on, then gapS after each; a call nobody answers in callS is dropped (the next one comes). Calls
-// come from dist px away; the search circle is circleR px across the middle of it (the spot somewhere inside); within
+// come from dist px from the base you signed on at - of draws spots drawn that near, the nearest (sar.js pick); the
+// search circle is circleR px across the middle of it (the spot somewhere inside); within
 // seeR px they see you - they wave and a smoke flare goes up. Landed within landR px of them they're helped aboard
 // (boardS); the harness: hovering within reach px of them across, the cable pays out (payout px/s, while you hold Act)
 // up to maxLen px - higher than that above them, or drifting faster than drift px/s, and it can't reach; clipped on,
@@ -678,7 +685,7 @@ export const BOOM_TEST_KINDS = ['small', 'medium', 'big', 'ultra', 'car', 'launc
 // rescue (the time against parS + a second per perKmS px), less hardCut a hard landing with someone aboard (down to
 // minPay of it); samaritan points a rescue.
 export const SAR = {
-  firstS: 8, gapS: [25, 50], callS: 720, shiftS: 3600, dist: [1400, 9000], circleR: 900, seeR: 560, landR: 320, boardS: 3,
+  firstS: 8, gapS: [25, 50], callS: 720, shiftS: 3600, dist: [1400, 24000], draws: 4, circleR: 900, seeR: 560, landR: 320, boardS: 3,
   hoist: { reach: 80, maxLen: 300, payout: 85, winch: 110, drift: 120 },
   life: [260, 380], hardLife: 40, base: 260, perKm: 90, fast: 0.6, parS: 120, perKmS: 70, hardCut: 0.25, minPay: 0.4, samaritan: 6,
 };
@@ -851,7 +858,7 @@ export const ARCADE = {
   hockey: { price: 1, to: 7, win: 20, perGoal: 2, minS: 20 },
   // pinball (client/pinball.js, NEON NIGHTS): a ticket for every pinball.perTicket points, no more than maxRate points a second
   pinball: { price: 1, perTicket: 1000, maxRate: 400, minS: 10 },
-  prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { item: 'skateboard', t: 500 }],
+  prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { board: 1, t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 // bank heists (the owner's #306, 10-07 / 10-08: "heists and bank robberies" - server/systems/heist.js, client/vault.js):

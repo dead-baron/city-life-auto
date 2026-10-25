@@ -15644,6 +15644,420 @@ Copper Gulch, next door to the town's clinic.
 - test/fences.test.js: held walking, hopped at a run (the crouch, the lift, the far side), the event, chain-link holds,
   a crate holds, a wall behind it holds, the page's prediction matches.
 - Page code: 497.9 KB of the 498 budget (the fences load after the page; the spawn map with the death screen).
+## 2026-10-24 - Batch 4a: finding your way on jobs, the siren that clears the road, search and rescue out in the wild
+
+### The job's waypoint (the owner: "On jobs let's give a waypoint arrow or line that helps players know where they're going for the job. In the ambulance job it's hard to know where to go")
+- The server already decided each job's target (server/systems/phone.js jobTarget: the fare then the drop, the next bus
+  stop, the wreck then the impound, the patient then the hospital, the fire, the delivery, the field, the search circle,
+  the job's truck until you're in it) and the self record carried it (me.job). The radar and the map marked it; on the
+  screen there was only a small marker over it once it was in view.
+- client/jobway.js (new, loaded the first time you have a job): off screen, a pulsing yellow arrow at the screen's edge
+  points to it, with how far (m / km) on a plate beside it. A rescue call's search circle is drawn on the ground too
+  (dashed orange); inside it the arrow gives way to "SEARCH AREA - LOOK FOR THEM". While the job's truck is waiting for
+  you its own ring and arrow lead (as before).
+- The GPS line (client/route.js) follows the roads to the job when you've set no waypoint of your own - on the radar and
+  the map, on foot or driving; not in an aircraft or a boat. A target on the move (a fare walking up) is snapped to a
+  96 px grid so it doesn't re-route every frame.
+- The map's panel: picking the job's line takes the map to it (the search circle with it).
+- test/jobway.test.js: every job on the phone's list (deliveries, the farm, search and rescue, crop dusting, charter,
+  the coast guard by boat and air, field work, firefighter, paramedic, taxi, bus, tow truck) sends a finite target, its
+  vehicle marked until you're in it and the target in the self record; the target follows the job (the patient, the
+  fire, the fare then where they go, the search circle's middle then the person found).
+
+### The siren (the owner: "There should be a siren for the ambulance that makes people get out of the way faster so it's easier to drive")
+- H already switched it (any police car, the ambulance, the fire engine); traffic eased over only for one coming at 60
+  px/s or more within 380 px. Now (server/systems/traffic.js SIREN_YIELD) it's heard from 520 px plus 0.6 s of its speed,
+  110 px either side, even crawling up behind a queue (20 px/s).
+- People get out of the road (server/systems/npc.js clearWay, called a few times a second from vehicles.js): anyone at a
+  loose end in the road up to 380 px ahead (more the faster it comes), 80 px either side of its way, steps off to the
+  nearest pavement at a run. A player's horn now does the same for someone just in front (170 px), at a walk. NPC
+  police cars, ambulances and fire engines running their sirens clear the road the same way.
+- The ambulance's and the fire engine's siren come on by themselves with each call (H still switches it off); the call's
+  message says so.
+
+### Search and rescue (the owner: "Search and rescue missions should be out in the wilderness not in a small city park"; "We should have a few specific search and rescue HQs to take these missions not the hospital")
+- Five bases (shared/world3-sarhq.js SAR_HQS, built by the same layout as the first): the Search & Rescue HQ at Westport
+  International, the Granite Peaks Ranger Station (up in the peaks, by the road), the Egret Coast Coastguard Station (by
+  the shore: the marsh and the open sea), the Red Rock Rescue Post (in the canyons off the desert road), the Sandpiper
+  Coastguard Station (on the east coast west of the point). Each: the HQ building and its door (a 'sar' place), the
+  hangar, the helipad with its lights (a rescue helicopter parked on it), the windsock, the fuel, the lamps and a paved
+  drive to the nearest road. The wild ones keep off the designed nature places and 3 tiles clear of the relief's cliff bands (no drive
+  where it would run along one), and clear the trees and rocks off their
+  apron and drive. m.world3.sarHqs lists them (sarHq the first, as before).
+- Calls only from the wilderness (server/systems/sar.js wildDistrict): the wild districts (the woods, the peaks, the
+  desert, the rocks and islets) and the open coast that's a region of its own (the Sandpiper Coast) - no parks, no farm
+  valley, no beach towns - with at most two buildings within 40 tiles (a cabin, a campground, not a town), and the water
+  off a wild shore or on a wild lake. On the v3 world: 179,528 open spots, 1,204 rough, 8,864 in the water.
+- Near the base you signed on at (sar.js pick): of four spots drawn within 1,400 - 24,000 px of the base (SAR.dist,
+  SAR.draws), the nearest - none of the kind that near (no rough ground by the airport), someone hurt on open ground
+  near it instead. Signing on at a base's pad (Act there) starts the shift there; the phone's job list offers the
+  nearest base.
+- test/world3scenes.test.js: the five bases built, each in its region with its pad, far apart; signing on at each one's pad starts
+  the shift there and its calls come near it; every call spot in a wild district. test/jobway.test.js: the same rules on
+  today's city (no park, no town), pick within reach of the base.
+
+### Numbers
+- Page code: 498.1 KB of the 498 budget (the arrow and its drawing load with the first job: client/jobway.js); the
+  renderer untouched.
+## 2026-10-24 - Batch 4b of the owner's notes: lost pets with posters, someone collapsing in front of you
+
+### Lost pets, redone (the owner: "a 'lost pet' poster are hung up and if you actually read the poster gives an approximate area where the pet was last seen ... These should pay a lot more ... a way to get the pet to stop following you")
+- server/systems/pets.js, rewritten round a real home. Now and then (PET_EVERY_S, at most PET_MAX_LOST = 3 at once) a
+  dog or a cat goes missing from a house, a cottage or a flat nobody plays in, 400-2600 px from someone on foot. Its
+  owner stands at their door the whole time ("Lost my dog!" over them for anyone within 700 px); killed or cleared, the
+  next from the house comes out once nobody's looking. No more owners or pets popping up at random spots.
+- Its last-seen area (PET_AREA_R = 320 px) is 900-2200 px from home (PET_LOST_PX), on the same island, in town; the pet
+  is in it where a lost pet ends up - the best of 50 looks scored for a yard or a park (grass), an alley's asphalt,
+  under a porch (beside a house, off the pavement), the pavement least; never the road, the water or indoors
+  (petGround). Lost, it sniffs about at half pace, sitting a while now and then, and never leaves the area.
+- The posters (PET_POSTERS = 4): by the home, a third and two thirds of the way to the area and at its near edge, each
+  on the nearest pole within 220 px (street lamps, utility and signal poles, posts, bus stops, finger posts, road signs
+  - a neighbourhood map board counts as a noticeboard) whose foot isn't in the road, else a wall's face over the
+  pavement; 120 px apart at least, put up out of everyone's sight. The page draws them as props (client/lostposter.js,
+  loaded the first time one is near: a sheet up the pole with a red LOST band, the pet's picture in its own colours, the
+  tear-off tabs, stirring a little) - the server sends the ones within 900 px in the event list (k 'poster').
+- Reading one (ACT at it: "Read the "Lost dog" poster") gives a note: its name, what it looks like, where it was last
+  seen ("Pine Hills, a short walk north-east of here - marked on your map") and the owner's address (the home's name
+  and district). From then on the area is a dashed circle on the minimap, the big map and the ground (k 'petarea', r)
+  with a lasting arrow to it, wherever you are, till someone has the pet at heel.
+- Found: take its collar (the label names its home). It trots at your heel and the way to its door is marked (k
+  'petret', as before). Handed back at the door it pays PET_REWARD = $300 + $8 a metre from where you found it to the
+  door, at most $1,200 (rewardFor; about $500-900 for the usual walk - it was a flat $220), and 12 Samaritan points
+  (was 8). The happy reunion and the adoption offer (task #427, H71) are as they were; the posters come down.
+- Let it go: with it at heel and nothing else to do, ACT is "Let Biscuit go (stop walking it home)" (pets.letGo, the
+  last of players.js findInteraction - anything else near you comes first). Let go, or lost (a car, a teleport, 900 px
+  off), it sniffs about where it is now: the area moves there with it (for everyone who read a poster) and the posters
+  stay up. Take it again any time.
+- Nobody brings it home in PET_LOST_S (30 minutes): once nobody sees it, it finds its own way back and the posters come
+  down. The lost pets no longer count as happenings (no radar blip on the pet itself, nothing for the calm streets).
+- shared/rules.js: PET_MAX_LOST, PET_LOST_PX, PET_AREA_R, PET_POSTERS, PET_LOST_S, PET_REWARD { base, perM, max }
+  (PET_OWNER_PX gone). shared/worldevents.js: the 'poster' and 'petarea' kinds. The paused tour's lost-pet stop still
+  reads PET_REWARD as a number - it wants its words redone when the tour comes back.
+
+### Someone collapses in front of you (the owner: "you actually see them trip and fall or pass out or something and you can go help them up?")
+- server/systems/happenings.js: the collapse now happens where you can see it - someone walking along the pavement well
+  inside your view (90-460 px off; nobody there yet: the next one who walks into sight, within 40 s). They sway, weave
+  and slow for 1.6 s - a stagger back on their heels, then forward - and go down face first, still (a 'collapse'
+  event: k 's' the stagger, k 'F' face down; the page: client/main.js, the existing stagger and face-down poses; the
+  thud of a body falling). Then the note: "hold ACT beside them to help them up".
+- Hold ACT FAINT_HELP_HOLD_S (1.5 s) beside them ("Helping them up... 0.8s (keep holding)", the prompt's bar; let go or
+  walk off and it stops) and they're back on their feet, turn to you, thank you ("Thank you!" over them) and press $40
+  on you, +6 Samaritan, as before.
+- Left lying FAINT_EMS_S (30 s), someone calls an ambulance: server/systems/ems.js dispatchFor sends one the usual way
+  for a living patient (emsPatient - drive() and the scene take one as they take a body); the paramedics treat them and
+  wheel them off on the stretcher. Helped up meanwhile, it turns round. No road to them: after FAINT_S they come round
+  and limp off as before. The ambulance also keeps clear of anyone passed out on the ground now, not only bodies.
+- The weakest of the random happenings, the one that just dropped someone on the spot, is gone with this; the fight
+  and the dropped wallet are unchanged.
+
+### Tests
+- test/lostpets.test.js (new): the posters by the home and along the way, on a pole or a wall, never in the road,
+  spread out; reading one (the note, the area marked for that reader only, wherever they are); the pet in its area, off
+  the road, staying there sniffing about for a minute; found, followed, the way home marked, handed back - the reward
+  from the walk; let go - it stays round there, the area moved, the posters up, taken again; lost from a car; nobody
+  brings it home - gone, the posters down.
+- test/happenings.test.js: the collapse in sight - the stagger on the wire, down face first, a tap isn't enough, held:
+  up, paid, thanked; left lying - the ambulance takes them away (or they come round); helped up while it's coming - it
+  turns round; lost pets from real homes, their areas a walk away. test/pets.test.js, test/world.test.js,
+  test/lobby.test.js: their lost pets now come from a home near the player.
+- Page code: 498.2 KB of the 498 budget (the rules' new numbers with short comments; the posters' drawing loads when
+  first near). README: rows for the lost pets and helping someone up (ACT, no new control).
+## 2026-10-24 - Batch 4c: skateboards you find and leave lying about, the walk-in arcade
+
+### Skateboards are vehicles now (the owner: "people will always be using skateboards to get around faster ... just making it like other vehicles would work best")
+- A skateboard is a vehicle lying on the ground (shared/vehicles.js 'skateboard', i 52: kind bike, pedal, board), not a
+  thing in your bag. The bag's skateboard, its quick button (B, D-pad down, the touch 🛹 pill) and its use from the bag
+  are gone (shared/items.js, shared/controls.js, client/main.js quickBoard, hud.js, input.js, style.css, index.html).
+- Where they lie (server/systems/skate.js boardSpots, worked out from the map at run time - the world's hash doesn't
+  change): a rack of three at each skate park (on its smooth ground, clear of the ramps, the rails and the benches,
+  the first run found from its south edge), two by the skate shop (Kickflip Skate Co.), one by most surf shops and by
+  half the boardwalk's places, one at a campus (World v3 has none yet). Never on a road or a bridge, never on grass,
+  never indoors. In World v3: 12 at the four skate parks and a handful elsewhere. They're put out round a player where
+  nobody's looking, as the shopping carts are (skate.js setOut), free to take.
+- The vehicle button by one (the prompt: "Get on the skateboard") steps you on: the board is taken up off the ground
+  (vehicles.js tryEnter -> skate.js mount) and you ride it as before - the push, the carve, the ollie, every trick,
+  the ramps' surfaces and the quarter pipes (shared/skate.js rampSurface, map.js qpipeSolids: unchanged), the sessions.
+  The vehicle button again steps you off and leaves it at your feet (beside you, on your level); by a car it's off
+  the board and into the car. A bail throws it ahead of you and it lands 1.2 s later where it stopped (short of the
+  wall); into the water it's gone. A park's board left lying is nobody's: traffic.js clears it once nobody's about,
+  and its rack fills again; while it's ridden its place stays empty.
+- The board's speed (shared/board.js BOARD): push 330 -> 270 px/s, pushHard 380 -> 315 - under every bike's top speed
+  (the commuter's 330, the beach cruiser's 290), so it's a short hop and a trick ride, not a way across town.
+- Your own board: bought at a skate shop, a surf shop or a sports shop ($85, "Skateboard": skate.js shopOptions), set
+  down by the door - outside a walk-in shop. One at a time (profile.board): after that the shops (free) and your home's
+  menu offer "bring it out" - the one lying about anywhere else goes first, never two. Taking someone else's is bike
+  theft. Left lying more than 2,000 px from you, or when you log off, it goes home (skate.js tidy, with a word about it).
+- The old bag's board, a fair swap (skate.js convert, on joining): a skateboard in your bag becomes your own board -
+  out of the bag and the quick wheel, profile.board set, a note saying where to take it out. Chosen over a refund: you
+  paid for a board, you keep a board. The arcade's 500-ticket prize is now a skateboard of your own too.
+- Both renderers draw a board on the ground: art v2 a voxel model (client/art2/vehicles.js 'skateboard'), the classic
+  view the bail's board sprite (main.js drawVehicleEnt). client/skate.js loads when a board's in sight.
+- Debug menu: "My own skateboard, beside me" and "The nearest skate park's rack of boards" (server/devplay.js).
+
+### The arcade you walk into (the owner: "The Arcade should be a building that has an interior you walk into ... the prize counter should be somewhere inside")
+- Every arcade's door - the Neon Strip's (Retro Rewind, Hi Score, VR Den, the Pixel Arcade, the Koi, the Nightfall,
+  Ultra Games), the Pier Arcade, the two Game Zones, Midtown's Penny Arcade: the 11 POIs arcade.js isArcade finds in
+  World v3 - opens onto its floor: a level of its own as a home's or a block's lobby is (shared/homelayout.js 'arcade',
+  walked round by server/systems/homeinside.js, drawn by client/render/homeview.js and homeart2.js; one floor per door:
+  arcade.js hallOf, ids from ARC0). Open to anyone, others in there with you; not with the police watching (wanted and
+  out of sight, the door takes its moment, as a lobby's).
+- Inside: a cabinet along the back wall for each arcade game (STARFALL, skee-ball, pinball NEON NIGHTS, air hockey -
+  arcade.js GAMES): walk up to one and Act puts in its credit and plays it on its own screen (the minigame flow and
+  client/arcscreen.js as before). Down the east wall the prize counter (G: a glass case of prizes lit from inside, plush
+  toys along it - client/art2/props-home.js prizeCounter, homeview.js): Act there for the prizes and your tickets.
+  Out by the door into the street at the arcade's door.
+- The menu at the door with the credits and the counter is gone: a menu opened at an arcade some other way offers only
+  "Go inside".
+
+### Tests
+- test/skate.test.js: a board on the ground, on and off with the vehicle button (taken up, left at your feet), the prompt;
+  no board no ride, not on grass, the water or indoors, off the board into a car; the bail's board landing; slower than
+  the bikes; the boards set out (a rack of three at a park, side by side, never on a road, filled round a player, free,
+  its place empty while it's ridden, gone once nobody's about); your own board bought and set down by the door, one at a
+  time, brought out, theft, gone home when left; the old bag's board converted.
+- test/arcade.test.js: in at the door, a cabinet for every game and each in reach, a different game at each, a credit
+  played and its tickets, the counter walked up to and a prize redeemed (the skateboard prize set down by the door), out
+  by the door; open to two players, not with the police watching, every arcade's door leads onto a floor.
+- test/world3server.test.js: World v3's racks at all four skate parks, a sparse few elsewhere, none on a road; every one
+  of its arcades' doors leads onto its floor. test/devplay.test.js: the new debug buttons.
+- Page code 497 KB of 498 (the board's vehicle in; the quick button, its pill and the bag's board out); the renderer
+  399.9 KB of 400 (the board's model in, a few of art2/vehicles.js's comments shorter).
+## 2026-10-24 - Batch 4d: the cinematic mode's drift controls and follow scenes
+
+The owner: "Can cinematic mode have more controls for the camera like choosing which direction the camera drifts at and
+the speed it drifts at? Can we set up automatic scenes that has the camera follow NPCs like in cop chases or street
+races or fishing or surfing (or every activity and stuff we've established so I can take some cinematic shots of
+everything, anything that can be automated with NPCs would be great.)"
+
+### The drift, steered
+- client/director.js: the Drift camera has a way (8 ways from the panel's compass, or any angle on the dial - drag
+  it) and a speed (Off, Crawl, Slow, Steady, Quick, Fast: 0-170 world px a second at the zoom of 1, slower across the
+  world further in), kept from one drift to the next; a new speed or way eases in. WASD / arrows / the left stick steer
+  it (it turns toward the way held), Z / X or LB / RB slower / faster, Space stops it and starts it again, Q / E or
+  LT / RT zoom, Esc / B back to you. While drifting the keys are the camera's (your character stands still).
+- The bar along the bottom (#cine-ctl) holds the drift's dial, speed and zoom (the follow scenes' kind, Next, Tour and
+  zoom). It shows with the HUD; on the clean screen it's hidden, and comes back for 3.5 s when you press a key or a
+  pad button, move a stick or the mouse, or touch the screen - then fades for the shot.
+- On a pad, while the camera has the controls: Y the panel, X a picture, B back; the bag, the quick wheel and the
+  weapon wheel stay shut (client/main.js: `ch`).
+
+### Follow scenes
+- shared/cinekinds.js (new): 36 kinds - Action (police chase, street race, armored truck, gang shootout, street fight,
+  purse snatcher, biker club ride, police on patrol, police helicopter, ambulance call), Vehicles (traffic, city bus,
+  taxi, main-line train, ferry, boats, a plane taking off or landing, the news helicopter), Country (combine
+  harvesting, horse rider, wildlife, shark, hunter, hikers / rangers / climbers), Fun (anglers, surfer, skaters, pickup
+  basketball, pool, dancers), People (chess, picnic, painter, diners, street corner life, street characters) - and the
+  tour's order (the action between the quiet ones), CINE_TOUR_S 45 s a kind, CINE_SUBJECT_S 120 s a subject.
+- server/systems/cinefollow.js (new): the page asks `{ t: 'cine', f: kind | 'tour' | 'next' | 'stop', near }`; the
+  server finds who's doing it from the systems' own state (streetlife's events, the police's targets, the shootouts,
+  the happenings, the activities' groups, the personas, the flights, the buses, taxis, ferries, trains, boats,
+  animals) - an NPC, an animal, a train or an aircraft, never another player - near you first (9 km) or anywhere, and
+  tells the page `{ t: 'cinef', id, k, n, z, cut, x, y }`: whom to follow (the vehicle they're in), what to call it,
+  how wide, cut or glide. When their activity ends it moves on: the same scene's next first (the next racer in the
+  race), else another of the kind; the tour moves on to the next kind (and after 45 s anyway). Nobody at it: in dev
+  mode one is started where that's cheap (a street race, a chase, an armored truck's run as the debug menu does, a gang
+  shootout, a street fight, a purse snatch, a plane on the nearest runway, an activity's spot filled, a street
+  character), at most once a minute a kind; otherwise the kind is skipped (the page says so and it keeps looking).
+- Its own actors, for what nobody does on their own yet: a combine harvesting a field (two ripe rows a pass, down and
+  back - farming.js npcWork: the rows cut, the stubble behind it, nobody paid), a rider out on a horse along the
+  country's roads and tracks (traffic.js planRoute / driveToward), a surfer at the nearest break (out at the line-up,
+  up on a wave as its crest comes, carving along the face ahead of the break, now and then an air, wiping out in the
+  white water, paddling back out - shared/surf.js's waves, the page's surf poses). They go once they're done and
+  nobody's looking.
+- The view goes with the camera: view.js focusOf / viewRect is the subject while you follow one (round them, leading
+  their way, out to the widest shot); cineEyes - traffic.js, npc.js, activities.js, boats.js, wildlife.js fill the
+  world round them as round a player, and farming.js / surf.js send the fields and the breaks round them. The page's
+  world window follows the camera when it's off you (main.js keepWindow: DIR.eye()). Your character stays where you
+  left it.
+- The page (client/director.js 'scene' mode, "Follow scenes" in the panel - it starts on the tour): the camera on the
+  subject, leading the way they go (0.6 s ahead, at most 380 px), the framing changing every 9-16 s (wider, closer,
+  off to one side), an aircraft followed where art v2 draws it up by its height; a cut fades through black while the
+  art comes in. N / Enter / A the next one, [ ] / LB RB the kind, T the tour, Q / E / LT RT zoom, Esc / B back.
+  Near me / Anywhere in the panel. Like the tour, it tells the server once a minute that it's playing on by itself
+  (the idle clock runs slow).
+- Not here, because nobody does them on their own: golf, tennis (the club pro only plays you), soccer and volleyball,
+  the jetski and raceway races (players').
+
+### Tests
+- test/world3scenes.test.js: on World v3 every kind finds someone at it, starts one for the camera or is skipped
+  cleanly (the page told either way; the view, the net window and what's sent on them); the street race, chase,
+  armored truck, train, plane, combine, horse, surfer, anglers and traffic always found; the hand-off (a racer out:
+  the next in the same race; the race over: another scene; the combine done: moved on), the tour's next kind.
+- test/director.test.js: the drift goes the way it's pointed at the speed picked (8 ways, the speeds in order, off
+  stays put, the zoom), steered by the keys and a stick; the follow camera leads its subject and settles when they
+  stop; every kind is the server's and in the tour once.
+- On the test's World v3 run from Midtown at noon, 29 of the 36 kinds found someone (or started one); skipped there:
+  the gang shootout (no turf near Midtown), the biker clubs, a police patrol, the police helicopter, an ambulance, a
+  taxi, a shark - nobody at those just then, and nothing cheap to start.
+- Page code: 498.0 KB of the 498 budget (the hooks in main.js: the 'cinef' message, the window following the camera,
+  the pad's wheels and bag shut while the camera has the controls); everything else loads with the director.
+## 2026-10-24 - Batch 4f: the insides of buildings, each its own (the owner: "We should keep developing the interiors of buildings so they're more unique and interesting on the inside")
+
+**What it was:** every walk-in that wasn't a food place, a hospital, a police station, the bowling alley, the cinema or
+one of Midtown's six hand-fitted trades drew the same room: a grey counter and one shelf of random coloured goods along
+the back wall. World v3 has 978 walk-in units; about 520 of them (the corner stores and marts, 312 of them, the clubs
+and bars, the clothes shops, the gun shops, the banks...) looked exactly alike inside.
+
+### The shops fitted by their trade (shared/shoprooms.js, new; client/art2/shopart.js, new)
+- A plan per kind of place, laid out over the server's room (the counter row, the doorway and the floor don't move):
+  - **corner store / mart** (convenience, the `mart` trade): aisles of snacks, a lit drinks cooler, the cigarette rack
+    and the lotto behind the till, a hot-dog roller or the coffee, a slush machine, an ice chest, a newspaper rack or an
+    arcade cabinet, a sign lit on the back wall (OPEN 24H, LOTTO, ICE COLD...); **gas station**: the same with the motor
+    oil on its stand and a stack of tyres
+  - **grocery**: aisles, produce bins by the door, the dairy coolers along the back, a freezer island, the carts
+  - **liquor**: the back wall of bottles, a beer cooler, a wine rack
+  - **gun shop**: rifles racked on the back wall, a glass counter of pistols on red felt, glass cases and a gun rack on
+    the floor, ammo crates, a camo mannequin, a deer's head or a flag
+  - **hardware**: the pegboard of tools, aisles, the paint cans, a stack of lumber, a ladder, a ride-on mower or a
+    wheelbarrow on show, the key machine on the counter
+  - **pawn shop**: guitars and TVs on the wall, jewellery under the glass counter, shelves of clutter and a heap of it,
+    a big old safe, a bike, a jukebox (WE BUY GOLD); **the fence**: the same, darker, crates, no sign
+  - **bank**: marble, the tellers' brass screen along the counter, the queue roped off with people in it, the vault door,
+    the clock and the rates board, the loan officers' desks, an ATM, a runner from the door; **the courthouse**: its
+    benches, the seal between two flags
+  - **pharmacy**: pastel aisles of medicine, the green cross lit, the blood-pressure chair, a few seats
+  - **barber**: the mirrors and the pole on the back wall, mirror stations with their chairs (a customer in one), the
+    bench for the wait, a fish tank or the TV
+  - **clothes / sports**: racks and folded tables, mannequins by the door; the sports shop's shoe wall, the ball bin and
+    a bike
+  - **tackle**: rods on the wall, a mounted fish, the bait tank, coolers, a canoe; **fish market**: ice tables, the ice
+    in the counter, the lobster tank, the price board
+  - **bars** (the `bar` trade) and the **clubs**: the counter a bar (dark top, the brass rail, the taps), the back wall of
+    lit bottles, stools along the bar, a neon sign; the bars' booths, a pool table where there's room, a jukebox, a TV or
+    an arcade machine; the clubs' dance floor lit in squares. The Rusty Spur keeps its own room, with the bar's back wall.
+  - **offices** (the `lobby` trade: the opticians, insurance, tax, quick cash and travel shops along the main streets):
+    desks with someone at them, filing cabinets, chairs to wait on, a water cooler - the optician's frames on the wall,
+    the quick cash's grille, the travel agent's posters, an inn's key rack, armchairs and luggage cart.
+- **Within a kind, every building its own** (seeded by where it stands: no Math.random, the same everywhere): the floor
+  (lino, checkers in three colours, tile, planks, polished concrete, marble, carpet...), the walls (paint and its band,
+  wood panelling, brick, pegboard, tile, stone), the goods' palette, the sign's words and colour, which hero pieces, and
+  how the aisles fall. Forty corner stores in the test come out in over twenty looks.
+- **Lit**: the coolers, the signs, the screens, the bottles, the dance floor and the fish tanks glow after dark
+  (emissive pixels in the cut-away: statics.js zw takes the glow).
+- **Gameplay-safe**: furniture isn't solid (as the food places' tables), and the door's lane, the strip along the counter
+  (the place's spot) and an ATM the map stood in the room and its spot are kept clear; the bar's stools leave the spot
+  you order at and the door free. Rooms with the door on the north side (none in World v3) keep the plain fit-out.
+- **Customers** (server/systems/activities.js 'shoppers'): one to three in a shop when you come near - browsing an
+  aisle, waiting at the counter, in the queue at the bank, sat in the barber's chair, on a stool at the bar, at a desk.
+  The shopkeeper behind the counter was there already (interiors.js).
+
+### The clinics' exam bays, the diners' colours, the homes' schemes
+- The hospital and clinic lobbies (IN1-B) get exam bays out past the waiting chairs where there's room: a bed with its
+  sheet and pillow, the curtain half round it on its rail (statics.js lobbyRoom).
+- The diners' booths and checkers come in three colourings (red and black, teal and red, blue and teal), the fast-food
+  places' counters with them (shared/foodrooms.js `v`, by the building).
+- Homes (client/render/homeart2.js schemeOf): each home its own scheme by its id - the walls' paper tinted (sage, rose,
+  blue, ochre or the plain one), the planks' wood, a house's siding. The plans (a trailer, a flat, a house, a mansion by
+  the home's kind and its price) stay as they were, so every home's placed furniture stays where its owner put it, and
+  a room the owner painted keeps its paint.
+
+### Not done
+- The arcade (another batch-4 slice) and Midtown's hand-fitted trades (laundromat, books, records, clothes, florist,
+  salon) keep theirs. No hotel lobby or gym walk-ins exist to fit (World v3 has none); the `lobby` trade's offices took
+  their place.
+- The classic renderer (client/render/roomart.js) still draws the old fit-out for the shops.
+- Furniture isn't solid: making it so means new solid props in the map (a world change).
+
+### Budget
+- **Raised: the bake worker's code, 860 -> 875 KB and 73 -> 75 files (now 874.8 KB).** The fit-outs are drawn where the
+  cut-away rooms are baked - in the chunk bake, not the renderer - so shared/shoprooms.js (the plans, 8.8 KB) and
+  client/art2/shopart.js (the painters, 9.1 KB) load with the bake worker; nothing of it is on the page (498) or in the
+  renderer (400), which are untouched. Their comments were trimmed and three plans with no walk-ins in World v3 (a
+  tattoo parlour, a gallery, a surf shop) dropped before raising it; the raise is the 15 KB the batch allowed.
+
+### Tests
+- test/shoprooms.test.js (new): each listed kind has its own plan and no two plans look the same; a building's fit-out
+  is the same every time and buildings of a kind differ; in every size of room (3x3 to 24x10, the door left, middle or
+  right) the door and the counter's spot stay in reach round everything that stands, nothing stands in the way or off
+  the floor; the city's shops the same over the map's own tiles, their ATMs clear; the art draws every plan and the
+  fit-out rides in the cut-away's recipe; customers stand on the floor; homes of a kind differ.
+## 2026-10-24 - Batch 4e: better horses, new cars and boats, more helicopter and plane looks
+
+### The horse (the owner: "Horse animations could be better, can we make the horses look better and have better animation?")
+The horse was the four-legged rig every animal shares, given a long neck: a sausage of a body, straight legs swinging
+from the hip, two gaits (a 4-frame walk and a 4-frame run), and the saddle 10 px behind where the game sits the rider.
+- client/art2/horse.js (new): a model of its own. The body is the chest and shoulder, the barrel and the hindquarters
+  blended into one (the withers, the dip of the back, the round of the croup); the neck rises deep at its base to the
+  poll; the head is long and angled down (the jowl, the eyes, the nostrils, the ears up, the forelock); the mane falls
+  down one side of the neck in locks; the tail hangs from its dock. Each leg has its joints: the forearm to the knee
+  and the gaskin to the point of the hock (two-bone IK to where the foot is), the cannon, the fetlock, the pastern
+  folding back as the foot comes through, the hoof.
+- Eight coats (was six) with markings: chestnut (a blaze, white hind socks), bay (black points, a star), black (a star,
+  a sock), dapple grey, palomino (a blaze, white fore socks), paint (patches, four stockings), dun (black points, the
+  dorsal stripe, a snip) and appaloosa (the spotted blanket, a stripe). The farms' horses and the co-op's come in all
+  eight (server/systems/horses.js COATS, COAT_NAMES; wildlife.js; entities.js).
+- Real gaits, each foot on its own beat (horse.js GAITS): the walk (four beats, 8 frames, the head nodding twice a
+  stride), the trot (the diagonals together, a moment of suspension), the canter (three beats, the body rocking, the
+  head with it) and the gallop (four beats, the body stretched out, the head lower and forward, a moment with no foot
+  down) - 6 frames each. The body bobs with how much weight the feet carry; the tail swings, lifts and streams the
+  faster it goes and the mane lifts at the gallop. Standing, it rests a hind leg on its toe, swishes its tail, flicks an
+  ear and drops its head a little; grazing, its muzzle is in the grass and a foreleg forward. It also rears, falls,
+  lies dead on its side, wades and swims.
+- The gait is picked by the speed (client/art2/game/actors.js horseGait): the walk from 6 px/s, the trot from 66, the
+  canter from 172 (the horse's own pace is HORSE.canter of its top speed: 273), the gallop from 300 - 8 px/s past an
+  edge to change up and below it to change down, so it never flickers. The legs' cycle runs by the ground covered
+  (a stride a cycle: 42 px at the walk to 150 at the gallop - host.js _horse), and the rider rises and falls with the
+  gait (twice a stride at the walk and the trot).
+- The saddle sits at the model's middle, where the game puts the rider (the def's seat): the saddle cloth, the saddle
+  (the seat at 37-38 px, the people's 'saddle' pose height), the cantle, the horn, the fenders and stirrups, the girth,
+  the bridle, the bit and the reins to the horn.
+- The classic view keeps its simpler horse (the farm animal's sprite, walking or running by speed).
+
+### New cars and boats (the owner: "Add more vehicle and boat types")
+shared/vehicles.js: seven cars and five boats, each with its stats, seats, crate slots (the open beds and decks carry
+more: the 4x4's tub 2, the pontoon's and the trawler's decks 4) and a classic-view stand-in (sprite).
+- The Riviera Convertible (a fifties droptop: the open cockpit, cream benches, the folded top, tail fins, the chrome
+  spear, whitewalls), the Bajito Lowrider (long and slammed on gold or chrome wire wheels, pinstripes, flames on some,
+  a continental kit on others), the Stallion 440 muscle car (fastback, hood scoop, ducktail, racing stripes), the
+  Zipper GTi hot hatch (roof spoiler, sill stripe, twin pipes), the Trailcat 4x4 (open top, roll bar, buckets and a
+  bench, the spare on the back, round lamps, a slotted grille; rough 0.35: at home off the road), the Haul-Away Moving
+  Van (a cab-over box van in the firm's colour, the loft over the cab, the arrow down the side, the roll-up door) and
+  the Mr. Frosty Ice Cream Van (pastel and white, a striped roof, the serving hatch lit under its awning, the menu, a
+  giant cone on the roof).
+- The Gull 26 Sailboat (the sloop's mainsail set on its boom, the jib, the cabin trunk, the cockpit and tiller), the
+  Sunday Pontoon (two aluminium tubes, a carpeted deck, the fence, couches, the bimini, the helm), the Fishing Trawler
+  (a deep hull, the wheelhouse, the outrigger booms, the net drum and the gantry, fish boxes), the Seaview 32 Cruiser
+  (the cabin, the flybridge and its radar arch, the cockpit, the swim platform) and the Sport RIB (the rescue boat's
+  hull without its kit, its tubes in its paint). Riders show at their seats in the open boats (crew).
+- Where they turn up (server/systems/traffic.js): the town's traffic and parked cars take a district's own on top of
+  the mix (DISTRICT_MIX: convertibles, 4x4s and ice-cream vans by the beach, lowriders and muscle cars on the south side
+  and the strips, hot hatches and moving vans among the homes and flats, the ice-cream van by the park, moving vans in
+  the industrial districts and the harbour - not in the busy centre, where one long van in the kerb bays and the
+  junctions tipped Midtown into a jam in test/calmstreets.test.js), the country's roads the 4x4s (COUNTRY_MIX). The boaters take the new boats
+  out (boats.js MODELS) - on big water only, as all of them. At the marinas, two berths in five of a speedboat or a
+  dinghy take one of the new boats (marinaModel: the trawlers at the harbours), only on big water and only where the
+  bigger hull clears the pier.
+- Sold at the dealership (the cars) and the marina (the boats); the sea rental docks hire the RIB, the pontoon and the
+  sailboat too (shared/rules.js BOAT_RENTAL_PRICE); the dealers' lots stock the cars; the debug menu spawns each.
+- The engines' sounds (client/sound/vehicles.js ENGINE_CLASS): the V8s for the convertible, the lowrider and the muscle
+  car; the sailboat under sail is quiet.
+
+### More helicopter and plane looks (the owner: "Add more helicopter and plane looks")
+- New models (client/art2/aircraft.js, render/aircraft.js for the classic view): the Channel 7 SkyCam (the news crew's
+  own: deep blue and gold, the camera turret under the nose, the dish on the roof, the mast) - the news flights over a
+  chase fly it now (airtraffic.js); the Mercy Air Ambulance (white with a green band, the blue star of life on its
+  doors, its beacon on a call) - waiting on the hospital's pad (aircraft.js); and the Otter Floatplane on its floats,
+  moored off a few marinas on big water (aircraft.js seaplaneSpots) - it floats (no sinking, no ditching: def.floats),
+  and takes off and lands on the water (it lifts off at 320 px/s, under what the water lets it roll at).
+- Liveries by the variant (LIVERIES): the Skylark (the private and charter helicopter - no longer dressed as the news
+  one) in five, the Larkspur light plane in five, the floatplane in three. The rescue helicopter keeps its SAR look; the
+  police, the gunship and the crop duster theirs.
+
+### Loading and the budgets
+The new models load when first needed, out of the startup code (the renderer was at 400 of 400 KB and a bake worker at
+856 of 860): client/art2/fleet.js (the cars' and boats' models, which add themselves to vehicles.js's tables) and
+client/art2/horse.js. The page's host loads the fleet the first time one is seen (until then it draws a stand-in under
+the stand-in's own key); the workers are told where both are (pool.js init) and load them the first time a sprite wants
+them (actors.js needsArt) - like the aircraft's art. Comments trimmed in shared/vehicles.js and client/art2/vehicles.js to
+make room for the new types' entries and the hooks. Measured after: the page 497.3 KB of 498 (was 497.9), the renderer
+400.2 of 400 (was 400.0), a bake worker 855.8 of 860 (was 856.3), its files 73 of 73 - no budget raised.
+
+Tests: test/fleet.test.js (the new types, their models and states, the liveries, crate slots, sold and hired, kept out
+of the startup code; the horse's coats, its gait by speed with the margin at each edge, every frame its own, the
+gallop's moment in the air, the saddle's height), test/world3fleet.test.js (World v3: every new car on some road and
+at some kerb, the new boats only on big water, the floatplanes' moorings and one floating, the air ambulance's pad).
+Pictures: tools/art2/model-shot.mjs (new: a model's sprites at headings or a pose's frames, lit, to a PNG);
+tools/art2/horse-preview.html shows the new horse.
 ## 2026-10-24 - b3c: the shops where you need them, again after batch 3
 
 Batch 3 broke test/world3server.test.js "shops where you need them": Pine Hills' and Sunset Beach's south-west streets
@@ -15710,6 +16124,66 @@ turns south (one street - one edge, a lane each way - round a tight corner):
   station, neither with room behind) and 0.3; with all three: 0.2, 0.4 and 0.3 (3, 7, 7 at the worst).
 - test/trafficwalls.test.js: a bike parked on the pavement beside a car's way doesn't stop it (one in the road does);
   two cars nose to nose with a car close behind each - one of those behind backs off.
+## 2026-10-24 - ui0: the UI review's quick fixes (P0) - the touch controls off the sticks, 44 px targets, the debug bits back
+
+The UI/UX review of every screen (step 1 of the overhaul) listed nine quick fixes before the redesign. This is those
+nine; the redesign (P1 / P2) waits for the mockups and the owner. The owner's example was the first: flying on a phone
+held upright, ▲ and ▼ sat on the move stick.
+
+### The touch controls (client/style.css)
+- **Upright (390 px wide), every right-hand control right of the middle** - the left half is the move stick's. Over
+  the aim stick FIRE and ACT; over them WPN, CAR and THROW; beside the stick ROLL / BRAKE with HORN / RELOAD above it.
+  In the air CLIMB and DOWN take those two places (they sat on the move stick); RELOAD at the wheel takes THROW's. The
+  cluster reaches no higher than it did (y 548 on 844), the stick itself 12 px nearer the edge to make room.
+- **CLIMB / DOWN** written on the buttons under the arrows (they were ▲ / ▼ only). **BRAKE is put away in the air**
+  (only a plane on its wheels brakes, and pulling the stick back does that too).
+- **FIRE ON** (the aim stick's ring fires) is a small pill top left with ITEMS and the flashlight: on its side by the
+  minimap, ITEMS / FIRE ON / 🔦 / COP CAR down a column; upright in a row under the minimap. It sat on the aim stick's
+  ring, and a thumb on the stick's edge flipped it.
+- **44 px or more to tap, everything on touch**: the round HUD buttons (the 34 px circle drawn inside a clear border),
+  the pills (30 px tall drawn, 44 to tap), FIRE ON, WPN and HORN / RELOAD (45 px after a short screen's 0.9 scale -
+  the pills keep out of that scale), the panels' ✕ (pause, bag, phone, settings, shop, map), the phone's ◀, the death
+  screen's ◀ ▶ and hide, its spawn map's buttons, the title's graphics and tool buttons, the creator's tabs, chips,
+  swatches and turn buttons, the settings' selects, switches (drawn 24 px in a 44 px target) and sliders, the map's
+  check boxes, rows, zoom buttons, Set Waypoint and ✕, the bag's pins and Use, the hub's tabs, and the cinematic panel and bar.
+- **Safe areas**: the aim stick, ROLL / BRAKE and DOWN clear of the home bar (env(safe-area-inset-bottom)), the
+  upright column by the right inset, the round buttons by the camera at the top, the phone, the weapon picker and the
+  cinematic panel inside the top inset.
+- The aim stick's name (AIM · PUNCH) sits under the stick: ACT covered it.
+- A phone on its side 800 px wide or less: the round buttons start beside the pills and the cash comes 6 px nearer
+  the edge so all of it fits at 740 px with the 44 px targets; the grey 🐞 leaves that row until Dev Debug Mode is on
+  (the pause list's Debug menu line still opens it).
+
+### The HUD
+- **The weapon and its rounds show on a phone held upright** (compact, top right over the cash; it was hidden). The
+  round buttons, the notes and the robbery / train / custody bars moved down to make room; the prompt 14 px lower.
+- **The job line upright** sits in the left half over the move stick (it was mid-screen across the buttons' rise).
+- **The weapon box is gone from the big map** (its "TAB to switch" / "tap: next · hold: pick" wrapped and was cut
+  off). On touch the HUD's weapon plate no longer says "tap: next · hold: pick" - WPN ⇄ says it.
+- **The prompt's colon** after the key chip is gone ("E : Enter ..." read as a typo, ": Counter" on touch).
+- **#net** (fps, ms, entities) shows only in Dev Debug Mode, on a desktop.
+- **The pause list**: Debug menu is the last line, so Resume is first and has the focus.
+
+### The new batch-4 pieces under the same rules
+- **The cinematic drift / follow-scenes bar** (client/director.js): on a phone it takes the action buttons' corner,
+  bottom right, at most half the screen wide, and the action buttons, the aim stick and FIRE ON are put away while it
+  shows (the camera has the controls then; they did nothing). It sat over FIRE, ROLL and both sticks upright. Its
+  buttons and the panel's are 44 px on touch.
+- **The death screen's spawn map** (client/deathscreen.js) on a phone on its side ends higher, clear of the panel's
+  now-taller 44 px buttons (its list had covered the panel's hide button).
+- **Going down closes the cinematic panel** and brings the camera back to you (a drift or a follow scene kept the keys
+  and the pad from the death screen's choices); the bar hides while you're down. The panel sat over the death panel.
+- **The job arrow** (client/jobway.js) keeps on a phone to the open middle of the screen, clear of the HUD at the top,
+  the sticks and the buttons (it reached under them at the screen's edge), and points out from you; "SEARCH AREA"
+  sits at that part's top.
+
+### Tests
+- test/hudlayout.test.js: on every touch screen of the HUD page (844x390, 740x360, 390x844, 1024x768, 1280x720,
+  1920x1080; on foot, driving, flying, police, robbing, arrested) no touch control on another, every one 44 px or
+  more, and upright the right-hand ones right of the middle - with the H70 checks as before.
+- test/touchair.test.js reads the safe-area bottoms and checks BRAKE is away in the air; test/kbdrive.test.js the
+  FIRE ON pill's markup.
+- Captured on the dev server (World v3), before and after: ui0-shots in the session's scratchpad.
 ## 2026-10-24 - b3d, part 2: the streets by Midtown station keep moving, whatever the day brings
 
 ### Still locking on the merged batch 3 (e952ccfc)
@@ -15753,6 +16227,14 @@ in the middle where the wide road from the south comes in - and they were on:
 - test/trafficwalls.test.js: a car out of its lane nose to nose with one in its own edges back and they pass (the
   make-room test now starts after the sidestep's tries); a tanker and a car round a tight bend the two ways both get
   round, the tanker's claim seen; a kerb bay at the street's end takes a car, not a van or a flatbed.
+- 2026-10-24, the batch 4 merge (b4b-2): the ambulance crew get round a vehicle they're held up against. With the
+  siren clearing the road (b4a), a car that pulls over for it can end up stopped beside the ambulance at the scene,
+  across the crew's way to the patient. pedStep held the medic at its side, and sidestep sent them back and forth along
+  it till the scene timed out ("every step in turn": no treat, no lift - test/ems.test.js, and the collapse's ambulance
+  in test/happenings.test.js). server/systems/ems.js walkTo: a medic with next to no headway in half a second, up
+  against a vehicle standing still, takes the shortest way round it by its corners - each in sight of the next, on open
+  ground, not one pressed against another vehicle - and keeps to it till round, then on as before. Not the vehicle
+  they're walking to (boarding); only when held up, so a walk that slides past as it did is unchanged.
 ## 2026-10-24 - b3c-2: Sandpiper Bay built up again (gardens behind houses only)
 
 test/world3towns.test.js failed on batch 3: Sandpiper Bay had 3,004 tiles of road (943 the main street's) and 1,955 of
@@ -15825,3 +16307,41 @@ and two workers behind it, the street through the ghost, no blob. Phone 390x844 
 - `test/seethrough.test.js`: b5a's easing, vehicle-sized clear space and feathering, plus `seenBehind`: what's behind
   shows at 75 %+ (more than the street does), nothing while it isn't fading, no step as it eases in or across the
   feathered edge.
+## 2026-10-25 - Batch 4a fix: the Sandpiper Coastguard Station's drive off Sandpiper Bay's boardwalk
+
+- test/world3townmodels.test.js on batch 4 found three of Sandpiper Bay's boardwalk rails standing on paving (LOT) where
+  their planks should have been, at tiles (5464-5466, 2777-2779) - and so "outside the towns". The cause was the new
+  Sandpiper Coastguard Station (shared/world3-sarhq.js, batch 4a). Its drive ran straight west from the station's
+  apron, along the apron's row 14 (tiles 2777-2779), to the nearest road. That road was the beach town's, so the drive
+  went across the boardwalk's ground. It was paved and marked RES (32, kept open), so the town's boardwalk, laid later,
+  left those tiles alone while its rail ran on over them.
+- A base out in the wild (SAR_HQS' wild ones) now stands wholly in its planned spot's own district, 6 tiles in from any
+  other (TOWN_GAP), so it is never on or up against a town's ground. It gets no drive if the drive would leave that
+  district, cross paving (PLAZA) or ground another pass has reserved, or run along a cliff band. The helicopters don't
+  need one. The airport's base is built as before.
+- Tests: world3townmodels, world3scenes (the five bases, their pads, the calls near each), world3server and
+  world3towns.
+## 2026-10-25 - Batch 4d, part 2: the follow scenes on batch 4 as merged
+
+On batch 4's merge (c4c59f74) test/world3scenes.test.js failed two of the follow-scene tests now and then. Neither
+came from another slice's change. Both were weaknesses in cinefollow.js that the merged world's different random state
+(World's rand is Math.random) uncovered:
+
+- **"mugging: a live subject, never a player"**: the purse snatcher the camera was on was taken away (arrested and
+  driven off, or cleared up) in the same tick, after cinefollow had run. The follow scenes looked again only every 5
+  ticks, and ran in the middle of the tick (after boats), so for up to 5 ticks `p.cineF.sub` (and the view, which
+  follows it) pointed at an entity that was gone. Fixed: cinefollow now runs **last** in the tick (server/world.js
+  SYSTEMS, after devplay), so it sees what every other system did that tick. A subject removed or downed is handed off
+  in that same tick; the full "still at it?" look stays every 5 ticks.
+- **"it harvests as it goes"**: the combine started for the camera took the middle rows of the field nearest you,
+  whole length. World v3's fields are cut by a wandering edge (their rects hold trees and tracks; farming.js row.ok has
+  a bit for each segment that's crop). Checked on World v3: from Downtown (where the second test starts one, its first part
+  having ended early) the old choice was field 134's rows 13-18, with no crop in four of them and one segment in the
+  other two, so nothing was harvested. From Midtown only the first of its three passes was on crop. The combine drove
+  where nothing grows. Fixed: `combinePlan` picks the nearest field with 1-3 passes (pairs of rows) whose crop runs together for at
+  least 5 of the 10 segments, and keeps each pass to that stretch (the header ends at the crop's end). The ripening is
+  only those rows. And a driven actor (the combine, the horse) that gets no nearer where it's going for 8 s skips to the
+  next point, or is done at the last one, so the camera moves on instead of watching a stuck machine.
+- Neither test was loosened.
+- Now: from Downtown field 138, one pass over segments 1-6; from Midtown field 95, rows 14-15 over the whole length.
+- test/world3scenes.test.js under the lock, twice: 6/6 both times; test/director.test.js + test/farming.test.js 15/15.

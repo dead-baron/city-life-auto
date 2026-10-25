@@ -117,20 +117,18 @@ test('ATMs in every district with streets (set into building fronts, a few insid
   assert.ok(f.items[0].text && f.items[0].x === 20000 && f.items[0].where, 'the newest item first, with where it is');
 });
 
-test('lost pets: one runs off near you, take its collar, walk it to the owner for a reward', async () => {
+test('lost pets: one runs off from a home near you, take its collar, walk it to the owner for a reward', async () => {
   const pets = await import('../server/systems/pets.js');
-  const { PET_REWARD, PET_SAMARITAN } = await import('../shared/rules.js');
+  const { PET_SAMARITAN } = await import('../shared/rules.js');
   const combat = await import('../server/systems/combat.js');
   const w = makeWorld();
-  const shop = w.map.pois.find((q) => q.kind === 'coffee');
   const { p, prof } = joinPlayer(w, { cash: 0 });
-  teleport(w, p.ped, shop.x, shop.y + 40);
   let pet = null;
-  for (let k = 0; k < 20 && !pet; k++) pet = pets.spawnLost(w, p);
+  for (const h of w.map.homes) { if (pet) break; if (h && h.kind === 'house') { teleport(w, p.ped, h.x, h.y); pet = pets.spawnLost(w, p); } }
   assert.ok(pet, 'a pet went missing');
   const owner = w.get(pet.pet.owner);
   assert.ok(owner && owner.npc.petOwner === pet.id);
-  assert.ok(w.happenings.some((e) => e.kind === 'pet'), 'on the radar');
+  assert.ok(pet.pet.posters.length >= 1, 'posters up (test/lostpets.test.js)');
   assert.equal(combat.damage(w, pet, 50, p.ped, 'melee'), false, 'nobody hurts a lost pet');
   teleport(w, p.ped, pet.x + 20, pet.y);
   let act = players.findInteraction(w, p);
@@ -149,7 +147,7 @@ test('lost pets: one runs off near you, take its collar, walk it to the owner fo
   act = players.findInteraction(w, p);
   assert.ok(act && /Give .* back/.test(act.label), act && act.label);
   act.run();
-  assert.equal(prof.cash, PET_REWARD);
+  assert.equal(prof.cash, pets.rewardFor(pet));
   assert.ok(prof.samaritan >= PET_SAMARITAN);
   assert.ok(w.get(pet.id) && pet.pet.home && !pets.lostPets(w).includes(pet), 'home again: with its owner, no longer lost (test/pets.test.js)');
 });

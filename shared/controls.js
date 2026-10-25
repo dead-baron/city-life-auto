@@ -1,6 +1,6 @@
 // Logical actions and how each device triggers them. The HUD prompts and the tutorial both read
 // these tables, so a rebind here updates every hint in the game.
-export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance', B: 'board' };
+export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance' };
 // (on a skateboard the fire button is the trick button: shared/skate.js)
 // (light shares D-pad up with the horn: the horn is only in a vehicle, the flashlight only on foot)
 // On a pad (tasks #301, #411): RT fires and the right stick only aims (Settings: "right stick full push fires" puts the
@@ -14,7 +14,6 @@ export const PAD = {
   move: ['L-STICK', 'stick'], aim: ['R-STICK', 'stick'], gas: ['RT', 'bumper'], brake: ['LT', 'bumper'], pause: ['MENU', 'sys'], back: ['B', 'b'],
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
-  board: ['D↓', 'sys'],   // (D-pad down: the skateboard - the police cruiser instead when you're a cop who can call one)
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
 };
 // (back: the death screen's choices folded away to watch the scene, and opened again - task #403)
@@ -23,7 +22,6 @@ export const TOUCH = {
   move: 'LEFT THUMB', aim: 'AIM STICK', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
   steer: 'LEFT THUMB', block: 'HOLD AIM STICK',
   dance: '📱 DANCE',
-  board: '🛹',
   trick: 'TRICK',
 };
 export const KB = {
@@ -31,7 +29,6 @@ export const KB = {
   move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',
   steer: 'A/D', block: 'RMB',
   dance: 'G',
-  board: 'B',
   trick: 'CLICK',
 };
 export const ACTIONS = Object.keys(KB);

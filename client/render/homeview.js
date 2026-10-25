@@ -168,7 +168,7 @@ function drawArt(L, me, u, now) {
   // paint or floor changed, the furniture's models kept - while the old one stays on screen until it's ready
   if (!art || art.ap !== ap || (art.L !== L && !(art.next && art.next.L === L))) {
     const same = !!art && art.ap === ap && (art.L.base || art.L) === (L.base || L);
-    const nx = new artMod.HomeArt(L, ap, same ? art : null);
+    const nx = new artMod.HomeArt(L, ap, same ? art : null, st.id);   // (st.id: the home's own scheme - homeart2.js schemeOf)
     if (same && art.ready) art.next = nx; else art = nx;
   }
   if (art.next) { const nx = art.next; nx.relight(daylight()); if (nx.work(6)) { art = nx; } }
@@ -467,6 +467,7 @@ function piece(b, p, P, L) {
     case 'Z': for (let k = 0; k < 8; k++) { box(k & 1 ? '#8a8680' : '#9a968e', x + 2, y + h - (k + 1) * 8, w - 10, 8); box('rgba(0,0,0,.18)', x + 2, y + h - (k + 1) * 8, w - 10, 1); } box('#5a3c22', x + w - 8, y, 4, h); break;
     // (H77, HO6) the concept's new pieces: a pool table, an arcade cabinet, cinema seats, a kitchen island, a sectional, a bath
     case 'x': box('#5a3a22', x + 3, y + 4, w - 6, h - 8); box('#2e7a46', x + 8, y + 9, w - 16, h - 18); for (const [dx, dy] of [[8, 9], [w / 2 - 2, 7], [w - 12, 9], [8, h - 13], [w / 2 - 2, h - 11], [w - 12, h - 13]]) box('#141414', x + dx, y + dy, 4, 4); box('#f4f0e4', x + w * 0.3, y + h / 2, 3, 3); box('#c83a2a', x + w * 0.62, y + h / 2 - 3, 3, 3); box('#e8c030', x + w * 0.66, y + h / 2 + 1, 3, 3); break;
+    case 'G': box('#3a2a4a', x + 3, y + 2, w - 6, h - 4); box('#9ad8e8', x + 6, y + 5, w - 12, h - 10); for (let k = 0; k < Math.floor((h - 10) / 10); k++) for (let i = 0; i < 2; i++) box(['#e85a9a', '#f2c21b', '#3ad0e8', '#7ae86a'][(k + i) % 4], x + 8 + i * 9, y + 7 + k * 10, 6, 6); break;   // an arcade's prize counter, its prizes behind the glass
     case 'j': box('#2a2e5a', x + 6, y + 4, w - 12, h - 8); box('#3ad0e8', x + 9, y + 8, w - 18, 10); box('#e85a9a', x + 8, y + 4, w - 16, 3); box('#141418', x + 7, y + h - 10, w - 14, 4); break;
     case 'i': for (let j = 0; j < p.th; j++) for (let i = 0; i < p.tw; i++) { const xx = x + i * TILE_IN, yy = y + j * TILE_IN; box('#2a1a1e', xx + 1, yy + 4, TILE_IN - 2, TILE_IN - 6); box('#a01e26', xx + 5, yy + 4, TILE_IN - 10, TILE_IN - 8); box('#7a141a', xx + 5, yy + 4, TILE_IN - 10, 7); } break;
     case 'n': box(P.fab, x + 2, y + 2, w - 4, h * 0.55); box('#f2f0ec', x, y + 2, w, h * 0.55 - 2); box('#9aa4ac', x + w * 0.2, y + 8, 16, 8); for (let i = 0; i < Math.round(w / 32); i++) { b.fillStyle = '#3a2a24'; b.beginPath(); b.arc(x + (i + 0.5) * w / Math.round(w / 32), y + h * 0.55 + 9, 5, 0, 6.28); b.fill(); } break;

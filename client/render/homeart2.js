@@ -58,9 +58,14 @@ const CONC = ramp('#8e8c88', 6, 3);
 const RUNNER = ramp('#8a2e2a', 6, 3);   // (H71: a lobby's landing)
 const PAPER = { living: ['#b8a888', '#c8b48e', '#d8c49a', '#3e4a5a'], bed: ['#a8a090', '#8aa0b4', '#9ab08e', '#6a2e36'], kitchen: ['#d0ccb8', '#e0dcc8', '#e8e4d4', '#e8e6de'], bath: ['#c8ccc4', '#d8e4ea', '#d8e4ea', '#e8eef0'] };
 const OUTSIDE = ['#8a929a', '#8e4a3c', '#b8a07a', '#d8d0c0'];   // the front wall's outside: tin, brick, siding, stone
+// (batch 4: no two homes of a kind alike) each home's own scheme by its id - 0 the plain one: the walls' paper tinted, the
+// planks' wood and the siding's colour (a room painted by its owner keeps the paint: shared/homedecor.js)
+const TINT = [null, [150, 176, 140], [196, 150, 156], [140, 166, 196], [204, 170, 112]], SIDING = ['#b8a07a', '#8aa0b4', '#c8c0a8', '#a8b89a', '#c89a8a'];
+export const schemeOf = (id) => (id ? (Math.imul(id | 0, 2654435761) >>> 0) % TINT.length : 0);
+const TINTED = new Map(), tinted = (hex, s, k) => { if (!TINT[s]) return hex; const key = hex + s + k; let c = TINTED.get(key); if (!c) { const b = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)); TINTED.set(key, (c = b.map((v, i) => Math.round(v + (TINT[s][i] - v) * k)))); } return c; };
 const CAP = ramp('#3a3440', 5, 2), RIM = ramp('#8a8070', 5, 2);
 
-function floorPx(kind, tier, wx, wy, x, y) {
+function floorPx(kind, tier, wx, wy, x, y, sc = 0) {
   if (kind === 't') {
     const P = TILE[tier], s = 16, gx = wx % s, gy = wy % s;
     if (gx < 1 || gy < 1) return step(ramp('#8a8a84', 5, 2), 0.45, x, y, 0.2);
@@ -78,11 +83,12 @@ function floorPx(kind, tier, wx, wy, x, y) {
   }
   // wood: planks east-west, staggered joints, grain; a trailer's scuffed
   const row = Math.floor(wy / 8), off = Math.floor(hash(row, 1, 9) * 64), lx = (wx + off) % 64;
-  if (wy % 8 < 1) return WOOD[tier][1];
+  const Wd = WOOD[tier < 3 && sc ? (tier + sc) % 3 : tier];
+  if (wy % 8 < 1) return Wd[1];
   let t = 0.52 + (hash(Math.floor((wx + off) / 64), row, 2) - 0.5) * 0.3 + (vnoise(wx * 0.3, wy * 3, 10, 3) - 0.5) * 0.18;
   if (lx < 1) t -= 0.3;
   if (tier === 0 && vnoise(wx, wy, 18, 8) > 0.7) t -= 0.15;
-  return step(WOOD[tier], t, x, y, 0.5);
+  return step(Wd, t, x, y, 0.5);
 }
 // a rug: its field, a border, a medallion, the fringe at the ends
 function rug(G, ap, rx, ry, rw, rh, tier, seed) {
@@ -106,8 +112,8 @@ export class HomeArt {
   // (H71) prev: the drawing of the same home before a change of decor - its yard, walls, floor and furniture models are
   // kept where the change didn't touch them (a piece placed, moved or turned: only the furniture and the floor's shadows
   // and rugs are made again; the paint: the walls; a new floor: the floor), so a change is a moment, not seconds
-  constructor(L, ap = 2, prev = null) {
-    this.L = L; this.ap = ap; this.tier = L.tier; this.R = prev && prev.R && (prev.L.base || prev.L) === (L.base || L) ? prev.R : rooms(L);
+  constructor(L, ap = 2, prev = null, id = 0) {
+    this.L = L; this.ap = ap; this.tier = L.tier; this.sc = schemeOf(id); this.R = prev && prev.R && (prev.L.base || prev.L) === (L.base || L) ? prev.R : rooms(L);
     this.items = []; this.lamps = []; this.windows = []; this.floor = null;
     this.envKey = ''; this.people = new Map(); this.cars = new Map(); this.figs = new Map();
     this.prev = prev; this.models = new Map();
@@ -173,7 +179,7 @@ export class HomeArt {
   // chairs - is buildFurniture's: yardThings)
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const key = L.key, paved = /^(apartment|studio|penthouse|lobby)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
+    const key = L.key, paved = /^(apartment|studio|penthouse|lobby|arcade)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
     const grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     const stone = ramp('#d8ceb8', 6, 3), plank = ramp('#9a6c44', 6, 3), board = ramp('#7a5034', 6, 3), white = ramp('#eeeae0', 5, 2), soil = ramp('#5a3e2a', 5, 2);
     const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3);
@@ -238,7 +244,7 @@ export class HomeArt {
             tx = o[0]; ty = o[1];
           }
           const f = this.L.floorAt && this.L.floorAt(tx, ty);
-          G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y), UP, 0);
+          G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y, f ? 0 : this.sc), UP, 0);
         }
         if (y % 24 === 23) yield;
       }
@@ -353,7 +359,7 @@ export class HomeArt {
     if (ty === last) {   // the outside of the front wall (the roller door in it)
       if (ch === 'R') return step(ramp('#a8acb2', 5, 2), 0.5 + (v % 3 === 0 ? -0.35 : 0.1), x, y, 0.2);
       const kind = L.key === 'trailer' ? 0 : L.key === 'apartment' || /^lobby/.test(L.key) ? 1 : L.key === 'mansion' ? 3 : 2;
-      return step(ramp(OUTSIDE[kind], 5, 2), 0.5 + (kind === 0 ? (wx % 6 < 1 ? -0.3 : 0) : kind === 1 ? ((v % 4 === 0 || (wx + (Math.floor(v / 4) & 1) * 4) % 9 === 0) ? -0.35 : 0) : kind === 2 ? (v % 4 === 0 ? -0.25 : 0) : (v % 7 === 0 || wx % 14 === 0 ? -0.2 : 0)), x, y, 0.3);
+      return step(ramp(kind === 2 ? SIDING[this.sc] : OUTSIDE[kind], 5, 2), 0.5 + (kind === 0 ? (wx % 6 < 1 ? -0.3 : 0) : kind === 1 ? ((v % 4 === 0 || (wx + (Math.floor(v / 4) & 1) * 4) % 9 === 0) ? -0.35 : 0) : kind === 2 ? (v % 4 === 0 ? -0.25 : 0) : (v % 7 === 0 || wx % 14 === 0 ? -0.2 : 0)), x, y, 0.3);
     }
     const u = wx - tx * T;
     if (ch === 'U' || ch === 'E') {   // (H71) a flat's door along a lobby's landing, its brass number plate; the lift's steel doors
@@ -382,7 +388,7 @@ export class HomeArt {
     if (paint) return step(ramp(paint, 6, 3), 0.55 + (t >= 1 && (wx % 10 < 1) ? -0.06 : 0) + (vnoise(wx, v, 12, 3) - 0.5) * 0.08, x, y, 0.4);
     if (kind === 'garage') return step(ramp('#9a9a96', 6, 3), 0.55 + (v % 8 === 0 || (wx + (Math.floor(v / 8) & 1) * 8) % 16 === 0 ? -0.25 : 0), x, y, 0.3);
     if (L.key === 'trailer') return step(ramp('#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling
-    const base = PAPER[kind][t] || PAPER.living[t];
+    const base = tinted(PAPER[kind][t] || PAPER.living[t], this.sc, kind === 'kitchen' || kind === 'bath' ? 0.2 : 0.4);
     if (kind === 'bath' || kind === 'kitchen') return step(ramp(base, 5, 2), 0.55 + (wx % 8 < 1 || v % 8 === 0 ? -0.25 : 0), x, y, 0.3);
     if (t >= 2 && v < h * 0.4 && h > HC) return step(ramp(LOOK[t].wood, 5, 2), 0.5 + (v === Math.floor(h * 0.4) - 1 ? 0.3 : wx % 12 < 1 ? -0.2 : 0), x, y, 0.3);   // the wainscot
     return step(ramp(base, 6, 3), 0.55 + (t >= 1 && (wx % 10 < 1) ? -0.08 : 0) + (vnoise(wx, v, 12, 3) - 0.5) * 0.1, x, y, 0.4);

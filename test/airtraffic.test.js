@@ -84,7 +84,7 @@ test('the news helicopter comes to circle a chase, then flies off', () => {
   const f = [...A.flights.values()].find((q) => q.kind === 'news');
   assert.ok(f, 'the news helicopter is sent');
   const v = w.get(f.vid);
-  assert.equal(v.def.livery, 'news', 'the Skylark in its news colours');
+  assert.ok(v.def.id === 'newsheli' && v.def.livery === 'tv', 'the news crew\'s own helicopter (batch 4: Channel 7\'s)');
   // (only the helicopters at work: the squad cars sent for them taken off the board, so nobody's cuffed meanwhile)
   const noCars = () => {
     for (const vid of [...(w.police || [])]) { const q = w.get(vid); if (q) { for (const id of q.seats) { const c = id && w.get(id); if (c) w.remove(c); } w.remove(q); } w.police.delete(vid); }

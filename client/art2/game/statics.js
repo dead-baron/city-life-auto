@@ -67,6 +67,8 @@ const BLAZES = ['#2a62c8', '#c8342a', '#e8c030', '#f2f0e8'];
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
+import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
+import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
 import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
@@ -2787,11 +2789,11 @@ function asphaltTex() {
   return ASPH;
 }
 // write a pixel if it is nearer than what's there
-function zw(G, x, y, c, n, z, f) {
+function zw(G, x, y, c, n, z, f, e = null) {
   if (x < 0 || y < 0 || x >= G.w || y >= G.h) return;
   const i = y * G.w + x;
   if (G.col[i * 4 + 3] && G.z[i] > z) return;
-  G.put(x, y, c, n, z, null, f);
+  G.put(x, y, c, n, z, e, f);
 }
 
 // ================================================================================================
@@ -3706,7 +3708,8 @@ function cutRecipe(c, b, s, spec, base) {
     const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theatre: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
-    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food, trade: u.trade || null });
+    const sr = !fl && !blk && !LOBBY[u.kind] ? shopRoom(b, u, TILE, c.M) : null, shop = sr ? { R: sr, ox, oy } : null;   // (a shop by its trade: shared/shoprooms.js)
+    units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food, shop, trade: u.trade || null });
   }
   if (!units.length) return null;
   const inY0 = (wi.y0 - s.ty) * TILE, inY1 = (wi.y1 - s.ty + 1) * TILE;
@@ -3752,20 +3755,20 @@ function makeCut(r) {
   const WR = r.wall === 'brick' ? MAT.brick : r.wall === 'brickDark' ? MAT.brickDark : ramp(r.wallColor || '#d8cfc0', 6, 3), CAP = ramp('#8a8680', 5, 2);
   const gy = (Y, z) => G.ay - d + Y - z;   // sprite row of ground point Y (from the section's north edge) at height z
   const wallAt = (u, v) => (r.wall === 'brick' || r.wall === 'brickDark') ? ((v % 4 === 0 || (u + (Math.floor(v / 4) & 1) * 4) % 8 === 0) ? MAT.concrete[2] : WR[3 - ((hash(u >> 3, v >> 2, r.seed) * 2) | 0)]) : WR[3 + (hash(u >> 2, v >> 2, r.seed) > 0.85 ? -1 : 0)];
-  const px = (x, Y, z, c, n, f = 0) => zw(G, x, gy(Y, z), c, n, z, f);
+  const px = (x, Y, z, c, n, f = 0, e = null) => zw(G, x, gy(Y, z), c, n, z, f, e);
   // floor
   for (const u of r.units) {
     if (u.bowl) { bowlingFloor(u, r, px); continue; }
     if (u.cine) { cinemaFloor(u, r, px); continue; }
-    const fk = FLOORK[u.trade] || FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null;
-    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
+    const fk = FLOORK[u.trade] || FLOORK[u.kind] || 'woodFloor', lob = LOBBY[u.kind], fo = u.food ? FOOD_FLOOR[u.food.L.style] : null, sh = u.shop && u.shop.R.floor ? u.shop : null;
+    for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : sh ? shopFloorPx(sh.R, x + sh.ox, Y + sh.oy) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
   // the back wall: full height (up to the back rooms' roof, the building's own wall above the shop's), its face toward
   // the camera, its top a cap (over the back rooms: their roof)
   for (let x = 0; x < w; x++) {
-    const lu = r.units.find((u) => (LOBBY[u.kind] || u.food) && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall; IN8: a food place's)
+    const lu = r.units.find((u) => (LOBBY[u.kind] || u.food || (u.shop && u.shop.R.wall)) && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall; IN8: a food place's; a shop's)
     const hx = fh ? fh[x] : H;
-    for (let v = 0; v < hx; v++) px(x, BY, v, v >= r.H ? wallAt(x, v) : lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
+    for (let v = 0; v < hx; v++) px(x, BY, v, v >= r.H ? wallAt(x, v) : lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : lu.shop ? shopWallPx(lu.shop.R, x + lu.shop.ox, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
     if (!O) for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
   }
   // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open
@@ -3785,6 +3788,7 @@ function makeCut(r) {
     if (u.bowl) { bowlingRoom(u, r, px); continue; }   // (IN14: the lanes, the scoreboards, the ball returns, the settees, the shoe counter)
     if (u.cine) { cinemaRoom(u, r, px); continue; }   // (IN14: the screens, the seats, the poster wall, the popcorn counter)
     if (u.food) { foodRoom(u, r, px); continue; }   // (IN8: the diner's booths and stools, the fast-food queue, the restaurant's tables)
+    if (u.shop) { drawShop(u.shop.R, u, r, px, u.shop.ox, u.shop.oy); if (u.kind === 'roadhouse') roadhouseRoom(u, r, px); continue; }   // (shared/shoprooms.js, client/art2/shopart.js)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
@@ -4109,6 +4113,22 @@ function lobbyRoom(u, r, px0_) {
       if (n >= 2) for (let g = 0; g < (room > 190 ? 2 : 1); g++) chairs(side < 0 ? dc - 48 - n * 13 - g * (n * 13 + 30) : dc + 48 + g * (n * 13 + 30), n, Y);
     }
     plant(dc - 36, fy - 30, 1.1); plant(dc + 36, fy - 30, 1.1); plant(X1u - 22, fy - 32, 1.3); plant(X0 + 22, fy - 32, 1.3);
+    // (batch 4) the exam bays out past the chairs where there's room: a bed with its sheet and pillow, the curtain drawn
+    // half round it on its rail
+    for (const side of [-1, 1]) {
+      const room = side < 0 ? dc - 48 - (X0 + 40) : X1u - 40 - (dc + 48), n = Math.max(0, Math.min(5, Math.floor(room / 13))), g = room > 190 ? 2 : 1;
+      const free = room - (n >= 2 ? n * 13 * g + 30 * (g - 1) : 0) + 26;
+      for (let k = 0; k < Math.min(2, Math.floor((free - 8) / 32)); k++) {
+        const bx = side < 0 ? X0 + 16 + k * 32 : X1u - 38 - k * 32, Y0 = u.cy + 78, Y1 = Math.min(Y0 + 38, fy - 50);
+        if (Y1 - Y0 < 30) break;
+        slab(bx, bx + 22, Y0, Y1, 10, ramp('#9aa0a8', 5, 2), ramp('#7a808a', 5, 2));
+        slab(bx + 1, bx + 21, Y0 + 1, Y1 - 1, 12, ramp('#f0f2f2', 5, 3), ramp('#d8dcdc', 5, 2), 10);
+        slab(bx + 1, bx + 21, Y0 + 14, Y1 - 1, 13, ramp('#b8d4dc', 5, 3), ramp('#98b8c4', 5, 2), 10);
+        slab(bx + 4, bx + 18, Y0 + 2, Y0 + 8, 15, ramp('#ffffff', 5, 3), ramp('#e0e0dc', 5, 2), 12);
+        const cx = side < 0 ? bx + 26 : bx - 4;
+        for (let Y = Y0 - 2; Y < Y1 + 2; Y++) { px(cx, Y, 44, [200, 204, 210], [0, 0, 1]); if (Y < Y0 + (Y1 - Y0) * 0.7) for (let v = 8; v < 43; v++) px(cx, Y, v, (Y + (v >> 2)) % 5 ? [150, 196, 176] : [120, 170, 150], [side, 0, 0]); }
+      }
+    }
     mat(dc, fy - 44, 44, 16); mat(mid, u.cy + 44, 50, 12);
     return;
   }
@@ -4166,8 +4186,9 @@ function lobbyRoom(u, r, px0_) {
 // planks, tables with cloths and candles, the host stand inside the door and the runner to it. Behind the counter of
 // each: quarry tile, the kitchen line along the back wall (the grill, the fryers, the stove) and above it the menu boards
 // (plain shapes) or the pass with plates under the heat lamps.
+const FOOD_V = [['#c43a3c', [44, 44, 50]], ['#2a8a8a', [170, 40, 44]], ['#3a62b0', [40, 110, 110]]];   // (a diner's booths and its checkers' dark squares, by foodLayout's v)
 const FOOD_FLOOR = {
-  diner: (x, Y, F) => (Y + F.oy < F.L.cy ? quarry(x + F.ox, Y + F.oy) : ((((x + F.ox) / 12) | 0) + (((Y + F.oy) / 12) | 0)) & 1 ? [44, 44, 50] : [230, 228, 220]),
+  diner: (x, Y, F) => (Y + F.oy < F.L.cy ? quarry(x + F.ox, Y + F.oy) : ((((x + F.ox) / 12) | 0) + (((Y + F.oy) / 12) | 0)) & 1 ? FOOD_V[F.L.v || 0][1] : [230, 228, 220]),
   fastfood: (x, Y, F) => { const wx = x + F.ox, wy = Y + F.oy; if (wy < F.L.cy) return quarry(wx, wy); if ((wx & 15) === 0 || (wy & 15) === 0) return [200, 192, 176]; const b = (hash(wx >> 4, wy >> 4, 88) * 8) | 0; return [232 + b, 226 + b, 210 + b]; },
   restaurant: (x, Y, F) => {
     const wx = x + F.ox, wy = Y + F.oy, L = F.L;
@@ -4197,7 +4218,7 @@ function foodRoom(u, r, px0_) {
     for (let k = 0; k < 120 * big; k++) { const a = hash(k, x, 81) * 6.283, d = Math.sqrt(hash(k, Y, 82)) * 8 * big, z = 9 + hash(k, 3, 83) * 14 * big * (1 - d / (10 * big)); px(x + Math.cos(a) * d, Y - 2 + Math.sin(a) * d * 0.6, Math.round(z), [[52, 120, 58], [78, 156, 70], [40, 96, 48], [100, 176, 84]][k & 3], [Math.cos(a) * 0.5, -0.4, 0.75]); }
   };
   const F = u.food, L = F.L, st = L.style, X = (wx) => wx - F.ox, Yl = (wy) => wy - F.oy, cy = u.cy;
-  const STEEL = ramp('#b8bcc2', 5, 3), DARK = ramp('#34363c', 5, 2), RED = ramp('#c43a3c', 5, 2), CHROME = ramp('#d4d8de', 5, 3), WOOD = ramp('#5a3a26', 6, 3), CLOTH = ramp('#f2f0ea', 5, 3);
+  const STEEL = ramp('#b8bcc2', 5, 3), DARK = ramp('#34363c', 5, 2), RED = ramp(FOOD_V[L.v || 0][0], 5, 2), CHROME = ramp('#d4d8de', 5, 3), WOOD = ramp('#5a3a26', 6, 3), CLOTH = ramp('#f2f0ea', 5, 3);
   // the kitchen along the back wall: a steel line, and on it the grill (diner), the fryers (fast food), the stove (restaurant)
   const kx0 = Math.max(u.x0 + 4, X(L.X0) + 4), kx1 = Math.min(u.x1 - 4, X(L.X1) - 4), ky = r.inY0;
   if (Yl(L.cy) - ky >= 24) {

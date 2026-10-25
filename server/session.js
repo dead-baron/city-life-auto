@@ -30,6 +30,7 @@ import * as looks from './systems/looks.js';
 import * as arcade from './systems/arcade.js';
 import * as racebook from './systems/racebook.js';
 import * as safety from './systems/safety.js';
+import * as cinefollow from './systems/cinefollow.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 export function createSession(world, conn, opts) {
@@ -69,7 +70,7 @@ export function createSession(world, conn, opts) {
       if (msg.t !== 'ping' && msg.t !== 'away' && msg.t !== 'view' && msg.t !== 'perf' && msg.t !== 'cerr' && msg.t !== 'diag' && !(msg.t === 'cine' && msg.tour)) players.stillHere(player);   // (anything they did: not idle)
       // the cinematic mode (client/director.js): its camera flown, its panel used - here (above); its tour gliding on by
       // itself - like riding a train, the idle clock runs slow (players.js riding)
-      if (msg.t === 'cine') { if (msg.tour) player.cineTourMs = Date.now(); return; }
+      if (msg.t === 'cine') { if (msg.tour) player.cineTourMs = Date.now(); if (msg.f !== undefined) cinefollow.request(world, player, msg, !!(opts.dev || player.devMode)); return; }   // (f: its follow scenes - systems/cinefollow.js)
       if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
       if (msg.t === 'away') { players.setAway(world, player, !!msg.on); return; }   // (the page in the background, or back)

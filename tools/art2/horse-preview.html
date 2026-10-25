@@ -1,22 +1,22 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Art v2 riding horses</title>
 <style>body{margin:0;background:#4a4e58;color:#eee;font:11px monospace}canvas{image-rendering:pixelated;display:block}</style></head><body><canvas id="c"></canvas>
-<!-- The riding horses (#325) as the live game draws them (renderUpright, the character view): each coat saddled and
-     bridled ('horse:s<i>') at the eight headings, then the walk and the gallop's frames. ?z= zoom, ?time=noon|dusk|night -->
+<!-- The riding horses (#325; client/art2/horse.js) as the live game draws them (renderUpright, the character view): each
+     coat saddled and bridled ('horse:s<i>') at the eight headings, then the walk's, the trot's, the canter's and the
+     gallop's frames. ?z= zoom, ?time=noon|dusk|night -->
 <script type="module">
-import { animalModel, renderUpright, HORSE_COATS } from '../../client/art2/animals.js';
+import { renderUpright } from '../../client/art2/animals.js';
+import { horseModel } from '../../client/art2/horse.js';
 import { GBuf } from '../../client/art2/gbuf.js';
 import { Lighter, PRESETS } from '../../client/art2/light.js';
 const q = new URLSearchParams(location.search), Z = Number(q.get('z') || 2), T = q.get('time') || 'noon';
 const cw = 96, rh = 92, cols = 8;
-const rows = HORSE_COATS.map((_, i) => [...Array(8)].map((__, d) => ['horse:s' + i, { pose: 'stand' }, d * Math.PI / 4]));
-rows.push([...Array(8)].map((_, f) => ['horse:s0', { phase: f / 8, gait: 'walk' }, 0]));
-rows.push([...Array(8)].map((_, f) => ['horse:s1', { phase: f / 8, gait: 'run' }, 0]));
-rows.push([...Array(8)].map((_, f) => ['horse:s4', { phase: f / 8, gait: 'run' }, Math.PI / 2]));
+const rows = [0, 1, 2, 3, 4, 5, 6, 7].map((_, i) => [...Array(8)].map((__, d) => ['horse:s' + i, ['stand', 0, 1], d * Math.PI / 4]));
+for (const [g, n, c] of [['stride', 8, 0], ['trot', 6, 1], ['canter', 6, 4], ['gallop', 6, 6]]) rows.push([...Array(n)].map((_, f) => ['horse:s' + c, [g, f, n], 0]));
 const W = cols * cw + 10, H = rows.length * rh + 20;
 const G = new GBuf(W, H);
 for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const v = 112 + ((x * 7 + y * 13) % 5) * 2; G.put(x, y, [v - 10, v + 4, v - 14], [0, 0, 1], 0, null, 1); }
 const items = [];
-rows.forEach((cells, r) => cells.forEach(([k, o, hd], c) => items.push([animalModel(k, o), hd, 48 + c * cw, 76 + r * rh])));
+rows.forEach((cells, r) => cells.forEach(([k, o, hd], c) => items.push([horseModel(k, ...o), hd, 48 + c * cw, 76 + r * rh])));
 items.sort((a, b) => a[3] - b[3]);
 for (const [m, hd, x, y] of items) { const s = renderUpright(m, hd, { fy: 0.38 }); G.blit(s, x - s.ax, y - s.ay); }
 const cv = document.getElementById('c'); cv.width = W * Z; cv.height = H * Z;

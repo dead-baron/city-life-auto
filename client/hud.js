@@ -234,13 +234,11 @@ export class HUD {
     // the flashlight's touch button: there while you own one, lit while it's on
     document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
     $('b-light')?.classList.toggle('lit', !!me.light);
-    // the skateboard's: there while one's in your bag (main.js quickBoard)
-    document.body.classList.toggle('has-board', !!(me.inv && me.inv.skateboard > 0 && !me.dead));
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? 'tap: next · hold: pick' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
+    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     // the touch WPN button shows what's in your hands (tap: the next one, hold: the picker)
@@ -474,6 +472,7 @@ export class HUD {
         const kind = EVENT_KINDS[ev.k];
         if (!kind) continue;
         let [x, y] = toR(ev.x, ev.y);
+        if (ev.r) { g.strokeStyle = kind.color; g.lineWidth = 1.5; g.setLineDash([4, 3]); g.beginPath(); g.arc(x, y, ev.r * scale, 0, 6.28); g.stroke(); g.setLineDash([]); }
         const dx = x - size / 2, dy = y - size / 2, d = Math.hypot(dx, dy), lim = size / 2 - 7;
         if (d > lim && !big) { x = size / 2 + dx / d * lim; y = size / 2 + dy / d * lim; }
         const ph = (performance.now() / 900) % 1;

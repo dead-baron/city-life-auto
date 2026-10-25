@@ -8,7 +8,7 @@ import { angleDiff, clamp } from '../../shared/math.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
 import * as combat from './combat.js';
 import { dressAs } from './activities.js';
@@ -18,7 +18,7 @@ const BOATERS_NEAR = 4;      // NPC boats kept around a player who's out on / by
 const PATROLS_NEAR = 1;      // police patrol boats around such a player
 const NEAR_SEA_PX = 900;     // a player this close to open water counts as "by the water"
 const FAR_PX = 2400;         // boats further than this from every player are removed
-const MODELS = [['dinghy', 3], ['speedboat', 2], ['jetski', 2]];
+export const MODELS = [['dinghy', 3], ['speedboat', 2], ['jetski', 2], ['sailboat', 1.5], ['cabincruiser', 1.5], ['pontoon', 1], ['rib', 1], ['trawler', 1]];   // (the boaters' craft: batch 4's too - on big water only, as they all are)
 const FISHERS_NEAR = 2;      // anglers' boats kept on the water near a player who's by a lake or a big river's pocket
 const NEAR_LAKE_PX = 1200;   // a player this close to a lake's open water (or such a pocket) counts as "by it"
 const FISH_MODELS = [['rowboat', 3], ['dinghy', 1]];
@@ -186,7 +186,7 @@ export function spawnFisher(world, p) {
 function rodDown(world, ai) { const d = ai && world.get(ai.drv); if (d && d.fishing && d.fishing.npc) d.fishing = null; }
 
 function manage(world) {
-  const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped);
+  const anchors = [...world.players.values()].filter((p) => p.ped && !p.ped.dead).map((p) => p.ped).concat(cineEyes(world));   // (and the cinematic mode's: view.js)
   // tidy up
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || !v.ai || (v.ai.kind !== 'boater' && v.ai.kind !== 'pboat' && v.ai.kind !== 'fisher')) continue;

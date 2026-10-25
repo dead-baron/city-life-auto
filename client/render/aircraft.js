@@ -28,6 +28,9 @@ const LIVERY = {
   rescue: { body: '#d8382e', trim: '#f2f2f2', dark: '#7a1a14', glass: '#3a5f86', tip: 'rgba(245,245,245,0.55)', cross: true },
   plane: { body: '#f1f2f0', trim: '#c4302b', dark: '#9aa2a8', glass: '#3a5f86' },
   duster: { body: '#f2c230', trim: '#2f7a3c', dark: '#8a6a14', glass: '#3a5f86', boom: true },   // (the crop duster)
+  tv: { body: '#1d3f8a', trim: '#f2c230', dark: '#0f1e44', glass: '#3a5f86', tip: 'rgba(242,194,48,0.5)', cam: true },   // (the news crew's: batch 4)
+  med: { body: '#f4f4f0', trim: '#1f9a6a', dark: '#5a5c5e', glass: '#3a5f86', tip: 'rgba(245,245,245,0.55)', cross: true },   // (the air ambulance)
+  sea: { body: '#f1f2f0', trim: '#c8302c', dark: '#9aa2a8', glass: '#3a5f86' },   // (the floatplane)
 };
 
 // the altitude each aircraft is drawn at: yours from the prediction (e.ralt, set by main.js), the others' eased toward

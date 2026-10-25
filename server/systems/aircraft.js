@@ -2,7 +2,9 @@
 // (bumps, hard landings, crashes, ditching), mid-air collisions, getting out up in the air, the attack helicopter's
 // missiles, and the aircraft parked at the helipads, the airport's apron and the airstrips (stolen like cars: tryEnter).
 import { K } from '../../shared/constants.js';
-import { WATER_T } from '../../shared/mapcore.js';
+import { WATER_T, BOAT_BLOCK } from '../../shared/mapcore.js';
+import { TILE } from '../../shared/constants.js';
+import { waterSize } from './boats.js';
 import { obbVsObb } from '../../shared/math.js';
 import { isAir, isPlane, flightStep, flightInput, FLY, airfields, rollOf, findPadSpot, floorAt } from '../../shared/flight.js';
 import * as vehicles from './vehicles.js';
@@ -42,7 +44,7 @@ export function step(world, v, dt) {
     if (o.sink > FLY.HARD_SINK) { vehicles.damageVehicle(world, v, (o.sink - FLY.HARD_SINK) * 0.9, null, true); world.emit(v.x, v.y, { e: 'crash', x: v.x, y: v.y, p: 0.4 }); }
     // a plane put down off the hard ground at speed: the wheels dig in
     if (isPlane(v.def) && rollOf(world.map.tileAtPx(v.x, v.y)) < 0.8 && fwd > 260) vehicles.damageVehicle(world, v, (fwd - 260) * 0.35, null, true);
-    if (o.water && (isPlane(v.def) ? fwd > 300 : o.sink > FLY.HARD_SINK)) { crash(world, v, 'water'); return; }   // (ditched: it breaks up; gently, it floats a moment and sinks - vehicles.js)
+    if (o.water && !v.def.floats && (isPlane(v.def) ? fwd > 300 : o.sink > FLY.HARD_SINK)) { crash(world, v, 'water'); return; }   // (the floatplane: on its floats)   // (ditched: it breaks up; gently, it floats a moment and sinks - vehicles.js)
     if (drv && drv.player && !v.wreckAt) world.emit(v.x, v.y, { e: 'touchdown', x: Math.round(v.x), y: Math.round(v.y), id: v.id });
   }
 }
@@ -102,9 +104,26 @@ function spots(world) {
   for (const p of af.pads) {
     if (p.roof) continue;
     if (p.kind === 'hospital' && hosp++ > 0) continue;
-    out.push({ m: p.kind === 'police' ? 'policeheli' : p.kind === 'sar' ? 'rescueheli' : 'heli', x: p.x, y: p.y, a: -Math.PI / 2, police: p.kind === 'police' });   // (the Search & Rescue HQ's: its rescue helicopter)
+    out.push({ m: p.kind === 'police' ? 'policeheli' : p.kind === 'sar' ? 'rescueheli' : p.kind === 'hospital' ? 'medheli' : 'heli', x: p.x, y: p.y, a: -Math.PI / 2, police: p.kind === 'police' });   // (a hospital's yard: the air ambulance)   // (the Search & Rescue HQ's: its rescue helicopter)
   }
   for (const a of af.aprons) out.push({ m: a.duster ? 'duster' : 'plane', x: a.x, y: a.y, a: a.a });   // (a farm strip's: a crop duster - world3-airstrips.js)
+  for (const p of seaplaneSpots(world.map)) out.push({ m: 'seaplane', x: p.x, y: p.y, a: p.a });
+  return out;
+}
+// The floatplanes' moorings (batch 4): off a few of the marinas on big water (boats.js waterSize - the sea, a big lake), a
+// little way out where its wings clear everything (open water SEA_R px round it, no berth that close), far apart.
+const SEA_R = 104, SEA_APART = 3000, SEAPLANES = 4;
+export function seaplaneSpots(m) {
+  if (m._seaplanes) return m._seaplanes;
+  const out = [], open = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) && WATER_T[m.tiles[m.idx(tx, ty)]] && !BOAT_BLOCK[m.tiles[m.idx(tx, ty)]]; };
+  const clear = (x, y) => { for (let r = 0; r <= SEA_R; r += 26) for (let k = 0; k < (r ? 12 : 1); k++) if (!open(x + Math.cos(k * 0.52) * r, y + Math.sin(k * 0.52) * r)) return false; return (m.marina || []).every((q) => Math.hypot(q.x - x, q.y - y) > SEA_R + 20); };
+  for (const sp of m.marina || []) {
+    if (out.length >= SEAPLANES || out.some((q) => Math.hypot(q.x - sp.x, q.y - sp.y) < SEA_APART)) continue;
+    let got = null;
+    for (let d = 160; d <= 420 && !got; d += 65) for (let k = 0; k < 16 && !got; k++) { const x = sp.x + Math.cos(k * 0.39) * d, y = sp.y + Math.sin(k * 0.39) * d; if (clear(x, y)) got = { x, y, a: k * 0.39 + Math.PI / 2 }; }
+    if (got && waterSize(m, got.x, got.y, 2500) >= 2500) out.push(got);
+  }
+  Object.defineProperty(m, '_seaplanes', { value: out, enumerable: false });
   return out;
 }
 function park(world, sp) {

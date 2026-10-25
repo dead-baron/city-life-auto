@@ -103,6 +103,7 @@ async function init(args) {
   const modsMs = performance.now() - t0;
   if (P.actors && P.actors.setArtPx) P.actors.setArtPx(ART);   // (voxel things render straight at the art pixel)
   if (P.actors && P.actors.setActorBudget) P.actors.setActorBudget(args.modelMB ? { modelMB: args.modelMB } : { lowMem });
+  if (P.actors && P.actors.artFrom && args.art) P.actors.artFrom({ fleet: () => import(args.art.fleet), horse: () => import(args.art.horse) });   // (the newer art: loaded here when a sprite first wants it)
   const t1 = performance.now();
   const m = args.M || (args.key ? await readWorld(args.key) : null);
   return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m } };
@@ -372,6 +373,7 @@ async function handle(msg) {
   }
   if (op === 'sprite') {
     const { kind, key, a } = args;
+    if (P.actors && P.actors.needsArt && P.actors.needsArt(kind, a)) await P.actors.loadArt();   // (the newer art, the first time it's wanted: actors.js artFrom)
     const fn = kind === 'ped' ? P.peds && P.peds.pedSprite : (P.actors && P.actors.SPRITES && P.actors.SPRITES[kind]) || (SPRITE_FN[kind] && SPRITE_FN[kind]());
     if (!fn) throw new Error(`no provider for ${kind} sprites`);
     const g = key ? sprCache.get(key, () => fn(...a)) : fn(...a);

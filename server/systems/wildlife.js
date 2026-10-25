@@ -39,7 +39,7 @@ import { circleVsObb } from '../../shared/math.js';
 import { sameLevel } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { SPECIES, YOUNG_SCALE, APOSE, PREDATORS_OF, SIZE_ORDER, huntClass, gradeOf } from '../../shared/fauna.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as hunting from './hunting.js';
@@ -207,7 +207,7 @@ export function spawnAnimal(world, kind, x, y, herd = 0, o = {}) {
   const S = SPECIES[kind], L = LIVESTOCK[kind];
   const young = !!o.young && !!S, legend = !!o.legend && !!S;
   const hp = S ? Math.round(S.hp * (young ? 0.4 : 1) * (legend ? 1.7 : 1)) : (L || LIVESTOCK.cow).hp;
-  const coat = kind === 'horse' && !S ? Math.floor(rng() * 6) : -1;   // (a farm's horse: its coat - horses.js COATS, the pages' 'horse:c<i>')
+  const coat = kind === 'horse' && !S ? Math.floor(rng() * 8) : -1;   // (a farm's horse: its coat - horses.js COATS, the pages' 'horse:c<i>')
   const a = world.spawnPed(x, y, { hp, archetype: `pet:${kind}${coat >= 0 ? ':c' + coat : young ? ':y' : legend ? ':L' : ''}`, a: rng() * 6.28, app: { bd: 1 }, name: S ? (legend ? S.legend.name.replace(/^the /, 'The ') : `a ${S.name.toLowerCase()}`) : `a ${kind}` });
   a.r = S ? Math.round(SIZE_R[S.size] * (young ? 0.7 : 1)) : 12;
   a.bornAt = world.time;
@@ -358,6 +358,7 @@ function populate(world) {
   let total = 0;
   const anchors = [];
   for (const p of world.players.values()) { const q = p.ped; if (q && !q.dead && !q.hidden && !q.sub && !q.interior) anchors.push(q); }
+  anchors.push(...cineEyes(world));   // (the cinematic mode following someone: round them too - view.js)
   for (const e of world.entities.values()) {
     if (!isAnimal(e) || e.ug) continue;   // (the cave's den bear comes and goes with the cave: underground.js)
     let near = false;

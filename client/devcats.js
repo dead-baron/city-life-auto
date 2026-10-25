@@ -28,7 +28,8 @@ export const DEV_SECTIONS = [
     ['🛍 Westport Galleria (the Stadium District)', 'place', { n: 'Westport Galleria' }], ['🦆 Stadium Ponds (fishing)', 'place', { n: 'Stadium Ponds' }],
   ] },
   { id: 'skate', title: '🛹 Skateboarding', items: [
-    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 The nearest skate spot, on your board', 'skate', { k: 'spot' }],
+    ['🛹 A skateboard, and on it', 'skate', { k: 'on' }], ['🛹 My own skateboard, beside me', 'skate', { k: 'mine' }], ['🛹 The nearest skate park\'s rack of boards', 'skate', { k: 'rack' }],
+    ['🛹 The nearest skate spot, on your board', 'skate', { k: 'spot' }], ['🕹 Into the nearest arcade', 'arcade', { k: 'in' }], ['🎟 500 arcade tickets', 'arcade', { k: 'tickets' }],
     ['⏱ A skate session there (5 min, goals, a high score)', 'skate', { k: 'session' }],
     ['🛤 Lined up on the nearest ledge, flat bar or bench (grind it)', 'skate', { k: 'rail' }],
     ['📐 Lined up on the nearest kicker, quarter pipe or pyramid', 'skate', { k: 'ramp' }],
@@ -71,7 +72,11 @@ export const DEV_SECTIONS = [
   ] },
   { id: 'veh', title: '🚗 Vehicles', items: [
     ['🏎 Sports car', 'car', { m: 'sports' }], ['🛻 Pickup', 'car', { m: 'pickup' }], ['🏍 Motorbike', 'car', { m: 'bike' }],
-    ['🚤 Speedboat', 'car', { m: 'speedboat' }], ['⛳ Golf cart', 'car', { m: 'golfcart' }], ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
+    ['🚤 Speedboat', 'car', { m: 'speedboat' }], ['⛳ Golf cart', 'car', { m: 'golfcart' }],
+    // the batch-4 fleet
+    ['🚗 Vintage convertible', 'car', { m: 'convertible' }], ['🚗 Lowrider', 'car', { m: 'lowrider' }], ['🏎 Muscle car', 'car', { m: 'muscle' }], ['🚗 Hot hatch', 'car', { m: 'hothatch' }],
+    ['🚙 Open-top 4x4', 'car', { m: 'jeep' }], ['🚚 Moving van', 'car', { m: 'movingvan' }], ['🍦 Ice-cream van', 'car', { m: 'icecream' }],
+    ['⛵ Sailboat', 'car', { m: 'sailboat' }], ['🛥 Pontoon', 'car', { m: 'pontoon' }], ['🚢 Fishing trawler', 'car', { m: 'trawler' }], ['🛥 Cabin cruiser', 'car', { m: 'cabincruiser' }], ['🚤 Sport RIB', 'car', { m: 'rib' }], ['📦 Loaded flatbed (cargo)', 'cargo'], ['🔧 Garage', 'near', { k: 'garage' }],
     ['🎨 Paint shop', 'near', { k: 'paint' }], ['🚘 Car dealer', 'near', { k: 'dealer' }], ['🔑 Rentals', 'near', { k: 'rental' }],
     ['⛽ Filling station', 'near', { k: 'gasstation' }], ['⚓ Marina', 'near', { k: 'marina' }],
   ] },
@@ -180,7 +185,7 @@ export const DEV_SECTIONS = [
   // flying (shared/flight.js, server/systems/aircraft.js): an aircraft beside you; the airport's runway and the airstrip
   { id: 'air', title: '🚁 Aircraft', items: [
     ['🚁 Helicopter', 'car', { m: 'heli' }], ['✈ Light plane', 'car', { m: 'plane' }], ['🚁 Attack helicopter (missiles)', 'car', { m: 'gunship' }],
-    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
+    ['🚔 Police helicopter', 'car', { m: 'policeheli' }], ['📺 News helicopter', 'car', { m: 'newsheli' }], ['🚑 Air ambulance', 'car', { m: 'medheli' }], ['🛩 Floatplane', 'car', { m: 'seaplane' }], ['🛫 A light plane in the air, you flying it', 'car', { m: 'plane', alt: 500, in: 1 }], ['🚁 A helicopter in the air, you flying it', 'car', { m: 'heli', alt: 400, in: 1 }], ['🛫 A runway (take off from it)', 'near', { k: 'runway' }],
     ['🪂 Skydive: high over here, a parachute in your bag', 'sky', { alt: 900, chute: 1 }], ['🪂 Skydive with no parachute (steer for the water)', 'sky', { alt: 900 }], ['🪂 A parachute in my bag', 'give', { kind: 'item', id: 'parachute', n: 1 }], ['🅷 A helipad', 'near', { k: 'helipad' }], ['🛩 Desert airstrip', 'near', { k: 'airstrip' }],
   ] },
   // fire on people, the tank, the explosion tester (H58: server burning.js, tank.js, boomtest.js)

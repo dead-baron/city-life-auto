@@ -160,6 +160,7 @@ const CSS = `
 #d-map .dm-list button small { color: #c9d0e4; }
 @media (max-aspect-ratio: 1/1) { #d-map { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); top: max(8px, env(safe-area-inset-top)); width: auto; height: 46vh; } }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { #d-map { top: 8px; right: 8px; width: 46vw; height: calc(100vh - 128px); } }
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { .touch #d-map { height: calc(100vh - 182px); } }   /* (clear of the panel's 44 px buttons) */
 .d-mapb { margin-left: 6px; }
 `;
 // what kind of place a spot is, for its mark

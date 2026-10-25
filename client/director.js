@@ -10,15 +10,72 @@
 // Drone (free: WASD / arrows / the left stick to fly it, Q / E or - / = to zoom, Shift faster, Esc back to you), On
 // someone (the camera on a person or a vehicle near you - [ and ] for the next and the one before), the Tour (it glides
 // through the world's sights on its own, cutting from one to the next through black).
+// The owner, 10-24: "more controls for the camera like choosing which direction the camera drifts at and the speed it
+// drifts at" and "automatic scenes that has the camera follow NPCs ... so I can take some cinematic shots of everything":
+//   Drift: its direction (8 ways, or any angle on the dial - drag it; WASD / arrows / the left stick steer it), its speed
+//     (off, crawl .. fast: Z / X, LB / RB), the zoom (Q / E, LT / RT). The bar of its controls along the bottom hides with
+//     the clean screen and comes back for a few seconds when you press something, move the mouse or touch the screen.
+//   Follow scenes: the camera on someone doing something - a police chase, a street race, an angler, a surfer, a combine
+//     harvesting, a train, a plane landing (shared/cinekinds.js), or the tour of them all. The server picks who
+//     (server/systems/cinefollow.js) and moves on when it's over; the camera here follows them, leading the way they go,
+//     the framing changing now and then. N / A the next one, [ ] / LB RB the kind, T the tour.
 // main.js asks it each frame: holds() (the keys are the camera's), cam(cam, dt, tx, ty), zoomK, lt (the time of day's
-// loop time or null), wx (null | 'clear' | 'rain' | 'fog'), sky(sky), hideMe, clean; key(k, down), pad(axes).
+// loop time or null), wx (null | 'clear' | 'rain' | 'fog'), sky(sky), hideMe, clean, eye() (where the camera is, when
+// it's off you: the world's window follows it); key(k, down), pad(axes), follow(msg) (the server's { t: 'cinef' }).
 import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
+import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
+import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
 const WXS = [['Live', null], ['Clear', 'clear'], ['Rain', 'rain'], ['Fog', 'fog'], ['Mist', 'mist']];
 const BOXES = [['Off', 0], ['2.39:1', 2.39], ['1.85:1', 1.85]];
 const SHOT_S = 10, FADE_S = 0.7, HOLD_S = 1.6;   // the tour: each shot, the fade either side, the black while the art comes in
+
+// ---- the drift: which way and how fast (world px a second at the zoom of 1: further in, slower across the world) ----
+export const DRIFT_SPEEDS = [0, 10, 22, 45, 90, 170];
+export const DRIFT_NAMES = ['Off', 'Crawl', 'Slow', 'Steady', 'Quick', 'Fast'];
+const Q8 = Math.PI / 4;
+export const DIRS8 = [['↑', -2 * Q8], ['↗', -Q8], ['→', 0], ['↘', Q8], ['↓', 2 * Q8], ['↙', 3 * Q8], ['←', 4 * Q8], ['↖', -3 * Q8]];
+const wrapA = (a) => { a %= 2 * Math.PI; if (a > Math.PI) a -= 2 * Math.PI; if (a < -Math.PI) a += 2 * Math.PI; return a; };
+// the way the held keys point (WASD / arrows, diagonals too), or null
+export function keyDir(keys) {
+  const x = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
+  const y = (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) - (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0);
+  return x || y ? Math.atan2(y, x) : null;
+}
+// the way a stick points, pushed past halfway, or null
+export const stickDir = (ax) => (ax && Math.hypot(ax.lx || 0, ax.ly || 0) > 0.5 ? Math.atan2(ax.ly, ax.lx) : null);
+// one step of the drift: d = { x, y, a (its way), si (its speed), vx, vy (as it goes: easing to a new speed or way) };
+// want: the way it's steered to (null: as it is) - turning toward it at TURN rad/s
+const TURN = 2.2;
+export function driftStep(d, dt, zoom = 1, want = null) {
+  if (want !== null) { const da = wrapA(want - d.a), st = TURN * dt; d.a = wrapA(d.a + Math.max(-st, Math.min(st, da))); }
+  const sp = DRIFT_SPEEDS[d.si] / Math.max(0.3, zoom), k = 1 - Math.exp(-1.6 * dt);
+  d.vx += (Math.cos(d.a) * sp - d.vx) * k; d.vy += (Math.sin(d.a) * sp - d.vy) * k;
+  d.x += d.vx * dt; d.y += d.vy * dt;
+  return d;
+}
+
+// ---- the follow scenes' camera: on whoever the server says, leading the way they go, the framing changing now and then
+// (zk: the zoom on the kind's own, lead: how far ahead, side: off to one side of their way)
+export const FRAMES = [{ zk: 1, lead: 1, side: 0 }, { zk: 0.8, lead: 0.7, side: 0 }, { zk: 1.3, lead: 0.45, side: 0 }, { zk: 1, lead: 1.15, side: 0.45 }, { zk: 1.1, lead: 0.85, side: -0.45 }, { zk: 0.9, lead: 0.3, side: 0 }];
+const LEAD_S = 0.6, LEAD_MAX = 380, FRAME_S = [9, 16];
+// one step: f = { x, y, vx, vy (theirs, as seen), px, py (where they were), fi (the framing), lead, side, zk (eased) };
+// (ex, ey): where they are now
+export function followStep(f, ex, ey, dt) {
+  if (f.px === null) { f.px = ex; f.py = ey; }
+  const k = 1 - Math.exp(-2 * dt), ivx = dt > 0 ? (ex - f.px) / dt : 0, ivy = dt > 0 ? (ey - f.py) / dt : 0;
+  if (Math.hypot(ivx, ivy) < 3000) { f.vx += (ivx - f.vx) * k; f.vy += (ivy - f.vy) * k; }   // (not a jump: a teleport, a new subject)
+  f.px = ex; f.py = ey;
+  const F = FRAMES[f.fi], e = 1 - Math.exp(-0.7 * dt);
+  f.lead += (F.lead - f.lead) * e; f.side += (F.side - f.side) * e; f.zk += (F.zk - f.zk) * e;
+  const sp = Math.hypot(f.vx, f.vy), L = Math.min(LEAD_MAX, sp * LEAD_S * f.lead), ux = sp > 1 ? f.vx / sp : 0, uy = sp > 1 ? f.vy / sp : 0;
+  const S2 = Math.min(160, sp * 0.3) * f.side;
+  const tx = ex + ux * L - uy * S2, ty = ey + uy * L + ux * S2, c = 1 - Math.exp(-2.4 * dt);
+  f.x += (tx - f.x) * c; f.y += (ty - f.y) * c;
+  return f;
+}
 
 // minutes after midnight -> the chrono loop's seconds (as server/dev.js 'time')
 export function loopOf(mins) {
@@ -96,8 +153,13 @@ export const SCENES = [
 export function makeDirector(S, api) {
   const D = { clean: false, mode: 'follow', zoomK: 1, zi: 3, lt: null, ti: 0, wx: null, wi: 0, box: 0, bi: 0, hideMe: false, noShake: true, smooth: 0.55, hideNames: true };
   const keys = new Set();
-  let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, drift = null, scene = null, fade = null;
-  D.holds = () => D.mode === 'drone' || D.mode === 'tour';
+  let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, scene = null;
+  // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
+  // n, z, tour; cam: the camera on them; hold: black until they're here and the art's in; near: near you or anywhere)
+  const dr = { x: 0, y: 0, a: -Math.PI / 6, si: 2, vx: 0, vy: 0 };
+  let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, bar = null, barKey = '';
+  D.holds = () => D.mode === 'drone' || D.mode === 'tour' || D.mode === 'drift' || D.mode === 'scene';
+  D.eye = () => (D.mode === 'follow' || D.mode === 'smooth' || !inited ? null : { x, y });
   // the server's idle clock (players.js idleCheck): the camera flown or the panel used is someone there ({ t: 'cine' }, at
   // most every 20 s); the tour running on by itself is like riding a train ({ t: 'cine', tour: 1 } a minute: the clock
   // runs slow - the owner, 10-23, "riding the train for 10 minutes kicked me out for idling")
@@ -110,7 +172,7 @@ export function makeDirector(S, api) {
 body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .cine-bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 60; pointer-events: none; transition: height .5s ease; }
 #cine-fade { position: fixed; inset: 0; background: #000; opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
-#cine-panel { position: fixed; right: 12px; top: 12px; width: 290px; max-height: calc(100vh - 24px); overflow: auto; z-index: 70; background: rgba(14,16,22,.94); color: #e8eaf0; font: 12px/1.35 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; background: rgba(14,16,22,.94); color: #e8eaf0; font: 12px/1.35 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 10px; padding: 10px 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
 #cine-panel h3 { margin: 10px 0 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #9aa6c0; }
 #cine-panel .row { display: flex; flex-wrap: wrap; gap: 4px; }
 #cine-panel button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 4px 7px; font: inherit; cursor: pointer; }
@@ -118,7 +180,22 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-panel .sc { display: block; width: 100%; text-align: left; margin: 2px 0; }
 #cine-panel .sc small { color: #9aa6c0; }
 #cine-panel .tip { color: #9aa6c0; margin: 6px 0 0; }
-#cine-panel input[type=range] { width: 100%; }`;
+#cine-panel input[type=range] { width: 100%; }
+#cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: 8px; max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; background: rgba(14,16,22,.82); color: #e8eaf0; font: 12px/1.3 system-ui, sans-serif; border: 1px solid #39404e; border-radius: 12px; padding: 7px 10px; transition: opacity .4s ease; touch-action: none; user-select: none; }
+#cine-ctl button, #cine-panel .dirs button { background: #262c38; color: #e8eaf0; border: 1px solid #3c4454; border-radius: 6px; padding: 5px 8px; font: inherit; cursor: pointer; min-width: 30px; }
+#cine-ctl button.on { background: #ffd23a; color: #1a1a1a; border-color: #ffd23a; }
+#cine-ctl .lbl { min-width: 56px; text-align: center; }
+#cine-ctl .who { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #ffd23a; }
+.cine-dial { position: relative; width: 58px; height: 58px; border-radius: 50%; border: 2px solid #4a5366; background: radial-gradient(circle, #262c38 0 30%, #1a1e27 31%); cursor: grab; flex: none; touch-action: none; }
+.cine-dial i { position: absolute; left: 50%; top: 50%; width: 3px; height: 24px; margin-left: -1.5px; background: #ffd23a; border-radius: 2px; transform-origin: 50% 0; }
+.cine-dial b { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #ffd23a; }
+.cine-dial.sm { width: 34px; height: 34px; } .cine-dial.sm i { height: 13px; }
+#cine-panel .dirs { display: grid; grid-template-columns: repeat(3, 34px); gap: 3px; }
+.touch #cine-panel button, .touch #cine-ctl button { min-width: 44px; min-height: 44px; }
+.touch #cine-panel .dirs { grid-template-columns: repeat(3, 44px); }
+.touch #cine-ctl { left: auto; right: max(12px, env(safe-area-inset-right)); transform: none; max-width: min(320px, calc(50vw - 16px)); justify-content: flex-end; }
+.touch #cine-ctl .who { max-width: 100%; }
+body.touch.cine-bar #tbtns, body.touch.cine-bar #stick-r, body.touch.cine-bar #firetog, body.dead #cine-ctl { display: none !important; }`;
   document.head.appendChild(css);
   const bars = [0, 1].map((k) => { const b = document.createElement('div'); b.className = 'cine-bar'; b.style[k ? 'bottom' : 'top'] = '0'; document.body.appendChild(b); return b; });
   const fadeEl = document.createElement('div'); fadeEl.id = 'cine-fade'; document.body.appendChild(fadeEl);
@@ -135,16 +212,39 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
     if (D.clean && !shown) api.toast('Clean screen: F2 brings the HUD back, F4 the cinematic panel, F8 takes a picture.', 'info');
     render();
   }
-  function setMode(m) {
+  function setMode(m, k0 = 'tour') {
+    const was = D.mode;
     D.mode = m;
-    const [cx, cy] = [S.cam.x, S.cam.y];
-    x = cx; y = cy; inited = true;
+    if (was !== 'scene' || m !== 'scene') { x = S.cam.x; y = S.cam.y; }
+    inited = true;
     if (m !== 'tour') { if (tour) D.zoomK = ZOOMS[D.zi]; tour = null; fadeTo(0); }
+    if (was === 'scene' && m !== 'scene') { api.send({ t: 'cine', f: 'stop' }); fs = null; fcam = null; D.zoomK = ZOOMS[D.zi]; fadeTo(0); }
     if (m === 'tour') startTour();
     if (m === 'target') nextTarget(1);
-    if (m === 'drift') { const a = (performance.now() / 1000) % 6.283; drift = { vx: Math.cos(a) * 26, vy: Math.sin(a) * 18 }; }
+    if (m === 'drift') { dr.x = x; dr.y = y; dr.vx = Math.cos(dr.a) * DRIFT_SPEEDS[dr.si]; dr.vy = Math.sin(dr.a) * DRIFT_SPEEDS[dr.si]; }
+    if (m === 'scene' && was !== 'scene') followKind(k0);
+    if (m === 'drift' || m === 'scene') wake();
     render();
   }
+  // ---- the follow scenes: ask the server for a kind (or the tour, or the next one) ----
+  function followKind(k) {
+    here();
+    if (D.mode !== 'scene') { setMode('scene', k); return; }
+    api.send({ t: 'cine', f: k, near });
+    if (k !== 'next' && !D.clean) api.toast(k === 'tour' ? 'Follow scenes: the tour - each kind of scene a while, then the next. N skips, Esc ends it.' : `Follow scenes: ${CINE_KIND[k] ? CINE_KIND[k].n : k}...`, 'info');
+  }
+  function stepKind(dir) {
+    const cur = fs && !fs.tour ? CINE_KINDS.findIndex((q) => q.id === fs.k) : -1;
+    const i = cur < 0 ? (dir > 0 ? 0 : CINE_KINDS.length - 1) : (cur + dir + CINE_KINDS.length) % CINE_KINDS.length;
+    followKind(CINE_KINDS[i].id);
+  }
+  function setDrift(si) { dr.si = Math.max(0, Math.min(DRIFT_SPEEDS.length - 1, si)); here(); wake(); render(); }
+  function setDriftWay(a) { dr.a = wrapA(a); here(); wake(); render(); }
+  // the controls along the bottom: shown with the HUD; hidden with it for a clean shot - back for a few seconds when
+  // you press something, move the mouse or touch the screen
+  const wake = () => { wokeAt = performance.now(); };
+  addEventListener('pointerdown', () => { if (D.clean) wake(); }, true);
+  addEventListener('pointermove', () => { if (D.clean && (D.mode === 'drift' || D.mode === 'scene')) wake(); }, true);
   function setZoom(i) { D.zi = Math.max(0, Math.min(ZOOMS.length - 1, i)); D.zoomK = ZOOMS[D.zi]; render(); }
   function setTime(i) { D.ti = i; const m = TIMES[i][1]; D.lt = m === null ? null : loopOf(m); render(); }
   function setWx(i) {
@@ -267,9 +367,43 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
   }
 
   // ---- the panel ----
+  const btn = (label, on, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); if (cls) b.classList.add(cls); b.onclick = (ev) => { ev.stopPropagation(); here(); wake(); fn(); b.blur(); }; return b; };
+  // the drift's dial: its needle the way it goes; drag (or tap) it to point it anywhere
+  function dial() {
+    const d = document.createElement('div'); d.className = 'cine-dial'; d.title = 'Drag to steer the drift';
+    const n = document.createElement('i'), c = document.createElement('b');
+    d.append(n, c);
+    const show = () => { n.style.transform = `rotate(${dr.a - Math.PI / 2}rad)`; };
+    const at = (ev) => { const r = d.getBoundingClientRect(), dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2); if (Math.hypot(dx, dy) > 4) { dr.a = Math.atan2(dy, dx); show(); here(); wake(); } };
+    d.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); ev.preventDefault(); try { d.setPointerCapture(ev.pointerId); } catch { /* old browser */ } at(ev); d.onpointermove = at; });
+    d.addEventListener('pointerup', () => { d.onpointermove = null; render(); });
+    d.addEventListener('pointercancel', () => { d.onpointermove = null; });
+    show(); d.show = show;
+    return d;
+  }
+  const speedRow = () => [btn('◀', false, () => setDrift(dr.si - 1)), Object.assign(document.createElement('span'), { className: 'lbl', textContent: DRIFT_NAMES[dr.si] }), btn('▶', false, () => setDrift(dr.si + 1))];
+  const zoomRow = () => [btn('－', false, () => setZoom(D.zi - 1)), btn('＋', false, () => setZoom(D.zi + 1))];
+  // the bar along the bottom (drift / follow scenes): made again when what it shows changes
+  function barShow() {
+    const want = D.mode === 'drift' || D.mode === 'scene';
+    document.body.classList.toggle('cine-bar', want);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
+    if (!want) { if (bar) bar.style.display = 'none'; return; }
+    if (!bar) { bar = document.createElement('div'); bar.id = 'cine-ctl'; bar.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); wake(); }); document.body.appendChild(bar); }
+    const key = D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
+    if (key !== barKey) {
+      barKey = key; bar.textContent = '';
+      if (D.mode === 'drift') { const dl = dial(); bar.dial = dl; bar.append(dl, ...speedRow(), ...zoomRow(), btn('✕', false, () => setMode('follow'))); }
+      else {
+        const who = Object.assign(document.createElement('span'), { className: 'who', textContent: fs ? (fs.none ? `Looking for: ${fs.n}` : fs.n) : 'Finding a scene...' });
+        bar.append(btn('◀', false, () => stepKind(-1)), who, btn('▶', false, () => stepKind(1)), btn('Next', false, () => followKind('next')), btn('Tour', !!(fs && fs.tour), () => followKind('tour')), ...zoomRow(), btn('✕', false, () => setMode('follow')));
+      }
+    } else if (bar.dial) bar.dial.show();
+    const on = !D.clean || performance.now() - wokeAt < 3500;
+    bar.style.display = 'flex'; bar.style.opacity = on ? '1' : '0'; bar.style.pointerEvents = on ? '' : 'none';
+  }
   function render() {
+    barKey = '';
     if (!panel || !shown) return;
-    const btn = (label, on, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); if (cls) b.classList.add(cls); b.onclick = (ev) => { ev.stopPropagation(); here(); fn(); b.blur(); }; return b; };
     const row = (...bs) => { const r = document.createElement('div'); r.className = 'row'; for (const b of bs) r.appendChild(b); return r; };
     const h = (t) => { const e = document.createElement('h3'); e.textContent = t; return e; };
     panel.textContent = '';
@@ -278,14 +412,30 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
       h('Screen'), row(btn(D.clean ? 'Clean screen: on (F2)' : 'Clean screen (F2)', D.clean, () => setClean(!D.clean)), btn('Picture (F8)', false, shot), btn('Hide panel (F4)', false, () => toggle(false))),
       row(btn('Hide my character', D.hideMe, () => { D.hideMe = !D.hideMe; render(); }), btn('No shake', D.noShake, () => { D.noShake = !D.noShake; render(); })),
       h('Letterbox'), row(...BOXES.map(([n], i) => btn(n, D.bi === i, () => setBox(i)))),
-      h('Camera'), row(...[['Follow', 'follow'], ['Smooth', 'smooth'], ['Drift', 'drift'], ['Drone', 'drone'], ['On someone', 'target'], ['Tour', 'tour']].map(([n, m]) => btn(n, D.mode === m, () => setMode(m)))));
+      h('Camera'), row(...[['Follow', 'follow'], ['Smooth', 'smooth'], ['Drift', 'drift'], ['Drone', 'drone'], ['On someone', 'target'], ['Tour', 'tour'], ['Follow scenes', 'scene']].map(([n, m]) => btn(n, D.mode === m, () => setMode(m)))));
+    if (D.mode === 'drift') {
+      const dirs = document.createElement('div'); dirs.className = 'dirs';
+      for (const i of [7, 0, 1, 6, -1, 2, 5, 4, 3]) dirs.append(i < 0 ? dial() : btn(DIRS8[i][0], Math.abs(wrapA(dr.a - DIRS8[i][1])) < 0.05, () => setDriftWay(DIRS8[i][1])));
+      dirs.children[4].classList.add('sm');
+      panel.append(h('Drift: which way (or drag the dial)'), dirs, h('Drift: how fast'), row(...DRIFT_NAMES.map((n, i) => btn(n, dr.si === i, () => setDrift(i)))));
+    }
+    if (D.mode === 'scene') {
+      panel.append(h('Follow scenes'), row(btn('Near me', near, () => { near = true; if (fs) followKind(fs.tour ? 'tour' : fs.k); render(); }), btn('Anywhere', !near, () => { near = false; if (fs) followKind(fs.tour ? 'tour' : fs.k); render(); }), btn('▶ The tour', !!(fs && fs.tour), () => followKind('tour')), btn('Next (N)', false, () => followKind('next'))));
+      if (fs) { const p = document.createElement('div'); p.className = 'tip'; p.style.color = '#ffd23a'; p.textContent = fs.none ? `Nobody's at it right now: ${fs.n} - still looking` : `On: ${fs.n}`; panel.append(p); }
+      let g = '';
+      for (const q of CINE_KINDS) {
+        if (q.g !== g) { g = q.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = g; panel.append(e); }
+        panel.append(btn(q.n, !!(fs && !fs.tour && fs.k === q.id), () => followKind(q.id), 'sc'));
+      }
+      if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'In dev mode, a scene nobody is doing right now is started for the camera (a race, a chase, a plane, a surfer...).'; panel.append(p); }
+    }
     if (D.mode === 'smooth' || D.mode === 'target') {
       const r = document.createElement('input'); r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.05'; r.value = String(D.smooth);
       r.oninput = () => { D.smooth = +r.value; };
       panel.append(h('Smoothing (loose - tight)'), r);
     }
     if (D.mode === 'target') panel.append(row(btn('◀ Previous ([)', false, () => nextTarget(-1)), btn('Next (]) ▶', false, () => nextTarget(1))));
-    const tips = { drone: 'Drone: WASD / arrows / left stick fly it, Q / E zoom, Shift faster, Esc back to you.', tour: 'Tour: the camera glides through the world\'s sights on its own. Esc ends it.', drift: 'Drift: a slow pan across wherever you are - scenery shots.', target: 'On someone: the people and vehicles near you, nearest first.', smooth: 'Smooth: the camera trails you, like a camera operator.' };
+    const tips = { drone: 'Drone: WASD / arrows / left stick fly it, Q / E zoom, Shift faster, Esc back to you.', tour: 'Tour: the camera glides through the world\'s sights on its own. Esc ends it.', drift: 'Drift: a pan across wherever you are. WASD / arrows / the left stick steer it, Z / X or LB / RB slower / faster, Space stops it, Q / E or LT / RT zoom.', scene: 'Follow scenes: the camera on someone doing something, near you or anywhere - it moves on when they\'re done. N / A the next one, [ ] / LB RB the kind, T the tour, Esc / B back to you.', target: 'On someone: the people and vehicles near you, nearest first.', smooth: 'Smooth: the camera trails you, like a camera operator.' };
     if (tips[D.mode]) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = tips[D.mode]; panel.append(p); }
     panel.append(h('Zoom'), row(btn('－', false, () => setZoom(D.zi - 1)), btn(`${Math.round(100 / D.zoomK)}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(D.zi + 1))));
     panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
@@ -314,22 +464,108 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
     if (down && k === 'F8') { shot(); return true; }
     if (D.mode === 'target' && down && (k === 'BracketLeft' || k === 'BracketRight')) { nextTarget(k === 'BracketRight' ? 1 : -1); return true; }
     if (!D.holds()) return false;
-    if (down) here();
+    if (down) { here(); wake(); }
     if (down && k === 'Escape') { setMode('follow'); return true; }
-    if (D.mode === 'drone' && down && (k === 'KeyQ' || k === 'Minus')) { setZoom(D.zi - 1); return true; }
-    if (D.mode === 'drone' && down && (k === 'KeyE' || k === 'Equal')) { setZoom(D.zi + 1); return true; }
+    const zoomKey = D.mode === 'drone' || D.mode === 'drift' || D.mode === 'scene';
+    if (zoomKey && down && (k === 'KeyQ' || k === 'Minus')) { setZoom(D.zi - 1); return true; }
+    if (zoomKey && down && (k === 'KeyE' || k === 'Equal')) { setZoom(D.zi + 1); return true; }
+    if (D.mode === 'drift' && down) {
+      if (k === 'KeyZ') { setDrift(dr.si - 1); return true; }
+      if (k === 'KeyX') { setDrift(dr.si + 1); return true; }
+      if (k === 'Space') { if (dr.si) { dr.last = dr.si; setDrift(0); } else setDrift(dr.last || 2); return true; }
+    }
+    if (D.mode === 'scene' && down) {
+      if (k === 'KeyN' || k === 'Enter') { followKind('next'); return true; }
+      if (k === 'BracketLeft' || k === 'BracketRight') { stepKind(k === 'BracketRight' ? 1 : -1); return true; }
+      if (k === 'KeyT') { followKind('tour'); return true; }
+    }
     if (down) keys.add(k); else keys.delete(k);
     return true;
   };
-  D.pad = (a) => { axes = a; };
+  // the pad, each frame (main.js, while no menu's open): the sticks and triggers, and while the camera has the controls
+  // - B back to you, Y the panel, X a picture; LB / RB the drift's speed or the scene's kind; A the next scene
+  D.pad = (a) => {
+    axes = a;
+    if (!D.holds()) return;
+    const I = api.input || {}, t = performance.now();
+    if (I.menuBack || I.padX || I.padY || I.menuTab || I.menuSelect || (a && (Math.hypot(a.lx || 0, a.ly || 0) > 0.3 || (a.lt || 0) > 0.3 || (a.rt || 0) > 0.3))) { wake(); here(); }
+    if (I.menuBack) { setMode('follow'); return; }
+    if (I.padY) toggle();
+    if (I.padX) shot();
+    if (D.mode === 'drift' && I.menuTab) setDrift(dr.si + I.menuTab);
+    if (D.mode === 'scene' && I.menuTab) stepKind(I.menuTab);
+    if (D.mode === 'scene' && I.menuSelect) followKind('next');
+    if (a && D.mode !== 'drone' && t - padZoomAt > 260) {   // (the drone zooms with Q / E; held, a trigger steps the zoom)
+      if ((a.rt || 0) > 0.5) { setZoom(D.zi + 1); padZoomAt = t; } else if ((a.lt || 0) > 0.5) { setZoom(D.zi - 1); padZoomAt = t; }
+    }
+  };
+  // the server's word on the follow scenes: whom to follow ({ id, k, n, z, cut, tour, x, y }), nobody at it ({ none }),
+  // or over ({ off })
+  D.follow = (m) => {
+    if (m.off) { if (D.mode === 'scene') { fs = null; setMode('follow'); } return; }
+    if (D.mode !== 'scene') return;
+    if (!m.id) { fs = { ...(fs || {}), k: m.k, n: m.n, none: 1, tour: fs ? fs.tour : 0 }; if (!D.clean) api.toast(`Nobody's at it right now: ${m.n}${m.dev ? '' : ' (in dev mode one is started for the camera)'} - still looking.`, 'warn'); render(); return; }
+    const first = !fs || !fs.id;
+    fs = { id: m.id, k: m.k, n: m.n, z: m.z || 1, tour: !!m.tour, hold: m.cut || first ? 1.2 : 0, none: 0 };
+    missing = 0;
+    if (m.cut || first || !fcam) {
+      fadeTo(1);
+      fcam = { x: m.x, y: m.y, vx: 0, vy: 0, px: null, py: null, fi: 0, lead: FRAMES[0].lead, side: 0, zk: FRAMES[0].zk };
+      x = m.x; y = m.y;
+    }
+    frameAt = performance.now() + (FRAME_S[0] + Math.random() * (FRAME_S[1] - FRAME_S[0])) * 1000;
+    if (!D.clean) api.toast(m.n, 'info');
+    render();
+  };
+  // the subject's ground point (an aircraft drawn up by its height: two thirds of the way up, as main.js has your own)
+  function subjectAt(e) {
+    let ex = e.rx, ey = e.ry;
+    const def = e.kind === K.VEH && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
+    if (def && def.kind === 'air' && S.airMod && S.airMod.liftOf && S.art2 && S.art2.ready) ey -= S.airMod.liftOf(e.ralt ?? (e.extra | 0) * 4) * 0.66;
+    return [ex, ey];
+  }
+  function sceneStep(dt) {
+    if (!fs || !fs.id || !fcam) return;
+    const e = S.ents.get(fs.id);
+    if (!e || e.rx === undefined) {   // (on its way to us after a cut: black meanwhile; gone for good: the next one)
+      missing += dt;
+      if (missing > 6) { missing = -6; api.send({ t: 'cine', f: 'next', near }); }
+      return;
+    }
+    missing = 0;
+    const [ex, ey] = subjectAt(e);
+    if (fs.hold > 0) {   // (the cut: in black, the camera put on them, the art coming in)
+      fs.hold -= dt;
+      fcam.x = ex; fcam.y = ey; fcam.px = ex; fcam.py = ey;
+      if (fs.hold <= 0) fadeTo(0);
+    }
+    if (performance.now() > frameAt) {   // (now and then the framing changes: wider, closer, off to one side)
+      fcam.fi = (fcam.fi + 1 + Math.floor(Math.random() * (FRAMES.length - 1))) % FRAMES.length;
+      frameAt = performance.now() + (FRAME_S[0] + Math.random() * (FRAME_S[1] - FRAME_S[0])) * 1000;
+    }
+    followStep(fcam, ex, ey, dt);
+    x = fcam.x; y = fcam.y;
+    D.zoomK = ZOOMS[D.zi] * fs.z * fcam.zk;
+  }
   D.sky = (sky) => { if (D.wx === 'clear') { sky.rain = 0; } };
   D.cam = (cam, dt, tx, ty) => {
+    // (down: the panel shuts and the camera comes back to you - the death screen's choices take the keys and the screen)
+    if (S.me && S.me.dead) { if (shown) toggle(false); if (D.holds()) setMode('follow'); }
     if (D.noShake) cam.shake = 0;
     if (!inited) { x = cam.x; y = cam.y; inited = true; }
+    barShow();
     const lag = (k) => 1 - Math.exp(-k * dt);
     if (D.mode === 'follow') { x = cam.x; y = cam.y; return; }
+    // (the drift and the follow scenes going on by themselves, like the tour: the idle clock runs slow - players.js riding)
+    if (D.mode === 'drift' || D.mode === 'scene') { const t = performance.now(); if (t - tourAt > 60e3) { tourAt = t; api.send({ t: 'cine', tour: 1 }); } }
     if (D.mode === 'smooth') { const k = 0.6 + D.smooth * 5; x += (tx - x) * lag(k); y += (ty - y) * lag(k); }
-    else if (D.mode === 'drift') { x += drift.vx * dt; y += drift.vy * dt; }
+    else if (D.mode === 'drift') {
+      const want = keyDir(keys) ?? stickDir(axes);
+      dr.x = x; dr.y = y;
+      driftStep(dr, dt, cam.zoom || 1, want);
+      x = dr.x; y = dr.y;
+      if (want !== null && bar && bar.dial) bar.dial.show();
+    } else if (D.mode === 'scene') sceneStep(dt);
     else if (D.mode === 'target') {
       const e = S.ents.get(target);
       if (!e || e.rx === undefined) { nextTarget(1); return; }

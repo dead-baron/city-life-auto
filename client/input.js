@@ -134,7 +134,7 @@ function initTouch(hooks) {
   // the FIRE toggle by the aim stick (settings.touchEdgeFire)
   const ft = document.getElementById('firetog');
   if (ft) {
-    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.innerHTML = `FIRE<br>${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
+    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.textContent = `FIRE ${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
     input.showFireToggle();
     const flip = (e) => { e.preventDefault(); e.stopPropagation(); settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(10); };
     ft.addEventListener('touchstart', flip, { passive: false });
@@ -149,7 +149,6 @@ function initTouch(hooks) {
       if (name === 'dev') { hooks.onDev?.(); return; }
       if (name === 'map') { hooks.onMap?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
-      if (name === 'board') { hooks.onBoard?.(); return; }   // (the skateboard: on or off - main.js quickBoard)
       if (name === 'phone') { hooks.onPhone?.(); return; }
       if (name === 'use') { hooks.onItems?.(); return; } // the quick wheel (stays open until you tap a slot)
       if (name === 'settings') { hooks.onSettings?.(); return; }

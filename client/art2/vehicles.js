@@ -4,21 +4,12 @@
 // from the rear (0) to the front (L), y across (0 = the left side, L = the right side, which faces south
 // at heading 0), z up.
 //
-//   vehicleModel(type, o) -> Vox (with .anchors, see below)
-//     type     any id from shared/vehicles.js (compact sedan taxi sports pickup flatbed van bus police swat
-//              ambulance armored bike policebike bicycle speedboat dinghy jetski policeboat boxtruck
-//              dumptruck mixer tanker garbage firetruck towtruck) or a scenery model (suv limo foodtruck
-//              tram tugboat ferry tractor combine plane excavator)
-//     o.paint  hex body colour (civilian bodies; on liveried models a respray); o.cab truck cab colour; o.band a
-//              bus's band in its line's colour
-//     o.lights 0..1 headlights and tail lights      o.brake / o.reverse  brake and reversing lamps lit
-//     o.siren  false | true (all lamps lit) | 1 | 2 (the two flash phases: red side or blue side lit)
-//     o.state  'clean' | 'dented' | 'wrecked' | 'burning' | 'burnt' | 'smoulder' (burnt, embers glowing)
-//     o.variant integer: roof racks, rust, two-tone roofs, sunroofs, stickers, hubcaps, dirt (per model)
-//     o.bloody blood on the front      o.cargo crate tiers to strap onto a bed or deck (scenery only;
-//              the game places crates as their own sprites)      o.dry skip the normals (anchors only)
-//   vehicleAnchors(type) -> the lamp, siren, seat, exhaust and fire points of a model (model coordinates,
-//              x from the rear, y from the left side, z up), measured once per type.
+//   vehicleModel(type, o) -> Vox (with .anchors)   type: any id from shared/vehicles.js (the batch-4 fleet's once
+//     client/art2/fleet.js is in) or a scenery model (suv limo foodtruck tram tugboat ferry tractor combine plane
+//     excavator). o.paint body colour, o.cab a truck's cab, o.band a bus's band; o.lights, o.brake, o.reverse; o.siren
+//     false | true | 1 | 2 (the flash phases); o.state clean | dented | wrecked | burning | burnt | smoulder; o.variant
+//     (racks, rust, two-tone...); o.bloody; o.cargo crate tiers (scenery); o.dry: anchors only, no normals
+//   vehicleAnchors(type) -> its lamp, siren, seat, exhaust and fire points (model coordinates), once per type.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
 import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
@@ -29,24 +20,22 @@ export const VEHICLE_DIMS = {
   compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
   van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], rowboat: [64, 28], kayak: [52, 16], jetski: [46, 22], golfcart: [54, 30],
-  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20],
+  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20], skateboard: [26, 10],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
   // the MC1 motorcycles (task #366)
   vtwin: [54, 20], tourer: [58, 26], chopper: [66, 20], bobber: [50, 20], caferacer: [50, 18], dirtbike: [48, 18], scooter: [40, 18], trike: [60, 38], ratbike: [54, 22], bagger: [58, 26],
   // scenery-only variants (parked and NPC traffic; they share the sedan / van footprints in play)
   suv: [104, 50], limo: [150, 50], foodtruck: [124, 58],
-  // transit and harbour scenery (World v2): a two-section tram, a harbour tug, a car and passenger ferry
+  // transit and harbour scenery (World v2)
   tram: [300, 56], tugboat: [150, 64], ferry: [470, 150],
-  // the island ferries' water bus (server/systems/ferries.js; the car ferry is the 'ferry' above)
   waterbus: [240, 76],
-  // the five-star response (server/systems/police.js): the FBI's black SUV, the army's olive truck
+  // the five-star response (police.js)
   fbi: [104, 50], army: [120, 58],
   // country and works scenery
   tractor: [84, 54], combine: [150, 120], plane: [104, 130], excavator: [130, 60],
-  // the search-and-rescue boat (server/systems/rescue.js; RS1): an orange rigid inflatable
   rescueboat: [96, 48],
-  // the off-road ambulance (ems.js; RS1): a white and orange 4x4
+  // the rescue boat, the off-road ambulance (RS1)
   rescue4x4: [104, 50],
   // the tank (H58: server tank.js): the hull on its tracks, and the turret drawn over it at its own angle - a model of its
   // own, its pivot in the middle (the barrel reaching forward, the bustle back), sat up at the hull's deck height
@@ -57,7 +46,7 @@ export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
   bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, rowboat: 11, kayak: 8, jetski: 16, policeboat: 34, golfcart: 40,
-  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26,
+  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26, skateboard: 5,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
@@ -449,13 +438,9 @@ function roofKit(m, M, x0, x1, z, o = {}) {
   }
 }
 
-// ---- the shopping cart (shared/vehicles.js cart, 2026-10-18: kicked along from the back, ridden on its back rail, one in the
-// basket; refined from the owner's cart concepts CC01-CC04 the same day) ---------------------------------------------------
-// x from the back (the handle, 0) to the front, z up: a deep wire basket on a chrome frame - the top rim and the corner
-// posts solid, the walls a mesh, the front wall leaning out (the top longer than the floor), narrowing to the front - the
-// bottom rack, four legs and casters, the red plastic of the concepts: the handle with its end caps, the folding child
-// seat's flap on the back, a bumper at each front corner; the back rail to stand on. Its states (CC04): 'tipped' - over on
-// its side (a hard crash: server vehicles.js cartCrash); 'wrecked' - crushed, the front buckled in and down, a caster gone.
+// ---- the shopping cart (task #329, the owner's concepts CC01-CC04): x from the handle (0) to the front, z up - a wire
+// basket on a chrome frame, the rack, the casters, the red plastic (the handle, the child seat's flap, the bumpers), the
+// back rail to stand on. Its states: 'tipped' on its side (server vehicles.js cartCrash), 'wrecked' crushed.
 function shoppingCart(m, M, A, state) {
   const L = m.w, W = m.d, cy = W / 2, red = M.body;
   const wire = m.mat({ ramp: R('#9ca2ac', 6, 3, { light: 0.7 }), k: 2.6, gloss: 0.4 });   // (galvanised wire: greyer than chrome, CC04)
@@ -515,7 +500,7 @@ function shoppingCart(m, M, A, state) {
 // The pedal bikes (shared/vehicles.js pedal), all from one builder: the wheels (spoked; balloon, knobby or skinny
 // tyres), the frame drawn as tubes in the bike's middle plane, the fork, bars, saddle and each type's own kit.
 // Coordinates: x from the rear (0) to the front, z up; the frame sits at y = cy.
-export const PEDAL = new Set(['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike', 'cart']);
+export const PEDAL = new Set(['bicycle', 'cruiser', 'mtb', 'roadbike', 'bmx', 'cargobike', 'cart', 'skateboard']);
 const BIKES = {
   // r: wheel radius; tw: tyre thickness across (voxels); xr / xf: the axles (rf: a smaller front wheel); bb: the bottom
   // bracket; st: the top of the seat tube; ht / hb: the head tube's top and bottom; seat: the saddle [x0, x1, z, half-width];
@@ -821,7 +806,7 @@ export function carPaint(hex) {
 // jockey seats behind it, an A-frame arch over the stern with the light bar on top and a life ring hung on it, twin
 // outboards. The paint is the tubes' colour. A.crew: the four places people stand or sit aboard (shared/vehicles.js
 // rescueboat.crew), so the renderer can stand riders there.
-function rescueBoat(m, M, A, L, W) {
+function rescueBoat(m, M, A, L, W, sport) {
   const cy = W / 2, r = 6.5, zc = 9, xb = L * 0.58, ax = L - 1 - r * 0.6 - xb, Rb = W / 2 - r;
   const deckM = m.mat({ ramp: R('#4a4c52'), k: 2, shade: (x, y) => (((x | 0) + (y | 0)) % 3 === 0 ? -0.6 : 0) });
   const hullM = m.mat({ ramp: R('#3a3c44'), k: 2 }), strake = m.mat({ ramp: R('#5a5c62'), k: 2 });
@@ -843,7 +828,7 @@ function rescueBoat(m, M, A, L, W) {
     const dp = toLine(x, Math.abs(y - cy)), dz = z - zc;
     if (dp * dp + dz * dz > r * r) return -1;
     if (Math.abs(dz + 1.5) < 0.8) return strake;
-    if (dz > 0 && dz < 2.5 && x < xb && Math.floor(x / 14) % 2 === 1) return tape;
+    if (!sport && dz > 0 && dz < 2.5 && x < xb && Math.floor(x / 14) % 2 === 1) return tape;
     return M.body;
   }, 0, 0, 2, L, W, zc + r + 1);
   // the hull under it: a deep V, in to the bow
@@ -856,7 +841,9 @@ function rescueBoat(m, M, A, L, W) {
   m.box(c1 - 2, cy - 6, 18, c1, cy + 6, 23, M.glass);
   m.box(c0 + 2, cy - 5, 18, c1 - 3, cy + 5, 19, M.trim);
   for (const y of [cy - 9, cy + 2]) { m.box(L * 0.36, y, 7, L * 0.45, y + 7, 12, M.seat); m.box(L * 0.36, y, 12, L * 0.38, y + 7, 16, M.seat); }
-  // the A-frame over the stern: two legs, the cross bar, the light bar on top, a life ring hung on it, an aerial
+  // the A-frame over the stern: two legs, the cross bar, the light bar on top, a life ring hung on it, an aerial (the
+  // sport RIB - client/art2/fleet.js - has none: a single outboard, a bow cushion)
+  if (sport) { m.box(0, cy - 4, 2, 6, cy + 4, 19, M.dark); m.box(L * 0.7, cy - 7, 7, L * 0.82, cy + 7, 9, M.seat); A.head.push([L - 3, cy, zc + 3]); A.tail.push([2, cy - 12, zc + 3], [2, cy + 12, zc + 3]); A.wake = [0, cy]; A.fire.push([L * 0.4, cy, 10]); A.seat = [L * 0.42, cy - 6, 12]; return; }
   for (const y of [cy - 15, cy + 14]) m.box(12, y, 7, 14, y + 1, 29, M.chrome);
   m.box(12, cy - 15, 27, 14, cy + 15, 29, M.chrome);
   lightbar(m, M, 11, 15, 29);
@@ -869,6 +856,12 @@ function rescueBoat(m, M, A, L, W) {
   A.seat = [L * 0.42, cy - 6, 12];
 }
 
+// The newer models (client/art2/fleet.js) add themselves when loaded: their sizes, paints and builder; KIT is what they
+// build with. CIVIL_X: theirs that take the spawn paint (game/actors.js).
+const EXTRA = { build: null };
+export const CIVIL_X = new Set();
+export function addModels(o) { Object.assign(VEHICLE_DIMS, o.dims); Object.assign(VEHICLE_TALL, o.tall); Object.assign(DEFAULT_PAINT, o.paint); for (const t of o.civil) CIVIL_X.add(t); EXTRA.build = o.build; }
+export const KIT = { R, sm, mats, paintSet, deco, shell, glassy, wheel, wheels, lamps, lightbar, crateOn, carBody, thirdBrake, cutBed, truckCab, chassis, truckRear, boxBody, roofKit, rescueBoat, CAR };
 export function vehicleModel(type, o = {}) {
   const [L, W] = VEHICLE_DIMS[type] || VEHICLE_DIMS.sedan;
   if (!VEHICLE_DIMS[type]) return vehicleModel('sedan', o);
@@ -1175,6 +1168,12 @@ export function vehicleModel(type, o = {}) {
     }
     case 'bicycle': case 'cruiser': case 'mtb': case 'roadbike': case 'bmx': case 'cargobike': pedalBike(m, M, V, type, A); break;
     case 'cart': shoppingCart(m, M, A, o.state); break;
+    case 'skateboard': {   // lying on the ground: the wheels on their trucks, the deck in its paint, the grip tape on it
+      for (const x of [5, L - 6]) { m.box(x - 1, 2, 1.5, x + 1, W - 2, 3, M.rim); for (const y of [0, W - 2.5]) m.cyl('y', x, 0, 1.6, 1.6, y, y + 2.5, M.tyre); }
+      m.box(1, 1, 3, L - 1, W - 1, 4, M.body); m.box(0, 2, 3.5, L, W - 2, 4.6, M.body); m.box(2, 1.5, 4, L - 2, W - 1.5, 4.6, M.black);
+      A.seat = [L / 2, W / 2, 4]; A.fire.push([L / 2, W / 2, 3]);
+      break;
+    }
     case 'rowboat': {
       // a clinker-built wooden rowboat (Nature-B1): planked hull, its paint above the waterline, two thwarts, a pair of
       // oars out in the rowlocks; no engine
@@ -1493,7 +1492,7 @@ export function vehicleModel(type, o = {}) {
       for (const yy of [4, W - 6]) m.box(L * 0.02, yy, hz, c0, yy + 1, hz + 6, M.chrome);
       break;
     }
-    default: return vehicleModel('sedan', o);
+    default: if (!EXTRA.build || !EXTRA.build(type, m, M, A, V, o)) return vehicleModel('sedan', o);
   }
   // variant wear: rust and dirt (civilian models), blood on the front
   const civ = type === 'compact' || type === 'sedan' || type === 'pickup' || type === 'van' || type === 'suv' || type === 'dinghy';
