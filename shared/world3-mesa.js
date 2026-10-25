@@ -47,13 +47,18 @@ export const MESA = {
   streets: [
     ['Palm Row', [[5256, 548], [5542, 548]]],                              // behind the north resorts
     ['Chapel Street', [[5330, 500], [5542, 500]]],                         // the motels and the wedding chapels
-    ['Gold Street', [[5256, 690], [5256, 548]]],                           // Old Downtown's west street, across the Strip
+    ['Gold Street', [[5256, 690], [5256, 548], [5256, 508]]],              // Old Downtown's west street, across the Strip, on up into the flats
     ['Silver Street', [[5330, 690], [5330, 500]]],                         // the Strip's west end, up to Chapel Street
     ['Lucky Street', [[5542, 612], [5542, 500]]],                          // the Strip's east end, up to Chapel Street
     ['Cactus Street', [[5454, 612], [5454, 690]]],                         // between the south resorts
     ['Mesa Flats Drive', [[5256, 690], [5454, 690]]],                      // the flats' street
     ['Trailer Lane', [[5300, 690], [5300, 728], [5410, 728], [5410, 690]]],   // the trailer park's loop
     ['Chapel Lane', [[5444, 500], [5444, 466]]],                           // the lane out into the desert (a turnaround)
+    // (the owner, 2026-10-23: the flats north of Palm Row west of Mesa Flats Road were one block 90 tiles deep - the
+    // block filler stacked plain roofs 80 tiles deep behind the fronts on Palm Row, a bare lane between their columns:
+    // "really long empty alleyways", "the way some buildings overlap each other") - a street across them, Gold Street
+    // up to it: a row of houses facing it, their gardens behind
+    ['Sage Street', [[5256, 508], [5317, 508]]],                           // across the flats west of Mesa Flats Road
     ['Station Road', [[5612, 620], [5612, 884], [5532, 940]]],             // Route 9 down to the main line's station (v3b: 190 tiles south of the town, past the line's bend - STATIONS 'Lucky Mesa')
   ],
   // the resorts (a lot [x0, y0, x1, y1), the side it fronts the Strip on, its look): the Strip's plan's (world3-strip.js)

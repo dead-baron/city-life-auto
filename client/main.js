@@ -5,7 +5,7 @@ import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_L
 import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
-import { pedStep, vehStep, driveInput } from '../shared/physics.js';
+import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
 import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js';
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
@@ -431,7 +431,7 @@ function reconcile(s) {
   const old = S.pred && !switched ? drawn(S.pred) : null;
   let st;
   if (kind === 'ped') {
-    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim, lz: s.self.lz, ug: S.ugLayer || 0 };
+    st = { x: s.self.x, y: s.self.y, a: s.self.a, vx: s.self.vx, vy: s.self.vy, stamina: s.self.stamina, rollT: s.self.rollT, rdx: s.self.rdx, rdy: s.self.rdy, hop: s.selfFlags & 64 ? 0 : s.self.av, prevBits: s.prevBits, under: !!(S.ents.get(s.ctrlId) || {}).swim, lz: s.self.lz, ug: S.ugLayer || 0 };
     if ((s.selfFlags & 64) && S.skate) S.skate.boardIn(st, s.self);   // (on a skateboard: its kick, grind, manual and air - shared/board.js boardOut)
     S.pred = { kind, s: st, mods: pedModsFrom(s.selfFlags, s.self.speedMul), prev: null };
   } else {
@@ -862,6 +862,7 @@ function onEvent(ev) {
       else if (ev.id !== S.myPedId) sfx('swing', distVol(ev.x, ev.y));
       break;
     }
+    case 'hop': { const e = S.ents.get(ev.id); if (e) e.hopAt = S.loopClock; break; }   // (over a fence: shared/fences.js; pedLook lifts them)
     case 'fling': { const e = S.ents.get(ev.id); if (e) { e.flingAt = S.loopClock; e.flingDur = ev.d; e.flingK = ev.k; e.flingLanded = false; } break; }
     case 'bang': { const e = S.ents.get(ev.id); if (e) { e.bangAt = S.loopClock; e.bangK = ev.k; } break; }   // (fight in a cell: the bars rattled, a fist on the wall - server cells.js; the clang or thud: sound/events.js)
     case 'knockdown': {
@@ -1130,6 +1131,7 @@ function setupWorld(seed, here = false, given = null) {
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
+  import('../shared/fences.js').then((F) => { S.fence = F; setFences(F.FENCES); }).catch(() => {});   // (the fences: held off them, the hop - predicted like the server)
   S.hud.onDown = (a) => downAct(a);
   loadSpan('setup', performance.now() - t);
   startArt2(S.map);
@@ -1446,7 +1448,7 @@ initInput(canvas, {
       if (k === 'KeyJ') { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
       if (k === 'KeyC' && S.me.down.help) { downAct('cancel'); return; }
     }
-    if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1); return; }
+    if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1, /Up|Down|W|S/.test(k) ? 'v' : 'h'); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
     if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
@@ -1523,7 +1525,7 @@ function deathPad() {
     if (input.padLB && dn.help) downAct('cancel');
   }
   const step = input.menuNav || input.menuLR;
-  if (step) S.hud.stepSpawn(step);
+  if (step) S.hud.stepSpawn(step, input.menuNav ? 'v' : 'h');
 }
 
 // ---- the bag + quick wheel ----------------------------------------------------------------------
@@ -4364,6 +4366,9 @@ function pedLook(p, now) {
     lift = sf === 3 ? 14 : 0;
   }
   if (S.skate && !flying && !(f & PF.INVEH) && !p.swim) lift = Math.max(lift, S.skate.rampAt(p.rx ?? p.x, p.ry ?? p.y));   // (up on a skate ramp: on its surface - client/skate.js)
+  // hopping a fence (shared/fences.js): a crouch, then up and over - yours as predicted, the others' from the event
+  const hl = S.fence && !flying ? (p.id === S.myPedId && S.pred && S.pred.kind === 'ped' ? S.pred.s.hop : S.fence.FENCE_HOP.s - S.loopClock + (p.hopAt ?? -9)) : 0;
+  if (hl > 0) { const h = S.fence.hopLift(hl); lift = Math.max(lift, h); pose = h ? 'move' : 'kneel'; fr = h ? 2 : 0; }
   const L = p._look || (p._look = {});
   L.lift = lift; L.board = !!(p.d && p.d.bd) && SKATE_POSES.has(pose); L.surf = sf;
   L.pose = pose; L.fr = fr; L.flT = flT; L.flying = flying; L.flK = flK; L.flRecent = flRecent; L.turn = turn;

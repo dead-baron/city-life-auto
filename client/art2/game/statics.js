@@ -1487,7 +1487,7 @@ function voxModel(m, a) {
   switch (m) {
     case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
-    case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'planter': return P.planter(a[0] ?? true);
+    case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'steamVent': return RD.steamVent(); case 'handTruck': return RD.handTruck(a[0] || 2); case 'planter': return P.planter(a[0] ?? true);
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'gatePier': return gatePier(); case 'crate': return P.crate(a[0] || 1);
     case 'hotdogCart': return P.hotdogCart(a[0] || 0); case 'armLamp': return P.armLamp(a[0], a[1], a[2]); case 'streetLamp': return P.streetLamp(a[0]);
     case 'lampPost': return P.lampPost(a[0], a[1]); case 'bannerLamp': return D.bannerLamp(a[0], a[1]); case 'twinLamp': return K.twinLamp(a[0]); case 'wallLamp': return RD.wallLamp(a[0], a[1]);
@@ -1558,7 +1558,7 @@ function vdim(m, a) {
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
-    case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
+    case 'bollard': return [6, 6, a[0] || 12]; case 'acUnit': return [18, 14, 12]; case 'steamVent': return [18, 14, 60]; case 'handTruck': return [14, 12, 34]; case 'planter': return [24, 14, 22]; case 'pottedPalm': return [22, 22, 40]; case 'umbrella': return [30, 30, 30];
     case 'dumpster': return [32, 18, 20]; case 'gatePier': return [12, 12, 46]; case 'crate': return [14, 14, 13]; case 'hotdogCart': return [40, 24, 56]; case 'armLamp': return [a[0] + 12, 10, 102]; case 'streetLamp': return [14, 14, 94];
     case 'lampPost': return a[0] === 'cast' || a[0] === 'iron' ? [12, 12, 84] : [30, 12, 106]; case 'bannerLamp': return [22, 12, 90]; case 'twinLamp': return [46, 12, 98]; case 'wallLamp': return [8, 12, (a[1] || 46) + 4];
     case 'busShelter': return [a[0] || 64, 22, 46]; case 'phoneBooth': return [20, 20, 58]; case 'atmWall': return [36, 12, 52]; case 'vending': return [24, 16, 46]; case 'mailbox': return [12, 8, 20];
@@ -2107,6 +2107,8 @@ function propItems(c, p, pi, I) {
     case 'rubble': V(`rub:${seed % 3}`, 'rubble', [seed % 3]); return;
     case 'gravel': V(`grv:${seed % 3}`, 'gravel', [seed % 3]); return;
     case 'acunit': V('acu', 'acUnit', []); return;
+    case 'steamvent': V(`stv:${qa(u * TAU, 4).toFixed(2)}`, 'steamVent', [], qa(u * TAU, 4)); return;   // (an alley wall's vent breathing steam: World v3's alleys, shared/map.js dressAlleys)
+    case 'handtruck': V(`htr:${1 + seed % 2}:${qa(u * TAU, 4).toFixed(2)}`, 'handTruck', [1 + seed % 2], qa(u * TAU, 4)); return;
     case 'news_a': case 'news_b': case 'news_c': V(`nws:${t}`, 'newsBox', [{ news_a: '#c8343a', news_b: '#2f5aa8', news_c: '#e8c040' }[t]]); return;
     case 'busstop': V(`bus:${p.face === 'N' ? 1 : 0}`, 'busShelter', [72, 1], p.face === 'N' ? PI : 0); lightAt(I, x, y + (p.face === 'N' ? -6 : 6), 40, 90, [0.85, 0.92, 1], 1.1, 'sign'); return;
     case 'bollard': V('bol', 'bollard', [12]); return;

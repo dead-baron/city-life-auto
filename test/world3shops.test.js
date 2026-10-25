@@ -68,3 +68,36 @@ test('a district with nothing to buy: a row of shops in a plain building - a gun
   const again = shops3(m, H);
   assert.equal(again.rows + again.built + again.carts + again.kiosks, 0, JSON.stringify(again));
 });
+
+// (2026-10-24) a street built up end to end with named restaurants, the water across it: no plain building, no open
+// ground to build on, no pavement a cart can stand at - the gun shop, the hardware store and the corner store take
+// over three of the named storefronts (as the clinics take theirs: shared/world3-medics.js), each in its own building
+test('nowhere to build: a named storefront taken over, one need to a building', () => {
+  const m = new CityMap(1, 120, 40);
+  m.tiles.fill(T.GRASS);
+  m.dist.fill(1);
+  for (let x = 0; x < 120; x++) {
+    m.set(x, 19, T.SIDEWALK); m.set(x, 23, T.SIDEWALK);
+    for (let y = 20; y <= 22; y++) { m.set(x, y, T.ROAD); m.roadRank[m.idx(x, y)] = 2; }
+    for (let y = 24; y < 40; y++) m.set(x, y, T.WATER);
+  }
+  const H = kit(m), names = ['Taco Loco', 'Noodle House', 'Hot Wok', 'The Brick Oven', 'Sunset Grill', 'Cafe Retro'];
+  names.forEach((name, k) => {
+    const tx = k * 20, b = { id: m.buildings.length, prefab: m.prefabs.length, roof: -1, tx, ty: 0, tw: 20, th: 19, kind: 'rest1', name, business: null, signs: [{ x: (tx + 10) * TILE, y: 18.4 * TILE, text: name }] };
+    m.prefabs.push({ key: 'rest1', rot: 0, tx, ty: 0, tw: 20, th: 19 });
+    m.buildings.push(b);
+    for (let y = 0; y < 19; y++) for (let x = tx; x < tx + 20; x++) { m.set(x, y, T.BUILDING); m.bld[m.idx(x, y)] = b.id; }
+    m.pois.push({ id: m.pois.length, kind: 'delivery', label: name, x: (tx + 10.5) * TILE, y: 19.7 * TILE, r: 44, b: b.id });
+  });
+  shops3(m, H);
+  const mine = m.pois.filter((p) => p.own && p.b !== undefined);
+  for (const k of ['gunshop', 'hardware', 'convenience']) assert.ok(mine.some((p) => p.kind === k), `a ${k} (${mine.map((p) => p.kind)})`);
+  assert.equal(new Set(mine.map((p) => p.b)).size, mine.length, 'one need to a building');
+  for (const p of mine) {
+    const b = m.buildings[p.b];
+    assert.equal(m.tileAtPx(p.x, p.y), T.SIDEWALK, `${p.label}'s door on the pavement`);
+    assert.ok(!names.includes(p.label) && b.signs.some((s) => s.text === p.label.split(' - ')[0]), `${p.label} signed`);
+  }
+  assert.ok(m.pois.some((p) => p.kind === 'atm'), 'an ATM');
+  assert.equal(m.pois.filter((p) => p.kind === 'delivery').length, names.length - mine.length, 'the rest as they were');
+});

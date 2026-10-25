@@ -380,6 +380,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildMotorPools(m);
   buildCornerStores(m);
   buildClothesShops(m);   // (task #364: the clothing stores by style and district, the barbers and salons)
+  if (OPTS?.clinics) OPTS.clinics(m);   // (World v3: a clinic in each part of the world that has none near - shared/world3-medics.js; walk-ins next)
   buildInteriors(m);
   buildBowlingAlley(m, { T, DISTRICTS, keep: OPTS?.quays ? OPTS.quays.map((q) => q.freight).filter(Boolean) : null });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js; World v3's ports keep their freight stop)
   buildCinema(m, { T, DISTRICTS });   // (The Grand Theatre becomes a cinema: the lobby, two screens - shared/cinema.js)
@@ -1002,6 +1003,10 @@ const ONTO_HWY = new Set(['ave', 'blvd', 'art', 'rural', 'front']);
 // Streets and lanes don't cross a ground-level highway: they stop short of it (and get joined
 // to something else or turned into a cul-de-sac); arterials and county roads cross at junctions.
 const CROSS_HWY = new Set(['ave', 'blvd', 'art', 'rural', 'front', 'hwy', 'ramp']);
+// a cul-de-sac bulb's radius (tiles) for a road of half width hw (px), and the outer edge of its pavement ring (px) for a
+// line (rasterRoads lays them)
+const bulbR = (hw) => Math.max(3.6, hw / TILE + 0.8);
+const bulbRing = (l) => (bulbR(((l.w || (ROAD_KINDS[l.kind] || ROAD_KINDS.st).w) * TILE) / 2) + 2) * TILE;
 function clipAtHighways(lines) {
   const hw = lines.filter((l) => l.kind === 'hwy' && l.lvl === 0);
   const boxOf = (pts) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; } return { x0, y0, x1, y1 }; };
@@ -1020,7 +1025,10 @@ function clipAtHighways(lines) {
         if (x) cuts.push(pts[i].s + (pts[i + 1].s - pts[i].s) * x.t);
       }
     }
-    const gap = ROAD_KINDS.hwy.w * TILE / 2 + 3 * TILE; // (3 tiles clear of the highway's edge)
+    // (3 tiles clear of the highway's edge. World v3: a town street's cut end gets a turning circle - rasterRoads' bulb,
+    // its pavement ring 2 tiles round it - so it stops that much further back, 3 tiles of verge between the ring and the
+    // highway's edge: the owner, 2026-10-23, "two cul-de-sacs touching the major arterial road")
+    const gap = ROAD_KINDS.hwy.w * TILE / 2 + 3 * TILE + (WD && CITY_KINDS.has(l.kind) ? bulbRing(l) : 0);
     // an end that stops right beside a highway is pulled back too (it would snap onto it)
     const near = (q) => hw.some((h) => { if (q.x < h.box.x0 - gap || q.x > h.box.x1 + gap || q.y < h.box.y0 - gap || q.y > h.box.y1 + gap) return false; const pr = project(h.pts, q); return pr && pr.d < gap; });
     if (near(pts[0])) { let s1 = 0; while (s1 < L && near(pointAt(pts, s1))) s1 += 16; cuts.push(Math.min(L, s1) - gap); }
@@ -1089,8 +1097,63 @@ function repairRoads(m, lines, seed) {
     if (!add.length) break;
     lines.push(...add);
   }
+  if (WD && setBulbsBack(lines, net)) net = buildNetwork(lines, seed);
   fixOneWays(net);
   return net;
+}
+
+// World v3 (the owner, 2026-10-23: "Weird intersection formation here with two cul-de-sacs touching the major arterial
+// road"): a town street's dead end whose turning circle - rasterRoads' bulb and its pavement ring - would reach a bigger
+// road (the highway, an avenue, an arterial) is cut back along itself until 3 tiles of verge are left between the ring
+// and that road's edge; a stub that can't clear it (a few tiles of road on past a junction) is cut back to the junction
+// (a T). -> how many ends were moved (the caller rebuilds the network).
+const BIG_ROAD = new Set(['hwy', 'ramp', 'ave', 'blvd', 'front', 'art', 'drive']);
+function setBulbsBack(lines, net) {
+  const big = lines.filter((l) => l.lvl === 0 && BIG_ROAD.has(l.kind));
+  const box = new Map(big.map((l) => { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; for (const p of l.pts) { if (p.x < x0) x0 = p.x; if (p.y < y0) y0 = p.y; if (p.x > x1) x1 = p.x; if (p.y > y1) y1 = p.y; } return [l, [x0, y0, x1, y1]]; }));
+  const hwOf = (l) => ((l.w || (ROAD_KINDS[l.kind] || ROAD_KINDS.st).w) * TILE) / 2;
+  // the big road whose verge the ring at q would cut into, and how near (null: clear)
+  const blocker = (own, q, R) => {
+    for (const o of big) {
+      if (o === own) continue;
+      const bb = box.get(o), need = hwOf(o) + R + 3 * TILE;
+      if (q.x < bb[0] - need || q.x > bb[2] + need || q.y < bb[1] - need || q.y > bb[3] + need) continue;
+      const pr = project(o.pts, q);
+      if (pr && pr.d < need) return { o, pr };
+    }
+    return null;
+  };
+  let moved = 0;
+  for (const n of net.nodes) {
+    if (n.lvl !== 0 || n.edges.length !== 1) continue;
+    const e = net.edges[n.edges[0]];
+    if (!e || e.lvl !== 0 || !CITY_KINDS.has(e.kind)) continue;
+    const near = (p) => Math.abs(p.x - n.x) < 2 && Math.abs(p.y - n.y) < 2;
+    // (every line ending here: a road carried on to another can lie along the last stretch of one)
+    for (const l of lines.filter((q) => q.lvl === 0 && q.kind === e.kind && q.pts.length >= 2 && (near(q.pts[0]) || near(q.pts[q.pts.length - 1])))) {
+      const R = bulbRing(l);
+      if (!blocker(l, n, R)) continue;
+      const atStart = near(l.pts[0]);
+      const pts = (atStart ? l.pts.slice().reverse() : l.pts.slice()).map((p) => ({ x: p.x, y: p.y }));
+      const L = measure(pts);
+      let cut = null;
+      for (let s = L - TILE / 2; s > 0; s -= TILE / 2) {
+        const q = pointAt(pts, s), b = blocker(l, q, R);
+        if (!b) { cut = { s, end: { x: q.x, y: q.y } }; break; }
+        // (on the big road's roadway: the junction the stub hangs off - the street ends on it, 4 px past its centre line,
+        // as repairRoads joins one)
+        if (b.pr.d < hwOf(b.o) && b.pr.d > 1) { cut = { s, end: { x: b.pr.x + ((b.pr.x - q.x) / b.pr.d) * 4, y: b.pr.y + ((b.pr.y - q.y) / b.pr.d) * 4 } }; break; }
+      }
+      const keep = cut ? pts.filter((p) => p.s < cut.s - 1).map((p) => ({ x: p.x, y: p.y })) : [];
+      if (cut) keep.push(cut.end);
+      let kl = 0;
+      for (let k = 1; k < keep.length; k++) kl += Math.hypot(keep[k].x - keep[k - 1].x, keep[k].y - keep[k - 1].y);
+      if (keep.length < 2 || kl < TILE) lines.splice(lines.indexOf(l), 1);   // (all of it by the big road: it goes)
+      else l.pts = atStart ? keep.reverse() : keep;
+      moved++;
+    }
+  }
+  return moved;
 }
 
 // One-way edges whose ends aren't mutually reachable become two-way (so nothing gets trapped).
@@ -1222,7 +1285,7 @@ function rasterRoads(m) {
     if (!CITY_KINDS.has(e.kind)) continue;
     if (!m.land[at(Math.floor(n.x / TILE), Math.floor(n.y / TILE))]) continue;
     const cx = n.x / TILE, cy = n.y / TILE;
-    const rr = Math.max(3.6, e.hw / TILE + 0.8), R = rr + 2;
+    const rr = bulbR(e.hw), R = rr + 2;
     for (let dy = -Math.ceil(R); dy <= Math.ceil(R); dy++) for (let dx = -Math.ceil(R); dx <= Math.ceil(R); dx++) {
       const i = at(Math.floor(cx + dx), Math.floor(cy + dy));
       if (i < 0 || !m.land[i] || m.deck[i]) continue;
@@ -1649,7 +1712,7 @@ function placePrefab(m, row, key, x, special, rand, dims = null) {
   // dress the leftover strip behind a shorter building (back lots, yards, gardens)
   const left = row.h - pf.th;
   if (left >= 2 && STYLE[DISTRICTS[row.d].style]) {
-    const back = { d: row.d, y: row.face === 'S' ? row.y : row.y + pf.th, h: left, face: row.face === 'S' ? 'N' : 'S' };
+    const back = { d: row.d, y: row.face === 'S' ? row.y : row.y + pf.th, h: left, face: row.face === 'S' ? 'N' : 'S', house: key.startsWith('house') || key.startsWith('shanty') };   // (house: its garden - fillerInner)
     filler(m, back, x, pf.tw, STYLE[DISTRICTS[row.d].style], rand, true);
   }
   // the lot sits on the district's own paving/lawn so its feathered edges melt into the block
@@ -3835,11 +3898,17 @@ function walledGap(m, row, x, w, rand) {
   }
   streetWall(m, x, row.face === 'S' ? y0 + h - 1 : y0, w, rand, w >= 5);
 }
+const HOME_STYLES = new Set(['houses', 'luxury', 'beach']);
 function fillerInner(m, row, x, w, st, rand, backLot = false) {
   const x0 = x, y0 = row.y, h = row.h;
-  // (behind a house on the winding drives, its garden)
-  if (st.roof && w >= 4 && h >= 4 && !(backLot && DRIVE_HOUSES[row.d]) && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
-  let kind = w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;
+  // (behind a house on the winding drives, its garden. World v3: behind every house, its garden - a plain roof block
+  // there stood right behind the house, the house's roof drawn over it and its own over the next row's front: the owner,
+  // 2026-10-23, "The way some buildings overlap each other doesn't look very good". Only a house's: behind a beach
+  // town's diners and stores on its main street the back block stays - Sandpiper Bay's were all gardens, more asphalt
+  // than building - test/world3towns.test.js)
+  const garden = backLot && (DRIVE_HOUSES[row.d] || (WD && row.house && HOME_STYLES.has(DISTRICTS[row.d].style)));
+  if (st.roof && w >= 4 && h >= 4 && !garden && rand() < (backLot ? Math.max(st.roof, 0.7) : st.roof)) { roofBuilding(m, row, x0, y0, w, h, st, rand); return; }
+  let kind = garden && WD ? 'park' : w >= 5 && (st.filler === 'parking' || st.filler === 'yard' || (st.filler === 'plaza' && rand() < 0.4)) ? 'parking' : st.filler;
   if (backLot && kind === 'parking' && h < 4) kind = st.filler === 'parking' ? 'plaza' : st.filler;
   if (backLot && st.filler === 'yard' && rand() < 0.5 && h >= 4) kind = 'parking';
   if (kind === 'parking') {
@@ -4734,20 +4803,31 @@ const logClear = (m, x, y, a, len) => { const c = Math.cos(a), s = Math.sin(a); 
 // Back alleys: dumpsters (a few bin bags beside one now and then, mostly in the rough districts), crates, AC units,
 // drums and pallets against the walls, the odd wall lamp - all of it smashable by anything driving through. (No heaps
 // of loose garbage: the owner, 2026-10-10.)
+// World v3 (the owner, 2026-10-23: "really long empty alleyways ... decorating them with more dressing to make them
+// unique"): more kinds - the rough end's trash heaps, cable spools, pipes, planks, a burn barrel; a steam vent on the
+// wall, a hand truck of boxes - and never more than ALLEY_BARE tiles of an alley's walls with nothing against them.
+const ALLEY_POOL3 = ['dump_g', 'dump_b', 'dump_o', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'pallet_b', 'pallet_s', 'crates', 'steamvent', 'handtruck', 'spool', 'pipes', 'planks', 'acunit', 'dump_g'];
+const ALLEY_ROUGH3 = ['trashpile', 'burnbarrel', 'tires', 'drum', 'pallet_b'];
+const ALLEY_SOLID = { dump_g: 14, dump_b: 14, dump_o: 14, crates: 12, acunit: 12, drum: 9, tires: 9, spool: 12, steamvent: 9, handtruck: 8, burnbarrel: 9, trashpile: 10 };
+const ALLEY_BARE = 6;
 function dressAlleys(m) {
-  const pool = ['dump_g', 'dump_b', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'dump_g', 'crates', 'pallet'];
+  const pool = WD ? ALLEY_POOL3 : ['dump_g', 'dump_b', 'crates', 'acunit', 'drum', 'tires', 'pallet', 'dump_g', 'crates', 'pallet'];
   for (const e of m.edges) {
     if (e.kind !== 'alley' || e.lvl !== 0) continue;
-    let k = 0;
+    let k = 0, last = 0;
     for (let s = 2.5 * TILE; s < e.len - 2.5 * TILE; s += 2.6 * TILE, k++) {
       const q = pointAt(e.pts, s);
       const h = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 611);
-      if (h > 0.55) continue;
+      if (h > 0.55 && !(WD && s - last >= ALLEY_BARE * TILE)) continue;
       const side = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 612) < 0.5 ? -1 : 1;
       const x = q.x - q.ty * side * (e.hw - 12), y = q.y + q.tx * side * (e.hw - 12);
-      const t = pool[Math.floor(hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 613) * pool.length)];
+      const dd0 = WD ? DISTRICTS[m.dist[Math.floor(q.y / TILE) * m.w + Math.floor(q.x / TILE)]] : null;
+      const u = hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 613);
+      const t = dd0 && (dd0.tier === 'rough' || dd0.tier === 'low') && hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 615) < 0.25 ? ALLEY_ROUGH3[Math.floor(u * ALLEY_ROUGH3.length)] : pool[Math.floor(u * pool.length)];
       if (!(WD && !inAlley(m, x, y))) {   // (World v3: only on the alley's own asphalt, never out at its mouth on the street)
-        addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
+        last = s;
+        if (WD) addProp(m, t, x, y, ALLEY_SOLID[t] || 0);
+        else addProp(m, t, x, y, t.startsWith('dump') ? 14 : t === 'crates' || t === 'acunit' ? 12 : t === 'drum' || t === 'tires' ? 9 : 0);
         const dd = DISTRICTS[m.dist[Math.floor(y / TILE) * m.w + Math.floor(x / TILE)]], rough = !!dd && (dd.tier === 'rough' || dd.tier === 'low');
         if (t.startsWith('dump') && hash2(Math.round(LQX(q.x)), Math.round(LQY(q.y)), 614) < (rough ? 0.5 : 0.06) && !(WD && !inAlley(m, x + q.tx * 34, y + q.ty * 34))) addProp(m, 'bags', x + q.tx * 34, y + q.ty * 34, 0);   // (bags by the dumpster: mostly in the rough districts)
       }

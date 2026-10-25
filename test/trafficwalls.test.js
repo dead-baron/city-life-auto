@@ -14,7 +14,8 @@ import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { T, TILE } from '../shared/constants.js';
 import { CAR_BLOCK } from '../shared/map.js';
 import { lanePath, laneOffset } from '../shared/roads.js';
-import { measure, pointAt } from '../shared/geom.js';
+import { measure, pointAt, project } from '../shared/geom.js';
+import { VEHICLES } from '../shared/vehicles.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import * as traffic from '../server/systems/traffic.js';
 
@@ -268,4 +269,118 @@ test('stopped behind a street blocked across both lanes, a queue behind it: nobo
   assert.equal(inside, 0, 'no body ever in a building');
   assert.ok(longest <= 40, `nobody against a building for more than 2 s (${(longest / 20).toFixed(1)} s)`);
   assert.ok((w.turnsHeld || 0) > 0, 'they waited their turn instead');
+});
+
+// (World v3, Midtown station: a pickup turning the corner by the station's bike rack had a bike parked there in its
+// look-ahead box - straight ahead of it, so over the kerb on the bend - and stopped in the bend for good, the queues
+// behind it both ways locking the corner; test/calmstreets.test.js)
+test('a bike parked on the pavement beside a car\'s way never stops it; one standing in the road does', () => {
+  const w = makeWorld(), m = w.map;
+  // a straight kerb: a run of road with the pavement along its north side
+  let spot = null;
+  for (let ty = m.y0 + 2; ty < m.y0 + m.h - 4 && !spot; ty++) for (let tx = m.x0 + 2; tx < m.x0 + m.w - 16; tx++) {
+    let ok = true;
+    for (let k = 0; k < 12 && ok; k++) ok = m.tileAt(tx + k, ty - 1) === T.SIDEWALK && m.tileAt(tx + k, ty) === T.ROAD && m.tileAt(tx + k, ty + 1) === T.ROAD;
+    if (ok) { spot = { x: (tx + 3) * TILE, kerb: ty * TILE }; break; }
+  }
+  assert.ok(spot, 'a kerb');
+  const pick = car(w, 'pickup', spot.x, spot.kerb + 19, 0);
+  // the bike: wholly on the pavement, 28 px across from the pickup's middle (inside its look-ahead box)
+  const bike = w.spawnVehicle('cruiser', spot.x + 150, spot.kerb - 9, 0, {});
+  assert.equal(m.tileAtPx(bike.x, bike.y + bike.def.W / 2), T.SIDEWALK);
+  traffic.driveToward(w, pick, spot.x + 400, pick.y, 200);
+  assert.equal(pick._blk, 0, 'the bike on the pavement is not in its way');
+  // the same bike out in the road, just off the kerb: it is
+  bike.y = spot.kerb + 10; w.place(bike);
+  traffic.driveToward(w, pick, spot.x + 400, pick.y, 200);
+  assert.equal(pick._blk, bike.id, 'a bike standing in the road is');
+});
+
+// (World v3, Midtown station: a car out of the bend nose to nose with a tanker coming up the other lane, a car close
+// behind each - neither with room to back off, the corner locked for minutes; test/calmstreets.test.js)
+test('two cars nose to nose with a car close behind each: one of those behind backs off to make room', () => {
+  const w = makeWorld(), m = w.map;
+  const S = streetByBuilding(m);
+  assert.ok(S, 'a straight street');
+  const { p: pl } = joinPlayer(w);
+  teleport(w, pl.ped, S.x + 300, S.r.y + S.r.hw + 150);
+  const y = S.r.y + laneOffset(S.e, 0), x0 = S.x + 300;
+  const mk = (model, x, a) => { const v = car(w, model, x, y, a); v.despawnable = false; traffic.joinTraffic(w, v); return v; };
+  // A heads west in the eastbound lane, B east in it: nose to nose; A2 and B2 close behind them
+  const A = mk('sedan', x0 + 70, Math.PI), B = mk('sedan', x0 - 70, 0);
+  const A2 = mk('sedan', A.x + A.def.L + 16, Math.PI), B2 = mk('sedan', B.x - B.def.L - 16, 0);
+  const a2x = A2.x, b2x = B2.x;
+  A.ai.sideN = B.ai.sideN = 2; A.ai.sideAt = B.ai.sideAt = 1e9;   // (A's edging back into its lane tried twice already: sidestep - the next test)
+  let backed = false;
+  for (let t = 0; t < 20 * 20 && !backed; t++) {
+    w.step();
+    backed = (w.ringRoomMade || 0) > 0 && (A2.x > a2x + 10 || B2.x < b2x - 10);
+  }
+  assert.ok(backed, `one of the cars behind backed off (A2 ${(A2.x - a2x).toFixed(0)} px, B2 ${(b2x - B2.x).toFixed(0)} px)`);
+});
+
+// (World v3, by Midtown station: a car come round into the other lane, nose to nose with one in its own lane there,
+// a car close behind each - backing off and coming on again only met it again, for minutes)
+test('nose to nose with a car in the other lane: the one out of its lane edges back into it and they pass', () => {
+  const w = makeWorld(), m = w.map;
+  const S = streetByBuilding(m);
+  assert.ok(S, 'a straight street');
+  const { p: pl } = joinPlayer(w);
+  teleport(w, pl.ped, S.x + 300, S.r.y + S.r.hw + 150);
+  const yE = S.r.y + laneOffset(S.e, 0), yW = S.r.y - laneOffset(S.e, 0), x0 = S.x + 300;
+  const mk = (model, x, y, a) => { const v = car(w, model, x, y, a); v.despawnable = false; traffic.joinTraffic(w, v); return v; };
+  const A = mk('sedan', x0 + 70, yE, Math.PI), B = mk('sedan', x0 - 70, yE, 0);
+  mk('sedan', A.x + A.def.L + 16, yE, Math.PI); mk('sedan', B.x - B.def.L - 16, yE, 0);
+  let passed = false;
+  for (let t = 0; t < 30 * 20 && !passed; t++) { w.step(); passed = A.x < B.x - 60; }
+  assert.ok((w.sidesteps || 0) > 0, 'the one out of its lane edged over');
+  assert.ok(passed, `they got past each other (A ${Math.round(A.x - x0)}, B ${Math.round(B.x - x0)})`);
+  assert.ok(Math.abs(A.y - yW) < Math.abs(A.y - yE), 'A in its own lane');
+});
+
+// (World v3, by Midtown station: a long lorry and a car coming round a tight bend the two ways at once locked it)
+test('a tight bend on a street with a lane each way: a long vehicle and a car the other way both get round it', () => {
+  const w = makeWorld(), m = w.map, net = m.net;
+  let pick = null;
+  for (const e of net.edges) {
+    if (e.lvl !== 0 || e.pts.length !== 3 || e.oneway || (e.nl || 1) > 1 || e.kind === 'alley') continue;
+    const [a, b, c] = e.pts;
+    let turn = Math.abs(Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(b.y - a.y, b.x - a.x));
+    if (turn > Math.PI) turn = 2 * Math.PI - turn;
+    if (turn < 0.9 || Math.hypot(b.x - a.x, b.y - a.y) < 300 || Math.hypot(c.x - b.x, c.y - b.y) < 300) continue;
+    if (!pick || turn > pick.turn) pick = { e, turn };
+  }
+  assert.ok(pick, 'a street with a sharp one-point corner');
+  const { e } = pick;
+  const { p: pl } = joinPlayer(w);
+  teleport(w, pl.ped, e.pts[1].x + 200, e.pts[1].y + 200);
+  const go = (model, from) => {
+    const lp = lanePath(net, e, from, 0), L = lp[lp.length - 1].s, sc = project(lp, e.pts[1]).s, q = pointAt(lp, Math.max(0, sc - 300));
+    const v = car(w, model, q.x, q.y, Math.atan2(q.ty, q.tx)); v.despawnable = false;
+    traffic.joinTraffic(w, v);
+    v.vx = q.tx * 100; v.vy = q.ty * 100;
+    return { v, end: lp[lp.length - 1], L };
+  };
+  const T1 = go('tanker', e.a), C1 = go('sedan', e.b);
+  assert.ok(T1.v.ai && T1.v.ai.edge === e.id && C1.v.ai && C1.v.ai.edge === e.id, 'both in traffic on it');
+  let claimed = false;
+  const near = (o) => Math.hypot(o.v.x - o.end.x, o.v.y - o.end.y) < 60;
+  let tDone = false, cDone = false;
+  for (let t = 0; t < 45 * 20 && !(tDone && cDone); t++) {
+    w.step();
+    claimed ||= !!(w.bends && w.bends.size);
+    tDone ||= !T1.v.ai || T1.v.ai.edge !== e.id || near(T1); cDone ||= !C1.v.ai || C1.v.ai.edge !== e.id || near(C1);
+  }
+  assert.ok(claimed, 'the long one claimed the bend');
+  assert.ok(tDone && cDone, `both got round (tanker ${tDone}, car ${cDone})`);
+});
+
+// (World v3, by Midtown station: a flatbed parked in the last bay before the junction stuck out into the street across)
+test('a kerb bay\'s room: as far as the kerb runs beside it - a bay at the street\'s end takes a car, not a flatbed', () => {
+  // a wide road (x < 288) running north into a street across it (y < 0); the pavement east of the road, south of the street
+  const m = { tileAtPx: (x, y) => (y < 0 && y > -128) || (x >= 0 && x < 288) ? T.ROAD : T.SIDEWALK };
+  const end = traffic.bayRoom(m, { x: 272, y: 45, a: -Math.PI / 2, kerb: true }, 0);
+  assert.ok(end >= VEHICLES.sedan.L && end < VEHICLES.van.L && end < VEHICLES.flatbed.L, `the last bay: room for ${end} px - a sedan, not a van or a flatbed`);
+  assert.equal(traffic.bayRoom(m, { x: 272, y: 600, a: -Math.PI / 2, kerb: true }, 1), Infinity, 'one along the kerb: any');
+  assert.equal(traffic.bayRoom(m, { x: 400, y: 600, a: 0 }, 2), Infinity, 'one off the road: any');
 });

@@ -1969,12 +1969,12 @@ export class World2 {
     lit.length = 0;
     if (!list || !list.length || !A || !A.forageKey) return;
     let g = this._fgrid;
-    if (!g) { g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
+    if (!g || this._fgList !== list || this._fgN !== list.length) { this._fgList = list; this._fgN = list.length; g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
     const gone = this.S.forageGone, o = this.opts;
     o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false; o.air = false;
     for (let cy = Math.floor((this.vy0 - 40) / 512); cy <= Math.floor((this.vy1 + 60) / 512); cy++) for (let cx = Math.floor((this.vx0 - 40) / 512); cx <= Math.floor((this.vx1 + 40) / 512); cx++) {
       for (const i of g.get(cy * 4096 + cx) || []) {
-        const f = list[i], K = FORAGE_KINDS[f.k];
+        const f = list[i], K = f && FORAGE_KINDS[f.k];
         if (!K || (gone && gone.has(i)) || f.x < this.vx0 - 30 || f.x > this.vx1 + 30 || f.y < this.vy0 - 10 || f.y > this.vy1 + 40) continue;
         const v = i & 3, key = this._spr('actors', 'forage', A.forageKey(K.art, v), [K.art, v]);
         if (K.glow) lit.push(f.x, f.y, K.glow);

@@ -425,8 +425,23 @@ function roadPointToward(world, v, gx, gy) {
 // The point a smooth driver looks at: `look` px ahead along the path (the car's position, then
 // the waypoints in order). Steering at it rather than at the next waypoint takes bends in one
 // clean arc instead of a series of little corrections.
-function lookAhead(v, pts, look) {
+// lw: the waypoint it last passed (steerTraffic), while ai.pts is still the list it was passed on: a car off the line
+// between it and the next waypoint by more than LANE_BACK[0] px (swung wide coming out of a corner, eased over for a
+// siren, nudged in a jam) looks ahead along that line from the nearest point on it, so it steers back into its lane
+// within a car's length or two - it used to aim straight at the next waypoint, which after a corner may be the far end
+// of the street, and drove most of the street half in the oncoming lane: by Midtown station a car out of the bend nose
+// to nose with a tanker coming up the other lane, neither with room to back off, the corner locked for minutes.
+const LANE_BACK = [8, 96];
+function lookAhead(v, pts, look, lw = null) {
   let px = v.x, py = v.y, left = look;
+  if (lw && lw.of === pts && lw.n === pts.length && pts.length) {
+    const q = pts[0], dx = q.x - lw.x, dy = q.y - lw.y, L2 = dx * dx + dy * dy;
+    const t = L2 > 1 ? ((v.x - lw.x) * dx + (v.y - lw.y) * dy) / L2 : -1;
+    if (t > 0 && t < 1) {
+      const ox = lw.x + dx * t, oy = lw.y + dy * t, off = Math.hypot(v.x - ox, v.y - oy);
+      if (off > LANE_BACK[0] && off < LANE_BACK[1]) { px = ox; py = oy; }
+    }
+  }
   for (let i = 0; i < Math.min(pts.length, 6); i++) {
     const q = pts[i];
     const d = Math.hypot(q.x - px, q.y - py);
@@ -435,6 +450,23 @@ function lookAhead(v, pts, look) {
     if (q.stop || q.final) break;
   }
   return { x: px, y: py };
+}
+
+// A vehicle nobody's in, standing still wholly off the roadway (a bike at a rack, a car left up on the pavement): the
+// look-ahead box is straight ahead of the car, so on a bend it sweeps over the kerb - a pickup turning the corner by
+// Midtown station had a bike parked at the rack there in its box and stopped in the bend for good, the queues behind
+// it both ways locking the corner for minutes. The lanes never leave the road: it's never in the way. (Remembered while
+// it stands where it is.)
+const ROADWAY = new Set([T.ROAD, T.BRIDGE, T.LOT]);
+function parkedOff(m, e) {
+  if (Math.abs(e.vx) + Math.abs(e.vy) > 4 || e.lz || e.seats.some((s) => s)) return false;
+  const k = e._offAt;
+  if (k && k[0] === e.x && k[1] === e.y && k[2] === e.a) return k[3];
+  const c = Math.cos(e.a), s = Math.sin(e.a), hl = e.def.L / 2, hw = e.def.W / 2;
+  let off = true;
+  for (const [u, w] of [[0, 0], [hl, hw], [hl, -hw], [-hl, hw], [-hl, -hw]]) if (ROADWAY.has(m.tileAtPx(e.x + c * u - s * w, e.y + s * u + c * w))) { off = false; break; }
+  e._offAt = [e.x, e.y, e.a, off];
+  return off;
 }
 
 // How much room a driver leaves to the car in front when stopped (px, 0.6-2.4 m): some creep right up, others hang
@@ -449,6 +481,7 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (e.kind === K.PED) { if (e.vehId || e.dead) continue; }
     else if (e.kind !== K.VEH) continue;
     else if ((e.alt || 0) > FLY.HIGH) continue;   // (an aircraft overhead: drive on under it)
+    else if (parkedOff(world.map, e)) continue;   // (a bike at a rack on the pavement: not on the road, never in the way)
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
@@ -561,6 +594,7 @@ function steerTraffic(world, v, t) {
   if (d < 30 || passed(v, wp) || beside || ai.turned > Math.PI * 1.9) {
     ai.turned = 0;
     ai.pts.shift();
+    ai.lastWp = { x: wp.x, y: wp.y, of: ai.pts, n: ai.pts.length };   // (the line back to its lane: lookAhead)
     if (wp.halt !== undefined) haltAt(world, v, wp.halt);   // (a bus at its stop, a taxi where it's picking up or dropping off)
     if (wp.stop) { crossJunction(world, v); if (!v.ai) return; ai.replans = 0; }
     if (!ai.pts.length && !ai.turn) { crossJunction(world, v); if (!v.ai) return; }
@@ -615,6 +649,7 @@ function steerTraffic(world, v, t) {
       else if (ds < v.def.L / 2 + 50 && roadGivesOut(world, v)) { ai.pts.splice(0, stopIdx + 1); crossJunction(world, v); if (ai.turn) stepTurn(world, v); return; }
     }
   }
+  if (!panic && !reckless) { const bh = bendHold(world, v); if (bh < desired) { desired = bh; holding ||= bh < 20; } }
   if (!panic && !reckless && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
     // an emergency vehicle with its siren on is coming: ease over toward the curb and slow
@@ -661,7 +696,12 @@ function steerTraffic(world, v, t) {
   if (!panic && (world.tick + v.id) % 10 === 0) breakRing(world, v);
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
-  const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190));
+  if (ai.sideUntil > now && !panic) {   // (edging back over into its lane past a car nose to nose with it: sidestep)
+    const e = net.edges[ai.edge], lp = e ? lanePath(net, e, ai.from, Math.min(ai.lane || 0, e.nl - 1)) : null, pr = lp ? project(lp, v) : null;
+    if (pr && pr.d > 6) { const q = pointAt(lp, pr.s + v.def.L / 2 + 40); driveToward(world, v, q.x, q.y, SIDE_PX, { ignore: new Set([ai.sideBlk]) }); return; }
+    ai.sideUntil = 0;
+  }
+  const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190), ai.lastWp);
   let ignore = ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null;
   // held up by someone on foot in the road (nothing else in its way, not at a light or a junction): after PED_HONK_S a
   // honk, and someone at a loose end steps out of the road (npc.js shoo); after PED_CREEP_S it edges on at a crawl,
@@ -711,16 +751,123 @@ function breakRing(world, v) {
   if (b !== v) { ai.ringAt = undefined; return; }
   ai.ringAt ??= now;
   if (now - ai.ringAt < RING_S) return;
+  if (ring.length === 2 && sidestep(world, v, ring)) return;
   let best = null, room = 30;
   for (const q of ring) {
     if (!q.ai || q.ai.kind !== 'traffic' || q.ai.turn || q.ai.reverseUntil > now) continue;
     const r = roomBehind(world, q, 96);
     if (r > room || (r === room && best && q.id < best.id)) { room = r; best = q; }
   }
+  if (!best) makeRoom(world, v, ring);
   if (best !== v) return;
+  for (const q of ring) if (q.ai) q.ai.ringBackAt = now;   // (backed off once: if they meet again, sidestep)
   ai.ringAt = undefined; ai.stuck = 0;
   ai.reverseUntil = now + Math.min(1.8, 0.5 + room / 70);
   world.ringsBroken = (world.ringsBroken || 0) + 1;
+}
+// Two cars nose to nose, one of them out of its lane and the other in its own (swung wide out of a bend, come round in a turn, shoved in a jam -
+// in the other's lane, where backing off and coming on again only meets it again: a car and a taxi by Midtown station
+// did that for minutes): the one further off its own lane's line edges back over into it at a crawl, past the other
+// (sideways and on: it doesn't brake for that one for SIDE_S). Decided by both alike; the one that goes starts it.
+const SIDE_OFF = 20, SIDE_S = 4, SIDE_PX = 40;
+function laneOff(world, q) {
+  const ai = q.ai, net = world.map.net, e = ai && net.edges[ai.edge];
+  if (!e || ai.kind !== 'traffic') return -1;
+  const pr = project(lanePath(net, e, ai.from, Math.min(ai.lane || 0, e.nl - 1)), q);
+  return pr ? pr.d : -1;
+}
+function sidestep(world, v, ring) {
+  const [p, q] = ring, now = world.time;
+  if (Math.abs(angleDiff(p.a, q.a)) < 2.2) return false;
+  const op = laneOff(world, p), oq = laneOff(world, q);
+  const out = op > oq || (op === oq && p.id < q.id) ? p : q, other = out === p ? q : p;
+  // (one clearly out of its lane, the other in it: at once; two as far off as each other: backing off first, as before -
+  // and if they meet again after that, the one further off edges over)
+  const again = ring.some((r) => r.ai && now - (r.ai.ringBackAt ?? -1e9) < 30);
+  if (Math.max(op, oq) < SIDE_OFF || (Math.abs(op - oq) < SIDE_OFF && !again) || out.ai.turn) return false;
+  if (now - (out.ai.sideAt || -1e9) > 60) out.ai.sideN = 0;
+  if ((out.ai.sideN || 0) >= 2) return false;   // (tried twice and still there: backing off, making room - as before)
+  if (out !== v) return true;   // (the other one goes: it starts it on its turn)
+  v.ai.sideN = (v.ai.sideN || 0) + 1; v.ai.sideAt = now;
+  v.ai.ringAt = undefined; v.ai.stuck = 0;
+  v.ai.sideUntil = now + SIDE_S; v.ai.sideBlk = other.id;
+  world.sidesteps = (world.sidesteps || 0) + 1;
+  return true;
+}
+
+// Nobody in the ring has the room to back off - each has the queue behind it right up to its bumper (by Midtown station:
+// a car out of the bend nose to nose with a tanker coming up the other lane, a car close behind each - the corner locked
+// for minutes). Then the car queued behind one of them with the most room behind it (an NPC's) backs off first, and the
+// one in the ring in front of it can the next time round. The ring's first car (by id) decides, once every RING_S.
+function makeRoom(world, v, ring) {
+  const now = world.time;
+  if (ring.some((q) => q.ai && q.ai.reverseUntil > now) || v.id !== Math.min(...ring.map((q) => q.id))) return;
+  v.ai.ringAt = now;
+  let fb = null, room = 30;
+  for (const q of ring) for (const f of world.query(q.x, q.y, q.def.L + 120, K.VEH)) {
+    if (f._blk !== q.id || ring.includes(f) || !f.ai || f.ai.kind !== 'traffic' || f.ai.turn || f.ai.reverseUntil > now || Math.hypot(f.vx, f.vy) > 10 || !sameLevel(f.lz, q.lz)) continue;
+    const r = roomBehind(world, f, 96);
+    if (r > room || (r === room && fb && f.id < fb.id)) { room = r; fb = f; }
+  }
+  if (!fb) return;
+  for (const q of ring) if (q.ai) q.ai.ringBackAt = now;
+  fb.ai.ringAt = undefined; fb.ai.stuck = 0;
+  fb.ai.reverseUntil = now + Math.min(1.8, 0.5 + room / 70);
+  world.ringsBroken = (world.ringsBroken || 0) + 1;
+  world.ringRoomMade = (world.ringRoomMade || 0) + 1;
+}
+
+// A tight bend on a street with a lane each way (a street that turns its corner in one point: World v3's grid streets
+// - the one past Midtown station turns south in a road's width): a long vehicle turning it sweeps the other lane, and
+// two coming round it at once the two ways lock it (a mixer, a garbage truck and a sedan round that corner; a tanker
+// and a taxi nose to nose there). So a long vehicle (L >= BEND_BIG) coming up to one claims it: the other way waits
+// short of it till it's round, and it waits short while someone the other way is in it. The first to claim has it; a
+// claim lapses when its vehicle is round, gone, or held up BEND_STALL_S without anyone in the way in the bend (stuck
+// in its own queue: the other way isn't kept waiting for that), and it doesn't claim that bend again for a while.
+const BEND_BIG = 100, BEND_TURN = 0.9, BEND_LOOK = 320, BEND_STALL_S = 8, BEND_MAX_S = 25;
+function bendsOf(e) {
+  if (e._bends) return e._bends;
+  const out = [], P = e.pts;
+  if (!e.oneway && (e.nl || 1) <= 1 && e.lvl === 0) for (let i = 1; i + 1 < P.length; i++) {
+    const a1 = Math.atan2(P[i].y - P[i - 1].y, P[i].x - P[i - 1].x), a2 = Math.atan2(P[i + 1].y - P[i].y, P[i + 1].x - P[i].x);
+    if (Math.abs(angleDiff(a1, a2)) > BEND_TURN) out.push({ x: P[i].x, y: P[i].y, k: i, r: (e.hw || 64) + 16 });
+  }
+  return (e._bends = out);
+}
+const bendAhead = (v, c) => v.ai.pts && v.ai.pts.slice(0, 4).some((p) => Math.hypot(p.x - c.x, p.y - c.y) < 90);
+const inBend = (q, c) => Math.hypot(q.x - c.x, q.y - c.y) < c.r + q.def.L / 2;
+function bendHold(world, v) {
+  const ai = v.ai, e = world.map.net.edges[ai.edge];
+  if (!e || (v.lz || 0) > 0.3) return Infinity;
+  const B = bendsOf(e);
+  if (!B.length) return Infinity;
+  const now = world.time, claims = (world.bends ??= new Map());
+  let lim = Infinity;
+  for (const c of B) {
+    const d = Math.hypot(c.x - v.x, c.y - v.y);
+    if (d > BEND_LOOK) continue;
+    const inside = inBend(v, c), key = e.id * 4096 + c.k;
+    if (!inside && !bendAhead(v, c)) continue;
+    let cl = claims.get(key);
+    if (cl) {   // (still good?)
+      const o = world.get(cl.id);
+      const live = o && o.ai && o.ai.edge === e.id && o.ai.from === cl.from && (inBend(o, c) || bendAhead(o, c)) && now - cl.at < BEND_MAX_S;
+      if (live && Math.hypot(o.vx, o.vy) < 5) { cl.still ??= now; } else if (live) cl.still = undefined;
+      if (!live || (cl.still !== undefined && now - cl.still > BEND_STALL_S && !cl.waiting)) { if (o && o.ai) o.ai.bendNot = now + 20; claims.delete(key); cl = null; }
+    }
+    if (!cl && v.def.L >= BEND_BIG && !(ai.bendNot > now)) { cl = { id: v.id, from: ai.from, at: now }; claims.set(key, cl); }
+    const hold = Math.max(0, (d - v.def.L / 2 - c.r - 12) * 1.6);
+    if (inside) continue;
+    if (cl && cl.id !== v.id && cl.from !== ai.from) { lim = Math.min(lim, hold); continue; }
+    if (cl && cl.id === v.id) {
+      cl.waiting = false;
+      for (const o of world.query(c.x, c.y, c.r + 100, K.VEH)) {
+        if (o === v || !o.ai || o.ai.edge !== e.id || o.ai.from === ai.from || !inBend(o, c)) continue;
+        cl.waiting = true; lim = Math.min(lim, hold); break;
+      }
+    }
+  }
+  return lim;
 }
 
 // The painted stop line is this far back from where a lane meets a signalled junction (px)
@@ -904,6 +1051,8 @@ function manage(world) {
       if (sp.kerb && world.query(sp.x, sp.y, 70, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by)
       let pm = sp.model && VEHICLES[sp.model] ? sp.model : sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(PARKED_MIX);   // (sp.model: a van in a shop's loading bay - World v3's Midtown)
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
+      const fit = bayRoom(world.map, sp, i);   // (a bay at the street's end: nothing so long it sticks out into the junction)
+      if (VEHICLES[pm].L > fit) { pm = FITS.find((k) => VEHICLES[k].L <= fit); if (!pm) continue; }
       const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
     }
@@ -1041,6 +1190,35 @@ function rackSpots(m) {
     }
   });
   return (m._rackSpots = out);
+}
+
+// How long a vehicle a parking spot in the road takes (px): along it both ways, as far as the kerb runs beside it -
+// where the tiles past the kerb side are road too, that's the junction's mouth (or a side street): a flatbed parked in
+// the last bay before the junction by Midtown station stuck a tile and a half out into the street across, the traffic
+// coming round the corner turned round in the junction to get past, and the junction locked. A spot off the road (a
+// car park, a driveway) or with no kerb beside it: any. Worked out once per spot.
+const FITS = ['sedan', 'compact'];
+export function bayRoom(m, sp, i) {   // (exported for the tests)
+  const memo = (m._bayRoom ??= new Map());
+  if (memo.has(i)) return memo.get(i);
+  let room = Infinity;
+  const road = (x, y) => { const t = m.tileAtPx(x, y); return t === T.ROAD || t === T.BRIDGE; };
+  if (road(sp.x, sp.y)) {
+    const c = Math.cos(sp.a), s = Math.sin(sp.a), nx = -s, ny = c;
+    // the kerb side: the nearer of the two sides off the road
+    let side = 0;
+    for (let k = 16; k <= 64 && !side; k += 8) side = !road(sp.x + nx * k, sp.y + ny * k) ? 1 : !road(sp.x - nx * k, sp.y - ny * k) ? -1 : 0;
+    if (side) {
+      let kd = 16;
+      while (kd < 64 && road(sp.x + nx * side * kd, sp.y + ny * side * kd)) kd += 4;
+      const ox = nx * side * (kd + 6), oy = ny * side * (kd + 6);
+      let half = Infinity;
+      for (const dir of [1, -1]) for (let t = 0; t <= 160; t += 4) if (road(sp.x + c * dir * t + ox, sp.y + s * dir * t + oy)) { half = Math.min(half, t); break; }
+      room = half === Infinity ? Infinity : 2 * Math.max(0, half);
+    }
+  }
+  memo.set(i, room);
+  return room;
 }
 
 // Where the shopping carts stand (the owner, 2026-10-18): by the door of each grocery and market (a POI of kind grocery,

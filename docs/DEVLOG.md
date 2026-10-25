@@ -15516,6 +15516,264 @@ visual for harvesting crops?"):
   wheat: the header cuts two rows at once and the grain fills the tank as you go", each row "Row of wheat harvested ...
   the tank: 60 bu of wheat", and the farm-work line on the HUD adds "- 120 bu of wheat cut".
 Tests: test/harvestart.test.js, test/farming.test.js.
+## 2026-10-24 - Batch 3a of the owner's notes: cul-de-sacs by the highway, stray track, houses over houses, gardens in sight, long alleys
+
+**Cul-de-sacs set back from the big roads** (the owner: "Weird intersection formation here with two cul-de-sacs touching
+the major arterial road" - The Yards' Rail Street, cut either side of the Gulf Loop at grade, its two turning circles'
+pavements on the highway's shoulders). World v3 only (today's world unchanged):
+- shared/map.js clipAtHighways: a town street cut at a ground-level highway stops its turning circle's ring (rasterRoads'
+  bulb, `bulbRing`) plus 3 tiles of verge short of the highway's edge (it stopped 3 tiles from the edge, the ring 2.6 tiles
+  over it).
+- shared/map.js setBulbsBack (after repairRoads' joins): any other town street's dead end whose ring would reach a bigger
+  road (highway, ramp, avenue, boulevard, frontage, arterial, drive) is cut back along itself until 3 tiles of verge are
+  left; a stub that can't clear it (a few tiles of road past a junction: Willow Road's 10 tiles north of North Coast Road,
+  a carried-on line along it) is cut back to the junction, a T.
+- Audit (tools: a probe over the built world, every node with a bulb against every bigger road within its ring + 1 tile):
+  before 4 places (Rail Street x2 by the Gulf Loop, the Gulf Footbridge's end by the West Loop, Willow Road's stub on North
+  Coast Road), after 0. Cedar Farms Road's end was set back too.
+
+**No stray track** (the owner: "Random train tracks in this area, I don't think are supposed to be here?"). A loop came up
+out of its tunnel for a short way and went straight back down: across Willow Valley's meadow between the Old Quarter's and
+Old Town's tunnels (61 tiles, both ways), across the strip by Westport International (31 tiles, both ways), and the Pink
+Line (one way) onto the Civic Bridge's road deck with its mouth out in Liberty Bay (45 tiles; the other way already ran
+under the bay there). shared/world3-rail.js buryStubs, from world3-world.js' rails hook on the main line's and the subway's
+loops: a surface stretch under 100 tiles between two tunnels, not within 70 tiles of a station, not the El's inclines or a
+bore, and either dry all the way or with a mouth offshore (no dry ground within 2 tiles), stays below ground. The bridges
+from shore to shore are kept (Liberty Bay's two, Old Town's). m.world3.railStubs lists them (5 stretches). The 'rails'
+props were checked too: The Yards' freight sidings and its spur, the Arts District's Spur Line walk, the mines' and the
+Copper Gulch crusher's - all deliberate, kept.
+
+**Houses no longer stacked on roofs** (the owner: "The way some buildings overlap each other doesn't look very good"). The
+block filler put a plain roof block (70%) in a row's back lot - behind every house shorter than its block, so the house's
+roof was drawn over that block and the block's over the next row's fronts; in Mesa Flats north of Palm Row a whole block
+90 tiles deep had roof blocks 80 tiles deep behind the fronts (the long dark "alley" of the notes is the lane between their
+columns). shared/map.js fillerInner (World v3): a back lot behind a house in a houses, luxury or beach district is its
+garden (grass, trees, shrubs). Mesa Flats gets Sage Street across its west block and Gold Street up to it
+(shared/world3-mesa.js). Audit (each building's art v2 picture from statics.js staticIndex against the front walls of the
+buildings behind it): a house's picture over a roof block behind it, more than 48 px: 327 -> 102 (the rest in the Old
+Quarter and Southside, whose blocks are built up behind the houses); house over house 7 -> 3; anything over a house's
+front 20 -> 17.
+
+**Garden plots in sight** (the owner: "gardening spaces or other home features shouldn't be placed behind the home, they
+should be out and easy to see and access"). server/systems/gardening.js findSpots: the bed was put as far from the door
+as the lot went - the back yard, under the house's own picture (the camera looks north). Now it looks round the house's
+whole yard (its lot, and open ground within 4 tiles nearer it than any other building, off the street's edge), leaves out
+any spot with a building within 5 tiles south of it (behind a picture), and starts the bed at the nearest walk from the
+door; a yard that is all behind a house (a terrace's back yards between two rows) gets the spot farthest out from behind
+it. Nothing is added to the map. Before: 596 of 1771 houses had a garden, 1557 plots, 203 of them (13%) with a building
+within 5 tiles south. After: 1642 of 1777 houses, 4871 plots, 438 (9%) - those in the 144 yards with no spot in sight at
+all (Northgate's and Bayside Heights' back-to-back terraces, whose back yards lie under the next row's roofs), each at the
+spot farthest out from behind it.
+
+**Long alleys broken up and dressed** (the owner: "There are a few really long empty alleyways that could be broken up with
+more side alleys connecting them and decorating them with more dressing"):
+- shared/world3-hand.js K.row: a row backing onto a back alley (alley asphalt on most tiles just past its band) gets a
+  passage through to it at least every 40 tiles (a 3-tile paved gap, the kit's 'passage'). Longest stretch of an alley with
+  no way through to a street: Northgate's Allotment and Orchard Lanes 144/145 -> 46/44 tiles, Neon's Glow and Back Alleys
+  106/113 -> 43/49, Midtown's Pier Alley 89 -> 39, the Pink Mile's Rose Alley 83 -> 42; the worst anywhere 145 -> 56
+  (Midtown's two alleys between Madison Street and Civic Avenue, untouched: their rows don't back onto them).
+- shared/map.js dressAlleys (World v3): more kinds against the walls - dumpsters of three colours, pallets of three, cable
+  spools, pipes, planks, a steam vent, a hand truck of boxes; in the rough and low districts trash heaps, burn barrels,
+  tyres, drums - and never more than 6 tiles of an alley without something. New art: client/art2/game/statics.js props
+  'steamvent' and 'handtruck' (props-road.js' steamVent and handTruck models). The clutter guard keeps them on alley
+  asphalt (world3-clutter.js ALLEY_DRESS).
+- Not done: a parked van in the alleys (a car standing in a one-lane-each-way alley would block the traffic).
+
+Homes: 304 of the 3486 home spots moved or were replaced (Mesa Flats' new rows, the houses districts' back gardens, the
+alley passages); most home ids are renumbered. Tests: test/gardening, northgate2, pinkmile, world3clutter, worldbuild,
+roadends, world3mesa (its count of Lucky Mesa's buildings now >= 90: 95, the roof blocks behind the flats' houses are
+gardens), world3rail, world3roads, world3world, world3subway, perf, mapwindow, dmath.
+## 2026-10-24 - Batch 3b: a place to wake up in every region, the spawn map, fences you can't walk through
+
+### Somewhere to wake up in every part of the world (the owner: "a clinic or hospital to spawn at spread around the world ... one for each district/region")
+The audit (World v3 built as the server builds it; each district's land, sampled, against the 13 hospitals and clinics
+you could wake up at): whole regions were 500-1,500 m from any - the islands (Gull Harbor 1,225 m from the nearest,
+Coral Cay 1,064, Pelican Key 795, Paradise Cay 1,477), the Egret Coast (1,068; Egret Point 1,285), the Granite Peaks
+(957), Highland Woods' far west (1,470 at its edge), the desert east of Copper Gulch (to 1,185) and Dusty Hollow (574),
+the Sandpiper Coast (649, its north-east 1,069), Westport International (641), Southside (702), the city's north and
+east (Midtown 573, Northgate 543, The Yards 619, the Stadium District 635) and the Arts District (614). And the
+generator's "Northshore Medical" - planned for Northshore, which builds its own Medical Center by hand - had landed in
+Copper Gulch, next door to the town's clinic.
+- shared/world3-medics.js (new, the whole-world build only): `clinics3` (map.js calls it just before the walk-ins are
+  built) turns a storefront nearest a spot into a clinic in nine built-up places - Northgate Clinic, Yards Urgent Care,
+  Arts District Clinic, Southside Community Clinic, Pelican Key Clinic, Gull Harbor Clinic, Westport International First
+  Aid, West Hills Clinic, Northshore Beaches Clinic - each a walk-in with its ER reception like the towns' clinics
+  (a plain storefront before a named one; never a church, a hotel, a warehouse, a stadium, a bar); `POSTS3` (built by
+  shared/world3-shops.js with the wild land's themed places) puts a small building by the road nearest its spot where
+  there's no town: Egret Point Clinic, the Egret Marsh, Pine Gulch, Highland, Granite Peaks and Summit Road ranger
+  stations, the Red Rock, Eastern Desert and Sandpiper Junction first-aid posts - and on Coral Cay, built up to its
+  beaches, a lifeguard tower by Tiki Point with the first-aid post at its foot. All are kind 'hospital': respawn points
+  (homes.js spawnOptions), the ambulance's and the helicopters' hospitals as before. DROP_SPECIALS3: the stray Northshore
+  Medical isn't placed.
+- After: 31 places to wake up (was 13); every district's middle within 600 m of one (the worst: the Bluffs 450 m, North
+  Point 444; Coral Cay 2 m, Gull Harbor 168, the Egret Coast 365, the Granite Peaks 86, Red Rock 316, the Sandpiper Coast
+  260). Prison Island (a prison) and the scattered islets have none. test/world3server.test.js checks it.
+
+### The spawn map (the owner: "Still hoping to get a spawn point map when you are choosing a place to spawn")
+- The death screen (client/deathscreen.js, still loaded the first time you go down; the map's renderer client/worldmap.js
+  loaded with it): with the choices, a card with the world map - every place you can wake up marked (hospitals red,
+  clinics and first-aid posts blue, ranger stations green, your homes), the one picked ringed in yellow with its name,
+  the nearest to where you went down tagged and pulsing, you where you fell - and a strip of the places nearest first
+  with their distances. Click or tap a mark or a name to pick it; the arrow keys / the D-pad step to the next one that
+  way on the map; drag to look round, the wheel or a pinch to zoom; ✕ folds the map away (the 🗺 by the spot brings it
+  back) and folding the choices (Esc / B) takes it with them. It opens on where you went down and the few places
+  nearest it. Docked top right on a desktop and a landscape phone, across the top in portrait.
+- The server sends where each place is (homes.js spawnOptions: x, y; the hospitals nearest you first) and where you went
+  down (me.deadAt). README: the controls row.
+
+### Fences you can't walk through, and the hop over the low ones (the owner: "an auto-jump over mechanic ... on things like fences (specifically this mid-height wooden fence)")
+- shared/fences.js (new): every fence run - the fence props (fenceline: picket, wood, rail, iron, stone, chain;
+  chainfence, yfence, hedgerun, rail) and the fields' split-rail fences - is a segment people collide with
+  (shared/physics.js pedStep, registered by the server - server/world.js - and by the page once it has the city, so the
+  page's first load doesn't carry it). Low and mid-height ones (rail, picket, board, iron, low stone, hedges under 16 px)
+  you hop: run into one square on (the stick past a walk, the keys, a dive roll) and you crouch a beat (0.12 s) and
+  vault it, up 12 px through it and down on the far side (0.5 s in all) - not carrying a crate, not on a board, not
+  swimming, and only where there's ground to land on (no wall, water, solid prop or second fence there). Walking into
+  it holds you. Chain-link, walls and tall hedges always block. The others see the hop (a 'hop' event; the page lifts the
+  person through it: client/main.js pedLook); your own is predicted (its time left rides in the self record's spare
+  slot). The people the server walks hop the low ones the same way when they walk into one; a tall one stops them.
+  Cars drive through them as before. Not yet solid: the fences only the renderer lays (a house's front fence or hedge
+  drawn with its lot, the police motor pools' chain-link, a compound's walls are tiles already) - they have gaps at the
+  paths by design but no collision.
+- shared/world3-fencegaps.js (new, World v3's done hook, last): no fence shuts a door, a yard's gate or a path. From
+  every door near a fence (314) the street must be reachable on foot past the fences - none was shut in - and a fence
+  across a narrow path (pavement, paving, dirt, boards with other ground either side along the fence) gets a 48 px gap
+  where it crosses: 74 gaps (44 picket, 9 field fences, 8 chain-link panels, 4 wood, 4 chain-link, 3 hedges, 2 railings)
+  - most of them the ends of yard fences that ran out across the pavement (North Point, West Hills, Cedar Falls, The
+  Yards' trailer park).
+- test/fences.test.js: held walking, hopped at a run (the crouch, the lift, the far side), the event, chain-link holds,
+  a crate holds, a wall behind it holds, the page's prediction matches.
+- Page code: 497.9 KB of the 498 budget (the fences load after the page; the spawn map with the death screen).
+## 2026-10-24 - b3c: the shops where you need them, again after batch 3
+
+Batch 3 broke test/world3server.test.js "shops where you need them": Pine Hills' and Sunset Beach's south-west streets
+were 433 and 462 tiles from a gun shop (the reach is 400), and The Strip had no food of its own.
+- The cause (World v3 built at batch 2 and at batch 3, the shop places compared): not the clinics. Batch 2's Sunset
+  Beach gun shop stood in a plain roof block behind the houses at (2774, 3158); batch 3a's back gardens (map.js
+  `fillerInner`) put a garden there instead, and no plain building, generic storefront or open lot was left within reach
+  of that corner, so the shops pass gave up. The Strip's snack cart was put on the pavement's last row, its map point one
+  tile further south, in Mesa Flats. It counted as Mesa Flats' food, and the pass made one try only.
+- shared/world3-shops.js:
+  - where nothing else will do (no plain building, no generic storefront, no open ground near), a named business's
+    storefront is taken over, by the rules the clinics take theirs (world3-medics.js `STORE_KEYS` / `NOT_INTO`, now
+    exported): a shop, restaurant or small office lot building with only storefront doors in it. Never a home's, a
+    handcrafted district's or a painted one (`fixed`), and one need to a building. Sunset Beach now has Marksman Firearms
+    and Home Run Sports this way.
+  - Failing that, a gun shop or a hardware store (not for a remote village) goes farther off, just inside the reach and
+    over the district's edge: in a plain building, a named storefront or on open ground in a built-up district (past the
+    park and the wild land). Downtown, built by hand to its edges between the park and the handcrafted districts, had
+    its south-east corner's hardware store from Pine Hills' pass by luck (394 tiles at the worst). The first fix moved
+    Pine Hills' shops and took it to 411; a hardware store now goes up for it on open ground in Pine Hills, where batch 2's gun shop stood (366).
+  - A snack cart's or an ATM kiosk's map point must be in the district it is for. A district gets up to three tries at a
+    place of its own, each at the street then farthest from one; a try that finds nothing ends them.
+- After (tools/world3b/shops.mjs): Pine Hills weapons 340 at the worst, Sunset Beach 318, Pelican Key 317 (was 371),
+  Downtown equipment 366; The Strip has its own Lemonade Stand. The Gull Harbor and Egret Point equipment
+  give-ups are as at batch 2 (the test doesn't ask a village for reach).
+- test/world3shops.test.js has a new case: a street built up with named restaurants, the water across it, gets its gun
+  shop, hardware store and corner store in three of them.
+## 2026-10-24 - b3d: the corner by Midtown station stays clear (test/calmstreets.test.js on batch 3)
+
+### What locked it
+Batch 3's run of test/calmstreets.test.js (a player standing still by Midtown station for eight minutes) had 14 cars
+stuck round the player at the worst, 8.2 on average (the limit 10 and 3; batch 2: 0.7). Traced headless: no batch 3
+change touched that corner - the station block's roads, props and buildings are the same tile for tile in batch 2 and
+batch 3 (the only fence near is the coffee shop's yard fence, there in batch 2 too), and the traffic round the player
+is as dense (8-12 NPC vehicles within 20 m, about 300 entities, in both). The run isn't the same twice, and batch 3's
+changes drew one that hit three locks the traffic code already had, all at the bend where the street past the station
+turns south (one street - one edge, a lane each way - round a tight corner):
+- a pickup turning the bend stopped for a bike parked at the station's bike rack, on the pavement: the look-ahead box
+  (traffic.js obstacleSpeed) is straight ahead of the car, so on a bend it sweeps over the kerb, and a wide car's
+  reached the bike. Parked bikes never move: the pickup stood in the bend for good, the queues behind it both ways locked
+  the corner, and the cars that turned round to get out made it worse (most of the 14);
+- out of the bend a car aimed straight at its next waypoint - the far end of the street, 17 tiles on - so a car that
+  swung wide on the corner drove most of the street half in the oncoming lane, and met a tanker coming up it nose to
+  nose;
+- the two of them, a car close behind each: breakRing (a ring of cars each stopped for the next) backs off the one in
+  the ring with room behind it, and neither had any - they waited for ever.
+
+### The fixes (server/systems/traffic.js)
+- obstacleSpeed: a vehicle nobody's in, standing still wholly off the roadway (a bike at a rack, a car left up on the
+  pavement - parkedOff: its middle and corners on no road, bridge or car park) isn't in a car's way; the lanes never
+  leave the road. Remembered while it stands where it is.
+- lookAhead: a car off the line between the waypoint it last passed and the next one by more than 8 px (swung wide out
+  of a corner, eased over for a siren, nudged in a jam - up to 3 tiles) looks ahead along that line from the nearest
+  point on it, so it's back in its lane within a car's length or two. Only while the waypoints are the ones it passed
+  that one on (a lane change, a new road, a turn round: as before).
+- breakRing -> makeRoom: when nobody in a ring has room to back off, the car queued behind one of them with the most
+  room behind it (an NPC's) backs off first - then the one in front of it can, the next time round. world.ringRoomMade
+  counts them.
+
+### Checks
+- test/calmstreets.test.js passes (run after each fix). Its steps, run headless with a trace, vary from run to run;
+  batch 2: 0.7 cars stuck on average (7 at the worst); batch 3 before: 8.2 (14); with the first fix only: 3.8 (13 -
+  the tanker); with the first two: 4.4 (14 - two more nose-to-nose pairs, at the west bend and the junction by the
+  station, neither with room behind) and 0.3; with all three: 0.2, 0.4 and 0.3 (3, 7, 7 at the worst).
+- test/trafficwalls.test.js: a bike parked on the pavement beside a car's way doesn't stop it (one in the road does);
+  two cars nose to nose with a car close behind each - one of those behind backs off.
+## 2026-10-24 - b3d, part 2: the streets by Midtown station keep moving, whatever the day brings
+
+### Still locking on the merged batch 3 (e952ccfc)
+The suite's run of test/calmstreets.test.js on the merged batch 3 (with b3c's shops) had 17 cars stuck at the worst,
+7.4 on average. The run isn't the same twice: the world's day (server/world.js: `day` from the clock, a new one every
+20 minutes) and a few other things change it from run to run - so it was sampled, the test's own steps run headless
+for a dozen days in one build (a day each: World's `day` option). On e952ccfc, 3 runs in 12 failed. The jams were round the same
+block - the street past the station that bends south at both ends (one edge each, a lane each way) and the junction
+in the middle where the wide road from the south comes in - and they were on:
+- a flatbed parked in the last kerb bay before that junction: the bay is a car's length from the street across, the
+  flatbed's nose stuck a tile and a half out into it; the cars coming round the bend stopped, turned round in the
+  junction to get past and locked it (the cars parked there are drawn at random - a sedan or a hatchback most days);
+- long vehicles on the bends: a mixer, a garbage truck, a tanker coming round them the two ways at once - a long one
+  sweeps the other lane on a bend that tight, and the other way's car was in the bend with it;
+- two cars nose to nose, one in the other's lane (out of a bend, round in a turn), a car close behind each: backing off
+  and coming on again only met it again (the ring broken 14 times in one run), and with no room behind either of them
+  nothing broke it at all.
+
+### The fixes (server/systems/traffic.js)
+- bayRoom: a parking spot in the road takes a vehicle only as long as the kerb runs beside it - along it both ways,
+  until the tiles past its kerb side are road too (the junction's mouth, a side street). Too short for the one drawn:
+  a sedan or a hatchback instead, or none. Worked out once per spot.
+- bendHold: the tight bends of a street with a lane each way (a turn of more than about 50 degrees in one point) -
+  a long vehicle (100 px or more: a van, a lorry, a bus) coming up to one claims it; the other way waits short of it
+  till it's round, and it waits short while someone the other way is in it. A claim lapses when its vehicle is round,
+  gone, or held up 8 s with nobody in the way in the bend (stuck in its own queue: the other way isn't kept waiting),
+  and that one doesn't claim that bend again for 20 s.
+- sidestep: two cars nose to nose (a ring of two), one at least 20 px further off its own lane's line than the other -
+  that one edges back over into its lane at a crawl past the other (40 px/s, not braking for that one for 4 s). Two
+  as far off as each other back off as before (breakRing: the one with room behind it), and if they meet again within
+  30 s the one further off edges over. Tried twice; after that, backing off and making room as before.
+
+### Checks
+- The test's steps, sampled: on e952ccfc 3 of 12 days over the limit (average stuck 0-4.9, worst 1-11); with the
+  fixes 0 of 16 (average 0-0.4, worst 1-5). The same scenario by five other stations (Metro Central, Old
+  Quarter, Northgate, Southside, Westport Center, two days each), on the fixes before the sidestep's last change
+  (it first edged over even for two as far off their lanes as each other): none over, the worst 10 at Northgate.
+- test/calmstreets.test.js three times, all passing: 0.1, 0 and 0 cars stuck on average, 4, 1 and 1 at the worst (it
+  reports its numbers now: a diagnostic, passing or not). trafficwalls, reroute, stops, bikes, roadends, transit,
+  ems and police: 67 pass.
+- test/trafficwalls.test.js: a car out of its lane nose to nose with one in its own edges back and they pass (the
+  make-room test now starts after the sidestep's tries); a tanker and a car round a tight bend the two ways both get
+  round, the tanker's claim seen; a kerb bay at the street's end takes a car, not a van or a flatbed.
+## 2026-10-24 - b3c-2: Sandpiper Bay built up again (gardens behind houses only)
+
+test/world3towns.test.js failed on batch 3: Sandpiper Bay had 3,004 tiles of road (943 the main street's) and 1,955 of
+buildings. Off the main street that is 2,061 of asphalt against 1,955 of building, and the town must have less asphalt
+than building.
+- The cause: batch 3a's back gardens (map.js `fillerInner`). The owner's note was about the plain roof block right
+  behind a house, and the devlog says "a back lot behind a house". But the code made every back lot in a houses, luxury or
+  beach district a garden, whatever stood in front. Sandpiper Bay is beach style, and its main street is diners, stores
+  and a hotel, so the roof blocks behind them went too: 8 of its 25 buildings and 431 building tiles. Its roads were
+  unchanged (3,004 at batch 2 and 3; setBulbsBack, the clinics, the posts and the shops pass didn't touch it).
+- map.js: `placePrefab` marks the strip behind a house (a `house*` or `shanty*` lot) and `fillerInner` makes only that
+  strip a garden. Behind a store, a diner or a hotel the back block is built as before. The winding drives'
+  (DRIVE_HOUSES) gardens are as they were.
+- After: Sandpiper Bay 25 buildings, 2,456 tiles of them (2,386 at batch 2) against 2,061 of its own streets. The gardens
+  behind the houses stay (Lucky Mesa's flats, world3mesa, still passes). The test is unchanged.
+
+## 2026-10-24 - The forest finds' grid kept up with its list (a drawing crash)
+- client/art2/game/host.js `_forage`: the grid of mushrooms and golden stars by 512 px cell was built once and kept
+  pointing into an old list after the map's finds changed, so a cell could name a find that wasn't there any more and
+  the frame threw ("Something went wrong drawing the game"). The grid is rebuilt when the list or its length changes,
+  and a missing find is skipped. Found by the UI-1 pass.
 ## 2026-10-24 - Hotfix: see-through buildings show what's behind them (cars, people, animals no longer vanish)
 
 The owner, 10-24 (a phone shot): "With the current transparency in buildings vehicles and NPCs and things disappeared

@@ -26,6 +26,7 @@ import { DISTRICTS } from './mapcore.js';
 import { hash2 } from './rng.js';
 import { propGrid } from './propgrid.js';
 import { handPlanAt } from './world3-hand.js';
+import { POSTS3, roadNear3, STORE_KEYS, NOT_INTO } from './world3-medics.js';
 
 export const SHOP_NEEDS = {
   weapons: ['gunshop', 'pawn', 'fence', 'lodge', 'huntcamp'],
@@ -198,7 +199,7 @@ export function shops3(m, H) {
       const x = tx + dx, y = ty + dy;
       if (!m.inside(x, y)) continue;
       const i = m.idx(x, y);
-      if (!(loose ? VERGE.has(m.tiles[i]) && roadBy(x, y) : WALK.has(m.tiles[i])) || m.reserve[i] & 3 || m.deck[i] || (d >= 0 && m.dist[i] !== d)) continue;
+      if (!(loose ? VERGE.has(m.tiles[i]) && roadBy(x, y) : WALK.has(m.tiles[i])) || m.reserve[i] & 3 || m.deck[i] || (d >= 0 && (m.dist[i] !== d || distAt(x, y + 1) !== d))) continue;   // (its map point, a tile down, in the district too)
       if (tileAt(x, y - 1) === T.ROAD || tileAt(x, y - 1) === T.WATER || tileAt(x, y - 1) === T.DEEP) continue;
       if (tileAt(x - 1, y) === T.ROAD || tileAt(x + 1, y) === T.ROAD) continue;
       const px = (x + 0.5) * TILE, py = y * TILE + 4;
@@ -220,7 +221,7 @@ export function shops3(m, H) {
       if (!m.inside(x, y)) continue;
       const i = m.idx(x, y);
       if (!ok(m.tiles[i]) || (loose && !roadBy(x, y)) || m.reserve[i] & 3 || m.deck[i] || m.dist[i] !== d) continue;
-      if (!ok(tileAt(x, y + 1))) continue;   // (room to stand at it)
+      if (!ok(tileAt(x, y + 1)) || distAt(x, y + 1) !== d) continue;   // (room to stand at it - its map point there, in the district too)
       const px = (x + 0.5) * TILE, py = (y + 0.5) * TILE;
       if (solidNear(px, py, 36) || m.pois.some((p) => Math.abs(p.x - px) < 80 && Math.abs(p.y - py) < 80)) continue;
       H.addProp(m, 'foodcart', px, py, 0);
@@ -237,15 +238,16 @@ export function shops3(m, H) {
   // street within 4 tiles of it; nothing built, reserved or kept there; the greenery on it cleared
   // (the lot's depth: 6 tiles if there's room, else 5, else 4)
   // (wild: out in the country - the street up to 10 tiles off, the waterfront's strip allowed)
-  const lot = (tx, ty, w, h, r, d, any = false, wild = false) => { for (const hh of [h, h - 1, h - 2]) { const at = lot1(tx, ty, w, hh, r, d, any, wild); if (at) return [...at, hh]; } return null; };
-  const lot1 = (tx, ty, w, h, r, d, any, wild) => {
+  // (okD(d): the districts a lot may be in, by its north-west corner's)
+  const lot = (tx, ty, w, h, r, d, any = false, wild = false, okD = null) => { for (const hh of [h, h - 1, h - 2]) { const at = lot1(tx, ty, w, hh, r, d, any, wild, okD); if (at) return [...at, hh]; } return null; };
+  const lot1 = (tx, ty, w, h, r, d, any, wild, okD) => {
     const spots = [];
     for (let y0 = ty - r - h; y0 <= ty + r; y0++) for (let x0 = tx - r - (w >> 1); x0 <= tx + r - (w >> 1); x0++) {
       const cx = x0 + (w >> 1), cy = y0 + h, e = (cx - tx) * (cx - tx) + (cy - ty) * (cy - ty);
       if (e <= r * r) spots.push([e, y0, x0]);
     }
     spots.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
-    for (const [, y0, x0] of spots) if (lotOk(x0, y0, w, h, d, any, wild)) return [x0, y0];
+    for (const [, y0, x0] of spots) if ((!okD || okD(distAt(x0, y0))) && lotOk(x0, y0, w, h, d, any, wild)) return [x0, y0];
     return null;
   };
   const lotOk = (x0, y0, w, h, d, any, wild) => {
@@ -298,27 +300,46 @@ export function shops3(m, H) {
   const labelN = new Map();
   for (const p of m.pois) if (p.kind === 'delivery') labelN.set(p.label, (labelN.get(p.label) || 0) + 1);
   const GENERIC = new Set(['Storefronts', 'Office Tower', 'Glass Tower', 'Auto Repair', 'Factory', 'First City Bank', 'Crown Boutique', 'Royale Fashion', 'Crown Couture']);
-  const storefront = (tx, ty, r, d, ownOnly) => {
+  // (named: where nothing else will do - no plain building, no generic storefront, no open ground near - a named
+  // business's storefront, by the rules the clinics take theirs (world3-medics.js): a shop, a restaurant or a small
+  // office's lot building with nothing but storefronts in it, no home, not a handcrafted district's, not a painted one)
+  const homeB = new Set();
+  for (const h of m.homes || []) if (h && h.b !== undefined) homeB.add(h.b);
+  const doorKinds = new Map();   // building -> the kinds of its doors
+  const kindIn = (bi, kind) => { let s = doorKinds.get(bi); if (!s) doorKinds.set(bi, (s = new Set())); s.add(kind); };
+  for (const p of m.pois) if (p.b !== undefined && p.b !== null) kindIn(p.b, p.kind);
+  const namedOk = (p, b) => {
+    if (b.prefab < 0 || b.home !== undefined || homeB.has(b.id) || (m.handBuilt && m.handBuilt.has(b))) return false;
+    const key = (m.prefabs[b.prefab] && m.prefabs[b.prefab].key) || '';
+    if (!STORE_KEYS.test(key) || NOT_INTO.test(p.label || '') || NOT_INTO.test(b.name || '')) return false;
+    for (const k of doorKinds.get(b.id) || []) if (k !== 'delivery') return false;
+    return true;
+  };
+  const storefront = (tx, ty, r, d, ownOnly, named = false) => {
     let best = null, bd = r * r;
     for (const p of m.pois) {
       if (p.kind !== 'delivery' || p.fixed || p.b === undefined || p.b === null) continue;
       const b = m.buildings[p.b];
-      if (!b || b.gone || !RETYPE.has(b.kind) || b.walkIn || !(GENERIC.has(p.label) || labelN.get(p.label) > 1)) continue;
+      if (!b || b.gone || b.walkIn) continue;
       const x = p.x / TILE, y = p.y / TILE, pd = distAt(Math.floor(x), Math.floor(y));
       if (ownOnly && pd !== d) continue;
       const pk = placeKind3(pd);
       if (pk === 'wild' || pk === 'none') continue;
       const e = (x - tx) * (x - tx) + (y - ty) * (y - ty) + (pd === d ? 0 : 1600);
-      if (e < bd) { bd = e; best = p; }
+      if (e >= bd) continue;
+      if (named ? !namedOk(p, b) : !RETYPE.has(b.kind) || !(GENERIC.has(p.label) || labelN.get(p.label) > 1)) continue;
+      bd = e; best = p;
     }
     return best;
   };
   const retype = (p, kind) => {
     const d = distAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)), [label, sign] = unitName(kind, DISTRICTS[d]), old = p.label, b = m.buildings[p.b];
     p.kind = kind; p.label = label; p.own = 1;
+    kindIn(p.b, kind);
+    if (b.name === old) b.name = label;
     let signed = false;
-    for (const sg of b.signs) if (sg.text === old) { sg.text = sign; signed = true; }
-    if (!signed && b.prefab >= 0) { const south = m.prefabs[b.prefab].rot === 0; b.signs.push({ x: p.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: sign }); }
+    for (const sg of b.signs || []) if (sg.text === old) { sg.text = sign; signed = true; }
+    if (!signed && b.prefab >= 0) { const south = m.prefabs[b.prefab].rot === 0; (b.signs ||= []).push({ x: p.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: sign }); }
     addSrc(kind, p.x / TILE, p.y / TILE);
     out.units[kind] = (out.units[kind] || 0) + 1; out.retyped++;
     out.list.push([d, kind, label]);
@@ -338,7 +359,20 @@ export function shops3(m, H) {
   };
   // (a lot in any built-up district near the spot: across a district's edge)
   const lotNear = (tx, ty, w, r) => { const at = lot(tx, ty, w, 6, r, -1, true); if (!at) return null; const pk = placeKind3(distAt(at[0], at[1])); return pk === 'wild' || pk === 'none' || OPEN.has(distAt(at[0], at[1])) ? null : at; };
+  // (...and the nearest in one, past any open ground in the wild land, the park or the airfield nearer)
+  const builtUp = (d) => { const pk = placeKind3(d); return pk !== 'wild' && pk !== 'none' && !OPEN.has(d); };
+  const lotBuilt = (tx, ty, w, r) => lot(tx, ty, w, 6, r, -1, true, false, builtUp);
   const near2 = (k, x, y) => { let e = Infinity; const a = src[k]; for (let j = 0; j < a.length; j += 2) { const q = (a[j] - x) * (a[j] - x) + (a[j + 1] - y) * (a[j + 1] - y); if (q < e) e = q; } return Math.sqrt(e); };
+  // a row of shops built on the lot at (from lot(): [x0, y0, depth]) w tiles wide, for the needs ks of the spot (tx, ty)
+  // served (sv: the district's served(), as it stands)
+  let sv = null;
+  const buildRow = (at, w, ks, tx, ty) => {
+    const bd2 = distAt(at[0], at[1]);
+    const b = build(at[0], at[1], w, at[2], bd2, ks.map((k) => [UNIT_OF(k, bd2, tx, ty)]));
+    const ps = row(b, ks.map((k) => [UNIT_OF(k, bd2, tx, ty)]), true, bd2);
+    for (const p of ps) for (const k of needsOf(p.kind)) sv(k, p.x / TILE, p.y / TILE);
+    if (ps.atm) sv('cash', ps.atm.x / TILE, ps.atm.y / TILE);
+  };
   // the districts, one by one
   const order = [...samples.keys()].sort((a, b) => a - b);
   for (const d of order) {
@@ -358,18 +392,21 @@ export function shops3(m, H) {
       }
       dd[k] = a;
     }
-    const served = (k, x, y) => { const a = dd[k]; for (let j = 0; j < n; j++) { const ex = S[2 * j] - x, ey = S[2 * j + 1] - y, e = ex * ex + ey * ey; if (e < a[j] * a[j]) a[j] = Math.sqrt(e); } };
+    const served = (k, x, y) => { const a = dd[k]; if (!a) return; for (let j = 0; j < n; j++) { const ex = S[2 * j] - x, ey = S[2 * j + 1] - y, e = ex * ex + ey * ey; if (e < a[j] * a[j]) a[j] = Math.sqrt(e); } };
     const giveUp = (k, x, y) => { const a = dd[k], R = SHOP_REACH[k] * 0.6; for (let j = 0; j < n; j++) { const ex = S[2 * j] - x, ey = S[2 * j + 1] - y; if (ex * ex + ey * ey < R * R) a[j] = 0; } out.stuck[`${D.name} ${k}`] = (out.stuck[`${D.name} ${k}`] || 0) + 1; };
     const lacking = {};
+    sv = served;
     for (let it = 0; it < 120; it++) {
       // the worst-served sample (by need, against its reach); once all are served, a need with no place of its own
       let wk = null, wj = -1, wr = 1;
       for (const k of needs) { const a = dd[k], R = SHOP_REACH[k]; for (let j = 0; j < n; j++) if (a[j] / R > wr) { wr = a[j] / R; wj = j; wk = k; } }
-      if (wj < 0 && !OPEN.has(d)) for (const k of needs) if (!own[d][k] && !lacking[k]) { wk = k; let best = -1; for (let j = 0; j < n; j++) if (dd[k][j] > best) { best = dd[k][j]; wj = j; } break; }
+      if (wj < 0 && !OPEN.has(d)) for (const k of needs) if (!own[d][k] && (lacking[k] || 0) < 3) { wk = k; let best = -1; for (let j = 0; j < n; j++) if (dd[k][j] > best) { best = dd[k][j]; wj = j; } break; }
       if (wj < 0) break;
       const tx = S[2 * wj], ty = S[2 * wj + 1], R = SHOP_REACH[wk];
-      const ownOnly = wr <= 1;   // (only for a place of its own: it must be in the district - one try each)
-      if (ownOnly) lacking[wk] = 1;
+      const ownOnly = wr <= 1;   // (only for a place of its own: it must be in the district - three tries each, each at the
+      // street then farthest from one: a try that lands its place over the district's edge serves that street, so the
+      // next is elsewhere)
+      if (ownOnly) lacking[wk] = (lacking[wk] || 0) + 1;
       // the plain building nearest the spot (its own district's first), within three quarters of the reach
       let best = null, bd = (R * 0.75) * (R * 0.75);
       for (const [cd, list] of cands) {
@@ -414,18 +451,39 @@ export function shops3(m, H) {
         // (in the district; else in any built-up one near; else - only to bring a far street within reach - on open
         // ground by the road just over its edge, in the country: a roadside store)
         const at = lot(tx, ty, w, 6, lr, d) || (ownOnly ? null : lotNear(tx, ty, w, lr) || lot(tx, ty, w, 6, lr, -1, true, true));
-        if (at) {
-          const bd2 = distAt(at[0], at[1]);
-          const b = build(at[0], at[1], w, at[2], bd2, ks.map((k) => [UNIT_OF(k, bd2, tx, ty)]));
-          const ps = row(b, ks.map((k) => [UNIT_OF(k, bd2, tx, ty)]), true, bd2);
-          for (const p of ps) for (const k of needsOf(p.kind)) if (dd[k]) served(k, p.x / TILE, p.y / TILE);
-          if (ps.atm) served('cash', ps.atm.x / TILE, ps.atm.y / TILE);
-          continue;
-        }
+        if (at) { buildRow(at, w, ks, tx, ty); continue; }
       }
       if (wk === 'food') { const p = cart(tx, ty, 24, d); if (p) { served('food', p.x / TILE, p.y / TILE); continue; } }
       if (wk === 'cash') { const a = kiosk(tx, ty, 24, ownOnly ? d : -1); if (a) { addSrc('atm', a.x / TILE, a.y / TILE); out.atms++; served('cash', a.x / TILE, a.y / TILE); continue; } }
-      if (!ownOnly) giveUp(wk, tx, ty);
+      // nowhere to build: a named business's storefront taken over (2026-10-24: the back gardens that replaced the roof
+      // blocks behind the houses - map.js fillerInner - took the plain buildings Sunset Beach's gun shop stood in)
+      if (wk !== 'cash') {
+        const p = storefront(tx, ty, R * 0.75, d, ownOnly, true);
+        if (p) { const k = UNIT_OF(wk, distAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)), p.x / TILE, p.y / TILE); retype(p, k); for (const n of needsOf(k)) if (dd[n]) served(n, p.x / TILE, p.y / TILE); continue; }
+      }
+      // or, for a gun shop or a hardware store (a short drive) - not in a remote village - farther off, over the district's
+      // edge: in a plain building, a named storefront or on open ground, just inside the reach (2026-10-24: Downtown,
+      // built by hand to its edges between the park and the handcrafted districts, had its south-east corner's hardware
+      // store from Pine Hills' pass by luck, and lost it when Pine Hills' shops moved)
+      if (!ownOnly && (wk === 'weapons' || wk === 'equipment') && !VILLAGE.has(d)) {
+        const rf = R - 10;
+        let c = null, cd2 = rf * rf;
+        for (const [, list] of cands) for (const q of list) { if (used.has(q.b.id) || busy.has(q.b.id)) continue; const e = (q.fx - tx) * (q.fx - tx) + (q.fy - ty) * (q.fy - ty); if (e < cd2) { cd2 = e; c = q; } }
+        if (c) {
+          used.add(c.b.id);
+          const ps = row(c.b, [[UNIT_OF(wk, c.d, c.fx, c.fy)]], near2('cash', c.fx, c.fy) > SHOP_REACH.cash * 0.5 || !own[c.d].cash, c.d);
+          out.rows++;
+          for (const q of ps) for (const k of needsOf(q.kind)) served(k, q.x / TILE, q.y / TILE);
+          if (ps.atm) served('cash', ps.atm.x / TILE, ps.atm.y / TILE);
+          continue;
+        }
+        const p = storefront(tx, ty, rf, d, false, true);
+        if (p) { const k = UNIT_OF(wk, distAt(Math.floor(p.x / TILE), Math.floor(p.y / TILE)), p.x / TILE, p.y / TILE); retype(p, k); for (const n of needsOf(k)) served(n, p.x / TILE, p.y / TILE); continue; }
+        const at = lotBuilt(tx, ty, 7, rf);
+        if (at) { buildRow(at, 7, [wk], tx, ty); continue; }
+      }
+      if (ownOnly) lacking[wk] = 3;   // (nothing to be had here: no more tries)
+      else giveUp(wk, tx, ty);
     }
   }
   // the wild land's themed places
@@ -442,6 +500,46 @@ export function shops3(m, H) {
     const b = build(at[0], at[1], w, at[2], distAt(at[0], at[1]), S.units, S.roof);
     row(b, S.units.map(([k, name]) => [k, name, name]), true, distAt(at[0], at[1]), { counter: true });
     out.wild++;
+  }
+  // open ground for a lifeguard tower within 40 tiles of (tx, ty): 3 x 4 tiles of sand, grass or paving, nothing built,
+  // reserved, kept or solid on it, nothing's map point near
+  const towerSpot = (tx, ty) => {
+    for (let k = 2; k <= 40; k++) for (let dy = -k; dy <= k; dy++) for (let dx = -k; dx <= k; dx += (Math.abs(dy) === k ? 1 : 2 * k)) {
+      const x = tx + dx, y = ty + dy;
+      let ok = true;
+      for (let yy = y - 1; yy <= y + 2 && ok; yy++) for (let xx = x - 1; xx <= x + 1 && ok; xx++) {
+        if (!m.inside(xx, yy)) { ok = false; break; }
+        const i = m.idx(xx, yy);
+        if (!(m.tiles[i] === T.SAND || m.tiles[i] === T.GRASS || m.tiles[i] === T.PLAZA) || m.bld[i] >= 0 || m.reserve[i] & 3 || m.deck[i] || m.solidProps.has(i)) ok = false;
+      }
+      if (!ok || solidNear((x + 0.5) * TILE, (y + 0.5) * TILE, 40) || m.pois.some((p) => Math.abs(p.x - (x + 0.5) * TILE) < 96 && Math.abs(p.y - (y + 1) * TILE) < 96)) continue;
+      if (propsIn((x - 1) * TILE, (y - 1) * TILE, (x + 2) * TILE, (y + 3) * TILE).some((pr) => KEEP.has(pr.t))) continue;
+      return [x, y];
+    }
+    return null;
+  };
+  // where there's no town: a ranger station or a first-aid post by the road nearest its spot, somewhere to come round
+  // (kind 'hospital': a respawn point - shared/world3-medics.js)
+  out.posts = [];
+  for (const [name, xy, roof] of POSTS3) {
+    const at0 = typeof xy === 'string' ? m.pois.find((q) => q.label === xy) : null, a = at0 ? [Math.floor(at0.x / TILE), Math.floor(at0.y / TILE)] : typeof xy === 'string' ? null : roadNear3(m, xy[0], xy[1]);   // (a place's name: by it)
+    let at = null, w = 8;
+    if (a) for (const [ww, hh, r] of [[8, 6, 30], [7, 5, 60], [6, 5, 90]]) { at = lot(a[0], a[1], ww, hh, r, -1, true, true); if (at) { w = ww; break; } }
+    if (!at && a) for (const [x, y] of roadSpots(m, distAt(a[0], a[1]), a)) { at = lot(x, y, 8, 6, 16, -1, true, true); if (at) break; }
+    if (!at) {
+      // (no room for a building - a handcrafted key built up to its beaches: a lifeguard tower with the first-aid post at
+      // its foot, on open ground near the road)
+      const q = a && towerSpot(a[0], a[1]);
+      if (!q) { out.stuck[name] = 1; continue; }
+      for (const pr of propsIn((q[0] - 1) * TILE, (q[1] - 1) * TILE, (q[0] + 2) * TILE, (q[1] + 3) * TILE)) gone.add(pr);   // (the greenery off its spot)
+      H.addProp(m, 'lifeguard', (q[0] + 0.5) * TILE, (q[1] + 0.5) * TILE, 16);
+      m.pois.push({ id: m.pois.length, kind: 'hospital', label: name, x: (q[0] + 0.5) * TILE, y: (q[1] + 1.8) * TILE, r: 44, counter: true, own: 1 });
+      out.posts.push([name, q[0], q[1], 'tower']);
+      continue;
+    }
+    const d = distAt(at[0], at[1]), b = build(at[0], at[1], w, at[2], d, [['hospital', name]], roof);
+    row(b, [['hospital', name, name]], false, d, { counter: true });
+    out.posts.push([name, at[0], at[1]]);
   }
   if (gone.size) { const keys = new Set([...gone].map((p) => p.x + ',' + p.y)); H.removeProps(m, (x, y) => keys.has(x + ',' + y)); }
   return out;
