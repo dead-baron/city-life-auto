@@ -89,19 +89,19 @@ export const PRESETS_GAME = {
     bloomK: 1.35, haze: 0.04, hazeCol: [0.04, 0.05, 0.14], vign: 0.72, sat: 1.24, contrast: 1.12, lift: [0.002, 0.003, 0.022], gain: [1.08, 0.99, 0.95], reflK: 0.7, lampsOn: 1, skyRefl: 0.2 }),
   // overcast daytime rain: flat grey-blue light, faint shadows, everything wet
   rain: mk({ sunDir: [-0.45, -0.3, 0.84], sunCol: [0.42, 0.44, 0.5], ambSky: [0.44, 0.48, 0.58], ambGround: [0.3, 0.31, 0.35], shadowTint: [0.95, 0.97, 1.05],
-    shadowLen: 60, emiK: 0.8, bloomThr: 0.7, bloomK: 0.7, haze: 0.1, hazeCol: [0.5, 0.55, 0.64], vign: 0.5, sat: 0.92, contrast: 1.04,
-    lift: [0, 0.005, 0.02], gain: [0.98, 1.0, 1.04], wet: 1, reflK: 1.0, rain: 1, lampsOn: 0.6, skyRefl: 0.45, fog: 0.06, fogCol: [0.55, 0.58, 0.65], fogH: 90 }),
+    shadowLen: 60, emiK: 0.8, bloomThr: 0.7, bloomK: 0.7, haze: 0.05, hazeCol: [0.5, 0.55, 0.64], vign: 0.55, sat: 1.04, contrast: 1.1,
+    lift: [0, 0.003, 0.012], gain: [0.98, 1.0, 1.03], wet: 1, reflK: 1.0, rain: 1, lampsOn: 0.6, skyRefl: 0.35, fog: 0.05, fogCol: [0.5, 0.54, 0.6], fogH: 90 }),
   // AT1-B: night storm, soaked streets mirroring every light; set .flash for lightning
   storm: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.03, 0.034, 0.064], ambSky: [0.042, 0.05, 0.1], ambGround: [0.034, 0.038, 0.068], emiK: 1.1, bloomThr: 0.55,
     bloomK: 1.2, haze: 0.08, hazeCol: [0.12, 0.15, 0.3], vign: 0.7, sat: 1.12, contrast: 1.12, lift: [0, 0.005, 0.03], gain: [1.06, 1.0, 0.98],
     wet: 1, reflK: 1.3, rain: 1, lampsOn: 1, skyRefl: 0.3, flashCol: [0.7, 0.8, 1.15] }),
   // AT1-C: a soft rose fog lying in the streets in drifting banks, lamps glowing through it
   fog: mk({ sunDir: [-0.62, -0.3, 0.5], sunCol: [0.5, 0.4, 0.38], ambSky: [0.36, 0.32, 0.42], ambGround: [0.3, 0.26, 0.3], shadowTint: [0.95, 0.92, 1.06],
-    shadowLen: 80, emiK: 1.0, bloomThr: 0.6, bloomK: 1.1, haze: 0.06, hazeCol: [0.72, 0.6, 0.66], vign: 0.45, sat: 0.9, contrast: 0.95,
-    lift: [0.03, 0.02, 0.035], gain: [1.02, 0.97, 0.98], wet: 0.3, reflK: 0.5, lampsOn: 1, fog: 0.6, fogCol: [0.78, 0.6, 0.62], fogH: 70, skyRefl: 0.3 }),
+    shadowLen: 80, emiK: 1.0, bloomThr: 0.6, bloomK: 1.1, haze: 0.04, hazeCol: [0.72, 0.6, 0.66], vign: 0.55, sat: 1.02, contrast: 1.04,
+    lift: [0.012, 0.008, 0.016], gain: [1.02, 0.97, 0.98], wet: 0.3, reflK: 0.5, lampsOn: 1, fog: 0.6, fogCol: [0.74, 0.64, 0.66], fogH: 70, skyRefl: 0.3 }),
   // ... after dark: the mist lies grey-blue and dim, the lamps glow in it (the host blends fog toward this by night)
   fogNight: mk({ sunDir: [-0.45, -0.25, 0.86], sunCol: [0.04, 0.045, 0.07], ambSky: [0.07, 0.07, 0.11], ambGround: [0.055, 0.055, 0.075], shadowTint: [1, 1, 1.05],
-    emiK: 1.1, bloomThr: 0.52, bloomK: 1.3, haze: 0.06, hazeCol: [0.1, 0.1, 0.15], vign: 0.6, sat: 0.9, contrast: 1.0,
+    emiK: 1.1, bloomThr: 0.52, bloomK: 1.3, haze: 0.06, hazeCol: [0.1, 0.1, 0.15], vign: 0.65, sat: 1.0, contrast: 1.04,
     lift: [0.012, 0.012, 0.02], gain: [1.02, 1.0, 1.0], wet: 0.3, reflK: 0.5, lampsOn: 1, fog: 0.6, fogCol: [0.42, 0.42, 0.5], fogH: 70, skyRefl: 0.25 }),
   // indoors and underground: no sun, a warm fill, the room's own lamps do the rest
   indoor: mk({ sunDir: [-0.4, -0.3, 0.86], ambSky: [0.3, 0.28, 0.27], ambGround: [0.22, 0.2, 0.2], emiK: 1.0, bloomThr: 0.62,
@@ -220,6 +220,12 @@ vec3 octDec(float ex, float ey){
 float bayer4(ivec2 q){ int i = (q.y & 3) * 4 + (q.x & 3);
   int b[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5); return float(b[i]) / 16.0 - 0.5 + 1.0 / 32.0; }
 float hash2(ivec2 p){ uint h = uint(p.x) * 374761393u + uint(p.y) * 668265263u; h = (h ^ (h >> 13u)) * 1274126177u; return float((h ^ (h >> 16u)) & 16777215u) / 16777216.0; }
+// puddles on wet ground: patches on the world (w: px mod 8192; the lattice repeats over it, so the wrap never shows)
+float pn(vec2 g, float per){ vec2 i = floor(g), f = g - i, a = mod(i, per), b = mod(i + 1.0, per); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(ivec2(a)), hash2(ivec2(b.x, a.y)), f.x), mix(hash2(ivec2(a.x, b.y)), hash2(ivec2(b)), f.x), f.y); }
+float puddle(vec2 w){ return smoothstep(0.6, 0.7, pn(w / 64.0, 128.0) * 0.7 + pn(w / 16.0, 512.0) * 0.3); }
+// how much a wet surface shines (linear albedo): paving and asphalt are grey; grass, earth, crops and brick are not
+float hardOf(vec3 a){ float mx = max(a.r, max(a.g, a.b)); return 1.0 - smoothstep(0.2, 0.5, (mx - min(a.r, min(a.g, a.b))) / max(mx, 0.02)); }
 `;
 
 export const CAN_N = [180, 246];   // (the canopy's noise: lattice cells over 8192 and 4096 px, CANOPY_GLSL)
@@ -335,13 +341,16 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
     // (the sea, 2026-10-23 - the owner: "rapid lines moving diagonally like if it's a rapids but that shouldn't be happening
     // in large bodies of water": three swells crossing at fixed angles made a lattice of glints marching over a whole bay.
     // Now its swells are lower, a slow noise bends their crests out of line (wv), and the sun catches them in patches)
+    // (lakes too, 10-24 - "water fx is super bugged still": on a big lake in the wind the three straight swells' glints
+    // lined up in broad diagonal bands, a herringbone over the whole lake. Now their crests bend, they glint in patches,
+    // and only as the odd twinkling pixel)
     float f = inl ? 1.75 : 1.0, A = inl ? (pond ? 0.025 + wind4.x * 0.04 : 0.05 + wind4.x * 0.14) : 0.1 + wind4.x * 0.3;
-    float wv = inl ? 0.0 : wnoise(w * 0.0071 + d1 * (t * 0.05)) * 9.0;
+    float wv = wnoise(w * 0.0071 + d1 * (t * 0.05)) * (inl ? 5.0 : 9.0);
     float p1 = dot(w, d1) * 0.13 * f - t * 1.7 + wv, p2 = dot(w, d2) * 0.21 * f - t * 2.3 + 1.7 + wv * 1.3, p3 = dot(w, d3) * 0.47 * f - t * 3.1 - wv * 0.7;
     alb *= 1.0 + (sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25) * (inl ? (0.012 + wind4.x * 0.02) * (pond ? 0.35 : 1.0) : 0.025 + wind4.x * 0.03);
     vec3 nw = normalize(vec3(n.xy + (d1 * cos(p1) + d2 * (cos(p2) * 0.6) + d3 * (cos(p3) * 0.25)) * A, n.z));
     glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 60.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
-    if (!inl) glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0));   // (the sea's: in patches, a sparkle here and there)
+    glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0)) * (inl ? step(0.6, hash2(wq + ivec2(int(t * 3.0) * 131, 7))) : 1.0);   // (in patches, a sparkle here and there)
     float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
     if (k > 0.2) alb += caustics(w + d1 * (t * 3.5), t * 0.75, k * (pond ? 0.6 : 0.9), wq);
     if (inl) {
@@ -512,14 +521,17 @@ vec4 shade(vec3 alb, vec3 n, int fl, float sh, vec3 plight, vec3 refl, vec3 emi,
   if ((fl & ${F_LEAF}) != 0) light += sunCol * leafGlow * pow(max(dot(n.xy, sunDir.xy), 0.0), 2.0) * sh;
   if (flash > 0.0) light += flashCol * (flash * (0.35 + 0.65 * max(n.z, 0.0)));
   vec3 col = alb;
-  if (wg && (fl & ${F_WATER}) == 0) col *= mix(1.0, 0.7, wet);
+  // wet (the owner, 10-24: "very greyed out ... and very reflective"): paving darkens and shines, most in its puddles;
+  // grass, earth and crops darken a little and deepen in colour, with no grey sheen over them
+  float hd = (fl & ${F_LEAF}) != 0 ? 0.0 : hardOf(alb), pd = puddle(vec2(org) + gl_FragCoord.xy) * hd;
+  if (wg && (fl & ${F_WATER}) == 0) { float l = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(l), col, 1.0 + wet * 0.3 * (1.0 - hd)) * mix(1.0, mix(0.84, 0.66 - pd * 0.12, hd), wet); }
   vec3 lit = col * light;
   if ((fl & ${F_GLASS}) != 0) lit += ambSky * 0.12;
   if (wet > 0.0 && (fl & ${F_WET | F_GROUND}) != 0) {
-    lit += ambSky * (skyRefl * wet * (0.25 + 0.75 * max(n.z, 0.0)) * 0.5);
+    lit += ambSky * (skyRefl * wet * (0.25 + 0.75 * max(n.z, 0.0)) * 0.5 * (0.08 + hd * 0.4 + pd * 0.45));
     if (rain > 0.0 && hash2(wq + ivec2(0, int(time * 12.0) * 7919)) > 1.0 - 0.0015 * rain) lit += vec3(0.55, 0.6, 0.75) * rain;
   }
-  lit += pow(emi, vec3(2.2)) * emiK + refl * wet;
+  lit += pow(emi, vec3(2.2)) * emiK + refl * (wet * (0.25 + 0.75 * hd));
   vec3 m = lit / (1.0 + lit * 0.18);
   return vec4(pow(m, vec3(1.0 / 2.2)), ground ? sh * step(0.01, lam) : 0.0);
 }
@@ -632,16 +644,11 @@ void main(){
   o = s;
 }`;
 
-// god rays and the fog at quarter size. r: sunlit ground smeared toward the sun, kept over shade (High and Ultra, a
-// low sun). g: under the redwood canopy (every tier), the beams themselves - the sunlit air in front of what is drawn
-// at this pixel: up the column of air over it (from the surface's height to the canopy: what is behind the
-// surface is hidden), the share of points whose way to the sun goes out through a gap in the crowns.
-// b, a: the fog's two layers (task #387, the owner: "wisps and puffs of foggy clouds ... not take over the entire area
-// so much but have layers of procedurally generated fog"), on the world and drifting with the air (fogD: wind.js air,
-// and twice that). b the low fog, about 24 px up: banks with clear ground between them, billowing at their edges (a
-// finer layer moving at half the air's speed, so their shapes change as they go), thicker over water and in the woods.
-// a the wisps aloft, about 72 px up: long thin streaks in patches, drifting twice as fast. FINAL_FS lays them over what
-// stands under them. The noise repeats over 8192 px (as the scene's origin and the air do), so nothing ever jumps.
+// god rays and the fog at quarter size. r: sunlit ground smeared toward the sun over shade (High, Ultra, a low sun).
+// g: the canopy's beams - up the air over this pixel, the share of points whose way to the sun is through a gap in the
+// crowns. b, a: the fog's two layers on the world, drifting with the air (fogD: wind.js air; task #387): b the low
+// banks (~24 px up) with clear ground between, billowing at their edges, thicker over water and in the woods; a the
+// wisps aloft (~72 px), thin streaks in patches drifting twice as fast. The noise repeats over 8192 px (as the origin).
 const SHAFT_FS = (T) => `#version 300 es
 precision highp float; precision highp int; precision highp sampler2D;
 #define SMEAR ${T.shafts}
@@ -723,7 +730,7 @@ void main(){
   // it moves 2t rows up the screen; the first standing texel at least that tall is what it sees (so a
   // lamp's image hangs below its foot, a car's below the car), softened by the bloom, rippled by rain.
   // Open water mirrors what stands in and beside it in any weather.
-  float rk = (fl & ${F_WATER}) != 0 ? max(wet * reflK, 0.5) : wet * reflK;
+  float rk = (fl & ${F_WATER}) != 0 ? max(wet * reflK, 0.5) : wet * reflK * hardOf(pow(c, vec3(2.2))) * (0.2 + 0.8 * puddle(vec2(q + org)));   // (a mirror in the puddles; grass and earth hardly)
   if (rk > 0.0 && (fl & ${F_GROUND}) != 0) {
     float wy = float((q.y + org.y) / AP * AP);
     float wob = (sin(wy * 0.7854 + time * 3.14159) * 0.6 + sin(wy * 1.5708) * 0.4) * ((fl & ${F_WATER}) != 0 ? 1.6 : 1.0);
@@ -772,11 +779,12 @@ void main(){
     // the fog's layers (SHAFT_FS b, a: soft at a quarter of the size) over what stands here: the low fog hugs the
     // ground and thins up to fogH, the wisps float at about 72 px - a roof or a treetop above them stands clear -
     // over the faintest veil; clear ground between the banks. Lights glow in it (wide bloom).
-    vec2 fv = texture(tSh, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).ba;
-    float low = exp(-Z / fogH);
-    float f = clamp(fog * (low * (0.1 + fv.x * 0.62) + fv.y * 0.3 * smoothstep(110.0, 50.0, Z)), 0.0, 0.8);
+    // (10-24, the owner: the map washed grey) thinner round you, thicker and darker toward the view's edges (e)
+    vec2 fv = texture(tSh, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).ba, sv = (gl_FragCoord.xy - view.xy) / max(view.zw, vec2(1.0)) - 0.5;
+    float low = exp(-Z / fogH), e = smoothstep(0.12, 0.62, length(sv * vec2(1.0, 1.3)));
+    float f = clamp(fog * (low * (0.05 + fv.x * 0.6) + fv.y * 0.28 * smoothstep(110.0, 50.0, Z)) * (0.5 + 0.8 * e), 0.0, 0.78);
     vec3 lit = useBQ > 0.5 ? texture(tBQ, min(gl_FragCoord.xy * 0.25 / quarterTex, maxUVq)).rgb * 1.1 : vec3(0.0);
-    c = mix(c, fogCol + lit, f);
+    c = mix(c, (fogCol + lit) * (1.0 - 0.3 * e), f);
   }
   vec3 bl = vec3(0.0);
   if (useBH > 0.5) bl += texture(tBH, min(gl_FragCoord.xy * 0.5 / halfTex, maxUVh)).rgb * 0.6;

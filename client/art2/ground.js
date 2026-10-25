@@ -1078,7 +1078,7 @@ export const GSHADE = {
     const col = (x + row * 3) >> 1, ch = hh(col, row, s + 3), sheen = vnc(x * 0.7, y, 41, s + 13);
     let k;
     if (ch < 0.78 && ly <= 3 - (ch > 0.6 ? 1 : 0)) { k = ly === 0 ? 6 : ly === 1 ? 5 : 4; if ((x + row) & 1) k -= 1; GS.h = 5 - ly; }
-    else { k = ly >= 4 ? 1 : 2; GS.h = 2; }
+    else { k = ly >= 4 ? 0 : 1; GS.h = 2; }
     k += sheen > 0.64 ? 1 : sheen < 0.34 ? -1 : 0;
     return at(GRAIN, k);
   },
@@ -1196,14 +1196,13 @@ function makeCover(kind, v) {
       put(S.ax + lean * h + 1, S.ay - h + 2, GRAIN[4], 0.3, 0.4, h - 2, F_LEAF);
       break;
     }
-    case 'wheat': {                                        // a clump of ripe wheat: 3-4 straw stalks, a golden ear on each
-      const ns = 3 + (r() * 2 | 0);
+    case 'wheat': {   // a clump of ripe wheat: 4-5 stalks 2 px apart fanning from the root, dark stems, a golden ear (v > 7: taller)
+      const ns = 4 + (r() * 2 | 0), tall = v >> 3;
       for (let b = 0; b < ns; b++) {
-        const x0 = Math.round((b - (ns - 1) / 2) * 1.4), lean = (b - (ns - 1) / 2) * 0.06 + (r() - 0.5) * 0.12, h = 8 + (r() * 4 | 0);
+        const sp = b / (ns - 1) - 0.5, x0 = Math.round(sp * (ns - 1) * 2), lean = sp * 0.22 + (r() - 0.5) * 0.08, h = 10 + tall * 3 + (r() * 3 | 0);
         for (let k = 0; k < h; k++) {
-          const ear = k >= h - 3, c = ear ? GRAIN[(k === h - 1 ? 6 : 5 - ((k + b) & 1))] : G_DRY[3 + Math.min(4, k >> 2)];
-          put(S.ax + x0 + lean * k, S.ay - k, c, lean * 0.6, 0.4, k, F_LEAF);
-          if (ear && k === h - 2 && (b & 1)) put(S.ax + x0 + lean * k + 1, S.ay - k, GRAIN[3], lean, 0.4, k, F_LEAF); // (an awn)
+          const e = k - (h - 5), c = e >= 0 ? GRAIN[Math.min(6, 2 + e + (b & 1))] : G_DRY[Math.min(5, 1 + (k >> 1))];
+          for (let w = 0; w < 2; w++) put(S.ax + x0 + w + lean * k, S.ay - k, c, lean + sp * 0.5, 0.35, k, F_LEAF);
         }
       }
       break;
