@@ -16,8 +16,8 @@
 //   - uploadChunk g.under (optional RGBA8, 768^2): the chunk before its buildings (rgb) + the local number of
 //     the building on top (alpha), g.blds [[building index, ...]] per local number; beginFrame f.fades: a Map
 //     building index -> 0..1 fades those whole buildings (smoothly, to a ghost: GHOST; < 0 a thin one, GHOST_THIN);
-//     +f.clear (Float32Array 16): up to four clear spaces in them [x, y, radius, strength] round figures (past half
-//     way a texel stops hiding what is behind it).
+//     +f.clear (Float32Array 16): up to four clear spaces in them [x, y, radius, strength] round figures (whatever is
+//     behind a fading part draws through it, the ghost laid over it: GHOST_FS).
 //   beginFrame(f) -> bool  drawSprite(key, x, y, z0, o) -> bool  drawDecal(key, x, y, angle, alpha, +z0, +zt)
 //   (drawDecal zt: px over its ground it also covers - a field's rows over the crop standing on it, farmart.js)
 //   (drawSprite o.under: a height its depth test never goes past - a boat under a bridge, hidden by any deck over it
@@ -46,18 +46,9 @@
 //   ties. Ground texels (F_GROUND) sink 4 px for the test only, so feet at z0 = 0 stand on 3 px kerbs and
 //   sidewalks (grass tufts taller than 4 px still cover feet). Decals test at 3.5 px over z0 (so only the
 //   ground takes them) and blend into albedo only.
-// Memory (GPU; RGBA8 everywhere, no float targets, no extensions required):
-//   chunk slot (768 / ap)^2 x 12 B = 1.69 MiB at ap 2 (6.75 at ap 1; slots are created on demand up to the tier
-//   cap and reused, never re-allocated); atlas page 1024^2 x 12 B = 12 MiB (three TEXTURE_2D_ARRAYs allocated
-//   per tier; at ap 2 a page holds four times the sprites); frame ~21 B per scene texel (scene 12 + depth 2 +
-//   lit 4 + half/quarter bloom, shafts, light tiles ~3), allocated on the first frame and grown in 128 px steps
-//   only when the view needs more.
-//   A baked chunk with buildings also keeps its "under" layer (the chunk before its buildings, RGBA8, 0.56 MiB
-//   at ap 2) for the building fades: 2.25 MiB a slot. Caches at the cap (ap 2): Low 12 chunks + 4 pages = 27 +
-//   48 MiB; Medium 14 + 6 = 32 + 72; High 18 + 8 = 41 + 96; Ultra 26 + 10 = 59 + 120. lowMem: 10 + 4 = 23 + 48.
-//   The host reserves as many slots as the view needs (zoomed out driving on a 1080p screen: up to 15), so
-//   the cap only grows past these when the view itself is bigger. Frame: ~27 MiB for 1280x720 or a phone
-//   (1.1-1.3 M texels), ~52 MiB at 1080p, ~94 MiB at 1440p zoomed out to 1.5x.
+// Memory (GPU, RGBA8 everywhere): a chunk slot 1.69 MiB at ap 2 (+0.56 for its "under" layer, the building fades),
+//   an atlas page 12 MiB, the frame ~21 B per scene texel (~27 MiB at 1280x720, ~52 at 1080p); slots and pages are
+//   made on demand up to the tier's cap and reused (docs/art-v2/GAME-RENDERER.md has the sums).
 // Sprite atlas: shelf packing (heights rounded to 4 px) on 1024 px pages; when full it evicts the least
 //   recently drawn shelf that fits (then the least recently drawn page), never one drawn this frame;
 //   evicted keys report hasSprite() false. Sprites larger than 1024 px are refused.
@@ -73,11 +64,7 @@
 //   number: nearest, offset snapped to device px (crisp); other scales >= 1: sharp bilinear (1 device px
 //   edge blend, even texel sizes, so no shimmer at 1.26, 1.44 or 2.52); scale < 0.92 (phones at 0.72 and
 //   DPR 1, zoomed out): 4-tap area filter. Vignette here. presentMode (0 / 1 / 2) overrides, for tests.
-// Cost (SwiftShader in headless Chromium, 1280x720, ~1.2 M scene texels; CPU time of the GPU process per
-//   frame, tools/art2/engine-test.html): Low 0.7-0.9 s, Medium 1.3-2.4 s, High 1.2-3.0 s, Ultra 1.4-6.7 s
-//   (the 3 x 110 step sun march at golden hour). The lit pass is 50-75 % of a frame (the march by day, the
-//   lights at night), final 15-35 % when wet (mirror march) or foggy, static + present + bloom ~10 %,
-//   sprites and decals < 1 %. A real GPU is ~1000x faster.
+// Cost: the lit pass is most of a frame (the sun march by day, the lights at night), final 15-35 % when wet or foggy.
 // Integration notes: sprites snap to the art grid (engine.ap world px) while the camera scrolls with sub-texel
 //   precision, so pass camX/camY as the player's position rounded to that grid (+ the smooth look-ahead) to keep
 //   the player steady.
@@ -134,41 +121,34 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // isn't the best look"): it goes semi-transparent - a ghost, GHOST of the street showing through (a tall thin one,
 // uFade < 0: a mast's hut, a tree, GHOST_THIN, so it doesn't vanish by half) - and only round the people that matter
 // (uClr[i]: world x, y of a figure's middle, its radius, strength - you, players near you) is it fully clear, the
-// edge of that soft. Past half way a texel also takes the ground's height and normal, so whoever is behind it draws
-// over it (dithered in whole art pixels at the clear space's edge).
-// Swaying vegetation: leaf texels (F_LEAF: foliage, grass tufts, crops) lean with the wind (uWind: strength,
-// gustiness, direction) by whole texels, more the higher they stand above their ground - so a tree's crown sways over
-// its trunk and grass tips nod. Not as one wave over the screen (task #385, the owner: "all the trees kind of move in
-// a big wave ... Can we make it so leaves move in smaller groups and bundles and by themselves on branches"):
-//   - gusts come in patches (gustAt: two layers of noise travelling with the wind at different speeds and a little
-//     apart - render/flora/wind.js gd, uGust - so a patch gathers, sweeps over a field or a stand and fades), pushing
-//     what they cross, and brightening the leaves they bend;
-//   - each stand of trees (a few hundred px) sways in its own time and by its own amount, each cluster of leaves
-//     (26 px) a little in its own, with a flutter over that, on the flutter clock (wind.js ft, uFlut; the
-//     frequencies are whole turns over its 256 s, so its wrap never shows).
-// A texel looks for the leaf that leans onto it among its neighbours (up to uSway - 1 texels either side; the
-// tallest wins, as in the depth rule); where a leaf leans away and nothing takes its place, the texel beside it
-// shows through. The wind is only worked out where there's a leaf (most of a town has none).
-// uSway: 0 off, 1 gust shading only (Low), 2-4 leaning up to 1-3 world px (whole art pixels: 1 or 2 at ap 2).
-// A chunk texel is an art pixel (AP world px a side, CTX texels a chunk): every world px of it fetches the same
-// texel and computes the same lean, fade and dither, so it moves and fades as one pixel.
-// The noise all that is drawn from is a small texture (tN, windNoise: 128 x 128 lattice values; smooth value noise
-// in one fetch each, the smoothstep folded into where it samples - far cheaper on a phone than hashing the lattice
-// for every pixel): r repeats over 16 texels and g over 32, so the gust layers (512 and 256 px cells) repeat over
-// the 8192 px gd wraps at and its wrap never shows; b and a for what stays put (a stand's phase and rhythm, 230 px
-// cells; a cluster's phase, 26 px).
+// edge of that feathered. Its depth is the ground's, so whatever is behind it draws over it (the depth test never hides
+// it under a ghost) and GHOST_FS lays the ghost back over them, lighter (SEE): a car half under it reads as one car.
+// It casts no shadow once it's faded (F_NOCAST, dithered in): not over the street it shows, nor round you, nor on
+// them. Well inside the clear space a texel also takes the ground's height and normal (dithered over CLR_SWAP_W).
+// Swaying vegetation: leaf texels (F_LEAF) lean with the wind (uWind: strength, gustiness, direction) by whole texels,
+// more the higher they stand - a crown over its trunk, grass by its tips - not as one wave over the screen (task #385):
+// gusts come in patches (gustAt: two noise layers travelling with the wind, wind.js gd, uGust) and push and brighten
+// what they cross; each stand (230 px) and each cluster of leaves (26 px) sways in its own time, on the flutter clock
+// (wind.js ft, uFlut: whole turns over its 256 s). A texel takes the tallest leaf leaning onto it from up to uSway - 1
+// texels either side; where one leans away and nothing takes its place, the texel beside it shows. uSway: 0 off, 1
+// gust shading only (Low), 2-4 leaning. The noise is one texture (tN, windNoise: r over 16 texels and g over 32 for
+// the gusts, so the 8192 px wrap never shows; b, a for what stays put), one fetch per value.
 // see-through buildings (STATIC_FS): how much of the street shows through the ghost of one that hides you (a tall thin
-// one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the soft edge, how
-// much taller than wide it is
-export const GHOST = 0.45, GHOST_THIN = 0.2, CLR_SOFT = 0.45, CLR_TALL = 1.3;
+// one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the feathered edge,
+// how much taller than wide it is; CLR_SWAP: past what share of the clear space a texel takes the ground's height,
+// dithered over CLR_SWAP_W (10-24, the owner: "slightly more transparent ... feather the border": 0.45 / 0.2 / 0.45
+// before); SEE: how much of the ghost lies over what is behind it (GHOST_FS), next to over the street
+export const GHOST = 0.6, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
 // seeThrough: STATIC_FS's fade of a texel at world (x, y) outside its building's footprint, in JS (the tests): f the
-// building's fade (uFade), C the clear spaces (uClr) -> 0..1 (past ~0.55 whatever is behind it shows)
+// building's fade (uFade), C the clear spaces (uClr) -> 0..1. seenBehind: how much shows of a sprite there (GHOST_FS;
+// 0 when it isn't fading: hidden, as behind anything solid)
 export function seeThrough(f, x, y, C) {
   const gh = f < 0 ? GHOST_THIN : GHOST, a = Math.abs(f), sst2 = (e0, v) => { const t = Math.max(0, Math.min(1, (v - e0) / (1 - e0))); return t * t * (3 - 2 * t); };
   let cl = 0;
   for (let i = 0; i < 4; i++) if (C[i * 4 + 2] > 0) cl = Math.max(cl, (1 - sst2(1 - CLR_SOFT, Math.hypot((x - C[i * 4]) / C[i * 4 + 2], (y - C[i * 4 + 1]) / (C[i * 4 + 2] * CLR_TALL)))) * C[i * 4 + 3]);
   return a * (gh + (1 - gh) * cl);
 }
+export const seenBehind = (f, x, y, C) => (Math.abs(f) > 0.002 ? 1 - (1 - seeThrough(f, x, y, C)) * (1 - (1 - SEE) * Math.abs(f)) : 0);
 const CLR0 = new Float32Array(16);
 const FLUT = (k) => (2 * Math.PI * k / 256).toFixed(6);   // (whole turns over wind.js FLUT_P)
 const WN = 128;
@@ -222,13 +202,49 @@ export function leanOf(pw, pi, h, f, R, ap = ART_PX) {
   const k = f & LOW_SWAY ? SW.lowIdle : 1, v = Math.round((pw + pi * k) * leanAmp(h, f) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
   return Math.max(-R, Math.min(R, v));
 }
+// a texel's fade (STATIC_FS, GHOST_FS): 0 if none, else how far to the under layer u; fa its building's, fc that x the
+// clear part. Over its own footprint it stays (x0 > x1: the footprint is the ellipse in that box - a tree's foot); the
+// clear space round each figure an upright ellipse, its outer ${CLR_SOFT * 100}% feathered
+const FADE_GLSL = `uniform sampler2D t3; uniform float uFade[64]; uniform vec4 uFoot[64]; uniform vec4 uClr[4]; uniform vec2 uChunk;
+float fadeOf(ivec2 src, out vec4 u, out float fa, out float fc){
+  u = texelFetch(t3, src, 0); fa = 0.0; fc = 0.0;
+  int k = int(u.a * 255.0 + 0.5);
+  if (k <= 0 || k >= 64) return 0.0;
+  float f = uFade[k], gh = ${GHOST};
+  if (f < 0.0) { f = -f; gh = ${GHOST_THIN}; }
+  vec4 fp = uFoot[k];
+  vec2 sp = vec2(src * AP) + 0.5 * float(AP);
+  if (f <= 0.002 || (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0)) return 0.0;
+  vec2 wp = uChunk + sp;
+  float cl = 0.0;
+  for (int i = 0; i < 4; i++) { vec4 q = uClr[i]; if (q.z > 0.0) cl = max(cl, (1.0 - smoothstep(${(1 - CLR_SOFT).toFixed(2)}, 1.0, length((wp - q.xy) / vec2(q.z, q.z * ${CLR_TALL.toFixed(2)})))) * q.w); }
+  fa = f; fc = f * cl;
+  return f * (gh + (1.0 - gh) * cl);
+}`;
+// the ghost laid back over what drew over it (after the sprites, depth GREATER than the ground: only where something
+// did), into albedo and emissive: a share SEE of what it is over the street (seenBehind)
+const GHOST_FS = (AP) => HDR + `
+#define AP ${AP}
+uniform sampler2D t0, t2; uniform vec2 uOff;
+layout(location=0) out vec4 o0; layout(location=2) out vec4 o2;
+${FADE_GLSL}
+void main(){
+  ivec2 src = ivec2(gl_FragCoord.xy - uOff) / AP;
+  vec4 a = texelFetch(t0, src, 0), u;
+  if (a.a < 0.5) discard;
+  float fa, fc, f = fadeOf(src, u, fa, fc), k = (1.0 - f) * (1.0 - ${(1 - SEE).toFixed(2)} * fa);
+  if (f <= 0.0 || k < 0.004) discard;
+  gl_FragDepth = 1.0;
+  o0 = vec4(a.rgb, k); o2 = vec4(texelFetch(t2, src, 0).rgb, k);
+}`;
 const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
-uniform sampler2D t0, t1, t2, t3, tN; uniform vec2 uOff; uniform float uFadeOn; uniform float uFade[64]; uniform vec4 uFoot[64]; uniform vec4 uClr[4];
-uniform vec4 uWind, uGust; uniform float uFlut; uniform int uSway; uniform vec2 uChunk;
+uniform sampler2D t0, t1, t2, tN; uniform vec2 uOff; uniform float uFadeOn;
+uniform vec4 uWind, uGust; uniform float uFlut; uniform int uSway;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
+${FADE_GLSL}
 // smooth value noise at lattice point g in one fetch of the wind's noise (windNoise)
 vec4 wn(vec2 g){ vec2 i = floor(g), f = g - i; return textureLod(tN, (i + 0.5 + f * f * (3.0 - 2.0 * f)) / ${WN}.0, 0.0); }
 float gustAt(vec2 w){
@@ -292,32 +308,15 @@ void main(){
   bool ground = (fl & ${F_GROUND}) != 0;
   if (gb > 0.0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 + gb * (ground ? 0.2 : 0.08);
   if (uFadeOn > 0.5) {
-    vec4 u = texelFetch(t3, src, 0);
-    int k = int(u.a * 255.0 + 0.5);
-    if (k > 0 && k < 64) {
-      float f = uFade[k], gh = ${GHOST};
-      if (f < 0.0) { f = -f; gh = ${GHOST_THIN}; }
-      vec4 fp = uFoot[k];
-      vec2 sp = vec2(src * AP) + 0.5 * float(AP);   // (world px: the art pixel's centre)
-      // over its own footprint it stays (x0 > x1: the footprint is the ellipse in that box - a tree's foot)
-      if (fp.x <= fp.z ? sp.x >= fp.x && sp.x < fp.z && sp.y >= fp.y && sp.y < fp.w : length((sp - (fp.xy + fp.zw) * 0.5) / max((fp.xw - fp.zy) * 0.5, vec2(1.0))) < 1.0) f = 0.0;
-      if (f > 0.002) {
-        // the clear space round each figure: an upright ellipse, its outer ${CLR_SOFT * 100}% soft
-        vec2 wp = uChunk + sp;
-        float cl = 0.0;
-        for (int i = 0; i < 4; i++) {
-          vec4 q = uClr[i];
-          if (q.z > 0.0) cl = max(cl, (1.0 - smoothstep(${(1 - CLR_SOFT).toFixed(2)}, 1.0, length((wp - q.xy) / vec2(q.z, q.z * ${CLR_TALL.toFixed(2)})))) * q.w);
-        }
-        f *= gh + (1.0 - gh) * cl;
-        a.rgb = mix(a.rgb, u.rgb, f);
-        c.rgb *= 1.0 - f;
-        if (f > 0.55 + bayer4(src) * 0.2) {
-          gl_FragDepth = 1.0;
-          o0 = vec4(a.rgb, 1.0); o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2 = vec4(c.rgb, ${OCT_MID / 255});
-          return;
-        }
-      }
+    vec4 u; float fa, fc, f = fadeOf(src, u, fa, fc);
+    if (f > 0.0) {
+      a.rgb = mix(a.rgb, u.rgb, f);
+      c.rgb *= 1.0 - f;
+      gl_FragDepth = 1.0;   // (the ground's: whatever is behind it draws over it, GHOST_FS the ghost back over that)
+      o0 = vec4(a.rgb, 1.0); o1 = b; o2 = c;
+      if (fa > 0.5 + bayer4(src) * 0.9) o1.b = float(fl | 4) / 255.0;   // (F_NOCAST, dithered in: a ghost casts no shadow on what it shows)
+      if (fc > ${CLR_SWAP.toFixed(2)} + bayer4(src) * ${CLR_SWAP_W.toFixed(2)}) { o1 = vec4(0.0, 0.0, ${(F_GROUND | 8) / 255}, ${OCT_MID / 255}); o2.a = ${OCT_MID / 255}; }
+      return;
     }
   }
   if (ground) h = max(h - ${GSINK.toFixed(1)}, 0.0);
@@ -519,6 +518,7 @@ export class Art2Engine {
     this.uboBuf = gl.createBuffer(); gl.bindBuffer(gl.UNIFORM_BUFFER, this.uboBuf); gl.bufferData(gl.UNIFORM_BUFFER, this.ubo.byteLength, gl.DYNAMIC_DRAW); gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     const IA = ['c', 'iDst', 'iSrc', 'iPar', 'iTint'];
     this.pStatic = glProgram(gl, STATIC_VS, STATIC_FS(this.ap), ['c'], { t0: 0, t1: 1, t2: 2, t3: 7, tN: 8 });
+    this.pGhost = glProgram(gl, STATIC_VS, GHOST_FS(this.ap), ['c'], { t0: 0, t2: 2, t3: 7 }); this.DBG = [gl.COLOR_ATTACHMENT0, gl.NONE, gl.COLOR_ATTACHMENT2];
     // (the wind's noise for the swaying vegetation: unit 8, which nothing else uses)
     this.tWN = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, WN, WN, 0, gl.RGBA, gl.UNSIGNED_BYTE, windNoise());
@@ -948,6 +948,7 @@ export class Art2Engine {
     this._passStatic(); this.markPass('static');
     this._passDecals(); this.markPass('decals');
     this._passSprites(); this.markPass('sprites');
+    this._passGhost();
     const LS = this.LS;
     LS.A = this.tA; LS.B = this.tB; LS.C = this.tC; LS.w = this.SW; LS.h = this.SH; LS.preset = this.P;
     LS.wet = this.wet; LS.time = this.time; LS.flash = this.flash; LS.fog = this.fog;
@@ -1030,6 +1031,8 @@ export class Art2Engine {
     const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;
+    const GL = this.ghosts || (this.ghosts = []);
+    GL.length = 0;
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
       const s = this.chunks.get(ckey(cx, cy, this.layer));
       if (!s) continue;
@@ -1040,7 +1043,7 @@ export class Art2Engine {
       if (fades && s.under && s.t[3] && s.bids) {
         FA.fill(0);
         for (let i = 0; i < s.bids.length && i < 63; i++) { const f = fades.get(s.bids[i]); if (f) { FA[i + 1] = f; on = 1; } }
-        if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); gl.uniform4fv(u.uClr, this.clr || CLR0); }
+        if (on) { gl.uniform1fv(u.uFade, FA); gl.uniform4fv(u.uFoot, s.foot); gl.uniform4fv(u.uClr, this.clr || CLR0); (s.fa || (s.fa = new Float32Array(64))).set(FA); s.gx = cx; s.gy = cy; GL.push(s); }
       }
       gl.uniform1f(u.uFadeOn, on);
       const x = cx * CHUNK_PX - this.ox, y = cy * CHUNK_PX - this.oy;
@@ -1049,6 +1052,25 @@ export class Art2Engine {
       n++;
     }
     this.last.chunks = n;
+  }
+  // the ghosts of the fading buildings back over whatever drew over them (GHOST_FS)
+  _passGhost() {
+    const GL = this.ghosts;
+    if (!this.nInst || !GL || !GL.length) return;
+    const gl = this.gl, p = this.pGhost, u = p.u;
+    gl.drawBuffers(this.DBG); gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
+    gl.depthMask(false); gl.depthFunc(gl.GREATER);
+    gl.useProgram(p.p); gl.bindVertexArray(this.vaoQuad);
+    gl.uniform2f(u.uScene, this.SW, this.SH); gl.uniform4fv(u.uClr, this.clr || CLR0);
+    for (const s of GL) {
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, s.t[0]); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, s.t[2]);
+      gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, s.t[3]);
+      gl.uniform1fv(u.uFade, s.fa); gl.uniform4fv(u.uFoot, s.foot);
+      const x = s.gx * CHUNK_PX - this.ox, y = s.gy * CHUNK_PX - this.oy;
+      gl.uniform4f(u.uRect, x, y, CHUNK_PX, CHUNK_PX); gl.uniform2f(u.uOff, x, y); gl.uniform2f(u.uChunk, s.gx * CHUNK_PX, s.gy * CHUNK_PX);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    gl.disable(gl.BLEND); gl.depthMask(true); gl.depthFunc(gl.LEQUAL); gl.drawBuffers(this.DB3);
   }
   _bindAtlas() { const gl = this.gl; for (let i = 0; i < 3; i++) { gl.activeTexture(gl.TEXTURE3 + i); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.atlas[i]); } }
   _passDecals() {
