@@ -16512,3 +16512,165 @@ run as a whole file on batch 4 as it was (it passes alone) - not this change.
 
 Perf: page 497.6 of 498 KB, renderer 400.4 of 400 (the firewood model; actors.js's header trimmed to fit), bake 874.6
 of 875 - no budget raised.
+## 2026-10-24 - ui1: one UI system - the tokens and the parts, the old GTA look retired (the UI overhaul, phase UI-1)
+
+The owner approved the UI/UX overhaul ("I think the UI/UX proposal is looking good let's move forward with that
+overhaul"). Phase UI-1 is the foundation: one look for every screen, built from a small set of tokens and parts, with
+the screens moved onto it and their layouts left as they are. The touch slots (UI-2), the hub (UI-3) and the HUD's
+information (UI-4) build on it.
+
+### What the player sees
+- **One look everywhere**: navy panels with a 2 px gold rim, one gold, CLA Pixel for titles and numbers and Barlow
+  Condensed for everything you read. The phone, the bag, the quick wheel, the weapon wheel and picker, the shop and
+  counter menus, the pause list, settings, players online, install help, the map screen, the cinematic panel and bar,
+  the debug menu and free camera, the creator and its starting looks, the knocked-out panel and its map, the jail
+  plate and the title screen all wear it. The pink-to-purple GTA headers, Anton, the black outlines, the slate "app"
+  style and the cinematic panel's system font are gone.
+- **The title screen**: PLAY a gold button with ink words; the graphics choice one segmented control (a check and
+  "recommended" readable inside the button, not a 9 px tag cut by its edge); Install, Settings and Fullscreen 44 px
+  secondary buttons; the background solid navy (the world no longer ghosts through it); the build line readable.
+- **Buttons by role**: primary (gold, ink words), secondary (navy, gold rim), destructive (a red outline - Start fresh,
+  Leave Dev Debug Mode), icon buttons; the close ✕ a gold-rimmed square (44 px on touch).
+- **Settings' switches are toggles** (a knob that slides, gold when on, 52 x 44 on touch), the sliders gold, the
+  selects navy with a gold edge.
+- **Colours mean one thing each**: money green, danger red (health, FIRE, crimes), info blue (stamina, the bank,
+  waypoints, the police), heat orange (the stars, warnings, the HOT cash). The stars are heat orange.
+- **Notes fade out** instead of vanishing (250 ms), panels arrive with a short eased rise, and nothing animates for
+  someone whose device asks for reduced motion.
+- **Canvas text** over the game - the minimap's letters, the floating numbers and speech, names over people, the
+  horse / skateboard / fishing cards, the ATM sign, the home's names, the knocked-out map, the debug teleport map, the
+  stargazing names - in CLA Pixel or Barlow (it was monospace, system-ui, Rubik or Anton). The art's own painted signs
+  and the arcade cabinets' screens keep their pixels.
+- Behaviour, contents and layouts are unchanged: the same buttons in the same places, the same lists.
+
+### The system (client/style.css)
+- **Tokens** on `:root`: the eleven colours (ink, navy, navy2, navy3, gold, cream, dim, money, danger, info, heat), the
+  see-through steps made from them (glass, shade, scrim, gold washes), the six type sizes 12 / 14 / 16 / 20 / 28 / 40
+  (`body.touch` lifts the smallest to 14), the radii 4 / 10 / round, the spacing 4 / 8 / 12 / 16 / 24, the 44 / 48 px
+  targets, the motion 150 / 200 / 250 ms with one easing. "What things are" colours (a pad's buttons, a casino's felt
+  and cards, the map's sea, the rail and ferry lines, an arcade cabinet's neon) are tokens too.
+- **Parts**: `.panel` and `.mhead`, the list row (`.row` / `.opt`), `.btn` / `.btn-1` / `.btn-x` / `.ibtn` / `.x`,
+  `.chip` and the key chip (`.kchip`, `.g-key`, `.g-touch`), `.toggle`, `.slider`, `.stepper`, `.tabs` / `.tab`, `.seg`,
+  `.field`, and for coming and going `.enter`, `.out` and `.foldable` (a compact and an expanded state, `.open`). The
+  existing panels use them by selector list, so their markup and the tests that read it stay as they were.
+- **No literals in the rules**: every colour, type size and radius is a token. test/uitokens.test.js checks it, here
+  and in the CSS the lazily loaded panels carry (director.js, devmenu.js, spectator.js, creator.js, deathscreen.js),
+  checks the two faces are the shipped ones, and that the UI's canvas text uses them.
+- **One exception, for UI-4**: the HUD's small readouts (bank, status, faction, clock, the weapon line on a phone) use
+  `--fs-hud` (12 px) on a phone as well - at 14 px they pushed the top-right column onto the prompt and the notes onto
+  the pills (test/hudlayout.test.js). UI-4 lays the HUD out again and retires it.
+- **Moved out of the page's stylesheet**: the debug menu's look into client/devmenu.js and the free camera's into
+  client/spectator.js (both load only when used); the old debug side panel's dead rules dropped.
+
+### Sizes
+- client/style.css: **134,131 -> 114,897 bytes** (30 -> 23 KB as sent).
+- Title screen assets: **273 -> 241 KB** (budget 290): Anton (26 KB) is no longer shipped - assets/fonts/Anton-Regular.woff
+  and its licence are removed - and index.html preloads Barlow Condensed SemiBold instead.
+- The page: 497.5 -> 497.7 KB (budget 498, not raised): the canvas font names and the notes' fade. The renderer is untouched (400).
+
+### HUD coverage (the owner's UX bar)
+The capture audit now measures how much of the screen the HUD paints over the game (`coverage`: hud, the middle third,
+and everything over the world with panels open), before -> after, per size:
+- Over the eleven in-game states (on foot, the prompt, wanted, a taxi job, driving, a boat, the heli and the plane, the
+  horse and two bikes), the average share HUD covers:
+  - desk: 7.0 -> 7.8 % (the middle third 0.5 -> 0); the rise is the notes in Barlow 16 (were the pixel face at 14) and
+    the prompt at 20, the mockups' sizes;
+  - land: 34.4 -> 33.2 % (the middle third 9.0 -> 6.4);
+  - port: 35.7 -> 34.7 % (the middle third 9.2 -> 7.4).
+- Most of a phone's share is the touch controls and the sticks (UI-2's to bring down) and the top band (UI-4's).
+- Targets under 44 px on touch, from the audit: the bag 44 -> 9, settings 18 -> 0, pause 12 -> 0, controls 12 -> 0,
+  the debug page 778 -> 1, the title's settings 8 -> 1.
+
+### Checked
+- Every screen in cap.py's list at desk 1440x900, land 844x390 and port 390x844, before and after
+  (scratchpad/ui1-shots/).
+- Tests: hudlayout, hudlayers, titlemenu, phones, director, loadorder, gamepad, touchair, spawnmap, lazypage,
+  startfresh, campfire-ui, crush, fishing, homeart, homeprompt, jobway, kbdrive, shadowing, worldmap, devtp, mapwindow,
+  worldframe, perf and the new uitokens: 94 / 94 pass. `node tools/perf.mjs`: all within budget.
+
+### Left for later phases
+- The pause list on a phone on its side shows five lines, not six (its lines are 44 px now); the hub (UI-3) replaces it.
+- `--fs-hud` (above), the round HUD buttons' look and the touch buttons' places are UI-2 / UI-3 / UI-4's.
+- Seen while capturing, not from this change: the renderer's foraging pass can throw "Cannot read properties of
+  undefined (reading 'k')" (client/art2/game/host.js `_forage`: its cached grid `_fgrid` indexes an older forage list
+  after the list changes), which shows "Something went wrong drawing the game" once.
+## 2026-10-24 - ui2: the touch controls by slots, and aiming by dragging FIRE (UI overhaul, phase 2)
+
+The approved overhaul's decision 2 (the mockups LandFoot, LandDrive, PortFoot and PortHeli). The touch controls had
+grown one button at a time, each placed by its own `calc()` offset in style.css, with a fixed aim stick bottom right,
+its FIRE ON pill and a row of small pills by the minimap. Now there is one arc on the right whose slots each state
+fills, and FIRE is dragged to aim.
+
+### The layout (client/touchslots.js, shared/touchcontrols.js)
+- **The left 40% is the move stick's**: it comes up where the thumb lands (from 36% of the height down on its side,
+  from the middle down upright). Nothing else sits there.
+- **The arc on the right**: fixed slots **1 FIRE** (80 px, red), **2 ROLL**, **3 ACT** (gold), **4 CAR** (60 px, round),
+  two **context slots C1 / C2** (an orange dashed rim) and three small **utility slots U1-U3** (ITEMS, LIGHT, COP CAR).
+  C and U are rounded squares, so RELOAD, GALLOP and COP CAR fit inside them. Every button has an icon and its label.
+- **Each state fills the slots** (`TOUCH_STATES`; a button shows only while it does something, and the same role
+  always sits in the same slot):
+  - on foot: HIT, ROLL, ACT, CAR, BLOCK (with fists, a bat or a blade);
+  - armed: FIRE, AIM, RELOAD;
+  - carrying a crate: THROW in FIRE's slot;
+  - at the wheel: FIRE (only with a gun), BRAKE, ACT (only with something to do), EXIT, HORN (SIREN in a police car,
+    a fire engine or an ambulance), RELOAD with a gun;
+  - a passenger: FIRE, ACT, EXIT, RELOAD;
+  - flying: CLIMB / DOWN as one rocker in C1 / C2, EXIT, FIRE (a gun or the gunship's missiles);
+  - on a boat: as at the wheel;
+  - on a horse: STOP, OFF, GALLOP;
+  - on a board: TRICK, OLLIE, OFF;
+  - surfing: AIR;
+  - swimming: ACT, CAR;
+  - at home: ACT.
+  
+  ITEMS shows while there's something in the bag, LIGHT while you own a light, COP CAR while you can call one.
+- **Placed per orientation from one table** (`GEO`, centres in from the bottom-right corner at a phone's 390 px short
+  side), scaled to the room inside the safe areas: 0.86x on a 360 px phone, up to 1.3x on a tablet, never under 44 px.
+  The safe areas are read from `env(safe-area-inset-*)`. The job line keeps left of the arc (`--arc-w`). **The
+  per-button `calc()` offsets are gone from style.css**, and so are the old pills under the minimap, the WPN button
+  (the weapon plate top right is the switch on touch: tap for the next weapon, hold to pick) and the hidden MAP button.
+- **Kept clear of you**: nothing of the arc is over the middle of the screen (a box a third of the width and a quarter
+  of the height round you). Upright, all of it is right of the middle, and the top band and the middle stay clear.
+- **They dim when left alone** (5 s without a touch, to 50%) and come straight back at a touch.
+- One button per action stays in index.html's `#tbtns`, so client/hud.js still pulses the one the prompt names
+  (green, red for a crime), and the cinematic bar and the knocked-out screen still put them away.
+
+### Drag-to-aim FIRE (client/input.js, shared/touchcontrols.js touchAim)
+- **A tap fires at the auto-target.** There was no aim assist before: a tap fired where you faced, or along the aim
+  stick's last aim. Now it fires at the nearest person standing ahead in reach (within 0.7 rad either side of where you
+  face; all round at the wheel, not anyone aboard with you; never your crew or the down). With nobody there it fires
+  where you face, and a drive-by goes straight ahead.
+- **Press and drag** from FIRE aims the way you drag (past a 12 px dead zone) and fires while held, with a short aim
+  line from you (110 px on touch). **Letting go stops.** The aim stays for 0.7 s, so the next tap fires the same way.
+- **AIM** (C1 with a gun out) does the same without firing. It is the right mouse button's place: a gun held on a
+  shop's clerk for a robbery, which the aim stick did before. **BLOCK** (C1 with fists, a bat or a blade) is held to
+  guard; it replaces holding the aim stick short of its ring.
+- **The aim stick, the FIRE ON pill and its setting are gone.** Settings' "Touch: aim stick outer ring fires" is
+  removed and `touchEdgeFire` is dropped from what a browser kept. The pad's "right stick full push fires" is
+  unchanged. Keyboard and gamepad are unchanged.
+- **Golf, hoops, bowling, tennis, the fire hose, the bow**: drag FIRE wherever the aim stick was used. There is no
+  auto-target by your golf ball, on a court or a lane, with a crate, fishing or on a board, so a golf shot still starts
+  aimed at the flag. On a board FIRE is TRICK and doesn't drag (the stick picks the trick). "DRAG TO AIM" shows under
+  FIRE the first five times a gun comes out, for 8 s each time.
+
+### Page weight
+- The slot tables, the aiming and the placing load with the touch controls (shared/touchcontrols.js,
+  client/touchslots.js: a dynamic import the first time the device is touch), not with the page. The page stays at
+  497.7 KB (budget 498, unchanged). style.css is smaller: 22 KB gzipped (it was 23).
+
+### Tests
+- test/hudlayout.test.js: every touch state on every screen of the HUD page (844x390, 740x360, 390x844, 1024x768,
+  1280x720, 1920x1080; the six H70 states plus unarmed, horse, board, boat, swimming, passenger, surfing, home). It
+  checks that no two controls overlap, that each is 44 px or more, that nothing is in the left 40% or over the middle
+  or on the HUD (the minimap, the vitals, the cash, the weapon, the round buttons), that upright everything is right of
+  the middle, and that each slot holds what shared/touchcontrols.js says it does.
+- test/touchslots.test.js (new): the slot contents per state and the same role in the same slot; every action's
+  button, binding, icon and README row; the geometry on eleven sizes, with and without a notch's safe areas; touchAim
+  (a tap at the auto-target, a drag's angle and FIRE, AIM without FIRE, letting go stops, golf keeps its aim); the
+  auto-target; the angle and the bits on the wire. In a real headless page, touches on FIRE and AIM go through
+  client/input.js's sample(): a tap fires, a drag aims and fires while held, letting go stops.
+- test/touchair.test.js reads the slot geometry (the rocker clear of FIRE, ACT, EXIT and ITEMS; BRAKE, HORN and RELOAD
+  put away in the air). test/kbdrive.test.js and test/gamepad.test.js check that the aim stick and FIRE ON are gone
+  cleanly.
+- Captured on the dev server (World v3), before and after, every touch state at 844x390 and 390x844: ui2-shots in the
+  session's scratchpad.
