@@ -335,7 +335,8 @@ export class World {
     }
   }
   broadcast(ev) { this.globalEvents.push(ev); }
-  notify(player, text, tone = 'info') { if (player && player.conn) player.toasts.push({ text, tone }); }
+  // short: the one line the HUD shows of a long note (the whole of it goes to the phone's Log - client/notelog.js)
+  notify(player, text, tone = 'info', short = '') { if (player && player.conn) player.toasts.push(short ? { text, tone, short } : { text, tone }); }
 
   profile() {
     const out = { net: +this.netMs.toFixed(2) };

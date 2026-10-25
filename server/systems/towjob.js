@@ -37,7 +37,7 @@ export function start(world, p, yard = null) {
   p.job = { type: 'towjob', stage: 'wait', truck: 0, base: yard, nextAt: world.time + TOWJOB.firstS, expires: world.time + TOWJOB.shiftS, done: 0, call: null, text: 'Tow truck: waiting for a call' };
   const v = jobs.workTruck(world, p, yard, 'towtruck', { label: yard.name });
   if (!v) { p.job = null; return 'No room to park a tow truck there.'; }
-  world.notify(p, `You drive a tow truck out of ${yard.name}: it's the green ring. Calls come over the phone - back up to the car until your tail touches it, and the winch does the rest.`, 'good');
+  world.notify(p, `You drive a tow truck out of ${yard.name}: it's the green ring. Calls come over the phone - back up to the car until your tail touches it, and the winch does the rest.`, 'good', 'Tow shift: your truck is the green ring');
   p.meDirty = true;
   store.touch();
   return null;

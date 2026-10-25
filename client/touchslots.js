@@ -77,6 +77,12 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     geo = slotGeometry(W, H, safe());
     // (how far in from the right the arc reaches: the job line keeps left of it - style.css)
     document.documentElement.style.setProperty('--arc-w', `${W - Math.min(...['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2'].map((k) => geo[k].x)) + 8}px`);
+    // the prompt's slot (style.css #hud-low, UI-4): on its side over the arc's lowest buttons and left of the rest; upright
+    // under you, left of the utility column
+    const R = document.documentElement.style, X = (ks) => Math.min(...ks.map((k) => geo[k].x)), Y = (ks) => Math.min(...ks.map((k) => geo[k].y));
+    if (H > W) R.setProperty('--lo-r', `${W - X(['u2', 'u3', 'u4']) + 8}px`);
+    else { R.setProperty('--lo-r', `${W - X(['roll', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['c1', 'roll']) + 6}px`); R.setProperty('--lo-c', `${W - X(['c1']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1)
+    if (H > W) R.setProperty('--lo-c', `${W - X(['u1', 'c1', 'c2', 'act', 'roll']) + 8}px`);   // (upright: the hint strip left of the arc, over the move stick)
     if (cur) place();
   }
   function place() {

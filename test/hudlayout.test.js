@@ -8,7 +8,7 @@
 // skipped when there's none - set CLA_CHROME to one).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { problems, scenarios, findChrome, measureAll, FLAGS } from './hudpage.js';
+import { problems, scenarios, findChrome, measureAll, FLAGS, SIZES } from './hudpage.js';
 import { touchSlots } from '../shared/touchcontrols.js';
 
 test('the prompt, the notes, the job line, the cruiser hint and the bars are readable and clear of the buttons on every screen', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
@@ -26,7 +26,7 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   // middle of the screen (you and the space round you), nor on the HUD (the minimap, the vitals, the cash, the weapon,
   // the round buttons); held upright all of them right of the middle; and each slot holding what shared/controls.js
   // says it does for that state
-  const ctl = [], HUDK = ['minimap', 'vitals', 'status', 'rclock', 'weapon', 'money', 'bank', 'stars', 'clock', 'faction'];
+  const ctl = [], HUDK = ['minimap', 'vitals', 'status', 'rclock', 'weapon', 'money', 'bank', 'vchip', 'stars', 'clock'];
   const on = (a, b) => a.x0 < b.x1 - 2 && b.x0 < a.x1 - 2 && a.y0 < b.y1 - 2 && b.y0 < a.y1 - 2;
   for (const r of all.filter((q) => q.sc.dev === 'touch')) {
     const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, ks = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'stick-l'), tb = ks.filter((k) => k.name.startsWith('tb.'));
@@ -65,6 +65,50 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   assert.deepEqual(row, [], row.slice(0, 20).join('\n'));
   const you = all.filter((r) => !/^740x360|^844x390 (kbm|pad)|^1024x768 (kbm|pad)/.test(`${r.sc.w}x${r.sc.h} ${r.sc.dev}`)).flatMap((r) => problems(r, { you: true }));
   assert.deepEqual(you, [], you.join('\n'));
+  // UI-4, the HUD's information (the owner's bar: the view first, information that comes and goes):
+  const info = [], forms = new Set();
+  const HUDKEEP = ['minimap', 'vitals', 'status', 'rclock', 'weapon', 'money', 'bank', 'vchip', 'stars', 'clock'];
+  for (const r of all) {
+    const { w, h, dev, st } = r.sc, tag = `${w}x${h} ${dev} ${st}`, touch = dev === 'touch';
+    const third = { x0: w / 3, x1: w * 2 / 3, y0: h / 3, y1: h * 2 / 3 }, mid = { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 };
+    const get = (n) => r.read.find((b) => b.name === n);
+    // the prompt: one slot - by you (under you) with a keyboard or a pad, above the thumbs on touch; never on you
+    const pr = get('prompt');
+    if (pr) {
+      if (!touch && (Math.abs((pr.x0 + pr.x1) / 2 - w / 2) > w / 4 || pr.y0 < h / 2)) info.push(`${tag}: the prompt isn't by you (${pr.x0},${pr.y0}-${pr.x1},${pr.y1})`);
+      if (touch && h > w && pr.y0 < h / 2) info.push(`${tag}: the prompt above you upright (y ${pr.y0})`);
+      if (touch && w > h && pr.y1 < h / 2) info.push(`${tag}: the prompt not low on its side (y ${pr.y1})`);
+    }
+    // the job card: under the minimap, never over the middle; big or a one-line chip (44 px to tap on touch)
+    const jb = get('job');
+    if (!jb) info.push(`${tag}: no job card`);
+    else {
+      forms.add(`${w}x${h} ${jb.form}`);
+      const mm = r.keep.find((k) => k.name === 'minimap');
+      if (jb.y0 < mm.y1) info.push(`${tag}: the job card isn't under the minimap`);
+      if (on(jb, mid)) info.push(`${tag}: the job card over the middle (${jb.x0},${jb.y0}-${jb.x1},${jb.y1})`);
+      const jh = jb.y1 - jb.y0;
+      if (jb.form === 'chip' && (jh > (touch ? 48 : 40) || (touch && jh < 44))) info.push(`${tag}: the job chip ${jh} px tall`);
+      if (jb.form === 'big' && jh > 132) info.push(`${tag}: the job card ${jh} px tall`);
+    }
+    // the notes: two at most, one line each, never in the middle third
+    const notes = r.read.filter((b) => b.name.startsWith('note'));
+    if (notes.length > 2) info.push(`${tag}: ${notes.length} notes`);
+    for (const n of notes) {
+      if (n.y1 - n.y0 > 34) info.push(`${tag}: ${n.name} more than a line (${n.y1 - n.y0} px)`);
+      if (on(n, third)) info.push(`${tag}: ${n.name} in the middle third (${n.x0},${n.y0}-${n.x1},${n.y1})`);
+    }
+    // the hint strip clear of the middle too (it comes and goes over the bottom)
+    const hs = get('hints');
+    if (hs && on(hs, mid)) info.push(`${tag}: the hint strip over the middle`);
+    // 14 px the smallest words on a phone (UI-1's 12 px exception for the HUD's readouts is gone)
+    if (touch && r.minFont < 14) info.push(`${tag}: ${r.minFont} px words (${r.minAt})`);
+    // the HUD's own parts clear of each other (the minimap, the vitals and status, the top-right column, the row)
+    const hk = r.keep.filter((k) => HUDKEEP.includes(k.name) || k.name.startsWith('b-'));
+    for (const [i, a] of hk.entries()) for (const b of hk.slice(i + 1)) if (on(a, b) && !(a.name === 'minimap' && b.name === 'rclock')) info.push(`${tag}: ${a.name} on ${b.name}`);
+  }
+  for (const [w, h] of SIZES) for (const f of ['big', 'chip']) assert.ok(forms.has(`${w}x${h} ${f}`), `the job card ${f} measured at ${w}x${h}`);
+  assert.deepEqual(info, [], info.slice(0, 40).join('\n'));
 });
 
 // the prompt's crime marks (hud.js crimeMarks: the key chip red with a "!", a felony ringed; the touch button red - no

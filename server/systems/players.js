@@ -705,9 +705,9 @@ export function findInteraction(world, p) {
   if (ped.surf && ped.surf.st !== 'pad') return surf.interaction(world, p);   // (riding a wave: what the buttons do - surf.js)
   if (p.prison) return prison.interaction(world, p);   // (doing time on Prison Island: the wall - prison.js)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
-  if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
+  if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Pick a weapon at the armory, or go out to the motor pool' : 'Talk to the front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)
-  if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
+  if (ped.hidden) return { label: 'Open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
   if (ped.ug && !ped.vehId) return fishing.interaction(world, p) || underground.interaction(world, p) || fishHere(world, p, ped);   // (down the sewers or in the cave: only what's down there)

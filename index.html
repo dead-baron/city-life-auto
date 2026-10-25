@@ -22,34 +22,41 @@
   <canvas id="world" class="hidden"></canvas>
   <canvas id="view"></canvas>
 
+  <!-- the HUD (UI-4): the minimap and the vitals top left, the job card under them; MENU · PHONE · MAP; the cash, the
+       vehicle, the stars and what you hold top right; the notes; the prompt, the hint strip (client/hudinfo.js) -->
   <div id="hud" class="hidden">
+    <div id="radar-wrap">
+      <canvas id="radar" width="168" height="168"></canvas>
+      <div id="rclock"><img id="rc-tod" class="pi" alt=""><span id="rc-time"></span><img id="rc-wx" class="pi" alt=""></div>
+    </div>
+    <div id="vitals">
+      <div class="vrow hp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg><span class="vl">Health</span><div class="vbar"><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
+      <div class="vrow st"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span class="vl">Stamina</span><div class="vbar"><div id="st-fill" class="fill st"></div></div><b id="st-n">100</b></div>
+    </div>
+    <div id="status"></div>
+    <div id="job" class="hidden"></div>
+    <div id="hud-btns"><button id="b-menu" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>MENU<span class="kchip kbm-only">ESC</span></button><button id="b-phone" type="button" aria-label="Phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>PHONE<span class="kchip kbm-only">P</span></button><button id="b-map" type="button" aria-label="Map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>MAP<span class="kchip kbm-only">M</span></button></div>
     <div id="hud-tr">
-      <div id="weapon"><div id="w-icon"></div><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div></div>
       <div id="money"><span id="cash">$0</span><span id="hot" class="hidden"></span></div>
-      <div id="bank" class="dim">bank $0</div>
+      <div id="bank">BANK $0</div>
+      <div id="vchip" class="hidden"></div>
       <div id="stars"></div>
+      <div id="weapon"><div id="w-icon"></div><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div></div>
       <div id="clock"></div>
-      <div id="faction"></div>
     </div>
     <div id="hud-msg">
       <div id="trainbar" class="hidden"><b id="tb-where"></b><div class="rob-bar hidden" id="tb-crack"><i id="tb-fill"></i></div><span id="tb-next"></span></div>
       <div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div>
-      <div id="helpbox" class="hidden"></div><div id="toasts"></div>
     </div>
-    <div id="hud-sub"><div id="cruiser-hint" class="hidden"></div><div id="job" class="hidden"></div></div>
+    <div id="toasts"></div>
+    <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="helpbox" class="off" aria-live="polite"></div></div>
+    <div id="hints" class="off"></div>
     <div id="edgewarn" class="hidden"></div>
-    <div id="radar-wrap">
-      <canvas id="radar" width="168" height="168"></canvas>
-      <div id="rclock"><img id="rc-tod" class="pi" alt=""><span id="rc-time"></span><img id="rc-wx" class="pi" alt=""></div>
-      <div id="vitals"><div class="vbar"><div id="hp-fill" class="fill hp"></div></div><div class="vbar"><div id="st-fill" class="fill st"></div></div></div>
-      <div id="status"></div>
-    </div>
     <div id="w-carry"></div>
     <div id="fishbar" class="hidden"></div>
     <div id="net"></div>
-    <div id="hud-btns"><button id="b-menu" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>MENU<span class="kchip kbm-only">ESC</span></button><button id="b-phone" type="button" aria-label="Phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>PHONE<span class="kchip kbm-only">P</span></button><button id="b-map" type="button" aria-label="Map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>MAP<span class="kchip kbm-only">M</span></button></div>
   </div>
-  <span id="hp-text" class="hidden"></span>
+
 
   <div id="touch" class="hidden">
     <div id="zone-l"></div>
@@ -86,8 +93,7 @@
   <div id="arcade" class="hidden"><div class="arc-frame"><canvas id="arc-cv" width="256" height="224"></canvas><div id="arc-hint">Esc / B to leave the cabinet</div></div></div>
   <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-board" class="hidden"></div><div id="m-money"></div><div id="m-opts"></div></div></div>
 
-  <div id="death" class="hidden"><h1 id="d-title">WASTED</h1>
-    <div id="d-panel"><div id="d-head"><b id="d-tag">WASTED</b><span id="d-cause"></span><span id="d-timer"></span><span id="d-fold"></span><button id="d-hide" type="button" title="Hide the choices to watch"></button></div><div id="d-acts"><div id="d-help"></div><div id="d-spawn"></div></div></div></div>
+  <div id="death" class="hidden"><h1 id="d-title">WASTED</h1></div>   <!-- (the panel and its map: client/deathscreen.js) -->
   <div id="district"></div>
 
   <div id="dev" class="hidden"></div>

@@ -113,7 +113,7 @@ export function start(world, p, pad = null) {
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (yours: not theft - safety.js / vehicles.js mineOf; kept for the shift)
   v.returnTo = { x: spot.x, y: spot.y, label: pad.name };
   p.job = { type: 'sar', stage: 'wait', truck: v.id, base: { x: pad.x, y: pad.y, name: pad.name }, nextAt: world.time + SAR.firstS, expires: world.time + SAR.shiftS, saved: 0, text: 'Search & rescue: on call - stand by for the first call' };
-  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital - land on its roof (or the helipad in its yard).`, 'good');
+  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital - land on its roof (or the helipad in its yard).`, 'good', 'Rescue pilot on call: your helicopter is the green ring');
   p.meDirty = true;
   store.touch();
   return null;

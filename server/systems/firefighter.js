@@ -227,7 +227,7 @@ export function start(world, p, station = null) {
   const v = jobs.workTruck(world, p, st, 'firetruck', { label: st.name });
   if (!v) { p.job = null; return 'No room to park the engine there.'; }
   v.sirenOn = false;
-  world.notify(p, `You're on the crew at ${st.name}: your fire engine's the green ring. Calls come over the phone - H for the siren, then get out and hold fire near the engine for the hose.`, 'good');
+  world.notify(p, `You're on the crew at ${st.name}: your fire engine's the green ring. Calls come over the phone - H for the siren, then get out and hold fire near the engine for the hose.`, 'good', 'Firefighter shift: your engine is the green ring');
   p.meDirty = true;
   store.touch();
   return null;

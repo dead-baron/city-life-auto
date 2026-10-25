@@ -947,8 +947,8 @@ export class World2 {
   // Shop symbols over the doors you're near (the owner, 10-08, SI1: "Shop symbols over entrances when close (subtle, can
   // be turned off)"): the map's icon for each place within a few steps of you, on foot, floating over where you'd stand
   // to go in - fading in as you come close and out as you walk on; off in Settings (settings.shopMarks false). g: the
-  // overlay, in world coordinates; icon(g, name, x, y, size) and the icons by kind come from the page (pixicons.js,
-  // mapwaypoints.js KIND_ICON).
+  // overlay, in world coordinates; icon(g, name, x, y, size) and the icons by kind come from the page (client/storeicons.js
+  // drawBadge and STORE_ICON: a round badge, a gold rim, the trade's glyph - UI-4).
   shopMarks(g, F, icon, kinds) {
     const S = this.S, sp = F.sp, m = this.map, list = m.pois || [];
     if (!S.playing || !S.pred || S.pred.kind !== 'ped' || (S.me && S.me.dead) || F.insideB) return;
@@ -970,12 +970,10 @@ export class World2 {
     for (const p of near.list) {
       const d = Math.hypot(p.x - sp.x, p.y - sp.y), k = d < SHOP_NEAR ? 1 : Math.max(0, 1 - (d - SHOP_NEAR) / (SHOP_FAR - SHOP_NEAR));
       if (k <= 0.02) continue;
-      const y = p.y - (p.door ? 46 : 58) + Math.sin(F.now * 2.2 + p.x * 0.013) * 1.5;
+      const y = p.y - (p.door ? 52 : 64) + Math.sin(F.now * 2.2 + p.x * 0.013) * 1.5;
       g.save();
-      g.globalAlpha = 0.85 * k;
-      g.fillStyle = 'rgba(13,22,45,.82)'; g.strokeStyle = 'rgba(226,189,87,.75)'; g.lineWidth = 1.5;
-      g.beginPath(); g.roundRect ? g.roundRect(p.x - 11, y - 11, 22, 22, 5) : g.rect(p.x - 11, y - 11, 22, 22); g.fill(); g.stroke();
-      icon(g, kinds[p.kind], p.x, y, 14);
+      g.globalAlpha = k;
+      icon(g, kinds[p.kind], p.x, y, 30);   // (the round gold-rimmed badge: client/storeicons.js)
       g.restore();
     }
   }

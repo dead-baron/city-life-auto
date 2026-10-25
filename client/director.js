@@ -168,7 +168,7 @@ export function makeDirector(S, api) {
 
   // ---- the page's own bits: the clean screen's rule, the bars, the fade ----
   const css = document.createElement('style');
-  css.textContent = `body.cine-clean #hud, body.cine-clean #touch, body.cine-clean #wheel, body.cine-clean #menu, body.cine-clean #toasts { display: none !important; }
+  css.textContent = `body.cine-clean #hud > :not(#hints), body.cine-clean #touch, body.cine-clean #wheel, body.cine-clean #menu, body.cine-clean #toasts { display: none !important; }
 body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .cine-bar { position: fixed; left: 0; right: 0; height: 0; background: var(--ink); z-index: 60; pointer-events: none; transition: height .5s ease; }
 #cine-fade { position: fixed; inset: 0; background: var(--ink); opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
@@ -208,7 +208,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   function setClean(on) {
     D.clean = !!on;
     document.body.classList.toggle('cine-clean', D.clean);
-    if (D.clean && !shown) api.toast('Clean screen: F2 brings the HUD back, F4 the cinematic panel, F8 takes a picture.', 'info');
+    // (what the keys do: the cinematic hint strip, the first few times - client/hudinfo.js, which sees D.clean)
     render();
   }
   function setMode(m, k0 = 'tour') {

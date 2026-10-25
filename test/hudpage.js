@@ -11,7 +11,7 @@ import { extname } from 'node:path';
 const ROOT = new URL('../', import.meta.url);
 const INDEX = readFileSync(new URL('index.html', ROOT), 'utf8');
 const cut = (from, to) => { const a = INDEX.indexOf(from), b = INDEX.indexOf(to, a); if (a < 0 || b < 0) throw new Error(`index.html: ${from}`); return INDEX.slice(a, b); };
-const HUD = cut('<div id="hud"', '<span id="hp-text"');
+const HUD = cut('<div id="hud"', '<div id="touch"');
 const TOUCH = cut('<div id="touch"', '<div id="interior"');
 
 // the sizes asked for (H70): desktops, phones on their side and upright, a tablet; each with the devices it plays with
@@ -51,13 +51,13 @@ export function scenarios() {
 export const TEXT = {
   prompt: 'Pull the driver out of the Police Cruiser - Carjacking a police vehicle (felony)',
   shop: 'Shop at Corner Mart #12',   // (in the middle of a robbery you're in the shop: its menu's the prompt)
-  notes: [
+  notes: [   // (the HUD shows the two newest, one line each - hud.js toast, notelog.js noteLine)
     'Coast guard: your patrol boat is waiting at the Liberty Bay docks (the green ring). Calls come over the radio - smugglers running contraband along the coast, people in the water.',
     'Snatch-and-grab! A mugger grabbed a purse - stop them (no penalty).',
     'You were seen: Vehicle theft. +10 heat - the police are looking for a Sedan.',
     'Wanted level lost - the police have stopped looking for you.',
   ],
-  job: '▶ Fire call: a grass fire in Greenfield Park - it\'s spreading: stop the front before it reaches the houses',
+  job: { k: 'Firefighter', n: 2, u: 'Call', step: [1, 2], text: 'Fire call: a grass fire in Greenfield Park - it\'s spreading: stop the front before it reaches the houses', x: 1, y: 1, s: 'shift' },
   cruiser: 'Cruiser on its way to you - it\'s the blue square on your map',
 };
 
@@ -77,16 +77,23 @@ if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
 const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
-const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('hidden'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
-if (sc.st === 'custody') pr.classList.add('hidden');   // (held: nothing to Act on)
-// (the notes as client/hud.js lays them: the words in a .tx box, paged by client/notepages.js when they don't fit -
-// imported with the page's script, not after it: the headless page's clock doesn't wait for an import made later)
-import * as NP from '/client/notepages.js';
+const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
+if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
+// (the HUD's own markup for the status line, the job card and the hint strip: client/hudinfo.js; the notes as hud.js
+// lays them - one line each, the two newest; the touch slots as client/touchslots.js places them)
 import * as TS from '/client/touchslots.js';
+import * as HI from '/client/hudinfo.js';
+import { noteLine } from '/client/notelog.js';
 const slots = sc.dev === 'touch' ? TS.makeSlots($('tbtns')) : null;
 if (slots) slots.set(FL);
-for (const [i, n] of (sc.notes || T.notes).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn', 'bad', 'good'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = n; $('toasts').appendChild(el); }
-$('job').textContent = T.job; $('job').classList.remove('hidden');
+for (const [i, n] of (sc.notes || T.notes).slice(-2).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = noteLine(n); if (tx.textContent !== n) el.classList.add('more'); $('toasts').appendChild(el); }
+// the job card: big (the step just in) in half the states, the one-line chip in the rest
+const JOBF = ['foot', 'air', 'rob', 'unarmed', 'board', 'swim', 'home'].includes(sc.st) ? 'big' : 'chip';
+$('job').className = JOBF; $('job').innerHTML = HI.jobHtml(T.job, { big: JOBF === 'big', dist: '640 M', time: sc.dev === 'touch' ? '9:58' : 'SHIFT 9:58' });
+// the vehicle chip in a vehicle; the hint strip for what you're doing
+const VST = { veh: 'drive', air: 'air', horse: 'horse', boat: 'boat', board: 'board', swim: 'swim' }[sc.st];
+if (FL.inVeh) { $('vchip').innerHTML = '<b>' + (sc.st === 'air' ? 'Skylark Helicopter' : 'Police Cruiser') + '</b>' + (sc.st === 'air' ? '<span class="vc-alt">ALT 31 M</span>' : '') + '<span class="vc-spd">88 KM/H</span>'; $('vchip').classList.remove('hidden'); }
+if (VST) { $('hints').innerHTML = HI.hintHtml(HI.hintStrip(VST, sc.dev)); $('hints').classList.remove('off'); }
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
 if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
@@ -94,8 +101,10 @@ $('w-icon').innerHTML = '<canvas width="96" height="48"></canvas>';
 $('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
 $('cash').textContent = '$248,500'; $('bank').textContent = 'bank $1,250,000';
 $('stars').innerHTML = '<span class="on">★</span><span class="on">★</span><span>★</span><span>★</span><span>★</span>'; $('stars').classList.add('wanted');
-$('clock').textContent = '13:24 ☀'; $('faction').className = 'criminal'; $('faction').textContent = sc.st === 'police' ? 'POLICE · SERGEANT' : 'CITIZEN · 2 FELONIES';
-$('status').textContent = 'EXP 1,250 · SAM 40';
+$('clock').textContent = '13:24 · RAIN';
+$('status').innerHTML = HI.statusHtml(sc.st === 'police' ? { faction: 'enforcer', rank: 'Sergeant', sam: 40, cexp: 1250, bleeding: true } : { faction: 'citizen', sam: 40, cexp: 1250, felonies: 2, bleeding: true, buffs: { coffee: 40 } });
+if (sc.st === 'unarmed') $('weapon').classList.add('compact');
+$('hp-n').textContent = '82'; $('st-n').textContent = '65';
 $('rc-time').textContent = '13:24';
 for (const el of document.querySelectorAll('#hud *, #touch *')) el.style.animation = 'none';
 const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
@@ -103,30 +112,22 @@ const box = (el, name) => { const r = el.getBoundingClientRect(); return { name,
 function measure() {
   const read = [], keep = [];
   if (shown(pr)) read.push(box(pr, 'prompt'));
-  // (a note's pages: lost - words it never shows - when they don't fit and it isn't paged; whole - the last page ends on
-  // its last line)
-  document.querySelectorAll('#toasts .toast').forEach((el, i) => {
-    const tx = el.firstChild;
-    el.style.animation = 'none';
-    const life = NP.layNote(el, tx, tx.textContent), pages = NP.notePages(tx), lh = parseFloat(getComputedStyle(tx).lineHeight) || 14;
-    NP.stopNote(el);
-    NP.showPage(tx, pages - 1, false);
-    const end = tx.scrollTop + tx.clientHeight >= tx.scrollHeight - 1;
-    NP.showPage(tx, 0, false);
-    if (shown(el)) read.push({ ...box(el, 'note' + i), pages, life, lines: Math.round(tx.clientHeight / lh), lost: pages > 1 && (!el.classList.contains('paged') || !end) });
-  });
-  for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar']) if (shown($(id))) read.push(box($(id), id));
+  document.querySelectorAll('#toasts .toast').forEach((el, i) => { el.style.animation = 'none'; if (shown(el)) read.push({ ...box(el, 'note' + i), lines: Math.round(el.getBoundingClientRect().height / 20) }); });
+  for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar', 'hints']) if (shown($(id))) read.push({ ...box($(id), id), form: id === 'job' ? JOBF : undefined });
   keep.push(box($('radar'), 'minimap'));
   // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
   keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
-  for (const id of ['weapon', 'money', 'bank', 'stars', 'clock', 'faction']) if (shown($(id))) keep.push(box($(id), id));
+  for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id))) keep.push(box($(id), id));
   document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
   }
-  parent.postMessage({ sc, read, keep, state: slots && slots.state }, '*');
+  // the smallest words on the screen: every element with words of its own in the HUD and the touch controls
+  let minFont = 99, minAt = '';
+  for (const el of document.querySelectorAll('#hud *, #touch *')) { if (!shown(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue; const f = parseFloat(getComputedStyle(el).fontSize); if (f < minFont) { minFont = f; minAt = (el.id || el.className || el.tagName) + ' "' + el.textContent.trim().slice(0, 20) + '"'; } }
+  parent.postMessage({ sc, read, keep, state: slots && slots.state, minFont, minAt }, '*');
 }
 document.fonts.ready.then(() => setTimeout(measure, 100));
 `;

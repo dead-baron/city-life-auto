@@ -76,6 +76,14 @@ const START_CSS = `#creator.cc-start .cc-left, #creator.cc-start .cc-foot, #crea
   #creator .cc-pick { flex-direction: row; justify-content: center; }
   #creator .cc-pick .cc-big { min-height: var(--tap); font-size: var(--fs-3); gap: 10px; }
   #creator .cc-pick .cc-cust { font-size: var(--fs-2); gap: var(--s2); }
+}
+#creator .cc-count { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; }
+/* upright (UI-4): the looks two to a row, scrolling down - every one a swipe away, not one of twelve in a strip */
+@media (max-aspect-ratio: 4/5) {
+  #creator .cc-stages { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow-x: hidden; overflow-y: auto; max-height: 56vh; scroll-snap-type: y proximity; }
+  #creator .cc-stage { min-height: 0; padding: var(--s2) var(--s1); }
+  #creator .cc-stage .cc-th { width: 110px; height: 168px; }
+  #creator .cc-new { position: static; box-shadow: none; min-height: 120px; }
 }`;
 
 export function init(hooks) {
@@ -492,7 +500,7 @@ function renderPage() {
     // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
     // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
     const n = LK.STARTERS.length, rnd = startPick === n, nm = rnd ? 'this one' : esc(LK.STARTERS[startPick].name);
-    h = `<p class="cc-note">Pick who you'll be. You can change everything later from the pause menu (Appearance).</p><div class="cc-stages">`
+    h = `<p class="cc-note"><b class="cc-count">${n} LOOKS + RANDOM</b> Pick who you'll be. You can change everything later from the menu (Appearance).</p><div class="cc-stages">`
       + LK.STARTERS.map((s, i) => `<button class="cc-stage ${i === startPick ? 'on' : ''}" data-act="start" data-v="${i}">${th(s.look, i === startPick ? 'stageon' : 'stage')}<span class="cc-plate">${esc(s.name)}</span><small class="cc-sub">${esc(s.sub || '')}</small></button>`).join('')
       + `<button class="cc-stage ${rnd ? 'on' : ''}" data-act="start" data-v="random">${rnd ? th(look, 'stageon') : '<span class="cc-q">?</span>'}<span class="cc-plate">Random</span><small class="cc-sub">Surprise me</small></button>`
       + `<button class="cc-stage cc-new" data-act="new-char"><b>+</b><span>New character</span></button></div>`
@@ -570,12 +578,12 @@ function renderPage() {
       }).join('') + '</div>';
   }
   if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
-  const row0 = pg.querySelector('.cc-stages'), sl = row0 ? row0.scrollLeft : -1;
+  const row0 = pg.querySelector('.cc-stages'), sl = row0 ? row0.scrollLeft : -1, stp = row0 ? row0.scrollTop : 0;
   pg.innerHTML = h;
   // (the row keeps its place; opened, the picked one is brought into view. Not called `row`: that shadowed the row()
   // helper for the whole function, so every page that builds rows - Customize's tabs, the shops - threw before it drew)
   const stages = pg.querySelector('.cc-stages');
-  if (stages) { if (sl >= 0) stages.scrollLeft = sl; else { const on = stages.querySelector('.on'); if (on) stages.scrollLeft = on.offsetLeft - (stages.clientWidth - on.offsetWidth) / 2; } }
+  if (stages) { if (sl >= 0) { stages.scrollLeft = sl; stages.scrollTop = stp; } else { const on = stages.querySelector('.on'); if (on) { stages.scrollLeft = on.offsetLeft - (stages.clientWidth - on.offsetWidth) / 2; stages.scrollTop = on.offsetTop - (stages.clientHeight - on.offsetHeight) / 2; } } }
   want.length = 0;
   for (const el of pg.querySelectorAll('canvas[data-th]')) { const [TL, crop] = TH[Number(el.dataset.th)], Z = SIZES[crop] || SIZES.full; el.width = Math.round(Z[0] * dpr()); el.height = Math.round(Z[1] * dpr()); want.push([el, TL, crop]); }
   pumpThumbs();

@@ -24,6 +24,7 @@ import * as combat from './combat.js';
 import * as law from './law.js';
 import * as safety from './safety.js';
 import * as cargo from './cargo.js';
+import * as taxijob from './taxijob.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
@@ -1411,7 +1412,7 @@ export function interaction(world, p) {
       if (world.rails) { const rows = routeRows(world, st.name).sort((a, b) => a.eta - b.eta); eta = rows.length && Number.isFinite(rows[0].eta) ? rows[0].eta : null; nxt = rows.length ? rows[0].next[0] : null; }
       else { eta = nextTrainIn(world, si); nxt = sts[(si + 1) % sts.length].name.replace(/ Station$/, ''); }
       const e = eta == null ? null : Math.max(1, Math.round(eta));
-      return { label: `${st.name}: ${e == null ? 'trains every couple of minutes' : `next train in ${Math.floor(e / 60)}:${String(e % 60).padStart(2, '0')}`} - wait in line, F when it's in${nxt ? ` (to ${nxt})` : ''} · the route board`, run: () => readRouteBoard(world, p, st.name) };
+      return { label: `${taxijob.interaction(world, p) ? 'Check the trains and the taxi rank' : 'Read the route board'} at ${st.name} - ${e == null ? 'trains every couple of minutes' : `next train in ${Math.floor(e / 60)}:${String(e % 60).padStart(2, '0')}`}${nxt ? ` to ${nxt}` : ''}, F to board when it's in`, run: () => readRouteBoard(world, p, st.name) };
     }
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);
@@ -1459,7 +1460,8 @@ export function readRouteBoard(world, p, name) {
   p.conn.sendJSON({
     t: 'menu', poi: -1, title: `${name.replace(/ Station$/, '')} - where the trains go`,
     sub: 'Every line through here and the stops it runs on to. The platform clock shows when the next train is due.',
-    opts: rows.length ? rows.map((r) => ({ id: 'close', label: r.label, note: `${Number.isFinite(r.eta) ? (r.eta < 1 ? 'in now' : `next in ${Math.round(r.eta)}s`) + ' · ' : ''}${r.next.join(' → ')}` })) : [{ id: 'close', label: 'OK' }],
+    // (the station's taxi rank - its prompt is the board's, so the cab is offered here: UI-4; economy.js handleMenu)
+    opts: [...(taxijob.interaction(world, p) ? [{ id: 'cabcard', label: 'Drive a taxi from here', note: 'the rank issues a cab', shut: true }] : []), ...(rows.length ? rows.map((r) => ({ id: 'close', label: r.label, note: `${Number.isFinite(r.eta) ? (r.eta < 1 ? 'in now' : `next in ${Math.round(r.eta)}s`) + ' · ' : ''}${r.next.join(' → ')}` })) : [{ id: 'close', label: 'OK' }])],
     cash: p.profile.cash, bank: p.profile.bank,
   });
 }

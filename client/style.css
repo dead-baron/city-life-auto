@@ -42,7 +42,6 @@
   --ui: "Barlow Condensed", "Arial Narrow", sans-serif;
   --fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;
   --fs-row: var(--fs-4);
-  --fs-hud: 12px;   /* the HUD's small readouts (bank, status, faction, clock): 12 on a phone too till UI-4 lays the HUD out again */
   /* shape, space, motion */
   --r1: 4px; --r2: 10px; --r3: 999px;
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
@@ -148,94 +147,241 @@ input[type=range]:disabled { opacity: .4; }
 .foldable.open > .fold-body { grid-template-rows: 1fr; opacity: 1; }
 .foldable > .fold-head { cursor: pointer; }
 
-/* ==== the HUD ==== */
-#hud { position: absolute; inset: 0; pointer-events: none; font-size: var(--fs-2); }
+/* ==== the HUD (UI-4: the mockups DeskHud, LandFoot, LandDrive, PortFoot, PortHeli) ====
+   Top left the minimap and the vitals, the job card under them; top centre MENU · PHONE · MAP; top right the cash, the
+   vehicle chip, the stars and what you hold. The notes one line each, two at most (bottom left on a desktop, under the
+   row on a phone on its side, under the job upright); the prompt by you with a keyboard or a pad, in its slot above
+   the thumbs on touch, the hint strip under it. Nothing over the middle of the screen but the prompt. The insets: --sl,
+   --sr, --st (the top), --sb; --map the minimap's size. */
+#hud { position: absolute; inset: 0; pointer-events: none; font: 600 var(--fs-2) var(--ui); color: var(--cream);
+  --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 24px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 156px; --vbar: 115px; }
+.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: calc(10px + var(--corner-top)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --vbar: 72px; }
+body.portrait.touch #hud { --map: 88px; --vbar: 60px; }
+@media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --vbar: 80px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
-/* top right: what you hold, the cash, the bank, the stars, the clock, who you are */
-#hud-tr { position: absolute; right: max(16px, env(safe-area-inset-right)); top: 12px; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+
+/* the minimap in a gold ring; on a phone the clock on its foot */
+#radar-wrap { position: absolute; left: var(--sl); top: var(--st); width: var(--map); pointer-events: auto; }
+#radar { display: block; width: var(--map); height: var(--map); border-radius: var(--r3); border: 3px solid var(--gold); background: var(--navy); box-shadow: 0 0 0 2px var(--ink), 0 4px 14px var(--ink-a); cursor: pointer; }
+#radar-wrap::before { content: 'N'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
+#rclock { display: none; position: absolute; left: 50%; top: var(--map); transform: translate(-50%, -50%); z-index: 1; align-items: center; gap: var(--s1); height: 24px; padding: 0 7px; white-space: nowrap; pointer-events: none;
+  background: var(--panel-bg); border: 1px solid var(--gold); border-radius: var(--r1); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--lift); }
+#rclock img.pi { height: 12px; width: auto; }
+.touch #rclock { display: flex; }
+
+/* the vitals: an icon, the bar, the number (the words too on a desktop); the status line under them in plain words */
+#vitals { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 6px); display: flex; flex-direction: column; gap: 5px; }
+.vrow { display: flex; align-items: center; gap: 6px; }
+.vrow svg { flex: none; width: 16px; height: 16px; }
+.vrow.hp svg { fill: var(--danger); } .vrow.st svg { fill: var(--info); }
+.vrow .vl { width: 58px; font: 700 var(--fs-3) var(--ui); text-shadow: var(--halo-s); }
+.vrow b { min-width: 30px; font: 400 var(--fs-2) var(--pixel); text-align: right; text-shadow: var(--halo-s); }
+.vbar { position: relative; flex: none; width: var(--vbar); height: 10px; overflow: hidden; background: var(--shade); border-radius: var(--r1); box-shadow: 0 0 0 1px var(--ink); }
+.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r1); transition: width var(--t1); }
+.fill.hp { background: var(--danger); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
+@keyframes hplow { 50% { opacity: .55; } }
+.fill.st { background: var(--info); }
+.touch .vrow .vl { display: none; }
+#status { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 62px); display: flex; flex-wrap: wrap; gap: var(--s1) 6px; max-width: min(440px, calc(100vw - var(--sl) - var(--map) - 300px)); }
+#status:empty { display: none; }
+.hchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 var(--s2); border-radius: var(--r1); background: var(--glass); color: var(--cream); font: 700 var(--fs-2) var(--ui); white-space: nowrap; }
+.hchip b { font: 700 var(--fs-2) var(--pixel); }
+.hchip.role { background: var(--navy3); letter-spacing: .5px; text-transform: uppercase; }
+.hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
+.hchip.good b { color: var(--money); } .hchip.warn b, .hchip.warn { color: var(--heat); } .hchip.bad { color: var(--danger); } .hchip.info { color: var(--info); }
+.hchip.flag { border: 1px solid currentColor; }
+body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
+/* on a phone: only what's happening to you now (bleeding, a bounty, a coffee wearing off) and who you are when it isn't a
+   citizen's (the rest is in the phone's Skills) */
+.touch .hchip.stat, .touch .hchip.role.citizen { display: none; }
+.touch #status { top: calc(var(--st) + 52px); max-width: calc(var(--vbar) + 58px); flex-wrap: nowrap; overflow: hidden; }
+.touch .hchip { height: 24px; padding: 0 6px; }
+
+/* the job (UI-4): one card under the minimap - the job, the call, step N of M, the objective, how far, the time left;
+   a one-line chip after a few seconds; big again when the step changes or on a tap (client/hudinfo.js) */
+#job { position: absolute; left: var(--sl); top: calc(var(--st) + var(--map) + 16px); z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); color: var(--cream); animation: enter var(--t2) var(--ease); transition: border-color var(--t2) var(--ease), box-shadow var(--t2) var(--ease); }
+#job.big { width: min(330px, calc(33vw - var(--sl) - 6px)); padding: 10px 14px; }
+#job.chip { display: flex; align-items: center; gap: var(--s2); max-width: min(340px, calc(100vw - 2 * var(--sl))); min-height: 34px; padding: var(--s1) var(--s3); border-color: var(--gold-a); }
+#job .jc-h { display: flex; justify-content: space-between; gap: var(--s2); white-space: nowrap; font: 400 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--gold); }
+#job .jc-t { flex: none; color: var(--heat); }
+#job.big .jc-o { margin-top: var(--s1); font: 700 var(--fs-4) var(--ui); line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#job .jc-d { display: flex; justify-content: space-between; gap: var(--s2); font: 400 var(--fs-2) var(--pixel); color: var(--info); }
+#job.big .jc-d { margin-top: 6px; }
+#job.chip .jc-o { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--fs-3) var(--ui); }
+#job.chip .jc-d { flex: none; }
+#job .jc-s { flex: none; color: var(--gold); }
+#job .jc-dot { flex: none; width: 10px; height: 10px; border-radius: var(--r3); background: var(--info); }
+#job .jc-paid { color: var(--money); font: 700 var(--fs-3) var(--pixel); }
+#job.new { box-shadow: 0 0 0 2px var(--ink), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
+@keyframes jobnew { 50% { border-color: var(--cream); } }
+#job.paid { border-color: var(--money); }
+.touch #job.chip { min-height: var(--tap); }
+.touch:not(.portrait) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
+.touch #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; pointer-events: none; }   /* (big for a few seconds, then a chip: a thumb on the move stick isn't caught by it) */
+.touch #job.big .jc-o { font-size: var(--fs-3); }
+.touch #job.big .jc-d { margin-top: var(--s1); }
+body.portrait.touch #job { top: calc(var(--st) + var(--map) + 66px); }
+body.portrait.touch #job.big { width: calc(100vw - 2 * var(--sl)); }
+body.portrait.touch #job.big .jc-o { -webkit-line-clamp: 1; }
+#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
+body.dead #job { display: none !important; }
+
+/* top right: the cash (the bank under it on a desktop), the vehicle chip, the stars, what you hold, the clock */
+#hud-tr { position: absolute; right: var(--sr); top: var(--st); display: flex; flex-direction: column; align-items: flex-end; gap: var(--s1); text-align: right; }
+#money { font: 700 var(--fs-5) var(--pixel); line-height: 1.05; color: var(--money); text-shadow: 0 3px 0 var(--ink), var(--halo); }
+#hot { display: block; font: 700 var(--fs-2) var(--pixel); line-height: 1.15; letter-spacing: 1px; color: var(--heat); text-shadow: var(--halo-s); animation: hot-pulse 1.6s ease-in-out infinite; }   /* (a robbery's takings, not spendable till they're cleaned: server hotmoney.js) */
+@keyframes hot-pulse { 50% { color: var(--gold); } }
+#bank { font: 400 var(--fs-2) var(--pixel); color: var(--dim); text-shadow: var(--halo-s); }
+#vchip { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; background: var(--glass); border-radius: var(--r1); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
+#vchip .vc-spd { font: 400 var(--fs-3) var(--pixel); color: var(--gold); }
+#vchip .vc-alt { font: 400 var(--fs-3) var(--pixel); color: var(--info); }
+#stars { display: none; font-size: var(--fs-4); letter-spacing: 1px; line-height: 1; }
+#stars.wanted, #stars.recent { display: block; animation: enter var(--t2) var(--ease); }
+#stars.recent { opacity: .55; transition: opacity var(--t3); }
+#stars span { color: var(--ink-a); -webkit-text-stroke: 1.5px var(--cream-a); }
+#stars .on { color: var(--heat); -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 8px var(--heat); }
+#stars .flash { animation: starflash .35s steps(2) infinite; }
+@keyframes starflash { 50% { color: var(--danger); } }
 #weapon { display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 3px 10px 3px var(--s2); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); }
 #w-icon canvas { width: 96px; height: 48px; image-rendering: pixelated; display: block; filter: drop-shadow(var(--lift)); }
 #w-info { text-align: right; }
 #w-name { font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--cream); text-shadow: var(--lift); }
 #w-ammo { font: 400 var(--fs-2) var(--pixel); color: var(--gold); }
-#money { margin-top: 6px; font: 700 var(--fs-5) var(--pixel); line-height: 1.05; color: var(--money); text-shadow: 0 3px 0 var(--ink), var(--halo); }
-#bank { font: 700 var(--fs-2) var(--pixel); color: var(--info); text-shadow: var(--halo-s); }
-#stars { margin-top: var(--s1); min-height: 30px; font-size: var(--fs-5); letter-spacing: 1px; line-height: 1; }
-#stars span { color: var(--ink-a); -webkit-text-stroke: 1.5px var(--cream-a); }
-#stars:not(.wanted) { opacity: .55; }
-#stars .on { color: var(--heat); -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 8px var(--heat); }
-#stars .flash { animation: starflash .35s steps(2) infinite; }
-@keyframes starflash { 50% { color: var(--danger); } }
-#clock { margin-top: 3px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
-#faction { margin-top: 5px; padding: 3px var(--s2); font: 700 var(--fs-hud) var(--pixel); letter-spacing: 2px; background: var(--glass); border: 1px solid var(--gold-a); border-radius: var(--r1); }
-#faction.citizen { color: var(--cream); } #faction.criminal { color: var(--danger); } #faction.enforcer { color: var(--info); } #faction.hunter { color: var(--heat); }
-#faction .misc { color: var(--heat); }
-#faction .misc.last { color: var(--danger); animation: blink .8s steps(2) infinite; }
-@keyframes blink { 50% { opacity: .35; } }
-body.practice #faction::after { content: ' · PRACTICE'; color: var(--heat); }
-#hot { display: block; font: 700 var(--fs-2) var(--pixel); line-height: 1.15; letter-spacing: 1px; color: var(--heat); text-shadow: var(--halo-s); animation: hot-pulse 1.6s ease-in-out infinite; }   /* (a robbery's takings, not spendable till they're cleaned: server hotmoney.js) */
-@keyframes hot-pulse { 50% { color: var(--gold); } }
+/* your fists and nothing going on: small (a phone: only the switch, and none with nothing to switch to) */
+#weapon.compact { min-height: 0; padding: 2px var(--s2); border-color: var(--gold-a); background: var(--glass); }
+#weapon.compact #w-icon canvas { width: 48px; height: 24px; }
+#weapon.compact #w-name { font-size: var(--fs-2); }
+#clock { font: 400 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
+.touch #money { font-size: var(--fs-4); }
+.touch #bank, .touch #clock { display: none; }
+.touch #stars { font-size: var(--fs-3); }
+.touch #weapon { position: relative; min-height: 40px; padding: 2px var(--s1) 2px var(--s2); pointer-events: auto; cursor: pointer; }
+.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--tap)); transform: translateY(-50%); }   /* (44 px to tap whatever its height) */
+.touch #w-icon canvas { width: 64px; height: 32px; }
+.touch #w-name { font-size: var(--fs-2); }
+.touch #weapon.compact { min-width: var(--tap); min-height: var(--tap); justify-content: center; padding: 0 var(--s1); }
+.touch #weapon.compact #w-info { display: none; }
+.touch #weapon.none { display: none; }
+body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: var(--s1); font-size: var(--fs-2); opacity: .75; }
+body.in-veh.touch #weapon:not(.gun) { display: none; }
+/* upright: the vehicle chip three short lines (the name, the height, the speed) */
+.touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); border: 2px solid var(--gold); border-radius: var(--r2); font-size: var(--fs-2); }
+.touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
+body.portrait.touch #hud-tr { max-width: calc(100vw - var(--sl) - var(--map) - 14px - var(--vbar) - 70px); }
+body.portrait.touch #w-name { display: none; }
+body.portrait.touch #status { max-width: calc(var(--vbar) + 40px); }
+body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
 
-/* the prompt and the notes: right of the minimap, in one column (#hud-msg) so a prompt that wraps pushes the notes down */
-#hud-msg { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 188px); top: 50px; width: min(380px, 44vw, calc(100vw - 494px)); display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-#hud-msg > #rob, #hud-msg > #trainbar { position: static; transform: none; max-width: 100%; flex-wrap: wrap; }   /* (the robbery, train and custody bars at the column's head) */
-body.portrait.touch #hud-msg > #rob, body.portrait.touch #hud-msg > #trainbar { position: absolute; top: calc(282px + var(--corner-top)); left: 50%; transform: translateX(-50%); }
-body.portrait.touch #hud-msg > #trainbar.custody { bottom: auto; }
-.touch #hud-msg > #rob, .touch #hud-msg > #trainbar { padding: 5px 10px; gap: 6px var(--s2); } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: var(--fs-2); }
-#helpbox { position: relative; max-width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); font: 600 var(--fs-4) var(--ui); line-height: 1.25; color: var(--cream); animation: hin var(--t2) var(--ease); }
-@keyframes hin { from { opacity: 0; transform: translateY(-6px); } }
-#helpbox > .g-key, #helpbox > .g-touch { min-width: 26px; height: 26px; padding: 0 5px; flex: none; }   /* (the key, then a space: no colon) */
+/* the robbery, train, bus, ferry, taxi and custody bars: top centre under the row */
+#hud-msg { position: absolute; left: 0; right: 0; top: calc(var(--st) + 120px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+#hud-msg:not(:has(> :not(.hidden))) { display: none; }
+.touch #hud-msg { top: calc(var(--st) + 52px); }
+.touch:not(.portrait) #hud-msg { left: calc(var(--sl) + 290px); right: calc(var(--sr) + 210px); }
+.touch #hud-msg > * { max-width: 100%; box-sizing: border-box; }
+body.portrait.touch #hud-msg > * { max-width: calc(100vw - 2 * var(--sl)); }
+body.portrait.touch #hud-msg { top: calc(var(--st) + var(--map) + 72px); }
+body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job { margin-top: 80px; }
+body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }   /* (upright with a bar up - a robbery, a ride, custody - the notes wait in the Log) */
+
+/* the notes: one line each, two at most, in and out on their own (hud.js toast); a long one cut short, the whole of it
+   a tap away in the phone's Log */
+#toasts { position: absolute; left: var(--sl); bottom: var(--sb); z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 440px); pointer-events: none; }
+.toast { position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 5px 10px; background: var(--glass); border-left: 4px solid var(--info); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: enter-l var(--t2) var(--ease); transition: opacity var(--t3) var(--ease), transform var(--t3) var(--ease); }
+.toast > .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toast.good { border-left-color: var(--money); } .toast.bad { border-left-color: var(--danger); } .toast.warn { border-left-color: var(--heat); }
+.toast.more { pointer-events: auto; cursor: pointer; }
+.toast.more::after { content: 'LOG ›'; flex: none; font: 400 var(--fs-1) var(--pixel); color: var(--gold); }
+.toast.out { transform: translateX(-8px); }
+#toasts .toast:nth-last-child(n+3) { display: none; }
+.touch #toasts { left: 0; right: 0; bottom: auto; top: calc(var(--st) + 54px); width: auto; align-items: center; }
+.touch .toast { max-width: min(40vw, 380px); padding: 3px var(--s2); font-size: var(--fs-2); }
+/* (on its side with a bar up: the newest note under the job, on the left) */
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 16px); left: var(--sl); right: auto; width: min(260px, calc(33vw - var(--sl) - 6px)); align-items: flex-start; }
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) .toast { max-width: 100%; }
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)):has(#job.chip:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 66px); }
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)):has(#job.big:not(.hidden)) #toasts { display: none; }
+.touch #hud:has(#hud-msg > :not(.hidden)) #toasts .toast:nth-last-child(n+2) { display: none; }
+body.portrait.touch #toasts { left: var(--sl); right: var(--sr); align-items: flex-start; }
+body.portrait.touch .toast { max-width: 100%; }
+body.portrait.touch #toasts { top: calc(var(--st) + var(--map) + 66px); }
+body.portrait.touch #hud:has(#job.chip:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 116px); }
+body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 158px); }
+body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts .toast:nth-last-child(n+2) { display: none; }
+
+/* the low slot: the police cruiser's hint, the prompt, the hint strip - bottom centre (on touch between the move stick
+   and the arc on its side, above the arc upright); with a keyboard or a pad the prompt is by you (hudinfo.js frame) */
+#hud-low { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); display: flex; flex-direction: column; align-items: center; gap: var(--s2); pointer-events: none; }
+.touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 134px); right: var(--lo-r, 338px); bottom: var(--lo-b, 76px); max-width: none; }   /* (client/touchslots.js sets the room) */
+body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: calc(50% + 28px); bottom: auto; margin: 0; }
+#cruiser-hint { font: 700 var(--fs-3) var(--ui); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
+.touch #cruiser-hint { font-size: var(--fs-2); }
+/* the prompt: one at a time, the key chip then what it does (no colon); in while you're in range, out when you leave */
+#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 14px 6px 6px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream);
+  transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
+#helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
+#helpbox > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
+#helpbox > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
+body:not(.touch) #helpbox { position: fixed; left: 50%; top: calc(50% + 40px); transform: translateX(-50%); max-width: min(560px, 60vw); }
+body:not(.touch) #helpbox.off { transform: translate(-50%, 6px); }
+.touch #helpbox { font-size: var(--fs-3); padding: 4px 12px 4px 4px; }
+.touch #helpbox > .g-touch { height: 34px; min-width: 44px; font-size: var(--fs-2); }
 /* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks): the key chip red with a "!" on its corner,
    a felony ringed as well - the colour, a mark and a ring, so it reads without the colour */
 #helpbox.crime > :is(.g-key, .g-touch, .g-pad) { position: relative; }
 #helpbox.crime > :is(.g-key, .g-touch) { background: var(--danger); color: var(--ink); box-shadow: inset 0 -3px 0 var(--blood); }
 #helpbox.crime > .g-pad { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--danger); }
-#helpbox.crime > :is(.g-key, .g-touch, .g-pad)::after, #tbtns button.pulse.crime::after { content: '!'; position: absolute; top: -7px; right: -7px; width: 14px; height: 14px; border-radius: var(--r3); background: var(--gold); color: var(--ink); border: 1.5px solid var(--ink); font: 700 var(--fs-1)/11px var(--ui); text-align: center; text-shadow: none; letter-spacing: 0; }
+#helpbox.crime > :is(.g-key, .g-touch, .g-pad)::after, #tbtns button.pulse.crime::after { content: '!'; position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: var(--r3); background: var(--gold); color: var(--ink); border: 1.5px solid var(--ink); font: 700 var(--fs-2)/13px var(--ui); text-align: center; text-shadow: none; letter-spacing: 0; }
 #tbtns button.pulse.crime::after { top: -3px; right: -3px; width: 18px; height: 18px; line-height: 15px; }
 #helpbox.felony > :is(.g-key, .g-touch) { outline: 2px solid var(--danger); outline-offset: 1px; }
 /* Safety mode held it back (server safety.js; hud.js safetyNudge): the key blinks, a tab on the plate's top edge */
-#helpbox.armed::before { content: 'PRESS AGAIN'; position: absolute; right: var(--s2); top: -10px; padding: 0 5px; border-radius: var(--r1); background: var(--danger); color: var(--ink); border: 1px solid var(--ink); font: 700 var(--fs-1)/16px var(--ui); letter-spacing: .5px; pointer-events: none; }
+#helpbox { position: relative; }
+#helpbox.armed::before { content: 'PRESS AGAIN'; position: absolute; right: var(--s2); top: -12px; padding: 0 5px; border-radius: var(--r1); background: var(--danger); color: var(--ink); border: 1px solid var(--ink); font: 700 var(--fs-2)/18px var(--ui); letter-spacing: .5px; pointer-events: none; }
 .touch #helpbox.armed::before { content: 'TAP AGAIN'; }
 #helpbox.armed > :is(.g-key, .g-touch, .g-pad) { animation: armblink .5s steps(2, jump-none) infinite; }
 @keyframes armblink { 50% { filter: brightness(1.6); } }
-/* the notes: in, then out on their own (hud.js toast: .out as one goes) */
-#toasts { position: relative; width: 100%; display: flex; flex-direction: column; gap: 5px; z-index: 7; }   /* (over the district's card, z 6; under the robbery and train bars) */
-.toast { position: relative; padding: 7px 11px; background: var(--glass); border: 1px solid var(--gold-a); border-left-width: 4px; border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); animation: enter-l var(--t2) var(--ease); transition: opacity var(--t3) var(--ease), transform var(--t3) var(--ease); }
-.toast.good { border-left-color: var(--money); } .toast.bad { border-left-color: var(--danger); } .toast.warn { border-left-color: var(--heat); } .toast.info { border-left-color: var(--info); }
-.toast.out { transform: translateX(-8px); }
-.toast.paged::after { content: ''; position: absolute; left: 0; bottom: 0; height: 2px; width: calc(var(--pg, 0) * 100%); background: var(--dim); transition: width .4s ease; }   /* (a long one a page at a time: client/notepages.js) */
+/* the first-time hint strip: the device's own keys, buttons or slot names (hudinfo.js HINTS) */
+#hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); padding: var(--s1) var(--s3); background: var(--shade); border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); color: var(--cream); text-shadow: var(--halo-s); transition: opacity var(--t3) var(--ease), visibility 0s; }
+#hints.off { opacity: 0; visibility: hidden; transition: opacity var(--t3) var(--ease), visibility 0s var(--t3); }
+#hints .hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 134px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); font-size: var(--fs-2); gap: 2px 10px; }
+.touch #hints .g-touch { height: 22px; padding: 0 var(--s1); }
+body.portrait.touch #hints .hint { white-space: normal; }
+body.portrait.touch #hints { left: var(--sl); right: var(--lo-c, 196px); bottom: calc(var(--sb) + 150px); margin: 0; flex-direction: column; align-items: flex-start; gap: 2px; }
+body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 48px); }
 
-/* the job line at the bottom; the police cruiser's hint over it, in the same column */
-#hud-sub { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 56vw; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-#job { padding: 6px 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); font: 600 var(--fs-4) var(--ui); text-align: center; color: var(--cream); }
-#job::first-letter { color: var(--gold); }
-#cruiser-hint { font: 700 var(--fs-3) var(--ui); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); pointer-events: none; }
-
-/* the minimap in a gold ring and the vitals (top left, on every device) */
-#radar-wrap { position: absolute; left: max(16px, env(safe-area-inset-left)); top: 14px; width: 170px; pointer-events: auto; }
-#radar { display: block; width: 170px; height: 170px; border-radius: var(--r3); border: 4px solid var(--gold); background: var(--navy); box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px var(--gold-a), 0 4px 14px var(--ink-a); cursor: pointer; }
-#radar-wrap::before { content: 'N'; position: absolute; top: -7px; left: 85px; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-1) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
-.touch #radar-wrap::before { left: 56px; width: 20px; height: 20px; }
-#vitals { display: flex; gap: var(--s1); margin-top: 6px; }
-#rclock { display: none; position: absolute; left: 50%; top: 170px; transform: translate(-50%, -50%); z-index: 1; align-items: center; gap: var(--s1); height: 22px; padding: 0 7px; white-space: nowrap; pointer-events: none;
-  background: var(--panel-bg); border: 1px solid var(--gold); border-radius: var(--r1); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-hud) var(--pixel); color: var(--cream); text-shadow: var(--lift); }
-#rclock img.pi { height: 11px; width: auto; }
-.vbar { position: relative; height: 9px; flex: 1; overflow: hidden; background: var(--navy); border: 1px solid var(--ink); border-radius: var(--r1); box-shadow: 0 0 0 1px var(--gold-a); }
-.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transition: width var(--t1); }
-.fill.hp { background: var(--danger); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
-@keyframes hplow { 50% { opacity: .55; } }
-.fill.st { background: var(--info); }
-#status { margin-top: var(--s1); font: 400 var(--fs-hud) var(--pixel); letter-spacing: .5px; color: var(--heat); text-shadow: var(--halo-s); }
-#w-carry { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: 16px; font: 700 var(--fs-2) var(--ui); color: var(--gold); text-shadow: var(--halo-s); text-align: right; }
+#w-carry { position: absolute; right: var(--sr); bottom: var(--sb); font: 700 var(--fs-2) var(--ui); color: var(--gold); text-shadow: var(--halo-s); text-align: right; }
+.touch #w-carry { display: none; }
 #fishbar { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font: 700 var(--fs-5) var(--pixel); color: var(--gold); text-shadow: var(--halo); }
 #fishbar.bite { color: var(--cream); animation: starflash .3s steps(2) infinite; }
+.touch #fishbar { bottom: auto; top: 35%; }
 #net { display: none; position: absolute; right: 10px; bottom: 40px; font-size: var(--fs-1); color: var(--dim); text-shadow: var(--halo-s); }
 body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame rate and the lag: Dev Debug Mode only) */
 
-/* the round buttons (menu, phone, bag, map, settings, fullscreen, debug: the hub replaces them, UI-3) */
-body.kbm #b-fs { display: none; }
+/* a short window with a keyboard or a pad (a laptop's browser half height, a phone with a pad), last so it wins: the
+   prompt in the low slot (no room by you), the status in its short form */
+@media (max-height: 430px) {
+  body:not(.touch) #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; } body:not(.touch) #job.big .jc-o { font-size: var(--fs-3); }
+  body:not(.touch) #helpbox { position: static; transform: none; font-size: var(--fs-3); }
+  body:not(.touch) #helpbox.off { transform: translateY(6px); }
+  body:not(.touch) :is(.hchip.stat, .hchip.role.citizen) { display: none; }
+  body:not(.touch) #hud-msg { top: calc(var(--st) + 52px); left: calc(var(--sl) + 300px); right: calc(var(--sr) + 220px); }
+  body:not(.touch) #hud-msg > * { max-width: 100%; box-sizing: border-box; }
+  body:not(.touch) #status { max-width: calc(var(--vbar) + 58px); flex-wrap: nowrap; overflow: hidden; }
+  body:not(.touch) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
+  body:not(.touch) #rob .rob-bar { width: 80px; } body:not(.touch) #rob span { min-width: 0; font-size: var(--fs-2); }
+  body:not(.touch) #hud:has(#hints:not(.off)) > #hud-low { bottom: calc(var(--sb) + 64px); }
+  /* (the notes on the left under the job, the hint strip and the low slot the bottom's whole width) */
+  body:not(.touch) #toasts { top: calc(var(--st) + var(--map) + 16px); bottom: auto; width: calc(33vw - var(--sl) - 8px); }
+  body:not(.touch) #hud:has(#job.chip:not(.hidden)) > #toasts { top: calc(var(--st) + var(--map) + 58px); }
+  body:not(.touch) #hud:has(#job.big:not(.hidden)) > #toasts { top: calc(var(--st) + var(--map) + 112px); }
+  body:not(.touch) #hints { max-width: calc(100vw - 2 * var(--sl)); }
+  body:not(.touch) #hud-low { left: 33vw; right: var(--sr); max-width: none; }
+}
+@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #rob > b { display: none; } }
+@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) .vrow .vl { display: none; } body:not(.touch) #money { font-size: var(--fs-4); } body:not(.touch) #hud-btns { left: max(calc(var(--sl) + var(--map) + var(--vbar) + 90px), calc(50% - 160px)); } body:not(.touch) #hud-btns button { padding: 0 6px; } }
 
 /* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): as wide as
    their words up to the screen less a margin, two balanced lines past it */
@@ -250,22 +396,21 @@ body.kbm #b-fs { display: none; }
 #district, #edgewarn { width: max-content; max-width: calc(100vw - 24px); white-space: normal; text-wrap: balance; line-height: 1.08; }
 
 /* the robbery bar, a train ride's (or a bus', a ferry's, a taxi's), custody's */
-#rob { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 8; display: flex; align-items: center; gap: 10px; padding: var(--s2) 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }
+#rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: var(--s2) 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }
 #rob .rob-bar, #trainbar .rob-bar { width: 140px; height: 10px; background: var(--navy3); border-radius: var(--r1); overflow: hidden; }
 #rob-fill, #tb-fill { display: block; height: 100%; width: 0; background: var(--gold); transition: width var(--t2); }
 #rob span { min-width: 90px; font: 700 var(--fs-3) var(--ui); color: var(--money); }
 #rob.till #rob-fill { background: var(--money); }
 #rob.alarm, #trainbar.alarm { border-color: var(--danger); color: var(--danger); animation: robflash .5s steps(2) infinite; } #rob.alarm span, #trainbar.alarm span { color: var(--danger); }
 @keyframes robflash { 50% { background: var(--blood); } }
-#trainbar { position: absolute; left: 50%; top: 118px; transform: translateX(-50%); z-index: 8; display: flex; align-items: center; gap: 10px; padding: 6px var(--s3); background: var(--glass); border: 2px solid var(--info); border-radius: var(--r2); font: 700 var(--fs-2) var(--pixel); color: var(--info); letter-spacing: 1px; pointer-events: none; }
+#trainbar { position: relative; z-index: 8; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: wrap; justify-content: center; display: flex; align-items: center; gap: 10px; padding: 6px var(--s3); background: var(--glass); border: 2px solid var(--info); border-radius: var(--r2); font: 700 var(--fs-2) var(--pixel); color: var(--info); letter-spacing: 1px; pointer-events: none; }
 #trainbar span { font: 700 var(--fs-3) var(--ui); color: var(--cream); }
 #trainbar .rob-bar { width: 110px; height: 8px; }
 #trainbar.sub, #trainbar.taxi { border-color: var(--gold); color: var(--gold); }
 #trainbar.bus { border-color: var(--money); color: var(--money); }
 #trainbar.ferry { border-color: var(--info); color: var(--info); }
 #trainbar.warn { border-color: var(--heat); color: var(--heat); }
-#trainbar.custody { top: auto; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 58px); border-color: var(--danger); color: var(--danger); }   /* (arrested: server custody.js) */
-body.portrait.touch #trainbar.custody { bottom: auto; top: calc(282px + var(--corner-top)); max-width: calc(100vw - 140px); }
+#trainbar.custody { border-color: var(--danger); color: var(--danger); }   /* (arrested: server custody.js) */
 #trainbar.custody.brk { border-color: var(--gold); color: var(--gold); animation: brk-pulse 1.2s ease-in-out infinite; }
 #trainbar.custody.fight { border-color: var(--heat); color: var(--heat); animation: brk-pulse .6s ease-in-out infinite; }   /* (fighting an officer off: server struggle.js) */
 #trainbar.fight #tb-fill { background: linear-gradient(90deg, var(--danger), var(--gold) 70%, var(--cream)); transition: width .1s; } #trainbar.fight .rob-bar { width: 140px; height: 10px; }
@@ -273,7 +418,7 @@ body.portrait.touch #trainbar.custody { bottom: auto; top: calc(282px + var(--co
 .ph-line { display: inline-block; width: 12px; height: 12px; border-radius: var(--r1); margin-right: var(--s2); vertical-align: -1px; border: 1px solid var(--ink); }
 
 /* the way out of a walk-in while its inside is still being drawn (main.js exitHint) */
-#exithint { position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); z-index: 6; padding: var(--s1) 10px; background: var(--glass); border: 1px solid var(--gold-a); border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; pointer-events: none; }
+#exithint { position: absolute; left: 50%; top: calc(50% - 76px); transform: translateX(-50%); z-index: 6; padding: var(--s1) 10px; background: var(--glass); border: 1px solid var(--gold-a); border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; pointer-events: none; }
 
 /* ==== the touch controls by slots (UI-2): client/touchslots.js places them, shared/controls.js says what each holds ====
    The left 40% is the move stick's (it comes up where the thumb lands); on the right the aim stick in the corner and round
@@ -545,7 +690,7 @@ div.ph-row { cursor: default; }
 .bm-x { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; border-radius: var(--r2); background: var(--navy); border: 1px solid var(--gold); cursor: pointer; }
 .bm-cats { padding: var(--s1) 0; border-top: 1px solid var(--gold-a); border-bottom: 1px solid var(--gold-a); }
 .bm-cat { display: flex; align-items: center; gap: 6px; }
-.bm-catname { flex: 1; display: flex; align-items: center; gap: var(--s3); padding: 7px 6px; background: none; border: none; border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-3) var(--ui); text-align: left; cursor: pointer; }
+.bm-catname { flex: 1; display: flex; align-items: center; gap: var(--s3); min-height: var(--tap); padding: 7px 6px; background: none; border: none; border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-3) var(--ui); text-align: left; cursor: pointer; }
 .bm-catname img.pi { width: 22px; height: auto; }
 .bm-catname:hover, .bm-catname.pfocus, .bm-row:hover, .bm-row.pfocus { background: var(--pick) !important; box-shadow: inset 0 0 0 2px var(--gold); color: var(--cream) !important; }
 .bm-check { position: relative; flex: none; width: 22px; height: 22px; padding: 0; border: 2px solid var(--dim); border-radius: var(--r1); background: var(--navy); cursor: pointer; }
@@ -566,7 +711,7 @@ div.ph-row { cursor: default; }
 .bm-setwp { width: 100%; min-height: var(--tap); margin: 2px 0 var(--s2); padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--gold); color: var(--ink); font: 700 var(--fs-3) var(--ui); letter-spacing: 1px; cursor: pointer; }
 .bm-setwp:hover, .bm-setwp.pfocus { filter: brightness(1.1); box-shadow: 0 0 0 2px var(--cream); }
 .bm-more { display: grid; gap: var(--s1); }
-.bm-row { width: 100%; display: flex; align-items: center; gap: 10px; margin: 2px 0; padding: 7px var(--s2); text-align: left; border-radius: var(--r1); border: 1px solid transparent; background: var(--line); color: var(--cream); font: 600 var(--fs-3) var(--ui); cursor: pointer; }
+.bm-row { width: 100%; display: flex; align-items: center; gap: 10px; min-height: var(--tap); margin: 2px 0; padding: 7px var(--s2); text-align: left; border-radius: var(--r1); border: 1px solid transparent; background: var(--line); color: var(--cream); font: 600 var(--fs-3) var(--ui); cursor: pointer; }
 .bm-row .ic { width: 22px; text-align: center; color: var(--gold); font: 700 var(--fs-2) var(--pixel); }
 .bm-row .nm { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .bm-row small { color: var(--dim); font: 500 var(--fs-1) var(--ui); }
@@ -586,41 +731,10 @@ body.portrait #bm-mapwrap { min-height: 40vh; }
 @keyframes wasted { from { transform: scale(1.6); opacity: 0; } }
 #death.reveal h1 { opacity: 0; }
 body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to press while down but the panel) */
-#d-panel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); width: max-content; max-width: min(980px, calc(100vw - 24px)); transform: translate(-50%, 14px); opacity: 0;
-  padding: 7px var(--s3) 9px; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); color: var(--cream); font: 600 var(--fs-3) var(--ui); transition: opacity .5s ease, transform .5s ease; }
-#death.reveal #d-panel { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-#d-panel i { font-style: normal; font-size: var(--fs-1); opacity: .8; margin-left: 5px; border: 1px solid var(--cream-a); border-radius: var(--r1); padding: 0 var(--s1); }
-#d-head { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-#d-tag { flex: none; font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; color: var(--danger); text-shadow: var(--lift); }
-#d-cause, #d-timer { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-#d-cause { flex: 0 100 auto; color: var(--dim); font-size: var(--fs-2); }
-#d-timer { flex: 0 1 auto; font: 400 var(--fs-2) var(--pixel); color: var(--cream); }
-.touch #d-cause { display: none; }
-#d-hide { flex: none; margin-left: auto; min-height: 30px; padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; }
-#d-hide:hover { border-color: var(--gold); }
-#d-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px var(--s4); margin-top: 7px; }
-#d-help { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-#d-help:empty { display: none; }
-#d-help .help-btn { min-height: 36px; padding: 0 var(--s3); border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font: 700 var(--fs-3) var(--ui); cursor: pointer; touch-action: manipulation; }
-#d-help .help-btn.help { border-color: var(--danger); background: var(--danger-t); }
-#d-help .help-btn.amb.on { border-color: var(--cream); background: var(--navy3); }
-#d-help .help-btn:disabled { opacity: .45; cursor: default; }
-#d-help .help-btn:active { transform: scale(.95); }
-#d-help .medic { display: inline-block; width: 18px; height: 18px; margin-right: 3px; border-radius: var(--r3); background: var(--cream); color: var(--danger); font-size: var(--fs-2); line-height: 18px; text-align: center; }
-#d-help small { flex-basis: 100%; color: var(--dim); font-size: var(--fs-1); }
-#d-spawn { display: flex; align-items: center; gap: 6px; }
-#d-spawn .d-lbl { font: 700 var(--fs-2) var(--ui); letter-spacing: 1px; color: var(--dim); }
-.d-pick { padding: 5px 10px; max-width: 44vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font: 700 var(--fs-3) var(--ui); color: var(--cream); background: var(--gold-t); border: 2px solid var(--gold); border-radius: var(--r2); }
-.d-pick small { font-weight: 500; font-size: var(--fs-1); color: var(--dim); }
-#d-fold { display: none; }
-#death.fold #d-panel { padding: 5px var(--s3); cursor: pointer; }
-#death.fold #d-cause, #death.fold #d-hide, #death.fold #d-acts { display: none; }
-#death.fold #d-tag { font-size: var(--fs-3); }
-#death.fold #d-fold { display: inline; flex: none; color: var(--gold); font-size: var(--fs-2); }
-.touch #d-panel { padding: 6px 10px var(--s2); } .touch #d-acts { margin-top: 5px; }
+/* the knocked-out screen's panel and its map: client/deathscreen.js carries their CSS (loaded the first time you go down) */
 
 /* ==== arrested: in a cell you're in the world (server cells.js), so the jail screen is a small panel at the top ==== */
-#jail { position: absolute; z-index: 3; top: calc(max(8px, env(safe-area-inset-top)) + 52px); left: 50%; transform: translateX(-50%); width: auto; max-width: min(340px, 92vw);
+#jail { position: absolute; z-index: 3; top: calc(max(8px, env(safe-area-inset-top)) + 76px); left: 50%; transform: translateX(-50%); width: auto; max-width: min(340px, 92vw);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 10px; row-gap: 2px; padding: 5px 10px;
   background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); text-align: center; color: var(--cream); font-family: var(--pixel); }
 #jail h2 { margin: 0; font-size: var(--fs-2); letter-spacing: 2px; color: var(--danger); }
@@ -629,7 +743,8 @@ body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to 
 #jail button { width: auto; min-height: 32px; margin: 0; padding: 0 10px; font-size: var(--fs-2); }
 #jail button:disabled { opacity: .45; }
 #jail small { flex-basis: 100%; font: 500 var(--fs-1) var(--ui); color: var(--dim); }
-@media (max-height: 480px) and (orientation: landscape) { #jail small { display: none; } }
+@media (max-height: 480px) and (orientation: landscape) { #jail small { display: none; } .touch #jail { top: 60px; } }
+body.portrait.touch #jail { top: calc(var(--corner-top) + 168px); }   /* (under the HUD's row: UI-4) */
 
 /* ==== odds and ends ==== */
 #interior { position: absolute; inset: 0; z-index: 15; background: var(--ink); }   /* (the police station lobby / armory behind the menu) */
@@ -801,40 +916,15 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
   #creator .cc-prev { width: auto; height: min(56vh, 240px); max-width: 100%; }
 }
 
-/* ==== the touch arrangement: the minimap top-left (the left thumb owns the bottom-left) ==== */
-.touch #w-carry { display: none; }
-.touch #radar-wrap { top: 10px; bottom: auto; left: max(10px, env(safe-area-inset-left)); width: 112px; }
-.touch #radar { width: 112px; height: 112px; border-width: 3px; }
-/* the prompt and the notes right of the small pills, under the round buttons, clear of the cash and the stars; the job
-   line at the bottom between the sticks (H70) */
-.touch #hud-msg { left: calc(max(10px, env(safe-area-inset-left)) + 186px); top: 52px; width: min(380px, calc(100vw - 482px)); }
-.touch #helpbox { font-size: var(--fs-2); padding: 6px 10px; }
-.touch #helpbox > .g-touch { height: 22px; }
-.touch #hud-sub { bottom: max(8px, env(safe-area-inset-bottom)); left: calc(max(20px, env(safe-area-inset-left)) + 140px); right: var(--arc-w, 324px); width: fit-content; max-width: none; margin: 0 auto; transform: none; }
-/* phones: notes of three lines at most - a longer one a page of three at a time (client/notepages.js) */
-.touch #toasts { gap: 3px; }
-.touch .toast { padding: var(--s1) 7px; font-size: var(--fs-1); line-height: 1.2; }
-.touch .toast > .tx { max-height: 3.6em; overflow: hidden; overflow-wrap: anywhere; }
-.touch #toasts .toast:nth-last-child(n+3) { display: none; }
-.touch #hud-tr { top: 6px; }
-.touch #weapon { min-height: 40px; padding: 2px var(--s1) 2px var(--s2); }
-.touch #w-icon canvas { width: 72px; height: 36px; }
-.touch #w-name { font-size: var(--fs-2); }
-.touch #money { font-size: var(--fs-4); }
-.touch #bank { font-size: var(--fs-hud); }
-.touch #stars { font-size: var(--fs-4); min-height: 22px; }
-.touch #clock { font-size: var(--fs-hud); }
-.touch #job { font-size: var(--fs-2); }
-.touch #cruiser-hint { font-size: var(--fs-1); }
+/* ==== the touch arrangement: the HUD's own is in its section above (UI-4); the district's card and the warnings ==== */
 .touch #district { font-size: var(--fs-5); top: 30%; }
-.touch #district small { font-size: var(--fs-1); letter-spacing: 5px; }
+.touch #district small { font-size: var(--fs-2); letter-spacing: 5px; }
 .touch #edgewarn { font-size: var(--fs-4); top: 16%; }
-.touch #edgewarn small { font-size: var(--fs-1); letter-spacing: 2px; }
-.touch #fishbar { bottom: auto; top: 35%; }
+.touch #edgewarn small { font-size: var(--fs-2); letter-spacing: 2px; }
 .touch #menu { padding-top: 12px; }
 .touch #death h1 { font-size: calc(1.5 * var(--fs-6)); }
-.touch #hot { font-size: var(--fs-1); }
 .touch #exithint { padding: 3px var(--s2); }
+.touch #hud-msg > :is(#rob, #trainbar) { padding: 5px 10px; gap: 6px var(--s2); } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: var(--fs-2); }
 /* short screens (a phone on its side) */
 @media (max-height: 430px) {
   #title { gap: var(--s2); padding-top: var(--s2); padding-bottom: var(--s2); } #logo { width: min(200px, 28vh * 1.4); } #t-note { display: none; }
@@ -845,66 +935,20 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
   #t-gfxseg button { min-width: 0; padding: 2px var(--s2); }
   #t-gfxseg button.on { padding-left: 18px; }
   #t-practice { font-size: var(--fs-1); line-height: 1.3; }
-  /* the top-right column in three short rows (weapon; cash and bank; stars, clock and status), clear of the buttons */
-  .touch #hud-tr { display: grid; grid-template-columns: auto auto auto; justify-items: end; align-items: baseline; column-gap: var(--s2); }
-  .touch #weapon { grid-column: 1 / 4; grid-row: 1; min-height: 32px; padding: 1px var(--s1) 1px var(--s2); }
-  .touch #w-icon canvas { width: 56px; height: 28px; }
-  .touch #w-name, .touch #w-ammo { font-size: var(--fs-hud); }
-  .touch #money { grid-column: 1 / 3; grid-row: 2; margin-top: 0; }
-  .touch #bank { grid-column: 3; grid-row: 2; }
-  .touch #stars { grid-column: 1; grid-row: 3; font-size: var(--fs-2); min-height: 0; margin-top: 0; }
-  .touch #clock { grid-column: 2; grid-row: 3; margin-top: 0; }
-  .touch #faction { grid-column: 1 / 4; grid-row: 4; letter-spacing: 1px; margin-top: 2px; padding: 1px 6px; }   /* (a row of its own: the prompt beside the column has room - H70) */
-  /* a keyboard or a pad on a short screen: the notes clear of the cash and the weapon, two at a time, smaller */
-  body:not(.touch) #toasts .toast:nth-last-child(n+3) { display: none; }
-  body:not(.touch) .toast { font-size: var(--fs-2); padding: var(--s1) var(--s2); }
-  body:not(.touch) #helpbox { font-size: var(--fs-3); padding: 6px 10px; }
-  body:not(.touch) #job { font-size: var(--fs-2); }
-  body:not(.touch) #hud-sub { bottom: 8px; }
-  .touch #job { padding: var(--s1) 10px; }
-  /* with a prompt or a bar over the notes: the newest note only, so the column ends above you */
-  .touch #hud-msg:has(> #helpbox:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #rob:not(.hidden)) .toast:nth-last-child(n+2), .touch #hud-msg:has(> #trainbar:not(.hidden)) .toast:nth-last-child(n+2) { display: none; }
 }
-@media (max-height: 380px) { #toasts .toast:nth-last-child(n+2) { display: none; } .touch #helpbox { padding: 5px var(--s2); } }   /* (740x360: the newest note only) */
 /* a narrow phone (740 px on its side, or upright): the robbery bar on one line; on its side the round buttons start
    beside the small pills, the 🐞 off the row till Dev Debug Mode is on (the pause menu's Debug menu line opens it) */
 @media (max-width: 800px) { .touch #rob > b { display: none; } }
-@media (max-width: 800px) and (orientation: landscape) { .touch #hud-tr { right: max(10px, env(safe-area-inset-right)); } }
-/* a narrow, tall window with a keyboard: the prompt and the notes under the minimap */
-body.portrait:not(.touch) #hud-msg { left: max(16px, env(safe-area-inset-left)); top: 236px; width: calc(100vw - 32px); }
-body.portrait:not(.touch) #hud-sub { max-width: 90vw; }
-/* a phone held upright (the user, 2026-10-08): the minimap top-left with the time and the weather on its plate; the cash,
-   the bank and the stars top-right; the round buttons down the right edge under them; nothing at the top centre (a
-   camera in the screen) */
-body.portrait.touch #hud-tr { max-width: 46vw; top: calc(4px + var(--corner-top)); }
-body.portrait.touch #weapon { min-height: 0; padding: 1px var(--s2) 1px 6px; gap: 5px; }
-body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
-body.portrait.touch :is(#w-name, #w-ammo) { font-size: var(--fs-hud); }
-body.portrait.touch #hud-tr #clock { display: none; }
-body.portrait.touch #hud-msg { display: contents; }
-body.portrait.touch #helpbox, body.portrait.touch #toasts { position: absolute; left: max(10px, env(safe-area-inset-left)); top: calc(334px + var(--corner-top)); max-width: 80vw; width: auto; }
-body.portrait.touch #toasts { top: calc(148px + var(--corner-top)); left: calc(max(10px, env(safe-area-inset-left)) + 120px); right: 54px; max-width: none; }   /* (one note at a time, beside the minimap - the user, 2026-10-08) */
-body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }
-body.portrait.touch .toast > .tx { max-height: 2.4em; }   /* (two lines beside the minimap: a longer note pages) */
-body.portrait.touch #hud-sub { bottom: 176px; left: max(10px, env(safe-area-inset-left)); right: calc(50% + 6px); margin: 0 auto; transform: none; width: fit-content; max-width: none; }   /* (the left half, over the move stick) */
-body.portrait.touch #radar-wrap { top: calc(8px + var(--corner-top)); }
-body.portrait.touch #rclock { display: flex; top: 112px; }   /* (straddling the foot of the minimap's ring) */
-body.portrait.touch #vitals { margin-top: 13px; }
-body.portrait.touch #status { width: max-content; max-width: calc(100vw - 76px); letter-spacing: 0; }   /* (one line where it fits) */
-body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(282px + var(--corner-top)); max-width: calc(100vw - 140px); }   /* (clear of the HUD at the top and the column of buttons) */
 @media (max-width: 760px) and (min-height: 431px) { #death h1 { font-size: calc(1.5 * var(--fs-6)); } #district { font-size: var(--fs-5); } }
 /* narrow screens (a portrait phone): last, so they win over the rules above */
 @media (max-width: 520px) {
   .touch #district, #district { font-size: clamp(var(--fs-4), 7.4vw, var(--fs-5)); letter-spacing: 2px; }
-  #district small { font-size: var(--fs-1); letter-spacing: 4px; }
+  #district small { font-size: var(--fs-2); letter-spacing: 4px; }
   #edgewarn { font-size: clamp(var(--fs-4), 7vw, var(--fs-5)); }
   #edgewarn small { letter-spacing: 1px; }
   .srow { flex-wrap: wrap; row-gap: 6px; }   /* (a long choice drops under its label instead of being cut short; a switch stays beside it) */
   .srow:has(> input[type=checkbox]) { flex-wrap: nowrap; }
   .srow select { max-width: 100%; }
-  .d-pick { max-width: 58vw; white-space: normal; }   /* (the wake-up spot's whole name and the timer, on two lines if need be) */
-  #d-head { white-space: normal; }
-  #d-timer { overflow: visible; text-overflow: clip; }
   #t-gfx { align-self: stretch; max-width: 100%; padding: 6px; }   /* (the graphics bar shares the width - the owner, 2026-10-15) */
   #t-gfxseg { width: 100%; }
   #t-gfxseg button { flex: 1 1 auto; min-width: 0; padding: var(--s1) 2px; }
@@ -920,20 +964,16 @@ body.portrait.touch #trainbar, body.portrait.touch #rob { top: calc(282px + var(
 #hud-btns button:active { transform: scale(.96); }
 #hud-btns svg { flex: none; width: 20px; height: 20px; color: var(--gold); }
 #hud-btns .kchip { min-width: 24px; height: 24px; font-size: var(--fs-1); }
-.touch #hud-btns { top: max(4px, var(--cam-top)); gap: 6px; }
+.touch #hud-btns { gap: 6px; }
 .touch #hud-btns button { height: var(--tap); padding: 0 12px; gap: 6px; font-size: var(--fs-3); }
 .touch #hud-btns svg { width: 18px; height: 18px; }
-body:not(.touch) #hud-msg { top: 74px; }   /* (the prompt and the notes under the row) */
-@media (max-height: 430px) {
-  body:not(.touch) #hud-btns { left: calc(max(16px, env(safe-area-inset-left)) + 188px); transform: none; gap: 6px; top: 8px; }
-  body:not(.touch) #hud-btns button { height: 40px; padding: 0 10px; }
-  body:not(.touch) #hud-btns svg { display: none; }
-  body:not(.touch) #hud-msg { top: 56px; }
-}
-@media (max-width: 800px) and (orientation: landscape) { .touch #hud-btns { left: calc(max(10px, env(safe-area-inset-left)) + 176px); transform: none; } }
-/* upright: one row under the minimap, the notes under it */
-body.portrait.touch #hud-btns { left: max(12px, env(safe-area-inset-left)); top: calc(166px + var(--corner-top)); transform: none; }
-body.portrait.touch #toasts { top: calc(218px + var(--corner-top)); left: max(10px, env(safe-area-inset-left)); right: 54px; }
+#hud-btns { top: var(--st); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 140px), calc(50% - 210px)); transform: none; }
+@media (max-width: 1180px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
+/* on its side: right of the vitals, centred where there's room (clear of a camera in the screen's top centre) */
+.touch #hud-btns { top: max(var(--st), var(--cam-top)); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 80px), calc(50% - 160px)); transform: none; }
+@media (max-height: 430px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { height: 40px; padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
+/* upright: one row under the minimap */
+body.portrait.touch #hud-btns { left: var(--sl); top: calc(var(--st) + var(--map) + 14px); }
 
 /* ==== the hub (UI-3): one panel for the map, the phone, the bag, the people and the settings; the game runs on ==== */
 #hub { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: var(--scrim); }
@@ -1189,12 +1229,11 @@ body.portrait .set-head .seg { width: 100%; } body.portrait .set-head .seg > but
 .touch :is(.x, #m-close, #s-close) { width: var(--tap); height: var(--tap); }
 .touch .bm-x { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 1px var(--gold); }
 .touch #ph-back { min-width: var(--tap); min-height: var(--tap); }
-.touch :is(.srow select, #creator .cc-tab, #creator .cc-chip, #creator .cc-btn, #creator .cc-name, #inv .inv-use, #inv .inv-pin, #d-help .help-btn, #d-hide, .bm-zb, .bm-catname, .bm-row, #d-map button, #jail button, #tut-btns button) { min-height: var(--tap); }
-.touch :is(#creator .cc-turn button, .bm-zb, #inv .inv-pin, #d-map header button) { min-width: var(--tap); }
+.touch :is(.srow select, #creator .cc-tab, #creator .cc-chip, #creator .cc-btn, #creator .cc-name, #inv .inv-use, #inv .inv-pin, .bm-zb, #jail button, #tut-btns button) { min-height: var(--tap); }
+.touch :is(#creator .cc-turn button, .bm-zb, #inv .inv-pin) { min-width: var(--tap); }
 .touch #creator .cc-turn button { height: var(--tap); }
 .touch .bm-check { width: var(--tap); height: var(--tap); border: 11px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px var(--dim); }
 .touch .bm-check.on { border-color: transparent; box-shadow: none; }
 .touch .bm-check.on::after { left: 16px; top: 12px; }
 .touch #creator .cc-sw { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 1px var(--gold-a); }
 .touch #creator .cc-sw.on { transform: none; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--gold); }
-.touch #d-hide { border: 7px solid transparent; background-clip: padding-box; box-shadow: inset 0 0 0 2px var(--gold-a); margin: -7px -7px -7px auto; }

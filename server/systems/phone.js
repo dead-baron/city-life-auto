@@ -311,12 +311,27 @@ export function jobTarget(world, p) {
   const j = p.job;
   if (!j) {   // the job's done and its truck's still out: bring it back for the bonus (jobs.js returnTruck)
     const ri = jobs.returnInfo(world, p);
-    return ri ? { text: `Bonus: bring the ${ri.v.def.name} back to ${ri.label} (+$${WORK_TRUCK_RETURN})`, x: ri.x, y: ri.y, stage: 'return', veh: truckMark(p, ri.v) } : null;
+    return ri ? { text: `Bonus: bring the ${ri.v.def.name} back to ${ri.label} (+$${WORK_TRUCK_RETURN})`, x: ri.x, y: ri.y, stage: 'return', veh: truckMark(p, ri.v), k: 'Bonus' } : null;
   }
   const t = target(world, p, j), v = j.truck ? world.get(j.truck) : null;
   if (v && !v.removed && !v.wreckAt) t.veh = truckMark(p, v);   // the job's truck, until you're in it: a ring and arrows (main.js, hud.js)
   if (t.stage === 'pickup' && Number.isFinite(j.tx)) t.dest = [Math.round(j.tx), Math.round(j.ty)];   // (and where it goes after: the minimap)
-  return t;
+  return Object.assign(t, jobCardInfo(world, j, t));
+}
+// The HUD's job card (UI-4, client/hudinfo.js): the job's name (k), the call or fare it's on (n, u), the step of it
+// (step: [i, of]) and the time left on the shift or the contract (left, s) - beside the objective line (text) and where
+// (x, y). A shift waiting for its next call has no step.
+const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work' };
+const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']] };
+const JOB_UNIT = { cab: 'Fare', charter: 'Flight', medic: 'Call', fire: 'Call', towjob: 'Call', sar: 'Call', coast: 'Call' };
+export function jobCardInfo(world, j, t) {
+  const out = { k: JOB_NAME[j.type] || '' };
+  const st = j.type === 'medic' && j.call && j.call.aboard ? 'hospital' : t.stage, L = JOB_STEPS[j.type];
+  const i = L ? L.findIndex((q) => q.includes(st)) : -1;
+  if (i >= 0) out.step = [i + 1, L.length];
+  if (JOB_UNIT[j.type] && st !== 'wait') { out.u = JOB_UNIT[j.type]; out.n = (j.done ?? j.flown ?? ((j.saved || 0) + (j.busts || 0))) + 1; }
+  if (Number.isFinite(j.expires)) { out.left = Math.max(0, Math.round(j.expires - world.time)); out.s = j.nextAt !== undefined ? 'shift' : 'job'; }
+  return out;
 }
 const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y), v.def.i]);   // (the model: the plate over it names it - "YOUR HELICOPTER", client/main.js drawJobTruck)
 function target(world, p, j) {

@@ -27,3 +27,12 @@ export function logNote(text, tone = 'info', at = Date.now()) {
 // the log, newest first (a copy)
 export function noteLog() { return load().slice().reverse(); }
 export function clearLog() { log = []; save(); }
+// The one line the HUD shows of a note (UI-4: notes are one line, the whole of them in the Log): a short one as it is,
+// a long one its first sentence or clause - the server can name the line itself (world.notify's short)
+export const NOTE_LINE = 64;
+export function noteLine(t) {
+  const s = String(t || '').trim();
+  if (s.length <= NOTE_LINE) return s;
+  const m = /^(.{24,}?)(?:[.!?](?=\s)|:\s|\s-\s|;\s)/.exec(s);
+  return m && m[1].length <= NOTE_LINE + 16 ? m[1].replace(/[,\s]+$/, '') : s;   // (else the HUD cuts it with an ellipsis)
+}

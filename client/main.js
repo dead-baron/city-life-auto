@@ -25,9 +25,9 @@ import { Campfires } from './render/campfx.js';     // the campfires' embers, fl
 import { HUD } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
-import { createMapWaypoints, ROLE_ICON, ROLE_NAME, KIND_ICON } from './mapwaypoints.js';
+import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
 import { createRouter } from './route.js';
-import { iconImg, drawIcon } from './pixicons.js';
+import { iconImg } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
@@ -768,7 +768,7 @@ function onEvent(ev) {
   const now = S.loopClock;
   const fx = S.fx;
   switch (ev.e) {
-    case 'toast': S.hud.toast(ev.text, ev.tone); if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
+    case 'toast': S.hud.toast(ev.text, ev.tone, ev.short); if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
     case 'shot': {
       const w = WEAPON_BY_INDEX[ev.w];
       // the flash and the tracer start at the gun as it's drawn: your own character runs ahead of where the server had
@@ -1136,6 +1136,7 @@ function setupWorld(seed, here = false, given = null) {
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
+  S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log');   // (client/hudinfo.js; a note cut short: the Log)
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
   import('../shared/fences.js').then((F) => { S.fence = F; setFences(F.FENCES); }).catch(() => {});   // (the fences: held off them, the hop - predicted like the server)
@@ -1452,6 +1453,7 @@ initInput(canvas, {
       if (k === 'KeyJ') { downAct(S.me.down.amb ? 'ambx' : 'amb'); return; }
       if (k === 'KeyC' && S.me.down.help) { downAct('cancel'); return; }
     }
+    if (deathUp && k === 'Enter' && S.hud.deathWake()) return;   // (WAKE UP HERE)
     if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1, /Up|Down|W|S/.test(k) ? 'v' : 'h'); return; }
     if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
     if (k === 'Escape' && topOverlay() === 'inv' && bag.back()) return;   // (a thing's details: back to the bag's grid)
@@ -1531,6 +1533,7 @@ function deathPad() {
   }
   const step = input.menuNav || input.menuLR;
   if (step) S.hud.stepSpawn(step, input.menuNav ? 'v' : 'h');
+  if (input.menuSelect) S.hud.deathWake();   // (A: WAKE UP HERE)
 }
 
 // ---- the bag + quick wheel ----------------------------------------------------------------------
@@ -3408,7 +3411,7 @@ function drawOverlays(F, v2) {
   const clean = !!(DIR && DIR.clean);   // (the cinematic mode's clean screen: no marks, labels, sights or HUD bits)
   if (v2 && !F.sub) {   // (none of the city's marks down in the subway's tunnel)
     if (!clean) drawAtmMarks(F.view, now);
-    if (!clean && settings.shopMarks !== false && S.art2.shopMarks) S.art2.shopMarks(g, F, drawIcon, KIND_ICON);   // (the shop symbols over doors near you: art2/game/host.js)
+    if (!clean && settings.shopMarks !== false && S.art2.shopMarks) { if (S.storeIcons) S.art2.shopMarks(g, F, S.storeIcons.drawBadge, S.storeIcons.STORE_ICON); else S.storeIconsP ||= import('./storeicons.js').then((m) => { S.storeIcons = m; }).catch(() => { S.storeIconsP = null; }); }   // (the store icons over doors near you: art2/game/host.js, client/storeicons.js)
     drawStationClocks(F.view, now); drawBusBoards(F.view, now); // (interim, flat on the overlay: the platform boards and race buoys)
     drawTrainSigns(F);
     drawSkyShadows(F, true);
@@ -3466,7 +3469,7 @@ function drawOverlays(F, v2) {
   }
 
   // HUD bits
-  if (clean) { if (S.cineGrab) { const fn = S.cineGrab; S.cineGrab = null; fn(canvas, worldCv); } return; }   // (the cinematic mode's clean screen: none - and its picture, taken now)
+  if (clean) { if (S.hud.info) S.hud.info.frame({ now: performance.now(), cine: true }); if (S.cineGrab) { const fn = S.cineGrab; S.cineGrab = null; fn(canvas, worldCv); } return; }   // (the cinematic hint strip: client/hudinfo.js)   // (the cinematic mode's clean screen: none - and its picture, taken now)
   if (S.skate && S.me && S.me.sk) S.skate.drawHud(g, W, H, S.me.sk, now);
   // (on a surfboard: this ride's points, the last one's, your best - server surf.js; on a horse: its wind, the hire's
   // clock - server horses.js: client/ridehud.js, loaded the first time)
@@ -3499,6 +3502,8 @@ function drawOverlays(F, v2) {
     // the touch slots: what each holds for what you're doing (shared/controls.js; client/touchslots.js, loaded the first time)
     if (input.device === 'touch') { if (S.slots) S.slots.tick(inVeh, inAir, onBoard); else if (!S.slotsAsk) { S.slotsAsk = 1; import('./touchslots.js').then((m) => { S.slots = m.makeSlots(undefined, { ctx: { S, CTRL, WEAPONS, VEHICLE_BY_INDEX, PF } }); setTouchAim(m.touchAim); }).catch((e) => { S.slotsAsk = 0; console.warn('[touchslots]', e); }); } }
     if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
+    // the vitals' numbers, the vehicle chip, the job card's clock, the hint strips, the prompt by you (client/hudinfo.js)
+    if (S.hud.info) { const pe = S.ents.get(S.myPedId); S.hud.info.frame({ now: performance.now(), veh: inVeh ? S.ents.get(S.ctrlId) : null, driver: S.ctrlKind === CTRL.DRIVER, board: onBoard, swim: !!(pe && pe.swim && !inVeh), cine: !!(DIR && DIR.clean), pred: S.pred, stam: S.uiSt }); }
   }
   if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); }
   if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);

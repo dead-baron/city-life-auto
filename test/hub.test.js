@@ -15,7 +15,7 @@ const HTML = read('index.html'), MAIN = read('client/main.js');
 const hubHtml = HTML.slice(HTML.indexOf('<div id="hub"'), HTML.indexOf('<div id="install"'));
 
 test('the HUD row is MENU · PHONE · MAP, and the hub has RESUME first, then its five tabs, each one of the panels', () => {
-  const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('<span id="hp-text"'));
+  const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
   assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-menu', 'b-phone', 'b-map'], 'three buttons, no more round ones');
   assert.deepEqual([...row.matchAll(/<\/svg>([A-Z]+)<span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['MENU ESC', 'PHONE P', 'MAP M'], 'labelled, the keys on a keyboard');
   for (const gone of ['b-bag', 'b-settings', 'b-fs', 'b-dev', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
