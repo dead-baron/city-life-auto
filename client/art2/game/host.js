@@ -29,6 +29,9 @@
 //   w.ready, w.resize(W, H, dpr), w.frame(F), w.propChanged(i), w.resync(), w.diag(), w.stats(), w.dispose()
 // api: helpers lent by main.js (pedLook, vehLift, birds, umbrella colours, seats, scales).
 import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bake itself: that runs in the workers)
+// see-through buildings (_fades): seconds to ease in and out; the clear space's radius round you on foot, in a vehicle at
+// most (else half its length + 34 px), round another player
+export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
 import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
@@ -158,18 +161,10 @@ const shallows = (M, x, y) => M.tileAtPx(x, y) === TT.WATER && [[22, 0], [-22, 0
 const UP_N = [128, 128, 255, 255], FACE_N = [128, 196, 230, 255]; // flat ground; an upright figure facing the camera
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 
-// Which chunks to bake, and in what order (lower runs sooner).
-//   need  the view (x0..y1, world px) plus the scene's margins (the shadow reach on the sun's side, room for
-//         reflections on top): drawn this frame; priority = distance from the camera (0..~2000). On the move the
-//         chunks only in the margins (they lend shadows at the edge; a stand-in does that well enough for a
-//         moment) wait until the next MARGIN_S s of the road ahead is under way: 2000 + MARGIN_S * 1000 + distance
-//   bake  need; then the sweep ahead when moving at (vx, vy) px/s: every chunk the view (grown by gx, gy: the
-//         zoom-out to come) passes over in the next T s (1.5 s plus 1 s per 250 px/s, at most 6 s: a phone's
-//         bakes take a second or more each, so the road ahead has to be started well before it shows), priority
-//         2000 + the ms until it comes into view; then a ring of MARGIN round the view (6000 + distance) - not
-//         behind you when moving, not at all at speed (the view itself is wider then)
-// Returns the chunks coming into view within 1.5 s that aren't on screen yet, soonest first (their placeholders
-// are drawn ahead).
+// Which chunks to bake, and in what order (lower runs sooner): need - the view plus the scene's margins, by distance
+// (on the move the margins wait: 2000 + MARGIN_S * 1000 + distance); bake - then the sweep ahead at (vx, vy): every
+// chunk the view passes over in the next 1.5 s + 1 s per 250 px/s (at most SWEEP_MAX), 2000 + ms until in view; then
+// a ring of MARGIN (6000 + distance), not behind you when moving. Returns those in view within SOON_S, soonest first.
 const SWEEP_MAX = 6, SOON_S = 1.5, MARGIN_S = 1.2;
 export function planBake(need, bake, view, vx, vy, reach, out = [], grid = [Infinity, Infinity]) {   // grid: artGrid(map)
   out.length = 0;
@@ -568,7 +563,7 @@ export class World2 {
     if (typeof document !== 'undefined') { const el = document.getElementById('exithint'); if (el) el.classList.add('hidden'); }   // (the way-out note: nothing hides it once we're gone)
     if (this.pool) this.pool.dispose();
     try { this.E.dispose(); } catch { /* gone */ }
-    this.chunkState.clear(); this.results.clear(); this.upQ.clear(); this.phs.clear(); this.fades.clear();
+    this.chunkState.clear(); this.results.clear(); this.upQ.clear(); this.phs.clear(); this.fades.clear(); if (this.fadeP) this.fadeP.clear();
   }
 
   // ---- while another view draws the frame (riding through a tunnel: main.js v1Draws) -----------------------------
@@ -741,12 +736,7 @@ export class World2 {
   }
 
   // ---- chunks ---------------------------------------------------------------------------------------------
-  // need: what the engine draws this frame (the view plus the tier's shadow reach) - resident now, a
-  // placeholder (roads, blocks and trees drawn simply) standing in until its bake lands; the engine keeps at
-  // least that many chunk slots, so what is on screen never pushes itself out. bake, in this order: that; the
-  // road ahead when moving (every chunk the view will sweep over in the next few seconds, by when it comes into
-  // view); then a ring round the view, not behind you when moving and not at all at speed. A fast car on a
-  // phone outruns a bake queue that spends its time on the ring (planBake, exported for the tests).
+  // need: what the engine draws this frame (a placeholder until its bake lands); bake: that, the road ahead, a ring (planBake)
   _chunks(F) {
     const E = this.E, S = this.S, tier = this.tier;
     const need = this.needChunks || (this.needChunks = new Map()), bake = this.wantChunks;
@@ -922,17 +912,11 @@ export class World2 {
   }
 
   // ---- baking ahead into the browser's store --------------------------------------------------------------
-  // When nothing on screen or on the road ahead is waiting for a bake, the workers bake the chunks round you into the
-  // browser's store of baked chunks (chunkstore.js) without drawing them, nearest first: further along the way you are
-  // heading, along the roads you could take from here (by distance along them), then a ring round you. Coming to
-  // one later, its bake is a read from the store: tens of ms instead of a second or more on a phone. One worker is
-  // always left for what the screen needs, nothing is baked ahead while the page is hidden, and at most PRE_N[phone]
-  // chunks round you are kept (the store holds 90 on a phone, 180 elsewhere: pool.js keepCap).
-  // About to go into a walk-in (its door a few steps off, or the hospital you'll wake up in - main.js walkInSoon:
-  // F.nearB): its chunks baked cut away into the browser's store ahead, so going in shows the floor at once (the look
-  // in the store: peekChunk) - not the roof over you for the seconds a phone takes to bake it (the owner, 10-16:
-  // "Interior art loads slowly on a phone (bowling alley, deli): preload or bake it"). Never the server's chunks: they're
-  // the roofed ones.
+  // When nothing on screen or ahead waits for a bake, the workers bake the chunks round you into the browser's store
+  // (chunkstore.js) undrawn, nearest first along your way and the roads from here, then a ring: later a bake is a read.
+  // One worker stays free for the screen; nothing while the page is hidden; at most PRE_N[phone] kept.
+  // A walk-in you're about to enter (main.js walkInSoon: F.nearB) is baked cut away ahead (peekChunk), so going in
+  // shows the floor at once, not the roof (the owner, 10-16).
   _precut(F) {
     const b = F.nearB, P = this.pool;
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
@@ -1252,13 +1236,18 @@ export class World2 {
   }
 
   // ---- see-through buildings --------------------------------------------------------------------------------
-  // A building whose picture covers you eases (~0.2 s) to a ghost, clear round you and the players near you (engine.js
-  // STATIC_FS: GHOST, uClr); its footprint never fades; a tall thin one fades less (GHOST_THIN) - the owner, 10-23.
+  // A building whose picture covers you (or the vehicle you're in, all of it) eases to a ghost and back - a smoothstep
+  // over FADE_IN / FADE_OUT s, not a snap - clear round you and the players near you (engine.js STATIC_FS: GHOST, uClr,
+  // its edge feathered over CLR_SOFT); its footprint never fades; a tall thin one fades less (GHOST_THIN); whatever is
+  // behind it shows through (GHOST_FS). The owner, 10-23 and 10-24 ("make the circle around the player much bigger (so
+  // it shows an entire vehicle) ... ease in and out of transparency ... feather the border"; "vehicles and NPCs and
+  // things disappeared entirely behind the building").
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
-    // your figure on screen (from your feet up) and the space kept clear round it
-    const rx = onTrain ? 28 : inVeh ? 64 : 30, up = onTrain ? 70 : inVeh ? 72 : 62, down = onTrain ? 12 : inVeh ? 30 : 12;
+    // your figure on screen (from your feet up): in a vehicle the whole of it, whichever way it faces (half its length)
+    const half = inVeh ? Math.max(40, ((S.pred.def && S.pred.def.L) || 90) * 0.5) : 0;
+    const rx = onTrain ? 28 : inVeh ? half + 6 : 30, up = onTrain ? 70 : inVeh ? half + 36 : 62, down = onTrain ? 12 : inVeh ? half : 12;
     const want = this._fadeWant || (this._fadeWant = new Map());
     want.clear();
     const riding = !!(S.me && S.me.ride);   // (up on the wheel or in a balloon: nothing round your feet to see past)
@@ -1275,22 +1264,31 @@ export class World2 {
         want.set(b, pw < 72 || pw * 2.2 < ph ? -1 : 1);
       }
     }
-    const k = 1 - Math.exp(-11 * Math.min(0.1, F.dt || 0.016));   // (eased: most of the way in ~0.2 s)
-    for (const [b, sg] of want) if (!this.fades.has(b)) this.fades.set(b, sg * 1e-3);
-    for (const [b, f] of this.fades) {
-      const on = want.has(b), sg = on ? want.get(b) : f < 0 ? -1 : 1, a = Math.abs(f), na = a + ((on ? 1 : 0) - a) * k;
-      if (!on && na < 0.01) this.fades.delete(b); else this.fades.set(b, sg * Math.max(1e-3, na));
+    // each one's progress runs linearly (fadeP) and is shown through a smoothstep, so it eases in and out at both ends
+    const dt = Math.min(0.1, F.dt || 0.016), P = this.fadeP || (this.fadeP = new Map());
+    for (const [b, sg] of want) if (!P.has(b)) P.set(b, sg * 1e-3);
+    this.fades.clear();
+    for (const [b, f] of P) {
+      const on = want.has(b), sg = on ? want.get(b) : f < 0 ? -1 : 1, a = Math.abs(f);
+      const na = on ? Math.min(1, a + dt / FADE_IN) : a - dt / FADE_OUT;
+      if (!on && na <= 0) { P.delete(b); continue; }
+      P.set(b, sg * Math.max(1e-3, na));
+      this.fades.set(b, sg * Math.max(1e-3, na * na * (3 - 2 * na)));
     }
-    // the clear spaces: round you (a car's a little bigger), then the players near you (engine.js uClr)
+    // the clear spaces: round you - on foot CLR_FOOT, in a vehicle the whole of it (eased as you get in or out) - then
+    // the players near you (engine.js uClr)
     const C = this.clr || (this.clr = new Float32Array(16));
     C.fill(0);
+    const tr = inVeh ? Math.min(CLR_VEH_MAX, half + 34) : CLR_FOOT, ty = inVeh ? 16 : 22;
+    const ke = 1 - Math.exp(-8 * dt);
+    if (!this.clrR) { this.clrR = tr; this.clrY = ty; } else { this.clrR += (tr - this.clrR) * ke; this.clrY += (ty - this.clrY) * ke; }
     if (this.fades.size && !F.spec) {
-      C[0] = px; C[1] = sy - (inVeh ? 16 : 22); C[2] = inVeh ? 66 : 40; C[3] = 1;
+      C[0] = px; C[1] = sy - this.clrY; C[2] = this.clrR; C[3] = 1;
       let n = 1;
       for (const p of F.peds || []) {
         if (n >= 4) break;
         if (p.id === S.myPedId || !p.d || !p.d.pl || (p.flags & PF.DEAD) || Math.abs(p.rx - px) > 360 || Math.abs(p.ry - py) > 300) continue;
-        C[n * 4] = p.rx; C[n * 4 + 1] = p.ry - 22; C[n * 4 + 2] = 32; C[n * 4 + 3] = 1; n++;
+        C[n * 4] = p.rx; C[n * 4 + 1] = p.ry - 22; C[n * 4 + 2] = CLR_OTHER; C[n * 4 + 3] = 1; n++;
       }
     }
   }
@@ -1903,11 +1901,8 @@ export class World2 {
   }
 
   // ---- the rides (shared/rides.js) -------------------------------------------------------------------------------
-  // The Ferris wheel's sixteen gondolas going round on the world's loop clock (the wheel is baked without them; your
-  // own cab glows a little while you ride it), and every balloon flight under way, from its route and how long it
-  // has been up (main.js keeps S.rides from the server's broadcasts): it fades in as it fills on the field and out
-  // as it empties after touch-down. The burners light up the night (_lights). And the sliders at Splash Canyon: up the
-  // tower's stair, then down their slide on their backs, feet first (_slider).
+  // The Ferris wheel's gondolas on the world's loop clock, the balloon flights under way (S.rides; fading in and out on
+  // the field, burners lit: _lights), and Splash Canyon's sliders (_slider).
   _rides(F, now) {
     const A = this.A, S = this.S, E = this.E, lit = this.balLit || (this.balLit = []);
     lit.length = 0;
@@ -1976,12 +1971,12 @@ export class World2 {
     lit.length = 0;
     if (!list || !list.length || !A || !A.forageKey) return;
     let g = this._fgrid;
-    if (!g) { g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
+    if (!g || this._fgList !== list || this._fgN !== list.length) { this._fgList = list; this._fgN = list.length; g = this._fgrid = new Map(); list.forEach((f, i) => { const k = Math.floor(f.y / 512) * 4096 + Math.floor(f.x / 512); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }); }
     const gone = this.S.forageGone, o = this.opts;
     o.alpha = 1; o.flash = 0; o.xray = false; o.shadow = true; o.tint = null; o.flipX = false; o.air = false;
     for (let cy = Math.floor((this.vy0 - 40) / 512); cy <= Math.floor((this.vy1 + 60) / 512); cy++) for (let cx = Math.floor((this.vx0 - 40) / 512); cx <= Math.floor((this.vx1 + 40) / 512); cx++) {
       for (const i of g.get(cy * 4096 + cx) || []) {
-        const f = list[i], K = FORAGE_KINDS[f.k];
+        const f = list[i], K = f && FORAGE_KINDS[f.k];
         if (!K || (gone && gone.has(i)) || f.x < this.vx0 - 30 || f.x > this.vx1 + 30 || f.y < this.vy0 - 10 || f.y > this.vy1 + 40) continue;
         const v = i & 3, key = this._spr('actors', 'forage', A.forageKey(K.art, v), [K.art, v]);
         if (K.glow) lit.push(f.x, f.y, K.glow);
@@ -2236,12 +2231,8 @@ export class World2 {
       }
     }
   }
-  // Flags in the wind (task #426: liveart.js; the chunks' live.flags, [kind, x, y, z0] of every bare flagpole): the
-  // cloth stands out as far as the wind where it is says (limp and hanging in calm air), streams the way it blows,
-  // and flaps - or in calm air sways - at the wind's pace, each flag a little out of step with the others. The
-  // flap's phase is summed frame by frame (never the clock times the wind now, which races when the wind changes:
-  // task #388); with Settings' wind sway off the cloth holds still. Frames are made as needed, the last one shown
-  // meanwhile.
+  // Flags in the wind (task #426: liveart.js, the chunks' live.flags): out as far as the wind says, flapping at its pace,
+  // the phase summed frame by frame (task #388); still with Settings' wind sway off.
   _flagStep(F) {
     const P = (this.flagP ||= {}), dt = Math.min(0.1, Math.max(0, F.dt || 0));
     flagPose(wind.strength, P);
