@@ -27,6 +27,8 @@ export function logNote(text, tone = 'info', at = Date.now()) {
 // the log, newest first (a copy)
 export function noteLog() { return load().slice().reverse(); }
 export function clearLog() { log = []; save(); }
+// A prompt's words (UI-5): a crime's (pcr > 0) less its name after the last " - " - the red key says it (hud.js crimeMarks)
+export function promptWords(p, pcr) { const t = String(p || ''), i = pcr > 0 ? t.lastIndexOf(' - ') : -1; return i > 0 ? t.slice(0, i) : t; }
 // The one line the HUD shows of a note (UI-4: notes are one line, the whole of them in the Log): a short one as it is,
 // a long one its first sentence or clause - the server can name the line itself (world.notify's short)
 export const NOTE_LINE = 64;

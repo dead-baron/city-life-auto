@@ -47,11 +47,10 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
   --tap: 44px; --tap-l: 48px;
   --t1: 150ms; --t2: 200ms; --t3: 250ms; --ease: cubic-bezier(.2, .7, .3, 1);
-  /* the top of a phone's screen: --cam-top keeps the top centre clear of a camera in the screen; the corners stay at
-     the top (--corner-top) unless an installed app on an iPhone shows the clock and the battery there */
-  --cam-top: env(safe-area-inset-top, 0px); --corner-top: 0px;
+  /* the top of a phone's screen: the safe area (a camera, a notch, a corner punch-hole, a status bar) - the HUD keeps
+     below it, corners and all (UI-5: the owner's Pixel 7 Pro played full screen hid the vitals under its camera) */
+  --cam-top: env(safe-area-inset-top, 0px);
 }
-@media (display-mode: standalone) { :root { --corner-top: env(safe-area-inset-top, 0px); } }
 body.touch { --fs-1: 14px; --fs-row: var(--fs-3); }
 @media (max-height: 520px) { :root { --fs-row: var(--fs-3); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; } }
@@ -155,21 +154,31 @@ input[type=range]:disabled { opacity: .4; }
    --sr, --st (the top), --sb; --map the minimap's size. */
 #hud { position: absolute; inset: 0; pointer-events: none; font: 600 var(--fs-2) var(--ui); color: var(--cream);
   --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 24px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 156px; --vbar: 115px; }
-.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: calc(10px + var(--corner-top)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --vbar: 72px; }
-body.portrait.touch #hud { --map: 88px; --vbar: 60px; }
+.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(10px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --vbar: 72px; }
+body.portrait.touch #hud { --map: 88px; --vbar: 56px; }
 @media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --vbar: 80px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 
-/* the minimap in a gold ring; on a phone the clock on its foot */
+/* the minimap in a gold ring, nothing on it */
 #radar-wrap { position: absolute; left: var(--sl); top: var(--st); width: var(--map); pointer-events: auto; }
 #radar { display: block; width: var(--map); height: var(--map); border-radius: var(--r3); border: 3px solid var(--gold); background: var(--navy); box-shadow: 0 0 0 2px var(--ink), 0 4px 14px var(--ink-a); cursor: pointer; }
-#radar-wrap::before { content: 'N'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
-#rclock { display: none; position: absolute; left: 50%; top: var(--map); transform: translate(-50%, -50%); z-index: 1; align-items: center; gap: var(--s1); height: 24px; padding: 0 7px; white-space: nowrap; pointer-events: none;
-  background: var(--panel-bg); border: 1px solid var(--gold); border-radius: var(--r1); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--lift); }
+#radar-wrap::before { content: 'N'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
+/* the clock on a phone (UI-5, the owner 2026-10-26: "The time of day blocks too much of the minimap"): a small chip off
+   the minimap - on its side on the cash's row, to its left (the column can't grow: the arc's small buttons are under
+   it); upright beside the minimap under the vitals, where the status line stands in for it while there's something
+   happening to you. A desktop has #clock at the foot of the top-right column. */
+#rclock { display: none; flex: none; align-items: center; gap: var(--s1); height: 24px; padding: 0 6px; white-space: nowrap; pointer-events: none; background: var(--glass); border-radius: var(--r1); font: 400 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--lift); }
 #rclock img.pi { height: 12px; width: auto; }
+#rclock img.pi:not([src]) { display: none; }
 .touch #rclock { display: flex; }
+.touch:not(.portrait) #hud-tr { display: grid; grid-template-columns: 1fr auto; column-gap: var(--s2); justify-items: end; }
+.touch:not(.portrait) #hud-tr > * { grid-column: 1 / -1; }
+.touch:not(.portrait) #hud-tr > #money { grid-area: 1 / 2; }
+.touch:not(.portrait) #hud-tr > #rclock { grid-area: 1 / 1; align-self: center; }
+body.portrait.touch #rclock { position: fixed; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 76px); }
+body.portrait.touch #hud:has(#status > .hchip:not(.stat, .role.citizen)) #rclock { display: none; }
 
 /* the vitals: an icon, the bar, the number (the words too on a desktop); the status line under them in plain words */
 #vitals { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 6px); display: flex; flex-direction: column; gap: 5px; }
@@ -184,6 +193,13 @@ body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 @keyframes hplow { 50% { opacity: .55; } }
 .fill.st { background: var(--info); }
 .touch .vrow .vl { display: none; }
+/* upright (UI-5, the owner 2026-10-26 on a Pixel 7 Pro: "The health and stamina at the top get blocked by a camera
+   lens"): beside the minimap's lower half, the status line under them - the top centre, where a camera sits, holds
+   nothing (38 px down: under the band test/hudlayout.test.js keeps clear - the top 48 px, or the safe area and a bit) */
+body.portrait.touch #vitals { top: calc(var(--st) + 38px); gap: 3px; }
+body.portrait.touch .vrow { gap: var(--s1); }
+body.portrait.touch .vrow svg { width: 14px; height: 14px; }
+body.portrait.touch .vrow b { min-width: 28px; }
 #status { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 62px); display: flex; flex-wrap: wrap; gap: var(--s1) 6px; max-width: min(440px, calc(100vw - var(--sl) - var(--map) - 300px)); }
 #status:empty { display: none; }
 .hchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 var(--s2); border-radius: var(--r1); background: var(--glass); color: var(--cream); font: 700 var(--fs-2) var(--ui); white-space: nowrap; }
@@ -258,22 +274,18 @@ body.dead #job { display: none !important; }
 .touch #money { font-size: var(--fs-4); }
 .touch #bank, .touch #clock { display: none; }
 .touch #stars { font-size: var(--fs-3); }
-.touch #weapon { position: relative; min-height: 40px; padding: 2px var(--s1) 2px var(--s2); pointer-events: auto; cursor: pointer; }
-.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--tap)); transform: translateY(-50%); }   /* (44 px to tap whatever its height) */
-.touch #w-icon canvas { width: 64px; height: 32px; }
-.touch #w-name { font-size: var(--fs-2); }
-.touch #weapon.compact { min-width: var(--tap); min-height: var(--tap); justify-content: center; padding: 0 var(--s1); }
-.touch #weapon.compact #w-info { display: none; }
-.touch #weapon.none { display: none; }
-body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: var(--s1); font-size: var(--fs-2); opacity: .75; }
-body.in-veh.touch #weapon:not(.gun) { display: none; }
+/* on touch the weapon plate is the weapon button, a slot above CAR / ACT (UI-6: client/touchslots.js sets --sx/y/w/h and
+   data-slot while the slot holds it): the icon and the rounds; a tap the next weapon, held the picker (client/main.js) */
+.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; flex-direction: column; justify-content: center; gap: 0; padding: 0; pointer-events: auto; cursor: pointer; touch-action: none; }
+.touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
+.touch #w-icon canvas { width: 48px; height: 24px; }
+.touch #w-info { text-align: center; white-space: nowrap; }
+body.touch.multi-wpn #weapon::after { content: '⇄'; position: absolute; top: -2px; right: 3px; font-size: var(--fs-2); opacity: .75; }
 /* upright: the vehicle chip three short lines (the name, the height, the speed) */
 .touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); border: 2px solid var(--gold); border-radius: var(--r2); font-size: var(--fs-2); }
 .touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
-body.portrait.touch #hud-tr { max-width: calc(100vw - var(--sl) - var(--map) - 14px - var(--vbar) - 70px); }
-body.portrait.touch #w-name { display: none; }
-body.portrait.touch #status { max-width: calc(var(--vbar) + 40px); }
-body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
+body.portrait.touch #hud-tr { max-width: calc(40vw - var(--sr)); }
+body.portrait.touch #status { top: calc(var(--st) + 76px); max-width: calc(var(--vbar) + 54px); }   /* (under the vitals, over the row: UI-5) */
 
 /* the robbery, train, bus, ferry, taxi and custody bars: top centre under the row */
 #hud-msg { position: absolute; left: 0; right: 0; top: calc(var(--st) + 120px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
@@ -284,6 +296,7 @@ body.portrait.touch #w-icon canvas { width: 48px; height: 24px; }
 body.portrait.touch #hud-msg > * { max-width: calc(100vw - 2 * var(--sl)); }
 body.portrait.touch #hud-msg { top: calc(var(--st) + var(--map) + 72px); }
 body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job { margin-top: 80px; }
+body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o { display: none; }   /* (and the big card short: clear of the middle - UI-5) */
 body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }   /* (upright with a bar up - a robbery, a ride, custody - the notes wait in the Log) */
 
 /* the notes: one line each, two at most, in and out on their own (hud.js toast); a long one cut short, the whole of it
@@ -308,8 +321,9 @@ body.portrait.touch #toasts { left: var(--sl); right: var(--sr); align-items: fl
 body.portrait.touch .toast { max-width: 100%; }
 body.portrait.touch #toasts { top: calc(var(--st) + var(--map) + 66px); }
 body.portrait.touch #hud:has(#job.chip:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 116px); }
-body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 158px); }
-body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts .toast:nth-last-child(n+2) { display: none; }
+/* (upright while the job card is big - a new step, a few seconds - the notes wait in the Log: under it they'd reach the
+   middle, on a phone with a camera in the screen most of all) */
+body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts { display: none; }
 
 /* the low slot: the police cruiser's hint, the prompt, the hint strip - bottom centre (on touch between the move stick
    and the arc on its side, above the arc upright); with a keyboard or a pad the prompt is by you (hudinfo.js frame) */
@@ -445,6 +459,7 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); font: 700 var(--fs-1)/1 var(--ui); letter-spacing: .5px; transition: transform var(--t1) var(--ease), background-color var(--t1), opacity var(--t2); }
 #tbtns button[data-slot] { display: flex; }
 #tbtns svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#tbtns svg * { vector-effect: non-scaling-stroke; }   /* (the same 2 px line on every button, big or small: UI-5) */
 #tbtns button:active { transform: scale(.94); }
 #tbtns [data-slot=fire] { background: var(--danger); color: var(--ink); border: 3px solid var(--ink); font-size: var(--fs-3); }
 #tbtns [data-slot=act] { background: var(--gold); color: var(--ink); }
@@ -476,10 +491,6 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 @keyframes pulsebad { 50% { box-shadow: 0 0 0 7px var(--danger-t); } }
 #tbtns button.pulse.felony { outline: 2px solid var(--danger); outline-offset: 3px; }
 #tbtns button.pulse.armed { animation-duration: .4s; }
-/* the weapon plate is the weapon button on touch: a tap the next one, held the picker */
-body.touch.multi-wpn #weapon::after { content: '⇄'; margin-left: 6px; font-size: var(--fs-2); opacity: .75; }
-body.touch #weapon { position: relative; pointer-events: auto; cursor: pointer; }
-body.touch #weapon::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: max(100%, var(--tap)); transform: translateY(-50%); }   /* (44 px to tap whatever its height) */
 #dev-btn { display: none !important; }
 /* the weapon picker (hold the weapon plate): a grid of what you carry */
 #wpick { position: fixed; inset: 0; z-index: 31; background: var(--ink-a); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding: max(8px, env(safe-area-inset-top)) 0 max(14px, env(safe-area-inset-bottom)); }
@@ -744,7 +755,7 @@ body.dead #touch, body.dead #job { display: none !important; }   /* (nothing to 
 #jail button:disabled { opacity: .45; }
 #jail small { flex-basis: 100%; font: 500 var(--fs-1) var(--ui); color: var(--dim); }
 @media (max-height: 480px) and (orientation: landscape) { #jail small { display: none; } .touch #jail { top: 60px; } }
-body.portrait.touch #jail { top: calc(var(--corner-top) + 168px); }   /* (under the HUD's row: UI-4) */
+body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 158px); }   /* (under the HUD's row: UI-4, UI-5) */
 
 /* ==== odds and ends ==== */
 #interior { position: absolute; inset: 0; z-index: 15; background: var(--ink); }   /* (the police station lobby / armory behind the menu) */
@@ -975,7 +986,7 @@ body:not(.touch) #hud-btns #b-dev { width: auto; min-width: 40px; padding: 0; }
 #hud-btns { top: var(--st); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 140px), calc(50% - 210px)); transform: none; }
 @media (max-width: 1180px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
 /* on its side: right of the vitals, centred where there's room (clear of a camera in the screen's top centre) */
-.touch #hud-btns { top: max(var(--st), var(--cam-top)); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 80px), calc(50% - 160px)); transform: none; }
+.touch #hud-btns { top: var(--st); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 80px), calc(50% - 160px)); transform: none; }
 @media (max-height: 430px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { height: 40px; padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
 /* upright: one row under the minimap */
 body.portrait.touch #hud-btns { left: var(--sl); top: calc(var(--st) + var(--map) + 14px); }
@@ -1242,3 +1253,4 @@ body.portrait .set-head .seg { width: 100%; } body.portrait .set-head .seg > but
 .touch .bm-check.on::after { left: 16px; top: 12px; }
 .touch #creator .cc-sw { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 1px var(--gold-a); }
 .touch #creator .cc-sw.on { transform: none; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--gold); }
+@media (max-height: 430px) and (max-width: 800px) { .touch #hud-btns button:not(#b-dev) { padding: 0 10px; } .touch #hud-btns button:not(#b-dev) svg { display: none; } }

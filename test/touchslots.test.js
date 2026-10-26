@@ -33,6 +33,10 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   assert.deepEqual(acts({ swim: true, armed: true, items: true }), { act: 'action:ACT', car: 'vehicle:CAR', u1: 'use:ITEMS' }, 'swimming: no FIRE, no ROLL');
   assert.equal(touchState({ inVeh: true, driver: true, boat: true }), 'boat');
   assert.equal(touchState({ inVeh: true }), 'ride');
+  // the weapon button (UI-6): in WP whenever the page has something to switch (wpn), in every state but at home
+  for (const f of [{}, { armed: true }, { carrying: true }, { inVeh: true, driver: true }, { air: true, inVeh: true }, { swim: true }, { board: true }]) assert.equal(acts({ ...f, wpn: true }).wp, 'nextw:WEAPON', JSON.stringify(f));
+  assert.equal(acts({ armed: true }).wp, undefined, 'none with nothing to switch');
+  assert.equal(acts({ home: true, wpn: true }).wp, undefined, 'none at home');
   assert.equal(touchState({ home: true, armed: true }), 'home');
   // the aim stick and FIRE ON beside it in every state but at home
   for (const [state, slots] of Object.entries(TOUCH_STATES)) {
@@ -53,7 +57,9 @@ test('every action a slot can hold has its button, its binding, its icon and a R
   const html = read('index.html'), inp = read('client/input.js'), readme = read('README.md');
   const tb = html.slice(html.indexOf('<div id="tbtns">'), html.indexOf('<div id="interior"'));
   for (const a of new Set(Object.values(TOUCH_STATES).flatMap((s) => Object.values(s).map((e) => e[0])))) {
-    assert.match(tb, new RegExp(`data-b="${a}"`), `a #tbtns button for ${a}`);
+    // (the weapon button: the HUD's weapon plate, placed in its slot on touch - UI-6)
+    if (a === 'nextw') assert.match(html, /<div id="weapon">/, 'the weapon plate for nextw');
+    else assert.match(tb, new RegExp(`data-b="${a}"`), `a #tbtns button for ${a}`);
     assert.notEqual(iconOf(a, ''), undefined);
   }
   // held: FIRE, BLOCK, GALLOP, CLIMB / DOWN; the aim stick with its ring and the FIRE ON toggle and setting as before

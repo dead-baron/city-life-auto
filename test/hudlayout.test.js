@@ -1,7 +1,7 @@
 // The HUD on every screen (H70): the prompt (what Act would do - "Steal the Sedan - Vehicle theft"), the notes, the job
 // line, the cruiser's hint and the robbery and custody bars fully on the screen and never under a button, the minimap,
 // the cash and the stars, nor each other - on desktops (1280x720, 1920x1080), phones on their side (844x390, 740x360)
-// and upright (390x844) and a tablet (1024x768), with a keyboard, a pad or the touch controls, on foot, driving, flying,
+// and upright (390x844; 412x892 with a camera in the screen's top) and a tablet (1024x768), with a keyboard, a pad or the touch controls, on foot, driving, flying,
 // as the police, robbing a shop and arrested. The QA sweep of 2026-10-11 found the prompt under the round buttons on a
 // phone (its first word or two showing) and on a desktop with a long prompt, and the notes over the job line on a phone.
 // Measured for real: the HUD's markup from index.html with the stylesheet in a headless Chromium (test/hudpage.js;
@@ -45,6 +45,26 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     if (JSON.stringify(Object.keys(got).sort().map((k) => [k, got[k]])) !== JSON.stringify(Object.keys(want.slots).sort().map((k) => [k, want.slots[k]]))) ctl.push(`${tag}: the slots ${JSON.stringify(got)} - controls.js says ${JSON.stringify(want.slots)}`);
   }
   assert.ok(all.some((r) => r.sc.st === 'air' && r.keep.some((k) => k.name === 'tb.climb')), 'the rocker measured');
+  // UI-6 (the owner, 2026-10-26: "moving the weapons button down to the bottom UI so it's easier to switch weapons"): on
+  // touch the weapon button is a slot by the right thumb - low on the screen, right of the middle, 44 px or more (the
+  // checks above: on nothing, clear of the middle) - upright and on its side, with or without a camera in the screen;
+  // nothing of it left in the top right
+  const wpn = [], wsz = new Set();
+  for (const r of all.filter((q) => q.sc.dev === 'touch')) {
+    const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, b = r.keep.find((k) => k.name === 'tb.nextw');
+    if (r.keep.some((k) => k.name === 'weapon')) wpn.push(`${tag}: the weapon plate still in the HUD`);
+    if (!touchSlots(FLAGS[st]).slots.wp) { if (b) wpn.push(`${tag}: a weapon button with nothing to switch`); continue; }
+    if (!b) { wpn.push(`${tag}: no weapon button`); continue; }
+    wsz.add(`${w}x${h}`);
+    if (b.slot !== 'wp') wpn.push(`${tag}: the weapon button in ${b.slot}`);
+    // (upright in the bottom half; on its side - a 390 px tall screen, the arc round the aim stick full - in the right
+    // third, under the top band, by the stick)
+    if (h > w ? b.y0 < h / 2 : b.y0 < h * 0.3) wpn.push(`${tag}: the weapon button too high (y ${b.y0})`);
+    if (b.x0 < (h > w ? w / 2 : w * 2 / 3)) wpn.push(`${tag}: the weapon button too far left (x ${b.x0})`);
+    if (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44) wpn.push(`${tag}: the weapon button ${b.x1 - b.x0}x${b.y1 - b.y0}`);
+  }
+  for (const s of ['390x844', '412x892', '844x390', '740x360']) assert.ok(wsz.has(s), `the weapon button measured at ${s}`);
+  assert.deepEqual(wpn, [], wpn.slice(0, 30).join('\n'));
   assert.deepEqual(ctl, [], ctl.slice(0, 30).join('\n'));
   // the HUD row (UI-3): MENU · PHONE · MAP, labelled, nothing else; 44 px on touch; the keys on a keyboard (Esc / P / M),
   // none on a pad or a phone; side by side, not on each other; upright, in the top band and clear of the middle
@@ -108,10 +128,40 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     if (touch && r.minFont < 14) info.push(`${tag}: ${r.minFont} px words (${r.minAt})`);
     // the HUD's own parts clear of each other (the minimap, the vitals and status, the top-right column, the row)
     const hk = r.keep.filter((k) => HUDKEEP.includes(k.name) || k.name.startsWith('b-'));
-    for (const [i, a] of hk.entries()) for (const b of hk.slice(i + 1)) if (on(a, b) && !(a.name === 'minimap' && b.name === 'rclock')) info.push(`${tag}: ${a.name} on ${b.name}`);
+    for (const [i, a] of hk.entries()) for (const b of hk.slice(i + 1)) if (on(a, b)) info.push(`${tag}: ${a.name} on ${b.name}`);
   }
   for (const [w, h] of SIZES) for (const f of ['big', 'chip']) assert.ok(forms.has(`${w}x${h} ${f}`), `the job card ${f} measured at ${w}x${h}`);
   assert.deepEqual(info, [], info.slice(0, 40).join('\n'));
+  // UI-5 (the owner, 2026-10-26, on a Pixel 7 Pro held upright: "The health and stamina at the top get blocked by a camera
+  // lens"; "The time of day blocks too much of the minimap"): nothing on the minimap, the clock included; and held upright
+  // nothing of the HUD above the safe area's top (a notch, a centred or a corner punch-hole: 412x892 is played with one)
+  // nor in the top-centre band where a centred camera sits even on a phone that doesn't say so (the middle 20%, the top
+  // 48 px - or the safe area and a little) - the vitals beside the minimap's lower half
+  const cam = [];
+  for (const r of all) {
+    const { w, h, dev, st } = r.sc, top = r.sc.cam || 0, tag = `${w}x${h} ${dev} ${st}`;
+    const mm = r.keep.find((k) => k.name === 'minimap');
+    const hud = [...r.keep.filter((k) => HUDKEEP.includes(k.name) || k.name.startsWith('b-')), ...r.read];
+    for (const k of [...hud, ...r.keep.filter((q) => q.name.startsWith('tb.'))]) if (k !== mm && on(k, mm)) cam.push(`${tag}: ${k.name} on the minimap (${k.x0},${k.y0}-${k.x1},${k.y1})`);
+    // the clock on touch: a small chip beside the minimap, never on it; upright it stands aside for the status (bleeding,
+    // a bounty) - one line there under the vitals
+    if (dev === 'touch') {
+      const ck = r.keep.find((k) => k.name === 'rclock'), stl = r.keep.find((k) => k.name === 'status');
+      if (ck && (ck.x0 < mm.x1 || ck.y0 > mm.y1 || ck.y1 - ck.y0 > 26)) cam.push(`${tag}: the clock isn't a small chip beside the minimap ${JSON.stringify(ck)}`);
+      if (!ck && !(h > w && stl)) cam.push(`${tag}: no clock`);
+    }
+    if (dev !== 'touch' || h < w) continue;
+    const band = { x0: w * 0.4, x1: w * 0.6, y0: -99, y1: Math.max(48, top + 8) };
+    for (const k of [mm, ...hud]) {
+      if (k.y0 < top) cam.push(`${tag}: ${k.name} above the safe area (y ${k.y0} < ${top})`);
+      if (on(k, band)) cam.push(`${tag}: ${k.name} in the top-centre band (${k.x0},${k.y0}-${k.x1},${k.y1})`);
+    }
+    const v = r.keep.find((k) => k.name === 'vitals');
+    if (!v || v.x0 < mm.x1 || v.y1 > mm.y1 + 4) cam.push(`${tag}: the vitals aren't beside the minimap ${JSON.stringify(v)}`);
+  }
+  assert.ok(all.some((r) => r.sc.cam), 'a phone with a camera in the screen measured');
+  assert.ok(all.some((r) => r.sc.h > r.sc.w && r.keep.some((k) => k.name === 'rclock')), 'the clock measured upright');
+  assert.deepEqual(cam, [], cam.slice(0, 40).join('\n'));
 });
 
 // the prompt's crime marks (hud.js crimeMarks: the key chip red with a "!", a felony ringed; the touch button red - no

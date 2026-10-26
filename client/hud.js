@@ -1,6 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
-import { logNote, noteLine } from './notelog.js';
+import { logNote, noteLine, promptWords } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -97,11 +97,11 @@ export class HUD {
     this.lastStars = me.wanted;
     // prompt -> GTA help box with the right button for this device; matching touch button pulses
     const pr = $('helpbox');
-    const sig = (me.prompt || '') + '|' + input.device;
+    const sig = (me.prompt || '') + '|' + (me.pcr | 0) + '|' + input.device;
     if (me.prompt && !me.dead) {
       if (pr.dataset.sig !== sig) {
         pr.dataset.sig = sig;
-        const fp = formatPrompt(me.prompt);
+        const fp = formatPrompt(promptWords(me.prompt, me.pcr | 0));
         pr.innerHTML = fp.html;
         this.unarm();
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
@@ -291,9 +291,8 @@ export class HUD {
     $('rclock').title = `${c.isNight ? 'Night' : 'Day'} · ${rain ? 'rain' : 'clear'}`;
   }
 
-  // Safety mode held back a crime (server safety.js, tone 'safety': "That's vehicle theft - press again to do it anyway"):
-  // with the prompt up, no note - the prompt's key and the touch button blink and a small "PRESS AGAIN" sits on the plate's
-  // edge for as long as the second press would count. False when there's no prompt to mark (a plain note then).
+  // Safety mode held back a crime (server safety.js, tone 'safety'): no note (UI-5) - the prompt's key and the touch
+  // button blink, "PRESS AGAIN" on the plate's edge, while a second press counts. False with no prompt to mark.
   safetyNudge() {
     const pr = $('helpbox');
     if (!pr || pr.classList.contains('off')) return false;
@@ -309,7 +308,7 @@ export class HUD {
   }
 
   toast(text, tone = 'info', short = '') {
-    if (tone === 'safety') { if (!$('hud').classList.contains('hidden') && this.safetyNudge()) return; tone = 'warn'; }
+    if (tone === 'safety') { if (!$('hud').classList.contains('hidden')) this.safetyNudge(); return; }
     // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
     // it's still fresh - so the welcome (or "fresh start after an update") isn't missed
     if ($('hud').classList.contains('hidden')) {
