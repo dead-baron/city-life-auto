@@ -126,6 +126,7 @@ export const GIVE_AFTER_REVIVE_S = 15;        // after a revive you may hand the
 export { REVIVE_KIT_PRICE } from './rules-base.js';           // hospitals and pharmacies; never used up, only works on someone else
 export const AMBULANCE_FEE = 200;             // paid from the bank, and only if the paramedics actually revive you
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
+export const DROP_LIFE_S = 300;               // something you drop from the bag (client/bag.js Drop) waits in a bag at your feet this long
 export const PACK_LIFE_S = 600;               // the backpack (and the cash) you drop when you die stays this long
 export const PACK_BLINK_S = 30;               // ...and blinks for its last seconds
 export const HOSPITAL_FEE = 150;

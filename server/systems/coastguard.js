@@ -96,7 +96,7 @@ export function start(world, p, mode = 'boat') {
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (yours for the shift: not theft)
   v.returnTo = { x: Math.round(v.x), y: Math.round(v.y), label: where };
   p.job = { type: 'coast', mode, truck: v.id, stage: 'wait', nextAt: world.time + COAST.firstS, expires: world.time + COAST.shiftS, busts: 0, saved: 0, text: 'Coast guard: on patrol - stand by for a call' };
-  world.notify(p, `Coast guard: your ${mode === 'air' ? 'helicopter' : 'patrol boat'} is waiting at ${where} (the green ring). Calls come over the radio - smugglers running contraband along the coast, people in the water.`, 'good');
+  world.notify(p, `Coast guard: your ${mode === 'air' ? 'helicopter' : 'patrol boat'} is waiting at ${where} (the green ring). Calls come over the radio - smugglers running contraband along the coast, people in the water.`, 'good', `Coast guard: your ${mode === 'air' ? 'helicopter' : 'boat'} is the green ring`);
   p.meDirty = true;
   store.touch();
   return null;

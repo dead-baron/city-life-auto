@@ -2,7 +2,7 @@
 // visible vehicle slots, knocked off in crashes — plus loot bags from the drop rule (§9).
 import { K, T } from '../../shared/constants.js';
 import { WEAPONS, ITEMS, SHOPS, PACK_TIERS, PACK_WIRE, packTier } from '../../shared/items.js';
-import { PACK_LIFE_S, PACK_BLINK_S } from '../../shared/rules.js';
+import { PACK_LIFE_S, PACK_BLINK_S, DROP_LIFE_S } from '../../shared/rules.js';
 import { localToWorld, circleVsObb } from '../../shared/math.js';
 import { collideCircle } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
@@ -326,6 +326,38 @@ export function dropEverything(world, ped, ownerName) {
     world.notify(p, `You dropped your ${T.name} (${T.rarity}, ~$${Math.round(itemValue).toLocaleString('en-US')} of gear)${cash > 0 ? ` and $${cash.toLocaleString('en-US')} in cash` : ''} where you fell. Get back to it within ${Math.round(PACK_LIFE_S / 60)} minutes - anyone can take it.`, 'warn');
   } else if (cash > 0) world.notify(p, `You dropped $${cash.toLocaleString('en-US')} where you fell.`, 'warn');
   return pack;
+}
+
+// The bag's Drop (UI-3, client/bag.js): n of an item, or a weapon with its rounds, out of what you carry and into a bag
+// at your feet - anyone can pick it up (you too), for DROP_LIFE_S. Not from a vehicle, not while held. -> error | null
+export function dropItem(world, p, id, n, weapon) {
+  const ped = p.ped, prof = p.profile;
+  if (!ped || ped.dead) return 'Not right now.';
+  if (ped.vehId || ped.onTrain) return 'Get out first to drop things.';
+  if (p.custody) return 'Not while you\'re held.';
+  const items = {}, weapons = {};
+  let what = '';
+  if (weapon) {
+    if (id === 'fists' || !WEAPONS[id] || prof.weapons[id] === undefined) return 'You don\'t have that.';
+    const left = WEAPONS[id].mag ? (prof.weapons[id] || 0) : 0;
+    weapons[id] = left;
+    delete prof.weapons[id]; if (ped.mag) delete ped.mag[id];
+    if (ped.weapon === id) ped.weapon = 'fists';
+    what = WEAPONS[id].name;
+  } else {
+    const have = prof.inventory[id] || 0, k = Math.max(1, Math.min(have, Math.floor(Number(n) || 1)));
+    if (!ITEMS[id] || have <= 0) return 'You don\'t have that.';
+    prof.inventory[id] = have - k;
+    if (!prof.inventory[id]) delete prof.inventory[id];   // (its quick-wheel slot stays: "none left", as when the last is used)
+    items[id] = k;
+    what = k > 1 ? `${k} x ${ITEMS[id].name}` : ITEMS[id].name;
+  }
+  const a = ped.a || 0;
+  const bag = world.spawnBag(ped.x + Math.cos(a) * 20, ped.y + Math.sin(a) * 20, { cash: 0, items, weapons, itemValue: weapon ? 20 : (ITEMS[id].sell || 5) * (items[id] || 1) }, p.name);
+  bag.expires = world.time + DROP_LIFE_S;
+  p.meDirty = true;
+  world.notify(p, `Dropped: ${what}. It's in a bag at your feet for ${Math.round(DROP_LIFE_S / 60)} minutes - anyone can pick it up.`, 'info');
+  return null;
 }
 
 export function npcDrop(world, ped, cash, item) {

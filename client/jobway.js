@@ -59,7 +59,7 @@ function open() {
 
 // a little navy plate with the text on it, centred on (x, y)
 function plate(g, x, y, text, u, col) {
-  g.font = `700 ${12 * u}px "CLA Pixel", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${12 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   const w = g.measureText(text).width + 14 * u, h = 20 * u;
   g.globalAlpha = 0.9; g.fillStyle = '#0d162d'; g.strokeStyle = '#c9d6ee'; g.lineWidth = 1.5 * u;
   g.beginPath(); g.rect(x - w / 2, y - h / 2, w, h); g.fill(); g.stroke();

@@ -195,13 +195,13 @@ export class FishView {
     g.strokeStyle = leg ? '#ffd34a' : f.rare >= 4 ? '#c890ff' : f.rare >= 3 ? '#58b8ff' : '#c8a060'; g.lineWidth = 3; rr(g, x, y, cw, ch, 12); g.stroke();
     g.textAlign = 'center'; g.textBaseline = 'middle';
     const banner = m.wr ? 'NEW RECORD!' : m.nw ? 'NEW SPECIES!' : m.pb ? 'PERSONAL BEST!' : leg ? 'LEGENDARY!' : '';
-    if (banner) { g.font = '800 14px system-ui, sans-serif'; g.fillStyle = leg || m.wr ? '#ffd34a' : '#7fe07f'; g.fillText(banner, cx, y + 18); }
+    if (banner) { g.font = '700 14px "Barlow Condensed", sans-serif'; g.fillStyle = leg || m.wr ? '#ffd34a' : '#7fe07f'; g.fillText(banner, cx, y + 18); }
     const L = Math.min(cw * 0.62, 70 + Math.min(1, Math.log10(1 + m.lb) / 3) * 160), sway = Math.sin(now0 * 3) * 0.04;
     g.save(); g.translate(cx, y + 74); g.rotate(sway); drawFish(g, f, 0, 0, L, { glow: leg ? '#ffd34a' : null }); g.restore();
-    g.font = '800 20px system-ui, sans-serif'; g.fillStyle = '#fff'; g.fillText(f.name, cx, y + 128);
-    g.font = '700 14px system-ui, sans-serif'; g.fillStyle = '#dde';
+    g.font = '700 20px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#fff'; g.fillText(f.name, cx, y + 128);
+    g.font = '700 16px "Barlow Condensed", sans-serif'; g.fillStyle = '#dde';
     g.fillText(`${m.lb} lb · ${'★'.repeat(f.rare)}${'☆'.repeat(Math.max(0, 5 - f.rare))} ${FS.RARITY[f.rare]}`, cx, y + 152);
-    g.font = '600 12px system-ui, sans-serif'; g.fillStyle = '#bcd';
+    g.font = '600 14px "Barlow Condensed", sans-serif'; g.fillStyle = '#bcd';
     g.fillText(`about $${fmt(m.v)} at the fish market · ${m.n} of ${m.of} kinds in your log`, cx, y + 176);
     g.restore();
   }

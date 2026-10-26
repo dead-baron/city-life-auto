@@ -37,7 +37,7 @@ export function start(world, p, yard = null) {
   p.job = { type: 'towjob', stage: 'wait', truck: 0, base: yard, nextAt: world.time + TOWJOB.firstS, expires: world.time + TOWJOB.shiftS, done: 0, call: null, text: 'Tow truck: waiting for a call' };
   const v = jobs.workTruck(world, p, yard, 'towtruck', { label: yard.name });
   if (!v) { p.job = null; return 'No room to park a tow truck there.'; }
-  world.notify(p, `You drive a tow truck out of ${yard.name}: it's the green ring. Calls come over the phone - back up to the car until your tail touches it, and the winch does the rest.`, 'good');
+  world.notify(p, `You drive a tow truck out of ${yard.name}: it's the green ring. Calls come over the phone - back up to the car until your tail touches it, and the winch does the rest.`, 'good', 'Tow shift: your truck is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -47,7 +47,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const y = yardsOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!y) return null;
-  return { label: 'Sign on as a tow truck driver (a truck is issued)', run: () => { const err = start(world, p, y); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a tow truck driver (a truck is issued)', card: { id: 'towjob', where: y.name, start: () => start(world, p, y) }, run: () => { const err = start(world, p, y); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------

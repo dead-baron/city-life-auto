@@ -17,6 +17,8 @@ import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
+import * as taxijob from './taxijob.js';
+import * as phone from './phone.js';
 import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
 import * as trains from './trains.js';
@@ -55,60 +57,60 @@ export function poiLabel(world, p, poi) {
   if (casino.isCasino(poi)) return casino.label(poi);   // (Lucky Mesa's casinos: the slots and the tables - casino.js)
   if (arcade.isArcade(world, poi)) return arcade.label(poi);   // (the arcades: a credit, the prize counter - arcade.js)
   if (bathhouse.isBath(world, poi)) return null;   // (a bathhouse: in through its door - bathhouse.js)
-  if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Counter - ${poi.label}` : null;
+  if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Shop at the counter - ${poi.label}` : null;
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
     case 'bowling': return null;   // (Pinwheel Lanes' shoe counter: server/systems/bowling.js)
-    case 'cinema': return `${poi.label} - tickets & popcorn`;   // (the shop menu: shared/items.js SHOPS.cinema; the screens: server/systems/cinema.js)
-    case 'gang': return gang.isMember(p) ? 'Syndicate HQ (members)' : 'Syndicate HQ (join the gang)';
-    case 'smuggler': return "Smuggler's Den";
-    case 'charter': return 'Charter desk (deep-sea fishing)';
-    case 'station': { const eta = trains.nextTrainIn(world, poi.station, poi); return eta < 1 ? `${poi.label} - train in! Walk up to the doors` : `${poi.label} - next train ${Math.round(eta)}s (timetable)`; }
+    case 'cinema': return `Buy tickets and popcorn at ${poi.label}`;   // (the shop menu: shared/items.js SHOPS.cinema; the screens: server/systems/cinema.js)
+    case 'gang': return gang.isMember(p) ? 'Talk to Syndicate HQ (members)' : 'Join the gang at Syndicate HQ';
+    case 'smuggler': return "Knock at the Smuggler's Den";
+    case 'charter': return 'Book a deep-sea fishing charter';
+    case 'station': { const eta = trains.nextTrainIn(world, poi.station, poi), cab = !!taxijob.interaction(world, p); return eta < 1 ? `${cab ? 'Check the trains and taxis' : 'Check the board'} at ${poi.label} - train in, walk up to the doors` : `Check the ${cab ? 'trains and taxis' : 'timetable'} at ${poi.label} - next train ${Math.round(eta)}s`; }   // (its taxi rank: the station's menu offers the cab - UI-4)
     case 'home': {
       const us = homes.unitsAt(world, poi);   // (an apartment block: its lobby - H65)
       if (us) {
         const mine = us.filter((id) => world.homeOwner.get(id) === p.pid).length, free = us.filter((id) => !world.homeOwner.has(id)).length;
-        return `${poi.label} - the lobby: ${mine ? `your home${mine > 1 ? 's' : ''}, ` : ''}${free} of ${us.length} for sale`;
+        return `Enter the lobby of ${poi.label} - ${mine ? `your home${mine > 1 ? 's' : ''}, ` : ''}${free} of ${us.length} for sale`;
       }
       const h = world.map.homes[poi.home];
       const owner = world.homeOwner.get(h.id);
-      if (owner === p.pid) return `Your ${h.kind} (rest, garage, spawn)`;
+      if (owner === p.pid) return `Go into your ${h.kind} (rest, garage, spawn)`;
       if (owner) return null;
-      return `For sale: ${h.name} - $${h.price.toLocaleString()}`;
+      return `Look round ${h.name} - for sale, $${h.price.toLocaleString()}`;
     }
-    case 'atm': return p.profile.cash > 0 ? `ATM - $${p.profile.cash.toLocaleString()} on you to deposit` : 'Use ATM';
-    case 'club': return `Bar - ${poi.label}`;
-    case 'roadhouse': return `Bar - ${poi.label} (beer, rye)`;
+    case 'atm': return p.profile.cash > 0 ? `Use the ATM - $${p.profile.cash.toLocaleString()} on you to deposit` : 'Use the ATM';
+    case 'club': return `Order at the bar - ${poi.label}`;
+    case 'roadhouse': return `Order at the bar - ${poi.label} (beer, rye)`;
     case 'vending': return 'Buy an Energy Drink';
-    case 'police': return p.badge ? 'Front desk (armory, motor pool, off duty)' : 'Front desk (join the police)';
-    case 'courthouse': return 'Courthouse desk (bounties, fines)';
-    case 'hospital': return 'Hospital front desk';
-    case 'bank': return 'Bank teller';
-    case 'pawn': return 'Pawn window';
-    case 'farm': return 'Farm Co-op (contracts, seeds, horses)';
-    case 'warehouse': return 'Portside Logistics (courier jobs)';
+    case 'police': return p.badge ? 'Talk to the front desk (armory, motor pool, off duty)' : 'Talk to the front desk (join the police)';
+    case 'courthouse': return 'Talk to the courthouse desk (bounties, fines)';
+    case 'hospital': return 'Talk to the hospital front desk';
+    case 'bank': return 'Talk to the bank teller';
+    case 'pawn': return 'Sell at the pawn window';
+    case 'farm': return 'Talk to the Farm Co-op (contracts, seeds, horses)';
+    case 'warehouse': return 'Ask Portside Logistics for courier work';
     default:
       if (poi.counter && COUNTER[poi.kind]) return COUNTER[poi.kind].label(poi.label);
-      return poi.outside ? `Counter - ${poi.label}` : `Enter ${poi.label}`;
+      return poi.outside ? `Shop at the counter - ${poi.label}` : `Enter ${poi.label}`;
   }
 }
 
 // The counters out at the countryside places (shared/naturesites.js addCounter): what the prompt says
 // when you walk up, the menu title, and the line under it.
 const COUNTER = {
-  winery: { label: (l) => `${l} - tasting room`, title: (l) => SHOPS.winery.title, sub: 'Estate reds and whites, poured by the bottle: a glass or two and your health comes back faster for a couple of minutes. The cellar pays more for grapes than any shop in town - pick them off the vines up the hill.' },
-  fruitstand: { label: (l) => `${l} (fruit, cider)`, title: (l) => l, sub: 'Fresh off the trees out back - pick your own for free, or buy a bag here. A cup of pressed cider puts the spring back in your step. They buy apples and oranges.' },
-  market: { label: (l) => `${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the farms round about. The stallholders buy fruit and honey too.' },
-  snack: { label: (l) => `${l} (hot dogs, lemonade)`, title: (l) => l, sub: 'Hot dogs, ice-cold lemonade and energy drinks.' },
-  tackle: { label: (l) => `${l} (bait, rods; sells fish)`, title: (l) => l, sub: null },
-  clubhouse: { label: (l) => `${l} - the bar`, title: (l) => `${l} - ${SHOPS.clubhouse.title}`, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
-  farmstand: { label: (l) => `${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
-  salvage: { label: (l) => `${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
-  assay: { label: (l) => `${l} (pickaxes; buys ore)`, title: (l) => SHOPS.assay.title, sub: 'Ore from the quarry\'s faces, the mine\'s outcrops and the cave under the peaks: the assayer pays more than any pawn shop. Pickaxes for every rock - the best ore needs the best pick.' },
-  lodge: { label: (l) => `${l} (hunting gear; buys game, hides and pelts)`, title: (l) => SHOPS.lodge.title, sub: 'Rifles, bows and arrows, knives, the varmint rifle, a ghillie cloak and cover scent. Bring in what you take - field dress it where it fell, with a Hunting Knife for a whole hide - and they pay best for it: one clean shot from the right weapon makes a perfect hide. The work bench makes clothing from hides and pelts.' },
-  huntcamp: { label: (l) => `${l} (ammunition, arrows; buys game)`, title: (l) => l, sub: 'Rounds, arrows, knives and cover scent for the hunt. The outfitter buys what you bring in, for a little less than the lodge.' },
-  trapper: { label: (l) => `${l} (pelts and furs; makes clothing)`, title: (l) => l, sub: 'The trapper pays best for pelts, hides, antlers, claws and feathers - and at the bench makes gloves, moccasins, fur hats, buckskin and bearskin from them. The city clothing shops pay well for those.' },
-  butcher: { label: (l) => `${l} (buys meat)`, title: (l) => l, sub: 'Raw game and cooked meals: the butcher pays more for meat than anyone.' },
+  winery: { label: (l) => `Taste the wine at ${l} - tasting room`, title: (l) => SHOPS.winery.title, sub: 'Estate reds and whites, poured by the bottle: a glass or two and your health comes back faster for a couple of minutes. The cellar pays more for grapes than any shop in town - pick them off the vines up the hill.' },
+  fruitstand: { label: (l) => `Shop at ${l} (fruit, cider)`, title: (l) => l, sub: 'Fresh off the trees out back - pick your own for free, or buy a bag here. A cup of pressed cider puts the spring back in your step. They buy apples and oranges.' },
+  market: { label: (l) => `Browse ${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the farms round about. The stallholders buy fruit and honey too.' },
+  snack: { label: (l) => `Order at ${l} (hot dogs, lemonade)`, title: (l) => l, sub: 'Hot dogs, ice-cold lemonade and energy drinks.' },
+  tackle: { label: (l) => `Shop at ${l} (bait, rods; buys fish)`, title: (l) => l, sub: null },
+  clubhouse: { label: (l) => `Order at ${l} - the bar`, title: (l) => `${l} - ${SHOPS.clubhouse.title}`, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
+  farmstand: { label: (l) => `Shop at ${l} - farm stand (honey)`, title: (l) => SHOPS.farmstand.title, sub: 'Lavender honey from the hives at the end of the rows, and fresh lemonade. They buy honey back.' },
+  salvage: { label: (l) => `Sell scrap at ${l} - yard office (buys scrap)`, title: (l) => SHOPS.salvage.title, sub: 'The foreman buys component scrap for more than the pawn shop pays. Bring it to the window.' },
+  assay: { label: (l) => `Sell ore at ${l} (pickaxes; buys ore)`, title: (l) => SHOPS.assay.title, sub: 'Ore from the quarry\'s faces, the mine\'s outcrops and the cave under the peaks: the assayer pays more than any pawn shop. Pickaxes for every rock - the best ore needs the best pick.' },
+  lodge: { label: (l) => `Shop at ${l} (hunting gear; buys game, hides and pelts)`, title: (l) => SHOPS.lodge.title, sub: 'Rifles, bows and arrows, knives, the varmint rifle, a ghillie cloak and cover scent. Bring in what you take - field dress it where it fell, with a Hunting Knife for a whole hide - and they pay best for it: one clean shot from the right weapon makes a perfect hide. The work bench makes clothing from hides and pelts.' },
+  huntcamp: { label: (l) => `Shop at ${l} (ammunition, arrows; buys game)`, title: (l) => l, sub: 'Rounds, arrows, knives and cover scent for the hunt. The outfitter buys what you bring in, for a little less than the lodge.' },
+  trapper: { label: (l) => `Trade with ${l} (pelts and furs; makes clothing)`, title: (l) => l, sub: 'The trapper pays best for pelts, hides, antlers, claws and feathers - and at the bench makes gloves, moccasins, fur hats, buckskin and bearskin from them. The city clothing shops pay well for those.' },
+  butcher: { label: (l) => `Sell meat at ${l} (buys meat)`, title: (l) => l, sub: 'Raw game and cooked meals: the butcher pays more for meat than anyone.' },
 };
 
 // The work bench (a trapper's cabin, the lodge): what can be made from what's in the bag (shared/items.js CRAFTS)
@@ -396,6 +398,8 @@ export function buildMenu(world, p, poi) {
     case 'station': {
       const b = trains.stationBoard(world, poi);
       title = b.title; sub = b.sub;
+      // the station's taxi rank (UI-4): its prompt is the station's, so the cab's job card is offered from here
+      if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'the rank issues a cab', shut: true });
       opts.push({ id: 'close', label: 'OK' });
       break;
     }
@@ -509,6 +513,7 @@ export function handleMenu(world, p, poiId, optId) {
   if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
+  if (optId === 'cabcard' && poiId === -1 && ped && !ped.dead) { const it = taxijob.interaction(world, p); if (it && !phone.offerCard(world, p, it.card)) it.run(); return; }   // (a station's route board: its taxi rank - trains.js readRouteBoard)
   if (!poi || !ped || ped.dead || ped.vehId) return;
   if (Math.hypot(ped.x - poi.x, ped.y - poi.y) > poi.r + 40) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
   const shut = !!(buildMenu(world, p, poi).opts.find((o) => o.id === optId) || {}).shut;   // (an option that closes its menu: the page closes it too)
@@ -531,6 +536,7 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'cabcard': { const it = taxijob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
     case 'fback': p.furnShop = null; return null;
