@@ -1,8 +1,4 @@
-// The bag (inventory screen) and the quick wheel.
-//
-// Bag: everything you carry - weapons (tap to equip), usable items (use now, or pin to one of the
-// four quick-wheel slots), and loot / fish / bait. Opens and closes in one press (I, D-pad →, the
-// 🎒 button) and the city keeps running behind it; tapping off the panel closes it.
+// The quick wheel, the weapon picker and the weapon wheel (the bag itself, the hub's BAG tab: client/bag.js).
 //
 // Quick wheel: hold the use key (X / View / ITEMS) and four slots fan out round your character;
 // point at one (mouse, right stick, or your finger) and let go to use it. A quick tap uses the slot
@@ -10,10 +6,9 @@
 // The client only asks; the server checks you have the item and applies it.
 // Weapon wheel (a pad: hold RB or LB): everything you carry round a circle in the order the bumpers step through it;
 // point a stick at one and let go of the bumper to take it out.
-import { WEAPONS, ITEMS, weaponOrder, BLADE_COLORS } from '../shared/items.js';
+import { WEAPONS, ITEMS, weaponOrder } from '../shared/items.js';
 import { wheelPicker } from '../shared/input.js';
 import { weaponIcon } from './render/peds.js';
-import { keyName } from './glyphs.js';
 
 export const ITEM_ICON = {
   medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', parachute: '🪂', drill: '🛠',
@@ -30,141 +25,7 @@ export const ITEM_ICON = {
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
 const SLOTS = 4;
-
-export function createInventory({ el, send, me, onClose }) {
-  let open = false;
-
-  function render() {
-    const m = me();
-    if (!open || !m) return;
-    const quick = m.quick || [];
-    const weapons = (m.weapons || []).slice().sort((a, b) => (WEAPONS[a.id]?.i ?? 99) - (WEAPONS[b.id]?.i ?? 99));
-    const items = Object.entries(m.inv || {}).filter(([k, n]) => n > 0 && ITEMS[k]);
-    const use = items.filter(([k]) => usable(k) || ITEMS[k].tool);
-    const other = items.filter(([k]) => !usable(k) && !ITEMS[k].tool);
-    const body = el.querySelector('.inv-body');
-    body.innerHTML = '';
-    // the wheel, as it stands
-    const wheel = document.createElement('div');
-    wheel.className = 'inv-wheel';
-    wheel.innerHTML = '<h3>Quick wheel <small>hold X / View / ITEMS, let go on a slot</small></h3>';
-    const row = document.createElement('div'); row.className = 'inv-slots';
-    for (let i = 0; i < SLOTS; i++) {
-      const id = quick[i];
-      const n = id ? (m.inv[id] || 0) : 0;
-      const b = document.createElement('button');
-      b.className = 'inv-slot' + (id ? '' : ' empty') + (id && !n ? ' out' : '');
-      b.innerHTML = id ? `<span class="ic">${ITEM_ICON[id] || '•'}</span><span>${ITEMS[id].name}</span><small>${n ? 'x' + n : 'none left'}</small>` : `<span class="ic">${i + 1}</span><span>empty</span>`;
-      b.title = id ? 'Clear this slot' : 'Pin an item here with its 1-4 buttons below';
-      if (id) b.onclick = () => send({ t: 'inv', a: 'slot', i, id: null });
-      row.appendChild(b);
-    }
-    wheel.appendChild(row);
-    body.appendChild(wheel);
-    // weapons
-    const ws = section(body, 'Weapons');
-    for (const w of weapons) {
-      const def = WEAPONS[w.id];
-      if (!def) continue;
-      const b = document.createElement('button');
-      b.className = 'inv-weapon' + (m.weapon === w.id ? ' on' : '');
-      b.appendChild(weaponIcon(def.i, m.blade));
-      const t = document.createElement('span');
-      t.innerHTML = `${def.name}<small>${def.mag ? `${w.mag} | ${Math.max(0, w.ammo - w.mag)}` : m.weapon === w.id ? 'equipped' : ''}</small>`;
-      b.appendChild(t);
-      b.onclick = () => send({ t: 'weapon', id: w.id });
-      ws.appendChild(b);
-      if (w.id === 'plasma') ws.appendChild(bladeSwatches(m.blade | 0, send));   // (its colour: the server keeps it, everyone sees it)
-    }
-    // usable items: use now, or pin to a slot
-    const is = section(body, 'Items');
-    if (!use.length) is.innerHTML = '<p class="inv-none">Nothing to use. Pharmacies sell med kits and bandages; coffee shops, corner stores and clubs sell drinks.</p>';
-    for (const [id, n] of use) {
-      const it = ITEMS[id];
-      const r = document.createElement('div'); r.className = 'inv-item';
-      r.innerHTML = `<span class="ic">${ITEM_ICON[id] || '•'}</span><span class="nm">${it.name} <small>x${n}</small><em>${describe(id)}</em></span>`;
-      if (usable(id)) {
-        const u = document.createElement('button'); u.className = 'inv-use'; u.textContent = 'Use';
-        if (it.light) { u.textContent = m.light ? 'Turn off' : 'Turn on'; u.classList.toggle('lit', !!m.light); }
-        u.onclick = () => send({ t: 'inv', a: 'use', id });
-        r.appendChild(u);
-        for (let i = 0; i < SLOTS; i++) {
-          const s = document.createElement('button');
-          s.className = 'inv-pin' + (quick[i] === id ? ' on' : '');
-          s.textContent = String(i + 1); s.title = `Put on quick slot ${i + 1}`;
-          s.onclick = () => send({ t: 'inv', a: 'slot', i, id: quick[i] === id ? null : id });
-          r.appendChild(s);
-        }
-      }
-      is.appendChild(r);
-    }
-    if (m.creel) {   // the cooler (server fishing.js): what's in it, what it'd fetch
-      const r = document.createElement('div'); r.className = 'inv-item';
-      r.innerHTML = `<span class="ic">🧊</span><span class="nm">Cooler <small>${m.creel.n}/${m.creel.max} fish</small><em>about $${m.creel.v.toLocaleString()} at a fish market</em></span>`;
-      section(body, 'Your catch').appendChild(r);
-    }
-    if (other.length) {
-      const os = section(body, 'Loot, fish & bait');
-      for (const [id, n] of other) {
-        const r = document.createElement('div'); r.className = 'inv-item';
-        r.innerHTML = `<span class="ic">${ITEM_ICON[id] || '•'}</span><span class="nm">${ITEMS[id].name} <small>x${n}</small><em>${ITEMS[id].sell ? `sells for about $${ITEMS[id].sell}` : ''}</em></span>`;
-        os.appendChild(r);
-      }
-    }
-    el.querySelector('.inv-cash').textContent = `$${(m.cash || 0).toLocaleString()} cash · $${(m.bank || 0).toLocaleString()} bank`;
-  }
-
-  return {
-    get open() { return open; },
-    show() { open = true; el.classList.remove('hidden'); render(); },
-    hide() { if (!open) return; open = false; el.classList.add('hidden'); onClose?.(); },
-    toggle() { if (open) this.hide(); else this.show(); },
-    refresh: render,
-  };
-}
-
-function section(body, title) {
-  const h = document.createElement('h3'); h.textContent = title; body.appendChild(h);
-  const box = document.createElement('div'); box.className = 'inv-sec'; body.appendChild(box);
-  return box;
-}
-// the plasma blade's colours, a swatch each (task #411; also in Settings): { t: 'look', a: 'blade', c } - the server
-// checks it and keeps it with the character
-function bladeSwatches(cur, send) {
-  const row = document.createElement('div'); row.className = 'inv-blade';
-  row.innerHTML = '<small>Blade colour</small>';
-  BLADE_COLORS.forEach((bc, i) => {
-    const s = document.createElement('button');
-    s.className = 'sw' + (i === cur ? ' on' : ''); s.title = bc.name; s.style.background = `radial-gradient(circle, ${bc.core} 0 30%, ${bc.c} 60%)`;
-    s.onclick = () => send({ t: 'look', a: 'blade', c: i });
-    row.appendChild(s);
-  });
-  return row;
-}
-function describe(id) {
-  const it = ITEMS[id];
-  if (id === 'revivekit') return 'revive a downed player to full health - never used up';
-  if (id === 'surfboard') return 'in the sea you lie on it and paddle; at a surf break (a straight sandy beach facing the open sea) paddle for the beach as a wave comes to catch it, then carve along the face ahead of the white water - the action button for an air';
-  if (id === 'parachute') return `jump out of a helicopter or a plane up in the air, then ${keyName('action')} opens it and you float down, steering where to land - one jump`;
-  if (id === 'drill') return 'a bank job: take it behind a bank\'s counter to the vault door and set it there - the alarm goes at once, and it works through in about a minute while you hold them off';
-  if (id === 'flashlight') return `${keyName('light')} switches it on and off - held in your free hand (dark while both are busy); everyone sees the beam`;
-  if (id === 'headlamp' || id === 'hardhat') return `${keyName('light')} switches it on and off - hands free${id === 'hardhat' ? '; the hat takes some of a falling tree or rock' : ''}; runs on batteries`;
-  if (id === 'lantern') return 'a warm glow all round you, in one hand - use it again while it\'s lit to set it down (it stays lit)';
-  if (id === 'flare') return 'strike it and throw it: a red light for about a minute';
-  if (id === 'glowstick') return 'snap it and drop it: a little green, blue or pink glow for a few minutes';
-  if (id === 'batteries') return 'a fresh set goes into a light by itself when its batteries run flat';
-  if (it.fell) return `hold the action button at a tree to fell it${id === 'hatchet' ? ' (small trees only)' : id === 'axe' ? ' (not the giant redwoods)' : id === 'chainsaw' ? ' - the fastest, loud, runs on fuel cans' : ' - anything, even a giant redwood'}`;
-  if (id === 'sawfuel') return 'fills the chainsaw when it runs dry';
-  if (id === 'medkit') return `+${it.heal} health, stops bleeding`;
-  if (id === 'bandage') return `+${it.heal} health, stops bleeding`;
-  if (it.food) return `+${it.heal} health (doesn't stop bleeding)${it.sell ? ` - or sell it for about $${it.sell}` : ''}`;
-  if (it.buff === 'wine') return 'a glass or two: health comes back faster for 2 minutes';
-  if (it.buff === 'coffee') return 'refills stamina, faster recovery for 60s';
-  if (it.buff === 'energy') return 'extra stamina and speed for 60s';
-  return '';
-}
 
 // ---- the quick wheel ------------------------------------------------------------------------------
 // Four slots round a centre; pick(angle) gives the slot a direction points at (up, right, down, left).
@@ -214,15 +75,15 @@ export function createWheel({ el, send, me }) {
   };
 }
 
-// ---- the weapon picker (touch: hold WPN or the weapon box) ----------------------------------------------
+// ---- the weapon picker (touch: hold the weapon plate) -----------------------------------------------------
 // Every weapon you carry in a tray at the bottom of the screen, the one in your hands marked: tap one to take it
-// out. Tapping off the tray, or picking, closes it. (A tap on WPN or the weapon box just takes out the next one.)
+// out. Tapping off the tray, or picking, closes it. (A tap on the weapon plate just takes out the next one.)
 export function createWeaponPicker({ el, send, me }) {
   let open = false, sig = '', press = null;
   function render() {
     const m = me();
     if (!open || !m) return;
-    const by = new Map((m.weapons || []).map((w) => [w.id, w])), ws = weaponOrder([...by.keys()]).map((id) => by.get(id));   // (the order WPN steps through them)
+    const by = new Map((m.weapons || []).map((w) => [w.id, w])), ws = weaponOrder([...by.keys()]).map((id) => by.get(id));   // (the order a tap steps through them)
     const s = m.weapon + '|' + (m.blade | 0) + '|' + ws.map((w) => `${w.id}:${w.mag}:${w.ammo}`).join(',');
     if (s === sig) return;
     sig = s;
@@ -254,7 +115,7 @@ export function createWeaponPicker({ el, send, me }) {
   function close() { open = false; sig = ''; press = null; el.classList.add('hidden'); }
   // a tap off the tray closes it (the tray's own touches stop before here)
   const off = (e) => { if (e.target === el) { e.preventDefault(); close(); } };
-  // (a touch that began before the tray opened - the hold on WPN - picks nothing when it lifts)
+  // (a touch that began before the tray opened - the hold on the weapon plate - picks nothing when it lifts)
   el.addEventListener('touchend', (e) => { if (!press) e.preventDefault(); }, { passive: false });
   el.addEventListener('touchstart', off, { passive: false });
   el.addEventListener('mousedown', off);
@@ -271,7 +132,7 @@ export function createWeaponPicker({ el, send, me }) {
 // to fit w x h, kept per weapon, colour and size: the wheel draws a slot's icon again whenever the pick moves. A canvas
 // sits in one place at a time, and each slot of the wheel shows a different weapon.
 const fitted = new Map();
-function fittedIcon(wi, bc, w, h) {
+export function fittedIcon(wi, bc, w, h) {
   const key = `${wi}|${bc | 0}|${w}x${h}`;
   let c = fitted.get(key);
   if (c) return c;

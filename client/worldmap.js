@@ -13,7 +13,7 @@ import { mapFrameOf, districtCentroids, iconSkip, packIcon, drawMini } from './h
 import { MAP_CATS, KIND_ICON, MAJOR_KINDS } from './mapwaypoints.js';
 import { drawIcon } from './pixicons.js';
 
-const PIXEL = '"CLA Pixel", "Barlow Condensed", monospace';
+const PIXEL = '"CLA Pixel", "Barlow Condensed", sans-serif';
 const SEA = '#2f74c0';
 
 export function createWorldMap(map) { return new WorldMap(map); }

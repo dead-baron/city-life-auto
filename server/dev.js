@@ -82,6 +82,8 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
 const WATER_RACES = { jetski: 'jetski', boat: 'speedboat', kayak: 'kayak' };   // (a water race's kind: the craft waiting at its start)
 export const NEAR_KINDS = {
+  firestation: (m) => firefighter.sitesOf(m).stations.map((q) => ({ x: q.x, y: q.y, name: q.name })),   // (the job card at a job's place: UI-3)
+  taxirank: (m) => taxijob.ranksOf(m).map((r) => ({ x: r.x, y: r.y, name: r.name })),
   bikerack: (m) => m.props.filter((q) => q.t === 'bikerack').map((q) => ({ x: q.x, y: q.y + 40, name: 'a bike rack' })),
   // (every line's stops: World v3 runs a rail per loop - m.rail is only the first, the main line - the owner, 2026-10-15:
   // "find nearest subway station ... says there is no subway station on this map")

@@ -70,7 +70,7 @@ export function start(world, p) {
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (the company's: yours to fly, not theft)
   v.returnTo = { x: spot.x, y: spot.y, label: pad.name };
   p.job = { type: 'charter', stage: 'wait', truck: v.id, nextAt: world.time + CHARTER.firstS, expires: world.time + CHARTER.shiftS, flown: 0, text: 'Charter pilot: waiting for a booking' };
-  world.notify(p, `You fly charters now: the company's helicopter is by ${pad.name} (the green ring). Bookings come over the phone - pick the customer up, fly them there smoothly and they tip.`, 'good');
+  world.notify(p, `You fly charters now: the company's helicopter is by ${pad.name} (the green ring). Bookings come over the phone - pick the customer up, fly them there smoothly and they tip.`, 'good', 'Charter pilot: your helicopter is the green ring');
   p.meDirty = true;
   store.touch();
   return null;

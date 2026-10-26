@@ -16512,6 +16512,187 @@ run as a whole file on batch 4 as it was (it passes alone) - not this change.
 
 Perf: page 497.6 of 498 KB, renderer 400.4 of 400 (the firewood model; actors.js's header trimmed to fit), bake 874.6
 of 875 - no budget raised.
+## 2026-10-24 - ui1: one UI system - the tokens and the parts, the old GTA look retired (the UI overhaul, phase UI-1)
+
+The owner approved the UI/UX overhaul ("I think the UI/UX proposal is looking good let's move forward with that
+overhaul"). Phase UI-1 is the foundation: one look for every screen, built from a small set of tokens and parts, with
+the screens moved onto it and their layouts left as they are. The touch slots (UI-2), the hub (UI-3) and the HUD's
+information (UI-4) build on it.
+
+### What the player sees
+- **One look everywhere**: navy panels with a 2 px gold rim, one gold, CLA Pixel for titles and numbers and Barlow
+  Condensed for everything you read. The phone, the bag, the quick wheel, the weapon wheel and picker, the shop and
+  counter menus, the pause list, settings, players online, install help, the map screen, the cinematic panel and bar,
+  the debug menu and free camera, the creator and its starting looks, the knocked-out panel and its map, the jail
+  plate and the title screen all wear it. The pink-to-purple GTA headers, Anton, the black outlines, the slate "app"
+  style and the cinematic panel's system font are gone.
+- **The title screen**: PLAY a gold button with ink words; the graphics choice one segmented control (a check and
+  "recommended" readable inside the button, not a 9 px tag cut by its edge); Install, Settings and Fullscreen 44 px
+  secondary buttons; the background solid navy (the world no longer ghosts through it); the build line readable.
+- **Buttons by role**: primary (gold, ink words), secondary (navy, gold rim), destructive (a red outline - Start fresh,
+  Leave Dev Debug Mode), icon buttons; the close ✕ a gold-rimmed square (44 px on touch).
+- **Settings' switches are toggles** (a knob that slides, gold when on, 52 x 44 on touch), the sliders gold, the
+  selects navy with a gold edge.
+- **Colours mean one thing each**: money green, danger red (health, FIRE, crimes), info blue (stamina, the bank,
+  waypoints, the police), heat orange (the stars, warnings, the HOT cash). The stars are heat orange.
+- **Notes fade out** instead of vanishing (250 ms), panels arrive with a short eased rise, and nothing animates for
+  someone whose device asks for reduced motion.
+- **Canvas text** over the game - the minimap's letters, the floating numbers and speech, names over people, the
+  horse / skateboard / fishing cards, the ATM sign, the home's names, the knocked-out map, the debug teleport map, the
+  stargazing names - in CLA Pixel or Barlow (it was monospace, system-ui, Rubik or Anton). The art's own painted signs
+  and the arcade cabinets' screens keep their pixels.
+- Behaviour, contents and layouts are unchanged: the same buttons in the same places, the same lists.
+
+### The system (client/style.css)
+- **Tokens** on `:root`: the eleven colours (ink, navy, navy2, navy3, gold, cream, dim, money, danger, info, heat), the
+  see-through steps made from them (glass, shade, scrim, gold washes), the six type sizes 12 / 14 / 16 / 20 / 28 / 40
+  (`body.touch` lifts the smallest to 14), the radii 4 / 10 / round, the spacing 4 / 8 / 12 / 16 / 24, the 44 / 48 px
+  targets, the motion 150 / 200 / 250 ms with one easing. "What things are" colours (a pad's buttons, a casino's felt
+  and cards, the map's sea, the rail and ferry lines, an arcade cabinet's neon) are tokens too.
+- **Parts**: `.panel` and `.mhead`, the list row (`.row` / `.opt`), `.btn` / `.btn-1` / `.btn-x` / `.ibtn` / `.x`,
+  `.chip` and the key chip (`.kchip`, `.g-key`, `.g-touch`), `.toggle`, `.slider`, `.stepper`, `.tabs` / `.tab`, `.seg`,
+  `.field`, and for coming and going `.enter`, `.out` and `.foldable` (a compact and an expanded state, `.open`). The
+  existing panels use them by selector list, so their markup and the tests that read it stay as they were.
+- **No literals in the rules**: every colour, type size and radius is a token. test/uitokens.test.js checks it, here
+  and in the CSS the lazily loaded panels carry (director.js, devmenu.js, spectator.js, creator.js, deathscreen.js),
+  checks the two faces are the shipped ones, and that the UI's canvas text uses them.
+- **One exception, for UI-4**: the HUD's small readouts (bank, status, faction, clock, the weapon line on a phone) use
+  `--fs-hud` (12 px) on a phone as well - at 14 px they pushed the top-right column onto the prompt and the notes onto
+  the pills (test/hudlayout.test.js). UI-4 lays the HUD out again and retires it.
+- **Moved out of the page's stylesheet**: the debug menu's look into client/devmenu.js and the free camera's into
+  client/spectator.js (both load only when used); the old debug side panel's dead rules dropped.
+
+### Sizes
+- client/style.css: **134,131 -> 114,897 bytes** (30 -> 23 KB as sent).
+- Title screen assets: **273 -> 241 KB** (budget 290): Anton (26 KB) is no longer shipped - assets/fonts/Anton-Regular.woff
+  and its licence are removed - and index.html preloads Barlow Condensed SemiBold instead.
+- The page: 497.5 -> 497.7 KB (budget 498, not raised): the canvas font names and the notes' fade. The renderer is untouched (400).
+
+### HUD coverage (the owner's UX bar)
+The capture audit now measures how much of the screen the HUD paints over the game (`coverage`: hud, the middle third,
+and everything over the world with panels open), before -> after, per size:
+- Over the eleven in-game states (on foot, the prompt, wanted, a taxi job, driving, a boat, the heli and the plane, the
+  horse and two bikes), the average share HUD covers:
+  - desk: 7.0 -> 7.8 % (the middle third 0.5 -> 0); the rise is the notes in Barlow 16 (were the pixel face at 14) and
+    the prompt at 20, the mockups' sizes;
+  - land: 34.4 -> 33.2 % (the middle third 9.0 -> 6.4);
+  - port: 35.7 -> 34.7 % (the middle third 9.2 -> 7.4).
+- Most of a phone's share is the touch controls and the sticks (UI-2's to bring down) and the top band (UI-4's).
+- Targets under 44 px on touch, from the audit: the bag 44 -> 9, settings 18 -> 0, pause 12 -> 0, controls 12 -> 0,
+  the debug page 778 -> 1, the title's settings 8 -> 1.
+
+### Checked
+- Every screen in cap.py's list at desk 1440x900, land 844x390 and port 390x844, before and after
+  (scratchpad/ui1-shots/).
+- Tests: hudlayout, hudlayers, titlemenu, phones, director, loadorder, gamepad, touchair, spawnmap, lazypage,
+  startfresh, campfire-ui, crush, fishing, homeart, homeprompt, jobway, kbdrive, shadowing, worldmap, devtp, mapwindow,
+  worldframe, perf and the new uitokens: 94 / 94 pass. `node tools/perf.mjs`: all within budget.
+
+### Left for later phases
+- The pause list on a phone on its side shows five lines, not six (its lines are 44 px now); the hub (UI-3) replaces it.
+- `--fs-hud` (above), the round HUD buttons' look and the touch buttons' places are UI-2 / UI-3 / UI-4's.
+- Seen while capturing, not from this change: the renderer's foraging pass can throw "Cannot read properties of
+  undefined (reading 'k')" (client/art2/game/host.js `_forage`: its cached grid `_fgrid` indexes an older forage list
+  after the list changes), which shows "Something went wrong drawing the game" once.
+## 2026-10-24 - ui2: the touch controls by slots, round the aim stick (UI overhaul, phase 2)
+
+The approved overhaul's decision 2 (the mockups LandFoot, LandDrive, PortFoot and PortHeli). The touch controls had
+grown one button at a time, each placed by its own `calc()` offset in style.css, with a row of small pills by the
+minimap - FIRE ON among them. Now there is one layout on the right whose slots each state fills, built round the aim
+stick.
+
+A first cut replaced the aim stick with drag-to-aim on FIRE. On seeing it the owner asked for the stick back
+(2026-10-24: "still want the right joystick to work as it did before, that you can aim without shooting but if you
+push it outside the red circle it will fire, but you can toggle that on or off as it worked before"). The stick, its
+ring fire, the FIRE ON toggle and its setting now work exactly as before; dragging FIRE and the AIM button are gone.
+
+### The layout (client/touchslots.js, shared/touchcontrols.js)
+- **The left 40% is the move stick's**: it comes up where the thumb lands (from 36% of the height down on its side,
+  from the middle down upright). Nothing else sits there.
+- **The aim stick** has a fixed place in the bottom-right corner, as before (132 px on its side, 116 upright), with
+  its red ring.
+- **The arc round the stick**: fixed slots **1 FIRE** (80 px, red, beside the stick), **2 ROLL**, **3 ACT** (gold) and
+  **4 CAR** (over the stick), all round. Two **context slots, C1 / C2**, have an orange dashed rim. Four small
+  **utility slots** hold ITEMS, LIGHT, COP CAR and **FIRE ON**; FIRE ON sits clear of the stick's ring (off the ring
+  was the ui0 overlap fix). C and U are rounded squares, so RELOAD, GALLOP and COP CAR fit inside them. Every button
+  has an icon and its label.
+- **Each state fills the slots** (`TOUCH_STATES`; a button shows only while it does something, and the same role
+  always sits in the same slot):
+  - on foot: HIT, ROLL, ACT, CAR, BLOCK (with fists, a bat or a blade);
+  - armed: FIRE, RELOAD;
+  - carrying a crate: THROW in FIRE's slot;
+  - at the wheel: FIRE (only with a gun), BRAKE, ACT (only with something to do), EXIT, HORN (SIREN in a police car,
+    a fire engine or an ambulance), RELOAD with a gun;
+  - a passenger: FIRE, ACT, EXIT, RELOAD;
+  - flying: CLIMB / DOWN as one rocker in C1 / C2, EXIT, FIRE (a gun or the gunship's missiles);
+  - on a boat: as at the wheel;
+  - on a horse: STOP, OFF, GALLOP;
+  - on a board: TRICK, OLLIE, OFF;
+  - surfing: AIR;
+  - swimming: ACT, CAR;
+  - at home: ACT and no stick.
+  
+  ITEMS shows while there's something in the bag, LIGHT while you own a light, COP CAR while you can call one. The
+  stick and FIRE ON show everywhere but at home.
+- **Placed per orientation from one table** (`GEO`, centres in from the bottom-right corner at a phone's 390 px short
+  side), scaled to the room inside the safe areas: 0.86x on a 360 px phone, up to 1.3x on a tablet, never under 44 px.
+  The safe areas are read from `env(safe-area-inset-*)`. The job line keeps left of the arc (`--arc-w`). **The
+  per-button `calc()` offsets are gone from style.css**, and so are the pills under the minimap, the WPN button and
+  the hidden MAP button. The weapon plate top right is the weapon switch on touch: tap for the next weapon, hold to
+  pick; it has a 44 px tap area now.
+- **Kept clear of you**: nothing of the stick or the arc is over the middle of the screen (a box a third of the width
+  and a quarter of the height round you). Upright, all of it is right of the middle (an old 667 px-tall phone upright
+  is the exception for the utility slots: there's no room under the middle for everything).
+- **They dim when left alone** (5 s without a touch: the buttons to 50%, the stick to 60%) and come straight back at a
+  touch.
+- One button per action stays in index.html's `#tbtns` (the stick and FIRE ON in there too), so client/hud.js still
+  pulses the one the prompt names (green, red for a crime), and the cinematic bar and the knocked-out screen still put
+  them away.
+
+### Aiming and firing (client/input.js, shared/input.js touchStick, shared/touchcontrols.js touchAim)
+- **The aim stick, as before**: held a fifth of the way out it aims without firing; pushed into its red ring it fires
+  too, while **FIRE ON** is on. FIRE ON is on by default; with it off the stick only aims. The toggle and Settings'
+  "Touch: aim stick outer ring fires" stay in step and are kept with the other settings. Held short of the ring with
+  fists, a bat or a blade, the stick guards, as before.
+- **FIRE**: a tap fires where the stick aims while it's held. With a gun out the stick's aim also stays for 1.2 s after
+  you let go, as before, and FIRE uses it. Otherwise a tap fires at the **auto-target**, which is new: the nearest
+  person standing ahead in reach (within 0.7 rad either side of where you face; all round at the wheel, not anyone
+  aboard with you; never your crew or the down). With nobody there it fires where you face, and a drive-by goes
+  straight ahead. Before, a tap without the stick fired where you faced.
+- **BLOCK** (C1 with fists, a bat or a blade) is held to guard, as well as the stick.
+- **Golf, hoops, bowling, tennis, the fire hose, the bow** use the stick again, as they did. There is no auto-target
+  by your golf ball, on a court or a lane, with a crate, fishing or on a board, so a golf shot still starts aimed at
+  the flag. The aim line is the stick's, as before.
+- Keyboard and gamepad are unchanged.
+
+### Page weight
+- The slot tables, the auto-target and the placing load with the touch controls (shared/touchcontrols.js,
+  client/touchslots.js: a dynamic import the first time the device is touch), not with the page. The page is 498.1 KB
+  (budget 498, unchanged). style.css is smaller: 22 KB gzipped (it was 23).
+
+### Tests
+- test/hudlayout.test.js: every touch state on every screen of the HUD page (844x390, 740x360, 390x844, 1024x768,
+  1280x720, 1920x1080; the six H70 states plus unarmed, horse, board, boat, swimming, passenger, surfing, home). It
+  checks that no two controls overlap - the aim stick and its ring included - that each is 44 px or more, that nothing
+  is in the left 40% or over the middle or on the HUD (the minimap, the vitals, the cash, the weapon, the round
+  buttons), that upright everything is right of the middle, and that each slot holds what shared/touchcontrols.js says
+  it does.
+- test/touchslots.test.js (new):
+  - the slot contents per state, and the same role in the same slot;
+  - the stick and FIRE ON everywhere but at home;
+  - every action's button, binding, icon and README row;
+  - the FIRE ON markup and setting;
+  - the geometry on eleven sizes, with and without a notch's safe areas;
+  - touchStick and touchAim: the stick aims without firing; past the ring with FIRE ON it fires, with it off it
+    doesn't; FIRE taps where the stick aims, else at the auto-target; golf keeps its aim;
+  - the auto-target, and the angle and the bits on the wire;
+  - in a real headless page, touches on the stick, the toggle and FIRE go through client/input.js's sample().
+- test/touchair.test.js reads the slot geometry: the rocker is clear of the stick, FIRE, ACT, EXIT, ITEMS and FIRE ON,
+  and BRAKE, HORN and RELOAD are put away in the air.
+- test/kbdrive.test.js and test/gamepad.test.js are back to their checks of the stick's ring and the FIRE ON toggle;
+  only the toggle's markup is new.
+- Captured on the dev server (World v3), before and after, every touch state at 844x390 and 390x844, plus armed and
+  driving again with the stick back: ui2-shots (before, after, after2) in the session's scratchpad.
 - 2026-10-24, the batch 4 merge (b4b-2): the ambulance crew get round a vehicle they're held up against. With the
   siren clearing the road (b4a), a car that pulls over for it can end up stopped beside the ambulance at the scene,
   across the crew's way to the patient. pedStep held the medic at its side, and sidestep sent them back and forth along
@@ -16630,3 +16811,263 @@ came from another slice's change. Both were weaknesses in cinefollow.js that the
 - Neither test was loosened.
 - Now: from Downtown field 138, one pass over segments 1-6; from Midtown field 95, rows 14-15 over the whole length.
 - test/world3scenes.test.js under the lock, twice: 6/6 both times; test/director.test.js + test/farming.test.js 15/15.
+## 2026-10-24 - ui3: one hub - MENU · PHONE · MAP on the HUD, and the map, the phone, the bag, the people and the settings in one panel (UI overhaul, phase 3)
+
+The owner approved the UI/UX overhaul on 2026-10-24; decision 3 is "one hub instead of five ways in". Before this the
+same places could be reached from the HUD's seven round buttons, the hub's round tabs, the 15-line pause list, the
+phone and the keys. Now there is one way in, and every old entry has a home.
+
+### The HUD row
+- **Three labelled buttons, MENU · PHONE · MAP**, replace the seven round ones (☰ 📱 🎒 ▦ ⚙ ⛶ 🐞). Each has a line icon,
+  and on a keyboard a key badge (ESC / P / M). They are 48 px tall on desktop and 44 px on touch.
+- **Placement.** Top centre on a desktop and on a sideways phone. Beside the minimap on a short window and on a 740 px
+  phone. Upright, the row sits under the minimap, and the notes, the bars and the prompt move down to make room.
+- **The bag.** I opens the hub's BAG tab, and so does a tap of the touch ITEMS slot. Holding ITEMS opens the quick
+  wheel, as holding X / View does.
+- **Settings, fullscreen, players online and the debug menu** are in the hub. The debug menu is the last line of
+  Settings › Help, quiet, and ` still opens it.
+
+### The hub
+- **One panel.** It fills the screen on a phone and is a large centred panel (1160 x 760) on a desktop. Its bar holds
+  RESUME first, then the tabs MAP · PHONE · BAG · PEOPLE · SETTINGS, then ✕. Upright, the bar is RESUME, the tab's name
+  and ✕, with the five tabs on a row under them.
+- **How it works.** Each tab is one of the old overlays (bigmap, phone, inv, players, settings), shown one at a time in
+  the hub's frame, so their code and their pad navigation carry on. The game keeps running behind it.
+- **Opening it.** Esc, Start or MENU opens the hub on the last tab used. P / M / I (D-pad ← / →, the HUD's PHONE and
+  MAP) open a tab straight away, and pressing the same one again closes it.
+- **Moving round it.** LB / RB (Tab on a keyboard) change the tab. The D-pad moves through RESUME, the tabs and the
+  tab's contents, and focus starts in the contents. On a keyboard ← / → now step sideways through a grid. B / Esc goes
+  back (an app, a map category, a bag item's details) and then closes. A click or tap round the desktop panel closes it.
+- **The title screen.** Settings opens in the same frame on its own, with no tabs and no RESUME.
+- **Where the pause list went:**
+  - Settings › Help: unstuck, surrender (pressed twice), cinematic mode, fullscreen, exit to the title, install,
+    repair, leave Dev Debug Mode, and the debug menu last.
+  - Settings › Account: your look.
+  - The phone's quick row: the cop's cruiser. The phone's Camera app is the cinematic mode too.
+- Nothing is lost (test/hub.test.js lists each one).
+
+### The Phone tab
+- **The job you're on comes first.** It shows what it is, the step you're on (live, from your self record), the pay,
+  Show on map (it opens the MAP tab on it) and Quit job (pressed twice).
+- **Then every app in one grid of line SVG icons, with no paging.** The apps are Jobs, Places, Transit, City feed,
+  Bounties, Homes, Skills, Crew, Log and Camera. The actions (Nearest ATM, Dance, the cruiser, clear the waypoint) sit
+  in a QUICK row of their own, apart from the apps.
+- **In an app**, its name is in the header with a 44 px ◀ Back.
+- **The Log app** shows every note in full, newest first, with how long ago and its tone. The store is
+  client/notelog.js: every note the HUD shows goes in (hud.js toast), the same note again within a minute is counted,
+  the last 80 are kept, and this tab's session keeps them over a reload. UI-4 makes the notes one line and sends their
+  detail here.
+
+### Jobs, easy to take on
+- **The Jobs app lists short cards** (client/jobcard.js), grouped and nearest first. Each card shows what the job is,
+  the pay as a range with what it is paid for ("$150-$420 a call"), how far it is, the first step ("Get in the fire
+  engine at Fire Station 7") and Accept.
+- **One tap accepts it.** The server signs you on, its waypoint is set and the hub closes.
+- **Where the numbers come from.** server/systems/phone.js gives every board entry `lo`, `hi`, `per` and `step`, all
+  computed from shared/rules.js: FIRE.pay and MEDIC.pay per call, with the fast bonus in the top; CAB's fare over
+  CAB.trip; BUSJOB per stop and passengers; TOWJOB; SAR; CHARTER; COAST; DUST; FARM.
+- **The same card at a job's place.** Act at a hospital's doors, a fire station, a taxi rank, a bus stop, an impound lot
+  or a rescue helipad no longer signs you straight on. It brings the job's card over the game ({ t: 'jobcard' }), with
+  Accept and Not now. The interactions carry a `card` (firefighter, paramedic, taxijob, towjob, busjob, sar.js), and
+  players.js doAct offers it (phone.js offerCard). Accept ({ a: 'take', card: 1 }) signs on at that place, by its own
+  start, as long as you're still within 400 px. The interactions' `run` is unchanged, so their tests still sign on
+  directly.
+
+### The Bag tab (the owner: "much cleaner and modern and easier to work through")
+- **A grid of cells by category** (client/bag.js, which replaces inventory.js createInventory). The categories are
+  weapons, healing, food and drink, clothes, fishing, tools and lights, hunting, garden, valuables and other. Each cell
+  has a big glyph or the weapon's own art, the name and the count, with IN HAND or SLOT n tags.
+- **Filter and sort.** Category chips (only the ones you have something in) filter the grid, and it sorts by kind, A-Z,
+  most or value. Both choices are remembered in this browser.
+- **A details pane beside the grid** shows the name, the category, what it does, how many you have (or the rounds) and
+  the actions:
+  - Use or Turn on/off;
+  - Equip or Put away;
+  - the plasma blade's colours;
+  - pin to quick-wheel slot 1-4;
+  - Drop one or Drop all, each pressed twice.
+- **Drop is new on the server** (cargo.js dropItem, session `inv drop`). The thing goes into a bag at your feet for
+  DROP_LIFE_S (300 s, shared/rules.js), and anyone can pick it up. A weapon goes with its rounds, and you're back to
+  fists if it was in your hand. You can't drop things from a vehicle or while held.
+- **The layout.** Upright, the details come up as a sheet from the bottom with a ✕. The quick wheel's four slots sit
+  under the grid. A hidden `bag-craft` section keeps crafting's place in the layout; crafting itself isn't built.
+
+### The Settings tab
+- **Sections.** Controls · Sound · Graphics · Account · Help sit down the left (a scrolling row upright), with the
+  Danger zone (Start fresh) apart at the foot. The existing settings rows and their handlers are unchanged and moved
+  into their sections.
+- **Controls show the device you're on**, with Keyboard and mouse · Gamepad · Touch one tab away. The bindings come
+  from shared/controls.js, in groups: on foot, at the wheel, in the air, menus. The device's own options show with
+  them, and the other devices' options hide: keyboard driving; gamepad driving and the stick-fire; vibration on a pad
+  or a phone.
+- **Every row, select, nav button and toggle is 44-48 px.**
+
+### The Map and People tabs, and a sideways phone
+- **MAP (LandHub):**
+  - the map, with zoom in, zoom out and find-me on it (44 px);
+  - beside it a panel: your job's card and your waypoint's (with Clear);
+  - SHOW, a two-column grid of category chips (aria-pressed);
+  - FIND A PLACE, the categories' lists;
+  - the legend, then players online.
+- The old top bar (the logo, the round tabs, the clock and bars, the money) and its foot are gone. The control hints
+  sit at the panel's foot.
+- **PEOPLE:** players online (the dev buttons as before) and your crew. The Crew app's view moved into exported
+  functions of client/phone.js (`crewHtml`, `wireCrew`), so the tab and the app share it.
+- **A shop's menu on a sideways phone:** a compact one-line head (title, ✕), a two-line description, the wallet line,
+  and the list from high up. Its list scrolls on its own, with a fade at the foot while there's more (`.cue-down`; the
+  bag's grid has it too). The bag at 844x390 keeps its details beside the grid (260 px).
+
+### Controls tables and the README
+- **shared/controls.js** gains `hub` (ESC / MENU / MENU), `hubtab` (TAB / LB / RB / TAP A TAB) and `climb` / `descend`
+  for every device.
+- **The touch words** for the HUD's row and ITEMS (PHONE, MENU, ITEMS, HOLD ITEMS) are set in one `Object.assign`
+  after TOUCH, so the lines the touch controls' own rework edits stay as they were.
+- **The README controls table:** the hub, the bag (tap ITEMS), taking a job, the notes' log, the quick wheel (hold
+  ITEMS), and every "☰ / ⚙ / 🎒 / pause menu" route rewritten to the hub's.
+
+### Page weight
+- **The page went from 498.2 KB to 497 KB** (budget 498, not raised). Four things load only when first needed:
+  - the hub's tabs: hub.js for Settings and People, bag.js, phone.js and jobcard.js;
+  - the map (worldmap.js, as before).
+- **What came off the page:** the old bag (createInventory), the pause list, the round tabs and their top bar
+  (buildHubs, hubGo, uiTop) and help-tpl.
+- **style.css** dropped the pause, round-tab, top-bar and old-bag rules and gained the hub's. The title screen's assets
+  are at 242 KB (290).
+
+### Tests
+- **test/hub.test.js (new):**
+  - the row and the hub's tabs; every old pause item reachable; Esc / Start / MENU / P / M / I / LB / RB / Tab and the
+    D-pad's focus;
+  - the tabs lazy;
+  - the log store;
+  - the job card (the markup, the server's ranges and steps; Act at a fire station brings the card and doesn't sign on;
+    Accept signs on; walking off refuses it);
+  - the bag (its categories, its messages; the server's Drop of an item, all of it, a weapon in hand; refused from a
+    car);
+  - Settings' sections and its device filter (the bindings per device from the tables);
+  - the sideways shop menu and its cue.
+- **test/hudlayout.test.js** checks the HUD row on every screen and device: three buttons, MENU · PHONE · MAP
+  labelled, key badges only on a keyboard, 44 px on touch, not on each other or on the HUD, upright in the top band and
+  clear of the middle. The rest of its checks still pass with the row in place.
+- **Updated for the new layout:** test/startfresh.test.js (Start fresh in the Danger zone) and test/hudlayers.test.js
+  (the hub over the notes).
+- **The HUD's share of the screen, on foot** (the audit's coverage): desktop 5.8% -> 6.5%, 844x390 25.2% -> 24.7%,
+  390x844 25.5% -> 25.3%. The middle third stays clear. Touch targets under 44 px in the hub's screens went to 0; there
+  were 9 in the old bag alone.
+- **Two failures that aren't this phase's.** test/sound.test.js: the server's `bt` event, the shelters' boards from
+  server/systems/transit.js, has no sound entry. test/worldmap.test.js: the baked world map's signature is not the
+  test city's. Neither file is touched here.
+- **Taxi ranks at stations.** In the built city a rank's Act is the station's own (its timetable, boarding), which
+  takes precedence over the taxi sign-on, so the card is tested at a fire station. Signing on as a taxi driver from the
+  Jobs app works.
+- **Merged with the aim stick's return (fix-ui2, ff0eaac4).** The right aim stick, its ring-fire and the FIRE ON
+  toggle (a utility slot) are back. Their setting, "The aim stick pushed into its red ring fires", is in Settings ›
+  Controls with `data-for="touch"`, so it shows on the Touch tab only. TOUCH.aim reads AIM STICK in the bindings.
+  ITEMS keeps its tap (the bag) and its hold (the quick wheel) beside the stick's handlers in client/input.js.
+- **Captured** before and after, every screen at desk 1440x900, land 844x390 and port 390x844, on the dev server: the
+  session's scratchpad ui3-shots.
+## 2026-10-24 - ui4: the HUD's information - the prompt in its slot, one job card, one-line notes and the Log, vitals and status in plain words, the vehicle chip, first-time hint strips, the knocked-out screen, store icons over doors (UI overhaul, phase 4)
+
+The owner approved the UI/UX overhaul on 2026-10-24. Decisions 4 ("information where the eye is") and 5 (the knocked-out
+screen) are this phase, held to his bar: "elements that pop up on screen don't take over the view of the game for the
+character, especially in mobile portrait mode ... information should come and go as necessary but not linger". The
+HUD is laid out again from the mockups (DeskHud, LandFoot, LandDrive, PortFoot, PortHeli, LandDeath); its CSS section
+is rewritten rather than layered (the old touch and upright overrides are gone), and what it shows beyond the basics
+lives in client/hudinfo.js, fetched as the game opens.
+
+### The prompt
+- **One slot.** With a keyboard or a pad it sits just under you on the screen (hudinfo.js keeps it under your feet as
+  the camera leads). On a phone on its side it sits low between the move stick and the arc, over the arc's lowest
+  buttons and left of the rest; upright, just under you, left of the utility column. client/touchslots.js tells the
+  stylesheet where the room is (--lo-r, --lo-b, --lo-c) from the slots' own geometry. A short window with a keyboard
+  (under 430 px tall) puts it in the low slot.
+- **In and out.** It eases in and out (200 ms) instead of popping, and shows only while the server offers it.
+- **A verb and an object, no colon.** The places' prompts were nouns ("Bank teller", "Pawn window", "Counter - ...",
+  "Union Square Station: next train ..."). They read "Talk to the bank teller", "Sell at the pawn window", "Shop at the
+  counter - ...", "Read the route board at ...", "Use the ATM - $420 on you to deposit", and so on (server
+  economy.js poiLabel, trains.js, players.js).
+- **Taxi ranks in stations (the known case).** A station's own prompt (its timetable, or World v3's route board) came
+  first, so the rank's job card never appeared. Now the prompt says "Check the trains and taxis at ..." and the
+  station's menu and the route board both offer "Drive a taxi from here", which brings up the taxi's job card.
+
+### The job card
+- **One card under the minimap**, replacing the bottom job line: the job and the call it's on ("TAXI · FARE 2"), the
+  time left on the shift, the objective, how far (live), STEP N OF M. The server sends the card's words with the job
+  target (phone.js jobCardInfo: k, n, u, step, left, s), each job's steps in order (paramedic: to the patient, at the
+  scene, to the hospital; taxi: the pickup, the drop-off; and so on). Waiting for a call has no step.
+- **Big, then a chip.** It's big for 5 seconds when a step comes in (a short glow says so), then folds to a one-line
+  chip (the objective and the distance). A tap or a click opens it again. On a phone the big card lets touches through,
+  so a thumb going for the move stick isn't caught.
+- **The pay, then gone.** When a call or the job pays, the card shows PAID +$X (or DONE · +$X) for a few seconds, then
+  goes back to the chip or away.
+
+### Notes and the Log
+- **One line each, two at most, a few seconds.** A long note shows its first sentence or clause (notelog.js noteLine);
+  the server can name the line itself - world.notify's new short argument - and the job intros do ("Taxi shift: your cab
+  is the green ring" for the five-line taxi intro). A note cut short ends LOG ›, and a tap or a click opens the phone's
+  Log with every note in full. The paging of long notes (client/notepages.js) is gone with its test.
+- **Never over you or the middle.** Bottom left on a desktop; top centre under the row on a phone on its side; under
+  the job upright. With a robbery, ride or custody bar up they make room (upright they wait in the Log).
+
+### Vitals and status
+- **Health and stamina** with a heart and a bolt and their numbers; the words Health and Stamina on a desktop.
+- **Plain words:** a status line of chips - who you are (CITIZEN, POLICE · SERGEANT), Samaritan 12, Criminal XP 3,
+  Record 15 felonies (on its own, not "CITIZEN · 15 FELONIES"), then what's happening to you now (Bleeding, a bounty, a
+  coffee wearing off, Police remember you ★★). A phone shows only what's happening now, and the faction when it isn't a
+  citizen's.
+- **Progressive disclosure.** The stars only while you're wanted and for 8 seconds after. The weapon plate small with
+  your fists out and nothing going on (on a phone gone when there's nothing to switch to). The bank and the clock are
+  folded on phones: the clock and the weather on the minimap's foot. UI-1's 12 px exception for the HUD's readouts is
+  gone: 14 px is the smallest on a phone (test/hudlayout.test.js measures every word).
+
+### The vehicle chip
+- The vehicle's name, its speed in km/h and, in the air, its height in metres, under the cash - only in a vehicle
+  (three short lines on a phone).
+
+### First-time hint strips
+- Driving, flying, a horse, a boat, a board, swimming and the cinematic mode each get a strip of what to press - key
+  chips on a keyboard, the pad's button names, the touch slots' own names (BRAKE, HORN, EXIT; CLIMB, DOWN) - the first 3
+  times on this device for this character (localStorage cla.hints, by player id), up 7 seconds or until you stop. They
+  sit clear of the controls: bottom centre on a desktop, the strip under the arc's lowest buttons on a phone on its
+  side, over the move stick upright. The cinematic mode's shows on the clean screen (its old note couldn't: the clean
+  screen hid the notes).
+
+### The knocked-out screen
+- Reworked to the LandDeath mockup: a map of the places to wake up (numbered marks) beside the panel - upright, the map
+  over it. The panel: KNOCKED OUT (or WASTED), how it happened (on phones too now), the calls while you're down (call
+  for help, the ambulance or the rescue boat, cancel the request), the places nearest first as numbered rows matching
+  the marks (tap either), WAKE UP HERE and AUTO IN 12 S. WAKE UP HERE settles the place and folds the choices to the
+  slim bar to watch the scene - you still wake when the timer runs out ("whatever you press", RESPAWN_SECONDS).
+  Enter / A press it; H, J, C, the arrows, Esc / B as before. Its CSS moved out of style.css into deathscreen.js.
+
+### Store icons over doors
+- The shop symbols over the doors near you are round badges with a gold rim and a warm glow and a glyph per trade, in
+  the style of the owner's concepts (page 15): a gun, a shirt, a hammer, a cart, a pill, a cross, a badge, scales, a
+  bank, a beer, a cocktail, a coffee, a burger, a fuel pump, a shop front, rings, a hood, a wrench, ... - 37 glyphs for
+  every kind of shop (client/storeicons.js, loaded the first time one is drawn; art2 host.js draws them a little
+  bigger and higher). Off in Settings as before.
+
+### The creator and the desktop hub
+- **The starting looks upright:** two to a row, scrolling down, with "12 LOOKS + RANDOM" over them (was one of twelve
+  in a sideways strip).
+- **Desktop hub targets:** the map's category names and the players row are 44 px tall now (16 targets under 44 px in
+  the before shots).
+
+### The numbers
+- HUD coverage (scratchpad ui4/cap4.py, the audit's coverage: the share of the screen the HUD and touch controls paint,
+  and of the middle third), in each state at desk 1440x900, land 844x390 and port 390x844:
+  - **desk** (HUD / middle third, before → after): foot 6/0 → 5.4/0; armed 8/0 → 7.1/0; notes 7.7/0 → 5.9/0; notes-gone 6.5/0 → 5.9/0; prompt 8/4.2 → 7.8/17.2; station 11.6/0 → 9.3/14.4; wanted 8.6/0 → 10/7.5; drive 6.5/0 → 6.2/0; heli 6.5/0 → 7.8/0; job 12.7/0 → 8.4/15.3; job-compact 9.9/0 → 8.4/15.3; death 12.8/0 → 44.9/77.4
+  - **land** (HUD / middle third, before → after): foot 34.9/0 → 32.7/4.7; armed 36.2/1 → 35.7/5.7; notes 39/0 → 37/4.7; notes-gone 35.9/0 → 34.8/4.7; prompt 36/15.4 → 35.3/10.9; station 44.8/37 → 36.9/16.5; wanted 38.1/0.8 → 41.7/4.7; drive 27.8/0 → 30/0; heli 27.7/0 → 31.1/0; job 41.4/0 → 38.5/4.7; job-compact 38.4/0 → 38.5/4.7; death 49.2/26.5 → 91.3/98.6
+  - **port** (HUD / middle third, before → after): foot 34.2/19.7 → 28.8/19.7; armed 35.5/19.7 → 31.4/19.7; notes 35.2/19.7 → 35.9/19.7; notes-gone 35.2/19.7 → 30.8/19.7; prompt 34.1/19 → 32.6/29.6; station 36.7/25.4 → 32.7/8.9; wanted 36.1/33.8 → 43.4/12.8; drive 26.7/0 → 25.9/0; heli 31.1/0 → 23.7/0; job 44.4/19.7 → 34.8/19.7; job-compact 39.7/19.7 → 34.8/19.7; death 42.4/0 → 90.5/97.2
+  - Read: the HUD's share is down in most states (the land and port figures include the touch controls, UI-2's, which
+    didn't change). The middle third holds the prompt now - by you on a desktop, under you upright - which is the one
+    thing the bar allows there; with no prompt up it's clear but for a bar or the edge arrow. The knocked-out screen
+    covers the most by design (the approved LandDeath mockup: the map and the panel); ▾ HIDE or WAKE UP HERE fold it to
+    a slim bar to watch the scene.
+- Tests: test/hudlayout.test.js measures the prompt slot (by you, or low on touch), the job card's both forms on every
+  screen, two one-line notes at most and never in the middle third, 14 px on touch and the HUD's parts clear of each
+  other. New: test/hudinfo.test.js (the note → Log path, the hint strips shown 3 times then not, the knocked-out
+  screen's choices, an icon for every shop kind, the card's words) and test/jobcardinfo.test.js (the server's card
+  words, the intro's short line, the taxi rank in a station).
+- The page is 498 of 498 KB: the new code loads after the page (hudinfo.js with the HUD, storeicons.js with the first
+  mark, the knocked-out screen with the first knock-out); notepages.js and the HUD code that moved out made the room.
