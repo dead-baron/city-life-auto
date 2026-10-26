@@ -36,6 +36,7 @@ import * as skills from './skills.js';
 import * as arcade from './arcade.js';
 import * as music from './music.js';
 import { RECORD_STORE } from '../../shared/music.js';
+import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
@@ -434,6 +435,7 @@ export function buildMenu(world, p, poi) {
   }
   // clothes to buy (task #364): every store that sells clothes has a fitting room (looks.js openShop)
   if (storeOf(poi) && kind !== 'barber') opts.unshift({ id: 'fit', label: 'The fitting room: try on and buy clothes' });
+  if (kind === 'club' || kind === 'garage' || kind === 'dealer') biz.menuRow(world, p, poi, opts);   // (the business: the manager's office - biz.js)
   hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
   if (atmMore) opts.push({ id: 'atmfull', label: 'Use ATM', note: 'deposit or withdraw an amount' });
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
@@ -512,8 +514,9 @@ export function openMenu(world, p, poi) {
 }
 
 export function handleMenu(world, p, poiId, optId) {
-  if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;
-  if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)   // (the bed, the safe, the fridge... at home: homeinside.js)
+  if (biz.isBizPoi(poiId)) { biz.onMenu(world, p, poiId, String(optId || '')); return; }   // (a business's own menu: biz.js)
+  if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
+  if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
   if (optId === 'cabcard' && poiId === -1 && ped && !ped.dead) { const it = taxijob.interaction(world, p); if (it && !phone.offerCard(world, p, it.card)) it.run(); return; }   // (a station's route board: its taxi rank - trains.js readRouteBoard)
@@ -539,6 +542,7 @@ function execute(world, p, poi, opt) {
   if (valid.dis) return 'Not available.';
   switch (parts[0]) {
     case 'close': return null;
+    case 'biz': return biz.openFrom(world, p, poi);   // (the manager's office: biz.js)
     case 'cabcard': { const it = taxijob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
@@ -586,6 +590,7 @@ function execute(world, p, poi, opt) {
       if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough (checked before paying)
       if (!pay(p, price)) return 'Not enough money.';
       prof.inventory[id] = (prof.inventory[id] || 0) + qty;
+      if (poi.kind === 'club') biz.onSpend(world, p, poi, price);   // (the owner's cut of the bar: biz.js)
       autoSlot(p, id);
       if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
       if (it.light) world.notify(p, `${it.name} in your bag - press L to switch it on and off (or use it from the bag). It doesn't take a hand: you keep your weapon.`, 'good');
@@ -699,20 +704,21 @@ function execute(world, p, poi, opt) {
     case 'respray': case 'wash': case 'repair': {
       const v = myVehicleNear(world, p, poi);
       if (!v) return 'Bring your vehicle onto the lot first.';
+      const free = biz.freeAt(world, p, poi), charge = (amt) => { if (free) return true; if (!pay(p, amt)) return false; biz.onSpend(world, p, poi, amt); return true; };   // (your own shop: on the house; someone else's: their cut - biz.js)
       if (parts[0] === 'respray') {
         if (v.def.horse) return "We don't paint horses.";   // (its coat is its own: horses.js)
         if (v.cargo.some((c) => c)) return 'Unload the cargo first - we do not respray loaded vehicles.';
         const blocked = disguiseBlocked(world, p);
         if (blocked) return blocked;
-        if (!pay(p, 250)) return 'Not enough money.';
+        if (!charge(250)) return 'Not enough money.';
         respray(v, rng);
         applyDisguise(world, p);
       } else if (parts[0] === 'wash') {
-        if (!pay(p, 20)) return 'Not enough money.';
+        if (!charge(20)) return 'Not enough money.';
         v.bloody = false;
         world.notify(p, 'Squeaky clean.', 'good');
       } else {
-        if (!pay(p, 300)) return 'Not enough money.';
+        if (!charge(300)) return 'Not enough money.';
         v.hp = v.def.hp; v.burnUntil = 0; v.flat = false; v.dead = false; v.deadBoomAt = 0; v.deadFireAt = 0;
         v.dz = 0; v.zh = null; v.holes = 0; v.off = 0; v.dst = 0; v.plasmaHits = 0;   // (the dents beaten out, the holes filled, new parts: task #402)
         world.notify(p, 'Body work done (and new tyres).', 'good');

@@ -98,6 +98,7 @@ import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
 import * as casino from './casino.js';
 import * as arcade from './arcade.js';
+import * as biz from './biz.js';
 import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
 
@@ -799,6 +800,8 @@ export function findInteraction(world, p) {
   const below = underground.interaction(world, p);   // a manhole over the sewers, the cave's mouth, an ore vein
   if (below) return below;
 
+  const office = biz.interaction(world, p);   // a business's office, your food truck, a customer's car (biz.js)
+  if (office) return office;
   const hall = arcade.doorInteraction(world, p);   // an arcade's door: onto its floor - the cabinets, the prize counter (arcade.js)
   if (hall) return hall;
   const baths = bathhouse.doorInteraction(world, p);   // a bathhouse's door: into its lobby (bathhouse.js)
@@ -1004,7 +1007,7 @@ export function buildMe(world, p) {
     blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
@@ -1014,6 +1017,7 @@ export function buildMe(world, p) {
     vehicles: prof.vehicles.map((v) => v.model),
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),
+    biz: biz.mapList(world, prof),   // (your businesses on the map: biz.js)
     spawnOpts: ped && ped.dead ? homes.spawnOptions(world, p) : null, deadAt: ped && ped.dead ? [Math.round(ped.x), Math.round(ped.y)] : null, spawnChoice: p.respawnChoice || null,
     cruiser: cruiser.stateFor(world, p), happen: events.forPlayer(world, p), misconduct: law.misconductFor(p), suspects: law.suspectsFor(world, p),
     dev: p.dev, devMode: !!p.devMode, god: !!p.invincible, safety: safety.on(p),

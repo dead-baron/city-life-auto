@@ -49,7 +49,7 @@ import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as TN from '../props-towns.js';
-import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
+import { EL_Z, DECK_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns, handNeon, picSize, picGlow } from '../neonsigns.js';   // (the night's big neon signs)
@@ -1515,7 +1515,7 @@ const step2 = (R, t, x, y) => R[clamp(Math.round(t * (R.length - 1) + (((x & 3) 
 // ================================================================================================
 function voxModel(m, a) {
   switch (m) {
-    case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
+    case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1); case 'stationBridge': return RD.stationBridge(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
     case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'steamVent': return RD.steamVent(); case 'handTruck': return RD.handTruck(a[0] || 2); case 'planter': return P.planter(a[0] ?? true);
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'gatePier': return gatePier(); case 'crate': return P.crate(a[0] || 1);
@@ -1584,7 +1584,7 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 // model sizes [w, d, h] for each name (used for the chunk extents without building the model)
 function vdim(m, a) {
   switch (m) {
-    case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40];
+    case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40]; case 'stationBridge': return [a[0] || 280, 36, (a[1] || 88) + 30];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
@@ -2866,8 +2866,27 @@ function railHubs(I, hubs) {
     lightAt(I, h.x + Math.cos(h.a) * 70, h.y + Math.sin(h.a) * 70, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
     lightAt(I, h.x - Math.cos(h.a) * 20, h.y - Math.sin(h.a) * 20, 70, 150, [1, 0.94, 0.8], 1.3, 'lamp');
     put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
-    for (const f of h.bridges || []) { const fh = qa(f.a, STATION_TURNS); put(I, vitem(`fbr:${f.len}:${fh.toFixed(3)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); }
+    for (const f of h.bridges || []) {
+      const fh = qa(f.a, STATION_TURNS);
+      if (!f.ends) { put(I, vitem(`fbr:${f.len}:${fh.toFixed(3)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); continue; }
+      // (up over the tracks, a flight from each platform: world3-rail.js stationFootbridges)
+      const Z = Math.round(f.z * DECK_Z), L = Math.round(Math.hypot(f.ends[0].tx - f.ends[0].fx, f.ends[0].ty - f.ends[0].fy));
+      put(I, vitem(`sbr:${f.len}:${Z}:${fh.toFixed(3)}`, 'stationBridge', [f.len, Z, 1], f.x, f.y, fh));
+      for (const e of f.ends) { const eh = qa(e.a, STATION_TURNS); put(I, vitem(`els:${L}:${Z}:${eh.toFixed(3)}`, 'elStairs', [L, Z, 1], e.fx + Math.cos(e.a) * (L / 2 + 10), e.fy + Math.sin(e.a) * (L / 2 + 10), eh)); }
+      lightAt(I, f.x, f.y, Z + 26, 140, [1, 0.92, 0.75], 1.3, 'lamp', 1);
+    }
   }
+}
+// on a station footbridge's flight (or its landing)?
+const FLIGHTS = new WeakMap();
+function onFlight(M, p) {
+  let F = FLIGHTS.get(M);
+  if (!F) { F = []; for (const h of M.railHubs || []) for (const f of h.bridges || []) for (const e of f.ends || []) F.push(e); FLIGHTS.set(M, F); }
+  for (const e of F) {
+    const dx = e.tx - e.fx, dy = e.ty - e.fy, l2 = dx * dx + dy * dy || 1, t = Math.max(-0.1, Math.min(1.3, ((p.x - e.fx) * dx + (p.y - e.fy) * dy) / l2));
+    if (Math.hypot(e.fx + dx * t - p.x, e.fy + dy * t - p.y) < 34) return true;
+  }
+  return false;
 }
 function addRailLoop(c, I, R, once) {
   if (!R || !R.pts) return;
@@ -2892,7 +2911,7 @@ function addRailLoop(c, I, R, once) {
     }
     const L = st.half || 112, sd = st.side;
     const at = (d, off) => { const q = railAt(R, st.s + d); return { x: q.x - Math.sin(q.a) * sd * off, y: q.y + Math.cos(q.a) * sd * off, a: q.a }; };
-    const ok = (p) => { const t = c.at(p.x, p.y); return t !== T.ROAD && t !== T.BUILDING && t !== T.WALL && t !== T.BRIDGE; };
+    const ok = (p) => { const t = c.at(p.x, p.y); return t !== T.ROAD && t !== T.BUILDING && t !== T.WALL && t !== T.BRIDGE && !onFlight(c.M, p); };
     const cl = Math.round(L * 0.7 / 8) * 8;
     for (const f of [-0.42, 0.42]) { const p = at(f * L, 80); if (!ok(p)) continue; const hd = qa(p.a, STATION_TURNS); put(I, vitem(`pcan:${cl}:${hd.toFixed(3)}`, 'platformCanopy', [cl, 40, 1], p.x, p.y, hd)); lightAt(I, p.x, p.y, 52, 160, [1, 0.94, 0.8], 1.5, 'lamp'); }
     for (const f of [-0.85, -0.12, 0.12, 0.85]) { const p = at(f * L, 62); if (!ok(p)) continue; const n = Math.atan2(Math.cos(p.a) * sd, -Math.sin(p.a) * sd); put(I, vitem(`bn:${qa(n + PI / 2, STATION_TURNS).toFixed(3)}`, 'bench', [], p.x, p.y, qa(n + PI / 2, STATION_TURNS))); }

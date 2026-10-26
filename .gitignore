@@ -9,3 +9,4 @@ tools/weights/
 .playtest-data/
 .claude/worktrees/
 playtest_fail.png
+.scratch/

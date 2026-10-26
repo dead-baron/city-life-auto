@@ -34,6 +34,7 @@ import { DANCE_SOLO, DANCE_COUPLES, DANCE_JUMP, COUPLE_PX } from '../../shared/d
 import { ARCHETYPES, BUILDS } from '../entities.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, startFight, walkInAt, leaveBuilding, flee, startFilming, filmChance } from './npc.js';
+import { clubAdmit } from './biz.js';
 
 let rng = mulberry32(4320);
 export function setRng(r) { rng = r; }
@@ -352,9 +353,16 @@ function dancing(world, c) {
     setMove(world, e, dm);
   }
 }
+// the owner on the decks (biz.js djSet): the floor drops now, for s seconds
+export function drop(world, c, s) {
+  const list = c.dancers.map((id) => world.get(id)).filter((e) => alive(e) && e.npc && e.npc.dancer);
+  c.dropUntil = world.time + s;
+  for (const e of list) { if (e.npc.partner) unpair(world, e); setMove(world, e, DANCE_JUMP); }
+}
 // the front of the line goes in; everyone behind steps up a place
 function admit(world, c, head) {
   c.queue.shift();
+  clubAdmit(world, c);   // (the cover: a club's owner's - biz.js)
   addDancer(world, c, head);
   c.dancers.push(head.id);
   c.queue.forEach((id, k) => { const e = world.get(id); if (e && e.npc) { e.npc.guard = lineGuard(c, k); e.npc.lineAt = world.time; } });

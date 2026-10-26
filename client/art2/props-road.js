@@ -359,7 +359,7 @@ export function elStairs(len = 150, Z = 128, on = 1) {
     const z = Math.round((x / len) * (Z - 4));
     m.box(x, 6, Math.max(0, z - 5), x + 1, W - 6, z + 1, tread);           // the treads
     for (const y of [3, W - 6]) m.box(x, y, Math.max(0, z - 12), x + 1, y + 3, z + 2, st);   // the stringers
-    if (x % 3 === 0) for (const y of [3, W - 6]) m.box(x, y + 1, z + 2, x + 1, y + 2, z + 18, rail);   // the balusters
+    if (x % 3 === 0) for (const y of [3, W - 6]) m.box(x, y + 1, z + 2, x + 1, y + 2, z + 18, rail);
     for (const y of [3, W - 6]) m.box(x, y, z + 17, x + 1, y + 3, z + 19, rail);            // the handrails
   }
   // the posts under the flight, the landing at the top, its canopy and lamp
@@ -370,5 +370,17 @@ export function elStairs(len = 150, Z = 128, on = 1) {
   m.box(len + 2, W / 2 - 3, Z + 27, len + 12, W / 2 + 3, Z + 30, lamp);
   m.box(0, W / 2 - 8, 0, 4, W / 2 + 8, 10, st);                               // (the foot's newel)
   m.box(8, W / 2 - 2, 0, 12, W / 2 + 2, 44, st); m.box(2, W / 2 - 10, 44, 20, W / 2 + 10, 64, sign);   // the sign box on its post at the foot
+  return m;
+}
+// a station's footbridge over the tracks, along +x: the walkway at Z, railings, columns, a lamp (its stairs: elStairs)
+export function stationBridge(len = 280, Z = 88, on = 1) {
+  const W = 36, m = new Vox(len, W, Z + 30);
+  const st = m.mat({ ramp: R(STEEL), k: 3 }), deck = m.mat({ ramp: R('#8a8a84'), k: 3, shade: (x) => (Math.round(x) % 8 === 0 ? -1.2 : 0) });
+  const rail = m.mat({ ramp: R('#2e3e3a'), k: 3, flag: F_THIN }), lamp = m.mat({ ramp: R('#f8f0d0', 5, 3), k: 4, emi: [255, 236, 190, 60 + on * 180], flag: F_NOCAST });
+  m.box(0, 5, Z - 6, len, W - 5, Z, deck);                                 
+  for (const y of [2, W - 6]) { m.box(0, y, Z - 16, len, y + 4, Z + 2, st); m.box(0, y, Z + 18, len, y + 4, Z + 20, rail); }
+  for (let x = 2; x < len; x += 4) for (const y of [3, W - 5]) m.box(x, y, Z + 2, x + 1, y + 2, Z + 18, rail);
+  for (const x of [10, len / 2 - 4, len - 18]) for (const y of [6, W - 12]) m.box(x, y, 0, x + 6, y + 6, Z - 16, st);
+  m.box(len / 2 - 2, W / 2 - 2, Z + 2, len / 2 + 2, W / 2 + 2, Z + 26, st); m.box(len / 2 - 6, W / 2 - 3, Z + 24, len / 2 + 6, W / 2 + 3, Z + 28, lamp);
   return m;
 }
