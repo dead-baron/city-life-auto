@@ -16,9 +16,9 @@ const hubHtml = HTML.slice(HTML.indexOf('<div id="hub"'), HTML.indexOf('<div id=
 
 test('the HUD row is MENU · PHONE · MAP, and the hub has RESUME first, then its five tabs, each one of the panels', () => {
   const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
-  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-menu', 'b-phone', 'b-map'], 'three buttons, no more round ones');
+  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-menu', 'b-phone', 'b-map', 'b-dev'], 'three labelled buttons and the debug button (the owner wants it on the HUD), no more round ones');
   assert.deepEqual([...row.matchAll(/<\/svg>([A-Z]+)<span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['MENU ESC', 'PHONE P', 'MAP M'], 'labelled, the keys on a keyboard');
-  for (const gone of ['b-bag', 'b-settings', 'b-fs', 'b-dev', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
+  for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
   assert.ok(bar.indexOf('id="hub-resume"') < bar.indexOf('id="hub-tabs"'), 'RESUME first');
   assert.deepEqual([...bar.matchAll(/data-tab="([a-z]+)"/g)].map((m) => m[1]), ['map', 'phone', 'bag', 'people', 'settings']);

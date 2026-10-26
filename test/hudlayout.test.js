@@ -51,9 +51,12 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   const row = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, tag = `${w}x${h} ${dev} ${st}`, bs = r.keep.filter((k) => k.name.startsWith('b-'));
-    if (bs.map((b) => b.name).join() !== 'b-menu,b-phone,b-map') { row.push(`${tag}: the row is ${bs.map((b) => b.name)}`); continue; }
-    if (bs.map((b) => b.label).join() !== 'MENU,PHONE,MAP') row.push(`${tag}: labels ${bs.map((b) => b.label)}`);
-    const keys = bs.map((b) => b.key).join();
+    // (plus the icon-only debug button after MAP, which the owner wants on the HUD; hidden in a tiny keyboard or pad window)
+    const lab = bs.filter((b) => b.name !== 'b-dev'), dbg = bs.length - lab.length;
+    if (lab.map((b) => b.name).join() !== 'b-menu,b-phone,b-map' || (dbg && bs[bs.length - 1].name !== 'b-dev')) { row.push(`${tag}: the row is ${bs.map((b) => b.name)}`); continue; }
+    if (!dbg && !(dev !== 'touch' && h <= 430 && w <= 800)) row.push(`${tag}: no debug button`);
+    if (lab.map((b) => b.label).join() !== 'MENU,PHONE,MAP') row.push(`${tag}: labels ${lab.map((b) => b.label)}`);
+    const keys = lab.map((b) => b.key).join();
     if (dev === 'kbm' ? keys !== 'ESC,P,M' : keys !== ',,') row.push(`${tag}: key badges ${keys}`);
     for (const [i, a] of bs.entries()) {
       if (dev === 'touch' && (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44)) row.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);

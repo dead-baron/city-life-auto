@@ -17593,3 +17593,11 @@ msg.suit).
 - **Raised: the bake worker's code, 905 -> 906 KB** (905.6). The arena's ground - the turf, the banks, the goals' boxes,
   the lines - is baked with the chunk like every pitch's lines (groundbake.js `venues`), about 0.45 KB; my comment was
   trimmed first. The ball, the pads, the goals' frames and the HUD are client/carsoccer.js's, not the bake's.
+
+## 2026-10-26 - Hotfix: the debug button is back on the HUD
+
+The owner: "the latest UI overhaul doesn't have the debug menu. Can you add back the debug menu button from before." The overhaul had moved the debug menu to the hub (MENU → Settings › Help → Debug menu) and the ` key, and dropped the 🐞 button.
+
+- `#b-dev` is back, as a square icon button (a bug) after MAP in the MENU · PHONE · MAP row, on desktop, pad and touch, sideways and upright. It opens and closes the debug menu as before (`openDebug`).
+- In a very small keyboard or pad window (430 px tall or less and 800 px wide or less) it hides, because it would sit under the cash; the ` key and the hub still open the menu there.
+- Tests: hub.test.js expects the debug button after MAP; hudlayout.test.js checks it is in the row and clear of everything on every screen.
