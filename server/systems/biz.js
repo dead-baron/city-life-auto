@@ -9,7 +9,9 @@
 //            sell the crop; the coop, the pens and the dairy herd earn every day on a sack of feed each
 //   club     the city's nightclubs (nightclubs.js): a night's takings by how popular it is, its sound system and its bar
 //            (stocked: the cases behind it), the cover of everyone the bouncer lets in (nightclubs.js admit -> clubAdmit),
-//            a cut of the bar's sales (economy.js -> onSpend); at night take the decks: the floor drops, and they tip
+//            a cut of the bar's sales (economy.js -> onSpend); at night take the decks: the floor drops, and they tip.
+//            Most nights a drunk starts a fight on the floor while you're in: knock them down and the patrons tip (hitting
+//            a brawler is no crime - law.js), a few accidental blows on your own patrons a night are let go (patronSlip)
 //   hideout  a few plain buildings in the rough ends of town, laid out for sale here (nothing added to the map): the grow
 //            room makes product - taken as hot money (hotmoney.js), or run to a buyer across the world for clean cash;
 //            the Syndicate's soldiers stand guard at the door while you own it and warn off, then shoot, outsiders who
@@ -18,6 +20,7 @@
 //            the tools, the parts to fit), a cut of what other players pay there (yours is free: economy.js, paint.js),
 //            and a customer's car brought in to fix by hand
 //   truck    a food truck - the Mr. Frosty van, from the dealership: park it where people are, open the hatch and sell
+// Every one but the truck is a home too: wake up there, rest in the back room, cook in its kitchen.
 // Where: a farm's, a hideout's and a Spray & Go's office is a spot of its own (the action button there opens the
 // manager's menu); a club's is its bar's menu (a row), the garage's its counter's, the food truck's the dealership's and,
 // out on the street, the truck itself. Owned businesses show on your map (players.js self record: biz).
@@ -37,7 +40,9 @@ import * as nightclubs from './nightclubs.js';
 import * as gang from './gang.js';
 import * as crews from './crews.js';
 import * as skills from './skills.js';
-import { spawnNpc, despawnNpc, startFight } from './npc.js';
+import { spawnNpc, despawnNpc, startFight, markBrawl, leaveBuilding } from './npc.js';
+import { ITEMS } from '../../shared/items.js';
+import { HOME_IN, NPC_CRITICAL } from '../../shared/rules.js';
 
 const rng = mulberry32(7411);
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -353,7 +358,11 @@ export function menuOf(world, p, s) {
     const v = truckOf(world, p);
     opts.push({ id: 'van', label: v ? 'Your van is out' : e.wrecked ? 'A new van (yours was wrecked)' : 'Take the van out', price: !v && e.wrecked ? BIZ.truck.replace : undefined, dis: !!v || Math.hypot(p.ped.x - s.x, p.ped.y - s.y) > 200, note: v ? 'park it where people are' : '' });
   }
-  if (T0.home) { opts.push({ id: 'rest', label: 'Rest in the back room', note: 'full health' }); opts.push({ id: 'spawn', label: 'Wake up here after you die', dis: prof.lastSpawn === `biz:${s.id}` }); }
+  if (T0.home) {
+    const use = cookPick(prof);
+    opts.push(use ? { id: 'cook', label: `Cook a meal in the kitchen: ${use.map((id) => ITEMS[id].name).join(', ')}`, note: `a ${ITEMS.homeMeal.name} (+${ITEMS.homeMeal.heal} health, hearty)` }
+      : { id: 'cook', label: `Cook a meal in the kitchen - ${HOME_IN.cookN} things to cook in your bag first`, note: 'fruit, crops, fish, game...', dis: true });
+    opts.push({ id: 'rest', label: 'Rest in the back room', note: 'full health' }); opts.push({ id: 'spawn', label: 'Wake up here after you die', dis: prof.lastSpawn === `biz:${s.id}` }); }
   opts.push({ id: 'sell', label: `Sell ${s.t === 'truck' ? 'the food truck' : s.name}`, price: -Math.round((e.paid || 0) * BIZ.sellBack) });
   opts.push({ id: 'close', label: 'Close' });
   const d = s.t === 'truck' ? null : dayOf(world, s, e);
@@ -429,6 +438,15 @@ function run(world, p, s, opt, atTruck) {
       return null;
     }
     case 'rest': { const ped = p.ped; ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up in the back room. Full health.', 'good'); return null; }
+    case 'cook': {
+      const use = cookPick(prof);
+      if (!use) return `${HOME_IN.cookN} things to cook in your bag first.`;
+      for (const id of use) { prof.inventory[id]--; if (prof.inventory[id] <= 0) delete prof.inventory[id]; }
+      prof.inventory.homeMeal = (prof.inventory.homeMeal || 0) + 1;
+      store.touch();
+      world.notify(p, `You cook up a ${ITEMS.homeMeal.name} in ${s.name}'s kitchen - it's in your bag.`, 'good');
+      return null;
+    }
     case 'spawn': prof.lastSpawn = `biz:${s.id}`; store.touch(); world.notify(p, `You'll wake up at ${s.name} after you die.`, 'good'); return null;
     case 'sell': return sell(world, p, s);
     case 'dj': return djSet(world, p, s);
@@ -466,6 +484,16 @@ export function sell(world, p, s) {
   store.touch(); p.meDirty = true;
   world.notify(p, `Sold ${s.t === 'truck' ? 'the food truck' : s.name} for ${money(back)} (paid into your bank).`, 'info');
   return null;
+}
+
+// what a meal in a business's kitchen is cooked from: HOME_IN.cookN things to eat from your bag - the plainest first, never
+// a meal already cooked nor a prize (as a home's stove: homeinside.js cookPick, from the bag instead of the fridge)
+function cookPick(prof) {
+  const units = [];
+  for (const [id, n] of Object.entries(prof.inventory || {})) { const it = ITEMS[id]; if (n > 0 && it && it.food && !it.cooked && !it.prize) for (let k = 0; k < n && units.length < 64; k++) units.push(id); }
+  if (units.length < HOME_IN.cookN) return null;
+  units.sort((a, b) => ITEMS[a].heal - ITEMS[b].heal || (a < b ? -1 : a > b ? 1 : 0));
+  return units.slice(0, HOME_IN.cookN);
 }
 
 // ---- the office spots: the action button there ------------------------------------------------------------------------
@@ -539,6 +567,81 @@ function djTips(world) {
     const n = c.dancers.filter((q) => { const d = world.get(q); return d && !d.dead && !d.removed; }).length;
     if (n) credit(e, n * BIZ.club.dj.tip);
   }
+}
+
+// ---- trouble at the club: the night's drunk ------------------------------------------------------------------------------
+// (DESIGN-NOTES Tier 4: "Most nights a drunk starts a fight: beat them up and protect your patrons") Once a night, with
+// its owner in the club, a drunk may be due (BIZ.club.brawl.chance): `after` seconds on, a dancer leaves the floor and
+// goes for another - a brawler, so hitting them is no crime (law.js brawling). Knocked down (limping, crawling, or
+// worse) by the owner within `s` s: the patrons tip; otherwise the bouncers throw them out and some of the night's
+// takings walk out with the patrons.
+const BR = BIZ.club.brawl;
+function brawls(world) {
+  const B = S(world), now = world.time;
+  B.brawl ??= new Map();
+  for (const s of sites(world)) {
+    if (s.t !== 'club') continue;
+    const pid = ownerOf(world, s.id), op = pid && world.players.get(pid), c = nightclubs.clubByKey(world, s.key);
+    let st = B.brawl.get(s.id);
+    if (!op || !c || c.state !== 'open') { if (st && st.drunk) endBrawl(world, s, st, op, 'shut'); continue; }
+    if (!st || st.night !== c.since) { st = { night: c.since, due: 0, rolled: false, drunk: 0, until: 0, done: false }; B.brawl.set(s.id, st); }
+    const ped = op.ped, inside = ped && !ped.dead && nightclubs.clubAt(world, ped.x, ped.y) === c;
+    if (!st.rolled && inside) { st.rolled = true; if (rng() < BR.chance) st.due = now + BR.after[0] + rng() * (BR.after[1] - BR.after[0]); }
+    if (st.due && !st.drunk && !st.done && now >= st.due) startBrawl(world, s, c, st, op);
+    if (!st.drunk) continue;
+    const d = world.get(st.drunk);
+    if (!d || d.removed || d.dead || (d.npc && (d.npc.state === 'limp' || d.npc.state === 'crawl' || d.hp < d.maxHp * NPC_CRITICAL))) { endBrawl(world, s, st, op, d && ped && now - (d.aggressors.get(ped.id) ?? -99) < 15 ? 'owner' : 'other'); continue; }   // (the owner had a go at them lately: law.js onDamage keeps who hit whom)
+    if (now > st.until) { endBrawl(world, s, st, op, 'out'); continue; }
+    if (d.npc.state !== 'fight') { const t = world.get(st.victim); if (t && !t.dead && !t.removed) startFight(world, d, t, 20); else if (ped && !ped.dead) startFight(world, d, ped, 20); }
+    markBrawl(world, d, now + 30);
+  }
+}
+// a dancer has had too many: off the floor and at another one
+export function startBrawl(world, s, c, st, op) {
+  const list = c.dancers.map((id) => world.get(id)).filter((e) => e && !e.dead && !e.removed && e.npc && e.npc.dancer);
+  st.due = 0;
+  if (list.length < 2) { st.done = true; return false; }
+  const d = list[Math.floor(rng() * list.length)], v = list.find((e) => e !== d && Math.hypot(e.x - d.x, e.y - d.y) < 200) || list.find((e) => e !== d);
+  c.dancers = c.dancers.filter((id) => id !== d.id);
+  const n = d.npc;
+  n.desk = null; n.dancer = false; n.partner = 0; n.drunk = true; n.fight = 1;   // (spoiling for it: hit back, never run - npc.js onAttacked)
+  if (d.gt) { d.gt = null; d.dm = undefined; d.appVer = (d.appVer || 0) + 1; }
+  markBrawl(world, d, world.time + BR.s + 30);
+  if (v.npc) v.npc.fight = 0;   // (who they picked on wants no trouble: away from them, not a fight to the death on the floor)
+  startFight(world, d, v, 20);
+  st.drunk = d.id; st.victim = v.id; st.until = world.time + BR.s;
+  world.notify(op, `A drunk's started a fight on ${s.name}'s floor! Knock them down before the patrons walk out.`, 'warn');
+  return true;
+}
+// how: 'owner' (knocked down by the owner), 'other' (by someone else: no tip, no harm done), 'out' (nobody stopped them
+// in time), 'shut' (the night over, the owner gone)
+function endBrawl(world, s, st, op, how) {
+  const d = world.get(st.drunk), e = ownedEntry(world, s.id);
+  st.drunk = 0; st.done = true;
+  if (how === 'other') return;
+  if (how === 'owner') {
+    if (e) credit(e, BR.thanks);
+    if (op) world.notify(op, `You put the drunk down - the patrons cheer and tip: ${money(BR.thanks)} into ${s.name}'s till.`, 'good');
+    return;
+  }
+  if (d && !d.removed && !d.dead && d.npc) { d.npc.state = 'wander'; leaveBuilding(world, d, null); }
+  if (how === 'shut') return;
+  if (e) { const lost = Math.min(e.till | 0, BR.loss); e.till = (e.till | 0) - lost; store.touch(); }
+  if (op) world.notify(op, `The bouncers threw the drunk out - some of ${s.name}'s patrons walked out with them (up to ${money(BR.loss)} of the till).`, 'warn');
+}
+// (law.js onDamage) a blow that lands on one of your own club's patrons: a few a night are let go - you were throwing out
+// a drunk (BIZ.club.brawl.slips); true when this one is
+export function patronSlip(world, p, victim) {
+  if (!p || !victim.npc || victim.npc.clubKey == null) return false;
+  const s = siteById(world, `club:${victim.npc.clubKey}`), c = s && nightclubs.clubByKey(world, s.key);
+  if (!s || ownerOf(world, s.id) !== p.pid || nightclubs.clubAt(world, victim.x, victim.y) !== c) return false;
+  const B = S(world), key = `${p.pid}:${c.since}`;   // (tonight: since the club opened)
+  B.slips ??= new Map();
+  const n = (B.slips.get(key) || 0) + 1;
+  if (n > BR.slips) return false;
+  B.slips.set(key, n);
+  world.notify(p, `Careful - that's one of your patrons (${n}/${BR.slips} tonight).`, 'warn');
+  return true;
 }
 
 // ---- the auto shop's customer car ------------------------------------------------------------------------------------
@@ -738,5 +841,6 @@ export function update(world) {
   if (world.tick % 10 === 4 && world.biz && world.biz.owner && world.biz.owner.size) guardHideouts(world);
   if (world.tick % 20 === 7 && world.biz && world.biz.trucks.size) stepTrucks(world);
   if (world.tick % 20 === 13 && world.biz && world.biz.dj.size) djTips(world);
+  if (world.tick % 20 === 17 && world.biz && world.biz.owner && world.biz.owner.size) brawls(world);
   if (world.tick % 5 === 2) for (const p of world.players.values()) { if (p.bizFix) stepFix(world, p); if (p.bizRun) stepRun(world, p); }
 }

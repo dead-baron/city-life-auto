@@ -1,12 +1,16 @@
 ## 2026-10-25 - Batch 7b: Tier-4 businesses; two-sided stations
 
-The owner asked to "first get in the features we've already got planned". These are two of them from the design doc's
-tracker: "Tier-4 homes that are businesses" (10-06) and "two-sided stations" (queued since 10-07).
+The owner's notes, part 2: "Quick note: First lets get in the features we've already got planned (like bathhouses, etc.)
+but then lets get some new ideas coming in". These are two of them from the design doc's tracker: "Tier-4 homes that are
+businesses" (10-06; docs/DESIGN-NOTES.md: "homes that are businesses: spawn, sleep, cook, claim as active spot, and
+earn") and "two-sided stations" (queued since 10-07).
 
 ### Tier-4 properties: the businesses (server/systems/biz.js)
 You buy a business the way you buy a home. Find it in the phone's real-estate app (a new **Businesses** chip, with a
 waypoint to each), then buy it at its manager's office. Like a home, it is a place to wake up (on the death screen;
-**Wake up here** in its menu) and a place to rest (**Rest in the back room** gives full health). Each in-game day you
+**Wake up here** in its menu), a place to rest (**Rest in the back room** gives full health) and a place to cook (**Cook
+a meal in the kitchen** turns three things to eat from your bag into a Home-cooked Meal, as a home's stove does from its
+fridge; the food truck is the one business that isn't a home). Each in-game day you
 are in the city, a day's takings go into its till. The till holds at most three days' worth, so you have a reason to go
 back and collect. Each business also earns while you work it, and has upgrades and stock to buy. You can own up to three
 (the food truck is not counted). Selling one gives back 60% of what you paid for it, upgrades included. Your businesses
@@ -23,6 +27,15 @@ changes and a business's place is gone, you get back what you paid for it, into 
     behind the bar, it takes half.
   - You get $15 cover for everyone the bouncer lets in, and half of what other players spend at the bar.
   - At night, **Take the decks**: the dance floor drops, and the dancers tip for 90 seconds (5-minute cooldown).
+  - **The night's drunk** (the design notes: "Most nights a drunk starts a fight: beat them up and protect your
+    patrons"): on 7 nights in 10, 20 to 90 seconds after you walk into your club, a dancer who's had too many leaves the
+    floor and goes for another. You're told. The drunk is a brawler, so hitting them is no crime (killing them still is).
+    Knock them down within 60 seconds and the patrons tip $250 into the till. Leave them, and the bouncers throw them
+    out and up to $200 of the till walks out with the patrons. If someone else (the police, say) puts them down first,
+    nothing is gained or lost. The one they picked on runs from them rather than fighting back.
+  - **Your own patrons:** the first 3 punches or blows that land on your own club's patrons in a night are let go with a
+    warning ("Careful - that's one of your patrons (1/3 tonight)"); after that, and any shot at all, it's assault as
+    anywhere else (law.js onDamage -> biz.js patronSlip).
 - **Criminal hideouts:** six plain buildings in the rough, industrial, poor and country ends of the world, at least
   4,000 px apart. They are laid out for sale by the server; nothing is added to the map.
   - The grow room (lamps, levels 0 to 3) makes $300 to $1,400 of product a day, using nutrients.
@@ -71,27 +84,31 @@ bar with its office, the map's business icons; Metro Central's, Northshore's and
 up on one).
 
 ### Budgets
-- The bake went from 905 to 906 KB (905.8 measured) for the footbridge's model (client/art2/props-road.js
-  stationBridge), its stairs and the platform furniture kept off them (game/statics.js onFlight). I trimmed the new
-  comments first.
-- The renderer is unchanged (401).
-- The page is still within 498 (498.2 measured): shared/levels.js now skips a level segment the page's window doesn't
+- The bake stays at 906 KB (906.3 measured after merging batch 6 and car soccer, b7a): b7a raised it 905 -> 906 for the
+  Waves Arena, and b7b's footbridge model (client/art2/props-road.js stationBridge), its stairs and the platform
+  furniture kept off them (game/statics.js onFlight) fit in the same KB. I trimmed the new comments first. No raise.
+- The renderer is unchanged (401 of 401).
+- The page is still within 498 of 498: shared/levels.js now skips a level segment the page's window doesn't
   hold. The levels' grid is the whole world's, but a window holds only its own regions' segments. Just after a teleport,
   before the new window arrives, the grid pointed at a station's stairs the page didn't have yet and threw (the first
   capture run, in levelStep).
-- Server-side code (biz.js and the hooks) and the lazily loaded realestate.js and worldmap.js cost the page nothing.
+- Server-side code (biz.js, the drunk, the hooks in law.js, economy.js, paint.js, farming.js, nightclubs.js, homes.js,
+  trains.js) and the lazily loaded realestate.js and worldmap.js cost the page nothing.
+- Bakes 86.4x of the yardstick (budget 90x).
 
 ### Controls
 No new controls: everything is on the action button and the menus. The README controls table is unchanged.
 
 ### Tests
 - New:
-  - test/biz.test.js (7 tests): every kind laid out, listed in the app, bought at its office, with its manager's menu,
+  - test/biz.test.js (9 tests): every kind laid out, listed in the app, bought at its office, with its manager's menu,
     on the map and the death screen; the cap of three; selling. Each one earning: the day's takings, collecting them (the
     hideout's as hot money), the till's cap, short of stock. A farm's row harvested; a club's cover, its bar's cut and the
     DJ's tips; the auto shop's customer car fixed by hand, another driver's cut and your own repair free; the food truck
     selling to a crowd and shutting; the hideout's guards warning, then attacking an outsider, never the owner, and
-    leaving when nobody is about; a business whose place is gone, refunded.
+    leaving when nobody is about; a business whose place is gone, refunded. Cooking in a business's kitchen. The club's
+    drunk: off the floor and fighting with the owner in, hitting them no crime, knocked down by the owner and the tip;
+    three blows on your own patrons let go, the fourth an assault; another night left alone, thrown out and the loss.
   - test/world3rail.test.js: two-sided stations. Every open-air station has a footbridge with a flight on each platform
     and a walkable span. A player boards on one platform; the other way's train comes in at the far platform and the
     prompt says so; the player walks up, across above the tracks and down onto the far platform, and boards there.

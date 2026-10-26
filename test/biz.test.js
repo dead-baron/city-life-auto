@@ -12,7 +12,7 @@ import * as homes from '../server/systems/homes.js';
 import * as phone from '../server/systems/phone.js';
 import * as farming from '../server/systems/farming.js';
 import * as players from '../server/systems/players.js';
-import { spawnNpc } from '../server/systems/npc.js';
+import { spawnNpc, despawnNpc } from '../server/systems/npc.js';
 import * as nightclubs from '../server/systems/nightclubs.js';
 
 const lastMenu = (conn) => [...conn.sent].reverse().find((m) => m && m.t === 'menu');
@@ -278,4 +278,87 @@ test('an owned business whose place is gone (the world changed): bought back at 
   assert.equal(biz.ownerOf(w, 'hide:999999'), null);
   assert.equal(prof.bank - bank, 75000, 'refunded');
   assert.ok(!prof.biz['hide:999999'], 'gone from the profile');
+});
+
+test('a home that earns: cooking in a business\'s kitchen from what\'s in your bag', () => {
+  const w = world();
+  const { p, prof, conn } = joinPlayer(w, { bank: 2e6 });
+  const farm = siteOf(w, 'farm');
+  biz.buy(w, p, farm);
+  at(w, p, farm);
+  prof.inventory = { ...(prof.inventory || {}) };
+  for (const id of Object.keys(prof.inventory)) if (/^(apple|orange|grapes|homeMeal)$/.test(id)) delete prof.inventory[id];
+  biz.openMenu(w, p, farm);
+  assert.ok(lastMenu(conn).opts.find((o) => o.id === 'cook').dis, 'nothing to cook: not yet');
+  prof.inventory.apple = 2; prof.inventory.orange = 2;
+  biz.openMenu(w, p, farm);
+  const row = lastMenu(conn).opts.find((o) => o.id === 'cook');
+  assert.ok(row && !row.dis && /Cook a meal in the kitchen/.test(row.label), row && row.label);
+  choose(w, p, farm, 'cook');
+  assert.equal(prof.inventory.homeMeal, 1, 'a home-cooked meal in the bag');
+  assert.equal((prof.inventory.apple || 0) + (prof.inventory.orange || 0), 1, 'three things went into it');
+});
+
+test('the club\'s drunk: a fight on the floor with the owner in - knocked down by the owner, no crime, the patrons tip; left alone, thrown out', async () => {
+  const law = await import('../server/systems/law.js');
+  const w = world();
+  const { p, prof } = joinPlayer(w, { bank: 2e6 });
+  const club = siteOf(w, 'club');
+  biz.buy(w, p, club);
+  // (the middle of the night, hours of it either side - it runs over the loop's end)
+  const night = (t) => { w.loopTime = ((t % 1200) + 1200) % 1200; return w.clock.isNight; };
+  let n0 = 0; while (n0 < 1200 && !(night(n0) && !night(n0 - 5))) n0 += 5;
+  let n1 = n0; while (n1 < n0 + 1200 && night(n1)) n1 += 5;
+  night(Math.round((n0 + n1) / 2));
+  assert.ok(w.clock.isNight, 'night');
+  const c = nightclubs.clubByKey(w, club.key);
+  c.state = 'open';
+  const F = c.floor, dancers = [];
+  for (let k = 0; k < 5; k++) { const d = spawnNpc(w, 'casual', F.x0 + 14 + k * 12, F.y0 + 10, 'civ'); d.npc.dancer = true; d.npc.clubKey = c.key; d.npc.keep = true; d.npc.desk = { x: d.x, y: d.y, a: 0 }; c.dancers.push(d.id); dancers.push(d); }
+  teleport(w, p.ped, F.x0 + 20, F.y0 + 40);
+  assert.equal(nightclubs.clubAt(w, p.ped.x, p.ped.y), c, 'the owner is in the club');
+  run(w, 1.5);
+  const st = w.biz.brawl.get(club.id);
+  assert.ok(st && st.rolled, 'tonight\'s drunk rolled for');
+  st.due = w.time; st.done = false;
+  run(w, 1.5);
+  const d = w.get(st.drunk);
+  assert.ok(d && d.npc.drunk && !d.npc.dancer && d.npc.state === 'fight', 'a dancer off the floor and fighting');
+  assert.ok(told(w, p, /drunk's started a fight/), 'the owner told');
+  // the owner lays into the drunk: no crime
+  const e0 = prof.criminalExp;
+  law.onDamage(w, p.ped, d, 5, 'melee');
+  assert.equal(prof.criminalExp, e0, 'hitting the brawler is no crime');
+  const t0 = prof.biz[club.id].till;
+  d.hp = Math.round(d.maxHp * 0.1);
+  run(w, 1.5);
+  assert.equal(prof.biz[club.id].till, t0 + BIZ.club.brawl.thanks, 'the patrons tip');
+  assert.ok(told(w, p, /patrons cheer/), 'told so');
+  // a few blows on your own patrons are let go; then it's a crime
+  const others = dancers.filter((q) => q !== d && !q.dead);
+  // (crime() past the excuses adds criminal exp, whether or not anyone calls it in)
+  const x0 = prof.criminalExp;
+  for (let k = 0; k < BIZ.club.brawl.slips; k++) { law.onDamage(w, p.ped, others[k], 3, 'melee'); assert.equal(prof.criminalExp, x0, `slip ${k + 1} let go`); }
+  assert.ok(told(w, p, /one of your patrons/), 'warned');
+  law.onDamage(w, p.ped, others[BIZ.club.brawl.slips], 3, 'melee');
+  assert.ok(prof.criminalExp > x0, 'one too many: assault');
+  // another night, nobody stops the drunk: thrown out, some of the till walks out
+  w.day++;
+  c.state = 'open'; c.since = w.time;   // (the next night: the club opens again)
+  for (const q of w.query(F.x0, F.y0, 900, K.PED)) if (q.npc && q.npc.role === 'civ') despawnNpc(w, q);   // (last night's lot gone: just the two tonight)
+  c.dancers = [];
+  for (let k = 0; k < 2; k++) { const q = spawnNpc(w, 'casual', F.x0 + 14 + k * 12, F.y0 + 10, 'civ'); q.npc.dancer = true; q.npc.clubKey = c.key; q.npc.keep = true; q.npc.desk = { x: q.x, y: q.y, a: 0 }; c.dancers.push(q.id); }
+  run(w, 1.5);
+  const st2 = w.biz.brawl.get(club.id);
+  st2.due = w.time; st2.done = false;
+  prof.biz[club.id].till = 1000;
+  run(w, 1.5);
+  const d2 = w.get(st2.drunk);
+  assert.ok(d2, 'another drunk');
+  d2.maxHp = d2.hp = 1e6;   // (nobody about puts them down - a passer-by they swing at might)
+  run(w, BIZ.club.brawl.s + 1.5);
+  assert.ok(told(w, p, /threw the drunk out/), 'told');
+  const t2 = prof.biz[club.id].till;   // (less the loss - and plus the cover of whoever the bouncer let in meanwhile)
+  assert.ok(t2 <= 1000 - BIZ.club.brawl.loss + 10 * BIZ.club.cover && t2 >= 1000 - BIZ.club.brawl.loss, `patrons walked out (${t2})`);
+  assert.equal(d2.npc.state, 'leave', 'the drunk thrown out');
 });

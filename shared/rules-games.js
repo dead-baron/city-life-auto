@@ -38,6 +38,9 @@ export const CASINO = {
 //     the bar), half without stock behind the bar (cases: a case a night and one more for each bar level); `cover` for
 //     every one the bouncer lets in while you own it, `barCut` of what's spent at its bar; dj: you on the decks at night
 //     - the floor drops, and `tip` a dancer every `every` seconds for `s` seconds, then `cool` seconds before the next
+//     brawl: most nights (chance) a drunk starts a fight on the floor, `after` s after you're in; knock them down within `s`
+//     seconds and the patrons tip `thanks`, else the bouncers throw them out and `loss` walks out of the till; `slips`: a
+//     few blows that land on your own patrons by accident each night are let go (shooting one never is - law.js)
 //   hideout: the grow room's lamps (level 0..3) - `grow[level]` of product a day, eating `level + 1` bags of nutrients a
 //     day (stock); taken as hot money (server/systems/hotmoney.js), or run to a buyer at least runPx away for clean cash
 //     x runMult; guards: `guards0` of the Syndicate's soldiers at the door (+1 a level, +1 for a member) - an outsider in
@@ -54,7 +57,8 @@ export const BIZ = {
   farm: { price: 85000, row: 30, own: 20, hands: [6000, 12000, 20000], handsDay: 35, feed: { price: 300, qty: 10 },
     animals: { chickens: { name: 'A chicken coop', price: 3000, day: 110 }, pigs: { name: 'A pig pen', price: 7000, day: 220 }, cows: { name: 'A dairy herd', price: 12000, day: 340 } } },
   club: { price: 150000, night: 1400, up: 0.35, cover: 15, barCut: 0.5, sound: [8000, 16000, 28000], bar: [6000, 12000, 22000], stock: { price: 400, qty: 10 },
-    dj: { s: 90, tip: 3, every: 10, cool: 300 } },
+    dj: { s: 90, tip: 3, every: 10, cool: 300 },
+    brawl: { chance: 0.7, after: [20, 90], s: 60, thanks: 250, loss: 200, slips: 3 } },
   hideout: { price: 60000, grow: [300, 600, 950, 1400], lamps: [5000, 11000, 19000], guards: [4000, 9000, 15000], guards0: 2, nutrients: { price: 250, qty: 10 },
     runPx: 6000, runMult: 1.3, yardPx: 320, warnS: 3, respawnS: 180 },
   shop: { price: 70000, garagePrice: 110000, jobs: 3, perLift: 2, perJob: 70, perTools: 25, lift: [7000, 14000, 24000], tools: [5000, 10000, 18000], parts: { price: 250, qty: 10 },

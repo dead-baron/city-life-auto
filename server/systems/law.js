@@ -14,6 +14,7 @@ import * as events from './events.js';
 import * as bounties from './bounties.js';
 import * as custody from './custody.js';
 import * as cells from './cells.js';
+import * as biz from './biz.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
@@ -443,6 +444,7 @@ export function onDamage(world, attacker, victim, amount, cause) {
   attacker.recentAssault.set(victim.id, now);
   // bare fists (a punch, a shove) are a small crime; a weapon, a gun or an officer is as ever
   const wpn = WEAPONS[attacker.weapon], fist = cause === 'melee' && (!wpn || wpn.id === 'fists');
+  if (cause === 'melee' && victim.npc && !isFlagged(world, victim) && biz.patronSlip(world, attacker.player, victim)) return;   // (your own club's patron, by accident: a few a night - biz.js)
   crime(world, attacker, isCop(victim) ? (fist ? 'copPunch' : 'copAssault') : fist ? 'punch' : 'assault', victim, victim.x, victim.y, { quiet: !!attacker.quietWeapon });
 }
 
