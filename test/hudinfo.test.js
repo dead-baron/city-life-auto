@@ -5,7 +5,7 @@
 // they are (test/hudlayout.test.js measures where it all sits; test/jobcardinfo.test.js the server's side).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { logNote, noteLog, clearLog, noteLine, NOTE_LINE } from '../client/notelog.js';
+import { logNote, noteLog, clearLog, noteLine, NOTE_LINE, promptWords } from '../client/notelog.js';
 import { hintDue, hintSeen, hintCounts, hintStrip, HINT_TIMES, HINT_STATES, statusChips, jobWords, jobHtml, jobKey, fmtDist } from '../client/hudinfo.js';
 import { deathChoices, WAKE_ROWS } from '../client/deathscreen.js';
 import { STORE_ICON, GLYPHS } from '../client/storeicons.js';
@@ -35,6 +35,37 @@ test('a note: one line on the screen, the whole of it in the phone\'s Log', () =
   assert.match(hud, /logNote\(msg, tone\);[^]*const line = short \? localizeText\(short\) : noteLine\(msg\);/);
   assert.match(hud, /while \(this\.toastEls\.length > 2\)/);
   assert.match(hud, /\.toast\.more'\)\) this\.openLog\?\.\(\)/, 'a note cut short: a tap opens the Log');
+});
+
+// UI-5 (the owner, 2026-10-26: "We don't need the message that says the crime you're about to commit like when stealing a
+// car, the button showing a caution on it is enough"): what Act would do in the prompt's own words, the crime's name off
+// it (the key chip and the touch button red with the "!" say it - hud.js crimeMarks); Safety mode's first press marks
+// the prompt and the button for the second (hud.js safetyNudge), never a note
+test('a crime ahead says so on the button, not in words: the prompt without the crime\'s name, no Safety mode note', () => {
+  const crimes = [   // (the server's prompts for every act it knows is a crime: vehicles.js enterLabel, players.js, trains.js, ...)
+    ['Steal the Sedan - Vehicle theft', 'Steal the Sedan'],
+    ['Steal the Police Cruiser - Stealing a police vehicle (felony)', 'Steal the Police Cruiser'],
+    ['Pull the driver out of the Police Cruiser - Carjacking a police vehicle (felony)', 'Pull the driver out of the Police Cruiser'],
+    ['Pull the driver out of the Sedan - Violent carjacking (felony)', 'Pull the driver out of the Sedan'],
+    ['Pull the rider off the horse - Carjacking', 'Pull the rider off the horse'],
+    ['Steal the Road Bike - Bike theft', 'Steal the Road Bike'],
+    ['Ride off on the skateboard - Vehicle theft', 'Ride off on the skateboard'],
+    ['Ride off on the horse - Horse theft', 'Ride off on the horse'],
+    ['Ride the horse bareback - Horse theft', 'Ride the horse bareback'],
+    ['Pick up the carbon-gold case - Cargo theft', 'Pick up the carbon-gold case'],
+    ['Crack the strongbox - Train robbery', 'Crack the strongbox'],
+    ['Hold to unlock the back of the armored truck (5s) - armed robbery', 'Hold to unlock the back of the armored truck (5s)'],
+    ['Set the thermal drill on the vault - a bank heist (the alarm goes at once)', 'Set the thermal drill on the vault'],
+    ['Climb the wall - the guards will see', 'Climb the wall'],
+  ];
+  for (const [said, shown] of crimes) for (const pcr of [1, 2]) assert.equal(promptWords('F: ' + said, pcr), 'F: ' + shown, said);
+  // no crime: as the server said it, dashes and all
+  for (const t of ['E: Shop at the counter - Iron Sights Arms', 'F: Get in your Sedan', 'E: Talk to Ray - the mechanic']) assert.equal(promptWords(t, 0), t);
+  assert.equal(promptWords('', 1), '');
+  const hud = readFileSync(new URL('../client/hud.js', import.meta.url), 'utf8');
+  assert.match(hud, /formatPrompt\(promptWords\(me\.prompt, me\.pcr \| 0\)\)/, 'the prompt in its own words');
+  assert.match(hud, /if \(tone === 'safety'\) \{ if \(!\$\('hud'\)\.classList\.contains\('hidden'\)\) this\.safetyNudge\(\); return; \}/, 'Safety mode: no note, not even in the Log');
+  assert.doesNotMatch(hud, /tone = 'warn'; \}/);
 });
 
 test('a hint strip: the first few times for each thing you do, per character, then not again', () => {

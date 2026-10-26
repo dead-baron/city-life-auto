@@ -17078,4 +17078,128 @@ The owner: "the latest UI overhaul doesn't have the debug menu. Can you add back
 
 - `#b-dev` is back, as a square icon button (a bug) after MAP in the MENU · PHONE · MAP row, on desktop, pad and touch, sideways and upright. It opens and closes the debug menu as before (`openDebug`).
 - In a very small keyboard or pad window (430 px tall or less and 800 px wide or less) it hides, because it would sit under the cash; the ` key and the hub still open the menu there.
+- With UI-5's clock beside the cash on a small sideways phone (800 x 430 or less), MENU, PHONE and MAP drop their icons there so the row stays clear of the clock.
 - Tests: hub.test.js expects the debug button after MAP; hudlayout.test.js checks it is in the row and clear of everything on every screen.
+
+
+## 2026-10-26 - ui6: the weapon button down by the right thumb on touch
+
+The owner, on his phone held upright: "I'd like to prioritize moving the weapons button down to the bottom UI so it's
+easier to switch weapons (looking in mobile portrait mode but might need the same for landscape)." The weapon plate
+sat top right under the cash, the far end of the screen from both thumbs. All of the change is on the page; the server
+is untouched.
+
+### What moved where
+- **On touch the weapon plate is now a slot of the touch layout, WP** (`shared/touchcontrols.js` TOUCH_SLOTS /
+  TOUCH_STATES, placed by `client/touchslots.js` GEO like every other button). It is the same element, `#weapon`,
+  so it keeps what it did: a tap takes out the next weapon, a hold opens the weapon picker (client/main.js tapHold).
+  It shows the weapon's icon and, for a gun, its rounds (`12 | 48`), with the ⇄ in its corner when you carry more
+  than one weapon. The weapon's name is left off on touch (the icon says it).
+- **Upright:** right above CAR, in the column over FIRE and the aim stick - 72 x 56 px at a 390 px wide phone (76 x
+  59 on a 412 px one). LIGHT and FIRE ON move one row up to make room, and COP CAR above them.
+- **Sideways:** above ACT, between ACT and FIRE ON - 60 x 52 px at 844 x 390. FIRE ON moves 2 px right.
+- **The top right** now holds the cash (and the clock beside it sideways, the vehicle chip in a vehicle, the stars
+  while wanted) and nothing else.
+- **When it shows** is unchanged: the plate's own rules (client/hudinfo.js) - not with only your fists and nothing
+  going on (nothing to switch to), in a vehicle only with a gun out - now through the slot's `wpn` flag. Not at home.
+  When the weapon button isn't shown, nothing takes its place.
+- **Keyboard and gamepad:** no change. The plate stays top right; everything above is under `.touch`.
+
+### Checks
+- `test/hudlayout.test.js` measures the weapon button as a touch slot in every touch state and size (390x844,
+  412x892 with the camera's 36 px inset, 844x390, 740x360, 1024x768...): on nothing, 44 px or more, out of the middle;
+  upright in the bottom half and right of the middle; sideways in the right third under the top band (a 390 px tall
+  screen's thumb arc is full below the middle); and no weapon plate left in the top right.
+- `test/touchslots.test.js`: the WP slot in every state but home, only with something to switch; the slots' geometry
+  on every phone and tablet size, safe areas included.
+- The HUD's share of the screen upright, armed: 27.8% -> 27.2% (390x844), 26.3% -> 25.9% (412x892). Driving with a gun
+  out, the old plate dropped under the MENU row upright and onto FIRE ON sideways; both are gone.
+- Page budget unchanged (the slot code loads with the touch controls; style.css 7 bytes smaller gzipped).
+
+## 2026-10-26 - ui5: the owner's phone notes on the new HUD - no crime warning in words, new button icons, the vitals clear of the camera, the clock off the minimap
+
+The owner played the UI/UX overhaul (e4b0473e) on his Pixel 7 Pro held upright. This entry covers his four notes. All
+the changes are on the page. The server is untouched, so this ships without a restart.
+
+### "We don't need the message that says the crime you're about to commit"
+- **The prompt names no crime now.** "Steal the Checker Taxi - Vehicle theft" reads "Steal the Checker Taxi".
+  "Pull the driver out of the Sedan - Carjacking" loses the carjacking. It is the same for every act the server knows
+  is a crime before you do it: a horse or a bike ridden off, someone else's cargo, the strongbox on the mail train,
+  the armored truck's doors, the bank vault's drill, the prison wall. The red key, or the red touch button with its
+  "!", is the caution, and a felony also gets its ring. `client/notelog.js promptWords` cuts the crime's name: when
+  the server marks the prompt as a crime (`me.pcr`), it drops the text after the last " - ". Prompts that aren't
+  crimes keep their dashes.
+- **Safety mode asks without a note.** The first press of a crime is still held back. The server's "That's vehicle
+  theft - press again to do it anyway" (tone `safety`) is no longer shown as a note, and it doesn't go in the Log. The
+  prompt's key and the button blink fast, with TAP AGAIN (PRESS AGAIN on a keyboard) on the plate while a second
+  press counts. Before, when no prompt was up, the line came as a plain note. That case is now silent too.
+- The robbery of a shop clerk (aiming at the till) never had a warning like this, so nothing changed there. The
+  notes about what was seen after a crime ("You were seen: Vehicle theft", "people saw that") stay: they report what
+  happened, not a warning before it.
+
+### "The hands don't look very good as part of the UI buttons"
+The touch icons are redrawn as one set (`client/touchslots.js`). They are plain line glyphs on a 24 x 24 grid with
+round ends and no hands. Every button draws its line at the same 2 px, whatever the icon's size (a non-scaling stroke
+in style.css). Before, the small utility buttons drew a 1.3 px line and FIRE a 2.6 px one. The changes:
+- ACT: a pressed button (a ring round a dot), not the pointing hand.
+- HIT: an impact burst, not the fist.
+- FIRE ON: the aim stick in its dashed ring, so it no longer looks like FIRE's crosshair.
+- THROW: a ball on an arc.
+- The car: a front view with a roof, wheels and lights.
+- COP CAR: that car with a light bar.
+- ITEMS: a bag.
+- OLLIE: a board with an arrow up.
+- FIRE, BLOCK, ROLL, BRAKE, EXIT, HORN, SIREN, RELOAD, GALLOP, CLIMB / DOWN, LIGHT and TRICK keep their shapes,
+  tidied to the grid.
+
+The sheet: ui5-shots/before/icons.png and after/icons.png.
+
+### "The health and stamina at the top get blocked by a camera lens"
+- **The HUD keeps below the safe area.** The cause was that the top of the touch HUD ignored the safe area. It used
+  `--corner-top`, which was 0 everywhere except in an installed iPhone app. So a phone in full screen with a
+  hole-punch camera drew the minimap row under the camera. The touch HUD's top is now
+  `max(10px, safe-area-inset-top + 4px)`. That covers the corners too, for phones with a corner punch-hole.
+- **Upright, the vitals moved off the top centre.** They now sit beside the minimap's lower half, 38 px down, with the
+  status line under them. The top centre, where a camera sits, holds nothing. The cash, the stars and the weapon stay
+  in the right 40%. Nothing below moved down:
+  - the MENU · PHONE · MAP row, the job card and the notes stay where they were;
+  - on a phone that reports a camera inset, everything moves down by that inset, less 6 px;
+  - while the job card is big (a new step, a few seconds), the notes wait in the Log upright, so they stay out of
+    the middle;
+  - while a robbery, ride or custody bar is up, the big card drops its objective line for the same reason.
+- On its side nothing moved: a phone held sideways has its camera at the side, which `--sl` / `--sr` already respect.
+
+### "The time of day blocks too much of the minimap"
+The clock chip no longer sits on the minimap's foot. It is a small chip with no rim (time, sun or moon, rain):
+- **On its side:** on the cash's row, to its left. The right-hand column can't grow, because the arc's small buttons
+  are under it.
+- **Upright:** under the vitals, beside the minimap. While something is happening to you (bleeding, a bounty, a
+  coffee, a role chip), the status line takes that spot and the clock comes back when it ends.
+- **Desktop:** unchanged, with the clock at the foot of the top-right column.
+
+The N on the minimap's ring is 2 px smaller and sits on the ring, so nothing covers the map.
+
+### Tests
+- **test/hudlayout.test.js** gets UI-5's checks:
+  - nothing on the minimap: no HUD part, no note, no prompt, no touch button, and no clock (the old exception for
+    it is gone);
+  - held upright, nothing above the safe area's top, and nothing in the top-centre band (the middle 20%, the top
+    48 px, or the safe area plus 8);
+  - the vitals beside the minimap;
+  - the clock a small chip beside it, or upright standing aside for the status.
+- **test/hudpage.js** adds a Pixel 7 Pro-like 412x892 played with a 36 px camera inset (`--cam-top`), and the
+  unarmed and home states with no status chips, so the clock is measured upright.
+- **test/hudinfo.test.js:** every crime prompt the server writes, cut to its act, with felonies too. Prompts that
+  aren't crimes are as written. The HUD shows no Safety mode note.
+- **test/honestliving.test.js:** the server still sends the Safety note, as the page's signal. Its message now says
+  the page shows none.
+- **Results:**
+  - hudlayout, hudinfo, touchslots, touchair, hub, kbdrive, gamepad, uitokens, lazypage: 42/42;
+  - honestliving and horses (under the lock): 14/14.
+- **Shots:** before and after with the dev server, in ui5-shots/{before,after}/:
+  - modes: desk 1440x900, land 844x390, port 390x844, and pix (412x892, a 36 px safe-area top via CDP, the camera
+    drawn in);
+  - scenes: foot, crime, crime-press, crime-noprompt, armed, drive, job, wanted.
+- **HUD coverage upright on foot:** pix 27.1% before, 25.8% after; with a wanted level, 40.8% before, 33.0% after.
+- **perf:** the page is 497.75 KB of 498 (+0.08 KB) and the renderer 400 of 400; the icons load with the touch
+  controls, not with the page.

@@ -15,27 +15,31 @@ const HUD = cut('<div id="hud"', '<div id="touch"');
 const TOUCH = cut('<div id="touch"', '<div id="interior"');
 
 // the sizes asked for (H70): desktops, phones on their side and upright, a tablet; each with the devices it plays with
-export const SIZES = [[1280, 720], [1920, 1080], [844, 390], [740, 360], [390, 844], [1024, 768]];
+export const SIZES = [[1280, 720], [1920, 1080], [844, 390], [740, 360], [390, 844], [412, 892], [1024, 768]];
+// the safe area's top inset (px) a size is played with: 412x892 a Pixel 7 Pro-like phone upright, full screen, its
+// centred hole-punch camera in that band (UI-5: the owner, 2026-10-26) - the page's --cam-top, as env() would give it
+export const CAM = { '412x892': 36 };
 export const DEVICES = ['kbm', 'touch', 'pad'];
 export const STATES = ['foot', 'veh', 'air', 'police', 'rob', 'custody'];   // (on foot armed with a flashlight and a crate; driving; flying; the police with the cruiser's hint; robbing a shop; arrested)
 // and on touch every state the slots have (shared/controls.js TOUCH_STATES): unarmed, on a horse, a board, at a boat's
 // wheel, swimming, a passenger, surfing, at home
 export const TOUCH_STATES = ['unarmed', 'horse', 'board', 'boat', 'swim', 'ride', 'surf', 'home'];
-// what the page tells the touch slots in each (client/main.js touchFlags), each with everything it can show
+// what the page tells the touch slots in each (client/touchslots.js tick), each with everything it can show (wpn: the
+// weapon button - the page has a gun and more to switch to)
 export const FLAGS = {
-  foot: { items: true, carrying: true, armed: true, light: true, prompt: true },
-  veh: { items: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true },
-  air: { items: true, air: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true },
-  police: { items: true, armed: true, light: true, call: true, prompt: true },
-  rob: { items: true, armed: true, prompt: true },
+  foot: { items: true, carrying: true, armed: true, light: true, prompt: true, wpn: true },
+  veh: { items: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true, wpn: true },
+  air: { items: true, air: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, wpn: true },
+  police: { items: true, armed: true, light: true, call: true, prompt: true, wpn: true },
+  rob: { items: true, armed: true, prompt: true, wpn: true },
   custody: {},
-  unarmed: { items: true, guard: true, light: true, call: true, prompt: true },
-  horse: { items: true, inVeh: true, driver: true, horse: true, armed: true, shoot: true, prompt: true },
-  board: { items: true, board: true, prompt: true },
-  boat: { items: true, inVeh: true, driver: true, boat: true, armed: true, shoot: true, prompt: true, siren: true },
-  swim: { items: true, swim: true, prompt: true },
-  ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true },
-  surf: { items: true, surf: true, prompt: true },
+  unarmed: { items: true, guard: true, light: true, call: true, prompt: true, wpn: true },
+  horse: { items: true, inVeh: true, driver: true, horse: true, armed: true, shoot: true, prompt: true, wpn: true },
+  board: { items: true, board: true, prompt: true, wpn: true },
+  boat: { items: true, inVeh: true, driver: true, boat: true, armed: true, shoot: true, prompt: true, siren: true, wpn: true },
+  swim: { items: true, swim: true, prompt: true, wpn: true },
+  ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true, wpn: true },
+  surf: { items: true, surf: true, prompt: true, wpn: true },
   home: { items: true, home: true, light: true, prompt: true },
 };
 export function scenarios() {
@@ -44,6 +48,7 @@ export function scenarios() {
   // plate alone fill 390)
   for (const [w, h] of SIZES) for (const dev of DEVICES) for (const st of STATES) if (w > h || dev === 'touch') out.push({ w, h, dev, st });
   for (const [w, h] of SIZES) for (const st of TOUCH_STATES) out.push({ w, h, dev: 'touch', st });
+  for (const sc of out) if (CAM[`${sc.w}x${sc.h}`]) sc.cam = CAM[`${sc.w}x${sc.h}`];
   return out;
 }
 
@@ -68,6 +73,7 @@ const T = ${JSON.stringify(TEXT)}, FL = ${JSON.stringify(FLAGS)}[sc.st] || {};
 const $ = (id) => document.getElementById(id);
 const b = document.body;
 b.classList.add(sc.dev);
+if (sc.cam) document.documentElement.style.setProperty('--cam-top', sc.cam + 'px');   // (a camera in the screen's top: the safe area)
 if (sc.h > sc.w) b.classList.add('portrait');
 b.classList.add('armed', 'multi-wpn');
 if (sc.st === 'foot') b.classList.add('has-light', 'carrying');
@@ -102,7 +108,7 @@ $('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
 $('cash').textContent = '$248,500'; $('bank').textContent = 'bank $1,250,000';
 $('stars').innerHTML = '<span class="on">★</span><span class="on">★</span><span>★</span><span>★</span><span>★</span>'; $('stars').classList.add('wanted');
 $('clock').textContent = '13:24 · RAIN';
-$('status').innerHTML = HI.statusHtml(sc.st === 'police' ? { faction: 'enforcer', rank: 'Sergeant', sam: 40, cexp: 1250, bleeding: true } : { faction: 'citizen', sam: 40, cexp: 1250, felonies: 2, bleeding: true, buffs: { coffee: 40 } });
+$('status').innerHTML = HI.statusHtml(['unarmed', 'home'].includes(sc.st) ? { faction: 'citizen', sam: 40, cexp: 1250 } : sc.st === 'police' ? { faction: 'enforcer', rank: 'Sergeant', sam: 40, cexp: 1250, bleeding: true } : { faction: 'citizen', sam: 40, cexp: 1250, felonies: 2, bleeding: true, buffs: { coffee: 40 } });
 if (sc.st === 'unarmed') $('weapon').classList.add('compact');
 $('hp-n').textContent = '82'; $('st-n').textContent = '65';
 $('rc-time').textContent = '13:24';
@@ -118,7 +124,9 @@ function measure() {
   // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
   keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });
   for (const id of ['vitals', 'status', 'rclock']) if (shown($(id))) keep.push(box($(id), id));
-  for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id))) keep.push(box($(id), id));
+  for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id)) && !(id === 'weapon' && sc.dev === 'touch')) keep.push(box($(id), id));
+  // (on touch the weapon plate is a slot, the weapon button: UI-6)
+  if (sc.dev === 'touch' && shown($('weapon'))) keep.push({ ...box($('weapon'), 'tb.nextw'), slot: $('weapon').dataset.slot, label: $('weapon').dataset.lbl });
   document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });

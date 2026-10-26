@@ -5,12 +5,16 @@ import { IN } from './input.js';
 // move stick's (it comes up where the thumb lands). On the right the aim stick in the bottom-right corner (it aims
 // without firing; pushed into its red ring it fires, while the FIRE ON toggle is on - the owner, 2026-10-24) and round
 // it an arc of fixed slots - 1 FIRE (big), 2 ROLL, 3 ACT, 4 CAR - two context slots C1 / C2 and four small utility slots
-// U1-U4 (U4 the FIRE ON toggle, with the stick). Each state fills them with what it needs, the same role always in the
+// U1-U4 (U4 the FIRE ON toggle, with the stick) and WP, the weapon button above CAR (UI-6, the owner 2026-10-26: "moving
+// the weapons button down to the bottom UI so it's easier to switch weapons" - index.html's #weapon, the HUD's weapon
+// plate, placed here on touch; tap the next weapon, hold the picker; shown when the plate would be: not with only your
+// fists and nothing going on, in a vehicle only with a gun out). Each state fills them with what it needs, the same role always in the
 // same slot, a button only while it does something. client/touchslots.js places them (on its side or upright, a short
 // screen, the safe areas) with an icon and the label. An entry: [action, label, the flag it needs, { flag: the label then }].
-export const TOUCH_SLOTS = ['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4'];
-const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'], u4: ['firetog', 'FIRE ON'] };
-const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4 };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON)
+export const TOUCH_SLOTS = ['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4', 'wp'];
+const WP = ['nextw', 'WEAPON', 'wpn'];
+const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light', 'LIGHT', 'light'], u3: ['cruiser', 'COP CAR', 'call'], u4: ['firetog', 'FIRE ON'], wp: WP };
+const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4, wp: WP };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON, the weapon)
 const AT = { act: ['action', 'ACT', 'prompt'], ...UV };   // (in a vehicle ACT only with something to do)
 const VFIRE = ['fire', 'FIRE', 'shoot'], VRELOAD = ['reload', 'RELOAD', 'armed'], HORN = ['horn', 'HORN', 0, { siren: 'SIREN' }];
 export const TOUCH_STATES = {
@@ -38,7 +42,7 @@ export function touchState(f) {
   if (f.carrying) return 'carry';
   return f.armed ? 'armed' : 'foot';
 }
-// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call): { state, slots: { slot: { a, label } } }
+// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call, wpn): { state, slots: { slot: { a, label } } }
 export function touchSlots(f) {
   const state = touchState(f), slots = {};
   for (const [slot, [a, label, need, alt]] of Object.entries(TOUCH_STATES[state])) {
