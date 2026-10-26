@@ -284,6 +284,8 @@ class WorldMap {
     if (me) {
       // your homes, always
       for (const hm of me.homes || []) { const [x, y] = P(hm.x, hm.y); iconPlate(g, x, y, 'home', iconPx + 2, '#123a22', '#7dffa8'); this.hits.push([x, y, 14, { x: hm.x, y: hm.y, label: hm.name || 'Home' }]); }
+      // your businesses, always (server/systems/biz.js: the farm, the club, the hideout, the auto shop, the food truck) - gold-rimmed
+      for (const bz of me.biz || []) { const [x, y] = P(bz.x, bz.y); iconPlate(g, x, y, KIND_ICON[bz.k] || 'home', iconPx + 2, '#3a2a08', '#ffd36b'); plateText(g, x, y - iconPx / 2 - 9, bz.n, 10, '#ffd36b', true); this.hits.push([x, y, 14, { x: bz.x, y: bz.y, label: bz.n }]); }
       if (me.rumor) { const [x, y] = P(me.rumor.x, me.rumor.y); g.strokeStyle = '#ffd36b'; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath(); g.arc(x, y, me.rumor.r * sc, 0, 6.28); g.stroke(); g.setLineDash([]); }
       if (me.taxi && (me.taxi.st === 'pickup' || me.taxi.st === 'wait')) { const [x, y] = P(me.taxi.x, me.taxi.y); g.fillStyle = '#ffd21f'; g.strokeStyle = '#000'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); plateText(g, x, y - 18, 'YOUR TAXI', 11, '#ffd21f', true); }
       if (me.cruiser && me.cruiser.s !== 'none' && me.cruiser.s !== 'in') { const [x, y] = P(me.cruiser.x, me.cruiser.y); g.fillStyle = '#3b6bff'; g.strokeStyle = '#fff'; g.lineWidth = 2; g.fillRect(x - 7, y - 7, 14, 14); g.strokeRect(x - 7, y - 7, 14, 14); }

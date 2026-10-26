@@ -322,12 +322,56 @@ export function elFurniture(m, removeProps = null) {
     const poi = m.pois[h.poi];
     if (poi) { poi.x = s.x; poi.y = s.y; }
   }
+  el.footbridges = stationFootbridges(m, el.foot);   // (the main line's stations: both platforms joined over the tracks)
   // nothing tall under the deck: the trees and lamps the streets were dressed with along its line go
   if (removeProps) removeProps(m, (x, y) => x > el.x0 - 32 && x < el.x3 + 32 && Math.abs(y - el.y) < 150 && m.props.some((p) => p.x === x && p.y === y && /^(tree|palm|lamp)/.test(p.t)));
   m.el = el;
   // (the levels again, now with the El's corridors - the generator built them before the El was furnished)
   if (m.levels) { const L = buildLevels(m); L.broken = m.levels.broken; m.levels = L; }
-  return { piers: el.piers.length, stairs: el.stairs.length, foot: el.foot.length };
+  return { piers: el.piers.length, stairs: el.stairs.length, foot: el.foot.length, footbridges: el.footbridges };
+}
+
+// Two-sided stations (queued since 10-07; the owner: platforms on both sides of the tracks, trains stopping on either
+// side, both reachable): every open-air main-line station has a platform each side of its double track - each way's on
+// its outer side - and the footbridge between them (shared/world3-passes.js buildRailHubs: h.bridges) is one you walk
+// over now: a flight of stairs up from the middle of each platform, along it, to the span across both tracks at
+// FOOT_LZ (the trains pass under it - nobody up there is in their way). Each bridge gets its flights for the art
+// (f.ends: [{ fx, fy (the foot), tx, ty (the top), a (the way up) }], f.z) and the walking (people only, as the El's
+// stairs: shared/levels.js foot - the stairs, then the span). -> how many bridges.
+export const FOOT_LZ = 1, FOOT_FLIGHT = 112, FOOT_OFF = 72, FOOT_HW = 18;
+function stationFootbridges(m, foot) {
+  let n = 0;
+  for (const h of m.railHubs || []) {
+    if (h.el || !(h.bridges || []).length) continue;
+    const sts = h.calls.map(([ri, si]) => m.rails[ri].stations[si]).filter((st) => st && !st.under && !st.el);
+    for (const f of h.bridges) {
+      // each platform's top: the bridge's middle brought onto the platform's middle line (FOOT_OFF out from its track)
+      const tops = [];
+      for (const st of sts) {
+        const ux = Math.cos(st.a), uy = Math.sin(st.a), nx = -uy * st.side, ny = ux * st.side;
+        const d = (f.x - st.x) * ux + (f.y - st.y) * uy, off = (f.x - st.x) * nx + (f.y - st.y) * ny;
+        if (Math.abs(d) > st.half || off > 0 || off < -260) continue;   // (the bridge across this platform's own track, from its side)
+        const tx = st.x + ux * d + nx * FOOT_OFF, ty = st.y + uy * d + ny * FOOT_OFF;
+        if (tops.some((q) => Math.hypot(q.tx - tx, q.ty - ty) < 24)) continue;
+        // the flight runs along the platform toward its middle, staying on it
+        let dir = d > 0 ? -1 : 1;
+        if (Math.abs(d + dir * FOOT_FLIGHT) > st.half - 8) dir = -dir;
+        const fx = tx + ux * dir * FOOT_FLIGHT, fy = ty + uy * dir * FOOT_FLIGHT;
+        tops.push({ tx: Math.round(tx), ty: Math.round(ty), fx: Math.round(fx), fy: Math.round(fy), a: Math.atan2(ty - fy, tx - fx) });
+      }
+      if (tops.length < 2) continue;
+      // the two furthest apart: the span across every track between them
+      let A = tops[0], B = tops[1], bd = -1;
+      for (let i = 0; i < tops.length; i++) for (let j = i + 1; j < tops.length; j++) { const d = Math.hypot(tops[i].tx - tops[j].tx, tops[i].ty - tops[j].ty); if (d > bd) { bd = d; A = tops[i]; B = tops[j]; } }
+      const L = Math.hypot(B.tx - A.tx, B.ty - A.ty) || 1, ux = (B.tx - A.tx) / L, uy = (B.ty - A.ty) / L;
+      f.ends = [A, B]; f.z = FOOT_LZ;
+      f.x = Math.round((A.tx + B.tx) / 2); f.y = Math.round((A.ty + B.ty) / 2); f.a = Math.atan2(uy, ux); f.len = Math.round(L + 2 * FOOT_HW);
+      for (const e of f.ends) foot.push({ kind: 'stairs', ax: e.fx, ay: e.fy, bx: e.tx, by: e.ty, hw: 20, za: 0, zb: FOOT_LZ, ramp: true });
+      foot.push({ kind: 'footbridge', ax: A.tx - ux * FOOT_HW, ay: A.ty - uy * FOOT_HW, bx: B.tx + ux * FOOT_HW, by: B.ty + uy * FOOT_HW, hw: FOOT_HW, za: FOOT_LZ, zb: FOOT_LZ });
+      n++;
+    }
+  }
+  return n;
 }
 
 // (H35, 8.14) Each station's house on open ground: the house (140 x 92 px, its canopy toward the tracks, drawn by the

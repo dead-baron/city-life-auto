@@ -27,6 +27,7 @@ import { signsBlocked } from '../shared/world3-greens.js';
 import { zebraCrossings, laneOffset, nearestEdge } from '../shared/roadcore.js';
 import { PED_BLOCK, isSwimming } from '../shared/mapcore.js';
 import * as economy from '../server/systems/economy.js';
+import * as biz from '../server/systems/biz.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -231,6 +232,17 @@ test('World v3\'s skateboards: a rack at every skate park, a sparse few elsewher
 });
 
 // (the owner's notes, part 2: the world's layout - b5b)
+// the Tier-4 businesses round the v3 world (server/systems/biz.js): every kind for sale, each office somewhere to stand
+test('World v3\'s businesses: farms, clubs, hideouts spread round the world, auto shops and the food trucks, each office on open ground', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const S = biz.sites(w), by = (t) => S.filter((s) => s.t === t);
+  console.log(`[biz] ${['farm', 'club', 'hideout', 'shop', 'truck'].map((t) => `${by(t).length} ${t}`).join(', ')}`);
+  assert.ok(by('farm').length >= 3 && by('club').length >= 10 && by('hideout').length >= 4 && by('shop').length >= 4 && by('truck').length >= 1, 'every kind');
+  const H = by('hideout');
+  for (let i = 0; i < H.length; i++) for (let j = i + 1; j < H.length; j++) assert.ok(Math.hypot(H[i].x - H[j].x, H[i].y - H[j].y) >= 4000, 'the hideouts spread out');
+  for (const s of S) if (s.poi == null) assert.ok(!PED_BLOCK[M.tileAtPx(s.x, s.y)], `${s.name}: its office on open ground`);
+});
+
 test('zebra crossings only on the asphalt: a paved refuge across a boulevard\'s planted median, never stripes over grass', () => {
   const xs = [...zebraCrossings(M).values()];
   assert.ok(xs.length > 1000, `the crossings (${xs.length})`);

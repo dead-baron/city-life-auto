@@ -8,6 +8,7 @@ import { lobbyKey, planOf } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
+import * as biz from './biz.js';
 
 const BASE_GARAGE = 2;
 const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no record: bought back at a house's price
@@ -229,6 +230,7 @@ export function spawnOptions(world, p) {
   opts.sort((a, b) => far(a) - far(b));
   if (p.policeKill) return opts;   // (killed by the police: a hospital - custody.js / players.onPedDeath)
   for (const h of ownedHomes(world, p.profile)) opts.unshift({ id: `home:${h.id}`, label: h.name, kind: 'home', x: Math.round(h.x), y: Math.round(h.y) });
+  for (const s of biz.spawnSites(world, p.profile)) opts.unshift({ id: `biz:${s.id}`, label: s.name, kind: 'home', x: s.x, y: s.y });   // (a business of yours: biz.js)
   return opts;
 }
 // the hospital nearest a spot ('h:<i>')
@@ -243,6 +245,7 @@ function offered(world, p, id) {
   if (typeof id !== 'string') return false;
   if (id.startsWith('h:')) return !!world.map.hospitals[Number(id.slice(2))];
   if (id.startsWith('home:')) return !p.policeKill && world.homeOwner.get(Number(id.slice(5))) === p.profile.pid;
+  if (id.startsWith('biz:')) return !p.policeKill && !!biz.spawnAt(world, p, id.slice(4));
   return false;
 }
 // The pre-selected wake-up spot shown on the death screen: where you last woke up (the user, 2026-10-08: it stays
@@ -269,6 +272,10 @@ export function resolveSpawn(world, p, choice, deathPos) {
   if (choice && choice.startsWith('home:')) {
     const h = homeById(world, choice.slice(5));
     if (h && world.homeOwner.get(h.id) === prof.pid) { prof.lastSpawn = `home:${h.id}`; return { x: h.x, y: h.y + 8, name: h.name }; }
+  }
+  if (choice && choice.startsWith('biz:')) {   // (a business of yours: biz.js)
+    const at = biz.spawnAt(world, p, choice.slice(4));
+    if (at) { prof.lastSpawn = choice; return at; }
   }
   if (choice && choice.startsWith('h:')) {
     const h = hs[Number(choice.slice(2))];

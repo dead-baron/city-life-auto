@@ -7,6 +7,7 @@ import { PAINT_PRICE, PAINT_TIME_S } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as law from './law.js';
+import { freeBay, onBay } from './biz.js';
 
 const rng = mulberry32(2718);
 const TILE = 32;
@@ -53,7 +54,9 @@ export function update(world) {
         }
       }
       if (v.cargo.some((c) => c)) { if (now - st.warnAt > 6) { st.warnAt = now; world.notify(p, 'Spray & Go: "Unload the cargo first."', 'warn'); } continue; }
-      if (!pay(p, PAINT_PRICE)) { if (now - st.warnAt > 6) { st.warnAt = now; world.notify(p, `A respray costs $${PAINT_PRICE}.`, 'warn'); } continue; }
+      const free = freeBay(world, p, i);   // (your own shop: on the house - biz.js)
+      if (!free && !pay(p, PAINT_PRICE)) { if (now - st.warnAt > 6) { st.warnAt = now; world.notify(p, `A respray costs $${PAINT_PRICE}.`, 'warn'); } continue; }
+      if (!free) onBay(world, p, i, PAINT_PRICE);
       st.closedUntil = now + PAINT_TIME_S; st.v = v.id;
       v.vx = 0; v.vy = 0; v.input = { throttle: 0, steer: 0, hb: true };
       world.broadcast({ e: 'baydoor', i, open: false });

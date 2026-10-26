@@ -20,6 +20,7 @@ import { TRAIN_DWELL_S, TRAIN_LOOP_HEADWAY_S, TRAIN_LOOP_MAX } from '../shared/r
 import { command as devCommand } from '../server/dev.js';
 import { offAxis, stationForecourt } from '../shared/world3-passes.js';
 import { routeBoardAt } from '../shared/mapcore.js';
+import { surfaceZ } from '../shared/levels.js';
 import { HAND_PLANS } from '../shared/world3-hand.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
@@ -246,6 +247,66 @@ test('no ghost train: someone where its cars were left, far from the train itsel
   teleport(w, p.ped, at0[0] + 60, at0[1]);
   w.step();
   assert.ok(Math.hypot(e0.x - at0[0], e0.y - at0[1]) > trains.NEAR_PX, 'its cars gone from the platform, where the train is');
+});
+
+// two-sided stations (queued since 10-07): every open-air main-line station has a platform each side of its double
+// track and a footbridge between them you walk over - up a flight from one platform, across above the tracks, down to
+// the other - and a train is boarded from either platform (shared/world3-rail.js stationFootbridges)
+test('two-sided stations: both platforms built, joined by a footbridge you walk over, a train boarded from either platform', () => {
+  const R = M.rails.filter((r) => !r.subway);
+  const open = M.railHubs.filter((h) => !h.el && h.calls.some(([ri, si]) => !M.rails[ri].stations[si].under));
+  assert.ok(open.length >= 8, 'open-air stations');
+  for (const h of open) {
+    const sts = h.calls.map(([ri, si]) => M.rails[ri].stations[si]).filter((st) => !st.under);
+    assert.ok(sts.length >= 2, `${h.name}: a platform for each way`);
+    const f = (h.bridges || []).find((q) => q.ends);
+    assert.ok(f, `${h.name}: a footbridge with its stairs`);
+    assert.equal(f.ends.length, 2, `${h.name}: a flight down to each platform`);
+    for (const e of f.ends) {
+      const on = sts.some((st) => { const R0 = M.rails.find((r) => r.stations.includes(st)); return trains.onPlatformOf(null, st, e.fx, e.fy, R0) && trains.onPlatformOf(null, st, e.tx, e.ty, R0); });
+      assert.ok(on, `${h.name}: the flight stands on a platform`);
+    }
+    assert.ok(Math.abs(surfaceZ(M, f.x, f.y, 1) - 1) < 0.01, `${h.name}: the span walkable up over the tracks`);
+  }
+  // a player walks over: up the flight from one platform, across above the tracks, down to the other
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p, conn } = joinPlayer(w);
+  const t1 = w.trains.find((q) => !w.rails[q.r].subway && q.dwellUntil && !w.rails[q.r].stations[q.stop].under && !w.rails[q.r].stations[q.stop].el && M.railHubs.some((h) => h.name === w.rails[q.r].stations[q.stop].name && (h.bridges || []).some((f) => f.ends)));
+  assert.ok(t1, 'a train in at a two-sided station');
+  const r1 = w.rails[t1.r], st1 = r1.stations[t1.stop], hub = M.railHubs.find((h) => h.name === st1.name), f = hub.bridges.find((q) => q.ends);
+  const r2 = R.find((r) => r !== r1 && r.stations.some((q) => q.name === st1.name)), st2 = r2.stations.find((q) => q.name === st1.name);
+  const offOf = (st, x, y) => -Math.sin(st.a) * st.side * (x - st.x) + Math.cos(st.a) * st.side * (y - st.y);
+  const [eA, eB] = f.ends[0] && Math.abs(offOf(st1, f.ends[0].tx, f.ends[0].ty) - 72) < 20 ? f.ends : [f.ends[1], f.ends[0]];
+  // boarded from its own platform
+  t1.dwellUntil = w.time + 60;
+  teleport(w, p.ped, st1.platform.x, st1.platform.y);
+  w.step();
+  assert.ok(/Board the train/.test(players.findInteraction(w, p).label), 'boarded from the first platform');
+  // the other way's train in at the far platform: over the footbridge to it
+  const in2 = () => w.trains.find((q) => w.rails[q.r] === r2 && q.dwellUntil && w.rails[q.r].stations[q.stop] === st2);
+  let t2 = in2();
+  for (let i = 0; i < TICK_HZ * 1200 && !t2; i++) { w.step(); if (i % 20 === 0) t2 = in2(); }
+  assert.ok(t2, `${r2.name}: in at ${st2.name}'s other platform`);
+  t2.dwellUntil = w.time + 120;
+  teleport(w, p.ped, eA.fx - Math.cos(eA.a) * 30, eA.fy - Math.sin(eA.a) * 30);
+  w.step();
+  const hint = players.findInteraction(w, p);
+  assert.ok(hint && /other platform/.test(hint.label), `told where it is (${hint && hint.label})`);
+  let seq = 1, top = 0;
+  const walkTo = (x, y) => { for (let i = 0; i < TICK_HZ * 12; i++) { const dx = x - p.ped.x, dy = y - p.ped.y, d = Math.hypot(dx, dy); if (d < 6) break; p.inputQ.push({ seq: ++seq + p.ack, bits: 0, mx: dx / d, my: dy / d, aim: 0 }); w.step(); top = Math.max(top, p.ped.lz || 0); } };
+  walkTo(eA.fx, eA.fy); walkTo(eA.tx, eA.ty);
+  assert.ok(p.ped.lz > 0.9, `up the stairs (${p.ped.lz})`);
+  walkTo((eA.tx + eB.tx) / 2, (eA.ty + eB.ty) / 2);
+  assert.ok(p.ped.lz > 0.9, 'up over the tracks');
+  walkTo(eB.tx, eB.ty); walkTo(eB.fx, eB.fy); walkTo(eB.fx - Math.cos(eB.a) * 30, eB.fy - Math.sin(eB.a) * 30);
+  p.inputQ.push({ seq: ++seq + p.ack, bits: 0, mx: 0, my: 0, aim: 0 }); w.step();
+  assert.ok((p.ped.lz || 0) < 0.3, 'down on the far platform');
+  assert.ok(trains.onPlatformOf(w, st2, p.ped.x, p.ped.y, r2), 'on the other platform');
+  const act = players.findInteraction(w, p);
+  assert.ok(act && /Board the train/.test(act.label), `boarded from the other platform (${act && act.label})`);
+  act.run();
+  assert.ok(p.ped.onTrain, 'aboard');
+  void conn;
 });
 
 test('riding the v3 main line as today: board a train at its platform, ride, get off at the next stop', () => {

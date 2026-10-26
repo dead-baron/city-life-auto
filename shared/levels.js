@@ -92,6 +92,7 @@ export function surfaceZ(m, x, y, z = 1) {
   let best = null;
   for (const i of segsAt(L, x, y)) {
     const sg = L.segs[i];
+    if (!sg) continue;   // (a window's grid points past its own regions' segments)
     const p = probe(sg, x, y);
     if (p.d > sg.hw || Math.abs(p.z - z) > 0.45) continue;
     if (!best || Math.abs(p.z - z) < Math.abs(best - z)) best = p.z;
@@ -125,7 +126,7 @@ export function levelStep(m, s, r, breaker = false) {
     let nz = 0;
     for (const i of near) {
       const sg = L.segs[i];
-      if (!sg.ramp || (sg.foot && (breaker || (s.npc && !s.npc.climb)))) continue;   // (the El's stairs: people on foot - not the NPCs milling past)
+      if (!sg || !sg.ramp || (sg.foot && (breaker || (s.npc && !s.npc.climb)))) continue;   // (the El's stairs: people on foot - not the NPCs milling past)
       const p = probe(sg, s.x, s.y);
       if (p.d <= sg.hw - 2 && p.z <= GROUND_Z + 0.08 && p.z > nz && (z > 0.02 || p.z < 0.2)) nz = p.z;
     }
@@ -136,7 +137,7 @@ export function levelStep(m, s, r, breaker = false) {
   let best = null;
   for (const i of near) {
     const sg = L.segs[i];
-    if (sg.foot && breaker) continue;
+    if (!sg || (sg.foot && breaker)) continue;
     const p = probe(sg, s.x, s.y);
     if (Math.abs(p.z - z) > 0.3) continue;
     const score = p.d - sg.hw;
