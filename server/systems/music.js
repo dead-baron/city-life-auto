@@ -59,7 +59,7 @@ const bump = (ped) => { ped.appVer = (ped.appVer || 0) + 1; };
 function wire(world, s) {
   return { id: s.id, k: KIND[s.k], x: Math.round(s.x), y: Math.round(s.y), a: s.att || 0, tr: s.tr && TRACK[s.tr] ? TRACK[s.tr].i : -1, st: s.st ?? -1, t0: +(s.t0 || 0).toFixed(2), on: s.on ? 1 : 0, br: s.br ? 1 : 0, c: s.c || 0, i: s.i || 0, o: s.name || '' };
 }
-function send(world, ...ss) { world.broadcast({ e: 'mus', now: +world.time.toFixed(2), s: ss.map((s) => wire(world, s)) }); }
+function send(world, ...ss) { world.broadcast({ e: 'mus', now: +world.time.toFixed(2), tk: world.tick, s: ss.map((s) => wire(world, s)) }); }
 function add(world, p, k, x, y, extra = {}) {
   world.stageN = (world.stageN || 0) + 1;
   const s = { id: world.stageN, k, x, y, att: 0, owner: p ? p.pid : null, name: p ? p.name : '', on: false, tr: null, st: -1, t0: world.time, hp: k === 'boombox' ? MUSIC_GEAR.boomboxHp : MUSIC_GEAR.radioHp, br: 0, c: 0, i: 0, at: world.time, ...extra };
@@ -69,7 +69,7 @@ function add(world, p, k, x, y, extra = {}) {
 }
 function remove(world, s) {
   if (!stage(world).delete(s.id)) return;
-  world.broadcast({ e: 'mus', now: +world.time.toFixed(2), off: [s.id] });
+  world.broadcast({ e: 'mus', now: +world.time.toFixed(2), tk: world.tick, off: [s.id] });
   const p = s.owner && byPid(world, s.owner);
   if (p && p.mus && p.mus[s.k] === s.id) delete p.mus[s.k];
 }
@@ -272,7 +272,7 @@ function startDance(world, p, mat, track) {
   mat.tr = track; mat.st = -1; mat.on = true; mat.t0 = t0;
   send(world, mat);
   setMove(ped, DANCE_PLAYER[0]);
-  if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'rhythm', id: 0, mode: 'dance', track, seed, t0: +t0.toFixed(2), now: +world.time.toFixed(2), setS: RHYTHM.setS });
+  if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'rhythm', id: 0, mode: 'dance', track, seed, t0: +t0.toFixed(2), now: +world.time.toFixed(2), tk: world.tick, setS: RHYTHM.setS });
   return P;
 }
 // an instrument out of the bag: free play, a hat at your feet
@@ -284,7 +284,7 @@ function startJam(world, p, inst) {
   const src = add(world, p, 'jam', ped.x, ped.y, { att: ped.id, i: I.code, on: true });
   const P = newPerf(world, p, 'jam', { inst, hat: hat.id, src: src.id, key: 57, minor: true });
   ped.pp = I.pp; ped.vx = 0; ped.vy = 0; bump(ped);
-  if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'jam', id: 0, inst, key: 57, minor: true, tapes: tapesOf(p).map((t) => t.id), now: +world.time.toFixed(2), setS: RHYTHM.setS });
+  if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'jam', id: 0, inst, key: 57, minor: true, tapes: tapesOf(p).map((t) => t.id), now: +world.time.toFixed(2), tk: world.tick, setS: RHYTHM.setS });
   world.notify(p, `You take out your ${ITEMS[inst].name.toLowerCase()}. Play for the people walking by - a good gig fills your hat.`, 'info');
   return P;
 }
@@ -296,7 +296,7 @@ function startGig(world, p, track) {
   const src = stage(world).get(P.src), song = songOf(track), seed = (rng() * 2 ** 31) >>> 0, t0 = world.time + 1.5;
   Object.assign(P, { kind: 'gig', track, seed, t0, chart: chart(track, seed), T: newTally(), judged: new Set(), next: 0, key: song.key, minor: song.minor });
   if (src) { src.tr = track; src.t0 = t0; src.on = true; send(world, src); }
-  queue(p, { e: 'mus', now: +world.time.toFixed(2), go: { track, seed, t0: +t0.toFixed(2), setS: RHYTHM.setS, key: song.key, minor: song.minor } });
+  queue(p, { e: 'mus', now: +world.time.toFixed(2), tk: world.tick, go: { track, seed, t0: +t0.toFixed(2), setS: RHYTHM.setS, key: song.key, minor: song.minor } });
 }
 const queue = (p, ev) => (p.evq ||= []).push(ev);
 // the end of it: the hat's takings to you if you're by it, the result of a set
@@ -306,7 +306,7 @@ export function stopPerf(world, p, why = 'stop') {
   p.perf = null;
   if (P.kind === 'rhythm' || P.kind === 'gig') {
     const T = P.T;
-    queue(p, { e: 'mus', now: +world.time.toFixed(2), res: { score: T.score, acc: +accuracy(T).toFixed(3), best: T.best, grades: T.grades, crowd: P.crowd.size, tips: P.tips || 0, n: P.chart ? P.chart.length : 0 } });
+    queue(p, { e: 'mus', now: +world.time.toFixed(2), tk: world.tick, res: { score: T.score, acc: +accuracy(T).toFixed(3), best: T.best, grades: T.grades, crowd: P.crowd.size, tips: P.tips || 0, n: P.chart ? P.chart.length : 0 } });
     if (T.n >= 8) world.notify(p, `Set over: ${T.score.toLocaleString()} points, ${Math.round(accuracy(T) * 100)}% on the beat, best combo ${T.best}.${P.tips ? ` $${P.tips} in tips.` : ''}`, accuracy(T) >= 0.7 ? 'good' : 'info');
   }
   const mat = P.mat && stage(world).get(P.mat);
@@ -365,7 +365,7 @@ export function onMsg(world, p, msg) {
       tune(world, p, s, st);
       return;
     }
-    case 'list': if (world.time - (p.musListAt || -9) > 2) { p.musListAt = world.time; queue(p, { e: 'mus', now: +world.time.toFixed(2), all: list(world) }); } return;
+    case 'list': if (world.time - (p.musListAt || -9) > 2) { p.musListAt = world.time; queue(p, { e: 'mus', now: +world.time.toFixed(2), tk: world.tick, all: list(world) }); } return;
     default:
   }
 }
@@ -576,7 +576,7 @@ export function update(world) {
       continue;
     }
     // left behind: packed back into the bag (gone with an owner who's left)
-    const far = !p || !ped || ped.dead || Math.hypot(ped.x - s.x, ped.y - s.y) > MUSIC_GEAR.awayPx;
+    const far = !p || !p.conn || !ped || ped.dead || Math.hypot(ped.x - s.x, ped.y - s.y) > MUSIC_GEAR.awayPx;
     if (s.k === 'hat') continue;
     if (!far) { s.away = 0; continue; }
     if (!s.away) s.away = now;

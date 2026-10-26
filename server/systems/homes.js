@@ -40,7 +40,7 @@ export const isUnit = (id) => Number(id) >= UNIT0;
 export function homeById(world, id) {
   if (id == null) return null;
   const n = Number(id);
-  if (n >= UNIT0) return (world.units && world.units.get(n)) || (world.lobbies && world.lobbies.get(n)) || (world.arcadeHalls && world.arcadeHalls.get(n)) || null;   // (a block's lobby: H71; an arcade's floor - arcade.js)
+  if (n >= UNIT0) return (world.units && world.units.get(n)) || (world.lobbies && world.lobbies.get(n)) || (world.arcadeHalls && world.arcadeHalls.get(n)) || (world.bathHalls && world.bathHalls.get(n)) || null;   // (a block's lobby: H71; an arcade's floor - arcade.js)
   return (world.map.homes && world.map.homes[n]) || null;
 }
 // how many homes an apartment block holds: by its footprint (an 8x11 walk-up: 6), 4 to 8

@@ -3,9 +3,10 @@
 //
 //   move  : WASD / arrows · left stick · floating left thumb-stick   (analog: how far = how fast)
 //   aim   : mouse cursor  · right stick · right thumb-stick          (independent of movement)
-//   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE button, or push the aim stick into its outer ring
+//   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE (a tap: where the stick aims, else at the
+//           auto-target), or push the aim stick into its outer ring (with the FIRE ON toggle on)
 //           (on a pad the stick-ring fire is a Settings option, off by default: shared/input.js padFires)
-//   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · WPN (tap: next, hold: pick)
+//   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · the weapon plate (tap: next, hold: pick)
 //
 // Driving: keyboard W gas, S brake / reverse, A/D steer (Settings' Controls 2: WASD points the way); touch points the way.
 import { IN, padFires, createTapHold, easeSteer, touchStick } from '../shared/input.js';
@@ -113,12 +114,11 @@ export function initInput(canvas, hooks) {
   initTouch(hooks);
 }
 
-// ---- touch: floating left stick, fixed aim stick with a fire ring, contextual buttons ----------
+// ---- touch: floating left stick, the aim stick with its fire ring, the slot buttons (client/touchslots.js places them) ----
 function initTouch(hooks) {
   addEventListener('touchstart', () => { input.activeAt = performance.now(); setDevice('touch'); }, { passive: true, capture: true });
-  const zone = document.getElementById('zone-l');
-  const stickL = document.getElementById('stick-l');
-  floatingStick(zone, stickL, (x, y) => { touch.lx = x; touch.ly = y; });
+  floatingStick(document.getElementById('zone-l'), document.getElementById('stick-l'), (x, y) => { touch.lx = x; touch.ly = y; });
+  const buzz = (n) => { if (settings.vibrate && navigator.vibrate) navigator.vibrate(n); };
   const stickR = document.getElementById('stick-r');
   fixedStick(stickR, (x, y, on) => {
     touch.rx = x; touch.ry = y; touch.rOn = on;
@@ -127,36 +127,30 @@ function initTouch(hooks) {
     const was = touch.firing;
     const st = touchStick(on ? m : 0, touch.firing, settings.touchEdgeFire);
     touch.firing = st.firing; touch.guard = st.guard;
-    if (touch.firing && !was && settings.vibrate && navigator.vibrate) navigator.vibrate(12);
+    if (touch.firing && !was) buzz(12);
     stickR.classList.toggle('firing', touch.firing);
     stickR.classList.toggle('aiming', on && m > 0.2);
   });
-  // the FIRE toggle by the aim stick (settings.touchEdgeFire)
+  // the FIRE ON toggle (a utility slot, off the stick's ring): the ring fires or not (settings.touchEdgeFire)
   const ft = document.getElementById('firetog');
-  if (ft) {
-    input.showFireToggle = () => { ft.classList.toggle('on', !!settings.touchEdgeFire); ft.textContent = `FIRE ${settings.touchEdgeFire ? 'ON' : 'OFF'}`; };
-    input.showFireToggle();
-    const flip = (e) => { e.preventDefault(); e.stopPropagation(); settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); if (settings.vibrate && navigator.vibrate) navigator.vibrate(10); };
-    ft.addEventListener('touchstart', flip, { passive: false });
-    ft.addEventListener('mousedown', flip);
-  }
-  for (const b of document.querySelectorAll('#tbtns [data-b]')) {
+  input.showFireToggle = () => { const on = !!settings.touchEdgeFire, l = `FIRE ${on ? 'ON' : 'OFF'}`; ft.classList.toggle('lit', on); ft.dataset.lbl = l; (ft.querySelector('.l') || ft).textContent = l; };
+  input.showFireToggle();
+  for (const b of document.querySelectorAll('#tbtns button[data-b]')) {
     const name = b.dataset.b;
-    // WPN: a tap switches to the next weapon, holding it opens the weapon picker (every weapon you carry)
-    if (name === 'nextw') { tapHold(b, () => { touch.tapped.add('nextw'); }, () => hooks.onWeaponPick?.()); continue; }
     const down = (e) => {
       e.preventDefault(); e.stopPropagation();
+      if (name === 'firetog') { settings.touchEdgeFire = !settings.touchEdgeFire; saveSettings(); input.showFireToggle(); buzz(10); return; }
       if (name === 'dev') { hooks.onDev?.(); return; }
-      if (name === 'map') { hooks.onMap?.(); return; }
       if (name === 'cruiser') { hooks.onCruiser?.(); return; }
-      if (name === 'phone') { hooks.onPhone?.(); return; }
-      if (name === 'use') { hooks.onItems?.(); return; } // the quick wheel (stays open until you tap a slot)
-      if (name === 'settings') { hooks.onSettings?.(); return; }
-      if (name === 'fullscreen') { hooks.onFullscreen?.(); return; }
+      // ITEMS: a tap the bag (the hub's BAG tab), held the quick wheel (it stays open until you tap a slot)
+      if (name === 'use') { b.classList.add('on'); clearTimeout(b.holdT); b.held = false; b.down = true; b.holdT = setTimeout(() => { if (!b.down) return; b.held = true; b.classList.remove('on'); buzz(15); hooks.onItems?.(); }, 380); return; }
       touch.btn.add(name); touch.tapped.add(name); b.classList.add('on');
-      if (settings.vibrate && navigator.vibrate) navigator.vibrate(6);
+      buzz(6);
     };
-    const up = (e) => { e.preventDefault(); touch.btn.delete(name); b.classList.remove('on'); };
+    const up = (e) => {
+      e.preventDefault(); touch.btn.delete(name); b.classList.remove('on');
+      if (name === 'use') { if (b.down && !b.held && e.type !== 'mouseleave' && e.type !== 'touchcancel') { buzz(6); hooks.onBag?.(); } b.down = false; clearTimeout(b.holdT); }
+    };
     b.addEventListener('touchstart', down, { passive: false });
     b.addEventListener('touchend', up, { passive: false });
     b.addEventListener('touchcancel', up, { passive: false });
@@ -411,13 +405,14 @@ export function sample(view) {
 
   if (input.device === 'touch') {
     if (Math.abs(touch.lx) + Math.abs(touch.ly) > 0.04) { mx = touch.lx; my = touch.ly; }
-    const held = touch.rOn && Math.hypot(touch.rx, touch.ry) > 0.2;
-    const recent = performance.now() - touch.aimAt < 1200; // aim lingers so the FIRE button uses it
-    if (held || (recent && (view.armed || touch.btn.has('fire')))) { aim = touch.aim; bits |= IN.AIMING; }
-    if (touch.firing || touch.btn.has('fire') || touch.tapped.has('fire')) bits |= IN.FIRE;
-    if (held && touch.guard && !view.inVehicle) bits |= IN.BLOCK;   // (FIRE with the guard held: a blow from the guard, then back up - server players.js)
     const tb = touch.btn, tt = touch.tapped;
-    if ((!view.inVehicle || view.horse) && Math.hypot(touch.lx, touch.ly) > FULL_STICK) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out - on a horse too, a gallop)
+    // FIRE: a tap at the auto-target, a drag aims and fires while held; AIM the same without firing (shared/input.js)
+    const held = touch.rOn && Math.hypot(touch.rx, touch.ry) > 0.2;
+    const tf = { fire: tb.has('fire') || tt.has('fire'), stick: held ? touch.aim : null, ring: touch.firing, last: touch.aim, lastAt: touch.aimAt };
+    const ta = touchAim ? touchAim(tf, view, performance.now()) : { bits: (tf.fire || tf.ring ? IN.FIRE : 0) | (held ? IN.AIMING : 0), aim: touch.aim };   // (till the touch controls' module is in)
+    bits |= ta.bits; if (ta.bits & IN.AIMING) aim = ta.aim;
+    if (((held && touch.guard) || tb.has('block')) && !view.inVehicle) bits |= IN.BLOCK;   // (the stick held short of its ring, or BLOCK: the guard; FIRE from it, a blow - server players.js)
+    if ((!view.inVehicle || view.horse) && (Math.hypot(touch.lx, touch.ly) > FULL_STICK || tb.has('sprint'))) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out; on a horse GALLOP too)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
     if (tb.has('vehicle') || tt.has('vehicle')) bits |= IN.VEHICLE;
@@ -438,6 +433,9 @@ export function sample(view) {
 
 export function takeNumberPick() { const n = numberPick; numberPick = null; return n; }
 export function mouseScreen() { return mouse; }
+// touch aiming (the stick, FIRE's auto-target: shared/touchcontrols.js touchAim), handed over when the touch controls load
+let touchAim = null;
+export function setTouchAim(fn) { touchAim = fn; }
 export function touchAimState() { return { on: touch.rOn, firing: touch.firing, aim: touch.aim, recent: performance.now() - touch.aimAt < 1200 }; }
 // on-screen elements other than #tbtns (e.g. tapping the weapon box) can press a touch action
 export function virtualTap(name) { touch.tapped.add(name); }

@@ -8,6 +8,8 @@ import { mapSignature } from '../shared/map.js';
 import * as unstuck from './systems/unstuck.js';
 import * as combat from './systems/combat.js';
 import * as economy from './systems/economy.js';
+import * as cargo from './systems/cargo.js';
+import { store } from './store.js';
 import * as dev from './dev.js';
 import * as cruiser from './systems/cruiser.js';
 import * as phone from './systems/phone.js';
@@ -89,6 +91,7 @@ export function createSession(world, conn, opts) {
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)
       if (msg.t === 'inv' && msg.a === 'use' && typeof msg.id === 'string') { economy.useItem(world, player, msg.id); return; }
       if (msg.t === 'inv' && msg.a === 'slot' && Number.isInteger(msg.i)) { economy.setQuick(player, msg.i, typeof msg.id === 'string' ? msg.id : null); return; }
+      if (msg.t === 'inv' && msg.a === 'drop' && typeof msg.id === 'string') { const err = cargo.dropItem(world, player, msg.id.slice(0, 40), msg.n, !!msg.w); if (err) world.notify(player, err, 'warn'); store.touch(); return; }   // (the bag's Drop: into a bag at your feet)
       // downed: call for help (again: re-alert), give up waiting, the paid ambulance
       if (msg.t === 'down') {
         if (msg.a === 'help') revive.callHelp(world, player);

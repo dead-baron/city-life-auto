@@ -20,6 +20,7 @@ import { compileScore } from '../tools/music/songbook.mjs';
 import * as music from '../server/systems/music.js';
 import * as economy from '../server/systems/economy.js';
 import * as combat from '../server/systems/combat.js';
+import * as players from '../server/systems/players.js';
 import { spawnNpc } from '../server/systems/npc.js';
 import * as dance from '../server/systems/dance.js';
 import { mulberry32 } from '../shared/rng.js';
@@ -162,6 +163,17 @@ test('the record store sells tapes, the boombox, the radio, the mat and the inst
   run(w, MUSIC_GEAR.awayS + 2);
   assert.ok(!w.stage.has(b.id), 'packed away');
   assert.equal(prof.inventory.boombox, 1, 'still yours');
+  // set down by someone who then leaves the game (their body lingers a while): packed away too
+  const { p: lv } = joinPlayer(w, 'Leaver');
+  lv.profile.inventory.radio = 1;
+  teleport(w, lv.ped, spot.x, spot.y);
+  economy.useItem(w, lv, 'radio');
+  const r = [...w.stage.values()].find((s) => s.k === 'radio' && s.owner === lv.pid);
+  music.onMenu(w, lv, music.MENU_POI, 'mdown');
+  assert.equal(r.att, 0);
+  players.leave(w, lv);
+  run(w, MUSIC_GEAR.awayS + 2);
+  assert.ok(!w.stage.has(r.id), 'gone with its owner');
   void conn;
 });
 
@@ -349,4 +361,25 @@ test('freestyle on the mat: the dance button\'s moves draw a small crowd, never 
     if (p.perf) most = Math.max(most, p.perf.crowd.size);
   }
   assert.ok(most >= 2 && most <= CROWD.sizes.find(([r]) => r <= 0.66)[1], `a small crowd (${most})`);
+});
+
+test("the page's clock: the server's time from a music message's tick, even one read late, and it runs on with the snapshots", async () => {
+  const { Stage } = await import('../client/music/stage.js');
+  const S = { ents: new Map(), latestTick: 500, rtt: 0 };
+  const st = new Stage(S, () => {});
+  // a message from tick 400 read only now, with snapshot 500 in (a busy page: the events played late)
+  st.ev({ e: 'mus', now: 1 + 400 * 0.05, tk: 400, all: [] });
+  const a = st.now();
+  assert.ok(a >= 26 - 1e-6 && a <= 26.26, `the server's time at tick 500 is 26 s: ${a}`);
+  S.latestTick = 520;
+  const b = st.now();
+  assert.ok(b >= 27 - 1e-6 && b <= 27.26, `on with the snapshots: ${b}`);
+  // the server says so too, in its messages
+  const w = makeWorld();
+  for (let k = 0; k < 7; k++) w.step();
+  const p = joinPlayer(w, 'Clock');
+  music.onMsg(w, p, { a: 'list' });
+  const ev = p.evq.find((e) => e.e === 'mus');
+  assert.equal(ev.tk, w.tick);
+  assert.ok(Math.abs(ev.now - (1 + w.tick * 0.05)) < 0.01);
 });

@@ -113,7 +113,7 @@ export function start(world, p, pad = null) {
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (yours: not theft - safety.js / vehicles.js mineOf; kept for the shift)
   v.returnTo = { x: spot.x, y: spot.y, label: pad.name };
   p.job = { type: 'sar', stage: 'wait', truck: v.id, base: { x: pad.x, y: pad.y, name: pad.name }, nextAt: world.time + SAR.firstS, expires: world.time + SAR.shiftS, saved: 0, text: 'Search & rescue: on call - stand by for the first call' };
-  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital - land on its roof (or the helipad in its yard).`, 'good');
+  world.notify(p, `You're on call as a search & rescue pilot. Your rescue helicopter is by ${pad.name} (the green ring). Calls come over the phone: search the circle on your map, land for the hurt and the lost, hold Act over the stuck and the swimmers to lower the harness, and fly them to a hospital - land on its roof (or the helipad in its yard).`, 'good', 'Rescue pilot on call: your helicopter is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -346,7 +346,7 @@ export function interaction(world, p) {
   const m = world.map, hq = (m.pois || []).find((q) => q && q.kind === 'sar' && Math.hypot(q.x - ped.x, q.y - ped.y) < (q.r || 44) + 30);
   const pad = hq ? nearestBase(m, hq.x, hq.y) : basePads(m).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < FLY.PAD_R + 30);
   if (!pad) return null;
-  return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a search & rescue pilot (a rescue helicopter is issued)', card: { id: 'sar', where: pad.name || null, start: () => start(world, p, pad) }, run: () => { const err = start(world, p, pad); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // the hospital yard pad a shift starts from: the nearest to p (the phone's job list)

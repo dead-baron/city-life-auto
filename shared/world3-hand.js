@@ -507,6 +507,7 @@ function handBuilding(m, o) {
     const poi = { id: m.pois.length, kind: o.poi.kind, label, x: px, y: py, r: o.poi.kind === 'delivery' ? 40 : 48, b: bid, fixed: o.poi.fixed !== false };
     if (o.poi.walk) { poi.walk = true; poi.store = o.poi.store || (o.art && o.art.shop && o.art.shop.kind) || 'mart'; }   // (a shop you walk into: shared/map.js buildInteriors)
     if (o.poi.food) poi.food = true;
+    if (o.poi.bath) poi.bath = true;   // (a bathhouse: its door onto its floor - server/systems/bathhouse.js)
     if (o.poi.flagship) poi.flagship = true;   // (the Neon Strip's Pixel Arcade: the biggest floor - server/systems/arcade.js)   // (a food place's counter sells a plate as well as coffee: server/systems/economy.js)
     m.pois.push(poi);
     b.signs.push({ x: px, y: (y + h - 0.6) * TILE, text: label });

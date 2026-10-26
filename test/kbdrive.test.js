@@ -28,7 +28,7 @@ test('keyboard driving: car-style is the default (W gas, S brake / reverse, A/D 
   const input = src('client/input.js'), page = src('index.html');
   assert.match(input, /settings = \{ kbDrive: 'car'/, 'the default');
   assert.match(input, /kbDriveV !== 2\) \{ settings\.kbDrive = 'car'/, 'everyone starts this build on it, once');
-  assert.match(page, /<option value="car">Car: W gas, S brake\/reverse, A\/D steer<\/option><option value="direction">/, 'Settings: car first, then Controls 2');
+  assert.match(page, /<option value="car">Controls 1: W gas, S brake, A\/D steer<\/option><option value="direction">Controls 2: /, 'Settings: car first (Controls 1), then Controls 2 - short enough not to be cut off (UI-3)');
   assert.equal(KB.gas, 'W'); assert.equal(KB.brake, 'S');
   // W + D: full gas AND full lock (the two axes are separate - no diagonal shrinking either)
   const both = driveInput({ x: 0, y: 0, a: 0, vx: 0, vy: 0 }, { bits: IN.TANK, mx: 1, my: -1, aim: 0 });
@@ -92,10 +92,10 @@ test('touch: the aim stick fires from its outer ring only with the FIRE toggle o
   assert.deepEqual(touchStick(1, true, false), { firing: false, aiming: true, guard: true });
   // let go: nothing
   assert.deepEqual(touchStick(0.1, false, true), { firing: false, aiming: false, guard: false });
-  // the toggle (a small pill top left, off the stick's ring): on by default, remembered with the other settings, kept in
-  // step with Settings' checkbox
+  // the toggle (a utility slot beside the stick, off its ring - the touch slots, UI-2): on by default, remembered with the
+  // other settings, kept in step with Settings' checkbox
   const page = src('index.html'), input = src('client/input.js'), main = src('client/main.js');
-  assert.match(page, /<button id="firetog" class="on"[^>]*>FIRE ON<\/button>/);
+  assert.match(page, /<button data-b="firetog" id="firetog" class="lit"[^>]*>FIRE ON<\/button>/);
   assert.match(input, /touchEdgeFire: true/);
   assert.match(input, /settings\.touchEdgeFire = !settings\.touchEdgeFire; saveSettings\(\)/);
   assert.match(main, /settings\.touchEdgeFire = e\.target\.checked; saveSettings\(\); input\.showFireToggle\?\.\(\)/);

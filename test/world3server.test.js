@@ -230,6 +230,59 @@ test('World v3\'s skateboards: a rack at every skate park, a sparse few elsewher
   }
 });
 
+// (the owner, 10-16: "Bathhouses and locker rooms with usable showers" and "Rocket League-style car soccer arena") - both
+// bathhouses' doors lead onto their floors (server/systems/bathhouse.js); the Waves Arena by the stadium: walled in, its
+// gate on the pavement of a street, a match played on it (server/systems/carsoccer.js)
+test('World v3\'s bathhouses open onto their floors; the Waves Arena by the stadium: walled in, its gate on a street, a match on it', async () => {
+  const bath = await import('../server/systems/bathhouse.js'), soc = await import('../server/systems/carsoccer.js'), players = await import('../server/systems/players.js');
+  const baths = M.pois.filter((p) => bath.isBath({ map: M }, p));
+  assert.deepEqual(baths.map((p) => p.label).sort(), ['Old Quarter Baths', 'Steam & Stone Baths'], 'the two bathhouses');
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w, { cash: 50 });
+  for (const poi of baths) {
+    teleport(w, p.ped, poi.x, poi.y);
+    const it = players.findInteraction(w, p);
+    assert.ok(it && /the bathhouse/.test(it.label), `${poi.label}: ${it && it.label}`);
+    it.run();
+    assert.ok(p.ped.home && p.ped.home.bath, `${poi.label}: onto its floor`);
+    (await import('../server/systems/homeinside.js')).leave(w, p);
+  }
+  const A = M.arenas || [];
+  assert.equal(A.length, 1, 'one arena');
+  const a = A[0], D = DISTRICTS[M.dist[M.idx(Math.floor(a.cx / TILE), Math.floor(a.cy / TILE))]];
+  assert.equal(a.name, 'Waves Arena');
+  assert.ok(D && /Stadium/.test(D.name), `by the stadium (${D && D.name})`);
+  // walled all round (no way in on foot or by car but the match), nothing standing on the pitch
+  for (let tx = a.tx; tx < a.tx + a.tw; tx++) for (const ty of [a.ty, a.ty + a.th - 1]) assert.equal(M.tiles[M.idx(tx, ty)], T.WALL, 'the wall');
+  for (let ty = a.ty; ty < a.ty + a.th; ty++) for (const tx of [a.tx, a.tx + a.tw - 1]) assert.equal(M.tiles[M.idx(tx, ty)], T.WALL, 'the back walls');
+  for (let ty = Math.floor(a.iy0 / TILE); ty < a.iy1 / TILE; ty++) for (let tx = Math.floor(a.ix0 / TILE); tx < a.ix1 / TILE; tx++) {
+    assert.equal(M.tiles[M.idx(tx, ty)], T.PLAZA, 'the pitch paved');
+    assert.ok(!M.solidProps.has(M.idx(tx, ty)), `nothing solid on the pitch (${tx}, ${ty})`);
+  }
+  assert.ok(M.parking.every((q) => !(q.x > a.x0 && q.x < a.x1 && q.y > a.y0 && q.y < a.y1)), 'no cars parked in it');
+  // the gate: on ground you walk on, a street's pavement within reach of it
+  const gx = Math.floor(a.gate.x / TILE), gy = Math.floor(a.gate.y / TILE);
+  assert.ok(!PED_BLOCK[M.tiles[M.idx(gx, gy)]], `the gate on open ground (tile ${M.tiles[M.idx(gx, gy)]})`);
+  let road = false;
+  for (let dy = -6; dy <= 6 && !road; dy++) for (let dx = -8; dx <= 0; dx++) if (M.tiles[M.idx(gx + dx, gy + dy)] === T.ROAD) road = true;
+  assert.ok(road, 'a street by the gate');
+  assert.ok((M.jumps || []).filter((J) => J.bank).length === 6, 'the banks drawn for the cars that climb them');
+  // a match on it: joined at the gate, a goal scored, the ball kept in by the walls
+  teleport(w, p.ped, a.gate.x, a.gate.y);
+  const it = players.findInteraction(w, p);
+  assert.ok(it && /Join car soccer at Waves Arena/.test(it.label), it && it.label);
+  soc.devStart(w, p, {});
+  const st = soc._test.stOf(w, 0);
+  for (let k = 0; k < 20 * 20; k++) {
+    w.step();
+    if (st.ball) assert.ok(st.ball.x > a.gx0 && st.ball.x < a.gx1 && st.ball.y > a.iy0 && st.ball.y < a.iy1, 'the ball inside');
+  }
+  assert.equal(st.phase, 'play');
+  Object.assign(st.ball, { x: a.ix1 - 90, y: a.cy, vx: 1200, vy: 0 });
+  for (let k = 0; k < 20; k++) w.step();
+  assert.equal(st.score[0], 1, 'a goal in the east goal: ORANGE\'s');
+});
+
 // (the owner's notes, part 2: the world's layout - b5b)
 test('zebra crossings only on the asphalt: a paved refuge across a boulevard\'s planted median, never stripes over grass', () => {
   const xs = [...zebraCrossings(M).values()];

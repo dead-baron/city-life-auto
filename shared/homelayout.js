@@ -16,7 +16,7 @@ export const TILE_IN = 32;
 // (H77) the concept's new pieces, lower case in a plan: x a pool table  j an arcade cabinet  i a row of cinema seats  n a
 // kitchen island and its stools  s a sectional sofa (its long side)  b a bedside table and its lamp  l a floor lamp  w a
 // washing machine  k a workbench  e an exercise bike  h a bathtub - furniture like the rest (solid, a run one piece)
-const PLAN_LOWER = 'xjinsblwkh';
+const PLAN_LOWER = 'xjinsblwkhuyof';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf)
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
 // (H77, the owner's HO6 concept: thin walls) a wall is a thin line, not its whole tile: WALL_IN px thick, along the middle
 // of a wall tile inside the home and along the inner edge of the outside walls - the rest of the tile is the room's
@@ -133,6 +133,27 @@ PLANS.arcadeflag = [
   '#PccccccccccccccccccccP#',
   '###########D############',
 ];
+// (the owner, 10-16: "Bathhouses and locker rooms with usable showers") a bathhouse (server/systems/bathhouse.js): in by
+// the front door to the lobby - the front desk (I: pay for the day there), the towels on the shelf behind it (f),
+// plants; the curtains (X) to the men's locker room (west) and the women's (east) open to you once you've paid - each
+// with its lockers (J: change, stash things), a bench (o), the showers along the back (H), the basins (N); through the
+// doorway at the back of each, the bath hall: the big bath (u), the steam's hot stones in the corner (y), benches
+PLANS.bath = [
+  '#########################',
+  '#yyttttttttttttttttttttP#',
+  '#yyttuuuuuuuuuuuuuuttttt#',
+  '#ttttuuuuuuuuuuuuuutttoo#',
+  '#oottttttttttttttttttttt#',
+  '####+###############+####',
+  '#HtHtHtH#..fff..#HtHtHtH#',
+  '#ttttttt#.......#ttttttt#',
+  '#J......#.IIIII.#......J#',
+  '#J..o...#.......#...o..J#',
+  '#J..o...#.......#...o..J#',
+  '#J......X.......X......J#',
+  '#.....NN#P.....P#NN.....#',
+  '############D############',
+];
 // (H71) an apartment block's lobby (HO5), lobby4 .. lobby8 by its number of flats: in by the front door, the tiled hall -
 // the mailboxes on the back wall, the lift beside them, the stairs up in the corner, a plant by the door - and the
 // landing's carpet runner along the back wall with the flats' doors, unit 1 first (U, numbered in order), each one's
@@ -149,10 +170,10 @@ for (let n = 4; n <= 8; n++) {
   ];
 }
 
-const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZG', ...PLAN_LOWER]);
+const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZGIJ', ...PLAN_LOWER]);   // (X - a bathhouse's curtain - isn't: blocked lets the paid through)
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
-export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes' };   // (G: an arcade's prize counter)
+export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam' };   // (G: an arcade's prize counter; I J u y: a bathhouse's)
 
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
 // odds and ends .. 3 a mansion's)
@@ -179,7 +200,7 @@ export function layout(key, tier = 0) {
   const seen = new Set(), pieces = [];
   for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
     const ch = at(tx, ty);
-    if (!(/[A-Z]/.test(ch) || PLAN_LOWER.includes(ch)) || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E' || seen.has(tx + ',' + ty)) continue;
+    if (!(/[A-Z]/.test(ch) || PLAN_LOWER.includes(ch)) || ch === 'D' || ch === 'R' || ch === 'U' || ch === 'E' || ch === 'X' || seen.has(tx + ',' + ty)) continue;
     let w = 1, h = 1;
     while (at(tx + w, ty) === ch && !seen.has(tx + w + ',' + ty)) w++;
     while ([...Array(w).keys()].every((i) => at(tx + i, ty + h) === ch)) h++;
@@ -206,7 +227,7 @@ export function layout(key, tier = 0) {
   // inner edge on the outside walls) toward each wall beside it, out to the tile's edge where a doorway or a wall goes on
   const T = TILE_IN, mid0 = (T - WALL_IN) / 2;
   const isW = (tx, ty) => tx >= 0 && ty >= 0 && tx < C && ty < R && WALLISH.has(at(tx, ty));
-  const goes = (tx, ty) => isW(tx, ty) || (tx >= 0 && ty >= 0 && tx < C && ty < R && at(tx, ty) === '+');
+  const goes = (tx, ty) => isW(tx, ty) || (tx >= 0 && ty >= 0 && tx < C && ty < R && (at(tx, ty) === '+' || at(tx, ty) === 'X'));
   const walls = new Array(C * R).fill(null), wallRects = [];
   for (let ty = 0; ty < R; ty++) for (let tx = 0; tx < C; tx++) {
     if (!isW(tx, ty)) continue;
@@ -235,8 +256,9 @@ export function carRects(L, n) {
   return L.bays.slice(0, Math.max(0, n | 0)).map((b) => ({ x: b.x - CAR_IN.w / 2 - 2, y: b.y - CAR_IN.l / 2 - 2, w: CAR_IN.w + 4, h: CAR_IN.l + 4 }));
 }
 
-// Does a body at (x, y) touch a wall or a piece of furniture - or one of the nc cars parked in the garage?
-export function blocked(L, x, y, r = BODY_IN, nc = 0) {
+// Does a body at (x, y) touch a wall or a piece of furniture - or one of the nc cars parked in the garage? (a bathhouse's
+// curtains, X, too - unless pass: paid for the day, or one of its bathers)
+export function blocked(L, x, y, r = BODY_IN, nc = 0, pass = false) {
   const x0 = Math.floor((x - r) / TILE_IN), x1 = Math.floor((x + r - 0.001) / TILE_IN);
   const y0 = Math.floor((y - r) / TILE_IN), y1 = Math.floor((y + r - 0.001) / TILE_IN);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
@@ -244,14 +266,14 @@ export function blocked(L, x, y, r = BODY_IN, nc = 0) {
     if (wr) {   // (H77: a wall tile - only its thin line is solid)
       const lx = x - tx * TILE_IN, ly = y - ty * TILE_IN;
       for (const q of wr) if (lx + r > q[0] && lx - r < q[2] && ly + r > q[1] && ly - r < q[3]) return true;
-    } else if (L.solid(tx, ty)) return true;
+    } else if (L.solid(tx, ty) || (!pass && L.cell(tx, ty) === 'X')) return true;
   }
   if (nc > 0) for (const c of carRects(L, nc)) if (x + r > c.x && x - r < c.x + c.w && y + r > c.y && y - r < c.y + c.h) return true;
   return false;
 }
 
 // One step of walking round the inside (the server's and the page's, the same): along the walls, never through them
-// (s.nc: how many cars are parked in the garage - they're solid too)
+// (s.nc: how many cars are parked in the garage - they're solid too; s.pass: through a bathhouse's curtains)
 export function stepInside(L, s, mx, my, dt, speed) {
   let len = Math.hypot(mx, my);
   if (len < 0.15) return false;
@@ -260,9 +282,9 @@ export function stepInside(L, s, mx, my, dt, speed) {
   const slide = (axis, d) => {
     const from = s[axis];
     s[axis] = from + d;
-    if (!blocked(L, s.x, s.y, BODY_IN, s.nc)) return;
+    if (!blocked(L, s.x, s.y, BODY_IN, s.nc, s.pass)) return;
     let lo = 0, hi = 1;   // as far as it goes
-    for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; s[axis] = from + d * m; if (blocked(L, s.x, s.y, BODY_IN, s.nc)) hi = m; else lo = m; }
+    for (let i = 0; i < 6; i++) { const m = (lo + hi) / 2; s[axis] = from + d * m; if (blocked(L, s.x, s.y, BODY_IN, s.nc, s.pass)) hi = m; else lo = m; }
     s[axis] = from + d * lo;
   };
   slide('x', dx); slide('y', dy);

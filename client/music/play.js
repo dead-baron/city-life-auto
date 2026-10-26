@@ -42,7 +42,7 @@ export function start(o) {
   ov.classList.add('mus');
   G = { o, ov, cv, g: cv.getContext('2d'), hint, hint0: hint ? hint.textContent : '', keys: new Set(), padPrev: new Set(), mode: o.game === 'jam' ? 'jam' : 'rhythm', inst: o.inst || null, key: o.key ?? 57, minor: o.minor ?? true, chordOn: false, pick: -1, picks: [BEAT_TRACK, ...(o.tapes || [])], set: null, res: null, flash: [], lastPad: -1, padAt: 0 };
   const S = stage();
-  if (S) { S.play = api; if (o.now !== undefined) S.clock(o.now); }
+  if (S) { S.play = api; if (o.now !== undefined) S.clock(o.now, o.tk); }
   if (G.mode === 'rhythm') beginSet(o.track, o.seed, o.t0, o.setS || RHYTHM.setS);
   G.onKey = (e) => {
     if (e.type === 'keyup') { G.keys.delete(e.code); if (e.key === 'Shift') G.chordOn = false; return; }

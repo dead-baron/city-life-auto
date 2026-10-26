@@ -15,7 +15,7 @@ export const IN = {
   PREVW: 2048,   // previous weapon
   TANK: 4096,    // classic tank-style driving (optional keyboard setting)
   LIGHT: 8192,   // L / D-pad up on foot / 🔦 - flashlight on / off (if you have one)
-  BLOCK: 16384,  // guard: right mouse · LT on foot · touch aim stick (combat.js)
+  BLOCK: 16384,  // guard: right mouse · LT on foot · touch aim stick or BLOCK (combat.js)
   DANCE: 32768,  // G / L3 / the phone's 💃 - dance where you stand, the next move each press (server dance.js)
   // 65536 and up: free - the input is 32 bits on the wire (protocol.js: a second word); keep below 2^31 (signed ops)
   // at the controls of an aircraft (shared/flight.js): climb and descend - Space / Shift, RT / LT, touch ▲ / ▼ (bits 20, 21:
@@ -69,6 +69,12 @@ export function wheelPicker(n, start = -1) {
   };
 }
 
+// The touch aim stick: its ring fires only with the FIRE toggle on; short of it (or toggled off) it aims and guards
+export function touchStick(m, wasFiring, fireOn) {
+  const firing = !!fireOn && (wasFiring ? m > 0.8 : m > 0.92);
+  return { firing, aiming: m > 0.2, guard: m > 0.2 && !firing };
+}
+
 export function quantizeAngle(a) {
   const t = ((a % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   return Math.round((t / (Math.PI * 2)) * 65535) & 0xffff;
@@ -85,8 +91,3 @@ export function easeSteer(cur, target, dt) {
   return Math.abs(d) <= step ? target : cur + Math.sign(d) * step;
 }
 
-// The touch aim stick: its ring fires only with the FIRE toggle on; short of it (or toggled off) it aims and guards
-export function touchStick(m, wasFiring, fireOn) {
-  const firing = !!fireOn && (wasFiring ? m > 0.8 : m > 0.92);
-  return { firing, aiming: m > 0.2, guard: m > 0.2 && !firing };
-}

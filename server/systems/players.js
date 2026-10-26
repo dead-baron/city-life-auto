@@ -98,6 +98,8 @@ import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
 import * as casino from './casino.js';
 import * as arcade from './arcade.js';
+import * as carsoccer from './carsoccer.js';
+import * as bathhouse from './bathhouse.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -251,7 +253,7 @@ export function savePos(p, ped) {
   if (!ped || ped.onTrain || ped.sub) return;
   // (inside your own home: which - you're back in it next time; players.backInside)
   const s = ped.home;
-  if (s && ped.hidden && !s.tour && !s.guest && !s.lobby && !s.arcade && ped.inside === s.id) p.profile.inHome = s.id; else delete p.profile.inHome;
+  if (s && ped.hidden && !s.tour && !s.guest && !s.lobby && !s.arcade && !s.bath && ped.inside === s.id) p.profile.inHome = s.id; else delete p.profile.inHome;
   const back = rides.savedSpot(ped); // (up in a balloon or on the wheel: you come back where you boarded)
   if (back) { p.profile.pos = { x: Math.round(back.x), y: Math.round(back.y), lz: 0 }; return; }
   p.profile.pos = { x: Math.round(ped.x), y: Math.round(ped.y), lz: (ped.lz || 0) > 0.5 ? 1 : 0 };
@@ -466,7 +468,7 @@ export function pedMods(world, ped) {
     canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
     board: !!ped.board, wet: !!ped.board && world.weather === WEATHER.RAIN,   // (on a skateboard: shared/physics.js boardStep)
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
-    regenMul: ped.buffs.coffee > now ? 2.2 : 1,
+    regenMul: ped.buffs.coffee > now || ped.buffs.bath > now ? 2.2 : 1,   // (refreshed by a soak at a bathhouse: bathhouse.js)
     staminaMax: (ped.buffs.energy > now ? 140 : 100) * (1 + skills.pedBonus(ped, 'stamina')), energy: ped.buffs.energy > now,   // (a longer sprint with stamina: skills.js)
     swimMul: 1 + skills.pedBonus(ped, 'swimming'),   // (a faster stroke: skills.js)
   };
@@ -578,11 +580,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
       if ((pressed & IN.HORN) && (v.def.police || v.def.siren)) v.sirenOn = !v.sirenOn;   // (def.siren: a fire engine, an ambulance - H68)
       if (v.def.turret && (inp.bits & IN.FIRE)) tank.fire(world, v, ped);   // (the tank's cannon - tank.js)
     }
-    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !v.def.turret && !(ped.seat === 0 && v.def.missiles)) {   // (a tank's cannon: tank.js; the gunship's pilot fires its missiles instead: aircraft.js)
+    if ((inp.bits & IN.FIRE) && (inp.bits & IN.AIMING) && !v.def.turret && !v.arena && !(ped.seat === 0 && v.def.missiles)) {   // (no shooting from car soccer's cars)   // (a tank's cannon: tank.js; the gunship's pilot fires its missiles instead: aircraft.js)
       const w = WEAPONS[ped.weapon];
       if (w && (w.type === 'gun')) combat.tryAttack(world, ped, inp.aim);
     }
-    if ((pressed & IN.VEHICLE) && !v.scripted) vehicles.exitVehicle(world, ped);
+    if ((pressed & IN.VEHICLE) && !v.scripted && !(v.arena && carsoccer.quit(world, p))) vehicles.exitVehicle(world, ped);   // (an arena car: out of the match, at the gate - carsoccer.js)
     if (pressed & IN.ACTION) doAct(world, p);
     return;
   }
@@ -642,6 +644,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
 // The Act button: what findInteraction offers - one that's a crime (act.crime) waits for Safety mode's say-so (safety.js).
 function doAct(world, p) {
   const act = findInteraction(world, p);
+  if (act && act.card && phone.offerCard(world, p, act.card)) return;   // (a job's place: its card first - what it pays, the first step, Accept: phone.js)
   if (act && act.run && safety.confirm(world, p, act.crime, act.key2 || act.label)) act.run();   // (a passive line has nothing to run)
 }
 
@@ -706,14 +709,16 @@ export function findInteraction(world, p) {
   if (ped.surf && ped.surf.st !== 'pad') return surf.interaction(world, p);   // (riding a wave: what the buttons do - surf.js)
   if (p.prison) return prison.interaction(world, p);   // (doing time on Prison Island: the wall - prison.js)
   if (ped.ride) return { label: rides.aboardLabel(world, ped), passive: true, run: () => {} };
-  if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Armory - pick a weapon / out to the motor pool' : 'Front desk', run: () => station.openInterior(world, p) };
+  if (ped.hidden && ped.interior) return { label: ped.interior.kind === 'armory' ? 'Pick a weapon at the armory, or go out to the motor pool' : 'Talk to the front desk', run: () => station.openInterior(world, p) };
   if (ped.hidden && ped.home) return homeinside.interaction(world, p);   // (the bed, the safe, the front door... homeinside.js)
-  if (ped.hidden) return { label: 'Inside your home - open the home menu', run: () => homes.openInside(world, p) };
+  if (ped.hidden) return { label: 'Open the home menu', run: () => homes.openInside(world, p) };
   if (ped.entering) return { label: 'Going inside... (stand still)', run: () => {} };
   if (ped.onTrain) return trains.interaction(world, p);
   if (ped.ug && !ped.vehId) return fishing.interaction(world, p) || underground.interaction(world, p) || fishHere(world, p, ped);   // (down the sewers or in the cave: only what's down there)
   if (!ped.vehId) { const rv = revive.interaction(world, p); if (rv) return rv; }
   if (ped.vehId) {
+    const soc = carsoccer.interaction(world, p);   // (at the wheel in a car soccer match: the score, the boost - carsoccer.js)
+    if (soc) return soc;
     const hop = trains.interaction(world, p);
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
@@ -796,6 +801,10 @@ export function findInteraction(world, p) {
 
   const hall = arcade.doorInteraction(world, p);   // an arcade's door: onto its floor - the cabinets, the prize counter (arcade.js)
   if (hall) return hall;
+  const baths = bathhouse.doorInteraction(world, p);   // a bathhouse's door: into its lobby (bathhouse.js)
+  if (baths) return baths;
+  const gate = carsoccer.gateInteraction(world, p);   // car soccer at the arena's gate: join (carsoccer.js)
+  if (gate) return gate;
   const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
   if (door) return door;
   const poi = world.map.poiNear(ped.x, ped.y);
@@ -1001,7 +1010,7 @@ export function buildMe(world, p) {
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
     fishing: fishing.meInfo(p), creel: fishing.creelInfo(prof),   // (a line out: where, the rod, the fight's parameters once it's cast; the cooler's catch - fishing.js)
     reloading: ped ? world.time < ped.reloadUntil : false,
-    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time), hearty: Math.max(0, (ped.buffs.hearty || 0) - world.time), scent: Math.max(0, (ped.buffs.scent || 0) - world.time) } : {},
+    buffs: ped ? { coffee: Math.max(0, (ped.buffs.coffee || 0) - world.time), energy: Math.max(0, (ped.buffs.energy || 0) - world.time), wine: Math.max(0, (ped.buffs.wine || 0) - world.time), hearty: Math.max(0, (ped.buffs.hearty || 0) - world.time), scent: Math.max(0, (ped.buffs.scent || 0) - world.time), bath: Math.max(0, (ped.buffs.bath || 0) - world.time) } : {},
     vehicles: prof.vehicles.map((v) => v.model),
     garageCap: homes.garageCap(world, prof),
     homes: homes.ownedHomes(world, prof).map((h) => ({ id: h.id, name: h.name, x: Math.round(h.x), y: Math.round(h.y) })),

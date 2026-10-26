@@ -1,7 +1,19 @@
 ## 2026-10-25 - Batch 7c: music in the world - boomboxes, radios, the car radio, the mat and the rhythm game, instruments and busking
 
-From the owner's notes, part 2: the Radio/Boombox item, breakdancing and street performance, playing instruments. On the
-music itself he said: "Let's do some simple music for now for the Boombox, or recycle something we already have for now.
+From the owner's notes, part 2:
+> Item - Radio/Boombox, can play it out loud for people to hear in game. They can be shot and destroyed too and the music
+> will glitch out or wind down. Music can be purchased at record store and you can buy tape casettes for your Boombox or
+> you can play a radio station on either radio or Boombox
+
+> Breakdancing - can out down a cardboard mat and dance or breakdance or do street performances, they will gather NPCs,
+> if you're really good then it will gather a good sized crowd thats really into it, if you aren't good npcs will walk off
+> unamused, sometimes they will boo. There's freestyle dancing they your character can do while idling or you can play a
+> dance dance revolution or guitar hero type mini game to see how well you perform.
+
+> Play instruments? Be able to do live music? Have instruments as items you can get and play them out loud for people in
+> the area to hear?
+
+On the music itself he said (2026-10-24): "Let's do some simple music for now for the Boombox, or recycle something we already have for now.
 I will be working on music later." So everything plays the songs we already have, and there's a clean place for his own
 tracks to drop in.
 
@@ -94,7 +106,17 @@ hung by the counter, rows of record crates, a listening booth and a jukebox, a V
 counters sell the tapes, the boombox, the radio, the mat and the instruments (one of each). The debug teleport has
 `near records`.
 
-**The page** (budgets: page 498 of 498, renderer 401 of 401, bake 905 of 905 - none raised):
+**The clock the music keeps**: every music message carries the server's time and its tick, so the page knows the server's
+clock exactly (its time is a base plus the tick) however late it reads the message - a busy page plays its events late,
+and the first reckoning, from the snapshot in at the time, ran seconds behind on a slow machine, so every hit landed
+outside the server's window. The page's reckoning then runs on with the snapshots (client/music/stage.js `clock`).
+
+**With the hub (batch 6 / UI)**: the music items have their own Music shelf in the bag (client/bag.js, their lines from
+shared/music.js `desc`), and Radio is an app in the phone's grid; the app loads the stations through client/music/stage.js,
+so the page doesn't carry shared/music.js. On touch the car radio is the phone's Radio app (no new HUD slot); the music
+games' lanes and pads are tapped on their own screen.
+
+**The page** (budgets: page 498 of 498, renderer 401 of 401, bake 906 of 906 - none raised):
 - Everything new loads after the page: client/music/stage.js at the start (as render/carryfx.js is), client/music/play.js
   the first time you perform, client/sound/stage.js with the sound, the songs one by one as they're wanted.
 - The page's hooks are a few lines in main.js (the module, its events, its drawing, the two games on the arcade screen)
@@ -107,7 +129,7 @@ counters sell the tapes, the boombox, the radio, the mat and the instruments (on
 **Tests**: test/music.test.js (new): the track list, the songbook and the stations; the chart, the judging, the score and
 the rating; the record shop's counter and a boombox heard in sync, by someone coming in too; shooting, punching and
 blowing one up; the car radio; a good set drawing a big crowd that jumps, films and tips; a sloppy one booed and left;
-an instrument heard by another player, a gig, busking, the hat swiped; freestyle's small crowd. test/world3server.test.js:
+an instrument heard by another player, a gig, busking, the hat swiped; freestyle's small crowd. the page's clock from a message read late. test/hub.test.js: the bag's Music shelf. test/world3server.test.js:
 World v3's record shops fitted out and selling the music. test/dance.test.js (fourteen moves); test/sound.test.js (the
 crowd's sounds measured: client/sound/levels.js, test/fixtures/sound-levels.json).
 

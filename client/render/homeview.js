@@ -23,6 +23,7 @@ let cv = null, g = null, S = null, st = null, raf = 0, app = null, bake = null;
 // street - loaded the first time you go in with art v2 on (its imports are the renderer's own, in the page by then)
 let artMod = null, artP = null, art = null;
 const raw = new Map();     // a friend's look as the server sends it (art v2's people adapt it themselves)
+const folkLooks = new Map();   // (a bathhouse's bathers' and attendant's looks, by key: server/systems/bathhouse.js sendExtra)
 // the street camera's scale (main.js baseZoom): CSS px per world px - you're your usual size in here
 function streetZoom() {
   const long = Math.max(innerWidth, innerHeight), viewH = 660 * (1 + 0.3 * Math.max(0, Math.min(1, (long - 960) / 960)));
@@ -45,6 +46,8 @@ export function onMsg(state, m) {
   if (!st || st.id !== m.id || m.plan !== (st && st.plan)) st = { id: m.id, cars: [], name: '', garage: 0, sleepS: HOME_IN.sleepS, wakeH: HOME_IN.wakeH };
   Object.assign(st, m);
   st.pet = m.pet || null;   // (H71: your pet - its name, look and bed come now and then, where it is every time)
+  st.suit = m.suit || null; st.folk = m.folk || null;   // (a bathhouse: your bathing suit, the bathers going through the routine)
+  if (m.looks) for (const k in m.looks) folkLooks.set(k, m.looks[k]);
   if (m.pet && m.pet.art) st.petI = { n: m.pet.n, art: m.pet.art, bx: m.pet.bx, by: m.pet.by };
   if (!m.pet) st.petI = null;
   st.at = performance.now();
@@ -72,12 +75,12 @@ function show() {
   }
   cv.style.display = '';
   if (!raf) raf = requestAnimationFrame(frame);
-  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no FIRE / ROLL / CAR, no aim
-  // stick and no district card in here
+  // (H64) the city isn't drawn under the inside (main.js render: a phone's frame rate); no district card in here, and
+  // the touch slots hold only ACT and the items (shared/controls.js TOUCH_STATES.home)
   S.homeIn = true;
   if (!document.getElementById('home-css')) {
     const css = document.createElement('style'); css.id = 'home-css';
-    css.textContent = 'body.home-in #tbtns [data-b=fire],body.home-in #tbtns [data-b=vehicle],body.home-in #tbtns [data-b=dive],body.home-in #tbtns [data-b=throw],body.home-in #tbtns [data-b=reload],body.home-in #stick-r,body.home-in #firetog,body.home-in #district{display:none!important}';
+    css.textContent = 'body.home-in #district{display:none!important}';
     document.head.appendChild(css);
   }
   document.body.classList.add('home-in');
@@ -104,7 +107,7 @@ function ding() {
 // where you are: the server's spot, your inputs it hasn't seen yet replayed on it (the same steps it takes), between the
 // last two steps by the time since
 function predicted(L) {
-  const s = { x: st.x, y: st.y, a: st.a, nc: (st.cars || []).length }, prev = { ...s };   // (nc: the parked cars are solid)
+  const s = { x: st.x, y: st.y, a: st.a, nc: (st.cars || []).length, pass: !!st.pass }, prev = { ...s };   // (nc: the parked cars are solid; pass: through a bathhouse's curtains)
   let mv = !!st.mv;
   if (!st.sleep && !st.shower && S.pending) {
     let sat = !!st.seat;   // (sat down: a nudge of the stick keeps you there, as the server has it - homeinside.js step)
@@ -151,8 +154,10 @@ function frame(now) {
       g.strokeRect(u.x + 1, u.y + 1, u.w - 2, u.h - 2); g.restore();
     }
     for (const o of st.others || []) friend(L, o, now);
+    if (st.folk) folkV1(now);
     you(L, me, now);
     nightV1(L);
+    if (L.key === 'bath') bathFx(L, now);
   }
   if (st.doors && !(v2 && art && art.ready)) lobbyMarks(L, false, now);   // (H71: a lobby's door numbers, yours lit - art v2 draws them with the back wall, under the people)
   if (st.edit) editMarks(L, me, now);
@@ -187,18 +192,25 @@ function drawArt(L, me, u, now) {
   for (const it of art.items) list.push({ b: it.base, it });
   (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
   // you, and anyone in here with you: art v2's people, at the street's size
-  const person = (look, x, y, a, mv, sl, sh, nm, si) => {
+  const tub = L.key === 'bath' ? L.pieces.find((p) => p.ch === 'u') : null;
+  const person = (look, x, y, a, mv, sl, sh, nm, si, sk) => {
     let pose = mv ? 'move1' : 'idle', fr = mv ? Math.floor(now / 110) % 6 : 0, d8 = dir8Of(a), b = y;
     if (si) { x = si[0]; y = si[1]; d8 = dir8Of(si[2]); pose = 'sit'; fr = 0; b = y + TILE_IN / 2 + 1; }   // (sat on the couch, an armchair, the cinema's seats: in front of the seat's own base)
+    if (sk && tub && y < tub.y + tub.h) { pose = 'sit'; fr = 0; d8 = 0; b = tub.y + tub.h + 0.5; }   // (in a bathhouse's bath: drawn over the tub, the water over them - soak)
+    if (Array.isArray(sh)) { x = sh[0]; y = sh[1] + 10; d8 = 4; pose = 'sit'; fr = 0; b = y + 4; }   // (on the stool at a bathhouse's wash station, facing its tiled wall)
     if (sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + (nm ? 14 : -6); y = bed.y + 26; b = bed.y + bed.h + 1; pose = 'down'; fr = 0; d8 = 4; } }
-    if (sh) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
-    list.push({ b, p: { look, x, y, pose, fr, d8, nm } });
+    if (sh && !Array.isArray(sh)) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
+    list.push({ b, p: { look, x, y, pose, fr, d8, nm, sk: !!sk && !!tub && y < tub.y + tub.h, sh: !!sh } });
   };
   for (const o of st.others || []) {
     const q = seen.get(o.n), kk = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
-    person(raw.get(o.n) || {}, q ? q.x0 + (q.x1 - q.x0) * kk : o.x, q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n, o.si);
+    const ok = o.sk && o.si;
+    person(raw.get(o.n) || {}, ok ? o.si[0] : q ? q.x0 + (q.x1 - q.x0) * kk : o.x, ok ? o.si[1] : q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n, ok ? 0 : o.si, o.sk);
   }
-  person(app || {}, me.x, me.y, me.a, me.mv, st.sleep, st.shower, null, st.seat);
+  for (const f of st.folk || []) person(folkLooks.get(f[5]) || {}, ...folkAt(f), f[2], f[3], false, f[4] === 'shower' ? folkAt(f) : 0, null, null, f[4] === 'soak');   // (a bathhouse's bathers)
+  if (st.clerk && folkLooks.has('clerk')) person(folkLooks.get('clerk'), st.clerk[0], st.clerk[1], Math.PI / 2, false);   // (and its attendant behind the desk)
+  const soakMe = st.soak === 1 && st.seat;
+  person(st.suit || app || {}, soakMe ? st.seat[0] : me.x, soakMe ? st.seat[1] : me.y, me.a, me.mv, st.sleep, st.shower, null, soakMe ? 0 : st.seat, soakMe ? 1 : 0);
   if (st.doors) list.push({ b: TILE_IN + 0.5, marks: 1 }, { b: 2 * TILE_IN + 0.5, mailflag: 1 });   // (H71: the lobby's door plates on the back wall's face, in front of it, behind anyone standing there; new mail's envelope over the mailboxes)
   list.sort((a, b) => a.b - b.b);
   const pulse = 0.7 + 0.3 * Math.sin(now / 220);   // (never faint: the thing in reach always shows)
@@ -219,10 +231,12 @@ function drawArt(L, me, u, now) {
       let c = null;
       try { c = art.person(p.look, p.pose, p.d8, p.fr, p.x, p.y); } catch (err) { if (!art.pedErr) { art.pedErr = 1; console.warn('[home art] person', err); } }
       if (!c) continue;
-      if (p.pose !== 'down' && !st.shower) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
+      if (p.pose !== 'down' && !st.shower && !p.sk) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
       g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
+      if (p.sk) water(p.x, p.y, now);   // (up to the shoulders in the bath)
+      if (p.sh) drops(p.x, p.y - 30, now);   // (under the shower)
       if (p.nm) {
-        g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+        g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
         g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.nm, p.x + 1, p.y - c.ay - 3);
         g.fillStyle = '#bfe3ff'; g.fillText(p.nm, p.x, p.y - c.ay - 4);
       }
@@ -234,6 +248,7 @@ function drawArt(L, me, u, now) {
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
   }
   tvGlow(L, now);
+  if (L.key === 'bath') bathFx(L, now);
   return true;
 }
 // the classic view after dark: the place dimmed, warm light round the lamps, the bed, the table and the kitchen
@@ -267,6 +282,57 @@ function tvGlow(L, now) {
     g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   g.restore();
+}
+
+// ---- a bathhouse (server/systems/bathhouse.js): the bathers, the water, the steam, the curtains -------------------------
+const folkSeen = new Map();   // (each bather's last two spots: drawn between them, as a friend is)
+function folkAt(f) {
+  const t = performance.now(), q = folkSeen.get(f[5].split(':')[1]);
+  if (!q || Math.hypot(q.x1 - f[0], q.y1 - f[1]) > 0.5) folkSeen.set(f[5].split(':')[1], { x0: q ? q.x0 + (q.x1 - q.x0) * Math.min(1, (t - q.t) / 50) : f[0], y0: q ? q.y0 + (q.y1 - q.y0) * Math.min(1, (t - q.t) / 50) : f[1], x1: f[0], y1: f[1], t });
+  const r = folkSeen.get(f[5].split(':')[1]), k = Math.min(1, (t - r.t) / 50);
+  if (folkSeen.size > 64) folkSeen.clear();
+  return [r.x0 + (r.x1 - r.x0) * k, r.y0 + (r.y1 - r.y0) * k];
+}
+// in the bath: the water's surface over the lower half, a ripple round them
+function water(x, y, now) {
+  g.fillStyle = 'rgba(96,172,206,.88)'; g.fillRect(Math.round(x - 13), Math.round(y - 15), 26, 17);
+  g.fillStyle = 'rgba(200,236,248,.7)'; g.fillRect(Math.round(x - 13), Math.round(y - 15), 26, 1);
+  g.strokeStyle = `rgba(220,244,255,${0.35 + 0.2 * Math.sin(now / 300 + x)})`; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y - 12, 14 + Math.sin(now / 400) * 2, 4, 0, 0, 6.28); g.stroke();
+}
+function drops(x, y, now) {
+  g.fillStyle = 'rgba(200,232,250,.75)';
+  for (let k = 0; k < 9; k++) { const t = ((now / 380) + k / 9) % 1; g.fillRect(Math.round(x - 8 + ((k * 37) % 17)), Math.round(y + t * 30), 1, 3); }
+}
+// the steam off the bath and the hot stones, rising and fading; the curtains (noren) in the locker rooms' doorways - drawn
+// aside for you once you've paid
+function bathFx(L, now) {
+  const tub = L.pieces.find((p) => p.ch === 'u'), stones = L.pieces.find((p) => p.ch === 'y');
+  for (const [P, n, rr] of [[tub, 14, 11], [stones, 6, 9]]) {
+    if (!P) continue;
+    for (let k = 0; k < n; k++) {
+      const t = ((now / 2600) + k / n) % 1, x = P.x + ((k * 97) % 100) / 100 * P.w + Math.sin(now / 900 + k) * 6, y = P.y + P.h * 0.5 - t * 46;
+      g.fillStyle = `rgba(240,246,250,${0.22 * Math.sin(t * Math.PI)})`; g.beginPath(); g.arc(x, y, rr * (0.6 + t), 0, 6.28); g.fill();
+    }
+  }
+  for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
+    if (L.cell(tx, ty) !== 'X') continue;
+    const x = tx * TILE_IN, y = ty * TILE_IN, open = !!st.pass, east = tx > L.cols / 2;
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(x + 2, y - 22, TILE_IN - 4, 3);
+    for (let k = 0; k < 3; k++) {   // three panels of indigo cloth, the house's crest in white (pushed aside when you've paid)
+      const px = x + 3 + k * 9 + (open ? (k - 1) * 3 : 0), sw = Math.sin(now / 700 + k) * (open ? 2 : 0.6);
+      g.fillStyle = east ? '#a8323a' : '#2a4a7a'; g.fillRect(Math.round(px + sw), y - 20, 8, 26);
+      g.fillStyle = 'rgba(255,255,255,.85)'; if (k === 1) { g.fillRect(Math.round(px + sw + 2), y - 12, 4, 4); }
+    }
+  }
+}
+function folkV1(now) {
+  for (const f of st.folk) {
+    const [x, y] = folkAt(f), soak = f[4] === 'soak';
+    const spr = pedSprite(appOf(folkLooks.get(f[5])), f[3] ? 'move1' : 'idle', f[3] ? Math.floor(now / 110) % 4 : 0, 0);
+    g.save(); g.translate(x, y); g.rotate(f[2]); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.restore();
+    if (soak) water(x, y + 10, now); else if (f[4] === 'shower') drops(x, y - 16, now);
+  }
+  if (st.clerk && folkLooks.has('clerk')) { const spr = pedSprite(appOf(folkLooks.get('clerk')), 'idle', 0, 0); g.save(); g.translate(st.clerk[0], st.clerk[1]); g.rotate(Math.PI / 2); g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX); g.restore(); }
 }
 
 // ---- your pet at home (H71: server/systems/homeinside.js walks it) --------------------------------------------------
@@ -473,6 +539,13 @@ function piece(b, p, P, L) {
     case 'n': box(P.fab, x + 2, y + 2, w - 4, h * 0.55); box('#f2f0ec', x, y + 2, w, h * 0.55 - 2); box('#9aa4ac', x + w * 0.2, y + 8, 16, 8); for (let i = 0; i < Math.round(w / 32); i++) { b.fillStyle = '#3a2a24'; b.beginPath(); b.arc(x + (i + 0.5) * w / Math.round(w / 32), y + h * 0.55 + 9, 5, 0, 6.28); b.fill(); } break;
     case 's': box(P.fab, x + 1, y + 2, w - 2, 28); box(P.fab, x + w - 30, y + 2, 29, h - 4); box('rgba(0,0,0,.25)', x + 1, y + h - 8, w - 2, 6); box('rgba(255,255,255,.12)', x + 4, y + 10, w - 36, 16); break;
     case 'h': box('#f2f2ee', x + 2, y + 3, w - 4, h - 6); box('#9ac8de', x + 6, y + 7, w - 12, h - 14); box('#c8ccd2', x + w - 6, y + h / 2 - 1, 3, 3); break;
+    // a bathhouse's (server/systems/bathhouse.js): the desk, the lockers, the bath, the hot stones, a bench, the towels
+    case 'I': box('#7a5432', x + 2, y + 6, w - 4, h - 10); box('#c8a070', x, y + 4, w, 6); box('#d8b050', x + 18, y + 8, 6, 5); box('#3a3a40', x + w - 40, y + 8, 18, 10); break;
+    case 'J': for (let k = 0; k < Math.max(p.tw, p.th) * 2; k++) { const v = h > w; box('#b8905a', v ? x + 3 : x + k * 16 + 1, v ? y + k * 16 + 1 : y + 3, v ? w - 6 : 14, v ? 14 : h - 6); box('#d8b050', v ? x + w / 2 - 2 : x + k * 16 + 6, v ? y + k * 16 + 6 : y + h / 2 - 2, 4, 3); } break;
+    case 'u': box('#c8a070', x, y, w, h); box('#d8e6ea', x + 4, y + 4, w - 8, h - 8); box('#6ab4d0', x + 7, y + 7, w - 14, h - 14); for (let k = 0; k < w / 24; k++) box('rgba(220,244,255,.5)', x + 10 + k * 24, y + 12 + (k % 2) * 14, 10, 2); break;
+    case 'y': box('#4a3424', x + 4, y + 6, w - 8, h - 10); box('#e85a30', x + 8, y + 10, w - 16, h - 18); for (let k = 0; k < 10; k++) { b.fillStyle = ['#7a7470', '#5a5652', '#8e8680'][k % 3]; b.beginPath(); b.arc(x + 12 + (k * 13) % (w - 24), y + 14 + ((k * 7) % (h - 28)), 5, 0, 6.28); b.fill(); } break;
+    case 'o': box('#5a3a24', x + 4, y + 6, w - 8, h - 10); for (let k = 0; k < 5; k++) box('#c8a070', w > h ? x + 2 : x + 4 + k * (w - 8) / 5, w > h ? y + 6 + k * (h - 10) / 5 : y + 2, w > h ? w - 4 : (w - 8) / 5 - 1, w > h ? (h - 10) / 5 - 1 : h - 4); break;
+    case 'f': box('#5a3a24', x + 2, y + 4, w - 4, h - 8); for (let k = 0; k < Math.floor((w - 8) / 16); k++) box(k % 2 ? '#2a4a7a' : '#f2f0ea', x + 5 + k * 16, y + 7, 13, h - 14); break;
     default: box('#6a6a6a', x + 2, y + 2, w - 4, h - 4);
   }
   void L;
@@ -494,7 +567,7 @@ function editMarks(L, me, now) {
     const cx = (t.tx + t.w / 2) * T, cy = (t.ty + t.h / 2) * T, a = [Math.PI / 2, Math.PI, -Math.PI / 2, 0][e.r & 3];
     g.fillStyle = 'rgba(255,255,255,.85)'; g.beginPath();
     g.moveTo(cx + Math.cos(a) * 12, cy + Math.sin(a) * 12); g.lineTo(cx + Math.cos(a + 2.5) * 7, cy + Math.sin(a + 2.5) * 7); g.lineTo(cx + Math.cos(a - 2.5) * 7, cy + Math.sin(a - 2.5) * 7); g.fill();
-    g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     g.fillStyle = 'rgba(0,0,0,.7)'; g.fillText(PIECES[e.k].name, cx + 1, t.ty * T - 2 + 1);
     g.fillStyle = '#fff'; g.fillText(PIECES[e.k].name, cx, t.ty * T - 2);
   } else {
@@ -555,8 +628,9 @@ function you(L, me, now) {
     const bed = L.pieces.find((p) => p.ch === 'B');
     if (bed) { x = bed.x + bed.w / 2; y = bed.y + 22; a = Math.PI / 2; pose = 'idle'; fr = 0; }
   }
-  if (st.shower) { const sh = L.pieces.find((p) => p.ch === 'H'); if (sh) { x = sh.x + sh.w / 2; y = sh.y + sh.h / 2; } }
-  const spr = pedSprite(app || {}, pose, fr, 0);
+  if (st.shower) { const sh = Array.isArray(st.shower) ? { x: st.shower[0] - 16, y: st.shower[1] - 16, w: 32, h: 32 } : L.pieces.find((p) => p.ch === 'H'); if (sh) { x = sh.x + sh.w / 2; y = sh.y + sh.h / 2; } }
+  if (st.seat && st.soak) { x = st.seat[0]; y = st.seat[1]; }   // (a bathhouse: in the bath, by the stones)
+  const spr = pedSprite((st.suit ? appOf(st.suit) : app) || {}, pose, fr, 0);
   g.save(); g.translate(x, y);
   if (!st.sleep) { g.fillStyle = 'rgba(0,0,0,.22)'; g.beginPath(); g.ellipse(2, 3, 12, 8, 0, 0, 6.28); g.fill(); }
   g.rotate(a); g.imageSmoothingEnabled = false;
@@ -567,6 +641,7 @@ function you(L, me, now) {
     g.fillStyle = 'rgba(235,245,255,.35)';
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(x - 10 + k * 5, y - 6 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
   }
+  if (st.seat && st.soak === 1) water(x, y + 10, now);
 }
 // a friend in there with you (server homeinside.js letIn): where the server last had them, their name over them
 function friend(L, o, now) {
@@ -579,14 +654,14 @@ function friend(L, o, now) {
   g.rotate(a); g.imageSmoothingEnabled = false;
   g.drawImage(spr, -PED_BOX / 2, -PED_BOX / 2, PED_BOX, PED_BOX);
   g.restore();
-  g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(o.n, x + 1, y - 21);
   g.fillStyle = '#bfe3ff'; g.fillText(o.n, x, y - 22);
 }
 // the place's name, and the night passing while you sleep
 function hudText(W, H, dpr, now) {
   const fs = Math.round(15 * dpr), ny = H - Math.round(30 * dpr);   // (the name along the bottom: the prompt and the buttons are up top)
-  g.font = `bold ${fs}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(st.name || '', W / 2 + 2, ny + 2);
   g.fillStyle = '#f2e6c8'; g.fillText(st.name || '', W / 2, ny);
   if (st.sleepT0) {
@@ -595,9 +670,9 @@ function hudText(W, H, dpr, now) {
     g.fillStyle = `rgba(4,6,14,${0.92 * dark})`; g.fillRect(0, 0, W, H);
     const m = sleepMinutes(), hh = Math.floor(m / 60), mm = Math.floor(m % 60);
     g.globalAlpha = dark;
-    g.font = `bold ${Math.round(40 * dpr)}px monospace`; g.textBaseline = 'middle';
+    g.font = `700 ${Math.round(40 * dpr)}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textBaseline = 'middle';
     g.fillStyle = '#9fb7ff'; g.fillText(`${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`, W / 2, H / 2);
-    g.font = `bold ${Math.round(22 * dpr)}px monospace`;
+    g.font = `700 ${Math.round(22 * dpr)}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     g.fillText('z'.repeat(1 + (Math.floor(now / 500) % 3)), W / 2 + 80 * dpr, H / 2 - 40 * dpr);
     g.globalAlpha = 1;
   }

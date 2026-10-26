@@ -174,30 +174,53 @@ function describe(world, j) {
 // The farm that takes harvest contracts nearest to you (Dry Creek's co-op, the Cedar Farms stand).
 const nearestFarm = (world, p) => world.map.pois.filter((q) => q.kind === 'farm').sort((a, b) => Math.hypot(a.x - p.ped.x, a.y - p.ped.y) - Math.hypot(b.x - p.ped.x, b.y - p.ped.y))[0];
 
+// The job card's facts (UI-3: client/jobcard.js): what it pays as a range - [lo, hi] for each thing it's paid for (per),
+// from the rules' own numbers, the speed bonus in the top - and the first step. A fare by the km takes the rules' usual
+// trip lengths.
+const r5 = (n) => Math.round(n / 5) * 5;
+const card = (lo, hi, per, step) => ({ lo: r5(lo), hi: r5(Math.max(lo, hi)), per, step });
+const fireLo = () => Math.min(...['car', 'wreck', 'person', 'grass', 'dumpster', 'kitchen'].map((k) => FIRE.pay[k]));
+const fireHi = () => Math.max(...['car', 'wreck', 'person', 'grass', 'dumpster', 'kitchen'].map((k) => FIRE.pay[k])) * (1 + FIRE.pay.fast);
+
 export function boardFor(world, p) {
   const farm = p.ped ? nearestFarm(world, p) : world.map.pois.find((q) => q.kind === 'farm');
   const list = (world.jobBoard || []).filter((j) => j.kind === 'delivery' || (j.kind === 'patrol' && p.badge)).map((j) => describe(world, j));
-  if (farm) list.push({ id: 'farm', kind: 'farm', pay: 4 * 140 + 200, title: 'Harvest contract at ' + farm.label, x: farm.x, y: farm.y });
+  if (farm) list.push({ id: 'farm', kind: 'farm', pay: 4 * 140 + 200, title: 'Harvest contract at ' + farm.label, x: farm.x, y: farm.y, ...card(4 * 140 + 200, 4 * 140 + 200, 'the contract', `Load 4 produce boxes at ${farm.label}`) });
   const base = sar.baseFor(world, p);   // search & rescue pilot: a shift of rescue calls from the nearest hospital (sar.js)
-  if (base) list.push({ id: 'sar', kind: 'sar', fly: true, icon: '🚁', sub: 'rescue calls: the lost, the hurt, the stranded - a rescue helicopter is issued', pay: SAR.base + 2 * SAR.perKm, title: `Search & rescue pilot - a shift from ${base.name}`, x: base.x, y: base.y });
+  if (base) list.push({ id: 'sar', kind: 'sar', fly: true, icon: '🚁', sub: 'rescue calls: the lost, the hurt, the stranded - a rescue helicopter is issued', pay: SAR.base + 2 * SAR.perKm, title: `Search & rescue pilot - a shift from ${base.name}`, x: base.x, y: base.y, ...card(SAR.base + SAR.perKm, (SAR.base + 4 * SAR.perKm) * (1 + SAR.fast), 'a rescue', `Take the rescue helicopter up from ${base.name}`) });
   const strip = p.ped ? dusting.stripFor(world, p.ped.x, p.ped.y) : null;   // crop dusting from the nearest farm strip (dusting.js)
-  if (strip) list.push({ id: 'dusting', kind: 'dusting', fly: true, icon: '🌾', sub: 'fly the co-op\'s crop duster low over the fields and spray them - paid by the field, a bonus for the lot', pay: DUST.fields * DUST.pay + DUST.bonus, title: `Crop duster pilot - out of ${strip.name}`, x: strip.x, y: strip.y });
-  list.push({ id: 'charter', kind: 'charter', fly: true, icon: '🛩', sub: 'fly rich customers between helipads, airfields, mansions and the islands - a tip for a smooth ride', pay: CHARTER.base + 4 * CHARTER.perKm, title: 'Charter pilot - VIP helicopter flights', x: 0, y: 0 });   // (charter.js)
-  list.push({ id: 'coast', kind: 'coast', fly: true, icon: '⚓', sub: 'boat patrol: run down smugglers, board them and seize the cargo; pull people out of the water', pay: COAST.bust + 200, title: 'Coast guard - boat patrol', x: 0, y: 0 }, { id: 'coastair', kind: 'coast', fly: true, icon: '🚁', sub: 'air patrol: the same from a helicopter - hover over smugglers to stop them, the harness for people in the water', pay: COAST.bust + 200, title: 'Coast guard - air patrol', x: 0, y: 0 });   // (coastguard.js)
-  if (farm) list.push({ id: 'fieldwork', kind: 'farm', icon: '🚜', sub: 'drive the co-op tractor down the rows: plough, sow, harvest - paid by the row', pay: FARM.rows * FARM.pay.sow + FARM.bonus, title: 'Farm work at ' + farm.label, x: farm.x, y: farm.y });   // (farming.js)
+  if (strip) list.push({ id: 'dusting', kind: 'dusting', fly: true, icon: '🌾', sub: 'fly the co-op\'s crop duster low over the fields and spray them - paid by the field, a bonus for the lot', pay: DUST.fields * DUST.pay + DUST.bonus, title: `Crop duster pilot - out of ${strip.name}`, x: strip.x, y: strip.y, ...card(DUST.fields * DUST.pay, DUST.fields * DUST.pay + DUST.bonus, 'the contract', `Take the crop duster up from ${strip.name}`) });
+  list.push({ id: 'charter', kind: 'charter', fly: true, icon: '🛩', sub: 'fly rich customers between helipads, airfields, mansions and the islands - a tip for a smooth ride', pay: CHARTER.base + 4 * CHARTER.perKm, title: 'Charter pilot - VIP helicopter flights', x: 0, y: 0, ...card(CHARTER.base + (CHARTER.minTrip / 1000) * CHARTER.perKm, (CHARTER.base + 8 * CHARTER.perKm) * (1 + CHARTER.tip), 'a flight', 'Fly the helicopter you\'re issued to your first customer') });   // (charter.js)
+  list.push({ id: 'coast', kind: 'coast', fly: true, icon: '⚓', sub: 'boat patrol: run down smugglers, board them and seize the cargo; pull people out of the water', pay: COAST.bust + 200, title: 'Coast guard - boat patrol', x: 0, y: 0, ...card(COAST.bust, COAST.bust + 200, 'a bust', 'Get to your patrol boat at the docks') }, { id: 'coastair', kind: 'coast', fly: true, icon: '🚁', sub: 'air patrol: the same from a helicopter - hover over smugglers to stop them, the harness for people in the water', pay: COAST.bust + 200, title: 'Coast guard - air patrol', x: 0, y: 0, ...card(COAST.bust, COAST.bust + 200, 'a bust', 'Take the coast guard helicopter up from the nearest helipad') });   // (coastguard.js)
+  if (farm) list.push({ id: 'fieldwork', kind: 'farm', icon: '🚜', sub: 'drive the co-op tractor down the rows: plough, sow, harvest - paid by the row', pay: FARM.rows * FARM.pay.sow + FARM.bonus, title: 'Farm work at ' + farm.label, x: farm.x, y: farm.y, ...card(FARM.rows * FARM.pay.sow, FARM.rows * FARM.pay.harvest + FARM.bonus, 'the contract', `Get on the co-op tractor at ${farm.label}`) });   // (farming.js)
   const fst = firefighter.stationFor(world, p);   // firefighter: a shift of fire calls from the nearest fire station (firefighter.js)
-  if (fst) list.push({ id: 'fire', kind: 'fire', icon: '🚒', sub: 'fire calls: cars, wrecks, people, grass, dumpsters, kitchens - a fire engine and its hose are issued', pay: FIRE.pay.grass, title: `Firefighter - a shift from ${fst.name}`, x: fst.x, y: fst.y });
+  if (fst) list.push({ id: 'fire', kind: 'fire', icon: '🚒', sub: 'fire calls: cars, wrecks, people, grass, dumpsters, kitchens - a fire engine and its hose are issued', pay: FIRE.pay.grass, title: `Firefighter - a shift from ${fst.name}`, x: fst.x, y: fst.y, ...card(fireLo(), fireHi(), 'a call', `Get in the fire engine at ${fst.name}`) });
   const hosp = paramedic.hospitalFor(world, p);   // paramedic: a shift of medical calls from the nearest hospital (paramedic.js)
-  if (hosp) list.push({ id: 'medic', kind: 'medic', icon: '🚑', sub: 'medical calls: treat the hurt on the spot, get the badly hurt to a hospital, revive players down - an ambulance is issued', pay: MEDIC.pay.serious, title: `Paramedic - a shift from ${hosp.label}`, x: hosp.x, y: hosp.y });
+  if (hosp) list.push({ id: 'medic', kind: 'medic', icon: '🚑', sub: 'medical calls: treat the hurt on the spot, get the badly hurt to a hospital, revive players down - an ambulance is issued', pay: MEDIC.pay.serious, title: `Paramedic - a shift from ${hosp.label}`, x: hosp.x, y: hosp.y, ...card(MEDIC.pay.minor, MEDIC.pay.serious * (1 + MEDIC.pay.fast), 'a call', `Get in the ambulance at ${hosp.label}`) });
   drivingJobs(world, p, list);   // the taxi, the bus, the tow truck (H72)
-  return { t: 'board', jobs: list, job: p.job ? { text: p.job.text, type: p.job.type } : null, saw: law.sawList(world, p) };
+  const pj = p.job;
+  return { t: 'board', jobs: list, job: pj ? { text: pj.text, type: pj.type, pay: Number.isFinite(pj.pay) ? pj.pay : null } : null, saw: law.sawList(world, p) };
 }
 
 function drivingJobs(world, p, list) {
   const rank = taxijob.rankFor(world, p), bus = busjob.lineFor(world, p), yard = p.ped ? towjob.yardFor(world, p.ped.x, p.ped.y) : null;
-  if (rank) list.push({ id: 'cab', kind: 'drive', icon: '🚕', sub: 'fares hail you or ring in: pick them up, the meter runs, drop them at the kerb - a tip for a quick, smooth ride', pay: CAB.flag + 3 * CAB.perKm, title: `Taxi driver - a cab from ${rank.name}`, x: rank.x, y: rank.y });
-  if (bus) list.push({ id: 'bus', kind: 'drive', icon: '🚌', sub: 'drive the line round its stops: people off and on, keep to the timetable - paid per stop on time and per passenger', pay: bus.L.stops.length * BUSJOB.perStop, title: `Bus driver - the ${bus.L.name}`, x: bus.L.stops[bus.k].x, y: bus.L.stops[bus.k].y });
-  if (yard) list.push({ id: 'towjob', kind: 'drive', icon: '🛻', sub: 'wrecks and broken-down cars: back up to them, hook them, tow them to the impound - paid per tow', pay: TOWJOB.pay, title: `Tow truck driver - out of ${yard.name.replace(/^the impound at /, '')}`, x: yard.x, y: yard.y });
+  if (rank) list.push({ id: 'cab', kind: 'drive', icon: '🚕', sub: 'fares hail you or ring in: pick them up, the meter runs, drop them at the kerb - a tip for a quick, smooth ride', pay: CAB.flag + 3 * CAB.perKm, title: `Taxi driver - a cab from ${rank.name}`, x: rank.x, y: rank.y, ...card(CAB.flag + (CAB.trip[0] / 1000) * CAB.perKm, (CAB.flag + ((CAB.trip[1] * 1.6 + 200) / 1000) * CAB.perKm) * (1 + CAB.tip), 'a fare', `Get in your cab at ${rank.name}`) });
+  if (bus) list.push({ id: 'bus', kind: 'drive', icon: '🚌', sub: 'drive the line round its stops: people off and on, keep to the timetable - paid per stop on time and per passenger', pay: bus.L.stops.length * BUSJOB.perStop, title: `Bus driver - the ${bus.L.name}`, x: bus.L.stops[bus.k].x, y: bus.L.stops[bus.k].y, ...card(BUSJOB.perStop, BUSJOB.perStop + 4 * BUSJOB.perPax, 'a stop', `Take the bus out at the ${bus.L.stops[bus.k].name} stop`) });
+  if (yard) list.push({ id: 'towjob', kind: 'drive', icon: '🛻', sub: 'wrecks and broken-down cars: back up to them, hook them, tow them to the impound - paid per tow', pay: TOWJOB.pay, title: `Tow truck driver - out of ${yard.name.replace(/^the impound at /, '')}`, x: yard.x, y: yard.y, ...card(TOWJOB.pay, TOWJOB.pay + 5 * TOWJOB.perKm, 'a tow', `Get in the tow truck at ${yard.name.replace(/^the impound at /, 'the impound at ')}`) });
+}
+
+// Act at a job's place (a hospital's doors, a fire station, a taxi rank, a bus stop, an impound lot, a helipad - the
+// interactions' card): the job's card rather than signing straight on (the owner's bar: what it is, what it pays and the
+// first step, then one tap). Accepting it ({ a: 'take', card: 1 }) signs on here, as Act used to.
+export function offerCard(world, p, c) {
+  const job = boardFor(world, p).jobs.find((q) => q.id === c.id);
+  if (!job || !p.conn) return false;
+  if (c.title) job.title = c.title;
+  if (c.step) job.step = c.step;
+  if (c.x !== undefined) { job.x = c.x; job.y = c.y; }
+  p.pendingCard = { id: c.id, start: c.start, at: world.time, x: p.ped.x, y: p.ped.y };
+  p.conn.sendJSON({ t: 'jobcard', job, where: c.where || null });
+  return true;
 }
 
 // Your phone in your hand while its menu is open, for everyone to see (the descriptor's ph: net.js; drawn held,
@@ -229,7 +252,7 @@ export function handle(world, p, msg) {
     return boardFor(world, p);
   }
   if (a === 'take') {
-    const err = take(world, p, msg.id);
+    const err = msg.card ? takeCard(world, p, String(msg.id || '')) : take(world, p, msg.id);
     return { ...boardFor(world, p), err: err || null, ok: !err };
   }
   if (a === 'report') {   // calling in a crime you saw (law.js reportSaw)
@@ -242,6 +265,17 @@ export function handle(world, p, msg) {
   if (a === 'bplace') { const err = bounties.place(world, p, String(msg.pid || ''), Number(msg.amt)); return { ...bounties.boardFor(world, p), err: err || null, ok: !err }; }
   if (a === 'homes') return realestate.listings(world, p, { sort: String(msg.sort || ''), kind: String(msg.kind || '') });   // the real-estate app (H65: realestate.js)
   return null;
+}
+
+// the card from Act at the job's place: signed on there, by that place's own start (still standing by it)
+function takeCard(world, p, id) {
+  const c = p.pendingCard;
+  p.pendingCard = null;
+  if (!c || c.id !== id || world.time - c.at > 300) return take(world, p, id);
+  if (!p.ped || p.ped.dead) return 'Not right now.';
+  if (p.job) return 'You already have a job - cancel it first.';
+  if (Math.hypot(p.ped.x - c.x, p.ped.y - c.y) > 400) return 'You walked away from it - go back and Act there again.';
+  return c.start() || null;
 }
 
 function take(world, p, id) {
@@ -277,12 +311,27 @@ export function jobTarget(world, p) {
   const j = p.job;
   if (!j) {   // the job's done and its truck's still out: bring it back for the bonus (jobs.js returnTruck)
     const ri = jobs.returnInfo(world, p);
-    return ri ? { text: `Bonus: bring the ${ri.v.def.name} back to ${ri.label} (+$${WORK_TRUCK_RETURN})`, x: ri.x, y: ri.y, stage: 'return', veh: truckMark(p, ri.v) } : null;
+    return ri ? { text: `Bonus: bring the ${ri.v.def.name} back to ${ri.label} (+$${WORK_TRUCK_RETURN})`, x: ri.x, y: ri.y, stage: 'return', veh: truckMark(p, ri.v), k: 'Bonus' } : null;
   }
   const t = target(world, p, j), v = j.truck ? world.get(j.truck) : null;
   if (v && !v.removed && !v.wreckAt) t.veh = truckMark(p, v);   // the job's truck, until you're in it: a ring and arrows (main.js, hud.js)
   if (t.stage === 'pickup' && Number.isFinite(j.tx)) t.dest = [Math.round(j.tx), Math.round(j.ty)];   // (and where it goes after: the minimap)
-  return t;
+  return Object.assign(t, jobCardInfo(world, j, t));
+}
+// The HUD's job card (UI-4, client/hudinfo.js): the job's name (k), the call or fare it's on (n, u), the step of it
+// (step: [i, of]) and the time left on the shift or the contract (left, s) - beside the objective line (text) and where
+// (x, y). A shift waiting for its next call has no step.
+const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work' };
+const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']] };
+const JOB_UNIT = { cab: 'Fare', charter: 'Flight', medic: 'Call', fire: 'Call', towjob: 'Call', sar: 'Call', coast: 'Call' };
+export function jobCardInfo(world, j, t) {
+  const out = { k: JOB_NAME[j.type] || '' };
+  const st = j.type === 'medic' && j.call && j.call.aboard ? 'hospital' : t.stage, L = JOB_STEPS[j.type];
+  const i = L ? L.findIndex((q) => q.includes(st)) : -1;
+  if (i >= 0) out.step = [i + 1, L.length];
+  if (JOB_UNIT[j.type] && st !== 'wait') { out.u = JOB_UNIT[j.type]; out.n = (j.done ?? j.flown ?? ((j.saved || 0) + (j.busts || 0))) + 1; }
+  if (Number.isFinite(j.expires)) { out.left = Math.max(0, Math.round(j.expires - world.time)); out.s = j.nextAt !== undefined ? 'shift' : 'job'; }
+  return out;
 }
 const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y), v.def.i]);   // (the model: the plate over it names it - "YOUR HELICOPTER", client/main.js drawJobTruck)
 function target(world, p, j) {

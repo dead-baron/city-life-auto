@@ -94,7 +94,7 @@ export function startFarm(world, p, poi) {
   p.job = { type: 'farm', crates: ids, dest: grocery.id, tx: grocery.x, ty: grocery.y, expires: world.time + 1200, text: `Haul 4 Produce Boxes to ${grocery.label} in the city`, pickupText: `Load the 4 Produce Boxes at ${poi.label}` };
   // a co-op flatbed waits nearby to help haul (taking it isn't theft)
   workTruck(world, p, pad, 'flatbed', poi);
-  world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op flatbed is parked next to them - take it, it is not stealing.', 'good');
+  world.notify(p, 'Harvest contract! 4 Produce Boxes are in the field by the farm road. A co-op flatbed is parked next to them - take it, it is not stealing.', 'good', 'Harvest contract: take the flatbed and load the boxes');
   return null;
 }
 

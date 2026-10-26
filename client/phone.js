@@ -1,13 +1,14 @@
-// The in-game phone: find places (nearest of each kind, read from the shared map), browse the
-// job board (deliveries priced $ / $$ / $$$ by distance, farm harvests, police patrols), take
-// or cancel your one job, and set a waypoint. The Bounties app (server/systems/bounties.js): the
-// contracts out, taking one, and putting a bounty on someone who keeps killing you. It lives in the
-// overlay system, so a controller navigates it like every other menu.
+// The in-game phone, the hub's PHONE tab (UI-3): the job you're on first (what it is, the step, the pay, Show on map,
+// Quit job), then every app on one screen as a grid of line icons - no paging - and a row of quick actions apart from
+// them. In an app its name is in the header with a 44 px Back. Find places (nearest of each kind, read from the shared
+// map), the job board as short cards (what it is, the pay, how far, the first step: client/jobcard.js; one tap to
+// accept), the Bounties app (server/systems/bounties.js), the Log of every note in full (client/notelog.js). It lives
+// in the overlay system, so a controller navigates it like every other menu.
 import { JOB_TIERS } from '../shared/rules.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
-import { STATIONS, stationAt, TRACK } from '../shared/music.js';
-import * as MUS from './music/stage.js';
+import { jobCardHtml } from './jobcard.js';
+import { noteLog, clearLog } from './notelog.js';
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 
@@ -16,7 +17,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // Place finder categories -> POI kinds (labels say what you'd go there for)
 export const PLACE_GROUPS = [
-  { id: 'emergency', icon: '<b style="color:#e0182d">H</b>', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
+  { id: 'emergency', icon: '<b class="ic-h">H</b>', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
   { id: 'money', icon: '$', title: 'Banks & ATMs', kinds: ['bank', 'atm'] },
   { id: 'shops', icon: '🛒', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'grocery', 'clothing', 'barber', 'tackle'] },
   { id: 'out', icon: '🎡', title: 'Food, drink & days out', kinds: ['winery', 'clubhouse', 'roadhouse', 'market', 'fruitstand', 'farmstand', 'snack', 'ride', 'race', 'bowling', 'cinema'] },
@@ -36,41 +37,55 @@ const KIND_NOTE = {
 
 const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
 
-// the flying jobs (server sar.js / charter.js): icon, title, a line about it, the pay
-const flyJobs = (list, job, h = 'Flying') => (list.length ? `<h3>${h}</h3>` + list.map((j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.icon}</span><span class="nm">${esc(j.title)}<small>${esc(j.sub)}</small></span><span class="d">$${j.pay}+</span></button>`).join('') : '');
+// line icons (24 x 24, the stroke in the text's colour): the apps and the quick actions
+const P = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+export const ICON = {
+  jobs: P('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'),
+  places: P('<path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+  transit: P('<rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M8 21l2-4M16 21l-2-4"/>'),
+  feed: P('<path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5M8 13h5"/>'),
+  bounties: P('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>'),
+  homes: P('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>'),
+  skills: P('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+  crew: P('<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7 0"/>'),
+  log: P('<path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/>'),
+  camera: P('<path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  atm: P('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/>'),
+  dance: P('<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>'),
+  radio: P('<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="8" cy="14" r="3"/><path d="M14 12h4M14 16h4M6 8l12-5"/>'),
+  clear: P('<path d="M6 6l12 12M18 6L6 18"/>'),
+  cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
+};
+// the apps, in the grid's order: [screen, name]
+const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera']];
+const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Phone']]);
+// what a job is, by its type (the board's job: server phone.js boardFor)
+const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB' };
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
-  let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
+  let homes = null, RE = null, RADIO = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
+  let taking = null;   // the job just accepted: its waypoint once the server says yes
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
 
   function render() {
     const el = $('ph-screen');
     $('ph-back').classList.toggle('hidden', screen === 'home');
+    $('phone').classList.toggle('at-home', screen === 'home');
+    ctx.title?.(NAME[screen === 'group' ? 'group' : screen] || 'Phone');
     if (screen === 'home') {
       const wp = ctx.waypoint();
-      const job = board && board.job;
       // crimes you saw (server law.js sawCrime): a minute to call each one in
       const saw = (board && board.saw) || [];
-      el.innerHTML = `
-        ${saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')}
-        <div class="ph-apps">
-          <button class="ph-app" data-go="places"><b>📍</b>Places</button>
-          <button class="ph-app" data-go="jobs"><b>💼</b>Jobs${ctx.isCop() ? ' & patrols' : ''}</button>
-          <button class="ph-app atm" data-act="atm"><b>$</b>Nearest ATM</button>
-          <button class="ph-app" data-go="feed"><b>📰</b>City feed</button>
-          <button class="ph-app bty" data-go="bounties"><b>💀</b>Bounties</button>
-          <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
-          <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
-          <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
-          <button class="ph-app" data-go="radio"><b>📻</b>Radio</button>
-          <button class="ph-app" data-go="skills"><b>💪</b>Skills</button>
-          <button class="ph-app" data-go="crew"><b>🤝</b>Crew</button>
-          ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
-        </div>
-        ${wp ? `<div class="ph-card">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</div>` : ''}
-        ${job ? `<div class="ph-card job">Current job: <b>${esc(job.text)}</b><button data-act="cancel">Cancel job</button></div>` : ''}`;
+      const quick = [['atm', 'Nearest ATM'], ['dance', 'Dance']];
+      if (ctx.canCruiser && ctx.canCruiser()) quick.push(['cruiser', 'Call a cruiser']);
+      if (wp) quick.push(['clearwp', 'Clear waypoint']);
+      el.innerHTML = saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')
+        + curJob()
+        + `<div class="ph-grid">${APPS.map(([k, n]) => `<button class="ph-app" data-go="${k}">${ICON[k]}${n}</button>`).join('')}</div>`
+        + `<div class="ph-quick"><small>QUICK</small>${quick.map(([k, n]) => `<button class="btn" data-act="${k === 'atm' ? 'atm' : k === 'clearwp' ? 'clearwp' : k}">${ICON[k === 'clearwp' ? 'clear' : k]}${n}</button>`).join('')}</div>`
+        + (wp ? `<p class="ph-hint">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</p>` : '');
     } else if (screen === 'places') {
       el.innerHTML = '<h3>Find a place</h3>' + PLACE_GROUPS.map((g) => `<button class="ph-row" data-group="${g.id}"><span class="ic">${g.icon}</span>${g.title}</button>`).join('');
     } else if (screen === 'group') {
@@ -92,12 +107,13 @@ export function createPhone(ctx) {
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
         + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
     } else if (screen === 'radio') {   // (the stations: the car radio in a vehicle, else your pocket radio or boombox - server music.js)
-      const now = MUS.current ? MUS.current.now() : performance.now() / 1000;
-      el.innerHTML = '<h3>Radio</h3><p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
+      if (!RADIO) { import('./music/stage.js').then((mod) => { RADIO = mod; if (screen === 'radio') render(); }).catch((e) => console.warn('[radio]', e)); el.innerHTML = '<p class="ph-empty">Loading…</p>'; return; }   // (loaded with the page's music: client/music/stage.js)
+      const { STATIONS, stationAt, TRACK } = RADIO, now = RADIO.current ? RADIO.current.now() : performance.now() / 1000;
+      el.innerHTML = '<p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
         + STATIONS.map((S, i) => `<button class="ph-row" data-st="${i}"><span class="ic">📻</span><span class="nm">${esc(S.freq)} ${esc(S.name)}<small>now: ${esc(TRACK[stationAt(i, now).track].title)}</small></span></button>`).join('')
         + '<button class="ph-row" data-st="-1"><span class="ic">⏻</span><span class="nm">Off</span></button>';
     } else if (screen === 'crew') {
-      el.innerHTML = crewHtml();
+      el.innerHTML = crewHtml(crew, m);
     } else if (screen === 'bounties') {
       el.innerHTML = bountiesHtml();
     } else if (screen === 'transit') {
@@ -105,25 +121,38 @@ export function createPhone(ctx) {
     } else if (screen === 'homes') {
       if (RE) RE.render(el, homes, { ...ctx, dist });
       else { el.innerHTML = '<p class="ph-empty">Loading…</p>'; import('./realestate.js').then((mod) => { RE = mod; if (screen === 'homes') render(); }).catch((e) => console.warn('[homes]', e)); }
+    } else if (screen === 'log') {   // every note in full, newest first (client/notelog.js; the HUD's notes are short)
+      const L = noteLog(), ago = (t) => { const q = Math.round((Date.now() - t) / 1000); return q < 60 ? `${q}s ago` : q < 3600 ? `${Math.round(q / 60)} min ago` : `${Math.round(q / 3600)} h ago`; };
+      el.innerHTML = L.length ? `<div class="ph-log">${L.map((e) => `<div class="lg-row ${esc(e.tone)}"><i></i><span>${esc(e.text)}${e.n > 1 ? ` ×${e.n}` : ''}<small>${ago(e.at)}</small></span></div>`).join('')}</div><button class="btn" data-act="clearlog">Clear the log</button>`
+        : '<p class="ph-empty">Nothing yet. Every note that pops up is kept here in full.</p>';
     } else if (screen === 'jobs') {
       if (!board) { el.innerHTML = '<p class="ph-empty">Loading jobs…</p>'; return; }
       const job = board.job;
-      const rows = (k) => board.jobs.filter((j) => j.kind === k).sort((a, b) => (a.tier ?? 0) - (b.tier ?? 0) || dist(a) - dist(b));
-      const jobRow = (j) => `<button class="ph-row job" data-take="${j.id}"${job ? ' disabled' : ''}><span class="ic tier">${j.kind === 'delivery' ? JOB_TIERS[j.tier].name : j.kind === 'patrol' ? '🚔' : '🌾'}</span><span class="nm">${esc(j.title)}<small>${j.kind === 'delivery' ? `pickup ${m(dist(j))} away · ${Math.round(j.limit / 60)} min limit` : j.kind === 'patrol' ? `${m(dist(j))} away · stop the crime` : `${m(dist(j))} away · 4 boxes`}</small></span><span class="d">$${j.pay}</span></button>`;
-      el.innerHTML = (job ? `<div class="ph-card job">On a job: <b>${esc(job.text)}</b><button data-act="cancel">Cancel job</button></div>` : '<p class="ph-hint">One job at a time. Take one and it\'s marked on your map. You can also walk up to the warehouse or farm.</p>')
-        + (ctx.isCop() ? '<h3>Patrol calls</h3>' + (rows('patrol').map(jobRow).join('') || '<p class="ph-empty">Quiet right now.</p>') : '')
-        + '<h3>Deliveries</h3><p class="ph-hint">$ nearby · $$ across town · $$$ island to island</p>' + rows('delivery').map(jobRow).join('')
-        + '<h3>Farm</h3>' + rows('farm').map(jobRow).join('')
-        + flyJobs(board.jobs.filter((j) => j.fly), job)   // (flying for a living: search & rescue, charters - server sar.js)
-        + flyJobs(board.jobs.filter((j) => j.kind === 'fire' || j.kind === 'medic'), job, 'Emergency services')
-        + flyJobs(board.jobs.filter((j) => j.kind === 'drive'), job, 'Driving');   // (the taxi, the bus, the tow truck: taxijob.js, busjob.js, towjob.js)   // (the firefighter, the paramedic: firefighter.js, paramedic.js)
+      const card = (j) => jobCardHtml(j, { dist: dist(j), busy: !!job, compact: true });
+      const sec = (h, list) => (list.length ? `<h3>${h}</h3>` + list.sort((a2, b2) => ((a2.x || a2.y ? dist(a2) : 1e9) - (b2.x || b2.y ? dist(b2) : 1e9))).map(card).join('') : '');
+      const J = board.jobs;
+      el.innerHTML = curJob() + (job ? '' : '<p class="ph-hint">One job at a time. Accept one and it\'s on your map - or walk up to a hospital, a fire station or a taxi rank.</p>')
+        + (ctx.isCop() ? sec('Patrol calls', J.filter((j) => j.kind === 'patrol')) : '')
+        + sec('Emergency services', J.filter((j) => j.kind === 'fire' || j.kind === 'medic'))
+        + sec('Driving', J.filter((j) => j.kind === 'drive'))
+        + sec('Deliveries', J.filter((j) => j.kind === 'delivery'))
+        + sec('Farm', J.filter((j) => j.kind === 'farm'))
+        + sec('Flying and boats', J.filter((j) => j.fly));
     }
     wire(el);
     ctx.refocus();
   }
 
+  // the job you're on (the board's job; the step from your self record): what it is, the step, the pay; Show on map, Quit
+  function curJob() {
+    const j = board && board.job, live = ctx.job && ctx.job();
+    if (!j) return '';
+    return `<div class="ph-cur"><div class="ph-cur-top"><span>ON A JOB · ${esc(JOB_NAME[j.type] || String(j.type || '').toUpperCase())}</span>${j.pay ? `<span>$${Math.round(j.pay).toLocaleString('en-US')}</span>` : ''}</div>`
+      + `<b>${esc((live && live.text) || j.text)}</b><div class="ph-cur-acts">${live && (live.x || live.y) ? '<button class="btn btn-1" data-act="showjob">Show on map</button>' : ''}<button class="btn btn-x" data-act="cancel">Quit job</button></div></div>`;
+  }
   function wire(el) {
-    for (const b of el.querySelectorAll('[data-go]')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'crew') ctx.send({ t: 'phone', a: 'crew' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go="camera"]')) b.onclick = () => ctx.cine();   // (the Camera: the cinematic mode - client/director.js)
+    for (const b of el.querySelectorAll('[data-go]:not([data-go="camera"])')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'crew') ctx.send({ t: 'phone', a: 'crew' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -194,20 +223,13 @@ export function createPhone(ctx) {
       ctx.toast(`Waypoint set: ${p.label}`, 'info');
       ctx.close();
     };
-    for (const b of el.querySelectorAll('[data-take]')) b.onclick = () => ctx.send({ t: 'phone', a: 'take', id: b.dataset.take });
+    for (const b of el.querySelectorAll('[data-take]')) b.onclick = () => { b.disabled = true; taking = board && board.jobs.find((q) => String(q.id) === b.dataset.take); ctx.send({ t: 'phone', a: 'take', id: b.dataset.take }); };
+    for (const b of el.querySelectorAll('[data-act="showjob"]')) b.onclick = () => { const j = ctx.job && ctx.job(); if (j) ctx.showOnMap(j.x, j.y); };
+    for (const b of el.querySelectorAll('[data-act="cruiser"]')) b.onclick = () => ctx.cruiser();
+    for (const b of el.querySelectorAll('[data-act="clearlog"]')) b.onclick = () => { clearLog(); render(); };
     for (const b of el.querySelectorAll('[data-report]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'report', id: b.dataset.report }); };
-    for (const b of el.querySelectorAll('[data-act="cancel"]')) b.onclick = () => ctx.send({ t: 'phone', a: 'cancel' });
-    // the Crew app (server crews.js): a quick line to the crew, a waypoint to one of them, taking someone off, leaving
-    for (const b of el.querySelectorAll('[data-say]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'crewsay', i: Number(b.dataset.say) }); ctx.toast('Sent to the crew', 'info'); };
-    for (const b of el.querySelectorAll('[data-mate]')) b.onclick = () => {
-      const q = crew && crew.crew && crew.crew.members[Number(b.dataset.mate)];
-      if (!q || q.x === null) return;
-      ctx.setWaypoint({ x: q.x, y: q.y, label: q.n });
-      ctx.toast(`Waypoint: ${q.n}`, 'info');
-      ctx.close();
-    };
-    for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; const q = crew && crew.crew && crew.crew.members[Number(b.dataset.kick)]; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick), n: q ? q.n : '' }); };
-    for (const b of el.querySelectorAll('[data-act="crewleave"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewleave' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to leave the crew'; } };
+    for (const b of el.querySelectorAll('[data-act="cancel"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'cancel' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to quit'; } };
+    wireCrew(el, () => crew, ctx);   // (the Crew app: server crews.js)
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }
 
@@ -282,18 +304,6 @@ export function createPhone(ctx) {
     return h;
   }
 
-  // the Crew app: who's in it (online, how far, where), the quick lines; asked in by walking up to someone (crews.js)
-  function crewHtml() {
-    if (!crew) return '<h3>Crew</h3><p class="ph-empty">Loading…</p>';
-    if (!crew.crew) return `<h3>Crew</h3><p class="ph-hint">No crew yet. Walk up to another player and press the action button to ask them in - up to ${crew.max} in a crew. They join the same way, near you. In a crew you see each other on the map wherever you are, can't hurt each other, send quick lines to each other here, and split a bank job's drawers.</p>`;
-    const C = crew.crew, n = C.members.length;
-    return `<h3>Your crew (${n}/${crew.max})</h3>`
-      + C.members.map((q, k) => `<div class="ph-row"><span class="ic">${q.lead ? '★' : '•'}</span><span class="nm">${esc(q.n)}${q.me ? ' (you)' : ''}<small>${q.me ? (q.where ? esc(q.where) : '') : q.on ? (q.where ? `${esc(q.where)} · ${m(q.d || 0)}` : 'online') : 'offline'}</small></span>`
-        + (!q.me && q.x !== null ? `<button data-mate="${k}">📍</button>` : '') + (C.lead && !q.me ? `<button data-kick="${k}">✕</button>` : '') + '</div>').join('')
-      + '<h3>Say to the crew</h3><div class="ph-apps ph-says">' + crew.says.map((t, i) => `<button class="ph-app" data-say="${i}">${esc(t)}</button>`).join('') + '</div>'
-      + '<button class="ph-row" data-act="crewleave"><span class="ic">🚪</span><span class="nm">Leave the crew</span></button>';
-  }
-
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     // straight to one app (the hub's JOBS tab: 'jobs')
@@ -312,11 +322,44 @@ export function createPhone(ctx) {
     onBoard(msg) {
       board = msg;
       if (msg.err) ctx.toast(msg.err, 'warn');
-      if (msg.ok) { ctx.close(); return; } // the server's own message confirms the job
+      if (msg.ok) {   // taken: its waypoint, and the hub away (the server's own note confirms the job)
+        if (taking && (taking.x || taking.y)) ctx.setWaypoint({ x: taking.x, y: taking.y, label: taking.title });
+        taking = null;
+        ctx.close();
+        return;
+      }
+      taking = null;
       if (screen === 'jobs' || screen === 'home') render();
     },
     get screen() { return screen; },
   };
+}
+
+// The Crew app's view (also the hub's People tab: client/hub.js): who's in it (online, how far, where), the quick lines,
+// leaving; asked in by walking up to someone (server crews.js). m: a distance's words
+export function crewHtml(crew, m, inPeople = false) {
+  const h = (t) => (inPeople ? '' : `<h3>${t}</h3>`);
+  if (!crew) return h('Crew') + '<p class="ph-empty">Loading…</p>';
+  if (!crew.crew) return `${h('Crew')}<p class="ph-hint">No crew yet. Walk up to another player and press the action button to ask them in - up to ${crew.max} in a crew. In a crew you see each other on the map, can't hurt each other, send quick lines here, and split a bank job's drawers.</p>`;
+  const C = crew.crew, n = C.members.length;
+  return `${inPeople ? `<p class="ph-hint">${n} of ${crew.max} in your crew</p>` : `<h3>Your crew (${n}/${crew.max})</h3>`}`
+    + C.members.map((q, k) => `<div class="ph-row"><span class="ic">${q.lead ? '★' : '•'}</span><span class="nm">${esc(q.n)}${q.me ? ' (you)' : ''}<small>${q.me ? (q.where ? esc(q.where) : '') : q.on ? (q.where ? `${esc(q.where)} · ${m(q.d || 0)}` : 'online') : 'offline'}</small></span>`
+      + (!q.me && q.x !== null ? `<button data-mate="${k}" aria-label="Waypoint to ${esc(q.n)}">📍</button>` : '') + (C.lead && !q.me ? `<button data-kick="${k}" aria-label="Take ${esc(q.n)} off the crew">✕</button>` : '') + '</div>').join('')
+    + '<h3>Say to the crew</h3><div class="ph-apps ph-says">' + crew.says.map((t, i) => `<button class="ph-app" data-say="${i}">${esc(t)}</button>`).join('') + '</div>'
+    + '<button class="ph-row" data-act="crewleave"><span class="ic">🚪</span><span class="nm">Leave the crew</span></button>';
+}
+// its buttons: a quick line to the crew, a waypoint to one of them, taking someone off, leaving. ctx: { send, toast, setWaypoint, close }
+export function wireCrew(el, getCrew, ctx) {
+  for (const b of el.querySelectorAll('[data-say]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'crewsay', i: Number(b.dataset.say) }); ctx.toast('Sent to the crew', 'info'); };
+  for (const b of el.querySelectorAll('[data-mate]')) b.onclick = () => {
+    const c = getCrew(), q = c && c.crew && c.crew.members[Number(b.dataset.mate)];
+    if (!q || q.x === null) return;
+    ctx.setWaypoint({ x: q.x, y: q.y, label: q.n });
+    ctx.toast(`Waypoint: ${q.n}`, 'info');
+    ctx.close();
+  };
+  for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; const c = getCrew(), q = c && c.crew && c.crew.members[Number(b.dataset.kick)]; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick), n: q ? q.n : '' }); };
+  for (const b of el.querySelectorAll('[data-act="crewleave"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewleave' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to leave the crew'; } };
 }
 
 // (H33) The railway's stations for the phone: today's loop's, or on World v3's main line one per station (its map point,

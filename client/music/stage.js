@@ -12,6 +12,7 @@ import { TRACKS, KINDS, stationAt, tapePos, trackSecs, songOf, beatAt } from '..
 import { MUSIC_GEAR } from '../../shared/rules-music.js';
 import { DT } from '../../shared/constants.js';
 import { ITEM_ICON } from '../inventory.js';
+export { STATIONS, stationAt, TRACK } from '../../shared/music.js';   // (the phone's Radio app reads them through this)
 
 export let current = null;
 const NOTE_GLYPH = ['♪', '♫', '♪', '♬'];
@@ -25,13 +26,15 @@ export class Stage {
     for (const t of TRACKS) if (t.tape) ITEM_ICON[`tape_${t.id}`] = '📼';
     if (S.welcomed) send({ t: 'mus', a: 'list' });   // (loaded after coming in: the list again)
   }
-  // the server's clock, as this page reckons it: each 'mus' event carries the server's time, which is tied to the snapshot
-  // it came with (its tick, 20 a second) - so the reckoning follows the server's own pace, slow or not, from the latest
-  // snapshot on (plus half the ping: the server's that far ahead of what's arrived)
-  clock(now) {
+  // the server's clock, as this page reckons it: each 'mus' message carries the server's time and its tick (20 a second),
+  // so its time is a base plus the tick - the reckoning follows the latest snapshot's tick from there, at the server's own
+  // pace (plus half the ping: the server's that far ahead of what's arrived). Without the tick (an old server), the
+  // latest snapshot's stands in: a message read late gives too small a base, so the largest is kept.
+  clock(now, tk) {
     const S = this.S;
     this.tickNow();
-    if (S.latestTick) this.base = now - S.latestTick * TICK_S;
+    const k = tk || S.latestTick;
+    if (k) { const b = now - k * TICK_S; this.base = tk || this.base === undefined || Math.abs(b - this.base) > 5 ? b : Math.max(this.base, b); }
     const est = now + (S.rtt || 80) / 2000 - performance.now() / 1000;
     this.off = this.off === null || Math.abs(est - this.off) > 1 ? est : this.off + (est - this.off) * 0.2;
   }
@@ -45,7 +48,7 @@ export class Stage {
   ev(ev) {
     if (ev.e === 'jamn') { this.noteFx(ev.x, ev.y - 22, ev.n.length > 1 ? 3 : 0); return; }
     if (ev.e !== 'mus') return;
-    if (ev.now !== undefined) this.clock(ev.now);
+    if (ev.now !== undefined) this.clock(ev.now, ev.tk);
     if (ev.all) { this.recs.clear(); for (const r of ev.all) this.set(r, true); }
     if (ev.s) for (const r of ev.s) this.set(r, false);
     if (ev.off) for (const id of ev.off) this.recs.delete(id);

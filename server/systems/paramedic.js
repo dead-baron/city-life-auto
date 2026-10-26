@@ -52,7 +52,7 @@ export function start(world, p, h = null) {
   const v = jobs.workTruck(world, p, h, 'ambulance', h);
   if (!v) { p.job = null; return 'No room to park the ambulance there.'; }
   v.sirenOn = false;
-  world.notify(p, `You're a paramedic out of ${h.label}: your ambulance is the green ring. Calls come over the phone - H for the siren; hold Act by a patient to treat them.`, 'good');
+  world.notify(p, `You're a paramedic out of ${h.label}: your ambulance is the green ring. Calls come over the phone - H for the siren; hold Act by a patient to treat them.`, 'good', 'Paramedic shift: your ambulance is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -68,7 +68,7 @@ export function interaction(world, p) {
   if (j) return null;
   const h = hospitals(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!h) return null;
-  return { label: 'Sign on as a paramedic (an ambulance is issued)', run: () => { const err = start(world, p, h); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a paramedic (an ambulance is issued)', card: { id: 'medic', where: h.label, start: () => start(world, p, h) }, run: () => { const err = start(world, p, h); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------

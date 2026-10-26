@@ -113,35 +113,35 @@ export class SkateView {
     const cx = W / 2, top = Math.max(64, H * 0.14);
     const shadow = (txt, x, y, col) => { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(txt, x + 1.5, y + 1.5); g.fillStyle = col; g.fillText(txt, x, y); };
     if (sk.c && sk.c.n) {
-      g.font = '700 13px system-ui, sans-serif';
+      g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
       const names = sk.c.l.join(' + ');
       shadow(names.length > 70 ? '... ' + names.slice(-66) : names, cx, top, '#fff');
-      g.font = '800 20px system-ui, sans-serif';
+      g.font = '700 20px "CLA Pixel", "Barlow Condensed", sans-serif';
       shadow(`${fmt(sk.c.p)} x ${sk.c.n}`, cx, top + 22, sk.on ? '#ff9af2' : '#ffd34a');
     } else if (sk.last) {
       if (!this.bank || this.bank.pts !== sk.last) this.bank = { pts: sk.last, at: now };
       const k = Math.min(1, (now - this.bank.at) / 1.6);
       g.globalAlpha = 1 - k * k;
-      g.font = '800 22px system-ui, sans-serif';
+      g.font = '700 20px "CLA Pixel", "Barlow Condensed", sans-serif';
       shadow(`+${fmt(sk.last)}`, cx, top + 10 - k * 14, '#7fe07f');
       g.globalAlpha = 1;
     }
     // the score and the special meter (top right, under the money)
     const rx = W - 16, ry = Math.max(96, H * 0.2);
-    g.textAlign = 'right'; g.font = '700 12px system-ui, sans-serif';
+    g.textAlign = 'right'; g.font = '700 14px "Barlow Condensed", sans-serif';
     shadow(`SCORE ${fmt(sk.s)}   BEST COMBO ${fmt(sk.b)}`, rx, ry, '#fff');
     const bw = 120, bx = rx - bw, by = ry + 12;
     g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(bx - 1, by - 1, bw + 2, 7);
     g.fillStyle = sk.on ? `hsl(${(now * 160) % 360},90%,62%)` : '#58b8ff'; g.fillRect(bx, by, bw * Math.min(1, sk.sp), 5);
-    g.font = '700 10px system-ui, sans-serif';
+    g.font = '700 12px "Barlow Condensed", sans-serif';
     shadow(sk.on ? `SPECIAL ${sk.on}s` : 'SPECIAL', bx - 6, by + 3, sk.on ? '#ffb0f4' : '#bcd');
     // a session at a skate spot: its clock, its score, its goals
     if (sk.ses) {
       const X = sk.ses, mm = Math.floor(X.t / 60), ss = String(X.t % 60).padStart(2, '0');
-      g.textAlign = 'left'; g.font = '700 12px system-ui, sans-serif';
+      g.textAlign = 'left'; g.font = '700 14px "Barlow Condensed", sans-serif';
       const lx = 16, ly = Math.max(150, H * 0.3);
       shadow(`SESSION · ${X.spot} · ${mm}:${ss} · ${fmt(X.s)}`, lx, ly, '#fff');
-      g.font = '600 11px system-ui, sans-serif';
+      g.font = '600 12px "Barlow Condensed", sans-serif';
       X.g.forEach(([label, done], i) => shadow(`${done ? '✓' : '○'} ${label}`, lx, ly + 16 + i * 14, done ? '#7fe07f' : '#dde'));
     }
     g.restore();
