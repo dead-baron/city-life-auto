@@ -246,7 +246,7 @@ function draw(time) {
     const [, topY] = S(tg.x, tg.y - tg.h / 2);
     const fs = Math.round(Math.min(52, v.W / 15));
     const y = Math.max(v.top + fs * 0.75, Math.min(v.top + v.vh - fs, topY + fs * 0.8));
-    g.font = `${fs}px Anton, Impact, sans-serif`;
+    g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
     const hw = g.measureText(tg.label.toUpperCase()).width / 2 + 10;
     lx = Math.max(hw, Math.min(v.W - hw, lx));
@@ -270,7 +270,7 @@ function draw(time) {
 }
 
 function label(g, text, x, y, col, size) {
-  g.font = `600 ${size}px Rubik, system-ui, sans-serif`;
+  g.font = `600 ${size}px "Barlow Condensed", sans-serif`;
   g.textAlign = 'center'; g.textBaseline = 'bottom';
   const w = g.measureText(text).width + 12;
   g.fillStyle = 'rgba(0,0,0,.78)'; g.fillRect(x - w / 2, y - size - 6, w, size + 8);

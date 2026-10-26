@@ -69,7 +69,7 @@ export function teleportMap(cv, map, places, { mini = null, go, width = 360 } = 
     g.fillStyle = '#0b1830'; g.fillRect(0, 0, w, h);
     if (mini) { g.imageSmoothingEnabled = false; drawMini(g, mini, fx0 / TILE, fy0 / TILE, (fx1 - fx0) / TILE, (fy1 - fy0) / TILE, 0, 0, w, h); g.fillStyle = 'rgba(6,12,24,.35)'; g.fillRect(0, 0, w, h); }
     const sc = w / (fx1 - fx0);
-    g.font = '600 10px Rubik, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.font = '600 12px "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
     for (const p of places) {
       const x = (p.x - fx0) * sc, y = (p.y - fy0) * sc, hot = p === hover;
       g.fillStyle = p.kind === 'district' ? '#f2c21b' : p.kind === 'station' ? '#f28c28' : p.kind === 'v3' || p.kind === 'v3shop' ? '#ff6ad5' : '#7de0ff';

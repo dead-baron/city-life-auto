@@ -29,6 +29,8 @@ import * as boomtest from './boomtest.js';
 import * as grenades from './grenades.js';
 import * as crews from './crews.js';   // (no friendly fire in a crew)   // (the explosion tester: H58)
 import { FLY, isAir } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
+import * as grime from './grime.js';
+import { BATH } from '../../shared/rules-play.js';
 
 // two players in one crew (crews.js): no friendly fire - a swing, a zap or a spray passes them by
 const mates = (a, b) => !!(a && b && a !== b && a.player && b.player && crews.mates(a.player, b.player));
@@ -523,6 +525,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
     }
   }
   ped.hp -= amount;
+  if (ped.player && cause !== 'nonlethal' && cause !== 'fall' && cause !== 'fire') grime.soil(world, ped, amount / (ped.maxHp || 100), 0);   // (blood on you: grime.js)
   if (ped.dancing || ped.gt === 'dance') dance.hurt(world, ped, attacker);   // (hurt: the dance stops - yours or an NPC's)
   ped.lastHitAt = now;
   ped.lastCombatAt = now;
@@ -557,6 +560,7 @@ export function kill(world, ped, attacker, cause, dir = 0) {
   if (attacker && attacker.wild) { if (ped.player) players.onPedDeath(world, ped, attacker, attacker.wild.kind === 'shark' ? 'Taken by a great white shark.' : `Mauled by ${attacker.name || 'a wild animal'}.`); else { npc.onDeath(world, ped, null); world.bodies.add(ped); } return; }   // (killed by an animal: nobody's crime)
   law.onKill(world, attacker, ped, cause);
   if (attacker && attacker.player) attacker.player.profile.stats.kills++;
+  if (attacker && attacker.player && !attacker.vehId && Math.hypot(attacker.x - ped.x, attacker.y - ped.y) < BATH.close) grime.soil(world, attacker, BATH.kill, 0);   // (up close: their blood on you)
   if (ped.player) {
     const by = attacker ? (attacker.player ? attacker.player.name : attacker.npc && attacker.npc.role === 'cop' ? (FORCE_NAME[attacker.archetype] || 'the police') : (attacker.name || 'a local')) : null;
     players.onPedDeath(world, ped, attacker, by ? (cause === 'fire' ? `Burned to death - set alight by ${by}.` : `Taken out by ${by}.`) : causeText(cause));

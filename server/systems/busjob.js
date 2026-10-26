@@ -62,7 +62,7 @@ export function start(world, p, L = null, k = -1) {
   p.job.due = world.time + 60 + Math.hypot(v.x - L.stops[k].x, v.y - L.stops[k].y) / BUSJOB.speed;
   waitAt(world, p, L, k);
   setText(world, p, L);
-  world.notify(p, `You drive the ${L.name} today: your bus is the green ring, on the line by the ${L.stops[k].name} stop. Pull up at each stop to let people off and on - and keep to the timetable.`, 'good');
+  world.notify(p, `You drive the ${L.name} today: your bus is the green ring, on the line by the ${L.stops[k].name} stop. Pull up at each stop to let people off and on - and keep to the timetable.`, 'good', `Bus shift on the ${L.name}: your bus is the green ring`);
   p.meDirty = true;
   store.touch();
   return null;
@@ -72,7 +72,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const n = lineFor(world, p);
   if (!n || n.d > 130) return null;
-  return { label: `Sign on to drive the ${n.L.name} (a bus is issued)`, run: () => { const err = start(world, p, n.L, n.k); if (err) world.notify(p, err, 'bad'); } };
+  return { label: `Sign on to drive the ${n.L.name} (a bus is issued)`, card: { id: 'bus', where: `the ${n.L.stops[n.k].name} stop`, title: `Bus driver - the ${n.L.name}`, step: `Take the bus out at the ${n.L.stops[n.k].name} stop`, start: () => start(world, p, n.L, n.k) }, run: () => { const err = start(world, p, n.L, n.k); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the passengers ----------------------------------------------------------------------------------------------------

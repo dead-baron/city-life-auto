@@ -395,7 +395,7 @@ test('the El\'s route boards up on its platforms, read from the deck; the subway
     const k = st.kiosk;
     teleport(w, p.ped, k.out ? k.out.x : k.x0 + 64, k.out ? k.out.y : k.y0 + 48);
     const q = players.findInteraction(w, p);
-    assert.ok(q && /route board/.test(q.label), `at the kiosk (${q && q.label})`);
+    assert.ok(q && /route board|Check the trains/.test(q.label), `at the kiosk (${q && q.label})`);
     const n = conn.sent.length;
     q.run();
     assert.ok(conn.sent.slice(n).some((m) => m && m.t === 'menu'), 'the kiosk reads the route board out');

@@ -334,7 +334,7 @@ export class FX {
 
   // floating text (rising and fading) and speech bubbles, in world px
   drawTexts(g) {
-    g.font = 'bold 13px monospace'; g.textAlign = 'center';
+    g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center';
     for (const t of this.texts) {
       if (t.say) { this.bubble(g, t); continue; }
       g.globalAlpha = Math.max(0, 1 - t.t / 1.4);
@@ -348,7 +348,7 @@ export class FX {
     if (e) { t.x = e.rx; t.y = e.ry; } // (gone from view: it stays where they were)
     const pop = Math.min(1, t.t / 0.12), a = Math.min(pop, (t.max - t.t) / 0.35);
     if (a <= 0) return;
-    g.font = 'bold 12px monospace';
+    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif';
     const w = g.measureText(t.text).width + 12, h = 18, x = t.x, y = t.y - 40 - pop * 4;
     g.globalAlpha = a;
     g.fillStyle = 'rgba(12,12,16,.88)';
@@ -356,6 +356,6 @@ export class FX {
     g.beginPath(); g.moveTo(x - 5, y + h / 2); g.lineTo(x + 5, y + h / 2); g.lineTo(x, y + h / 2 + 6); g.closePath(); g.fill(); // the tail, down to the speaker
     g.strokeStyle = t.color; g.lineWidth = 1.5; g.strokeRect(x - w / 2, y - h / 2, w, h);
     g.fillStyle = t.color; g.textBaseline = 'middle'; g.fillText(t.text, x, y + 1); g.textBaseline = 'alphabetic';
-    g.font = 'bold 13px monospace';
+    g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
   }
 }

@@ -1,5 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
+import { logNote, noteLine, promptWords } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -29,7 +30,7 @@ function mapIcon(g, k, x, y, big) {
     g.fillStyle = '#ffb43c'; g.beginPath(); g.moveTo(0, -7); g.lineTo(7, -0.5); g.lineTo(5, -0.5); g.lineTo(5, 6); g.lineTo(-5, 6); g.lineTo(-5, -0.5); g.lineTo(-7, -0.5); g.closePath(); g.fill(); g.stroke();
     g.fillStyle = '#5a2e08'; g.fillRect(-1.5, 1.5, 3, 4.5);
   } else if (k === 'job') {
-    g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3;
+    g.font = '700 16px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 3;
     g.strokeText('$', 0, 1); g.fillStyle = '#3ddc5a'; g.fillText('$', 0, 1);
   } else if (k === 'car') {
     g.fillStyle = '#45b8ff'; g.beginPath(); g.moveTo(-7, 4); g.lineTo(-7, 0); g.lineTo(-5, -1); g.lineTo(-3.5, -5); g.lineTo(3.5, -5); g.lineTo(5, -1); g.lineTo(7, 0); g.lineTo(7, 4); g.closePath(); g.fill(); g.stroke();
@@ -59,14 +60,21 @@ export class HUD {
     this.dp = { at: 0, fold: false };   // (the death screen's: client/deathscreen.js)
     // (the HUD faded by a campfire: the first touch only wakes it, so it can't press a button you couldn't see)
     addEventListener('touchstart', (e) => { if (this.calmH) { this.calm(true, input.activeAt = performance.now()); e.preventDefault(); e.stopPropagation(); } }, { passive: false, capture: true });
+    // the HUD's information - the status line, the job card, the vehicle chip, the hint strips (UI-4): client/hudinfo.js,
+    // fetched as the game opens rather than with the page
+    this.infoP = import('./hudinfo.js').then((m) => { this.info = m.createInfo(this); if (this.infoCtx) this.info.setCtx(this.infoCtx); if (this.me) this.info.me(this.me, null); }).catch((e) => { this.infoP = null; console.warn('[hudinfo]', e); });
+    // a note cut short: a tap (or a click) opens the phone's Log with the whole of it
+    $('toasts').addEventListener('click', (e) => { if (e.target.closest('.toast.more')) this.openLog?.(); });
   }
+  setInfoCtx(c) { this.infoCtx = c; this.info?.setCtx(c); }
+  hint(k) { return !!this.info && this.info.hint(k); }
 
   setMe(me) {
     const prev = this.me;
     this.me = me;
     if (this.held && this.held.length && !$('hud').classList.contains('hidden')) { // notes that came in on the title screen
       const held = this.held; this.held = [];
-      for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone);
+      for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone, t.short);
     }
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
@@ -79,20 +87,6 @@ export class HUD {
     const hot = $('hot');
     hot.classList.toggle('hidden', !(me.hot > 0));
     if (me.hot > 0) hot.textContent = `HOT $${me.hot.toLocaleString()}`;
-    const st = [];
-    if (me.bleeding) st.push('<span class="bad">BLEEDING</span>');
-    if (me.peak > 0) st.push(`RECORD ${'★'.repeat(me.peak)}${me.disguised ? ' (DISGUISED)' : ''}`);
-    // (btime: the bounty placed on you - its clock only runs while you're out in the city: server/systems/bounties.js)
-    if (me.bounty > 0) st.push(`<span class="bad">💀 BOUNTY $${me.bounty.toLocaleString('en-US')}${me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''}</span>`);
-    if (me.buffs?.coffee > 0) st.push(`COFFEE ${Math.ceil(me.buffs.coffee)}s`);
-    if (me.buffs?.energy > 0) st.push(`ENERGY ${Math.ceil(me.buffs.energy)}s`);
-    if (me.buffs?.wine > 0) st.push(`WINE ${Math.ceil(me.buffs.wine)}s`);
-    if (me.buffs?.hearty > 0) st.push(`HEARTY ${Math.ceil(me.buffs.hearty / 60)}m`);
-    if (me.buffs?.scent > 0) st.push(`SCENT ${Math.ceil(me.buffs.scent)}s`);
-    if (me.light) st.push('🔦 ON');
-    if (me.ghost) st.push('GHOST');
-    st.push(`<span class="dim">EXP ${me.cexp} · SAM ${me.sam}</span>`);
-    $('status').innerHTML = st.join(' · ');
     // stars (GTA style: outlined when empty, gold and flashing when fresh)
     const flashing = this.flareUntil && performance.now() < this.flareUntil;
     let s = '';
@@ -101,35 +95,30 @@ export class HUD {
     $('stars').classList.toggle('wanted', me.wanted > 0);
     if (me.wanted > this.lastStars) this.flareUntil = performance.now() + 3000;
     this.lastStars = me.wanted;
-    const f = $('faction');
-    f.className = me.faction;
-    f.innerHTML = me.faction === 'enforcer' ? `POLICE · ${(me.rank || 'Officer').toUpperCase()}${me.misconduct && me.misconduct.n ? ` · <span class="misc${me.misconduct.n >= me.misconduct.max ? ' last' : ''}">MISCONDUCT ${me.misconduct.n}/${me.misconduct.max}</span>` : ''}` : { citizen: 'CITIZEN', criminal: 'CRIMINAL', hunter: 'BOUNTY HUNTER' }[me.faction] + (me.felonies > 0 && me.faction !== 'criminal' ? ` · ${me.felonies} FELON${me.felonies === 1 ? 'Y' : 'IES'}` : '');
     // prompt -> GTA help box with the right button for this device; matching touch button pulses
     const pr = $('helpbox');
-    const sig = (me.prompt || '') + '|' + input.device;
+    const sig = (me.prompt || '') + '|' + (me.pcr | 0) + '|' + input.device;
     if (me.prompt && !me.dead) {
       if (pr.dataset.sig !== sig) {
         pr.dataset.sig = sig;
-        const fp = formatPrompt(me.prompt);
+        const fp = formatPrompt(promptWords(me.prompt, me.pcr | 0));
         pr.innerHTML = fp.html;
         this.unarm();
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         this.actBtn?.classList.add('pulse');
       }
-      pr.classList.remove('hidden');
+      pr.classList.remove('off');
       // what it would do is a crime (server players.js: me.pcr 1, a felony 2): no warning plate, only the key - the
       // prompt's chip red with a "!" on it, the touch button it pulses red with the "!" (green when it's no crime)
       crimeMarks(pr, me.pcr | 0); if (this.actBtn) crimeMarks(this.actBtn, me.pcr | 0);
-    } else if (!pr.classList.contains('hidden')) {
-      pr.classList.add('hidden'); pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
+    } else if (!pr.classList.contains('off')) {
+      pr.classList.add('off'); pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
     }
     document.body.classList.toggle('carrying', !!me.carrying);
-    // job
-    const jb = $('job');
-    if (me.job) { jb.textContent = '▶ ' + me.job.text; jb.classList.remove('hidden'); } else jb.classList.add('hidden');
+    this.info?.me(me, prev);   // (the vitals' numbers, the status line, the stars, the weapon plate, the job card: hudinfo.js)
     const rb = $('rob');
     if (me.rob) {
       // (the bar: the hands going up, then what's left in the till - server robbery.js hudFor)
@@ -229,7 +218,7 @@ export class HUD {
       if (ch.dataset.h !== html) { ch.dataset.h = html; ch.innerHTML = html; }
       ch.classList.remove('hidden');
     } else ch.classList.add('hidden');
-    cb.textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';
+    (cb.querySelector('.l') || cb).textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';   // (the slot's label: client/touchslots.js)
     cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
     // the flashlight's touch button: there while you own one, lit while it's on
     document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
@@ -241,9 +230,6 @@ export class HUD {
     $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
-    // the touch WPN button shows what's in your hands (tap: the next one, hold: the picker)
-    const bwi = $('b-wpn')?.querySelector('.wi');
-    if (bwi && bwi.dataset.w !== wk) { bwi.dataset.w = wk; bwi.innerHTML = ''; bwi.appendChild(weaponIcon(w.i, me.blade)); }
     document.body.classList.toggle('multi-wpn', me.weapons.length > 1 && !me.dead);
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);
@@ -261,7 +247,6 @@ export class HUD {
       $('j-note').textContent = cu.can ? 'From your bank, then your cash.' : `You don't have $${cu.bail} - wait it out.`;
     } else jl.classList.add('hidden');
     this.deathScreen(me);
-    void prev;
   }
 
   // the death screen (task #403): client/deathscreen.js, fetched a few seconds into the game (not with the page), so it's
@@ -285,6 +270,7 @@ export class HUD {
   }
   deathBack() { return !!this.DS && this.DS.back(this); }   // (Esc / B: the choices folded away to watch, and back)
   stepSpawn(s, ax) { if (this.DS) this.DS.step(this, s, ax); }   // (ax: the way on the spawn map - 'h', 'v')
+  deathWake() { return !!this.DS && this.DS.wake(this); }   // (WAKE UP HERE: Enter, A)
 
   // the clock in the HUD's top-right column, and on the minimap's plate (a phone held upright: the sun or the moon, the
   // time, a rain cloud when it rains) - written only when the minute or the weather changes
@@ -305,12 +291,11 @@ export class HUD {
     $('rclock').title = `${c.isNight ? 'Night' : 'Day'} · ${rain ? 'rain' : 'clear'}`;
   }
 
-  // Safety mode held back a crime (server safety.js, tone 'safety': "That's vehicle theft - press again to do it anyway"):
-  // with the prompt up, no note - the prompt's key and the touch button blink and a small "PRESS AGAIN" sits on the plate's
-  // edge for as long as the second press would count. False when there's no prompt to mark (a plain note then).
+  // Safety mode held back a crime (server safety.js, tone 'safety'): no note (UI-5) - the prompt's key and the touch
+  // button blink, "PRESS AGAIN" on the plate's edge, while a second press counts. False with no prompt to mark.
   safetyNudge() {
     const pr = $('helpbox');
-    if (!pr || pr.classList.contains('hidden')) return false;
+    if (!pr || pr.classList.contains('off')) return false;
     this.unarm();
     pr.classList.add('armed'); this.actBtn?.classList.add('armed');
     this.armT = setTimeout(() => this.unarm(), SAFETY_CONFIRM_S * 1000);
@@ -322,25 +307,27 @@ export class HUD {
     document.querySelectorAll('#tbtns .armed').forEach((b) => b.classList.remove('armed'));
   }
 
-  toast(text, tone = 'info') {
-    if (tone === 'safety') { if (!$('hud').classList.contains('hidden') && this.safetyNudge()) return; tone = 'warn'; }
+  toast(text, tone = 'info', short = '') {
+    if (tone === 'safety') { if (!$('hud').classList.contains('hidden')) this.safetyNudge(); return; }
     // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
     // it's still fresh - so the welcome (or "fresh start after an update") isn't missed
     if ($('hud').classList.contains('hidden')) {
-      (this.held ||= []).push({ text, tone, at: performance.now() });
+      (this.held ||= []).push({ text, tone, short, at: performance.now() });
       if (this.held.length > 4) this.held.shift();
       return;
     }
     const msg = localizeText(text);
-    // up for as long as it takes to read (a short note goes sooner; one too long for its box - three lines on a phone -
-    // a page at a time, client/notepages.js); the same note again while it's still up isn't stacked: it moves to the
-    // front with its time restarted and a count (the user, 2026-10-08: fewer, smaller notes)
-    let el = this.toastEls.find((x) => x.dataset.msg === msg), shown = msg;
+    logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
+    // one line on the screen (UI-4): the server's short line for it, else its first sentence - a long one cut with an
+    // ellipsis and a tap away from the Log; two at most, each up a few seconds; the same note again while it's still up
+    // isn't stacked: it moves to the front with its time restarted and a count (the user, 2026-10-08)
+    const line = short ? localizeText(short) : noteLine(msg);
+    let el = this.toastEls.find((x) => x.dataset.msg === msg), shown = line;
     if (el) {
       clearTimeout(el._t);
       const n = (+el.dataset.n || 1) + 1;
       el.dataset.n = String(n);
-      shown = `${msg} ×${n}`;
+      shown = `${line} ×${n}`;
       this.toastEls = this.toastEls.filter((x) => x !== el);
     } else {
       el = document.createElement('div');
@@ -348,16 +335,14 @@ export class HUD {
       el.dataset.msg = msg;
       el.appendChild(document.createElement('div')).className = 'tx';
     }
-    const tx = el.firstChild;
-    tx.textContent = shown;
+    el.firstChild.textContent = shown;
+    el.title = msg;
     $('toasts').appendChild(el);
     this.toastEls.push(el);
-    while (this.toastEls.length > 4) { const old = this.toastEls.shift(); clearTimeout(old._t); clearInterval(old._pg); old.remove(); }
-    clearInterval(el._pg); el._pg = 0; el.classList.remove('paged');
-    const gone = () => { clearInterval(el._pg); el.remove(); this.toastEls = this.toastEls.filter((x) => x !== el); };
-    el._t = setTimeout(gone, Math.min(6500, 2400 + shown.length * 45));
-    // (too long for its box: paged, notepages.js loaded the first time one is - not with the page)
-    if (tx.scrollHeight > tx.clientHeight + 1) (this.notesP ||= import('./notepages.js')).then((NP) => { if (!el.isConnected || tx.textContent !== shown) return; clearTimeout(el._t); el._t = setTimeout(gone, NP.layNote(el, tx, shown)); }).catch(() => { this.notesP = null; });
+    while (this.toastEls.length > 2) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
+    const gone = () => { this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
+    el._t = setTimeout(gone, Math.min(6000, 2600 + shown.length * 40));
+    requestAnimationFrame(() => { const tx = el.firstChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
   }
 
   // ---- menu ----
@@ -388,6 +373,8 @@ export class HUD {
       box.appendChild(b);
     });
     if (this.menuFocus >= m.opts.length) this.menuFocus = 0;
+    const cue = () => box.classList.toggle('cue-down', box.scrollTop + box.clientHeight < box.scrollHeight - 4);   // (more below: a fade at the foot)
+    box.onscroll = cue; requestAnimationFrame(cue);
   }
   choose(i) {
     const o = this.menu && this.menu.opts[i];
@@ -430,7 +417,7 @@ export class HUD {
       g.strokeStyle = '#ffd34a'; g.lineWidth = big ? 4 : 2.6; g.stroke();
     }
     // POIs
-    g.font = `bold ${big ? 14 : 9}px monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map);
     for (const p of this.map.pois) {
       const icon = p && POI_ICON[p.kind];

@@ -171,6 +171,7 @@ function resolveVehicleHit(world, a, b, hit) {
   a.av += crossA * j * 0.06 / ma;
   b.av -= crossA * j * 0.06 / mb;
   const impact = -vn;
+  if (a.arena && b.arena) { if (impact > 200) world.emit((a.x + b.x) / 2, (a.y + b.y) / 2, { e: 'crash', x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, p: Math.min(1, impact / 700) }); return; }   // (car soccer: a bump, no harm, no crime - carsoccer.js)
   // a shopping cart in it: the one in its basket thrown, the driver likely - and two loaded carts head on, everyone
   if (a.def.cart || b.def.cart) {
     const both = !!(a.def.cart && b.def.cart && a.seats[1] && b.seats[1] && Math.cos(a.a - b.a) < -0.5);
@@ -282,7 +283,7 @@ export function toughOf(def) { return def.kind === 'bike' ? VEHICLE_TOUGH.bike :
 // A vehicle already dying: a blast or a rocket sets it off at once, gunfire brings the end sooner.
 // zone (shared/vehicles.js VZ): the side it was hit on, for the dents the clients draw there (task #402).
 export function damageVehicle(world, v, amount, attackerPed, raw = false, boom = false, zone = 0) {
-  if (v.wreckAt || amount <= 0 || v.ferry || v.bolt) return;   // (a horse bolting: already off - horses.js)   // (the ferries can't be hurt: ferries.js)
+  if (v.wreckAt || amount <= 0 || v.ferry || v.bolt || v.arena) return;   // (car soccer's cars take no harm: carsoccer.js)   // (a horse bolting: already off - horses.js)   // (the ferries can't be hurt: ferries.js)
   const dmg = (raw ? amount : amount / toughOf(v.def)) * (v.def.armor && !raw && !boom ? v.def.armor : 1);   // (a tank's armour: small arms barely scratch it - tank.js)
   if (attackerPed) v.lastAttacker = attackerPed.id;
   if (zone) noteHit(v, zone, dmg);
@@ -300,7 +301,7 @@ export function damageVehicle(world, v, amount, attackerPed, raw = false, boom =
 // A crash: a hard one (closing speed over CRASH_BOOM_IMPACT) blows a motorcycle up on the spot, and anything else
 // that was already badly damaged (or that it finishes off); the rest is ordinary damage.
 function crashDamage(world, v, dmg, attackerPed, impact, zone = 0) {
-  if (v.wreckAt) return;
+  if (v.wreckAt || v.arena) return;
   if (v.hardHitAt !== world.time || impact > v.hardHit) { v.hardHit = impact; v.hardHitAt = world.time; }   // (custody.js: a bad crash can throw a prisoner out)
   const hard = impact > CRASH_BOOM_IMPACT && !v.def.pedal && v.def.kind !== 'boat';
   if (zone) noteHit(v, zone, dmg);
@@ -438,6 +439,8 @@ import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
+import * as grime from './grime.js';
+import { BATH } from '../../shared/rules-play.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
   const a = Math.atan2(v.vy, v.vx);
@@ -494,6 +497,7 @@ export function fling(world, ped, vx, vy, attacker = null, cause = 'bail', dmgMu
   // faceplant, and the harder it hits.
   const soft = cause === 'bail' && spd < BAIL_HURT_SPEED;
   ped.tumbleSoft = soft;
+  if (ped.player) grime.soil(world, ped, 0, soft ? BATH.tumble * 0.4 : BATH.tumble);   // (along the ground: dirt on you - grime.js)
   const over = cause === 'bail' ? Math.max(0, (spd - BAIL_HURT_SPEED) / 400) : 0;
   const kind = (o && o.kind) || (soft ? 'roll' : cause === 'bail' ? (world.rand() < 0.25 + over * 0.45 ? 'face' : world.rand() < 0.5 ? 'roll' : 'slide') : LANDINGS[Math.floor(world.rand() * LANDINGS.length)]);
   const air = o && o.air !== undefined ? o.air : Math.max(0.28, Math.min(0.75, 0.2 + spd / 1100)) * (0.85 + world.rand() * 0.3);

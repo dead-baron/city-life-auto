@@ -144,7 +144,7 @@ test('Safety mode: on for new characters; the first press of a crime only warns,
   beside(w, p.ped, v);
   assert.equal(vehicles.playerEnter(w, p.ped), false, 'first press: a question');
   assert.ok(!p.ped.vehId && told(p, /^That's vehicle theft - press again to do it anyway$/));
-  assert.equal(p.toasts.find((t) => /^That's vehicle theft/.test(t.text)).tone, 'safety', 'its own tone: the page marks the prompt with it, no note (hud.js safetyNudge)');
+  assert.equal(p.toasts.find((t) => /^That's vehicle theft/.test(t.text)).tone, 'safety', 'its own tone: the page shows no note for it - the prompt and the button marked for the second press (hud.js safetyNudge; UI-5)');
   run(w, SAFETY_CONFIRM_S + 1);
   assert.equal(vehicles.playerEnter(w, p.ped), false, 'too long after: asked again');
   // the F key goes through it too (players.applyInput)

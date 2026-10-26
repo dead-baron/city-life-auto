@@ -113,7 +113,7 @@ export function start(world, p) {
   p.job = { type: 'dusting', truck: v.id, strip: { x: S.x, y: S.y, name: S.name }, fields, paid: 0, hp0: v.hp, hurt: 0, boosted: new Set(), expires: world.time + DUST.contractS, text: '' };
   p.job.text = textOf(p.job);
   const where = DISTRICTS[m.dist[m.idx(Math.floor(fields[0].cx / TILE), Math.floor(fields[0].cy / TILE))]];
-  world.notify(p, `Crop dusting: the co-op's ${v.def.name} is on ${S.name} (the green ring). ${fields.length} fields to spray${where ? ` in ${where.name}` : ''} - fly over them low (under ${Math.round(DUST.alt / TILE)} m) and the spray goes down. $${DUST.pay} a field, $${DUST.bonus} for the lot with the plane in one piece.`, 'good');
+  world.notify(p, `Crop dusting: the co-op's ${v.def.name} is on ${S.name} (the green ring). ${fields.length} fields to spray${where ? ` in ${where.name}` : ''} - fly over them low (under ${Math.round(DUST.alt / TILE)} m) and the spray goes down. $${DUST.pay} a field, $${DUST.bonus} for the lot with the plane in one piece.`, 'good', 'Crop dusting: your plane is the green ring');
   p.meDirty = true;
   store.touch();
   return null;

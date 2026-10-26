@@ -508,7 +508,7 @@ function build(m, api, K) {
   function bathhouse() {
     used.add('Steam & Stone Baths');
     out.shops++;
-    return { arch: 'mixed', key: 'rest2', name: 'Steam & Stone Baths', poi: { kind: 'delivery', label: 'Steam & Stone Baths' }, whole: true,
+    return { arch: 'mixed', key: 'rest2', name: 'Steam & Stone Baths', poi: { kind: 'delivery', label: 'Steam & Stone Baths', bath: true }, whole: true,
       art: { spec: { floors: 2, style: 'siding', wallColor: '#8a6a4a', win: 'pair', pitch: 'gable', ridge: 'ns', slope: 0.42, roofColor: '#3a4048', parapet: 6, grime: 0.08, blades: [], plaques: [] },
         shop: { kind: 'lobby', door: 'left', open: true, people: 2, sign: { text: 'BATHS', bg: '#2a3a5a', fg: [240, 236, 220], lit: true }, awning: ['#2a3a5a', '#2a3a5a'] }, kit: [] } };
   }

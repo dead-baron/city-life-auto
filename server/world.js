@@ -103,6 +103,8 @@ import * as paramedic from './systems/paramedic.js';
 import * as taxijob from './systems/taxijob.js';
 import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
+import * as carsoccer from './systems/carsoccer.js';
+import * as bathhouse from './systems/bathhouse.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -150,7 +152,9 @@ const SYSTEMS = [
   ['phone', phone.update],          // phone job board + police patrol calls
   ['ems', ems.update],              // ambulances + 45s cleanup loop
   ['revive', revive.update],        // holding to revive / finish a downed player, the limp afterwards
+  ['carsoccer', carsoccer.update],  // car soccer at the arena: the lobby, kick-offs, the clock, the boost, the city's drivers at the wheel
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
+  ['carsoccerBall', carsoccer.after], // car soccer: the giant ball after the cars have moved, the goals; the arena's state to the pages
   ['tow', tow.update],              // the tow service: trucks for wrecks and cars left blocking a lane; the towed hung behind them
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
@@ -189,6 +193,7 @@ const SYSTEMS = [
   ['coastguard', coastguard.update], // the coast guard's patrols: smugglers run down and boarded, people pulled out of the water (H59)
   ['gardening', gardening.update],  // the plots in owned homes' yards: growing, drying out, wilting; the plots near each player sent (H61)
   ['farming', farming.update],      // the farms' fields: the rows growing, a tractor down a row ploughing, sowing, harvesting it (H61)
+  ['bathhouse', bathhouse.update],  // the bathhouses: the bathers' routine, blood and dirt on people washed off (bathhouse.js)
   ['homeinside', homeinside.update], // inside your home: sleeping, the shower, where you are in there to your page (H62)
   ['biz', biz.update],              // the businesses: a day's takings in the till, the hideouts' guards, the food trucks' hatches, the decks (biz.js)
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
@@ -338,7 +343,8 @@ export class World {
     }
   }
   broadcast(ev) { this.globalEvents.push(ev); }
-  notify(player, text, tone = 'info') { if (player && player.conn) player.toasts.push({ text, tone }); }
+  // short: the one line the HUD shows of a long note (the whole of it goes to the phone's Log - client/notelog.js)
+  notify(player, text, tone = 'info', short = '') { if (player && player.conn) player.toasts.push(short ? { text, tone, short } : { text, tone }); }
 
   profile() {
     const out = { net: +this.netMs.toFixed(2) };

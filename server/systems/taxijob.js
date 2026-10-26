@@ -47,7 +47,7 @@ export function start(world, p, rank = null) {
   p.job = { type: 'cab', stage: 'wait', truck: 0, base: rank, nextAt: world.time + CAB.firstS, expires: world.time + CAB.shiftS, done: 0, fare: null, text: 'Taxi: cruising for a fare' };
   const v = jobs.workTruck(world, p, rank, 'taxi', { label: rank.name });
   if (!v) { p.job = null; return 'No room to park a cab there.'; }
-  world.notify(p, `You drive a cab out of ${rank.name}: your taxi is the green ring. Fares hail you in the street or ring in - pull up by them, then take them where they're going. Quick and smooth earns a tip.`, 'good');
+  world.notify(p, `You drive a cab out of ${rank.name}: your taxi is the green ring. Fares hail you in the street or ring in - pull up by them, then take them where they're going. Quick and smooth earns a tip.`, 'good', 'Taxi shift: your cab is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -57,7 +57,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const r = ranksOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!r) return null;
-  return { label: 'Sign on as a taxi driver (a cab is issued)', run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a taxi driver (a cab is issued)', card: { id: 'cab', where: r.name, start: () => start(world, p, r) }, run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the fares ---------------------------------------------------------------------------------------------------------

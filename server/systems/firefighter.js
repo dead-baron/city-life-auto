@@ -227,7 +227,7 @@ export function start(world, p, station = null) {
   const v = jobs.workTruck(world, p, st, 'firetruck', { label: st.name });
   if (!v) { p.job = null; return 'No room to park the engine there.'; }
   v.sirenOn = false;
-  world.notify(p, `You're on the crew at ${st.name}: your fire engine's the green ring. Calls come over the phone - H for the siren, then get out and hold fire near the engine for the hose.`, 'good');
+  world.notify(p, `You're on the crew at ${st.name}: your fire engine's the green ring. Calls come over the phone - H for the siren, then get out and hold fire near the engine for the hose.`, 'good', 'Firefighter shift: your engine is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -237,7 +237,7 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const st = sitesOf(world.map).stations.find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 170);
   if (!st) return null;
-  return { label: 'Sign on as a firefighter (a fire engine is issued)', run: () => { const err = start(world, p, st); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a firefighter (a fire engine is issued)', card: { id: 'fire', where: st.name, start: () => start(world, p, st) }, run: () => { const err = start(world, p, st); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------

@@ -114,7 +114,7 @@ export const DEV_SECTIONS = [
   { id: 'fun', title: '🎉 Events & sport', items: [
     ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
-    ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🏄 A surf break (with a board)', 'near', { k: 'surf' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
+    ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🏄 A surf break (with a board)', 'near', { k: 'surf' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['♨ Bathhouse', 'near', { k: 'bathhouse' }], ['⚽ Car soccer: the arena\'s gate', 'near', { k: 'carsoccer' }], ['🚗 Car soccer: a match now', 'soccer'], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
     ['🎰 Casino', 'near', { k: 'casino' }], ['🎲 Street dice', 'near', { k: 'dice' }],
     ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }],
   ] },
