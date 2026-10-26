@@ -10,7 +10,7 @@
 //     pastures and the wind farm) and comes down where it took off. balloonAt says where it is t seconds in.
 //   - A slide: up the tower's stair, along its top deck to the slide's bay, and down it into the splash pool
 //     (slideRider says where you are t seconds after boarding; slideDur how long it all takes).
-import { FERRIS_S } from './rules.js';
+import { FERRIS_S } from './rules-page.js';
 
 const TAU = Math.PI * 2;
 

@@ -2,7 +2,7 @@
 // never a hard advantage (+15% at the top: rules.js SKILL). Shared: the server levels them and applies them
 // (server/systems/skills.js); the page shows them (the phone's Skills app) and predicts what touches your own movement
 // - stamina's longer sprint, swimming's stroke - from the levels the server sends (players.js me.skl).
-import { SKILL } from './rules.js';
+import { SKILL } from './rules-page.js';
 
 export const SKILLS = ['strength', 'stamina', 'swimming', 'driving', 'shooting', 'constitution'];
 export const SKILL_INFO = {
