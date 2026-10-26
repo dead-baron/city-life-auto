@@ -51,7 +51,7 @@ test('World v3: the Red Rock MX Park - the course, its berms and tabletops, the 
   assert.ok(count('berm') >= 12, `${count('berm')} berms`);
   const parkJumps = (m.jumps || []).filter((J) => J.name === MX.name);
   assert.ok(count('tabletop') >= 3 && parkJumps.length === count('tabletop'), `${count('tabletop')} tabletops, ${parkJumps.length} jumps`);
-  for (const J of m.jumps) assert.equal(m.tiles[m.idx(Math.floor(J.x / TILE), Math.floor(J.y / TILE))], T.DIRT, `${J.name}'s tabletop on its dirt`);
+  for (const J of m.jumps.filter((J) => !J.bank)) assert.equal(m.tiles[m.idx(Math.floor(J.x / TILE), Math.floor(J.y / TILE))], T.DIRT, `${J.name}'s tabletop on its dirt`);   // (the car soccer arena's banks are ramps too, on its pitch)
   assert.ok(count('startgate') === 1 && count('timingtower') === 1 && count('floodmast') >= 4 && count('fenceline') >= 4 && count('tapeline') >= 6 && count('tires') >= 4, 'the gate, the tower, the lights, the fence, the tape, the tyres');
   // the pits: trailers, the tent, the bikes on their stands (dirt bikes to take), the trucks
   assert.ok(count('mxtrailer') === 2 && count('canopy') >= 1, 'the pits');
