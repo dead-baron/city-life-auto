@@ -17071,3 +17071,11 @@ lives in client/hudinfo.js, fetched as the game opens.
   words, the intro's short line, the taxi rank in a station).
 - The page is 498 of 498 KB: the new code loads after the page (hudinfo.js with the HUD, storeicons.js with the first
   mark, the knocked-out screen with the first knock-out); notepages.js and the HUD code that moved out made the room.
+
+## 2026-10-26 - Hotfix: the debug button is back on the HUD
+
+The owner: "the latest UI overhaul doesn't have the debug menu. Can you add back the debug menu button from before." The overhaul had moved the debug menu to the hub (MENU → Settings › Help → Debug menu) and the ` key, and dropped the 🐞 button.
+
+- `#b-dev` is back, as a square icon button (a bug) after MAP in the MENU · PHONE · MAP row, on desktop, pad and touch, sideways and upright. It opens and closes the debug menu as before (`openDebug`).
+- In a very small keyboard or pad window (430 px tall or less and 800 px wide or less) it hides, because it would sit under the cash; the ` key and the hub still open the menu there.
+- Tests: hub.test.js expects the debug button after MAP; hudlayout.test.js checks it is in the row and clear of everything on every screen.
