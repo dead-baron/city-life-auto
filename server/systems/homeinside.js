@@ -36,6 +36,8 @@ import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
+import * as bathhouse from './bathhouse.js';
+import * as grime from './grime.js';
 
 export const planFor = (h) => layout(planOf(h), tierOf(h));
 // (H67) a home's decor - its owner's (profile.decor[home id]: shared/homedecor.js) - and its plan with the decor laid over
@@ -55,9 +57,9 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 export function enter(world, p, h, at) {
   const ped = p.ped;
   const L = planFor(h), sp = at || L.spawn;   // (at: out of a flat's door into its lobby - H71)
-  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : h.isArcade ? { arcade: 1 } : null) };
+  ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : h.isArcade ? { arcade: 1 } : h.isBath ? { bath: 1 } : null) };
   p.homeMenu = null;
-  if (!h.isLobby && !h.isArcade && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
+  if (!h.isLobby && !h.isArcade && !h.isBath && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
     petIn(world, p, h);
     const n = homes.blockOf(world, h) == null ? mail.unread(p.profile) : 0;
     if (n) world.notify(p, `You pick up the mail on the way in: ${n} new - read it at the hall table.`, 'info');
@@ -264,6 +266,7 @@ export function interaction(world, p) {
   if (s.cook) return { label: 'Cooking... something smells good', passive: true, run: () => {} };
   if (s.lobby) return lobbyInteraction(world, p, h, s);   // (H71: a block's lobby)
   if (s.arcade) return arcade.hallInteraction(world, p, h, s);   // (an arcade's floor: its cabinets, its prize counter - arcade.js)
+  if (s.bath) return bathhouse.hallInteraction(world, p, h, s);   // (a bathhouse's: the desk, the lockers, the showers, the bath - bathhouse.js)
   if (s.edit) return editPrompt(world, p, h);   // (H67: decorating - the action button is the menu for the spot in front of you)
   const u = useAt(planFor(h), s.x, s.y, HOME_IN.reach);
   if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
@@ -729,7 +732,7 @@ export function update(world) {
     if (!s) continue;
     const h = homes.homeById(world, s.id);
     // out some other way (the home menu's Step outside, the garage, the boathouse, dead, a dev command): gone from here
-    const ok = s.lobby || s.arcade ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
+    const ok = s.lobby || s.arcade || s.bath ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
     if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || !ok) {
       if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) { homes.leaveHome(world, p); if (s.tour) world.notify(p, `${h.name} has just been sold - you're shown out.`, 'warn'); }   // (sold under a guest or a visitor: out they go)
       ped.home = null; p.homeMenu = null;
@@ -749,8 +752,9 @@ export function update(world) {
     }
     if (s.shower && world.time >= s.shower) {
       s.shower = 0;
-      ped.hp = Math.min(ped.maxHp, ped.hp + HOME_IN.showerHeal); ped.bleeding = false; ped.burnT = 0;
-      world.notify(p, 'Fresh and clean.', 'good');
+      ped.hp = Math.min(ped.maxHp, ped.hp + HOME_IN.showerHeal);
+      world.notify(p, grime.wash(world, ped) ? 'The blood and the dirt washed off - fresh and clean.' : 'Fresh and clean.', 'good');   // (grime.js: the bleeding stopped, a burn out too)
+      bathhouse.showered(world, p);
       p.meDirty = true;
     }
     send(world, p, false);
@@ -785,13 +789,13 @@ export function send(world, p, full) {
   const m = {
     t: 'home', id: h.id, plan: L.key, tier: L.tier, x: Math.round(s.x * 10) / 10, y: Math.round(s.y * 10) / 10, a: Math.round(s.a * 100) / 100,
     mv: s.mv ? 1 : 0, ack: p.ack, min: Math.round(world.clock.minutes),
-    sleep: s.sleep ? Math.max(0, Math.round((s.sleep - world.time) * 10) / 10) : 0, shower: s.shower ? 1 : 0,
+    sleep: s.sleep ? Math.max(0, Math.round((s.sleep - world.time) * 10) / 10) : 0, shower: s.shower ? s.showerAt || 1 : 0,
     seat: s.seat ? [Math.round(s.seat.x), Math.round(s.seat.y), Math.round(s.seat.a * 100) / 100] : 0, tv: tvOn(world, h) ? 1 : 0,
   };
   const others = [];
   for (const q of world.players.values()) {
     const o = q !== p && q.ped && q.ped.home && q.ped.hidden && q.ped.home.id === s.id ? q.ped.home : null;
-    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, si: o.seat ? [Math.round(o.seat.x), Math.round(o.seat.y), Math.round(o.seat.a * 100) / 100] : 0, ...(full || world.tick % 20 === 0 ? { app: q.ped.app || null } : null) });
+    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, si: o.seat ? [Math.round(o.seat.x), Math.round(o.seat.y), Math.round(o.seat.a * 100) / 100] : 0, ...(o.soak && o.seat ? { sk: 1 } : null), ...(full || world.tick % 20 === 0 ? { app: bathhouse.appIn(q) || q.ped.app || null } : null) });
   }
   m.others = others;   // (their looks now and then: the page keeps them)
   const pt = petOf(world, h);   // (H71: the owner's pet - you see it as their guest too)
@@ -803,9 +807,10 @@ export function send(world, p, full) {
     m.edit = s.edit ? { k: heldKind(world, h, s), r: s.edit.r, mv: s.edit.mv } : null;   // (decorating: what you hold - the page shows where it'd go)
     if (s.lobby) m.doors = (world.unitsOf.get(h.block) || []).map((id) => { const o = world.homeOwner.get(id); return o === p.pid ? 2 : o ? (someoneIn(world, homes.homeById(world, id)) ? 3 : 1) : 0; });   // (H71: each flat's door - 0 for sale, 1 taken, 2 yours, 3 someone's in)
     if (s.lobby) m.mail = ownsIn(world, p, h.block) ? mail.unread(p.profile) : 0;   // (H71: new mail in your box - the page flags it)
-    m.cars = s.tour || s.lobby || s.arcade ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air' && !VEHICLES[ov.model].horse).slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
+    m.cars = s.tour || s.lobby || s.arcade || s.bath ? [] : p.profile.vehicles.filter((ov) => VEHICLES[ov.model] && VEHICLES[ov.model].kind !== 'boat' && VEHICLES[ov.model].kind !== 'air' && !VEHICLES[ov.model].horse).slice(0, L.bays.length).map((ov) => ({ m: ov.model, p: ov.paint | 0, v: ov.variant | 0 }));
     s.nc = m.cars.length;   // (the cars parked in the bays are solid: shared/homelayout.js stepInside - the page counts the same ones)
   }
+  if (s.bath) bathhouse.sendExtra(world, p, h, s, m, full);   // (a bathhouse: the bathers, the attendant, your suit - bathhouse.js)
   p.conn.sendJSON(m);
 }
 

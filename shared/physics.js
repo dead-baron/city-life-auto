@@ -37,8 +37,9 @@ export function setBoard(step, bailHit) { BSTEP = step; BAIL_HIT = bailHit; }
 export const boardOn = () => !!BSTEP;
 // The fences (shared/fences.js FENCES: held off them, the hop over a low one): the server registers them, the page once
 // it has the city
-let FEN = null;
+let FEN = null, ARENA = null;
 export function setFences(f) { FEN = f; }
+export function setArena(f) { ARENA = f; }   // (car soccer's banks and boost - shared/carsoccer.js carStep: the server's, the page's near an arena)
 
 // Analog stick magnitude (0..1) -> target ground speed for players.
 export function analogSpeed(m, sprint) {
@@ -359,6 +360,7 @@ export function vehStep(s, inp, dt, map, def, env) {
   // (a horse at a ragged shore at a gallop, squeezed onto the water between the tiles it was pushed off: it stops dead
   // where it stood instead - it never steps into the water)
   if (hoof && WATER_T[map.tileAtPx(s.x, s.y)] && !up(s)) { s.x = x0; s.y = y0; s.vx = 0; s.vy = 0; return Math.max(hit, 1); }
+  if (ARENA && !isBoat) ARENA(s, inp, dt, map);
   if (!map.levels || isBoat) return hit;
   return Math.max(hit, levelStep(map, s, def.W / 2, true));
 }

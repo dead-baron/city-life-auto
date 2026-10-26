@@ -37,6 +37,7 @@ export function jumpLift(map, v, now) {
     if (Math.abs(w) > J.w / 2 + 10 || Math.abs(u) > J.len / 2 + JUMP.AWAY) continue;
     const along = (v._jvx || 0) * ca + (v._jvy || 0) * sa, sg = along >= 0 ? 1 : -1, s = Math.abs(along), t = u * sg, lip = -(J.len / 2 - J.ramp);
     const gz = ground(J, u);
+    if (J.bank) { if (gz > 0) return gz; continue; }   // (car soccer's banked walls: up them, never a flight - shared/carsoccer.js)
     // in the air: the arc from the lip at the speed it left with, until it meets the ground
     const F = v._jf;
     if (F && F.J === J && F.sg === sg) {

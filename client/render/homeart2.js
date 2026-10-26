@@ -10,6 +10,7 @@
 import { GBuf, hash, vnoise, step, bayer, F_GLASS } from '../art2/gbuf.js';
 import { ramp } from '../art2/palette.js';
 import { MAKERS, LOOK, YARD_MAKERS } from '../art2/props-home.js';
+import { BATH_MAKERS } from '../art2/props-bath.js';   // (a bathhouse's floor: its desk, lockers, wash stations, the bath - bathhouse.js)
 import { pedSprite } from '../art2/game/peds.js';
 import { vehicleSprite, animalSprite } from '../art2/game/actors.js';
 import { TILE_IN, CAR_IN, WALL_IN } from '../../shared/homelayout.js';
@@ -27,7 +28,7 @@ function rooms(L) {
   const id = new Int16Array(L.cols * L.rows).fill(-1), list = [];
   for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) {
     const ch = L.cell(x, y);
-    if (WALLISH.has(ch) || ch === '+' || id[y * L.cols + x] >= 0) continue;
+    if (WALLISH.has(ch) || ch === '+' || ch === 'X' || id[y * L.cols + x] >= 0) continue;   // (X: a bathhouse's curtained doorway, as a doorway)
     const r = { i: list.length, tiles: [], kind: 'living', x0: x, y0: y, x1: x, y1: y };
     const q = [[x, y]]; id[y * L.cols + x] = r.i;
     while (q.length) {
@@ -35,7 +36,7 @@ function rooms(L) {
       r.x0 = Math.min(r.x0, cx); r.x1 = Math.max(r.x1, cx); r.y0 = Math.min(r.y0, cy); r.y1 = Math.max(r.y1, cy);
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = cx + dx, ny = cy + dy, c2 = L.cell(nx, ny);
-        if (nx < 0 || ny < 0 || nx >= L.cols || ny >= L.rows || WALLISH.has(c2) || c2 === '+' || id[ny * L.cols + nx] >= 0) continue;
+        if (nx < 0 || ny < 0 || nx >= L.cols || ny >= L.rows || WALLISH.has(c2) || c2 === '+' || c2 === 'X' || id[ny * L.cols + nx] >= 0) continue;
         id[ny * L.cols + nx] = r.i; q.push([nx, ny]);
       }
     }
@@ -44,7 +45,7 @@ function rooms(L) {
     list.push(r);
   }
   // a doorway takes the room of a floor beside it
-  for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) if (L.cell(x, y) === '+') {
+  for (let y = 0; y < L.rows; y++) for (let x = 0; x < L.cols; x++) if (L.cell(x, y) === '+' || L.cell(x, y) === 'X') {
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const j = (y + dy) * L.cols + x + dx; if (x + dx >= 0 && x + dx < L.cols && y + dy >= 0 && y + dy < L.rows && id[j] >= 0) { id[y * L.cols + x] = id[j]; break; } }
   }
   return { id, list, at: (x, y) => (x < 0 || y < 0 || x >= L.cols || y >= L.rows ? null : list[id[y * L.cols + x]] || null) };
@@ -179,7 +180,7 @@ export class HomeArt {
   // chairs - is buildFurniture's: yardThings)
   buildYard() {
     const L = this.L, ap = this.ap, M = YARD, G = new GBuf(Math.ceil((L.w + 2 * M) / ap), Math.ceil((L.h + 2 * M) / ap));
-    const key = L.key, paved = /^(apartment|studio|penthouse|lobby|arcade)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
+    const key = L.key, paved = /^(apartment|studio|penthouse|lobby|arcade|bath)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
     const grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     const stone = ramp('#d8ceb8', 6, 3), plank = ramp('#9a6c44', 6, 3), board = ramp('#7a5034', 6, 3), white = ramp('#eeeae0', 5, 2), soil = ramp('#5a3e2a', 5, 2);
     const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3);
@@ -387,7 +388,7 @@ export class HomeArt {
     const paint = L.paintAt && L.paintAt(tx, ty);   // (H67: the room's walls painted - shared/homedecor.js)
     if (paint) return step(ramp(paint, 6, 3), 0.55 + (t >= 1 && (wx % 10 < 1) ? -0.06 : 0) + (vnoise(wx, v, 12, 3) - 0.5) * 0.08, x, y, 0.4);
     if (kind === 'garage') return step(ramp('#9a9a96', 6, 3), 0.55 + (v % 8 === 0 || (wx + (Math.floor(v / 8) & 1) * 8) % 16 === 0 ? -0.25 : 0), x, y, 0.3);
-    if (L.key === 'trailer') return step(ramp('#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling
+    if (L.key === 'trailer' || L.key === 'bath') return step(ramp(L.key === 'bath' ? '#b08454' : '#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling (a bathhouse's timber)
     const base = tinted(PAPER[kind][t] || PAPER.living[t], this.sc, kind === 'kitchen' || kind === 'bath' ? 0.2 : 0.4);
     if (kind === 'bath' || kind === 'kitchen') return step(ramp(base, 5, 2), 0.55 + (wx % 8 < 1 || v % 8 === 0 ? -0.25 : 0), x, y, 0.3);
     if (t >= 2 && v < h * 0.4 && h > HC) return step(ramp(LOOK[t].wood, 5, 2), 0.5 + (v === Math.floor(h * 0.4) - 1 ? 0.3 : wx % 12 < 1 ? -0.2 : 0), x, y, 0.3);   // the wainscot
@@ -422,7 +423,7 @@ export class HomeArt {
     const L = this.L, ap = this.ap;
     const wall = (x, y) => WALLISH.has(L.cell(x, y));
     for (const p of L.pieces) {
-      const make = MAKERS[p.ch];
+      const make = (L.key === 'bath' && BATH_MAKERS[p.ch]) || MAKERS[p.ch];
       if (!make) continue;
       if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
@@ -447,6 +448,8 @@ export class HomeArt {
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });
       if (p.ch === 'j') this.lamps.push({ x: cx, y: cy + 8, z: 36, kind: 'tv' });   // (H77: an arcade cabinet's screen)
+      if (L.key === 'bath' && p.ch === 'y') this.lamps.push({ x: cx, y: cy, z: 20, kind: 'lamp' });   // (the hot stones' glow)
+      if (L.key === 'bath' && p.ch === 'u') for (let k = 0; k < 4; k++) this.lamps.push({ x: p.x + (k + 0.5) * p.w / 4, y: p.y - 8, z: 60, kind: 'lamp' });   // (the paper lanterns over the bath)
       yield;
     }
     for (const [k, x, y, w, d] of this.yardThings()) {   // (H77) out in the yard

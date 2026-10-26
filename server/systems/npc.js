@@ -7,6 +7,7 @@ import { IN } from '../../shared/input.js';
 import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
+import { arenaAt } from '../../shared/carsoccer.js';
 import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
@@ -826,6 +827,7 @@ const OPEN_STYLES = { beach: 'beach', rocky: 'wild', water: 'beach' };
 const openGround = (map, x, y) => !!OPEN_STYLES[(map.districtAt(x, y) || {}).style] && !peopleBelongAt(map, x, y);
 const countryFolk = (world, x, y) => world.query(x, y, 1200, K.PED).filter((e) => e.npc && e.npc.country && !e.dead).length;
 export function peopleBelongAt(map, x, y) {
+  if (arenaAt(map, x, y)) return false;   // (nobody wanders a car soccer arena's pitch: shared/carsoccer.js)
   const t = map.tileAtPx(x, y);
   if (DEV_T.has(t)) return true;
   const d = map.districtAt(x, y);

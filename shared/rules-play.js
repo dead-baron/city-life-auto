@@ -22,3 +22,15 @@ export const DOORWAY = { r: 56, keepS: 0.3 };
 // hardware stores pay LOG_BUNDLE_PRICE for, a sawmill or lumber yard mill; a felled trunk nobody cuts up is gone after
 // LOGS_LIFE_S. Stacked at your home's garage, the bundles are kept there (a count per home) for its upgrades
 export const FIREWOOD = { work: 2.4, reach: 36, mill: 65 };
+// The bathhouses (server/systems/bathhouse.js; the owner, 10-16: "Bathhouses and locker rooms with usable showers; NPCs
+// going through the routine"): in through the door to the lobby, the day pass bought at the desk (fee dollars) opens
+// the curtains to the locker rooms - change into a bathing suit at the lockers (stash things there while you bathe:
+// back to you on the way out), the showers (showerS s: washes off the blood and the dirt, stops the bleeding, puts out a
+// burn, heal health back), then the bath (soak in it; the house rule: a shower first) - a soak of soakS s or more
+// leaves you refreshed for buffS s (stamina back faster, as a coffee does) and heals soakHeal health a second while
+// you're in. bathers: how many of the city's people are in there going through the routine, at most; arriveS: a new
+// one about every so many seconds while someone's inside. Blood and dirt on you (ped.grime: 0..1 each): blood x a hit's
+// share of your health, kill when you kill someone up close (within close px), dirt from a tumble or crawling;
+// swimming washes it off, rain the dirt slowly (rainS: from all of it to none). Blood over seen of it: people step
+// away from you and police within copR px grow suspicious (once every eyeS s - never a star by itself)
+export const BATH = { fee: 8, showerS: 3, heal: 10, soakS: 6, soakHeal: 1.2, buffS: 180, bathers: 6, arriveS: 14, kill: 0.6, close: 70, tumble: 0.35, crawl: 0.15, rainS: 120, seen: 0.45, copR: 360, eyeS: 45 };

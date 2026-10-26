@@ -370,6 +370,7 @@ function onText(m) {
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
+    case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
     case 'fires': S.fires = m; fireJob(); break;   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
     default: break;
   }
@@ -3434,6 +3435,7 @@ function drawOverlays(F, v2) {
   drawCinema(F);
   drawDriveIn(F, v2);
   drawVault(F);
+  if (S.soc) S.soc.draw(g, F, v2);   // (car soccer: the ball, the goals, the pads, the score - client/carsoccer.js)
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();
