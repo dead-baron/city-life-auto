@@ -9,7 +9,7 @@ import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
 import { iconURL } from './pixicons.js';
-import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules.js';
+import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)

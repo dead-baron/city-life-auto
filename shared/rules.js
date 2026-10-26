@@ -147,7 +147,7 @@ export const PATROL_SEARCH_S = [6, 14];      // how long you look around before 
 // Combat balance
 export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 shots most people, ~3 for SWAT / brutes)
 export const NPC_GRIT = [[0.75, 30], [1, 45], [1.6, 17], [2.5, 8]]; // [how much more a bullet takes to drop them, % of people]: some go down at the first shot, a few take three or four
-export const NPC_CRITICAL = 0.3;        // below this share of health people bleed; NPCs stop fighting and limp off
+export { NPC_CRITICAL } from './rules-page.js';   // below this share of health people bleed; NPCs stop fighting and limp off
 export const LIMP_SPEED = 0.35;         // a critically hurt NPC limps along at this fraction of walking pace
 export const SHOTGUN_CLOSE_PX = 130;     // a shotgun blast (3+ pellets in) closer than this hits harder the closer it is and throws people off their feet...
 export const SHOTGUN_CLOSE_MULT = 2.6;   // ...up to this many times its damage at point blank: almost always a kill, player or not
@@ -177,8 +177,8 @@ export const DEAD_BOOM_S = 9;
 export const ARMORED_ROCKETS = 2;       // rockets to destroy an armored van / SWAT truck (everything else: one)
 export const ARMORED_VEHICLES = ['armored', 'swat', 'army'];
 // huge blasts, chain reactions (task #398: server/systems/explosions.js)
-export const TANKER_BLAST = { r: 330, dmg: 160 };
-export const EXPLOSIVES_BLAST = { r: 200, dmg: 110, per: 30, max: 410 };   // a crate, + per crate
+export { TANKER_BLAST } from './rules-page.js';
+export { EXPLOSIVES_BLAST } from './rules-page.js';   // a crate, + per crate
 export const BLAST_FLING = 1.5;
 export const CHAIN_K = 2;                 // chance f x this (f 1 at the heart)
 export const CHAIN_DELAY_S = [0.3, 0.8];
@@ -197,8 +197,8 @@ export const FIRE_REACH = 46;           // stand this close to light it or sit d
 export const FIRE_HEAL = 2;             // health per second while sitting by a lit fire...
 export const FIRE_AFTER_HIT_S = 5;      // ...once you've been out of the fight this long
 export const FIRE_BURN_S = 900;         // how long a change lasts
-export const CALM_PROMPT_S = 4;         // sitting by a fire this long without touching anything: its prompt fades...
-export const CALM_HUD_S = 20;           // ...and this long, the whole HUD, for the scene (task #375)
+export { CALM_PROMPT_S } from './rules-page.js';   // sitting by a fire this long without touching anything: its prompt fades...
+export { CALM_HUD_S } from './rules-page.js';   // ...and this long, the whole HUD, for the scene (task #375)
 
 // Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
 export const WINE_S = 120;
@@ -258,7 +258,7 @@ export const LAP_PRIZE = 25;
 // Rides (shared/rides.js, server/systems/rides.js): the Ferris wheel on Westport Pier (one turn of the wheel) and
 // hot-air balloon flights from the Dry Creek Balloon Field (out over the country and back). Not while wanted.
 export const FERRIS_PRICE = 5;
-export const FERRIS_S = 40;             // one turn of the wheel (it turns all the time)
+export { FERRIS_S } from './rules-page.js';   // one turn of the wheel (it turns all the time)
 export const BALLOON_PRICE = 40;
 export const BALLOON_S = 100;           // take-off to touch-down
 export const BALLOONS_UP = 3;           // flights in the air at once (the field has three balloons)
@@ -349,7 +349,7 @@ export const HIDE_TIME_S = 2.5;      // standing at your own front door this lon
 export const SPAWN_PROTECT_S = 2;    // after spawning or stepping out of a home: you can move, but can't shoot or be hurt
 
 // Police stations
-export const POLICE_ARMORY = ['service', 'prifle', 'psniper', 'passault', 'pshotgun']; // department weapons in the HQ armory
+export { POLICE_ARMORY } from './rules-page.js';   // department weapons in the HQ armory
 
 // Out on the water
 export const GANG_JOIN_FEE = 500;                       // Syndicate initiation (at any gang HQ) - opens the Smuggler's Rock compound
@@ -561,9 +561,9 @@ export const TOW_FEE = 150;               // your own car towed back to your gar
 
 // ---- Lights to carry (task #359: shared/lights.js, server/systems/lights.js) ----------------------------------------
 export { LIGHT_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
-export const BATTERY_S = 1800;             // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
-export const FLARE_S = 60;                 // a road flare burns about a minute
-export const GLOWSTICK_S = 240;            // a glow stick glows a few minutes
+export { BATTERY_S } from './rules-page.js';   // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
+export { FLARE_S } from './rules-page.js';   // a road flare burns about a minute
+export { GLOWSTICK_S } from './rules-page.js';   // a glow stick glows a few minutes
 export const GROUND_LIGHTS_MAX = 10;       // lights one player has set down at once (the oldest goes out)
 export const HARDHAT_GUARD = 0.4;          // a hard hat takes this share off the hurt of a falling tree or rock
 // ---- Felling trees (task #358: shared/felling.js, server/systems/felling.js) ----------------------------------------
@@ -648,7 +648,7 @@ export const WORK_TRUCK = { returnR: 240, returnS: 900, searchR: 1400 };
 // never in mid-air. Nobody aboard: it's gone goneS seconds later. remindS: how often you're told while it waits.
 export const RECALL = { outS: 3, goneS: 4, slowPx: 70, remindS: 25 };
 // Safety mode (server safety.js): the first act that would be a crime only warns; pressing again within confirmS does it
-export const SAFETY_CONFIRM_S = 4;
+export { SAFETY_CONFIRM_S } from './rules-page.js';
 
 // ---- fire on people (H58; the owner, 2026-10-11: "NPCs and players catch on fire if they are near an explosion or their
 // vehicle blows up or they run into fire ... Rain makes the fire go out faster. Player characters: you want to roll on the
@@ -890,20 +890,5 @@ export const HEIST = {
 // race finished, a hit with a gun, a night in your bed, a home-cooked meal), up to `cap` an in-game day; something else
 // for the same skill still counts that day. A skill's bonus tops out at `top` (never a hard advantage); level L takes
 // perLevel * L * (L + 1) xp in all
-export const SKILL = {
-  max: 10, top: 0.15, perLevel: 25,
-  act: {
-    brawl: { skill: 'strength', xp: 1, cap: 20, name: 'landing blows' },
-    haul: { skill: 'strength', xp: 3, cap: 15, name: 'carrying crates' },
-    run: { skill: 'stamina', xp: 0.5, cap: 20, name: 'sprinting' },
-    swim: { skill: 'swimming', xp: 0.5, cap: 25, name: 'swimming' },
-    drive: { skill: 'driving', xp: 4, cap: 20, name: 'driving' },
-    race: { skill: 'driving', xp: 10, cap: 20, name: 'racing' },
-    shoot: { skill: 'shooting', xp: 1, cap: 20, name: 'hitting what you aim at' },
-    sleep: { skill: 'constitution', xp: 15, cap: 15, name: 'a night in your own bed' },
-    meal: { skill: 'constitution', xp: 8, cap: 16, name: 'home-cooked meals' },
-    campfire: { skill: 'constitution', xp: 0.2, cap: 10, name: 'sitting by a campfire' },
-    pushups: { skill: 'strength', xp: 1, cap: 15, name: 'push-ups' },
-    situps: { skill: 'stamina', xp: 1, cap: 15, name: 'sit-ups' },
-  },
-};
+export { SKILL } from './rules-page.js';   // (the numbers: shared/rules-page.js)
+

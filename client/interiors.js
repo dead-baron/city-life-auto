@@ -4,7 +4,7 @@
 // what you can do in there comes from the server.
 import { pedSprite, PED_BOX } from './render/sprites.js';
 import { weaponIcon } from './render/peds.js';
-import { POLICE_ARMORY } from '../shared/rules.js';
+import { POLICE_ARMORY } from '../shared/rules-page.js';
 import { WEAPONS } from '../shared/items.js';
 import { atlas } from './render/sprites.js';
 import { INTERIOR_RECTS } from '../shared/interior-art.js';
