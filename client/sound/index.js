@@ -13,6 +13,7 @@ import { Music } from './music.js';
 import { Track } from './track.js';
 import { Places } from './places.js';
 import { People } from './people.js';
+import { StageSound } from './stage.js';
 import { surfaceAt } from './surface.js';
 
 // How many one-shot voices and engine voices: few enough for a phone's audio thread (tools/sound/bench.py).
@@ -27,6 +28,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const titleTrack = new Track(E, 'title');   // (the owner's own title track, recorded; the old tune if it can't play)
   const places = new Places(E, music);
   const people = new People(E);
+  const stage = new StageSound(E);   // (boomboxes, radios, car radios, mats, instruments: client/sound/stage.js)
   const titleEl = document.getElementById('title'), tutEl = document.getElementById('tutorial');
   let S = null, quiet = false, scene = 'title', lastFrame = 0, inside = false, lastT = ctx.currentTime;
   const unquiet = () => { quiet = false; };
@@ -38,7 +40,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
     surf: (x, y) => (A.S && A.S.map ? surfaceAt(A.S.map, x, y) : 'pavement'),
   };
   const sys = {
-    E, mix, veh, amb, music, places, people, titleTrack,
+    E, mix, veh, amb, music, places, people, titleTrack, stage,
     get scene() { return scene; },
     // main.js's own sfx(name, vol, p) calls: their old names, no place (vol already has the distance in it; p: the
     // recipe's parameters - the thunder's distance and strength)
@@ -71,11 +73,12 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
       E.update(F.sp && F.spec ? F.sp : state.cam, inside);
       const me = state.ents && state.ents.get(state.myPedId);   // (where you are: your own sounds are never cut off)
       if (me && me.rx !== undefined) { E.me.x = me.rx; E.me.y = me.ry; E.me.live = true; } else E.me.live = false;
-      if (scene === 'title') { veh.silence(); amb.silence(); return; }
+      if (scene === 'title') { veh.silence(); amb.silence(); stage.silence(); return; }
       inside = places.update(F, state, t, scene);
       veh.update(F, state, dt);
       amb.update(F, state, dt, inside);
       people.update(F, state, dt);
+      stage.update(F, state, t, scene);
       music.tick();
     },
     // a few times a second whatever the frame does: the scene (the title screen has its music), the music's notes
@@ -89,7 +92,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
       music.set('title', titleTrack.set(want) ? 0 : want);
       if (scene !== was && scene === 'game') music.set('title', 0);
       if (document.hidden) music.silence();
-      if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); }
+      if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); stage.silence(); }
       music.tick();
       E.update(null, inside);
     },

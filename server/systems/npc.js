@@ -22,6 +22,7 @@ import * as wildlife from './wildlife.js';
 import { inAnyView, cineEyes } from '../view.js';
 import * as npclooks from './npclooks.js';
 import * as personas from './personas.js';
+import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS } from '../../shared/rules.js';
@@ -230,6 +231,7 @@ export function update(world, dt) {
       case 'fight': inp = fight(world, ped, now); factor = 1; break;
       case 'watch': inp = watch(world, ped, now); break;
       case 'audience': inp = personas.audience(world, ped, now); factor = 0.45; break;   // (in a busker's crowd: personas.js)
+      case 'mcrowd': inp = music.crowdStep(world, ped, now); factor = 0.45; break;   // (watching a player perform: music.js)
       case 'limp': inp = limp(world, ped, now); factor = LIMP_SPEED; break;
       case 'crawl': inp = crawl(world, ped, now); factor = CRAWL_SPEED; break;
       case 'mug': inp = mugRun(world, ped, now); factor = 1; break;
@@ -244,7 +246,7 @@ export function update(world, dt) {
       default: n.state = 'wander';
     }
     if (n.holdup && n.state !== 'holdup') { ped.handsUp = false; n.holdup = null; n.keep = false; }   // (scared off some other way: the hands come down)
-    if (ped.filming && n.state !== 'film') stopFilming(ped);   // (they ran, fought, got hurt: the phone goes away)
+    if (ped.filming && n.state !== 'film' && n.state !== 'mcrowd') stopFilming(ped);   // (a performance's crowd films it: music.js)   // (they ran, fought, got hurt: the phone goes away)
     // commuters heading for a platform to wait for the train
     if (n.waitTrain !== undefined && (n.state === 'wander' || n.state === 'idle')) {
       const d = Math.hypot(n.waitX - ped.x, n.waitY - ped.y);
@@ -327,7 +329,7 @@ const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); ret
 // of it - to the nearest pavement off to the side of the car's way (a passer-by stuck walking into the side of a lorry
 // in a jam, the car behind waiting for them for ever: a headless run in Midtown had a dozen cars locked that way round
 // one corner for minutes). Only someone at a loose end - not in a fight, running, at work, filming a scene...
-const SHOO_STATES = new Set(['wander', 'idle', 'watch', 'audience', 'waitHelp']);
+const SHOO_STATES = new Set(['wander', 'idle', 'watch', 'audience', 'mcrowd', 'waitHelp']);
 export function shoo(world, ped, v, hurry = false) {
   const n = ped.npc;
   if (!n || ped.dead || ped.vehId || n.desk || n.guard || n.keep || n.driven || n.role !== 'civ' || !SHOO_STATES.has(n.state)) return false;

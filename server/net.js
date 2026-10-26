@@ -203,6 +203,7 @@ export function send(world) {
     for (const ev of world.globalEvents) evs.push(ev);
     for (const t of p.toasts) evs.push({ e: 'toast', text: t.text, tone: t.tone });
     p.toasts.length = 0;
+    if (p.evq && p.evq.length) { for (const ev of p.evq) evs.push(ev); p.evq.length = 0; }   // (events for this player alone: music.js)
     if (evs.length) { const s = JSON.stringify({ t: 'ev', l: evs }); conn.sendText(s); bytes += s.length; }
 
     if ((p.meDirty && tick - p.meTick >= 2) || tick - p.meTick >= 20) {

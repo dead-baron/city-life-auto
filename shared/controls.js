@@ -15,6 +15,7 @@ export const PAD = {
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
+  radio: ['📱 RADIO', 'sys'], lanes: ['D-PAD / X A Y RB', 'sys'], pads: ['D-PAD + X A Y RB', 'sys'], chord: ['LT', 'bumper'],
 };
 // (back: the death screen's choices folded away to watch the scene, and opened again - task #403)
 export const TOUCH = {
@@ -23,6 +24,7 @@ export const TOUCH = {
   steer: 'LEFT THUMB', block: 'HOLD AIM STICK',
   dance: '📱 DANCE',
   trick: 'TRICK',
+  radio: '📱 RADIO', lanes: 'TAP THE LANES', pads: 'TAP THE PADS', chord: 'CHORD',
 };
 export const KB = {
   action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
@@ -30,5 +32,8 @@ export const KB = {
   steer: 'A/D', block: 'RMB',
   dance: 'G',
   trick: 'CLICK',
+  radio: 'G', lanes: '← ↓ ↑ → / DFJK', pads: 'A-K', chord: 'SHIFT',
 };
+// the music games' keys (client/music/play.js): the lanes, the pads by key code and pad button, the chord (radio: G in a car)
+export const MUSIC_KEYS = { lanes: [['ArrowLeft', 'KeyD'], ['ArrowDown', 'KeyF'], ['ArrowUp', 'KeyJ'], ['ArrowRight', 'KeyK']], pads: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK'], padLanes: [[14, 2], [13, 0], [12, 3], [15, 5]], padPads: [14, 13, 12, 15, 2, 0, 3, 5], padChord: 6 };
 export const ACTIONS = Object.keys(KB);

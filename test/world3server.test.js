@@ -342,3 +342,25 @@ test('street parking in some neighbourhoods: bays by the kerb, clear of the junc
   delete M._xings;
   for (const e of M.edges) delete e.bb;
 });
+
+// music (server/systems/music.js): World v3's record shops are walk-ins - fitted out as record shops (shared/shoprooms.js
+// 'records'), their counters selling the tapes, the boomboxes and radios, the mats and the instruments
+test('the record shops: walk-ins fitted out with crates and instruments, their counters selling tapes, boomboxes and instruments', async () => {
+  const { planOf, shopRoom } = await import('../shared/shoprooms.js');
+  const shops = [];
+  for (const bid of M.walkIns) { const b = M.buildings[bid]; for (const u of b.walkIn.units) if (u.trade === 'records') shops.push({ b, u }); }
+  assert.ok(shops.length >= 2, `record shops to walk into (${shops.length}: ${shops.map((s) => s.b.name).join(', ')})`);
+  let fitted = 0;
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w, { cash: 5000 });
+  for (const { b, u } of shops) {
+    assert.equal(planOf(u), 'records', b.name);
+    const R = shopRoom(b, u, TILE, M);
+    if (R && R.pieces.some((q) => q.t === 'bins')) fitted++;
+    const poi = M.pois[u.poi];
+    assert.ok(poi && poi.walk && poi.store === 'records', `${b.name}: its counter`);
+    const ids = economy.buildMenu(w, p, poi).opts.map((o) => o.id);
+    for (const it of ['boombox', 'radio', 'dancemat', 'guitar', 'tape_kickflip']) assert.ok(ids.some((o) => o.startsWith(`i:${it}:`)), `${b.name} sells ${it}`);
+  }
+  assert.ok(fitted >= Math.ceil(shops.length / 2), `fitted out with crates of vinyl (${fitted} of ${shops.length})`);
+});

@@ -136,6 +136,13 @@
    "trim": 4,
    "after": -32
   },
+  "boo": {
+   "cat": "fx",
+   "loud": -32.8,
+   "peak": -15.5,
+   "trim": 0.8,
+   "after": -32.0
+  },
   "burner": {
    "cat": "fx",
    "loud": -34.5,
@@ -206,6 +213,13 @@
    "trim": 5.9,
    "after": -35.0
   },
+  "cheer": {
+   "cat": "fx",
+   "loud": -33.8,
+   "peak": -18.5,
+   "trim": 1.8,
+   "after": -32.0
+  },
   "chop": {
    "cat": "fx",
    "loud": -36.5,
@@ -246,6 +260,13 @@
    "loud": -33.7,
    "peak": -14.1,
    "trim": 1.7,
+   "after": -32.0
+  },
+  "clap": {
+   "cat": "fx",
+   "loud": -36.8,
+   "peak": -16.6,
+   "trim": 4.8,
    "after": -32.0
   },
   "click": {

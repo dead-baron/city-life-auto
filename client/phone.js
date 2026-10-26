@@ -6,6 +6,8 @@
 import { JOB_TIERS } from '../shared/rules.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
+import { STATIONS, stationAt, TRACK } from '../shared/music.js';
+import * as MUS from './music/stage.js';
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 
@@ -62,6 +64,7 @@ export function createPhone(ctx) {
           <button class="ph-app" data-go="transit"><b>🚌</b>Transit</button>
           <button class="ph-app" data-go="homes"><b>🏠</b>Homes</button>
           <button class="ph-app" data-act="dance"><b>💃</b>Dance</button>
+          <button class="ph-app" data-go="radio"><b>📻</b>Radio</button>
           <button class="ph-app" data-go="skills"><b>💪</b>Skills</button>
           <button class="ph-app" data-go="crew"><b>🤝</b>Crew</button>
           ${wp ? '<button class="ph-app" data-act="clearwp"><b>✕</b>Clear waypoint</button>' : ''}
@@ -88,6 +91,11 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>Skills</h3><div class="ph-apps"><button class="ph-app" data-act="workout" data-k="pushups"><b>💪</b>Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps"><b>🧘</b>Sit-ups here</button></div>' + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-card skl"><b>${esc(k.name)}</b> level ${k.L} of ${k.max}<small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ''}</small><i style="--w:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></div>`).join('')
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
         + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
+    } else if (screen === 'radio') {   // (the stations: the car radio in a vehicle, else your pocket radio or boombox - server music.js)
+      const now = MUS.current ? MUS.current.now() : performance.now() / 1000;
+      el.innerHTML = '<h3>Radio</h3><p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
+        + STATIONS.map((S, i) => `<button class="ph-row" data-st="${i}"><span class="ic">📻</span><span class="nm">${esc(S.freq)} ${esc(S.name)}<small>now: ${esc(TRACK[stationAt(i, now).track].title)}</small></span></button>`).join('')
+        + '<button class="ph-row" data-st="-1"><span class="ic">⏻</span><span class="nm">Off</span></button>';
     } else if (screen === 'crew') {
       el.innerHTML = crewHtml();
     } else if (screen === 'bounties') {
@@ -134,6 +142,7 @@ export function createPhone(ctx) {
       ctx.close();
     };
     for (const b of el.querySelectorAll('[data-act="workout"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'workout', k: b.dataset.k }); ctx.close(); };   // (a set where you stand: server workout.js)
+    for (const b of el.querySelectorAll('[data-st]')) b.onclick = () => { ctx.send({ t: 'mus', a: 'tune', st: Number(b.dataset.st) }); ctx.close(); };
     for (const b of el.querySelectorAll('[data-act="dance"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'dance' }); ctx.close(); };   // (dance where you stand: the next move each time - server dance.js; G / L3 too)
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call', tier: b.dataset.tier }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };

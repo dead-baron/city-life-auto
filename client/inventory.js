@@ -30,7 +30,7 @@ export const ITEM_ICON = {
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light)); // (the flashlight: switched on / off)
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music)); // (the flashlight: switched on / off)
 const SLOTS = 4;
 
 export function createInventory({ el, send, me, onClose }) {
@@ -163,7 +163,7 @@ function describe(id) {
   if (it.buff === 'wine') return 'a glass or two: health comes back faster for 2 minutes';
   if (it.buff === 'coffee') return 'refills stamina, faster recovery for 60s';
   if (it.buff === 'energy') return 'extra stamina and speed for 60s';
-  return '';
+  return it.desc || '';
 }
 
 // ---- the quick wheel ------------------------------------------------------------------------------

@@ -21,7 +21,7 @@ const PEAK_T = DAY_PART_S + 0.45 * (DAY_LOOP_S - DAY_PART_S);   // (about half p
 const sum = (G) => { let h = 0; for (let i = 0; i < G.col.length; i += 3) h = (Math.imul(h, 31) + G.col[i]) | 0; return h + ':' + G.w + 'x' + G.h; };
 
 test('the dance moves are poses: four frames each, every frame different, the spin goes round', () => {
-  assert.equal(DANCE_MOVES.length, 12);
+  assert.equal(DANCE_MOVES.length, 14);   // (the last two: breaking - toprock and a freeze, b7c)
   const man = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#a02a2a', tc2: '#eee', l: '#2a3a5a', sh: '#eee', bd: 1 };
   const woman = { s: 3, h: 2, hc: '#2a1a10', t: 5, tc: '#c8262b', tc2: '#eee', l: '#222', sh: '#111', bd: 1 };
   for (const pose of DANCE_POSE) {

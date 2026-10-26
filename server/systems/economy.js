@@ -32,6 +32,8 @@ import * as skate from './skate.js';
 import * as casino from './casino.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
+import * as music from './music.js';
+import { RECORD_STORE } from '../../shared/music.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -46,7 +48,7 @@ function walkCounter(poi) {
   if (st === 'bar') return { items: [['whiskey', 8], ['redwine', 10]], sub: 'A quiet one at the bar.' };
   if (st === 'laundry') return { items: [], wash: true, decor: ['washer'], sub: 'Wash and dry while you wait - or take a machine home.' };
   if (st === 'books') return { items: [], decor: ['bookshelf', 'armchair', 'lamp'], sub: 'New and used. A reading corner for your place, delivered.' };
-  if (st === 'records') return { items: [], decor: ['turntable', 'crates', 'art'], sub: 'Crates of vinyl, a listening booth. Take the sound home.' };
+  if (st === 'records') return { items: RECORD_STORE, decor: ['turntable', 'crates', 'art'], sub: 'Crates of vinyl and cassettes, a listening booth, instruments on the wall: tapes for a boombox, a pocket radio, a cardboard mat to dance on - or take the sound home.' };   // (music: server music.js)
   if (FOODISH.test(n)) return { items: [['bread', 5], ['apple', 3], ['energy', 8]], sub: 'Fresh in this morning.' };
   return null;
 }
@@ -182,7 +184,7 @@ export function buildMenu(world, p, poi) {
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
     const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
-    for (const [id, price] of W.items) opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, note: prof.inventory[id] ? `have ${prof.inventory[id]}` : '' });
+    for (const [id, price] of W.items) { const one = !!(ITEMS[id].tool || ITEMS[id].music) && prof.inventory[id] > 0; opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, dis: one, note: one ? 'have one' : prof.inventory[id] ? `have ${prof.inventory[id]}` : '' }); }   // (a tape, a boombox, an instrument: one's enough)
     if (W.wash) opts.push({ id: 'wash', label: 'Wash and dry your clothes', price: 6 });
     for (const k of W.decor || []) opts.push({ id: `fb:${k}`, label: DECOR_PIECES[k].name, price: decorPrice(k), dis: none, note: `for your home${furn[k] ? ` · ${furn[k]} in storage` : ''}` });
     if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
@@ -503,7 +505,8 @@ export function openMenu(world, p, poi) {
 }
 
 export function handleMenu(world, p, poiId, optId) {
-  if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
+  if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;
+  if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)   // (the bed, the safe, the fridge... at home: homeinside.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
   if (!poi || !ped || ped.dead || ped.vehId) return;
@@ -880,7 +883,7 @@ function heartyEnd(world) {
 // The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
 // usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
-export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light)); };
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music)); };
 export function quickSlots(p) {
   const prof = p.profile;
   if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
@@ -888,7 +891,7 @@ export function quickSlots(p) {
   return prof.quick;
 }
 function autoSlot(p, id) {
-  if (!USABLE(id)) return;
+  if (!USABLE(id) || ITEMS[id].music === 'tape') return;
   const q = quickSlots(p);
   if (q.includes(id)) return;
   const i = q.indexOf(null);
@@ -917,7 +920,8 @@ export function useItem(world, p, id) {
   const ped = p.ped, inv = p.profile.inventory, it = ITEMS[id];
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
-  if (it.light) { lights.use(world, p, id); return; }   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
+  if (it.light) { lights.use(world, p, id); return; }
+  if (it.music) { music.use(world, p, id); return; }   // (a boombox, a radio, a tape, the mat, an instrument: music.js)   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }

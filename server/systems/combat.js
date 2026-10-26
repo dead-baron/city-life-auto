@@ -24,6 +24,7 @@ import * as nightclubs from './nightclubs.js';
 import * as explosions from './explosions.js';   // (chain reactions: task #398)
 import * as campfires from './campfires.js';
 import * as dance from './dance.js';
+import * as music from './music.js';
 import * as burning from './burning.js';   // (fire on people: H58)
 import * as boomtest from './boomtest.js';
 import * as grenades from './grenades.js';
@@ -123,7 +124,7 @@ function melee(world, ped, w, aim) {
     if (d < bestD) { bestD = d; best = o; }
   }
   world.emit(ped.x, ped.y, { e: 'swing', x: ped.x, y: ped.y, id: ped.id, side: ped.swingSide });
-  if (!best) { meleeVehicle(world, ped, w, aim); return true; }   // (nobody in reach: a vehicle's body in the swing - task #402)
+  if (!best) { if (!music.swing(world, ped, w, aim)) meleeVehicle(world, ped, w, aim); return true; }   // (a boombox set down: music.js)   // (nobody in reach: a vehicle's body in the swing - task #402)
   const dir = Math.atan2(best.y - ped.y, best.x - ped.x);
   npcGuard(world, best);   // (someone fighting back with fists or a blade: now and then the guard goes up)
   if (blocked(world, best, ped, w, dir)) return true;
@@ -466,6 +467,8 @@ function hitscan(world, ped, w, a, acc) {
   const x1 = ped.x + Math.cos(a) * 14, y1 = ped.y + Math.sin(a) * 14;
   const x2 = ped.x + Math.cos(a) * w.range, y2 = ped.y + Math.sin(a) * w.range;
   const hit = traceTarget(world, ped, x1, y1, x2, y2, true);
+  const mt = music.shot(world, ped, x1, y1, x2, y2, hit.hitT, w.dmg);   // (a boombox or a radio in the way, nearer: hit - music.js)
+  if (mt >= 0) { world.emit(x1, y1, { e: 'shot', x1, y1, x2: x1 + (x2 - x1) * mt, y2: y1 + (y2 - y1) * mt, w: w.i, h: 0, id: ped.id }); return false; }
   const t = hit.hitT;
   const hx = x1 + (x2 - x1) * t, hy = y1 + (y2 - y1) * t;
   world.emit(x1, y1, { e: 'shot', x1, y1, x2: hx, y2: hy, w: w.i, h: hit.kind || 0, id: ped.id });   // (id: the client puts the flash on the gun it draws)
@@ -574,7 +577,7 @@ function causeText(cause) {
 // L: the blast's link of a chain (explosions.js: what it sets off goes up a beat later, as the next link); big: its
 // size (shared/explosions.js blastSize) - a huge one (3, 4) throws people and shoves vehicles harder (BLAST_FLING)
 export function blast(world, x, y, r, dmg, attacker, excludeVehId = 0, rocket = false, z = null, L = explosions.newLink(), big = 1) {
-  if (z === null || z < 0.3) props.blastBreak(world, x, y, r * 0.8);
+  if (z === null || z < 0.3) { props.blastBreak(world, x, y, r * 0.8); music.blast(world, x, y, r * 0.8, attacker); }
   const k = big > 2 ? BLAST_FLING : 1, vs = [];
   if (big > 2) L.c.hot = true;
   for (const e of world.query(x, y, r + 90)) {   // (+90: a long vehicle whose near end is in it)

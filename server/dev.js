@@ -83,6 +83,7 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
 const WATER_RACES = { jetski: 'jetski', boat: 'speedboat', kayak: 'kayak' };   // (a water race's kind: the craft waiting at its start)
 export const NEAR_KINDS = {
+  records: (m) => (m.walkIns || []).flatMap((id) => (m.buildings[id] && m.buildings[id].walkIn ? m.buildings[id].walkIn.units : []).filter((u) => u.trade === 'records' && m.pois[u.poi]).map((u) => ({ x: m.pois[u.poi].x, y: m.pois[u.poi].y, name: m.pois[u.poi].label }))),   // (the record shops you walk into: music.js)
   bikerack: (m) => m.props.filter((q) => q.t === 'bikerack').map((q) => ({ x: q.x, y: q.y + 40, name: 'a bike rack' })),
   // (every line's stops: World v3 runs a rail per loop - m.rail is only the first, the main line - the owner, 2026-10-15:
   // "find nearest subway station ... says there is no subway station on this map")

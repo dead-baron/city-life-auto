@@ -1,12 +1,8 @@
-// The shops you walk into fitted out by their trade (the owner, batch 4: "keep developing the interiors of buildings so
-// they're more unique and interesting on the inside"): FIT below, one per plan - the corner store's aisles, cooler and
-// cigarette rack, the gun shop's racks and glass cases, the hardware store's pegboard and lumber, the pawn shop's
-// clutter, the bank's tellers' screen, queue and vault, the barber's chairs, the bar's lit bottles and stools... - each
-// varied by the building (its floor, walls, palette, hero pieces; deterministic, never Math.random). Pure layout in world
-// px over the server's room (shared/map.js buildInteriors: the counter row, the doorway, the floor stay as they are):
-// client/art2/shopart.js draws it into the cut-away (client/art2/game/statics.js makeCut), server/systems/activities.js
-// 'shoppers' stands customers where it says. Furniture isn't solid (as the food places' tables): the door's lane, the
-// strip along the counter and an ATM's spot are kept clear (clear). Rooms with the door on the south side only.
+// The shops you walk into fitted out by their trade (the owner, batch 4): FIT below, one per plan - aisles, coolers, racks,
+// cases, tellers, chairs, bottles... - varied by the building (deterministic, never Math.random). Pure layout in world px
+// over the server's room (shared/map.js buildInteriors): client/art2/shopart.js draws it into the cut-away (statics.js
+// makeCut), server/systems/activities.js 'shoppers' stands customers where it says. Furniture isn't solid: the door's
+// lane, the strip along the counter and an ATM's spot are kept clear (clear). Rooms with the door on the south side only.
 // shopRoom(b, u, TILE, M) -> null | { plan, X0, X1, back, cy, Ya, Yb, dx, dw, dc, tillX, spot, floor, wall, counter,
 //   onWall [{ t, x0, x1, v0, v1, c, g, text }] (v: up the back wall), pieces [{ t, x0, y0, x1, y1, h, c, c2, g, flat }],
 //   people [{ x, y, a, gt }] (where customers stand; gt 'sit'), clear [[x0, y0, x1, y1]] }
@@ -15,8 +11,8 @@ export const SHOP_PLAN = {
   fence: 'fence', bank: 'bank', courthouse: 'court', pharmacy: 'pharmacy', barber: 'barber', clothing: 'boutique',
   sports: 'sports', tackle: 'tackle', fishmarket: 'fishmarket', club: 'club', roadhouse: 'saloon',
 };
-export const TRADE_PLAN = { mart: 'corner', bar: 'bar', liquor: 'liquor', pawn: 'pawn', barber: 'barber', lobby: 'office' };
-export const PLANS = ['corner', 'fuel', 'grocery', 'liquor', 'gunshop', 'hardware', 'pawn', 'fence', 'bank', 'court', 'pharmacy', 'barber', 'boutique', 'sports', 'tackle', 'fishmarket', 'bar', 'club', 'saloon', 'office'];
+export const TRADE_PLAN = { mart: 'corner', bar: 'bar', liquor: 'liquor', pawn: 'pawn', barber: 'barber', lobby: 'office', records: 'records' };
+export const PLANS = ['corner', 'fuel', 'grocery', 'liquor', 'gunshop', 'hardware', 'pawn', 'fence', 'bank', 'court', 'pharmacy', 'barber', 'boutique', 'sports', 'tackle', 'fishmarket', 'bar', 'club', 'saloon', 'office', 'records'];
 export function planOf(u) {
   if (!u) return null;
   return SHOP_PLAN[u.kind] || (u.trade && TRADE_PLAN[u.trade]) || null;
@@ -63,6 +59,7 @@ const G = {
   clothes: ['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0', '#e8e4dc', '#3a8a5a', '#d86aa0', '#7a5ab0'],
   sport: ['#d8343a', '#2a5ab0', '#f0c030', '#e8e8e8', '#2a2a2e', '#3ab05a', '#f07a2a'],
   tackle: ['#3a6a3a', '#c8a040', '#d8343a', '#2a5a8a', '#e8e4dc', '#f07a2a'],
+  sleeves: ['#1c1c22', '#d8343a', '#f0c030', '#e8e4dc', '#2a5ab0', '#ff6ab0', '#3a8a4a', '#8a3ac8'],
 };
 const pick = (r, a) => a[Math.floor(r() * a.length) % a.length];
 
@@ -366,5 +363,22 @@ FIT.office = (c) => {
   }
   for (const reg of c.regs) { const q = corner(reg, 12, 10, false); put(c, 'plant', ...q, 22); }
   waiting(c);
+};
+// the record shop (its counter: server music.js): sleeves up the wall, guitars hung, crates of vinyl, a booth, a jukebox
+FIT.records = (c) => {
+  const { R, r } = c;
+  R.floor = pick(r, F.wood.concat(F.dark.slice(0, 2))); R.wall = pick(r, W.bar.concat(W.pastel.slice(0, 2)));
+  R.counter = { top: '#2a2a2e', front: R.wall[2], trim: '#c8a050', k: 'plain', on: ['jar', 'bags'] };
+  wall(c, 'goods', c.X0 + 6, c.tillX - 38, 4, 50, { g: G.sleeves });
+  wall(c, 'guitars', c.tillX + 38, c.X1 - 6, 4, 54, { g: ['#c8742a', '#d8343a', '#2a2a2e', '#e8c040', '#5aa0d0'] });
+  sign(c, pick(r, ['VINYL', 'RECORDS', 'TAPES', 'MUSIC']), pick(r, ['#ff6ab0', '#5ae8ff', '#ffd24a', '#7aff7a']));
+  const [a, b] = c.regs;
+  if (a) aisles(c, a, 14, 28, (x0, y, x1, y1) => put(c, 'bins', x0, y, x1, y1, 12, { c: '#5a3a24', g: G.sleeves }));
+  if (b) {
+    if (b.x1 - b.x0 >= 46 && b.y1 - b.y0 >= 26) { const q = corner(b, 46, 24, false); put(c, 'booth', q[0], b.y0, q[2], b.y0 + 24, 22, { c: pick(r, ['#8a2a26', '#2a4a3a', '#3a2a4a']) }); }
+    const q = corner(b, 22, 16, true); put(c, 'machine', ...q, 30, { k: 'jukebox' });
+    if (b.y1 - b.y0 > 60) put(c, 'bins', b.x0, b.y0 + 34, Math.min(b.x1, b.x0 + 70), b.y0 + 48, 12, { c: '#5a3a24', g: G.sleeves });
+  }
+  waiting(c); waiting(c);
 };
 for (const k of PLANS) if (!FIT[k]) throw new Error('shoprooms: no fit-out for ' + k);

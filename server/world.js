@@ -58,6 +58,7 @@ import * as foraging from './systems/foraging.js';
 import * as hunting from './systems/hunting.js';
 import * as campfires from './systems/campfires.js';
 import * as lights from './systems/lights.js';
+import * as music from './systems/music.js';
 import * as felling from './systems/felling.js';
 import * as wanderer from './systems/wanderer.js';
 import * as places from './systems/places.js';
@@ -166,6 +167,7 @@ const SYSTEMS = [
   ['hunting', hunting.update],      // field-dressing game, cooking over the fire
   ['campfires', campfires.update],  // fires lit and put out, warming up by one
   ['lights', lights.update],        // lights to carry: batteries running down, flares and glow sticks burning out
+  ['music', music.update],          // boomboxes, radios, the car radio, performances and their crowds (music.js)
   ['felling', felling.update],      // cutting trees, the falls, the logs, the stumps growing back
   ['wanderer', wanderer.update],    // the rare hooded stranger who sells the plasma blade
   ['economy', economy.update],      // auto-heal at ER reception

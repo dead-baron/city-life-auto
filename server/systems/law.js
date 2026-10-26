@@ -51,6 +51,7 @@ export const CRIMES = {
   heist:       { heat: HEIST.heat, label: 'A bank heist', felony: true, sev: 2 },   // (the bank's alarm calls it in: heist.js)
   escape:      { heat: 25, label: 'Escaping custody', felony: true, sev: 1 },
   treeFelling: { heat: FELL_HEAT, label: 'Vandalism: felling a tree', sev: 0.6, minor: true },   // (in town or a park: felling.js)
+  tipTheft:    { heat: 6, label: 'Stealing a performer\'s tips', sev: 0.6, minor: true },   // (a hat's takings swiped: music.js)
   vandalism:   { heat: VANDAL_HEAT, label: 'Vandalism: damaging a vehicle', sev: 0.7, minor: true },   // (an empty one: vehicleDamaged)
   // (the owner, 2026-10-11: "tone down the severity of some less severe crimes so it's not as easy to get a felony")
   carjackHurt: { heat: 25, label: 'Violent carjacking', felony: true, sev: 1.3 },   // (the driver thrown out of a moving car: vehicles.js carjack)
