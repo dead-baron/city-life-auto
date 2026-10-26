@@ -37,6 +37,7 @@ import * as sharks from './systems/sharks.js';
 import * as prison from './systems/prison.js';
 import * as wanderer from './systems/wanderer.js';
 import * as personas from './systems/personas.js';
+import { dress as dressNpc } from './systems/npclooks.js';
 import * as activities from './systems/activities.js';
 import { isArcade } from './systems/arcade.js';
 import { isCasino } from './systems/casino.js';
@@ -66,6 +67,8 @@ import * as gardening from './systems/gardening.js';
 import * as farming from './systems/farming.js';
 import * as homes from './systems/homes.js';
 import * as homeinside from './systems/homeinside.js';
+import * as carsoccer from './systems/carsoccer.js';
+import * as bathhouse from './systems/bathhouse.js';
 import * as policeair from './systems/policeair.js';
 import * as airtraffic from './systems/airtraffic.js';
 import * as firefighter from './systems/firefighter.js';
@@ -75,7 +78,7 @@ import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'afoot', 'place'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'afoot', 'place', 'soccer', 'bath'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -110,6 +113,8 @@ export const NEAR_KINDS = {
   // street dice, a bank's vault - exact: right on the spot, not the open ground beside it)
   tennis: (m) => m.props.filter((q) => q && q.t === 'court' && q.k === 'tennis').map((q) => ({ x: q.x, y: q.y, name: 'a tennis court' })),
   arcade: (m) => m.pois.filter((q) => q && isArcade({ map: m }, q)).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),
+  bathhouse: (m) => m.pois.filter((q) => q && q.kind === 'delivery' && q.bath).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),   // (bathhouse.js: at its door)
+  carsoccer: (m) => (m.arenas || []).map((a) => ({ x: a.gate.x - 30, y: a.gate.y, name: `${a.name}'s gate`, exact: true })),   // (carsoccer.js: join there)
   casino: (m) => m.pois.filter((q) => q && isCasino(q)).map((q) => ({ x: q.x, y: q.y + 20, name: q.label })),
   pooltable: (m) => { const T2 = m.roadhouse ? activities.poolTable(m) : null; return T2 ? [{ x: T2.cx, y: T2.cy + 40, name: 'the Rusty Spur\'s pool table' }] : []; },
   dice: (m) => activities.spotsOf(m).list.filter((s) => s.k === 'dice').map((s) => ({ x: s.x, y: s.y, name: 'street dice down an alley', exact: true })),
@@ -172,6 +177,8 @@ function railStops(m, keep) {
   }
   return out;
 }
+// the debug dummies dressed as the people the world concepts showed the city didn't have (msg.looks)
+const DUMMY_LOOKS = { new: ['lifeguard', 'postal', 'courier', 'chef', 'nurse', 'tennis'], new2: ['cyclist', 'valet', 'gardener', 'groom', 'bride', 'server'] };
 export function nearTargets(m, k) {
   if (NEAR_KINDS[k]) return NEAR_KINDS[k](m);
   const pois = m.pois.filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.label || q.name || k }));   // (walk-ins: at the desk inside)
@@ -516,7 +523,7 @@ function run(world, p, c, msg) {
       if (!ped || ped.dead || ped.vehId) break;
       const L = undergroundOf(world.map);
       if (ped.ug) break;
-      if (msg.k === 'cave') { const K2 = L.caves[msg.cave] || caveNear(L, ped.x, ped.y); if (K2) { ped.x = K2.mouth.x; ped.y = K2.mouth.y; underground.enterCave(world, p, K2); const c = K2.ch[msg.at]; if (c) { ped.x = c.x; ped.y = c.y; } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den; cave: which, else the nearest)
+      if (msg.k === 'cave') { const K2 = L.caves[msg.cave] || caveNear(L, ped.x, ped.y); if (K2) { ped.x = K2.mouth.x; ped.y = K2.mouth.y; underground.enterCave(world, p, K2); const c = K2.ch[msg.at], sh = msg.shaft !== undefined && K2.shafts && K2.shafts[msg.shaft]; if (c) { ped.x = c.x; ped.y = c.y; } if (sh) { ped.x = sh.x; ped.y = sh.y + 40; } if (msg.find && (p.caveFind = underground.rollFind(world, p, K2, true))) { if (msg.find === 'here') { p.caveFind.x = Math.round(ped.x + 30); p.caveFind.y = Math.round(ped.y); } underground.sendLayer(world, p); } } break; }   // (at: a chamber - grotto, river, worms, pool, crystal, den; shaft: stand under its shaft n; find: a light left lying in its light ('here': beside you); cave: which, else the nearest)
       let best = null, bd = Infinity;
       for (const r of L.routes) for (const m of r.manholes) { const d = Math.hypot(m.x - ped.x, m.y - ped.y); if (d < bd) { bd = d; best = m; } }
       if (best) { ped.x = best.x; ped.y = best.y; underground.goDown(world, p, best); }
@@ -680,6 +687,8 @@ function run(world, p, c, msg) {
         if (!q) continue;
         q.npc.desk = { x, y, a: a + Math.PI }; q.npc.keep = true; q.a = a + Math.PI;
         if (Number(msg.hp) > 0) q.hp = q.maxHp = Number(msg.hp);
+        const lk = DUMMY_LOOKS[msg.looks] && DUMMY_LOOKS[msg.looks][i];   // (msg.looks: the people of the world concepts, b6c - personas.js LOOKS)
+        if (lk) { const g = dressNpc(world, 'p:' + lk, x, y, false, Math.random, personas.LOOKS[lk]); if (g) { q.app = { ...g.app, bd: q.app.bd }; q.appVer = (q.appVer || 0) + 1; } }
         made++;
       }
       world.notify(p, `[dev] ${made} practice ${made === 1 ? 'dummy' : 'dummies'} in front of you.`, 'info');
@@ -817,6 +826,8 @@ function run(world, p, c, msg) {
 
     case 'homein': { const err = homeinside.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }
     case 'decor': { const err = homeinside.devDecor(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // decorating (H67): msg.furn, msg.demo, msg.wall / msg.floor, msg.edit   // inside a home (H62): msg.id | msg.kind - yours, and in; msg.at: by the bed, the safe...
+    case 'bath': { const err = bathhouse.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // into the nearest bathhouse (bathhouse.js): msg.at, msg.side, msg.suit, msg.pass
+    case 'soccer': { const err = carsoccer.devStart(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // car soccer now at the arena: you and the city's drivers (carsoccer.js); msg.score, msg.ball, msg.play
     case 'lobby': { const err = homeinside.devLobby(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // (H71) an apartment block's lobby: msg.own / msg.other unit n, msg.mail, msg.pet, msg.at ('mail' | n), msg.home
     case 'airtraffic': {   // aircraft about the world (H66): msg.k 'land' | 'takeoff' at the runway nearest you (msg.seen: even in view), 'news' over you
       if (!ped) break;

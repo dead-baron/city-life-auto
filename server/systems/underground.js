@@ -22,8 +22,9 @@ import { pedStep } from '../../shared/physics.js';
 import {
   MANHOLE_REACH, LADDER_REACH, MINE_REACH, VEIN_REGROW_S, POLICE_FOLLOW_R, POLICE_FOLLOW_S, POLICE_GIVE_UP_S,
   ROCKFALL_WARN_S, ROCKFALL_DMG, ROCKFALL_R, ROCKFALL_EVERY_S, BATS_REST_S, BEAR_WAKE_R, BEAR_BITE, BEAR_BITE_S,
-  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT,
+  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT, CAVE_FIND,
 } from '../../shared/rules.js';
+import { LIGHTS } from '../../shared/lights.js';
 import * as combat from './combat.js';
 import * as wildlife from './wildlife.js';
 import { store } from '../store.js';
@@ -84,6 +85,8 @@ export function interaction(world, p) {
       if (w && w.d < 56) return { label: w.M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : 'Walk out of the cave', run: () => leaveCave(world, p, K2, w.M) };
       const c = chestInteraction(world, p, K2, ped);
       if (c) return c;
+      const f = p.caveFind;
+      if (f && f.k === K2.k && Math.hypot(f.x - ped.x, f.y - ped.y) < CAVE_FIND.reach) return { label: `Pick up the old ${ITEMS[f.id].name.toLowerCase()} lying here`, run: () => takeFind(world, p) };
     }
     return mineInteraction(world, p, ped);
   }
@@ -155,6 +158,7 @@ export function enterCave(world, p, K = null, M = null) {
   if (!K2 || !ped || ped.dead || ped.vehId || ped.ug) return false;
   if (ped.carrying) { world.notify(p, 'Set the crate down first.', 'warn'); return false; }
   const M2 = M || mouthsOf(K2).reduce((b, q) => (!b || Math.hypot(q.x - ped.x, q.y - ped.y) < Math.hypot(b.x - ped.x, b.y - ped.y) ? q : b), null);
+  p.caveFind = rollFind(world, p, K2);
   moveTo(world, p, M2.inside.x, M2.inside.y, UG.CAVE);
   world.notify(p, p.profile.light ? 'Into the cave. Your flashlight shows the way.' : 'Into the cave. It\'s pitch dark in here - switch on a flashlight if you have one.', 'info');
   return true;
@@ -163,6 +167,7 @@ export function leaveCave(world, p, K = null, M = null) {
   const L = layoutOf(world), K2 = K || (p.ped && caveOf(L, p.ped.x, p.ped.y));
   if (!K2 || !p.ped) return false;
   const M2 = M || wayOut(K2, p.ped.x, p.ped.y).M;
+  p.caveFind = null;
   moveTo(world, p, M2.out.x, M2.out.y, 0);
   world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : 'Out into the daylight.', 'info');
   return true;
@@ -193,11 +198,33 @@ export function openChest(world, p, K2, c) {
   store.touch();
   return { got, cash };
 }
+// ---- a light left behind (CAVE_FIND) -----------------------------------------------------------------------------------
+// On the way in, now and then: one of the cave's lit spots (K.finds) has a lantern or a flashlight lying in it - for you
+// (yours alone; gone when you leave) - a light you don't have yet if there is one, its batteries low.
+export function rollFind(world, p, K2, force = false) {
+  if (!K2.finds || !K2.finds.length || (!force && world.rand() >= CAVE_FIND.chance)) return null;
+  const inv = p.profile.inventory || {}, want = CAVE_FIND.items.filter((id) => !(inv[id] > 0)), list = want.length ? want : CAVE_FIND.items;
+  const at = K2.finds[Math.floor(world.rand() * K2.finds.length) % K2.finds.length];
+  return { k: K2.k, x: at.x, y: at.y, id: list[Math.floor(world.rand() * list.length) % list.length] };
+}
+export function takeFind(world, p) {
+  const f = p.caveFind, inv = p.profile.inventory;
+  if (!f || !p.ped || p.ped.dead) return false;
+  p.caveFind = null;
+  const had = inv[f.id] > 0;
+  if (!had) { inv[f.id] = 1; (p.profile.lightFuel ||= {})[f.id] = Math.round(LIGHTS[f.id].fuel * CAVE_FIND.fuel); }
+  else inv.batteries = (inv.batteries || 0) + 1;
+  world.notify(p, had ? `An old ${ITEMS[f.id].name.toLowerCase()} someone left behind - you have one, so you take its batteries.` : `An old ${ITEMS[f.id].name.toLowerCase()} someone left behind, still working - its batteries are low. Switch it on with the light button.`, 'good');
+  sendLayer(world, p);
+  p.meDirty = true;
+  store.touch();
+  return true;
+}
 // what the client needs to draw where you are (and its veins): sent on going down / up and when a vein changes
-function sendLayer(world, p) {
+export function sendLayer(world, p) {
   if (!p.conn) return;
-  const ped = p.ped;
-  p.conn.sendJSON({ t: 'ug', ug: (ped && ped.ug) || 0, veins: veinList(world), chests: chestList(world) });
+  const ped = p.ped, f = p.caveFind;
+  p.conn.sendJSON({ t: 'ug', ug: (ped && ped.ug) || 0, veins: veinList(world), chests: chestList(world), find: f ? [f.k, f.x, f.y, f.id] : null });
 }
 // the chests that are empty now: [cave k, chest i, seconds till they're full again]
 function chestList(world) { const out = []; for (const [k, S] of (world.caves || []).entries()) if (S && S.chests) S.chests.forEach((c, i) => { if (c.until > world.time) out.push([k, i, Math.round(c.until - world.time)]); }); return out; }

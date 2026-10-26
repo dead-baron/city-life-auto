@@ -6,14 +6,13 @@
 //   paintSigns(G, spec)             paints spec.neonSigns onto makeBuilding(spec)'s south face (G.ax, G.ay: the
 //                                   footprint's south-west corner; a face pixel at height v is at row G.ay - v)
 //   signsFor(...)                   (the same choice, for tests: which buildings get what)
-//   handNeon(spec, N, ctx)          a hand-planned front's own neon (World v3's Neon Strip, the Pink Mile: b.art.neon) -
-//                                   its name in tubes, a picture sign (the eye-patch woman, the striding tiger, the
-//                                   roaring head; the Pink Mile's moon, cocktail glass, heart, lips, palm and rose),
-//                                   a blade sign down the side, a tube along the cornice
+//   handNeon(spec, N, ctx)          a hand-planned front's own neon (b.art.neon): its name, a picture sign, a blade, the
+//                                   cornice tube; the Neon Strip's more pictures and its dressing (neonpics.js)
 // Names and icons are original (no real venues, brands or logos). Pure and worker-safe.
 import { drawText, textWidth } from './font.js';
 import { F_GLASS } from './gbuf.js';
 import { buildingH } from './buildings.js';
+import { npPic, dressFace, placePics, paintCyber, signRects, backShutter } from './neonpics.js';   // (the Neon Strip's own signs and facades)
 
 export const NEON_COLS = [[255, 60, 200], [70, 230, 255], [255, 80, 150], [170, 100, 255], [255, 190, 60], [110, 255, 150], [255, 110, 70]];
 // what a sign says, by what's behind it (the club's own name when it has one)
@@ -51,8 +50,10 @@ export function signsFor(ctx) {
   const pick = (a) => a[Math.min(a.length - 1, Math.floor(rnd() * a.length))];
   const ci = Math.floor(rnd() * NEON_COLS.length), col = NEON_COLS[ci], col2 = NEON_COLS[(ci + 2 + Math.floor(rnd() * 3)) % NEON_COLS.length];
   // the club's own name if it fits, else words of its kind
-  const sx = w >= 200 ? 4 : 2, room = w - 16 - 30;
-  let text = (k === 'club' || k === 'lounge' || k === 'bar') && name && !/^(BUILDING|SHOP|STORE)$/i.test(name) ? clean(name) : pick(NEON_WORDS[k]);
+  let sx = w >= 200 ? 4 : 2;
+  const room = w - 16 - 30;
+  let text = (ctx.own || k === 'club' || k === 'lounge' || k === 'bar') && name && !/^(BUILDING|SHOP|STORE)$/i.test(name) ? clean(name) : pick(NEON_WORDS[k]);
+  if (ctx.own && sx > 2 && textWidth(text, { sx, gap: 1 }) > room) sx = 2;   // (a hand-planned front's own name, smaller, before words of its kind)
   if (textWidth(text, { sx, gap: 1 }) > room) text = pick(NEON_WORDS[k].filter((q) => textWidth(q, { sx, gap: 1 }) <= room)) || '';
   if (!text) return null;
   const tw = textWidth(text, { sx, gap: 1 }), sw = tw + 30 + 12, sh = 5 * sx + 12;
@@ -89,18 +90,16 @@ const ICONS = {
   moon: [[6, 0], [7, 0], [8, 0], [4, 1], [5, 1], [3, 2], [2, 3], [2, 4], [1, 5], [1, 6], [2, 7], [2, 8], [3, 9], [4, 10], [5, 10], [6, 11], [7, 11], [8, 11], [9, 10], [10, 9], [8, 1], [7, 2], [6, 3], [6, 4], [5, 5], [5, 6], [6, 7], [6, 8], [7, 9], [8, 9], [9, 9]],
 };
 export function paintSigns(G, spec) {
+  if (spec.cyber) paintCyber(G, spec);   // (the Neon Strip's facade dressing, under its signs)
   for (const sg of spec.neonSigns || []) (sg.pic ? paintPic : sg.blade ? paintBlade : paintSign)(G, sg);
   return G;
 }
 
 // ---- the picture signs (the owner's favourites from NE3-NE8, drawn for the game): rows of palette letters, '.' clear.
-// The eye-patch woman is a lit panel (the club's tower sign, the billboard by the plaza); the tigers are cut-out tubes
-// (their cyan outline the tube) - the striding one over the streetwear shop, the roaring head over a club or a tattoo
-// parlour. Original art: no real brand, venue or person.
+// The eye-patch woman is a lit panel (the club's tower sign, the billboard by the plaza). The tigers, the panther and the
+// rest of the Neon Strip's signs are his sign sheets' (neonpics.js). Original art: no real brand, venue or person.
 const PICS = {
   lucy: { pal: [[30,40,120],[50,110,230],[160,240,255],[90,200,255],[235,150,220],[180,90,190],[40,30,50],[20,14,26],[30,10,40],[250,230,250],[80,220,255],[220,70,170],[130,60,150],[255,220,120],[140,20,110],[255,80,200],[40,30,90]], rows: '...........aaaaaaaaaa........../..........aaaaaaaaaaaa........./........aaabbbbbcbbbbbaa......./.......aaabbdcdddddddbbaa....../......aaabbbbbbbbbbbbbbbaa...../.....aaabbbbbbdbbbbdbbbbbaa..../.....aabbbbbbdbbbbbdbbbbbba..../.....aabbbbbbdbbbbbbdbbbbba..../....aaabbbbbdbbeebbbdbbbbbaa.../....aaabdaebdbeeeebbdefbbaaa.../....aaabdbedbeeeeeebeefgggaa.../...aaaabdbeeeeeeeeeegggfbbaaa../...aaabgdbeeeeeeeeggeaafbbdaa../...aaabbgbeeheeeggaaaeffibdaa../...aaabbdghhhhhgeeeeeefibbdaa../...aaabbdhhhhhhheeiiiiifbbdaa../...aaabdbhhhhhhheejkkjffbbcaa../...aaabdbehhhhheeeekieffbbdaa../..aaaabdbeeeheeeeeeeeeffbbdaaa./..aaaabdbeeeeeeeeeeeeeffbbdaaa./..aaabbdbeeeeeeeefeelfffbbdaaa./..aaabbdbeeeeeeefmeeeeffbbdaaa./..aaabbdbaeeeeeeeeeeeeffnbdaaa./..aaabbbbaeeeeeoeeoeeeffnbdaaa./..aaabbbbaaeeeooooooeaffbbdaaa./..aaabbbbaaaeeelloeeeafabbdaaa./..aaaabbaaaaeeeeeeeeeafabbdaaa./..aaaabbaaaaaeeeeeeaaaaabbbaaa./..aaaabbaaaaffeeeeffaaaabbbaaa./..aaaabbaaaaffffeffaaaaaabbaaa./...aaaaaaaaafffffffaaaaaabaaa../...aaaaaaaafppppppppaaaaabaaa../...aaaaaaa.fffffnfff..aaabaaa../...aaaaaaa.fffffffff..aaaaaaa../...aaaaaaqpqqqqqqqqqqp.aaaaaa../...aaaaqppqppppppppppqppaaaaa../...aaappqqqqqqqqqqqqqqqqppaaa../....ppqqqqqqqqqqqqqqqqqqqqpp.../...pqqqqqqqqqqqqqqqqqqqqqqqqp../..qqqqqqqqqqqqqqqqqqqqqqqqqqq../..qqqqqqqqqqqqqqqqqqqqqqqqqqq../.qqqqqqqqqqqqqqqqqqqqqqqqqqqqq./.qqqqqqqqqqqqqqqqqqqqqqqqqqqqq./.qqqqqqqqqqqqqqqqqqqqqqqqqqqqq./qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq' },
-  tiger: { pal: [[80,230,255],[255,140,40],[20,10,20],[40,12,30],[255,200,90],[120,255,160],[255,235,190],[255,80,190]], rows: '..................................................aaa......./...a.......................................aaaa..abbba....../..aca.....................................abbbbaabbbbba...../.abba.....................................abbbbabbbbcba...../.aba......................................abbcbbbbbbba....../adba.......................................abbbbbdbbbba...../aba.................................aaaaaaabbbbbddbbbbba..../abba............aaaaaaaaaaaaaaaaaaaabbbbbbabbbdbbdbbbcba..../.ada........aaaaeeeeeeeeeeeeeeeeeeeebbbbbbbbbbbdbbdbffbaa.a./.aba.......abddebbddbbbddbbbddbbbddbbbddbbbbbbbdbbbbgggggaha/.abbaa....abbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbbbbbbbbgggggghha/..abbbaaaabbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbdbbbbbbggggggga./...abdbbbbbbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbdbbbbbbbgggggga../....aabbbbbbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbgbbbbbbbbbgcccca./......aaabbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbggaabbaaaaaaaa../........abbbbbdbbbbdbbbbdbbbbdbbbbdbbbbdbbbbbba.aa........../........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba............/.........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba.........../.........abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbba........../.........abbbbbbbbbbbggggggggbbbbbbbbbbbbbbbbbbddda........./.........abbbbbaaabbbbgggggggggggggggbbbbbabbbbbbbbaa......./.........adddbba.abdddbaaaaaagggggggbbbaaa.abbbbbbdddaa...../.........abbbba...abbbba.....aaaaadddba.....abbbbbbeeeea..../.........abbbba...abbbba.........abbbba......abbbbeeeeeea.../.........abbbba...abbbba.........abbbba.......aabbbeeeea..../.........abddda...abdddba........abbbba.........aaaaaaa...../.........abbba....abbbbba........abddda...................../........abbbba.....abbbba........abbbbba..................../........abbbba.....abbbbba.......abbbbba..................../.......aeeeeea.....aeeeeea.......aeeeeea..................../.......aeeeeea.....aeeeeea.......aeeeeea..................../........aaaaa.......aaaaa.........aaaaa.....................' },
-  tigerHead: { pal: [[80,230,255],[120,60,200],[255,80,190],[30,10,60],[255,220,80],[24,16,40],[170,100,240],[200,40,110],[250,245,255]], rows: '......a..........................a....../.....abaa......................aaba...../.....abbba....................abbba...../......abbbaa................aabbba....../......abcbbba..............abbbbca....../......abbbbba...aaaaaaaa...abbbbba....../.......abbba..aabbbbbbbbaa..abbba......./.......abaa.aabbdbbbdbbbdbaa.aaba......./........a..abbbbdbbbdbbbdbbba..a......../..........abbbbbbdbbdbbbdbbbba........../.........abbbbbbbdbbdbbdbbbbbba........./........abbbbbbbbdbbdbbdbbbbbbba......../.......abbdddbbbbbbbdbbbbbbbdddba......./.......abbbbbddddbbbbbbbddddbbbba......./.......abbbeebbbbbbbbbbbbbbbeebba......./......abbbbbbfeebbbbbbbbbeefbbbbba....../......abbbbbbbbbbbbbbbbbbbbbbbbbba....../......addbbbbbbbbgccccgbbbbbbbbbdda...../......abbdddbbbbgggccgggbbbbbdddba....../......abbbbbbbbggggggggggbbbbbbbba....../.....aabbbbbbbbggggggggggbbbbbbbbaa...../....abddbbbbbbbbggggggggbbbbbbbbbdda..../...abbbbdddbbbbbbggggggbbbbbbbdddbbba.../...abbbbbbbbbhihhhhhhhhhhihbbbbbbbbba.../..abbbbbbbbbbhihhhhhhhhhhihbbbbbbbbbba../..abbbbbbbbddbhihhhhhhhhhibbddbbbbbbba../.abbbbbbbddbbbhihhhhhhhhihbbbbddbbbbbba./.abbbbbbbbbbbbhihhhhhhhhihbbbbbbbbbbbba./abbbbaaabbbbbbhhhcccccchhhbbbbbbaaabbbba/.aaaa...abbbbbhhiccccccihhbbbbba...aaaa./.........abbbbbhiccccccihbbbbba........./..........abbbbihcccccchibbbba........../...........aabbibbbbbbbbibbaa.........../.............aaabbbbbbbbaaa............./................aaabbaaa................/...................aa...................' },
 };
 // ---- the Pink Mile's picture signs (2026-10-18; WC423, WC046, WC237): drawn from shapes - a crescent moon and its stars,
 // a cocktail glass with its olive, a heart and its arrow, lips, a palm, a rose - each a lit tube round its outline over
@@ -232,12 +231,15 @@ const SHAPES = {
   } },
 };
 // (a picture sign's glow colour: the shape's own, else the panel's pink, the tiger's orange, the head's violet)
-export const picGlow = (k) => (SHAPES[k] ? SHAPES[k].glow : k === 'lucy' ? [255, 80, 200] : k === 'tiger' ? [255, 150, 60] : [170, 100, 255]);
+export const picGlow = (k) => (SHAPES[k] ? SHAPES[k].glow : k === 'lucy' ? [255, 80, 200] : (npPic(OLD[k] || k) || { glow: [170, 100, 255] }).glow);
+const OLD = { tigerHead: 'panther' };   // (the roaring head: the panther now)
 const picCache = new Map();
 function picOf(k) {
   let P = picCache.get(k);
   if (P) return P;
-  if (SHAPES[k]) {
+  const N = npPic(OLD[k] || k);
+  if (N) P = N;
+  else if (SHAPES[k]) {
     // (a shape: its colours gathered into a palette as they're met)
     const S = SHAPES[k], w = S.w, h = S.h, px = new Int8Array(w * h).fill(-1), pal = [], keyOf = new Map();
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -249,7 +251,7 @@ function picOf(k) {
     }
     P = { w, h, px, pal, panel: false };
   } else {
-    const D = PICS[k] || PICS.tigerHead, rows = D.rows.split('/'), h = rows.length, w = rows[0].length, px = new Int8Array(w * h).fill(-1);
+    const D = PICS[k] || PICS.lucy, rows = D.rows.split('/'), h = rows.length, w = rows[0].length, px = new Int8Array(w * h).fill(-1);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const c = rows[y].charCodeAt(x); if (c !== 46) px[y * w + x] = c - 97; }
     P = { w, h, px, pal: D.pal, panel: k === 'lucy' };
   }
@@ -258,11 +260,9 @@ function picOf(k) {
 }
 // a picture sign's size on the face (px; s: px per picture pixel - 2, one art pixel each)
 export const picSize = (k, s = 2) => { const P = picOf(k); return [P.w * s + (P.panel ? 12 : 0), P.h * s + (P.panel ? 12 : 0)]; };
-// (2026-10-23, the owner: "Neon tiger sign is way blown out, can't see details" - the sign's own light, 18 px in front of it
-// at its middle, lit its colours two and a half times over, the bloom did the rest: a yellow blob. Now the picture is
-// glass - the lights round it reach it a third as much (lightgame.js F_GLASS) - its tubes glow bright and its fills dimly,
-// so the dark between them (the tiger's stripes, the eyes, the outline's gaps) stays dark and the drawing reads; its
-// light on the pavement stands out from the wall and lower down: handNeon.)
+// (2026-10-23, the owner: "Neon tiger sign is way blown out" - the picture is glass, the lights round it reach it a third as
+// much (lightgame.js F_GLASS); its tubes glow bright, its fills dimly, the dark between them stays dark; its light on the
+// pavement stands out from the wall and lower down: handNeon)
 const PIC_TUBE = 190, PIC_FILL = 96;
 function paintPic(G, sg) {
   const P = picOf(sg.pic), s = sg.s || 2, pad = P.panel ? 6 : 0, [w, h] = picSize(sg.pic, s), S = [0, 1, 0];
@@ -287,8 +287,8 @@ function paintPic(G, sg) {
   for (let y = 0; y < P.h; y++) for (let x = 0; x < P.w; x++) {
     const i = P.px[y * P.w + x];
     if (i < 0) continue;
-    const c = P.pal[i], lum = c[0] + c[1] + c[2];
-    for (let j = 0; j < s; j++) for (let k = 0; k < s; k++) put(X0 + pad + x * s + k, Y0 + pad + y * s + j, c, lum > 120 ? [c[0], c[1], c[2], lum > 500 ? PIC_TUBE : PIC_FILL] : null);
+    const c = P.pal[i], lum = c[0] + c[1] + c[2], st = P.pe ? P.pe[y * P.w + x] : lum > 120 ? (lum > 500 ? PIC_TUBE : PIC_FILL) : 0;   // (P.pe: a sheet sign's own - neonpics.js)
+    for (let j = 0; j < s; j++) for (let k = 0; k < s; k++) put(X0 + pad + x * s + k, Y0 + pad + y * s + j, c, st ? [c[0], c[1], c[2], st] : null);
   }
 }
 // a blade sign: a narrow lit panel down the face with its word stacked letter over letter (KARAOKE, HOTEL, RAMEN)
@@ -321,7 +321,7 @@ export function handNeon(spec, N, ctx) {
   if (spec.plaques) spec.plaques = spec.plaques.filter((p) => p.bg !== '#1c1a28');
   let top = 70;
   if (N.name !== null) {
-    const sg = signsFor({ w, st: 'nightlife', A: N.kind === 'club' ? 'club' : 'nightrow', kind: N.kind === 'club' ? null : N.kind || 'bar', name: N.name, rnd, H });
+    const sg = signsFor({ w, st: 'nightlife', A: N.kind === 'club' ? 'club' : 'nightrow', kind: N.kind === 'club' ? null : N.kind || 'bar', name: N.name, rnd, H, own: !!N.dress });
     if (sg) { sg.col = col; sg.col2 = col2; out.push(sg); top = sg.v + sg.h + 6; lights.push([sg.x + sg.w / 2, 18, sg.v + sg.h / 2, 250, L(col), 2.4, 'neon']); }
   }
   const doorLeft = N.door === 'left';
@@ -336,8 +336,15 @@ export function handNeon(spec, N, ctx) {
       const x = Math.round(N.picX !== undefined ? Math.max(6, Math.min(w - pw - 6, N.picX)) : (w - pw) / 2);
       const pc = N.picCol || picGlow(N.pic);
       out.push({ pic: N.pic, x, v, s, col: pc });
-      lights.push([x + pw / 2, 44, Math.round(v * 0.7), 280, L(pc), 1.5, 'neon']);   // (out over the pavement, below the sign: paintPic)
+      lights.push([x + pw / 2, 44, Math.round(v * 0.7), 280, L(pc), 1.5, N.flick ? 'neonf' : 'neon']);   // (out over the pavement, below the sign: paintPic)
     }
+  }
+  // (the Neon Strip's: more picture signs where the face has room, then its dressing round them - neonpics.js)
+  if (N.pics || N.dress) {
+    const taken = signRects(spec, picSize, bladeSize), c2 = { w, H, top: N.top ?? Math.max(66, top - 4), taken, picSize, lights, rnd, doorLeft };
+    if (N.dress && N.dress.back) backShutter(spec, c2);
+    if (N.pics) placePics(spec, N.pics, c2);
+    if (N.dress) dressFace(spec, N, c2);
   }
   if (N.trim !== false && !spec.trim) { spec.trim = col2; lights.push([w / 2, 10, H - 8, 180, L(col2), 1.2, 'neon']); }
   return out.length > 0;

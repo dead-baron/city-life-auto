@@ -1312,10 +1312,17 @@ function parking(C, G) {
     });
   }
 }
-// sports courts and pitches laid on the ground
+// sports courts and pitches laid on the ground; car soccer's arenas (shared/carsoccer.js): turf, banks, goals, lines
+const TURF = ramp('#3f8f3c', 5, 2), BANKC = ramp('#a8a49a', 5, 2), BOXC = [ramp('#c8641e', 5, 2), ramp('#2a64c8', 5, 2)];
 function venues(C, G) {
-  const { M, b } = C;
-  for (const v of M.venues || []) {
+  const { M, b } = C, ar = M.arenas || [];
+  for (const a of ar) rect(C, (a.gx0 + a.gx1) / 2, (a.iy0 + a.iy1) / 2, 1, 0, (a.gx1 - a.gx0) / 2, (a.iy1 - a.iy0) / 2, (gi, u, w, gx, gy) => {
+    const X = gx + C.X0, Y = gy + C.Y0, mouth = Y > a.my0 && Y < a.my1;
+    if (X < a.ix0 || X > a.ix1) { if (mouth) setC(G, gi, sd(BOXC[X > a.cx ? 1 : 0], 0.5 + (((X >> 3) + (Y >> 3)) & 1 ? 0.12 : 0), X, Y, 0)); return; }
+    const dx = mouth ? 0 : Math.max(a.fx0 - X, X - a.fx1, 0), dy = Math.max(a.fy0 - Y, Y - a.fy1, 0), up = Math.min(1, Math.hypot(dx, dy) / (a.fx0 - a.ix0));
+    setC(G, gi, up ? sd(BANKC, 0.8 - up * 0.5 + ((Y + X * 0.3) % 48 < 3 ? -0.15 : 0), X, Y, 0) : sd(TURF, ((X - a.fx0) % 128 < 64 ? 0.58 : 0.42) + (hh(X >> 2, Y >> 2, 7) - 0.5) * 0.12, X, Y));
+  });
+  for (const v of [...(M.venues || []), ...ar.map((a) => ({ kind: 'soccer', rect: { x: a.fx0, y: a.fy0, w: a.fx1 - a.fx0, h: a.fy1 - a.fy0 } }))]) {
     const r = v.rect;
     if (r.x > C.X0 + CHUNK || r.x + r.w < C.X0 || r.y > C.Y0 + CHUNK || r.y + r.h < C.Y0) continue;
     const pitch = v.kind === 'soccer', lc = pitch ? WHITE : MAT.woodDark;

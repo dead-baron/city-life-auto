@@ -117,7 +117,7 @@ function build(m, api, K) {
     }
     // the Old Quarter Baths (the sento: the timber bath house, its noren, the tall boiler chimney behind)
     const bx0 = QX.tanner + 6, bw = 22, by = top(bx0, bw) + 1, by1 = Math.floor(along(BELL, bx0 + bw)) - 6;
-    const bh = place({ x: bx0, y: by, w: bw, h: Math.min(14, by1 - by - 3), arch: 'mixed', key: 'rest2', name: 'Old Quarter Baths', poi: { kind: 'delivery', label: 'Old Quarter Baths' }, whole: true,
+    const bh = place({ x: bx0, y: by, w: bw, h: Math.min(14, by1 - by - 3), arch: 'mixed', key: 'rest2', name: 'Old Quarter Baths', poi: { kind: 'delivery', label: 'Old Quarter Baths', bath: true }, whole: true,
       art: { spec: { floors: 2, style: 'siding', wallColor: '#7a5a40', win: 'pair', pitch: 'gable', ridge: 'ns', slope: 0.42, roofColor: '#3a4048', parapet: 6, grime: 0.12, blades: [], plaques: [] },
         shop: { kind: 'lobby', door: 'left', open: true, people: 2, sign: { text: 'BATHS', bg: '#2a3a5a', fg: [240, 236, 220], lit: true }, awning: ['#2a3a5a', '#2a3a5a'] }, kit: [] } });
     if (bh) {

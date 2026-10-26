@@ -24,3 +24,23 @@ export const CASINO = {
     BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
   },
 };
+// Car soccer at the Waves Arena (the owner, 10-16: "Rocket League-style car soccer arena (boosts, banked walls, a giant
+// ball)": server/systems/carsoccer.js, shared/carsoccer.js, client/carsoccer.js). Join at the gate (on foot, within
+// joinR px): a match fills to teamMin a side (up to teamMax with more players) with the city's drivers, lobbyS s after
+// the first joins; each player is put in an arena car (model, in the team's paint). Kick-off: kickS s held at the
+// spots; matchS s of play (the clock stops for goals and kick-offs), most goals wins - a draw goes to overtime, the
+// next goal wins (otS s of it at most, then a draw); goalS s for the goal's replay and the cheering, overS s of the result; prize dollars to the bank of
+// each player on the winning side. The ball (r px): drag and roll (per second, in the air and on the ground), bounce
+// off the walls and the floor, g its gravity (px/s/s), hit how lively it comes off a car, kick px/s more on top, lift
+// the share of a hit that goes up, max its top speed. The banked walls: w px wide along every wall (none in a goal's
+// mouth), h px high at the top (how high a car's drawn up there), g how hard they pull back down to the pitch (px/s/s
+// at the top). Boost (the Sprint button at the wheel): acc px/s/s forward while held, drain a second, start at
+// kick-off; the pads give small (refilled smallS s later) or big (bigS) within r px. goalW px the goals' mouths.
+// nearR: the arena's state goes to players this close; cheer: the crowd's roar's reach (px)
+export const CARSOCCER = {
+  teamMin: 2, teamMax: 3, lobbyS: 20, kickS: 3, matchS: 180, otS: 60, goalS: 4, overS: 8, prize: 150, model: 'hothatch', joinR: 120, nearR: 2600,
+  ball: { r: 44, drag: 0.25, roll: 0.45, bounce: 0.72, g: 900, hit: 1.2, kick: 160, lift: 0.28, max: 1500 },
+  bank: { w: 96, h: 40, g: 1500 },
+  boost: { acc: 650, drain: 34, start: 34, small: 12, big: 100, smallS: 4, bigS: 10, r: 36 },
+  goalW: 320,
+};

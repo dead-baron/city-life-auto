@@ -34,6 +34,7 @@ import * as skate from './skate.js';
 import * as casino from './casino.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
+import * as bathhouse from './bathhouse.js';
 import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -55,6 +56,7 @@ function walkCounter(poi) {
 export function poiLabel(world, p, poi) {
   if (casino.isCasino(poi)) return casino.label(poi);   // (Lucky Mesa's casinos: the slots and the tables - casino.js)
   if (arcade.isArcade(world, poi)) return arcade.label(poi);   // (the arcades: a credit, the prize counter - arcade.js)
+  if (bathhouse.isBath(world, poi)) return null;   // (a bathhouse: in through its door - bathhouse.js)
   if (poi.walk && poi.kind === 'delivery') return walkCounter(poi) ? `Shop at the counter - ${poi.label}` : null;
   switch (poi.kind) {
     case 'delivery': case 'evidence': case 'reception': case 'paint': case 'ride': case 'race': return null;   // (a ride's boarding point: server/systems/rides.js; a race's start: races.js)
@@ -182,6 +184,7 @@ export function buildMenu(world, p, poi) {
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
   if (casino.isCasino(poi)) return casino.menu(world, p, poi);   // (a casino's floor: casino.js)
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
+  if (bathhouse.isBath(world, poi)) return bathhouse.menu(world, p, poi);   // (a bathhouse's locker: bathhouse.js)
   if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
     const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
     for (const [id, price] of W.items) opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, note: prof.inventory[id] ? `have ${prof.inventory[id]}` : '' });
@@ -554,6 +557,7 @@ function execute(world, p, poi, opt) {
     case 'hot': return hotmoney.execute(world, p, poi, parts[1]);
     case 'cs': return casino.execute(world, p, poi, opt, pay);   // (a bet at a casino: casino.js)
     case 'ar': return arcade.execute(world, p, poi, opt, pay);   // (an arcade: arcade.js)
+    case 'ba': return bathhouse.execute(world, p, poi, opt);   // (a bathhouse's locker: bathhouse.js)
     case 'bd': return skate.shopExecute(world, p, poi, parts[1], pay);   // (a skateboard bought, or yours brought out: skate.js)
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {

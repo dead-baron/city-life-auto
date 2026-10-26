@@ -12,6 +12,11 @@
 // as a page could say anything), and tickets buy the prizes (an item in your bag, a piece for your home, delivered, or a
 // skateboard of your own). Out by the door you came in. The mansion's own cabinets play for free (homeinside.js): no
 // tickets, the high score.
+// (2026-10-25, the owner: "a really awesome arcade in the neon district (we can have the points from all the arcades in
+// the game transfer from different arcades around the world so they're all tied together") - the Neon Strip's Pixel
+// Arcade is the flagship (its POI's flagship: shared/world3-neon.js), its floor the biggest ('arcadeflag': eighteen
+// cabinets, the long prize counter); and the tickets are one balance, the player's (profile.tickets), won at any arcade
+// and good at every prize counter - every arcade says so at its door, on its floor and at its counter.
 //   p.arcade: { id (this credit's), at (world.time it began), free, poi } while a game's on; profile.tickets; profile.arcadeBest
 //   world.arcadeHalls: the arcades' floors (hallOf), by id - ARC0 + the door's POI id; ped.home.arcade: 1 on one
 import { randomBytes } from 'node:crypto';
@@ -48,14 +53,17 @@ const GAME = {
   pinball: { name: 'Pinball - NEON NIGHTS', price: () => ARCADE.pinball.price, note: () => `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points` },
   hockey: { name: 'Air hockey against the machine', price: () => ARCADE.hockey.price, note: () => `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win` },
 };
-const PLAN = 'arcade', TIER = 3;   // (the mansion's palette: the deep purple carpet, the dark walls)
-export const hallLayout = () => layout(PLAN, TIER);
+const PLAN = 'arcade', FLAG = 'arcadeflag', TIER = 3;   // (the mansion's palette: the deep purple carpet, the dark walls)
+export const hallLayout = (h = null) => layout((h && h.plan) || PLAN, TIER);
+// (the tickets' word, everywhere they're shown: one balance, every arcade's)
+const ticketsLine = (t) => `${t} ticket${t === 1 ? '' : 's'} - good at every arcade's prize counter`;
 // the floor behind an arcade's door (made the first time anyone goes in): a "home" to homes.js and homeinside.js -
 // x, y its door out in the street (where you come out), price only for the plan's palette (homelayout.js tierOf)
 export function hallOf(world, poi) {
   const id = ARC0 + poi.id, H = (world.arcadeHalls ||= new Map());
   let h = H.get(id);
-  if (!h) H.set(id, (h = { id, isArcade: 1, poi: poi.id, kind: 'arcade', plan: PLAN, price: 60000, name: poi.label, x: poi.x, y: poi.y, slots: 0, welcome: `In ${poi.label}: walk up to a cabinet to play, the prize counter for your tickets.` }));
+  if (!h) H.set(id, (h = { id, isArcade: 1, poi: poi.id, kind: 'arcade', plan: poi.flagship ? FLAG : PLAN, price: 60000, name: poi.label, x: poi.x, y: poi.y, slots: 0,
+    welcome: poi.flagship ? `${poi.label}, the flagship: eighteen cabinets, the big prize counter - and your tickets from every arcade count here.` : `In ${poi.label}: walk up to a cabinet to play, the prize counter for your tickets (from any arcade).` }));
   return h;
 }
 export const hallById = (world, id) => (world.arcadeHalls ? world.arcadeHalls.get(Number(id)) || null : null);
@@ -90,14 +98,14 @@ export function cabinetAt(L, x, y) {
 }
 // What the action button does where you stand on the floor (homeinside.js interaction)
 export function hallInteraction(world, p, h, s) {
-  const L = hallLayout(), poi = world.map.pois[h.poi], none = () => {};
+  const L = hallLayout(h), poi = world.map.pois[h.poi], none = () => {};
   const u = useAt(L, s.x, s.y, HOME_IN.reach), cab = cabinetAt(L, s.x, s.y);
   if (cab && (!u || cab.d <= edge(u, s.x, s.y))) {
     const G = GAME[cab.game], best = bestOf(p.profile, cab.game);
     return { label: `Play ${G.name} - $${G.price()} (${G.note()}${best ? `; your best ${best.toLocaleString('en-US')}` : ''})`, run: () => credit(world, p, poi, cab.game) };
   }
   if (u && u.use === 'door') return { label: 'Out to the street', run: () => homeinside.leave(world, p) };
-  if (u && u.use === 'prizes') { const t = p.profile.tickets || 0; return { label: `The prize counter - ${t} ticket${t === 1 ? '' : 's'}`, run: () => openCounter(world, p, poi) }; }
+  if (u && u.use === 'prizes') { const t = p.profile.tickets || 0; return { label: `The prize counter - ${ticketsLine(t)}`, run: () => openCounter(world, p, poi) }; }
   return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to a cabinet to play, the prize counter for your tickets`, passive: true, run: none } : null;
 }
 const bestOf = (prof, game) => ({ skee: prof.skeeBest, hockey: prof.hockeyWins, pinball: prof.pinballBest }[game] ?? prof.arcadeBest) || 0;
@@ -123,11 +131,11 @@ export function menu(world, p, poi) {
   if (inHall(p, poi)) {
     ARCADE.prizes.forEach((q, i) => { const have = q.board && skate.owns(p); opts.push({ id: `ar:prize:${i}`, label: `${prizeName(q)} - ${q.t} tickets`, dis: t < q.t || have, note: q.decor ? 'for your home, delivered' : have ? 'have one' : q.board ? 'yours, set down by the door' : '' }); });
     opts.push({ id: 'close', label: 'Done' });
-    return { t: 'menu', poi: poi.id, title: `${poi.label} - the prize counter`, sub: `You have ${t} ticket${t === 1 ? '' : 's'}. Your best at STARFALL: ${prof.arcadeBest || 0}.`, opts, cash: prof.cash, bank: prof.bank };
+    return { t: 'menu', poi: poi.id, title: `${poi.label} - the prize counter`, sub: `You have ${ticketsLine(t)} (won at any of them). Your best at STARFALL: ${prof.arcadeBest || 0}.`, opts, cash: prof.cash, bank: prof.bank };
   }
   opts.push({ id: 'ar:in', label: 'Go inside', note: 'the cabinets and the prize counter', shut: true });
   opts.push({ id: 'close', label: 'Leave' });
-  return { t: 'menu', poi: poi.id, title: poi.label, sub: `The cabinets blinking in the dark, the bleeps and the high scores. You have ${t} ticket${t === 1 ? '' : 's'}.`, opts, cash: prof.cash, bank: prof.bank };
+  return { t: 'menu', poi: poi.id, title: poi.label, sub: `${poi.flagship ? 'The flagship arcade: eighteen cabinets in rows, the big prize counter. ' : ''}The cabinets blinking in the dark, the bleeps and the high scores. You have ${ticketsLine(t)}.`, opts, cash: prof.cash, bank: prof.bank };
 }
 const prizeName = (q) => (q.item ? ITEMS[q.item].name : q.board ? 'A skateboard of your own' : DECOR[q.decor].name);
 
@@ -203,7 +211,7 @@ function ticketGame(world, p, A, msg) {
   }
   if (A.free) { world.notify(p, text, 'info'); store.touch(); return; }
   prof.tickets = (prof.tickets || 0) + tickets;
-  world.notify(p, `${text} - ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all).`, tickets ? 'good' : 'info');
+  world.notify(p, `${text} - ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all, good at every arcade).`, tickets ? 'good' : 'info');
   p.meDirty = true;
   store.touch();
 }
@@ -230,7 +238,7 @@ export function onScore(world, p, msg) {
   if (A.free) { world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''}`, best ? 'good' : 'info'); store.touch(); return; }
   const tickets = Math.min(ARCADE.maxTickets, Math.floor(score / ARCADE.perTicket));
   prof.tickets = (prof.tickets || 0) + tickets;
-  world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''} ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all - the prize counter's by the east wall).`, tickets ? 'good' : 'info');
+  world.notify(p, `STARFALL: ${score}${best ? ' - a new high score!' : ''} ${tickets} ticket${tickets === 1 ? '' : 's'} (${prof.tickets} in all, good at every arcade - the prize counter's by the east wall).`, tickets ? 'good' : 'info');
   p.meDirty = true;
   store.touch();
 }

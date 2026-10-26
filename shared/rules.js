@@ -596,6 +596,9 @@ export const VEIN_REGROW_S = 300;          // a worked-out vein grows back (some
 export const CHEST_REACH = 44;
 export const CHEST_REFILL_S = 2700;
 export const CHEST_LOOT = { items: [['doubloon', 1, 4], ['nugget', 0, 2], ['geode', 0, 2], ['amethystGeode', 0, 1], ['arrowhead', 0, 1]], cash: [40, 180] };
+// a light someone left behind (notes 2): now and then on going into a cave (chance a visit) a lantern or a flashlight lies
+// somewhere in its light (shared/caverns.js K.finds) for you to find - its batteries this share of full; reach: px
+export const CAVE_FIND = { chance: 0.12, reach: 36, fuel: 0.35, items: ['lantern', 'flashlight'] };
 export { PICK_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay office pays this much over what a pawn shop does
 

@@ -135,13 +135,14 @@ test('the cave: chambers joined from the way in; dark but for lights and glowing
   assert.equal(p.ped.ug, UG.CAVE);
   const out = act(w, p);
   assert.ok(out && /out of the cave/i.test(out.label), 'and out again by the way in');
-  // dark: only lights and glowing things light it
+  // dark: only lights, glowing things, the miners' lanterns and the shafts of daylight light it (shared/caverns.js
+  // lightCave) - and a chamber with none of them is pitch dark
   let dark = null;
   for (const c of K2.chambers) {
     if (c.glow) continue;
-    if (K2.glow.every((g) => Math.hypot(g.x - c.x, g.y - c.y) > g.r)) { dark = c; break; }
+    if (K2.glow.every((g) => Math.hypot(g.x - c.x, g.y - c.y) > g.r) && K2.lanterns.every((l) => Math.hypot(l.x - c.x, l.y - c.y) > 200) && K2.shafts.every((q) => Math.hypot(q.x - c.x, q.y - c.y) > q.r)) { dark = c; break; }
   }
-  assert.ok(dark, 'a chamber with nothing glowing in it');
+  assert.ok(dark, 'a chamber with nothing lighting it');
   assert.equal(lightAt(L, dark.x, dark.y, []), 0, 'pitch dark with no light');
   assert.ok(lightAt(L, dark.x, dark.y, [{ x: dark.x + 20, y: dark.y, r: 200, k: 1 }]) > 0.5, 'a flashlight lights it');
   const gl = K2.glow[0];
@@ -249,4 +250,45 @@ test('a cave per mine: today\'s world has one, the same as before the list', () 
   assert.ok(/Walk out/.test(act(w, p).label), 'the way out');
   act(w, p).run();
   assert.ok(!p.ped.ug && p.ped.x === K2.mouth.x && p.ped.y === K2.mouth.y + 26, 'out at its mouth');
+});
+
+// A light someone left behind (notes 2: "maybe place a random object like lantern or low level flashlight around the
+// cave you can find sometimes (not a common thing but kind of rare ...)"): the server rolls it on the way in.
+test('the cave: now and then a lantern or a flashlight lies in its light - rare, yours to pick up, its batteries low', async () => {
+  const { CAVE_FIND } = await import('../shared/rules.js');
+  const { LIGHTS } = await import('../shared/lights.js');
+  const w = makeWorld();
+  const L = undergroundOf(w.map), K2 = L.cave;
+  const { p } = joinPlayer(w);
+  let finds = 0;
+  const N = 600, kinds = new Set();
+  for (let i = 0; i < N; i++) {
+    teleport(w, p.ped, K2.mouth.x, K2.mouth.y);
+    ug.enterCave(w, p, K2);
+    if (p.caveFind) { finds++; kinds.add(p.caveFind.id); assert.ok(K2.finds.some((f) => f.x === p.caveFind.x && f.y === p.caveFind.y), 'lying at one of its lit spots'); }
+    ug.leaveCave(w, p, K2);
+    assert.equal(p.caveFind, null, 'gone when you leave');
+  }
+  assert.ok(finds / N > CAVE_FIND.chance - 0.05 && finds / N < CAVE_FIND.chance + 0.05, `rare: ${(finds / N * 100).toFixed(1)}% of visits`);
+  assert.deepEqual([...kinds].sort(), [...CAVE_FIND.items].sort(), 'a lantern or a flashlight');
+  // found: walk up to it, pick it up - it goes in the bag and gives light, on low batteries
+  teleport(w, p.ped, K2.mouth.x, K2.mouth.y);
+  ug.enterCave(w, p, K2);
+  p.caveFind = ug.rollFind(w, p, K2, true);
+  const f = p.caveFind, id = f.id;
+  assert.ok(!(p.profile.inventory[id] > 0), 'a light you don\'t have yet');
+  teleport(w, p.ped, f.x + 10, f.y);
+  const a = act(w, p);
+  assert.ok(a && /Pick up the old/.test(a.label), `the prompt (${a && a.label})`);
+  a.run();
+  assert.equal(p.profile.inventory[id], 1, 'in the bag');
+  assert.ok(LIGHTS[id], 'a light');
+  assert.equal(p.profile.lightFuel[id], Math.round(LIGHTS[id].fuel * CAVE_FIND.fuel), 'its batteries low');
+  assert.equal(p.caveFind, null);
+  // with both lights already: you take the batteries
+  for (const k of CAVE_FIND.items) p.profile.inventory[k] = 1;
+  const b0 = p.profile.inventory.batteries || 0;
+  p.caveFind = ug.rollFind(w, p, K2, true);
+  ug.takeFind(w, p);
+  assert.equal(p.profile.inventory.batteries, b0 + 1);
 });

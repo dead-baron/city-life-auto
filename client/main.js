@@ -347,7 +347,7 @@ function onText(m) {
     case 'menu': S.hud.openMenu(m); break;
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
-    case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
+    case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; S.ugFind = m.find || null; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
@@ -371,6 +371,7 @@ function onText(m) {
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
+    case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
     case 'fires': S.fires = m; fireJob(); break;   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
     default: break;
   }
@@ -3433,6 +3434,7 @@ function drawOverlays(F, v2) {
   drawCinema(F);
   drawDriveIn(F, v2);
   drawVault(F);
+  if (S.soc) S.soc.draw(g, F, v2);   // (car soccer: the ball, the goals, the pads, the score - client/carsoccer.js)
   // aim sight for sticks / touch (the mouse has its own cursor)
   if (!clean && input.device !== 'keyboard' && S.playing && S.me && !S.me.dead && performance.now() - (S.lastAimAt || 0) < 250) {
     const ta = touchAimState();

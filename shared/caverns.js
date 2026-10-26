@@ -148,4 +148,76 @@ export function dressCavern(L, K) {
   for (const c of K.chambers) for (const s of pickN(rnd, floorSpots(R, c.x, c.y, c.r), c.kind === 'lake' ? 12 : 5)) K.spikes.push({ x: Math.round(s.x), y: Math.round(s.y), s: 0.6 + rnd() * 0.8 });
 }
 
-registerCaverns({ buildCavern, carveCavern, dressCavern });
+// The light down there that isn't yours (the owner, notes 2: "dark inside for sure but there should be some natural
+// light happening ... lanterns hung up or bioluminescent plants/fungi/creatures, or light shining through the ceiling.
+// But we can still have areas that are completely dark"), for every cave, a mine's and a cavern's, after its dressing:
+//   - K.shafts: daylight down through openings in the roof, onto a chamber's floor (by day; a little moonlight at night)
+//     - in a mine's river hall and still pool, a cavern's gallery, lake and stalactite hall (SHAFTS);
+//   - lanterns hung on the walls (K.lanterns, hung: 1, n toward the rock): the miners' along a mine's way in and its first
+//     passages, a cavern's along the paths in from its mouths and at the foot of its stairs;
+//   - K.timbers: a mine's timber sets across its way in and the passages off its hall (and a cavern's ore face's);
+//   - K.finds: spots on dry floor in the light where something left behind can lie (server/systems/underground.js: the
+//     rare lantern or flashlight - CAVE_FIND).
+// The rest stays dark: a mine's den, the glow-worm and crystal caves (their own glow only), the passages between; a
+// cavern's echo hall, its den, the river's long reaches between the docks.
+export const SHAFTS = { mine: ['river', 'pool'], cavern: ['gallery', 'lake', 'pillars'] };
+const LAMPED = ['gallery', 'lake', 'pillars', 'seacave', 'treasure'];   // (a cavern's chambers with lanterns on their walls: the echo hall, the den, the ore face, the glow and crystal caves have none)
+export function lightCave(L, K) {
+  const R = K.region, rnd = mulberry32(kSeed((L.seed ^ 0x11e7) >>> 0, K.k)), cav = K.kind === 'cavern';
+  const open = (x, y) => { const v = cellAt(R, Math.floor(x / TILE), Math.floor(y / TILE)); return v > 0 && v !== C.RIVER && v !== C.POOL && v !== C.CASCADE; };
+  const dryAt = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (cellAt(R, Math.floor(x / TILE) + i, Math.floor(y / TILE) + j) !== C.FLOOR) return false; return true; };
+  // the shafts: on the floor near each chosen chamber's middle (a long hall's: a third of the way along)
+  K.shafts = [];
+  for (const id of SHAFTS[cav ? 'cavern' : 'mine']) {
+    const c = K.ch[id];
+    if (!c) continue;
+    const at = c.long ? { x: c.long.ax + (c.long.bx - c.long.ax) * 0.3, y: c.long.ay + (c.long.by - c.long.ay) * 0.3 - c.long.hw * 0.4 } : c;
+    const near = floorSpots(R, at.x, at.y, Math.min(110, (c.r || 120) * 0.7)), dry = near.filter((s) => dryAt(s.x, s.y));
+    const s = id === 'pool' ? { x: c.x + 20, y: c.y } : pickN(rnd, dry.length ? dry : near, 1)[0] || { x: c.x, y: c.y };   // (the still pool's - or a chamber with the river through it: down onto the water)
+    if (s) K.shafts.push({ x: Math.round(s.x), y: Math.round(s.y), r: 96 + Math.round(rnd() * 40), lean: Math.round((rnd() - 0.5) * 60) });
+  }
+  // a lantern hung on the nearest wall either side of a point (side: +1 the right of the way u, -1 the left)
+  const hung = [];
+  const hang = (x, y, ux, uy, side, reach = 70) => {
+    const px = x - uy * side * reach, py = y + ux * side * reach;
+    let best = null;
+    for (const s of wallSpots(R, px, py, 90)) { const d = len(s.x - px, s.y - py); if (!best || d < best.d) best = { ...s, d }; }
+    if (best && hung.every((h) => len(h.x - best.x, h.y - best.y) > 90)) hung.push({ x: Math.round(best.x), y: Math.round(best.y), hung: 1, nx: best.nx, ny: best.ny });
+  };
+  // timber sets across a passage at a point: the posts where the rock is each side
+  K.timbers = [];
+  const frame = (x, y, ux, uy) => {
+    const ext = (sd) => { let d = 8; while (d < 120 && open(x - uy * sd * d, y + ux * sd * d)) d += 6; return d - 4; };
+    const l = ext(-1), r = ext(1);
+    if (l + r > 40 && l + r < 200) K.timbers.push({ x: Math.round(x), y: Math.round(y), ux: Math.round(ux * 1000) / 1000, uy: Math.round(uy * 1000) / 1000, l, r });
+  };
+  // along a way from a to b: a lantern every `lamp` px on alternate walls, a timber set every `tim` (0: none)
+  const along = (a, b, lamp, tim) => {
+    const dx = b.x - a.x, dy = b.y - a.y, l = len(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    for (let s = 40, k = 0; s < l - 30; s += 20) {
+      const x = a.x + ux * s, y = a.y + uy * s;
+      if (lamp && Math.floor(s / lamp) !== Math.floor((s - 20) / lamp)) hang(x, y, ux, uy, k++ % 2 ? 1 : -1);
+      if (tim && Math.floor(s / tim) !== Math.floor((s - 20) / tim)) frame(x, y, ux, uy);
+    }
+  };
+  if (cav) {
+    for (const M of K.mouths) { along(M.inside, (M.toward && K.ch[M.toward]) || M.inside, 160, 0); hang(M.inside.x, M.inside.y, 0, -1, 1); }
+    for (const id of LAMPED) { const c = K.ch[id]; if (c) for (const sd of [-1, 1]) hang(c.x, c.y, 1, 0, sd, c.r || 120); }
+    for (const st of K.stairs || []) hang(st.x - st.ux * (st.len / 2 + 20), st.y - st.uy * (st.len / 2 + 20), st.ux, st.uy, 1);
+    const ore = K.chambers.find((c) => c.kind === 'ore'), ps = ore && K.passages.find((q) => q.a === ore.id || q.b === ore.id);
+    if (ps) { const a = K.ch[ps.a], b = K.ch[ps.b]; along(ps.vias[0] || a, b, 0, 110); }
+  } else {
+    along(K.inside, K.ch.hall, 120, 100);
+    for (const sd of [-1, 1]) hang(K.ch.hall.x, K.ch.hall.y, 1, 0, sd);   // (the miners' lamps in the hall)
+    for (const ps of K.passages) if (ps.a === 'hall') { const pts = [K.ch.hall, ...(ps.via ? [ps.via] : []), K.ch[ps.b]]; for (let i = 1; i < pts.length; i++) along(pts[i - 1], pts[i], 170, 110); }
+  }
+  K.lanterns = [...(K.lanterns || []), ...hung];
+  // where a find can lie: dry floor in the light (a shaft's pool, by a lantern), clear of the way in
+  const spots = [];
+  for (const s of K.shafts) spots.push(...floorSpots(R, s.x, s.y, s.r * 0.55).filter((q) => len(q.x - s.x, q.y - s.y) < s.r * 0.55));
+  for (const l of K.lanterns) spots.push(...floorSpots(R, l.x, l.y, 75).filter((q) => len(q.x - l.x, q.y - l.y) < 75));
+  K.finds = pickN(rnd, spots.filter((s) => dryAt(s.x, s.y) && mouthsOf2(K).every((M) => len(M.inside.x - s.x, M.inside.y - s.y) > 120)), 8).map((s) => ({ x: Math.round(s.x), y: Math.round(s.y) }));
+}
+const mouthsOf2 = (K) => K.mouths || [{ inside: K.inside }];
+
+registerCaverns({ buildCavern, carveCavern, dressCavern, lightCave });

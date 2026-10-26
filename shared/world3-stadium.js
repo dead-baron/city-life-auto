@@ -19,6 +19,7 @@
 // Deterministic like every plan (shared/world3-hand.js): tiles, fixed vertices and hash draws only.
 import { TILE, T } from './constants.js';
 import { towerKit } from './world3-downtown.js';
+import { arenaOf, arenaTile, bankRamps } from './carsoccer.js';
 
 const D = 25;   // the Stadium District's id (shared/mapcore.js DISTRICTS)
 // the stadium (tiles): its outer box, the stands' depth, the pitch inside them
@@ -74,6 +75,7 @@ function build(m, api, K) {
   stadium(K, m, ctx);
   north(K, m, ctx);
   ponds(K, m, ctx);
+  arena(K, m, ctx);   // (before the RV lot's ground: the arena takes the middle of it)
   tailgates(K, m, ctx);
   fanWalk(K, m, ctx);
   dealerRow(K, m, ctx);
@@ -224,6 +226,40 @@ function tailgates(K, m, ctx) {
   }
   for (let x = 3700; x < 3910; x += 18) { prop('lamp', x, 1552, 0); }
   (out.places ||= []).push({ name: 'Lot A', x0: 3686, y0: 1535, x1: 3916, y1: 1570, tailgates: n }, { name: 'The RV Lot', x0: 3880, y0: 1570, x1: 3922, y1: 1748 });
+}
+
+// The Waves Arena (the owner, 10-16: "Rocket League-style car soccer arena (boosts, banked walls, a giant ball)"): car
+// soccer by the water, east of Stadium Way in the middle of the RV lot - the pitch walled in, its banks, the goals'
+// boxes in the end walls (shared/carsoccer.js arenaOf, arenaTile: the server plays the matches, server/systems/
+// carsoccer.js; the bake lays the turf, the lines and the banks, client/art2/game/groundbake.js), the stand along its
+// north side with the crowd, the floodlight masts, the gate on Stadium Way where you join
+function arena(K, m, ctx) {
+  const { prop } = K;
+  const { place, out } = ctx;
+  let box = null;
+  for (const [tw, th] of [[54, 36], [54, 34], [52, 34], [50, 32], [48, 32]]) {   // (against Stadium Way's pavement, as far north as it fits)
+    for (let y = 1588; y <= 1644 && !box; y++) for (let x = 3880; x <= 3884 && !box; x++) if (K.allFree(x, y, tw, th)) box = [x, y, tw, th];
+    if (box) break;
+  }
+  if (!box) return;
+  const [tx, ty, tw, th] = box, a = arenaOf(tx, ty, tw, th, 'Waves Arena');
+  for (let y = ty; y < ty + th; y++) for (let x = tx; x < tx + tw; x++) m.set(x, y, arenaTile(a, x, y));
+  K.take(tx, ty, tw, th);
+  (m.arenas ||= []).push(a);
+  (m.jumps ||= []).push(...bankRamps(a));
+  // the wall's face round the pitch (the end walls either side of the goals' mouths), the masts at its corners
+  const X0 = a.ix0 / TILE, X1 = a.ix1 / TILE, Y0 = a.iy0 / TILE, Y1 = a.iy1 / TILE, M0 = a.my0 / TILE, M1 = a.my1 / TILE;
+  prop('fenceline', X0, Y0 - 0.1, 0, { kind: 'wall', tx: (X1 - X0) * TILE, ty: 0 });
+  prop('fenceline', X0, Y1 + 0.1, 0, { kind: 'wall', tx: (X1 - X0) * TILE, ty: 0 });
+  for (const x of [X0 - 0.1, X1 + 0.1]) { prop('fenceline', x, Y0, 0, { kind: 'wall', tx: 0, ty: (M0 - Y0) * TILE }); prop('fenceline', x, M1, 0, { kind: 'wall', tx: 0, ty: (Y1 - M1) * TILE }); }
+  for (const [x, y] of [[tx + 1, ty + 0.6], [tx + tw - 1, ty + 0.6], [tx + 1, ty + th - 0.6], [tx + tw - 1, ty + th - 0.6]]) prop('ymast', x, y, 6, { tall: 160 });
+  // the stand along the north side: its seats stepping down to the pitch, the crowd
+  if (K.allFree(tx + 6, ty - 8, tw - 12, 8)) place({ x: tx + 6, y: ty - 8, w: tw - 12, h: 8, arch: 'grandstand', key: 'grandstand', name: 'Waves Arena', poi: false, whole: true,
+    art: { spec: { floors: 1, groundH: 72, style: 'concrete', wallColor: '#c8c4bc', roofMat: 'seats', seatTo: 'S', crowd: 0.7, lip: 3, rimW: 3, parapet: 4, grime: 0.06, windows: [] }, noShop: true, kit: [] } });
+  // the gate on Stadium Way: its signs
+  prop('textsign', tx - 0.4, a.cy / TILE - 3, 0, { text: 'WAVES ARENA', bg: NAVY, fg: CREAM, z: 52, sx: 2, lit: true });
+  prop('textsign', tx - 0.4, a.cy / TILE + 3, 0, { text: 'CAR SOCCER', bg: '#d8701e', fg: CREAM, z: 40, sx: 1, lit: true });
+  (out.places ||= []).push({ name: 'Waves Arena', x0: tx, y0: ty, x1: tx + tw, y1: ty + th, arena: 1 });
 }
 
 // The fan walk (WC405): the brick row of sports bars along 15th Street and Fan Street facing it - The Turnstile Bar

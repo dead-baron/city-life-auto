@@ -35,6 +35,7 @@
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ } from '../buildings.js';
+import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
 import * as D from '../props-district.js';
@@ -51,7 +52,7 @@ import * as TN from '../props-towns.js';
 import { EL_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
-import { nightFront, paintSigns, handNeon, picSize } from '../neonsigns.js';   // (the night's big neon signs)
+import { nightFront, paintSigns, handNeon, picSize, picGlow } from '../neonsigns.js';   // (the night's big neon signs)
 import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
 import { critterFrames } from '../critters.js';
@@ -68,6 +69,7 @@ import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
 import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
 import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
+import { unitDoor, DOOR_COLS } from '../../../shared/doors.js';   // (the doors that open live)
 import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
 import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
@@ -352,7 +354,7 @@ export function makeStatic(r) {
     case 'msign': return makeMotelSign(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
-    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone });
+    case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
@@ -556,7 +558,7 @@ function sectionsOf(c, b, A) {
 const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [10, 10, 12], pipe: [8, 8, 22], sky: [24, 18, 7], dish: [18, 14, 18], tank: [26, 26, 44],
   plant: [30, 12, 10], palm: [22, 22, 40], solar: [30, 20, 8], heli: [82, 82, 3], hut: [34, 26, 36], ant: [14, 14, 63], stack: [18, 18, 72], bill: [130, 12, 118],
   hatch: [16, 16, 9], chim: [12, 12, 39], line: [60, 4, 30], umb: [30, 30, 30], table: [14, 14, 12], lounge: [34, 14, 16], cool: [36, 36, 36], duct: [64, 10, 11],
-  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48],
+  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48], npic: [110, 6, 130],
   // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
   bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102], cdome: [94, 94, 97] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
@@ -577,6 +579,7 @@ function kitModel(k) {
 // (a roof garden's bed is painted for its roof alone - props-garden.js roofBed, about a millisecond - so it isn't kept)
 const kitSprite = (k) => (kitBase(k) === 'bed' ? GD.roofBed(...k.split('|').slice(1).map((q, i) => (i === 3 || i === 4 ? q : +q))) : memo('kit:' + k, () => {
   if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, sx: 2, bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
+  if (kitBase(k) === 'npic') return makeSignBoard({ t: 'sign', k: 'pic', pic: k.split('|')[1], z: 14 });   // ('npic|key': a picture sign on posts at the roof's edge - neonpics.js)
   if (kitBase(k) === 'tree') { const a = k.split('|'); return GD.roofTree(a[1], a[2], +a[3]); }
   return voxSprite(kitModel(kitBase(k)), k.endsWith('@') ? PI / 2 : 0);
 }));
@@ -1160,7 +1163,7 @@ function specOf(c, b, A, s, D) {
       const pw = clamp(Math.round(w * 0.46), 90, 160);
       const museum = /MUSEUM/i.test(b.name || '');
       if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : museum ? 'MUSEUM' : 'BANK' };
-      spec.doors = [{ x: Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];
+      spec.doors = [{ x: s.walk && s.doorX !== undefined ? clamp(Math.round(s.doorX + ((s.doorW || 56) - 28) / 2), 6, w - 34) : Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];   // (a walk-in's: at its doorway)
       spec.windows = winXs(w, [[w / 2 - pw / 2, w / 2 + pw / 2]], 30);
       if (A === 'bank' && named && w >= 120) spec.plaques = [{ text: clean(museum ? 'MUSEUM OF ART' : named, 18), x: 6, v: 70, sx: 1, bg: museum ? '#5a1e24' : '#2a3a2a', fg: [236, 214, 150], lit: true }];
       if (museum) spec.doors[0].open = true;
@@ -1263,6 +1266,7 @@ function specOf(c, b, A, s, D) {
     if (ART.noShop) delete spec.shop;
     else if (ART.shop) {
       spec.shop = { ...(spec.shop || {}), ...ART.shop };
+      if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }   // (a walk-in's door where its doorway is, whatever side the hand plan's front put it - the owner's notes 2, p16: "some building entrances are still not put in correctly")
       if (ART.shop.sign === null) delete spec.shop.sign;
       if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
     }
@@ -1275,13 +1279,14 @@ function specOf(c, b, A, s, D) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
-    const K = ART && ART.kit ? { kit: ART.kit.filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
+    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
     const zD = roofDeckZ(spec), kl = (list, ox, oy, z) => { for (const [k, rx, ry] of list) { const b = kitBase(k), X = ox + rx, Y = oy + ry - d;
       if (b === 'string') lights.push([X, Y, z + 26, 110, [1, 0.76, 0.42], 1.1, 'lamp']);
       else if (b === 'neon') lights.push([X, Y + 6, z + 40, 160, NEONC[+k.split('|')[2] % NEONC.length].map((q) => q / 255), 1.4, 'neon']);
+      else if (b === 'npic') lights.push([X, Y + 6, z + 60, 220, picGlow(k.split('|')[1]).map((q) => q / 255), 1.4, 'neon']);
       else if (b === 'skyL') lights.push([X, Y, z + 8, 56, [1, 0.84, 0.6], 0.45, 'window']);
       else if (b === 'perg') lights.push([X, Y, z + 26, 96, [1, 0.76, 0.42], 1, 'lamp']);
       else if (b === 'lant') lights.push([X, Y, z + 13, 44, [1, 0.78, 0.48], 0.7, 'lamp']); } };
@@ -1347,6 +1352,7 @@ function addBuildings(c, I) {
     for (const s of secs) {
       const { spec, kit, lights, up } = specOf(c, b, A, s, D);
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;
+      if (!s.vox && !s.frame && s.south) dressPlan(spec, { id: b.id, k: s.k, st: D.style, tier: D.tier, A, H: buildingH(spec), w, walkIn: !!s.walk });   // (the facade's dressing by the district: facadedress.js)
       let it;
       if (s.vox) {   // the lighthouse: a voxel tower on its rock
         it = { key: 'lh', recipe: { t: 'v', m: 'lighthouse', a: [170, 1] }, x: x0 + w / 2, y: y1 - d / 2, ext: [46, 250, 46, 46] };
@@ -1367,11 +1373,12 @@ function addBuildings(c, I) {
         if (b.walkIn) {
           const sec = s, bld = b, base = it;
           it.cut = () => {
-            if (base._cut === undefined) { const r = cutRecipe(c, bld, sec, spec, base.recipe); base._cut = r ? { ...base, key: 'cut:' + base.key, recipe: r, ext: [2, r.back ? base.ext[1] + 12 : d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] } : null; }
+            if (base._cut === undefined) { const r = cutRecipe(c, bld, sec, spec, base.recipe); base._cut = r ? { ...base, door: null, key: 'cut:' + base.key, recipe: r, ext: [2, r.back ? base.ext[1] + 12 : d + Math.min(buildingH(spec), 120) + 12, w + 2, 4] } : null; }
             return base._cut || base;
           };
         }
       }
+      if (!s.vox && !s.frame) { const dr = liveDoors(spec, s, bi, x0, y1, w, A); if (dr) it.door = dr; }   // (the doors that open live: doorart.js)
       it.b = bi; it.fp = [x0, y1 - d, x0 + w, y1];   // (fp: the section's footprint; a fading building keeps it covered)
       put(I, it);
       for (const [dx, dy, z, r, col, k, kind] of lights) lightAt(I, x0 + dx, y1 + dy, z, r, col, k, kind, 1);
@@ -1380,6 +1387,27 @@ function addBuildings(c, I) {
       if (spec.shop && s.south && !s.vox && !s.frame) { const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10; I.fronts.push({ x0, y1, w, dx, dw, kind: sh.kind, A, st: D.style, b: bi }); }
     }
   });
+}
+
+// The doors on a street front that open live (shared/doors.js; the owner's notes 2, p16): its shop's door or its own,
+// baked shut (buildings.js liveDoor), and their records for the page - [x, y (the wall's foot), w, h (inside the frame),
+// 1 sliding | 0 hinged, the paint, the building] (client/art2/game/doorart.js draws them opening). Sliding glass by the
+// trade (a walk-in's kind, or the front's look); the civic halls by theirs. Not inside a walk-in seen cut away.
+const CIVIC_SLIDE = new Set(['bank', 'hospital', 'police']);
+function liveDoors(spec, s, bi, x0, y1, w, A) {
+  if (!s.south || spec.blank || spec.motel) return null;
+  const out = [], u = s.walk || null, c = (bi * 7 + s.k * 3) % DOOR_COLS.length;
+  if (spec.shop) {
+    const sh = spec.shop, dw = sh.doorW || 22, dx = typeof sh.door === 'number' ? sh.door : sh.door === 'right' ? w - dw - 10 : 10;
+    if (dw < 12) return null;
+    sh.live = unitDoor(u, sh.kind); sh.doorC = c;
+    out.push([x0 + dx + 2, y1, dw - 4, 48, sh.live === 'slide' ? 1 : 0, c, bi]);
+  } else for (const q of spec.doors || []) {
+    if (q.kind !== 'door' || (q.w || 18) < 12) continue;
+    q.live = u ? unitDoor(u) : CIVIC_SLIDE.has(A) ? 'slide' : 'hinge'; q.c = c;
+    out.push([x0 + q.x + 2, y1, (q.w || 18) - 4, (q.h || 46) - 2, q.live === 'slide' ? 1 : 0, c, bi]);
+  }
+  return out.length ? out : null;
 }
 
 // ---- the building sprite: makeBuilding plus the rooftop kit, or an unfinished frame -------------------------
@@ -1535,7 +1563,7 @@ function voxModel(m, a) {
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, a[1] || 34, 8, 'ns'); case 'birdHide': return GD.birdHide(); case 'trailBlaze': return GD.trailBlaze(a[0]); case 'logSteps': return GD.logSteps(a[0] || 60); case 'logBridge': return GD.logBridge(a[0] || 140); case 'ropeBridge': return GD.ropeBridge(a[0] || 240, a[1] || 44); case 'drinkFountain': return GD.drinkFountain(); case 'cairn': return GD.cairn(a[0] || 0, a[1] || 0); case 'stoneHut': return GD.stoneHut(); case 'mountainSpring': return GD.mountainSpring(); case 'tabletop': return GD.tabletop(a[0], a[1], a[2], a[3]); case 'berm': return GD.berm(a[0], a[1], a[2]); case 'tapeLine': return GD.tapeLine(a[0]); case 'startGate': return GD.startGate(a[0]); case 'timingTower': return GD.timingTower(); case 'floodMast': return GD.floodMast(a[0] || 220); case 'mxTrailer': return GD.mxTrailer(a[0] || 0); case 'rootPlate': return GD.rootPlate(); case 'viewPlatform': return GD.viewPlatform(a[0] || 160, a[1] || 160); case 'pier': return GD.fishingPier(a[0] || 120, a[1] || 30, 10, 0.7);
-    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'caveMouth': return WT.caveMouth(a[0] || 96, a[1] || 72, a[2] || 0); case 'rowboatS': return WT.rowboatProp(a[0] || '#3f6a7a'); case 'yacht': return P.yacht(); case 'sailboat': return RD.sailboat(a[0] || 120, a[1] !== 0, a[2] || '#f0eee8'); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'swimRaft': return PK.swimRaft(); case 'swimBuoy': return PK.swimBuoy(a[0] || 0); case 'crashPad': return PK.crashPad(a[0] || 0); case 'ropeCoil': return PK.ropeCoil(); case 'weir': return PK.weir(a[0] || 320); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'basketHoop': return PK.basketHoop(); case 'tennisNet': return D.tennisNet(a[0] || 100); case 'skateQuarter': return PK.skateQuarter(a[0] || 128); case 'skateLedge': return PK.skateLedge(a[0] || 96, 20, 14, a[1] || 0); case 'skateRail': return PK.skateRail(a[0] || 96); case 'skateKicker': return PK.skateKicker(); case 'skatePyramid': return PK.skatePyramid(); case 'graffitiWall': return PK.graffitiWall(a[0] || 256, 40, a[1] || 1); case 'boombox': return PK.boombox(); case 'bleachers': return PK.bleachers(a[0], a[1]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'pierRail': return PK.pierRail(a[0] || 192); case 'baitShack': return PK.baitShack(a[0] ?? 0.5); case 'lifeRing': return PK.lifeRingPost(); case 'fishTable': return PK.fishTable(); case 'rodHolder': return PK.rodHolder(); case 'ferrisWheel': return PK.ferrisWheel(a[0] ?? 0.6, a[1] ?? 1); case 'marketStall': return PK.marketStall(a[0] || 0, a[1] || '#c8343a'); case 'clubhouse': return PK.clubhouse(a[0] ?? 0.6); case 'golfCart': return PK.golfCart(a[0] || '#f0eee8'); case 'golfPin': return PK.golfPin(a[0] ?? true); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1, a[4] || 0); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'caveMouth': return WT.caveMouth(a[0] || 96, a[1] || 72, a[2] || 0); case 'rowboatS': return WT.rowboatProp(a[0] || '#3f6a7a'); case 'yacht': return P.yacht(); case 'sailboat': return RD.sailboat(a[0] || 120, a[1] !== 0, a[2] || '#f0eee8'); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'swimRaft': return PK.swimRaft(); case 'swimBuoy': return PK.swimBuoy(a[0] || 0); case 'crashPad': return PK.crashPad(a[0] || 0); case 'ropeCoil': return PK.ropeCoil(); case 'weir': return PK.weir(a[0] || 320); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'basketHoop': return PK.basketHoop(); case 'tennisNet': return D.tennisNet(a[0] || 100); case 'skateQuarter': return PK.skateQuarter(a[0] || 128); case 'skateLedge': return PK.skateLedge(a[0] || 96, 20, 14, a[1] || 0); case 'skateRail': return PK.skateRail(a[0] || 96); case 'skateKicker': return PK.skateKicker(); case 'skatePyramid': return PK.skatePyramid(); case 'graffitiWall': return PK.graffitiWall(a[0] || 256, 40, a[1] || 1); case 'boombox': return PK.boombox(); case 'bleachers': return PK.bleachers(a[0], a[1]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'pierRail': return PK.pierRail(a[0] || 192); case 'baitShack': return PK.baitShack(a[0] ?? 0.5); case 'lifeRing': return PK.lifeRingPost(); case 'fishTable': return PK.fishTable(); case 'rodHolder': return PK.rodHolder(); case 'ferrisWheel': return PK.ferrisWheel(a[0] ?? 0.6, a[1] ?? 1); case 'marketStall': return PK.marketStall(a[0] || 0, a[1] || '#c8343a'); case 'clubhouse': return PK.clubhouse(a[0] ?? 0.6); case 'golfCart': return PK.golfCart(a[0] || '#f0eee8'); case 'golfPin': return PK.golfPin(a[0] ?? true); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
     case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
@@ -1597,7 +1625,7 @@ function vdim(m, a) {
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'sculpt': return [36, 36, 92]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, a[1] || 34, 32]; case 'birdHide': return [64, 52, 66]; case 'trailBlaze': return [8, 8, 40]; case 'logSteps': return [30, (a[0] || 60) + 4, 10]; case 'logBridge': return [a[0] || 140, 30, 36]; case 'ropeBridge': return [a[0] || 240, a[1] || 44, 44]; case 'drinkFountain': return [14, 14, 32]; case 'cairn': return a[1] ? [29, 29, 58] : [20, 20, 30]; case 'stoneHut': return [136, 92, 92]; case 'mountainSpring': return [36, 22, 28]; case 'tabletop': return [a[0] || 416, a[1] || 112, (a[2] || 30) + 4]; case 'berm': return [a[0] || 64, 30, (a[1] || 18) + 2]; case 'tapeLine': return [a[0] || 128, 4, 22]; case 'startGate': return [a[0] || 120, 14, 30]; case 'timingTower': return [52, 52, 130]; case 'floodMast': return [36, 14, (a[0] || 220) + 18]; case 'mxTrailer': return [154, 46, 54]; case 'rootPlate': return [84, 40, 74]; case 'viewPlatform': return [a[0] || 160, a[1] || 160, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
-    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 8]; case 'canoe': return [64, 16, 12]; case 'caveMouth': return [a[0] || 96, 46, (a[1] || 72) + 8]; case 'rowboatS': return [64, 28, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'swimRaft': return [64, 64, 14]; case 'swimBuoy': return [10, 10, 6]; case 'crashPad': return [44, 30, 12]; case 'ropeCoil': return [26, 22, 6]; case 'weir': return [a[0] || 320, 30, 14]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 12]; case 'canoe': return [64, 16, 12]; case 'caveMouth': return [a[0] || 96, 46, (a[1] || 72) + 8]; case 'rowboatS': return [64, 28, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'swimRaft': return [64, 64, 14]; case 'swimBuoy': return [10, 10, 6]; case 'crashPad': return [44, 30, 12]; case 'ropeCoil': return [26, 22, 6]; case 'weir': return [a[0] || 320, 30, 14]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
     case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2]; case 'delineator': return [4, 4, 28];
@@ -1691,18 +1719,43 @@ function tikiTorch() {
   m.fill((x, y, z) => (Math.hypot(x - 4, y - 4) < 2.2 - (z - 42) * 0.3 ? fl : -1), 1, 1, 42, 7, 7, 48);
   return m;
 }
-// a plain timber post (festoon lights hang from these)
 // a desert road's delineator (world3-roadside.js): a white post, a red reflector near its top
 function delineatorPost() { const m = new Vox(4, 4, 28), w = m.mat({ ramp: ramp('#ecebe6', 6, 3), k: 3, flag: F_THIN }), r = m.mat({ ramp: ramp('#d02a1e', 5, 2), k: 2, emi: [255, 60, 40, 60] }); m.box(0.5, 0.5, 0, 3.5, 3.5, 27, w); m.box(0.5, 0.5, 19, 3.5, 3.5, 24, r); return m; }
 function woodPost(h = 46) { const m = new Vox(6, 6, h + 2), w = m.mat({ ramp: ramp('#7a5434', 6, 3), k: 3, flag: F_THIN }); m.box(1, 1, 0, 5, 5, h, w); m.box(0, 0, h - 2, 6, 6, h, w); return m; }
-// festoon lights: a sagging wire from the item's anchor (height h) to (tx, ty) (height h), warm bulbs every 10 px
+// lights strung between two points h px up (tx, ty: the far end, px). r.k: 0 bulbs, 1 red paper lanterns, 2 a bare
+// cable; r.e: what each end is made fast to - bit 0 / 1 a post of its own at the near / far end (from the ground up past
+// the string, a cap on top), bit 2 / 3 a bracket on a wall there (the owner, 10-25: "lantern (or hanging lights) don't
+// connect to anything")
 function makeFestoon(r) {
-  const { tx, ty, h } = r, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 24); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 12;
-  wireLine(G, 0, 0, h, tx, ty, h, 10, [40, 36, 34]);
-  const n = Math.max(2, Math.round(Math.hypot(tx, ty) / 10)), cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  const { tx, ty, h } = r, k = r.k || 0, e = r.e || 0, sag = k === 1 ? 14 : k === 2 ? 18 : 10, G = new GBuf(Math.abs(tx) + 24, Math.abs(ty) + h + 30); G.ax = Math.max(0, -tx) + 12; G.ay = Math.max(0, -ty) + h + 18;
+  const P = (x, y, z, c, em = null) => { const px = Math.round(G.ax + x), py = Math.round(G.ay + y - z); if (G.inside(px, py)) G.put(px, py, c, [0, 0.3, 0.95], z, em, F_NOCAST); };
+  // the posts and the brackets
+  for (const [bit, x, y] of [[1, 0, 0], [2, tx, ty]]) {
+    if (e & bit) {
+      for (let z = 0; z <= h + 5; z++) { P(x, y, z, [44, 46, 54]); P(x + 1, y, z, z % 11 === 0 ? [60, 62, 70] : [74, 78, 88]); }
+      for (let dx = -1; dx <= 2; dx++) P(x + dx, y, h + 6, [92, 96, 106]);
+      P(x - 1, y, 1, [36, 36, 42]); P(x + 2, y, 1, [36, 36, 42]);
+    }
+    if (e & (bit << 2)) for (let i = 0; i < 4; i++) { P(x + (i - 1), y, h + 3, [58, 60, 68]); P(x, y, h + i, [70, 72, 80]); P(x + 1, y, h + i, [52, 54, 60]); }
+  }
+  wireLine(G, 0, 0, h, tx, ty, h, sag, k === 2 ? [26, 24, 30] : [40, 36, 34]);
+  if (k === 2) return G;
+  const len = Math.hypot(tx, ty), n = Math.max(2, Math.round(len / (k === 1 ? 15 : 10)));
+  const cols = k === 1 ? [[232, 52, 40], [255, 120, 40], [232, 52, 40], [255, 70, 110]] : [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
   for (let i = 1; i < n; i++) {
-    const t = i / n, X = tx * t, Y = ty * t, Z = h - 10 * 4 * t * (1 - t) - 2, px = Math.round(G.ax + X), py = Math.round(G.ay + Y - Z), c = cols[i % 3];
-    for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) if (G.inside(px + dx, py + dy)) G.put(px + dx, py + dy, c, [0, 0.3, 0.95], Z, [c[0], c[1], c[2], 255], F_NOCAST);
+    const t = i / n, X = tx * t, Y = ty * t, Z = h - sag * 4 * t * (1 - t) - 2, c = cols[i % cols.length];
+    if (k === 1) {
+      // a paper lantern: a round body 5 wide, 7 tall, hanging from the line - its ribs, a gold cap and tassel, lit within
+      const hc = c.map((q) => Math.min(255, q + 60)), gold = [255, 200, 90];
+      for (let dz = 0; dz < 9; dz++) for (let dx = -2; dx <= 2; dx++) {
+        const zz = Z - 1 - dz;
+        if (dz === 0 || dz === 8) { if (Math.abs(dx) <= 1) P(X + dx, Y, zz, gold, [255, 190, 90, 140]); continue; }
+        if (Math.abs(dx) === 2 && (dz === 1 || dz === 7)) continue;
+        const rib = dz === 3 || dz === 5, core = Math.abs(dx) <= 1 && dz > 1 && dz < 7;
+        P(X + dx, Y, zz, rib ? c.map((q) => q * 0.7) : core ? hc : c, [c[0], c[1], c[2], core ? 230 : 150]);
+      }
+      P(X, Y, Z - 11, gold, [255, 190, 90, 90]);
+    } else for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) P(X + dx, Y - dy, Z, c, [c[0], c[1], c[2], 255]);
   }
   return G;
 }
@@ -1725,16 +1778,6 @@ function makeBlanket(r) {
   }
   return G;
 }
-// An old two-arch stone bridge carrying a country road over a river (Willow River; concept W1). The water kit's model
-// (water.js stoneBridge) stands its deck faceH above the water; here the road is the map's own (flat) and the river
-// runs beside it at the same level, so: the deck is taken off (the road's surface shows through), every height comes
-// down by faceH (the parapets stand 11 px off the road, the face lies flat), and the picture is anchored faceH below
-// the road's centre - the deck edge lands on the road edge, the arched face hangs below it over the water like a
-// bridge seen from downstream, and cars on the road draw over it.
-// a painted half court on the ground (concept G2): w x d px, the hoop's baseline at the north edge. Worn blue
-// paint with a red key, white lines (the sidelines and baseline, the key, the free-throw circle, the three-point
-// arc, the half-court line with its circle at the south edge), cracks and scuffs. Flat ground (anchor: the middle
-// of the north edge).
 // the skate spot's slab (Midtown, by the El): smooth troweled concrete in saw-cut squares, scuffed with wheel and wax
 // marks, a crack or two, an old oil stain - flat on the ground, anchored at its north edge's middle like a court
 function makeSkatePad(r) {
@@ -2146,7 +2189,7 @@ function propItems(c, p, pi, I) {
     case 'fountain': V('fnt:0', 'fountain', [30, 2, false], 0, null, { fnt: [x, y, p.lift || 0] }); return;   // (the stone and still water: its water moves live - liveart.js)
     case 'cone': V('cone', 'cone', []); return;
     case 'turbine': V(`trb:${Math.floor((p.ph || 0) * 6)}`, 'turbine', [230, 70, (p.ph || 0) * TAU]); lightAt(I, x, y, 236, 60, [1, 0.15, 0.1], 1.2, 'sign', 1); return;
-    case 'vend_cola': V('vend', 'vending', ['#c8242a', 1]); lightAt(I, x, y + 6, 30, 60, [1, 0.6, 0.55], 0.9, 'sign'); return;
+    case 'vend_cola': { const c = (p.c || 0) % 5, col = ['#c8242a', '#2a6ad8', '#e8e6e0', '#22a05a', '#e89a20'][c]; V(c ? `vend:${c}` : 'vend', 'vending', [col, 1]); lightAt(I, x, y + 6, 30, 60, [[1, 0.6, 0.55], [0.55, 0.75, 1], [0.95, 0.95, 1], [0.55, 1, 0.7], [1, 0.8, 0.5]][c], 0.9, 'sign'); return; }   // (p.c: the Neon Strip's machines in their colours)
     case 'wheelbarrow': V('whb', 'wheelbarrow', [], qa(u * TAU, 4)); return;
     case 'plane': V(`pln:${qa(p.a ?? -PI / 2, 8).toFixed(2)}`, 'airliner', [300, 270, pick(['#c83a30', '#2a5aa8', '#2a8a6a'], u)], qa(p.a ?? -PI / 2, 8)); return;
     case 'radiotower': V('rt', 'cellTower', [190]); lightAt(I, x, y, 196, 70, [1, 0.15, 0.1], 1.4, 'sign', 1); return;
@@ -2357,10 +2400,10 @@ function propItems(c, p, pi, I) {
     case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
-    case 'festoon': {
-      const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40;
-      put(I, { key: `fest:${tx}:${ty}:${h}`, recipe: { t: 'festoon', tx, ty, h }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 16, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
-      for (let k = 1; k < 4; k++) lightAt(I, x + tx * k / 4, y + ty * k / 4, h - 6, 90, [1, 0.8, 0.5], 0.9, 'window');
+    case 'festoon': {   // (p.k: 'lantern' | 'cable'; p.ends: what each end is made fast to - the Neon Strip's: shared/world3-neon.js fest)
+      const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40, k = p.k === 'lantern' ? 1 : p.k === 'cable' ? 2 : 0, en = p.ends || [], e = (en[0] === 'pole' ? 1 : 0) | (en[1] === 'pole' ? 2 : 0) | (en[0] === 'wall' ? 4 : 0) | (en[1] === 'wall' ? 8 : 0);
+      put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}`, recipe: { t: 'festoon', tx, ty, h, k, e }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 22, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
+      if (k !== 2) for (let q = 1; q < 4; q++) lightAt(I, x + tx * q / 4, y + ty * q / 4, h - 6, k ? 100 : 90, k ? [1, 0.42, 0.3] : [1, 0.8, 0.5], k ? 1.1 : 0.9, 'window');
       return;
     }
     case 'cottage': V(`cot:${p.w || 84}:${p.d || 54}:${p.log ? 1 : 0}`, 'cottage', [p.w || 84, p.d || 54, 0.6, p.log ? 1 : 0]); lightAt(I, x, y + 6, 22, 110, [1, 0.8, 0.5], 1.4, 'window'); return;   // (p.log: the hunting lodge's log cabin)
@@ -3222,7 +3265,16 @@ function makeMesas(r) {
 // designed nature places (shared/naturesites.js): what stands on the map's tiles there
 // ================================================================================================
 // the nature sites' falls as drawn (2026-10-21, the falls chain): at least this wide and this high (px), the mist
-const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5 } };
+const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5, rock: 56 } };
+// a falls' gorge walls (notes 2: the cliffs "embedded into the environment"): each drawn on toward the falls till it
+// meets the falls' own rock (a falls hw px either side of x), its end by the water dark and wet
+function fallWalls(I, list, x, hw) {
+  for (const cw of list || []) {
+    const left = cw.x < x, near = left ? cw.x + cw.len / 2 : cw.x - cw.len / 2, gap = left ? x - hw - near : near - (x + hw), ext = gap > 0 && gap < 140 ? Math.round((gap + 12) / 8) * 8 : 0;
+    const len = cw.len + ext, cx = cw.x + (left ? ext / 2 : -ext / 2), wet = left ? 1 : -1;
+    put(I, vitem(`cliffw:${len}:${cw.h}:${cw.seed}:${wet}`, 'cliffWall', [len, cw.h, 60, cw.seed, wet], Math.round(cx), cw.y, 0));
+  }
+}
 function addNature(c, I) {
   for (const s of c.M.natureSites || []) {
     if (s.kind === 'oasis') {   // the spring down the cliff into the pool
@@ -3237,7 +3289,9 @@ function addNature(c, I) {
       continue;
     }
     if (s.kind === 'ledgefall') {   // (the falls chain, part 2: a river over a band of rock in pieces, its water in strands - shared/world3-ledgefalls.js)
-      for (const g of s.segs) put(I, { key: `fall:l:${g.k}:${g.w}:${g.d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: g.d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8, ext: [g.w / 2 + 60, g.d + 120, g.w / 2 + 60, 40] });
+      // (notes 2: not one ruled row - each piece a little forward or back of the next, a little higher or lower)
+      for (const g of s.segs) { if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
+        const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; put(I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
@@ -3247,7 +3301,7 @@ function addNature(c, I) {
     }
     if (s.kind === 'river') {   // Willow River (concept W1): the falls between basalt walls, the old stone bridge, the barn
       const f = s.falls;
-      for (const cw of s.cliffs || []) put(I, vitem(`cliffw:${cw.len}:${cw.h}:${cw.seed}`, 'cliffWall', [cw.len, cw.h, 60, cw.seed], cw.x, cw.y, 0));
+      fallWalls(I, s.cliffs, f.x, f.w / 2 + 36);
       put(I, { key: `fall:w:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 17, mist: 0.8, upper: [[-64, -34], [-26, 6], [14, 38], [46, 64]], streams: [[-62, -40], [-30, -6], [4, 28], [38, 62]] }, x: Math.round(f.x), y: Math.round(f.y), ext: [f.w / 2 + 80, f.drop + 120, f.w / 2 + 80, 60] });
       lightAt(I, f.x, f.y + 10, 12, 140, [0.75, 0.9, 1], 0.5, 'sign', 0);
       const b = s.bridge, len = Math.round(b.half * 2 + 20);
@@ -3274,10 +3328,11 @@ function addNature(c, I) {
     const b = s.bridge, nx = -Math.sin(b.a), ny = Math.cos(b.a), hd = qa(b.a, 64), len = Math.round(b.half * 2);
     for (const side of [-1, 1]) put(I, vitem(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], Math.round(b.x + nx * side * (b.roadHw + 7)), Math.round(b.y + ny * side * (b.roadHw + 7)), hd));
     // the gorge's basalt walls either side of the falls
-    for (const cw of s.gorge || []) put(I, vitem(`cliffw:${cw.len}:${cw.h}:${cw.seed}`, 'cliffWall', [cw.len, cw.h, 60, cw.seed], cw.x, cw.y, 0));
-    // the falls: water over a mossy basalt ledge, facing south, its foot on the pool's north shore
-    const f = s.falls, fd = Math.max(f.drop, FALLS_LOOK.creek.drop);   // (2026-10-21: the creek's fall over its ledge, a little higher)
-    put(I, { key: `fall:${f.w}:${fd}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + 60, fd + 90, f.w / 2 + 60, 40] });
+    // the falls: water over a ledge of layered rock, facing south, its foot on the pool's north shore - its walls in the
+    // same rock, the gorge's walls drawn on to meet them
+    const f = s.falls, fd = Math.max(f.drop, FALLS_LOOK.creek.drop), fr = FALLS_LOOK.creek.rock;   // (2026-10-21: the creek's fall over its ledge, a little higher)
+    fallWalls(I, s.gorge, f.x, f.w / 2 + fr);
+    put(I, { key: `fall:${f.w}:${fd}:${fr}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist, rock: fr }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + fr + 24, fd + 90, f.w / 2 + fr + 24, 40] });
     lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
     // the footbridge across the creek below the pool
     const fb = s.footbridge, fh = qa(fb.a, 16);

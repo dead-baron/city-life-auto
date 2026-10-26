@@ -191,19 +191,33 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   assert.equal(sites.length, LF.steps);
   for (const q of sites) {
     const ly = Math.round((q.falls.y + 8) / TILE) - 1, xa = Math.ceil((q.falls.x - q.falls.w / 2 + 8) / TILE), xb = Math.floor((q.falls.x + q.falls.w / 2 - 8) / TILE) - 1;
-    let lip = 0, drop = 0;
-    for (let x = xa; x <= xb; x++) { const i = ly * W + x; if (m.tiles[i] === T.WALL && (m.reserve[i] & 96) === 96) lip++; if (drops.has(i)) drop++; }
+    // (notes 2: no straight dam - each piece's stretch of the lip a row up or down from the next, joined in rock at the
+    // steps: in each column the lip's rock is in one of the rows round ly, and every bit of it a one-way drop)
+    let lip = 0, drop = 0, lipTiles = 0;
+    const lipRow = new Map();
+    for (let x = xa; x <= xb; x++) {
+      let on = false;
+      for (let y = ly - 1; y <= ly + 1; y++) { const i = y * W + x; if (m.tiles[i] === T.WALL && (m.reserve[i] & 96) === 96) { if (!on) lipRow.set(x, y); on = true; lipTiles++; if (drops.has(i)) drop++; } }
+      if (on) lip++;
+    }
     assert.equal(lip, xb - xa + 1, `${q.name} (${q.step}): its lip right across (${lip} of ${xb - xa + 1})`);
-    assert.ok(m.land[ly * W + xa - 1] && m.land[ly * W + xb + 1], `${q.name}: bank to bank`);
-    assert.ok(drop === lip, `${q.name}: a one-way drop (${drop})`);
-    assert.ok(q.segs.length >= 1 && q.segs.every((g) => g.up.length >= 2 && Math.abs(g.y - (ly + 1) * TILE) < TILE * 1.5), `${q.name}: drawn along it, in strands`);
+    assert.ok(m.land[(lipRow.get(xa) ?? ly) * W + xa - 1] || m.land[ly * W + xa - 1], `${q.name}: bank to bank`);
+    assert.ok(m.land[(lipRow.get(xb) ?? ly) * W + xb + 1] || m.land[ly * W + xb + 1], `${q.name}: bank to bank`);
+    assert.ok(drop === lipTiles, `${q.name}: a one-way drop (${drop} of ${lipTiles})`);
+    assert.ok(q.segs.length >= 1 && q.segs.every((g) => (g.dry || g.up.length >= 2) && Math.abs(g.y - (ly + 1) * TILE) < TILE * 2.5), `${q.name}: drawn along it, in strands`);
+    assert.ok(q.segs.some((g) => !g.dry), `${q.name}: water pouring over it`);
+    if (q.segs.length >= 3) assert.ok(new Set(lipRow.values()).size >= 2 || new Set(q.segs.map((g) => g.d)).size >= 2, `${q.name}: not one ruled row`);
     let wetN = 0;
-    for (const [cx, cy] of [[Math.round(xa + (xb - xa) * 0.25), ly], [Math.round((xa + xb) / 2), ly], [Math.round(xa + (xb - xa) * 0.75), ly]]) {   // (across it, clear of the banks' wet sand; a reed by the bank may stand on it)
+    for (const [cx] of [[Math.round(xa + (xb - xa) * 0.25)], [Math.round((xa + xb) / 2)], [Math.round(xa + (xb - xa) * 0.75)]]) {   // (across it, clear of the banks' wet sand; a reed by the bank may stand on it)
+      const cy = lipRow.get(cx) ?? ly;
       const G = bakeGround(m, Math.floor(cx * TILE / CHUNK), Math.floor(cy * TILE / CHUNK), { quality: 1, seed: 1337 }), px = cx * TILE + 16 - Math.floor(cx * TILE / CHUNK) * CHUNK, py = cy * TILE + 16 - Math.floor(cy * TILE / CHUNK) * CHUNK;
       if (G.flag[py * G.w + px] & F_WATER) wetN++;
     }
     assert.ok(wetN >= 2, `${q.name}: the lip drawn as water (${wetN} of 3 across it)`);
   }
+  const segsAll = sites.flatMap((q) => q.segs);
+  assert.ok(segsAll.some((g) => g.dry) && segsAll.filter((g) => g.dry).length < segsAll.length / 3, `some stretches of the lips dry rock (${segsAll.filter((g) => g.dry).length} of ${segsAll.length})`);
+  assert.ok(new Set(segsAll.map((g) => g.d)).size >= 6, 'the pieces of different heights');
   for (const name of LF.names) {
     const last = sites.filter((q) => q.name === name).pop();
     const pool = pockets.find((p) => p[3] === 2 && Math.abs(p[0] * TILE - last.falls.x) < last.falls.w / 2 && p[1] * TILE > last.falls.y && p[1] * TILE < last.falls.y + 16 * TILE);

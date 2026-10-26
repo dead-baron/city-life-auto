@@ -620,7 +620,7 @@ export class World2 {
     if (!F.sub && !F.spec) F.nearB = F.insideB ? null : walkInSoon(S, F.sp);   // (a walk-in ahead: _precut)
     this._fetchAhead(F); if (!sub) this._precut(F); this._prebake(F); mk('prebake');
     const preset = sub ? this._tunnelPreset() : this._preset(F);
-    const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8);
+    const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8, this._slick(F, camX, camY));
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
     if (!sub) { this._fades(F, sp); this._push(F, sp); }
@@ -1340,6 +1340,13 @@ export class World2 {
     this.t.lastBake = r.bake;
     if (this.failed) return;
     this.results.set(jk, { jk, key, cx, cy, mode, r, prio, ver });
+  }
+  // the Neon Strip after dark (the owner, 10-25): a sheen of wet on its streets, the signs' colour lying in it
+  _slick(F, x, y) {
+    const M = this.map, tx = Math.floor(x / 32), ty = Math.floor(y / 32), d = M.inside && M.inside(tx, ty) ? DISTRICTS[M.dist[M.idx(tx, ty)]] : null;
+    const want = d && d.tier === 'neon' ? 0.5 * smooth((F.sky.night - 0.2) / 0.5) : 0;
+    this.slickK = (this.slickK || 0) + (want - (this.slickK || 0)) * 0.03;
+    return this.slickK < 0.01 ? 0 : this.slickK;
   }
   // static lights of a chunk: lamps matched to the v1 lamps (for their warm-up, flicker and breakage)
   _prepLights(list) {
@@ -2175,6 +2182,7 @@ export class World2 {
     const x0 = this.vx0 - 120, x1 = this.vx1 + 120, y0 = this.vy0 - 40, y1 = this.vy1 + 160;
     o.alpha = 1; o.flash = 0; o.xray = false; o.flipX = false; o.tint = null; o.shadow = false;
     const heads = this.liveHeads; heads.length = 0; this.nfL = 0;
+    const DL = this.doorL || (this.doorL = []); DL.length = 0;
     this._flagStep(F);
     for (const [k, st] of this.chunkState) {
       const lv = st.live;
@@ -2194,7 +2202,9 @@ export class World2 {
       }
       if (lv.flags) for (const fl of lv.flags) if (fl[1] > x0 && fl[1] < x1 && fl[2] > y0 && fl[2] < y1) this._flag(fl);
       if (lv.fnt) for (const fn of lv.fnt) if (fn[0] > x0 && fn[0] < x1 && fn[1] > y0 && fn[1] < y1) this._fountain(fn);
+      if (lv.doors) for (const dr of lv.doors) if (dr[0] > x0 - 60 && dr[0] < x1 && dr[1] > y0 && dr[1] < y1 + 60) DL.push(dr);
     }
+    if (DL.length) this._doors(F, DL);
     o.shadow = false;
     // level crossings (v1's arm pivots, beside the statics' crossbuck posts)
     const xs = M.railXings || (M.rail && M.rail.crossings) || [];   // (World v3: every loop's crossings, once each)
@@ -2243,6 +2253,11 @@ export class World2 {
         if (key) E.drawDecal(key, s.x, s.y, s.a || 0, 1, this._gz(s.x, s.y));
       }
     }
+  }
+  // the street fronts' doors opening as someone comes up to them (doorart.js: loaded the first time one is in view)
+  _doors(F, L) {
+    if (!this.DA) { if (!this.daP) this.daP = import('./doorart.js').then((m) => { this.DA = m; }, (e) => { console.warn('[art2] doors', e); setTimeout(() => { this.daP = null; }, 30e3); }); return; }
+    this.DA.drawDoors(this, F, L);
   }
   // Flags in the wind (task #426: liveart.js, the chunks' live.flags): out as far as the wind says, flapping at its pace,
   // the phase summed frame by frame (task #388); still with Settings' wind sway off.
@@ -2566,6 +2581,7 @@ export class World2 {
         let kk = L.k;
         if (L.kind === 'lamp' && L._lamp) { if (L._lamp.broken) continue; kk *= L._lamp._lv ?? (night > 0.05 ? 1 : 0); }
         else if (L.night) kk *= nightK;
+        if (L.kind === 'neonf') { const ph = (now * 0.43 + L.x * 0.0017 + L.y * 0.0031) % 5; if (ph < 0.5) kk *= (Math.floor(now * 23 + L.x) % 3) ? 0.3 : 1; }   // (a tube on the blink)
         this._light(L.x, L.y, L.z || 0, L.r, L.col, kk);
       }
     }
