@@ -14,7 +14,7 @@
 //     burn    a flare or a glow stick: lit once, it burns this long and is gone
 //     drop    can be set down or thrown, and stays lit there
 //     hat     worn on the head (the hard hat: some protection from a falling tree or rock - HARDHAT_GUARD)
-import { BATTERY_S, FLARE_S, GLOWSTICK_S } from './rules.js';
+import { BATTERY_S, FLARE_S, GLOWSTICK_S } from './rules-page.js';
 
 export const LIGHTS = {
   flashlight: { w: 1, name: 'Flashlight', beam: 'cone', range: 240, spread: 0.32, col: [1, 0.96, 0.84], k: 1.6, hand: true, fuel: BATTERY_S },

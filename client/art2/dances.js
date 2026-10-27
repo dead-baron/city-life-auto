@@ -7,13 +7,8 @@ const vadd = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const mv = (M, v) => [M[0] * v[0] + M[1] * v[1] + M[2] * v[2], M[3] * v[0] + M[4] * v[1] + M[5] * v[2], M[6] * v[0] + M[7] * v[1] + M[8] * v[2]];
 
 // ==== Dancing (task #394, shared/dance.js; server nightclubs.js, dance.js) ==============================================
-// The dance moves (DN1), four frames each: dstep (a loose two-step), dbounce (bouncing on the knees, the fists low),
-// dpump (an arm up, the fist pumping; both up on the beat), dpoint (the disco point: up to one side, down across),
-// dspin (arms out, a foot up: the client turns the figure round with the frames, shared/dance.js danceDir), drobot (stiff,
-// the arms at right angles, the head and the chest turning in steps), dsway (a slow sway, the eyes closed); the couples,
-// face to face (COUPLE_PX apart): dslow / dslowf (the lead's hands at the partner's waist, the partner's on his shoulders),
-// dsalsa / dsalsaf (hands held, a step in and out, the turn under the lead's raised hand); djump (jumping in the crowd).
-Object.assign(POSES, { dstep: 4, dbounce: 4, dpump: 4, dpoint: 4, dspin: 4, drobot: 4, dsway: 4, dslow: 4, dslowf: 4, dsalsa: 4, dsalsaf: 4, djump: 4 });
+// The moves (DN1), four frames each - what each is, by its pose below; the couples face to face (COUPLE_PX apart).
+Object.assign(POSES, { dstep: 4, dbounce: 4, dpump: 4, dpoint: 4, dspin: 4, drobot: 4, dsway: 4, dslow: 4, dslowf: 4, dsalsa: 4, dsalsaf: 4, djump: 4, dtop: 4, dfreeze: 4 });
 const DUP = (S, s, x, z) => vadd(S[s < 0 ? 'shL' : 'shR'], [s * x, 2, z]);        // a hand up over a shoulder
 const DCH = (S, x, y, z) => vadd(S.chest, mv(S.SP, [x, y, z]));                    // a hand in front of the chest
 const DHIP = (D, S, s) => vadd(S.pel, [s * (D.pelR[0] + 1.2), 0.8, 2.6]);          // a hand on the hip (s: the side)
@@ -63,7 +58,7 @@ Object.assign(GAITS2, {
     P.fL = [-D.hipX - 0.4, 0.2, D.ank]; P.fR = [D.hipX - 0.2, -1.2, D.ank + 3.6 + (f & 1)]; P.kneeR = [0.6, 1, 0];
     P.hands = (S) => { P.hL = vadd(S.shL, [-11.0, -1.0 + f * 0.4, 3.0]); P.hR = vadd(S.shR, [11.0, 1.0 - f * 0.4, 3.6]); P.openL = P.openR = 1; P.elL = [-1, 0, 0.2]; P.elR = [1, 0, 0.2]; };
   },
-  drobot(D, P, f) {   // stiff: the upper arms out level, the forearms up / forward / down by turns, the head turning in steps
+  drobot(D, P, f) {   // stiff: the forearms up, forward, down by turns, the head in steps
     danceBase(P); P.lean = 0; P.splay = 0.1;
     P.pel = [0, 0, D.pelZ - 0.8]; P.twist = [0.3, 0, -0.3, 0][f]; P.headYaw = [0.5, 0, -0.5, 0][f]; P.headPitch = 0;
     P.fL = [-D.hipX - 1.8, 0.2, D.ank]; P.fR = [D.hipX + 1.8, 0.2, D.ank];
@@ -126,13 +121,36 @@ Object.assign(GAITS2, {
       P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3];
     };
   },
+  dtop(D, P, f) {   // toprock: a foot crossed in front and back, the arms opening
+    danceBase(P);
+    const s = f < 2 ? 1 : -1, x = !(f & 1);
+    P.pel = [s * 0.8, 0.4, D.pelZ - (x ? 1.4 : 0.4)]; P.twist = s * (x ? 0.4 : 0.1); P.tilt = -s * 0.08; P.lean = 0.1; P.headYaw = -s * 0.25; P.headPitch = x ? 0.1 : -0.05;
+    P.fL = x && s < 0 ? [D.hipX + 0.6, 3.4, D.ank] : [-D.hipX - 2.4, -0.4, D.ank + (x ? 0 : 0.8)];
+    P.fR = x && s > 0 ? [-D.hipX - 0.6, 3.4, D.ank] : [D.hipX + 2.4, -0.4, D.ank + (x ? 0 : 0.8)];
+    P.kneeL = [-0.4, 1, 0]; P.kneeR = [0.4, 1, 0];
+    P.hands = (S) => {
+      const open = x ? s : -s;
+      P.hL = open > 0 ? vadd(S.shL, [-7.4, 3.2, 0.6]) : DCH(S, -2.6, 7.0, -1.0); P.hR = open < 0 ? vadd(S.shR, [7.4, 3.2, 0.6]) : DCH(S, 2.6, 7.0, -1.0);
+      P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3]; P.openL = open > 0 ? 1 : 0; P.openR = open < 0 ? 1 : 0;
+    };
+  },
+  dfreeze(D, P, f) {   // a freeze: down on one hand, the legs up, held
+    danceBase(P);
+    const dn = [2.6, 6.4, 6.8, 3.2][f], up = f === 1 || f === 2;
+    P.pel = [-1.0, 1.0, D.pelZ - dn]; P.lean = [0.3, 0.55, 0.6, 0.3][f]; P.tilt = [0.12, 0.38, 0.42, 0.16][f]; P.headPitch = 0.25; P.headYaw = -0.35; P.twist = -0.2;
+    P.fL = [-D.hipX - 2.8, -0.8, D.ank + (f === 2 ? 4.6 : f === 1 ? 2.2 : 0)]; P.fR = [D.hipX + 3.0, -1.4, D.ank + (f === 2 ? 7.0 : f === 1 ? 4.4 : 0)];
+    P.kneeL = [-0.8, 1, 0.3]; P.kneeR = [0.8, 1, 0.3];
+    P.hands = (S) => {
+      P.hL = up ? [-D.hipX - 3.4, 5.0, 1.0] : vadd(S.shL, [-2.0, 4.4, -D.reach * 0.55]);
+      P.hR = up ? vadd(S.shR, [4.6, 2.0, 6.0 + f]) : DCH(S, 3.4, 6.6, -2.2);
+      P.elL = [-1, 0.2, -0.2]; P.elR = [1, -0.2, -0.3]; P.openL = up ? 1 : 0;
+    };
+  },
 });
 // ==== end of dancing ====================================================================================================
 
 // ==== The guard (blocking: server combat.js - a player's held guard, an NPC's raised now and then; main.js pedPose) ====
-// Its own pose, no longer the aim's: knees bent, feet apart, the head down behind it. Fists: both up in front of the
-// face, the elbows in. A bat, a sword, the katana or the plasma blade: held across in front of the face in both hands,
-// the blade up and out to the far side - what a blow meets. (Here, out of the chunk bake's reach, like the dances.)
+// Knees bent, the head down; fists up before the face, or a bat or a blade held across it in both hands.
 const vn = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 function holdItem(P, kind, axis, down) {   // (people.js setItem, two-handed)
   axis = vn(axis);
@@ -152,8 +170,7 @@ Object.assign(GAITS2, {
       holdItem(P, kind, [-0.72, 0.18, 0.68], [0, 1, 0]);
     };
   },
-  // walking in the guard (the owner's notes, 10-22: "you just sort of float across the ground"): the walk's stride, a
-  // little lower on bent knees, and the guard's arms, lean and head held over it - six frames, on the stride's phase
+  // walking in the guard (the owner, 10-22): the walk's stride, lower, the guard's arms over it - six frames
   guardw(D, P, f, kind) {
     GAITS2.escortR(D, P, f);   // (people.js gait: the walk's legs)
     const legs = { fL: P.fL, fR: P.fR, toeL: P.toeL, toeR: P.toeR, pel: P.pel.slice(), pelYaw: P.pelYaw };

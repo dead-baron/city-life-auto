@@ -17725,3 +17725,294 @@ The N on the minimap's ring is 2 px smaller and sits on the ring, so nothing cov
 - **HUD coverage upright on foot:** pix 27.1% before, 25.8% after; with a wanted level, 40.8% before, 33.0% after.
 - **perf:** the page is 497.75 KB of 498 (+0.08 KB) and the renderer 400 of 400; the icons load with the touch
   controls, not with the page.
+
+## 2026-10-25 - Batch 7c: music in the world - boomboxes, radios, the car radio, the mat and the rhythm game, instruments and busking
+
+From the owner's notes, part 2:
+> Item - Radio/Boombox, can play it out loud for people to hear in game. They can be shot and destroyed too and the music
+> will glitch out or wind down. Music can be purchased at record store and you can buy tape casettes for your Boombox or
+> you can play a radio station on either radio or Boombox
+
+> Breakdancing - can out down a cardboard mat and dance or breakdance or do street performances, they will gather NPCs,
+> if you're really good then it will gather a good sized crowd thats really into it, if you aren't good npcs will walk off
+> unamused, sometimes they will boo. There's freestyle dancing they your character can do while idling or you can play a
+> dance dance revolution or guitar hero type mini game to see how well you perform.
+
+> Play instruments? Be able to do live music? Have instruments as items you can get and play them out loud for people in
+> the area to hear?
+
+On the music itself he said (2026-10-24): "Let's do some simple music for now for the Boombox, or recycle something we already have for now.
+I will be working on music later." So everything plays the songs we already have, and there's a clean place for his own
+tracks to drop in.
+
+**The songs** (tools/music/songbook.mjs, new):
+- The owner's song scores (tools/music/songs/*.js: Smash and Grab, Kickflip, Sunburnt Tape, Grease Fire, the sixteen of
+  them) and the live synth's own loops (client/sound/music.js: the club's beat, the shop's bossa, the lobby, the
+  drive-in) are compiled for the synth the game already has: each song becomes client/sound/songbook/<id>.json, its parts
+  as notes in milliseconds (the swing and Rescue Run's tempo change worked in), each part on one of the live synth's
+  voices (lead, bass, brass, reed, keys, bells, pad, organ, pluck, flute, voco, the kit). 0.4-15 KB a song gzipped,
+  fetched the first time a song is wanted. shared/music-songs.js, made with them, has each song's length, beats, tempo
+  map and key, which the server and the screens time things by. Run the tool again when a song changes;
+  test/music.test.js checks the checked-in songbook matches the scores.
+- **The track list** (shared/music.js `TRACKS`): every song by id, with a title, a band, a genre, whether it's sold on
+  tape, and two empty fields for the owner: `file` ({ opus, mp3 } under assets/music, as tools/music/make-loop.py makes
+  them) and `secs`. Give a track its file and the game plays the recording in its place everywhere - tapes, stations,
+  the mat (client/sound/stage.js `playFile`; a wrecked boombox winds a recording down by its playback rate).
+
+**The boombox and the pocket radio** (server/systems/music.js, new; client/music/stage.js, client/sound/stage.js):
+- Bought at a record shop's counter. Taken out of the bag (Use, or the quick wheel) it plays out loud, carried - the
+  boombox on the shoulder, the radio on the hip - and its menu opens: a tape you own, one of the stations, off, set it
+  down here, put it away. The action button by one you set down opens the same menu.
+- Everyone near hears the same song at the same moment. What's on the wire is the song and when it started (a tape) or
+  which station: the stations run on the world's clock (`stationAt`), so nobody has to be kept in step. The page plays
+  the nearest two sources, full up close and falling off with distance (`MUSIC_HEAR`: a boombox 560 px, the radio 300).
+- **Five stations**, from what the owner's song briefs said each song was for: The Haze 94.5 (Sunburnt Tape, Sugar
+  Haze, Waiting Room Disco, Clockwork Kitty), Heist FM 101.1 (Smash and Grab, Badge and Brass, Getaway Job, Jester's
+  Parade), Grease 88.3 (Grease Fire, Double Scoop), Skate Radio 106.6 (Kickflip, Rescue Run, Wide Awake City), Garden
+  Country 90.7 (First Sprouts, Tomatoes in the Morning, Porch Light).
+- **Tapes**: one of each of the sixteen scores and three of the synth's loops, $12 each at the record shops.
+- **Shot, it's wrecked.** One set down takes bullets (hp 24; a radio 10), punches and blasts. Wrecked, its music
+  stutters and crackles and winds down over 2.4 s like a tape running out of battery (pitch and tempo sliding, the
+  sound closing in), pieces fly, glass and a clang, and the wreck lies there two and a half minutes. It's gone from the
+  owner's bag, and they're told who did it.
+- Left 900 px behind for two minutes, or its owner gone, it's packed back into their bag.
+
+**The car radio** (the tracker's "Car radio stations"): the dance button in a car (G) flicks through the stations and
+off; the phone has a new Radio app for any device (the stations and what each is playing now; on foot it tunes your
+radio or boombox). The people in the car hear it clearly, everyone outside muffled through the body. It goes off a
+while after the car's left empty, or when it's wrecked.
+
+**The cardboard mat and the rhythm game**:
+- Put the mat down (bag, Use) and its menu opens: the rhythm game to the mat's street beat or a tape of yours,
+  freestyle, pick it up. The action button on it opens the menu again.
+- **Freestyle**: dancing on your mat with the dance button. Each different move in the last 20 s makes it better, but
+  freestyle tops out at a small crowd (`FREESTYLE`). Two breaking moves are new for everyone's dance button: toprock
+  (a foot crossed in front and back, the arms opening) and a freeze (down on one hand, the legs up) - client/art2/
+  dances.js `dtop`, `dfreeze`; shared/dance.js.
+- **The rhythm game** (client/music/play.js, loaded the first time): a 48-second set. The notes fall down four lanes to
+  the beat of the song the mat plays, on the arcade's screen laid low over the city, so you can see your dancer and the
+  crowd. Hit with the arrows or D F J K, the d-pad or X A Y RB, or by tapping the lane (shared/controls.js
+  `MUSIC_KEYS`). PERFECT within 50 ms, GREAT 100, GOOD 150, else a miss. Ten in a row adds half to the multiplier, up to
+  x3. A hype meter shows how the crowd's taking it. The chart comes from the song's beats and a seed the server picks
+  (`chart`): the page and the server make the same one, a bar to count in, busier as the set goes on, a fast song on its
+  half-time.
+- **The server judges**: each hit goes up with how far off it was by the page's clock. The server takes it only within
+  0.45 s before to 1.5 s after the note by its own clock, so a set can't be scored before it's played. Notes nobody hit
+  are misses. The score, the combo and the rating (how the crowd takes it) are the server's, and the set's result comes
+  back to the page. Your dancer moves on to the next move every few hits in a row, and stumbles back to the two-step on a
+  miss.
+
+**The crowd** (npc.js state 'mcrowd', music.js `crowdStep`; the numbers: shared/rules-music.js `CROWD`):
+- People walking by stop to watch, one every 1.6 s, up to the size the show is worth: 12 for a great one (rating 0.85 and
+  up), 7, 4, or 1. They stand round you and face you.
+- A great show has them jumping (the crowd's `djump`), some filming it on their phones, cheers going up ("Woo!",
+  "Encore!": speech bubbles and a cheer), and people stepping up to the hat with $1-6 (more the better it is). A good
+  one has them swaying and bouncing and clapping.
+- A sloppy one and they drift off unamused, one every couple of seconds; below a rating of 0.3 most boo as they go (a
+  bubble and a boo).
+- **The hat** goes down beside you when you perform. Its takings go to you when you finish standing by it. Walk off and
+  leave it, and anyone can swipe the tips (a minor crime, "Stealing a performer's tips"), and you're told who took them.
+  Tips are capped at $300 an hour.
+
+**Instruments** (guitar $260, keytar $420, bucket drums $60, sax $380, violin $320 - the record shops):
+- Use one from the bag and you hold it as the street buskers do (the keytar slung like the guitar), a hat at your
+  feet, and the jam screen opens: eight pads (A-K; the d-pad and X A Y RB; tap them) play the instrument's notes - a
+  pentatonic, so anything sounds fine - Shift / LT / CHORD for a chord. You hear your notes the moment you press. The
+  server sends them to everyone within 520 px (the 'jamn' event; at most 14 notes a second), who hear them from where
+  you stand.
+- **GIG** (Enter, the View button, or the button on the screen) picks a backing track (the street beat or one of your
+  tapes) and plays the rhythm game on the instrument. Each hit is a note on it, a chord at a long combo, and the crowd
+  rates and tips it like the dance. After the set it's back to free play.
+- Free play on its own draws a small crowd while you keep playing.
+- **The city's buskers play now too** (client/sound/stage.js `buskers`): the nearest guitarist, saxophonist, violinist or
+  bucket drummer (server personas.js) noodles on their instrument - a pentatonic walk at an easy tempo - heard from their
+  pitch.
+
+**The record shops** (shared/shoprooms.js `FIT.records`): World v3's record shops were walk-ins with a counter that only
+sold furniture. They now have a fitted interior like the other shop rooms: sleeves racked up the back wall, guitars
+hung by the counter, rows of record crates, a listening booth and a jukebox, a VINYL / RECORDS / TAPES sign. The
+counters sell the tapes, the boombox, the radio, the mat and the instruments (one of each). The debug teleport has
+`near records`.
+
+**The clock the music keeps**: every music message carries the server's time and its tick, so the page knows the server's
+clock exactly (its time is a base plus the tick) however late it reads the message - a busy page plays its events late,
+and the first reckoning, from the snapshot in at the time, ran seconds behind on a slow machine, so every hit landed
+outside the server's window. The page's reckoning then runs on with the snapshots (client/music/stage.js `clock`).
+
+**With the hub (batch 6 / UI)**: the music items have their own Music shelf in the bag (client/bag.js, their lines from
+shared/music.js `desc`), and Radio is an app in the phone's grid; the app loads the stations through client/music/stage.js,
+so the page doesn't carry shared/music.js. On touch the car radio is the phone's Radio app (no new HUD slot); the music
+games' lanes and pads are tapped on their own screen.
+
+**The page** (budgets: page 498 of 498, renderer 401 of 401, bake 906 of 906 - none raised):
+- Everything new loads after the page: client/music/stage.js at the start (as render/carryfx.js is), client/music/play.js
+  the first time you perform, client/sound/stage.js with the sound, the songs one by one as they're wanted.
+- The page's hooks are a few lines in main.js (the module, its events, its drawing, the two games on the arcade screen)
+  and in inventory.js (the music items' Use and their bag lines). The new controls in shared/controls.js cost page bytes
+  too. To make room, two long comments in main.js were condensed. The renderer and the bake took the two breaking poses
+  and the record shop's fit-out; the dances' and shoprooms.js's header comments were condensed to fit.
+- The numbers are in shared/rules-music.js, not shared/rules.js, which every page loads at once - the same as
+  rules-games.js for the games of chance.
+
+**Tests**: test/music.test.js (new): the track list, the songbook and the stations; the chart, the judging, the score and
+the rating; the record shop's counter and a boombox heard in sync, by someone coming in too; shooting, punching and
+blowing one up; the car radio; a good set drawing a big crowd that jumps, films and tips; a sloppy one booed and left;
+an instrument heard by another player, a gig, busking, the hat swiped; freestyle's small crowd. the page's clock from a message read late. test/hub.test.js: the bag's Music shelf. test/world3server.test.js:
+World v3's record shops fitted out and selling the music. test/dance.test.js (fourteen moves); test/sound.test.js (the
+crowd's sounds measured: client/sound/levels.js, test/fixtures/sound-levels.json).
+
+Left for later: the owner's own music (the `file` fields are ready); breaking's floor moves (windmills, headspins) need
+poses the rig doesn't have yet.
+
+## 2026-10-25 - Batch 7b: Tier-4 businesses; two-sided stations
+
+The owner's notes, part 2: "Quick note: First lets get in the features we've already got planned (like bathhouses, etc.)
+but then lets get some new ideas coming in". These are two of them from the design doc's tracker: "Tier-4 homes that are
+businesses" (10-06; docs/DESIGN-NOTES.md: "homes that are businesses: spawn, sleep, cook, claim as active spot, and
+earn") and "two-sided stations" (queued since 10-07).
+
+### Tier-4 properties: the businesses (server/systems/biz.js)
+You buy a business the way you buy a home. Find it in the phone's real-estate app (a new **Businesses** chip, with a
+waypoint to each), then buy it at its manager's office. Like a home, it is a place to wake up (on the death screen;
+**Wake up here** in its menu), a place to rest (**Rest in the back room** gives full health) and a place to cook (**Cook
+a meal in the kitchen** turns three things to eat from your bag into a Home-cooked Meal, as a home's stove does from its
+fridge; the food truck is the one business that isn't a home). Each in-game day you
+are in the city, a day's takings go into its till. The till holds at most three days' worth, so you have a reason to go
+back and collect. Each business also earns while you work it, and has upgrades and stock to buy. You can own up to three
+(the food truck is not counted). Selling one gives back 60% of what you paid for it, upgrades included. Your businesses
+show on the map with gold-rimmed icons and their names. Ownership is stored on the profile (`profile.biz`). If the world
+changes and a business's place is gone, you get back what you paid for it, into your bank.
+- **Farms:** the World v3 fields grouped into farms (fields close together count as one farm; the ten biggest are for
+  sale), with the office by the nearest farmhouse.
+  - Every row harvested on its fields pays into the till: $30, or $50 when you drive the tractor yourself. The NPC
+    farmhands' tractors count too (hooked in farming.js finishRow).
+  - Farmhands (3 levels) sell the crop: $35 a field per level per day.
+  - A chicken coop, a pig pen and a dairy herd earn $110, $220 and $340 a day. Each eats a sack of feed a day.
+- **Nightclubs:** every club (nightclubs.js). The office is a row in the bar's menu.
+  - A night's takings depend on how popular the club is, its sound system and its bar (3 levels each). Without cases
+    behind the bar, it takes half.
+  - You get $15 cover for everyone the bouncer lets in, and half of what other players spend at the bar.
+  - At night, **Take the decks**: the dance floor drops, and the dancers tip for 90 seconds (5-minute cooldown).
+  - **The night's drunk** (the design notes: "Most nights a drunk starts a fight: beat them up and protect your
+    patrons"): on 7 nights in 10, 20 to 90 seconds after you walk into your club, a dancer who's had too many leaves the
+    floor and goes for another. You're told. The drunk is a brawler, so hitting them is no crime (killing them still is).
+    Knock them down within 60 seconds and the patrons tip $250 into the till. Leave them, and the bouncers throw them
+    out and up to $200 of the till walks out with the patrons. If someone else (the police, say) puts them down first,
+    nothing is gained or lost. The one they picked on runs from them rather than fighting back.
+  - **Your own patrons:** the first 3 punches or blows that land on your own club's patrons in a night are let go with a
+    warning ("Careful - that's one of your patrons (1/3 tonight)"); after that, and any shot at all, it's assault as
+    anywhere else (law.js onDamage -> biz.js patronSlip).
+- **Criminal hideouts:** six plain buildings in the rough, industrial, poor and country ends of the world, at least
+  4,000 px apart. They are laid out for sale by the server; nothing is added to the map.
+  - The grow room (lamps, levels 0 to 3) makes $300 to $1,400 of product a day, using nutrients.
+  - **Take the product** gives it to you as hot money (hotmoney.js: clean it as usual). Or **Run the product to a buyer**:
+    a waypoint to a buyer at least 6,000 px away (another hideout, the fence, a smuggler's den, a pawn shop, a gang HQ)
+    pays clean cash at 1.3x. If you are killed or cuffed on the way, the product is lost.
+  - Syndicate soldiers (2, plus 1 for each **More guards** level, plus 1 if you are a member) stand at the door while
+    someone is near. An outsider who comes into the yard is warned, then shot at after 3 seconds. Anyone who hurts the
+    owner there is attacked. Your crewmates are left alone. If they are all killed, new guards come after 3 minutes.
+  - Not for sale to someone wearing a badge.
+- **Auto shops:** the Fresh Coat garage (its office is a row in the counter's menu) and every Spray & Go paint bay.
+  - 3 customers' cars a day, plus 2 for each lift level. Each pays $70, plus $25 for each tools level, and uses a part.
+  - You get 60% of what other drivers pay at that counter or bay. Your own respray and repairs there are free (hooked in
+    economy.js and paint.js).
+  - **Bring a customer's car in**: a damaged car is left on the lot. Stand by it for 8 seconds to fix it, for $220 plus
+    the tools bonus.
+- **Food truck:** bought at the dealership (a row in its menu), with your own Mr. Frosty van.
+  - Take the van out, park it where people are, step out and open the hatch. Each sale is a meal at the menu's price
+    ($8, $11 or $15), quicker with a crowd (up to 3x) and with a bigger grill.
+  - People walk up to the hatch. The hatch comes down when you drive off or walk away. If the van is wrecked, a new one
+    costs $1,500.
+- **The numbers** are in `shared/rules-games.js` `BIZ`, not `shared/rules.js`. rules.js loads with every page and the
+  page's budget is full; rules-games.js is where the casinos' and the drive-in's numbers already went.
+- **Menus:** a business's menu is the page's ordinary menu with a negative poi (economy.js handleMenu hands it to
+  biz.js). The page needed no new code for it. client/realestate.js (Businesses) and client/worldmap.js (the icons) both
+  load lazily.
+
+### Two-sided stations (shared/world3-rail.js stationFootbridges)
+Every open-air World v3 main-line station already had a platform on each side of its double track (each direction's on
+its outer side), with a footbridge between them drawn as a wooden plank on the ground. That footbridge is now one you
+walk over:
+- A steel span crosses above both tracks at deck height (lz 1). A stair flight on each platform runs along the platform,
+  from its middle up to the span. They are part of the levels' people-only corridors, like the El's stairs, so the trains
+  pass under anyone up there.
+- The platform furniture (benches, canopies, lamps, the name sign) is kept off the flights.
+- Passengers who get off on the platform away from the station house walk up and over the footbridge to it.
+- On one platform, with the train in at the other, the prompt says so: "The train to X is in on the other platform - up
+  the stairs and over the footbridge". At a flight's foot it reads "Up the footbridge - to the other platform".
+- You can board a train from either platform.
+- All 12 open-air stations have one. Midtown's El station already had its stair towers on both sides of Trestle Street.
+- Known: in the art renderer, a train standing under the span is drawn over it rather than under it (the baked
+  footbridge sorts by where it stands on the ground). Someone walking over it is drawn up on it as they should be.
+
+Screenshots: the scratchpad's b7b-shots/ (the app's Businesses list, a hideout for sale, bought and guarded, a club's
+bar with its office, the map's business icons; Metro Central's, Northshore's and Lucky Mesa's footbridges, and a player
+up on one).
+
+### Budgets
+- The bake stays at 906 KB (906.3 measured after merging batch 6 and car soccer, b7a): b7a raised it 905 -> 906 for the
+  Waves Arena, and b7b's footbridge model (client/art2/props-road.js stationBridge), its stairs and the platform
+  furniture kept off them (game/statics.js onFlight) fit in the same KB. I trimmed the new comments first. No raise.
+- The renderer is unchanged (401 of 401).
+- The page is still within 498 of 498: shared/levels.js now skips a level segment the page's window doesn't
+  hold. The levels' grid is the whole world's, but a window holds only its own regions' segments. Just after a teleport,
+  before the new window arrives, the grid pointed at a station's stairs the page didn't have yet and threw (the first
+  capture run, in levelStep).
+- Server-side code (biz.js, the drunk, the hooks in law.js, economy.js, paint.js, farming.js, nightclubs.js, homes.js,
+  trains.js) and the lazily loaded realestate.js and worldmap.js cost the page nothing.
+- Bakes 86.4x of the yardstick (budget 90x).
+
+### Controls
+No new controls: everything is on the action button and the menus. The README controls table is unchanged.
+
+### Tests
+- New:
+  - test/biz.test.js (9 tests): every kind laid out, listed in the app, bought at its office, with its manager's menu,
+    on the map and the death screen; the cap of three; selling. Each one earning: the day's takings, collecting them (the
+    hideout's as hot money), the till's cap, short of stock. A farm's row harvested; a club's cover, its bar's cut and the
+    DJ's tips; the auto shop's customer car fixed by hand, another driver's cut and your own repair free; the food truck
+    selling to a crowd and shutting; the hideout's guards warning, then attacking an outsider, never the owner, and
+    leaving when nobody is about; a business whose place is gone, refunded. Cooking in a business's kitchen. The club's
+    drunk: off the floor and fighting with the owner in, hitting them no crime, knocked down by the owner and the tip;
+    three blows on your own patrons let go, the fourth an assault; another night left alone, thrown out and the loss.
+  - test/world3rail.test.js: two-sided stations. Every open-air station has a footbridge with a flight on each platform
+    and a walkable span. A player boards on one platform; the other way's train comes in at the far platform and the
+    prompt says so; the player walks up, across above the tracks and down onto the far platform, and boards there.
+  - test/world3server.test.js: World v3's businesses. Every kind is there, the hideouts are spread out, and every office
+    stands on open ground.
+
+## 2026-10-26 - The page's code budget: 498 -> 520 KB, after a trim pass (467.9 KB)
+
+The page's code (tools/perf.mjs `page`: what client/boot.js and client/main.js load before the title screen and PLAY,
+gzipped) was full at 498.2 of 498 KB, so every feature had to trim something first. Claude proposed, and the owner
+agreed ("Sure"), to raise the budget to 520 KB - room for the next features instead of a trim each time - and to do a
+trim pass first, moving what the title screen and the first play don't need out of the page.
+
+### What moved
+- **The game numbers the page reads, out of shared/rules.js** (-30 KB). The page loaded all of shared/rules.js (81 KB,
+  30.5 KB gzipped) for twelve numbers: `NPC_CRITICAL` (main.js), `CALM_PROMPT_S`, `CALM_HUD_S`, `SAFETY_CONFIRM_S`
+  (hud.js), `POLICE_ARMORY` (interiors.js), `TANKER_BLAST`, `EXPLOSIVES_BLAST` (shared/explosions.js), `BATTERY_S`,
+  `FLARE_S`, `GLOWSTICK_S` (shared/lights.js), `FERRIS_S` (shared/rides.js) and `SKILL` (shared/skills.js). They now
+  live in **shared/rules-page.js**, and those seven files import them from there. shared/rules.js re-exports every one
+  with its note, so it stays the one place to import game numbers from - the server, the tests and the tutorial read
+  the same values as before (the same way shared/rules-base.js and rules-games.js were split off). None of these files
+  is in the art's, the world's or World v3's hash, so nobody's kept city or chunks are thrown away.
+- **The install help sheet** (-0.9 KB): its steps for each browser, the "already installed?" help and Repair install
+  moved to **client/installhelp.js**, loaded the first time Install (title screen, Settings, the hub) or Repair is
+  pressed; the sheet fills and opens once it's here, so the first press isn't lost. The browser's own install prompt
+  stays in main.js (it must be shown inside the press).
+
+Most of the other candidates were already lazy: the character creator, the phone and the hub's apps, the bag, the debug
+menu, the free camera, the job card. The page is now 81 files, 467.9 KB of 520.
+
+### The biggest thing left on the page
+The classic renderer (client/render/*, about 160 KB gzipped of the page) is the fallback art (`?art=1`, or when the
+v2 renderer can't start); parts of it (the effects, the explosions, the trains' overlays) draw over art v2 too. Lazy
+loading the rest is the next big trim if the budget fills again, but it is tangled into main.js's drawing and needs its
+own pass.
+
+### Tests
+- test/lazypage.test.js: the page leaves shared/rules.js and client/installhelp.js out of its start-up code, main.js
+  loads the help when first opened and fills the sheet after it's here, and rules.js re-exports every number of
+  rules-page.js with the same value.
+- tools/perf.mjs: `page.kb` 498 -> 520 with the reason.

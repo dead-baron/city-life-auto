@@ -11,7 +11,7 @@ import { input } from './input.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SLOTS = 4;
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light));
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music));
 // the categories, in the grid's order: [id, name, test(item def, id)] - an item goes in the first that takes it
 export const BAG_CATS = [
   ['weapons', 'Weapons'],
@@ -19,6 +19,7 @@ export const BAG_CATS = [
   ['food', 'Food & drink', (it) => it.food || it.buff === 'coffee' || it.buff === 'energy' || it.buff === 'wine' || it.stamina],
   ['clothes', 'Clothes', (it) => it.crafted || it.camo],
   ['fishing', 'Fishing', (it) => it.bait || it.rod || it.fish],
+  ['music', 'Music', (it) => it.music],
   ['tools', 'Tools & lights', (it) => it.tool || it.light || it.chute || it.fell || it.buff],
   ['hunting', 'Hunting', (it) => it.game || it.pelt],
   ['garden', 'Garden', (it) => it.seed || it.crop || it.prize],
@@ -62,6 +63,7 @@ export function describe(id) {
   if (it.game || it.pelt) return 'From a hunt: a butcher, a lodge or a trapper buys it; cook the meat at home.';
   if (it.seed) return 'Plant it in a garden plot at your home.';
   if (it.illegal) return 'Illegal to carry - a fence buys it.';
+  if (it.desc) return it.desc[0].toUpperCase() + it.desc.slice(1) + '.';   // (the music items: shared/music.js)
   return it.sell ? 'Something to sell.' : '';
 }
 

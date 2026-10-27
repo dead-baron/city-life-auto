@@ -574,6 +574,22 @@ export function onPlatformOf(world, st, x, y, rail = world.map.rail) {
   return false;
 }
 
+// (two-sided stations) the footbridge at station st's platform (shared/world3-rail.js stationFootbridges): its flight on
+// this platform, the one on the far side, the way over (each point at its level: stepStairs) and whether the station's
+// house is across the tracks - or null
+const FOOT_FAR = 52;
+function footbridgeOf(world, st) {
+  const h = (world.map.railHubs || []).find((q) => q.name === st.name);
+  if (!h || !st || st.under || st.deck) return null;
+  const nx = -Math.sin(st.a) * st.side, ny = Math.cos(st.a) * st.side, off = (x, y) => (x - st.x) * nx + (y - st.y) * ny;
+  for (const f of h.bridges || []) {
+    const mine = (f.ends || []).find((e) => Math.abs(off(e.tx, e.ty) - 72) < 20), far = mine && f.ends.find((e) => e !== mine);
+    if (!far) continue;
+    const z = f.z || 1, out = { x: far.fx - Math.cos(far.a) * FOOT_FAR, y: far.fy - Math.sin(far.a) * FOOT_FAR, z: 0 };
+    return { f, mine, far, across: off(h.x, h.y) < 0, over: [{ x: mine.fx, y: mine.fy, z: 0 }, { x: mine.tx, y: mine.ty, z }, { x: far.tx, y: far.ty, z }, { x: far.fx, y: far.fy, z: 0 }, out] };
+  }
+  return null;
+}
 // Step off at a station: onto the platform, or up the stairs to the street from the subway.
 export function alightAtStation(world, t, ped) {
   const st = stationAt(world, t);
@@ -601,6 +617,8 @@ export function alightAtStation(world, t, ped) {
   else {
     const ci = ped.onTrain.c, side = doorSide(world, t, ci, st), pt = doorPoint(world, t, ci, side, 22 + rng() * 12);
     alight(world, ped, pt.x, pt.y);
+    const fb = ped.npc && footbridgeOf(world, st);
+    if (fb && fb.across && rng() < 0.75) { walkStairs(world, ped, fb.over, null, 0.3 + rng() * 1.2); return true; }   // (the station's house across the tracks: up and over the footbridge to it)
     if (ped.npc) { // out of the door, then away from the train onto the platform before going about their day
       const e = world.get(t.cars[ci].id), out = doorPoint(world, t, ci, side, 46 + rng() * 14), along = (rng() - 0.5) * 80;
       const n = ped.npc;
@@ -1396,6 +1414,16 @@ export function interaction(world, p) {
       if (dd < bd) { bd = dd; best = ci; }
     }
     if (best >= 0) return { label: `Board the train - next stop ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')}`, run: () => boardAtStation(world, ped, t, best) };
+  }
+  // (two-sided stations) on one platform with a train in at the other: it's over the footbridge; at a flight's foot, the way up
+  if ((ped.lz || 0) < 0.3 && world.rails) {
+    for (const t of world.trains) {
+      const st = stationAt(world, t);
+      if (!st || st.under || st.deck || onPlatformOf(world, st, ped.x, ped.y, railOf(world, t))) continue;
+      const here = world.rails.some((R) => R !== railOf(world, t) && !R.subway && R.stations.some((q) => q.name === st.name && !q.under && onPlatformOf(world, q, ped.x, ped.y, R)));
+      if (here && footbridgeOf(world, st)) return { label: `The train to ${railOf(world, t).stations[(t.stop + 1) % railOf(world, t).stations.length].name.replace(/ Station$/, '')} is in on the other platform - up the stairs and over the footbridge`, passive: true, run: () => {} };
+    }
+    for (const h of world.map.railHubs || []) for (const f of h.bridges || []) for (const e of f.ends || []) if (Math.abs(ped.x - e.fx) < 40 && Math.abs(ped.y - e.fy) < 40 && Math.hypot(ped.x - e.fx, ped.y - e.fy) < 34) return { label: `Up the footbridge - to the other platform at ${h.name.replace(/ Station$/, '')}`, passive: true, run: () => {} };
   }
   // (up on an El platform with no train in: no prompt - the platform's clock shows when the next one's due, the owner,
   // 10-16: "No 'next train' popup (the station sign shows it)"); at a stair tower's foot: the way up

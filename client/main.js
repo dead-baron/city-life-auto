@@ -49,7 +49,7 @@ import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } 
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
-import { NPC_CRITICAL } from '../shared/rules.js';
+import { NPC_CRITICAL } from '../shared/rules-page.js';
 import { bonusOf } from '../shared/skills.js';
 import { cleanName } from '../shared/names.js';   // (Settings: your name - the server checks it too)
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
@@ -107,6 +107,7 @@ S.boom = new Booms(S); S.camp = new Campfires(S); S.onCrackle = (x, y, v) => S.c
 // renderer (S.lightOf), and the toppling trees and the lights' little sprites (render/carryfx.js, loaded when the page is up)
 S.lightOf = lightOf; S.glights = new Map(); S.carry = null;
 import('./render/carryfx.js').then((m) => { S.carry = new m.CarryFx(S); }).catch((e) => console.warn('[carryfx]', e));
+import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch((e) => console.warn('[music]', e));
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
@@ -359,7 +360,7 @@ function onText(m) {
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      (m.game === 'race' ? import('./racebook.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
     case 'racebook': if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the race book's screen: where the race is (server racebook.js)
     case 'bounties': phone.on('Bounties', m); break;
@@ -766,6 +767,7 @@ function plasmaSwing(a) {
 const GROCERY = ['#d83a2a', '#3a7ad0', '#f0d040', '#f08a2a', '#e8e8e0', '#5ab04a'];   // (cans, cartons, fruit)
 function onEvent(ev) {
   soundEvent(ev, S);   // its sound, placed where it happened (client/sound/events.js): the sfx calls below then stay quiet
+  if (S.mus) S.mus.ev(ev);
   const now = S.loopClock;
   const fx = S.fx;
   switch (ev.e) {
@@ -2042,11 +2044,6 @@ if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.
 // wipes only this game's service worker + caches (never the other deadbaron.com games).
 let installEvt = null;
 let relatedInstalled = false;
-const UA = navigator.userAgent;
-const IS_IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const IS_ANDROID = /Android/.test(UA);
-const IS_SAMSUNG = /SamsungBrowser/.test(UA);
-const IS_FIREFOX = /Firefox|FxiOS/.test(UA);
 if (!standalone) $('t-install').classList.remove('hidden');
 if (!standalone && navigator.getInstalledRelatedApps) {
   navigator.getInstalledRelatedApps().then((apps) => { relatedInstalled = apps.some((a) => a.platform === 'webapp'); }).catch(() => {});
@@ -2054,31 +2051,21 @@ if (!standalone && navigator.getInstalledRelatedApps) {
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; relatedInstalled = false; if (!standalone) $('t-install').classList.remove('hidden'); });
 addEventListener('appinstalled', () => { installEvt = null; relatedInstalled = true; closeOverlay('install'); S.hud?.toast('City Life Auto is installed - open it from your home screen.', 'good'); });
 
-function installSteps() {
-  if (IS_IOS) return `<h3>iPhone / iPad (Safari)</h3><ol><li>Tap the <b>Share</b> button.</li><li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol><p>Reinstalling after a delete works the same way - iOS keeps no install record.</p>`;
-  if (IS_SAMSUNG) return `<h3>Samsung Internet</h3><ol><li>Tap the <b>☰ menu</b>.</li><li>Choose <b>Add page to</b> → <b>Apps screen</b> (or <b>Home screen</b>).</li></ol>`;
-  if (IS_FIREFOX && IS_ANDROID) return `<h3>Firefox for Android</h3><ol><li>Tap the <b>⋮ menu</b>.</li><li>Choose <b>Install</b> (or <b>Add to Home screen</b>).</li></ol>`;
-  if (IS_ANDROID) return `<h3>Chrome on Android</h3><ol><li>Tap the <b>⋮ menu</b> (top right).</li><li>Choose <b>Install app</b> (older Chrome: <b>Add to Home screen</b> → <b>Install</b>).</li></ol>`;
-  return `<h3>Desktop Chrome / Edge</h3><ol><li>Click the <b>install icon</b> at the right end of the address bar, or open the <b>⋮ / … menu</b>.</li><li>Choose <b>Install City Life Auto</b> (Edge: <b>Apps → Install this site as an app</b>).</li></ol>`;
-}
-function stuckSteps() {
-  if (IS_IOS) return '';
-  const android = IS_ANDROID && !IS_FIREFOX;
-  return `<h3>Says "already installed" after you removed it?</h3><ol>
-    ${android ? '<li>Make sure it is really gone: phone <b>Settings → Apps → City Life Auto → Uninstall</b>. Removing only the home-screen icon can leave the app installed.</li>' : '<li>Make sure it is really gone: open <b>chrome://apps</b> (Edge: <b>edge://apps</b>), right-click City Life Auto → <b>Uninstall</b>.</li>'}
-    <li>Tap <b>Repair install and reload</b> below. It clears only this game's offline copy - your saves and other games are untouched.</li>
-    <li>${android ? 'Fully close Chrome (swipe it away in recent apps), reopen it' : 'Restart the browser'} and come back to this page, then install again.</li>
-  </ol>`;
-}
 function openInstall() {
   if (installEvt && !relatedInstalled) { nativeInstall(); return; }
   $('i-sub').textContent = relatedInstalled
     ? 'Your browser reports City Life Auto as already installed - open it from your home screen / app list.'
     : 'Your browser didn’t offer its install prompt, so here are the steps.';
-  $('i-body').innerHTML = installSteps() + stuckSteps();
-  $('i-go').classList.toggle('hidden', !installEvt);
-  openOverlay('install');
+  // (the steps and Repair install: client/installhelp.js, loaded the first time - the sheet opens once it's here)
+  installHelp().then((m) => {
+    $('i-body').innerHTML = m.installSteps() + m.stuckSteps();
+    $('i-go').classList.toggle('hidden', !installEvt);
+    if (topOverlay() !== 'install') openOverlay('install');
+  }).catch((e) => console.warn('[install]', e));
 }
+let installP = null;
+const installHelp = () => (installP ||= import('./installhelp.js').catch((e) => { installP = null; throw e; }));
+function repairInstall() { installHelp().then((m) => m.repairInstall()).catch((e) => console.warn('[install]', e)); }
 async function nativeInstall() {
   const evt = installEvt;
   if (!evt) return;
@@ -2086,23 +2073,6 @@ async function nativeInstall() {
   evt.prompt();
   try { await evt.userChoice; } catch { /* dismissed */ }
   closeOverlay('install');
-}
-async function repairInstall() {
-  const scopePath = new URL('./', location.href).pathname;
-  try {
-    if (navigator.serviceWorker) {
-      for (const r of await navigator.serviceWorker.getRegistrations()) {
-        if (new URL(r.scope).pathname !== scopePath) continue; // never touch the other games
-        try { (r.active || r.waiting || r.installing)?.postMessage('cla-reset'); } catch { /* gone */ }
-        await r.unregister();
-      }
-    }
-    if (self.caches) for (const k of await caches.keys()) if (k.startsWith('city-life-auto-')) await caches.delete(k);
-  } catch { /* best effort */ }
-  try { localStorage.removeItem('cla.build'); } catch { /* storage blocked */ }
-  const u = new URL(location.href);
-  u.searchParams.set('fresh', Date.now().toString(36));
-  location.replace(u.href);
 }
 // ---- Start fresh (task #413): Settings (under Repair install) and the debug menu, pressed twice - the first press arms
 // it, with a warning, for a few seconds; the second asks the server to delete this character for good (only ever your own:
@@ -2518,13 +2488,9 @@ try {
   if (was && Date.now() - was.at < 60000) { sessionStorage.removeItem('cla.gfxLost'); setTimeout(() => S.hud && S.hud.toast(`Graphics were lowered to ${PRESET_NAMES[gfx.preset]} after the screen lost its graphics memory (Settings to change).`, 'info'), 4000); }
 } catch { /* blocked */ }
 
-// ---- smooth first: adaptive sharpness ---------------------------------------------------------------------------
-// The frames of the last few seconds (always kept: this and the device report read them). When a device can't hold
-// the frame rate at the chosen sharpness (Ultra on a phone, mostly), the render size steps down 15% at a time, a few
-// seconds apart, until it does - never below 60% of the setting, or 0.75 - and back up when there is room again. The
-// art is pixel art, so a step or two barely shows; dropped frames do. A step that doesn't help (the frame rate held
-// back by something else: the CPU, a phone saving power at 30 fps) is undone, and it waits a minute before trying
-// again (two, four... up to ten). Settings → "Keep it smooth" turns it off.
+// ---- smooth first: adaptive sharpness - the render size steps down 15% at a time (never below 60% of the setting, or
+// 0.75) while the frame rate can't hold, and back up when there's room; a step that doesn't help is undone and waits a
+// minute before trying again (two, four... ten). Settings → "Keep it smooth" turns it off.
 function frameRecord(dtMs) { FR.t[FR.n++ % 240] = dtMs; }
 function framePct(p, last = 240) {   // the p-th percentile of the last frames (ms)
   const n = Math.min(FR.n, 240, last), a = [];
@@ -2861,14 +2827,9 @@ addEventListener('error', (ev) => reportError('page', ev.error || ev.message));
 addEventListener('unhandledrejection', (ev) => { const r = ev.reason; if (r && /^(NotAllowedError|AbortError)$/.test(r.name || '')) return; reportError('promise', r); });   // (not a sound the browser won't start yet, nor a fetch called off)
 
 // ---- the frame ------------------------------------------------------------------------------------------
-// A frame is four steps:
-//   prepFrame(dt)     interpolation and prediction, the camera, the sky, who is on screen: the frame packet F
-//                     every later step reads (null while the spectator camera draws its own frame)
-//   tickVisuals(F)    the visual simulation - particles and decals, sounds, cars leaning and sinking, doors,
-//                     gates, shutters and crossing arms easing, signal heads, birds, trampled grass, building
-//                     fades, the frame's light sources - the same whichever renderer draws the world
-//   the world         drawWorldV1(F) (Canvas2D) or the art v2 renderer (S.art2: client/art2/game/host.js)
-//   drawOverlays(F)   what stays sharp and unlit on top: aim line, name tags, markers, and the HUD bits
+// A frame is four steps: prepFrame(dt) (interpolation, prediction, the camera, the sky: the frame packet F), tickVisuals(F)
+// (particles, sounds, doors, birds, fades, lights - whichever renderer draws), the world (drawWorldV1 or the art v2
+// renderer, S.art2), drawOverlays(F) (the sharp, unlit bits on top: aim line, name tags, markers, the HUD).
 function render(dt) {
   const F = prepFrame(dt);
   if (!F) return;
@@ -3426,6 +3387,7 @@ function drawOverlays(F, v2) {
   }
   g.setTransform(...S.worldTf);
   if (S.carry && !F.sub) S.carry.over(g, F);   // (both views: a tree falling, the trunks lying, the police dogs' leads)
+  if (S.mus && !F.sub) S.mus.draw(g, F);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)

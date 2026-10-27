@@ -52,18 +52,19 @@ export const ICON = {
   camera: P('<path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   atm: P('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/>'),
   dance: P('<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>'),
+  radio: P('<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="8" cy="14" r="3"/><path d="M14 12h4M14 16h4M6 8l12-5"/>'),
   clear: P('<path d="M6 6l12 12M18 6L6 18"/>'),
   cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
 };
 // the apps, in the grid's order: [screen, name]
-const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['log', 'Log'], ['camera', 'Camera']];
+const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera']];
 const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Phone']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
 const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB' };
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
-  let homes = null, RE = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
+  let homes = null, RE = null, RADIO = null;   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   let taking = null;   // the job just accepted: its waypoint once the server says yes
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -105,6 +106,12 @@ export function createPhone(ctx) {
       el.innerHTML = '<h3>Skills</h3><div class="ph-apps"><button class="ph-app" data-act="workout" data-k="pushups"><b>💪</b>Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps"><b>🧘</b>Sit-ups here</button></div>' + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-card skl"><b>${esc(k.name)}</b> level ${k.L} of ${k.max}<small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ''}</small><i style="--w:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></div>`).join('')
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
         + skl.today.map((t) => `<div class="ph-row"><span class="nm">${esc(t.name)}<small>${esc(t.skill)} · ${t.left ? `${t.left} xp left today` : 'done for today'}</small></span></div>`).join(''));
+    } else if (screen === 'radio') {   // (the stations: the car radio in a vehicle, else your pocket radio or boombox - server music.js)
+      if (!RADIO) { import('./music/stage.js').then((mod) => { RADIO = mod; if (screen === 'radio') render(); }).catch((e) => console.warn('[radio]', e)); el.innerHTML = '<p class="ph-empty">Loading…</p>'; return; }   // (loaded with the page's music: client/music/stage.js)
+      const { STATIONS, stationAt, TRACK } = RADIO, now = RADIO.current ? RADIO.current.now() : performance.now() / 1000;
+      el.innerHTML = '<p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
+        + STATIONS.map((S, i) => `<button class="ph-row" data-st="${i}"><span class="ic">📻</span><span class="nm">${esc(S.freq)} ${esc(S.name)}<small>now: ${esc(TRACK[stationAt(i, now).track].title)}</small></span></button>`).join('')
+        + '<button class="ph-row" data-st="-1"><span class="ic">⏻</span><span class="nm">Off</span></button>';
     } else if (screen === 'crew') {
       el.innerHTML = crewHtml(crew, m);
     } else if (screen === 'bounties') {
@@ -164,6 +171,7 @@ export function createPhone(ctx) {
       ctx.close();
     };
     for (const b of el.querySelectorAll('[data-act="workout"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'workout', k: b.dataset.k }); ctx.close(); };   // (a set where you stand: server workout.js)
+    for (const b of el.querySelectorAll('[data-st]')) b.onclick = () => { ctx.send({ t: 'mus', a: 'tune', st: Number(b.dataset.st) }); ctx.close(); };
     for (const b of el.querySelectorAll('[data-act="dance"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'dance' }); ctx.close(); };   // (dance where you stand: the next move each time - server dance.js; G / L3 too)
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call', tier: b.dataset.tier }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };

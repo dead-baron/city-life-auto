@@ -5,7 +5,7 @@
 // shockwave, sparks and embers, the smoke column, debris, the scorch, the shake - and the pieces the plan names.
 // Pure integer and arithmetic work only (no trig at load, no Math.random): identical in every engine.
 import { mulberry32 } from './rng.js';
-import { TANKER_BLAST as TB, EXPLOSIVES_BLAST as EB } from './rules.js';
+import { TANKER_BLAST as TB, EXPLOSIVES_BLAST as EB } from './rules-page.js';
 
 // the pieces a car can blow apart into (the event names them by these letters)
 export const PIECES = { d: 'door', h: 'hood', w: 'wheel', p: 'panel', t: 'trunk', b: 'bumper' };

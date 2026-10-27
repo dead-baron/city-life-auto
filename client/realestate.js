@@ -8,7 +8,8 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const TIER = { lux: 'upscale', mid: 'middling', low: 'modest', rough: 'rough end' };
 const SORTS = [['near', 'Nearest'], ['cheap', 'Cheapest'], ['dear', 'Priciest']];
-const KINDS = [['all', 'All'], ['apartment', 'Apartments'], ['house', 'Houses'], ['big', 'Big'], ['cheap', 'Under $15k']];
+const KINDS = [['all', 'All'], ['apartment', 'Apartments'], ['house', 'Houses'], ['big', 'Big'], ['cheap', 'Under $15k'], ['biz', 'Businesses']];
+const BIZ_ICON = { farm: '🌾', club: '🪩', hideout: '🕶', shop: '🔧', truck: '🚚' };
 
 // ---- the plan's picture: the rooms from above, a few pixels a tile (made once a plan and furnishing) -------------------
 const FLOOR = { '.': '#b08a5e', c: '#8f6276', t: '#cdd6da', g: '#8e8e8e', '+': '#a07c52' };
@@ -62,6 +63,17 @@ export function render(el, msg, ctx) {
     h += `<p class="ph-hint">Yours: ${msg.mine.length} home${msg.mine.length === 1 ? '' : 's'}, worth ${money(worth)}.</p>`;
     h += msg.mine.map((r) => `<button class="ph-row re-row re-mine" data-hwp="m${r.id}"><img alt="" src="${planPic(r.pl, r.tr)}"><span class="nm">${esc(r.n)}${r.spawn ? ' ★' : ''}<small>${what(r)} · ${where(r)}</small><small>${has(r)}</small>${r.owed ? `<small>mortgage: ${money(r.owed)} owed · ${money(r.pay)} a day${r.missed ? ` · ${r.missed} missed!` : ''}</small>` : ''}</span><span class="d">worth<b>${money(r.worth)}</b><small>sells ${money(r.back)}</small></span></button>`).join('');
   }
+  const B = msg.biz || { sale: [], mine: [], total: 0 };   // (the businesses - server/systems/biz.js: the farms, clubs, hideouts, auto shops, the food truck)
+  const bizRow = (r, m) => `<button class="ph-row re-row${m ? ' re-mine' : ''}" data-bwp="${m ? 'm' : 's'}${esc(r.id)}"><span class="nm">${BIZ_ICON[r.t] || ''} ${esc(r.n)}<small>${esc(r.w)}${r.f ? ` · ${r.f} field${r.f === 1 ? '' : 's'}` : ''} · ${where(r)}</small>${m ? `<small>${money(r.till)} in the till · ${r.stock} in stock</small>` : `<small>${esc(r.b)}</small>`}</span><span class="d">${m ? `sells<b>${money(r.worth)}</b>` : `<b>${money(r.p)}</b><small>${Math.round(ctx.dist(r) / 32)}m</small>`}</span></button>`;
+  if (B.mine.length) h += `<p class="ph-hint">Your businesses: ${B.mine.length} - collect their takings at the manager's office.</p>` + B.mine.map((r) => bizRow(r, true)).join('');
+  if (kind === 'biz') {
+    h += `<h3>Businesses for sale <small>${B.total}</small></h3><div class="re-chips">${KINDS.map(([k, t]) => `<button data-hkind="${k}" class="${k === kind ? 'on' : ''}">${t}</button>`).join('')}</div>`;
+    h += '<p class="ph-hint">Tap one for a waypoint. Buy it at the manager\'s office there - a club\'s at its bar, the garage\'s at its counter, the food truck at the dealership.</p>';
+    h += B.sale.length ? B.sale.map((r) => bizRow(r, false)).join('') : '<p class="ph-empty">Nothing for sale right now.</p>';
+    el.innerHTML = h;
+    wire(el, msg, ctx, B);
+    return;
+  }
   h += `<h3>For sale <small>${msg.total} of ${msg.homes} homes</small></h3>`;
   h += `<div class="re-chips">${SORTS.map(([k, t]) => `<button data-hsort="${k}" class="${k === sort ? 'on' : ''}">${t}</button>`).join('')}</div>`;
   h += `<div class="re-chips">${KINDS.map(([k, t]) => `<button data-hkind="${k}" class="${k === kind ? 'on' : ''}">${t}</button>`).join('')}</div>`;
@@ -70,6 +82,16 @@ export function render(el, msg, ctx) {
     : '<p class="ph-empty">Nothing like that for sale right now.</p>';
   if (msg.matching > msg.sale.length) h += `<p class="ph-hint">… and ${msg.matching - msg.sale.length} more.</p>`;
   el.innerHTML = h;
+  wire(el, msg, ctx, B);
+}
+function wire(el, msg, ctx, B) {
+  for (const b of el.querySelectorAll('[data-bwp]')) b.onclick = () => {
+    const k = b.dataset.bwp, r = (k[0] === 'm' ? B.mine : B.sale).find((q) => q.id === k.slice(1));
+    if (!r) return;
+    ctx.setWaypoint({ x: r.x, y: r.y, label: r.n });
+    ctx.toast(k[0] === 'm' ? `Waypoint: ${r.n}` : `Waypoint: ${r.n} - ${money(r.p)}. Buy it at the manager's office there.`, 'info');
+    ctx.close();
+  };
   for (const b of el.querySelectorAll('[data-hsort]')) b.onclick = () => { sort = b.dataset.hsort; ctx.send({ t: 'phone', a: 'homes', sort, kind }); };
   for (const b of el.querySelectorAll('[data-hkind]')) b.onclick = () => { kind = b.dataset.hkind; ctx.send({ t: 'phone', a: 'homes', sort, kind }); };
   for (const b of el.querySelectorAll('[data-hwp]')) b.onclick = () => {

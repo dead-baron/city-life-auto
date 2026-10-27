@@ -15,6 +15,7 @@ export const PAD = {
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
+  radio: ['📱 RADIO', 'sys'], lanes: ['D-PAD / X A Y RB', 'sys'], pads: ['D-PAD + X A Y RB', 'sys'], chord: ['LT', 'bumper'],
   climb: ['RT', 'bumper'], descend: ['LT', 'bumper'],   // (flying: shared/flight.js)
   hub: ['MENU', 'sys'], hubtab: ['LB / RB', 'bumper'],   // (the hub - map, phone, bag, people, settings: Menu opens it on the last tab, the bumpers change tab)
 };
@@ -25,6 +26,7 @@ export const TOUCH = {
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
   trick: 'TRICK',
+  radio: '📱 RADIO', lanes: 'TAP THE LANES', pads: 'TAP THE PADS', chord: 'CHORD',
   climb: 'CLIMB', descend: 'DOWN',
   hub: 'MENU', hubtab: 'TAP A TAB',
 };
@@ -37,9 +39,12 @@ export const KB = {
   steer: 'A/D', block: 'RMB',
   dance: 'G',
   trick: 'CLICK',
+  radio: 'G', lanes: '← ↓ ↑ → / DFJK', pads: 'A-K', chord: 'SHIFT',
   climb: 'SPACE', descend: 'SHIFT',
   hub: 'ESC', hubtab: 'TAB',
 };
+// the music games' keys (client/music/play.js): the lanes, the pads by key code and pad button, the chord (radio: G in a car)
+export const MUSIC_KEYS = { lanes: [['ArrowLeft', 'KeyD'], ['ArrowDown', 'KeyF'], ['ArrowUp', 'KeyJ'], ['ArrowRight', 'KeyK']], pads: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK'], padLanes: [[14, 2], [13, 0], [12, 3], [15, 5]], padPads: [14, 13, 12, 15, 2, 0, 3, 5], padChord: 6 };
 export const ACTIONS = Object.keys(KB);
 
 // The touch controls by slots (UI-2): which button each slot holds in each state - TOUCH_STATES, touchSlots - and how

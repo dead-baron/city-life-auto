@@ -24,6 +24,48 @@ export const CASINO = {
     BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
   },
 };
+
+// Tier-4 properties - the businesses (server/systems/biz.js; the owner's tracker, 10-06: "Tier-4 homes that are
+// businesses: farm, nightclub, criminal hideout with gang guards; auto shop, food truck etc."), kept here with the games'
+// numbers - out of shared/rules.js, which every page loads at once. Each in-game day you're in the city a business you
+// own puts a day's takings in its till (no more than tillDays' worth waits there: go and collect it), and some of them
+// earn as you work them. max: businesses at once (the food truck not counted); sellBack: what selling one brings back of
+// what was paid for it, its upgrades included. A business is a place to wake up and to rest, as a home is.
+//   farm: the fields round it - every row harvested there (the farmhands' tractors too) pays `row` into the till, `own` more
+//     when you drive it yourself; hands: hired farmhands selling the crop, `handsDay` a day for each field and level;
+//     the animals (bought once each): `day` a day each, eating a sack of feed a day each (stock: feed)
+//   club: a night's takings - `night` x (0.6 + how popular the club is) x (1 + up for each level of the sound system and
+//     the bar), half without stock behind the bar (cases: a case a night and one more for each bar level); `cover` for
+//     every one the bouncer lets in while you own it, `barCut` of what's spent at its bar; dj: you on the decks at night
+//     - the floor drops, and `tip` a dancer every `every` seconds for `s` seconds, then `cool` seconds before the next
+//     brawl: most nights (chance) a drunk starts a fight on the floor, `after` s after you're in; knock them down within `s`
+//     seconds and the patrons tip `thanks`, else the bouncers throw them out and `loss` walks out of the till; `slips`: a
+//     few blows that land on your own patrons by accident each night are let go (shooting one never is - law.js)
+//   hideout: the grow room's lamps (level 0..3) - `grow[level]` of product a day, eating `level + 1` bags of nutrients a
+//     day (stock); taken as hot money (server/systems/hotmoney.js), or run to a buyer at least runPx away for clean cash
+//     x runMult; guards: `guards0` of the Syndicate's soldiers at the door (+1 a level, +1 for a member) - an outsider in
+//     the yard (yardPx) is warned, then shot at after warnS seconds; they're back respawnS after they're all down
+//   shop: an auto shop (the Fresh Coat garage: garagePrice; a Spray & Go) - `jobs` customers a day, `perLift` more for
+//     each level of the lift, each paying `perJob` + `perTools` a tools level and using a part (stock: parts); `cut` of
+//     what other players pay at its counter or its paint bay (yours is free); fix: a customer's car brought in - stand by
+//     it `s` seconds and it pays `pay` (+ `perTools` a tools level), `cool` seconds before the next
+//   truck: a food truck (the Mr. Frosty van, bought at the dealership: its commissary) - park it, open the hatch and
+//     sell a meal at `meal[menu level]` every serveS seconds (less with a grill: grillCut a level; quicker with a crowd
+//     within crowdR px - up to 3x), one meal of stock each; `replace`: a new van when yours is wrecked
+export const BIZ = {
+  max: 3, tillDays: 3, sellBack: 0.6,
+  farm: { price: 85000, row: 30, own: 20, hands: [6000, 12000, 20000], handsDay: 35, feed: { price: 300, qty: 10 },
+    animals: { chickens: { name: 'A chicken coop', price: 3000, day: 110 }, pigs: { name: 'A pig pen', price: 7000, day: 220 }, cows: { name: 'A dairy herd', price: 12000, day: 340 } } },
+  club: { price: 150000, night: 1400, up: 0.35, cover: 15, barCut: 0.5, sound: [8000, 16000, 28000], bar: [6000, 12000, 22000], stock: { price: 400, qty: 10 },
+    dj: { s: 90, tip: 3, every: 10, cool: 300 },
+    brawl: { chance: 0.7, after: [20, 90], s: 60, thanks: 250, loss: 200, slips: 3 } },
+  hideout: { price: 60000, grow: [300, 600, 950, 1400], lamps: [5000, 11000, 19000], guards: [4000, 9000, 15000], guards0: 2, nutrients: { price: 250, qty: 10 },
+    runPx: 6000, runMult: 1.3, yardPx: 320, warnS: 3, respawnS: 180 },
+  shop: { price: 70000, garagePrice: 110000, jobs: 3, perLift: 2, perJob: 70, perTools: 25, lift: [7000, 14000, 24000], tools: [5000, 10000, 18000], parts: { price: 250, qty: 10 },
+    cut: 0.6, fix: { s: 8, pay: 220, cool: 45 } },
+  truck: { price: 18000, replace: 1500, meal: [8, 11, 15], menu: [6000, 12000], grill: [4000, 9000], grillCut: 0.25, serveS: 7, crowdR: 450, food: { price: 90, qty: 20 } },
+};
+
 // Car soccer at the Waves Arena (the owner, 10-16: "Rocket League-style car soccer arena (boosts, banked walls, a giant
 // ball)": server/systems/carsoccer.js, shared/carsoccer.js, client/carsoccer.js). Join at the gate (on foot, within
 // joinR px): a match fills to teamMin a side (up to teamMax with more players) with the city's drivers, lobbyS s after

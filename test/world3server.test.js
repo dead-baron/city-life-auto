@@ -27,6 +27,7 @@ import { signsBlocked } from '../shared/world3-greens.js';
 import { zebraCrossings, laneOffset, nearestEdge } from '../shared/roadcore.js';
 import { PED_BLOCK, isSwimming } from '../shared/mapcore.js';
 import * as economy from '../server/systems/economy.js';
+import * as biz from '../server/systems/biz.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -284,6 +285,17 @@ test('World v3\'s bathhouses open onto their floors; the Waves Arena by the stad
 });
 
 // (the owner's notes, part 2: the world's layout - b5b)
+// the Tier-4 businesses round the v3 world (server/systems/biz.js): every kind for sale, each office somewhere to stand
+test('World v3\'s businesses: farms, clubs, hideouts spread round the world, auto shops and the food trucks, each office on open ground', () => {
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const S = biz.sites(w), by = (t) => S.filter((s) => s.t === t);
+  console.log(`[biz] ${['farm', 'club', 'hideout', 'shop', 'truck'].map((t) => `${by(t).length} ${t}`).join(', ')}`);
+  assert.ok(by('farm').length >= 3 && by('club').length >= 10 && by('hideout').length >= 4 && by('shop').length >= 4 && by('truck').length >= 1, 'every kind');
+  const H = by('hideout');
+  for (let i = 0; i < H.length; i++) for (let j = i + 1; j < H.length; j++) assert.ok(Math.hypot(H[i].x - H[j].x, H[i].y - H[j].y) >= 4000, 'the hideouts spread out');
+  for (const s of S) if (s.poi == null) assert.ok(!PED_BLOCK[M.tileAtPx(s.x, s.y)], `${s.name}: its office on open ground`);
+});
+
 test('zebra crossings only on the asphalt: a paved refuge across a boulevard\'s planted median, never stripes over grass', () => {
   const xs = [...zebraCrossings(M).values()];
   assert.ok(xs.length > 1000, `the crossings (${xs.length})`);
@@ -394,4 +406,26 @@ test('street parking in some neighbourhoods: bays by the kerb, clear of the junc
   }
   delete M._xings;
   for (const e of M.edges) delete e.bb;
+});
+
+// music (server/systems/music.js): World v3's record shops are walk-ins - fitted out as record shops (shared/shoprooms.js
+// 'records'), their counters selling the tapes, the boomboxes and radios, the mats and the instruments
+test('the record shops: walk-ins fitted out with crates and instruments, their counters selling tapes, boomboxes and instruments', async () => {
+  const { planOf, shopRoom } = await import('../shared/shoprooms.js');
+  const shops = [];
+  for (const bid of M.walkIns) { const b = M.buildings[bid]; for (const u of b.walkIn.units) if (u.trade === 'records') shops.push({ b, u }); }
+  assert.ok(shops.length >= 2, `record shops to walk into (${shops.length}: ${shops.map((s) => s.b.name).join(', ')})`);
+  let fitted = 0;
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w, { cash: 5000 });
+  for (const { b, u } of shops) {
+    assert.equal(planOf(u), 'records', b.name);
+    const R = shopRoom(b, u, TILE, M);
+    if (R && R.pieces.some((q) => q.t === 'bins')) fitted++;
+    const poi = M.pois[u.poi];
+    assert.ok(poi && poi.walk && poi.store === 'records', `${b.name}: its counter`);
+    const ids = economy.buildMenu(w, p, poi).opts.map((o) => o.id);
+    for (const it of ['boombox', 'radio', 'dancemat', 'guitar', 'tape_kickflip']) assert.ok(ids.some((o) => o.startsWith(`i:${it}:`)), `${b.name} sells ${it}`);
+  }
+  assert.ok(fitted >= Math.ceil(shops.length / 2), `fitted out with crates of vinyl (${fitted} of ${shops.length})`);
 });

@@ -48,8 +48,8 @@ const SIZES = [[3, 3], [4, 5], [5, 6], [6, 7], [7, 7], [8, 9], [10, 7], [12, 9],
 test('each kind of place has a plan of its own', () => {
   const want = { convenience: 'corner', gasstation: 'fuel', grocery: 'grocery', gunshop: 'gunshop', hardware: 'hardware', pawn: 'pawn', fence: 'fence', bank: 'bank', courthouse: 'court', pharmacy: 'pharmacy', barber: 'barber', clothing: 'boutique', sports: 'sports', tackle: 'tackle', fishmarket: 'fishmarket', club: 'club', roadhouse: 'saloon' };
   for (const [k, p] of Object.entries(want)) assert.equal(planOf({ kind: k }), p, `${k}: its plan`);
-  for (const [t, p] of Object.entries({ mart: 'corner', bar: 'bar', liquor: 'liquor', lobby: 'office' })) assert.equal(planOf({ kind: 'delivery', trade: t }), p, `the ${t} trade: its plan`);
-  for (const t of ['laundry', 'books', 'records', 'clothes', 'florist', 'salon', 'arcade']) assert.equal(planOf({ kind: 'delivery', trade: t }), null, `${t}: keeps its own fit-out`);
+  for (const [t, p] of Object.entries({ mart: 'corner', bar: 'bar', liquor: 'liquor', lobby: 'office', records: 'records' })) assert.equal(planOf({ kind: 'delivery', trade: t }), p, `the ${t} trade: its plan`);
+  for (const t of ['laundry', 'books', 'clothes', 'florist', 'salon', 'arcade']) assert.equal(planOf({ kind: 'delivery', trade: t }), null, `${t}: keeps its own fit-out`);
   for (const k of ['coffee', 'hospital', 'police', 'bowling', 'cinema']) assert.equal(planOf({ kind: k }), null, `${k}: keeps its own fit-out`);
   for (const p of [...Object.values(SHOP_PLAN), ...Object.values(TRADE_PLAN)]) assert.ok(PLANS.includes(p), p);
   // each plan furnished in a fair-sized room: its floor and walls, the back wall dressed, things on the floor - and no two

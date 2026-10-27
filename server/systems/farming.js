@@ -11,6 +11,7 @@ import { FARM } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
 import { cropOf } from '../../shared/fieldcrop.js';
+import { farmRow } from './biz.js';
 
 const DAY = DAY_LOOP_S;
 export const ROW = { STUBBLE: 0, PLOUGHED: 1, SOWN: 2, RIPE: 3 };
@@ -151,10 +152,10 @@ function finishRow(world, p, F, r, job, v = null) {
   row.s = job === 'plough' ? ROW.PLOUGHED : job === 'sow' ? ROW.SOWN : ROW.STUBBLE;
   row.g = 0; row.m = 0;
   F.dirty = true;
-  const j = p && p.job;
+  const j = p && p.job, own = farmRow(world, p, F.i, job);   // (a farm's owner's till: a row harvested there - biz.js)
   if (!p) { keep(world); return job; }
   // (harvested: the crop, and what's in the tank now - "Row of wheat harvested (the tank: 54 bu of wheat)")
-  const what = job === 'harvest' ? `Row of ${cropOf(F.i, world.map.seed).name} harvested` : `Row ${VERB[job]}`, tank = job === 'harvest' && v && v.tank ? ` - the tank: ${tankText(v.tank)}` : '';
+  const what = (job === 'harvest' ? `Row of ${cropOf(F.i, world.map.seed).name} harvested` : `Row ${VERB[job]}`) + own, tank = job === 'harvest' && v && v.tank ? ` - the tank: ${tankText(v.tank)}` : '';
   if (j && j.type === 'fieldwork') {
     const pay = FARM.pay[job];
     p.profile.cash += pay;

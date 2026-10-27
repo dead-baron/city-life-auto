@@ -21,7 +21,7 @@ const TITLE_LEAD = [
   81, _, 84, _, 77, _, 81, _, 83, _, 86, _, 79, _, 83, _, 84, _, _, _, 79, _, 76, _, 72, _, _, _, _, _, 0, 0,
 ];
 const TITLE_CHORDS = ['C', 'Am', 'F', 'G', 'C', 'Am', 'Dm', 'G', 'F', 'G', 'Em', 'Am', 'F', 'G', 'C', 'C'];
-const CH = {   // root (bass octave) and the chord's tones (an octave up)
+export const CH = {   // root (bass octave) and the chord's tones (an octave up)
   C: [36, [60, 64, 67]], Am: [45, [57, 60, 64]], F: [41, [57, 60, 65]], G: [43, [55, 59, 62]], Dm: [38, [57, 62, 65]], Em: [40, [55, 59, 64]],
   Fmaj7: [41, [57, 60, 64, 65]], Em7: [40, [55, 59, 62, 64]], Dm7: [38, [57, 60, 62, 65]], Cmaj7: [36, [55, 59, 60, 64]],
   Am7: [45, [55, 57, 60, 64]], G7: [43, [53, 55, 59, 62]], Bb: [46, [58, 62, 65]],
