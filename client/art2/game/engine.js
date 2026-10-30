@@ -5,7 +5,7 @@
 //
 // ---- Engine implementation notes ---------------------------------------------------------------------
 // API (as specified, plus a few extras marked +):
-//   Art2Engine.create(canvas, {quality 0..3, lowMem, profile+}) -> engine | null (no WebGL2 / MRT / limits)
+//   Art2Engine.create(canvas, {quality 0..3, lowMem, profile+, moreChunks+ (slots past the tier's: 8 GB devices)}) -> engine | null (no WebGL2 / MRT / limits)
 //   setQuality(q)  resize(cssW, cssH, dpr)  onContextLost(cb)  stats()  dispose()
 //   hasChunk(cx, cy) (true only for baked chunks)  uploadChunk(cx, cy, g)  setChunkFallback(cx, cy, src)
 //   dropChunk(cx, cy)  chunkKeys() ('cx,cy' of every resident chunk, baked or fallback)
@@ -33,7 +33,7 @@
 //   - o.shadow === false stops the sprite casting a shadow; o.flash whitens it and adds glow; o.air marks it as
 //     up in the air (birds: no mirror image in wet ground or water). o.xray: what hides it is outlined over the frame;
 //     o.xrayTop (px over z0): only what stands taller than that hides it - a tank's hull under its own turret (a sprite
-//     of its own) is not hidden by it (the owner, 10-24: "the tank top is looking invisible").
+//     of its own) is not hidden by it (10-24).
 //   - f.wet / f.flash / f.fog (optional) raise the preset's wet, lightning flash and fog; f.air (render/flora/wind.js
 //     air: how far the air has carried things - the canopy's leaf clumps, the fog), f.bio (the sea's sparkle tonight:
 //     render/atmos.js bioAt).
@@ -107,8 +107,7 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // number of the building on top at each texel. uFade[k] (0..1, the host eases it in and out over ~0.2 s) fades
 // building k toward the under layer where its picture covers ground outside its own footprint (uFoot[k], chunk
 // texels) - the street and pavement behind it - while over its footprint it stays, so the inside isn't shown until
-// you walk in. Not the whole of that at once (the owner, 10-23: "watching half a building disappear this abruptly
-// isn't the best look"): it goes semi-transparent - a ghost, GHOST of the street showing through (a tall thin one,
+// you walk in. Not the whole of that at once (10-23): it goes semi-transparent - a ghost, GHOST of the street showing through (a tall thin one,
 // uFade < 0: a mast's hut, a tree, GHOST_THIN, so it doesn't vanish by half) - and only round the people that matter
 // (uClr[i]: world x, y of a figure's middle, its radius, strength - you, players near you) is it fully clear, the
 // edge of that feathered. Its depth is the ground's, so whatever is behind it draws over it (the depth test never hides
@@ -126,8 +125,7 @@ void main(){ vec2 p = uRect.xy + c * uRect.zw; gl_Position = vec4(p / uScene * 2
 // see-through buildings (STATIC_FS): how much of the street shows through the ghost of one that hides you (a tall thin
 // one's lighter, so it keeps its shape), the clear space round a figure - how much of its radius is the feathered edge,
 // how much taller than wide it is; CLR_SWAP: past what share of the clear space a texel takes the ground's height,
-// dithered over CLR_SWAP_W (10-24, the owner: "slightly more transparent ... feather the border": 0.45 / 0.2 / 0.45
-// before); SEE: how much of the ghost lies over what is behind it (GHOST_FS), next to over the street
+// dithered over CLR_SWAP_W (10-24); SEE: how much of the ghost lies over what is behind it (GHOST_FS), next to over the street
 export const GHOST = 0.6, GHOST_THIN = 0.3, CLR_SOFT = 0.65, CLR_TALL = 1.3, CLR_SWAP = 0.3, CLR_SWAP_W = 0.55, SEE = 0.5;
 // seeThrough: STATIC_FS's fade of a texel at world (x, y) outside its building's footprint, in JS (the tests): f the
 // building's fade (uFade), C the clear spaces (uClr) -> 0..1. seenBehind: how much shows of a sprite there (GHOST_FS;
@@ -401,8 +399,7 @@ void main(){
   o = vec4(c * (1.0 - uVign * dot(sv, sv) * 1.6), 1.0);
 }`;
 // x-ray: the parts of a sprite hidden by something taller, drawn unlit over the presented frame - but never through
-// vegetation (task #400, the owner: "going behind bushes will show your character outline ... Let's not do that for
-// vegetation or grass or plants when you walk behind them, I think it takes away from the immersion"): leaves, grass,
+// vegetation (task #400): leaves, grass,
 // crops, ferns and flowers (F_LEAF) hide you, and so does a twig, a stem or a berry among them (a texel with leaves
 // taller than you VEG_D px out on two of its four sides). Buildings, walls, cars, trunks, rocks and posts still show
 // you through them. vegHides is the same rule in JS (the tests).
@@ -472,7 +469,7 @@ export class Art2Engine {
   }
   constructor(canvas, gl, opts) {
     this.cv = canvas; this.gl = gl;
-    this.q = clampQ(opts.quality ?? 2); this.lowMem = !!opts.lowMem; this.profile = !!opts.profile;
+    this.q = clampQ(opts.quality ?? 2); this.lowMem = !!opts.lowMem; this.profile = !!opts.profile; this.more = opts.moreChunks | 0;
     this.ap = opts.artPx === 1 ? 1 : ART_PX; this.ctx = CHUNK_PX / this.ap;   // world px per art pixel; chunk texels a side
     this.dpr = 1; this.frameNo = 1; this.inFrame = false; this.lost = false; this.lostCb = null; this.disposed = false;
     // per-frame records, allocated once (grown only if a frame needs more)
@@ -540,7 +537,7 @@ export class Art2Engine {
     gl.bindVertexArray(null);
     return v;
   }
-  _chunksCap() { const c = this.lowMem ? Math.min(10, QUALITY[this.q].chunks) : QUALITY[this.q].chunks; return Math.max(c, this.chunkMin || 0); }
+  _chunksCap() { const c = this.lowMem ? Math.min(10, QUALITY[this.q].chunks) : Math.min(32, QUALITY[this.q].chunks + this.more); return Math.max(c, this.chunkMin || 0); }
   reserveChunks(n) { this.chunkMin = Math.max(0, Math.min(32, n | 0)); }
   chunkCap() { return this._chunksCap(); }
   _pagesCap() { return this.lowMem ? Math.min(4, QUALITY[this.q].pages) : QUALITY[this.q].pages; }

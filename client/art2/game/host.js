@@ -65,12 +65,17 @@ export const artGrid = (M) => [Math.ceil(M.frame.w * TILE / CHUNK), Math.ceil(M.
 // syncMs: how long a frame may spend making sprites on this thread (people and small things)
 // results: bakes back from the workers that may wait for an upload (2.3 MB each), so the road ahead keeps baking while
 // the slots fill
+// upMs: the time a frame may spend on texture uploads past its first (perf 10-26: upBudget)
 const TIERS = [
-  { chunks: 16, lights: 16, N: 16, chunkUp: 1, sprUp: 8, convert: 3, sprJobs: 12, syncMs: 2.5, results: 6 },
-  { chunks: 20, lights: 32, N: 32, chunkUp: 1, sprUp: 10, convert: 4, sprJobs: 16, syncMs: 3.5, results: 8 },
-  { chunks: 24, lights: 64, N: 32, chunkUp: 2, sprUp: 12, convert: 5, sprJobs: 24, syncMs: 4.5, results: 10 },
-  { chunks: 32, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6, results: 12 },
+  { chunks: 16, lights: 16, N: 16, chunkUp: 1, sprUp: 8, convert: 3, sprJobs: 12, syncMs: 2.5, results: 6, upMs: 3 },
+  { chunks: 20, lights: 32, N: 32, chunkUp: 1, sprUp: 10, convert: 4, sprJobs: 16, syncMs: 3.5, results: 8, upMs: 4 },
+  { chunks: 24, lights: 64, N: 32, chunkUp: 2, sprUp: 12, convert: 5, sprJobs: 24, syncMs: 4.5, results: 10, upMs: 5 },
+  { chunks: 32, lights: 96, N: 64, chunkUp: 2, sprUp: 14, convert: 6, sprJobs: 32, syncMs: 6, results: 12, upMs: 6 },
 ];
+// (perf 10-26) WARM_MS: the budgets behind the loading screen; OWN_MS: your figure made here (else by the workers first
+// in line, unless you have none yet); GEN_MS: generated sprites a frame. A person here: ~7 ms desktop, 15-40 phone
+const WARM_MS = 40, OWN_MS = 8, GEN_MS = 4;
+export const upBudget = (spent, est, budget, first) => first || spent + est <= budget;
 const LOWMEM_CHUNKS = 10;
 const MARGIN = 420;        // world px baked round the view (shadows fall in from beyond its edge)
 const PEEK_AGAIN_MS = 2500; // a chunk the view needs that the server didn't have yet: looked for again this often (_chunks)
@@ -277,7 +282,7 @@ function rgbOf(c) {
 }
 const quant = (a, N) => ((Math.round(a / TAU * N) % N) + N) % N;
 // A train car's turns: twice a car's (64 on most screens, 128 on High). A coach 212 px long rounded to 32 turns snapped
-// round a wide curve an 11-degree step at a time (the owner, 10-16: "Trains look odd on wide curves (angle steps)").
+// round a wide curve an 11-degree step at a time (10-16).
 export const trainSteps = (N) => Math.min(128, N * 2);
 
 // The giant redwoods' fade ids (statics.js TREE_FADE + the prop's index) and their outlines: the half width (px) a
@@ -332,9 +337,8 @@ const XING0 = { d: 0, b: [0, 0] };
 const extra = () => World2.extra || (World2.extra = import('./hostextra.js'));
 
 // ---- the host -----------------------------------------------------------------------------------------------
-// ---- walk-ins ahead, and the way out (the owner, 10-16: "Interior art loads slowly on a phone (bowling alley, deli):
-// preload or bake it", "Show where the exit is while an interior's art loads (spawning in a hospital)"). A walk-in is
-// drawn cut away - no roof, the shop floor - once its chunks are baked that way: seconds on a phone after you step in.
+// ---- walk-ins ahead, and the way out (10-16): a walk-in is drawn cut away - no roof, the shop floor - once its chunks
+// are baked that way: seconds on a phone after you step in.
 //   walkInSoon(S, sp)   the walk-in you're about to go into - one whose door is a few steps off, on foot; or, down, the
 //                       hospital you'll wake up in - for World2._precut to bake cut away into the store ahead
 //   exitHint(S, F, on, ready)   inside one while what's on screen of it isn't drawn cut away yet: which way the door
@@ -410,7 +414,7 @@ export class World2 {
     if (/[?&]art2nogl\b/.test(location.search)) { World2.lastWhy = 'no WebGL2 (?art2nogl)'; return null; } // (testing: as if there were no WebGL2)
     // the art pixel: 2 world px (the 16-bit look); ?artpx=1 draws the art at full resolution (comparisons)
     const artPx = /[?&]artpx=1\b/.test(location.search) ? 1 : 2;
-    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem, artPx }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
+    if (E && E.Art2Engine) { try { engine = E.Art2Engine.create(o.canvas, { quality: q, lowMem: !!o.lowMem, artPx, moreChunks: !o.lowMem && ((typeof navigator !== 'undefined' && navigator.deviceMemory) || 0) >= 8 ? 6 : 0 }); } catch (e) { console.error('[art2] engine', e); engine = null; why = String((e && e.message) || e); } if (!engine) why = why || E.Art2Engine.lastWhy || ''; }
     if (!engine && /[?&]art2stub\b/.test(location.search)) { try { engine = new (await extra()).StubEngine(o.canvas); } catch (e) { console.error('[art2] stub', e); } }
     if (!engine) { World2.lastWhy = why || 'WebGL2 is not available'; console.warn('[art2] no engine:', World2.lastWhy); return null; }
     const w = new World2(o, engine, L, q);
@@ -439,6 +443,8 @@ export class World2 {
     this.critInfo = {}; this.fxInf = {}; this.projWarm = new Set();
     this.losses = [];                              // when the graphics memory was lost (visible page only)
     this.convBudget = 0; this.genBudget = 0; this.sprOut = 0; this.sprPrio = -1; this.syncLeft = 0;
+    this.warming = false; this.missN = 0; this.miss = 0; this.est = { chunk: 3, spr: 0.3, ped: 4 };   // (warmth(); upBudget's averages, ms)
+    this.bigMem = !this.lowMem && ((typeof navigator !== 'undefined' && navigator.deviceMemory) || 0) >= 8;
     this.fades = new Map();                        // building index -> 0..1 (eased round the player)
     this.phs = new Map();                          // placeholder canvases (chunk key -> canvas)
     this.cycles = new Map();                       // walk cycles asked for lately (key -> time)
@@ -570,7 +576,7 @@ export class World2 {
   // ---- while another view draws the frame (riding through a tunnel: main.js v1Draws) -----------------------------
   // Nothing is drawn or uploaded, but the way ahead keeps coming: the server's chunks downloaded and the rest baked into the
   // browser's store (_fetchAhead, _prebake), along the line the train runs on (_prebakeList), so the town is there when
-  // the train comes up - before, the renderer stood still in the dark and came out to stand-ins (the owner, 2026-10-15).
+  // the train comes up (10-15).
   stream(F) {
     if (this.failed || this.q === undefined) return;
     if (this.pool && this.pool.dead && !this._revivePool()) return;
@@ -601,15 +607,18 @@ export class World2 {
     // sprites snap to the art grid: the camera moves with the player's position rounded to it (plus the smooth
     // look-ahead) so the player stays steady on screen (engine.js integration notes)
     // (riding a train: where you're drawn - your car's spot on the grid plus your place in it, _ped - so the train and its
-    // riders hold still on screen together: b2a, "riding on train is a bit jittery")
+    // riders hold still on screen together: b2a)
     const ap = E.ap || 1, sp = F.sp, tc = F.myTrain >= 0 ? F.myCar : null, gx = tc ? tc.rx + snapTo(sp.x - tc.rx, ap) : Math.round(sp.x / ap) * ap, gy = tc ? tc.ry + snapTo(sp.y - tc.ry, ap) : Math.round(sp.y / ap) * ap;
     const camX = gx + (S.cam.x - sp.x) - F.shx / z, camY = gy + (S.cam.y - sp.y) - F.shy / z;
     const hw = this.W / 2 / z, hh = this.H / 2 / z;
     this.vx0 = camX - hw; this.vx1 = camX + hw; this.vy0 = camY - hh; this.vy1 = camY + hh;
     this.camX = camX; this.camY = camY;
     this.convBudget = this.tier.convert; this.genBudget = 48;
-    // people made on this thread this frame: more while the workers are still starting
-    this.syncLeft = this.prov.peds ? this.tier.syncMs : Math.max(8, this.tier.syncMs * 2);
+    // people made on this thread this frame: more while the workers are still starting, plenty behind the loading screen
+    const wm = this.warming;
+    this.syncLeft = wm ? WARM_MS : this.prov.peds ? this.tier.syncMs : Math.max(8, this.tier.syncMs * 2);
+    this.genLeft = wm ? WARM_MS : GEN_MS; this.upMax = wm ? WARM_MS : this.tier.upMs; this.upSpent = 0; this.upFirst = true;
+    this.miss = this.missN; this.missN = 0;   // (sprites drawn with nothing exact last frame: warmth)
     if (F.now - this.badAt > 20) { this.badKeys.clear(); this.badAt = F.now; } // (a failure may have been passing)
     const T = this.part, mk = (k) => { const n = performance.now(); T[k] = (T[k] || 0) * 0.9 + (n - this.pt) * 0.1; this.pt = n; };
     this.pt = t0;
@@ -826,15 +835,19 @@ export class World2 {
     // uploads, nearest first: what is needed now; the rest into the slots not taken by what is wanted (a slot whose
     // chunk was left behind is free for the road ahead)
     if (this.results.size) {
-      const ready = [...this.results.values()].sort((a, b) => a.prio - b.prio);
+      const ready = this.readyL || (this.readyL = []);
+      ready.length = 0;
+      for (const r of this.results.values()) ready.push(r);
+      ready.sort((a, b) => a.prio - b.prio);
       const cap = E.chunkCap ? E.chunkCap() : this.lowMem ? Math.min(LOWMEM_CHUNKS, tier.chunks) : tier.chunks;
       let held = 0;
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
       // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
       // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
-      let n = this.jump && !this.jump.drawn && !this.jump.over ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
+      const jmp = !!this.jump && !this.jump.drawn && !this.jump.over;   // (the screen all stand-ins: not held to the budget)
+      let n = this.warming ? 2 * JUMP_UP : jmp ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
-        if (n <= 0) break;
+        if (n <= 0 || (!jmp && !this._upOk('chunk'))) break;
         if (!need.has(res.key)) { if (free <= 0) continue; free--; }
         if (res.preview || res.jk[0] === 'p') {   // (a look in the store: never over the real bake, or after it)
           const st = this.chunkState.get(res.key);
@@ -846,7 +859,8 @@ export class World2 {
         try { const g = res.r.g; if (res.r.under) g.under = res.r.under; g.blds = res.r.blds || null; ok = E.uploadChunk(res.cx, res.cy, g) !== false; } catch (e) { console.error('[art2] uploadChunk', e); }
         this.results.delete(res.jk);
         if (!ok) continue;
-        this.t.upChunkMs = performance.now() - t;
+        this.t.upChunkMs = performance.now() - t; this._upDone('chunk', this.t.upChunkMs);
+        this.t.upMax = Math.max(this.t.upMax || 0, this.t.upChunkMs); this.t.upSum = (this.t.upSum || 0) + this.t.upChunkMs;
         this.chunkState.set(res.key, { mode: res.mode, ver: res.ver, preview: !!res.preview, gh: res.r.gh, lights: this._prepLights(res.r.lights || []), live: res.r.live || null, blds: res.r.blds && res.r.blds.length ? res.r.blds : null });
         if (res.r.kept) this.n.kept = (this.n.kept || 0) + 1;
         this.fallbacks.delete(res.key);
@@ -915,9 +929,8 @@ export class World2 {
   // ---- baking ahead into the browser's store --------------------------------------------------------------
   // When nothing on screen or ahead waits for a bake, the workers bake the chunks round you into the browser's store
   // (chunkstore.js) undrawn, nearest first along your way and the roads from here, then a ring: later a bake is a read.
-  // One worker stays free for the screen; nothing while the page is hidden; at most PRE_N[phone] kept.
-  // A walk-in you're about to enter (main.js walkInSoon: F.nearB) is baked cut away ahead (peekChunk), so going in
-  // shows the floor at once, not the roof (the owner, 10-16).
+  // One worker stays free for the screen; nothing while the page is hidden. A walk-in you're about to enter (F.nearB) is
+  // baked cut away ahead (10-16).
   _precut(F) {
     const b = F.nearB, P = this.pool;
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
@@ -944,11 +957,9 @@ export class World2 {
       });
     }
   }
-  // Shop symbols over the doors you're near (the owner, 10-08, SI1: "Shop symbols over entrances when close (subtle, can
-  // be turned off)"): the map's icon for each place within a few steps of you, on foot, floating over where you'd stand
-  // to go in - fading in as you come close and out as you walk on; off in Settings (settings.shopMarks false). g: the
-  // overlay, in world coordinates; icon(g, name, x, y, size) and the icons by kind come from the page (client/storeicons.js
-  // drawBadge and STORE_ICON: a round badge, a gold rim, the trade's glyph - UI-4).
+  // Shop symbols over the doors you're near (SI1): each place's icon within a few steps of you, on foot, over where you'd
+  // go in, fading in and out; off in Settings. g: the overlay, in world coordinates; icon(g, name, x, y, size) and the
+  // icons by kind: client/storeicons.js.
   shopMarks(g, F, icon, kinds) {
     const S = this.S, sp = F.sp, m = this.map, list = m.pois || [];
     if (!S.playing || !S.pred || S.pred.kind !== 'ped' || (S.me && S.me.dead) || F.insideB) return;
@@ -1054,7 +1065,7 @@ export class World2 {
   }
   // the chunks to bake ahead, best first (see _prebake)
   _prebakeList() {
-    const phone = isPhone(), RING = phone ? 3 : 4, ROAD = phone ? 4800 : 7500, AHEAD_S = 12, MAXN = phone ? 64 : 120;
+    const phone = isPhone(), big = phone && this.bigMem, RING = phone && !big ? 3 : 4, ROAD = big ? 6000 : phone ? 4800 : 7500, AHEAD_S = 12, MAXN = big ? 96 : phone ? 64 : 120;   // (big: a phone with 8 GB or more - pool.js keepCap keeps more of them)
     const out = new Map(), add = (cx, cy, p) => {
       if (cx < 0 || cy < 0 || cx >= this.grid[0] || cy >= this.grid[1]) return;
       const k = cy * 1000 + cx, c = out.get(k);
@@ -1062,12 +1073,10 @@ export class World2 {
     };
     const x0 = this.camX, y0 = this.camY;
     // 1. the way you're heading, past the stretch _chunks bakes: a band three chunks wide, up to AHEAD_S s on. Flying
-    // (an aircraft goes straight over the blocks, the roads don't lead it): the band as wide as the view and nothing
-    // along the roads - the owner, 2026-10-11, flying a helicopter on a phone: "it definitely struggles on mobile and
-    // loading art fast enough"
+    // (straight over the blocks): the band as wide as the view and nothing along the roads (10-11)
     const v = this.camV ? this.camV.out : null, sp = v ? Math.hypot(v.x, v.y) : 0, air = !!(this.S.pred && this.S.pred.air);
-    // 1a. riding a train: along the line ahead, which bends where a straight band doesn't (the owner, 2026-10-15, on the
-    // main line on a phone: "I'm going faster than the art is loading"), ~20 s of it, as wide as the view; no roads
+    // 1a. riding a train: along the line ahead (it bends where a straight band doesn't: 10-15), ~20 s of it, as wide as the
+    // view; no roads
     const rail = this.S.rideTrain && sp > 60 ? this._railAhead(x0, y0, v.x, v.y, Math.min(sp * 20, 16000)) : null;
     if (rail) {
       const w = Math.max(1, Math.min(2, Math.round(Math.max(this.vx1 - this.vx0, this.vy1 - this.vy0) / 2 / CHUNK + 0.25)));
@@ -1111,10 +1120,8 @@ export class World2 {
     return [...out].sort((a, b) => a[1] - b[1]).slice(0, MAXN).map((e) => e[0]);
   }
   // The line a train you ride runs on, ahead of (x, y) heading (vx, vy): points every ~400 px along it for L px, each with its
-  // distance along - [[x, y, d], ...] - or null (no line within reach). The lines' points are kept by 512 px cell, once per
-  // map: World v3's window holds only its regions' points (shared/regionpack.js), so each new window (setMap) is indexed
-  // afresh - the old window's index pointed past the new lists' ends and threw every frame on the train, the owner's
-  // 10-22 "subway ... crashed" (ridden headless into Lake District Station)
+  // distance along - [[x, y, d], ...] - or null. The points are kept by 512 px cell per map: each new window (setMap) is
+  // indexed afresh (10-22)
   _railAhead(x, y, vx, vy, L) {
     const rails = this.map.rails || (this.map.rail ? [this.map.rail] : []);
     if (!rails.length) return null;
@@ -1168,11 +1175,9 @@ export class World2 {
     return o;
   }
   _fallback(cx, cy) { return this.E.hasFallback ? this.E.hasFallback(cx, cy) : this.fallbacks.has(cy * 1000 + cx); }
-  // Past the map's edge the sea runs on (shared/border.js). Those chunks are baked like any other - groundbake.js
-  // makes open sea of everything past the edge - but kept apart from the map's own: the bookkeeping above keys
-  // chunks by cy * 1000 + cx, which only holds inside the map, and they have no lights, heights or buildings.
-  // Until a bake lands, a flat stand-in of the deep sea's colour that the light pass rolls with waves. Returns how
-  // many such chunks the view takes (the engine keeps that many slots more).
+  // Past the map's edge the sea runs on (shared/border.js): those chunks are baked like any other but kept apart (the
+  // keys above, cy * 1000 + cx, only hold inside the map), a flat deep-sea stand-in until then. Returns how many the
+  // view takes (the engine keeps that many slots more).
   _offSea() {
     const E = this.E, pool = this.pool;
     if (!E.hasFallback) return 0;   // (the 2D stub engine keys chunks the map's way: no sea past the edge there)
@@ -1238,9 +1243,7 @@ export class World2 {
   // A building whose picture covers you (or the vehicle you're in, all of it) eases to a ghost and back - a smoothstep
   // over FADE_IN / FADE_OUT s, not a snap - clear round you and the players near you (engine.js STATIC_FS: GHOST, uClr,
   // its edge feathered over CLR_SOFT); its footprint never fades; a tall thin one fades less (GHOST_THIN); whatever is
-  // behind it shows through (GHOST_FS). The owner, 10-23 and 10-24 ("make the circle around the player much bigger (so
-  // it shows an entire vehicle) ... ease in and out of transparency ... feather the border"; "vehicles and NPCs and
-  // things disappeared entirely behind the building").
+  // behind it shows through (GHOST_FS) (10-23, 10-24).
   _fades(F, sp) {
     const S = this.S, inVeh = S.pred ? S.pred.kind === 'veh' : false, onTrain = F.myTrain !== undefined && F.myTrain >= 0;
     const z0 = (sp.z || 0) > 0.01 ? DECK_Z * sp.z : this._gz(sp.x, sp.y), px = sp.x, py = sp.y, sy = py - z0;
@@ -1432,10 +1435,9 @@ export class World2 {
   }
 
   // ---- sprites --------------------------------------------------------------------------------------------
-  // Only the new art is drawn. A sprite comes from the providers (actors.js, peds.js): resident already, made
-  // on this thread at once (people, ~2 ms each, while the frame's budget lasts - your own figure always), or
-  // asked of the workers and drawn once it lands. Meanwhile a thing keeps showing the last sprite it had
-  // (thing._v2k); a vehicle or train seen for the first time takes the nearest heading already made.
+  // Only the new art is drawn. A sprite is resident, made here at once (people, while the frame's budget lasts: _now),
+  // or asked of the workers and drawn once it lands; meanwhile a thing keeps its last sprite (_v2k), and a vehicle or
+  // train seen the first time the nearest heading made.
   _spr(prov, kind, key, args) {
     if (!key) return null;
     if (this.E.hasSprite(key)) return key;
@@ -1444,18 +1446,20 @@ export class World2 {
     if (this.badKeys.has(key)) return null;
     if (kind === 'ped' && this._now(key, args)) return key;
     this._ask(prov, kind, key, args, this.sprPrio);
+    this.missN++;
     return null;
   }
-  // a person made on this thread, now: yours always, others while the frame's budget lasts
+  // a person made on this thread, now, while what one takes (est.ped) fits the frame's budget - yours within OWN_MS, or
+  // whatever it takes when you have no figure yet (this.meNone: _ped)
   _now(key, args) {
-    const fn = this.Pd && this.Pd.pedSprite;
-    if (!fn || (this.sprPrio !== -3 && this.syncLeft <= 0)) return false;
+    const fn = this.Pd && this.Pd.pedSprite, est = this.est.ped;
+    if (!fn || (this.sprPrio === -3 ? !this.meNone && est > Math.max(OWN_MS, this.syncLeft) : this.syncLeft <= 0 || est > this.syncLeft)) return false;
     const t = performance.now();
     let G = null;
     try { G = fn(...args); } catch (e) { this.badKeys.add(key); this.n.sprErr++; if (this.n.sprErr <= 3) console.warn('[art2] sprite failed', key, e); return false; }
     const ok = !!(G && G.w) && this._upload(key, G);
     const ms = performance.now() - t;
-    this.syncLeft -= ms; this.t.syncMs += ms; this.n.sync++;
+    this.syncLeft -= ms; this.t.syncMs += ms; this.n.sync++; this.est.ped = this.est.ped * 0.8 + ms * 0.2;
     if (ok && this.pool) { const jk = 's' + key; if (this.pool.has(jk)) { this.pool.cancel(jk); this.sprOut = Math.max(0, this.sprOut - 1); } }
     return ok;
   }
@@ -1477,16 +1481,20 @@ export class World2 {
     });
     return true;
   }
+  // the frame's upload budget (upBudget): may one more of kind ('chunk' | 'spr') go up; and what one took
+  _upOk(kind) { const e = this.est; return !e || upBudget(this.upSpent, e[kind], this.upMax, this.upFirst); }
+  _upDone(kind, ms) { const e = this.est; if (e) { this.upSpent += ms; this.upFirst = false; e[kind] = e[kind] * 0.8 + ms * 0.2; } }
   _upload(key, g) {
     let ok = false;
+    const t = performance.now();
     try { ok = this.E.uploadSprite(key, g) !== false; } catch (e) { console.warn('[art2] uploadSprite', key, e); }
-    if (ok) this.n.sprUp++;
+    if (ok) { this.n.sprUp++; this._upDone('spr', performance.now() - t); }
     return ok; // (a full atlas refuses for now: the sprite is asked for again when it is next needed)
   }
   _uploadSprites() {
-    let n = this.tier.sprUp;
+    let n = this.warming ? 64 : this.tier.sprUp;
     for (const [key, g] of this.upQ) {
-      if (n-- <= 0) break;
+      if (n-- <= 0 || !this._upOk('spr')) break;
       this.upQ.delete(key);
       if (!this.E.hasSprite(key)) this._upload(key, g);
     }
@@ -1501,10 +1509,11 @@ export class World2 {
   }
   // exact-size scratch: getImageData reads the whole canvas
   _sized(i, w, h) { const [c, g] = this._canvas(i, 1, 1); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } g.imageSmoothingEnabled = false; g.clearRect(0, 0, w, h); return [c, g]; }
-  // a generated sprite (gen: from the frame's generous budget), made once and kept
+  // a generated sprite (gen: from the frame's generous budget - GEN_MS of it, gen 2: whatever it takes, when there's
+  // nothing to show meanwhile), made once and kept
   _conv(key, make, gen = false) {
     if (this.E.hasSprite(key)) return key;
-    if (gen ? this.genBudget-- <= 0 : this.convBudget-- <= 0) return null;
+    if (gen ? this.genBudget-- <= 0 || (gen !== 2 && this.genLeft <= 0) : this.convBudget-- <= 0) return null;
     const t = performance.now();
     let G = null;
     try { G = make(); } catch (e) { console.warn('[art2] generated sprite', key, e); G = null; }
@@ -1512,7 +1521,8 @@ export class World2 {
     let ok = false;
     try { ok = this.E.uploadSprite(key, G) !== false; } catch (e) { console.warn('[art2] uploadSprite', key, e); }
     if (!ok) return null;
-    this.t.convMs += performance.now() - t; gen ? this.n.gen++ : this.n.conv++;
+    const ms = performance.now() - t;
+    this.t.convMs += ms; if (gen) { this.n.gen++; this.genLeft -= ms; } else this.n.conv++;
     return key;
   }
   // the nearest heading already made (within an eighth of a turn either way), for a thing seen the first time
@@ -1602,6 +1612,8 @@ export class World2 {
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined)) && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
     const bo = bladeOpt(p, wpn);   // (a plasma blade in its owner's colour)
+    this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
+    if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
     let sk = this._spr('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo]);
     if (!sk) sk = p._v2k && E.hasSprite(p._v2k) ? p._v2k : null; // (the last one while the new one is made)
     if (ppose !== p._cp || d8 !== p._cd || wpn !== p._cw || A2 !== p._ca || (this.frameNo + p.id) % 40 === 0) {
@@ -1661,10 +1673,13 @@ export class World2 {
     return true;
   }
   // every frame of a looping pose (stride, idle, carry...) at this heading, asked for ahead
-  _cycle(A2, ppose, d8, wpn, prio, bo) {
+  _cycle(A2, ppose, d8, wpn, prio, bo, queue = false) {
     const Pd = this.Pd, n = (Pd.PED_POSES && Pd.PED_POSES[ppose]) || 1;
     if (n < 2 || n > 8) return;
-    for (let i = 0; i < n; i++) this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, i, wpn, bo), [A2, ppose, d8, i, wpn, bo], prio);
+    for (let i = 0; i < n; i++) {
+      const key = Pd.pedKey(A2, ppose, d8, i, wpn, bo), a = [A2, ppose, d8, i, wpn, bo];
+      if (queue) this.warmQ.unshift(['peds', 'ped', key, a, prio]); else this._ask('peds', 'ped', key, a, prio);   // (queue: through warmQ, as room allows)
+    }
   }
   // ---- animals, vehicles, trains, small things ------------------------------------------------------------------
   _pet(p, now) {
@@ -1770,7 +1785,7 @@ export class World2 {
     // a moving boat: its foam under the hull (bow collar, churned stern, the V close behind) and wake points
     // dropped for the trail that spreads and fades behind it (_wakeTrail)
     // a boat (or a swimmer) part-way under a bridge: the deck over it hides it (o.under caps its depth below a deck's) -
-    // its foam too (the owner, b1c: "their VFX show up over the bridge")
+    // its foam too (b1c)
     const under = def.kind === 'boat' && this._underDeck(v.rx, v.ry, v.ra, def.L);
     if (def.kind === 'boat' && A.wakeKey && !sinking) {
       const b = v.buf, sp = b && b.length > 1 ? Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y) * 20 : 0;
@@ -1816,11 +1831,9 @@ export class World2 {
     }
   }
 
-  // A horse (#325, server horses.js): its sprite in its coat, saddled or bare (the variant: 'horse:s<coat>', 'horse:c<coat>'
-  // - art2/horse.js) - standing (now and then its head down to graze, ridden or not), or at the walk, the trot, the
-  // canter or the gallop by its speed (actors.js horseGait), the legs' frames as fast as the ground goes by - and whoever's
-  // on it astride its back ('saddle', drawn at the horse's own feet: the pose sits the rider at its saddle's height),
-  // rising and falling with the gait
+  // A horse (#325): its sprite in its coat, saddled or bare ('horse:s<coat>', 'horse:c<coat>' - art2/horse.js), standing
+  // (now and then grazing) or at its gait by its speed (actors.js horseGait), and its rider astride ('saddle', drawn at
+  // the horse's feet), rising and falling with the gait
   _horse(v, now, me, def) {
     const A = this.A, E = this.E, Pd = this.Pd;
     if (!A || !A.animalKey) return;
@@ -2104,7 +2117,7 @@ export class World2 {
     if (!pool || pool.dead || !pool.ready) return;
     if (!this.warmed && this.prov.actors && this.A) this._warm();
     const q = this.warmQ;
-    for (let n = 4; q.length && n > 0;) {
+    for (let n = this.warming ? 24 : 4; q.length && n > 0;) {
       const it = q[0], key = it[2];
       if (this.E.hasSprite(key) || this.upQ.has(key) || this.badKeys.has(key) || pool.has('s' + key)) { q.shift(); continue; }
       if (!this._ask(it[0], it[1], key, it[3], it[4])) break; // (no room for more jobs yet)
@@ -2113,10 +2126,10 @@ export class World2 {
     const S = this.S, now = F.now, A = this.A, Pd = this.Pd, fn = this.frameNo || 0;
     const x0 = this.vx0 - 520, x1 = this.vx1 + 520, y0 = this.vy0 - 520, y1 = this.vy1 + 520;
     const ox0 = this.vx0 - 60, ox1 = this.vx1 + 60, oy0 = this.vy0 - 100, oy1 = this.vy1 + 100;
-    let budget = 8;
+    let budget = this.warming ? 32 : 8;
     for (const e of S.ents.values()) {
       if (budget <= 0) break;
-      if (!e.d || (e.id + fn) % 6 || e.rx === undefined || e.rx < x0 || e.rx > x1 || e.ry < y0 || e.ry > y1) continue;
+      if (!e.d || (!this.warming && (e.id + fn) % 6) || e.rx === undefined || e.rx < x0 || e.rx > x1 || e.ry < y0 || e.ry > y1) continue;
       if (e.rx > ox0 && e.rx < ox1 && e.ry > oy0 && e.ry < oy1) continue; // (on screen: drawn, so already asked)
       const prio = 2 + Math.hypot(e.rx - this.camX, e.ry - this.camY) / 1000;
       if (e.kind === K.PED && Pd && Pd.pedKey) {
@@ -2600,7 +2613,7 @@ export class World2 {
       if (f & VF.LIGHTS) {
         const fx = v.rx + c * hl, fy = v.ry + s * hl;
         this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
-        for (const sd of [-1, 1]) this._light(v.rx - c * hl - s * def.W * 0.31 * sd, v.ry - s * hl + c * def.W * 0.31 * sd, zb + 8, f & VF.BRAKE ? 60 : 36, C.tail, f & VF.BRAKE ? 1.4 : 0.7);
+        for (let sd = -1; sd <= 1; sd += 2) this._light(v.rx - c * hl - s * def.W * 0.31 * sd, v.ry - s * hl + c * def.W * 0.31 * sd, zb + 8, f & VF.BRAKE ? 60 : 36, C.tail, f & VF.BRAKE ? 1.4 : 0.7);
       } else if (f & VF.BRAKE) this._light(v.rx - c * hl, v.ry - s * hl, zb + 8, 40, C.tail, 0.9);
       if (f & (VF.SIREN | VF.BEACON)) this._light(v.rx, v.ry, zb + 24, 240, Math.floor(now * 6) % 2 ? C.red : C.blue, 2.2);
       if (f & VF.BURN) this._light(v.rx, v.ry, zb + 20, 200, C.fire, 2.2 * (0.75 + 0.25 * Math.sin(now * 23 + v.id)));
@@ -2761,6 +2774,8 @@ export class World2 {
   // whether a chunk on screen is a stand-in right now while moving fast (main.js eases the camera's pull-back at speed
   // off while this keeps happening: a phone's bakes keep up with a smaller view)
   lateNow() { return !!(this.late && this.late.now); }
+  // what the loading screen waits on (client/warmup.js; hostextra.js warmth - null until it's in)
+  warmth() { if (World2.X) return World2.X.warmth(this); extra().then((X) => { World2.X = X; }, () => {}); return null; }
 
   // ---- reporting ---------------------------------------------------------------------------------------------
   stats() {

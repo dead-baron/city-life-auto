@@ -18016,3 +18016,175 @@ own pass.
   loads the help when first opened and fills the sheet after it's here, and rules.js re-exports every number of
   rules-page.js with the same value.
 - tools/perf.mjs: `page.kb` 498 -> 520 with the reason.
+
+## 2026-10-30 - UI-7: fishing's meter gets its own spot, one prompt while fishing, big words on one line
+
+The owner, on a phone held upright (2026-10-26): "Fishing UI is hidden behind the weapons selection button. And some
+UI text like the 'ACT' in this text looks bad as is. Some text is on two lines with the same style in other cases."
+His screenshot showed the fight's meter (the track, the fish, the catch gauge) drawn at a fixed spot right of the
+player, on top of the weapon button and FIRE ON, and a big gold "Hold [ACT] to reel" over the water: the ACT chip a
+squashed, blurred box and "to / reel" wrapped onto a second line, while the prompt under the player already said
+"ACT Hold to reel, let go to ease off".
+
+### The meter has a spot in the HUD
+- **index.html `#fishspot`**, an empty box style.css places like any other part of the HUD; client/fishing.js draws
+  the meter in it (its box read once per screen size) instead of at `min(W - 90, W / 2 + 90)`.
+  - **Keyboard and pad:** right of the player, past the prompt's widest (50% + 300 px, kept on the screen), centred; in
+    a short window under the top-right column and shorter.
+  - **Touch, upright:** at the right edge, from 36% down (under the notes and the job card, over the thumb).
+  - **Touch, sideways:** at the right edge, down to the bottom.
+- **The touch slots stand aside while a line is out** - a new state in shared/touchcontrols.js, `fish`: ACT alone
+  (it casts, strikes and reels; nothing else does anything then), so the weapon button, the aim stick, FIRE, CAR and
+  the utilities leave the right-hand side to the meter. It wins over everything but home (a boat's wheel still steers
+  with the move stick, and driving off reels in, as before). client/touchslots.js tells it from `me.fishing`.
+  README's touch row says so.
+
+### One prompt at a time
+The prompt slot (#helpbox, from the server's fishing.js `interaction`) shows on every device the whole time a line
+is out: "Let go to cast", "Waiting for a bite...", "STRIKE!", "Hold to reel, let go to ease off". The big copy
+(#fishbar) said the same thing again, so it's gone; what's left of it are the two timing cues the prompt can't flash:
+**LET GO!** at the top of the cast's swing and **STRIKE!** on the bite.
+- They're one line (nowrap, at most 28 px or 7% of the width).
+- The key in them is a proper key cap (`.bigkey`): the UI font at 0.62 of the words round it (never under 14 px),
+  padded, 1.9 em tall, with no halo of its own. The halo that big words carry was smearing the old 14 px pixel-font
+  chip.
+
+### Big words never on two lines
+- **The district's card** (40 px) and **the warning past the map's edge** (28 px) were allowed two balanced lines;
+  "LEAVING THE CITY'S WATERS" or a long district name broke in two upright.
+- They're one line now. client/hud.js `fitLine` shrinks them to the screen less 24 px when they'd be wider. The
+  warning is "LEAVING CITY WATERS" (fitted again when the screen turns).
+- The other big-pixel texts are canvas text (never wrapped) or panel titles inside their own panels.
+
+### Tests
+- **test/hudlayout.test.js** measures a `fish` state on every screen and device (desktop 1280x720 / 1920x1080 /
+  1024x768, sideways 844x390 / 740x360, upright 390x844 / 412x892 with a camera inset):
+  - the meter's spot is on the screen;
+  - it's tall enough (120 px under 400 px tall, else 150);
+  - nothing overlaps it (the touch slots, the prompt, the notes, the job card, the minimap, the top-right column) and
+    it's never on the player;
+  - the STRIKE! cue is a single line;
+  - on touch, the slots are in the fish state.
+- **test/touchslots.test.js:** fishing shows ACT alone, on foot or at a boat's wheel, whatever else you hold.
+
+Shots: scratchpad ui7-shots/before (the live game, the charge and the wait, upright and sideways) and after (the HUD's
+fish state from test/hudpage.js with the meter's box filled in: upright, a camera inset, sideways, a 740x360 phone and
+two desktop windows). Live after shots weren't taken because the shared machine's heavy-work lock was queued for hours.
+
+## 2026-10-30 · Art loads before you see it, and fewer hitches on phones (Pixel 7 Pro)
+
+The owner (10-26): "Any way to make art load better and faster and improve performance on lower end mobile devices
+(specifically testing on a Pixel 7 Pro and seems slow to load art and a bit choppy in some places) but without
+compromising the quality of the art or changing the art? It's okay to have a longer load time..."
+
+Nothing here changes a sprite, a chunk or the lighting: the same art arrives earlier, or a frame or two later instead of
+in one long frame.
+
+### What the Pixel gets today (measured, and worked out from the code)
+- **Tier:** a phone with 8 GB (Chrome says 8 at most; the Pixel has 12) is recommended **Medium** (gfx.js).
+- **Canvas:** Medium's sharpness is 1, so the world canvas is **412 x 892** for a 1440 x 3120 screen - already well
+  under what the screen has (High 618 x 1338, Ultra 824 x 1784; the 2.5 MP cap would be 2.6x). The world's scene is lit
+  at its own size, one texel per world px (about 600 x 1300 on Medium upright), whatever the canvas is: the canvas
+  only sets how finely the lit frame is put on the screen. So a DPR-3.5 canvas is **not** the cause; nothing to cut
+  there without changing the look (see the suggestion below).
+- **Workers:** four (8 cores).
+- **Loading:** PLAY was pressable as soon as the server said welcome - before the renderer, its workers or any chunk
+  existed. In a phone-sized headless run (412 x 892 @ 3.5, Android, 4 workers, Medium) PLAY lit at 1.5 s; the renderer's
+  sprite modules took 6.7 s to load, the workers 10.5 s, the first chunk 24 s and the whole screen 35 s: everything in
+  between was stand-ins on screen.
+- **Hitches (main thread):** a person's sprite made on the page costs ~7 ms on a desktop core (p95 14 ms; node bench),
+  so 15-40 ms on a phone - and the budget (3.5 ms on Medium) was checked *before* making one, so one person could blow
+  a frame; your own figure was always made on the page, every new pose or heading. An aircraft heading: ~3.4 ms desktop
+  (up to 70 ms the first of a model), made on the page with only a count limit (48 a frame). Chunk uploads 0.9 ms p50,
+  15 ms max here (one a frame on Medium, two on High/Ultra without a time limit). GC ~1 % of the main thread.
+- (SwiftShader makes every frame GPU-bound in the headless browser - 1.5-4.5 s a frame - so frame rates from here mean
+  nothing; the numbers above are main-thread costs and the load timeline. The readout below is for the real phone.)
+
+### What changed
+- **The loading screen waits for the art** (client/warmup.js). After PLAY the title stays up with a progress bar
+  ("Getting the art ready...") while the renderer bakes, reads back or downloads the chunks the view draws, then the
+  ring round them, and makes your figure standing/walking/jogging/running/sprinting in all eight directions plus what
+  is near you - with the frame's budgets raised (nobody is watching): uploads, sprites made on the page, asks ahead.
+  It goes in when the view is ready and the ring is too (the ring waited for until half the cap), or at the cap:
+  **12 s on a phone, 8 s elsewhere**. Enter on the title skips it. The first time in per page only.
+  The load timeline (and /perf reports) gets a `warm` mark and how long it waited.
+- **A jump (teleport, respawn, a taxi ride) fades to dark** under the HUD until what's on screen is baked, "Loading
+  the area...", at most **5 s on a phone, 3 s elsewhere**, instead of a screen of stand-ins.
+- **Uploads within a time budget** (host.js upBudget): a frame's first upload always goes (the view never waits longer
+  than before); more only while the tier's time lasts (Low 3, Medium 4, High 5, Ultra 6 ms, running averages per
+  chunk and per sprite). Just after a jump the old JUMP_UP rule still applies.
+- **People made on the page only when they fit**: one is made only while its running average fits what's left of the
+  frame's budget; others go to the workers (they're asked for ahead within 520 px anyway, so it is rare on screen). Your
+  own figure is made here within 8 ms (OWN_MS), else the workers make it first in line and your last frame shows a
+  frame or two meanwhile - unless you have none yet. Behind the loading screen your common poses are made ahead.
+- **Generated sprites within 4 ms a frame** (GEN_MS: aircraft headings, rotors, doors, water life, farm rows...);
+  an aircraft past it takes the nearest heading made, or makes this one if there is none. Your own aircraft's
+  headings either side are made ahead while the frame has time.
+- **8 GB devices keep more:** six more chunk slots on the GPU (Medium 20 -> 26, ~13.5 MB), 160 baked chunks kept in
+  the browser on such a phone (90 before; desktops 180), and baking ahead into the store further (ring 4, 6000 px of
+  road, 96 chunks; 3 / 4800 / 64 on other phones). The workers' memory caches stay as they were (test/pool.test.js:
+  four workers on a phone within 300 MB - a long drive ran a phone out of memory before).
+- Bake workers stay at four on 8-core phones: the Tensor G2 has 2 big, 2 middle and 4 little cores, the page, the GPU
+  process and the compositor want the big ones, and each worker holds its own ~65 MB copy of the world.
+- Small per-frame allocations gone from the chunk upload loop and the tail lights.
+
+### The readout (for the owner's phone)
+Debug menu -> **📈 Performance -> Performance readout on / off**. A small panel at the top: fps, frame p50/p95, the
+page's own ms a frame, long tasks; the art tier, workers, chunks baking/queued, waiting to go up, on screen and how many
+are stand-ins; bake avg, chunk upload avg/max, kept and from-the-server counts, the renderer's ms and GPU ms; sprites
+being made / to upload, what a person costs here, how often a chunk on screen was late; the canvas's size against the
+screen's and the render scale; cores, memory, and how long the loading screen waited. It stays on in that browser (also
+after a reload) until switched off. Loaded only when switched on (client/perfhud.js).
+
+### Suggestion (not done: it changes the look)
+On Medium the Pixel's canvas is 412 x 892, so each 2-world-px art pixel gets ~1.5 canvas pixels, which the browser then
+stretches 3.5x: art pixels come out 1 or 2 canvas pixels wide. "Render sharpness: Sharp" (High's 1.5) gives 618 x 1338,
+over one canvas pixel per world px - crisper pixel art for a little more fill. Worth a try on the Pixel with the readout on.
+
+### Before / after (headless Chromium, 412 x 892 @ 3.5, Android UA, 4 workers, Medium, local server)
+| | before | after |
+|---|---|---|
+| what you see after PLAY | the city at once, mostly stand-ins | the title and its bar, up to the cap (12 s on a phone) |
+| frames shown with stand-ins on screen, first 20 s in | 11 of 26 (42 %) | 0 of 13 |
+| whole screen first drawn (load timeline `screen`) | 35.0 s | 39.6 s (a busier machine: the city took 9.9 s, not 1.3) |
+| a person made on the page (node, desktop core) | 6.8 ms p50, 14 ms p95, always | same cost, only when it fits |
+| stand-in frames after a teleport / in flight (15 s each) | 0 / 0 | 0 / 0 |
+| main-thread GC | ~1 % | ~1 % |
+
+On that busy machine the loading screen ran to its cap (13.6 s: its frames came 2-5 s apart under SwiftShader, so
+what's on screen plus its margins wasn't all baked yet). A phone's frames come every 16-33 ms, so it should end on
+'ready' well inside the cap: the readout's last line says how long it waited and why (ready, view, cap) - the first
+thing to read off the Pixel. If it always says 'cap', the cap or what it waits for wants a look.
+
+### Budgets
+Renderer code 401 of 401 KB (401.5): room made by trimming history notes out of comments in host.js, engine.js and
+lightgame.js and moving the loading screen's look at the art to hostextra.js (loaded with it). Page 470 of 520 KB
+(client/warmup.js, 2 KB). Nothing raised.
+
+### Tests
+test/warmup.test.js (new): the loading screen's plan and cap, the jump fade, the upload budget in _chunks, the person
+rule, keepCap and the GPU slots on 8 GB devices, gfx.js renderDpr on the Pixel, the readout's laziness.
+
+## 2026-10-30 - Calm water: the sea's "rapid lines" gone, the surf wave less of a ruled line
+
+- **Calm water on the sea and the lakes - no more "rapid lines"** (the owner, 10-26, on a beach: "There are still rapid
+  lines on large bodies of water"). The short white streaks in diagonal rows over the whole sea were the light pass's
+  sun glints (client/art2/game/lightgame.js waterSurf), not the bake: still water's surface was three swells - sums of
+  sines along the wind at fixed angles - and the sun caught their crests where they lined up, a lattice of white dashes
+  marching across the bay. The 10-23 fix bent the swells with a slow noise, but over a phone's view the rows stayed
+  rows, and through the middle of the day (the sun in the south, its glint nearly straight up) a good part of the sea
+  lit up in them. Now the wind's ripples are two octaves of value noise (wnoiseD: the noise and its slope) stretched
+  across the wind and drifting down it - nothing periodic - and the sun catches the odd steep ripple, one pixel in four
+  of those, in patches: a sparkle here and there that twinkles, never in rows. The same ripples on lakes and ponds
+  (their twinkling as before); running water (creeks, rivers, rapids) keeps its flecks hurrying downstream, the broad
+  rivers and mouths the still look (WIDE_STILL, MOUTH_UP) as before. Test: test/calmwater.test.js - the shader's still
+  water says what the test's mirror of it does, has no sines along fixed directions, and the mirror's glints over open
+  sea (three suns, three winds) never repeat in rows (under 12 % of them at their best offset; the old swells: 16-68 %)
+  and stay a sparkle, not a sheet.
+- **The surf's waves aren't a ruler-straight band** (the same beach: "a long straight horizontal band of white foam" a
+  little offshore - a wave coming in to a surf break, batch 6). Near the beach the crest the server rides straightens
+  out (shared/surf.js crestD) and its dark face and white lip were drawn evenly all along it. Now (client/art2/game/
+  surfart.js) the crest as drawn wanders a few px more in shorter bends - more as it comes in, never 8 px off the line
+  you ride (jit) - the face and the lip are stronger where the crest stands high and weaker where it's low, and the
+  white pieces churn: the lip, the curl, the white water, its lace and the spray change their look a few times a second,
+  each piece out of step with its neighbours. Test: test/surf.test.js "a wave drawn near the beach".

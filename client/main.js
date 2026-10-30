@@ -22,7 +22,7 @@ import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVeh
 import { FX } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
-import { HUD } from './hud.js';
+import { HUD, fitLine } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
@@ -68,10 +68,11 @@ import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShado
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats, setDeviceKind } from './platform.js';
 import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
-import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted } from './gfx.js';
+import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted, renderDpr } from './gfx.js';
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
+import { holdForArt, veilTick } from './warmup.js';   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -110,6 +111,7 @@ import('./render/carryfx.js').then((m) => { S.carry = new m.CarryFx(S); }).catch
 import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch((e) => console.warn('[music]', e));
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
 
 // ---- the load timeline -------------------------------------------------------------------------------------
@@ -1299,7 +1301,8 @@ function edgeWarn(k) {
   const el = $('edgewarn');
   if (!el) return;
   el.classList.toggle('hidden', !k); el.classList.toggle('hold', k === 2);
-  el.innerHTML = k === 2 ? 'TURN BACK<small>The open sea won\'t let you go any further</small>' : k === 1 ? 'LEAVING THE CITY\'S WATERS<small>Turn back - follow the arrow</small>' : '';
+  el.innerHTML = k === 2 ? 'TURN BACK<small>The open sea won\'t let you go any further</small>' : k === 1 ? 'LEAVING CITY WATERS<small>Turn back - follow the arrow</small>' : '';
+  if (k) fitLine(el);   // (one line: client/hud.js)
 }
 
 // With the art v2 world the overlay canvas also carries what v1 draws as marks inside its world pass:
@@ -1356,9 +1359,19 @@ function art2Failed(why) {
 }
 
 function startPlaying() {
-  S.playing = true;
   initAudio();
   if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true);
+  // the first time in on this page: the title stays up until the art round you is ready (client/warmup.js, capped)
+  if (!S.warmedIn && ART2_WANTED && !S.practice) {
+    S.warmedIn = true; S.playing = false;
+    const t = performance.now();
+    holdForArt(S, $, () => { loadMark('warm'); loadSpan('warm', performance.now() - t); enterCity(); }, () => !!S.art2Off && !S.art2);
+    return;
+  }
+  enterCity();
+}
+function enterCity() {
+  S.playing = true;
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
@@ -2445,8 +2458,7 @@ function onResize() {
   // A 4K TV reports a pixel ratio of 2, which made a console draw every pass at 3840x2160 until
   // its graphics memory ran out. Lower settings and consoles draw at fewer pixels (the art is
   // pixel art: it barely shows), and nothing ever renders more than ~2.5 megapixels.
-  const cap = IS_CONSOLE ? Math.min(1, gfx.resolution) : gfx.resolution;
-  const base = Math.max(0.5, Math.min(cap, window.devicePixelRatio || 1, Math.sqrt(2.5e6 / Math.max(1, innerWidth * innerHeight))));
+  const base = renderDpr(window.devicePixelRatio || 1, innerWidth, innerHeight, gfx.resolution, IS_CONSOLE);
   DPR = Math.max(0.5, base * GOV.scale);   // (eased off while the frame rate can't keep up: govern below)
   GOV.base = base;
   const nw = innerWidth, nh = innerHeight;
@@ -2455,6 +2467,7 @@ function onResize() {
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   if (S.art2) S.art2.resize(W, H, DPR);
   document.body.classList.toggle('portrait', H > W);
+  edgeWarnState = -1;   // (the warning fitted to the new width)
   sendView();
 }
 // Tell the server how much world this screen shows at rest, so it spawns things just out of
@@ -2841,6 +2854,7 @@ function render(dt) {
   else if (v2) S.art2.frame(F);
   else if (v1Draws(F)) drawWorldV1(F);
   else { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#10141c'; g.fillRect(0, 0, canvas.width, canvas.height); }
+  veilTick(S, v2);   // (a teleport or a respawn: dark until what's on screen is baked - client/warmup.js)
   if (S.art2 && S.art2.exitHint) S.art2.exitHint(F, v2);   // (the way out of a walk-in while its inside is on its way: art2/game/host.js exitHint)
   if (F.spec) { // spectating close in: the new renderer's picture, the spectator's names / grid / players on top
     S.spec.overlay(g, W, H, DPR);

@@ -38,10 +38,18 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   assert.equal(acts({ armed: true }).wp, undefined, 'none with nothing to switch');
   assert.equal(acts({ home: true, wpn: true }).wp, undefined, 'none at home');
   assert.equal(touchState({ home: true, armed: true }), 'home');
-  // the aim stick and FIRE ON beside it in every state but at home
+  // fishing (UI-7, the owner 2026-10-26: "Fishing UI is hidden behind the weapons selection button"): a line out, only
+  // ACT (cast, strike, reel) - the right-hand side clear for the fight's meter - whatever else you have, on foot or in a boat
+  for (const f of [{}, { armed: true, guard: true, items: true, light: true, call: true, wpn: true }, { inVeh: true, driver: true, boat: true, shoot: true, wpn: true }]) {
+    assert.equal(touchState({ ...f, fish: true }), 'fish', JSON.stringify(f));
+    assert.deepEqual(touchSlots({ ...f, fish: true, prompt: true }).slots, { act: { a: 'action', label: 'ACT' } }, JSON.stringify(f));
+  }
+  assert.equal(touchState({ home: true, fish: true }), 'home');
+  // the aim stick and FIRE ON beside it in every state but at home and fishing
   for (const [state, slots] of Object.entries(TOUCH_STATES)) {
-    assert.equal(!!slots.stick, state !== 'home', `${state}: the aim stick`);
-    assert.equal(slots.u4 && slots.u4[0], state === 'home' ? undefined : 'firetog', `${state}: FIRE ON with it`);
+    const none = state === 'home' || state === 'fish';
+    assert.equal(!!slots.stick, !none, `${state}: the aim stick`);
+    assert.equal(slots.u4 && slots.u4[0], none ? undefined : 'firetog', `${state}: FIRE ON with it`);
   }
   // the same role always in the same slot, in every state
   const slotOf = {};

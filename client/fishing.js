@@ -6,9 +6,9 @@
 //     the meter, the strike and the bar answer your thumb at once;
 //   - in the world: everyone's line and bobber (from the 'cast' events: where it landed), its nibbles and its bite, the
 //     line taut and the fish thrashing while it's on; your cast's meter at your side;
-//   - on the screen: the fight (the track, your bar, the fish on it, the catch meter - Stardew Valley's), the prompts
-//     (#fishbar: STRIKE!), and the catch card when you land one (the fish drawn, its weight, new to your log, your best,
-//     a record, what it's worth: client/fishart.js).
+//   - on the screen: the fight (the track, your bar, the fish on it, the catch meter - Stardew Valley's) in the HUD's
+//     spot for it (#fishspot), the timing cues (#fishbar: LET GO!, STRIKE!), and the catch card when you land one (the
+//     fish drawn, its weight, new to your log, your best, a record, what it's worth: client/fishart.js).
 import * as FS from '../shared/fish.js';
 import { IN } from '../shared/input.js';
 import { DT, T } from '../shared/constants.js';
@@ -140,29 +140,45 @@ export class FishView {
   drawHud(g, W, H) {
     const now = this.S.loopClock || 0;
     this.prompt();
-    const F = this.F;
-    if (F && F.ph === PH.FIGHT && this.P) this.fight(g, W, H, now, F, this.P);
+    const F = this.F, on = !!(F && F.ph === PH.FIGHT && this.P), sp = this.spot(on, W, H);
+    if (on && sp) this.fight(g, sp, now, F, this.P);
     if (this.card) this.drawCard(g, W, H, now);
   }
-  // the words under you: what to do now
+  // the big timing cue (UI-7, the owner 2026-10-26: one prompt at a time): what to do the rest of the time - hold to
+  // cast, wait, hold to reel - is the prompt's (server fishing.js interaction: #helpbox, on every device); this only
+  // flashes the moments - LET GO! at the top of the cast's swing, STRIKE! on the bite - on one line (style.css #fishbar)
   prompt() {
     const el = this.pEl || (this.pEl = document.getElementById('fishbar'));
     if (!el) return;
     const F = this.F, ph = F ? F.ph : 0;
     if (ph === this.phSeen && ph !== PH.CHARGE) return;
     this.phSeen = ph;
-    const txt = ph === PH.CHARGE ? (F.power > 0.92 ? `Let go! ${glyph('action')}` : `Hold ${glyph('action')} · let go to cast`) : ph === PH.BITE ? `STRIKE! ${glyph('action')}` : ph === PH.FIGHT ? `Hold ${glyph('action')} to reel` : '';
+    const txt = ph === PH.CHARGE && F.power > 0.92 ? `LET GO! ${glyph('action')}` : ph === PH.BITE ? `STRIKE! ${glyph('action')}` : '';
     el.classList.toggle('hidden', !txt);
     el.classList.toggle('bite', ph === PH.BITE);
     if (el.dataset.t !== txt) { el.dataset.t = txt; el.innerHTML = txt; }
   }
-  // the fight: the track, your bar on it, the fish, the catch meter beside it (screen px)
-  fight(g, W, H, now, F, P) {
-    const th = Math.min(260, H * 0.5), tw = 34, x = Math.min(W - 90, W / 2 + 90), y = H / 2 - th / 2;
+  // the meter's box: the HUD's spot for it (index.html #fishspot, placed by style.css clear of the touch slots, the
+  // prompt, the notes and the corners' HUD on every screen), looked up again when the screen changes
+  spot(on, W, H) {
+    const el = this.spEl || (this.spEl = document.getElementById('fishspot'));
+    if (!el) return null;
+    if (on !== this.spOn) { this.spOn = on; el.classList.toggle('on', on); this.spBox = null; }
+    if (!on) return null;
+    const k = `${W}x${H}|${document.body.className}`;
+    if (!this.spBox || this.spKey !== k) {
+      const r = el.getBoundingClientRect(), c = this.cv || (this.cv = document.getElementById('view')), o = c ? c.getBoundingClientRect() : { left: 0, top: 0 };
+      this.spKey = k; this.spBox = { x: r.left - o.left, y: r.top - o.top, w: r.width, h: r.height };
+    }
+    return this.spBox;
+  }
+  // the fight: the track, your bar on it, the fish, the catch meter beside it (in the spot's box, screen px)
+  fight(g, sp, now, F, P) {
+    const tw = 34, x = sp.x + 8, y = sp.y + 8, th = sp.h - 16;
     const leg = this.S.me && this.S.me.fishing && this.S.me.fishing.leg;
     g.save();
-    g.fillStyle = 'rgba(14,24,34,.82)'; rr(g, x - 8, y - 8, tw + 40, th + 16, 8); g.fill();
-    g.strokeStyle = leg ? '#ffd34a' : '#c8a060'; g.lineWidth = 2; rr(g, x - 8, y - 8, tw + 40, th + 16, 8); g.stroke();
+    g.fillStyle = 'rgba(14,24,34,.82)'; rr(g, sp.x, sp.y, sp.w, sp.h, 8); g.fill();
+    g.strokeStyle = leg ? '#ffd34a' : '#c8a060'; g.lineWidth = 2; rr(g, sp.x, sp.y, sp.w, sp.h, 8); g.stroke();
     // the water in the track
     const wg = g.createLinearGradient(0, y, 0, y + th); wg.addColorStop(0, '#2a6a9a'); wg.addColorStop(1, '#0e2a44');
     g.fillStyle = wg; g.fillRect(x, y, tw, th);
