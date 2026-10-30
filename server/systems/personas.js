@@ -216,7 +216,12 @@ export const PERSONAS = {
   fisher:   { arche: 'casual', look: 'fisher', where: 'beach:2 harbor:3 park:1', day: 2, night: 0.7, fish: true },
   // the world concepts' people the city hadn't met yet (the owner's notes 2)
   lifeguard: { arche: 'athlete', look: 'lifeguard', where: 'beach:4', day: 1.5, night: 0, cap: 2 },
-  postal:   { arche: 'casual', look: 'postal', speed: 0.9, where: 'houses:2 apartments:2 commercial:2 oldtown:2 civic:1 luxury:1', day: 1.2, night: 0, cap: 1 },
+  postal:   { arche: 'casual', look: 'postal', speed: 0.9, where: 'houses:2 apartments:2 commercial:2 oldtown:2 civic:1 luxury:1', day: 1.2, night: 0, cap: 1, mail: true },
+  // people at their jobs (batch 8, the owner's notes 2: "You can see NPCs performing their jobs like street sweepers or
+  // construction workers or mailmen"): the mail carrier walks a round of the mailboxes (mail), the street sweeper pushes
+  // a broom along the pavement and back (sweep), the gardener kneels at the planters and hedges (tend); the road crew and
+  // the building sites' crews are activities.js's
+  sweeper:  { arche: 'casual', look: 'sweeper', pp: 'broom', speed: 0.55, where: 'commercial:2 civic:2 towers:2 oldtown:2 apartments:1 park:1 nightlife:1 arts:1', day: 1.2, night: 0.2, cap: 1, sweep: true },
   courier:  { arche: 'athlete', look: 'courier', speed: 1.15, where: 'commercial:2 towers:2 apartments:1 nightlife:2 civic:1', day: 1, night: 1, cap: 2 },
   chef:     { arche: 'casual', look: 'chef', gt: 'lean', where: 'commercial:1 nightlife:2 oldtown:1 redlight:1', day: 0.5, night: 0.8, cap: 1, lean: true },
   server:   { arche: 'casual', look: 'server', where: 'commercial:1 beach:1 oldtown:1', day: 0.6, night: 0.3, cap: 1 },
@@ -224,7 +229,7 @@ export const PERSONAS = {
   tennis:   { arche: 'athlete', look: 'tennis', where: 'luxury:2 park:1', day: 0.8, night: 0, cap: 2 },
   cyclist:  { arche: 'athlete', look: 'cyclist', jog: true, where: 'park:2 beach:2 luxury:1', day: 1, night: 0, cap: 2 },
   valet:    { arche: 'casual', look: 'valet', where: 'towers:2 luxury:1 nightlife:1', day: 0.6, night: 1, cap: 1 },
-  gardener: { arche: 'casual', look: 'gardener', speed: 0.8, where: 'houses:2 luxury:2 park:1', day: 1, night: 0, cap: 1 },
+  gardener: { arche: 'casual', look: 'gardener', speed: 0.8, where: 'houses:2 luxury:2 park:1', day: 1, night: 0, cap: 1, tend: true },
   wedding:  { arche: 'casual', look: 'groom', partner: 'bride', where: 'civic:1 oldtown:1 park:1', day: 0.15, night: 0.05, pair: true, cap: 1 },
   leaner:   { arche: 'casual', look: 'casual', gt: 'lean', where: 'commercial:2 apartments:2 southside:2 nightlife:2 towers:1 oldtown:1 redlight:1', day: 1, night: 1.4, lean: true },
 };
@@ -234,8 +239,8 @@ export const PERSONA_SHARE = { day: 0.3, night: 0.22 };   // of the townsfolk wh
 const CAP_R = 1400;
 
 // ---- benches and landmarks (the map's props), by 512 px cell ---------------------------------------------------------------
-const CAT = { bench_m: 'b', bench_a: 'b', bench_b: 'b', pbench: 'b', fountain: 'm', statue: 'm', mapboard: 'm', gazebo: 'm', ferris: 'm', foodcart: 'c', pierrail: 'p', pier: 'p', fishtable: 'p', rods: 'p' };
-const BENCH = 'b', MARK = 'm', CART = 'c', PIER = 'p';
+const CAT = { bench_m: 'b', bench_a: 'b', bench_b: 'b', pbench: 'b', fountain: 'm', statue: 'm', mapboard: 'm', gazebo: 'm', ferris: 'm', foodcart: 'c', pierrail: 'p', pier: 'p', fishtable: 'p', rods: 'p', mailbox: 'x', trashcan: 't', planter_fl: 'g', planter_g: 'g', planter_sq: 'g', hedgebox: 'g' };
+const BENCH = 'b', MARK = 'm', CART = 'c', PIER = 'p', MAILBOX = 'x', BIN = 't', GARDEN = 'g';
 const IDX = new WeakMap();
 function propsNear(map, x, y, r, cat) {
   let ix = IDX.get(map);
@@ -502,12 +507,22 @@ export function steer(world, ped, now) {
     ped.sitBench = false; ped.appVer = (ped.appVer || 0) + 1; n.bench = null; n.persona = 'texter'; ped.pp = rng() < 0.5 ? 'phone' : null; if (!ped.pp) n.persona = null;
     return null;
   }
+  if (P.mail || P.tend) { const r = rounds(world, ped, n, P, now); if (r) return r; }
+  if (P.sweep) { const r = sweeping(world, ped, n, now); if (r) return r; }
   if (P.camp && n.camp) {   // round his camp: pushing the cart a little way, then sitting by it a good while
     if (ped.sit) { if (now < n.upAt) { ped.vx = ped.vy = 0; return { inp: NO_INPUT, factor: 0.55 }; } ped.sit = false; ped.appVer = (ped.appVer || 0) + 1; }
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10 || now > (n.until || 0)) {
+      if (n.bin) {   // at a bin: a rummage through it a while, now and then a word to himself
+        const b = n.bin; n.bin = null; ped.a = Math.atan2(b.y - ped.y, b.x - ped.x); n.until = now + 5 + rng() * 5; n.wx = ped.x; n.wy = ped.y;
+        if (rng() < 0.25) world.emit(ped.x, ped.y, { e: 'say', id: ped.id, x: ped.x, y: ped.y, text: pick(rng, ['Anything good in here...', 'Cans, cans...', 'Ha! Half a sandwich.']) });
+        return { inp: NO_INPUT, factor: 0.55 };
+      }
       if (rng() < 0.35) { ped.sit = true; n.upAt = now + 20 + rng() * 40; ped.appVer = (ped.appVer || 0) + 1; return { inp: NO_INPUT, factor: 0.55 }; }
-      const s = spotNear(world, n.camp.x, n.camp.y, 20, 140) || n.camp; n.wx = s.x; n.wy = s.y; n.until = now + 14;
+      const bins = rng() < 0.45 ? propsNear(world.map, n.camp.x, n.camp.y, 320, BIN) : [];   // (a bin on his round: he goes through it - batch 8)
+      const bin = bins.length ? bins[Math.floor(rng() * bins.length) % bins.length] : null, bs = bin && standBy(world.map, bin);
+      if (bs) { n.wx = bs.x; n.wy = bs.y; n.until = now + 20; n.bin = bin; } else { const s = spotNear(world, n.camp.x, n.camp.y, 20, 140) || n.camp; n.wx = s.x; n.wy = s.y; n.until = now + 14; }
     }
+    if (n.bin && now > n.until) n.bin = null;
     return { inp: seekTo(ped, n.wx, n.wy), factor: 0.45 };
   }
   if (P.bumps && now >= (n.bumpAt || 0)) {   // eyes on the phone: walks into people
@@ -523,11 +538,78 @@ export function steer(world, ped, now) {
   return null;
 }
 
+// ---- people at their jobs (batch 8) ------------------------------------------------------------------------------------------
+// where to stand at a prop (a mailbox, a bin, a planter): open ground beside it, facing it
+function standBy(map, q) {
+  for (const r of [24, 34, 46]) for (const [dx, dy] of [[0, r], [0, -r], [r, 0], [-r, 0]]) if (walkable(map, q.x + dx, q.y + dy) && walkable(map, q.x + dx * 1.4, q.y + dy * 1.4)) return { x: q.x + dx, y: q.y + dy, a: Math.atan2(-dy, -dx) };   // (clear of the prop's own footprint)
+  return null;
+}
+// the stops of a round from (x, y): the mailboxes (mail) or the planters and hedges near, nearest next each time, up to six
+export function roundFrom(map, x, y, mail) {
+  const L = propsNear(map, x, y, 700, mail ? MAILBOX : GARDEN), out = [];
+  let at = { x, y };
+  while (out.length < 6 && L.length) {
+    let bi = 0; for (let i = 1; i < L.length; i++) if (Math.hypot(L[i].x - at.x, L[i].y - at.y) < Math.hypot(L[bi].x - at.x, L[bi].y - at.y)) bi = i;
+    const q = L.splice(bi, 1)[0], st = standBy(map, q);
+    if (st && !out.some((o) => Math.hypot(o.x - st.x, o.y - st.y) < 40)) out.push(st);
+    at = q;
+  }
+  return out;
+}
+// a round of the props near: the mail carrier's mailboxes (letters held out at each), the gardener's planters and hedges
+// (down on a knee at each a while) - the nearest next each time, up to six; then a stroll before the next round
+function rounds(world, ped, n, P, now) {
+  if (!n.round) {
+    if (now < (n.roundAt || 0)) return null;
+    const out = roundFrom(world.map, ped.x, ped.y, !!P.mail);
+    if (!out.length) { n.roundAt = now + 30; return null; }
+    n.round = out; n.ri = 0; n.stopAt = 0;
+  }
+  const q = n.round[n.ri];
+  if (!n.stopAt) {
+    if (Math.hypot(q.x - ped.x, q.y - ped.y) > 12) {
+      n.legAt ||= now;
+      if (now - n.legAt > 40) { n.legAt = 0; n.ri++; if (n.ri >= n.round.length) { n.round = null; n.roundAt = now + 20; } return null; }   // (can't get there: on to the next)
+      return { inp: seekTo(ped, q.x, q.y, 0.9), factor: 0.5 };
+    }
+    n.legAt = 0;
+    n.stopAt = now + (P.mail ? 2 + rng() * 1.5 : 8 + rng() * 8);
+    if (P.mail) ped.pp = 'letters'; else ped.gt = 'kneel';
+    ped.appVer = (ped.appVer || 0) + 1;
+  }
+  ped.vx = ped.vy = 0; ped.a = q.a;
+  if (now < n.stopAt) return { inp: NO_INPUT, factor: 0.55 };
+  if (P.mail) ped.pp = null; else ped.gt = null;
+  ped.appVer = (ped.appVer || 0) + 1;
+  n.stopAt = 0; n.ri++;
+  if (n.ri >= n.round.length) { n.round = null; n.roundAt = now + 15 + rng() * 20; }
+  return { inp: NO_INPUT, factor: 0.55 };
+}
+// the street sweeper: along a stretch of the pavement and back, slowly, the broom out in front; a pause at each end
+function sweeping(world, ped, n, now) {
+  if (!n.sweep) {
+    const a0 = Math.floor(rng() * 4);
+    for (let k = 0; k < 4 && !n.sweep; k++) {
+      const a = ((a0 + k) % 4) * Math.PI / 2, d = 110 + rng() * 90, x = ped.x + Math.cos(a) * d, y = ped.y + Math.sin(a) * d;
+      let ok = true; for (let t = 0.25; t <= 1 && ok; t += 0.25) ok = walkable(world.map, ped.x + Math.cos(a) * d * t, ped.y + Math.sin(a) * d * t);
+      if (ok) n.sweep = { p: [{ x: ped.x, y: ped.y }, { x, y }], i: 1, rest: 0, legs: 0 };
+    }
+    if (!n.sweep) return null;
+  }
+  const S = n.sweep, q = S.p[S.i];
+  if (S.rest) { ped.vx = ped.vy = 0; if (now < S.rest) return { inp: NO_INPUT, factor: 0.55 }; S.rest = 0; S.i = 1 - S.i; if (++S.legs > 6) n.sweep = null; return { inp: NO_INPUT, factor: 0.55 }; }
+  if (Math.hypot(q.x - ped.x, q.y - ped.y) < 8) { S.rest = now + 2 + rng() * 3; return { inp: NO_INPUT, factor: 0.55 }; }
+  return { inp: seekTo(ped, q.x, q.y, 0.7), factor: 0.35 };
+}
+
 // ---- every tick: the walked dogs at heel (out in front on their leads), the persona props on the descriptor ---------------
 const LEAD = [[24, -8], [27, 0], [24, 8]];   // where each dog trots, in front of the walker (ahead, to the side) - the leads in
                                              // the walker's sprite (people.js 'leads') end here
 export function update(world, dt) {
   for (const dog of world.entities.values()) {
+    if (dog.kind === K.PED && dog.npc && dog.npc.stopAt && (dog.dead || (dog.npc.state !== 'wander' && dog.npc.state !== 'idle'))) {   // (at a mailbox or a planter when trouble came: up and off)
+      dog.npc.stopAt = 0; dog.npc.round = null; if (dog.pp === 'letters') dog.pp = null; if (dog.gt === 'kneel') dog.gt = null; dog.appVer = (dog.appVer || 0) + 1;
+    }
     if (dog.kind === K.PED && dog.fishing && dog.fishing.npc && dog.npc && (dog.dead || (dog.npc.state !== 'wander' && dog.npc.state !== 'idle'))) dog.fishing = null;   // (trouble: the rod goes down)
     if (dog.kind !== K.PED || !dog.pet || !dog.pet.walked) continue;
     const w = world.get(dog.pet.walked);

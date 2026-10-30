@@ -3507,7 +3507,7 @@ function drawWaterGlints(view, now) {
 
 function drawCrateEnt(c, now) {
   let lift = (c.flags & 3) === 0 ? c.hp * 64 : (c.flags & 3) === 1 ? 26 : 0;
-  if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = vehLift(pd) / 0.6 + 4; } // on the bed: up with the body
+  if ((c.flags & 3) === 2) { const par = S.ents.get(c.parent); const pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = vehLift(pd) / 0.6 + 4 + c.hp * 64; } // on the bed: up with the body (a forklift's forks: up with them)
   g.save();
   if (lift > 1) { g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(c.rx + 3, c.ry + 3, 13, 10, 0, 0, 6.28); g.fill(); }
   g.translate(c.rx, c.ry - lift * 0.6);
@@ -4219,7 +4219,7 @@ function vehTurn(g, v, def) {
 }
 
 // how high a vehicle's body stands (world px of visible side wall)
-const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3, horse: 20 };   // (a horse: a crate rides up behind the saddle)
+const LIFT = { forklift: -2.4, bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3, horse: 20 };   // (a horse: a crate rides up behind the saddle)
 function vehLift(def) { return def.kind === 'boat' ? 3 : LIFT[def.id] ?? 7; }
 
 // rings on the water around a swimmer, plus a little splash while they paddle

@@ -104,6 +104,9 @@ import * as paramedic from './systems/paramedic.js';
 import * as taxijob from './systems/taxijob.js';
 import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
+import * as forklift from './systems/forklift.js';
+import * as fishboat from './systems/fishboat.js';
+import * as rangerjob from './systems/rangerjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 
@@ -207,6 +210,9 @@ const SYSTEMS = [
   ['taxijob', taxijob.update],      // taxi drivers' fares: hailing, aboard, the meter, the tip (H72)
   ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
   ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
+  ['forklift', forklift.update],    // forklift drivers: the forks up and down, the pallets on them, the bays (batch 8)
+  ['fishboat', fishboat.update],    // fishing boat skippers: the net trawled, the pots hauled, the boxes on deck (batch 8)
+  ['rangerjob', rangerjob.update],  // park rangers' tasks: the trail, the litter, a campfire left burning, a lost hiker (batch 8)
   ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
   ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors - last, so it sees
                                     // what every other system did this tick (a subject taken away: off them before it's sent)

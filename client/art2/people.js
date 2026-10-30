@@ -2024,6 +2024,10 @@ Object.assign(POSES, { cue: 4 });
 // climbkit (a climber's rope in a coil, a helmet and the chalk bag laid out by them), rope (the rope coiled over a
 // climber's shoulder, its end run up the rock in front)
 CARRY.push('binoculars', 'poles', 'radio', 'basket', 'kayak', 'tripod', 'tackle', 'campstove', 'climbkit', 'rope');
+// people at their jobs (batch 8, server personas.js): broom (a street sweeper's push broom, swept along in front), letters (a
+// mail carrier's letters held out at a mailbox)
+CARRY.push('broom', 'letters');
+Object.assign(ACC_HANDS, { broom: 2, letters: 1 });
 Object.assign(ACC_HANDS, { binoculars: 2, radio: 1, basket: 1, kayak: 2 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
 // in the air over the board: knees tucked up (the feet `up` over the ankles' height), arms out; the deck drawn apart (P.deck)
@@ -2250,6 +2254,8 @@ function accHands2(D, P, S, acc) {
   if (acc === 'binoculars') { P.hR = vadd(S.head, mv(S.HD, [1.3, 2.6, -0.5])); P.hL = vadd(S.head, mv(S.HD, [-1.3, 2.6, -0.5])); P.elR = [1, -0.1, -0.7]; P.elL = [-1, -0.1, -0.7]; return true; }   // (a birder's, up at the eyes)
   if (acc === 'radio') { P.hR = vadd(S.neck, mv(S.SP, [2.8, 2.8, 3.6])); P.elR = [1, -0.2, -1]; P.headYaw += 0.1; return true; }   // (a ranger's, a word on it)
   if (acc === 'basket') { P.hL = vadd(S.shL, [-2.2, 3.4, -r * 0.52]); P.elL = [-1, -0.3, -0.7]; return true; }   // (on the crook of the arm)
+  if (acc === 'broom') { const k = P.breath * 3; P.hR = [2.4, 8.6 + k, 17]; P.hL = [-0.8, 5.0 + k, 24.5]; P.elR = [1, -0.4, -0.5]; P.elL = [-1, -0.4, -0.4]; P.lean += 0.12; P.headPitch += 0.15; return true; }
+  if (acc === 'letters') { P.hR = vadd(S.chest, mv(S.SP, [2.4, 8.2, -0.8])); P.elR = [1, -0.4, -0.4]; return true; }
   if (acc === 'kayak') { P.hR = vadd(S.shR, [0.6, 1.0, 2.6]); P.elR = [1, 0.2, -0.3]; P.hL = vadd(S.shL, [-1.8, 2.6, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; return true; }   // (the cockpit's rim up on the shoulder; the paddle)
   return false;
 }
@@ -2292,6 +2298,11 @@ function figure365(B, C, E, D, P, S, acc) {
     for (const s of [-1, 1]) for (const y of [CART_Y + 2.4, CART_Y + 16.6]) { C([s * 4.6, y, 14], [s * 4.6, y, 2], 0.45, 0.45, GR.ACC, 'cartleg', M365.metal); E([s * 4.6, y, 1.3], I, [0.6, 1.3, 1.3], GR.ACC, 'wheel', M365.rubber); }
     B([0, CART_Y + 9.0, 24.8], I, [5.4, 7.0, 1.4], GR.ACC, 'blanket', M365.blanket);
     E([2.4, CART_Y + 13, 26.2], I, [2.4, 2.2, 2.4], GR.ACC, 'bag', M365.bag);
+  } else if (acc === 'broom') {   // the shaft from the upper hand down through the lower to the head on the ground ahead
+    const h = [0.6, 18 + P.breath * 3, 1.2];
+    C(S.haL, h, 0.4, 0.4, GR.ACC, 'broomh', M365.wood); B(h, I, [5.2, 1.0, 1.0], GR.ACC, 'broomb', M365.dark);
+  } else if (acc === 'letters') {   // a little bundle of white envelopes
+    B(vadd(S.haR, [0, 1.0, 0.8]), I, [1.6, 0.4, 1.1], GR.ACC, 'letters', MAT('#f4f0e6'));
   } else if (acc === 'leads') {   // three leads from the hand down to the dogs' collars, out in front
     for (const [x, y] of [[-8, 21], [0, 24], [8, 21]]) C(hR, [x, y, 5.4], 0.42, 0.42, GR.ACC, 'lead', M365.lead);
   } else if (acc === 'guitar') {   // held across the body: the body low at the right, the neck up to the left hand

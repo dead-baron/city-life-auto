@@ -53,6 +53,11 @@ export function update(world, dt) {
 }
 
 function stepGroundCrate(world, c, dt) {
+  if (c.on) {   // (stacked on another - a forklift's pallet in its bay: forklift.js - it stays up while that one's under it)
+    const b = world.get(c.on);
+    if (b && !b.removed && b.state === 'ground' && Math.abs(b.x - c.x) < 12 && Math.abs(b.y - c.y) < 12) { c.vx = c.vy = c.vz = 0; return; }
+    c.on = 0;
+  }
   const airborne = c.z > 0 || c.vz !== 0;
   if (airborne) {
     c.vz -= GRAV * dt;
@@ -132,7 +137,7 @@ export function loadCrate(world, ped, v, i) {
 export function nearestCrate(world, ped) {
   let best = null, bd = 44 * 44;
   for (const c of world.query(ped.x, ped.y, 160, K.CRATE)) {
-    if (c.state === 'carried') continue;
+    if (c.state === 'carried' || c.heavy || c.litter) continue;   // (a pallet: the forklift's - forklift.js; a ranger's litter: rangerjob.js)
     if (c.state === 'loaded') {
       const v = world.get(c.parent);
       if (!v || Math.hypot(v.vx, v.vy) > 60) continue;

@@ -94,6 +94,9 @@ export const VEHICLES = {
   // ---- the farm's tractor and combine (H61, farming.js): driven down a row they plough, sow or harvest it
   tractor:   { i: 48, name: 'Furrowmaster Tractor', kind: 'car', L: 84, W: 54, max: 250, accel: 170, brake: 600, rev: 110, turn: 2.0, grip: 11, drift: 6, mass: 3.2, hp: 900, seats: 1, slots: [[-34, 0]], rough: 0.08 },
   combine:   { i: 49, name: 'Reaper Combine Harvester', kind: 'car', L: 150, W: 120, max: 190, accel: 110, brake: 500, rev: 80, turn: 1.4, grip: 12, drift: 8, mass: 6, hp: 1400, seats: 1, slots: [[-60, 0]], rough: 0.08 },
+  // the forklift (batch 8: server forklift.js): the forks out in front - its one cargo slot, a pallet on them; the forks'
+  // height rides the wire (net.js); model in client/art2/fleet.js
+  forklift:  { i: 85, name: 'Forklift',         kind: 'car',  L: 56,  W: 32, max: 240, accel: 210, brake: 640, rev: 170, turn: 3.4, grip: 9.5, drift: 1.4, mass: 1.6, hp: 260, seats: 1, slots: [[41, 0]], sprite: 'golfcart' },
   // ---- the fleet of batch 4 (the owner: "Add more vehicle and boat types", "more helicopter and plane looks"): their
   // models in client/art2/fleet.js (loaded when one is first seen); sprite: the classic view's stand-in. Where they turn
   // up: server traffic.js (by district), boats.js and the marinas (big water only), aircraft.js, airtraffic.js.

@@ -231,6 +231,12 @@ export function spotsOf(map) {
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  // the building sites (a building of kind 'construction': the frame going up) - a crew at work out front (batch 8)
+  for (const b of map.buildings || []) {
+    if (!b || b.kind !== 'construction') continue;
+    const x = (b.tx + b.tw / 2) * TILE, y = (b.ty + b.th) * TILE + 30;
+    if (walkable(map, x - 30, y) && walkable(map, x + 30, y) && clear(x, y, 140)) { list.push({ k: 'site', x, y, a: -Math.PI / 2, wild: false }); taken.push({ x, y }); }
+  }
   // the walk-ups' front steps (a hand plan's walk-up with a home behind its door, its front to the camera)
   for (const b of map.buildings || []) {
     if (!b || !b.hand || b.arch !== 'walkup' || b.back || !b.door || b.home === undefined) continue;
@@ -378,6 +384,12 @@ function members(s) {
     out.push({ x: s.x - 14, y: s.y, a: 0, arche: 'construction', chop: true });
     out.push({ x: s.x + 14, y: s.y + 4, a: Math.PI, arche: 'construction', gt: 'kneel' });
     out.push({ x: s.x + 6, y: s.y + 40, a: -Math.PI / 2, arche: 'construction', watch: true });
+  } else if (s.k === 'site') {      // a building site: two at the frame with picks and hammers, one down on a knee, one carrying a crate, the foreman
+    out.push({ x: s.x - 26, y: s.y - 10, a: -Math.PI / 2, arche: 'construction', chop: true });
+    out.push({ x: s.x + 22, y: s.y - 12, a: -Math.PI / 2, arche: 'construction', chop: true });
+    out.push({ x: s.x, y: s.y - 6, a: -Math.PI / 2, arche: 'construction', gt: 'kneel' });
+    out.push({ x: s.x + 40, y: s.y + 20, a: Math.PI, arche: 'construction', pp: 'crate', patrol: [{ x: s.x + 40, y: s.y + 20 }, { x: s.x - 40, y: s.y + 20 }] });
+    out.push({ x: s.x - 50, y: s.y + 34, a: -Math.PI / 4, arche: 'construction', watch: true });
   } else if (s.k === 'stoop') {     // one or two sat on the steps facing the street; now and then one stood by for a word
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });

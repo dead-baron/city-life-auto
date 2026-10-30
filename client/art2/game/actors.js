@@ -1,40 +1,8 @@
-// Art v2 live renderer: actors (docs/art-v2/GAME-RENDERER.md "Actors"). Pure, deterministic sprite
-// providers for everything that moves - vehicles, boats, animals, crates, bags, balls, projectiles,
-// trains and particles. Worker-safe: no DOM, no WebGL. Every sprite is a fresh G-buffer
-// { w, h, ax, ay, col, nrm, z, emi, flag } (trimmed to its pixels) whose anchor (ax, ay) is the thing's
-// ground point and whose z is the true height above it; the engine adds the ground height (a deck, a bed).
-// Headings: index hi of N means angle hi * 2pi / N, 0 east, + toward south (e.ra). dir8: 0 S, 1 SW, 2 W,
-// 3 NW, 4 N, 5 NE, 6 E, 7 SE.
-//
-//   vehicleKey(d, st, hi, N) / vehicleSprite(d, st, hi, N)   d = spawn descriptor {m, p, vr, tn}; st = {wreck,
-//       burn, lights, siren (0 | 1 red phase | 2 blue phase | true both), brake, rev, bloody, dmg (stage 0-4), zones,
-//       holes, off, cut, half ('a' | 'b': one half of a car cut in two)}; vehState(flags, phase, hp, dw) builds st from
-//       the wire VF bits and the damage word (task #402). Anchor = the vehicle's centre on the ground.
-//   vehicleLights(d) -> { L, W, H, kind, head, tail, brake, rev: [[x,y,z]], siren: [[x,y,z,c]] (c 0 red,
-//       1 blue, 2 amber), seat, exhaust: [x,y,z], fire: [[x,y,z]], wake: [x,y], bed (cargo floor z) }, local
-//       coordinates at heading 0 (+x forward, +y right, z up, origin the centre on the ground)
-//   wakeKey / wakeSprite(d, hi, N, frame)   a boat's foam (4 looping frames), drawn under the hull
-//   animalKey / animalSprite(kind, pose, dir8, frame)   kind 'pet:<art>' or any animals.js kind; poses and
-//       frame counts in ANIMAL_FRAMES (idle 4, walk 4, run 4, sit 2, lie 2, graze 2)
-//   crateKey / crateSprite(tier 1-4, label, hi = 0, N = 16)   (labels: 'Produce Box', 'Explosives', 'Firewood')
-//   bagKey / bagSprite(tier 0-4, hi, N)   ballKey / ballSprite(t 0 soccer | 1 volleyball, spin 0-3)
-//   projKey / projSprite(w, hi, N)   the rocket in flight (body at z ~14, exhaust glowing)
-//   trainKey / trainCarSprite(c, mode, hi, N)   c = TRAIN_CARS index (or {kind, L, W}); mode 'roof' | 'in'
-//       (+ '-lit', '-empty', '-doors'); trainLights(c) -> head lamps and window light points
-//   fxKey / fxSprite(name, frame), fxInfo(name), FX_NAMES   every client/art2/fx.js effect (.light on frames
-//       that light their surroundings); muzzleSprite(size, hi, N, frame), tracerSprite(kind, hi, N, frame),
-//       SHOT_FX[weapon index] -> [muzzle size, tracer kind]
-//   FX_FOR_V1[v1 particle type] = { name, frames } (+ .decal, .event tables), v1ParticleFx / v1ParticleFrame,
-//       v1DecalFx / v1DecalFrame: the v1 pooled particles and decals onto art2 frames
-//   critterKey / critterSprite(kind, frame, left), critterInfo(kind), critterShadow(r)   ambient birds etc.
-//   rideKey / rideSprite(kind, v)   the rides (shared/rides.js): 'cab' a Ferris wheel gondola (colour v 0-3; anchor
-//       the ground point under its floor), 'balloon' a balloon on a flight (palette v 0-3, burner lit; anchor under
-//       the basket)
-//   useArt({ ferrisCab, hotAirBalloon, starfish })   their art (props-park.js, props-rural.js, props-wild.js), handed
-//       in by the bake workers (worker.js) - the page's renderer uses this module only for the sprite keys
-//   SPRITES / KEYS   one table per kind for the workers: SPRITES[kind](...args), KEYS[kind](...args)
-//   clearActorCaches(), setActorBudget({ modelMB | lowMem })   the model caches (vehicles are kept packed,
-//       compactVox / renderCompact: 6 bytes a voxel; default 48 MB of vehicle models, 16 MB on lowMem)
+// Art v2 live renderer: actors (docs/art-v2/GAME-RENDERER.md "Actors"). Pure, deterministic, worker-safe sprite
+// providers for everything that moves - vehicles, boats, animals, crates, bags, balls, projectiles, trains, particles,
+// critters, rides. A sprite is a trimmed G-buffer { w, h, ax, ay, col, nrm, z, emi, flag }, anchored at its ground
+// point, z its true height. Headings: hi of N = hi * 2pi / N, 0 east, + toward south; dir8: 0 S .. 7 SE. Each kind has
+// a key and a sprite function (SPRITES / KEYS: the workers' tables); vehState builds a vehicle's state from the wire.
 import { GBuf, F_NOCAST, F_GLASS, hash, bayer, norm, cutGBuf } from '../gbuf.js';
 import { Vox } from '../voxel.js';
 import { ramp, MAT } from '../palette.js';
@@ -246,7 +214,7 @@ export function vehState(flags, sirenPhase = 1, hp = 1, dw = 0) {
 // (holes in steps of 0-3 and the zones only where they show: a few damage looks per model, cached like the other states)
 function normSt(st = {}, t = '') {
   const s = { tip: t === 'cart' && !!st.tip, wreck: !!st.wreck, burn: !!st.burn, lights: !!st.lights, siren: st.siren === true ? 3 : st.siren | 0, brake: !!st.brake, rev: !!st.rev, bloody: !!st.bloody, dmg: st.dmg === true ? 3 : Math.max(0, Math.min(4, st.dmg | 0)), tow: Math.max(-2, Math.min(2, st.tow | 0)),
-    zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '', reel: t === 'combine' ? ((st.reel | 0) % 3 + 3) % 3 : 0 };
+    zones: (st.zones | 0) & 15, holes: Math.min(3, Math.ceil((st.holes | 0) / 2)), off: (st.off | 0) & 63, cut: (st.cut | 0) & 255, half: st.half === 'a' || st.half === 'b' ? st.half : '', reel: t === 'combine' ? ((st.reel | 0) % 3 + 3) % 3 : t === 'forklift' ? (st.reel | 0) & 3 : 0 };
   if (!s.dmg) { s.zones = 0; s.off = 0; }
   if (s.dmg && !s.zones) s.zones = 1;
   if (!s.cut) s.half = '';
@@ -398,6 +366,21 @@ function crateModel(tier, label) {
     const m = objModel(26, 22, 16), bark = m.mat({ ramp: RP('#5a3a22'), k: 3, shade: (x, y, z) => (hash(x >> 1, (y + z) | 0, 9) - 0.5) * 0.9 }), end = m.mat({ ramp: RP('#d0a066', 5, 3), k: 3 }), pith = m.mat({ ramp: RP('#9a6a3a'), k: 2 }), rope = m.mat({ ramp: RP('#c8b07a'), k: 3 });
     for (const [y, z] of [[5, 3.6], [11, 3.6], [17, 3.6], [8, 9.6], [14, 9.6]]) { m.cyl('x', 0, y, z, 3.4, 2, 24, bark); for (const x of [2, 23]) m.cyl('x', 0, y, z, 3.1, x, x + 1, end, 1.3, pith); }
     for (const x of [8, 16]) { m.box(x, 1, 0, x + 2, 2.2, 8, rope); m.box(x, 19.8, 0, x + 2, 21, 8, rope); m.box(x, 4, 12, x + 2, 18, 13.6, rope); }
+    return m;
+  }
+  if (label === 'Pallet') {   // batch 8's work (server forklift.js, fishboat.js, rangerjob.js): a pallet of wrapped cartons
+    const m = objModel(26, 24, 15), wood = m.mat({ ramp: RP('#b89060'), k: 3, shade: (x) => ((x | 0) % 5 === 0 ? -0.7 : 0) }), card = m.mat({ ramp: RP('#c09a64'), k: 3, shade: (x, y, z) => ((y | 0) % 11 === 0 || (z | 0) % 6 === 0 ? -0.9 : 0) }), tape = m.mat({ ramp: RP('#e8dcc0', 5, 3), k: 3 });
+    m.fill((x, y, z) => (z < 1 ? ((y | 0) % 8 < 3 ? wood : -1) : z < 2.4 ? (x < 3 || x > 23 || Math.abs(x - 13) < 1.5 ? wood : -1) : z < 3.4 ? ((y | 0) % 4 < 3 ? wood : -1) : x > 1.5 && x < 24.5 && y > 1.5 && y < 22.5 ? (Math.abs(x - 13) < 0.8 && z > 13 ? tape : card) : -1));
+    return m;
+  }
+  if (label === 'Fish Box') {   // a blue fish tray heaped with the catch on ice
+    const m = objModel(24, 18, 11), blue = m.mat({ ramp: RP('#2a6ab0'), k: 3 }), ice = m.mat({ ramp: RP('#e4f0f4', 5, 3), k: 3 }), fish = m.mat({ ramp: RP('#a8b8c4', 6, 3), k: 3, shade: (x, y) => ((x + y * 2) % 7 < 1 ? -1.2 : 0.4) });
+    m.fill((x, y, z) => { const e = Math.min(x - 1, 23 - x, y - 1, 17 - y); if (e < 0) return -1; if (e < 1.4 || z < 1.2) return blue; return z < 7 ? ice : z < 9.5 && (hash(x >> 1, y >> 1, 4) > 0.3) ? fish : -1; });
+    return m;
+  }
+  if (label === 'Litter') {   // a burst bin bag, a can and a crushed cup
+    const m = objModel(16, 14, 8), bag = m.mat({ ramp: RP('#2a2c30'), k: 2.4 }), can = m.mat({ ramp: RP('#c83030', 5, 3), k: 3 }), cup = m.mat({ ramp: RP('#f0ece0', 5, 3), k: 3 });
+    m.ell(6, 7, 3.4, 5, 4.4, 3.4, bag); m.cyl('x', 0, 11, 1.4, 1.4, 10, 14.5, can); m.box(11, 1.5, 0, 14, 4.5, 2.4, cup);
     return m;
   }
   if (label === 'Produce Box') {
@@ -596,7 +579,7 @@ function rocketModel() {
 }
 const OBJ_MODELS = new LRU(16);
 const objRender = (key, make, hi, N) => { const m = OBJ_MODELS.get(key, () => { const mm = make(); patchHidden(mm); return mm; }); return trimSprite(m.render(wrapHi(hi, N) * TAU / N, { dither: 0.3, px: ART_PX })); };
-const crateK = (tier, label) => (label === 'Produce Box' ? 'P' : label === 'Explosives' ? 'X' : label === 'Firewood' ? 'W' : Math.max(1, Math.min(4, tier | 0)));
+const crateK = (tier, label) => (label === 'Produce Box' ? 'P' : label === 'Explosives' ? 'X' : label === 'Firewood' ? 'W' : label === 'Pallet' ? 'L' : label === 'Fish Box' ? 'F' : label === 'Litter' ? 'T' : Math.max(1, Math.min(4, tier | 0)));
 export const crateKey = (tier, label = '', hi = 0, N = 16) => `c|${crateK(tier, label)}|${wrapHi(hi, N)}|${N}`;
 export function crateSprite(tier, label = '', hi = 0, N = 16) { return objRender('crate' + crateK(tier, label), () => crateModel(tier, label), hi, N); }
 export const bagKey = (tier, hi = 0, N = 16) => `g|${Math.max(0, Math.min(9, tier | 0))}|${wrapHi(hi, N)}|${N}`;

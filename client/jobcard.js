@@ -15,6 +15,9 @@ export const JOB_ICON = {
   medic: P('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>'),
   drive: P('<path d="M3 15l2-6h14l2 6v4H3z"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
   coast: P('<circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/>'),
+  forklift: P('<path d="M4 19V8h6l3 6v5M4 14h9M17 4v15M17 17h4"/><circle cx="6.5" cy="19" r="1.5"/><circle cx="11.5" cy="19" r="1.5"/>'),
+  fish: P('<path d="M3 12c3-5 9-6 13-2l5-3v10l-5-3c-4 4-10 3-13-2z"/><circle cx="8" cy="11" r="1"/>'),
+  ranger: P('<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3"/>'),
 };
 export const jobKind = (j) => (j.fly ? (j.kind === 'coast' ? 'coast' : 'fly') : JOB_ICON[j.kind] ? j.kind : j.kind === 'sar' || j.kind === 'charter' || j.kind === 'dusting' ? 'fly' : 'delivery');
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');

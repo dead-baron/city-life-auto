@@ -76,9 +76,13 @@ import * as paramedic from './systems/paramedic.js';
 import * as taxijob from './systems/taxijob.js';
 import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
+import * as forklift from './systems/forklift.js';
+import * as fishboat from './systems/fishboat.js';
+import * as rangerjob from './systems/rangerjob.js';
+import * as phone from './systems/phone.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'afoot', 'place', 'soccer', 'bath'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'forklift', 'fishboat', 'ranger', 'afoot', 'place', 'soccer', 'bath'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -845,6 +849,18 @@ function run(world, p, c, msg) {
     case 'cabjob': case 'busjob': case 'towjob': {   // driving for a living (H72): on the rota - a fare hailing beside you, the bus on its line, a car to tow
       const err = (c === 'cabjob' ? taxijob.devCab : c === 'busjob' ? busjob.devBus : towjob.devTow)(world, p);
       if (err) world.notify(p, `[dev] ${err}`, 'warn');
+      break;
+    }
+    case 'forklift': case 'fishboat': case 'ranger': {   // batch 8's jobs: to the nearest yard / fish market's quay / ranger station, on the job (ranger: msg.k the task)
+      if (!ped || ped.dead) break;
+      if (ped.vehId) vehicles.exitVehicle(world, ped);
+      const at = c === 'forklift' ? forklift.yardFor(world, ped.x, ped.y) : c === 'fishboat' ? (fishboat.marketFor(world, ped.x, ped.y) || {}).quay : rangerjob.baseFor(world, ped.x, ped.y);
+      const st = at && (standAt(world, at.x, at.y, 120) || standAt(world, at.x, at.y, 400));
+      if (st && !(p.job && p.job.type === c)) { if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y); ped.sub = false; ped.ug = 0; ped.x = st.x; ped.y = st.y; ped.lz = 0; ped.vx = ped.vy = 0; p.teleportAt = world.time; world.place(ped); }
+      const err = c === 'forklift' ? forklift.devFork(world, p, String(msg.k || '')) : c === 'fishboat' ? fishboat.devFish(world, p, String(msg.k || '')) : rangerjob.devRanger(world, p, String(msg.k || ''));
+      if (err) world.notify(p, `[dev] ${err}`, 'warn');
+      const t = c === 'ranger' && msg.go && p.job && p.job.task ? phone.jobTarget(world, p) : null, s2 = t && standAt(world, t.x + 50, t.y + 40, 200);   // (msg.go: a few steps from the ranger's task)
+      if (s2) { ped.x = s2.x; ped.y = s2.y; ped.vx = ped.vy = 0; p.teleportAt = world.time; world.place(ped); }
       break;
     }
     case 'medicjob': { const err = paramedic.devMedic(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the paramedic (H68): on the rota, a patient (msg.k 'minor' | 'serious') beside you

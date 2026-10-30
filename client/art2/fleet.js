@@ -9,9 +9,9 @@ import { MAT } from './palette.js';
 import { hash } from './gbuf.js';
 
 const { R, deco, shell, glassy, wheels, crateOn, carBody, thirdBrake, truckCab, chassis, truckRear, boxBody, roofKit, rescueBoat } = KIT;
-const DIMS = { convertible: [104, 50], lowrider: [112, 50], muscle: [104, 50], hothatch: [82, 46], jeep: [92, 50], movingvan: [132, 56], icecream: [114, 54], sailboat: [118, 40], pontoon: [112, 52], trawler: [150, 56], cabincruiser: [128, 50], rib: [88, 42] };
-const TALL = { convertible: 30, lowrider: 29, muscle: 30, hothatch: 31, jeep: 40, movingvan: 60, icecream: 64, sailboat: 96, pontoon: 34, trawler: 70, cabincruiser: 46, rib: 26 };
-const PAINT = { convertible: '#5ab0a8', lowrider: '#7a2a8a', muscle: '#d88a2a', hothatch: '#c8302c', jeep: '#5e6e3e', movingvan: '#e8702a', icecream: '#f2a6c0', sailboat: '#22305a', pontoon: '#2f8a86', trawler: '#a8342a', cabincruiser: '#22305a', rib: '#4a4c52' };
+const DIMS = { convertible: [104, 50], lowrider: [112, 50], muscle: [104, 50], hothatch: [82, 46], jeep: [92, 50], movingvan: [132, 56], icecream: [114, 54], sailboat: [118, 40], pontoon: [112, 52], trawler: [150, 56], cabincruiser: [128, 50], rib: [88, 42], forklift: [96, 32] };
+const TALL = { convertible: 30, lowrider: 29, muscle: 30, hothatch: 31, jeep: 40, movingvan: 60, icecream: 64, sailboat: 96, pontoon: 34, trawler: 70, cabincruiser: 46, rib: 26, forklift: 44 };
+const PAINT = { convertible: '#5ab0a8', lowrider: '#7a2a8a', muscle: '#d88a2a', hothatch: '#c8302c', jeep: '#5e6e3e', movingvan: '#e8702a', icecream: '#f2a6c0', sailboat: '#22305a', pontoon: '#2f8a86', trawler: '#a8342a', cabincruiser: '#22305a', rib: '#4a4c52', forklift: '#e8b018' };
 // the car bodies (vehicles.js carBody's spec: x along the length as a fraction of it)
 const BODY = {
   convertible: { belt: 17, nose: 13, tail: 15.5, hood: 0.64, boot: 0.24, roof: 17, wheels: [0.19, 0.8], wr: 7.5, seams: [0.52], lampW: 9, rf: 8, rr: 6, shoulder: 0.4, tailUp: 2 },
@@ -136,6 +136,30 @@ function movingVan(m, M, A, o) {
   A.fire.push([L * 0.4, cy, 30]);
 }
 
+// the forklift (batch 8: server forklift.js): the yellow body and its counterweight, the seat under the overhead guard, the
+// mast at the front and the carriage with its two tines - up the mast to o.reel's height (0 down, 1 carrying, 2 a pallet's
+// height up, 3 higher: the wire's fork stage, as the pallet on them is drawn). The body is the middle 56 px (its length in
+// play), the tines out in front of it to where the pallet sits (its cargo slot).
+const FORK_Z = [0, 2, 14, 22];
+function forklift(m, M, A, o) {
+  const W = m.d, cy = W / 2, x0 = 20, x1 = 76, fz = FORK_Z[(o.reel | 0) & 3];
+  m.box(x0, 4, 3, x0 + 12, W - 4, 19, M.body); m.box(x0, 5, 3, x0 + 2, W - 5, 17, M.dark);   // (the counterweight, its back)
+  m.box(x0 + 10, 5, 4, x1 - 10, W - 5, 13, M.body); m.box(x0 + 10, 5, 4, x1 - 10, W - 5, 6, M.lower);
+  m.box(x1 - 12, 7, 6, x1 - 8, W - 7, 16, M.dark);   // (the dash and the levers)
+  m.box(x0 + 22, cy - 6, 13, x0 + 30, cy + 6, 16, M.seat || M.dark); m.box(x0 + 21, cy - 6, 16, x0 + 23, cy + 6, 24, M.seat || M.dark);
+  for (const x of [x0 + 14, x1 - 12]) for (const y of [5, W - 7]) m.box(x, y, 13, x + 2, y + 2, 37, M.trim);
+  for (let x = x0 + 14; x <= x1 - 10; x += 4) m.box(x, 5, 36, x + 1, W - 5, 38, M.trim);
+  m.box(x0 + 14, 5, 36, x1 - 10, 7, 38, M.trim); m.box(x0 + 14, W - 7, 36, x1 - 10, W - 5, 38, M.trim);
+  m.box(x0 + 30, cy - 1.5, 38, x0 + 33, cy + 1.5, 41, M.amber);   // (the beacon)
+  for (const y of [7, W - 9]) m.box(x1 - 6, y, 2, x1 - 3, y + 2, 44, M.steel);   // (the mast)
+  m.box(x1 - 6, 7, 42, x1 - 3, W - 7, 44, M.steel);
+  m.box(x1 - 3, 6, fz + 1, x1, W - 6, fz + 11, M.dark);   // (the carriage, then the tines out to the front)
+  for (const y of [cy - 7, cy + 4]) m.box(x1, y, fz, m.w, y + 3, fz + 1.4, M.steel);
+  wheels(m, [x0 + 8, x1 - 12], 6, M, { width: 5, inset: 1 });
+  A.head.push([x1 - 4, 6, 30], [x1 - 4, W - 6, 30]); A.tail.push([x0, 7, 14], [x0, W - 7, 14]);
+  A.seat = [x0 + 26, cy, 16]; A.fire.push([x0 + 8, cy, 14]); A.bed = 1;
+}
+
 // ---- the boats ------------------------------------------------------------------------------------------------------
 // a hull: its plan narrowing to the bow from fraction bow of the length, its sides flaring to the deck at hz; the top
 // of the sides (the sheer, rising bowRise toward the bow) in top, a band in band from za to zb, below in low; the deck in
@@ -255,6 +279,7 @@ addModels({
   build(type, m, M, A, V, o) {
     if (BODY[type]) car(type, m, M, A, V, o);
     else if (type === 'movingvan') movingVan(m, M, A, o);
+    else if (type === 'forklift') forklift(m, M, A, o);
     else if (DIMS[type]) boat(type, m, M, A, V, o);
     else return false;
     return true;
