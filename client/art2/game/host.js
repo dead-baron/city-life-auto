@@ -1725,7 +1725,8 @@ export class World2 {
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
-    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
+    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);
+    if (def.id === 'forklift') st.reel = (v.extra >> 4) & 3;   // (the forks' height: server forklift.js)   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
     // a combine at work: its reel turning (a third of a bat a step, six steps a second) while it moves and a moment after
     if (def.id === 'combine' && !(f & VF.WRECK)) {
       const mv = Math.abs(v.rx - (v._rlx ?? v.rx)) + Math.abs(v.ry - (v._rly ?? v.ry));
@@ -2031,7 +2032,7 @@ export class World2 {
       for (const c of F.crates) {
         const st = c.flags & 3;
         let lift = st === 0 ? c.hp * 64 : st === 1 ? 26 : 0;
-        if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4; }
+        if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4 + c.hp * 64; }
         const tier = c.d.t, label = c.d.l || '', hi = quant(c.ra || 0, 16);
         const par = st === 2 ? S.ents.get(c.parent) : null;
         this._small('crate', A.crateKey(tier, label, hi, 16), [tier, label, hi, 16], c, c.rx, c.ry, this._z0(par || c, false) + lift * 0.6);

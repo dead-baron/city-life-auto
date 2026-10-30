@@ -96,6 +96,9 @@ import * as towjob from './towjob.js';
 import * as rigs from './rigs.js';
 import * as truckjob from './truckjob.js';
 import * as mailjob from './mailjob.js';
+import * as forklift from './forklift.js';
+import * as fishboat from './fishboat.js';
+import * as rangerjob from './rangerjob.js';
 import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
@@ -727,6 +730,8 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
+    const work = forklift.vehicleInteraction(world, p) || fishboat.vehicleInteraction(world, p);   // at a forklift's or the trawler's wheel (batch 8)
+    if (work) return work;
     return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
@@ -768,6 +773,8 @@ export function findInteraction(world, p) {
 
   const fellAct = felling.interaction(world, p);   // at a tree with a cutting tool: hold to fell it (felling.js)
   if (fellAct && (ped.chop || fellAct.log)) return fellAct;   // (cutting up a felled trunk, facing it: before the bundles lying by it)
+  const task = p.job && p.job.type === 'ranger' ? rangerjob.interaction(world, p) : null;   // a ranger's task: the litter, the campfire, the lost hiker (rangerjob.js)
+  if (task) return task;
   const crate = cargo.nearestCrate(world, ped);
   if (crate) { const theirs = !!(crate.owner && crate.owner !== p.pid); return { label: (crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`) + (theirs ? ' - Cargo theft' : ''), crime: theirs ? 'cargoTheft' : null, run: () => cargo.pickUp(world, ped, crate) }; }
   const lantern = lights.interaction(world, p);   // a lantern someone set down (lights.js)
@@ -815,6 +822,8 @@ export function findInteraction(world, p) {
   if (gate) return gate;
   const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
   if (door) return door;
+  const work = forklift.interaction(world, p) || fishboat.interaction(world, p) || rangerjob.interaction(world, p);   // a yard's forklifts, a fish market's quay, a ranger station: sign on (batch 8)
+  if (work) return work;
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);

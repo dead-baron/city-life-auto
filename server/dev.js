@@ -79,9 +79,14 @@ import * as towjob from './systems/towjob.js';
 import * as crazytaxi from './systems/crazytaxi.js';
 import * as truckjob from './systems/truckjob.js';
 import * as mailjob from './systems/mailjob.js';
+
+import * as forklift from './systems/forklift.js';
+import * as fishboat from './systems/fishboat.js';
+import * as rangerjob from './systems/rangerjob.js';
+import * as phone from './systems/phone.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -857,6 +862,18 @@ function run(world, p, c, msg) {
       break;
     }
     case 'cabhail': { const n = taxijob.playerHail(world, p); world.notify(p, `[dev] hail sent to ${n} cab driver(s)`, 'info'); break; }   // b8a: you hail a cab (the players' on duty)
+    case 'forklift': case 'fishboat': case 'ranger': {   // batch 8's jobs: to the nearest yard / fish market's quay / ranger station, on the job (ranger: msg.k the task)
+      if (!ped || ped.dead) break;
+      if (ped.vehId) vehicles.exitVehicle(world, ped);
+      const at = c === 'forklift' ? forklift.yardFor(world, ped.x, ped.y) : c === 'fishboat' ? (fishboat.marketFor(world, ped.x, ped.y) || {}).quay : rangerjob.baseFor(world, ped.x, ped.y);
+      const st = at && (standAt(world, at.x, at.y, 120) || standAt(world, at.x, at.y, 400));
+      if (st && !(p.job && p.job.type === c)) { if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y); ped.sub = false; ped.ug = 0; ped.x = st.x; ped.y = st.y; ped.lz = 0; ped.vx = ped.vy = 0; p.teleportAt = world.time; world.place(ped); }
+      const err = c === 'forklift' ? forklift.devFork(world, p, String(msg.k || '')) : c === 'fishboat' ? fishboat.devFish(world, p, String(msg.k || '')) : rangerjob.devRanger(world, p, String(msg.k || ''));
+      if (err) world.notify(p, `[dev] ${err}`, 'warn');
+      const t = c === 'ranger' && msg.go && p.job && p.job.task ? phone.jobTarget(world, p) : null, s2 = t && standAt(world, t.x + 50, t.y + 40, 200);   // (msg.go: a few steps from the ranger's task)
+      if (s2) { ped.x = s2.x; ped.y = s2.y; ped.vx = ped.vy = 0; p.teleportAt = world.time; world.place(ped); }
+      break;
+    }
     case 'medicjob': { const err = paramedic.devMedic(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the paramedic (H68): on the rota, a patient (msg.k 'minor' | 'serious') beside you
     case 'firejob': { const err = firefighter.devFire(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the firefighter (H68): on the crew, a call of kind msg.k beside you
     case 'policeair': {   // the police air unit (H66): up after you now - 3 stars at least; msg.near: already in the air close by

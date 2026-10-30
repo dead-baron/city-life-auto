@@ -60,7 +60,7 @@ export const ICON = {
 const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera']];
 const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Phone']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
-const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB' };
+const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;

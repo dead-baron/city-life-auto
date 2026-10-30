@@ -108,6 +108,9 @@ import * as rigs from './systems/rigs.js';
 import * as crazytaxi from './systems/crazytaxi.js';
 import * as truckjob from './systems/truckjob.js';
 import * as mailjob from './systems/mailjob.js';
+import * as forklift from './systems/forklift.js';
+import * as fishboat from './systems/fishboat.js';
+import * as rangerjob from './systems/rangerjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 
@@ -215,6 +218,9 @@ const SYSTEMS = [
   ['crazytaxi', crazytaxi.update],  // Crazy Taxi runs: the clock, the fares waving, the tips (b8a)
   ['truckjob', truckjob.update],    // truckers' hauls: the load, its knocks, the buyer (b8a)
   ['mailjob', mailjob.update],      // mail carriers' rounds (b8a)
+  ['forklift', forklift.update],    // forklift drivers: the forks up and down, the pallets on them, the bays (batch 8)
+  ['fishboat', fishboat.update],    // fishing boat skippers: the net trawled, the pots hauled, the boxes on deck (batch 8)
+  ['rangerjob', rangerjob.update],  // park rangers' tasks: the trail, the litter, a campfire left burning, a lost hiker (batch 8)
   ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
   ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors - last, so it sees
                                     // what every other system did this tick (a subject taken away: off them before it's sent)

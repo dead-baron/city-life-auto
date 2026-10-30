@@ -205,4 +205,9 @@ export const DEV_SECTIONS = [
   { id: 'drive', title: '🚕 Taxi, bus, tow truck, trucker & mail', items: [
     ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'], ['🚖 Crazy Taxi: a run, me at the wheel', 'crazycab'], ['🚛 Trucker: a haul, the rig by me', 'haul'], ['📬 Mail round: the van', 'mailjob'], ['✉ Mail round: on foot', 'mailjob', { k: 'walk' }], ['✋ Hail a cab (players on duty)', 'cabhail'],
   ] },
+  // working for a living, batch 8 (server forklift.js, fishboat.js, rangerjob.js)
+  { id: 'work8', title: '🏗 Forklift, fishing boat & ranger', items: [
+    ['🏗 Forklift driver: the nearest yard, at the wheel', 'forklift'], ['🎣 Fishing boat: the trawler at the nearest quay', 'fishboat'],
+    ['🌲 Ranger: walk the trail', 'ranger', { k: 'patrol' }], ['🌲 Ranger: clear the litter', 'ranger', { k: 'litter' }], ['🌲 Ranger: a campfire left burning', 'ranger', { k: 'fire' }], ['🌲 Ranger: a lost hiker', 'ranger', { k: 'hiker' }],
+  ] },
 ];
