@@ -12,6 +12,7 @@
 //           red with sparks and smoke, a glow stick, a lantern. Their light is the renderer's (art2/game/host.js).
 import { K } from '../../shared/constants.js';
 import { TREE_SIZES, roundAlong } from '../../shared/felling.js';
+import { gameClock } from '../../shared/constants.js';
 const FALL_S = 1.2;   // (server felling.js FALL_S)
 const LEN = [0, 64, 104, 190, 330], CROWN = [0, 18, 26, 34, 56], TRUNK = [0, 3, 4, 6, 10];
 const BOUNCE_S = 0.38, SETTLE_S = 0.9, BOUNCE = 0.13;   // (up off the ground after it hits: how long, how high - radians)
@@ -23,7 +24,38 @@ export class CarryFx {
   fall(x, y, a, s, sp, i) {
     s = Math.max(1, Math.min(4, s | 0));
     if (this.logs.size > 40) this.logs.delete(this.logs.keys().next().value);
-    this.logs.set(i ?? -this.logs.size - 1, { x, y, a, s, m: (1 << (TREE_SIZES[s] ? TREE_SIZES[s].logs : 1)) - 1, t0: performance.now() / 1000, palm: !!sp });
+    this.logs.set(i ?? -this.logs.size - 1, { x, y, a, s, m: (1 << (TREE_SIZES[s] ? TREE_SIZES[s].logs : 1)) - 1, t0: performance.now() / 1000, palm: !!sp, i });
+    this.ask(i);
+  }
+  // (art v2) the tree's own picture as it stood - the bake workers make it (worker.js 'prop'), so what falls is the very
+  // tree that stood there; till it comes (and in the classic view) the trunk and crown are drawn in strokes
+  ask(i) {
+    const A = this.S.art2, pool = A && A.pool;
+    if (i == null || i < 0 || !pool || pool.dead || (this.spr ||= new Map()).has(i)) return;
+    this.spr.set(i, null);
+    if (this.spr.size > 24) this.spr.delete(this.spr.keys().next().value);
+    pool.request(`prop:${i}`, 'sprite', { kind: 'prop', key: `prop:${i}`, a: [i] }, -1, (r) => { if (r && r.g && r.g.w && this.spr.has(i)) this.spr.set(i, { g: r.g, cv: null, dk: -1 }); });
+  }
+  // the picture lit for the time of day: its colours by the light on its normals (the sun high in the south-west), dimmer
+  // and bluer at night
+  lit(sp) {
+    const dk = Math.round(gameClock(this.S.loopTime || 0).dark * 4) / 4;
+    if (sp.cv && sp.dk === dk) return sp.cv;
+    const { w, h, p0, p1, p2 } = sp.g, cv = sp.cv || document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const g = cv.getContext('2d'), id = g.createImageData(w, h), o = id.data;
+    const lx = -0.35, ly = 0.45, lz = 0.82, amb = 1 - 0.62 * dk;
+    for (let j = 0; j < w * h * 4; j += 4) {
+      if (!p0[j + 3]) continue;
+      let nx = p1[j + 3] / 127 - 1, ny = p2[j + 3] / 127 - 1;
+      const nz = 1 - Math.abs(nx) - Math.abs(ny);
+      if (nz < 0) { const fx = (1 - Math.abs(ny)) * (nx >= 0 ? 1 : -1); ny = (1 - Math.abs(nx)) * (ny >= 0 ? 1 : -1); nx = fx; }
+      const n = Math.hypot(nx, ny, nz) || 1, k = amb * (0.62 + 0.5 * Math.max(0, (nx * lx + ny * ly + nz * lz) / n));
+      o[j] = p0[j] * k * (1 - 0.15 * dk); o[j + 1] = p0[j + 1] * k * (1 - 0.08 * dk); o[j + 2] = Math.min(255, p0[j + 2] * k * (1 + 0.15 * dk)); o[j + 3] = 255;
+    }
+    g.putImageData(id, 0, 0);
+    sp.cv = cv; sp.dk = dk;
+    return cv;
   }
   // a round cut off a trunk (the 'logcut' event: m what's left of it - 0 all cut up, or cleared away): chips and sawdust
   cut(ev) {
@@ -53,7 +85,7 @@ export class CarryFx {
     const S = this.S, now = performance.now() / 1000, v = F.view;
     if (S.logs0) {   // (the trunks lying there when you came: [index, size, mask, ...] - the props' felled angle, main.js setFelled)
       const l = S.logs0; S.logs0 = null;
-      for (let k = 0; k + 2 < l.length; k += 3) { const p = S.map.props[l[k]]; if (p && p.broken) this.logs.set(l[k], { x: p.x, y: p.y, a: p.broken.a, s: l[k + 1], m: l[k + 2], t0: -1e9, palm: p.t.startsWith('palm') }); }
+      for (let k = 0; k + 2 < l.length; k += 3) { const p = S.map.props[l[k]]; if (p && p.broken) { this.logs.set(l[k], { x: p.x, y: p.y, a: p.broken.a, s: l[k + 1], m: l[k + 2], t0: -1e9, palm: p.t.startsWith('palm'), i: l[k] }); this.ask(l[k]); } }
     }
     g.save();
     g.lineCap = 'round';
@@ -65,6 +97,8 @@ export class CarryFx {
       if (t < 1) th = (Math.PI / 2) * t * t;
       else { const u = (now - L.t0 - FALL_S) / BOUNCE_S; if (u < 1) th = Math.PI / 2 - BOUNCE * Math.sin(Math.PI * u) * (1 - u * 0.4); else { const w = (now - L.t0 - FALL_S - BOUNCE_S) / SETTLE_S; if (w < 1) shake = Math.sin(now * 38) * 2.2 * (1 - w); } }
       const n = TREE_SIZES[L.s] ? TREE_SIZES[L.s].logs : 1, wd = TRUNK[L.s] * 2;
+      const sp = this.spr && this.spr.get(L.i);
+      if (sp && sp.g) { this.tree(g, L, sp, th, shake, n, len, wd); continue; }
       // the crown, out at the top (while there's trunk left to it)
       if (L.m) {
         const r = CROWN[L.s], [cx0, cy0] = this._pt(L, len * 0.86, th), cx = cx0 + shake * -Math.sin(L.a), cy = cy0 + shake * Math.cos(L.a);
@@ -98,6 +132,36 @@ export class CarryFx {
       g.beginPath(); g.moveTo(hx, hy); g.quadraticCurveTo((hx + dx) / 2, (hy + dy) / 2 + sag, dx, dy); g.stroke();
     }
     g.restore();
+  }
+  // the tree's picture tipped th from upright toward its fall: turned so its trunk runs along where it's falling and
+  // drawn out or squashed to the length it shows from above (the 3/4 view: a trunk lying north shows as long as one
+  // standing); scaled to the trunk the server lays down (TREE_SIZES.len). Lying there, only the rounds still uncut are
+  // drawn (and the crown, until the last), each cut end's pale face showing
+  tree(g, L, sp, th, shake, n, len, wd) {
+    const cv = this.lit(sp), { ax, ay, ap } = sp.g, H = Math.max(8, ay * (ap || 1)), k = Math.max(0.5, Math.min(1.8, len / H));
+    const vx = Math.cos(L.a) * Math.sin(th), vy = Math.sin(L.a) * Math.sin(th) - Math.cos(th), l = Math.hypot(vx, vy) || 1e-3, phi = Math.atan2(vy, vx) + Math.PI / 2;
+    g.save();
+    g.translate(L.x + shake * -Math.sin(L.a), L.y + shake * Math.cos(L.a));
+    g.rotate(phi); g.scale(k, k * l);
+    g.imageSmoothingEnabled = false;
+    const s = ap || 1, x0 = -ax * s, wpx = cv.width * s;
+    const seg = (d0, d1) => { const y0 = -Math.min(H, d1 / k), y1 = -Math.max(0, d0 / k); if (y1 > y0) g.drawImage(cv, 0, (ay * s + y0) / s, cv.width, (y1 - y0) / s, x0, y0, wpx, y1 - y0); };
+    if (L.m === (1 << n) - 1) seg(-len, len * 2);   // (whole: the stump end to the crown's top, and the roots' flare under it)
+    else {
+      for (let q = 0; q < n; q++) if (L.m & (1 << q)) seg(q ? roundAlong(L.s, q) : -len, roundAlong(L.s, q + 1));
+      if (L.m) seg(roundAlong(L.s, n), len * 2);
+    }
+    g.restore();
+    if (th < Math.PI / 2 - 0.05 || L.m === (1 << n) - 1) return;
+    for (let q = 0; q < n; q++) {   // the cut faces
+      if (!(L.m & (1 << q))) continue;
+      for (const [d, cut] of [[roundAlong(L.s, q), q > 0 && !(L.m & (1 << (q - 1)))], [roundAlong(L.s, q + 1), q < n - 1 && !(L.m & (1 << (q + 1)))]]) {
+        if (!cut) continue;
+        const [ex, ey] = this._pt(L, d, th);
+        g.fillStyle = '#d8b07a'; g.beginPath(); g.ellipse(ex, ey, wd * 0.32, wd * 0.5, L.a, 0, 6.283); g.fill();
+        g.strokeStyle = '#a07040'; g.lineWidth = 1; g.beginPath(); g.ellipse(ex, ey, wd * 0.18, wd * 0.3, L.a, 0, 6.283); g.stroke();
+      }
+    }
   }
   draw(g, F) {
     const S = this.S, now = performance.now() / 1000;

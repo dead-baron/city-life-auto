@@ -18,6 +18,7 @@ export const JOB_ICON = {
   forklift: P('<path d="M4 19V8h6l3 6v5M4 14h9M17 4v15M17 17h4"/><circle cx="6.5" cy="19" r="1.5"/><circle cx="11.5" cy="19" r="1.5"/>'),
   fish: P('<path d="M3 12c3-5 9-6 13-2l5-3v10l-5-3c-4 4-10 3-13-2z"/><circle cx="8" cy="11" r="1"/>'),
   ranger: P('<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3"/>'),
+  wood: P('<rect x="3" y="13" width="18" height="6" rx="3"/><rect x="5" y="6" width="14" height="6" rx="3"/><circle cx="6" cy="16" r="1.5"/><circle cx="8" cy="9" r="1.5"/>'),   // (a firewood order: server woodjob.js)
 };
 export const jobKind = (j) => (j.fly ? (j.kind === 'coast' ? 'coast' : 'fly') : JOB_ICON[j.kind] ? j.kind : j.kind === 'sar' || j.kind === 'charter' || j.kind === 'dusting' ? 'fly' : 'delivery');
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');

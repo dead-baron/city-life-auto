@@ -33,6 +33,7 @@ import * as forklift from './forklift.js';
 import * as fishboat from './fishboat.js';
 import * as rangerjob from './rangerjob.js';
 import { FORK, FISHBOAT, RANGER } from '../../shared/rules-work.js';
+import * as woodjob from './woodjob.js';
 import * as skills from './skills.js';
 import * as workout from './workout.js';
 import * as crews from './crews.js';
@@ -206,6 +207,8 @@ export function boardFor(world, p) {
   if (hosp) list.push({ id: 'medic', kind: 'medic', icon: '🚑', sub: 'medical calls: treat the hurt on the spot, get the badly hurt to a hospital, revive players down - an ambulance is issued', pay: MEDIC.pay.serious, title: `Paramedic - a shift from ${hosp.label}`, x: hosp.x, y: hosp.y, ...card(MEDIC.pay.minor, MEDIC.pay.serious * (1 + MEDIC.pay.fast), 'a call', `Get in the ambulance at ${hosp.label}`) });
   drivingJobs(world, p, list);   // the taxi, the bus, the tow truck (H72)
   workJobs(world, p, list);   // the forklift, the fishing boat, the ranger (batch 8)
+  const wood = woodjob.boardEntry(world, p);   // a firewood order from a diner, a cafe, a camp... (woodjob.js)
+  if (wood) list.push(wood);
   const pj = p.job;
   return { t: 'board', jobs: list, job: pj ? { text: pj.text, type: pj.type, pay: Number.isFinite(pj.pay) ? pj.pay : null } : null, saw: law.sawList(world, p) };
 }
@@ -326,6 +329,7 @@ function take(world, p, id) {
   if (id === 'forklift') return forklift.start(world, p);
   if (id === 'fishboat') return fishboat.start(world, p);
   if (id === 'ranger') return rangerjob.start(world, p);
+  if (id === 'wood') return woodjob.start(world, p);
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -355,8 +359,8 @@ export function jobTarget(world, p) {
 // The HUD's job card (UI-4, client/hudinfo.js): the job's name (k), the call or fare it's on (n, u), the step of it
 // (step: [i, of]) and the time left on the shift or the contract (left, s) - beside the objective line (text) and where
 // (x, y). A shift waiting for its next call has no step.
-const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work', crazy: 'Crazy Taxi', haul: 'Trucker', mail: 'Mail carrier', forklift: 'Forklift', fishboat: 'Fishing boat', ranger: 'Park ranger' };
-const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']], haul: [['pickup', 'hitch'], ['go']], forklift: [['pickup'], ['go']], fishboat: [['go', 'haul'], ['home']], ranger: [['go'], ['home']] };
+const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work', crazy: 'Crazy Taxi', haul: 'Trucker', mail: 'Mail carrier', forklift: 'Forklift', fishboat: 'Fishing boat', ranger: 'Park ranger', wood: 'Firewood order' };
+const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']], haul: [['pickup', 'hitch'], ['go']], forklift: [['pickup'], ['go']], fishboat: [['go', 'haul'], ['home']], ranger: [['go'], ['home']], wood: [['gather'], ['go']] };
 const JOB_UNIT = { cab: 'Fare', charter: 'Flight', medic: 'Call', fire: 'Call', towjob: 'Call', sar: 'Call', coast: 'Call', ranger: 'Task' };
 export function jobCardInfo(world, j, t) {
   const out = { k: JOB_NAME[j.type] || '' };
@@ -386,6 +390,7 @@ function target(world, p, j) {
   if (j.type === 'forklift') return forklift.target(world, p, j);   // (a pallet, then its bay: forklift.js)
   if (j.type === 'fishboat') return fishboat.target(world, p, j);   // (the grounds in turn, then the quay: fishboat.js)
   if (j.type === 'ranger') return rangerjob.target(world, p, j);   // (the task's place: rangerjob.js)
+  if (j.type === 'wood') return woodjob.target(world, p, j);   // (cut the firewood, then take it there: woodjob.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

@@ -7,16 +7,16 @@
 // that looks like stacked wood (but still acts like a crate ...)"): stand by the felled trunk with the same tools and
 // hold the action button, a few strokes to each round (rules.js FIREWOOD), and each round is a firewood bundle - a crate
 // (cargo.js, labelled 'Firewood': the stacked logs both renderers draw) to carry, load onto a pickup or a flatbed, and
-// sell at a hardware store or, for more, a sawmill or lumber yard (by foot or on the truck bed); or stack at your own
-// home's garage, kept there as a count (profile.homeWood[home id]) for the home's upgrades. Felling in town or a park is
+// sell at a hardware store or, for more, a sawmill or lumber yard (by foot or on the truck bed); or bring to your own
+// home's garage - its menu stacks them there (the home's materials: homeups.js) or puts them straight towards an upgrade. Felling in town or a park is
 // vandalism (a little heat); out in the wilds it's free. A felled tree's stump grows back after TREE_REGROW_S when
 // nobody is near. Only the felled trees are kept (world.felled: prop index -> { at, q, s }); everyone hears of a fall
 // ('treefall', then 'treecrash' where it lands) and of the regrowth ('treeup'), and a player joining gets the list as
 // [index, angle code, ...] (felledList). The trunks lying there are world.logs (prop index -> { s, a, m: a bit for each
 // round still uncut }); a round cut off is a 'logcut' (m: what's left) and a player joining gets [index, size, mask, ...]
 // (logList).
-// The wood's other uses (home upgrades, civilian missions, gang hideouts): LOG_USES below is the hook - the bundles are
-// ordinary crates with .logs, so a system that wants wood takes them like any delivery (jobs.deliveryZoneFor).
+// The wood's other uses: the home upgrades and the fireplace (homeups.js), the firewood orders (woodjob.js); LOG_USES is
+// the hook - the bundles are ordinary crates with .logs, so a system that wants wood takes them like any delivery.
 import { K } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { treeSize, treeName, TREE_SIZES, FELL_TOOLS, fellTime, bestTool, fallAngle, underFall, roundSpots, angleCode, codeAngle } from '../../shared/felling.js';
@@ -27,13 +27,13 @@ import * as law from './law.js';
 import * as combat from './combat.js';
 import * as lights from './lights.js';
 import { store } from '../store.js';
-import * as homes from './homes.js';
+import * as homeups from './homeups.js';
 
 export const FALL_S = 1.2;          // the topple, from the crack to the crash
 const REACH = 30;                   // px beyond the trunk you can cut from
 const CUT_KEEP_S = 120;             // a half-made cut stays in the tree this long
 const CELL = 128;
-export const LOG_USES = ['sell', 'home'];   // (hook: 'mission', 'hideout' when those take wood)
+export const LOG_USES = ['sell', 'home', 'order'];   // (hook: 'hideout' when that takes wood)
 export const FIREWOOD_LABEL = 'Firewood';
 
 // every tree on the map in a grid (made once per map)
@@ -228,15 +228,13 @@ const priceAt = (b, crate) => (b.mill && crate.wood ? FIREWOOD.mill : crate.valu
 const isWood = (c) => !!(c && c.logs);
 const woodOn = (world, v) => (v.cargo || []).map((id) => (id ? world.get(id) : null)).filter(isWood);
 
-// carrying a bundle at a buyer: sell it; at your own home's garage: stack it there (players.findInteraction, before the
-// other deliveries)
+// carrying a bundle at a buyer: sell it; at your own home's garage: its menu - stack it, or put it towards an upgrade
+// (players.findInteraction, before the other deliveries)
 export function sellZone(world, p, crate) {
   if (!isWood(crate)) return null;
   const ped = p.ped, b = buyerNear(world, ped.x, ped.y);
   if (b) return { label: `Sell the ${crate.wood ? 'firewood' : 'logs'} to ${b.poi.label || 'the hardware store'} (+$${priceAt(b, crate)})`, run: () => sellLogs(world, p, crate, b) };
-  const h = crate.wood && homes.nearOwnGarage(world, p, ped.x, ped.y, 120);
-  if (h) return { label: `Stack the firewood in your garage at ${h.name} (${woodAt(p, h)} there)`, run: () => storeWood(world, p, h, [crate]) };
-  return null;
+  return crate.wood ? homeups.garageInteraction(world, p) : null;
 }
 export function sellLogs(world, p, crate, b = buyerNear(world, p.ped.x, p.ped.y)) {
   const ped = p.ped;
@@ -251,27 +249,12 @@ export function sellLogs(world, p, crate, b = buyerNear(world, p.ped.x, p.ped.y)
   store.touch();
   return true;
 }
-export const woodAt = (p, h) => ((p.profile.homeWood || {})[h.id] || 0);
-// the bundles (carried, or off a truck's bed) stacked at home h: kept as a count
-export function storeWood(world, p, h, crates) {
-  const ped = p.ped, mine = crates.filter((c) => isWood(c) && c.wood && !c.removed);
-  if (!mine.length || !h) return 0;
-  for (const c of mine) {
-    if (ped.carrying === c.id) ped.carrying = 0;
-    const v = c.state === 'loaded' ? world.get(c.parent) : null;
-    if (v && v.cargo) v.cargo[c.slot] = 0;
-    world.remove(c);
-  }
-  const W = (p.profile.homeWood ||= {});
-  W[h.id] = (W[h.id] || 0) + mine.length;
-  world.emit(h.garage.x, h.garage.y, { e: 'garagedoor', home: h.id });
-  world.notify(p, `${mine.length === 1 ? 'A bundle' : `${mine.length} bundles`} of firewood stacked in your garage at ${h.name} (${W[h.id]} there) - kept for the home's upgrades.`, 'good');
-  p.meDirty = true;
-  store.touch();
-  return mine.length;
-}
-// driving up with wood on the bed: sell it all at a buyer, or stack the firewood at your own garage (players.js, the
-// vehicle's interactions: before parking it in the garage)
+// the firewood stacked at home h (its garage's materials: homeups.js)
+export const woodAt = (p, h) => homeups.matsAt(p.profile, h.id).wood;
+// the bundles (carried, or off a truck's bed) stacked at home h, as many as its garage has room for
+export const storeWood = (world, p, h, crates) => (h ? homeups.stackWood(world, p, h, crates.filter(isWood)) : 0);
+// driving up with wood on the bed: sell it all at a buyer, or at your own garage its menu - stack it, or put it towards
+// an upgrade (players.js, the vehicle's interactions: before parking it in the garage)
 export function vehicleInteraction(world, p) {
   const ped = p.ped, v = world.get(ped.vehId);
   if (!v || ped.seat !== 0 || !v.cargo) return null;
@@ -279,9 +262,7 @@ export function vehicleInteraction(world, p) {
   if (!wood.length || Math.hypot(v.vx, v.vy) > 60) return null;
   const b = buyerNear(world, v.x, v.y);
   if (b) { const pay = wood.reduce((n, c) => n + priceAt(b, c), 0); return { label: `Sell the ${wood.length} bundle${wood.length === 1 ? '' : 's'} of wood on the back to ${b.poi.label || 'the hardware store'} (+$${pay})`, run: () => sellLoad(world, p, v, b) }; }
-  const h = homes.nearOwnGarage(world, p, v.x, v.y), fw = wood.filter((c) => c.wood);
-  if (h && fw.length) return { label: `Stack the ${fw.length} bundle${fw.length === 1 ? '' : 's'} of firewood in your garage (${woodAt(p, h)} there)`, run: () => storeWood(world, p, h, fw) };
-  return null;
+  return homeups.vehicleWood(world, p, v, wood);
 }
 export function sellLoad(world, p, v, b) {
   const wood = woodOn(world, v);

@@ -29,5 +29,6 @@ export const SKILL = {
     campfire: { skill: 'constitution', xp: 0.2, cap: 10, name: 'sitting by a campfire' },
     pushups: { skill: 'strength', xp: 1, cap: 15, name: 'push-ups' },
     situps: { skill: 'stamina', xp: 1, cap: 15, name: 'sit-ups' },
+    bike: { skill: 'stamina', xp: 1, cap: 15, name: 'the exercise bike at home' },
   },
 };

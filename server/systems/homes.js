@@ -9,6 +9,7 @@ import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
 import * as biz from './biz.js';
+import * as homeups from './homeups.js';
 
 const BASE_GARAGE = 2;
 const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no record: bought back at a house's price
@@ -108,7 +109,7 @@ export function checkWorld(world, prof) {
   const names = [];
   for (const id of prof.homes || []) {
     const paid = prof.deeds && prof.deeds[id] !== undefined ? prof.deeds[id] : old[id] ? old[id][0] : FALLBACK_PRICE;
-    refund += Math.max(0, Math.round(paid) || 0);
+    refund += Math.max(0, Math.round(paid) || 0) + homeups.worldRefund(prof, id);   // (its upgrades bought back too: homeups.js)
     if (old[id]) names.push(old[id][1]);
   }
   const n = (prof.homes || []).length;
@@ -146,7 +147,7 @@ export function ownedHomes(world, prof) {
 
 export function garageCap(world, prof) {
   let cap = BASE_GARAGE;
-  for (const h of ownedHomes(world, prof)) cap += h.slots;
+  for (const h of ownedHomes(world, prof)) cap += h.slots + homeups.parkingOf(prof, h.id);   // (a parking space added: homeups.js)
   return Math.min(60, cap);
 }
 
@@ -164,6 +165,7 @@ export function release(world, prof, home) {
   if (prof.deeds) delete prof.deeds[home.id];
   if (prof.spawnHome === home.id) prof.spawnHome = prof.homes.length ? prof.homes[0] : null;
   stowDecor(prof, home.id);
+  homeups.sellOff(prof, home.id);   // (its upgrades go with it)
   store.touch();
 }
 // A home's rooms changed under its furniture (the plan its decor was laid in - shared/homelayout.js planOf - isn't the
@@ -183,13 +185,16 @@ export function replanDecor(world, prof) {
   if (moved.length) store.touch();
   return moved.length ? moved : null;
 }
-// (H67) a home's furniture back into storage (it's sold, or taken back): placed in your next home
+// (H67) a home's furniture back into storage (it's sold, or taken back): placed in your next home (its levels' too - the
+// home upgrades' floors and basement: decor keyed id@level)
 export function stowDecor(prof, id) {
-  const d = prof.decor && prof.decor[id];
-  if (!d) return;
-  prof.furn ||= {};
-  for (const q of d.it || []) prof.furn[q.k] = (prof.furn[q.k] || 0) + 1;
-  delete prof.decor[id];
+  for (const k of Object.keys(prof.decor || {})) {
+    if (k !== String(id) && !(String(id).indexOf('@') < 0 && k.startsWith(`${id}@`))) continue;
+    const d = prof.decor[k];
+    prof.furn ||= {};
+    for (const q of (d && d.it) || []) prof.furn[q.k] = (prof.furn[q.k] || 0) + 1;
+    delete prof.decor[k];
+  }
 }
 // the home is yours (paid: what you've paid for it - the price, or a mortgage's deposit; mortgage.js)
 export function claim(world, p, home, paid) {
@@ -213,11 +218,12 @@ export function sell(world, p, home) {
   const loan = prof.loans && prof.loans[home.id], owed = loan ? loan.owed : 0;   // (a mortgage: what's owed comes out of the sale first - H65)
   if (loan) delete prof.loans[home.id];
   stowDecor(prof, home.id);
-  const back = Math.max(0, Math.round(home.price * 0.6) - owed);
+  const ups = homeups.sellOff(prof, home.id);   // (what its upgrades and the materials kept there fetch: homeups.js)
+  const back = Math.max(0, Math.round(home.price * 0.6) + ups - owed);
   prof.bank += back;
   while (prof.vehicles.length > garageCap(world, prof)) prof.vehicles.pop();
   store.touch();
-  world.notify(p, `Sold ${home.name} for $${back.toLocaleString()} (paid into your bank${owed ? ` - the mortgage's $${owed.toLocaleString()} paid off first` : ''}).`, 'info');
+  world.notify(p, `Sold ${home.name} for $${back.toLocaleString()} (paid into your bank${ups ? `, $${ups.toLocaleString()} of it for the upgrades` : ''}${owed ? ` - the mortgage's $${owed.toLocaleString()} paid off first` : ''}).`, 'info');
   return null;
 }
 

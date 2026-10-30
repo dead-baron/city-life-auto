@@ -67,6 +67,7 @@ import * as gardening from './systems/gardening.js';
 import * as farming from './systems/farming.js';
 import * as homes from './systems/homes.js';
 import * as homeinside from './systems/homeinside.js';
+import * as homeups from './systems/homeups.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 import * as policeair from './systems/policeair.js';
@@ -85,7 +86,7 @@ import * as rangerjob from './systems/rangerjob.js';
 import * as phone from './systems/phone.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -836,6 +837,7 @@ function run(world, p, c, msg) {
     case 'decor': { const err = homeinside.devDecor(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // decorating (H67): msg.furn, msg.demo, msg.wall / msg.floor, msg.edit   // inside a home (H62): msg.id | msg.kind - yours, and in; msg.at: by the bed, the safe...
     case 'bath': { const err = bathhouse.devIn(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // into the nearest bathhouse (bathhouse.js): msg.at, msg.side, msg.suit, msg.pass
     case 'soccer': { const err = carsoccer.devStart(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // car soccer now at the arena: you and the city's drivers (carsoccer.js); msg.score, msg.ball, msg.play
+    case 'homeup': { const err = homeups.devHomeUp(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the home upgrades (homeups.js): msg.build [ids], msg.mats { wood, stone, metal }, msg.menu, msg.lv, msg.fire
     case 'lobby': { const err = homeinside.devLobby(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // (H71) an apartment block's lobby: msg.own / msg.other unit n, msg.mail, msg.pet, msg.at ('mail' | n), msg.home
     case 'airtraffic': {   // aircraft about the world (H66): msg.k 'land' | 'takeoff' at the runway nearest you (msg.seen: even in view), 'news' over you
       if (!ped) break;

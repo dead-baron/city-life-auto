@@ -1,4 +1,4 @@
-import { REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
+import { STONE_PRICE, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -130,7 +130,7 @@ export const ITEMS = {
   purse:   { name: 'Snatched Purse',    loot: true, sell: 180 },
   bonds:   { name: 'Bearer Bonds',      loot: true, sell: 140 },
   jewelry: { name: 'Diamond Earrings',  loot: true, sell: 220 },
-  scrap:   { name: 'Component Scrap',   loot: true, sell: 30 },
+  scrap:   { name: 'Component Scrap',   loot: true, mat: 'metal', sell: 30 },   // (mat: a building material - shared/homeups.js MATS)
   wallet:  { name: 'Lost Wallet',       loot: true, sell: 60 },
   // fruit picked at the orchard and the vineyard: eat it for a little health (it doesn't stop bleeding), or sell it
   apple:   { name: 'Crisp Apple',       food: true, heal: 6, sell: 3 },
@@ -303,7 +303,7 @@ export const CRAFTED = Object.keys(ITEMS).filter((id) => ITEMS[id].crafted);
 export const ITEM_CATS = [
   { id: 'tools', name: 'Tools & equipment' }, { id: 'medical', name: 'Medical' }, { id: 'drinks', name: 'Drinks' },
   { id: 'bait', name: 'Fishing bait' }, { id: 'fish', name: 'Fish' }, { id: 'food', name: 'Food' }, { id: 'game', name: 'Game & hides' },
-  { id: 'crafted', name: 'Crafted goods' }, { id: 'loot', name: 'Loot & valuables' },
+  { id: 'crafted', name: 'Crafted goods' }, { id: 'materials', name: 'Building materials' }, { id: 'loot', name: 'Loot & valuables' },
 ];
 // ---- Lights to carry (task #359) and felling trees (task #358): their items ---------------------------------------
 // The lights (shared/lights.js): switched on and off like the flashlight, run on batteries (one set goes in when the
@@ -335,7 +335,7 @@ const FELL_KIT = [
 export function itemCat(id) {
   const it = ITEMS[id];
   if (!it) return null;
-  return it.tool || it.gear ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : it.crafted ? 'crafted' : 'loot';
+  return it.tool || it.gear ? 'tools' : it.food ? 'food' : it.heal ? 'medical' : it.buff || it.stamina ? 'drinks' : it.bait ? 'bait' : it.fish ? 'fish' : it.game ? 'game' : it.crafted ? 'crafted' : it.mat ? 'materials' : 'loot';
 }
 
 // GDD §8 crate rarity tiers
@@ -489,16 +489,19 @@ Object.assign(ITEMS, {
   pickSteel: { name: 'Steel Pickaxe',          tool: true, sell: 90 },
   pickDiamond: { name: 'Diamond-Tipped Pickaxe', tool: true, sell: 400 },
   coal: { name: 'Coal',                        loot: true, sell: 5 },
-  copperOre: { name: 'Copper Ore',             loot: true, sell: 12 },
-  ironOre: { name: 'Iron Ore',                 loot: true, sell: 16 },
+  copperOre: { name: 'Copper Ore',             loot: true, mat: 'metal', sell: 12 },
+  ironOre: { name: 'Iron Ore',                 loot: true, mat: 'metal', sell: 16 },
   silverOre: { name: 'Silver Ore',             loot: true, sell: 34 },
   goldOre: { name: 'Gold Ore',                 loot: true, sell: 70 },
   gem: { name: 'Rough Gemstone',               loot: true, sell: 110 },
   diamond: { name: 'Rough Diamond',            loot: true, sell: 320 },
+  // building stone: knocked loose round a vein as you mine it (server underground.js), sold at the hardware store - for
+  // your home's upgrades and the workbench (shared/homeups.js MATS: unload it at your garage)
+  stone: { name: 'Building Stone',             mat: 'stone', sell: 6 },
 });
 export const ORE_ITEMS = ['coal', 'copperOre', 'ironOre', 'silverOre', 'goldOre', 'gem', 'diamond'];
 const PICK_OFFERS = (ids) => ids.map((id) => ({ kind: 'item', id, price: PICK_PRICES[id], qty: 1 }));
-SHOPS.hardware.buy.push(...PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel']));
+SHOPS.hardware.buy.push(...PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel']), { kind: 'item', id: 'stone', price: STONE_PRICE, qty: 1 });
 SHOPS.huntcamp.buy.push(...PICK_OFFERS(['pickStone', 'pickIron', 'pickSteel', 'pickDiamond']));
 SHOPS.pawn.sells.push(...ORE_ITEMS);
 // the assay office at the Granite Quarry (shared/countryside.js): it buys ore best, and sells the pickaxes
