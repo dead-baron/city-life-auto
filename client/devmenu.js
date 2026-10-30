@@ -163,6 +163,7 @@ function devLocal(c, extra) {
   else if (c === '@storm') { if (S.wx) S.wx.stormForce = extra ? extra.mood : null; }   // (while it rains: render/lightning.js stormSpell's moods)
   else if (c === '@fog') S.fogForce = extra ? { k: extra.k, spread: extra.spread } : null;
   else if (c === '@bio') S.bioForce = extra ? [extra.k, 0.5] : null;   // (the sea's sparkle whatever the night: art2 host.js)
+  else if (c === '@perf') import('./perfhud.js').then((m) => { const v = m.show(S); S.hud.toast(`Performance readout ${v ? 'on' : 'off'}`, 'info'); });   // (client/perfhud.js)
   else if (c === '@wardrobe') { closeOverlay('dev'); openCreator('dev'); }   // (the debug wardrobe: client/creator.js)
   else if (c === '@homes' && S.map) import('./devhomes.js').then((m) => m.showHomes(S.map, (id) => { send({ t: 'dev', c: 'home', op: 'go', id }); closeOverlay('dev'); }));   // (every home: client/devhomes.js)
 }

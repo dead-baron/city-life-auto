@@ -61,10 +61,11 @@ export function cacheBudget(lowMem, workers, nav = typeof navigator !== 'undefin
   return { stat: workers >= 4 ? 90 : 120, spr: 32, model: 48 };
 }
 
-// How many baked chunks the browser keeps (chunkstore.js: ~0.4 MB each, compressed): a phone fewer.
+// How many baked chunks the browser keeps (chunkstore.js: ~0.4 MB each, compressed): a phone fewer - but a phone with 8 GB
+// or more (Chrome says 8 at most) keeps 160, as it bakes further ahead (host.js _prebakeList)
 export function keepCap(lowMem, nav = typeof navigator !== 'undefined' ? navigator : null) {
   const dm = (nav && nav.deviceMemory) || 0;
-  return lowMem || (dm && dm <= 2) ? 40 : isPhone(nav) || (dm && dm <= 4) ? 90 : 180;
+  return lowMem || (dm && dm <= 2) ? 40 : isPhone(nav) ? (dm >= 8 ? 160 : 90) : dm && dm <= 4 ? 90 : 180;
 }
 
 export class WorkerPool {

@@ -137,8 +137,7 @@ export function godRays(P, el, shafts, can, wet = 0, fog = 0, out = {}) {
   out.moteK = nat > 0 ? Math.min(1, nat) * risen * (1 - sstep(0.48, 0.7, el)) * sstep(0.35, 1.0, sunL) * (1 - Math.min(1, wet * 1.5)) * (1 - Math.min(1, fog * 1.2)) : 0;
   return out;
 }
-// What is drawn eases toward those over a few seconds (task #393, the owner: "when God rays happen they don't just pop
-// on the screen they gradually ease in"): whatever the targets do - the canopy coming into view as you walk, the sun
+// What is drawn eases toward those over a few seconds (task #393): whatever the targets do - the canopy coming into view as you walk, the sun
 // clearing the trees, rain or fog rolling in, arriving somewhere - the rays fade in and out with a time constant of
 // RAY_TAU s (95% in about three times that). A step counts at most a quarter of a second (a hitch, a tab back).
 export const RAY_TAU = 2.5;
@@ -508,7 +507,7 @@ vec4 shade(vec3 alb, vec3 n, int fl, float sh, vec3 plight, vec3 refl, vec3 emi,
   if ((fl & ${F_LEAF}) != 0) light += sunCol * leafGlow * pow(max(dot(n.xy, sunDir.xy), 0.0), 2.0) * sh;
   if (flash > 0.0) light += flashCol * (flash * (0.35 + 0.65 * max(n.z, 0.0)));
   vec3 col = alb;
-  // wet (the owner, 10-24: "very greyed out ... and very reflective"): paving darkens and shines, most in its puddles;
+  // wet (10-24): paving darkens and shines, most in its puddles;
   // grass, earth and crops darken a little and deepen in colour, with no grey sheen over them
   float hd = (fl & ${F_LEAF}) != 0 ? 0.0 : hardOf(alb), pd = puddle(vec2(org) + gl_FragCoord.xy) * hd;
   if (wg && (fl & ${F_WATER}) == 0) { float l = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(l), col, 1.0 + wet * 0.3 * (1.0 - hd)) * mix(1.0, mix(0.84, 0.66 - pd * 0.12, hd), wet); }

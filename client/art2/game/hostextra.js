@@ -1,6 +1,7 @@
 // What the renderer (host.js) needs only now and then, loaded the first time it's needed - not before the first frame
 // (the renderer's code budget: tools/perf.mjs; docs/WORLD-V3.md 8.12.1): World v3's window swap (reworld), the debug
-// overlay's line (diag) and the 2D stand-in for the engine (?art2stub, testing).
+// overlay's line (diag), the loading screen's look at the art (warmth, warmMe: client/warmup.js) and the 2D stand-in for
+// the engine (?art2stub, testing).
 import { CHUNK } from './chunkgeom.js';
 import { canopyGrid } from './canopy.js';
 import { worldData } from './host.js';
@@ -43,6 +44,32 @@ export function reworld(w, map, old) {
 }
 
 // the debug overlay's line about the renderer (client/main.js, ?debug)
+// What the loading screen waits on (client/warmup.js warmPlan): the chunks the view draws (scr: on screen; need: with the
+// scene's margins) baked and up, the ring round them (ring: the rest being baked) up too, and last frame's sprites all
+// made (miss: drawn with nothing exact); jump: ms since a teleport or respawn whose screen isn't drawn yet (-1: none)
+export function warmth(w) {
+  const E = w.E, need = w.needChunks, o = w.wo || (w.wo = {});
+  let n = 0, have = 0, scr = 0, scrHave = 0, ring = 0, ringHave = 0;
+  if (need) for (const k of need.keys()) {
+    const cx = k % 1000, cy = Math.floor(k / 1000), h = E.hasChunk(cx, cy);
+    n++; if (h) have++;
+    if ((cx + 1) * CHUNK > w.vx0 && cx * CHUNK < w.vx1 && (cy + 1) * CHUNK > w.vy0 && cy * CHUNK < w.vy1) { scr++; if (h) scrHave++; }
+  }
+  for (const k of w.wantChunks.keys()) if (!need || !need.has(k)) { ring++; if (E.hasChunk(k % 1000, Math.floor(k / 1000))) ringHave++; }
+  const J = w.jump;
+  o.ok = !w.failed && !!w.pool && !!w.pool.ready && w.frameNo > 0; o.need = n; o.have = have; o.scr = scr; o.scrHave = scrHave; o.ring = ring; o.ringHave = ringHave;
+  o.miss = w.miss; o.spr = w.sprOut + w.upQ.size; o.jump = J && !J.drawn && !J.over && J.frames >= 1 ? performance.now() - J.t0 : -1;
+  return o;
+}
+// Behind the loading screen: your own figure standing, walking, jogging, running and sprinting every way, asked for (once
+// per look and what's in hand, through the host's queue of asks ahead) so the first steps after it lifts are made already
+export const WARM_POSES = ['idle', 'walk0', 'walk1', 'walk2', 'walk3'];
+export function warmMe(w, A2, wpn, bo) {
+  const k = w.warmK || (w.warmK = new WeakMap());
+  if (k.get(A2) === wpn) return;
+  k.set(A2, wpn);
+  for (const pose of WARM_POSES) for (let d = 0; d < 8; d++) w._cycle(A2, pose, d, wpn, -2, bo, true);
+}
 export function diag(w) {
   const p = w.pool ? w.pool.stats() : null, t = w.t;
   return `q${w.q}${w.lowMem ? ' lowmem' : ''} chunks ${w.chunkState.size}+${w.fallbacks.size} placeholder (workers ${p ? p.workers + '/' + p.slots + (p.restarted ? ' restarted ' + p.restarted : '') : '-'}${w.n.revived ? ' new pool ' + w.n.revived : ''}, queue ${p ? p.queued : '-'}, run ${p ? p.running : '-'}, failing ${w.chunkFails.size}) bake avg ${(t.bakeN ? t.bakeSum / t.bakeN : 0).toFixed(0)} max ${t.bakeMax.toFixed(0)} ms (kept ${w.n.kept || 0}, ahead ${w.pre ? w.pre.done + '+' + w.pre.had : 0})${w.late ? ` late ${w.late.frames}/${w.late.of}` : ''}  sprites req ${w.n.sprReq} up ${w.n.sprUp} now ${w.n.sync} gen ${w.n.gen} out ${w.sprOut}  fades ${w.fades.size}  lights ${w.n.lights}  lost ${w.lost}  host ${t.frameMs.toFixed(1)} ms${w.lastErr ? '  err ' + w.lastErr.slice(0, 60) : ''}`;
