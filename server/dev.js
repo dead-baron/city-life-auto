@@ -79,7 +79,6 @@ import * as towjob from './systems/towjob.js';
 import * as crazytaxi from './systems/crazytaxi.js';
 import * as truckjob from './systems/truckjob.js';
 import * as mailjob from './systems/mailjob.js';
-
 import * as forklift from './systems/forklift.js';
 import * as fishboat from './systems/fishboat.js';
 import * as rangerjob from './systems/rangerjob.js';
