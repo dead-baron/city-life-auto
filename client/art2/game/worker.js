@@ -68,6 +68,7 @@ const SPRITE_FN = {
   crate: () => P.actors && P.actors.crateSprite, bag: () => P.actors && P.actors.bagSprite, ball: () => P.actors && P.actors.ballSprite,
   proj: () => P.actors && P.actors.projSprite, train: () => P.actors && P.actors.trainCarSprite, fx: () => P.actors && P.actors.fxSprite,
   ped: () => P.peds && P.peds.pedSprite,
+  prop: () => chunkProviders.statics && ((pi) => chunkProviders.statics.propSprite(M, pi)),   // (a felled tree as it stood: carryfx.js)
 };
 
 // a G-buffer as a message: packed into the engine's three planes and turned into art pixels (chunkpack.js, the same

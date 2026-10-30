@@ -11,6 +11,7 @@ import { K } from '../shared/constants.js';
 import { treeSize, TREE_SIZES, FELL_TOOLS, fellTime, bestTool, fallAngle, underFall, roundSpots, codeAngle } from '../shared/felling.js';
 import { TREE_REGROW_S, TREE_REGROW_NEAR, LOG_BUNDLE_PRICE, HARDHAT_GUARD } from '../shared/rules.js';
 import { FIREWOOD } from '../shared/rules-play.js';
+import * as homeups from '../server/systems/homeups.js';
 import * as economy from '../server/systems/economy.js';
 import { ITEMS, SHOPS } from '../shared/items.js';
 import * as felling from '../server/systems/felling.js';
@@ -232,9 +233,10 @@ test('firewood: driven to a buyer on the bed it sells by the load (a sawmill pay
   loaded(v, 2);
   p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
   act = players.findInteraction(w, p);
-  assert.ok(act && /Stack the 2 bundles of firewood in your garage/.test(act.label), `the prompt (${act && act.label})`);
+  assert.ok(act && /Your garage: stack the 2 bundles of firewood, or put them towards an upgrade/.test(act.label), `the prompt (${act && act.label})`);
   act.run();
-  assert.equal(prof.homeWood[h.id], 2, 'two bundles kept at that home');
+  economy.handleMenu(w, p, homeups.UP_POI, 'u:stack');   // (the garage's menu: stack them - or towards an upgrade, homeups.test.js)
+  assert.equal(felling.woodAt(p, h), 2, 'two bundles kept at that home');
   assert.ok(v.cargo.every((id) => !id), 'off the bed');
   // carried up to it on foot: one more
   p.ped.vehId = 0; p.ped.seat = -1; v.seats[0] = 0; w.remove(v);
@@ -243,9 +245,10 @@ test('firewood: driven to a buyer on the bed it sells by the load (a sawmill pay
   cargo.pickUp(w, p.ped, c);
   assert.equal(p.ped.carrying, c.id);
   act = players.findInteraction(w, p);
-  assert.ok(act && /Stack the firewood in your garage/.test(act.label), `on foot (${act && act.label})`);
+  assert.ok(act && /Your garage: stack the firewood/.test(act.label), `on foot (${act && act.label})`);
   act.run();
-  assert.equal(prof.homeWood[h.id], 3, 'three now');
+  economy.handleMenu(w, p, homeups.UP_POI, 'u:stack');
+  assert.equal(homeups.matsAt(prof, h.id).wood, 3, 'three now');
   assert.equal(felling.woodAt(p, h), 3);
 });
 

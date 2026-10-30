@@ -34,8 +34,17 @@ export const PIECES = {
   workbench: { name: 'Workbench', w: 2, h: 1, cat: 'Garage', ch: 'k' },
   turntable: { name: 'Record player', w: 1, h: 1, cat: 'Living', ch: 'd' },   // (Midtown's record shop, Vinyl & More, sells these two)
   crates: { name: 'Crate of records', w: 1, h: 1, cat: 'Storage', ch: 'q' },
+  // (the home upgrades' - shared/homeups.js, server homeups.js: am, an amenity built for the home; craft, made at a
+  // workbench from your materials. Neither is sold at the counter. use: what Act does at it, as a plan's own piece does)
+  fireplace: { name: 'Fireplace', w: 2, h: 1, cat: 'Amenities', ch: 'p', am: 1, use: 'fire' },
+  hottub: { name: 'Hot tub', w: 2, h: 2, cat: 'Amenities', ch: '%', am: 1, use: 'tub' },
+  bar: { name: 'Home bar', w: 2, h: 1, cat: 'Amenities', ch: 'm', am: 1, use: 'bar' },
+  exbike: { name: 'Exercise bike', w: 1, h: 1, cat: 'Amenities', ch: 'e', am: 1, use: 'bike' },
+  shelves: { name: 'Storage shelves', w: 2, h: 1, cat: 'Storage', ch: 'z', craft: 1, use: 'store' },
+  woodpile: { name: 'Woodpile', w: 1, h: 1, cat: 'Storage', ch: '&', craft: 1, use: 'store' },
 };
 export const KINDS = Object.keys(PIECES);
+export const SHOP_KINDS = KINDS.filter((k) => !PIECES[k].am && !PIECES[k].craft);   // (the hardware store's furniture counter)
 export const priceOf = (k) => (DECOR.price[k] || 0);
 export const backOf = (k) => Math.round(priceOf(k) * DECOR.sellBack);
 // the walls' colours and the floors (a floor: the plan's letter for it and the look's tier - homeart2.js floorPx)
@@ -88,7 +97,7 @@ export function decorate(L, d) {
     const P = PIECES[q.k];
     if (!P) return;
     const [w, h] = dims(q.k, q.r), r = q.r & 3;
-    const p = { ch: P.ch, use: null, tx: q.tx, ty: q.ty, tw: w, th: h, x: q.tx * TILE_IN, y: q.ty * TILE_IN, w: w * TILE_IN, h: h * TILE_IN, dec: i, k: q.k, r, face: FACE[r], flat: !!P.flat, wall: !!P.wall };
+    const p = { ch: P.ch, use: P.use || null, tx: q.tx, ty: q.ty, tw: w, th: h, x: q.tx * TILE_IN, y: q.ty * TILE_IN, w: w * TILE_IN, h: h * TILE_IN, dec: i, k: q.k, r, face: FACE[r], flat: !!P.flat, wall: !!P.wall };
     mine.push(p);
     if (!P.flat && !P.wall) for (let j = 0; j < h; j++) for (let ii = 0; ii < w; ii++) { const x = q.tx + ii, y = q.ty + j; if (x >= 0 && y >= 0 && x < C && y < L.rows) occ[y * C + x] = 1; }
   });
@@ -177,7 +186,7 @@ export function canPlace(L, d, q, skip = -1, bodies = []) {
     if (ch === '+') return 'Not in a doorway.';
     if (!PLACEABLE.has(ch)) return WALLISH.has(ch) ? 'There\'s a wall there.' : 'Something\'s already there.';
     if (P.flat || P.wall) continue;
-    if (x === sx && y === sy) return 'Keep the way in from the front door clear.';
+    if (x === sx && y === sy) return L.door ? 'Keep the way in from the front door clear.' : 'Keep the way off the stairs clear.';
     const cx = (x + 0.5) * TILE_IN, cy = (y + 0.5) * TILE_IN;
     if (cars.some((c) => cx > c.x - TILE_IN / 2 && cx < c.x + c.w + TILE_IN / 2 && cy > c.y && cy < c.y + c.h)) return 'That\'s where a car parks.';
   }

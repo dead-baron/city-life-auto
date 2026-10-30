@@ -268,8 +268,11 @@ function mineStep(world) {
     finishVein(world, v, st);
     const inv = p.profile.inventory, n = v.ore === 'diamond' || v.ore === 'gem' ? 1 : 1 + (world.rand() < 0.35 ? 1 : 0);
     inv[v.ore] = (inv[v.ore] || 0) + n;
+    // (and the rock round it: building stone for the home upgrades - homeups.js; a quarry's faces give more)
+    const stone = (v.ug ? 1 : 2) + (world.rand() < 0.5 ? 1 : 0);
+    inv.stone = (inv.stone || 0) + stone;
     world.emit(m.vx, m.vy, { e: 'pick', id: ped.id, x: m.vx, y: m.vy, t: m.tier, done: 1 });
-    world.notify(p, `${n > 1 ? 'Two lumps of ' + oreName(v.ore) : `A${/^[aeiou]/i.test(ITEMS[v.ore].name) ? 'n' : ''} ${oreName(v.ore)}`} - the assay office at the quarry pays best; pawn shops buy it too.`, 'good');
+    world.notify(p, `${n > 1 ? 'Two lumps of ' + oreName(v.ore) : `A${/^[aeiou]/i.test(ITEMS[v.ore].name) ? 'n' : ''} ${oreName(v.ore)}`} and ${stone} blocks of building stone - the assay office at the quarry pays best for the ore; the stone builds onto a home.`, 'good');
     p.meDirty = true;
     store.touch();
   }

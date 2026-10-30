@@ -16,6 +16,7 @@ import { ITEMS, GARDEN_CROP_NAMES } from '../../shared/items.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { ownedHomes } from './homes.js';
+import { bedsOf } from './homeups.js';
 
 const rng = mulberry32(6161);
 export const CROP_IDS = Object.keys(GARDEN_CROPS);   // (the wire's crop index: render/farmart.js)
@@ -25,13 +26,20 @@ const SEND_TICKS = 20;   // the plots near each player sent (when they changed) 
 const SEE_R = 900;       // px: the gardens a player is sent
 
 // ---- the plots: where they are in a home's yard ----------------------------------------------------------------
+// (the home upgrades' garden beds - homeups.js: up to GARDEN.more more are found, the first GARDEN.plots the ones a home
+// comes with - the same spots as ever; plotsOf: a home's as its owner has dug them)
 const spotCache = new WeakMap();
-export function plotSpots(map, h) {
+export function allSpots(map, h) {
   let per = spotCache.get(map);
   if (!per) spotCache.set(map, (per = new Map()));
   let s = per.get(h.id);
   if (!s) per.set(h.id, (s = findSpots(map, h)));
   return s;
+}
+export const plotSpots = (map, h, n = GARDEN.plots) => allSpots(map, h).slice(0, n);
+export function plotsOf(world, h, prof = null) {
+  const pid = world.homeOwner && world.homeOwner.get(h.id), pr = prof || (pid ? (world.players.get(pid) || {}).profile || store.get(pid) : null);
+  return plotSpots(world.map, h, GARDEN.plots + (pr ? bedsOf(pr, h.id) : 0));
 }
 const yardTile = (map, tx, ty) => map.inside(tx, ty) && (map.tiles[map.idx(tx, ty)] === T.GRASS || map.tiles[map.idx(tx, ty)] === T.DIRT);
 // the props standing in yards (trees, sheds, fences...), bucketed once a map: a plot never goes on one
@@ -116,7 +124,7 @@ function findSpots(map, h) {
   pool.sort((p, q) => Math.hypot(p.x - a.x, p.y - a.y) - Math.hypot(q.x - a.x, q.y - a.y) || p.y - q.y || p.x - q.x);
   const out = [];
   for (const c of pool) {
-    if (out.length >= GARDEN.plots) break;
+    if (out.length >= GARDEN.plots + GARDEN.more) break;
     if (out.some((o) => Math.abs(o.x - c.x) < 68 && Math.abs(o.y - c.y) < 40)) continue;
     if (Math.hypot(c.x - a.x, c.y - a.y) > 260) break;
     out.push({ x: c.x, y: c.y });
@@ -189,9 +197,9 @@ export function nearPlots(world, x, y, r = SEE_R) {
   for (const [hid, pid] of world.homeOwner || []) {
     const h = world.map.homes[hid];
     if (!h || Math.abs(h.x - x) > r + 300 || Math.abs(h.y - y) > r + 300) continue;
-    const spots = plotSpots(world.map, h);
+    const prof = store.get(pid), spots = plotsOf(world, h, prof);
     if (!spots.length) continue;
-    const prof = store.get(pid), gd = prof && prof.garden && prof.garden[hid];
+    const gd = prof && prof.garden && prof.garden[hid];
     spots.forEach((s, i) => {
       const q = gd && gd.plots[i];
       if (!q) { out.push([s.x, s.y, -1, 0, 0]); return; }
@@ -219,9 +227,9 @@ export function plotNear(world, p) {
   let best = null, bd = GARDEN.reach;
   for (const h of ownedHomes(world, p.profile)) {
     if (!h || Math.abs(h.x - ped.x) > 700 || Math.abs(h.y - ped.y) > 700) continue;
-    plotSpots(world.map, h).forEach((s, i) => { const d = Math.hypot(s.x - ped.x, s.y - ped.y); if (d < bd) { bd = d; best = { h, i, s }; } });
+    plotsOf(world, h, p.profile).forEach((s, i) => { const d = Math.hypot(s.x - ped.x, s.y - ped.y); if (d < bd) { bd = d; best = { h, i, s }; } });
   }
-  if (best) best.gd = gardenOf(p.profile, best.h.id, plotSpots(world.map, best.h).length);
+  if (best) best.gd = gardenOf(p.profile, best.h.id, plotsOf(world, best.h, p.profile).length);
   return best;
 }
 // the seeds you'd plant: the first kind you carry

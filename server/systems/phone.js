@@ -29,6 +29,7 @@ import * as realestate from './realestate.js';
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
+import * as woodjob from './woodjob.js';
 import * as skills from './skills.js';
 import * as workout from './workout.js';
 import * as crews from './crews.js';
@@ -198,6 +199,8 @@ export function boardFor(world, p) {
   const hosp = paramedic.hospitalFor(world, p);   // paramedic: a shift of medical calls from the nearest hospital (paramedic.js)
   if (hosp) list.push({ id: 'medic', kind: 'medic', icon: '🚑', sub: 'medical calls: treat the hurt on the spot, get the badly hurt to a hospital, revive players down - an ambulance is issued', pay: MEDIC.pay.serious, title: `Paramedic - a shift from ${hosp.label}`, x: hosp.x, y: hosp.y, ...card(MEDIC.pay.minor, MEDIC.pay.serious * (1 + MEDIC.pay.fast), 'a call', `Get in the ambulance at ${hosp.label}`) });
   drivingJobs(world, p, list);   // the taxi, the bus, the tow truck (H72)
+  const wood = woodjob.boardEntry(world, p);   // a firewood order from a diner, a cafe, a camp... (woodjob.js)
+  if (wood) list.push(wood);
   const pj = p.job;
   return { t: 'board', jobs: list, job: pj ? { text: pj.text, type: pj.type, pay: Number.isFinite(pj.pay) ? pj.pay : null } : null, saw: law.sawList(world, p) };
 }
@@ -292,6 +295,7 @@ function take(world, p, id) {
   if (id === 'cab') return taxijob.start(world, p);
   if (id === 'bus') return busjob.start(world, p);
   if (id === 'towjob') return towjob.start(world, p);
+  if (id === 'wood') return woodjob.start(world, p);
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -321,8 +325,8 @@ export function jobTarget(world, p) {
 // The HUD's job card (UI-4, client/hudinfo.js): the job's name (k), the call or fare it's on (n, u), the step of it
 // (step: [i, of]) and the time left on the shift or the contract (left, s) - beside the objective line (text) and where
 // (x, y). A shift waiting for its next call has no step.
-const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work' };
-const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']] };
+const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work', wood: 'Firewood order' };
+const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']], wood: [['gather'], ['go']] };
 const JOB_UNIT = { cab: 'Fare', charter: 'Flight', medic: 'Call', fire: 'Call', towjob: 'Call', sar: 'Call', coast: 'Call' };
 export function jobCardInfo(world, j, t) {
   const out = { k: JOB_NAME[j.type] || '' };
@@ -344,6 +348,7 @@ function target(world, p, j) {
   if (j.type === 'cab') return taxijob.target(world, p, j);   // (the fare, then where they're going: taxijob.js)
   if (j.type === 'bus') return busjob.target(world, p, j);   // (the next stop: busjob.js)
   if (j.type === 'towjob') return towjob.target(world, p, j);   // (the car, then the impound: towjob.js)
+  if (j.type === 'wood') return woodjob.target(world, p, j);   // (cut the firewood, then take it there: woodjob.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

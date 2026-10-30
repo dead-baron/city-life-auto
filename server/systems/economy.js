@@ -28,6 +28,8 @@ import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
+import * as homeups from './homeups.js';
+import * as woodjob from './woodjob.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skate from './skate.js';
@@ -38,7 +40,7 @@ import * as music from './music.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
-import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
+import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -233,6 +235,7 @@ export function buildMenu(world, p, poi) {
     }
   }
   if (kind === 'hardware') opts.unshift({ id: 'furn', label: 'Furniture & decor for your home', note: 'sofas, lamps, rugs, a wall TV...' });   // (H67)
+  if (kind === 'hardware') opts.push({ id: 'job:wood', label: p.job ? 'Firewood orders - finish your job first' : 'Firewood orders: deliver bundles for pay', dis: !!p.job, note: 'a diner, a cafe, a camp...' });   // (woodjob.js)
   switch (kind) {
     case 'bank': case 'atm':
       title = kind === 'bank' ? 'First Pixel Bank' : 'ATM';
@@ -515,6 +518,7 @@ export function openMenu(world, p, poi) {
 
 export function handleMenu(world, p, poiId, optId) {
   if (biz.isBizPoi(poiId)) { biz.onMenu(world, p, poiId, String(optId || '')); return; }   // (a business's own menu: biz.js)
+  if (homeups.onMenu(world, p, poiId, String(optId || ''))) return;   // (your garage, the home's upgrades: homeups.js)
   if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)
   const poi = world.map.pois[poiId];
@@ -833,6 +837,7 @@ function execute(world, p, poi, opt) {
       if (parts[1] === 'quit') { jobs.failJob(world, p, 'Job abandoned.'); return null; }
       if (p.job) return 'Finish your current job first.';
       if (parts[1] === 'fieldwork' || parts[1] === 'combine') return farming.startWork(world, p, poi, parts[1] === 'combine' ? 'combine' : 'tractor');   // (the tractor, the combine on the fields: farming.js)
+      if (parts[1] === 'wood') return woodjob.start(world, p);   // (a firewood order: woodjob.js)
       return parts[1] === 'courier' ? jobs.startCourier(world, p, poi) : jobs.startFarm(world, p, poi);
     }
     default: return 'Unknown option.';

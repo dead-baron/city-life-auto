@@ -157,6 +157,7 @@ function frame(now) {
     if (st.folk) folkV1(now);
     you(L, me, now);
     nightV1(L);
+    fireFx(L, now);
     if (L.key === 'bath') bathFx(L, now);
   }
   if (st.doors && !(v2 && art && art.ready)) lobbyMarks(L, false, now);   // (H71: a lobby's door numbers, yours lit - art v2 draws them with the back wall, under the people)
@@ -192,7 +193,7 @@ function drawArt(L, me, u, now) {
   for (const it of art.items) list.push({ b: it.base, it });
   (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
   // you, and anyone in here with you: art v2's people, at the street's size
-  const tub = L.key === 'bath' ? L.pieces.find((p) => p.ch === 'u') : null;
+  const tub = L.key === 'bath' ? L.pieces.find((p) => p.ch === 'u') : L.pieces.find((p) => p.ch === '%');   // (a home's hot tub: homeups.js)
   const person = (look, x, y, a, mv, sl, sh, nm, si, sk) => {
     let pose = mv ? 'move1' : 'idle', fr = mv ? Math.floor(now / 110) % 6 : 0, d8 = dir8Of(a), b = y;
     if (si) { x = si[0]; y = si[1]; d8 = dir8Of(si[2]); pose = 'sit'; fr = 0; b = y + TILE_IN / 2 + 1; }   // (sat on the couch, an armchair, the cinema's seats: in front of the seat's own base)
@@ -248,6 +249,7 @@ function drawArt(L, me, u, now) {
     for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
   }
   tvGlow(L, now);
+  fireFx(L, now);
   if (L.key === 'bath') bathFx(L, now);
   return true;
 }
@@ -282,6 +284,31 @@ function tvGlow(L, now) {
     g.fillStyle = grd; g.fillRect(x - r, y - r, r * 2, r * 2);
   }
   g.restore();
+}
+
+// (the home upgrades - server homeups.js) a fire lit in the fireplace: flames dancing in the firebox, sparks going up, a
+// warm flickering glow over the room; the hot tub's steam
+function fireFx(L, now) {
+  const fire = st.fire && L.pieces.filter((q) => q.ch === 'p'), tubs = L.pieces.filter((q) => q.ch === '%');
+  if (tubs.length) {
+    g.fillStyle = 'rgba(235,245,255,.18)';
+    for (const q of tubs) for (let k = 0; k < 4; k++) { const t = (now / 1400 + k / 4) % 1; g.beginPath(); g.arc(q.x + q.w * (0.25 + 0.17 * k), q.y + q.h / 2 - t * 30, 4 + t * 9, 0, 6.28); g.fill(); }
+  }
+  if (!fire || !fire.length) return;
+  for (const q of fire) {
+    const side = q.face === 'e' || q.face === 'w', cx = q.x + q.w / 2, cy = q.y + q.h / 2 + (side ? 0 : 4);
+    g.save(); g.globalCompositeOperation = 'lighter';
+    const d = daylight(), r = 150 + 12 * Math.sin(now / 90), grd = g.createRadialGradient(cx, cy, 6, cx, cy, r);
+    grd.addColorStop(0, `rgba(255,150,60,${0.28 + 0.2 * (1 - d) + 0.05 * Math.sin(now / 53)})`); grd.addColorStop(1, 'rgba(255,120,40,0)');
+    g.fillStyle = grd; g.fillRect(cx - r, cy - r, r * 2, r * 2);
+    for (let k = 0; k < 7; k++) {   // the flames: tongues of fire, each flickering on its own
+      const f = Math.sin(now / (70 + k * 13) + k * 1.7), fx = cx + (k - 3) * (side ? 1.2 : 3.2), fh = 7 + 5 * (0.5 + 0.5 * f);
+      g.fillStyle = k % 3 === 0 ? 'rgba(255,230,150,.9)' : k % 3 === 1 ? 'rgba(255,160,50,.85)' : 'rgba(230,80,30,.8)';
+      g.beginPath(); g.moveTo(fx - 2.5, cy); g.quadraticCurveTo(fx + f * 2, cy - fh * 0.6, fx + f, cy - fh); g.quadraticCurveTo(fx + 1 + f, cy - fh * 0.5, fx + 2.5, cy); g.fill();
+    }
+    for (let k = 0; k < 3; k++) { const t = (now / 900 + k / 3) % 1; g.fillStyle = `rgba(255,200,110,${1 - t})`; g.fillRect(cx - 4 + k * 4 + Math.sin(now / 200 + k) * 2, cy - 10 - t * 22, 1.5, 1.5); }
+    g.restore();
+  }
 }
 
 // ---- a bathhouse (server/systems/bathhouse.js): the bathers, the water, the steam, the curtains -------------------------
@@ -527,6 +554,18 @@ function piece(b, p, P, L) {
     case 'w': box('#eceae4', x + 4, y + 4, w - 8, h - 8); b.fillStyle = '#5a7a8a'; b.beginPath(); b.arc(x + 16, y + 18, 7, 0, 6.28); b.fill(); box('#3a3e46', x + 8, y + 6, 6, 2); break;
     case 'd': box('#5a3c22', x + 4, y + 10, w - 8, h - 14); box('#22222a', x + 6, y + 4, w - 12, 12); b.fillStyle = '#0e0e12'; b.beginPath(); b.arc(x + w / 2 - 2, y + 10, 5, 0, 6.28); b.fill(); box('#c83a2a', x + w / 2 - 3, y + 9, 2, 2); box('#c8ccd2', x + w - 10, y + 6, 2, 7); break;   // a record player on its cabinet
     case 'q': for (let k = 0; k < 2; k++) { box(k ? '#2f6ab0' : '#a8743c', x + 3 + k * 13, y + 8, 12, h - 12); for (let j = 0; j < 4; j++) box(['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0'][(j + k) % 4], x + 4 + k * 13 + j * 3, y + 6, 2, 8); } break;   // two crates of records
+    case '^': {   // (the home upgrades - homeups.js) the stairs between the floors: a flight up, a railed stairwell down, or both
+      const k = L.stairsKind || 'u', up = k !== 'd' && k !== 'down', down = k === 'd' || k === 'down' || k === 'ud', ux = k === 'ud' ? x + w / 2 : x;
+      if (down) { const x1 = k === 'ud' ? x + w / 2 - 2 : x + w - 4; box('#141416', x + 3, y + 3, x1 - x - 3, h - 6); for (let i = 0; i < 4; i++) box(['#5a5650', '#4a4640', '#3a3632', '#2a2622'][i], x + 4, y + h - 10 - i * 12, x1 - x - 5, 6); box('#6a4a2c', x + 2, y + 2, 2, h - 4); box('#6a4a2c', x1, y + 2, 2, h - 4); box('#6a4a2c', x + 2, y + h - 4, x1 - x, 2); }
+      if (up) { for (let i = 0; i < 8; i++) { box(i & 1 ? '#8a8680' : '#9a968e', ux + 2, y + h - (i + 1) * 8, x + w - ux - 10, 8); box('rgba(0,0,0,.18)', ux + 2, y + h - (i + 1) * 8, x + w - ux - 10, 1); } box('#5a3c22', x + w - 8, y, 4, h); }
+      break;
+    }
+    case 'p': box('#8e4a3c', x + 2, y + 2, w - 4, h - 8); box('#1a1614', x + 14, y + 8, w - 28, h - 16); box('#6a4228', x + 18, y + h - 14, w - 36, 4); box('#7a7068', x, y + h - 8, w, 6); box('#5a3424', x, y + 2, w, 4); break;   // a fireplace: the brick surround, the firebox, its logs, the hearth
+    case '%': box(L.tier >= 3 ? '#e8e8e4' : '#8a5a34', x + 2, y + 2, w - 4, h - 4); box('#9ac8d8', x + 6, y + 6, w - 12, h - 12); box('#5ab4d8', x + 12, y + 12, w - 24, h - 24); for (let k = 0; k < 4; k++) box('rgba(230,248,255,.6)', x + 14 + (k * 11) % (w - 30), y + 16 + (k * 7) % (h - 32), 4, 2); break;   // a hot tub
+    case 'm': box('#5a3a24', x + 1, y + 6, w - 2, h - 14); box('#e8e4dc', x, y + 4, w, 5); for (let k = 0; k < 6; k++) box(['#3a7a3a', '#7a3a2a', '#c8a040', '#2a4a7a'][k % 4], x + 5 + k * ((w - 10) / 6), y + 5, 3, 3); for (const sx of [0.28, 0.72]) { b.fillStyle = '#7a1d24'; b.beginPath(); b.arc(x + w * sx, y + h - 4, 4, 0, 6.28); b.fill(); } break;   // a home bar, its stools
+    case 'e': box('#5a6a7a', x + 10, y + 4, w - 20, h - 8); b.fillStyle = '#c8ccd2'; b.beginPath(); b.arc(x + w / 2, y + 9, 6, 0, 6.28); b.fill(); box('#1a1a1e', x + w / 2 - 4, y + h - 12, 8, 6); box('#c83a2a', x + w / 2 - 7, y + 5, 14, 2); break;   // an exercise bike
+    case 'z': box('#6a727a', x + 2, y + 4, w - 4, h - 8); for (let k = 0; k < 3; k++) { box('#b08a5a', x + 5 + k * ((w - 10) / 3), y + 7, (w - 10) / 3 - 3, h - 14); box('rgba(0,0,0,.2)', x + 5 + k * ((w - 10) / 3), y + 7, (w - 10) / 3 - 3, 2); } break;   // storage shelves
+    case '&': for (let r = 0; r < 3; r++) for (let k = 0; k < 3 - (r > 1 ? 1 : 0); k++) { b.fillStyle = '#5a3a24'; b.beginPath(); b.arc(x + 9 + k * 7 + (r % 2) * 3, y + h - 8 - r * 6, 3.4, 0, 6.28); b.fill(); b.fillStyle = '#d8b07a'; b.beginPath(); b.arc(x + 9 + k * 7 + (r % 2) * 3, y + h - 8 - r * 6, 2.2, 0, 6.28); b.fill(); } break;   // a woodpile, the logs' cut ends
     case 'k': box('#4a5a6a', x + 2, y + 6, w - 4, h - 10); box('#b08a5a', x + 3, y + 7, w - 6, h - 14); box('#b8342e', x + 10, y + 10, 12, 7); box('#c8ccd2', x + w - 14, y + h - 10, 8, 4); break;
     // (H71) a lobby's: the mailboxes on the back wall, the stairs climbing to it
     case 'M': box('#5a6068', x + 2, y + 2, w - 4, h - 12); for (let j = 0; j < 2; j++) for (let i = 0; i < Math.floor((w - 8) / 10); i++) { box('#a8aeb4', x + 5 + i * 10, y + 4 + j * 9, 8, 7); box('#22262c', x + 7 + i * 10, y + 6 + j * 9, 4, 1); } break;

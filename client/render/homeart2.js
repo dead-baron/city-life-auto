@@ -183,7 +183,7 @@ export class HomeArt {
     const key = L.key, paved = /^(apartment|studio|penthouse|lobby|arcade|bath)/.test(key), house = key === 'house', trailer = key === 'trailer', mansion = key === 'mansion';
     const grass = ramp(['#7a8a3e', '#6a9236', '#5e9a34', '#4e9a3a'][this.tier], 6, 3), pave = ramp('#b8b0a0', 6, 3), conc = ramp('#9c9a94', 6, 3);
     const stone = ramp('#d8ceb8', 6, 3), plank = ramp('#9a6c44', 6, 3), board = ramp('#7a5034', 6, 3), white = ramp('#eeeae0', 5, 2), soil = ramp('#5a3e2a', 5, 2);
-    const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3);
+    const hedge = ramp('#3e6a2e', 6, 3), sea = ramp('#2e6a9a', 6, 3), rock = ramp('#7a7068', 6, 3), roof = ramp(['#6a5a4a', '#5a4a44', '#4a4a52', '#3a3e48'][this.tier] || '#5a4a44', 6, 3);
     const E = T - WALL_IN, H = L.h, W = L.w, front = H - E;
     let r0 = L.cols, r1 = -1;
     for (let tx = 0; tx < L.cols; tx++) if (L.cell(tx, L.rows - 1) === 'R') { r0 = Math.min(r0, tx); r1 = Math.max(r1, tx); }
@@ -191,6 +191,16 @@ export class HomeArt {
     for (let y = 0; y < G.h; y++) for (let x = 0; x < G.w; x++) {
       const wx = x * ap - M, wy = y * ap - M;
       if (wx >= E && wy >= E && wx < W - E && wy < front) continue;   // (the floor's)
+      if (key === 'upper') {   // (a floor upstairs - the home upgrades: the roofs round it, shingles in rows, the gutter's line)
+        const e = Math.min(wx + M, wy + M, W + M - wx, H + M - wy);
+        G.put(x, y, step(roof, 0.5 + ((Math.floor(wy / 8) + (Math.floor((wx + (Math.floor(wy / 8) & 1) * 6) / 12))) & 1 ? 0.08 : -0.06) + (wy % 8 < 1 ? -0.35 : 0) + (e < 6 ? -0.3 : 0) + (hash(wx >> 2, wy >> 2, 3) - 0.5) * 0.15, x, y, 0.4), UP, 0);
+        continue;
+      }
+      if (key === 'cellar') {   // (the basement: packed earth and the footings' stone round it)
+        const e = Math.min(Math.abs(wx - E / 2), Math.abs(wy - E / 2), Math.abs(W - E / 2 - wx), Math.abs(H - E / 2 - wy));
+        G.put(x, y, e < 14 ? step(rock, 0.45 + (hash(wx >> 3, wy >> 2, 6) - 0.5) * 0.5 + (wx % 16 < 1 || wy % 8 < 1 ? -0.3 : 0), x, y, 0.4) : step(soil, 0.35 + (vnoise(wx, wy, 10, 4) - 0.5) * 0.3 + (hash(x, y, 7) - 0.5) * 0.2, x, y, 0.5), UP, 0);
+        continue;
+      }
       const pathX = door && Math.abs(wx - door.x) < 16, path = pathX && wy >= front, drive = r1 >= 0 && wy >= front && wx >= dx0 && wx < dx1;
       const gr = () => step(grass, 0.5 + (vnoise(wx, wy, 14, 2) - 0.5) * 0.3 + (hash(x, y, 5) - 0.5) * 0.25 + (this.tier >= 2 && !paved ? ((Math.floor((wx + 400) / 24) & 1) ? 0.07 : -0.05) : 0), x, y, 0.6);
       const pavers = (P, s = 16) => step(P, 0.55 + ((((wx % s) + s) % s < 1 || (((wy % s) + s) % s) < 1) ? -0.3 : (hash(Math.floor(wx / s), Math.floor(wy / s), 3) - 0.5) * 0.2), x, y, 0.3);
@@ -428,13 +438,13 @@ export class HomeArt {
       if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
       if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
-      else if (p.ch === 'Z' || p.ch === 'M') face = 's';   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
+      else if (p.ch === 'Z' || p.ch === 'M' || p.ch === '^') face = 's';   // (^: a home's stairs between its floors - homeups.js)   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
       else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
       else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c ? (c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < p.y - c.y ? 'n' : 's') : wall(p.tx, p.ty + p.th) ? 'n' : 's'; }   // (the couch north of it: it faces north - it measured that the wrong way round, so a set against the south wall faced the wall: the owner, 10-16, "A TV faces the wall"; no couch: away from the wall it stands against)   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
       const side = face === 'e' || face === 'w', mw = side ? p.h : p.w, md = side ? p.w : p.h;
       const head = { s: 0, n: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }[face];
-      const seed = p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : 0, mk = `${p.ch}|${mw}|${md}|${this.tier}|${seed}|${face}`;
+      const seed = p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : p.ch === '^' ? ({ u: 1, up: 1, d: 2, down: 2, ud: 3 }[L.stairsKind] || 1) : 0, mk = `${p.ch}|${mw}|${md}|${this.tier}|${seed}|${face}`;
       let G = this.models.get(mk);   // (H71: a model made once - a change of decor makes only the new pieces)
       if (!G) { G = make(mw, md, this.tier, seed).render(head, { px: ap, dither: 0.35 }); this.models.set(mk, G); }
       const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
