@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, DAY_PART_S } from '../shared/constants.js';
+import { PED_BLOCK } from '../shared/mapcore.js';
 import * as C from '../shared/chess.js';
 import { bestMove, think } from '../server/systems/chessai.js';
 import * as chess from '../server/systems/chess.js';
@@ -74,6 +75,12 @@ test('the park regular: takes a mate, a free queen, and thinks a root move at a 
 const w = makeWorld();
 const tables = chess.tables(w.map);
 const clearPeds = () => { for (const e of [...w.entities.values()]) if (e.kind === K.PED && !e.player) w.remove(e); w.acts = new Map(); w.chess = new Map(); };
+// an open spot outside near (x, y): no building's floor, wall or water round it
+const openSpot = (x, y) => {
+  const m = w.map, ok = (px, py) => { const tx = Math.floor(px / 32), ty = Math.floor(py / 32); return m.inside(tx, ty) && m.bld[m.idx(tx, ty)] < 0 && !PED_BLOCK[m.tileAtPx(px, py)] && !m.isWater(px, py); };
+  for (let r = 0; r < 3000; r += 24) for (let k = 0; k < 24; k++) { const px = x + Math.cos(k * 0.26) * r, py = y + Math.sin(k * 0.26) * r; if ([[0, 0], [20, 0], [-20, 0], [0, 20], [0, -20]].every(([dx, dy]) => ok(px + dx, py + dy))) return [px, py]; }
+  return [x, y];
+};
 const last = (conn, t) => [...conn.sent].reverse().find((m) => m && m.t === t);
 
 test('chess at the park: two players at a table, moves only when legal, mate decides it, the record kept', () => {
@@ -190,6 +197,7 @@ test('fireworks: bought, lit from the bag, the same show for everyone, harmless,
   assert.equal(fwShow(2, 99).shots.length, 12, 'the cake: twelve shots');
   assert.ok(fwShow(1, 5).fountain && !fwShow(0, 5).fountain);
   const A = joinPlayer(w, { name: 'Eve' }), B = joinPlayer(w, { name: 'Finn' });
+  teleport(w, A.p.ped, ...openSpot(A.p.ped.x, A.p.ped.y));   // (out under the sky: never a building's floor)
   teleport(w, B.p.ped, A.p.ped.x + 30, A.p.ped.y);
   A.p.profile.inventory.fwrocket = 5;
   const hp = B.p.ped.hp;
