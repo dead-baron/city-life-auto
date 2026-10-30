@@ -26,6 +26,8 @@ export const DEV_SECTIONS = [
     ['🌇 15:00 afternoon', 'time', { m: 900 }], ['🌆 18:30 golden hour', 'time', { m: 1110 }], ['🌃 20:15 dusk', 'time', { m: 1215 }],
     ['🌙 23:00 night', 'time', { m: 1380 }], ['🌌 03:00 small hours', 'time', { m: 180 }], ['⏸ Freeze the clock (toggle)', 'clockhold'],
   ] },
+  // what the owner's phone does (the perf work, 10-26): the readout over the screen, kept on in this browser till switched off
+  { id: 'perf', title: '📈 Performance', items: [['📈 Performance readout on / off (your screen)', '@perf']] },
   { id: 'me', title: '🧍 Me', items: [
     ['🛡 Invincible (toggle)', 'god'], ['❤ Heal', 'heal'], ['💵 +$25k', 'money'], ['😇 +50 Samaritan', 'samaritan'],
     ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'], ['🎒 Dropped backpacks, Common to Legendary', 'packs'],

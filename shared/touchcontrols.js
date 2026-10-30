@@ -30,10 +30,15 @@ export const TOUCH_STATES = {
   surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
   swim: { act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
   home: { act: ['action', 'ACT'], u1: UT.u1, u2: UT.u2 },   // (walking round your home: no stick)
+  // a line out (UI-7, the owner 2026-10-26: "Fishing UI is hidden behind the weapons selection button"): ACT casts,
+  // strikes and reels, and nothing else does anything - the right-hand side clear for the fight's meter (style.css
+  // #fishspot); the move stick still walks you off (a boat's wheel still steers)
+  fish: { act: ['action', 'ACT'] },
 };
-// what you're doing, from the page's flags: { home, air, inVeh, driver, horse, boat, surf, swim, board, carrying, armed }
+// what you're doing, from the page's flags: { home, fish, air, inVeh, driver, horse, boat, surf, swim, board, carrying, armed }
 export function touchState(f) {
   if (f.home) return 'home';
+  if (f.fish) return 'fish';
   if (f.air) return 'air';
   if (f.inVeh) return f.horse ? 'horse' : !f.driver ? 'ride' : f.boat ? 'boat' : 'drive';
   if (f.surf) return 'surf';

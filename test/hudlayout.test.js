@@ -162,6 +162,20 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   assert.ok(all.some((r) => r.sc.cam), 'a phone with a camera in the screen measured');
   assert.ok(all.some((r) => r.sc.h > r.sc.w && r.keep.some((k) => k.name === 'rclock')), 'the clock measured upright');
   assert.deepEqual(cam, [], cam.slice(0, 40).join('\n'));
+  // UI-7 (the owner, 2026-10-26, upright: "Fishing UI is hidden behind the weapons selection button. ... Some text is on
+  // two lines"): the fight's meter has its own spot in the HUD (#fishspot: client/fishing.js draws in its box) - on every
+  // screen, tall enough to play (120 px on a screen under 400 px tall), on nothing and under nothing (the checks above: the touch slots, the prompt, the notes,
+  // the job card, the minimap, the top-right column; and never on you); the big cue (STRIKE!) on one line
+  const fish = [];
+  for (const [w, h] of SIZES) if (!all.some((r) => r.sc.st === 'fish' && r.sc.w === w && r.sc.h === h && r.read.some((b) => b.name === 'fishspot'))) fish.push(`${w}x${h}: no fishing meter measured`);
+  for (const r of all.filter((q) => q.sc.st === 'fish')) {
+    const { w, h, dev } = r.sc, tag = `${w}x${h} ${dev} fish`, sp = r.read.find((b) => b.name === 'fishspot'), cue = r.read.find((b) => b.name === 'fishbar');
+    if (!sp || sp.y1 - sp.y0 < (h < 400 ? 120 : 150) || sp.x1 - sp.x0 < 70) fish.push(`${tag}: the meter's spot ${JSON.stringify(sp)}`);
+    if (!cue) fish.push(`${tag}: no cue`);
+    else if (cue.y1 - cue.y0 > 46) fish.push(`${tag}: the cue on two lines (${cue.y1 - cue.y0} px tall)`);
+    if (dev === 'touch' && r.state && r.state.state !== 'fish') fish.push(`${tag}: the slots in ${r.state.state}`);
+  }
+  assert.deepEqual(fish, [], fish.slice(0, 30).join('\n'));
 });
 
 // the prompt's crime marks (hud.js crimeMarks: the key chip red with a "!", a felony ringed; the touch button red - no

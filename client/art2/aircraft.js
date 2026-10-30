@@ -262,14 +262,18 @@ export function drawAir(H, v, now, me) {
   // the plane's bank: yours from the prediction, the others' from their turning (render/aircraft.js keeps v._bank)
   const bank = isPlane(def) ? (v._own ? v.rbank : v._bank) || 0 : 0, bi = Math.max(0, Math.min(4, Math.round(bank / 0.3) + 2));
   const key = `air|${type}${li}|${bi}|${hi}|${N}`;
-  let k = H._conv(key, () => bodySprite(type, hi, N, bi, px, true, li), true);
-  if (!k) k = H._near((h) => `air|${type}${li}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}${li}|2|${h}|${N}`, hi, N);
+  const mk = () => bodySprite(type, hi, N, bi, px, true, li);
+  let k = H._conv(key, mk, true);
+  // (past the frame's time for made sprites: the nearest heading made, or this one now if there's none - host.js GEN_MS)
+  if (!k) k = H._near((h) => `air|${type}${li}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}${li}|2|${h}|${N}`, hi, N) || H._conv(key, mk, 2);
   if (!k) return false;
   const o = H.opts, z0 = lift + (alt < 1 ? H._z0(v, false) : 0) - (T.plane ? zoffOf(BANKS[bi]) : 0);
   o.alpha = 1; o.flash = 0; o.xray = !!me && alt < 30; o.flipX = false; o.shadow = alt < 6; o.under = 0; o.air = alt > 24;   // (off the ground its shadow is the overlay's: render/aircraft.js airShadow - the march would make a column of it)
   o.tint = f & VF.WRECK ? [0.32, 0.3, 0.3] : null;
   E.drawSprite(k, v.rx, v.ry, z0, o);
   H.n.drawn++;
+  // yours: the headings either side made ahead while the frame has time, so a turn finds them made
+  if (me) for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; H._conv(`air|${type}${li}|${bi}|${h}|${N}`, () => bodySprite(type, h, N, bi, px, true, li), true); }
   // the main rotor over the mast: the blades while it spools (turning), the blurred disc once it's up to speed
   if (!T.plane && !(f & VF.WRECK)) {
     const R = def.rotor || 76, s = v._spin || 0, c = Math.cos(v.ra), sn = Math.sin(v.ra), mx = v.rx + c * def.L * MAST, my = v.ry + sn * def.L * MAST;
