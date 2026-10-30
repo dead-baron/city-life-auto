@@ -16,6 +16,7 @@
 // waits there, interact boards it, free (a passenger seat; the camera rides along). Get off with the vehicle key
 // while it waits at a stop (on the move you bail out, as from any vehicle). A bus that is taken or wrecked leaves its
 // line; a new one comes into service a minute later, out of sight.
+import * as taxijob from './taxijob.js';
 import { K, T } from '../../shared/constants.js';
 import { lanePath, exitsFrom, nearestEdge } from '../../shared/roads.js';
 import { project, pointAt } from '../../shared/geom.js';
@@ -694,9 +695,12 @@ function callTaxi(world, p, tier = 'std') {
   let best = null, bd = TAXI_CALL_PX;
   if (tier === 'std') for (const v of world.query(ped.x, ped.y, TAXI_CALL_PX, K.VEH)) { if (!freeTaxi(world, v)) continue; const d = Math.hypot(v.x - ped.x, v.y - ped.y); if (d < bd) { bd = d; best = v; } }
   if (!best) best = spawnTaxi(world, ped.x, ped.y, tier);
+  const cabbies = tier === 'std' ? taxijob.playerHail(world, p) : 0;   // (the on-duty players' cabs are sent too: first there gets you - taxijob.js)
+  if (!best && cabbies) { world.notify(p, `${cabbies === 1 ? 'A cab driver is' : `${cabbies} cab drivers are`} on the way - wave them down.`, 'good'); return null; }
   if (!best) return `No ${tier === 'std' ? 'taxis' : RIDESHARE[tier].name + ' cars'} free round here right now - try again in a moment.`;
   const err = sendTaxi(world, p, best, tier);
   if (err) return err;
+  if (cabbies) world.notify(p, `${cabbies === 1 ? 'A player\'s cab is' : `${cabbies} players' cabs are`} coming for you too - get in whichever's first.`, 'info');
   world.notify(p, `${tier === 'std' ? 'A taxi' : `Your ${RIDESHARE[tier].name}`} is on its way (about ${Math.max(10, Math.round(best.taxi.left / 200 / 5) * 5)}s) - it's the yellow square on your map.`, 'good');
   return null;
 }
@@ -770,6 +774,7 @@ function boardTaxi(world, p, v) {
   v.seats[seat] = ped.id; ped.vehId = v.id; ped.seat = seat; ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
   T.meter = 0; T.lx = v.x; T.ly = v.y; T.dest = p.taxiDest || null;
+  taxijob.hailOver(world, p, null, 'Your fare got in a city taxi first.');   // (the players' cabs sent for you stood down)
   if (!T.dest) world.notify(p, 'Where to? Set a waypoint (the map, or the phone\'s places) and the driver takes you there.', 'info');
   taxiGo(world, p, v);
   p.meDirty = true;
@@ -791,6 +796,7 @@ function updateTaxis(world) {
       continue;
     }
     if (!p || !ped || ped.dead) { releaseTaxi(world, v); continue; }
+    if (p.cabRide && ped.vehId === p.cabRide && (T.st === 'pickup' || T.st === 'wait')) { releaseTaxi(world, v, 'You took another cab - the taxi you called drove off.'); continue; }   // (a player's cab got there first: taxijob.js)
     // standing at the kerb: where it stopped (pushed far off it - rammed, or the driver panicked - it's gone)
     if (T.anchor !== T.st) { T.anchor = T.st; T.sx = v.x; T.sy = v.y; }   // (where it was when this stage began)
     if (TAXI_STILL.has(T.st) && Math.hypot(v.x - T.sx, v.y - T.sy) > 200) {
@@ -857,11 +863,13 @@ const sideDist = (v, ped) => {
   return Math.hypot(dx - c * along, dy - sn * along);
 };
 
+// a player's cab got there first (taxijob.js): the taxi you called on its way, or waiting, stood down
+export function standDown(world, p, why) { const v = taxiOf(world, p); if (v && (v.taxi.st === 'pickup' || v.taxi.st === 'wait')) releaseTaxi(world, v, why); }
 // the phone (the Transit app): call a taxi, cancel it, and where you want to go (your waypoint, while you have one)
 export function taxiPhone(world, p, msg) {
   const op = String(msg.op || '');
   if (op === 'call') { const err = callTaxi(world, p, TIERS.includes(msg.tier) ? msg.tier : 'std'); if (err) world.notify(p, err, 'warn'); }
-  else if (op === 'cancel') { const v = taxiOf(world, p); if (v && !(p.ped && p.ped.vehId === v.id)) releaseTaxi(world, v, 'Taxi cancelled.'); }
+  else if (op === 'cancel') { const v = taxiOf(world, p); if (v && !(p.ped && p.ped.vehId === v.id)) releaseTaxi(world, v, 'Taxi cancelled.'); if (world.cabHails && world.cabHails.has(p.pid)) taxijob.hailOver(world, p, null, 'The fare cancelled.'); }
   else if (op === 'dest') {
     const x = Number(msg.x), y = Number(msg.y);
     p.taxiDest = Number.isFinite(x) && Number.isFinite(y) && msg.x !== null ? { x: Math.round(x), y: Math.round(y), label: String(msg.label || '').slice(0, 60) } : null;
@@ -872,7 +880,7 @@ export function taxiPhone(world, p, msg) {
 // the HUD while you have a taxi: on its way (where, how long), waiting, where to, the meter, there
 export function taxiInfo(world, p) {
   const v = taxiOf(world, p);
-  if (!v) return null;
+  if (!v) return taxijob.riderInfo(world, p);   // (a player's cab on its way, or riding in one: taxijob.js)
   const T = v.taxi;
   return { tier: T.tier || 'std', name: (RIDESHARE[T.tier] || RIDESHARE.std).name, st: T.st, x: Math.round(v.x), y: Math.round(v.y), eta: T.st === 'pickup' ? Math.round(T.left / 200) : 0, wait: T.st === 'wait' ? Math.max(0, Math.round(T.until - world.time)) : 0, to: T.dest ? T.dest.label || 'your waypoint' : '', m: Math.round(T.left / 32), fare: fareOf(T.meter, T.tier), est: fareOf(T.meter + T.left, T.tier) };
 }

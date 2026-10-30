@@ -120,7 +120,10 @@ export const EVENT_SOUNDS = {
   skbank: (ev, A) => A.at('cashtoss', ev.x, ev.y, 0.35),
   skbail: null,   // (a combo lost: the 'bail' with it is heard)
   cartcrash: (ev, A) => { A.at('clang', ev.x, ev.y, 0.55); A.at('scrape', ev.x, ev.y, 0.5); },
-  cartup: (ev, A) => A.at('clang', ev.x, ev.y, 0.3),   // (a tipped shopping cart stood back up)   // (a shopping cart's wire basket into something, someone thrown out)
+  cartup: (ev, A) => A.at('clang', ev.x, ev.y, 0.3),
+  ctip: (ev, A) => A.at('cashtoss', ev.x, ev.y, 0.5),   // (Crazy Taxi: a tip, the clock's seconds back - crazytaxi.js)
+  hitch: (ev, A) => { A.at('clank', ev.x, ev.y, 0.9); A.at('thud', ev.x, ev.y, 0.5); },   // (a trailer on or off the fifth wheel: rigs.js)
+  mailbox: (ev, A) => A.at(ev.k ? 'thud' : 'lightclick', ev.x, ev.y, 0.6),   // (letters posted, a parcel set down: mailjob.js)   // (a tipped shopping cart stood back up)   // (a shopping cart's wire basket into something, someone thrown out)
   hood: (ev, A) => { A.at('thud', ev.x, ev.y, 1); A.at('bonk', ev.x, ev.y, 0.8); A.at('clank', ev.x, ev.y, 0.6); },   // a thud up onto the hood
   hoodoff: (ev, A) => A.at('bodyfall', ev.x, ev.y, 0.9),
   sinkboom: (ev, A) => { A.at('explosion', ev.x, ev.y, 0.5, { r: 60, wet: 1 }); A.at('splash', ev.x, ev.y, 1, { n: 40 }); },

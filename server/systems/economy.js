@@ -18,6 +18,7 @@ import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
 import * as taxijob from './taxijob.js';
+import * as truckjob from './truckjob.js';
 import * as phone from './phone.js';
 import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
@@ -373,6 +374,7 @@ export function buildMenu(world, p, poi) {
     case 'warehouse':
       sub = 'Haul a crate to a storefront. Cargo is visible - keep it safe from ambushes.';
       opts.push({ id: 'job:courier', label: p.job ? 'You already have a job' : 'Take a courier contract', dis: !!p.job });
+      if (!p.job && truckjob.interaction(world, p)) opts.push({ id: 'haulcard', label: 'Trucker: a long haul in a big rig', note: 'a rig and a trailer of crates', shut: true });   // (b8a: truckjob.js)
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
       break;
     case 'farm':
@@ -402,7 +404,7 @@ export function buildMenu(world, p, poi) {
       const b = trains.stationBoard(world, poi);
       title = b.title; sub = b.sub;
       // the station's taxi rank (UI-4): its prompt is the station's, so the cab's job card is offered from here
-      if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'the rank issues a cab', shut: true });
+      if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'a cab - or a Crazy Taxi run', shut: true });
       opts.push({ id: 'close', label: 'OK' });
       break;
     }
@@ -543,6 +545,7 @@ function execute(world, p, poi, opt) {
   switch (parts[0]) {
     case 'close': return null;
     case 'biz': return biz.openFrom(world, p, poi);   // (the manager's office: biz.js)
+    case 'haulcard': { const it = truckjob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'cabcard': { const it = taxijob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)

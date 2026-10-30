@@ -104,6 +104,10 @@ import * as paramedic from './systems/paramedic.js';
 import * as taxijob from './systems/taxijob.js';
 import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
+import * as rigs from './systems/rigs.js';
+import * as crazytaxi from './systems/crazytaxi.js';
+import * as truckjob from './systems/truckjob.js';
+import * as mailjob from './systems/mailjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 
@@ -157,6 +161,7 @@ const SYSTEMS = [
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['carsoccerBall', carsoccer.after], // car soccer: the giant ball after the cars have moved, the goals; the arena's state to the pages
   ['tow', tow.update],              // the tow service: trucks for wrecks and cars left blocking a lane; the towed hung behind them
+  ['rigs', rigs.update],            // the big rigs' trailers dragged along behind their tractors (b8a)
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
@@ -207,6 +212,9 @@ const SYSTEMS = [
   ['taxijob', taxijob.update],      // taxi drivers' fares: hailing, aboard, the meter, the tip (H72)
   ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
   ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
+  ['crazytaxi', crazytaxi.update],  // Crazy Taxi runs: the clock, the fares waving, the tips (b8a)
+  ['truckjob', truckjob.update],    // truckers' hauls: the load, its knocks, the buyer (b8a)
+  ['mailjob', mailjob.update],      // mail carriers' rounds (b8a)
   ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
   ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors - last, so it sees
                                     // what every other system did this tick (a subject taken away: off them before it's sent)

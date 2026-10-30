@@ -71,7 +71,7 @@ export function jobHtml(j, o = {}) {
   const w = jobWords(j), paid = o.paid > 0 ? `<span class="jc-paid">${o.done ? 'DONE · ' : 'PAID '}+${money(o.paid)}</span>` : '';
   return o.big
     ? `<div class="jc-h"><span>${esc(w.head || 'THE JOB')}</span>${o.time ? `<span class="jc-t">${o.time}</span>` : ''}</div><div class="jc-o">${esc(o.done ? 'Job done' : w.obj)}</div>${o.dist || paid || w.step ? `<div class="jc-d"><span>${o.dist || ''}</span>${paid || (w.step && !o.done ? `<span class="jc-s">${w.step}</span>` : '')}</div>` : ''}`
-    : `<i class="jc-dot"></i><span class="jc-o">${esc(w.obj)}</span>${o.dist ? `<span class="jc-d">${o.dist}</span>` : ''}${paid}`;
+    : `<i class="jc-dot"></i>${o.clock && o.time ? `<span class="jc-t">${o.time}</span>` : ''}<span class="jc-o">${esc(w.obj)}</span>${o.dist ? `<span class="jc-d">${o.dist}</span>` : ''}${paid}`;   // (a run against the clock: its clock on the chip too - Crazy Taxi)
 }
 export const jobKey = (j) => (j ? `${j.k || ''}|${j.n || 0}|${j.step ? j.step.join('/') : j.stage || ''}|${j.text || ''}` : '');
 
@@ -174,7 +174,8 @@ export function createInfo(H) {
     let dist = '';
     if (!done && ctx && (j.x || j.y)) { const p = ctx.pos(); if (p) dist = fmtDist(Math.hypot(j.x - p.x, j.y - p.y)); }
     const left = J.left ? Math.max(0, J.left - (now - J.leftAt) / 1000) : 0;
-    const time = left > 0 && !done ? `${j.s === 'shift' && input.device !== 'touch' ? 'SHIFT ' : ''}${clock(left)}` : '';
+    const run = j.s === 'clock', fl = run && j.fl !== undefined ? Math.max(0, j.fl - Math.floor((now - J.leftAt) / 1000)) : -1;
+    const time = left > 0 && !done ? `${j.s === 'shift' && input.device !== 'touch' ? 'SHIFT ' : ''}${clock(left)}${fl >= 0 ? ` · FARE ${fl}s` : ''}` : '';
     const paid = J.paidUntil > now && J.paid > 0 ? J.paid : 0;
     const sig = `${big}|${w.head}|${w.obj}|${dist}|${time}|${paid}|${J.isNew && now - J.at < 1600}`;
     if (el.dataset.sig === sig) return;
@@ -183,8 +184,9 @@ export function createInfo(H) {
     el.classList.toggle('big', big); el.classList.toggle('chip', !big);
     el.classList.toggle('new', !!(J.isNew && now - J.at < 1600));
     el.classList.toggle('paid', !!paid);
+    el.classList.toggle('hot', run && left > 0 && left < 10);
     el.setAttribute('aria-label', big ? 'The job: tap to fold' : 'The job: tap for the details');
-    el.innerHTML = jobHtml(j, { big, done, dist, time, paid });
+    el.innerHTML = jobHtml(j, { big, done, dist, time, paid, clock: run });
   }
 
   // each frame: f { veh (the vehicle you're in, or null), driver, board, swim, cine, now, pred (S.pred), stam }

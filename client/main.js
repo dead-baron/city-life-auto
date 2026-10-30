@@ -354,6 +354,7 @@ function onText(m) {
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
+    case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
@@ -985,6 +986,7 @@ function onEvent(ev) {
       } else if (ev.x !== undefined) fx.ring(ev.x, ev.y, 24, 'rgba(255,255,255,');
       break;
     case 'scream': fx.floatText(ev.x, ev.y - 18, 'AAAAH!', '#fff'); break;
+    case 'ctip': fx.floatText(ev.x, ev.y - 34, String(ev.n || ''), '#ffd21f'); break;   // (Crazy Taxi's tips and calls: server crazytaxi.js)
     case 'cartcrash': for (let k = 0; k < 5 + (ev.n | 0) * 4; k++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 110; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.7 + Math.random() * 0.5, 3 + Math.random() * 2, GROCERY[k % 6], 0, 120 + Math.random() * 120); } fx.litter(ev.x, ev.y, 7, GROCERY, 34, S.loopClock); break;   // (a cart's crash: the shopping flies - CC01)
     case 'douse': fx.splash(ev.x, ev.y, 14); for (let k = 0; k < 9; k++) fx.spawn(2, ev.x + (Math.random() - 0.5) * 18, ev.y - 4, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 1.2 + Math.random(), 6 + Math.random() * 5, 'rgba(232,238,244,', 14); break;   // (into the water on fire: a burst of steam - burning.js)
     case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
@@ -2907,13 +2909,35 @@ function tunnelsTop(F) {
   S.tunP = import('./tunnels.js').then((mod) => { S.tunMod = mod; }).catch((e) => console.warn('[tunnels]', e)).finally(() => { S.tunP = null; });
 }
 
+// the trailer hitched to the rig you're driving (its extra bit 3: server/net.js) dragged along on your fifth wheel as you
+// see it, the way the server does (rigs.js: the rear axle stays put, it swings to point at the fifth wheel), eased
+// toward the server's angle; the crates on it with it
+function glueTrailer(sp) {
+  const hd = S.pred.def.hitch, hx = sp.x + Math.cos(sp.a) * hd, hy = sp.y + Math.sin(sp.a) * hd, me = S.ents.get(S.ctrlId);
+  if (!me || me.srx === undefined) return;
+  const sx = me.srx + Math.cos(me.sra) * hd, sy = me.sry + Math.sin(me.sra) * hd;   // (the fifth wheel where the server has it: yours is the trailer on it)
+  for (const e of S.ents.values()) {
+    if (e.kind !== K.VEH || !(e.extra & 8) || !e.d) continue;
+    const td = VEHICLE_BY_INDEX[e.d.m];
+    if (!td || !td.trailer || Math.hypot(e.rx + Math.cos(e.ra) * td.hitch - sx, e.ry + Math.sin(e.ra) * td.hitch - sy) > 60) continue;
+    let a = e.ga;
+    if (a === undefined || Math.abs(Math.atan2(Math.sin(a - e.ra), Math.cos(a - e.ra))) > 1.2) a = e.ra;   // (new, or far off the server's: the server's)
+    else { const rx = e.gx + Math.cos(a) * td.axle, ry = e.gy + Math.sin(a) * td.axle; if (Math.hypot(hx - rx, hy - ry) > 1) a = Math.atan2(hy - ry, hx - rx); }
+    a += Math.atan2(Math.sin(e.ra - a), Math.cos(e.ra - a)) * 0.08;
+    const rel = Math.atan2(Math.sin(a - sp.a), Math.cos(a - sp.a));
+    if (Math.abs(rel) > 1.75) a = sp.a + Math.sign(rel) * 1.75;
+    e.ga = a; e.gx = hx - Math.cos(a) * td.hitch; e.gy = hy - Math.sin(a) * td.hitch;
+    e.rx = e.gx; e.ry = e.gy; e.ra = a; e.rz = sp.z;
+    for (const c of S.ents.values()) if (c.kind === K.CRATE && c.parent === e.id && (c.flags & 3) === 2) { const sl = td.slots[c.extra]; if (sl) { const [x, y] = localToWorld(e.rx, e.ry, e.ra, sl[0], sl[1]); c.rx = x; c.ry = y; c.ra = e.ra; c.rz = sp.z; } }
+  }
+}
 function prepFrame(dt) {
   const fx = S.fx;
   const now = S.loopClock;
   for (const e of S.ents.values()) interp(e, S.renderTick);
   // own entity follows prediction
   const sp = selfPos();
-  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; e.rz = sp.z; if (S.pred.air) { const pr = S.pred.prev || S.pred.s, k = Math.min(1, S.acc / DT); e.ralt = lerp(pr.alt || 0, S.pred.s.alt || 0, k); e.rbank = S.pred.s.bank || 0; } } }
+  if (S.pred) { const e = S.ents.get(S.ctrlId); if (e) { e.srx = e.rx; e.sry = e.ry; e.sra = e.ra; e.rx = sp.x; e.ry = sp.y; e.ra = sp.a; e.rz = sp.z; if (S.pred.air) { const pr = S.pred.prev || S.pred.s, k = Math.min(1, S.acc / DT); e.ralt = lerp(pr.alt || 0, S.pred.s.alt || 0, k); e.rbank = S.pred.s.bank || 0; } } }
   // things riding on my driven vehicle (passengers, loaded crates) follow the prediction too
   if (S.pred && S.pred.kind === 'veh') {
     for (const e of S.ents.values()) {
@@ -2922,6 +2946,7 @@ function prepFrame(dt) {
         if (sl) { const [x, y] = localToWorld(sp.x, sp.y, sp.a, sl[0], sl[1]); e.rx = x; e.ry = y; e.ra = sp.a; e.rz = sp.z; }
       }
     }
+    if (S.pred.def.hitch && !S.pred.def.trailer) glueTrailer(sp);   // (driving a big rig: its trailer on the fifth wheel - server rigs.js)
   }
   // walk-cycle phase from how far each ped actually moved on screen this frame: continuous
   // across walk <-> run (stride length eases with speed), so the loop never jumps
@@ -4219,7 +4244,7 @@ function vehTurn(g, v, def) {
 }
 
 // how high a vehicle's body stands (world px of visible side wall)
-const LIFT = { bus: 12, flatbed: 9, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3, horse: 20 };   // (a horse: a crate rides up behind the saddle)
+const LIFT = { bus: 12, flatbed: 9, trailer: 20, swat: 10, armored: 10, ambulance: 9, van: 9, pickup: 8, sports: 5, bike: 3, policebike: 3, horse: 20 };   // (a horse: a crate rides up behind the saddle)
 function vehLift(def) { return def.kind === 'boat' ? 3 : LIFT[def.id] ?? 7; }
 
 // rings on the water around a swimmer, plus a little splash while they paddle

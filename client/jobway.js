@@ -32,6 +32,8 @@ export function drawJobWay(g, S, view, sp, now, z) {
       return;
     }
   }
+  if (j.marks) marks(g, j.marks, now, u);   // (Crazy Taxi's fares waving, a mail round's stops: rings on the ground)
+  if (j.crazy && !j.veh && j.stage !== 'wait') bigArrow(g, sp, j, now, u);   // (Crazy Taxi's arrow over you, at the target)
   if (j.veh) { g.restore(); return; }   // (get to the job's truck first: its own ring and arrow - main.js drawJobTruck)
   const [ml, mt, mr, mb] = open(), x = j.x, y = j.y, x0 = view.x0 + ml * u, x1 = view.x1 - mr * u, y0 = view.y0 + mt * u, y1 = view.y1 - mb * u;
   if (x >= x0 && x <= x1 && y >= y0 && y <= y1) { g.restore(); return; }   // (on screen: the marker over it - main.js)
@@ -47,6 +49,28 @@ export function drawJobWay(g, S, view, sp, now, z) {
   const d = Math.hypot(x - sp.x, y - sp.y), back = 46 * u;
   plate(g, ex - Math.cos(a) * back, ey - Math.sin(a) * back, `${j.area ? 'SEARCH ' : ''}${fmtDist(d)}`, u, '#fff');
   g.restore();
+}
+
+// rings on the ground: [x, y, kind] - a Crazy Taxi fare by its trip (g short, y longer, r long), a mail stop (m letters,
+// p a parcel)
+const MARK = { g: '#3ddc84', y: '#ffd21f', r: '#ff5a4a', m: '#5ab0ff', p: '#e2bd57' };
+function marks(g, L, now, u) {
+  for (const [x, y, k] of L) {
+    const c = MARK[k] || COL, pulse = 1 + 0.12 * Math.sin(now * 6 + x * 0.01), r = (k === 'm' || k === 'p' ? 26 : 44) * pulse;
+    g.globalAlpha = 0.9; g.lineWidth = 6 * u; g.strokeStyle = EDGE; g.beginPath(); g.ellipse(x, y, r, r * 0.6, 0, 0, 6.283); g.stroke();
+    g.lineWidth = 3.5 * u; g.strokeStyle = c; g.stroke();
+    g.globalAlpha = 0.22; g.fillStyle = c; g.fill();
+  }
+  g.globalAlpha = 1;
+}
+// Crazy Taxi's arrow: big, over your head, turning to point the way to the fare or the stop
+function bigArrow(g, sp, j, now, u) {
+  const a = Math.atan2(j.y - sp.y, j.x - sp.x), s = 30 * u, cx = sp.x, cy = sp.y - 90 * u + Math.sin(now * 4) * 4 * u;
+  g.save(); g.translate(cx, cy); g.rotate(a);
+  g.fillStyle = '#3ddc84'; g.strokeStyle = EDGE; g.lineWidth = 3.5 * u;
+  g.beginPath(); g.moveTo(s * 1.3, 0); g.lineTo(0, -s * 0.9); g.lineTo(0, -s * 0.4); g.lineTo(-s * 1.1, -s * 0.4); g.lineTo(-s * 1.1, s * 0.4); g.lineTo(0, s * 0.4); g.lineTo(0, s * 0.9); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+  plate(g, cx, cy - 46 * u, fmtDist(Math.hypot(j.x - sp.x, j.y - sp.y)), u, '#fff');
 }
 
 // the part of the screen the arrow keeps to, as screen px in from the left, top, right and bottom: on a phone the open

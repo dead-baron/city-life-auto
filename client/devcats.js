@@ -9,7 +9,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 // vehicles we've added in like golf carts, etc."): made from shared/vehicles.js, so a new type turns up here by itself,
 // in its group by its kind - the work vehicles and the odd ones by name. The 'car' command (server/dev.js) keeps the
 // one-of-a-kind rule: a new one takes your last car, boat or aircraft away.
-const WORK = new Set(['flatbed', 'van', 'bus', 'police', 'swat', 'ambulance', 'armored', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck', 'fbi', 'army', 'tractor', 'combine', 'movingvan', 'icecream', 'rescue4x4', 'taxi', 'policebike', 'policeboat', 'rescueboat', 'ferry', 'waterbus', 'trawler']);
+const WORK = new Set(['flatbed', 'van', 'bus', 'police', 'swat', 'ambulance', 'armored', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck', 'fbi', 'army', 'tractor', 'combine', 'movingvan', 'icecream', 'rescue4x4', 'taxi', 'policebike', 'policeboat', 'rescueboat', 'ferry', 'waterbus', 'trawler', 'semi', 'trailer', 'boxtrailer']);
 const ODD = new Set(['horse', 'cart', 'skateboard', 'golfcart', 'tank']);
 export const vehGroup = (id) => { const d = VEHICLES[id]; return ODD.has(id) ? 'other' : WORK.has(id) ? 'work' : d.kind === 'air' ? 'air' : d.kind === 'boat' ? 'boats' : d.kind === 'bike' ? 'bikes' : 'cars'; };
 export const VEH_GROUPS = [['cars', '🚗 Spawn: cars'], ['bikes', '🏍 Spawn: bikes & motorbikes'], ['boats', '🚤 Spawn: boats'], ['air', '🚁 Spawn: aircraft'], ['work', '🚚 Spawn: work & emergency vehicles'], ['other', '🐴 Spawn: horses, carts, boards & the rest']];
@@ -202,7 +202,7 @@ export const DEV_SECTIONS = [
     ['🚜 A tractor at the fields (the rows in every state)', 'farm'], ['🌾 A combine at the fields (it harvests two ripe rows at once)', 'farm', { k: 'combine' }], ['🌧 Rain (it waters the gardens)', 'rain'],
   ] },
   // driving for a living (H72: server taxijob.js, busjob.js, towjob.js)
-  { id: 'drive', title: '🚕 Taxi, bus & tow truck', items: [
-    ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'],
+  { id: 'drive', title: '🚕 Taxi, bus, tow truck, trucker & mail', items: [
+    ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'], ['🚖 Crazy Taxi: a run, me at the wheel', 'crazycab'], ['🚛 Trucker: a haul, the rig by me', 'haul'], ['📬 Mail round: the van', 'mailjob'], ['✉ Mail round: on foot', 'mailjob', { k: 'walk' }], ['✋ Hail a cab (players on duty)', 'cabhail'],
   ] },
 ];

@@ -3,6 +3,8 @@
 // through junctions on smooth paths, obey 2- and 3-phase signals, keep their distance, slow for
 // bends, pull over for sirens and panic when attacked; parked cars and docked boats near players.
 // Also exports the shared driving controller + route planner used by police and EMS.
+import { RIG } from '../../shared/rules.js';
+import { attachTrailer } from './rigs.js';
 import { K, T, TILE } from '../../shared/constants.js';
 import { lanePath, turnPath, exitsFrom, edgeZ, nearestEdge } from '../../shared/roads.js';
 import { signalFor } from '../../shared/signals.js';
@@ -1178,6 +1180,7 @@ function manage(world) {
       const heavy = e.kind === 'hwy' || st === 'harbor' || st === 'industrial' || st === 'factory' || st === 'airport';
       let model = weighted(trafficMix(st, country).filter(([id]) => !(e.kind === 'dirt' && (TRUCK_MODELS.has(id) || id === 'roadbike'))
         && !(VEHICLES[id].pedal && (NO_BIKES.has(e.kind) || e.lvl !== 0 || z > 0.05))).map(([id, wt]) => [id, heavy && TRUCK_MODELS.has(id) ? wt * 3 : wt]));
+      if (e.kind === 'hwy' && e.lvl === 0 && z < 0.05 && rng() < RIG.npc) model = 'semi';   // (a big rig and its box trailer: rigs.js)
       const moto = model === 'bike';
       if (moto) model = weighted(motoMix(e.kind, country || st));   // which motorcycle: by road and district (task #366)
       if (VEHICLES[model].pedal && lane > 0) { lane = 0; lp = lanePath(net, e, from, 0); p = pointAt(lp, Math.min(s, lp[lp.length - 1].s - 20)); }   // (cyclists keep to the kerb lane)
@@ -1191,6 +1194,7 @@ function manage(world) {
       if (country && riderLook(model)) dressWild(world, driver, riderLook(model), rng);   // (the mountain bikers and the dirt bikers: wildfolk.js)
       driver.vehId = v.id; driver.seat = 0; v.seats[0] = driver.id; driver.lz = z;
       v.ai = { kind: 'traffic' };
+      if (model === 'semi') attachTrailer(world, v, 'boxtrailer', { npc: true });
       enterEdge(world, v, e.id, from, lane, s + 30);
       world.trafficCount++;
       break;

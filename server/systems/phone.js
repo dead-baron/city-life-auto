@@ -32,7 +32,10 @@ import * as towjob from './towjob.js';
 import * as skills from './skills.js';
 import * as workout from './workout.js';
 import * as crews from './crews.js';
-import { CAB, BUSJOB, TOWJOB } from '../../shared/rules.js';
+import { CAB, BUSJOB, TOWJOB, CRAZY, RIG, MAILJOB } from '../../shared/rules.js';
+import * as crazytaxi from './crazytaxi.js';
+import * as truckjob from './truckjob.js';
+import * as mailjob from './mailjob.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -206,6 +209,12 @@ function drivingJobs(world, p, list) {
   const rank = taxijob.rankFor(world, p), bus = busjob.lineFor(world, p), yard = p.ped ? towjob.yardFor(world, p.ped.x, p.ped.y) : null;
   if (rank) list.push({ id: 'cab', kind: 'drive', icon: '🚕', sub: 'fares hail you or ring in: pick them up, the meter runs, drop them at the kerb - a tip for a quick, smooth ride', pay: CAB.flag + 3 * CAB.perKm, title: `Taxi driver - a cab from ${rank.name}`, x: rank.x, y: rank.y, ...card(CAB.flag + (CAB.trip[0] / 1000) * CAB.perKm, (CAB.flag + ((CAB.trip[1] * 1.6 + 200) / 1000) * CAB.perKm) * (1 + CAB.tip), 'a fare', `Get in your cab at ${rank.name}`) });
   if (bus) list.push({ id: 'bus', kind: 'drive', icon: '🚌', sub: 'drive the line round its stops: people off and on, keep to the timetable - paid per stop on time and per passenger', pay: bus.L.stops.length * BUSJOB.perStop, title: `Bus driver - the ${bus.L.name}`, x: bus.L.stops[bus.k].x, y: bus.L.stops[bus.k].y, ...card(BUSJOB.perStop, BUSJOB.perStop + 4 * BUSJOB.perPax, 'a stop', `Take the bus out at the ${bus.L.stops[bus.k].name} stop`) });
+  if (rank) list.push({ id: 'crazy', kind: 'drive', icon: '🚖', sub: 'against the clock: fares wave from rings - green short, yellow longer, red long - get them there fast for seconds back; near misses, drifts and dashes for tips', pay: CRAZY.tiers[1].pay, title: `Crazy Taxi - a run from ${rank.name}`, x: rank.x, y: rank.y, ...card(CRAZY.tiers[0].pay * 0.7, CRAZY.tiers[2].pay + CRAZY.nearTip * CRAZY.comboMax, 'a fare', `Get in the cab at ${rank.name} - the clock starts`) });
+  const haul = p.ped ? truckjob.offerFor(world, p) : null;   // the trucker: a big rig and a trailer of crates to a buyer across the world (truckjob.js)
+  if (haul) { const a = world.map.pois[haul.from], b = world.map.pois[haul.to]; list.push({ id: 'haul', kind: 'drive', icon: '🚛', sub: `a big rig and a flatbed trailer of ${haul.goods.toLowerCase()} crates, out in the open: haul them to ${b.label} - paid by the distance, less for crates lost and knocks`, pay: haul.pay, title: `Trucker - ${a.label} to ${b.label}`, x: a.x, y: a.y, ...card(haul.pay * RIG.floor, haul.pay, 'the haul', `Get in the rig at ${a.label}`) }); }
+  const post = mailjob.officeFor(world, p);   // the mail carrier: a van round, or a walking one (mailjob.js)
+  if (post) list.push({ id: 'mail', kind: 'delivery', icon: '📬', sub: `a van round of ${MAILJOB.van} homes in a neighbourhood: letters from the window at the mailboxes, parcels carried to the door`, pay: MAILJOB.van * MAILJOB.letter + MAILJOB.bonus, title: `Mail carrier - a van round from ${post.label}`, x: post.x, y: post.y, ...card(MAILJOB.letter, MAILJOB.parcel, 'a stop', `Get in the mail van at ${post.label}`) },
+    { id: 'mailwalk', kind: 'delivery', icon: '✉', sub: `a walking round of ${MAILJOB.walk} homes near the post office: post the letters by hand`, pay: MAILJOB.walk * MAILJOB.letter + MAILJOB.bonus, title: `Mail carrier - a walking round from ${post.label}`, x: post.x, y: post.y, ...card(MAILJOB.letter, MAILJOB.letter * MAILJOB.walk + MAILJOB.bonus, 'the round', 'Walk to the first mailbox') });
   if (yard) list.push({ id: 'towjob', kind: 'drive', icon: '🛻', sub: 'wrecks and broken-down cars: back up to them, hook them, tow them to the impound - paid per tow', pay: TOWJOB.pay, title: `Tow truck driver - out of ${yard.name.replace(/^the impound at /, '')}`, x: yard.x, y: yard.y, ...card(TOWJOB.pay, TOWJOB.pay + 5 * TOWJOB.perKm, 'a tow', `Get in the tow truck at ${yard.name.replace(/^the impound at /, 'the impound at ')}`) });
 }
 
@@ -218,8 +227,10 @@ export function offerCard(world, p, c) {
   if (c.title) job.title = c.title;
   if (c.step) job.step = c.step;
   if (c.x !== undefined) { job.x = c.x; job.y = c.y; }
-  p.pendingCard = { id: c.id, start: c.start, at: world.time, x: p.ped.x, y: p.ped.y };
-  p.conn.sendJSON({ t: 'jobcard', job, where: c.where || null });
+  const alt = c.alt ? boardFor(world, p).jobs.find((q) => q.id === c.alt.id) || null : null;   // (a second job from the same place: the card's "or" - Crazy Taxi at a rank, the walking round at the post office)
+  if (alt && c.x !== undefined) { alt.x = c.x; alt.y = c.y; }
+  p.pendingCard = { id: c.id, start: c.start, alt: alt ? c.alt : null, at: world.time, x: p.ped.x, y: p.ped.y };
+  p.conn.sendJSON({ t: 'jobcard', job, where: c.where || null, ...(alt ? { alt } : null) });
   return true;
 }
 
@@ -271,6 +282,7 @@ export function handle(world, p, msg) {
 function takeCard(world, p, id) {
   const c = p.pendingCard;
   p.pendingCard = null;
+  if (c && c.alt && c.alt.id === id && world.time - c.at <= 300) { if (p.job) return 'You already have a job - cancel it first.'; return c.alt.start() || null; }
   if (!c || c.id !== id || world.time - c.at > 300) return take(world, p, id);
   if (!p.ped || p.ped.dead) return 'Not right now.';
   if (p.job) return 'You already have a job - cancel it first.';
@@ -292,6 +304,10 @@ function take(world, p, id) {
   if (id === 'cab') return taxijob.start(world, p);
   if (id === 'bus') return busjob.start(world, p);
   if (id === 'towjob') return towjob.start(world, p);
+  if (id === 'crazy') return crazytaxi.start(world, p);
+  if (id === 'crazyagain') return crazytaxi.start(world, p, null, true);
+  if (id === 'haul') return truckjob.start(world, p);
+  if (id === 'mail' || id === 'mailwalk') return mailjob.start(world, p, null, id === 'mail' ? 'van' : 'walk');
   const j = (world.jobBoard || []).find((q) => q.id === Number(id));
   if (!j) return 'That job was taken.';
   if (j.kind === 'patrol') {
@@ -321,8 +337,8 @@ export function jobTarget(world, p) {
 // The HUD's job card (UI-4, client/hudinfo.js): the job's name (k), the call or fare it's on (n, u), the step of it
 // (step: [i, of]) and the time left on the shift or the contract (left, s) - beside the objective line (text) and where
 // (x, y). A shift waiting for its next call has no step.
-const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work' };
-const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']] };
+const JOB_NAME = { medic: 'Paramedic', fire: 'Firefighter', cab: 'Taxi', bus: 'Bus driver', towjob: 'Tow truck', sar: 'Search & rescue', dusting: 'Crop duster', charter: 'Charter pilot', coast: 'Coast guard', courier: 'Courier', farm: 'Harvest', deepsea: 'Deep-sea charter', poach: 'Poaching run', patrol: 'Patrol', trainjob: 'Mail train', fieldwork: 'Farm work', crazy: 'Crazy Taxi', haul: 'Trucker', mail: 'Mail carrier' };
+const JOB_STEPS = { medic: [['go'], ['scene'], ['hospital']], fire: [['go'], ['fight']], cab: [['pickup'], ['go']], towjob: [['pickup'], ['go', 'tow']], charter: [['pickup'], ['go']], sar: [['search'], ['rescue', 'board'], ['deliver']], coast: [['search', 'chase'], ['board', 'rescue'], ['ashore']], courier: [['pickup'], ['go']], farm: [['pickup'], ['go']], trainjob: [['board'], ['grab'], ['crack'], ['fence']], patrol: [['go'], ['crime', 'chase']], poach: [['go'], ['deliver']], haul: [['pickup', 'hitch'], ['go']] };
 const JOB_UNIT = { cab: 'Fare', charter: 'Flight', medic: 'Call', fire: 'Call', towjob: 'Call', sar: 'Call', coast: 'Call' };
 export function jobCardInfo(world, j, t) {
   const out = { k: JOB_NAME[j.type] || '' };
@@ -331,6 +347,8 @@ export function jobCardInfo(world, j, t) {
   if (i >= 0) out.step = [i + 1, L.length];
   if (JOB_UNIT[j.type] && st !== 'wait') { out.u = JOB_UNIT[j.type]; out.n = (j.done ?? j.flown ?? ((j.saved || 0) + (j.busts || 0))) + 1; }
   if (Number.isFinite(j.expires)) { out.left = Math.max(0, Math.round(j.expires - world.time)); out.s = j.nextAt !== undefined ? 'shift' : 'job'; }
+  if (j.type === 'crazy') Object.assign(out, crazytaxi.cardInfo(world, j));   // (the run's clock, the fare's own: crazytaxi.js)
+  if (j.type === 'mail') { out.u = 'Stop'; out.n = Math.min(j.stops.length, j.done + 1); }
   return out;
 }
 const truckMark = (p, v) => (p.ped && p.ped.vehId === v.id ? null : [Math.round(v.x), Math.round(v.y), v.def.i]);   // (the model: the plate over it names it - "YOUR HELICOPTER", client/main.js drawJobTruck)
@@ -344,6 +362,9 @@ function target(world, p, j) {
   if (j.type === 'cab') return taxijob.target(world, p, j);   // (the fare, then where they're going: taxijob.js)
   if (j.type === 'bus') return busjob.target(world, p, j);   // (the next stop: busjob.js)
   if (j.type === 'towjob') return towjob.target(world, p, j);   // (the car, then the impound: towjob.js)
+  if (j.type === 'crazy') return crazytaxi.target(world, p, j);   // (the fares waving, then where they're going: crazytaxi.js)
+  if (j.type === 'haul') return truckjob.target(world, p, j);   // (the rig, then the buyer: truckjob.js)
+  if (j.type === 'mail') return mailjob.target(world, p, j);   // (the nearest stop not done: mailjob.js)
   if ((j.type === 'courier' || j.type === 'farm') && j.crates && j.crates.length) {
     const waiting = j.crates.map((id) => world.get(id)).filter((c) => c && c.kind === K.CRATE && c.state === 'ground' && !c.touched);
     if (waiting.length === j.crates.length) {

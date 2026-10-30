@@ -93,6 +93,9 @@ import * as paramedic from './paramedic.js';
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
+import * as rigs from './rigs.js';
+import * as truckjob from './truckjob.js';
+import * as mailjob from './mailjob.js';
 import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
@@ -724,7 +727,7 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
+    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -738,7 +741,7 @@ export function findInteraction(world, p) {
     const crate = world.get(ped.carrying);
     const logs = felling.sellZone(world, p, crate);   // a bundle of firewood at a buyer, or at your own garage (felling.js)
     if (logs) return logs;
-    const dz = jobs.deliveryZoneFor(world, p, crate);
+    const dz = mailjob.parcelZone(world, p, crate) || jobs.deliveryZoneFor(world, p, crate);   // (a mail round's parcel at its door: mailjob.js)
     if (dz) return { label: dz.label, run: () => dz.run() };
     const slot = cargo.findFreeSlot(world, ped);
     if (slot) return { label: `Load onto ${slot.v.def.name}`, run: () => cargo.loadCrate(world, ped, slot.v, slot.i) };
@@ -772,6 +775,8 @@ export function findInteraction(world, p) {
   const mus = music.interaction(world, p);   // your boombox, your mat, a performer's hat (music.js)
   if (mus) return mus;
   if (fellAct) return fellAct;
+  const rider = taxijob.riderInteraction(world, p) || mailjob.interaction(world, p);   // a player's cab come for you (taxijob.js); a mail round's stop, the post office (mailjob.js)
+  if (rider) return rider;
 
   const hap = happenings.interaction(world, p);   // a street fight to break up, someone to help up, a wallet to give back
   if (hap) return hap;
@@ -854,7 +859,7 @@ export function findInteraction(world, p) {
   if (crew) return crew;
   const medic = paramedic.interaction(world, p);   // a hospital's doors: sign on as a paramedic; a patient: treat them (paramedic.js)
   if (medic) return medic;
-  const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
+  const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p) || truckjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
   if (drive) return drive;
 
   const fish = fishHere(world, p, ped);

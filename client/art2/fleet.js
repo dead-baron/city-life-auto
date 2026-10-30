@@ -9,9 +9,9 @@ import { MAT } from './palette.js';
 import { hash } from './gbuf.js';
 
 const { R, deco, shell, glassy, wheels, crateOn, carBody, thirdBrake, truckCab, chassis, truckRear, boxBody, roofKit, rescueBoat } = KIT;
-const DIMS = { convertible: [104, 50], lowrider: [112, 50], muscle: [104, 50], hothatch: [82, 46], jeep: [92, 50], movingvan: [132, 56], icecream: [114, 54], sailboat: [118, 40], pontoon: [112, 52], trawler: [150, 56], cabincruiser: [128, 50], rib: [88, 42] };
-const TALL = { convertible: 30, lowrider: 29, muscle: 30, hothatch: 31, jeep: 40, movingvan: 60, icecream: 64, sailboat: 96, pontoon: 34, trawler: 70, cabincruiser: 46, rib: 26 };
-const PAINT = { convertible: '#5ab0a8', lowrider: '#7a2a8a', muscle: '#d88a2a', hothatch: '#c8302c', jeep: '#5e6e3e', movingvan: '#e8702a', icecream: '#f2a6c0', sailboat: '#22305a', pontoon: '#2f8a86', trawler: '#a8342a', cabincruiser: '#22305a', rib: '#4a4c52' };
+const DIMS = { convertible: [104, 50], lowrider: [112, 50], muscle: [104, 50], hothatch: [82, 46], jeep: [92, 50], movingvan: [132, 56], icecream: [114, 54], sailboat: [118, 40], pontoon: [112, 52], trawler: [150, 56], cabincruiser: [128, 50], rib: [88, 42], semi: [124, 58], trailer: [250, 60], boxtrailer: [250, 60] };
+const TALL = { convertible: 30, lowrider: 29, muscle: 30, hothatch: 31, jeep: 40, movingvan: 60, icecream: 64, sailboat: 96, pontoon: 34, trawler: 70, cabincruiser: 46, rib: 26, semi: 60, trailer: 30, boxtrailer: 66 };
+const PAINT = { convertible: '#5ab0a8', lowrider: '#7a2a8a', muscle: '#d88a2a', hothatch: '#c8302c', jeep: '#5e6e3e', movingvan: '#e8702a', icecream: '#f2a6c0', sailboat: '#22305a', pontoon: '#2f8a86', trawler: '#a8342a', cabincruiser: '#22305a', rib: '#4a4c52', semi: '#c8302c', trailer: '#5a5e66', boxtrailer: '#e8e6e0' };
 // the car bodies (vehicles.js carBody's spec: x along the length as a fraction of it)
 const BODY = {
   convertible: { belt: 17, nose: 13, tail: 15.5, hood: 0.64, boot: 0.24, roof: 17, wheels: [0.19, 0.8], wr: 7.5, seams: [0.52], lampW: 9, rf: 8, rr: 6, shoulder: 0.4, tailUp: 2 },
@@ -136,6 +136,56 @@ function movingVan(m, M, A, o) {
   A.fire.push([L * 0.4, cy, 30]);
 }
 
+// ---- the big rigs (b8a: server/systems/rigs.js) ----------------------------------------------------------------------
+// the tractor unit: a long-nosed conventional with a sleeper box behind the cab, twin chrome stacks, the fuel tanks and the
+// fifth wheel's greased plate over the tandem drive axles (shared/vehicles.js semi.hitch: 32 px behind the middle)
+function semi(m, M, A) {
+  const L = m.w, W = m.d, cy = W / 2, cabH = 52, cx0 = truckCab(m, M, L - 1, cabH, { cabL: 30, hood: 24, hoodZ: 28, stack: false });
+  chassis(m, M, cx0, cx0 + 4);
+  m.look = { ...m.look, belt: 32, z0: 7, roof: cabH, wheels: [L * 0.14, L * 0.3, L * 0.84], wr: 9.5 };
+  shell(m, { x0: cx0 - 18, x1: cx0 + 2, y0: 3, y1: W - 3, z0: 9, z1: cabH + 4, r: 3, rz: 4, mat: (x, y, z, sh) => (sh.side < 1.6 && z > 20 && z < 24 ? M.chrome : M.cab || M.body) });   // the sleeper
+  deco(m, M.glass, cx0 - 12, 0, 34, cx0 - 6, W, 40, (x, y, z, vv, side) => side === 'y');
+  for (const y of [1.5, W - 3.5]) { m.cyl('z', cx0 - 20, y + 1, 0, 1.8, 14, cabH + 16, M.chrome); m.box(cx0 - 22, y, cabH + 14, cx0 - 18, y + 2, cabH + 16, M.trim); }   // the stacks
+  const fifth = L / 2 - 32;
+  m.box(4, 8, 11, cx0 - 22, W - 8, 14, M.trim);
+  m.cyl('z', fifth, cy, 0, 11, 14, 16, M.steel); m.box(fifth - 11, cy - 2, 14, fifth - 4, cy + 2, 16.5, M.dark);   // the plate and its slot
+  for (const y of [1, W - 4]) m.box(0, y, 4, 3, y + 3, 16, M.dark);   // (the mud flaps)
+  wheels(m, [L * 0.14, L * 0.3, L * 0.84], 9.5, M, { width: 8, inset: 2 });
+  truckRear(m, M, 12);
+  A.exhaust = [cx0 - 20, 2.5, cabH + 16];
+  A.fire.push([L * 0.62, cy, 30]);
+}
+// a trailer: the frame and its tandem axles at the back, the landing legs up front, the kingpin under the nose; the
+// flatbed's plank deck with stake pockets and a headboard (its load: the crates, drawn on their own), or the box van's
+// tall white box with its ribs, a reefer unit on the nose of some, the swing doors and their bars at the back
+function trailer(type, m, M, A, V) {
+  const L = m.w, W = m.d, cy = W / 2, box = type === 'boxtrailer';
+  m.look = { ...m.look, belt: 26, z0: 8, roof: box ? 64 : 26, wheels: [L * 0.07, L * 0.15], wr: 9.5 };
+  m.box(2, 8, 12, L - 4, W - 8, 17, M.trim);                                                                          // the frame rails
+  for (const x of [L * 0.74, L * 0.76]) for (const y of [7, W - 10]) m.box(x, y, 0, x + 3, y + 3, 14, M.steel);        // the landing legs
+  m.box(L * 0.73, 6, 1, L * 0.78, W - 6, 2, M.trim);
+  if (!box) {
+    m.box(1, 2, 17, L - 2, W - 2, 21, M.body);
+    m.box(1, 3, 21, L - 3, W - 3, 23, M.wood);
+    deco(m, M.seam, 1, 3, 22, L - 3, W - 3, 23.5, (x, y, z, vv, side) => side === 'z' && Math.round(y) % 9 === 0);
+    for (let x = 6; x < L - 8; x += 18) for (const y of [1, W - 3]) m.box(x, y, 17, x + 3, y + 2, 26, M.trim);         // stake pockets, stakes
+    m.box(L - 7, 2, 23, L - 2, W - 2, 30, M.body);                                                                    // the headboard
+    deco(m, M.steel, L - 7, 2, 23, L - 2, W - 2, 30, (x, y, z) => (z | 0) % 3 === 0);
+    A.bed = 23;
+  } else {
+    boxBody(m, 1, L - 2, 16, 64, (x, y, z, sh) => (sh.side < 1.6 && Math.round(x) % 14 === 0 ? M.seam : sh.side < 1.6 && z > 20 && z < 24 && V.twoTone ? M.stripeRed || M.trim : M.body), { r: 1.5, rz: 1.5 });
+    roofKit(m, M, 2, L - 4, 63, { step: 28 });
+    if (V.rack) m.box(L - 6, 10, 34, L + 0, W - 10, 58, M.white);                                                     // a reefer unit on the nose
+    deco(m, M.seam, 0, cy - 0.5, 17, 2, cy + 0.5, 63, (x, y, z, vv, side) => side === 'x');                           // the swing doors
+    for (const y of [cy - 10, cy - 4, cy + 4, cy + 10]) deco(m, M.chrome, 0, y - 0.5, 18, 2, y + 0.5, 62, (x, yy, z, vv, side) => side === 'x');   // their bars
+    if (V.rusty) deco(m, M.rust || M.seam, 0, 0, 16, L, W, 30, (x, y, z, vv, side) => side === 'y' && hash(x | 0, z | 0, 9) > 0.86);
+  }
+  for (const y of [2, W - 5]) m.box(L * 0.03, y, 4, L * 0.04, y + 3, 15, M.dark);                                    // (the mud flaps)
+  wheels(m, [L * 0.07, L * 0.15], 9.5, M, { width: 8, inset: 2 });
+  truckRear(m, M, 12);
+  A.fire.push([L * 0.5, cy, box ? 40 : 24]);
+}
+
 // ---- the boats ------------------------------------------------------------------------------------------------------
 // a hull: its plan narrowing to the bow from fraction bow of the length, its sides flaring to the deck at hz; the top
 // of the sides (the sheer, rising bowRise toward the bow) in top, a band in band from za to zb, below in low; the deck in
@@ -251,10 +301,12 @@ function boat(type, m, M, A, V, o) {
 }
 
 addModels({
-  dims: DIMS, tall: TALL, paint: PAINT, civil: ['convertible', 'lowrider', 'muscle', 'hothatch', 'jeep', 'movingvan', 'sailboat', 'pontoon', 'cabincruiser', 'rib', 'trawler'],
+  dims: DIMS, tall: TALL, paint: PAINT, civil: ['convertible', 'lowrider', 'muscle', 'hothatch', 'jeep', 'movingvan', 'sailboat', 'pontoon', 'cabincruiser', 'rib', 'trawler', 'semi'],
   build(type, m, M, A, V, o) {
     if (BODY[type]) car(type, m, M, A, V, o);
     else if (type === 'movingvan') movingVan(m, M, A, o);
+    else if (type === 'semi') semi(m, M, A);
+    else if (type === 'trailer' || type === 'boxtrailer') trailer(type, m, M, A, V);
     else if (DIMS[type]) boat(type, m, M, A, V, o);
     else return false;
     return true;

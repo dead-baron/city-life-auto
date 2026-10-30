@@ -114,6 +114,10 @@ export const VEHICLES = {
   newsheli:  { i: 73, name: 'Channel 7 SkyCam', kind: 'air', air: 'heli', L: 150, W: 54, max: 720, accel: 340, brake: 400, rev: 0, turn: 1.9, grip: 8, drift: 2, mass: 1.6, hp: 320, seats: 3, slots: [[-34, 0]], climb: 170, sink: 200, ceiling: 1000, rotor: 76, livery: 'tv' },
   medheli:   { i: 74, name: 'Mercy Air Ambulance', kind: 'air', air: 'heli', L: 156, W: 56, max: 740, accel: 350, brake: 400, rev: 0, turn: 2.0, grip: 8, drift: 2, mass: 1.7, hp: 380, seats: 4, slots: [[-36, 0]], climb: 175, sink: 205, ceiling: 1000, rotor: 78, siren: true, livery: 'med' },
   seaplane:  { i: 75, name: 'Otter Floatplane', kind: 'air', air: 'plane', L: 128, W: 112, max: 880, accel: 200, brake: 300, rev: 0, turn: 1.3, grip: 8, drift: 2, mass: 1.5, hp: 300, seats: 4, slots: [[-34, 0]], climb: 135, sink: 200, ceiling: 900, vr: 320, stall: 280, bank: 0.75, span: 168, floats: true, livery: 'sea' },
+  // the big rigs (b8a): hitch - the local x of the fifth wheel / the kingpin (server/systems/rigs.js)
+  semi:      { i: 77, name: 'Roadking Semi',     kind: 'car',  L: 124, W: 58, max: 520, accel: 230, brake: 560, rev: 130, turn: 2.0, grip: 7.6, drift: 2.3, mass: 3.4, hp: 620, seats: 2, slots: [[-44, 0]], hitch: -32, sprite: 'boxtruck' },
+  trailer:   { i: 78, name: 'Flatbed Trailer',  kind: 'car',  L: 250, W: 60, max: 600, accel: 0, brake: 300, rev: 0, turn: 0, grip: 6, drift: 2, mass: 3.0, hp: 700, seats: 1, slots: [[80, -14], [80, 14], [44, -14], [44, 14], [8, -14], [8, 14], [-28, -14], [-28, 14], [-64, -14], [-64, 14]], trailer: true, hitch: 103, axle: -88, sprite: 'flatbed' },
+  boxtrailer: { i: 79, name: 'Box Van Trailer', kind: 'car',  L: 250, W: 60, max: 600, accel: 0, brake: 300, rev: 0, turn: 0, grip: 6, drift: 2, mass: 3.2, hp: 760, seats: 1, slots: [[-112, 0]], trailer: true, hitch: 103, axle: -88, sprite: 'boxtruck' },
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
@@ -134,7 +138,7 @@ for (const [id, v] of Object.entries(VEHICLES)) {
 
 // A vehicle in a word, the way a job names the one it issues you ("your helicopter", "your cab" - the owner, 10-23:
 // "Helicopter is referred to as 'your truck' during a job"): client/main.js drawJobTruck's plate, the jobs' notes.
-const WORD_OF = { ambulance: 'ambulance', taxi: 'cab', bus: 'bus', firetruck: 'fire engine', tractor: 'tractor', combine: 'combine', towtruck: 'tow truck', police: 'cruiser' };
+const WORD_OF = { ambulance: 'ambulance', taxi: 'cab', bus: 'bus', firetruck: 'fire engine', tractor: 'tractor', combine: 'combine', towtruck: 'tow truck', police: 'cruiser', semi: 'rig', trailer: 'trailer', boxtrailer: 'trailer', van: 'van' };
 export function vehicleWord(def) {
   if (!def) return 'vehicle';
   if (WORD_OF[def.id]) return WORD_OF[def.id];

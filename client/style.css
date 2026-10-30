@@ -1107,6 +1107,15 @@ body.portrait .ph-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .jc-pop .mhead h2 { font-size: var(--fs-4); }
 .jc-pop .jc { margin: 0; border: 0; background: none; }
 .jc-pop .jc-no { display: flex; width: calc(100% - 2 * var(--s3)); margin: 0 var(--s3) var(--s3); }
+#job.chip .jc-t { margin-right: var(--s1); font: 800 var(--fs-3) var(--ui); color: var(--gold); }
+#job.hot .jc-t { color: var(--danger); }
+.jc-or { margin: 0 var(--s3); color: var(--dim); font: 700 var(--fs-2) var(--ui); text-transform: uppercase; text-align: center; }
+.rc-top { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); }
+.rc-rank { display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--r2); background: var(--gold); color: var(--ink); font: 800 var(--fs-6) var(--ui); }
+.rc-S { background: var(--money); } .rc-E, .rc-D { background: var(--dim); }
+.rc-cash { display: flex; flex-direction: column; font: 800 var(--fs-5) var(--ui); color: var(--money); } .rc-cash small { font: 700 var(--fs-2) var(--ui); color: var(--gold); }
+.rc-row { display: flex; justify-content: space-between; padding: var(--s1) var(--s3); font: 600 var(--fs-3) var(--ui); border-top: 1px solid var(--line); }
+.rc-go { display: flex; gap: var(--s2); padding: var(--s3); } .rc-go .btn { flex: 1; min-height: var(--tap); }
 @media (max-height: 430px) { .jc-pop .jc-t small { display: none; } .jc-pop .jc { padding: var(--s2) var(--s3); } }
 
 /* the Bag tab (client/bag.js): a grid by category, one thing's details beside it */

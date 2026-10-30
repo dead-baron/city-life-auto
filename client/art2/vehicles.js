@@ -1,15 +1,8 @@
-// Art v2 vehicles: every vehicle in the game (shared/vehicles.js) as a voxel model, built to the V1-V6
-// targets (docs/art-v2/targets). Models are rendered at any heading by voxel.js, so cars turn smoothly
-// and are lit, shaded and shadowed like everything else. 1 voxel = 1 world px; the model's x axis runs
-// from the rear (0) to the front (L), y across (0 = the left side, L = the right side, which faces south
-// at heading 0), z up.
-//
-//   vehicleModel(type, o) -> Vox (with .anchors)   type: any id from shared/vehicles.js (the batch-4 fleet's once
-//     client/art2/fleet.js is in) or a scenery model (suv limo foodtruck tram tugboat ferry tractor combine plane
-//     excavator). o.paint body colour, o.cab a truck's cab, o.band a bus's band; o.lights, o.brake, o.reverse; o.siren
-//     false | true | 1 | 2 (the flash phases); o.state clean | dented | wrecked | burning | burnt | smoulder; o.variant
-//     (racks, rust, two-tone...); o.bloody; o.cargo crate tiers (scenery); o.dry: anchors only, no normals
-//   vehicleAnchors(type) -> its lamp, siren, seat, exhaust and fire points (model coordinates), once per type.
+// Art v2 vehicles: every vehicle (shared/vehicles.js) as a voxel model (targets: docs/art-v2/targets), drawn at any
+// heading by voxel.js. 1 voxel = 1 world px; x from the rear (0) to the front, y across (0 the left), z up.
+//   vehicleModel(type, o) -> Vox (with .anchors): a game id (the fleet's once client/art2/fleet.js is in) or a scenery
+//     model. o: paint, cab, band, lights, brake, reverse, siren (phase), state, variant, bloody, cargo, dry
+//   vehicleAnchors(type) -> its lamp, siren, seat, exhaust and fire points, once per type.
 import { Vox } from './voxel.js';
 import { MAT, ramp } from './palette.js';
 import { F_GLASS, F_NOCAST, hash } from './gbuf.js';
