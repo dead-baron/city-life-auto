@@ -279,6 +279,13 @@ float wnoise(vec2 p){
   ivec2 c = ivec2(i);
   return mix(mix(hash2(c), hash2(c + ivec2(1, 0)), f.x), mix(hash2(c + ivec2(0, 1)), hash2(c + ivec2(1, 1)), f.x), f.y);
 }
+// wnoise and its slope (d/dx, d/dy)
+vec3 wnoiseD(vec2 p){
+  vec2 f = fract(p), u = f * f * (3.0 - 2.0 * f), du = 6.0 * f * (1.0 - f);
+  ivec2 c = ivec2(floor(p));
+  float a = hash2(c), b = hash2(c + ivec2(1, 0)), e = hash2(c + ivec2(0, 1)), k = a - b - e + hash2(c + ivec2(1, 1));
+  return vec3(a + (b - a) * u.x + (e - a) * u.y + k * u.x * u.y, du.x * (b - a + k * u.y), du.y * (e - a + k * u.x));
+}
 ${CANOPY_GLSL}
 // The canopy far overhead: where the ray from P toward the sun meets it, the crowns' thickness there and their
 // leaf clumps take the sun but for the gaps between - the sunflecks on the forest floor, the light on the trunks.
@@ -323,21 +330,18 @@ float waterSurf(inout vec3 alb, inout vec3 n, int fl, float code, vec2 w, ivec2 
     return glint;
   }
   if (still) {
-    vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), d2 = normalize(vec2(-d1.y, d1.x) * 0.7 + d1), d3 = vec2(d1.x * 0.77 + d1.y * 0.64, -d1.x * 0.64 + d1.y * 0.77);
+    vec2 d1 = normalize(wind4.zw + vec2(1e-3, 0.0)), e1 = vec2(-d1.y, d1.x);
     bool pond = inl && cf >= 224 && cf < 232;
-    // (the sea, 2026-10-23 - the owner: "rapid lines moving diagonally like if it's a rapids but that shouldn't be happening
-    // in large bodies of water": three swells crossing at fixed angles made a lattice of glints marching over a whole bay.
-    // Now its swells are lower, a slow noise bends their crests out of line (wv), and the sun catches them in patches)
-    // (lakes too, 10-24 - "water fx is super bugged still": on a big lake in the wind the three straight swells' glints
-    // lined up in broad diagonal bands, a herringbone over the whole lake. Now their crests bend, they glint in patches,
-    // and only as the odd twinkling pixel)
+    // the wind's ripples: noise (and its slope) across the wind, drifting down it - swells at fixed angles glinted in rows
+    // of white dashes over a whole bay (the owner, 10-26: "still rapid lines on large bodies of water"; test/calmwater)
     float f = inl ? 1.75 : 1.0, A = inl ? (pond ? 0.025 + wind4.x * 0.04 : 0.05 + wind4.x * 0.14) : 0.1 + wind4.x * 0.3;
-    float wv = wnoise(w * 0.0071 + d1 * (t * 0.05)) * (inl ? 5.0 : 9.0);
-    float p1 = dot(w, d1) * 0.13 * f - t * 1.7 + wv, p2 = dot(w, d2) * 0.21 * f - t * 2.3 + 1.7 + wv * 1.3, p3 = dot(w, d3) * 0.47 * f - t * 3.1 - wv * 0.7;
-    alb *= 1.0 + (sin(p1) + sin(p2) * 0.6 + sin(p3) * 0.25) * (inl ? (0.012 + wind4.x * 0.02) * (pond ? 0.35 : 1.0) : 0.025 + wind4.x * 0.03);
-    vec3 nw = normalize(vec3(n.xy + (d1 * cos(p1) + d2 * (cos(p2) * 0.6) + d3 * (cos(p3) * 0.25)) * A, n.z));
+    vec2 q = vec2(dot(w, d1), dot(w, e1)) * f, r = vec2(q.x * 0.8 + q.y * 0.6, q.y * 0.8 - q.x * 0.6);
+    vec3 n1 = wnoiseD(vec2(q.x * 0.11 - t * 0.35, q.y * 0.045 + 13.0)), n2 = wnoiseD(vec2(r.x * 0.23 - t * 0.6, r.y * 0.09 + 57.0));
+    vec2 g = (d1 * (n1.y * 0.11 + (n2.y * 0.184 - n2.z * 0.054) * 0.5) + e1 * (n1.z * 0.045 + (n2.y * 0.138 + n2.z * 0.072) * 0.5)) * (A * (inl ? 9.0 : 20.0) * f);
+    alb *= 1.0 + (n1.x + n2.x * 0.5 - 0.75) * (inl ? (0.024 + wind4.x * 0.04) * (pond ? 0.35 : 1.0) : 0.05 + wind4.x * 0.06);
+    vec3 nw = normalize(vec3(n.xy + g, n.z));
     glint = step(inl ? 0.8 + bayer4(wq) * 0.18 : 0.72 + bayer4(wq) * 0.25, pow(max(dot(nw, H), 0.0), inl ? 200.0 : 60.0)) * (pond ? 0.22 : inl ? 0.4 : 0.5);
-    glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0)) * (inl ? step(0.6, hash2(wq + ivec2(int(t * 3.0) * 131, 7))) : 1.0);   // (in patches, a sparkle here and there)
+    glint *= step(0.5, wnoise(w * 0.0053 - d1 * (t * 0.03) + 7.0)) * step(inl ? 0.6 : 0.75, hash2((inl ? wq : ivec2(floor(w * 0.5))) + ivec2(int(t * 3.0) * 131, 7)));   // (in patches, the odd pixel twinkling)
     float k = inl ? (cf >= 192 && cf < 216 ? 1.0 : cf >= 216 && cf < 232 ? float(cf - (pond ? 224 : 216)) / 7.0 : 0.0) : cf >= 239 && cf <= 254 ? float(cf - 239) / 15.0 : cf >= 191 && cf <= 238 ? 0.55 * (1.0 - float(cf - 191) / 47.0) : 0.0;
     if (k > 0.2) alb += caustics(w + d1 * (t * 3.5), t * 0.75, k * (pond ? 0.6 : 0.9), wq);
     if (inl) {

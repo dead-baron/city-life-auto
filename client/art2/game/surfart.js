@@ -164,14 +164,14 @@ export function pieceOf(B, w, a, e, out = []) {
       if (lace > 0.05) out.push(['lace', cw, d + 14 + c * 6, lace]);
       return { d, stage: 'white', list: out };
     }
-    const s = clamp01((w.brk + 200 - d) / 200), ah = w.edge === null ? Infinity : B.side * (a - w.edge);
+    const s = clamp01((w.brk + 200 - d) / 200), ah = w.edge === null ? Infinity : B.side * (a - w.edge), hn = clamp01((h / w.size - 0.58) / 0.42);
     out.push(['back', c, d, (0.45 + 0.4 * s) * rise * end]);
-    out.push(['face', c, d - 2, (0.45 + 0.55 * s) * Math.min(1, h / 0.8) * rise * end]);
+    out.push(['face', c, d - 2, (0.45 + 0.55 * s) * Math.min(1, h / 0.8) * (0.5 + 0.5 * hn) * rise * end]);   // (the face, and the lip, weaker where the crest stands low: no even band)
     if (ah < 110) {   // (just ahead of the break: the lip pitching over)
       out.push(['curl', c, d - 1, Math.min(1, 1.25 - ah / 110) * end]);
       return { d, stage: 'curl', list: out };
     }
-    if (s > 0.3 && !gapAt(B, w, a)) out.push(['lip', c, d, Math.min(1, (s - 0.3) * 2.5) * Math.min(1, 1.1 * rise) * end]);
+    if (s > 0.3 && !gapAt(B, w, a)) out.push(['lip', c, d, Math.min(1, (s - 0.3) * 2.5) * Math.min(1, 1.1 * rise) * (0.3 + 0.7 * hn) * end]);
     if (s > 0.75 && h > 1) out.push(['feather', c, d + 3, 0.5 * end]);
     return { d, stage: s > 0.3 ? 'steep' : 'swell', list: out };
   }
@@ -190,6 +190,13 @@ export function pieceOf(B, w, a, e, out = []) {
   return { d, stage: 'swash', list: out };
 }
 
+// (as drawn: the crest wanders a little more, in shorter bends than the line the server rides - jit, px - and the white
+// pieces churn: each piece slot changes its variant a few times a second, out of step with its neighbours. The owner,
+// 10-26: a wave coming in read as "a long straight horizontal band of white foam")
+const wobL = (a, k, s) => { const u = a / k, i = Math.floor(u), f = u - i, g = f * f * (3 - 2 * f), h0 = hh(i, s, 31); return h0 + (hh(i + 1, s, 31) - h0) * g; };
+// (more as it comes in, where the line the server rides straightens; under 8 px: the rider stays on the face drawn)
+export const jit = (B, w, a) => (2.5 + 4 * clamp01((SURF.start - w.d) / (SURF.start - SURF.shore))) * (wobL(a + B.half, 58, B.id * 37 + w.id) * 2 - 1) + 1.5 * (wobL(a + B.half, 23, B.id * 41 + w.id) * 2 - 1);
+const CHURN = { white: 2.6, lace: 1.7, feather: 3.2, lip: 1.4, curl: 2 };
 const WS = [], LIST = [];
 export function drawWaves(host, F, breaks, t) {
   const E = host.E, M = host.map, x0 = host.vx0 - 80, x1 = host.vx1 + 80, y0 = host.vy0 - 80, y1 = host.vy1 + 120;
@@ -210,13 +217,14 @@ export function drawWaves(host, F, breaks, t) {
         // (shared/surf.js breakPt, inline) and the crest's own line here: the piece turned along it
         const px = B.x + ux * a + B.nx * P.d, py = B.y + uy * a + B.ny * P.d;
         if (px < x0 - 40 || px > x1 + 40 || py < y0 - 40 || py > y1 + 40) continue;
-        const sl = (crestD(B, w, a + 8) - crestD(B, w, a - 8)) / 16, ang = Math.atan2(uy + B.ny * sl, ux + B.nx * sl);
-        const v = (w.id * 7 + j) & 3;
+        const sw = P.stage === 'swash', jd = sw ? 0 : jit(B, w, a);
+        const sl = (crestD(B, w, a + 8) - crestD(B, w, a - 8) + (sw ? 0 : jit(B, w, a + 8) - jit(B, w, a - 8))) / 16, ang = Math.atan2(uy + B.ny * sl, ux + B.nx * sl);
+        const v = (w.id * 7 + j) & 3, ph = hh(j, w.id, 5) * 4;
         for (const [k, c, d, al] of P.list) {
           if (al <= 0.02) continue;
-          const key = conv(host, k, c, v);
+          const key = conv(host, k, c, CHURN[k] ? (v + Math.floor(t * CHURN[k] + ph)) & 3 : v);
           if (!key) continue;
-          const qx = B.x + ux * a + B.nx * d, qy = B.y + uy * a + B.ny * d;
+          const qx = B.x + ux * a + B.nx * (d + jd), qy = B.y + uy * a + B.ny * (d + jd);
           E.drawDecal(key, qx, qy, ang, al, P.stage === 'swash' && host._gz ? host._gz(qx, qy) : 0);
         }
       }

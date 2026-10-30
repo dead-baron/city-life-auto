@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { SURF, SET_S, LIFE_S, RIDE_S, wavesAt, onBreak, breakPt, broken, findBreaks, crestD, heightAt, gapAt, runupAt, brkOf } from '../shared/surf.js';
-import { pieceOf, sizeClass, PIECE_KINDS } from '../client/art2/game/surfart.js';
+import { pieceOf, sizeClass, PIECE_KINDS, jit } from '../client/art2/game/surfart.js';
 import { DT, T, TILE } from '../shared/constants.js';
 import { WATER_T } from '../shared/mapcore.js';
 import { IN } from '../shared/input.js';
@@ -268,4 +268,25 @@ test('riding: the server keeps you on the face of the crest the page draws, and 
   let lip = 0, gaps = 0;
   for (let a = -B.half + 60; a < B.half - 60; a += 13) (gapAt(B, gap, a) ? gaps++ : lip++);
   assert.ok(lip > 5 && gaps > 2, `sections (${lip} lip, ${gaps} gaps)`);
+});
+
+// (the owner, 10-26: a wave coming in to a beach read as "a long straight horizontal band of white foam" - near the beach
+// the crest the server rides straightens and its face and lip were drawn evenly all along it)
+test('a wave drawn near the beach: not a ruler-straight band - its line wanders, its lip and face stronger and weaker along it', () => {
+  const B = { id: 5, x: 0, y: 0, nx: 0, ny: -1, half: 500, ph: 0, side: 1 };
+  let w = null;
+  for (let t = 0; t < SET_S * 4 && !w; t += 0.1) w = wavesAt(B, t).find((q) => q.d < 260 && q.d > 200 && q.size > 0.8 && (q.edge === null || q.edge < -150)) || null;
+  assert.ok(w, 'a wave near the beach, not yet broken over most of it');
+  const D = [], lip = [], face = [];
+  for (let a = -300; a <= 300; a += 13) {
+    const j = jit(B, w, a);
+    assert.ok(Math.abs(j) < 8, 'drawn within 8 px of the line the server rides (the rider stays on the face)');
+    D.push(crestD(B, w, a) + j);
+    const P = pieceOf(B, w, a, 0);
+    if (P.stage !== 'steep' && P.stage !== 'swell') continue;
+    for (const [k, , , al] of P.list) { if (k === 'lip') lip.push(al); if (k === 'face') face.push(al); }
+  }
+  assert.ok(Math.max(...D) - Math.min(...D) > 9, `the drawn crest wanders (${(Math.max(...D) - Math.min(...D)).toFixed(1)} px over 600 px)`);
+  assert.ok(Math.max(...face) - Math.min(...face) > 0.12, 'the face darker in some places than others');
+  assert.ok(lip.length && Math.max(...lip) - Math.min(...lip) > 0.15, 'the lip brighter in some places than others');
 });
