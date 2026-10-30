@@ -374,8 +374,8 @@ body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 
 #fishbar.bite { color: var(--cream); animation: starflash .3s steps(2) infinite; }
 .touch #fishbar { bottom: auto; top: 35%; }
 /* a key chip inside big words: the UI font, sized to the words round it, padded, no halo of its own */
-.bigkey :is(.g-key, .g-touch) { font: 700 max(.62em, 14px)/1 var(--ui); height: 1.9em; min-width: 1.9em; padding: 0 .45em; letter-spacing: .5px; text-shadow: none; box-shadow: inset 0 -.18em 0 var(--dim), 0 0 0 2px var(--ink); }
-.bigkey .g-pad { width: 1.9em; height: 1.9em; min-width: 0; font: 700 max(.62em, 14px)/1 var(--ui); text-shadow: var(--halo-s); }
+.bigkey :is(.g-key, .g-touch) { font: 700 max(.62em, var(--fs-2))/1 var(--ui); height: 1.9em; min-width: 1.9em; padding: 0 .45em; letter-spacing: .5px; text-shadow: none; box-shadow: inset 0 -.18em 0 var(--dim), 0 0 0 2px var(--ink); }
+.bigkey .g-pad { width: 1.9em; height: 1.9em; min-width: 0; font: 700 max(.62em, var(--fs-2))/1 var(--ui); text-shadow: var(--halo-s); }
 .bigkey .g-pad.g-bumper, .bigkey .g-pad.g-sys, .bigkey .g-pad.g-stick { width: auto; padding: 0 .45em; }
 /* the fight's meter (client/fishing.js draws the track, the fish and the catch meter in this box): a spot of its own in
    the HUD - by the player on a keyboard or a pad, right of the prompt; on touch at the right edge, where the slots stand
