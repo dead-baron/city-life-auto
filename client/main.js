@@ -108,6 +108,7 @@ S.boom = new Booms(S); S.camp = new Campfires(S); S.onCrackle = (x, y, v) => S.c
 S.lightOf = lightOf; S.glights = new Map(); S.carry = null;
 import('./render/carryfx.js').then((m) => { S.carry = new m.CarryFx(S); }).catch((e) => console.warn('[carryfx]', e));
 import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch((e) => console.warn('[music]', e));
+import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e) => console.warn('[leisure]', e));   // (fireworks, campfires of your own, grapes for the ducks)
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
@@ -360,8 +361,9 @@ function onText(m) {
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
-      (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send({ t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
+    case 'chess': if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); } else if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the park's chess board (server chess.js; client/leisure/chess.js)
     case 'racebook': if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the race book's screen: where the race is (server racebook.js)
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
@@ -768,6 +770,7 @@ const GROCERY = ['#d83a2a', '#3a7ad0', '#f0d040', '#f08a2a', '#e8e8e0', '#5ab04a
 function onEvent(ev) {
   soundEvent(ev, S);   // its sound, placed where it happened (client/sound/events.js): the sfx calls below then stay quiet
   if (S.mus) S.mus.ev(ev);
+  if (S.fun) S.fun.ev(ev);
   const now = S.loopClock;
   const fx = S.fx;
   switch (ev.e) {
@@ -3388,6 +3391,7 @@ function drawOverlays(F, v2) {
   g.setTransform(...S.worldTf);
   if (S.carry && !F.sub) S.carry.over(g, F);   // (both views: a tree falling, the trunks lying, the police dogs' leads)
   if (S.mus && !F.sub) S.mus.draw(g, F);
+  if (S.fun && !F.sub) S.fun.draw(g, F);
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)

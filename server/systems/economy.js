@@ -35,6 +35,8 @@ import * as casino from './casino.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
 import * as music from './music.js';
+import * as fireworks from './fireworks.js';   // (the fireworks and the Campfire Kit: shared/leisure.js registers them)
+import * as campfires from './campfires.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
@@ -899,7 +901,7 @@ function heartyEnd(world) {
 // The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
 // usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
-export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music)); };
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music || it.fun)); };
 export function quickSlots(p) {
   const prof = p.profile;
   if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
@@ -937,6 +939,8 @@ export function useItem(world, p, id) {
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
   if (it.light) { lights.use(world, p, id); return; }
+  if (it.fun === 'fw') { fireworks.use(world, p, id); return; }   // (a firework set down and lit: fireworks.js)
+  if (it.fun === 'camp') { campfires.build(world, p); return; }   // (a campfire of your own: campfires.js)
   if (it.music) { music.use(world, p, id); return; }   // (a boombox, a radio, a tape, the mat, an instrument: music.js)   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {

@@ -135,8 +135,9 @@ function contacts(world, dt) {
   // who step round their fire: the owner, 10-16, "NPCs randomly catching fire" - they'd wander through it and go up.
   // Not at once: BURN.campS seconds in the flames (ped.campHeat), cooling off out of them - the owner's notes 2, 10-24)
   const heat = world.campHeat ||= new Set(), hot = new Set();
-  for (const i of campfires.fireIdx(world.map)) {
-    const c = world.map.props[i];
+  const built = world.builtFires && world.builtFires.size ? [...world.builtFires.keys()].map((id) => -id) : [];   // (campfires of the players' own: campfires.js build)
+  for (const i of built.length ? [...campfires.fireIdx(world.map), ...built] : campfires.fireIdx(world.map)) {
+    const c = campfires.fireAt(world, i);
     if (!c || c.broken || !campfires.isLit(world, i)) continue;
     for (const q of world.query(c.x, c.y, BURN.campPx, K.PED)) {
       if (burning(q) || q.sit || hot.has(q) || !(q.player || now < (q.downUntil || 0) + 0.5) || Math.hypot(q.x - c.x, q.y - c.y) >= BURN.campPx) continue;

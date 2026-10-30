@@ -30,6 +30,8 @@ import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
 import * as campfires from './campfires.js';
+import * as chess from './chess.js';
+import * as ducks from './ducks.js';
 import * as wanderer from './wanderer.js';
 import * as places from './places.js';
 import * as rides from './rides.js';
@@ -786,6 +788,8 @@ export function findInteraction(world, p) {
   if (ranger) return ranger;
   const pet = pets.interaction(world, p);
   if (pet) return pet;
+  const duck = ducks.interaction(world, p);   // grapes for the park's ducks (ducks.js)
+  if (duck) return duck;
 
   const victim = jobs.purseVictimNear(world, p);
   if (victim) return { label: 'Return the purse (+Samaritan)', run: () => jobs.returnPurse(world, p, victim) };
@@ -830,6 +834,8 @@ export function findInteraction(world, p) {
   if (game) return game;
   const fire = campfires.interaction(world, p);
   if (fire) return fire;
+  const board = chess.interaction(world, p);   // a chess table in the park (chess.js)
+  if (board) return board;
   const place = places.interaction(world, p);
   if (place) return place;
   const ride = rides.interaction(world, p);

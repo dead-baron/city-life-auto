@@ -20,6 +20,7 @@ import * as gates from './systems/gates.js';
 import * as nightclubs from './systems/nightclubs.js';
 import * as foraging from './systems/foraging.js';
 import * as campfires from './systems/campfires.js';
+import * as chess from './systems/chess.js';
 import * as trains from './systems/trains.js';
 import * as rides from './systems/rides.js';
 import * as felling from './systems/felling.js';
@@ -103,6 +104,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'respawn' && typeof msg.choice === 'string' && msg.choice.length < 20) { player.respawnChoice = msg.choice; player.meDirty = true; return; } // just picks; the normal wake-up timer runs
       if (msg.t === 'phone') { const r = phone.handle(world, player, msg); if (r) conn.sendJSON(r); return; }
       if (msg.t === 'arcade') { arcade.onScore(world, player, msg); return; }
+      if (msg.t === 'chess') { chess.onMsg(world, player, msg); return; }   // a move, a resignation, a draw at the park's chess table (chess.js)
       if (msg.t === 'mus') { music.onMsg(world, player, msg); return; }   // the rhythm game's hits, an instrument's notes, the radio (music.js)   // a game's score from the cabinet (arcade.js)
       if (msg.t === 'racebook') { conn.sendJSON(racebook.screen(world, player)); return; }   // the race book's screen asking where the race is (racebook.js)
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
