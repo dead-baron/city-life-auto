@@ -368,9 +368,23 @@ body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 
 
 #w-carry { position: absolute; right: var(--sr); bottom: var(--sb); font: 700 var(--fs-2) var(--ui); color: var(--gold); text-shadow: var(--halo-s); text-align: right; }
 .touch #w-carry { display: none; }
-#fishbar { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; font: 700 var(--fs-5) var(--pixel); color: var(--gold); text-shadow: var(--halo); }
+/* fishing (client/fishing.js; UI-7, the owner 2026-10-26): the big timing cue (STRIKE!, LET GO!) - one line, the key a
+   proper key cap at its size; what to do the rest of the time is the prompt's (#helpbox), once */
+#fishbar { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; white-space: nowrap; max-width: calc(100vw - 24px); font: 700 min(var(--fs-5), 7vw) var(--pixel); line-height: 1; color: var(--gold); text-shadow: var(--halo); }
 #fishbar.bite { color: var(--cream); animation: starflash .3s steps(2) infinite; }
 .touch #fishbar { bottom: auto; top: 35%; }
+/* a key chip inside big words: the UI font, sized to the words round it, padded, no halo of its own */
+.bigkey :is(.g-key, .g-touch) { font: 700 max(.62em, 14px)/1 var(--ui); height: 1.9em; min-width: 1.9em; padding: 0 .45em; letter-spacing: .5px; text-shadow: none; box-shadow: inset 0 -.18em 0 var(--dim), 0 0 0 2px var(--ink); }
+.bigkey .g-pad { width: 1.9em; height: 1.9em; min-width: 0; font: 700 max(.62em, 14px)/1 var(--ui); text-shadow: var(--halo-s); }
+.bigkey .g-pad.g-bumper, .bigkey .g-pad.g-sys, .bigkey .g-pad.g-stick { width: auto; padding: 0 .45em; }
+/* the fight's meter (client/fishing.js draws the track, the fish and the catch meter in this box): a spot of its own in
+   the HUD - by the player on a keyboard or a pad, right of the prompt; on touch at the right edge, where the slots stand
+   aside while a line is out (shared/touchcontrols.js 'fish'), between the notes and the thumb */
+#fishspot { position: absolute; width: 74px; height: min(276px, 40vh); visibility: hidden; pointer-events: none; }
+#fishspot.on { visibility: visible; }
+body:not(.touch) #fishspot { left: min(calc(50% + 300px), calc(100% - var(--sr) - 74px)); top: max(calc(50% - min(276px, 40vh) / 2), 170px); height: min(276px, 40vh, calc(100vh - 236px)); }   /* (a short window: under the top-right column, over the prompt) */
+.touch #fishspot { right: calc(var(--sr) + 12px); bottom: calc(var(--sb) + 12px); height: min(276px, calc(100vh - 160px)); }
+body.portrait.touch #fishspot { bottom: auto; top: 36%; height: min(276px, 34vh); }
 #net { display: none; position: absolute; right: 10px; bottom: 40px; font-size: var(--fs-1); color: var(--dim); text-shadow: var(--halo-s); }
 body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame rate and the lag: Dev Debug Mode only) */
 
@@ -397,8 +411,8 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 @media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #rob > b { display: none; } }
 @media (max-height: 430px) and (max-width: 800px) { body:not(.touch) .vrow .vl { display: none; } body:not(.touch) #money { font-size: var(--fs-4); } body:not(.touch) #hud-btns { left: max(calc(var(--sl) + var(--map) + var(--vbar) + 90px), calc(50% - 160px)); } body:not(.touch) #hud-btns button { padding: 0 6px; } }
 
-/* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): as wide as
-   their words up to the screen less a margin, two balanced lines past it */
+/* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): one line,
+   as wide as their words up to the screen less a margin, the big words smaller past it (UI-7: never two lines of them) */
 #district { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 6; opacity: 0; pointer-events: none; text-align: center; font: 700 var(--fs-6) var(--pixel); letter-spacing: 4px; color: var(--cream); text-transform: uppercase; text-shadow: 0 4px 0 var(--ink), var(--halo), 0 0 24px var(--ink); }
 #district small { display: block; margin-top: 2px; font: 700 var(--fs-2) var(--pixel); letter-spacing: 6px; color: var(--gold); }
 #district.show { animation: district 3.4s ease-out; }
@@ -407,7 +421,8 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #edgewarn small { display: block; margin-top: 2px; font: 700 var(--fs-3) var(--ui); letter-spacing: 3px; color: var(--cream); }
 #edgewarn.hold { color: var(--danger); }
 @keyframes edgewarn { from { opacity: .65; } to { opacity: 1; } }
-#district, #edgewarn { width: max-content; max-width: calc(100vw - 24px); white-space: normal; text-wrap: balance; line-height: 1.08; }
+#district, #edgewarn { width: max-content; max-width: calc(100vw - 24px); white-space: nowrap; line-height: 1.08; }   /* (one line, shrunk to the screen: hud.js fitLine - UI-7) */
+#district small, #edgewarn small { white-space: normal; text-wrap: balance; }   /* (the small line under them may wrap) */
 
 /* the robbery bar, a train ride's (or a bus', a ferry's, a taxi's), custody's */
 #rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: var(--s2) 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }

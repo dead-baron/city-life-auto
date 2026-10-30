@@ -528,9 +528,24 @@ export class HUD {
     const el = $('district');
     el.textContent = name;
     if (island && island !== name) { const sub = document.createElement('small'); sub.textContent = island === 'Rural' ? 'Countryside' : `${island} Island`; el.appendChild(sub); }
+    fitLine(el);
     el.classList.remove('show');
     void el.offsetWidth;
     el.classList.add('show');
+  }
+}
+
+// Big words on one line (UI-7, the owner 2026-10-26: "Some text is on two lines with the same style"): the district's
+// card, the warning past the map's edge - as big as they're made, smaller when they'd be wider than the screen less a
+// margin (style.css keeps them to one line: nowrap). Its <small> line keeps its own size.
+export function fitLine(el, room = innerWidth - 24) {
+  el.style.fontSize = '';
+  for (let i = 0; i < 3; i++) {
+    const w = el.scrollWidth;
+    if (!(w > room)) return;
+    const f = parseFloat(getComputedStyle(el).fontSize);
+    el.style.fontSize = `${Math.max(14, Math.floor(f * room / w))}px`;
+    if (f <= 14) return;
   }
 }
 

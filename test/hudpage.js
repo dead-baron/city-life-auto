@@ -20,7 +20,7 @@ export const SIZES = [[1280, 720], [1920, 1080], [844, 390], [740, 360], [390, 8
 // centred hole-punch camera in that band (UI-5: the owner, 2026-10-26) - the page's --cam-top, as env() would give it
 export const CAM = { '412x892': 36 };
 export const DEVICES = ['kbm', 'touch', 'pad'];
-export const STATES = ['foot', 'veh', 'air', 'police', 'rob', 'custody'];   // (on foot armed with a flashlight and a crate; driving; flying; the police with the cruiser's hint; robbing a shop; arrested)
+export const STATES = ['foot', 'veh', 'air', 'police', 'rob', 'custody', 'fish'];   // (on foot armed with a flashlight and a crate; driving; flying; the police with the cruiser's hint; robbing a shop; arrested; fishing - a fish on: the meter and the STRIKE! cue)
 // and on touch every state the slots have (shared/controls.js TOUCH_STATES): unarmed, on a horse, a board, at a boat's
 // wheel, swimming, a passenger, surfing, at home
 export const TOUCH_STATES = ['unarmed', 'horse', 'board', 'boat', 'swim', 'ride', 'surf', 'home'];
@@ -41,6 +41,7 @@ export const FLAGS = {
   ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true, wpn: true },
   surf: { items: true, surf: true, prompt: true, wpn: true },
   home: { items: true, home: true, light: true, prompt: true },
+  fish: { items: true, fish: true, armed: true, light: true, prompt: true, wpn: true },
 };
 export function scenarios() {
   const out = [];
@@ -102,6 +103,8 @@ if (FL.inVeh) { $('vchip').innerHTML = '<b>' + (sc.st === 'air' ? 'Skylark Helic
 if (VST) { $('hints').innerHTML = HI.hintHtml(HI.hintStrip(VST, sc.dev)); $('hints').classList.remove('off'); }
 if (sc.st === 'rob') { $('rob').classList.remove('hidden'); $('rob-take').textContent = 'HOT $1,250 · till $800'; $('rob-fill').style.width = '40%'; }
 if (sc.st === 'custody') { $('trainbar').classList.remove('hidden'); $('trainbar').classList.add('custody'); $('tb-where').textContent = 'IN CUSTODY'; $('tb-next').textContent = 'Held on the ground - a patrol car is on its way'; }
+// fishing (UI-7): the fight's meter in its spot (client/fishing.js draws it in #fishspot's box) and the big cue
+if (sc.st === 'fish') { $('fishspot').classList.add('on'); $('fishbar').innerHTML = 'STRIKE! ' + glyph; $('fishbar').classList.remove('hidden'); }
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
 $('w-icon').innerHTML = '<canvas width="96" height="48"></canvas>';
 $('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
@@ -119,7 +122,7 @@ function measure() {
   const read = [], keep = [];
   if (shown(pr)) read.push(box(pr, 'prompt'));
   document.querySelectorAll('#toasts .toast').forEach((el, i) => { el.style.animation = 'none'; if (shown(el)) read.push({ ...box(el, 'note' + i), lines: Math.round(el.getBoundingClientRect().height / 20) }); });
-  for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar', 'hints']) if (shown($(id))) read.push({ ...box($(id), id), form: id === 'job' ? JOBF : undefined });
+  for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar', 'hints', 'fishspot', 'fishbar']) if (shown($(id))) read.push({ ...box($(id), id), form: id === 'job' ? JOBF : undefined });
   keep.push(box($('radar'), 'minimap'));
   // you: the camera keeps you in the middle of the screen (on foot; your character about 24x32 px on a phone)
   keep.push({ name: 'you', x0: Math.round(sc.w / 2 - 12), y0: Math.round(sc.h / 2 - 20), x1: Math.round(sc.w / 2 + 12), y1: Math.round(sc.h / 2 + 12) });

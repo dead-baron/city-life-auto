@@ -22,7 +22,7 @@ import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVeh
 import { FX } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
-import { HUD } from './hud.js';
+import { HUD, fitLine } from './hud.js';
 import { AreaTracker } from './areaname.js';   // (the title card's place name: water keeps it)
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
@@ -1299,7 +1299,8 @@ function edgeWarn(k) {
   const el = $('edgewarn');
   if (!el) return;
   el.classList.toggle('hidden', !k); el.classList.toggle('hold', k === 2);
-  el.innerHTML = k === 2 ? 'TURN BACK<small>The open sea won\'t let you go any further</small>' : k === 1 ? 'LEAVING THE CITY\'S WATERS<small>Turn back - follow the arrow</small>' : '';
+  el.innerHTML = k === 2 ? 'TURN BACK<small>The open sea won\'t let you go any further</small>' : k === 1 ? 'LEAVING CITY WATERS<small>Turn back - follow the arrow</small>' : '';
+  if (k) fitLine(el);   // (one line: client/hud.js)
 }
 
 // With the art v2 world the overlay canvas also carries what v1 draws as marks inside its world pass:
@@ -2455,6 +2456,7 @@ function onResize() {
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   if (S.art2) S.art2.resize(W, H, DPR);
   document.body.classList.toggle('portrait', H > W);
+  edgeWarnState = -1;   // (the warning fitted to the new width)
   sendView();
 }
 // Tell the server how much world this screen shows at rest, so it spawns things just out of
