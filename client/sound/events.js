@@ -153,6 +153,15 @@ export const EVENT_SOUNDS = {
   treecrash: (ev, A) => { A.at('treefall', ev.x, ev.y, 0.55 + 0.15 * (ev.s || 2), { s: ev.s }); A.at('foliage', ev.x, ev.y, 0.8); },
   treeup: null,
   fire: (ev, A) => { const p = A.S.map && A.S.map.props[ev.i]; if (p) A.at(ev.lit ? 'ignite' : 'douse', p.x, p.y); },
+  // the park and the camp (server ducks.js, fireworks.js, chess.js, campfires.js build; fwup / fwpop / fwfount are the
+  // page's own, as client/leisure/stage.js plays a show out: the rocket going up, its burst, the fountain's hiss)
+  camp: (ev, A) => A.at(ev.off ? 'douse' : 'ignite', ev.x, ev.y, 0.8),
+  fw: (ev, A) => A.at('flarestrike', ev.x, ev.y, 0.8),
+  fwup: (ev, A) => A.at('whoosh', ev.x, ev.y, 0.75),
+  fwpop: (ev, A) => { A.at('explosion', ev.x, ev.y, ev.big ? 0.42 : 0.28, { r: ev.big ? 70 : 45 }); A.at('crackle', ev.x, ev.y, ev.crk ? 1 : 0.6); },
+  fwfount: (ev, A) => A.at('crackle', ev.x, ev.y, 0.9),
+  duckfeed: (ev, A) => A.at('splash', ev.tx, ev.ty, 0.35, { n: 4 }),
+  chessmv: (ev, A) => A.at('clack', ev.x, ev.y, ev.c ? 0.5 : 0.35),
   geyser: (ev, A) => A.at('gush', ev.x, ev.y),
   trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),
   xing: (ev, A) => { const c = A.S.map && A.S.map.rail && A.S.map.rail.crossings && A.S.map.rail.crossings[ev.i]; if (c) A.at('gatearm', c.x, c.y, 0.6); },

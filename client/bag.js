@@ -11,7 +11,7 @@ import { input } from './input.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SLOTS = 4;
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music));
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun));
 // the categories, in the grid's order: [id, name, test(item def, id)] - an item goes in the first that takes it
 export const BAG_CATS = [
   ['weapons', 'Weapons'],
@@ -20,6 +20,7 @@ export const BAG_CATS = [
   ['clothes', 'Clothes', (it) => it.crafted || it.camo],
   ['fishing', 'Fishing', (it) => it.bait || it.rod || it.fish],
   ['music', 'Music', (it) => it.music],
+  ['outdoors', 'Outdoors & fun', (it) => it.fun],   // (fireworks, the Campfire Kit: shared/leisure.js)
   ['tools', 'Tools & lights', (it) => it.tool || it.light || it.chute || it.fell || it.buff],
   ['hunting', 'Hunting', (it) => it.game || it.pelt],
   ['garden', 'Garden', (it) => it.seed || it.crop || it.prize],

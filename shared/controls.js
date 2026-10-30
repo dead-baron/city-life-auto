@@ -45,6 +45,9 @@ export const KB = {
 };
 // the music games' keys (client/music/play.js): the lanes, the pads by key code and pad button, the chord (radio: G in a car)
 export const MUSIC_KEYS = { lanes: [['ArrowLeft', 'KeyD'], ['ArrowDown', 'KeyF'], ['ArrowUp', 'KeyJ'], ['ArrowRight', 'KeyK']], pads: ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH', 'KeyJ', 'KeyK'], padLanes: [[14, 2], [13, 0], [12, 3], [15, 5]], padPads: [14, 13, 12, 15, 2, 0, 3, 5], padChord: 6 };
+// the chess board's keys (client/leisure/chess.js): the cursor, pick a square, resign / draw / the regular or a rematch
+// by key; on the pad the d-pad, A, X draw, Y resign, RB the regular or a rematch (Esc / B gets up: main.js)
+export const CHESS_KEYS = { up: ['ArrowUp', 'KeyW'], down: ['ArrowDown', 'KeyS'], left: ['ArrowLeft', 'KeyA'], right: ['ArrowRight', 'KeyD'], pick: ['Enter', 'Space'], resign: 'KeyR', draw: 'KeyQ', next: 'KeyN', pad: { up: 12, down: 13, left: 14, right: 15, pick: 0, draw: 2, resign: 3, next: 5 } };
 export const ACTIONS = Object.keys(KB);
 
 // The touch controls by slots (UI-2): which button each slot holds in each state - TOUCH_STATES, touchSlots - and how

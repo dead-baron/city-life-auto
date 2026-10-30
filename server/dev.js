@@ -84,6 +84,8 @@ import * as forklift from './systems/forklift.js';
 import * as fishboat from './systems/fishboat.js';
 import * as rangerjob from './systems/rangerjob.js';
 import * as phone from './systems/phone.js';
+import * as chess from './systems/chess.js';
+import { parkPonds } from './systems/wildlife.js';
 const { clearSpot } = cruiser;
 
 export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup'];
@@ -822,6 +824,24 @@ function run(world, p, c, msg) {
     case 'skate': case 'cart': case 'fish': case 'arcade': {   // today's new play (2026-10-18): skateboarding, the shopping carts, fishing (and the arcades' floors) - server/devplay.js
       const err = (c === 'skate' ? devplay.devSkate : c === 'cart' ? devplay.devCart : c === 'arcade' ? devplay.devArcade : devplay.devFish)(world, p, msg);
       if (err) world.notify(p, err, 'warn');
+      break;
+    }
+    case 'park': {   // the park (batch 8c): to the nearest chess table (msg.k 'chess') or town duck pond (msg.k 'ducks')
+      if (!ped || ped.dead || ped.vehId) break;
+      const L = msg.k === 'ducks' ? parkPonds(world.map).map((q) => ({ x: q.pts[0][0], y: q.pts[0][1] })) : chess.tables(world.map).map((T) => ({ x: T.x - T.sd - 8, y: T.y + 12 }));
+      let best = null, bd = Infinity;
+      for (const q of L) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d < bd) { bd = d; best = q; } }
+      if (!best) { world.notify(p, '[dev] None on this map.', 'warn'); break; }
+      let at = best;
+      if (msg.k === 'ducks') {   // (on the bank, three of the park's tame ducks on the water in front of you)
+        const pond = parkPonds(world.map).find((q) => q.pts[0][0] === best.x && q.pts[0][1] === best.y), m = world.map, dry = (x, y) => { const t = m.tileAtPx(x, y); return !m.isWater(x, y) && !PED_BLOCK[t]; };
+        at = null;
+        for (let r = 20; r < 400 && !at; r += 12) for (let k = 0; k < 16 && !at; k++) { const x = best.x + Math.cos(k * 0.3927) * r, y = best.y + Math.sin(k * 0.3927) * r; if (dry(x, y)) at = { x, y }; }
+        at ||= tpSpot(m, best.x, best.y);
+        for (const [x, y] of (pond ? [...pond.pts].sort((a, b) => Math.hypot(a[0] - at.x, a[1] - at.y) - Math.hypot(b[0] - at.x, b[1] - at.y)) : [[best.x, best.y]]).slice(0, 3)) wildlife.spawnAnimal(world, 'duck', x, y, 0, { tame: true });
+      }
+      ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
+      world.notify(p, `[dev] At the nearest ${msg.k === 'ducks' ? 'duck pond' : 'chess table'}.`, 'info');
       break;
     }
     case 'goto': devmode.goTo(world, p, msg.pid); break;     // teleport to an online player
