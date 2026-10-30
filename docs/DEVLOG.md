@@ -18165,6 +18165,8 @@ lightgame.js and moving the loading screen's look at the art to hostextra.js (lo
 test/warmup.test.js (new): the loading screen's plan and cap, the jump fade, the upload budget in _chunks, the person
 rule, keepCap and the GPU slots on 8 GB devices, gfx.js renderDpr on the Pixel, the readout's laziness.
 
+## 2026-10-30 - Calm water: the sea's "rapid lines" gone, the surf wave less of a ruled line
+
 - **Calm water on the sea and the lakes - no more "rapid lines"** (the owner, 10-26, on a beach: "There are still rapid
   lines on large bodies of water"). The short white streaks in diagonal rows over the whole sea were the light pass's
   sun glints (client/art2/game/lightgame.js waterSurf), not the bake: still water's surface was three swells - sums of
