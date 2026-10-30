@@ -605,6 +605,14 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
   background: radial-gradient(ellipse at 50% 32%, var(--navy3), transparent 62%), radial-gradient(ellipse at center, var(--navy), var(--ink)); }
 #logo { width: min(440px, 70vw, 46vh); filter: drop-shadow(0 10px 24px var(--ink)); }
 #t-status { color: var(--dim); font: 600 var(--fs-3) var(--ui); line-height: 1.35; min-height: 2.7em; display: flex; align-items: center; justify-content: center; }   /* (a fixed height: the menu never shifts) */
+/* (getting the art ready after PLAY - client/warmup.js: the bar, the buttons resting; the fade after a jump, under the HUD) */
+#t-warm { width: min(400px, 86vw); height: 6px; border-radius: var(--r1); background: var(--ink); overflow: hidden; margin-top: -8px; }
+#t-warm.hidden { display: none; }
+#t-warm i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .25s linear; }
+#t-buttons.t-wait { opacity: .45; pointer-events: none; }
+#veil { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity .35s ease; display: flex; align-items: center; justify-content: center; }
+#veil.on { opacity: 1; transition: none; }
+#veil span { color: var(--dim); font: 600 var(--fs-3) var(--ui); }
 #t-buttons { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; align-items: center; }
 #play, #practice, #t-resume { display: inline-flex; align-items: center; justify-content: center; gap: var(--s3); min-height: var(--tap-l); padding: 0 22px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font: 700 var(--fs-4) var(--pixel); letter-spacing: 2px; cursor: pointer; box-shadow: var(--shadow); transition: transform var(--t1) var(--ease), filter var(--t1) var(--ease); }
 #play, #t-resume { background: var(--gold); color: var(--ink); }

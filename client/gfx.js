@@ -124,6 +124,15 @@ export function worldArtWanted() {
   return q !== '1';
 }
 
+// The canvases' pixels per CSS px (main.js onResize): the setting's sharpness (consoles at most 1), never more than the
+// screen has, nor past ~2.5 megapixels (a 4K TV says 2; phones say 3.5). A Pixel 7 Pro upright (412 x 892 CSS px, 3.5):
+// Medium 1 (412 x 892), High 1.5, Ultra 2 - the 2.5 MP cap would be 2.6. The world's scene is lit at its own size (one
+// texel a world px, engine.js) whatever this is: it only sets how finely the lit frame is put on the screen.
+export function renderDpr(devDpr, cssW, cssH, res, consoleCap = false) {
+  const cap = consoleCap ? Math.min(1, res) : res;
+  return Math.max(0.5, Math.min(cap, devDpr || 1, Math.sqrt(2.5e6 / Math.max(1, cssW * cssH))));
+}
+
 // One notch down (after the browser ran out of graphics memory).
 export function stepDown() {
   const order = ['ultra', 'high', 'medium', 'low'];
