@@ -182,7 +182,7 @@ const stick = (name, dx, dy) => { const [x, y, r] = mid('stick'); ev('touchstart
 stick('aim', 0, 0.5);
 stick('ring', -0.8, -0.8);
 el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE OFF
-out.toggle = { on: settings.touchEdgeFire, label: el('firetog').textContent };
+out.toggle = { on: settings.touchEdgeFire, label: el('firetog').getAttribute('aria-label') };   // (an icon button: its name)
 stick('ringOff', -0.8, -0.8);
 el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE ON again
 // FIRE tapped with the stick held: where the stick aims
