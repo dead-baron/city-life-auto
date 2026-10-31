@@ -569,7 +569,7 @@ function sense(world, a, S, ph) {
 }
 
 // ---- decisions --------------------------------------------------------------------------------------------------
-function setState(w, state, now, secs) { w.state = state; w.until = now + secs; }
+export function setState(w, state, now, secs) { w.state = state; w.until = now + secs; }
 function flee(world, a, fx, fy, now, secs = 2.5, urgent = false) {
   const w = a.wild;
   if (w.state === 'dive' || w.state === 'fly' || w.state === 'climb') return;
@@ -656,6 +656,7 @@ function think(world, a, S, now, ph) {
   // the park's ducks and geese are used to people: someone right on top of them is paddled (or waddled) away from; only
   // a shot or a car close by sends them up
   if (w.tame && !spooked) {
+    if (w.state === 'tograpes' || w.state === 'nibble') return;   // (grapes thrown to it: over it comes - ducks.js)
     if (th.ped && d < 70 && w.state !== 'flee' && w.state !== 'trotoff') { w.fx = th.x; w.fy = th.y; setState(w, 'trotoff', now, 1.6 + rng()); }
     return;
   }
@@ -1213,6 +1214,13 @@ function step(world, a, dt, now, ph) {
       break;
     }
     case 'eat': pose = APOSE.eat; if (now > w.until) setState(w, 'idle', now, 3); break;
+    case 'tograpes': {   // grapes thrown in for it (ducks.js feed): it paddles (waddles) over to where they landed
+      const dx = w.wx - a.x, dy = w.wy - a.y, d = Math.hypot(dx, dy);
+      if (d < 9 || now > w.until) { setState(w, 'nibble', now, 3.5 + rng() * 3); break; }
+      mx = dx / d; my = dy / d; speed = (wet(map, a.x, a.y) ? (S.swim || 60) * 0.8 : S.walk * 1.3); goal = d;
+      break;
+    }
+    case 'nibble': pose = wet(map, a.x, a.y) ? APOSE.dabble : APOSE.peck; if (now > w.until) { setState(w, 'idle', now, 2 + rng() * 3); w.hx = a.x; w.hy = a.y; } break;
     case 'stalk': {
       // keeps behind its prey and out of its sight, closes in while it's turned away, freezes when it looks round,
       // and rushes it from close in; gives up at daybreak or if the prey gets company or a car
@@ -1389,7 +1397,7 @@ const canReach = (w, id, now) => !(id && w.unreach === id && now < (w.unreachUnt
 function giveUp(world, a, w, now) {
   w.blockA = w.hd ?? a.a; w.blockUntil = now + 1.5; w.fhAt = 0; w.stuck = (w.stuck || 0) + 1;
   switch (w.state) {
-    case 'walk': case 'regroup': case 'follow': case 'work': case 'towater': case 'totree': case 'tofish': case 'tobank':
+    case 'walk': case 'regroup': case 'follow': case 'work': case 'towater': case 'totree': case 'tofish': case 'tobank': case 'tograpes':
       setState(w, 'idle', now, 0.4 + rng() * 0.8); break;
     case 'hunt': case 'rush':   // (a trunk in the way: a stumble round it; still stuck - the far side of a fence or a river from it - not this one)
       if (w.stuck > 4) endHunt(world, a, now, 'blocked'); else w.missUntil = now + 0.4;

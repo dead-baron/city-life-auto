@@ -22,6 +22,10 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import { openNear } from './firefighter.js';
 import { kerbFor } from './kerbdrive.js';
 import * as jobs from './jobs.js';
+import * as crazytaxi from './crazytaxi.js';
+import * as transit from './transit.js';
+import { payFrom } from './economy.js';
+import { CABHAIL } from '../../shared/rules.js';
 
 const NAMES = ['a nurse off shift', 'a tourist', 'a banker', 'a student', 'a chef', 'a salesman', 'a night owl', 'a musician', 'a pensioner', 'a lawyer', 'a builder', 'a bride-to-be'];
 const GOES = new Set(['delivery', 'convenience', 'coffee', 'clothing', 'pharmacy', 'hospital', 'club', 'bank', 'cinema', 'bowling', 'gasstation', 'station', 'airport', 'market', 'barber', 'grocery', 'home', 'courthouse', 'marina']);
@@ -57,12 +61,12 @@ export function interaction(world, p) {
   if (!ped || ped.dead || ped.vehId || p.job) return null;
   const r = ranksOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 150);
   if (!r) return null;
-  return { label: 'Sign on as a taxi driver (a cab is issued)', card: { id: 'cab', where: r.name, start: () => start(world, p, r) }, run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
+  return { label: 'Sign on as a taxi driver (a cab is issued)', card: { id: 'cab', where: r.name, start: () => start(world, p, r), alt: { id: 'crazy', start: () => crazytaxi.start(world, p, r) } }, run: () => { const err = start(world, p, r); if (err) world.notify(p, err, 'bad'); } };
 }
 
 // ---- the fares ---------------------------------------------------------------------------------------------------------
-const placesOf = (m) => m._cabGo || Object.defineProperty(m, '_cabGo', { value: m.pois.filter((q) => GOES.has(q.kind)), enumerable: false })._cabGo;
-function pick(world, list, x, y, lo, hi) {
+export const placesOf = (m) => m._cabGo || Object.defineProperty(m, '_cabGo', { value: m.pois.filter((q) => GOES.has(q.kind)), enumerable: false })._cabGo;
+export function pick(world, list, x, y, lo, hi) {
   const ring = list.filter((q) => { const d = Math.hypot(q.x - x, q.y - y); return d >= lo && d <= hi; });
   return ring.length ? ring[Math.floor(world.rand() * ring.length)] : null;
 }
@@ -76,9 +80,7 @@ function newFare(world, p) {
 // a fare of kind k ('hail' | 'call') waiting by a for b -> the fare | null
 export function fareAt(world, p, k, a, b) {
   const j = p.job, now = world.time, m = world.map;
-  let at = null;   // (on open ground, not under a tree or against a lamp post: in sight)
-  for (const [ox, oy] of [[0, 0], [40, 0], [-40, 0], [0, 40], [0, -40], [80, 0], [-80, 0], [0, 80], [0, -80]]) { const q = openNear(m, a.x + ox, a.y + oy); if (q && !heavyNear(m, q.x, q.y)) { at = q; break; } }
-  at = at || openNear(m, a.x, a.y);
+  const at = kerbSpot(m, a);
   if (!at) return null;
   const q = spawnNpc(world, 'casual', at.x, at.y, 'civ');
   q.npc.sar = p.pid; q.npc.keep = true; q.vx = 0; q.vy = 0;
@@ -92,6 +94,14 @@ export function fareAt(world, p, k, a, b) {
   p.meDirty = true;
   return f;
 }
+// where someone waits for a cab by a: on open ground, not under a tree or against a lamp post (in sight) - or null
+export function kerbSpot(m, a) {
+  for (const [ox, oy] of [[0, 0], [40, 0], [-40, 0], [0, 40], [0, -40], [80, 0], [-80, 0], [0, 80], [0, -80]]) { const q = openNear(m, a.x + ox, a.y + oy); if (q && !heavyNear(m, q.x, q.y) && outdoors(m, q)) return q; }
+  const q = openNear(m, a.x, a.y);
+  return q && outdoors(m, q) ? q : null;
+}
+// not in a building's footprint (a courtyard or a plaza under a roof: out of sight)
+function outdoors(m, q) { const tx = Math.floor(q.x / 32), ty = Math.floor(q.y / 32); return m.inside(tx, ty) && m.bld[m.idx(tx, ty)] < 0; }
 // a tree, a lamp post, a hydrant... (shared/mapcore.js HEAVY_PROPS) within r px of (x, y)
 function heavyNear(m, x, y, r = 44) {
   let g = m._heavyGrid;
@@ -106,7 +116,7 @@ function heavyNear(m, x, y, r = 44) {
 const fareOf = (f) => Math.round((CAB.flag + (Math.min(f.meter, f.direct * 1.6 + 200) / 1000) * CAB.perKm) / 5) * 5;
 function endFare(world, p, msg, tone) {
   const j = p.job, f = j && j.fare;
-  if (f) {
+  if (f && f.k !== 'player') {
     const q = world.get(f.cust);
     if (q && !q.removed && (q.vehId || q.npc.sar)) {   // (not one set down at the kerb: off they walk)
       if (q.vehId) { const v = world.get(q.vehId); if (v) { const i = v.seats.indexOf(q.id); if (i >= 0) v.seats[i] = 0; } q.vehId = 0; q.seat = -1; }
@@ -119,7 +129,7 @@ function endFare(world, p, msg, tone) {
   p.meDirty = true;
 }
 // out at the kerb: off they walk (somewhere to be), gone once out of the way
-function setDown(world, v, q) {
+export function setDown(world, v, q) {
   const i = v.seats.indexOf(q.id);
   if (i >= 0) v.seats[i] = 0;
   q.vehId = 0; q.seat = -1;
@@ -140,6 +150,7 @@ function step(world, p, dt) {
     if (now >= j.nextAt && ped && !ped.dead) newFare(world, p);
     return;
   }
+  if (f.k === 'player') { stepRider(world, p, v, f, dt); return; }   // (a player who hailed a cab: below)
   const q = world.get(f.cust);
   if (!q || q.removed || q.dead) { endFare(world, p, 'The fare\'s off.', 'bad'); return; }
   const driving = ped && ped.vehId === v.id && ped.seat === 0, speed = Math.hypot(v.vx, v.vy);
@@ -206,6 +217,10 @@ function step(world, p, dt) {
 
 // ---- every tick --------------------------------------------------------------------------------------------------------
 export function update(world, dt) {
+  if (world.cabHails && world.tick % 10 === 4) for (const [pid, h] of world.cabHails) {   // (hails gone stale: they walked off, got in something, gave up)
+    const p = world.players.get(pid), ped = p && p.ped;
+    if (!ped || ped.dead || ped.vehId || world.time > h.until || Math.hypot(ped.x - h.x, ped.y - h.y) > CABHAIL.moveR) { if (p) hailOver(world, p, null, 'Your fare didn\'t wait.'); else world.cabHails.delete(pid); }
+  }
   if (world.cabFares) for (const [pid, id] of world.cabFares) {
     const p = world.players.get(pid);
     if (p && p.job && p.job.type === 'cab' && p.job.fare && p.job.fare.cust === id) continue;
@@ -220,7 +235,8 @@ export function update(world, dt) {
 export function target(world, p, j) {
   const f = j.fare, v = world.get(j.truck);
   if (!f) { const at = v || j.base; return { text: j.text, x: Math.round(at.x), y: Math.round(at.y), stage: 'wait' }; }
-  if (!f.aboard) { const q = world.get(f.cust); return { text: j.text, x: Math.round(q ? q.x : 0), y: Math.round(q ? q.y : 0), stage: 'pickup', dest: [Math.round(f.to.x), Math.round(f.to.y)] }; }
+  if (!f.aboard) { const q = world.get(f.cust); return { text: j.text, x: Math.round(q ? q.x : 0), y: Math.round(q ? q.y : 0), stage: 'pickup', ...(f.to ? { dest: [Math.round(f.to.x), Math.round(f.to.y)] } : null) }; }
+  if (!f.to) { const v = world.get(j.truck); return { text: j.text, x: Math.round(v ? v.x : 0), y: Math.round(v ? v.y : 0), stage: 'go' }; }
   return { text: j.text, x: Math.round(f.to.x), y: Math.round(f.to.y), stage: 'go' };
 }
 
@@ -239,5 +255,130 @@ export function devCab(world, p) {
   if (v && !ped.vehId) { v.x = ped.x - c * 72 - s * side * 30; v.y = ped.y - s * 72 + c * side * 30; v.a = k.a || 0; v.vx = 0; v.vy = 0; world.place(v); }
   if (!fareAt(world, p, 'hail', { x: ped.x + c * 45, y: ped.y + s * 45 }, { x: b.x, y: b.y, name: b.label })) return 'no room for a fare here';
   j.nextAt = world.time + CAB.gapS;
+  return null;
+}
+
+// ---- a player hailing a cab (b8a; the owner: "or even pick up other players if they hail a taxi and you see it you can go
+// pick them up if another NPC doesnt do it first") -------------------------------------------------------------------
+// Calling a taxi on the phone (transit.js callTaxi), or hailing a player's cab going by, puts out a hail: every on-duty
+// cab driver within CABHAIL.hailR with nobody in the back is sent to it (an NPC fare they were on their way to is
+// dropped - a player's first). The city's taxi comes too: whichever cab the player gets into first takes the fare, the
+// others are stood down. Aboard, their waypoint is where to (the page sends it, as for a city taxi); the meter runs as
+// for any fare, and getting out they pay it (CAB.flag + perKm) to the driver - no tip, no company bonus: the money only
+// changes hands. world.cabHails: pid -> { pid, x, y, at, until }; the cab's p.job.fare { k: 'player', rider, cust }.
+const nameOf = (p) => (p.profile && p.profile.name) || p.name || 'a player';
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+export function playerHail(world, p, only = null) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId) return 0;
+  const H = (world.cabHails ||= new Map());
+  H.set(p.pid, { pid: p.pid, x: ped.x, y: ped.y, at: world.time, until: world.time + CABHAIL.hailS });
+  ped.pp = 'hail'; ped.appVer = (ped.appVer || 0) + 1;   // (an arm up for a cab, for everyone to see)
+  let sent = 0;
+  for (const q of world.players.values()) {
+    if (q === p || !q.job || q.job.type !== 'cab' || (only && q !== only)) continue;
+    const v = world.get(q.job.truck), f = q.job.fare;
+    if (!v || Math.hypot(v.x - ped.x, v.y - ped.y) > CABHAIL.hailR || (f && (f.aboard || f.k === 'player'))) continue;
+    if (f) endFare(world, q);
+    q.job.fare = { id: seq++, k: 'player', rider: p.pid, cust: ped.id, who: nameOf(p), at: world.time, aboard: false, onAt: 0, to: null, meter: 0, lx: 0, ly: 0, there: false };
+    q.job.stage = 'pickup';
+    const where = world.map.districtAt(ped.x, ped.y);
+    q.job.text = `Taxi: ${nameOf(p)} is hailing a cab${where ? ` in ${where.name}` : ''} - beat the city's taxi there`;
+    world.notify(q, `Dispatch: ${nameOf(p)} wants a cab${where ? ` in ${where.name}` : ''} - it's marked. First cab there gets the fare.`, 'good');
+    q.meDirty = true;
+    sent++;
+  }
+  return sent;
+}
+// the hail's over (they got in a cab, cancelled, walked off): every cab sent to it stood down but the one that got them
+export function hailOver(world, p, by = null, why = 'Your fare took another cab.') {
+  if (world.cabHails) world.cabHails.delete(p.pid);
+  if (p.ped && p.ped.pp === 'hail') { p.ped.pp = null; p.ped.appVer = (p.ped.appVer || 0) + 1; }
+  for (const q of world.players.values()) {
+    const f = q.job && q.job.type === 'cab' && q.job.fare;
+    if (f && f.k === 'player' && f.rider === p.pid && !f.aboard && q !== by) endFare(world, q, why, 'bad');
+  }
+}
+// on foot: get in a player's cab sent for you and stopped by you; or hail an on-duty player's empty cab going by
+export function riderInteraction(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId) return null;
+  for (const q of world.players.values()) {
+    const j = q.job;
+    if (q === p || !j || j.type !== 'cab') continue;
+    const v = world.get(j.truck);
+    if (!v || v.removed || !q.ped || q.ped.vehId !== v.id) continue;
+    const d = Math.hypot(v.x - ped.x, v.y - ped.y), f = j.fare;
+    if (f && f.k === 'player' && f.rider === p.pid && !f.aboard && d < CABHAIL.boardR + v.def.L / 2 && Math.hypot(v.vx, v.vy) < 40) return { label: `Get in ${nameOf(q)}'s cab`, run: () => boardRider(world, p, q, v) };
+    if (!f && d < 260 && !(world.cabHails && world.cabHails.has(p.pid))) return { label: `Hail ${nameOf(q)}'s cab`, run: () => { if (playerHail(world, p, q)) world.notify(p, `${nameOf(q)} is pulling over for you.`, 'good'); } };
+  }
+  return null;
+}
+function boardRider(world, p, q, v) {
+  const ped = p.ped, f = q.job && q.job.fare;
+  if (!ped || ped.vehId || !f || f.rider !== p.pid || f.aboard) return;
+  if (ped.carrying) { world.notify(p, 'Put the crate down first - it won\'t fit in the back.', 'warn'); return; }
+  const seat = [2, 3, 1].find((i) => i < v.seats.length && !v.seats[i]);
+  if (seat === undefined) { world.notify(p, 'No seat free in the back.', 'warn'); return; }
+  v.seats[seat] = ped.id; ped.vehId = v.id; ped.seat = seat; ped.vx = 0; ped.vy = 0; ped.rollT = 0;
+  world.emit(v.x, v.y, { e: 'door', x: v.x, y: v.y });
+  f.aboard = true; f.onAt = world.time; f.lx = v.x; f.ly = v.y; f.meter = 0;
+  q.job.stage = 'go';
+  hailOver(world, p, q);
+  transit.standDown(world, p, 'You took another cab - the taxi you called drove off.');
+  p.cabRide = v.id;
+  world.notify(p, `You're in ${nameOf(q)}'s cab. Your waypoint is where to - the meter's running ($${CAB.flag} flag, $${CAB.perKm} a km).${p.taxiDest ? '' : ' Set a waypoint (the map, or the phone\'s places).'}`, 'good');
+  world.notify(q, `${nameOf(p)} gets in. ${p.taxiDest ? `"${p.taxiDest.label || 'My waypoint'}, please."` : 'They\'re picking where to.'}`, 'good');
+  p.meDirty = true; q.meDirty = true;
+}
+const meterFare = (f) => Math.round((CAB.flag + (f.meter / 1000) * CAB.perKm) / 5) * 5;
+function stepRider(world, q, v, f, dt) {
+  const j = q.job, p = world.players.get(f.rider), ped = p && p.ped;
+  if (!p || !ped || ped.dead || !p.conn) { if (f.aboard && ped && ped.vehId === v.id) { const i = v.seats.indexOf(ped.id); if (i >= 0) v.seats[i] = 0; ped.vehId = 0; ped.seat = -1; } if (p) hailOver(world, p, q); endFare(world, q, 'The fare\'s off.', 'bad'); return; }
+  if (!f.aboard) {
+    const h = world.cabHails && world.cabHails.get(p.pid);
+    if (!h || world.time > h.until || ped.vehId || Math.hypot(ped.x - h.x, ped.y - h.y) > CABHAIL.moveR) { hailOver(world, p, null, `${f.who} didn't wait.`); if (q.job && q.job.fare === f) endFare(world, q, `${f.who} didn't wait.`, 'bad'); return; }
+    return;
+  }
+  if (ped.vehId !== v.id) {   // out: they pay the meter to you
+    const fare = f.meter < 64 ? 0 : meterFare(f);
+    let paid = 0;
+    if (fare) { if (payFrom(p, fare)) paid = fare; else { paid = Math.max(0, p.profile.cash + p.profile.bank); p.profile.cash = 0; p.profile.bank = 0; } }
+    q.profile.cash += paid;
+    if (paid) { j.done++; world.emit(v.x, v.y, { e: 'cash', x: v.x, y: v.y, n: paid }); }
+    p.cabRide = 0; p.meDirty = true;
+    world.notify(p, paid ? `Taxi fare to ${nameOf(q)}: $${paid}.` : 'You got out before the meter got going - no charge.', 'info');
+    endFare(world, q, paid ? `${f.who} gets out and pays the meter: +$${paid}.` : `${f.who} got out.`, paid ? 'good' : 'info');
+    store.touch();
+    return;
+  }
+  const dm = Math.hypot(v.x - f.lx, v.y - f.ly);
+  if (dm < 400) f.meter += dm;
+  f.lx = v.x; f.ly = v.y;
+  const D = p.taxiDest;
+  if (D && (!f.to || f.to.x !== D.x || f.to.y !== D.y)) { f.to = { x: D.x, y: D.y, name: D.label || 'their waypoint' }; f.there = false; world.notify(q, `${f.who}: "${f.to.name}, please."`, 'info'); }
+  if (!D && f.to) f.to = null;
+  if (world.tick % 20 === 3) {
+    const t = f.to ? `Taxi: ${f.who} to ${f.to.name} - meter $${meterFare(f)}` : `Taxi: ${f.who} is aboard - waiting for where to (their waypoint)`;
+    if (t !== j.text) { j.text = t; q.meDirty = true; p.meDirty = true; }
+  }
+  if (f.to && !f.there && Math.hypot(v.vx, v.vy) < 25 && Math.hypot(v.x - f.to.x, v.y - f.to.y) < CAB.dropR) {
+    f.there = true;
+    world.notify(p, `Here we are - ${f.to.name}. $${meterFare(f)}: get out with the vehicle key.`, 'good');
+    world.notify(q, `You're there. ${f.who} pays the meter getting out.`, 'good');
+  }
+}
+// the passenger's view of it (the HUD's taxi strip, the Transit app: transit.taxiInfo's shape) - waiting for a player's
+// cab or riding in one
+export function riderInfo(world, p) {
+  if (!p.ped) return null;
+  for (const q of world.players.values()) {
+    const f = q.job && q.job.type === 'cab' && q.job.fare;
+    if (!f || f.k !== 'player' || f.rider !== p.pid) continue;
+    const v = world.get(q.job.truck);
+    if (!v) continue;
+    const d = Math.hypot(v.x - p.ped.x, v.y - p.ped.y), m = f.to ? Math.round(Math.hypot(v.x - f.to.x, v.y - f.to.y) / 32) : 0;
+    return { tier: 'std', name: `${nameOf(q)}'s cab`, st: !f.aboard ? (d < 300 && Math.hypot(v.vx, v.vy) < 40 ? 'wait' : 'pickup') : !f.to ? 'dest' : f.there ? 'there' : 'ride', x: Math.round(v.x), y: Math.round(v.y), eta: Math.round(d / 250), wait: 0, to: f.to ? f.to.name : '', m, fare: meterFare(f), est: meterFare({ meter: f.meter + m * 32 }), pc: 1 };
+  }
   return null;
 }

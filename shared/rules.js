@@ -826,6 +826,28 @@ export const MAIL = { util: 45, week: 7, late: 15, odds: 0.35, off: 20, keep: 12
 // scares), busjob.js (perStop on time - late s grace - and perPax), towjob.js (pay + perKm to the yard)
 export const CAB = { firstS: 5, gapS: 12, shiftS: 1800, waitS: 300, flag: 25, perKm: 50, tip: 0.4, parS: 30, kmS: 450, boardR: 150, dropR: 240, trip: [1500, 6000], hail: [350, 1500], bump: 140, bail: 3 };
 export const BUSJOB = { perStop: 40, perPax: 12, late: 25, haltR: 170, dwellS: 4, wait: [1, 4], speed: 140 };
+// (b8a) a player hailing a cab: offered to the on-duty cab drivers within hailR px for hailS s (the city's taxi races
+// them there); the rider pays the meter (flag + perKm) to the driver
+export const CABHAIL = { hailR: 9000, hailS: 240, moveR: 320, boardR: 170 };
+// (b8a) Crazy Taxi (crazytaxi.js): the clock starts at startS (at most maxS); waiting fares keep `waiting` hailing within
+// spot px; a fare's tier by trip px (green, yellow, red: its pay and a bonus in seconds); its own clock par = parS + d / pxS
+// (late: they jump out); picked up stopping under boardV px/s within boardR for boardS s, set down under dropV within dropR;
+// tips while aboard: a near miss (passing a vehicle under nearPx apart at nearV px/s), a drift (driftS s of it at speed),
+// a dash (dashK of the top speed for dashS s) - each times the combo (at most comboMax), lost on a crash over bump;
+// the licence by the run's takings (rank: [min $, letter])
+export const CRAZY = { startS: 50, maxS: 150, waiting: 3, spot: [200, 1000], tiers: [{ trip: [1100, 2400], pay: 60, bonus: 8, col: 'g' }, { trip: [2400, 4200], pay: 120, bonus: 12, col: 'y' }, { trip: [4200, 6800], pay: 210, bonus: 18, col: 'r' }],
+  parS: 8, pxS: 330, boardV: 90, boardR: 150, boardS: 0.4, dropV: 140, dropR: 230, nearPx: 26, nearV: 300, nearTip: 6, driftS: 0.8, driftTip: 5, dashK: 0.88, dashS: 2, dashTip: 4, comboMax: 10, bump: 150,
+  rank: [[1500, 'S'], [1000, 'A'], [650, 'B'], [380, 'C'], [180, 'D'], [0, 'E']] };
+// (b8a) the trucker (truckjob.js, rigs.js): a load of `crates` open crates on a flatbed trailer from a depot to a buyer
+// haul px away; paid base + perKm a 1000 px, times the share of the crates delivered, less hitCut a hard hit over bump
+// (at most to floor); stopped within dropR of the buyer for dropS s it's delivered; the clock limitS + d / pxS. A trailer
+// hitches within hitchR px of the fifth wheel, lined up within hitchA rad; it folds at most jack rad; npc: the share of
+// the highway's traffic that's a rig and its box trailer
+export const RIG = { crates: 8, haul: [25000, 140000], base: 250, perKm: 14, hitCut: 0.05, floor: 0.4, bump: 160, dropR: 420, dropS: 1.5, limitS: 240, pxS: 260, hitchR: 40, hitchA: 0.6, jack: 1.75, npc: 0.1 };
+// (b8a) the mail carrier (mailjob.js): a van route of van stops (parcels of them parcels in the van) in a neighbourhood
+// hood px from the post office within routeR, or a walking round of walk stops within walkR of it; letter / parcel pay
+// a stop, bonus for the whole round in its time (limitS a stop + 120); post within postR on foot or vanR stopped in the van
+export const MAILJOB = { van: 8, walk: 5, parcels: 2, letter: 22, parcel: 48, bonus: 120, limitS: 70, hood: [1800, 7000], routeR: 900, walkR: 1300, postR: 70, vanR: 120, doorR: 80 };
 export const TOWJOB = { firstS: 8, gapS: 20, shiftS: 1800, pay: 150, perKm: 60, touch: 16, hookS: 3, yardR: 340 };
 
 // jumping out of an aircraft: the fall (px, px/s, px/s²) - what each number is: server/systems/skydive.js

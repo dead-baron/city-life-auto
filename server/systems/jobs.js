@@ -129,7 +129,10 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
       v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
     }
   }
-  if (!v) return null;
+  return v ? markIssued(world, p, v, poi) : null;
+}
+// a vehicle made the job's: yours, kept while the job's on, its way back noted (the rigs and the mail van: truckjob.js, mailjob.js)
+export function markIssued(world, p, v, poi = null) {
   v.npcOwned = false; v.parked = false;
   v.issuedTo = p.pid; v.workTruck = true; v.despawnable = false;   // (kept while the job's on: releaseTruck lets it go)
   v.recall = null;   // (one on its way back, issued again for this job: kept)
@@ -318,7 +321,7 @@ function fence(world, p, crate, mult) {
   consume(world, p, crate);
   trains.onFenced(world, p, crate);
   world.notify(p, `The Exchange wired $${gain} to your bank. +${Math.round(gain / 100)} Criminal EXP.`, 'good');
-  if (crate.job) { const owner = world.players.get(crate.job.pid); if (owner && owner.job) failJob(world, owner, 'Your cargo was fenced by a thief. Contract lost.'); }
+  if (crate.job && crate.job.type !== 'haul' && crate.job.type !== 'mail') { const owner = world.players.get(crate.job.pid); if (owner && owner.job) failJob(world, owner, 'Your cargo was fenced by a thief. Contract lost.'); }   // (a haul's crate or a parcel: the load's short by one - truckjob.js, mailjob.js)
   store.touch();
 }
 

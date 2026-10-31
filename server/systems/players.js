@@ -30,6 +30,8 @@ import * as picking from './picking.js';
 import * as foraging from './foraging.js';
 import * as hunting from './hunting.js';
 import * as campfires from './campfires.js';
+import * as chess from './chess.js';
+import * as ducks from './ducks.js';
 import * as wanderer from './wanderer.js';
 import * as places from './places.js';
 import * as rides from './rides.js';
@@ -40,6 +42,8 @@ import * as cinema from './cinema.js';
 import * as drivein from './drivein.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
+import * as homeups from './homeups.js';
+import * as woodjob from './woodjob.js';
 import * as rentals from './rentals.js';
 import * as horses from './horses.js';
 import * as pets from './pets.js';
@@ -93,6 +97,12 @@ import * as paramedic from './paramedic.js';
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
+import * as rigs from './rigs.js';
+import * as truckjob from './truckjob.js';
+import * as mailjob from './mailjob.js';
+import * as forklift from './forklift.js';
+import * as fishboat from './fishboat.js';
+import * as rangerjob from './rangerjob.js';
 import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
@@ -724,7 +734,9 @@ export function findInteraction(world, p) {
     if (hop) return hop;
     const fi = fishing.interaction(world, p);
     if (fi) return fi;
-    return jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
+    const work = forklift.vehicleInteraction(world, p) || fishboat.vehicleInteraction(world, p);   // at a forklift's or the trawler's wheel (batch 8)
+    if (work) return work;
+    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || woodjob.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;
@@ -736,9 +748,11 @@ export function findInteraction(world, p) {
 
   if (ped.carrying) {
     const crate = world.get(ped.carrying);
+    const order = woodjob.carryInteraction(world, p, crate);   // a bundle for a firewood order, at its door (woodjob.js)
+    if (order) return order;
     const logs = felling.sellZone(world, p, crate);   // a bundle of firewood at a buyer, or at your own garage (felling.js)
     if (logs) return logs;
-    const dz = jobs.deliveryZoneFor(world, p, crate);
+    const dz = mailjob.parcelZone(world, p, crate) || jobs.deliveryZoneFor(world, p, crate);   // (a mail round's parcel at its door: mailjob.js)
     if (dz) return { label: dz.label, run: () => dz.run() };
     const slot = cargo.findFreeSlot(world, ped);
     if (slot) return { label: `Load onto ${slot.v.def.name}`, run: () => cargo.loadCrate(world, ped, slot.v, slot.i) };
@@ -765,6 +779,8 @@ export function findInteraction(world, p) {
 
   const fellAct = felling.interaction(world, p);   // at a tree with a cutting tool: hold to fell it (felling.js)
   if (fellAct && (ped.chop || fellAct.log)) return fellAct;   // (cutting up a felled trunk, facing it: before the bundles lying by it)
+  const task = p.job && p.job.type === 'ranger' ? rangerjob.interaction(world, p) : null;   // a ranger's task: the litter, the campfire, the lost hiker (rangerjob.js)
+  if (task) return task;
   const crate = cargo.nearestCrate(world, ped);
   if (crate) { const theirs = !!(crate.owner && crate.owner !== p.pid); return { label: (crate.state === 'loaded' ? `Unload ${crateName(crate)}` : `Pick up ${crateName(crate)}`) + (theirs ? ' - Cargo theft' : ''), crime: theirs ? 'cargoTheft' : null, run: () => cargo.pickUp(world, ped, crate) }; }
   const lantern = lights.interaction(world, p);   // a lantern someone set down (lights.js)
@@ -772,6 +788,8 @@ export function findInteraction(world, p) {
   const mus = music.interaction(world, p);   // your boombox, your mat, a performer's hat (music.js)
   if (mus) return mus;
   if (fellAct) return fellAct;
+  const rider = taxijob.riderInteraction(world, p) || mailjob.interaction(world, p);   // a player's cab come for you (taxijob.js); a mail round's stop, the post office (mailjob.js)
+  if (rider) return rider;
 
   const hap = happenings.interaction(world, p);   // a street fight to break up, someone to help up, a wallet to give back
   if (hap) return hap;
@@ -786,6 +804,8 @@ export function findInteraction(world, p) {
   if (ranger) return ranger;
   const pet = pets.interaction(world, p);
   if (pet) return pet;
+  const duck = ducks.interaction(world, p);   // grapes for the park's ducks (ducks.js)
+  if (duck) return duck;
 
   const victim = jobs.purseVictimNear(world, p);
   if (victim) return { label: 'Return the purse (+Samaritan)', run: () => jobs.returnPurse(world, p, victim) };
@@ -800,6 +820,8 @@ export function findInteraction(world, p) {
   const below = underground.interaction(world, p);   // a manhole over the sewers, the cave's mouth, an ore vein
   if (below) return below;
 
+  const mill = woodjob.interaction(world, p);   // a sawmill or a lumber yard: a firewood order's card (woodjob.js)
+  if (mill) return mill;
   const office = biz.interaction(world, p);   // a business's office, your food truck, a customer's car (biz.js)
   if (office) return office;
   const hall = arcade.doorInteraction(world, p);   // an arcade's door: onto its floor - the cabinets, the prize counter (arcade.js)
@@ -810,6 +832,8 @@ export function findInteraction(world, p) {
   if (gate) return gate;
   const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
   if (door) return door;
+  const work = forklift.interaction(world, p) || fishboat.interaction(world, p) || rangerjob.interaction(world, p);   // a yard's forklifts, a fish market's quay, a ranger station: sign on (batch 8)
+  if (work) return work;
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
@@ -830,6 +854,8 @@ export function findInteraction(world, p) {
   if (game) return game;
   const fire = campfires.interaction(world, p);
   if (fire) return fire;
+  const board = chess.interaction(world, p);   // a chess table in the park (chess.js)
+  if (board) return board;
   const place = places.interaction(world, p);
   if (place) return place;
   const ride = rides.interaction(world, p);
@@ -854,7 +880,7 @@ export function findInteraction(world, p) {
   if (crew) return crew;
   const medic = paramedic.interaction(world, p);   // a hospital's doors: sign on as a paramedic; a patient: treat them (paramedic.js)
   if (medic) return medic;
-  const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
+  const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p) || truckjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
   if (drive) return drive;
 
   const fish = fishHere(world, p, ped);
@@ -868,6 +894,8 @@ export function findInteraction(world, p) {
   if (v) return { label: vehicles.enterLabel(world, p, v), key: 'F', crime: vehicles.entryInfo(world, p, v).crime, key2: `veh:${v.id}`, run: () => vehicles.tryEnter(world, ped) };
   const fh = !ped.board && horses.farmHorseNear(world, ped);   // a farm's horse grazing beside you: up on it bareback - the farm's, so horse theft (horses.js)
   if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
+  const garage = homeups.garageInteraction(world, p);   // by your own garage's door: its materials and the home's upgrades (homeups.js)
+  if (garage) return garage;
   return pets.letGo(world, p) || transit.stopNote(world, p);   // a lost pet at your heel: let it go (pets.js); at a bus stop with nothing else to do: the line and when its next bus comes
 }
 

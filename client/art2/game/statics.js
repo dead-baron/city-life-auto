@@ -49,7 +49,7 @@ import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as TN from '../props-towns.js';
-import { EL_Z, DECK_Z } from './chunkgeom.js';   // (H40: World v3's small towns' own models - porches, the sawmill's yard, silos, the steeple...)
+import { EL_Z, DECK_Z } from './chunkgeom.js';
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns, handNeon, picSize, picGlow } from '../neonsigns.js';   // (the night's big neon signs)
@@ -77,7 +77,7 @@ import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
 export const STATIC_CHUNK = 768;
 const CH = 768, PI = Math.PI, TAU = PI * 2;
-const NIGHT = 0.7;                 // how many windows are lit in the bake (their light is emissive only)
+const NIGHT = 0.7;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const hh = (x, y, s = 0) => hash(Math.floor(x), Math.floor(y), s);
 const rndOf = (a, b = 0) => mulberry32((Math.imul(a | 0, 73856093) ^ Math.imul(b | 0, 19349663) ^ 0x5bd1e995) >>> 0);
@@ -360,7 +360,7 @@ export function makeStatic(r) {
     case 'festoon': return makeFestoon(r);
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
     case 'zen': return makeZen();
-    case 'cliff': { // a granite cliff band, its south face toward the camera, stepped back in ledges (anchor: the face's foot, centre)
+    case 'cliff': {
       // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face)
       const W = r.w, D = r.d, pad = 30, poly = [];
       for (let k = 0; k < 48; k++) {
@@ -371,10 +371,10 @@ export function makeStatic(r) {
         if (sn > 0 && Math.abs(x) < W * 0.22) y = D / 2;   // (the face round the adit stays straight)
         poly.push([x + W / 2 + pad, y + D / 2 + 6]);
       }
-      const ss = r.st === 'sandstone';   // (World v3 8.22: the desert's tables and bands - red sandstone, its scrub, no moss)
+      const ss = r.st === 'sandstone';
       return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
-    case 'crystal': { // (the cave kit's crystals glow full; out in the open half that, so they read as crystal, not lamps)
+    case 'crystal': {
       const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');
       for (let i = 3; i < G.emi.length; i += 4) G.emi[i] = G.emi[i] * 0.45;
       return G;
@@ -388,7 +388,7 @@ export function makeStatic(r) {
       }
       return G;
     }
-    case 'crail': { // a crane rail along a container quay (World v3's Port Westport): a steel rail set in a concrete strip
+    case 'crail': {
       const L = r.len || 256, G = r.ew ? new GBuf(L, 8) : new GBuf(8, L);
       if (r.ew) { G.ax = L / 2; G.ay = 4; } else { G.ax = 4; G.ay = L / 2; }
       const C = ramp('#8e8c84', 6, 3), Rl = MAT.metal;
@@ -478,7 +478,7 @@ function archOf(c, b) {
   const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE), st = D.style;
   const r = b.roof >= 0 ? c.M.roofs[b.roof] : null, rk = r ? r.kind : null;
   if (b.business === 'courthouse') return 'court';
-  if (b.arch) return b.arch;   // (World v3's handcrafted districts: the plan says what each building is drawn as - shared/world3-hand.js)
+  if (b.arch) return b.arch;
   if (b.look && LOOK_ARCH[b.look]) return LOOK_ARCH[b.look];   // (H40: World v3's towns' own buildings)
   if (b.kind === 'shop') { const n = (b.name || '').toUpperCase(); return /AUTO/.test(n) ? 'garage' : /FITNESS/.test(n) ? 'gym' : 'handshop'; }
   if (KIND_ARCH[b.kind]) return KIND_ARCH[b.kind];
@@ -517,8 +517,8 @@ function sectionsOf(c, b, A) {
     const ww = clamp(Math.round(b.tw * 0.32), 3, 5), doorL = b.door ? b.door.tx < b.tx + b.tw / 2 : rnd() < 0.5;
     if (doorL) xs.push([b.tx, b.tw - ww, 0], [b.tx + b.tw - ww, ww, 1, 'wing']);
     else xs.push([b.tx, ww, 1, 'wing'], [b.tx + ww, b.tw - ww, 0]);
-  } else if (b.lookW) xs.push([b.tx, b.lookW, 0]);   // (H40: a sawmill's shed, an elevator's head house - its yard, logs or silos, on the rest)
-  else if (b.whole) xs.push([b.tx, b.tw, 0]);   // (a hand plan's building drawn as the one building it is: shared/world3-hand.js)
+  } else if (b.lookW) xs.push([b.tx, b.lookW, 0]);
+  else if (b.whole) xs.push([b.tx, b.tw, 0]);
   else if (b.tw > (GENERIC.has(A) ? 18 : 26)) {
     let x = b.tx, k = 0;
     while (x < b.tx + b.tw) { let w = GENERIC.has(A) ? 7 + Math.floor(rnd() * 7) : 16; if (b.tx + b.tw - x - w < 5) w = b.tx + b.tw - x; xs.push([x, w, k++]); x += w; }
@@ -614,7 +614,7 @@ function layout(w, d, rnd, m, avoid = []) {
       }
       return n > 1 ? L.row(k, n - 1, rot, gap) : L;
     },
-    edge(k, n) {                                           // against the north, west or east parapet
+    edge(k, n) {
       const mm = Math.max(3, m - 5);
       for (let t = 0, got = 0; t < n * 10 && got < n; t++) {
         const side = Math.floor(rnd() * 3), rot = side > 0, [kw, kd] = dims(k, rot);
@@ -635,7 +635,7 @@ function layout(w, d, rnd, m, avoid = []) {
       }
       return L;
     },
-    front(k) {                                             // along the front parapet, facing the street (signs)
+    front(k) {
       const [kw, kd] = dims(k, false), mm = Math.max(3, m - 4);
       for (let t = 0; t < 8; t++) { const x = mm + rnd() * (w - 2 * mm - kw), y = d - mm - kd - 2; if (w - 2 * mm - kw >= 0 && fits(x, y, kw, kd, 4, mm)) { add(k, x, y, kw, kd, false); return L; } }
       return L;
@@ -807,7 +807,7 @@ function gardenKit(L, A, w, d, spec) {
   // the beds, by the plan
   const plan = small ? 'edge' : wpk([['edge', 3], ['rows', theme === 'kitchen' ? 4 : 1.2], ['court', 2], ['grid', 1.8]], r()), seatH = small ? 0 : even(44 * sc);
   if (plan === 'edge') {
-    run(x0, y0, iw, bd, true, true);                                                                   // along the north parapet
+    run(x0, y0, iw, bd, true, true);
     const sideL = ih - bd - 6 - (r() < 0.6 ? seatH : 0), south = !small && r() < 0.4;
     if (r() < 0.85) run(x0, y0 + bd + 6, sideL, bd, false);                                            // the west
     if (r() < 0.85) run(x1 - bd, y0 + bd + 6, sideL * (0.5 + r() * 0.5), bd, false);                    // the east
@@ -922,7 +922,7 @@ function townLook(spec, b, s, TL, rnd, w, pitched) {
   const L = b.look, wood = (c) => Object.assign(spec, { style: 'siding', wallColor: c, balconies: false, ivy: 0, graffiti: 0, grime: 0.1, fireEscape: false, boarded: 0 });
   const gable = (c, slope = 0.4) => { Object.assign(spec, { pitch: 'gable', ridge: 'ew', roof: 'shingle', roofColor: c, slope }); delete spec.parapet; return true; };
   const label = (re, t) => { for (const p of spec.plaques || []) if (re.test(p.text)) p.text = t; };
-  if (FLATS.has(L)) {   // (one storey under a low gable; the false front stands in front of it, on the porch's model)
+  if (FLATS.has(L)) {
     wood(L === 'lodgerow' && s.unit === 0 ? '#4e3424' : b.lookC || pick(TL.walls, rnd()));
     spec.floors = 1; delete spec.height;
     return gable(pick(TL.roofs, rnd()), 0.3);
@@ -1244,7 +1244,7 @@ function specOf(c, b, A, s, D) {
     else if (!pitched) spec.parapet = 10;   // (the false front)
   } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
   if (b.look && !b.art && !s.frame && !s.vox) pitched = townLook(spec, b, s, TL || TOWN_LOOK.log, rnd, w, pitched);   // (H40: the towns' own buildings)
-  if (s.bay) {   // the bay's back wall: an open roller door into the lit booth, a sign over it
+  if (s.bay) {
     delete spec.shop; delete spec.portico; delete spec.arches;
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
     lights.push([w / 2, 6, 40, 110, [1, 0.88, 0.7], 1.1, 'window']);
@@ -1266,7 +1266,7 @@ function specOf(c, b, A, s, D) {
     if (ART.noShop) delete spec.shop;
     else if (ART.shop) {
       spec.shop = { ...(spec.shop || {}), ...ART.shop };
-      if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }   // (a walk-in's door where its doorway is, whatever side the hand plan's front put it - the owner's notes 2, p16: "some building entrances are still not put in correctly")
+      if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }
       if (ART.shop.sign === null) delete spec.shop.sign;
       if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
     }
@@ -1515,7 +1515,7 @@ const step2 = (R, t, x, y) => R[clamp(Math.round(t * (R.length - 1) + (((x & 3) 
 // ================================================================================================
 function voxModel(m, a) {
   switch (m) {
-    case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1); case 'stationBridge': return RD.stationBridge(a[0], a[1], a[2] ?? 1);   // (2026-10-17: the El over Midtown's Trestle Street - its bents and stair towers)
+    case 'elPier': return RD.elPier(a[0], a[1]); case 'elStairs': return RD.elStairs(a[0], a[1], a[2] ?? 1); case 'stationBridge': return RD.stationBridge(a[0], a[1], a[2] ?? 1);
     case 'hydrant': return P.hydrant(); case 'bin': return P.bin(a[0] ?? true); case 'wireBin': return P.wireBin(); case 'newsBox': return P.newsBox(a[0]);
     case 'bench': return P.bench(); case 'bollard': return P.bollard(a[0] || 12); case 'acUnit': return P.acUnit(); case 'steamVent': return RD.steamVent(); case 'handTruck': return RD.handTruck(a[0] || 2); case 'planter': return P.planter(a[0] ?? true);
     case 'pottedPalm': return P.pottedPalm(); case 'umbrella': return P.umbrella(a[0], a[1]); case 'dumpster': return dumpster(a[0]); case 'gatePier': return gatePier(); case 'crate': return P.crate(a[0] || 1);
@@ -2025,7 +2025,7 @@ function plantFor0(c, p) {
     if (st === 'park') return [pick(c.M.lake && c.M.lake[c.M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))] ? ['willow'] : ['oak', 'maple', 'oak', 'willow', 'cherry', 'mapleAutumn', 'redMaple'], u), 1.4 + u2 * 0.2];
     if (st === 'beach' || coastal) return [pick(['coconut', 'royal', 'leaning', 'fanSkirt'], u), 1.25];
     if (st === 'luxury') return [t === 'tree_a' ? pick(['royal', 'royal', 'cypress', 'olive', 'magnolia'], u) : pick(['magnolia', 'flowerTree', 'cypress', 'olive'], u), 1.3];
-    if (di === 57) return [pick(['fir', 'cedar', 'spruce', 'fir', 'maple'], u), 1.35];   // (Timber Bend's gardens: its woods' trees; Willow Crossing's shade and orchard trees - 8.13.1)
+    if (di === 57) return [pick(['fir', 'cedar', 'spruce', 'fir', 'maple'], u), 1.35];
     if (di === 58) return [pick(['oak', 'maple', 'apple', 'oak'], u), 1.3];
     if (st === 'oldtown') return [pick(['cherry', 'olive', 'cypress', 'magnolia', 'flowerTree', 'street'], u), 1.3];
     if (st === 'arts') return [pick(['ginkgo', 'street', 'cherry', 'ginkgo', 'magnolia'], u), 1.3];
@@ -2152,7 +2152,7 @@ function propItems(c, p, pi, I) {
     case 'rubble': V(`rub:${seed % 3}`, 'rubble', [seed % 3]); return;
     case 'gravel': V(`grv:${seed % 3}`, 'gravel', [seed % 3]); return;
     case 'acunit': V('acu', 'acUnit', []); return;
-    case 'steamvent': V(`stv:${qa(u * TAU, 4).toFixed(2)}`, 'steamVent', [], qa(u * TAU, 4)); return;   // (an alley wall's vent breathing steam: World v3's alleys, shared/map.js dressAlleys)
+    case 'steamvent': V(`stv:${qa(u * TAU, 4).toFixed(2)}`, 'steamVent', [], qa(u * TAU, 4)); return;
     case 'handtruck': V(`htr:${1 + seed % 2}:${qa(u * TAU, 4).toFixed(2)}`, 'handTruck', [1 + seed % 2], qa(u * TAU, 4)); return;
     case 'news_a': case 'news_b': case 'news_c': V(`nws:${t}`, 'newsBox', [{ news_a: '#c8343a', news_b: '#2f5aa8', news_c: '#e8c040' }[t]]); return;
     case 'busstop': V(`bus:${p.face === 'N' ? 1 : 0}`, 'busShelter', [72, 1], p.face === 'N' ? PI : 0); lightAt(I, x, y + (p.face === 'N' ? -6 : 6), 40, 90, [0.85, 0.92, 1], 1.1, 'sign'); return;
@@ -2164,11 +2164,11 @@ function propItems(c, p, pi, I) {
     // their legs, the boom out over the water; warning lights on top, floodlights under the boom), the ship's sections,
     // straddle carriers, light masts, the gate's barrier, the yard's fence and the cranes' rails
     case 'cstack': V(`cst:${(p.v || 0) % 6}`, 'cstack', [(p.v || 0) % 6]); return;
-    case 'gcrane': {   // (p.a: its heading - the boom reaches out over the water the other way from the model's +x: a quay facing west 0, east PI, south -PI/2)
+    case 'gcrane': {
       const hd = qa(p.a || 0, 8), bx = -Math.cos(hd), by = -Math.sin(hd);
       V(`gcr:${p.k ? 1 : 0}:${hd.toFixed(2)}`, 'stsCrane', [p.k ? 1 : 0], hd, [351, 70]); lightAt(I, x, y, 322, 80, [1, 0.15, 0.1], 1.2, 'sign', 1); lightAt(I, x + bx * 290, y + by * 290, 220, 260, [1, 0.92, 0.75], 2.4, 'lamp'); return;
     }
-    case 'cship': { const hd = p.a === undefined ? PI / 2 : qa(p.a, 8); V(`csh:${p.v || 0}:${(p.c || 0) % 4}${hd === PI / 2 ? '' : ':' + hd.toFixed(2)}`, 'shipSection', [p.v || 0, (p.c || 0) % 4], hd); if (p.v === 2) lightAt(I, x, y - 40, 200, 160, [1, 0.85, 0.6], 1.4, 'window'); return; }   // (p.a: along the quay - Port Westport's ships lie north-south, the Harbor's east-west)
+    case 'cship': { const hd = p.a === undefined ? PI / 2 : qa(p.a, 8); V(`csh:${p.v || 0}:${(p.c || 0) % 4}${hd === PI / 2 ? '' : ':' + hd.toFixed(2)}`, 'shipSection', [p.v || 0, (p.c || 0) % 4], hd); if (p.v === 2) lightAt(I, x, y - 40, 200, 160, [1, 0.85, 0.6], 1.4, 'window'); return; }
     case 'straddle': V('strd', 'straddle', []); return;
     case 'ymast': V('ymast', 'floodMast', [150, 1]); lightAt(I, x, y, 150, 300, [1, 0.9, 0.7], 2.6, 'lamp'); return;
     case 'ygate': V(`ygt:${p.a ? 1 : 0}`, 'barrierArm', [90, false], p.a || 0); return;
@@ -2272,7 +2272,7 @@ function propItems(c, p, pi, I) {
     case 'tnet': V(`tnet:${p.len || 100}:${qa(p.a || 0, 4).toFixed(2)}`, 'tennisNet', [p.len || 100], qa(p.a || 0, 4)); return;
     case 'hoop': V('bhoop', 'basketHoop', [], 0, [18, 4]); return;
     case 'skatepad': { const w = p.w || 640, d = p.d || 480; put(I, { key: `spad:${w}:${d}`, recipe: { t: 'skatepad', w, d }, x, y, ext: [w / 2 + 2, 2, w / 2 + 2, d + 2], pi }); return; }
-    case 'qpipe': V(`qp:${p.w || 128}`, 'skateQuarter', [p.w || 128]); return;   // (2026-10-17: the skate spot by the El - shared/world3-midtown.js skateSpot)
+    case 'qpipe': V(`qp:${p.w || 128}`, 'skateQuarter', [p.w || 128]); return;
     case 'ledge': V(`sl:${p.w || 96}:${p.v || 0}`, 'skateLedge', [p.w || 96, p.v || 0]); return;
     case 'flatbar': V(`fb:${p.w || 96}`, 'skateRail', [p.w || 96]); return;
     case 'kicker': V('kick', 'skateKicker', []); return;
@@ -2282,7 +2282,7 @@ function propItems(c, p, pi, I) {
     case 'bleachers': { const len = Math.round((p.len || 120) / 8) * 8, rows = p.rows || 4; V(`blch:${len}:${rows}`, 'bleachers', [len, rows]); return; }
     case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
     case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}${p.kind && p.kind !== 'cliff' ? ':' + p.kind : ''}${p.stone ? ':' + p.stone : ''}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7, ...(p.stone ? { stone: p.stone } : {}) }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
-    case 'wslide': {   // a water slide from its tower (x, y: the start, at the tower's south face) down to its pool
+    case 'wslide': {
       const dx = Math.round(p.dx || 0), len = Math.round(p.len || 240), z0 = p.z || 84, kind = p.kind || 'flume', col = p.c || '#d8342e', wig = 34;
       const x0 = 22 + (dx < 0 ? Math.abs(dx) : 0) + wig;
       V(`wsl:${dx}:${len}:${z0}:${kind}:${col}`, 'waterSlide', [dx, len, z0, kind, col], 0, [x0, 4]);
@@ -2301,7 +2301,7 @@ function propItems(c, p, pi, I) {
     case 'gnawlog': { const len = Math.round((p.len || 90) / 10) * 10, hd = qa(p.a || 0, 8); V(`glog:${len}:${hd.toFixed(2)}`, 'gnawLog', [len, 2], hd); return; }
     case 'hiderack': V(`hrack:${(p.v || 0) % 3}`, 'hideRack', [(p.v || 0) % 3]); return;   // (a hunting camp, a trapper's cabin)
     case 'lodge': V('lodge', 'lodge', []); return;
-    case 'boardwalk': { const len = Math.round((p.len || 160) / 8) * 8, w = p.w || 34, hd = p.a !== undefined ? qa(p.a, 32) : PI / 2; V(`bwalk:${len}:${w}:${hd.toFixed(3)}`, 'boardwalk', [len, w], hd); return; }   // (p.a: a boardwalk's leg at any heading - the Egret Marsh's zig-zag, shared/world3-marsh.js)
+    case 'boardwalk': { const len = Math.round((p.len || 160) / 8) * 8, w = p.w || 34, hd = p.a !== undefined ? qa(p.a, 32) : PI / 2; V(`bwalk:${len}:${w}:${hd.toFixed(3)}`, 'boardwalk', [len, w], hd); return; }
     // (the nature program, 2026-10-20: Highland Woods' trail furniture - shared/world3-trails.js)
     case 'blaze': { const c = BLAZES[p.c || 0] || BLAZES[0]; V(`blz:${c}`, 'trailBlaze', [c]); return; }
     case 'logsteps': { const w = Math.round((p.w || 60) / 4) * 4, hd = qa(p.a || 0, 16); V(`lsteps:${w}:${hd.toFixed(3)}`, 'logSteps', [w], hd); return; }
@@ -2341,13 +2341,13 @@ function propItems(c, p, pi, I) {
     case 'silo': V(`silo:${p.h || 90}`, 'silo', [p.h || 90]); return;
     case 'gantryCrane': { const hd = qa(p.a || 0, 2); V(`gtc:${p.span || 170}:${hd.toFixed(2)}`, 'gantryCrane', [p.span || 170, p.h || 200], hd); return; }
     case 'boxcar': case 'tankcar': { const box = t === 'boxcar', col = (box ? ['#7a3a2e', '#8a5a2a', '#4a5a6a', '#5a4a3a'] : ['#3a3c44', '#2a2c30', '#9a9ea4'])[(p.c || 0) % (box ? 4 : 3)], hd = qa(p.a || 0, 4); V(`${t}:${col}:${hd.toFixed(2)}`, t, [col], hd); return; }   // (freight wagons standing on a siding: The Yards)
-    case 'container': { const col = ['#a8402e', '#2f5a8a', '#3a7a4a', '#c8a040', '#6a3a8a'][(p.c || 0) % 5], hd = qa(p.a || 0, 4); V(`cont:${col}:${hd.toFixed(2)}`, 'container', [col, 130], hd); return; }   // (a shipping container on its own: the Neon Strip's docks and container bar)
+    case 'container': { const col = ['#a8402e', '#2f5a8a', '#3a7a4a', '#c8a040', '#6a3a8a'][(p.c || 0) % 5], hd = qa(p.a || 0, 4); V(`cont:${col}:${hd.toFixed(2)}`, 'container', [col, 130], hd); return; }
     case 'boxoffice': V('cont:office', 'container', ['#c8a040', 110]); lightAt(I, x, y + 30, 24, 80, [1, 0.85, 0.6], 0.9, 'window'); return;
     case 'storedplane': { const col = ['#c83a30', '#2a5aa8', '#2a8a6a', '#e8a030', '#7a3a8a'][(p.c || 0) % 5], st = (p.v || 0) % 6 + 1, hd = qa(p.a || 0, 16); V(`spl:${col}:${st}:${hd.toFixed(2)}`, 'airliner', [300, 270, col, st], hd); return; }
     case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); lightAt(I, x, y, 34, 110, [1, 0.78, 0.48], 1.1, 'lamp'); return; }   // (the bulb under its canopy, after dark)
     case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
     case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
-    case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 });   // (its gondolas go round: client/art2/game/host.js _rides) lightAt(I, x, y + 10, 136, 230, [1, 0.85, 0.6], 2.2, 'lamp'); lightAt(I, x, y + 20, 30, 140, [1, 0.8, 0.55], 1.4, 'lamp'); return;
+    case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 });
     case 'rods': V(`rods:${qa(p.a || 0, 4).toFixed(2)}`, 'rodHolder', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
     case 'fishtable': V(`ftbl:${qa(p.a || 0, 4).toFixed(2)}`, 'fishTable', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
     case 'creekrail': { const len = Math.max(40, Math.round((p.len || 120) / 8) * 8), hd = qa(p.a || 0, 32); V(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], hd, null, p.z ? { z0: p.z } : null); return; }
@@ -2400,7 +2400,7 @@ function propItems(c, p, pi, I) {
     case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
     case 'hayBale': V('hay:1', 'hayBale', [true], qa(u * PI, 2)); return;
-    case 'festoon': {   // (p.k: 'lantern' | 'cable'; p.ends: what each end is made fast to - the Neon Strip's: shared/world3-neon.js fest)
+    case 'festoon': {
       const tx = p.tx || 0, ty = p.ty || 0, h = p.h || 40, k = p.k === 'lantern' ? 1 : p.k === 'cable' ? 2 : 0, en = p.ends || [], e = (en[0] === 'pole' ? 1 : 0) | (en[1] === 'pole' ? 2 : 0) | (en[0] === 'wall' ? 4 : 0) | (en[1] === 'wall' ? 8 : 0);
       put(I, { key: `fest:${tx}:${ty}:${h}:${k}:${e}`, recipe: { t: 'festoon', tx, ty, h, k, e }, x, y, ext: [Math.max(0, -tx) + 16, h + Math.max(0, -ty) + 22, Math.max(0, tx) + 16, Math.max(0, ty) + 16], pi });
       if (k !== 2) for (let q = 1; q < 4; q++) lightAt(I, x + tx * q / 4, y + ty * q / 4, h - 6, k ? 100 : 90, k ? [1, 0.42, 0.3] : [1, 0.8, 0.5], k ? 1.1 : 0.9, 'window');
@@ -2415,7 +2415,7 @@ function propItems(c, p, pi, I) {
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
     case 'crab': V(`crab:${qa(p.a || 0, 8).toFixed(2)}`, 'crab', [], qa(p.a || 0, 8)); return;
-    case 'hedgebox': {   // a clipped hedge of any footprint (a maze's walls): w x d px, h tall, anchored at its south edge's middle
+    case 'hedgebox': {
       const w = p.w || 32, d = p.d || 32, h = p.h || 34, fl = p.fl || null;
       put(I, { key: `hbox:${w}:${d}:${h}:${fl || ''}:${seed % 4}`, recipe: { t: 'hbox', w, d, h, s: seed % 4 + 1, fl }, x, y, ext: [w / 2 + 6, d + h + 10, w / 2 + 6, 6], pi });
       return;
@@ -2466,6 +2466,13 @@ function propItemsIn(c, I, k) {
   for (const pi of pis) { const p = M.props[pi]; if (p) propItems(c, p, pi, J); }
   return J.cells.get(k) || null;
 }
+// a prop as it stood, whatever's happened to it since (the page's falling tree: render/carryfx.js)
+export function propSprite(M, pi) {
+  const I = staticIndex(M), p = M.props[pi], J = { cells: new Map(), lights: new Map(), byB: new Map(), n: 0 };
+  if (p) propItems(I.c, p, pi, J);
+  for (const l of J.cells.values()) for (const it of l) if (it.pi === pi && it.recipe) return makeStatic(it.recipe);
+  return null;
+}
 // what a smashed prop leaves: a fallen post, a stump, glass and bits (it.pi's prop has .broken)
 function brokenVariant(it, p) {
   const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : PLANTS.has(p.t) ? 'tree' : 'bits';
@@ -2481,7 +2488,7 @@ function makeDebris(r) {
     for (let k = 0; k < 12; k++) for (let w = -5; w <= 5; w++) put1(c * (50 + k) - s * w, s * (50 + k) + c * w, r.kind === 'sigpole' ? [20, 22, 26] : DK[1], 4, 0);
     for (let i = 0; i < 26; i++) put1(c * 56 + (hash(i, 1, 7) - 0.5) * 30, s * 56 + (hash(i, 2, 7) - 0.5) * 24, GL[hash(i, 3, 7) * 4 | 0], 1);
     for (let w = -4; w <= 4; w++) for (let v = -4; v <= 4; v++) if (w * w + v * v < 18) put1(w, v, DK[1], 3, 0);
-  } else if (r.kind === 'stump') {   // felled (lights and felling #358: server felling.js): a sawn stump, chips and sawdust towards the fall
+  } else if (r.kind === 'stump') {
     const R = r.prop === 'redwood' ? 15 : 7, TOP = ramp('#c89a64', 5, 2), BK = r.prop === 'redwood' ? ramp('#7a3a24', 5, 2) : WD;
     for (let w = -R - 1; w <= R + 1; w++) for (let v = -R - 1; v <= R + 1; v++) { const d = Math.hypot(w, v * 1.25); if (d > R + 0.6) continue; const rim = d > R - 1.6; put1(w, v, rim ? BK[w < 0 ? 3 : 1] : TOP[(Math.round(d * 0.9) & 1) ? 2 : 3], rim ? 5 : 6, 0); }
     for (let i = 0; i < 70; i++) { const d = R + 2 + hash(i, 1, 13) * 22, e = (hash(i, 2, 13) - 0.5) * 2.2; put1(Math.cos(r.a + e) * d, Math.sin(r.a + e) * d * 0.8, TOP[1 + (hash(i, 3, 13) * 3 | 0)], 1, 0); }
@@ -2520,7 +2527,7 @@ function addSignals(c, I) {
 // props ('sigpole' with span: spanPole, drawn as street furniture); one knocked over takes its wires and their heads
 // down (spanBroken). The heads carry their lenses' places for the host's lit lamps (chunkbake.js signalLenses) and
 // their wire's two poles (pi, pi2: no lit lamp once either is down).
-const SPAN_Z = 84, SPAN_SAG = 3, SPAN_HEAD = 30, SPAN_LENS = [19, 12, 5];   // the wires' height at a pole and their sag; a head's height to the top of its hanger; its lenses' middles (red, amber, green)
+const SPAN_Z = 84, SPAN_SAG = 3, SPAN_HEAD = 30, SPAN_LENS = [19, 12, 5];
 const spanZ = (w, dx, dy) => { const ex = w[2] - w[0], ey = w[3] - w[1], t = clamp(((dx - w[0]) * ex + (dy - w[1]) * ey) / (ex * ex + ey * ey || 1), 0, 1); return Math.round(SPAN_Z - SPAN_SAG * 4 * t * (1 - t)); };
 function spanItem(c, I, sg) {
   const P = sg.poles || [], X = Math.round(sg.x), Y = Math.round(sg.y), recipe = { t: 'span', wires: [], heads: [] }, heads = [];
@@ -2608,7 +2615,7 @@ function makeFlat(r) {
       if (d > w / 2) continue;
       const ring = Math.floor(d / 6), pet = Math.floor((ang + PI) / (TAU / 8));
       c = d > w / 2 - 3 ? MAT.stone[2] : [[200, 90, 60], [230, 200, 120], [70, 120, 170], [236, 232, 222]][(ring + (ring % 2 ? pet : 0) + r.s) % 4].map((q) => q * (0.85 + hash(x >> 1, y >> 1, 5) * 0.2));
-    } else if (r.k === 'patio') {   // a back yard's patio (World v3's Midtown): decking, brick pavers or stone flags
+    } else if (r.k === 'patio') {
       const e = Math.min(x, y, w - 1 - x, h - 1 - y), hh = hash(x >> 1, y >> 1, r.s + 77);
       if (r.pk === 'deck') { const b = Math.floor(y / 6), seam = y % 6 === 5 || (x + b * 23) % 47 === 0; c = step2(MAT.woodDock, (seam ? 0.25 : 0.58) + (hash(b, Math.floor((x + b * 23) / 47), r.s) - 0.5) * 0.25 + (e < 2 ? -0.18 : 0), x, y); z = 1; }
       else if (r.pk === 'brick') { const row = Math.floor(y / 4), off = (row & 1) * 4, seam = y % 4 === 3 || (x + off) % 8 === 7; c = seam ? [118, 104, 94] : [[150, 78, 58], [164, 92, 66], [138, 70, 54], [172, 112, 80]][Math.floor(hash(Math.floor((x + off) / 8), row, r.s) * 4)].map((q) => q * (0.92 + hh * 0.12)); if (e < 2) c = MAT.stone[2]; }
@@ -2624,7 +2631,7 @@ function makeFlat(r) {
 // upright boards: billboard adverts, station name boards, price signs
 function makeSignBoard(r) {
   if (r.k === 'ad') return upright(adFace(r.w, r.h, ADS[r.ad % ADS.length], r.ad), r.z || 0);
-  if (r.k === 'pic') {   // a picture billboard (the Neon Strip's: the eye-patch woman, the tigers - neonsigns.js), on two posts
+  if (r.k === 'pic') {
     const [pw, ph] = picSize(r.pic, 2), w = pw + 8, h = ph + 8, F = new GBuf(w, h);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) F.put(x, y, (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) ? MAT.metalDark[2] : [14, 12, 22], [0, 1, 0.1], 0, null, 0);
     F.ax = 4; F.ay = h - 4;
@@ -2850,7 +2857,7 @@ function addRail(c, I) {
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
   if (c.M.railHubs) railHubs(I, c.M.railHubs);
   for (const t of c.M.lifeguards || []) put(I, vitem('lgt', 'lifeguardTower', [], t.x, t.y, 0));   // (H35: World v3's beach towns, shared/world3-beach.js)
-  if (c.M.townKit) townKit(I, c.M.townKit);   // (H40: World v3's towns' own models round their buildings, shared/world3-towns.js)
+  if (c.M.townKit) townKit(I, c.M.townKit);
 }
 // (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
@@ -2895,7 +2902,7 @@ function addRailLoop(c, I, R, once) {
     if (st.el) continue;   // (up on the El: its stairs and platforms are addEl's)
     if (st.under) {
       const k = st.kiosk;
-      if (k) {   // (SU5-B: the stairs down inside green iron railings, globe lamps and the lit train sign along the back)
+      if (k) {
         const lx = (x) => (k.flip ? k.x0 + k.w - x : k.x0 + x);
         put(I, vitem('sk:' + (k.flip ? 1 : 0), 'subwayKiosk', [1, k.flip ? 1 : 0], k.x0 + 64, k.y0 + 48, 0));
         for (const x of [8, 120]) lightAt(I, lx(x), k.y0 + 16, 54, 110, [1, 0.86, 0.6], 1.6, 'lamp');
@@ -2951,7 +2958,7 @@ function crossingSignals(I, list) {
 // edges - up on steel bents; the inclines at either end on concrete retaining walls down to the portals; at a station
 // the platforms out over the pavements under their canopies, the stair towers down to the street
 // ================================================================================================
-const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 400;   // (the platforms: a train's length either side of the station's middle, out to the stair towers' tops - shared/world3-rail.js EL_STA_LEN)
+const EL_PIECE = 128, EL_HW = 104, EL_STA_HW = 168, EL_STA_LEN = 400;
 function addEl(c, I) {
   const E = c.M.el;
   if (!E) return;
@@ -3119,7 +3126,7 @@ function addSetPieces(c, I) {
   }
   // airports: a control tower by each terminal (or hangar)
   for (const ap of M.airports || []) {
-    if (ap.tower) continue;   // (a handcrafted airport stands its own: the 'ctower' prop - shared/world3-airport.js)
+    if (ap.tower) continue;
     const box = [ap.runway.x - 1200, ap.runway.y - 600, ap.runway.x + ap.runway.w + 1600, ap.runway.y + ap.runway.h + 600];
     const bl = M.buildings.filter((b) => b && !b.gone && (b.kind === 'terminal' || b.kind === 'hangar') && b.tx * TILE > box[0] && b.tx * TILE < box[2] && b.ty * TILE > box[1] && b.ty * TILE < box[3]);
     const b = bl.find((q) => q.kind === 'terminal') || bl[0];
@@ -3157,7 +3164,7 @@ function addSetPieces(c, I) {
       const sand = tilesIn((t) => t === T.SAND || t === T.GRASS);
       for (let k = 0; k < Math.min(40, sand.length / 12); k++) { const [tx, ty] = sand[Math.floor(rnd() * sand.length)]; const sp = rnd() < 0.7 ? 'coconut' : 'leaning'; put(I, fitem(`f:${sp}:${k % 5}:1.3`, sp, 1000 + (k % 5) * 37 + sp.length * 7, (tx + 0.5) * TILE, (ty + 0.5) * TILE, 1.3)); }
       for (const [tx, ty] of tilesIn((t) => t === T.DOCK).filter((q, i) => i % 3 === 0)) put(I, vitem('pile:22', 'piling', [22], tx * TILE + 2, ty * TILE + 2));
-    } else if (pt.key === 'golf' && !M.golf) {   // (the course laid out by the map - greens, flags, trees - has its own props)
+    } else if (pt.key === 'golf' && !M.golf) {
       const grass = tilesIn((t) => t === T.GRASS);
       for (let k = 0; k < Math.min(70, grass.length / 30); k++) { const [tx, ty] = grass[Math.floor(rnd() * grass.length)]; const sp = pick(['oak', 'maple', 'cypress', 'oak', 'birch'], rnd()); put(I, fitem(`f:${sp}:${k % 3}:1.3`, sp, 1000 + (k % 3) * 37 + sp.length * 7, (tx + 0.5) * TILE, (ty + 0.5) * TILE, 1.3)); }
       for (let k = 0; k < 5; k++) { const [tx, ty] = grass[Math.floor(rnd() * grass.length)]; put(I, vitem('flag:golf', 'flagpole', [40, '#d8343a'], (tx + 0.5) * TILE, (ty + 0.5) * TILE)); }
@@ -3307,18 +3314,18 @@ function addNature(c, I) {
       put(I, { key: `fall:r:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'ledge', w: f.w, drop: f.drop, seed: 13, mist: 0.6 }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.drop + 100, f.w / 2 + 60, 50] });
       continue;
     }
-    if (s.kind === 'ledgefall') {   // (the falls chain, part 2: a river over a band of rock in pieces, its water in strands - shared/world3-ledgefalls.js)
+    if (s.kind === 'ledgefall') {
       // (notes 2: not one ruled row - each piece a little forward or back of the next, a little higher or lower)
       for (const g of s.segs) { if (g.dry) { const len = Math.round((g.w + 34) / 8) * 8, h = g.d + 6; put(I, vitem(`cliffw:${len}:${h}:${g.s}:44`, 'cliffWall', [len, h, 44, g.s, 0], g.x, g.y - 12, 0)); continue; }   // (a dry stretch of the lip: a bluff of rock the water parts round)
         const j = (Math.imul(g.x | 0, 0x9e3779b1) >>> 0) / 4294967296, d = g.d + (Math.floor(j * 3) - 1) * 4; put(I, { key: `fall:l:${g.k}:${g.w}:${d}:${g.s}:${s.stone || ''}`, recipe: { t: 'fall', kind: g.k, w: g.w, drop: d, seed: g.s, mist: 0.5, upper: g.up, streams: g.st, stone: s.stone }, x: g.x, y: g.y + 8 + Math.round(((j * 7) % 1 - 0.5) * 14), ext: [g.w / 2 + 60, d + 120, g.w / 2 + 60, 40] }); }
       continue;
     }
     if (s.kind === 'tarn') {   // the tarn spilling over its granite ledge
-      const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);   // (2026-10-21: a fall you can see from the shore - its ledge face up into the tarn's lip)
+      const f = s.falls, w = Math.max(f.w, FALLS_LOOK.tarn.w), drop = Math.max(f.drop, FALLS_LOOK.tarn.drop);
       put(I, { key: `fall:t:${w}:${drop}`, recipe: { t: 'fall', kind: 'twoTier', w, drop, seed: 9, mist: FALLS_LOOK.tarn.mist }, x: f.x, y: f.y + 8, ext: [w / 2 + 60, drop + 100, w / 2 + 60, 50] });
       continue;
     }
-    if (s.kind === 'river') {   // Willow River (concept W1): the falls between basalt walls, the old stone bridge, the barn
+    if (s.kind === 'river') {
       const f = s.falls;
       fallWalls(I, s.cliffs, f.x, f.w / 2 + 36);
       put(I, { key: `fall:w:${f.w}:${f.drop}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.drop, seed: 17, mist: 0.8, upper: [[-64, -34], [-26, 6], [14, 38], [46, 64]], streams: [[-62, -40], [-30, -6], [4, 28], [38, 62]] }, x: Math.round(f.x), y: Math.round(f.y), ext: [f.w / 2 + 80, f.drop + 120, f.w / 2 + 80, 60] });
@@ -3332,7 +3339,7 @@ function addNature(c, I) {
       }
       continue;
     }
-    if (s.kind === 'towncreek') {   // Cedar Creek: the little falls out of the pond, the stone culvert under the road
+    if (s.kind === 'towncreek') {
       const f = s.falls;
       put(I, { key: `fall:t:${f.w}:${f.drop}`, recipe: { t: 'fall', w: f.w, drop: f.drop, seed: 9, mist: 0.3 }, x: Math.round(f.x), y: Math.round(f.y + 8), ext: [f.w / 2 + 60, f.drop + 90, f.w / 2 + 60, 40] });
       lightAt(I, f.x, f.y + 16, 8, 100, [0.75, 0.9, 1], 0.4, 'sign', 0);
@@ -3615,7 +3622,7 @@ function coverAt(c, tx, ty, x, y) {
     const h = hash(tx, ty, 7121);
     return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;
   }
-  if (M.reserve[i] & 128) {   // a river's lush banks (Willow River): reed beds along the water, meadow grass and flowers further up
+  if (M.reserve[i] & 128) {
     const h = hash(tx, ty, 7141), pb = vnoise(x, y, 80, 7143), pa = vnoise(x, y, 160, 7147), h2 = vnoise(x, y, 60, 7145) * 0.7 + hash(tx, ty, 7149) * 0.3;
     if (t === T.SAND) return h < 0.07 ? [pickW(M.dist[i] === 50 ? NAT_SP.desert : NAT_SP.shore, h2), 1] : null;   // (a few on the gravel bars; World v3's dry washes: desert scrub)
     const d = M.distRiver ? M.distRiver[i] : 99;
@@ -3640,13 +3647,13 @@ function coverAt(c, tx, ty, x, y) {
     const back = M.distSea ? M.distSea[i] : 99;   // (quarter tiles) dune grass only behind the wet sand
     return back > 14 && pa > 0.45 && h < 0.35 ? [pickW(NAT_SP.dune, h2), 1] : null;
   }
-  if (bio === 2 && (c.di(x, y) === 29 || c.di(x, y) === 47)) {   // (47: World v3's Highland Woods) the redwood floor: beds of big sword ferns (each a stride or two across), carpets of sorrel, the duff between
+  if (bio === 2 && (c.di(x, y) === 29 || c.di(x, y) === 47)) {
     const fp = vnoise(x, y, 150, 7163) * 0.7 + vnoise(x, y, 46, 7165) * 0.3;
     if (fp > 0.48 && h < 0.4) return [pickW(NAT_SP.redwood, h2), 1];
     if (vnoise(x, y, 120, 7161) > 0.55 && h < 0.62) return ['sorrel', 1];
     return h < 0.05 ? [pickW(NAT_SP.redwood, h2), 1] : null;
   }
-  if (bio === 2) {                                                      // the woods: a fern bed nearly everywhere
+  if (bio === 2) {
     if (pb < 0.25 && h < 0.8) return null;                              // (sunlit gaps)
     if (h > 0.72) return null;
     return [pickW(c.di(x, y) === 29 ? NAT_SP.redwood : NAT_SP.forest, h2), 1 + (hash(tx, ty, 7109) > 0.6 ? 0.2 : 0)];
@@ -3749,7 +3756,7 @@ function coverItems(c, I, cx, cy) {
     }
     let r = coverAt(c, tx, ty, x, y);
     if (!r || !(lush ? coverClearWet(c, tx, ty) : coverClear(c, tx, ty, 1))) continue;
-    if (weed) {   // (a track's edge, an orchard's: a low tuft of grass now and then, the dry country's dry grass)
+    if (weed) {
       if (hash(tx, ty, 7177) > 0.3) continue;
       r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
     }
@@ -3816,7 +3823,7 @@ function makeCut(r) {
   let H = r.H;
   if (fh) for (let x = 0; x < w; x++) H = Math.max(H, fh[x]);
   const G = new GBuf(w, Math.max(d + H + 8, O ? O.ay : 0)); G.ax = 0; G.ay = G.h;
-  if (O) {   // what of it is north of the back wall: its roof, the kit on it, the upper storey's part
+  if (O) {
     const dy = G.ay - O.ay;
     for (let row = 0; row < O.h; row++) for (let x = 0; x < Math.min(w, O.w); x++) {
       const i = row * O.w + x, j = i * 4;
@@ -3859,16 +3866,16 @@ function makeCut(r) {
   // counters, back shelves with goods, a clerk's till
   for (const u of r.units) {
     if (LOBBY[u.kind]) { lobbyRoom(u, r, px); if (u.cells) cellRoom(u.cells, px); continue; }   // (IN1-B hospital / IN2-B police: their own desk and dressing)
-    if (u.bowl) { bowlingRoom(u, r, px); continue; }   // (IN14: the lanes, the scoreboards, the ball returns, the settees, the shoe counter)
+    if (u.bowl) { bowlingRoom(u, r, px); continue; }
     if (u.cine) { cinemaRoom(u, r, px); continue; }   // (IN14: the screens, the seats, the poster wall, the popcorn counter)
-    if (u.food) { foodRoom(u, r, px); continue; }   // (IN8: the diner's booths and stools, the fast-food queue, the restaurant's tables)
+    if (u.food) { foodRoom(u, r, px); continue; }
     if (u.shop) { drawShop(u.shop.R, u, r, px, u.shop.ox, u.shop.oy); if (u.kind === 'roadhouse') roadhouseRoom(u, r, px); continue; }   // (shared/shoprooms.js, client/art2/shopart.js)
     const CT = u.kind === 'coffee' || u.kind === 'club' || u.kind === 'fence' || u.kind === 'roadhouse' ? ramp('#6a4a30', 6, 3) : ramp('#d8d4cc', 6, 3), TOPC = u.kind === 'club' ? ramp('#2a2a34', 5, 2) : u.kind === 'roadhouse' ? ramp('#4a3020', 5, 2) : ramp('#a8aab0', 5, 2);
     const ca = u.x0 > u.fx0 ? u.x0 : u.x0 + 6, cb = u.x1 < u.fx1 ? u.x1 : u.x1 - (u.fx1 - u.fx0 > 128 ? 34 : 6);   // (the counter runs on across a section's open side)
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
     for (let x = ca; x < cb; x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
     if (u.cells) { cellRoom(u.cells, px); continue; }   // (the cells along the back: no shelves)
-    if (u.trade && TRADE_ROOM[u.trade]) { TRADE_ROOM[u.trade](u, r, px); continue; }   // (a hand plan's walk-in shop by its trade: the laundromat, the bookshop, the record shop...)
+    if (u.trade && TRADE_ROOM[u.trade]) { TRADE_ROOM[u.trade](u, r, px); continue; }
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
     for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 52, MAT.metalDark[3], [0, 0, 1]);
@@ -3891,21 +3898,21 @@ const TRADE_ROOM = {};
   const sides = (u, r, n, f) => { const Ya = u.cy + 44, Yb = r.inY1 - 30; for (let k = 0; k < n; k++) { const Y = Ya + k * ((Yb - Ya) / Math.max(1, n)); if (Y + 28 > Yb) break; f(u.x0 + 8, Y, -1); f(u.x1 - 8, Y, 1); } };
   const SPINE = ['#8a2a2a', '#2a5a8a', '#c8a050', '#3a6a3a', '#6a3a7a', '#d0d0c0', '#a85a2a', '#2a2a30'].map(rgb), SLEEVE = ['#c83a2a', '#e8c040', '#2a2a30', '#5aa0d0', '#e8e4dc', '#3a8a5a', '#d86aa0'].map(rgb);
   const WOOD = rgb('#6a4a2c'), WOODL = rgb('#8a6440'), WHITE = rgb('#e8eae8'), STEEL = rgb('#9aa0a8'), DARK = rgb('#2a2a30'), GLASS = rgb('#5a7a8a');
-  TRADE_ROOM.laundry = (u, r, px) => {   // dryers stacked along the back wall; washers down the side walls, a folding table, chairs
+  TRADE_ROOM.laundry = (u, r, px) => {
     back(u, r, px, (x, v) => { const lx = x % 26, ly = v % 26; return lx < 2 || ly < 2 ? STEEL : Math.hypot(lx - 13, ly - 13) < 8 ? (Math.hypot(lx - 13, ly - 13) < 6 ? GLASS : STEEL) : WHITE; }, 52);
     const slab = slabOf(px);
     sides(u, r, 4, (x, Y, s) => { const x0 = s < 0 ? x : x - 26; slab(x0, x0 + 26, Y, Y + 24, 26, (xx, YY) => (Math.hypot(xx - x0 - 13, YY - Y - 12) < 8 ? GLASS : WHITE), flat(WHITE)); });
     const mx = (u.x0 + u.x1) / 2, my = (u.cy + r.inY1) / 2 + 10;
     if (u.x1 - u.x0 > 140) slab(mx - 30, mx + 30, my - 10, my + 10, 22, flat(WOODL), flat(WOOD));
   };
-  TRADE_ROOM.books = (u, r, px) => {   // shelves of spines floor to ceiling; low bookcases down the sides, a table of new books
+  TRADE_ROOM.books = (u, r, px) => {
     back(u, r, px, (x, v) => (v % 13 < 2 ? WOOD : SPINE[Math.floor(hash(x >> 1, v / 13 | 0, 7) * SPINE.length)]), 60);
     const slab = slabOf(px);
     sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 18; slab(x0, x0 + 18, Y, Y + 40, 30, (xx, YY) => (YY % 4 < 1 ? WOOD : SPINE[Math.floor(hash(xx, YY >> 2, 9) * SPINE.length)]), flat(WOOD)); });
     const mx = (u.x0 + u.x1) / 2, my = (u.cy + r.inY1) / 2 + 12;
     if (u.x1 - u.x0 > 140) slab(mx - 26, mx + 26, my - 12, my + 12, 20, (xx, YY) => ((xx >> 3) + (YY >> 3)) & 1 ? SPINE[(xx >> 3) % SPINE.length] : WOODL, flat(WOOD));
   };
-  TRADE_ROOM.records = (u, r, px) => {   // posters over the shelves of LPs; bins of sleeves down the sides; the listening post
+  TRADE_ROOM.records = (u, r, px) => {
     back(u, r, px, (x, v) => (v > 34 ? (x % 24 < 20 ? SLEEVE[Math.floor(x / 24) % SLEEVE.length] : DARK) : v % 9 < 1 ? WOOD : SLEEVE[Math.floor(hash(x >> 1, v / 9 | 0, 3) * SLEEVE.length)]), 58);
     const slab = slabOf(px);
     sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 30; slab(x0, x0 + 30, Y, Y + 26, 20, (xx, YY) => ((YY - Y) % 3 === 0 ? DARK : SLEEVE[Math.floor(hash(xx >> 2, YY, 5) * SLEEVE.length)]), flat(WOOD)); });
@@ -3915,7 +3922,7 @@ const TRADE_ROOM = {};
     const slab = slabOf(px);
     sides(u, r, 3, (x, Y, s) => { const x0 = s < 0 ? x : x - 12; slab(x0, x0 + 12, Y, Y + 40, 34, (xx, YY) => SLEEVE[Math.floor(hash(xx, YY >> 2, 13) * SLEEVE.length)], (xx, v) => (v < 6 ? STEEL : SLEEVE[Math.floor(hash(xx >> 2, 2, 13) * SLEEVE.length)])); });
   };
-  TRADE_ROOM.florist = (u, r, px) => {   // the cold room's glass doors full of flowers; buckets on stands down the sides
+  TRADE_ROOM.florist = (u, r, px) => {
     back(u, r, px, (x, v) => (x % 40 < 2 || v < 2 ? STEEL : v > 10 && hash(x >> 1, v >> 1, 15) > 0.5 ? SLEEVE[Math.floor(hash(x >> 2, v >> 2, 16) * 5)] : rgb('#5a8a5a')), 54);
     const slab = slabOf(px);
     sides(u, r, 4, (x, Y, s) => { const x0 = s < 0 ? x : x - 22; slab(x0, x0 + 22, Y, Y + 22, 16, (xx, YY) => (hash(xx >> 1, YY >> 1, 17) > 0.4 ? SLEEVE[Math.floor(hash(xx >> 2, YY >> 2, 18) * 5)] : rgb('#3a7a3a')), flat(rgb('#5a5a62'))); });
@@ -4112,7 +4119,7 @@ function cellRoom(k, px0_) {
 // floor and the back wall in their own materials, the desk, and the fittings - all art over the server's layout (the
 // counter row, the doorway, the cells stay where shared/map.js and shared/cells.js put them)
 const LOBBY = {
-  hospital: {   // white tile with a soft sheen; white wall tile with a blue band and a dark skirting
+  hospital: {
     floor: (x, Y) => {
       if ((x & 15) === 0 || (Y & 15) === 0) return [198, 202, 206];
       const b = 226 + ((hash(x >> 4, Y >> 4, 77) * 7) | 0), s = Math.max(0, Math.cos((x * 0.7 + Y) / 38) - 0.55) * 22;
@@ -4329,7 +4336,7 @@ function foodRoom(u, r, px0_) {
   else if (st === 'fastfood') { for (const k of [-1, 1]) { const x = tx + k * 22; if (x > ca + 8 && x < cb - 16) slab(x, x + 14, cy + 10, cy + 20, 23, ramp('#c8343a', 5, 2), ramp('#a82a30', 5, 2), 22); } }   // (the trays)
   else for (let x = ca + 10; x < cb - 10; x += 22) dot(x, cy + 12, 23, [244, 242, 236], 4);   // (plates at the pass)
   // the floor
-  for (const B of L.booths) {   // a red booth: two high-backed benches either side of a white-topped table, the sauces on it
+  for (const B of L.booths) {
     const x0 = X(B.x0), x1 = X(B.x1), y0 = Yl(B.y0), y1 = Yl(B.y1);
     slab(x0, x1, y0, y0 + 4, 22, RED, RED); slab(x0, x1, y0 + 4, y0 + 10, 11, RED, RED);
     slab(x0 + 2, x1 - 2, y0 + 11, y1 - 11, 17, ramp('#eceae2', 5, 3), CHROME);
@@ -4338,7 +4345,7 @@ function foodRoom(u, r, px0_) {
   }
   for (const S of L.stools) { const x = X(S.x), Y = Yl(S.y); for (let v = 0; v < 12; v++) px(x, Y + 2, v, CHROME[2], [1, 0, 0]); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) px(x + dx, Y + dy, 13, dx + dy < -2 ? [230, 90, 90] : RED[2], [0, 0, 1]); }
   if (L.jukebox) { const J = L.jukebox, x0 = X(J.x0), x1 = X(J.x1); slab(x0, x1, Yl(J.y0), Yl(J.y1), 30, WOOD, WOOD); for (let x = x0 + 3; x < x1 - 3; x++) for (let v = 8; v < 26; v++) px(x, Yl(J.y1), v, [[255, 120, 60], [255, 210, 80], [90, 200, 255], [255, 90, 200]][((v >> 2) + (x >> 3)) & 3], [0, 1, 0]); }
-  if (L.queue) {   // chrome posts with a belt between them, either side of the lane up to the till
+  if (L.queue) {
     const Q = L.queue;
     for (const qx of [Q.x0, Q.x1]) {
       for (let y = Q.y0; y <= Q.y1; y += 16) for (let v = 0; v < 15; v++) px(X(qx), Yl(y), v, CHROME[v > 12 ? 4 : 2], [1, 0, 0]);
@@ -4348,7 +4355,7 @@ function foodRoom(u, r, px0_) {
   if (L.drinks) { const D2 = L.drinks, x0 = X(D2.x0), x1 = X(D2.x1); slab(x0, x1, Yl(D2.y0), Yl(D2.y1), 30, ramp('#d8dce2', 5, 3), ramp('#2a2c34', 5, 2)); for (let x = x0 + 2; x < x1 - 2; x++) for (let v = 12; v < 27; v++) px(x, Yl(D2.y1), v, v < 16 ? (x % 4 === 0 ? [200, 200, 210] : [40, 40, 46]) : [[200, 40, 50], [60, 150, 220], [240, 190, 40], [80, 180, 90]][((x - x0) / 4 | 0) & 3], [0, 1, 0]); }
   for (const T2 of L.tables) {
     const x0 = X(T2.x0), x1 = X(T2.x1), y0 = Yl(T2.y0), y1 = Yl(T2.y1);
-    if (T2.cloth) {   // a white cloth to the floor, a candle and two plates; dark wood chairs either side
+    if (T2.cloth) {
       for (const [cx, k] of [[x0 - 9, -1], [x1 + 2, 1]]) { slab(cx, cx + 7, y0 + 6, y1 - 6, 9, WOOD, WOOD); slab(k < 0 ? cx : cx + 5, k < 0 ? cx + 2 : cx + 7, y0 + 5, y1 - 5, 19, WOOD, WOOD, 9); }
       slab(x0, x1, y0, y1, 17, CLOTH, CLOTH);
       dot((x0 + x1) / 2 - 1, (y0 + y1) / 2 - 1, 19, [255, 214, 120]); dot(x0 + 3, (y0 + y1) / 2 - 2, 18, [250, 250, 246], 4); dot(x1 - 7, (y0 + y1) / 2 - 2, 18, [250, 250, 246], 4);

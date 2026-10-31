@@ -18188,3 +18188,401 @@ rule, keepCap and the GPU slots on 8 GB devices, gfx.js renderDpr on the Pixel, 
   you ride (jit) - the face and the lip are stronger where the crest stands high and weaker where it's low, and the
   white pieces churn: the lip, the curl, the white water, its lace and the spray change their look a few times a second,
   each piece out of step with its neighbours. Test: test/surf.test.js "a wave drawn near the beach".
+
+## 2026-10-30 - Batch 8a: the taxi a player hails, Crazy Taxi, the trucker and the big rigs, the mail carrier
+
+The owner's notes part 2 (2026-10-24):
+- "Taxi Driving job - But we should make a version that pays okay that is pretty straight forward just picking up NPCs
+  and dropping them off places (or even pick up other players if they hail a taxi and you see it you can go pick them
+  up if another NPC doesnt do it first). But then we should have a Crazy Taxi style mode that is similar to the classic
+  Sega Crazy Taxi game where you have to try to get passengers from one place to the other as fast as you can."
+- "Big rig trucks on highways, truck driving jobs available to haul goods across the world." / "Jobs - Trucker job,
+  long hauls across the world on the highway"
+- "Mail man/package delivery job"
+
+### What was there
+The taxi driver (H72, server/systems/taxijob.js): NPC fares hailing or ringing in, the meter, the tip, the scared fare
+who bails - the "plain version that pays okay" was already in. The city's taxis a player calls or hails (transit.js).
+The job cards (client/jobcard.js), the job's issued vehicle and its recall (jobs.js workTruck), open-cargo crates
+(cargo.js), the tow truck's hook. No semi, no trailers, no post office job (World v3 has the Midtown Post Office as a
+'delivery' place; mailboxes are props by the homes).
+
+### What's new
+- **A player hailing a cab** (taxijob.js playerHail): calling a taxi on the phone (Transit > Rides) also sends every
+  on-duty player cab driver within CABHAIL.hailR with nobody in the back (an NPC pick-up they were heading for is
+  dropped: a player first) - "Dispatch: X wants a cab, first cab there gets the fare". The city's taxi comes too: the
+  rider gets in whichever is first ("Get in X's cab"), the others are stood down. A player can also hail an on-duty
+  player's empty cab going by. Aboard, the rider's waypoint is where to (the page already sends it for a city taxi -
+  the rider's HUD taxi strip and the Transit app show the player's cab the same way); getting out, the rider pays the
+  meter (CAB.flag + perKm) to the driver - no tip or company bonus, so the money only changes hands (no farming it
+  between friends). The rider's arm is up while hailing (pp 'hail', as the NPC fares').
+- **Crazy Taxi** (crazytaxi.js): the taxi rank's job card now carries an "or" - Crazy Taxi - (and the phone's Jobs
+  list). A cab, and the clock (CRAZY.startS 50 s) starts when you get in. Three fares wave from rings on the pavement round you (by the kerb, never under a building's roof), by
+  their trip: green short, yellow longer, red long (more pay, more seconds). Stop by one and they jump in; each has its
+  own clock (par from the distance; late, "I'LL WALK!"). Set down in time: SPEEDY / GOOD / SLOW - the pay and the
+  seconds back (the clock at most CRAZY.maxS). Tips on the way: a near miss with a vehicle, a drift, a flat-out dash,
+  each times the combo (to x10); a crash loses the combo. The HUD's job card shows the clock (red under 10 s) and the
+  fare's own, the chip too; a big green arrow over you points the way (client/jobway.js), the rings on the ground in
+  their colours; the tips float up over the cab with a coin sound. Time up: the run card (client/jobcard.js
+  showRunCard) - the licence S to E by the takings, the fares, the tips, the best combo and your best run
+  (profile.crazyBest, "NEW BEST RUN!") - Again (the same cab, where you are) or Done; it goes by itself after 15 s.
+  Not done: jumps - cars never leave the ground in this game's physics, so there's nothing to tip for.
+- **The big rigs** (rigs.js; shared/vehicles.js semi, trailer, boxtrailer): a tractor unit and a trailer that's its own
+  vehicle, never driven, hitched at the fifth wheel. Each tick after the physics the trailer is dragged by its kingpin -
+  its rear axle stays put and it swings round to point at the fifth wheel, so it follows the tractor's path and cuts the
+  corners as a trailer does (folding at most RIG.jack). It carries the speed it moved at (it shoves what it sweeps
+  into; what hits it hits it), the pair never collide with each other (vehicles.js), there's no way into a trailer.
+  At the wheel of a rig, stopped: Act unhitches the trailer, or - the fifth wheel backed under a trailer's kingpin,
+  lined up - hitches it. A hitched trailer has no physics step of its own (no knocks off the kerb as it swings: the load's condition
+  counts real hits). The page drags the trailer you're pulling along on your fifth wheel as you see it, the same way,
+  eased toward the server's angle (main.js glueTrailer: the wire's extra bit 3 says it's hitched; yours is the one on
+  the server's fifth wheel - the server can run well behind your prediction on a loaded machine) and its crates with it. The city's own rigs run the highways:
+  RIG.npc of the traffic spawned on a highway is a semi with a box van trailer (traffic.js), the trailer gone with it.
+  The models (client/art2/fleet.js, loaded with the batch-4 fleet): a long-nosed conventional with its sleeper, twin
+  stacks and the fifth wheel's plate; the flatbed trailer's plank deck, stakes and headboard; the box van's ribs,
+  swing doors and a reefer unit on some. Sounds: the truck diesel and air brakes; the hitch's clank.
+- **The trucker** (truckjob.js): Act at a freight depot (the yards' and the port's warehouses, Portside Logistics' menu)
+  or the phone: the card names the haul (from the depot nearest you to a buyer RIG.haul px across the world - a
+  grocery, a market, a hardware store, a farm, a gas station, a roadhouse...) and its pay. A rig is issued at the kerb
+  outside with a flatbed trailer of RIG.crates open crates (the depot's goods: lumber, steel, produce, freight) - in
+  plain view, anyone can take one (cargo theft; the fence pays for it, and the haul goes on a crate short). Stop in the
+  buyer's yard: paid base + by the km, times the share of the crates still aboard and the load's condition (RIG.hitCut a
+  hard knock). The rig's then the company's to bring back for the return bonus.
+- **The mail carrier** (mailjob.js): at the post office (the Midtown Post Office; a city without one, its freight
+  depot) the card offers the van round, "or" the walking round. The van round: MAILJOB.van homes of one neighbourhood -
+  letters to each home's mailbox (posted from the van's window, stopped by it) or through the door, and two parcels in
+  the back of the Delivery Van to carry to their doors ("Leave the parcel on the doorstep"). The walking round: letters
+  only, homes near the post office. Paid by the stop, a bonus for the round, +1 Samaritan a stop; the stops are rings on
+  the ground (blue letters, gold parcels) and the job card counts them.
+
+### Controls
+No new keys: Act at the place for its card; Act stopped in a rig to hitch / unhitch; Act by a mailbox, a door or in the
+van stopped by a mailbox; the vehicle key to get out of a player's cab. README rows added.
+
+### Tests
+test/b8jobs.test.js: the board's cards and the rank's "or"; the trailer following round a turn on the fifth wheel,
+unhitched and hitched again, the city's trailer gone with its rig; the haul paid by the crates and the knocks; Crazy
+Taxi's clock, a fare from a ring, a near-miss tip, the pay and the seconds back, the run card and Again; a player
+hailing a player's cab, riding, picking where and paying the driver; the van and walking mail rounds; the rigs' models.
+
+### Budgets
+Page 469 / 520 KB. Renderer 401 / 401 and bake 906 / 906: shared/vehicles.js grew by the three vehicles, so the long
+header comment of client/art2/vehicles.js was condensed to make room (the bake 906.4); the models themselves load with
+the fleet, outside both.
+
+### Shots
+In the scratchpad's b8a-shots: the Jobs app (desk-jobs-app*.png), a Crazy Taxi run - the clock and the green arrow,
+the rings, a fare aboard with its own clock on the card, the run card (desk/phone-crazy-*.png), the rig and its
+trailer of crates turning (desk/phone-haul-*.png), the mail van round and a walking round's stop and the letters
+posted (desk/phone-mail-*.png).
+
+## 2026-10-30 - Batch 8b: forklift, fishing boat and park ranger jobs; people at their jobs
+
+The owner's notes, part 2 (the new ideas): "Jobs - Forklift driver", "Jobs - Fishing boat", "Park Ranger jobs", "NPC jobs -
+You can see NPCs performing their jobs like street sweepers or construction workers or mailmen or other jobs around the
+world", "NPC - Mail man, postal service, they go about their job delivering mail" and "NPC - homeless dude pushing cart?".
+Each job uses the existing job card. The phone's Jobs app lists it, and Act at the job's place brings up the same card:
+what the job is, what it pays, and the first step, with one Accept. All of their numbers are in a new file,
+**shared/rules-work.js** (FORK, FISHBOAT, RANGER).
+
+### What was there already
+- **The homeless man with his cart:**
+  - personas.js `homeless` pushes his cart around his camp and sits by it;
+  - the cart and the push walk are in people.js.
+- **Mail carriers:** the persona `postal` (b6c) existed, in a postal shirt with a satchel, but only wandered.
+- **Construction workers:**
+  - the road crew at Holly Street (activities.js `roadcrew`);
+  - miners at the quarries.
+- **Park rangers:** wildfolk.js rangers walk a beat and give tips.
+- **Models:**
+  - a forklift prop (in the bake only, not drivable);
+  - the fishing trawler (fleet.js).
+- **Fishing:** the fish table (shared/fish.js).
+
+### Forklift driver (server/systems/forklift.js)
+- **Signing on:**
+  - Act by one of the forklifts parked at a port or warehouse yard (the map's forklift props, with the warehouses'
+    doors as a fallback; not the airport apron's ground-crew forklifts), or take the job from the phone.
+  - A **Forklift** is issued like a work truck: green ring, recalled if you quit. It is a new drivable vehicle
+    (shared/vehicles.js, i 85), modelled in client/art2/fleet.js: a yellow body with a counterweight, a seat under the
+    overhead guard, an amber beacon, the mast, and a carriage with two tines.
+- **The yard:**
+  - A row of 6 pallets waits on the yard's open ground.
+  - A row of bays is marked a little way off (`layout`, with room to drive up to each).
+- **The work:**
+  - Drive the fork tips up to a pallet and **Act - Lift the pallet**. It goes on the forklift's one cargo slot, out in
+    front, and the forks rise.
+  - Drive it to the marked bay and **Act - Set the pallet down in bay N**. The forks lower it.
+  - The second pallet in a bay is **stacked**: the forks rise to the first pallet's height first, then lower the second
+    onto it. A pallet sitting on another stays up while the one under it is there (cargo.js `c.on`).
+  - Pallets are too heavy to lift by hand.
+- **Pay:**
+  - $45 a pallet, $20 more for a stacked one;
+  - a $120 bonus for all six;
+  - the work truck's return bonus as usual.
+- **What everyone sees:**
+  - The forks' height goes to clients in the vehicle's extra byte (bits 3-4, net.js `forkStage`).
+  - The renderer draws the carriage at that height (host.js, actors.js `reel`).
+  - The pallet rides on the tines (host.js and main.js add a loaded crate's z).
+- **New crate model:** 'Pallet', a wooden pallet of taped cartons.
+
+### Fishing boat (server/systems/fishboat.js)
+- **Signing on:**
+  - Act on a fish market's quay by the trawler's berth (the market's door stays its shop), or take the job from the
+    phone.
+  - The market's **Fishing Trawler** is issued at the quay: open water near the market, on the sea.
+- **The grounds:** three, out at sea, taken in turn:
+  - **net** grounds: **Act - Shoot the net**, then keep her moving through the ground at trawling speed (35-190 px/s)
+    for 10 s;
+  - **pots**: **Act - Haul the pots**, then hold her still by the buoys for 8 s.
+- **The catch:**
+  - Each haul is a **Fish Box** on the deck: a haul of 6-11 of one of the sea's shoaling fish from shared/fish.js
+    (mackerel, bonito, skipjack, squid and others), priced at the fish market's price for an average one.
+  - The pots bring up crabs and lobsters at $14 each.
+  - The boxes are open cargo, so rivals can take them.
+- **Selling:**
+  - Back at the quay, stopped, **Act - Sell the catch**.
+  - A $90 bonus for a full deck.
+  - Anyone riding along (crew) is paid $25 a box by the market.
+- **New crate model:** 'Fish Box', a blue tray of fish on ice.
+
+### Park ranger (server/systems/rangerjob.js)
+- **Signing on:** Act at a ranger station (World v3: Pine Ridge and Granite Cove) or at a trailhead's map board out in the
+  wild, or take the job from the phone. The station's 4x4 is issued, in park green.
+- **The shift:** radio calls one after another, in a shuffled order, each paid:
+  - **Walk the trail:** the waymarks, map boards and picnic spots near the station, in turn ($85).
+  - **Clear the litter:** 5 pieces at a picnic spot. **Act - Pick up the litter** by each ($95). New crate model
+    'Litter': a burst bin bag, a can, a cup.
+  - **Put out a campfire left burning:** one of the map's campfires is lit, and kept lit until you **Act - Put out the
+    unattended campfire** ($110).
+  - **Find a lost hiker:** they wave for help (the hail pose) out in the woods.
+    - **Act - Help the lost hiker** and they follow you.
+    - Stop the 4x4 by them and they climb in.
+    - Bring them back to the station ($170).
+- Each task is also +2 Samaritan.
+- Whatever is left of a task when the shift ends (litter, a waiting hiker) is cleared away.
+- Poachers are left for later: hunting.js already fines poaching that a ranger sees.
+
+### People at their jobs (server/systems/personas.js, activities.js)
+- **Mail carriers** walk a round of the mailboxes near them (the map's 1,306 mailbox props). At each one they stop and
+  hold out a bundle of letters (new prop `letters`), then go on to the next.
+- **Street sweepers** are a new persona in the town districts by day, in orange coveralls (npclooks' `sweeper`). They push
+  a push broom (new prop `broom`) slowly along a stretch of pavement and back, pausing at each end.
+- **Gardeners** kneel at the planters and hedges near them for a while, one after another.
+- **The homeless man** now also goes through the bins near his camp (the map's trash cans). Now and then he says
+  something to himself ("Cans, cans...").
+- **Building sites:** each building of kind `construction` (3 in World v3) gets a crew out front. Two work the frame with
+  picks and hammers, one is down on a knee, one carries a crate back and forth, and the foreman watches.
+- If trouble comes, a carrier or gardener stops mid-job and gets up and away (the pose is reset).
+
+### Controls
+Act (E / B / ACT) does all of it. README rows: Forklift driver, Fishing boat, Park ranger. The job card row now names the
+new places.
+
+### Debug menu
+New section "Forklift, fishing boat & ranger":
+- the forklift at the nearest yard (`{ c: 'forklift', k: 'lift' | 'bay' }` stages a lift and a carry);
+- the trawler at the nearest quay (`k: 'haul'` lands a haul);
+- each ranger task (`k`, `go: 1` to stand by it).
+
+### Budgets
+- **Renderer and bake (full):** the new art is the three crate models (actors.js), the broom and the letters
+  (people.js) and the fork height (host.js). The forklift's model is in fleet.js, which loads on use and is outside both.
+  To make room, I cut actors.js's 37-line header comment down to 5 lines.
+- **Results (KB):** renderer 401.1 / 401, bake 906.2 / 906, page 468.2 / 520. Unchanged, no raises.
+
+### Tests
+- **test/workjobs.test.js:**
+  - the three cards on the board;
+  - the forklift's six pallets lifted, carried, set down and stacked, with the pay and the bonus;
+  - the fork stages;
+  - the trawler's net and pots hauled, the catch sold, the crew paid;
+  - each ranger task paid;
+  - the leftovers tidied;
+  - the job tracker.
+- **test/townwork.test.js:**
+  - the mail carrier's round with letters at a mailbox;
+  - the sweeper's stretch;
+  - the gardener kneeling;
+  - the homeless man off to a bin;
+  - a building site's crew.
+
+## 2026-10-30 - Batch 8c: chess at the park, fireworks, a campfire of your own, grapes for the ducks
+
+From the owner's notes, part 2:
+> Feed ducks grapes and it gives you good samaritan points (has a daily cap but still significant, have to buy the grapes)
+
+> Fireworks you can set off
+
+> Chess at the park (chess tables you can play against NPCs or other players that come up to it)
+
+> Build a campfire, lets you create a campfire anywhere which stacks some logs and a few log seats. Just as long as it
+> cant be used to exploit anything, like block an entrance or something. We can just make it so it can be passed
+> through. And it despawns if the player walks away after a certain amount of time
+
+> You can catch on fire standing in a campfire but i think it should take a few seconds of standing in it before you
+> catch on fire, not catch on fire so quickly.
+
+**What was there already:** the town ponds' tame ducks and geese (wildlife.js parkDucks) and grapes (picked in the
+vineyard, sold at the Old Town Market); the old men's chess games at the parks' and squares' tables (activities.js
+'chess', the board prop and the sit pose); the map's campfires (light, sit, warm up, cook); and the campfire's delay
+before you catch fire was already in from batch 7 (`BURN.campS`, 2.5 s in the flames, cooling off twice as fast out of
+them). Nothing for fireworks. Everything below builds on those; the numbers are in the new shared/rules-leisure.js
+(kept out of shared/rules.js, which every page loads at once).
+
+**Chess at the park** (server/systems/chess.js; the rules shared/chess.js; the regular server/systems/chessai.js; the
+board client/leisure/chess.js):
+- Every table the old men play at is a chess table. Walk up: "Sit down at the chess table". Two of them already at it:
+  "Challenge the chess players" - the one with the board gets up for you and the other plays you (you have white).
+- Sat alone you wait for an opponent: another player walking up gets "Play chess with <you>" and sits across (colours
+  drawn at random). Or "Play the regular": an old man shuffles over, sits down across from you and plays.
+- The rules are complete and the server's: only a legal move is made (castling, en passant, promotion, pins), and
+  check, checkmate, stalemate, the fifty-move rule, threefold repetition and not enough material are all decided there.
+  Checked against the standard perft counts (the start, "Kiwipete" and position 3).
+- **The regular**: a small alpha-beta search, two plies plus captures to the end, material and piece-square tables, a
+  little whim so no two games are the same. He finds a mate in one and never leaves a queen hanging, but a careful
+  player beats him. He thinks a root move at a time, three milliseconds a server tick, and takes 1.6-4.5 s over a move
+  as a man in the park would. He takes a draw when he's worse off.
+- **The board** sits on the arcade's overlay, low on the screen (bottom-centre upright, bottom-right sideways) so the
+  table and the players stay in view. It has pixel pieces, the last move, check in red, dots for a piece's moves and
+  rings round captures, a promotion picker and the last few moves in notation. Tap a piece, then where it goes; the
+  arrows / WASD and Enter / Space; the d-pad and A. Below the board: Resign (press twice), Draw (offer it, or take one
+  offered), Play the regular / Rematch (colours swapped), Get up. Esc / B gets you up: a game against another player
+  in progress is resigned.
+- Sat down you hold the sit pose at the table, and the west seat has the board in front of it, as the old men's games
+  show it, so passers-by see the game. Your record (won-lost-drawn) is kept and told after each game.
+
+**Fireworks** (server/systems/fireworks.js; the shows shared/leisure.js `fwShow`; drawn by client/leisure/stage.js):
+- Skyrocket ($15 for 3), Fountain ($10), Firework Cake ($45, twelve shots) at the corner stores and gas stations.
+- Bag → Use (or the quick wheel) sets it down at your feet and lights the fuse: 2.5 s of fizzing, then the show. The
+  rocket climbs on a trail of sparks and bursts over the rooftops (peony, ring, gold willow, crackle, palm; one or two
+  colours). The fountain throws a cone of sparks that changes colour. The cake fires a barrage, ending on a big one.
+- Everyone sees the same show: the server sends the kind, the place, the fuse and a seed, and each page works out the
+  shots from the seed. Someone coming in mid-show sees the rest of it.
+- **The light:** each burst lights the city round it in its colour through the renderer's lights (a hook of one line
+  in art2/game/host.js, `S.xlights`). The stars are drawn additively with a soft glow round each, a bloom of their
+  own on the overlay layer. Sounds: the fuse struck, a whoosh going up, the bang and its crackle, the fountain's hiss.
+- **The rules:** fireworks hurt nobody and break nothing. Three of yours at most at once, 1.5 s between two. Not
+  indoors, underground, in the water or from a vehicle. In town after dark (not in the country, not by day) it's a new
+  small crime, "Setting off fireworks in town after dark": if someone sees it, a little heat, and an officer may come for
+  a word (law.js `fireworks`).
+
+**A campfire of your own** (server/systems/campfires.js `build`):
+- The Campfire Kit ($25: hardware stores, gas stations, the sports shop, the hunting lodge and camps). Bag → Use builds
+  it 30 px ahead of you on open ground (not a road, the water, a bridge or indoors). It's a ring of stones with logs
+  stacked in it, burning, and three log seats round the far side.
+- It's the same fire as the map's: sit by it to warm up and heal ("Sit by the fire" puts you on the nearest free log
+  seat), cook game over it, light it with a fire arrow, and stand in its flames for 2.5 s and you catch fire. Its
+  embers rise and its light flickers on the ground.
+- **Nothing about it is solid**, so it can't block a door or trap anyone. One a player (a new one puts the old one
+  out). Walk 700 px away for a minute, or leave the game, and it burns out; it lasts 20 minutes at most. Sat at it, the
+  action button kicks dirt over it.
+
+**Feeding the ducks** (server/systems/ducks.js; wildlife.js states 'tograpes', 'nibble'):
+- Grapes are now on the corner stores' and gas stations' shelves ($8 for two), as well as the market's.
+- By a town pond's ducks or geese with grapes in your bag: "Feed the ducks some grapes". You throw them in; the
+  nearest few paddle (or waddle) over to where they land and dabble, heads down, eating. Near them without grapes,
+  you're told once where to buy some.
+- **+3 Samaritan a feed, up to 15 a day** (the real day, UTC) - over half a police badge's 25 in a day. After that they
+  still eat, for nothing. One feed every 10 s.
+
+**Debug**: the dev command `park` (k 'chess' or 'ducks') takes you to the nearest chess table, or to the bank of the
+nearest town pond with three tame ducks on the water in front of you. Fireworks and the kit also refuse a walk-in shop's
+floor (a building's tile), not just a roof or a tunnel.
+
+**The page**: everything new loads after the page. client/leisure/stage.js loads at the start (as client/music/stage.js
+does) and registers the new items. The board, client/leisure/chess.js with shared/chess.js, loads the first time you sit
+down. The bag has a new shelf, Outdoors & fun. Budgets: page 468 of 520 KB, renderer 401.2 of 401 (rounded; the
+host.js hook was paid for by condensing its header comment), bake 906 of 906 - none raised.
+
+**Tests**: test/leisure.test.js (new): perft, mate, stalemate, the draws, the notation; the regular taking a mate and a
+free queen, thinking a root move at a time, a game against himself all legal; two players at a table (illegal moves
+refused, the fool's mate, the record, a rematch, leaving resigns); the regular called over and answering; challenging
+the old men; the ducks fed, the cap and a new day; fireworks lit, harmless, one at a time, the same show from a seed, a
+crime in town after dark; a campfire built, sat at on a log seat, catching fire after a few seconds in it, burning out
+once you walk off; the page's hooks. test/hub.test.js: the bag's new shelf.
+
+Left for later: the regular plays one strength (an easy / hard choice would be a small step: `CHESS.depth`); nobody
+watching a player's game stands round the table yet.
+
+## 2026-10-30 - b8d: home upgrades, the firewood's uses, a proper fall, materials for crafting
+
+The owner's notes 2 (10-24): "House upgrades, be able to add new rooms, new floors, basement, customize, expand garden,
+decorate, etc. You can do this by gathering materials like wood or stone or other things across the world, or you can
+purchase them with money outright. I dont think it needs to change the outside of the house but you can just expand the
+inside ... For apartments I think you just pull up to the garage still and able to upgrade the interior with different
+amenities or add-ons" - and of the trees: "Trees falling still has placeholder animation ... chop the whole tree up and
+then it puts the wood into bundles ... deliver that somewhere that purchases wood, or is part of a job, or you can take
+it to your home and driving up to the home's garage with the wood will give an option to store that wood there or put it
+towards an upgrade to the home."
+
+### What was there
+b5c had already made the felled trunk stay, cut into rounds, each a Firewood crate (sold at hardware stores, more at a
+sawmill; stacked at your garage as a count). The fall was drawn in canvas strokes. Homes had their plans, decorating
+(H67), gardens (H61); nothing grew. No tent, cardboard-box or sewer homes exist yet (they're in DESIGN-NOTES as proposals),
+so their few fitting upgrades wait for them - the catalogue takes a plan list per upgrade, ready for them.
+
+### Home upgrades (shared/homeups.js, server/systems/homeups.js, rules-play.js HOME_UPS)
+- **Your garage**: E by its door on foot, or stopped at the wheel, opens its menu: the materials kept there (firewood,
+  stone, scrap metal - profile.homeMats, up to the garage's room: HOME_STORE), unload the bag's stone and scrap, take a
+  bundle back out, and the upgrades. Firewood you bring (carried, or on the bed) gives the owner's choice: **stack it,
+  or put it towards an upgrade**.
+- **An upgrade's card**: what it is, what it takes (firewood/stone/metal and the builders' labour), what's in already;
+  put in what you have (the garage's first, then the bag's), or pay for the rest - labour plus the missing materials at
+  MAT_PRICE - and it's built at once. Bought outright = paying for all of it. Inside, the hall table lists them too.
+- **Floors and a basement** (houses and mansions; a trailer gets a storm cellar): a level of its own up or down new
+  stairs (`^`, in the hall / the great room / by the trailer's kitchen; furniture standing there goes back into
+  storage). Each level is a hall with rooms along it (3 a house, 4 a mansion, 2 the cellar), the first fitted as built (a
+  bedroom upstairs, a study on the third floor, a storeroom below); the rest are bare concrete behind a wall until you add
+  a room: bedroom, bathroom, study, home gym, games room, home cinema, sunroom upstairs; workshop, wine cellar, storeroom,
+  gym, games, cinema, bath below. The outside never changes. Decorate works on every level (decor keyed id@level).
+- **Amenities** for every kind of home, apartments too: a fireplace (burns a bundle from the garage: everyone in the home
+  heals while it burns - the page draws the flames and the glow), a hot tub (heals and refills stamina fast), a home bar
+  (a glass: the wine's faster healing), an exercise bike (stamina skill, capped a day: skills 'bike'). Each goes into your
+  furniture storage to place with Decorate; Act uses it where it stands.
+- **More**: two (then two more) garden beds dug in the yard where there's room (gardening.js plotsOf - the first four
+  are the same spots as ever), parking spaces (homes.garageCap), garage shelving; a storeroom and the basement keep more.
+- **Sold**: the upgrades fetch half what they'd cost now, the materials kept there half their price; a world rebuilt
+  under a home buys them back in full (homes.checkWorld).
+- The plans are specs (plan~level~rooms) both sides lay out the same way (shared/homelayout.js layout); a home with
+  nothing built is its plan's key as before.
+
+### Materials, the crafting foundation
+- **Building Stone** (new bag item, mat 'stone'): knocked loose with the ore from every vein you mine (more at the
+  quarry's faces), sold at the hardware store. **Scrap metal**: Component Scrap and the caves' iron and copper ore count.
+- The bag has a **Materials** category (client/bag.js; shared/items.js itemCat 'materials').
+- **The workbench** (a workshop's, or one you place) makes furniture from the home's materials (HOME_CRAFTS: bookshelves,
+  tables, chairs, a couch, pots, storage shelves, woodpiles...) into storage - recipes as data, for the crafting the bag
+  will grow into.
+
+### Firewood orders (server/systems/woodjob.js, WOODJOB)
+"Or is part of a job": at a sawmill or lumber yard (Act: the job's card), the hardware store's counter or the phone's
+Jobs, a diner, cafe, bar, hotel or camp wants 3-6 bundles: fell, cut, bring them (carried or on the bed) - $95 a bundle
+(the mill pays $65), $160 for the lot. Two steps on the HUD: cut the wood, take it there.
+
+### The fall (client/render/carryfx.js)
+The falling tree is now the tree that stood there: the bake workers draw its own sprite (statics.js propSprite, worker
+sprite kind 'prop'), lit for the time of day, and it tips over turned and drawn out along its fall, bounces, settles and
+shakes; lying there only the uncut rounds are drawn, the crown till the last, each cut face showing. The classic view
+(and the moment before the sprite arrives) keeps the strokes.
+
+### Budgets
+Bake: the worker's 'prop' sprite kind and propSprite (+0.2 KB) and the stone item (+0.25) took it to 906.9 of 906 -
+trimmed back to 904.7 by dropping 56 long trailing comments in client/art2/game/statics.js (no code changed). Page
+468.4 (shared/items.js, rules-base.js, rules-page.js's 'bike' skill line), renderer untouched. Everything new on the
+page side loads lazily (homeview, homeart2, props-home, carryfx, jobcard, bag).
+
+### Controls
+README: four rows - your garage's menu, upgrading the home, the things inside (stairs, fire, tub, bar, bike,
+workbench, shelves), a firewood order. All on Act (E / B / ACT).
+
+### Tests
+New: test/homeups.test.js (every room kind in every slot of every level walkable from the stairs, the ground floors with
+their stairs as walkable as ever, the specs; the catalogue; the garage menu - firewood on the bed put towards the second
+floor, stacked on foot, the bag unloaded, put in and paid for the rest - up and down the stairs, a room added, a parking
+space, the sale; the fireplace, bar, hot tub, bike and the workbench; garden beds, stone from mining, a guest on the
+stairs) and test/woodjob.test.js. Updated: felling (the garage's menu), homedecor (amenity pieces have no counter price),
+hub (the bag's Materials category). Run with the home, felling, garden, lobby, real-estate, mining, bathhouse, arcade,
+sound, HUD (hudlayout, touchslots, hub, hudinfo), jobs and perf tests: all pass.
+
+Merging batch 8 (2026-10-30): 8a and 8b both claimed bit 3 of a vehicle's extra byte (the rig's hitched trailer, the forklift's forks). The forks moved to bits 4-5 (net.js, host.js, forklift.js); the bag's categories now carry both Outdoors & fun (8c) and Materials (8d).

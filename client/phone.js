@@ -9,6 +9,7 @@ import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
 import { jobCardHtml } from './jobcard.js';
 import { noteLog, clearLog } from './notelog.js';
+const LISTED = new Set(['patrol', 'fire', 'medic', 'drive', 'delivery', 'mail', 'farm']);   // (the job list's own sections; the rest under Work)
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 
@@ -60,7 +61,7 @@ export const ICON = {
 const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera']];
 const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Phone']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
-const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB' };
+const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
@@ -135,8 +136,9 @@ export function createPhone(ctx) {
         + (ctx.isCop() ? sec('Patrol calls', J.filter((j) => j.kind === 'patrol')) : '')
         + sec('Emergency services', J.filter((j) => j.kind === 'fire' || j.kind === 'medic'))
         + sec('Driving', J.filter((j) => j.kind === 'drive'))
-        + sec('Deliveries', J.filter((j) => j.kind === 'delivery'))
+        + sec('Deliveries', J.filter((j) => j.kind === 'delivery' || j.kind === 'mail'))
         + sec('Farm', J.filter((j) => j.kind === 'farm'))
+        + sec('Work', J.filter((j) => !j.fly && !LISTED.has(j.kind)))   // (the forklift, the fishing boat, the ranger, a firewood order - and any new kind)
         + sec('Flying and boats', J.filter((j) => j.fly));
     }
     wire(el);

@@ -20,8 +20,9 @@ export const FLASHLIGHT_PRICE = 35;        // hardware stores, corner stores and
 export const LIGHT_PRICES = { headlamp: 45, hardhat: 75, lantern: 55, heavyflash: 95, flare: 12, glowstick: 5, batteries: 8 };
 export const FELL_TOOL_PRICES = { hatchet: 40, axe: 120, fellaxe: 260, chainsaw: 650, sawfuel: 15 };
 export const PICK_PRICES = { pickStone: 30, pickIron: 95, pickSteel: 280, pickDiamond: 1250 };
+export const STONE_PRICE = 40;   // a block of building stone at the hardware store (the home upgrades' price for one: rules-play.js MAT_PRICE)
 export const ASSAY_PAYS = 1.3;             // the quarry's assay office pays this much over what a pawn shop does
-export const GARDEN = { plots: 4, reach: 34, waterDays: 0.5, wiltDays: 0.35, dieDays: 1.5, prize: 0.1, prizeX: 6 };
+export const GARDEN = { plots: 4, more: 4, reach: 34, waterDays: 0.5, wiltDays: 0.35, dieDays: 1.5, prize: 0.1, prizeX: 6 };
 export const GARDEN_CROPS = {
   tomato: { seeds: 10, days: 1.5, yield: 3, sell: 6, heal: 8 },
   carrot: { seeds: 8, days: 1.2, yield: 4, sell: 4, heal: 6 },

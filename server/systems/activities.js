@@ -77,6 +77,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
   roadcrew: { day: 0.9, night: 0, cap: 1 },
+  site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
   dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
@@ -231,6 +232,12 @@ export function spotsOf(map) {
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  // the building sites (a building of kind 'construction': the frame going up) - a crew at work out front (batch 8)
+  for (const b of map.buildings || []) {
+    if (!b || b.kind !== 'construction') continue;
+    const x = (b.tx + b.tw / 2) * TILE, y = (b.ty + b.th) * TILE + 30;
+    if (walkable(map, x - 30, y) && walkable(map, x + 30, y) && clear(x, y, 140)) { list.push({ k: 'site', x, y, a: -Math.PI / 2, wild: false }); taken.push({ x, y }); }
+  }
   // the walk-ups' front steps (a hand plan's walk-up with a home behind its door, its front to the camera)
   for (const b of map.buildings || []) {
     if (!b || !b.hand || b.arch !== 'walkup' || b.back || !b.door || b.home === undefined) continue;
@@ -378,6 +385,12 @@ function members(s) {
     out.push({ x: s.x - 14, y: s.y, a: 0, arche: 'construction', chop: true });
     out.push({ x: s.x + 14, y: s.y + 4, a: Math.PI, arche: 'construction', gt: 'kneel' });
     out.push({ x: s.x + 6, y: s.y + 40, a: -Math.PI / 2, arche: 'construction', watch: true });
+  } else if (s.k === 'site') {      // a building site: two at the frame with picks and hammers, one down on a knee, one carrying a crate, the foreman
+    out.push({ x: s.x - 26, y: s.y - 10, a: -Math.PI / 2, arche: 'construction', chop: true });
+    out.push({ x: s.x + 22, y: s.y - 12, a: -Math.PI / 2, arche: 'construction', chop: true });
+    out.push({ x: s.x, y: s.y - 6, a: -Math.PI / 2, arche: 'construction', gt: 'kneel' });
+    out.push({ x: s.x + 40, y: s.y + 20, a: Math.PI, arche: 'construction', pp: 'crate', patrol: [{ x: s.x + 40, y: s.y + 20 }, { x: s.x - 40, y: s.y + 20 }] });
+    out.push({ x: s.x - 50, y: s.y + 34, a: -Math.PI / 4, arche: 'construction', watch: true });
   } else if (s.k === 'stoop') {     // one or two sat on the steps facing the street; now and then one stood by for a word
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });

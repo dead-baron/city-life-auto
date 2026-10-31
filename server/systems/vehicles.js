@@ -71,7 +71,7 @@ export function update(world, dt) {
     // player-driven cars were already stepped once per received input (players.processInputs);
     // AI drivers get two physics sub-steps a tick with their wheel and pedals re-trimmed in
     // between, so they correct twice as often - smoother lines, steadier speeds
-    if (v.ownStepTick !== world.tick) {
+    if (v.ownStepTick !== world.tick && !v.hitchTo) {   // (a hitched trailer: dragged along by rigs.js, no physics of its own - no knocks off the kerb as it swings)
       // (only when driveToward steered it this tick: a car braked by hand - police pulling up, the custody car halting -
       // was being steered back at its last target between the sub-steps, so it went round and round instead of stopping)
       if (v.ai && v.ai.ctl && v.ai.ctl.t === world.tick && driver && driver.npc) { stepVehicle(world, v, dt / 2, env); traffic.trim(v); stepVehicle(world, v, dt / 2, env); }
@@ -115,6 +115,7 @@ export function update(world, dt) {
     for (const b of near) {
       if (b === a || b.removed || b.onDeck || b.fly || aircraft.airborne(b)) continue;
       if ((a.def.kind === 'boat') !== (b.def.kind === 'boat') || !sameLevel(a.lz, b.lz)) continue;
+      if (a.hitchTo === b.id || b.hitchTo === a.id) continue;   // (a rig and its own trailer: rigs.js)
       const sb = Math.abs(b.vx) + Math.abs(b.vy);
       if (sb >= 2 && b.id < a.id) continue; // pair handled once when both move
       const hit = a.cutQ || b.cutQ ? halvesHit(a, b) : obbVsObb(a.x, a.y, a.a, a.def.L / 2, a.def.W / 2, b.x, b.y, b.a, b.def.L / 2, b.def.W / 2);   // (a car cut in two: a box per half)
@@ -570,7 +571,7 @@ export function acrossBridge(map, ped, v) {
 export function nearestVehicle(world, ped, range, noBoard = false) {   // (noBoard: past the skateboards on the ground)
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
-    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && v.def.board)) continue;   // (an aircraft overhead: out of reach - no Act prompt for it)
+    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && v.def.board) || v.def.trailer) continue;   // (a trailer: never driven - rigs.js)   // (an aircraft overhead: out of reach - no Act prompt for it)
     if (acrossBridge(world.map, ped, v)) continue;   // (up on a bridge's deck and down on the water under it: out of reach)
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;

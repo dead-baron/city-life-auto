@@ -1,24 +1,14 @@
 // Art v2 live renderer: the host (docs/art-v2/GAME-RENDERER.md) - the bridge between client/main.js and
 // the WebGL2 engine (engine.js). World2 owns the engine and the bake worker pool and turns main.js's
 // frame packet F (camera, sky, who is on screen, the fx pools; see main.js prepFrame) into engine calls:
-//   chunks   the static world baked per 768 px chunk in the workers (chunkbake.js): what is in view
-//            first, then a wide ring round it and the road ahead; a budget of uploads a frame; a quick
-//            placeholder (the ground's colours by tile) until a bake lands; the cache kept to the quality
-//            tier; the chunks of a walk-in shop you stand in rebaked in cutaway (opt.cutaway = building)
-//   sprites  moving things get their sprite keys from the providers (actors.js, peds.js) and the
-//            sprites from the workers, asked for as soon as a thing is near (before it is on screen);
-//            people and small things are made on this thread at once within a small budget a frame (your
-//            own figure always). Only the new art is drawn: while a new frame or heading is being made a
-//            thing keeps showing the last sprite it had
-//   fades    whole buildings round the player ease to transparent (the engine shows the street under
-//            them), so nothing standing in front of you hides you or what is near you
-//   live     what moves on the static world: the lit lens of every signal head (the chunk bakes bring the
-//            heads, chunkbake.signalLenses), flags in the wind and fountains' water (liveart.js), level
-//            crossing barrier arms and flashers, sliding gates, spike strips (as decals)
-//   lights   the chunks' static lights (lamps keep v1's warm-up and flicker, windows and neon follow
-//            the dark) and the moving ones (headlight and flashlight cones, tail and brake lights,
-//            sirens, lit trains, muzzle flashes, explosions, fire, camp fires, signal heads, a light to
-//            see yourself by), ranked by strength and distance, capped per tier
+//   chunks   the static world baked per 768 px chunk in the workers (chunkbake.js): in view first, then a ring
+//            round it and the road ahead; a placeholder until a bake lands; a walk-in shop you stand in in cutaway
+//   sprites  moving things' keys from the providers (actors.js, peds.js), their sprites from the workers (people
+//            and small things here, within a budget); a thing keeps its last sprite while a new one is made
+//   fades    buildings round the player ease to transparent, so nothing in front of you hides you
+//   live     signal heads' lenses, flags, fountains (liveart.js), crossing arms, gates, spike strips
+//   lights   the chunks' static lights and the moving ones (headlights, flashlights, sirens, trains, muzzle
+//            flashes, explosions, fires, signal heads), ranked by strength and distance, capped per tier
 //   sky      skyAt() -> PRESETS_GAME blended by the time of day, toward rain / storm / fog by the
 //            weather, the sun direction from the same sky that drives v1, lightning
 // Height: a moving thing stands on the ground under it - kerbs and bridge decks come from the chunks'
@@ -1740,7 +1730,8 @@ export class World2 {
     const sinking = def.kind !== 'boat' && WATER_T[this.map.tileAtPx(v.rx, v.ry)] === 1, sk = Math.min(1, (v.sinkT || 0) / 3);
     const hi = quant(v.ra, N), phase = Math.floor(now * 6) % 2 ? 1 : 2, st = A.vehState(f, phase, v.hp, v.parent);   // (parent: its damage word - task #402)
     if (st.cut) { this._vehCut(v, now, me, st, hi, N); return; }   // (cut in two by a plasma blade)
-    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
+    if (v.extra & 3 && A.towOf) st.tow = A.towOf(v.extra);
+    if (def.id === 'forklift') st.reel = (v.extra >> 4) & 3;   // (the forks' height: server forklift.js)   // (on a tow truck's hook: drawn tilted, the hooked end up - server tow.js)
     // a combine at work: its reel turning (a third of a bat a step, six steps a second) while it moves and a moment after
     if (def.id === 'combine' && !(f & VF.WRECK)) {
       const mv = Math.abs(v.rx - (v._rlx ?? v.rx)) + Math.abs(v.ry - (v._rly ?? v.ry));
@@ -2044,7 +2035,7 @@ export class World2 {
       for (const c of F.crates) {
         const st = c.flags & 3;
         let lift = st === 0 ? c.hp * 64 : st === 1 ? 26 : 0;
-        if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4; }
+        if (st === 2) { const par = S.ents.get(c.parent), pd = par && par.d ? VEHICLE_BY_INDEX[par.d.m] : null; if (pd) lift = this.api.vehLift(pd) / 0.6 + 4 + c.hp * 64; }
         const tier = c.d.t, label = c.d.l || '', hi = quant(c.ra || 0, 16);
         const par = st === 2 ? S.ents.get(c.parent) : null;
         this._small('crate', A.crateKey(tier, label, hi, 16), [tier, label, hi, 16], c, c.rx, c.ry, this._z0(par || c, false) + lift * 0.6);
@@ -2665,6 +2656,7 @@ export class World2 {
       else if (f.kind === 'plasma') this._light(f.x, f.y, 26, f.r, C.plasma, 2.6 * Math.min(1.4, f.t * 5));   // (the hooded stranger, gone in a flash)
       else this._light(f.x, f.y, 20, f.r || 150, C.flash, 2.2 * Math.min(1.4, f.t * 22));
     }
+    if (S.xlights) for (const l of S.xlights) if (inV(l.x, l.y)) this._light(l.x, l.y, l.z, l.r, l.col, l.k);   // (client/leisure/stage.js)
     // lightning coming down near you (render/weather.js strikeLight): the ground lit blue-white where it strikes, as
     // its flash flickers
     const SL = S.wx && S.wx.strikeLight;

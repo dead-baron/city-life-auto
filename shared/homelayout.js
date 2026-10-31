@@ -12,11 +12,13 @@
 //   1 2 3: a plant in a home of that price tier or better (shared/homelayout.js tierOf), bare floor below it
 //   (H71, an apartment block's lobby) M the mailboxes (use) Z the stairs up - U a flat's door and E the lift's doors (in
 //   the back wall, solid like it)
+import { levelRows, STAIRS, LEVEL_STAIRS } from './homeups.js';
 export const TILE_IN = 32;
 // (H77) the concept's new pieces, lower case in a plan: x a pool table  j an arcade cabinet  i a row of cinema seats  n a
 // kitchen island and its stools  s a sectional sofa (its long side)  b a bedside table and its lamp  l a floor lamp  w a
 // washing machine  k a workbench  e an exercise bike  h a bathtub - furniture like the rest (solid, a run one piece)
-const PLAN_LOWER = 'xjinsblwkhuyof';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf)
+const PLAN_LOWER = 'xjinsblwkhuyof^pm%ez&';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf; ^ p m % e z &: the
+// home upgrades' stairs, fireplace, bar, hot tub, exercise bike, shelves, woodpile - shared/homeups.js)
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
 // (H77, the owner's HO6 concept: thin walls) a wall is a thin line, not its whole tile: WALL_IN px thick, along the middle
 // of a wall tile inside the home and along the inner edge of the outside walls - the rest of the tile is the room's
@@ -173,7 +175,8 @@ for (let n = 4; n <= 8; n++) {
 const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZGIJ', ...PLAN_LOWER]);   // (X - a bathhouse's curtain - isn't: blocked lets the paid through)
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
-export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam' };   // (G: an arcade's prize counter; I J u y: a bathhouse's)
+export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam',
+  '^': 'stairs', p: 'fire', '%': 'tub', m: 'bar', 'e': 'bike', k: 'bench', z: 'store', '&': 'store' };   // (G: an arcade's prize counter; I J u y: a bathhouse's; the rest the home upgrades' - server homeups.js)
 
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
 // odds and ends .. 3 a mansion's)
@@ -190,10 +193,19 @@ export function tierOf(home) {
 const cache = new Map();
 // The plan built: { key, tier, cols, rows, w, h, cell(tx, ty) -> char, solid(tx, ty), pieces [{ ch, use, x, y, w, h }]
 // (px), door { x, y } (the front door's tile, px centre), spawn { x, y } (just inside it), garage bays [{ x, y }] }
+// (the home upgrades - shared/homeups.js specOf: key may be a spec, plan~level~code - the ground floor with the stairs in
+// it, or a level up or down the stairs: L.key is then 'upper' or 'cellar', L.home the home's plan, L.lv the level)
 export function layout(key, tier = 0) {
   const ck = key + ':' + tier;
   if (cache.has(ck)) return cache.get(ck);
-  const rows0 = PLANS[key] || PLANS.house;
+  const sp = String(key).split('~'), home = PLANS[sp[0]] ? sp[0] : 'house', lv = sp.length === 3 ? Math.trunc(+sp[1]) || 0 : 0;
+  let rows0 = PLANS[sp.length === 3 ? home : key] || PLANS.house, stairs = null;
+  if (sp.length === 3 && lv) { rows0 = levelRows(home, lv, sp[2].split(',').map((k) => (k === '-' ? null : k)), tier); stairs = LEVEL_STAIRS; }
+  else if (sp.length === 3 && sp[2] && STAIRS[home]) {
+    stairs = STAIRS[home];
+    const [sx, sy] = stairs.at;
+    rows0 = rows0.map((r, y) => (y === sy || y === sy + 1 ? r.slice(0, sx) + '^^' + r.slice(sx + 2) : r));
+  }
   const rows = rows0.map((r) => [...r].map((ch, x) => (ch >= '1' && ch <= '3' ? (tier >= +ch ? 'P' : (r[x - 1] && FLOORS.has(r[x - 1]) ? r[x - 1] : '.')) : ch)));
   const R = rows.length, C = Math.max(...rows.map((r) => r.length));
   const at = (tx, ty) => (ty >= 0 && ty < R && tx >= 0 && tx < C ? rows[ty][tx] || '#' : '#');
@@ -239,9 +251,12 @@ export function layout(key, tier = 0) {
     walls[ty * C + tx] = rs;
     for (const q of rs) wallRects.push({ tx, ty, ch: at(tx, ty), x: tx * T + q[0], y: ty * T + q[1], w: q[2] - q[0], h: q[3] - q[1] });
   }
+  const arrive = stairs ? { x: (stairs.arrive[0] + 0.5) * TILE_IN, y: (stairs.arrive[1] + 0.5) * TILE_IN } : null;
   const L = {
-    key, tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors, walls, wallRects,
-    spawn: { x: door.x, y: door.y - TILE_IN },
+    key: lv > 0 ? 'upper' : lv < 0 ? 'cellar' : sp.length === 3 ? home : key, spec: String(key), home: sp.length === 3 ? home : key, lv, arrive,
+    stairsKind: !stairs ? '' : lv ? (lv > 0 ? 'down' : 'up') : sp[2],   // (the stairs' look: 'u' up, 'd' down, 'ud' both ways; on a level the way back)
+    tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors, walls, wallRects,
+    spawn: door ? { x: door.x, y: door.y - TILE_IN } : arrive,
     cell: at,
     solid: (tx, ty) => SOLID.has(at(tx, ty)),
   };
@@ -306,7 +321,7 @@ export function useAt(L, x, y, reach) {
     const e = near(d.x - TILE_IN / 2, d.y - TILE_IN / 2, TILE_IN, TILE_IN);
     if (e <= reach + 2 && e < bd) { bd = e; best = { use: 'unit', n: d.n, x: d.x - TILE_IN / 2, y: d.y - TILE_IN / 2, w: TILE_IN, h: TILE_IN }; }
   }
-  const dd = near(L.door.x - TILE_IN / 2, L.door.y - TILE_IN / 2, TILE_IN, TILE_IN);
+  const dd = L.door ? near(L.door.x - TILE_IN / 2, L.door.y - TILE_IN / 2, TILE_IN, TILE_IN) : Infinity;   // (a level up or down the stairs has no front door)
   if (dd <= reach + 2 && dd < bd) best = { use: 'door', x: L.door.x - TILE_IN / 2, y: L.door.y - TILE_IN / 2, w: TILE_IN, h: TILE_IN };
   return best;
 }

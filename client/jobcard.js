@@ -15,6 +15,10 @@ export const JOB_ICON = {
   medic: P('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>'),
   drive: P('<path d="M3 15l2-6h14l2 6v4H3z"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
   coast: P('<circle cx="12" cy="5" r="2"/><path d="M12 7v14M5 13a7 7 0 0 0 14 0M8 10h8"/>'),
+  forklift: P('<path d="M4 19V8h6l3 6v5M4 14h9M17 4v15M17 17h4"/><circle cx="6.5" cy="19" r="1.5"/><circle cx="11.5" cy="19" r="1.5"/>'),
+  fish: P('<path d="M3 12c3-5 9-6 13-2l5-3v10l-5-3c-4 4-10 3-13-2z"/><circle cx="8" cy="11" r="1"/>'),
+  ranger: P('<path d="M12 3l6 9h-3l4 6H5l4-6H6zM12 18v3"/>'),
+  wood: P('<rect x="3" y="13" width="18" height="6" rx="3"/><rect x="5" y="6" width="14" height="6" rx="3"/><circle cx="6" cy="16" r="1.5"/><circle cx="8" cy="9" r="1.5"/>'),   // (a firewood order: server woodjob.js)
 };
 export const jobKind = (j) => (j.fly ? (j.kind === 'coast' ? 'coast' : 'fly') : JOB_ICON[j.kind] ? j.kind : j.kind === 'sar' || j.kind === 'charter' || j.kind === 'dusting' ? 'fly' : 'delivery');
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -42,11 +46,12 @@ export function showJobCard(msg, ctx) {
     el.addEventListener('pointerdown', (e) => { if (e.target === el) ctx.closeOverlay('jobcard'); });
     document.getElementById('game').appendChild(el);
   }
-  const j = msg.job;
+  const j = msg.job, alt = msg.alt || null;
   shown = j;
+  // (a second job from the same place - Crazy Taxi at a rank, the walking round at the post office: "or", compact)
   el.innerHTML = `<div class="panel jc-pop" role="dialog" aria-label="A job"><div class="mhead"><h2>${esc(msg.where || 'A JOB HERE')}</h2><button class="x" data-close aria-label="Close">✕</button></div>`
-    + jobCardHtml(j, { here: true, busy: !!msg.busy }) + '<button class="btn jc-no" data-jc="no">Not now</button></div>';
-  el.querySelector('[data-take]').onclick = (e) => { e.currentTarget.disabled = true; ctx.send({ t: 'phone', a: 'take', id: j.id, card: 1 }); };
+    + jobCardHtml(j, { here: true, busy: !!msg.busy }) + (alt ? `<div class="jc-or">or</div>${jobCardHtml(alt, { here: true, busy: !!msg.busy, compact: true })}` : '') + '<button class="btn jc-no" data-jc="no">Not now</button></div>';
+  for (const b of el.querySelectorAll('[data-take]')) b.onclick = (e) => { const id = e.currentTarget.dataset.take; shown = alt && id === String(alt.id) ? alt : j; for (const o of el.querySelectorAll('[data-take]')) o.disabled = true; ctx.send({ t: 'phone', a: 'take', id, card: 1 }); };
   el.querySelector('[data-jc=no]').onclick = () => ctx.closeOverlay('jobcard');
   el.querySelector('[data-close]').onclick = () => ctx.closeOverlay('jobcard');
   if (ctx.topOverlay() !== 'jobcard') ctx.openOverlay('jobcard');
@@ -61,7 +66,33 @@ export function jobTaken(msg, ctx) {
     if (ctx.topOverlay() === 'jobcard') ctx.closeOverlay('jobcard');
     return true;
   }
+  for (const o of el.querySelectorAll('[data-take]')) o.disabled = false;
   const b = el.querySelector('[data-take]');
   if (b && msg.err) { b.disabled = false; b.textContent = 'Accept'; let p = el.querySelector('.jc-err'); if (!p) { p = document.createElement('p'); p.className = 'jc-err'; b.before(p); } p.textContent = msg.err; }
   return true;
+}
+
+// Crazy Taxi's run over (server crazytaxi.js { t: 'crazyend' }): the licence, the takings, the fares, the tips, the best
+// combo and your best run - Again (the same cab, where you are) or Done; it goes by itself after a while
+let runTimer = 0;
+export function showRunCard(m, ctx) {
+  let el = document.getElementById('jobcard');
+  if (!el) {
+    el = document.createElement('div'); el.id = 'jobcard'; el.className = 'overlay hidden';
+    el.addEventListener('pointerdown', (e) => { if (e.target === el) ctx.closeOverlay('jobcard'); });
+    document.getElementById('game').appendChild(el);
+  }
+  shown = null;
+  const row = (k, v) => `<div class="rc-row"><span>${k}</span><b>${v}</b></div>`;
+  el.innerHTML = `<div class="panel jc-pop rc" role="dialog" aria-label="Crazy Taxi: the run"><div class="mhead"><h2>CRAZY TAXI · ${esc(m.why || 'TIME UP')}</h2><button class="x" data-close aria-label="Close">✕</button></div>`
+    + `<div class="rc-top"><span class="rc-rank rc-${esc(m.rank)}">${esc(m.rank)}</span><span class="rc-cash">${money(m.cash)}<small>${m.record ? 'NEW BEST RUN!' : `best ${money(m.best)}`}</small></span></div>`
+    + row('Fares', m.fares) + row('Tips', money(m.tips)) + row('Best combo', m.combo ? `x${m.combo}` : '-')
+    + '<div class="rc-go"><button class="btn btn-1" data-rc="again">Again</button><button class="btn" data-rc="done">Done</button></div></div>';
+  const close = () => { clearTimeout(runTimer); if (ctx.topOverlay() === 'jobcard') ctx.closeOverlay('jobcard'); };
+  el.querySelector('[data-rc=again]').onclick = () => { ctx.send({ t: 'phone', a: 'take', id: 'crazyagain' }); close(); };
+  el.querySelector('[data-rc=done]').onclick = close;
+  el.querySelector('[data-close]').onclick = close;
+  if (ctx.topOverlay() !== 'jobcard') ctx.openOverlay('jobcard');
+  clearTimeout(runTimer);
+  runTimer = setTimeout(close, 15000);
 }

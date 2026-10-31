@@ -1489,7 +1489,7 @@ export function readRouteBoard(world, p, name) {
     t: 'menu', poi: -1, title: `${name.replace(/ Station$/, '')} - where the trains go`,
     sub: 'Every line through here and the stops it runs on to. The platform clock shows when the next train is due.',
     // (the station's taxi rank - its prompt is the board's, so the cab is offered here: UI-4; economy.js handleMenu)
-    opts: [...(taxijob.interaction(world, p) ? [{ id: 'cabcard', label: 'Drive a taxi from here', note: 'the rank issues a cab', shut: true }] : []), ...(rows.length ? rows.map((r) => ({ id: 'close', label: r.label, note: `${Number.isFinite(r.eta) ? (r.eta < 1 ? 'in now' : `next in ${Math.round(r.eta)}s`) + ' · ' : ''}${r.next.join(' → ')}` })) : [{ id: 'close', label: 'OK' }])],
+    opts: [...(taxijob.interaction(world, p) ? [{ id: 'cabcard', label: 'Drive a taxi from here', note: 'a cab - or a Crazy Taxi run', shut: true }] : []), ...(rows.length ? rows.map((r) => ({ id: 'close', label: r.label, note: `${Number.isFinite(r.eta) ? (r.eta < 1 ? 'in now' : `next in ${Math.round(r.eta)}s`) + ' · ' : ''}${r.next.join(' → ')}` })) : [{ id: 'close', label: 'OK' }])],
     cash: p.profile.cash, bank: p.profile.bank,
   });
 }

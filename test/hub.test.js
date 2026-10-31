@@ -165,8 +165,9 @@ test('the server: every job on the board has its pay range and first step; Act a
 test('the bag: a grid by category; Drop puts things in a bag at your feet (never from a car); weapons too', async () => {
   const { itemCat, BAG_CATS, describe } = await import('../client/bag.js');
   await import('../shared/music.js');   // (the music items: registered into ITEMS when it loads, as the page's music does)
-  assert.deepEqual(BAG_CATS.map((c) => c[0]), ['weapons', 'healing', 'food', 'clothes', 'fishing', 'music', 'tools', 'hunting', 'garden', 'valuables', 'other']);
-  const want = { medkit: 'healing', bandage: 'healing', revivekit: 'healing', apple: 'food', coffee: 'food', redwine: 'food', buckskinJacket: 'clothes', camoCloak: 'clothes', worms: 'fishing', flyRod: 'fishing', bass: 'fishing', flashlight: 'tools', parachute: 'tools', venison: 'hunting', wolfPelt: 'hunting', jewelry: 'valuables', filmTicket: 'other', boombox: 'music', radio: 'music', dancemat: 'music', guitar: 'music', 'tape_kickflip': 'music' };
+  await import('../shared/leisure.js');   // (the fireworks and the Campfire Kit: the same - client/leisure/stage.js)
+  assert.deepEqual(BAG_CATS.map((c) => c[0]), ['weapons', 'healing', 'food', 'clothes', 'fishing', 'music', 'outdoors', 'tools', 'hunting', 'garden', 'materials', 'valuables', 'other']);
+  const want = { medkit: 'healing', bandage: 'healing', revivekit: 'healing', apple: 'food', coffee: 'food', redwine: 'food', buckskinJacket: 'clothes', camoCloak: 'clothes', worms: 'fishing', flyRod: 'fishing', bass: 'fishing', flashlight: 'tools', parachute: 'tools', venison: 'hunting', wolfPelt: 'hunting', jewelry: 'valuables', filmTicket: 'other', boombox: 'music', radio: 'music', dancemat: 'music', guitar: 'music', 'tape_kickflip': 'music', fwrocket: 'outdoors', fwcake: 'outdoors', campkit: 'outdoors', stone: 'materials', scrap: 'materials' };
   assert.match(describe('boombox'), /^Take it out and it plays out loud.*\.$/);
   for (const [id, c] of Object.entries(want)) assert.equal(itemCat(id), c, id);
   assert.match(describe('medkit'), /\+60 health, stops bleeding/);

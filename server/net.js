@@ -20,6 +20,7 @@ import * as k9 from './systems/k9.js';
 import { blinkState } from './systems/homes.js';
 import { bagWireTier, bagBlinks } from './systems/cargo.js';
 import { netRect, NET_KEEP } from './view.js';
+import { forkStage } from './systems/forklift.js';
 const CHOP_CODE = { hatchet: 1, axe: 2, fellaxe: 3, chainsaw: 4, pickaxe: 5 };   // (pickaxe: a miner at the rock face - activities.js)   // ch: a ped felling a tree, with what (felling.js)
 
 const writer = new SnapshotWriter(1500);
@@ -70,12 +71,12 @@ function fields(world, e) {
       if (e.pet) return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), k9.leashOf(e), ((e.pet.mood || 0) & 31) | (isSwimming(world.map, e) ? 128 : 0)];
       return [players.pedFlags(world, e), Math.max(0, e.hp / e.maxHp), (e.vehId || (e.onTrain ? world.trains[e.onTrain.t].cars[e.onTrain.c].id : 0) || (e.sky ? skyWord(e) : 0)) + (e.burnT > 0 ? 0x80000000 : 0) + (e.dead && e.charred ? 0x40000000 : 0), (e.cuffed ? 0 : e.board ? (e.board.code || 0) & 31 : handIndex(e.weapon)) | (e.player ? blinkState(world, e) << 5 : 0) | (!e.vehId && !e.hidden && isSwimming(e.ug ? ugMapOf(world.map) : world.map, e) ? 128 : 0) | (e.vehId && e.seat > 1 ? 128 : 0)];
     // (a vehicle on a tow truck's hook: extra bits 0-1 the end up on the wheel lift - 1 its nose, 2 its tail - and bit 2
-    // still being winched up: tow.js; the clients draw it tilted)
+    // still being winched up: tow.js; the clients draw it tilted; bit 3 a trailer on its tractor's fifth wheel)
     // (parent: the damage you can see - its stage, the sides it's dented on, bullet holes, the parts off, a plasma cut:
     // vehicles.js vehDamageWord, shared/vehicles.js packVehDamage - task #402; a tank's top byte: its turret's angle from the hull, tank.js)
     // (an aircraft: extra its altitude - shared/flight.js altByte; flags VF.ROTOR its engine turning)
     case K.VEH: if (e.def.kind === 'air') return [vehicles.vehFlags(world, e) | ((e.spool || 0) > 0.05 ? VF.ROTOR : 0), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | ((e.lightB | 0) << 24)) >>> 0, altByte(e.alt)];   // (the top byte: the police unit's searchlight - policeair.js lightByte)
-      return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | (e.def.turret ? tank.turretByte(e) << 24 : 0)) >>> 0, e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0];
+      return [vehicles.vehFlags(world, e), Math.max(0, e.hp / e.def.hp), (vehicles.vehDamageWord(world, e) | (e.def.turret ? tank.turretByte(e) << 24 : 0)) >>> 0, (e.towedBy ? (e.towEnd === -1 ? 2 : 1) | (e.towFrom ? 4 : 0) : 0) | (e.hitchTo ? 8 : 0) | (e.forkZ ? forkStage(e) << 4 : 0)];   // (bit 3: a trailer hitched to its tractor - rigs.js; the page keeps it on the fifth wheel; bits 4-5: a forklift's forks up - forklift.js)
     case K.CRATE: return [e.state === 'carried' ? 1 : e.state === 'loaded' ? 2 : 0, Math.min(1, e.z / 64), e.parent, e.slot];
     case K.BAG: return [bagBlinks(world, e) ? 1 : 0, 1, 0, bagWireTier(e)];   // flags 1: about to vanish (it blinks)
     case K.PROJ: return [0, 1, 0, e.altNow !== undefined ? altByte(e.altNow) : e.alt0 ? altByte(e.alt0 * Math.max(0, 1 - e.dist / e.maxDist)) : 0];   // (altNow: the SAM's missile climbing after an aircraft - combat.js stepMissile)   // (extra: a missile's height - the gunship's, gliding down from it to where it lands)

@@ -18,6 +18,7 @@ import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as station from './station.js';
 import * as taxijob from './taxijob.js';
+import * as truckjob from './truckjob.js';
 import * as phone from './phone.js';
 import * as gang from './gang.js';
 import * as cruiser from './cruiser.js';
@@ -28,6 +29,8 @@ import * as hotmoney from './hotmoney.js';
 import * as farming from './farming.js';
 
 import * as homeinside from './homeinside.js';
+import * as homeups from './homeups.js';
+import * as woodjob from './woodjob.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skate from './skate.js';
@@ -35,10 +38,12 @@ import * as casino from './casino.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
 import * as music from './music.js';
+import * as fireworks from './fireworks.js';   // (the fireworks and the Campfire Kit: shared/leisure.js registers them)
+import * as campfires from './campfires.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
-import { PIECES as DECOR_PIECES, KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
+import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
@@ -233,6 +238,7 @@ export function buildMenu(world, p, poi) {
     }
   }
   if (kind === 'hardware') opts.unshift({ id: 'furn', label: 'Furniture & decor for your home', note: 'sofas, lamps, rugs, a wall TV...' });   // (H67)
+  if (kind === 'hardware') opts.push({ id: 'job:wood', label: p.job ? 'Firewood orders - finish your job first' : 'Firewood orders: deliver bundles for pay', dis: !!p.job, note: 'a diner, a cafe, a camp...' });   // (woodjob.js)
   switch (kind) {
     case 'bank': case 'atm':
       title = kind === 'bank' ? 'First Pixel Bank' : 'ATM';
@@ -373,6 +379,7 @@ export function buildMenu(world, p, poi) {
     case 'warehouse':
       sub = 'Haul a crate to a storefront. Cargo is visible - keep it safe from ambushes.';
       opts.push({ id: 'job:courier', label: p.job ? 'You already have a job' : 'Take a courier contract', dis: !!p.job });
+      if (!p.job && truckjob.interaction(world, p)) opts.push({ id: 'haulcard', label: 'Trucker: a long haul in a big rig', note: 'a rig and a trailer of crates', shut: true });   // (b8a: truckjob.js)
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
       break;
     case 'farm':
@@ -402,7 +409,7 @@ export function buildMenu(world, p, poi) {
       const b = trains.stationBoard(world, poi);
       title = b.title; sub = b.sub;
       // the station's taxi rank (UI-4): its prompt is the station's, so the cab's job card is offered from here
-      if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'the rank issues a cab', shut: true });
+      if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'a cab - or a Crazy Taxi run', shut: true });
       opts.push({ id: 'close', label: 'OK' });
       break;
     }
@@ -515,6 +522,7 @@ export function openMenu(world, p, poi) {
 
 export function handleMenu(world, p, poiId, optId) {
   if (biz.isBizPoi(poiId)) { biz.onMenu(world, p, poiId, String(optId || '')); return; }   // (a business's own menu: biz.js)
+  if (homeups.onMenu(world, p, poiId, String(optId || ''))) return;   // (your garage, the home's upgrades: homeups.js)
   if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)
   const poi = world.map.pois[poiId];
@@ -543,6 +551,7 @@ function execute(world, p, poi, opt) {
   switch (parts[0]) {
     case 'close': return null;
     case 'biz': return biz.openFrom(world, p, poi);   // (the manager's office: biz.js)
+    case 'haulcard': { const it = truckjob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'cabcard': { const it = taxijob.interaction(world, p); if (!it) return 'Not right now.'; if (!phone.offerCard(world, p, it.card)) it.run(); return null; }
     case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
@@ -833,6 +842,7 @@ function execute(world, p, poi, opt) {
       if (parts[1] === 'quit') { jobs.failJob(world, p, 'Job abandoned.'); return null; }
       if (p.job) return 'Finish your current job first.';
       if (parts[1] === 'fieldwork' || parts[1] === 'combine') return farming.startWork(world, p, poi, parts[1] === 'combine' ? 'combine' : 'tractor');   // (the tractor, the combine on the fields: farming.js)
+      if (parts[1] === 'wood') return woodjob.start(world, p);   // (a firewood order: woodjob.js)
       return parts[1] === 'courier' ? jobs.startCourier(world, p, poi) : jobs.startFarm(world, p, poi);
     }
     default: return 'Unknown option.';
@@ -899,7 +909,7 @@ function heartyEnd(world) {
 // The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
 // usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
-export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music)); };
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music || it.fun)); };
 export function quickSlots(p) {
   const prof = p.profile;
   if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
@@ -937,6 +947,8 @@ export function useItem(world, p, id) {
   if (!ped || ped.dead || !it) return;
   if ((inv[id] || 0) <= 0) { world.notify(p, `No ${it.name} left.`, 'warn'); return; }
   if (it.light) { lights.use(world, p, id); return; }
+  if (it.fun === 'fw') { fireworks.use(world, p, id); return; }   // (a firework set down and lit: fireworks.js)
+  if (it.fun === 'camp') { campfires.build(world, p); return; }   // (a campfire of your own: campfires.js)
   if (it.music) { music.use(world, p, id); return; }   // (a boombox, a radio, a tape, the mat, an instrument: music.js)   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {

@@ -495,4 +495,101 @@ export function recordCrates(w = 32, d = 32, tier = 1) {
   void tier;
   return m;
 }
-export const MAKERS = { M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, G: prizeCounter, i: cinemaSeats, n: island, s: sectional, h: bathtub };
+// ---- the home upgrades' pieces (server/systems/homeups.js; shared/homeups.js ROOMS) -------------------------------------
+// the stairs between a home's floors (2 x 2 tiles): kind 1 a flight up to the back wall with its banister, 2 a stairwell
+// down - a railed opening, the steps dropping away into the dark, 3 both: the flight up beside the way down
+export function homeStairs(w = 64, d = 64, tier = 1, kind = 1) {
+  const P = L4(tier), m = new Vox(w, d, 58);
+  const tread = m.mat({ ramp: R(tier >= 2 ? '#8a5a3a' : '#8a8680'), k: 3, shade: (x, y) => (Math.round(y) % 8 < 1 ? -0.9 : 0) }), side = m.mat({ ramp: R(P.dark), k: 3 }), rail = m.mat({ ramp: R(P.wood), k: 3 });
+  const deep = [0.25, 0.4, 0.55, 0.72].map((k) => m.mat({ ramp: R(tier >= 2 ? '#6a4a32' : '#6a6862'), k: 2, shade: () => -2.2 * (1 - k) })), hole = m.mat({ ramp: R('#141416'), k: 2 });
+  const up = kind !== 2, down = kind >= 2, ux0 = kind === 3 ? w / 2 : 0;
+  if (up) {
+    for (let i = 0; i < 8; i++) m.box(ux0, d - (i + 1) * 8, 0, w - 6, d - i * 8, (i + 1) * 6, tread);
+    m.box(w - 6, 0, 0, w - 3, d, 10, side);
+    for (let i = 0; i < 8; i++) m.box(w - 5, d - (i + 1) * 8, 10, w - 3, d - (i + 1) * 8 + 2, (i + 1) * 6 + 12, rail);
+    m.box(w - 6, 0, 52, w - 2, d, 55, rail);
+  }
+  if (down) {
+    const x1 = kind === 3 ? w / 2 - 2 : w - 4;
+    m.box(3, 3, 0, x1, d - 3, 1, hole);
+    for (let i = 0; i < 4; i++) m.box(4, 6 + i * 12, 0, x1 - 1, 6 + i * 12 + 6, 1, deep[3 - i]);   // (the steps going down, darker the deeper)
+    for (const x of [2, x1]) { m.box(x, 2, 0, x + 2, d - 2, 2, side); for (let y = 4; y < d - 2; y += 14) m.box(x, y, 2, x + 2, y + 2, 22, rail); m.box(x, 2, 22, x + 2, d - 2, 24, rail); }
+    for (let x = 4; x < x1; x += 14) m.box(x, d - 4, 2, x + 2, d - 2, 22, rail);
+    m.box(2, d - 4, 22, x1 + 2, d - 2, 24, rail);
+  }
+  return m;
+}
+// a fireplace against the wall: the surround (brick, then stone, then marble by the tier), the hearth before it, the
+// dark firebox with logs laid in it, the mantelshelf with candlesticks and a clock (the flames: the page draws them lit)
+export function fireplace(w = 64, d = 32, tier = 1) {
+  const m = new Vox(w, d, 62);
+  const sur = m.mat({ ramp: tier >= 3 ? R('#e8e4dc') : tier >= 2 ? R('#a8a294') : MAT.brick, k: 3, shade: tier >= 3 ? (x, y, z) => (hash(Math.round(x / 3), Math.round(z / 3), 4) > 0.82 ? -0.4 : 0) : (x, y, z) => ((Math.round(z) % 6 === 0 || (Math.round(x) + (Math.floor(z / 6) % 2) * 4) % 8 === 0) ? -1 : 0) });
+  const hearth = m.mat({ ramp: R(tier >= 3 ? '#2a2a30' : '#7a7068'), k: 3 }), box = m.mat({ ramp: R('#1a1614'), k: 2 }), log = m.mat({ ramp: R('#6a4228'), k: 3, shade: grain(0.5) }), end = m.mat({ ramp: R('#d8b07a'), k: 3 });
+  const mant = m.mat({ ramp: R(tier >= 2 ? '#5a3424' : '#7a5c40'), k: 3, shade: grain(0.4) }), brass = m.mat({ ramp: R('#d8b050'), k: 4 }), wax = m.mat({ ramp: R('#f2ecd8'), k: 3 });
+  m.box(2, 2, 0, w - 2, d - 10, 50, sur);
+  m.box(0, d - 10, 0, w, d, 3, hearth);
+  m.box(14, d - 13, 3, w - 14, d - 10, 30, box); m.box(16, 4, 3, w - 16, d - 10, 28, box);
+  for (const [z, dx] of [[4, 0], [8, 4]]) { m.cyl('x', 0, d - 16, z + 2, 2.5, 18 + dx, w - 18 - dx, log); m.box(18 + dx, d - 18, z, 19 + dx, d - 14, z + 4, end); }
+  m.box(0, d - 14, 50, w, d - 8, 54, mant);
+  for (const x of [8, w - 10]) { m.box(x, d - 12, 54, x + 2, d - 10, 56, brass); m.box(x + 0.5, d - 12, 56, x + 1.5, d - 11, 62, wax); }
+  m.box(w / 2 - 4, d - 12, 54, w / 2 + 4, d - 9, 61, mant); m.box(w / 2 - 2, d - 9, 56, w / 2 + 2, d - 8, 60, wax);
+  return m;
+}
+// a hot tub: a wooden-sided tub (white acrylic in a mansion's), the water in it, the seats round it, a step up
+export function hotTub(w = 64, d = 64, tier = 2) {
+  const m = new Vox(w, d, 24);
+  const side = m.mat({ ramp: R(tier >= 3 ? '#e8e8e4' : '#8a5a34'), k: 3, shade: tier >= 3 ? null : (x, y) => (Math.round(x + y) % 6 === 0 ? -0.8 : 0) }), rim = m.mat({ ramp: R(tier >= 3 ? '#c8ccd2' : '#6a4228'), k: 3 });
+  const water = m.mat({ ramp: R('#5ab4d8'), k: 3, flag: F_GLASS, shade: (x, y) => (hash(Math.round(x / 3), Math.round(y / 3), 9) > 0.86 ? 0.8 : 0) }), seat = m.mat({ ramp: R(tier >= 3 ? '#d8dcde' : '#9ac8d8'), k: 3 });
+  m.box(2, 2, 0, w - 2, d - 2, 20, side); m.box(2, 2, 20, w - 2, d - 2, 22, rim);
+  m.box(6, 6, 6, w - 6, d - 6, 22, 0);
+  m.box(6, 6, 14, w - 6, d - 6, 15, water);
+  for (const [x0, y0, x1, y1] of [[6, 6, w - 6, 12], [6, 6, 12, d - 6], [w - 12, 6, w - 6, d - 6]]) m.box(x0, y0, 6, x1, y1, 13, seat);
+  m.box(w / 2 - 10, d - 2, 0, w / 2 + 10, d, 8, side);
+  return m;
+}
+// a home bar: the counter, its brass foot rail and a row of bottles and glasses on it, two stools in front
+export function homeBar(w = 64, d = 32, tier = 1) {
+  const P = L4(tier), m = new Vox(w, d, 46);
+  const front = m.mat({ ramp: R(tier >= 3 ? '#2a1a16' : P.wood), k: 3, shade: (x) => (Math.round(x) % 8 === 0 ? -0.9 : 0) }), top = m.mat({ ramp: R(tier >= 2 ? '#e8e4dc' : P.top), k: 4 }), brass = m.mat({ ramp: R('#d8b050'), k: 4 });
+  const seat = m.mat({ ramp: R(tier >= 2 ? '#7a1d24' : '#3a3a40'), k: 3 }), leg = m.mat({ ramp: MAT.chrome, k: 4 });
+  const bott = ['#3a7a3a', '#7a3a2a', '#c8a040', '#2a4a7a', '#e8e4dc'].map((c) => m.mat({ ramp: R(c), k: 4, flag: F_GLASS }));
+  m.box(1, 2, 0, w - 1, d - 12, 30, front); m.box(0, 1, 30, w, d - 10, 33, top);
+  m.box(2, d - 13, 4, w - 2, d - 12, 6, brass);
+  for (let k = 0; k < 6; k++) { const x = 6 + k * ((w - 12) / 6); m.box(x, 6, 33, x + 3, 9, 33 + (k % 2 ? 9 : 12), bott[k % bott.length]); }
+  for (const x of [w * 0.28, w * 0.72]) { m.cyl('z', x, d - 5, 0, 1, 0, 18, leg); m.cyl('z', x, d - 5, 0, 5, 18, 21, seat); }
+  return m;
+}
+// an exercise bike: its frame, the flywheel at the front, the saddle and the handlebars, a little screen
+export function exBike(w = 32, d = 32, tier = 1) {
+  const m = new Vox(w, d, 40);
+  const fr = m.mat({ ramp: R(tier >= 2 ? '#2a2a30' : '#5a6a7a'), k: 3 }), fly = m.mat({ ramp: MAT.chrome, k: 4 }), sad = m.mat({ ramp: R('#1a1a1e'), k: 3 }), scr = m.mat({ ramp: R('#3ad0e8'), k: 3, emi: [90, 220, 255, 90] }), red = m.mat({ ramp: R('#c83a2a'), k: 3 });
+  m.box(10, 4, 0, w - 10, 28, 3, fr);
+  m.cyl('x', 0, 9, 12, 8, w / 2 - 2, w / 2 + 2, fly);
+  m.box(w / 2 - 1.5, 9, 3, w / 2 + 1.5, 24, 6, fr);
+  m.box(w / 2 - 1.5, 22, 3, w / 2 + 1.5, 25, 26, fr); m.box(w / 2 - 4, 20, 26, w / 2 + 4, 28, 29, sad);
+  m.box(w / 2 - 1.5, 7, 6, w / 2 + 1.5, 10, 32, fr); m.box(w / 2 - 7, 6, 32, w / 2 + 7, 9, 34, red); m.box(w / 2 - 3, 9, 30, w / 2 + 3, 10, 35, scr);
+  return m;
+}
+// the storeroom's shelves: a steel rack, three shelves of boxes, blocks of stone and scrap
+export function shelves(w = 64, d = 32, tier = 1) {
+  const m = new Vox(w, d, 56);
+  const st = m.mat({ ramp: R('#6a727a'), k: 3 }), box = m.mat({ ramp: R('#b08a5a'), k: 3, shade: (x, y, z) => (Math.round(z) % 8 === 0 ? -0.6 : 0) }), stone = m.mat({ ramp: R('#a8a294'), k: 3 }), scrap = m.mat({ ramp: R('#7a5a44'), k: 3, shade: (x, y, z) => (hash(Math.round(x), Math.round(z), 5) > 0.7 ? 0.7 : 0) });
+  for (const x of [2, w - 4]) for (const y of [6, d - 4]) m.box(x, y, 0, x + 2, y + 2, 54, st);
+  for (const z of [2, 20, 38]) m.box(2, 6, z, w - 2, d - 2, z + 2, st);
+  for (let k = 0; k < 3; k++) { const z = 4 + k * 18; m.box(6, 9, z, 6 + 14, d - 5, z + 12, box); m.box(24, 10, z, 36, d - 5, z + 7, k === 1 ? scrap : stone); m.box(40, 9, z, w - 6, d - 5, z + (k === 2 ? 14 : 10), k ? box : stone); }
+  void tier;
+  return m;
+}
+// a woodpile: split logs stacked crosswise, their pale cut ends towards you
+export function woodpile(w = 32, d = 32, tier = 1) {
+  const m = new Vox(w, d, 30);
+  const bark = m.mat({ ramp: R('#5a3a24'), k: 3, shade: grain(0.6) }), end = m.mat({ ramp: R('#d8b07a'), k: 3, shade: (x, y, z) => (Math.round(Math.hypot(x % 7 - 3.5, z % 7 - 3.5)) % 2 ? -0.4 : 0) });
+  for (let row = 0; row < 4; row++) for (let k = 0; k < 4 - (row > 2 ? 1 : 0); k++) {
+    const x = 3 + k * 7 + (row % 2) * 3, z = 3 + row * 6.5;
+    if (x + 6 > w - 1) continue;
+    m.cyl('y', x + 3, 0, z, 3.3, 6, d - 3, bark); m.cyl('y', x + 3, 0, z, 2.6, d - 3, d - 1, end);
+  }
+  void tier;
+  return m;
+}
+export const MAKERS = { '^': homeStairs, p: fireplace, '%': hotTub, m: homeBar, e: exBike, z: shelves, '&': woodpile, M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, G: prizeCounter, i: cinemaSeats, n: island, s: sectional, h: bathtub };

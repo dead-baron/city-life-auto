@@ -25,7 +25,7 @@ const stand = (p, tx, ty, a) => { p.ped.home.x = (tx + 0.5) * TILE_IN; p.ped.hom
 const pick = (w, p, conn, id) => { const m = lastMenu(conn); assert.ok(m.opts.some((o) => o.id === id && !o.dis), `${id} not in ${m.title}: ${m.opts.map((o) => o.id + (o.dis ? '(x ' + o.note + ')' : '')).join(' ')}`); economy.handleMenu(w, p, m.poi, id); };
 
 test('every piece has a price and a footprint; the house rule lets things in the open and keeps the doors and the bed clear', () => {
-  for (const k of KINDS) { assert.ok(DECOR.price[k] > 0, `${k}: price`); assert.ok(PIECES[k].w >= 1 && PIECES[k].h >= 1); }
+  for (const k of KINDS) { assert.ok(DECOR.price[k] > 0 || PIECES[k].am || PIECES[k].craft, `${k}: price (or an amenity, or made at the workbench: homeups.js)`); assert.ok(PIECES[k].w >= 1 && PIECES[k].h >= 1); }
   assert.deepEqual(dims('couch', 1), [1, 2], 'turned, a sofa is the other way round');
   const L = layout('house', 2), none = { it: [] };
   assert.equal(canPlace(L, none, { k: 'couch', tx: 7, ty: 6, r: 0 }), null, 'a sofa in the hall');

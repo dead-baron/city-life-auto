@@ -57,6 +57,8 @@ import * as rides from './systems/rides.js';
 import * as foraging from './systems/foraging.js';
 import * as hunting from './systems/hunting.js';
 import * as campfires from './systems/campfires.js';
+import * as chess from './systems/chess.js';
+import * as fireworks from './systems/fireworks.js';
 import * as lights from './systems/lights.js';
 import * as music from './systems/music.js';
 import * as felling from './systems/felling.js';
@@ -104,6 +106,13 @@ import * as paramedic from './systems/paramedic.js';
 import * as taxijob from './systems/taxijob.js';
 import * as busjob from './systems/busjob.js';
 import * as towjob from './systems/towjob.js';
+import * as rigs from './systems/rigs.js';
+import * as crazytaxi from './systems/crazytaxi.js';
+import * as truckjob from './systems/truckjob.js';
+import * as mailjob from './systems/mailjob.js';
+import * as forklift from './systems/forklift.js';
+import * as fishboat from './systems/fishboat.js';
+import * as rangerjob from './systems/rangerjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 
@@ -157,6 +166,7 @@ const SYSTEMS = [
   ['vehicles', vehicles.update],    // vehicle physics + collisions + ped hits
   ['carsoccerBall', carsoccer.after], // car soccer: the giant ball after the cars have moved, the goals; the arena's state to the pages
   ['tow', tow.update],              // the tow service: trucks for wrecks and cars left blocking a lane; the towed hung behind them
+  ['rigs', rigs.update],            // the big rigs' trailers dragged along behind their tractors (b8a)
   ['spikes', spikes.update],        // police spike strips: shredded tyres
   ['props', props.update],          // smashable street furniture, hydrant geysers, tidy-up
   ['barriers', barriers.update],    // smashed highway barriers: the road crew puts them back
@@ -170,7 +180,9 @@ const SYSTEMS = [
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['foraging', foraging.update],    // picked mushroom spots and tidepool stars growing back
   ['hunting', hunting.update],      // field-dressing game, cooking over the fire
-  ['campfires', campfires.update],  // fires lit and put out, warming up by one
+  ['campfires', campfires.update],  // fires lit and put out, warming up by one; the players' own campfires
+  ['fireworks', fireworks.update],  // fireworks going off (fireworks.js)
+  ['chess', chess.update],          // the park's chess games, the regular's thinking (chess.js)
   ['lights', lights.update],        // lights to carry: batteries running down, flares and glow sticks burning out
   ['music', music.update],          // boomboxes, radios, the car radio, performances and their crowds (music.js)
   ['felling', felling.update],      // cutting trees, the falls, the logs, the stumps growing back
@@ -207,6 +219,12 @@ const SYSTEMS = [
   ['taxijob', taxijob.update],      // taxi drivers' fares: hailing, aboard, the meter, the tip (H72)
   ['busjob', busjob.update],        // bus drivers' lines: the stops, the passengers on and off, the timetable (H72)
   ['towjob', towjob.update],        // tow truck drivers' calls: backed up to, hooked, towed to the impound (H72)
+  ['crazytaxi', crazytaxi.update],  // Crazy Taxi runs: the clock, the fares waving, the tips (b8a)
+  ['truckjob', truckjob.update],    // truckers' hauls: the load, its knocks, the buyer (b8a)
+  ['mailjob', mailjob.update],      // mail carriers' rounds (b8a)
+  ['forklift', forklift.update],    // forklift drivers: the forks up and down, the pallets on them, the bays (batch 8)
+  ['fishboat', fishboat.update],    // fishing boat skippers: the net trawled, the pots hauled, the boxes on deck (batch 8)
+  ['rangerjob', rangerjob.update],  // park rangers' tasks: the trail, the litter, a campfire left burning, a lost hiker (batch 8)
   ['devplay', devplay.update],      // the debug menu's staged bits on a timer: the head-on cart crash's carts setting off (devplay.js)
   ['cinefollow', cinefollow.update], // the cinematic mode's follow scenes: who the camera's on, its own actors - last, so it sees
                                     // what every other system did this tick (a subject taken away: off them before it's sent)
