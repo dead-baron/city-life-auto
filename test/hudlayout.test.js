@@ -147,22 +147,25 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   // nothing of the HUD above the safe area's top (a notch, a centred or a corner punch-hole: 412x892 is played with one)
   // nor in the top-centre band where a centred camera sits even on a phone that doesn't say so (the middle 20%, the top
   // 48 px - or the safe area and a little). UI-8 (the owner, 2026-10-30: upright "health and stamina in a strange
-  // location and time just off to the side of the minimap"): the vitals at the minimap's foot, its width, upright (beside
-  // it on a screen wider than tall); the clock a small chip beside the cash on every screen
+  // location and time just off to the side of the minimap"; his concepts U1-U4): health and stamina in one plate with the
+  // cash, top right; the clock's plate above the minimap upright, beside it on a wider screen
   const cam = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, top = r.sc.cam || 0, tag = `${w}x${h} ${dev} ${st}`;
     const mm = r.keep.find((k) => k.name === 'minimap');
     const hud = [...r.keep.filter((k) => HUDKEEP.includes(k.name) || k.name.startsWith('b-')), ...r.read];
     for (const k of [...hud, ...r.keep.filter((q) => q.name.startsWith('tb.'))]) if (k !== mm && on(k, mm)) cam.push(`${tag}: ${k.name} on the minimap (${k.x0},${k.y0}-${k.x1},${k.y1})`);
-    // the clock: a small chip on the cash's row, left of it (on a phone on its side it steps aside while a bar has the top)
+    // the clock's plate (U2, U4): above the minimap upright, beside it (at its top) on a wider screen
     {
-      const ck = r.keep.find((k) => k.name === 'rclock'), mo = r.keep.find((k) => k.name === 'money');
-      if (ck && (ck.x1 > mo.x0 || Math.abs((ck.y0 + ck.y1) / 2 - (mo.y0 + mo.y1) / 2) > 6 || ck.y1 - ck.y0 > 26)) cam.push(`${tag}: the clock isn't a small chip beside the cash ${JSON.stringify(ck)}`);
-      if (!ck && !(dev === 'touch' && w > h && ['rob', 'custody'].includes(st))) cam.push(`${tag}: no clock`);
+      const ck = r.keep.find((k) => k.name === 'rclock');
+      if (!ck) cam.push(`${tag}: no clock`);
+      else if (h > w ? ck.x0 !== mm.x0 || ck.y1 > mm.y0 : ck.x0 < mm.x1 || ck.y0 > mm.y0 + 12) cam.push(`${tag}: the clock isn't ${h > w ? 'above' : 'beside'} the minimap ${JSON.stringify(ck)}`);
     }
-    const v = r.keep.find((k) => k.name === 'vitals');
-    if (h > w ? !v || v.x0 !== mm.x0 || v.y0 < mm.y1 || v.y0 > mm.y1 + 12 || Math.abs((v.x1 - v.x0) - (mm.x1 - mm.x0)) > 2 : !v || v.x0 < mm.x1 || v.y1 > mm.y1 + 4) cam.push(`${tag}: the vitals aren't ${h > w ? "at the minimap's foot" : 'beside the minimap'} ${JSON.stringify(v)}`);
+    // health and stamina with the cash, one plate top right (U1-U4): the vitals over the cash, both at the right edge
+    {
+      const v = r.keep.find((k) => k.name === 'vitals'), mo = r.keep.find((k) => k.name === 'money');
+      if (!v || !mo || v.y1 > mo.y0 + 2 || w - v.x1 > 200 || w - mo.x1 > 200 || v.y0 > 160 + (r.sc.cam || 0)) cam.push(`${tag}: the vitals aren't with the cash top right ${JSON.stringify([v, mo])}`);
+    }
     if (dev !== 'touch' || h < w) continue;
     const band = { x0: w * 0.4, x1: w * 0.6, y0: -99, y1: Math.max(48, top + 8) };
     for (const k of [mm, ...hud]) {

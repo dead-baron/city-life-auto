@@ -83,7 +83,7 @@ if (sc.st === 'air') b.classList.add('in-air');
 if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
-const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
+const glyph = sc.dev === 'touch' ? '<span class="g-touch g-ico" role="img" aria-label="ACT"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
 const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
 if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
 // (the HUD's own markup for the status line, the job card and the hint strip: client/hudinfo.js; the notes as hud.js

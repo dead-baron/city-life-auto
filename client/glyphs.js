@@ -1,9 +1,10 @@
 // Device-aware button hints: the server speaks in keyboard keys ("E: Buy coffee", "press E"),
 // the client shows whatever the player is actually holding: a key cap, an Xbox-style face
-// button, or the label of the on-screen touch button (which also pulses).
+// button, or the on-screen touch button's icon (the button also pulses).
 import { input } from './input.js';
 
 import { KEY_ACTION, PAD, TOUCH, KB } from '../shared/controls.js';
+import { iconOf, svg } from './touchicons.js';
 
 export function actionOfKey(k) { return KEY_ACTION[String(k).toUpperCase()] || null; }
 
@@ -11,7 +12,7 @@ export function actionOfKey(k) { return KEY_ACTION[String(k).toUpperCase()] || n
 export function glyph(action) {
   const d = input.device;
   if (d === 'gamepad') { const [t, c] = PAD[action] || ['?', 'sys']; return `<span class="g-pad g-${c}">${t}</span>`; }
-  if (d === 'touch') return `<span class="g-touch">${TOUCH[action] || action.toUpperCase()}</span>`;
+  if (d === 'touch') { const n = TOUCH[action] || action.toUpperCase(); return `<span class="g-touch g-ico" role="img" aria-label="${n}">${svg(iconOf(action, n))}</span>`; }   // (the button as it looks: its icon - the buttons carry no words since UI-8)
   return `<span class="g-key">${KB[action] || action.toUpperCase()}</span>`;
 }
 // plain-text name (for toasts)

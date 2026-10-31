@@ -19,6 +19,7 @@ import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { KB, PAD, TOUCH } from '../shared/controls.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 import { input } from './input.js';
+import { iconOf, svg as iconSvg } from './touchicons.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -101,7 +102,7 @@ export function hintStrip(state, dev) {
   const touchName = (a) => { for (const k in slots) if (slots[k][0] === a) return slots[k][1]; return TOUCH[a] || a.toUpperCase(); };
   // (on touch the move stick goes without saying in a vehicle or on a board: the slots' own names, what each does)
   const L = dev === 'touch' && ['drive', 'air', 'horse', 'boat', 'board'].includes(state) ? list.filter(([a]) => a !== 'move') : list;
-  return L.map(([a, w]) => [dev === 'pad' ? (PAD[a] || [a.toUpperCase()])[0] : dev === 'touch' ? (a === 'move' ? 'LEFT THUMB' : touchName(a)) : (KB[a] || a.toUpperCase()), w, kind]);
+  return L.map(([a, w]) => [dev === 'pad' ? (PAD[a] || [a.toUpperCase()])[0] : dev === 'touch' ? (a === 'move' ? 'LEFT THUMB' : touchName(a)) : (KB[a] || a.toUpperCase()), w, kind, a]);   // (the action: on touch the chip is the button's own icon - UI-8)
 }
 // how many times each strip has shown, per character, on this device (localStorage - a convenience: none in a private
 // window, and the strips just show again)
@@ -117,7 +118,11 @@ export function hintSeen(store, pid, state) {
     store.setItem(HKEY, JSON.stringify(v));
   } catch { /* storage blocked */ }
 }
-export const hintHtml = (list) => list.map(([g, w, k]) => `<span class="hint"><span class="${k === 'pad' ? 'g-pad g-sys' : k === 'touch' ? 'g-touch' : 'g-key'}">${esc(g)}</span>${esc(w)}</span>`).join('');
+// (on touch the chip is the button as it looks - its icon in a round plate, the name for a screen reader - the buttons
+// carry no words since UI-8; the left thumb keeps its words)
+export const hintHtml = (list) => list.map(([g, w, k, a]) => k === 'touch' && a && a !== 'move'
+  ? `<span class="hint"><span class="g-touch g-ico" role="img" aria-label="${esc(g)}">${iconSvg(iconOf(a, g))}</span>${esc(w)}</span>`
+  : `<span class="hint"><span class="${k === 'pad' ? 'g-pad g-sys' : k === 'touch' ? 'g-touch' : 'g-key'}">${esc(g)}</span>${esc(w)}</span>`).join('');
 const dev = () => (input.device === 'gamepad' ? 'pad' : input.device === 'touch' ? 'touch' : 'kbm');
 let store = null;
 try { store = globalThis.localStorage || null; } catch { store = null; }
