@@ -54,7 +54,7 @@ test('every vehicle carries crates: bikes and jet skis one, trucks a few, work t
   assert.ok(VEHICLES.armored.slots.length > VEHICLES.flatbed.slots.length, 'armored: a lot');
   // slots sit on the vehicle, and crates on them don't overlap
   for (const [id, d] of Object.entries(VEHICLES)) {
-    for (const [f, r] of d.slots) assert.ok(Math.abs(f) <= d.L / 2 && Math.abs(r) <= d.W / 2, `${id} slot on the body`);
+    for (const [f, r] of d.slots) assert.ok((id === 'forklift' ? f <= d.L / 2 + 16 : Math.abs(f) <= d.L / 2) && Math.abs(r) <= d.W / 2, `${id} slot on the body`);   // (but the forklift: its slot is the forks, out in front)
   }
 });
 
