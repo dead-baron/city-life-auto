@@ -185,7 +185,7 @@ body:not(.portrait) #radar-wrap { grid-area: 1 / 1 / 3 / 2; }
 body:not(.portrait) #rclock { grid-area: 1 / 2; margin-bottom: 0; }
 body:not(.portrait) #b-dev { grid-area: 1 / 3; position: relative; left: auto; top: auto; }
 body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
-.touch:not(.portrait) #status { max-width: 180px; }
+.touch:not(.portrait) #status { max-width: min(300px, 40vw); }
 #hud-tr { position: absolute; right: var(--sr); top: var(--st); display: flex; flex-direction: column; align-items: flex-end; gap: var(--s1); text-align: right; }
 #hud-tr > #hud-btns { margin-bottom: 2px; }
 /* (a short screen - a phone on its side, as U3; a low window: the buttons beside the plate, the vehicle's readouts under
