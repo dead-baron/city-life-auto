@@ -14,9 +14,9 @@ import { T, TILE } from '../shared/constants.js';
 import { teleportPlaces } from './devtp.js';
 
 // its look (moved here from client/style.css, 2026-10-24: only a page that spectates loads it), on the game's tokens
-const CSS = `body.spectating #hud > :not(#toasts), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
+const CSS = `body.spectating #hud > :not(#hud-tl), body.spectating #hud-tl > :not(#toasts, #hud-msg), body.spectating #touch, body.spectating #interior, body.spectating #wheel, body.spectating #death, body.spectating #menu { display: none !important; }
 body.spectating #hud-msg { display: contents; }
-body.spectating #toasts { position: absolute; left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
+body.spectating #toasts { position: fixed !important; left: auto !important; right: 12px; top: auto !important; bottom: 12px; margin: 0 !important; width: min(360px, 60vw) !important; z-index: 16; }
 body.spectating #view { filter: none !important; cursor: grab; }
 #spec-pad { position: absolute; inset: 0; z-index: 10; touch-action: none; cursor: grab; }
 #spec-pad.drag { cursor: grabbing; }

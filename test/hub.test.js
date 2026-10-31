@@ -14,10 +14,13 @@ const read = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
 const HTML = read('index.html'), MAIN = read('client/main.js');
 const hubHtml = HTML.slice(HTML.indexOf('<div id="hub"'), HTML.indexOf('<div id="install"'));
 
-test('the HUD row is MENU · PHONE · MAP, and the hub has RESUME first, then its five tabs, each one of the panels', () => {
+test('the HUD row is PHONE · MAP · MENU as icons, and the hub has RESUME first, then its five tabs, each one of the panels', () => {
   const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
-  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-menu', 'b-phone', 'b-map', 'b-dev'], 'three labelled buttons and the debug button (the owner wants it on the HUD), no more round ones');
-  assert.deepEqual([...row.matchAll(/<\/svg>([A-Z]+)<span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['MENU ESC', 'PHONE P', 'MAP M'], 'labelled, the keys on a keyboard');
+  // (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work")
+  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-phone', 'b-map', 'b-menu'], 'three buttons, the menu in the corner');
+  assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><svg[^]*?<\/svg><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone P', 'Map M', 'Menu ESC'], 'icons, named for a screen reader and a tooltip, the keys on a keyboard');
+  assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');
+  assert.match(HTML, /<button id="b-dev"[^>]*aria-label="Debug menu"/, 'and the debug button (the owner wants it on the HUD), apart');
   for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
   assert.ok(bar.indexOf('id="hub-resume"') < bar.indexOf('id="hub-tabs"'), 'RESUME first');

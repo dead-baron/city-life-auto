@@ -83,7 +83,7 @@ if (sc.st === 'air') b.classList.add('in-air');
 if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
-const glyph = sc.dev === 'touch' ? '<span class="g-touch">ACT</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
+const glyph = sc.dev === 'touch' ? '<span class="g-touch g-ico" role="img" aria-label="ACT"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
 const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
 if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
 // (the HUD's own markup for the status line, the job card and the hint strip: client/hudinfo.js; the notes as hud.js
@@ -130,7 +130,7 @@ function measure() {
   for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id)) && !(id === 'weapon' && sc.dev === 'touch')) keep.push(box($(id), id));
   // (on touch the weapon plate is a slot, the weapon button: UI-6)
   if (sc.dev === 'touch' && shown($('weapon'))) keep.push({ ...box($('weapon'), 'tb.nextw'), slot: $('weapon').dataset.slot, label: $('weapon').dataset.lbl });
-  document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
+  document.querySelectorAll('#hud-btns button, #b-dev').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), name2: el.getAttribute('aria-label'), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
@@ -182,7 +182,7 @@ const stick = (name, dx, dy) => { const [x, y, r] = mid('stick'); ev('touchstart
 stick('aim', 0, 0.5);
 stick('ring', -0.8, -0.8);
 el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE OFF
-out.toggle = { on: settings.touchEdgeFire, label: el('firetog').textContent };
+out.toggle = { on: settings.touchEdgeFire, label: el('firetog').getAttribute('aria-label') };   // (an icon button: its name)
 stick('ringOff', -0.8, -0.8);
 el('firetog').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));   // FIRE ON again
 // FIRE tapped with the stick held: where the stick aims

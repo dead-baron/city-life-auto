@@ -133,7 +133,7 @@ function initTouch(hooks) {
   });
   // the FIRE ON toggle (a utility slot, off the stick's ring): the ring fires or not (settings.touchEdgeFire)
   const ft = document.getElementById('firetog');
-  input.showFireToggle = () => { const on = !!settings.touchEdgeFire, l = `FIRE ${on ? 'ON' : 'OFF'}`; ft.classList.toggle('lit', on); ft.dataset.lbl = l; (ft.querySelector('.l') || ft).textContent = l; };
+  input.showFireToggle = () => { const on = !!settings.touchEdgeFire, l = `FIRE ${on ? 'ON' : 'OFF'}`; ft.classList.toggle('lit', on); ft.setAttribute('aria-label', l); const t = ft.querySelector('.l'); if (t) t.textContent = l; };   // (an icon button since UI-8: lit when on; the words its name)
   input.showFireToggle();
   for (const b of document.querySelectorAll('#tbtns button[data-b]')) {
     const name = b.dataset.b;

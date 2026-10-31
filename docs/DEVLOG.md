@@ -18586,3 +18586,79 @@ hub (the bag's Materials category). Run with the home, felling, garden, lobby, r
 sound, HUD (hudlayout, touchslots, hub, hudinfo), jobs and perf tests: all pass.
 
 Merging batch 8 (2026-10-30): 8a and 8b both claimed bit 3 of a vehicle's extra byte (the rig's hitched trailer, the forklift's forks). The forks moved to bits 4-5 (net.js, host.js, forklift.js); the bag's categories now carry both Outdoors & fun (8c) and Materials (8d).
+
+## 2026-10-30 - UI-8: the HUD after the owner's concepts (U1-U4, U17) - icon-only round touch buttons, health, stamina and cash in one plate, the clock's plate by the minimap
+
+The owner, on his Pixel 7 Pro, said:
+- "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work";
+- "On portrait mode on phone we can make it look better and more compact instead of having the health and stamina in
+  a strange location and time just off to the side of the minimap";
+- "review the UI and UX as a professional ... a cleaner and more intuitive UI and UX design that makes the game look
+  and feel polished and finalized. Right now it's just awkward and feels like a placeholder";
+- then: "do we need the actual text with those buttons? ... use our UI concepts for visual direction".
+
+The concepts are docs/art-v2/targets U1 (HUD and pause), U2-A/B (desktop HUD), U3 (phone on its side), U4 (phone
+upright) and U17 (prompts and markers). This pass brings the HUD and the touch controls to them.
+
+### What was wrong (the review)
+- **Placement.** The top had four places, not two corners. The vitals floated beside the minimap, away from the cash.
+  The clock sat off to the side. A row of wide labelled buttons ran across the top; upright it was a full-width row
+  under the minimap.
+- **Touch buttons with words.** Every touch button carried a word (LIGHT, FIRE ON, ITEMS, THROW...), and the small
+  switches were as big as the action buttons.
+- **Placement by arithmetic.** Upright, everything was placed by adding up offsets, so one thing appearing pushed the
+  rest into odd spots.
+- **Too much standing information.** Two lines of status chips on a desktop never changed mid-play.
+
+### The new HUD (index.html, client/style.css "the HUD (UI-8)")
+- **Two corners, each one column** (`#hud-tl`, `#hud-tr`). Nothing is positioned by adding up offsets any more.
+- **Top left, where you are (U2, U4):**
+  - the clock's plate: the sun or the moon, the time, rain. It sits above the minimap upright and beside it on a wider
+    screen.
+  - the minimap in a steel-blue ring.
+  - the status chips: only what's happening now.
+  - a bar while one is up: a robbery, a ride, custody. On a phone it sits here in the column, and on a desktop top
+    centre.
+  - the job card.
+  - on a phone, the newest note.
+- **Top right, how you are and what you have (U1-U4):**
+  - the round icon buttons: phone, map, and the menu in the corner. They have no words; each is named for screen
+    readers and has a tooltip. On a keyboard the key's badge (P, M, Esc) sits on the corner.
+  - one plate holding health and stamina (each with its icon, bar and number), and under a hairline the cash (the bank
+    too on a desktop).
+  - then the stars, the vehicle chip and what you hold.
+  - On a phone on its side or a short window (U3), the buttons sit beside the plate and the vehicle's readouts under
+    them.
+- **One look for every plate:** dark navy, a thin gold rim, an ink line round it, a soft shadow (`--plate`,
+  `--plate-rim`). It covers the clock, the status chips, the job card, the vehicle chip, the weapon plate and the
+  buttons.
+- **The debug button** sits quietly beside the minimap, apart from the game's own buttons.
+- **The status shows only what's happening to you now**, on a desktop too. The standing numbers (Samaritan, Criminal
+  XP, felonies on record) moved to a Standing card at the top of the phone's Skills app.
+
+### The touch controls (U3)
+- **Round icon buttons:** dark navy, a thin gold rim, the icon alone. The words live in the button's aria-label and
+  the first-time hint strips.
+- **FIRE / HIT** has a red rim and a red icon; **ACT** a gold rim and a gold icon. ACT still lights green (red for a
+  crime) when it has something to do.
+- **The switches are smaller and quieter** (the light, FIRE ON, the bag, and the context buttons such as reload, horn
+  and siren): 42-46 px at a 390 px phone, 44 px at the least once scaled (client/touchslots.js GEO). A switch that's on
+  lights up (the light gold, FIRE ON red).
+- **The aim stick's AIM · PUNCH words are gone.**
+- **The same icons elsewhere.** A touch button named in the prompt, the hint strips or a cue (STRIKE!) shows as the
+  button looks: its icon on a round plate (client/glyphs.js, client/hudinfo.js hintHtml). The icons moved to
+  client/touchicons.js, shared by the buttons and the strips.
+
+### The hub upright
+It no longer repeats the tab's name beside RESUME, and the tab labels are a size smaller, so SETTINGS fits.
+
+### Tests
+- **test/hudlayout.test.js**:
+  - the HUD's buttons: phone, map, menu as icons, named, square, in the top-right corner; keys' badges on a keyboard
+    only; the debug button beside the minimap.
+  - the clock's plate is above the minimap upright and beside it otherwise.
+  - health and stamina are over the cash in the top-right plate.
+- **test/hudpage.js** measures the debug button and the buttons' names, and draws the touch prompt chip as an icon.
+- **test/hub.test.js** checks the row's markup.
+- **Tokens:** the new colours are named in `:root`.
+- **Spectating:** client/spectator.js follows the new columns.
