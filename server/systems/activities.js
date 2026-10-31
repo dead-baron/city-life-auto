@@ -77,6 +77,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   stoop: { day: 0.18, night: 0.45, cap: 2 },
   party: { day: 0.08, night: 0.55, cap: 1 },
   roadcrew: { day: 0.9, night: 0, cap: 1 },
+  site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
   dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };

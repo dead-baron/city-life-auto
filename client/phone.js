@@ -9,6 +9,7 @@ import { DISTRICTS } from '../shared/mapcore.js';
 import { TILE } from '../shared/constants.js';
 import { jobCardHtml } from './jobcard.js';
 import { noteLog, clearLog } from './notelog.js';
+const LISTED = new Set(['patrol', 'fire', 'medic', 'drive', 'delivery', 'mail', 'farm']);   // (the job list's own sections; the rest under Work)
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 
@@ -135,8 +136,9 @@ export function createPhone(ctx) {
         + (ctx.isCop() ? sec('Patrol calls', J.filter((j) => j.kind === 'patrol')) : '')
         + sec('Emergency services', J.filter((j) => j.kind === 'fire' || j.kind === 'medic'))
         + sec('Driving', J.filter((j) => j.kind === 'drive'))
-        + sec('Deliveries', J.filter((j) => j.kind === 'delivery'))
+        + sec('Deliveries', J.filter((j) => j.kind === 'delivery' || j.kind === 'mail'))
         + sec('Farm', J.filter((j) => j.kind === 'farm'))
+        + sec('Work', J.filter((j) => !j.fly && !LISTED.has(j.kind)))   // (the forklift, the fishing boat, the ranger, a firewood order - and any new kind)
         + sec('Flying and boats', J.filter((j) => j.fly));
     }
     wire(el);
