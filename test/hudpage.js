@@ -130,7 +130,7 @@ function measure() {
   for (const id of ['weapon', 'money', 'bank', 'vchip', 'stars', 'clock']) if (shown($(id)) && !(id === 'weapon' && sc.dev === 'touch')) keep.push(box($(id), id));
   // (on touch the weapon plate is a slot, the weapon button: UI-6)
   if (sc.dev === 'touch' && shown($('weapon'))) keep.push({ ...box($('weapon'), 'tb.nextw'), slot: $('weapon').dataset.slot, label: $('weapon').dataset.lbl });
-  document.querySelectorAll('#hud-btns button').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), key: k && shown(k) ? k.textContent : '' }); } });
+  document.querySelectorAll('#hud-btns button, #b-dev').forEach((el) => { if (shown(el)) { const k = el.querySelector('.kchip'); keep.push({ ...box(el, el.id), label: [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').trim(), name2: el.getAttribute('aria-label'), key: k && shown(k) ? k.textContent : '' }); } });
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));

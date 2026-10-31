@@ -2,7 +2,8 @@
 // as necessary but not linger and take up visual real estate"). Loaded with the HUD (client/hud.js starts it as the
 // game opens), out of the page's first load. What it keeps:
 //   - the vitals' numbers, and the status line in plain words: who you are (the faction chip), Samaritan, Criminal XP,
-//     what's on your record, what's wearing off (a phone shows only what's happening to you now);
+//     what's on your record, what's wearing off (the HUD shows only what's happening to you now - UI-8: the standing
+//     numbers are in the phone's Skills);
 //   - progressive disclosure: the stars only while you're wanted (and a few seconds after), the weapon plate small
 //     with your fists out and nothing going on, gone on a phone when there's nothing to switch to;
 //   - the job card under the minimap: the job, the call it's on, step N of M, the objective, how far, the time left -

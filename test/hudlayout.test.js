@@ -66,24 +66,34 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   for (const s of ['390x844', '412x892', '844x390', '740x360']) assert.ok(wsz.has(s), `the weapon button measured at ${s}`);
   assert.deepEqual(wpn, [], wpn.slice(0, 30).join('\n'));
   assert.deepEqual(ctl, [], ctl.slice(0, 30).join('\n'));
-  // the HUD row (UI-3): MENU · PHONE · MAP, labelled, nothing else; 44 px on touch; the keys on a keyboard (Esc / P / M),
-  // none on a pad or a phone; side by side, not on each other; upright, in the top band and clear of the middle
+  // the HUD's buttons (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon
+  // should work"): phone, map and the menu - icons, no words (each named for a screen reader and a tooltip), the keys'
+  // badges on a keyboard (P / M / Esc), none on a pad or a phone; square, 44 px or more on touch, side by side in the
+  // top-right corner, the menu in the corner; the debug button apart from them, quiet beside the minimap
   const row = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, tag = `${w}x${h} ${dev} ${st}`, bs = r.keep.filter((k) => k.name.startsWith('b-'));
-    // (plus the icon-only debug button after MAP, which the owner wants on the HUD; hidden in a tiny keyboard or pad window)
-    const lab = bs.filter((b) => b.name !== 'b-dev'), dbg = bs.length - lab.length;
-    if (lab.map((b) => b.name).join() !== 'b-menu,b-phone,b-map' || (dbg && bs[bs.length - 1].name !== 'b-dev')) { row.push(`${tag}: the row is ${bs.map((b) => b.name)}`); continue; }
-    if (!dbg && !(dev !== 'touch' && h <= 430 && w <= 800)) row.push(`${tag}: no debug button`);
-    if (lab.map((b) => b.label).join() !== 'MENU,PHONE,MAP') row.push(`${tag}: labels ${lab.map((b) => b.label)}`);
-    const keys = lab.map((b) => b.key).join();
-    if (dev === 'kbm' ? keys !== 'ESC,P,M' : keys !== ',,') row.push(`${tag}: key badges ${keys}`);
+    const nav = bs.filter((b) => b.name !== 'b-dev'), dbg = bs.find((b) => b.name === 'b-dev');
+    if (nav.map((b) => b.name).join() !== 'b-phone,b-map,b-menu') { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
+    if (!dbg) row.push(`${tag}: no debug button`);
+    if (nav.some((b) => b.label)) row.push(`${tag}: words on the buttons ${nav.map((b) => b.label)}`);
+    if (nav.map((b) => b.name2).join() !== 'Phone,Map,Menu') row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
+    const keys = nav.map((b) => b.key).join();
+    if (dev === 'kbm' ? keys !== 'P,M,ESC' : keys !== ',,') row.push(`${tag}: key badges ${keys}`);
+    const m = nav[2];
+    if (w - m.x1 > 30 || m.y0 > 30 + (r.sc.cam || 0)) row.push(`${tag}: the menu isn't in the top-right corner (${m.x0},${m.y0}-${m.x1},${m.y1})`);
+    for (const [i, a] of nav.entries()) {
+      if (i && Math.abs(a.y0 - nav[0].y0) > 1) row.push(`${tag}: ${a.name} out of the row`);
+      if (Math.abs((a.x1 - a.x0) - (a.y1 - a.y0)) > 1) row.push(`${tag}: ${a.name} not square`);
+    }
     for (const [i, a] of bs.entries()) {
       if (dev === 'touch' && (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44)) row.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);
-      if (a.y1 - a.y0 < 40) row.push(`${tag}: ${a.name} ${a.y1 - a.y0} px tall`);
+      if (a.name !== 'b-dev' && a.y1 - a.y0 < 40) row.push(`${tag}: ${a.name} ${a.y1 - a.y0} px tall`);
       for (const b of bs.slice(i + 1)) if (on(a, b)) row.push(`${tag}: ${a.name} on ${b.name}`);
       if (h > w && (a.y1 > h * 0.3 || on(a, { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 }))) row.push(`${tag}: ${a.name} out of the top band`);
     }
+    const mm = r.keep.find((k) => k.name === 'minimap');
+    if (dbg && (dbg.x0 < mm.x1 || dbg.x0 > mm.x1 + 230 || dbg.y0 > mm.y1)) row.push(`${tag}: the debug button isn't beside the minimap (${dbg.x0},${dbg.y0})`);
   }
   assert.deepEqual(row, [], row.slice(0, 20).join('\n'));
   const you = all.filter((r) => !/^740x360|^844x390 (kbm|pad)|^1024x768 (kbm|pad)/.test(`${r.sc.w}x${r.sc.h} ${r.sc.dev}`)).flatMap((r) => problems(r, { you: true }));
@@ -136,28 +146,29 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   // lens"; "The time of day blocks too much of the minimap"): nothing on the minimap, the clock included; and held upright
   // nothing of the HUD above the safe area's top (a notch, a centred or a corner punch-hole: 412x892 is played with one)
   // nor in the top-centre band where a centred camera sits even on a phone that doesn't say so (the middle 20%, the top
-  // 48 px - or the safe area and a little) - the vitals beside the minimap's lower half
+  // 48 px - or the safe area and a little). UI-8 (the owner, 2026-10-30: upright "health and stamina in a strange
+  // location and time just off to the side of the minimap"): the vitals at the minimap's foot, its width, upright (beside
+  // it on a screen wider than tall); the clock a small chip beside the cash on every screen
   const cam = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, top = r.sc.cam || 0, tag = `${w}x${h} ${dev} ${st}`;
     const mm = r.keep.find((k) => k.name === 'minimap');
     const hud = [...r.keep.filter((k) => HUDKEEP.includes(k.name) || k.name.startsWith('b-')), ...r.read];
     for (const k of [...hud, ...r.keep.filter((q) => q.name.startsWith('tb.'))]) if (k !== mm && on(k, mm)) cam.push(`${tag}: ${k.name} on the minimap (${k.x0},${k.y0}-${k.x1},${k.y1})`);
-    // the clock on touch: a small chip beside the minimap, never on it; upright it stands aside for the status (bleeding,
-    // a bounty) - one line there under the vitals
-    if (dev === 'touch') {
-      const ck = r.keep.find((k) => k.name === 'rclock'), stl = r.keep.find((k) => k.name === 'status');
-      if (ck && (ck.x0 < mm.x1 || ck.y0 > mm.y1 || ck.y1 - ck.y0 > 26)) cam.push(`${tag}: the clock isn't a small chip beside the minimap ${JSON.stringify(ck)}`);
-      if (!ck && !(h > w && stl)) cam.push(`${tag}: no clock`);
+    // the clock: a small chip on the cash's row, left of it (on a phone on its side it steps aside while a bar has the top)
+    {
+      const ck = r.keep.find((k) => k.name === 'rclock'), mo = r.keep.find((k) => k.name === 'money');
+      if (ck && (ck.x1 > mo.x0 || Math.abs((ck.y0 + ck.y1) / 2 - (mo.y0 + mo.y1) / 2) > 6 || ck.y1 - ck.y0 > 26)) cam.push(`${tag}: the clock isn't a small chip beside the cash ${JSON.stringify(ck)}`);
+      if (!ck && !(dev === 'touch' && w > h && ['rob', 'custody'].includes(st))) cam.push(`${tag}: no clock`);
     }
+    const v = r.keep.find((k) => k.name === 'vitals');
+    if (h > w ? !v || v.x0 !== mm.x0 || v.y0 < mm.y1 || v.y0 > mm.y1 + 12 || Math.abs((v.x1 - v.x0) - (mm.x1 - mm.x0)) > 2 : !v || v.x0 < mm.x1 || v.y1 > mm.y1 + 4) cam.push(`${tag}: the vitals aren't ${h > w ? "at the minimap's foot" : 'beside the minimap'} ${JSON.stringify(v)}`);
     if (dev !== 'touch' || h < w) continue;
     const band = { x0: w * 0.4, x1: w * 0.6, y0: -99, y1: Math.max(48, top + 8) };
     for (const k of [mm, ...hud]) {
       if (k.y0 < top) cam.push(`${tag}: ${k.name} above the safe area (y ${k.y0} < ${top})`);
       if (on(k, band)) cam.push(`${tag}: ${k.name} in the top-centre band (${k.x0},${k.y0}-${k.x1},${k.y1})`);
     }
-    const v = r.keep.find((k) => k.name === 'vitals');
-    if (!v || v.x0 < mm.x1 || v.y1 > mm.y1 + 4) cam.push(`${tag}: the vitals aren't beside the minimap ${JSON.stringify(v)}`);
   }
   assert.ok(all.some((r) => r.sc.cam), 'a phone with a camera in the screen measured');
   assert.ok(all.some((r) => r.sc.h > r.sc.w && r.keep.some((k) => k.name === 'rclock')), 'the clock measured upright');

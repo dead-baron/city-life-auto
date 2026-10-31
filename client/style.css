@@ -15,7 +15,12 @@
   --gold: #e2bd57; --cream: #f3ead2; --dim: #a6aec4; --money: #6cd06c; --danger: #ff6b5a; --info: #5ab0ff; --heat: #ffa63d;
   --rim: var(--gold);
   --panel-bg: linear-gradient(180deg, #15223f, #0d162d);
-  --glass: rgba(15, 24, 48, .92);         /* a HUD plate over the world */
+  --glass: rgba(15, 24, 48, .92);         /* a touch button over the world */
+  --plate: rgba(11, 18, 37, .84);         /* a HUD plate over the world (UI-8): with --plate-line round it and --plate-sh under it */
+  --plate-line: rgba(243, 234, 210, .14);
+  --plate-sh: 0 4px 14px rgba(0, 0, 0, .35);
+  --track: rgba(0, 0, 0, .5);             /* a bar's empty part */
+  --danger-hi: #ff9585; --info-hi: #9ad2ff;   /* the bars' lit top edge */
   --shade: rgba(7, 11, 22, .6);           /* a band inside a panel */
   --scrim: rgba(4, 7, 16, .55);           /* behind a panel */
   --scrim-hi: rgba(4, 7, 16, .8);
@@ -146,80 +151,102 @@ input[type=range]:disabled { opacity: .4; }
 .foldable.open > .fold-body { grid-template-rows: 1fr; opacity: 1; }
 .foldable > .fold-head { cursor: pointer; }
 
-/* ==== the HUD (UI-4: the mockups DeskHud, LandFoot, LandDrive, PortFoot, PortHeli) ====
-   Top left the minimap and the vitals, the job card under them; top centre MENU · PHONE · MAP; top right the cash, the
-   vehicle chip, the stars and what you hold. The notes one line each, two at most (bottom left on a desktop, under the
-   row on a phone on its side, under the job upright); the prompt by you with a keyboard or a pad, in its slot above
-   the thumbs on touch, the hint strip under it. Nothing over the middle of the screen but the prompt. The insets: --sl,
-   --sr, --st (the top), --sb; --map the minimap's size. */
+/* ==== the HUD (UI-8, the owner 2026-10-30: "review the UI and UX as a professional ... a cleaner and more intuitive
+   UI and UX design that makes the game look and feel polished and finalized") ====
+   Two corners, each one column (index.html), and the low slot:
+   - top left, what's around you and how you are: the minimap; health and stamina under it at its width; the status
+     chips; a bar while one's up (a robbery, a ride, custody); the job card; on a phone upright, the notes;
+   - top right: the icon buttons (phone, map, menu - no words: the name on hover and to a screen reader, the key's
+     badge on a keyboard), then what you have - the cash with the clock beside it, the bank, the vehicle chip, the
+     stars, what you hold;
+   - the prompt and the hint strip low; the notes bottom left on a desktop, top centre on a phone on its side.
+   One look for every plate: dark glass with a hairline and a soft shadow, no gold rims - gold marks the minimap, the
+   prompt and what you can press. Nothing over the middle of the screen but the prompt. The insets: --sl, --sr, --st
+   (the top: below a phone's camera), --sb; --map the minimap's size; --gap between things in a corner. */
 #hud { position: absolute; inset: 0; pointer-events: none; font: 600 var(--fs-2) var(--ui); color: var(--cream);
-  --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 24px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 156px; --vbar: 115px; }
-.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(10px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --vbar: 72px; }
-body.portrait.touch #hud { --map: 88px; --vbar: 56px; }
-@media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --vbar: 80px; } }
+  --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 24px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 156px; --gap: 8px; --nav: 48px; }
+.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(10px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --gap: 6px; --nav: 44px; }
+@media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --gap: 6px; --nav: 40px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
+.plate { background: var(--plate); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); }
 
-/* the minimap in a gold ring, nothing on it */
-#radar-wrap { position: absolute; left: var(--sl); top: var(--st); width: var(--map); pointer-events: auto; }
-#radar { display: block; width: var(--map); height: var(--map); border-radius: var(--r3); border: 3px solid var(--gold); background: var(--navy); box-shadow: 0 0 0 2px var(--ink), 0 4px 14px var(--ink-a); cursor: pointer; }
-#radar-wrap::before { content: 'N'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
-/* the clock on a phone (UI-5, the owner 2026-10-26: "The time of day blocks too much of the minimap"): a small chip off
-   the minimap - on its side on the cash's row, to its left (the column can't grow: the arc's small buttons are under
-   it); upright beside the minimap under the vitals, where the status line stands in for it while there's something
-   happening to you. A desktop has #clock at the foot of the top-right column. */
-#rclock { display: none; flex: none; align-items: center; gap: var(--s1); height: 24px; padding: 0 6px; white-space: nowrap; pointer-events: none; background: var(--glass); border-radius: var(--r1); font: 400 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--lift); }
-#rclock img.pi { height: 12px; width: auto; }
-#rclock img.pi:not([src]) { display: none; }
-.touch #rclock { display: flex; }
-.touch:not(.portrait) #hud-tr { display: grid; grid-template-columns: 1fr auto; column-gap: var(--s2); justify-items: end; }
-.touch:not(.portrait) #hud-tr > * { grid-column: 1 / -1; }
-.touch:not(.portrait) #hud-tr > #money { grid-area: 1 / 2; }
-.touch:not(.portrait) #hud-tr > #rclock { grid-area: 1 / 1; align-self: center; }
-body.portrait.touch #rclock { position: fixed; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 76px); }
-body.portrait.touch #hud:has(#status > .hchip:not(.stat, .role.citizen)) #rclock { display: none; }
+/* the corners */
+#hud-tl { position: absolute; left: var(--sl); top: var(--st); display: flex; flex-direction: column; align-items: flex-start; gap: var(--gap); width: calc(100vw - var(--sl) - var(--sr)); pointer-events: none; }
+/* (anything wider than tall - a desktop, a phone on its side: the vitals beside the minimap, the debug button after
+   them, the status under them; the rest of the column under the minimap, clear of the move stick. Upright on a phone
+   the vitals sit under the minimap at its width) */
+body:not(.portrait) #hud-tl { display: grid; grid-template-columns: var(--map) auto 1fr; grid-template-rows: auto 1fr; gap: var(--gap); align-items: start; justify-items: start; }
+body:not(.portrait) #hud-tl > * { grid-column: 1 / -1; }
+body:not(.portrait) #radar-wrap { grid-area: 1 / 1 / 3 / 2; }
+body:not(.portrait) #vitals { grid-area: 1 / 2; width: 190px; }
+body:not(.portrait) #b-dev { grid-area: 1 / 3; position: relative; left: auto; top: auto; }
+body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
+.touch:not(.portrait) #vitals { width: 128px; }
+.touch:not(.portrait) #status { max-width: 180px; }
+@media (max-height: 430px) { body:not(.touch) #vitals { width: 150px; } }
+#hud-tr { position: absolute; right: var(--sr); top: var(--st); display: grid; grid-template-columns: 1fr auto; column-gap: var(--s2); row-gap: var(--s1); justify-items: end; align-items: center; text-align: right; }
+#hud-tr > * { grid-column: 1 / -1; }
+#hud-tr > #hud-btns { grid-row: 1; margin-bottom: var(--s1); }
+#hud-tr > #money { grid-area: 2 / 2; }
+#hud-tr > #rclock { grid-area: 2 / 1; }
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) #rclock { display: none; }   /* (on its side with a bar up - a ride, custody - the bar has the top: the clock steps aside) */
 
-/* the vitals: an icon, the bar, the number (the words too on a desktop); the status line under them in plain words */
-#vitals { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 6px); display: flex; flex-direction: column; gap: 5px; }
+/* the minimap in a gold ring, nothing on it but the north */
+#radar-wrap { position: relative; flex: none; width: var(--map); pointer-events: auto; }
+#radar { display: block; width: var(--map); height: var(--map); border-radius: var(--r3); border: 3px solid var(--gold); background: var(--navy); box-shadow: 0 0 0 2px var(--ink), var(--plate-sh); cursor: pointer; }
+#radar-wrap::before { content: 'N'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--gold); background: var(--ink); border: 1px solid var(--gold); z-index: 1; }
+
+/* health and stamina: one small plate under the minimap at its width - an icon and a slim bar each, the number too on a
+   desktop (the owner 2026-10-30: upright they sat "in a strange location"; under the map they read as one with it) */
+#vitals { flex: none; display: flex; flex-direction: column; gap: 5px; width: var(--map); padding: 6px 8px; background: var(--plate); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); }
 .vrow { display: flex; align-items: center; gap: 6px; }
-.vrow svg { flex: none; width: 16px; height: 16px; }
+.vrow svg { flex: none; width: 14px; height: 14px; }
 .vrow.hp svg { fill: var(--danger); } .vrow.st svg { fill: var(--info); }
-.vrow .vl { width: 58px; font: 700 var(--fs-3) var(--ui); text-shadow: var(--halo-s); }
-.vrow b { min-width: 30px; font: 400 var(--fs-2) var(--pixel); text-align: right; text-shadow: var(--halo-s); }
-.vbar { position: relative; flex: none; width: var(--vbar); height: 10px; overflow: hidden; background: var(--shade); border-radius: var(--r1); box-shadow: 0 0 0 1px var(--ink); }
-.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r1); transition: width var(--t1); }
-.fill.hp { background: var(--danger); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
+.vrow .vl { display: none; }
+.vrow b { flex: none; min-width: 26px; font: 400 var(--fs-2) var(--pixel); line-height: 1; text-align: right; }
+.vbar { position: relative; flex: 1; min-width: 0; height: 8px; overflow: hidden; background: var(--track); border-radius: var(--r3); box-shadow: inset 0 1px 1px var(--track); }
+.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r3); transition: width var(--t1); }
+.fill.hp { background: linear-gradient(var(--danger-hi), var(--danger) 60%); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
 @keyframes hplow { 50% { opacity: .55; } }
-.fill.st { background: var(--info); }
-.touch .vrow .vl { display: none; }
-/* upright (UI-5, the owner 2026-10-26 on a Pixel 7 Pro: "The health and stamina at the top get blocked by a camera
-   lens"): beside the minimap's lower half, the status line under them - the top centre, where a camera sits, holds
-   nothing (38 px down: under the band test/hudlayout.test.js keeps clear - the top 48 px, or the safe area and a bit) */
-body.portrait.touch #vitals { top: calc(var(--st) + 38px); gap: 3px; }
-body.portrait.touch .vrow { gap: var(--s1); }
-body.portrait.touch .vrow svg { width: 14px; height: 14px; }
-body.portrait.touch .vrow b { min-width: 28px; }
-#status { position: absolute; left: calc(var(--sl) + var(--map) + 14px); top: calc(var(--st) + 62px); display: flex; flex-wrap: wrap; gap: var(--s1) 6px; max-width: min(440px, calc(100vw - var(--sl) - var(--map) - 300px)); }
+.fill.st { background: linear-gradient(var(--info-hi), var(--info) 60%); }
+.touch #vitals { gap: 5px; padding: 6px 7px; }
+.touch .vrow { gap: 5px; }
+.touch .vrow svg { width: 12px; height: 12px; }
+.touch .vrow b { display: none; }
+.touch .vbar { height: 7px; }
+
+/* the status: chips in plain words - only what's happening to you now (bleeding, a bounty, a coffee wearing off, a light
+   on) and who you are when it isn't a citizen's; the standing numbers (Samaritan, Criminal XP, your record) are in the
+   phone's Skills */
+#status { display: flex; flex-wrap: wrap; gap: var(--s1); max-width: min(440px, 34vw); }
 #status:empty { display: none; }
-.hchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 var(--s2); border-radius: var(--r1); background: var(--glass); color: var(--cream); font: 700 var(--fs-2) var(--ui); white-space: nowrap; }
+.hchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 var(--s2); border-radius: var(--r1); background: var(--plate); box-shadow: inset 0 0 0 1px var(--plate-line); color: var(--cream); font: 700 var(--fs-2) var(--ui); white-space: nowrap; }
 .hchip b { font: 700 var(--fs-2) var(--pixel); }
 .hchip.role { background: var(--navy3); letter-spacing: .5px; text-transform: uppercase; }
 .hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
 .hchip.good b { color: var(--money); } .hchip.warn b, .hchip.warn { color: var(--heat); } .hchip.bad { color: var(--danger); } .hchip.info { color: var(--info); }
-.hchip.flag { border: 1px solid currentColor; }
+.hchip.flag { box-shadow: inset 0 0 0 1px currentColor; }
 body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
-/* on a phone: only what's happening to you now (bleeding, a bounty, a coffee wearing off) and who you are when it isn't a
-   citizen's (the rest is in the phone's Skills) */
-.touch .hchip.stat, .touch .hchip.role.citizen { display: none; }
-.touch #status { top: calc(var(--st) + 52px); max-width: calc(var(--vbar) + 58px); flex-wrap: nowrap; overflow: hidden; }
-.touch .hchip { height: 24px; padding: 0 6px; }
+.hchip.stat, .hchip.role.citizen { display: none; }   /* (UI-8: on a desktop too - the standing numbers are in the phone's Skills; the status is what's happening now) */
+.touch #status { flex-wrap: nowrap; overflow: hidden; max-width: min(56vw, 300px); }
+.touch .hchip { padding: 0 6px; }
 
-/* the job (UI-4): one card under the minimap - the job, the call, step N of M, the objective, how far, the time left;
-   a one-line chip after a few seconds; big again when the step changes or on a tap (client/hudinfo.js) */
-#job { position: absolute; left: var(--sl); top: calc(var(--st) + var(--map) + 16px); z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); color: var(--cream); animation: enter var(--t2) var(--ease); transition: border-color var(--t2) var(--ease), box-shadow var(--t2) var(--ease); }
-#job.big { width: min(330px, calc(33vw - var(--sl) - 6px)); padding: 10px 14px; }
-#job.chip { display: flex; align-items: center; gap: var(--s2); max-width: min(340px, calc(100vw - 2 * var(--sl))); min-height: 34px; padding: var(--s1) var(--s3); border-color: var(--gold-a); }
+/* the robbery, train, bus, ferry, taxi and custody bars: top centre (upright, in the corner's column under the status) */
+#hud-msg { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+#hud-msg:not(:has(> :not(.hidden))) { display: none; }
+body:not(.portrait) #hud-msg { position: fixed; left: calc(var(--sl) + var(--map) + 250px); right: calc(var(--sr) + 250px); top: var(--st); }
+.touch:not(.portrait) #hud-msg { left: calc(var(--sl) + var(--map) + 200px); right: calc(var(--sr) + 3 * var(--nav) + 2 * var(--gap) + 8px); }
+@media (max-height: 430px) { body:not(.portrait) #hud-msg { left: calc(var(--sl) + var(--map) + 200px); right: calc(var(--sr) + 240px); } body:not(.touch) #bank { display: none; } }
+#hud-msg > * { max-width: 100%; box-sizing: border-box; }
+body.portrait #hud-msg { width: 100%; align-items: flex-start; }
+
+/* the job (UI-4): one card under the vitals - the job, the call, step N of M, the objective, how far, the time left; a
+   one-line chip after a few seconds; big again when the step changes or on a tap (client/hudinfo.js) */
+#job { position: relative; flex: none; z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; background: var(--plate); border-left: 3px solid var(--gold); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); color: var(--cream); animation: enter var(--t2) var(--ease); transition: border-color var(--t2) var(--ease), box-shadow var(--t2) var(--ease); }
+#job.big { width: min(330px, calc(33vw - var(--sl) - 6px)); padding: 10px 14px 10px 12px; }
+#job.chip { display: flex; align-items: center; gap: var(--s2); max-width: min(340px, calc(100vw - var(--sl) - var(--sr))); min-height: 34px; padding: var(--s1) var(--s3) var(--s1) 10px; }
 #job .jc-h { display: flex; justify-content: space-between; gap: var(--s2); white-space: nowrap; font: 400 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--gold); }
 #job .jc-t { flex: none; color: var(--heat); }
 #job.big .jc-o { margin-top: var(--s1); font: 700 var(--fs-4) var(--ui); line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -230,28 +257,51 @@ body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); 
 #job .jc-s { flex: none; color: var(--gold); }
 #job .jc-dot { flex: none; width: 10px; height: 10px; border-radius: var(--r3); background: var(--info); }
 #job .jc-paid { color: var(--money); font: 700 var(--fs-3) var(--pixel); }
-#job.new { box-shadow: 0 0 0 2px var(--ink), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
-@keyframes jobnew { 50% { border-color: var(--cream); } }
-#job.paid { border-color: var(--money); }
+#job.new { box-shadow: inset 0 0 0 1px var(--gold-a), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
+@keyframes jobnew { 50% { box-shadow: inset 0 0 0 1px var(--gold), 0 0 22px var(--gold-a); } }
+#job.paid { border-left-color: var(--money); }
+#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .touch #job.chip { min-height: var(--tap); }
 .touch:not(.portrait) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
 .touch #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; pointer-events: none; }   /* (big for a few seconds, then a chip: a thumb on the move stick isn't caught by it) */
 .touch #job.big .jc-o { font-size: var(--fs-3); }
 .touch #job.big .jc-d { margin-top: var(--s1); }
-body.portrait.touch #job { top: calc(var(--st) + var(--map) + 66px); }
-body.portrait.touch #job.big { width: calc(100vw - 2 * var(--sl)); }
+body.portrait.touch #job.big { width: 100%; }
 body.portrait.touch #job.big .jc-o { -webkit-line-clamp: 1; }
-#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 @media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
 body.dead #job { display: none !important; }
+/* (upright with a bar up - a robbery, a ride, custody - the big card short: clear of the middle - UI-5) */
+body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o { display: none; }
 
-/* top right: the cash (the bank under it on a desktop), the vehicle chip, the stars, what you hold, the clock */
-#hud-tr { position: absolute; right: var(--sr); top: var(--st); display: flex; flex-direction: column; align-items: flex-end; gap: var(--s1); text-align: right; }
-#money { font: 700 var(--fs-5) var(--pixel); line-height: 1.05; color: var(--money); text-shadow: 0 3px 0 var(--ink), var(--halo); }
+/* the icon buttons (the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should
+   work"): phone, map, the menu in the corner - square glass keys, the icon alone; on a keyboard the key's badge on the
+   corner (P, M, Esc); 44 px or more to tap */
+#hud-btns { display: flex; gap: var(--gap); pointer-events: auto; }
+#hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border: 0; border-radius: var(--r2); background: var(--plate); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t1) var(--ease), box-shadow var(--t1) var(--ease), color var(--t1) var(--ease); }
+#hud-btns button:hover, #b-dev:hover { background: var(--navy3); box-shadow: inset 0 0 0 1px var(--gold-a), var(--plate-sh); color: var(--gold); }
+#hud-btns button:active, #b-dev:active { transform: scale(.94); background: var(--navy3); }
+#hud-btns button:focus-visible, #b-dev:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#hud-btns svg { display: block; width: 22px; height: 22px; }
+#hud-btns .kchip { position: absolute; right: -5px; bottom: -5px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+.touch #hud-btns svg { width: 22px; height: 22px; }
+/* the debug button (a playtest tool, open to everyone): quiet, by the minimap's foot - apart from the game's own buttons */
+#b-dev { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(var(--map) - 36px); width: 36px; height: 36px; opacity: .72; color: var(--dim); }
+#b-dev svg { display: block; width: 18px; height: 18px; }
+#b-dev.on { opacity: 1; color: var(--gold); }
+.touch #b-dev { width: var(--tap); height: var(--tap); top: calc(var(--map) - var(--tap)); }
+
+/* the clock: a small chip, the sun or the moon, the time, a rain cloud when it rains - beside the cash */
+#rclock { display: flex; flex: none; align-items: center; gap: var(--s1); height: 24px; padding: 0 7px; white-space: nowrap; pointer-events: none; background: var(--plate); box-shadow: inset 0 0 0 1px var(--plate-line); border-radius: var(--r1); font: 400 var(--fs-2) var(--pixel); color: var(--cream); }
+#rclock img.pi { height: 12px; width: auto; }
+#rclock img.pi:not([src]) { display: none; }
+#clock { display: none; }
+
+/* what you have: the cash (a robbery's hot money under it), the bank, the vehicle chip, the stars, what you hold */
+#money { font: 700 var(--fs-5) var(--pixel); line-height: 1.05; color: var(--money); text-shadow: var(--halo-s), 0 3px 0 var(--ink); }
 #hot { display: block; font: 700 var(--fs-2) var(--pixel); line-height: 1.15; letter-spacing: 1px; color: var(--heat); text-shadow: var(--halo-s); animation: hot-pulse 1.6s ease-in-out infinite; }   /* (a robbery's takings, not spendable till they're cleaned: server hotmoney.js) */
 @keyframes hot-pulse { 50% { color: var(--gold); } }
 #bank { font: 400 var(--fs-2) var(--pixel); color: var(--dim); text-shadow: var(--halo-s); }
-#vchip { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; background: var(--glass); border-radius: var(--r1); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
+#vchip { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; background: var(--plate); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
 #vchip .vc-spd { font: 400 var(--fs-3) var(--pixel); color: var(--gold); }
 #vchip .vc-alt { font: 400 var(--fs-3) var(--pixel); color: var(--info); }
 #stars { display: none; font-size: var(--fs-4); letter-spacing: 1px; line-height: 1; }
@@ -261,69 +311,54 @@ body.dead #job { display: none !important; }
 #stars .on { color: var(--heat); -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 8px var(--heat); }
 #stars .flash { animation: starflash .35s steps(2) infinite; }
 @keyframes starflash { 50% { color: var(--danger); } }
-#weapon { display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 3px 10px 3px var(--s2); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); }
+#weapon { display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 3px 12px 3px var(--s2); background: var(--plate); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); }
 #w-icon canvas { width: 96px; height: 48px; image-rendering: pixelated; display: block; filter: drop-shadow(var(--lift)); }
 #w-info { text-align: right; }
-#w-name { font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--cream); text-shadow: var(--lift); }
+#w-name { font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--cream); }
 #w-ammo { font: 400 var(--fs-2) var(--pixel); color: var(--gold); }
-/* your fists and nothing going on: small (a phone: only the switch, and none with nothing to switch to) */
-#weapon.compact { min-height: 0; padding: 2px var(--s2); border-color: var(--gold-a); background: var(--glass); }
+#weapon.compact { min-height: 0; padding: 2px var(--s2); box-shadow: inset 0 0 0 1px var(--plate-line); }
 #weapon.compact #w-icon canvas { width: 48px; height: 24px; }
 #weapon.compact #w-name { font-size: var(--fs-2); }
-#clock { font: 400 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
 .touch #money { font-size: var(--fs-4); }
-.touch #bank, .touch #clock { display: none; }
+.touch #bank { display: none; }
 .touch #stars { font-size: var(--fs-3); }
 /* on touch the weapon plate is the weapon button, a slot above CAR / ACT (UI-6: client/touchslots.js sets --sx/y/w/h and
-   data-slot while the slot holds it): the icon and the rounds; a tap the next weapon, held the picker (client/main.js) */
-.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; flex-direction: column; justify-content: center; gap: 0; padding: 0; pointer-events: auto; cursor: pointer; touch-action: none; }
+   data-slot while the slot holds it): the icon and the rounds, drawn like the touch buttons round it; a tap the next
+   weapon, held the picker (client/main.js) */
+.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; flex-direction: column; justify-content: center; gap: 0; padding: 0; border: 2px solid var(--gold); background: var(--panel-bg); box-shadow: 0 0 0 2px var(--ink); pointer-events: auto; cursor: pointer; touch-action: none; }
 .touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
 .touch #w-icon canvas { width: 48px; height: 24px; }
 .touch #w-info { text-align: center; white-space: nowrap; }
 body.touch.multi-wpn #weapon::after { content: '⇄'; position: absolute; top: -2px; right: 3px; font-size: var(--fs-2); opacity: .75; }
-/* upright: the vehicle chip three short lines (the name, the height, the speed) */
-.touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); border: 2px solid var(--gold); border-radius: var(--r2); font-size: var(--fs-2); }
+.touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); font-size: var(--fs-2); }
 .touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
-body.portrait.touch #hud-tr { max-width: calc(40vw - var(--sr)); }
-body.portrait.touch #status { top: calc(var(--st) + 76px); max-width: calc(var(--vbar) + 54px); }   /* (under the vitals, over the row: UI-5) */
-
-/* the robbery, train, bus, ferry, taxi and custody bars: top centre under the row */
-#hud-msg { position: absolute; left: 0; right: 0; top: calc(var(--st) + 120px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-#hud-msg:not(:has(> :not(.hidden))) { display: none; }
-.touch #hud-msg { top: calc(var(--st) + 52px); }
-.touch:not(.portrait) #hud-msg { left: calc(var(--sl) + 290px); right: calc(var(--sr) + 210px); }
-.touch #hud-msg > * { max-width: 100%; box-sizing: border-box; }
-body.portrait.touch #hud-msg > * { max-width: calc(100vw - 2 * var(--sl)); }
-body.portrait.touch #hud-msg { top: calc(var(--st) + var(--map) + 72px); }
-body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job { margin-top: 80px; }
-body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o { display: none; }   /* (and the big card short: clear of the middle - UI-5) */
-body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }   /* (upright with a bar up - a robbery, a ride, custody - the notes wait in the Log) */
+.touch:not(.portrait) #vchip > b { display: none; }   /* (on its side, the readouts only: the arc's small buttons are under the column) */
+body.portrait.touch #hud-tr { max-width: calc(48vw - var(--sr)); }
+body.portrait.touch #hud-btns { gap: 4px; }   /* (three keys clear of the top-centre band, where a centred camera sits) */
 
 /* the notes: one line each, two at most, in and out on their own (hud.js toast); a long one cut short, the whole of it
-   a tap away in the phone's Log */
-#toasts { position: absolute; left: var(--sl); bottom: var(--sb); z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 440px); pointer-events: none; }
-.toast { position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 5px 10px; background: var(--glass); border-left: 4px solid var(--info); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: enter-l var(--t2) var(--ease); transition: opacity var(--t3) var(--ease), transform var(--t3) var(--ease); }
+   a tap away in the phone's Log. Bottom left on a desktop; top centre on a phone on its side; upright in the corner's
+   column under the job card (not while it's big, nor with a bar up: they wait in the Log, clear of the middle) */
+#toasts { position: fixed; left: var(--sl); bottom: var(--sb); z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 440px); pointer-events: none; }
+.toast { position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 5px 10px; background: var(--plate); box-shadow: var(--plate-sh); border-left: 3px solid var(--info); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: enter-l var(--t2) var(--ease); transition: opacity var(--t3) var(--ease), transform var(--t3) var(--ease); }
 .toast > .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .toast.good { border-left-color: var(--money); } .toast.bad { border-left-color: var(--danger); } .toast.warn { border-left-color: var(--heat); }
 .toast.more { pointer-events: auto; cursor: pointer; }
 .toast.more::after { content: 'LOG ›'; flex: none; font: 400 var(--fs-1) var(--pixel); color: var(--gold); }
 .toast.out { transform: translateX(-8px); }
 #toasts .toast:nth-last-child(n+3) { display: none; }
-.touch #toasts { left: 0; right: 0; bottom: auto; top: calc(var(--st) + 54px); width: auto; align-items: center; }
 .touch .toast { max-width: min(40vw, 380px); padding: 3px var(--s2); font-size: var(--fs-2); }
-/* (on its side with a bar up: the newest note under the job, on the left) */
-.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 16px); left: var(--sl); right: auto; width: min(260px, calc(33vw - var(--sl) - 6px)); align-items: flex-start; }
+.touch:not(.portrait) #toasts { left: calc(var(--sl) + var(--map) + 200px); right: calc(var(--sr) + 3 * var(--nav) + 2 * var(--gap) + 8px); bottom: auto; top: var(--st); width: auto; align-items: center; }
+.touch:not(.portrait) .toast { max-width: min(100%, 380px); }
+/* (on its side with a bar up - it has the top centre: the newest note in the corner's column under the job) */
+.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) #toasts { position: static; width: min(260px, calc(33vw - var(--sl) - 6px)); align-items: flex-start; }
 .touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)) .toast { max-width: 100%; }
-.touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)):has(#job.chip:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 66px); }
 .touch:not(.portrait) #hud:has(#hud-msg > :not(.hidden)):has(#job.big:not(.hidden)) #toasts { display: none; }
 .touch #hud:has(#hud-msg > :not(.hidden)) #toasts .toast:nth-last-child(n+2) { display: none; }
-body.portrait.touch #toasts { left: var(--sl); right: var(--sr); align-items: flex-start; }
+body.portrait.touch #toasts { position: static; width: 100%; }
+body.portrait.touch #toasts .toast:nth-last-child(n+2) { display: none; }   /* (upright one at a time, the newest: the column stays out of the middle third) */
 body.portrait.touch .toast { max-width: 100%; }
-body.portrait.touch #toasts { top: calc(var(--st) + var(--map) + 66px); }
-body.portrait.touch #hud:has(#job.chip:not(.hidden)) #toasts { top: calc(var(--st) + var(--map) + 116px); }
-/* (upright while the job card is big - a new step, a few seconds - the notes wait in the Log: under it they'd reach the
-   middle, on a phone with a camera in the screen most of all) */
-body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts { display: none; }
+body.portrait.touch #hud:has(#job.big:not(.hidden)) #toasts, body.portrait.touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }
 
 /* the low slot: the police cruiser's hint, the prompt, the hint strip - bottom centre (on touch between the move stick
    and the arc on its side, above the arc upright); with a keyboard or a pad the prompt is by you (hudinfo.js frame) */
@@ -373,6 +408,7 @@ body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 
 #fishbar { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: center; white-space: nowrap; max-width: calc(100vw - 24px); font: 700 min(var(--fs-5), 7vw) var(--pixel); line-height: 1; color: var(--gold); text-shadow: var(--halo); }
 #fishbar.bite { color: var(--cream); animation: starflash .3s steps(2) infinite; }
 .touch #fishbar { bottom: auto; top: 35%; }
+body.portrait.touch #fishbar { top: 40%; }
 /* a key chip inside big words: the UI font, sized to the words round it, padded, no halo of its own */
 .bigkey :is(.g-key, .g-touch) { font: 700 max(.62em, var(--fs-2))/1 var(--ui); height: 1.9em; min-width: 1.9em; padding: 0 .45em; letter-spacing: .5px; text-shadow: none; box-shadow: inset 0 -.18em 0 var(--dim), 0 0 0 2px var(--ink); }
 .bigkey .g-pad { width: 1.9em; height: 1.9em; min-width: 0; font: 700 max(.62em, var(--fs-2))/1 var(--ui); text-shadow: var(--halo-s); }
@@ -394,22 +430,17 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
   body:not(.touch) #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; } body:not(.touch) #job.big .jc-o { font-size: var(--fs-3); }
   body:not(.touch) #helpbox { position: static; transform: none; font-size: var(--fs-3); }
   body:not(.touch) #helpbox.off { transform: translateY(6px); }
-  body:not(.touch) :is(.hchip.stat, .hchip.role.citizen) { display: none; }
-  body:not(.touch) #hud-msg { top: calc(var(--st) + 52px); left: calc(var(--sl) + 300px); right: calc(var(--sr) + 220px); }
-  body:not(.touch) #hud-msg > * { max-width: 100%; box-sizing: border-box; }
-  body:not(.touch) #status { max-width: calc(var(--vbar) + 58px); flex-wrap: nowrap; overflow: hidden; }
+  body:not(.touch) #status { max-width: min(300px, 34vw); flex-wrap: nowrap; overflow: hidden; }
   body:not(.touch) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
   body:not(.touch) #rob .rob-bar { width: 80px; } body:not(.touch) #rob span { min-width: 0; font-size: var(--fs-2); }
   body:not(.touch) #hud:has(#hints:not(.off)) > #hud-low { bottom: calc(var(--sb) + 64px); }
-  /* (the notes on the left under the job, the hint strip and the low slot the bottom's whole width) */
-  body:not(.touch) #toasts { top: calc(var(--st) + var(--map) + 16px); bottom: auto; width: calc(33vw - var(--sl) - 8px); }
-  body:not(.touch) #hud:has(#job.chip:not(.hidden)) > #toasts { top: calc(var(--st) + var(--map) + 58px); }
-  body:not(.touch) #hud:has(#job.big:not(.hidden)) > #toasts { top: calc(var(--st) + var(--map) + 112px); }
+  /* (the notes in the corner's column under the job, the hint strip and the low slot the bottom's whole width) */
+  body:not(.touch) #toasts { position: static; width: calc(33vw - var(--sl) - 8px); }
   body:not(.touch) #hints { max-width: calc(100vw - 2 * var(--sl)); }
   body:not(.touch) #hud-low { left: 33vw; right: var(--sr); max-width: none; }
 }
 @media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #rob > b { display: none; } }
-@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) .vrow .vl { display: none; } body:not(.touch) #money { font-size: var(--fs-4); } body:not(.touch) #hud-btns { left: max(calc(var(--sl) + var(--map) + var(--vbar) + 90px), calc(50% - 160px)); } body:not(.touch) #hud-btns button { padding: 0 6px; } }
+@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #money { font-size: var(--fs-4); } }
 
 /* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): one line,
    as wide as their words up to the screen less a margin, the big words smaller past it (UI-7: never two lines of them) */
@@ -991,28 +1022,6 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
   #t-tools button { padding: 0 var(--s3); }
 }
 
-/* ==== the HUD row (UI-3): MENU · PHONE · MAP, labelled, their keys on a keyboard ==== */
-#hud-btns { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
-#hud-btns button { display: inline-flex; align-items: center; gap: var(--s2); height: var(--tap-l); padding: 0 14px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--glass); color: var(--cream); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; transition: background var(--t1) var(--ease), transform var(--t1) var(--ease); }
-#hud-btns button:hover { background: var(--navy3); }
-#hud-btns button:active { transform: scale(.96); }
-#hud-btns svg { flex: none; width: 20px; height: 20px; color: var(--gold); }
-#hud-btns .kchip { min-width: 24px; height: 24px; font-size: var(--fs-1); }
-#hud-btns #b-dev { width: var(--tap-l); padding: 0; justify-content: center; }
-.touch #hud-btns #b-dev { width: var(--tap); padding: 0; }
-#hud-btns #b-dev svg { display: block; }
-body:not(.touch) #hud-btns #b-dev { width: auto; min-width: 40px; padding: 0; }
-@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #hud-btns #b-dev { display: none; } }
-.touch #hud-btns { gap: 6px; }
-.touch #hud-btns button { height: var(--tap); padding: 0 12px; gap: 6px; font-size: var(--fs-3); }
-.touch #hud-btns svg { width: 18px; height: 18px; }
-#hud-btns { top: var(--st); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 140px), calc(50% - 210px)); transform: none; }
-@media (max-width: 1180px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
-/* on its side: right of the vitals, centred where there's room (clear of a camera in the screen's top centre) */
-.touch #hud-btns { top: var(--st); left: max(calc(var(--sl) + var(--map) + var(--vbar) + 80px), calc(50% - 160px)); transform: none; }
-@media (max-height: 430px) { body:not(.touch) #hud-btns { gap: 6px; } body:not(.touch) #hud-btns button { height: 40px; padding: 0 10px; } body:not(.touch) #hud-btns svg { display: none; } }
-/* upright: one row under the minimap */
-body.portrait.touch #hud-btns { left: var(--sl); top: calc(var(--st) + var(--map) + 14px); }
 
 /* ==== the hub (UI-3): one panel for the map, the phone, the bag, the people and the settings; the game runs on ==== */
 #hub { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: var(--scrim); }
@@ -1042,12 +1051,12 @@ body.touch .hub-frame { width: 100%; height: 100%; border: 0; border-radius: 0; 
 .touch #hub-tabs .tab { min-height: var(--tap); padding: 0 12px; font-size: var(--fs-3); }
 .touch #hub-close { width: var(--tap); height: var(--tap); }
 @media (max-height: 560px) { #hub-bar { min-height: 56px; } #hub-tabs .tab { min-height: var(--tap); padding: 0 12px; } }
-body.portrait #hub-bar { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "res title x" "tabs tabs tabs"; row-gap: var(--s1); padding: calc(6px + var(--cam-top)) var(--s4) 0; }
+body.portrait #hub-bar { display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "res . x" "tabs tabs tabs"; row-gap: var(--s1); padding: calc(6px + var(--cam-top)) var(--s4) 0; }
 body.portrait .hub-resume { grid-area: res; }
-body.portrait #hub-title { display: block; grid-area: title; }
+body.portrait #hub-title { display: none; }   /* (the lit tab says where you are - UI-8) */
 body.portrait #hub-close { grid-area: x; }
 body.portrait #hub-tabs { grid-area: tabs; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 0 calc(-1 * var(--s4)); }
-body.portrait #hub-tabs .tab { justify-content: center; padding: 0; border-radius: 0; min-height: var(--tap-l); font-size: var(--fs-3); }
+body.portrait #hub-tabs .tab { justify-content: center; padding: 0; border-radius: 0; min-height: var(--tap-l); font-size: var(--fs-2); letter-spacing: .3px; }
 body.portrait #hub-bar .pad-only { display: none; }
 
 /* the Map tab: the map, the waypoint and what's shown beside it (LandHub) */
@@ -1081,6 +1090,9 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 
 /* the Phone tab: the job first, every app on one screen, an app's name and a 44 px Back */
 #hub #phone { flex-direction: column; }
+.ph-stand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); margin-bottom: var(--s3); }
+.ph-stand > div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: var(--s2); border-radius: var(--r2); background: var(--navy2); color: var(--dim); font: 600 var(--fs-2) var(--ui); text-align: center; }
+.ph-stand b { font: 700 var(--fs-4) var(--pixel); color: var(--cream); } .ph-stand b.good { color: var(--money); } .ph-stand b.warn { color: var(--heat); } .ph-stand b.bad { color: var(--danger); }
 #hub .ph-body { width: 100%; max-width: 820px; height: 100%; margin: 0 auto; border: 0; border-radius: 0; background: none; box-shadow: none; animation: none; }
 #hub .ph-top { min-height: 56px; padding: 6px var(--s3); background: none; border-bottom: 1px solid var(--navy3); }
 #hub .ph-top #ph-clock { flex: 1; text-align: left; font: 700 var(--fs-4) var(--pixel); color: var(--gold); letter-spacing: 1px; }
@@ -1285,4 +1297,3 @@ body.portrait .set-head .seg { width: 100%; } body.portrait .set-head .seg > but
 .touch .bm-check.on::after { left: 16px; top: 12px; }
 .touch #creator .cc-sw { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 1px var(--gold-a); }
 .touch #creator .cc-sw.on { transform: none; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--gold); }
-@media (max-height: 430px) and (max-width: 800px) { .touch #hud-btns button:not(#b-dev) { padding: 0 10px; } .touch #hud-btns button:not(#b-dev) svg { display: none; } }

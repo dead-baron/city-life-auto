@@ -1772,6 +1772,7 @@ addEventListener('blur', () => { if (S.spec) S.spec.clearKeys(); });
 // sends for them meanwhile (the transit lines, a job board) is kept and handed over then
 const phoneCtx = {
   map: () => S.map, pos: () => selfPos(), isCop: () => !!(S.me && S.me.faction === 'enforcer'), send: (o) => send(o),
+  me: () => S.me,   // (the Skills app's standing: Samaritan, Criminal XP, your record - off the HUD since UI-8)
   setWaypoint: (w) => { S.waypoint = w; if (S.hud) S.hud.waypoint = w; },
   waypoint: () => S.waypoint,
   toast: (t, tone) => S.hud && S.hud.toast(t, tone),
