@@ -18586,3 +18586,67 @@ hub (the bag's Materials category). Run with the home, felling, garden, lobby, r
 sound, HUD (hudlayout, touchslots, hub, hudinfo), jobs and perf tests: all pass.
 
 Merging batch 8 (2026-10-30): 8a and 8b both claimed bit 3 of a vehicle's extra byte (the rig's hitched trailer, the forklift's forks). The forks moved to bits 4-5 (net.js, host.js, forklift.js); the bag's categories now carry both Outdoors & fun (8c) and Materials (8d).
+
+## 2026-10-30 - UI-8: the HUD redone as two tidy corners - icon buttons, health and stamina at the minimap's foot, one look for every plate
+
+The owner, on his Pixel 7 Pro: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work. On
+portrait mode on phone we can make it look better and more compact instead of having the health and stamina in a
+strange location and time just off to the side of the minimap ... review the UI and UX as a professional ... a cleaner
+and more intuitive UI and UX design that makes the game look and feel polished and finalized. Right now it's just
+awkward and feels like a placeholder."
+
+### What was wrong (the review)
+- **Four places at the top, not two.** The minimap top left, the vitals floating to its right, a row of three wide
+  labelled buttons and the debug button across the top (upright: a full-width row under the minimap), the cash top
+  right. Upright, the minimap, the vitals, the status, the button row and the job card stacked down to about 30% of
+  the screen.
+- **Heavy chrome.** Every plate had a 2 px gold rim and a black ring: the buttons, the job card, the vehicle chip, the
+  weapon plate. Gold everywhere meant gold said nothing.
+- **Things not grouped by meaning.** The vitals sat apart from the minimap, the clock off to the side of it, the debug
+  tool in the same row as the game's own buttons.
+- **Too much standing information.** On a desktop the status showed CITIZEN, Samaritan, Criminal XP and the record all
+  the time, two lines of chips that never change mid-play.
+
+### The new HUD (index.html, client/style.css "the HUD (UI-8)")
+- **Two corners, each one column.** `#hud-tl`: the minimap, health and stamina, the status, a bar when one is up (a
+  robbery, a ride, custody), the job card, and upright the notes. `#hud-tr`: the buttons, then what you have. Nothing
+  is positioned by adding up offsets any more, so things move up when something above them goes away.
+- **Icon buttons, top right: phone, map, menu.** Square glass keys, 44 px on touch and 48 px on a desktop, the menu
+  in the corner. No words. Each is named for screen readers and has a tooltip ("Map (M)"). On a keyboard its key's
+  badge sits on the corner (P, M, Esc). The debug button is no longer in the row. It is a quiet key beside the minimap,
+  dimmer than the game's own buttons.
+- **Health and stamina in one small plate.** Upright, it sits at the minimap's foot at the minimap's width. On a
+  screen wider than tall (a desktop, a phone on its side), it sits beside the minimap. Each bar is slim and rounded
+  with a lit top edge. A desktop also shows the numbers. The words "Health" and "Stamina" are gone; the heart and the
+  bolt say it.
+- **The clock is a small chip beside the cash, on every screen.** On a phone on its side it steps aside while a bar
+  has the top.
+- **The status shows only what's happening now**: bleeding, a bounty, a coffee wearing off, a light on, and your role
+  when it isn't a citizen's. This now holds on a desktop too. The standing numbers (Samaritan, Criminal XP, felonies on
+  record) moved to a Standing card at the top of the phone's Skills app.
+- **One look for every plate.** Dark glass (`--plate`), a hairline (`--plate-line`) and a soft shadow (`--plate-sh`):
+  the buttons, the vitals, the status chips, the job card, the vehicle chip, the weapon plate, the clock, the notes.
+  Gold is kept for the minimap's ring, the prompt and what you press. The job card has a gold edge on its left (green
+  once it's paid), like the notes' coloured edges.
+- **Notes.** On a desktop they stay bottom left. On a phone on its side they are top centre, between the vitals and
+  the buttons. Upright they sit in the column under the job card, one at a time.
+- **Bars.** On a desktop and a phone on its side the robbery, ride and custody bars are top centre. Upright they sit in
+  the column.
+- **On its side, the vehicle chip shows its readouts only** (the speed, the height); the arc's small buttons are under
+  the column. Upright it keeps the name.
+- **The hub upright.** It no longer repeats the tab's name as a title beside RESUME; the lit tab says where you are.
+  The tab labels are a size smaller so SETTINGS fits.
+
+Upright on a 412 x 892 phone with a camera in the screen, the top of the HUD now ends with the job chip at about y 250
+instead of about 300, and the top centre stays clear for the camera.
+
+### Tests
+- **test/hudlayout.test.js**, the HUD row now: phone, map, menu; icons with no words; named; square; in the top-right
+  corner; keys' badges on a keyboard only; the debug button beside the minimap.
+- **test/hudlayout.test.js**, the UI-5 checks now:
+  - upright, the vitals are at the minimap's foot at its width, and beside it otherwise;
+  - the clock is a chip on the cash's row, left of the cash.
+- **test/hudpage.js** measures the debug button and each button's name.
+- **test/hub.test.js** checks the row's markup.
+- Tokens: the new colours are named in `:root` (test/uitokens.test.js).
+- **The spectator's hiding rules** (client/spectator.js) follow the new columns.
