@@ -32,7 +32,7 @@
 //   shoeKind: sneaker shoe boot heel sandal barefoot (else from the colour)
 //   hats: cap trucker police beanie bucket sunhat cowboy fedora hard helmet bandana headband hood
 //   carry: briefcase bag purse toolbag shopping coffee phone cane board, or any items.js kind (held)
-// Undressed bodies (a 'none' bottom, or a 'none' top on a woman) get a small pixelated censor block over the
+// Undressed bodies (a 'none' bottom, or a 'none' top on a woman) get a pixelated mosaic, the Sims' way, over the
 // private areas only; app.censored dresses them in swimwear instead. Adults only.
 // Dither and texture patterns are anchored to the feet, so they hold still from frame to frame.
 // Also exported: POSES (frames per pose), SEATS (seat heights), PERSON_CAM, HAIR_STYLES, TOP_KINDS, SKIN_TONES,
@@ -1904,25 +1904,33 @@ function water(w, h, AX, AY, X, S, P, R = 1) {
     PID[i] = FOAMID; NOO[i] = 1; FL[i] = F_NOCAST; CR[i] = 214; CG[i] = 238; CB[i] = 242; ZW[i] = 0; NEAR[i] = -1e8; EM[i] = null;
   }
 }
+// The Sims' way (the owner, 11-01: "pixelated instead of a blue square"): over each private area a mosaic of chunky
+// blocks, each the average of the body's own pixels under it - skin, shading and all - so it reads as the body blurred
+// into squares, not a patch stuck on. Blocks are 2 art pixels (2R close up) on a grid that moves with the body; the
+// mosaic is a little larger than what it hides, and no crease or outline line crosses it (AO -1).
 function censor(fig, S, X, D, w, h, AX, AY, R = 1) {
   const W = fig.W, spots = [];
-  if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * 0.36])), 6, 6]);
-  if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, 1.0])), 10, 4]);
-  const soft = W.skin[4];
+  if (W.bk === 'none') spots.push([vadd(S.pel, mv(S.PF, [0, D.pelR[1] * 0.95, -D.pelR[2] * 0.3])), 10, 8]);
+  if (W.tk === 'none' && D.fem) spots.push([vadd(S.chest, mv(S.SP, [0, D.chestR[1] + 0.2, 1.0])), 14, 6]);
+  const B = 2 * R;
   for (const [p, bw, bh] of spots) {
-    const q = X.pt(p), s = q[1] * CA + q[2] * SA, cx = Math.round(AX + q[0] * R), cy = Math.round(AY + (q[1] * SA - q[2] * CA) * R), B3 = 3 * R;
+    const q = X.pt(p), s = q[1] * CA + q[2] * SA, cx = Math.round(AX + q[0] * R), cy = Math.round(AY + (q[1] * SA - q[2] * CA) * R);
     let seen = false;                                                // facing us (a body pixel close by is not much nearer)
     for (let dy = -R; dy <= R && !seen; dy++) for (let dx = -R; dx <= R; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < w && y < h && PID[y * w + x] >= 0 && NEAR[y * w + x] - s < 4) { seen = true; break; } }
     if (!seen) continue;
-    const xa = cx - ((bw * R) >> 1), ya = cy - ((bh * R) >> 1);
-    for (let by = ya; by < ya + bh * R; by += B3) for (let bx = xa; bx < xa + bw * R; bx += B3) {
+    const nx = Math.max(2, Math.round(bw * R / B)), ny = Math.max(2, Math.round(bh * R / B));
+    const xa = cx - ((nx * B) >> 1), ya = cy - ((ny * B) >> 1);
+    for (let j = 0; j < ny; j++) for (let k = 0; k < nx; k++) {
+      // (the corners left out: a rounded patch, as the game's mosaic reads)
+      if ((j === 0 || j === ny - 1) && (k === 0 || k === nx - 1) && nx > 3 && ny > 3) continue;
+      const bx = xa + k * B, by = ya + j * B;
       let r = 0, g = 0, b = 0, m = 0;
-      for (let y = by; y < by + B3; y++) for (let x = bx; x < bx + B3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
+      // (averaged over the block and a pixel round it: soft, like a blur, the neighbours' tones bleeding in)
+      for (let y = by - 1; y < by + B + 1; y++) for (let x = bx - 1; x < bx + B + 1; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; r += CR[i]; g += CG[i]; b += CB[i]; m++; }
       if (!m) continue;
-      // a visible mosaic: 3 px blocks of soft skin tone, alternately lighter and darker, which no crease line crosses
-      const j = (((bx - xa) / B3 + (by - ya) / B3) & 1 ? 1.1 : 0.86) + hash(bx - AX, by - AY, 41) * 0.06;
-      r = (r / m * 0.35 + soft[0] * 0.65) * j; g = (g / m * 0.35 + soft[1] * 0.65) * j; b = (b / m * 0.35 + soft[2] * 0.65) * j;
-      for (let y = by; y < by + B3; y++) for (let x = bx; x < bx + B3; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
+      const jt = ((j + k) & 1 ? 1.12 : 0.86) + (hash(k + Math.round(cx / B), j + Math.round(cy / B), 41) - 0.5) * 0.14;   // (each block its own shade, neighbours apart: the squares show)
+      r = r / m * jt; g = g / m * jt; b = b / m * jt;
+      for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++) { if (x < 0 || y < 0 || x >= w || y >= h) continue; const i = y * w + x; if (PID[i] < 0) continue; CR[i] = r; CG[i] = g; CB[i] = b; AO[i] = -1; }
     }
   }
 }

@@ -41,7 +41,7 @@ export const FIREWOOD = { work: 2.4, reach: 36, mill: 65 };
 // pool's changing rooms - outS s under it: the wash (grime.js) and outHeal health; reach: how near you stand (px)
 export const BATH = { fee: 8, showerS: 3, heal: 10, soakS: 6, soakHeal: 1.2, buffS: 180, bathers: 6, arriveS: 14, kill: 0.6, close: 70, tumble: 0.35, crawl: 0.15, rainS: 120, seen: 0.45, copR: 360, eyeS: 45,
   fees: { sento: 8, onsen: 15, kr: 12, spa: 25, sea: 6 }, springHeal: 2, springBuffS: 300, saunaHeal: 1.4, loungeHeal: 1, plungeC: 18, contrastS: 90, contrastHeal: 15, contrastBuffS: 420,
-  outS: 3, outHeal: 5, reach: 40 };
+  outS: 3, outHeal: 5, reach: 40, bareShare: 0.6 };   // (bareShare: the bathers who go in with nothing on - the rest in a bathing suit)
 // Home upgrades (server/systems/homeups.js; what each is and where: shared/homeups.js; the owner's notes 2, 10-24: "You
 // can do this by gathering materials like wood or stone or other things across the world, or you can purchase them with
 // money outright"): what each takes - the builders' labour (dollars) and the materials (wood: bundles of firewood,

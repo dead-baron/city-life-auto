@@ -13,7 +13,7 @@
 //   - the benches: sit down
 // The city's people go through the routine while anyone's in (h.folk, at most BATH.bathers): in by the door, the desk,
 // through their curtain, changed at the lockers, a shower, a soak in the bath, back to the lockers, dressed, out - all in
-// their clothes, their bathing suits or the house's towels (nothing more: the game's nudity setting is still open). The
+// their clothes, their bathing suits or nothing at all (most - the page pixelates them, the Sims' way). The
 // attendant behind the desk. They're the page's to draw (homeinside.send: m.folk, m.looks).
 // (nat5, the owner 10-31: "a few more bath houses") each house its own floor (shared/homelayout.js: its POI's bath - true
 // the sento's plan 'bath', a word the plan 'bath' + it): the onsen up at Granite Hot Springs (its rock pools outdoors),
@@ -133,7 +133,9 @@ function seatIn(q, u) {
   return [x, q.y + q.h / 2 + 2];
 }
 
-// ---- looks: in the street, and changed (a bathing suit - a man's trunks with a vest, a woman's swimsuit - never less) ---
+// ---- looks: in the street, and changed - a bathing suit (a man's trunks with a vest, a woman's swimsuit) or nothing at all
+// (the owner, 11-01: "you can change into a bathing suit or just not wear anything at all" - the page pixelates the private
+// areas, the Sims' way: client/art2/people.js censor) ---
 export function suitOf(look, seed) {
   const L = JSON.parse(JSON.stringify(look || emptyLook('m'))), O = L.outfit, r = mulberry32(seed >>> 0), cols = ['Navy', 'Royal blue', 'Red', 'Teal', 'Black', 'Coral', 'Forest', 'Purple'];
   for (const k of ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'bag', 'glasses', 'jewel']) O[k] = null;
@@ -141,16 +143,22 @@ export function suitOf(look, seed) {
   if (L.body.base === 'f') O.set = item('Swimsuit', c); else { O.bottoms = item('Swim trunks', c); O.top = item('Tank top', 'White'); }   // (a vest over the trunks: never reads as bare at the street's size)
   return L;
 }
+export function bareOf(look) {
+  const L = JSON.parse(JSON.stringify(look || emptyLook('m'))), O = L.outfit;
+  for (const k of ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'bag', 'glasses', 'jewel']) O[k] = null;
+  O.set = item('Nothing');
+  return L;
+}
 const appOfLook = (L) => lookToApp(L, encodeLook(L));
-// a player's suit (their own face and hair, a bathing suit): made once a look
+// what a player has on in there (s.suit): 1 their bathing suit, 2 nothing - their own face and hair; made once a look
 function playerSuit(p) {
-  const app = p.ped && p.ped.app, code = app && app.lk;
-  if (p.bathSuit && p.bathSuit.of === code) return p.bathSuit.app;
+  const app = p.ped && p.ped.app, code = app && app.lk, bare = p.ped && p.ped.home && p.ped.home.suit === 2;
+  if (p.bathSuit && p.bathSuit.of === code && p.bathSuit.bare === bare) return p.bathSuit.app;
   const L = (code && decodeLook(code)) || randomLook(p.ped ? p.ped.id : 1, 'm');
-  p.bathSuit = { of: code, app: appOfLook(suitOf(L, (p.ped ? p.ped.id : 1) * 7)) };
+  p.bathSuit = { of: code, bare, app: appOfLook(bare ? bareOf(L) : suitOf(L, (p.ped ? p.ped.id : 1) * 7)) };
   return p.bathSuit.app;
 }
-// the look the others in there see on a player: their suit once they've changed
+// the look the others in there see on a player: their suit (or nothing) once they've changed
 export const appIn = (q) => (q.ped && q.ped.home && q.ped.home.bath && q.ped.home.suit ? playerSuit(q) : null);
 
 // ---- on the floor: what the action button does (homeinside.js interaction) ------------------------------------------
@@ -171,16 +179,16 @@ export function hallInteraction(world, p, h, s) {
     if (s.pass) return { label: 'The front desk - you\'ve paid for the day: the lockers are through the curtains', passive: true, run: none };
     return { label: `The front desk - a day here: $${fee} (a towel, a locker)`, run: () => payDesk(world, p, h, s) };
   }
-  if (u.use === 'locker') return { label: `Your locker - ${s.suit ? 'change back into your clothes' : 'change into your bathing suit'}; leave your things in it`, run: () => openLocker(world, p, h) };
+  if (u.use === 'locker') return { label: `Your locker - ${s.suit ? 'get dressed again' : 'undress (a bathing suit if you like)'}; leave your things in it`, run: () => openLocker(world, p, h) };
   if (u.use === 'shower') {
-    if (!s.suit) return { label: 'The showers - change into your bathing suit at the lockers first', passive: true, run: none };
+    if (!s.suit) return { label: 'The showers - undress at the lockers first (a bathing suit if you like)', passive: true, run: none };
     const w = grime.grimeWord(ped);
     return { label: `Take a shower${w ? ` - wash off ${w}` : ''}`, run: () => shower(world, p, h, s, u) };
   }
   const K = SOAK[u.use];
   if (K) {
     const what = u.use === 'bath' ? 'The bath' : K.water ? 'The water' : u.use === 'lounge' ? 'The heated floor' : u.use === 'sauna' ? 'The sauna' : 'The steam';
-    if (!s.suit) return { label: `${what} - your bathing suit first (the lockers)`, passive: true, run: none };
+    if (!s.suit) return { label: `${what} - undress at the lockers first (a bathing suit if you like)`, passive: true, run: none };
     if (!s.washed && K.wash) return { label: `${what} - a shower first: the house rule`, passive: true, run: none };
     const baths = L.pieces.filter((q) => q.use === 'bath').sort((a, b) => a.x - b.x);
     const label = u.use === 'bath' ? Y.bath[Math.max(0, baths.indexOf(u)) % Y.bath.length]
@@ -251,7 +259,9 @@ export function menu(world, p, poi) {
     opts.push({ id: 'close', label: 'Leave' });
     return { t: 'menu', poi: poi.id, title: poi.label, sub: STYLE[h.style].sub, opts, cash: prof.cash, bank: prof.bank };
   }
-  opts.push({ id: 'ba:suit', label: s.suit ? 'Change back into your clothes' : 'Change into your bathing suit', shut: true });
+  if (s.suit !== 2) opts.push({ id: 'ba:bare', label: s.suit ? 'Take the bathing suit off - nothing on' : 'Undress - nothing on', note: 'the way bathhouses go', shut: true });
+  if (s.suit !== 1) opts.push({ id: 'ba:suit', label: s.suit ? 'Put a bathing suit on' : 'Change into a bathing suit', shut: true });
+  if (s.suit) opts.push({ id: 'ba:dress', label: 'Get dressed again', shut: true });
   const mine = guns(prof);
   if (mine.length) opts.push({ id: 'ba:put', label: `Leave your weapons in the locker (${mine.map((id) => WEAPONS[id].name).join(', ')})`, note: 'yours again on the way out' });
   if (Object.keys(lk).length) opts.push({ id: 'ba:take', label: `Take your things back (${Object.keys(lk).map((id) => WEAPONS[id] ? WEAPONS[id].name : id).join(', ')})` });
@@ -262,9 +272,10 @@ export function execute(world, p, poi, opt) {
   const prof = p.profile, ped = p.ped, s = ped && ped.home, parts = opt.split(':');
   if (parts[1] === 'in') return goIn(world, p, poi);
   if (!s || !s.bath) return 'At the lockers, inside.';
-  if (parts[1] === 'suit') {
-    s.suit = s.suit ? 0 : 1; if (!s.suit) s.washed = 0;
-    world.notify(p, s.suit ? 'Changed into your bathing suit, a towel over your shoulder.' : 'Dressed again.', 'info');
+  if (parts[1] === 'suit' || parts[1] === 'bare' || parts[1] === 'dress') {
+    const to = parts[1] === 'dress' ? 0 : parts[1] === 'bare' ? (s.suit === 2 ? 0 : 2) : (s.suit === 1 ? 0 : 1);   // (suit / bare again: back into your clothes)
+    s.suit = to; if (!s.suit) s.washed = 0;
+    world.notify(p, to === 1 ? 'Changed into your bathing suit, a towel over your shoulder.' : to === 2 ? 'Undressed, a towel over your shoulder.' : 'Dressed again.', 'info');
     homeinside.send(world, p, true);
     return null;
   }
@@ -316,14 +327,15 @@ function newBather(world, h, G, L, stage = 0) {
   const side = rng() < 0.5 ? 0 : 1, seed = (h.id * 31 + (h.seq += 1) * 7919) >>> 0;
   const look = randomLook(seed, side ? 'f' : 'm');
   const b = { id: h.seq, side, path: route({ ...G, door: [L.spawn.x, L.spawn.y + 10] }, side, rng(), rng()), i: 0, wait: 0, x: L.spawn.x, y: L.spawn.y + 10, a: -Math.PI / 2, mv: 0, po: 'idle', wear: 'street',
-    app: { street: appOfLook(look), suit: appOfLook(suitOf(look, seed)) } };
+    change: rng() < BATH.bareShare ? 'bare' : 'suit',   // (some go in a bathing suit, most in nothing at all)
+    app: { street: appOfLook(look), suit: appOfLook(suitOf(look, seed)), bare: appOfLook(bareOf(look)) } };
   // (one already somewhere along it: seeded through the routine when the first player comes in)
   for (let k = 0; k < stage && b.i < b.path.length - 1; k++) arrive(b, b.path[b.i]), b.i++;
   if (stage) { const q = b.path[b.i]; b.x = q[0]; b.y = q[1]; }
   h.folk.push(b);
   return b;
 }
-function arrive(b, q) { const o = q[3]; if (o && o.wear) b.wear = o.wear; }
+function arrive(b, q) { const o = q[3]; if (o && o.wear) b.wear = o.wear === 'suit' ? b.change || 'suit' : o.wear; }
 function stepFolk(world, h, dt) {
   const L = hallLayout(h), G = geoOf(L);
   if (world.time >= h.nextAt && h.folk.length < BATH.bathers) { newBather(world, h, G, L); h.nextAt = world.time + BATH.arriveS * (0.6 + rng() * 0.8); }

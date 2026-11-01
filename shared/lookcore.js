@@ -375,6 +375,9 @@ add('jewel', 'Work gloves', 'mf', 'work outdoors', 18, 'workwear', { gloves: 1 }
 add('bag', 'Rescue tube', 'mf', 'beach work', 40, 'beach', { carry: 'bag', big: 1 }, 'red');
 add('bag', 'Delivery pack', 'mf', 'work streetwear', 45, 'workwear', { back: 1, box: 1 }, 'orange');
 add('hat', 'Bridal veil', 'f', 'formal', 120, 'boutique', { k: 'veil' }, 'white');
+// nothing on at all - the bathhouses' lockers only (server/systems/bathhouse.js barOf): never sold, never in the creator
+// (issued), never in a random look (shared/look.js pieceList: never an issued piece); the renderer pixelates the private areas (client/art2/people.js censor)
+add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', issued: 1 }, 'white');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { BATH } from '../shared/rules-play.js';
 import { layout, useAt, stepInside, blocked, TILE_IN } from '../shared/homelayout.js';
-import { PIECES, decodeLook } from '../shared/look.js';
+import { PIECES, decodeLook, lookArt } from '../shared/look.js';
 import * as bath from '../server/systems/bathhouse.js';
 import * as grime from '../server/systems/grime.js';
 import * as players from '../server/systems/players.js';
@@ -92,7 +92,15 @@ test('a day at the baths: the desk, through the curtain, changed at the locker, 
   const sm = lastOf(conn, 'home');
   assert.ok(sm.suit && sm.suit.lk, 'the page draws you in it');
   const L2 = decodeLook(sm.suit.lk);
-  assert.ok(L2.outfit.bottoms || L2.outfit.set, 'a bathing suit on - never less');
+  assert.ok(L2.outfit.bottoms || L2.outfit.set, 'a bathing suit on');
+  // or nothing at all (the owner, 11-01): the locker offers it; the page draws you bare (client/art2/people.js: the mosaic)
+  act(w, p); const m2 = lastOf(conn, 'menu');
+  assert.ok(m2.opts.some((o) => o.id === 'ba:bare') && m2.opts.some((o) => o.id === 'ba:dress'), 'nothing on, or dressed again');
+  economy.handleMenu(w, p, m2.poi, 'ba:bare');
+  assert.equal(p.ped.home.suit, 2, 'nothing on');
+  const L3 = decodeLook(lastOf(conn, 'home').suit.lk);
+  assert.equal(PIECES[L3.outfit.set.id].name, 'Nothing', 'bare'); assert.ok(!L3.outfit.top && !L3.outfit.bottoms && !L3.outfit.shoes, 'nothing else either');
+  const A3 = lookArt(L3); assert.equal(A3.top.kind, 'none'); assert.equal(A3.bottom.kind, 'none');
   const Sh = S.showers[1];
   await walkPath(w, p, [[S.lx, S.row], Sh.stand]);
   const sh = act(w, p);
@@ -139,9 +147,9 @@ test('the bath wants a shower first, the showers a bathing suit; your weapons wa
   assert.ok(prof.bathLocker && prof.bathLocker.pistol === 36, 'kept on your profile (a restart can\'t lose it)');
   const Sh = S.showers[0];
   await walkPath(w, p, [[S.lx, S.row], Sh.stand]);
-  assert.match(players.findInteraction(w, p).label, /bathing suit at the lockers first/, 'no shower in your clothes');
+  assert.match(players.findInteraction(w, p).label, /undress at the lockers first/, 'no shower in your clothes');
   await walkPath(w, p, [[S.below[0], S.row], S.below, S.door, S.above, [G.bath.x + 120, G.edgeY]]);
-  assert.match(players.findInteraction(w, p).label, /bathing suit first/);
+  assert.match(players.findInteraction(w, p).label, /undress at the lockers first/);
   await walkPath(w, p, [S.above, S.door, S.below, [S.below[0], S.row], [S.lx, S.row], [S.lx, S.locker.y + 40]]);
   act(w, p); economy.handleMenu(w, p, lastOf(conn, 'menu').poi, 'ba:suit');
   await walkPath(w, p, [[S.lx, S.row], [S.below[0], S.row], S.below, S.door, S.above, [G.bath.x + 120, G.edgeY]]);
@@ -152,7 +160,7 @@ test('the bath wants a shower first, the showers a bathing suit; your weapons wa
   assert.equal(prof.bathLocker, undefined);
 });
 
-test('the city\'s people through the routine: the desk, their curtain, changed at the lockers, a shower, the bath, dressed, out - never less than a bathing suit', () => {
+test('the city\'s people through the routine: the desk, their curtain, changed at the lockers, a shower, the bath, dressed, out - a bathing suit or nothing at all', () => {
   const w = makeWorld();
   const { p, conn } = joinPlayer(w, { cash: 40, bank: 0 });
   const poi = bathDoor(w, p);
@@ -177,9 +185,11 @@ test('the city\'s people through the routine: the desk, their curtain, changed a
   }
   assert.ok(!h.folk.includes(b), 'out by the door at the end');
   assert.deepEqual(seen, ['shower', 'soak'], 'a shower, then the bath');
-  assert.deepEqual(wear, ['street', 'suit', 'street'], 'changed at the lockers and back');
+  assert.deepEqual(wear, ['street', b.change, 'street'], 'changed at the lockers and back');
+  assert.ok(['suit', 'bare'].includes(b.change));
   // every bather's suit: swim trunks or a swimsuit
   for (const f of h.folk) {
+    assert.equal(PIECES[decodeLook(f.app.bare.lk).outfit.set.id].name, 'Nothing', 'or nothing on');
     const L2 = decodeLook(f.app.suit.lk), O = L2.outfit;
     assert.ok(O.bottoms ? PIECES[O.bottoms.id].name === 'Swim trunks' : PIECES[O.set.id].name === 'Swimsuit', 'a bathing suit');
     assert.equal(L2.body.base === 'f', !!O.set, 'the women in a swimsuit');
