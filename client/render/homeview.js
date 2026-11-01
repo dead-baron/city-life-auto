@@ -235,8 +235,8 @@ function drawArt(L, me, u, now) {
       try { c = art.person(p.look, p.pose, p.d8, p.fr, p.x, p.y); } catch (err) { if (!art.pedErr) { art.pedErr = 1; console.warn('[home art] person', err); } }
       if (!c) continue;
       if (p.pose !== 'down' && !st.shower && !p.sk) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
-      g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
-      if (p.sk) water(p.x, p.y, now);   // (up to the shoulders in the bath)
+      if (p.sk) soakIn(c, p.x, p.y, now);   // (up to the chest in the bath: the body under the surface tinted with the water, ripples round it)
+      else g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
       if (p.sh) drops(p.x, p.y - 30, now);   // (under the shower)
       if (p.nm) {
         g.font = '700 9px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'bottom';
@@ -246,9 +246,9 @@ function drawArt(L, me, u, now) {
     }
   }
   if (u && u.use === 'door') { g.save(); g.shadowColor = 'rgba(120,236,255,.9)'; g.shadowBlur = 6; g.strokeStyle = `rgba(150,240,255,${pulse})`; g.lineWidth = 2; g.strokeRect(u.x + 1, u.y - 12, u.w - 2, 24); g.restore(); }
-  if (st.shower) {   // steam
-    g.fillStyle = 'rgba(235,245,255,.3)';
-    for (let k = 0; k < 5; k++) { const t = (now / 900 + k / 5) % 1; g.beginPath(); g.arc(me.x - 10 + k * 5, me.y - 30 - t * 26, 5 + t * 8, 0, 6.28); g.fill(); }
+  if (st.shower) for (let k = 0; k < 6; k++) {   // steam off the shower
+    const t = (now / 1300 + k / 6) % 1;
+    puff(me.x - 8 + ((k * 7) % 16) + Math.sin(now / 500 + k) * 3, me.y - 34 - t * 30, 9 + t * 12, 0.3 * Math.sin(t * Math.PI));
   }
   tvGlow(L, now);
   fireFx(L, now);
@@ -293,8 +293,7 @@ function tvGlow(L, now) {
 function fireFx(L, now) {
   const fire = st.fire && L.pieces.filter((q) => q.ch === 'p'), tubs = L.pieces.filter((q) => q.ch === '%');
   if (tubs.length) {
-    g.fillStyle = 'rgba(235,245,255,.18)';
-    for (const q of tubs) for (let k = 0; k < 4; k++) { const t = (now / 1400 + k / 4) % 1; g.beginPath(); g.arc(q.x + q.w * (0.25 + 0.17 * k), q.y + q.h / 2 - t * 30, 4 + t * 9, 0, 6.28); g.fill(); }
+    for (const q of tubs) for (let k = 0; k < 5; k++) { const t = (now / 2400 + k / 5) % 1; puff(q.x + q.w * (0.2 + 0.15 * k) + Math.sin(now / 1100 + k) * (3 + t * 6), q.y + q.h / 2 - t * 34, 7 * (0.7 + t * 1.3), 0.3 * Math.sin(t * Math.PI)); }
   }
   if (!fire || !fire.length) return;
   for (const q of fire) {
@@ -322,7 +321,48 @@ function folkAt(f) {
   if (folkSeen.size > 64) folkSeen.clear();
   return [r.x0 + (r.x1 - r.x0) * k, r.y0 + (r.y1 - r.y0) * k];
 }
-// in the bath: the water's surface over the lower half, a ripple round them
+// in the bath (art v2's view): the figure drawn, then everything under the water line tinted with the bath's water - deep
+// and blue-green at the bottom, clearer up by the surface - a bright rim where the water meets the body, and two
+// ripples spreading out from them (no box: only the body's own pixels take the water)
+const soakCv = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+function soakIn(c, x, y, now) {
+  const w = c.cv.width, h = c.cv.height, X = Math.round(x - c.ax), Y = Math.round(y - c.ay), line = Math.round(c.ay - 14);   // (the surface: a sitting body's chest)
+  if (!soakCv || line <= 0 || line >= h) { g.drawImage(c.cv, X, Y); return; }
+  if (soakCv.width < w || soakCv.height < h) { soakCv.width = Math.max(soakCv.width, w); soakCv.height = Math.max(soakCv.height, h); }
+  const q = soakCv.getContext('2d');
+  q.clearRect(0, 0, w, h); q.globalCompositeOperation = 'source-over'; q.drawImage(c.cv, 0, 0);
+  q.globalCompositeOperation = 'source-atop';
+  const gr = q.createLinearGradient(0, line, 0, h);
+  gr.addColorStop(0, 'rgba(120,200,220,.55)'); gr.addColorStop(0.35, 'rgba(70,150,180,.8)'); gr.addColorStop(1, 'rgba(40,110,140,.95)');
+  q.fillStyle = gr; q.fillRect(0, line, w, h - line);
+  q.fillStyle = 'rgba(225,248,255,.8)'; q.fillRect(0, line, w, 1);   // (the rim: the surface against the skin)
+  q.globalCompositeOperation = 'destination-out';   // (deeper down the body fades into the water)
+  const fd = q.createLinearGradient(0, line + 4, 0, h);
+  fd.addColorStop(0, 'rgba(0,0,0,0)'); fd.addColorStop(1, 'rgba(0,0,0,.85)');
+  q.fillStyle = fd; q.fillRect(0, line + 4, w, h - line - 4);
+  q.globalCompositeOperation = 'source-over';
+  g.drawImage(soakCv, 0, 0, w, h, X, Y, w, h);
+  const sy = Y + line + 0.5;
+  for (let k = 0; k < 2; k++) {   // ripples, spreading and fading
+    const t = (now / 1600 + k / 2 + x * 0.001) % 1;
+    g.strokeStyle = `rgba(220,246,255,${0.45 * (1 - t)})`; g.lineWidth = 1;
+    g.beginPath(); g.ellipse(x, sy, 7 + t * 12, 2 + t * 3, 0, 0, 6.28); g.stroke();
+  }
+  if (Math.sin(now / 260 + x) > 0.85) { g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(Math.round(x - 6 + ((now / 90) % 12)), Math.round(sy - 1), 1, 1); }   // (a glint)
+}
+// a soft round of steam: one blurred disc drawn once, scaled and faded where it's wanted
+let puffCv = null;
+function puff(x, y, r, a) {
+  if (a <= 0.01) return;
+  if (!puffCv) {
+    puffCv = document.createElement('canvas'); puffCv.width = puffCv.height = 32;
+    const q = puffCv.getContext('2d'), gr = q.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gr.addColorStop(0, 'rgba(250,252,255,1)'); gr.addColorStop(0.45, 'rgba(240,247,252,.55)'); gr.addColorStop(1, 'rgba(240,247,252,0)');
+    q.fillStyle = gr; q.fillRect(0, 0, 32, 32);
+  }
+  g.globalAlpha = a; g.drawImage(puffCv, x - r, y - r * 0.8, r * 2, r * 1.6); g.globalAlpha = 1;
+}
+// in the bath (the classic view): the water's surface over the lower half, a ripple round them
 function water(x, y, now) {
   g.fillStyle = 'rgba(96,172,206,.88)'; g.fillRect(Math.round(x - 13), Math.round(y - 15), 26, 17);
   g.fillStyle = 'rgba(200,236,248,.7)'; g.fillRect(Math.round(x - 13), Math.round(y - 15), 26, 1);
@@ -337,10 +377,13 @@ function drops(x, y, now) {
 function bathFx(L, now) {
   for (const P of L.pieces) {
     if (!'u@y!'.includes(P.ch) || (P.ch === 'u' && L.bath === 'spa')) continue;   // (the steam off the hot water, the stones, a sauna - not the spa's pool)
-    const n = Math.max(4, Math.round(P.w / 32)), rr = P.ch === 'y' || P.ch === '!' ? 9 : 11;
+    // soft wisps: a low haze lying on the water, puffs rising off it in slow drifting columns, swelling and thinning out
+    const hot = P.ch === 'y' || P.ch === '!', n = Math.max(5, Math.round(P.w / 22)), rr = hot ? 8 : 10;
+    for (let k = 0; k < Math.max(2, Math.round(P.w / 60)); k++) puff(P.x + (k + 0.5) / Math.max(2, Math.round(P.w / 60)) * P.w + Math.sin(now / 1700 + k * 2) * 8, P.y + P.h * 0.55, 22, 0.16 + 0.05 * Math.sin(now / 1100 + k));
     for (let k = 0; k < n; k++) {
-      const t = ((now / 2600) + k / n) % 1, x = P.x + ((k * 97) % 100) / 100 * P.w + Math.sin(now / 900 + k) * 6, y = P.y + P.h * 0.5 - t * 46;
-      g.fillStyle = `rgba(240,246,250,${0.22 * Math.sin(t * Math.PI)})`; g.beginPath(); g.arc(x, y, rr * (0.6 + t), 0, 6.28); g.fill();
+      const sp = 3000 + ((k * 431) % 1400), t = ((now / sp) + k / n) % 1, col = ((k * 97) % 100) / 100;
+      const x = P.x + 6 + col * (P.w - 12) + Math.sin(now / 1300 + k * 1.7) * (4 + t * 10), y = P.y + P.h * 0.5 - t * (hot ? 56 : 48);
+      puff(x, y, rr * (0.7 + t * 1.3), 0.34 * Math.sin(t * Math.PI) * (1 - t * 0.35));
     }
   }
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {

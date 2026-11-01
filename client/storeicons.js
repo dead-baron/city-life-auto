@@ -53,7 +53,7 @@ export const GLYPHS = {
   film: (g) => { fillPath(g, C.amber, 'M3 6h18v12H3z'); fillPath(g, C.ink, 'M5 8h2v2H5zM5 14h2v2H5zM17 8h2v2h-2zM17 14h2v2h-2zM9 9h6v6H9z'); },
   pin: (g) => { fillPath(g, C.cream, 'M12 2a3 3 0 0 1 2 5c2 3 3 7 2 11a4 4 0 0 1-8 0c-1-4 0-8 2-11a3 3 0 0 1 2-5z'); fillPath(g, C.red, 'M9.6 8.5h4.8v1.6H9.6z'); },
   box: (g) => { fillPath(g, C.wood, 'M3 7l9-4 9 4v11l-9 4-9-4z'); strokePath(g, C.amber, 1.5, 'M3 7l9 4 9-4M12 11v11'); },
-  bath: (g) => { fillPath(g, C.cyan, 'M2 12h20v2a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z'); fillPath(g, C.steel, 'M5 20h2v2H5zM17 20h2v2h-2z'); strokePath(g, C.cream, 1.6, 'M8 3c-1 2 1 3 0 5M12 3c-1 2 1 3 0 5M16 3c-1 2 1 3 0 5'); },
+  bath: (g) => { strokePath(g, C.steel, 2, 'M20 13V5a2.5 2.5 0 0 0-5 0'); fillPath(g, C.steel, 'M12.5 5h5v2h-5z'); g.fillStyle = C.cyan; for (const [x, y] of [[13, 9], [15, 10.5], [17, 9]]) g.fillRect(x, y, 1.4, 1.8); g.fillStyle = C.cream; g.beginPath(); g.arc(7, 9.5, 3, 0, 6.3); g.fill(); fillPath(g, C.cream, 'M1 12h22v1.6h-1v1.4a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5v-1.4H1z'); fillPath(g, C.cyan, 'M3 13.6h18v1.2H3z'); fillPath(g, C.steel, 'M5 19.5h2.4l-.8 3H5.4zM16.6 19.5H19l-.6 3h-1.2z'); },   // (a bathtub on its feet, someone in it, the shower over it: not a mug)
   cup: (g) => { fillPath(g, C.green, 'M6 4h12l-1.5 17h-9z'); fillPath(g, C.cream, 'M7 8h10v3H7z'); },
 };
 // the badge for a glyph, px across (drawn once per size)

@@ -19129,3 +19129,17 @@ The owner asked for this on 11-01: "pixelated instead of a blue square ... like 
   - no crease or outline line crosses it.
 
   It replaces the small skin-tinted patch. Before this, the bathing suit (white vest over coloured trunks) read as underwear with a blue square.
+
+## 2026-11-01 - The bathhouses: in the water, not a blue box; soft steam; a bathtub on the sign
+
+The owner asked for this on 11-01: "There is still a blue square around the player and NPCs when in the bath ... make the sitting in water fx look better", "The steam vfx could look better too", and "some other buildings appear to be labeled a bathhouse when they're not (like this coffee shop)".
+- **In the water** (client/render/homeview.js soakIn): the bather is drawn whole. Everything under the waterline, at chest height, then takes the water's colour on the body's own pixels only, clearer near the surface and deeper below. Lower down the body fades into the water.
+  - A bright rim where the water meets the skin.
+  - Two ripples spreading out round them, and a glint now and then.
+
+  This replaces the opaque blue rectangle drawn over every soaker.
+- **Steam** (bathFx, puff): soft blurred puffs, drawn once and scaled, in place of flat circles.
+  - A low haze lies on the water.
+  - Wisps rise in slow drifting columns, swelling and thinning out.
+  - The same puffs come off the showers and a home's hot tub.
+- **The sign:** the bathhouse store icon (client/storeicons.js `bath`) is now a bathtub on its feet with someone in it and the shower over it. The steaming tub before read as a coffee mug, which made the Old Quarter Baths look like a coffee shop.
