@@ -18,7 +18,7 @@ import * as homeinside from '../server/systems/homeinside.js';
 const lastOf = (conn, t) => [...conn.sent].reverse().find((m) => m && m.t === t);
 // a bathhouse's door on the test city (World v3's two are checked in test/world3server.test.js)
 function bathDoor(w, p) {
-  let poi = w.map.pois.find((q) => bath.isBath(w, q));
+  let poi = w.map.pois.find((q) => bath.isBath(w, q) && q.bath === true);   // (the sento: the other houses' floors - test/bathhouses2.test.js)
   if (!poi) { const b = w.map.buildings.find((q) => q && q.tw >= 2); poi = { id: w.map.pois.length, kind: 'delivery', label: 'Test Baths', x: p.ped.x + 10, y: p.ped.y, r: 40, b: w.map.buildings.indexOf(b), bath: true }; w.map.pois.push(poi); }
   return poi;
 }

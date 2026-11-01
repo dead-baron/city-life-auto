@@ -45,10 +45,10 @@ function driveTo(v, x, y, hop = 300) {
   }
 }
 // a long straight street (its middle, its heading)
-function street() {
+function street(f = 0.5) {   // (f: how far along it, 0..1)
   const e = w.map.net.edges.find((q) => q.lvl === 0 && q.len > 900 && q.pts.length === 2 && q.kind !== 'hwy' && !q.bridge);
   const a = Math.atan2(e.pts[1].y - e.pts[0].y, e.pts[1].x - e.pts[0].x);
-  return { x: (e.pts[0].x + e.pts[1].x) / 2, y: (e.pts[0].y + e.pts[1].y) / 2, a };
+  return { x: e.pts[0].x + (e.pts[1].x - e.pts[0].x) * f, y: e.pts[0].y + (e.pts[1].y - e.pts[0].y) * f, a };
 }
 
 test('the jobs are on the phone\'s list with their cards', () => {
@@ -184,8 +184,12 @@ test('Crazy Taxi: the clock starts in the cab; a fare from a ring, there in time
   for (let i = 0; i < 20 && !j.fare; i++) { v.vx = 0; v.vy = 0; w.step(); }
   assert.ok(j.fare, 'in');
   assert.equal(q.vehId, v.id);
-  // a near miss on the way: a car just past the cab's side at speed
-  const o = w.spawnVehicle('sedan', v.x, v.y + v.def.W / 2 + VEHICLES.sedan.W / 2 + 12, v.a, {});
+  // a near miss on the way: a car just past the cab's side at speed - out on a long straight street, heading along it
+  // (not where the fare stood: their kerb is wherever the run's dice put it, and a wall or a lamp post a car's length
+  // ahead of the cab there stopped it short of the speed a near miss wants - the test failed about one run in four)
+  const s2 = street(0.3), nx = -Math.sin(s2.a), ny = Math.cos(s2.a), off = v.def.W / 2 + VEHICLES.sedan.W / 2 + 12;
+  put(v, s2.x, s2.y, s2.a); for (const sid of v.seats) { const e = sid && w.get(sid); if (e) { e.x = v.x; e.y = v.y; w.place(e); } }
+  const o = w.spawnVehicle('sedan', v.x + nx * off, v.y + ny * off, v.a, {});
   v.vx = Math.cos(v.a) * 500; v.vy = Math.sin(v.a) * 500;
   w.step();
   assert.ok(j.fare.tips >= CRAZY.nearTip, `a near-miss tip ($${j.fare.tips})`);

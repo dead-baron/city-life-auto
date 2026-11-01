@@ -10,9 +10,9 @@
 //     and Conch Square across from them;
 //   - the quay at Coral Street's foot: the T-jetty, the dive boat and the skiffs, the bait shack, the boat hire;
 //   - Tiki Point on the north beach: the beach bar, hammocks between the palms, loungers;
-//   - the east lobe: Coral Cay Rainforest (palms, banana and bird of paradise, monstera and hibiscus, jungle paths),
-//     Cay Road out through it to the Coral Cay Eco Lodge (its lodge, its cabins along the south shore on a boardwalk,
-//     their jetty), Coral Point Light on the tip;
+//   - the east lobe: Cay Road out to the Coral Cay Eco Lodge (its lodge, seven cabins in the jungle), Coral Point Light
+//     on the tip; its wild side - the spine and its falls, the inner lagoon, the trails, the mangrove inlet, the beach
+//     bar and its jetty, Macaw Cove, the islet (NA1-E, SC3-H) - laid after the district by shared/world3-tropic.js;
 //   - the whole key the plan's: the grid of mainland streets and the farm fields (the key's land was Willow Valley's
 //     meadow till a city painted it - shared/world3-land.js ISLE3) give way.
 // Every building faces south (the camera). Names and signs are invented. Draws are fixed by place (hash2).
@@ -230,32 +230,20 @@ function build(m, api, K) {
         shop: { kind: 'lobby', door: 'left', open: true, people: 1, sign: { text: 'ECO LODGE', bg: '#2a4a3a', fg: [240, 230, 190], lit: true }, awning: ['#2a4a3a', '#2a4a3a'] } };
       if (K.building({ x: lx, y: ly, w: 16, h: 10, arch: 'hotel', key: 'hotel', name: 'Coral Cay Eco Lodge', poi: { kind: 'delivery', label: 'Coral Cay Eco Lodge' }, whole: true, art })) out.shops++;
     }
-    // the path down from the road's end to the boardwalk
-    const px = 4458;
-    let by = 3480;
-    for (let y = CAY[CAY.length - 1][1] + 4; y < by; y++) for (const x of [px, px + 1]) if (K.free(x, y)) { m.set(x, y, T.DIRT); K.take(x, y, 1, 1); }
-    // the cabins along the shore, the boardwalk in front of them
+    // its cabins (each a room to rent), scattered in the jungle either side of Cay Road (2026-10-31: the row of them along
+    // the shore gave way to NA1-E's beach - shared/world3-tropic.js lays the east lobe's wild side)
     let n = 0;
-    for (let x = 4384; x < 4486 && n < 7; x += 14) {
-      let s = by + 8; while (s < BOX[3] - 10 && !isW(x + 3, s)) s++;
-      const cy = Math.min(by, s - 14);
-      if (cy < 3460 || !K.allFree(x, cy, 8, 6)) continue;
+    // (all seven of them, built in the same order as before: each keeps its home id - the homes' ids are their order on
+    // the map, and a player's ownership is kept by id: server/systems/homes.js)
+    for (const [x, cy] of [[4372, 3474], [4436, 3466], [4384, 3492], [4354, 3486], [4428, 3486], [4390, 3462], [4362, 3504]]) {
+      if (!K.allFree(x, cy, 8, 6)) continue;
       const art = { spec: { floors: 1, style: 'siding', wallColor: pick(['#c8a878', '#b89a6a', '#d8b88a'], rnd(x, cy, 50)), win: 'even', pitch: 'gable', roof: 'shingle', roofColor: '#6a5a3a', slope: 0.6, parapet: 2, grime: 0.08, blades: [], plaques: [] }, noShop: true };
       const b = K.building({ x, y: cy, w: 8, h: 6, arch: 'house', name: `Cabin ${n + 1}, Coral Cay Eco Lodge`, whole: true, art, home: { kind: 'apartment', name: `Cabin ${n + 1}, Coral Cay Eco Lodge`, price: 9000, slots: 1 } });
       if (!b) continue;
       out.homes++; n++;
-      for (let y = cy + 6; y < cy + 9; y++) for (let xx = x - 3; xx < x + 11; xx++) if (K.free(xx, y)) { m.set(xx, y, T.DOCK); K.take(xx, y, 1, 1); }
-      prop('hammock', x + 4, cy + 7.6, 0, { len: 90 }); prop('lounger', x + 9.5, cy + 7.4, 0, { v: n % 4, a: -Math.PI / 2 });
+      prop('hammock', x + 4, cy + 7.2, 0, { len: 90 });
     }
-    // their jetty off the shore below the path
-    let s = by; while (s < BOX[3] - 14 && !isW(px, s)) s++;
-    if (s < BOX[3] - 14) {
-      for (let y = by + 2; y < s; y++) for (const x of [px, px + 1]) if (K.free(x, y) || tile(x, y) === T.SAND) { m.set(x, y, T.DOCK); K.take(x, y, 1, 1); }
-      for (let y = s; y < s + 10; y++) for (const x of [px, px + 1]) if (isW(x, y)) m.set(x, y, T.DOCK);
-      prop('canoe', px + 3.2, s + 6, 0, { a: Math.PI / 2, c: 0 }); prop('canoe', px - 1.4, s + 4, 0, { a: Math.PI / 2, c: 2 });
-      prop('lamp', px + 0.5, s + 9.5, 5, { style: 'iron', lift: 4 });
-    }
-    place('Coral Cay Eco Lodge', 4380, ly - 2, 4490, by + 14);
+    place('Coral Cay Eco Lodge', 4366, ly - 2, 4466, 3500);
   }
 
   // ===========================================================================================================
@@ -296,24 +284,10 @@ function build(m, api, K) {
   // Coral Cay Rainforest on the east lobe (and the west lobe's wild end): palms, banana and bird of paradise, monstera,
   // elephant ear and hibiscus under them; jungle paths from Cay Road through it to the north shore
   function rainforest() {
-    // the paths: from the road north to the shore, and along through the middle
-    const path = (pts) => { for (let k = 1; k < pts.length; k++) { const [ax, ay] = pts[k - 1], [bx, by] = pts[k], n = Math.ceil(Math.hypot(bx - ax, by - ay)); for (let j = 0; j <= n; j++) { const x = Math.round(ax + (bx - ax) * j / n), y = Math.round(ay + (by - ay) * j / n); for (const [dx, dy] of [[0, 0], [1, 0]]) if (K.free(x + dx, y + dy)) { m.set(x + dx, y + dy, T.DIRT); K.take(x + dx, y + dy, 1, 1); } } } };
-    path([[4396, 3442], [4392, 3410], [4400, 3380], [4396, 3350], [4402, 3332]]);
-    path([[4352, 3400], [4392, 3410], [4430, 3396], [4470, 3392]]);
-    let n = 0;
-    for (let y = 3326; y < 3540; y += 2.3) for (let x = CX.east + 6; x < 4505; x += 2.3) {
-      const jx = x + (rnd(Math.round(x * 3), Math.round(y * 3), 60) - 0.5) * 1.6, jy = y + (rnd(Math.round(x * 3), Math.round(y * 3), 61) - 0.5) * 1.6, tx = Math.floor(jx), ty = Math.floor(jy);
-      if (!K.free(tx, ty) || rnd(tx, ty, 62) < 0.25) continue;
-      let ok = true;
-      for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1; dx++) if (!K.free(tx + dx, ty + dy) && tile(tx + dx, ty + dy) !== T.GRASS) { ok = false; break; }
-      if (!ok) continue;
-      const u = rnd(tx, ty, 63);
-      if (u < 0.5) prop('palm_a', jx, jy, 10, { sp: pick(PALMS, rnd(tx, ty, 64)), k: 1.2 + rnd(tx, ty, 65) * 0.35 });
-      else if (u < 0.72) prop('palm_s', jx, jy, 6, { sp: pick(['banana', 'bird', 'smallPalm', 'banana'], rnd(tx, ty, 66)), k: 1.1 });
-      else prop('shrub_a', jx, jy, 0, { sp: pick(['monstera', 'elephant', 'hibiscus', 'monstera', 'bougain'], rnd(tx, ty, 67)), k: 1.1 });
-      n++;
-    }
-    out.jungle = n;
+    // (the east lobe's wild side is laid after the district, by shared/world3-tropic.js: the black-rock spine and its
+    // falls into the inner lagoon, the trails, the mangrove inlet, the beach bar and the T-jetty, the cove - here it is
+    // only kept clear of the village's lawn and palms)
+    for (let y = 3318; y < 3545; y++) for (let x = CX.east + 6; x < 4512; x++) if (K.free(x, y)) K.take(x, y, 1, 1);
     prop('parksign', 4398, 3438, 0);
     place('Coral Cay Rainforest', CX.east, 3320, 4510, 3540);
   }

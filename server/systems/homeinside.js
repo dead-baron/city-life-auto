@@ -827,7 +827,7 @@ export function send(world, p, full) {
   const others = [];
   for (const q of world.players.values()) {
     const o = q !== p && q.ped && q.ped.home && q.ped.hidden && q.ped.home.id === s.id && (q.ped.home.lv || 0) === lv ? q.ped.home : null;   // (on the same floor)
-    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, si: o.seat ? [Math.round(o.seat.x), Math.round(o.seat.y), Math.round(o.seat.a * 100) / 100] : 0, ...(o.soak && o.seat ? { sk: 1 } : null), ...(full || world.tick % 20 === 0 ? { app: bathhouse.appIn(q) || q.ped.app || null } : null) });
+    if (o) others.push({ n: q.name, x: Math.round(o.x), y: Math.round(o.y), a: Math.round(o.a * 100) / 100, mv: o.mv ? 1 : 0, sl: o.sleep ? 1 : 0, si: o.seat ? [Math.round(o.seat.x), Math.round(o.seat.y), Math.round(o.seat.a * 100) / 100] : 0, ...(o.soak && o.seat ? { sk: o.steam ? 2 : 1 } : null), ...(full || world.tick % 20 === 0 ? { app: bathhouse.appIn(q) || q.ped.app || null } : null) });
   }
   m.others = others;   // (their looks now and then: the page keeps them)
   const pt = lv ? null : petOf(world, h);   // (H71: the owner's pet - you see it as their guest too; it stays on the ground floor)

@@ -237,7 +237,25 @@ test('World v3\'s skateboards: a rack at every skate park, a sparse few elsewher
 test('World v3\'s bathhouses open onto their floors; the Waves Arena by the stadium: walled in, its gate on a street, a match on it', async () => {
   const bath = await import('../server/systems/bathhouse.js'), soc = await import('../server/systems/carsoccer.js'), players = await import('../server/systems/players.js');
   const baths = M.pois.filter((p) => bath.isBath({ map: M }, p));
-  assert.deepEqual(baths.map((p) => p.label).sort(), ['Old Quarter Baths', 'Steam & Stone Baths'], 'the two bathhouses');
+  assert.deepEqual(baths.map((p) => p.label).sort(), ['Granite Springs Onsen', 'Moonlight Spa 24', 'Old Quarter Baths', 'Seaglass Spa', 'Steam & Stone Baths', 'Sunset Bathhouse'], 'the bathhouses');
+  // (nat5) each house its own floor, where it belongs: the onsen at the hot springs, the jjimjilbang on the Neon Strip,
+  // the spa in Bayside, the seaside house on Sunset Beach's sand
+  const want = { 'Granite Springs Onsen': ['onsen', /Granite Peaks/], 'Moonlight Spa 24': ['kr', /Neon/], 'Seaglass Spa': ['spa', /Bayside/], 'Sunset Bathhouse': ['sea', /Sunset Beach/] };
+  for (const poi of baths) {
+    const W = want[poi.label];
+    if (!W) { assert.equal(poi.bath, true, `${poi.label}: the sento`); continue; }
+    assert.equal(poi.bath, W[0], `${poi.label}: its house`);
+    const D = DISTRICTS[M.dist[M.idx(Math.floor(poi.x / TILE), Math.floor(poi.y / TILE))]];
+    assert.ok(D && W[1].test(D.name), `${poi.label}: in ${D && D.name}`);
+  }
+  // (nat5) the showers: every public beach has one, every campground a shower block, the pool and the water park theirs
+  const sh = M.props.filter((q) => q && (q.t === 'shower' || q.t === 'showerhut'));
+  const dry = (L) => { for (let ty = Math.floor(L.y / TILE); ty < (L.y + L.h) / TILE; ty++) for (let tx = Math.floor(L.x / TILE); tx < (L.x + L.w) / TILE; tx++) if (M.inside(tx, ty) && M.tiles[M.idx(tx, ty)] === T.SAND) return true; return false; };   // (a wreck out on a reef has no sand: no shower)
+  for (const L of (M.landmarks || []).filter((q) => (q.type === 'beach' || q.type === 'cove' || q.type === 'bonfire' || q.type === 'wreck') && dry(q))) {
+    assert.ok(sh.some((q) => q.x > L.x - 10 * TILE && q.x < L.x + L.w + 10 * TILE && q.y > L.y - 10 * TILE && q.y < L.y + L.h + 10 * TILE), `a shower on ${L.name}`);
+  }
+  for (const L of (M.landmarks || []).filter((q) => q.type === 'camp')) assert.ok(sh.some((q) => q.t === 'showerhut' && Math.hypot(q.x - L.x - L.w / 2, q.y - L.y - L.h / 2) < Math.max(L.w, L.h) / 2 + 10 * TILE), `a shower block at ${L.name}`);
+  for (const s of (M.natureSites || []).filter((q) => q.kind === 'pool' || q.kind === 'waterpark')) assert.ok(sh.some((q) => Math.hypot(q.x - s.x, q.y - s.y) < 26 * TILE), `showers by ${s.name}`);
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const { p } = joinPlayer(w, { cash: 50 });
   for (const poi of baths) {

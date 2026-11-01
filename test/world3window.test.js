@@ -87,7 +87,7 @@ test("the v3 index: every region's signature and the world's; a window lists the
   const all = M.pois.filter(Boolean), outside = all.filter((p) => !w.inside(Math.floor(p.x / TILE), Math.floor(p.y / TILE)));
   assert.equal(w.places.filter(Boolean).length, all.length);
   assert.ok(outside.length > 50, `${outside.length} of ${all.length} places outside the window`);
-  for (const p of outside) { const q = w.places[p.id]; assert.deepEqual([q.kind, q.label, q.x, q.y], [p.kind, p.label, p.x, p.y]); assert.equal(q.d, M.dist[M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))]); }
+  for (const p of outside) { const q = w.places[p.id]; assert.deepEqual([q.kind, q.label, q.x, q.y], [p.bath ? 'bathhouse' : p.kind, p.label, p.x, p.y]); assert.equal(q.d, M.dist[M.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))]); }
   const kinds = new Set(outside.map((p) => p.kind));
   // the coarse picture: a tile every PICTURE_K, the whole frame
   const P = w.picture;

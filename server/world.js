@@ -91,6 +91,7 @@ import * as dusting from './systems/dusting.js';
 import * as coastguard from './systems/coastguard.js';
 import * as gardening from './systems/gardening.js';
 import * as farming from './systems/farming.js';
+import * as countyroad from './systems/countyroad.js';
 
 import * as homeinside from './systems/homeinside.js';
 import * as mortgage from './systems/mortgage.js';
@@ -207,6 +208,7 @@ const SYSTEMS = [
   ['coastguard', coastguard.update], // the coast guard's patrols: smugglers run down and boarded, people pulled out of the water (H59)
   ['gardening', gardening.update],  // the plots in owned homes' yards: growing, drying out, wilting; the plots near each player sent (H61)
   ['farming', farming.update],      // the farms' fields: the rows growing, a tractor down a row ploughing, sowing, harvesting it (H61)
+  ['countyroad', countyroad.update], // the county roads made the concept (SC3-E): the farmer and his pickup at the gate, the combine at work on the half-cut wheat
   ['bathhouse', bathhouse.update],  // the bathhouses: the bathers' routine, blood and dirt on people washed off (bathhouse.js)
   ['homeinside', homeinside.update], // inside your home: sleeping, the shower, where you are in there to your page (H62)
   ['biz', biz.update],              // the businesses: a day's takings in the till, the hideouts' guards, the food trucks' hatches, the decks (biz.js)

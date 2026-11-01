@@ -11,7 +11,7 @@ export const STORE_ICON = {
   snack: 'burger', fruitstand: 'apple', farmstand: 'shop', market: 'shop', gasstation: 'fuel', pawn: 'rings', fence: 'hood', smuggler: 'hood', gang: 'hood',
   garage: 'wrench', salvage: 'wrench', paint: 'spray', dealer: 'car', barber: 'scissors', sports: 'dumbbell', tackle: 'hook', fishmarket: 'fish',
   lodge: 'deer', huntcamp: 'deer', trapper: 'deer', butcher: 'cleaver', marina: 'anchor', rental: 'ship', charter: 'ship', airport: 'plane',
-  assay: 'pick', cinema: 'film', bowling: 'pin', warehouse: 'box', vending: 'cup',
+  assay: 'pick', cinema: 'film', bowling: 'pin', warehouse: 'box', vending: 'cup', bathhouse: 'bath',
 };
 // a glyph: drawn in a 24-unit box (g scaled), centred on 12,12
 const fillPath = (g, c, d) => { g.fillStyle = c; g.fill(new Path2D(d)); };
@@ -53,6 +53,7 @@ export const GLYPHS = {
   film: (g) => { fillPath(g, C.amber, 'M3 6h18v12H3z'); fillPath(g, C.ink, 'M5 8h2v2H5zM5 14h2v2H5zM17 8h2v2h-2zM17 14h2v2h-2zM9 9h6v6H9z'); },
   pin: (g) => { fillPath(g, C.cream, 'M12 2a3 3 0 0 1 2 5c2 3 3 7 2 11a4 4 0 0 1-8 0c-1-4 0-8 2-11a3 3 0 0 1 2-5z'); fillPath(g, C.red, 'M9.6 8.5h4.8v1.6H9.6z'); },
   box: (g) => { fillPath(g, C.wood, 'M3 7l9-4 9 4v11l-9 4-9-4z'); strokePath(g, C.amber, 1.5, 'M3 7l9 4 9-4M12 11v11'); },
+  bath: (g) => { fillPath(g, C.cyan, 'M2 12h20v2a6 6 0 0 1-6 6H8a6 6 0 0 1-6-6z'); fillPath(g, C.steel, 'M5 20h2v2H5zM17 20h2v2h-2z'); strokePath(g, C.cream, 1.6, 'M8 3c-1 2 1 3 0 5M12 3c-1 2 1 3 0 5M16 3c-1 2 1 3 0 5'); },
   cup: (g) => { fillPath(g, C.green, 'M6 4h12l-1.5 17h-9z'); fillPath(g, C.cream, 'M7 8h10v3H7z'); },
 };
 // the badge for a glyph, px across (drawn once per size)

@@ -552,6 +552,27 @@ export function beachShower(run = 1) {
   if (run) for (let k = 0; k < 18; k++) { const x = 23 + hash(k, 1, 9) * 7, y = 7 + hash(k, 2, 9) * 7, z = 8 + hash(k, 3, 9) * 42; m.box(x, y, z, x + 1, y + 1, z + 2, wat); }
   return m;
 }
+// (nat5) a campground's shower block: a timber hut of three stalls under one pitched roof - each stall's door ajar on its
+// slatted floor, the gap under the doors, the water tank on the roof, a sign board, a tap and a bucket by the end wall
+export function showerHut() {
+  const W = 72, D = 40, H = 34, m = new Vox(W + 8, D + 10, H + 26);
+  const wall = m.mat({ ramp: R('#8a6440'), k: 3, shade: (x, y, z) => (Math.round(x) % 8 === 0 ? -1 : 0) + (hash(Math.round(x / 8), Math.round(z / 3), 3) - 0.5) * 0.5 });
+  const roof = m.mat({ ramp: R('#4a5a4a'), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -0.9 : 0) }), door = m.mat({ ramp: R('#b08a5a'), k: 3 }), dark = m.mat({ ramp: R('#2a2420'), k: 2 });
+  const tank = m.mat({ ramp: MAT.metal, k: 4 }), sign = m.mat({ ramp: R('#2a5a8a'), k: 3 }), txt = m.mat({ ramp: R('#f0ece4', 4, 2), k: 3 }), deck = m.mat({ ramp: MAT.woodDock, k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -1.1 : 0) });
+  const x0 = 4, y0 = 4, x1 = x0 + W, y1 = y0 + D;
+  m.box(x0 - 2, y1 - 2, 0, x1 + 2, y1 + 6, 3, deck);
+  m.box(x0, y0, 0, x1, y1, H, wall);
+  for (let k = 0; k < 3; k++) {   // the stalls' doors, a little open, the dark of the stall behind
+    const dx = x0 + 6 + k * 22;
+    m.box(dx, y1 - 1, 4, dx + 16, y1, H - 4, dark); m.box(dx + (k === 1 ? 6 : 0), y1, 5, dx + (k === 1 ? 22 : 16), y1 + 1, H - 5, door);
+  }
+  m.fill((x, y, z) => { const top = H + (D / 2 + 5 - Math.abs(y - (y0 + D / 2))) * 0.45; return z >= top - 2.5 && z < top ? roof : -1; }, x0 - 3, y0 - 5, H - 2, x1 + 3, y1 + 6, H + 20);
+  m.cyl('x', x1 - 16, y0 + 10, H + 12, 6, x1 - 28, x1 - 6, tank);
+  m.box(x0 + W / 2 - 16, y1 + 1, H - 2, x0 + W / 2 + 16, y1 + 2, H + 6, sign);
+  for (let k = 0; k < 7; k++) m.box(x0 + W / 2 - 13 + k * 4, y1 + 2, H + 1, x0 + W / 2 - 11 + k * 4, y1 + 3, H + 4, txt);
+  m.box(x1, y1 - 10, 10, x1 + 3, y1 - 8, 14, tank); m.cyl('z', x1 + 3, y1 - 4, 0, 3, 0, 7, m.mat({ ramp: R('#5a7a9a'), k: 3 }));
+  return m;
+}
 // a driftwood shade: four silvered posts, crossbeams and a lattice of branches over the top, a few shells hung on
 // twine (a shady spot to lie on a towel)
 export function driftShade(w = 70, d = 50) {

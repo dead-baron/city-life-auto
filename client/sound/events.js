@@ -198,6 +198,7 @@ export const EVENT_SOUNDS = {
   heal: at('heal', 0.7),
   revive: at('revive'),
   splash: (ev, A) => A.at('splash', ev.x, ev.y, 1, { n: ev.n || 10 }),
+  shw: (ev, A) => A.at('splash', ev.x, ev.y, 0.4, { n: 6 }),   // (an outdoor shower running: server/systems/showers.js)
   whinny: (ev, A) => A.at('whinny', ev.x, ev.y, 1),   // (a horse bolting: server horses.js)
   // ---- money and things ----
   cash: at('cashtoss'),

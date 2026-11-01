@@ -37,7 +37,9 @@ export function fieldsOf(world) {
         const tx = Math.floor(c.x / TILE), ty = Math.floor(c.y / TILE);
         if (map.inside(tx, ty) && map.tiles[map.idx(tx, ty)] === T.FIELD) { ok |= 1 << k; okN++; }
       }
-      rows.push({ s: start, g: start === ROW.SOWN ? ((r * 37 + fi * 11) % 70) / 100 : 0, m: 0, ok, okN });
+      const row = { s: start, g: start === ROW.SOWN ? ((r * 37 + fi * 11) % 70) / 100 : 0, m: 0, ok, okN };
+      if (f.cut) Object.assign(row, cutRow(f, v, r, ok));
+      rows.push(row);
     }
     out.push({ i: fi, f, v, n, len, rows });
   });
@@ -64,6 +66,15 @@ export function keep(world) {
   if (!F || !F.length) return;
   store.kept.fields = { sig: layoutOf(F), rows: F.map((fd) => fd.rows.map((row) => [row.s, Math.round(row.g * 1000), row.m])) };
   store.touch();
+}
+// a row of a field half harvested by hand (a county road's, world3-countyroad.js f.cut: a rect of it cut) as it starts:
+// stubble where the whole of it is in the cut, ripe where none is - ripe with its stretches in the cut done where it's
+// partly in it (the combine's at work along it)
+export function cutRow(f, v, r, ok) {
+  let m = 0;
+  for (let k = 0; k < FARM.segs; k++) { const c = segCentre(f, v, r, k); if (c.x >= f.cut[0] && c.x < f.cut[2] && c.y >= f.cut[1] && c.y < f.cut[3]) m |= 1 << k; }
+  m &= ok;
+  return ok && (m & ok) === ok ? { s: ROW.STUBBLE, g: 0, m: 0 } : { s: ROW.RIPE, g: 0, m };
 }
 function segCentre(f, v, r, k) {
   const a = (r + 0.5) * FARM.rowW, b = ((k + 0.5) / FARM.segs) * (v ? f.h : f.w);

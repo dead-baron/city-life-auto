@@ -34,7 +34,14 @@ export const FIREWOOD = { work: 2.4, reach: 36, mill: 65 };
 // share of your health, kill when you kill someone up close (within close px), dirt from a tumble or crawling;
 // swimming washes it off, rain the dirt slowly (rainS: from all of it to none). Blood over seen of it: people step
 // away from you and police within copR px grow suspicious (once every eyeS s - never a star by itself)
-export const BATH = { fee: 8, showerS: 3, heal: 10, soakS: 6, soakHeal: 1.2, buffS: 180, bathers: 6, arriveS: 14, kill: 0.6, close: 70, tumble: 0.35, crawl: 0.15, rainS: 120, seen: 0.45, copR: 360, eyeS: 45 };
+// (nat5) the other houses (shared/homelayout.js's plans): fees, a day at each (the sento's is fee); springHeal: the onsen's
+// rock pools' health a second (springBuffS: the refresh after a soak in one); saunaHeal, loungeHeal: the sauna's, the heated
+// floor's; the cold plunge (plungeC degrees) within contrastS s of a hot soak done: contrastHeal health at once, refreshed
+// for contrastBuffS s. Out in the world (server/systems/showers.js): an outdoor shower - on a beach, at a campground, a
+// pool's changing rooms - outS s under it: the wash (grime.js) and outHeal health; reach: how near you stand (px)
+export const BATH = { fee: 8, showerS: 3, heal: 10, soakS: 6, soakHeal: 1.2, buffS: 180, bathers: 6, arriveS: 14, kill: 0.6, close: 70, tumble: 0.35, crawl: 0.15, rainS: 120, seen: 0.45, copR: 360, eyeS: 45,
+  fees: { sento: 8, onsen: 15, kr: 12, spa: 25, sea: 6 }, springHeal: 2, springBuffS: 300, saunaHeal: 1.4, loungeHeal: 1, plungeC: 18, contrastS: 90, contrastHeal: 15, contrastBuffS: 420,
+  outS: 3, outHeal: 5, reach: 40 };
 // Home upgrades (server/systems/homeups.js; what each is and where: shared/homeups.js; the owner's notes 2, 10-24: "You
 // can do this by gathering materials like wood or stone or other things across the world, or you can purchase them with
 // money outright"): what each takes - the builders' labour (dollars) and the materials (wood: bundles of firewood,

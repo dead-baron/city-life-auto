@@ -5,6 +5,7 @@
 import { TILE } from './constants.js';
 import { mulberry32 } from './rng.js';
 import { UG, C, registerCaverns, _ug } from './underground.js';
+import { carveScene, kitCavern, dressKit } from './cavekit.js';
 
 const { region, cellAt, setCell, capsule, disc, wallSpots, floorSpots, pickN, vnoise, segDist, len, kSeed } = _ug;
 
@@ -70,6 +71,7 @@ export function carveCavern(F, K, s2) {
     }
   }
   for (const d of P.docks || []) capsule(cr, d.x0, d.y0, d.x1, d.y1, d.hw || 18, C.DOCK, true);
+  if (rv) kitCavern(cr, K, s2);   // (the mine cave's kit spread here: shared/cavekit.js - a trestle over the lake, crystal grottos, rails at the ore face)
   // little pools of still water about the dry chambers' floors
   const rp = mulberry32(s2 + 21);
   for (const c of K.chambers) if (c.kind === 'glow' || c.kind === 'crystal' || c.kind === 'den') { const px = c.x + Math.round((rp() - 0.5) * c.r), py = c.y + Math.round((rp() - 0.5) * c.r); if (cellAt(cr, Math.floor(px / TILE), Math.floor(py / TILE)) === C.FLOOR) disc(cr, px, py, 22 + Math.round(rp() * 14), C.POOL, true); }
@@ -207,11 +209,12 @@ export function lightCave(L, K) {
     const ore = K.chambers.find((c) => c.kind === 'ore'), ps = ore && K.passages.find((q) => q.a === ore.id || q.b === ore.id);
     if (ps) { const a = K.ch[ps.a], b = K.ch[ps.b]; along(ps.vias[0] || a, b, 0, 110); }
   } else {
-    along(K.inside, K.ch.hall, 120, 100);
+    if (!K.kit) along(K.inside, K.ch.hall, 120, 100);   // (a scene's way in: its own lanterns - shared/cavekit.js)
     for (const sd of [-1, 1]) hang(K.ch.hall.x, K.ch.hall.y, 1, 0, sd);   // (the miners' lamps in the hall)
     for (const ps of K.passages) if (ps.a === 'hall') { const pts = [K.ch.hall, ...(ps.via ? [ps.via] : []), K.ch[ps.b]]; for (let i = 1; i < pts.length; i++) along(pts[i - 1], pts[i], 170, 110); }
   }
   K.lanterns = [...(K.lanterns || []), ...hung];
+  dressKit(K);
   // where a find can lie: dry floor in the light (a shaft's pool, by a lantern), clear of the way in
   const spots = [];
   for (const s of K.shafts) spots.push(...floorSpots(R, s.x, s.y, s.r * 0.55).filter((q) => len(q.x - s.x, q.y - s.y) < s.r * 0.55));
@@ -220,4 +223,4 @@ export function lightCave(L, K) {
 }
 const mouthsOf2 = (K) => K.mouths || [{ inside: K.inside }];
 
-registerCaverns({ buildCavern, carveCavern, dressCavern, lightCave });
+registerCaverns({ buildCavern, carveCavern, dressCavern, lightCave, carveScene });

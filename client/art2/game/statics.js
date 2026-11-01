@@ -45,21 +45,24 @@ import * as U from '../props-rural.js';
 import * as TW from '../props-town.js';
 import * as X from '../props-transit.js';
 import * as WL from '../props-wild.js';
+import * as DZ from '../props-desert.js';   // (the red rock desert's handcrafted places: shared/redrock.js)
 import * as PK from '../props-park.js';
 import * as GD from '../props-garden.js';
 import * as BK from '../props-biker.js';   // (the Rusty Spur's burn barrel and pole sign: task #366)
 import * as TN from '../props-towns.js';
+import * as TP from '../props-tropic.js';   // (the nature showcase's tropics: shared/world3-tropic.js)
 import { EL_Z, DECK_Z } from './chunkgeom.js';
 import * as AL from '../alleyart.js';      // (the back alleys' dressing: shared/alleys.js says where)
 import { alleyDressing, alleyBackOf, DECALS as ALLEY_DECALS } from '../../../shared/alleys.js';
 import { nightFront, paintSigns, handNeon, picSize, picGlow } from '../neonsigns.js';   // (the night's big neon signs)
 import { streetGrit } from '../streetgrit.js';              // (grit on the town's streets)
 import * as WT from '../water.js';
+import * as RK from '../props-redwoods.js';   // (the redwoods' kit: basalt columns, the column falls, the forest floor - shared/world3-redwoods.js)
 import { critterFrames } from '../critters.js';
 import * as FL from '../flora.js';
 import * as TR from '../trees.js';
 import * as RW from '../redwoods.js';
-import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals } from '../terrain.js';
+import { boulder as rockLump, outcrop, rockSprite, seaStack, crystals, redStack } from '../terrain.js';
 import { distSq } from '../scene.js';
 import { SCENE_MASKS } from '../../../shared/interior-art.js';
 import { groundPixel } from '../ground.js';
@@ -71,7 +74,7 @@ import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner,
 import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
 import { unitDoor, DOOR_COLS } from '../../../shared/doors.js';   // (the doors that open live)
 import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
-import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate } from '../../../shared/mapcore.js';
+import { DISTRICTS, terrainAt, railAt, routeBoardAt, SEA_ISLES, wildBiome, crossingGate, CANYON } from '../../../shared/mapcore.js';
 import { PREFABS } from '../../../shared/prefab-data.js';
 import { DECK_LIFT, BARRIER_PIECE } from '../../../shared/levels.js';
 
@@ -354,6 +357,7 @@ export function makeStatic(r) {
     case 'msign': return makeMotelSign(r);
     case 'debris': return makeDebris(r);
     case 'rock': return makeRock(r);
+    case 'rk': return rkSprite(r);
     case 'fall': return WT.waterfall({ kind: r.kind || 'ledge', width: r.w, drop: r.drop, seed: r.seed || 5, frame: 0, mist: r.mist, upper: r.upper, streams: r.streams, stone: r.stone, rock: r.rock });
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
@@ -401,13 +405,15 @@ export function makeStatic(r) {
     case 'court': return makeCourt(r);
     case 'skatepad': return makeSkatePad(r);
     case 'hbox': return GD.hedgeBox(r.w, r.d, r.h, { seed: r.s || 1, R: FL.FOL(r.c || '#3a7226'), flowers: r.fl ? ramp(r.fl, 6, 3, { light: 0.6 }) : null, fk: 0.1, ragged: 1 });
-    case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });
+    case 'outcrop': return outcrop(r.s + 7, r.w, r.d, r.h, r.style || 'granite', r.j ? { veg: { kind: 'shrub', density: 0.1, band: 2 }, hang: { kind: 'vine', amount: 0.4 }, moss: 0.18, wet: 6, tiers: [[0, r.h * 0.78], [Math.min(r.w, r.d) * 0.16, r.h]] } : { veg: { kind: 'grass', density: 0.06, band: 2 }, moss: 0.1 });   // (j: a jungle's black rock - vines down its faces, shrubs on its ledges: shared/world3-tropic.js)
     case 'towel': return makeTowel(r);
     case 'blanket': return makeBlanket(r);
     case 'stack': return seaStack(r.s || 1, r.r || 26, r.h || 150, 'basalt', { hang: { kind: 'kelp', amount: 0.5 }, veg: { kind: 'grass', density: 0.1, band: 2 } });
     case 'sealrock': return outcrop(r.s || 3, r.w || 120, r.d || 70, r.h || 26, 'basalt', { barnacles: 0.8, wet: 12, hang: { kind: 'kelp', amount: 0.6 }, tiers: [[0, (r.h || 26) * 0.7], [8, r.h || 26]] });
+    case 'surf': return TP.surfBand(r.len, r.s, r.v, r.w);   // (the surf over a reef band, the white water at a falls' foot: shared/world3-tropic.js)
     case 'crit': return r.k === 'starfish' ? WL.starfish(r.col || '#d8583a', r.glow ? 6 : 5, r.s || 1, r.glow || 0) : r.k === 'urchin' ? WL.urchin(4, r.s || 1, r.col || '#3a2448') : WL.anemone(4, r.s || 1);
     case 'mesas': return makeMesas(r);
+    case 'rstack': return redStack(r.s || 1, r.w || 90, r.d || 60, r.h || 110, !!r.l);   // (the red rock's stacked towers: shared/redrock.js)
     case 'adecal': return AL.decal(r.k, r.v || 0);   // (the back alleys: puddles, oil, leaves, litter, cracks, weeds, drains)
     default: return EMPTY;
   }
@@ -1563,13 +1569,14 @@ function voxModel(m, a) {
     case 'fruitCrate': return GD.fruitCrate('#c8302a', 2);
     case 'beaverDam': return GD.beaverDam(a[0] || 130, 26, 14, 0.6, 3); case 'lodge': return GD.beaverLodge(28, 22, 2);
     case 'boardwalk': return GD.boardwalk(a[0] || 160, a[1] || 34, 8, 'ns'); case 'birdHide': return GD.birdHide(); case 'trailBlaze': return GD.trailBlaze(a[0]); case 'logSteps': return GD.logSteps(a[0] || 60); case 'logBridge': return GD.logBridge(a[0] || 140); case 'ropeBridge': return GD.ropeBridge(a[0] || 240, a[1] || 44); case 'drinkFountain': return GD.drinkFountain(); case 'cairn': return GD.cairn(a[0] || 0, a[1] || 0); case 'stoneHut': return GD.stoneHut(); case 'mountainSpring': return GD.mountainSpring(); case 'tabletop': return GD.tabletop(a[0], a[1], a[2], a[3]); case 'berm': return GD.berm(a[0], a[1], a[2]); case 'tapeLine': return GD.tapeLine(a[0]); case 'startGate': return GD.startGate(a[0]); case 'timingTower': return GD.timingTower(); case 'floodMast': return GD.floodMast(a[0] || 220); case 'mxTrailer': return GD.mxTrailer(a[0] || 0); case 'rootPlate': return GD.rootPlate(); case 'viewPlatform': return GD.viewPlatform(a[0] || 160, a[1] || 160); case 'pier': return GD.fishingPier(a[0] || 120, a[1] || 30, 10, 0.7);
-    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1, a[4] || 0); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'caveMouth': return WT.caveMouth(a[0] || 96, a[1] || 72, a[2] || 0); case 'rowboatS': return WT.rowboatProp(a[0] || '#3f6a7a'); case 'yacht': return P.yacht(); case 'sailboat': return RD.sailboat(a[0] || 120, a[1] !== 0, a[2] || '#f0eee8'); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'swimRaft': return PK.swimRaft(); case 'swimBuoy': return PK.swimBuoy(a[0] || 0); case 'crashPad': return PK.crashPad(a[0] || 0); case 'ropeCoil': return PK.ropeCoil(); case 'weir': return PK.weir(a[0] || 320); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'basketHoop': return PK.basketHoop(); case 'tennisNet': return D.tennisNet(a[0] || 100); case 'skateQuarter': return PK.skateQuarter(a[0] || 128); case 'skateLedge': return PK.skateLedge(a[0] || 96, 20, 14, a[1] || 0); case 'skateRail': return PK.skateRail(a[0] || 96); case 'skateKicker': return PK.skateKicker(); case 'skatePyramid': return PK.skatePyramid(); case 'graffitiWall': return PK.graffitiWall(a[0] || 256, 40, a[1] || 1); case 'boombox': return PK.boombox(); case 'bleachers': return PK.bleachers(a[0], a[1]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'pierRail': return PK.pierRail(a[0] || 192); case 'baitShack': return PK.baitShack(a[0] ?? 0.5); case 'lifeRing': return PK.lifeRingPost(); case 'fishTable': return PK.fishTable(); case 'rodHolder': return PK.rodHolder(); case 'ferrisWheel': return PK.ferrisWheel(a[0] ?? 0.6, a[1] ?? 1); case 'marketStall': return PK.marketStall(a[0] || 0, a[1] || '#c8343a'); case 'clubhouse': return PK.clubhouse(a[0] ?? 0.6); case 'golfCart': return PK.golfCart(a[0] || '#f0eee8'); case 'golfPin': return PK.golfPin(a[0] ?? true); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
-    case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
+    case 'cliffWall': return WT.cliffWall(a[0] || 160, a[1] || 70, a[2] || 56, a[3] || 1, a[4] || 0); case 'canoe': return WT.canoe(0, a[0] || '#b83a2e', null, { vox: true }); case 'caveMouth': return WT.caveMouth(a[0] || 96, a[1] || 72, a[2] || 0); case 'rowboatS': return WT.rowboatProp(a[0] || '#3f6a7a'); case 'yacht': return P.yacht(); case 'sailboat': return RD.sailboat(a[0] || 120, a[1] !== 0, a[2] || '#f0eee8'); case 'poolHouse': return PK.poolHouse(a[0], a[1]); case 'hotTub': return PK.hotTub(a[0]); case 'divingBoard': return PK.divingBoard(a[0]); case 'laneRope': return PK.laneRope(a[0]); case 'swimRaft': return PK.swimRaft(); case 'swimBuoy': return PK.swimBuoy(a[0] || 0); case 'crashPad': return PK.crashPad(a[0] || 0); case 'ropeCoil': return PK.ropeCoil(); case 'weir': return PK.weir(a[0] || 320); case 'culvert': return PK.culvert(a[0], a[1], a[2]); case 'roadCulvert': return WT.culvert(a[0], a[1], a[2], a[3]); case 'basketHoop': return PK.basketHoop(); case 'tennisNet': return D.tennisNet(a[0] || 100); case 'skateQuarter': return PK.skateQuarter(a[0] || 128); case 'skateLedge': return PK.skateLedge(a[0] || 96, 20, 14, a[1] || 0); case 'skateRail': return PK.skateRail(a[0] || 96); case 'skateKicker': return PK.skateKicker(); case 'skatePyramid': return PK.skatePyramid(); case 'graffitiWall': return PK.graffitiWall(a[0] || 256, 40, a[1] || 1); case 'boombox': return PK.boombox(); case 'bleachers': return PK.bleachers(a[0], a[1]); case 'bathPavilion': return GD.bathPavilion(a[0] ?? 0.6); case 'onsenLodge': return GD.onsenLodge(a[0] ?? 0.6); case 'waterSlide': return PK.waterSlide(a[0], a[1], a[2], a[3], a[4]); case 'ringFloat': return PK.ringFloat(a[0]); case 'pierRail': return PK.pierRail(a[0] || 192); case 'baitShack': return PK.baitShack(a[0] ?? 0.5); case 'lifeRing': return PK.lifeRingPost(); case 'fishTable': return PK.fishTable(); case 'rodHolder': return PK.rodHolder(); case 'ferrisWheel': return PK.ferrisWheel(a[0] ?? 0.6, a[1] ?? 1); case 'marketStall': return PK.marketStall(a[0] || 0, a[1] || '#c8343a'); case 'clubhouse': return PK.clubhouse(a[0] ?? 0.6); case 'golfCart': return PK.golfCart(a[0] || '#f0eee8'); case 'golfPin': return PK.golfPin(a[0] ?? true); case 'slideTower': return PK.slideTower(a[0], a[1], a[2]); case 'bambooFence': return GD.bambooFence(a[0] || 80, a[1] || 30); case 'boathouse': return WL.boathouse(a[0] ?? 1); case 'swan': return GD.swan(); case 'duck': return PK.duck(a[0] ?? true);
+    case 'beachBar': return WL.beachBar(a[0] ?? 0.5); case 'beachShower': return WL.beachShower(a[0] ?? 1); case 'showerHut': return WL.showerHut(); case 'driftShade': return WL.driftShade(a[0] || 70, a[1] || 50); case 'cliffStairs': return WL.cliffStairs(a[0] || 120, a[1] || 80, a[2] || 28);
     case 'logCabin': return WL.logCabin(a[0] || 96, a[1] || 60, a[2] ?? 0.6); case 'lookout': return WL.lookoutTower(a[0] || 110, a[1] ?? 0.6);
     case 'chair': return U.campChair(['#2e6a3e', '#2f5a9a', '#b8402e', '#d89a2a'][a[0] || 0]); case 'cooler': return PK.cooler(['#2f6ab0', '#c8342e', '#e8e4dc'][a[0] || 0]);
     case 'surfboard': return P.surfboard(['#e8a040', '#2f8ac8', '#e85a7a'][a[0] || 0]); case 'tiki': return tikiTorch(); case 'post': return woodPost(a[0] || 46); case 'delineator': return delineatorPost();
     case 'cottage': return WL.cottage(a[0] || 84, a[1] || 54, a[2] ?? 0.5, a[3] || 0); case 'seal': return WL.seal(a[0] || 0, ['#8a8a92', '#6e6e78', '#9a9088'][a[1] || 0]); case 'beacon': return WL.beacon(a[0] || 0, a[1] || 46, a[2] ?? 1); case 'headstone': return WL.headstone(a[0] || 0); case 'fishboat': return WL.fishboat(a[0] || 0); case 'netRack': return WL.netRack(a[0] || 60); case 'lobsterPots': return WL.lobsterPots(a[0] || 0); case 'gull': return WL.gull(false);
     case 'crab': return WL.crab(); case 'blowhole': return WL.blowhole(a[0] || 64, a[1] || 48); case 'seaArch': return WL.seaArch(a[0] || 150, a[1] || 56, a[2] || 96, a[3] || 3); case 'driftwood': return WL.driftwood(a[0] || 50, a[1] || 1); case 'shipwreck': return WL.shipwreck(a[0] || 220, a[1] || 64, a[2] || 40);
+    case 'thatchBar': return TP.thatchBar(a[0] ?? 0.5); case 'stiltHut': return TP.stiltHut(a[0] || 64, a[1] || 52, a[2] || 22, a[3] || 0); case 'macaw': return TP.macaw(a[0] || 0, !!a[1]); case 'seaTurtle': return TP.seaTurtle(a[0] || 1); case 'snorkeler': return TP.snorkeler(a[0] || 0); case 'mangrove': return TP.mangrove(a[0] || 1, a[1] || 1, a[2] || 0); case 'redGinger': return TP.redGinger(a[0] || 1);
     case 'footbridge': return WT.footbridge(a[0] || 140, a[1] || 26, a[2] || 8);
     case 'mapBoard': return U.mapBoard();
     case 'lantern': return WL.lantern(a[0] || 'post', a[1] ?? 1);
@@ -1577,6 +1584,8 @@ function voxModel(m, a) {
     case 'cabbages': return K.cabbages(a[0] || 3, a[1] || 3); case 'cornRow': return U.cornField(120, 60, (a[0] || 0) + 1); case 'wheatRow': return K.wheatPatch(120, 50, (a[0] || 0) + 1); case 'ropeLine': return TW.ropeLine(a[0] || 60);
     case 'gnawStump': return GD.gnawedStump(a[0] || 0, a[1] || 1); case 'gnawLog': return GD.gnawedLog(a[0] || 90, a[1] || 2); case 'hideRack': return GD.hideRack(a[0] || 0);
     case 'alley': return AL.model(a[0], a[1] || 0);
+    case 'ranchGate': return DZ.ranchGate(a[0] || 120, a[1] || 90); case 'ramada': return DZ.ramada(a[0] || 120, a[1] || 80, a[2] || 56); case 'redCairn': return DZ.redCairn(a[0] || 4, a[1] || 1); case 'hawkShadow': return DZ.hawkShadow(a[0] || 54); case 'groundShadow': return DZ.groundShadow(a[0] || 200, a[1] || 70);
+    case 'roadrunner': return WL.roadrunner(); case 'lizard': return WL.lizard(a[0] || '#b8a070'); case 'deadTree': return WL.deadTree(a[0] || 1, a[1] || 70);
     default: return EMPTY_VOX();
   }
 }
@@ -1585,6 +1594,8 @@ const EMPTY_VOX = () => new Vox(1, 1, 1);
 function vdim(m, a) {
   switch (m) {
     case 'elPier': return [18, (a[1] || 300) + 26, (a[0] || 128) - 18]; case 'elStairs': return [(a[0] || 150) + 20, 44, (a[1] || 128) + 40]; case 'stationBridge': return [a[0] || 280, 36, (a[1] || 88) + 30];
+    case 'ranchGate': return [(a[0] || 120) + (a[1] || 90) * 2 + 12, 30, 84]; case 'ramada': return [(a[0] || 120) + 8, (a[1] || 80) + 8, (a[2] || 56) + 14]; case 'redCairn': return [16, 16, 6 + (a[0] || 4) * 5]; case 'hawkShadow': return [(a[0] || 54) + 4, (a[0] || 54) * 0.6 + 4, 2]; case 'groundShadow': return [(a[0] || 200) + 2, (a[1] || 70) + 2, 2];
+    case 'roadrunner': return [30, 8, 22]; case 'lizard': return [34, 14, 6]; case 'deadTree': return [(a[1] || 70) + 10, 10, (a[1] || 70) + 8];
     case 'gnawStump': return [30, 30, a[0] ? 64 : 26]; case 'gnawLog': return [(a[0] || 90) + 14, 26, 16]; case 'hideRack': return [40, 16, 44];
     case 'alley': return AL.dim(a[0]);
     case 'hydrant': return [10, 10, 16]; case 'bin': case 'wireBin': case 'wheelieBin': return [12, 12, 20]; case 'newsBox': return [10, 9, 18]; case 'bench': return [32, 10, 14];
@@ -1625,11 +1636,12 @@ function vdim(m, a) {
     case 'greenhouse': return [150, 80, 76]; case 'gStatue': return [30, 30, 82]; case 'sculpt': return [36, 36, 92]; case 'stoneLantern': return [22, 22, 44]; case 'redBridge': return [a[0] || 110, 26, 40];
     case 'beehive': return [18, 16, 26]; case 'raisedBed': return [60, 26, 9]; case 'gShed': return [52, 38, 46]; case 'ladder': return [14, 18, 48]; case 'fruitCrate': return [18, 14, 14];
     case 'beaverDam': return [a[0] || 130, 26, 22]; case 'lodge': return [60, 48, 28]; case 'boardwalk': return [a[0] || 160, a[1] || 34, 32]; case 'birdHide': return [64, 52, 66]; case 'trailBlaze': return [8, 8, 40]; case 'logSteps': return [30, (a[0] || 60) + 4, 10]; case 'logBridge': return [a[0] || 140, 30, 36]; case 'ropeBridge': return [a[0] || 240, a[1] || 44, 44]; case 'drinkFountain': return [14, 14, 32]; case 'cairn': return a[1] ? [29, 29, 58] : [20, 20, 30]; case 'stoneHut': return [136, 92, 92]; case 'mountainSpring': return [36, 22, 28]; case 'tabletop': return [a[0] || 416, a[1] || 112, (a[2] || 30) + 4]; case 'berm': return [a[0] || 64, 30, (a[1] || 18) + 2]; case 'tapeLine': return [a[0] || 128, 4, 22]; case 'startGate': return [a[0] || 120, 14, 30]; case 'timingTower': return [52, 52, 130]; case 'floodMast': return [36, 14, (a[0] || 220) + 18]; case 'mxTrailer': return [154, 46, 54]; case 'rootPlate': return [84, 40, 74]; case 'viewPlatform': return [a[0] || 160, a[1] || 160, 32]; case 'pier': return [a[0] || 120, a[1] || 30, 54];
-    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 12]; case 'canoe': return [64, 16, 12]; case 'caveMouth': return [a[0] || 96, 46, (a[1] || 72) + 8]; case 'rowboatS': return [64, 28, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'swimRaft': return [64, 64, 14]; case 'swimBuoy': return [10, 10, 6]; case 'crashPad': return [44, 30, 12]; case 'ropeCoil': return [26, 22, 6]; case 'weir': return [a[0] || 320, 30, 14]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
-    case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
+    case 'cliffWall': return [a[0] || 160, a[2] || 56, (a[1] || 70) + 12]; case 'canoe': return [64, 16, 12]; case 'caveMouth': return [a[0] || 96, 46, (a[1] || 72) + 8]; case 'rowboatS': return [64, 28, 12]; case 'yacht': return [110, 40, 30]; case 'sailboat': return [a[0] || 120, 40, 150]; case 'poolHouse': return [a[0] || 288, (a[1] || 60) + 16, 62]; case 'hotTub': return [(a[0] || 30) * 2 + 4, (a[0] || 30) * 2 + 4, 26]; case 'divingBoard': return [(a[0] || 56) + 18, 16, 30]; case 'laneRope': return [a[0] || 400, 4, 3]; case 'swimRaft': return [64, 64, 14]; case 'swimBuoy': return [10, 10, 6]; case 'crashPad': return [44, 30, 12]; case 'ropeCoil': return [26, 22, 6]; case 'weir': return [a[0] || 320, 30, 14]; case 'culvert': return [a[0] || 150, 22, (a[1] || 34) + 4]; case 'roadCulvert': return [a[0], a[1] + 18, a[2] + 14]; case 'basketHoop': return [36, 30, 64]; case 'tennisNet': return [6, a[0] || 100, 14]; case 'skateQuarter': return [a[0] || 128, 48, 34]; case 'skateLedge': return [a[0] || 96, 20, 15]; case 'skateRail': return [a[0] || 96, 8, 15]; case 'skateKicker': return [40, 34, 14]; case 'skatePyramid': return [120, 80, 17]; case 'graffitiWall': return [a[0] || 256, 10, 42]; case 'boombox': return [16, 6, 12]; case 'bleachers': return [a[0] || 120, (a[1] || 4) * 10 + 8, (a[1] || 4) * 8 + 22]; case 'bathPavilion': return [84, 62, 68]; case 'onsenLodge': return [256, 156, 86]; case 'ringFloat': return [22, 22, 6]; case 'pierRail': return [a[0] || 192, 6, 26]; case 'baitShack': return [120, 76, 66]; case 'lifeRing': return [14, 8, 34]; case 'fishTable': return [34, 16, 26]; case 'rodHolder': return [22, 30, 48]; case 'ferrisWheel': return [224, 44, 262]; case 'marketStall': return [60, 34, 46]; case 'clubhouse': return [252, 144, 100]; case 'golfCart': return [34, 20, 26]; case 'golfPin': return [14, 4, 36]; case 'waterSlide': return [Math.ceil(Math.abs(a[0] || 0) + 112), (a[1] || 240) + 18, (a[2] || 84) + 20]; case 'slideTower': return [(a[0] || 96) + 30, (a[1] || 56) + 8, (a[2] || 84) + 36]; case 'bambooFence': return [a[0] || 80, 6, (a[1] || 30) + 2]; case 'boathouse': return [62, 68, 64]; case 'swan': return [22, 12, 20]; case 'duck': return [12, 8, 10];
+    case 'beachBar': return [108, 84, 64]; case 'beachShower': return [40, 34, 64]; case 'showerHut': return [80, 50, 60]; case 'driftShade': return [(a[0] || 70) + 8, (a[1] || 50) + 8, 52]; case 'cliffStairs': return [(a[2] || 28) + 6, (a[0] || 120) + 4, (a[1] || 80) + 26];
     case 'logCabin': return [(a[0] || 96) + 8, (a[1] || 60) + 18, 72]; case 'lookout': return [68, 68, (a[0] || 110) + 46];
     case 'chair': return [12, 12, 20]; case 'cooler': return [16, 10, 12]; case 'surfboard': return [8, 4, 34]; case 'tiki': return [8, 8, 48]; case 'post': return [6, 6, (a[0] || 46) + 2]; case 'delineator': return [4, 4, 28];
     case 'cottage': return [(a[0] || 84) + 4, (a[1] || 54) + 6, 64]; case 'seal': return [46, 22, 18]; case 'beacon': return [24, 24, (a[1] || 46) + 14]; case 'headstone': return [14, 8, 20]; case 'fishboat': return [80, 28, 40]; case 'netRack': return [a[0] || 60, 6, 34]; case 'lobsterPots': return [18, 13, ((a[0] || 0) % 2 + 2) * 8 + 6]; case 'gull': return [16, 8, 14]; case 'crab': return [16, 14, 6]; case 'blowhole': return [a[0] || 64, a[1] || 48, 18]; case 'seaArch': return [a[0] || 150, a[1] || 56, (a[2] || 96) + 6]; case 'shipwreck': return [(a[0] || 220) + 8, (a[1] || 64) + 30, (a[2] || 40) + 40]; case 'driftwood': return [a[0] || 50, 16, 10];
+    case 'thatchBar': return [124, 94, 80]; case 'stiltHut': return [(a[0] || 64) + 20, (a[1] || 52) + 22, (a[2] || 22) + 74]; case 'macaw': return a[1] ? [30, 30, 22] : [12, 10, 22]; case 'seaTurtle': return [34, 30, 7]; case 'snorkeler': return [46, 18, 9]; case 'mangrove': return [Math.round(64 * (a[1] || 1)), Math.round(64 * (a[1] || 1)), Math.round(60 * (a[1] || 1))]; case 'redGinger': return [30, 24, 40];
     case 'mapBoard': return [40, 12, 50]; case 'lantern': return [12, 12, 40];
     case 'lumber': return [60, 24, 18]; case 'crates': return [32, 28, 30]; case 'cctv': return [22, 8, (a[0] || 64) + 2]; case 'signal': return [(a[0] || 70) + 10, 14, 92]; case 'spanPole': return [8, 8, SPAN_Z + 6]; case 'bbframe': return [a[0] || 132, 10, (a[1] || 54) + (a[2] || 36) + 6]; case 'cabbages': return [(a[0] || 3) * 18, (a[1] || 3) * 18, 14]; case 'cornRow': return [120, 60, 36]; case 'wheatRow': return [120, 50, 22]; case 'ropeLine': return [a[0] || 60, 6, 20]; case 'silo': return [44, 44, (a[0] || 90) + 22]; case 'craneTower': return [(a[1] || 120) + 40, 30, (a[0] || 200) + 16];
     case 'stsCrane': return [470, 140, 320]; case 'cstack': return [160, 256, 234]; case 'straddle': return [64, 96, 128]; case 'shipSection': return [a[0] === 0 ? 320 : 256, 220, 240]; case 'floodMast': return [30, 12, (a[0] || 140) + 8];
@@ -2104,6 +2116,7 @@ function propItems(c, p, pi, I) {
     put(I, { key: `f:${sp}:${v}:1`, recipe: { t: 'f', sp, s: 1000 + v * 37 + sp.length * 7, k: 1 }, x, y, ext: [S[1], S[2], S[1], 60], fbox: [fw, S[2], fw, 60], pi, fade: 1, b: TREE_FADE + pi, fp: [x + rr, y - rr * 0.5, x - rr, y + rr * 0.5] });   // (x0 > x1: an ellipse, engine.js STATIC_FS)
     return;
   }
+  if (t === 'rk') { rkItem(I, p, pi); return; }
   if (PLANTS.has(t)) {
     const r = plantFor(c, p);
     if (!r) return;
@@ -2293,6 +2306,7 @@ function propItems(c, p, pi, I) {
     case 'motelsign': { const text = String(p.text || 'MOTEL').toUpperCase().slice(0, 14), word = String(p.word || 'MOTEL').toUpperCase().slice(0, 7), z = p.z || 60, ci = (p.col || 0) % NEONC.length; put(I, { key: `msign:${text}:${word}:${ci}:${z}`, recipe: { t: 'msign', text, word, ci, z }, x, y, ext: [70, z + 170, 70, 10], pi }); lightAt(I, x, y + 4, z + 70, 220, NEONC[ci].map((q) => q / 255), 2.4, 'neon'); return; }
     case 'textsign': { const text = String(p.text || 'SIGN').slice(0, 24), z = p.z || 40; put(I, { key: `tsign:${text}:${p.bg || ''}:${z}`, recipe: { t: 'sign', text, sx: p.sx || 2, bg: p.bg || '#1a4a8a', fg: p.fg || [255, 226, 90], lit: 1, z, posts: true }, x, y, ext: [90, z + 40, 90, 10], pi }); lightAt(I, x, y + 4, z, 90, [1, 0.9, 0.6], 0.9, 'sign'); return; }
     case 'bathpav': V('bpav', 'bathPavilion', [0.6]); lightAt(I, x, y + 26, 22, 120, [1, 0.78, 0.46], 1.5, 'lamp'); return;
+    case 'onsenlodge': V('olodge', 'onsenLodge', [0.6]); lightAt(I, x, y + 70, 30, 190, [1, 0.76, 0.44], 1.6, 'window'); return;   // (nat5: the onsen at Granite Hot Springs - naturesites.js hotSprings)
     case 'bamboo': { const len = Math.round((p.len || 80) / 8) * 8, hd = qa(p.a || 0, 4); V(`bmb:${len}:${hd.toFixed(2)}`, 'bambooFence', [len, 30], hd); return; }
     case 'koi': put(I, { key: `koi:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, recipe: { t: 'koi', v: p.v || 0, a: qa(p.a || 0, 8) }, x, y, ext: [12, 12, 12, 12], pi }); return;
     case 'gravelgarden': put(I, { key: 'zen', recipe: { t: 'zen' }, x, y, ext: [70, 50, 70, 50], pi }); return;
@@ -2368,6 +2382,7 @@ function propItems(c, p, pi, I) {
     case 'fenceline': fenceLine(I, p.kind || 'iron', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;   // (a hand plan's fence: picket, wood, chain, iron, stone)
     case 'hedgerun': fenceLine(I, 'hedge', x, y, x + (p.tx || 0), y + (p.ty || 0), { h: p.h || 16 }); return;
     case 'boathouse': V('bhouse', 'boathouse', [1]); lightAt(I, x, y + 36, 30, 100, [1, 0.8, 0.5], 1.3, 'lamp'); return;
+    case 'culvert': { const len = p.len || 96, w = p.w || 64, hd = qa(p.a || 0, 32); V(`rculv:${len}:${w}:${hd.toFixed(3)}`, 'roadCulvert', [len, w, 16, 12], hd); return; }   // (a county road's canal crossing, the lane over it: world3-countyroad.js)
     case 'fbridge': { const len = p.len || 140, hd = qa(p.a || 0, 16); V(`fbr:${len}:${hd.toFixed(2)}`, 'footbridge', [len, 30, 6], hd); return; }
     case 'cavemouth': { const w = Math.round((p.w || 96) / 4) * 4, h = Math.round((p.h || 72) / 4) * 4, st = p.style === 'sea' ? 1 : 0; V(`cmouth:${w}:${h}:${st}`, 'caveMouth', [w, h, st]); return; }   // (Nature-B2: the Redwood Caverns' ways in - shared/world3-caves.js)
     case 'rowboat': V(`rowb:${qa(p.a || 0, 8).toFixed(2)}`, 'rowboatS', ['#3f6a7a'], qa(p.a || 0, 8)); return;
@@ -2381,11 +2396,12 @@ function propItems(c, p, pi, I) {
     case 'lily': put(I, { key: `lily:${p.v || 0}`, recipe: { t: 'lily', s: (p.v || 0) + 1 }, x, y, ext: [50, 30, 50, 30], pi }); return;
     case 'beachbar': V('bbar', 'beachBar', [0.6]); lightAt(I, x, y + 30, 30, 110, [1, 0.8, 0.5], 1.2, 'window'); return;
     case 'shower': V('bshow', 'beachShower', [1]); return;
+    case 'showerhut': V('shut', 'showerHut', []); return;   // (nat5: a campground's shower block - world3-showers.js)
     case 'driftshade': V(`dshade:${p.w || 70}:${p.d || 50}`, 'driftShade', [p.w || 70, p.d || 50]); return;
     case 'stairs': V(`cstairs:${p.len || 120}:${p.h || 80}`, 'cliffStairs', [p.len || 120, p.h || 80, p.w || 28], 0, [((p.w || 28) + 6) / 2, (p.len || 120) + 2]); return;
     case 'logcabin': V('lcab', 'logCabin', [96, 60, 0.6]); lightAt(I, x, y + 8, 22, 120, [1, 0.78, 0.46], 1.4, 'window'); return;
     case 'lookout': { const h = p.h || 110; V(h === 110 ? 'lkout' : `lkout:${h}`, 'lookout', [h, 0.6]); lightAt(I, x, y, h + 20, 140, [1, 0.82, 0.5], 1.2, 'window'); return; }   // (p.h: a taller tower - the woods' fire lookout over the redwoods)
-    case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
+    case 'outcrop': put(I, { key: `oc:${p.style || 'granite'}:${p.w || 80}:${p.d || 50}:${p.h || 46}:${(p.s || 1) % 4}${p.j ? ':j' : ''}`, recipe: { t: 'outcrop', style: p.style || 'granite', w: p.w || 80, d: p.d || 50, h: p.h || 46, s: (p.s || 1) % 4, j: p.j ? 1 : 0 }, x, y, ext: [(p.w || 80) / 2 + 16, (p.h || 46) + (p.d || 50) / 2 + 20, (p.w || 80) / 2 + 16, (p.d || 50) / 2 + 16], pi }); return;
     case 'rail': fenceLine(I, 'rail', x, y, x + (p.tx || 0), y + (p.ty || 0)); return;
     case 'chair': V(`chr:${p.v || 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'chair', [p.v || 0], qa(p.a || 0, 8)); return;
     case 'cooler': V(`col:${p.v || 0}`, 'cooler', [p.v || 0], qa(u * TAU, 4)); return;
@@ -2395,7 +2411,19 @@ function propItems(c, p, pi, I) {
     case 'torch': V('tiki', 'tiki', []); lightAt(I, x, y, 46, 120, LIGHT.fire, 1.6, 'fire', 0); return;
     case 'post': V(`post:${p.h || 46}`, 'post', [p.h || 46]); return;
     case 'delineator': V('dlin', 'delineator', []); return;   // (a desert road's: world3-roadside.js)
-    case 'windmill': V('wmill', 'windmill', [120]); return;
+    case 'windmill': V(`wmill:${p.h || 120}`, 'windmill', [p.h || 120]); return;
+    case 'cropstrip': V(`crop:${p.k}:${seed % 3}`, p.k === 'corn' ? 'cornRow' : 'wheatRow', [seed % 3]); return;   // (a field's edge standing tall: world3-countyroad.js)
+    // (the red rock desert's handcrafted places - shared/redrock.js)
+    case 'rgate': V(`rgate:${p.w || 120}:${p.wing || 90}:${qa(p.a || 0, 4).toFixed(2)}`, 'ranchGate', [p.w || 120, p.wing || 90], qa(p.a || 0, 4)); return;
+    case 'ramada': V(`ramada:${p.w || 120}:${p.d || 80}`, 'ramada', [p.w || 120, p.d || 80, 56]); return;
+    case 'rcairn': V(`rcairn:${p.k || 4}:${(p.v || 0) % 3}`, 'redCairn', [p.k || 4, (p.v || 0) % 3 + 1]); return;
+    case 'hawkshadow': V('hawksh', 'hawkShadow', [54]); return;
+    case 'gshadow': V(`gsh:${p.w || 200}:${p.h || 70}`, 'groundShadow', [p.w || 200, p.h || 70]); return;
+    case 'roadrunner': V(`rrun:${qa(p.a || 0, 8).toFixed(2)}`, 'roadrunner', [], qa(p.a || 0, 8)); return;
+    case 'lizard': V(`liz:${qa(p.a || 0, 8).toFixed(2)}`, 'lizard', [], qa(p.a || 0, 8)); return;
+    case 'deadtree': V(`dtree:${(p.v || 0) % 3}`, 'deadTree', [(p.v || 0) % 3 + 1, 66]); return;
+    case 'rstack': { const w = Math.round((p.w || 90) / 20) * 20, d = Math.round((p.d || 60) / 20) * 20, h = Math.round((p.h || 110) / 20) * 20, s = Math.abs(p.s || 1) % 4;   // (sizes in 20s, four seeds: few sprites to bake)
+      const l = p.l ? 1 : 0; put(I, { key: `rst:${w}:${d}:${h}:${s}:${l}`, recipe: { t: 'rstack', w, d, h, s: s + 1, l }, x, y, ext: [w / 2 + 24, h + d / 2 + 24, w / 2 + 24, d / 2 + 24], pi }); return; }   // (a desert road's: world3-roadside.js)
     case 'trough': V('trough', 'trough', []); return;
     case 'stocktank': V(`stk:${p.r || 26}`, 'stocktank', [p.r || 26]); return;   // (the desert's stock tanks: world3-stocktanks.js)
     case 'cattlegrid': V(`cgrid:${qa(p.a || 0, 4).toFixed(2)}`, 'cattleGrid', [64, 28], qa(p.a || 0, 4)); return;   // (a ranch track's, at the road: world3-stocktanks.js)
@@ -2415,6 +2443,16 @@ function propItems(c, p, pi, I) {
     case 'seal': { const coat = Math.floor(hh(x, y, 21) * 3); V(`seal:${p.pose || 0}:${coat}:${qa(p.a || 0, 8).toFixed(2)}`, 'seal', [p.pose || 0, coat], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return; }
     case 'gull': V(`gull:${qa(p.a || 0, 8).toFixed(2)}`, 'gull', [], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
     case 'crab': V(`crab:${qa(p.a || 0, 8).toFixed(2)}`, 'crab', [], qa(p.a || 0, 8)); return;
+    // (the tropics, shared/world3-tropic.js: the thatched bar, a stilt hut, macaws up in the palms (p.z), a turtle and a
+    // snorkeler in the shallows, the mangroves, red ginger)
+    case 'tbar': V('tbar', 'thatchBar', [0.6]); lightAt(I, x, y + 30, 34, 120, [1, 0.8, 0.5], 1.3, 'window'); return;
+    case 'stilthut': { const k = p.tin ? 1 : 0, lf = p.lift || 22; V(`shut:${lf}:${k}`, 'stiltHut', [84, 60, lf, k]); lightAt(I, x, y + 10, lf + 16, 70, [1, 0.8, 0.5], 0.8, 'window'); return; }
+    case 'macaw': V(`mcw:${p.k ? 1 : 0}:${p.fly ? 1 : 0}:${qa(p.a || 0, 8).toFixed(2)}`, 'macaw', [p.k ? 1 : 0, p.fly ? 1 : 0], qa(p.a || 0, 8), null, { z0: p.z || 0 }); return;
+    case 'turtle': V(`trtl:${qa(p.a || 0, 8).toFixed(2)}`, 'seaTurtle', [1], qa(p.a || 0, 8)); return;
+    case 'snorkeler': V(`snkl:${(p.k || 0) % 3}:${qa(p.a || 0, 8).toFixed(2)}`, 'snorkeler', [(p.k || 0) % 3], qa(p.a || 0, 8)); return;
+    case 'mangrove': { const sz = p.j ? (p.k >= 1.2 ? 1.6 : 1.35) : p.k >= 1.2 ? 1.3 : 1, j = p.j ? 1 : 0; V(`mgr:${(p.s || 1) % 3}:${sz}:${j}`, 'mangrove', [(p.s || 1) % 3 + 1, sz, j]); return; }   // (j: the jungle's broad-leaved tree)
+    case 'ginger': V(`gngr:${(p.s || 1) % 2}`, 'redGinger', [(p.s || 1) % 2 + 1]); return;
+    case 'surf': { const len = Math.round((p.len || 160) / 16) * 16, v = p.v ? 1 : 0, w = p.w || 14, sd = (p.s || 1) % 4; put(I, { key: `surf:${len}:${v}:${w}:${sd}`, recipe: { t: 'surf', len, v, w, s: sd }, x, y, ext: v ? [w + 6, len / 2 + 2, w + 6, len / 2 + 2] : [len / 2 + 2, w + 6, len / 2 + 2, w + 6], pi }); return; }
     case 'hedgebox': {
       const w = p.w || 32, d = p.d || 32, h = p.h || 34, fl = p.fl || null;
       put(I, { key: `hbox:${w}:${d}:${h}:${fl || ''}:${seed % 4}`, recipe: { t: 'hbox', w, d, h, s: seed % 4 + 1, fl }, x, y, ext: [w / 2 + 6, d + h + 10, w / 2 + 6, 6], pi });
@@ -3169,12 +3207,12 @@ function addSetPieces(c, I) {
       for (let k = 0; k < Math.min(70, grass.length / 30); k++) { const [tx, ty] = grass[Math.floor(rnd() * grass.length)]; const sp = pick(['oak', 'maple', 'cypress', 'oak', 'birch'], rnd()); put(I, fitem(`f:${sp}:${k % 3}:1.3`, sp, 1000 + (k % 3) * 37 + sp.length * 7, (tx + 0.5) * TILE, (ty + 0.5) * TILE, 1.3)); }
       for (let k = 0; k < 5; k++) { const [tx, ty] = grass[Math.floor(rnd() * grass.length)]; put(I, vitem('flag:golf', 'flagpole', [40, '#d8343a'], (tx + 0.5) * TILE, (ty + 0.5) * TILE)); }
     } else if (pt.key === 'canyon') {
-      const open = tilesIn((t) => t === T.DIRT || t === T.GRASS || t === T.SAND);
+      const open = tilesIn((t) => t === T.DIRT || t === T.GRASS), onTr = (tx, ty) => (M.tracks || []).some((r) => r.pts.some(([a, b]) => Math.abs(a - (tx + 0.5) * TILE) < 48 && Math.abs(b - (ty + 0.5) * TILE) < 48));   // (the floor: not the wash's gravel, not the track - the scene's own props are shared/redrock.js's)
       // the mesas, buttes and the arch: the painting's solid tiles raised as stepped sandstone (one big sprite)
       put(I, { key: 'mesas:canyon', recipe: { t: 'mesas', mask: 'canyon', seed: 41 }, x: pt.x, y: pt.y + pt.h, ext: [0, pt.h + MESA_MAXH * 2 + 8, pt.w, 6] });
-      for (let k = 0; k < Math.min(10, open.length / 80); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; const big = rnd() < 0.4; put(I, { key: `can:${k % 6}:${big ? 1 : 0}`, recipe: { t: 'rock', style: 'sandstone', size: big ? 52 : 32, s: k % 6 }, x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, ext: [110, 120, 110, 60] }); }
+      for (let k = 0; k < Math.min(10, open.length / 80); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; if (onTr(tx, ty)) continue; const big = rnd() < 0.4; put(I, { key: `can:${k % 6}:${big ? 1 : 0}`, recipe: { t: 'rock', style: 'sandstone', size: big ? 52 : 32, s: k % 6 }, x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE, ext: [110, 120, 110, 60] }); }
       // desert scrub between the rocks
-      for (let k = 0; k < Math.min(90, open.length / 10); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; flora1(I, pick(['creosote', 'sage', 'bursage', 'dryGrass', 'brittle', 'creosote', 'barrel', 'agave', 'ocotillo', 'yucca', 'tumble', 'cholla', 'dFlowers'], rnd()), 1, Math.round((tx + rnd()) * TILE), Math.round((ty + rnd()) * TILE)); }
+      for (let k = 0; k < Math.min(70, open.length / 10); k++) { const [tx, ty] = open[Math.floor(rnd() * open.length)]; if (onTr(tx, ty)) continue; flora1(I, pick(['creosote', 'sage', 'bursage', 'dryGrass', 'brittle', 'creosote', 'barrel', 'agave', 'ocotillo', 'yucca', 'tumble', 'cholla', 'dFlowers'], rnd()), 1, Math.round((tx + rnd()) * TILE), Math.round((ty + rnd()) * TILE)); }
     }
   }
   // marina slips: mooring piles either side of each berth
@@ -3240,48 +3278,19 @@ function addSetPieces(c, I) {
 // become stepped sandstone mesas and buttes (terrain.js), with a natural arch between two of them. Made at the
 // art pixel (half size: 1 px here = 2 world px) as one sprite and composited at 2x (chunkbake ap2).
 // ================================================================================================
-const MESA_MAXH = 96;   // (half px)
-const MESAS = {
-  canyon: {
-    // tiers [[inset, height]...] in half px, by region in reading order (A: the west butte, B: the tall butte,
-    // C: the big north mesa, D and E: low blocks, F: the big south mesa, G: the south-east pillar)
-    tiers: [[[0, 30], [6, 58]], [[0, 34], [7, 66], [15, 90]], [[0, 30], [9, 56], [19, 78]], [[0, 16], [4, 28]], [[0, 18], [4, 30]], [[0, 28], [9, 52], [20, 74]], [[0, 24], [5, 46]]],
-    // the arch: from the tail of the north mesa east to the low block (tile coords), its height and thickness (half px)
-    arch: { path: [[30.1, 11.2], [32.7, 11.7], [35.6, 12.7]], width: 15, h: 60, thick: 14 },
-  },
-};
+const MESA_MAXH = 124;   // (half px)
+// (Red Rock Canyon by hand, 2026-10-31: its shapes, tiers and arch - shared/mapcore.js CANYON; the upper tiers broken into
+// columns, the concept's stacked towers)
+const MESAS = { canyon: CANYON };
 function makeMesas(r) {
   const mk = SCENE_MASKS[r.mask], spec = MESAS[r.mask];
   if (!mk || !spec) return EMPTY;
   const S = 2, TS = TILE / S, W = mk.w * TS, D = mk.h * TS;
-  // the solid regions of the mask (4-connected, reading order)
-  const lab = new Int16Array(mk.w * mk.h).fill(-1), regs = [];
-  for (let y = 0; y < mk.h; y++) for (let x = 0; x < mk.w; x++) {
-    if (mk.rows[y][x] !== '#' || lab[y * mk.w + x] >= 0) continue;
-    const id = regs.length, st = [[x, y]], R = { id, x0: x, y0: y, x1: x, y1: y };
-    lab[y * mk.w + x] = id;
-    while (st.length) {
-      const [a, b] = st.pop();
-      R.x0 = Math.min(R.x0, a); R.y0 = Math.min(R.y0, b); R.x1 = Math.max(R.x1, a); R.y1 = Math.max(R.y1, b);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const X = a + dx, Y = b + dy; if (X >= 0 && Y >= 0 && X < mk.w && Y < mk.h && mk.rows[Y][X] === '#' && lab[Y * mk.w + X] < 0) { lab[Y * mk.w + X] = id; st.push([X, Y]); } }
-    }
-    regs.push(R);
-  }
-  const VEG = { kind: 'sage', density: 0.012, band: 3, inner: 0.003, size: 2, bloom: true };
+  const VEG = { kind: 'sage', density: 0.007, band: 3, inner: 0.0015, size: 2, bloom: true };
   const G = rockSprite(W, D, MESA_MAXH, (T) => {
-    for (const R of regs) {
-      const pad = 12, x0 = Math.max(0, R.x0 * TS - pad), y0 = Math.max(0, R.y0 * TS - pad), x1 = Math.min(W, (R.x1 + 1) * TS + pad), y1 = Math.min(D, (R.y1 + 1) * TS + pad);
-      const bw = x1 - x0, bh = y1 - y0, ins = new Uint8Array(bw * bh), out = new Uint8Array(bw * bh);
-      for (let y = 0; y < bh; y++) for (let x = 0; x < bw; x++) {
-        const tx = Math.floor((x0 + x) / TS), ty = Math.floor((y0 + y) / TS), inside = lab[ty * mk.w + tx] === R.id ? 1 : 0;
-        ins[y * bw + x] = inside; out[y * bw + x] = 1 - inside;
-      }
-      const dIn = distSq(out, bw, bh), dOut = distSq(ins, bw, bh), g = new Float32Array(bw * bh);
-      for (let i = 0; i < bw * bh; i++) g[i] = ins[i] ? Math.sqrt(dIn[i]) - 0.5 : 0.5 - Math.sqrt(dOut[i]);
-      const f = (x, y) => (x < x0 || y < y0 || x >= x1 || y >= y1 ? -99 : g[(y - y0) * bw + (x - x0)]);
-      T.plateau({ sdf: { bb: [x0, y0, x1, y1], f, r: Math.min(bw, bh) / 2 } }, { style: 'sandstone', tiers: spec.tiers[R.id] || [[0, 30], [8, 50]], veg: VEG, seed: (r.seed || 41) + R.id * 7, jag: 12, block: 11 });
-    }
-    if (spec.arch) { const a = spec.arch; T.arch(a.path.map(([x, y]) => [x * TS, y * TS]), a.width, a.h, a.thick, { style: 'sandstone', veg: { kind: 'dry', density: 0.08, band: 3, inner: 0.002 }, seed: (r.seed || 41) + 99 }); }
+    spec.shapes.forEach((sh, k) => T.plateau({ poly: sh.poly.map(([x, y]) => [x * TS, y * TS]) }, { style: 'sandstone', tiers: sh.tiers, cols: { s: 30, v: 0.16, gap: 1.7 }, slab: 44, veg: VEG, seed: (r.seed || 41) + k * 7, jag: 10, block: 11 }));
+    const a = spec.arch;
+    if (a) T.arch(a.path.map(([x, y]) => [x * TS, y * TS]), a.width, a.h, a.thick, { style: 'sandstone', veg: { kind: 'sage', density: 0.05, band: 3, inner: 0.01, size: 2, bloom: true }, seed: (r.seed || 41) + 99 });
   }, 0, D, r.seed || 41);
   G.ax *= S; G.ay *= S; G.ap2 = S;
   return G;
@@ -3290,6 +3299,34 @@ function makeMesas(r) {
 // ================================================================================================
 // designed nature places (shared/naturesites.js): what stands on the map's tiles there
 // ================================================================================================
+// the redwoods' kit (client/art2/props-redwoods.js; shared/world3-redwoods.js lays it): p.k 'cols' a run of basalt
+// columns (anchored at its front's foot), 'fall' a curtain fall off a lip of them (at its foot), 'fungi', 'puddle',
+// 'stone' a stepping stone, 'mist' and 'ray' soft sprites
+function rkSprite(r) {
+  const a = r.a;
+  switch (r.k) {
+    case 'cols': return voxSprite(RK.basaltCols(a[0], a[1], a[2], a[3], { wet: a[4], fall: a[5] }), 0, [a[0] / 2, a[1]]);
+    case 'fall': return RK.columnFall({ w: a[0], drop: a[1], side: a[2], seed: a[3], log: a[4] });
+    case 'fungi': return voxSprite(RK.fungi(a[0], a[1]));
+    case 'puddle': return voxSprite(RK.puddle(a[0], a[1], a[2]));
+    case 'stone': return voxSprite(WT.steppingStone(a[0], a[1]));
+    case 'mist': return RK.mist(a[0], a[1], a[2]);
+    case 'foam': return RK.foam(a[0], a[1], a[2]);
+    case 'ray': return RK.ray(a[0], a[1], a[2]);
+  }
+  return EMPTY;
+}
+function rkItem(I, p, pi) {
+  const x = p.x, y = p.y, k = p.k, q8 = (v, d) => Math.max(8, Math.round((v || d) / 8) * 8);
+  if (k === 'cols') { const len = q8(p.len, 160), d = q8(p.d, 60), h = Math.round((p.h || 90) / 6) * 6, s = (p.s || 1) % 64, wet = p.wet || 0, fl = p.fall || 0; put(I, { key: `rkc:${len}:${d}:${h}:${s}:${wet}:${fl}`, recipe: { t: 'rk', k, a: [len, d, h, s, wet, fl] }, x, y, ext: [len / 2 + 6, h + d + 24, len / 2 + 6, 12], pi }); return; }
+  if (k === 'fall') { const w = q8(p.w, 110), dr = q8(p.drop, 104), sd = q8(p.side, 70), s = (p.s || 7) % 64, lg = p.log === 0 ? 0 : 1; put(I, { key: `rkf:${w}:${dr}:${sd}:${s}:${lg}`, recipe: { t: 'rk', k, a: [w, dr, sd, s, lg] }, x, y, ext: [w / 2 + sd + 80, dr + 140, w / 2 + sd + 80, 80], pi }); lightAt(I, x, y + 10, 12, 150, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }
+  if (k === 'fungi') { const v = p.v || 'agaric', s = (p.s || 1) % 4; put(I, { key: `rku:${v}:${s}`, recipe: { t: 'rk', k, a: [v, s] }, x, y, ext: [18, 34, 18, 18], pi }); if (v === 'glow') lightAt(I, x, y, 4, 46, [0.35, 0.75, 1], 0.9, 'sign'); return; }
+  if (k === 'puddle') { const w = q8(p.w, 40), d = q8(p.d, 24), s = (p.s || 1) % 4; put(I, { key: `rkp:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 16, d + 16, w / 2 + 16, d / 2 + 16], pi }); return; }
+  if (k === 'stone') { const r = Math.max(6, Math.min(16, Math.round(p.r || 10))), s = (p.s || 1) % 4; put(I, { key: `rks:${r}:${s}`, recipe: { t: 'rk', k, a: [s + 1, r] }, x, y, ext: [r * 2 + 12, r * 2 + 20, r * 2 + 12, r * 2 + 12], pi }); return; }
+  if (k === 'mist') { const w = q8(p.w, 200), d = q8(p.d, 80), s = (p.s || 1) % 4; put(I, { key: `rkm:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 4, d / 2 + 70, w / 2 + 4, d / 2 + 4], pi }); return; }
+  if (k === 'foam') { const w = q8(p.w, 64), d = q8(p.d, 40), s = (p.s || 1) % 4; put(I, { key: `rkw:${w}:${d}:${s}`, recipe: { t: 'rk', k, a: [w, d, s] }, x, y, ext: [w / 2 + 4, d / 2 + 10, w / 2 + 4, d / 2 + 4], pi }); return; }
+  if (k === 'ray') { const w = q8(p.w, 70), h = q8(p.h, 260), s = (p.s || 1) % 4; put(I, { key: `rkr:${w}:${h}:${s}`, recipe: { t: 'rk', k, a: [w, h, s] }, x, y, ext: [w + h * 0.6 + 8, h + 8, w + 8, 12], pi }); }
+}
 // the nature sites' falls as drawn (2026-10-21, the falls chain): at least this wide and this high (px), the mist
 const FALLS_LOOK = { tarn: { w: 96, drop: 76, mist: 0.6 }, creek: { drop: 56, mist: 0.5, rock: 56 } };
 // a falls' gorge walls (notes 2: the cliffs "embedded into the environment"): each drawn on toward the falls till it
@@ -3305,7 +3342,8 @@ function addNature(c, I) {
   for (const s of c.M.natureSites || []) {
     if (s.kind === 'oasis') {   // the spring down the cliff into the pool
       const f = s.spring;
-      put(I, { key: `curt:${f.w}:${f.h}`, recipe: { t: 'curtain', w: f.w, h: f.h, seed: 4 }, x: f.x, y: f.y, ext: [f.w + 20, f.h + 30, f.w + 20, 30] });
+      if (f.red) put(I, { key: `fall:o:${f.w}:${f.h}`, recipe: { t: 'fall', kind: 'twoTier', w: f.w, drop: f.h, seed: 21, mist: 0.4, stone: 'red' }, x: f.x, y: f.y + 8, ext: [f.w / 2 + 60, f.h + 100, f.w / 2 + 60, 50] });   // (Red Rock Canyon by hand: the spring down the red rock in two tiers)
+      else put(I, { key: `curt:${f.w}:${f.h}`, recipe: { t: 'curtain', w: f.w, h: f.h, seed: 4 }, x: f.x, y: f.y, ext: [f.w + 20, f.h + 30, f.w + 20, 30] });
       lightAt(I, f.x, f.y + 10, 8, 90, [0.8, 0.95, 1], 0.4, 'sign', 0);
       continue;
     }
@@ -3357,9 +3395,9 @@ function addNature(c, I) {
     // the falls: water over a ledge of layered rock, facing south, its foot on the pool's north shore - its walls in the
     // same rock, the gorge's walls drawn on to meet them
     const f = s.falls, fd = Math.max(f.drop, FALLS_LOOK.creek.drop), fr = FALLS_LOOK.creek.rock;   // (2026-10-21: the creek's fall over its ledge, a little higher)
-    fallWalls(I, s.gorge, f.x, f.w / 2 + fr);
-    put(I, { key: `fall:${f.w}:${fd}:${fr}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist, rock: fr }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + fr + 24, fd + 90, f.w / 2 + fr + 24, 40] });
-    lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
+    if (!s.bowl) fallWalls(I, s.gorge, f.x, f.w / 2 + fr);   // (s.bowl: the falls and its walls are the redwoods' kit's props - shared/world3-redwoods.js)
+    if (!s.bowl) put(I, { key: `fall:${f.w}:${fd}:${fr}`, recipe: { t: 'fall', w: f.w, drop: fd, seed: 5, mist: FALLS_LOOK.creek.mist, rock: fr }, x: Math.round(f.x), y: Math.round(f.y + 10), ext: [f.w / 2 + fr + 24, fd + 90, f.w / 2 + fr + 24, 40] });
+    if (!s.bowl) lightAt(I, f.x, f.y + 20, 10, 120, [0.75, 0.9, 1], 0.5, 'sign', 0);   // (the white water catches the light)
     // the footbridge across the creek below the pool
     const fb = s.footbridge, fh = qa(fb.a, 16);
     put(I, vitem(`fbr:${fb.len}:${fh.toFixed(2)}`, 'footbridge', [fb.len, 30, 6], Math.round(fb.x), Math.round(fb.y), fh));
@@ -3614,10 +3652,13 @@ const TOWN_COVER = {
 };
 const pickW = (list, u) => { let t = 0; for (const e of list) t += e[1]; let a = u * t; for (const e of list) { a -= e[1]; if (a < 0) return e[0]; } return list[list.length - 1][0]; };
 // what a wild tile grows, or null: [species, scale]
+const inWashBed = (list, x, y) => { let best = 0; for (const e of list) { if (x < e.bb[0] || x > e.bb[2] || y < e.bb[1] || y > e.bb[3]) continue; const P = e.pts, r2 = e.hw * e.hw * 0.7, b2 = e.bank ? e.hw * e.hw * e.bank * e.bank : 0; for (let k = 1; k < P.length; k++) { const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)), qx = x - ax - dx * t, qy = y - ay - dy * t, q = qx * qx + qy * qy; if (q < r2) return 2; if (q < b2) best = 1; } } return best; };   // (2 in a wash's bed, 1 on its banks)
 function coverAt(c, tx, ty, x, y) {
   const M = c.M, i = M.idx(tx, ty), t = M.tiles[i];
   if (t !== T.GRASS && t !== T.DIRT && t !== T.SAND) return null;
   if ((M.reserve[i] & 192) === 192) return null;   // (a tidepool shelf's bare basalt: shared/world3-coast.js)
+  const wb = M.washes ? inWashBed(M.washes, x, y) : 0;
+  if (wb === 2 || (wb === 1 && hash(tx, ty, 7191) > 0.3)) return null;   // (a dry wash's gravel bed: bare; its sandy banks: a few plants - shared/naturesites.js wash)
   if (M.reserve[i] & 64) {   // the jungle floor (Coral Cay): dense big leaves, a few gaps
     const h = hash(tx, ty, 7121);
     return h < 0.8 ? [pickW(NAT_SP.jungle, vnoise(x, y, 50, 7123) * 0.7 + hash(tx, ty, 7125) * 0.3), 1 + (h < 0.2 ? 0.2 : 0)] : null;

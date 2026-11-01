@@ -277,7 +277,7 @@ function build(m, api, K) {
       const L = [
         { w: 12, key: 'monarch', name: 'Monarch', look: '#e8e0d0', sign: ['#1a1a1a', [236, 214, 150]], store: 'clothes', poi: { kind: 'clothing', label: 'Monarch' } },
         { w: 11, key: 'diamond', name: 'Diamond & Co.', look: '#f0ece4', sign: ['#1e2a3a', [200, 220, 240]], store: 'pawn', poi: { kind: 'delivery', label: 'Diamond & Co.' } },
-        { w: 16, key: 'rest2', name: 'Seaglass Spa', look: '#e4f0ec', sign: ['#2a6a6a', [240, 248, 244]], store: 'salon', poi: { kind: 'delivery', label: 'Seaglass Spa' }, garden: true },
+        { w: 16, key: 'rest2', name: 'Seaglass Spa', look: '#e4f0ec', sign: ['#2a6a6a', [240, 248, 244]], store: 'salon', poi: { kind: 'delivery', label: 'Seaglass Spa', bath: 'spa' }, garden: true },   // (nat5: a bathhouse - the pool, the steam room, the sauna, the plunge, the loungers: server/systems/bathhouse.js)
       ][i];
       if (!L) return room >= 1 ? { gap: room, kind: 'garden' } : null;
       const w = Math.min(room, L.w);

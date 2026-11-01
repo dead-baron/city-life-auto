@@ -86,7 +86,7 @@ mat('ALPINE', 'grassAlpine', 0); mat('FOREST', 'forestFloor', 0); mat('FORESTDIR
 mat('GOLF', 'grassGolf', 0); mat('GREEN', 'grassGreen', 0); mat('CLOVER', 'grassClover', 0); mat('DIRT', 'dirtPebbly', 0); mat('DESERT', 'desertGround', 0);
 mat('CRACKED', 'earthCracked', 0); mat('REDROCK', 'redRock', 0); mat('SCREE', 'scree', 0); mat('GRAVEL', 'gravelGrey', 0);
 mat('MUD', 'mudRuts', 0); mat('BEACH', 'sandBeach', 0); mat('DUNE', 'sandDune', 0); mat('QUARRY', 'quarryRock', 0);
-mat('UNDERDECK', 'underDeck', 0); mat('WETSAND', 'sandWet', 0); mat('ROCKSHORE', 'rockShore', 0); mat('SHINGLE', 'pebbleBeach', 0);
+mat('UNDERDECK', 'underDeck', 0); mat('WETSAND', 'sandWet', 0); mat('ROCKSHORE', 'rockShore', 0); mat('SHINGLE', 'pebbleBeach', 0); mat('WASH', 'washGravel', 0); mat('RUT', 'dirtRut', 0); mat('TRACKD', 'dirtTrack', 0);
 mat('WHEAT', 'cropWheat', 1); mat('CORN', 'cropCorn', 1); mat('CORNV', 'cropCornV', 1); mat('VEG', 'cropVeg', 1);
 mat('HAY', 'cropHay', 1); mat('PLOW', 'soilPlowed', 1); mat('PLOWV', 'soilPlowedV', 1);
 mat('ROAD', 'asphaltFresh', 3); mat('ROADOLD', 'asphaltOld', 3); mat('DIRTROAD', 'dirtPebbly', 3); mat('SHOULDER', 'gravelGrey', 3);
@@ -100,6 +100,7 @@ mat('BALLAST', 'ballastStone', 1); mat('PLATFORM', 'slabPlaza', 1); mat('RAILDEC
 mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); mat('POOL', '', 2); mat('SPRING', '', 2);
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
 mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
+mat('STUB', 'cropStubble', 1); mat('STUBV', 'cropStubbleV', 1);   // (a wheat field's harvested part: m.fields[f].cut - world3-countyroad.js)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -227,7 +228,7 @@ export const fieldKindAt = (f, seed) => FIELD_KINDS[Math.floor(hh(f, 0, seed + 9
 function tileFacts(C) {
   const { M, b, TX0, TY0, seed } = C;
   const { cls, cw } = M.terrainCls;
-  const fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
+  const dryV = (M.countyRoads || []).map((q) => q.dry).filter(Boolean), fields = M.fields || [], paint = M.paintings || [], quarries = M.quarries || [], races = M.raceways || [], airports = M.airports || [];
   // a golf course laid out by the map (M.golf): greens and tees, the striped fairways, the rough round them
   const golf = M.golf || null, golfAt = (X, Y) => {
     if (!golf) return M_.GOLF;
@@ -243,8 +244,12 @@ function tileFacts(C) {
   // cracked mud - out to its ring, ragged
   const tinas = (M.tinajas || []).filter((e) => e.x + e.r * 1.3 + e.ring + 64 >= TX0 * TILE && e.x - e.r * 1.3 - e.ring - 64 <= (TX0 + TN) * TILE && e.y + e.r * 1.3 + e.ring + 64 >= TY0 * TILE && e.y - e.r * 1.3 - e.ring - 64 <= (TY0 + TN) * TILE);
   C.tina = tinas;   // (drawn per pixel by classify: tinaPx)
+  // the desert's dry washes (shared/redrock.js, concepts N4 / SC3-F): a braided bed of pale gravel, bars of the desert
+  // between its channels, cracked mud where water stood - per pixel along each one's line
+  C.wash = (M.washes || []).filter((e) => e.bb[2] >= TX0 * TILE - 64 && e.bb[0] <= (TX0 + TN) * TILE + 64 && e.bb[3] >= TY0 * TILE - 64 && e.bb[1] <= (TY0 + TN) * TILE + 64);
   const mazes = M.mazes || [];              // hedge mazes: the walls' tiles are lawn under the hedges, the paths gravel
   const tracks = (M.tracks || []).filter((r) => r.bb[2] >= TX0 * TILE - 64 && r.bb[0] <= (TX0 + TN) * TILE + 64 && r.bb[3] >= TY0 * TILE - 64 && r.bb[1] <= (TY0 + TN) * TILE + 64);   // dirt tracks off-road (Red Rock Canyon)
+  C.ruts = tracks.filter((r) => r.ruts);   // (a two-rut track's ruts: rutPx)
   // (World v3 8.22, H50: the desert's tables - their tops' cap rock, the talus at their feet - and Red Rock Canyon's floor
   // as the desert round it, its rock at its walls; a map with relief only: today's bakes as before)
   const tabs = M.relief && M.tables ? M.tables.filter((t) => t.x + t.rx + 18 >= TX0 && t.x - t.rx - 18 <= TX0 + TN && t.y + t.ry + 18 >= TY0 && t.y - t.ry - 18 <= TY0 + TN) : null;
@@ -267,7 +272,7 @@ function tileFacts(C) {
   // shared/world3-biomes.js m.orchards; a vineyard's rows run along x as the lavender's do)
   const orch = farmRects(M).filter((r) => r.x + r.w >= TX0 * TILE && r.x <= (TX0 + TN) * TILE && r.y + r.h >= TY0 * TILE && r.y <= (TY0 + TN) * TILE);
   const farmed = (X, Y) => { for (const r of orch) if (inRect(r, X, Y)) return r.k === 'orchard' ? M_.ORCHARD : M_.PLOW; return -1; };   // (the rows run along x: world3-biomes.js)
-  const onTrack = (X, Y) => tracks.some((r) => { if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
+  const onTrack = (X, Y) => tracks.some((r) => { if (r.px) return false; if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) return false; for (let k = 1; k < r.pts.length; k++) { const [ax, ay] = r.pts[k - 1], [bx, by] = r.pts[k], dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)); if (Math.hypot(X - ax - dx * t, Y - ay - dy * t) < r.hw) return true; } return false; });
   for (let j = 0; j < TN; j++) { const ty = TY0 + j, row = M.row(ty), rowIn = ty >= M.y0 && ty < M.y0 + M.h; for (let i = 0; i < TN; i++) {
     const tx = TX0 + i, k = j * TN + i;
     if (!rowIn || tx < M.x0 || tx >= M.x0 + M.w) { b.tt[k] = T.DEEP; b.td[k] = 13; b.tb[k] = 0; b.tz[k] = 0; b.tw[k] = 1; b.tdeck[k] = 0; b.tres[k] = 0; b.tbld[k] = -1; b.tm[k] = M_.SEA; continue; }
@@ -287,6 +292,7 @@ function tileFacts(C) {
     else if ((t === T.GRASS || t === T.DIRT) && orch.length && farmed(X, Y) >= 0) m = farmed(X, Y);
     else if (t === T.GRASS) {
       if (b.tdeck[k]) m = M_.UNDERDECK;
+      else if (dryV.length && dryV.some((r) => X >= r[0] && X < r[2] && Y >= r[1] && Y < r[3]) && vnc(X, Y, 90, seed + 143) > 0.22) m = M_.DRYGRASS;   // (a county road's late-summer verges: world3-countyroad.js)
       else if (b.tres[k] & 128) m = M_.PASTURE;                 // (a river's lush banks, even in dry country: Willow River)
       else if (inRects(paint, X, Y, 'golf')) m = golfAt(X, Y);
       else if (inRects(parks, X, Y)) m = hh(tx >> 3, ty >> 3, seed + 5) > 0.75 ? M_.CLOVER : M_.PARK;
@@ -323,6 +329,9 @@ function tileFacts(C) {
       const fk = f >= 0 ? fieldKindAt(f, seed) : FIELD_KINDS[Math.floor(hh(tx >> 3, ty >> 3, seed + 9) * FIELD_KINDS.length)];
       const long = f >= 0 && fields[f].w > fields[f].h;
       m = fk === 'CORN' ? (long ? M_.CORN : M_.CORNV) : fk === 'PLOW' ? (long ? M_.PLOW : M_.PLOWV) : M_[fk];
+      const cut = f >= 0 && fields[f].cut;
+      const wob = cut ? (vnc(X, Y, 37, seed + 141) - 0.5) * 56 : 0;   // (the cut's edge wavering: where the combine has got to)
+      if (cut && X >= cut[0] + (cut[0] > fields[f].x ? wob : 0) && X < cut[2] && Y >= cut[1] + (cut[1] > fields[f].y ? wob : 0) && Y < cut[3]) m = long ? M_.STUB : M_.STUBV;
     } else if (t === T.SIDEWALK) m = walkOf(D);
     else if (t === T.PLAZA) {
       if (pools.length && pools.some((r) => r.deck && inRect(r.deck, X, Y))) m = M_.PLAZAC;
@@ -402,6 +411,44 @@ export function tinaPx(list, X, Y, seed) {
     if (d2 > far * far) continue;
     const lim = e.r * 1.1 + e.ring * (0.7 + 0.6 * vnc(X, Y, 34, seed + 77)) + (vnc(X, Y, 9, seed + 79) - 0.5) * 8;
     if (d2 < lim * lim) return e.k ? M_.MUD : M_.REDROCK;
+  }
+  return -1;
+}
+// a two-rut track's ruts (shared/naturesites.js: the canyon's, the trailhead's): two lines either side of its middle
+// (0 off it, 1 the track, 2 a rut; a track drawn per pixel - r.px - is all its own, else only its ruts on its dirt tiles)
+function rutPx(list, X, Y, seed, onDirt) {
+  for (const r of list) {
+    if (!r.px && !onDirt) continue;
+    if (X < r.bb[0] || X > r.bb[2] || Y < r.bb[1] || Y > r.bb[3]) continue;
+    const P = r.pts, hw = r.hw;
+    let d2 = 1e12;
+    for (let k = 1; k < P.length; k++) {
+      const ax = P[k - 1][0], ay = P[k - 1][1], dx = P[k][0] - ax, dy = P[k][1] - ay;
+      if ((X < ax - hw && X < ax + dx - hw) || (X > ax + hw && X > ax + dx + hw) || (Y < ay - hw && Y < ay + dy - hw) || (Y > ay + hw && Y > ay + dy + hw)) continue;
+      const l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
+      if (q < d2) d2 = q;
+    }
+    const lim = r.px ? hw * (0.8 + 0.35 * vnc(X, Y, 23, seed + 91)) : hw;
+    if (d2 < lim * lim) return Math.abs(Math.sqrt(d2) - hw * 0.4) < 3 + vnc(X, Y, 11, seed + 89) * 1.6 ? 2 : r.px ? 1 : 0;
+  }
+  return 0;
+}
+export function washPx(list, X, Y, seed) {
+  for (const e of list) {
+    if (X < e.bb[0] || X > e.bb[2] || Y < e.bb[1] || Y > e.bb[3]) continue;
+    const P = e.pts, hw = e.hw, reach = hw * (e.bank || 1) * 1.25;
+    let d2 = 1e12;
+    for (let k = 1; k < P.length; k++) {
+      const ax = P[k - 1][0], ay = P[k - 1][1], bx = P[k][0], by = P[k][1];
+      if ((X < ax - reach && X < bx - reach) || (X > ax + reach && X > bx + reach) || (Y < ay - reach && Y < by - reach) || (Y > ay + reach && Y > by + reach)) continue;
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / l2)), qx = X - ax - dx * t, qy = Y - ay - dy * t, q = qx * qx + qy * qy;
+      if (q < d2) d2 = q;
+    }
+    const u = Math.sqrt(d2) / (hw * (0.8 + 0.4 * vnc(X, Y, 61, seed + 81))) + (vnc(X, Y, 9, seed + 83) - 0.5) * 0.16;
+    if (u > 1) { if (e.bank && u < e.bank) return M_.DESERT; continue; }   // (its banks: the desert's sand, whatever rock or hardpan round it)
+    if (e.mud !== 0 && u < 0.7 && vnc(X, Y, 57, seed + 85) > 0.7) return M_.CRACKED;   // (where the water stood last: cracked mud)
+    if (u > 0.3 && vnc(X + Y * 0.4, Y - X * 0.3, 34, seed + 87) > 0.68) return e.bank ? M_.DESERT : -1;    // (a bar of the desert between the braids)
+    return M_.WASH;
   }
   return -1;
 }
@@ -774,6 +821,8 @@ function classify(C) {
       // --- the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of slickrock, a seep's ring of cracked mud -
       // round the water out to a ragged edge, per pixel (a tile's step would show as a square)
       if (C.tina && C.tina.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = tinaPx(C.tina, X, Y, seed); if (q >= 0) m = q; }
+      if (C.wash && C.wash.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS) && m !== M_.DIRT) { const q = washPx(C.wash, X, Y, seed); if (q >= 0) m = q; }
+      if (C.ruts && C.ruts.length && isSoft(m) && (t === T.DIRT || t === T.SAND || t === T.GRASS)) { const q = rutPx(C.ruts, X, Y, seed, m === M_.DIRT); if (q) m = q === 2 ? M_.RUT : M_.TRACKD; }
       // --- vectors: roads, sidewalks, shoulders, bridge decks
       const a = b.aux[i];
       let z = 0;

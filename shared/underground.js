@@ -197,7 +197,8 @@ const kSeed = (s, k) => (k ? (s ^ Math.imul(k, 0x2c1b3c6d)) >>> 0 : s);
 function buildCave(map, mine, k) {
   const X = mine.x, face = mine.y, rnd = mulberry32(kSeed(((map.seed ?? 1337) ^ 0xca7e) >>> 0, k));
   const flip = face - 1500 < 3 * TILE ? -1 : 1;     // (no room north: the cave runs south under the road instead)
-  const at = (dx, dy) => ({ x: Math.round(X + dx), y: Math.round(face + dy * flip) });
+  const sc = mine.scene || null, push = sc ? sc.push || 0 : 0;   // (a cave laid out as a scene, World v3's: shared/caverns.js carveScene - the template's chambers further in, beyond it)
+  const at = (dx, dy) => ({ x: Math.round(X + dx), y: Math.round(face + (dy - push) * flip) });
   const ch = {}, chambers = [];
   for (const c of CHAMBERS) {
     const j = (k) => Math.round((rnd() - 0.5) * k);
@@ -214,7 +215,7 @@ function buildCave(map, mine, k) {
   // the still pool's chamber (a channel you can row up)
   const rv = { ax: river.ax + 40, ay: river.ay + 6, bx: river.bx - 40, by: river.by + 6, hw: 68 };
   const fork = { ax: Math.round(rv.ax + (rv.bx - rv.ax) * 0.62), ay: Math.round(rv.ay + (rv.by - rv.ay) * 0.62), bx: ch.pool.x, by: ch.pool.y, hw: 50 };
-  return { k, name: mine.name || 'the mine', X, face, flip, mouth, inside, chambers, ch, passages, river: rv, fork };
+  return { k, name: mine.name || 'the mine', X, face, flip, mouth, inside, chambers, ch, passages, river: rv, fork, scene: sc };
 }
 // the caves: one per mine with a cave of its own (a mine marked cave: false has none), in the map's order; then the
 // caverns (theirs after the mines', so a mine cave's seeds and veins come out as they were)
@@ -314,7 +315,7 @@ function build(map) {
       for (let i = 1; i < pts.length; i++) capsule(cr, pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y, 46, C.FLOOR, false, 0.6, s2 + 7);
     }
     // the way in: from the adit up into the entrance hall
-    capsule(cr, cave.mouth.x, cave.mouth.y - 4 * cave.flip, cave.ch.hall.x, cave.ch.hall.y, 44, C.FLOOR, false, 0.3, s2 + 9);
+    if (!(cave.scene && CAV)) capsule(cr, cave.mouth.x, cave.mouth.y - 4 * cave.flip, cave.ch.hall.x, cave.ch.hall.y, 44, C.FLOOR, false, 0.3, s2 + 9);
     // the river, its fork, and the still pool
     const rv = cave.river, fk = cave.fork;
     capsule(cr, rv.ax, rv.ay, rv.bx, rv.by, rv.hw, C.RIVER, true, 0.25, s2 + 11);
@@ -323,6 +324,7 @@ function build(map) {
     // little pools of still water about the floors
     const rp = mulberry32(s2 + 21);
     for (const c of cave.chambers) if (!c.long && c.id !== 'pool' && c.id !== 'hall') { const px = c.x + Math.round((rp() - 0.5) * c.r), py = c.y + Math.round((rp() - 0.5) * c.r); disc(cr, px, py, 22 + Math.round(rp() * 14), C.POOL, true); }
+    if (cave.scene && CAV) CAV.carveScene(cave, cr, s2);   // (its scene: the way in, the chamber, the drift on to the hall)
     regions.push(cr);
     cave.region = cr;
   }

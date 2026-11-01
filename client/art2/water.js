@@ -433,7 +433,7 @@ function rockKit(m, seed, sand) {
   const bed = (x, y, z) => { const u = z + (vnoise(x, y, 23, seed + 31) - 0.5) * 5, b = Math.floor(u / 6), f = u - b * 6; return (hash(b, Math.floor(x / 37), seed) - 0.5) * 1.2 + (f < 1 ? -1 : f > 5 ? 0.55 : 0) + (hash(Math.floor(x / 3), b, seed + 2) < 0.05 ? -1.1 : 0) + (vnoise(x, z, 4, seed + 3) - 0.5) * 0.7; };
   const mm = (r, k, f) => m.mat({ ramp: r, k, shade: f });
   return {
-    rock: mm(sand ? SANDROCK : LAYER, 4, bed),
+    rock: mm(sand === 'lava' ? LAVAR : sand ? (sand === true ? SANDROCK : sand) : LAYER, 4, bed),
     wet: mm(WETR, 3, (x, y, z) => bed(x, y, z) * 0.6 + (hash(Math.round(x), Math.round(z), seed + 4) > 0.9 ? 1.6 : 0)),
     moss: mm(MOSS, 3, (x, y, z) => (hash(Math.round(x), Math.round(y), Math.round(z)) - 0.5) * 1.4),
     fern: mm(FERN, 2, (x, y, z) => (Math.round(z) % 2 ? 0.8 : -0.2)),
@@ -459,7 +459,8 @@ const autoUps = (w, sd) => { const out = []; let x = -w / 2 + 2; for (let i = 0;
 //   o.width  water width; o.drop total drop (z); o.rock side rock width each side; o.frame / o.frames
 //   o.streams  for the lower tier of 'twoTier': [[x0, x1], ...] relative to the centre
 // The model's .face is the y of the lowest face (the anchor the sprite is placed by) and .lip the drop.
-const SANDROCK = R('#c49a6a', 7, 3, { dark: 0.55, light: 0.45 });
+const SANDROCK = R('#c49a6a', 7, 3, { dark: 0.55, light: 0.45 }), LAVAR = R('#46434a', 7, 3, { dark: 0.6, light: 0.55, shift: 0.2 });   // (LAVAR: the tropics' black rock, o.stone 'lava')
+const REDROCKW = R('#a8563c', 7, 3, { dark: 0.55, light: 0.45 });   // (o.stone 'red': the red rock desert's - Red Rock Canyon's spring)
 export function fallModel(o = {}) {
   const kind = o.kind || 'ledge', seed = o.seed ?? 3, frames = o.frames || 4;
   const width = o.width ?? (kind === 'cliff' ? 22 : kind === 'weir' ? 120 : 60), drop = o.drop ?? (kind === 'cliff' ? 120 : kind === 'twoTier' ? 110 : kind === 'weir' ? 12 : 26);
@@ -472,8 +473,8 @@ export function fallModel(o = {}) {
   const frame = { v: o.frame || 0 };
   // basalt: columns from a jittered grid (Voronoi), each with its own top; seams between columns
   // (o.stone 'sand': a resort's rockwork of warm sandstone in courses - Lucky Mesa's Mesa Grande)
-  const sand = o.stone === 'sand';
-  const RK = rockKit(m, seed, sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
+  const sand = o.stone === 'sand' || o.stone === 'red';
+  const RK = rockKit(m, seed, o.stone === 'lava' ? 'lava' : o.stone === 'red' ? REDROCKW : sand), rock = kind === 'weir' ? m.mat({ ramp: CONC, k: 3, shade: (x, y, z) => (Math.round(z) % 6 === 0 ? -0.6 : 0) + (Math.round(x) % 24 === 0 ? -0.8 : 0) + (z < 4 ? -0.5 : 0) + (hash(Math.round(x / 3), Math.round(z / 3), seed) - 0.5) * 0.5 }) : RK.rock;
   const wtop = m.mat({ ramp: WATER.river, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y) => Math.sin(y * 0.6 - frame.v / frames * TAU * 2 + hash(Math.round(x), 1, seed) * 3) * 0.5 + (hash(Math.round(x), Math.round(y), seed) > 0.9 ? 1 : 0) - 0.2 - Math.max(0, d1 - 6 - y) / d1 * 1.6 + (vnoise(x, y, 6, seed + 75) > 0.72 ? 1.2 : 0) });   // (deeper and darker back from the lip, streaks of foam on it)
   const sheet = m.mat({ ramp: WATER.fall, k: 3, flag: F_WATER | F_NOCAST, shade: (x, y, z) => {
     const col = Math.round(x), h = hash(col, 3, seed), u = (Hh - z) / (7 + h * 7) + frame.v / frames * (2 + Math.floor(h * 2)) * -1;

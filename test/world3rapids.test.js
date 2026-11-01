@@ -137,7 +137,7 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   // (on the creeks and narrower rivers up in the hills: none across the wide rivers, at a mouth or down on the coast - 10-22)
   assert.ok(S.rapids >= 5 && S.rapidTiles / S.riverTiles > 0.02 && S.rapidTiles / S.riverTiles < 0.15, `rapids on the steep stretches of the rivers (${JSON.stringify(S)})`);
   for (const c of m.waters.ch) if (c.r) assert.ok(c.w <= RAPIDS.wide, `none across a wide river (${c.w})`);
-  const CH = m.waters.ch, pockets = CH.flatMap((c) => c.p || []);
+  const CH = m.waters.ch.filter((c) => !c.hand), pockets = CH.flatMap((c) => c.p || []);
   const LF = m.world3.ledges;   // (the ledge falls' plunge pools join them: shared/world3-ledgefalls.js)
   assert.ok(S.eddies >= 4 && S.pools >= 8 && pockets.length === S.eddies + S.pools + LF.pools, `eddies and bend pools (${S.eddies}, ${S.pools}, ${LF.pools})`);
   for (const c of CH) for (const [s0, s1, k] of c.r || []) { assert.ok(c.k === 'river' || c.k === 'creek'); assert.ok(s1 - s0 >= RAPIDS.min - 0.01 && k >= 0.45 && k <= 1); }

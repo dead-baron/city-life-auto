@@ -15,6 +15,7 @@ import { TERRAIN_CELL } from './worldmask-dims.js';
 import { coverAtPx } from './tunnels.js';
 import { EDGE_OUT } from './border.js';
 import { barsRay } from './cells.js';
+import { SCENE_MASKS } from './interior-art.js';
 const EDGE_T = Math.ceil(EDGE_OUT / TILE) + 2;   // tiles of open sea past the map's edge (border.js), then the wall
 
 // Islands / parts of the world shown in the tour and on the map. box: tile rect [x0, y0, x1, y1)
@@ -481,4 +482,44 @@ export function mapSignature(m) {
   for (const [, arr] of m.solidProps) for (const e of arr) { mix(e.x | 0); mix(e.y | 0); mix(e.r | 0); }
   m._sig = h.toString(36);
   return m._sig;
+}
+
+// ---- Red Rock Canyon's rock, by hand (the nature showcase, 2026-10-31; concepts N4, N4-B, N4-C): the canyon painting's
+// 54 x 36 tiles laid out as the concept - the big banded tower mass with the oasis tucked under its south face between
+// two lower ledges, the natural arch spanning the wash from it to the east mesa, the wash running north to south under
+// the arch, the dirt track coming in on the west past the mid-left stack and the low block, the south-west and the
+// south-east mesas framing the floor. One source for the three that read it: the map's solid tiles (the painting's
+// mask, shared/interior-art.js SCENE_MASKS.canyon - its rows are made here from the shapes, below), the rock's art
+// (client/art2/game/statics.js makeMesas: each shape raised as stepped sandstone, its upper tiers broken into columns)
+// and the dressing (shared/naturesites.js canyonOasis / canyonWash). Tile coordinates in the painting; tiers in the art's
+// half px (1 = 2 world px). Arithmetic only (read by the page's bake and the generator alike).
+
+export const CANYON = {
+  w: 54, h: 36,
+  shapes: [
+    { poly: [[0.4, 13.4], [2.6, 12.8], [4, 14.5], [3.6, 17.5], [1.8, 19.2], [0.6, 18.4]], tiers: [[0, 30], [5, 52], [10, 70]] },                                  // the mid-left stack
+    { poly: [[0.6, 22.4], [3, 21.2], [6.2, 21.8], [8.6, 24], [9.6, 27.6], [12.4, 30.6], [14.8, 32.2], [13.6, 33.8], [10.2, 34.6], [6.4, 33.6], [3.2, 34.8], [0.8, 33.2], [0.2, 28]], tiers: [[0, 30], [8, 54], [18, 74]] },   // the south-west mesa
+    { poly: [[16.8, 1.2], [20.4, 0.4], [26, 1], [31, 0.3], [34.4, 1], [34.6, 3], [34, 8], [33.2, 12], [31, 14.6], [28, 16.6], [25, 17.4], [21.2, 17.2], [18.4, 15.6], [16.6, 12], [15.6, 6]], tiers: [[0, 34], [7, 60], [16, 82], [28, 96]] },   // the tower mass over the oasis
+    { poly: [[11.6, 15.2], [14.6, 14.2], [17.2, 16.2], [17.6, 18.8], [16.6, 21.2], [14.4, 22.2], [12.4, 21], [11.2, 18.4]], tiers: [[0, 22], [6, 40]] },   // the oasis's west ledge
+    { poly: [[30.4, 17.2], [32.4, 15.2], [34, 15.6], [34.6, 18.4], [34.2, 22.6], [33, 26], [31.4, 27], [30.2, 24.6], [30.8, 21.2]], tiers: [[0, 24], [6, 44], [12, 56]] },   // the oasis's east ledge
+    { poly: [[40.8, 1.2], [44, 0.4], [49.4, 1], [52.8, 0.6], [53.4, 6], [52.4, 12], [53.2, 18], [52.2, 21.2], [50.4, 22.2], [46.6, 21], [43.6, 18.4], [42, 14], [41.2, 9], [40.2, 4]], tiers: [[0, 34], [7, 60], [16, 80], [28, 92]] },   // the east mesa
+    { poly: [[38.6, 25.4], [42.4, 23.6], [47, 24.4], [52.6, 24.2], [53.2, 28], [52.4, 32.4], [49, 34.2], [44.6, 33.4], [40.6, 34.8], [37, 33.8], [36.4, 31.6], [37.8, 28.4]], tiers: [[0, 26], [6, 40], [14, 62]] },   // the south-east mesa (the lizard's ledges)
+    { poly: [[8.4, 0.6], [12.6, 0.8], [12.2, 2.8], [9.6, 3.4], [8, 2]], tiers: [[0, 18], [4, 30]] },   // a low block north of the track
+  ],
+  // the arch: from the tower mass's east flank over the wash to the east mesa (tiles), its crown's height and thickness
+  arch: { path: [[33.2, 5.2], [37, 6.8], [41.2, 6.4]], width: 58, h: 88, thick: 22 },
+  pool: { x: 24.1, y: 20.9, rx: 5.0, ry: 3.0 },                 // the oasis pool (tiles), under the mass's south face
+  spring: { x: 24.0, y: 17.95 },                                 // the spring's foot (tiles): the face above the pool
+  palms: [[18.4, 18.6, 'desertFan', 1.7], [29.8, 18.2, 'desertFan', 1.65], [18.6, 22.8, 'date', 1.45], [29.6, 23, 'desertFan', 1.4], [21.2, 24.7, 'date', 1.25], [27.2, 24.9, 'desertFan', 1.2], [17.6, 21.7, 'date', 1.3]],   // (tiles, species, size)
+  wash: [[37.6, -1], [37.7, 7], [37.1, 13.5], [36.6, 19.5], [35.4, 25.4], [33, 30.4], [31.4, 35], [30.6, 40]],   // the wash, north to south under the arch
+  outflow: [[27.6, 21.6], [30.2, 23.2], [33.6, 24.4], [35.8, 24.6]],   // the pool's overflow, out between the east ledge and the south-east mesa to the wash
+  track: [[-3.2, 9.2], [3.6, 8.4], [10.4, 9.8], [10.2, 14], [9.8, 18.4], [11, 22], [13.4, 25.2], [16.4, 27.4]],   // the dirt track in from the west road, down to the turnaround
+};
+const inPoly = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++) if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; return c; };
+export const inCanyonRock = (x, y) => CANYON.shapes.some((s) => inPoly(s.poly, x, y));
+// the painting's mask: a tile is rock where its middle is in a shape
+{
+  const rows = [];
+  for (let y = 0; y < CANYON.h; y++) { let r = ''; for (let x = 0; x < CANYON.w; x++) r += inCanyonRock(x + 0.5, y + 0.5) ? '#' : 's'; rows.push(r); }
+  if (SCENE_MASKS.canyon) SCENE_MASKS.canyon = { w: CANYON.w, h: CANYON.h, rows };
 }

@@ -158,7 +158,7 @@ function frame(now) {
     you(L, me, now);
     nightV1(L);
     fireFx(L, now);
-    if (L.key === 'bath') bathFx(L, now);
+    if (L.bath) bathFx(L, now);
   }
   if (st.doors && !(v2 && art && art.ready)) lobbyMarks(L, false, now);   // (H71: a lobby's door numbers, yours lit - art v2 draws them with the back wall, under the people)
   if (st.edit) editMarks(L, me, now);
@@ -193,22 +193,24 @@ function drawArt(L, me, u, now) {
   for (const it of art.items) list.push({ b: it.base, it });
   (st.cars || []).forEach((c, i) => { const s = art.car(c, i); if (s) list.push({ b: s.base, car: s }); });
   // you, and anyone in here with you: art v2's people, at the street's size
-  const tub = L.key === 'bath' ? L.pieces.find((p) => p.ch === 'u') : L.pieces.find((p) => p.ch === '%');   // (a home's hot tub: homeups.js)
+  const tubs = L.pieces.filter((p) => (L.bath ? 'u@$!_y' : '%').includes(p.ch));   // (a bathhouse's baths, rock pools, plunge - and what you sit in: the sauna, the heated floor; a home's hot tub: homeups.js)
+  const tubAt = (x, y, wet = true) => tubs.find((p) => (!wet || !'!_y'.includes(p.ch)) && x >= p.x - 4 && x < p.x + p.w + 4 && y >= p.y - 4 && y < p.y + p.h);
   const person = (look, x, y, a, mv, sl, sh, nm, si, sk) => {
     let pose = mv ? 'move1' : 'idle', fr = mv ? Math.floor(now / 110) % 6 : 0, d8 = dir8Of(a), b = y;
-    if (si) { x = si[0]; y = si[1]; d8 = dir8Of(si[2]); pose = 'sit'; fr = 0; b = y + TILE_IN / 2 + 1; }   // (sat on the couch, an armchair, the cinema's seats: in front of the seat's own base)
-    if (sk && tub && y < tub.y + tub.h) { pose = 'sit'; fr = 0; d8 = 0; b = tub.y + tub.h + 0.5; }   // (in a bathhouse's bath: drawn over the tub, the water over them - soak)
+    if (si) { x = si[0]; y = si[1]; d8 = dir8Of(si[2]); pose = 'sit'; fr = 0; b = y + TILE_IN / 2 + 1; const q = L.bath && tubAt(x, y, false); if (q) b = Math.max(b, q.y + q.h + 0.5); }   // (sat on the couch, an armchair, the cinema's seats: in front of the seat's own base; in a bathhouse's sauna, on its heated floor: over it)
+    const tub = sk ? tubAt(x, y) : null;
+    if (tub) { pose = 'sit'; fr = 0; d8 = 0; b = tub.y + tub.h + 0.5; }   // (in a bathhouse's bath: drawn over the tub, the water over them - soak)
     if (Array.isArray(sh)) { x = sh[0]; y = sh[1] + 10; d8 = 4; pose = 'sit'; fr = 0; b = y + 4; }   // (on the stool at a bathhouse's wash station, facing its tiled wall)
     if (sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + (nm ? 14 : -6); y = bed.y + 26; b = bed.y + bed.h + 1; pose = 'down'; fr = 0; d8 = 4; } }
     if (sh && !Array.isArray(sh)) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
-    list.push({ b, p: { look, x, y, pose, fr, d8, nm, sk: !!sk && !!tub && y < tub.y + tub.h, sh: !!sh } });
+    list.push({ b, p: { look, x, y, pose, fr, d8, nm, sk: !!tub, sh: !!sh } });
   };
   for (const o of st.others || []) {
     const q = seen.get(o.n), kk = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
-    const ok = o.sk && o.si;
+    const ok = o.sk === 1 && o.si;   // (2: sat in the steam, the sauna, on the heated floor - as on a bench)
     person(raw.get(o.n) || {}, ok ? o.si[0] : q ? q.x0 + (q.x1 - q.x0) * kk : o.x, ok ? o.si[1] : q ? q.y0 + (q.y1 - q.y0) * kk : o.y, o.a, o.mv, o.sl, false, o.n, ok ? 0 : o.si, o.sk);
   }
-  for (const f of st.folk || []) person(folkLooks.get(f[5]) || {}, ...folkAt(f), f[2], f[3], false, f[4] === 'shower' ? folkAt(f) : 0, null, null, f[4] === 'soak');   // (a bathhouse's bathers)
+  for (const f of st.folk || []) { const at = folkAt(f); person(folkLooks.get(f[5]) || {}, ...at, f[2], f[3], false, f[4] === 'shower' ? at : 0, null, f[4] === 'sit' ? [at[0], at[1], f[2]] : null, f[4] === 'soak'); }   // (a bathhouse's bathers: on the stool, in the water, sat in the sauna or on the heated floor)
   if (st.clerk && folkLooks.has('clerk')) person(folkLooks.get('clerk'), st.clerk[0], st.clerk[1], Math.PI / 2, false);   // (and its attendant behind the desk)
   const soakMe = st.soak === 1 && st.seat;
   person(st.suit || app || {}, soakMe ? st.seat[0] : me.x, soakMe ? st.seat[1] : me.y, me.a, me.mv, st.sleep, st.shower, null, soakMe ? 0 : st.seat, soakMe ? 1 : 0);
@@ -250,7 +252,7 @@ function drawArt(L, me, u, now) {
   }
   tvGlow(L, now);
   fireFx(L, now);
-  if (L.key === 'bath') bathFx(L, now);
+  if (L.bath) bathFx(L, now);
   return true;
 }
 // the classic view after dark: the place dimmed, warm light round the lamps, the bed, the table and the kitchen
@@ -333,9 +335,9 @@ function drops(x, y, now) {
 // the steam off the bath and the hot stones, rising and fading; the curtains (noren) in the locker rooms' doorways - drawn
 // aside for you once you've paid
 function bathFx(L, now) {
-  const tub = L.pieces.find((p) => p.ch === 'u'), stones = L.pieces.find((p) => p.ch === 'y');
-  for (const [P, n, rr] of [[tub, 14, 11], [stones, 6, 9]]) {
-    if (!P) continue;
+  for (const P of L.pieces) {
+    if (!'u@y!'.includes(P.ch) || (P.ch === 'u' && L.bath === 'spa')) continue;   // (the steam off the hot water, the stones, a sauna - not the spa's pool)
+    const n = Math.max(4, Math.round(P.w / 32)), rr = P.ch === 'y' || P.ch === '!' ? 9 : 11;
     for (let k = 0; k < n; k++) {
       const t = ((now / 2600) + k / n) % 1, x = P.x + ((k * 97) % 100) / 100 * P.w + Math.sin(now / 900 + k) * 6, y = P.y + P.h * 0.5 - t * 46;
       g.fillStyle = `rgba(240,246,250,${0.22 * Math.sin(t * Math.PI)})`; g.beginPath(); g.arc(x, y, rr * (0.6 + t), 0, 6.28); g.fill();
@@ -436,7 +438,7 @@ function bakeRooms(L) {
   const b = c.getContext('2d');
   b.scale(PX, PX); b.translate(16, 24);
   const P = PAL[L.tier] || PAL[0], T = TILE_IN;
-  const floorOf = (ch, Q = P) => (ch === 't' ? Q.tile : ch === 'c' ? Q.carpet : ch === 'g' ? ['#6c6d70', '#66676a'] : Q.wood);
+  const floorOf = (ch, Q = P) => (ch === 't' ? Q.tile : ch === 'c' ? Q.carpet : ch === 'g' ? ['#6c6d70', '#66676a'] : ch === ':' ? ['#8a8478', '#7a746a'] : Q.wood);
   // floors (under the furniture too: the floor next to it)
   for (let ty = 0; ty < L.rows; ty++) for (let tx = 0; tx < L.cols; tx++) {
     let ch = L.cell(tx, ty);
@@ -582,6 +584,10 @@ function piece(b, p, P, L) {
     case 'I': box('#7a5432', x + 2, y + 6, w - 4, h - 10); box('#c8a070', x, y + 4, w, 6); box('#d8b050', x + 18, y + 8, 6, 5); box('#3a3a40', x + w - 40, y + 8, 18, 10); break;
     case 'J': for (let k = 0; k < Math.max(p.tw, p.th) * 2; k++) { const v = h > w; box('#b8905a', v ? x + 3 : x + k * 16 + 1, v ? y + k * 16 + 1 : y + 3, v ? w - 6 : 14, v ? 14 : h - 6); box('#d8b050', v ? x + w / 2 - 2 : x + k * 16 + 6, v ? y + k * 16 + 6 : y + h / 2 - 2, 4, 3); } break;
     case 'u': box('#c8a070', x, y, w, h); box('#d8e6ea', x + 4, y + 4, w - 8, h - 8); box('#6ab4d0', x + 7, y + 7, w - 14, h - 14); for (let k = 0; k < w / 24; k++) box('rgba(220,244,255,.5)', x + 10 + k * 24, y + 12 + (k % 2) * 14, 10, 2); break;
+    case '@': b.fillStyle = '#6a6460'; b.beginPath(); b.ellipse(x + w / 2, y + h / 2, w / 2, h / 2, 0, 0, 6.28); b.fill(); b.fillStyle = '#7ec8c0'; b.beginPath(); b.ellipse(x + w / 2, y + h / 2, w / 2 - 7, h / 2 - 6, 0, 0, 6.28); b.fill(); break;   // (nat5) an onsen's rock pool
+    case '$': box('#5a7a9a', x, y, w, h); box('#8ad8f0', x + 5, y + 5, w - 10, h - 10); break;   // a cold plunge
+    case '!': box('#8a5a34', x, y, w, h); box('#d8a870', x + 4, y + 4, w - 8, 22); box('#c8905a', x + 4, y + 26, w - 8, 16); box('#3a3a40', x + w - 34, y + h - 30, 24, 22); box('#ff7040', x + w - 31, y + h - 27, 18, 4); break;   // a sauna
+    case '_': box('#d8b060', x, y, w, h); for (let k = 0; k < Math.floor(Math.max(w, h) / 36); k++) box(['#c8644a', '#4a7a9a', '#8a6aa8'][k % 3], h > w ? x + 6 : x + 6 + k * 36, h > w ? y + 6 + k * 36 : y + 6, h > w ? w - 12 : 28, h > w ? 28 : h - 12); break;   // a heated floor's mats, loungers
     case 'y': box('#4a3424', x + 4, y + 6, w - 8, h - 10); box('#e85a30', x + 8, y + 10, w - 16, h - 18); for (let k = 0; k < 10; k++) { b.fillStyle = ['#7a7470', '#5a5652', '#8e8680'][k % 3]; b.beginPath(); b.arc(x + 12 + (k * 13) % (w - 24), y + 14 + ((k * 7) % (h - 28)), 5, 0, 6.28); b.fill(); } break;
     case 'o': box('#5a3a24', x + 4, y + 6, w - 8, h - 10); for (let k = 0; k < 5; k++) box('#c8a070', w > h ? x + 2 : x + 4 + k * (w - 8) / 5, w > h ? y + 6 + k * (h - 10) / 5 : y + 2, w > h ? w - 4 : (w - 8) / 5 - 1, w > h ? (h - 10) / 5 - 1 : h - 4); break;
     case 'f': box('#5a3a24', x + 2, y + 4, w - 4, h - 8); for (let k = 0; k < Math.floor((w - 8) / 16); k++) box(k % 2 ? '#2a4a7a' : '#f2f0ea', x + 5 + k * 16, y + 7, 13, h - 14); break;

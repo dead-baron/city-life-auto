@@ -224,7 +224,7 @@ function vehicleActor(world, k, model, x, y, a, who, extra = {}, opts = {}) {
 // the stretch of the rows that's crop (World v3's fields are cut by a wandering edge: their rects hold trees and
 // tracks too - farming.js row.ok, a bit a segment), the field nearest you with a long enough one
 const CROP_SEGS = 5;   // at least this many of a row's FARM.segs in a row, crop in every row the combine takes
-function cropRun(F, r0, rows) {
+export function cropRun(F, r0, rows) {
   let ok = (1 << FARM.segs) - 1;
   for (let r = r0; r < r0 + rows; r++) ok &= F.rows[r].ok;
   let best = null;
@@ -251,10 +251,13 @@ export function combinePlan(world, x, y) {
 }
 function startCombine(world, p) {
   const P = combinePlan(world, p.ped.x, p.ped.y);
-  if (!P) return null;
+  return P ? combineOn(world, P) : null;
+}
+// a combine at work on a plan's rows (P: combinePlan's - or a county road's, server/systems/countyroad.js: the field's
+// ripe rows beside its stubble), its actor; ripen: the rows ripe first (the cinematic mode's: a fresh crop to cut)
+export function combineOn(world, P, ripen = true) {
   const { F, passes, r0, run } = P, seg = F.len / FARM.segs, head = VEHICLES.combine.L / 2 - 12;   // (its header: that far ahead of its middle)
-  for (let r = r0; r < r0 + passes * 2; r++) { const row = F.rows[r]; row.s = farming.ROW.RIPE; row.g = 0; row.m = 0; }
-  F.dirty = true;
+  if (ripen) { for (let r = r0; r < r0 + passes * 2; r++) { const row = F.rows[r]; row.s = farming.ROW.RIPE; row.g = 0; row.m = 0; } F.dirty = true; }
   const lo = run.k0 * seg, hi = (run.k1 + 1) * seg;
   const f = F.f, side = (r) => (F.v ? f.x : f.y) + (r + 1) * FARM.rowW, pt = (lat, s) => (F.v ? { x: lat, y: f.y + s } : { x: f.x + s, y: lat });
   const route = [];

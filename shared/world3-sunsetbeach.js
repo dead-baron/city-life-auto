@@ -96,6 +96,7 @@ function build(m, api, K) {
     tikiBar(2516, bw, 'Coconut Tiki Bar', 'TIKI BAR', '#3a6a5a');
     tikiBar(2712, bw, 'The Sandbar', 'THE SANDBAR', '#8a3a2a');
     lifeguards(bw);
+    seaBaths(bw);
     skatePark(bw);
     volleyball(bw);
     beach(bw);
@@ -368,6 +369,27 @@ function build(m, api, K) {
       if (b) { out.shops++; K.fill(x - 1, y + h, w + 2, 2, T.PLAZA); busy.push([x - 1, y, x + w + 1, y + h + 4]); prop('surfboard', x + w + 0.6, y + h - 1, 0, { v: 1 }); prop('lifering', x - 0.6, y + h - 1.2, 0); }
     }
     for (const lx of [2532, 2600, 2650, 2700]) { const s = shore(lx); if (s < SEA) { prop('lguard', lx, s - 4.5, 16, { a: 0 }); busy.push([lx - 2, s - 7, lx + 2, s - 3]); } }
+  }
+
+  // ===========================================================================================================
+  // (nat5, the owner 10-31: "a few more bath houses and showers") the Sunset Bathhouse on the sand between the west tiki
+  // bar and the pier (L4/L6): a seaside public bath - blue and white tile, its curtain over the door, the steam out of
+  // its vent; inside the shower bar, the big bath under its mural of the sea, the sea-water plunge (server/systems/
+  // bathhouse.js, shared/homelayout.js 'bathsea'); out front the deck with an outdoor shower each side of the door, a
+  // bench and the towel bin
+  function seaBaths(bw) {
+    const x = 2530, y = bw.y1 + 1, w = 12, h = 7;
+    if (!K.allFree(x, y, w, h + 3)) return;
+    const art = tower(x, y, { name: 'Sunset Bathhouse', sign: 'BATHHOUSE', store: 'lobby', style: 'stucco', wall: '#e8f0f4', floors: 1, win: 'pair', parapet: 10, grime: 0.04, roofMat: 'membrane', awning: ['#2a5a9a', '#f0ece4'], signC: ['#2a5a9a', [250, 250, 245]], people: 1,
+      kit: [['vent', 90, 60], ['ac', 260, 90]] });
+    const b = K.building({ x, y, w, h, arch: 'office', name: 'Sunset Bathhouse', poi: { kind: 'delivery', label: 'Sunset Bathhouse', bath: 'sea' }, whole: true, art });
+    if (!b) return;
+    out.shops++;
+    K.fill(x - 1, y + h, w + 2, 3, T.DOCK); busy.push([x - 2, y, x + w + 2, y + h + 4]);
+    prop('shower', x + 1.6, y + h + 1.4, 6); prop('shower', x + w - 1.4, y + h + 1.4, 6);
+    prop('bench_m', x + 3.6, y + h + 2.4, 0); prop('trashcan', x + w - 3.2, y + h + 2.4, 6);
+    prop('textsign', x + w / 2, y + h + 3.4, 0, { text: 'SHOWERS - BATHS', bg: '#2a5a9a', fg: [250, 250, 245], z: 22, sx: 1 });
+    placeName('Sunset Bathhouse', x - 1, y, x + w + 1, y + h + 3);
   }
 
   // ===========================================================================================================

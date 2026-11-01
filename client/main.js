@@ -993,6 +993,7 @@ function onEvent(ev) {
     case 'scream': fx.floatText(ev.x, ev.y - 18, 'AAAAH!', '#fff'); break;
     case 'ctip': fx.floatText(ev.x, ev.y - 34, String(ev.n || ''), '#ffd21f'); break;   // (Crazy Taxi's tips and calls: server crazytaxi.js)
     case 'cartcrash': for (let k = 0; k < 5 + (ev.n | 0) * 4; k++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 110; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.7 + Math.random() * 0.5, 3 + Math.random() * 2, GROCERY[k % 6], 0, 120 + Math.random() * 120); } fx.litter(ev.x, ev.y, 7, GROCERY, 34, S.loopClock); break;   // (a cart's crash: the shopping flies - CC01)
+    case 'shw': fx.splash(ev.x, ev.y + 8, 12); break;   // (an outdoor shower turned on: server/systems/showers.js)
     case 'douse': fx.splash(ev.x, ev.y, 14); for (let k = 0; k < 9; k++) fx.spawn(2, ev.x + (Math.random() - 0.5) * 18, ev.y - 4, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 1.2 + Math.random(), 6 + Math.random() * 5, 'rgba(232,238,244,', 14); break;   // (into the water on fire: a burst of steam - burning.js)
     case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;

@@ -19,6 +19,7 @@ export const MAP_CATS = [
   { id: 'transit', icon: 'transit', title: 'Transit', kinds: ['station', 'airport', 'marina', 'rental', 'charter'] },
   { id: 'homes', icon: 'home', title: 'Safehouses', kinds: ['home'] },
   { id: 'fun', icon: 'activity', title: 'Activities', kinds: ['ride', 'race', 'clubhouse', 'roadhouse', 'winery', 'market', 'fruitstand', 'farmstand', 'snack', 'club', 'coffee', 'bowling', 'cinema'] },
+  { id: 'baths', icon: 'activity', title: 'Bathhouses', kinds: ['bathhouse'] },   // (nat5: shared/regionpack.js lists a bathhouse's door as one)
   { id: 'gangs', icon: 'skull', title: 'Gangs', kinds: ['gang', 'smuggler', 'fence'] },
 ];
 // each kind's icon (client/pixicons.js)
@@ -29,11 +30,11 @@ export const KIND_ICON = {
   hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car',
   station: 'transit', airport: 'plane', marina: 'anchor', rental: 'anchor', charter: 'anchor',
   home: 'home', ride: 'star', race: 'car', clubhouse: 'activity', roadhouse: 'bar', winery: 'bar', market: 'shop', fruitstand: 'shop', farmstand: 'shop', snack: 'food',
-  club: 'bar', coffee: 'food', gang: 'skull', smuggler: 'skull', fence: 'skull', bowling: 'activity', cinema: 'activity',
+  club: 'bar', coffee: 'food', gang: 'skull', smuggler: 'skull', fence: 'skull', bowling: 'activity', cinema: 'activity', bathhouse: 'activity',
 };
 // shown zoomed all the way out; the rest (the corner shops, the ATMs) once zoomed in
 export const MAJOR_KINDS = new Set(['hospital', 'sar', 'police', 'bank', 'gunshop', 'station', 'airport', 'garage', 'paint', 'dealer', 'clothing', 'farm', 'warehouse',
-  'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema']);
+  'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema', 'bathhouse']);
 
 export const ROLE_ICON = { citizen: '•', criminal: '☠', police: '★', hunter: '◎' };
 export const ROLE_NAME = { citizen: 'Citizen', criminal: 'Wanted', police: 'Police', hunter: 'Bounty hunter' };

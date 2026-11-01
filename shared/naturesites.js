@@ -14,6 +14,7 @@
 import { T, TILE } from './constants.js';
 import { propGrid } from './propgrid.js';
 import { hash2 } from './rng.js';
+import { CANYON } from './mapcore.js';
 
 // the giant redwoods' trunks (solid radius, px) by size - Highland Woods' groves (map.js redwoodGroves) and the
 // ones placed by hand here; the art is client/art2/redwoods.js (statics.js SPECIES giantL ... redwood2)
@@ -140,7 +141,6 @@ function buildSites(m, H) {
   if (H.terrainAt && m.terrainCls && !m.terrainCls.at) Object.defineProperty(m.terrainCls, 'at', { value: (tx, ty) => H.terrainAt(m.terrainCls.cls, m.terrainCls.cw, tx, ty), enumerable: false });
   redwoodCreek(m, H);
   canyonOasis(m, H);
-  canyonWash(m, H);
   lighthouseTidepools(m, H);
   campDressing(m, H);
   redwoodCove(m, H);
@@ -1363,7 +1363,27 @@ function hotSprings(m, H) {
   for (const [tx, ty, sp] of [[CX - 12, CY - 9, 'mapleAutumn'], [CX + 10, CY - 10, 'mtnPine'], [CX + 10, CY + 1, 'mapleAutumn'], [CX - 12, CY - 2, 'mtnPine'], [CX + 6, CY - 11, 'mapleAutumn'], [CX - 7, CY + 8, 'mapleAutumn']]) add('tree_a', tx, ty, 12, { sp, k: 1.3 });
   for (const [tx, ty, sp] of [[CX - 19, CY - 6, 'mtnPine'], [CX + 17, CY - 8, 'mapleAutumn'], [CX - 18, CY + 6, 'mapleAutumn'], [CX + 17, CY + 5, 'mtnPine'], [CX - 6, CY - 17, 'mtnPine'], [CX + 6, CY - 16, 'mtnFir'], [CX + 18, CY + 11, 'mapleAutumn'], [CX - 18, CY + 12, 'mtnPine']]) if (open(Math.floor(tx), Math.floor(ty)) || m.reserve[at(tx, ty)] & RES) add('tree_a', tx, ty, 12, { sp, k: 1.4 });
   for (let j = 0; j < 22; j++) { const tx = CX - 14 + hash2(j, 1, 2502) * 28, ty = CY - 12 + hash2(j, 2, 2502) * 20; const i = at(tx, ty); if ((m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) && !wetSet.has(i)) add('shrub_a', tx, ty, 0, { sp: ['fern', 'salal', 'fern', 'heather'][j % 4], k: 1 }); }
-  (m.landmarks ||= []).push({ name: 'Granite Hot Springs', type: 'springs', x: (CX - 15) * TILE, y: (CY - 13) * TILE, w: 28 * TILE, h: 22 * TILE });
+  // (nat5, L7: the owner 10-31, "a few more bath houses") the onsen's lodge west of the baths, as the concept has the
+  // ryokan beside its open-air pools: a timber house on its stone footing facing the road (client/art2/props-garden.js
+  // onsenLodge), its door - into the onsen's floor: the hinoki bath, the rock pools under the sky (server/systems/
+  // bathhouse.js, shared/homelayout.js 'bathonsen') - a flagstone path from it to the steps up from the road, lanterns
+  const LX = CX - 19, LY = CY + 1;
+  let lodge = true;
+  for (let ty = LY - 4; ty <= CY + 11 && lodge; ty++) for (let tx = LX - 5; tx <= LX + 4; tx++) { const i = at(tx, ty); if ((m.tiles[i] !== T.GRASS && m.tiles[i] !== T.DIRT && m.tiles[i] !== T.PLAZA) || m.dist[i] !== D) { lodge = false; break; } }
+  if (lodge) {
+    const onPath = (x, y) => (x >= LX - 2.5 && x < LX + 1.5 && y >= LY + 1 && y < CY + 12.5) || (x >= LX - 2.5 && x < CX && y >= CY + 9.5 && y < CY + 12.5);
+    m.props.forEach((q, i) => { if (q && q.t !== 'painted' && ((q.x / TILE >= LX - 6 && q.x / TILE < LX + 5 && q.y / TILE >= LY - 5 && q.y / TILE < LY + 4) || onPath(q.x / TILE, q.y / TILE))) dropProp(m, i); });
+    for (let ty = LY - 3; ty <= LY + 1; ty++) for (let tx = LX - 4; tx <= LX + 3; tx++) { const i = at(tx, ty); m.tiles[i] = T.WALL; m.reserve[i] |= RES; }
+    add('onsenlodge', LX, LY - 0.5, 0);
+    for (let ty = LY + 2; ty <= CY + 11; ty++) for (const tx of [LX - 1, LX]) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.PLAZA; m.reserve[i] |= RES; } }
+    for (let tx = LX - 1; tx <= CX - 1; tx++) for (const ty of [CY + 10, CY + 11]) { const i = at(tx, ty); if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.PLAZA; m.reserve[i] |= RES; } }
+    for (const [tx, ty] of [[LX - 2.2, LY + 3.2], [LX + 1.2, LY + 3.2]]) add('lantern', tx, ty, 4);
+    add('stonelantern', LX + 3.6, LY + 2.4, 6);
+    for (const [tx, ty] of [[LX - 6, LY + 2.5], [LX + 5.5, LY - 2]]) add('tree_a', tx, ty, 12, { sp: 'mapleAutumn', k: 1.3 });   // (red maples framing it, as the concept's)
+    for (const tx of [LX + 4, LX + 9, LX + 14]) add('lantern', tx, CY + 12.6, 4);   // (paper lanterns along the path to it)
+    m.pois.push({ id: m.pois.length, kind: 'delivery', label: 'Granite Springs Onsen', x: Math.round((LX - 0.5) * TILE), y: Math.round((LY + 2.9) * TILE), r: 40, fixed: true, bath: 'onsen' });
+  }
+  (m.landmarks ||= []).push({ name: 'Granite Hot Springs', type: 'springs', x: (CX - (lodge ? 23 : 15)) * TILE, y: (CY - 13) * TILE, w: (lodge ? 36 : 28) * TILE, h: 22 * TILE });
   m.natureSites.push({ kind: 'springs', name: 'Granite Hot Springs', x: Math.round((CX + 1) * TILE), y: Math.round((CY - 2) * TILE), gate: { x: CX * TILE + 16, y: (CY + 9) * TILE + 16 }, pools: POOLS.length });
 }
 
@@ -2466,84 +2486,30 @@ function giantsLoop(m, H) {
   m.natureSites.push({ kind: 'trail', name: 'Giants Loop', x: Math.round(L[0]), y: Math.round(L[1]), len: pts.length });
 }
 
-// ---- the oasis in Red Rock Canyon (concepts N4-B, N4-C) ------------------------------------------------------
-// The canyon's mesas are the scene painting's solid tiles (map.js buildScenePaintings), raised by the renderer
-// (statics.js makeMesas). Under the big north mesa's south face: a spring falls down the cliff into a pool ringed
-// with palms, reeds and ferns.
+// ---- Red Rock Canyon: the oasis, the wash and the track (concepts N4, N4-B, N4-C) ---------------------------------
+// By hand (the nature showcase, 2026-10-31): the canyon's rock is shared/mapcore.js CANYON's shapes, its floor dressed by
+// the red rock kit below (canyonScene) - the pool under the tower mass with the spring falling into it in tiers, palms, reeds
+// and boulders in and round it; the wash under the arch; the track in from the desert road to the turnaround.
 function canyonOasis(m, H) {
   const pt = (m.paintings || []).find((p) => p.key === 'canyon');
   if (!pt) return;
-  const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
-  const [cx, cy] = T0(26.5, 8.1), rx = 104, ry = 50;
-  const pool = [];
-  for (let ty = Math.floor((cy - ry - 8) / TILE); ty <= Math.floor((cy + ry + 8) / TILE); ty++) for (let tx = Math.floor((cx - rx - 8) / TILE); tx <= Math.floor((cx + rx + 8) / TILE); tx++) {
-    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, a = Math.atan2(y - cy, x - cx), wob = 1 + Math.sin(a * 3 + 1.3) * 0.12;
-    if (((x - cx) / (rx * wob)) ** 2 + ((y - cy) / (ry * wob)) ** 2 > 1) continue;
-    const i = ty * m.w + tx;
-    if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS && m.tiles[i] !== T.SAND) continue;
-    m.tiles[i] = T.WATER; m.land[i] = 0; m.river[i] = 1; m.reserve[i] |= RES; pool.push(i);
-  }
-  if (!pool.length) return;
-  // the spring: down the cliff behind the pool (its foot at the face, which is solid rock)
-  const fx = cx - 6, fy = pt.y + 6 * TILE + 6;
-  // palms round it (solid trunks), reeds and cattails at the water, ferns and a few sandstone boulders
-  for (const [dx, dy, sp, k] of [[-150, -16, 'date', 1.4], [146, -22, 'desertFan', 1.45], [-168, 40, 'desertFan', 1.15], [150, 44, 'date', 1.2], [-118, 72, 'banana', 0.9]]) {
-    H.addProp(m, 'palm_a', Math.round(cx + dx), Math.round(cy + dy), sp === 'banana' ? 0 : 10, { sp, k });
-  }
-  for (const [dx, dy, sp] of [[-112, 22, 'cattails'], [-96, 48, 'reeds'], [104, 34, 'cattails'], [118, 8, 'reeds'], [64, 58, 'reeds'], [-46, 60, 'cattails'], [-124, -14, 'fern'], [128, -10, 'fern'], [-60, -44, 'fern'], [70, -46, 'elephant']]) {
-    H.addProp(m, 'shrub_a', Math.round(cx + dx), Math.round(cy + dy), 0, { sp, k: 1 });
-  }
-  for (const [dx, dy, r] of [[-190, 4, 16], [186, 16, 14], [10, 74, 12], [-150, 92, 12]]) H.addProp(m, 'boulder', Math.round(cx + dx), Math.round(cy + dy), r, { s: r * 2 + 6 });
-  (m.landmarks ||= []).push({ name: 'Canyon Oasis', type: 'oasis', x: Math.round(cx - 220), y: Math.round(cy - 160), w: 440, h: 300 });
-  m.natureSites.push({ kind: 'oasis', name: 'Canyon Oasis', x: Math.round(cx), y: Math.round(cy), spring: { x: Math.round(fx), y: Math.round(fy), w: 18, h: 104 } });
+  const clear = (x, y, r) => nearProps(m, x - r - 1, y - r - 1, x + r + 1, y + r + 1, (q, i) => { if (q && q.t !== 'painted' && !q.rr && Math.hypot(q.x - x, q.y - y) < r) dropProp(m, i); });
+  const road = roadNear(m, pt.x - 6 * TILE, pt.y + 9 * TILE, 22 * TILE) || hwyEdge(m, pt.x - 6 * TILE, pt.y + 9 * TILE, 22 * TILE) || (m.roads || []).filter((r) => r.lvl === 0).map((r) => r.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x - (pt.x - 6 * TILE), q.y - (pt.y + 9 * TILE)); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);   // (the world build: the nearest road, the Canyon Track - 8.19)
+  canyonScene(m, H, { clear, road: road && road.d < 22 * TILE ? road : null });
 }
 
-// ---- the wash and the track in Red Rock Canyon (concepts N4-B, N4-C) ---------------------------------------------
-// A dry wash of pale gravel and cobbles winds from the oasis pool south-east across the canyon floor and out to the
-// beach, mesquite and palo verde along it (they follow the water under the sand), boulders in its bends; a dirt
-// track comes in from the desert road on the west, between the mesas, to a turnaround by the oasis. The wash is
-// sand tiles (drawn as river gravel inside the canyon), the track a polyline the ground bake draws as dirt (m.tracks).
-function canyonWash(m, H) {
-  const pt = (m.paintings || []).find((p) => p.key === 'canyon'), o = (m.natureSites || []).find((q) => q.kind === 'oasis');
-  if (!pt || !o) return;
-  const at = (tx, ty) => Math.floor(ty) * m.w + Math.floor(tx);
-  const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
-  const add = (t, x, y, r = 0, extra = null) => H.addProp(m, t, Math.round(x), Math.round(y), r, extra);
-  const clearR = (x, y, r) => nearProps(m, x - r - 1, y - r - 1, x + r + 1, y + r + 1, (q, i) => { if (q && q.t !== 'painted' && Math.hypot(q.x - x, q.y - y) < r) dropProp(m, i); });
-  // the wash: from the pool's south side out across the floor, east to the sea
-  const wash = spline([[o.x + 10, o.y + 60], T0(29, 14), T0(35, 18), T0(40, 23), T0(45, 27), T0(51, 31), T0(56, 35), T0(61, 38.5)], 14);
-  for (const [x, y] of wash) {
-    clearR(x, y, 40);
-    const k = Math.floor(y / TILE) * m.w + Math.floor(x / TILE);
-    paint(m, x, y, 26 + 10 * hash2(Math.floor(x / 64), Math.floor(y / 64), 2401), T.SAND, (t) => t === T.DIRT || t === T.GRASS);
-    void k;
+// (the nearest ground-level road's edge to (x, y) px within r px, a highway's too: a track off it starts there)
+function hwyEdge(m, x, y, r) {
+  let best = null;
+  for (const e of m.roads || []) {
+    if ((e.lvl || 0) !== 0 || e.kind === 'ramp' || e.foot || e.bridge || e.tunnel) continue;
+    for (let j = 1; j < e.pts.length; j++) {
+      const a = e.pts[j - 1], b = e.pts[j], dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / L)) : 0, px = a.x + dx * t, py = a.y + dy * t, d = Math.hypot(px - x, py - y);
+      if (d < r && d > (e.hw || 40) && (!best || d < best.d)) { const k = (d - (e.hw || 40)) / (d || 1); best = { x: px + (x - px) * (1 - k), y: py + (y - py) * (1 - k), d }; }
+    }
   }
-  // its banks: mesquite and palo verde, boulders in the bends, brittlebush and dry grass
-  for (let k = 6; k < wash.length - 4; k += 7) {
-    const [x0, y0] = wash[k - 1], [x1, y1] = wash[k], l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l, ny = (x1 - x0) / l, sd = k % 2 ? 1 : -1;
-    const tx = x1 + nx * sd * 62, ty = y1 + ny * sd * 62, i = at(tx / TILE, ty / TILE);
-    if (m.tiles[i] !== T.DIRT && m.tiles[i] !== T.GRASS) continue;
-    const h = hash2(k, 3, 2402);
-    if (h < 0.5) add('tree_a', tx, ty, 10, { sp: h < 0.25 ? 'mesquite' : 'paloVerde', k: 1.2 });
-    else if (h < 0.8) add('boulder', x1 - nx * sd * 30, y1 - ny * sd * 30, 14, { s: 22 + Math.round(h * 20) });
-    else add('shrub_a', tx, ty, 0, { sp: 'brittle', k: 1 });
-  }
-  for (let k = 3; k < wash.length; k += 5) { const [x, y] = wash[k]; add('boulder', x + (hash2(k, 1, 2403) - 0.5) * 30, y + (hash2(k, 2, 2403) - 0.5) * 20, 0, { s: 9 + Math.round(hash2(k, 4, 2403) * 8) }); }   // (cobbles in the bed)
-  // the track: from the desert road west of the canyon, between the mesas, to a turnaround by the oasis
-  const road = H.place?.d ? roadNear(m, pt.x - 6 * TILE, pt.y + 16 * TILE, 19 * TILE) : (m.roads || []).filter((r) => r.lvl === 0).map((r) => r.pts).flat().reduce((b, q) => { const d = Math.hypot(q.x - (pt.x - 6 * TILE), q.y - (pt.y + 16 * TILE)); return !b || d < b.d ? { x: q.x, y: q.y, d } : b; }, null);   // (the world build: the nearest road, the Canyon Track - 8.19)
-  if (road && road.d < 20 * TILE) {
-    const tp = spline([[road.x + 60, road.y], T0(-4, 15.6), T0(4, 15.2), T0(12, 14.6), T0(19, 13.2), [o.x - 150, o.y + 120]], 12);
-    for (const [x, y] of tp) clearR(x, y, 34);
-    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of tp) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-    (m.tracks ||= []).push({ pts: tp, hw: 26, bb: [x0 - 40, y0 - 40, x1 + 40, y1 + 40] });
-    for (const [x, y] of tp) reserveRound(m, x, y, 30);
-    const [ex, ey] = tp[tp.length - 1];
-    (m.tracks).push({ pts: [[ex - 40, ey], [ex + 40, ey]], hw: 52, bb: [ex - 100, ey - 60, ex + 100, ey + 60] });   // (the turnaround)
-    m.parking.push({ x: Math.round(ex), y: Math.round(ey), a: 0.2, drive: true });
-    add('roadsign', road.x + 90, road.y - 44, 0, { k: 'arrow', a: 0 });
-    add('mapboard', ex + 70, ey - 36, 10);
-  }
-  (m.landmarks ||= []).push({ name: 'Red Rock Wash', type: 'wash', x: Math.round(wash[0][0]), y: Math.round(wash[0][1]), w: Math.round(wash[wash.length - 1][0] - wash[0][0]), h: Math.round(wash[wash.length - 1][1] - wash[0][1]) });
+  return best;
 }
 
 // ---- Redwood Creek ------------------------------------------------------------------------------------------
@@ -3242,4 +3208,241 @@ export function pruneRestSpots(m) {
     for (const p of s._items || []) { const i = m.props.indexOf(p); if (i >= 0) dropProp(m, i); }
     return false;
   });
+}
+
+// ---- the red rock kit (the nature showcase, 2026-10-31) ------------------------------------------------------------
+// The owner's concepts N4 (the canyon oasis under the arch), NT1-B (the desert trailhead on the highway) and SC3-F (the
+// dry wash with its waterhole) made into places, and the kit they are made of: Red Rock Canyon's scene is laid here
+// with the nature sites (canyonOasis, above); World v3's desert places are dressed from it by shared/redrock.js.
+//
+// The kit (each lays props through K.add(t, x, y, solidR, extra) - px):
+//   stack(K, x, y, w, d, h, s)   a banded red sandstone stack (prop 'rstack': client/art2/terrain.js redStack), solid
+//                                over its foot
+//   wash(K, pts, hw, o)          a dry wash along pts (px): its braided bed of pale gravel and cracked mud (m.washes:
+//                                client/art2/game/groundbake.js washPx), cobbles in it, mesquite and palo verde, brittlebush
+//                                and boulders along its banks
+//   waterhole(K, x, y, R, o)     the dry wash's: a big shade tree leaning over a small green pool, red boulders round it,
+//                                cairns, a roadrunner, a hawk's shadow
+//   trailhead(K, at, o)          the trailhead's set at a pull-off: the lot with its 4x4s, the ranch gate on the dirt road
+//                                in, the map board, the water tower, cairns up the foot trail, the stacks round it
+//   bloom(K, x, y, n, r, seed)   a clump of desert flowers (brittlebush, poppies, flowers, a barrel cactus)
+
+export const rrHash = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 2246822519); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+// a smooth path through control points (Catmull-Rom, step px)
+export function rrSpline(cp, step = 24) {
+  const out = [];
+  for (let i = 0; i < cp.length - 1; i++) {
+    const p0 = cp[Math.max(0, i - 1)], p1 = cp[i], p2 = cp[i + 1], p3 = cp[Math.min(cp.length - 1, i + 2)];
+    const n = Math.max(2, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / step));
+    for (let k = 0; k < n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push([f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])]);
+    }
+  }
+  out.push(cp[cp.length - 1].slice());
+  return out;
+}
+export const bbOf = (pts, pad) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const [x, y] of pts) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } return [Math.round(x0 - pad), Math.round(y0 - pad), Math.round(x1 + pad), Math.round(y1 + pad)]; };
+const rrTileAt = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return tx >= 0 && ty >= 0 && tx < m.w && ty < m.h ? m.tiles[ty * m.w + tx] : -1; };
+const RR_OPEN = new Set([T.DIRT, T.SAND, T.GRASS]);
+export const rrOpen = (m, x, y) => RR_OPEN.has(rrTileAt(m, x, y));
+
+// ---- the kit ----------------------------------------------------------------------------------------------------
+// a banded sandstone stack: the prop, and solid circles over its foot (an ellipse w x d)
+export function stack(K, x, y, w, d, h, s, l = 0) {
+  if (!rrOpen(K.m, x, y)) return false;
+  K.add('rstack', x, y, 0, { w: Math.round(w), d: Math.round(d), h: Math.round(h), s: s | 0, ...(l ? { l: 1 } : null), rr: 1 });
+  const rx = w * 0.42, ry = d * 0.34;
+  for (let oy = -ry; oy <= ry + 0.1; oy += 16) for (let ox = -rx; ox <= rx + 0.1; ox += 16) if ((ox / rx) * (ox / rx) + (oy / ry) * (oy / ry) <= 1.05) K.solid(x + ox, y + oy, 12);
+  return true;
+}
+// a clump of desert flowers round (x, y)
+export function bloom(K, x, y, n, r, seed) {
+  const SP = ['dFlowers', 'brittle', 'dPoppies', 'dFlowers', 'brittle', 'barrel'];
+  for (let k = 0; k < n; k++) {
+    const a = rrHash(seed, k, 31) * 6.283, d = r * Math.sqrt(rrHash(seed, k, 32)), px = x + Math.cos(a) * d, py = y + Math.sin(a) * d;
+    if (rrOpen(K.m, px, py)) K.add(k === n - 1 && n > 3 ? 'cactus' : 'shrub_a', px, py, 0, { sp: k === n - 1 && n > 3 ? 'barrel' : SP[Math.floor(rrHash(seed, k, 33) * 5)], k: 1.15 + rrHash(seed, k, 34) * 0.35, rr: 1 });
+  }
+}
+// a dry wash along pts (px, spline'd here): the bed, cobbles, the banks' trees and shrubs. o: { mud, trees, seed, keep(x, y) }
+export function wash(K, cp, hw, o = {}) {
+  const m = K.m, pts = rrSpline(cp, 20), seed = o.seed || 1;
+  const bank = o.bank || 0;
+  (m.washes ||= []).push({ pts: pts.map(([x, y]) => [Math.round(x), Math.round(y)]), hw, bb: bbOf(pts, hw * Math.max(1.4, bank * 1.3) + 8), mud: o.mud === 0 ? 0 : 1, ...(bank ? { bank } : null) });
+  if (o.paint) for (const [x, y] of pts) for (let ty = Math.floor((y - hw) / TILE); ty <= Math.floor((y + hw) / TILE); ty++) for (let tx = Math.floor((x - hw) / TILE); tx <= Math.floor((x + hw) / TILE); tx++) {
+    const i = ty * m.w + tx;
+    if (Math.hypot((tx + 0.5) * TILE - x, (ty + 0.5) * TILE - y) < hw * 0.75 && (m.tiles[i] === T.DIRT || m.tiles[i] === T.GRASS)) { m.tiles[i] = T.SAND; m.reserve[i] |= RES; }
+  }
+  let made = 0;
+  for (let k = 2; k < pts.length - 1; k++) {
+    const [x0, y0] = pts[k - 1], [x1, y1] = pts[k], l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = -(y1 - y0) / l, ny = (x1 - x0) / l, h = rrHash(seed, k, 41);
+    // cobbles in the bed: grey and red, a few
+    if (h < 0.55) { const u = (rrHash(seed, k, 42) - 0.5) * hw * 1.2, cx = x1 + nx * u, cy = y1 + ny * u; if (rrOpen(m, cx, cy)) K.add('boulder', cx, cy, 0, { s: 8 + Math.round(rrHash(seed, k, 43) * 8), style: rrHash(seed, k, 44) < 0.6 ? 'granite' : 'sandstone', rock: 1, rr: 1 }); }
+    if (k % 4) continue;
+    // the banks, one side then the other: a tree, a boulder, brittlebush and flowers
+    const sd = (k >> 2) % 2 ? 1 : -1, bx = x1 + nx * sd * (hw + 30 + rrHash(seed, k, 45) * 26), by = y1 + ny * sd * (hw + 30 + rrHash(seed, k, 45) * 26);
+    if (!rrOpen(m, bx, by) || (o.keep && !o.keep(bx, by))) continue;
+    const g = rrHash(seed, k, 46);
+    if (o.trees !== 0 && g < 0.3) K.add('tree_a', bx, by, 10, { sp: g < 0.16 ? 'mesquite' : 'paloVerde', k: 1.1 + rrHash(seed, k, 47) * 0.3, rr: 1 });
+    else if (g < 0.55) K.add('boulder', bx, by, 12, { s: 22 + Math.round(rrHash(seed, k, 48) * 14), style: 'sandstone', rock: 1, rr: 1 });
+    else if (g < 0.8) bloom(K, bx, by, 3 + Math.floor(rrHash(seed, k, 49) * 3), 26, seed * 97 + k);
+    else K.add('shrub_a', bx, by, 0, { sp: g < 0.9 ? 'creosote' : 'dryGrass', k: 1, rr: 1 });
+    made++;
+  }
+  return { pts, made };
+}
+// the small green pool under its shade tree (SC3-F), at an existing water (x, y, R px): the tree on its north-west rim
+// leaning over, red boulders round it, a cairn, the roadrunner and a hawk's shadow on the open gravel south-east
+export function waterhole(K, x, y, R, o = {}) {
+  const s = o.seed || 1, m = K.m;
+  const ta = -2.3 + (rrHash(s, 1, 51) - 0.5) * 0.5, tx = x + Math.cos(ta) * (R + 30), ty = y + Math.sin(ta) * (R + 30);
+  if (rrOpen(m, tx, ty)) K.add('tree_a', tx, ty, 14, { sp: 'mesquite', k: 2.1, rr: 1 });
+  { const qx = x + Math.cos(ta + 0.9) * (R + 70), qy = y + Math.sin(ta + 0.9) * (R + 70); if (rrOpen(m, qx, qy)) K.add('tree_a', qx, qy, 10, { sp: 'paloVerde', k: 1.4, rr: 1 }); }
+  for (let j = 0; j < 7; j++) {
+    const a = ta + 0.9 + j * 0.62 + (rrHash(s, j, 52) - 0.5) * 0.3, r = R + 18 + rrHash(s, j, 53) * 14, bx = x + Math.cos(a) * r, by = y + Math.sin(a) * r;
+    if (j === 3 || !rrOpen(m, bx, by)) continue;   // (the way down to the water, south)
+    const sz = 14 + Math.round(rrHash(s, j, 54) * 16);
+    K.add('boulder', bx, by, Math.round(sz * 0.4), { s: sz, style: rrHash(s, j, 55) < 0.75 ? 'sandstone' : 'granite', rock: 1, rr: 1 });
+  }
+  for (const [a, d, sp] of [[ta + 0.5, R + 10, 'reeds'], [ta - 0.4, R + 8, 'reeds'], [ta + 1.4, R + 14, 'dryGrass']]) { const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d; if (rrOpen(m, px, py)) K.add('shrub_a', px, py, 0, { sp, k: 0.9, rr: 1 }); }
+  bloom(K, x + Math.cos(ta + 2.2) * (R + 46), y + Math.sin(ta + 2.2) * (R + 46), 4, 22, s * 7 + 1);
+  bloom(K, x + Math.cos(ta - 1.9) * (R + 50), y + Math.sin(ta - 1.9) * (R + 50), 4, 22, s * 7 + 2);
+  const px = x + R + 70, py = y + R * 0.4 + 40;
+  if (rrOpen(m, px, py)) K.add('roadrunner', px, py, 0, { a: Math.PI + 0.3, rr: 1 });
+  if (o.hawk !== 0) K.add('hawkshadow', x + R + 150, y - R - 60, 0, { rr: 1 });
+  const cx = x - R - 90, cy = y + R + 40;
+  if (rrOpen(m, cx, cy)) K.add('rcairn', cx, cy, 0, { k: 4, v: s, rr: 1 });
+}
+// the trailhead (NT1-B) at a highway pull-off, made over (the pull-off's own ramada, table, tank and bin cleared first):
+// at = { x, y } the road's edge below the pull-off's middle (px), ux, uy along the road, nx, ny away from it. As the
+// concept, left to right off the road: the rutted dirt road in through the log-framed ranch gate, the gravel lot with the
+// 4x4s nosed in, and behind it in one cluster the plank-roofed ramada with its table, the map board and the water tower
+// on its stand; the foot trail with its cairns up between the red stacks that frame it all behind. Returns where things
+// went (px).
+export function trailhead(K, at, o = {}) {
+  const m = K.m, { x, y, ux, uy, nx, ny } = at, s = o.seed || 3;
+  const P = (a, b) => [x + ux * a * TILE + nx * b * TILE, y + uy * a * TILE + ny * b * TILE];
+  const out = { lot: P(3.6, 3.4), gate: P(-5, 7.6), board: P(7.4, 8.4), ramada: P(2.6, 9.4) };
+  // the lot: gravel (sand tiles kept clear, as a pull-off's apron)
+  for (let a = -1.5; a <= 9.5; a += 0.5) for (let b = 0.6; b <= 6.2; b += 0.5) { const [px, py] = P(a, b), i = Math.floor(py / TILE) * m.w + Math.floor(px / TILE); if (m.tiles[i] === T.DIRT || m.tiles[i] === T.GRASS || m.tiles[i] === T.SAND) { m.tiles[i] = T.SAND; m.reserve[i] |= 4 | RES | 128; } }
+  for (const [a, mdl] of [[2.2, 'jeep'], [5.2, 'rescue4x4']]) { const [px, py] = P(a, 3.6); m.parking.push({ x: Math.round(px), y: Math.round(py), a: Math.atan2(-ny, -nx), model: mdl, bare: 1 }); }
+  // the dirt road in, through the gate, on out as a two-rut track
+  const tp = rrSpline([P(-5, 0.2), P(-5, 5), P(-5.4, 10), P(-4, 16), P(-5.8, 24), P(-4.6, 32)], 14);
+  (m.tracks ||= []).push({ pts: tp.map(([a, b]) => [Math.round(a), Math.round(b)]), hw: 34, bb: bbOf(tp, 44), ruts: 1, px: 1 });
+  const [gx, gy] = P(-5, 7.6), ga = Math.atan2(uy, ux);
+  K.add('rgate', gx, gy, 0, { w: 170, wing: 120, a: ga, rr: 1 });
+  for (const sd of [-1, 1]) { K.solid(gx + ux * sd * 88, gy + uy * sd * 88, 8); for (let k = 98; k <= 98 + 116; k += 14) K.solid(gx + ux * sd * k, gy + uy * sd * k, 5); }
+  // the cluster behind the lot: the ramada and its table and bin, the map board, the water tower; the sign by the road
+  const [rx, ry] = P(2.6, 9.4);
+  K.add('ramada', rx, ry, 0, { w: 160, d: 100, rr: 1 });
+  for (const [ox, oy] of [[-72, -42], [72, -42], [-72, 42], [72, 42]]) K.solid(rx + ox, ry + oy, 6);
+  K.add('picnic', rx, ry + 10, 10, { rr: 1 });
+  K.add('trashcan', rx + 100, ry + 46, 5, { rr: 1 });
+  const [bx, by] = P(7.4, 8.4); K.add('mapboard', bx, by, 8, { rr: 1 });
+  const [wx, wy] = P(10.8, 8.8); K.add('watertower', wx, wy, 24, { h: 86, rr: 1 });
+  const [sx, sy] = P(-1.6, 1.4); K.add('textsign', sx, sy, 0, { text: (o.name || 'Trailhead').toUpperCase(), bg: '#5a3a22', fg: [250, 230, 180], z: 30, rr: 1 });
+  // the foot trail: from the board up between the rocks, cairns along it
+  const ft = rrSpline([P(7.6, 10), P(9.4, 14), P(12.6, 18), P(13.4, 23), P(16.4, 28), P(15.6, 33)], 16);
+  (m.washes ||= []).push({ pts: ft.map(([a, b]) => [Math.round(a), Math.round(b)]), hw: 20, bb: bbOf(ft, 30), mud: 0 });   // (a foot trail of pale gravel: a wash's bed, narrow)
+  for (let k = 3; k < ft.length; k += 5) { const [px, py] = ft[k], sd = k % 10 < 5 ? 1 : -1; const cx = px + ux * sd * 30, cy = py + uy * sd * 30; if (rrOpen(m, cx, cy)) K.add('rcairn', cx, cy, 0, { k: 3 + (k % 3), v: k, rr: 1 }); }
+  // the rock framing it behind and at the sides: masses of stacked blocks, lower ones beside them
+  for (const [a, b, w, d, h] of [[-16, 10, 260, 170, 150], [-13, 18, 220, 140, 130], [-21, 15, 180, 120, 100], [19, 9, 260, 170, 150], [18, 18, 240, 150, 140], [24, 13, 180, 120, 100], [2, 17, 220, 140, 120], [-5, 22, 240, 150, 140], [8, 24, 200, 130, 120], [-17, 3, 160, 100, 70], [22, 3, 160, 100, 70]]) { const [px, py] = P(a, b); stack(K, px, py, w, d, h, s + a * 7 + b); }
+  for (const [a, b, sp] of [[-11, 4, 'saguaroBig'], [14.5, 4.4, 'saguaroMid'], [-9, 12, 'joshua'], [14, 13, 'saguaroBig'], [5, 14, 'joshua'], [-2, 13, 'saguaroMid'], [3, -4.6, 'joshua'], [-9, -5, 'saguaroBig'], [16, -5, 'saguaroMid'], [-12, 1.6, 'joshua']]) { const [px, py] = P(a, b); if (rrOpen(m, px, py)) K.add(sp === 'joshua' ? 'tree_a' : 'cactus', px, py, sp === 'saguaroBig' ? 8 : 6, { sp, k: sp === 'joshua' ? 1.25 : 1.1, rr: 1 }); }
+  for (let k = 0; k < 14; k++) { const [px, py] = P(-14 + rrHash(s, k, 63) * 30, 1 + rrHash(s, k, 64) * 20); if (rrOpen(m, px, py) && Math.hypot(px - gx, py - gy) > 130 && Math.hypot(px - rx, py - ry) > 130 && Math.hypot(px - wx, py - wy) > 70) { const sz = 16 + Math.round(rrHash(s, k, 65) * 22); K.add('boulder', px, py, Math.round(sz * 0.4), { s: sz, style: 'sandstone', rock: 1, rr: 1 }); } }
+  for (let k = 0; k < 10; k++) { const [px, py] = P(-14 + rrHash(s, k, 61) * 30, 1 + rrHash(s, k, 62) * 18); if (rrOpen(m, px, py) && Math.hypot(px - gx, py - gy) > 120 && Math.hypot(px - rx, py - ry) > 120 && Math.hypot(px - bx, py - by) > 70) bloom(K, px, py, 3, 22, s * 31 + k); }
+  return out;
+}
+
+
+// ---- Red Rock Canyon (N4) ----------------------------------------------------------------------------------------
+// The painting's floor dressed as the concept (its rock is shared/mapcore.js CANYON): the pool under the tower mass's south face,
+// the spring falling down the face into it in tiers, palms round it, reeds, ferns, boulders in the water and on its rim,
+// flowers in clumps; the wash under the arch with its cobbles and bank trees, the pool's overflow running out to it; the
+// track in from the west road past the stack to the turnaround, the pickup parked there; saguaros, barrel cacti, a dead
+// tree, the roadrunner on the wash, the lizard on a ledge, a hawk's shadow. ctx: { clear(x, y, r), road: { x, y } | null }
+export function canyonScene(m, H, ctx) {
+  const pt = (m.paintings || []).find((p) => p.key === 'canyon');
+  if (!pt) return null;
+  const T0 = (tx, ty) => [pt.x + tx * TILE, pt.y + ty * TILE];
+  const K = kit(m, (t, x, y, r, ex) => H.addProp(m, t, Math.round(x), Math.round(y), r, ex));
+  // clear the floor's old dressing (the scene below replaces it)
+  for (let ty = 0; ty < CANYON.h; ty++) for (let tx = 0; tx < CANYON.w; tx++) { const [x, y] = T0(tx + 0.5, ty + 0.5); if (rrOpen(m, x, y)) ctx.clear(x, y, 23); }
+  // the pool: a lobed oval, water where the floor was (clear turquoise: world3 desertKit3 gives it its look)
+  const Pp = CANYON.pool, [cx, cy] = T0(Pp.x, Pp.y), rx = Pp.rx * TILE, ry = Pp.ry * TILE, pool = [];
+  for (let ty = Math.floor((cy - ry * 1.3) / TILE); ty <= Math.floor((cy + ry * 1.3) / TILE); ty++) for (let tx = Math.floor((cx - rx * 1.3) / TILE); tx <= Math.floor((cx + rx * 1.3) / TILE); tx++) {
+    const x = (tx + 0.5) * TILE, y = (ty + 0.5) * TILE, a = Math.atan2(y - cy, x - cx), wob = 1 + Math.sin(a * 3 + 1.3) * 0.12 + Math.sin(a * 5 + 0.4) * 0.07;
+    if (((x - cx) / (rx * wob)) * ((x - cx) / (rx * wob)) + ((y - cy) / (ry * wob)) * ((y - cy) / (ry * wob)) > 1) continue;
+    const i = ty * m.w + tx;
+    if (!RR_OPEN.has(m.tiles[i])) continue;
+    m.tiles[i] = T.WATER; m.land[i] = 0; m.reserve[i] |= RES; if (m.lake) m.lake[i] = 2; else m.river[i] = 1;
+    pool.push(i);
+  }
+  if (!pool.length) return null;
+  let bx0 = 1e9, by0 = 1e9, bx1 = -1, by1 = -1; for (const i of pool) { const x = i % m.w, y = Math.floor(i / m.w); bx0 = Math.min(bx0, x); by0 = Math.min(by0, y); bx1 = Math.max(bx1, x); by1 = Math.max(by1, y); }
+  const [fx, fy] = T0(CANYON.spring.x, CANYON.spring.y);
+  // boulders in the water and round its rim, palms (solid trunks), reeds and cattails at the water, ferns, flowers
+  for (const [dx, dy, s] of [[-0.55, 0.15, 18], [0.42, 0.35, 22], [0.1, 0.62, 14], [-0.25, -0.45, 16], [0.62, -0.2, 14]]) K.add('boulder', cx + dx * rx, cy + dy * ry, Math.round(s * 0.42), { s, style: 'sandstone', rock: 1, wet: 1, rr: 1 });
+  for (let j = 0; j < 16; j++) {
+    const a = (j / 16) * 6.283 + (rrHash(j, 1, 2471) - 0.5) * 0.3, r = 1.08 + rrHash(j, 2, 2471) * 0.2, x = cx + Math.cos(a) * rx * r, y = cy + Math.sin(a) * ry * r;
+    if (y < cy - ry * 0.6 || !rrOpen(m, x, y)) continue;
+    const sz = 16 + Math.round(rrHash(j, 3, 2471) * 18);
+    K.add('boulder', x, y, Math.round(sz * 0.4), { s: sz, style: 'sandstone', rock: 1, rr: 1 });
+  }
+  for (const [a, b, sp, k] of CANYON.palms) { const [x, y] = T0(a, b); if (rrOpen(m, x, y)) K.add('palm_a', x, y, 10, { sp, k, rr: 1 }); }
+  for (let j = 0; j < 14; j++) {
+    const a = 0.2 + (j / 14) * 6.0, r = 0.98 + rrHash(j, 4, 2472) * 0.12, x = cx + Math.cos(a) * rx * r, y = cy + Math.sin(a) * ry * r;
+    if (!rrOpen(m, x, y)) continue;
+    K.add('shrub_a', x, y, 0, { sp: j % 3 === 0 ? 'cattails' : j % 3 === 1 ? 'reeds' : y < cy ? 'fern' : 'reeds', k: 1, rr: 1 });
+  }
+  for (const [dx, dy, n] of [[-1.5, 1.15, 5], [1.45, 1.3, 5], [0.1, 1.55, 4], [-1.65, -0.1, 3], [1.7, 0.4, 3]]) bloom(K, cx + dx * rx, cy + dy * ry, n, 26, 2480 + n * 7 + Math.round(dx * 10));
+  // the wash: north to south under the arch, its overflow from the pool; cobbles, bank trees
+  const W = wash(K, CANYON.wash.map(([a, b]) => T0(a, b)), 64, { seed: 2490, paint: true, keep: (x, y) => !(Math.abs(x - cx) < rx * 1.4 && Math.abs(y - cy) < ry * 1.6) });
+  wash(K, [[cx + rx * 0.8, cy + ry * 0.4], ...CANYON.outflow.slice(1).map(([a, b]) => T0(a, b))], 30, { seed: 2491, paint: true, trees: 0 });
+  // the track: from the west road to the turnaround south-west of the pool, the pickup parked there
+  let tp = null;
+  if (ctx.road) {
+    const cp = CANYON.track.map(([a, b]) => T0(a, b)); cp[0] = [ctx.road.x + 40, ctx.road.y];
+    tp = rrSpline(cp, 12);
+    for (const [x, y] of tp) ctx.clear(x, y, 34);
+    (m.tracks ||= []).push({ pts: tp, hw: 26, bb: bbOf(tp, 40), ruts: 1, px: 1 });
+    const [ex, ey] = tp[tp.length - 1];
+    m.tracks.push({ pts: [[ex - 50, ey], [ex + 50, ey]], hw: 52, bb: [ex - 110, ey - 60, ex + 110, ey + 60] });   // (the turnaround)
+    m.parking.push({ x: Math.round(ex - 20), y: Math.round(ey + 6), a: -2.6, model: 'pickup', bare: 1, drive: true });
+    K.add('mapboard', ex + 76, ey - 40, 10, { rr: 1 });
+    K.add('crates', ex + 70, ey + 40, 10, { rr: 1 });
+    { const [sx, sy] = tp[Math.min(tp.length - 1, 4)]; if (rrOpen(m, sx, sy - 48) && rrOpen(m, sx + 20, sy - 48)) K.add('roadsign', sx, sy - 48, 0, { k: 'arrow', a: 0, rr: 1 }); }   // (the arrow off the road, by the track)
+  }
+  const onTrack = (x, y) => tp && tp.some(([a, b]) => Math.abs(a - x) < 60 && Math.abs(b - y) < 60);
+  // saguaros, flowering cacti, a dead tree; the roadrunner on the wash, the lizard on the south-east mesa's ledge, a hawk
+  for (const [a, b, t, sp] of [[2.4, 4.4, 'cactus', 'saguaroBig'], [1.2, 10.8, 'cactus', 'saguaroMid'], [6.4, 6.2, 'cactus', 'barrel'], [5, 11.6, 'cactus', 'pear'], [13.6, 4.2, 'cactus', 'saguaroMid'], [4.6, 20, 'cactus', 'saguaroSmall'], [11.4, 28.6, 'cactus', 'saguaroMid'], [20.6, 31.4, 'cactus', 'barrel'], [39.6, 22.4, 'cactus', 'barrel'], [44.8, 22.6, 'tree_a', 'deadSnag'], [28.2, 30.6, 'cactus', 'pear'], [26.4, 12.2, 'shrub_a', 'brittle'], [15, 1.6, 'cactus', 'saguaroBig'], [40.2, 33.2, 'cactus', 'saguaroSmall']]) {
+    const [x, y] = T0(a, b); if (rrOpen(m, x, y) && !onTrack(x, y)) K.add(t, x, y, t === 'shrub_a' ? 0 : 8, { sp, k: 1, rr: 1 });
+  }
+  for (let k = 0; k < 9; k++) { const [x, y] = T0(2 + rrHash(k, 1, 2493) * 30, 3 + rrHash(k, 2, 2493) * 30); if (rrOpen(m, x, y) && !onTrack(x, y) && Math.hypot(x - cx, y - cy) > rx * 1.8) bloom(K, x, y, 3 + (k % 3), 24, 2494 + k); }
+  { const [x, y] = T0(37.2, 17.4); K.add('roadrunner', x, y, 0, { a: Math.PI * 0.9, rr: 1 }); }
+  { const [x, y] = T0(38.4, 24.6); K.add('boulder', x, y, 12, { s: 30, style: 'sandstone', rock: 1, rr: 1 }); K.add('lizard', x + 2, y - 4, 0, { a: -0.4, lift: 14, rr: 1 }); }
+  { const [x, y] = T0(30.5, 9.5); K.add('hawkshadow', x, y, 0, { rr: 1 }); }
+  { const a = CANYON.arch.path[1], [x, y] = T0(a[0] - 0.3, a[1] + 0.4); K.add('gshadow', x, y, 0, { w: 200, h: 100, rr: 1 }); }   // (the arch's shadow on the wash under it)
+  { const [x, y] = T0(44.6, 23.2); if (rrOpen(m, x, y)) K.add('deadtree', x, y, 6, { v: 1, rr: 1 }); }
+  // stacks standing out on the floor: the concept's boulder piles at the mesas' feet
+  for (const [a, b, w, d, h] of [[13, 24.6, 70, 50, 60], [33.6, 33.2, 80, 54, 70], [6.4, 13.4, 60, 40, 54]]) { const [x, y] = T0(a, b); if (!onTrack(x, y)) stack(K, x, y, w, d, h, a * 3 + b); }
+  // the mesas' feet: red boulders along them
+  for (let k = 0; k < 60; k++) {
+    const [x, y] = T0(rrHash(k, 5, 2495) * CANYON.w, rrHash(k, 6, 2495) * CANYON.h);
+    if (!rrOpen(m, x, y) || onTrack(x, y) || Math.hypot(x - cx, y - cy) < rx * 1.5) continue;
+    let near = false; for (const [dx, dy] of [[0, -40], [40, 0], [-40, 0], [0, -64]]) if (rrTileAt(m, x + dx, y + dy) === T.WALL) near = true;
+    if (!near) continue;
+    const sz = 18 + Math.round(rrHash(k, 7, 2495) * 22); K.add('boulder', x, y, Math.round(sz * 0.4), { s: sz, style: 'sandstone', rock: 1, rr: 1 });
+  }
+  (m.landmarks ||= []).push({ name: 'Canyon Oasis', type: 'oasis', x: Math.round(cx - 260), y: Math.round(cy - 200), w: 520, h: 360 });
+  const wp = W.pts;
+  (m.landmarks).push({ name: 'Red Rock Wash', type: 'wash', x: Math.round(Math.min(wp[0][0], wp[wp.length - 1][0])), y: Math.round(wp[0][1]), w: Math.round(Math.abs(wp[wp.length - 1][0] - wp[0][0]) + 64), h: Math.round(wp[wp.length - 1][1] - wp[0][1]) });
+  const site = { kind: 'oasis', name: 'Canyon Oasis', x: Math.round(cx), y: Math.round(cy), spring: { x: Math.round(fx), y: Math.round(fy), w: 48, h: 84, red: 1 }, box: [bx0, by0, bx1 + 1, by1 + 1] };
+  m.natureSites.push(site);
+  return site;
+}
+
+// a kit context over a map: add (the props, marked as the kit's), solid (a solid circle of the place's own)
+export function kit(m, add) {
+  return { m, add: (t, x, y, r = 0, ex = null) => add(t, x, y, r, ex), solid: (x, y, r) => { if (m.addSolidProp) m.addSolidProp(Math.round(x), Math.round(y), r); } };
 }

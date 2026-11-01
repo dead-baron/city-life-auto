@@ -24,7 +24,7 @@ test('World v3: the water bodies - which water is which, which way it runs; the 
   console.log('water bodies', JSON.stringify(sum));
   const V = m.waters;
   assert.ok(V && Array.isArray(V.ch) && Array.isArray(V.lk), 'm.waters: channels and lakes');
-  assert.equal(V.ch.length, 1 + STREAMS.length, 'every channel: the Long Reach and each creek');
+  assert.equal(V.ch.filter((c) => !c.hand).length, 1 + STREAMS.length, 'every channel: the Long Reach and each creek (and the hand-laid runs: shared/world3-redwoods.js channel)');
   // kinds and settings
   const kinds = new Set(V.ch.map((c) => c.k)), sets = new Set(V.ch.map((c) => c.t));
   for (const k of ['creek', 'river', 'marsh', 'lake']) assert.ok(kinds.has(k), `some ${k}`);

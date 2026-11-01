@@ -16,6 +16,7 @@ import { FRAME_W, FRAME_H } from '../shared/world3.js';
 import { ISLANDS3, MAINLAND3 } from '../shared/world3-layout.js';
 import { CITY3 } from '../shared/world3-city.js';
 import { HAND_PLANS } from '../shared/world3-hand.js';
+import { TROPIC3 } from '../shared/world3-tropic.js';
 import { courtHoops, hoopAt } from '../shared/hoops.js';
 import { ferrisSite } from '../shared/rides.js';
 import { lieAt } from '../shared/golf.js';
@@ -71,7 +72,9 @@ test('World v3: the whole world in one build - every city district on its island
     const got = rows[keys[k]].land, want = planned[k], marsh = /marsh/.test(BIOMES.find((B) => B.key === keys[k])?.ground || '');
     assert.ok(got <= want * 1.01 && got >= want * (marsh ? 0.95 : 0.99), `${keys[k]}: ${got} land tiles, ${want} planned`);
   }
-  assert.ok(rows.sea.land < 1000, `${rows.sea.land} land tiles on the sea`);
+  // (and Turtle Islet off Coral Cay, the nature showcase's: land raised out of the sea by design - shared/world3-tropic.js)
+  const islet = Math.ceil(Math.PI * TROPIC3.islet.c[2] * TROPIC3.islet.c[3] * 1.3);
+  assert.ok(rows.sea.land < 1000 + islet, `${rows.sea.land} land tiles on the sea`);
   // the mainland: every biome has its ground and its dressing (trees, rocks, scrub) - at least a prop every 250 tiles
   for (const B of BIOMES) {
     const r = rows[B.key];

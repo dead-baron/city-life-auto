@@ -10,7 +10,7 @@
 import { GBuf, hash, vnoise, step, bayer, F_GLASS } from '../art2/gbuf.js';
 import { ramp } from '../art2/palette.js';
 import { MAKERS, LOOK, YARD_MAKERS } from '../art2/props-home.js';
-import { BATH_MAKERS } from '../art2/props-bath.js';   // (a bathhouse's floor: its desk, lockers, wash stations, the bath - bathhouse.js)
+import { BATH_MAKERS, BATH_STYLE, bathFloor } from '../art2/props-bath.js';   // (a bathhouse's floor: its desk, lockers, wash stations, the bath - bathhouse.js)
 import { pedSprite } from '../art2/game/peds.js';
 import { vehicleSprite, animalSprite } from '../art2/game/actors.js';
 import { TILE_IN, CAR_IN, WALL_IN } from '../../shared/homelayout.js';
@@ -21,7 +21,7 @@ export const HF = 46, HC = 10;   // the walls' heights (world px): a lobby's bac
 export const YARD = 88;          // the ground drawn round the place (world px)
 const UP = [0, 0, 1], SOUTH = [0, 1, 0];
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);   // (U a flat's door, E the lift: a lobby's back wall - H71)
-const FLOORISH = new Set(['.', 'c', 't', 'g', '+']);
+const FLOORISH = new Set(['.', 'c', 't', 'g', '+', ':']);   // (: a bathhouse's floor open to the sky - the onsen's flagstones)
 
 // the rooms: the plan's open tiles flooded between the walls (a doorway joins none), each with its kind
 function rooms(L) {
@@ -165,7 +165,7 @@ export class HomeArt {
     if (f) return f[1] === '.' ? '.' : f[1];
     const ch = this.L.cell(tx, ty);
     if (ch === 'c' && /^lobby/.test(this.L.key)) return 'u';   // (H71: a lobby's landing - the red runner)
-    if (ch === 't' || ch === 'g' || ch === 'c') return ch;
+    if (ch === 't' || ch === 'g' || ch === 'c' || ch === ':') return ch;
     const r = this.R.at(tx, ty);
     if (r && r.kind === 'garage') return 'g';
     if (r && (r.kind === 'bath')) return 't';
@@ -255,7 +255,8 @@ export class HomeArt {
             tx = o[0]; ty = o[1];
           }
           const f = this.L.floorAt && this.L.floorAt(tx, ty);
-          G.put(x, y, floorPx(this.floorKind(tx, ty), f ? f[2] : this.tier, wx, wy, x, y, f ? 0 : this.sc), UP, 0);
+          const fk = this.floorKind(tx, ty);
+          G.put(x, y, (L.bath && bathFloor(L.bath, fk, wx, wy, x, y)) || floorPx(fk, f ? f[2] : this.tier, wx, wy, x, y, f ? 0 : this.sc), UP, 0);
         }
         if (y % 24 === 23) yield;
       }
@@ -398,7 +399,7 @@ export class HomeArt {
     const paint = L.paintAt && L.paintAt(tx, ty);   // (H67: the room's walls painted - shared/homedecor.js)
     if (paint) return step(ramp(paint, 6, 3), 0.55 + (t >= 1 && (wx % 10 < 1) ? -0.06 : 0) + (vnoise(wx, v, 12, 3) - 0.5) * 0.08, x, y, 0.4);
     if (kind === 'garage') return step(ramp('#9a9a96', 6, 3), 0.55 + (v % 8 === 0 || (wx + (Math.floor(v / 8) & 1) * 8) % 16 === 0 ? -0.25 : 0), x, y, 0.3);
-    if (L.key === 'trailer' || L.key === 'bath') return step(ramp(L.key === 'bath' ? '#b08454' : '#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling (a bathhouse's timber)
+    if (L.key === 'trailer' || L.bath) return step(ramp(L.bath ? (BATH_STYLE[L.bath] || BATH_STYLE.sento).wall : '#9a7a56', 6, 3), 0.5 + (wx % 8 < 1 ? -0.3 : 0) + (hash(wx >> 3, 1, 3) - 0.5) * 0.2, x, y, 0.4);   // wood panelling (a bathhouse's: its house's walls - props-bath.js BATH_STYLE)
     const base = tinted(PAPER[kind][t] || PAPER.living[t], this.sc, kind === 'kitchen' || kind === 'bath' ? 0.2 : 0.4);
     if (kind === 'bath' || kind === 'kitchen') return step(ramp(base, 5, 2), 0.55 + (wx % 8 < 1 || v % 8 === 0 ? -0.25 : 0), x, y, 0.3);
     if (t >= 2 && v < h * 0.4 && h > HC) return step(ramp(LOOK[t].wood, 5, 2), 0.5 + (v === Math.floor(h * 0.4) - 1 ? 0.3 : wx % 12 < 1 ? -0.2 : 0), x, y, 0.3);   // the wainscot
@@ -433,18 +434,18 @@ export class HomeArt {
     const L = this.L, ap = this.ap;
     const wall = (x, y) => WALLISH.has(L.cell(x, y));
     for (const p of L.pieces) {
-      const make = (L.key === 'bath' && BATH_MAKERS[p.ch]) || MAKERS[p.ch];
+      const make = (L.bath && ((BATH_STYLE[L.bath] || BATH_STYLE.sento).makers[p.ch] || BATH_MAKERS[p.ch])) || MAKERS[p.ch];
       if (!make) continue;
       if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
       if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
-      else if (p.ch === 'Z' || p.ch === 'M' || p.ch === '^') face = 's';   // (^: a home's stairs between its floors - homeups.js)   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
+      else if (p.ch === 'Z' || p.ch === 'M' || p.ch === '^' || (L.bath && '!_$@u'.includes(p.ch))) face = 's';   // (a bathhouse's baths, pools, sauna, heated floor: drawn facing the camera)   // (^: a home's stairs between its floors - homeups.js)   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
       else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
       else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c ? (c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < p.y - c.y ? 'n' : 's') : wall(p.tx, p.ty + p.th) ? 'n' : 's'; }   // (the couch north of it: it faces north - it measured that the wrong way round, so a set against the south wall faced the wall: the owner, 10-16, "A TV faces the wall"; no couch: away from the wall it stands against)   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
       const side = face === 'e' || face === 'w', mw = side ? p.h : p.w, md = side ? p.w : p.h;
       const head = { s: 0, n: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 }[face];
-      const seed = p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : p.ch === '^' ? ({ u: 1, up: 1, d: 2, down: 2, ud: 3 }[L.stairsKind] || 1) : 0, mk = `${p.ch}|${mw}|${md}|${this.tier}|${seed}|${face}`;
+      const seed = L.bath ? p.tx * 7 + p.ty : p.ch === 'a' ? p.tx * 3 + p.ty + p.dec : p.ch === '^' ? ({ u: 1, up: 1, d: 2, down: 2, ud: 3 }[L.stairsKind] || 1) : 0, mk = `${p.ch}|${mw}|${md}|${this.tier}|${seed}|${face}`;
       let G = this.models.get(mk);   // (H71: a model made once - a change of decor makes only the new pieces)
       if (!G) { G = make(mw, md, this.tier, seed).render(head, { px: ap, dither: 0.35 }); this.models.set(mk, G); }
       const cx = p.x + p.w / 2, cy = p.y + p.h / 2;
@@ -458,8 +459,8 @@ export class HomeArt {
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });
       if (p.ch === 'j') this.lamps.push({ x: cx, y: cy + 8, z: 36, kind: 'tv' });   // (H77: an arcade cabinet's screen)
-      if (L.key === 'bath' && p.ch === 'y') this.lamps.push({ x: cx, y: cy, z: 20, kind: 'lamp' });   // (the hot stones' glow)
-      if (L.key === 'bath' && p.ch === 'u') for (let k = 0; k < 4; k++) this.lamps.push({ x: p.x + (k + 0.5) * p.w / 4, y: p.y - 8, z: 60, kind: 'lamp' });   // (the paper lanterns over the bath)
+      if (L.bath && (p.ch === 'y' || p.ch === '!')) this.lamps.push({ x: cx, y: cy, z: 20, kind: 'lamp' });   // (the hot stones' glow, a sauna's stove)
+      if (L.bath && (p.ch === 'u' || p.ch === '@')) for (let k = 0; k < Math.max(2, Math.round(p.w / 96)); k++) this.lamps.push({ x: p.x + (k + 0.5) * p.w / Math.max(2, Math.round(p.w / 96)), y: p.y - 8, z: 60, kind: 'lamp' });   // (the paper lanterns over the bath, the stone lanterns round a rock pool)
       yield;
     }
     for (const [k, x, y, w, d] of this.yardThings()) {   // (H77) out in the yard

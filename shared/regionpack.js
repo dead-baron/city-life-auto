@@ -251,7 +251,8 @@ function placesOf(city, win) {
     if (!p || typeof p !== 'object') return;
     const tx = Math.floor(p.x / TILE) - win[0], ty = Math.floor(p.y / TILE) - win[1];
     const d = tx >= 0 && ty >= 0 && tx < win[2] && ty < win[3] ? city.dist[ty * win[2] + tx] : -1;
-    out.push(p.home !== undefined ? [i, p.kind, p.label, p.x, p.y, d, p.home] : [i, p.kind, p.label, p.x, p.y, d]);
+    const kind = p.bath ? 'bathhouse' : p.kind;   // (nat5: a bathhouse's door - a business place to the server - is listed as one: the phone's Places, the map's icon)
+    out.push(p.home !== undefined ? [i, kind, p.label, p.x, p.y, d, p.home] : [i, kind, p.label, p.x, p.y, d]);
   });
   return out;
 }

@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { IN } from '../shared/input.js';
-import { K } from '../shared/constants.js';
+import { K, T, TILE } from '../shared/constants.js';
 import { treeSize, TREE_SIZES, FELL_TOOLS, fellTime, bestTool, fallAngle, underFall, roundSpots, codeAngle } from '../shared/felling.js';
 import { TREE_REGROW_S, TREE_REGROW_NEAR, LOG_BUNDLE_PRICE, HARDHAT_GUARD } from '../shared/rules.js';
 import { FIREWOOD } from '../shared/rules-play.js';
@@ -29,7 +29,12 @@ function findTree(w, size, wild, r = 60) {
   for (let i = 0; i < props.length; i++) {
     const p = props[i];
     if (treeSize(p) !== size || !!wildStyle(w.map, p.x, p.y) !== wild || p.broken || felling.isFelled(w, i)) continue;
-    if (props.some((q, j) => j !== i && treeSize(q) && Math.abs(q.x - p.x) < r && Math.abs(q.y - p.y) < r)) continue;
+    if (props.some((q, j) => j !== i && (treeSize(q) || w.map.propSolid.get(j)) && Math.abs(q.x - p.x) < r && Math.abs(q.y - p.y) < r)) continue;   // (nothing solid by it either: a boulder would keep the cutter off its side)
+    // (open ground all round, as far as it falls: no wall, cliff, building or water for a cutter or a bystander to be pushed off)
+    const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE), R = Math.ceil((TREE_SIZES[size].len + 16) / TILE);
+    let open = true;
+    for (let dy = -R; dy <= R && open; dy++) for (let dx = -R; dx <= R; dx++) { const t = w.map.inside(tx + dx, ty + dy) ? w.map.tiles[w.map.idx(tx + dx, ty + dy)] : T.WALL; if (t === T.WALL || t === T.BUILDING || t === T.WATER || t === T.DEEP) { open = false; break; } }
+    if (!open) continue;
     return { i, p };
   }
   return null;

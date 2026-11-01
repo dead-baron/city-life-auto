@@ -18,6 +18,7 @@
 // boats, its chests). For the whole-world build only (shared/world3-world.js calls buildCaves3 from its done hook).
 // Deterministic: authored shapes, integer hashes; Math's trig only inside generateCity (withDeterministicMath).
 import { TILE, T } from './constants.js';
+import { N3 } from './cavekit.js';
 
 const RES = 32;
 const P2 = (x, y) => [Math.round((x + 0.5) * TILE), Math.round((y + 0.5) * TILE)];
@@ -56,6 +57,9 @@ export const CAVERNS = {
 export function buildCaves3(m, H3) {
   const out = { built: false, missed: [] };
   if (!H3 || !H3.addProp) return out;
+  // the mines' caves laid out as the mine cave scene (the nature showcase, concept N3: shared/cavekit.js) - the Old
+  // Granite Mine's as the concept, Copper Gulch Mine's mirrored in its red rock
+  for (const q of m.natureSites || []) if (q.kind === 'mine' && q.cave !== false) { q.scene = { kit: /Copper/.test(q.name) ? 'n3red' : 'n3', push: N3.push }; out.scenes = (out.scenes || 0) + 1; }
   const W = m.w, HH = m.h, inF = (x, y) => x >= 0 && y >= 0 && x < W && y < HH, idx = (x, y) => y * W + x;
   const props = [], P = (t, x, y, r = 0, ex = null) => props.push([t, Math.round(x), Math.round(y), r, ex]);
   const drop = new Set();

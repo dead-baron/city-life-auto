@@ -111,6 +111,7 @@ import * as arcade from './arcade.js';
 import * as biz from './biz.js';
 import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
+import * as showers from './showers.js';
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -852,6 +853,8 @@ export function findInteraction(world, p) {
   if (stranger) return stranger;
   const game = hunting.interaction(world, p);
   if (game) return game;
+  const shower = showers.interaction(world, p);   // an outdoor shower, a campground's shower block (showers.js)
+  if (shower) return shower;
   const fire = campfires.interaction(world, p);
   if (fire) return fire;
   const board = chess.interaction(world, p);   // a chess table in the park (chess.js)

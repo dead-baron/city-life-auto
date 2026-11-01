@@ -286,7 +286,7 @@ function build(m, api, K) {
   {
     const x0 = 3240, x1 = 3416;
     shorePromenade(K, x0, x1, by1 - 14, out, 8);
-    litRow(x0, x1, by1 - 21, by1, [{ w: 16, lot: clubLot('club', 'Volt', 4, 'club', null, 'DANCE'), depth: 22 }, { w: 14, name: 'Stardust', store: 'bar', neon: 'lounge', blade: 'JAZZ', floors: 4 }], { depth: 22, floors: 4, passages: false });
+    litRow(x0, x1, by1 - 21, by1, [{ w: 16, lot: clubLot('club', 'Volt', 4, 'club', null, 'DANCE'), depth: 22 }, { w: 14, name: 'Moonlight Spa 24', sign: 'MOONLIGHT SPA', store: 'lobby', neon: 'hotel', blade: 'SAUNA', floors: 4, poi: { kind: 'delivery', label: 'Moonlight Spa 24', bath: 'kr' } }], { depth: 22, floors: 4, passages: false });   // (nat5: the jjimjilbang, open all night - server/systems/bathhouse.js)
     waterGardens(K, x0, x1, by1 - 22, out);
   }
 

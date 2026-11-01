@@ -32,9 +32,11 @@ const OUTC = (c) => [c[0] * 0.42 * 0.85 + 6, c[1] * 0.42 * 0.8 + 4, c[2] * 0.42 
 // ---- rock styles ---------------------------------------------------------------------------------------
 const RO = (c, o = {}) => ramp(c, 7, 3, { dark: 0.64, light: 0.48, shift: 0.24, ...o });
 export const ROCK = {
+  redrock: { id: 0, face: [RO('#cc5a30', { shift: 0.3 }), RO('#b04428', { dark: 0.58, shift: 0.3 }), RO('#dc7438', { shift: 0.3 }), RO('#c25232', { shift: 0.3 })], top: RO('#c86c3c', { light: 0.3, shift: 0.3 }), jag: 6, block: 12, blocky: 0.9, fine: 1.2 },   // (the red rock desert's bright orange-red: concepts N4, NT1-B, SC3-F)
   sandstone: { id: 0, face: [RO('#b05238'), RO('#923c34', { dark: 0.62 }), RO('#c06c46'), RO('#a04a3a')], top: RO('#a45a40', { light: 0.36 }), jag: 9, block: 13, blocky: 0.75, fine: 1.5 },
   granite: { id: 1, face: [RO('#a39b92', { shift: 0.2 }), RO('#8f8a86', { shift: 0.2 }), RO('#b0a796', { shift: 0.2 })], top: RO('#aca598', { shift: 0.2 }), jag: 10, block: 18, blocky: 0.45, fine: 1.5 },
   basalt: { id: 2, face: [RO('#5e5248', { shift: 0.28 }), RO('#4e4744', { shift: 0.28 }), RO('#6a5c4c', { shift: 0.28 })], top: RO('#5c5046', { shift: 0.28 }), jag: 6, block: 9, blocky: 0.5, fine: 1.2 },
+  lava: { id: 2, face: [RO('#3e3c42', { shift: 0.2, light: 0.56 }), RO('#2e2d33', { shift: 0.2, light: 0.56 }), RO('#4a474c', { shift: 0.2, light: 0.56 })], top: RO('#45424a', { shift: 0.2, light: 0.5 }), jag: 6, block: 8, blocky: 0.72, fine: 1.2 },   // (the tropics' black volcanic rock: shared/world3-tropic.js)
   cave: { id: 3, face: [RO('#786a74', { dark: 0.68 }), RO('#665a68', { dark: 0.68 }), RO('#847466', { dark: 0.68 })], top: RO('#6e6270', { dark: 0.7 }), jag: 12, block: 11, blocky: 0.25, fine: 2 },
 };
 const STYLE_LIST = ['sandstone', 'granite', 'basalt', 'cave'];
@@ -78,7 +80,7 @@ export class Terrain {
   }
   _op(o) {
     const st = ROCK[o.style || 'granite'];
-    const op = { style: o.style || 'granite', st, top: o.top || 'rock', rim: o.rim ?? (o.top && o.top !== 'rock' ? 3 : 0), veg: o.veg || null, hang: o.hang || null, moss: o.moss || 0, snow: o.snow || 0, seed: o.seed ?? (this.ops.length * 37 + this.seed), keepKind: o.keepKind || 'dirt', barnacles: o.barnacles || 0, dome: !!o.dome, lit: o.lit ?? 0, wet: o.wet || 0, snowTop: o.snowTop || 0, fade: o.fade, blocky: o.blocky };
+    const op = { style: o.style || 'granite', st, top: o.top || 'rock', rim: o.rim ?? (o.top && o.top !== 'rock' ? 3 : 0), veg: o.veg || null, hang: o.hang || null, moss: o.moss || 0, snow: o.snow || 0, seed: o.seed ?? (this.ops.length * 37 + this.seed), keepKind: o.keepKind || 'dirt', barnacles: o.barnacles || 0, dome: !!o.dome, lit: o.lit ?? 0, wet: o.wet || 0, snowTop: o.snowTop || 0, fade: o.fade, blocky: o.blocky, slab: o.slab || 19 };
     this.ops.push(op);
     if (this.ops.length > 254) throw new Error('terrain: too many ops');
     return this.ops.length - 1;
@@ -142,7 +144,14 @@ export class Terrain {
         const t = clamp(dd / r), fac = (hash(Math.floor(x / (r * 0.45 + 2)), Math.floor(y / (r * 0.45 + 2)), op.seed + 9) - 0.5) * 0.22;
         hh = o.h * (Math.sqrt(1 - (1 - t) ** 2) * (1 + fac * t)) * (o.flat ? Math.min(1, 1.15 - (1 - t) * 0.15) : 1);
         if (o.flat) hh = Math.min(hh, o.h * o.flat);
-      } else for (let k = 0; k < tiers.length; k++) if (d + this._jag(x, y, k, amp, bw, op.seed, st) >= tiers[k][0]) hh = tiers[k][1];
+      } else {
+        let kk = -1;
+        for (let k = 0; k < tiers.length; k++) if (d + this._jag(x, y, k, amp, bw, op.seed, st) >= tiers[k][0]) { hh = tiers[k][1]; kk = k; }
+        // (o.cols { s, v, gap }: the upper tiers broken into columns - each cell its own height, a cleft between them: the
+        // red rock's stacked towers, concept N4)
+        const cs = o.cols;
+        if (cs && kk >= 1) { const C = cell(x, y * 1.15, cs.s, op.seed + 61); hh = C.d2 - C.d1 < (cs.gap ?? 1.6) ? tiers[kk - 1][1] * (0.9 + C.id * 0.1) : hh * (1 + (C.id - 0.5) * 2 * (cs.v ?? 0.2)); }
+      }
       if (hh < 1) continue;
       const i = y * w + x;
       if (o.replace || hh > this.H[i]) { this.H[i] = hh; this.O[i] = id; this.U[i] = 0; }
@@ -361,8 +370,8 @@ function rockTop(st, op, kind, x, y, e) {
   let t = 0.5;
   switch (st.id) {
     case 0: { // sandstone: flat slabs split by cracks, a little sand in the joints
-      const C = cell(x, y * 1.2, 19, seed + 21), cd = C.d2 - C.d1, crack = cd < 1.1 && hash(Math.floor(C.id * 997), 3, seed) > 0.25;
-      t = 0.5 + (C.id - 0.5) * 0.24 + (vnoise(x, y, 6, seed) - 0.5) * 0.16 + (h > 0.93 ? 0.12 : h < 0.05 ? -0.14 : 0) - (y * 1.2 - C.cy) / 19 * 0.12;
+      const sl = op.slab || 19, C = cell(x, y * 1.2, sl, seed + 21), cd = C.d2 - C.d1, crack = cd < 1.1 && hash(Math.floor(C.id * 997), 3, seed) > 0.25;
+      t = 0.5 + (C.id - 0.5) * 0.24 + (vnoise(x, y, 6, seed) - 0.5) * 0.16 + (h > 0.93 ? 0.12 : h < 0.05 ? -0.14 : 0) - (y * 1.2 - C.cy) / sl * 0.12;
       if (crack) t = 0.24 + h * 0.08; else if (cd < 2.2) t += 0.1;
       TR.nx = (hash(Math.floor(C.id * 999), 1, seed) - 0.5) * 0.3; TR.ny = (hash(Math.floor(C.id * 999), 2, seed) - 0.5) * 0.3;
       if (vnoise(x, y, 9, seed + 7) > 0.74 && !crack) { TR.c = pickR(st.face[2], 0.55 + (h - 0.5) * 0.3, x, y); return TR; }
@@ -610,6 +619,26 @@ export function outcrop(seed = 1, w = 60, d = 40, h = 40, style = 'granite', o =
   const W = w + 16, D = d + 16;
   return rockSprite(W, D, h + 6, (T) => {
     T.plateau({ blob: { cx: W / 2, cy: D / 2, rx: w / 2, ry: d / 2, seed, wob: 0.2 } }, { style, seed, tiers: o.tiers || [[0, h * 0.55], [Math.min(w, d) * 0.18, h * 0.8], [Math.min(w, d) * 0.32, h]], top: o.top || 'rock', veg: o.veg, hang: o.hang, moss: o.moss || 0, barnacles: o.barnacles || 0, wet: o.wet || 0, snowTop: o.snow || 0, jag: o.jag });
+  }, W / 2, D / 2 + d * 0.3, seed);
+}
+// a red sandstone stack (concepts N4, NT1-B, SC3-F): a cluster of square-ish blocks of banded orange-red rock, each
+// flat-topped and stepped in tiers - a main block, shoulders either side, low blocks and a few boulders at the front
+// (ledge: a long low run of them along x, a bank's rock); w x d its foot, h its tallest
+export function redStack(seed = 1, w = 90, d = 60, h = 110, ledge = false) {
+  const W = w + 24, D = d + 24, H = (k, a) => hash(seed, k, a);
+  return rockSprite(W, D, Math.ceil(h) + 10, (T) => {
+    const blk = (cx, cy, bw, bd, bh, k) => T.plateau({ rect: [cx - bw / 2, cy - bd / 2, bw, bd, Math.min(bw, bd) * 0.18] }, { style: 'redrock', seed: seed + k * 13, tiers: bh > 40 ? [[0, bh * 0.5], [Math.min(bw, bd) * 0.12, bh * 0.78], [Math.min(bw, bd) * 0.22, bh]] : [[0, bh * 0.6], [Math.min(bw, bd) * 0.14, bh]], jag: 4, block: 12, slab: 26, veg: { kind: 'sage', density: 0.006, band: 2, inner: 0.002, size: 2, bloom: true } });
+    const cx = W / 2, cy = D / 2;
+    if (ledge) {
+      const n = Math.max(2, Math.round(w / 46));
+      for (let k = 0; k < n; k++) { const bw = w / n * (1 + H(k, 1) * 0.35), x = cx - w / 2 + (k + 0.5) * w / n, y = cy + (H(k, 2) - 0.5) * d * 0.25; blk(x, y, bw, d * (0.7 + H(k, 3) * 0.3), h * (0.55 + H(k, 4) * 0.45), k); }
+    } else {
+      blk(cx + (H(0, 1) - 0.5) * w * 0.1, cy - d * 0.08, w * 0.56, d * 0.62, h, 0);                       // the main block
+      blk(cx - w * 0.3, cy + d * 0.04, w * 0.4, d * 0.56, h * (0.55 + H(1, 2) * 0.2), 1);                // its shoulders
+      blk(cx + w * 0.31, cy + d * 0.02, w * 0.38, d * 0.5, h * (0.5 + H(2, 2) * 0.2), 2);
+      blk(cx + (H(3, 1) - 0.5) * w * 0.3, cy + d * 0.3, w * 0.4, d * 0.34, h * (0.22 + H(3, 2) * 0.12), 3);   // a low block at the front
+    }
+    for (let k = 0; k < 5; k++) { const a = 0.4 + H(k, 5) * 2.4, r = 0.46 + H(k, 6) * 0.08; T.dome(cx + Math.cos(a) * w * r, cy + Math.sin(a) * d * r, 4 + H(k, 7) * 5, 3 + H(k, 8) * 3, 6 + H(k, 9) * 8, { style: 'redrock', seed: seed + k }); }
   }, W / 2, D / 2 + d * 0.3, seed);
 }
 // a sea stack / pinnacle: a tall narrow pillar with a few shoulders

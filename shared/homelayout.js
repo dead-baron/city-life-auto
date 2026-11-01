@@ -17,7 +17,7 @@ export const TILE_IN = 32;
 // (H77) the concept's new pieces, lower case in a plan: x a pool table  j an arcade cabinet  i a row of cinema seats  n a
 // kitchen island and its stools  s a sectional sofa (its long side)  b a bedside table and its lamp  l a floor lamp  w a
 // washing machine  k a workbench  e an exercise bike  h a bathtub - furniture like the rest (solid, a run one piece)
-const PLAN_LOWER = 'xjinsblwkhuyof^pm%ez&';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf; ^ p m % e z &: the
+const PLAN_LOWER = 'xjinsblwkhuyof^pm%ez&@$!_';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf; ^ p m % e z &: the
 // home upgrades' stairs, fireplace, bar, hot tub, exercise bike, shelves, woodpile - shared/homeups.js)
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
 // (H77, the owner's HO6 concept: thin walls) a wall is a thin line, not its whole tile: WALL_IN px thick, along the middle
@@ -156,6 +156,72 @@ PLANS.bath = [
   '#.....NN#P.....P#NN.....#',
   '############D############',
 ];
+// (nat5, the owner 10-31: "a few more bath houses") the other bathhouses' floors, each its own character over the same
+// lobby and locker rooms (bathhouse.js geoOf reads them alike: the bathers walk the hall's front row - the one above the
+// locker rooms' doorways - to whatever they soak in, each piece of it standing on that row). The new pieces: @ a rock
+// pool (an onsen's hot spring, outdoors), $ a cold plunge, ! a sauna (its timber benches, the stove), _ a heated floor
+// to lie on (a jjimjilbang's mats; a spa's loungers); : a floor open to the sky (the onsen's flagstones). Drawn by
+// client/art2/props-bath.js (BATH_STYLE: the walls, the tiles, the pieces each house draws its own way)
+const BATH_LOW = [
+  '#HtHtHtH#..fff..#HtHtHtH#',
+  '#ttttttt#.......#ttttttt#',
+  '#J......#.IIIII.#......J#',
+  '#J..o...#.......#...o..J#',
+  '#J..o...#.......#...o..J#',
+  '#J......X.......X......J#',
+  '#.....NN#P.....P#NN.....#',
+  '############D############',
+];
+// the onsen (Granite Hot Springs, L7): the timber bath hall to the west - the hinoki bath, the hot stones, a bench - and
+// through the glass the rotenburo open to the sky, two rock pools stepping down among the maples and the lanterns
+PLANS.bathonsen = [
+  '#########################',
+  '#yyttttooot#:::P:::::::P#',
+  '#yytttttttt=::@@@@@:::::#',
+  '#ttttttttPt=::@@@@@:::::#',
+  '#tttuuuuuut=:::::@@@@@@:#',
+  '#tttuuuuuut#:P:::@@@@@@:#',
+  '#ttttttttttt::::::::::::#',
+  '####+###############+####',
+  ...BATH_LOW,
+];
+// the jjimjilbang (the Neon Strip's Moonlight Spa 24, L5/L8): the sauna's timber room, the hot bath (42) and the warm
+// (39), the cold plunge (18), the heated floor's mats under the lamps; the sit-down wash stations along the back wall
+PLANS.bathkr = [
+  '#########################',
+  '#ffPttHtHtHtHtHttPttt___#',
+  '#tttttttttttttttttttt___#',
+  '#!!!!!ttttttttttttttt___#',
+  '#!!!!!tuuuuutuuuut$$t___#',
+  '#!!!!!tuuuuutuuuut$$t___#',
+  '#ttttttttttttttttttttttt#',
+  '####+###############+####',
+  ...BATH_LOW,
+];
+// the wellness spa (Bayside's Seaglass Spa, L8): the blue-tiled pool, the steam room's stones, the cedar sauna, the cold
+// plunge, the loungers in the garden corner among the palms
+PLANS.bathspa = [
+  '#########################',
+  '#yyyttPtttttttttttPt___P#',
+  '#yyytttuuuuuuuuuuttttttt#',
+  '#!!!!ttuuuuuuuuuutt$$t__#',
+  '#!!!!ttuuuuuuuuuutt$$t__#',
+  '#ttttttttttttttttttttttt#',
+  '####+###############+####',
+  ...BATH_LOW,
+];
+// the seaside bathhouse (Sunset Beach, L4/L6): the big bath under its mural of the sea, the shower bar down the middle
+// of the hall (L4's), the sea-water cold plunge
+PLANS.bathsea = [
+  '#########################',
+  '#Ptuuuuuuuuuuuuuuuuuuu$$#',
+  '#ttuuuuuuuuuuuuuuuuuuu$$#',
+  '#ttuuuuuuuuuuuuuuuuuuu$$#',
+  '#ttttttHtHtHtHtHtttttttt#',
+  '#oottttttttttttttttttttP#',
+  '####+###############+####',
+  ...BATH_LOW,
+];
 // (H71) an apartment block's lobby (HO5), lobby4 .. lobby8 by its number of flats: in by the front door, the tiled hall -
 // the mailboxes on the back wall, the lift beside them, the stairs up in the corner, a plant by the door - and the
 // landing's carpet runner along the back wall with the flats' doors, unit 1 first (U, numbered in order), each one's
@@ -175,7 +241,7 @@ for (let n = 4; n <= 8; n++) {
 const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZGIJ', ...PLAN_LOWER]);   // (X - a bathhouse's curtain - isn't: blocked lets the paid through)
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
-export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam',
+export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam', '@': 'spring', $: 'plunge', '!': 'sauna', _: 'lounge',
   '^': 'stairs', p: 'fire', '%': 'tub', m: 'bar', 'e': 'bike', k: 'bench', z: 'store', '&': 'store' };   // (G: an arcade's prize counter; I J u y: a bathhouse's; the rest the home upgrades' - server homeups.js)
 
 // The plan for a home: its kind (a trailer, an apartment, a house, a mansion) and how well it's furnished (0 a shack's
@@ -255,6 +321,7 @@ export function layout(key, tier = 0) {
   const L = {
     key: lv > 0 ? 'upper' : lv < 0 ? 'cellar' : sp.length === 3 ? home : key, spec: String(key), home: sp.length === 3 ? home : key, lv, arrive,
     stairsKind: !stairs ? '' : lv ? (lv > 0 ? 'down' : 'up') : sp[2],   // (the stairs' look: 'u' up, 'd' down, 'ud' both ways; on a level the way back)
+    bath: /^bath/.test(String(key)) ? String(key).slice(4) || 'sento' : '',   // (a bathhouse's floor: its house style - 'sento', 'onsen', 'kr', 'spa', 'sea')
     tier, cols: C, rows: R, w: C * TILE_IN, h: R * TILE_IN, grid: rows, pieces, door, bays, doors, walls, wallRects,
     spawn: door ? { x: door.x, y: door.y - TILE_IN } : arrive,
     cell: at,

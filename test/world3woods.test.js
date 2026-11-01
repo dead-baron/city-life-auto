@@ -122,7 +122,7 @@ test('World v3: Highland Woods - the falls, the trails and their furniture, the 
     check(m.natureSites.some((s) => s.kind === 'glade' && s.name === g.name), `${g.name}: listed`);
   }
   const pool = TR.glades.find((g) => g.pool);
-  check(pool && m.props.some((p) => p && p.t === 'fallsmall' && Math.hypot(p.x - pool.pool.x, p.y - pool.pool.y) < 120), 'Hidden Pool: its pool and little fall');
+  check(pool && m.props.some((p) => p && (p.t === 'fallsmall' || (p.t === 'rk' && p.k === 'fall')) && Math.hypot(p.x - pool.pool.x, p.y - pool.pool.y) < 120), 'Hidden Pool: its pool and little fall');
   // 6. the fire lookout up on the ridge, its telescope
   const L = TR.lookout;
   check(L && m.props.some((p) => p && p.t === 'lookout' && Math.hypot(p.x - L.x, p.y - L.y) < 60) && m.props.some((p) => p && p.t === 'scope' && Math.hypot(p.x - L.x, p.y - L.y) < 140), 'the fire lookout and its telescope');

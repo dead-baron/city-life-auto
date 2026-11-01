@@ -498,6 +498,38 @@ export function bathPavilion(on = 0.6) {
   m.box((x0 + x1) / 2 - 0.5, y1 - 2, H - 8, (x0 + x1) / 2 + 0.5, y1 - 1, H, post); m.ell((x0 + x1) / 2, y1 - 1.5, H - 13, 4, 4, 6, lamp);
   return m;
 }
+// (nat5, L7) the onsen's lodge at Granite Hot Springs: a timber ryokan on a stone footing - dark posts, shoji panels warm
+// with light, the engawa deck along its front, the indigo noren over the door with the hot spring's mark, paper lanterns
+// either side, the dark tiled roof hipped all round with its corners turned up and the ridge capped
+export function onsenLodge(on = 0.6) {
+  const w = 240, d = 136, H = 42, m = new Vox(w + 16, d + 20, H + 44), x0 = 8, y0 = 6, x1 = x0 + w, y1 = y0 + d;
+  const found = m.mat({ ramp: STONE, k: 3, shade: (x, y, z) => (Math.round(x) % 12 === 0 || Math.round(z) % 5 === 0 ? -0.8 : 0) + (hash(Math.round(x / 6), Math.round(z / 5), 3) - 0.5) * 0.6 });
+  const post = m.mat({ ramp: R('#3e2a1e', 6, 3), k: 3 }), deck = m.mat({ ramp: R('#9a7652', 6, 3), k: 3, shade: (x) => (Math.round(x) % 6 === 0 ? -1 : 0) });
+  const shoji = m.mat({ ramp: R('#f0e4c4', 5, 2), k: 3, emi: [255, 210, 140, Math.round(150 * on)], shade: (x, y, z) => (Math.round(x) % 6 === 0 || Math.round(z) % 7 === 0 ? -1.2 : 0) });
+  const plaster = m.mat({ ramp: R('#e2d6bc', 5, 2), k: 3 }), tile = m.mat({ ramp: R('#30343c', 6, 3), k: 3, shade: (x, y, z) => (Math.round(x) % 4 === 0 ? -0.9 : 0) + (Math.round(z) % 3 === 0 ? -0.4 : 0) });
+  const ridge = m.mat({ ramp: R('#1e2026', 5, 2), k: 2 }), noren = m.mat({ ramp: R('#22325a', 5, 2), k: 2 }), white = m.mat({ ramp: R('#f2f0ea', 4, 2), k: 2 });
+  const lamp = m.mat({ ramp: R('#f0c890', 5, 3), k: 4, emi: [255, 190, 110, Math.round(190 * on)] }), sign = m.mat({ ramp: R('#5a3a24', 5, 2), k: 3 });
+  m.box(x0, y0, 0, x1, y1, 6, found);
+  m.box(x0 + 4, y1 - 2, 0, x1 - 4, y1 + 12, 6, deck);                                     // the engawa along the front
+  m.box(x0 + 4, y0 + 4, 6, x1 - 4, y1 - 4, H, plaster);
+  for (let x = x0 + 4; x <= x1 - 8; x += 30) m.box(x, y0 + 4, 6, x + 4, y1 - 2, H, post);   // the frame's posts, the beam over them
+  m.box(x0 + 4, y1 - 6, H - 5, x1 - 4, y1 - 2, H, post);
+  const cx = (x0 + x1) / 2;
+  for (let x = x0 + 8; x < x1 - 8; x += 30) if (Math.abs(x + 13 - cx) > 22) m.box(x + 3, y1 - 3, 12, x + 25, y1 - 2, H - 7, shoji);   // the shoji along the front
+  m.box(cx - 18, y1 - 3, 6, cx + 18, y1 - 2, H - 5, post);                                 // the door, its noren
+  for (let k = 0; k < 3; k++) m.box(cx - 17 + k * 12, y1 - 2, 18, cx - 7 + k * 12, y1 - 1, H - 6, noren);
+  for (const [a, b] of [[-3, 24], [3, 24], [-5, 28], [0, 28], [5, 28], [-3, 31], [3, 31]]) m.box(cx + a - 1, y1 - 1, b, cx + a + 1, y1, b + 2, white);   // (the hot spring's mark)
+  for (const lx of [cx - 28, cx + 28]) { m.box(lx - 0.5, y1 + 6, H - 6, lx + 0.5, y1 + 7, H - 2, post); m.ell(lx, y1 + 6.5, H - 11, 4, 4, 6, lamp); }
+  m.box(cx - 20, y1 - 1, H + 2, cx + 20, y1 + 1, H + 10, sign); m.box(cx - 14, y1 + 1, H + 4, cx + 14, y1 + 2, H + 8, white);
+  // the roof: hipped all round from a ridge along x, the eaves out past the walls, the corners turned up
+  m.fill((x, y, z) => {
+    const ex = Math.min(x - (x0 - 8), (x1 + 8) - x), ey = Math.min(y - (y0 - 8), (y1 + 10) - y), e = Math.min(ex, ey);
+    const top = H + 2 + Math.min(26, e * 0.5) + (ex < 8 && ey < 8 ? 3 : 0);
+    return e >= 0 && z >= top - 3 && z < top ? tile : -1;
+  }, x0 - 8, y0 - 8, H, x1 + 8, y1 + 10, H + 34);
+  m.box(x0 + 40, (y0 + y1) / 2 - 2, H + 26, x1 - 40, (y0 + y1) / 2 + 2, H + 31, ridge);
+  return m;
+}
 // a bamboo fence: a row of canes lashed to three rails, a darker cap rail; along +x
 export function bambooFence(len = 80, h = 30) {
   const m = new Vox(len, 6, h + 2);

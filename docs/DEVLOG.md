@@ -18662,3 +18662,450 @@ It no longer repeats the tab's name beside RESUME, and the tab labels are a size
 - **test/hub.test.js** checks the row's markup.
 - **Tokens:** the new colours are named in `:root`.
 - **Spectating:** client/spectator.js follows the new columns.
+
+## 2026-10-31 - Nature showcase, tropical slice (nat1): Coral Cay's east lobe after NA1-E, Macaw Cove after SC3-H
+
+The owner asked for hand-crafted nature areas that follow his concepts closely, then for that style to spread across
+the world. This slice covers the tropics. Coral Cay's wild east lobe used to be an even grid of palms with one dirt
+path, the lodge and a row of seven cabins. It is now the island in **NA1-E (the paradise coral cay)**. **SC3-H (the
+jungle lagoon)** is a cove dug into its east shore.
+
+### What you see there
+- **The volcanic spine.** A massif of overlapping black basalt masses climbs from the inner lagoon north to the north
+  beach, highest behind the falls. Vines hang down its faces, shrubs grow on its ledges (a jungle variant of the outcrop:
+  `j`), and palms rise out of green pockets in the rock.
+- **Coral Cay Falls** drops off the spine in two tiers into **The Inner Lagoon**. The lagoon is a pool of the reef's
+  clear turquoise water, with boulders and a mossy islet in it, two snorkelers and a ring float, and a sand beach on its
+  south side. Macaws perch on the rocks and palms around it, and one is in flight.
+- **The trails.** They wind from Cay Road to the lagoon. Timber steps climb the spine's west side to a lookout with a
+  bench and a scope above the falls. Other trails run east to the north beach, north to the mangroves, south to the
+  beach bar and east to the cove.
+- **The mangrove inlet** cuts into the north shore. Mangroves stand on their arching roots along its banks and in its
+  shallows, and a zig-zag boardwalk on posts runs out to a thatched hut on stilts.
+- **The south beach** has The Lagoon Bar, a thatched hut on a deck with stools and string lights (its counter sells
+  snacks). Hammocks hang between leaning palms, with loungers and parasols, a surfboard and tiki torches nearby. A
+  T-jetty runs out over the reef with the speedboat at its head and a rowboat beside it.
+- **Black rock headlands** break up the beaches in five places.
+- **The beaches** are narrower now, with the jungle coming down to them. Black rock outcrops and boulders sit along
+  the beaches, and black reef heads lie in the clear shallows. You can see sea turtles and snorkelers in the water.
+- **Corsair Reef**, a wreck out on the outer reef to the north-east.
+- **Turtle Islet**, offshore to the south-east, with a jungle middle, black rock on its shore and a tin-roofed stilt
+  house reached by its own little jetty.
+- **Macaw Cove (SC3-H)**:
+  - a cove dug back into the east shore and open to the sea;
+  - Macaw Falls, falling off tiered black basalt (a second, smaller fall beside it);
+  - rocks and a mossy islet in the water, and a band of black reef heads across the mouth;
+  - a timber dock with a moored rowboat, and a sand beach with crabs, shells and a driftwood log;
+  - dense jungle round it (palms, banana, monstera, red ginger), macaws and a snorkeler;
+  - a trail in from Cay Road's end.
+- **The jungle** grows in groves with clearings between them. A new broad-leaved jungle tree fills the depths, with
+  palms toward the edges and in the light. Banana, bird of paradise, monstera and elephant ears form the understorey,
+  with red ginger, hibiscus and ferns in clumps along the edges. The jungle floor's cover fills the rest. No tall tree
+  stands where it would hide a rock face.
+
+The Eco Lodge stays at Cay Road's end. Three of its cabins (still to rent) now stand scattered in the jungle.
+
+### The kit (shared/world3-tropic.js), and where else it's used
+- **ridge**: a massif of black rock over an area, with green pockets in it.
+- **rockShore**: black rock clusters along a beach.
+- **reefBand**: black reef heads off a shore.
+- **jungleFrame**: the layered jungle.
+- **jungleFalls**: a falls off tiered basalt into a turquoise pool.
+- **tropicDock**: a timber jetty with its posts, lamp and boats.
+- **trail**: winding dirt, with timber steps where the trail climbs.
+
+The kit is applied to the east lobe, Macaw Cove and Turtle Islet. Wreck Beach on the west lobe's tip gets the jungle,
+black rock and reef heads. Tiki Point's north beach gets basalt points at each end and reef heads offshore.
+(shared/naturesites.js `coralRainforest` builds only in the old map's frame; World v3's falls on the key are these.)
+
+### New art (client/art2/props-tropic.js)
+- the thatched beach bar;
+- the stilt hut (thatch or tin);
+- scarlet and blue-and-gold macaws (perched or flying);
+- a sea turtle and a snorkeler;
+- the mangrove, and the broad-leaved jungle tree (the same model without roots);
+- red ginger.
+
+client/art2/game/statics.js draws them as the props `tbar`, `stilthut`, `macaw`, `turtle`, `snorkeler`, `mangrove`
+and `ginger`, and the outcrop takes `j`.
+
+### Tests
+- test/world3tropic.test.js (one World v3 build) checks:
+  - each place on the map;
+  - the spine is solid behind the falls, and the lagoon is water;
+  - the trails are on the ground with nothing solid across them;
+  - the bar's counter, the jetty and its speedboat;
+  - the cove opens to the sea and has its falls;
+  - the islet is Coral Cay's land, with its stilt house;
+  - the wildlife is there, and the cabins are still to rent.
+
+### Round 2 (the coordinator's review: "a dark uniform green carpet")
+- **The jungle in groves and clearings.** Open grass now lies between the groves, with a palm standing alone here and
+  there and drifts of red ginger and hibiscus. In the groves, two trees in three are palms with distinct crowns,
+  spaced so each reads on its own. The broad-leaved trees are a brighter yellow-green.
+- **The falls are the hero of each scene.**
+  - Coral Cay Falls: 72 px wide, a 210 px drop, a narrower stream on each side stepping down behind it, white foam
+    where it lands and spray drifting off.
+  - Macaw Falls: 60 px wide, a 168 px drop.
+  - The basalt behind them is raised to match.
+- **Black volcanic rock.** A new rock style, `lava` (client/art2/terrain.js), has near-black columns with highlights.
+  The spine, the cove's walls, the headlands and every boulder use it. Each shore cluster is now a columned mass with
+  big boulders round it.
+- **The surf.** A white foam band breaks over the outer edge of the reef all round the lobe, and across Macaw Cove's
+  mouth. It is drawn as `surf` (client/art2/props-tropic.js surfBand), laid flat on the water.
+- **Macaw Cove's beach** has crabs, sea stars and shells along the water's edge, and two driftwood logs. The dock is
+  bigger (3 wide with a T-head), with the rowboat at its head.
+- **The lodge's seven cabins are back**, scattered in the jungle either side of Cay Road. They are built in the same
+  order, so every home keeps its id. Home ids are their order on the map, and ownership is saved by id
+  (server/systems/homes.js). A full id-and-name dump of all 3471 homes matches main's exactly.
+  - Round 1 (aa3646f3) had cut the row to three cabins, which shifted the id of every home after them; this round
+    puts that right.
+  - test/world3tropic.test.js checks the seven cabins and that their ids run in a row (with CLA_CABIN0=2383: the first
+    one's id, as on main).
+- **test/world3world.test.js** allows Turtle Islet's land on its "nothing built out on the sea" check. The islet is
+  land raised out of the sea by design; the allowance is the islet's own size, from TROPIC3.
+- **Tests:**
+  - world3tropic: passes, with CLA_CABIN0=2383 set.
+  - nature: 43 pass.
+  - world3world: passes (rerun after the islet allowance).
+  - mapwindow, dmath and coralcay: 17 pass.
+  - perf: 6 pass.
+- **Perf:** page 475/520, renderer 401/401, bake 911/1000 KB with 79 files, city 28.2x, bakes 60.6x.
+- **The surf is broken foam lying flat along the reef line**:
+  - short irregular dashes following the reef heads across Macaw Cove's mouth;
+  - the same dashes down the north-south stretches of the outer reef;
+  - bands only where the reef runs east-west.
+
+  The long north-south bands had drawn as white strips standing in the water.
+
+## 2026-10-31 - The nature showcase, the redwoods (nat2): Redwood Creek Falls, Hidden Pool and the Giants Loop built to the owner's concepts NR1-E, N2-A and N1-A, their kit spread through Highland Woods
+
+The owner sent ten concepts to treat as real places. This slice took the three redwood ones and rebuilt the places
+they show. Then it turned what they needed into a kit and laid it over the other falls, glades and trails of the kind.
+Before, these places looked schematic: a pool of square water tiles, a short strip of falls, a few loose rocks, filler
+trees.
+
+### Redwood Creek Falls (NR1-E: the redwood waterfall cliffs)
+- **A wide curtain fall off a lip of dark basalt columns** (client/art2/props-redwoods.js `columnFallModel`). It is
+  128 px wide and drops 140 px. The creek's water runs over the lip, a mossy log has fallen across the top with a broken
+  branch sticking up, and the churn at the foot spreads into the pool under a veil of spray.
+- **The columns wrap the plunge pool in a horseshoe.** The back wall stands either side of the fall. On each side an arm
+  of columns steps down toward the camera in tiers (`basaltCols`): hexagonal columns, each its own height, with moss on
+  their tops and hanging down the faces, ferns growing out of them, dark and wet near the falls, and mossy boulders and
+  ferns at their foot. The Redwood Caverns' mouth sits in the west wall, and its path and stairs work as before.
+- **The pool is clear green water** (about 11 x 7 tiles, deep in the middle), with mossy boulders in it and round its
+  edge. It joins the map's waters as a creek channel with a plunge pool at its head
+  (shared/world3-redwoods.js `channel`), so it draws as running clear water, not a still pond with lilies.
+- **The outflow** tumbles between boulders past a cobble bar (river gravel) down to the footbridge.
+- **A switchback trail** comes down from the trapper's cabin, with timber steps at the bends and split rails on the drop
+  side. It leads to a railed wooden viewing deck with a bench, on the pool's west bank where the caverns' path runs,
+  with the falls' name on a board.
+- **Framing:** giant redwood trunks either side (none in front: shared/world3-falls.js), sword ferns round the walls'
+  feet and the pool, boulders in the creek above the lip, and shafts of sun slanting through the canopy from the west.
+- **The camp that stood where the east wall goes moved east of the bowl,** with a path to it from the footbridge. The
+  creek site's falls now read 128 x 140, and the mist, the roar and the fishing below the falls all go by that.
+
+### Hidden Pool (N2-A: the misty fern glade)
+- **The glade's floor is dark forest duff** (it was meadow flowers), with puddles on it.
+- **The big mossy log carries fungi along it:** fly agarics, shelf fungi and small blue caps that glow after dark (their
+  own light). Two more patches of mushrooms make the forager's round there (server/systems/wildfolk.js).
+- **A little falls** comes off a mossy ledge of columns into the creek's pool, which is reshaped, clear and deep in the
+  middle. Stepping stones cross it on bridge tiles: you walk over, or swim under.
+- **Round it:** moss boulders, sword ferns, golden aspens among the conifers, low mist, and a shaft of sun. No tall
+  tree stands in front of the pool in this view.
+
+### The Giants Loop (N1-A: the redwood trail)
+- **Giant redwood trunks** stand two to four tiles off the dirt loop on both sides. Most of the small conifers in the
+  loop's woods are gone, with ferns in their place.
+- **A spring-fed creek** comes out of a jumble of mossy boulders and runs over boulders under the loop's east side. It
+  passes beneath a railed plank footbridge (bridge tiles) into a little pond inside the loop. No giant stands in front of
+  the bridge or the pond.
+- **Along the loop:** split-rail fence on the outside of the bends, mossy fallen giants beside the path, ferns, and
+  shafts of light. The fingerposts and the hikers were already there.
+
+### The kit, spread
+- **The ledge falls** (Mossy Ledge Falls, both arms of Twin Falls, Willow River Falls): basalt columns wrap each end of
+  the lip and step down the banks (`cheeks`). Each run is placed only where its footprint is open bank, never on a
+  trail, a deck or a road. Mist hangs at the foot.
+- **The glades** (Fern Hollow, Elk Glade, Toadstool Glade): the same dressing as Hidden Pool (`gladeDress`).
+- **The trails** (Mast Ridge Trail, Gorge Trail, Highland Way, Giants Link): ferns along both edges, a run of split rail
+  on the outside of a turn now and then, a mossy fallen giant beside the path, and the odd shaft of sun (`trailEdge`).
+
+### How
+shared/world3-redwoods.js runs in World v3's done hook, after the woods' trails, caves and ledge falls and before the
+falls in view. The art is client/art2/props-redwoods.js, drawn by client/art2/game/statics.js: props 'rk' (`rkItem`,
+`rkSprite`). The creek site carries `bowl` so the old ledge and gorge walls are no longer drawn.
+
+### Tests
+test/world3redwoods.test.js: the kit's art draws. The three places are where they should be. The lip and the columns
+are solid; the caverns' way out, the deck and the camp are open; the stepping stones and the footbridge are walkable.
+The forager's patches are there. The kit is at the ledge falls, the glades and the trails.
+
+### Budgets
+Bake code 904 -> 911 KB (79 files; this slice's share was up to 24 KB). The page and the renderer are unchanged (475, 401 KB).
+
+### Round 4 (the coordinator's review of the falls' pool)
+- **A round basin that narrows into a winding run.** The pool is carved rounder. A rim of big boulders (`rimRocks`,
+  mostly grey granite, about a third of them mossy) sits along its front lip and sides and down the run's banks, over
+  the tiles' stepped edge. The run below winds and is wider, with stones in it. The run is a rapid on the map's waters, and the scrub over it is gone. (The soft 'foam'
+  sprite stays only where the curtain lands: on the run it read as splats. The cobble bar is one smooth bar now, not
+  overlapping blobs that read as a white X.)
+- **The falls' face:** the lip is uneven, a little forward or back and higher or lower along it. Three basalt columns
+  stand up through it and split the curtain's top into tongues that join lower down. Thin spills run over the columns
+  either side. The churn and foam where the curtain lands is wider and taller.
+- **The picnic pull-off is packed dirt now, not gravel,** with a dirt path down to the deck (the timber steps there read as loose planks and went).
+- Bake code 912 KB.
+- Left over: the rim boulders aren't solid. They sit in the water's edge, and making them solid risked blocking the
+  cave's path.
+
+## 2026-10-31 - Nature showcase, the desert (nat3): Red Rock Canyon by hand, the dry wash waterholes, the Red Rock Trailhead
+
+The owner asked for handcrafted nature areas that "really follow the concepts", recreating everything in them and then
+spreading the style across the world. This slice is the red rock desert: concepts N4 (the canyon oasis under the arch),
+NT1-B (the desert trailhead on the highway) and SC3-F (the dry wash with its waterhole), with N4-B, N4-C and NA1-C for
+reference.
+
+### Red Rock Canyon (N4)
+- **The rock, redrawn as the concept.** The canyon's 54 x 36 tiles are laid out by hand (shared/mapcore.js `CANYON`): a
+  big banded tower mass with the oasis tucked under its south face between two lower ledges, a natural arch spanning
+  the wash from the mass to the east mesa, the mid-left stack, the south-west and south-east mesas framing the floor,
+  a low block by the track. The painting's mask (what the map makes solid) is made from the same shapes, so the rock
+  you see is the rock you bump into. The edges wander - no mesa ends on a straight line at the painting's edge.
+- **Stacked columns.** The terrain's plateaus can now break their upper tiers into columns (`cols`: Voronoi cells, each
+  its own height, a cleft between them - client/art2/terrain.js), so the mesas read as the concept's stacked towers of
+  banded blocks instead of flat polygon tops; the slab cracks on the tops are bigger (`slab`), the sage sparser.
+- **The oasis.** A lobed pool of clear turquoise water (still, swimmable, fishable) under the mass's face; the spring
+  falls into it down red rock in two tiers (the falls' rockwork in a new red stone); fan and date palms round it,
+  reeds, cattails and ferns at the water, sandstone boulders on its rim and in the water, desert flowers in clumps.
+- **The wash** runs north to south under the arch: a braided bed of pale gravel with blue-grey pebbles and cobbles,
+  bars of sand between its channels, cracked mud where water stood (a new ground pass, `washPx`, and a `washGravel`
+  ground), mesquite and palo verde along its banks; the pool's overflow runs out to it.
+- **The track** comes in off the road on the west past the stack to a turnaround by the oasis, with tyre ruts (a new
+  `dirtRut` ground along a track's two ruts); a pickup parked at the turnaround, a map board, crates.
+- **Life:** saguaros, barrel and prickly pear cacti, a dead snag, the roadrunner on the wash, the lizard on a boulder at
+  the south-east mesa's foot, a hawk's shadow passing over. The biomes' random scatter is cleared off the floor.
+
+### The dry wash waterholes (SC3-F) - every tinaja
+Each of the five tinajas is now a waterhole at the head of a dry wash: a big mesquite leaning over the pool, red
+boulders round it (the way down to the water left open), reeds; the wash runs away from it ~30 tiles, braided gravel
+and cracked mud with sandy banks, walls of red stacked rock along both banks, cobbles, bank trees and flowers; a cairn,
+the roadrunner, a hawk's shadow. The showcase (the tinaja under the Dry Creek mesas, Coyote Wash on the map) has a
+dirt-bike track along the far bank with a dirt bike parked on it. Coyotes already roam the desert at night (fauna).
+
+### The Red Rock Trailhead (NT1-B)
+The pull-off on the straightest east-west stretch of the Casino Highway (by the motel) is now the trailhead: its gravel
+apron, ramada, table, tank and bin kept, the lot run on west with two 4x4s nosed in, a dirt road in through a new
+log-framed ranch gate (tube-steel gate swung open, fence wings), the map board, a water tower on its stand, the
+trailhead's sign by the road, a pale foot trail up between the stacks with red cairns along it, saguaros and Joshua
+trees, red boulders, flowers.
+
+### The kit, spread
+The pieces are a kit (shared/naturesites.js, its last section; shared/redrock.js lays it over World v3's desert):
+`stack` (a banded red sandstone stack - new `rstack` sprite, solid over its foot), `wash`, `waterhole`, `trailhead`,
+`bloom` (a flower clump). Besides the canyon, the five tinajas and the trailhead it dresses: the two other highway
+pull-offs (stacks behind, saguaros, Joshua trees, a map board, a cairn, flowers), the Red Rock Trail's start (stacks, a
+plank-roofed ramada with its table, the map board, cairns up the first stretch), Mirage Camp (stacks to its north and
+east, flowers, a roadrunner) and the Red Rock Arch's flats (stacks and a wash under the arch).
+
+New art: client/art2/props-desert.js (the ranch gate, the plank ramada, red cairns, the hawk's shadow); the roadrunner,
+the lizard and the dead tree (props-wild.js) wired as props; terrain.js `redStack` and plateau `cols` / `slab`;
+ground.js `washGravel`, `dirtRut`; water.js falls in red stone.
+
+Budgets: bake 904 -> 911 KB (unchanged by round 2) (of 1000; this slice's share 20); renderer, page and city code unchanged in files.
+Tests: test/redrock.test.js (the mask from the shapes, the wash bed in the ground bake, and one World v3 build: the
+oasis, the waterholes, the trailhead, the stacks solid on open ground).
+
+### Round 2 (the lead's review)
+- **The stacks** were dark rounded blobs (haystacks, termite mounds). Now each is a cluster of square-ish blocks of
+  banded orange-red rock (a new `redrock` rock style, brighter than the canyon's sandstone): a flat-topped main block
+  stepped in tiers, shoulders either side, a low block at the front, boulders at the foot; sunlit tops, shadowed faces.
+- **The washes' ground** is calm: one warm sandy base out to well past the banks (the tables' cobbled hardpan and red
+  smears gone there), the pale gravel bed winding through it with its cracked mud, a few bigger plants on the banks
+  instead of many small ones; masses of stacked rock framing both banks. The waterhole's mesquite is bigger, a palo
+  verde beside it. The dirt-bike track is a sandy two-track with ruts sweeping round the far bank, the rock kept off it
+  (tracks can now be drawn per pixel - smooth edges - with a sandy `dirtTrack` bed).
+- **The trailhead** moved to the pull-off with nothing built round it (the motel's pull-off was the straightest stretch,
+  but the motel took the shot): the pull-off is made over as the concept - the rutted road in through a bigger ranch
+  gate, the gravel lot with the 4x4s, and in one cluster behind it a big plank-roofed ramada with its table and bin, the
+  map board and the water tower, the stacks framing it all. It is no longer a pull-off on the map (kind 'trailhead').
+  Hikers: the map board is a trailhead to the wild folk (server/systems/wildfolk.js spawns backpackers, runners and
+  rangers at map boards whose trail it can follow), as on the redwood trails.
+- **The canyon**: the oasis ledges pulled back so the pool is larger and open (10 x 6 tiles), seven palms round it, the
+  two-tier falls wider and taller on the rock above; the arch is wider, with its shadow on the wash under it; the track
+  a sandy two-track. (The pickup's crates stay on the ground: parked cars can't carry cargo.)
+- **Warmer desert:** the desert ground's colours lean orange (ground.js DESR).
+
+## 2026-10-31 · Nature showcase nat4: the mine cave (N3) and the wheat county road (SC3-E)
+
+The owner's ask: treat the concepts as real places, rebuild them to the concept's composition, then spread the style.
+This slice: **N3, the mine cave** (with MI1, MI2, MI4, MI5 beside it) and **SC3-E, the wheat county road** (with D13
+and FA4).
+
+### The mine cave: the lantern lake (shared/cavekit.js)
+- **Old Granite Mine's cave is now laid out as N3.** A mine whose map site carries a `scene` (World v3's: marked by
+  `shared/world3-caves.js`) is carved round one big chamber just in from its mouth, about 46 x 31 tiles - the concept's
+  composition at the player's scale (`N3` in tiles from its centre). The template's seven chambers (`shared/underground.js`
+  CHAMBERS) move `push` px further in, beyond it; the old straight way in from the mouth to the hall is skipped.
+  - The way in comes up from the adit's mouth into the chamber's south-west; the light in at the mouth follows it there
+    (the cave's own `mouths` now aim at the chamber's `entry`).
+  - A **light well** in the north-west corner (the roof fallen in): daylight down a rubble slope, grass and ferns in it, a
+    dim moonlit pool at night.
+  - Orange cave **mushrooms**, **puddles** on the path (baked: their rims wavering, the lanterns' light on them), a
+    **broken ore cart** and its fallen timbers by the west wall, barrels, ferns and moss at the walls' feet, rubble.
+  - The **timbered adit** of the old workings on the north wall, a lantern hung in it; the **rails** come out of it past an
+    **ore cart** heaped with rock and curve down onto a **timber trestle** over the lake's north arm (walkable: dock
+    cells over the water); a chest, a barrel, a pickaxe, a lantern on its post, crates stacked at the trestle's east end.
+    Beyond the adit the **drift** runs on to the template's hall: timber sets every four tiles, lanterns, the rails.
+  - **The lake**: clear water glowing teal from its bed (a light-net pattern on the bed, the dark lifted over it), deep
+    in its middle, rock masses and stalagmites standing in it, a rope fence along its west shore, paths round its south
+    and east shores. The lanterns' light wavers in gold streaks on the water below them and in the puddles.
+  - **Stalactites** hanging from the roof's rim all round (`kit.drips`: found on the wall spots with rock above),
+    **bats** asleep upside down on the roof (a new roost; the bats burst out as before), two **crystal grottos** off its east
+    side - big blue crystals, the rock gone blue-violet.
+  - **Rock**: the rim of every cave is now heaped **boulders** lit from the top left, fading into the dark void (a
+    chamfer distance from the open, worked over a margin so the 512 px tiles meet); N3's stone a warm purple-brown, its
+    floor warmer.
+  - A dim fill over the scene's chamber (its lanterns, lake and crystals between them light it all a little); the
+    stalagmites in a kit's cave no longer carry a floating stalactite (the roof's rim has its own).
+- **Copper Gulch Mine's cave** gets the same scene mirrored east-west in the desert's red rock (`SCENES.n3red`).
+- **The kit spread to the Redwood Caverns** (`kitCavern`): a timber trestle across the Great Lake shore to shore (south of
+  the river's way through it and the rowboats' moorings) with a lantern at each end and the lake glowing teal, two crystal grottos dug back off its rim, rails with an ore cart, crates
+  and a barrel and a lantern at the Ore Face, timber sets with hung lanterns through the Stalactite Hall and the Echo
+  Hall, stalactites along every chamber's roof, puddles in the halls.
+- The kit's things are drawn by `client/underground/caveart.js` (rails, trestle, drip, roostBats, kitThing: the adit's
+  portal, the ore cart, chest, barrel, crates, pickaxe, plank, broken cart, timbers, mushrooms, fern, rope fence, plank
+  fence, rubble); the caverns' old things (barrels, crates, carts, picks) draw with it too. The cave view is its own lazy
+  module: none of this is in the page, the renderer or the bake.
+
+### The wheat county road (shared/world3-countyroad.js, server/systems/countyroad.js)
+- **Lake Road east of Lakeshore Road is SC3-E** (`COUNTY3.stretches[0]`, the hero), 46 tiles of it:
+  - the farm side (north): the **power poles** between the road and the fence, wired pole to pole; a **split-rail fence**
+    with **sunflowers** along it; the **field gate** (its posts, a mailbox) and a **dirt lane** in through it; the **farm
+    pond** to the left with reeds round its far rim and lilies, the **windmill pump** and its **round trough** beside it;
+    the **tall corn** carried on to just right of the lane; big round **oaks**;
+  - the field side (south): **wooden posts** along the road's edge, the **irrigation canal** in grassy banks with reeds and
+    cattails, the lane carried over it on a **concrete culvert** (its tiles a bridge's, the water drawn on under it), then
+    the **wheat** carried on east to fill the view - **half of it harvested**: a field's `cut` rect baked as **stubble**
+    (a new ground material, `cropStubble`/`cropStubbleV`: short pale stalks in rows, the earth between, a golden windrow
+    of straw every few rows), hay bales left on it, the rest standing.
+  - **Its life** (`server/systems/countyroad.js`): while someone is within ~56 tiles - the **farmer** at his gate and his
+    **red pickup** parked on the lane, and the **red combine at work** along the ripe rows beside the cut
+    (`cinefollow.combineOn`, the cinematic mode's combine, now exported: it cuts as it goes, the chaff and straw out of
+    its back), a pass, a rest, the next. Once everyone has gone ~100 tiles away the farm packs up (the combine and its driver too) and the field is as
+    the concept has it again (`farming.cutRow`: rows wholly in the cut stubble, those partly in it ripe with their cut
+    stretches done).
+- **The kit along the valley's other county roads**: Orchard Road (beside the main line - no pond there, the lane stops
+  at the ballast), Valley Parkway, North Coast Road (with its pond and windmill) and Lakeshore Drive (a north-south one):
+  each found on the map from a point on its road, the canal on whichever side has the wheat, the pond only where there's
+  open, unreserved grass for it.
+
+### Checks
+- `test/natcave.test.js`: both mine caves laid out as the scene and reachable on foot from the mouth through the chamber,
+  over the trestle, through the adit to every template chamber and both grottos; the lake's water and deep middle; the
+  lanterns, the light well, the blue crystals, the things on dry floor, the rails, stalactites, puddles and roosts;
+  Copper Gulch's mirrored; the Redwood Caverns' trestle shore to shore, its grottos reached, the ore face's rails.
+- `test/natcounty.test.js` (one world build): every stretch laid, canal, culvert, poles, fence, posts, the half-cut
+  field's rect inside its field; the hero's pond, windmill and round trough; the server's rows half stubble half ripe;
+  someone near - the pickup and the farmer at the gate, the combine cutting; everyone gone - home, the field as it was.
+
+- Budgets: bake 905 of 1000 KB (+1 KB: the stubble's ground material, the culvert prop), page 475, renderer 401 untouched
+  (the cave's art is the cave view's own lazy module); the generator gains shared/world3-countyroad.js.
+- Left over: the crows behind the combine (the renderer's particle mapping is full: a crow would need bytes there), the
+  cyclist on the road (the traffic's own cyclists may pass), a dust cloud bigger than the combine's chaff.
+
+### Round 2 (the coordinator's review against the concepts)
+- **The county road's golden hour**: the ripe wheat's ground is a warm gold now (every wheat field's: `ground.js` GRAIN);
+  the stubble pale and clearly cut - short cream stalks in straight rows, the earth between, golden windrows - and the
+  line between it and the standing wheat wavers (the bake's noise on a field's `cut`); the verges along a county
+  stretch gone dry and golden (`rec.dry`: the ground bake's dry grass there, a green patch here and there).
+- **Sunflowers** two deep in dense tall clumps along the whole fence, a gap now and then; **the canal** about three and a
+  half tiles wide, reeds and cattails in clumps on both banks, the culvert wider with its railing; more **oaks** framing
+  the corners; **the corn** standing tall (strips of stalks and tassels - a new `cropstrip` prop over the `cornRow`
+  model - over the field near the road); the **windmill pump** on a taller tower (`windmill` takes `h`).
+- **The cave**: worn **paths** of packed earth across the floor (up from the way in, to the adit, onto the trestle, up
+  to the light well) with two ruts down them, **gravel** strewn off them, more rubble at the walls' feet, ferns thicker
+  under the light well; the **puddles** shallow and clear - the floor showing at their rims, a sheen across them, the
+  nearest lantern's light glinting gold in them; the lake's square edges softened by **boulders and stalagmites** along
+  its shore; **brighter, warmer lantern pools** (the kit's lanterns reach further), three more lanterns about the adit
+  and the trestle.
+- In-game shots taken from the page itself (a dev server on its own port): the county road at the player's zoom with
+  the farmer, his pickup and the combine; the cave's lantern lake.
+
+## 2026-10-31 - nat5: more bathhouses, showers round the world, Crazy Taxi's near miss made certain
+
+The owner (10-31): "Also can we add a few more bath houses and showers into the world?" Concepts: L2-A..D (showers,
+locker room, pool changing room and sauna), L4 (the bathhouse showers), L5 (the Korean bathhouse), L6-A/B/C (the sento),
+L7 (the onsen), L8 (the wellness spa), BE1-A / BE3 (the public beach and its props).
+
+### Four more bathhouses, each its own house (server/systems/bathhouse.js, shared/homelayout.js)
+A bathhouse's POI says which house it is (`bath: true` the sento as before, or a word: its plan is `'bath' + word`).
+They share the lobby, the curtains and the two locker rooms (and the whole routine - desk, lockers, showers, the house
+rule); the hall behind is each one's own:
+- **Granite Springs Onsen** (L7) at Granite Hot Springs: a new timber lodge west of the fenced pools - stone footing,
+  shoji lit warm, the engawa deck, the indigo noren with the hot spring's mark, paper lanterns, a dark hipped tile roof
+  (client/art2/props-garden.js `onsenLodge`, statics 'onsenlodge'); a flagstone path to the steps up from the road
+  (shared/naturesites.js hotSprings; the landmark widened over it). Inside (`bathonsen`): the hinoki bath and the hot
+  stones in the timber hall; through the glass, the rotenburo open to the sky - two rock pools stepping down on
+  flagstones with moss in the joints, boulders round their rims, a bamboo spout, red maples.
+- **Moonlight Spa 24** (L5, a jjimjilbang) on the Neon Strip's waterfront row (where Stardust stood; neon SAUNA blade):
+  the sauna's cedar room, the hot bath (42, rose water) and the warm (39, blue) with their temperature panels, the cold
+  plunge (18), the heated ondol floor with its mats and block pillows, the sit-down wash stations along the back wall.
+- **Seaglass Spa** (L8), Bayside: the blue mosaic pool with its steps and underwater lights, the frosted-glass steam
+  room, the cedar sauna, the plunge, loungers with candles, palms.
+- **Sunset Bathhouse** (L4/L6), a new blue-and-white building on Sunset Beach's sand between the west tiki bar and the
+  pier (shared/world3-sunsetbeach.js seaBaths): an outdoor shower each side of its door, a bench, its sign. Inside
+  (`bathsea`): the long bath under a painted mural of the sea and the mountain, the shower bar down the hall, the
+  sea-water plunge; blue tiles scattered through the white.
+- **What you sit in** (bathhouse.js SOAK): the bath; the onsen's rock pools (`springHeal` a second, refreshed for
+  `springBuffS`); the steam, the sauna (`saunaHeal`); the heated floor or a lounger (`loungeHeal`); the cold plunge -
+  wide awake at once, and within `contrastS` of a hot soak done, the contrast: `contrastHeal` health at once and the
+  longest refresh (`contrastBuffS`). Water wants a shower first. Each house its own fee (`BATH.fees`).
+- **The bathers** go to the house's own pools, sauna and heated floor too (geoOf `soaks`: each piece with a clear way up
+  from the hall's front row); sat in the sauna or on the floor they sit (`po: 'sit'`), in water they soak.
+- **The page**: homeart2.js draws each house by its style (client/art2/props-bath.js `BATH_STYLE`: its makers, its walls,
+  its tiles; `bathFloor` the onsen's flagstones); homeview.js puts you and the bathers in any pool, the sauna, on the
+  floor, the steam over the hot water, the sauna and the stones. props-bath.js still loads only with the inside's art.
+- `/dev bath` takes `style` ('onsen', 'kr', 'spa', 'sea') and `at` 'spring' / 'sauna' / 'plunge' / 'lounge'.
+
+### Showers round the world (shared/world3-showers.js, server/systems/showers.js)
+- Every outdoor shower works now: on foot by one, the action button - stand under it `BATH.outS` s and the wash
+  (grime.js: blood, dirt, bleeding, a burn, the red footprints) and `outHeal` health; a step away and you're out from
+  under it. A splash at its foot for everyone ('shw').
+- Laid where the places had none: one on every public beach (Pelican Point, Bluffs Cove, Northshore Cove, Kestrel
+  Beach, Wreck Beach, Bonfire Beach, the coves - on the sand a step from the path or grass behind it), a **shower block**
+  at each campground (a timber hut of three stalls, its water tank and sign - props-wild.js `showerHut`, statics
+  'showerhut'), a pair by Stadium Lido and Splash Canyon's slides. The boardwalk's, Pink Mile's and Granite Cove's work
+  as they stand.
+### Places
+- The region index lists a bathhouse's door as kind `bathhouse` (shared/regionpack.js placesOf): the phone's Places has
+  "Bathhouses & spas", the world map a "Bathhouses" category and icon, the minimap its ♨.
+
+### Crazy Taxi's near miss (test/b8jobs.test.js)
+- The near-miss check failed about one run in eight to four: the test drove the cab at 500 px/s from wherever the run's
+  first waiting fare stood (crazytaxi.js newWaiter picks the kerb with `world.rand`, Math.random on the server), 60 px
+  past them heading east - and at some of those kerbs the cab ran into a wall or a lamp post inside its first step
+  (its speed fell to 115, under `CRAZY.nearV`), or was shoved sideways out of the near-miss band. A probe of 80 runs
+  failed 8 times, every one so. The system was right; the test now does the near miss out on a long straight street,
+  heading along it, the car beside it at the same gap - the same every run.
+
+### Tests, budgets
+- New: test/bathhouses2.test.js (each house's floor in reach and its bathers' ways, the spring and the contrast, the
+  heated floor, every house's bathers using its own pools, an outdoor shower washing you and stepping out of it, the
+  Places category, every new piece's art). test/world3server.test.js: the six bathhouses where they belong, a shower on
+  every public beach, a shower block at every campground, showers by the pool and the water park. test/bathhouse.test.js
+  takes the sento by name (the test city has the onsen now). test/b8jobs.test.js: the near miss above.
+- Bake 906 of 1000 KB (+2: the shower block, the onsen's lodge); page 475, renderer 401 - unchanged.
+
+## 2026-10-31 - Nature showcase: the merge fixes
+
+The five slices were merged and the whole suite run on the result. These fixes came out of that run:
+- **Bathhouse doors:** they list as `bathhouse` places, so they now have a store icon (a steaming tub, client/storeicons.js). The window tests compare that kind.
+- **Outdoor showers:** the `shw` event plays a soft splash (client/sound/events.js). A narrow beach, like the Inner Lagoon's strip of sand, now gets a shower in one tile from the water, or on the dry ground at its back (shared/world3-showers.js). The test leaves out wrecks out on a reef, which have no sand.
+- **County road wheat:** the fields grown up to the road keep off the skeleton's road lines and leave the green bank by the water (shared/world3-countyroad.js).
+- **Redwoods:**
+  - their hand-laid creek runs are marked `hand: 1`; the channel and pocket counts in the tests leave them out.
+  - no giant stands within about two tiles of another trail's line; one had been planted on the Highland Way.
+  - the Hidden Pool's fall is the redwoods' own fall now, and the woods test accepts it.
+- **The felling test** looks for a tree with nothing solid by it and open ground as far as it falls. An oasis palm with a boulder at its foot had pushed the cutter off.
+- **The outdoor shower test** starts somewhere quiet. It had spawned by a hospital desk, whose talk took the button first.
+- **The world map** was redrawn. The suite passed: 1542 passing, none failing.

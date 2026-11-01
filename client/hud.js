@@ -596,7 +596,7 @@ const POI_ICON = {
   airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], roadhouse: ['🍺', '#ff7a3a'], market: ['🧺', '#e8b060'],
   fruitstand: ['🍎', '#ff6a5a'], farmstand: ['🍯', '#e0b040'], snack: ['🌭', '#ffb060'], salvage: ['⚙', '#c0c8d0'], barber: ['✂', '#f0b0d8'], ride: ['🎡', '#ff9ad0'], race: ['🏁', '#f0f0f0'],
   bowling: ['🎳', '#ff7ad0'],
-  cinema: ['🎬', '#ffd27a'],
+  cinema: ['🎬', '#ffd27a'], bathhouse: ['♨', '#9ad8f0'],   // (nat5: the bathhouses - shared/regionpack.js lists their doors as one)
   lodge: ['⛺', '#d8a860'], huntcamp: ['⛺', '#d8a860'],   // (the hunting lodges and the outfitters: World v3b's marsh outfitters among them)
 };
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of

@@ -202,7 +202,7 @@ test("the whole world's places in a window: every POI (id, kind, label, position
   let outside = 0;
   for (const p of all) {
     const q = w.places[p.id];
-    assert.deepEqual([q.id, q.kind, q.label, q.x, q.y], [p.id, p.kind, p.label, p.x, p.y]);
+    assert.deepEqual([q.id, q.kind, q.label, q.x, q.y], [p.id, p.bath ? 'bathhouse' : p.kind, p.label, p.x, p.y]);   // (a bathhouse's door is listed as one: shared/regionpack.js placesOf)
     assert.equal(q.d, m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))], `${p.label}'s district`);
     if (p.home !== undefined) assert.equal(q.home, p.home);
     const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);

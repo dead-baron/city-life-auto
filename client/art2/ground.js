@@ -231,6 +231,7 @@ const BALLAST = ramp('#6a6660', 6, 3, { dark: 0.55, light: 0.4, shift: 0.15 });
 const YARD = ramp('#9a9890', 6, 3, { dark: 0.55, light: 0.42, shift: 0.15 });
 const DIRTROAD = ramp('#b08a5e', 6, 3, { dark: 0.5, light: 0.4 });
 const WHEAT = ramp('#d8a840', 7, 3, { dark: 0.55, light: 0.55, shift: 0.2 });
+const STRAW = ramp('#e2d09a', 7, 3, { dark: 0.6, light: 0.4, shift: 0.1 }), STUBSOIL = ramp('#b49a6c', 6, 3, { dark: 0.55, light: 0.35, shift: 0.12 }), WINDROW = ramp('#d6b456', 6, 3, { dark: 0.55, light: 0.5, shift: 0.15 });
 const DESERT = ramp('#d09a62', 6, 3, { dark: 0.5, light: 0.45, shift: 0.2 });
 const ROCKRED = ramp('#a8543a', 6, 3, { dark: 0.55, light: 0.45 });
 const TILEW = ramp('#d8d6cc', 6, 3, { dark: 0.45, light: 0.4, shift: 0.15 });
@@ -793,12 +794,13 @@ const DIRT2 = RP('#3c3028 #524236 #685444 #7c6652 #8e7660 #a0886e #b29a80');
 const PLOW = RP('#211b1e #2e2526 #3c302e #4c3c38 #5c4a42 #6e5a4e #82705e');
 const SPROUT = RP('#2e5a32 #4a7e3a #6aa044');
 const DUNE = RP('#896d52 #9a7c5a #a98963 #b5956d #bd9f75 #c5a97f #cbb289');
-const DESR = RP('#5a4a3c #6e5a48 #826c54 #947c62 #a48c70 #b49c80 #c2ac90');
+const DESR = RP('#644632 #7c583e #946c4a #aa7e56 #bc8e62 #cc9e70 #d8ae80');   // (warm: the concepts' golden desert - the nature showcase)
 const REDS = RP('#382325 #4d2d2d #623835 #72433d #835046 #905d53 #9c6c60');
 const REDST = RP('#3f2527 #563131 #6c3c39 #7e4741 #90544a #9f6357 #ad7466');
 const CRACK = RP('#4a3a32 #62503e #78644e #8a745c #9a846a #aa947a #b8a48a');
 const BEACH = RP('#7e7a6e #989383 #aea997 #beb8a4 #cac4af #d3ceba #dad6c5');
 const WETS = RP('#4e4c48 #605c54 #726c62 #847c70 #948a7c #a49884');
+const WASHG = RP('#76706e #8c8684 #a29c96 #b6b0a8 #c6c0b6 #d4cec2 #e2dccf');   // (a dry wash's pale gravel: concepts N4, SC3-F)
 const PEBG = RP('#2c2e34 #44464c #5c5e64 #76787c #929494');
 const SETT = RP('#1c2327 #383f46 #515963 #646d79 #737b84 #7c8489 #818a8c');
 const SETTW = RP('#3a3230 #4c4240 #605450 #746660 #887870 #9a8a80');
@@ -817,7 +819,7 @@ const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
 const SCREE = RP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
 const SNOWR = RP('#7c8ca6 #98a8c0 #b4c2d4 #ccd6e4 #dfe6ef #edf1f6 #f8fafc');
 const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
-const GRAIN = RP('#5a4c2a #746236 #8e7842 #a68c4e #b89e5c #c8b06c #d6c080');
+const GRAIN = RP('#5e4218 #80601e #a07e28 #bc9632 #d2ae42 #e4c45a #f2d87c');   // (golden-hour ripe wheat: SC3-E)
 const CORN = RP('#183026 #20402c #2a5232 #386438 #4a763e #608846 #789a50');
 const VEGL = RP('#1e3c38 #284e44 #34644e #447a58 #589062 #6ea66e');
 const HAY = RP('#40462c #565c34 #6e723e #848648 #9a9a54 #aeac62 #c0bc74');
@@ -963,6 +965,25 @@ export const GSHADE = {
     GS.nx = GS.ny = 0;
     return vnc(x, y, 9, s + 45) > 0.68 ? at(MOSS, 1 + (hh(x, y, s) > 0.5 ? 1 : 0)) : at(SCREE, hh(x, y, s) > 0.6 ? 1 : 0);
   },
+  dirtTrack(x, y, s) {                                       // a desert two-track's bed: packed sand a shade lighter than the ground round it
+    const h = hh(x, y, s);
+    if (h > 0.992) return at(PEBG, 1 + ((hh(x, y, s + 1) * 2) | 0));
+    return sd(DESR, 0.7 + (vnc(x, y, 17, s + 71) - 0.5) * 0.18 + (vnc(x, y, 3, s + 73) - 0.5) * 0.16 + (h > 0.94 ? 0.1 : h < 0.05 ? -0.12 : 0), x, y, 0.7);
+  },
+  dirtRut(x, y, s) {                                         // a tyre rut in a dirt track: packed darker, a pebble pressed in
+    const h = hh(x, y, s);
+    if (h > 0.985) return at(PEBG, 1 + ((hh(x, y, s + 1) * 2) | 0));
+    return sd(DESR, 0.2 + (vnc(x, y, 7, s + 69) - 0.5) * 0.2 + (h > 0.9 ? 0.12 : 0), x, y, 0.6);
+  },
+  washGravel(x, y, s) {                                      // a desert wash's floor: pale gravel, blue-grey pebbles and a cobble here and there
+    let p = stone(x, y, 21, s + 61, 0.2, 0.9);
+    if (p >= 0 && WC.h > 0.45) return sd(WC.h > 0.8 ? GRV_W : PEBG, p * 0.8 + 0.25, x, y, 0.35);
+    p = stone(x, y, 7, s + 63, 0.24, 0.9);
+    if (p >= 0 && WC.h > 0.35) return sd(WC.h > 0.85 ? GRV_W : PEBG, p * 0.7 + 0.3, x, y, 0.35);
+    GS.nx = GS.ny = 0;
+    const h = hh(x, y, s);
+    return sd(WASHG, 0.5 + (vnc(x, y, 23, s + 65) - 0.5) * 0.3 + (vnc(x, y, 3, s + 67) - 0.5) * 0.2 + (h > 0.93 ? 0.14 : h < 0.07 ? -0.2 : 0), x, y, 0.8);
+  },
   pebbleBeach(x, y, s) {                                     // shingle: sand between packed pebbles
     const p = stone(x, y, 6, s + 47, 0.46, 0.9);
     if (p >= 0) return sd(WC.h > 0.6 ? GRV_W : PEBG, p * 0.85 + 0.1, x, y, 0.35);
@@ -1082,6 +1103,8 @@ export const GSHADE = {
     k += sheen > 0.64 ? 1 : sheen < 0.34 ? -1 : 0;
     return at(GRAIN, k);
   },
+  cropStubble: (x, y, s) => stubble(x, y, s),                // (a harvested wheat field: rows of cut stalks, the straw's windrows)
+  cropStubbleV: (x, y, s) => stubble(y, x, s),
   cropCorn: (x, y, s) => corn(x, y, s, 0),
   cropCornV: (x, y, s) => corn(y, x, s, 1),
   cropVeg(x, y, s) {
@@ -1100,6 +1123,16 @@ export const GSHADE = {
   underDeck(x, y, s) { const v = vnc(x, y, 21, s + 9); if (v > 0.6) return GSHADE.gravelGrey(x, y, s); const c = GSHADE.dirtPebbly(x, y, s); return v < 0.3 && hh(x, y, s) > 0.4 ? at(MUD, 2) : c; },
   counterTop(x, y, s) { return sd(WOOD, 0.35 + (y % 6 === 0 ? -0.25 : 0) + (hh(x >> 3, y, s) - 0.5) * 0.2, x, y, 0.4); },
 };
+// stubble: short pale stalks in the rows the header cut (along x), the earth showing between, a windrow of straw every
+// few rows - the combine's swath, golden and raised
+function stubble(x, y, s) {
+  const wy = y + ((vnc(x, y, 53, s + 7) * 4) | 0), row = Math.floor(wy / 5), ly = wy - row * 5, sw = Math.floor(wy / 34), lw = wy - sw * 34;
+  if (lw < 5) { const k = lw === 0 || lw === 4 ? 1.5 : 3.5 + ((x + row) & 1); GS.h = lw === 2 ? 3 : 2; return sd(WINDROW, k / 6 + (hh(x >> 1, y, s + 9) - 0.5) * 0.3, x, y, 0.5); }
+  const ch = hh(x >> 1, row, s + 11);
+  if (ly <= 1 && ch < 0.8) { GS.h = 1; return sd(STRAW, 0.45 + ly * 0.15 + (ch - 0.4) * 0.3, x, y, 0.5); }
+  GS.h = 0;
+  return sd(STUBSOIL, 0.45 + (vnc(x, y, 9, s + 13) - 0.5) * 0.3 + (hh(x, y, s + 15) > 0.92 ? 0.25 : 0), x, y, 0.6);
+}
 function slab(R, x, y, s, S, cracked) {
   const sx = Math.floor(x / S), sy = Math.floor(y / S), lx = x - sx * S, ly = y - sy * S, sh = hh(sx, sy, s + 9);
   if (lx === 0 || ly === 0) return at(R, 1);
