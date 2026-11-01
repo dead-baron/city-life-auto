@@ -64,6 +64,7 @@ export function enter(world, p, h, at) {
   const ped = p.ped;
   const L = planFor(h, world), sp = at || L.spawn;   // (at: out of a flat's door into its lobby - H71)
   ped.home = { id: h.id, x: sp.x, y: sp.y, a: at ? Math.PI / 2 : -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, inAt: world.time, ...(h.isLobby ? { lobby: 1 } : h.isArcade ? { arcade: 1 } : h.isBath ? { bath: 1 } : null) };
+  if (h.isBath) bathhouse.arriving(p, ped.home);   // (come in already changed, from the street)
   p.homeMenu = null;
   if (!h.isLobby && !h.isArcade && !h.isBath && world.homeOwner.get(h.id) === p.pid) {   // (H71) your pet comes to meet you; the mail by a house's door comes in with you
     petIn(world, p, h);
@@ -232,6 +233,7 @@ export function leave(world, p) {
   const ped = p.ped;
   if (!ped || !ped.home) return;
   const h = homeOf(world, ped), b = h && !h.isLobby ? homes.blockOf(world, h) : null, lob = b != null ? homes.lobbyOf(world, b) : null;
+  if (ped.home.bath) bathhouse.leaving(world, p, ped.home);   // (out in what you had on in there)
   ped.home = null; p.homeMenu = null;
   if (lob && ped.hidden && !ped.dead) { toLobby(world, p, lob, h); return; }   // (H71: a flat's door opens onto its landing)
   homes.leaveHome(world, p);
@@ -270,6 +272,7 @@ export function input(world, p, ped, inp, pressed, dt) {
     s.seat = null; s.soak = 0; s.ride = 0; send(world, p, true);
   }
   s.mv = stepInside(planIn(world, h, s.lv || 0), s, inp.mx || 0, inp.my || 0, dt, HOME_IN.walk);
+  if (s.bath) bathhouse.wade(world, p, h, s);   // (into the water and out: bathhouse.js)
   if (pressed & (IN.ACTION | IN.VEHICLE)) { const act = interaction(world, p); if (act && !act.passive) act.run(); }
   return true;
 }
@@ -765,6 +768,7 @@ export function update(world) {
     const ok = s.lobby || s.arcade || s.bath ? !!h : s.tour ? !world.homeOwner.has(s.id) : world.homeOwner.get(s.id) === (s.guest || p.pid);   // (a look round: while it's still for sale; a lobby: anyone's)
     if (!h || !ped.hidden || ped.dead || ped.removed || ped.inside !== s.id || !ok) {
       if (h && !ped.dead && !ped.removed && ped.hidden && ped.inside === s.id) { homes.leaveHome(world, p); if (s.tour) world.notify(p, `${h.name} has just been sold - you're shown out.`, 'warn'); }   // (sold under a guest or a visitor: out they go)
+      if (s.bath && !ped.dead) bathhouse.leaving(world, p, s);
       ped.home = null; p.homeMenu = null;
       if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 });
       continue;

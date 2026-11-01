@@ -238,7 +238,8 @@ for (let n = 4; n <= 8; n++) {
   ];
 }
 
-const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZGIJ', ...PLAN_LOWER]);   // (X - a bathhouse's curtain - isn't: blocked lets the paid through)
+export const WADE = 'u@$', WADE_SLOW = 0.55;   // (a bathhouse's water - the bath, the hot spring's pools, the cold plunge: walked into and waded round, slower - stepInside)
+const SOLID = new Set(['#', '=', 'D', 'R', 'U', 'E', ...'BWSFHAYKTCVLNOQPMZGIJ', ...[...PLAN_LOWER].filter((c) => !WADE.includes(c))]);   // (X - a bathhouse's curtain - isn't: blocked lets the paid through)
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);
 const FLOORS = new Set(['.', 'c', 't', 'g', '+']);
 export const USES = { B: 'bed', W: 'wardrobe', S: 'safe', F: 'fridge', H: 'shower', A: 'hall', Y: 'garage', M: 'mail', G: 'prizes', I: 'desk', J: 'locker', u: 'bath', y: 'steam', '@': 'spring', $: 'plunge', '!': 'sauna', _: 'lounge',
@@ -360,6 +361,8 @@ export function stepInside(L, s, mx, my, dt, speed) {
   let len = Math.hypot(mx, my);
   if (len < 0.15) return false;
   if (len > 1) { mx /= len; my /= len; len = 1; }
+  const wc = L.cell(Math.floor(s.x / TILE_IN), Math.floor(s.y / TILE_IN));
+  if (wc && WADE.includes(wc)) speed *= WADE_SLOW;   // (wading: slower through the water)
   const dx = mx * speed * dt, dy = my * speed * dt;
   const slide = (axis, d) => {
     const from = s[axis];

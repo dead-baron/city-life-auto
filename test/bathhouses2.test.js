@@ -74,13 +74,14 @@ test('the onsen\'s hot spring heals more and refreshes longer; the sauna\'s heat
   const h = bath.hallById(w, p.ped.home.id), L = bath.hallLayout(h), q = L.pieces.find((o) => o.use === 'plunge');
   const st = p.ped.home; st.seat = null; st.soak = 0; st.x = q.x + q.w / 2; st.y = q.y + q.h + 12;
   const pl = players.findInteraction(w, p);
-  assert.match(pl.label, /cold plunge.*straight from the heat/);
+  assert.match(pl.label, /cold plunge.*straight from the heat - walk in/);
   p.ped.hp = 50; p.ped.buffs.bath = 0;
-  pl.run();
+  st.y = q.y + q.h / 2; bath.wade(w, p, h, st);   // (walked in: homeinside.js input calls it after each step)
+  assert.equal(st.wade, 'plunge');
   assert.equal(p.ped.hp, 50 + BATH.contrastHeal, 'the contrast: health at once');
   assert.ok(p.ped.buffs.bath - w.time >= BATH.contrastBuffS - 1, 'and the longest refresh');
   // the heated floor: lie down on it
-  st.seat = null; st.soak = 0;
+  st.seat = null; st.soak = 0; st.wade = null;
   const fl = L.pieces.find((o) => o.use === 'lounge'); st.x = fl.x - 12; st.y = fl.y + fl.h / 2;
   const lie = players.findInteraction(w, p);
   assert.match(lie.label, /heated floor/);

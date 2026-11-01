@@ -83,6 +83,7 @@ export function wear(world, p, code, give = false) {
   if (give) grant(prof, decodeLook(code));
   prof.look = code;
   prof.lookPicked = true;
+  p.wearOut = null;   // (dressed: out of a bathhouse's suit - bathhouse.js leaving)
   if (p.ped) { p.ped.app = appOf(prof); p.ped.appVer = (p.ped.appVer || 0) + 1; }
   store.touch();
 }

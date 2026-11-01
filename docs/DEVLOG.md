@@ -19143,3 +19143,21 @@ The owner asked for this on 11-01: "There is still a blue square around the play
   - Wisps rise in slow drifting columns, swelling and thinning out.
   - The same puffs come off the showers and a home's hot tub.
 - **The sign:** the bathhouse store icon (client/storeicons.js `bath`) is now a bathtub on its feet with someone in it and the shower over it. The steaming tub before read as a coffee mug, which made the Old Quarter Baths look like a coffee shop.
+
+## 2026-11-01 - The bathhouses: wade round the water, no house rules, out in what you had on
+
+The owner asked for this on 11-01: "be able to wade around the pool instead of sitting in one spot ... just walk up and get in. Let's remove the need to shower and undress ... And you can leave the bath house with what you're wearing in there."
+- **The water is walked into.** A bathhouse's bath, the hot spring's rock pools and the cold plunge (shared/homelayout.js `WADE`: u @ $) aren't solid any more. You walk in and wade round at `WADE_SLOW` (0.55) of the walking speed. stepInside slows you on both the server and the page, so prediction agrees.
+- **What wading does** (server/systems/bathhouse.js `wade`, `enterWater`; called after each step by homeinside.js input): it's the soak's effects, on your feet:
+  - the heal, the refresh after `BATH.soakS`;
+  - the plunge's contrast straight from the heat;
+  - the bleeding stopped.
+
+  Walking out ends it. The prompt reads "The hot bath - walk in" from the edge, and "In the hot bath - walk out to get out" while you're in. The steam, the sauna and the heated floor are still sat in with the button.
+- **The page** (client/render/homeview.js) draws anyone standing in the water waist-deep. It reuses soakIn's tint, rim and ripples, with the surface at the waist (`WADE_D`).
+- **No house rules:** no undressing, bathing suit or shower is needed for the showers or the bath. Undressing, a bathing suit and a shower are all yours to choose.
+- **Out in what you had on** (bathhouse.js `leaving` / `dressOut` / `arriving`): leave in a bathing suit or with nothing on and you're seen that way in the street.
+  - `p.wearOut` keeps the clothes you came in with.
+  - Coming back into a bathhouse, you're still changed.
+  - "Get dressed again" at a locker, or putting a look on (looks.js wear: the wardrobe, a clothes shop), puts your clothes back on.
+  - Taking an outfit off out in the world waits for the inventory work.

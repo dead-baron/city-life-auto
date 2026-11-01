@@ -28,7 +28,7 @@
 import { BATH } from '../../shared/rules-play.js';
 import { HOME_IN } from '../../shared/rules.js';
 import { WEAPONS } from '../../shared/items.js';
-import { layout, useAt, TILE_IN } from '../../shared/homelayout.js';
+import { layout, useAt, TILE_IN, WADE } from '../../shared/homelayout.js';
 import { decodeLook, encodeLook, lookToApp, randomLook, item, emptyLook } from '../../shared/look.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -152,7 +152,7 @@ export function bareOf(look) {
 const appOfLook = (L) => lookToApp(L, encodeLook(L));
 // what a player has on in there (s.suit): 1 their bathing suit, 2 nothing - their own face and hair; made once a look
 function playerSuit(p) {
-  const app = p.ped && p.ped.app, code = app && app.lk, bare = p.ped && p.ped.home && p.ped.home.suit === 2;
+  const app = p.wearOut ? p.wearOut.civvies : p.ped && p.ped.app, code = app && app.lk, bare = p.ped && p.ped.home ? p.ped.home.suit === 2 : !!(p.wearOut && p.wearOut.k === 2);
   if (p.bathSuit && p.bathSuit.of === code && p.bathSuit.bare === bare) return p.bathSuit.app;
   const L = (code && decodeLook(code)) || randomLook(p.ped ? p.ped.id : 1, 'm');
   p.bathSuit = { of: code, bare, app: appOfLook(bare ? bareOf(L) : suitOf(L, (p.ped ? p.ped.id : 1) * 7)) };
@@ -165,6 +165,11 @@ export const appIn = (q) => (q.ped && q.ped.home && q.ped.home.bath && q.ped.hom
 const edge = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
 export function hallInteraction(world, p, h, s) {
   const L = hallLayout(h), G = geoOf(L), none = () => {}, ped = p.ped, Y = styleOf(L), fee = feeOf(h);
+  if (s.wade) {   // (wading round the water: walk out to get out)
+    const k = s.sk || 'bath', done = k !== 'plunge' && world.time - s.soak >= BATH.soakS;
+    const what = { bath: 'In the hot bath', spring: 'In the hot spring, under the sky', plunge: 'In the cold plunge - brr' }[k] || 'In the water';
+    return { label: `${what}${done ? ' - you feel refreshed' : ''} - walk out to get out`, passive: true, run: none };
+  }
   if (s.seat) {
     const k = s.sk || 'bath', done = k !== 'plunge' && world.time - s.soak >= BATH.soakS;
     const what = { bath: 'Soaking in the hot bath', spring: 'Soaking in the hot spring under the sky', steam: 'In the steam', sauna: 'Sweating it out in the sauna', lounge: 'Stretched out in the warmth', plunge: 'In the cold plunge - brr' }[k];
@@ -181,15 +186,13 @@ export function hallInteraction(world, p, h, s) {
   }
   if (u.use === 'locker') return { label: `Your locker - ${s.suit ? 'get dressed again' : 'undress (a bathing suit if you like)'}; leave your things in it`, run: () => openLocker(world, p, h) };
   if (u.use === 'shower') {
-    if (!s.suit) return { label: 'The showers - undress at the lockers first (a bathing suit if you like)', passive: true, run: none };
     const w = grime.grimeWord(ped);
     return { label: `Take a shower${w ? ` - wash off ${w}` : ''}`, run: () => shower(world, p, h, s, u) };
   }
   const K = SOAK[u.use];
   if (K) {
     const what = u.use === 'bath' ? 'The bath' : K.water ? 'The water' : u.use === 'lounge' ? 'The heated floor' : u.use === 'sauna' ? 'The sauna' : 'The steam';
-    if (!s.suit) return { label: `${what} - undress at the lockers first (a bathing suit if you like)`, passive: true, run: none };
-    if (!s.washed && K.wash) return { label: `${what} - a shower first: the house rule`, passive: true, run: none };
+    if (K.water) return { label: `${u.use === 'plunge' ? `The cold plunge (${BATH.plungeC}\u00b0C)${s.hotAt && world.time - s.hotAt <= BATH.contrastS ? ' - straight from the heat' : ''}` : u.use === 'spring' ? 'The hot spring' : what} - walk in`, passive: true, run: none };   // (the water's waded into: wade below)
     const baths = L.pieces.filter((q) => q.use === 'bath').sort((a, b) => a.x - b.x);
     const label = u.use === 'bath' ? Y.bath[Math.max(0, baths.indexOf(u)) % Y.bath.length]
       : u.use === 'spring' ? 'Get into the hot spring, out under the sky'
@@ -220,11 +223,28 @@ function shower(world, p, h, s, u) {
   p.ped.bleeding = false;   // (the bleeding stops as you step in)
   homeinside.send(world, p, true);
 }
-function soak(world, p, h, s, u) {
-  const K = SOAK[u.use] || SOAK.bath, [x, y] = seatIn(u, Math.max(0, Math.min(1, (s.x - u.x - 18) / Math.max(1, u.w - 36))));
-  s.seat = { x, y, a: u.use === 'steam' ? Math.PI : Math.PI / 2 }; s.steam = K.water ? 0 : 1; s.sk = u.use;
-  s.soak = world.time; s.soaked = 0; s.mv = false;
-  const ped = p.ped;
+function soak(world, p, h, s, u) {   // (sat down in the steam, the sauna, on the heated floor: the water's waded into - wade)
+  const [x, y] = seatIn(u, Math.max(0, Math.min(1, (s.x - u.x - 18) / Math.max(1, u.w - 36))));
+  s.seat = { x, y, a: u.use === 'steam' ? Math.PI : Math.PI / 2 }; s.mv = false; s.wade = null;
+  enterWater(world, p, h, s, u);
+}
+// homeinside.js input, after each step: into the water (the bath, a rock pool, the plunge) - and out again
+export function waterAt(L, x, y) {
+  const c = L.cell(Math.floor(x / TILE_IN), Math.floor(y / TILE_IN));
+  if (!c || !WADE.includes(c)) return null;
+  return L.pieces.find((q) => q.ch === c && x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h) || null;
+}
+export function wade(world, p, h, s) {
+  if (s.seat) return;
+  const u = waterAt(hallLayout(h), s.x, s.y), was = s.wade;
+  if (u && was === u.use) return;
+  if (!u) { if (was) { s.wade = null; s.soak = 0; homeinside.send(world, p, true); } return; }
+  s.wade = u.use;
+  enterWater(world, p, h, s, u);
+}
+function enterWater(world, p, h, s, u) {
+  const K = SOAK[u.use] || SOAK.bath, ped = p.ped;
+  s.steam = K.water ? 0 : 1; s.sk = u.use; s.soak = world.time; s.soaked = 0;
   if (K.cold) {   // the cold plunge: wide awake at once; straight after the heat, the contrast
     ped.stamina = Math.max(ped.stamina || 0, 100); ped.burnT = 0; s.soaked = 1;
     if (s.hotAt && world.time - s.hotAt <= BATH.contrastS) {
@@ -233,7 +253,8 @@ function soak(world, p, h, s, u) {
       world.notify(p, `The cold after the heat - every nerve awake! Refreshed for ${Math.round(BATH.contrastBuffS / 60)} minutes.`, 'good');
     } else world.notify(p, 'Brr! The cold water knocks the breath out of you - wide awake.', 'info');
     p.meDirty = true;
-  } else world.notify(p, { bath: 'Into the hot water... ahh.', spring: 'Into the hot spring - the steam rising round you, the sky overhead.', steam: 'The steam rolls over you.', sauna: 'The dry heat of the sauna wraps round you.', lounge: 'The warmth soaks into your back.' }[u.use], 'info');
+  } else world.notify(p, { bath: 'Into the hot water... ahh.', spring: 'Into the hot spring - the steam rising round you, the sky overhead.', steam: 'The steam rolls over you.', sauna: 'The dry heat of the sauna wraps round you.', lounge: 'The warmth soaks into you.' }[u.use] || 'Ahh.', 'info');
+  if (K.water && ped.bleeding) ped.bleeding = false;
   homeinside.send(world, p, true);
 }
 // homeinside.js update: a shower's done
@@ -241,6 +262,25 @@ export function showered(world, p) {
   const s = p.ped && p.ped.home;
   if (s && s.bath) { s.washed = 1; s.showerAt = null; }
 }
+
+// ---- out to the street in what you had on in there (the owner, 11-01: "you can leave the bath house with what you're
+// wearing in there"): p.wearOut { k: 1 the bathing suit | 2 nothing, civvies: the look you came in with }; dressed again
+// at any bathhouse's locker, or by putting a look on (looks.js wear: the wardrobe, a clothes shop)
+export function leaving(world, p, s) {
+  if (!p.ped || !s || !s.bath) return;
+  if (!s.suit) { if (p.wearOut) dressOut(p); return; }
+  const civ = p.wearOut ? p.wearOut.civvies : p.ped.app;
+  p.wearOut = { k: s.suit, civvies: civ };
+  p.ped.app = playerSuit(p); p.ped.appVer = (p.ped.appVer || 0) + 1;
+  world.notify(p, s.suit === 2 ? 'Out on the street with nothing on - get dressed at a bathhouse locker or your wardrobe.' : 'Out on the street in your bathing suit.', 'info');
+}
+export function dressOut(p) {
+  if (!p.wearOut) return;
+  if (p.ped) { p.ped.app = p.wearOut.civvies; p.ped.appVer = (p.ped.appVer || 0) + 1; }
+  p.wearOut = null;
+}
+// into a bathhouse already changed (from the street): what you have on
+export function arriving(p, s) { if (p.wearOut && s && s.bath) s.suit = p.wearOut.k; }
 
 // ---- the lockers ---------------------------------------------------------------------------------------------------
 const guns = (prof) => Object.keys(prof.weapons || {}).filter((id) => WEAPONS[id] && !KEEP.has(id));
@@ -275,6 +315,7 @@ export function execute(world, p, poi, opt) {
   if (parts[1] === 'suit' || parts[1] === 'bare' || parts[1] === 'dress') {
     const to = parts[1] === 'dress' ? 0 : parts[1] === 'bare' ? (s.suit === 2 ? 0 : 2) : (s.suit === 1 ? 0 : 1);   // (suit / bare again: back into your clothes)
     s.suit = to; if (!s.suit) s.washed = 0;
+    if (!to && p.wearOut) dressOut(p);   // (came in in it from the street: your clothes back on)
     world.notify(p, to === 1 ? 'Changed into your bathing suit, a towel over your shoulder.' : to === 2 ? 'Undressed, a towel over your shoulder.' : 'Dressed again.', 'info');
     homeinside.send(world, p, true);
     return null;
@@ -385,7 +426,7 @@ export function update(world, dt) {
     stepFolk(world, h, dt);
     for (const q of ps) {
       const s = q.ped.home, ped = q.ped;
-      if (!s.soak || !s.seat) { if (s.soak && !s.seat) s.soak = 0; continue; }
+      if (!s.soak || !(s.seat || s.wade)) { if (s.soak && !s.seat && !s.wade) s.soak = 0; continue; }
       const K = SOAK[s.sk] || SOAK.bath;
       if (K.heal && ped.hp < ped.maxHp) { ped.hp = Math.min(ped.maxHp, ped.hp + BATH[K.heal] * dt); if (world.tick % 20 === 0) q.meDirty = true; }
       if (!s.soaked && now - s.soak >= BATH.soakS) {
@@ -422,7 +463,8 @@ export function devIn(world, p, msg = {}) {
   const use = { soak: 'bath', steam: 'steam', spring: 'spring', sauna: 'sauna', plunge: 'plunge', lounge: 'lounge' }[msg.at], piece = use && L.pieces.find((q) => q.use === use);
   const at = { lobby: G.deskFront, lockers: [S.lx, S.locker.y + 40], showers: S.showers[1].stand, hall: [G.bath.x + 160, G.edgeY] }[msg.at] || (piece && [piece.x + piece.w / 2, piece.y + piece.h + 12]);
   if (at) { s.x = at[0]; s.y = at[1]; s.a = -Math.PI / 2; }
-  if (piece) { s.suit = 1; s.washed = 1; soak(world, p, h, s, piece); }
+  if (piece && (SOAK[piece.use] || {}).water) { s.x = piece.x + piece.w / 2; s.y = piece.y + piece.h / 2; wade(world, p, h, s); }
+  else if (piece) soak(world, p, h, s, piece);
   homeinside.send(world, p, true);
   return null;
 }

@@ -111,24 +111,36 @@ test('a day at the baths: the desk, through the curtain, changed at the locker, 
   assert.equal(p.ped.bleeding, false, 'the bleeding stopped');
   assert.equal(p.ped.home.washed, 1);
   // the bath: in, a soak, refreshed (stamina back faster: the self record's flag the page predicts with)
+  // the bath (the owner, 11-01): walked into and waded round - no button, no sitting down
   await walkPath(w, p, [[S.below[0], S.row], S.below, S.door, S.above, [G.bath.x + 120, G.edgeY]]);
-  const b = act(w, p);
-  assert.match(b.label, /into the hot bath/);
-  assert.ok(p.ped.home.seat && p.ped.home.soak, 'soaking');
-  assert.ok(p.ped.home.seat.y < G.bath.y + G.bath.h && p.ped.home.seat.y > G.bath.y, 'in the water');
+  assert.match(players.findInteraction(w, p).label, /walk in/);
+  const t0 = w.time, y0 = p.ped.home.y;
+  await walkTo(w, p, G.bath.x + 120, G.bath.y + G.bath.h / 2);
+  assert.equal(p.ped.home.wade, 'bath', 'in the water');
+  assert.ok(p.ped.home.soak && !p.ped.home.seat, 'soaking, on your feet');
+  assert.ok(w.time - t0 > (y0 - p.ped.home.y) / 130, 'slower through the water');
+  await walkTo(w, p, G.bath.x + 60, G.bath.y + G.bath.h / 2);
+  assert.equal(p.ped.home.wade, 'bath', 'wading round it');
   p.ped.hp = 60;
   run(w, BATH.soakS + 0.5);
   assert.ok(p.ped.hp > 60, 'health back while you soak');
   assert.ok(p.ped.buffs.bath > w.time, 'refreshed');
-  assert.equal(lastOf(conn, 'home').soak, 1, 'the page draws you in the water');
-  // moving gets you out
-  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 1, aim: 0 }); w.step();
-  assert.ok(!p.ped.home.seat, 'out of the bath');
+  assert.match(players.findInteraction(w, p).label, /walk out to get out/);
+  await walkTo(w, p, G.bath.x + 120, G.edgeY);
+  assert.ok(!p.ped.home.wade && !p.ped.home.soak, 'out of the bath');
+  // out to the street with nothing on, and dressed again at the locker next time
+  const civvies = p.ped.app;
   homeinside.leave(w, p);
   assert.ok(!p.ped.hidden && !p.ped.home, 'out in the street');
+  assert.ok(p.wearOut && p.wearOut.k === 2, 'still undressed');
+  assert.equal(PIECES[decodeLook(p.ped.app.lk).outfit.set.id].name, 'Nothing', 'everyone sees it');
+  players.findInteraction(w, p).run(); run(w, 0.2);
+  assert.equal(p.ped.home.suit, 2, 'in again as you were');
+  economy.handleMenu(w, p, poi.id, 'ba:dress');
+  assert.equal(p.ped.app, civvies, 'your own clothes back'); assert.equal(p.wearOut, null);
 });
 
-test('the bath wants a shower first, the showers a bathing suit; your weapons wait in the locker and come back on the way out', async () => {
+test('the shower and the bathing suit up to you; your weapons wait in the locker and come back on the way out', async () => {
   const w = makeWorld();
   const { p, conn, prof } = joinPlayer(w, { cash: 40, bank: 0 });
   prof.weapons.pistol = 24; p.ped.mag.pistol = 12; p.ped.weapon = 'pistol';
@@ -147,13 +159,13 @@ test('the bath wants a shower first, the showers a bathing suit; your weapons wa
   assert.ok(prof.bathLocker && prof.bathLocker.pistol === 36, 'kept on your profile (a restart can\'t lose it)');
   const Sh = S.showers[0];
   await walkPath(w, p, [[S.lx, S.row], Sh.stand]);
-  assert.match(players.findInteraction(w, p).label, /undress at the lockers first/, 'no shower in your clothes');
+  assert.match(players.findInteraction(w, p).label, /shower/, 'a shower in your clothes if you like');
   await walkPath(w, p, [[S.below[0], S.row], S.below, S.door, S.above, [G.bath.x + 120, G.edgeY]]);
-  assert.match(players.findInteraction(w, p).label, /undress at the lockers first/);
+  assert.match(players.findInteraction(w, p).label, /walk in/, 'the bath in your clothes, unwashed: up to you');
   await walkPath(w, p, [S.above, S.door, S.below, [S.below[0], S.row], [S.lx, S.row], [S.lx, S.locker.y + 40]]);
   act(w, p); economy.handleMenu(w, p, lastOf(conn, 'menu').poi, 'ba:suit');
   await walkPath(w, p, [[S.lx, S.row], [S.below[0], S.row], S.below, S.door, S.above, [G.bath.x + 120, G.edgeY]]);
-  assert.match(players.findInteraction(w, p).label, /a shower first/, 'the house rule');
+  assert.match(players.findInteraction(w, p).label, /walk in/, 'no house rule: in when you like');
   homeinside.leave(w, p);
   run(w, 1);
   assert.equal(prof.weapons.pistol + p.ped.mag.pistol, 36, 'your pistol back as you leave, every round');

@@ -203,7 +203,8 @@ function drawArt(L, me, u, now) {
     if (Array.isArray(sh)) { x = sh[0]; y = sh[1] + 10; d8 = 4; pose = 'sit'; fr = 0; b = y + 4; }   // (on the stool at a bathhouse's wash station, facing its tiled wall)
     if (sl) { const bed = L.pieces.find((p) => p.ch === 'B'); if (bed) { x = bed.x + bed.w / 2 + (nm ? 14 : -6); y = bed.y + 26; b = bed.y + bed.h + 1; pose = 'down'; fr = 0; d8 = 4; } }
     if (sh && !Array.isArray(sh)) { const s2 = L.pieces.find((p) => p.ch === 'H'); if (s2) { x = s2.x + s2.w / 2; y = s2.y + s2.h / 2 + 4; b = s2.y + s2.h - 1; d8 = 0; } }
-    list.push({ b, p: { look, x, y, pose, fr, d8, nm, sk: !!tub, sh: !!sh } });
+    const wade = !tub && !si && !sh && !sl && L.bath && tubs.some((q) => 'u@$'.includes(q.ch) && x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);   // (wading round the water: up to the waist - shared/homelayout.js WADE)
+    list.push({ b, p: { look, x, y, pose, fr, d8, nm, sk: !!tub || wade, wade, sh: !!sh } });
   };
   for (const o of st.others || []) {
     const q = seen.get(o.n), kk = q ? Math.min(1, (performance.now() - q.t) / 50) : 1;
@@ -235,7 +236,7 @@ function drawArt(L, me, u, now) {
       try { c = art.person(p.look, p.pose, p.d8, p.fr, p.x, p.y); } catch (err) { if (!art.pedErr) { art.pedErr = 1; console.warn('[home art] person', err); } }
       if (!c) continue;
       if (p.pose !== 'down' && !st.shower && !p.sk) { g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.ellipse(p.x, p.y, 9, 4, 0, 0, 6.28); g.fill(); }
-      if (p.sk) soakIn(c, p.x, p.y, now);   // (up to the chest in the bath: the body under the surface tinted with the water, ripples round it)
+      if (p.sk) soakIn(c, p.x, p.y, now, p.wade ? WADE_D : 14);   // (up to the chest in the bath: the body under the surface tinted with the water, ripples round it)
       else g.drawImage(c.cv, Math.round(p.x - c.ax), Math.round(p.y - c.ay));
       if (p.sh) drops(p.x, p.y - 30, now);   // (under the shower)
       if (p.nm) {
@@ -325,8 +326,9 @@ function folkAt(f) {
 // and blue-green at the bottom, clearer up by the surface - a bright rim where the water meets the body, and two
 // ripples spreading out from them (no box: only the body's own pixels take the water)
 const soakCv = typeof document !== 'undefined' ? document.createElement('canvas') : null;
-function soakIn(c, x, y, now) {
-  const w = c.cv.width, h = c.cv.height, X = Math.round(x - c.ax), Y = Math.round(y - c.ay), line = Math.round(c.ay - 14);   // (the surface: a sitting body's chest)
+const WADE_D = 12;   // (standing in the water: the surface at the waist)
+function soakIn(c, x, y, now, depth = 14) {
+  const w = c.cv.width, h = c.cv.height, X = Math.round(x - c.ax), Y = Math.round(y - c.ay), line = Math.round(c.ay - depth);   // (the surface: a sitting body's chest, a standing one's waist)
   if (!soakCv || line <= 0 || line >= h) { g.drawImage(c.cv, X, Y); return; }
   if (soakCv.width < w || soakCv.height < h) { soakCv.width = Math.max(soakCv.width, w); soakCv.height = Math.max(soakCv.height, h); }
   const q = soakCv.getContext('2d');
