@@ -117,8 +117,13 @@
       };
       w.inner = part(true); w.outer = part(false);
     }
+    // every pose the wingbeat reaches, drawn now rather than mid-flight (the flap is the same every beat, so
+    // sampling one beat finds them all - about a hundred small canvases)
+    for (let i = 0; i < 1000; i++) { const fl = flap(i / 1000 * BEAT); for (const side of ['L', 'R']) wingPose(side, Math.round(fl.a), Math.round(fl.b / 2) * 2); }
     wingsReady = true;
+    ready();
   };
+  sheet.onerror = () => ready();
   function wingPose(side, a, b) {
     const key = `${side}${a}:${b}`;
     let c = poses.get(key);
@@ -133,7 +138,6 @@
       x.save(); x.translate(w.el[0], w.el[1]); x.rotate(rad(b * f)); x.translate(-w.el[0], -w.el[1]);
       x.drawImage(w.outer, 0, 0); x.restore();
     }
-    if (poses.size > 400) poses.clear();
     poses.set(key, c);
     return c;
   }
@@ -149,7 +153,7 @@
     return { a: BOT + (TOP - BOT) * smooth(k), b: -BEND * 0.7 * Math.sin(Math.PI * k) };
   }
 
-  const txt = document.createElement('canvas'), mos = document.createElement('canvas');
+  const txt = document.createElement('canvas'), fill = document.createElement('canvas'), mos = document.createElement('canvas');
   let t0 = 0, done = false, raf = 0, chimed = false;
 
   const finish = () => {
@@ -161,7 +165,7 @@
   };
   cv.addEventListener('pointerdown', (e) => { e.preventDefault(); finish(); });
   addEventListener('keydown', finish, true);
-  if (still < 0) setTimeout(finish, T_END / SPEED + 4000);   // (whatever happens - the art never loads, the tab sleeps - the title comes)
+  setTimeout(() => { if (!t0) start(); }, 5000);   // (whatever happens - the art never loads, the page never settles - it plays)
 
   // the chime: four square-wave notes up the chord, SNES-bright, only if the browser lets sound play yet
   function chime() {
@@ -184,11 +188,17 @@
 
   const ease = (t) => 1 - (1 - t) * (1 - t) * (1 - t);   // (ease-out cubic)
   const clamp = (v) => Math.max(0, Math.min(1, v));
+  let W = 0, H = 0, textKey = '';
   function frame(now) {
     if (done) return;
     if (!t0) t0 = now;
     const t = still >= 0 ? still : (now - t0) * SPEED;
-    const W = (cv.width = Math.round(innerWidth * Math.min(2, devicePixelRatio || 1))), H = (cv.height = Math.round(innerHeight * Math.min(2, devicePixelRatio || 1)));
+    // the canvas is sized only when the window changes (setting a canvas's size reallocates it - not every frame)
+    // (and at one canvas pixel to a CSS pixel wherever that draws the logo just as big: pixel art scaled up looks the
+    // same either way, and a phone fills a quarter of the pixels each frame)
+    const fit = (k) => Math.floor(Math.min(innerWidth * k * 0.85 / 128, innerHeight * k * 0.75 / 134)) / k, hi = Math.min(2, devicePixelRatio || 1);
+    const dpr = fit(1) >= 1 && fit(1) >= fit(hi) ? 1 : hi, w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+    if (w !== W || h !== H) { W = cv.width = w; H = cv.height = h; textKey = ''; }
     g.imageSmoothingEnabled = false;
     g.fillStyle = NAVY; g.fillRect(0, 0, W, H);
     // one sprite pixel = S screen pixels, as big as fits: the sprite (to row 105) and the lettering under it in three
@@ -229,24 +239,28 @@
       const mt = g.measureText('DEAD BARON'), ink = mt.actualBoundingBoxLeft + mt.actualBoundingBoxRight;   // (the letters' ink, not their advance: centred on what you see)
       const tw = Math.ceil(ink + 4 * fp), th = Math.ceil(fs + 4 * fp);
       const tx = Math.round(W / 2) + shake, ty = Math.round(restY + 110 * S);   // (the sprite ends at row 105)
+      const sheen = t > 1400 && t < 1950, p = (t - 1400) / 550, bx = Math.round((p * (tw + 3 * fs) - 1.5 * fs) / fp) * fp;
+      const key = `${tw}x${th}:${sheen ? bx : '-'}`;
+      if (key !== textKey) {   // (the lettering is redrawn only when it changes: a new size, or the sheen moving on a font pixel)
+      textKey = key;
       if (txt.width !== tw || txt.height !== th) { txt.width = tw; txt.height = th; }
+      if (fill.width !== tw || fill.height !== th) { fill.width = tw; fill.height = th; }
       const c = txt.getContext('2d'), X = 2 * fp + mt.actualBoundingBoxLeft, Y = fp;
       c.clearRect(0, 0, tw, th); c.font = F; c.textAlign = 'left'; c.textBaseline = 'top';
       c.fillStyle = '#080D1C';
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 2; dy++) c.fillText('DEAD BARON', X + dx * fp, Y + dy * fp);   // (the outline and, below, the shadow)
-      const fill = document.createElement('canvas'); fill.width = tw; fill.height = th;
-      const f = fill.getContext('2d'); f.font = F; f.textAlign = 'left'; f.textBaseline = 'top';
+      const f = fill.getContext('2d'); f.clearRect(0, 0, tw, th); f.globalCompositeOperation = 'source-over'; f.font = F; f.textAlign = 'left'; f.textBaseline = 'top';
       f.fillStyle = '#F3EAD2'; f.fillText('DEAD BARON', X, Y);
       f.globalCompositeOperation = 'source-atop';
       f.fillStyle = '#E2BD57'; f.fillRect(0, Math.round(Y + fs * 0.45), tw, th);   // (the lower half gold)
-      if (t > 1400 && t < 1950) {   // the sheen: a slanted band, bright, a fainter one trailing it, in whole font pixels
-        const p = (t - 1400) / 550, bx = Math.round((p * (tw + 3 * fs) - 1.5 * fs) / fp) * fp;
+      if (sheen) {   // the sheen: a slanted band, bright, a fainter one trailing it, in whole font pixels
         for (const [off, wd, col] of [[0, 4, 'rgba(255,255,255,0.95)'], [-4, 2, 'rgba(255,255,255,0.5)'], [5, 1, 'rgba(255,255,255,0.35)']]) {
           f.fillStyle = col;
           for (let r = 0; r < 12; r++) f.fillRect(bx + off * fp + (11 - r) * fp * 0.5, Y + (r - 1) * fp, wd * fp, fp);
         }
       }
       c.drawImage(fill, 0, 0);
+      }
       g.globalAlpha = clamp((t - 1150) / 60);   // (stamped in: there in a frame or two)
       g.drawImage(txt, Math.round(tx - tw / 2), ty);
       g.globalAlpha = 1;
@@ -268,7 +282,31 @@
     if (t >= T_END && still < 0) { finish(); return; }
     raf = requestAnimationFrame(frame);
   }
-  const go = () => { raf = requestAnimationFrame(frame); };
-  if (document.fonts && document.fonts.load) Promise.race([document.fonts.load('16px "CLA Pixel"'), new Promise((r) => setTimeout(r, 400))]).then(go, go);
-  else go();
+  // Before it plays: plain navy until everything is in hand and the page has finished loading behind it - the sheet,
+  // the wing poses, the font, the page's own scripts - and then until the frames come steadily (ten in a row under
+  // 20 ms), so the sting never stutters while the game starts up behind it (the owner, 11-03: choppy on a Pixel 7
+  // Pro). Capped: it plays within about two and a half seconds whatever the page is doing.
+  let need = 3, started = false;
+  function ready() { if (--need === 0) settle(); }
+  const fontP = document.fonts && document.fonts.load ? document.fonts.load('16px "CLA Pixel"') : Promise.resolve();
+  Promise.race([fontP, new Promise((r) => setTimeout(r, 1500))]).then(ready, ready);
+  if (document.readyState === 'complete') ready(); else addEventListener('load', ready, { once: true });
+  function settle() {
+    if (still >= 0) { start(); return; }
+    const begin = performance.now();
+    let last = 0, calm = 0;
+    const tick = (now) => {
+      if (done || started) return;
+      if (last) calm = now - last < 20 ? calm + 1 : 0;
+      last = now;
+      if (calm >= 10 || now - begin > 1200) start(); else requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  function start() {
+    if (started || done) return;
+    started = true;
+    if (still < 0) setTimeout(finish, T_END / SPEED + 2000);   // (whatever happens - the tab sleeps - the title comes)
+    raf = requestAnimationFrame(frame);
+  }
 })();

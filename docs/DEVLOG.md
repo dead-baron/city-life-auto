@@ -19178,3 +19178,20 @@ The owner asked for this on 11-03: "a short little game studio logo when startin
   2. A sheen crosses the logo.
   3. The title's rows step up into place one after another, in stepped CSS transitions.
 - The rebuilt loading screen (UIC-08's "Connecting..." bar and tips) comes with the UI overhaul's screens stage.
+
+## 2026-11-03 - The studio intro waits for the page, and draws for less
+
+The owner saw the intro stutter on a Pixel 7 Pro, as if the game were loading behind it. Now it holds plain navy
+until it can play smoothly, then plays (client/splash.js):
+- **It waits for:**
+  - the sheet and every wing pose (all of them drawn up front, about a hundred small canvases, instead of mid-flight);
+  - the pixel font (up to 1.5 s);
+  - the page's `load` event;
+  - then ten frames in a row under 20 ms, or 1.2 s, whichever comes first. A 5 s cap starts it whatever happens.
+- **Each frame costs less:**
+  - The canvas is sized only when the window changes. It used to be reassigned (and so reallocated) every frame.
+  - The lettering's canvas is reused, and the lettering is redrawn only when the sheen moves on a font pixel.
+  - It draws at one canvas pixel per CSS pixel wherever the logo comes out just as big (landscape phones): a quarter
+    of the pixels. In portrait it keeps the higher resolution, so the logo stays its full size.
+- Under a 6x CPU throttle in headless Chromium, the old intro drew 25 frames (median 150 ms) and the new one 182
+  (median 16.7 ms).
