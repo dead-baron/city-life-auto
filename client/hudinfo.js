@@ -45,7 +45,8 @@ export function statusChips(me) {
   out.push({ k: 'stat', t: 'Criminal XP', v: String(me.cexp | 0), cls: 'warn' });
   if (me.felonies > 0 && me.faction !== 'criminal') out.push({ k: 'stat', t: 'Record', v: `${me.felonies} ${me.felonies === 1 ? 'felony' : 'felonies'}`, cls: 'warn' });
   if (me.bleeding) out.push({ k: 'flag', t: 'Bleeding', cls: 'bad' });
-  if (me.peak > 0) out.push({ k: 'flag', t: me.disguised ? 'Police remember you (disguised)' : 'Police remember you', v: '★'.repeat(me.peak), cls: 'warn' });   // (PeakWantedLevelMemory: server law.js)
+  // (no chip for the police's memory of your peak wanted level - the owner, 11-03: it still works, server law.js, and
+  // shows itself when a disguise is blown)
   if (me.bounty > 0) out.push({ k: 'flag', t: 'Bounty', v: money(me.bounty) + (me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''), cls: 'bad' });
   const B = me.buffs || {};
   for (const [k, n] of [['coffee', 'Coffee'], ['energy', 'Energy'], ['wine', 'Wine'], ['scent', 'Scent']]) if (B[k] > 0) out.push({ k: 'flag', t: n, v: `${Math.ceil(B[k])}s`, cls: 'good' });

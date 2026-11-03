@@ -19195,3 +19195,11 @@ until it can play smoothly, then plays (client/splash.js):
     of the pixels. In portrait it keeps the higher resolution, so the logo stays its full size.
 - Under a 6x CPU throttle in headless Chromium, the old intro drew 25 frames (median 150 ms) and the new one 182
   (median 16.7 ms).
+
+## 2026-11-03 - No "Police remember you" chip
+
+The owner asked for the status line's "Police remember you" chip to go (client/hudinfo.js). The memory behind it,
+PeakWantedLevelMemory (server/systems/law.js), is unchanged:
+- The police keep your highest wanted level, which cools by one star for every 10 minutes you stay clean.
+- If you commit a crime in disguise while they still remember it, your heat jumps straight back to that peak.
+- The "Disguise blown!" notice still tells you when that happens.
