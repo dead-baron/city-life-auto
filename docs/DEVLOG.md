@@ -19161,3 +19161,20 @@ The owner asked for this on 11-01: "be able to wade around the pool instead of s
   - Coming back into a bathhouse, you're still changed.
   - "Get dressed again" at a locker, or putting a look on (looks.js wear: the wardrobe, a clothes shop), puts your clothes back on.
   - Taking an outfit off out in the world waits for the inventory work.
+
+## 2026-11-03 - The studio intro: Dead Baron, SNES-style, and the title's entrance
+
+The owner asked for this on 11-03: "a short little game studio logo when starting the game up ... like an old school retro SNES game studio would show", and then for "the City Life Auto logo [to] come in with a similar stylized animation ... goes smoothly into the main menu".
+- **The sting** (client/splash.js, loaded as its own module beside boot.js so the game loads underneath) uses the owner's pixel sprite, assets/deadbaron.png: a 640 x 128 sheet of the body, both wings at rest and both raised, made with ChatGPT and checked to restack pixel for pixel. It plays at 3/4 speed, about 4.4 s, scaled by whole pixels on the navy:
+  1. The Baron eases in, gliding the last few pixels into place.
+  2. His wings beat the whole time: a quick downstroke, a slower lift, and the tips bending as they trail each stroke. Each wing is split at its elbow into two overlapping halves turned nearest-neighbour, so it stays one piece and stays pixel art. He rides a gentle hover in step.
+  3. A glint crosses both lenses.
+  4. DEAD BARON stamps in under him with a two-pixel shake and a four-note square-wave chime, the chime only if the browser already allows sound. The lettering is bold CLA Pixel, cream over gold, with a dark outline and drop shadow, and is centred on its ink.
+  5. A slanted sheen sweeps the letters.
+  6. It leaves through a SNES mosaic that grows as it darkens, dissolving onto the title.
+- **When it plays:** any tap, click or key skips it. It plays once per browser session. It never plays with ?nosplash or ?fresh, or under an automated browser (the tests); ?splash forces it, and ?splash=<ms> holds one moment for captures.
+- **The title's entrance** follows the sting, and plays straight away on a later load in the same session:
+  1. The logo resolves out of a mosaic, on a canvas over it: blocks 24 down to 1 while it scales in by steps.
+  2. A sheen crosses the logo.
+  3. The title's rows step up into place one after another, in stepped CSS transitions.
+- The rebuilt loading screen (UIC-08's "Connecting..." bar and tips) comes with the UI overhaul's screens stage.
