@@ -4,7 +4,8 @@
 // - you see each other on the radar and the big map wherever you are (a green blip with the name), and your mates' name
 //   tags are green;
 // - no friendly fire: a crewmate's blows, shots and blasts don't hurt you (combat.js damage), so nothing to report;
-// - crew chat: the phone's Crew app sends one of the quick lines (CREW.says - no free text) to everyone in it;
+// - crew chat: the phone's Crew app sends one of the quick lines (CREW.says) to everyone in it, and free text goes on
+//   the crew channel (server/chat.js);
 // - a bank heist's drawers are split with the crewmates there when the vault opens (heist.js);
 // - the Crew app lists who's in it, who's on and how far, a waypoint to any of them, leaving, and (whoever started it)
 //   taking someone off it.
@@ -98,6 +99,7 @@ export function accept(world, p) {
   c.members.push(p.pid);
   c.names[p.pid] = p.name;
   changed();
+  if (world.track) for (const pid of c.members) { const m = world.players.get(pid); if (m && m !== p) world.track('crewed', p, { other: m }); }   // (contacts for phone messages: server/chat.js)
   tell(world, c, `${p.name} joined the crew (${c.members.length}/${CREW.max}).`, 'good');
   return true;
 }

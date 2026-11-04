@@ -15,9 +15,23 @@ const MAX_TRIES_PER_MIN = 5;
 // No password for now (just the team and friends testing): asking is enough. Flip this to
 // false to bring the password back (DEV_PASSWORD, or CLA_DEV_PASSWORD on the server).
 export const DEV_OPEN = true;
+// The launch foundation (server/roles.js): the server sets the policy - devOpen (config CLA_DEV_OPEN) and who may have
+// the debug powers when it's off (the admin and owner roles). Without a policy set (offline practice, older tests) the
+// mode is open as before. may(p) is asked on the server every time; nothing the page says counts.
+let policy = { open: DEV_OPEN, may: () => false, onEnter: null };
+export function setPolicy(p) { policy = { ...policy, ...p }; }
+export const devOpen = () => !!policy.open;
+export const mayDev = (p) => !!(policy.open || policy.may(p));
 
 export function tryPassword(world, p, pw) {
-  if (DEV_OPEN) { enter(world, p, null); return true; }
+  if (policy.open) { enter(world, p, null); return true; }
+  if (policy.may(p)) { enter(world, p, null); if (policy.onEnter) policy.onEnter(p, null); return true; }
+  world.notify(p, 'Dev Debug Mode is for admins now.', 'warn');
+  void pw;
+  return false;
+}
+// the old password gate (DEV_PASSWORD / CLA_DEV_PASSWORD), kept should a setup want it back in place of the roles
+export function tryOldPassword(world, p, pw) {
   const now = world.time;
   p.devTries = (p.devTries || []).filter((t) => now - t < 60);
   if (p.devTries.length >= MAX_TRIES_PER_MIN) { world.notify(p, 'Too many wrong passwords - wait a minute.', 'bad'); return false; }
@@ -50,7 +64,9 @@ export function grant(world, p, pid) {
   const q = world.players.get(String(pid));
   if (!q || !q.conn) { world.notify(p, '[dev] That player isn\'t online.', 'warn'); return; }
   if (q.devMode) { world.notify(p, `[dev] ${q.name} already has dev mode.`, 'info'); return; }
+  if (!mayDev(q)) { world.notify(p, `[dev] ${q.name} isn't an admin - grant the admin role from the owner's tools instead.`, 'warn'); return; }
   enter(world, q, p);
+  if (policy.onEnter) policy.onEnter(q, p);
   world.notify(p, `[dev] Gave ${q.name} Dev Debug Mode.`, 'info');
 }
 

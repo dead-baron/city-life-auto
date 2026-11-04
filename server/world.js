@@ -394,6 +394,7 @@ export class World {
     const systems = SYSTEMS;
     for (let i = 0; i < systems.length; i++) {
       const t = performance.now();
+      this.curSys = systems[i][0];   // (what a change to someone's money happens under: server/moneywatch.js)
       try { systems[i][1](this, DT); } catch (e) { this.reportError(systems[i][0], e); }
       this.sysMs[i] = this.sysMs[i] * 0.98 + (performance.now() - t) * 0.02;
     }
@@ -402,6 +403,7 @@ export class World {
       if (e.hopNew) { e.hopNew = 0; this.emit(e.x, e.y, { e: 'hop', id: e.id }); }   // (over a fence: the others see the hop - shared/fences.js)
       this.place(e);
     }
+    this.curSys = null;
     const tn = performance.now();
     try { net.send(this); } catch (e) { this.reportError('net', e); }
     this.netMs = this.netMs * 0.98 + (performance.now() - tn) * 0.02;

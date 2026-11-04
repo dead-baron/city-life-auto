@@ -63,14 +63,17 @@ export class WSConnection extends EventEmitter {
     if (opcode === 0xA) { this.lastPong = Date.now(); return; }
     if (opcode === 0x0) {
       this.fragments.push(payload);
+      this.fragBytes = (this.fragBytes || 0) + payload.length;
+      if (this.fragBytes > MAX_PAYLOAD) { this.close(1009, 'too big'); return; }   // (a message in pieces: the same cap as one frame)
       if (fin) {
         const full = Buffer.concat(this.fragments);
         this.fragments = [];
+        this.fragBytes = 0;
         this._deliver(this.fragOpcode, full);
       }
       return;
     }
-    if (!fin) { this.fragOpcode = opcode; this.fragments = [payload]; return; }
+    if (!fin) { this.fragOpcode = opcode; this.fragments = [payload]; this.fragBytes = payload.length; return; }
     this._deliver(opcode, payload);
   }
 

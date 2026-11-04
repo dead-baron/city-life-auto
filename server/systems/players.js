@@ -921,6 +921,7 @@ export function onPedDeath(world, ped, killer, cause) {
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
   p.profile.stats.deaths++;
+  if (world.track) world.track('death', p, { cause: p.deathCause, killer });   // (analytics: server/launch.js)
   if (p.badge) { world.notify(p, 'Your badge was stripped. Return to Police HQ to re-deploy.', 'bad'); law.stripPoliceGear(p); }
   ped.bookable = p.wanted > 0 ? { pid: p.pid, stars: p.wanted } : null; // police can still book the body
   p.badge = false; p.hunter = false; p.faction = FACTION.CITIZEN;

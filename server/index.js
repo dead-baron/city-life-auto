@@ -10,7 +10,7 @@ import { join, normalize, extname } from 'node:path';
 import { config } from './config.js';
 import { attachWebSocketServer, wsStats } from './ws.js';
 import { createLimits, clientIp } from './limits.js';
-import { issueToken, verifyToken, newPlayerId } from './auth.js';
+import { createLaunch } from './launch.js';
 import { store, useStore } from './store.js';
 import { FileStore } from './file-store.js';
 import { createSession } from './session.js';
@@ -78,6 +78,9 @@ watchBuild(BUILD_FILE, 20000, (b) => {
   if (artCdn) artCdn.rebuild();   // (a new build of the art: its chunks baked afresh)
 }, bootBuild && bootBuild.v);
 const startedAt = Date.now();
+// the launch foundation: accounts and sign-ins, roles and the admin log, chat, anti-cheat, analytics (server/launch.js)
+const launch = createLaunch({ config, store, world, ip: (req) => clientIp(req, config.trustProxy), extraOrigins: config.allowedOrigins.filter((o) => o !== '*') });
+launch.start();
 // always on for metering; each limit only acts when configured (see config.js)
 const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
 
@@ -94,6 +97,8 @@ const server = createServer(async (req, res) => {
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
   }
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
+  // sign-ins, transfer codes, passkeys, /launch.json; the owner's protected pages (server/authhttp.js, adminhttp.js)
+  if (path === '/launch.json' || path.startsWith('/auth/') || path.startsWith('/admin/')) { try { if (await launch.http(req, res, url)) return; } catch (e) { console.error('[launch] http', e && e.message); if (!res.headersSent) { res.writeHead(500); res.end(); } return; } }
   if (path === '/perf') {   // how players' devices loaded and ran the game (server/perfreports.js)
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
     res.end(reportsText(world));
@@ -112,7 +117,7 @@ const server = createServer(async (req, res) => {
   if (path === '/' || path === '') path = '/index.html';
   const rel = normalize(path).replace(/^([/\\])+/, '');
   // (version.json too: a page played straight off this server checks it for updates - client/boot.js, update.js)
-  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || !(rel === 'index.html' || rel === 'version.json' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
+  if (rel.includes('..') || rel.startsWith('server/config') || rel.startsWith('server/auth') || rel === 'server/chatwords.json' || !(rel === 'index.html' || rel === 'version.json' || STATIC_ROOTS.some((r) => rel.startsWith(r)))) {
     res.writeHead(404); res.end('not found'); return;
   }
   const file = join(config.root, rel);
@@ -147,14 +152,8 @@ attachWebSocketServer(server, {
     const session = createSession(world, conn, {
       seed: config.seed, dev: config.dev, world: WORLD3 ? 'v3' : undefined, maxPlayers: config.maxPlayers, label: 'City Life Auto 0.8',
       closedReason: () => (limits && limits.state() !== 'ok' ? QUOTA_MSG : null),
-      login(token) {
-        const v = verifyToken(token);
-        let profile = v ? store.get(v.pid) : null;
-        if (profile) return { profile, token };
-        const pid = v ? v.pid : newPlayerId();
-        profile = store.get(pid) || store.create(pid);
-        return { profile, token: issueToken(pid) };
-      },
+      login: (token, hello) => launch.login(token, hello, ip),   // (bans, kicks, new guests, the age gate: server/launch.js)
+      hooks: launch.hooks,
     });
     conn.on('message', (data, isBinary) => session.onMessage(data, isBinary));
     conn.on('close', () => session.onClose());
@@ -176,6 +175,7 @@ function statsSnapshot() {
     weather: world.weather, clock: Math.round(world.clock.minutes), droppedSnapshots: world.stats.dropped || 0,
     systemMs: world.profile(),
     traffic: limits ? limits.summary() : null,
+    ga: launch.ga.stats, flags: launch.ac.flags.length, reviews: launch.mod.openReviews(500).length,
     art: artCdn ? artCdn.summary() : null,
     world: worldCdn ? worldCdn.summary() : null,
     // the machine: its cores, load and memory (the owner moved the server to 2 OCPUs / 12 GB on 2026-10-15 - the art's bake
@@ -263,6 +263,7 @@ function shutdown(sig) {
     if (p.ped && !p.ped.dead) players.savePos(p, p.ped);
     if (p.conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Server restarting - your progress is saved. Reconnecting...' }); } catch { /* closed */ } }
   }
+  try { launch.stop(); } catch (e) { console.error('[server] saving the analytics failed', e); }
   try { store.flushSync(); } catch (e) { console.error('[server] final save failed', e); }
   if (limits) { limits.addBytes(wsStats.bytesOut - lastWs); limits.save(); }
   process.exit(0);
