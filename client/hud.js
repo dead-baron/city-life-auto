@@ -258,6 +258,14 @@ export class HUD {
     // weapon
     const w = WEAPON_BY_ID[me.weapon] || WEAPONS.fists;
     $('w-name').textContent = w.name;
+    // reloading, FIRE's ring fills (UIC-10 2, "cooling down"): the weapon's reload time, the button grey under it
+    const fb = document.querySelector('#tbtns [data-b="fire"]');
+    if (me.reloading && !this.rlAt && fb) {
+      const at = this.rlAt = performance.now(), dur = Math.max(200, (w.reload || 1) * 1000);
+      fb.classList.add('cooling'); fb.style.setProperty('--cd', '0');
+      const tick = () => { if (this.rlAt !== at) return; const k = Math.min(1, (performance.now() - at) / dur); fb.style.setProperty('--cd', k.toFixed(3)); if (k < 1) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    } else if (!me.reloading && this.rlAt) { this.rlAt = 0; fb?.classList.remove('cooling'); }
     const ow = me.weapons.find((x) => x.id === me.weapon);
     $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)

@@ -416,6 +416,7 @@ body.dead #job { display: none !important; }
 #w-quick .wq :is(img, canvas) { width: 48px; height: 24px; image-rendering: pixelated; }
 #w-quick .kchip { position: absolute; left: 3px; top: 3px; min-width: 14px; height: 14px; padding: 0 2px; font-size: var(--fs-1); box-shadow: none; }
 #weapon.compact { min-height: 0; padding: 2px var(--s2); }
+body:not(.touch) #weapon.compact { display: none; }   /* (UI-9, the owner's minimal HUD: fists out and nothing going on, no weapon plate - it comes with a weapon, a fight or the police) */
 #weapon.compact #w-icon canvas { width: 48px; height: 24px; }
 #weapon.compact #w-name { font-size: var(--fs-2); }
 .touch #bank { display: none; }
@@ -650,6 +651,9 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns [data-rk=bot] { border-radius: var(--r1) var(--r1) var(--r3) var(--r3); border-top: 0; }
 #tbtns .light.lit, #b-light.lit { background: var(--gold); border-color: var(--gold-hi); }   /* (a switch that's on: lit, UIC-10 3's headlights / auto-fire ON) */
 #stick-r .lbl { display: none; }   /* (AIM: the hint strip says it) */
+#tbtns [data-slot=fire].cooling { border-color: var(--grey); --cd-c: var(--danger); }   /* (reloading: FIRE's ring fills - UIC-10 2 "cooling down") */
+#tbtns [data-slot=fire].cooling .pi24 { filter: grayscale(1) brightness(.8); }
+#tbtns [data-slot=fire].cooling::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--cd-c) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }
 #b-cruiser.cooling { border-color: var(--grey); }
 #b-cruiser.cooling .pi24 { filter: grayscale(1) brightness(.8); }
 #b-cruiser.cooling::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--gold) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }   /* (the cooldown ring, UIC-10 2 / UIK-00 6F) */
