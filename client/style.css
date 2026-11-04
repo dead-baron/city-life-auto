@@ -847,6 +847,7 @@ body.portrait #m-wallet small { display: none; }
   #title > * { grid-column: 2; }
   #title > #logo { grid-column: 1; grid-row: 1 / span 8; align-self: center; width: min(360px, 40vw, 64vh); margin: 0; }
   #play, #t-resume { min-height: 56px; }
+  #title > #t-tools { position: absolute; left: max(var(--s3), env(safe-area-inset-left)); top: var(--s3); }   /* (INSTALL APP, FULLSCREEN: top left, clear of the menu) */
 }
 /* focused with a pad, the title's buttons keep their own fill (the kit's .pfocus would dim PLAY's gold) */
 #title button.pfocus { background: var(--navy) !important; color: var(--cream) !important; }
@@ -878,6 +879,7 @@ body.portrait #m-wallet small { display: none; }
 #t-gfxseg { display: flex; border: 2px solid var(--gold); border-radius: var(--r2); overflow: hidden; }
 #t-gfxseg button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 70px; min-height: var(--tap); padding: 2px 10px; font: 700 var(--fs-3) var(--ui); color: var(--cream); background: transparent; border: 0; border-left: 1px solid var(--gold-a); cursor: pointer; transition: background var(--t1) var(--ease); }
 #t-gfxseg button:first-child { border-left: 0; }
+@media (max-width: 480px) { #t-gfx { flex-direction: column; gap: 4px; } #t-gfxseg button { min-width: 0; padding: 2px var(--s2); } }   /* (a narrow phone: the label over the five, which get the width) */
 #t-gfxseg button i { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); font: normal 700 var(--fs-1) var(--ui); visibility: hidden; }
 #t-gfxseg button.on { background: var(--gold); color: var(--ink); padding-left: 18px; }
 #t-gfxseg button.on i { visibility: visible; }
