@@ -9,16 +9,18 @@ import { iconOf, svg } from './touchicons.js';   // (the icons: the hint strips 
 export { iconOf } from './touchicons.js';
 
 // where each slot sits, at a phone's 390 px short side: its centre in from the right and up from the bottom (inside the
-// safe areas) and its size; the aim stick in the corner (its red ring inside its box), the arc round it; rk is the
-// CLIMB / DOWN rocker, in C1 / C2's stead. Kept clear of each other, of the left 40% (the move stick's), of the middle
-// (you) and upright of the left half; the switches (C, U) small, 44 px (UI-9, the touch concept UIC-10: FIRE 72, ACT 60, the
-// secondary buttons 44 - icons only). wp, the weapon button (UI-6): above CAR upright, above ACT on its side - by the
-// right thumb, the utilities upright one row higher for it.
+// safe areas) and its size (the owner, 11-03: "cleaner, more consistent" - two sizes, on tidy arcs round the aim stick,
+// the way mobile shooters lay them out). The aim stick stays where and how big it was. On its side: FIRE and ACT (72)
+// on the inner arc round the stick, ROLL, CAR, C1 and C2 (52) on the outer one - its middle left out where it would
+// cross the middle of the screen - the weapon card over the stick, and the switches (FIRE ON, COP CAR, LIGHT, ITEMS) in
+// a row along the top of it, under the HUD. Upright the same groups climb in two columns over the stick (the left half
+// is the move stick's, the middle the view's). Kept clear of each other, of the left 40%, of the middle (you) and inside the safe areas
+// (test/touchslots.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
 export const GEO = {
-  land: { stick: [88, 88, 132], fire: [214, 74, 72], roll: [300, 46, 60], act: [200, 164, 60], car: [110, 194, 60], c1: [362, 44, 44], c2: [300, 106, 44],
-    u1: [34, 192, 44], u2: [34, 246, 44], u3: [88, 252, 44], u4: [140, 252, 44], rk: [300, 74, 62, 104], wp: [196, 228, 60, 52] },
-  port: { stick: [70, 80, 116], fire: [70, 186, 72], car: [70, 256, 56], roll: [163, 47, 52], act: [163, 106, 60], c1: [163, 160, 44], c2: [163, 208, 44],
-    u1: [163, 256, 44], u2: [82, 378, 44], u3: [82, 430, 44], u4: [30, 378, 44], rk: [163, 184, 52, 96], wp: [70, 318, 72, 56] },
+  land: { stick: [88, 88, 132], fire: [202, 88, 72], act: [169, 169, 72], roll: [263, 38, 52], car: [269, 107, 52], c1: [205, 227, 52], c2: [152, 247, 52],
+    wp: [88, 206, 64, 52], u4: [34, 300, 52], u3: [92, 300, 52], u2: [150, 300, 52], u1: [208, 300, 52] },
+  port: { stick: [70, 80, 116], fire: [141, 164, 72], act: [66, 190, 72], roll: [157, 244, 52], car: [83, 266, 52], c1: [92, 326, 52], c2: [34, 326, 52],
+    wp: [63, 384, 64, 52], u4: [34, 442, 52], u3: [92, 442, 52], u2: [34, 500, 52], u1: [92, 500, 52] },
 };
 export const MIN_TAP = 44;
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)
@@ -38,8 +40,6 @@ export function slotGeometry(W, H, safe = {}) {
   }
   return out;
 }
-// the rocker's halves: CLIMB on top (C2), DOWN under it (C1)
-const half = (rk, top) => ({ x: rk.x, y: top ? rk.y : rk.y + Math.round(rk.h / 2), w: rk.w, h: top ? Math.round(rk.h / 2) : rk.h - Math.round(rk.h / 2) });
 
 
 // the slots on the page: set(flags) each frame (cheap when nothing changed), placed again when the screen turns
@@ -75,10 +75,8 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
       if (!b) continue;
       const label = a === 'firetog' ? `FIRE ${b.classList.contains('lit') ? 'ON' : 'OFF'}` : l0;   // (on or off: client/input.js showFireToggle)
       shown.add(a);
-      const rock = cur.state === 'air' && (slot === 'c1' || slot === 'c2');
-      const g = rock ? half(geo.rk, slot === 'c2') : geo[slot];
+      const g = geo[slot];   // (in the air CLIMB and DOWN: two discs in C2 and C1, an arrow each - one container for every button)
       b.dataset.slot = slot;
-      if (rock) b.dataset.rk = slot === 'c2' ? 'top' : 'bot'; else delete b.dataset.rk;
       const st = b.style;
       if (a === 'nextw') { for (const k of 'xywh') st.setProperty('--s' + k, g[k] + 'px'); b.dataset.lbl = label; continue; }
       st.left = `${g.x}px`; st.top = `${g.y}px`; st.width = `${g.w}px`; st.height = `${g.h}px`;

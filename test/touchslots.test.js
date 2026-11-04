@@ -90,22 +90,22 @@ test('every action a slot can hold has its button, its binding, its icon and a R
 const SIZES = [[844, 390], [740, 360], [667, 375], [932, 430], [1024, 768], [1280, 720], [390, 844], [360, 780], [375, 667], [430, 932], [768, 1024]];
 test('the slots: apart, 44 px or more, out of the left 40% and the middle, upright right of the middle, inside the safe areas', () => {
   const on = (a, b) => a.x < b.x + b.w - 1 && b.x < a.x + a.w - 1 && a.y < b.y + b.h - 1 && b.y < a.y + a.h - 1;
+  // (the buttons are discs since 11-03: two apart when their circles are - the weapon card a box)
+  const apart = (ka, a, kb, b) => (ka === 'wp' || kb === 'wp' ? !on(a, b) : Math.hypot(a.x + a.w / 2 - b.x - b.w / 2, a.y + a.h / 2 - b.y - b.h / 2) >= (a.w + b.w) / 2 - 1);
   const bad = [];
   // (the safe areas a phone with a notch has: on its side both edges and the home bar, upright the top and the home bar)
   for (const [W, H] of SIZES) for (const safe of [{}, H > W ? (H >= 780 ? { t: 47, b: 34 } : {}) : W >= 800 && H < 500 ? { r: 47, b: 21, l: 47 } : {}]) {
-    const g = slotGeometry(W, H, safe), tag = `${W}x${H} ${JSON.stringify(safe)}`, ks = Object.keys(g).filter((k) => k !== 'rk');
+    const g = slotGeometry(W, H, safe), tag = `${W}x${H} ${JSON.stringify(safe)}`, ks = Object.keys(g);
     const mid = { x: W / 2 - W / 6, y: H / 2 - H / 8, w: W / 3, h: H / 4 };
-    for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) if (on(g[a], g[b])) bad.push(`${tag}: ${a} on ${b}`);
+    for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) if (!apart(a, g[a], b, g[b])) bad.push(`${tag}: ${a} on ${b}`);
     for (const k of Object.keys(g)) {
       const b = g[k];
-      if (b.w < 44 || b.h < (k === 'rk' ? 88 : 44)) bad.push(`${tag}: ${k} ${b.w}x${b.h}`);
+      if (b.w < 44 || b.h < 44) bad.push(`${tag}: ${k} ${b.w}x${b.h}`);
       if (b.x < W * 0.4) bad.push(`${tag}: ${k} in the left 40%`);
       if (H > W && b.x < W / 2) bad.push(`${tag}: ${k} left of the middle`);
       if (on(b, mid) && !(H > W && H < 740)) bad.push(`${tag}: ${k} over the middle`);   // (an old 667 px phone upright: no room under the middle for all of it)
       if (b.x + b.w > W - (safe.r || 0) || b.y + b.h > H - (safe.b || 0) || b.y < (safe.t || 0)) bad.push(`${tag}: ${k} outside the safe area`);
     }
-    // the rocker in C1 / C2's stead (they're never shown with it), clear of what shows in the air (the stick, FIRE, ACT, CAR, ITEMS, FIRE ON)
-    for (const k of ['stick', 'fire', 'act', 'car', 'u1', 'u4']) if (on(g.rk, g[k])) bad.push(`${tag}: the rocker on ${k}`);
   }
   assert.deepEqual(bad, [], bad.slice(0, 20).join('\n'));
   assert.deepEqual(Object.keys(GEO.land).sort(), Object.keys(GEO.port).sort());

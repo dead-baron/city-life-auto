@@ -241,70 +241,79 @@ export function paintIcons(root = document) {
   for (const el of root.querySelectorAll('[data-gl]')) if (el.dataset.icd !== el.dataset.gl) { el.innerHTML = glyph(el.dataset.gl); el.dataset.icd = el.dataset.gl; }
 }
 
-// ---- the touch buttons' glyphs (the owner, 11-03: "we really don't need colored icons here, they should be simplified
-// UI icons ... something really simple"): one icon language - each glyph one color, the button's own text color (cream
-// on the navy plate, ink on a gold or a red fill), bold 2-3 px strokes and plain solid shapes on the same 24-px grid,
-// whole pixels, no inner colors and no outline. Color means something and it lives on the button (FIRE's red rim, ACT's
-// gold when there's something to do, a switch lit when it's on), never in the glyph. They share the shapes' language
-// above ('x' fills, '.' clears) and draw with currentColor. Also the aim stick's crosshair and the weapon button's
-// silhouette of what you hold (glyphOfWeapon), and the hint strips' pictures of the buttons (client/glyphs.js).
-const GL = {
+// ---- the touch buttons' glyphs (the owner, 11-03: "simplified UI icons ... cleaner, more consistent and better looking")
+// One line-icon language, vector, never scaled pixels: the 24-unit grid, a 2-unit stroke with round caps and joins, no
+// fill (variant 'line', the open-source line sets' style - Tabler, Lucide); or the same shapes solid (variant 'solid').
+// Drawn for City Life Auto in that style - no third-party path data (the icon packages couldn't be fetched in the
+// session that drew these; a set's own paths can replace any of them, they share the grid and the stroke). One color:
+// currentColor (the button's: off-white; ink on an accent disc). Each glyph: a - the line drawing; b - its solid
+// silhouette (fill, even-odd for holes); l - lines drawn in both; c - cuts drawn over the solid in the disc's color.
+const VG = {
   // the actions
-  fist: [['C', 'x', 7.5, 8, 2.6], ['C', 'x', 11.5, 7.3, 2.6], ['C', 'x', 15.5, 7.3, 2.6], ['C', 'x', 19, 8.8, 2.3], ['R', 'x', 5, 8, 16.3, 9], ['R', 'x', 7, 16, 11, 5], ['L', 'x', 5, 13, 3, 10.5, 3.2], ['L', '.', 7, 13.2, 13, 13.2, 1.3], ['R', '.', 9.4, 5, 0.9, 5], ['R', '.', 13.4, 5, 0.9, 5], ['R', '.', 17.3, 5, 0.9, 5.5]],
-  burst: [['C', 'x', 12, 12, 4.2], ['L', 'x', 12, 2, 12, 6.5, 2.6], ['L', 'x', 12, 17.5, 12, 22, 2.6], ['L', 'x', 2, 12, 6.5, 12, 2.6], ['L', 'x', 17.5, 12, 22, 12, 2.6], ['L', 'x', 4.8, 4.8, 7.6, 7.6, 2.6], ['L', 'x', 19.2, 4.8, 16.4, 7.6, 2.6], ['L', 'x', 4.8, 19.2, 7.6, 16.4, 2.6], ['L', 'x', 19.2, 19.2, 16.4, 16.4, 2.6]],
-  crosshair: [['A', 'x', 12, 12, 5.5, 7.6], ['R', 'x', 11, 1.5, 2, 5], ['R', 'x', 11, 17.5, 2, 5], ['R', 'x', 1.5, 11, 5, 2], ['R', 'x', 17.5, 11, 5, 2], ['R', 'x', 11, 11, 2, 2]],
-  roll: [['A', 'x', 12, 12.5, 6.2, 8.8, 330, 270], ['P', 'x', 11, 1.2, 11, 8.6, 17, 4.9]],
-  hand: [['R', 'x', 7, 11, 11.5, 8.5], ['R', 'x', 7, 4.5, 2.6, 8], ['R', 'x', 10.2, 3, 2.6, 9], ['R', 'x', 13.4, 3, 2.6, 9], ['R', 'x', 16.4, 5.5, 2.6, 7], ['L', 'x', 7.5, 16, 3.5, 11.5, 2.8], ['R', 'x', 8.5, 19, 9, 3]],
-  car: [['P', 'x', 1, 16, 1, 12.5, 4, 11.5, 7, 7, 16.5, 7, 20, 11.5, 23, 12.5, 23, 16], ['P', '.', 8.2, 8.6, 11.3, 8.6, 11.3, 11, 6.6, 11], ['P', '.', 12.7, 8.6, 15.7, 8.6, 17.8, 11, 12.7, 11], ['C', '.', 6.5, 16.5, 3.8], ['C', '.', 17.5, 16.5, 3.8], ['C', 'x', 6.5, 16.5, 2.7], ['C', 'x', 17.5, 16.5, 2.7]],
-  shield: [['P', 'x', 12, 2, 20, 5, 20, 12, 12, 22, 4, 12, 4, 5], ['P', '.', 12, 5.2, 17, 7.2, 17, 11.6, 12, 18, 7, 11.6, 7, 7.2]],
-  autofire: [['A', 'x', 12, 7.5, 3.4, 5.4], ['R', 'x', 11, 0.8, 2, 3.2], ['R', 'x', 11, 11.2, 2, 2.6], ['R', 'x', 4.6, 6.5, 3.2, 2], ['R', 'x', 16.2, 6.5, 3.2, 2], ['R', 'x', 4.5, 16, 3.5, 6.5], ['R', 'x', 10.25, 16, 3.5, 6.5], ['R', 'x', 16, 16, 3.5, 6.5]],
-  rounds: [['R', 'x', 3.5, 10, 4, 11], ['C', 'x', 5.5, 10, 2], ['R', 'x', 10, 10, 4, 11], ['C', 'x', 12, 10, 2], ['R', 'x', 16.5, 10, 4, 11], ['C', 'x', 18.5, 10, 2], ['R', '.', 3, 15.5, 18, 1.2]],
-  horn: [['P', 'x', 2.5, 9.5, 6.5, 9.5, 13.5, 4, 13.5, 20, 6.5, 14.5, 2.5, 14.5], ['L', 'x', 16.5, 8, 20, 5.2, 2.2], ['R', 'x', 17, 10.9, 5, 2.2], ['L', 'x', 16.5, 16, 20, 18.8, 2.2]],
-  up: [['P', 'x', 12, 2, 20.5, 10.5, 15, 10.5, 15, 21.5, 9, 21.5, 9, 10.5, 3.5, 10.5]],
-  down: [['P', 'x', 12, 22, 20.5, 13.5, 15, 13.5, 15, 2.5, 9, 2.5, 9, 13.5, 3.5, 13.5]],
-  bag: [['R', 'x', 8, 3, 8, 2.2], ['R', 'x', 8, 3, 2.2, 5], ['R', 'x', 13.8, 3, 2.2, 5], ['R', 'x', 4, 7.5, 16, 13.5], ['R', '.', 6.5, 12, 11, 1.6]],
-  light: [['P', 'x', 2, 9, 11, 9, 14, 6.5, 14, 17.5, 11, 15, 2, 15], ['L', 'x', 17, 7, 21, 5, 2.2], ['R', 'x', 17.5, 10.9, 4.5, 2.2], ['L', 'x', 17, 17, 21, 19, 2.2]],
-  badge: [['P', 'x', 12, 2, 20, 5, 20, 12, 12, 22, 4, 12, 4, 5], ['P', '.', 12, 6.5, 13.6, 10, 17.2, 10.3, 14.5, 12.6, 15.4, 16.2, 12, 14.3, 8.6, 16.2, 9.5, 12.6, 6.8, 10.3, 10.4, 10]],
-  siren: [['P', 'x', 6, 18, 6, 12.5, 8, 8, 16, 8, 18, 12.5, 18, 18], ['R', 'x', 4, 18.5, 16, 3.5], ['R', '.', 8.5, 10.5, 2, 5], ['R', 'x', 11, 1.5, 2, 4], ['L', 'x', 4, 4.5, 6, 6.5, 2], ['L', 'x', 20, 4.5, 18, 6.5, 2]],
-  brake: [['R', 'x', 3.5, 6, 17, 12], ['R', '.', 7, 8.5, 2.2, 7], ['R', '.', 10.9, 8.5, 2.2, 7], ['R', '.', 14.8, 8.5, 2.2, 7]],
-  throw: [['C', 'x', 18, 6, 3.6], ['C', 'x', 12.5, 9.5, 2], ['C', 'x', 8, 13.5, 1.7], ['C', 'x', 4.5, 18, 1.5]],
-  star: [['P', 'x', 12, 1.5, 14.8, 8.4, 22, 9, 16.4, 13.7, 18.2, 20.8, 12, 17, 5.8, 20.8, 7.6, 13.7, 2, 9, 9.2, 8.4]],
-  ollie: [['R', 'x', 2.5, 17, 19, 3], ['P', 'x', 12, 2, 17.5, 8, 14.2, 8, 14.2, 13.5, 9.8, 13.5, 9.8, 8, 6.5, 8]],
-  gallop: [['L', 'x', 4, 5, 10, 12, 3.4], ['L', 'x', 10, 12, 4, 19, 3.4], ['L', 'x', 12, 5, 18, 12, 3.4], ['L', 'x', 18, 12, 12, 19, 3.4]],
-  swap: [['P', 'x', 3, 7, 15, 7, 15, 3.5, 21, 8.5, 15, 13.5, 15, 10, 3, 10], ['P', 'x', 21, 14, 9, 14, 9, 10.5, 3, 15.5, 9, 20.5, 9, 17, 21, 17]],
-  exit: [['R', 'x', 3, 3, 10, 18], ['R', '.', 5.5, 5.5, 5, 13], ['P', 'x', 9, 10, 15, 10, 15, 6.5, 21.5, 12, 15, 17.5, 15, 14, 9, 14]],
-  // what you hold: a silhouette of each kind, pointing right
-  pistol: [['R', 'x', 3, 6, 17, 5], ['R', 'x', 16, 4.5, 3, 2], ['P', 'x', 10.5, 10, 16, 10, 14, 20.5, 8.5, 20.5], ['A', 'x', 7.5, 12, 1.6, 3, 0, 180], ['R', '.', 3, 8.2, 12, 0.9]],
-  rifle: [['P', 'x', 1, 9.5, 6, 8.5, 6, 14, 1, 15.5], ['R', 'x', 6, 8, 13, 4.5], ['R', 'x', 19, 9, 4, 2], ['R', 'x', 11, 12, 3.5, 6.5], ['R', 'x', 7, 12, 2.6, 4.5], ['R', 'x', 13, 6, 4, 2]],
-  knife: [['P', 'x', 3, 15, 16, 7, 21.5, 5.5, 18, 11, 7.5, 18.5], ['L', 'x', 2.5, 19.5, 6.5, 16.5, 3.4], ['L', 'x', 5.5, 14.5, 9, 19, 2]],
-  sword: [['L', 'x', 7, 17, 21, 3, 3], ['L', 'x', 4, 14, 10, 20, 2.4], ['L', 'x', 2.5, 21.5, 7, 17, 3]],
-  bat: [['L', 'x', 4, 20, 13, 11, 3], ['L', 'x', 11.5, 12.5, 19, 5, 6], ['C', 'x', 3.5, 20.5, 2.2]],
-  grenade: [['C', 'x', 11, 14, 7], ['R', 'x', 8.5, 4.5, 5, 3.5], ['L', 'x', 13.5, 5.5, 18.5, 9.5, 2], ['A', 'x', 18.5, 5, 2, 3.4], ['R', '.', 6.5, 13.3, 9, 1.3]],
-  bow: [['A', 'x', 4, 12, 9, 11.5, 300, 60], ['R', 'x', 8, 2, 1.4, 20], ['L', 'x', 3, 12, 21, 12, 2], ['P', 'x', 22.5, 12, 18, 9, 18, 15]],
-  rocket: [['R', 'x', 2, 8.5, 17, 6], ['P', 'x', 19, 8.5, 23, 11.5, 19, 14.5], ['R', 'x', 7, 14.5, 3, 5], ['R', 'x', 12, 14.5, 2.6, 3.5]],
-  bolt: [['P', 'x', 14, 1.5, 5, 13, 11, 13, 9, 22.5, 19, 10, 13, 10, 16, 1.5]],
-  spray: [['R', 'x', 8, 7, 8, 15], ['R', 'x', 10, 3.5, 4, 3.5], ['R', 'x', 14, 4, 3, 2], ['C', 'x', 20, 3, 1.1], ['C', 'x', 21.5, 6, 1.1]],
-  flame: [['P', 'x', 12, 1.5, 17, 8, 19, 14, 17, 19, 12, 22, 7, 19, 5, 14, 7, 8.5, 9, 12, 10, 6], ['P', '.', 12, 12, 14.5, 15.5, 13.5, 19, 10.5, 19, 9.5, 15.5]],
-  rod: [['L', 'x', 3, 21, 19, 3.5, 2.4], ['R', 'x', 19, 4, 1.2, 12], ['A', 'x', 19.6, 18, 1.4, 2.6], ['C', 'x', 6, 18, 2]],
-  spikes: [['R', 'x', 1.5, 16, 21, 4], ['P', 'x', 2, 16, 4.5, 9, 7, 16], ['P', 'x', 7, 16, 9.5, 9, 12, 16], ['P', 'x', 12, 16, 14.5, 9, 17, 16], ['P', 'x', 17, 16, 19.5, 9, 22, 16]],
+  fist: { a: 'M7 10.5V8a1.5 1.5 0 0 1 3 0v1.5M10 9V7.5a1.5 1.5 0 0 1 3 0V9.5M13 9.5V7.5a1.5 1.5 0 0 1 3 0V10M16 10V8.5a1.5 1.5 0 0 1 3 0V14c0 3.9-2.7 6.5-6.5 6.5H12c-3.3 0-5.5-2.4-5.5-5.5v-2c0-1.1.9-2 2-2H11a1.5 1.5 0 0 1 0 3H9.5',
+    b: 'M6.5 13V8a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2-.5 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.4 1V14c0 3.9-2.8 6.5-6.6 6.5H12c-3.2 0-5.5-2.4-5.5-5.5z', c: 'M9.7 8.6v2.4M12.9 8v2.8M16.1 8.4v2.6M8.5 13.5h3' },
+  bullet: { a: 'M9 21V10c0-3 1.3-5.8 3-7 1.7 1.2 3 4 3 7v11zM9 16.5h6', b: 'M8.5 21.5V10c0-3.2 1.5-6.3 3.5-7.7 2 1.4 3.5 4.5 3.5 7.7v11.5z', c: 'M8.5 16.5h7' },
+  crosshair: { a: 'M12 12m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0M12 2v4M12 18v4M2 12h4M18 12h4', l: 'M12 12h.01' },
+  hand: { a: 'M9 13.5V5a1.5 1.5 0 0 1 3 0v6.5M12 11a1.5 1.5 0 0 1 3 0v1M15 11.5a1.5 1.5 0 0 1 3 0v1M18 12a1.5 1.5 0 0 1 3 0v4a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1L9 15', l: 'M4.5 4l1.5 1.5M3 9h2M15.5 4L14 5.5',
+    b: 'M9 15V5a1.5 1.5 0 0 1 3 0v5.6a1.5 1.5 0 0 1 3 .4 1.5 1.5 0 0 1 3 .5 1.5 1.5 0 0 1 3 .5V16a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1z', c: 'M12 11.5v2.5M15 11.8v2.4M18 12.3v2' },
+  car: { a: 'M3 16.5V13l2.2-5.5h11.3l3.2 5.5H21a1 1 0 0 1 1 1v2.5M3 16.5h1.5M9.5 16.5h5M19.5 16.5H22M5 13h14.7M11.5 7.5V13M7 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M17 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
+    b: 'M2 17v-4.2L4.4 7h12.4l3.3 5.5h1.4A1.5 1.5 0 0 1 23 14v3h-2.6a3.4 3.4 0 0 0-6.8 0H10.4a3.4 3.4 0 0 0-6.8 0zM6 12.2h4.6V8.6H7.5zM12.4 12.2h5.5l-2-3.6h-3.5zM7 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0M17 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0' },
+  roll: { a: 'M4.5 16a7.5 7.5 0 0 1 15 0M19.5 16l-3-1.5M19.5 16l1.5-3M3 20h18' },
+  reload: { a: 'M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4h-4' },
+  shield: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6z', b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6z' },
+  badge: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6zM12 8.2l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z',
+    b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6zM12 7.8l-1.4 2.8-3 .5 2.2 2.1-.5 3 2.7-1.4 2.7 1.4-.5-3 2.2-2.1-3-.5z' },
+  siren: { a: 'M7 18v-5.5a5 5 0 0 1 10 0V18M5 21h14v-3H5zM12 3.5V5M5 7l1.2 1.2M19 7l-1.2 1.2M10 13a2 2 0 0 1 2-2',
+    b: 'M6.5 18v-5.5a5.5 5.5 0 0 1 11 0V18zM4.5 18.5h15v3h-15z', l: 'M12 3v2M5 6.5l1.4 1.4M19 6.5l-1.4 1.4', c: 'M10 13a2 2 0 0 1 2-2' },
+  horn: { a: 'M4 9.5h3l5-4v13l-5-4H4zM16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11', b: 'M3.5 9h3.3l5.7-4.5v15L6.8 15H3.5z', l: 'M16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11' },
+  bag: { a: 'M6 21V10.5A4.5 4.5 0 0 1 10.5 6h3a4.5 4.5 0 0 1 4.5 4.5V21zM9.5 6V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5V6M6 13.5h12M10 13.5v2.5',
+    b: 'M5.5 21.5v-11a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v11z', l: 'M9.5 5.5V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v1', c: 'M5.5 13.5h13M10 13.5v2.5' },
+  light: { a: 'M3 9h8l3-2.5v11L11 15H3zM17.5 8l3-1.5M18 12h3M17.5 16l3 1.5', b: 'M2.5 8.5h8.3l3.7-3v13l-3.7-3H2.5z', l: 'M17.5 8l3-1.5M18 12h3M17.5 16l3 1.5' },
+  autofire: { a: 'M12 20V11c0-2.6 1.1-4.8 2.75-6 1.65 1.2 2.75 3.4 2.75 6v9zM12 16h5.5M3.5 9H8M2.5 12.5H8M3.5 16H8',
+    b: 'M11.5 20.5V11c0-2.8 1.3-5.2 3.25-6.5C16.7 5.8 18 8.2 18 11v9.5z', l: 'M3.5 9H8M2.5 12.5H8M3.5 16H8', c: 'M11.5 16h6.5' },
+  up: { a: 'M12 20V4M5.5 10.5L12 4l6.5 6.5' },
+  down: { a: 'M12 4v16M5.5 13.5L12 20l6.5-6.5' },
+  brake: { a: 'M12 12m-5.5 0a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0-11 0M5.2 5.5a9.5 9.5 0 0 0 0 13M18.8 5.5a9.5 9.5 0 0 1 0 13M12 9v3.5M12 15h.01' },
+  gallop: { a: 'M5 6l6 6-6 6M13 6l6 6-6 6' },
+  throw: { a: 'M5.5 18.5C8 11 12.5 7 19 5.5M14.5 4l4.5 1.5-1.5 4.5M5.5 18.5m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0-3.6 0' },
+  star: { a: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', b: 'M12 2.3l3 6 6.7 1-4.9 4.7 1.2 6.6-6-3.1-6 3.1 1.2-6.6-4.9-4.7 6.7-1z' },
+  ollie: { a: 'M3 17h18M6 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M18 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M12 13V3.5M8 7.5l4-4 4 4' },
+  exit: { a: 'M14 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3M9.5 12H21M17.5 8.5L21 12l-3.5 3.5' },
+  swap: { a: 'M9.5 6l6 6-6 6' },
+  // what you hold: silhouettes pointing right
+  pistol: { a: 'M3.5 6.5h16v4h-9M5.5 10.5l-1.8 8.5h4.6l1.5-6.5h3a1 1 0 0 0 1-1v-1M19.5 6.5V5',
+    b: 'M3 6h17v5h-6.7v1a1.5 1.5 0 0 1-1.5 1.5H10.4L9 19.5H3.2L5 11H3z' },
+  rifle: { a: 'M2.5 9.5L6 9h13.5v2.5H22M6 9v3.5l-2 4M6 12.5h8L12.5 16H9.5l1-3.5M14 9V7h3',
+    b: 'M2 9.2L6 8.5h14v2.5h2.5v1.5H14l-1.6 4H9l1-4H6.6l-2 4.3H2.3L4.5 12H2z' },
+  knife: { a: 'M20.5 3.5C17 4.5 12.5 9 10 12.5l1.5 1.5c3.5-2.5 8-7 9-10.5zM10 12.5l-6 6 1.5 1.5 6-6',
+    b: 'M21 3c-3.8.8-8.8 5.6-11.6 9.4l2.2 2.2C15.4 11.8 20.2 6.8 21 3zM9.5 12.7l2 2L5.2 21 3 18.8z' },
+  sword: { a: 'M20 4v3.5L9.5 18l-3.5-3.5L16.5 4zM5.5 13.5l5 5M8 16l-4 4' },
+  bat: { a: 'M4 20l1.5-1.5M5.5 18.5l8.5-8.5c1.5-1.5 3.5-4 5-5.5s2.5 0 1 1.5-4 3.5-5.5 5L6 20.5z', b: 'M5 19l8.5-8.5c1.6-1.6 3.6-4.1 5.2-5.7 1.6-1.6 3.6.4 2 2-1.6 1.6-4.1 3.6-5.7 5.2L6.5 20.5zM3 20.5l1.5-1.5 1 1-1.5 1.5z' },
+  grenade: { a: 'M11 15m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M9 9V6.5h4V9M13 7.5l4.5-3M17.5 4.5l1.5 1.5', b: 'M11 15m-6.5 0a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M8.5 5.8h5V9h-5z', l: 'M13.5 7.2l4-2.7M17.5 4.5l1.5 1.5' },
+  bow: { a: 'M6 3c6 3 6 15 0 18M6 3v18M3 12h17M17.5 9l3 3-3 3' },
+  rocket: { a: 'M2.5 10h14v4h-14zM16.5 9.5L21 12l-4.5 2.5M6 14v3.5M10 14v2.5', b: 'M2 9.5h14.5V9l5.5 3-5.5 3v-.5H11v2.5H9v-2.5H7v3.5H5v-3.5H2z' },
+  bolt: { a: 'M13 3L5 13.5h6L10 21l8-10.5h-6z', b: 'M13.6 2.2L4 14h6.6L9.4 21.8 19 10h-6.5z' },
+  spray: { a: 'M8 21V10.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V21zM10 8.5V5.5h3v3M13 6h3M19 4v.01M19 7.5v.01M21.5 5.5v.01', b: 'M7.5 21.5V10.5A2.5 2.5 0 0 1 10 8h3a2.5 2.5 0 0 1 2.5 2.5v11zM9.5 4.8h4V8h-4z', l: 'M13.5 6h2.5M19 4v.01M19 7.5v.01M21.5 5.5v.01' },
+  flame: { a: 'M12 21c3.6 0 6-2.6 6-6 0-4-3-6.5-4-10.5-2.6 2-3.6 4.6-3.6 7.2-1-1-1.5-2.1-1.5-3.6C7.4 10.2 6 12.4 6 15c0 3.4 2.4 6 6 6z', b: 'M12 21.6c3.9 0 6.6-2.8 6.6-6.6 0-4.4-3.3-7-4.4-11.6-2.9 2-4 4.8-4 7.6-1-1-1.6-2.3-1.6-3.9-2.4 2.1-4 4.5-4 7.9 0 3.8 2.7 6.6 7.4 6.6z' },
+  rod: { a: 'M4 20L19 5M19 5v11M19 16a1.5 1.5 0 1 1-1.5 1.5M3 21l1.5-1.5' },
+  spikes: { a: 'M3 18h18M4 18l2-6 2 6M10 18l2-6 2 6M16 18l2-6 2 6' },
 };
-export const GLYPH_NAMES = Object.keys(GL);
-const gGrids = new Map(), gSvgs = new Map();
-export function glyphGrid(name) {
-  if (gGrids.has(name)) return gGrids.get(name);
-  const def = GL[name] || GL.hand, g = new Array(N * N).fill('');
-  for (const sh of def) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (hit(sh, x + 0.5, y + 0.5)) g[y * N + x] = sh[1] === '.' ? '' : 'x';
-  gGrids.set(name, g);
-  return g;
-}
-// '<svg class="pi24 gl">' for a glyph, in the button's text color (currentColor)
-export function glyph(name, px = 0) {
-  if (!gSvgs.has(name)) {
-    const g = glyphGrid(name), d = [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N;) { if (!g[y * N + x]) { x++; continue; } let e = x + 1; while (e < N && g[y * N + e]) e++; d.push(`M${x} ${y}h${e - x}v1h${x - e}z`); x = e; }
-    gSvgs.set(name, `<path fill="currentColor" d="${d.join('')}"/>`);
+export const GLYPH_NAMES = Object.keys(VG);
+export const GLYPH_VARIANTS = ['line', 'solid'];
+let VARIANT = 'line';   // (the one in use: the owner picks between the two - setGlyphVariant)
+export function setGlyphVariant(v) { if (GLYPH_VARIANTS.includes(v)) { VARIANT = v; gSvgs.clear(); } }
+const gSvgs = new Map();
+const STROKE = (w = 2) => `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+// '<svg class="pi24 gl">' for a glyph, in the button's text color (currentColor); a solid glyph's cuts in --cut (the disc's)
+export function glyph(name, px = 0, variant = VARIANT) {
+  const key = name + '|' + variant;
+  if (!gSvgs.has(key)) {
+    const g = VG[name] || VG.hand;
+    gSvgs.set(key, variant === 'solid' && g.b
+      ? `<path fill="currentColor" fill-rule="evenodd" d="${g.b}"/>${g.l ? `<path ${STROKE(2.2)} d="${g.l}"/>` : ''}${g.c ? `<path class="cut" ${STROKE(1.6)} d="${g.c}"/>` : ''}`
+      : `<path ${STROKE(variant === 'solid' ? 2.6 : 2)} d="${g.a}${g.l || ''}"/>`);
   }
-  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} shape-rendering="crispEdges" aria-hidden="true">${gSvgs.get(name)}</svg>`;
+  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} aria-hidden="true">${gSvgs.get(key)}</svg>`;
 }
 // what you hold, as its glyph (the weapon button: shared/items.js WEAPONS' type and id)
 const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
@@ -317,6 +326,6 @@ export function glyphOfWeapon(id, type) {
 }
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
 const ICON = { HIT: 'fist', THROW: 'throw', TRICK: 'star', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'up', EXIT: 'exit', OFF: 'exit', SIREN: 'siren', GALLOP: 'gallop' };
-const ACTION_ICON = { fire: 'burst', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'rounds', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
+const ACTION_ICON = { fire: 'bullet', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
 export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'hand';
 export const svg = (k) => glyph(k);
