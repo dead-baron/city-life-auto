@@ -69,6 +69,7 @@ import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
+import * as slips from './systems/slips.js';
 import * as activities from './systems/activities.js';
 import * as burning from './systems/burning.js';
 import * as tank from './systems/tank.js';
@@ -131,6 +132,7 @@ const SYSTEMS = [
   ['dealer', dealer.update],        // dealership lot stock      // police motor pool gates + restocking
   ['interiors', interiors.update],  // shop clerks / desk staff in walk-in buildings
   ['npc', npc.update],              // pedestrian AI, gangs, muggers
+  ['slips', slips.update],          // after a rear-end: the drivers out having words or blows, then back in and away (slips.js)
   ['pets', pets.update],            // lost pets wandering, led home on a collar
   ['happenings', happenings.update], // a street fight, someone collapsing, a dropped wallet - now and then near someone
   ['personas', personas.update],    // the street personalities' walked dogs (personas.js)

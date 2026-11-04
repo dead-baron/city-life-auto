@@ -19363,3 +19363,136 @@ The owner's two reports from the same day:
 - test/walkinfront.test.js pins both: every walk-in seen cut away has its doorway open on its doorway's side and the
   wall opposite shut, a clinic's glass is on that side, and no clinic, first-aid post or ranger station opens onto
   rail or deck.
+## 2026-11-03 - Traffic that keeps moving; people and drivers with a bit more sense; drivers who slip up, now and then
+
+The owner's notes (11-03): "Traffic still seems to backup in areas too, can we make sure we're solving for traffic jams?
+Its okay if they happen from time to time but just want to make sure traffic is moving smoothly and NPCs humans and
+animals and vehicles are all operating with some intelligence to them." And, for the drivers: "its good they stop for
+pedestrians (npc and players) but they still should run some people over sometimes, and if they stop suddenly the
+vehicle behind them might rear end them which sometimes might start a fight between the npc drivers but not always."
+
+### The harness (tools/trafficsim.mjs)
+World v3 built headless as the server builds it. Six players stand by the busy stations (Midtown, Metro Central, Old
+Quarter, Northgate, Southside, Westport Center) and one stands out in the wilds by Red Rock. The world runs for 8 in-game
+minutes; the first minute is warm-up. The report gives:
+- vehicles stopped for 20 s and more, and why (it walks down the queue to its head);
+- the jam clusters (three or more stuck cars within 140 px), named by the junction's streets;
+- the average speed by road kind, with how much of the time traffic is stopped and how much of that is at a red light;
+- the rescues: cars cleared while stuck, and the cars that gave up;
+- the traffic code's own counters;
+- people on foot who mean to walk somewhere and don't move;
+- animals pressing into something;
+- the tick, overall and for each system.
+
+`--dump` writes every stuck car's whole state and the state of whatever is in its way. Run it under
+`flock /tmp/cla-heavy.lock node --expose-gc tools/trafficsim.mjs --seed 7` (about 100 s and 2 GB to build).
+
+### The hot spots and what locked them
+1. **Central Avenue at Northgate Station Road (The Yards): a gang shootout's police car.** gangwar.js dropped the car
+   20 px off the nearest junction's middle, at a random angle. It isn't despawnable, and the shootout's clean-up waits
+   until nobody is within 1100 px. With a player at the station, it stood across the avenue's mouth for the rest of the
+   run, and the avenue queued behind it: 1,038-1,288 vehicle-seconds in one run, a sedan stuck four minutes. Now
+   `kerbSpot` puts the car along the nearest street, clear of the junctions at both ends. It goes up on the pavement
+   where it fits (one-lane streets are no wider than a car) and at the kerb otherwise. A finished shootout's car becomes
+   the clean-up's (despawnable).
+2. **Cars left in the lane (parked or empty, a wreck, a breakdown), and service vehicles at work.** A driver behind one
+   on a street with a lane each way could only turn round. With no room to turn (a queue behind, a narrow street), it
+   waited for the clean-up, which never comes while someone's watching. Now (reroute.js `findWay`, `standing`) it goes
+   round on the other side of the road when the strip is clear and nothing's coming (`oncoming`). It backs off first
+   if it's nose to the other car (`gap0`/`back0`), so the corner of its bumper doesn't catch it and shove it along. It
+   swings out slowly from beside the back corner and follows the lane's heading, not the way it happens to point. The
+   queue behind follows it round one car at a time (`jammed` no longer counts a car that's about to go round).
+3. **Cars nosed at a slant into a car in a kerb bay (Magnolia Street, Southside).** A car eased over for a siren, or
+   out of a bend, stopped nose to a parked car's corner. Standing still, it could never steer back into its lane.
+   Three fixes in traffic.js:
+   - `straighten`: it backs off a little, and the nose swings back toward its line.
+   - `obstacleSpeed`: it crawls past a standing car that's clear of its lane (`clearOfLane`, worked out once per pair)
+     instead of stopping short of it for good.
+   - Easing over for a siren never goes onto a car standing at the kerb.
+4. **A tow truck pulling away with a car on its hook, nose to nose with a car from each side (Magnolia Street, four
+   minutes).** A car with no way round and no room to turn now backs off down its lane, as far as the room behind it
+   allows, for a vehicle at work that's headed its way (reroute.js `makeWay`).
+5. **Blocking the box.** junctionClear looked for a queue only a car's length past the junction's mouth. A van stopped
+   just beyond that let a car drive in, and it stopped with its tail across the junction. Now the whole car must fit
+   past the mouth (`boxHolds` counts the holds).
+
+### People and animals
+- **People on foot** (npc.js):
+  - A wanderer's next spot must be reachable in a straight walk: no tree, lamp post, bench, bin or standing vehicle
+    on the way (`lineHits`, checked once per pick). The tiles alone let them pick a spot behind a parked car and walk
+    into it.
+  - At the kerb they wait for a gap in the traffic (`kerbWait`: a car that would be there within 2.6 s). They give up
+    and go somewhere else after 7 s.
+  - Wanderers pressing into something step aside (`sidestep`, which only some roles had before).
+- **Animals**: measured, and they're fine. No animal was stuck 3 s or more in any run, and their give-ups are task
+  #422's steering working. No change.
+
+### Fallible drivers (server/systems/slips.js; the numbers are shared/rules.js DRIVER_SLIPS)
+- **A miss.** A driver coming up on someone on foot in the road (an NPC or a player) is rolled once for that person.
+  Now and then it reacts late, by 0.9-1.5 s. The odds go up when they step out close in front, at night, in the rain,
+  or with a reckless driver, and down on a zebra crossing with the walk light. What happens next is the cars' own
+  physics (vehicles.js strikePed, carhits.js).
+- **A rear-end.** The car ahead brakes hard (`noteBraking`). The driver behind may be slow to react, by its
+  attentiveness (fixed per driver) and the road's wetness, and if its gap wasn't enough it runs into it: the cars' own
+  crash and damage.
+- **After a rear-end between two of the city's drivers** (`bumped`, from vehicles.js):
+  - Most often both drive on.
+  - About a fifth of the time they pull up, get out and have words: 'say' lines, face to face.
+  - About one in twelve (more with the drivers' tempers, npc fight) it comes to fists. That runs through npc.startFight
+    and markBrawl, so the police can be called to it like any brawl. It stops at 55 % health.
+  - Then they walk back, get in and go. A driver who is still about is put back at the wheel when time's up, so a car
+    left in the lane happens only if its driver is down, arrested or gone. While they're out, the traffic behind treats
+    the two cars as a blockage and goes round.
+- **Never** near a hospital, near a player who is down, or within 90 s of a player waking up or coming in (anywhere).
+  Never twice to the same player in 10 minutes, and never to anyone lying in the road.
+
+### Before and after (tools/trafficsim.mjs, 8 in-game minutes, 7 counted; main c232e74a vs this branch)
+| | seed 7 before | seed 7 after | seed 3 before | seed 3 after |
+|---|---|---|---|---|
+| vehicles stuck 20 s+ (episodes / vehicles) | 30 / 26 | 2 / 2 | 39 / 29 | 21 / 17 |
+| vehicle-seconds stuck (not at a light) | 1,228 | 41 | 2,519 | 583 |
+| longest | 193 s | 21 s | 255 s | 60 s |
+| stuck at once (average / peak) | 1.5 / 7 | 0.05 / 3 | 4.2 / 12 | 0.4 / 6 |
+| jam clusters (count / cluster-seconds) | 2 / 6 | 0 / 0 | 2 / 38 | 1 / 1 |
+| cleared away while stuck / gave up | 5 / 4 | 0 / 0 | 3 / 2 | 2 / 0 |
+| avg speed px/s: st / ave / minor / art / blvd | 102 / 114 / 71 / 180 / 180 | 106 / 130 / 60 / 181 / 176 | 104 / 95 / 58 / 182 / 176 | 105 / 124 / 49 / 183 / 181 |
+
+The rest:
+- **People.** Seed 3 (the same ped metric both sides): meaning to walk but not moving, 17.9 % of their walking time
+  before and 16.7 % after; pressing 3 s or more, 454 episodes before and 233 after. Pressing into a standing vehicle
+  went from 44 to 0.
+- **Animals.** No animal was stuck 3 s or more, before or after.
+- **Minor roads are slower.** The minor roads by Midtown station are the station's own approach roads. Cars there now
+  wait at their line while the road they're taking is backed up past the junction, where they used to drive in and
+  block the box. That costs the minor roads some speed; the avenues and streets go faster.
+- **The tick.** These were measured on the shared 2-core machine with other agents' captures running, so the noise is
+  a few ms. On the cleanest pair (the same code but for makeWay): traffic 4.54-4.59 ms before and 4.85-5.01 ms after;
+  npc 5.0-5.2 before and 5.8 after; the whole tick's mean 33.3-33.8 before and 34.1 after, p95 44-47 before and 46-47
+  after. A CPU profile has every new function (straighten, clearOfLane, lineHits, kerbWait, noteBraking, missPed,
+  lateFor) under 0.3 % of the tick.
+- **The slips over the four after-runs (about 50 vehicle-hours of traffic round the players):**
+  - misses 0.7-1.7 per vehicle-hour, almost all of them on someone who stepped (or dived) clear in time; one
+    run-over in about 110 vehicle-hours over all nine runs with the slips on;
+  - rear-ends 0.24-0.87 per vehicle-hour;
+  - words 0.08-0.24 per vehicle-hour;
+  - fist fights 0-0.08 per vehicle-hour;
+  - cars left in the lane after an incident: 0 since the drivers are put back at the wheel.
+
+### Tests
+- test/trafficbox.test.js:
+  - don't block the box: a car waits at its line while its exit is backed up, then goes;
+  - two cars nose to nose get by each other;
+  - a shootout's police car is never in a junction;
+  - a car nosed at a slant into a car in a kerb bay straightens up and drives past without touching it.
+- test/reroute.test.js:
+  - a car left in the lane is gone round, the whole queue following, and not shoved along;
+  - no pulling out with something in the other lane ahead;
+  - a car backs off for a tow truck headed its way, and not for one facing away;
+  - the turn-round case now has both lanes blocked.
+- test/slips.test.js:
+  - a rear-end that ends in words: out, words, back in and away within 40 s;
+  - a rear-end that comes to blows: both back in afterwards, nobody killed;
+  - most rear-ends: both drive on, and never one by a hospital;
+  - a late driver really runs into the car ahead, with dents on both;
+  - a miss that hits someone;
+  - nobody lying in the road is missed, and nor is a player who has just come in.
