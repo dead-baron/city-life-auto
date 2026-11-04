@@ -37,7 +37,7 @@ test('every item of the old pause list has a home in the hub', () => {
   const help = hubHtml.slice(hubHtml.indexOf('<section data-sec="help"'), hubHtml.indexOf('<section data-sec="danger"'));
   const homes = {
     resume: /data-p="resume"/, map: /data-p="map"/, phone: /data-p="phone"/, players: /data-p="people"/, settings: /data-p="settings"/,
-    controls: /<section data-sec="controls">[\s\S]*id="set-binds"/, look: /data-h="look"/, cine: /data-h="cine"/, unstuck: /data-h="unstuck"/, surrender: /data-h="surrender"/,
+    controls: /<section data-sec="controls" hidden>[\s\S]*id="set-binds"/, look: /data-h="look"/, cine: /data-h="cine"/, unstuck: /data-h="unstuck"/, surrender: /data-h="surrender"/,
     fullscreen: /data-h="fullscreen"/, devmode: /data-h="devmode"/, title: /data-p="leave"/, dev: /data-h="dev"/, logoff: /data-p="logoff"/,
   };
   for (const [k, re] of Object.entries(homes)) assert.match(hubHtml, re, k);

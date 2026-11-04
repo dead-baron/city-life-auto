@@ -34,6 +34,7 @@ export function createHub(ctx) {
   function showSec(s) {
     sec = s;
     for (const b of nav.querySelectorAll('[data-sec]')) { b.classList.toggle('on', b.dataset.sec === s); b.setAttribute('aria-selected', b.dataset.sec === s); }
+    nav.querySelector('.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // (a narrow screen: the lit tab in view)
     for (const el of $('settings').querySelectorAll('section[data-sec]')) el.hidden = el.dataset.sec !== s;
     $('set-body').scrollTop = 0;
     ctx.refocus();

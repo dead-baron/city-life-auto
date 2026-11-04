@@ -188,7 +188,7 @@
       <button class="tab" role="tab" data-sec="graphics">GRAPHICS</button><button class="tab" role="tab" data-sec="sound">SOUND</button><button class="tab" role="tab" data-sec="controls">CONTROLS</button><button class="tab" role="tab" data-sec="game">GAME</button><button class="tab" role="tab" data-sec="chat">CHAT</button><button class="tab" role="tab" data-sec="account">ACCOUNT</button><button class="tab" role="tab" data-sec="help">HELP</button><button class="tab" role="tab" data-sec="legal">LEGAL</button>
     </nav>
     <div id="set-body">
-      <section data-sec="controls">
+      <section data-sec="controls" hidden>
         <div class="set-head"><h2>CONTROLS</h2><div id="set-dev" class="seg" role="tablist" aria-label="Device"><button role="tab" data-dev="kbm">Keyboard and mouse</button><button role="tab" data-dev="pad">Gamepad</button><button role="tab" data-dev="touch">Touch</button></div></div>
         <div id="set-binds"></div>
         <h3>OPTIONS</h3>
@@ -213,7 +213,7 @@
         </div>
       </section>
       <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>
-      <section data-sec="graphics" hidden><h2>GRAPHICS</h2>
+      <section data-sec="graphics"><h2>GRAPHICS</h2>
         <div id="s-gfxbox" class="gfxbox"></div>
         <label class="srow"><span>Keep it smooth (ease off the sharpness when the frame rate drops)</span><input type="checkbox" id="s-smooth"></label>
         <label class="srow"><span>Fullscreen when playing on a phone</span><input type="checkbox" id="s-autofs"></label>
