@@ -777,7 +777,8 @@ function onEvent(ev) {
   const now = S.loopClock;
   const fx = S.fx;
   switch (ev.e) {
-    case 'toast': S.hud.toast(ev.text, ev.tone, ev.short); if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
+    case 'toast': if (!S.hud) break; S.hud.toast(ev.text, ev.tone, ev.short);   // (a note that comes in before the HUD is up - while the city loads - is dropped, not an error)
+      if (ev.tone === 'bad') sfx('bad'); else if (ev.tone === 'good') sfx('cash', 0.6); else if (ev.tone === 'warn') sfx('alert', 0.7); break;
     case 'shot': {
       const w = WEAPON_BY_INDEX[ev.w];
       // the flash and the tracer start at the gun as it's drawn: your own character runs ahead of where the server had
@@ -1454,7 +1455,7 @@ $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pr
 const PRACTICE_ON = false;
 if (!PRACTICE_ON) { $('practice').classList.add('hidden'); $('t-practice').classList.add('hidden'); }
 const practiceGo = () => { if (!PRACTICE_ON) return; initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
-const playGo = () => { startPlaying(); if (S.dev) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
+const playGo = () => { startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
 

@@ -19326,3 +19326,7 @@ count-up one requestAnimationFrame loop for 300 ms, the reload ring one while re
 ### Found on the way
 - The kit's generic `.chip` (30 px tall) also matched the job card's `#job.chip` and pinned it to one line's height:
   `#job.chip` now sets `height: auto`.
+
+## 2026-11-03 - No error when a note arrives before the HUD
+
+A note from the server (a toast) that came in while the city was still loading threw "Cannot read properties of null (reading 'toast')" on every start (client/main.js). Notes before the HUD exists are now dropped.
