@@ -91,6 +91,7 @@ test('the touch buttons: one vector glyph for every action and label a slot hold
     const nums = (glyph(n, 0, 'line').match(/d="([^"]+)"/) || [])[1].match(/-?\d*\.?\d+/g).map(Number);
     assert.ok(nums.length > 4, n);
   }
+  assert.equal(glyph('bag'), glyph('bag', 0, 'solid'), 'the owner\'s pick (11-04): the solid set by default');
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
   assert.equal(glyphOfWeapon('fists', 'melee'), 'fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
   assert.equal(glyphOfWeapon('knife', 'melee'), 'knife'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat');

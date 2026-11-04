@@ -301,7 +301,7 @@ const VG = {
 };
 export const GLYPH_NAMES = Object.keys(VG);
 export const GLYPH_VARIANTS = ['line', 'solid'];
-let VARIANT = 'line';   // (the one in use: the owner picks between the two - setGlyphVariant)
+let VARIANT = 'solid';   // (the one in use - the owner's pick, 11-04: the solid set; 'line' stays as the shapes' outline, the solid set's fallback where a glyph has no fill of its own)
 export function setGlyphVariant(v) { if (GLYPH_VARIANTS.includes(v)) { VARIANT = v; gSvgs.clear(); } }
 const gSvgs = new Map();
 const STROKE = (w = 2) => `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
