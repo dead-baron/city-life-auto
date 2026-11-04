@@ -391,7 +391,7 @@ function build(m, api, K) {
       { name: 'Zipline Car Rental', sign: 'ZIPLINE', bg: '#e8b030', fg: [30, 30, 36], wall: '#f0e8d0', aw: ['#e8b030', '#f0ece4'] },
       { name: 'Sunbelt Rent-A-Car', sign: 'SUNBELT', bg: '#c8342e', fg: [250, 246, 236], wall: '#ece6da', aw: ['#c8342e', '#f0ece4'] },
       { name: 'EconoRide Rentals', sign: 'ECONORIDE', bg: '#2a8a4a', fg: [250, 250, 240], wall: '#e4e0d4', aw: ['#2a8a4a', '#f0ece4'] },
-      { name: 'Coastline Car Hire', sign: 'COASTLINE', bg: '#1e4a8a', fg: [250, 250, 240], wall: '#e8e4dc', aw: ['#1e4a8a', '#f0ece4'] },
+      { name: 'Coastline Car Rental', sign: 'COASTLINE', bg: '#1e4a8a', fg: [250, 250, 240], wall: '#e8e4dc', aw: ['#1e4a8a', '#f0ece4'] },
     ];
     const x0 = S(AX.blvd, 'blvd') + 1, x1 = AX.bend - 14, cw = Math.floor((x1 - x0) / CO.length);
     CO.forEach((c, k) => {

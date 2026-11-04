@@ -20266,3 +20266,24 @@ are a separate change (the next entry) because they re-key the world; this one l
 - The tutorial (paused) has its text Americanized too; its test still passes, TUTORIAL_VERSION is unchanged.
 - Tests that read the words moved with them: cinema (Movie Ticket), look (Uniform pants), bounties (pants), homeups and
   felling (toward an upgrade), hudinfo (call in).
+
+## 2026-11-04 - American English: the place names (re-keys the world)
+
+The place names from the owner's "American English everywhere" note, kept to one commit because they change the
+world's data: `world`, `art`, `world3` and `art3` all move, so players fetch the world once more (the owner's plan:
+"Place names re-key the world once"). Ship it with the next world change.
+- Theatre -> Theater: The Grand Theater (Downtown, its sign, the cinema, its counter's menu), The Rose Theater (the
+  Pink Mile, its neon), the theater neon's default word. The generator's name tests (map.js: not into the front of a
+  theater, no gun shop in one; world3-medics.js NOT_INTO) match both spellings, so nothing is placed differently.
+- Harbour -> Harbor: Prison Harbor Office, Prison Island Harbor, Harbor Pottery (Old Town), Harborlight (a Bayside villa).
+- Hire -> Rental: Gull Harbor / Coral Cay / Kestrel Lake Boat Rental, Coastline Car Rental (beside Zipline Car Rental),
+  Egret Marsh / Silver Thread Canoe Rental, Redwood River Run - Kayak Rental, the BIKE RENTAL and CANOE RENTAL signs, and
+  the old city's rentals (map.js).
+- Pitch -> field: Greenfield Park Soccer Field, Linden Park Soccer Field, Waves Stadium Field, the old city's
+  "<park> Soccer Field".
+- Post -> Station: the four First Aid Stations (Coral Cay, Red Rock, Eastern Desert, Sandpiper Junction) and the Red
+  Rock Rescue Station.
+- High Street -> Main Street (the old core's street and Gull Harbor's, metro.js and islands.js).
+- Kept: Quay Street, Garden Crescent, Greystones, the Copper Spur and Hollow Saloons, Railway Express Agency, Velocity
+  Parcel, Cay Post & Supply, Desert Junction Trading Post - American names, or names in their own right.
+- Tests that name the places moved with them: cinema, walkinrooms, world3water, world3scenes, world3world.

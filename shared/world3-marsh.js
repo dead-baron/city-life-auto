@@ -18,7 +18,7 @@ export const MARSH = {
   name: 'Egret Marsh Boardwalk', district: 53, seg: [6, 14], segs: 6, turn: [0.75, -0.95, 0.85, -0.7, 0.9], plat: [7, 5],
   // the canoe dock's hire (2026-10-21; the research's 4.5 "a canoe launch and canoe trail"): kayaks to paddle the
   // channels, handed back at the dock (server/systems/rentals.js)
-  hire: 'Egret Marsh Canoe Hire', models: ['kayak'], note: 'Paddle the channels between the reed islands - the herons, the beavers\' lodge and their dam, the lilies. Hand it back at the dock.',
+  hire: 'Egret Marsh Canoe Rental', models: ['kayak'], note: 'Paddle the channels between the reed islands - the herons, the beavers\' lodge and their dam, the lilies. Hand it back at the dock.',
   // the race from the hire (server/systems/races.js kind 'kayak'): out through the channels as far as `reach` tiles of
   // paddling take you and back another way where there is one, a gate every `gate` tiles; at least `min` tiles out
   race: { name: 'Egret Marsh Paddle', gate: 30, reach: 240, min: 80, prize: 200 },

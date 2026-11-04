@@ -200,7 +200,7 @@ const SYSTEMS = [
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
-  ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
+  ['cinema', cinema.update],        // The Grand Theater: the films in the screens, the audience
   ['drivein', drivein.update],      // the Starlite Drive-In: who's watching (drivein.js)
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)

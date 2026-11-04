@@ -11,7 +11,7 @@ import { TILE, T } from './constants.js';
 // at: the river's point nearest which the landing goes (tiles); jetty: tiles out into the water; models: what's for hire
 export const RIVERRUN3 = {
   name: 'Redwood River Run',
-  put: { at: [2357, 1128], label: 'Redwood River Run - Kayak Hire', sign: 'RIVER RUN - PUT-IN', note: 'The current takes you down to the bay at Northshore - the white water too. Hand it in at the take-out.' },
+  put: { at: [2357, 1128], label: 'Redwood River Run - Kayak Rental', sign: 'RIVER RUN - PUT-IN', note: 'The current takes you down to the bay at Northshore - the white water too. Hand it in at the take-out.' },
   take: { at: [2480, 811], label: 'Redwood River Run - Take-out', sign: 'RIVER RUN - TAKE-OUT', note: 'The end of the Redwood River Run: hand your kayak in here.' },
   jetty: 6, models: ['kayak'],
   gate: 45, prize: 250,   // (the race: a gate every this many tiles down the river; the prize, as the races' - server/systems/races.js)

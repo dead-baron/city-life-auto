@@ -40,7 +40,7 @@ export const AVES_X = [
   { x: 868.5, name: 'Bridge Avenue', bridge: true }, { x: 958.5, name: 'Northbridge Avenue', bridge: true },
 ];
 export const AVES_Y = [
-  { y: 380.5, name: 'High Street', from: 770, bow: { amp: -4, x0: 770, x1: 1047 } },
+  { y: 380.5, name: 'Main Street', from: 770, bow: { amp: -4, x0: 770, x1: 1047 } },
   { y: 476.5, name: 'North Boulevard', kind: 'blvd', from: 688.5, beside: true, bow: { amp: 7, x0: 688.5, x1: 1010 } },
   { y: 556.5, name: 'Bay Avenue' },
   { y: 724.5, name: 'Southside Avenue' }, { y: 808.5, name: 'Dock Avenue' },

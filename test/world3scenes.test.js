@@ -98,7 +98,7 @@ test('World v3: a few Search & Rescue HQs across the regions, each with its pad;
   const pads = airfields(M).pads.filter((r) => r.kind === 'sar');
   assert.equal(pads.length, hqs.length, 'a helipad at each');
   const dn = (x, y) => DISTRICTS[M.dist[M.idx(Math.floor(x / TILE), Math.floor(y / TILE))]];
-  const want = { 'Granite Peaks Ranger Station': 'Granite Peaks', 'Egret Coast Coastguard Station': 'Egret Coast', 'Red Rock Rescue Post': 'Red Rock Desert', 'Sandpiper Coastguard Station': 'Sandpiper Coast' };
+  const want = { 'Granite Peaks Ranger Station': 'Granite Peaks', 'Egret Coast Coastguard Station': 'Egret Coast', 'Red Rock Rescue Station': 'Red Rock Desert', 'Sandpiper Coastguard Station': 'Sandpiper Coast' };
   for (const [name, d] of Object.entries(want)) { const r = hqs.find((q) => q.label === name); assert.ok(r, `${name} built`); assert.equal(dn(r.x, r.y).name, d, `${name} in ${d}`); }
   for (let i = 0; i < hqs.length; i++) for (let k = i + 1; k < hqs.length; k++) assert.ok(Math.hypot(hqs[i].x - hqs[k].x, hqs[i].y - hqs[k].y) > 600 * TILE, `${hqs[i].label} and ${hqs[k].label} far apart`);
   // the calls: only from wild districts, never the city's parks

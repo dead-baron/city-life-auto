@@ -291,7 +291,7 @@ function build(m, api, K) {
     place('Gull Harbor Fish Wharf', wx0, qy0, wx1 + 1, pend + 1);
     // nets drying on the grass beyond the wharf
     for (const [dx, dy] of [[4, 2], [4, 7], [10, 4.5]]) prop('netrack', wx1 + dx, qy0 + dy, 8, { len: 60 });
-    { const hx = px1 + 6; let s2 = wy0; while (s2 < 3790 && !isW(hx, s2)) s2++; (m.handRentals ||= []).push({ x: hx * TILE, y: (s2 - 1) * TILE, name: 'Gull Harbor Boat Hire' }); }
+    { const hx = px1 + 6; let s2 = wy0; while (s2 < 3790 && !isW(hx, s2)) s2++; (m.handRentals ||= []).push({ x: hx * TILE, y: (s2 - 1) * TILE, name: 'Gull Harbor Boat Rental' }); }
     place('Gull Harbor Quay', sx1 + 3, qy0, qx1 + 1, GY.edge + 1);
     // the breakwaters: 3 wide (the heads 5), stone, rubble along the sea side, a light on each head
     const mole = (L, v) => {

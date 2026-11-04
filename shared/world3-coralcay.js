@@ -196,7 +196,7 @@ function build(m, api, K) {
     m.pois.push({ id: m.pois.length, kind: 'tackle', label: 'Coral Cay Bait & Tackle', x: Math.round(bx * TILE), y: Math.round((by + 1.6) * TILE), r: 40, counter: true });
     prop('crates', CX.coral + 4, sy - 2, 10); prop('cooler', CX.coral + 5.5, sy - 1.4, 0, { v: 2 });
     prop('textsign', CX.coral + 3, CORAL[1][1] + 5, 0, { text: 'CORAL CAY DOCK', bg: '#1e3a5e', fg: [255, 226, 140], z: 34, sx: 1 });
-    (m.handRentals ||= []).push({ x: (CX.coral + 16) * TILE, y: (sy - 1) * TILE, name: 'Coral Cay Boat Hire' });
+    (m.handRentals ||= []).push({ x: (CX.coral + 16) * TILE, y: (sy - 1) * TILE, name: 'Coral Cay Boat Rental' });
     m.dropSites.push({ x: CX.coral * TILE, y: Math.round((hy0 + 1.5) * TILE), name: 'the end of Coral Cay Dock' });
     place('Coral Cay Dock', CX.coral - 9, CORAL[1][1], CX.coral + 9, hy1 + 1);
   }

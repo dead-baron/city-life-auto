@@ -519,7 +519,7 @@ Object.assign(SHOPS.assay.sellPrice, Object.fromEntries(['geode', 'amethystGeode
 const FIND_KIT = [{ kind: 'item', id: 'trowel', price: 25, qty: 1 }, { kind: 'item', id: 'goldPan', price: 45, qty: 1 }];
 SHOPS.hardware.buy.push(...FIND_KIT); SHOPS.lodge.buy.push(...FIND_KIT); SHOPS.huntcamp.buy.push(...FIND_KIT);
 // The Grand Theatre's ticket and popcorn counter (shared/cinema.js; the prices are CINE's there)
-SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
+SHOPS.cinema = { title: 'The Grand Theater - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
 // ---- gardening (H61: server/systems/gardening.js; the numbers: shared/rules.js GARDEN, GARDEN_CROPS): a packet of seeds
 // for each crop (planted at an empty plot in your yard: seed_<crop>), what it grows (<crop>: eaten for a little health,
 // sold to the grocery or the co-op) and the prize ones now and then (prize_<crop>: worth GARDEN.prizeX times as much)
