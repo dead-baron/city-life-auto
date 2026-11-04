@@ -69,6 +69,7 @@ export const ENGINE_CLASS = {
   horse: 'pedal',   // (never voiced: its hooves instead - hooves(), #325)
   semi: 'truck', trailer: 'pedal', boxtrailer: 'pedal', forklift: 'electric',   // (b8a: the big rig's diesel and air brakes; a trailer's never voiced - nobody drives it)
   skateboard: 'pedal',   // (a board lying on the ground: ridden, it's the rider's - skate.js - so never voiced)
+  surfboard: 'pedal',   // (a surfboard set down on the sand: never ridden as a vehicle - gear.js)
 };
 export const SIREN_KIND = { police: 'police', policebike: 'police', fbi: 'police', swat: 'police', policeboat: 'police', ambulance: 'ambulance', rescueboat: 'ambulance', rescue4x4: 'ambulance', firetruck: 'fire' };
 const AIR_BRAKES = new Set(['truck', 'bus']);

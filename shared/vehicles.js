@@ -62,6 +62,8 @@ export const VEHICLES = {
   cart:      { i: 50, name: 'Shopping Cart',    kind: 'bike', L: 30,  W: 20, max: 330, accel: 250, brake: 420, rev: 60,  turn: 3.7, grip: 7.0, drift: 2.4, mass: 0.22, hp: 60, seats: 2, slots: [[1, 0]], pedal: true, cart: true, rough: 2.4, crew: [[-20, 0], [3, 0]], blurb: 'kick it along, ride the back rail; one rides in the basket' },
   // the skateboard (2026-10-24): lying about like the carts, ridden as the board (server skate.js)
   skateboard: { i: 52, name: 'Skateboard', kind: 'bike', L: 26, W: 10, max: 300, accel: 300, brake: 430, rev: 0, turn: 4, grip: 14, drift: 3, mass: 0.1, hp: 40, seats: 1, slots: [], pedal: true, board: true, rough: 3 },
+  // a surfboard set down (2026-11-04): lying on the sand till you pick it up, or it goes home (server gear.js) - never ridden as a vehicle
+  surfboard: { i: 86, name: 'Surfboard', kind: 'bike', L: 44, W: 14, max: 0, accel: 0, brake: 400, rev: 0, turn: 0, grip: 14, drift: 3, mass: 0.1, hp: 40, seats: 1, slots: [], pedal: true, surfboard: true, rough: 3 },
   cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
   // the five-star response (police.js): the FBI's black SUVs, the army's olive trucks
   fbi:       { i: 33, name: 'Federal SUV',      kind: 'car',  L: 104, W: 50, max: 660, accel: 380, brake: 780, rev: 180, turn: 2.6, grip: 8.8, drift: 2.2, mass: 1.8, hp: 520, seats: 4, slots: [[-36, 0]], police: true },
@@ -124,7 +126,7 @@ export const VEHICLES = {
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
-export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal && !VEHICLES[id].cart && !VEHICLES[id].board);
+export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal && !VEHICLES[id].cart && !VEHICLES[id].board && !VEHICLES[id].surfboard);
 
 export const VEHICLE_BY_INDEX = [];
 for (const [id, v] of Object.entries(VEHICLES)) {

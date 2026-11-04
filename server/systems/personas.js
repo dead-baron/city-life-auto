@@ -373,6 +373,8 @@ function waterward(map, x, y) {
   for (const r of [24, 40, 60]) for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, t = map.tileAtPx(x + Math.cos(a) * r, y + Math.sin(a) * r); if (t === T.WATER || t === T.DEEP) return a; }
   return null;
 }
+// the benches within r of (x, y) (gear.js: rollerblades on and off sitting on one)
+export const benchesNear = (map, x, y, r) => propsNear(map, x, y, r, BENCH);
 const benchTaken = (world, b) => world.query(b.x, b.y, 30, K.PED).some((e) => e.npc && (e.npc.bench || e.sitBench));
 // the way a bench faces, as the art draws it (client/art2/game/statics.js 'bench', props.js bench(): the seat's front at +y,
 // turned by its heading): as its place set it, else toward the road beside it, else one of four ways by its position

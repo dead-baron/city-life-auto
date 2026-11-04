@@ -11,7 +11,7 @@ import { wheelPicker } from '../shared/input.js';
 import { weaponIcon } from './render/peds.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', parachute: '🪂', drill: '🛠',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', skateboard: '🛹', rollerblades: '🛼', parachute: '🪂', drill: '🛠',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨', crickets: '🦗', minnows: '🐟', doughballs: '⚪', chum: '🪣', dryfly: '🪰',
   caneRod: '🎣', baitcaster: '🎣', flyRod: '🎣', surfRod: '🎣', gameRod: '🎣',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',

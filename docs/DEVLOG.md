@@ -19942,3 +19942,73 @@ refusals while wanted and after a fight (and allowed once the minute is up), a t
 then the drop rule), no ghost after a clean exit, and the summary's numbers. All 7 fail on the code before this
 change (the closed-tab test on "not the quiet five minutes"). The launch-*,
 startfresh, gameplay, core, world3server, pagemodules and perf tests all pass (171 of 171).
+
+## 2026-11-04 - Rides you own and carry: skateboards, surfboards, rollerblades
+
+The owner's note (11-03): skateboards, rollerblades and surfboards should be "things you find, keep or carry, and lose",
+"not something you can just equip and go faster on". He also reported that the surfboard was slower than swimming, and
+that you couldn't swim while you carried one. The approved design, built on the systems already there
+(`server/systems/skate.js`, `surf.js`) with a new `server/systems/gear.js` for the carrying, the bag and the blades:
+
+**Skateboard.** Still a world vehicle (the vehicle button gets on and off), now tightened:
+- A skate park's rack boards are borrowed. They only serve the park: ride one more than `RIDE_GEAR.borrowPad` (3)
+  tiles past the park's edge and you're off it where you stand, and it's back on its rack (put out again once nobody's
+  looking, as before). The racks by the shops and the boardwalks are unchanged.
+- A board you bought is yours to carry. In the bag (it's an item again: `ITEMS.skateboard`), or in your hand (the bag's
+  Use, the quick wheel, or the action button by it lying on the ground). Carrying it takes a hand: the fire button does
+  nothing but say so. With it in hand the vehicle button rides it; the action button puts it in the bag. On your own
+  board, the action button steps off and picks it up. Getting into a vehicle, going inside or picking up a crate puts it
+  in the bag; going down drops it where you fall.
+- It wears with each bail: `RIDE_GEAR.wear` (0.1), plus up to `hard` (0.25) more for a bail at full speed into a wall: the third full-speed wall snaps it, a trick's bail is about 0.16.
+  Past `warnAt` (0.6) you're told it's cracking. At 1 it snaps (the page shows SNAPPED!): it's gone until you buy another.
+  In a skate session it's replaced on the spot instead (a fresh board lands where it stopped; the owner's exception).
+- One in the bag is yours; one gone from the bag (dropped, sold, lost with your pack) is gone. An old bag's skateboard
+  now stays in the bag as your board (it used to be taken out of it, 2026-10-24).
+
+**Surfboard.** The same model:
+- The bag no longer puts you on it. In the sea, the action button sets it down and you're on it, paddling. The vehicle
+  button does the same with it in your hand. Otherwise you swim like anyone, with it in the bag or under your arm.
+- The action button slides you off (it's under your arm, and you swim). Up the beach you walk out with it. Into a boat,
+  inside or onto a train, it goes in the bag; gone down in the water, it goes home.
+- Paddling is faster than swimming: `SURF_PADDLE` 88 px/s (it was 70; swimming is 75 at full stick, 86 at the top of the
+  swimming skill). The waves roll in at 100 px/s (they were 84), so a wave still outruns a paddle (the catch needs that).
+  A ride is about 1.3 s shorter.
+- Set down on dry land (the vehicle button with it in hand) it lies on the sand (a new vehicle type, `surfboard`, which
+  is never driven; the vehicle button picks up your own, and nobody else can take it). After `RIDE_GEAR.surfLieS` (180 s),
+  or once you're gone or 2,000 px away, it goes home once nobody's looking. Take it out at home, at a surf shop or at
+  a sports shop (into your bag). Logging off with it out: it's home when you come back.
+
+**Rollerblades.** Wearable gear (`ITEMS.rollerblades`, $70 at the skate shops and the sports shops):
+- Sit on a park bench to put them on or take them off: `BLADES.laceS` (3 s), and moving the stick gets you up. You're
+  seen sitting on the bench, then back where you stood.
+- On them: `BLADES.speedMul` 1.12 times the walk-to-run curve. That's about 200 px/s at full stick: quicker than walking,
+  slower than a board's 270. No sprint and no getting into a vehicle (buses, trains and ferries still take you). The
+  page predicts it from the snapshot's speed and sprint flag, so nothing new goes on the wire. You're drawn with the
+  bladers' gait (`gt 'blade'`).
+- On grass, dirt or sand you clump along at `roughMul` (0.34). Rolling onto it faster than `fallV` (70 px/s) puts you
+  down for `fallS` (1.2 s). In the water you swim as anyone. They stay on through a respawn and a rejoin.
+
+**The page.** The client stays a dumb window, so its changes are small: a surfboard carried under the arm (`pp
+'surfboard'`, `client/art2/people.js`, `game/peds.js`), a surfboard lying on the sand (`client/art2/vehicles.js`), the
+SNAPPED text (`client/skate.js`), and the bag's lines and buttons for the three (`client/bag.js`, `inventory.js` icons).
+The board in hand uses the skaters' existing board prop. Everything else goes through the prompts and notes.
+
+**Not done / for the owner.** A blader standing still is drawn standing, not on blades (the art draws the wheels only
+in the blade stride). The free boards by the shops and the boardwalks are still free to ride off on and aren't
+borrowed. There's no skate "event" beyond the sessions, so the snap exception covers sessions only.
+
+**Tests.** `test/ridegear.test.js` (new, 7 tests) covers each rule: a borrowed board going back on its rack; a board in
+hand blocking the gun (and firing again once it's in the bag); the wear, the warning, the snap, and the fresh board in a
+session; the surfboard (swimming with it in the bag, the action button putting you on it, paddling faster than swimming,
+swimming again after sliding off, a board on the sand going home, taking it out at the surf shop); and the rollerblades
+(on and off at a bench, the speeds, no sprint, no vehicles, the fall on the grass, kept on through a rejoin). Against
+origin/main the file fails outright (`gear.js` doesn't exist there). `skate.test.js`, `surf.test.js` and
+`gameplay.test.js` were updated to the new design. Their changes: an old bag's board stays in the bag; the action
+button puts you on a surfboard; up the beach the board is in your hand; a surfboard has no crate slot; a test park
+clears the real racks' boards first (their places are numbered on the map's own list). In the white-water test, the
+tumble no longer carries the speed of the test's one-step jump along the beach. Run under the shared lock with
+`--test-concurrency=2`, all pass: ridegear, skate, surf, gameplay, core, pagemodules, lazypage, perf, deathpack, carts,
+bikes, fleet, devplay, sound, skills, water, riders, horses, blades, homes, homeinside, hub, transit, revive. The one
+exception is core's "world tick stays fast" (avg tick under 20 ms). It failed once in the big batch at 23 ms. Run
+twice on its own on this busy machine, origin/main failed both times (23.3 and 20.2 ms) and this branch passed both
+times. It's the machine's load, not this change. No perf budget was raised.

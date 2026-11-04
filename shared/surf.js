@@ -18,12 +18,12 @@
 // peel catches you if you stay in it.
 // Arithmetic only (no Math.sin and the like): the page and the server must agree.
 import { TILE, T } from './constants.js';
-import { SURFBOARD_PRICE } from './rules-base.js';
+import { SURFBOARD_PRICE, SURF_PADDLE } from './rules-base.js';
 
 export const SURF = {
   price: SURFBOARD_PRICE,   // a surfboard at the surf shops and the sports shops
   waves: 5, gapS: 4.2, lullS: 11,   // a set: three to five waves 4.2 s apart, then 11 s of calm
-  speed: 84,           // px/s a wave rolls in - faster than you paddle, so paddling in ahead of one, it catches you up
+  speed: 100,          // px/s a wave rolls in - faster than you paddle, so paddling in ahead of one, it catches you up
   start: 22 * TILE,    // px out where a wave rises
   brk: 11 * TILE,      // px out where a wave of size 1 starts to break (a bigger one further out, a smaller one nearer in)
   shore: 42,           // px out where its white water reaches the beach (the swash runs on up the sand: the page's)
@@ -36,7 +36,7 @@ export const SURF = {
   gapK: 0.7,           // it's a gap in the lip (gapAt)
   swashUp: 1.5, swashDown: 2.2, runup: 54,   // s the swash runs up the sand, s it drains back, px it runs (size 1)
   catch: [-26, 18],    // you catch a wave with its crest this far behind (-) / in front of you (px across it)
-  paddle: 70,          // px/s lying on the board, paddling (half again as fast as you swim)
+  paddle: SURF_PADDLE, // px/s lying on the board, paddling: faster than anyone swims (rules.js; 2026-11-04 - it was slower)
   along: 230,          // px/s the fastest you carve along the face
   face: 12,            // px in front of the crest you ride
   pocket: 140,         // px ahead of the break: the pocket, where the points are
