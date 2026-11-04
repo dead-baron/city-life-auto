@@ -50,7 +50,7 @@ export const PERSON_CAM = { elevation: 35, zScale: CA };          // world px of
 // seat heights (world px above the anchor) the seated poses sit on: motorbike / jet ski, bicycle, bench, car, the ground
 // (by a campfire, knees up)
 export const SEATS = { ride: 20, pedal: 19, sit: 11, drive: 9, sitlow: 3, cartsit: 8, saddle: 37 };   // (saddle: up on a horse's back, #325 - drawn at the horse's own feet)
-export const POSES = { idle: 2, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
+export const POSES = { idle: 4, walk0: 6, walk1: 6, walk2: 6, walk3: 6, punch: 6, swing: 6, aim: 2, aimw: 6, carry: 6, handsup: 2, fish: 4, kneel: 2, roll: 4, down: 2, dead: 1, swim: 2, ride: 1, pedal: 4, sit: 2, drive: 1, walk: 4, held: 2, sitlow: 2, cuffed: 6,
   // hit reactions: a stagger (0-1 knocked back, 2-3 shoved forward), a limp, crawling on the stomach, down on the face or the
   // back (1: pushing up to get back on their feet), dead face down or on the side ('dead' lies on the back)
   stagger: 4, limp: 6, crawl: 4, downF: 2, downB: 2, deadF: 1, deadS: 1 };
@@ -401,7 +401,10 @@ function rig(D, A, pose, f, kind, acc) {
   const P = base(D), c = kind ? ICLS[kind] : null;
   if (GAITS2[pose]) { GAITS2[pose](D, P, f, kind, acc); return P; }   // (the city's people, at the end)
   if (pose === 'idle') {
-    P.breath = f ? 0.4 : 0;
+    // standing: the breath fills the chest only (P.calm), never the head; 2, 3: a glance aside (peds.js idleFrame)
+    P.calm = 1;
+    P.breath = f === 1 ? 0.5 : 0;
+    if (f === 2 || f === 3) P.headYaw = f === 2 ? 0.55 : -0.55;
     if (kind) P.hands = (S) => restHold(D, P, S, kind); else if (acc) P.hands = (S) => accHands(D, P, S, acc);
   } else if (pose === 'walk' || pose[0] === 'w') {
     const lvl = pose === 'walk' ? 0 : +pose[4] || 0;
@@ -634,10 +637,10 @@ function accHands(D, P, S, acc) {
 function headFrame(S, P, cam) { return mmul(S.SP, mmul(rz(P.headYaw + cam), rx(P.headPitch - P.lean * 0.75 - 0.16))); }
 function spine(D, P) {
   const PF = rz(P.pelYaw), SP = mmul(PF, mmul(rz(P.twist), mmul(rx(P.lean), ry(P.tilt)))), SH = mmul(PF, mmul(rz(P.twist * 0.5), rx(P.lean * 0.5)));
-  const pel = P.pel, at = (M, v) => vadd(pel, mv(M, v)), b = P.breath;
+  const pel = P.pel, at = (M, v) => vadd(pel, mv(M, v)), b = P.breath, cb = P.calm ? b : b * 0.3, sb = P.calm ? 0 : b, nb = sb;
   const S = {
-    PF, SP, SH, pel, waist: at(SH, [0, 0.15, D.waistUp]), chest: at(SP, [0, 0, D.chestUp + b * 0.3]),
-    shL: at(SP, [-D.shX, -0.4, D.shUp + b]), shR: at(SP, [D.shX, -0.4, D.shUp + b]), neck: at(SP, [0, 0.2, D.neckUp + b]),
+    PF, SP, SH, pel, waist: at(SH, [0, 0.15, D.waistUp]), chest: at(SP, [0, 0, D.chestUp + cb]),
+    shL: at(SP, [-D.shX, -0.4, D.shUp + sb]), shR: at(SP, [D.shX, -0.4, D.shUp + sb]), neck: at(SP, [0, 0.2, D.neckUp + nb]),
     hipL: at(PF, [-D.hipX, 0, -1.0]), hipR: at(PF, [D.hipX, 0, -1.0]),
   };
   S.HD = headFrame(S, P, P.camYaw || 0);

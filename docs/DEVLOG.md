@@ -19870,3 +19870,22 @@ From below, the foot held.
   today's world hash too. That's left for a follow-up.
 - World v3's `world3` / `art3` hashes change (the v3 world's tiles), so browsers fetch the World v3 regions and chunks
   again. Today's `art` changes too (the cliff sprite's code), and today's `world` doesn't.
+
+## 2026-11-04 - Standing people breathe calmly, each on their own clock
+The owner: the NPC idle animation "just looks like they're sitting back and forward over and over." The standing pose
+had two frames, and the breath frame lifted the neck, so the head, and the shoulders with the arms hanging from them,
+by 0.4 px. At sprite size that rounds to a whole pixel on most looks, so the head and arms dropped and rose together.
+That reads as a squat. Every 2.7 s, every standing person flipped to the other frame, and people whose ids were eight
+apart flipped together.
+- client/art2/people.js 'idle' now has 4 frames: rest, breath, and a glance to the left or to the right. The breath
+  fills the chest only (`P.calm`): the shoulders, neck, head and hanging arms stay put. In an offline render of six
+  looks at every heading, the breath frame moved the top of the head in 28 of 48 sprites before and in none now, and it
+  changes about a third as many rows.
+- client/art2/game/peds.js `idleFrame(id, t)`: each person keeps their own clock from their id. A step lasts 0.8-0.95 s,
+  so no frame flickers past. A breath comes every 5 or 6 steps, and a glance aside every 13-22 s lasts two steps.
+  game/host.js draws standing people with it in place of pedFrame's shared beat.
+- Cost: two more idle sprites per look and heading, asked for ahead with the rest of the pose's cycle (host.js
+  `_cycle`). They're drawn lazily, not part of any chunk bake.
+- test/idlepose.test.js: the breath keeps the head's top row, the head and the feet unchanged for every look and
+  heading, and changes only a small share of the pixels. Each clock holds every frame at least 0.75 s, glances 4-10
+  times in two minutes, and a crowd of twelve is never all on one frame. It fails on the old pose.
