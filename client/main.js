@@ -73,7 +73,7 @@ initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
 import { holdForArt, veilTick } from './warmup.js';
-import { createTitle } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
+import { createTitle, paintSky } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -113,6 +113,8 @@ import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch(
 import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e) => console.warn('[leisure]', e));   // (fireworks, campfires of your own, grapes for the ducks)
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+// (and the screens, for the captures: UI-10)
+if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
 
@@ -1464,6 +1466,7 @@ $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
 
 // ---- the title screen (UI-10, UIC-08): the loading state, the tips, your card, who's online (client/titlescreen.js) ----
+paintSky($('hub'));   // (the skyline under the pause list's logo and the phone's home)
 createTitle({ $, S, warming: () => $('t-buttons').classList.contains('t-wait'), idle: () => !!S.idledOut, players: () => (S.welcomed && S.plist && S.plist.l ? S.plist.l.length : null) });
 setInterval(() => { if (S.welcomed && !S.playing && !$('title').classList.contains('hidden')) requestPlayers(); }, 15000);   // (who's online, while the title shows)
 $('t-char').onclick = () => { if (S.welcomed && S.looks) openCreator('edit'); };   // (CHARACTER: the creator over the title)

@@ -3,6 +3,7 @@
 // same card comes up when you Act at a job's place - a hospital's doors, a fire station, a taxi rank (the server's
 // { t: 'jobcard' }: server/systems/phone.js jobCard). Accepting asks the server ({ t: 'phone', a: 'take' }); its answer
 // sets the waypoint and puts the card (or the hub) away. Loaded with the phone or with the first card.
+import { icon as pix } from './touchicons.js';
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const P = (d) => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 // a line icon for each kind of job
@@ -26,14 +27,22 @@ export const payText = (j) => (j.lo && j.hi && j.hi > j.lo ? `${money(j.lo)}-${m
 export const fmtDist = (d) => (d >= 32000 ? `${(d / 32000).toFixed(1)} km` : `${Math.round(d / 32)} m`);   // (32 px a metre: the event arrows' scale)
 
 // the card's markup: j the board's entry; o: { dist (px), busy (you have a job), here (at its place: no distance),
-// compact (the Jobs app's list: no description, Accept beside the first step) }
+// compact (the Jobs app's list, UIC-05: the icon, what it is, the pay in green, how far, the first step, START) }
+// - and the offer at a job's place (UIC-17: JOB OFFER, what it is and who from, what it is about, the reward and how
+// it's paid in two boxes, ACCEPT and DECLINE)
 export function jobCardHtml(j, o = {}) {
   const d = o.here ? '' : o.dist == null || !(j.x || j.y) ? '' : fmtDist(o.dist);
-  const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? (o.compact ? 'Busy' : 'Finish your job first') : 'Accept'}</button>`;
-  return `<div class="jc${o.compact ? ' compact' : ''}" data-kind="${jobKind(j)}"><div class="jc-top"><span class="jc-ic">${JOB_ICON[jobKind(j)]}</span><span class="jc-t"><b>${esc(j.title)}</b>${j.sub && !o.compact ? `<small>${esc(j.sub)}</small>` : ''}</span>`
-    + `<span class="jc-pay">${payText(j)}<small>${esc(j.per || 'the job')}</small></span></div>`
-    + `<div class="jc-row"><span class="jc-step"><i>FIRST</i>${esc(j.step || 'Head there and start')}</span>${d ? `<span class="jc-d">${d}</span>` : ''}${o.compact ? go : ''}</div>`
-    + `${o.compact ? '' : go}</div>`;
+  if (o.compact) {
+    const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? 'ON A JOB' : 'START'}</button>`;
+    return `<div class="jc compact" data-kind="${jobKind(j)}"><div class="jc-top"><span class="jc-ic">${JOB_ICON[jobKind(j)]}</span><span class="jc-t"><b>${esc(j.title)}</b>`
+      + `<span class="jc-pay">${payText(j)}<small>${esc(j.per || 'the job')}</small></span>${d ? `<span class="jc-d">${pix('pin')}${d}</span>` : ''}`
+      + `<span class="jc-step"><i>FIRST</i>${esc(j.step || 'Head there and start')}</span></span></div>${go}</div>`;
+  }
+  const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? 'FINISH YOURS FIRST' : 'ACCEPT'}</button>`;
+  return `<div class="jc offer" data-kind="${jobKind(j)}"><div class="jc-top"><span class="jc-ic">${JOB_ICON[jobKind(j)]}</span><span class="jc-t"><b>${esc(j.title)}</b>${o.from ? `<em>${esc(o.from)}</em>` : ''}${j.sub ? `<small>${esc(j.sub)}</small>` : ''}</span></div>`
+    + `<div class="jc-boxes"><div class="jc-box"><small>REWARD</small><b class="jc-pay">${payText(j)}</b></div><div class="jc-box"><small>${d ? 'HOW FAR' : 'PAID FOR'}</small><b>${esc(d || j.per || 'the job')}</b></div></div>`
+    + `<div class="jc-row"><span class="jc-step"><i>FIRST</i>${esc(j.step || 'Head there and start')}</span></div>`
+    + `<div class="jc-acts">${go}${o.decline ? '<button class="btn jc-no" data-jc="no">DECLINE</button>' : ''}</div></div>`;
 }
 
 // The card at a job's place (Act): over the game, the game running, Accept or Not now. ctx: { send, openOverlay,
@@ -49,8 +58,8 @@ export function showJobCard(msg, ctx) {
   const j = msg.job, alt = msg.alt || null;
   shown = j;
   // (a second job from the same place - Crazy Taxi at a rank, the walking round at the post office: "or", compact)
-  el.innerHTML = `<div class="panel jc-pop" role="dialog" aria-label="A job"><div class="mhead"><h2>${esc(msg.where || 'A JOB HERE')}</h2><button class="x" data-close aria-label="Close">✕</button></div>`
-    + jobCardHtml(j, { here: true, busy: !!msg.busy }) + (alt ? `<div class="jc-or">or</div>${jobCardHtml(alt, { here: true, busy: !!msg.busy, compact: true })}` : '') + '<button class="btn jc-no" data-jc="no">Not now</button></div>';
+  el.innerHTML = `<div class="panel jc-pop" role="dialog" aria-label="Job offer"><div class="mhead"><h2>${pix('jobs')}JOB OFFER</h2><button class="x" data-close aria-label="Close">✕</button></div>`
+    + jobCardHtml(j, { here: true, busy: !!msg.busy, from: msg.where || '', decline: !alt }) + (alt ? `<div class="jc-or">or</div>${jobCardHtml(alt, { here: true, busy: !!msg.busy, compact: true })}<button class="btn jc-no jc-no-alt" data-jc="no">DECLINE</button>` : '') + '</div>';
   for (const b of el.querySelectorAll('[data-take]')) b.onclick = (e) => { const id = e.currentTarget.dataset.take; shown = alt && id === String(alt.id) ? alt : j; for (const o of el.querySelectorAll('[data-take]')) o.disabled = true; ctx.send({ t: 'phone', a: 'take', id, card: 1 }); };
   el.querySelector('[data-jc=no]').onclick = () => ctx.closeOverlay('jobcard');
   el.querySelector('[data-close]').onclick = () => ctx.closeOverlay('jobcard');
@@ -68,7 +77,7 @@ export function jobTaken(msg, ctx) {
   }
   for (const o of el.querySelectorAll('[data-take]')) o.disabled = false;
   const b = el.querySelector('[data-take]');
-  if (b && msg.err) { b.disabled = false; b.textContent = 'Accept'; let p = el.querySelector('.jc-err'); if (!p) { p = document.createElement('p'); p.className = 'jc-err'; b.before(p); } p.textContent = msg.err; }
+  if (b && msg.err) { b.disabled = false; b.textContent = b.closest('.compact') ? 'START' : 'ACCEPT'; let p = el.querySelector('.jc-err'); if (!p) { p = document.createElement('p'); p.className = 'jc-err'; b.before(p); } p.textContent = msg.err; }
   return true;
 }
 
