@@ -840,6 +840,17 @@ body.portrait #m-wallet small { display: none; }
 #t-buttons.t-wait { opacity: .45; pointer-events: none; }
 #title.loading :is(#t-buttons, #t-row2, #t-gfx, #t-tools, #t-practice) { display: none; }
 #title:not(.loading) #t-load { display: none; }
+/* a phone on its side (UI-10 review): the logo on the left, the menu on the right - stacked, the graphics row fell off
+   the foot of a 360 px screen */
+@media (max-height: 430px) and (orientation: landscape) {
+  #title { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-rows: min-content; align-content: center; justify-items: center; column-gap: var(--s4); row-gap: var(--s2); }
+  #title > * { grid-column: 2; }
+  #title > #logo { grid-column: 1; grid-row: 1 / span 8; align-self: center; width: min(360px, 40vw, 64vh); margin: 0; }
+  #play, #t-resume { min-height: 56px; }
+}
+/* focused with a pad, the title's buttons keep their own fill (the kit's .pfocus would dim PLAY's gold) */
+#title button.pfocus { background: var(--navy) !important; color: var(--cream) !important; }
+#title :is(#t-resume, #t-resume.hidden + #play, #t-gfxseg button.on).pfocus { background: var(--gold) !important; color: var(--ink) !important; }
 #veil { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; transition: opacity .35s ease; display: flex; align-items: center; justify-content: center; }
 #veil.on { opacity: 1; transition: none; }
 #veil span { color: var(--dim); font: 600 var(--fs-3) var(--ui); }
@@ -1561,7 +1572,7 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-sort select { min-height: var(--tap); padding: 0 var(--s2); border-radius: var(--r1); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
 .bag-grid { grid-area: grid; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); align-content: start; gap: var(--s2); padding: 2px; }
 .bag-h { grid-column: 1 / -1; margin: 6px 0 0; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
-.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; aspect-ratio: 1; min-height: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
+.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 96px; min-height: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
 .bag-cell:hover { border-color: var(--gold-a); }
 .bag-cell.sel, .bag-cell.pfocus { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 2px var(--gold-a); }
 .bag-cell.on { background: var(--pick), var(--navy); }
@@ -1620,7 +1631,7 @@ body.portrait .bag-slot2 { min-height: 72px; } body.portrait .bag-slot2 b { disp
 body.portrait .bag-tools { flex-wrap: wrap; }
 body.portrait .bag-tools h3 { display: none; }
 body.portrait .bag-cats { order: 3; flex-basis: 100%; }
-body.portrait .bag-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+body.portrait .bag-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } body.portrait .bag-cell { height: 84px; }   /* (a fixed height: an aspect-ratio tile in the scrolling grid let the rows collapse onto each other) */
 body.portrait .bag-detail { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 64%; display: none; padding: var(--s4) var(--s4) max(var(--s4), env(safe-area-inset-bottom)); border-radius: var(--r2) var(--r2) 0 0; border: 0; border-top: 2px solid var(--gold); box-shadow: var(--shadow); }
 body.portrait .bag.has-sel .bag-detail { display: block; animation: sheet-up var(--t2) var(--ease); }
 body.portrait .bd-x { display: inline-grid; width: var(--tap); height: var(--tap); }
