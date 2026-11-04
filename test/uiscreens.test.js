@@ -119,3 +119,20 @@ test('the launch code in the title\'s slots: SIGN IN opens client/account.js\'s 
   assert.match(MAIN, /if \(\(topOverlay\(\) === 'signin' \|\| topOverlay\(\) === 'gate'\) && S\.launch && S\.launch\.acc\.padActive\(\)\) return false;/, 'the pad is the panel\'s');
   assert.match(MAIN, /if \(!accountUi && !S\.practice\) \{ launchCall\('boot'\);/, 'PLAY before the launch code is in: the gate waits for it');
 });
+
+test('LOG OFF to the end (the server\'s safe exit, f5d9fc16): done, the socket closes 4016 - final, a summary on the title, PLAY connects', async () => {
+  assert.match(MAIN, /if \(ev && ev\.code === 4016\) \{ loggedOff\(S\.offSummary\); return; \}/, 'no reconnecting on it');
+  assert.match(MAIN, /else if \(m\.s === 'done'\) \{ S\.offSummary = m; stopLogoff\(\);/, 'the summary kept for the close');
+  const lo = MAIN.slice(MAIN.indexOf('function loggedOff(sum) {'), MAIN.indexOf('function idleOut() {'));
+  assert.match(lo, /S\.ws = null; S\.welcomed = false; S\.playing = false; S\.refused = 4016;/, 'PLAY connects again (playGo: S.refused)');
+  assert.match(lo, /\$\('t-off'\)\.innerHTML = offSummaryHtml\(sum \|\| \{\}\);/);
+  assert.match(MAIN, /S\.me && S\.me\.offNow \? 'at once here - your own home'/, 'the server\'s offNow, not a guess');
+  assert.match(MAIN, /const LOGOFF_WAIT_MS = 1500;/, 'an old server: as before after 1.5 s');
+  assert.match(HTML, /<div id="t-off" class="hidden" role="status" aria-live="polite"><\/div>/);
+  const { offSummaryHtml, playedFor } = await import('../client/titlescreen.js');
+  const h = offSummaryHtml({ earned: 1250, spent: 300, xp: 42, cexp: 0, sam: 5, secs: 4380 });
+  assert.match(h, /SAVED - SAFE TRAVELS/);
+  for (const w of ['Earned', '\\$1,250', 'Spent', '\\$300', 'XP', '\\+42', 'Samaritan', '\\+5', 'Played', '1 h 13 min']) assert.match(h, new RegExp(w), w);
+  assert.ok(!/Criminal EXP/.test(h), 'only when it moved');
+  assert.equal(playedFor(20), 'under a minute'); assert.equal(playedFor(600), '10 min'); assert.equal(playedFor(7200), '2 h');
+});

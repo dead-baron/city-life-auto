@@ -20034,6 +20034,11 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
   the first PLAY (boot with noGate: the title shows it). PLAY pressed before the launch code is in waits for it. While
   either is up the pad and Esc are the panel's (launchPad); closing the screen closes the panel. The stub stays only
   for a page where the launch code didn't load.
+- **LOG OFF to the end** (the server's side: branch safeexit, server/systems/logoff.js): its 'done' carries the
+  session's summary and the socket then closes with 4016 - final, like the refusals: no reconnecting, the title with one
+  calm plate, "SAVED - SAFE TRAVELS" and the numbers (earned, spent, XP; Criminal EXP and Samaritan only when they moved;
+  the time played), PLAY connects again. "At once here" in the pause list comes from the server's me.offNow. A server
+  that doesn't answer still gets the old way after 1.5 s.
 - **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
 
 ### Performance (tools/perf.mjs --quick, 11-04)

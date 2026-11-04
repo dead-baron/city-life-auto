@@ -58,6 +58,20 @@ export function skyline() {
   return skyUrl;
 }
 // the skyline under an element (a CSS variable its rules use: --sky)
+// logged off (LOG OFF's 'done', the socket closed with 4016): the session in a few numbers - earned, spent, skill XP,
+// Criminal EXP and Samaritan only when they moved, the time played
+const money = (n) => `$${Math.round(Math.abs(Number(n) || 0)).toLocaleString('en-US')}`;
+export function playedFor(secs) {
+  const m = Math.max(0, Math.round((Number(secs) || 0) / 60));
+  return m < 1 ? 'under a minute' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`;
+}
+export function offSummaryHtml(m = {}) {
+  const rows = [['Earned', money(m.earned)], ['Spent', money(m.spent)], ['XP', `+${Math.round(Number(m.xp) || 0)}`]];
+  if (Number(m.cexp)) rows.push(['Criminal EXP', `${m.cexp > 0 ? '+' : ''}${Math.round(m.cexp)}`]);
+  if (Number(m.sam)) rows.push(['Samaritan', `${m.sam > 0 ? '+' : ''}${Math.round(m.sam)}`]);
+  rows.push(['Played', playedFor(m.secs)]);
+  return `<b class="t-off-h">SAVED - SAFE TRAVELS</b><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>`;
+}
 export function paintSky(el) { const u = skyline(); if (el && u) el.style.setProperty('--sky', `url(${u})`); }
 
 // ctx: { $, S, warming() -> bool, idle() -> bool, players() -> number | null }

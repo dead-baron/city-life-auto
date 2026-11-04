@@ -841,6 +841,14 @@ body.portrait #m-wallet small { display: none; }
 #t-buttons.t-wait { opacity: .45; pointer-events: none; }
 #title.loading :is(#t-buttons, #t-row2, #t-gfx, #t-tools, #t-practice) { display: none; }
 #title:not(.loading) #t-load { display: none; }
+/* logged off (LOG OFF, UI-10): one calm plate - the session in numbers - over PLAY */
+#t-off { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4); background: var(--plate); border: 2px solid var(--gold-a); border-radius: var(--r2); box-shadow: var(--plate-sh); color: var(--cream); }
+#t-off.hidden { display: none; }
+#t-off .t-off-h { font: 700 var(--fs-3) var(--pixel); letter-spacing: 2px; color: var(--money); }
+#t-off dl { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2) var(--s4); margin: 0; }
+#t-off dl > div { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+#t-off dt { font: 600 var(--fs-2) var(--ui); color: var(--dim); }
+#t-off dd { margin: 0; font: 700 var(--fs-4) var(--pixel); }
 /* a phone on its side (UI-10 review): the logo on the left, the menu on the right - stacked, the graphics row fell off
    the foot of a 360 px screen */
 @media (max-height: 430px) and (orientation: landscape) {

@@ -73,7 +73,7 @@ initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
 import { holdForArt, veilTick } from './warmup.js';
-import { createTitle, paintSky } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
+import { createTitle, paintSky, offSummaryHtml } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -114,7 +114,7 @@ import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
 // (and the screens, for the captures: UI-10)
-if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay }; }, 0);
+if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
 S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
 
@@ -264,7 +264,7 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } if (ev && ev.code === 4016) { loggedOff(S.offSummary); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
   ws.onerror = () => {};
 }
 
@@ -274,6 +274,22 @@ function connect() {
 const RECONNECT_IN_GAME_MS = 60000;
 // Disconnected for being idle 10 minutes (server players.js idleCheck: close 4006): back to the title, no reconnecting on
 // its own - its PLAY button says RECONNECT and reloads the page into the game
+// logged off (LOG OFF: the server's 'done', then the socket closed with 4016): final - no reconnecting; the title with the
+// session's summary, PLAY connects again (playGo: S.refused)
+function loggedOff(sum) {
+  if (S.refused === 4016) return;
+  stopLogoff(); closeHub();
+  S.ws = null; S.welcomed = false; S.playing = false; S.refused = 4016; S.offSummary = null;
+  clearTimeout(S.reconnectT);
+  reconnecting(false);
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('t-status').textContent = '';
+  $('t-off').innerHTML = offSummaryHtml(sum || {});
+  $('t-off').classList.remove('hidden');
+  $('play').disabled = false;
+}
 function idleOut() {
   S.idledOut = true;
   S.welcomed = false; S.ws = null; S.playing = false;
@@ -1536,7 +1552,7 @@ $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pr
 const PRACTICE_ON = false;
 if (!PRACTICE_ON) { $('practice').classList.add('hidden'); $('t-practice').classList.add('hidden'); }
 const practiceGo = () => { if (!PRACTICE_ON) return; initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
-const playGo = () => { if (S.refused) { S.refused = 0; S.refusedWhy = null; S.reconnectIn = 1000; $('t-status').textContent = 'Connecting...'; connect(); return; } startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
+const playGo = () => { if (S.refused) { $('t-off').classList.add('hidden'); S.refused = 0; S.refusedWhy = null; S.reconnectIn = 1000; $('t-status').textContent = 'Connecting...'; connect(); return; } startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
 
@@ -2034,14 +2050,14 @@ function stopLogoff(tell = false) {
 function onLogoff(m) {
   if (m.s === 'start') { if (logoff) clearTimeout(logoff.t); logoff = { st: 'count', end: performance.now() + (Number(m.left) || 10) * 1000 }; if (m.left === 0) { stopLogoff(); exitToTitle(); return; } }
   else if (m.s === 'cancel') { stopLogoff(); if (S.hud) S.hud.toast(m.why || 'Logging off was called off.', 'warn'); }
-  else if (m.s === 'done') { stopLogoff(); exitToTitle(); return; }
+  else if (m.s === 'done') { S.offSummary = m; stopLogoff(); setTimeout(() => { if (S.offSummary === m) loggedOff(m); }, 3000); return; }   // (the socket closes with 4016 next: loggedOff - or, if it doesn't, the summary anyway)
   syncLogoff();
 }
 function syncLogoff() {
   const row = $('pz-logoff'), note = $('pz-off-note');
   row.classList.toggle('counting', !!logoff);
   const left = logoff && logoff.st === 'count' ? Math.max(0, Math.ceil((logoff.end - performance.now()) / 1000)) : 0;
-  note.textContent = !logoff ? (S.me && S.me.interior === 'home' ? 'at once in your own home' : 'safe: stand still 10 s') : logoff.st === 'ask' ? 'asking...' : `${left} s - stand still · again to stop`;
+  note.textContent = !logoff ? (S.me && S.me.offNow ? 'at once here - your own home' : 'safe: stand still 10 s') : logoff.st === 'ask' ? 'asking...' : `${left} s - stand still · again to stop`;
   row.style.setProperty('--off', logoff && logoff.st === 'count' ? String(1 - left / 10) : '0');
 }
 setInterval(() => { if (logoff && logoff.st === 'count') syncLogoff(); }, 250);
