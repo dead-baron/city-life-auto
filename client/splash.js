@@ -41,16 +41,27 @@
     rows.forEach((r, i) => { r.classList.add('cla-up'); setTimeout(() => r.classList.add('cla-on'), 520 + i * 70); });
     setTimeout(done, 520 + rows.length * 70 + 400);
     const run = () => {
-      const R = logo.getBoundingClientRect();
-      if (!R.width || !logo.naturalWidth) { logo.classList.add('cla-on'); return; }
+      const R0 = logo.getBoundingClientRect();
+      if (!R0.width || !logo.naturalWidth) { logo.classList.add('cla-on'); return; }
       const dpr = Math.min(2, devicePixelRatio || 1), c = document.createElement('canvas');
-      c.width = Math.round(R.width * dpr); c.height = Math.round(R.height * dpr);
-      c.style.cssText = `position:fixed;left:${R.left}px;top:${R.top}px;width:${R.width}px;height:${R.height}px;z-index:31;pointer-events:none;image-rendering:pixelated`;
+      c.style.cssText = 'position:fixed;z-index:31;pointer-events:none;image-rendering:pixelated';
+      // the canvas follows the logo every frame: the title's rows settle while it plays (the sign-in line, the
+      // graphics row, a phone's address bar), and a canvas left where the logo first was showed it twice (the owner, 11-03)
+      let at = '';
+      const follow = () => {
+        const R = logo.getBoundingClientRect(), key = `${R.left},${R.top},${R.width},${R.height}`;
+        if (key === at) return;
+        at = key;
+        const w = Math.round(R.width * dpr), h = Math.round(R.height * dpr);
+        if (c.width !== w || c.height !== h) { c.width = w; c.height = h; sh.width = w; sh.height = h; }
+        Object.assign(c.style, { left: `${R.left}px`, top: `${R.top}px`, width: `${R.width}px`, height: `${R.height}px` });
+      };
       document.body.appendChild(c);
       const x = c.getContext('2d'), m = document.createElement('canvas'), sh = document.createElement('canvas');
-      sh.width = c.width; sh.height = c.height;
+      follow();
       const T = 900, t1 = performance.now();
       const step = (now) => {
+        follow();
         const t = now - t1, W = c.width, H = c.height;
         x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = false;
         // 0-480 ms: the mosaic resolving (blocks 24 -> 1, a new size every 40 ms) while the scale steps 1.15 -> 1
@@ -72,7 +83,11 @@
         x.globalAlpha = Math.min(1, t / 160);
         x.drawImage(sh, 0, 0);
         if (t < T) requestAnimationFrame(step);
-        else { logo.classList.add('cla-on'); setTimeout(() => c.remove(), 280); }   // (after the logo's own fade in, so it never dims)
+        else {   // (the canvas goes once the logo's own fade in is over, so it never dims - still following it till then)
+          logo.classList.add('cla-on');
+          const t2 = now, hold = (n) => { if (n - t2 > 280) { c.remove(); return; } follow(); x.clearRect(0, 0, c.width, c.height); x.drawImage(logo, 0, 0, c.width, c.height); requestAnimationFrame(hold); };
+          requestAnimationFrame(hold);
+        }
       };
       requestAnimationFrame(step);
     };

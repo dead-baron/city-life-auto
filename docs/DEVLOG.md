@@ -19203,3 +19203,10 @@ PeakWantedLevelMemory (server/systems/law.js), is unchanged:
 - The police keep your highest wanted level, which cools by one star for every 10 minutes you stay clean.
 - If you commit a crime in disguise while they still remember it, your heat jumps straight back to that peak.
 - The "Disguise blown!" notice still tells you when that happens.
+
+## 2026-11-03 - The title logo no longer shows twice
+
+The owner saw the City Life Auto logo double for a moment as the title came in. Its mosaic entrance is drawn on a
+canvas over the logo, and the canvas was placed once, where the logo first was. The title's rows then settled while it
+played (the sign-in line arriving, a phone's address bar), so the real logo moved while the canvas stayed put. Now the
+canvas follows the logo every frame, up to the moment it hands over (client/splash.js `titleIntro`).
