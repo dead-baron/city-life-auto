@@ -134,11 +134,11 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     const now = performance.now();
     if (now - nearAt < 250) return near;
     nearAt = now; near = false;
-    const P = S.pred && S.pred.s ? S.pred.s : pe ? { x: pe.rx, y: pe.ry } : null;
+    const P = S.pred && S.pred.s ? S.pred.s : pe && pe.buf && pe.buf.length ? pe.buf[pe.buf.length - 1] : null;
     if (!P) return near;
     for (const e of S.ents.values()) {
-      if (e.kind !== 2 || !e.buf.length) continue;   // (K.VEH: a car, a boat, a horse, a bike - where it's drawn)
-      const dx = e.rx - P.x, dy = e.ry - P.y;
+      if (e.kind !== 2 || !e.buf || !e.buf.length) continue;   // (K.VEH: a car, a boat, a horse, a bike - where the server last had it)
+      const q = e.buf[e.buf.length - 1], dx = q.x - P.x, dy = q.y - P.y;
       if (dx * dx + dy * dy < NEAR_CAR_PX * NEAR_CAR_PX) { near = true; break; }
     }
     return near;

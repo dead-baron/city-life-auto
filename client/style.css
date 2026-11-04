@@ -636,7 +636,7 @@ body.portrait #zone-l { top: 50%; }
 #stick-r.firing .knob { background: var(--danger); border-color: var(--cream); }
 #stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
 body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
-#firetog.lit { background: var(--danger); border-color: var(--danger-hi); color: var(--ink); }   /* (auto-fire ON: red, UIC-10 3) */
+#firetog.lit { background: var(--red-d); border-color: var(--danger); }   /* (auto-fire on: a red rim on a deep red plate - the switch is on, the glyph stays cream) */
 /* the touch buttons (U3, the owner 2026-10-30: "do we need the actual text with those buttons?"): round, dark navy,
    a thin gold rim, the icon alone - each named for a screen reader (aria-label) and in the first-time hint strips. The
    big ones (FIRE / HIT, ACT, CAR, ROLL) for the thumb mid-action; the switches (the light, FIRE ON, the bag, the
