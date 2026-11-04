@@ -32,7 +32,7 @@
   --scrim-lo: rgba(4, 7, 16, .4);
   /* the touch buttons' one container (the owner, 11-03): a dark disc with a hairline; the state the only accent */
   --disc: rgba(12, 14, 20, .55); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
-  --fire-disc: #c8463c; --fire-hi: #e0594d; --act-disc: #e2b33c; --act-hi: #f0c55a;         /* (behind the hub: the world at 60% - UIC-20 05) */
+  --fire-disc: #c8463c; --fire-hi: #e0594d; --act-disc: #e2b33c; --act-hi: #f0c55a;
   --ink-a: rgba(7, 11, 22, .25);
   --gold-a: rgba(226, 189, 87, .4);       /* a quiet rim */
   --gold-t: rgba(226, 189, 87, .18);      /* a gold wash: hover, picked */

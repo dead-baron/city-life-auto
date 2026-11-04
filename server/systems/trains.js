@@ -27,6 +27,7 @@ import * as cargo from './cargo.js';
 import * as taxijob from './taxijob.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const rng = mulberry32(8080);
 const GAP = CAR_GAP;
@@ -544,7 +545,7 @@ export function alight(world, ped, x, y) {
   const t = trainOf(world, ped);
   if (t) t.riders.delete(ped.id);
   ped.onTrain = null; ped.sub = false;
-  ped.x = x; ped.y = y;
+  ped.x = x; ped.y = y; moved(ped);
   world.place(ped);
   if (ped.player) { ped.player.meDirty = true; ped.player.crack = null; }
 }

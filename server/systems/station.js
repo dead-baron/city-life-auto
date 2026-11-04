@@ -9,6 +9,7 @@ import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as combat from './combat.js';
 import { inAnyView } from '../view.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const TILE = 32;
 const REFILL_EVERY_S = 20;   // empty bays are restocked when nobody is watching
@@ -83,7 +84,7 @@ export function toArmory(world, p, poi) {
 function stepOut(world, p, x, y) {
   const ped = p.ped;
   ped.hidden = false; ped.interior = null; ped.inside = null;
-  ped.x = x; ped.y = y; ped.vx = 0; ped.vy = 0;
+  ped.x = x; ped.y = y; ped.vx = 0; ped.vy = 0; moved(ped);
   world.place(ped);
   homes.protect(world, ped, SPAWN_PROTECT_S);
   world.emit(x, y, { e: 'door', x, y });

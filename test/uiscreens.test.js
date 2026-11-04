@@ -110,3 +110,12 @@ test('a desktop\'s screens scale with the window (the 11-04 review): one zoom on
   assert.match(bag, /s\.innerHTML = glyph\(glyphOfWeapon\(id, \(WEAPONS\[id\] \|\| \{\}\)\.type\), Math\.round\(h \* 1\.15\)\);/, 'a weapon: its class\'s glyph, not the thin top-down sprite');
   assert.ok(!/fittedIcon/.test(bag));
 });
+
+test('the launch code in the title\'s slots: SIGN IN opens client/account.js\'s panel, the 17+ gate shows in the gate\'s slot', () => {
+  assert.match(MAIN, /acc\.boot\(\{ send, toast, serverUrl, analytics: ga, noGate: true,/, 'the title shows the gate itself');
+  assert.match(MAIN, /signIn: \(el, close\) => \{ el\.innerHTML = ''; acc\.openPanel\(\{ into: el \}\)\.then\(\(p\) => \{ if \(p\) p\.onback = close; \}\)/);
+  assert.match(MAIN, /gate: \(el, done\) => \{ el\.innerHTML = ''; acc\.showGate\(done, \{ into: el \}\); \}/);
+  assert.match(MAIN, /if \(id === 'signin' && S\.launch\) S\.launch\.acc\.closePanel\(\);/, 'closed with the screen, its pad with it');
+  assert.match(MAIN, /if \(\(topOverlay\(\) === 'signin' \|\| topOverlay\(\) === 'gate'\) && S\.launch && S\.launch\.acc\.padActive\(\)\) return false;/, 'the pad is the panel\'s');
+  assert.match(MAIN, /if \(!accountUi && !S\.practice\) \{ launchCall\('boot'\);/, 'PLAY before the launch code is in: the gate waits for it');
+});

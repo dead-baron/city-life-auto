@@ -138,6 +138,77 @@ loadMark('code');
 
 try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 
+// The launch foundation's page code - accounts and the first-launch gate, chat, Google Analytics, the error reporter
+// (client/account.js, chat.js, analytics.js, errors.js) - loaded once the page is up, never in its first load. launchCall
+// hands it what happens: the server's messages for it, play pressed, in the city, a perf report, an error, the chat key.
+let launchP = null;
+function launchHello() {   // (in the hello: this browser's device marker, and whether the 17+ gate was confirmed here)
+  let dm = null, age17 = false;
+  try {
+    dm = localStorage.getItem('cla.dm');
+    if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
+    age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
+  } catch { /* storage blocked */ }
+  return { dm, age17 };
+}
+function launchCall(k, a) {
+  if (S.practice) return;
+  launchP ||= Promise.all([import('./account.js'), import('./analytics.js'), import('./chat.js'), import('./errors.js')]).then(([acc, an, ch, er]) => {
+    const ga = an.createAnalytics({ win: window, doc: document, send });
+    const toast = (t, tone) => { if (S.hud) S.hud.toast(t, tone); };
+    const chat = ch.createChat({ send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; } });
+    er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
+    // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
+    acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
+    S.launch = { acc, ga, chat, er };
+    // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
+    // with no sign-in provider switched on (today), the panel still has the transfer code and the name
+    setAccountUi({
+      signIn: (el, close) => { el.innerHTML = ''; acc.openPanel({ into: el }).then((p) => { if (p) p.onback = close; }).catch((e) => { console.warn('[account]', e); el.textContent = 'The account panel didn\'t load - try again.'; }); },
+      gate: (el, done) => { el.innerHTML = ''; acc.showGate(done, { into: el }); },
+      gateNeeded: () => acc.gateNeeded(),
+    });
+    return S.launch;
+  });
+  launchP.then((L) => {
+    if (k === 'msg') {
+      // (a new session's account state: GA's ids again - the server forgets them with a session - and any errors queued
+      // while offline go now)
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
+    } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
+    else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
+    else if (k === 'perf') L.ga.perf(a);
+    else if (k === 'error') L.er.report(a.where, a.e);
+    else if (k === 'chat') L.chat.open(a);
+    else if (k === 'account') openSignIn();
+  }).catch((e) => { launchP = null; console.warn('[launch]', e); });
+}
+if (document.readyState === 'complete') setTimeout(() => launchCall('boot'), 300); else addEventListener('load', () => setTimeout(() => launchCall('boot'), 300), { once: true });
+// The gate, the account panel or a sign-in choice up (client/account.js): the pad drives it, and the title underneath is
+// left alone (A used to press PLAY under the gate). True while one is up.
+function launchPad() {
+  const A = S.launch && S.launch.acc;
+  if (A && A.padActive()) { A.pad({ nav: input.menuNav, lr: input.menuLR, select: input.menuSelect || input.padStart, back: input.menuBack }); return true; }
+  return !!document.querySelector('[data-cla-modal]');   // (up before its module's ready: the title still waits)
+}
+// Refused at the door (server/launch.js login, admin.js kick): no reconnecting on these - the reason stays on the title,
+// and PLAY tries again. 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved to another device, 4013 too many new
+// guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest).
+const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014]);
+function refusedAtDoor(code) {
+  clearTimeout(S.reconnectT);
+  S.ws = null; S.welcomed = false; S.refused = code;
+  reconnecting(false);
+  if (code === 4014) { S.token = null; try { localStorage.removeItem(TOKEN_KEY); } catch { /* blocked */ } }
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('play').disabled = false;
+  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 17 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
+  $('t-status').textContent = `${why} ${code === 4010 ? '' : 'Press PLAY to try again.'}`.trim();
+  S.playing = false;
+}
+
 // ---------------------------------------------------------------------------
 // Networking
 // Offline practice transport: a Web Worker running the server simulation locally,
@@ -181,18 +252,19 @@ function connect() {
   const url = serverUrl();
   // only announce the first attempt: rewriting the status on every retry made the title screen jump
   if (!S.connectFailed) $('t-status').textContent = 'Connecting...';
+  S.refusedWhy = null;   // (a reason belongs to the connection it came on: none yet on this one)
   let ws;
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     if (holding(ws, ev.data)) return;
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
   ws.onerror = () => {};
 }
 
@@ -378,13 +450,14 @@ function onText(m) {
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
     case 'logoff': onLogoff(m); break;   // (the pause list's LOG OFF: the server's count - UI-10)
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
-    case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
+    case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; S.refusedWhy = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
-    case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
+    case 'wiped': freshDone(m.keep); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
     case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
-    case 'fires': S.fires = m; fireJob(); break;   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
+    case 'fires': S.fires = m; fireJob(); break;
+    case 'chat': case 'emote': case 'chatstate': case 'chatsay': case 'modres': case 'contacts': case 'inbox': case 'acct': case 'admin': case 'agegate': launchCall('msg', m); break;   // (the launch foundation: client/chat.js, account.js)   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
     default: break;
   }
 }
@@ -519,7 +592,7 @@ function fixedStep() {
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
   const inVehicle = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, ce = S.ents.get(S.ctrlId);
   let inp = sample({ selfScreen, inVehicle, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, face: S.pred ? S.pred.s.a : ce && ce.ra !== undefined ? ce.ra : S.lastAim, target: () => (S.slots ? S.slots.target(inVehicle, wcur) : null), air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
-  const inOverlay = overlayPad();
+  const inOverlay = overlayPad() || launchPad();
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
@@ -1372,6 +1445,7 @@ function art2Failed(why) {
 }
 
 function startPlaying() {
+  launchCall('play');
   initAudio();
   if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true);
   // the first time in on this page: the title stays up until the art round you is ready (client/warmup.js, capped)
@@ -1384,6 +1458,7 @@ function startPlaying() {
   enterCity();
 }
 function enterCity() {
+  if (!S.playing) launchCall('world');
   S.playing = true;
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
@@ -1461,7 +1536,7 @@ $('devpw-in').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pr
 const PRACTICE_ON = false;
 if (!PRACTICE_ON) { $('practice').classList.add('hidden'); $('t-practice').classList.add('hidden'); }
 const practiceGo = () => { if (!PRACTICE_ON) return; initAudio(); if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); startPractice(); };
-const playGo = () => { startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
+const playGo = () => { if (S.refused) { S.refused = 0; S.refusedWhy = null; S.reconnectIn = 1000; $('t-status').textContent = 'Connecting...'; connect(); return; } startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode: press ` (backtick) for the playtest panel.', 'info'); };
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
 
@@ -1498,6 +1573,7 @@ function openSignIn() {
 }
 // before the first PLAY in this browser: the gate, if the launch code says it's needed (else straight on)
 function withGate(go) {
+  if (!accountUi && !S.practice) { launchCall('boot'); if (launchP) { launchP.then(() => withGate(go), () => go()); return; } }   // (the launch code still loading: the gate waits for it)
   if (!(accountUi && accountUi.gate && accountUi.gateNeeded && accountUi.gateNeeded())) { go(); return; }
   openOverlay('gate');
   accountUi.gate($('gate-body'), () => { closeOverlay('gate'); go(); });
@@ -1506,12 +1582,14 @@ for (const b of document.querySelectorAll('.overlay [data-back]')) b.onclick = (
 
 initInput(canvas, {
   onKey(k) {
+    if (document.querySelector('[data-cla-modal]')) return;   // (the 17+ gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
     if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (topOverlay() === 'dev' && S.devNav && S.devNav.key(k)) return;   // (the debug menu's own keys: client/devmenu.js)
+    if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
@@ -2225,13 +2303,15 @@ function freshPress(b, say) {
 }
 function freshDisarm(b) { delete b.dataset.armed; b.classList.remove('armed'); if (b.dataset.label) b.textContent = b.dataset.label; clearTimeout(b.freshT); }
 // the server erased the character ({ t: 'wiped' }): no reconnecting with the old token - forget it all and start over
-function freshDone() {
+// keep: the account outlived its character (server players.js wipeAccount) - the page keeps its token for it
+function freshDone(keep) {
   S.wipeSay = null; clearTimeout(S.wipeT);
   const ws = S.ws; S.ws = null; S.token = null; S.welcomed = false;
   try { if (ws) ws.close(); } catch { /* closing */ }
   for (const k of ['localStorage', 'sessionStorage']) {
-    try { const st = window[k]; for (const key of Object.keys(st)) if (key.startsWith('cla.')) st.removeItem(key); } catch { /* storage blocked */ }
+    try { const st = window[k]; for (const key of Object.keys(st)) if (key.startsWith('cla.') && !(keep && (key === 'cla.gate' || key === 'cla.dm'))) st.removeItem(key); } catch { /* storage blocked */ }
   }
+  if (typeof keep === 'string') { try { localStorage.setItem(TOKEN_KEY, keep); } catch { /* storage blocked */ } }
   location.replace(location.pathname + location.search);
 }
 $('s-fresh').onclick = () => freshPress($('s-fresh'), (t) => { $('s-fresh-msg').textContent = t; });
@@ -2276,6 +2356,7 @@ function closeOverlay(id = topOverlay()) {
   if (i >= 0) overlays.splice(i, 1);
   $(id).classList.add('hidden');
   if (id === 'inv') bag.hide();
+  if (id === 'signin' && S.launch) S.launch.acc.closePanel();   // (client/account.js: its panel and its pad off with the screen)
   if (id === 'dev') $('dev').classList.remove('as-overlay');
   if (id === 'tutorial') stopTutorial();
   if (id === 'arcade' && S.arcadeMod) S.arcadeMod.stop();   // (the cabinet left: the score so far goes in)
@@ -2340,6 +2421,7 @@ function focusOverlay() {
 }
 function overlayPad() {
   if (!topOverlay()) return false;
+  if ((topOverlay() === 'signin' || topOverlay() === 'gate') && S.launch && S.launch.acc.padActive()) return false;   // (the account panel or the gate in the title's slot: client/account.js has the pad - launchPad)
   if (topOverlay() === 'creator' && S.creator) return S.creator.pad(input);
   if (topOverlay() === 'dev' && S.devNav) return S.devNav.pad(input);   // (the debug menu moves between its buttons as they sit: client/devmenu.js)
   const f = focusables();
@@ -2670,7 +2752,7 @@ function perfReport(nowMs) {
   const at = LOAD.at.screen;
   if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
   LOAD.sent = true;
-  import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'load') }), () => {});
+  import('./diag.js').then((m) => { const r = m.perfPayload(ctx(), 'load'); send({ t: 'perf', r }); launchCall('perf', r); }, () => {});
 }
 
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
@@ -2934,7 +3016,7 @@ function frameBody(nowMs) {
   } else {
     g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
     // title screen before the city connects: the pad still drives the menus
-    if (pollPadForMenus() && !overlayPad()) titlePad();
+    if (pollPadForMenus() && !overlayPad() && !launchPad()) titlePad();
   }
 }
 // What went wrong in this page, once each (message and where): to the server (server/perfreports.js addClientError, listed
@@ -2951,6 +3033,7 @@ function reportError(where, e) {
   if (ERR_SEEN.has(key) || ERR_SEEN.size > 40) return;
   ERR_SEEN.add(key);
   console.error(`[${where}]`, e);
+  if (!S.practice) { launchCall('error', { where, e }); if (where === 'frame' && S.hud) S.hud.toast('Something went wrong drawing the game. It was reported; the game carries on.', 'warn'); return; }   // (client/errors.js: queued while offline)
   try { send({ t: 'cerr', where, msg, stack: String((e && e.stack) || '').slice(0, 1500), build: myBuild().v, ua: navigator.userAgent.slice(0, 160), ctx: errNote() }); } catch { /* not connected */ }
   if (where === 'frame' && S.hud) S.hud.toast('Something went wrong drawing the game. It was reported; the game carries on.', 'warn');
 }

@@ -88,6 +88,7 @@ export function initInput(canvas, hooks) {
   addEventListener('keydown', (e) => {
     input.activeAt = performance.now();   // (anything pressed, moved or touched: the HUD's calm by a campfire)
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (e.target && e.target.closest && e.target.closest('[data-cla-modal]')) return;   // (the 17+ gate, the account panel: their keys are theirs - client/account.js)
     if (typeof e.key === 'string' && e.key.startsWith('Gamepad')) { e.preventDefault(); return; } // Xbox Edge mirrors the pad as keys
     const k = e.code;
     if (!keys.has(k)) { pressedOnce.add(k); tappedKeys.add(k); }

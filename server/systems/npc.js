@@ -8,6 +8,7 @@ import { pedStep } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK, isSwimming, nearestLand } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { arenaAt } from '../../shared/carsoccer.js';
+import { circleVsObb } from '../../shared/math.js';
 import { ARCHETYPES, makeAppearance, BUILDS, rollBuild } from '../entities.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
@@ -211,7 +212,7 @@ export function update(world, dt) {
     let inp = NO_INPUT, factor = 0.55;
     const pin = n.persona && (n.state === 'wander' || n.state === 'idle') ? personas.steer(world, ped, now) : n.act && (n.state === 'wander' || n.state === 'idle') ? activities.steer(world, ped, now) : null;   // (personas.js; at an activity: activities.js)
     if (pin) { inp = pin.inp; factor = pin.factor; } else switch (n.state) {
-      case 'wander': inp = wander(world, ped, now); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;
+      case 'wander': inp = sidestep(world, ped, wander(world, ped, now), dt); factor = rain && !ped.umbrella ? 0.85 : 0.55; break;   // (pressing into a parked car, a bin, a corner: a step aside - sidestep)
       case 'idle': inp = idle(world, ped, now); break;
       case 'flee': {
         if (n.railFlee && n.railSafe) { // getting off the line: to the spot picked beside it, then wait there
@@ -321,7 +322,32 @@ function wander(world, ped, now) {
     n.until = now + 8;
     if (Math.hypot(n.wx - ped.x, n.wy - ped.y) < 10) { n.state = 'idle'; n.until = now + 1 + rng() * 2; n.lookAt = now; return NO_INPUT; }
   }
-  return seek(ped, n.wx, n.wy, now < (n.hurryUntil || 0));   // (out of a siren's way: at a run - clearWay)
+  return kerbWait(world, ped, seek(ped, n.wx, n.wy, now < (n.hurryUntil || 0)), now);   // (out of a siren's way: at a run - clearWay)
+}
+
+// At the kerb, about to step into the road: a car coming that would be there within KERB_LOOK_S - wait for the gap
+// (the owner's notes, 11-03: everyone "operating with some intelligence"; they used to walk straight out, and every car
+// on the street stood on its brakes for them). Not for ever: after KERB_WAIT_S they pick somewhere else to go. Someone
+// hurrying out of a siren's way, or already in the road, goes on.
+const KERB_LOOK_S = 2.6, KERB_WAIT_S = 7;
+function kerbWait(world, ped, inp, now) {
+  const n = ped.npc, ml = Math.hypot(inp.mx, inp.my);
+  if (ml < 0.1 || now < (n.hurryUntil || 0) || onRoad(world, ped)) { n.kerbAt = undefined; return inp; }
+  const ux = inp.mx / ml, uy = inp.my / ml, px = ped.x + ux * 20, py = ped.y + uy * 20, t = world.map.tileAtPx(px, py);
+  if (t !== T.ROAD && t !== T.BRIDGE) { n.kerbAt = undefined; return inp; }
+  for (const v of world.query(px, py, 360, K.VEH)) {
+    const sp = Math.hypot(v.vx, v.vy);
+    if (sp < 50 || Math.abs((v.lz || 0) - (ped.lz || 0)) > 0.5 || (v.alt || 0) > 40) continue;
+    const vx = v.vx / sp, vy = v.vy / sp, dx = px - v.x, dy = py - v.y, along = dx * vx + dy * vy, side = Math.abs(-dx * vy + dy * vx);
+    if (along < -v.def.L / 2 || along > sp * KERB_LOOK_S + v.def.L / 2 || side > v.def.W / 2 + 46) continue;
+    n.kerbAt ??= now;
+    if (now - n.kerbAt > KERB_WAIT_S) { n.kerbAt = undefined; n.until = 0; world.pedGapGiveUps = (world.pedGapGiveUps || 0) + 1; return NO_INPUT; }   // (somewhere else, then)
+    if (now - n.kerbAt < 0.06) world.pedGapWaits = (world.pedGapWaits || 0) + 1;
+    ped.a = Math.atan2(-vy, -vx);   // (looking at what's coming)
+    return NO_INPUT;
+  }
+  n.kerbAt = undefined;
+  return inp;
 }
 
 const onRoad = (world, ped) => { const t = world.map.tileAtPx(ped.x, ped.y); return t === T.ROAD || t === T.BRIDGE; };
@@ -421,6 +447,7 @@ function pickWaypoint(world, ped) {
     if (!crossesRoadOk(world, ped.x, ped.y, x, y)) continue;
     if (offSk && skateCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (round a skate park, not across it)
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
+    if (lineHits(world, ped, x, y)) continue;   // (not straight into a tree, a bench, a bin or a parked car: somewhere they can walk to)
     if (world.map.rail && trains.railBlocked(world, ped.x, ped.y, x, y)) continue; // not into (or across the line in front of) a train
     n.wx = x; n.wy = y;
     return;
@@ -456,6 +483,36 @@ export function skateOff(map, q, x, y) {
     if (WALK_TILES.has(t) && t !== T.FLOOR && !PED_BLOCK[t] && !skateAt(map, px, py)) return { x: px, y: py };
   }
   return null;
+}
+
+// A walk from where ped is to (x, y) that runs into something solid on the way - a street tree, a lamp post, a bench, a
+// bin (the map's solid props) or a vehicle standing there. The tiles alone (rayTiles) let them pick a spot behind a tree
+// or a parked car and walk into it: a headless run had people pressing into something a quarter of the time they were
+// out walking. Checked once per pick (every few seconds a person), every 16 px along the way.
+const BODY = 9;
+function lineHits(world, ped, x, y) {
+  const m = world.map, dx = x - ped.x, dy = y - ped.y, L = Math.hypot(dx, dy);
+  if (L < 8 || !m.solidProps) return false;
+  const ux = dx / L, uy = dy / L;
+  let cars = null;
+  for (const v of world.query(ped.x + dx / 2, ped.y + dy / 2, L / 2 + 60, K.VEH)) if (Math.abs(v.vx) + Math.abs(v.vy) < 30 && !((v.alt || 0) > 40) && Math.abs((v.lz || 0) - (ped.lz || 0)) < 0.5) (cars ||= []).push(v);
+  let lastK = -1;
+  for (let d = 16; d <= L; d += 16) {
+    const px = ped.x + ux * d, py = ped.y + uy * d, tx = Math.floor(px / TILE), ty = Math.floor(py / TILE);
+    if (cars) for (const v of cars) if (circleVsObb(px, py, BODY, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2)) return true;
+    const k = m.idx(tx, ty);
+    if (k === lastK) continue;
+    lastK = k;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const arr = m.solidProps.get(m.idx(tx + i, ty + j));
+      if (arr) for (const p of arr) if (!p.off) {
+        const t = (p.x - ped.x) * ux + (p.y - ped.y) * uy;
+        if (t < 4 || t > L + p.r) continue;
+        if (Math.hypot(ped.x + ux * t - p.x, ped.y + uy * t - p.y) < p.r + BODY) return true;
+      }
+    }
+  }
+  return false;
 }
 
 function crossesRoadOk(world, x1, y1, x2, y2) {

@@ -16,7 +16,7 @@ import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { enterEdge } from './traffic.js';
 import { rejoin } from './transit.js';
-import { startTurn, roomToTurn } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
+import { startTurn, roomToTurn, roomBehind } from './roadends.js';   // (turning round in the street by a manoeuvre: task #384)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 export const MEMORY = 24, TTL = 45;   // the blocked-road memory: this many roads at most, each kept this long (s)
@@ -49,7 +49,7 @@ export function jammed(world, v) {
   const bai = b.ai, drv = b.seats[0] && world.get(b.seats[0]);
   if (drv && drv.player) { b._stillAt ??= world.time; return world.time - b._stillAt > 8; }   // (a player waiting at the lights isn't in the way)
   if (!bai) return true;                                  // nobody driving it: left in the road
-  if (bai.kind === 'traffic') return !!bai.jam || !!bai.parkIt;   // a queue: jammed if the car ahead of it is (or that one gave up and pulled up: traffic.js parkIt)
+  if (bai.kind === 'traffic') return (!!bai.jam && !(bai.roundUntil > world.time)) || !!bai.parkIt || !!bai.incident;   // (one about to go round what's in its way: the queue follows it round, it doesn't turn back)   // (... or pulled up after a rear-end: slips.js)   // a queue: jammed if the car ahead of it is (or that one gave up and pulled up: traffic.js parkIt)
   return true;                                            // a police car, an ambulance, a tow truck at work
 }
 
@@ -86,6 +86,11 @@ function laneClear(world, v, e, from, k, s, blk) {
   return true;
 }
 
+// the way v's lane runs where it is (s: its arc length along edge e from where it came in)
+function laneHeading(world, v, e, s) {
+  const lp = lanePath(world.map.net, e, v.ai.from, Math.min(v.ai.lane || 0, e.nl - 1)), p = pointAt(lp, Math.max(0, Math.min(lp[lp.length - 1].s, s)));
+  return Math.atan2(p.ty, p.tx);
+}
 function findWay(world, v) {
   const ai = v.ai, net = world.map.net, e = net.edges[ai.edge], now = world.time;
   if (!e) return false;
@@ -108,10 +113,19 @@ function findWay(world, v) {
   // 2. this road's blocked: remembered for a while
   markBlocked(world, e.id);
   if (v.bus) { ai.howOut = 'round'; ai.roundUntil = now + 20; return false; }   // (round it on the other side when that's clear: goRound)
-  if (e.oneway || (v.lz || 0) > 0.3) { ai.howOut = 'wait'; return false; }   // (no turning round on a one-way street or the highway)
+  // right behind something that won't move (a car left in the road, a breakdown, a wreck, a tow truck at work, two
+  // drivers out having words): round it on the other side of the road when that's clear and nothing's coming, as anyone
+  // would - the queue behind follows it round one by one. (It used to turn round, or with no room to - a narrow street, a
+  // queue behind - wait for the clean-up, which never comes while someone's watching: The Yards by Northgate station,
+  // a sedan four minutes behind an empty car, eight cars queued behind it.)
+  // (along the lane, not the way the car happens to point: one that ended up nosed in at an angle behind a car in a kerb
+  // bay - eased over for a siren - goes round it all the same)
+  const la = laneHeading(world, v, e, s);
+  if (blk && standing(world, blk) && !v.def.pedal && (v.lz || 0) < 0.3 && stripClear(world, v, blk, la, -(v.def.W / 2 + blk.def.W / 2 + 14), false)) { ai.howOut = 'round'; ai.roundUntil = now + 20; ai.roundA = la; world.goneRound = (world.goneRound || 0) + 1; return false; }
+  if (e.oneway || (v.lz || 0) > 0.3) { ai.howOut = 'wait'; makeWay(world, v, blk); return false; }   // (no turning round on a one-way street or the highway)
   // 3. turn round and take another way (a taxi plans a new way to where it's going) - where there's room to; otherwise
   //    it waits its turn (roadends.js roomToTurn: not over the kerb into the shop fronts with the far lane blocked)
-  if (!roomToTurn(world, v, e.id, ai.from)) { ai.howOut = 'wait'; world.turnsHeld = (world.turnsHeld || 0) + 1; return false; }
+  if (!roomToTurn(world, v, e.id, ai.from)) { ai.howOut = 'wait'; world.turnsHeld = (world.turnsHeld || 0) + 1; makeWay(world, v, blk); return false; }
   const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - s);
   if (ai.route && v.taxi && rejoin(world, v, e, other, s2)) { /* (on its new way) */ }
   else { delete ai.route; enterEdge(world, v, e.id, other, 0, s2); }
@@ -124,6 +138,28 @@ function findWay(world, v) {
   return true;
 }
 
+// Nose to nose with a vehicle at work that wants to come this way - a tow truck pulling away with a car on its hook, an
+// ambulance leaving a scene - with no way round it and no room to turn: it backs off down its lane, as far as there's
+// room behind it, so the other can swing past (by Southside station a tow truck and the car on its hook stood across
+// Magnolia Street for four minutes, a car nosed up to it from each side, nobody giving way).
+export function makeWay(world, v, b) {   // (exported for the tests)
+  if (!b || !b.ai || b.ai.kind === 'traffic' || Math.hypot(b.vx, b.vy) > 15 || !b.seats[0]) return;
+  const toV = Math.atan2(v.y - b.y, v.x - b.x);
+  if (Math.cos(b.a - toV) < 0.35) return;   // (it isn't headed this way: it's working, not leaving - round it, or wait)
+  const room = roomBehind(world, v, 120);
+  if (room < 24) return;
+  v.ai.reverseUntil = world.time + Math.min(1.8, 0.4 + room / 70); v.ai.stuck = 0;
+  world.madeWay = (world.madeWay || 0) + 1;
+}
+
+// something stopped in the road that won't move off by itself: nobody driving it, a wreck, a car that's given up, one
+// pulled up after a rear-end, a police car or an ambulance or a tow truck at work
+export function standing(world, b) {
+  if (b.kind !== K.VEH || Math.hypot(b.vx, b.vy) > 12) return false;
+  const drv = b.seats[0] && world.get(b.seats[0]);
+  if (drv && drv.player) return false;
+  return !!(b.wreckAt || b.dead || !b.ai || !drv || b.ai.kind !== 'traffic' || b.ai.parkIt || b.ai.incident);
+}
 // Round something stopped in the way, on whichever side is clear: the other side of the road, or (a siren only) up on
 // the pavement. Called from driveToward with the speed the obstacles allow; returns { x, y, speed, ignore } to drive
 // at instead, or null.
@@ -136,22 +172,48 @@ export function goRound(world, v, ai, speed, desired) {
     const c = Math.cos(r.a), s = Math.sin(r.a);
     const along = (v.x - b.x) * c + (v.y - b.y) * s;
     if (along > b.def.L / 2 + v.def.L / 2 + 8) { ai.round = null; return null; }   // past it: back to the route
-    const ahead = Math.max(along + 80, b.def.L / 2 + v.def.L / 2 + 40);
-    return { x: b.x + c * ahead - s * r.off, y: b.y + s * ahead + c * r.off, speed: Math.min(desired, v.siren ? 170 : 110), ignore: b.id };
+    // (out beside its back corner first, then on past it: aimed straight past its front from behind, the line cut its
+    // back corner and the car going round shoved it on up the street)
+    const ahead = Math.min(Math.max(along + 80, -b.def.L / 2 - v.def.L * 0.8), b.def.L / 2 + v.def.L / 2 + 40);
+    // (still behind it: slowly, so the swing out is tight - a corner clipping its bumper shoves it on up the street)
+    const behind = along < -b.def.L / 2 - v.def.L / 2 + 20 && Math.abs((v.x - b.x) * -s + (v.y - b.y) * c) < Math.abs(r.off) - 12;
+    return { x: b.x + c * ahead - s * r.off, y: b.y + s * ahead + c * r.off, speed: Math.min(desired, behind ? (v.siren ? 90 : 55) : v.siren ? 170 : 110), ignore: b.id };
   }
   const b = v._blk && world.get(v._blk);
   if (!b || b.kind !== K.VEH || speed > 40 || desired < 60 || Math.hypot(b.vx, b.vy) > 15 || after(world, ai, b)) { ai.roundT = 0; return null; }
   ai.roundT = (ai.roundT || 0) + 0.05;
   if (ai.roundT < (v.siren ? ROUND_S : ROUND_BUS_S)) return null;
   ai.roundT = 0;
-  const a = v.a, off0 = v.def.W / 2 + b.def.W / 2 + 14;
+  const a = !v.siren && ai.roundUntil > now && ai.roundA !== undefined ? ai.roundA : v.a, off0 = v.def.W / 2 + b.def.W / 2 + 14;
+  // (nose right up to it with no room to back off for the swing out: not without a siren - the corner of its bumper
+  // would catch the other's and shove it on up the street; the queue behind sorts itself out first)
+  const gap0 = (b.x - v.x) * Math.cos(a) + (b.y - v.y) * Math.sin(a) - b.def.L / 2 - v.def.L / 2;
+  const back0 = gap0 < v.def.L * 1.2 ? roomBehind(world, v, 90) : 0;
+  if (!v.siren && gap0 + back0 < v.def.L * 0.8) return null;
   for (const side of v.siren ? [-1, 1] : [-1]) {           // (-1: the other side of the road; 1: the kerb side, the pavement)
     if (!stripClear(world, v, b, a, side * off0, !!v.siren)) continue;
+    if (!v.siren && oncoming(world, v, b, a, side * off0)) continue;   // (without a siren: only with nothing coming the other way)
     ai.round = { blk: b.id, off: side * off0, a, until: now + 8 };
     world.reroutes = (world.reroutes || 0) + 1;
+    // nose right up to it: back off a little first, for the room to swing out (pulling out from a car's length or less
+    // behind it, the corner of its bumper caught the other's and shoved it on up the street)
+    const need = v.def.L * 1.2;
+    if (gap0 < need) { const back = Math.min(need - gap0, back0); if (back > 8) { ai.reverseUntil = now + Math.min(1.4, 0.25 + back / 80); ai.stuck = 0; } }
     return goRound(world, v, ai, speed, desired);
   }
   return null;
+}
+// something coming the other way down the strip beside b that v would drive round it in (off px over), near enough to
+// meet it before it's past: wait for it
+function oncoming(world, v, b, a, off) {
+  const c = Math.cos(a), s = Math.sin(a), mx = b.x - s * off, my = b.y + c * off;
+  for (const q of world.query(mx + c * 300, my + s * 300, 420, K.VEH)) {
+    if (q === v || q === b || !sameLevel(q.lz, v.lz) || (q.alt || 0) > FLY.HIGH) continue;
+    const dx = q.x - mx, dy = q.y - my, along = dx * c + dy * s, lat = Math.abs(-dx * s + dy * c);
+    if (along < -b.def.L || along > 720 || lat > v.def.W + 20) continue;
+    if (Math.hypot(q.vx, q.vy) > 25 ? Math.cos(q.a - a) < 0.3 : along < 260) return true;   // (coming, or standing in the way)
+  }
+  return false;
 }
 // the police don't go round the car of the one they're after: they pull up behind it
 function after(world, ai, b) {

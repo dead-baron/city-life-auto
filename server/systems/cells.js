@@ -23,6 +23,7 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import { inAnyView } from '../view.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const NEAR_PX = 1000, FAR_PX = 1400;
 const SPOT_PX = 30;   // this close to the bench, the toilet or the bars: the action button uses it
@@ -221,7 +222,7 @@ export function sit(world, p, cell, where) {
   const list = where === 'toilet' ? spots(cell).toilet : [...spots(cell).bench].sort((a, b) => Math.abs(a.x - ped.x) - Math.abs(b.x - ped.x));
   const spot = list.find((s) => isFree(world, s.x, s.y, ped, 12)) || null;
   if (!spot) { world.notify(p, where === 'toilet' ? 'Occupied.' : 'No room on the bench.', 'warn'); return; }
-  ped.x = spot.x; ped.y = spot.y; ped.a = spot.a; ped.vx = 0; ped.vy = 0;
+  ped.x = spot.x; ped.y = spot.y; ped.a = spot.a; ped.vx = 0; ped.vy = 0; moved(ped);
   world.place(ped);
   ped.holdBars = false; ped.sitBench = true; ped.seat2 = where;
   ped.appVer = (ped.appVer || 0) + 1;
@@ -237,7 +238,7 @@ export function holdBars(world, p, cell) {
     if (q >= cell.x0 && q <= cell.x1 && isFree(world, q, cell.front, ped, 18)) { x = q; break; }
   }
   if (x === null) { world.notify(p, 'No room at the bars.', 'warn'); return; }
-  ped.x = x; ped.y = cell.front; ped.a = cell.a; ped.vx = 0; ped.vy = 0;
+  ped.x = x; ped.y = cell.front; ped.a = cell.a; ped.vx = 0; ped.vy = 0; moved(ped);
   world.place(ped);
   ped.sitBench = false; ped.seat2 = null; ped.holdBars = true;
   ped.appVer = (ped.appVer || 0) + 1;

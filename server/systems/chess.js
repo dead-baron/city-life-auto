@@ -21,6 +21,7 @@ import { think, evaluate } from './chessai.js';
 import { spotsOf, leave as leaveAct } from './activities.js';
 import { spawnNpc } from './npc.js';
 import { store } from '../store.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 let rng = mulberry32(64064);
 export function setRng(r) { rng = r; }   // (tests)
@@ -89,7 +90,7 @@ function sit(world, p, T, i) {
   if (!G) A.set(T.id, G = newGame(T));
   if (G.seats[i]) return false;
   const pos = seatPos(T, i);
-  ped.x = pos.x; ped.y = pos.y; ped.vx = ped.vy = 0; ped.a = pos.a;
+  ped.x = pos.x; ped.y = pos.y; ped.vx = ped.vy = 0; ped.a = pos.a; moved(ped);
   world.place(ped);
   ped.gt = 'sit'; ped.pp = i === 0 ? 'chess' : null; ped.cv = null; ped.appVer = (ped.appVer || 0) + 1;
   G.seats[i] = { pid: p.pid };
@@ -271,7 +272,7 @@ export function update(world) {
         if (!q || !q.conn || !ped || ped.dead || ped.vehId || ped.hidden || !q.chess || q.chess.g !== G.id) { if (q && q.chess && q.chess.g === G.id) getUp(world, q, 'gone'); else { G.seats[i] = null; if (G.st === 'play' && G.seats[i ^ 1] && G.seats[i ^ 1].pid) end(world, G, i ^ 1, 'The other player left'); } continue; }
         const pos = seatPos(G.T, i);
         if (Math.hypot(ped.x - pos.x, ped.y - pos.y) > 12) { getUp(world, q, 'gone'); continue; }
-        ped.x = pos.x; ped.y = pos.y; ped.vx = ped.vy = 0; ped.a = pos.a;
+        ped.x = pos.x; ped.y = pos.y; ped.vx = ped.vy = 0; ped.a = pos.a; moved(ped);
       } else {
         const n = npcOf(world, o);
         const pos = seatPos(G.T, i);

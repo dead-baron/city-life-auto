@@ -4,10 +4,13 @@
 // the turf of a player who is around (a red world event on the radar).
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
-import { PED_BLOCK, isTurf } from '../../shared/map.js';
+import { PED_BLOCK, CAR_BLOCK, WATER_T, isTurf } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { GANG_PROVOKE_SPEED, SHOOTOUT_EVERY_S } from '../../shared/rules.js';
 import { IN } from '../../shared/input.js';
+import { nearestEdge } from '../../shared/roads.js';
+import { pointAt } from '../../shared/geom.js';
+import { VEHICLES } from '../../shared/vehicles.js';
 import { spawnNpc, despawnNpc, seek, startFight } from './npc.js';
 import { wildStyle } from './wildlife.js';
 import * as players from './players.js';
@@ -130,9 +133,9 @@ export function startShootout(world, nearPlayer = null) {
     ok = !PED_BLOCK[world.map.tileAtPx(cx, cy)] && !PED_BLOCK[world.map.tileAtPx(cx + 120, cy)];
   }
   if (!ok) return null;
-  const node = world.map.nearestNode(cx, cy);
+  const at = kerbSpot(world, cx, cy);
   const cop = [];
-  const car = node ? world.spawnVehicle('police', node.x + 20, node.y + 20, rng() * 6.28, {}) : null;
+  const car = at ? world.spawnVehicle('police', at.x, at.y, at.a, {}) : null;
   if (car) { car.despawnable = false; car.sirenOn = true; car.shootout = true; }
   for (let i = 0; i < 3; i++) {
     const c = spawnNpc(world, 'cop', (car ? car.x : cx) + 30 + i * 22, (car ? car.y : cy) + 26, 'cop');
@@ -157,6 +160,37 @@ export function startShootout(world, nearPlayer = null) {
   return { x: cx, y: cy };
 }
 
+// Where the police car pulls up for a shootout: at the kerb of the street nearest (x, y), along it, clear of the
+// junctions at its ends. (It used to be dropped 20 px off the nearest junction's middle at any angle - and while anyone
+// was near enough to see, it stood there for good: by Northgate station one stood across the mouth of Central Avenue,
+// and the avenue queued behind it for the rest of the run.)
+function kerbSpot(world, x, y) {
+  const net = world.map.net;
+  if (!net) return null;
+  const ne = nearestEdge(net, x, y, (e) => e.lvl === 0 && e.kind !== 'hwy' && e.kind !== 'ramp' && !e.bridge);
+  if (!ne) return null;
+  const e = ne.e, d = VEHICLES.police, ta = net.nodes[e.a].trim?.[e.id] || 0, tb = net.nodes[e.b].trim?.[e.id] || 0;
+  const lo = ta + d.L / 2 + 60, hi = e.len - tb - d.L / 2 - 60;
+  const s = hi > lo ? Math.min(hi, Math.max(lo, ne.s)) : e.len / 2;
+  const c = pointAt(e.pts, s), side = rng() < 0.5 ? 1 : -1, hw = e.hw || 48;
+  // (on the right-hand kerb of the way it faces: side 1 faces along the street's points, -1 against them)
+  const a = Math.atan2(c.ty, c.tx) + (side > 0 ? 0 : Math.PI), nx = -Math.sin(a), ny = Math.cos(a), ca = Math.cos(a), sa = Math.sin(a), m = world.map;
+  // up on the pavement where there's room for it (out of the traffic's way: a one-lane street's lane is no wider than a
+  // car), else at the kerb
+  const fits = (off) => {
+    const x = c.x + nx * off, y = c.y + ny * off;
+    for (const [u, w] of [[0, 0], [d.L / 2, d.W / 2], [d.L / 2, -d.W / 2], [-d.L / 2, d.W / 2], [-d.L / 2, -d.W / 2], [0, d.W / 2], [0, -d.W / 2]]) {
+      const px = x + ca * u - sa * w, py = y + sa * u + ca * w, t = m.tileAtPx(px, py);
+      if (CAR_BLOCK[t] || WATER_T[t] || PED_BLOCK[t]) return false;
+      const tx = Math.floor(px / 32), ty = Math.floor(py / 32);
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) for (const q of m.solidProps.get(m.idx(tx + i, ty + j)) || []) if (!q.off && Math.hypot(q.x - px, q.y - py) < q.r + 4) return false;
+    }
+    return true;
+  };
+  const up = hw + d.W / 2 + 4, kerb = Math.max(0, hw - d.W / 2 - 6), off = fits(up) ? up : kerb;
+  return { x: c.x + nx * off, y: c.y + ny * off, a };
+}
+
 function tidyShootouts(world) {
   if (!world.shootouts) return;
   world.shootouts = world.shootouts.filter((s) => {
@@ -169,7 +203,7 @@ function tidyShootouts(world) {
     // clean up once nobody's watching
     const ref = alive[0] || world.get(s.car) || null;
     const seen = ref && [...world.players.values()].some((q) => q.ped && Math.hypot(q.ped.x - ref.x, q.ped.y - ref.y) < 1100);
-    if (seen) { for (const e of alive) if (e.npc && e.npc.role === 'cop') e.npc.war = 0; return true; }
+    if (seen) { for (const e of alive) if (e.npc && e.npc.role === 'cop') e.npc.war = 0; const c0 = world.get(s.car); if (c0) { c0.despawnable = true; c0.sirenOn = false; } return true; }   // (over: the car's the street's clean-up's once nobody's looking)
     for (const e of alive) despawnNpc(world, e);
     const car = world.get(s.car);
     if (car && !car.seats.some((x) => x && world.get(x)?.player)) world.remove(car);

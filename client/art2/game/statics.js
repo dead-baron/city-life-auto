@@ -34,7 +34,8 @@
 // once per M (a WeakMap); the worker caches sprites by key (identical keys = identical sprites).
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift } from '../buildings.js';
+import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
 import * as P from '../props.js';
@@ -70,7 +71,8 @@ import { groundPixel } from '../ground.js';
 const BLAZES = ['#2a62c8', '#c8342a', '#e8c030', '#f2f0e8'];
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
+import { foodLayout } from '../../../shared/foodrooms.js';
+import { cliffOutline, cliffTiers, CLIFF_PAD } from '../../../shared/cliffshape.js';   // (a cliff face's outline: the world build's solid rock under it is the same)   // (IN8: the diner, the fast-food place, the restaurant)
 import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
 import { unitDoor, DOOR_COLS } from '../../../shared/doors.js';   // (the doors that open live)
 import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
@@ -118,6 +120,7 @@ export function zPut(dst, src, ax, ay, dz = 0, flagOr = 0) {
 // a copy of G with margins added round it (the anchor moves with the content)
 function grow(G, l, t, r, b) {
   l = Math.max(0, Math.ceil(l)); t = Math.max(0, Math.ceil(t)); r = Math.max(0, Math.ceil(r)); b = Math.max(0, Math.ceil(b));
+  l += l & 1; t += t & 1;   // (whole art pixels: what was on the art grid - a sign's letters - stays on it)
   if (!l && !t && !r && !b) return G;
   const O = new GBuf(G.w + l + r, G.h + t + b);
   O.ax = G.ax + l; O.ay = G.ay + t;
@@ -133,6 +136,8 @@ function grow(G, l, t, r, b) {
 function group(parts) {
   let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
   for (const [s, dx, dy, dz = 0] of parts) { x0 = Math.min(x0, dx - s.ax); y0 = Math.min(y0, dy - dz - s.ay); x1 = Math.max(x1, dx - s.ax + s.w); y1 = Math.max(y1, dy - dz - s.ay + s.h); }
+  // (the first part - a sign's board - keeps its rows and columns on the art grid: an even offset into the group)
+  { const [s, dx, dy, dz = 0] = parts[0]; if (Math.round(dx - s.ax - x0) & 1) x0 -= 1; if (Math.round(dy - dz - s.ay - y0) & 1) y0 -= 1; }
   const G = new GBuf(Math.ceil(x1 - x0), Math.ceil(y1 - y0)); G.ax = Math.round(-x0); G.ay = Math.round(-y0);
   for (const [s, dx, dy, dz = 0] of parts) zPut(G, s, G.ax + dx, G.ay + dy, dz);
   return G;
@@ -365,18 +370,11 @@ export function makeStatic(r) {
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
     case 'zen': return makeZen();
     case 'cliff': {
-      // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face)
-      const W = r.w, D = r.d, pad = 30, poly = [];
-      for (let k = 0; k < 48; k++) {
-        const a = k / 48 * TAU, c = Math.cos(a), sn = Math.sin(a), e = 0.55;
-        let x = Math.sign(c) * Math.abs(c) ** e * W / 2, y = Math.sign(sn) * Math.abs(sn) ** e * D / 2;
-        const j = 1 + (hash(k, 3, r.s || 1) - 0.5) * 0.18 + Math.sin(a * 5 + (r.s || 1)) * 0.05;
-        x *= j; y *= j;
-        if (sn > 0 && Math.abs(x) < W * 0.22) y = D / 2;   // (the face round the adit stays straight)
-        poly.push([x + W / 2 + pad, y + D / 2 + 6]);
-      }
+      // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face) - the
+      // shape the world build makes solid under it (shared/cliffshape.js: the rock drawn is the rock you can't walk into)
+      const W = r.w, D = r.d, pad = CLIFF_PAD, poly = cliffOutline(W, D, r.s || 1).map(([x, y]) => [x + W / 2 + pad, y + D + 6]);
       const ss = r.st === 'sandstone';
-      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
+      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: cliffTiers(D, r.h), veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
     case 'crystal': {
       const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');
@@ -459,8 +457,7 @@ const WALLS = {
 const ROOFC = ['#5e6270', '#585c68', '#6a5a50', '#4e5a66', '#6a6e78', '#5a4e4a', '#46505a', '#4a5a50', '#6a4e44'];
 const TILEC = ['#94503a', '#8a4a3c', '#9c5a3a', '#7e4436', '#946446', '#8a5640'];
 const SHUT = ['#3a4a5c', '#2e5a4a', '#56606a', '#6a3a34', '#2e4a6a', '#4a5a3a'];
-const SIGNC = [['#2a2c38', [236, 206, 120]], ['#e8e0cc', [180, 40, 46]], ['#1e3a5e', [240, 236, 220]], ['#f0ece4', [40, 110, 80]], ['#2f6a4e', [240, 232, 200]],
-  ['#8a2a2e', [250, 230, 190]], ['#232838', [236, 214, 150]], ['#e8c040', [40, 40, 50]], ['#2a4a7a', [250, 250, 240]], ['#f4f0e8', [40, 60, 120]]];
+// (the shop signs' colours: by trade - signfont.js TRADES, styleSign below - not a random deal of ten pairs any more)
 const AWN = [['#2f7a5c', '#f0ece4'], ['#a8343a', '#f0ece4'], ['#2a3e7a', '#e8e4dc'], ['#c8503a', '#f0ece4'], ['#e0b040', '#f0ece4'], ['#2f6a4e', '#2f6a4e'],
   ['#a8343a', '#a8343a'], ['#3a3a44', '#e8e4dc'], ['#6a3a8a', '#f0ece4'], ['#2e6a8a', '#f0ece4'], ['#1e2a3a', '#1e2a3a']];
 const NEONC = [[255, 70, 220], [90, 230, 255], [255, 90, 190], [180, 110, 255], [255, 200, 80], [120, 255, 150], [255, 120, 60]];
@@ -588,7 +585,7 @@ function kitModel(k) {
 }
 // (a roof garden's bed is painted for its roof alone - props-garden.js roofBed, about a millisecond - so it isn't kept)
 const kitSprite = (k) => (kitBase(k) === 'bed' ? GD.roofBed(...k.split('|').slice(1).map((q, i) => (i === 3 || i === 4 ? q : +q))) : memo('kit:' + k, () => {
-  if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, sx: 2, bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
+  if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, face: 'neon', bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
   if (kitBase(k) === 'npic') return makeSignBoard({ t: 'sign', k: 'pic', pic: k.split('|')[1], z: 14 });   // ('npic|key': a picture sign on posts at the roof's edge - neonpics.js)
   if (kitBase(k) === 'tree') { const a = k.split('|'); return GD.roofTree(a[1], a[2], +a[3]); }
   return voxSprite(kitModel(kitBase(k)), k.endsWith('@') ? PI / 2 : 0);
@@ -963,6 +960,52 @@ function townKit(I, list) {
   }
 }
 
+// ---- the signs' faces and colours by trade (wave A1; signfont.js) ---------------------------------------------------
+// the POIs standing in each building (by the building's record)
+let PB_M = null, PB = null;
+function poisOf(M, b) {
+  if (PB_M !== M) { PB_M = M; PB = new Map(); for (const p of M.pois || []) { const q = p.b !== undefined ? M.buildings[p.b] : null; if (!q) continue; let l = PB.get(q); if (!l) PB.set(q, (l = [])); l.push(p); } }
+  return PB.get(b) || [];
+}
+// a shop sign's trade: its own business (the walk-in unit's POI, else the POI named like the sign, else the building's
+// only shop) - its name's words, its kind, its store - then the window's kind and the archetype
+function signTrade(c, b, A, s, spec) {
+  const sg = spec.shop.sign, u = s.walk, ps = poisOf(c.M, b).filter((p) => p.kind !== 'home' && p.kind !== 'atm');
+  let p = u && u.poi !== undefined ? ps.find((q) => q.id === u.poi) : null;
+  if (!p) p = ps.find((q) => clean(q.label, 30) === sg.text) || (ps.length === 1 ? ps[0] : null);
+  return spec.shop.trade || tradeOf({ name: sg.text, kind: p ? p.kind : u ? u.kind : null, store: (p && p.store) || (u && u.trade) || null, shop: spec.shop.kind, A });
+}
+// how a trade's board throws its light: [strength, z above its foot]
+const SIGN_LIGHT = { neon: 1.2, panel: 0.8, ink: 0.6, flood: 0.5 };
+// a shop sign styled by its trade: the face, a sibling palette by the building (two clinics differ, neighbours differ),
+// the icon; a hand-planned front (b.art) keeps its own panel colour, its ink made legible; and its light on the pavement
+function styleSign(spec, c, b, A, s, named, lights, hand) {
+  const sg = spec.shop.sign, trade = signTrade(c, b, A, s, spec), st = signStyle(trade, (b.id * 7 + s.k) | 0), T = TRADES[st.trade];
+  let pal = st.pal;
+  if (hand && sg.bg) {
+    if (T.face === 'neon') pal = palOf({ p: '#16141e', i: rgbOf(sg.fg || st.pal.h), neon: true }, T);
+    else {
+      pal = palOf([sg.bg, st.pal.i], T);
+      if (contrast(pal.i, pal.p) < 4.5) pal.i = rgbOf(sg.fg || [250, 248, 240]);
+      legible(pal);
+      pal.t = T.tile ? T.tile.map(rgbOf) : [pal.p, pal.i];
+    }
+  }
+  Object.assign(sg, { trade: st.trade, face: st.face, pal, icon: st.icon, glow: sg.lit === false ? undefined : st.lit, bulbs: st.bulbs });
+  delete sg.bg; delete sg.fg;
+  const col = pal.neon ? pal.h : st.lit === 'panel' && contrast(pal.p, [0, 0, 0]) > 8 ? pal.p : pal.i;
+  lights.push([spec.w / 2, 10, 60 + signLift(spec), 90, col.map((v) => 0.4 + (v / 255) * 0.6), SIGN_LIGHT[st.lit] || 0.5, 'sign']);
+}
+// a plaque styled: its trade's face and palette when it has one (a clinic's white and green, the fire station's red), its
+// own colours made legible otherwise, in the small face
+function stylePlaque(pq, A, seed) {
+  if (pq.pal || pq.face === 'neon') return;
+  const trade = pq.trade !== undefined && pq.trade !== null ? pq.trade : null;
+  if (trade && TRADES[trade]) { const st = signStyle(trade, seed); pq.face = pq.face || st.face; pq.pal = st.pal; pq.glow = st.lit; return; }
+  const P = legible(palOf([pq.bg || '#f4f2ea', pq.fg || [40, 36, 32]]));
+  pq.pal = P; pq.face = pq.face || 'civic';
+}
+
 // the makeBuilding spec, rooftop kit and lights of one section. lights: [dx, dy, z, r, col, k, kind] from the
 // section's south-west corner (dy south of the front wall)
 function specOf(c, b, A, s, D) {
@@ -976,13 +1019,13 @@ function specOf(c, b, A, s, D) {
   const spec = { w, d, seed, glowOnly: true, night: NIGHT, roof: 'flat' };
   let kit = null, pitched = false;
   const shopName = (pool) => named || pick(SHOPNAMES[pool] || SHOPNAMES.shop, rnd());
-  const sc = () => pick(SIGNC, rnd());
-  // a storefront on the ground floor: kind (storefront interior), sign text, awning (null = band/sign only)
+  // a storefront on the ground floor: kind (storefront interior), sign text, awning (null = band/sign only); the sign's
+  // face and colours come from its trade (styleSign, once the front is settled)
   const shop = (kind, text, o = {}) => {
-    const [bg, fg] = o.sc || sc();
+    if (!o.sc) rnd();   // (the old random colour deal's draw, kept: the front's other choices - awning, roof, kit - stay as they were)
     const sh = { kind, door: s.doorX !== undefined ? doorX : rnd() < 0.5 ? 'left' : 'right', open: true, people: o.people ?? (rnd() < 0.6 ? 1 + (rnd() * 3 | 0) : 0), clerkShirt: o.shirt };
     if (s.doorW) sh.doorW = s.doorW;
-    if (text) sh.sign = { text: clean(text, Math.max(4, Math.floor((w - 14) / 4))), bg, fg, lit: true, icon: o.icon };
+    if (text) sh.sign = { text: clean(text, 30), lit: true };
     if (o.awning !== null && (o.awning || rnd() < 0.55)) sh.awning = o.awning || pick(AWN, rnd());
     if (!sh.sign && !sh.awning) sh.band = pick(AWN, rnd());
     if (o.grille) sh.grille = true;
@@ -990,7 +1033,6 @@ function specOf(c, b, A, s, D) {
     spec.shop = sh;
     const dx = typeof sh.door === 'number' ? sh.door + (sh.doorW || 22) / 2 : sh.door === 'left' ? 21 : w - 21;
     shopSpill(lights, w, dx);
-    if (sh.sign) lights.push([w / 2, 10, 70, 90, L01(bg).map((v) => 0.4 + v * 0.6), 0.5, 'sign']);
   };
   const plainDoors = (o = {}) => {
     const dw = o.dw || 22;
@@ -1006,7 +1048,7 @@ function specOf(c, b, A, s, D) {
   };
   // a vertical blade sign at one end of the facade (on the upper floors)
   const blade = (text, col, v) => { const x = rnd() < 0.5 ? 10 : w - 32; if (w < 90) return; (spec.blades ||= []).push({ text, x, v, col }); lights.push([x + 11, 10, v + 40, 130, col.map((q) => q / 255), 1.3, 'neon']); };
-  const neon = (text, col, v) => { const t = clean(text, clamp(Math.floor((w - 24) / 8), 4, 20)); (spec.plaques ||= []).push({ text: t, x: Math.max(4, Math.round(w / 2 - textWidth(t, { sx: 2, gap: 1 }) / 2) - 5), v, sx: 2, bg: '#1c1a28', fg: col, lit: true }); lights.push([w / 2, 14, v + 8, 150, col.map((q) => q / 255), 1.6, 'neon']); };
+  const neon = (text, col, v) => { const t = clean(text, 20); (spec.plaques ||= []).push({ text: t, cx: w / 2, v, bg: '#1c1a28', fg: col, lit: true, face: 'neon' }); lights.push([w / 2, 14, v + 8, 150, col.map((q) => q / 255), 1.6, 'neon']); };
   switch (A) {
     case 'house': case 'cottage': {
       // the choices a house's parts share come from the building; the garage wing is one storey under its own roof
@@ -1048,7 +1090,7 @@ function specOf(c, b, A, s, D) {
     case 'cabin': {
       Object.assign(spec, { style: 'siding', wallColor: '#7a5a40', pitch: 'gable', slope: 0.5, roof: 'shingle', roofColor: '#3e6a5a', chimney: true });
       plainDoors({ dw: 18, open: true });
-      if (named) spec.plaques = [{ text: clean(named.replace(/^.*RANGER/, 'RANGER'), 16), x: 6, v: 46, sx: 1, bg: '#2e5a3e', fg: [240, 236, 214] }];
+      if (named) spec.plaques = [{ text: clean(named.replace(/^.*RANGER/, 'RANGER'), 16), x: 6, v: 46, bg: '#2e5a3e', fg: [240, 236, 214], face: 'serif' }];
       pitched = true; break;
     }
     case 'shack': {
@@ -1067,7 +1109,7 @@ function specOf(c, b, A, s, D) {
       else if (fl >= 3 && rnd() < 0.25) spec.balconies = true;
       if (front && (A === 'rough' || st === 'commercial' || st === 'southside' || rnd() < 0.3)) {
         const k = A === 'rough' ? pick(['liquor', 'pawn', 'mart', 'mart', 'bar'], rnd()) : pick(['mart', 'cafe', 'mart', 'liquor', 'pawn'], rnd());
-        shop(k, shopName(k === 'mart' ? 'mart' : k === 'cafe' ? 'cafe' : k === 'bar' ? 'bar' : k), { grille: rough && rnd() < 0.6, openSign: rough || rnd() < 0.3, awning: rough && rnd() < 0.6 ? null : undefined, icon: k === 'pawn' ? 'crown' : null });
+        shop(k, shopName(k === 'mart' ? 'mart' : k === 'cafe' ? 'cafe' : k === 'bar' ? 'bar' : k), { grille: rough && rnd() < 0.6, openSign: rough || rnd() < 0.3, awning: rough && rnd() < 0.6 ? null : undefined });
       } else if (front) plainDoors({ dw: 22 });
       else spec.blank = true;
       upperLights(fl);
@@ -1163,7 +1205,7 @@ function specOf(c, b, A, s, D) {
     case 'theatre': {
       Object.assign(spec, { floors: 3, style: 'stone', wallColor: '#b89a7a', parapet: 10 });
       shop('lobby', null, { awning: null, people: 3 });
-      neon(named || 'THEATRE', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', x: Math.max(4, Math.round(w / 2) - 30), v: 128, sx: 2, bg: '#2a1e1a', fg: [255, 236, 190], lit: true });
+      neon(named || 'THEATRE', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', cx: w / 2, v: 128, bg: '#2a1e1a', fg: [255, 236, 190], lit: true, face: 'marquee', bulbs: true });
       blade('CINEMA', [255, 200, 90], 70);
       break;
     }
@@ -1172,10 +1214,14 @@ function specOf(c, b, A, s, D) {
       Object.assign(spec, { floors: fl, style: 'stone', wallColor: pick(['#d4c8b0', '#c8bca4', '#dcd2bc'], rnd()), parapet: 8 });
       const pw = clamp(Math.round(w * 0.46), 90, 160);
       const museum = /MUSEUM/i.test(b.name || '');
-      if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : museum ? 'MUSEUM' : 'BANK' };
+      // (a bank's own name cut in its portico when it fits there - Serif Caps, else Civic Sans - else BANK, the name on a
+      // plaque beside the columns)
+      const own = A === 'bank' && named && !museum ? clean(named, 26) : null, fitsP = own && w >= 140 && Math.min(lineMask(own, 'serif').w, lineMask(own, 'civic').w) * 2 <= pw - 8;
+      if (w >= 140) spec.portico = { x: Math.round(w / 2 - pw / 2), w: pw, cols: 4, text: A === 'court' ? 'COURTHOUSE' : A === 'cityhall' ? 'CITY HALL' : museum ? 'MUSEUM' : fitsP ? own : 'BANK' };
       spec.doors = [{ x: s.walk && s.doorX !== undefined ? clamp(Math.round(s.doorX + ((s.doorW || 56) - 28) / 2), 6, w - 34) : Math.round(w / 2 - 14), w: 28, kind: 'door', h: 50, open: A === 'bank' }];   // (a walk-in's: at its doorway)
       spec.windows = winXs(w, [[w / 2 - pw / 2, w / 2 + pw / 2]], 30);
-      if (A === 'bank' && named && w >= 120) spec.plaques = [{ text: clean(museum ? 'MUSEUM OF ART' : named, 18), x: 6, v: 70, sx: 1, bg: museum ? '#5a1e24' : '#2a3a2a', fg: [236, 214, 150], lit: true }];
+      const side = w >= 140 ? Math.round((w - pw) / 2) - 10 : w - 12;
+      if (A === 'bank' && named && w >= 120 && !fitsP && side >= 64) spec.plaques = [{ text: clean(museum ? 'MUSEUM OF ART' : named, 26), x: 6, v: 70, maxW: side, bg: museum ? '#5a1e24' : '#2a3a2a', fg: [236, 214, 150], lit: true, trade: museum ? 'civic' : 'bank' }];
       if (museum) spec.doors[0].open = true;
       lights.push([w / 2, 12, 40, 110, [1, 0.85, 0.6], 1, 'window']);
       upperLights(fl, 0);
@@ -1189,16 +1235,19 @@ function specOf(c, b, A, s, D) {
         for (let i = 0; i < n; i++) dws.push({ x: 14 + i * 70, w: 58, kind: 'garage', open: i === 0, h: 54 });
         spec.doors = [...dws, { x: w - 30, w: 18, kind: 'door' }];
         spec.windows = [];
-        spec.plaques = [{ text: clean(named || 'FIRE STATION', 16), x: 10, v: 64, sx: 1, bg: '#a8282c', fg: [250, 240, 230], lit: true }];
+        spec.plaques = [{ text: clean(named || 'FIRE STATION', 26), x: 10, v: 64, lit: true, trade: 'fire' }];
       } else {
         // (a walk-in's glass doors where its doorway really is - shared/map.js buildInteriors; else in the middle)
         const wk = s.walk && s.doorX !== undefined, dx0 = wk ? clamp(s.doorX - 3, 6, w - 60) : Math.round(w / 2 - 25), dw0 = wk ? (s.doorW || 56) + 6 : 50;
         const blind = !!b.walkIn && !wk;   // (a walk-in drawn in sections: only the one with the doorway has doors)
         spec.doors = blind ? [] : [{ x: dx0, w: dw0, kind: 'door', open: true, h: 48 }];
         spec.windows = winXs(w, blind ? [] : [[dx0, dx0 + dw0]], 30);
-        const txt = A === 'hospital' ? 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 18);
-        spec.plaques = blind ? [] : [{ text: txt, x: Math.max(4, Math.round(w / 2 - textWidth(txt, { sx: 2, gap: 1 }) / 2) - 5), v: 66, sx: 2, bg: A === 'police' ? '#1d3a8a' : A === 'school' ? '#2a4a3a' : null, fg: A === 'hospital' ? [60, 54, 48] : [250, 250, 240], lit: A !== 'hospital' }];   // (one name plaque: on the section with the doors, not on each)
-        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', x: Math.round(dx0 + dw0 / 2 - 25), v: 52, sx: 1, bg: '#c8343a', fg: [250, 246, 240], lit: true }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
+        // (a clinic or a hospital says its own name - Northgate Clinic, the owner's 11-03 example - in Civic Sans on a lit
+        // white panel: green for a clinic, red for a hospital; the police and schools theirs)
+        const med = A === 'hospital' && named && /CLINIC|INFIRMARY|MEDICAL|HEALTH|HOSPITAL/.test(named) ? named : null;
+        const txt = A === 'hospital' ? med || 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 26);
+        spec.plaques = blind ? [] : [{ text: txt, cx: w / 2, v: 66, lit: true, trade: A === 'hospital' ? tradeOf({ name: txt, kind: 'hospital' }) : A }];   // (one name plaque: on the section with the doors, not on each)
+        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 52, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
       lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);
@@ -1227,7 +1276,7 @@ function specOf(c, b, A, s, D) {
       spec.doors = doors.filter((q) => q.x >= 2 && q.x + q.w <= w - 2);
       spec.windows = A === 'warehouse' || A === 'hangar' || A === 'pits' || A === 'grandstand' ? [] : winXs(w, spec.doors.map((q) => [q.x, q.x + q.w]), 40);
       const label = A === 'block' ? 'RESTROOMS' : A === 'pits' ? 'PITS' : A === 'garage' ? (named || 'AUTO REPAIR') : A === 'poolhouse' ? (named || 'POOL') : A === 'grandstand' ? named : A === 'den' ? null : named;
-      if (label) { const t = clean(label, Math.max(4, Math.floor((w - 16) / 8))), sx = w >= 200 ? 2 : 1; spec.plaques = [{ text: t, x: Math.max(4, Math.round(w / 2 - textWidth(t, { sx, gap: 1 }) / 2) - 5), v: Math.min(H - 5 * sx - 14, A === 'garage' ? 54 : 58), sx, bg: A === 'garage' ? '#2a4a7a' : A === 'grandstand' ? '#2a3e8a' : '#3a3e46', fg: [240, 236, 220], lit: A === 'garage' || A === 'grandstand' }]; }
+      if (label) { const t = clean(label, 26); spec.plaques = [{ text: t, cx: w / 2, v: Math.max(30, Math.min(H - 30, A === 'garage' ? 54 : 58)), bg: A === 'garage' ? '#2a4a7a' : A === 'grandstand' ? '#2a3e8a' : '#3a3e46', fg: [240, 236, 220], lit: A === 'garage' || A === 'grandstand', trade: A === 'garage' ? 'auto' : null }]; }
       if (A === 'den') { spec.graffiti = 2; spec.tagText = 'NO TRESPASSING'; }
       if (A === 'grandstand') s.stands = true;
       if (doors.length) lights.push([w / 2, 10, 50, 90, [1, 0.85, 0.65], 0.7, 'window']);
@@ -1240,8 +1289,7 @@ function specOf(c, b, A, s, D) {
   // a bank branch moved into a shop unit: stone front, a marble lobby behind the glass, a green and gold sign
   if (spec.shop && spec.shop.sign && /\bBANK\b/.test(spec.shop.sign.text)) {
     Object.assign(spec, { style: 'stone', wallColor: pick(['#d4c8b0', '#c8bca4', '#dcd2bc'], rnd()), grime: 0, graffiti: 0, tagText: null, boarded: 0 });
-    Object.assign(spec.shop, { kind: 'lobby', awning: null, band: null, grille: false, openSign: null, people: 2 });
-    Object.assign(spec.shop.sign, { bg: '#1e3a2e', fg: [236, 214, 150] });
+    Object.assign(spec.shop, { kind: 'lobby', awning: null, band: null, grille: false, openSign: null, people: 2, trade: 'bank' });
   }
   // ---- the small towns (World v3, docs/WORLD-V3.md 8.13.1, districts 57-59 and Northshore's beach towns, 54): wood
   // siding of one or two storeys instead of the city's brick and stucco - the logging town's dark timber, the farm
@@ -1256,7 +1304,7 @@ function specOf(c, b, A, s, D) {
   if (b.look && !b.art && !s.frame && !s.vox) pitched = townLook(spec, b, s, TL || TOWN_LOOK.log, rnd, w, pitched);   // (H40: the towns' own buildings)
   if (s.bay) {
     delete spec.shop; delete spec.portico; delete spec.arches;
-    Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', x: Math.max(4, Math.round(w / 2 - 26)), v: 66, sx: 2, bg: '#2a3a6a', fg: [250, 236, 200], lit: true }] });
+    Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', cx: w / 2, v: 66, bg: '#2a3a6a', fg: [250, 236, 200], lit: true, face: 'block' }] });
     lights.push([w / 2, 6, 40, 110, [1, 0.88, 0.7], 1.1, 'window']);
   }
   // ---- the back alleys (shared/alleys.js; concepts AL1-A..H): a plain back wall fronting an alley gets a back door
@@ -1267,6 +1315,7 @@ function specOf(c, b, A, s, D) {
   }
   // ---- the night's neon (neonsigns.js; R1-C/E, D8, B7): big signs on the nightlife strips' fronts and on clubs, bars
   // and arcades anywhere, a tube along the cornice, their colour on the pavement
+  if (spec.shop && spec.shop.sign && !b.art) styleSign(spec, c, b, A, s, named, lights, false);
   if (front && spec.shop && !b.art && !pitched && !s.frame && !s.vox) nightFront(spec, { w, st, A, kind: spec.shop.kind, name: named, lights, rnd: rndOf(b.id * 31 + s.k, 977) });
   // a building whose look the map sets (the hero corner, map.js buildHeroCorner): its spec, shopfront and roof kit
   const ART = b.art || null;
@@ -1287,14 +1336,17 @@ function specOf(c, b, A, s, D) {
       if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }
       if (ART.shop.sign === null) delete spec.shop.sign;
       if (!had) shopSpill(lights, w, spec.shop.door === 'left' ? 21 : w - 21);
+      if (spec.shop.sign && spec.shop.sign.text) styleSign(spec, c, b, A, s, named, lights, true);
     }
     if (ART.lights) lights.push(...ART.lights);
     // (a hand-planned front's own neon - the Neon Strip's: its name, a picture sign, a blade sign, the cornice tube)
+    if (spec.shop && spec.shop.sign && spec.shop.sign.text && !spec.shop.sign.face) styleSign(spec, c, b, A, s, named, lights, false);
     if (ART.neon && s.south && !s.turned) handNeon(spec, { door: spec.shop && spec.shop.door, ...ART.neon }, { w, lights, rnd: rndOf(b.id * 31 + s.k, 979) });
   }
   // (a walk-in turned round, its doorway on the north - sectionsOf: its south wall a plain back, no shopfront and no
   // door on it that looks like the way in, whatever its trade or its hand plan draws there)
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
+  if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
@@ -2693,9 +2745,13 @@ function makeSignBoard(r) {
     const pole = memo('signpost:' + (r.z || 0), () => { const m = new Vox(4, 4, (r.z || 0) + 2), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 3, 3, (r.z || 0) + 2, p); return voxSprite(m); });
     return group([[S, 0, 0, 0], [pole, -Math.round(w * 0.3), -1, 0], [pole, Math.round(w * 0.3), -1, 0]]);
   }
-  const t = clean(r.text, 24), sx = r.sx || 1, w = r.w || textWidth(t, { sx, gap: 1 }) + 12, h = 5 * sx + 8, F = new GBuf(w, h), bg = ramp(r.bg || '#1c2a44', 5, 2), fg = r.fg || [236, 240, 248];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1; F.put(x, y, e ? MAT.metalDark[2] : bg[y < 2 ? 3 : 2], [0, 1, 0.1], 0, r.lit && !e ? [...bg[3], 40] : null, 0); }
-  drawText((px, py) => F.put(px, py, fg, [0, 1, 0.1], 0, r.lit ? [...fg, 140] : null, 0), t, Math.floor((w - textWidth(t, { sx, gap: 1 })) / 2), 4, { sx, sy: sx, gap: 1 });
+  // (wave A1: a board in a sign face at the art pixel - Civic Sans on its panel, or Neon Tube - as wide as its words)
+  const t = clean(r.text, 24), fk = r.face || 'civic', neonF = fk === 'neon', fg = rgbOf(r.fg || [236, 240, 248]);
+  const P = neonF ? palOf({ p: '#16141e', i: fg, neon: true }) : palOf([r.bg || '#1c2a44', fg]);
+  if (!neonF) legible(P);
+  const L0 = layoutSign(t, 200, { face: fk, lines: 1 }), L = layoutSign(t, Math.max(L0.cw + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });
+  const w = L.w * 2, h = L.h * 2, F = new GBuf(w, h);
+  paintBoard((x, y, c, e) => F.put(x, y, c, [0, 1, 0.1], 0, e, 0), L, P, 0, 0, { lit: r.lit ? (neonF ? 'neon' : 'panel') : false, night: 0.7 });
   const S = upright(F, r.z || 0);
   if (r.posts) { const pole = memo('signpost:' + (r.z || 0), () => { const m = new Vox(4, 4, (r.z || 0) + 2), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 3, 3, (r.z || 0) + 2, p); return voxSprite(m); }); return group([[S, 0, 0, 0], [pole, -Math.round(w * 0.35), -1, 0], [pole, Math.round(w * 0.35), -1, 0]]); }
   return S;
@@ -2706,20 +2762,21 @@ function makeSignBoard(r) {
 // foot, a star on top
 function makeMotelSign(r) {
   const col = NEONC[r.ci || 0], hot = (c) => c.map((q) => Math.min(255, q * 0.62 + 96)), dim = col.map((q) => Math.round(q * 0.28 + 12));
-  const name = r.text, word = r.word, tw = textWidth(name, { sx: 2, gap: 1 }), pw = tw + 14, cw = 36, ch = word.length * 24 + 12, vw = textWidth('VACANCY', { sx: 1, gap: 1 }) + 10;
-  const W = Math.max(pw, cw + 42) + 2, Hs = 12 + 20 + ch + 16, cx = Math.round(W / 2 - 10), F = new GBuf(W, Hs);
+  // (wave A1: the name and VACANCY in Neon Tube at the art pixel - 7 art px letters, a halo round each tube)
+  const name = r.text, word = r.word, NM = lineMask(name, 'neon'), VM = lineMask('VACANCY', 'civic'), tw = NM.w * 2, pw = tw + 12, cw = 36, ch = word.length * 24 + 12, vw = VM.w * 2 + 8;
+  const W = (Math.max(pw, cw + 42, vw + 8) + 2 + 1) & ~1, Hs = 12 + 26 + ch + 22, cx = Math.round(W / 4 - 5) * 2, F = new GBuf(W, Hs);
   const P = (x, y, c, e = 0) => { if (x >= 0 && y >= 0 && x < W && y < Hs) F.put(x, y, c, [0, 1, 0.1], 0, e ? [c[0], c[1], c[2], e] : null, 0); };
   const panel = (x0, y0, w, h, bg, tube) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1, e2 = x === 2 || y === 2 || x === w - 3 || y === h - 3; P(x0 + x, y0 + y, e ? MAT.metalDark[2] : e2 && tube ? hot(tube) : bg, e2 && tube ? 170 : 0); } };
   // the star
   for (let y = 0; y < 11; y++) for (let x = -5; x <= 5; x++) { const dy = Math.abs(y - 5); if ((Math.abs(x) < 1 && dy <= 5) || (dy < 1 && Math.abs(x) <= 5) || Math.abs(x) + dy <= 2) P(cx + x, y, [255, 230, 140], 200); }
   // the name along the top
-  const nx = Math.round(W / 2 - pw / 2);
-  panel(nx, 12, pw, 20, [26, 20, 32], col);
-  drawText((px, py) => P(px, py, hot(col), 200), name, nx + 7, 17, { sx: 2, sy: 2, gap: 1 });
+  const nx = Math.round(W / 4 - pw / 4) * 2;
+  panel(nx, 12, pw, 26, [26, 20, 32], col);
+  paintLine((px, py, c, e) => P(px, py, c, e ? e[3] : 0), name, 'neon', nx + 6, 16, { 1: hot(col), 4: col.map((q) => Math.round(q * 0.55 + 20)) }, { 1: [...col, 200], 4: [...col, 120] });
   // the word down the board
-  const by = 32;
+  const by = 38;
   panel(cx - 18, by, cw, ch, dim, col);
-  for (let i = 0; i < word.length; i++) { const lw = textWidth(word[i], { sx: 4, gap: 1 }); drawText((px, py) => P(px, py, [255, 246, 236], 210), word[i], cx - Math.round(lw / 2), by + 6 + i * 24, { sx: 4, sy: 4, gap: 1 }); }
+  for (let i = 0; i < word.length; i++) { const lw = textWidth(word[i], { sx: 4, gap: 1 }); drawText((px, py) => P(px, py, [255, 246, 236], 200), word[i], cx - Math.round(lw / 4) * 2, by + 6 + i * 24, { sx: 4, sy: 4, gap: 1 }); }
   // the arrow of bulbs: down the board's side and out to the drive, its head
   const ax = cx + 23, ay1 = by + ch - 6;
   for (let y = by + 4; y <= ay1; y += 3) P(ax, y, (y >> 1) % 3 ? [255, 214, 110] : [255, 250, 220], 190);
@@ -2727,8 +2784,9 @@ function makeMotelSign(r) {
   for (let k = 0; k < 5; k++) { P(ax + 16 - k, ay1 - k, [255, 230, 140], 200); P(ax + 16 - k, ay1 + k, [255, 230, 140], 200); }
   // VACANCY at the foot
   const vy = by + ch + 2;
-  panel(cx - Math.round(vw / 2), vy, vw, 12, [24, 10, 14], null);
-  drawText((px, py) => P(px, py, [255, 70, 90], 200), 'VACANCY', cx - Math.round(vw / 2) + 5, vy + 3, { sx: 1, sy: 1, gap: 1 });
+  const vx = cx - Math.round(vw / 4) * 2;
+  panel(vx, vy, vw, 18, [24, 10, 14], null);
+  paintLine((px, py, c) => P(px, py, c, 200), 'VACANCY', 'civic', vx + 4, vy + 2, { 1: [255, 110, 120] });
   const S = upright(F, r.z || 0);
   const pole = memo('msignpole:' + (r.z || 0), () => { const m = new Vox(6, 6, (r.z || 0) + 40), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 5, 5, (r.z || 0) + 40, p); return voxSprite(m); });
   return group([[S, 0, 0, 0], [pole, cx - Math.round(W / 2), -1, 0]]);
