@@ -89,6 +89,11 @@ the weapon. Everything else comes when it starts or changes and goes on its own.
     fire past it) behave exactly as before.
 16. **The job card**: big for 5 s when a step comes in (or on a tap), then a one-line chip; upright it is two short
     lines (the job; the clock and how far), as UIC-14.
+17. **On a phone one status chip in words at a time** (the newest); the rest are icons. The row stays one line beside
+    the minimap, clear of the middle third; a tap opens them all.
+18. **No standing "TAB to switch" / "RB / LB" line on the weapon plate**: the on-foot hint line (first three times)
+    now teaches the next-weapon key instead, and the plate shows only what you hold and its rounds.
+19. **Health stays, numbers and all** - the one vital that's always on (with the white flash and drain on a hit).
 
 ### Perf
 `node tools/perf.mjs --quick` against main: the page's start-up code 477 -> 485 KB gzipped (budget 520; the icon set,
