@@ -20028,6 +20028,12 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
   read as broken art: every weapon in the bag (its tiles, its carried slots, its details) now shows its class's glyph -
   pistol, rifle, knife, bat, grenade, bow... - the touch buttons' solid set, cream on the navy tile. The desktop HUD's
   weapon plate keeps the sprite.
+- **The title's slots get the launch code** (client/account.js, on main since the 11-04 ship): SIGN IN (the title's
+  card, Settings > Account) opens its account panel inside the sign-in screen - with no sign-in provider switched on,
+  which is today, it still offers the transfer code and the name - and the 17+ gate shows inside the gate's screen before
+  the first PLAY (boot with noGate: the title shows it). PLAY pressed before the launch code is in waits for it. While
+  either is up the pad and Esc are the panel's (launchPad); closing the screen closes the panel. The stub stays only
+  for a page where the launch code didn't load.
 - **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
 
 ### Performance (tools/perf.mjs --quick, 11-04)
