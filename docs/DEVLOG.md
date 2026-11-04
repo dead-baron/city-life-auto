@@ -19856,8 +19856,11 @@ From below, the foot held.
   their band is open slope.
 - Copper Gulch Mine's adit (shared/world3-desert.js) is solid under its face's drawn rock too.
 - After: no walkable tile under a desert face's footprint, 55 of 141,717 drawn tiles still open at a tall face's top
-  edge (the plateau's jag), and every road, track and place of the desert still reachable on foot and by car (five
-  tinajas fenced in by faceless band before are reachable now). Goats still climb the cliffs (ROCK_BLOCK), as before.
+  edge (the plateau's jag), and every road, track and place of the desert still reachable on foot and by car. Goats
+  still climb the cliffs (ROCK_BLOCK), as before.
+- The tinajas (shared/world3-tinajas.js) sit at a face's foot, and their bowl needed open ground a couple of rows up
+  under the face: ground that only existed where the rock leaked. With the rock solid, none was placed. A bowl now
+  backs onto the cliff's rock north of its rim.
 - test/cliffs.test.js (one world build) checks against the real sprites: no walkable tile under a relief face's rock,
   no desert band drawn as nothing, players, NPC-style walkers and a car sent at a sample of the desert's faces from
   below, above and the sides never end up inside the rock, and the desert's places, roads and tracks are reachable.
