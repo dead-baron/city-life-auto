@@ -20058,3 +20058,182 @@ still load the first time they open. The title screen's assets 257 KB (budget 29
 - LOG OFF needs its server side ({ t: 'logoff' }); until then it leaves to the title as before.
 - The conversation has no portraits: the place's icon stands in.
 - The concepts' "Police are searching - break line of sight" pill (UIC-15 01) needs a "searching" state from the server.
+
+## 2026-11-04 - The safe exit: LOG OFF without leaving a body behind (server)
+
+The launch plan's item 11 (the owner's design, 11-03). Before this, closing the tab left your body in the city for 30 s
+(`GHOST_SECONDS`), or 5 min after a quiet disconnect, and the pause menu's LOG OFF only went back to the title. Now LOG
+OFF in the pause menu asks the server (`server/systems/logoff.js`):
+
+- **A 10-second count while you stand still** (`LOGOFF.countS` in `shared/rules.js`). The page shows its ring.
+- **Called off** by moving (the stick or any button but the aim), being moved by the server (`server/movemark.js`: a
+  seat, a door, a ride, a rescue, a teleport - your situation changed), being pushed more than half a tile, taking
+  damage, dealing damage, or becoming wanted. The page's own cancel (LOG OFF again, or the pause menu closed) stops it
+  without an answer.
+- **At once inside a home of your own** (`homes.ownsInside`: its rooms; not a look round one for sale, a visit, a
+  lobby, an arcade or a bathhouse). Renting and hotel rooms don't exist yet; they belong in that function when they do.
+  The `me` message carries `offNow: 1` there, so the page can say so.
+- **Refused** while wanted, within 60 s of taking or dealing damage (`LOGOFF.calmS`; the answer says how long is left),
+  in custody, while down, in a vehicle (on foot only: one rule for every kind of ride, and stepping out is one button),
+  riding (a train, a ride, a board, a skydive) or carrying a crate.
+- **A clean exit** takes the body out of the world at once (`players.logOut`: saved where you stood, or back inside your
+  own home next time, nothing dropped, no ghost). It ends the session through the launch hooks' leave, as every leaving
+  does (the money settled and the watcher let go, the analytics session closed). It answers with the session's summary
+  and closes the socket with code 4016.
+- **Combat-logging never pays.** The quiet disconnect's guard (`players.js` `safeToIdle`) now counts dealing damage as
+  well as taking it, over the same 60 s. Someone who hit someone and closed the tab gets the usual 30 s and the drop
+  rule, not five quiet minutes.
+- **A disconnect mid-count** is an ordinary disconnect: the count is dropped and the ghost timer runs. A reconnect from
+  another tab drops it too.
+
+**The protocol.** The page sends `{ t: 'logoff' }` (again while counting: the count goes on, its state re-sent) or
+`{ t: 'logoff', a: 'cancel' }`. The server answers with one of:
+- `{ t: 'logoff', s: 'start', left }`
+- `{ t: 'logoff', s: 'cancel', why, c, left? }`. `c` is the cause: move, hurt, fight, wanted, down, custody, vehicle,
+  riding or crate. `left` comes with fight: the seconds until you may.
+- `{ t: 'logoff', s: 'done', left: 0, earned, spent, xp, cexp, sam, secs }`
+
+**The summary.** Earned and spent come from the money watcher's sources as they settle (`launch.js` `onMoney`). The
+debug menu's money is left out, and moving cash to the bank at an ATM counts as neither. XP is the skills' xp gained.
+`cexp` and `sam` are the Criminal EXP and Samaritan points gained, and `secs` is the time played. A reconnect inside the
+ghost window is the same session. Without a money watcher (offline practice), the net change of cash and bank stands in.
+
+**The page** (UI-10's `client/main.js`) works as it is for start, cancel and done. Two changes finish it:
+- treat close code 4016 as final, with no reconnecting, and show "Saved - safe travels" with the summary;
+- use `me.offNow` for the "at once" note.
+
+Until then, the page reconnects a second after a clean exit, as it would after any lost connection, and the character
+comes back where it logged off.
+
+**Tests.** `test/logoff.test.js` (new) covers the count, a second request, each cause of a cancel, the page's cancel, a
+disconnect mid-count, at once at home (and back inside next time), counted in someone else's rooms, on foot only,
+refusals while wanted and after a fight (and allowed once the minute is up), a tab closed after dealing damage (30 s,
+then the drop rule), no ghost after a clean exit, and the summary's numbers. All 7 fail on the code before this
+change (the closed-tab test on "not the quiet five minutes"). The launch-*,
+startfresh, gameplay, core, world3server, pagemodules and perf tests all pass (171 of 171).
+
+## 2026-11-04 - Rides you own and carry: skateboards, surfboards, rollerblades
+
+The owner's note (11-03): skateboards, rollerblades and surfboards should be "things you find, keep or carry, and lose",
+"not something you can just equip and go faster on". He also reported that the surfboard was slower than swimming, and
+that you couldn't swim while you carried one. The approved design, built on the systems already there
+(`server/systems/skate.js`, `surf.js`) with a new `server/systems/gear.js` for the carrying, the bag and the blades:
+
+**Skateboard.** Still a world vehicle (the vehicle button gets on and off), now tightened:
+- A skate park's rack boards are borrowed. They only serve the park: ride one more than `RIDE_GEAR.borrowPad` (3)
+  tiles past the park's edge and you're off it where you stand, and it's back on its rack (put out again once nobody's
+  looking, as before). The racks by the shops and the boardwalks are unchanged.
+- A board you bought is yours to carry. In the bag (it's an item again: `ITEMS.skateboard`), or in your hand (the bag's
+  Use, the quick wheel, or the action button by it lying on the ground). Carrying it takes a hand: the fire button does
+  nothing but say so. With it in hand the vehicle button rides it; the action button puts it in the bag. On your own
+  board, the action button steps off and picks it up. Getting into a vehicle, going inside or picking up a crate puts it
+  in the bag; going down drops it where you fall.
+- It wears with each bail: `RIDE_GEAR.wear` (0.1), plus up to `hard` (0.25) more for a bail at full speed into a wall: the third full-speed wall snaps it, a trick's bail is about 0.16.
+  Past `warnAt` (0.6) you're told it's cracking. At 1 it snaps (the page shows SNAPPED!): it's gone until you buy another.
+  In a skate session it's replaced on the spot instead (a fresh board lands where it stopped; the owner's exception).
+- One in the bag is yours; one gone from the bag (dropped, sold, lost with your pack) is gone. An old bag's skateboard
+  now stays in the bag as your board (it used to be taken out of it, 2026-10-24).
+
+**Surfboard.** The same model:
+- The bag no longer puts you on it. In the sea, the action button sets it down and you're on it, paddling. The vehicle
+  button does the same with it in your hand. Otherwise you swim like anyone, with it in the bag or under your arm.
+- The action button slides you off (it's under your arm, and you swim). Up the beach you walk out with it. Into a boat,
+  inside or onto a train, it goes in the bag; gone down in the water, it goes home.
+- Paddling is faster than swimming: `SURF_PADDLE` 88 px/s (it was 70; swimming is 75 at full stick, 86 at the top of the
+  swimming skill). The waves roll in at 100 px/s (they were 84), so a wave still outruns a paddle (the catch needs that).
+  A ride is about 1.3 s shorter.
+- Set down on dry land (the vehicle button with it in hand) it lies on the sand (a new vehicle type, `surfboard`, which
+  is never driven; the vehicle button picks up your own, and nobody else can take it). After `RIDE_GEAR.surfLieS` (180 s),
+  or once you're gone or 2,000 px away, it goes home once nobody's looking. Take it out at home, at a surf shop or at
+  a sports shop (into your bag). Logging off with it out: it's home when you come back.
+
+**Rollerblades.** Wearable gear (`ITEMS.rollerblades`, $70 at the skate shops and the sports shops):
+- Sit on a park bench to put them on or take them off: `BLADES.laceS` (3 s), and moving the stick gets you up. You're
+  seen sitting on the bench, then back where you stood.
+- On them: `BLADES.speedMul` 1.12 times the walk-to-run curve. That's about 200 px/s at full stick: quicker than walking,
+  slower than a board's 270. No sprint and no getting into a vehicle (buses, trains and ferries still take you). The
+  page predicts it from the snapshot's speed and sprint flag, so nothing new goes on the wire. You're drawn with the
+  bladers' gait (`gt 'blade'`).
+- On grass, dirt or sand you clump along at `roughMul` (0.34). Rolling onto it faster than `fallV` (70 px/s) puts you
+  down for `fallS` (1.2 s). In the water you swim as anyone. They stay on through a respawn and a rejoin.
+
+**The page.** The client stays a dumb window, so its changes are small: a surfboard carried under the arm (`pp
+'surfboard'`, `client/art2/people.js`, `game/peds.js`), a surfboard lying on the sand (`client/art2/vehicles.js`), the
+SNAPPED text (`client/skate.js`), and the bag's lines and buttons for the three (`client/bag.js`, `inventory.js` icons).
+The board in hand uses the skaters' existing board prop. Everything else goes through the prompts and notes.
+
+**Not done / for the owner.** A blader standing still is drawn standing, not on blades (the art draws the wheels only
+in the blade stride). The free boards by the shops and the boardwalks are still free to ride off on and aren't
+borrowed. There's no skate "event" beyond the sessions, so the snap exception covers sessions only.
+
+**Tests.** `test/ridegear.test.js` (new, 7 tests) covers each rule: a borrowed board going back on its rack; a board in
+hand blocking the gun (and firing again once it's in the bag); the wear, the warning, the snap, and the fresh board in a
+session; the surfboard (swimming with it in the bag, the action button putting you on it, paddling faster than swimming,
+swimming again after sliding off, a board on the sand going home, taking it out at the surf shop); and the rollerblades
+(on and off at a bench, the speeds, no sprint, no vehicles, the fall on the grass, kept on through a rejoin). Against
+origin/main the file fails outright (`gear.js` doesn't exist there). `skate.test.js`, `surf.test.js` and
+`gameplay.test.js` were updated to the new design. Their changes: an old bag's board stays in the bag; the action
+button puts you on a surfboard; up the beach the board is in your hand; a surfboard has no crate slot; a test park
+clears the real racks' boards first (their places are numbered on the map's own list). In the white-water test, the
+tumble no longer carries the speed of the test's one-step jump along the beach. Run under the shared lock with
+`--test-concurrency=2`, all pass: ridegear, skate, surf, gameplay, core, pagemodules, lazypage, perf, deathpack, carts,
+bikes, fleet, devplay, sound, skills, water, riders, horses, blades, homes, homeinside, hub, transit, revive. The one
+exception is core's "world tick stays fast" (avg tick under 20 ms). It failed once in the big batch at 23 ms. Run
+twice on its own on this busy machine, origin/main failed both times (23.3 and 20.2 ms) and this branch passed both
+times. It's the machine's load, not this change. No perf budget was raised.
+
+## 2026-11-04 - The starter car, and public garages
+The owner, 11-03: "A starter vehicle: low-level, waiting in the arrival station's lot (stations in the city, the desert,
+the forest, the coast), and always available from public garages if lost or despawned, unless you own a property with
+a garage." The approved design: a rusty compact, registered to you. It can't be sold, it's slow, and it steals easily.
+It solves early travel without making the cars you buy worth less.
+- The car: a new model, `starter` (shared/vehicles.js): the Rusty Compact. Its top speed is 400 (the Hatchback's is 520),
+  it accelerates at 230 (the Hatchback's is 330) and it has 140 hp (the Hatchback's is 180). It has no price, so no
+  dealer stocks it and nothing buys or sells it. It's drawn as the Hatchback in rust brown: the classic view's sprite
+  (`art`), art2's model (`look`: client/art2/game/actors.js `vehType`, one line) and the tint over the bodywork (PAINTS
+  11). Its engine sounds like the Hatchback's (client/sound/vehicles.js, one entry). No new art.
+- Registered to you: `v.owner` and `v.starter` carry your id, and the name over it is yours. It's never one of the cars
+  you own (`profile.vehicles`), so it takes no garage slot. Nobody else's garage takes it in: a thief parking it at their
+  home is told whose it is. It has no lock, so taking it is plain theft, like any parked car.
+- First day: a new character (store.js `defaultProfile`: `starter: { first: true }`) finds it in the car park of the
+  arrival station. Until the FTUE exists, that's `arrivalStation()` (server/systems/starter.js): the station with a car
+  park nearest where a new character wakes up (a hospital). The FTUE replaces that one function. Characters from before
+  this change get no car in a car park, but theirs is free at any public garage.
+- Public garages, from what the map already has (nothing added to the world, so no hash changes):
+  - every train station with a car park: the parking spaces within 900 px of its board. These are the countryside
+    stations' lots and World v3's station car parks, or the street spaces by a station in town;
+  - the Fresh Coat Garage(s);
+  - the dealerships, which already bring a car you own round (economy.js `vg`).
+  At one, the menu has a row for your starter. If it's been lost and the cooldown is over, a new one is free. If it's
+  still out somewhere and nobody's in it, it's brought round as it is. If someone else has it, it isn't. The prompt
+  adds "· your starter car" when one is waiting for you there.
+- Lost: wrecked, sunk, towed or taken away by anything (a despawn, a tidy-up when you log off). `starter.update` sees it
+  gone and starts the 5-minute cooldown. The cooldown is also saved on the profile (`starter.readyAt`), so it holds
+  across a rejoin and a restart. If someone else drove it off and left it empty, it's taken away after 90 s out of
+  everyone's sight, and it's free again after the cooldown.
+- One per player: handing one out takes away any other of yours. An empty one is removed. One with someone in it
+  becomes nobody's starter (theirs to drive off in), as Start fresh does with your cars.
+- Own a home with a garage and the starter lives there. Buying the home moves it in if it's out and empty. The home's
+  menu takes it out onto the driveway. Parking it in your garage puts it away with no cooldown and no slot used. The
+  public garages tell you it's at home.
+- Numbers: shared/rules.js `STARTER` (cooldownS 300, strayS 90, lotR 900, paint 11). The car's own stats are in its
+  model.
+- Shared files changed (small): server/world.js (the `starter` system), server/store.js (one profile field),
+  server/systems/players.js (`onJoin` at the end of a join, `forget` in Start fresh), server/systems/homes.js (a
+  thief's garage refuses it; parking yours puts it away; buying a home moves it), server/systems/economy.js (the rows
+  in the station, garage, dealer and home menus, the two options, the prompt's tag), shared/rules.js, shared/vehicles.js,
+  client/art2/game/actors.js, client/sound/vehicles.js.
+- Not built: there's no chop shop and no way to sell a car in the game today, so "unsellable" holds by construction (no
+  price, not in your owned cars). A future chop shop or car sale should check `v.starter`.
+- test/starter.test.js covers the first day in the lot, registered and unsellable, lost then free at a public garage
+  after the cooldown, the move to an owned garage, one per player, and a rejoin and a restart. It fails on the old build.
+
+## 2026-11-04 - One server update: the safe exit, rides you own and carry, the starter car
+
+Merged together so players reconnect once (branches safeexit, rides, starter). Two fixes from putting them together:
+- The starter car and the set-down surfboard had both taken vehicle index 86; the starter car is now 87
+  (test/fleet.test.js checks each index is unique).
+- The renderer's code budget goes from 401 to 404 KB (tools/perf.mjs). The rides' art (the surfboard on the sand and under
+  the arm) and the starter car's look took it to 402. Raising it by a little more than that leaves room for the next ride,
+  so it doesn't need its own raise.
+- Bladers now count as skaters at the skate parks. npc.js looked for the gait 'blades', but the gait is 'blade'.

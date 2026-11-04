@@ -20,7 +20,7 @@ function wIcon(id, w, h) {
 }
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SLOTS = 4;
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun));
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun || ITEMS[id].ride));   // (ride: a board into your hand, blades on at a bench - server gear.js)
 // the categories, in the grid's order: [id, name, test(item def, id)] - an item goes in the first that takes it
 export const BAG_CATS = [
   ['weapons', 'Weapons'],
@@ -62,7 +62,9 @@ export function describe(id) {
   const it = ITEMS[id];
   if (!it) return '';
   if (id === 'revivekit') return 'Revive a downed player to full health - never used up.';
-  if (id === 'surfboard') return 'In the sea you lie on it and paddle. At a surf break, paddle for the beach as a wave comes, then carve along its face.';
+  if (id === 'surfboard') return `Yours. In the sea, ${keyName('action')} puts you on it, paddling (faster than you swim) - at a surf break, paddle for the beach as a wave comes, then carve along its face. Use: under your arm.`;
+  if (id === 'skateboard') return `Your own board. Use: in your hand (it takes a hand - no fighting), ${keyName('vehicle')} rides it. Each bail wears it; it snaps in the end.`;
+  if (id === 'rollerblades') return 'Put them on sitting on a bench: quicker than walking, no sprinting, no vehicles, and keep off the grass.';
   if (id === 'parachute') return `Jump out of a helicopter or a plane high up, then ${keyName('action')} opens it. One jump.`;
   if (id === 'drill') return 'A bank job: set it at a vault door behind the counter. The alarm goes at once; it works through in about a minute.';
   if (id === 'flashlight') return `${keyName('light')} switches it on and off. Held in your free hand; everyone sees the beam.`;
@@ -147,7 +149,7 @@ export function createBag({ el, send, me, refocus }) {
     // (UIC-19: USE, DROP and EQUIP always in the same three places, the ones that don't apply greyed)
     const held = t.kind === 'w' && m.weapon === t.id, canUse = t.kind === 'i' && usable(t.id);
     let acts = '<div class="bd-three">'
-      + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${canUse && it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : 'USE'}</button>`
+      + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
       + `<button class="btn btn-d" data-a="drop"${t.id === 'fists' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
       + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>';
     if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;

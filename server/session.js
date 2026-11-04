@@ -35,6 +35,7 @@ import * as music from './systems/music.js';
 import * as racebook from './systems/racebook.js';
 import * as safety from './systems/safety.js';
 import * as cinefollow from './systems/cinefollow.js';
+import * as logoff from './systems/logoff.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 // opts.hooks (server/launch.js, the online server only): the launch foundation - accounts, chat, roles, anti-cheat,
@@ -78,6 +79,10 @@ export function createSession(world, conn, opts) {
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
         conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, world: opts.world, sig: mapSignature(world.map), tick: world.tick, day: world.day, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), clubs: nightclubs.liveList(world), forage: foraging.goneList(world), fires: campfires.fireList(world), felled: felling.felledList(world), logs: felling.logList(world), glights: lights.groundList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
         player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
+        // the safe exit's end of this session (logoff.js finish): its leaving as any leaving (the launch hooks), and nothing
+        // more from this connection reaches the character (the socket closes right after)
+        const me = player;
+        me.endSession = () => { if (player !== me) return; player = null; if (hooks) hooks.leave(me); };
         conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
         if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17 }, res);
         return;
@@ -136,6 +141,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'interior' && player.ped && player.ped.interior) { station.openInterior(world, player); return; }
       if (msg.t === 'bail') { const err = custody.payBail(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'unstuck') { unstuck.request(world, player); return; }
+      if (msg.t === 'logoff') { const r = logoff.request(world, player, msg.a); if (r) conn.sendJSON(r); return; }   // the pause menu's LOG OFF: the safe exit (logoff.js)
       if (msg.t === 'surrender') { const err = unstuck.surrender(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'cruiser') { const err = cruiser.call(world, player); if (err) world.notify(player, err, 'warn'); return; }
       if (msg.t === 'look') { const r = looks.handle(world, player, msg); if (r) conn.sendJSON(r); return; } // the character creator (and the blade's colour)

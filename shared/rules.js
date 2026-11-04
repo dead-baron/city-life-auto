@@ -19,6 +19,15 @@ export const POLICE_RANKS = [
   { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
 ];
 
+// The starter car (server/systems/starter.js; the owner, 11-03): a rusty compact registered to you, slow, unsellable and
+// easy to steal (no lock). On your first day it waits in the arrival station's car park; after that, lost (wrecked, sunk,
+// towed, taken away) it's free again at any public garage - a station's car park, a Fresh Coat Garage, a dealership -
+// cooldownS after it was lost; own a home with a garage and it lives there instead. Taken and left empty by someone else
+// (strayed), out of everyone's sight strayS, it's taken away (lost: free again after the cooldown). lotR: how far round a
+// station (px) its car park's spaces are looked for. paint: shared/vehicles.js PAINTS index (the rust brown). The car's
+// own numbers (slower, weaker than the Hatchback it's drawn as) are its model's: shared/vehicles.js 'starter'.
+export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
+
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
 export const ARREST_REWARD_PER_STAR = 150;
@@ -126,6 +135,10 @@ export const GIVE_AFTER_REVIVE_S = 15;        // after a revive you may hand the
 export { REVIVE_KIT_PRICE } from './rules-base.js';           // hospitals and pharmacies; never used up, only works on someone else
 export const AMBULANCE_FEE = 200;             // paid from the bank, and only if the paramedics actually revive you
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
+// The safe exit (LOG OFF in the pause menu; server/systems/logoff.js): stand still for countS and you leave the city
+// cleanly - saved, no body left behind. At once inside a home of your own. Not while wanted, nor within calmS of taking
+// or dealing damage (and a tab closed then leaves the body for GHOST_SECONDS, as always: players.js safeToIdle).
+export const LOGOFF = { countS: 10, calmS: 60 };
 export const DROP_LIFE_S = 300;               // something you drop from the bag (client/bag.js Drop) waits in a bag at your feet this long
 export const PACK_LIFE_S = 600;               // the backpack (and the cash) you drop when you die stays this long
 export const PACK_BLINK_S = 30;               // ...and blinks for its last seconds
@@ -464,6 +477,19 @@ import { DRILL_PRICE } from './rules-base.js';
 export { DRILL_PRICE };
 export { SKATEBOARD_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, HORSE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
+// Rides you own and carry (the owner, 11-03: "things you find, keep or carry, and lose, not something you can just equip
+// and go faster on" - server/systems/gear.js, skate.js, surf.js). A skate park's rack board is borrowed: ridden more than
+// borrowPad tiles past the park's edge it goes back on its rack. A board of your own wears with each bail - wear, and up
+// to hard more for a bail at full speed into a wall - and snaps at 1: gone until you buy another (in a skate session a
+// fresh one lands where it stopped instead); past warnAt you're told it's cracking. A surfboard you set down stays
+// surfLieS s, then goes home (once nobody's looking): take it out at home or at a surf shop.
+export const RIDE_GEAR = { borrowPad: 3, wear: 0.1, hard: 0.25, warnAt: 0.6, surfLieS: 180 };   // (a full-speed wall: 0.35 - the third snaps it; a trick's bail about 0.16; knocked off 0.1)
+export { ROLLERBLADES_PRICE, SURF_PADDLE } from './rules-base.js';   // (rollerblades' price; a surfboard's paddle, px/s)
+// Rollerblades (gear.js): worn, not ridden - put on or taken off sitting on a bench (reach px from it) for laceS s (the
+// stick gets you up). On them you glide at speedMul times the walk-to-run curve (full stick ~200 px/s: quicker than
+// walking, slower than a board's 270) with no sprint and no getting into a vehicle; on grass, dirt or sand you clump
+// along at roughMul, and rolling onto it faster than fallV px/s you go down for fallS s.
+export const BLADES = { laceS: 3, reach: 40, speedMul: 1.12, roughMul: 0.34, fallV: 70, fallS: 1.2 };
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
 // specialPts: specialS s of tricks worth specialMul, till you bail; the gaps' points (shared/skate.js)

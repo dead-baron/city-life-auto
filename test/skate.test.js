@@ -106,8 +106,9 @@ test('the board: as fast as a bike pushing, kick by kick; coasts a long way; bra
 // ---- on and off, the look on the wire ------------------------------------------------------------------------------
 test('a skateboard on the ground: the vehicle button gets you on it (taken up off the ground), off again (left at your feet); the rider\'s look and flags on the wire', () => {
   assert.ok(ROAD, 'a long straight road');
-  assert.ok(VEHICLES.skateboard && VEHICLES.skateboard.board && !ITEMS.skateboard, 'a vehicle, not a thing in the bag');
-  assert.ok(!SHOPS.sports.buy.some((o) => o.id === 'skateboard'), 'not on a shop\'s shelf of things');
+  assert.ok(VEHICLES.skateboard && VEHICLES.skateboard.board, 'a vehicle lying about');
+  assert.equal(ITEMS.skateboard.ride, 'skate', 'your own in the bag: a ride you carry (2026-11-04, server gear.js)');
+  assert.ok(!SHOPS.sports.buy.some((o) => o.id === 'skateboard'), 'not on a shop\'s shelf of things: bought as your own (bd:buy)');
   const p = rider(ROAD.x + 300, ROAD.y);
   const ped = p.ped, v0 = ped.appVer || 0;
   assert.equal(boardsNear(ped.x, ped.y).length, 1, 'a board lying there');
@@ -241,6 +242,8 @@ test('the boards set out: a rack at each skate park, one or two by the skate and
   const tx = Math.floor(ROAD.x / TILE) + 40, ty = Math.floor(ROAD.y / TILE) - 8;
   const spots0 = M.skateSpots, cache = M._boardSpots;
   M.skateSpots = [{ name: 'Test Park', x: tx, y: ty, w: 14, h: 6, seats: [] }]; delete M._boardSpots;
+  for (const v of [...W.entities.values()]) if (v.kind === K.VEH && v.boardSpot !== undefined) W.remove(v);   // (the real racks' boards: their places were numbered on the map's own list)
+  if (W.boardParked) W.boardParked.clear();
   try {
     const S = skate.boardSpots(M);
     const park = S.filter((q) => q.kind === 'park');
@@ -332,17 +335,17 @@ test('your own board: bought at a skate, surf or sports shop and set down by the
   leave(p);
 });
 
-test('a skateboard in an old bag: yours to keep as your own board (no item left, a word about it); the vehicle button never pulls a board from nowhere', () => {
+test('a skateboard in an old bag: since 2026-11-04 it stays there, your own board, carried (server gear.js); the vehicle button never pulls a board from nowhere', () => {
   const { p } = joinPlayer(W, { cash: 50, inventory: { skateboard: 1, medkit: 1 }, quick: ['skateboard', 'medkit', null, null] });
-  assert.ok(!p.profile.inventory.skateboard, 'out of the bag');
+  assert.equal(p.profile.inventory.skateboard, 1, 'still in the bag');
   assert.equal(p.profile.inventory.medkit, 1, 'the rest of the bag as it was');
-  assert.ok(p.profile.board, 'your own board now');
-  assert.ok(!p.profile.quick.includes('skateboard'), 'off the quick wheel');
+  assert.ok(p.profile.board && p.profile.board.at === 'bag', 'your own board, in the bag');
+  assert.ok(p.profile.quick.includes('skateboard'), 'on the quick wheel still: it takes it into your hand');
   const menu = economy.buildMenu(W, p, { id: 9999, kind: 'clothing', store: 'kickflip', label: 'Test', x: 0, y: 0 });
-  assert.ok(menu.opts.some((o) => o.id === 'bd:out') && !menu.opts.some((o) => o.id === 'bd:buy'), 'brought out free at a skate shop');
+  assert.ok(!menu.opts.some((o) => o.id === 'bd:out') && !menu.opts.some((o) => o.id === 'bd:buy'), 'nothing to bring out or buy: it\'s with you');
   teleport(W, p.ped, ROAD.x + 1100, ROAD.y);
   hold(p, 0.1, 0, 0, 0, IN.VEHICLE);
-  assert.ok(!skate.riding(p.ped), 'no board lying by you: the vehicle button does nothing');
+  assert.ok(!skate.riding(p.ped), 'no board lying by you: the vehicle button does nothing (it\'s in the bag, not in your hand)');
   leave(p);
 });
 

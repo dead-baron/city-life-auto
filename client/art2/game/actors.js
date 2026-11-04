@@ -196,6 +196,7 @@ export const vehType = (d) => {
   if (d && d.tt) return 'tankturret';
   const D = vehDef(d);
   if (VEHICLE_DIMS[D.id]) return D.id;
+  if (D.look && VEHICLE_DIMS[D.look]) return D.look;   // (drawn as another model: the starter car as the Hatchback - shared/vehicles.js)
   loadFleet();
   return D.kind === 'boat' ? 'speedboat' : 'sedan';   // (until the fleet's in: a stand-in, keyed as itself)
 };   // (tt: a tank's turret, drawn on its own - H58)

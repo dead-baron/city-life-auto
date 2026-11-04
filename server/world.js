@@ -32,6 +32,7 @@ import * as homes from './systems/homes.js';
 import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
+import * as starter from './systems/starter.js';
 import * as gates from './systems/gates.js';
 import * as nightclubs from './systems/nightclubs.js';
 import * as boats from './systems/boats.js';
@@ -51,6 +52,7 @@ import * as personas from './systems/personas.js';
 import * as wildlife from './systems/wildlife.js';
 import * as sharks from './systems/sharks.js';
 import * as unstuck from './systems/unstuck.js';
+import * as logoff from './systems/logoff.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as rides from './systems/rides.js';
@@ -80,6 +82,7 @@ import * as aircraft from './systems/aircraft.js';
 import * as skydive from './systems/skydive.js';
 import * as surf from './systems/surf.js';   // (surfing: the breaks, the waves, the rides - #312)
 import * as skate from './systems/skate.js';   // (the skateboards lying about: their racks, a bail's landing, yours taken home)
+import * as gear from './systems/gear.js';   // (the rides you own and carry: a board in your hand, rollerblades, a surfboard set down)
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
 import * as cinefollow from './systems/cinefollow.js';
@@ -193,6 +196,8 @@ const SYSTEMS = [
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
+  ['logoff', logoff.update],        // the safe exit's count: called off by a move, a hit, the police; out when it's done (logoff.js)
+  ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
@@ -202,6 +207,7 @@ const SYSTEMS = [
   ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)
   ['skate', skate.update],          // the skateboards on the ground: put out at their racks, a bail's landing, yours left lying taken home (skate.js)
   ['surf', surf.update],            // on a surfboard: paddling, catching a wave, riding it, the white water (surf.js)
+  ['gear', gear.update],            // the rides you own and carry: rollerblades laced at a bench, a fall on the grass, a surfboard set down gone home (gear.js)
   ['burning', burning.update],      // people on fire: burning down, going out, catching it from fire (H58)
   ['tank', tank.update],            // the tanks' turrets turning to their drivers' aim (H58)
   ['sar', sar.update],              // search and rescue pilots' shifts: the calls, the harness, the hand-over (H59)

@@ -10,7 +10,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 // in its group by its kind - the work vehicles and the odd ones by name. The 'car' command (server/dev.js) keeps the
 // one-of-a-kind rule: a new one takes your last car, boat or aircraft away.
 const WORK = new Set(['flatbed', 'van', 'bus', 'police', 'swat', 'ambulance', 'armored', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck', 'fbi', 'army', 'tractor', 'combine', 'movingvan', 'icecream', 'rescue4x4', 'taxi', 'policebike', 'policeboat', 'rescueboat', 'ferry', 'waterbus', 'trawler', 'semi', 'trailer', 'boxtrailer']);
-const ODD = new Set(['horse', 'cart', 'skateboard', 'golfcart', 'tank']);
+const ODD = new Set(['horse', 'cart', 'skateboard', 'surfboard', 'golfcart', 'tank']);
 export const vehGroup = (id) => { const d = VEHICLES[id]; return ODD.has(id) ? 'other' : WORK.has(id) ? 'work' : d.kind === 'air' ? 'air' : d.kind === 'boat' ? 'boats' : d.kind === 'bike' ? 'bikes' : 'cars'; };
 export const VEH_GROUPS = [['cars', '🚗 Spawn: cars'], ['bikes', '🏍 Spawn: bikes & motorbikes'], ['boats', '🚤 Spawn: boats'], ['air', '🚁 Spawn: aircraft'], ['work', '🚚 Spawn: work & emergency vehicles'], ['other', '🐴 Spawn: horses, carts, boards & the rest']];
 const spawnSections = () => VEH_GROUPS.map(([g, title]) => ({ id: 'v' + g, title, items: Object.keys(VEHICLES).filter((id) => vehGroup(id) === g).sort((a, b) => VEHICLES[a].name.localeCompare(VEHICLES[b].name)).map((id) => [`${VEHICLES[id].name} (${id})`, 'car', { m: id }]) }));

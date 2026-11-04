@@ -8,6 +8,8 @@ export const FORAGE_FENCE_GHOSTGLASS = 70;   // what the Back-Alley Exchange pay
 export const BARRIER_BREAK_SPEED = 300;    // ram a highway barrier this fast (px/s, straight into it) and it gives way
 export const SKATEBOARD_PRICE = 85;
 export const SURFBOARD_PRICE = 160;   // a surfboard at the surf shops and the sports shops (server/systems/surf.js)
+export const ROLLERBLADES_PRICE = 70;   // rollerblades at the skate shops and the sports shops (server/systems/gear.js)
+export const SURF_PADDLE = 88;   // px/s lying on a surfboard, paddling: faster than anyone swims (75, 86 at the top of the swimming skill)
 // A horse (#325; shared/vehicles.js horse, shared/physics.js, server/systems/horses.js): it canters at canter x its top
 // speed; spurred (Sprint) it gallops flat out while its wind lasts - galS seconds from fresh - and gets it back at a walk
 // or standing (backS s from blown to fresh; at a canter three times as long). Hire one at the livery for hire (hireS s on

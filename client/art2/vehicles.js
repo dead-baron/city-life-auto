@@ -13,7 +13,7 @@ export const VEHICLE_DIMS = {
   compact: [80, 48], sedan: [94, 52], taxi: [100, 48], sports: [96, 48], pickup: [110, 50], flatbed: [150, 56],
   van: [112, 54], bus: [186, 62], police: [100, 48], swat: [120, 58], ambulance: [112, 56], armored: [122, 54],
   bike: [48, 20], policebike: [50, 20], bicycle: [40, 14], speedboat: [104, 48], dinghy: [80, 40], rowboat: [64, 28], kayak: [52, 16], jetski: [46, 22], golfcart: [54, 30],
-  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20], skateboard: [26, 10],
+  cruiser: [42, 16], mtb: [42, 16], roadbike: [42, 12], bmx: [34, 14], cargobike: [58, 18], cart: [30, 20], skateboard: [26, 10], surfboard: [44, 14],
   policeboat: [104, 48], boxtruck: [150, 58], dumptruck: [140, 60], mixer: [146, 60], tanker: [160, 58],
   garbage: [140, 60], firetruck: [172, 66], towtruck: [134, 58],
   // the MC1 motorcycles (task #366)
@@ -39,7 +39,7 @@ export const VEHICLE_TALL = {
   compact: 31, sedan: 33, taxi: 33, police: 33, sports: 27, pickup: 36, van: 46, suv: 42, limo: 32, ambulance: 54, armored: 50,
   swat: 52, bus: 62, flatbed: 46, boxtruck: 62, dumptruck: 46, mixer: 62, tanker: 54, garbage: 60, firetruck: 56, towtruck: 50,
   bike: 24, policebike: 31, bicycle: 20, speedboat: 22, dinghy: 14, rowboat: 11, kayak: 8, jetski: 16, policeboat: 34, golfcart: 40,
-  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26, skateboard: 5,
+  cruiser: 21, mtb: 21, roadbike: 22, bmx: 18, cargobike: 20, cart: 26, skateboard: 5, surfboard: 3,
   tractor: 50, combine: 70, plane: 40, excavator: 70, tram: 66, tugboat: 70, ferry: 112, waterbus: 70, foodtruck: 60,
   fbi: 42, army: 52,
   vtwin: 25, tourer: 31, chopper: 35, bobber: 24, caferacer: 25, dirtbike: 28, scooter: 25, trike: 28, ratbike: 26, bagger: 29,
@@ -47,7 +47,7 @@ export const VEHICLE_TALL = {
   tank: 24, tankturret: 40,
 };
 const DEFAULT_PAINT = {
-  rescueboat: '#e8601e', rescue4x4: '#ecebe4',
+  rescueboat: '#e8601e', rescue4x4: '#ecebe4', surfboard: '#f4efe2',
   compact: '#3f8a46', sedan: '#3f6a8e', taxi: '#e8b830', sports: '#c8302c', pickup: '#b0402e', van: '#e2e0d8',
   police: '#22242c', swat: '#262c44', ambulance: '#ecebe4', armored: '#7a7e84', flatbed: '#e6e2d8', boxtruck: '#e6e2d8',
   dumptruck: '#c0402c', mixer: '#e6e2d8', tanker: '#c0402c', garbage: '#3f7a3a', firetruck: '#c0302a', towtruck: '#2f4a8a',
@@ -1165,6 +1165,17 @@ export function vehicleModel(type, o = {}) {
       for (const x of [5, L - 6]) { m.box(x - 1, 2, 1.5, x + 1, W - 2, 3, M.rim); for (const y of [0, W - 2.5]) m.cyl('y', x, 0, 1.6, 1.6, y, y + 2.5, M.tyre); }
       m.box(1, 1, 3, L - 1, W - 1, 4, M.body); m.box(0, 2, 3.5, L, W - 2, 4.6, M.body); m.box(2, 1.5, 4, L - 2, W - 1.5, 4.6, M.black);
       A.seat = [L / 2, W / 2, 4]; A.fire.push([L / 2, W / 2, 3]);
+      break;
+    }
+    case 'surfboard': {   // set down on the sand (server gear.js): a long board, round at the tail, pointed at the nose, its stripe down the middle
+      const cy = W / 2, stripe = m.mat({ ramp: R('#e0582a'), k: 3 });
+      m.fill((x, y, z) => {
+        const t = x / L, half = (W / 2 - 0.5) * (t > 0.6 ? Math.sqrt(Math.max(0, 1 - ((t - 0.6) / 0.4) ** 2)) : Math.sqrt(Math.max(0, 1 - ((0.6 - t) / 0.6) ** 2 * 0.55)));
+        if (Math.abs(y - cy) > half) return -1;
+        return z >= 1 && Math.abs(y - cy) < 0.9 ? stripe : M.body;
+      }, 0, 0, 0, L, W, 2);
+      m.box(3, cy - 0.5, 0, 7, cy + 0.5, 1, M.dark);   // (the fin, under the tail)
+      A.seat = [L / 2, cy, 2]; A.fire.push([L / 2, cy, 1]);
       break;
     }
     case 'rowboat': {
