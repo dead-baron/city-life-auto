@@ -5,7 +5,8 @@
 //   player accepted analytics at the first-launch gate (client/account.js): until then, and with "Essential only",
 //   gtag.js is never fetched and nothing goes to Google.
 // - Consent Mode v2: analytics_storage, ad_storage, ad_user_data and ad_personalization default to denied; Accept grants
-//   analytics_storage and ad_storage (ad_user_data / ad_personalization stay denied until the game shows ads).
+//   analytics_storage only: the gate's text asks about analytics, not ads (ad_storage, ad_user_data and
+//   ad_personalization stay denied until the game shows ads and the gate says so).
 // - The GA client id and session id go to the server ({ t: 'ga', on: 1, cid, sid }) so its events join the same user;
 //   withdrawing consent tells it to stop ({ t: 'ga', on: 0 }).
 // Recommended event names where they fit; the funnel's own: title_view, play_click, in_world. Server-sent: login,
@@ -26,7 +27,7 @@ export function createAnalytics(env) {
     win.dataLayer ||= [];
     win.gtag = gtag;
     gtag('consent', 'default', { analytics_storage: 'denied', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', wait_for_update: 500 });
-    gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'granted' });
+    gtag('consent', 'update', { analytics_storage: 'granted' });
     granted = true;
     gtag('js', new Date());
     gtag('config', id, { send_page_view: true, allow_google_signals: false, cookie_flags: 'SameSite=None;Secure' });
@@ -51,10 +52,12 @@ export function createAnalytics(env) {
     // the player's choice: 'all' loads GA (once there's an id); 'essential' keeps it off, and turns it off if it was on
     consent(v) {
       consent = v === 'all' ? 'all' : 'essential';
-      if (consent === 'all') { if (loaded && !granted) { gtag('consent', 'update', { analytics_storage: 'granted', ad_storage: 'granted' }); granted = true; ids(); } else load(); }
-      else if (loaded && granted) { gtag('consent', 'update', { analytics_storage: 'denied', ad_storage: 'denied' }); granted = false; if (env.send) env.send({ t: 'ga', on: 0 }); }
+      if (consent === 'all') { if (loaded && !granted) { gtag('consent', 'update', { analytics_storage: 'granted' }); granted = true; ids(); } else load(); }
+      else if (loaded && granted) { gtag('consent', 'update', { analytics_storage: 'denied' }); granted = false; if (env.send) env.send({ t: 'ga', on: 0 }); }
       else if (env.send) env.send({ t: 'ga', on: 0 });
     },
+    // a new connection (a reconnect, a new server session): the server forgets the GA ids with the session - sent again
+    resend() { if (loaded && granted && win.gtag) ids(); },
     // the player's device and settings, as user properties (register them as custom dimensions: docs/LAUNCH-SETUP.md)
     props(p) { if (granted) gtag('set', 'user_properties', p); },
     event(name, params = {}) {

@@ -141,6 +141,6 @@ test('start fresh: two presses, a clear warning, then this browser forgets only 
   assert.match(done, /startsWith\('cla\.'\)/, 'only the game\'s own keys (other games share the site)');
   assert.doesNotMatch(done, /\.clear\(\)/, 'never the whole storage');
   assert.match(done, /S\.token = null/, 'no reconnecting with the old token');
-  assert.match(main, /case 'wiped': freshDone\(\)/);
+  assert.match(main, /case 'wiped': freshDone\(m\.keep\)/);
   void K;
 });

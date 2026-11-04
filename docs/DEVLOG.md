@@ -19499,3 +19499,58 @@ Tests:
 - test/launch-roles.test.js;
 - test/launch-analytics.test.js;
 - test/launch-world.test.js (a running world, heavy).
+
+## 2026-11-04 - The launch foundation: the review's fixes
+
+An independent review found no blockers for live tokens, saves or balances, but listed fixes to make before it ships.
+Each fix has a test that failed before it (test/launch-review.test.js, plus the updated launch-*.test.js).
+
+1. **The gate and the account panel on a gamepad.** client/account.js keeps its own modal stack (the gate, the panel, a
+   choice). While one is up, main.js hands it the pad (launchPad: D-pad or stick moves, A presses, B backs out, the
+   focus outlined) and the title's own pad handling waits. It used to press PLAY underneath.
+2. **Signing in on another device.**
+   - The sign-in buttons log in: an identity already on an account signs into it.
+   - "Link to this account" is its own button.
+   - An identity no account has asks: link to this character, or start a new account. The guest stays as the previous
+     character, never merged.
+3. **Admin log spam.**
+   - Claims are throttled (5 per 10 minutes), and their refusals are logged once a minute per player.
+   - Debug commands are logged for admins only while the open mode is on.
+   - Appends are async and batched.
+   - /admin/log reads the last 256 KB and checks a head file (count, last hash, size), so a file cut short shows. The
+     whole chain is rehashed only on ?verify=1.
+4. **Money noted against the player who's on now.** The target lives on the profile (`__mw`). watch() re-binds it on
+   every join and release() unbinds it on leave.
+5. **Reports.**
+   - A reporter's weight: members 1, guests with 6 h of age and 60 minutes of play 0.5, new guests 0.
+   - Weighted reports reaching the threshold go to the top of the review list ('reports'). They no longer strike or
+     mute on their own.
+   - Hate-filter and admin strikes are unchanged.
+6. **Start fresh keeps the account** (players.js wipeAccount). Only the progress resets, and the page keeps its token
+   (`wiped.keep`).
+7. **Refusals at the door.**
+   - The guest limit is off by default.
+   - Refusal codes: 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved, 4013 the guest limit, 4014 signed out.
+   - The page stops reconnecting on these, shows why, and PLAY tries again.
+8. **Guests rename as before while no provider is switched on.**
+9. **Bans and sign-outs.**
+   - A ban no longer invalidates the guest's token, so unbanning restores access.
+   - Banned devices are indexed, not scanned for on each retry.
+   - Sign-out-everywhere closes the account's live sessions (4015). A member's stale token is refused (4014) instead
+     of becoming a new guest.
+10. **The smaller items.**
+    - Linking and logging in are bound to the starting page (a nonce), and a link is POST-confirmed with the page's
+      own token.
+    - Own-key lookups for emotes, leisure and message rates (the rate counter is prototype-free: 'constructor' was
+      always dropped).
+    - A cookie with a bad % isn't a 500.
+    - The admin link lands on a same-site page (meta refresh) so its Strict cookie survives a cross-site first load.
+    - Helpers can't refund or restore their own account. Staff act on account ids only.
+    - A passkey counter that goes backwards signs in and flags for review.
+    - GA's Accept grants analytics_storage only.
+    - The GA ids are re-sent and queued errors flushed on every new session.
+    - The half-second work is guarded.
+    - Smaller per-account caps (log 60, purchases 20, inbox 30, contacts 100, strikes 20, sign-ins 8).
+    - Names are escaped in the panel.
+    - Server-made moves are marked (server/movemark.js `moved(ped)`) at about 40 sites in 22 systems, so the
+      movement audit doesn't take them for teleports.

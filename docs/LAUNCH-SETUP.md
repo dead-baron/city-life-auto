@@ -4,6 +4,21 @@ The launch foundation (accounts and sign-ins, roles and the admin log, chat and 
 on the game server. Everything here is switched on by environment variables on the server. **Nothing secret goes in
 the repository**: keys and secrets live only in the server's environment file.
 
+## Signing in, linking, and guests
+
+- **Sign in** (a provider button, or a passkey) logs into the account that sign-in belongs to, on any device.
+- **Link to this account** adds a sign-in to the character on this page, so a guest keeps its progress. It's a separate
+  button. A sign-in that's already on another account is never moved.
+- A sign-in no account uses yet asks: link it to the character I'm playing, or start a new account. Nothing is merged
+  silently.
+- Starting a new account, or signing into another one, keeps the guest on this device as the previous character
+  (Settings can go back to it).
+- Every flow is bound to the page that started it, so a sign-in someone else set off in your browser can't be finished
+  by your page. Open an email link in the browser you asked from.
+- **Guests rename** as before while no provider is switched on. Once one is, names are for signed-in members
+  (filtered, unique, once a month).
+- **Start fresh** resets the character and keeps the account: its sign-ins, passkeys, role, strikes and ban record.
+
 ## What works with no keys at all
 
 - **Guests**: play at once as GuestNNNN. Progress is saved on the server. A **transfer code** (Settings → Account →
@@ -39,7 +54,7 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 | `CLA_DEV_OPEN` | `1`: anyone can open Dev Debug Mode (testing). `0`: **launch**, only admins and the owner. | `1` |
 | `CLA_OWNER_ID` | The owner's account id (Settings → Account shows it). If unset, see "The owner's account". | unset |
 | `CLA_REQUIRE_AGE` | `1`: the server refuses a page that hasn't confirmed the 17+ gate. | `0` |
-| `CLA_GUESTS_PER_HOUR` | New guest characters an hour from one address (0 = no limit). | `30` |
+| `CLA_GUESTS_PER_HOUR` | New guest characters an hour from one address (0 = no limit). Schools and phone networks share one address between many players, so set it high if at all (200+). | `0` |
 | `CLA_BLOCK_BANNED_DEVICES` | `1`: a browser marked by a banned account can't make a new guest. | `1` |
 | `CLA_RP_ID` / `CLA_RP_NAME` | The passkey domain (the page's registrable domain) and the name devices show. | `deadbaron.com` / `City Life Auto` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google sign-in. | unset (off) |
@@ -131,8 +146,8 @@ How it behaves:
 - The first-launch gate asks for **17+** and **Accept / Essential only**.
 - gtag.js loads only after Accept, and only when the measurement ID is set. With Essential only, nothing is loaded and
   nothing goes to Google, from the page or from the server.
-- Consent Mode v2 defaults everything to denied. Accept grants `analytics_storage` and `ad_storage`.
-  `ad_user_data` and `ad_personalization` stay denied until the game shows ads.
+- Consent Mode v2 defaults everything to denied. Accept grants `analytics_storage` only, because the gate asks about
+  analytics. The three ad signals stay denied until the game shows ads and the gate's text says so.
 - The server sends gameplay events through the Measurement Protocol, for players who accepted, under the page's GA
   client ID:
   - `sign_up` and `login`, by method;

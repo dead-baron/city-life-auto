@@ -82,7 +82,7 @@ export function createChat(ctx) {
         if (m.ch === 'near') bubble(m.eid, m.text, false);
         return;
       }
-      case 'emote': { const E = EMOTES[m.e]; if (!E) return; addLine('emote', `<i>${esc(m.n)} ${esc(E.text)}</i>`, 'emote'); bubble(m.eid, `*${E.text}*`, true); return; }
+      case 'emote': { const E = Object.hasOwn(EMOTES, m.e) ? EMOTES[m.e] : null; if (!E) return; addLine('emote', `<i>${esc(m.n)} ${esc(E.text)}</i>`, 'emote'); bubble(m.eid, `*${E.text}*`, true); return; }
       case 'chatstate': state = m; inEl.maxLength = m.max || CHAT.maxLen; if (m.muted) addLine('sys', `You're muted from chat until ${new Date(m.muted).toLocaleString()}.`, 'sys'); changed(); return;
       case 'chatsay': if (!m.ok) addLine('sys', esc(m.err), 'sys'); return;
       case 'modres': if (m.state) state = m.state; ctx.toast(m.ok ? m.note : m.err, m.ok ? 'good' : 'warn'); changed(); return;
@@ -117,7 +117,7 @@ export function createChat(ctx) {
     if (!text) { close(); return; }
     // /me <emote>, /c crew, /f faction
     const cmd = text.match(/^\/(\w+)\s*(.*)$/);
-    if (cmd && EMOTES[cmd[1]]) { ctx.send({ t: 'emote', e: cmd[1] }); return; }
+    if (cmd && Object.hasOwn(EMOTES, cmd[1])) { ctx.send({ t: 'emote', e: cmd[1] }); return; }
     if (cmd && (cmd[1] === 'c' || cmd[1] === 'f' || cmd[1] === 'n')) { say(cmd[1] === 'c' ? 'crew' : cmd[1] === 'f' ? 'faction' : 'near', cmd[2]); return; }
     say(chEl.value, text, chEl.value === 'phone' ? toEl.value : undefined);
   });
