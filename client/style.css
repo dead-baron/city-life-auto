@@ -1350,6 +1350,7 @@ body.portrait .pz { width: 100%; max-width: 420px; }
 #hub[data-tab=settings] { justify-content: flex-start; padding-left: clamp(var(--s5), 22vw, 420px); }
 #hub[data-tab=settings] .hub-frame { width: min(620px, 100%); height: min(720px, 100%); animation: enter-l var(--t2) var(--ease); }
 #hub.solo[data-tab=settings] { justify-content: center; padding-left: var(--s5); }
+@media (max-width: 900px), (max-height: 560px) { #hub[data-tab=settings] { padding: 0; } #hub[data-tab=settings] .hub-frame { width: 100%; height: 100%; } }
 body.portrait #hub[data-tab=settings] { align-items: flex-end; padding: 0; }
 body.portrait #hub[data-tab=settings] .hub-frame { height: 74%; border-top: 2px solid var(--gold); border-radius: var(--r2) var(--r2) 0 0; animation: sheet-up var(--t3) var(--ease); }
 body.portrait #hub.solo[data-tab=settings] .hub-frame { height: 100%; border-radius: 0; }
