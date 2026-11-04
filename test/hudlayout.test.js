@@ -31,14 +31,18 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   for (const r of all.filter((q) => q.sc.dev === 'touch')) {
     const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, ks = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'stick-l'), tb = ks.filter((k) => k.name.startsWith('tb.'));
     const mid = { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 };
-    for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) if (on(a, b)) ctl.push(`${tag}: ${a.name} on ${b.name}`);
+    // (the buttons are discs since 11-03, as test/touchslots.test.js has them: two apart when their circles are - the weapon
+    // card and the move stick's zone boxes)
+    const disc = (a) => a.name.startsWith('tb.') && a.name !== 'tb.nextw';
+    const hit = (a, b) => (disc(a) && disc(b) ? Math.hypot((a.x0 + a.x1 - b.x0 - b.x1) / 2, (a.y0 + a.y1 - b.y0 - b.y1) / 2) < (a.x1 - a.x0 + b.x1 - b.x0) / 2 - 2 : on(a, b));
+    for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) if (hit(a, b)) ctl.push(`${tag}: ${a.name} on ${b.name}`);
     for (const a of tb) {
       if (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44) ctl.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);
       if (a.x0 < w * 0.4) ctl.push(`${tag}: ${a.name} in the move stick's left 40% (x ${a.x0})`);
       if (h > w && a.x0 < w / 2) ctl.push(`${tag}: ${a.name} in the left half`);
       if (on(a, mid)) ctl.push(`${tag}: ${a.name} over the middle (${a.x0},${a.y0}-${a.x1},${a.y1})`);
       if (a.x0 < 0 || a.y0 < 0 || a.x1 > w || a.y1 > h) ctl.push(`${tag}: ${a.name} off the screen`);
-      for (const k of r.keep.filter((q) => HUDK.includes(q.name) || q.name.startsWith('b-'))) if (on(a, k)) ctl.push(`${tag}: ${a.name} on ${k.name}`);
+      for (const k of r.keep.filter((q) => HUDK.includes(q.name) || q.name.startsWith('b-'))) if (on(a, k)) ctl.push(`${tag}: ${a.name} on ${k.name} (${a.x0},${a.y0}-${a.x1},${a.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`);
     }
     const want = touchSlots(FLAGS[st]), got = Object.fromEntries(tb.map((k) => [k.slot, { a: k.name.slice(3), label: k.label }]));
     assert.equal(r.state && r.state.state, want.state, `${tag}: the state`);

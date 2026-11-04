@@ -40,7 +40,7 @@ export function jobCardHtml(j, o = {}) {
   }
   const go = `<button class="btn btn-1 jc-go" data-take="${esc(j.id)}"${o.busy ? ' disabled' : ''}>${o.busy ? 'FINISH YOURS FIRST' : 'ACCEPT'}</button>`;
   return `<div class="jc offer" data-kind="${jobKind(j)}"><div class="jc-top"><span class="jc-ic">${JOB_ICON[jobKind(j)]}</span><span class="jc-t"><b>${esc(j.title)}</b>${o.from ? `<em>${esc(o.from)}</em>` : ''}${j.sub ? `<small>${esc(j.sub)}</small>` : ''}</span></div>`
-    + `<div class="jc-boxes"><div class="jc-box"><small>REWARD</small><b class="jc-pay">${payText(j)}</b></div><div class="jc-box"><small>${d ? 'HOW FAR' : 'PAID FOR'}</small><b>${esc(d || j.per || 'the job')}</b></div></div>`
+    + `<div class="jc-boxes"><div class="jc-box"><small>REWARD</small><b class="jc-pay">${payText(j)}</b>${d && j.per ? `<small class="jc-per">${esc(j.per)}</small>` : ''}</div><div class="jc-box"><small>${d ? 'HOW FAR' : 'PAID FOR'}</small><b>${esc(d || j.per || 'the job')}</b></div></div>`
     + `<div class="jc-row"><span class="jc-step"><i>FIRST</i>${esc(j.step || 'Head there and start')}</span></div>`
     + `<div class="jc-acts">${go}${o.decline ? '<button class="btn jc-no" data-jc="no">DECLINE</button>' : ''}</div></div>`;
 }

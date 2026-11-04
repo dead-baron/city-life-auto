@@ -21,7 +21,7 @@ test('the HUD row is PHONE · MAP · MENU as icons, and the hub has RESUME first
   assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-ic="([a-z]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone handset P', 'Map map M', 'Menu menu ESC'], 'pixel icons (UI-9: client/touchicons.js), named for a screen reader and a tooltip, the keys on a keyboard');
   assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');
   assert.match(HTML, /<button id="b-dev"[^>]*aria-label="Debug menu"/, 'and the debug button (the owner wants it on the HUD), apart');
-  for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
+  for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
   // (UI-10, UIC-07: the pause list first - RESUME, the five screens, LOG OFF, LEAVE GAME; each screen's head: back, its
   // name, close)
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
@@ -53,7 +53,7 @@ test('every item of the old pause list has a home in the hub', () => {
   const hub = read('client/hub.js');
   for (const h of ['unstuck', 'surrender', 'cine', 'fullscreen', 'title', 'install', 'look', 'devmode', 'dev']) assert.match(hub, new RegExp(`\\b${h}: `), `Help: ${h}`);
   assert.match(MAIN, /function surrender\(b\) \{[\s\S]*?send\(\{ t: 'surrender' \}\)/, 'surrender, pressed twice');
-  assert.match(MAIN, /function exitToTitle\(\) \{ closeHub\(\); S\.playing = false;/);
+  assert.match(MAIN, /function exitToTitle\(\) \{ stopLogoff\(\); closeHub\(\); S\.playing = false;/);
   // the Danger zone stands apart
   assert.match(hubHtml, /<div class="set-danger"><h3>DANGER ZONE<\/h3>[\s\S]*id="s-fresh"/, 'the Danger zone apart, at the foot of Account');
 });
@@ -81,8 +81,8 @@ test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out;
   for (const a of ['hub', 'hubtab']) assert.ok(KB[a] && TOUCH[a] && PAD[a], a);
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
   const readme = read('README.md');
-  assert.match(readme, /\| Menu \(the hub\) \|/);
-  assert.match(readme, /\| Bag \(the hub's BAG tab[^\n]*\| tap ITEMS \|/);
+  assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Log off, Leave game\)/);
+  assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap ITEMS \|/);
 });
 
 test('the hub\'s tabs load when first opened, not with the page', () => {
@@ -230,7 +230,7 @@ test('Settings: in sections, the controls of the device you\'re on (the others o
   assert.match(read('client/hub.js'), /for \(const el of \$\('settings'\)\.querySelectorAll\('\[data-for\]'\)\) el\.hidden = !el\.dataset\.for\.split\(' '\)\.includes\(d\);/);
   assert.match(read('client/hub.js'), /if \(!dev\) dev = devOf\(ctx\.input\.device\);/, 'it opens on the device you\'re using');
   const css = read('client/style.css');
-  assert.match(css, /#set-nav \.tab \{ flex: none; min-height: var\(--tap\);/);
+  assert.match(css, /#set-nav \.tab \{ flex: 1 0 auto; min-height: var\(--tap\);/);
   assert.match(css, /\.set-bind \{[^}]*min-height: var\(--tap\);/);
   assert.match(css, /#set-body \.srow select \{ min-height: var\(--tap\);/);
 });

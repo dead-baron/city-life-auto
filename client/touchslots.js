@@ -13,9 +13,10 @@ export { iconOf } from './touchicons.js';
 // the way mobile shooters lay them out). The aim stick stays where and how big it was. On its side: FIRE and ACT (72)
 // on the inner arc round the stick, ROLL, CAR, C1 and C2 (52) on the outer one - its middle left out where it would
 // cross the middle of the screen - the weapon card over the stick, and the switches (FIRE ON, COP CAR, LIGHT, ITEMS) in
-// a row along the top of it, under the HUD. Upright the same groups climb in two columns over the stick (the left half
-// is the move stick's, the middle the view's). Kept clear of each other, of the left 40%, of the middle (you) and inside the safe areas
-// (test/touchslots.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
+// a row along the top of it, under the HUD's plate and buttons (the stars and the vehicle's readout move left of the
+// row: style.css). Upright the same groups climb in two columns over the stick (the left half is the move stick's, the
+// middle the view's). Kept clear of each other, of the left 40%, of the middle (you) and inside the safe areas
+// (test/touchslots.test.js; the HUD: test/hudlayout.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
 export const GEO = {
   land: { stick: [88, 88, 132], fire: [202, 88, 72], act: [167, 167, 72], roll: [263, 38, 52], car: [271, 104, 52], c1: [203, 228, 52], c2: [143, 241, 52],
     wp: [70, 206, 76, 52], u4: [32, 300, 52], u3: [92, 300, 52], u2: [152, 300, 52], u1: [212, 300, 52] },
@@ -60,11 +61,12 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     geo = slotGeometry(W, H, safe());
     // (how far in from the right the arc reaches: the job line keeps left of it - style.css)
     document.documentElement.style.setProperty('--arc-w', `${W - Math.min(...['stick', 'fire', 'roll', 'act', 'car', 'c1', 'c2'].map((k) => geo[k].x)) + 8}px`);
-    // the prompt's slot (style.css #hud-low, UI-4): on its side over the arc's lowest buttons and left of the rest; upright
+    // the prompt's slot (style.css #hud-low, UI-4): on its side left of the whole arc, its foot level with ROLL's top (--u-l:
+    // the stars and the vehicle's readout keep left of the switches' row); upright
     // under you, left of the utility column
     const R = document.documentElement.style, X = (ks) => Math.min(...ks.map((k) => geo[k].x)), Y = (ks) => Math.min(...ks.map((k) => geo[k].y));
     if (H > W) R.setProperty('--lo-r', `${W - X(['u2', 'u3', 'u4']) + 8}px`);
-    else { R.setProperty('--lo-r', `${W - X(['roll', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['c1', 'roll']) + 6}px`); R.setProperty('--lo-c', `${W - X(['c1']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1)
+    else { R.setProperty('--lo-r', `${W - X(['roll', 'car', 'c1', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['roll']) + 6}px`); R.setProperty('--u-l', `${W - X(['u1', 'u2', 'u3', 'u4']) + 8}px`); R.setProperty('--lo-c', `${W - X(['c1']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1)
     if (H > W) R.setProperty('--lo-c', `${W - X(['u1', 'c1', 'c2', 'act', 'roll']) + 8}px`);   // (upright: the hint strip left of the arc, over the move stick)
     if (cur) place();
   }

@@ -231,7 +231,7 @@ body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
 .touch:not(.portrait) #hud-tr { display: grid; grid-template-columns: auto auto; column-gap: var(--gap); row-gap: var(--s1); align-items: start; justify-items: end; }
 .touch:not(.portrait) #hud-tr > * { grid-column: 1; }
 .touch:not(.portrait) #hud-tr > #hud-btns { grid-area: 1 / 2; margin: 0; }
-.touch:not(.portrait) #hud-tr > #vchip { grid-area: 2 / 2 / 4 / 3; }
+.touch:not(.portrait) #hud-tr > :is(#stars, #vchip) { grid-column: 1 / -1; justify-self: end; margin: 0 calc(var(--u-l, 0px) - var(--sr)) 0 -100vw; }   /* (under the plate the touch switches' row: the stars and the vehicle's readout left of it - client/touchslots.js --u-l; the -100vw: they don't widen the plate's column) */
 @media (max-height: 430px) {
   body:not(.touch) #hud-tr { display: grid; grid-template-columns: auto auto; column-gap: var(--gap); row-gap: var(--s1); align-items: start; justify-items: end; }
   body:not(.touch) #hud-tr > * { grid-column: 1; }

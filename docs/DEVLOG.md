@@ -19344,9 +19344,10 @@ over, a scatter of places. Redone from scratch:
   attached), so the set is drawn in that style, ours; the same names take the real paths if we want them. The game's own
   - a fist, a pistol, a rifle, a throwable - are in the same stroke. A solid variant of every glyph is kept beside it
   (setGlyphVariant('solid')) for the owner's pick; the line set is on.
-- **The glyphs**: HIT a fist, FIRE a round, ACT a pointing hand, CAR a side-view car, ROLL an arc and its arrow, block a
+- **The glyphs**: HIT a fist, FIRE a target (a round and a muzzle flash were tried beside it on the real layout: the target
+  reads at a glance and isn't the aim stick's crosshair), ACT a pointing hand, CAR a side-view car, ROLL an arc and its arrow, block a
   shield, the cruiser a badge, the siren, the horn, reload the circling arrow, the bag, the light, auto-fire, the air's
-  up and down, brake a pedal, gallop, throw, the trick's star, ollie, get out; the aim stick's center a crosshair. The
+  up and down, brake the dashboard's brake light (a pedal read as a speech bubble), gallop, throw, the trick's star, ollie, get out; the aim stick's center a crosshair. The
   weapon card: the held weapon's silhouette (glyphOfWeapon) over "12 | 48" in the HUD's number face, a small chevron
   when there's more than one to switch to - a tap on the card switches, the hold is still its picker.
 - **One glyph color, one container**: the glyph off-white (#F3EAD2) at full strength, 40% when disabled; every button
@@ -19355,16 +19356,23 @@ over, a scatter of places. Redone from scratch:
   vehicle - a solid gold disc (#E2B33C), red with the "!" for a crime. On an accent disc the glyph is ink, on every one
   of them: off-white on gold is 1.6:1, ink 10:1 (3.9:1 on the red). Pressed: 90% and a brighter fill; a switch that's on:
   an inset gold ring; the cooldown and reload: a ring round the disc. The left stick's base takes the same disc and
-  hairline (its place and its feel as they were). While the screen is left alone the buttons fade to half as before -
-  but not FIRE, which faded read as pink on a bright floor.
+  hairline (its place and its feel as they were). While the screen is left alone the buttons go a little quieter (70%;
+  it was 50%, pale on a bright floor) - but not FIRE, which faded read as pink.
 - **Two sizes**: the primaries FIRE and ACT 72 px (a 40-px glyph), every other button 52 (a 28-px glyph), the weapon
-  card 76 x 52; every hit area at least 48.
+  card 76 x 52, on a phone 390 px across its short side; the cluster scales with the phone (a 360-px one draws 66 and
+  48), never under 48 (MIN_TAP: the hit area). Held at 52 on a 360-px phone the twelve slots don't fit sideways with
+  room between them and the middle of the screen clear, so it scales - and the places were tuned so every pair keeps
+  a gap of 6 px or more on every phone and tablet in the test's list (it was down to 0 - discs touching - on the smaller ones).
 - **A tidy arc round the right stick** (client/touchslots.js GEO), as the shooters on phones do it: sideways FIRE and
   ACT on the inner arc, ROLL, CAR and the two context buttons on the outer arc at equal steps, leaving the screen's middle
   clear; the weapon card above the stick; the switches (bag, light, auto-fire...) a row along the top of the cluster.
   Upright, the same buttons in the same order as a two-column ladder above the stick, all in the right thumb's reach and
   inside the safe areas. The flying rocker is two arrow discs now (CLIMB, DOWN). The sticks themselves - where they
   sit, how they move - untouched.
+- **The HUD round it** (test/hudlayout.test.js): the switches' row sits under the HUD's plate and buttons, so on its
+  side the wanted stars and the vehicle's readout move left of the row (--u-l from client/touchslots.js), and the prompt
+  keeps left of the whole arc, its foot level with ROLL's top (it had climbed onto the job line). The layout test counts
+  two buttons apart when their discs are, as test/touchslots.test.js does.
 - **Fewer buttons at once**: on foot CAR shows only with a vehicle near enough to get in (shared/touchcontrols.js
   near; client/touchslots.js reads the last snapshot for one within 140 px - a sedan's reach is about 96, a bus's 146).
 - **A long press names a button**: after 450 ms a small tip over it (Hit, Fire, Dive roll, Act, Get in, Call a
