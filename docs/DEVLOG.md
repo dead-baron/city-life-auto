@@ -19363,3 +19363,14 @@ The owner's two reports from the same day:
 - test/walkinfront.test.js pins both: every walk-in seen cut away has its doorway open on its doorway's side and the
   wall opposite shut, a clinic's glass is on that side, and no clinic, first-aid post or ranger station opens onto
   rail or deck.
+
+## 2026-11-03 - The ambulance choice answers on the knocked-out screen
+The owner: "Choosing ambulance doesn't seem to do anything when knocked down." The server side works: 11 of 12 random
+spots in a probe got an ambulance and a revive in 9-36 s, and about 1 in 100 spots has no road an ambulance can reach.
+But every answer came as a HUD note, and the knocked-out panel covers the notes, so on a phone the player saw nothing:
+not "on its way", not "no ambulance can reach you", not "you need $200 in the bank". And a greyed-out choice ignored taps.
+- client/deathscreen.js: a note line under the choices (#d-note). The answer to a choice you just pressed shows there
+  for 6 s (hud.js mirrors a note that arrives within 4 s of a death-panel choice, so the city's chatter stays out).
+- While the ambulance (or rescue boat) drives over, the line says how far off it is, and the map shows it (a white disc
+  with a red cross, labeled), as the server's note always promised ("watch for it on your map").
+- A greyed-out choice can be tapped: it says why it can't (one per time down, the fee in the bank).

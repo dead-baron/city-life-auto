@@ -365,6 +365,7 @@ export class HUD {
       return;
     }
     const msg = localizeText(text);
+    if (this.deathRevealed && this.DS && performance.now() - (this.downAsked || 0) < 4000) this.DS.note(this, msg, tone);   // (the answer to a choice on the death panel, which covers the notes: it says it there)
     logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
     // one line on the screen (UI-4): the server's short line for it, else its first sentence - a long one cut with an
     // ellipsis and a tap away from the Log; two at most, each up a few seconds; the same note again while it's still up

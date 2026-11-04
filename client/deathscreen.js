@@ -74,8 +74,12 @@ const CSS = `
 #d-help button, .d-x { min-height: var(--tap); padding: 0 var(--s3); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 700 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; }
 #d-help .help { border-color: var(--danger); background: var(--danger-t); }
 #d-help .amb.on { border-color: var(--cream); background: var(--navy3); }
-#d-help button:disabled { opacity: .45; cursor: default; }
+#d-help button[aria-disabled=true] { opacity: .45; cursor: default; }
 #d-help small { flex-basis: 100%; color: var(--dim); font-size: var(--fs-2); }
+#d-note { margin: 0; min-height: 0; color: var(--cream); font: 600 var(--fs-2) var(--ui); line-height: 1.25; }
+#d-note:empty { display: none; }
+#d-note.bad, #d-note.warn { color: var(--danger); }
+#d-note.good { color: var(--gold); }
 #d-side i.k { font-style: normal; margin-left: 6px; padding: 0 var(--s1); border-radius: var(--r1); background: var(--cream); color: var(--ink); font: 700 var(--fs-1) var(--pixel); }
 #d-side .d-lbl { font: 400 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--gold); }
 #d-rows { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
@@ -105,7 +109,7 @@ function build(H) {
   const p = document.createElement('div');
   p.id = 'd-panel';
   p.innerHTML = '<section id="d-map"><canvas></canvas><span class="dm-tip">Tap a marker or a row to choose</span></section>'
-    + '<section id="d-side"><h2><span id="d-tag">KNOCKED OUT</span><button class="d-x" type="button" id="d-hide"></button></h2><p id="d-cause"></p><div id="d-help"></div><span class="d-lbl">WAKE UP AT</span><div id="d-rows"></div>'
+    + '<section id="d-side"><h2><span id="d-tag">KNOCKED OUT</span><button class="d-x" type="button" id="d-hide"></button></h2><p id="d-cause"></p><div id="d-help"></div><p id="d-note" aria-live="polite"></p><span class="d-lbl">WAKE UP AT</span><div id="d-rows"></div>'
     + '<div id="d-go"><button id="d-wake" type="button">WAKE UP HERE</button><span id="d-auto"></span></div></section>'
     + '<div id="d-bar"><b id="d-bar-t"></b><span id="d-bar-l"></span><span class="open" id="d-bar-o"></span></div>';
   $('death').appendChild(p);
@@ -116,10 +120,13 @@ function build(H) {
     const r = e.target.closest('#d-rows [data-id]');
     if (r) { const o = (H.me.spawnOpts || []).find((q) => q.id === r.dataset.id); if (o) pick(H, o); return; }
     const hb = e.target.closest('#d-help [data-a]');
-    if (hb && !hb.disabled) H.onDown?.(hb.dataset.a);
+    if (hb) H.onDown?.(hb.dataset.a);   // (a greyed-out choice too: the answer says why it can't - the note under them)
   });
   mapInput(H, p.querySelector('canvas'));
 }
+
+// a note for the open panel (hud.js toast while it's up): shown under the choices for a few seconds
+export function note(H, text, tone = 'info') { H.dp.note = { text: String(text), tone, until: performance.now() + 6000 }; if (H.me) draw(H, H.me); }
 
 // H: the HUD (client/hud.js): H.dp the panel's state, H.spawnPick a spot picked here and not yet echoed by the server
 export function draw(H, me) {
@@ -147,9 +154,17 @@ export function draw(H, me) {
   const hb = $('d-help');
   if (hb.dataset.sig !== hsig) {
     hb.dataset.sig = hsig;
-    hb.innerHTML = C.help.map(([a, l, cls, dis]) => `<button type="button" class="${cls}" data-a="${a}"${dis ? ' disabled' : ''}>${a === 'help' ? '✚ ' : a === 'cancel' ? '✕ ' : C.wet ? '🚤 ' : '🚑 '}${esc(l)}${k(...keys[a])}</button>`).join('')
+    hb.innerHTML = C.help.map(([a, l, cls, dis]) => `<button type="button" class="${cls}" data-a="${a}"${dis ? ' aria-disabled="true"' : ''}>${a === 'help' ? '✚ ' : a === 'cancel' ? '✕ ' : C.wet ? '🚤 ' : '🚑 '}${esc(l)}${k(...keys[a])}</button>`).join('')
       + (C.down && !C.canAmb && !me.down.amb && !me.down.ambUsed ? `<small>(${C.wet ? 'a rescue boat' : 'an ambulance'} needs $${C.fee} in the bank)</small>` : '');
   }
+  // what happened to a choice (the server's answer: on its way, can't reach you, not enough in the bank) - the HUD's
+  // notes sit under this panel, so it says it here; while the ambulance is driving over, how far off it is
+  const N = H.dp.note, dn0 = me.down;
+  let nt = N && N.until > now ? N.text : '', nk = N && N.until > now ? N.tone : '';
+  if (!nt && C.down && dn0.amb && me.deadAt) { const m = Math.hypot(dn0.amb.x - me.deadAt[0], dn0.amb.y - me.deadAt[1]) / 32; nt = `${C.wet ? 'Rescue boat' : 'Ambulance'} on its way - ${km(m).toLowerCase()} off. Anyone nearby can still help you up first.`; nk = 'good'; }
+  const ne = $('d-note');
+  if (ne.textContent !== nt) ne.textContent = nt;
+  if (ne.className !== nk) ne.className = nk;
   // the places to wake up: numbered rows, the same numbers on the map
   const rows = $('d-rows'), rsig = C.places.map((o) => o.id + (o.on ? '*' : '')).join();
   if (rows.dataset.sig !== rsig) {
@@ -227,7 +242,7 @@ function spawnMap(H, me, C, show) {
     return;
   }
   if (SM.wm.map !== H.map) { SM.wm = null; SM.loading = null; return; }
-  SM.places = C.places; SM.at = me.deadAt || null; SM.chosen = C.chosen;
+  SM.places = C.places; SM.at = me.deadAt || null; SM.chosen = C.chosen; SM.amb = (C.down && me.down.amb) || null; SM.wet = C.wet;
   if (!SM.fitted) SM.fitted = fit(H, c);
   render(H, c);
 }
@@ -313,5 +328,12 @@ function render(H, c) {
     g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
     g.fillStyle = ink; g.fillText(o.kind === 'home' ? '⌂' : String(i + 1), x, y + 1);
     SM.hits.unshift([x, y, o]);
+  }
+  if (SM.amb) {   // the ambulance (or rescue boat) you called, driving over: a white disc with a red cross, its name under it
+    const [x, y] = P(SM.amb.x, SM.amb.y), r = 11;
+    g.fillStyle = cream; g.strokeStyle = danger; g.lineWidth = 3; g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
+    g.fillStyle = danger; g.fillRect(x - 2, y - 7, 4, 14); g.fillRect(x - 7, y - 2, 14, 4);
+    const t = SM.wet ? 'Rescue boat' : 'Ambulance';
+    g.font = '700 13px "Barlow Condensed", sans-serif'; g.fillStyle = ink; g.fillText(t, x + 1, y + r + 11); g.fillStyle = cream; g.fillText(t, x, y + r + 10);
   }
 }
