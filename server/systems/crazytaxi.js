@@ -34,7 +34,7 @@ export function start(world, p, rank = null, again = false) {
   rank = rank || rankFor(world, p);
   if (!v && !rank) return 'No taxi company here.';
   p.job = { type: 'crazy', stage: 'ready', truck: 0, clockAt: 0, expires: world.time + 1200, waiting: [], fare: null, done: 0, cash: 0, tips: 0, combo: 0, best: 0, hitAt: 0, near: new Map(), driftT: 0, dashT: 0, rank: rank || { x: p.ped.x, y: p.ped.y, name: 'here' }, text: 'Crazy Taxi: get in your cab - the clock starts when you do' };
-  if (v) jobs.markIssued(world, p, v, { label: v.returnTo ? v.returnTo.label : 'the rank' });
+  if (v) jobs.markIssued(world, p, v, { label: v.returnTo ? v.returnTo.label : 'the taxi stand' });
   else if (!jobs.workTruck(world, p, rank, 'taxi', { label: rank.name })) { p.job = null; return 'No room to park a cab there.'; }
   world.notify(p, `CRAZY TAXI! Get in your cab (the green ring) and the clock starts: ${CRAZY.startS}s. Fares wave from rings - green short, yellow longer, red long. Stop by one, get them there fast for seconds back. Near misses, drifts and dashes earn tips.`, 'good', 'Crazy Taxi: get in the cab - the clock starts');
   p.meDirty = true;
@@ -174,7 +174,7 @@ function finish(world, p, why) {
   const prof = p.profile, prev = prof.crazyBest || 0, sum = { t: 'crazyend', why, fares: j.done, cash: j.cash, tips: j.tips, combo: j.best, rank: rankOf(j.cash), best: Math.max(prev, j.cash), record: j.cash > prev && j.cash > 0 };
   prof.crazyBest = sum.best;
   if (p.conn) p.conn.sendJSON(sum);
-  world.notify(p, `${why} Crazy Taxi: ${j.done} fare${j.done === 1 ? '' : 's'}, $${j.cash} (tips $${j.tips}), licence ${sum.rank}${sum.record ? ' - a new best!' : ''}.`, 'good');
+  world.notify(p, `${why} Crazy Taxi: ${j.done} fare${j.done === 1 ? '' : 's'}, $${j.cash} (tips $${j.tips}), license ${sum.rank}${sum.record ? ' - a new best!' : ''}.`, 'good');
   jobs.jobDone(world, p);
   store.touch();
 }

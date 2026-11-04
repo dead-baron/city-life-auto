@@ -77,7 +77,7 @@ export function render(el, msg, ctx) {
   h += `<h3>For sale <small>${msg.total} of ${msg.homes} homes</small></h3>`;
   h += `<div class="re-chips">${SORTS.map(([k, t]) => `<button data-hsort="${k}" class="${k === sort ? 'on' : ''}">${t}</button>`).join('')}</div>`;
   h += `<div class="re-chips">${KINDS.map(([k, t]) => `<button data-hkind="${k}" class="${k === kind ? 'on' : ''}">${t}</button>`).join('')}</div>`;
-  h += '<p class="ph-hint">Tap one for a waypoint. At its door: take a look inside, then buy it at the front door - or straight from the menu. Apartment blocks list their flats in the lobby.</p>';
+  h += '<p class="ph-hint">Tap one for a waypoint. At its door: take a look inside, then buy it at the front door - or straight from the menu. Apartment buildings list their units in the lobby.</p>';
   h += msg.sale.length ? msg.sale.map((r) => `<button class="ph-row re-row" data-hwp="s${r.id}"><img alt="" src="${planPic(r.pl, r.tr)}"><span class="nm">${esc(r.n)}<small>${what(r)} · ${where(r)}</small><small>${has(r)}</small></span><span class="d"><b>${money(r.p)}</b><small>${r.dep ? `or ${money(r.dep)} down · ` : ''}${Math.round(ctx.dist(r) / 32)}m</small></span></button>`).join('')
     : '<p class="ph-empty">Nothing like that for sale right now.</p>';
   if (msg.matching > msg.sale.length) h += `<p class="ph-hint">… and ${msg.matching - msg.sale.length} more.</p>`;

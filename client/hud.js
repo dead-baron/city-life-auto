@@ -255,7 +255,7 @@ export class HUD {
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus'); tb.classList.add('taxi'); tb.style.borderColor = '';
       $('tb-where').textContent = 'TAXI';
       $('tb-next').textContent = t.st === 'pickup' ? `On its way · about ${Math.max(5, t.eta)}s (the yellow square on your map)`
-        : t.st === 'wait' ? `At the kerb · ${keyName('action')} by the cab to get in (${t.wait}s)`
+        : t.st === 'wait' ? `At the curb · ${keyName('action')} by the cab to get in (${t.wait}s)`
           : t.st === 'dest' ? 'Where to? Set a waypoint (the map or the phone)'
             : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est})`
               : `${t.to} · $${t.fare} · ${keyName('vehicle')} to get out`;

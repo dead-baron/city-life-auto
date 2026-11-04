@@ -69,10 +69,10 @@ export function describe(id) {
   if (id === 'drill') return 'A bank job: set it at a vault door behind the counter. The alarm goes at once; it works through in about a minute.';
   if (id === 'flashlight') return `${keyName('light')} switches it on and off. Held in your free hand; everyone sees the beam.`;
   if (id === 'headlamp' || id === 'hardhat') return `${keyName('light')} switches it on and off - hands free${id === 'hardhat' ? '; the hat takes some of a falling tree or rock' : ''}. Runs on batteries.`;
-  if (id === 'lantern') return 'A warm glow all round you, in one hand. Use it again while lit to set it down.';
+  if (id === 'lantern') return 'A warm glow all around you, in one hand. Use it again while lit to set it down.';
   if (id === 'flare') return 'Strike it and throw it: a red light for about a minute.';
   if (id === 'glowstick') return 'Snap it and drop it: a little glow for a few minutes.';
-  if (id === 'batteries') return 'A fresh set goes into a light by itself when its batteries run flat.';
+  if (id === 'batteries') return 'A fresh set goes into a light by itself when its batteries run down.';
   if (it.fell) return `Hold the action button at a tree to fell it${id === 'hatchet' ? ' (small trees only)' : id === 'axe' ? ' (not the giant redwoods)' : id === 'chainsaw' ? ' - the fastest, loud, runs on fuel' : ''}.`;
   if (id === 'sawfuel') return 'Fills the chainsaw when it runs dry.';
   if (it.heal && !it.food) return `+${it.heal} health, stops bleeding.`;

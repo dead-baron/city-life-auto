@@ -71,7 +71,7 @@ export function start(world, p, office = null, mode = 'van') {
   office = office || officeFor(world, p);
   if (!office) return 'No post office here.';
   const stops = routeFor(world, office, mode);
-  if (!stops) return 'No round going out from here right now.';
+  if (!stops) return 'No route going out from here right now.';
   const parcels = stops.filter((s) => s.parcel).length;
   p.job = { type: 'mail', mode, stops, done: 0, crates: [], truck: 0, earned: 0, office: { x: office.x, y: office.y, name: office.label }, expires: world.time + MAILJOB.limitS * stops.length + 120, text: '' };
   if (mode === 'van') {
@@ -89,8 +89,8 @@ export function start(world, p, office = null, mode = 'van') {
   }
   setText(world, p);
   world.notify(p, mode === 'van'
-    ? `Mail round: ${stops.length} stops round ${stops[0].name}. The van is the green ring - post the letters from its window stopped by each mailbox; carry the ${parcels} parcel${parcels === 1 ? '' : 's'} from the back to the door.`
-    : `Walking round: ${stops.length} stops near ${office.label}. Walk up to each mailbox (or door) and post the letters.`, 'good', `Mail round: ${stops.length} stops`);
+    ? `Mail route: ${stops.length} stops around ${stops[0].name}. The van is the green ring - deliver the letters from its window stopped by each mailbox; carry the ${parcels} package${parcels === 1 ? '' : 's'} from the back to the door.`
+    : `Walking route: ${stops.length} stops near ${office.label}. Walk up to each mailbox (or door) and deliver the letters.`, 'good', `Mail route: ${stops.length} stops`);
   p.meDirty = true;
   return null;
 }
@@ -99,7 +99,7 @@ const left = (j) => j.stops.filter((s) => !s.done);
 function setText(world, p) {
   const j = p.job, L = left(j), at = p.ped || j.office;
   const s = L.length ? L.reduce((a, b) => (Math.hypot(b.x - at.x, b.y - at.y) < Math.hypot(a.x - at.x, a.y - at.y) ? b : a)) : null;
-  const t = !s ? 'Mail: round done' : s.parcel ? `Mail: a parcel to the door in ${s.name} (${j.done}/${j.stops.length})` : `Mail: letters to the ${s.box ? 'mailbox' : 'door'} in ${s.name} (${j.done}/${j.stops.length})`;
+  const t = !s ? 'Mail: route done' : s.parcel ? `Mail: a package to the door in ${s.name} (${j.done}/${j.stops.length})` : `Mail: letters to the ${s.box ? 'mailbox' : 'door'} in ${s.name} (${j.done}/${j.stops.length})`;
   if (t !== j.text) { j.text = t; p.meDirty = true; }
 }
 function deliver(world, p, s, crate = null) {
@@ -110,7 +110,7 @@ function deliver(world, p, s, crate = null) {
   world.emit(s.x, s.y, { e: 'mailbox', x: s.x, y: s.y, k: s.parcel ? 1 : 0 });
   world.emit(s.x, s.y, { e: 'cash', x: s.x, y: s.y, n: pay });
   p.profile.samaritan = (p.profile.samaritan || 0) + 1;
-  if (left(j).length) { setText(world, p); world.notify(p, `${s.parcel ? 'Parcel left on the doorstep' : 'Letters posted'}: +$${pay}. ${left(j).length} to go.`, 'good'); store.touch(); return; }
+  if (left(j).length) { setText(world, p); world.notify(p, `${s.parcel ? 'Package left on the doorstep' : 'Letters delivered'}: +$${pay}. ${left(j).length} to go.`, 'good'); store.touch(); return; }
   p.profile.cash += MAILJOB.bonus;
   world.notify(p, `Round done: ${j.stops.length} stops, $${j.earned} + a $${MAILJOB.bonus} bonus from the post office.`, 'good');
   jobs.jobDone(world, p);
@@ -125,20 +125,20 @@ export function interaction(world, p) {
   if (j && j.type === 'mail') {
     for (const s of j.stops) {
       if (s.done || s.parcel || Math.hypot(s.x - ped.x, s.y - ped.y) > (s.box ? MAILJOB.postR : MAILJOB.doorR)) continue;
-      return { label: s.box ? `Post the letters in the mailbox (+$${MAILJOB.letter})` : `Put the letters through the door (+$${MAILJOB.letter})`, run: () => deliver(world, p, s) };
+      return { label: s.box ? `Put the letters in the mailbox (+$${MAILJOB.letter})` : `Put the letters through the door (+$${MAILJOB.letter})`, run: () => deliver(world, p, s) };
     }
     return null;
   }
   if (j || ped.carrying) return null;
   const o = officesOf(world.map).find((q) => Math.hypot(q.x - ped.x, q.y - ped.y) < 160);
   if (!o) return null;
-  return { label: `Take a mail round at ${o.label}`, card: { id: 'mail', where: o.label, start: () => start(world, p, o, 'van'), alt: { id: 'mailwalk', start: () => start(world, p, o, 'walk') } }, run: () => { const err = start(world, p, o, 'van'); if (err) world.notify(p, err, 'bad'); } };
+  return { label: `Take a mail route at ${o.label}`, card: { id: 'mail', where: o.label, start: () => start(world, p, o, 'van'), alt: { id: 'mailwalk', start: () => start(world, p, o, 'walk') } }, run: () => { const err = start(world, p, o, 'van'); if (err) world.notify(p, err, 'bad'); } };
 }
 // stopped in the round's van by a mailbox: posted from the window
 export function vanInteraction(world, p) {
   const ped = p.ped, j = p.job, v = ped && ped.vehId ? world.get(ped.vehId) : null;
   if (!j || j.type !== 'mail' || !v || v.id !== j.truck || ped.seat !== 0 || Math.hypot(v.vx, v.vy) > 20) return null;
-  for (const s of j.stops) if (!s.done && !s.parcel && s.box && Math.hypot(s.x - v.x, s.y - v.y) < MAILJOB.vanR + v.def.W / 2) return { label: `Post the letters from the window (+$${MAILJOB.letter})`, run: () => deliver(world, p, s) };
+  for (const s of j.stops) if (!s.done && !s.parcel && s.box && Math.hypot(s.x - v.x, s.y - v.y) < MAILJOB.vanR + v.def.W / 2) return { label: `Deliver the letters from the window (+$${MAILJOB.letter})`, run: () => deliver(world, p, s) };
   return null;
 }
 // carrying the round's parcel at its door
@@ -149,9 +149,9 @@ export function parcelZone(world, p, crate) {
   if (!s || s.done || Math.hypot(s.x - ped.x, s.y - ped.y) > MAILJOB.doorR) {
     const other = j.stops.find((q) => q.parcel && !q.done && Math.hypot(q.x - ped.x, q.y - ped.y) < MAILJOB.doorR);   // (any of the round's parcels does for any of its doors: they're all the round's)
     if (!other) return null;
-    return { label: `Leave the parcel on the doorstep (+$${MAILJOB.parcel})`, run: () => deliver(world, p, other, crate) };
+    return { label: `Leave the package on the doorstep (+$${MAILJOB.parcel})`, run: () => deliver(world, p, other, crate) };
   }
-  return { label: `Leave the parcel on the doorstep (+$${MAILJOB.parcel})`, run: () => deliver(world, p, s, crate) };
+  return { label: `Leave the package on the doorstep (+$${MAILJOB.parcel})`, run: () => deliver(world, p, s, crate) };
 }
 
 export function update(world) {
@@ -159,9 +159,9 @@ export function update(world) {
   for (const p of world.players.values()) {
     const j = p.job;
     if (!j || j.type !== 'mail') continue;
-    if (j.mode === 'van') { const v = world.get(j.truck); if (!v || v.removed || v.wreckAt) { jobs.failJob(world, p, 'The van is wrecked. The round is off.'); continue; } }
+    if (j.mode === 'van') { const v = world.get(j.truck); if (!v || v.removed || v.wreckAt) { jobs.failJob(world, p, 'The van is wrecked. The route is off.'); continue; } }
     // a parcel lost (stolen, fallen in the water): its stop's off the round
-    for (const s of j.stops) if (s.parcel && !s.done && s.crate) { const c = world.get(s.crate); if (!c || c.removed || (c.job && c.job.pid !== p.pid) || !c.job) { s.done = true; s.lost = true; j.done++; world.notify(p, 'A parcel\'s gone missing - that stop\'s off the round.', 'warn'); } }
+    for (const s of j.stops) if (s.parcel && !s.done && s.crate) { const c = world.get(s.crate); if (!c || c.removed || (c.job && c.job.pid !== p.pid) || !c.job) { s.done = true; s.lost = true; j.done++; world.notify(p, 'A package has gone missing - that stop\'s off the route.', 'warn'); } }
     if (!left(j).length) { world.notify(p, `Round over: $${j.earned}.`, 'info'); jobs.jobDone(world, p); continue; }
     setText(world, p);
   }

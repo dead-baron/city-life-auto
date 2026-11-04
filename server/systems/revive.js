@@ -104,7 +104,7 @@ export function helpLost(world, pid, vehId) {
 export function cancelAmbulance(world, p, quiet = false) {
   if (!p.amb) return;
   ems.recall(world, p.amb.vehId);
-  if (!quiet) world.notify(p, `${p.amb.boat ? 'Rescue boat' : 'Ambulance'} cancelled - no charge.`, 'info');
+  if (!quiet) world.notify(p, `${p.amb.boat ? 'Rescue boat' : 'Ambulance'} canceled - no charge.`, 'info');
   p.amb = null;
   p.meDirty = true;
 }

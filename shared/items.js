@@ -209,9 +209,9 @@ export const ITEMS = {
   cougarPelt: { name: 'Mountain Lion Pelt', game: true, pelt: true, sell: 120 },
   bobcatPelt: { name: 'Bobcat Pelt',    game: true, pelt: true, sell: 60 },
   coyotePelt: { name: 'Coyote Pelt',    game: true, pelt: true, sell: 24 },
-  wolfPelt: { name: 'Grey Wolf Pelt',  game: true, pelt: true, sell: 95 },
+  wolfPelt: { name: 'Gray Wolf Pelt',  game: true, pelt: true, sell: 95 },
   redFoxPelt: { name: 'Red Fox Pelt',   game: true, pelt: true, sell: 55 },
-  greyFoxPelt: { name: 'Grey Fox Pelt', game: true, pelt: true, sell: 50 },
+  greyFoxPelt: { name: 'Gray Fox Pelt', game: true, pelt: true, sell: 50 },
   raccoonPelt: { name: 'Raccoon Pelt',  game: true, pelt: true, sell: 14 },
   beaverPelt: { name: 'Beaver Pelt',    game: true, pelt: true, sell: 60 },
   otterPelt: { name: 'River Otter Pelt', game: true, pelt: true, sell: 75 },
@@ -250,7 +250,7 @@ export const ITEMS = {
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
   // The Grand Theatre's counter (shared/cinema.js): a ticket gets you a seat in a screen (server/systems/cinema.js); popcorn's eaten
-  filmTicket: { name: 'Film Ticket',     sell: 0 },
+  filmTicket: { name: 'Movie Ticket',     sell: 0 },
   popcorn: { name: 'Popcorn',           food: true, heal: 8, sell: 0 },
   // cooked at home from what's in the fridge (server/systems/homeinside.js cook: the owner's 10-06 "home life: cooking")
   homeMeal: { name: 'Home-cooked Meal',  food: true, heal: 60, hearty: true, sell: 0, cooked: true },

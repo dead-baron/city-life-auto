@@ -171,7 +171,7 @@ function finish(world, a, st) {
     if (!q) continue;
     const won = s.team === w;
     if (won) { q.profile.bank += C.prize; store.touch(); q.meDirty = true; }
-    world.notify(q, `Full time: ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}. ${won ? `You win! +$${C.prize} to your bank.` : w < 0 ? 'A draw.' : 'You lost this one.'}`, won ? 'good' : 'info');
+    world.notify(q, `Full time: ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}. ${won ? `You win! +$${C.prize} to your bank.` : w < 0 ? 'A tie.' : 'You lost this one.'}`, won ? 'good' : 'info');
   }
   for (const s of st.slots) { const v = world.get(s.veh); if (v) { v.frz = true; v.bok = false; } }
   st.ver++;
@@ -220,7 +220,7 @@ export function update(world, dt) {
     if (st.phase === 'play') {
       st.clock -= dt;
       if (st.clock <= 0 && !st.ot) {
-        if (st.score[0] === st.score[1]) { st.ot = true; st.clock = C.otS; tell(world, st, `Time! All square - OVERTIME: the next goal wins (${C.otS} s, then it's a draw).`, 'info'); st.ver++; }
+        if (st.score[0] === st.score[1]) { st.ot = true; st.clock = C.otS; tell(world, st, `Time! All square - OVERTIME: the next goal wins (${C.otS} s, then it's a tie).`, 'info'); st.ver++; }
         else { st.clock = 0; finish(world, a, st); }
       } else if (st.clock <= 0) { st.clock = 0; finish(world, a, st); }   // (overtime run out: a draw)
     }

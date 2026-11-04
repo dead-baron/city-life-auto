@@ -17,7 +17,7 @@ const memStore = () => { const m = new Map(); return { getItem: (k) => m.get(k) 
 
 test('a note: one line on the screen, the whole of it in the phone\'s Log', () => {
   clearLog();
-  const intro = "You drive a cab out of Union Station: your taxi is the green ring. Fares hail you in the street or ring in - pull up by them, then take them where they're going. Quick and smooth earns a tip.";
+  const intro = "You drive a cab out of Union Station: your taxi is the green ring. Fares hail you in the street or call in - pull up by them, then take them where they're going. Quick and smooth earns a tip.";
   const line = noteLine(intro);
   assert.ok(line.length <= NOTE_LINE + 16 && line.length < intro.length, `a line: "${line}"`);
   assert.ok(intro.startsWith(line), 'its first clause');

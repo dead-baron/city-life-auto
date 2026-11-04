@@ -134,7 +134,7 @@ export function dressIn(L, o) {
 }
 
 // ---- the barbershop and the hair salon (ST3) ------------------------------------------------------------------------
-export const HAIR_TABS = { barber: [['cut', 'Cut'], ['colour', 'Colour'], ['beard', 'Beard'], ['moustache', 'Moustache']], salon: [['cut', 'Cut'], ['colour', 'Colour']] };
+export const HAIR_TABS = { barber: [['cut', 'Cut'], ['colour', 'Color'], ['beard', 'Beard'], ['moustache', 'Mustache']], salon: [['cut', 'Cut'], ['colour', 'Color']] };
 const MOUSTACHE_KINDS = ['moustache', 'handlebar'];
 export const MOUSTACHES = [0, ...FACIAL_HAIR.map((f, i) => [f, i]).filter(([f]) => MOUSTACHE_KINDS.includes(f[1])).map(([, i]) => i)];
 export const BEARDS = [0, ...FACIAL_HAIR.map((f, i) => [f, i]).filter(([f]) => f[1] && !MOUSTACHE_KINDS.includes(f[1])).map(([, i]) => i)];

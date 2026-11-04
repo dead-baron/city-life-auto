@@ -162,7 +162,7 @@ export function release(world, p, msg = null) {
   if (S && S.weapon && p.profile.weapons[S.weapon] !== undefined) ped.weapon = S.weapon;
   const R = (ferryRoutes(world) || []).find((r) => r.custody), land = R && R.stops[0] && R.stops[0].land;
   const at = land ? { x: land.x, y: land.y } : live(world).dock || { x: ped.x, y: ped.y };
-  if (!land && !msg) msg = 'Time served. You\'re let out at the harbour - the Prison Boat isn\'t running.';
+  if (!land && !msg) msg = 'Time served. You\'re let out at the harbor - the Prison Boat isn\'t running.';
   ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0; moved(ped);
   world.place(ped);
   homes.protect(world, ped, 3);

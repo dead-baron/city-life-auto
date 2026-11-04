@@ -499,12 +499,12 @@ function mailWatch(world, t, p, r, now) {
     r.mailSince = now; r.doorWarned = true;
     if (caller) {
       shout(world, caller, 'OUT! NOW, OR WE SHOOT!');
-      world.notify(p.player, `MAIL CAR - the guards: "Authorised staff only! Get out or we shoot!" You have ${MAIL_WARN_S} seconds.`, 'bad');
+      world.notify(p.player, `MAIL CAR - the guards: "Authorized staff only! Get out or we shoot!" You have ${MAIL_WARN_S} seconds.`, 'bad');
     }
   } else if (door && !r.doorWarned && caller) {
     r.doorWarned = true;
     shout(world, caller, 'STAFF ONLY - STAY OUT!');
-    world.notify(p.player, `The mail car is through that door. Its armed guards: "Authorised staff only - stay out!" Walk in and you have ${MAIL_WARN_S} seconds to get out before they shoot.`, 'warn');
+    world.notify(p.player, `The mail car is through that door. Its armed guards: "Authorized staff only - stay out!" Walk in and you have ${MAIL_WARN_S} seconds to get out before they shoot.`, 'warn');
   }
   if (inMail && caller && !r.fireCalled && now - r.mailSince > MAIL_WARN_S) { r.fireCalled = true; shout(world, caller, 'OPEN FIRE!'); }
   // the HUD: 'door' at the door, then the seconds left inside (0: they're shooting)
@@ -1441,7 +1441,7 @@ export function interaction(world, p) {
       if (world.rails) { const rows = routeRows(world, st.name).sort((a, b) => a.eta - b.eta); eta = rows.length && Number.isFinite(rows[0].eta) ? rows[0].eta : null; nxt = rows.length ? rows[0].next[0] : null; }
       else { eta = nextTrainIn(world, si); nxt = sts[(si + 1) % sts.length].name.replace(/ Station$/, ''); }
       const e = eta == null ? null : Math.max(1, Math.round(eta));
-      return { label: `${taxijob.interaction(world, p) ? 'Check the trains and the taxi rank' : 'Read the route board'} at ${st.name} - ${e == null ? 'trains every couple of minutes' : `next train in ${Math.floor(e / 60)}:${String(e % 60).padStart(2, '0')}`}${nxt ? ` to ${nxt}` : ''}, F to board when it's in`, run: () => readRouteBoard(world, p, st.name) };
+      return { label: `${taxijob.interaction(world, p) ? 'Check the trains and the taxi stand' : 'Read the route board'} at ${st.name} - ${e == null ? 'trains every couple of minutes' : `next train in ${Math.floor(e / 60)}:${String(e % 60).padStart(2, '0')}`}${nxt ? ` to ${nxt}` : ''}, F to board when it's in`, run: () => readRouteBoard(world, p, st.name) };
     }
   }
   const hit = climbable(world, ped, ped.x, ped.y, 48, ped.vx, ped.vy);

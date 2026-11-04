@@ -20237,3 +20237,32 @@ Merged together so players reconnect once (branches safeexit, rides, starter). T
   the arm) and the starter car's look took it to 402. Raising it by a little more than that leaves room for the next ride,
   so it doesn't need its own raise.
 - Bladers now count as skaters at the skate parks. npc.js looked for the gait 'blades', but the gait is 'blade'.
+
+## 2026-11-04 - American English: the player-facing text
+
+The owner's note (11-03): "American English everywhere", in spelling and in terms. This pass changes only what a player
+reads (HUD and prompts, notes, menus, the phone, item, clothing and vehicle names and blurbs, shop lines, NPC lines, job
+text, server messages, index.html, the README's controls table); code identifiers, CSS classes and data keys keep their
+spelling (`kerbdrive.js`, `pocketColour`, the hair tab's `'colour'` key, the store kind `'jeweller'`...). Place names
+are a separate change (the next entry) because they re-key the world; this one leaves `world`, `art`, `world3` and
+`art3` as they were.
+- Spellings: colour -> color, metres -> meters, tyres -> tires (knobbly -> knobby), kerb -> curb, harbour -> harbor,
+  neighbour -> neighbor, favourite -> favorite, grey -> gray, pyjamas -> pajamas, moustache -> mustache, plough ->
+  plow, licence -> license, offence -> offense, labour -> labor, authorised -> authorized, stabilise -> stabilize,
+  cancelled -> canceled, jewellery -> jewelry, towards -> toward, levelled -> leveled.
+- Terms: pavement -> sidewalk, car park -> parking lot, hire -> rent / rental (boats, horses), taxi rank -> taxi stand,
+  ring in -> call in, timetable -> schedule, trousers -> pants, flat -> apartment (an apartment block -> building, the
+  lift -> the elevator), a mail round -> a mail route, parcel -> package, post the letters -> deliver the letters, quay
+  -> dock (the fishing boat job), films / the pictures -> movies, home cinema -> home theater, pitch -> field, a draw ->
+  a tie (soccer; chess keeps its draw), railway -> railroad, level crossing -> railroad crossing, junction ->
+  intersection, bins and rubbish -> trash cans and trash, batteries flat -> dead, motorbike -> motorcycle, "round"
+  (around: look round, walk round, round here) -> around.
+- Clothing pieces are looked up by name in code (`item('Suit trousers')`), so every caller moved with the catalog
+  (personas, npclooks, look.js); saves keep the piece's index, so nobody's outfit changes. The cloth color keys stay
+  `'grey'` / `'light grey'` in code: lookcore.js maps them to the renamed Gray / Light gray.
+- Kept: "fence" (a buyer of stolen goods is American usage too, and the lines around it read American), "Earl Grey"
+  (a cat's name), "Flat cap", chess's "draw", "Full time" (US soccer says it too), the units (km/h and meters are a
+  separate decision).
+- The tutorial (paused) has its text Americanized too; its test still passes, TUTORIAL_VERSION is unchanged.
+- Tests that read the words moved with them: cinema (Movie Ticket), look (Uniform pants), bounties (pants), homeups and
+  felling (toward an upgrade), hudinfo (call in).

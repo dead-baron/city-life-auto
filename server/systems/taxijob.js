@@ -51,7 +51,7 @@ export function start(world, p, rank = null) {
   p.job = { type: 'cab', stage: 'wait', truck: 0, base: rank, nextAt: world.time + CAB.firstS, expires: world.time + CAB.shiftS, done: 0, fare: null, text: 'Taxi: cruising for a fare' };
   const v = jobs.workTruck(world, p, rank, 'taxi', { label: rank.name });
   if (!v) { p.job = null; return 'No room to park a cab there.'; }
-  world.notify(p, `You drive a cab out of ${rank.name}: your taxi is the green ring. Fares hail you in the street or ring in - pull up by them, then take them where they're going. Quick and smooth earns a tip.`, 'good', 'Taxi shift: your cab is the green ring');
+  world.notify(p, `You drive a cab out of ${rank.name}: your taxi is the green ring. Fares hail you in the street or call in - pull up by them, then take them where they're going. Quick and smooth earns a tip.`, 'good', 'Taxi shift: your cab is the green ring');
   p.meDirty = true;
   store.touch();
   return null;
@@ -90,7 +90,7 @@ export function fareAt(world, p, k, a, b) {
   (world.cabFares ||= new Map()).set(p.pid, q.id);
   const where = world.map.districtAt(q.x, q.y);
   j.text = k === 'hail' ? `Taxi: ${f.who} is hailing a cab${where ? ` in ${where.name}` : ''}` : `Taxi: a call - pick up ${f.who}${where ? ` in ${where.name}` : ''}`;
-  world.notify(p, k === 'hail' ? `Fare! ${f.who[0].toUpperCase()}${f.who.slice(1)} is flagging down a cab nearby - pull up beside them.` : `Dispatch: ${f.who} rang for a cab${where ? ` in ${where.name}` : ''} - it's marked.`, 'good');
+  world.notify(p, k === 'hail' ? `Fare! ${f.who[0].toUpperCase()}${f.who.slice(1)} is flagging down a cab nearby - pull up beside them.` : `Dispatch: ${f.who} called for a cab${where ? ` in ${where.name}` : ''} - it's marked.`, 'good');
   p.meDirty = true;
   return f;
 }

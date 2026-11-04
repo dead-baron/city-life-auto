@@ -132,7 +132,7 @@ function draw(t) {
       const say = won ? `YOU COLLECT $${won.toLocaleString('en-US')}` : (S.mine || []).length ? 'NOT YOUR DAY' : `NEXT RACE IN ${clock(S.next - t)}`;
       infield(g, say, won ? '#7fe07f' : '#e8e8e8');
       if (won && !G.sounds.has('won' + S.n)) { G.sounds.add('won' + S.n); G.o.sfx && G.o.sfx('cashin', 0.6); }
-    } else if (fin.length) call = `${S.field[fin[0]].name} FIRST PAST THE POST!`;
+    } else if (fin.length) call = `${S.field[fin[0]].name} FIRST ACROSS THE LINE!`;
     else if (off < 2) call = 'AND THEY ARE OFF!';
     else if (R.at(lead, off) > 0.8) call = `INTO THE STRAIGHT - ${S.field[lead].name}!`;
     else call = `${S.field[lead].name} LEADS`;

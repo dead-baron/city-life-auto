@@ -48,7 +48,7 @@ export function interaction(world, p) {
   const { D, v } = at;
   if (p.drivein) return { label: 'Switch off the speaker (stop watching)', run: () => leave(world, p, 'You hang the speaker back on its post.') };
   const sh = showAt(world.day, world.loopTime);
-  if (!sh) return { label: world.clock.isNight ? `That's all at the ${D.name} tonight` : `The ${D.name} shows films after dark`, passive: true, run: () => {} };
+  if (!sh) return { label: world.clock.isNight ? `That's all at the ${D.name} tonight` : `The ${D.name} shows movies after dark`, passive: true, run: () => {} };
   if (Math.hypot(v.vx || 0, v.vy || 0) > STILL || !facing(D, v)) return { label: 'Stop in a stall facing the screen to watch', passive: true, run: () => {} };
   const paid = p.dinNight === sh.night || carTicket(world, p, v, sh.night);
   const what = sh.at < 0 ? `next up, ${featureName(sh.f)}` : featureName(sh.f);
@@ -62,7 +62,7 @@ export function tuneIn(world, p, pay = payFrom) {
   const { D, v } = at;
   if (p.drivein) return 'You\'re tuned in already.';
   const sh = showAt(world.day, world.loopTime);
-  if (!sh) return world.clock.isNight ? `That's all at the ${D.name} tonight.` : `The ${D.name} shows films after dark.`;
+  if (!sh) return world.clock.isNight ? `That's all at the ${D.name} tonight.` : `The ${D.name} shows movies after dark.`;
   if (Math.hypot(v.vx || 0, v.vy || 0) > STILL || !facing(D, v)) return 'Stop in a stall facing the screen first.';
   if (p.dinNight !== sh.night && !carTicket(world, p, v, sh.night)) {
     if (!pay(p, DRIVEIN.price)) return `Admission's $${DRIVEIN.price} a car - you're short.`;
@@ -90,8 +90,8 @@ export function update(world) {
     const c = p.drivein;
     if (!c) continue;
     const ped = p.ped, v = ped && !ped.dead && ped.vehId === c.v ? world.get(c.v) : null;
-    if (!v || v.removed || !D) { leave(world, p, ped && !ped.dead ? 'You leave the drive-in - the film goes on without you.' : null); continue; }
-    if (Math.hypot(v.x - c.x, v.y - c.y) > MOVE_PX) { leave(world, p, 'You pull out with the speaker still on the window - clunk. The film goes on without you.'); continue; }
+    if (!v || v.removed || !D) { leave(world, p, ped && !ped.dead ? 'You leave the drive-in - the movie goes on without you.' : null); continue; }
+    if (Math.hypot(v.x - c.x, v.y - c.y) > MOVE_PX) { leave(world, p, 'You pull out with the speaker still on the window - clunk. The movie goes on without you.'); continue; }
     const sh = showAt(world.day, world.loopTime);
     if (!sh || sh.night !== c.night) { leave(world, p, `That's all at the ${D.name} tonight - drive home safe!`, 'good'); continue; }
     if (sh.k !== c.k) {

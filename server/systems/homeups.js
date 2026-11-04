@@ -204,7 +204,7 @@ function takeBack(world, p, h, id) {
 export function stackWood(world, p, h, crates) {
   const prof = p.profile, at = matsAt(prof, h.id), room = storeCap(prof, h) - usedOf(at);
   const mine = crates.filter((c) => c && c.wood && !c.removed).slice(0, Math.max(0, room));
-  if (!mine.length) { world.notify(p, `The garage at ${h.name} is full of materials (${usedOf(at)}/${storeCap(prof, h)}) - put some towards an upgrade, or build more storage.`, 'warn'); return 0; }
+  if (!mine.length) { world.notify(p, `The garage at ${h.name} is full of materials (${usedOf(at)}/${storeCap(prof, h)}) - put some toward an upgrade, or build more storage.`, 'warn'); return 0; }
   removeCrates(world, p, mine);
   at.wood += mine.length;
   world.emit(h.garage.x, h.garage.y, { e: 'garagedoor', home: h.id });
@@ -223,7 +223,7 @@ function woodTowards(world, p, h, crates, id) {
   world.emit(h.garage.x, h.garage.y, { e: 'garagedoor', home: h.id });
   store.touch(); p.meDirty = true;
   const left = missing(u, id);
-  world.notify(p, `${mine.length === 1 ? 'A bundle' : `${mine.length} bundles`} of firewood towards ${nameOf(h, id).toLowerCase()}${MAT_IDS.some((m) => left[m]) ? ` - still to come: ${MAT_IDS.filter((m) => left[m]).map((m) => plural(left[m], m)).join(', ')}` : ' - all the materials are in'}.`, 'good');
+  world.notify(p, `${mine.length === 1 ? 'A bundle' : `${mine.length} bundles`} of firewood toward ${nameOf(h, id).toLowerCase()}${MAT_IDS.some((m) => left[m]) ? ` - still to come: ${MAT_IDS.filter((m) => left[m]).map((m) => plural(left[m], m)).join(', ')}` : ' - all the materials are in'}.`, 'good');
   return null;
 }
 function removeCrates(world, p, list) {
@@ -292,7 +292,7 @@ function homeHere(world, p) {
   return homes.nearOwnGarage(world, p, x, y, GARAGE_R);
 }
 const matLine = (prof, h) => { const at = matsAt(prof, h.id); return `${plural(at.wood, 'wood')}, ${plural(at.stone, 'stone')}, ${plural(at.metal, 'metal')} (${usedOf(at)}/${storeCap(prof, h)} spaces)`; };
-const needLine = (u, id) => { const c = costOf(id), got = putOf(u, id); return MAT_IDS.filter((m) => c[m]).map((m) => `${MATS[m].name} ${got[m] || 0}/${c[m]}`).join(' · ') || 'labour only'; };
+const needLine = (u, id) => { const c = costOf(id), got = putOf(u, id); return MAT_IDS.filter((m) => c[m]).map((m) => `${MATS[m].name} ${got[m] || 0}/${c[m]}`).join(' · ') || 'labor only'; };
 function menuOf(world, p, h) {
   const prof = p.profile, V = p.upMenu, u = (prof.homeUp && prof.homeUp[h.id]) || { b: [], p: {} }, opts = [], inside = !!p.ped.hidden;
   u.p ||= {};
@@ -303,7 +303,7 @@ function menuOf(world, p, h) {
     sub = `Kept here: ${matLine(prof, h)}.`;
     if (wood.length) {
       opts.push({ id: 'u:stack', label: `Stack the ${wood.length === 1 ? 'bundle' : `${wood.length} bundles`} of firewood in the garage` });
-      for (const o of offered(prof, h, world).concat(roomOffers(prof, h, true))) { const c = costOf(o.id), left = missing(u, o.id).wood; if (c.wood && left > 0 && (u.p[o.id] || opts.length < 6)) opts.push({ id: `u:tw:${o.id}`, label: `Put it towards ${o.name.toLowerCase()}`, note: `firewood ${(c.wood || 0) - left}/${c.wood}` }); }
+      for (const o of offered(prof, h, world).concat(roomOffers(prof, h, true))) { const c = costOf(o.id), left = missing(u, o.id).wood; if (c.wood && left > 0 && (u.p[o.id] || opts.length < 6)) opts.push({ id: `u:tw:${o.id}`, label: `Put it toward ${o.name.toLowerCase()}`, note: `firewood ${(c.wood || 0) - left}/${c.wood}` }); }
     }
     const bs = bagCount(prof, 'stone'), bm = bagCount(prof, 'metal');
     if (bs || bm) opts.push({ id: 'u:unload', label: `Unload your bag: ${[bs && plural(bs, 'stone'), bm && plural(bm, 'metal')].filter(Boolean).join(', ')}` });
@@ -431,13 +431,13 @@ export function garageInteraction(world, p) {
   if (c && !c.wood) return null;
   const h = homes.nearOwnGarage(world, p, ped.x, ped.y, c ? GARAGE_R : 60);
   if (!h) return null;
-  return { label: c ? `Your garage: stack the firewood, or put it towards an upgrade` : `Your garage at ${h.name} - materials and upgrades`, run: () => openMenu(world, p, h) };
+  return { label: c ? `Your garage: stack the firewood, or put it toward an upgrade` : `Your garage at ${h.name} - materials and upgrades`, run: () => openMenu(world, p, h) };
 }
 // at the wheel, stopped by your garage with firewood on the back: the same menu (felling.js vehicleInteraction)
 export function vehicleWood(world, p, v, wood) {
   const h = homes.nearOwnGarage(world, p, v.x, v.y, GARAGE_R);
   if (!h || !wood.some((c) => c.wood)) return null;
-  return { label: `Your garage: stack the ${wood.length === 1 ? 'bundle' : `${wood.length} bundles`} of firewood, or put ${wood.length === 1 ? 'it' : 'them'} towards an upgrade`, run: () => openMenu(world, p, h) };
+  return { label: `Your garage: stack the ${wood.length === 1 ? 'bundle' : `${wood.length} bundles`} of firewood, or put ${wood.length === 1 ? 'it' : 'them'} toward an upgrade`, run: () => openMenu(world, p, h) };
 }
 
 // ---- inside: the upgrades' things -------------------------------------------------------------------------------------
@@ -447,7 +447,7 @@ export const fireOn = (world, h) => !!(world.homeFire && world.homeFire.get(h.id
 // the prompt at one of them (homeinside.js interaction); s: ped.home, u: what's in reach (shared/homelayout.js useAt)
 export function insideInteraction(world, p, h, s, u) {
   if ((s.guest || s.tour) && !GUEST_OK.has(u.use)) return { label: `${u.use === 'fire' ? 'The fireplace' : u.use === 'bench' ? 'The workbench' : 'The shelves'} - not yours`, passive: true, run: () => {} };
-  if (s.tour) return { label: 'Having a look round', passive: true, run: () => {} };
+  if (s.tour) return { label: 'Having a look around', passive: true, run: () => {} };
   const prof = ownerProf(world, h) || p.profile, at = matsAt(prof, h.id);
   switch (u.use) {
     case 'stairs': {

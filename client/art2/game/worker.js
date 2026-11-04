@@ -259,7 +259,7 @@ async function handle(msg) {
     }
     return;
   }
-  if (!M && op !== 'stats') throw new Error('worker not initialised');
+  if (!M && op !== 'stats') throw new Error('worker not initialized');
   if (op === 'peekChunk') {   // (a quick look in the store - or the server's: no baking)
     const { cx, cy, ck } = args;
     let got = null, exact = true;

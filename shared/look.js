@@ -70,12 +70,12 @@ export const STARTERS = [
   mk('The Rancher', 'Country roots', 'm', { build: 4, skin: 7, age: 4 }, { shape: 2, brows: 5 }, { style: 3, color: 3, facial: 3 }, {}, { top: item('Flannel shirt', 'red', 'black'), jacket: item('Bib overalls', 'denim', 'gold'), bottoms: item('Jeans'), shoes: item('Work boots', 'brown'), hat: item('Cowboy hat', 'tan') }),
   mk('The Club-goer', 'Night owl', 'f', { build: 0, skin: 9 }, { eyes: 4, lips: 2 }, { style: 26, color: 15 }, { makeup: 2, makeupColor: 1 }, { top: item('Crop top', 'black'), bottoms: item('Denim shorts', 'denim'), shoes: item('Skate shoes', 'black', 'white'), hat: item('Baseball cap', 'black'), jewel: item('Bangles', 'silver') }),
   mk('The Executive', 'Big ambitions', 'm', { build: 1, skin: 1, age: 1 }, { shape: 3 }, { style: 7, color: 3, facial: 1 }, {}, { set: item('Business suit', 'black', 'navy'), shoes: item('Oxfords', 'black'), glasses: item('Sunglasses'), bag: item('Briefcase', 'brown'), jewel: item('Watch', 'silver') }),
-  mk('The Barista', 'Local favourite', 'f', { build: 1, skin: 8 }, { eyeColor: 4, freckles: 1 }, { style: 21, color: 9 }, {}, { top: item('Plain tee', 'black'), jacket: item('Apron', 'forest', 'cream'), bottoms: item('Chinos', 'black'), shoes: item('High-tops', 'black', 'white'), bag: item('Coffee to go') }),
+  mk('The Barista', 'Local favorite', 'f', { build: 1, skin: 8 }, { eyeColor: 4, freckles: 1 }, { style: 21, color: 9 }, {}, { top: item('Plain tee', 'black'), jacket: item('Apron', 'forest', 'cream'), bottoms: item('Chinos', 'black'), shoes: item('High-tops', 'black', 'white'), bag: item('Coffee to go') }),
   mk('The Punk', 'Outsider', 'm', { build: 2, skin: 1 }, { brows: 2 }, { style: 10, color: 14, facial: 1 }, { tattoos: 0b00101, piercings: 0b0001 }, { top: item('Tank top', 'black'), jacket: item('Studded vest', 'black', 'silver'), bottoms: item('Ripped jeans', 'black'), shoes: item('Combat boots', 'black'), jewel: item('Watch', 'black') }),
   mk('The Jogger', 'Disciplined', 'f', { build: 2, skin: 10 }, { shape: 4 }, { style: 20, color: 1 }, {}, { top: item('Sports bra', 'hot pink'), bottoms: item('Leggings', 'plum'), shoes: item('Running shoes', 'white', 'white'), jewel: item('Hoop earrings', 'gold') }),
   mk('The Outdoorsy', 'Hard worker', 'm', { build: 2, skin: 13 }, { shape: 2 }, { style: 1, color: 0, facial: 2 }, {}, { top: item('Hi-vis vest', 'hi-vis', 'black'), bottoms: item('Cargo pants', 'black'), shoes: item('Work boots', 'brown'), hat: item('Beanie', 'black') }),
   mk('The Local', 'Good vibes', 'm', { build: 4, skin: 0, age: 4 }, { shape: 1 }, { style: 8, color: 13, facial: 3 }, {}, { top: item('Hawaiian shirt', 'royal blue', 'orange'), bottoms: item('Shorts', 'khaki'), shoes: item('Flip-flops', 'navy'), glasses: item('Sunglasses') }),
-  mk('The Blue-collar', 'Keeps it real', 'm', { build: 2, skin: 2, age: 1 }, { shape: 2 }, { style: 2, color: 1, facial: 2 }, {}, { top: item('Work shirt', 'royal blue', 'navy'), bottoms: item('Work trousers', 'royal blue'), shoes: item('Work boots', 'brown'), hat: item('Baseball cap', 'navy', 'orange'), bag: item('Tool bag', 'red') }),
+  mk('The Blue-collar', 'Keeps it real', 'm', { build: 2, skin: 2, age: 1 }, { shape: 2 }, { style: 2, color: 1, facial: 2 }, {}, { top: item('Work shirt', 'royal blue', 'navy'), bottoms: item('Work pants', 'royal blue'), shoes: item('Work boots', 'brown'), hat: item('Baseball cap', 'navy', 'orange'), bag: item('Tool bag', 'red') }),
   mk('The Trendsetter', 'Ahead of the curve', 'f', { build: 0, skin: 15 }, { eyes: 1, lips: 4 }, { style: 24, color: 0 }, {}, { top: item('Crop top', 'black'), bottoms: item('Cargo pants', 'tan'), shoes: item('Sneakers', 'white'), jewel: item('Bangles', 'gold') }),
 ];
 
@@ -92,7 +92,7 @@ export function policeLook(L, rank = 0, kind = null, shades = false) {
     if (rank >= 5) O.jewel = item('Dress gloves');
   } else {
     O.top = item(rank >= 2 ? "Sergeant's shirt" : 'Uniform shirt', kind === 'rookie' ? 'sky' : 'navy', 'gold');
-    O.bottoms = item('Uniform trousers', 'navy');
+    O.bottoms = item('Uniform pants', 'navy');
     O.shoes = item('Work boots', 'black');
     O.hat = kind === 'rookie' || kind === 'k9' ? item('Baseball cap', 'navy', 'gold') : item('Police cap');
     if (kind === 'k9') O.jacket = item('Tactical vest', 'black');

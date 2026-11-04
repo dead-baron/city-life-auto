@@ -627,7 +627,7 @@ function lockIn(world, p) {
   endWalk(world, c);
   jail(world, p, st, c.secs, c.bail, c.stars, c.by, c.cell);
   cells.setDoor(world, c.cell.b, c.cell.c, false);
-  world.notify(p, 'The cuffs come off and the door locks behind you. Walk round, sit, use the toilet or hold the bars.', 'info');
+  world.notify(p, 'The cuffs come off and the door locks behind you. Walk around, sit, use the toilet or hold the bars.', 'info');
 }
 function endWalk(world, c) {
   const k = c.cell ? cells.blocks(world)[c.cell.b] : null;

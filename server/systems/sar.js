@@ -203,7 +203,7 @@ function step(world, p, dt) {
     return;
   }
   const c = j.call, vic = world.get(c.vic);
-  if (!vic || vic.removed) { endCall(world, p, 'The call was cancelled - someone else got to them.', 'info'); return; }
+  if (!vic || vic.removed) { endCall(world, p, 'The call was canceled - someone else got to them.', 'info'); return; }
   // a hurt patient's time runs down (aboard too); a hard landing with them aboard costs them (aircraft.js landSink)
   if ((v.landAt || 0) > c.landAt) {
     c.landAt = v.landAt;
@@ -373,7 +373,7 @@ export function devSar(world, p, msg = {}) {
   const ped = p.ped;
   if (!ped || ped.dead) return 'Not right now.';
   if (!p.job || p.job.type !== 'sar') {
-    if (p.job) jobs.failJob(world, p, 'Job cancelled.');
+    if (p.job) jobs.failJob(world, p, 'Job canceled.');
     const err = start(world, p, nearestBase(world.map, ped.x, ped.y));   // (the Search & Rescue HQ's pad - a hospital's yard only where there's no HQ)
     if (err) return err;
   }

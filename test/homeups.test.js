@@ -113,7 +113,7 @@ test('the garage: firewood on the bed stacked or put towards a floor upstairs, t
   for (let i = 0; i < 3; i++) { const c = bundle(w, v.x, v.y); c.state = 'loaded'; c.parent = v.id; c.slot = i; v.cargo[i] = c.id; }
   p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
   let a = players.findInteraction(w, p);
-  assert.match(a.label, /Your garage: stack the 3 bundles of firewood, or put them towards an upgrade/);
+  assert.match(a.label, /Your garage: stack the 3 bundles of firewood, or put them toward an upgrade/);
   a.run();
   let m = lastMenu(conn);
   assert.equal(m.poi, homeups.UP_POI);
@@ -127,7 +127,7 @@ test('the garage: firewood on the bed stacked or put towards a floor upstairs, t
   teleport(w, p.ped, h.garage.x + 20, h.garage.y);
   const c = bundle(w, p.ped.x + 6, p.ped.y); cargo.pickUp(w, p.ped, c);
   a = players.findInteraction(w, p);
-  assert.match(a.label, /Your garage: stack the firewood, or put it towards an upgrade/);
+  assert.match(a.label, /Your garage: stack the firewood, or put it toward an upgrade/);
   a.run(); pick(w, p, conn, /^u:stack$/);
   assert.equal(homeups.matsAt(prof, h.id).wood, 1, 'one stacked');
   assert.equal(felling.woodAt(p, h), 1);

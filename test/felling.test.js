@@ -238,7 +238,7 @@ test('firewood: driven to a buyer on the bed it sells by the load (a sawmill pay
   loaded(v, 2);
   p.ped.vehId = v.id; p.ped.seat = 0; v.seats[0] = p.ped.id;
   act = players.findInteraction(w, p);
-  assert.ok(act && /Your garage: stack the 2 bundles of firewood, or put them towards an upgrade/.test(act.label), `the prompt (${act && act.label})`);
+  assert.ok(act && /Your garage: stack the 2 bundles of firewood, or put them toward an upgrade/.test(act.label), `the prompt (${act && act.label})`);
   act.run();
   economy.handleMenu(w, p, homeups.UP_POI, 'u:stack');   // (the garage's menu: stack them - or towards an upgrade, homeups.test.js)
   assert.equal(felling.woodAt(p, h), 2, 'two bundles kept at that home');

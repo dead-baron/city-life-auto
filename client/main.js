@@ -1262,7 +1262,7 @@ function keepWindow(job) {
   S.win = job.win;
   console.info(`[world] the window ${job.win.keys.join(' ')}: ${job.win.kept || 0} files from this browser, ${job.win.fetched || 0} downloaded`);
   job.onWindow = (m) => {
-    if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world round you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
+    if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world around you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
     const t = performance.now();
     swapWorld(cityFromData(m.data));

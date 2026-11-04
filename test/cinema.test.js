@@ -54,7 +54,7 @@ test('buying a ticket and popcorn at the counter, sitting down in a screen, watc
   const { p } = joinPlayer(w, { cash: 100 });
   teleport(w, p.ped, C.counter.x, C.counter.y);
   const menu = economy.buildMenu(w, p, poi);
-  assert.ok(menu && JSON.stringify(menu).includes('Film Ticket'), 'the counter sells tickets');
+  assert.ok(menu && JSON.stringify(menu).includes('Movie Ticket'), 'the counter sells tickets');
   economy.handleMenu(w, p, poi.id, `i:filmTicket:${CINE.TICKET}:1`);
   economy.handleMenu(w, p, poi.id, `i:popcorn:${CINE.POPCORN}:1`);
   assert.equal(p.profile.inventory.filmTicket, 1, 'a ticket');

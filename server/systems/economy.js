@@ -79,7 +79,7 @@ function baseLabel(world, p, poi) {
     case 'gang': return gang.isMember(p) ? 'Talk to Syndicate HQ (members)' : 'Join the gang at Syndicate HQ';
     case 'smuggler': return "Knock at the Smuggler's Den";
     case 'charter': return 'Book a deep-sea fishing charter';
-    case 'station': { const eta = trains.nextTrainIn(world, poi.station, poi), cab = !!taxijob.interaction(world, p); return eta < 1 ? `${cab ? 'Check the trains and taxis' : 'Check the board'} at ${poi.label} - train in, walk up to the doors` : `Check the ${cab ? 'trains and taxis' : 'timetable'} at ${poi.label} - next train ${Math.round(eta)}s`; }   // (its taxi rank: the station's menu offers the cab - UI-4)
+    case 'station': { const eta = trains.nextTrainIn(world, poi.station, poi), cab = !!taxijob.interaction(world, p); return eta < 1 ? `${cab ? 'Check the trains and taxis' : 'Check the board'} at ${poi.label} - train in, walk up to the doors` : `Check the ${cab ? 'trains and taxis' : 'schedule'} at ${poi.label} - next train ${Math.round(eta)}s`; }   // (its taxi rank: the station's menu offers the cab - UI-4)
     case 'home': {
       const us = homes.unitsAt(world, poi);   // (an apartment block: its lobby - H65)
       if (us) {
@@ -90,7 +90,7 @@ function baseLabel(world, p, poi) {
       const owner = world.homeOwner.get(h.id);
       if (owner === p.pid) return `Go into your ${h.kind} (rest, garage, spawn)`;
       if (owner) return null;
-      return `Look round ${h.name} - for sale, $${h.price.toLocaleString()}`;
+      return `Look around ${h.name} - for sale, $${h.price.toLocaleString()}`;
     }
     case 'atm': return p.profile.cash > 0 ? `Use the ATM - $${p.profile.cash.toLocaleString()} on you to deposit` : 'Use the ATM';
     case 'club': return `Order at the bar - ${poi.label}`;
@@ -114,7 +114,7 @@ function baseLabel(world, p, poi) {
 const COUNTER = {
   winery: { label: (l) => `Taste the wine at ${l} - tasting room`, title: (l) => SHOPS.winery.title, sub: 'Estate reds and whites, poured by the bottle: a glass or two and your health comes back faster for a couple of minutes. The cellar pays more for grapes than any shop in town - pick them off the vines up the hill.' },
   fruitstand: { label: (l) => `Shop at ${l} (fruit, cider)`, title: (l) => l, sub: 'Fresh off the trees out back - pick your own for free, or buy a bag here. A cup of pressed cider puts the spring back in your step. They buy apples and oranges.' },
-  market: { label: (l) => `Browse ${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the farms round about. The stallholders buy fruit and honey too.' },
+  market: { label: (l) => `Browse ${l} - the stalls`, title: (l) => l, sub: 'Bread, fruit and honey from the nearby farms. The stallholders buy fruit and honey too.' },
   snack: { label: (l) => `Order at ${l} (hot dogs, lemonade)`, title: (l) => l, sub: 'Hot dogs, ice-cold lemonade and energy drinks.' },
   tackle: { label: (l) => `Shop at ${l} (bait, rods; buys fish)`, title: (l) => l, sub: null },
   clubhouse: { label: (l) => `Order at ${l} - the bar`, title: (l) => `${l} - ${SHOPS.clubhouse.title}`, sub: 'Members and guests welcome. Cocktails, coffee, a fine red and a hot dog at the turn.' },
@@ -340,14 +340,14 @@ export function buildMenu(world, p, poi) {
           break;
         }
         title = `${poi.label} - the lobby`;
-        sub = `${us.length} homes in this building, three doors a landing. Yours to go in; for sale to look round or buy (each a respawn point with a safe, a bed and parking out front); someone else's to knock at while they're in.`;
+        sub = `${us.length} homes in this building, three doors a landing. Yours to go in; for sale to look around or buy (each a respawn point with a safe, a bed and parking out front); someone else's to knock at while they're in.`;
         lobbyOpts(world, p, us, opts);
         break;
       }
       title = inside ? `${h.name} - inside` : h.name;
       if (!mine) {
         sub = `A ${h.dock ? 'waterfront ' : ''}${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage${h.dock ? ' and its own boat dock and boathouse' : ''}. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
-        opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk round it first' });   // (H65: homeinside.js tour)
+        opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk around it first' });   // (H65: homeinside.js tour)
         opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
         { const t = mortgage.terms(h); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
       } else {
@@ -398,7 +398,7 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'job:farm', label: p.job ? 'You already have a job' : 'Take a harvest contract (4 boxes)', dis: !!p.job });
       if (p.job) opts.push({ id: 'job:quit', label: 'Abandon current job' });
       title = poi.label;   // (the co-op's counter: seeds and what you grow - SHOPS.farm; farm work on the fields - farming.js)
-      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow. Horses to hire or buy, and yours saddled up.';
+      sub = 'Harvest contracts, farm work on the fields with the co-op tractor (paid by the row), seeds for your garden - and they buy what you grow. Horses to rent or buy, and yours saddled up.';
       if (!p.job) opts.push({ id: 'job:fieldwork', label: 'Farm work: the co-op tractor on the fields (paid by the row)' });
       if (!p.job && farming.anyRipe(world)) opts.push({ id: 'job:combine', label: 'Harvest: the co-op combine on the ripe rows (two at a time)' });
       opts.push(...horses.menuOpts(world, p, poi));   // (#325: hire one, buy one, saddle up yours - horses.js)
@@ -447,8 +447,8 @@ export function buildMenu(world, p, poi) {
       break;
     case 'barber':   // (the barbershops and the hair salons: map.js buildClothesShops, looks.js cut)
       title = poi.label;
-      sub = poi.salon ? 'Cuts and colour, previewed on you before you pay.' : 'Cut, colour, beard and moustache, previewed on you before you pay.';
-      opts.push({ id: 'chair', label: poi.salon ? 'Take a seat: cut or colour' : 'Take a seat: cut, colour, beard, moustache' });
+      sub = poi.salon ? 'Cuts and color, previewed on you before you pay.' : 'Cut, color, beard and mustache, previewed on you before you pay.';
+      opts.push({ id: 'chair', label: poi.salon ? 'Take a seat: cut or color' : 'Take a seat: cut, color, beard, mustache' });
       break;
     default: break;
   }
@@ -475,7 +475,7 @@ function lobbyOpts(world, p, us, opts) {
       const prof = store.get(o), inNow = homeinside.someoneIn(world, u);
       opts.push({ id: `hu:knock:${id}`, label: `${nm} - ${prof && prof.name ? `${prof.name}'s` : 'taken'}${inNow ? ': knock' : ''}`, note: inNow ? 'they\'re in' : 'nobody in', dis: !inNow });
     } else {
-      opts.push({ id: `hu:unit:${id}`, label: `${nm} for sale - look round or buy`, price: u.price, note: what });   // (H67: one row a flat - its own menu)
+      opts.push({ id: `hu:unit:${id}`, label: `${nm} for sale - look around or buy`, price: u.price, note: what });   // (H67: one row a flat - its own menu)
     }
   }
   // a home of yours in here: your cars come out at the building's parking out front
@@ -486,7 +486,7 @@ function lobbyOpts(world, p, us, opts) {
 function unitWhat(u) { const beds = homeinside.bedsIn(u); return `${u.what || 'apartment'}, ${(u.floor || 1) > 1 ? `floor ${u.floor}` : 'ground floor'} · ${beds} bed${beds === 1 ? '' : 's'} · parks ${u.slots}`; }
 function unitSaleOpts(u) {
   const one = u.lobby == null, nm = `Unit ${u.unit || 1}`;
-  return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: 'walk round it first' }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
+  return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: 'walk around it first' }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
 }
 const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
@@ -745,7 +745,7 @@ function execute(world, p, poi, opt) {
         if (!charge(300)) return 'Not enough money.';
         v.hp = v.def.hp; v.burnUntil = 0; v.flat = false; v.dead = false; v.deadBoomAt = 0; v.deadFireAt = 0;
         v.dz = 0; v.zh = null; v.holes = 0; v.off = 0; v.dst = 0; v.plasmaHits = 0;   // (the dents beaten out, the holes filled, new parts: task #402)
-        world.notify(p, 'Body work done (and new tyres).', 'good');
+        world.notify(p, 'Bodywork done (and new tires).', 'good');
       }
       return null;
     }

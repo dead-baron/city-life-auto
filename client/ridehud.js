@@ -17,7 +17,7 @@ export function drawHorseHud(g, W, H, S, h, now) {
   g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(x - 1, y - 1, w + 2, 8);
   g.fillStyle = blown ? (Math.floor(now * 3) % 2 ? '#c8502a' : '#8a3a22') : st > 0.35 ? '#e8c27a' : '#e0803a';
   g.fillRect(x, y, Math.round(w * Math.max(0, Math.min(1, st))), 6);
-  if (h.hire !== null && h.hire !== undefined) { g.textBaseline = 'top'; g.fillStyle = h.hire < 60 ? '#ff9a6a' : '#f2e2c4'; g.fillText(`HIRED · ${Math.floor(h.hire / 60)}:${String(h.hire % 60).padStart(2, '0')}`, W / 2, y + 10); }
+  if (h.hire !== null && h.hire !== undefined) { g.textBaseline = 'top'; g.fillStyle = h.hire < 60 ? '#ff9a6a' : '#f2e2c4'; g.fillText(`RENTED · ${Math.floor(h.hire / 60)}:${String(h.hire % 60).padStart(2, '0')}`, W / 2, y + 10); }
   g.restore();
 }
 
