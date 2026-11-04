@@ -20058,3 +20058,13 @@ It solves early travel without making the cars you buy worth less.
   price, not in your owned cars). A future chop shop or car sale should check `v.starter`.
 - test/starter.test.js covers the first day in the lot, registered and unsellable, lost then free at a public garage
   after the cooldown, the move to an owned garage, one per player, and a rejoin and a restart. It fails on the old build.
+
+## 2026-11-04 - One server update: the safe exit, rides you own and carry, the starter car
+
+Merged together so players reconnect once (branches safeexit, rides, starter). Two fixes from putting them together:
+- The starter car and the set-down surfboard had both taken vehicle index 86; the starter car is now 87
+  (test/fleet.test.js checks each index is unique).
+- The renderer's code budget goes from 401 to 404 KB (tools/perf.mjs). The rides' art (the surfboard on the sand and under
+  the arm) and the starter car's look took it to 402. Raising it by a little more than that leaves room for the next ride,
+  so it doesn't need its own raise.
+- Bladers now count as skaters at the skate parks. npc.js looked for the gait 'blades', but the gait is 'blade'.
