@@ -70,7 +70,8 @@ import { groundPixel } from '../ground.js';
 const BLAZES = ['#2a62c8', '#c8342a', '#e8c030', '#f2f0e8'];
 import { drawText, textWidth } from '../font.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { foodLayout } from '../../../shared/foodrooms.js';   // (IN8: the diner, the fast-food place, the restaurant)
+import { foodLayout } from '../../../shared/foodrooms.js';
+import { cliffOutline, cliffTiers, CLIFF_PAD } from '../../../shared/cliffshape.js';   // (a cliff face's outline: the world build's solid rock under it is the same)   // (IN8: the diner, the fast-food place, the restaurant)
 import { shopRoom } from '../../../shared/shoprooms.js';   // (the shops fitted out by their trade)
 import { unitDoor, DOOR_COLS } from '../../../shared/doors.js';   // (the doors that open live)
 import { shopFloorPx, shopWallPx, drawShop } from '../shopart.js';
@@ -365,18 +366,11 @@ export function makeStatic(r) {
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
     case 'zen': return makeZen();
     case 'cliff': {
-      // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face)
-      const W = r.w, D = r.d, pad = 30, poly = [];
-      for (let k = 0; k < 48; k++) {
-        const a = k / 48 * TAU, c = Math.cos(a), sn = Math.sin(a), e = 0.55;
-        let x = Math.sign(c) * Math.abs(c) ** e * W / 2, y = Math.sign(sn) * Math.abs(sn) ** e * D / 2;
-        const j = 1 + (hash(k, 3, r.s || 1) - 0.5) * 0.18 + Math.sin(a * 5 + (r.s || 1)) * 0.05;
-        x *= j; y *= j;
-        if (sn > 0 && Math.abs(x) < W * 0.22) y = D / 2;   // (the face round the adit stays straight)
-        poly.push([x + W / 2 + pad, y + D / 2 + 6]);
-      }
+      // the outline: a squashed superellipse, ragged, its south side flattened where the adit is (the face) - the
+      // shape the world build makes solid under it (shared/cliffshape.js: the rock drawn is the rock you can't walk into)
+      const W = r.w, D = r.d, pad = CLIFF_PAD, poly = cliffOutline(W, D, r.s || 1).map(([x, y]) => [x + W / 2 + pad, y + D + 6]);
       const ss = r.st === 'sandstone';
-      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: [[0, r.h * 0.6], [D * 0.22, r.h * 0.84], [D * 0.42, r.h]], veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
+      return rockSprite(W + pad * 2, D + 16, r.h + 6, (Tr) => Tr.plateau({ poly }, { style: ss ? 'sandstone' : 'granite', tiers: cliffTiers(D, r.h), veg: ss ? { kind: 'sage', density: 0.05, band: 2 } : { kind: 'grass', density: 0.1, band: 2 }, hang: ss ? null : { kind: 'moss', amount: 0.35 }, moss: ss ? 0 : 0.14, seed: r.s || 1, jag: 10 }), W / 2 + pad, D + 6, r.s || 1);
     }
     case 'crystal': {
       const G = crystals(r.s || 1, r.size || 20, '#5ac8ff');

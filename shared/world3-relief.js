@@ -30,6 +30,7 @@ import { peakHeight, TREE_LINE } from './world3-biomes.js';
 import { DISTRICTS } from './mapcore.js';
 import { GROUND3 } from './world3-layout.js';
 import { AIRSTRIPS3 } from './world3-wild.js';   // (the tables keep off Lucky Mesa's strip: used in the build only - the two modules import each other)
+import { cliffSolid } from './cliffshape.js';
 
 export const RELIEF_CELL = 8;      // the coarse grid of the biomes' ground (tiles)
 export const CLIFF_SLOPE = 2.2;    // m per tile: steeper (on open wild ground) is a cliff band
@@ -530,8 +531,28 @@ export function buildRelief3(m, L, addProp) {
   const was = new Uint8Array(N);   // (what each band tile was: given back where no face stands on it - below)
   for (let i = 0; i < N; i++) if (cliff[i]) { was[i] = m.tiles[i]; m.tiles[i] = T.WALL; m.reserve[i] |= 32; }
   CLIFFS.set(m, cliff);
-  const faced = new Uint8Array(N);   // (the band tiles under a face's picture)
-  const face = (x0, y0, x1, y1) => { for (let y = Math.max(0, y0); y <= Math.min(H - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) faced[y * W + x] = 1; };
+  // (2026-11-04, the owner: "There are cliffs in the desert that you can walk into") a face's rock is solid where it's
+  // drawn, no more and no less: each tile under its rock as the art draws it (shared/cliffshape.js cliffSolid - its
+  // ragged outline across the arc's box, and the ground north of it its tiers hide as they stand up the screen) is
+  // made rock with the band, and what of the band no face is drawn over goes back to its ground (below). Was: the
+  // band's tiles alone - the outline's corners off a curving rim, a run's shallower columns and the ground behind the
+  // face open, a walker drawn inside the rock. A face that would stand on a road, a track, a place or water isn't put.
+  const faced = new Uint8Array(N);   // (the tiles under a face's rock as it's drawn)
+  const band0 = cliff.slice();   // (the bands as the slope laid them: where the faces go, whatever rock the faces add)
+  const open = (i) => { const t = m.tiles[i]; return m.land[i] && (!m.reserve[i] || m.reserve[i] === 32) && near[i] > 2 && (t === T.GRASS || t === T.DIRT || t === T.SAND || t === T.WALL); };
+  const face = (x, y, w, d, h, s) => {
+    const at = cliffSolid(x, y, w, d, h, s);
+    for (const [tx, ty] of at) if (tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || !open(ty * W + tx)) return false;
+    for (const [tx, ty] of at) {
+      const i = ty * W + tx;
+      faced[i] = 1;
+      if (cliff[i]) continue;
+      if (m.tiles[i] !== T.WALL) { was[i] = m.tiles[i]; m.tiles[i] = T.WALL; }
+      else was[i] = T.WALL;
+      m.reserve[i] |= 32; cliff[i] = 1; cliffs++;
+    }
+    return true;
+  };
   // the desert's tables (H50): red sandstone all round each rim - its band in arcs of 6 to 13 tiles round the rim (shorter on a small one; 2026-10-21:
   // was a 6-tile grid, a ring of even knobs), each arc's face as tall as the table on the south, two thirds of it east
   // and west, a low lip on the north (the face looks away), each a little taller or lower than the next
@@ -540,7 +561,7 @@ export function buildRelief3(m, L, addProp) {
   for (const t of tables) {
     const [ex, ey] = tableReach(t, 5), bx0 = Math.max(1, Math.floor(t.x - ex)), by0 = Math.max(1, Math.floor(t.y - ey)), bx1 = Math.min(W - 2, Math.ceil(t.x + ex)), by1 = Math.min(H - 2, Math.ceil(t.y + ey));
     const band = [];
-    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const i = y * W + x; if (cliff[i] && !own[i] && tableEdge(t, x, y) <= 4) { own[i] = 1; band.push([Math.atan2((y - t.y) / t.ry, (x - t.x) / t.rx), x, y]); } }
+    for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) { const i = y * W + x; if (band0[i] && !own[i] && tableEdge(t, x, y) <= 4) { own[i] = 1; band.push([Math.atan2((y - t.y) / t.ry, (x - t.x) / t.rx), x, y]); } }
     if (band.length < 4) continue;
     band.sort((p, q) => p[0] - q[0] || p[2] - q[2] || p[1] - q[1]);
     const rr = (t.rx + t.ry) / 2;
@@ -551,8 +572,9 @@ export function buildRelief3(m, L, addProp) {
       if (n < 4) continue;
       const nx = (sx / n - t.x) / t.rx, ny = (sy / n - t.y) / t.ry, nl = Math.sqrt(nx * nx + ny * ny) || 1, f = ny / nl;
       const kf = f > 0.45 ? 1 : f > -0.45 ? 0.65 : 0.3, h = Math.round(clamp((40 + t.h * 3) * kf * (0.85 + 0.3 * hash(t.x, t.y + k, 7314)), 30, 160) / 10) * 10;
-      addProp(m, 'cliff', (x0 + x1 + 1) / 2 * TILE, (y1 + 1) * TILE, 0, { w: (x1 - x0 + 1) * TILE, d: (y1 - y0 + 1) * TILE, h, s: (t.s * 7 + k * 13) % 8 + 1, st: 'sandstone', relief: 1 });
-      face(x0, y0, x1, y1);
+      const fx = (x0 + x1 + 1) / 2 * TILE, fy = (y1 + 1) * TILE, fw = (x1 - x0 + 1) * TILE, fd = (y1 - y0 + 1) * TILE, fs = (t.s * 7 + k * 13) % 8 + 1;
+      if (!face(fx, fy, fw, fd, h, fs)) continue;
+      addProp(m, 'cliff', fx, fy, 0, { w: fw, d: fd, h, s: fs, st: 'sandstone', relief: 1 });
       faces++;
     }
   }
@@ -561,14 +583,18 @@ export function buildRelief3(m, L, addProp) {
   for (let y = 1; y < H - 1; y++) {
     let run = 0, drop = 0, depth = 0;
     for (let x = 1; x < W; x++) {
-      const i = y * W + x, foot = x < W - 1 && cliff[i] && !own[i] && !cliff[i + W] && z[i - W] - z[i + W] > 3;
-      if (foot && run < 8) { run++; drop = Math.max(drop, z[i - W * Math.min(3, y)] - z[i + W]); let dd = 1; while (dd < 5 && y - dd > 0 && cliff[i - dd * W]) dd++; depth = Math.max(depth, dd); continue; }
+      const i = y * W + x, foot = x < W - 1 && band0[i] && !own[i] && !band0[i + W] && z[i - W] - z[i + W] > 3;
+      if (foot && run < 8) { run++; drop = Math.max(drop, z[i - W * Math.min(3, y)] - z[i + W]); let dd = 1; while (dd < 5 && y - dd > 0 && band0[i - dd * W]) dd++; depth = Math.max(depth, dd); continue; }
       if (run >= 2) {
         const x0 = x - run, st = (DISTRICTS[m.dist[y * W + x0]] || {}).style, cx = (x0 + run / 2) * TILE, cy = (y + 1) * TILE, h = Math.round(clamp(40 + drop * 3, 50, 160) / 10) * 10;
-        if (st === 'desert' || st === 'rocky' || m.dist[y * W + x0] === 48) addProp(m, 'cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: (x0 * 7 + y) % 50 + 1, relief: 1, ...(st === 'desert' && { st: 'sandstone' }) });
-        else addProp(m, 'cliffwall', cx, cy - 0.4 * TILE, 0, { len: run * TILE, h, d: 64, s: x0 + y, relief: 1 });
-        face(x0, y - depth + 1, x - 1, y);
-        faces++;
+        if (st === 'desert' || st === 'rocky' || m.dist[y * W + x0] === 48) {
+          const fs = (x0 * 7 + y) % 50 + 1;
+          if (face(cx, cy, run * TILE, depth * TILE, h, fs)) { addProp(m, 'cliff', cx, cy, 0, { w: run * TILE, d: depth * TILE, h, s: fs, relief: 1, ...(st === 'desert' && { st: 'sandstone' }) }); faces++; }
+        } else {
+          addProp(m, 'cliffwall', cx, cy - 0.4 * TILE, 0, { len: run * TILE, h, d: 64, s: x0 + y, relief: 1 });
+          for (let fy = y - depth + 1; fy <= y; fy++) for (let fx = x0; fx < x; fx++) faced[fy * W + fx] = 1;
+          faces++;
+        }
       }
       run = foot ? 1 : 0; drop = foot ? z[i - W] - z[i + W] : 0; depth = foot ? 1 : 0;
     }
