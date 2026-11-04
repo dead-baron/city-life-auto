@@ -625,7 +625,7 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #zone-l { position: absolute; left: 0; top: 36%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
 body.portrait #zone-l { top: 50%; }
 .stick { position: absolute; border-radius: var(--r3); pointer-events: none; }
-#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 3px solid var(--gold); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); opacity: .55; transition: opacity var(--t2); }
+#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 1px solid var(--hair); background: var(--disc); box-shadow: none; opacity: .55;   /* (the touch buttons' disc and hairline - the look only; where it sits and how it works as before) */ transition: opacity var(--t2); }
 #stick-l.active { opacity: 1; }
 .stick .knob { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); }
 #stick-l .knob { border: 7px solid var(--cream); background: transparent; box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); }
@@ -672,7 +672,7 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 /* a long press: the button's name in a small tip over it (client/touchslots.js) */
 #tbtip { position: fixed; z-index: 8; padding: var(--s1) var(--s3); border-radius: var(--r2); background: var(--disc-solid); border: 1px solid var(--hair); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; pointer-events: none; animation: prpop var(--t-pop) var(--ease); }
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
-#touch.idle #tbtns button:not(.pulse) { opacity: .5; }
+#touch.idle #tbtns button:not(.pulse):not([data-slot=fire]) { opacity: .7; }   /* (left alone a while: a little quieter, still a disc on a bright floor; FIRE stays its solid red - faded it read as pink) */
 #touch.idle #stick-l:not(.active) { opacity: .25; }
 #touch.idle #stick-r:not(.aiming) { opacity: .6; }
 #dev-btn { display: none !important; }

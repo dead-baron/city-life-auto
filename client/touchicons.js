@@ -254,6 +254,7 @@ const VG = {
     b: 'M6.5 13V8a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2-.5 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.4 1V14c0 3.9-2.8 6.5-6.6 6.5H12c-3.2 0-5.5-2.4-5.5-5.5z', c: 'M9.7 8.6v2.4M12.9 8v2.8M16.1 8.4v2.6M8.5 13.5h3' },
   bullet: { a: 'M9 21V10c0-3 1.3-5.8 3-7 1.7 1.2 3 4 3 7v11zM9 16.5h6', b: 'M8.5 21.5V10c0-3.2 1.5-6.3 3.5-7.7 2 1.4 3.5 4.5 3.5 7.7v11.5z', c: 'M8.5 16.5h7' },
   crosshair: { a: 'M12 12m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0M12 2v4M12 18v4M2 12h4M18 12h4', l: 'M12 12h.01' },
+  target: { a: 'M12 12m-8.5 0a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0', l: 'M12 12h.01', b: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 1 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 1 0 0-12zM12 9.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 1 1 0-5z' },
   hand: { a: 'M9 13.5V5a1.5 1.5 0 0 1 3 0v6.5M12 11a1.5 1.5 0 0 1 3 0v1M15 11.5a1.5 1.5 0 0 1 3 0v1M18 12a1.5 1.5 0 0 1 3 0v4a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1L9 15', l: 'M4.5 4l1.5 1.5M3 9h2M15.5 4L14 5.5',
     b: 'M9 15V5a1.5 1.5 0 0 1 3 0v5.6a1.5 1.5 0 0 1 3 .4 1.5 1.5 0 0 1 3 .5 1.5 1.5 0 0 1 3 .5V16a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1z', c: 'M12 11.5v2.5M15 11.8v2.4M18 12.3v2' },
   car: { a: 'M3 16.5V13l2.2-5.5h11.3l3.2 5.5H21a1 1 0 0 1 1 1v2.5M3 16.5h1.5M9.5 16.5h5M19.5 16.5H22M5 13h14.7M11.5 7.5V13M7 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M17 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
@@ -326,6 +327,6 @@ export function glyphOfWeapon(id, type) {
 }
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
 const ICON = { HIT: 'fist', THROW: 'throw', TRICK: 'star', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'up', EXIT: 'exit', OFF: 'exit', SIREN: 'siren', GALLOP: 'gallop' };
-const ACTION_ICON = { fire: 'bullet', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
+const ACTION_ICON = { fire: 'target', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
 export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'hand';
 export const svg = (k) => glyph(k);

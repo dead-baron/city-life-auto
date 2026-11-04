@@ -76,7 +76,7 @@ test('the HUD and the touch buttons use the pixel icons', () => {
 // container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
 test('the touch buttons: one vector glyph for every action and label a slot holds, the weapon as a silhouette', () => {
   for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'bullet'); assert.equal(iconOf('action', 'ACT'), 'hand');
+  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'hand');
   assert.equal(iconOf('vehicle', 'CAR'), 'car'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield');
   assert.equal(iconOf('reload', 'RELOAD'), 'reload'); assert.equal(iconOf('cruiser', 'COP CAR'), 'badge'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
   for (const n of GLYPH_NAMES) {
