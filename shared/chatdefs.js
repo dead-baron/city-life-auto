@@ -3,7 +3,7 @@
 // to the people you've met.
 //   near    - proximity text, about 40 m, as speech bubbles over heads and a line in the log
 //   crew    - your crew (free text)
-//   faction - police on duty, or the gang / biker group you're in
+//   faction - police on duty, or the gang you're in (biker groups: FACTIONS.biker, off until they exist)
 //   phone   - a message to one contact (someone you've met, traded or crewed with) or a crewmate, anywhere; kept
 //             for them while they're offline
 export const CHANNELS = ['near', 'crew', 'faction', 'phone'];
@@ -27,4 +27,6 @@ export const EMOTES = {
   dance: { n: 'Dance', text: 'dances' }, clap: { n: 'Clap', text: 'claps' }, facepalm: { n: 'Facepalm', text: 'facepalms' },
   salute: { n: 'Salute', text: 'salutes' }, sorry: { n: 'Sorry', text: 'apologizes' }, angry: { n: 'Angry', text: 'is angry' },
 };
+// the factions that have a chat: biker groups don't exist yet (the owner, 11-04) - their channel waits behind this flag
+export const FACTIONS = { police: true, gang: true, biker: false };
 export const REPORT_WHY = ['hate', 'sexual', 'harassment', 'spam', 'cheating', 'name', 'other'];

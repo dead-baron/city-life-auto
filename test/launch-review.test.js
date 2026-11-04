@@ -32,7 +32,7 @@ function launch(over = {}) {
   const world = fakeWorld(); world.stats = { tickMs: 0 };
   const c = clock();
   const cfg = { ...config, launch: { ...config.launch, devOpen: true, google: { id: '', secret: '' }, discord: { id: '', secret: '' }, reddit: { id: '', secret: '' }, email: { key: '', from: '' }, ...over } };
-  const L = createLaunch({ config: cfg, store, world, ip: () => '1.2.3.4', dataDir: null, now: c.now, log: quiet });
+  const L = createLaunch({ config: cfg, store, world, ip: () => '1.2.3.4', dataDir: null, now: c.now, log: quiet, signOutCloseMs: 0 });
   const join = (o = {}) => { const p = fakePlayer(world, store, o); L.hooks.join(p, {}, {}); return p; };
   return { L, world, c, join };
 }
@@ -192,6 +192,7 @@ test('9. sign out everywhere closes the account\'s live sessions; the stale toke
   const old = L.accounts.token(p.pid);
   const r = await call(L.authHttp.handle, { method: 'POST', url: '/auth/signout-all', headers: { authorization: `Bearer ${old}` } });
   assert.equal(r.status, 200);
+  await new Promise((z) => setTimeout(z, 20));   // (closed a moment after the reply: launch.js signOutCloseMs)
   assert.equal(p.conn.open, false);
   assert.equal(p.conn.code, 4015);
   const again = L.login(old, {});

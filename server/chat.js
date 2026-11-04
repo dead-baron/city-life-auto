@@ -11,7 +11,7 @@
 // (server -> page): { t: 'chat', ch, n (sender's name), id (sender's public id), eid (their ped, for the bubble: near),
 //   text, at, own? } · { t: 'emote', eid, e, n, id } · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks }
 //   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
-import { CHAT, CHANNELS, EMOTES, REPORT_WHY } from '../shared/chatdefs.js';
+import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
 import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
@@ -33,13 +33,13 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
   const recent = new WeakMap();   // p -> { lines: [at...], phone: [at...], last: { text, at }, emoteAt, said: [] }
   const rec = (p) => { let r = recent.get(p); if (!r) { r = { lines: [], phone: [], last: null, emoteAt: -1e9, said: [] }; recent.set(p, r); } return r; };
 
-  // the faction you talk to: police on duty, or your gang / biker group
+  // the faction you talk to: police on duty, or your gang (a biker group's channel waits for FACTIONS.biker)
   function factionKey(p) {
-    if (p.badge) return 'police';
+    if (p.badge && FACTIONS.police) return 'police';
     const g = p.profile && p.profile.gang;
-    if (g) return `gang:${g}`;
+    if (g && FACTIONS.gang) return `gang:${g}`;
     const b = p.profile && p.profile.biker;
-    if (b) return `biker:${b}`;
+    if (b && FACTIONS.biker) return `biker:${b}`;
     return null;
   }
   const hears = (q, from, ch) => {

@@ -9,7 +9,9 @@ import { FTUE_STEPS } from './analytics.js';
 
 const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
 
-export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, now = Date.now, stats = null }) {
+// texts: { perf() -> string, errors() -> string } - the devices' reports and the pages' errors (server/perfreports.js),
+// read at /admin/perf and /admin/clienterrors by admins and the owner (the owner's call, 11-04: not public any more)
+export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, now = Date.now, stats = null, texts = null }) {
   const links = new Map(), sessions = new Map();
   const rl = createRateLimiter(now);
   const secure = publicUrl.startsWith('https://');
@@ -30,7 +32,7 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
 
   const shell = (title, body, w) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)} - City Life Auto</title>
 <style>body{font:14px/1.4 system-ui,sans-serif;background:#14161a;color:#e8e8e8;margin:16px}a{color:#8cc8ff}table{border-collapse:collapse;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #333;padding:3px 7px;text-align:left;vertical-align:top}th{background:#22252b}h1{font-size:20px}h2{font-size:16px;margin-top:24px}.n{text-align:right;font-variant-numeric:tabular-nums}.bad{color:#ff8a80}.ok{color:#9be29b}nav a{margin-right:14px}.bar{display:inline-block;height:9px;background:#5b9bd5;vertical-align:middle}</style>
-<nav>${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}<a href="/admin/reviews">Review list</a> · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
+<nav>${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}<a href="/admin/reviews">Review list</a><a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a> · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
   const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c) => (typeof c === 'number' ? `<td class="n">${c.toLocaleString('en-US')}</td>` : `<td>${c}</td>`)).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">nothing yet</td></tr>`}</table>`;
   const when = (t) => (t ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') : '');
   const j = (v) => (v === undefined ? '' : esc(typeof v === 'string' ? v : JSON.stringify(v)));
@@ -105,6 +107,12 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
     const w = who(req);
     if (!w) { sendHTML(res, 401, 'Signed out - open this page from the game (Settings -> Account -> staff tools).'); return true; }
     const page = path.slice(7);
+    if (page === 'perf' || page === 'clienterrors') {
+      if (!allowed(w.role, 'reviews')) { sendHTML(res, 403, 'Not for your role.'); return true; }
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
+      res.end(texts ? (page === 'perf' ? texts.perf() : texts.errors()) : '');
+      return true;
+    }
     const need = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'reviews' ? 'reviews' : null;
     if (!need) { sendHTML(res, 404, 'No such page.'); return true; }
     if (!allowed(w.role, need)) { sendHTML(res, 403, 'Not for your role.'); return true; }

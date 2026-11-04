@@ -27,6 +27,16 @@ import { verifyRegistration, verifyAssertion, createChallenges, ALG } from './we
 
 const FLOW_TTL_MS = 10 * 60e3, EMAIL_TTL_MS = 15 * 60e3, PEND_TTL_MS = 5 * 60e3;
 const PN_RE = /^[A-Za-z0-9_-]{16,64}$/;
+// the page's live nonces (a few: a Google sign-in started after an email link was sent doesn't spoil the link) - does
+// one of them match the flow's?
+export function pnMatches(body, want) {
+  if (!want || !body) return false;
+  const list = Array.isArray(body.pns) ? body.pns.slice(0, 5) : [];
+  if (typeof body.pn === 'string') list.push(body.pn);
+  let ok = false;
+  for (const x of list) if (typeof x === 'string' && safeEqual(x, want)) ok = true;   // (every one compared: no early out)
+  return ok;
+}
 const b64u = (b) => Buffer.from(b).toString('base64url');
 const pkce = () => { const verifier = randomBytes(32).toString('base64url'); return { verifier, challenge: b64u(createHash('sha256').update(verifier).digest()) }; };
 
@@ -263,21 +273,28 @@ export function createAuthHttp(opts) {
       if (req.method !== 'POST' && path !== '/auth/me') { bad(res, 405, 'POST only.'); return true; }
       if (path === '/auth/redeem') {
         if (limited(req, 'redeem', 30, 60e3)) { bad(res, 429, 'Too many tries.'); return true; }
-        const body = await readJSON(req, 1024), v = body && A.redeemLoginCode(body.code);
+        const body = await readJSON(req, 2048), peek = body && A.redeemLoginCode(body.code, { keep: true });
+        if (!peek) { bad(res, 400, 'That sign-in code expired - sign in again.'); return true; }
+        // the page that started it. An email link opened in another browser (or one someone else sent you) isn't bound
+        // to this page: it isn't used up, and the page asks first - "Sign in as <name>? This replaces the character on
+        // this device" - and sends confirm with the answer. Never a silent switch; never for OAuth.
+        if (peek.pn && !pnMatches(body, peek.pn)) {
+          if (!peek.loose) { A.redeemLoginCode(body.code); bad(res, 403, 'Finish signing in on the page you started from.'); return true; }
+          if (body.confirm !== true) { const prof = A.profileOf(peek.pid); sendJSON(res, 409, { confirm: true, name: prof ? prof.name : 'that account', err: 'Confirm this sign-in first.' }); return true; }
+        }
+        const v = A.redeemLoginCode(body.code);
         if (!v) { bad(res, 400, 'That sign-in code expired - sign in again.'); return true; }
-        // the page that started it (email may be opened in another browser: a login only, never a link)
-        if (v.pn && !v.loose && !(typeof body.pn === 'string' && safeEqual(body.pn, v.pn))) { bad(res, 403, 'Finish signing in on the page you started from.'); return true; }
         if (A.banned(v.pid)) { bad(res, 403, 'This account is banned.'); return true; }
         sendJSON(res, 200, { token: A.token(v.pid), pid: v.pid, method: v.method });
         return true;
       }
       if (path === '/auth/link-confirm') {
         if (limited(req, 'redeem', 30, 60e3)) { bad(res, 429, 'Too many tries.'); return true; }
-        const body = await readJSON(req, 1024);
+        const body = await readJSON(req, 2048);
         sweep();
         const code = body && typeof body.code === 'string' ? body.code : '', pv = pending.get(code);
         if (!pv) { bad(res, 400, 'That sign-in expired - try again.'); return true; }
-        if (!(typeof body.pn === 'string' && safeEqual(body.pn, pv.pn))) { bad(res, 403, 'Finish this on the page you started from (the same browser and tab).'); return true; }
+        if (!pnMatches(body, pv.pn)) { bad(res, 403, 'Finish this on the page you started from (the same browser and tab).'); return true; }
         const known = A.findLogin(pv.provider, pv.sub), action = String(body.action || '');
         if (action === 'link') {
           const pid = who(req);
@@ -337,8 +354,8 @@ export function createAuthHttp(opts) {
       }
       if (path === '/auth/signout-all') {
         const token = A.signOutEverywhere(pid);
-        if (opts.onSignOutAll) opts.onSignOutAll(pid);   // (its live sessions closed: each comes back with whatever token it holds)
-        sendJSON(res, 200, { token });
+        sendJSON(res, 200, { token });   // (the reply first: the asking page has its new token before its socket closes)
+        if (opts.onSignOutAll) opts.onSignOutAll(pid);   // (its live sessions closed - after a moment: launch.js)
         return true;
       }
       bad(res, 404, 'No such endpoint.');

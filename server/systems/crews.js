@@ -16,6 +16,12 @@ import { CREW } from '../../shared/rules.js';
 import { store } from '../store.js';
 
 const kept = () => (store.kept.crews ||= {});
+// Guests and crews (the owner, 11-04): while a sign-in is on offer (server/launch.js sets the policy), a guest can join a
+// crew but not start or lead one. With no policy - offline practice, or no provider switched on - nothing changes.
+let policy = { limited: () => false };
+export function setPolicy(p) { policy = { ...policy, ...p }; }
+export const GUEST_LEAD = 'Guests can\'t start or lead a crew - sign in (Settings \u2192 Account) to lead one.';
+const limited = (p) => !!(p && policy.limited(p));
 let index = null, indexOf = null, seq = 0;   // pid -> crew id (rebuilt when the crews change, or for a new store)
 function idx() {
   const K = kept();
@@ -74,6 +80,7 @@ export function askPrompt(world, p) {
 export function invite(world, p, q) {
   if (!fit(p) || !fit(q) || q === p || crewOf(q.pid)) return false;
   const mine = crewOf(p.pid);
+  if (!mine && limited(p)) { world.notify(p, GUEST_LEAD, 'warn'); return false; }   // (asking someone in starts a crew you'd lead)
   if (mine && mine.members.length >= CREW.max) { world.notify(p, `Your crew's full (${CREW.max}).`, 'warn'); return false; }
   const prev = q.crewAsk;   // (an asking that stands isn't overwritten; the same one again only after a while)
   if (prev && world.time - prev.at <= CREW.inviteS + (prev.from === p.pid ? CREW.askAgainS : 0)) return false;
@@ -92,6 +99,7 @@ export function accept(world, p) {
   const K = kept();
   let id = crewIdOf(q.pid), c = id ? K[id] : null;
   if (c && c.members.length >= CREW.max) { world.notify(p, `${q.name}'s crew is full now.`, 'warn'); return false; }
+  if (!c && limited(q)) { world.notify(p, `${q.name} can't start a crew as a guest.`, 'warn'); world.notify(q, GUEST_LEAD, 'warn'); return false; }
   if (!c) {
     do id = `c${Date.now().toString(36)}${(seq++).toString(36)}`; while (K[id]);   // (two crews in one tick: their own ids)
     c = K[id] = { lead: q.pid, members: [q.pid], names: { [q.pid]: q.name } };
@@ -110,7 +118,7 @@ export function leave(world, p, why = 'left the crew') {
   if (!c) return false;
   c.members = c.members.filter((pid) => pid !== p.pid);
   delete c.names[p.pid];
-  if (c.lead === p.pid) c.lead = c.members[0] || null;
+  if (c.lead === p.pid) c.lead = c.members.find((pid) => { const m = world.players.get(pid); return !(m && limited(m)); }) || c.members[0] || null;   // (a signed-in member first: a guest leads only if there's nobody else)
   const who = p.name || 'Someone';
   if (c.members.length < 2) { delete K[id]; for (const pid of c.members) { const q = world.players.get(pid); if (q) { world.notify(q, `${who} ${why} - the crew's broken up.`, 'info'); q.meDirty = true; } } }
   else tell(world, c, `${who} ${why}.`, 'info');

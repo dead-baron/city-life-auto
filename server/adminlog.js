@@ -37,6 +37,27 @@ export function createAdminLog(file, now = Date.now, { delayMs = 200 } = {}) {
     let last = null; try { last = JSON.parse(all[all.length - 1]); } catch { /* none */ }
     head = { n: all.length, h: (last && last.h) || 'start', bytes: statSync(file).size };
   }
+  // The process died between appending lines and writing the head (a crash, a kill): the file runs on past the head.
+  // When what runs on chains from the head's last hash, the head is caught up to the file - never when the file is
+  // shorter than the head says (cut short: left for checkHead / verify to report).
+  if (file && existsSync(file)) {
+    const size = statSync(file).size;
+    if (size > head.bytes) {
+      const fd = openSync(file, 'r');
+      try {
+        const buf = Buffer.alloc(size - head.bytes);
+        readSync(fd, buf, 0, buf.length, head.bytes);
+        let p = head.h, k = 0, ok = true;
+        for (const line of buf.toString('utf8').split('\n').filter(Boolean)) {
+          let e; try { e = JSON.parse(line); } catch { ok = false; break; }
+          const { h: got, ...rest } = e;
+          if (rest.prev !== p || h(p + JSON.stringify(rest)) !== got) { ok = false; break; }
+          p = got; k++;
+        }
+        if (ok && k) { head = { n: head.n + k, h: p, bytes: size }; if (headFile) { try { writeFileSync(headFile + '.tmp', JSON.stringify(head), { mode: 0o600 }); renameSync(headFile + '.tmp', headFile); } catch { /* next flush writes it */ } } }
+      } finally { closeSync(fd); }
+    }
+  }
   let prev = head.h, n = head.n, bytes = head.bytes;
   let queue = [], timer = null, writing = null;
 

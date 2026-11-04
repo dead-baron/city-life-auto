@@ -22,6 +22,8 @@ import { cleanName } from '../shared/names.js';
 import { USERNAME_GAP_DAYS } from './accounts.js';
 import * as devmode from './devmode.js';
 import * as players from './systems/players.js';
+import * as crews from './systems/crews.js';
+import * as bounties from './systems/bounties.js';
 
 const LEISURE = { arcade: 'arcade', chess: 'chess', mus: 'music', racebook: 'racebook', cine: 'cinematic' };
 
@@ -29,6 +31,7 @@ const LEISURE = { arcade: 'arcade', chess: 'chess', mus: 'music', racebook: 'rac
 export function createLaunch(opts) {
   const { config, store, world } = opts;
   const L = config.launch, now = opts.now || Date.now, log = opts.log || console, secret = config.secret;
+  const signOutCloseMs = opts.signOutCloseMs ?? 1500;
   const dataDir = opts.dataDir === undefined ? config.dataDir : opts.dataDir;
   const accounts = createAccounts({ store, secret, now });
   const adminLog = createAdminLog(dataDir ? pathJoin(dataDir, 'admin-log.jsonl') : null, now);
@@ -39,7 +42,7 @@ export function createLaunch(opts) {
   const modWithStats = { ...mod, review: (kind, who, noteText, data, by) => { if (['teleport', 'speed', 'rate', 'input', 'econ'].includes(kind)) { analytics.event('flag', null, { kind }); const a = who && accounts.get(who.id); if (a) note(a, 'flag', `${kind}: ${noteText}`); } return mod.review(kind, who, noteText, data, by); } };
   ac = createAntiCheat({ mod: modWithStats, now, log });
   const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }) });
-  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
+  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
@@ -53,7 +56,8 @@ export function createLaunch(opts) {
     onTransfer(pid) { const p = onlineOf(pid); if (p) { try { p.conn.sendJSON({ t: 'kicked', reason: 'This character moved to another device.' }); p.conn.close(4012, 'moved'); } catch { /* gone */ } } },
     // signed out everywhere: its sessions closed (4015 - each page comes back with the token it holds: the one that asked
     // has the new one; the others are refused, 4014)
-    onSignOutAll(pid) { const p = onlineOf(pid); if (p) { try { p.conn.close(4015, 'signed out'); } catch { /* gone */ } } },
+    // (a moment after the reply, so the page that asked has its new token before it reconnects: SIGNOUT_CLOSE_MS)
+    onSignOutAll(pid) { const t = setTimeout(() => { const p = onlineOf(pid); if (p) { try { p.conn.close(4015, 'signed out'); } catch { /* gone */ } } }, signOutCloseMs); if (t.unref) t.unref(); },
     onFlag(pid, kind, text) { const a = accounts.get(pid), prof = store.get(pid); mod.review(kind, { id: pid, n: prof ? prof.name : '?' }, text); note(a, 'flag', text); },
   });
   devmode.setPolicy({
@@ -106,6 +110,10 @@ export function createLaunch(opts) {
   // Guests keep their Guest number once a sign-in is on offer; until a provider is switched on (no keys set: nobody
   // could become a member) everyone may still rename, as before the launch foundation
   const guestsRename = () => !Object.values(enabledProviders(L)).some(Boolean);
+  // guests can't start or lead a crew, nor post a bounty - while a sign-in is on offer (the same switch as renaming)
+  const guestLimited = (p) => !!p && !guestsRename() && accounts.isGuest(p.pid);
+  crews.setPolicy({ limited: guestLimited });
+  bounties.setPolicy({ limited: guestLimited });
   function rename(p, raw) {
     const a = accounts.get(p.pid);
     if (a.kind !== 'member' && !guestsRename()) return 'Guests keep their Guest number - sign in to pick a username.';
@@ -207,7 +215,14 @@ export function createLaunch(opts) {
     timers.push(setInterval(() => { ga.flush().catch(() => {}); }, 10e3));
     for (const t of timers) t.unref();
   }
-  function stop() { for (const t of timers) clearInterval(t); timers.length = 0; settle(world, onMoney); analytics.save(); }
+  // at shutdown (index.js SIGTERM / SIGINT): the money settled, the analytics and the admin log's queued lines written now
+  function stop() {
+    for (const t of timers) clearInterval(t);
+    timers.length = 0;
+    try { settle(world, onMoney); } catch (e) { log.error('[launch] settling at stop:', e && e.message); }
+    try { adminLog.flushSync(); } catch (e) { log.error('[launch] the admin log at stop:', e && e.message); }
+    analytics.save();
+  }
 
   async function http(req, res, url) {
     if (await authHttp.handle(req, res, url)) return true;

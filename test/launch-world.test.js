@@ -196,3 +196,28 @@ test('Start fresh keeps the account - its sign-ins, role, strikes and ban record
   assert.equal(again.welcome.pid, pid, 'back in on the same account');
   B.L.stop();
 });
+
+test('a wipe ends the session like any leaving (the analytics, the money watcher); the update wipe keeps the account too', () => {
+  const B = boot();
+  const c = B.connect(null);
+  const pid = c.p.pid, prof = c.p.profile;
+  const before = B.L.analytics.day().sessionMs;
+  B.world.curSys = 'test'; prof.cash += 1; B.world.curSys = null;   // (the watcher bound to this session's player)
+  assert.equal(prof.__mw.p, c.p);
+  c.say({ t: 'wipe' });
+  assert.equal(prof.__mw.p, null, 'let go');
+  assert.ok(B.L.analytics.day().sessionMs >= before && c.p.anStart === 0, 'the session ended');
+  B.L.stop();
+  // CLA_FRESH_ON_UPDATE=all: a new build wipes the progress - not the account
+  const w2 = makeWorld({ build: 'new-build', freshOnUpdate: 'all' });
+  const P = store.get(pid);
+  B.L.accounts.signIn('google', 'g-update', { linkPid: pid });
+  B.L.accounts.setRole(pid, 'helper');
+  Object.assign(P, { build: 'old-build', pos: { x: 1, y: 1 }, bank: 4242 });
+  const conn = fakeConn();
+  players.join(w2, conn, P);
+  assert.equal(P.bank, 500, 'the progress went');
+  assert.ok(P.acct, 'the account stayed');
+  assert.equal(B.L.accounts.role(pid), 'helper');
+  assert.equal(B.L.accounts.findLogin('google', 'g-update'), pid);
+});

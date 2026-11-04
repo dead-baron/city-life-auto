@@ -154,12 +154,13 @@ export function createAccounts({ store, secret, now = Date.now }) {
     loginCodes.set(code, { pid, exp: now() + LOGIN_CODE_TTL_MS, ...meta });
     return code;
   }
-  function redeemLoginCode(code) {
+  // keep: look without using it up (a code that needs the player's say-so first: authhttp.js redeem)
+  function redeemLoginCode(code, { keep = false } = {}) {
     if (typeof code !== 'string' || code.length > 64) return null;
     sweep();
     const v = loginCodes.get(code);
     if (!v) return null;
-    loginCodes.delete(code);
+    if (!keep) loginCodes.delete(code);
     return store.get(v.pid) ? v : null;
   }
 

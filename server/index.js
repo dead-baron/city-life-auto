@@ -79,7 +79,7 @@ watchBuild(BUILD_FILE, 20000, (b) => {
 }, bootBuild && bootBuild.v);
 const startedAt = Date.now();
 // the launch foundation: accounts and sign-ins, roles and the admin log, chat, anti-cheat, analytics (server/launch.js)
-const launch = createLaunch({ config, store, world, ip: (req) => clientIp(req, config.trustProxy), extraOrigins: config.allowedOrigins.filter((o) => o !== '*') });
+const launch = createLaunch({ config, store, world, ip: (req) => clientIp(req, config.trustProxy), extraOrigins: config.allowedOrigins.filter((o) => o !== '*'), texts: { perf: () => reportsText(world), errors: () => errorsText(world) } });
 launch.start();
 // always on for metering; each limit only acts when configured (see config.js)
 const limits = createLimits({ dataDir: config.dataDir, monthlyGB: config.monthlyGB, maxPerIp: config.maxPerIp, connPerMinute: config.connPerMinute, httpPerMinute: config.httpPerMinute });
@@ -99,16 +99,10 @@ const server = createServer(async (req, res) => {
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
   // sign-ins, transfer codes, passkeys, /launch.json; the owner's protected pages (server/authhttp.js, adminhttp.js)
   if (path === '/launch.json' || path.startsWith('/auth/') || path.startsWith('/admin/')) { try { if (await launch.http(req, res, url)) return; } catch (e) { console.error('[launch] http', e && e.message); if (!res.headersSent) { res.writeHead(500); res.end(); } return; } }
-  if (path === '/perf') {   // how players' devices loaded and ran the game (server/perfreports.js)
-    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
-    res.end(reportsText(world));
-    return;
-  }
-  if (path === '/clienterrors') {   // what went wrong in players' pages (server/perfreports.js addClientError)
-    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
-    res.end(errorsText(world));
-    return;
-  }
+  // how players' devices loaded and ran the game, what went wrong in their pages (server/perfreports.js): for admins and
+  // the owner now (the owner's call, 11-04), at /admin/perf and /admin/clienterrors behind the staff login - the old
+  // addresses point there. (The pages still send both over the game's socket: 'perf', 'cerr' - nothing changes for them.)
+  if (path === '/perf' || path === '/clienterrors') { res.writeHead(302, { location: `/admin${path}`, 'cache-control': 'no-store' }); res.end(); return; }
   if (path === '/stats') {
     res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
     res.end(JSON.stringify(statsSnapshot()));

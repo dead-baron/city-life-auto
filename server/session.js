@@ -144,6 +144,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'wipe') {
         const p = player;
         player = null;
+        if (hooks) hooks.leave(p);   // (the session's end, as for any leaving: the analytics, the money watcher let go)
         const kept = players.wipeAccount(world, p);
         conn.sendJSON(kept ? { t: 'wiped', keep: myToken } : { t: 'wiped' });   // (keep: the account stays - the page keeps its token)
         conn.close(4005, 'wiped');

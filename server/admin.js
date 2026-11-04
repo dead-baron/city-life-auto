@@ -207,7 +207,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       }
       case 'pagelink': {
         if (!pageLink) return reply(a, false, { err: 'Not available here.' });
-        const page = ['log', 'dashboard', 'reviews'].includes(msg.page) ? msg.page : 'reviews';
+        const page = ['log', 'dashboard', 'reviews', 'perf', 'clienterrors'].includes(msg.page) ? msg.page : 'reviews';
         const pw = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : 'reviews';
         if (!allowed(role, pw)) return reply(a, false, { err: 'You don\'t have that power.' });
         log.append({ who: me(p), what: 'pagelink', note: page, ok: true });
