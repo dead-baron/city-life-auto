@@ -19534,6 +19534,19 @@ American English in everything new or touched.
     keeps the words.
 22. **Focus**: every screen starts on its first line; the pad's focus is the kit's gold frame; a finger gets none.
 
+### The review rounds (captures beside the concepts: scratchpad ui10-flow)
+Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each concept, fixed, captured again:
+- The bag's tiles overlapped: square tiles (aspect-ratio) in the scrolling grid let its rows collapse onto each other -
+  a fixed height now (96 px; 84 upright).
+- The title on a phone on its side lost its graphics row off the foot: the logo left and the menu right on a short
+  landscape screen, INSTALL APP and FULLSCREEN top left. Upright on a narrow phone the graphics row's label sits over
+  its five choices, which get the width.
+- A pad's focus dimmed the title's gold RESUME / PLAY (the kit's .pfocus fill): the title's buttons keep their own
+  fill and get the cream ring.
+- The job offer away from its place lost how it's paid (HOW FAR took its box): "a call" now sits under the pay.
+- The touch buttons' rework (UI-10a) and the HUD round them were checked in the same rounds.
+- Test drift fixed: the hub tests still looked for the pre-UI-10 head, exit, README rows and tab style.
+
 ### For the owner to decide
 - The graphics row on the title (your 10-11 request) - UIC-08 doesn't show it.
 - The bag's carry slots are drawn and the caps written, but nothing limits what you carry until the server does it

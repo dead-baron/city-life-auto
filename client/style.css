@@ -847,7 +847,7 @@ body.portrait #m-wallet small { display: none; }
   #title > * { grid-column: 2; }
   #title > #logo { grid-column: 1; grid-row: 1 / span 8; align-self: center; width: min(360px, 40vw, 64vh); margin: 0; }
   #play, #t-resume { min-height: 56px; }
-  #title > #t-tools { position: absolute; left: max(var(--s3), env(safe-area-inset-left)); top: var(--s3); }   /* (INSTALL APP, FULLSCREEN: top left, clear of the menu) */
+  #title > :is(#t-tools, #t-foot, #t-ver, #t-note) { grid-column: auto; grid-row: auto; }   /* (placed on the whole screen as before: a grid area would be their box) */
 }
 /* focused with a pad, the title's buttons keep their own fill (the kit's .pfocus would dim PLAY's gold) */
 #title button.pfocus { background: var(--navy) !important; color: var(--cream) !important; }
