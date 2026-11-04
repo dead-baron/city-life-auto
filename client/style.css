@@ -435,19 +435,18 @@ body:not(.touch) #weapon.compact { display: none; }   /* (UI-9, the owner's mini
 /* on touch the weapon plate is the weapon button, a slot above CAR / ACT (UI-6: client/touchslots.js sets --sx/y/w/h and
    data-slot while the slot holds it): the icon and the rounds, drawn like the touch buttons round it; a tap the next
    weapon, held the picker (client/main.js) */
-.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0 var(--s1); border: 1px solid var(--hair); background: var(--disc); box-shadow: none; border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
+.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 var(--s2); border: 1px solid var(--hair); background: var(--disc); box-shadow: none; border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
 .touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
 .touch #w-icon { display: none; }   /* (the sprite: the desktop's plate; on touch the glyph - the owner, 11-03) */
 #w-glyph { display: none; }
-.touch #w-glyph { display: grid; place-items: center; color: var(--cream); --ic: 30px; }
-.touch #weapon:has(#w-ammo:not(:empty)) { flex-direction: row; gap: var(--s1); }
-.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 24px; }
+.touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--cream); --ic: 30px; }
+.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 22px; }   /* (the silhouette over 12 | 48: side by side, the card squeezed the glyph to a speck) */
 .touch #weapon:active { transform: scale(.94); background: var(--disc-hi); }
 .touch #w-quick { display: none; }
 @media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #hud-stat { grid-template-columns: minmax(124px, 1fr); } body:not(.touch) #purse { align-items: flex-end; padding: 2px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); } }
 /* (a phone: the vehicle's plate one line - the speed and its condition; on its side and upright the name stays off) */
 .touch #vchip { grid-template-columns: auto auto; } .touch #vchip .vc-spd { font-size: var(--fs-4); } .touch #vchip .vc-hp > i { width: 36px; }
-.touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--cream); }   /* (12 | 48 in the HUD's number face) */
+.touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--cream); white-space: nowrap; }   /* (12 | 48 in the HUD's number face) */
 .touch #w-info { text-align: center; white-space: nowrap; }
 #w-swap { display: none; }
 body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; right: 1px; transform: translateY(-50%); --ic: 12px; color: var(--cream); opacity: .7; }   /* (more than one to switch to: a small chevron - a tap on the card is the switch) */   /* (more than one to switch to: the swap mark, UIC-14's) */

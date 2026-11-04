@@ -18,9 +18,9 @@ export { iconOf } from './touchicons.js';
 // (test/touchslots.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
 export const GEO = {
   land: { stick: [88, 88, 132], fire: [202, 88, 72], act: [169, 169, 72], roll: [263, 38, 52], car: [269, 107, 52], c1: [205, 227, 52], c2: [152, 247, 52],
-    wp: [88, 206, 64, 52], u4: [34, 300, 52], u3: [92, 300, 52], u2: [150, 300, 52], u1: [208, 300, 52] },
+    wp: [88, 206, 76, 52], u4: [34, 300, 52], u3: [92, 300, 52], u2: [150, 300, 52], u1: [208, 300, 52] },
   port: { stick: [70, 80, 116], fire: [141, 164, 72], act: [66, 190, 72], roll: [157, 244, 52], car: [83, 266, 52], c1: [92, 326, 52], c2: [34, 326, 52],
-    wp: [63, 384, 64, 52], u4: [34, 442, 52], u3: [92, 442, 52], u2: [34, 500, 52], u1: [92, 500, 52] },
+    wp: [63, 384, 76, 52], u4: [34, 442, 52], u3: [92, 442, 52], u2: [34, 500, 52], u1: [92, 500, 52] },
 };
 export const MIN_TAP = 44;
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)
