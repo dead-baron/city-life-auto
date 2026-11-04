@@ -19330,3 +19330,122 @@ count-up one requestAnimationFrame loop for 300 ms, the reload ring one while re
 ## 2026-11-03 - No error when a note arrives before the HUD
 
 A note from the server (a toast) that came in while the city was still loading threw "Cannot read properties of null (reading 'toast')" on every start (client/main.js). Notes before the HUD exists are now dropped.
+
+## 2026-11-03 · UI-10: every screen on the kit (stage 2 of the owner's UI concepts)
+
+The owner's screen concepts of 2026-11-03 (docs/art-v2/targets/ui: UIC-01 the map, UIC-02..05 the phone, UIC-06 the
+settings, UIC-07 the pause list, UIC-08 the title and the loading screen, UIC-15 the big moments, UIC-16 a conversation,
+UIC-17 a job offer, UIC-18 the gun store, UIC-19 the bag, UIC-20's phone slide) built on stage 1's kit (UI-9), with his
+standing rules: minimal and clean, build on the systems the game has, the touch sticks untouched, a strong UX pass, and
+American English in everything new or touched.
+
+### What's in, screen by screen
+- **The title (UIC-08)** - client/titlescreen.js. Two states. While the city loads: the logo, "Connecting..." (or what
+  it's doing - building the city, getting the art ready), the bar and a tip that changes every 6 s (true facts only,
+  from the paused tour). The bar creeps toward each real stage (the socket, the welcome, the city built), then
+  client/warmup.js drives it with the art's real progress after PLAY. Then the menu: PLAY big and gold, CHARACTER and
+  SETTINGS under it, the graphics row, your card bottom left (name, Criminal XP, Samaritan, SIGN IN) and "Online - N
+  players" bottom right (the plist the server already answers). Behind it the dusk over a pixel skyline drawn once in
+  code (the same skyline under the pause list's logo and the phone's home). The splash's entrance still steps the rows
+  in; the logo's mosaic canvas still follows the logo.
+- **The sign-in slot and the first-launch gate** - index.html #signin and #gate, main.js setAccountUi (also on
+  window.CLA): the launch code (client/account.js, branch launch) hands over signIn(el, close), gate(el, done),
+  gateNeeded(), chat(el) and legal(el). Until it does, SIGN IN opens a panel saying sign-in is coming soon with the six
+  ways (Guest, Google, Discord, Reddit, email link, passkey) greyed, and there's no gate. The gate, once there, comes
+  before the first PLAY and can't be backed out of (Esc, B, Start).
+- **The pause list (UIC-07)**: RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF, LEAVE GAME, the logo on the dusk,
+  PAUSED, A / B (Enter / Esc) along the foot. LOG OFF sends { t: 'logoff' }; a server that answers runs the 10 s count
+  ({ t: 'logoff', s: 'start' | 'cancel' | 'done', left, why }: the row fills green and counts down, pressed again it's
+  called off); one that doesn't answer in 1.5 s gets today's behavior - back to the title. LEAVE GAME is the old Help
+  line "Exit to the title screen", moved here (one place).
+- **Every screen's head**: back and its name top left (Esc and B the same; ESC's badge on a keyboard), close top right.
+  The frame takes each screen's shape: settings a panel left of center (upright, a sheet from the foot), the phone a
+  phone on the right (UIC-20 05: up 150 ms, past it, settled at 250; full screen upright), the map full screen, the bag
+  and people big. The world stays on behind at 60%.
+- **Settings (UIC-06)**: tabs along the top - GRAPHICS, SOUND, CONTROLS, GAME, then CHAT, ACCOUNT, HELP, LEGAL. GAME has
+  the game's own options (safety mode, shop symbols) moved out of Controls. CHAT (the channel toggles) and LEGAL (the
+  terms, the privacy policy, the mature-content notice) are slots for the launch work, filled with a stub. The Danger
+  zone sits at the foot of ACCOUNT, apart, with a red rim; ACCOUNT has SIGN IN.
+- **The phone (UIC-02..05)**: the apps as gold-rimmed tiles with the icon sheet's pixel icons, four across, over the
+  skyline; a GUIDE app last - the in-game wiki's place, a placeholder page for now. Places: each kind of place a rimmed
+  row; open one and its nearest four are under it with how far (All N for the rest); a tap sets the waypoint, the place
+  you're headed for framed. Skills: your standing in a gold card (Samaritan, Criminal XP, felonies), then each skill's
+  icon, level and a blue bar. Jobs: All / Driving / Delivery / Service, then the cards - the icon, what it is, the pay in
+  green, how far, the first step, START.
+- **The map (UIC-01)**: the legend on the right (a sheet under the map upright): a search box (any place by name,
+  nearest first, a tap sets the waypoint and centers the map), your job and your waypoint, then each kind of place a row
+  - its name lists them, its switch shows or hides them. Zoom out, in and find me along the map's foot.
+- **The bag (UIC-19)**: EQUIPMENT on the left - the carried slots (GUN 1, GUN 2, MELEE, THROWN) and the carry gear's
+  locked slots (shoulder holster +1 gun, back sling +1 long gun, chest rig +1 throwable +1 melee; caps 4 / 2 / 2); the
+  bag's grid of tiles; the picked thing with USE, DROP and EQUIP always in the same three places (greyed when they
+  don't apply); the quick bar along the foot. The server doesn't limit what you carry yet (the owner's decision of 11-03
+  isn't built): the slots show the first of each kind and anything past them stays in the grid under Weapons.
+- **A counter's menu (UIC-16, UIC-18)**: docked at the foot, the scene in view. A few lines with no prices are a
+  conversation: the place's face (there are no portraits), its name, what they say, the answers in boxes numbered as
+  their keys (1-9 pick them on a keyboard, now counted among the rows on show). A shop has the wallet in its head; a gun
+  store a tab per kind (pistols, rifles, melee, throwables, ammo, gear), each gun's damage and range as eight steps from
+  the weapons' own numbers, BUY on each row (OWNED, greyed when it's yours or you can't afford it) and "Not enough cash
+  for ..." under the list for the one you're on.
+- **The job offer (UIC-17)**: JOB OFFER, the job's icon big, what it is and where from, what it's about, REWARD and
+  how it's paid in two boxes (the game has no time limits), ACCEPT and DECLINE - bottom left (upright, across the foot).
+- **Big moments (UIC-15)**: hud.js moment - BUSTED when the cuffs go on, LEVEL UP for a skill up (the note's line goes
+  to the Log instead of a toast), JOB DONE with the pay when a job finishes; big over the middle 2.6 s, then gone, one
+  at a time.
+- **The knocked-out screen**: to the kit and UIC-15 - YOU'RE DOWN (WASTED when it's over) with a ring running down the
+  time till you wake on your own, the calls for help with pixel icons, RESPAWN AT and the places with their numbers or
+  a home's icon and a check on the one picked, RESPAWN HERE.
+
+### The UX decisions (each with its reason)
+1. **One root for the menus: Esc, Start and MENU open the pause list** (it used to reopen the hub on its last tab).
+   Why: the same thing every time, and UIC-07. P, M, I (D-pad left and right, the HUD's buttons) still open their screen
+   straight away - shortcuts to the same screens, not second ways.
+2. **Back and close in the same place on every screen**: back with the screen's name top left, close top right; Esc
+   and B are back. Back steps out one level - an app or a thing's details, then the pause list if you came from it,
+   then the game; close always goes to the game. Why: the owner's "back and close in the same place on every screen",
+   and the screens keep the platforms' convention.
+3. **No tab strip in the hub any more**: the pause list is the way to the screens. LB / RB (Tab) still step through
+   them, shown on a pad's foot with A SELECT and B BACK. Why: one way to do each thing; the strip and the list were two.
+4. **Each screen keeps a frame of its own shape** (the pause list a compact panel, the settings a panel, the phone a
+   phone, the map full screen) instead of one big panel. Why: the concepts; and the world showing round a small screen
+   says the game runs on behind it.
+5. **Upright, the pause list, the settings, the map's legend and a counter's menu come up from the foot.** Why: thumb
+   reach on a phone.
+6. **The title shows the menu only when PLAY works** - before that the loading state. Why: no button that can't be
+   pressed; the bar and the tip say what's happening.
+7. **"Connecting..." without the server's address; no "Signed in as" line.** Why: the address means nothing to a
+   player; the card says who you are.
+8. **The card has SIGN IN, not the concept's pencil.** Why: CHARACTER already edits your look (one way); the card is
+   about your account.
+9. **The graphics row stays on the title** though UIC-08 leaves it out. Why: the owner asked for it there on 10-11 (the
+   owner to decide - see below).
+10. **RESUME first and gold when you come back to the title**, PLAY second and navy.
+11. **LOG OFF counts on the server; closing the menu calls it off.** Why: it's only safe if the server says so; one
+    clear state - you watch it count or you're playing.
+12. **LEAVE GAME moves from Settings > Help to the pause list.** Why: one place, where the concept has it.
+13. **Settings: a GAME tab for the game's options**, the Danger zone at the foot of ACCOUNT. Why: Controls is about the
+    controls; erasing your character belongs with your account, apart and red so it's never pressed by mistake.
+14. **A tap on a place still sets the waypoint at once** (Places, the map's lists and search) - the concepts' SET
+    WAYPOINT step isn't added; the place you're headed for is framed instead. Why: one tap is faster than pick then
+    confirm, and the waypoint can always be changed.
+15. **No count badges on the phone's tiles.** Why: the game has no "new" count for jobs or the rest; the board's
+    total would always be up and mean nothing.
+16. **The map's legend: one row a kind**, its name listing them and its switch showing or hiding them (the SHOW chips
+    and FIND A PLACE were two lists of the same kinds).
+17. **The menus at a counter dock at the foot** on every device. Why: the scene above stays in view (UIC-16 / 18), and
+    one place to look.
+18. **Number keys on a keyboard show on the rows** (1-9). Why: they always worked; now you can see it.
+19. **USE / DROP / EQUIP always in the same three places in the bag**, the ones that don't apply greyed. Why: the hand
+    learns where each is.
+20. **The job offer's second box is how it's paid** (or how far, away from its place). Why: the game has no time
+    limits.
+21. **Big moments go by themselves in 2.6 s and never wait for a press.** Why: the owner's "nothing lingers"; the Log
+    keeps the words.
+22. **Focus**: every screen starts on its first line; the pad's focus is the kit's gold frame; a finger gets none.
+
+### For the owner to decide
+- The graphics row on the title (your 10-11 request) - UIC-08 doesn't show it.
+- The bag's carry slots are drawn and the caps written, but nothing limits what you carry until the server does it
+  (and the home stash) - the slots show the first of each kind.
+- LOG OFF needs its server side ({ t: 'logoff' }); until then it leaves to the title as before.
+- The conversation has no portraits: the place's icon stands in.
+- The concepts' "Police are searching - break line of sight" pill (UIC-15 01) needs a "searching" state from the server.
