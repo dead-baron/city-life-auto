@@ -2569,7 +2569,10 @@ let W = 0, H = 0, DPR = 1;
 const FR = { t: new Float32Array(240), n: 0 };
 const GOV = { scale: 1, base: 1, next: 0, slow: 0, fast: 0, tried: null, rest: 0, steps: 0, fails: 0 };
 const GOV_STEP = 0.85, GOV_SLOW_MS = 22, GOV_FAST_MS = 17.5;
+// a desktop's screens scale with the window (style.css --zk: zoom on the panels): 1.25 at 768 px tall, 1.6 at 1080
+function uiScale(w, h) { return Math.round(Math.min(1.6, Math.max(1, Math.min(h / 615, w / 1090))) * 20) / 20; }
 function onResize() {
+  document.documentElement.style.setProperty('--zk', String(uiScale(innerWidth, innerHeight)));
   // A 4K TV reports a pixel ratio of 2, which made a console draw every pass at 3840x2160 until
   // its graphics memory ran out. Lower settings and consoles draw at fewer pixels (the art is
   // pixel art: it barely shows), and nothing ever renders more than ~2.5 megapixels.

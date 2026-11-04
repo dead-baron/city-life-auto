@@ -8,7 +8,18 @@ import { WEAPONS, ITEMS, BLADE_COLORS } from '../shared/items.js';
 import { ITEM_ICON, fittedIcon } from './inventory.js';
 import { keyName } from './glyphs.js';
 import { input } from './input.js';
+import { glyph, glyphOfWeapon } from './touchicons.js';
 
+// a weapon's picture in a tile: its sprite, fitted - or, when the sprite is a thin top-down bar that reads as nothing at
+// this size (most guns), the weapon class's line glyph (the touch buttons' set, client/touchicons.js)
+function wIcon(id, wi, blade, w, h) {
+  const c = fittedIcon(wi, blade, w, h);
+  if (c.width / Math.max(1, c.height) < 3.4 && c.height >= h * 0.35) return c;
+  const s = document.createElement('span');
+  s.className = 'bc-gl';
+  s.innerHTML = glyph(glyphOfWeapon(id, (WEAPONS[id] || {}).type), Math.round(h * 0.95));
+  return s;
+}
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SLOTS = 4;
 const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun));
@@ -121,7 +132,7 @@ export function createBag({ el, send, me, refocus }) {
     b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? esc(ITEM_ICON[t.id] || '•') : ''}</span><span class="bc-nm">${esc(t.name)}</span>`
       + (t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n">${t.w.mag}|${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '')
       + (on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '');
-    if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(fittedIcon(t.i, m.blade, 64, 36));
+    if (t.kind === 'w') b.querySelector('.bc-ic').appendChild(wIcon(t.id, t.i, m.blade, 64, 36));
     b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); };
     return b;
   }
@@ -148,7 +159,7 @@ export function createBag({ el, send, me, refocus }) {
       + '<button class="x bd-x" data-a="close" aria-label="Back to the bag">✕</button></div>'
       + `<p class="bd-what">${esc(what)}</p>${count ? `<p class="bd-n">${esc(count)}</p>` : ''}<div class="bd-acts">${acts}</div>`;
     d.querySelector('.bd-head small').textContent = t.kind === 'w' ? (carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon') : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
-    if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(fittedIcon(def.i, m.blade, 96, 54));
+    if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(wIcon(t.id, def.i, m.blade, 96, 54));
     for (const b of d.querySelectorAll('[data-a]')) b.onclick = () => act(b.dataset.a, t);
     for (const b of d.querySelectorAll('[data-pin]')) b.onclick = () => { const i = Number(b.dataset.pin); send({ t: 'inv', a: 'slot', i, id: quick[i] === t.id ? null : t.id }); };
     for (const b of d.querySelectorAll('[data-blade]')) b.onclick = () => send({ t: 'look', a: 'blade', c: Number(b.dataset.blade) });
@@ -192,7 +203,7 @@ export function createBag({ el, send, me, refocus }) {
     }).join('');
     $q('.bag-slots').querySelectorAll('[data-carry]').forEach((b) => {
       const t = all.find((q) => q.k === b.dataset.carry);
-      if (t) { b.querySelector('.bc-ic').appendChild(fittedIcon(t.i, m.blade, 64, 36)); b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); }; }
+      if (t) { b.querySelector('.bc-ic').appendChild(wIcon(t.id, t.i, m.blade, 64, 36)); b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); }; }
     });
     $q('.bag-gear').innerHTML = '<small>CARRY GEAR</small>' + CARRY_GEAR.map(([, add, name]) => `<div class="bag-slot2 locked" title="${esc(name)}"><small>${esc(add)}</small><b>${esc(name)}</b></div>`).join('');
     $q('.bag-caps').textContent = `On you: 2 guns, 1 melee, 1 throwable. Carry gear adds slots - up to ${CARRY_CAPS.gun} guns, ${CARRY_CAPS.melee} melee, ${CARRY_CAPS.throw} throwables.`;

@@ -1567,6 +1567,8 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-cash b { font: 700 var(--fs-4) var(--pixel); color: var(--money); }
 .bag-cats { flex: 1; display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .bag-cats::-webkit-scrollbar { display: none; }
+.bag-cats { touch-action: pan-x; -webkit-mask-image: linear-gradient(90deg, var(--ink) calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, var(--ink) calc(100% - 32px), transparent); padding-right: 28px; }   /* (more chips than room: they scroll, the edge fades to say so) */
+.bc-gl { display: grid; place-items: center; color: var(--cream); }   /* (a weapon's line glyph where its sprite is a thin bar: client/bag.js wIcon) */
 .bag-cats .chip { flex: none; height: var(--tap); padding: 0 14px; border: 2px solid var(--edge); background: transparent; color: var(--dim); font-size: var(--fs-3); cursor: pointer; white-space: nowrap; touch-action: manipulation; }
 .bag-cats .chip.on { background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 700; }
 .bag-cats .chip.pfocus { box-shadow: 0 0 0 2px var(--cream); }
@@ -1722,3 +1724,21 @@ body.portrait .set-head .seg { width: 100%; } body.portrait .set-head .seg > but
 .touch .bm-check.on::after { left: 16px; top: 12px; }
 .touch #creator .cc-sw { width: var(--tap); height: var(--tap); border: 8px solid transparent; background-clip: padding-box !important; box-shadow: inset 0 0 0 2px var(--ink), 0 0 0 1px var(--gold-a); }
 .touch #creator .cc-sw.on { transform: none; box-shadow: inset 0 0 0 2px var(--ink), inset 0 0 0 4px var(--gold); }
+
+/* ==== the screens at a desktop's size (UI-10 review, 11-04: "every panel about half the concept's size") ====
+   A desktop's screens scale with the window (client/main.js uiScale: --zk, 1.25 at 768 px tall, 1.6 at 1080): the
+   panel's whole kit - type, rows, buttons, icons - zoomed together, so the proportions hold and body text is 16 px and
+   more at 1080. The frames' widths are set in the unzoomed size to land on the concepts' proportions (the pause list
+   about a quarter of the screen, settings a third, the bag about half). Phones (body.touch) stay as they are. */
+body:not(.touch) #hub:not([data-tab=map]) .hub-frame, body:not(.touch) #menu .panel, body:not(.touch) .jc-pop, body:not(.touch) #d-panel { zoom: var(--zk, 1); }
+body:not(.touch) .pz { width: min(300px, 100%); }
+body:not(.touch) #hub[data-tab=settings] .hub-frame { width: min(440px, 100%); }
+body:not(.touch) #set-nav { flex-wrap: wrap; row-gap: var(--s1); }
+body:not(.touch) #hub[data-tab=phone] .hub-frame { width: min(340px, 100%); }
+body:not(.touch) #hub[data-tab=bag] .hub-frame { width: min(720px, 100%); }
+body:not(.touch) .bag { grid-template-columns: 196px minmax(0, 1fr) 196px; }
+body:not(.touch) .bag-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+body:not(.touch) .bag-cell { height: 84px; }
+body:not(.touch) #hub[data-tab=people] .hub-frame { width: min(760px, 100%); }
+body:not(.touch) .jc-pop { width: min(480px, 100%); }
+body:not(.touch) #menu .panel { width: min(900px, 100%); max-height: 60%; }
