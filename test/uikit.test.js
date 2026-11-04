@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ICON_NAMES, grid, icon, iconOf } from '../client/touchicons.js';
+import { ICON_NAMES, grid, icon, iconOf, GLYPH_NAMES, glyphGrid, glyph, glyphOfWeapon } from '../client/touchicons.js';
+import { WEAPONS } from '../shared/items.js';
 import { GEO } from '../client/touchslots.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 
@@ -63,14 +64,43 @@ test('UIC-09: every icon on the sheet, a 24 x 24 pixel picture with its dark out
 test('the HUD and the touch buttons use the pixel icons', () => {
   const hud = HTML.slice(HTML.indexOf('<div id="hud"'), HTML.indexOf('<div id="interior"'));
   const used = [...hud.matchAll(/data-ic="([a-z0-9]+)"/g)].map((m) => m[1]);
-  assert.ok(used.length >= 9, `${used.length} icons in the HUD's markup`);
+  assert.ok(used.length >= 8, `${used.length} icons in the HUD's markup`);
   for (const n of used) assert.ok(ICON_NAMES.includes(n), `index.html's ${n}`);
-  for (const n of ['handset', 'map', 'menu', 'heart', 'shield', 'bank', 'sun', 'aim']) assert.ok(used.includes(n), n);
+  for (const n of ['handset', 'map', 'menu', 'heart', 'shield', 'bank', 'sun']) assert.ok(used.includes(n), n);
   assert.doesNotMatch(hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">')), /<svg/, 'no line icons left on the round buttons');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
-  for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(ICON_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'FIRE'), 'aim', 'FIRE: the crosshair (UIC-10)');
-  assert.equal(iconOf('action', 'ACT'), 'act', 'ACT: the hand');
+});
+
+// the touch buttons (the owner, 11-03: "we really don't need colored icons here, they should be simplified UI icons"):
+// one icon language - a one-color glyph (currentColor: cream, ink on a gold or red fill), plain shapes on the 24 grid,
+// whole pixels, no outline, about the same weight; color lives on the button
+test('the touch buttons: one-color glyphs, one for every action and label a slot holds, the weapon as a silhouette', () => {
+  for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
+  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'burst'); assert.equal(iconOf('action', 'ACT'), 'hand');
+  assert.equal(iconOf('vehicle', 'CAR'), 'car'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield');
+  assert.equal(iconOf('cruiser', 'COP CAR'), 'badge'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
+  const weights = [];
+  for (const n of GLYPH_NAMES) {
+    const g = glyphGrid(n), lit = g.filter(Boolean).length;
+    assert.ok(g.every((c) => c === '' || c === 'x'), `${n}: one color`);
+    assert.ok(lit >= 40 && lit <= 300, `${n}: ${lit} pixels lit`);
+    weights.push(lit);
+    assert.match(glyph(n), /^<svg class="pi24 gl" viewBox="0 0 24 24" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="(M\d+ \d+h\d+v1h-\d+z)+"\/><\/svg>$/, `${n}: whole pixels, the button's color`);
+  }
+  for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
+  assert.equal(glyphOfWeapon('fists', 'melee'), 'fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
+  assert.equal(glyphOfWeapon('knife', 'melee'), 'knife'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat');
+  // the colors on the buttons, not in the glyphs
+  const tb = CSS.slice(CSS.indexOf('/* (the owner, 11-03: "simplified UI icons'), CSS.indexOf('/* left alone a while'));
+  assert.ok(!/filter:/.test(tb), 'no filters recoloring a glyph');
+  assert.match(CSS, /#tbtns button \{ color: var\(--cream\); \}/);
+  assert.match(CSS, /#tbtns button\.pulse \{ border-color: var\(--gold-hi\); background: var\(--gold\); color: var\(--ink\);/, 'ACT with something to do: the gold primary, the glyph ink');
+  assert.match(CSS, /#tbtns \[data-slot=act\] \{ border: 3px solid var\(--edge\); \}/, 'nothing to do: dim navy');
+  assert.match(HTML, /<div class="knob"><i class="ic" data-gl="crosshair"><\/i><\/div>/, 'the aim stick\'s crosshair');
+  assert.match(HTML, /<i id="w-glyph" class="ic" aria-hidden="true"><\/i>/, 'the weapon button\'s silhouette');
+  // a long press names the button
+  const ts = read('client/touchslots.js');
+  assert.match(ts, /export const LONG_MS = 450;/); assert.match(ts, /tip\.textContent = n;/);
 });
 
 test('UIC-10: FIRE 72 px, ACT 60, the secondary buttons 44, on a phone on its side and upright', () => {
@@ -79,7 +109,7 @@ test('UIC-10: FIRE 72 px, ACT 60, the secondary buttons 44, on a phone on its si
     for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 44, k);
   }
   assert.match(CSS, /#tbtns \[data-slot=fire\]:is\(:active, \.on\) \{ background: var\(--danger\);/, 'FIRE pressed: red');
-  assert.match(CSS, /#tbtns \[data-slot=act\]:is\(:active, \.on\) \{ background: var\(--gold\); \}/, 'ACT pressed: gold');
+  assert.match(CSS, /#tbtns \[data-slot=act\]:is\(:active, \.on\) \{ background: var\(--gold\);/, 'ACT pressed: gold');
   assert.match(CSS, /#b-cruiser\.cooling::before \{[^}]*conic-gradient\(var\(--gold\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
   // the aim stick keeps its red ring where it was (the owner, 2026-11-03: the sticks' behaviour stays)
   assert.match(CSS, /#stick-r \.ring \{ position: absolute; inset: 6px; border-radius: var\(--r3\); border: 9px solid var\(--danger-t\); \}/);

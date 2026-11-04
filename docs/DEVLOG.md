@@ -19331,6 +19331,37 @@ count-up one requestAnimationFrame loop for 300 ms, the reload ring one while re
 
 A note from the server (a toast) that came in while the city was still loading threw "Cannot read properties of null (reading 'toast')" on every start (client/main.js). Notes before the HUD exists are now dropped.
 
+## 2026-11-03 · UI-10a: the touch buttons simplified (the owner's priority)
+
+The owner, on a phone screenshot of the bottom-right buttons: "the icons don't look good right now. We really don't
+need colored icons here, they should be simplified UI icons for those buttons instead of these more detailed graphics
+... something really simple, and simplified buttons on the bottom right." Every touch action button redone:
+
+- **One icon language** (client/touchicons.js GL, glyph): each glyph one color - the button's text color through
+  currentColor: cream on the navy plate, ink on a gold or a red fill - bold strokes and plain solid shapes on the same
+  24-px grid, whole pixels, no inner colors, no shading, no outline; about 55% of the button across (FIRE 72 px: a 40-px
+  glyph; ACT, CAR and ROLL: 32; the 44-px buttons: 24 - whole multiples of 8, crisp on a 3x phone).
+- **The glyphs**: a fist (HIT), a burst (FIRE), a hand (ACT), a side-view car (get in), a roll arrow (dive), a shield
+  (block), a badge (call a cruiser), a siren (the police car's horn), a horn, rounds (reload), a bag (items), a
+  flashlight, the auto-fire mark, arrows up and down (climb, descend, air), brake, gallop, throw, a star (trick), ollie,
+  get out; the aim stick's center a crosshair. The weapon button shows what you hold as a silhouette (glyphOfWeapon: a
+  fist, a pistol, a rifle, a knife, a sword, a bat, a grenade, a bow, a launcher, a taser bolt, a spray, a flame, a rod,
+  spikes) with its rounds small beside it, in place of the weapon's colored sprite (the desktop plate keeps the sprite).
+  The hint strips and the prompt draw the same glyphs (client/glyphs.js, hudinfo.js), so they still show the button as
+  it looks.
+- **Color carries meaning and lives on the button**: FIRE keeps its red rim (attack; red when pressed); ACT is dim navy
+  with nothing to do and the gold primary when there is (the button the prompt names: gold, its glyph ink - red with the
+  "!" for a crime, as before); every other button the navy plate with the gold rim; pressed 92%, disabled grey, a switch
+  lit when it's on (the light gold, auto-fire red), the cooldown rings - rims and fills only, never a recolored glyph.
+- **Fewer buttons at once**: on foot CAR shows only with a vehicle near enough to get in (shared/touchcontrols.js
+  near; client/touchslots.js looks a few times a second for one within 140 px - a sedan's reach is about 96, a bus's
+  146). The police buttons were already on duty only, the rest only while they do something.
+- **A long press names a button**: after 450 ms a small tip over it (Hit, Fire, Dive roll, Act, Get in, Call a
+  cruiser...), gone as the finger lifts; the press itself does what it always did. The weapon button's hold is still its
+  picker.
+- The sticks' behavior is untouched (client/input.js as it was); FIRE 72 / ACT 60 / secondary 44 and the slots' places
+  as they were.
+
 ## 2026-11-03 · UI-10: every screen on the kit (stage 2 of the owner's UI concepts)
 
 The owner's screen concepts of 2026-11-03 (docs/art-v2/targets/ui: UIC-01 the map, UIC-02..05 the phone, UIC-06 the

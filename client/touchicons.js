@@ -238,10 +238,85 @@ export function drawIcon(g, name, x, y, px = 24) {
 // fill every [data-ic] in root with its icon (index.html's HUD buttons and plates)
 export function paintIcons(root = document) {
   for (const el of root.querySelectorAll('[data-ic]')) if (el.dataset.icd !== el.dataset.ic) { el.innerHTML = icon(el.dataset.ic); el.dataset.icd = el.dataset.ic; }
+  for (const el of root.querySelectorAll('[data-gl]')) if (el.dataset.icd !== el.dataset.gl) { el.innerHTML = glyph(el.dataset.gl); el.dataset.icd = el.dataset.gl; }
 }
 
-// the touch buttons' icons by the action and the label the slot gives it (shared/touchcontrols.js)
-const ICON = { HIT: 'hit', THROW: 'throw', TRICK: 'trick', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'air', EXIT: 'getout', OFF: 'getout', SIREN: 'siren', GALLOP: 'gallop' };
-const ACTION_ICON = { fire: 'aim', dive: 'roll', action: 'act', vehicle: 'car', block: 'block', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'climb', descend: 'descend', use: 'bag', light: 'light', cruiser: 'radio', throw: 'throw', sprint: 'gallop', nextw: 'fire' };
-export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'act';
-export const svg = (k) => icon(k);
+// ---- the touch buttons' glyphs (the owner, 11-03: "we really don't need colored icons here, they should be simplified
+// UI icons ... something really simple"): one icon language - each glyph one color, the button's own text color (cream
+// on the navy plate, ink on a gold or a red fill), bold 2-3 px strokes and plain solid shapes on the same 24-px grid,
+// whole pixels, no inner colors and no outline. Color means something and it lives on the button (FIRE's red rim, ACT's
+// gold when there's something to do, a switch lit when it's on), never in the glyph. They share the shapes' language
+// above ('x' fills, '.' clears) and draw with currentColor. Also the aim stick's crosshair and the weapon button's
+// silhouette of what you hold (glyphOfWeapon), and the hint strips' pictures of the buttons (client/glyphs.js).
+const GL = {
+  // the actions
+  fist: [['C', 'x', 7.5, 8, 2.6], ['C', 'x', 11.5, 7.3, 2.6], ['C', 'x', 15.5, 7.3, 2.6], ['C', 'x', 19, 8.8, 2.3], ['R', 'x', 5, 8, 16.3, 9], ['R', 'x', 7, 16, 11, 5], ['L', 'x', 5, 13, 3, 10.5, 3.2], ['L', '.', 7, 13.2, 13, 13.2, 1.3], ['R', '.', 9.4, 5, 0.9, 5], ['R', '.', 13.4, 5, 0.9, 5], ['R', '.', 17.3, 5, 0.9, 5.5]],
+  burst: [['C', 'x', 12, 12, 4.2], ['L', 'x', 12, 2, 12, 6.5, 2.6], ['L', 'x', 12, 17.5, 12, 22, 2.6], ['L', 'x', 2, 12, 6.5, 12, 2.6], ['L', 'x', 17.5, 12, 22, 12, 2.6], ['L', 'x', 4.8, 4.8, 7.6, 7.6, 2.6], ['L', 'x', 19.2, 4.8, 16.4, 7.6, 2.6], ['L', 'x', 4.8, 19.2, 7.6, 16.4, 2.6], ['L', 'x', 19.2, 19.2, 16.4, 16.4, 2.6]],
+  crosshair: [['A', 'x', 12, 12, 5.5, 7.6], ['R', 'x', 11, 1.5, 2, 5], ['R', 'x', 11, 17.5, 2, 5], ['R', 'x', 1.5, 11, 5, 2], ['R', 'x', 17.5, 11, 5, 2], ['R', 'x', 11, 11, 2, 2]],
+  roll: [['A', 'x', 12, 12.5, 6.2, 8.8, 330, 270], ['P', 'x', 11, 1.2, 11, 8.6, 17, 4.9]],
+  hand: [['R', 'x', 7, 11, 11.5, 8.5], ['R', 'x', 7, 4.5, 2.6, 8], ['R', 'x', 10.2, 3, 2.6, 9], ['R', 'x', 13.4, 3, 2.6, 9], ['R', 'x', 16.4, 5.5, 2.6, 7], ['L', 'x', 7.5, 16, 3.5, 11.5, 2.8], ['R', 'x', 8.5, 19, 9, 3]],
+  car: [['P', 'x', 1, 16, 1, 12.5, 4, 11.5, 7, 7, 16.5, 7, 20, 11.5, 23, 12.5, 23, 16], ['P', '.', 8.2, 8.6, 11.3, 8.6, 11.3, 11, 6.6, 11], ['P', '.', 12.7, 8.6, 15.7, 8.6, 17.8, 11, 12.7, 11], ['C', '.', 6.5, 16.5, 3.8], ['C', '.', 17.5, 16.5, 3.8], ['C', 'x', 6.5, 16.5, 2.7], ['C', 'x', 17.5, 16.5, 2.7]],
+  shield: [['P', 'x', 12, 2, 20, 5, 20, 12, 12, 22, 4, 12, 4, 5], ['P', '.', 12, 5.2, 17, 7.2, 17, 11.6, 12, 18, 7, 11.6, 7, 7.2]],
+  autofire: [['A', 'x', 12, 7.5, 3.4, 5.4], ['R', 'x', 11, 0.8, 2, 3.2], ['R', 'x', 11, 11.2, 2, 2.6], ['R', 'x', 4.6, 6.5, 3.2, 2], ['R', 'x', 16.2, 6.5, 3.2, 2], ['R', 'x', 4.5, 16, 3.5, 6.5], ['R', 'x', 10.25, 16, 3.5, 6.5], ['R', 'x', 16, 16, 3.5, 6.5]],
+  rounds: [['R', 'x', 3.5, 10, 4, 11], ['C', 'x', 5.5, 10, 2], ['R', 'x', 10, 10, 4, 11], ['C', 'x', 12, 10, 2], ['R', 'x', 16.5, 10, 4, 11], ['C', 'x', 18.5, 10, 2], ['R', '.', 3, 15.5, 18, 1.2]],
+  horn: [['P', 'x', 2.5, 9.5, 6.5, 9.5, 13.5, 4, 13.5, 20, 6.5, 14.5, 2.5, 14.5], ['L', 'x', 16.5, 8, 20, 5.2, 2.2], ['R', 'x', 17, 10.9, 5, 2.2], ['L', 'x', 16.5, 16, 20, 18.8, 2.2]],
+  up: [['P', 'x', 12, 2, 20.5, 10.5, 15, 10.5, 15, 21.5, 9, 21.5, 9, 10.5, 3.5, 10.5]],
+  down: [['P', 'x', 12, 22, 20.5, 13.5, 15, 13.5, 15, 2.5, 9, 2.5, 9, 13.5, 3.5, 13.5]],
+  bag: [['R', 'x', 8, 3, 8, 2.2], ['R', 'x', 8, 3, 2.2, 5], ['R', 'x', 13.8, 3, 2.2, 5], ['R', 'x', 4, 7.5, 16, 13.5], ['R', '.', 6.5, 12, 11, 1.6]],
+  light: [['P', 'x', 2, 9, 11, 9, 14, 6.5, 14, 17.5, 11, 15, 2, 15], ['L', 'x', 17, 7, 21, 5, 2.2], ['R', 'x', 17.5, 10.9, 4.5, 2.2], ['L', 'x', 17, 17, 21, 19, 2.2]],
+  badge: [['P', 'x', 12, 2, 20, 5, 20, 12, 12, 22, 4, 12, 4, 5], ['P', '.', 12, 6.5, 13.6, 10, 17.2, 10.3, 14.5, 12.6, 15.4, 16.2, 12, 14.3, 8.6, 16.2, 9.5, 12.6, 6.8, 10.3, 10.4, 10]],
+  siren: [['P', 'x', 6, 18, 6, 12.5, 8, 8, 16, 8, 18, 12.5, 18, 18], ['R', 'x', 4, 18.5, 16, 3.5], ['R', '.', 8.5, 10.5, 2, 5], ['R', 'x', 11, 1.5, 2, 4], ['L', 'x', 4, 4.5, 6, 6.5, 2], ['L', 'x', 20, 4.5, 18, 6.5, 2]],
+  brake: [['R', 'x', 3.5, 6, 17, 12], ['R', '.', 7, 8.5, 2.2, 7], ['R', '.', 10.9, 8.5, 2.2, 7], ['R', '.', 14.8, 8.5, 2.2, 7]],
+  throw: [['C', 'x', 18, 6, 3.6], ['C', 'x', 12.5, 9.5, 2], ['C', 'x', 8, 13.5, 1.7], ['C', 'x', 4.5, 18, 1.5]],
+  star: [['P', 'x', 12, 1.5, 14.8, 8.4, 22, 9, 16.4, 13.7, 18.2, 20.8, 12, 17, 5.8, 20.8, 7.6, 13.7, 2, 9, 9.2, 8.4]],
+  ollie: [['R', 'x', 2.5, 17, 19, 3], ['P', 'x', 12, 2, 17.5, 8, 14.2, 8, 14.2, 13.5, 9.8, 13.5, 9.8, 8, 6.5, 8]],
+  gallop: [['L', 'x', 4, 5, 10, 12, 3.4], ['L', 'x', 10, 12, 4, 19, 3.4], ['L', 'x', 12, 5, 18, 12, 3.4], ['L', 'x', 18, 12, 12, 19, 3.4]],
+  swap: [['P', 'x', 3, 7, 15, 7, 15, 3.5, 21, 8.5, 15, 13.5, 15, 10, 3, 10], ['P', 'x', 21, 14, 9, 14, 9, 10.5, 3, 15.5, 9, 20.5, 9, 17, 21, 17]],
+  exit: [['R', 'x', 3, 3, 10, 18], ['R', '.', 5.5, 5.5, 5, 13], ['P', 'x', 9, 10, 15, 10, 15, 6.5, 21.5, 12, 15, 17.5, 15, 14, 9, 14]],
+  // what you hold: a silhouette of each kind, pointing right
+  pistol: [['R', 'x', 3, 6, 17, 5], ['R', 'x', 16, 4.5, 3, 2], ['P', 'x', 10.5, 10, 16, 10, 14, 20.5, 8.5, 20.5], ['A', 'x', 7.5, 12, 1.6, 3, 0, 180], ['R', '.', 3, 8.2, 12, 0.9]],
+  rifle: [['P', 'x', 1, 9.5, 6, 8.5, 6, 14, 1, 15.5], ['R', 'x', 6, 8, 13, 4.5], ['R', 'x', 19, 9, 4, 2], ['R', 'x', 11, 12, 3.5, 6.5], ['R', 'x', 7, 12, 2.6, 4.5], ['R', 'x', 13, 6, 4, 2]],
+  knife: [['P', 'x', 3, 15, 16, 7, 21.5, 5.5, 18, 11, 7.5, 18.5], ['L', 'x', 2.5, 19.5, 6.5, 16.5, 3.4], ['L', 'x', 5.5, 14.5, 9, 19, 2]],
+  sword: [['L', 'x', 7, 17, 21, 3, 3], ['L', 'x', 4, 14, 10, 20, 2.4], ['L', 'x', 2.5, 21.5, 7, 17, 3]],
+  bat: [['L', 'x', 4, 20, 13, 11, 3], ['L', 'x', 11.5, 12.5, 19, 5, 6], ['C', 'x', 3.5, 20.5, 2.2]],
+  grenade: [['C', 'x', 11, 14, 7], ['R', 'x', 8.5, 4.5, 5, 3.5], ['L', 'x', 13.5, 5.5, 18.5, 9.5, 2], ['A', 'x', 18.5, 5, 2, 3.4], ['R', '.', 6.5, 13.3, 9, 1.3]],
+  bow: [['A', 'x', 4, 12, 9, 11.5, 300, 60], ['R', 'x', 8, 2, 1.4, 20], ['L', 'x', 3, 12, 21, 12, 2], ['P', 'x', 22.5, 12, 18, 9, 18, 15]],
+  rocket: [['R', 'x', 2, 8.5, 17, 6], ['P', 'x', 19, 8.5, 23, 11.5, 19, 14.5], ['R', 'x', 7, 14.5, 3, 5], ['R', 'x', 12, 14.5, 2.6, 3.5]],
+  bolt: [['P', 'x', 14, 1.5, 5, 13, 11, 13, 9, 22.5, 19, 10, 13, 10, 16, 1.5]],
+  spray: [['R', 'x', 8, 7, 8, 15], ['R', 'x', 10, 3.5, 4, 3.5], ['R', 'x', 14, 4, 3, 2], ['C', 'x', 20, 3, 1.1], ['C', 'x', 21.5, 6, 1.1]],
+  flame: [['P', 'x', 12, 1.5, 17, 8, 19, 14, 17, 19, 12, 22, 7, 19, 5, 14, 7, 8.5, 9, 12, 10, 6], ['P', '.', 12, 12, 14.5, 15.5, 13.5, 19, 10.5, 19, 9.5, 15.5]],
+  rod: [['L', 'x', 3, 21, 19, 3.5, 2.4], ['R', 'x', 19, 4, 1.2, 12], ['A', 'x', 19.6, 18, 1.4, 2.6], ['C', 'x', 6, 18, 2]],
+  spikes: [['R', 'x', 1.5, 16, 21, 4], ['P', 'x', 2, 16, 4.5, 9, 7, 16], ['P', 'x', 7, 16, 9.5, 9, 12, 16], ['P', 'x', 12, 16, 14.5, 9, 17, 16], ['P', 'x', 17, 16, 19.5, 9, 22, 16]],
+};
+export const GLYPH_NAMES = Object.keys(GL);
+const gGrids = new Map(), gSvgs = new Map();
+export function glyphGrid(name) {
+  if (gGrids.has(name)) return gGrids.get(name);
+  const def = GL[name] || GL.hand, g = new Array(N * N).fill('');
+  for (const sh of def) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (hit(sh, x + 0.5, y + 0.5)) g[y * N + x] = sh[1] === '.' ? '' : 'x';
+  gGrids.set(name, g);
+  return g;
+}
+// '<svg class="pi24 gl">' for a glyph, in the button's text color (currentColor)
+export function glyph(name, px = 0) {
+  if (!gSvgs.has(name)) {
+    const g = glyphGrid(name), d = [];
+    for (let y = 0; y < N; y++) for (let x = 0; x < N;) { if (!g[y * N + x]) { x++; continue; } let e = x + 1; while (e < N && g[y * N + e]) e++; d.push(`M${x} ${y}h${e - x}v1h${x - e}z`); x = e; }
+    gSvgs.set(name, `<path fill="currentColor" d="${d.join('')}"/>`);
+  }
+  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} shape-rendering="crispEdges" aria-hidden="true">${gSvgs.get(name)}</svg>`;
+}
+// what you hold, as its glyph (the weapon button: shared/items.js WEAPONS' type and id)
+const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
+export function glyphOfWeapon(id, type) {
+  if (!id || id === 'fists') return 'fist';
+  if (LONG_GUNS.has(id)) return 'rifle';
+  if (/knife/.test(id)) return 'knife';
+  if (id === 'sword' || id === 'katana' || id === 'plasma') return 'sword';
+  return { gun: 'pistol', melee: 'bat', grenade: 'grenade', bow: 'bow', rocket: 'rocket', taser: 'bolt', spray: 'spray', flame: 'flame', tool: 'rod', deploy: 'spikes' }[type] || 'pistol';
+}
+// the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
+const ICON = { HIT: 'fist', THROW: 'throw', TRICK: 'star', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'up', EXIT: 'exit', OFF: 'exit', SIREN: 'siren', GALLOP: 'gallop' };
+const ACTION_ICON = { fire: 'burst', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'rounds', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
+export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'hand';
+export const svg = (k) => glyph(k);

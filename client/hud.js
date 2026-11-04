@@ -8,7 +8,7 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { icon, paintIcons, drawIcon } from './touchicons.js';
+import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
@@ -288,6 +288,8 @@ export class HUD {
     $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
+    const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
+    if (wg && wg.dataset.g !== gk) { wg.dataset.g = gk; wg.innerHTML = monoGlyph(gk); }
     // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
     // click takes one out: client/main.js)
     const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');

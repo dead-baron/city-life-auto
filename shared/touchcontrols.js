@@ -17,10 +17,13 @@ const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light
 const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4, wp: WP };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON, the weapon)
 const AT = { act: ['action', 'ACT', 'prompt'], ...UV };   // (in a vehicle ACT only with something to do)
 const VFIRE = ['fire', 'FIRE', 'shoot'], VRELOAD = ['reload', 'RELOAD', 'armed'], HORN = ['horn', 'HORN', 0, { siren: 'SIREN' }];
+// (on foot CAR shows only with a vehicle near enough to get in - the flag near: client/touchslots.js - the owner, 11-03:
+// "simplified buttons on the bottom right", a button only while it does something)
+const CAR = ['vehicle', 'CAR', 'near'];
 export const TOUCH_STATES = {
-  foot: { fire: ['fire', 'HIT'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], c1: ['block', 'BLOCK', 'guard'], ...UT },
-  armed: { fire: ['fire', 'FIRE'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], c2: ['reload', 'RELOAD'], ...UT },
-  carry: { fire: ['throw', 'THROW'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UT },
+  foot: { fire: ['fire', 'HIT'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, c1: ['block', 'BLOCK', 'guard'], ...UT },
+  armed: { fire: ['fire', 'FIRE'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, c2: ['reload', 'RELOAD'], ...UT },
+  carry: { fire: ['throw', 'THROW'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, ...UT },
   drive: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
   ride: { fire: VFIRE, car: ['vehicle', 'EXIT'], c2: VRELOAD, ...AT },   // (a passenger)
   air: { fire: VFIRE, car: ['vehicle', 'EXIT'], c1: ['descend', 'DOWN'], c2: ['climb', 'CLIMB'], ...AT },   // (C1 and C2 one rocker)
@@ -47,7 +50,7 @@ export function touchState(f) {
   if (f.carrying) return 'carry';
   return f.armed ? 'armed' : 'foot';
 }
-// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call, wpn): { state, slots: { slot: { a, label } } }
+// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call, wpn, near): { state, slots: { slot: { a, label } } }
 export function touchSlots(f) {
   const state = touchState(f), slots = {};
   for (const [slot, [a, label, need, alt]] of Object.entries(TOUCH_STATES[state])) {

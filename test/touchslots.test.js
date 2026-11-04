@@ -19,10 +19,11 @@ const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 test('each state fills the slots with what it needs, from shared/controls.js (its touch half)', () => {
   assert.match(read('shared/controls.js'), /shared\/touchcontrols\.js/, 'controls.js names its touch half');
   const st = (f) => touchSlots(f), acts = (f) => Object.fromEntries(Object.entries(st(f).slots).filter(([k]) => k !== 'stick' && k !== 'u4').map(([k, v]) => [k, `${v.a}:${v.label}`]));   // (the stick and FIRE ON: below)
-  assert.deepEqual(acts({}), { fire: 'fire:HIT', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR' }, 'on foot, fists: no BLOCK without a guard, nothing in the bag, no light, no cop car');
+  assert.deepEqual(acts({}), { fire: 'fire:HIT', roll: 'dive:ROLL', act: 'action:ACT' }, 'on foot, fists: no BLOCK without a guard, nothing in the bag, no light, no cop car - and no CAR with no vehicle near');
+  assert.equal(acts({ near: true }).car, 'vehicle:CAR', 'a vehicle near enough to get in: CAR');
   assert.equal(acts({ items: true }).u1, 'use:ITEMS', 'ITEMS with something in the bag');
   assert.equal(acts({ guard: true, light: true, call: true }).c1, 'block:BLOCK');
-  assert.deepEqual(acts({ armed: true, light: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed');
+  assert.deepEqual(acts({ armed: true, light: true, items: true, near: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed, by a car');
   assert.equal(acts({ carrying: true, armed: true }).fire, 'throw:THROW', 'a crate: THROW in FIRE\'s slot');
   assert.deepEqual(acts({ inVeh: true, driver: true, items: true }), { roll: 'dive:BRAKE', car: 'vehicle:EXIT', c1: 'horn:HORN', u1: 'use:ITEMS' }, 'at the wheel, unarmed: no FIRE, no ACT with nothing to do');
   assert.deepEqual(acts({ inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:BRAKE', act: 'action:ACT', car: 'vehicle:EXIT', c1: 'horn:SIREN', c2: 'reload:RELOAD', u1: 'use:ITEMS' }, 'a police car, a gun');

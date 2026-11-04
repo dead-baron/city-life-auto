@@ -433,7 +433,11 @@ body:not(.touch) #weapon.compact { display: none; }   /* (UI-9, the owner's mini
    weapon, held the picker (client/main.js) */
 .touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0; border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
 .touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
-.touch #w-icon canvas { width: 48px; height: 24px; }
+.touch #w-icon { display: none; }   /* (the sprite: the desktop's plate; on touch the glyph - the owner, 11-03) */
+#w-glyph { display: none; }
+.touch #w-glyph { display: grid; place-items: center; color: var(--cream); --ic: 32px; }
+.touch #weapon:has(#w-ammo:not(:empty)) { flex-direction: row; gap: var(--s1); }
+.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 24px; }
 .touch #w-quick { display: none; }
 @media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #hud-stat { grid-template-columns: minmax(124px, 1fr); } body:not(.touch) #purse { align-items: flex-end; padding: 2px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); } }
 /* (a phone: the vehicle's plate one line - the speed and its condition; on its side and upright the name stays off) */
@@ -518,7 +522,7 @@ body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 .g-touch.g-ico, #hints .g-touch.g-ico, #helpbox > .g-touch.g-ico { display: inline-grid; place-items: center; width: 30px; height: 30px; min-width: 0; padding: 0; border-radius: var(--r3); background: var(--plate); color: var(--cream); border: 2px solid var(--plate-rim); box-shadow: none; }
 .g-ico .pi24 { width: 16px; height: 16px; }
 .touch:not(.portrait) #hints .g-touch.g-ico { width: 26px; height: 26px; border-width: 1.5px; }
-#helpbox > .g-touch.g-ico { width: 38px; height: 38px; border-color: var(--gold); color: var(--gold); }
+#helpbox > .g-touch.g-ico { width: 38px; height: 38px; border-color: var(--gold); color: var(--cream); }
 #helpbox > .g-touch.g-ico .pi24 { width: 24px; height: 24px; }
 #helpbox.crime > .g-touch.g-ico { background: var(--danger); border-color: var(--danger); color: var(--ink); }
 .bigkey .g-touch.g-ico { width: 1.6em; height: 1.6em; } .bigkey .g-ico .pi24 { width: 24px; height: 24px; }
@@ -621,7 +625,7 @@ body.portrait #zone-l { top: 50%; }
 #stick-l.active { opacity: 1; }
 .stick .knob { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); }
 #stick-l .knob { border: 7px solid var(--cream); background: transparent; box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); }
-#stick-r .knob { background: var(--navy2); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink); --ic: 32px; }
+#stick-r .knob { background: var(--navy2); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink); color: var(--cream); --ic: 24px; }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
 /* the aim stick (the owner, 2026-10-24: kept): drag to aim; pushed into its red ring it fires, while FIRE ON is on */
 #stick-r { display: none; pointer-events: auto; touch-action: none; border: 3px solid var(--gold); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); transition: opacity var(--t2); }
@@ -632,7 +636,7 @@ body.portrait #zone-l { top: 50%; }
 #stick-r.firing .knob { background: var(--danger); border-color: var(--cream); }
 #stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
 body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
-#firetog.lit { background: var(--danger); border-color: var(--danger-hi); }   /* (auto-fire ON: red, UIC-10 3) */
+#firetog.lit { background: var(--danger); border-color: var(--danger-hi); color: var(--ink); }   /* (auto-fire ON: red, UIC-10 3) */
 /* the touch buttons (U3, the owner 2026-10-30: "do we need the actual text with those buttons?"): round, dark navy,
    a thin gold rim, the icon alone - each named for a screen reader (aria-label) and in the first-time hint strips. The
    big ones (FIRE / HIT, ACT, CAR, ROLL) for the thumb mid-action; the switches (the light, FIRE ON, the bag, the
@@ -640,39 +644,45 @@ body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
 #tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; align-items: center; justify-content: center; padding: 0; border-radius: var(--r3); border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); color: var(--cream); transition: transform var(--t-pop) var(--ease), background-color var(--t1), opacity var(--t2); }
 #tbtns button[data-slot] { display: flex; }
 #tbtns [data-slot] .l { display: none; }   /* (the words: the button's aria-label, the hint strips) */
-/* (the icons in whole multiples of 8 px: crisp on a 3x phone - client/touchicons.js) */
+/* (the owner, 11-03: "simplified UI icons ... something really simple"): one icon language - a one-color glyph in the
+   button's text color (cream; ink on a gold or a red fill: client/touchicons.js glyph), about 55% of the button across,
+   in whole multiples of 8 px so it stays crisp on a 3x phone. Color means something and lives on the button: FIRE's red
+   rim, ACT gold when there's something to do (dim when there isn't), a switch lit when it's on; pressed 92%, disabled
+   grey, the cooldown ring - the rim and the fill, never the glyph's color. */
+#tbtns button { color: var(--cream); }
 #tbtns .pi24 { width: 24px; height: 24px; }
 #tbtns button:active, #tbtns button.on { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
 #tbtns [data-slot=fire] { border: 3px solid var(--danger); }
 #tbtns [data-slot=fire] .pi24 { width: 40px; height: 40px; }
 #tbtns [data-slot=fire]:is(:active, .on) { background: var(--danger); border-color: var(--danger-hi); }
-#tbtns [data-slot=act] { border: 3px solid var(--gold); }
-#tbtns [data-slot=act] .pi24 { width: 32px; height: 32px; }
-#tbtns [data-slot=act]:is(:active, .on) { background: var(--gold); }
-#tbtns [data-slot=act]:is(:active, .on) .pi24 { filter: brightness(.2); }   /* (the hand dark on the gold, UIC-10 2) */
+#tbtns [data-slot=act] { border: 3px solid var(--edge); }   /* (ACT with nothing to do: dim navy) */
+#tbtns [data-slot=act] .pi24 { width: 32px; height: 32px; opacity: .55; }
+#tbtns [data-slot=act]:is(:active, .on) { background: var(--gold); border-color: var(--gold-hi); color: var(--ink); }
+#tbtns [data-slot=act]:is(:active, .on) .pi24 { opacity: 1; }
 #tbtns :is([data-slot=car], [data-slot=roll]) .pi24 { width: 32px; height: 32px; }
 #tbtns :is([data-slot=c1], [data-slot=c2], [data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) { border-width: 2px; }
-#tbtns button[disabled], #tbtns button.dis { border-color: var(--grey); background: var(--grey-d); filter: grayscale(1); opacity: .8; }
+#tbtns button[disabled], #tbtns button.dis { border-color: var(--grey); background: var(--grey-d); opacity: .8; }
 #tbtns [data-rk] { border: 2px solid var(--plate-rim); }   /* (CLIMB / DOWN: one rocker) */
 #tbtns [data-rk] .pi24 { width: 32px; height: 32px; }
 #tbtns [data-rk=top] { border-radius: var(--r3) var(--r3) var(--r1) var(--r1); border-bottom-color: var(--edge); }
 #tbtns [data-rk=bot] { border-radius: var(--r1) var(--r1) var(--r3) var(--r3); border-top: 0; }
-#tbtns .light.lit, #b-light.lit { background: var(--gold); border-color: var(--gold-hi); }   /* (a switch that's on: lit, UIC-10 3's headlights / auto-fire ON) */
+#tbtns .light.lit, #b-light.lit { background: var(--gold); border-color: var(--gold-hi); color: var(--ink); }   /* (a switch that's on: lit) */
 #stick-r .lbl { display: none; }   /* (AIM: the hint strip says it) */
 #tbtns [data-slot=fire].cooling { border-color: var(--grey); --cd-c: var(--danger); }   /* (reloading: FIRE's ring fills - UIC-10 2 "cooling down") */
-#tbtns [data-slot=fire].cooling .pi24 { filter: grayscale(1) brightness(.8); }
 #tbtns [data-slot=fire].cooling::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--cd-c) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }
 #b-cruiser.cooling { border-color: var(--grey); }
-#b-cruiser.cooling .pi24 { filter: grayscale(1) brightness(.8); }
 #b-cruiser.cooling::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--gold) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }   /* (the cooldown ring, UIC-10 2 / UIK-00 6F) */
+/* a long press: the button's name in a small tip over it (client/touchslots.js) */
+#tbtip { position: fixed; z-index: 8; padding: var(--s1) var(--s3); border-radius: var(--r2); background: var(--plate); box-shadow: 0 0 0 2px var(--gold), 0 0 0 3px var(--ink), var(--plate-sh); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; pointer-events: none; animation: prpop var(--t-pop) var(--ease); }
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
 #touch.idle #tbtns button:not(.pulse) { opacity: .5; }
 #touch.idle #stick-l:not(.active) { opacity: .25; }
 #touch.idle #stick-r:not(.aiming) { opacity: .6; }
 /* what Act would do now: green (red if it's a crime, with the "!" badge; a felony a ring as well - the owner, 2026-10-15) */
-#tbtns button.pulse { border-color: var(--cream); background: var(--money); animation: pulse 1s ease-in-out infinite; }
-@keyframes pulse { 50% { box-shadow: 0 0 0 7px var(--money-t); } }
-#tbtns button.pulse.crime { background: var(--danger); border-color: var(--cream); animation-name: pulsebad; }
+#tbtns button.pulse { border-color: var(--gold-hi); background: var(--gold); color: var(--ink); animation: pulse 1s ease-in-out infinite; }   /* (something to do: the gold primary - the owner, 11-03) */
+#tbtns button.pulse .pi24 { opacity: 1; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px var(--gold-a); } }
+#tbtns button.pulse.crime { background: var(--danger); border-color: var(--cream); color: var(--ink); animation-name: pulsebad; }
 @keyframes pulsebad { 50% { box-shadow: 0 0 0 7px var(--danger-t); } }
 #tbtns button.pulse.felony { outline: 2px solid var(--danger); outline-offset: 3px; }
 #tbtns button.pulse.armed { animation-duration: .4s; }

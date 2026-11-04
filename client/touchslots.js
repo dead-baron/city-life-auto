@@ -21,6 +21,12 @@ export const GEO = {
     u1: [163, 256, 44], u2: [82, 378, 44], u3: [82, 430, 44], u4: [30, 378, 44], rk: [163, 184, 52, 96], wp: [70, 318, 72, 56] },
 };
 export const MIN_TAP = 44;
+export const LONG_MS = 450;        // (a long press: the button's name in a tip)
+export const NEAR_CAR_PX = 140;    // (how near a vehicle has to be for CAR to show on foot: a little past where you can get in)
+// what each button is called in its tip (its slot's label otherwise)
+export const BUTTON_NAME = { HIT: 'Hit', FIRE: 'Fire', ROLL: 'Dive roll', ACT: 'Act', CAR: 'Get in', EXIT: 'Get out', OFF: 'Get off', BLOCK: 'Block', RELOAD: 'Reload', ITEMS: 'Items',
+  LIGHT: 'Light', 'COP CAR': 'Call a cruiser', 'FIRE ON': 'Auto-fire: on', 'FIRE OFF': 'Auto-fire: off', HORN: 'Horn', SIREN: 'Siren', BRAKE: 'Brake', STOP: 'Stop', GALLOP: 'Gallop',
+  CLIMB: 'Climb', DOWN: 'Descend', THROW: 'Throw', TRICK: 'Trick', OLLIE: 'Ollie', AIR: 'Air' };
 // every slot's box ({ x, y, w, h }, px from the top left) on a W x H screen; safe: the insets { t, r, b, l }
 export function slotGeometry(W, H, safe = {}) {
   const port = H > W, G = port ? GEO.port : GEO.land;
@@ -100,13 +106,50 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
   win.addEventListener('resize', () => setTimeout(layout, 30));
   win.addEventListener('orientationchange', () => setTimeout(layout, 120));
   wake();
+  // a long press on a button says its name (the owner, 11-03: no words on the buttons, but learnable): a small tip
+  // over it after LONG_MS while the finger stays, gone as it lifts - the press itself does what it always did
+  const tip = document.createElement('div');
+  tip.id = 'tbtip'; tip.className = 'hidden'; tip.setAttribute('role', 'tooltip');
+  touchEl.appendChild(tip);
+  let tipT = 0;
+  const tipOff = () => { clearTimeout(tipT); tip.classList.add('hidden'); };
+  root.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('button[data-slot]');
+    if (!b) return;
+    clearTimeout(tipT);
+    tipT = setTimeout(() => {
+      const r = b.getBoundingClientRect(), n = BUTTON_NAME[b.dataset.lbl] || b.dataset.lbl || '';
+      if (!n) return;
+      tip.textContent = n; tip.classList.remove('hidden');
+      const tw = tip.offsetWidth;
+      tip.style.left = `${Math.max(8, Math.min(win.innerWidth - tw - 8, r.left + r.width / 2 - tw / 2))}px`;
+      tip.style.top = `${Math.max(8, r.top - tip.offsetHeight - 8)}px`;
+    }, LONG_MS);
+  }, { passive: true });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) root.addEventListener(ev, tipOff, { passive: true });
+  win.addEventListener('touchend', tipOff, { passive: true });
+  // a vehicle near enough to get in (on foot CAR shows only then): looked for a few times a second
+  let nearAt = 0, near = false;
+  function nearCar(S, pe) {
+    const now = performance.now();
+    if (now - nearAt < 250) return near;
+    nearAt = now; near = false;
+    const P = S.pred && S.pred.s ? S.pred.s : pe ? { x: pe.rx, y: pe.ry } : null;
+    if (!P) return near;
+    for (const e of S.ents.values()) {
+      if (e.kind !== 2 || !e.buf.length) continue;   // (K.VEH: a car, a boat, a horse, a bike - where it's drawn)
+      const dx = e.rx - P.x, dy = e.ry - P.y;
+      if (dx * dx + dy * dy < NEAR_CAR_PX * NEAR_CAR_PX) { near = true; break; }
+    }
+    return near;
+  }
   // the page's flags for what you're doing (in a vehicle, flying, on a board: client/main.js), each frame
   function tick(inVeh, air, board) {
     const { S, CTRL, WEAPONS, VEHICLE_BY_INDEX } = ctx, me = S.me || {}, w = WEAPONS[me.weapon] || WEAPONS.fists, b = document.body.classList;
     const wq = btn.nextw ? btn.nextw.classList : b, cv = inVeh ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m], pe = S.ents.get(S.myPedId), driver = S.ctrlKind === CTRL.DRIVER;
     return set({ home: !!S.homeIn, fish: !!me.fishing, air, inVeh, driver, horse: !!(cd && cd.horse), boat: !!(cd && cd.kind === 'boat'), items: !!(me.inv && Object.values(me.inv).some((n) => n > 0)), surf: !!me.surf, swim: !!(pe && pe.swim && !inVeh), board, carrying: !!me.carrying,
       armed: w.type !== 'melee' && w.type !== 'tool', guard: !!w.guard, shoot: w.type === 'gun' || !!(cd && driver && (cd.missiles || cd.turret)), prompt: !!me.prompt, siren: !!(cd && (cd.police || cd.siren)), light: b.contains('has-light'), call: b.contains('can-call'),
-      wpn: !me.dead && !wq.contains('none') && (!inVeh || wq.contains('gun')) });   // (client/hudinfo.js: the plate's none and gun)
+      wpn: !me.dead && !wq.contains('none') && (!inVeh || wq.contains('gun')), near: !inVeh && nearCar(S, pe) });   // (client/hudinfo.js: the plate's none and gun)
   }
   // FIRE's auto-target (a tap: touchAim): the nearest person ahead in reach - at the wheel all round; none with a crate,
   // by your golf ball, on a court or a lane, fishing or on a board (the swing keeps its own aim)
