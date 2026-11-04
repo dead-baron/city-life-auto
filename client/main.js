@@ -3514,9 +3514,9 @@ function drawOverlays(F, v2) {
     if (dead !== S.uiDead) { S.uiDead = dead; document.body.classList.toggle('dead', dead); }
     // the touch slots: what each holds for what you're doing (shared/controls.js; client/touchslots.js, loaded the first time)
     if (input.device === 'touch') { if (S.slots) S.slots.tick(inVeh, inAir, onBoard); else if (!S.slotsAsk) { S.slotsAsk = 1; import('./touchslots.js').then((m) => { S.slots = m.makeSlots(undefined, { ctx: { S, CTRL, WEAPONS, VEHICLE_BY_INDEX, PF } }); setTouchAim(m.touchAim); }).catch((e) => { S.slotsAsk = 0; console.warn('[touchslots]', e); }); } }
-    if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; $('st-fill').style.width = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100) + '%'; } }
+    if (S.pred && S.pred.kind === 'ped') { const st = Math.round(S.pred.s.stamina); if (st !== S.uiSt) { S.uiSt = st; const sp = Math.min(100, st / ((S.pred.mods && S.pred.mods.staminaMax) || 100) * 100); S.uiStFull = sp >= 99.5; $('st-fill').style.width = sp + '%'; } }
     // the vitals' numbers, the vehicle chip, the job card's clock, the hint strips, the prompt by you (client/hudinfo.js)
-    if (S.hud.info) { const pe = S.ents.get(S.myPedId); S.hud.info.frame({ now: performance.now(), veh: inVeh ? S.ents.get(S.ctrlId) : null, driver: S.ctrlKind === CTRL.DRIVER, board: onBoard, swim: !!(pe && pe.swim && !inVeh), cine: !!(DIR && DIR.clean), pred: S.pred, stam: S.uiSt, dead: !!(S.me && S.me.dead) }); }
+    if (S.hud.info) { const pe = S.ents.get(S.myPedId); S.hud.info.frame({ now: performance.now(), veh: inVeh ? S.ents.get(S.ctrlId) : null, driver: S.ctrlKind === CTRL.DRIVER, board: onBoard, swim: !!(pe && pe.swim && !inVeh), cine: !!(DIR && DIR.clean), pred: S.pred, stam: S.uiSt, stFull: inVeh || S.uiStFull !== false, dead: !!(S.me && S.me.dead) }); }
   }
   if (S.bigmap) { padMapLook(Math.min(0.05, F.dt || 0.016)); S.hud.drawBigMap(sp.x, sp.y, sp.a, { cats: mapwp.cats, route: S.hud.route, cross: input.device === 'gamepad' }); }
   if ((F.nowMs | 0) % 500 < 20) S.hud.setNet(`${S.practice ? 'OFFLINE PRACTICE · ' : ''}${S.fps} fps · ${Math.round(S.rtt)} ms · ${S.ents.size} ents`);

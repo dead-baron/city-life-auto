@@ -252,6 +252,9 @@ body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
 #hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 12px; padding: 6px 12px 6px 8px; border-radius: var(--r2); }
 #vitals { display: flex; flex-direction: column; gap: 2px; }
 .vrow { display: flex; align-items: center; gap: 6px; }
+/* (UI-9, the owner's minimal HUD: stamina only when it matters - full a moment, its row folds away; spent, back at once) */
+.vrow.st { max-height: 24px; overflow: hidden; transition: max-height var(--t2) var(--ease), opacity var(--t2) var(--ease); }
+#vitals.st-rest .vrow.st { max-height: 0; opacity: 0; transition-duration: var(--t3); }
 .vrow .vl { display: none; }
 .vrow b { flex: none; min-width: 34px; font: 700 var(--fs-3) var(--pixel); line-height: 1; text-align: right; }
 #purse { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-left: 12px; border-left: 1px solid var(--plate-line); align-self: stretch; justify-content: center; }
@@ -287,6 +290,11 @@ body.portrait.touch #bank { display: none; }
 .hchip.flag { border-color: currentColor; }
 body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
 .hchip.stat, .hchip.role.citizen { display: none; }   /* (UI-8: on a desktop too - the standing numbers are in the phone's Skills; the status is what's happening now) */
+/* (UI-9, the owner's minimal HUD: a chip in words when it starts or changes, then its icon alone on a small round plate -
+   hudinfo.js statusOpen; a tap or a click on the row brings the words back a while) */
+.hchip.pip { width: 28px; height: 28px; padding: 0; justify-content: center; border-radius: var(--r3); --ic: 16px; }
+.touch .hchip.pip { width: 28px; height: 28px; padding: 0; }
+#status.folded { pointer-events: auto; cursor: pointer; touch-action: manipulation; }
 .touch #status { flex-wrap: nowrap; overflow: hidden; max-width: min(56vw, 300px); }
 .touch .hchip { padding: 0 6px; }
 
@@ -338,6 +346,12 @@ body.portrait.touch #hud { --trw: 168px; }
 body.portrait.touch :is(#status, #job.chip) { max-width: calc(100% - var(--trw)); }
 body.portrait.touch #hud-msg { width: calc(100% - var(--trw)); }
 body.portrait.touch #job.big .jc-o { -webkit-line-clamp: 1; }
+/* (UI-9, UIC-14: upright the card is two short lines - the job, then the clock and how far - in the small pixel size) */
+body.portrait.touch #job.big .jc-h { font-size: var(--fs-2); letter-spacing: 0; }
+body.portrait.touch #job.big .jc-d { flex-wrap: nowrap; gap: 6px; margin-top: 3px; padding-top: 3px; font-size: var(--fs-2); }
+body.portrait.touch #job.big .jc-d > :is(.jc-t, .jc-m) + :is(.jc-t, .jc-m) { padding-left: 6px; }
+body.portrait.touch #job.big .jc-d > span { gap: 3px; }
+body.portrait.touch #job.big .jc-d .jc-s { display: none; }
 @media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
 body.dead #job { display: none !important; }
 /* (upright with a bar up - a robbery, a ride, custody - the big card short: clear of the middle - UI-5) */
@@ -395,6 +409,7 @@ body.dead #job { display: none !important; }
 #w-ammo { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--cream); }
 #w-quick { grid-column: 1 / -1; display: flex; margin: 3px -12px -3px calc(-1 * var(--s2)); border-top: 1px solid var(--plate-line); }
 #w-quick:empty { display: none; }
+#weapon:not(.wq-on):not(:hover) #w-quick { display: none; }   /* (UI-9: a few seconds after a switch, or under the pointer) */
 #w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 1px solid var(--plate-line); background: transparent; cursor: pointer; }
 #w-quick .wq:first-child { border-left: 0; }
 #w-quick .wq:hover { background: var(--gold-t); }
@@ -467,6 +482,7 @@ body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: 
 #helpbox > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
 body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 .touch #helpbox { font-size: var(--fs-3); padding: 4px 12px 4px 4px; }
+.touch #helpbox > span:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }   /* (UI-9: two lines at most - the button says the rest) */
 .touch #helpbox > .g-touch { height: 34px; min-width: 44px; font-size: var(--fs-2); }
 /* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks): the key chip red with a "!" on its corner,
    a felony ringed as well - the colour, a mark and a ring, so it reads without the colour */

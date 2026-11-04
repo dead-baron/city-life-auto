@@ -22,6 +22,7 @@ export function calmState(sitAt, activeAt, now) {
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
 const WEAPON_BY_ID = WEAPONS;
+export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
 const toastIcon = (tone, msg) => (/^\+\$|\bpaid\b|\+\$\d/i.test(msg) && tone !== 'bad' ? 'money' : tone === 'good' ? 'check' : tone === 'warn' ? 'warn' : tone === 'bad' ? 'alert' : 'info');
 // the minimap's own marks (U17): your home a house, the job a $, your vehicle a car, the waypoint a pink dot
@@ -268,6 +269,9 @@ export class HUD {
       $('w-quick').dataset.q = qs;
       $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
     }
+    // (UI-9, the owner's minimal HUD: the quick weapons show a few seconds after you take one out, and while the pointer is
+    // on the plate - not all the time)
+    if (this.wqW !== me.weapon) { const first = this.wqW === undefined; this.wqW = me.weapon; if (!first) { $('weapon').classList.add('wq-on'); clearTimeout(this.wqT); this.wqT = setTimeout(() => $('weapon').classList.remove('wq-on'), WQ_MS); } }
     document.body.classList.toggle('multi-wpn', me.weapons.length > 1 && !me.dead);
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
     // (UI-9: only what's in your hands - a crate; the bag's contents are the bag's, a tap of I away)

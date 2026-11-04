@@ -32,10 +32,11 @@ export const JOB_PAID_MS = 3500;    // the pay shows this long on the card
 export const STARS_AFTER_MS = 8000; // the stars stay this long after the police stop looking
 export const HINT_TIMES = 3;        // a hint strip shows the first this many times
 export const HINT_MS = 7000;        // and stays up this long (or till you stop doing it)
+export const STAM_REST_MS = 2500;   // stamina full this long and its row folds away (UI-9)
 
 // ---- the status line ---------------------------------------------------------------------------------------------
-// [label, value, tone] chips; flag: what's happening to you now (a phone shows only those and the faction when it isn't
-// a citizen's); the role chip first
+// [label, value, tone] chips; flag: what's happening to you now; stat: the standing numbers (the phone's Skills shows
+// them - UI-8); the role chip first
 export function statusChips(me) {
   const out = [];
   const role = me.faction === 'enforcer' ? `Police · ${me.rank || 'Officer'}` : { citizen: 'Citizen', criminal: 'Criminal', hunter: 'Bounty hunter' }[me.faction] || 'Citizen';
@@ -47,17 +48,42 @@ export function statusChips(me) {
   if (me.bleeding) out.push({ k: 'flag', t: 'Bleeding', cls: 'bad' });
   // (no chip for the police's memory of your peak wanted level - the owner, 11-03: it still works, server law.js, and
   // shows itself when a disguise is blown)
-  if (me.bounty > 0) out.push({ k: 'flag', t: 'Bounty', v: money(me.bounty) + (me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''), cls: 'bad' });
+  if (me.bounty > 0) out.push({ k: 'flag', t: 'Bounty', v: money(me.bounty) + (me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''), cls: 'bad', ck: money(me.bounty) });
   const B = me.buffs || {};
   for (const [k, n] of [['coffee', 'Coffee'], ['energy', 'Energy'], ['wine', 'Wine'], ['scent', 'Scent']]) if (B[k] > 0) out.push({ k: 'flag', t: n, v: `${Math.ceil(B[k])}s`, cls: 'good' });
   if (B.hearty > 0) out.push({ k: 'flag', t: 'Well fed', v: `${Math.ceil(B.hearty / 60)}m`, cls: 'good' });
-  if (me.light) out.push({ k: 'flag', t: 'Light on', cls: 'good' });
-  if (me.ghost) out.push({ k: 'flag', t: 'Ghost', cls: 'info' });
+  // (UI-9, the owner's minimal HUD: no "Light on" chip - the light in the world and its lit button say it - and no
+  // "Ghost": that's your body left behind while you're offline, never seen by you playing)
   return out;
 }
-const CHIP_IC = { 'Police remember you': 'eye', 'Police remember you (disguised)': 'eye', Bleeding: 'blood', Bounty: 'bounties', Coffee: 'fresh', Energy: 'bolt', 'Light on': 'light', 'Well fed': 'check' };
-const chipHtml = (c) => `<span class="hchip ${c.k} ${c.cls}">${CHIP_IC[c.t] ? icon(CHIP_IC[c.t]) : ''}${esc(c.t)}${c.v ? ` <b>${esc(c.v)}</b>` : ''}</span>`;
-export const statusHtml = (me) => statusChips(me).map(chipHtml).join('');
+// The HUD's share of them (UI-9, the owner 2026-11-03: "remove unnecessary messages from lingering forever ... keep the
+// UI minimal and clean"): only what's happening to you now - the flags, and who you are when it isn't a citizen. Each
+// comes in as a chip in words when it starts or changes (a new bounty, another misconduct mark, going on duty), stays
+// STATUS_MS, then folds to its icon alone; a tap or a click on the row brings the words back for a while. The standing
+// numbers (Samaritan, Criminal XP, the record) aren't on the HUD at all: the phone's Skills has them.
+export const STATUS_MS = 4500;
+const CHIP_IC = { Misconduct: 'warn', Bleeding: 'blood', Bounty: 'bounties', Coffee: 'coffee', Energy: 'bolt', Wine: 'wine', Scent: 'fresh', 'Well fed': 'food' };
+const ROLE_IC = { enforcer: 'police', criminal: 'mask', hunter: 'aim' };
+export function hudChips(me) {
+  return statusChips(me).filter((c) => c.k === 'flag' || (c.k === 'role' && c.cls !== 'citizen'))
+    .map((c) => ({ ...c, ic: c.k === 'role' ? ROLE_IC[c.cls] || 'info' : CHIP_IC[c.t] || 'info', ck: c.k === 'role' ? c.t : c.t === 'Misconduct' ? `${c.t}|${c.v}` : `${c.t}|${c.ck || ''}` }));
+}
+// open: the words; folded: the icon alone (its words for a tooltip and a screen reader)
+const chipHtml = (c, open = true) => open
+  ? `<span class="hchip ${c.k} ${c.cls}">${c.ic ? icon(c.ic) : ''}${esc(c.t)}${c.v ? ` <b>${esc(c.v)}</b>` : ''}</span>`
+  : `<span class="hchip pip ${c.k} ${c.cls}" role="img" title="${esc(c.t + (c.v ? ' ' + c.v : ''))}" aria-label="${esc(c.t + (c.v ? ' ' + c.v : ''))}">${icon(c.ic)}</span>`;
+export const statusHtml = (me, open = true) => hudChips(me).map((c) => chipHtml(c, open)).join('');
+// which chips are open at a time: seen { t -> { ck, until } } (updated), openUntil: the row tapped open till then
+export function statusOpen(chips, seen, now, openUntil = 0) {
+  const live = new Set();
+  for (const c of chips) {
+    live.add(c.t);
+    const s = seen.get(c.t);
+    if (!s || s.ck !== c.ck) seen.set(c.t, { ck: c.ck, until: now + STATUS_MS });
+  }
+  for (const t of [...seen.keys()]) if (!live.has(t)) seen.delete(t);
+  return chips.map((c) => now < seen.get(c.t).until || now < openUntil);
+}
 
 // ---- the job card ------------------------------------------------------------------------------------------------
 // the card's words for the self record's job (server phone.js jobCardInfo): { head, obj, step }
@@ -137,7 +163,9 @@ const memStore = () => { const m = new Map(); return { getItem: (k) => m.get(k) 
 // pid(), openLog() }
 export function createInfo(H) {
   const st = store || memStore();
-  const I = { ctx: null, sig: '', wantedAt: 0, job: { key: '', at: 0, bigUntil: 0, j: null, paid: 0, paidUntil: 0, left: 0, leftAt: 0, gone: false }, veh: { sig: '', at: 0, lx: 0, ly: 0, lt: 0, v: 0 }, hint: { state: '', until: 0 }, stN: -1, pr: { x: -1, y: -1 } };
+  const I = { ctx: null, sig: '', chips: null, seen: new Map(), stOpen: 0, stNext: Infinity, stFullAt: 0, stRest: false, wantedAt: 0, job: { key: '', at: 0, bigUntil: 0, j: null, paid: 0, paidUntil: 0, left: 0, leftAt: 0, gone: false }, veh: { sig: '', at: 0, lx: 0, ly: 0, lt: 0, v: 0 }, hint: { state: '', until: 0 }, stN: -1, pr: { x: -1, y: -1 } };
+  const stEl = $('status');
+  if (stEl) stEl.addEventListener('click', () => { I.stOpen = performance.now() + STATUS_MS; drawStatus(performance.now()); });
   const jobEl = $('job');
   if (jobEl) {
     jobEl.setAttribute('role', 'button');
@@ -148,9 +176,9 @@ export function createInfo(H) {
     const now = performance.now();
     // the vitals' numbers
     const hn = $('hp-n'); if (hn) { const v = String(Math.max(0, Math.round(me.hp))); if (hn.textContent !== v) hn.textContent = v; }
-    // the status line
-    const chips = statusChips(me), sig = chips.map(chipHtml).join('');
-    if (sig !== I.sig) { I.sig = sig; const s = $('status'); if (s) s.innerHTML = sig; }
+    // the status line: in words when it starts or changes, then its icon alone (UI-9)
+    I.chips = hudChips(me);
+    drawStatus(now);
     // the stars: while wanted, and a few seconds after
     if (me.wanted > 0) I.wantedAt = now;
     const stars = $('stars');
@@ -171,6 +199,19 @@ export function createInfo(H) {
     if (j) { J.j = j; if (j.left !== undefined) { J.left = j.left; J.leftAt = now; } }
     else if (!(J.paidUntil > now)) J.j = null;
     drawJob(now);
+  }
+
+  function drawStatus(now) {
+    const el = $('status');
+    if (!el || !I.chips) return;
+    const open = statusOpen(I.chips, I.seen, now, I.stOpen);
+    const html = I.chips.map((c, i) => chipHtml(c, open[i])).join('');
+    I.stNext = Math.min(...I.chips.map((c, i) => (open[i] ? Math.max(I.seen.get(c.t).until, I.stOpen) : Infinity)));
+    if (html === I.sig) return;
+    I.sig = html; el.innerHTML = html;
+    const folded = open.some((o) => !o);
+    el.classList.toggle('folded', folded);
+    el.setAttribute('aria-label', folded ? 'Your status: tap for the details' : 'Your status');
   }
 
   function drawJob(now) {
@@ -204,6 +245,13 @@ export function createInfo(H) {
     const now = f.now;
     // the stamina's number (its bar: main.js)
     const sn = $('st-n'); if (sn && f.stam !== undefined) { const v = Math.round(f.stam); if (v !== I.stN) { I.stN = v; sn.textContent = String(Math.max(0, v)); } }
+    // stamina only when it matters (UI-9, the owner's minimal HUD): its row folds away once it's been full a moment (and
+    // in a vehicle), back the moment you spend it
+    if (f.stFull !== undefined) {
+      if (!f.stFull) I.stFullAt = 0; else if (!I.stFullAt) I.stFullAt = now;
+      const rest = !!I.stFullAt && now - I.stFullAt > STAM_REST_MS;
+      if (rest !== I.stRest) { I.stRest = rest; $('vitals')?.classList.toggle('st-rest', rest); }
+    }
     // the vehicle chip
     const V = I.veh, vc = $('vchip');
     if (vc) {
@@ -226,6 +274,8 @@ export function createInfo(H) {
         }
       }
     }
+    // a status chip's words fold to its icon when their time is up
+    if (now >= I.stNext) drawStatus(now);
     // the job card: its distance and its clock run on; folds to a chip after a few seconds
     if (I.job.j && now - (I.job.drawn || 0) > 250) { I.job.drawn = now; drawJob(now); }
     // the hint strips: the first few times you're doing each

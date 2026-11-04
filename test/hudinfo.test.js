@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { logNote, noteLog, clearLog, noteLine, NOTE_LINE, promptWords } from '../client/notelog.js';
-import { hintDue, hintSeen, hintCounts, hintStrip, HINT_TIMES, HINT_STATES, statusChips, jobWords, jobHtml, jobKey, fmtDist } from '../client/hudinfo.js';
+import { hintDue, hintSeen, hintCounts, hintStrip, HINT_TIMES, HINT_STATES, statusChips, hudChips, statusOpen, STATUS_MS, jobWords, jobHtml, jobKey, fmtDist } from '../client/hudinfo.js';
 import { deathChoices, WAKE_ROWS } from '../client/deathscreen.js';
 import { STORE_ICON, GLYPHS } from '../client/storeicons.js';
 import { KIND_ICON } from '../client/mapwaypoints.js';
@@ -97,6 +97,21 @@ test('the status line in plain words: Samaritan, Criminal XP, the record on its 
   assert.ok(!words.some((w) => /\bSAM\b|\bEXP\b/.test(w)), 'no SAM / EXP');
   assert.ok(c.find((x) => x.t === 'Bleeding').k === 'flag', 'what\'s happening to you now: a flag (a phone shows those)');
   assert.equal(statusChips({ faction: 'enforcer', rank: 'Sergeant' })[0].t, 'Police · Sergeant');
+});
+
+test('the HUD\'s status (UI-9, the owner\'s minimal HUD): what\'s happening now, in words when it starts or changes, then its icon alone', () => {
+  const me = { faction: 'citizen', sam: 12, cexp: 3, felonies: 2, bleeding: true, bounty: 500, buffs: { coffee: 30 }, light: true, ghost: true };
+  const c = hudChips(me), t = c.map((x) => x.t);
+  assert.deepEqual(t, ['Bleeding', 'Bounty', 'Coffee'], 'no citizen chip, no standing numbers (the phone\'s Skills), no Light on, no Ghost');
+  assert.ok(!statusChips(me).some((x) => /Light on|Ghost|Police remember/.test(x.t)), 'gone from the status for good');
+  for (const x of c) assert.ok(x.ic, `${x.t}: an icon to fold to`);
+  assert.equal(hudChips({ faction: 'enforcer', rank: 'Sergeant' })[0].ic, 'police', 'on duty: the badge');
+  const seen = new Map();
+  assert.deepEqual(statusOpen(c, seen, 1000), [true, true, true], 'new: in words');
+  assert.deepEqual(statusOpen(hudChips({ ...me, buffs: { coffee: 22 } }), seen, 1000 + STATUS_MS + 1), [false, false, false], 'a few seconds on: icons (the coffee counting down is no change)');
+  assert.deepEqual(statusOpen(hudChips({ ...me, bounty: 900 }), seen, 1000 + STATUS_MS + 2), [false, true, false], 'a bigger bounty: in words again');
+  assert.deepEqual(statusOpen(hudChips(me), seen, 1000 + 3 * STATUS_MS, 1000 + 4 * STATUS_MS), [true, true, true], 'tapped: all in words');
+  assert.deepEqual(statusOpen(hudChips({ faction: 'citizen', bounty: 500 }), seen, 1000 + 5 * STATUS_MS), [false], 'what stopped is gone; what goes on stays an icon');
 });
 
 test('the job card: the job, the call, step N of M, the objective; a new step is a new key', () => {
