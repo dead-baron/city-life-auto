@@ -54,6 +54,14 @@ export function weaponItem(w) {
   const W = WEAPON_BY_INDEX[w | 0];
   return W ? WEAPON_ITEM[W.id] ?? null : null;
 }
+// standing: breath in (1) / out (0), a glance aside (2, 3) every 13-22 s; each on their own clock from their id
+const idleH = (id, k) => { let x = Math.imul((id | 0) ^ Math.imul(k, 0x9e3779b1), 2654435761); x ^= x >>> 15; x = Math.imul(x, 2246822519); x ^= x >>> 13; return (x >>> 0) / 4294967296; };
+export function idleFrame(id, t) {
+  const s = Math.floor(t / (0.8 + idleH(id, 1) * 0.15) + idleH(id, 2) * 1000), gp = 16 + Math.floor(idleH(id, 3) * 8);
+  if ((s % gp + gp) % gp < 2) return idleH(id, 10 + Math.floor(s / gp)) < 0.5 ? 2 : 3;
+  const bp = idleH(id, 4) < 0.5 ? 5 : 6;
+  return (s % bp + bp) % bp < 2 ? 1 : 0;
+}
 // v1 frame counters -> this module's frames: moves and carry run on the 0-7 stride phase, idle on a slow 0-7 clock,
 // punch / swing on 0-3 (+4 for the other side)
 export function pedFrame(pose, fr = 0) {

@@ -1588,7 +1588,7 @@ export class World2 {
     const ptk = p.d.pp === 'stretcherPt' && p.d.pa && Pd.litterApp && L.upright ? this._patient(p.d.pa, d8) : null;
     const A1 = this._app(p.d.app || {}, p.d.ar), A0 = p.d.mb && A1 ? this._bagged(A1) : A1, A3 = p.d.pp && A0 && Pd.withProp ? this._propped(A0, ptk ? 'stretcher' : p.d.pp) : A0;
     const A2 = (p.d.hh || p.d.fl === 2) && A3 ? this._lamped(A3, p.d.hh ? 1 : 0) : A3;   // (a hard hat, a headlamp: lights to carry)
-    let pf = Pd.pedFrame(ppose, L.fr);
+    let pf = ppose === 'idle' && Pd.idleFrame ? Pd.idleFrame(p.id, now) : Pd.pedFrame(ppose, L.fr);
     if (lying && (f & PF.DEAD) && p.deadK === 'halved' && this._halves(p, A2, ppose, d8, pf)) return;   // (cut in two by the plasma blade)
     // unarmed with the flashlight on: it's in your hand; under an open umbrella (standing or walking): its shaft is
     const umb = !!(f & PF.UMBRELLA) && !(p.extra | 0) && !p.d.fl && (ppose === 'idle' || ppose.startsWith('walk')) && !!Pd.umbrellaTop;
@@ -2136,7 +2136,7 @@ export class World2 {
         let ppose = L.swimming ? 'swim' : pose === 'move' ? 'walk' + L.lvl : pose, d8 = dir8(e.ra), A2 = this._app(e.d.app || {}, e.d.ar);
         if (e.d.pp && A2 && Pd.withProp) A2 = this._propped(A2, e.d.pp);   // (a street personality: their prop and walk, as _ped draws them)
         if ((e.d.gt || e.d.sb) && Pd.personaPose) ppose = Pd.personaPose(e.d, ppose);
-        const wpn = L.board ? 0 : (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : Pd.pedFrame(ppose, L.fr);
+        const wpn = L.board ? 0 : (e.extra | 0) || (e.d.fl ? 'flashlight' : 0), pf = ppose === 'sitx' && Pd.sitFrame ? Pd.sitFrame(e.d, e.id, now) : ppose === 'sit' && e.d && e.d.gt === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(e.d, e.id, now) : ppose === 'idle' && Pd.idleFrame ? Pd.idleFrame(e.id, now) : Pd.pedFrame(ppose, L.fr);
         const bo = bladeOpt(e, wpn);
         if (this._ask('peds', 'ped', Pd.pedKey(A2, ppose, d8, pf, wpn, bo), [A2, ppose, d8, pf, wpn, bo], prio)) budget--;
       } else if (e.kind === K.VEH && A && A.vehicleKey && A.vehState && !(e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).horse)) {   // (a horse: its animal sprites, asked for as it's drawn - _horse)
