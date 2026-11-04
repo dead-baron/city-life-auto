@@ -222,10 +222,95 @@ export function drawIcon(g, name, x, y, px = 24) {
 // fill every [data-ic] in root with its icon (index.html's HUD buttons and plates)
 export function paintIcons(root = document) {
   for (const el of root.querySelectorAll('[data-ic]')) if (el.dataset.icd !== el.dataset.ic) { el.innerHTML = icon(el.dataset.ic); el.dataset.icd = el.dataset.ic; }
+  for (const el of root.querySelectorAll('[data-gl]')) if (el.dataset.icd !== el.dataset.gl) { el.innerHTML = glyph(el.dataset.gl); el.dataset.icd = el.dataset.gl; }
 }
 
-// the touch buttons' icons by the action and the label the slot gives it (shared/touchcontrols.js)
-const ICON = { HIT: 'hit', THROW: 'throw', TRICK: 'trick', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'air', EXIT: 'getout', OFF: 'getout', SIREN: 'siren', GALLOP: 'gallop' };
-const ACTION_ICON = { fire: 'aim', dive: 'roll', action: 'act', vehicle: 'car', block: 'block', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'climb', descend: 'descend', use: 'bag', light: 'light', cruiser: 'radio', throw: 'throw', sprint: 'gallop', nextw: 'fire' };
-export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'act';
-export const svg = (k) => icon(k);
+// ---- the touch buttons' glyphs (the owner, 11-03: "simplified UI icons ... cleaner, more consistent and better looking")
+// One line-icon language, vector, never scaled pixels: the 24-unit grid, a 2-unit stroke with round caps and joins, no
+// fill (variant 'line', the open-source line sets' style - Tabler, Lucide); or the same shapes solid (variant 'solid').
+// Drawn for City Life Auto in that style - no third-party path data (the icon packages couldn't be fetched in the
+// session that drew these; a set's own paths can replace any of them, they share the grid and the stroke). One color:
+// currentColor (the button's: off-white; ink on an accent disc). Each glyph: a - the line drawing; b - its solid
+// silhouette (fill, even-odd for holes); l - lines drawn in both; c - cuts drawn over the solid in the disc's color.
+const VG = {
+  // the actions
+  fist: { a: 'M7 10.5V8a1.5 1.5 0 0 1 3 0v1.5M10 9V7.5a1.5 1.5 0 0 1 3 0V9.5M13 9.5V7.5a1.5 1.5 0 0 1 3 0V10M16 10V8.5a1.5 1.5 0 0 1 3 0V14c0 3.9-2.7 6.5-6.5 6.5H12c-3.3 0-5.5-2.4-5.5-5.5v-2c0-1.1.9-2 2-2H11a1.5 1.5 0 0 1 0 3H9.5',
+    b: 'M6.5 13V8a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2-.5 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.4 1V14c0 3.9-2.8 6.5-6.6 6.5H12c-3.2 0-5.5-2.4-5.5-5.5z', c: 'M9.7 8.6v2.4M12.9 8v2.8M16.1 8.4v2.6M8.5 13.5h3' },
+  bullet: { a: 'M9 21V10c0-3 1.3-5.8 3-7 1.7 1.2 3 4 3 7v11zM9 16.5h6', b: 'M8.5 21.5V10c0-3.2 1.5-6.3 3.5-7.7 2 1.4 3.5 4.5 3.5 7.7v11.5z', c: 'M8.5 16.5h7' },
+  crosshair: { a: 'M12 12m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0M12 2v4M12 18v4M2 12h4M18 12h4', l: 'M12 12h.01' },
+  target: { a: 'M12 12m-8.5 0a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0', l: 'M12 12h.01', b: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 1 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 1 0 0-12zM12 9.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 1 1 0-5z' },
+  hand: { a: 'M9 13.5V5a1.5 1.5 0 0 1 3 0v6.5M12 11a1.5 1.5 0 0 1 3 0v1M15 11.5a1.5 1.5 0 0 1 3 0v1M18 12a1.5 1.5 0 0 1 3 0v4a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1L9 15', l: 'M4.5 4l1.5 1.5M3 9h2M15.5 4L14 5.5',
+    b: 'M9 15V5a1.5 1.5 0 0 1 3 0v5.6a1.5 1.5 0 0 1 3 .4 1.5 1.5 0 0 1 3 .5 1.5 1.5 0 0 1 3 .5V16a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1z', c: 'M12 11.5v2.5M15 11.8v2.4M18 12.3v2' },
+  car: { a: 'M3 16.5V13l2.2-5.5h11.3l3.2 5.5H21a1 1 0 0 1 1 1v2.5M3 16.5h1.5M9.5 16.5h5M19.5 16.5H22M5 13h14.7M11.5 7.5V13M7 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M17 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
+    b: 'M2 17v-4.2L4.4 7h12.4l3.3 5.5h1.4A1.5 1.5 0 0 1 23 14v3h-2.6a3.4 3.4 0 0 0-6.8 0H10.4a3.4 3.4 0 0 0-6.8 0zM6 12.2h4.6V8.6H7.5zM12.4 12.2h5.5l-2-3.6h-3.5zM7 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0M17 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0' },
+  roll: { a: 'M4.5 16.5a7.5 7.5 0 0 1 15 0M16.5 13.5l3 3 3-3M2.5 20.5h19' },
+  reload: { a: 'M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4h-4' },
+  shield: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6z', b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6z' },
+  badge: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6zM12 8.2l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z',
+    b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6zM12 7.8l-1.4 2.8-3 .5 2.2 2.1-.5 3 2.7-1.4 2.7 1.4-.5-3 2.2-2.1-3-.5z' },
+  siren: { a: 'M7 18v-5.5a5 5 0 0 1 10 0V18M5 21h14v-3H5zM12 3.5V5M5 7l1.2 1.2M19 7l-1.2 1.2M10 13a2 2 0 0 1 2-2',
+    b: 'M6.5 18v-5.5a5.5 5.5 0 0 1 11 0V18zM4.5 18.5h15v3h-15z', l: 'M12 3v2M5 6.5l1.4 1.4M19 6.5l-1.4 1.4', c: 'M10 13a2 2 0 0 1 2-2' },
+  horn: { a: 'M4 9.5h3l5-4v13l-5-4H4zM16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11', b: 'M3.5 9h3.3l5.7-4.5v15L6.8 15H3.5z', l: 'M16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11' },
+  bag: { a: 'M6 21V10.5A4.5 4.5 0 0 1 10.5 6h3a4.5 4.5 0 0 1 4.5 4.5V21zM9.5 6V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5V6M6 13.5h12M10 13.5v2.5',
+    b: 'M5.5 21.5v-11a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v11z', l: 'M9.5 5.5V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v1', c: 'M5.5 13.5h13M10 13.5v2.5' },
+  light: { a: 'M3 9h8l3-2.5v11L11 15H3zM17.5 8l3-1.5M18 12h3M17.5 16l3 1.5', b: 'M2.5 8.5h8.3l3.7-3v13l-3.7-3H2.5z', l: 'M17.5 8l3-1.5M18 12h3M17.5 16l3 1.5' },
+  autofire: { a: 'M12 20V11c0-2.6 1.1-4.8 2.75-6 1.65 1.2 2.75 3.4 2.75 6v9zM12 16h5.5M3.5 9H8M2.5 12.5H8M3.5 16H8',
+    b: 'M11.5 20.5V11c0-2.8 1.3-5.2 3.25-6.5C16.7 5.8 18 8.2 18 11v9.5z', l: 'M3.5 9H8M2.5 12.5H8M3.5 16H8', c: 'M11.5 16h6.5' },
+  up: { a: 'M12 20V4M5.5 10.5L12 4l6.5 6.5' },
+  down: { a: 'M12 4v16M5.5 13.5L12 20l6.5-6.5' },
+  brake: { a: 'M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M12 9v3.5M12 15.25v.01M4.6 6.2a9 9 0 0 0 0 11.6M19.4 6.2a9 9 0 0 1 0 11.6', b: 'M12 5.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 1 1 0-13z', l: 'M4.6 6.2a9 9 0 0 0 0 11.6M19.4 6.2a9 9 0 0 1 0 11.6', c: 'M12 9v3.5M12 15.25v.01' },   // (the dashboard's brake light, ISO 7000: a pedal read as a speech bubble)
+  gallop: { a: 'M5 6l6 6-6 6M13 6l6 6-6 6' },
+  throw: { a: 'M5.5 18.5C8 11 12.5 7 19 5.5M14.5 4l4.5 1.5-1.5 4.5M5.5 18.5m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0-3.6 0' },
+  star: { a: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', b: 'M12 2.3l3 6 6.7 1-4.9 4.7 1.2 6.6-6-3.1-6 3.1 1.2-6.6-4.9-4.7 6.7-1z' },
+  ollie: { a: 'M3 17h18M6 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M18 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M12 13V3.5M8 7.5l4-4 4 4' },
+  exit: { a: 'M14 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3M9.5 12H21M17.5 8.5L21 12l-3.5 3.5' },
+  swap: { a: 'M9.5 6l6 6-6 6' },
+  // what you hold: silhouettes pointing right
+  pistol: { a: 'M3.5 6.5h16v4h-9M5.5 10.5l-1.8 8.5h4.6l1.5-6.5h3a1 1 0 0 0 1-1v-1M19.5 6.5V5',
+    b: 'M3 6h17v5h-6.7v1a1.5 1.5 0 0 1-1.5 1.5H10.4L9 19.5H3.2L5 11H3z' },
+  rifle: { a: 'M2.5 9.5L6 9h13.5v2.5H22M6 9v3.5l-2 4M6 12.5h8L12.5 16H9.5l1-3.5M14 9V7h3',
+    b: 'M2 9.2L6 8.5h14v2.5h2.5v1.5H14l-1.6 4H9l1-4H6.6l-2 4.3H2.3L4.5 12H2z' },
+  knife: { a: 'M20.5 3.5C17 4.5 12.5 9 10 12.5l1.5 1.5c3.5-2.5 8-7 9-10.5zM10 12.5l-6 6 1.5 1.5 6-6',
+    b: 'M21 3c-3.8.8-8.8 5.6-11.6 9.4l2.2 2.2C15.4 11.8 20.2 6.8 21 3zM9.5 12.7l2 2L5.2 21 3 18.8z' },
+  sword: { a: 'M20 4v3.5L9.5 18l-3.5-3.5L16.5 4zM5.5 13.5l5 5M8 16l-4 4' },
+  bat: { a: 'M4 20l1.5-1.5M5.5 18.5l8.5-8.5c1.5-1.5 3.5-4 5-5.5s2.5 0 1 1.5-4 3.5-5.5 5L6 20.5z', b: 'M5 19l8.5-8.5c1.6-1.6 3.6-4.1 5.2-5.7 1.6-1.6 3.6.4 2 2-1.6 1.6-4.1 3.6-5.7 5.2L6.5 20.5zM3 20.5l1.5-1.5 1 1-1.5 1.5z' },
+  grenade: { a: 'M11 15m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M9 9V6.5h4V9M13 7.5l4.5-3M17.5 4.5l1.5 1.5', b: 'M11 15m-6.5 0a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M8.5 5.8h5V9h-5z', l: 'M13.5 7.2l4-2.7M17.5 4.5l1.5 1.5' },
+  bow: { a: 'M6 3c6 3 6 15 0 18M6 3v18M3 12h17M17.5 9l3 3-3 3' },
+  rocket: { a: 'M2.5 10h14v4h-14zM16.5 9.5L21 12l-4.5 2.5M6 14v3.5M10 14v2.5', b: 'M2 9.5h14.5V9l5.5 3-5.5 3v-.5H11v2.5H9v-2.5H7v3.5H5v-3.5H2z' },
+  bolt: { a: 'M13 3L5 13.5h6L10 21l8-10.5h-6z', b: 'M13.6 2.2L4 14h6.6L9.4 21.8 19 10h-6.5z' },
+  spray: { a: 'M8 21V10.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V21zM10 8.5V5.5h3v3M13 6h3M19 4v.01M19 7.5v.01M21.5 5.5v.01', b: 'M7.5 21.5V10.5A2.5 2.5 0 0 1 10 8h3a2.5 2.5 0 0 1 2.5 2.5v11zM9.5 4.8h4V8h-4z', l: 'M13.5 6h2.5M19 4v.01M19 7.5v.01M21.5 5.5v.01' },
+  flame: { a: 'M12 21c3.6 0 6-2.6 6-6 0-4-3-6.5-4-10.5-2.6 2-3.6 4.6-3.6 7.2-1-1-1.5-2.1-1.5-3.6C7.4 10.2 6 12.4 6 15c0 3.4 2.4 6 6 6z', b: 'M12 21.6c3.9 0 6.6-2.8 6.6-6.6 0-4.4-3.3-7-4.4-11.6-2.9 2-4 4.8-4 7.6-1-1-1.6-2.3-1.6-3.9-2.4 2.1-4 4.5-4 7.9 0 3.8 2.7 6.6 7.4 6.6z' },
+  rod: { a: 'M4 20L19 5M19 5v11M19 16a1.5 1.5 0 1 1-1.5 1.5M3 21l1.5-1.5' },
+  spikes: { a: 'M3 18h18M4 18l2-6 2 6M10 18l2-6 2 6M16 18l2-6 2 6' },
+};
+export const GLYPH_NAMES = Object.keys(VG);
+export const GLYPH_VARIANTS = ['line', 'solid'];
+let VARIANT = 'solid';   // (the one in use - the owner's pick, 11-04: the solid set; 'line' stays as the shapes' outline, the solid set's fallback where a glyph has no fill of its own)
+export function setGlyphVariant(v) { if (GLYPH_VARIANTS.includes(v)) { VARIANT = v; gSvgs.clear(); } }
+const gSvgs = new Map();
+const STROKE = (w = 2) => `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
+// '<svg class="pi24 gl">' for a glyph, in the button's text color (currentColor); a solid glyph's cuts in --cut (the disc's)
+export function glyph(name, px = 0, variant = VARIANT) {
+  const key = name + '|' + variant;
+  if (!gSvgs.has(key)) {
+    const g = VG[name] || VG.hand;
+    gSvgs.set(key, variant === 'solid' && g.b
+      ? `<path fill="currentColor" fill-rule="evenodd" d="${g.b}"/>${g.l ? `<path ${STROKE(2.2)} d="${g.l}"/>` : ''}${g.c ? `<path class="cut" ${STROKE(1.6)} d="${g.c}"/>` : ''}`
+      : `<path ${STROKE(variant === 'solid' ? 2.6 : 2)} d="${g.a}${g.l || ''}"/>`);
+  }
+  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} aria-hidden="true">${gSvgs.get(key)}</svg>`;
+}
+// what you hold, as its glyph (the weapon button: shared/items.js WEAPONS' type and id)
+const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
+export function glyphOfWeapon(id, type) {
+  if (!id || id === 'fists') return 'fist';
+  if (LONG_GUNS.has(id)) return 'rifle';
+  if (/knife/.test(id)) return 'knife';
+  if (id === 'sword' || id === 'katana' || id === 'plasma') return 'sword';
+  return { gun: 'pistol', melee: 'bat', grenade: 'grenade', bow: 'bow', rocket: 'rocket', taser: 'bolt', spray: 'spray', flame: 'flame', tool: 'rod', deploy: 'spikes' }[type] || 'pistol';
+}
+// the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
+const ICON = { HIT: 'fist', THROW: 'throw', TRICK: 'star', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'up', EXIT: 'exit', OFF: 'exit', SIREN: 'siren', GALLOP: 'gallop' };
+const ACTION_ICON = { fire: 'target', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
+export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'hand';
+export const svg = (k) => glyph(k);

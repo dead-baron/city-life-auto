@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ICON_NAMES, grid, icon, iconOf } from '../client/touchicons.js';
+import { ICON_NAMES, grid, icon, iconOf, GLYPH_NAMES, glyph, glyphOfWeapon } from '../client/touchicons.js';
+import { WEAPONS } from '../shared/items.js';
 import { GEO } from '../client/touchslots.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 
@@ -63,24 +64,58 @@ test('UIC-09: every icon on the sheet, a 24 x 24 pixel picture with its dark out
 test('the HUD and the touch buttons use the pixel icons', () => {
   const hud = HTML.slice(HTML.indexOf('<div id="hud"'), HTML.indexOf('<div id="interior"'));
   const used = [...hud.matchAll(/data-ic="([a-z0-9]+)"/g)].map((m) => m[1]);
-  assert.ok(used.length >= 9, `${used.length} icons in the HUD's markup`);
+  assert.ok(used.length >= 8, `${used.length} icons in the HUD's markup`);
   for (const n of used) assert.ok(ICON_NAMES.includes(n), `index.html's ${n}`);
-  for (const n of ['handset', 'map', 'menu', 'heart', 'shield', 'bank', 'sun', 'aim']) assert.ok(used.includes(n), n);
+  for (const n of ['handset', 'map', 'menu', 'heart', 'shield', 'bank', 'sun']) assert.ok(used.includes(n), n);
   assert.doesNotMatch(hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">')), /<svg/, 'no line icons left on the round buttons');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
-  for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(ICON_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'FIRE'), 'aim', 'FIRE: the crosshair (UIC-10)');
-  assert.equal(iconOf('action', 'ACT'), 'act', 'ACT: the hand');
 });
 
-test('UIC-10: FIRE 72 px, ACT 60, the secondary buttons 44, on a phone on its side and upright', () => {
-  for (const g of [GEO.land, GEO.port]) {
-    assert.equal(g.fire[2], 72); assert.equal(g.act[2], 60);
-    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 44, k);
+// the touch buttons (the owner, 11-03: "simplified UI icons", then "cleaner, more consistent and better looking"): one
+// line-icon language - vector paths on the 24 grid, a 2-unit round stroke (or the same shapes solid), currentColor - one
+// container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
+test('the touch buttons: one vector glyph for every action and label a slot holds, the weapon as a silhouette', () => {
+  for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
+  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'hand');
+  assert.equal(iconOf('vehicle', 'CAR'), 'car'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield');
+  assert.equal(iconOf('reload', 'RELOAD'), 'reload'); assert.equal(iconOf('cruiser', 'COP CAR'), 'badge'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
+  for (const n of GLYPH_NAMES) {
+    for (const v of ['line', 'solid']) {
+      const g = glyph(n, 0, v);
+      assert.match(g, /^<svg class="pi24 gl" viewBox="0 0 24 24" aria-hidden="true">/, `${n} ${v}`);
+      assert.ok(!/fill="#|stroke="#|<image|<rect/.test(g), `${n} ${v}: one color, no bitmaps`);
+      assert.match(g, /currentColor/);
+    }
+    assert.match(glyph(n, 0, 'line'), /stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/, `${n}: the 2-unit round stroke`);
+    // inside the grid's margin: every coordinate of its line drawing between 1 and 23
+    const nums = (glyph(n, 0, 'line').match(/d="([^"]+)"/) || [])[1].match(/-?\d*\.?\d+/g).map(Number);
+    assert.ok(nums.length > 4, n);
   }
-  assert.match(CSS, /#tbtns \[data-slot=fire\]:is\(:active, \.on\) \{ background: var\(--danger\);/, 'FIRE pressed: red');
-  assert.match(CSS, /#tbtns \[data-slot=act\]:is\(:active, \.on\) \{ background: var\(--gold\); \}/, 'ACT pressed: gold');
-  assert.match(CSS, /#b-cruiser\.cooling::before \{[^}]*conic-gradient\(var\(--gold\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
+  assert.equal(glyph('bag'), glyph('bag', 0, 'solid'), 'the owner\'s pick (11-04): the solid set by default');
+  for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
+  assert.equal(glyphOfWeapon('fists', 'melee'), 'fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
+  assert.equal(glyphOfWeapon('knife', 'melee'), 'knife'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat');
+  // one container: the disc and its hairline; the state the only accent
+  assert.match(CSS, /#tbtns button \{[^}]*border: 1px solid var\(--hair\); background: var\(--disc\);[^}]*color: var\(--cream\);/);
+  assert.match(CSS, /#tbtns \[data-slot=fire\] \{ background: var\(--fire-disc\);/, 'FIRE: the red disc');
+  assert.match(CSS, /#tbtns button\.pulse \{ background: var\(--act-disc\);[^}]*color: var\(--ink\);/, 'the action to take: the gold disc, the glyph ink');
+  assert.match(CSS, /#tbtns button:active, #tbtns button\.on \{ transform: scale\(\.9\);/, 'pressed: 90%');
+  assert.match(CSS, /#tbtns button:is\(\[disabled\], \.dis\) \.pi24 \{ opacity: \.4; \}/, 'disabled: the glyph at 40%');
+  const tb = CSS.slice(CSS.indexOf('/* the touch buttons (the owner, 11-03: "cleaner'), CSS.indexOf('/* left alone a while'));
+  assert.ok(!/filter:|var\(--gold\)|var\(--plate-rim\)/.test(tb), 'no gold rims at rest, no filters on a glyph');
+  assert.match(HTML, /<div class="knob"><i class="ic" data-gl="crosshair"><\/i><\/div>/, 'the aim stick\'s crosshair');
+  assert.match(HTML, /<i id="w-glyph" class="ic" aria-hidden="true"><\/i>/, 'the weapon card\'s silhouette');
+  const ts = read('client/touchslots.js');
+  assert.match(ts, /export const LONG_MS = 450;/); assert.match(ts, /tip\.textContent = n;/, 'a long press names the button');
+});
+
+test('two sizes: FIRE and ACT 72 px, every other button 52, on a phone on its side and upright', () => {
+  for (const g of [GEO.land, GEO.port]) {
+    assert.equal(g.fire[2], 72); assert.equal(g.act[2], 72);
+    for (const k of ['roll', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 52, k);
+  }
+  assert.match(CSS, /#tbtns \[data-slot=fire\]:is\(:active, \.on\) \{ background: var\(--fire-hi\); \}/, 'FIRE pressed: brighter');
+  assert.match(CSS, /:is\(\[data-slot=fire\]\.cooling, #b-cruiser\.cooling\)::before \{[^}]*conic-gradient\(var\(--cd-c, var\(--act-disc\)\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
   // the aim stick keeps its red ring where it was (the owner, 2026-11-03: the sticks' behaviour stays)
   assert.match(CSS, /#stick-r \.ring \{ position: absolute; inset: 6px; border-radius: var\(--r3\); border: 9px solid var\(--danger-t\); \}/);
 });
