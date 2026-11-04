@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { NP, NP_PAL, npPic } from '../client/art2/neonpics.js';
-import { handNeon, paintSigns, picSize, picGlow } from '../client/art2/neonsigns.js';
+import { handNeon, paintSigns, picSize, picGlow, bladeSize } from '../client/art2/neonsigns.js';
 import { makeBuilding, buildingH } from '../client/art2/buildings.js';
 import { makeStatic } from '../client/art2/game/statics.js';
 
@@ -35,7 +35,7 @@ test('a Neon Strip front: its sign, a picture over the shopfront and more stacke
   handNeon(spec, { door: 'right', name: 'NIGHT OWL RAMEN', kind: 'diner', col: 0, blade: 'RAMEN', pic: 'ramen', pics: ['noodles', 'dumpling'], dress: true, flick: 1 }, { w: spec.w, lights, rnd: rndOf(9) });
   const pics = spec.neonSigns.filter((s) => s.pic).map((s) => s.pic);
   assert.ok(pics.includes('ramen') && pics.length >= 2, `its pictures (${pics.join(', ')})`);
-  const H = buildingH(spec), rects = spec.neonSigns.map((s) => { const [w, h] = s.pic ? picSize(s.pic, 2) : s.blade ? [14, s.blade.length * 12 + 8] : [s.w, s.h]; return [s.x, s.v, w, h]; });
+  const H = buildingH(spec), rects = spec.neonSigns.map((s) => { const [w, h] = s.pic ? picSize(s.pic, 2) : s.blade ? bladeSize(s.blade) : [s.w, s.h]; return [s.x, s.v, w, h]; });
   for (const [x, v, w, h] of rects) assert.ok(x >= 0 && x + w <= spec.w && v >= 0 && v + h <= H, 'on the face');
   for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
     const [a, b] = [rects[i], rects[j]];

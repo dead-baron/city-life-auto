@@ -26,6 +26,7 @@
 import { MAT, ramp as ramp0 } from './palette.js';
 import { GBuf, hash, vnoise, bayer, step, F_GLASS, F_LEAF } from './gbuf.js';
 import { drawText, textWidth } from './font.js';
+import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, boardFor } from './signfont.js';
 import { DOOR_COLS } from '../../shared/doors.js';
 import { dressFacade } from './facadedress.js';
 
@@ -40,10 +41,17 @@ function ramp(base, n = 6, k = Math.floor((n - 1) / 2), opt) {
   return r;
 }
 export const FLOOR = 56, SHOP_FLOOR = 64;
+// (wave A1) a shop sign taller than the old 22 px band - two lines of 7 art px letters - raises the shop's ground floor
+// by the difference, so the board sits between the windows and the floor above (signfont.js layoutSign)
+export function signLift(spec) {
+  const sh = spec.shop, sg = sh && sh.sign;
+  if (!sg || !sg.text || spec.height || spec.groundH === 0) return 0;
+  return Math.max(0, boardFor(sg, sg.w ?? spec.w - 8).h * 2 - 22);
+}
 // the height of a building's walls (its flat roof level), as makeBuilding lays it out
 export function buildingH(spec) {
   if (spec.height) return spec.height;
-  const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = (spec.style || 'stucco') === 'brick' ? 10 : 6;
+  const floors = spec.floors || 1, gH = (spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR)) + signLift(spec), cornice = (spec.style || 'stucco') === 'brick' ? 10 : 6;
   return gH + (floors - 1) * FLOOR + cornice + (spec.parapet || 0);
 }
 export const roofDeckZ = (spec) => buildingH(spec) - (spec.roofMat && spec.roof !== 'tile' && !spec.pitch ? spec.lip ?? 6 : 0);
@@ -243,7 +251,7 @@ export function makeBuilding(spec) {
   GLASSC = spec.glassTint ? ramp(spec.glassTint, 6, 3, { light: 0.65 }) : null;
   BRICKC = spec.brickTone ? ramp(spec.brickTone, 6, 3, { dark: 0.55 }) : null;
   GLOW_ONLY = !!spec.glowOnly;
-  const floors = spec.floors || 1, gH = spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR), cornice = style === 'brick' ? 10 : 6;
+  const floors = spec.floors || 1, gH = (spec.groundH ?? (spec.shop ? SHOP_FLOOR : FLOOR)) + signLift(spec), cornice = style === 'brick' ? 10 : 6;
   const H = buildingH(spec);
   const G = new GBuf(w, d + H);
   G.ax = 0; G.ay = d + H;
@@ -294,6 +302,7 @@ export function makeBuilding(spec) {
     }
   }
   const fy = (v) => d + H - v;                                      // facade height -> sprite row
+  let shopAt = null;                                                // (the shopfront's sign band: painted over the grime)
   // cornice: a projecting band at the top (dentils on brick)
   for (let k = 0; k < cornice; k++) for (let x = 0; x < w; x++) {
     const v = H - k, Y = fy(v);
@@ -355,7 +364,7 @@ export function makeBuilding(spec) {
   // ---- ground floor
   if (spec.blank) { /* a plain wall: no doors or windows */ }
   else if (spec.motel) motelFront(G, w, gH, floors, spec, seed, night, fy);
-  else if (spec.shop) storefront(G, w, d, H, gH, spec, seed, night, fy);
+  else if (spec.shop) shopAt = storefront(G, w, d, H, gH, spec, seed, night, fy);
   else if (spec.doors) {
     for (const dd of spec.doors) {
       const dh = dd.h || (dd.kind === 'garage' || dd.kind === 'roller' ? 48 : 46);
@@ -383,14 +392,27 @@ export function makeBuilding(spec) {
   if (spec.ivy) ivy(G, w, d, H, spec.ivy, seed);
   if (spec.mural) mural(G, spec.mural, d + H, seed);
   if (spec.dress) dressFacade(G, spec, WL, w, d, H, gH, fy, seed);
+  // the shop's sign over the dirt, the ivy and the tags: the words stay clean and whole (signfont.js)
+  if (shopAt && spec.shop.sign && spec.shop.sign.text) signBoard(G, spec.shop.sign, spec.shop.sign.x ?? 4, shopAt.winTop - 2, spec.shop.sign.w ?? w - 8, night);
   if (spec.portico) portico(G, spec.portico, d, H, cornice);
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
   for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
-  for (const bl of spec.blades || []) blade(G, bl, d + H, night);
+  for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
-  return spec.pitch ? pitched(G, spec, w, d, H, seed) : G;
+  if (!spec.pitch) return G;
+  // (a roof raised over the face adds rows above it: an even number, so the face's letters stay on the art grid)
+  let R = pitched(G, spec, w, d, H, seed);
+  if ((R.ay - G.ay) & 1) R = padTop(R);
+  if (G.signBox) R.signBox = { ...G.signBox, y: G.signBox.y + R.ay - G.ay };
+  return R;
+}
+function padTop(G) {
+  const O = new GBuf(G.w, G.h + 1);
+  O.ax = G.ax; O.ay = G.ay + 1;
+  O.col.set(G.col, G.w * 4); O.nrm.set(G.nrm, G.w * 4); O.emi.set(G.emi, G.w * 4); O.z.set(G.z, G.w); O.flag.set(G.flag, G.w);
+  return O;
 }
 
 // ---- flat roof decks (spec.roofMat) ------------------------------------------------------------------
@@ -780,7 +802,7 @@ export function liveDoor(G, x0, y0, w, h, style, night, c = 0) {
 
 function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const shop = spec.shop, y0 = d + H;
-  const winTop = fy(gH - 18), winBot = y0 - 7;
+  const winTop = fy(gH - signLift(spec) - 18), winBot = y0 - 7;
   const doorW = shop.doorW || 22, doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
   // windows with the interior
   for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
@@ -881,22 +903,23 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
     if ((x - 4) % 5 === 0 || (y - winTop) % 15 === 0) setC(G, x, y, step(MAT.metalDark, (x - 4) % 5 === 0 ? 0.55 : 0.75, x, y, 0));
   }
-  if (shop.openSign) {
-    const ox = shop.openSign.x ?? (shop.door === 'right' ? doorX - 30 : doorX + doorW + 8), oy = winTop + 6, col = shop.openSign.col || [255, 60, 70];
-    for (let y = -2; y < 9; y++) for (let x = -2; x < 18; x++) if (y === -2 || y === 8 || x === -2 || x === 17) { setC(G, ox + x, oy + y, [70, 140, 255]); glow(G, ox + x, oy + y, [70, 140, 255, 140 + night * 115]); }
-    drawText((px, py) => { setC(G, px, py, col.map((v) => Math.min(255, v * 0.6 + 110))); glow(G, px, py, [...col, 170 + night * 85]); }, 'OPEN', ox, oy, { sx: 1, gap: 1 });
-  }
   // people inside the windows (busts), and the clerk at the counter
   const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
   for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
   if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
+  if (shop.openSign) {   // a neon OPEN in the window: the small face at one art px, its blue tube round it
+    const col = shop.openSign.col || [255, 60, 70], L = OPEN_L(), bw = L.w * 2;
+    const ox = clampI(shop.openSign.x ?? (shop.door === 'right' ? doorX - 6 - bw : doorX + doorW + 6), 4, w - 4 - bw), oy = winTop + 4;
+    const P = { p: [20, 14, 26], i: col.map((v) => Math.min(255, Math.round(v * 0.5 + 128))), h: [70, 140, 255], f: [70, 140, 255], neon: true };
+    paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });
+  }
   // stall riser under the windows
   for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
   if (shop.live) liveDoor(G, doorX, y0 - 50, doorW, 50, shop.live, night, shop.doorC | 0);
   else door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
-  if (shop.sign) signBoard(G, shop.sign, shop.sign.x ?? 4, winTop - 24, shop.sign.w ?? w - 8, 22, night);
+  // (the sign itself is painted by makeBuilding once the face is dressed: signBoard)
   // striped fascia band above the windows
-  else if (shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
+  if (!(shop.sign && shop.sign.text) && shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
   // awning: sloped canvas strip, scalloped, in stripes
   if (shop.awning) {
     const [ca, cb] = shop.awning.map((h) => ramp(h, 6, 3));
@@ -909,6 +932,23 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
     }
     for (let x = 0; x < w; x++) { const s = x % 6, len = s === 0 || s === 5 ? 1 : 3; const stripe = Math.floor(x / 6) % 2 === 1; for (let k = 0; k < len; k++) { const Y = top + depth + k; G.put(x, Y, step(stripe ? cb : ca, 0.3 - k * 0.06, x, Y, 0), [0, 1, 0.2], vTop - depth * 0.3 - k, null, 0); } }
   }
+  return { winTop };
+}
+const clampI = (v, a, b) => Math.max(a, Math.min(Math.max(a, b), v));
+const OPEN_L = () => layoutSign('OPEN', 27, { face: 'civic', lines: 1 });
+// a sign's pixel on the face: its colour and its glow (or none: the wall's or the window's under it put out), and no
+// longer glass for the lights
+function facePx(G, x, y, c, e) {
+  if (!G.inside(x, y)) return;
+  const j = (y * G.w + x) * 4;
+  G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255;
+  if (e) { G.emi[j] = e[0]; G.emi[j + 1] = e[1]; G.emi[j + 2] = e[2]; G.emi[j + 3] = e[3]; } else G.emi[j + 3] = 0;
+  G.flag[y * G.w + x] &= ~F_GLASS;
+}
+// a sign's palette: its trade's (statics.js signStyle), or one made from a plain bg / fg pair with the ink made legible
+export function paletteOf(sign) {
+  if (sign.pal) return sign.pal;
+  return legible(palOf([sign.bg || '#2c2c34', sign.fg || [240, 220, 150]]));
 }
 
 // A motel's front (spec.motel = { room: px per room, door: its doors' colour, stair: 'left' | 'right' - the end its stair
@@ -1147,28 +1187,20 @@ function mural(G, m, yGround, seed) {
   }
   if (m.text) drawText((px, py) => setC(G, px, py, [250, 236, 210]), m.text, x0 + 6, yGround - Math.round(h * 0.24), { sx: 2, sy: 2, gap: 1 });
 }
-// a shop sign board with lettering (lit from inside at night when sign.lit)
-function signBoard(G, sign, x0, y0, w, h, night) {
-  const bg = ramp(sign.bg || '#2c2c34', 5, 2), fg = sign.fg || [240, 220, 150];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const edge = x < 2 || y < 2 || x >= w - 2 || y >= h - 2;
-    setC(G, x0 + x, y0 + y, edge ? (y < 2 || x < 2 ? MAT.metal[4] : MAT.metalDark[1]) : step(bg, 0.5 + (y < h / 2 ? 0.08 : -0.05), x0 + x, y0 + y, 0.4));
-    if (sign.lit && !edge) glow(G, x0 + x, y0 + y, [...bg[3], 30 + night * 40]);
-  }
-  const text = sign.text || '';
-  let sx = Math.max(1, Math.min(3, Math.floor((w - 10) / Math.max(1, text.length * 4))));
-  const sy = Math.max(1, Math.min(3, Math.floor((h - 6) / 5)));
-  const tw = textWidth(text, { sx, gap: 1 });
-  const tx = x0 + Math.floor((w - tw) / 2), ty = y0 + Math.floor((h - 5 * sy) / 2);
-  drawText((px, py, k) => { setC(G, px, py, k ? [20, 16, 24] : fg); if (!k && (sign.lit || sign.neon)) glow(G, px, py, [...fg, (sign.neon ? 150 : 60) + night * 100]); }, text, tx, ty, { sx, sy, gap: 1, shadow: true });
-  if (sign.icon === 'badge') { const cx = x0 + 10, cy = y0 + h / 2; for (let y = -8; y <= 8; y++) for (let x = -8; x <= 8; x++) { const a = Math.atan2(y, x), r = Math.hypot(x, y), star = 4 + 4 * Math.max(0, Math.cos(5 * (a + Math.PI / 2))) ** 2; if (r < star) { setC(G, cx + x, cy + y, r < 3 ? [180, 140, 50] : [236, 200, 90]); glow(G, cx + x, cy + y, [255, 210, 110, 40 + night * 100]); } } }
-  if (sign.icon === 'crown') { const cx = x0 + w - 16, cy = y0 + 5; for (let y = 0; y < 10; y++) for (let x = 0; x < 13; x++) { const on = y > 6 || ((x === 0 || x === 6 || x === 12) && y > 0) || (y > 3 && (x < 3 || (x > 4 && x < 8) || x > 9)); if (on) { setC(G, cx + x, cy + y, [236, 196, 80]); glow(G, cx + x, cy + y, [255, 200, 80, 40 + night * 120]); } } }
+// a shop's sign board (wave A1, signfont.js): the trade's face and palette (statics.js signStyle) or a plain bg / fg
+// pair made legible, the icon's tile beside the words, one line or two - every letter whole art pixels; lit after dark
+// by how the trade's sign is lit (a lightbox, lit letters, tubes, lamps on it). yBot: the row under the board.
+function signBoard(G, sign, x0, yBot, w, night) {
+  const L = boardFor(sign, w), y0 = Math.floor((yBot - L.h * 2) / 2) * 2;
+  const mode = sign.lit === false ? false : sign.glow || (sign.neon ? 'neon' : 'ink');
+  const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: mode, night, bulbs: sign.bulbs });
+  G.signBox = { ...box, lay: L };   // (where it went: test/signs.test.js reads it back through the bake)
 }
 
 // a classical portico on the facade: columns standing proud of a shaded recess, an entablature with an
 // inscription and a pediment above (p: { x, w, cols, text })
 function portico(G, p, d, H, cornice) {
-  const yG = d + H, top = H - cornice, entH = 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
+  const yG = d + H, top = H - cornice, entH = p.text ? 20 : 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
   const S = ramp('#d8cfbc', 6, 3);
   // recess behind the columns
   for (let v = 4; v < ent0; v++) for (let x = p.x + 4; x < p.x + p.w - 4; x++) { const Y = yG - v, j = (Y * G.w + x) * 4; if (G.inside(x, Y)) { G.col[j] *= 0.62; G.col[j + 1] *= 0.6; G.col[j + 2] *= 0.66; } }
@@ -1185,36 +1217,48 @@ function portico(G, p, d, H, cornice) {
   }
   // entablature with lettering
   for (let v = ent0; v < ent0 + entH; v++) for (let x = p.x; x < p.x + p.w; x++) setC(G, x, yG - v, step(S, v === ent0 || v === ent0 + entH - 1 ? 0.35 : 0.62, x, v, 0.3));
-  if (p.text) { const sx = 2, tw = textWidth(p.text, { sx, gap: 1 }); drawText((px, py) => setC(G, px, py, S[1]), p.text, p.x + Math.floor((p.w - tw) / 2), yG - ent0 - entH + 3, { sx, sy: 2, gap: 1 }); }
+  // the inscription cut in Serif Caps (dark in the stone, a lit lip under each stroke); Civic Sans when it's long; none
+  // when even that won't fit
+  if (p.text) {
+    const fk = lineMask(p.text, 'serif').w * 2 <= p.w - 8 ? 'serif' : lineMask(p.text, 'civic').w * 2 <= p.w - 8 ? 'civic' : null;
+    if (fk) { const M = lineMask(p.text, fk); paintLine((x, y, c) => setC(G, x, y, c), p.text, fk, p.x + Math.floor((p.w - M.w * 2) / 2), yG - ent0 - entH + Math.floor((entH - M.h * 2) / 2), { 1: S[0], 5: S[5] }); }
+  }
   // pediment
   for (let v = ent0 + entH; v < top; v++) { const t = (v - ent0 - entH) / pedH, half = (p.w / 2) * (1 - t); for (let x = Math.round(p.x + p.w / 2 - half); x < p.x + p.w / 2 + half; x++) { const edge = x < p.x + p.w / 2 - half + 3 || x > p.x + p.w / 2 + half - 3 || v === ent0 + entH; setC(G, x, yG - v, step(S, edge ? 0.75 : 0.45, x, v, 0.3)); } }
 }
-// a plaque or lettered panel on the wall (p: { text, x, v height above the pavement, sx, bg, fg, lit })
+// a plaque or lettered panel on the wall (p: { text, x | cx (its left, or its centre), v (its foot above the pavement),
+// face, pal | bg + fg, icon, glow, lit }): a small board in its face (Civic Sans at one art px by default; the neon
+// plaques in Neon Tube) as wide as its words, on two lines when the wall is narrow
 function plaque(G, p, yG, night) {
-  const sx = p.sx || 2, sy = p.sy || sx, tw = textWidth(p.text, { sx, gap: 1 }), w = p.w || tw + 10, h = 5 * sy + 8, x0 = p.x, y0 = yG - p.v - h;
-  if (p.bg) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { setC(G, x0 + x, y0 + y, (x === 0 || y === 0 || x === w - 1 || y === h - 1) ? MAT.metalDark[2] : ramp(p.bg, 5, 2)[2]); if (p.lit) G.glow(x0 + x, y0 + y, [...ramp(p.bg, 5, 2)[3], 30 + night * 60]); }
-  drawText((px, py) => { setC(G, px, py, p.fg || [60, 54, 48]); if (p.lit) G.glow(px, py, [...(p.fg || [255, 255, 255]), 80 + night * 120]); }, p.text, x0 + Math.floor((w - tw) / 2), y0 + 4, { sx, sy, gap: 1 });
+  const fk = p.face || (p.bg === '#1c1a28' ? 'neon' : 'civic'), maxA = Math.floor(Math.min(G.w - 8, p.maxW || 1e9) / 2), opt = { face: fk, icon: p.icon || null, lines: p.lines || 2 };
+  const L0 = layoutSign(p.text, maxA, opt), tight = Math.min(maxA, L0.cw + 4 + (L0.icon ? 10 : 0)), L = layoutSign(p.text, Math.max(tight, p.w ? Math.floor(p.w / 2) : 0), opt);
+  const bw = L.w * 2, cx = p.cx ?? (p.x + (p.w || bw) / 2), x0 = Math.floor(clampI(p.cx === undefined && !p.w ? p.x : Math.round(cx - bw / 2), 4, G.w - 4 - bw) / 2) * 2, y0 = Math.floor((yG - p.v - L.h * 2) / 2) * 2;
+  const P = p.pal || (fk === 'neon' ? neonPal(p.fg || [255, 80, 200]) : paletteOf({ bg: p.bg || '#f4f2ea', fg: p.fg || [40, 36, 32] }));
+  paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
 }
-// a vertical neon blade sign: letters stacked top to bottom in a dark frame with a lit border, on two brackets
-// (b: { text, x, v (bottom height above the pavement), col: [r,g,b] })
-function blade(G, b, yG, night) {
-  const t = String(b.text || '').slice(0, 8), sx = 2, w = 5 * sx + 10, h = t.length * (5 * sx + 4) + 10, x0 = b.x, y0 = yG - b.v - h, col = b.col || [255, 80, 200];
-  if (b.paint) {   // a painted sign hung off the wall (a shop's, by day): its own colours, no tubes
-    const bg = ramp(b.bg || '#2a3a5a', 5, 2), fg = b.fg || [240, 232, 210];
-    for (let k = 0; k < 2; k++) for (let x = -3; x < 2; x++) setC(G, x0 + x, y0 + 8 + k * (h - 18), MAT.metalDark[1]);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const e = x === 0 || y === 0 || x === w - 1 || y === h - 1; setC(G, x0 + x, y0 + y, e ? MAT.metalDark[2] : x === 1 || y === 1 ? bg[3] : bg[2]); }
-    for (let i = 0; i < t.length; i++) drawText((px, py) => setC(G, px, py, fg), t[i], x0 + 5, y0 + 6 + i * (5 * sx + 4), { sx, sy: sx, gap: 1 });
-    return;
+const neonPal = (h) => ({ p: [22, 18, 30], i: h.map((q) => Math.min(255, Math.round(q * 0.35 + 170))), h, f: [40, 34, 48], neon: true, t: [[22, 18, 30], h, h, [10, 8, 14]] });
+// a vertical blade sign: letters stacked top to bottom (Civic Sans, 7 art px tall, 8 apart) in a dark frame with a lit
+// tube round it, on two brackets; or painted (b.paint: by day, its own colours, no tube). b: { text, x, v (its foot
+// above the pavement), col: [r,g,b] }. As many letters as the wall has room for above it.
+function blade(G, b, yG, night, H = 999) {
+  const room = Math.floor((H - b.v - 10) / 16);
+  const t = String(b.text || '').toUpperCase().slice(0, Math.max(0, Math.min(8, room)));
+  if (!t) return;
+  const wA = 11, hA = t.length * 8 + 5, x0 = Math.floor(b.x / 2) * 2, y0 = Math.floor((yG - b.v - hA * 2) / 2) * 2, col = b.col || [255, 80, 200];
+  const bg = b.paint ? ramp(b.bg || '#2a3a5a', 5, 2) : null, fg = b.fg || [240, 232, 210];
+  for (let k = 0; k < 2; k++) for (let x = -4; x < 2; x++) for (let q = 0; q < 2; q++) setC(G, x0 + x, y0 + 16 + q + k * (hA * 2 - 36), MAT.metalDark[1]);   // brackets
+  const hot = col.map((v) => Math.min(255, Math.round(v * 0.45 + 140)));
+  for (let y = 0; y < hA; y++) for (let x = 0; x < wA; x++) {
+    const e = x === 0 || y === 0 || x === wA - 1 || y === hA - 1, e2 = !b.paint && (x === 1 || y === 1 || x === wA - 2 || y === hA - 2);
+    const c = e ? MAT.metalDark[2] : b.paint ? (x === 1 || y === 1 ? bg[3] : bg[2]) : e2 ? hot : [24, 20, 32];
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) facePx(G, x0 + x * 2 + i, y0 + y * 2 + j, c, e2 ? [...col, 150 + Math.round(night * 40)] : null);
   }
-  for (let k = 0; k < 2; k++) for (let x = -3; x < 2; x++) setC(G, x0 + x, y0 + 8 + k * (h - 18), MAT.metalDark[1]);      // brackets
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const e = x === 0 || y === 0 || x === w - 1 || y === h - 1, e2 = x === 2 || y === 2 || x === w - 3 || y === h - 3;
-    if (e) setC(G, x0 + x, y0 + y, MAT.metalDark[2]);
-    else if (e2) { setC(G, x0 + x, y0 + y, col.map((v) => Math.min(255, v * 0.5 + 120))); glow(G, x0 + x, y0 + y, [...col, 150 + night * 100]); }
-    else setC(G, x0 + x, y0 + y, [24, 20, 32]);
+  for (let n = 0; n < t.length; n++) {
+    const M = lineMask(t[n], 'civic'), lx = x0 + 2 * Math.floor((wA - M.w) / 2), ly = y0 + 2 * (3 + n * 8);
+    paintLine((x, y, c, e) => facePx(G, x, y, c, e), t[n], 'civic', lx, ly, { 1: b.paint ? fg : hot }, b.paint ? {} : { 1: [...col, 170 + Math.round(night * 30)] });
   }
-  for (let i = 0; i < t.length; i++) drawText((px, py) => { setC(G, px, py, col.map((v) => Math.min(255, v * 0.55 + 115))); glow(G, px, py, [...col, 170 + night * 85]); }, t[i], x0 + 5, y0 + 6 + i * (5 * sx + 4), { sx, sy: sx, gap: 1 });
 }
+
 // the medical sign (the owner, 2026-10-18: never the red cross, a protected emblem): a hospital's red letter H on a white
 // panel; a clinic's white cross on a green one (k 'clinic'), the pharmacy sign of the Midtown concepts
 function medSign(G, x0, y0, s, night, k = 'hospital') {

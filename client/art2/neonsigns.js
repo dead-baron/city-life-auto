@@ -9,7 +9,7 @@
 //   handNeon(spec, N, ctx)          a hand-planned front's own neon (b.art.neon): its name, a picture sign, a blade, the
 //                                   cornice tube; the Neon Strip's more pictures and its dressing (neonpics.js)
 // Names and icons are original (no real venues, brands or logos). Pure and worker-safe.
-import { drawText, textWidth } from './font.js';
+import { lineMask } from './signfont.js';   // (wave A1: the names in Neon Tube, whole art pixels)
 import { F_GLASS } from './gbuf.js';
 import { buildingH } from './buildings.js';
 import { npPic, dressFace, placePics, paintCyber, signRects, backShutter } from './neonpics.js';   // (the Neon Strip's own signs and facades)
@@ -49,20 +49,26 @@ export function signsFor(ctx) {
   if (!k || w < 96 || H < 90) return null;
   const pick = (a) => a[Math.min(a.length - 1, Math.floor(rnd() * a.length))];
   const ci = Math.floor(rnd() * NEON_COLS.length), col = NEON_COLS[ci], col2 = NEON_COLS[(ci + 2 + Math.floor(rnd() * 3)) % NEON_COLS.length];
-  // the club's own name if it fits, else words of its kind
+  // the club's own name if it fits, else words of its kind (sx 4: the tubes two art px thick on a wide front)
   let sx = w >= 200 ? 4 : 2;
   const room = w - 16 - 30;
   let text = (ctx.own || k === 'club' || k === 'lounge' || k === 'bar') && name && !/^(BUILDING|SHOP|STORE)$/i.test(name) ? clean(name) : pick(NEON_WORDS[k]);
-  if (ctx.own && sx > 2 && textWidth(text, { sx, gap: 1 }) > room) sx = 2;   // (a hand-planned front's own name, smaller, before words of its kind)
-  if (textWidth(text, { sx, gap: 1 }) > room) text = pick(NEON_WORDS[k].filter((q) => textWidth(q, { sx, gap: 1 }) <= room)) || '';
+  if (ctx.own && sx > 2 && neonW(text, sx) > room) sx = 2;   // (a hand-planned front's own name, smaller, before words of its kind)
+  if (neonW(text, sx) > room) text = pick(NEON_WORDS[k].filter((q) => neonW(q, sx) <= room)) || '';
   if (!text) return null;
-  const tw = textWidth(text, { sx, gap: 1 }), sw = tw + 30 + 12, sh = 5 * sx + 12;
-  const v = Math.min(H - 20 - sh, 74 + Math.floor(rnd() * 3) * 6);   // over the shopfront, under the cornice
+  const hi = 74 + Math.floor(rnd() * 3) * 6;
+  if (sx > 2 && Math.min(H - 20 - neonSize(text, sx)[1], hi) < 66) sx = 2;   // (no room for the big tubes under the cornice)
+  if (neonW(text, sx) > room) return null;
+  const [sw, sh] = neonSize(text, sx);
+  const v = Math.min(H - 20 - sh, hi);   // over the shopfront, under the cornice
   if (v < 66) return null;
   const x = Math.max(4, Math.min(w - sw - 4, Math.round(w / 2 - sw / 2 + (rnd() - 0.5) * Math.max(0, w - sw - 20) * 0.6)));
   return { text, col, col2, icon: pick(ICON_OF[k]), x, v, sx, w: sw, h: sh, kind: k };
 }
 const clean = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9 &'!]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16);
+// a neon name's width (world px) and its panel's size: [frame, tube] round it, the icon's 12 art px and a px either side
+const neonW = (text, sx) => lineMask(text, 'neon').w * (sx >= 4 ? 4 : 2);
+export const neonSize = (text, sx) => { const M = lineMask(text, 'neon'), k = sx >= 4 ? 2 : 1; return [neonW(text, sx) + 38, (Math.max(12, M.h * k + 2) + 4) * 2]; };
 
 export function nightFront(spec, ctx) {
   const H = buildingH(spec);
@@ -292,9 +298,9 @@ function paintPic(G, sg) {
   }
 }
 // a blade sign: a narrow lit panel down the face with its word stacked letter over letter (KARAOKE, HOTEL, RAMEN)
-export const bladeSize = (text) => [14, String(text).length * 12 + 8];
+export const bladeSize = (text) => [22, (String(text).length * 8 + 5) * 2];
 function paintBlade(G, sg) {
-  const S = [0, 1, 0], [w, h] = bladeSize(sg.blade), X0 = G.ax + sg.x, Y1 = G.ay - sg.v, Y0 = Y1 - h, col = sg.col, col2 = sg.col2 || col;
+  const S = [0, 1, 0], [w, h] = bladeSize(sg.blade), X0 = ev(G.ax + sg.x), Y0 = ev(G.ay - sg.v - h), Y1 = Y0 + h, col = sg.col, col2 = sg.col2 || col;
   const put = (X, Y, c, e) => { if (G.inside(X, Y) && G.alpha(X, Y)) G.put(X, Y, c, S, G.ay - Y, e, 0); };
   const hot = (c) => c.map((q) => Math.min(255, q * 0.62 + 92));
   for (let Y = Y0 - 10; Y < Y1 + 10; Y++) for (let X = X0 - 10; X < X0 + w + 10; X++) {
@@ -303,11 +309,23 @@ function paintBlade(G, sg) {
     if (d > 0 && d < 10) G.glow(X, Y, [col[0], col[1], col[2], Math.round(50 * (1 - d / 10) ** 2)]);
   }
   for (let Y = Y0; Y < Y1; Y++) for (let X = X0; X < X0 + w; X++) {
-    const e = Y === Y0 || Y === Y1 - 1 || X === X0 || X === X0 + w - 1, e2 = Y === Y0 + 2 || Y === Y1 - 3 || X === X0 + 2 || X === X0 + w - 3;
+    const ax = (X - X0) >> 1, ay = (Y - Y0) >> 1, aw = w >> 1, ah = h >> 1;
+    const e = ay === 0 || ay === ah - 1 || ax === 0 || ax === aw - 1, e2 = ay === 1 || ay === ah - 2 || ax === 1 || ax === aw - 2;
     put(X, Y, e ? [26, 20, 34] : e2 ? hot(col2) : [18, 14, 26], e2 ? [col2[0], col2[1], col2[2], 160] : null);
   }
-  const t = String(sg.blade);
-  for (let i = 0; i < t.length; i++) drawText((px, py) => put(px, py, hot(col), [col[0], col[1], col[2], 200]), t[i], X0 + 4, Y0 + 5 + i * 12, { sx: 2, sy: 2, gap: 1 });
+  const t = String(sg.blade).toUpperCase();
+  for (let i = 0; i < t.length; i++) tube(put, t[i], X0 + 4 + Math.floor((7 - lineMask(t[i], 'neon').w) / 2) * 2, Y0 + 4 + i * 16, col, 1);
+}
+const ev = (v) => Math.floor(v / 2) * 2;
+// a word in Neon Tube: its white-hot core and the halo of its colour (k: art px per glyph px), from (x0, y0) on the art grid
+function tube(put, text, x0, y0, col, k = 1) {
+  const Q = lineMask(text, 'neon'), core = col.map((q) => Math.min(255, Math.round(q * 0.35 + 170))), halo = col.map((q) => Math.round(q * 0.62));
+  for (let y = 0; y < Q.h; y++) for (let x = 0; x < Q.w; x++) {
+    const r = Q.m[y * Q.w + x];
+    if (!r) continue;
+    const c = r === 1 ? core : halo, e = r === 1 ? [col[0], col[1], col[2], 200] : [col[0], col[1], col[2], 110];
+    for (let j = 0; j < 2 * k; j++) for (let i = 0; i < 2 * k; i++) put(x0 + x * 2 * k + i, y0 + y * 2 * k + j, c, e);
+  }
 }
 
 // A hand-planned front's neon (shared/world3-neon.js: b.art.neon = { name, kind, pic, blade, col (NEON_COLS index),
@@ -351,7 +369,7 @@ export function handNeon(spec, N, ctx) {
 }
 function paintSign(G, sg) {
   const S = [0, 1, 0], { x, v, w, h, col, col2, sx } = sg;
-  const X0 = G.ax + x, Y1 = G.ay - v, Y0 = Y1 - h;   // the panel's screen box
+  const X0 = ev(G.ax + x), Y0 = ev(G.ay - v - h), Y1 = Y0 + h;   // the panel's screen box (on the art grid)
   const put = (X, Y, c, e) => { if (G.inside(X, Y) && G.alpha(X, Y)) G.put(X, Y, c, S, G.ay - Y, e, 0); };
   const hot = (c) => c.map((q) => Math.min(255, q * 0.62 + 92));
   // the halo on the wall round it: the sign lights its own facade (faint: the bloom does the rest)
@@ -364,19 +382,18 @@ function paintSign(G, sg) {
     G.glow(X, Y, [col[0], col[1], col[2], Math.round(10 + 60 * k * k)]);
   }
   // the panel: a dark backing with a tube round its edge
+  const aw = w >> 1, ah = h >> 1;
   for (let Y = Y0; Y < Y1; Y++) for (let X = X0; X < X0 + w; X++) {
-    const e = Y === Y0 || Y === Y1 - 1 || X === X0 || X === X0 + w - 1, e2 = Y === Y0 + 2 || Y === Y1 - 3 || X === X0 + 2 || X === X0 + w - 3;
+    const ax = (X - X0) >> 1, ay = (Y - Y0) >> 1;
+    const e = ay === 0 || ay === ah - 1 || ax === 0 || ax === aw - 1, e2 = ay === 1 || ay === ah - 2 || ax === 1 || ax === aw - 2;
     if (e) put(X, Y, [26, 20, 34], null);
     else if (e2) put(X, Y, hot(col2), [col2[0], col2[1], col2[2], 170]);
     else put(X, Y, [18, 14, 26], null);
   }
-  // the icon (2 px strokes), then the words: a hot core in each tube, the colour round it, the dark panel between
-  // the letters (so they read through the bloom)
-  const IX = X0 + 7, IY = Y0 + Math.round((h - 24) / 2);
-  for (const [px, py] of ICONS[sg.icon] || ICONS.star) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) put(IX + px * 2 + i, IY + py * 2 + j + 1, (i + j) % 2 ? col2 : hot(col2), [col2[0], col2[1], col2[2], 190]);
-  const TX = X0 + 7 + 26, TY = Y0 + 6;
-  drawText((px, py) => {
-    const core = sx >= 4 ? ((px - TX) % sx === 1 || (px - TX) % sx === 2) && ((py - TY) % sx === 1 || (py - TY) % sx === 2) : true;
-    put(px, py, core ? hot(col) : col.map((q) => q * 0.85), [col[0], col[1], col[2], core ? 200 : 120]);
-  }, sg.text, TX, TY, { sx, sy: sx, gap: 1 });
+  // the icon (one art px strokes), then the words in Neon Tube: a hot core in each tube, its colour round it, the dark
+  // panel between the letters (so they read through the bloom)
+  const IX = X0 + 6, IY = Y0 + ev((h - 24) / 2);
+  for (const [px, py] of ICONS[sg.icon] || ICONS.star) for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) put(IX + px * 2 + i, IY + py * 2 + j, hot(col2), [col2[0], col2[1], col2[2], 190]);
+  const k = sx >= 4 ? 2 : 1, M = lineMask(sg.text, 'neon');
+  tube(put, sg.text, X0 + 32, Y0 + ev((h - M.h * 2 * k) / 2), col, k);
 }
