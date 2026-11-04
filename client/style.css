@@ -720,8 +720,8 @@ body.kbm .opt .okey { display: inline-grid; place-items: center; flex: none; min
 .opt .buy { flex: none; display: inline-grid; place-items: center; min-width: 76px; min-height: 36px; padding: 0 var(--s3); border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-3) var(--pixel); letter-spacing: 1px; }
 .opt .buy.off { background: var(--grey-d); color: var(--dim); box-shadow: inset 0 0 0 2px var(--grey); }
 .opt.has-wpn { justify-content: flex-start; gap: var(--s3); }
-.opt img.wpn { width: 72px; height: 36px; flex: none; image-rendering: pixelated; background: var(--line); border-radius: var(--r1); }
-.opt:hover img.wpn, .opt.focus img.wpn, .opt.pfocus img.wpn { background: var(--shade); }
+.opt .wpn { display: grid; place-items: center; width: 72px; height: 36px; flex: none; color: var(--cream); background: var(--line); border-radius: var(--r1); }
+.opt:hover .wpn, .opt.focus .wpn, .opt.pfocus .wpn { background: var(--shade); }
 .opt .stats { display: flex; gap: var(--s3); flex: none; }
 .opt .stats i { display: flex; align-items: center; gap: var(--s1); font: normal 700 var(--fs-1) var(--ui); letter-spacing: .5px; color: var(--dim); }
 .opt .stats b { display: inline-flex; gap: 2px; }
@@ -1763,3 +1763,10 @@ body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:n
 :is(#gate-body #g-all, #signin-body [data-in], #signin-body #a-pks, #signin-body #a-namego) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
 :is(#gate-body, #signin-body) input:not([type=checkbox]) { min-height: var(--tap); padding: 0 var(--s2) !important; border: 2px solid var(--steel); border-radius: var(--r1); background: var(--ink); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
 #signin-body .cla-account { padding: var(--s3) var(--s4); color: var(--cream); font: 500 var(--fs-3) var(--ui); }
+/* the title at a desktop's size (the 11-04 review: "all tiny at 1920"): its menu, card, tools and the plates over it
+   zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */
+body:not(.touch) #title > :is(#t-status, #t-load, #t-off, #t-buttons, #t-row2, #t-gfx, #t-practice, #t-tools, #t-foot), body:not(.touch) :is(#signin, #gate) .panel { zoom: var(--zk, 1); }
+body:not(.touch) #title { gap: var(--s2); padding-bottom: calc(var(--zk, 1) * 88px); }
+body:not(.touch) #logo { width: min(520px, 84vw, 38vh); margin-bottom: 0; }
+body:not(.touch) #title > #t-tools { position: absolute; left: var(--s4); top: var(--s4); }
+body:not(.touch) #play { min-width: 240px; }

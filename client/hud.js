@@ -514,8 +514,9 @@ export class HUD {
       const short = o.price !== undefined && o.price > 0 && o.price > funds;
       const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${(-o.price).toLocaleString('en-US')}</span>` : `<span class="price${short ? ' short' : ''}">$${o.price.toLocaleString('en-US')}</span>`;
       // weapon offers carry a picture (placeholder pixel art until the final weapon art lands), their damage and range
-      const pic = o.wpn !== undefined ? `<img class="wpn" alt="" src="${weaponThumb(o.wpn)}">` : '';
+      // (its class's glyph - pistol, rifle, knife...: the top-down sprites read as thin bars at a row's size, 11-04 review)
       const w = o.wpn !== undefined ? WEAPON_BY_I.get(o.wpn) : null;
+      const pic = w ? `<span class="wpn">${monoGlyph(glyphOfWeapon(w.id, w.type), 30)}</span>` : '';
       const bars = w ? `<span class="stats">${statBar('DMG', gunDmg(w))}${statBar('RNG', gunRng(w))}</span>` : o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => statBar(k, Math.round(v * 8 / 5))).join('')}</span>` : '';
       const buy = store && o.price > 0 ? `<span class="buy${o.dis || short ? ' off' : ''}">${o.note === 'owned' ? 'OWNED' : 'BUY'}</span>` : '';
       if (pic) b.classList.add('has-wpn');
