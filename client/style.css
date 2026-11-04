@@ -209,6 +209,7 @@ input[type=range]:disabled { opacity: .4; }
 @media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --gap: 6px; --nav: 40px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
+#helpbox.faded { opacity: 0; transition: opacity .4s; }   /* (a few seconds after it came up: client/hud.js, PROMPT_FADE_S) */
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 .plate { background: var(--plate); border: 2px solid var(--plate-rim); border-radius: var(--r2); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }   /* (UIK-00 3: the HUD plate) */
 

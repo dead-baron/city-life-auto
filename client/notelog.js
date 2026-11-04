@@ -28,6 +28,10 @@ export function logNote(text, tone = 'info', at = Date.now()) {
 export function noteLog() { return load().slice().reverse(); }
 export function clearLog() { log = []; save(); }
 // A prompt's words (UI-5): a crime's (pcr > 0) less its name after the last " - " - the red key says it (hud.js crimeMarks)
+// does a prompt fade a few seconds after it comes up (the owner, 11-04: "disappear after a few seconds so it's not always
+// on the screen")? Not one that counts down, asks, wants a hold, or is waiting for the second press (safety mode)
+export const PROMPT_KEEP = /\d+\s*s\b|\?|\bhold\b|\bagain\b/i;
+export function promptFades(p, armed = false) { return !armed && !PROMPT_KEEP.test(String(p || '')); }
 export function promptWords(p, pcr) { const t = String(p || ''), i = pcr > 0 ? t.lastIndexOf(' - ') : -1; return i > 0 ? t.slice(0, i) : t; }
 // The one line the HUD shows of a note (UI-4: notes are one line, the whole of them in the Log): a short one as it is,
 // a long one its first sentence or clause - the server can name the line itself (world.notify's short)

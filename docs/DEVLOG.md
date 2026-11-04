@@ -19575,3 +19575,18 @@ still load the first time they open. The title screen's assets 257 KB (budget 29
 - LOG OFF needs its server side ({ t: 'logoff' }); until then it leaves to the title as before.
 - The conversation has no portraits: the place's icon stands in.
 - The concepts' "Police are searching - break line of sight" pill (UIC-15 01) needs a "searching" state from the server.
+
+## 2026-11-04 · The action prompt fades after a few seconds
+
+The owner, on a phone held upright with "Into Old Town Apt #1229's lobby" over the street: "things like entering
+buildings with the UI text that pops up, we can have that disappear after a few seconds so it's not always on the
+screen". The prompt (client/hud.js, #helpbox) now shows when a new action comes up and fades out (0.4 s) PROMPT_FADE_S
+(3 s, shared/rules-page.js) later. A different target, or the same one after you've walked out of its reach and back,
+brings it up again. A crime's prompt does the same.
+
+UX decision - **the prompt goes, the button stays**: on touch the button it lit (ACT gold, red with the "!" for a crime)
+stays lit the whole time, and its long press still names it, so the action is still there to find; on a keyboard or a
+pad the key's chip is part of the prompt and fades with it (the key does what it did). Why: the words are needed once,
+to say what the button does here; after that they cover the street. **What doesn't fade**: a prompt that counts down,
+asks a question, wants a hold, or is waiting for safety mode's second press (client/notelog.js promptFades) - those are
+the ones you still have to read. test/promptfade.test.js.

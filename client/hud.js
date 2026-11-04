@@ -1,6 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
-import { logNote, noteLine, promptWords } from './notelog.js';
+import { logNote, noteLine, promptWords, promptFades } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -9,7 +9,7 @@ import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
 import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon } from './touchicons.js';
-import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules-page.js';
+import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S, PROMPT_FADE_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
@@ -155,6 +155,11 @@ export class HUD {
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         this.actBtn?.classList.add('pulse');
+        // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
+        // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
+        pr.classList.remove('faded'); clearTimeout(this.fadeT);
+        const words = me.prompt;
+        this.fadeT = setTimeout(() => { if (pr.dataset.sig === sig && promptFades(words, pr.classList.contains('armed'))) pr.classList.add('faded'); }, PROMPT_FADE_S * 1000);
       }
       pr.classList.remove('off');
       // what it would do is a crime (server players.js: me.pcr 1, a felony 2): no warning plate, only the key - the
@@ -162,7 +167,7 @@ export class HUD {
       crimeMarks(pr, me.pcr | 0); if (this.actBtn) crimeMarks(this.actBtn, me.pcr | 0);
     } else if (!pr.classList.contains('off')) {
       if (this.promptDone(pr)) { clearTimeout(this.offT); this.offT = setTimeout(() => { if (pr.dataset.sig === '') pr.classList.add('off'); }, 600); } else pr.classList.add('off');
-      pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
+      pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
     }
@@ -365,7 +370,7 @@ export class HUD {
     const pr = $('helpbox');
     if (!pr || pr.classList.contains('off')) return false;
     this.unarm();
-    pr.classList.add('armed'); this.actBtn?.classList.add('armed');
+    pr.classList.add('armed'); pr.classList.remove('faded'); this.actBtn?.classList.add('armed');
     this.armT = setTimeout(() => this.unarm(), SAFETY_CONFIRM_S * 1000);
     return true;
   }

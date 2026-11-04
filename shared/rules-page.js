@@ -8,6 +8,7 @@ export const TANKER_BLAST = { r: 330, dmg: 160 };
 export const EXPLOSIVES_BLAST = { r: 200, dmg: 110, per: 30, max: 410 };   // a crate, + per crate
 export const CALM_PROMPT_S = 4;         // sitting by a fire this long without touching anything: its prompt fades...
 export const CALM_HUD_S = 20;           // ...and this long, the whole HUD, for the scene (task #375)
+export const PROMPT_FADE_S = 3;         // an action's prompt ("Into the lobby") this long after it comes up, then it fades - the touch button stays lit (the owner, 11-04)
 export const FERRIS_S = 40;             // one turn of the wheel (it turns all the time)
 export const POLICE_ARMORY = ['service', 'prifle', 'psniper', 'passault', 'pshotgun']; // department weapons in the HQ armory
 export const BATTERY_S = 1800;             // a set of batteries: half an hour switched on (a light lasts a little more or less by its kind)
