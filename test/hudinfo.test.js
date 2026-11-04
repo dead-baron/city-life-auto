@@ -122,9 +122,10 @@ test('the knocked-out screen: where to wake up nearest first, the picked one amo
   const C = deathChoices(me);
   assert.equal(C.title, 'KNOCKED OUT');
   assert.equal(C.cause, 'Shot by a police officer in Midtown', 'how it happened (on a phone too)');
-  assert.equal(C.places.length, WAKE_ROWS);
-  assert.deepEqual(C.places.slice(0, WAKE_ROWS - 1).map((o) => o.id), ['h8', 'h7', 'h6', 'h5'], 'nearest first');
-  assert.equal(C.places[WAKE_ROWS - 1].id, 'home', 'the picked one kept among them');
+  assert.equal(C.places.length, spawnOpts.length, 'every place to wake up in the world, not only the nearest few');
+  assert.ok(WAKE_ROWS < spawnOpts.length);
+  assert.deepEqual(C.places.slice(0, 4).map((o) => o.id), ['h8', 'h7', 'h6', 'h5'], 'nearest first');
+  assert.equal(C.places[C.places.length - 1].id, 'home', 'the picked one among them, however far');
   assert.ok(C.places.find((o) => o.id === 'home').on && C.chosen.id === 'home');
   assert.ok(Math.abs(C.places[0].d - 0) < 1, 'how far, in metres');
   assert.ok(C.wake, 'WAKE UP HERE');

@@ -19210,3 +19210,11 @@ The owner saw the City Life Auto logo double for a moment as the title came in. 
 canvas over the logo, and the canvas was placed once, where the logo first was. The title's rows then settled while it
 played (the sign-in line arriving, a phone's address bar), so the real logo moved while the canvas stayed put. Now the
 canvas follows the logo every frame, up to the moment it hands over (client/splash.js `titleIntro`).
+
+## 2026-11-03 - Every place to wake up, on the knocked-out screen
+
+The owner saw only five places to wake up. The server already offered every hospital, clinic, first-aid post and
+ranger station in the world, plus your homes, but the screen kept only the nearest five (client/deathscreen.js).
+- Now it lists all of them, nearest first, in a list that scrolls.
+- On the map, the nearest five are drawn big as before. The rest are smaller numbered marks you can tap. The picked
+  place is always big.

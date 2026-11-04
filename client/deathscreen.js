@@ -18,7 +18,8 @@ import { keyName } from './glyphs.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-export const WAKE_ROWS = 5;   // the places listed (and marked): the nearest few, your homes among them
+export const WAKE_ROWS = 5;   // the nearest few, drawn big on the map; the rest of the places listed (every hospital,
+// clinic, first-aid post and home of yours in the world, nearest first - the owner, 11-03: "only seeing 5") scroll below them and show as smaller marks
 
 // the phase for D { at: when you went down, fold } at now (ms): 'off' alive, 'scene', then 'open' or 'bar'
 export function deathPanel(D, dead, now) {
@@ -44,9 +45,7 @@ export function deathChoices(me, pick = null) {
   const far = (o) => (at && o.x !== undefined ? Math.hypot(o.x - at[0], o.y - at[1]) : 0);
   const chosenId = pick ?? me.spawnChoice;
   const sorted = [...opts].sort((a, b) => far(a) - far(b));
-  let places = sorted.slice(0, WAKE_ROWS);
-  const ch = opts.find((o) => o.id === chosenId);
-  if (ch && !places.includes(ch)) places = [...places.slice(0, WAKE_ROWS - 1), ch];
+  const places = sorted, ch = opts.find((o) => o.id === chosenId);
   const wet = dn && dn.wet, aw = wet ? 'rescue boat' : 'ambulance';
   const help = !down ? [] : [
     ['help', dn.help ? 'Call again' : 'Call for help', 'help', false],
@@ -302,14 +301,17 @@ function render(H, c) {
   }
   SM.hits = [];
   g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
-  SM.places.forEach((o, i) => {
-    if (o.x === undefined) return;
-    const [x, y] = P(o.x, o.y), on = o.on, r = on ? 18 : 15;
-    if (x < -20 || y < -20 || x > c.clientWidth + 20 || y > c.clientHeight + 20) return;
+  // the far ones first and smaller, so the nearest few (and the picked one) sit on top
+  const order = SM.places.map((o, i) => [o, i]).reverse();
+  for (const [o, i] of order) {
+    if (o.x === undefined) continue;
+    const [x, y] = P(o.x, o.y), on = o.on, big = i < WAKE_ROWS || on, r = on ? 18 : big ? 15 : 11;
+    if (x < -20 || y < -20 || x > c.clientWidth + 20 || y > c.clientHeight + 20) continue;
+    g.font = big ? '700 14px "CLA Pixel", "Barlow Condensed", sans-serif' : '700 11px "CLA Pixel", "Barlow Condensed", sans-serif';
     if (on) { g.fillStyle = 'rgba(226,189,87,.3)'; g.beginPath(); g.arc(x, y, r + 7, 0, 6.28); g.fill(); }
     g.fillStyle = on ? gold : danger; g.strokeStyle = ink; g.lineWidth = 2.5;
     g.beginPath(); g.arc(x, y, r, 0, 6.28); g.fill(); g.stroke();
     g.fillStyle = ink; g.fillText(o.kind === 'home' ? '⌂' : String(i + 1), x, y + 1);
-    SM.hits.push([x, y, o]);
-  });
+    SM.hits.unshift([x, y, o]);
+  }
 }
