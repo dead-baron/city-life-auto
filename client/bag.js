@@ -35,6 +35,18 @@ export function itemCat(id) {
   return 'other';
 }
 const SORTS = [['kind', 'By kind'], ['name', 'A-Z'], ['count', 'Most'], ['value', 'Value']];
+// What you carry on you (UI-10, UIC-19; the owner, 11-03): 2 guns, 1 melee weapon and 1 throwable; carry gear adds
+// slots - a shoulder holster a gun, a back sling a long gun, a chest rig a throwable and a melee weapon - up to 4 guns,
+// 2 melee, 2 throwables, the rest waiting in a home stash. The server doesn't limit it yet: the slots show the first of
+// each kind you carry, the gear's slots wait locked, and anything past the slots stays in the grid under Weapons.
+export const CARRY = [['gun', 'GUN 1'], ['gun', 'GUN 2'], ['melee', 'MELEE'], ['throw', 'THROWN']];
+export const CARRY_GEAR = [['gun', '+1 GUN', 'Shoulder holster'], ['gun', '+1 LONG GUN', 'Back sling'], ['throw', '+1 THROWN · +1 MELEE', 'Chest rig']];
+export const CARRY_CAPS = { gun: 4, melee: 2, throw: 2 };
+export function carryKind(id) {
+  const w = WEAPONS[id];
+  if (!w || id === 'fists' || w.type === 'tool') return null;
+  return w.type === 'melee' ? 'melee' : w.type === 'grenade' || w.type === 'deploy' ? 'throw' : 'gun';
+}
 
 // what an item does, in a line
 export function describe(id) {
@@ -76,7 +88,8 @@ const savePref = (k, v) => { try { localStorage.setItem('cla.bag.' + k, v); } ca
 // el: the #inv tab; send(msg); me() the self record; refocus() after a render (the pad's focus)
 export function createBag({ el, send, me, refocus }) {
   let open = false, cat = loadPref('cat', 'all'), sort = loadPref('sort', 'kind'), sel = null, armDrop = '';
-  el.innerHTML = `<div class="bag"><div class="bag-tools"><span class="bag-cash"></span><div class="bag-cats" role="tablist" aria-label="Show"></div>`
+  el.innerHTML = '<div class="bag"><section class="bag-eq" aria-label="Carried"><h3>EQUIPMENT</h3><div class="bag-slots"></div><div class="bag-gear"></div><p class="bag-caps"></p></section>'
+    + `<div class="bag-tools"><h3>BAG</h3><span class="bag-cash"></span><div class="bag-cats" role="tablist" aria-label="Show"></div>`
     + `<label class="bag-sort"><span>Sort</span><select aria-label="Sort">${SORTS.map(([k, n]) => `<option value="${k}">${n}</option>`).join('')}</select></label></div>`
     + '<div class="bag-grid" role="list"></div><aside class="bag-detail" aria-live="polite"></aside><div class="bag-wheel"></div>'
     + '<section class="bag-craft" hidden aria-label="Crafting"></section></div>';
@@ -104,6 +117,7 @@ export function createBag({ el, send, me, refocus }) {
     const b = document.createElement('button');
     b.className = 'bag-cell' + (t.k === sel ? ' sel' : '') + (on ? ' on' : '');
     b.dataset.k = t.k; b.setAttribute('role', 'listitem');
+    b.title = t.name;
     b.innerHTML = `<span class="bc-ic">${t.kind === 'i' ? esc(ITEM_ICON[t.id] || '•') : ''}</span><span class="bc-nm">${esc(t.name)}</span>`
       + (t.kind === 'w' && WEAPONS[t.id].mag ? `<span class="bc-n">${t.w.mag}|${Math.max(0, t.w.ammo - t.w.mag)}</span>` : t.n > 1 ? `<span class="bc-n">×${t.n}</span>` : '')
       + (on ? '<span class="bc-tag">IN HAND</span>' : pin >= 0 ? `<span class="bc-tag">SLOT ${pin + 1}</span>` : '');
@@ -121,16 +135,19 @@ export function createBag({ el, send, me, refocus }) {
     const it = t.kind === 'i' ? ITEMS[t.id] : null, def = t.kind === 'w' ? WEAPONS[t.id] : null;
     const what = t.kind === 'w' ? weaponLine(def) : describe(t.id);
     const count = t.kind === 'w' ? (def.mag ? `${t.w.mag} in the gun · ${Math.max(0, t.w.ammo - t.w.mag)} spare` : '') : `${t.n} carried${it.sell ? ` · sells for about $${it.sell} each` : ''}`;
-    let acts = '';
-    if (t.kind === 'w') {
-      acts += m.weapon === t.id ? (t.id === 'fists' ? '' : '<button class="btn" data-a="holster">Put away</button>') : '<button class="btn btn-1" data-a="equip">Equip</button>';
-      if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade colour</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
-    } else if (usable(t.id)) acts += `<button class="btn btn-1" data-a="use">${it.light ? (m.light ? 'Turn off' : 'Turn on') : 'Use'}</button>`;
-    if (t.kind === 'i' && usable(t.id)) acts += `<div class="bag-pins"><small>Quick wheel slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
-    if (t.id !== 'fists') acts += `<button class="btn btn-x" data-a="drop">${armDrop === t.k ? 'Press again to drop it' : t.n > 1 ? 'Drop one' : 'Drop'}</button>` + (t.n > 1 ? `<button class="btn btn-x" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>` : '');
+    // (UIC-19: USE, DROP and EQUIP always in the same three places, the ones that don't apply greyed)
+    const held = t.kind === 'w' && m.weapon === t.id, canUse = t.kind === 'i' && usable(t.id);
+    let acts = '<div class="bd-three">'
+      + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${canUse && it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : 'USE'}</button>`
+      + `<button class="btn btn-d" data-a="drop"${t.id === 'fists' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
+      + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>';
+    if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
+    if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
+    if (canUse) acts += `<div class="bag-pins"><small>Quick bar slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
     d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? esc(ITEM_ICON[t.id] || '•') : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`
       + '<button class="x bd-x" data-a="close" aria-label="Back to the bag">✕</button></div>'
       + `<p class="bd-what">${esc(what)}</p>${count ? `<p class="bd-n">${esc(count)}</p>` : ''}<div class="bd-acts">${acts}</div>`;
+    d.querySelector('.bd-head small').textContent = t.kind === 'w' ? (carryKind(t.id) === 'gun' ? 'Gun' : carryKind(t.id) === 'melee' ? 'Melee' : carryKind(t.id) === 'throw' ? 'Throwable' : 'Weapon') : (usable(t.id) ? 'Consumable · ' : '') + BAG_CATS.find((c) => c[0] === t.cat)[1];
     if (t.kind === 'w') d.querySelector('.bd-ic').appendChild(fittedIcon(def.i, m.blade, 96, 54));
     for (const b of d.querySelectorAll('[data-a]')) b.onclick = () => act(b.dataset.a, t);
     for (const b of d.querySelectorAll('[data-pin]')) b.onclick = () => { const i = Number(b.dataset.pin); send({ t: 'inv', a: 'slot', i, id: quick[i] === t.id ? null : t.id }); };
@@ -163,8 +180,23 @@ export function createBag({ el, send, me, refocus }) {
     const cb = $q('.bag-cats');
     cb.innerHTML = [['all', 'All'], ...BAG_CATS.filter(([c]) => cats.has(c))].map(([c, n]) => `<button class="chip${c === cat ? ' on' : ''}" role="tab" aria-selected="${c === cat}" data-cat="${c}">${n}</button>`).join('');
     for (const b of cb.querySelectorAll('[data-cat]')) b.onclick = () => { cat = b.dataset.cat; savePref('cat', cat); render(); };
-    $q('.bag-cash').innerHTML = `<b>$${(m.cash || 0).toLocaleString('en-US')}</b> cash · $${(m.bank || 0).toLocaleString('en-US')} bank${m.creel ? ` · cooler ${m.creel.n}/${m.creel.max} fish (~$${m.creel.v.toLocaleString('en-US')})` : ''}`;
-    const shown = all.filter((t) => cat === 'all' || t.cat === cat);
+    $q('.bag-cash').innerHTML = `<b>$${(m.cash || 0).toLocaleString('en-US')}</b><span>${all.length} thing${all.length === 1 ? '' : 's'}${m.creel ? ` · cooler ${m.creel.n}/${m.creel.max} fish (~$${m.creel.v.toLocaleString('en-US')})` : ''}</span>`;
+    // the carried slots (UIC-19): the first gun, the second, a melee weapon, a throwable; the gear's slots locked
+    const slotted = new Set(), byKind = { gun: [], melee: [], throw: [] };
+    for (const t of all) if (t.kind === 'w' && carryKind(t.id)) byKind[carryKind(t.id)].push(t);
+    const take = { gun: 0, melee: 0, throw: 0 };
+    $q('.bag-slots').innerHTML = CARRY.map(([k, label], si) => {
+      const t = byKind[k][take[k]++];
+      if (t) slotted.add(t.k);
+      return `<button class="bag-slot2${t ? '' : ' empty'}${t && t.k === sel ? ' sel' : ''}${t && m.weapon === t.id ? ' on' : ''}" data-carry="${t ? t.k : ''}" data-si="${si}"${t ? '' : ' disabled'}><small>${label}</small><span class="bc-ic"></span><b>${t ? esc(t.name) : 'empty'}</b></button>`;
+    }).join('');
+    $q('.bag-slots').querySelectorAll('[data-carry]').forEach((b) => {
+      const t = all.find((q) => q.k === b.dataset.carry);
+      if (t) { b.querySelector('.bc-ic').appendChild(fittedIcon(t.i, m.blade, 64, 36)); b.onclick = () => { sel = sel === t.k && !portrait() ? null : t.k; armDrop = ''; render(); }; }
+    });
+    $q('.bag-gear').innerHTML = '<small>CARRY GEAR</small>' + CARRY_GEAR.map(([, add, name]) => `<div class="bag-slot2 locked" title="${esc(name)}"><small>${esc(add)}</small><b>${esc(name)}</b></div>`).join('');
+    $q('.bag-caps').textContent = `On you: 2 guns, 1 melee, 1 throwable. Carry gear adds slots - up to ${CARRY_CAPS.gun} guns, ${CARRY_CAPS.melee} melee, ${CARRY_CAPS.throw} throwables.`;
+    const shown = all.filter((t) => (cat === 'all' || t.cat === cat) && !slotted.has(t.k));
     grid.innerHTML = '';
     let last = '';
     for (const t of shown) {
@@ -176,7 +208,7 @@ export function createBag({ el, send, me, refocus }) {
     detail(all.find((t) => t.k === sel) || null, m);
     // the quick wheel as it stands (a slot picks its item; pin from an item's details)
     const quick = m.quick || [];
-    $q('.bag-wheel').innerHTML = `<small>QUICK WHEEL</small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span>${esc(ITEM_ICON[id] || '•')}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty'}</button>`; }).join('')}`;
+    $q('.bag-wheel').innerHTML = `<small>QUICK BAR</small>${Array.from({ length: SLOTS }, (_, i) => { const id = quick[i], n = id ? m.inv[id] || 0 : 0; return `<button class="bag-slot${id ? '' : ' empty'}" data-slot="${i}"${id ? '' : ' disabled'}><b>${i + 1}</b>${id ? `<span>${esc(ITEM_ICON[id] || '•')}</span>${esc(ITEMS[id].name)}${n ? '' : ' (none left)'}` : 'empty'}</button>`; }).join('')}`;
     for (const b of el.querySelectorAll('[data-slot]')) b.onclick = () => { const id = quick[Number(b.dataset.slot)]; if (id) { sel = 'i:' + id; render(); } };
     cue(grid);
     refocus?.();

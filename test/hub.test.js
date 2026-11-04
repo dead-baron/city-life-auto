@@ -22,21 +22,23 @@ test('the HUD row is PHONE · MAP · MENU as icons, and the hub has RESUME first
   assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');
   assert.match(HTML, /<button id="b-dev"[^>]*aria-label="Debug menu"/, 'and the debug button (the owner wants it on the HUD), apart');
   for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="pause"', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);
+  // (UI-10, UIC-07: the pause list first - RESUME, the five screens, LOG OFF, LEAVE GAME; each screen's head: back, its
+  // name, close)
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
-  assert.ok(bar.indexOf('id="hub-resume"') < bar.indexOf('id="hub-tabs"'), 'RESUME first');
-  assert.deepEqual([...bar.matchAll(/data-tab="([a-z]+)"/g)].map((m) => m[1]), ['map', 'phone', 'bag', 'people', 'settings']);
+  assert.ok(bar.indexOf('id="hub-back"') < bar.indexOf('id="hub-title"') && bar.indexOf('id="hub-title"') < bar.indexOf('id="hub-close"'), 'back and the name top left, close top right');
   const body = hubHtml.slice(hubHtml.indexOf('<div id="hub-body">'));
-  for (const id of ['bigmap', 'phone', 'inv', 'players', 'settings']) assert.match(body, new RegExp(`<div id="${id}" class="hidden[^"]*hubtab`), `${id} is a tab inside the hub`);
-  assert.match(MAIN, /const HUB_TABS = \{ map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' \};/);
+  assert.deepEqual([...body.matchAll(/data-p="([a-z]+)"/g)].map((m) => m[1]), ['resume', 'map', 'phone', 'bag', 'people', 'settings', 'logoff', 'leave']);
+  for (const id of ['pause', 'bigmap', 'phone', 'inv', 'players', 'settings']) assert.match(body, new RegExp(`<div id="${id}" class="hidden[^"]*hubtab`), `${id} is a screen inside the hub`);
+  assert.match(MAIN, /const HUB_TABS = \{ pause: 'pause', map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' \};/);
   assert.ok(!/openOverlay\('pause'\)/.test(MAIN) && !/'controls'/.test(MAIN), 'no pause list or controls page left');
 });
 
 test('every item of the old pause list has a home in the hub', () => {
   const help = hubHtml.slice(hubHtml.indexOf('<section data-sec="help"'), hubHtml.indexOf('<section data-sec="danger"'));
   const homes = {
-    resume: /id="hub-resume"/, map: /data-tab="map"/, phone: /data-tab="phone"/, players: /data-tab="people"/, settings: /data-tab="settings"/,
+    resume: /data-p="resume"/, map: /data-p="map"/, phone: /data-p="phone"/, players: /data-p="people"/, settings: /data-p="settings"/,
     controls: /<section data-sec="controls">[\s\S]*id="set-binds"/, look: /data-h="look"/, cine: /data-h="cine"/, unstuck: /data-h="unstuck"/, surrender: /data-h="surrender"/,
-    fullscreen: /data-h="fullscreen"/, devmode: /data-h="devmode"/, title: /data-h="title"/, dev: /data-h="dev"/,
+    fullscreen: /data-h="fullscreen"/, devmode: /data-h="devmode"/, title: /data-p="leave"/, dev: /data-h="dev"/, logoff: /data-p="logoff"/,
   };
   for (const [k, re] of Object.entries(homes)) assert.match(hubHtml, re, k);
   // the police cruiser: a quick action on the phone; the cinematic mode is also the phone's Camera app
@@ -53,23 +55,28 @@ test('every item of the old pause list has a home in the hub', () => {
   assert.match(MAIN, /function surrender\(b\) \{[\s\S]*?send\(\{ t: 'surrender' \}\)/, 'surrender, pressed twice');
   assert.match(MAIN, /function exitToTitle\(\) \{ closeHub\(\); S\.playing = false;/);
   // the Danger zone stands apart
-  assert.match(hubHtml, /<button role="tab" data-sec="danger" class="danger">Danger zone<\/button>/);
+  assert.match(hubHtml, /<div class="set-danger"><h3>DANGER ZONE<\/h3>[\s\S]*id="s-fresh"/, 'the Danger zone apart, at the foot of Account');
 });
 
-test('Esc, Start and MENU open the hub on the last tab; P, M, I a tab; LB / RB (Tab) step through them; the D-pad moves', () => {
-  assert.match(MAIN, /else if \(S\.playing\) openHub\(\); \}/, 'Esc with nothing open: the hub');
-  assert.match(MAIN, /input\.padStart && S\.playing\) openHub\(\);/, 'Start: the hub');
-  assert.match(MAIN, /\$\('b-menu'\)\.onclick = \(\) => \{ if \(!S\.playing\) return; if \(inHub\(\)\) closeHub\(\); else openHub\(\); \};/, 'MENU: the hub, or away');
-  assert.match(MAIN, /function openHub\(tab = hubTab, app\)/, 'on the last tab used');
+test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out; LB / RB (Tab) step through them; the D-pad moves', () => {
+  assert.match(MAIN, /else if \(S\.playing\) openHub\('pause'\); \}/, 'Esc with nothing open: the pause list');
+  assert.match(MAIN, /input\.padStart && S\.playing\) openHub\('pause'\);/, 'Start: the pause list');
+  assert.match(MAIN, /\$\('b-menu'\)\.onclick = \(\) => \{ if \(!S\.playing\) return; if \(inHub\(\)\) closeHub\(\); else openHub\('pause'\); \};/, 'MENU: the pause list, or away');
+  assert.match(MAIN, /function openHub\(tab = 'pause', app, fromPause = false\)/);
   assert.match(MAIN, /hubTab = tab;/);
+  // back, one step (Esc, B, the head's back): an app or a detail, then the pause list if you came from it, then the game
+  const back = MAIN.slice(MAIN.indexOf('function hubBack() {'), MAIN.indexOf('function hubToggle('));
+  assert.match(back, /bag\.back\(\)[\s\S]*phone\.back\(\)[\s\S]*mapwp\.back\(\)[\s\S]*hubFromPause && S\.playing\) \{ openHub\('pause'\); return; \}\n  closeHub\(\);/);
+  assert.match(MAIN, /if \(k === 'Escape' && HUB_IDS\.includes\(topOverlay\(\)\)\) \{ hubBack\(\); return; \}/, 'Esc');
+  assert.match(MAIN, /HUB_IDS\.includes\(topOverlay\(\)\) && input\.menuBack\) \{ hubBack\(\); return true; \}/, 'B');
+  assert.match(MAIN, /\$\('hub-back'\)\.onclick = \(\) => hubBack\(\);/, 'the head\'s back');
   assert.match(MAIN, /k === 'KeyP'[^\n]*hubToggle\('phone'\)/);
   assert.match(MAIN, /k === 'KeyM'[^\n]*hubToggle\('map'\)/);
   assert.match(MAIN, /function toggleBag\(\) \{[\s\S]*?openHub\('bag'\);/, 'I (and D-pad right): the bag');
   assert.match(MAIN, /up && input\.padPhone\) openHub\('phone'\)/, 'D-pad left: the phone');
   assert.match(MAIN, /HUB_IDS\.includes\(topOverlay\(\)\) && input\.menuTab && S\.playing\) \{ hubStep\(input\.menuTab\); return true; \}/, 'LB / RB');
   assert.match(MAIN, /k === 'Tab' && S\.playing && HUB_IDS\.includes\(topOverlay\(\)\)\) \{ hubStep\(1\); return; \}/, 'Tab on a keyboard');
-  assert.match(MAIN, /const bar = HUB_IDS\.includes\(id\) && S\.playing \? \[\.\.\.\$\('hub-bar'\)\.querySelectorAll\('button'\)\] : \[\];/, 'the D-pad reaches RESUME and the tabs');
-  assert.match(MAIN, /function startFocus\(\) \{ const i = focusables\(\)\.findIndex\(\(el\) => !el\.closest\('#hub-bar'\)\);/, 'focus starts in the tab, not on the bar');
+  assert.match(MAIN, /function startFocus\(\) \{ return 0; \}/, 'focus starts on the screen\'s first line (the head is back: B)');
   // one source for the controls: the hub's entries on every device, and the README
   for (const a of ['hub', 'hubtab']) assert.ok(KB[a] && TOUCH[a] && PAD[a], a);
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
@@ -111,9 +118,10 @@ test('a job\'s card: what it is, the pay range, how far, the first step and one 
   const j = { id: 'fire', kind: 'fire', title: 'Firefighter - a shift from Fire Station 7', sub: 'fire calls', pay: 280, lo: 150, hi: 420, per: 'a call', step: 'Get in the fire engine at Fire Station 7', x: 3200, y: 0 };
   assert.equal(payText(j), '$150-$420');
   const h = jobCardHtml(j, { dist: 3200 });
-  for (const want of ['Firefighter - a shift from Fire Station 7', '$150-$420', 'a call', 'FIRST</i>Get in the fire engine', '100 m', 'data-take="fire"', '>Accept<']) assert.ok(h.includes(want), want);
+  for (const want of ['Firefighter - a shift from Fire Station 7', '$150-$420', 'a call', 'FIRST</i>Get in the fire engine', '100 m', 'data-take="fire"', '>ACCEPT<']) assert.ok(h.includes(want), want);
   const busy = jobCardHtml(j, { dist: 0, busy: true, compact: true });
-  assert.match(busy, /class="jc compact"/); assert.match(busy, /disabled>Busy</);
+  assert.match(busy, /class="jc compact"/); assert.match(busy, /disabled>ON A JOB</);
+  assert.match(jobCardHtml(j, { dist: 3200, compact: true }), />START</, 'UIC-05: START');
   assert.ok(!busy.includes('fire calls'), 'the list\'s card is short: no description');
   const ph = read('client/phone.js');
   assert.match(ph, /jobCardHtml\(j, \{ dist: dist\(j\), busy: !!job, compact: true \}\)/, 'the Jobs app: short cards');
@@ -209,7 +217,7 @@ test('the bag: a grid by category; Drop puts things in a bag at your feet (never
 
 test('Settings: in sections, the controls of the device you\'re on (the others one tab away), every row 44 px', async () => {
   const { bindsHtml, devOf, BIND_GROUPS } = await import('../client/hub.js');
-  assert.deepEqual([...hubHtml.matchAll(/data-sec="([a-z]+)"/g)].map((m) => m[1]).slice(0, 6), ['controls', 'sound', 'graphics', 'account', 'help', 'danger']);
+  assert.deepEqual([...hubHtml.matchAll(/data-sec="([a-z]+)"/g)].map((m) => m[1]).slice(0, 8), ['graphics', 'sound', 'controls', 'game', 'chat', 'account', 'help', 'legal'], 'UIC-06: the tabs, then the launch\'s slots');
   assert.equal(devOf('gamepad'), 'pad'); assert.equal(devOf('touch'), 'touch'); assert.equal(devOf('keyboard'), 'kbm');
   const kb = bindsHtml('kbm'), pad = bindsHtml('pad'), touch = bindsHtml('touch');
   assert.match(kb, /Interact<\/span><span class="kchip">E</); assert.match(pad, /Interact<\/span><span class="kchip">B</); assert.match(touch, /Interact<\/span><span class="kchip">ACT</);
@@ -222,7 +230,7 @@ test('Settings: in sections, the controls of the device you\'re on (the others o
   assert.match(read('client/hub.js'), /for \(const el of \$\('settings'\)\.querySelectorAll\('\[data-for\]'\)\) el\.hidden = !el\.dataset\.for\.split\(' '\)\.includes\(d\);/);
   assert.match(read('client/hub.js'), /if \(!dev\) dev = devOf\(ctx\.input\.device\);/, 'it opens on the device you\'re using');
   const css = read('client/style.css');
-  assert.match(css, /#set-nav button \{ min-height: var\(--tap-l\);/);
+  assert.match(css, /#set-nav \.tab \{ flex: none; min-height: var\(--tap\);/);
   assert.match(css, /\.set-bind \{[^}]*min-height: var\(--tap\);/);
   assert.match(css, /#set-body \.srow select \{ min-height: var\(--tap\);/);
 });
@@ -235,5 +243,5 @@ test('a sideways phone: the shop\'s menu has a compact head and a scroll cue; th
   assert.match(css, /\.cue-down \{[^}]*mask-image/);
   assert.match(read('client/hud.js'), /box\.classList\.toggle\('cue-down'/, 'the menu shows when there is more below');
   assert.match(read('client/bag.js'), /export function cue\(el\) \{ el\.classList\.toggle\('cue-down'/, 'the bag\'s grid too');
-  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: minmax\(0, 1fr\) 260px;/, 'the bag beside its details at 844x390');
+  assert.match(css, /@media \(max-height: 560px\) \{\n  \.bag \{ grid-template-columns: 200px minmax\(0, 1fr\) 240px;/, 'the bag beside its slots and its details at 844x390');
 });

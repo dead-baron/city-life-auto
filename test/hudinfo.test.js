@@ -135,7 +135,7 @@ test('the knocked-out screen: where to wake up nearest first, the picked one amo
   const down = { help: false, amb: false, canAmb: true, fee: 250, ambUsed: false, finished: false };
   const me = { dead: true, down, spawnOpts, spawnChoice: 'home', deadAt: [1000, 500], deathCause: 'Shot by a police officer in Midtown', respawnIn: 12 };
   const C = deathChoices(me);
-  assert.equal(C.title, 'KNOCKED OUT');
+  assert.equal(C.title, 'YOU\'RE DOWN', 'UIC-15');
   assert.equal(C.cause, 'Shot by a police officer in Midtown', 'how it happened (on a phone too)');
   assert.equal(C.places.length, spawnOpts.length, 'every place to wake up in the world, not only the nearest few');
   assert.ok(WAKE_ROWS < spawnOpts.length);
@@ -143,7 +143,7 @@ test('the knocked-out screen: where to wake up nearest first, the picked one amo
   assert.equal(C.places[C.places.length - 1].id, 'home', 'the picked one among them, however far');
   assert.ok(C.places.find((o) => o.id === 'home').on && C.chosen.id === 'home');
   assert.ok(Math.abs(C.places[0].d - 0) < 1, 'how far, in metres');
-  assert.ok(C.wake, 'WAKE UP HERE');
+  assert.ok(C.wake, 'RESPAWN HERE');
   assert.deepEqual(C.help.map((b) => b[0]), ['help', 'amb'], 'call for help, the ambulance');
   assert.match(C.help[1][1], /Ambulance \$250/);
   const asked = deathChoices({ ...me, down: { ...down, help: true, amb: true } });

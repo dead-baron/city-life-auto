@@ -191,6 +191,7 @@ export function createInfo(H) {
     const J = I.job, j = me.job && !me.dead ? me.job : null, key = jobKey(j);
     const paidNow = prev && me.cash > prev.cash && (key !== J.key || (J.key && !j)) ? me.cash - prev.cash : 0;
     if (paidNow > 0 && J.key) { J.paid = paidNow; J.paidUntil = now + JOB_PAID_MS; }
+    if (paidNow > 0 && J.key && !j && H.moment) H.moment('JOB DONE', `+${money(paidNow)}`, 'good');   // (UIC-15: the job's done and paid)
     if (key !== J.key) {
       const was = J.key;
       J.key = key;

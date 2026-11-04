@@ -116,6 +116,7 @@ export class HUD {
       const held = this.held; this.held = [];
       for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone, t.short);
     }
+    if (prev && !prev.custody && me.custody && !me.dead) this.moment('BUSTED', 'The police have you.', 'bad');   // (UIC-15: cuffed)
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
@@ -372,6 +373,28 @@ export class HUD {
     document.querySelectorAll('#tbtns .armed').forEach((b) => b.classList.remove('armed'));
   }
 
+  // a big moment (UI-10, UIC-15): BUSTED, LEVEL UP, JOB DONE - big in the pixel face over the middle for a moment, then
+  // gone by itself (nothing lingers); one at a time, the next waits its turn. WASTED and the knocked-out screen are the
+  // death screen's (client/deathscreen.js)
+  moment(title, sub = '', tone = 'good') {
+    (this.moments ||= []).push([title, sub, tone]);
+    if (this.moments.length > 3) this.moments.shift();
+    if (!this.momentOn) this.nextMoment();
+  }
+  nextMoment() {
+    const q = this.moments && this.moments.shift();
+    let el = $('moment');
+    if (!q) { this.momentOn = false; if (el) el.className = 'hidden'; return; }
+    if (!el) { el = document.createElement('div'); el.id = 'moment'; el.setAttribute('role', 'status'); $('hud').appendChild(el); }
+    this.momentOn = true;
+    el.className = '';
+    el.innerHTML = `<b>${esc(q[0])}</b>${q[1] ? `<small>${esc(q[1])}</small>` : ''}`;
+    void el.offsetWidth;
+    el.className = `on ${q[2]}`;
+    clearTimeout(this.momentT);
+    this.momentT = setTimeout(() => { el.classList.add('out'); this.momentT = setTimeout(() => this.nextMoment(), 420); }, 2600);
+  }
+
   toast(text, tone = 'info', short = '') {
     if (tone === 'safety') { if (!$('hud').classList.contains('hidden')) this.safetyNudge(); return; }
     // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
@@ -383,6 +406,8 @@ export class HUD {
     }
     const msg = localizeText(text);
     logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
+    const lv = /^(.+?) up: level (\d+)/.exec(msg);   // (a skill up - server skills.js: the big moment says it, the Log keeps the line)
+    if (lv) { this.moment('LEVEL UP', `${lv[1]} - level ${lv[2]}`, 'good'); return; }
     // one line on the screen (UI-4): the server's short line for it, else its first sentence - a long one cut with an
     // ellipsis and a tap away from the Log; two at most, each up a few seconds; the same note again while it's still up
     // isn't stacked: it moves to the front with its time restarted and a count (the user, 2026-10-08)
