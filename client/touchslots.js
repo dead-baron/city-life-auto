@@ -11,13 +11,14 @@ export { iconOf } from './touchicons.js';
 // where each slot sits, at a phone's 390 px short side: its centre in from the right and up from the bottom (inside the
 // safe areas) and its size; the aim stick in the corner (its red ring inside its box), the arc round it; rk is the
 // CLIMB / DOWN rocker, in C1 / C2's stead. Kept clear of each other, of the left 40% (the move stick's), of the middle
-// (you) and upright of the left half; the switches (C, U) small, 44 px once scaled (UI-8: icons only). wp, the weapon button (UI-6): above CAR upright, above ACT on its side - by the
+// (you) and upright of the left half; the switches (C, U) small, 44 px (UI-9, the touch concept UIC-10: FIRE 72, ACT 60, the
+// secondary buttons 44 - icons only). wp, the weapon button (UI-6): above CAR upright, above ACT on its side - by the
 // right thumb, the utilities upright one row higher for it.
 export const GEO = {
-  land: { stick: [88, 88, 132], fire: [214, 74, 80], roll: [300, 46, 60], act: [200, 164, 60], car: [110, 194, 60], c1: [362, 44, 46], c2: [300, 106, 46],
-    u1: [34, 192, 42], u2: [34, 246, 42], u3: [88, 252, 42], u4: [140, 252, 42], rk: [300, 74, 62, 104], wp: [196, 228, 60, 52] },
-  port: { stick: [70, 80, 116], fire: [70, 186, 76], car: [70, 256, 56], roll: [163, 47, 52], act: [163, 104, 52], c1: [163, 158, 44], c2: [163, 207, 44],
-    u1: [163, 256, 42], u2: [82, 378, 42], u3: [82, 430, 42], u4: [30, 378, 42], rk: [163, 182, 52, 96], wp: [70, 318, 72, 56] },
+  land: { stick: [88, 88, 132], fire: [214, 74, 72], roll: [300, 46, 60], act: [200, 164, 60], car: [110, 194, 60], c1: [362, 44, 44], c2: [300, 106, 44],
+    u1: [34, 192, 44], u2: [34, 246, 44], u3: [88, 252, 44], u4: [140, 252, 44], rk: [300, 74, 62, 104], wp: [196, 228, 60, 52] },
+  port: { stick: [70, 80, 116], fire: [70, 186, 72], car: [70, 256, 56], roll: [163, 47, 52], act: [163, 106, 60], c1: [163, 160, 44], c2: [163, 208, 44],
+    u1: [163, 256, 44], u2: [82, 378, 44], u3: [82, 430, 44], u4: [30, 378, 44], rk: [163, 184, 52, 96], wp: [70, 318, 72, 56] },
 };
 export const MIN_TAP = 44;
 // every slot's box ({ x, y, w, h }, px from the top left) on a W x H screen; safe: the insets { t, r, b, l }

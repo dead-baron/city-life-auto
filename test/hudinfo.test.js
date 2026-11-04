@@ -106,7 +106,7 @@ test('the job card: the job, the call, step N of M, the objective; a new step is
   assert.equal(w.step, 'STEP 1 OF 3');
   assert.equal(w.obj, 'Someone collapsed on Rowan Street', 'the job\'s own name off the objective');
   const big = jobHtml(j, { big: true, dist: '640 M', time: 'SHIFT 10:10' }), chip = jobHtml(j, { dist: '640 M' });
-  assert.match(big, /PARAMEDIC · CALL 2.*SHIFT 10:10.*Someone collapsed on Rowan Street.*640 M.*STEP 1 OF 3/s);
+  assert.match(big, /PARAMEDIC · CALL 2.*Someone collapsed on Rowan Street.*SHIFT 10:10.*640 M.*STEP 1 OF 3/s);   // (UI-9, UIC-11/12/14: the job's name, the objective, then the clock and how far)
   assert.doesNotMatch(chip, /STEP|SHIFT/, 'the chip: the objective and how far only');
   assert.match(jobHtml(j, { big: true, done: true, paid: 140 }), /Job done.*DONE · \+\$140/s, 'finished: the pay');
   assert.notEqual(jobKey(j), jobKey({ ...j, step: [2, 3] }), 'a new step');

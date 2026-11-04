@@ -16,10 +16,13 @@
   --rim: var(--gold);
   --panel-bg: linear-gradient(180deg, #15223f, #0d162d);
   --glass: rgba(15, 24, 48, .92);         /* a touch button over the world */
-  --plate: rgba(11, 18, 37, .84);         /* a HUD plate over the world (UI-8): with --plate-line round it and --plate-sh under it */
+  --plate: rgba(15, 24, 48, .85);         /* the navy plate over the world (UIK-00: #0F1830 at 85%): with --plate-rim round it and --plate-sh under it */
   --plate-line: rgba(243, 234, 210, .14);
-  --plate-rim: rgba(226, 189, 87, .7);    /* a plate's thin gold rim (U1-U4) */
-  --ring: #4f86c6;                        /* the minimap's steel-blue ring (U1-U4) */
+  --plate-rim: var(--gold);               /* a plate's gold rim (UIK-00) */
+  --steel: #4f86c6; --ring: var(--steel); /* steel blue (UIK-00): the minimap's ring, a text box's rim, the count badge */
+  --grey: #5d6478; --grey-d: #2c3244;     /* disabled (UIK-00 4: the grey button) */
+  --white: #ffffff;                       /* the damage flash (UIC-20 03) */
+  --gold-hi: #f4d98a; --money-hi: #a6ef9a; --red-d: #8f2a22;
   --plate-sh: 0 4px 14px rgba(0, 0, 0, .35);
   --track: rgba(0, 0, 0, .5);             /* a bar's empty part */
   --danger-hi: #ff9585; --info-hi: #9ad2ff;   /* the bars' lit top edge */
@@ -54,6 +57,8 @@
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
   --tap: 44px; --tap-l: 48px;
   --t1: 150ms; --t2: 200ms; --t3: 250ms; --ease: cubic-bezier(.2, .7, .3, 1);
+  --t0: 60ms; --t-pop: 120ms; --t-drain: 400ms; --press: .92;   /* (the motion sheet UIC-20: a press 92% in 60 ms, back in 120; a hit drains in 400) */
+  --ic: 24px;                             /* a pixel icon's size (24 px, or a whole multiple: client/touchicons.js) */
   /* the top of a phone's screen: the safe area (a camera, a notch, a corner punch-hole, a status bar) - the HUD keeps
      below it, corners and all (UI-5: the owner's Pixel 7 Pro played full screen hid the vitals under its camera) */
   --cam-top: env(safe-area-inset-top, 0px);
@@ -96,12 +101,25 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 
 /* buttons: primary (gold, ink words), secondary (navy, gold rim), destructive (a red outline), the icon button with its label */
 .btn, .sbtn { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: var(--tap); padding: 0 22px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy); color: var(--cream); font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; transition: filter var(--t1) var(--ease), transform var(--t1) var(--ease), background var(--t1) var(--ease); }
-.btn:hover, .sbtn:hover { filter: brightness(1.15); }
-.btn:active, .sbtn:active { transform: scale(.97); }
-.btn[disabled], .sbtn[disabled] { opacity: .45; cursor: default; filter: none; transform: none; }
+/* (UIK-00 4: hover / focus a second, brighter rim; pressed 92% and darker; disabled grey) */
+.btn:hover, .sbtn:hover, .btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--gold-a); filter: brightness(1.08); }
+.btn:active, .sbtn:active { transform: scale(var(--press)); filter: brightness(.88); transition-duration: var(--t0); }
+.btn[disabled], .sbtn[disabled] { background: var(--grey-d); border-color: var(--grey); color: var(--dim); cursor: default; filter: none; transform: none; box-shadow: none; }
 .btn-1 { background: var(--gold); color: var(--ink); border-color: var(--gold); }
 .btn-1.pfocus { background: var(--gold) !important; color: var(--ink) !important; box-shadow: 0 0 0 3px var(--cream); }   /* (focused, still the primary)  */
 .btn-x, #s-fresh { background: transparent; color: var(--danger); border-color: var(--danger); }
+.btn-d { background: var(--danger); border-color: var(--danger); color: var(--cream); text-shadow: 0 1px 0 var(--red-d); }   /* (danger: SELL, DROP - UIK-00 4C) */
+.btn-d:hover { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--danger-t); }
+/* the round icon button (UIK-00 4D/E: phone, map, menu): navy, a gold rim, the icon alone; a key's badge on its corner */
+.rbtn { position: relative; display: grid; place-items: center; flex: none; width: var(--nav, 48px); height: var(--nav, 48px); padding: 0; border-radius: var(--r3); border: 2px solid var(--gold); background: var(--plate); color: var(--cream); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); cursor: pointer; touch-action: manipulation; transition: transform var(--t-pop) var(--ease), box-shadow var(--t1) var(--ease), background var(--t1) var(--ease); }
+.rbtn:hover, .rbtn:focus-visible { outline: none; background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
+.rbtn:active { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
+.rbtn[disabled] { border-color: var(--grey); opacity: .7; cursor: default; }
+.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+/* a pixel icon (client/touchicons.js): 24 px, or a whole multiple, never smoothed */
+.pi24 { display: block; width: var(--ic); height: var(--ic); flex: none; image-rendering: pixelated; }
+i.ic { display: inline-grid; place-items: center; flex: none; font-style: normal; line-height: 0; }
+
 .ibtn { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: var(--tap); min-height: var(--tap); padding: var(--s1) var(--s2); border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); cursor: pointer; }
 .ibtn svg, .ibtn img { color: var(--gold); }
 .sbtn { display: flex; width: calc(100% - 2 * var(--s4)); margin: var(--s3) var(--s4) var(--s4); }
@@ -119,7 +137,7 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 /* the toggle (a switch), the slider, the stepper */
 .toggle, .srow input[type=checkbox], .soundbox input[type=checkbox] { appearance: none; -webkit-appearance: none; flex: none; width: 52px; height: 30px; margin: 0; border-radius: var(--r3); cursor: pointer;
   background: radial-gradient(circle, var(--dim) 0 10px, transparent 11px) no-repeat 3px 50% / 24px 24px, var(--navy3); box-shadow: inset 0 0 0 1px var(--edge); transition: background-position var(--t2) var(--ease), background-color var(--t2) var(--ease); }
-.toggle:checked, .srow input[type=checkbox]:checked, .soundbox input[type=checkbox]:checked { background: radial-gradient(circle, var(--ink) 0 10px, transparent 11px) no-repeat calc(100% - 3px) 50% / 24px 24px, var(--gold); box-shadow: none; }
+.toggle:checked, .srow input[type=checkbox]:checked, .soundbox input[type=checkbox]:checked { background: radial-gradient(circle, var(--money) 0 10px, transparent 11px) no-repeat calc(100% - 3px) 50% / 24px 24px, var(--navy3); box-shadow: inset 0 0 0 2px var(--money); }   /* (UIK-00 5B: on, the green knob) */
 .toggle:disabled, .srow input:disabled { opacity: .4; cursor: default; }
 .touch :is(.toggle, .srow input[type=checkbox], .soundbox input[type=checkbox]) { height: var(--tap); border: 7px solid transparent; background-clip: padding-box; background-origin: padding-box; margin: -7px 0; }
 .slider, input[type=range] { width: min(46vw, 200px); height: 30px; margin: 0; accent-color: var(--gold); cursor: pointer; }
@@ -133,14 +151,28 @@ input[type=range]:disabled { opacity: .4; }
 /* tabs (a row of pages) and the segmented choice (one of a few) */
 .tabs { display: flex; gap: var(--s1); }
 .tab { min-height: var(--tap-l); padding: 0 18px; border: 0; border-bottom: 3px solid transparent; border-radius: var(--r2) var(--r2) 0 0; background: transparent; color: var(--dim); font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
-.tab.on, .tab[aria-selected=true] { background: var(--navy3); color: var(--cream); border-bottom-color: var(--gold); }
+.tab:hover { color: var(--cream); }
+.tab.on, .tab[aria-selected=true] { background: var(--gold); color: var(--ink); border-bottom-color: var(--gold); }   /* (UIK-00 5A: the page you're on, gold) */
 .seg { display: flex; border: 2px solid var(--gold); border-radius: var(--r2); overflow: hidden; }
 .seg > button { min-height: var(--tap); padding: 0 var(--s4); border: 0; background: transparent; color: var(--cream); font: 600 var(--fs-3) var(--ui); cursor: pointer; }
 .seg > button.on, .seg > button[aria-checked=true] { background: var(--gold); color: var(--ink); font-weight: 700; }
 
 /* a text box */
-.field, #devpw-in, #s-code-in, #s-name-in { flex: 1; min-width: 0; min-height: var(--tap); padding: var(--s2) 10px; background: var(--navy); color: var(--cream); border: 2px solid var(--gold-a); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); user-select: text; -webkit-user-select: text; }
+.field, #devpw-in, #s-code-in, #s-name-in { flex: 1; min-width: 0; min-height: var(--tap); padding: var(--s2) 10px; background: var(--navy); color: var(--cream); border: 2px solid var(--steel); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); user-select: text; -webkit-user-select: text; }
 .field:focus, #devpw-in:focus, #s-code-in:focus, #s-name-in:focus { outline: none; border-color: var(--gold); }
+
+/* the checkbox, the dropdown (UIK-00 5F/G) */
+.check { appearance: none; -webkit-appearance: none; flex: none; width: 22px; height: 22px; margin: 0; border: 2px solid var(--cream); border-radius: var(--r1); background: var(--navy); cursor: pointer; }
+.check:checked { border-color: var(--gold); background: linear-gradient(45deg, transparent 44%, var(--gold) 44% 58%, transparent 58%) no-repeat 3px 6px / 7px 7px, linear-gradient(-45deg, transparent 42%, var(--gold) 42% 56%, transparent 56%) no-repeat 7px 2px / 10px 12px, var(--navy); }
+.check:disabled { border-color: var(--grey); opacity: .6; }
+.drop { appearance: none; -webkit-appearance: none; min-height: var(--tap); padding: 0 34px 0 12px; border: 2px solid var(--gold); border-radius: var(--r1); color: var(--cream); font: 600 var(--fs-3) var(--ui); cursor: pointer;
+  background: linear-gradient(45deg, transparent 50%, var(--cream) 50%) no-repeat calc(100% - 17px) 50% / 6px 6px, linear-gradient(-45deg, transparent 50%, var(--cream) 50%) no-repeat calc(100% - 11px) 50% / 6px 6px, var(--navy); }
+/* feedback (UIK-00 6): the progress bar, the cooldown ring, the count badge */
+.pbar { position: relative; height: 12px; overflow: hidden; border-radius: var(--r1); background: var(--navy3); box-shadow: inset 0 0 0 1px var(--ink); }
+.pbar > i, .rob-bar > i { display: block; height: 100%; width: 0; background: linear-gradient(var(--gold-hi), var(--gold) 55%); transition: width var(--t2); }
+.cdring { --cd: 0; position: relative; }
+.cdring::before { content: ''; position: absolute; inset: -4px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--cd-c, var(--gold)) calc(var(--cd) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }
+.badge { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border: 2px solid var(--steel); border-radius: var(--r1); background: var(--navy); color: var(--info); font: 700 var(--fs-2) var(--pixel); line-height: 1; }
 
 /* coming and going (the owner's UX bar: shown when it matters, gone on its own): short eased motion; a compact and an
    expanded state (.foldable: its .fold-body opens with .open); .enter for something arriving, .out for one leaving */
@@ -172,7 +204,7 @@ input[type=range]:disabled { opacity: .4; }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
-.plate { background: var(--plate); border-radius: var(--r2); box-shadow: inset 0 0 0 1px var(--plate-line), var(--plate-sh); }
+.plate { background: var(--plate); border: 2px solid var(--plate-rim); border-radius: var(--r2); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }   /* (UIK-00 3: the HUD plate) */
 
 /* the corners */
 #hud-tl { position: absolute; left: var(--sl); top: var(--st); display: flex; flex-direction: column; align-items: flex-start; gap: var(--gap); width: calc(100vw - var(--sl) - var(--sr)); pointer-events: none; }
@@ -199,11 +231,11 @@ body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
   body:not(.touch) #hud-tr > * { grid-column: 1; }
   body:not(.touch) #hud-tr > #hud-btns { grid-area: 1 / 2; margin: 0; }
   body:not(.touch) #hud-tr > #vchip { grid-area: 2 / 2 / 4 / 3; }
-  body:not(.touch) #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); } body:not(.touch) #vchip > b { display: none; }
+  body:not(.touch) #vchip { grid-template-columns: auto; justify-items: end; gap: 0; padding: var(--s1) var(--s2); } body:not(.touch) #vchip > b { display: none; } body:not(.touch) #vchip .vc-spd { font-size: var(--fs-4); }
 }
 
 /* the plates (U1-U4): dark navy, a thin gold rim, an ink line round it, a soft shadow */
-#rclock, #hud-stat, #vchip, #job, .hchip, #weapon, #hud-btns button, #b-dev { background: var(--plate); border: 2px solid var(--plate-rim); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }
+#rclock, #hud-stat, #vchip, #job, .hchip, #weapon, #hud-btns button, #b-dev, #stars, .toast, #helpbox, #rob, #hints { background: var(--plate); border: 2px solid var(--plate-rim); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }
 
 /* the minimap (U1-U4): a steel-blue ring, the north on it */
 #radar-wrap { position: relative; flex: none; width: var(--map); pointer-events: auto; }
@@ -211,41 +243,47 @@ body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
 #radar-wrap::before { content: 'N'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--cream); background: var(--ink); border: 1px solid var(--ring); z-index: 1; }
 
 /* the clock's plate (U2, U4): the sun or the moon, the time, a rain cloud when it rains */
-#rclock { display: flex; flex: none; align-items: center; gap: 6px; height: 30px; margin-bottom: 4px; padding: 0 10px; white-space: nowrap; pointer-events: none; border-radius: var(--r2); font: 400 var(--fs-3) var(--pixel); color: var(--cream); }
-#rclock img.pi { height: 14px; width: auto; }
-#rclock img.pi:not([src]) { display: none; }
+#rclock { display: flex; flex: none; align-items: center; gap: var(--s2); height: 36px; margin-bottom: 4px; padding: 0 12px 0 8px; white-space: nowrap; pointer-events: none; border-radius: var(--r2); font: 700 var(--fs-4) var(--pixel); color: var(--cream); }
+.touch #rclock { height: 30px; gap: 6px; padding: 0 10px 0 6px; font-size: var(--fs-3); --ic: 16px; }
 #clock { display: none; }
 
 /* how you are and what you have, one plate top right (U1-U4): health and stamina - the icon, the bar, the number - then
    the cash (the bank under it on a desktop) */
-#hud-stat { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-width: 172px; padding: 7px 10px 6px; border-radius: var(--r2); }
-#vitals { display: flex; flex-direction: column; gap: 4px; }
+#hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 12px; padding: 6px 12px 6px 8px; border-radius: var(--r2); }
+#vitals { display: flex; flex-direction: column; gap: 2px; }
 .vrow { display: flex; align-items: center; gap: 6px; }
-.vrow svg { flex: none; width: 14px; height: 14px; }
-.vrow.hp svg { fill: var(--danger); } .vrow.st svg { fill: var(--info); }
 .vrow .vl { display: none; }
-.vrow b { flex: none; min-width: 30px; font: 400 var(--fs-2) var(--pixel); line-height: 1; text-align: right; }
+.vrow b { flex: none; min-width: 34px; font: 700 var(--fs-3) var(--pixel); line-height: 1; text-align: right; }
+#purse { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-left: 12px; border-left: 1px solid var(--plate-line); align-self: stretch; justify-content: center; }
 .vrow.hp b { color: var(--danger-hi); } .vrow.st b { color: var(--info-hi); }
-.vbar { position: relative; flex: 1; min-width: 0; height: 8px; overflow: hidden; background: var(--track); border-radius: var(--r1); box-shadow: inset 0 1px 1px var(--track); }
-.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r1); transition: width var(--t1); }
+.vbar { position: relative; flex: 1; min-width: 0; height: 12px; overflow: hidden; background: var(--track); border-radius: var(--r1); box-shadow: inset 0 0 0 1px var(--ink); }
+.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r1); transition: width var(--t0); }
+/* a hit (UIC-20 03): what was lost stays white a moment, then drains in 400 ms (client/hud.js damage) */
+.vbar .lag { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--white); border-radius: var(--r1); transition: width var(--t-drain) var(--ease); }
+.vbar .lag.hit { transition: none; }
 .fill.hp { background: linear-gradient(var(--danger-hi), var(--danger) 60%); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
 @keyframes hplow { 50% { opacity: .55; } }
 .fill.st { background: linear-gradient(var(--info-hi), var(--info) 60%); }
-#hud-stat #money { margin-top: 2px; border-top: 1px solid var(--line); padding-top: 4px; }
-.touch #hud-stat { min-width: 148px; padding: 6px 8px 5px; }
-.touch .vrow svg { width: 12px; height: 12px; }
-.touch .vbar { height: 7px; }
+.touch #hud-stat { grid-template-columns: minmax(96px, 1fr) auto; column-gap: 8px; padding: 4px 8px 4px 5px; --ic: 16px; }
+.touch #purse { padding-left: 8px; }
+.touch .vbar { height: 8px; } .touch .vrow b { min-width: 26px; font-size: var(--fs-2); }
+/* (upright, UIC-14: the cash under the bars, big, no bank) */
+body.portrait.touch #hud-stat { grid-template-columns: minmax(124px, 1fr); row-gap: 2px; }
+body.portrait.touch #purse { align-items: flex-end; padding: 3px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); }
+body.portrait.touch #bank { display: none; }
 
 /* the status: chips in plain words - only what's happening to you now (bleeding, a bounty, a coffee wearing off, a light
    on) and who you are when it isn't a citizen's; the standing numbers (Samaritan, Criminal XP, your record) are in the
    phone's Skills */
 #status { display: flex; flex-wrap: wrap; gap: var(--s1); max-width: min(440px, 34vw); }
 #status:empty { display: none; }
-.hchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 var(--s2); border-radius: var(--r1); color: var(--cream); font: 700 var(--fs-2) var(--ui); white-space: nowrap; }
+.hchip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 5px; border-radius: var(--r2); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; }
+.hchip:not(:has(.pi24)) { padding-left: 10px; }
+.touch .hchip { height: 28px; font-size: var(--fs-2); --ic: 16px; }
 .hchip b { font: 700 var(--fs-2) var(--pixel); }
 .hchip.role { background: var(--navy3); letter-spacing: .5px; text-transform: uppercase; }
 .hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
-.hchip.good b { color: var(--money); } .hchip.warn b, .hchip.warn { color: var(--heat); } .hchip.bad { color: var(--danger); } .hchip.info { color: var(--info); }
+.hchip.good b { color: var(--money); } .hchip.warn b { color: var(--heat); } .hchip.bad { border-color: var(--danger); } .hchip.info { border-color: var(--info); }
 .hchip.flag { border-color: currentColor; }
 body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
 .hchip.stat, .hchip.role.citizen { display: none; }   /* (UI-8: on a desktop too - the standing numbers are in the phone's Skills; the status is what's happening now) */
@@ -255,7 +293,7 @@ body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); 
 /* the robbery, train, bus, ferry, taxi and custody bars: top centre (upright, in the corner's column under the status) */
 #hud-msg { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
 #hud-msg:not(:has(> :not(.hidden))) { display: none; }
-body:not(.portrait) #hud-msg { position: fixed; left: calc(var(--sl) + var(--map) + 250px); right: calc(var(--sr) + 250px); top: var(--st); }
+body:not(.portrait) #hud-msg { position: fixed; left: calc(var(--sl) + var(--map) + 250px); right: calc(var(--sr) + 340px); top: var(--st); }
 @media (max-height: 430px) { body:not(.touch) #bank { display: none; } }
 #hud-msg > * { max-width: 100%; box-sizing: border-box; }
 body.portrait #hud-msg { align-items: flex-start; }
@@ -267,15 +305,23 @@ body.touch #hud-msg { position: static; align-items: flex-start; width: min(100%
 #job { position: relative; flex: none; z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; border-radius: var(--r2); color: var(--cream); animation: enter var(--t2) var(--ease); transition: border-color var(--t2) var(--ease), box-shadow var(--t2) var(--ease); }
 #job.big { width: min(330px, calc(33vw - var(--sl) - 6px)); padding: 9px 13px; }
 #job.chip { display: flex; align-items: center; gap: var(--s2); max-width: min(340px, calc(100vw - var(--sl) - var(--sr))); min-height: 34px; padding: var(--s1) var(--s3); }
-#job .jc-h { display: flex; justify-content: space-between; gap: var(--s2); white-space: nowrap; font: 400 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--gold); }
-#job .jc-t { flex: none; color: var(--heat); }
-#job.big .jc-o { margin-top: var(--s1); font: 700 var(--fs-4) var(--ui); line-height: 1.15; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-#job .jc-d { display: flex; justify-content: space-between; gap: var(--s2); font: 400 var(--fs-2) var(--pixel); color: var(--info); }
-#job.big .jc-d { margin-top: 6px; }
+#job .jc-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); white-space: nowrap; font: 700 var(--fs-3) var(--pixel); letter-spacing: 1px; color: var(--cream); }
+#job .jc-h .jc-s { font-size: var(--fs-1); color: var(--gold); }
+#job .jc-t { flex: none; color: var(--cream); }
+#job.hot .jc-t { color: var(--danger); }
+#job.big .jc-o { margin-top: 2px; font: 600 var(--fs-3) var(--ui); line-height: 1.2; color: var(--cream); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+#job .jc-d { display: flex; justify-content: flex-start; align-items: center; gap: var(--s2); font: 700 var(--fs-3) var(--pixel); color: var(--cream); }
+#job.big .jc-d { flex-wrap: wrap; row-gap: 2px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--plate-line); }
+#job.big .jc-d > span { display: inline-flex; flex: none; flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; }
+#job.big .jc-d > :is(.jc-t, .jc-m) + :is(.jc-t, .jc-m) { padding-left: var(--s2); border-left: 1px solid var(--plate-line); }
+#job.big .jc-d :is(.jc-paid, .jc-s) { margin-left: auto; font-size: var(--fs-1); color: var(--gold); }
+#job.big .jc-d .jc-paid { font-size: var(--fs-3); color: var(--money); }
+#job .pi24 { width: 24px; height: 24px; }
+.touch #job .pi24 { width: 16px; height: 16px; }
 #job.chip .jc-o { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--fs-3) var(--ui); }
 #job.chip .jc-d { flex: none; }
 #job .jc-s { flex: none; color: var(--gold); }
-#job .jc-dot { flex: none; width: 10px; height: 10px; border-radius: var(--r3); background: var(--info); }
+#job .jc-dot { flex: none; display: grid; place-items: center; }
 #job .jc-paid { color: var(--money); font: 700 var(--fs-3) var(--pixel); }
 #job.new { box-shadow: 0 0 0 1px var(--ink), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
 @keyframes jobnew { 50% { border-color: var(--cream); box-shadow: 0 0 0 1px var(--ink), 0 0 22px var(--gold-a); } }
@@ -295,18 +341,19 @@ body.portrait.touch #job.big .jc-o { -webkit-line-clamp: 1; }
 @media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
 body.dead #job { display: none !important; }
 /* (upright with a bar up - a robbery, a ride, custody - the big card short: clear of the middle - UI-5) */
-.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o { display: none; }
+.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o, .touch #hud:has(#rob:not(.hidden)) #job.big .jc-o { display: none; }
 
 /* the icon buttons (the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should
    work"; round, as U3): phone, map, the menu in the corner - the icon alone; on a keyboard the key's badge on the
    corner (P, M, Esc); 44 px or more to tap */
 #hud-btns { display: flex; gap: var(--gap); pointer-events: auto; }
-#hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border-radius: var(--r3); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t1) var(--ease), border-color var(--t1) var(--ease), color var(--t1) var(--ease); }
-#hud-btns button:hover, #b-dev:hover { background: var(--navy3); border-color: var(--gold); color: var(--gold); }
-#hud-btns button:active, #b-dev:active { transform: scale(.94); background: var(--navy3); }
+#hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border-radius: var(--r3); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t-pop) var(--ease), border-color var(--t1) var(--ease), color var(--t1) var(--ease), box-shadow var(--t1) var(--ease); }
+#hud-btns button:hover, #b-dev:hover { background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
+#hud-btns button:active, #b-dev:active { transform: scale(var(--press)); background: var(--navy3); }
 #hud-btns button:focus-visible, #b-dev:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-#hud-btns svg { display: block; width: 20px; height: 20px; }
-#hud-btns .kchip { position: absolute; right: -6px; bottom: -6px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+#hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
+#hud-btns .kchip { position: absolute; right: -7px; top: -7px; bottom: auto; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+.touch #hud-btns { --ic: 24px; }
 /* the debug button (a playtest tool, open to everyone): quiet, beside the minimap's foot - apart from the game's own */
 #b-dev { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(34px + var(--gap) + var(--map) - 36px); width: 36px; height: 36px; opacity: .7; color: var(--dim); border-color: var(--plate-line); }
 #b-dev svg { display: block; width: 18px; height: 18px; }
@@ -314,26 +361,46 @@ body.dead #job { display: none !important; }
 .touch #b-dev { width: var(--tap); height: var(--tap); top: calc(34px + var(--gap) + var(--map) - var(--tap)); }
 
 /* what you have: the cash (a robbery's hot money under it), the bank, the vehicle chip, the stars, what you hold */
-#money { font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--money); text-shadow: 0 2px 0 var(--ink); }
+#money { position: relative; font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--money); text-shadow: 0 2px 0 var(--ink); }
+/* the money's float (UIC-20 02): +$250 up beside the cash as it counts, gone in 600 ms */
+#cash-up { position: absolute; right: 100%; top: -2px; margin-right: 6px; opacity: 0; pointer-events: none; white-space: nowrap; font: 700 var(--fs-3) var(--pixel); color: var(--money-hi); text-shadow: var(--halo-s); }
+#cash-up.neg { color: var(--danger-hi); }
+#cash-up.go { animation: cashup 1s var(--ease) both; }
+@keyframes cashup { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-6px); } 100% { opacity: 0; transform: translateY(-14px); } }
 #hot { display: block; font: 700 var(--fs-2) var(--pixel); line-height: 1.15; letter-spacing: 1px; color: var(--heat); text-shadow: var(--halo-s); animation: hot-pulse 1.6s ease-in-out infinite; }   /* (a robbery's takings, not spendable till they're cleaned: server hotmoney.js) */
 @keyframes hot-pulse { 50% { color: var(--gold); } }
-#bank { font: 400 var(--fs-2) var(--pixel); color: var(--info-hi); }
-#vchip { display: flex; align-items: baseline; gap: 10px; padding: 5px 10px; border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
-#vchip .vc-spd { font: 400 var(--fs-3) var(--pixel); color: var(--gold); }
-#vchip .vc-alt { font: 400 var(--fs-3) var(--pixel); color: var(--info); }
-#stars { display: none; font-size: var(--fs-4); letter-spacing: 1px; line-height: 1; }
-#stars.wanted, #stars.recent { display: block; animation: enter var(--t2) var(--ease); }
+#bank { display: flex; align-items: center; gap: 4px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); --ic: 16px; }
+#bank .pi24 { width: 16px; height: 16px; }
+#vchip { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 10px; row-gap: 0; padding: 4px 10px 5px; border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
+#vchip > b { grid-column: 1 / -1; font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--gold); }
+#vchip .vc-spd { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--cream); }
+#vchip .vc-spd small { font: 700 var(--fs-1) var(--pixel); color: var(--dim); }
+#vchip .vc-alt { font: 700 var(--fs-3) var(--pixel); color: var(--info); }
+#vchip .vc-hp { display: flex; align-items: center; gap: 4px; --ic: 16px; }
+#vchip .vc-hp > i { position: relative; display: block; width: 52px; height: 8px; border-radius: var(--r1); background: var(--track); box-shadow: inset 0 0 0 1px var(--ink); overflow: hidden; }
+#vchip .vc-hp > i::before { content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 100%); background: var(--danger); }
+#vchip .vc-hp.low > i::before { animation: hplow .6s steps(2) infinite; }
+#stars { display: none; gap: 2px; padding: 3px 8px; border-radius: var(--r2); line-height: 0; font-size: var(--fs-4); }
+#stars.wanted, #stars.recent { display: flex; animation: enter var(--t2) var(--ease); }
 #stars.recent { opacity: .55; transition: opacity var(--t3); }
-#stars span { color: var(--ink-a); -webkit-text-stroke: 1.5px var(--cream-a); }
-#stars .on { color: var(--heat); -webkit-text-stroke: 2px var(--ink); text-shadow: 0 0 8px var(--heat); }
-#stars .flash { animation: starflash .35s steps(2) infinite; }
+#stars span { display: block; }
+#stars .flash { animation: starblink .35s steps(2) infinite; }
+@keyframes starblink { 50% { opacity: .35; } }
+.touch #stars { padding: 2px 6px; --ic: 16px; }
 @keyframes starflash { 50% { color: var(--danger); } }
-#weapon { display: flex; align-items: center; gap: var(--s2); min-height: 52px; padding: 3px 12px 3px var(--s2); border-radius: var(--r2); }
+#weapon { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s2); min-height: 52px; padding: 3px 12px 3px var(--s2); border-radius: var(--r2); pointer-events: auto; cursor: pointer; }
 #w-icon canvas { width: 96px; height: 48px; image-rendering: pixelated; display: block; filter: drop-shadow(var(--lift)); }
 #w-info { text-align: right; }
-#w-name { font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--cream); }
-#w-ammo { font: 400 var(--fs-2) var(--pixel); color: var(--gold); }
-#weapon.compact { min-height: 0; padding: 2px var(--s2); border-color: var(--plate-line); }
+#w-name { font: 700 var(--fs-2) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--dim); }
+#w-ammo { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--cream); }
+#w-quick { grid-column: 1 / -1; display: flex; margin: 3px -12px -3px calc(-1 * var(--s2)); border-top: 1px solid var(--plate-line); }
+#w-quick:empty { display: none; }
+#w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 1px solid var(--plate-line); background: transparent; cursor: pointer; }
+#w-quick .wq:first-child { border-left: 0; }
+#w-quick .wq:hover { background: var(--gold-t); }
+#w-quick .wq :is(img, canvas) { width: 48px; height: 24px; image-rendering: pixelated; }
+#w-quick .kchip { position: absolute; left: 3px; top: 3px; min-width: 14px; height: 14px; padding: 0 2px; font-size: var(--fs-1); box-shadow: none; }
+#weapon.compact { min-height: 0; padding: 2px var(--s2); }
 #weapon.compact #w-icon canvas { width: 48px; height: 24px; }
 #weapon.compact #w-name { font-size: var(--fs-2); }
 .touch #bank { display: none; }
@@ -341,33 +408,40 @@ body.dead #job { display: none !important; }
 /* on touch the weapon plate is the weapon button, a slot above CAR / ACT (UI-6: client/touchslots.js sets --sx/y/w/h and
    data-slot while the slot holds it): the icon and the rounds, drawn like the touch buttons round it; a tap the next
    weapon, held the picker (client/main.js) */
-.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; flex-direction: column; justify-content: center; gap: 0; padding: 0; border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
+.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 0; border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
 .touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
 .touch #w-icon canvas { width: 48px; height: 24px; }
+.touch #w-quick { display: none; }
+@media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #hud-stat { grid-template-columns: minmax(124px, 1fr); } body:not(.touch) #purse { align-items: flex-end; padding: 2px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); } }
+/* (a phone: the vehicle's plate one line - the speed and its condition; on its side and upright the name stays off) */
+.touch #vchip { grid-template-columns: auto auto; } .touch #vchip .vc-spd { font-size: var(--fs-4); } .touch #vchip .vc-hp > i { width: 36px; }
+.touch #w-ammo { font: 700 var(--fs-1) var(--ui); letter-spacing: 0; color: var(--cream); }
 .touch #w-info { text-align: center; white-space: nowrap; }
 body.touch.multi-wpn #weapon::after { content: '⇄'; position: absolute; top: -2px; right: 3px; font-size: var(--fs-2); opacity: .75; }
 .touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); font-size: var(--fs-2); }
 .touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
-.touch:not(.portrait) #vchip > b { display: none; }   /* (on its side, the readouts only: the arc's small buttons are under the column) */
+.touch #vchip > b { display: none; }   /* (on a phone the readouts only: the vehicle is under your thumb - the arc's small buttons are under the column on its side) */
 body.portrait.touch #hud-tr { max-width: calc(48vw - var(--sr)); }
 body.portrait.touch #hud-btns { gap: 4px; }   /* (three keys clear of the top-centre band, where a centred camera sits) */
 
 /* the notes: one line each, two at most, in and out on their own (hud.js toast); a long one cut short, the whole of it
    a tap away in the phone's Log. Bottom left on a desktop; top centre on a phone on its side; upright in the corner's
    column under the job card (not while it's big, nor with a bar up: they wait in the Log, clear of the middle) */
-#toasts { position: fixed; left: var(--sl); bottom: var(--sb); z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 440px); pointer-events: none; }
-.toast { position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 5px 10px; background: var(--plate); box-shadow: var(--plate-sh); border-left: 3px solid var(--info); border-radius: var(--r1); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: enter-l var(--t2) var(--ease); transition: opacity var(--t3) var(--ease), transform var(--t3) var(--ease); }
+#toasts { position: static; z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 360px); pointer-events: none; }
+.toast { position: relative; display: flex; align-items: center; gap: var(--s2); max-width: 100%; box-sizing: border-box; padding: 2px 12px 2px 4px; border-color: var(--steel); border-radius: var(--r2); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: toastin var(--t1) var(--ease); transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease); }
+@keyframes toastin { from { opacity: 0; transform: translateX(-8px); } }
 .toast > .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.toast.good { border-left-color: var(--money); } .toast.bad { border-left-color: var(--danger); } .toast.warn { border-left-color: var(--heat); }
+.toast.good { border-color: var(--money); } .toast.bad { border-color: var(--danger); } .toast.warn { border-color: var(--heat); }
+.touch .toast { --ic: 16px; }
 .toast.more { pointer-events: auto; cursor: pointer; }
 .toast.more::after { content: 'LOG ›'; flex: none; font: 400 var(--fs-1) var(--pixel); color: var(--gold); }
-.toast.out { transform: translateX(-8px); }
-#toasts .toast:nth-last-child(n+3) { display: none; }
-.touch .toast { max-width: min(40vw, 380px); padding: 3px var(--s2); font-size: var(--fs-2); }
-.touch #toasts { position: static; width: min(100%, 380px); }
+.toast.out { transform: none; }
+#toasts .toast:nth-child(n+3) { display: none; }
+.touch .toast { max-width: min(40vw, 380px); padding: 3px var(--s2) 3px 4px; font-size: var(--fs-2); }
+.touch #toasts { width: min(100%, 380px); }
 .touch:not(.portrait) #toasts { width: min(260px, calc(33vw - var(--sl) - 6px)); }
 .touch .toast { max-width: 100%; }
-.touch #toasts .toast:nth-last-child(n+2) { display: none; }   /* (on a phone one at a time, the newest: the column stays clear of the middle and the move stick) */
+.touch #toasts .toast:nth-child(n+2) { display: none; }   /* (on a phone one at a time, the newest: the column stays clear of the middle and the move stick) */
 .touch #hud:has(#job.big:not(.hidden)) #toasts, .touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }
 @media (max-height: 380px) { .touch #hud:has(#cruiser-hint:not(.hidden)) #toasts { display: none; } }   /* (a small phone on its side: the cruiser's hint says it) */
 
@@ -379,13 +453,19 @@ body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: 
 #cruiser-hint { font: 700 var(--fs-3) var(--ui); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
 .touch #cruiser-hint { font-size: var(--fs-2); }
 /* the prompt: one at a time, the key chip then what it does (no colon); in while you're in range, out when you leave */
-#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 14px 6px 6px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: 0 0 0 2px var(--ink); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream);
+#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 16px 6px 6px; border-radius: var(--r2); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream); animation: prpop var(--t-pop) var(--ease);
   transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
-#helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
+#helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; animation: none; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
+/* (UIC-20 06: in at 90%, up to 100% in 120 ms; the key's ring fills as you press it; a green tick when it's done) */
+@keyframes prpop { from { opacity: 0; transform: scale(.9); } }
+#helpbox.hit > :is(.g-key, .g-touch, .g-pad) { animation: keyhit var(--t-pop) var(--ease); box-shadow: 0 0 0 3px var(--gold), inset 0 -3px 0 var(--dim); }
+@keyframes keyhit { from { transform: scale(var(--press)); } }
+#helpbox .pr-tick { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; --ic: 32px; animation: prpop var(--t-pop) var(--ease); }
+.touch #helpbox .pr-tick { left: 4px; }
+#helpbox.done { border-color: var(--money); }
 #helpbox > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
 #helpbox > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
-body:not(.touch) #helpbox { position: fixed; left: 50%; top: calc(50% + 40px); transform: translateX(-50%); max-width: min(560px, 60vw); }
-body:not(.touch) #helpbox.off { transform: translate(-50%, 6px); }
+body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 .touch #helpbox { font-size: var(--fs-3); padding: 4px 12px 4px 4px; }
 .touch #helpbox > .g-touch { height: 34px; min-width: 44px; font-size: var(--fs-2); }
 /* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks): the key chip red with a "!" on its corner,
@@ -403,7 +483,7 @@ body:not(.touch) #helpbox.off { transform: translate(-50%, 6px); }
 #helpbox.armed > :is(.g-key, .g-touch, .g-pad) { animation: armblink .5s steps(2, jump-none) infinite; }
 @keyframes armblink { 50% { filter: brightness(1.6); } }
 /* the first-time hint strip: the device's own keys, buttons or slot names (hudinfo.js HINTS) */
-#hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); padding: var(--s1) var(--s3); background: var(--shade); border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); color: var(--cream); text-shadow: var(--halo-s); transition: opacity var(--t3) var(--ease), visibility 0s; }
+#hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); padding: 5px var(--s3); border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); color: var(--cream); text-shadow: var(--halo-s); transition: opacity var(--t3) var(--ease), visibility 0s; }
 #hints.off { opacity: 0; visibility: hidden; transition: opacity var(--t3) var(--ease), visibility 0s var(--t3); }
 #hints .hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 134px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); font-size: var(--fs-2); gap: 2px 10px; }
@@ -411,15 +491,17 @@ body:not(.touch) #helpbox.off { transform: translate(-50%, 6px); }
 /* a touch button named in words elsewhere (the prompt, the hint strips, a cue): the button as it looks - its icon on a
    round plate (UI-8) */
 .g-touch.g-ico, #hints .g-touch.g-ico, #helpbox > .g-touch.g-ico { display: inline-grid; place-items: center; width: 30px; height: 30px; min-width: 0; padding: 0; border-radius: var(--r3); background: var(--plate); color: var(--cream); border: 2px solid var(--plate-rim); box-shadow: none; }
-.g-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.touch:not(.portrait) #hints .g-touch.g-ico { width: 24px; height: 24px; border-width: 1.5px; } .touch:not(.portrait) #hints .g-ico svg { width: 15px; height: 15px; }
+.g-ico .pi24 { width: 16px; height: 16px; }
+.touch:not(.portrait) #hints .g-touch.g-ico { width: 26px; height: 26px; border-width: 1.5px; }
 #helpbox > .g-touch.g-ico { width: 38px; height: 38px; border-color: var(--gold); color: var(--gold); }
-#helpbox > .g-touch.g-ico svg { width: 22px; height: 22px; }
+#helpbox > .g-touch.g-ico .pi24 { width: 24px; height: 24px; }
 #helpbox.crime > .g-touch.g-ico { background: var(--danger); border-color: var(--danger); color: var(--ink); }
-.bigkey .g-touch.g-ico { width: 1.6em; height: 1.6em; } .bigkey .g-ico svg { width: .9em; height: .9em; }
+.bigkey .g-touch.g-ico { width: 1.6em; height: 1.6em; } .bigkey .g-ico .pi24 { width: 24px; height: 24px; }
 body.portrait.touch #hints .hint { white-space: normal; }
 body.portrait.touch #hints { left: var(--sl); right: var(--lo-c, 196px); bottom: calc(var(--sb) + 150px); margin: 0; flex-direction: column; align-items: flex-start; gap: 2px; }
-body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 48px); }
+/* (on a desktop the hint line bottom left - UIC-11/12 - the prompt over it only where the two would meet) */
+body:not(.touch) #hints { left: var(--sl); right: auto; margin: 0; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: nowrap; overflow: hidden; justify-content: flex-start; }
+body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 52px); }
 
 #w-carry { position: absolute; right: var(--sr); bottom: var(--sb); font: 700 var(--fs-2) var(--ui); color: var(--gold); text-shadow: var(--halo-s); text-align: right; }
 .touch #w-carry { display: none; }
@@ -456,7 +538,9 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
   body:not(.touch) #hud:has(#hints:not(.off)) > #hud-low { bottom: calc(var(--sb) + 64px); }
   /* (the notes in the corner's column under the job, the hint strip and the low slot the bottom's whole width) */
   body:not(.touch) #toasts { position: static; width: calc(33vw - var(--sl) - 8px); }
-  body:not(.touch) #hints { max-width: calc(100vw - 2 * var(--sl)); }
+  body:not(.touch) #hints { left: 33vw; right: var(--sr); margin: 0 auto; max-width: none; justify-content: center; }
+  body:not(.touch) #w-ammo { font-size: var(--fs-3); }
+  body:not(.touch) #stars { padding: 2px 6px; --ic: 16px; } body:not(.touch) #hud-stat { padding-top: 4px; padding-bottom: 4px; }
   body:not(.touch) #hud-low { left: 33vw; right: var(--sr); max-width: none; }
 }
 @media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #rob > b { display: none; } }
@@ -476,10 +560,10 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #district small, #edgewarn small { white-space: normal; text-wrap: balance; }   /* (the small line under them may wrap) */
 
 /* the robbery bar, a train ride's (or a bus', a ferry's, a taxi's), custody's */
-#rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: var(--s2) 14px; background: var(--glass); border: 2px solid var(--gold); border-radius: var(--r2); font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }
-#rob .rob-bar, #trainbar .rob-bar { width: 140px; height: 10px; background: var(--navy3); border-radius: var(--r1); overflow: hidden; }
+#rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: var(--r2); font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }
+#rob .rob-bar, #trainbar .rob-bar { width: 160px; height: 12px; background: var(--navy3); border-radius: var(--r1); overflow: hidden; box-shadow: inset 0 0 0 1px var(--ink); }
 #rob-fill, #tb-fill { display: block; height: 100%; width: 0; background: var(--gold); transition: width var(--t2); }
-#rob span { min-width: 90px; font: 700 var(--fs-3) var(--ui); color: var(--money); }
+#rob span { min-width: 90px; font: 700 var(--fs-3) var(--ui); color: var(--cream); }
 #rob.till #rob-fill { background: var(--money); }
 #rob.alarm, #trainbar.alarm { border-color: var(--danger); color: var(--danger); animation: robflash .5s steps(2) infinite; } #rob.alarm span, #trainbar.alarm span { color: var(--danger); }
 @keyframes robflash { 50% { background: var(--blood); } }
@@ -508,54 +592,57 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #zone-l { position: absolute; left: 0; top: 36%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
 body.portrait #zone-l { top: 50%; }
 .stick { position: absolute; border-radius: var(--r3); pointer-events: none; }
-#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 2px solid var(--cream-a); background: var(--ink-a); opacity: .6; transition: opacity var(--t2); }
+#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 3px solid var(--gold); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); opacity: .55; transition: opacity var(--t2); }
 #stick-l.active { opacity: 1; }
-.stick .knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); background: var(--cream-a); box-shadow: 0 3px 8px var(--ink-a); }
+.stick .knob { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); }
+#stick-l .knob { border: 7px solid var(--cream); background: transparent; box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); }
+#stick-r .knob { background: var(--navy2); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink); --ic: 32px; }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
 /* the aim stick (the owner, 2026-10-24: kept): drag to aim; pushed into its red ring it fires, while FIRE ON is on */
-#stick-r { display: none; pointer-events: auto; touch-action: none; border: 2px solid var(--cream-a); background: var(--ink-a); transition: opacity var(--t2); }
+#stick-r { display: none; pointer-events: auto; touch-action: none; border: 3px solid var(--gold); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); transition: opacity var(--t2); }
 #stick-r[data-slot] { display: block; }
 #stick-r .ring { position: absolute; inset: 6px; border-radius: var(--r3); border: 9px solid var(--danger-t); }
 #stick-r.aiming { border-color: var(--cream); }
 #stick-r.firing .ring { border-color: var(--danger); }
-#stick-r.firing .knob { background: var(--danger); }
+#stick-r.firing .knob { background: var(--danger); border-color: var(--cream); }
 #stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
 body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
-#firetog.lit { background: var(--danger); border-color: var(--danger); } #tbtns #firetog.lit svg { stroke: var(--ink); }
+#firetog.lit { background: var(--danger); border-color: var(--danger-hi); }   /* (auto-fire ON: red, UIC-10 3) */
 /* the touch buttons (U3, the owner 2026-10-30: "do we need the actual text with those buttons?"): round, dark navy,
    a thin gold rim, the icon alone - each named for a screen reader (aria-label) and in the first-time hint strips. The
    big ones (FIRE / HIT, ACT, CAR, ROLL) for the thumb mid-action; the switches (the light, FIRE ON, the bag, the
    context buttons) small and quieter; a switch that's on lights up */
-#tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; align-items: center; justify-content: center; padding: 0; border-radius: var(--r3); border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); color: var(--cream); transition: transform var(--t1) var(--ease), background-color var(--t1), opacity var(--t2); }
+#tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; align-items: center; justify-content: center; padding: 0; border-radius: var(--r3); border: 2px solid var(--plate-rim); background: var(--plate); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); color: var(--cream); transition: transform var(--t-pop) var(--ease), background-color var(--t1), opacity var(--t2); }
 #tbtns button[data-slot] { display: flex; }
 #tbtns [data-slot] .l { display: none; }   /* (the words: the button's aria-label, the hint strips) */
-#tbtns svg { width: 22px; height: 22px; flex: none; fill: none; stroke: var(--cream); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-#tbtns svg * { vector-effect: non-scaling-stroke; }   /* (the same 2 px line on every button, big or small: UI-5) */
-#tbtns button:active { transform: scale(.94); background: var(--navy3); }
+/* (the icons in whole multiples of 8 px: crisp on a 3x phone - client/touchicons.js) */
+#tbtns .pi24 { width: 24px; height: 24px; }
+#tbtns button:active, #tbtns button.on { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
 #tbtns [data-slot=fire] { border: 3px solid var(--danger); }
-#tbtns [data-slot=fire] svg { width: 30px; height: 30px; stroke: var(--danger-hi); }
-#tbtns [data-slot=act] { border-color: var(--gold); }
-#tbtns [data-slot=act] svg { width: 26px; height: 26px; stroke: var(--gold); }
-#tbtns :is([data-slot=car], [data-slot=roll]) svg { width: 24px; height: 24px; }
-#tbtns :is([data-slot=c1], [data-slot=c2]) svg { stroke: var(--heat); }
-#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) { border-color: var(--plate-line); }
-#tbtns :is([data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) svg { width: 18px; height: 18px; }
-#tbtns [data-rk] { border: 2px solid var(--plate-rim); }   /* (CLIMB / DOWN: one rocker, the arrows blue) */
-#tbtns [data-rk] svg { width: 26px; height: 26px; stroke: var(--info); stroke-width: 2.5; }
+#tbtns [data-slot=fire] .pi24 { width: 40px; height: 40px; }
+#tbtns [data-slot=fire]:is(:active, .on) { background: var(--danger); border-color: var(--danger-hi); }
+#tbtns [data-slot=act] { border: 3px solid var(--gold); }
+#tbtns [data-slot=act] .pi24 { width: 32px; height: 32px; }
+#tbtns [data-slot=act]:is(:active, .on) { background: var(--gold); }
+#tbtns [data-slot=act]:is(:active, .on) .pi24 { filter: brightness(.2); }   /* (the hand dark on the gold, UIC-10 2) */
+#tbtns :is([data-slot=car], [data-slot=roll]) .pi24 { width: 32px; height: 32px; }
+#tbtns :is([data-slot=c1], [data-slot=c2], [data-slot=u1], [data-slot=u2], [data-slot=u3], [data-slot=u4]) { border-width: 2px; }
+#tbtns button[disabled], #tbtns button.dis { border-color: var(--grey); background: var(--grey-d); filter: grayscale(1); opacity: .8; }
+#tbtns [data-rk] { border: 2px solid var(--plate-rim); }   /* (CLIMB / DOWN: one rocker) */
+#tbtns [data-rk] .pi24 { width: 32px; height: 32px; }
 #tbtns [data-rk=top] { border-radius: var(--r3) var(--r3) var(--r1) var(--r1); border-bottom-color: var(--edge); }
 #tbtns [data-rk=bot] { border-radius: var(--r1) var(--r1) var(--r3) var(--r3); border-top: 0; }
-#tbtns button.on, #tbtns [data-slot].on { background: var(--cream); }
-#tbtns button.on svg { stroke: var(--ink); }
-#tbtns .light.lit, #b-light.lit { background: var(--gold); border-color: var(--gold); } #tbtns .light.lit svg, #b-light.lit svg { stroke: var(--ink); }
+#tbtns .light.lit, #b-light.lit { background: var(--gold); border-color: var(--gold-hi); }   /* (a switch that's on: lit, UIC-10 3's headlights / auto-fire ON) */
 #stick-r .lbl { display: none; }   /* (AIM: the hint strip says it) */
-#b-cruiser.cooling { color: var(--dim); border-color: var(--edge); }
+#b-cruiser.cooling { border-color: var(--grey); }
+#b-cruiser.cooling .pi24 { filter: grayscale(1) brightness(.8); }
+#b-cruiser.cooling::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--gold) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }   /* (the cooldown ring, UIC-10 2 / UIK-00 6F) */
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
 #touch.idle #tbtns button:not(.pulse) { opacity: .5; }
 #touch.idle #stick-l:not(.active) { opacity: .25; }
 #touch.idle #stick-r:not(.aiming) { opacity: .6; }
 /* what Act would do now: green (red if it's a crime, with the "!" badge; a felony a ring as well - the owner, 2026-10-15) */
 #tbtns button.pulse { border-color: var(--cream); background: var(--money); animation: pulse 1s ease-in-out infinite; }
-#tbtns button.pulse svg, #tbtns [data-slot].pulse svg { stroke: var(--ink); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 7px var(--money-t); } }
 #tbtns button.pulse.crime { background: var(--danger); border-color: var(--cream); animation-name: pulsebad; }
 @keyframes pulsebad { 50% { box-shadow: 0 0 0 7px var(--danger-t); } }
@@ -1013,7 +1100,7 @@ body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
 .touch #menu { padding-top: 12px; }
 .touch #death h1 { font-size: calc(1.5 * var(--fs-6)); }
 .touch #exithint { padding: 3px var(--s2); }
-.touch #hud-msg > :is(#rob, #trainbar) { padding: 5px 10px; gap: 6px var(--s2); } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: var(--fs-2); }
+.touch :is(#rob, #trainbar) { padding: 5px 10px; gap: 6px var(--s2); } .touch #rob .rob-bar { width: 80px; } .touch #rob span { min-width: 0; font-size: var(--fs-2); }
 /* short screens (a phone on its side) */
 @media (max-height: 430px) {
   #title { gap: var(--s2); padding-top: var(--s2); padding-bottom: var(--s2); } #logo { width: min(200px, 28vh * 1.4); } #t-note { display: none; }

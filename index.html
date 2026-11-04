@@ -30,33 +30,34 @@
        prompt and the hint strip low (client/hudinfo.js); the debug button quiet beside the minimap -->
   <div id="hud" class="hidden">
     <div id="hud-tl">
-      <div id="rclock"><img id="rc-tod" class="pi" alt=""><span id="rc-time"></span><img id="rc-wx" class="pi" alt=""></div>
+      <div id="rclock"><i id="rc-tod" class="ic" data-ic="sun"></i><span id="rc-time"></span><i id="rc-wx" class="ic hidden" data-ic="rain"></i></div>
       <div id="radar-wrap"><canvas id="radar" width="168" height="168"></canvas></div>
       <button id="b-dev" type="button" aria-label="Debug menu" title="Debug menu (`)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5 7.5 4.5M15 6.5l1.5-2"/><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 10l4 2M21 10l-4 2M3 18l4-2M21 18l-4-2M2.5 14H7M17 14h4.5"/></svg></button>
       <div id="status"></div>
       <div id="hud-msg">
         <div id="trainbar" class="hidden"><b id="tb-where"></b><div class="rob-bar hidden" id="tb-crack"><i id="tb-fill"></i></div><span id="tb-next"></span></div>
-        <div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div>
       </div>
       <div id="job" class="hidden"></div>
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" type="button" aria-label="Phone" title="Phone (P)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><span class="kchip kbm-only">P</span></button><button id="b-map" type="button" aria-label="Map" title="Map (M)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span class="kchip kbm-only">M</span></button><button id="b-menu" type="button" aria-label="Menu" title="Menu (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-ic="handset"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-ic="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-ic="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
-          <div class="vrow hp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-8-5.2-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.8-8 11-8 11z"/></svg><span class="vl">Health</span><div class="vbar"><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
-          <div class="vrow st"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span class="vl">Stamina</span><div class="vbar"><div id="st-fill" class="fill st"></div></div><b id="st-n">100</b></div>
+          <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
+          <div class="vrow st"><i class="ic" data-ic="shield"></i><span class="vl">Stamina</span><div class="vbar"><div id="st-fill" class="fill st"></div></div><b id="st-n">100</b></div>
         </div>
-        <div id="money"><span id="cash">$0</span><span id="hot" class="hidden"></span></div>
-        <div id="bank">BANK $0</div>
+        <div id="purse">
+          <div id="money"><span id="cash">$0</span><span id="cash-up" aria-hidden="true"></span><span id="hot" class="hidden"></span></div>
+          <div id="bank"><i class="ic" data-ic="bank"></i><span id="bank-n">$0</span></div>
+        </div>
       </div>
       <div id="stars"></div>
       <div id="vchip" class="hidden"></div>
-      <div id="weapon"><div id="w-icon"></div><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div></div>
+      <div id="weapon"><div id="w-icon"></div><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
       <div id="clock"></div>
     </div>
-    <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="helpbox" class="off" aria-live="polite"></div></div>
+    <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
     <div id="hints" class="off"></div>
     <div id="edgewarn" class="hidden"></div>
     <div id="w-carry"></div>
@@ -71,7 +72,7 @@
     <div id="stick-l" class="stick"><div class="knob"></div></div>
     <!-- one button per action; client/touchslots.js puts the ones what you're doing needs in their slots (shared/controls.js TOUCH_STATES) -->
     <div id="tbtns">
-      <div id="stick-r" class="stick" data-b="stick"><div class="ring"></div><div class="knob"></div><span class="lbl">AIM</span></div>
+      <div id="stick-r" class="stick" data-b="stick"><div class="ring"></div><div class="knob"><i class="ic" data-ic="aim"></i></div><span class="lbl">AIM</span></div>
       <button data-b="fire">FIRE</button>
       <button data-b="dive">ROLL</button>
       <button data-b="action">ACT</button>

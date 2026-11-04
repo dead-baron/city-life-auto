@@ -148,7 +148,8 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   // nor in the top-centre band where a centred camera sits even on a phone that doesn't say so (the middle 20%, the top
   // 48 px - or the safe area and a little). UI-8 (the owner, 2026-10-30: upright "health and stamina in a strange
   // location and time just off to the side of the minimap"; his concepts U1-U4): health and stamina in one plate with the
-  // cash, top right; the clock's plate above the minimap upright, beside it on a wider screen
+  // cash, top right; the clock's plate above the minimap upright, beside it on a wider screen. UI-9 (the owner's UI kit
+  // and HUD concepts, 2026-11-03): the cash beside the bars on a wide screen, under them upright
   const cam = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, top = r.sc.cam || 0, tag = `${w}x${h} ${dev} ${st}`;
@@ -164,7 +165,10 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     // health and stamina with the cash, one plate top right (U1-U4): the vitals over the cash, both at the right edge
     {
       const v = r.keep.find((k) => k.name === 'vitals'), mo = r.keep.find((k) => k.name === 'money');
-      if (!v || !mo || v.y1 > mo.y0 + 2 || w - v.x1 > 200 || w - mo.x1 > 200 || v.y0 > 160 + (r.sc.cam || 0)) cam.push(`${tag}: the vitals aren't with the cash top right ${JSON.stringify([v, mo])}`);
+      // (UI-9, the concepts UIK-00 3B and UIC-11..13: on a wide screen the bars left of the cash, a hairline between - the
+      // cash over the bank; upright (UIC-14) and on a short window the cash under the bars)
+      const over = v && mo && v.y1 <= mo.y0 + 2, beside = v && mo && v.x1 <= mo.x0 + 2 && v.y0 < mo.y1 && mo.y0 < v.y1;
+      if (!v || !mo || !(over || beside) || (h > w && !over) || w - v.x1 > 340 || w - mo.x1 > 200 || v.y0 > 160 + (r.sc.cam || 0)) cam.push(`${tag}: the vitals aren't with the cash top right ${JSON.stringify([v, mo])}`);
     }
     if (dev !== 'touch' || h < w) continue;
     const band = { x0: w * 0.4, x1: w * 0.6, y0: -99, y1: Math.max(48, top + 8) };

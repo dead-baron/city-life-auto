@@ -19,7 +19,7 @@ import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { KB, PAD, TOUCH } from '../shared/controls.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 import { input } from './input.js';
-import { iconOf, svg as iconSvg } from './touchicons.js';
+import { iconOf, svg as iconSvg, icon } from './touchicons.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -55,7 +55,8 @@ export function statusChips(me) {
   if (me.ghost) out.push({ k: 'flag', t: 'Ghost', cls: 'info' });
   return out;
 }
-const chipHtml = (c) => `<span class="hchip ${c.k} ${c.cls}">${esc(c.t)}${c.v ? ` <b>${esc(c.v)}</b>` : ''}</span>`;
+const CHIP_IC = { 'Police remember you': 'eye', 'Police remember you (disguised)': 'eye', Bleeding: 'blood', Bounty: 'bounties', Coffee: 'fresh', Energy: 'bolt', 'Light on': 'light', 'Well fed': 'check' };
+const chipHtml = (c) => `<span class="hchip ${c.k} ${c.cls}">${CHIP_IC[c.t] ? icon(CHIP_IC[c.t]) : ''}${esc(c.t)}${c.v ? ` <b>${esc(c.v)}</b>` : ''}</span>`;
 export const statusHtml = (me) => statusChips(me).map(chipHtml).join('');
 
 // ---- the job card ------------------------------------------------------------------------------------------------
@@ -72,15 +73,17 @@ export function jobWords(j) {
 // the card's markup: o { big, done, dist ('640 M'), time ('SHIFT 9:58'), paid (the pay, $) }
 export function jobHtml(j, o = {}) {
   const w = jobWords(j), paid = o.paid > 0 ? `<span class="jc-paid">${o.done ? 'DONE · ' : 'PAID '}+${money(o.paid)}</span>` : '';
+  // (UI-9, the concepts UIC-11/12/14: the job's name over the objective, then the clock and how far, each with its icon)
   return o.big
-    ? `<div class="jc-h"><span>${esc(w.head || 'THE JOB')}</span>${o.time ? `<span class="jc-t">${o.time}</span>` : ''}</div><div class="jc-o">${esc(o.done ? 'Job done' : w.obj)}</div>${o.dist || paid || w.step ? `<div class="jc-d"><span>${o.dist || ''}</span>${paid || (w.step && !o.done ? `<span class="jc-s">${w.step}</span>` : '')}</div>` : ''}`
-    : `<i class="jc-dot"></i>${o.clock && o.time ? `<span class="jc-t">${o.time}</span>` : ''}<span class="jc-o">${esc(w.obj)}</span>${o.dist ? `<span class="jc-d">${o.dist}</span>` : ''}${paid}`;   // (a run against the clock: its clock on the chip too - Crazy Taxi)
+    ? `<div class="jc-h"><span>${esc(w.head || 'THE JOB')}</span></div><div class="jc-o">${esc(o.done ? 'Job done' : w.obj)}</div>${o.dist || paid || o.time || w.step ? `<div class="jc-d">${o.time ? `<span class="jc-t">${icon('clock')}${o.time}</span>` : ''}${o.dist ? `<span class="jc-m">${icon('pin')}${o.dist}</span>` : ''}${paid || (w.step && !o.done ? `<span class="jc-s">${w.step}</span>` : '')}</div>` : ''}`
+    : `<i class="jc-dot">${icon('job')}</i>${o.clock && o.time ? `<span class="jc-t">${o.time}</span>` : ''}<span class="jc-o">${esc(w.obj)}</span>${o.dist ? `<span class="jc-d">${o.dist}</span>` : ''}${paid}`;   // (a run against the clock: its clock on the chip too - Crazy Taxi)
 }
 export const jobKey = (j) => (j ? `${j.k || ''}|${j.n || 0}|${j.step ? j.step.join('/') : j.stage || ''}|${j.text || ''}` : '');
 
 // ---- the hint strips ---------------------------------------------------------------------------------------------
 // each state's: [action, what it does] - the action named as shared/controls.js names it; per device where it differs
 export const HINTS = {
+  foot: { all: [['move', 'move'], ['sprint', 'sprint'], ['dive', 'roll'], ['vehicle', 'get in']], touch: [['move', 'walk - all the way out runs'], ['dive', 'roll'], ['vehicle', 'get in']] },
   drive: { all: [['move', 'steer and drive'], ['dive', 'handbrake'], ['horn', 'horn'], ['vehicle', 'get out']], pad: [['steer', 'steer'], ['gas', 'gas'], ['brake', 'brake'], ['vehicle', 'get out']] },
   air: { all: [['move', 'fly'], ['climb', 'climb'], ['descend', 'down'], ['vehicle', 'get out once landed']] },
   horse: { all: [['move', 'ride'], ['sprint', 'gallop'], ['dive', 'stop'], ['vehicle', 'get off']] },
@@ -213,11 +216,11 @@ export function createInfo(H) {
         V.v += (sp - V.v) * 0.5;
         V.at = now;
         const kmh = Math.round(V.v / PX_PER_M * 3.6), alt = def.kind === 'air' ? Math.round(Math.max(0, (f.driver && f.pred && f.pred.s.alt !== undefined ? f.pred.s.alt : e.ralt || 0)) / PX_PER_M) : null;
-        const name = def.horse ? 'Horse' : def.name;
-        const sig = `${name}|${kmh}|${alt}`;
+        const name = def.horse ? 'Horse' : def.name, hp = def.horse ? -1 : Math.round(Math.max(0, Math.min(1, e.hp ?? 1)) * 10);
+        const sig = `${name}|${kmh}|${alt}|${hp}`;
         if (sig !== V.sig) {
           V.sig = sig;
-          vc.innerHTML = `<b>${esc(name)}</b>${alt !== null ? `<span class="vc-alt">ALT ${alt} M</span>` : ''}<span class="vc-spd">${kmh} KM/H</span>`;
+          vc.innerHTML = `<b>${esc(name)}</b>${alt !== null ? `<span class="vc-alt">ALT ${alt} M</span>` : ''}<span class="vc-spd">${kmh} <small>KM/H</small></span>${hp >= 0 ? `<span class="vc-hp${hp <= 3 ? ' low' : ''}" title="Condition">${icon('repair')}<i style="--v:${hp / 10}"></i></span>` : ''}`;
           vc.classList.toggle('air', alt !== null);
           vc.classList.remove('hidden');
         }
@@ -227,18 +230,11 @@ export function createInfo(H) {
     if (I.job.j && now - (I.job.drawn || 0) > 250) { I.job.drawn = now; drawJob(now); }
     // the hint strips: the first few times you're doing each
     const vd = f.veh && f.veh.d ? VEHICLE_BY_INDEX[f.veh.d.m] : null;
-    const state = f.cine ? 'cine' : !f.veh ? (f.board ? 'board' : f.swim ? 'swim' : '') : !f.driver || !vd ? '' : vd.kind === 'air' ? 'air' : vd.horse ? 'horse' : vd.kind === 'boat' ? 'boat' : 'drive';
+    const state = f.cine ? 'cine' : !f.veh ? (f.board ? 'board' : f.swim ? 'swim' : input.device !== 'touch' && !f.dead ? 'foot' : '') : !f.driver || !vd ? '' : vd.kind === 'air' ? 'air' : vd.horse ? 'horse' : vd.kind === 'boat' ? 'boat' : 'drive';
     if (state !== I.hint.state) { I.hint.state = state; if (state) hint(state, now); else showStrip(null); }
     else if (I.hint.until && now > I.hint.until) showStrip(null);
-    // a keyboard or a pad: the prompt by you, under your feet on the screen
-    const pr = $('helpbox');
-    if (pr && I.ctx && input.device !== 'touch') {
-      const s = I.ctx.self && I.ctx.self();
-      if (s) {
-        const x = Math.round(Math.max(160, Math.min(innerWidth - 160, s.x))), y = Math.round(Math.max(100, Math.min(innerHeight - 150, s.y + 40)));
-        if (Math.abs(x - I.pr.x) > 3 || Math.abs(y - I.pr.y) > 3) { I.pr.x = x; I.pr.y = y; pr.style.left = x + 'px'; pr.style.top = y + 'px'; }
-      }
-    } else if (pr && I.pr.x >= 0) { I.pr.x = I.pr.y = -1; pr.style.left = pr.style.top = ''; }
+    // (the prompt has one slot on every device since UI-9: bottom centre, over the hint line - the concepts UIC-11/12 -
+    // clear of the middle of the screen; style.css #hud-low)
   }
 
   // a hint strip for a state, if it's due (the cinematic mode asks directly: client/director.js)

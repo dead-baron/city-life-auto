@@ -8,7 +8,7 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { iconURL } from './pixicons.js';
+import { icon, paintIcons, drawIcon } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
@@ -22,8 +22,13 @@ export function calmState(sitAt, activeAt, now) {
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
 const WEAPON_BY_ID = WEAPONS;
+// a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
+const toastIcon = (tone, msg) => (/^\+\$|\bpaid\b|\+\$\d/i.test(msg) && tone !== 'bad' ? 'money' : tone === 'good' ? 'check' : tone === 'warn' ? 'warn' : tone === 'bad' ? 'alert' : 'info');
 // the minimap's own marks (U17): your home a house, the job a $, your vehicle a car, the waypoint a pink dot
 function mapIcon(g, k, x, y, big) {
+  // (UI-9: the kit's map icons, UIK-00 7 - client/touchicons.js)
+  const PIX = { home: 'home', job: 'jobmap', car: 'car', wp: 'wp' };
+  if (PIX[k]) { drawIcon(g, PIX[k], x, y, big ? 30 : 20); return; }
   g.save(); g.translate(Math.round(x), Math.round(y)); if (big) g.scale(1.6, 1.6);
   g.lineWidth = 1.5; g.strokeStyle = '#070b16'; g.lineJoin = 'round';
   if (k === 'home') {
@@ -65,6 +70,23 @@ export class HUD {
     this.infoP = import('./hudinfo.js').then((m) => { this.info = m.createInfo(this); if (this.infoCtx) this.info.setCtx(this.infoCtx); if (this.me) this.info.me(this.me, null); }).catch((e) => { this.infoP = null; console.warn('[hudinfo]', e); });
     // a note cut short: a tap (or a click) opens the phone's Log with the whole of it
     $('toasts').addEventListener('click', (e) => { if (e.target.closest('.toast.more')) this.openLog?.(); });
+    // the HUD's pixel icons (UI-9: the owner's icon sheet, client/touchicons.js) into index.html's [data-ic]
+    paintIcons(document);
+    // the prompt's feedback (UI-9, the motion sheet UIC-20 06): the key's ring fills as Act is pressed, and a tick when
+    // what it offered is done (the prompt goes or changes straight after)
+    const pressed = () => { const pr = $('helpbox'); if (!pr || pr.classList.contains('off')) return; this.pressAt = performance.now(); pr.classList.remove('hit'); void pr.offsetWidth; pr.classList.add('hit'); };
+    addEventListener('keydown', (e) => { if (!e.repeat && e.code === 'KeyE') pressed(); });
+    document.querySelector('#tbtns [data-b="action"]')?.addEventListener('touchstart', pressed, { passive: true });
+  }
+  // the prompt's tick: what Act offered is done (it went, or changed, within a moment of the press)
+  promptDone(pr) {
+    if (!(this.pressAt && performance.now() - this.pressAt < 900)) return false;
+    this.pressAt = 0;
+    pr.classList.remove('hit'); pr.classList.add('done');
+    pr.querySelector('.pr-tick')?.remove();
+    pr.insertAdjacentHTML('afterbegin', `<i class="ic pr-tick">${icon('check')}</i>`);
+    clearTimeout(this.doneT); this.doneT = setTimeout(() => { pr.classList.remove('done'); pr.querySelector('.pr-tick')?.remove(); }, 700);
+    return true;
   }
   setInfoCtx(c) { this.infoCtx = c; this.info?.setCtx(c); }
   hint(k) { return !!this.info && this.info.hint(k); }
@@ -79,8 +101,9 @@ export class HUD {
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
-    $('cash').textContent = '$' + me.cash.toLocaleString();
-    $('bank').textContent = `BANK $${me.bank.toLocaleString()}`;
+    this.damage(hpPct);
+    this.countCash(me.cash, prev ? prev.cash : me.cash);
+    $('bank-n').textContent = `$${me.bank.toLocaleString()}`;
     // an open shop menu's wallet line follows what you spend in it (the fitting room, the barber's chair)
     if (this.menu && (!prev || prev.cash !== me.cash || prev.bank !== me.bank)) $('m-money').textContent = `Wallet $${me.cash.toLocaleString()} · Bank $${me.bank.toLocaleString()}`;
     // hot money: a robbery's takings in the bag, under the cash (server hotmoney.js)
@@ -89,9 +112,14 @@ export class HUD {
     if (me.hot > 0) hot.textContent = `HOT $${me.hot.toLocaleString()}`;
     // stars (GTA style: outlined when empty, gold and flashing when fresh)
     const flashing = this.flareUntil && performance.now() < this.flareUntil;
-    let s = '';
-    for (let i = 1; i <= 5; i++) s += `<span class="${i <= me.wanted ? 'on' + (flashing ? ' flash' : '') : ''}">★</span>`;
-    $('stars').innerHTML = s;
+    const ss = `${me.wanted}|${flashing}`;
+    if (this.starSig !== ss) {   // (the wanted meter, UIK-00 6E: five pixel stars on a plate, the lit ones gold)
+      this.starSig = ss;
+      let s = '';
+      for (let i = 1; i <= 5; i++) s += `<span class="${i <= me.wanted ? 'on' + (flashing ? ' flash' : '') : ''}">${icon(i <= me.wanted ? 'star' : 'starx')}</span>`;
+      $('stars').innerHTML = s;
+      $('stars').setAttribute('aria-label', `Wanted: ${me.wanted} of 5 stars`);
+    }
     $('stars').classList.toggle('wanted', me.wanted > 0);
     if (me.wanted > this.lastStars) this.flareUntil = performance.now() + 3000;
     this.lastStars = me.wanted;
@@ -100,6 +128,7 @@ export class HUD {
     const sig = (me.prompt || '') + '|' + (me.pcr | 0) + '|' + input.device;
     if (me.prompt && !me.dead) {
       if (pr.dataset.sig !== sig) {
+        if (pr.dataset.sig && !pr.classList.contains('off')) this.promptDone(pr);
         pr.dataset.sig = sig;
         const fp = formatPrompt(promptWords(me.prompt, me.pcr | 0));
         pr.innerHTML = fp.html;
@@ -113,7 +142,8 @@ export class HUD {
       // prompt's chip red with a "!" on it, the touch button it pulses red with the "!" (green when it's no crime)
       crimeMarks(pr, me.pcr | 0); if (this.actBtn) crimeMarks(this.actBtn, me.pcr | 0);
     } else if (!pr.classList.contains('off')) {
-      pr.classList.add('off'); pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
+      if (this.promptDone(pr)) { clearTimeout(this.offT); this.offT = setTimeout(() => { if (pr.dataset.sig === '') pr.classList.add('off'); }, 600); } else pr.classList.add('off');
+      pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm();
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
     }
@@ -220,6 +250,7 @@ export class HUD {
     } else ch.classList.add('hidden');
     (cb.querySelector('.l') || cb).textContent = cr && cr.cd > 0 ? `COP CAR ${cr.cd}` : 'COP CAR';   // (the slot's label: client/touchslots.js)
     cb.classList.toggle('cooling', !!(cr && cr.cd > 0));
+    if (cr && cr.cd > 0) { this.cdMax = Math.max(this.cdMax || 0, cr.cd); cb.style.setProperty('--cd', String(1 - cr.cd / this.cdMax)); } else this.cdMax = 0;   // (its cooldown ring: style.css)
     // the flashlight's touch button: there while you own one, lit while it's on
     document.body.classList.toggle('has-light', !!(me.inv && (me.inv.flashlight > 0 || me.inv.headlamp > 0 || me.inv.hardhat > 0 || me.inv.lantern > 0) && !me.dead));
     $('b-light')?.classList.toggle('lit', !!me.light);
@@ -230,10 +261,17 @@ export class HUD {
     $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
+    // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
+    // click takes one out: client/main.js)
+    const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
+    if ($('w-quick').dataset.q !== qs) {
+      $('w-quick').dataset.q = qs;
+      $('w-quick').innerHTML = me.dead ? '' : qk.map(([x, n]) => { const d = WEAPON_BY_ID[x.id]; return d ? `<button type="button" class="wq" data-w="${esc(x.id)}" title="${esc(d.name)}${n < 9 ? ` (${n + 1})` : ''}" aria-label="${esc(d.name)}"><img alt="" src="${weaponThumb(d.i)}">${n < 9 ? `<span class="kchip kbm-only">${n + 1}</span>` : ''}</button>` : ''; }).join('');
+    }
     document.body.classList.toggle('multi-wpn', me.weapons.length > 1 && !me.dead);
     document.body.classList.toggle('armed', w.type !== 'melee' && w.type !== 'tool');
-    const inv = Object.entries(me.inv).filter(([k]) => ITEMS[k]).map(([k, n]) => `${ITEMS[k].name} x${n}`);
-    $('w-carry').textContent = (me.carrying ? `Carrying ${['', 'Wood Box', 'Steel Barrel', 'Iron Vault', 'Carbon-Gold Case'][me.carrying]} · ` : '') + (inv.length ? inv.slice(0, 3).join(', ') : '');
+    // (UI-9: only what's in your hands - a crate; the bag's contents are the bag's, a tap of I away)
+    $('w-carry').textContent = me.carrying ? `Carrying ${['', 'Wood Box', 'Steel Barrel', 'Iron Vault', 'Carbon-Gold Case'][me.carrying]}` : '';
     // in a cell (server custody.js): the time left and the bail
     const jl = $('jail');
     if (cu && cu.s === 'cell' && !me.dead) {
@@ -283,11 +321,9 @@ export class HUD {
     this.clockSig = sig;
     $('clock').textContent = `${hm} ${c.isNight ? '☾' : '☀'}${rain ? ' ☂ RAIN' : ''}`;
     const tod = c.isNight ? 'moon' : 'sun';
-    if (this.rcTod !== tod) { this.rcTod = tod; $('rc-tod').src = iconURL(tod); }
+    if (this.rcTod !== tod) { this.rcTod = tod; $('rc-tod').dataset.ic = tod; paintIcons($('rclock')); }
     $('rc-time').textContent = hm;
-    const wx = $('rc-wx');
-    if (rain && !wx.getAttribute('src')) wx.src = iconURL('rain');
-    wx.classList.toggle('hidden', !rain);
+    $('rc-wx').classList.toggle('hidden', !rain);
     $('rclock').title = `${c.isNight ? 'Night' : 'Day'} · ${rain ? 'rain' : 'clear'}`;
   }
 
@@ -333,16 +369,46 @@ export class HUD {
       el = document.createElement('div');
       el.className = 'toast ' + tone;
       el.dataset.msg = msg;
+      el.innerHTML = icon(toastIcon(tone, msg));
       el.appendChild(document.createElement('div')).className = 'tx';
     }
-    el.firstChild.textContent = shown;
+    el.lastChild.textContent = shown;
     el.title = msg;
-    $('toasts').appendChild(el);
+    $('toasts').prepend(el);   // (the newest on top, the older pushed down: the motion sheet UIC-20 01)
     this.toastEls.push(el);
     while (this.toastEls.length > 2) { const old = this.toastEls.shift(); clearTimeout(old._t); old.remove(); }
     const gone = () => { this.toastEls = this.toastEls.filter((x) => x !== el); el.classList.add('out'); setTimeout(() => el.remove(), 260); };   // (it fades out: style.css .out)
     el._t = setTimeout(gone, Math.min(6000, 2600 + shown.length * 40));
-    requestAnimationFrame(() => { const tx = el.firstChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
+    requestAnimationFrame(() => { const tx = el.lastChild; el.classList.toggle('more', line !== msg || tx.scrollWidth > tx.clientWidth + 1); });
+  }
+
+  // the money's count-up (the motion sheet UIC-20 02): the cash counts up (or down) to the new sum over 300 ms, the
+  // difference floats up beside it and fades
+  countCash(to, from) {
+    const el = $('cash'), up = $('cash-up');
+    if (this.cashTo === undefined || to === from || document.hidden) { this.cashTo = to; this.cashAt = 0; el.textContent = '$' + to.toLocaleString(); return; }
+    if (to === this.cashTo) return;
+    const start = this.cashNow ?? from, d = to - from;
+    this.cashTo = to; this.cashFrom = start; this.cashAt = performance.now();
+    if (up) { up.textContent = `${d > 0 ? '+' : '-'}$${Math.abs(d).toLocaleString()}`; up.classList.toggle('neg', d < 0); up.classList.remove('go'); void up.offsetWidth; up.classList.add('go'); }
+    const tick = (now) => {
+      const k = Math.min(1, (now - this.cashAt) / 300), v = Math.round(this.cashFrom + (this.cashTo - this.cashFrom) * (1 - (1 - k) * (1 - k)));
+      this.cashNow = k < 1 ? v : undefined;
+      el.textContent = '$' + v.toLocaleString();
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+  // a hit (UIC-20 03): what was lost shows white for a moment, then drains over 400 ms
+  damage(pct) {
+    const lag = $('hp-lag');
+    if (!lag) return;
+    const was = this.hpPct ?? pct;
+    this.hpPct = pct;
+    if (pct >= was) { lag.classList.remove('hit'); lag.style.width = pct + '%'; return; }
+    lag.classList.add('hit');
+    clearTimeout(this.lagT);
+    this.lagT = setTimeout(() => { lag.classList.remove('hit'); lag.style.width = this.hpPct + '%'; }, 60);
   }
 
   // ---- menu ----

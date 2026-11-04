@@ -70,6 +70,7 @@ export const TEXT = {
 // the page's own script: set the scenario up, wait for the fonts, measure, hand the boxes to the parent page
 const FRAME_JS = `
 const sc = JSON.parse(decodeURIComponent(location.hash.slice(1)));
+const { icon: ICON } = await import('/client/touchicons.js');
 const T = ${JSON.stringify(TEXT)}, FL = ${JSON.stringify(FLAGS)}[sc.st] || {};
 const $ = (id) => document.getElementById(id);
 const b = document.body;
@@ -83,7 +84,7 @@ if (sc.st === 'air') b.classList.add('in-air');
 if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
-const glyph = sc.dev === 'touch' ? '<span class="g-touch g-ico" role="img" aria-label="ACT"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/></svg></span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
+const glyph = sc.dev === 'touch' ? '<span class="g-touch g-ico" role="img" aria-label="ACT">' + ICON('act') + '</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
 const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
 if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
 // (the HUD's own markup for the status line, the job card and the hint strip: client/hudinfo.js; the notes as hud.js
@@ -91,9 +92,11 @@ if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
 import * as TS from '/client/touchslots.js';
 import * as HI from '/client/hudinfo.js';
 import { noteLine } from '/client/notelog.js';
+import { paintIcons, icon } from '/client/touchicons.js';
+paintIcons(document);
 const slots = sc.dev === 'touch' ? TS.makeSlots($('tbtns')) : null;
 if (slots) slots.set(FL);
-for (const [i, n] of (sc.notes || T.notes).slice(-2).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn'][i]; const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = noteLine(n); if (tx.textContent !== n) el.classList.add('more'); $('toasts').appendChild(el); }
+for (const [i, n] of (sc.notes || T.notes).slice(-2).entries()) { const el = document.createElement('div'); el.className = 'toast ' + ['info', 'warn'][i]; el.innerHTML = icon(['info', 'warn'][i]); const tx = el.appendChild(document.createElement('div')); tx.className = 'tx'; tx.textContent = noteLine(n); if (tx.textContent !== n) el.classList.add('more'); $('toasts').appendChild(el); }
 // the job card: big (the step just in) in half the states, the one-line chip in the rest
 const JOBF = ['foot', 'air', 'rob', 'unarmed', 'board', 'swim', 'home'].includes(sc.st) ? 'big' : 'chip';
 $('job').className = JOBF; $('job').innerHTML = HI.jobHtml(T.job, { big: JOBF === 'big', dist: '640 M', time: sc.dev === 'touch' ? '9:58' : 'SHIFT 9:58' });
@@ -108,8 +111,9 @@ if (sc.st === 'fish') { $('fishspot').classList.add('on'); $('fishbar').innerHTM
 if (sc.st === 'police') { $('cruiser-hint').textContent = T.cruiser; $('cruiser-hint').classList.remove('hidden'); }
 $('w-icon').innerHTML = '<canvas width="96" height="48"></canvas>';
 $('w-name').textContent = 'Assault rifle'; $('w-ammo').textContent = '30 | 120';
-$('cash').textContent = '$248,500'; $('bank').textContent = 'bank $1,250,000';
-$('stars').innerHTML = '<span class="on">★</span><span class="on">★</span><span>★</span><span>★</span><span>★</span>'; $('stars').classList.add('wanted');
+if (sc.dev !== 'touch') $('w-quick').innerHTML = ['Knife', 'Bat', 'Shotgun'].map((n, i) => '<button type="button" class="wq" aria-label="' + n + '"><canvas width="48" height="24"></canvas><span class="kchip kbm-only">' + (i + 2) + '</span></button>').join('');
+$('cash').textContent = '$248,500'; $('bank-n').textContent = '$1,250,000';
+$('stars').innerHTML = [1, 2, 3, 4, 5].map((i) => '<span' + (i <= 2 ? ' class="on">' + icon('star') : '>' + icon('starx')) + '</span>').join(''); $('stars').classList.add('wanted');
 $('clock').textContent = '13:24 · RAIN';
 $('status').innerHTML = HI.statusHtml(['unarmed', 'home'].includes(sc.st) ? { faction: 'citizen', sam: 40, cexp: 1250 } : sc.st === 'police' ? { faction: 'enforcer', rank: 'Sergeant', sam: 40, cexp: 1250, bleeding: true } : { faction: 'citizen', sam: 40, cexp: 1250, felonies: 2, bleeding: true, buffs: { coffee: 40 } });
 if (sc.st === 'unarmed') $('weapon').classList.add('compact');
