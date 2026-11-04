@@ -135,6 +135,43 @@ loadMark('code');
 
 try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 
+// The launch foundation's page code - accounts and the first-launch gate, chat, Google Analytics, the error reporter
+// (client/account.js, chat.js, analytics.js, errors.js) - loaded once the page is up, never in its first load. launchCall
+// hands it what happens: the server's messages for it, play pressed, in the city, a perf report, an error, the chat key.
+let launchP = null;
+function launchHello() {   // (in the hello: this browser's device marker, and whether the 17+ gate was confirmed here)
+  let dm = null, age17 = false;
+  try {
+    dm = localStorage.getItem('cla.dm');
+    if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
+    age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
+  } catch { /* storage blocked */ }
+  return { dm, age17 };
+}
+function launchCall(k, a) {
+  if (S.practice) return;
+  launchP ||= Promise.all([import('./account.js'), import('./analytics.js'), import('./chat.js'), import('./errors.js')]).then(([acc, an, ch, er]) => {
+    const ga = an.createAnalytics({ win: window, doc: document, send });
+    const toast = (t, tone) => { if (S.hud) S.hud.toast(t, tone); };
+    const chat = ch.createChat({ send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; } });
+    er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
+    acc.boot({ send, toast, serverUrl, analytics: ga, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
+    S.launch = { acc, ga, chat, er };   // (for the UI's next stage: the title's sign-in, settings, the phone's Messages)
+    return S.launch;
+  });
+  launchP.then((L) => {
+    if (k === 'msg') {
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) L.ga.setId(a.ga); L.acc.onMessage(a); } else L.chat.onMessage(a);
+    } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
+    else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
+    else if (k === 'perf') L.ga.perf(a);
+    else if (k === 'error') L.er.report(a.where, a.e);
+    else if (k === 'chat') L.chat.open(a);
+    else if (k === 'account') L.acc.openPanel();
+  }).catch((e) => { launchP = null; console.warn('[launch]', e); });
+}
+if (document.readyState === 'complete') setTimeout(() => launchCall('boot'), 300); else addEventListener('load', () => setTimeout(() => launchCall('boot'), 300), { once: true });
+
 // ---------------------------------------------------------------------------
 // Networking
 // Offline practice transport: a Web Worker running the server simulation locally,
@@ -182,7 +219,7 @@ function connect() {
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
   S.ws = ws;
-  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at })); }; // cb / cbt: this page's build (client/update.js)
+  ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
     if (holding(ws, ev.data)) return;
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
@@ -378,7 +415,8 @@ function onText(m) {
     case 'wiped': freshDone(); break;   // Start fresh: the character is gone (server players.js wipeAccount)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
     case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
-    case 'fires': S.fires = m; fireJob(); break;   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
+    case 'fires': S.fires = m; fireJob(); break;
+    case 'chat': case 'emote': case 'chatstate': case 'chatsay': case 'modres': case 'contacts': case 'inbox': case 'acct': case 'admin': case 'agegate': launchCall('msg', m); break;   // (the launch foundation: client/chat.js, account.js)   // the fires on the ground near you: grass, a dumpster, a kitchen (H68: firefighter.js)
     default: break;
   }
 }
@@ -1366,6 +1404,7 @@ function art2Failed(why) {
 }
 
 function startPlaying() {
+  launchCall('play');
   initAudio();
   if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true);
   // the first time in on this page: the title stays up until the art round you is ready (client/warmup.js, capped)
@@ -1378,6 +1417,7 @@ function startPlaying() {
   enterCity();
 }
 function enterCity() {
+  if (!S.playing) launchCall('world');
   S.playing = true;
   $('title').classList.add('hidden');
   $('hud').classList.remove('hidden');
@@ -1467,6 +1507,7 @@ initInput(canvas, {
     if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (topOverlay() === 'dev' && S.devNav && S.devNav.key(k)) return;   // (the debug menu's own keys: client/devmenu.js)
+    if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
@@ -2564,7 +2605,7 @@ function perfReport(nowMs) {
   const at = LOAD.at.screen;
   if (at === undefined ? nowMs < 120000 : nowMs - at < 20000) return;
   LOAD.sent = true;
-  import('./diag.js').then((m) => send({ t: 'perf', r: m.perfPayload(ctx(), 'load') }), () => {});
+  import('./diag.js').then((m) => { const r = m.perfPayload(ctx(), 'load'); send({ t: 'perf', r }); launchCall('perf', r); }, () => {});
 }
 
 // ---- diagnostics overlay (?diag, or Settings) -----------------------------------------------------
@@ -2845,6 +2886,7 @@ function reportError(where, e) {
   if (ERR_SEEN.has(key) || ERR_SEEN.size > 40) return;
   ERR_SEEN.add(key);
   console.error(`[${where}]`, e);
+  if (!S.practice) { launchCall('error', { where, e }); if (where === 'frame' && S.hud) S.hud.toast('Something went wrong drawing the game. It was reported; the game carries on.', 'warn'); return; }   // (client/errors.js: queued while offline)
   try { send({ t: 'cerr', where, msg, stack: String((e && e.stack) || '').slice(0, 1500), build: myBuild().v, ua: navigator.userAgent.slice(0, 160), ctx: errNote() }); } catch { /* not connected */ }
   if (where === 'frame' && S.hud) S.hud.toast('Something went wrong drawing the game. It was reported; the game carries on.', 'warn');
 }

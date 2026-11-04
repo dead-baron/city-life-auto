@@ -19374,3 +19374,128 @@ not "on its way", not "no ambulance can reach you", not "you need $200 in the ba
 - While the ambulance (or rescue boat) drives over, the line says how far off it is, and the map shows it (a white disc
   with a red cross, labeled), as the server's note always promised ("watch for it on your map").
 - A greyed-out choice can be tapped: it says why it can't (one per time down, the fee in the bank).
+
+## 2026-11-04 - The launch foundation: accounts, roles, chat, anti-cheat, analytics
+
+The owner's 11-03 decisions (claude/launch-plan-2026-11-03.md, sections 3 and 4). It's on the server, with thin page
+glue. The polished screens come with UI stage 2, which wires the functions below into the title screen, settings and
+the phone. docs/LAUNCH-SETUP.md has what the owner registers and sets.
+
+**Accounts and sign-ins** (server/accounts.js, auth.js, authhttp.js, webauthn.js; client/account.js)
+- One account per profile (`profile.acct`), with several linked sign-ins:
+  - Google and Discord: OAuth with a state, an HttpOnly CSRF cookie and PKCE;
+  - Reddit: state and cookie (no PKCE there);
+  - email magic links through Resend's HTTP API;
+  - passkeys, verified with node:crypto. CBOR, COSE ES256 and RS256, attestation "none", the challenge, origin and
+    rpId checks, user presence, and a sign counter that must climb unless it's always 0, as synced passkeys are.
+- Providers switch on when their env keys are set. Until then their buttons are hidden (`/launch.json`).
+- A sign-in comes back to the page as a two-minute, one-time code (`#cla_login=`), swapped for the token at
+  `/auth/redeem`. It never goes back to a page that isn't ours.
+- **Guests**:
+  - they stay GuestNNNN and can't rename;
+  - a one-time transfer code (10 minutes, rate-limited guessing) moves one to another device and signs the old one out;
+  - signing in on a guest links the sign-in to it, so the progress is kept.
+- Usernames are for members only: shared/names.js rules, the offensive-name filter, unique, once a month (the first
+  pick is free).
+- Old tokens keep working: no generation means generation 0, which every account starts at. Sign-out-everywhere and a
+  ban bump the generation. Existing profiles get an account record on their next login, untouched otherwise.
+- **The 17+ gate and the analytics choice** are asked together at first launch and kept in the browser. The hello says
+  the gate was confirmed, and `CLA_REQUIRE_AGE=1` makes the server insist.
+- Rate limits: transfer redeems (5 per 10 min per address), email links (5 per 10 min per address, 3 an hour per
+  address mailed), OAuth starts, passkey calls, new guests an hour per address. Bans by account, plus a soft device
+  marker (a random id the browser keeps, stored only hashed).
+
+**Roles and the admin log** (server/roles.js, admin.js, adminlog.js, adminhttp.js, devmode.js)
+- The roles:
+  - **owner**: grants and removes admin and helper, reads the admin log and the dashboard;
+  - **admin**: the debug powers, kick, ban, chat mute and strikes, the review list;
+  - **helper**: refund a purchase (from the player's recent purchases, once), rescue a stuck player to the street,
+    restore an item, view a player's recent log.
+- Every privileged message is checked against the account's role on the server, and every one is appended to
+  `<data>/admin-log.jsonl`, refusals included: who, what, target, when, before and after. Each line carries the hash
+  of the line before it, so `/admin/log` says whether the file was edited.
+- The open debug mode stays on behind `CLA_DEV_OPEN`. At 0, Dev Debug Mode and every debug command ask for the admin
+  role, and granting it to a non-admin is refused. Every debug command is logged.
+- The owner comes from `CLA_OWNER_ID`, or a one-time claim code printed in the server log.
+
+**Chat and moderation** (shared/chatdefs.js, server/chat.js, chatfilter.js, chatwords.json, moderation.js;
+client/chat.js)
+- Channels:
+  - near: about 40 m, the same level, as speech bubbles and a log line;
+  - crew: free text now;
+  - faction: police on duty, or your gang;
+  - phone: messages to contacts (met: within 15 m for 4 s, crewed with) and crewmates, kept in an inbox while
+    they're offline.
+- Emotes. No global or district chat. Each channel toggles.
+- The word filter: the words live in server/chatwords.json. A line is read as a skeleton, so leetspeak, spacing,
+  dots, repeats, full-width and Cyrillic look-alikes are caught. An allow list protects ordinary words ("therapist",
+  "cocktail"). Hate and sexual terms are masked. Profanity is only refused in usernames.
+- Moderation:
+  - rate limits, tighter for guests (shorter lines, fewer a window, fewer phone messages);
+  - mute, block and report, kept with the account;
+  - strikes: a hate-filter hit (at most one per 10 min), reports from 3 different players in 24 h, or an admin.
+    Three strikes mean a 24 h chat mute. Everything goes on the review list.
+
+**Anti-cheat** (server/anticheat.js; session.js, ws.js)
+- Movement audits about twice a second, against the shared physics: on foot PED's sprint and roll, in a vehicle its
+  own top speed. A jump with no server teleport is a 'teleport' flag; staying over the limit is a 'speed' flag.
+- Per-kind message rates: what comes faster is dropped, and a flood is flagged. Input packets are capped. Text frames
+  are capped at 8 KB (perf reports 16 KB). Fragmented WebSocket messages now share the 64 KB frame cap. Five seconds
+  in a row over the flood guard closes the socket (4008).
+- Economy anomaly flags: earnings an hour above max($50k, 6x the norm).
+- The audits only flag, to the review list. Kick and ban are admin actions.
+
+**Analytics** (server/analytics.js, moneywatch.js, ga.js; client/analytics.js, errors.js)
+- Self-hosted, in `<data>/analytics.json`, with a bucket a day:
+  - sessions; concurrent players every 5 min; new vs returning;
+  - day-1, day-7 and week-1 retention by cohort;
+  - the first-time funnel (`ftue` hooks, the page's from a short list);
+  - activity minutes and the activity mix (jobs, crimes, leisure, chat, purchases);
+  - jobs done; deaths by cause; client errors;
+  - devices and performance, folded in from the /perf reports;
+  - anti-cheat flags.
+- Money sources and sinks with no change to the ~100 places that pay. A profile's cash and bank become accessors that
+  note each change against the world system or message running: world.curSys, world.curMsg, `shop:<kind>` for a
+  menu pick. Changes are netted per source, so an ATM is no earning.
+- `/admin/dashboard` shows it all in plain HTML tables. Nothing personal goes beyond the account id, and that only on
+  the account itself.
+- GA4 hybrid: gtag.js on the page only with a measurement ID and the player's Accept (Consent Mode v2, denied by
+  default). Server events go through the Measurement Protocol, batched 25 a request on their own timer, with a capped
+  queue that never touches the tick. They're sent only for players whose page reported a GA client ID, which happens
+  only with consent. The user_id is a keyed hash.
+
+**Hooks into the game** (one line each): world.js sets `curSys`; law.js `crime`, players.js `onPedDeath` and
+crews.js `accept` call `world.track`. session.js takes `opts.hooks`, so offline practice runs as before.
+
+**Network messages added** (JSON):
+- Page to server:
+  - `chat {ch, text, to?}`, `emote {e}`, `chatset {off}`;
+  - `mod {a: mute|unmute|block|unblock|report, id, why?, note?}`, `contacts`, `inbox`;
+  - `admin {a, ...}` (roles.js POWERS, plus whoami, claim, pagelink);
+  - `acct {a: state|transfer|name|age}`;
+  - `ftue {s}`, `ga {on, cid, sid}`;
+  - hello gains `dm` (the device marker) and `age17`.
+- Server to page:
+  - `chat {ch, n, id, eid, text, at, own?, to?, tn?}`, `emote {eid, e, n, id}`;
+  - `chatstate`, `chatsay {ok, err}`, `modres`, `contacts {l}`, `inbox {l}`;
+  - `acct {...}` (the account's state) and `acct {a: transfer, code, exp}` / `{a: name, ok, err}`;
+  - `admin {a, ok, err?, data?}`, `agegate`.
+- New close codes:
+  - 4008 flood;
+  - 4009 kicked;
+  - 4010 banned;
+  - 4011 the age gate;
+  - 4012 moved to another device.
+- HTTP: `/launch.json`, `/auth/*`, `/admin/*`.
+
+**Controls**: T opens the chat line (Enter sends, Esc closes; `/c` crew, `/f` faction, `/wave` and the other emotes).
+
+**Budgets**: the page's first load gains the hello's few lines and launchCall (477 -> 478 KB of 520). The four page
+modules load after the page is up.
+
+Tests:
+- test/launch-auth.test.js;
+- test/launch-chat.test.js;
+- test/launch-roles.test.js;
+- test/launch-analytics.test.js;
+- test/launch-world.test.js (a running world, heavy).
