@@ -20039,6 +20039,11 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
   calm plate, "SAVED - SAFE TRAVELS" and the numbers (earned, spent, XP; Criminal EXP and Samaritan only when they moved;
   the time played), PLAY connects again. "At once here" in the pause list comes from the server's me.offNow. A server
   that doesn't answer still gets the old way after 1.5 s.
+- **The title at a desktop's size** (the third review): the title's menu, card, tools and the sign-in, the 17+ gate
+  and the "Saved" plate over it zoom with --zk like the screens; the logo is sized by the height (38vh) so it all fits
+  at 1366x768; INSTALL APP moves to the top left. PLAY is about a fifth of the screen at 1080 and the gate's text 25 px.
+  Phones as they were.
+- **The gun store's rows** show each gun's class glyph too (the sprites drew as thin bars).
 - **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
 
 ### Performance (tools/perf.mjs --quick, 11-04)
