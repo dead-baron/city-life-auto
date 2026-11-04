@@ -205,12 +205,18 @@ export function createInfo(H) {
     const el = $('status');
     if (!el || !I.chips) return;
     const open = statusOpen(I.chips, I.seen, now, I.stOpen);
+    // (a phone: one chip in words at a time - the newest; the row stays one line beside the minimap, clear of the middle)
+    if (input.device === 'touch' && !(now < I.stOpen) && open.filter(Boolean).length > 1) {
+      let k = -1; I.chips.forEach((c, i) => { if (open[i] && (k < 0 || I.seen.get(c.t).until >= I.seen.get(I.chips[k].t).until)) k = i; });
+      open.forEach((o, i) => { open[i] = i === k; });
+    }
     const html = I.chips.map((c, i) => chipHtml(c, open[i])).join('');
     I.stNext = Math.min(...I.chips.map((c, i) => (open[i] ? Math.max(I.seen.get(c.t).until, I.stOpen) : Infinity)));
     if (html === I.sig) return;
     I.sig = html; el.innerHTML = html;
     const folded = open.some((o) => !o);
     el.classList.toggle('folded', folded);
+    el.classList.toggle('all', now < I.stOpen);   // (tapped open: every chip in words, wrapping if it must)
     el.setAttribute('aria-label', folded ? 'Your status: tap for the details' : 'Your status');
   }
 
