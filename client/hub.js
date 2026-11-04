@@ -1,8 +1,8 @@
 // The hub's SETTINGS and PEOPLE tabs (UI-3, one hub instead of five ways in), loaded the first time either opens
-// (client/main.js loadHub). Settings in sections - Controls · Sound · Graphics · Account · Help, the Danger zone apart -
-// with the controls for the device you're on (the others one tab away), every row 44 px; Help holds what the old pause
-// list had besides the tabs: unstuck, surrender, cinematic mode, fullscreen, exit to the title, installing, and the
-// debug menu last and quiet. People: who's online (main.js renderPlayers fills it) and your crew (the Crew app's view).
+// (client/main.js loadHub). Settings in tabs along the top (UI-10, UIC-06) - Graphics · Sound · Controls · Game · Chat ·
+// Account (the Danger zone at its foot, apart) · Help · Legal - with the controls for the device you're on (the others
+// one tab away), every row 44 px; Help holds unstuck, surrender, cinematic mode, fullscreen, installing, and the debug
+// menu last and quiet (leaving the game is the pause list's LEAVE GAME). Chat and Legal are slots the launch work fills. People: who's online (main.js renderPlayers fills it) and your crew (the Crew app's view).
 import { KB, PAD, TOUCH } from '../shared/controls.js';
 import { crewHtml, wireCrew } from './phone.js';
 
@@ -29,7 +29,7 @@ export const devOf = (d) => (d === 'gamepad' ? 'pad' : d === 'touch' ? 'touch' :
 //   exitToTitle, openDebug, leaveDev, openInstall, repairInstall, openCreator, crew() (the Crew app's last message) }
 export function createHub(ctx) {
   const { $ } = ctx;
-  let sec = 'controls', dev = null;
+  let sec = 'graphics', dev = null;
   const nav = $('set-nav');
   function showSec(s) {
     sec = s;

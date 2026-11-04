@@ -60,7 +60,7 @@ export const ICON = {
 };
 // the apps, in the grid's order: [screen, name]
 const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera']];
-const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Phone']]);
+const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Home']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
 const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
 export function createPhone(ctx) {

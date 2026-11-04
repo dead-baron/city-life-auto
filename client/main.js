@@ -72,7 +72,8 @@ import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, P
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
-import { holdForArt, veilTick } from './warmup.js';   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
+import { holdForArt, veilTick } from './warmup.js';
+import { createTitle } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view');
@@ -177,7 +178,7 @@ function connect() {
   if (S.practice) return;
   const url = serverUrl();
   // only announce the first attempt: rewriting the status on every retry made the title screen jump
-  if (!S.connectFailed) $('t-status').textContent = `Connecting to ${url.replace(/^wss?:\/\//, '').replace(/\/ws$/, '')}...`;
+  if (!S.connectFailed) $('t-status').textContent = 'Connecting...';
   let ws;
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
@@ -200,6 +201,7 @@ const RECONNECT_IN_GAME_MS = 60000;
 // Disconnected for being idle 10 minutes (server players.js idleCheck: close 4006): back to the title, no reconnecting on
 // its own - its PLAY button says RECONNECT and reloads the page into the game
 function idleOut() {
+  S.idledOut = true;
   S.welcomed = false; S.ws = null; S.playing = false;
   clearTimeout(S.reconnectT);
   reconnecting(false);
@@ -323,13 +325,14 @@ function onText(m) {
       S.rides = new Map(); for (const r of m.rides || []) rideOn(r);   // (the balloons already up, the riders on the wheel)
       S.portals = portalCovers(S.map);
       S.ground.clear();
-      $('t-status').textContent = m.practice ? 'Offline practice city ready' : S.updating ? 'Updating to the latest version...' : `Signed in as ${m.name}`;
+      $('t-status').textContent = m.practice ? 'Offline practice city ready' : S.updating ? 'Updating to the latest version...' : '';   // (signed in: your card says who - UI-10)
       $('play').disabled = false;
       S.lostAt = 0; reconnecting(false);
       if (!S.playing && !m.practice && !S.updating && resumeWanted()) S.playing = true;   // (put away mid-game and reloaded since: back in)
       if (S.playing) startPlaying();
       setupDev();
       sendView();
+      if (!S.playing) requestPlayers();   // (who's online, on the title)
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
     case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
@@ -371,6 +374,7 @@ function onText(m) {
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
     case 'transit': S.transit = m; if (S.hud) S.hud.transit = m; phone.on('Transit', m); if (S.bigmap) mapwp.refreshLegend(); break;
+    case 'logoff': onLogoff(m); break;   // (the pause list's LOG OFF: the server's count - UI-10)
     case 'plist': S.plist = m; if (S.hud) S.hud.plist = m.l; renderPlayers(); if (S.bigmap) mapwp.refreshPlayers(); renderDevPlayers(); break;
     case 'kicked': S.hud && S.hud.toast(m.reason, 'bad'); $('t-status').textContent = m.reason; break;
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
@@ -517,7 +521,7 @@ function fixedStep() {
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
-  if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub();
+  if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub('pause');
   if (!inOverlay && !S.playing) titlePad();
   const ch = !!(DIR && DIR.holds()), padUI = !spec && !ch && !inOverlay && S.playing && !S.hud.menuOpen && !S.bigmap, up = padUI && !(S.me && S.me.dead);   // (down, the D-pad picks where to wake up)
   if (up && input.padCall && S.me && S.me.cruiser) callCruiser();   // (D-pad down: the cop car)
@@ -1459,6 +1463,44 @@ const playGo = () => { startPlaying(); if (S.dev && S.hud) S.hud.toast('Dev mode
 $('practice').onclick = firstPlay(practiceGo);
 $('play').onclick = firstPlay(playGo);
 
+// ---- the title screen (UI-10, UIC-08): the loading state, the tips, your card, who's online (client/titlescreen.js) ----
+createTitle({ $, S, warming: () => $('t-buttons').classList.contains('t-wait'), idle: () => !!S.idledOut, players: () => (S.welcomed && S.plist && S.plist.l ? S.plist.l.length : null) });
+setInterval(() => { if (S.welcomed && !S.playing && !$('title').classList.contains('hidden')) requestPlayers(); }, 15000);   // (who's online, while the title shows)
+$('t-char').onclick = () => { if (S.welcomed && S.looks) openCreator('edit'); };   // (CHARACTER: the creator over the title)
+$('t-signin').onclick = () => openSignIn();
+$('s-signin').onclick = () => openSignIn();
+
+// ---- the sign-in panel and the first-launch gate: slots for the launch work (client/account.js) ----------------------
+// The launch code hands its screens over with setAccountUi({ signIn(el, close), gate(el, done), gateNeeded() }):
+//   signIn(el, close)  fills the SIGN IN panel's body (#signin-body: Guest / Google / Discord / Reddit / email / passkey);
+//   gate(el, done)     fills the first-launch gate (#gate-body: the 17+ confirmation and the analytics choice) and calls
+//                      done() once it's answered; gateNeeded() says whether it's still to be answered in this browser;
+//   chat(el), legal(el) fill Settings > Chat (#s-chatbox: the channel toggles) and Settings > Legal (#s-legalbox).
+// Opened from your card on the title (SIGN IN) and from Settings > Account; the gate comes before the first PLAY. Until
+// the launch code is there, the panel says sign-in is coming soon and there's no gate.
+let accountUi = null;
+function setAccountUi(ui) {
+  accountUi = ui || null;
+  if (accountUi && accountUi.chat) accountUi.chat($('s-chatbox'));     // (Settings > Chat: the channel toggles)
+  if (accountUi && accountUi.legal) accountUi.legal($('s-legalbox'));  // (Settings > Legal: the terms, the privacy policy, the notice)
+}
+const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], ['google', 'Google'], ['discord', 'Discord'], ['reddit', 'Reddit'], ['email', 'Email link'], ['passkey', 'Passkey']];
+function openSignIn() {
+  const body = $('signin-body');
+  if (topOverlay() !== 'signin') openOverlay('signin');
+  if (accountUi && accountUi.signIn) { accountUi.signIn(body, () => closeOverlay('signin')); ovFocus = startFocus(); focusOverlay(); return; }
+  body.innerHTML = '<p class="msub">Sign-in is coming soon. Until then your character lives in this browser - Settings › Account has a transfer code to move it to another device.</p>'
+    + `<div class="m-opts">${SIGNIN_WAYS.map(([k, n, note]) => `<button class="opt" data-way="${k}" disabled><span class="t">${n}</span><span class="note">${note || 'coming soon'}</span></button>`).join('')}</div>`;
+  ovFocus = startFocus(); focusOverlay();
+}
+// before the first PLAY in this browser: the gate, if the launch code says it's needed (else straight on)
+function withGate(go) {
+  if (!(accountUi && accountUi.gate && accountUi.gateNeeded && accountUi.gateNeeded())) { go(); return; }
+  openOverlay('gate');
+  accountUi.gate($('gate-body'), () => { closeOverlay('gate'); go(); });
+}
+for (const b of document.querySelectorAll('.overlay [data-back]')) b.onclick = () => closeOverlay(b.closest('.overlay').id);
+
 initInput(canvas, {
   onKey(k) {
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
@@ -1478,10 +1520,8 @@ initInput(canvas, {
     }
     if (deathUp && k === 'Enter' && S.hud.deathWake()) return;   // (WAKE UP HERE)
     if (deathUp && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) { S.hud.stepSpawn(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW'].includes(k) ? -1 : 1, /Up|Down|W|S/.test(k) ? 'v' : 'h'); return; }
-    if (k === 'Escape' && topOverlay() === 'phone' && phone.screen !== 'home') { phone.back(); return; }
-    if (k === 'Escape' && topOverlay() === 'inv' && bag.back()) return;   // (a thing's details: back to the bag's grid)
-    if (k === 'Tab' && S.playing && HUB_IDS.includes(topOverlay())) { hubStep(1); return; }   // (the hub: the next tab)
-    if (k === 'Escape' && topOverlay() === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
+    if (k === 'Escape' && HUB_IDS.includes(topOverlay())) { hubBack(); return; }   // (the hub: one step back - an app, a detail, the pause list, the game)
+    if (k === 'Tab' && S.playing && HUB_IDS.includes(topOverlay())) { hubStep(1); return; }   // (the hub: the next screen)
     if (topOverlay() === 'bigmap' && S.hud) { // zoom the city map: + / - (and C to find yourself)
       if (k === 'Equal' || k === 'NumpadAdd') { S.hud.zoomMap(1.5); return; }
       if (k === 'Minus' || k === 'NumpadSubtract') { S.hud.zoomMap(1 / 1.5); return; }
@@ -1504,7 +1544,7 @@ initInput(canvas, {
     }
     if (k === 'Escape' && wheel.open) { wheel.close(); return; }
     if (k === 'KeyP' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) { hubToggle('phone'); return; }
-    if (k === 'Escape') { if (topOverlay()) closeOverlay(); else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openHub(); }
+    if (k === 'Escape') { if (topOverlay()) { if (topOverlay() !== 'gate') closeOverlay(); } else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openHub('pause'); }
     if (k === 'KeyM' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) hubToggle('map');
     if (k === 'KeyV' && S.playing && !topOverlay()) callCruiser();
     if (k === 'Backquote' && S.playing) { if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); }
@@ -1785,7 +1825,7 @@ const phoneCtx = {
   cine: () => { closeHub(); cine('F4'); },
   canCruiser: () => !!(S.me && S.me.cruiser),
   cruiser: () => { closeHub(); callCruiser(); },
-  title: (t) => { $('ph-clock').textContent = t; },
+  title: (t) => { $('ph-clock').textContent = t; if (topOverlay() === 'phone') $('hub-title').textContent = t.toUpperCase(); },
 };
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();
@@ -1820,15 +1860,18 @@ const mapwp = createMapWaypoints({
   center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
 function openPhone() { if (S.playing && S.map) openHub('phone'); }
-// ---- the hub (UI-3): one panel - MAP, PHONE, BAG, PEOPLE, SETTINGS - with RESUME first; Esc / Start / MENU open it on
-// the last tab, P / M / I (D-pad left / right, the HUD's PHONE and MAP) a tab straight away. Each tab is one of the
-// overlays (only one at a time), shown in the hub's frame (index.html #hub); the game runs on behind it.
-const HUB_TABS = { map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' };
+// ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF,
+// LEAVE GAME - opened by Esc, Start and the HUD's MENU; P / M / I (D-pad left / right, the HUD's PHONE and MAP) open a
+// screen straight away. Every screen has the same head: back and its name top left (Esc, B), close top right. Back
+// steps out of an app or a detail first, then to the pause list if that's where you came from, else to the game. Each
+// screen is one of the overlays (one at a time) in the hub's frame (index.html #hub); the game runs on behind it.
+const HUB_TABS = { pause: 'pause', map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' };
 const HUB_IDS = Object.values(HUB_TABS);
+const STEP_TABS = ['map', 'phone', 'bag', 'people', 'settings'];   // (LB / RB, Tab: the screens in the pause list's order)
 const inHub = () => overlays.some((o) => HUB_IDS.includes(o));
-let hubTab = 'map', hubP = null, hubMod = null;
-function openHub(tab = hubTab, app) {
-  if (!HUB_TABS[tab]) tab = 'map';
+let hubTab = 'pause', hubFromPause = false, hubP = null, hubMod = null;
+function openHub(tab = 'pause', app, fromPause = false) {
+  if (!HUB_TABS[tab]) tab = 'pause';
   const id = HUB_TABS[tab], top = topOverlay();
   if (tab !== 'settings' && (!S.playing || !S.map)) return;
   if (top && !HUB_IDS.includes(top) && top !== 'jobcard') return;   // (the creator, the debug menu, a cabinet: theirs first)
@@ -1837,6 +1880,9 @@ function openHub(tab = hubTab, app) {
   if (wheel.open) wheel.close();
   if (wpick.open) wpick.close();
   if (top !== id) sfx('click', 0.5);
+  if (tab === 'pause') hubFromPause = false;
+  else if (fromPause || top === 'pause') hubFromPause = true;
+  else if (!top || !HUB_IDS.includes(top)) hubFromPause = false;   // (straight in from the game: back goes back to it)
   for (const ov of [...overlays]) if (HUB_IDS.includes(ov) && ov !== id) closeOverlay(ov);
   hubTab = tab;
   if (tab === 'map') toggleMap(true);
@@ -1844,22 +1890,79 @@ function openHub(tab = hubTab, app) {
     if (topOverlay() !== id) openOverlay(id);
     if (tab === 'phone') { if (app) phone.openApp(app); else phone.open(); }
   }
+  syncHub();
 }
-function closeHub() { for (const ov of [...overlays].reverse()) if (HUB_IDS.includes(ov)) closeOverlay(ov); }
-// a tab's key or button: that tab, or the hub away if it's the one showing
+function closeHub() { stopLogoff(true); for (const ov of [...overlays].reverse()) if (HUB_IDS.includes(ov)) closeOverlay(ov); }
+// back, one step: out of an app or a thing's details first, then to the pause list (if you came from it), then the game
+function hubBack() {
+  const top = topOverlay();
+  if (top === 'inv' && bag.back()) return;
+  if (top === 'phone' && phone.screen !== 'home') { phone.back(); return; }
+  if (top === 'bigmap' && mapwp.inGroup) { mapwp.back(); return; }
+  if (top !== 'pause' && hubFromPause && S.playing) { openHub('pause'); return; }
+  closeHub();
+}
+// a screen's key or button: that screen, or the hub away if it's the one showing
 function hubToggle(tab) { if (topOverlay() === HUB_TABS[tab]) closeHub(); else openHub(tab); }
-function hubStep(d) { const ks = Object.keys(HUB_TABS); openHub(ks[(ks.indexOf(hubTab) + d + ks.length) % ks.length]); }
-// the frame shows while a tab is in the stack (an install help or a password box may sit over it); on the title
-// screen Settings shows on its own
+function hubStep(d) { const i = STEP_TABS.indexOf(hubTab), n = STEP_TABS.length; openHub(STEP_TABS[i < 0 ? (d > 0 ? 0 : n - 1) : (i + d + n) % n], null, hubFromPause); }
+// the frame shows while a screen is in the stack (an install help or a password box may sit over it); on the title
+// screen Settings shows on its own. Its name in the head (an app's, in the phone), and #hub[data-tab] shapes the frame
+const HUB_NAMES = { pause: 'PAUSED', map: 'MAP', phone: 'HOME', bag: 'BAG', people: 'PEOPLE', settings: 'SETTINGS' };
 function syncHub() {
   const id = [...overlays].reverse().find((o) => HUB_IDS.includes(o));
   $('hub').classList.toggle('hidden', !id);
   if (!id) return;
   const tab = Object.keys(HUB_TABS).find((k) => HUB_TABS[k] === id);
   $('hub').classList.toggle('solo', !S.playing);
-  $('hub-title').textContent = tab.toUpperCase();
-  for (const b of $('hub-tabs').querySelectorAll('[data-tab]')) { const on = b.dataset.tab === tab; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); }
+  $('hub').dataset.tab = tab;
+  if (tab !== 'phone') $('hub-title').textContent = HUB_NAMES[tab];
+  else phoneClock();
+  if (tab === 'pause') syncLogoff();
 }
+// the phone's status bar: the city's time, as on the HUD's clock
+function phoneClock() { const t = $('rc-time'); $('ph-time').textContent = t ? t.textContent : ''; }
+setInterval(() => { if (topOverlay() === 'phone') phoneClock(); }, 1000);
+// the pause list's rows
+const PAUSE_GO = {
+  resume: () => closeHub(),
+  map: () => openHub('map', null, true), phone: () => openHub('phone', null, true), bag: () => openHub('bag', null, true),
+  people: () => openHub('people', null, true), settings: () => openHub('settings', null, true),
+  logoff: () => logOff(),
+  leave: () => { sfx('click', 0.8); exitToTitle(); },
+};
+for (const b of $('pause').querySelectorAll('[data-p]')) b.onclick = () => PAUSE_GO[b.dataset.p]();
+// LOG OFF (UI-10): the safe way out. The server counts 10 s while you stand still - moving, a hit or being wanted call
+// it off; inside a property you own it's at once - and answers { t: 'logoff', s: 'start' | 'cancel' | 'done', left, why }.
+// A server that doesn't know it yet says nothing: after LOGOFF_WAIT_MS the row does what it did before - leave to the
+// title (your body stays in the city a while, as when you close the tab). Pressed again while counting: called off.
+const LOGOFF_WAIT_MS = 1500;
+let logoff = null;   // { st: 'ask' | 'count', end, t }
+function logOff() {
+  if (logoff) { if (logoff.st === 'count') send({ t: 'logoff', a: 'cancel' }); stopLogoff(); return; }
+  sfx('click', 0.8);
+  logoff = { st: 'ask', t: setTimeout(() => { if (logoff && logoff.st === 'ask') { stopLogoff(); exitToTitle(); } }, LOGOFF_WAIT_MS) };
+  send({ t: 'logoff' });
+  syncLogoff();
+}
+function stopLogoff(tell = false) {
+  if (!logoff) return;
+  if (tell && logoff.st === 'count') send({ t: 'logoff', a: 'cancel' });
+  clearTimeout(logoff.t); logoff = null; syncLogoff();
+}
+function onLogoff(m) {
+  if (m.s === 'start') { if (logoff) clearTimeout(logoff.t); logoff = { st: 'count', end: performance.now() + (Number(m.left) || 10) * 1000 }; if (m.left === 0) { stopLogoff(); exitToTitle(); return; } }
+  else if (m.s === 'cancel') { stopLogoff(); if (S.hud) S.hud.toast(m.why || 'Logging off was called off.', 'warn'); }
+  else if (m.s === 'done') { stopLogoff(); exitToTitle(); return; }
+  syncLogoff();
+}
+function syncLogoff() {
+  const row = $('pz-logoff'), note = $('pz-off-note');
+  row.classList.toggle('counting', !!logoff);
+  const left = logoff && logoff.st === 'count' ? Math.max(0, Math.ceil((logoff.end - performance.now()) / 1000)) : 0;
+  note.textContent = !logoff ? (S.me && S.me.interior === 'home' ? 'at once in your own home' : 'safe: stand still 10 s') : logoff.st === 'ask' ? 'asking...' : `${left} s - stand still · again to stop`;
+  row.style.setProperty('--off', logoff && logoff.st === 'count' ? String(1 - left / 10) : '0');
+}
+setInterval(() => { if (logoff && logoff.st === 'count') syncLogoff(); }, 250);
 const hubCtx = {
   $, S, input, send, toast: (t, tone) => S.hud && S.hud.toast(t, tone), setWaypoint: phoneCtx.setWaypoint,
   closeOverlay: () => closeHub(), topOverlay, refocus: () => { if (inHub()) { ovFocus = startFocus(); focusOverlay(); } },
@@ -1867,8 +1970,7 @@ const hubCtx = {
   leaveDev: () => { sfx('click', 0.8); send({ t: 'devmode', leave: true }); }, openInstall: () => openInstall(), openCreator: () => openCreator('edit'), crew: () => S.crewMsg,
 };
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
-for (const b of $('hub-tabs').querySelectorAll('[data-tab]')) b.onclick = () => openHub(b.dataset.tab);
-$('hub-resume').onclick = () => closeHub();
+$('hub-back').onclick = () => hubBack();
 $('hub-close').onclick = () => closeHub();
 $('hub').addEventListener('pointerdown', (e) => { if (e.target === $('hub')) closeHub(); });   // (a desktop's big panel: a click round it closes it)
 // Surrender (the hub's Settings > Help): press twice - dying (or, wanted, turning yourself in) isn't done by accident
@@ -1877,7 +1979,7 @@ function surrender(b) {
   if (b.dataset.armed && performance.now() - Number(b.dataset.armed) < 4000) { delete b.dataset.armed; t.textContent = 'Surrender'; closeHub(); send({ t: 'surrender' }); }
   else { b.dataset.armed = String(performance.now()); t.textContent = S.me && S.me.wanted > 0 ? 'Press again: turn yourself in (a fine)' : 'Press again: give up and respawn'; }
 }
-function exitToTitle() { closeHub(); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
+function exitToTitle() { stopLogoff(); closeHub(); S.playing = false; $('title').classList.remove('hidden'); $('hud').classList.add('hidden'); if (S.welcomed && !S.practice) $('play').disabled = false; $('t-resume').classList.toggle('hidden', !S.welcomed); titleFocus = 0; }
 // the job card at a job's place (client/jobcard.js, with the first card)
 let JC = null, jcP = null;
 const loadJobCard = () => (jcP ||= import('./jobcard.js').then((m) => (JC = m)).catch((e) => { jcP = null; throw e; }));
@@ -1916,7 +2018,7 @@ function openTutorial(chapter, then) {
 }
 // first-time players see the tour before their first game (SKIP is always there)
 function firstPlay(go0) {
-  return () => {
+  return () => withGate(() => {
     // a new player plays on the device's pick (the title's graphics row shows it and changes it): kept silently
     const go = () => { if (!gfxChosen()) applyPreset(gfx.preset === 'custom' ? getDevice().recommended : gfx.preset); go0(); };
     if (!TUTORIAL_ON || tutorialSeen()) { go(); return; }
@@ -1925,7 +2027,7 @@ function firstPlay(go0) {
     tutAskGo = go;
     if (tutorialSeenOld()) { $('tut-ask-h').textContent = 'THE CITY TOUR HAS BEEN UPDATED'; $('tut-ask-p').textContent = 'New places, rules and features since you last watched it. Take the tour?'; }
     openOverlay('tut-ask');
-  };
+  });
 }
 let tutAskGo = null;
 
@@ -2035,7 +2137,7 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
-$('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub(); };
+$('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
 for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => { document.body.classList.toggle('fs', isFullscreen()); if (isFullscreen()) followRotation(); setTimeout(onResize, 50); });   // (older iPad Safari: the prefixed one)
 
@@ -2163,7 +2265,7 @@ function openOverlay(id) {
   if (id === 'dev' && S.devNav) S.devNav.opened();   // (its home page, laid out for what you hold: client/devmenu.js)
 }
 // where a pad's focus starts in a screen: its first menu line or panel button, not the hub's tabs along the top
-function startFocus() { const i = focusables().findIndex((el) => !el.closest('#hub-bar')); return i >= 0 ? i : 0; }
+function startFocus() { return 0; }   // (a screen's first line; the hub's head is the mouse's and the finger's - Esc and B are back)
 function closeOverlay(id = topOverlay()) {
   if (!id) return;
   const i = overlays.lastIndexOf(id);
@@ -2183,8 +2285,7 @@ function closeOverlay(id = topOverlay()) {
 function focusables() {
   const id = topOverlay();
   if (!id) return [];
-  const bar = HUB_IDS.includes(id) && S.playing ? [...$('hub-bar').querySelectorAll('button')] : [];   // (a hub tab: RESUME and the tabs first)
-  return [...bar, ...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
+  return [...$(id).querySelectorAll('button, select, input')].filter((el) => !el.disabled && el.offsetParent !== null && !el.classList.contains('x'));
 }
 function menuKey(k) {
   const f = focusables();
@@ -2239,10 +2340,9 @@ function overlayPad() {
   if (topOverlay() === 'dev' && S.devNav) return S.devNav.pad(input);   // (the debug menu moves between its buttons as they sit: client/devmenu.js)
   const f = focusables();
   const el = f[ovFocus];
-  if (HUB_IDS.includes(topOverlay()) && input.menuTab && S.playing) { hubStep(input.menuTab); return true; }   // (LB / RB: the hub's tabs)
-  if (topOverlay() === 'inv' && input.menuBack && bag.back()) return true;
-  if (topOverlay() === 'phone' && input.menuBack && phone.screen !== 'home') { phone.back(); return true; }
-  if (topOverlay() === 'bigmap' && input.menuBack && mapwp.inGroup) { mapwp.back(); return true; }
+  if (HUB_IDS.includes(topOverlay()) && input.menuTab && S.playing) { hubStep(input.menuTab); return true; }   // (LB / RB: the hub's screens)
+  if (HUB_IDS.includes(topOverlay()) && input.menuBack) { hubBack(); return true; }   // (B: one step back, as Esc and the head's back)
+  if (topOverlay() === 'gate' && input.menuBack) return true;   // (the first-launch gate is answered, not backed out of)
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-chip'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
   if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
@@ -2264,7 +2364,7 @@ function overlayPad() {
     else el.click();
   }
   if (input.menuBack) closeOverlay();
-  if (input.padStart) { while (topOverlay()) closeOverlay(); }
+  if (input.padStart) { stopLogoff(true); while (topOverlay() && topOverlay() !== 'gate') closeOverlay(); }
   return true;
 }
 // Title screen with a gamepad: D-pad / stick between the buttons, A (or Start) to press.
@@ -5281,4 +5381,4 @@ if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
 else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
-window.CLA = { S, send, WEAPONS, load: LOAD, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
+window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };
