@@ -407,6 +407,7 @@ export class HUD {
       return;
     }
     const msg = localizeText(text);
+    if (this.deathRevealed && this.DS && performance.now() - (this.downAsked || 0) < 4000) this.DS.note(this, msg, tone);   // (the answer to a choice on the death panel, which covers the notes: it says it there)
     logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
     const lv = /^(.+?) up: level (\d+)/.exec(msg);   // (a skill up - server skills.js: the big moment says it, the Log keeps the line)
     if (lv) { this.moment('LEVEL UP', `${lv[1]} - level ${lv[2]}`, 'good'); return; }

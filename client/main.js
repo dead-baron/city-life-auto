@@ -1571,6 +1571,7 @@ detectDevice();
 function downAct(a) {
   const dn = S.me && S.me.down;
   if (!dn || dn.finished) return;
+  S.hud.downAsked = performance.now();   // (the answer shows on the death panel: hud.js toast)
   if (a === 'amb' && !dn.canAmb) { S.hud.toast(dn.ambUsed ? 'One ambulance per time you go down.' : `An ambulance needs $${dn.fee} in your bank.`, 'warn'); return; }
   sfx('click', 0.8);
   send({ t: 'down', a });

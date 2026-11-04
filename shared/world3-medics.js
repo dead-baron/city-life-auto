@@ -12,11 +12,16 @@
 //   - POSTS3 (shared/world3-shops.js shops3, with the wild land's themed places): where there's no town, a small
 //     building by the road nearest the spot - a ranger station in the woods and the mountains, a first-aid post on the
 //     coasts and in the desert - with the clinic's counter at its door.
+//   - its front on a street you can see it from (the owner, 11-03: Northgate Clinic opened straight under the El, "can
+//     we move it so you can see the actual entrance on the street"): streetFront3 - the ground just outside the wall its
+//     doorway goes in, and a few rows on, is open street: no railway's bed, no viaduct, El or highway deck over it, and
+//     a road close in front.
 //   - DROP_SPECIALS3: a planned hospital whose district builds its own by hand (Northshore's Medical Center) isn't
 //     placed again somewhere else (it landed in Copper Gulch, next door to the town's clinic).
 // Whole-world build only (shared/world3-world.js hands it to the generator); the page never loads it. Deterministic:
 // integer tiles, squared distances.
 import { TILE, T } from './constants.js';
+import { elAt } from './world3-rail.js';
 
 // [district, name, the spot (tiles) it should be nearest]
 export const CLINICS3 = [
@@ -50,8 +55,45 @@ export const DROP_SPECIALS3 = new Set(['Northshore Medical']);
 export const STORE_KEYS = /^(apt1|apt2|rest1|rest2|strip|shanty|shops|liquor|conv|quickstop|diner|boutique|tattoo|trail|repair|bank2)/;
 export const NOT_INTO = /church|chapel|hotel|motel|inn\b|lodge|warehouse|factory|freight|cargo|stadium|galleria|station|school|library|museum|theatre|club|bar\b|saloon|tap\b|pub\b|bank|police|fire|casino|salvage|mill|elevator/i;
 
+// The wall a lot building's doorway goes in: where its own door is, else its prefab's front (map.js walkInSouth wants
+// the same first)
+export const doorSouth3 = (m, b) => (b.door ? b.door.ty >= b.ty + b.th : m.prefabs[b.prefab].rot === 0);
+// Tiles under something in the air or on a railway's bed: the El (world3-rail.js elAt), the main line's other raised
+// stretches, the elevated highway's deck (m.deck), a railway at grade (reserve bit 2). -> (i) => bool
+export function overhead3(m) {
+  const up = new Set();
+  for (const R of m.rails || []) for (const p of R.pts) {
+    if (!p.elevated && !(p.ez > 0)) continue;
+    const cx = Math.floor(p.x / TILE), cy = Math.floor(p.y / TILE);
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) if (m.inside(cx + dx, cy + dy)) up.add(m.idx(cx + dx, cy + dy));
+  }
+  return (i, tx, ty) => up.has(i) || !!m.deck[i] || (m.reserve[i] & 2) !== 0 || elAt(tx, ty) > 0;
+}
+// Rows out in front of a doorway that must be open street, and how far out the road may be
+export const FRONT_ROWS = 4, ROAD_WITHIN = 6;
+const OPEN = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.ROAD, T.GRASS, T.DIRT]);
+// Does building b's front (south: its south wall) face open street? The row just outside the wall, across the building
+// inside its corners, is ground you walk on; it and the next FRONT_ROWS - 1 rows have nothing over them, no tracks, no
+// bridge; a road (no highway's) within ROAD_WITHIN rows. over: overhead3(m)
+export function streetFront3(m, b, south, over) {
+  const dir = south ? 1 : -1, oy = south ? b.ty + b.th : b.ty - 1;
+  let road = false;
+  for (let k = 0; k < ROAD_WITHIN; k++) {
+    const ty = oy + dir * k;
+    for (let tx = b.tx + 1; tx < b.tx + b.tw - 1; tx++) {
+      if (!m.inside(tx, ty)) return false;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      if (k < FRONT_ROWS && (over(i, tx, ty) || t === T.BRIDGE || t === T.WATER || t === T.DEEP)) return false;
+      if (k === 0 && !OPEN.has(t)) return false;
+      if (t === T.ROAD && m.roadRank[i] !== 3 && !over(i, tx, ty)) road = true;
+    }
+  }
+  return road;
+}
+
 export function clinics3(m) {
-  const out = { made: [], none: [] };
+  const out = { made: [], none: [], passed: [] };
+  const over = overhead3(m);
   const busyKinds = new Map();   // building -> the kinds of its other doors
   for (const p of m.pois) if (p.b !== undefined && p.b !== null) { let s = busyKinds.get(p.b); if (!s) busyKinds.set(p.b, (s = new Set())); s.add(p.kind); }
   const distAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.dist[m.idx(tx, ty)] : -1; };
@@ -67,15 +109,21 @@ export function clinics3(m) {
       const ks = busyKinds.get(p.b);
       if (ks && [...ks].some((k) => k !== 'delivery')) continue;
       const dx = p.x / TILE - at[0], dy = p.y / TILE - at[1];
-      const k = dx * dx + dy * dy + (p.fixed ? 120 * 120 : 0);   // (a plain storefront before a named place)
-      if (k < bk) { bk = k; best = p; }
+      // (a plain storefront before a named place - but the district's own storefront already named for the clinic, a
+      // hand plan's - Northgate's WC072 - before anything: one Northgate Clinic, not two)
+      const k = p.label === name ? -1 : dx * dx + dy * dy + (p.fixed ? 120 * 120 : 0);
+      if (k >= bk) continue;
+      if (!streetFront3(m, b, doorSouth3(m, b), over)) { out.passed.push([name, p.label || b.name, Math.floor(p.x / TILE), Math.floor(p.y / TILE)]); continue; }   // (its front under the El, on the tracks...)
+      bk = k; best = p;
     }
     if (!best) { out.none.push(name); continue; }
     const b = m.buildings[best.b], old = best.label;
     best.kind = 'hospital'; best.label = name; best.fixed = true; best.r = 48;
     let signed = false;
     for (const sg of b.signs || []) if (sg.text === old) { sg.text = name; signed = true; }
-    if (!signed) { const south = m.prefabs[b.prefab].rot === 0; (b.signs ||= []).push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: name }); }
+    // (its sign on its front: where its door is - a hand plan facing a street to the north has it there - as map.js
+    // walkInSouth first wants the walk-in's doorway; else the prefab's front)
+    if (!signed) { const south = doorSouth3(m, b); (b.signs ||= []).push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: name }); }
     if (b.name === old) b.name = name;
     m.pois.push({ id: m.pois.length, kind: 'reception', label: 'ER Reception', x: best.x, y: best.y, r: 36, b: b.id });
     busyKinds.get(best.b).add('hospital');
