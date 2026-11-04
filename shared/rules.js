@@ -126,6 +126,10 @@ export const GIVE_AFTER_REVIVE_S = 15;        // after a revive you may hand the
 export { REVIVE_KIT_PRICE } from './rules-base.js';           // hospitals and pharmacies; never used up, only works on someone else
 export const AMBULANCE_FEE = 200;             // paid from the bank, and only if the paramedics actually revive you
 export const GHOST_SECONDS = 30;              // a disconnected player's body lingers this long
+// The safe exit (LOG OFF in the pause menu; server/systems/logoff.js): stand still for countS and you leave the city
+// cleanly - saved, no body left behind. At once inside a home of your own. Not while wanted, nor within calmS of taking
+// or dealing damage (and a tab closed then leaves the body for GHOST_SECONDS, as always: players.js safeToIdle).
+export const LOGOFF = { countS: 10, calmS: 60 };
 export const DROP_LIFE_S = 300;               // something you drop from the bag (client/bag.js Drop) waits in a bag at your feet this long
 export const PACK_LIFE_S = 600;               // the backpack (and the cash) you drop when you die stays this long
 export const PACK_BLINK_S = 30;               // ...and blinks for its last seconds

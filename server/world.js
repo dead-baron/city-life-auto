@@ -51,6 +51,7 @@ import * as personas from './systems/personas.js';
 import * as wildlife from './systems/wildlife.js';
 import * as sharks from './systems/sharks.js';
 import * as unstuck from './systems/unstuck.js';
+import * as logoff from './systems/logoff.js';
 import * as props from './systems/props.js';
 import * as barriers from './systems/barriers.js';
 import * as rides from './systems/rides.js';
@@ -193,6 +194,7 @@ const SYSTEMS = [
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
+  ['logoff', logoff.update],        // the safe exit's count: called off by a move, a hit, the police; out when it's done (logoff.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience

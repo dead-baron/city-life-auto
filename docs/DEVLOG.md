@@ -19889,3 +19889,56 @@ apart flipped together.
 - test/idlepose.test.js: the breath keeps the head's top row, the head and the feet unchanged for every look and
   heading, and changes only a small share of the pixels. Each clock holds every frame at least 0.75 s, glances 4-10
   times in two minutes, and a crowd of twelve is never all on one frame. It fails on the old pose.
+
+## 2026-11-04 - The safe exit: LOG OFF without leaving a body behind (server)
+
+The launch plan's item 11 (the owner's design, 11-03). Before this, closing the tab left your body in the city for 30 s
+(`GHOST_SECONDS`), or 5 min after a quiet disconnect, and the pause menu's LOG OFF only went back to the title. Now LOG
+OFF in the pause menu asks the server (`server/systems/logoff.js`):
+
+- **A 10-second count while you stand still** (`LOGOFF.countS` in `shared/rules.js`). The page shows its ring.
+- **Called off** by moving (the stick or any button but the aim), being moved by the server (`server/movemark.js`: a
+  seat, a door, a ride, a rescue, a teleport - your situation changed), being pushed more than half a tile, taking
+  damage, dealing damage, or becoming wanted. The page's own cancel (LOG OFF again, or the pause menu closed) stops it
+  without an answer.
+- **At once inside a home of your own** (`homes.ownsInside`: its rooms; not a look round one for sale, a visit, a
+  lobby, an arcade or a bathhouse). Renting and hotel rooms don't exist yet; they belong in that function when they do.
+  The `me` message carries `offNow: 1` there, so the page can say so.
+- **Refused** while wanted, within 60 s of taking or dealing damage (`LOGOFF.calmS`; the answer says how long is left),
+  in custody, while down, in a vehicle (on foot only: one rule for every kind of ride, and stepping out is one button),
+  riding (a train, a ride, a board, a skydive) or carrying a crate.
+- **A clean exit** takes the body out of the world at once (`players.logOut`: saved where you stood, or back inside your
+  own home next time, nothing dropped, no ghost). It ends the session through the launch hooks' leave, as every leaving
+  does (the money settled and the watcher let go, the analytics session closed). It answers with the session's summary
+  and closes the socket with code 4016.
+- **Combat-logging never pays.** The quiet disconnect's guard (`players.js` `safeToIdle`) now counts dealing damage as
+  well as taking it, over the same 60 s. Someone who hit someone and closed the tab gets the usual 30 s and the drop
+  rule, not five quiet minutes.
+- **A disconnect mid-count** is an ordinary disconnect: the count is dropped and the ghost timer runs. A reconnect from
+  another tab drops it too.
+
+**The protocol.** The page sends `{ t: 'logoff' }` (again while counting: the count goes on, its state re-sent) or
+`{ t: 'logoff', a: 'cancel' }`. The server answers with one of:
+- `{ t: 'logoff', s: 'start', left }`
+- `{ t: 'logoff', s: 'cancel', why, c, left? }`. `c` is the cause: move, hurt, fight, wanted, down, custody, vehicle,
+  riding or crate. `left` comes with fight: the seconds until you may.
+- `{ t: 'logoff', s: 'done', left: 0, earned, spent, xp, cexp, sam, secs }`
+
+**The summary.** Earned and spent come from the money watcher's sources as they settle (`launch.js` `onMoney`). The
+debug menu's money is left out, and moving cash to the bank at an ATM counts as neither. XP is the skills' xp gained.
+`cexp` and `sam` are the Criminal EXP and Samaritan points gained, and `secs` is the time played. A reconnect inside the
+ghost window is the same session. Without a money watcher (offline practice), the net change of cash and bank stands in.
+
+**The page** (UI-10's `client/main.js`) works as it is for start, cancel and done. Two changes finish it:
+- treat close code 4016 as final, with no reconnecting, and show "Saved - safe travels" with the summary;
+- use `me.offNow` for the "at once" note.
+
+Until then, the page reconnects a second after a clean exit, as it would after any lost connection, and the character
+comes back where it logged off.
+
+**Tests.** `test/logoff.test.js` (new) covers the count, a second request, each cause of a cancel, the page's cancel, a
+disconnect mid-count, at once at home (and back inside next time), counted in someone else's rooms, on foot only,
+refusals while wanted and after a fight (and allowed once the minute is up), a tab closed after dealing damage (30 s,
+then the drop rule), no ghost after a clean exit, and the summary's numbers. All 7 fail on the code before this
+change (the closed-tab test on "not the quiet five minutes"). The launch-*,
+startfresh, gameplay, core, world3server, pagemodules and perf tests all pass (171 of 171).

@@ -68,14 +68,16 @@ import * as trains from './trains.js';
 import * as transit from './transit.js';
 import * as ferries from './ferries.js';
 
-import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD } from '../../shared/rules.js';
+import { GHOST_SECONDS, RESPAWN_SECONDS, REVIVE_LIMP_SPEED, TACKLE_SCRAMBLE, GUARD, NPC_GUARD, LOGOFF } from '../../shared/rules.js';
 import { K9 } from '../../shared/rules-play.js';
 // A disconnected player with nothing after them (not wanted, not hurt in the last AWAY_HURT_S, no cargo: a phone switching
-// apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. (Here, not in shared/rules.js:
-// a change there re-keys World v3's world and art - tools/stamp-version.mjs world3Hash - and every browser and the server
-// would fetch and bake them all again for two server-only numbers. They move there with the next change to the world.)
+// apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. "Hurt lately" is the safe
+// exit's own guard (rules.js LOGOFF.calmS: taking or dealing damage), so a tab closed in a fight is never a safe way out.
 export const AWAY_SECONDS = 300;
-export const AWAY_HURT_S = 60;
+export const AWAY_HURT_S = LOGOFF.calmS;
+// the last time this body took or dealt damage (combat.js damage: lastHitAt on whoever was hurt, lastCombatAt on both;
+// 0, a new body's: never)
+export const lastFight = (ped) => Math.max(ped.lastHitAt || -1e9, ped.lastCombatAt || -1e9);
 import * as felling from './felling.js';
 import * as lights from './lights.js';
 import * as revive from './revive.js';
@@ -133,6 +135,7 @@ export function join(world, conn, profile, opts = {}) {
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
     p.conn = conn;
     p.ghostUntil = 0; p.ghostSafe = false; p.away = 0;
+    p.logoff = null;   // (a count to a safe exit belonged to the page before: logoff.js)
     stillHere(p);   // (back: the idle clock starts again)
     p.known = new Map();
     p.inputQ = [];
@@ -169,6 +172,7 @@ export function join(world, conn, profile, opts = {}) {
   };
   noteClientBuild(world, p, opts);
   world.players.set(p.pid, p);
+  sessionMark(world, p);   // (what the safe exit's summary counts from: after a fresh start's wipe, above)
   if (fresh) {
     // a fresh start: at a spawn point (your home if you picked one, else a hospital), on foot, not wanted
     // (and no peak-wanted memory), nothing carried, full health, no police gear left over from a shift
@@ -192,6 +196,30 @@ export function join(world, conn, profile, opts = {}) {
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
   return p;
+}
+
+// The session's starting point for the safe exit's summary (logoff.js summary): the money, skill xp, Criminal EXP and
+// Samaritan points the character had, and when. Earned and spent are counted as they happen (launch.js onMoney, from the
+// money watcher's sources); a reconnect inside the ghost window is the same session, so it keeps counting.
+const skillXp = (prof) => Object.values((prof.skills && prof.skills.xp) || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+export function sessionMark(world, p) {
+  const prof = p.profile;
+  p.sess = { at: world.time, earned: 0, spent: 0, money0: (Number(prof.cash) || 0) + (Number(prof.bank) || 0), xp0: skillXp(prof), cexp0: Number(prof.criminalExp) || 0, sam0: Number(prof.samaritan) || 0 };
+}
+export function sessionSummary(world, p) {
+  const prof = p.profile, s = p.sess || { at: world.time, earned: 0, spent: 0, money0: 0, xp0: 0, cexp0: 0, sam0: 0 };
+  let earned = s.earned, spent = s.spent;
+  if (!prof.__mw) {   // (no money watcher - offline practice: the net change stands in)
+    const net = (Number(prof.cash) || 0) + (Number(prof.bank) || 0) - s.money0;
+    earned = Math.max(0, net); spent = Math.max(0, -net);
+  }
+  return {
+    earned: Math.round(earned), spent: Math.round(spent),
+    xp: Math.max(0, Math.floor(skillXp(prof) - s.xp0)),
+    cexp: Math.max(0, Math.round((Number(prof.criminalExp) || 0) - s.cexp0)),
+    sam: Math.max(0, Math.round((Number(prof.samaritan) || 0) - s.sam0)),
+    secs: Math.max(0, Math.round(world.time - s.at)),
+  };
 }
 
 // Logged off inside your own home (the ghost timer ran out, or the server restarted under you - savePos keeps which):
@@ -334,6 +362,7 @@ export function leave(world, p) {
   custody.onLeave(world, p);   // (logging out in custody: booked on the spot)
   p.conn = null;
   p.inputQ = [];
+  p.logoff = null;   // (gone mid-count to a safe exit: a disconnect like any other - logoff.js)
   p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
   // reloading to update (the server runs a newer build than this session or page): no ghost body and no
   // drop rule - they're straight back on the new build
@@ -352,7 +381,7 @@ export function leave(world, p) {
 export function safeToIdle(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || p.wanted > 0 || p.heat >= 1 || p.custody || p.prison || ped.cuffed || ped.carrying || p.bounty > 0 || p.skull) return false;   // (a bounty on your head: hunted)
-  if (world.time < (ped.downUntil || 0) || world.time - (ped.lastHitAt || -1e9) < AWAY_HURT_S) return false;
+  if (world.time < (ped.downUntil || 0) || world.time - lastFight(ped) < AWAY_HURT_S) return false;   // (hurt, or hurting someone)
   const v = ped.vehId ? world.get(ped.vehId) : null;
   if (v && v.cargo && v.cargo.some((c) => c)) return false;
   return true;
@@ -364,6 +393,17 @@ export function setAway(world, p, on) {
   p.away = on ? world.time || 1e-6 : 0;
   if (on) p.lastInput = { seq: p.lastInput.seq, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
   else p.meDirty = true;
+}
+
+// The safe exit's end (logoff.js finish): out of the world now - no ghost body, nothing dropped, saved where you stood (in
+// your own home: back inside it next time). The same end as a quiet ghost's (AWAY_SECONDS), without the wait.
+export function logOut(world, p) {
+  if (p.devMode) devmode.exit(world, p, true);
+  struggle.onLeave(world, p);
+  custody.onLeave(world, p);
+  p.conn = null; p.inputQ = []; p.logoff = null;
+  p.ghostUntil = 0; p.ghostSafe = false;
+  if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
 }
 
 // Called when the ghost timer expires (drop rule) or when leaving while dead.
@@ -468,6 +508,7 @@ export function riding(world, p) {
 export function stillHere(p) { p.activeAtMs = Date.now(); p.idleWarned = false; }
 export function queueInput(p, inp) {
   if (inp.seq <= p.ack) return;
+  if (p.logoff && stirs(inp)) p.logoff.stir = true;   // (counting down to a safe exit: a step or a button calls it off - logoff.js)
   const prev = p.inputQ.length ? p.inputQ[p.inputQ.length - 1] : p.lastInput;
   if (!prev || inp.bits !== prev.bits || Math.abs((inp.mx || 0) - (prev.mx || 0)) > 0.05 || Math.abs((inp.my || 0) - (prev.my || 0)) > 0.05 || Math.abs((inp.aim || 0) - (prev.aim || 0)) > 0.02) stillHere(p);
   p.inputQ.push(inp);
@@ -479,6 +520,11 @@ export function queueInput(p, inp) {
     p.inputQ[0] = { ...p.inputQ[0], bits: p.inputQ[0].bits | bits };
   }
 }
+
+// An input that does something: the stick pushed, or any button but the aim and the tank-driving setting (both held
+// without doing anything)
+const PASSIVE = IN.AIMING | IN.TANK;
+export const stirs = (inp) => Math.abs(inp.mx || 0) > 0.2 || Math.abs(inp.my || 0) > 0.2 || ((inp.bits || 0) & ~PASSIVE) !== 0;
 
 export function pedMods(world, ped) {
   const now = world.time;
@@ -1051,6 +1097,7 @@ export function buildMe(world, p) {
     faction: p.badge ? 'enforcer' : p.hunter ? 'hunter' : (p.wanted > 0 ? 'criminal' : 'citizen'),
     weapon: ped ? ped.weapon : 'fists', weapons, inv, bleeding: ped ? ped.bleeding : false, light: !!(ped && ped.flashOn),
     blade: prof.blade | 0,   // the plasma blade's colour (shared/items.js BLADE_COLORS; looks.js setBlade)
+    offNow: homes.ownsInside(world, p) ? 1 : undefined,   // LOG OFF here is at once: inside a home of your own (logoff.js)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p),

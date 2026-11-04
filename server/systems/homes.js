@@ -481,6 +481,16 @@ export function backDoorNear(world, x, y) {
 }
 const BACK_R = 44, BACKS = new WeakMap();   // (as near as a front door's: its POI's r; the homes with one, by map)
 
+// Inside a home of your own - its rooms, not a look round one for sale, a visit to someone else's, a building's lobby,
+// an arcade's floor or a bathhouse: where the safe exit is at once (logoff.js). (A home rented, a hotel room: the game has
+// neither yet - they go here when it does.)
+export function ownsInside(world, p) {
+  const ped = p && p.ped, s = ped && ped.home;
+  if (!ped || ped.dead || ped.removed || !ped.hidden || !s || ped.inside !== s.id) return false;
+  if (s.tour || s.guest || s.lobby || s.arcade || s.bath) return false;
+  return !!world.homeOwner && world.homeOwner.get(s.id) === p.pid;
+}
+
 export function goInside(world, p, h) {
   const ped = p.ped;
   // (in by the garden door: out by it too - leaveHome)
