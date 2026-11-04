@@ -19383,12 +19383,13 @@ simple". A first pass (pixel glyphs, navy plates, gold rims) went back with "cle
 looking": mixed styles, blobby scaled bitmaps, black glyphs on gold, a cream-on-cream gun card, rims and sizes all
 over, a scatter of places. Redone from scratch:
 
-- **One icon language** (client/touchicons.js VG, glyph()): vector line icons in the Tabler / Lucide manner - a
-  24-unit grid, a 2-px round-cap, round-join stroke, no fills but the few a shape needs - inlined as SVG paths, crisp at
-  every size (no bitmap is ever scaled). The packages couldn't be fetched here (npm and the CDNs refused, GitHub not
+- **One icon language** (client/touchicons.js VG, glyph()): vector line icons in the Tabler / Lucide manner - a 24-unit
+  grid, a 2-px round-cap, round-join stroke, no fills but the few a shape needs - inlined as SVG paths, crisp at every
+  size (no bitmap is ever scaled). The packages couldn't be fetched here (npm and the CDNs refused, GitHub not
   attached), so the set is drawn in that style, ours; the same names take the real paths if we want them. The game's own
-  - a fist, a pistol, a rifle, a throwable - are in the same stroke. A solid variant of every glyph is kept beside it
-  (setGlyphVariant('solid')) for the owner's pick; the line set is on.
+  - a fist, a pistol, a rifle, a throwable - are in the same stroke. Two variants were drawn - the line set and the same
+  shapes solid - and put side by side on a sheet; the owner picked the solid set (11-04): it's the default
+  (client/touchicons.js VARIANT), the line drawing its outline and fallback.
 - **The glyphs**: HIT a fist, FIRE a target (a round and a muzzle flash were tried beside it on the real layout: the target
   reads at a glance and isn't the aim stick's crosshair), ACT a pointing hand, CAR a side-view car, ROLL an arc and its arrow, block a
   shield, the cruiser a badge, the siren, the horn, reload the circling arrow, the bag, the light, auto-fire, the air's
@@ -19546,6 +19547,21 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
 - The job offer away from its place lost how it's paid (HOW FAR took its box): "a call" now sits under the pay.
 - The touch buttons' rework (UI-10a) and the HUD round them were checked in the same rounds.
 - Test drift fixed: the hub tests still looked for the pre-UI-10 head, exit, README rows and tab style.
+
+### The second review (11-04)
+- **A desktop's screens at the concepts' size.** At 1920x1080 every panel was about half the concept's and its text hard
+  to read. The screens now scale with the window: client/main.js uiScale sets --zk (1.25 at 768 px tall, 1.6 at 1080,
+  never under 1 or over 1.6) and style.css zooms the panels with it - the hub's frames but the map's, a counter's menu,
+  the job offer, the knocked-out panel - so the type, the rows, the buttons and the icons grow together and body text is
+  16 px and more at 1080. The frames' widths are set for the concepts' proportions: the pause list about a quarter of
+  the screen, settings about a third (its tabs wrap to two rows), the phone a phone, the bag a little over half, a
+  counter's menu three quarters along the foot. Why a zoom and not bigger tokens: the panels' many fixed sizes (tiles,
+  rows, the phone's frame) would each need a rule; one zoom keeps every proportion. Phones (body.touch) are as they were;
+  the HUD and the map aren't zoomed.
+- **The bag's weapons that drew as bars.** Most guns' sprites are thin top-down bars that read as nothing in a tile: where
+  a weapon's fitted sprite is that thin (wider than 3.4 to 1), the tile shows its class's line glyph (pistol, rifle,
+  knife, bat...: the touch buttons' set) instead; sprites that read (the bow, the fists, the grenade) stay.
+- **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
 
 ### Performance (tools/perf.mjs --quick, 11-04)
 All within budget: the page 84 files, 498 KB gzipped (budget 84 files, 520 KB) - client/titlescreen.js is on the page

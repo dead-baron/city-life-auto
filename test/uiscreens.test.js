@@ -100,3 +100,12 @@ test('big moments (UIC-15): BUSTED, LEVEL UP, JOB DONE come and go by themselves
   const ds = read('client/deathscreen.js');
   assert.match(ds, /id="d-ring"/); assert.match(ds, /RESPAWN HERE/);
 });
+
+test('a desktop\'s screens scale with the window (the 11-04 review): one zoom on the panels, phones as they were', () => {
+  assert.match(MAIN, /function uiScale\(w, h\) \{ return Math\.round\(Math\.min\(1\.6, Math\.max\(1, Math\.min\(h \/ 615, w \/ 1090\)\)\) \* 20\) \/ 20; \}/);
+  const uiScale = new Function(`${MAIN.match(/function uiScale\(w, h\) \{[^\n]*\}/)[0]}; return uiScale;`)();
+  assert.equal(uiScale(1920, 1080), 1.6); assert.equal(uiScale(1366, 768), 1.25); assert.equal(uiScale(1024, 600), 1);
+  assert.match(CSS, /body:not\(\.touch\) #hub:not\(\[data-tab=map\]\) \.hub-frame, body:not\(\.touch\) #menu \.panel, body:not\(\.touch\) \.jc-pop, body:not\(\.touch\) #d-panel \{ zoom: var\(--zk, 1\); \}/, 'the panels, not the map or the HUD, and never on a phone');
+  const bag = read('client/bag.js');
+  assert.match(bag, /if \(c\.width \/ Math\.max\(1, c\.height\) < 3\.4 && c\.height >= h \* 0\.35\) return c;/, 'a thin sprite: the class glyph instead');
+});
