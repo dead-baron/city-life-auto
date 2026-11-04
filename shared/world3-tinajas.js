@@ -101,6 +101,9 @@ export function desertWaters3(m, H3) {
       const X = tx + dx, Y = ty + dy;
       if (!inF(X, Y) || !DS.has(m.dist[idx(X, Y)])) { ok = false; break; }
       const i = idx(X, Y);
+      // (2026-11-04) the cliff's own rock north of the water: the bowl backs onto it (its face is solid where it's
+      // drawn - shared/cliffshape.js - so the ground under its rock is rock now, not open sand)
+      if (m.tiles[i] === T.WALL && (m.reserve[i] & RES) && Y + 1 <= cy - R * 1.3) continue;
       if (!plain(i)) { ok = false; break; }
       if (m.relief) { lo = Math.min(lo, m.relief[i]); hi = Math.max(hi, m.relief[i]); }
     }
