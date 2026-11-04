@@ -19547,6 +19547,11 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
 - The touch buttons' rework (UI-10a) and the HUD round them were checked in the same rounds.
 - Test drift fixed: the hub tests still looked for the pre-UI-10 head, exit, README rows and tab style.
 
+### Performance (tools/perf.mjs --quick, 11-04)
+All within budget: the page 84 files, 498 KB gzipped (budget 84 files, 520 KB) - client/titlescreen.js is on the page
+from the start, the title being the first thing you see; the bag, the phone, the hub, the job card and the map's lists
+still load the first time they open. The title screen's assets 257 KB (budget 290). No budget raised.
+
 ### For the owner to decide
 - The graphics row on the title (your 10-11 request) - UIC-08 doesn't show it.
 - The bag's carry slots are drawn and the caps written, but nothing limits what you carry until the server does it
