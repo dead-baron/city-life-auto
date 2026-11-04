@@ -10,6 +10,7 @@ import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
 import * as biz from './biz.js';
 import * as homeups from './homeups.js';
+import * as starter from './starter.js';   // (the starter car: lives in your garage once you have one)
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const BASE_GARAGE = 2;
@@ -206,6 +207,7 @@ export function claim(world, p, home, paid) {
   if (prof.spawnHome == null) { prof.spawnHome = home.id; prof.lastSpawn = `home:${home.id}`; }   // (your first home: where you wake up from now on)
   store.touch();
   world.notify(p, prof.spawnHome === home.id ? `You bought ${home.name}! It's your respawn point now, and its garage holds ${home.slots} more vehicles.` : `You bought ${home.name}! +${home.slots} garage spaces - your cars can be taken out at any home you own.`, 'good');
+  starter.onHome(world, p, home);   // (a garage: the starter car lives there from now on)
   return null;
 }
 
@@ -369,6 +371,7 @@ export function storeVehicle(world, p, v, home) {
   if (v.rentedBy) { world.notify(p, v.def.horse ? "That's the co-op's horse - hand it back at a farm co-op." : `That ${v.def.name} is hired - take it back where you got it.`, 'warn'); return 'hired'; }   // (a hired horse: horses.js)
   if (v.workTruck) { world.notify(p, `That ${v.def.name} belongs to the company - your garage won't keep it. Bring it back where you got it for a bonus.`, 'warn'); return 'work truck'; }
   if (v.def.kind === 'air') { world.notify(p, `A garage can't take the ${v.def.name} - leave it on a helipad or an airfield.`, 'warn'); return 'aircraft'; }   // (flying: shared/flight.js)
+  if (v.starter && v.starter !== p.pid) { world.notify(p, `That ${v.def.name} is registered to ${v.ownerName || 'someone else'} - your garage won't take it.`, 'warn'); return 'registered'; }   // (someone's starter car: starter.js)
   if (v.owner !== p.pid && prof.vehicles.length >= garageCap(world, prof)) { world.notify(p, `Garage full (${prof.vehicles.length}/${garageCap(world, prof)}). Buy another home for more space.`, 'warn'); return; }
   if (v.seats.some((s, i) => i > 0 && s)) { world.notify(p, 'Passengers have to get out first.', 'warn'); return; }
   const boat = v.def.kind === 'boat';
@@ -382,6 +385,7 @@ export function storeVehicle(world, p, v, home) {
   if (v.owner !== p.pid) prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant, ...(v.tint !== undefined ? { tint: v.tint } : {}) });
   else { const ov = prof.vehicles.find((o) => o.model === v.model && o.variant === v.variant) || prof.vehicles.find((o) => o.model === v.model); if (ov) { ov.paint = v.paint; ov.variant = v.variant; if (v.tint !== undefined) ov.tint = v.tint; } }
   if (p.activeVehicle === v.id) p.activeVehicle = 0;
+  if (v.starter) starter.putAway(world, p.pid);   // (your starter car: put away, not lost - and never one of your cars' slots)
   world.remove(v);
   store.touch();
   p.meDirty = true;

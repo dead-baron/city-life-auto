@@ -51,7 +51,7 @@ const P = {
   tank: { f0: 12, f1: 52, gears: 3, wave: 'saw8', sub: 0.7, noise: 0.4, nf: 1100, lp0: 160, lp1: 900, q: 1.6, am: 0.85, amr: 1, vol: 0.4, horn: [98, 123], hw: 'saw8' },
 };
 export const ENGINE_CLASS = {
-  compact: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
+  compact: 'small', starter: 'small', sedan: 'sedan', taxi: 'sedan', sports: 'sports', pickup: 'muscle', flatbed: 'truck', van: 'van', bus: 'bus',
   police: 'police', swat: 'truck', ambulance: 'van', rescue4x4: 'van', armored: 'truck', bike: 'sportbike', policebike: 'moto', fbi: 'police', army: 'truck',
   speedboat: 'outboard', policeboat: 'outboard', rescueboat: 'outboard', dinghy: 'dinghy', rowboat: 'pedal', kayak: 'pedal', jetski: 'jetski', ferry: 'ship', waterbus: 'ship',
   boxtruck: 'truck', dumptruck: 'truck', mixer: 'truck', tanker: 'truck', garbage: 'truck', firetruck: 'truck', towtruck: 'truck',

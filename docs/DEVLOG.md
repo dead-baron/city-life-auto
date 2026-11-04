@@ -19889,3 +19889,49 @@ apart flipped together.
 - test/idlepose.test.js: the breath keeps the head's top row, the head and the feet unchanged for every look and
   heading, and changes only a small share of the pixels. Each clock holds every frame at least 0.75 s, glances 4-10
   times in two minutes, and a crowd of twelve is never all on one frame. It fails on the old pose.
+
+## 2026-11-04 - The starter car, and public garages
+The owner, 11-03: "A starter vehicle: low-level, waiting in the arrival station's lot (stations in the city, the desert,
+the forest, the coast), and always available from public garages if lost or despawned, unless you own a property with
+a garage." The approved design: a rusty compact, registered to you. It can't be sold, it's slow, and it steals easily.
+It solves early travel without making the cars you buy worth less.
+- The car: a new model, `starter` (shared/vehicles.js): the Rusty Compact. Its top speed is 400 (the Hatchback's is 520),
+  it accelerates at 230 (the Hatchback's is 330) and it has 140 hp (the Hatchback's is 180). It has no price, so no
+  dealer stocks it and nothing buys or sells it. It's drawn as the Hatchback in rust brown: the classic view's sprite
+  (`art`), art2's model (`look`: client/art2/game/actors.js `vehType`, one line) and the tint over the bodywork (PAINTS
+  11). Its engine sounds like the Hatchback's (client/sound/vehicles.js, one entry). No new art.
+- Registered to you: `v.owner` and `v.starter` carry your id, and the name over it is yours. It's never one of the cars
+  you own (`profile.vehicles`), so it takes no garage slot. Nobody else's garage takes it in: a thief parking it at their
+  home is told whose it is. It has no lock, so taking it is plain theft, like any parked car.
+- First day: a new character (store.js `defaultProfile`: `starter: { first: true }`) finds it in the car park of the
+  arrival station. Until the FTUE exists, that's `arrivalStation()` (server/systems/starter.js): the station with a car
+  park nearest where a new character wakes up (a hospital). The FTUE replaces that one function. Characters from before
+  this change get no car in a car park, but theirs is free at any public garage.
+- Public garages, from what the map already has (nothing added to the world, so no hash changes):
+  - every train station with a car park: the parking spaces within 900 px of its board. These are the countryside
+    stations' lots and World v3's station car parks, or the street spaces by a station in town;
+  - the Fresh Coat Garage(s);
+  - the dealerships, which already bring a car you own round (economy.js `vg`).
+  At one, the menu has a row for your starter. If it's been lost and the cooldown is over, a new one is free. If it's
+  still out somewhere and nobody's in it, it's brought round as it is. If someone else has it, it isn't. The prompt
+  adds "· your starter car" when one is waiting for you there.
+- Lost: wrecked, sunk, towed or taken away by anything (a despawn, a tidy-up when you log off). `starter.update` sees it
+  gone and starts the 5-minute cooldown. The cooldown is also saved on the profile (`starter.readyAt`), so it holds
+  across a rejoin and a restart. If someone else drove it off and left it empty, it's taken away after 90 s out of
+  everyone's sight, and it's free again after the cooldown.
+- One per player: handing one out takes away any other of yours. An empty one is removed. One with someone in it
+  becomes nobody's starter (theirs to drive off in), as Start fresh does with your cars.
+- Own a home with a garage and the starter lives there. Buying the home moves it in if it's out and empty. The home's
+  menu takes it out onto the driveway. Parking it in your garage puts it away with no cooldown and no slot used. The
+  public garages tell you it's at home.
+- Numbers: shared/rules.js `STARTER` (cooldownS 300, strayS 90, lotR 900, paint 11). The car's own stats are in its
+  model.
+- Shared files changed (small): server/world.js (the `starter` system), server/store.js (one profile field),
+  server/systems/players.js (`onJoin` at the end of a join, `forget` in Start fresh), server/systems/homes.js (a
+  thief's garage refuses it; parking yours puts it away; buying a home moves it), server/systems/economy.js (the rows
+  in the station, garage, dealer and home menus, the two options, the prompt's tag), shared/rules.js, shared/vehicles.js,
+  client/art2/game/actors.js, client/sound/vehicles.js.
+- Not built: there's no chop shop and no way to sell a car in the game today, so "unsellable" holds by construction (no
+  price, not in your owned cars). A future chop shop or car sale should check `v.starter`.
+- test/starter.test.js covers the first day in the lot, registered and unsellable, lost then free at a public garage
+  after the cooldown, the move to an owned garage, one per player, and a rejoin and a restart. It fails on the old build.

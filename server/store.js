@@ -32,6 +32,7 @@ export function defaultProfile(pid) {
     pos: null,       // (and inHome: the home you logged off inside, back in it next time - players.savePos; absent when you weren't)
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
     safety: true,    // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - on for new characters
+    starter: { first: true },   // the starter car (server/systems/starter.js): first - waiting at the arrival station on their first day
   };
 }
 

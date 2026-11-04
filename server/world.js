@@ -32,6 +32,7 @@ import * as homes from './systems/homes.js';
 import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
+import * as starter from './systems/starter.js';
 import * as gates from './systems/gates.js';
 import * as nightclubs from './systems/nightclubs.js';
 import * as boats from './systems/boats.js';
@@ -193,6 +194,7 @@ const SYSTEMS = [
   ['economy', economy.update],      // auto-heal at ER reception
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
+  ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theatre: the films in the screens, the audience
