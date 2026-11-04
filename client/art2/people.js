@@ -2035,6 +2035,9 @@ CARRY.push('binoculars', 'poles', 'radio', 'basket', 'kayak', 'tripod', 'tackle'
 // people at their jobs (batch 8, server personas.js): broom (a street sweeper's push broom, swept along in front), letters (a
 // mail carrier's letters held out at a mailbox)
 CARRY.push('broom', 'letters');
+// a surfboard of your own carried under the arm (server gear.js: the descriptor's pp 'surfboard')
+CARRY.push('surfboard');
+Object.assign(ACC_HANDS, { surfboard: 1 });
 Object.assign(ACC_HANDS, { broom: 2, letters: 1 });
 Object.assign(ACC_HANDS, { binoculars: 2, radio: 1, basket: 1, kayak: 2 });
 const MAT = (c, g = 0) => (Q) => { if (g) Q.gloss = g; return cloth(c); };
@@ -2264,6 +2267,7 @@ function accHands2(D, P, S, acc) {
   if (acc === 'basket') { P.hL = vadd(S.shL, [-2.2, 3.4, -r * 0.52]); P.elL = [-1, -0.3, -0.7]; return true; }   // (on the crook of the arm)
   if (acc === 'broom') { const k = P.breath * 3; P.hR = [2.4, 8.6 + k, 17]; P.hL = [-0.8, 5.0 + k, 24.5]; P.elR = [1, -0.4, -0.5]; P.elL = [-1, -0.4, -0.4]; P.lean += 0.12; P.headPitch += 0.15; return true; }
   if (acc === 'letters') { P.hR = vadd(S.chest, mv(S.SP, [2.4, 8.2, -0.8])); P.elR = [1, -0.4, -0.4]; return true; }
+  if (acc === 'surfboard') { P.hR = vadd(S.shR, [1.8, 0.6, -r * 0.5]); P.elR = [1, -0.1, -0.6]; return true; }   // (the board's rail in the hand, tucked under the arm)
   if (acc === 'kayak') { P.hR = vadd(S.shR, [0.6, 1.0, 2.6]); P.elR = [1, 0.2, -0.3]; P.hL = vadd(S.shL, [-1.8, 2.6, -r * 0.62]); P.elL = [-1, -0.3, -0.5]; return true; }   // (the cockpit's rim up on the shoulder; the paddle)
   return false;
 }
@@ -2407,6 +2411,10 @@ const ACT_PROPS = {
     B(c, I3, [3.6, 2.8, 2.4], GR.ACC, 'basket', (Q) => { if (Q.l2 > 0.82) return cloth('#8a5e30'); if ((Math.round(Q.l0 * 6) + Math.round(Q.l2 * 4)) & 1) Q.k -= 0.2; return cloth('#e8bc70'); });
     C([c[0] - 3.2, c[1], c[2] + 2.2], [c[0], c[1], c[2] + 5.6], 0.35, 0.35, GR.ACC, 'handle', MAT('#8a5e30')); C([c[0], c[1], c[2] + 5.6], [c[0] + 3.2, c[1], c[2] + 2.2], 0.35, 0.35, GR.ACC, 'handle', MAT('#8a5e30'));
     for (const [x, y, col] of [[-1.6, -0.6, '#d8a030'], [0.8, 0.7, '#e2b040'], [2.0, -0.8, '#c8342e'], [-0.3, 1.2, '#5a2a7a'], [1.1, -1.4, '#f0e0b8']]) E([c[0] + x, c[1] + y, c[2] + 2.4], I3, [1.2, 1.2, 0.7], GR.ACC, 'find', MAT(col));
+  },
+  surfboard(B, C, E, S) {   // a surfboard under the right arm, on its edge, nose ahead: the white board, its stripe
+    const c = vadd(S.haR, [1.4, 1.6, 3.2]);
+    E(c, I3, [0.9, 15, 4.4], GR.ACC, 'board', M365.surf); E([c[0] + 0.85, c[1], c[2]], I3, [0.14, 14, 0.7], GR.ACC, 'stripe', M365.stripe);
   },
   kayak(B, C, E, S) {   // a red kayak up on the right shoulder, bow ahead, the cockpit turned in to the head; the paddle in the left hand
     const c = vadd(S.shR, [2.0, 2.2, 3.6]);

@@ -11,7 +11,7 @@ import { input } from './input.js';
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const SLOTS = 4;
-const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun));
+const usable = (id) => !!(ITEMS[id] && (ITEMS[id].heal || ITEMS[id].buff || ITEMS[id].light || ITEMS[id].music || ITEMS[id].fun || ITEMS[id].ride));   // (ride: a board into your hand, blades on at a bench - server gear.js)
 // the categories, in the grid's order: [id, name, test(item def, id)] - an item goes in the first that takes it
 export const BAG_CATS = [
   ['weapons', 'Weapons'],
@@ -41,7 +41,9 @@ export function describe(id) {
   const it = ITEMS[id];
   if (!it) return '';
   if (id === 'revivekit') return 'Revive a downed player to full health - never used up.';
-  if (id === 'surfboard') return 'In the sea you lie on it and paddle. At a surf break, paddle for the beach as a wave comes, then carve along its face.';
+  if (id === 'surfboard') return `Yours. In the sea, ${keyName('action')} puts you on it, paddling (faster than you swim) - at a surf break, paddle for the beach as a wave comes, then carve along its face. Use: under your arm.`;
+  if (id === 'skateboard') return `Your own board. Use: in your hand (it takes a hand - no fighting), ${keyName('vehicle')} rides it. Each bail wears it; it snaps in the end.`;
+  if (id === 'rollerblades') return 'Put them on sitting on a bench: quicker than walking, no sprinting, no vehicles, and keep off the grass.';
   if (id === 'parachute') return `Jump out of a helicopter or a plane high up, then ${keyName('action')} opens it. One jump.`;
   if (id === 'drill') return 'A bank job: set it at a vault door behind the counter. The alarm goes at once; it works through in about a minute.';
   if (id === 'flashlight') return `${keyName('light')} switches it on and off. Held in your free hand; everyone sees the beam.`;
@@ -125,7 +127,7 @@ export function createBag({ el, send, me, refocus }) {
     if (t.kind === 'w') {
       acts += m.weapon === t.id ? (t.id === 'fists' ? '' : '<button class="btn" data-a="holster">Put away</button>') : '<button class="btn btn-1" data-a="equip">Equip</button>';
       if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade colour</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
-    } else if (usable(t.id)) acts += `<button class="btn btn-1" data-a="use">${it.light ? (m.light ? 'Turn off' : 'Turn on') : 'Use'}</button>`;
+    } else if (usable(t.id)) acts += `<button class="btn btn-1" data-a="use">${it.light ? (m.light ? 'Turn off' : 'Turn on') : it.ride === 'blades' ? 'Put on (at a bench)' : it.ride ? 'Take in hand' : 'Use'}</button>`;
     if (t.kind === 'i' && usable(t.id)) acts += `<div class="bag-pins"><small>Quick wheel slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
     if (t.id !== 'fists') acts += `<button class="btn btn-x" data-a="drop">${armDrop === t.k ? 'Press again to drop it' : t.n > 1 ? 'Drop one' : 'Drop'}</button>` + (t.n > 1 ? `<button class="btn btn-x" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>` : '');
     d.innerHTML = `<div class="bd-head"><span class="bd-ic">${t.kind === 'i' ? esc(ITEM_ICON[t.id] || '•') : ''}</span><div><h3>${esc(t.name)}</h3><small>${esc(BAG_CATS.find((c) => c[0] === t.cat)[1])}</small></div>`

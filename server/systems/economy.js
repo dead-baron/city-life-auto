@@ -34,6 +34,7 @@ import * as woodjob from './woodjob.js';
 import * as mortgage from './mortgage.js';
 import * as mail from './mail.js';
 import * as skate from './skate.js';
+import * as gear from './gear.js';   // (the rides you own and carry: the bag's boards, rollerblades - gear.js)
 import * as casino from './casino.js';
 import * as skills from './skills.js';
 import * as arcade from './arcade.js';
@@ -45,7 +46,7 @@ import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { SURFBOARD_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { SURFBOARD_PRICE, ROLLERBLADES_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -210,11 +211,11 @@ export function buildMenu(world, p, poi) {
       if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
       else if (o.kind === 'ammo') { const an = WEAPONS[o.id].ammoName; opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? `need the ${WEAPONS[o.id].name}` : `have ${prof.weapons[o.id]}` }); }
       else if (o.kind === 'item') {
-        const have = prof.inventory[o.id] || 0, tool = !!ITEMS[o.id].tool; // a tool is never used up: one is enough
+        const have = ITEMS[o.id].ride && gear.owns(p, ITEMS[o.id].ride) ? 1 : prof.inventory[o.id] || 0, tool = !!ITEMS[o.id].tool; // a tool is never used up: one is enough (a ride: one you own anywhere - gear.js)
         opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, dis: tool && have > 0, note: tool && have > 0 ? 'have one' : have ? `have ${have}` : '' });
       }
     }
-    if (kind === 'sports') skate.shopOptions(p, opts);   // (a skateboard: skate.js)
+    if (kind === 'sports') { skate.shopOptions(p, opts); gear.surfOptions(p, opts); }   // (a skateboard: skate.js; your surfboard from home: gear.js)
     if (poi.counter && COUNTER[kind]) {
       title = COUNTER[kind].title(poi.label);
       if (COUNTER[kind].sub) sub = COUNTER[kind].sub;
@@ -295,7 +296,8 @@ export function buildMenu(world, p, poi) {
       sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
       opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
       if (storeOf(poi) === 'kickflip' || storeOf(poi) === 'surf') skate.shopOptions(p, opts);   // (the skate shop's decks, the surf shops' cruisers: set down by the door - skate.js)
-      if (storeOf(poi) === 'surf') { const have = (prof.inventory.surfboard || 0) > 0; opts.push({ id: `i:surfboard:${SURFBOARD_PRICE}:1`, label: ITEMS.surfboard.name, price: SURFBOARD_PRICE, dis: have, note: have ? 'have one' : 'paddle out at a surf break and catch a wave' }); }   // (surfing: surf.js)
+      if (storeOf(poi) === 'surf') { const have = gear.owns(p, 'surf'); opts.push({ id: `i:surfboard:${SURFBOARD_PRICE}:1`, label: ITEMS.surfboard.name, price: SURFBOARD_PRICE, dis: have, note: have ? 'have one' : 'in the sea, the action button: on it, paddling - then catch a wave' }); gear.surfOptions(p, opts); }   // (surfing: surf.js; yours from home: gear.js)
+      if (storeOf(poi) === 'kickflip') { const have = gear.owns(p, 'blades'); opts.push({ id: `i:rollerblades:${ROLLERBLADES_PRICE}:1`, label: ITEMS.rollerblades.name, price: ROLLERBLADES_PRICE, dis: have, note: have ? 'have a pair' : 'put them on sitting on a bench' }); }   // (rollerblades: gear.js)
       for (const id of SHOPS.clothing.sells) { const n = prof.inventory[id] || 0; if (n > 0) opts.push({ id: `s:${id}`, label: `Sell ${ITEMS[id].name} (x${n})`, price: -sellPrice(SHOPS.clothing, id), note: n > 1 ? 'sells all' : '' }); }
       break;
     case 'garage': {
@@ -363,13 +365,14 @@ export function buildMenu(world, p, poi) {
           opts.push({ id: 'houtfit', label: 'Change outfit', note: p.badge ? 'off duty only' : 'free', dis: p.badge });
           opts.push({ id: 'hlooks', label: 'Quick change', note: p.badge ? 'off duty only' : 'your saved looks', dis: p.badge });   // (server/systems/looks.js)
           opts.push({ id: 'hmirror', label: 'The mirror', note: p.badge ? 'off duty only' : 'change anything about your look', dis: p.badge });
-          for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id]) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });
+          for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id] && !ITEMS[id].ride) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });   // (not a ride: yours goes home by itself - gear.js)
           for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '', wpn: WEAPONS[id].i });
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
           for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash', wpn: WEAPONS[id].i });
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
         skate.shopOptions(p, opts, true);   // (your skateboard, set down by the front door: skate.js)
+        gear.surfOptions(p, opts, true);   // (your surfboard, home again: into your bag - gear.js)
         if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });
         if (h.dock) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind === 'boat') opts.push({ id: `hboat:${i}`, label: inside ? `Boathouse: ${d.name}` : `Take out your ${d.name}`, note: inside ? 'head down to the dock' : 'boathouse' }); });
         if (!inside) opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
@@ -575,6 +578,7 @@ function execute(world, p, poi, opt) {
     case 'ar': return arcade.execute(world, p, poi, opt, pay);   // (an arcade: arcade.js)
     case 'ba': return bathhouse.execute(world, p, poi, opt);   // (a bathhouse's locker: bathhouse.js)
     case 'bd': return skate.shopExecute(world, p, poi, parts[1], pay);   // (a skateboard bought, or yours brought out: skate.js)
+    case 'sb': return gear.surfExecute(world, p);   // (your surfboard from home, into your bag: gear.js)
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'w': {
       const id = parts[1], price = Number(parts[2]);
@@ -596,9 +600,11 @@ function execute(world, p, poi, opt) {
     case 'i': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
       const it = ITEMS[id];
+      if (it.ride && gear.owns(p, it.ride)) return `You already have ${it.ride === 'blades' ? 'a pair' : 'one'}.`;   // (a ride you own, wherever it is: gear.js)
       if (it.tool && prof.inventory[id] > 0) return `You already have a ${it.name}.`; // tools are never used up: one is enough (checked before paying)
       if (!pay(p, price)) return 'Not enough money.';
       prof.inventory[id] = (prof.inventory[id] || 0) + qty;
+      if (it.ride) { gear.sync(world, p); world.notify(p, it.ride === 'blades' ? 'Rollerblades in your bag - sit on a bench to put them on (the action button by one).' : 'A surfboard in your bag - in the sea, the action button puts you on it.', 'good'); }   // (yours now: gear.js)
       if (poi.kind === 'club') biz.onSpend(world, p, poi, price);   // (the owner's cut of the bar: biz.js)
       autoSlot(p, id);
       if (it.buff) world.notify(p, `${it.name} in your bag - drink it from the quick wheel (${'X / View / ITEMS'}).`, 'good');
@@ -779,6 +785,7 @@ function execute(world, p, poi, opt) {
       const [from, to] = parts[0] === 'hst' ? [prof.inventory, st.items] : [st.items, prof.inventory];
       const n = from[id] || 0;
       if (n <= 0) return 'Nothing there.';
+      if (parts[0] === 'hst' && ITEMS[id] && ITEMS[id].ride) return 'Keep it with you - a board or blades go home by themselves.';
       from[id] = 0; to[id] = (to[id] || 0) + n;
       if (parts[0] === 'hst' && prof.bait === id) prof.bait = null;
       store.touch();
@@ -909,7 +916,7 @@ function heartyEnd(world) {
 // The quick bar: four slots of usable items (a flashlight there switches it on and off). A newly bought
 // usable item fills the first empty slot.
 export const QUICK_SLOTS = 4;
-export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music || it.fun)); };
+export const USABLE = (id) => { const it = ITEMS[id]; return !!(it && (it.heal || it.buff || it.light || it.music || it.fun || it.ride)); };
 export function quickSlots(p) {
   const prof = p.profile;
   if (!Array.isArray(prof.quick)) prof.quick = ['medkit', 'bandage', 'energy', 'coffee'];
@@ -950,6 +957,7 @@ export function useItem(world, p, id) {
   if (it.fun === 'fw') { fireworks.use(world, p, id); return; }   // (a firework set down and lit: fireworks.js)
   if (it.fun === 'camp') { campfires.build(world, p); return; }   // (a campfire of your own: campfires.js)
   if (it.music) { music.use(world, p, id); return; }   // (a boombox, a radio, a tape, the mat, an instrument: music.js)   // (a light: chosen and switched on; a flare or a glow stick lit and dropped)
+  if (it.ride) { gear.useFromBag(world, p, id); p.meDirty = true; return; }   // (a board into your hand, rollerblades on at a bench: gear.js)
   if (it.tool) { world.notify(p, id === 'revivekit' ? 'The Revive Kit is for someone else: stand over a downed player and hold the action button.' : `${it.name} isn't used like that.`, 'info'); return; }
   if (it.heal) {
     if (ped.hp >= ped.maxHp && (it.food || !ped.bleeding) && !(it.hearty && !(ped.buffs.hearty > world.time + HEARTY_S * 0.5))) { world.notify(p, it.food ? 'You\'re not hungry - you\'re at full health.' : 'You are already healthy.', 'info'); return; }

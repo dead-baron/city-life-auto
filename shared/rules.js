@@ -464,6 +464,19 @@ import { DRILL_PRICE } from './rules-base.js';
 export { DRILL_PRICE };
 export { SKATEBOARD_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, HORSE } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export const BAIL = { hurt: 6, hurtMax: 18, downS: 1.1, roughS: 0.35 };   // (roughS: rolling onto grass or dirt this long and you step off)
+// Rides you own and carry (the owner, 11-03: "things you find, keep or carry, and lose, not something you can just equip
+// and go faster on" - server/systems/gear.js, skate.js, surf.js). A skate park's rack board is borrowed: ridden more than
+// borrowPad tiles past the park's edge it goes back on its rack. A board of your own wears with each bail - wear, and up
+// to hard more for a bail at full speed into a wall - and snaps at 1: gone until you buy another (in a skate session a
+// fresh one lands where it stopped instead); past warnAt you're told it's cracking. A surfboard you set down stays
+// surfLieS s, then goes home (once nobody's looking): take it out at home or at a surf shop.
+export const RIDE_GEAR = { borrowPad: 3, wear: 0.1, hard: 0.25, warnAt: 0.6, surfLieS: 180 };   // (a full-speed wall: 0.35 - the third snaps it; a trick's bail about 0.16; knocked off 0.1)
+export { ROLLERBLADES_PRICE, SURF_PADDLE } from './rules-base.js';   // (rollerblades' price; a surfboard's paddle, px/s)
+// Rollerblades (gear.js): worn, not ridden - put on or taken off sitting on a bench (reach px from it) for laceS s (the
+// stick gets you up). On them you glide at speedMul times the walk-to-run curve (full stick ~200 px/s: quicker than
+// walking, slower than a board's 270) with no sprint and no getting into a vehicle; on grass, dirt or sand you clump
+// along at roughMul, and rolling onto it faster than fallV px/s you go down for fallS s.
+export const BLADES = { laceS: 3, reach: 40, speedMul: 1.12, roughMul: 0.34, fallV: 70, fallS: 1.2 };
 // Skateboarding's score (server/systems/skate.js): a combo banked after comboGap s rolling on is its points x its tricks
 // (a trick again in the same combo: half); perS - a grind, grab, manual by the second; the special meter full at
 // specialPts: specialS s of tricks worth specialMul, till you bail; the gaps' points (shared/skate.js)

@@ -83,6 +83,7 @@ export class SkateView {
   // what the server said: a combo banked (the points over the rider), one lost
   onEvent(ev, fx) {
     if (ev.e === 'skbank' && fx) fx.floatText(ev.x, ev.y - 44, `+${fmt(ev.n)}`, '#ffd34a');
+    else if (ev.e === 'skbail' && fx && ev.snap) fx.floatText(ev.x, ev.y - 52, ev.snap === 2 ? 'SNAPPED! A FRESH BOARD' : 'SNAPPED!', ev.snap === 2 ? '#ffd34a' : '#ff6a5a');   // (the board broke - server skate.js wearOut)
     else if (ev.e === 'skbail' && fx) fx.floatText(ev.x, ev.y - 40, 'BAIL!', '#ff6a5a');
   }
 

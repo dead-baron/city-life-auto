@@ -20,6 +20,7 @@ import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
+import * as gear from './gear.js';   // (the rides you own and carry - a board in your hand, rollerblades: the owner, 11-03)
 const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); return out; };   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
@@ -177,7 +178,7 @@ export function join(world, conn, profile, opts = {}) {
     store.touch();
   }
   spawnPlayerPed(world, p, !fresh);
-  skate.convert(world, p);   // (a skateboard in an old bag: your own board now - skate.js)
+  gear.onJoin(world, p);   // (the bag and the boards you own in step; a surfboard you'd left out is home - gear.js)
   if (profile.worldNote) {
     // the world was rebuilt since they last played (homes.checkWorld): say what happened to their homes, once
     world.notify(p, homes.worldNoteText(profile.worldNote), 'warn');
@@ -316,6 +317,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
   }
   p.ped = ped;
+  gear.onSpawn(world, p, ped);   // (your rollerblades on, if you had them on - gear.js)
   ped.spawnedAt = world.time;   // (just woke up or came in: no driver's slip near them a while - slips.js)
   economy.syncLight(world, p); // a flashlight left switched on is still on
   homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
@@ -490,8 +492,9 @@ export function pedMods(world, ped) {
   if (ped.limpUntil > now) speedMul *= REVIVE_LIMP_SPEED; // just revived bare-handed: limping
   if (now < (ped.guardUntil || 0)) speedMul *= GUARD.speed;   // guarding: a careful step (rules.js GUARD)
   if (now < (ped.k9Until || 0)) speedMul *= K9.drag;   // a police dog hanging on to you (k9.js)
+  if (ped.blades) speedMul *= gear.bladeMul(world, ped);   // on rollerblades: a glide, a clump over the rough (gear.js)
   return {
-    canMove, canSprint: !ped.carrying, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
+    canMove, canSprint: !ped.carrying && !ped.blades, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),
     board: !!ped.board, wet: !!ped.board && world.weather === WEATHER.RAIN,   // (on a skateboard: shared/physics.js boardStep)
     canSwim: !!ped.player || isSwimming(world.map, ped), // players swim anywhere; NPCs only get out of water
     regenMul: ped.buffs.coffee > now || ped.buffs.bath > now ? 2.2 : 1,   // (refreshed by a soak at a bathhouse: bathhouse.js)
@@ -616,6 +619,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   }
 
   // on foot
+  if (ped.lacing && gear.lacingInput(world, p, ped, inp)) { if (pressed & IN.ACTION) doAct(world, p); return; }   // (sat on a bench lacing your rollerblades: gear.js)
   const tumbling = world.time < (ped.tumbleUntil || 0);
   const fr = world.time < (ped.airUntil || 0) ? AIR_FRICTION : TUMBLE_FRICTION;
   const v0 = tumbling ? Math.hypot(ped.vx, ped.vy) : 0;
@@ -642,7 +646,8 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   if (ped.rollT > 0 && (p.badge || p.hunter) && !ped.board) tackle(world, ped);   // (an ollie isn't a tackle)
   const swung = golf.input(world, p, ped, inp, pressed, dt) || hoops.input(world, p, ped, inp, pressed, dt) || tennis.input(world, p, ped, inp, pressed) || bowling.input(world, p, ped, inp, pressed, dt) || firefighter.hose(world, p, ped, inp, pressed, dt);   // (the hose by your fire engine: firefighter.js) (by your golf ball the attack button swings the club; on the court with a ball, it shoots)
   const kicked = !swung && (pressed & IN.FIRE) && !ped.carrying && !ped.board && minigames.tryKick(world, ped, (inp.bits & IN.AIMING) ? inp.aim : ped.a);
-  if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board) {   // (on a board: step off to fight)
+  if ((pressed & IN.FIRE) && !kicked && !swung && ped.held && !ped.board) world.notify(p, `Your hands are full - put the ${ped.held.k === 'surf' ? 'surfboard' : 'skateboard'} in your bag first (the action button).`, 'warn');   // (a board in your hand: gear.js)
+  if ((inp.bits & IN.FIRE) && !kicked && !swung && !ped.board && !ped.held) {   // (on a board: step off to fight)
     if (ped.carrying) { if (pressed & IN.FIRE) cargo.throwCrate(world, ped, inp.aim); }
     else if (!ped.fishing) {
       if (guard) ped.guardUntil = 0;   // (striking from the guard: down for the blow - combat.js tryAttack won't strike from it)
@@ -659,6 +664,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // (left at your feet), and into the vehicle by you if there's one
   if ((pressed & IN.VEHICLE) && !revive.tryFinish(world, p)) {
     if (ped.board) { const car = vehicles.nearestVehicle(world, ped, 56, true); skate.hopOff(world, ped); if (car) vehicles.playerEnter(world, ped, true); }
+    else if (ped.held && gear.vehicleButton(world, p, ped)) { /* a board in your hand: ridden, paddled out on, set down (gear.js) */ }
     else vehicles.playerEnter(world, ped);   // (Safety mode asks first when it'd be a crime)
   }
   if (pressed & IN.ACTION) {   // (step off to do it - but at a skate spot, the session there: on the board)
@@ -757,6 +763,8 @@ export function findInteraction(world, p) {
   if (now < ped.downUntil || now < ped.stunUntil) return null;
   const sk = skate.interaction(world, p);   // on your board at a skate spot: a session there (skate.js)
   if (sk) return sk;
+  const gi = gear.interaction(world, p);   // lacing your rollerblades; in the sea with your surfboard: paddle out (gear.js)
+  if (gi) return gi;
 
   const fi = fishing.interaction(world, p);
   if (fi) return fi;
@@ -905,6 +913,8 @@ export function findInteraction(world, p) {
   const join = crews.joinPrompt(world, p) || crews.askPrompt(world, p);   // someone beside you who asked you into their crew: join; or ask them into yours (crews.js)
   if (join) return join;
 
+  const gg = gear.groundInteraction(world, p);   // your own skateboard lying here: pick it up; a bench: rollerblades on or off (gear.js)
+  if (gg) return gg;
   const sale = dealer.saleNear(world, ped);
   if (sale) return { label: `Buy ${sale.def.name} - $${sale.forSale.price.toLocaleString()}`, run: () => { const err = dealer.buy(world, p, sale, economy.payFrom); if (err) world.notify(p, err, 'bad'); } };
   const v = vehicles.nearestVehicle(world, ped, 56);
@@ -913,7 +923,7 @@ export function findInteraction(world, p) {
   if (fh) return { label: 'Ride the horse bareback - Horse theft', key: 'F', crime: 'horseTheft', key2: `horse:${fh.id}`, run: () => vehicles.playerEnter(world, ped) };
   const garage = homeups.garageInteraction(world, p);   // by your own garage's door: its materials and the home's upgrades (homeups.js)
   if (garage) return garage;
-  return pets.letGo(world, p) || transit.stopNote(world, p);   // a lost pet at your heel: let it go (pets.js); at a bus stop with nothing else to do: the line and when its next bus comes
+  return gear.lateInteraction(world, p) || pets.letGo(world, p) || transit.stopNote(world, p);   // (off your surfboard; the board in your hand into the bag: gear.js)   // a lost pet at your heel: let it go (pets.js); at a bus stop with nothing else to do: the line and when its next bus comes
 }
 
 export function crateName(c) {
