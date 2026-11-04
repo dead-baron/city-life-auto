@@ -55,6 +55,7 @@ import * as wildfolk from './wildfolk.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
+import * as starter from './starter.js';   // (the starter car: first day at the arrival station, the cooldown carried over)
 import * as races from './races.js';
 import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
@@ -196,6 +197,7 @@ export function join(world, conn, profile, opts = {}) {
   bounties.onJoin(world, p);   // bounties still on their head from before they logged off
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
+  starter.onJoin(world, p);   // (a new character's starter car in the arrival station's car park; a lost one's cooldown carried on)
   return p;
 }
 
@@ -461,6 +463,7 @@ export function wipeAccount(world, p) {
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
   revive.clearDown(world, p);
   bounties.onWipe(world, p);
+  starter.forget(world, p.pid);   // (the new character's own starter, at the arrival station again: starter.js)
   crews.leave(world, p);   // (out of any crew: a fresh character starts in none - crews.js)
   p.conn = null; p.ghostUntil = 0;
   if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);

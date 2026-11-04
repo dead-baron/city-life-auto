@@ -16,6 +16,7 @@ import * as fishing from './fishing.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
+import * as starter from './starter.js';   // (the starter car: free at the public garages - a station's car park, a Fresh Coat Garage, a dealership)
 import * as station from './station.js';
 import * as taxijob from './taxijob.js';
 import * as truckjob from './truckjob.js';
@@ -63,6 +64,10 @@ function walkCounter(poi) {
   return null;
 }
 export function poiLabel(world, p, poi) {
+  const l = baseLabel(world, p, poi);
+  return l ? l + starter.promptTag(world, p, poi) : l;   // (your starter car waiting here: starter.js)
+}
+function baseLabel(world, p, poi) {
   if (casino.isCasino(poi)) return casino.label(poi);   // (Lucky Mesa's casinos: the slots and the tables - casino.js)
   if (arcade.isArcade(world, poi)) return arcade.label(poi);   // (the arcades: a credit, the prize counter - arcade.js)
   if (bathhouse.isBath(world, poi)) return null;   // (a bathhouse: in through its door - bathhouse.js)
@@ -308,6 +313,7 @@ export function buildMenu(world, p, poi) {
       opts.push({ id: 'wash', label: 'Car wash (removes hood blood)', price: 20, dis: !v });
       opts.push({ id: 'repair', label: 'Repair body damage', price: 300, dis: !v });
       ownedVehicleOpts(prof, opts, false);
+      starter.menuOpts(world, p, poi, opts);   // (your starter car: starter.js)
       break;
     }
     case 'dealer': case 'marina': {
@@ -317,6 +323,7 @@ export function buildMenu(world, p, poi) {
         opts.push({ id: `vb:${o.id}`, label: `${d.name}${d.slots.length ? ` (${d.slots.length} cargo slot${d.slots.length > 1 ? 's' : ''})` : ''}`, price: d.price, note: d.blurb || '' });
       }
       ownedVehicleOpts(prof, opts, kind === 'marina');
+      starter.menuOpts(world, p, poi, opts);   // (a dealership: your starter car too - starter.js)
       break;
     }
     case 'home': {
@@ -374,6 +381,7 @@ export function buildMenu(world, p, poi) {
         skate.shopOptions(p, opts, true);   // (your skateboard, set down by the front door: skate.js)
         gear.surfOptions(p, opts, true);   // (your surfboard, home again: into your bag - gear.js)
         if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });
+        starter.homeOpts(world, p, h, opts);   // (your starter car, kept in the garage: starter.js)
         if (h.dock) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind === 'boat') opts.push({ id: `hboat:${i}`, label: inside ? `Boathouse: ${d.name}` : `Take out your ${d.name}`, note: inside ? 'head down to the dock' : 'boathouse' }); });
         if (!inside) opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
       }
@@ -413,6 +421,7 @@ export function buildMenu(world, p, poi) {
       title = b.title; sub = b.sub;
       // the station's taxi rank (UI-4): its prompt is the station's, so the cab's job card is offered from here
       if (taxijob.interaction(world, p)) opts.push({ id: 'cabcard', label: 'Drive a taxi from here', note: 'a cab - or a Crazy Taxi run', shut: true });
+      starter.menuOpts(world, p, poi, opts);   // (the station's car park: your starter car - starter.js)
       opts.push({ id: 'close', label: 'OK' });
       break;
     }
@@ -752,6 +761,8 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'vg': return spawnOwned(world, p, poi, Number(parts[1]));
+    case 'starter': return starter.fetch(world, p, poi);   // (a public garage: your starter car)
+    case 'hstarter': return starter.fromHome(world, p, homes.homeFor(world, p, poi));   // (your home's garage: your starter car)
     case 'rent': return rentals.rent(world, p, poi, parts[1], pay);
     case 'rentback': return rentals.giveBack(world, p);
     case 'horse': return parts[1] === 'hire' ? horses.hire(world, p, poi, pay) : parts[1] === 'back' ? horses.giveBack(world, p) : parts[1] === 'buy' ? horses.buy(world, p, poi, Number(parts[2]) | 0, pay) : 'No such thing.';

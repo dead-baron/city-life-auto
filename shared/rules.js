@@ -19,6 +19,15 @@ export const POLICE_RANKS = [
   { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
 ];
 
+// The starter car (server/systems/starter.js; the owner, 11-03): a rusty compact registered to you, slow, unsellable and
+// easy to steal (no lock). On your first day it waits in the arrival station's car park; after that, lost (wrecked, sunk,
+// towed, taken away) it's free again at any public garage - a station's car park, a Fresh Coat Garage, a dealership -
+// cooldownS after it was lost; own a home with a garage and it lives there instead. Taken and left empty by someone else
+// (strayed), out of everyone's sight strayS, it's taken away (lost: free again after the cooldown). lotR: how far round a
+// station (px) its car park's spaces are looked for. paint: shared/vehicles.js PAINTS index (the rust brown). The car's
+// own numbers (slower, weaker than the Hatchback it's drawn as) are its model's: shared/vehicles.js 'starter'.
+export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
+
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
 export const ARREST_REWARD_PER_STAR = 150;

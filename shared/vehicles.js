@@ -8,6 +8,10 @@ import { HORSE } from './rules-base.js';
 
 export const VEHICLES = {
   compact:   { i: 0, name: 'Hatchback',        kind: 'car',  L: 84,  W: 44, max: 520, accel: 330, brake: 720, rev: 160, turn: 3.0, grip: 9.0, drift: 2.2, mass: 1.0, hp: 180, seats: 2, slots: [[-4, 0]], price: 2500 },
+  // the starter car (server/systems/starter.js; shared/rules.js STARTER): a tired old Hatchback - slower off the line and
+  // flat out, softer, never for sale (no price). art / look: drawn as the Hatchback (the classic view's sprite, art2's
+  // model - client/art2/game/actors.js vehType), in the rust brown (its tint: STARTER.paint)
+  starter:   { i: 86, name: 'Rusty Compact',    kind: 'car',  L: 84,  W: 44, max: 400, accel: 230, brake: 640, rev: 140, turn: 2.8, grip: 8.6, drift: 2.3, mass: 1.0, hp: 140, seats: 2, slots: [[-4, 0]], art: 'compact', sprite: 'compact', look: 'compact' },
   sedan:     { i: 1, name: 'Sedan',            kind: 'car',  L: 100, W: 48, max: 560, accel: 300, brake: 700, rev: 170, turn: 2.7, grip: 8.5, drift: 2.0, mass: 1.2, hp: 220, seats: 4, slots: [[-8, 0]], price: 4000 },
   taxi:      { i: 2, name: 'Checker Taxi',     kind: 'car',  L: 100, W: 48, max: 560, accel: 310, brake: 700, rev: 170, turn: 2.7, grip: 8.5, drift: 2.0, mass: 1.2, hp: 230, seats: 4, slots: [[-28, 0]] },
   sports:    { i: 3, name: 'Street Racer',     kind: 'car',  L: 96,  W: 48, max: 790, accel: 490, brake: 820, rev: 180, turn: 3.0, grip: 9.5, drift: 2.0, mass: 1.1, hp: 200, seats: 2, slots: [[-30, 0]], price: 15000 },
