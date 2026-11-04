@@ -19558,9 +19558,10 @@ Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each 
   counter's menu three quarters along the foot. Why a zoom and not bigger tokens: the panels' many fixed sizes (tiles,
   rows, the phone's frame) would each need a rule; one zoom keeps every proportion. Phones (body.touch) are as they were;
   the HUD and the map aren't zoomed.
-- **The bag's weapons that drew as bars.** Most guns' sprites are thin top-down bars that read as nothing in a tile: where
-  a weapon's fitted sprite is that thin (wider than 3.4 to 1), the tile shows its class's line glyph (pistol, rifle,
-  knife, bat...: the touch buttons' set) instead; sprites that read (the bow, the fists, the grenade) stay.
+- **The bag's weapons that drew as bars.** The weapons' top-down sprites are thin bars or blocks at a tile's size and
+  read as broken art: every weapon in the bag (its tiles, its carried slots, its details) now shows its class's glyph -
+  pistol, rifle, knife, bat, grenade, bow... - the touch buttons' solid set, cream on the navy tile. The desktop HUD's
+  weapon plate keeps the sprite.
 - **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
 
 ### Performance (tools/perf.mjs --quick, 11-04)

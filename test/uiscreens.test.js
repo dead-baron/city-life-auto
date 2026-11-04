@@ -107,5 +107,6 @@ test('a desktop\'s screens scale with the window (the 11-04 review): one zoom on
   assert.equal(uiScale(1920, 1080), 1.6); assert.equal(uiScale(1366, 768), 1.25); assert.equal(uiScale(1024, 600), 1);
   assert.match(CSS, /body:not\(\.touch\) #hub:not\(\[data-tab=map\]\) \.hub-frame, body:not\(\.touch\) #menu \.panel, body:not\(\.touch\) \.jc-pop, body:not\(\.touch\) #d-panel \{ zoom: var\(--zk, 1\); \}/, 'the panels, not the map or the HUD, and never on a phone');
   const bag = read('client/bag.js');
-  assert.match(bag, /if \(c\.width \/ Math\.max\(1, c\.height\) < 3\.4 && c\.height >= h \* 0\.35\) return c;/, 'a thin sprite: the class glyph instead');
+  assert.match(bag, /s\.innerHTML = glyph\(glyphOfWeapon\(id, \(WEAPONS\[id\] \|\| \{\}\)\.type\), Math\.round\(h \* 1\.15\)\);/, 'a weapon: its class\'s glyph, not the thin top-down sprite');
+  assert.ok(!/fittedIcon/.test(bag));
 });
