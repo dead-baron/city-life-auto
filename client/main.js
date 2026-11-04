@@ -573,7 +573,7 @@ function fixedStep() {
   else if (inCell() && !spec && (input.padY || input.menuSelect)) payBail();
   const n = takeNumberPick();
   if (n !== null && !spec) {
-    if (S.hud.menuOpen) S.hud.choose(n);
+    if (S.hud.menuOpen) S.hud.pickMenu(n);
     else if (S.me && S.me.weapons[n]) send({ t: 'weapon', id: S.me.weapons[n].id });
   }
 }

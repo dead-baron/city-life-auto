@@ -100,7 +100,10 @@
   <div id="spec-pad" class="hidden"></div>
   <div id="spec" class="hidden"></div>
   <div id="arcade" class="hidden"><div class="arc-frame"><canvas id="arc-cv" width="256" height="224"></canvas><div id="arc-hint">Esc / B to leave the cabinet</div></div></div>
-  <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-board" class="hidden"></div><div id="m-money"></div><div id="m-opts"></div></div></div>
+  <!-- a counter, a shop, someone to talk to (client/hud.js openMenu; UI-10 after UIC-16 and UIC-18): docked at the foot -
+       a few lines with no prices are a conversation (who, what they say, the answers numbered), a shop has your wallet in
+       its head and, with guns, their damage and range and a tab for each kind -->
+  <div id="menu" class="hidden"><div class="panel"><div class="mhead"><span id="m-face" class="ic"></span><h2 id="m-title"></h2><span id="m-wallet"></span><button id="m-close" aria-label="Close"><i class="ic" data-ic="close"></i></button></div><p id="m-sub"></p><div id="m-board" class="hidden"></div><div id="m-money"></div><div id="m-tabs" class="tabs hidden" role="tablist"></div><div id="m-opts"></div><p id="m-foot"></p></div></div>
 
   <div id="death" class="hidden"><h1 id="d-title">WASTED</h1></div>   <!-- (the panel and its map: client/deathscreen.js) -->
   <div id="district"></div>
@@ -168,7 +171,7 @@
   <div id="bigmap" class="hidden hubtab">
     <div id="bm-body">
       <div id="bm-panel"><div id="bm-list"></div><div id="bigmap-hint"></div></div>
-      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="bm-zoom"><button type="button" data-z="+" aria-label="Zoom in">+</button><button type="button" data-z="-" aria-label="Zoom out">−</button><button type="button" data-z="me" aria-label="Find me">⌖</button></div><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
+      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="bm-zoom"><button type="button" data-z="-" aria-label="Zoom out"><i class="ic" data-ic="minus"></i></button><button type="button" data-z="+" aria-label="Zoom in"><i class="ic" data-ic="plus"></i></button><button type="button" data-z="me" aria-label="Find me"><i class="ic" data-ic="aim"></i></button></div><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
     </div>
   </div>
   <div id="phone" class="hidden overlay hubtab at-home"><div class="ph-body">

@@ -5,6 +5,8 @@
 // pressed yet, or the art is warming up" (client/warmup.js drives the same bar with its real progress then).
 // Also the pixel skyline the title, the pause panel and the phone's home stand on (one small canvas, drawn once).
 
+import { paintIcons } from './touchicons.js';
+
 // tips, true of the game as it is (the paused tour's facts: shared/tutorial.js); one at a time, in a shuffled order
 export const TIPS = [
   'Explore the city to find new opportunities.',
@@ -63,6 +65,7 @@ export function createTitle(ctx) {
   const { $, S } = ctx;
   const title = $('title'), bar = $('t-warm'), fill = bar.firstElementChild, tip = $('t-tip');
   paintSky(title);
+  paintIcons(document);   // (the title's, the sign-in panel's and the hub's icons: before the HUD is up)
   let k = 0, order = TIPS.map((_, i) => i), at = 0, lastTip = 0, loading = null;
   for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   order.unshift(0);   // (the first is the concept's own: explore)

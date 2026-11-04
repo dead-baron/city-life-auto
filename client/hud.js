@@ -21,6 +21,23 @@ export function calmState(sitAt, activeAt, now) {
 }
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
+// a shop's rows (UI-10, UIC-18): a gun's damage and range as eight steps, from the weapons' own numbers; the kind of each
+// row for a gun store's tabs; the face beside a conversation (the place's icon: there are no portraits yet)
+const WEAPON_BY_I = new Map(Object.values(WEAPONS).map((w) => [w.i, w]));
+const LONG = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
+const steps = (v) => Math.max(1, Math.min(8, Math.round(v * 8)));
+const gunDmg = (w) => steps((w.dmg * (w.pellets || 1)) / (w.cd || 1) / 150);
+const gunRng = (w) => steps((w.range || 0) / 1050);
+const statBar = (k, v) => `<i>${k}<b>${'<u></u>'.repeat(v)}${'<s></s>'.repeat(8 - v)}</b></i>`;
+function optKind(o) {
+  const [t, id] = String(o.id).split(':');
+  if (t === 'a') return 'ammo';
+  if (t !== 'w' || !WEAPONS[id]) return 'gear';
+  const ty = WEAPONS[id].type;
+  return ty === 'melee' ? 'melee' : ty === 'grenade' || ty === 'deploy' ? 'throw' : LONG.has(id) || ty === 'rocket' || ty === 'bow' || ty === 'flame' ? 'rifles' : 'pistols';
+}
+const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
+const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
@@ -424,36 +441,64 @@ export class HUD {
   }
 
   // ---- menu ----
+  // (UI-10: docked at the foot. A few lines with no prices are a conversation - UIC-16: who, what they say, the answers
+  // numbered as their keys; a shop has your wallet in its head - UIC-18: with guns their damage and range as bars, a tab
+  // for each kind, BUY on each row, a line saying why when you can't afford the one you're on)
   openMenu(m) {
+    if (!this.menu || this.menu.poi !== m.poi || this.menu.title !== m.title) this.menuTab = null;
     this.menu = m;
-    $('menu').classList.remove('hidden');
+    const el = $('menu'), store = m.opts.some((o) => o.price !== undefined), guns = m.opts.some((o) => o.wpn !== undefined);
+    const talk = !store && !m.board && m.opts.length <= 4, funds = (m.cash || 0) + (m.bank || 0);
+    el.classList.remove('hidden');
+    el.classList.toggle('m-talk', talk); el.classList.toggle('m-store', store); el.classList.toggle('m-guns', guns);
     $('m-title').textContent = m.title;
     $('m-sub').textContent = localizeText(m.sub || '');
+    const poi = this.map && this.map.pois && this.map.pois[m.poi];
+    $('m-face').innerHTML = talk ? icon(MENU_FACE[poi && poi.kind] || 'talk') : '';
+    $('m-wallet').innerHTML = store ? `${icon('money')}<b>$${(m.cash || 0).toLocaleString('en-US')}</b><small>bank $${(m.bank || 0).toLocaleString('en-US')}</small>` : '';
     const bd = $('m-board');   // (a casino's table: server casino.js)
     bd.classList.toggle('hidden', !m.board);
     bd.innerHTML = (m.board || []).map((r) => `<div class="brow${r.cls ? ' ' + esc(r.cls) : ''}"><span class="bk">${esc(r.k)}</span><span class="bi">${r.items.map((i) => `<b class="${i.c}">${esc(i.t)}</b>`).join('')}</span><span class="bv">${esc(r.v)}</span></div>`).join('');
-    $('m-money').textContent = `Wallet $${m.cash.toLocaleString()} · Bank $${m.bank.toLocaleString()}`;
+    $('m-money').textContent = store || talk ? '' : `Wallet $${m.cash.toLocaleString('en-US')} · Bank $${m.bank.toLocaleString('en-US')}`;
+    // a gun store's tabs: each kind it has (pistols, rifles, melee, throwables, ammo, gear)
+    const kinds = guns ? [...new Set(m.opts.map(optKind))] : [];
+    const tabs = $('m-tabs');
+    tabs.classList.toggle('hidden', kinds.length < 2);
+    if (kinds.length >= 2) {
+      if (!kinds.includes(this.menuTab)) this.menuTab = kinds[0];
+      tabs.innerHTML = kinds.map((k) => `<button class="tab${k === this.menuTab ? ' on' : ''}" role="tab" aria-selected="${k === this.menuTab}" data-k="${k}">${KIND_NAME[k]}</button>`).join('');
+      for (const b of tabs.querySelectorAll('[data-k]')) b.onclick = () => { this.menuTab = b.dataset.k; this.menuFocus = this.menuShown().find((i) => i >= 0) ?? 0; this.openMenu(this.menu); };
+    } else this.menuTab = null;
+    const shown = this.menuShown();
+    if (!shown.includes(this.menuFocus)) this.menuFocus = shown[0] ?? 0;
     const box = $('m-opts');
     box.innerHTML = '';
-    m.opts.forEach((o, i) => {
+    shown.forEach((i, n) => {
+      const o = m.opts[i];
       const b = document.createElement('button');
       b.className = 'opt' + (i === this.menuFocus ? ' focus' : '');
       b.disabled = !!o.dis;
-      const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${-o.price}</span>` : `<span class="price">$${o.price.toLocaleString()}</span>`;
-      // weapon offers carry a picture (placeholder pixel art until the final weapon art lands) and,
-      // in the armory, rough stat bars
+      const short = o.price !== undefined && o.price > 0 && o.price > funds;
+      const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${(-o.price).toLocaleString('en-US')}</span>` : `<span class="price${short ? ' short' : ''}">$${o.price.toLocaleString('en-US')}</span>`;
+      // weapon offers carry a picture (placeholder pixel art until the final weapon art lands), their damage and range
       const pic = o.wpn !== undefined ? `<img class="wpn" alt="" src="${weaponThumb(o.wpn)}">` : '';
-      const bars = o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => `<i>${k}<b style="width:${v * 8}px"></b></i>`).join('')}</span>` : '';
+      const w = o.wpn !== undefined ? WEAPON_BY_I.get(o.wpn) : null;
+      const bars = w ? `<span class="stats">${statBar('DMG', gunDmg(w))}${statBar('RNG', gunRng(w))}</span>` : o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => statBar(k, Math.round(v * 8 / 5))).join('')}</span>` : '';
+      const buy = store && o.price > 0 ? `<span class="buy${o.dis || short ? ' off' : ''}">${o.note === 'owned' ? 'OWNED' : 'BUY'}</span>` : '';
       if (pic) b.classList.add('has-wpn');
       if (o.note && o.label.length + o.note.length > 40) b.classList.add('two');   // (a long row: its note on a line of its own, not run on from a label that wraps)
-      b.innerHTML = `${pic}<span>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ''}${bars}</span>${price}`;
+      const key = n < 9 ? `<span class="okey">${n + 1}</span>` : '';
+      b.innerHTML = `${key}${pic}<span class="olab">${esc(o.label)}${o.note && o.note !== 'owned' ? `<span class="note">${esc(o.note)}</span>` : ''}</span>${bars}${price}${buy}`;
       b.onclick = () => this.choose(i);
       box.appendChild(b);
     });
-    if (this.menuFocus >= m.opts.length) this.menuFocus = 0;
+    const f = m.opts[this.menuFocus];
+    $('m-foot').textContent = f && f.price > 0 && f.price > funds && !f.dis ? `Not enough cash for ${f.label}.` : '';
     const cue = () => box.classList.toggle('cue-down', box.scrollTop + box.clientHeight < box.scrollHeight - 4);   // (more below: a fade at the foot)
     box.onscroll = cue; requestAnimationFrame(cue);
   }
+  // the options on show (the tab's, in a gun store), as indexes into menu.opts
+  menuShown() { const m = this.menu; return m ? m.opts.map((o, i) => (!this.menuTab || optKind(o) === this.menuTab ? i : -1)).filter((i) => i >= 0) : []; }
   choose(i) {
     const o = this.menu && this.menu.opts[i];
     if (!o || o.dis) return;
@@ -464,9 +509,12 @@ export class HUD {
   }
   navMenu(d) {
     if (!this.menu) return;
-    this.menuFocus = (this.menuFocus + d + this.menu.opts.length) % this.menu.opts.length;
+    const sh = this.menuShown(), k = Math.max(0, sh.indexOf(this.menuFocus));
+    this.menuFocus = sh[(k + d + sh.length) % sh.length] ?? 0;
     this.openMenu(this.menu);
   }
+  // a number key: the n-th option on show
+  pickMenu(n) { const i = this.menuShown()[n]; if (i !== undefined) this.choose(i); }
   closeMenu() {
     this.menu = null; this.menuFocus = 0;
     $('menu').classList.add('hidden');
