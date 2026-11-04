@@ -43,7 +43,7 @@ const TEXT_MAX = 8192, PERF_MAX = 16384;   // a text message's size cap (a perf 
 const FLOOD_CLOSE_S = 5;                   // this many seconds in a row over the flood guard and the socket is closed
 export function createSession(world, conn, opts) {
   let player = null;
-  let msgBudget = 0, budgetAt = Date.now(), floodS = 0;
+  let msgBudget = 0, budgetAt = Date.now(), floodS = 0, myToken = null;
   const hooks = opts.hooks || null;
   const api = {
     onMessage(data, isBinary) {
@@ -74,6 +74,7 @@ export function createSession(world, conn, opts) {
         const res = opts.login(msg.token, msg);
         if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 17 } : { t: 'kicked', reason: res.refused, code: res.code }); conn.close(res.code || 4003, 'refused'); return; }
         const { profile, token } = res;
+        myToken = token;
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
         conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, world: opts.world, sig: mapSignature(world.map), tick: world.tick, day: world.day, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), clubs: nightclubs.liveList(world), forage: foraging.goneList(world), fires: campfires.fireList(world), felled: felling.felledList(world), logs: felling.logList(world), glights: lights.groundList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
         player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
@@ -143,8 +144,8 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'wipe') {
         const p = player;
         player = null;
-        players.wipeAccount(world, p);
-        conn.sendJSON({ t: 'wiped' });
+        const kept = players.wipeAccount(world, p);
+        conn.sendJSON(kept ? { t: 'wiped', keep: myToken } : { t: 'wiped' });   // (keep: the account stays - the page keeps its token)
         conn.close(4005, 'wiped');
         return;
       }

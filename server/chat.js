@@ -13,7 +13,7 @@
 //   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
 import { CHAT, CHANNELS, EMOTES, REPORT_WHY } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
-import { chatData } from './moderation.js';
+import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
 
 const PX = 32;
@@ -169,7 +169,7 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
   }
 
   function emote(world, p, e) {
-    if (!EMOTES[e] || !p.ped || p.ped.dead) return false;
+    if (!Object.hasOwn(EMOTES, e) || !p.ped || p.ped.dead) return false;
     const r = rec(p);
     if (now() - r.emoteAt < CHAT.emoteGapS * 1000) return false;
     r.emoteAt = now();
@@ -223,7 +223,7 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       if (now() - (r.reportAt || 0) < CHAT.reportGapS * 1000) return { err: 'You just sent a report - wait a moment.' };
       r.reportAt = now();
       const q = world.players.get(pid), ta = accounts.get(pid);
-      const res = mod.report(ta, { id: pid, n: name }, { id: p.pid, n: p.name }, why, typeof msg.note === 'string' ? msg.note.slice(0, 200) : '');
+      const res = mod.report(ta, { id: pid, n: name }, { id: p.pid, n: p.name }, why, typeof msg.note === 'string' ? msg.note.slice(0, 200) : '', reporterWeight(accounts.get(p.pid), now()));
       if (q) res.review.data = { said: rec(q).said.slice() };   // (what they said lately, for the admin)
       return { ok: true, note: `Thanks - your report on ${name} is with the moderators.` };
     }

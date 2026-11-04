@@ -67,7 +67,7 @@ test('linking: one account, several sign-ins; a sign-in on another account is re
   assert.match(A.unlink(pid, 'discord'), /at least one/);
 });
 
-test('sign out everywhere and bans: older tokens stop working; a ban ends, a device marker is noted', () => {
+test('sign out everywhere and bans: older tokens stop working; a ban ends, a device marker is noted; unbanning a guest restores it', () => {
   const c = clock();
   const { A, store } = setup(c);
   const pid = 'd'.repeat(24); store.create(pid);
@@ -78,7 +78,8 @@ test('sign out everywhere and bans: older tokens stop working; a ban ends, a dev
   A.noteDevice(pid, 'f'.repeat(32));
   A.ban(pid, { hours: 1, why: 'test' });
   assert.ok(A.banned(pid));
-  assert.equal(A.checkToken(t1), null, 'a ban signs it out');
+  assert.equal(A.checkToken(t1).pid, pid, 'the token itself stays good (a banned guest has no other way back once unbanned)');
+  assert.ok(A.staleToken(t0), 'the older one is stale');
   assert.ok(A.deviceBanned('f'.repeat(32)));
   assert.ok(!A.deviceBanned('e'.repeat(32)));
   c.add(3600e3 + 1);
@@ -146,10 +147,20 @@ function fakeProvider(sub) {
   return { f, calls };
 }
 
-test('OAuth: state + PKCE out, the CSRF cookie checked, a one-time code back to the page only, linking with a ticket', async () => {
+const PN = 'page-nonce-0123456789abcdef';
+const startQ = (mode = 'login', pn = PN) => `pn=${pn}&mode=${mode}`;
+const hashOf = (loc) => new URLSearchParams(new URL(loc).hash.slice(1));
+async function oauth(h, provider, mode = 'login', pn = PN) {
+  let r = await h({ url: `/auth/${provider}/start?ret=${encodeURIComponent('https://game.example/')}&${startQ(mode, pn)}` });
+  const st = new URL(r.headers.location).searchParams.get('state'), ck = r.headers['set-cookie'].match(/cla_oauth=([^;]+)/)[1];
+  r = await h({ url: `/auth/${provider}/callback?state=${st}&code=x`, headers: { cookie: `cla_oauth=${ck}` } });
+  return hashOf(r.headers.location);
+}
+
+test('OAuth: state + PKCE out, the CSRF cookie checked, back to our page only; a known identity signs in, an unknown one waits for the page', async () => {
   const P = fakeProvider('google-user-9');
-  const { h, A, store, signins } = setup(clock(), P.f);
-  let r = await h({ url: '/auth/google/start?ret=' + encodeURIComponent('https://evil.example/steal') });
+  const { h, A, signins } = setup(clock(), P.f);
+  let r = await h({ url: '/auth/google/start?ret=' + encodeURIComponent('https://evil.example/steal') + '&' + startQ() });
   assert.equal(r.status, 302);
   const loc = new URL(r.headers.location);
   assert.equal(loc.origin, 'https://accounts.google.com');
@@ -159,55 +170,78 @@ test('OAuth: state + PKCE out, the CSRF cookie checked, a one-time code back to 
   assert.equal(loc.searchParams.get('redirect_uri'), 'https://play.example/auth/google/callback');
   const cookie = r.headers['set-cookie'].match(/cla_oauth=([^;]+)/)[1];
   assert.match(r.headers['set-cookie'], /HttpOnly/);
-  // another browser comes back with the state: refused (no cookie)
   r = await h({ url: `/auth/google/callback?state=${state}&code=abc` });
   assert.match(decodeURIComponent(r.headers.location), /cla_login_error=.*different browser/);
   assert.match(r.headers.location, /^https:\/\/game\.example\//, 'never the evil page: back to one of ours');
-  // the state was spent: a second try is refused even with the cookie
   r = await h({ url: `/auth/google/callback?state=${state}&code=abc`, headers: { cookie: `cla_oauth=${cookie}` } });
-  assert.match(decodeURIComponent(r.headers.location), /expired/);
-  // a clean run
-  r = await h({ url: '/auth/google/start?ret=' + encodeURIComponent('https://game.example/play/?x=1') });
-  const st2 = new URL(r.headers.location).searchParams.get('state'), ck2 = r.headers['set-cookie'].match(/cla_oauth=([^;]+)/)[1];
-  r = await h({ url: `/auth/google/callback?state=${st2}&code=thecode`, headers: { cookie: `cla_oauth=${ck2}` } });
-  const back = new URL(r.headers.location);
-  assert.equal(back.origin + back.pathname, 'https://game.example/play/');
-  const code = new URLSearchParams(back.hash.slice(1)).get('cla_login');
-  assert.ok(code);
-  const tokenCall = P.calls.find((c) => /token/.test(c.url));
-  const form = new URLSearchParams(tokenCall.opt.body);
+  assert.match(decodeURIComponent(r.headers.location), /expired/, 'the state was spent');
+  assert.match(decodeURIComponent((await h({ url: '/auth/google/start?ret=x' })).headers.location), /cla_login_error=.*game's page/, 'no page nonce, no flow');
+  // an identity nobody has: the page is asked (no account made behind its back)
+  let back = await oauth(h, 'google');
+  assert.equal(back.get('known'), '0');
+  const code = back.get('cla_link');
+  assert.ok(code && !back.get('cla_login'));
+  assert.equal(A.findLogin('google', 'google-user-9'), null);
+  const form = new URLSearchParams(P.calls.find((c) => /token/.test(c.url)).opt.body);
   assert.ok(form.get('code_verifier'), 'PKCE verifier sent');
-  assert.equal(form.get('code'), 'thecode');
-  r = await h({ method: 'POST', url: '/auth/redeem', body: { code } });
+  assert.equal((await h({ method: 'POST', url: '/auth/link-confirm', body: { code, pn: 'someone-elses-nonce-000', action: 'new' } })).status, 403, 'only the page that started it');
+  r = await h({ method: 'POST', url: '/auth/link-confirm', body: { code, pn: PN, action: 'new' } });
   const j = r.json();
-  assert.equal(j.method, 'google');
   assert.ok(j.created);
   assert.equal(A.findLogin('google', 'google-user-9'), j.pid);
-  assert.equal((await h({ method: 'POST', url: '/auth/redeem', body: { code } })).status, 400, 'the code works once');
   assert.equal(signins.length, 1);
-  // linking: a guest asks for a ticket with its token, and the sign-in lands on it
-  const guest = '3'.repeat(24); store.create(guest);
-  const P2 = fakeProvider('discord-user-1');
-  const S2 = setup(clock(), P2.f);
-  S2.store.create(guest);
-  const t = (await S2.h({ method: 'POST', url: '/auth/link-ticket', headers: { authorization: `Bearer ${S2.A.token(guest)}` } })).json().ticket;
-  r = await S2.h({ url: `/auth/discord/start?link=${t}` });
-  const st3 = new URL(r.headers.location).searchParams.get('state'), ck3 = r.headers['set-cookie'].match(/cla_oauth=([^;]+)/)[1];
-  r = await S2.h({ url: `/auth/discord/callback?state=${st3}&code=x`, headers: { cookie: `cla_oauth=${ck3}` } });
-  const code3 = new URLSearchParams(new URL(r.headers.location).hash.slice(1)).get('cla_login');
-  const j3 = (await S2.h({ method: 'POST', url: '/auth/redeem', body: { code: code3 } })).json();
-  assert.equal(j3.pid, guest, 'linked to the guest: its progress kept');
-  assert.ok(j3.linked);
-  assert.equal(S2.A.isGuest(guest), false);
-  // a provider without keys isn't there
-  assert.equal((await h({ url: '/auth/reddit/start' })).status, 404);
+  // the same identity again: straight in
+  back = await oauth(h, 'google');
+  const lc = back.get('cla_login');
+  assert.ok(lc);
+  assert.equal((await h({ method: 'POST', url: '/auth/redeem', body: { code: lc, pn: 'wrong-nonce-00000000' } })).status, 403, 'a login code needs its page too');
+  back = await oauth(h, 'google');
+  r = await h({ method: 'POST', url: '/auth/redeem', body: { code: back.get('cla_login'), pn: PN } });
+  assert.equal(r.json().pid, j.pid);
+  assert.equal((await h({ url: '/auth/reddit/start?' + startQ() })).status, 404, 'a provider without keys isn\'t there');
+});
+
+test('a returning member signs in on another device (a guest page) - into their account; the guest is left as it was, nothing merged', async () => {
+  const S = setup(clock(), fakeProvider('google-member').f);
+  const member = S.A.signIn('google', 'google-member').pid;
+  S.store.get(member).bank = 77777;
+  const guest = '6'.repeat(24); S.store.create(guest); S.A.ensure(S.store.get(guest)); S.store.get(guest).bank = 5;
+  const back = await oauth(S.h, 'google', 'login');   // (the panel's sign-in button: login mode)
+  const r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code: back.get('cla_login'), pn: PN } });
+  assert.equal(r.status, 200, r.body);
+  assert.equal(r.json().pid, member, 'signed into the member account');
+  assert.equal(S.store.get(guest).bank, 5, 'the guest untouched');
+  assert.equal(S.store.get(member).bank, 77777);
+  assert.equal(S.A.isGuest(guest), true, 'nothing linked to the guest');
+});
+
+test('linking is explicit and bound to the page and its token: a link flow someone else started can\'t attach their identity to you', async () => {
+  const S = setup(clock(), fakeProvider('discord-user-1').f);
+  const guest = '3'.repeat(24); S.store.create(guest); S.A.ensure(S.store.get(guest));
+  const back = await oauth(S.h, 'discord', 'link');
+  assert.equal(back.get('m'), 'link');
+  const code = back.get('cla_link');
+  assert.equal((await S.h({ method: 'POST', url: '/auth/link-confirm', body: { code, pn: PN, action: 'link' } })).status, 401, 'the page\'s own token confirms it');
+  assert.equal((await S.h({ method: 'POST', url: '/auth/link-confirm', headers: { authorization: `Bearer ${S.A.token(guest)}` }, body: { code, pn: 'not-this-page-nonce-0', action: 'link' } })).status, 403, 'a flow from another page (a forged link) is refused');
+  const r = await S.h({ method: 'POST', url: '/auth/link-confirm', headers: { authorization: `Bearer ${S.A.token(guest)}` }, body: { code, pn: PN, action: 'link' } });
+  assert.equal(r.status, 200, r.body);
+  assert.equal(r.json().pid, guest, 'linked to the guest: its progress kept');
+  assert.equal(S.A.isGuest(guest), false);
+  // linking an identity that's on another account: refused, never moved
+  const other = '7'.repeat(24); S.store.create(other); S.A.ensure(S.store.get(other));
+  const b2 = await oauth(S.h, 'discord', 'link');
+  assert.equal(b2.get('known'), '1');
+  const r2 = await S.h({ method: 'POST', url: '/auth/link-confirm', headers: { authorization: `Bearer ${S.A.token(other)}` }, body: { code: b2.get('cla_link'), pn: PN, action: 'link' } });
+  assert.equal(r2.status, 409);
+  assert.equal(S.A.findLogin('discord', 'discord-user-1'), guest);
+  assert.equal((await S.h({ method: 'POST', url: '/auth/link-ticket', headers: { authorization: `Bearer ${S.A.token(guest)}` } })).status, 404, 'no more link tickets');
 });
 
 test('email magic link: sent through Resend, the same answer for any address, one POST confirms it once', async () => {
   const sent = [];
   const f = async (url, opt) => { sent.push({ url, opt }); return { ok: true, status: 200, json: async () => ({}) }; };
   const { h, A } = setup(clock(), f);
-  let r = await h({ method: 'POST', url: '/auth/email/start', body: { email: 'Player@Example.com', ret: 'https://game.example/' } });
+  let r = await h({ method: 'POST', url: '/auth/email/start', body: { email: 'Player@Example.com', ret: 'https://game.example/', pn: PN } });
   assert.equal(r.status, 200);
   await new Promise((z) => setImmediate(z));
   assert.equal(sent[0].url, 'https://api.resend.com/emails');
@@ -221,16 +255,16 @@ test('email magic link: sent through Resend, the same answer for any address, on
   assert.equal(r.status, 200);
   assert.match(r.body, /<form method="post"/);
   r = await h({ method: 'POST', url: '/auth/email/confirm', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `t=${link[1]}` });
-  const code = new URLSearchParams(new URL(r.headers.location).hash.slice(1)).get('cla_login');
-  const j = (await h({ method: 'POST', url: '/auth/redeem', body: { code } })).json();
-  assert.equal(j.method, 'email');
+  const code = new URLSearchParams(new URL(r.headers.location).hash.slice(1)).get('cla_link');
+  const j = (await h({ method: 'POST', url: '/auth/link-confirm', body: { code, pn: PN, action: 'new' } })).json();
+  assert.ok(j.created);
   const acct = A.get(j.pid);
   assert.ok(!JSON.stringify(acct).includes('example.com'), 'the address is never kept, only a keyed hash');
   r = await h({ method: 'POST', url: '/auth/email/confirm', body: `t=${link[1]}` });
   assert.equal(r.status, 410, 'once');
-  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'not an email' } })).status, 400);
-  for (let i = 0; i < 4; i++) await h({ method: 'POST', url: '/auth/email/start', body: { email: `x${i}@example.com` } });
-  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'y@example.com' } })).status, 429, 'five a ten minutes from one address');
+  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'not an email', pn: PN } })).status, 400);
+  for (let i = 0; i < 3; i++) await h({ method: 'POST', url: '/auth/email/start', body: { email: `x${i}@example.com`, pn: PN } });
+  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'y@example.com', pn: PN } })).status, 429, 'five a ten minutes from one address');
 });
 
 // ---- WebAuthn with generated keys ----
@@ -299,10 +333,11 @@ for (const [name, alg] of [['ES256', ALG.ES256], ['RS256', ALG.RS256]]) {
     const r = verifyAssertion(a.get({ challenge: c2 }), cred, opts(c2));
     assert.equal(r.count, 1);
     cred.count = r.count;
-    assert.throws(() => verifyAssertion(a.get({ challenge: c2, step: 0 }), cred, opts(c2)), /counter/, 'the same count again: a cloned key');
+    const again = verifyAssertion(a.get({ challenge: c2, step: 0 }), cred, opts(c2));
+    assert.equal(again.cloned, true, 'the same count again: reported as a possible clone (flagged, not locked out)');
     const good = a.get({ challenge: c2 });
     const bad = { ...good, response: { ...good.response, signature: b64u(Buffer.from(good.response.signature, 'base64url').map((x, i) => (i === 10 ? x ^ 1 : x))) } };
-    assert.throws(() => verifyAssertion(bad, cred, opts(c2)), /signature|counter/);
+    assert.throws(() => verifyAssertion(bad, cred, opts(c2)), /signature/);
     assert.throws(() => verifyAssertion(a.get({ challenge: c2, origin: 'https://evil.example' }), cred, opts(c2)), /origin/);
     assert.throws(() => verifyAssertion(a.get({ challenge: 'nope' }), cred, opts(c2)), /challenge/);
   });

@@ -426,7 +426,19 @@ export function wipeAccount(world, p) {
     if (!v.seats.some((s) => s)) world.remove(v);
     else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; }   // (its owner tag goes for everyone: net.js descriptor o)
   }
+  // The account outlives its character (the review, 11-04): a profile with an account record (server/accounts.js -
+  // every one online) keeps it - its role, linked sign-ins, passkeys, strikes, mutes, a ban - and its name; only the game
+  // progress starts over. Returns true then (the page keeps its token); a profile without one is deleted, as before.
+  const prof = p.profile;
+  if (prof && prof.acct) {
+    const keep = { pid: prof.pid, acct: prof.acct, name: prof.name, created: prof.created, nameAt: prof.nameAt };
+    for (const k of Object.keys(prof)) delete prof[k];
+    Object.assign(prof, defaultProfile(keep.pid), keep);
+    store.touch();
+    return true;
+  }
   store.remove(p.pid);
+  return false;
 }
 
 // Idle (decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone"): a player whose

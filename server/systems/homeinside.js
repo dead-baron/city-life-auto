@@ -39,6 +39,7 @@ import * as arcade from './arcade.js';
 import * as bathhouse from './bathhouse.js';
 import * as grime from './grime.js';
 import * as homeups from './homeups.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 // (the home upgrades - homeups.js: with the world, the level lv of the home as built - the stairs in the ground floor, a
 // floor up or the basement; without, the plan as it came)
@@ -144,7 +145,7 @@ function lobbyInteraction(world, p, h, s) {
 // out of a flat's front door: onto the landing outside it
 function toLobby(world, p, lob, from) {
   const ped = p.ped, d = planFor(lob).doors[(from.unit || 1) - 1];
-  ped.inside = lob.id; ped.x = lob.x; ped.y = lob.y;
+  ped.inside = lob.id; ped.x = lob.x; ped.y = lob.y; moved(ped);
   p.meDirty = true;
   enter(world, p, lob, d ? { x: d.x, y: d.y + TILE_IN } : null);
 }
@@ -185,7 +186,7 @@ function letIn(world, q, h, host) {
   if (q.wanted > 0 && world.time - (q.seenAt || -99) < 1.5) return `Not with the police watching ${q.name}!`;
   q.knock = null;
   ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
-  ped.x = h.x; ped.y = h.y;
+  ped.x = h.x; ped.y = h.y; moved(ped);
   world.place(ped);
   const gx = [L.spawn.x + 20, L.spawn.x - 20, L.spawn.x].find((x) => !blocked(L, x, L.spawn.y));   // (beside the way in, not on the host)
   ped.home = { id: h.id, x: gx, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, guest: host.pid };
@@ -217,7 +218,7 @@ export function tour(world, p, h) {
   if (ped.carrying) return 'Set the crate down first.';
   const L = planFor(h);
   ped.entering = null; ped.inside = h.id; ped.hidden = true; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.fishing = null;
-  ped.x = h.x; ped.y = h.y;
+  ped.x = h.x; ped.y = h.y; moved(ped);
   world.place(ped);
   ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, tour: 1 };
   p.homeMenu = null; p.knock = null; p.meDirty = true;
@@ -866,7 +867,7 @@ export function devIn(world, p, msg) {
     if (!world.homeOwner.has(want.id)) { (p.profile.homes ||= []).push(want.id); world.homeOwner.set(want.id, p.pid); store.touch(); }
     if (world.homeOwner.get(want.id) !== p.pid) return 'Someone else owns that one.';
     if (h && h.id !== want.id) leave(world, p);
-    if (!ped.home) { if (ped.hidden) homes.leaveHome(world, p); ped.x = want.x; ped.y = want.y; world.place(ped); homes.goInside(world, p, want); }
+    if (!ped.home) { if (ped.hidden) homes.leaveHome(world, p); ped.x = want.x; ped.y = want.y; world.place(ped); homes.goInside(world, p, want); } moved(ped);
     h = want;
   }
   if (!h || !ped.home) return 'Go inside one of your homes first (or give a home id or kind).';
@@ -964,7 +965,7 @@ export function devLobby(world, p, msg) {
   store.touch();
   if (ped.home) { ped.home = null; p.homeMenu = null; }
   if (ped.hidden) homes.leaveHome(world, p);
-  ped.x = base.x; ped.y = base.y; world.place(ped);
+  ped.x = base.x; ped.y = base.y; world.place(ped); moved(ped);
   const lob = homes.lobbyOf(world, base.id);
   homes.goInside(world, p, lob);
   if (msg.home && own) { homes.goInside(world, p, own); return null; }

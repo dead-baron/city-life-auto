@@ -17,7 +17,7 @@ export const CHAT = {
   phoneRate: { n: 20, s: 60 }, guestPhoneRate: { n: 5, s: 60 },
   dupS: 20,               // the same line again this soon is dropped
   emoteGapS: 2,
-  inboxMax: 50, contactsMax: 200, logMax: 60,
+  inboxMax: 30, contactsMax: 100, logMax: 60,
   strikesToMute: 3, muteH: 24, filterStrikeGapS: 600,
   reportsToStrike: 3, reportWindowH: 24, reportGapS: 30,
 };

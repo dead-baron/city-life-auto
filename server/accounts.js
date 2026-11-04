@@ -17,7 +17,7 @@ export const USERNAME_GAP_DAYS = 30;          // a username changes at most once
 export const TRANSFER_TTL_MS = 10 * 60e3;     // a guest's transfer code lasts ten minutes, once
 export const LOGIN_CODE_TTL_MS = 2 * 60e3;    // the code a sign-in hands the page lasts two minutes, once
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // (no 0/O, 1/I/L: read off one screen, typed on another)
-const MAX_DEVICES = 5, MAX_LOGINS = 12, MAX_PASSKEYS = 10;
+const MAX_DEVICES = 5, MAX_LOGINS = 8, MAX_PASSKEYS = 8;
 
 const hashCode = (code) => createHash('sha256').update(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '')).digest('base64url');
 export function humanCode(n = 10) {
@@ -116,6 +116,15 @@ export function createAccounts({ store, secret, now = Date.now }) {
     if (v.g !== (a.gen || 0)) return null;
     return { pid: v.pid, acct: a, gen: v.g };
   }
+  // a genuine token of an older generation (signed out everywhere, or a guest that moved device): -> { pid, member }
+  function staleToken(tok) {
+    const v = verifyToken(tok, secret);
+    if (!v) return null;
+    const prof = store.get(v.pid);
+    if (!prof) return null;
+    const a = ensure(prof);
+    return v.g !== (a.gen || 0) ? { pid: v.pid, member: a.kind === 'member' } : null;
+  }
   function signOutEverywhere(pid) { const a = get(pid); if (!a) return null; a.gen = (a.gen || 0) + 1; store.touch(); return token(pid); }
 
   // ---- one-time codes ----
@@ -182,15 +191,17 @@ export function createAccounts({ store, secret, now = Date.now }) {
     if (a.ban.until && a.ban.until <= now()) { a.ban = null; store.touch(); return null; }
     return a.ban;
   }
+  // A ban keeps the account's tokens as they are (a banned guest has no other way back in, so unbanning has to restore
+  // it): the login, the endpoints and the page all ask banned() instead, and the admin closes the live sessions.
   function ban(pid, { hours = 0, why = '', by = null } = {}) {
     const a = get(pid);
     if (!a) return null;
     a.ban = { at: now(), until: hours > 0 ? now() + hours * 3600e3 : 0, why: String(why).slice(0, 200), by };
-    a.gen = (a.gen || 0) + 1;   // (every token it had stops working)
+    for (const h of a.devices || []) bannedDevices().set(h, Math.max(bannedDevices().get(h) || 0, a.ban.until || Infinity));
     store.touch();
     return a.ban;
   }
-  function unban(pid) { const a = get(pid); if (!a || !a.ban) return false; a.ban = null; store.touch(); return true; }
+  function unban(pid) { const a = get(pid); if (!a || !a.ban) return false; a.ban = null; devIndex = null; store.touch(); return true; }
   const deviceHash = (dm) => (typeof dm === 'string' && /^[a-f0-9]{16,64}$/.test(dm) ? keyedHash('device', dm, secret) : null);
   function noteDevice(pid, dm) {
     const h = deviceHash(dm), a = get(pid);
@@ -198,15 +209,30 @@ export function createAccounts({ store, secret, now = Date.now }) {
     a.devices = (a.devices || []).filter((d) => d !== h);
     a.devices.unshift(h);
     if (a.devices.length > MAX_DEVICES) a.devices.length = MAX_DEVICES;
+    if (a.ban && (!a.ban.until || a.ban.until > now())) bannedDevices().set(h, a.ban.until || Infinity);
     store.touch();
     return h;
   }
-  // a device marker seen on an account that is banned now (a soft marker: the page keeps it, a cleared browser loses it)
+  // a device marker seen on an account that is banned now (a soft marker: the page keeps it, a cleared browser loses it).
+  // The banned devices are indexed (hash -> until), built once from the profiles and kept up by ban() / unban(): a
+  // banned page retrying doesn't look through every profile.
+  let devIndex = null;
+  function bannedDevices() {
+    if (devIndex) return devIndex;
+    devIndex = new Map();
+    for (const p of store.all()) {
+      const a = p.acct;
+      if (!a || !a.ban) continue;
+      const until = a.ban.until || Infinity;
+      for (const h of a.devices || []) devIndex.set(h, Math.max(devIndex.get(h) || 0, until));
+    }
+    return devIndex;
+  }
   function deviceBanned(dm) {
     const h = deviceHash(dm);
     if (!h) return false;
-    for (const p of store.all()) { const a = p.acct; if (a && a.ban && (!a.ban.until || a.ban.until > now()) && (a.devices || []).includes(h)) return true; }
-    return false;
+    const until = bannedDevices().get(h);
+    return !!until && until > now();
   }
 
   // the one-time owner claim (no CLA_OWNER_ID, no owner yet): a code printed in the server log at start
@@ -231,7 +257,7 @@ export function createAccounts({ store, secret, now = Date.now }) {
   }
 
   return {
-    ensure, get, profileOf, findLogin, findPasskey, link, unlink, signIn, token, checkToken, signOutEverywhere,
+    ensure, get, profileOf, findLogin, findPasskey, link, unlink, signIn, token, checkToken, staleToken, signOutEverywhere,
     makeTransfer, redeemTransfer, makeLoginCode, redeemLoginCode, addPasskey, role, setRole, ownerExists,
     banned, ban, unban, noteDevice, deviceBanned, deviceHash, bootstrapOwner, claimOwner, sweep, touch: () => store.touch(),
     isGuest: (pid) => { const a = get(pid); return !a || a.kind !== 'member'; },

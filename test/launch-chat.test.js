@@ -135,7 +135,7 @@ test('rate limits: members a few lines a window, guests fewer and shorter; the s
   assert.equal(last.text.length, CHAT.guestMaxLen);
 });
 
-test('strikes: hate speech is a strike (one per gap), three strikes mute chat for 24 h; reports from three players are a strike', () => {
+test('strikes: hate speech is a strike (one per gap), three strikes mute chat for 24 h; reports from three members go to review', () => {
   const S = setup();
   const a = S.P(), b = S.P();
   S.said(a, 'near', 'you n1gg3r');
@@ -152,14 +152,16 @@ test('strikes: hate speech is a strike (one per gap), three strikes mute chat fo
   assert.equal(S.mod.activeStrikes(S.A.get(a.pid)), 0, 'the strikes were spent');
   S.c.add(24 * 3600e3 + 1);
   assert.equal(S.said(a, 'near', 'sorry'), null, 'back after the day');
-  // reports: three different players inside the window make a strike; the same one again doesn't count twice
+  // reports: members from three different players inside the window go to the review list (an admin decides - no strike,
+  // no mute by reports alone); the same one again doesn't count twice
   const t = S.P(), r1 = S.P(), r2 = S.P(), r3 = S.P();
   const rep = (p) => { S.c.add(CHAT.reportGapS * 1000 + 1); return S.chat.handle(S.w, p, { t: 'mod', a: 'report', id: S.chat.hid(t.pid), why: 'harassment' }); };
   rep(r1); rep(r1); rep(r2);
-  assert.equal(S.mod.activeStrikes(S.A.get(t.pid)), 0);
+  assert.ok(!S.mod.openReviews().some((r) => r.kind === 'reports'));
   assert.ok(rep(r3).ok);
-  assert.equal(S.mod.activeStrikes(S.A.get(t.pid)), 1);
-  assert.ok(S.mod.openReviews().some((r) => r.kind === 'report' && r.who.id === t.pid));
+  assert.ok(S.mod.openReviews().some((r) => r.kind === 'reports' && r.who.id === t.pid));
+  assert.equal(S.mod.activeStrikes(S.A.get(t.pid)), 0);
+  assert.equal(S.mod.mutedUntil(S.A.get(t.pid)), 0);
 });
 
 test('emotes: to the people near you, not too fast', () => {

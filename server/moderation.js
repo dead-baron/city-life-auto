@@ -7,7 +7,15 @@
 //   spent mean a CHAT.muteH chat mute, and spend them.
 import { CHAT } from '../shared/chatdefs.js';
 
-const MAX_REVIEWS = 500, MAX_STRIKES = 50;
+const MAX_REVIEWS = 500, MAX_STRIKES = 20;
+export const REPORT = { guestAgeH: 6, guestPlayMin: 60, guestW: 0.5 };
+// how much a report from this account counts (members 1; guests with some age and play behind them half; new guests 0)
+export function reporterWeight(acct, now = Date.now()) {
+  if (!acct) return 0;
+  if (acct.kind === 'member') return 1;
+  const ageH = (now - (acct.created || now)) / 3600e3;
+  return ageH >= REPORT.guestAgeH && (acct.playMin || 0) >= REPORT.guestPlayMin ? REPORT.guestW : 0;
+}
 
 export function chatData(acct) {
   if (!acct) return null;
@@ -63,16 +71,22 @@ export function createModeration({ store, now = Date.now }) {
   function mute(acct, hours) { const c = chatData(acct); c.muteUntil = now() + Math.max(0.1, Math.min(24 * 365, Number(hours) || CHAT.muteH)) * 3600e3; store.touch(); return c.muteUntil; }
   function unmute(acct) { const c = chatData(acct); const had = c.muteUntil > now(); c.muteUntil = 0; store.touch(); return had; }
 
-  // a report on someone: the review list always; a strike once CHAT.reportsToStrike different players reported them
-  function report(targetAcct, target, reporter, why, note) {
+  // A report on someone: the review list always. Reports don't strike or mute by themselves (nine throwaway guests could
+  // silence anyone): reporters are weighed - a member 1, a guest with REPORT.guestAgeH of age and REPORT.guestPlayMin of
+  // play REPORT.guestW, a newer guest nothing - and once the weight from different reporters inside CHAT.reportWindowH
+  // reaches CHAT.reportsToStrike, the case goes to the top of the review list ('reports') for an admin to decide.
+  // weight: the reporter's (reporterWeight)
+  function report(targetAcct, target, reporter, why, note, weight = 1) {
     const c = chatData(targetAcct), t = now(), win = CHAT.reportWindowH * 3600e3;
     c.reportsIn = (c.reportsIn || []).filter((r) => t - r.at < win && r.by !== reporter.id);
-    c.reportsIn.push({ at: t, by: reporter.id, why });
+    c.reportsIn.push({ at: t, by: reporter.id, why, w: weight });
+    if (c.reportsIn.length > 20) c.reportsIn.splice(0, c.reportsIn.length - 20);
     const r = review('report', target, `${why}${note ? ': ' + note : ''}`, null, reporter);
-    let s = null;
-    if (c.reportsIn.length >= CHAT.reportsToStrike) { s = strike(targetAcct, `reported by ${c.reportsIn.length} players (${why})`, 'reports'); c.reportsIn = []; }
+    const total = c.reportsIn.reduce((a, x) => a + (x.w ?? 1), 0);
+    let escalated = null;
+    if (total >= CHAT.reportsToStrike) { escalated = review('reports', target, `reported by ${c.reportsIn.length} players (weight ${total.toFixed(1)}) in ${CHAT.reportWindowH} h: ${[...new Set(c.reportsIn.map((x) => x.why))].join(', ')}`, { reporters: c.reportsIn.map((x) => ({ id: x.by, w: x.w })) }); c.reportsIn = []; }
     store.touch();
-    return { review: r, strike: s };
+    return { review: r, escalated, total };
   }
   return { review, resolve, openReviews, reviews, strike, unstrike, activeStrikes, mutedUntil, mute, unmute, report };
 }

@@ -17,6 +17,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import { ownedHomes } from './homes.js';
 import { bedsOf } from './homeups.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const rng = mulberry32(6161);
 export const CROP_IDS = Object.keys(GARDEN_CROPS);   // (the wire's crop index: render/farmart.js)
@@ -328,7 +329,7 @@ export function devGarden(world, p, msg, buy) {
   spots.forEach((s, i) => { const [c, g, m, pz] = set[i % set.length]; gd.plots[i] = { c, g, m, d: 0, p: pz, dead: false }; });
   if (spots.length >= 3) gd.plots[1] = { c: 'lettuce', g: 0.6, m: 0, d: GARDEN.wiltDays * DAY, p: false, dead: false };   // (a wilting one)
   for (const c of CROP_IDS) prof.inventory[`seed_${c}`] = (prof.inventory[`seed_${c}`] || 0) + 2;
-  ped.x = spots[0].x; ped.y = spots[0].y + 30; world.place(ped);
+  ped.x = spots[0].x; ped.y = spots[0].y + 30; world.place(ped); moved(ped);
   p.gardenSig = null;
   world.notify(p, `[dev] ${h.name}'s garden: ${spots.length} plots, planted at every stage, and seeds in your bag.`, 'info');
   return null;

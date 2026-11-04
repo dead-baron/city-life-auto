@@ -16,7 +16,7 @@ import { createChat } from './chat.js';
 import { createAntiCheat } from './anticheat.js';
 import { createAnalytics } from './analytics.js';
 import { createGA } from './ga.js';
-import { watch, settle } from './moneywatch.js';
+import { watch, settle, release } from './moneywatch.js';
 import { createRateLimiter } from './httputil.js';
 import { cleanName } from '../shared/names.js';
 import { USERNAME_GAP_DAYS } from './accounts.js';
@@ -51,6 +51,10 @@ export function createLaunch(opts) {
       if (p) { p.meDirty = true; sendAcct(p); if (linked) world.notify(p, `Signed in with ${method} - your progress is saved to this account.`, 'good'); }
     },
     onTransfer(pid) { const p = onlineOf(pid); if (p) { try { p.conn.sendJSON({ t: 'kicked', reason: 'This character moved to another device.' }); p.conn.close(4012, 'moved'); } catch { /* gone */ } } },
+    // signed out everywhere: its sessions closed (4015 - each page comes back with the token it holds: the one that asked
+    // has the new one; the others are refused, 4014)
+    onSignOutAll(pid) { const p = onlineOf(pid); if (p) { try { p.conn.close(4015, 'signed out'); } catch { /* gone */ } } },
+    onFlag(pid, kind, text) { const a = accounts.get(pid), prof = store.get(pid); mod.review(kind, { id: pid, n: prof ? prof.name : '?' }, text); note(a, 'flag', text); },
   });
   devmode.setPolicy({
     open: L.devOpen,
@@ -62,6 +66,8 @@ export function createLaunch(opts) {
 
   // ---- the hello: who this page is ----
   // -> { profile, token, note? } | { refused, code }
+  // the close codes a refusal goes with (the page stops reconnecting on them and says why: client/main.js)
+  // 4009 kicked, 4010 banned, 4011 the age gate, 4013 too many new guests, 4014 signed out (a stale member token)
   function login(token, hello = {}, ip = '?') {
     const c = accounts.checkToken(token);
     if (c && c.acct) {
@@ -76,10 +82,13 @@ export function createLaunch(opts) {
       accounts.ensure(prof);
       return { profile: prof, token: accounts.token(c.pid) };
     }
-    // a new guest (no token, a forged one, or one this account has since signed out: moved to another device)
+    // a member's token from before "sign out everywhere": signed out here - sign in again (not a new guest made silently)
+    const stale = accounts.staleToken(token);
+    if (stale && stale.member) return { refused: 'You were signed out on this device. Sign in again - or press PLAY to play as a new guest.', code: 4014 };
+    // a new guest (no token, a forged one, or a guest's that has since moved to another device)
     const v = verifyToken(token, secret);
     if (L.blockBannedDevices && accounts.deviceBanned(hello.dm)) return { refused: 'This device is banned.', code: 4010 };
-    if (L.guestPerHour && !guestRl.hit(`guest:${ip}`, L.guestPerHour, 3600e3)) return { refused: 'Too many new characters from your network - try again later.', code: 4003 };
+    if (L.guestPerHour && !guestRl.hit(`guest:${ip}`, L.guestPerHour, 3600e3)) return { refused: 'Too many new characters from your network this hour - try again later.', code: 4013 };
     if (L.requireAge && !hello.age17) return { refused: 'agegate', code: 4011 };
     const pid = newPlayerId();
     const prof = store.create(pid);
@@ -90,20 +99,24 @@ export function createLaunch(opts) {
   function acctState(p) {
     const a = accounts.get(p.pid);
     const gap = a.username && a.nameAt ? Math.max(0, a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) : 0;
-    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
+    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: a.kind === 'member' || guestsRename(), role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
   }
   const sendAcct = (p) => { if (p.conn) p.conn.sendJSON(acctState(p)); };
 
+  // Guests keep their Guest number once a sign-in is on offer; until a provider is switched on (no keys set: nobody
+  // could become a member) everyone may still rename, as before the launch foundation
+  const guestsRename = () => !Object.values(enabledProviders(L)).some(Boolean);
   function rename(p, raw) {
     const a = accounts.get(p.pid);
-    if (a.kind !== 'member') return 'Guests keep their Guest number - sign in to pick a username.';
+    if (a.kind !== 'member' && !guestsRename()) return 'Guests keep their Guest number - sign in to pick a username.';
     const r = cleanName(raw);
     if (r.err) return r.err;
     if (!loadFilter().nameOk(r.name)) return 'Pick another name.';
-    if (a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
+    if (a.kind === 'member' && a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
     const before = p.name;
     if (!players.rename(world, p, r.name)) return 'That name didn\'t go through - try again in a moment, or pick another.';   // (players.rename noted why)
-    if (p.name !== before || !a.username) { a.username = true; a.nameAt = now(); note(a, 'name', `${before} -> ${p.name}`); store.touch(); }
+    if (a.kind === 'member' && (p.name !== before || !a.username)) { a.username = true; a.nameAt = now(); store.touch(); }
+    if (p.name !== before) note(a, 'name', `${before} -> ${p.name}`);
     return null;
   }
 
@@ -120,7 +133,7 @@ export function createLaunch(opts) {
       chat.onJoin(world, p);
       if (res.note === 'moved') world.notify(p, 'Your old character moved to another device (a transfer code), so this is a new guest.', 'warn');
     },
-    leave(p) { analytics.sessionEnd(p); ga.clear(p); },
+    leave(p) { settle(world, onMoney); release(p); analytics.sessionEnd(p); ga.clear(p); },
     allow(p, t) { return ac.allow(p, t); },
     input(p) { return ac.input(p); },
     perf(c) { analytics.perf(c); },
@@ -142,7 +155,7 @@ export function createLaunch(opts) {
       }
       if (t === 'ftue') { if (typeof msg.s === 'string') analytics.ftue(p, p.acct, msg.s, true); return null; }
       if (t === 'ga') { if (msg.on && ga.setClient(p, msg.cid, msg.sid)) { /* consent given: server events go to GA */ } else ga.clear(p); return null; }
-      if (LEISURE[t]) {
+      if (Object.hasOwn(LEISURE, t)) {
         const k = LEISURE[t], last = (p.anLeisure ||= {});
         if (now() - (last[k] || 0) > 5 * 60e3) { last[k] = now(); analytics.event('leisure', p, { type: t === 'arcade' && msg.id ? `arcade:${String(msg.id).slice(0, 20)}` : k }); }
       }
@@ -179,6 +192,9 @@ export function createLaunch(opts) {
   const timers = [];
   let ticks = 0;
   function halfSecond() {
+    try { halfSecondBody(); } catch (e) { log.error('[launch] the half-second work failed:', e && e.message); }
+  }
+  function halfSecondBody() {
     settle(world, onMoney);
     ac.audit(world);
     if (++ticks % 2 === 0) { jobsTick(); chat.update(world, 1); }

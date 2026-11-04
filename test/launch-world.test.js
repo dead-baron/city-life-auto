@@ -15,9 +15,9 @@ import * as law from '../server/systems/law.js';
 import * as devmode from '../server/devmode.js';
 
 const quiet = { log() {}, warn() {}, error() {} };
-function boot({ devOpen = true } = {}) {
+function boot({ devOpen = true, google = false } = {}) {
   const world = makeWorld();
-  const cfg = { ...config, launch: { ...config.launch, devOpen, gaMeasurementId: '', gaApiSecret: '', requireAge: false } };
+  const cfg = { ...config, launch: { ...config.launch, devOpen, gaMeasurementId: '', gaApiSecret: '', requireAge: false, google: google ? { id: 'gid', secret: 'gs' } : { id: '', secret: '' } } };
   const L = createLaunch({ config: cfg, store, world, ip: () => '1.2.3.4', dataDir: null, log: quiet });
   const connect = (token = null, extra = {}) => {
     const conn = fakeConn();
@@ -107,8 +107,8 @@ test('launch mode (devOpen off): a non-admin is refused every privileged message
   B.L.stop();
 });
 
-test('chat through the session; guests can\'t rename, members pick a filtered username', () => {
-  const B = boot();
+test('chat through the session; once a sign-in is offered guests can\'t rename, members pick a filtered username', () => {
+  const B = boot({ google: true });
   const a = B.connect(null), b = B.connect(null);
   b.p.ped.x = a.p.ped.x + 64; b.p.ped.y = a.p.ped.y; B.world.place(b.p.ped);
   a.say({ t: 'chat', ch: 'near', text: 'hello neighbour' });
@@ -171,5 +171,28 @@ test('a helper rescues a stuck player to the street; the movement audit flags a 
   B.L.halfSecond();
   assert.ok(B.L.ac.flags.some((f) => f.kind === 'teleport' && f.id === p.p.pid), 'flagged');
   assert.ok(!B.L.ac.flags.some((f) => f.id === h.p.pid));
+  B.L.stop();
+});
+
+test('Start fresh keeps the account - its sign-ins, role, strikes and ban record - and the page keeps its token; only the game starts over', () => {
+  const B = boot();
+  const c = B.connect(null);
+  const pid = c.p.pid, tok = c.welcome.token;
+  B.L.accounts.signIn('google', 'g-fresh', { linkPid: pid });
+  B.L.accounts.setRole(pid, 'helper');
+  B.L.mod.strike(B.L.accounts.get(pid), 'test', 'admin');
+  c.p.profile.bank = 99999; c.p.profile.criminalExp = 500;
+  c.say({ t: 'wipe' });
+  const w = c.last('wiped');
+  assert.equal(w.keep, tok, 'the page keeps its token');
+  const prof = store.get(pid);
+  assert.ok(prof, 'the profile is still there');
+  assert.equal(prof.criminalExp, 0);
+  assert.equal(prof.bank, 500, 'the progress starts over');
+  assert.equal(B.L.accounts.findLogin('google', 'g-fresh'), pid, 'the sign-in still leads here');
+  assert.equal(B.L.accounts.role(pid), 'helper');
+  assert.equal(B.L.mod.activeStrikes(B.L.accounts.get(pid)), 1);
+  const again = B.connect(tok);
+  assert.equal(again.welcome.pid, pid, 'back in on the same account');
   B.L.stop();
 });

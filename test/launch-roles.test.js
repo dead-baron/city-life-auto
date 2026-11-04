@@ -44,7 +44,7 @@ test('every privileged message from a non-staff player is refused and logged; th
   const S = setup();
   const p = S.P(), target = S.P();
   for (const a of [...Object.keys(POWERS), 'pagelink']) {
-    S.c.add(11e3);   // (refusals are logged at most one per ten seconds a player)
+    S.c.add(61e3);   // (refusals are logged at most once a minute a player)
     const r = S.admin.handle(S.w, p, { a, id: target.pid, role: 'admin', item: 'bandage', n: 5, i: 1, hours: 1, page: 'log', isOwner: true, role_override: 'owner' });
     assert.equal(r.ok, false, `${a} refused`);
     assert.match(r.err, /don't have that power/, a);
@@ -117,14 +117,16 @@ test('the admin log: append-only lines in a chain, verified end to end; an edit 
   const file = join(dir, 'admin-log.jsonl');
   let L = createAdminLog(file);
   for (let i = 0; i < 5; i++) L.append({ who: { id: 'o', n: 'Owner', role: 'owner' }, what: 'kick', target: { id: `t${i}`, n: 'T' }, before: i, after: i + 1 });
+  L.flushSync();
   assert.deepEqual(L.verify(), { ok: true, n: 5, brokenAt: -1 });
   L = createAdminLog(file);   // (a restart)
   L.append({ who: { id: 'o' }, what: 'unban' });
+  L.flushSync();
   assert.equal(L.verify().ok, true);
   assert.equal(L.tail(1)[0].what, 'unban');
   const lines = readFileSync(file, 'utf8').trim().split('\n');
   writeFileSync(file, lines.map((l, i) => (i === 2 ? l.replace('"after":3', '"after":99') : l)).join('\n') + '\n');
-  assert.deepEqual(L.verify(), { ok: false, n: 2, brokenAt: 2 }, 'an edited line');
+  assert.deepEqual({ ...L.verify(), why: undefined }, { ok: false, n: 2, brokenAt: 2, why: undefined }, 'an edited line');
   writeFileSync(file, lines.filter((_, i) => i !== 1).join('\n') + '\n');
   assert.equal(L.verify().brokenAt, 1, 'a removed line');
   assert.deepEqual(L.tail(2, 't4').map((e) => e.target.id), ['t4'], 'filtered by target');

@@ -187,6 +187,7 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
       n++;
       bump(d.mins, activityOf(world, p));
       p.anPlayed = (p.anPlayed || 0) + 1;
+      if (p.acct) p.acct.playMin = (p.acct.playMin || 0) + 1;   // (minutes played, all told: a reporter's weight - moderation.js)
       if (p.acct) { if (p.anPlayed === 10) ftue(p, p.acct, 'played_10m'); if (p.anPlayed === 30) ftue(p, p.acct, 'played_30m'); }
     }
     if (n > d.peak) d.peak = n;

@@ -19,6 +19,7 @@ import * as homes from './homes.js';
 import { ferryRoutes } from './ferries.js';
 import { spawnNpc } from './npc.js';
 import { pursue } from './police.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const live = (world) => world.map.prison || null;
 const inCompound = (P, x, y) => { const c = P.compound; return x > c.tx * TILE && x < (c.tx + c.tw) * TILE && y > c.ty * TILE && y < (c.ty + c.th) * TILE; };
@@ -66,7 +67,7 @@ export function sentence(world, p, secs, stars, quiet = false) {
   ped.hidden = false; ped.inside = null; ped.interior = null; ped.sub = false; ped.ug = 0; ped.lz = 0; ped.fishing = null; ped.sky = null;
   ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.downUntil = 0; ped.stunUntil = 0;
   const at = intake(world, P);
-  ped.x = at.x; ped.y = at.y; ped.a = -Math.PI / 2;
+  ped.x = at.x; ped.y = at.y; ped.a = -Math.PI / 2; moved(ped);
   world.place(ped);
   p.teleportAt = world.time;
   p.prison = { since: world.time, until: world.time + secs, stars, weapon: ped.weapon && ped.weapon !== 'fists' ? ped.weapon : null, climb: null, ped: ped.id };
@@ -162,7 +163,7 @@ export function release(world, p, msg = null) {
   const R = (ferryRoutes(world) || []).find((r) => r.custody), land = R && R.stops[0] && R.stops[0].land;
   const at = land ? { x: land.x, y: land.y } : live(world).dock || { x: ped.x, y: ped.y };
   if (!land && !msg) msg = 'Time served. You\'re let out at the harbour - the Prison Boat isn\'t running.';
-  ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0;
+  ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0; moved(ped);
   world.place(ped);
   homes.protect(world, ped, 3);
   p.teleportAt = world.time;

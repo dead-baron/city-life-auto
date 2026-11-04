@@ -35,6 +35,7 @@ import { MUSIC_GEAR, RHYTHM, CROWD, JAM } from '../../shared/rules-music.js';
 import { store } from '../store.js';
 import * as law from './law.js';
 import { openRide } from './vehicles.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 export const MENU_POI = -7;   // (the boombox's / the mat's menu: not a place's - economy.js handleMenu asks onMenu first)
 const KIND = Object.fromEntries(KINDS.map((k, i) => [k, i]));
@@ -181,7 +182,7 @@ export function onMenu(world, p, poiId, opt) {
   else if (a === 'mup') { s.att = ped.id; send(world, s); reopen = false; }
   else if (a === 'maway') { packAway(world, p, s); reopen = false; }
   else if (a === 'mr') { reopen = false; startDance(world, p, s, TRACK[b] ? b : BEAT_TRACK); }
-  else if (a === 'mfree') { reopen = false; if (!ped.dancing) { ped.x = s.x; ped.y = s.y; world.place(ped); setMove(ped, DANCE_PLAYER[0]); } world.notify(p, 'Freestyle! The dance button for the next move - mix it up and the crowd grows.', 'info'); }
+  else if (a === 'mfree') { reopen = false; if (!ped.dancing) { ped.x = s.x; ped.y = s.y; world.place(ped); setMove(ped, DANCE_PLAYER[0]); } world.notify(p, 'Freestyle! The dance button for the next move - mix it up and the crowd grows.', 'info'); } moved(ped);
   touch(p);
   if (reopen) openMenu(world, p, s); else p.musMenu = null;
   return true;
@@ -265,7 +266,7 @@ function newPerf(world, p, kind, extra) {
 // the rhythm game on your mat: the mat plays the song, the page the notes
 function startDance(world, p, mat, track) {
   const ped = p.ped;
-  ped.x = mat.x; ped.y = mat.y; world.place(ped);
+  ped.x = mat.x; ped.y = mat.y; world.place(ped); moved(ped);
   const seed = (rng() * 2 ** 31) >>> 0, t0 = world.time + 1.5;
   const hat = hatFor(world, p, mat.x + 30, mat.y + 10);
   const P = newPerf(world, p, 'rhythm', { mat: mat.id, src: mat.id, hat: hat.id, track, seed, t0, chart: chart(track, seed) });

@@ -171,10 +171,11 @@ export function verifyAssertion(body, cred, { challenge, origins, rpId, requireU
   const ok = cred.alg === ALG.ES256 ? cryptoVerify('sha256', data, { key, dsaEncoding: 'der' }, sig)
     : cred.alg === ALG.RS256 ? cryptoVerify('sha256', data, key, sig) : false;
   if (!ok) throw new Error('bad signature');
-  // the sign counter: an authenticator that counts must count up (a lower or equal count is a cloned key); one that
-  // doesn't (0 every time, as synced passkeys do) is fine
-  if ((auth.count !== 0 || (cred.count || 0) !== 0) && auth.count <= (cred.count || 0)) throw new Error('sign counter went backwards (a cloned passkey?)');
-  return { count: auth.count };
+  // the sign counter: an authenticator that counts must count up (a lower or equal count may be a cloned key); one that
+  // doesn't (0 every time, as synced passkeys do) is fine. A backwards count isn't a refusal - it's reported (cloned),
+  // and the caller flags it for review rather than locking the key's owner out
+  const cloned = (auth.count !== 0 || (cred.count || 0) !== 0) && auth.count <= (cred.count || 0);
+  return { count: auth.count, cloned, was: cred.count || 0 };
 }
 
 // the challenges handed out: single use, five minutes

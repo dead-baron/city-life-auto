@@ -25,6 +25,7 @@ import { SKYDIVE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as combat from './combat.js';
 import { safeSpot } from './unstuck.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 export const hasChute = (p) => !!(p && p.profile && (p.profile.inventory.parachute || 0) > 0);
 
@@ -119,7 +120,7 @@ function land(world, ped, floor) {
   const car = !open && !wet ? world.query(ped.x, ped.y, 60, K.VEH).find((v) => (v.alt || 0) < 6 && v.def.kind !== 'boat' && Math.abs(Math.cos(v.a) * (ped.x - v.x) + Math.sin(v.a) * (ped.y - v.y)) < v.def.L / 2 && Math.abs(-Math.sin(v.a) * (ped.x - v.x) + Math.cos(v.a) * (ped.y - v.y)) < v.def.W / 2) : null;
   if (!wet && (floor > 0 || PED_BLOCK[t])) {   // (a roof, a wall: down off it to the nearest open ground)
     const at = safeSpot(m, ped.x, ped.y);
-    if (at) { ped.x = at.x; ped.y = at.y; world.place(ped); }
+    if (at) { ped.x = at.x; ped.y = at.y; world.place(ped); } moved(ped);
   }
   ped.lz = 0;
   const hurt = (n, cause = 'fall') => { if (n > 0) combat.damage(world, ped, n, null, cause, ped.a); };
@@ -144,7 +145,7 @@ function land(world, ped, floor) {
     const a = world.rand() * Math.PI * 2;
     ped.x = car.x + Math.cos(a) * (car.def.W / 2 + 20); ped.y = car.y + Math.sin(a) * (car.def.W / 2 + 20);
     const at = safeSpot(m, ped.x, ped.y);
-    if (at) { ped.x = at.x; ped.y = at.y; }
+    if (at) { ped.x = at.x; ped.y = at.y; } moved(ped);
     world.place(ped);
     ped.downUntil = Math.max(ped.downUntil || 0, world.time + 2.2);
     hurt(Math.min(ped.hp - 1, ped.maxHp * S.carHurt));

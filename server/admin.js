@@ -20,8 +20,10 @@ import { escapeSpot, safeSpot } from './systems/unstuck.js';
 import { ejectPed } from './systems/vehicles.js';
 import { chatData } from './moderation.js';
 import * as devmode from './devmode.js';
+import { moved } from './movemark.js';
 
-const PLOG_MAX = 120, BUYS_MAX = 30, REFUND_DAYS = 30;
+const PLOG_MAX = 60, BUYS_MAX = 20, REFUND_DAYS = 30;
+const CLAIM_TRIES = 5, CLAIM_WINDOW_MS = 10 * 60e3, REFUSAL_LOG_MS = 60e3;
 
 // a player's recent log, kept with their account (the helpers read it: plog)
 export function note(acct, k, d) {
@@ -43,15 +45,14 @@ export function notePurchase(acct, amt, what) {
 export function createAdmin({ accounts, log, mod, store, pageLink = null, now = Date.now }) {
   const me = (p) => ({ id: p.pid, n: p.name, role: accounts.role(p.pid) });
   const reply = (a, ok, x = {}) => ({ t: 'admin', a, ok, ...x });
-  const lastRefusalLog = new WeakMap();
+  const lastRefusalLog = new WeakMap(), claimTries = new WeakMap();
 
-  // the player a message names: online by account id (or exact name), else an account by id
+  // the player a message names: by account id only (a name can be ambiguous - two players may look alike)
   function resolve(world, id) {
     const s = String(id || '');
-    if (!s) return null;
-    let q = world.players.get(s);
-    if (!q) for (const x of world.players.values()) if (x.name === s) { q = x; break; }
-    const pid = q ? q.pid : s;
+    if (!/^[a-f0-9]{16,32}$/.test(s)) return null;
+    const q = world.players.get(s) || null;
+    const pid = s;
     const prof = store.get(pid);
     if (!prof) return null;
     return { pid, p: q || null, prof, acct: accounts.get(pid), name: q ? q.name : prof.name };
@@ -71,8 +72,16 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
     const role = accounts.role(p.pid);
     if (a === 'whoami') return reply(a, true, { data: { role, powers: Object.keys(POWERS).filter((k) => allowed(role, k)), devOpen: devmode.devOpen(), claim: accounts.claimOpen && !accounts.ownerExists() } });
     if (a === 'claim') {
+      // a few tries in a while per player (the code is long, but guessing is still guessing); a refusal logged at most
+      // once a minute per player, so a script can't fill the log
+      const c = (claimTries.get(p) || []).filter((t) => now() - t < CLAIM_WINDOW_MS);
+      if (c.length >= CLAIM_TRIES) return reply(a, false, { err: 'Too many tries - wait a few minutes.' });
+      c.push(now()); claimTries.set(p, c);
       const err = accounts.claimOwner(p.pid, msg.code);
-      log.append({ who: me(p), what: 'claim-owner', target: { id: p.pid, n: p.name }, before: role, after: err ? role : 'owner', ok: !err });
+      if (!err || now() - (lastRefusalLog.get(p) || 0) > REFUSAL_LOG_MS) {
+        if (err) lastRefusalLog.set(p, now());
+        log.append({ who: me(p), what: 'claim-owner', target: { id: p.pid, n: p.name }, before: role, after: err ? role : 'owner', ok: !err });
+      }
       if (err) return reply(a, false, { err });
       p.meDirty = true;
       return reply(a, true, { data: { role: 'owner' } });
@@ -81,12 +90,13 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
     if (!POWERS[power]) return reply(a, false, { err: 'No such action.' });
     if (!allowed(role, power)) {
       const t = lastRefusalLog.get(p) || 0;
-      if (now() - t > 10e3) { lastRefusalLog.set(p, now()); log.append({ who: me(p), what: a, target: msg.id ? { id: String(msg.id).slice(0, 32) } : null, ok: false, note: 'refused: no such power' }); }
+      if (now() - t > REFUSAL_LOG_MS) { lastRefusalLog.set(p, now()); log.append({ who: me(p), what: a, target: msg.id ? { id: String(msg.id).slice(0, 32) } : null, ok: false, note: 'refused: no such power' }); }
       return reply(a, false, { err: 'You don\'t have that power.' });
     }
     const t = msg.id !== undefined ? resolve(world, msg.id) : null;
     const need = !['players', 'reviews', 'resolve', 'pagelink'].includes(a);
     if (need && !t) return reply(a, false, { err: 'No such player.' });
+    if ((a === 'refund' || a === 'restore') && t && t.pid === p.pid && role !== 'owner') return reply(a, false, { err: 'Not on your own account - ask another helper.' });
     const done = (x) => { log.append({ who: me(p), target: tgt(t), ...x }); if (t && t.acct && x.ok !== false) note(t.acct, 'staff', `${a} by ${p.name}${x.note ? ': ' + x.note : ''}`); store.touch(); };
     switch (a) {
       case 'players': {
@@ -121,7 +131,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         const spot = escapeSpot(world.map, ped.x, ped.y) || safeSpot(world.map, ped.x, ped.y);
         if (!spot) return reply(a, false, { err: 'No open street found near them.' });
         ped.x = spot.x; ped.y = spot.y; ped.vx = 0; ped.vy = 0; ped.ug = 0; ped.interior = null; ped.hidden = false; ped.lz = 0;
-        world.place(ped);
+        world.place(ped); moved(ped);
         q.teleportAt = world.time; q.meDirty = true;
         world.notify(q, 'A helper moved you out to the street.', 'good');
         done({ what: 'rescue', before, after: { x: Math.round(spot.x), y: Math.round(spot.y) } });
@@ -206,8 +216,10 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       default: return reply(a, false, { err: 'No such action.' });
     }
   }
-  // a debug command from someone in dev mode: logged (what and its main arguments)
+  // a debug command from someone in dev mode: logged (what and its main arguments) - an admin's always; while the open
+  // debug mode is on (CLA_DEV_OPEN=1) every tester has it, and their commands aren't privileged actions: not logged
   function devCommand(p, c, msg) {
+    if (devmode.devOpen() && !allowed(accounts.role(p.pid), 'dev')) return;
     const args = {};
     for (const k of ['pid', 'k', 'id', 'n', 'm', 'x', 'y', 's', 'on']) if (msg && msg[k] !== undefined) args[k] = typeof msg[k] === 'string' ? msg[k].slice(0, 40) : msg[k];
     log.append({ who: me(p), what: 'dev', note: String(c).slice(0, 40), after: Object.keys(args).length ? args : undefined, target: msg && msg.pid ? { id: String(msg.pid).slice(0, 32) } : null });

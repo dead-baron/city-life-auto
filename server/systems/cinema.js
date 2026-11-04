@@ -6,6 +6,7 @@
 import { CINE, FILMS, filmFor, roomAt } from '../../shared/cinema.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { spawnNpc, despawnNpc } from './npc.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const rng = mulberry32(1414);
 const SIT_PX = 26, MOVE_PX = 10;
@@ -56,7 +57,7 @@ export function sit(world, p, ri, s) {
   // (the first player in the room gets the film from the start; the NPCs don't mind)
   if (![...world.players.values()].some((o) => o !== p && o.cine && o.cine.room === ri)) { const Sr = st(world).rooms[ri]; Sr.film = filmFor(ri, Sr.k++); Sr.t0 = world.time; }
   const q = R.seats[s], S = showing(world, ri);
-  ped.x = q.x; ped.y = q.y; ped.a = q.a; ped.vx = 0; ped.vy = 0;
+  ped.x = q.x; ped.y = q.y; ped.a = q.a; ped.vx = 0; ped.vy = 0; moved(ped);
   if (world.place) world.place(ped);
   ped.sitBench = true; ped.seat2 = null; ped.appVer = (ped.appVer || 0) + 1;
   p.teleportAt = world.time;

@@ -61,8 +61,9 @@ export function createAntiCheat({ mod, now = Date.now, log = console }) {
       const ped = p.ped;
       if (!ped || ped.dead) { p.acPos = null; continue; }
       const last = p.acPos, mode = ped.vehId || 0;
-      p.acPos = { x: ped.x, y: ped.y, t: world.time, mode, tp: p.teleportAt || 0, ped: ped.id };
-      if (!last || last.ped !== ped.id || last.mode !== mode || (p.teleportAt || 0) !== last.tp || (p.teleportAt || 0) > last.t) continue;
+      p.acPos = { x: ped.x, y: ped.y, t: world.time, mode, tp: p.teleportAt || 0, ms: p.movedSeq || 0, ped: ped.id };
+      // (a move the server made since the last sample - teleportAt, or server/movemark.js moved(): not the player's doing)
+      if (!last || last.ped !== ped.id || last.mode !== mode || (p.teleportAt || 0) !== last.tp || (p.teleportAt || 0) > last.t || (p.movedSeq || 0) !== last.ms) continue;
       const dt = world.time - last.t;
       if (dt <= 0.05 || dt > 5) continue;
       const max = allowed(world, p);
@@ -81,12 +82,12 @@ export function createAntiCheat({ mod, now = Date.now, log = console }) {
 
   // a message from a page: may it go through? (dropped when it comes faster than its kind may)
   function allow(p, t) {
-    const c = (p.acRate ||= { at: 0, n: {}, dropped: 0, droppedAt: 0 });
+    const c = (p.acRate ||= { at: 0, n: Object.create(null), dropped: 0, droppedAt: 0 });   // (no prototype: 'constructor' is a kind like any other)
     const s = Math.floor(now() / 1000);
-    if (c.at !== s) { c.at = s; c.n = {}; }
+    if (c.at !== s) { c.at = s; c.n = Object.create(null); }
     const k = typeof t === 'string' && t.length < 16 ? t : '?';
     const n = (c.n[k] = (c.n[k] || 0) + 1);
-    if (n <= (RATES[k] ?? DEFAULT_RATE)) return true;
+    if (n <= (Object.hasOwn(RATES, k) ? RATES[k] : DEFAULT_RATE)) return true;
     if (now() - c.droppedAt > 10e3) { c.dropped = 0; c.droppedAt = now(); }
     if (++c.dropped === 60) flag('rate', p, `sent '${k}' messages far faster than a page does (${n} in a second)`, { kind: k });
     return false;

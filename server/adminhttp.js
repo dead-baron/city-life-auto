@@ -4,7 +4,7 @@
 // HttpOnly, SameSite=Strict session cookie for an hour. The role is checked again on every request.
 import { randomBytes } from 'node:crypto';
 import { allowed } from './roles.js';
-import { sendHTML, redirect, cookies, setCookie, esc, createRateLimiter } from './httputil.js';
+import { sendHTML, cookies, setCookie, esc, createRateLimiter } from './httputil.js';
 import { FTUE_STEPS } from './analytics.js';
 
 const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
@@ -41,8 +41,12 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
   function logPage(req, url) {
     const q = url.searchParams.get('q') || null;
     const list = log.tail(300, q);
-    const v = log.verify();
-    return `<p>${v.ok ? `<span class="ok">The chain checks out: ${v.n} entries, none changed or taken out.</span>` : `<span class="bad">The chain is broken at entry ${v.brokenAt + 1} - the file was edited by hand.</span>`} Newest first, the last 300${q ? `, for ${esc(q)}` : ''}. Filter: add ?q=&lt;account id or action&gt;.</p>`
+    // every view: the head (size and last line, cheap); the whole chain hashed again only on ?verify=1
+    const full = url.searchParams.get('verify') === '1', v = full ? log.verify() : log.checkHead();
+    const verdict = v.ok
+      ? `<span class="ok">${full ? `The whole chain checks out: ${v.n} entries, none changed or taken out.` : `${v.n} entries; the end of the file is as the head says.`}</span>${full ? '' : ' <a href="/admin/log?verify=1">Check the whole chain</a>.'}`
+      : `<span class="bad">${full ? `The chain is broken at entry ${v.brokenAt + 1}${v.why ? ` (${esc(v.why)})` : ''} - the file was edited by hand.` : `The log doesn't match its head: ${esc(v.why)}.`}</span>`;
+    return `<p>${verdict} Newest first, the last 300${q ? `, for ${esc(q)}` : ''}. Filter: add ?q=&lt;account id or action&gt;.</p>`
       + table(['when (UTC)', 'who', 'role', 'what', 'target', 'before', 'after', 'note', 'ok'], list.map((e) => [when(e.at), e.who ? `${esc(e.who.n)}<br><small>${esc(e.who.id)}</small>` : '', esc(e.who && e.who.role), esc(e.what), e.target ? `${esc(e.target.n || '')}<br><small>${esc(e.target.id || '')}</small>` : '', j(e.before), j(e.after), esc(e.note || ''), e.ok ? '<span class="ok">yes</span>' : '<span class="bad">refused</span>']));
   }
   function reviewsPage() {
@@ -93,7 +97,9 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
       links.delete(c);
       const sid = randomBytes(32).toString('base64url');
       sessions.set(sid, { pid: l.pid, exp: now() + SESSION_TTL_MS });
-      redirect(res, `/admin/${l.page}`, { 'set-cookie': setCookie('cla_admin', sid, { maxAge: SESSION_TTL_MS / 1000, path: '/admin', sameSite: 'Strict', secure }) });
+      // the link is opened from the game's page, another site: a Strict cookie isn't sent on the redirect that follows a
+      // cross-site navigation - so a small page of our own takes the next step, same-site (a meta refresh, no script)
+      sendHTML(res, 200, `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/admin/${l.page}"><title>City Life Auto</title><body style="font:16px system-ui;background:#14161a;color:#eee"><p><a style="color:#8cc8ff" href="/admin/${l.page}">Continue</a></p>`, { 'set-cookie': setCookie('cla_admin', sid, { maxAge: SESSION_TTL_MS / 1000, path: '/admin', sameSite: 'Strict', secure }) });
       return true;
     }
     const w = who(req);

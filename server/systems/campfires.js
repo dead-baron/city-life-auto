@@ -20,6 +20,7 @@ import { PED_BLOCK, WATER_T } from '../../shared/mapcore.js';
 import { underCover } from '../../shared/tunnels.js';
 import { store } from '../store.js';
 import * as skills from './skills.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const SIT_MOVE_PX = 6;   // a step this far gets you up
 
@@ -101,7 +102,7 @@ export function sitDown(world, p, i) {
   if (i < 0) {   // (a fire of your own: on the nearest free log seat)
     const taken = (q) => [...world.players.values()].some((o) => o.ped && o.ped !== ped && o.ped.sit && Math.hypot(o.ped.x - q.x, o.ped.y - q.y) < 8);
     const st = seatsOf(f).filter((q) => !taken(q)).sort((a, b) => Math.hypot(a.x - ped.x, a.y - ped.y) - Math.hypot(b.x - ped.x, b.y - ped.y))[0];
-    if (st) { ped.x = st.x; ped.y = st.y; if (world.place) world.place(ped); }
+    if (st) { ped.x = st.x; ped.y = st.y; if (world.place) world.place(ped); } moved(ped);
   }
   ped.sit = { i, x: ped.x, y: ped.y, at: world.time, said: false };
   ped.vx = 0; ped.vy = 0;

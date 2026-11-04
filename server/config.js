@@ -72,8 +72,9 @@ config.launch = {
   ownerId: env('CLA_OWNER_ID'),
   // the 17+ gate: when on, a page that hasn't confirmed the age floor isn't let into the city (the gate lives on the page)
   requireAge: env('CLA_REQUIRE_AGE', '0') === '1',
-  // new guest characters a minute from one address (0 = off), and whether a banned device marker stops new guests
-  guestPerHour: Number(env('CLA_GUESTS_PER_HOUR', '30')) || 0,
+  // new guest characters an hour from one address (0 = no limit - the default: a school or a phone network's shared
+  // address would hit a low one at launch), and whether a banned device marker stops new guests
+  guestPerHour: Number(env('CLA_GUESTS_PER_HOUR', '0')) || 0,
   blockBannedDevices: env('CLA_BLOCK_BANNED_DEVICES', '1') !== '0',
   // Google Analytics 4: the measurement id is public (served to the page); the Measurement Protocol secret is not
   gaMeasurementId: /^G-[A-Z0-9]{4,16}$/.test(env('GA_MEASUREMENT_ID')) ? env('GA_MEASUREMENT_ID') : '',

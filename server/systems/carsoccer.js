@@ -27,6 +27,7 @@ import * as vehicles from './vehicles.js';
 import * as traffic from './traffic.js';
 import { protect } from './homes.js';
 import * as homeinside from './homeinside.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 setArena(carStep);   // (the banks and the boost in every vehicle step the server takes - shared/physics.js)
 
@@ -138,7 +139,7 @@ function release(world, a, st, s, why) {
   if (q && q.ped && !q.ped.dead) {
     const ped = q.ped;
     if (ped.vehId && v && ped.vehId === v.id) { v.seats[0] = 0; ped.vehId = 0; ped.seat = -1; v.input = { throttle: 0, steer: 0, hb: false }; }
-    if (arenaAt(world.map, ped.x, ped.y) || Math.hypot(ped.x - a.gate.x, ped.y - a.gate.y) < 2 * C.joinR) { ped.x = a.gate.x - 24; ped.y = a.gate.y + (world.rand() - 0.5) * 60; ped.vx = 0; ped.vy = 0; ped.lz = 0; world.place(ped); protect(world, ped, 2); }
+    if (arenaAt(world.map, ped.x, ped.y) || Math.hypot(ped.x - a.gate.x, ped.y - a.gate.y) < 2 * C.joinR) { ped.x = a.gate.x - 24; ped.y = a.gate.y + (world.rand() - 0.5) * 60; ped.vx = 0; ped.vy = 0; ped.lz = 0; world.place(ped); protect(world, ped, 2); } moved(ped);
     q.meDirty = true;
     if (why) world.notify(q, why, 'info');
     if (q.conn) q.conn.sendJSON({ t: 'soc', a: st.i, off: 1 });
@@ -319,7 +320,7 @@ export function devStart(world, p, msg = {}) {
   if (ped.hidden) return 'Step outside first.';
   const st = stOf(world, 0);
   if (st.phase !== 'idle' && st.phase !== 'lobby') teardown(world, a, st);
-  ped.x = a.gate.x - 10; ped.y = a.gate.y; world.place(ped);
+  ped.x = a.gate.x - 10; ped.y = a.gate.y; world.place(ped); moved(ped);
   if (!st.queue.includes(p.pid)) st.queue.push(p.pid);
   start(world, a, st);
   if (Array.isArray(msg.score)) st.score = [msg.score[0] | 0, msg.score[1] | 0];

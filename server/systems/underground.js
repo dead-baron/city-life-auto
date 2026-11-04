@@ -28,6 +28,7 @@ import { LIGHTS } from '../../shared/lights.js';
 import * as combat from './combat.js';
 import * as wildlife from './wildlife.js';
 import { store } from '../store.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const MOVE_PX = 14, PICK_EVERY_S = 0.45;
 export const layoutOf = (world) => undergroundOf(world.map);
@@ -110,7 +111,7 @@ function mineInteraction(world, p, ped) {
 // ---- down and up -------------------------------------------------------------------------------------------------------
 function moveTo(world, p, x, y, ug) {
   const ped = p.ped;
-  ped.x = x; ped.y = y; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.lz = 0;
+  ped.x = x; ped.y = y; ped.vx = 0; ped.vy = 0; ped.rollT = 0; ped.lz = 0; moved(ped);
   ped.sub = !!ug; ped.ug = ug || 0;
   ped.mining = null; ped.work = null;
   p.teleportAt = world.time; p.meDirty = true;
