@@ -50,5 +50,34 @@ export const config = {
   // 'off' - they carry on where they left off.
   freshOnUpdate: ['off', 'spawn', 'all'].includes(process.env.CLA_FRESH_ON_UPDATE) ? process.env.CLA_FRESH_ON_UPDATE : 'spawn',
 };
+// The launch foundation (docs/LAUNCH-SETUP.md): sign-ins, roles, chat, anti-cheat, analytics. Every secret comes from the
+// environment and is never logged; a provider whose keys aren't set is switched off (its button hidden on the page).
+const env = (k, d = '') => (process.env[k] === undefined ? d : String(process.env[k]).trim());
+const list = (s) => s.split(',').map((x) => x.trim()).filter(Boolean);
+config.launch = {
+  // the open debug mode (Options -> Dev Debug Mode, anyone): on while testing; CLA_DEV_OPEN=0 at launch, then only
+  // accounts with the admin (or owner) role get the debug powers (server/roles.js)
+  devOpen: env('CLA_DEV_OPEN', '1') !== '0',
+  // the server's own public address (OAuth redirect URIs and magic links point here), and the pages that may sign in
+  publicUrl: env('CLA_PUBLIC_URL', 'https://play.deadbaron.com').replace(/\/+$/, ''),
+  pageOrigins: list(env('CLA_PAGE_ORIGINS', 'https://deadbaron.com,https://www.deadbaron.com,https://dead-baron.github.io')),
+  // passkeys (WebAuthn): the relying party id - the page's registrable domain - and its display name
+  rpId: env('CLA_RP_ID', 'deadbaron.com'),
+  rpName: env('CLA_RP_NAME', 'City Life Auto'),
+  google: { id: env('GOOGLE_CLIENT_ID'), secret: env('GOOGLE_CLIENT_SECRET') },
+  discord: { id: env('DISCORD_CLIENT_ID'), secret: env('DISCORD_CLIENT_SECRET') },
+  reddit: { id: env('REDDIT_CLIENT_ID'), secret: env('REDDIT_CLIENT_SECRET') },
+  email: { key: env('RESEND_API_KEY'), from: env('CLA_EMAIL_FROM', 'City Life Auto <login@deadbaron.com>') },
+  // the owner's account: its id (Settings -> Account shows it), or none - then a one-time claim code is printed at start
+  ownerId: env('CLA_OWNER_ID'),
+  // the 17+ gate: when on, a page that hasn't confirmed the age floor isn't let into the city (the gate lives on the page)
+  requireAge: env('CLA_REQUIRE_AGE', '0') === '1',
+  // new guest characters a minute from one address (0 = off), and whether a banned device marker stops new guests
+  guestPerHour: Number(env('CLA_GUESTS_PER_HOUR', '30')) || 0,
+  blockBannedDevices: env('CLA_BLOCK_BANNED_DEVICES', '1') !== '0',
+  // Google Analytics 4: the measurement id is public (served to the page); the Measurement Protocol secret is not
+  gaMeasurementId: /^G-[A-Z0-9]{4,16}$/.test(env('GA_MEASUREMENT_ID')) ? env('GA_MEASUREMENT_ID') : '',
+  gaApiSecret: env('GA_API_SECRET'),
+};
 // Only trust X-Forwarded-For when a local proxy (Caddy) is the only thing that can reach us.
 config.trustProxy = process.env.CLA_TRUST_PROXY ? process.env.CLA_TRUST_PROXY === '1' : (config.host === '127.0.0.1' || config.host === 'localhost');
