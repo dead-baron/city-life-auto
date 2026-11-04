@@ -37,40 +37,66 @@ import * as safety from './systems/safety.js';
 import * as cinefollow from './systems/cinefollow.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
+// opts.hooks (server/launch.js, the online server only): the launch foundation - accounts, chat, roles, anti-cheat,
+// analytics. Offline practice has none and plays as before.
+const TEXT_MAX = 8192, PERF_MAX = 16384;   // a text message's size cap (a perf report is the biggest a page sends)
+const FLOOD_CLOSE_S = 5;                   // this many seconds in a row over the flood guard and the socket is closed
 export function createSession(world, conn, opts) {
   let player = null;
-  let msgBudget = 0, budgetAt = Date.now();
-  return {
+  let msgBudget = 0, budgetAt = Date.now(), floodS = 0, myToken = null;
+  const hooks = opts.hooks || null;
+  const api = {
     onMessage(data, isBinary) {
       const t = Date.now();
-      if (t - budgetAt > 1000) { budgetAt = t; msgBudget = 0; }
+      if (t - budgetAt > 1000) { if (msgBudget > 120) { if (++floodS >= FLOOD_CLOSE_S) { conn.close(4008, 'flood'); return; } } else floodS = 0; budgetAt = t; msgBudget = 0; }
       if (++msgBudget > 120) return; // flood guard
+      if (!isBinary && typeof data === 'string' && data.length > PERF_MAX) return;   // (too big for anything a page sends)
       if (isBinary) {
         // (the input: 13 bytes, the action bits 32 wide - protocol.js; a page from before that sends 11, read with the high
         // word 0, and a server from before reads the first 11 of the new form: they meet for the minutes after a deploy.
         // A snapshot's prevBits stays 16 bits: only the low word reaches the prediction)
         if (!player || data.byteLength < 11) return;
         const dv = ArrayBuffer.isView(data) ? new DataView(data.buffer, data.byteOffset, data.byteLength) : new DataView(data);
+        if (hooks && !hooks.input(player)) return;
         if (dv.getUint8(0) === MSG_INPUT) players.queueInput(player, decodeInput(dv));
         return;
       }
       let msg;
       try { msg = JSON.parse(data); } catch { return; }
       if (!msg || typeof msg !== 'object') return;
+      if (data.length > TEXT_MAX && msg.t !== 'perf') return;
       if (msg.t === 'hello') {
         if (player) return;
         const closed = opts.closedReason && opts.closedReason();
         if (closed) { conn.sendJSON({ t: 'kicked', reason: closed }); conn.close(4003, 'quota'); return; }
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
-        const { profile, token } = opts.login(msg.token);
+        const res = opts.login(msg.token, msg);
+        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 17 } : { t: 'kicked', reason: res.refused, code: res.code }); conn.close(res.code || 4003, 'refused'); return; }
+        const { profile, token } = res;
+        myToken = token;
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
         conn.sendJSON({ t: 'welcome', token, pid: profile.pid, name: profile.name, seed: opts.seed, world: opts.world, sig: mapSignature(world.map), tick: world.tick, day: world.day, dev: opts.dev, practice: !!opts.practice, server: opts.label, build: world.build || undefined, built: world.buildAt || undefined, broken: brokenList(world), barriers: brokenBarrierList(world), bays: paint.closedBays(world), gates: gates.gatesOpen(world), clubs: nightclubs.liveList(world), forage: foraging.goneList(world), fires: campfires.fireList(world), felled: felling.felledList(world), logs: felling.logList(world), glights: lights.groundList(world), xing: trains.crossingStates(world), tt: trains.timetable(world), rides: rides.active(world) });
         player = players.join(world, conn, profile, { clientBuild: typeof msg.cb === 'string' ? msg.cb.slice(0, 40) : null, clientBuiltAt: Number(msg.cbt) || 0 });
         conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
+        if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17 }, res);
         return;
       }
       if (!player) return;
+      if (hooks && !hooks.allow(player, msg.t)) return;   // (faster than its kind may come: dropped - server/anticheat.js)
+      // what a change to someone's money happens under (server/moneywatch.js): the message, a shop's kind for a menu pick
+      if (hooks) {
+        const poi = msg.t === 'menu' ? world.map.pois[Number(msg.poi)] : null;
+        world.curMsg = msg.t === 'menu' ? `shop:${(poi && poi.kind) || 'menu'}` : msg.t === 'dev' ? 'dev' : `msg:${String(msg.t).slice(0, 16)}`;
+        world.curOpt = msg.t === 'menu' ? String(msg.opt || '').slice(0, 30) : null;
+      }
+      try { api.route(msg); } finally { world.curMsg = null; world.curOpt = null; }
+    },
+    route(msg) {
+      if (hooks) {
+        const r = hooks.message(player, msg);
+        if (r !== undefined) { if (r) conn.sendJSON(r); return; }
+      }
       if (msg.t !== 'ping' && msg.t !== 'away' && msg.t !== 'view' && msg.t !== 'perf' && msg.t !== 'cerr' && msg.t !== 'diag' && !(msg.t === 'cine' && msg.tour)) players.stillHere(player);   // (anything they did: not idle)
       // the cinematic mode (client/director.js): its camera flown, its panel used - here (above); its tour gliding on by
       // itself - like riding a train, the idle clock runs slow (players.js riding)
@@ -83,10 +109,10 @@ export function createSession(world, conn, opts) {
       // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)
       if (msg.t === 'perf') {   // (one report a connection, and one more four minutes into play: main.js perfReport)
         const play = !!(msg.r && msg.r.stage === 'play'), said = play ? 'perfPlaySaid' : 'perfSaid';
-        if (!conn[said] && !opts.practice) { conn[said] = true; perf.addReport(world, msg.r); }
+        if (!conn[said] && !opts.practice) { conn[said] = true; const c = perf.addReport(world, msg.r); if (hooks && c) hooks.perf(c); }
         return;
       }
-      if (msg.t === 'cerr') { perf.addClientError(world, conn, msg); return; }   // (an error in the page: /clienterrors)
+      if (msg.t === 'cerr') { if (perf.addClientError(world, conn, msg) && hooks) hooks.error(player, msg.where); return; }   // (an error in the page: /clienterrors)
       if (msg.t === 'menu') { economy.handleMenu(world, player, Number(msg.poi), String(msg.opt || '')); return; }
       if (msg.t === 'weapon' && player.ped && !player.ped.dead) { combat.selectWeapon(world, player.ped, String(msg.id)); return; }
       // the bag: use an item, or put one in a quick-wheel slot (null clears it)
@@ -118,8 +144,9 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'wipe') {
         const p = player;
         player = null;
-        players.wipeAccount(world, p);
-        conn.sendJSON({ t: 'wiped' });
+        if (hooks) hooks.leave(p);   // (the session's end, as for any leaving: the analytics, the money watcher let go)
+        const kept = players.wipeAccount(world, p);
+        conn.sendJSON(kept ? { t: 'wiped', keep: myToken } : { t: 'wiped' });   // (keep: the account stays - the page keeps its token)
         conn.close(4005, 'wiped');
         return;
       }
@@ -127,8 +154,14 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'name') { players.rename(world, player, msg.name); return; }   // (Settings: your name - players.js rename)
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)
       if (msg.t === 'devmode') { if (msg.leave) devmode.exit(world, player); else if (!player.devMode) devmode.tryPassword(world, player, msg.pw); return; }
-      if (msg.t === 'dev' && (opts.dev || player.devMode)) { dev.command(world, player, String(msg.c || ''), msg); }
+      // the debug commands: the server's own dev mode, or a player in Dev Debug Mode who may have it (devmode.mayDev: the open
+      // mode while it's on, else the admin role - asked again for every command, never taken from the page)
+      if (msg.t === 'dev' && (opts.dev || (player.devMode && devmode.mayDev(player)))) {
+        if (hooks && !opts.dev) hooks.devCommand(player, String(msg.c || ''), msg);
+        dev.command(world, player, String(msg.c || ''), msg);
+      }
     },
-    onClose() { if (player && player.conn === conn) players.leave(world, player); },
+    onClose() { if (player && player.conn === conn) { if (hooks) hooks.leave(player); players.leave(world, player); } },
   };
+  return api;
 }

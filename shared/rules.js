@@ -914,3 +914,27 @@ export const HEIST = {
 // perLevel * L * (L + 1) xp in all
 export { SKILL } from './rules-page.js';   // (the numbers: shared/rules-page.js)
 
+
+// NPC drivers are fallible, rarely (the owner's notes, 11-03: "they still should run some people over sometimes, and if
+// they stop suddenly the vehicle behind them might rear end them which sometimes might start a fight between the npc
+// drivers but not always"; server/systems/slips.js):
+// - a miss: a driver coming up on someone on foot in the road ahead reacts late (lateS) - rolled once per person per
+//   close encounter, missP, times close (they stepped out inside its stopping distance and a car's length), night, rain,
+//   reckless (a street racer, a getaway, a driver spoiling for it) and crossing (on a zebra crossing with the walk light:
+//   far less likely);
+// - a rear-end: the car ahead of it brakes hard (hardDecel px/s/s or more) and the driver behind is slow to react (rearP,
+//   times wet in the rain, times up to inattentive for its least attentive drivers) - it reacts rearLateS late, and if the
+//   gap it kept wasn't enough the cars meet (the cars' own crash: real damage);
+// - after a rear-end: most often both drive on; argue of the time they pull up and get out to have words (argueS); fight
+//   of the time (times the drivers' tempers) it comes to blows - fists, a brawl the police come to like any (police) - the
+//   fight broken off at fightStopHp of either's health or fightS; then back in and away. A driver who can't get back
+//   (down, arrested, gone) by maxS leaves the car for the clean-up and the tow trucks.
+// - never near a hospital (safeR px) - where people wake - nor near a player who is down or woke up or came in under
+//   spawnS ago (downR), nor to a player more than once in playerS, nor to anyone lying in the road.
+export const DRIVER_SLIPS = {
+  on: true,
+  missP: 0.03, close: 2.5, night: 1.6, rain: 1.6, reckless: 3, crossing: 0.2, lateS: [0.9, 1.5], minPx: 90,
+  hardDecel: 900, rearP: 0.35, wet: 2, inattentive: 2.2, rearLateS: [0.45, 0.85], minRearPx: 110,
+  argue: 0.22, fight: 0.08, argueS: [8, 14], fightS: [8, 14], fightStopHp: 0.55, police: 0.45, maxS: 40,
+  safeR: 900, downR: 700, spawnS: 90, playerS: 600, cooldownS: 30,
+};

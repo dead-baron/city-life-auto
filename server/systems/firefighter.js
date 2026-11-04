@@ -30,6 +30,7 @@ import { spawnNpc, despawnNpc } from './npc.js';
 import * as burning from './burning.js';
 import * as vehicles from './vehicles.js';
 import * as jobs from './jobs.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 export const KINDS = ['car', 'wreck', 'person', 'grass', 'dumpster', 'kitchen'];
 const WEIGHT = { car: 3, wreck: 2, person: 1.5, grass: 2.5, dumpster: 1.5, kitchen: 1.5 };
@@ -461,7 +462,7 @@ export function devFire(world, p, msg) {
   for (const q of list) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d < bd && d > 200) { bd = d; site = q; } }
   if (!site) return `no place for a ${k} fire`;
   const at = openNear(world.map, site.x - 150, site.y + 60) || openNear(world.map, site.x, site.y);
-  if (at) { ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0; world.place(ped); }
+  if (at) { ped.x = at.x; ped.y = at.y; ped.vx = 0; ped.vy = 0; world.place(ped); } moved(ped);
   const v = world.get(j.truck);
   if (v) {
     const spot = openNear(world.map, ped.x - 110, ped.y) || { x: ped.x - 110, y: ped.y };
@@ -473,7 +474,7 @@ export function devFire(world, p, msg) {
   j.nextAt = world.time + FIRE.gapS;
   const by = openNear(world.map, c.x - 130, c.y + 20);   // (you a hose's reach from it, the engine behind you)
   if (by && !(c.k === 'person' && Math.hypot(by.x - c.x, by.y - c.y) < 60)) {
-    ped.x = by.x; ped.y = by.y; world.place(ped);
+    ped.x = by.x; ped.y = by.y; world.place(ped); moved(ped);
     if (v) { const sp = openNear(world.map, by.x - 120, by.y) || by; v.x = sp.x; v.y = sp.y; world.place(v); }
   }
   return null;

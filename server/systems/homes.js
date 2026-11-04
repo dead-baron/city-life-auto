@@ -10,6 +10,7 @@ import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
 import * as biz from './biz.js';
 import * as homeups from './homeups.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const BASE_GARAGE = 2;
 const FALLBACK_PRICE = 25000; // a home of an old world with no deed and no record: bought back at a house's price
@@ -376,7 +377,7 @@ export function storeVehicle(world, p, v, home) {
   const ped = p.ped;
   if (!boat) world.emit(v.x, v.y, { e: 'garagedoor', home: home.id });
   ped.vehId = 0; ped.seat = -1;
-  if (boat) { ped.x = home.dock.walk.x; ped.y = home.dock.walk.y; } else { ped.x = home.x; ped.y = home.y + 10; }
+  if (boat) { ped.x = home.dock.walk.x; ped.y = home.dock.walk.y; } else { ped.x = home.x; ped.y = home.y + 10; } moved(ped);
   // one of your own (taken out of a garage, or bought) is already on your list; anything else is added
   if (v.owner !== p.pid) prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant, ...(v.tint !== undefined ? { tint: v.tint } : {}) });
   else { const ov = prof.vehicles.find((o) => o.model === v.model && o.variant === v.variant) || prof.vehicles.find((o) => o.model === v.model); if (ov) { ov.paint = v.paint; ov.variant = v.variant; if (v.tint !== undefined) ov.tint = v.tint; } }
@@ -487,7 +488,7 @@ export function goInside(world, p, h) {
   ped.entering = null;
   ped.inside = h.id; ped.hidden = true;
   ped.vx = 0; ped.vy = 0; ped.rollT = 0;
-  ped.x = h.x; ped.y = h.y;
+  ped.x = h.x; ped.y = h.y; moved(ped);
   ped.fishing = null;
   world.place(ped);
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
@@ -517,7 +518,7 @@ export function leaveHome(world, p) {
   ped.vx = 0; ped.vy = 0;
   const d = h && ped.inDoor === 'back' && h.back ? h.back : h;   // (out by the door you came in by)
   ped.inDoor = null;
-  if (h) { ped.x = d.x + (world.rand() - 0.5) * 20; ped.y = d.y + 10; world.emit(d.x, d.y, { e: 'door', x: d.x, y: d.y }); }
+  if (h) { ped.x = d.x + (world.rand() - 0.5) * 20; ped.y = d.y + 10; world.emit(d.x, d.y, { e: 'door', x: d.x, y: d.y }); } moved(ped);
   world.place(ped);
   protect(world, ped);
   p.meDirty = true;

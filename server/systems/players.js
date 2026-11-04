@@ -221,6 +221,7 @@ export function freshStart(world, prof) {
 function wipeProgress(world, prof) {
   for (const [id, pid] of [...world.homeOwner]) if (pid === prof.pid) world.homeOwner.delete(id);
   const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
+  if (prof.acct) { keep.acct = prof.acct; keep.nameAt = prof.nameAt; }   // (the account outlives the progress, as with Start fresh: wipeAccount)
   for (const k of Object.keys(prof)) delete prof[k];
   Object.assign(prof, defaultProfile(keep.pid), keep);
   store.touch();
@@ -315,6 +316,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
   }
   p.ped = ped;
+  ped.spawnedAt = world.time;   // (just woke up or came in: no driver's slip near them a while - slips.js)
   economy.syncLight(world, p); // a flashlight left switched on is still on
   homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
   p.faction = FACTION.CITIZEN; p.badge = false; p.hunter = false;
@@ -426,7 +428,19 @@ export function wipeAccount(world, p) {
     if (!v.seats.some((s) => s)) world.remove(v);
     else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; }   // (its owner tag goes for everyone: net.js descriptor o)
   }
+  // The account outlives its character (the review, 11-04): a profile with an account record (server/accounts.js -
+  // every one online) keeps it - its role, linked sign-ins, passkeys, strikes, mutes, a ban - and its name; only the game
+  // progress starts over. Returns true then (the page keeps its token); a profile without one is deleted, as before.
+  const prof = p.profile;
+  if (prof && prof.acct) {
+    const keep = { pid: prof.pid, acct: prof.acct, name: prof.name, created: prof.created, nameAt: prof.nameAt };
+    for (const k of Object.keys(prof)) delete prof[k];
+    Object.assign(prof, defaultProfile(keep.pid), keep);
+    store.touch();
+    return true;
+  }
   store.remove(p.pid);
+  return false;
 }
 
 // Idle (decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone"): a player whose
@@ -921,6 +935,7 @@ export function onPedDeath(world, ped, killer, cause) {
   p.respawnChoice = homes.defaultChoice(world, p, { x: ped.x, y: ped.y }); // pre-selected; change it on the death screen
   p.deathCause = cause || 'You flatlined.';
   p.profile.stats.deaths++;
+  if (world.track) world.track('death', p, { cause: p.deathCause, killer });   // (analytics: server/launch.js)
   if (p.badge) { world.notify(p, 'Your badge was stripped. Return to Police HQ to re-deploy.', 'bad'); law.stripPoliceGear(p); }
   ped.bookable = p.wanted > 0 ? { pid: p.pid, stars: p.wanted } : null; // police can still book the body
   p.badge = false; p.hunter = false; p.faction = FACTION.CITIZEN;

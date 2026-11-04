@@ -6,6 +6,7 @@ import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { BOAT_RENTAL_S, BOAT_RENTAL_GRACE_S, BOAT_RENTAL_PRICE } from '../../shared/rules.js';
 import * as law from './law.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 export const RENTAL_MODELS = ['jetski', 'dinghy', 'speedboat', 'rib', 'pontoon', 'sailboat'];   // (a sea dock's; a lake's: modelsAt)
 const RETURN_R = 260;     // drive within this of a rental dock to hand the boat back
@@ -84,7 +85,7 @@ export function giveBack(world, p) {
   if (ped && ped.vehId === v.id) {
     v.seats[ped.seat] = 0;
     ped.vehId = 0; ped.seat = -1;
-    ped.x = r.dock.x; ped.y = r.dock.y;
+    ped.x = r.dock.x; ped.y = r.dock.y; moved(ped);
     ped.vx = 0; ped.vy = 0;
     world.place(ped);
   }

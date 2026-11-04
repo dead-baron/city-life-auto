@@ -369,6 +369,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
 
   p.profile.criminalExp += Math.round(spec.heat / 2);
   store.touch();
+  if (world.track) world.track('crime', p, { type });   // (analytics: server/launch.js)
   if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y, true); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return true; }
   const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
   for (const q of w.saw) sawCrime(world, q, p, type, x, y);

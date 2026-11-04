@@ -93,7 +93,13 @@ export function noteKill(world, k, v) {
 
 // ---- placing one ---------------------------------------------------------------------------------------------------
 // null, or why not
+// Guests and bounties (the owner, 11-04): while a sign-in is on offer (server/launch.js sets the policy) a guest can't
+// post one. With no policy - offline practice, or no provider switched on - nothing changes.
+let policy = { limited: () => false };
+export function setPolicy(p) { policy = { ...policy, ...p }; }
+export const GUEST_BOUNTY = 'Guests can\'t post bounties - sign in (Settings \u2192 Account) to post one.';
 export function place(world, p, targetPid, amount) {
+  if (policy.limited(p)) return GUEST_BOUNTY;
   amount = Math.round(Number(amount));
   if (p.wanted > 0) return 'Criminals are barred from placing bounties.';
   const r = revenge(p.profile)[targetPid];

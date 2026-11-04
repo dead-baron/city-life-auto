@@ -11,6 +11,7 @@ import * as law from './law.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
 import * as revive from './revive.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const STILL_PX = 24;
 const SEARCH_PX = 480;
@@ -169,7 +170,7 @@ export function update(world) {
     let to = openSpot(world.map, ped.x, ped.y);
     if (!to || !canWalkOut(world.map, to.x, to.y)) to = escapeSpot(world.map, ped.x, ped.y); // closed in: out to the nearest street
     if (!to) { world.notify(p, 'No open ground nearby - use Surrender to start over.', 'warn'); continue; }
-    ped.x = to.x; ped.y = to.y; ped.vx = 0; ped.vy = 0; ped.lz = 0; ped.rollT = 0;
+    ped.x = to.x; ped.y = to.y; ped.vx = 0; ped.vy = 0; ped.lz = 0; ped.rollT = 0; moved(ped);
     world.place(ped);
     p.teleportAt = world.time;
     p.meDirty = true;

@@ -11,6 +11,7 @@ import { ferrisSite, balloonSite, ferrisBoardCab, balloonRoutes, balloonAt, slid
 import { payFrom } from './economy.js';
 import * as homes from './homes.js';
 import { store } from '../store.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const REACH = { ferris: 40, balloon: 46, slide: 40 };
 let nextId = 1, nextRoute = 0;
@@ -68,7 +69,7 @@ export function start(world, p, kind) {
   ped.ride = R;
   ped.hidden = true; ped.inside = null; ped.interior = null; ped.entering = null; ped.fishing = null;
   ped.vx = 0; ped.vy = 0; ped.rollT = 0;
-  if (kind === 'balloon') { const L = site.launch; ped.x = L.x; ped.y = L.y; } else if (kind === 'slide') { ped.x = site.board.x; ped.y = site.board.y; }
+  if (kind === 'balloon') { const L = site.launch; ped.x = L.x; ped.y = L.y; } else if (kind === 'slide') { ped.x = site.board.x; ped.y = site.board.y; } moved(ped);
   world.place(ped);
   world.broadcast({ e: 'ride', ...wire(world, ped) });
   world.notify(p, kind === 'ferris' ? 'You step into the cab at the bottom and the wheel carries you up over the bay.'
@@ -104,7 +105,7 @@ function end(world, p, landed) {
   ped.ride = null;
   if (landed) {
     ped.hidden = false;
-    ped.x = R.ret.x + (world.rand() - 0.5) * (R.k === 'slide' ? 6 : 14); ped.y = R.ret.y + 4;
+    ped.x = R.ret.x + (world.rand() - 0.5) * (R.k === 'slide' ? 6 : 14); ped.y = R.ret.y + 4; moved(ped);
     ped.vx = 0; ped.vy = 0;
     world.place(ped);
     homes.protect(world, ped, 1.5);

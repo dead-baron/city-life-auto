@@ -19374,6 +19374,342 @@ not "on its way", not "no ambulance can reach you", not "you need $200 in the ba
 - While the ambulance (or rescue boat) drives over, the line says how far off it is, and the map shows it (a white disc
   with a red cross, labeled), as the server's note always promised ("watch for it on your map").
 - A greyed-out choice can be tapped: it says why it can't (one per time down, the fee in the bank).
+
+## 2026-11-04 - The launch foundation: accounts, roles, chat, anti-cheat, analytics
+
+The owner's 11-03 decisions (claude/launch-plan-2026-11-03.md, sections 3 and 4). It's on the server, with thin page
+glue. The polished screens come with UI stage 2, which wires the functions below into the title screen, settings and
+the phone. docs/LAUNCH-SETUP.md has what the owner registers and sets.
+
+**Accounts and sign-ins** (server/accounts.js, auth.js, authhttp.js, webauthn.js; client/account.js)
+- One account per profile (`profile.acct`), with several linked sign-ins:
+  - Google and Discord: OAuth with a state, an HttpOnly CSRF cookie and PKCE;
+  - Reddit: state and cookie (no PKCE there);
+  - email magic links through Resend's HTTP API;
+  - passkeys, verified with node:crypto. CBOR, COSE ES256 and RS256, attestation "none", the challenge, origin and
+    rpId checks, user presence, and a sign counter that must climb unless it's always 0, as synced passkeys are.
+- Providers switch on when their env keys are set. Until then their buttons are hidden (`/launch.json`).
+- A sign-in comes back to the page as a two-minute, one-time code (`#cla_login=`), swapped for the token at
+  `/auth/redeem`. It never goes back to a page that isn't ours.
+- **Guests**:
+  - they stay GuestNNNN and can't rename;
+  - a one-time transfer code (10 minutes, rate-limited guessing) moves one to another device and signs the old one out;
+  - signing in on a guest links the sign-in to it, so the progress is kept.
+- Usernames are for members only: shared/names.js rules, the offensive-name filter, unique, once a month (the first
+  pick is free).
+- Old tokens keep working: no generation means generation 0, which every account starts at. Sign-out-everywhere and a
+  ban bump the generation. Existing profiles get an account record on their next login, untouched otherwise.
+- **The 17+ gate and the analytics choice** are asked together at first launch and kept in the browser. The hello says
+  the gate was confirmed, and `CLA_REQUIRE_AGE=1` makes the server insist.
+- Rate limits: transfer redeems (5 per 10 min per address), email links (5 per 10 min per address, 3 an hour per
+  address mailed), OAuth starts, passkey calls, new guests an hour per address. Bans by account, plus a soft device
+  marker (a random id the browser keeps, stored only hashed).
+
+**Roles and the admin log** (server/roles.js, admin.js, adminlog.js, adminhttp.js, devmode.js)
+- The roles:
+  - **owner**: grants and removes admin and helper, reads the admin log and the dashboard;
+  - **admin**: the debug powers, kick, ban, chat mute and strikes, the review list;
+  - **helper**: refund a purchase (from the player's recent purchases, once), rescue a stuck player to the street,
+    restore an item, view a player's recent log.
+- Every privileged message is checked against the account's role on the server, and every one is appended to
+  `<data>/admin-log.jsonl`, refusals included: who, what, target, when, before and after. Each line carries the hash
+  of the line before it, so `/admin/log` says whether the file was edited.
+- The open debug mode stays on behind `CLA_DEV_OPEN`. At 0, Dev Debug Mode and every debug command ask for the admin
+  role, and granting it to a non-admin is refused. Every debug command is logged.
+- The owner comes from `CLA_OWNER_ID`, or a one-time claim code printed in the server log.
+
+**Chat and moderation** (shared/chatdefs.js, server/chat.js, chatfilter.js, chatwords.json, moderation.js;
+client/chat.js)
+- Channels:
+  - near: about 40 m, the same level, as speech bubbles and a log line;
+  - crew: free text now;
+  - faction: police on duty, or your gang;
+  - phone: messages to contacts (met: within 15 m for 4 s, crewed with) and crewmates, kept in an inbox while
+    they're offline.
+- Emotes. No global or district chat. Each channel toggles.
+- The word filter: the words live in server/chatwords.json. A line is read as a skeleton, so leetspeak, spacing,
+  dots, repeats, full-width and Cyrillic look-alikes are caught. An allow list protects ordinary words ("therapist",
+  "cocktail"). Hate and sexual terms are masked. Profanity is only refused in usernames.
+- Moderation:
+  - rate limits, tighter for guests (shorter lines, fewer a window, fewer phone messages);
+  - mute, block and report, kept with the account;
+  - strikes: a hate-filter hit (at most one per 10 min), reports from 3 different players in 24 h, or an admin.
+    Three strikes mean a 24 h chat mute. Everything goes on the review list.
+
+**Anti-cheat** (server/anticheat.js; session.js, ws.js)
+- Movement audits about twice a second, against the shared physics: on foot PED's sprint and roll, in a vehicle its
+  own top speed. A jump with no server teleport is a 'teleport' flag; staying over the limit is a 'speed' flag.
+- Per-kind message rates: what comes faster is dropped, and a flood is flagged. Input packets are capped. Text frames
+  are capped at 8 KB (perf reports 16 KB). Fragmented WebSocket messages now share the 64 KB frame cap. Five seconds
+  in a row over the flood guard closes the socket (4008).
+- Economy anomaly flags: earnings an hour above max($50k, 6x the norm).
+- The audits only flag, to the review list. Kick and ban are admin actions.
+
+**Analytics** (server/analytics.js, moneywatch.js, ga.js; client/analytics.js, errors.js)
+- Self-hosted, in `<data>/analytics.json`, with a bucket a day:
+  - sessions; concurrent players every 5 min; new vs returning;
+  - day-1, day-7 and week-1 retention by cohort;
+  - the first-time funnel (`ftue` hooks, the page's from a short list);
+  - activity minutes and the activity mix (jobs, crimes, leisure, chat, purchases);
+  - jobs done; deaths by cause; client errors;
+  - devices and performance, folded in from the /perf reports;
+  - anti-cheat flags.
+- Money sources and sinks with no change to the ~100 places that pay. A profile's cash and bank become accessors that
+  note each change against the world system or message running: world.curSys, world.curMsg, `shop:<kind>` for a
+  menu pick. Changes are netted per source, so an ATM is no earning.
+- `/admin/dashboard` shows it all in plain HTML tables. Nothing personal goes beyond the account id, and that only on
+  the account itself.
+- GA4 hybrid: gtag.js on the page only with a measurement ID and the player's Accept (Consent Mode v2, denied by
+  default). Server events go through the Measurement Protocol, batched 25 a request on their own timer, with a capped
+  queue that never touches the tick. They're sent only for players whose page reported a GA client ID, which happens
+  only with consent. The user_id is a keyed hash.
+
+**Hooks into the game** (one line each): world.js sets `curSys`; law.js `crime`, players.js `onPedDeath` and
+crews.js `accept` call `world.track`. session.js takes `opts.hooks`, so offline practice runs as before.
+
+**Network messages added** (JSON):
+- Page to server:
+  - `chat {ch, text, to?}`, `emote {e}`, `chatset {off}`;
+  - `mod {a: mute|unmute|block|unblock|report, id, why?, note?}`, `contacts`, `inbox`;
+  - `admin {a, ...}` (roles.js POWERS, plus whoami, claim, pagelink);
+  - `acct {a: state|transfer|name|age}`;
+  - `ftue {s}`, `ga {on, cid, sid}`;
+  - hello gains `dm` (the device marker) and `age17`.
+- Server to page:
+  - `chat {ch, n, id, eid, text, at, own?, to?, tn?}`, `emote {eid, e, n, id}`;
+  - `chatstate`, `chatsay {ok, err}`, `modres`, `contacts {l}`, `inbox {l}`;
+  - `acct {...}` (the account's state) and `acct {a: transfer, code, exp}` / `{a: name, ok, err}`;
+  - `admin {a, ok, err?, data?}`, `agegate`.
+- New close codes:
+  - 4008 flood;
+  - 4009 kicked;
+  - 4010 banned;
+  - 4011 the age gate;
+  - 4012 moved to another device.
+- HTTP: `/launch.json`, `/auth/*`, `/admin/*`.
+
+**Controls**: T opens the chat line (Enter sends, Esc closes; `/c` crew, `/f` faction, `/wave` and the other emotes).
+
+**Budgets**: the page's first load gains the hello's few lines and launchCall (477 -> 478 KB of 520). The four page
+modules load after the page is up.
+
+Tests:
+- test/launch-auth.test.js;
+- test/launch-chat.test.js;
+- test/launch-roles.test.js;
+- test/launch-analytics.test.js;
+- test/launch-world.test.js (a running world, heavy).
+
+## 2026-11-04 - The launch foundation: the review's fixes
+
+An independent review found no blockers for live tokens, saves or balances, but listed fixes to make before it ships.
+Each fix has a test that failed before it (test/launch-review.test.js, plus the updated launch-*.test.js).
+
+1. **The gate and the account panel on a gamepad.** client/account.js keeps its own modal stack (the gate, the panel, a
+   choice). While one is up, main.js hands it the pad (launchPad: D-pad or stick moves, A presses, B backs out, the
+   focus outlined) and the title's own pad handling waits. It used to press PLAY underneath.
+2. **Signing in on another device.**
+   - The sign-in buttons log in: an identity already on an account signs into it.
+   - "Link to this account" is its own button.
+   - An identity no account has asks: link to this character, or start a new account. The guest stays as the previous
+     character, never merged.
+3. **Admin log spam.**
+   - Claims are throttled (5 per 10 minutes), and their refusals are logged once a minute per player.
+   - Debug commands are logged for admins only while the open mode is on.
+   - Appends are async and batched.
+   - /admin/log reads the last 256 KB and checks a head file (count, last hash, size), so a file cut short shows. The
+     whole chain is rehashed only on ?verify=1.
+4. **Money noted against the player who's on now.** The target lives on the profile (`__mw`). watch() re-binds it on
+   every join and release() unbinds it on leave.
+5. **Reports.**
+   - A reporter's weight: members 1, guests with 6 h of age and 60 minutes of play 0.5, new guests 0.
+   - Weighted reports reaching the threshold go to the top of the review list ('reports'). They no longer strike or
+     mute on their own.
+   - Hate-filter and admin strikes are unchanged.
+6. **Start fresh keeps the account** (players.js wipeAccount). Only the progress resets, and the page keeps its token
+   (`wiped.keep`).
+7. **Refusals at the door.**
+   - The guest limit is off by default.
+   - Refusal codes: 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved, 4013 the guest limit, 4014 signed out.
+   - The page stops reconnecting on these, shows why, and PLAY tries again.
+8. **Guests rename as before while no provider is switched on.**
+9. **Bans and sign-outs.**
+   - A ban no longer invalidates the guest's token, so unbanning restores access.
+   - Banned devices are indexed, not scanned for on each retry.
+   - Sign-out-everywhere closes the account's live sessions (4015). A member's stale token is refused (4014) instead
+     of becoming a new guest.
+10. **The smaller items.**
+    - Linking and logging in are bound to the starting page (a nonce), and a link is POST-confirmed with the page's
+      own token.
+    - Own-key lookups for emotes, leisure and message rates (the rate counter is prototype-free: 'constructor' was
+      always dropped).
+    - A cookie with a bad % isn't a 500.
+    - The admin link lands on a same-site page (meta refresh) so its Strict cookie survives a cross-site first load.
+    - Helpers can't refund or restore their own account. Staff act on account ids only.
+    - A passkey counter that goes backwards signs in and flags for review.
+    - GA's Accept grants analytics_storage only.
+    - The GA ids are re-sent and queued errors flushed on every new session.
+    - The half-second work is guarded.
+    - Smaller per-account caps (log 60, purchases 20, inbox 30, contacts 100, strikes 20, sign-ins 8).
+    - Names are escaped in the panel.
+    - Server-made moves are marked (server/movemark.js `moved(ped)`) at about 40 sites in 22 systems, so the
+      movement audit doesn't take them for teleports.
+
+**The fix check's round, and the owner's decisions (11-04).** Each item has a test that failed before it
+(test/launch-review2.test.js):
+- **A.** An email sign-in code from another browser, or one someone sent you, no longer switches silently. It isn't
+  used up, and the page asks "Sign in as <name>? This replaces the character on this device".
+- **I.** A page keeps a few nonces at once (up to 5, for half an hour), so pressing Google doesn't spoil an emailed link.
+- **B.** Up to three previous characters are kept, named, with "Switch back to <name>" rows in the account panel.
+  main.js's own Settings button still goes back to the newest.
+- **C.** launch.stop() writes the admin log's queued lines (the SIGTERM path calls it). A crash between the lines and
+  the head is repaired at start, when the extra lines chain from the head. A file cut short is still reported.
+- **D.** The update wipe (`CLA_FRESH_ON_UPDATE=all`) keeps the account.
+- **H.** Start fresh runs the session's leave hooks first.
+- **E.** While the gate or another account dialog is up, the game keys wait: Enter no longer presses PLAY underneath.
+  The dialog takes Tab, Enter, Space and Esc itself, and focus starts inside it.
+- **G.** A refusal's reason belongs to its own connection, and the age gate never shows an old one.
+- **F.** Sign-out-everywhere replies first and closes the sessions 1.5 s later.
+- **J.** /perf and /clienterrors are now behind the staff login, at /admin/perf and /admin/clienterrors (admins and the
+  owner). The old addresses redirect there. The pages still send both over the socket.
+- **K.** While a sign-in provider is on, guests can't start or lead a crew, or post a bounty, and are told to sign in.
+  With no provider on, nothing changes.
+- **L.** The biker faction channel waits behind `FACTIONS.biker` (off) until biker groups exist.
+
+## 2026-11-03 - Traffic that keeps moving; people and drivers with a bit more sense; drivers who slip up, now and then
+
+The owner's notes (11-03): "Traffic still seems to backup in areas too, can we make sure we're solving for traffic jams?
+Its okay if they happen from time to time but just want to make sure traffic is moving smoothly and NPCs humans and
+animals and vehicles are all operating with some intelligence to them." And, for the drivers: "its good they stop for
+pedestrians (npc and players) but they still should run some people over sometimes, and if they stop suddenly the
+vehicle behind them might rear end them which sometimes might start a fight between the npc drivers but not always."
+
+### The harness (tools/trafficsim.mjs)
+World v3 built headless as the server builds it. Six players stand by the busy stations (Midtown, Metro Central, Old
+Quarter, Northgate, Southside, Westport Center) and one stands out in the wilds by Red Rock. The world runs for 8 in-game
+minutes; the first minute is warm-up. The report gives:
+- vehicles stopped for 20 s and more, and why (it walks down the queue to its head);
+- the jam clusters (three or more stuck cars within 140 px), named by the junction's streets;
+- the average speed by road kind, with how much of the time traffic is stopped and how much of that is at a red light;
+- the rescues: cars cleared while stuck, and the cars that gave up;
+- the traffic code's own counters;
+- people on foot who mean to walk somewhere and don't move;
+- animals pressing into something;
+- the tick, overall and for each system.
+
+`--dump` writes every stuck car's whole state and the state of whatever is in its way. Run it under
+`flock /tmp/cla-heavy.lock node --expose-gc tools/trafficsim.mjs --seed 7` (about 100 s and 2 GB to build).
+
+### The hot spots and what locked them
+1. **Central Avenue at Northgate Station Road (The Yards): a gang shootout's police car.** gangwar.js dropped the car
+   20 px off the nearest junction's middle, at a random angle. It isn't despawnable, and the shootout's clean-up waits
+   until nobody is within 1100 px. With a player at the station, it stood across the avenue's mouth for the rest of the
+   run, and the avenue queued behind it: 1,038-1,288 vehicle-seconds in one run, a sedan stuck four minutes. Now
+   `kerbSpot` puts the car along the nearest street, clear of the junctions at both ends. It goes up on the pavement
+   where it fits (one-lane streets are no wider than a car) and at the kerb otherwise. A finished shootout's car becomes
+   the clean-up's (despawnable).
+2. **Cars left in the lane (parked or empty, a wreck, a breakdown), and service vehicles at work.** A driver behind one
+   on a street with a lane each way could only turn round. With no room to turn (a queue behind, a narrow street), it
+   waited for the clean-up, which never comes while someone's watching. Now (reroute.js `findWay`, `standing`) it goes
+   round on the other side of the road when the strip is clear and nothing's coming (`oncoming`). It backs off first
+   if it's nose to the other car (`gap0`/`back0`), so the corner of its bumper doesn't catch it and shove it along. It
+   swings out slowly from beside the back corner and follows the lane's heading, not the way it happens to point. The
+   queue behind follows it round one car at a time (`jammed` no longer counts a car that's about to go round).
+3. **Cars nosed at a slant into a car in a kerb bay (Magnolia Street, Southside).** A car eased over for a siren, or
+   out of a bend, stopped nose to a parked car's corner. Standing still, it could never steer back into its lane.
+   Three fixes in traffic.js:
+   - `straighten`: it backs off a little, and the nose swings back toward its line.
+   - `obstacleSpeed`: it crawls past a standing car that's clear of its lane (`clearOfLane`, worked out once per pair)
+     instead of stopping short of it for good.
+   - Easing over for a siren never goes onto a car standing at the kerb.
+4. **A tow truck pulling away with a car on its hook, nose to nose with a car from each side (Magnolia Street, four
+   minutes).** A car with no way round and no room to turn now backs off down its lane, as far as the room behind it
+   allows, for a vehicle at work that's headed its way (reroute.js `makeWay`).
+5. **Blocking the box.** junctionClear looked for a queue only a car's length past the junction's mouth. A van stopped
+   just beyond that let a car drive in, and it stopped with its tail across the junction. Now the whole car must fit
+   past the mouth (`boxHolds` counts the holds).
+
+### People and animals
+- **People on foot** (npc.js):
+  - A wanderer's next spot must be reachable in a straight walk: no tree, lamp post, bench, bin or standing vehicle
+    on the way (`lineHits`, checked once per pick). The tiles alone let them pick a spot behind a parked car and walk
+    into it.
+  - At the kerb they wait for a gap in the traffic (`kerbWait`: a car that would be there within 2.6 s). They give up
+    and go somewhere else after 7 s.
+  - Wanderers pressing into something step aside (`sidestep`, which only some roles had before).
+- **Animals**: measured, and they're fine. No animal was stuck 3 s or more in any run, and their give-ups are task
+  #422's steering working. No change.
+
+### Fallible drivers (server/systems/slips.js; the numbers are shared/rules.js DRIVER_SLIPS)
+- **A miss.** A driver coming up on someone on foot in the road (an NPC or a player) is rolled once for that person.
+  Now and then it reacts late, by 0.9-1.5 s. The odds go up when they step out close in front, at night, in the rain,
+  or with a reckless driver, and down on a zebra crossing with the walk light. What happens next is the cars' own
+  physics (vehicles.js strikePed, carhits.js).
+- **A rear-end.** The car ahead brakes hard (`noteBraking`). The driver behind may be slow to react, by its
+  attentiveness (fixed per driver) and the road's wetness, and if its gap wasn't enough it runs into it: the cars' own
+  crash and damage.
+- **After a rear-end between two of the city's drivers** (`bumped`, from vehicles.js):
+  - Most often both drive on.
+  - About a fifth of the time they pull up, get out and have words: 'say' lines, face to face.
+  - About one in twelve (more with the drivers' tempers, npc fight) it comes to fists. That runs through npc.startFight
+    and markBrawl, so the police can be called to it like any brawl. It stops at 55 % health.
+  - Then they walk back, get in and go. A driver who is still about is put back at the wheel when time's up, so a car
+    left in the lane happens only if its driver is down, arrested or gone. While they're out, the traffic behind treats
+    the two cars as a blockage and goes round.
+- **Never** near a hospital, near a player who is down, or within 90 s of a player waking up or coming in (anywhere).
+  Never twice to the same player in 10 minutes, and never to anyone lying in the road.
+
+### Before and after (tools/trafficsim.mjs, 8 in-game minutes, 7 counted; main c232e74a vs this branch)
+| | seed 7 before | seed 7 after | seed 3 before | seed 3 after |
+|---|---|---|---|---|
+| vehicles stuck 20 s+ (episodes / vehicles) | 30 / 26 | 2 / 2 | 39 / 29 | 21 / 17 |
+| vehicle-seconds stuck (not at a light) | 1,228 | 41 | 2,519 | 583 |
+| longest | 193 s | 21 s | 255 s | 60 s |
+| stuck at once (average / peak) | 1.5 / 7 | 0.05 / 3 | 4.2 / 12 | 0.4 / 6 |
+| jam clusters (count / cluster-seconds) | 2 / 6 | 0 / 0 | 2 / 38 | 1 / 1 |
+| cleared away while stuck / gave up | 5 / 4 | 0 / 0 | 3 / 2 | 2 / 0 |
+| avg speed px/s: st / ave / minor / art / blvd | 102 / 114 / 71 / 180 / 180 | 106 / 130 / 60 / 181 / 176 | 104 / 95 / 58 / 182 / 176 | 105 / 124 / 49 / 183 / 181 |
+
+The rest:
+- **People.** Seed 3 (the same ped metric both sides): meaning to walk but not moving, 17.9 % of their walking time
+  before and 16.7 % after; pressing 3 s or more, 454 episodes before and 233 after. Pressing into a standing vehicle
+  went from 44 to 0.
+- **Animals.** No animal was stuck 3 s or more, before or after.
+- **Minor roads are slower.** The minor roads by Midtown station are the station's own approach roads. Cars there now
+  wait at their line while the road they're taking is backed up past the junction, where they used to drive in and
+  block the box. That costs the minor roads some speed; the avenues and streets go faster.
+- **The tick.** These were measured on the shared 2-core machine with other agents' captures running, so the noise is
+  a few ms. On the cleanest pair (the same code but for makeWay): traffic 4.54-4.59 ms before and 4.85-5.01 ms after;
+  npc 5.0-5.2 before and 5.8 after; the whole tick's mean 33.3-33.8 before and 34.1 after, p95 44-47 before and 46-47
+  after. A CPU profile has every new function (straighten, clearOfLane, lineHits, kerbWait, noteBraking, missPed,
+  lateFor) under 0.3 % of the tick.
+- **The slips over the four after-runs (about 50 vehicle-hours of traffic round the players):**
+  - misses 0.7-1.7 per vehicle-hour, almost all of them on someone who stepped (or dived) clear in time; one
+    run-over in about 110 vehicle-hours over all nine runs with the slips on;
+  - rear-ends 0.24-0.87 per vehicle-hour;
+  - words 0.08-0.24 per vehicle-hour;
+  - fist fights 0-0.08 per vehicle-hour;
+  - cars left in the lane after an incident: 0 since the drivers are put back at the wheel.
+
+### Tests
+- test/trafficbox.test.js:
+  - don't block the box: a car waits at its line while its exit is backed up, then goes;
+  - two cars nose to nose get by each other;
+  - a shootout's police car is never in a junction;
+  - a car nosed at a slant into a car in a kerb bay straightens up and drives past without touching it.
+- test/reroute.test.js:
+  - a car left in the lane is gone round, the whole queue following, and not shoved along;
+  - no pulling out with something in the other lane ahead;
+  - a car backs off for a tow truck headed its way, and not for one facing away;
+  - the turn-round case now has both lanes blocked.
+- test/slips.test.js:
+  - a rear-end that ends in words: out, words, back in and away within 40 s;
+  - a rear-end that comes to blows: both back in afterwards, nobody killed;
+  - most rear-ends: both drive on, and never one by a hospital;
+  - a late driver really runs into the car ahead, with dents on both;
+  - a miss that hits someone;
+  - nobody lying in the road is missed, and nor is a player who has just come in.
+
 ## 2026-11-03 - Wave A1: shop signs you can read, in a face that suits the trade
 
 The owner's 11-03 note: "The text/font on building fronts can be hard to read sometimes in their stylized font. Would

@@ -47,6 +47,7 @@ import * as struggle from './struggle.js';
 import * as prison from './prison.js';
 import { seek, footWay, walkInAt, sidestep, spawnNpc } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 const PICKUP_PX = 200;   // a car this close to the prisoner is walked to (further off, it drives over first)
 const DROP_PX = 170;     // at the station: this close to the kerb outside the front door
@@ -546,7 +547,7 @@ function jail(world, p, st, secs, bail, stars, by, cell = null) {
   const b = cell ? cell.b : cells.blockOf(world, st.id);
   if (b < 0) {   // (a station with no cells - none now: the old holding cell, out of sight)
     ped.hidden = true; ped.inside = null; ped.interior = { kind: 'jail', poi: st.id };
-    ped.x = st.x; ped.y = st.y;
+    ped.x = st.x; ped.y = st.y; moved(ped);
   } else {
     if (!cell) cells.regulars(world, b);   // (a couple of others doing time there: task #380)
     const c = cell ? cell.c : cells.cellFor(world, b), cl = cells.blocks(world)[b].cells[c];
@@ -667,7 +668,7 @@ function release(world, p, msg) {
   cells.clearPose(ped);
   ped.hidden = false; ped.interior = null; ped.inside = null;
   if (k) { cells.setDoor(world, c.cell.b, c.cell.c, true); ped.x = k.door.x + (world.rand() - 0.5) * 20; ped.y = k.door.outY; ped.a = k.south ? Math.PI / 2 : -Math.PI / 2; }
-  else { ped.x = st.x + (world.rand() - 0.5) * 16; ped.y = st.y; }
+  else { ped.x = st.x + (world.rand() - 0.5) * 16; ped.y = st.y; } moved(ped);
   ped.vx = 0; ped.vy = 0;
   world.place(ped);
   homes.protect(world, ped, SPAWN_PROTECT_S);

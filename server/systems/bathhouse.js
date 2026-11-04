@@ -37,6 +37,7 @@ import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as grime from './grime.js';
 import * as showers from './showers.js';
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 export const BATH0 = 6000000;   // (a bathhouse's floor's id: clear of the arcades' - arcade.js ARC0)
 const PLAN = 'bath', TIER = 2;
@@ -455,7 +456,7 @@ export function devIn(world, p, msg = {}) {
   if (!poi) return 'No bathhouse on this map.';
   if (ped.home) homeinside.leave(world, p);
   if (ped.hidden) homes.leaveHome(world, p);
-  ped.x = poi.x; ped.y = poi.y; world.place(ped);
+  ped.x = poi.x; ped.y = poi.y; world.place(ped); moved(ped);
   homes.goInside(world, p, hallOf(world, poi));
   const h = ped.home && hallById(world, ped.home.id), L = hallLayout(h), s = ped.home, G = geoOf(L), S = G.sides[msg.side ? 1 : 0];
   if (msg.pass !== false) s.pass = 1;

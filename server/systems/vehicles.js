@@ -19,6 +19,7 @@ import * as carhits from './carhits.js';         // (task #361: run over, onto t
 import * as aircraft from './aircraft.js';       // (helicopters and planes: up in the air, nothing on the ground touches them)
 import * as crews from './crews.js';             // (a crewmate at the wheel: shoved aside, not run down)
 import * as doorways from './doorways.js';       // (nobody parked in at a door: the owner's notes 2)
+import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
 
 export function driverOf(world, v) { return v.seats[0] ? world.get(v.seats[0]) : null; }
@@ -202,6 +203,7 @@ function resolveVehicleHit(world, a, b, hit) {
     const pa = !!(da && da.player), pb = !!(db && db.player);
     if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db);
     if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null);
+    if (!pa && !pb) slips.bumped(world, a, b, impact);   // (one of the city's drivers into the back of another: on, words, or blows - slips.js)
   }
 }
 
@@ -215,6 +217,7 @@ function strikePed(world, v, ped, vn, h) {
   const driver = driverOf(world, v);
   // run over or up onto the hood (carhits.js), or knocked flying
   const how = carhits.outcome(world, v, ped, vn);
+  slips.noteStrike(world, v, ped);
   let killed;
   if (how !== 'fling') killed = carhits.apply(world, v, ped, vn, how, driver);
   else {
@@ -441,6 +444,7 @@ import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
 import * as grime from './grime.js';
+import * as slips from './slips.js';   // (fallible drivers: a rear-end between two of the city's drivers - slips.js)
 import { BATH } from '../../shared/rules-play.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
@@ -476,7 +480,7 @@ export function throwRider(world, ped, v, dir = 0, attacker = null, dead = false
   ped.bailFrom = v.id; ped.bailFromUntil = world.time + 1.5;   // (not straight into its own bike)
   const k = RIDER_KNOCK.push, vx = v.vx * 0.85 + Math.cos(dir) * k, vy = v.vy * 0.85 + Math.sin(dir) * k;
   if (boat && wet && WATER_T[world.map.tileAtPx(wet.x, wet.y)]) {
-    ped.x = wet.x; ped.y = wet.y; ped.under = true; world.place(ped);
+    ped.x = wet.x; ped.y = wet.y; ped.under = true; world.place(ped); moved(ped);
     ped.vx = vx * 0.3; ped.vy = vy * 0.3;
     world.emit(ped.x, ped.y, { e: 'splash', x: ped.x, y: ped.y, n: 14 });
   } else if (dead) { ped.vx = vx; ped.vy = vy; }
@@ -758,7 +762,7 @@ export function ejectPed(world, ped, force, toward = null) {
     if (i >= 0) v.seats[i] = 0;
     // nowhere dry nearby (out on the water): over the side, into the water beside the vehicle
     const spot = findExitSpot(world, v, ped, v.def.kind === 'boat' ? 150 : force ? 400 : 150, toward) || sideSpot(v, ped);
-    ped.x = spot.x; ped.y = spot.y; ped.lz = v.lz || 0;
+    ped.x = spot.x; ped.y = spot.y; ped.lz = v.lz || 0; moved(ped);
     // which layer of a bridge you're on (physics.js ped.under): out of a boat it's the water's - under a bridge, in the
     // water beneath the deck, swimming (task #381); out of anything else on a bridge, its deck
     ped.under = v.def.kind === 'boat';
