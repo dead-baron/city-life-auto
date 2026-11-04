@@ -1755,3 +1755,11 @@ body:not(.touch) .pz-head img { width: 200px; }
 body:not(.touch) .pz-row { min-height: var(--tap); }
 /* the map: the map itself full screen as it was, its head, legend and zoom buttons at the screens' scale */
 body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:not(.touch) .bm-zoom { zoom: var(--zk, 1); }
+/* the launch code's account panel and 17+ gate (client/account.js: its own inline styles) inside the title's slots, on
+   the kit: its heading is the screen's own, its buttons the kit's */
+#gate-body h2 { display: none; }
+#gate-body [data-cla-modal] > div { max-width: none !important; margin: 0 !important; padding: var(--s3) var(--s4) !important; background: none !important; border: 0 !important; color: var(--cream); font: 500 var(--fs-3) var(--ui); }
+:is(#gate-body, #signin-body) button { border-radius: var(--r2); min-height: var(--tap) !important; padding: 0 var(--s4) !important; border: 2px solid var(--gold-a) !important; background: var(--navy) !important; color: var(--cream) !important; font: 700 var(--fs-3) var(--ui) !important; }
+:is(#gate-body #g-all, #signin-body [data-in], #signin-body #a-pks, #signin-body #a-namego) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
+:is(#gate-body, #signin-body) input:not([type=checkbox]) { min-height: var(--tap); padding: 0 var(--s2) !important; border: 2px solid var(--steel); border-radius: var(--r1); background: var(--ink); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
+#signin-body .cla-account { padding: var(--s3) var(--s4); color: var(--cream); font: 500 var(--fs-3) var(--ui); }
