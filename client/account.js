@@ -28,7 +28,7 @@ async function api(path, body, { auth = false, method = 'POST' } = {}) {
   if (auth && C.token()) headers.authorization = `Bearer ${C.token()}`;
   const r = await fetch(httpBase() + path, { method, headers, body: method === 'GET' ? undefined : JSON.stringify(body || {}), credentials: 'omit' });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.err || `HTTP ${r.status}`);
+  if (!r.ok) { const e = new Error(j.err || `HTTP ${r.status}`); e.body = j; e.status = r.status; throw e; }
   return j;
 }
 export async function launchInfo() {
@@ -72,6 +72,22 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // opens a text field), B backs out where that makes sense. The control with the pad's focus is outlined.
 const modals = [];   // what's up, top last: the gate, the panel, a choice
 function closeModal(m) { const i = modals.indexOf(m); if (i >= 0) modals.splice(i, 1); m.remove(); }
+// a dialog the keyboard can use: focus starts on its first control, Tab and Shift+Tab go round inside it (Enter and Space
+// press the focused button or tick the box - the browser's own; client/input.js leaves keys inside a dialog alone)
+export function keyboardDialog(m) {
+  const items = () => [...m.querySelectorAll('button, input, select, a[href]')].filter((e) => !e.disabled && e.offsetParent !== null);
+  m.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && m.onback) { e.preventDefault(); m.onback(); return; }
+    if (e.key !== 'Tab') return;
+    const l = items();
+    if (!l.length) return;
+    const i = l.indexOf(document.activeElement);
+    e.preventDefault();
+    l[(i + (e.shiftKey ? -1 : 1) + l.length) % l.length].focus();
+  });
+  const first = items()[0];
+  if (first && first.focus) first.focus();
+}
 const FOCUS_CSS = 'cla-pfocus';
 let padIdx = 0, styled = false;
 function padStyle() { if (styled || typeof document === 'undefined') return; styled = true; const st = document.createElement('style'); st.textContent = `.${FOCUS_CSS}{outline:3px solid #ffd27f !important;outline-offset:2px}`; document.head.appendChild(st); }
@@ -111,6 +127,7 @@ export function showGate(onDone, { into = null } = {}) {
     <p id="g-msg" style="color:#ff8a80;min-height:1.2em;margin:8px 0 0"></p></div></div>`);
   (into || document.body).appendChild(ov);
   modals.push(ov); padIdx = 0;
+  keyboardDialog(ov);
   const go = (consent) => {
     if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 17 or older to play.'; return; }
     const v = { age17: g.age17 || Date.now(), consent, at: Date.now(), v: 1 };
@@ -133,11 +150,18 @@ export function showGate(onDone, { into = null } = {}) {
 //   signIn(provider, { link })  link it to the character on this page (Settings: "Link to this account").
 // Each flow carries a nonce this page keeps to itself (localStorage cla.pn) and shows again to finish: a sign-in set off
 // in your browser by someone else can't be finished by your page.
-const PN_KEY = 'cla.pn', PREV_KEY = 'cla.token.prev';
+const PNS_KEY = 'cla.pns', PREV_KEY = 'cla.token.prev', PREVS_KEY = 'cla.prevs';
+const PN_TTL_MS = 30 * 60e3, PN_MAX = 5, PREV_MAX = 3;
+// the page's live nonces, newest first: one per flow started in the last half hour (an email link sent, then Google
+// pressed: both still finish)
+export function keepPn(list, pn, at) { return [{ pn, at }, ...(Array.isArray(list) ? list : []).filter((x) => x && x.pn !== pn && at - x.at < PN_TTL_MS)].slice(0, PN_MAX); }
+const livePns = () => { try { return (JSON.parse(ls.get(PNS_KEY) || '[]') || []).filter((x) => Date.now() - x.at < PN_TTL_MS).map((x) => x.pn); } catch { return []; } };
 function newPn() {
   const b = new Uint8Array(24); crypto.getRandomValues(b);
   const pn = btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  ls.set(PN_KEY, pn);
+  let list = [];
+  try { list = JSON.parse(ls.get(PNS_KEY) || '[]'); } catch { list = []; }
+  ls.set(PNS_KEY, JSON.stringify(keepPn(list, pn, Date.now())));
   return pn;
 }
 export function signIn(provider, { link = false } = {}) {
@@ -151,10 +175,31 @@ export async function emailLink(email, { link = false } = {}) {
   return true;
 }
 // a new token for this page; the one it replaces kept as the previous one (Settings -> go back to it)
+// The characters this page played before a sign-in or a code switched it (up to PREV_MAX, newest first, with their
+// names): Settings -> Account -> "Switch back to <name>". The newest also goes in cla.token.prev, which main.js's
+// own Settings button goes back to.
+export function keepPrev(list, entry, max = PREV_MAX) {
+  if (!entry || !entry.token) return Array.isArray(list) ? list.slice(0, max) : [];
+  return [entry, ...(Array.isArray(list) ? list : []).filter((x) => x && x.token && x.token !== entry.token)].slice(0, max);
+}
+export function previousCharacters() { try { return (JSON.parse(ls.get(PREVS_KEY) || '[]') || []).filter((x) => x && x.token && x.token !== (C && C.token())); } catch { return []; } }
 function takeToken(t) {
   const old = C.token();
-  if (old && old !== t) ls.set(PREV_KEY, old);
+  if (old && old !== t) {
+    let list = [];
+    try { list = JSON.parse(ls.get(PREVS_KEY) || '[]'); } catch { list = []; }
+    ls.set(PREVS_KEY, JSON.stringify(keepPrev(list, { token: old, name: (state && state.name) || 'your previous character', at: Date.now() })));
+    ls.set(PREV_KEY, old);
+  }
   C.setToken(t);
+}
+// back to one of them (the one played now joins the list in its place)
+export function switchBack(i) {
+  const p = previousCharacters()[i | 0];
+  if (!p) return false;
+  takeToken(p.token);
+  location.reload();
+  return true;
 }
 const NAMES = { google: 'Google', discord: 'Discord', reddit: 'Reddit', email: 'Email link', passkey: 'Passkey' };
 // A sign-in that came back (the hash): a login code swapped for its token; a link confirmed with this page's own token;
@@ -165,23 +210,35 @@ export async function consumeLoginHash() {
   if (!code && !lc && !err) return null;
   history.replaceState(null, '', location.href.split('#')[0]);
   if (err) return { error: err };
-  const pn = ls.get(PN_KEY) || '';
+  const pns = livePns(), pn = pns[0] || '';
   try {
-    if (code) { const j = await api('/auth/redeem', { code, pn }); takeToken(j.token); return { method: j.method, reload: true }; }
+    if (code) {
+      let j;
+      try { j = await api('/auth/redeem', { code, pns }); }
+      catch (e) {
+        if (!e.body || !e.body.confirm) throw e;
+        // an email link from another browser (or sent by someone else): only with the player's say-so
+        const go = await choose(`Sign in as ${e.body.name}? This replaces the character on this device (it stays in Settings as a previous character).`, [['yes', `Sign in as ${e.body.name}`], ['cancel', 'Cancel']]);
+        if (go !== 'yes') return null;
+        j = await api('/auth/redeem', { code, pns, confirm: true });
+      }
+      takeToken(j.token);
+      return { method: j.method, reload: true };
+    }
     const mode = h.get('m'), known = h.get('known') === '1', prov = NAMES[h.get('p')] || 'that sign-in';
     if (mode === 'link') {
-      try { const j = await api('/auth/link-confirm', { code: lc, pn, action: 'link' }, { auth: true }); C.setToken(j.token); return { linked: prov }; }
+      try { const j = await api('/auth/link-confirm', { code: lc, pns, action: 'link' }, { auth: true }); C.setToken(j.token); return { linked: prov }; }
       catch (e) { if (!known) throw e; }
       // (already on another account: signing into that one instead is offered, never done silently)
       const go = await choose(`${prov} is already linked to another account.`, [['login', `Sign in to that account`], ['cancel', 'Stay here']]);
       if (go !== 'login') return null;
-      const j = await api('/auth/link-confirm', { code: lc, pn, action: 'login' });
+      const j = await api('/auth/link-confirm', { code: lc, pns, action: 'login' });
       takeToken(j.token);
       return { reload: true };
     }
-    const go = await choose(`No account uses this ${prov} sign-in yet.`, [['link', 'Link it to the character I’m playing (keeps its progress)'], ['new', 'Start a new account (this character stays on this device as your previous one)'], ['cancel', 'Cancel']]);
+    const go = await choose(`No account uses this ${prov} sign-in yet.`, [['link', 'Link it to the character I’m playing (keeps its progress)'], ['new', 'Start a new account (you can switch back to this character from Settings → Account)'], ['cancel', 'Cancel']]);
     if (go === 'cancel' || !go) return null;
-    const j = await api('/auth/link-confirm', { code: lc, pn, action: go }, { auth: go === 'link' });
+    const j = await api('/auth/link-confirm', { code: lc, pns, action: go }, { auth: go === 'link' });
     if (go === 'link') { C.setToken(j.token); return { linked: prov }; }
     takeToken(j.token);
     return { reload: true };
@@ -193,6 +250,7 @@ function choose(text, opts) {
     const ov = el(`<div style="${css}" role="dialog" aria-modal="true" data-cla-modal="1"><div style="${box}"><p>${esc(text)}</p>${opts.map(([k, t], i) => `<div><button data-k="${esc(k)}" style="${i ? btn2 : btn};width:100%;text-align:left">${esc(t)}</button></div>`).join('')}</div></div>`);
     document.body.appendChild(ov);
     modals.push(ov);
+    keyboardDialog(ov);
     for (const b of ov.querySelectorAll('[data-k]')) b.onclick = () => { closeModal(ov); resolve(b.dataset.k); };
     ov.dataset.back = 'cancel';
     ov.onback = () => { closeModal(ov); resolve('cancel'); };
@@ -257,6 +315,7 @@ function renderPanel() {
     <div>${on.map((p) => `<button data-link="${p}" style="${btn2}">${NAMES[p]}${linked.has(p) ? ' ✓' : ''}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>
     <div id="a-email" style="display:none;margin-top:8px"><input id="a-em" type="email" placeholder="you@example.com" style="padding:7px;width:16em"> <button id="a-ems" style="${btn}">Send link</button></div>` : ''}
     ${s.canRename ? `<p style="margin:12px 0 2px">${s.guest ? 'Name' : 'Username'}${s.renameIn ? ` (next change in ${Math.ceil(s.renameIn / 86400e3)} days)` : ''}:</p><input id="a-name" maxlength="16" value="${esc(s.name || '')}" style="padding:7px"> <button id="a-namego" style="${btn}">Save</button>` : s.guest ? '<p style="margin:12px 0 2px">Sign in to pick a username.</p>' : ''}
+    ${previousCharacters().map((p, i) => `<div><button data-back="${i}" style="${btn2}">Switch back to ${esc(p.name)}</button></div>`).join('')}
     <p style="margin:12px 0 2px">Move to another device:</p><button id="a-xfer" style="${btn2}">Make a transfer code</button> <code id="a-code" style="font-size:18px;margin-left:6px"></code>
     <div style="margin-top:6px"><input id="a-xin" placeholder="ABCDE-FGHJK" style="padding:7px;width:9em;text-transform:uppercase"> <button id="a-xuse" style="${btn2}">Use a code</button></div>
     ${s.claim ? `<p style="margin:12px 0 2px">Claim ownership (the code in the server log):</p><input id="a-claim" style="padding:7px"> <button id="a-claimgo" style="${btn2}">Claim</button>` : ''}
@@ -276,6 +335,7 @@ function renderPanel() {
   onc('#a-xfer', () => { makeTransferCode(); return 'Making a code...'; });
   onc('#a-xuse', async () => { await useTransferCode(inner.querySelector('#a-xin').value); location.reload(); return 'Moving...'; });
   onc('#a-claimgo', async () => { const r = await claimOwner(inner.querySelector('#a-claim').value); return r.ok ? 'You are the owner.' : r.err; });
+  for (const b of inner.querySelectorAll('[data-back]')) b.onclick = () => switchBack(Number(b.dataset.back));
   for (const b of inner.querySelectorAll('[data-page]')) b.onclick = tryIt(async () => { const r = await staffPage(b.dataset.page); return r.ok ? '' : r.err; });
 }
 export async function openPanel({ into = null } = {}) {
@@ -291,6 +351,7 @@ export async function openPanel({ into = null } = {}) {
   if (!into) panel.querySelector('#a-x').onclick = closePanel;
   C.send({ t: 'acct', a: 'state' });
   renderPanel();
+  keyboardDialog(panel);
   return panel;
 }
 export function closePanel() { if (panel) { closeModal(panel); panel = null; } }

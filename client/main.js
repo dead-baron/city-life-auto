@@ -193,7 +193,7 @@ function refusedAtDoor(code) {
   $('hud').classList.add('hidden');
   $('t-resume').classList.add('hidden');
   $('play').disabled = false;
-  const why = S.refusedWhy || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 17 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
+  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 17 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
   $('t-status').textContent = `${why} ${code === 4010 ? '' : 'Press PLAY to try again.'}`.trim();
   S.playing = false;
 }
@@ -241,6 +241,7 @@ function connect() {
   const url = serverUrl();
   // only announce the first attempt: rewriting the status on every retry made the title screen jump
   if (!S.connectFailed) $('t-status').textContent = `Connecting to ${url.replace(/^wss?:\/\//, '').replace(/\/ws$/, '')}...`;
+  S.refusedWhy = null;   // (a reason belongs to the connection it came on: none yet on this one)
   let ws;
   try { ws = new WebSocket(url); } catch (e) { scheduleReconnect('Bad server address'); return; }
   ws.binaryType = 'arraybuffer';
@@ -1527,6 +1528,7 @@ $('play').onclick = firstPlay(playGo);
 
 initInput(canvas, {
   onKey(k) {
+    if (document.querySelector('[data-cla-modal]')) return;   // (the 17+ gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
     if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;

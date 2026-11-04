@@ -19555,6 +19555,27 @@ Each fix has a test that failed before it (test/launch-review.test.js, plus the 
     - Server-made moves are marked (server/movemark.js `moved(ped)`) at about 40 sites in 22 systems, so the
       movement audit doesn't take them for teleports.
 
+**The fix check's round, and the owner's decisions (11-04).** Each item has a test that failed before it
+(test/launch-review2.test.js):
+- **A.** An email sign-in code from another browser, or one someone sent you, no longer switches silently. It isn't
+  used up, and the page asks "Sign in as <name>? This replaces the character on this device".
+- **I.** A page keeps a few nonces at once (up to 5, for half an hour), so pressing Google doesn't spoil an emailed link.
+- **B.** Up to three previous characters are kept, named, with "Switch back to <name>" rows in the account panel.
+  main.js's own Settings button still goes back to the newest.
+- **C.** launch.stop() writes the admin log's queued lines (the SIGTERM path calls it). A crash between the lines and
+  the head is repaired at start, when the extra lines chain from the head. A file cut short is still reported.
+- **D.** The update wipe (`CLA_FRESH_ON_UPDATE=all`) keeps the account.
+- **H.** Start fresh runs the session's leave hooks first.
+- **E.** While the gate or another account dialog is up, the game keys wait: Enter no longer presses PLAY underneath.
+  The dialog takes Tab, Enter, Space and Esc itself, and focus starts inside it.
+- **G.** A refusal's reason belongs to its own connection, and the age gate never shows an old one.
+- **F.** Sign-out-everywhere replies first and closes the sessions 1.5 s later.
+- **J.** /perf and /clienterrors are now behind the staff login, at /admin/perf and /admin/clienterrors (admins and the
+  owner). The old addresses redirect there. The pages still send both over the socket.
+- **K.** While a sign-in provider is on, guests can't start or lead a crew, or post a bounty, and are told to sign in.
+  With no provider on, nothing changes.
+- **L.** The biker faction channel waits behind `FACTIONS.biker` (off) until biker groups exist.
+
 ## 2026-11-03 - Traffic that keeps moving; people and drivers with a bit more sense; drivers who slip up, now and then
 
 The owner's notes (11-03): "Traffic still seems to backup in areas too, can we make sure we're solving for traffic jams?

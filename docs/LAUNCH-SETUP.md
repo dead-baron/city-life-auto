@@ -15,8 +15,11 @@ the repository**: keys and secrets live only in the server's environment file.
   (Settings can go back to it).
 - Every flow is bound to the page that started it, so a sign-in someone else set off in your browser can't be finished
   by your page. Open an email link in the browser you asked from.
-- **Guests rename** as before while no provider is switched on. Once one is, names are for signed-in members
-  (filtered, unique, once a month).
+- **Guests rename** as before while no provider is switched on. Once one is:
+  - names are for signed-in members (filtered, unique, once a month);
+  - guests can't start or lead a crew or post a bounty, and are told to sign in.
+- An email link opened in another browser asks first: "Sign in as <name>? This replaces the character on this device".
+- The account panel keeps up to three previous characters on a device ("Switch back to <name>").
 - **Start fresh** resets the character and keeps the account: its sign-ins, passkeys, role, strikes and ban record.
 
 ## What works with no keys at all
@@ -180,7 +183,9 @@ How it behaves:
   for an hour:
   - `/admin/dashboard`: analytics, owner only;
   - `/admin/log`: the admin log, owner only;
-  - `/admin/reviews`: reports, filter hits and cheat flags, admins and up.
+  - `/admin/reviews`: reports, filter hits and cheat flags, admins and up;
+  - `/admin/perf` and `/admin/clienterrors`: how devices load and run the game, and the pages' errors, admins and up.
+    The old `/perf` and `/clienterrors` addresses redirect here.
 
 ## 8. At launch
 
