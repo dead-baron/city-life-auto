@@ -19330,3 +19330,36 @@ count-up one requestAnimationFrame loop for 300 ms, the reload ring one while re
 ## 2026-11-03 - No error when a note arrives before the HUD
 
 A note from the server (a toast) that came in while the city was still loading threw "Cannot read properties of null (reading 'toast')" on every start (client/main.js). Notes before the HUD exists are now dropped.
+## 2026-11-03 - Walk-ins drawn the right way round; the Northgate Clinic off the El
+
+The owner's two reports from the same day:
+- **Yards Urgent Care looked backwards** ("door at the bottom doesn't work you have to go through the top part"). Its
+  hand plan faces a street to the north, so its walk-in's doorway is in the north wall (shared/map.js walkInSouth was
+  right). But art v2's cutaway (client/art2/game/statics.js cutRecipe / makeCut) drew every room as if its door were on
+  the south: the storefront glass and a doorway gap in the south wall, the back-wall fittings (the red doors, the
+  pharmacy, the lifts) on the north wall, over the real doorway. Fourteen walk-ins had their doorway on the north and
+  all were drawn that way: Yards Urgent Care, the Old Quay's five (Pescheria del Molo, Ristorante Il Faro, Galleria San
+  Marco, Merletti Anna, Old Quay Bait & Tackle), the six on the green (Teal Coffee, Ramen Studio, Moth Laundromat,
+  Linden Cafe, Moth Donuts, Slate Bakery), Gas 'n Go - Stadium District and Falls Center's Corner Deli. Now:
+  - A room with its doorway on the north (`r.north`) draws that wall as its front: glass between the side walls, open
+    at the doorways under a frame. The south wall is its back, cut low and shut.
+  - The hospital lobby is laid out turned round: the chairs between the doors and the desk, the desk's staff side and
+    the vending machine, the cooler and a low pharmacy cabinet along the south wall. A plain shop's shelves go low along
+    the south wall.
+  - Such a walk-in no longer has a shopfront or a door that opens on its south face (sectionsOf `turned`). The Gas 'n Go
+    and the Corner Deli had one, and it didn't lead in.
+- **Northgate Clinic opened straight under the El.** There were two of them. Northgate's own hand plan has a Northgate
+  Clinic (WC072, on Harborview's corner), but it was only a storefront. shared/world3-medics.js clinics3 turned the
+  storefront nearest its spot into the walk-in clinic instead: the Noodle House on Trestle Street, its front under the
+  El's tracks. Now:
+  - A storefront already named for the clinic is taken first, so the hand plan's Northgate Clinic becomes the walk-in
+    clinic and the Noodle House stays the Noodle House.
+  - No clinic may open onto anything but open street (`streetFront3`): the four rows outside its doorway have no
+    railway, viaduct, El or deck over them, and there's a road within six. Every other clinic already passed and
+    stays where it was.
+  - A hand plan's walk-in drawn with no shopfront gets glass doors at its doorway. It had a plain door a fifth of the
+    way along.
+  - A new clinic's sign goes on the side its door is on (it went by the prefab's side).
+- test/walkinfront.test.js pins both: every walk-in seen cut away has its doorway open on its doorway's side and the
+  wall opposite shut, a clinic's glass is on that side, and no clinic, first-aid post or ranger station opens onto
+  rail or deck.

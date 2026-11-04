@@ -548,8 +548,12 @@ function sectionsOf(c, b, A) {
       // what's in front of it: a street front gets doors and shops; a wall behind another building stays plain
       let open = 0; for (let x = tx; x < tx + tw; x++) { const t = c.tile(x, ty + th); if (t !== T.BUILDING && t !== T.WALL && t !== T.WATER && t !== T.DEEP) open++; }
       // (b.back: a World v2 building whose front faces north, away from the camera: its south wall is a plain back)
-      sec.front = !b.back && (open >= tw * 0.5 || b.prefab >= 0 || !!b.hand || !!b.walkIn);
-      if (units) { const u = units.find((q) => q.door && q.door.tx >= tx && q.door.tx < tx + tw); if (u) { sec.walk = u; sec.doorX = (u.door.tx - tx) * TILE + 4; sec.doorW = (u.door.w || 2) * TILE - 8; } }
+      // (a walk-in turned round, its doorway on the north - shared/map.js walkInSouth: its south wall a back as well, no
+      // shopfront and no door there to walk up to that doesn't open)
+      const turned = !!b.walkIn && !b.walkIn.south;
+      if (turned) sec.turned = true;
+      sec.front = !b.back && !turned && (open >= tw * 0.5 || b.prefab >= 0 || !!b.hand || !!b.walkIn);
+      if (units && !turned) { const u = units.find((q) => q.door && q.door.tx >= tx && q.door.tx < tx + tw); if (u) { sec.walk = u; sec.doorX = (u.door.tx - tx) * TILE + 4; sec.doorW = (u.door.w || 2) * TILE - 8; } }
       if (sec.doorX === undefined && b.door && b.door.tx >= tx && b.door.tx < tx + tw) sec.doorX = (b.door.tx - tx) * TILE + 7;
       if (b.signs && b.signs.length) { const s = b.signs.find((q) => q.x >= tx * TILE && q.x < (tx + tw) * TILE) || (xs.length === 1 ? b.signs[0] : null); if (s) sec.sign = clean(s.text, 26); }
       if (units && sec.walk) sec.ukind = sec.walk.kind;
@@ -1269,8 +1273,16 @@ function specOf(c, b, A, s, D) {
   if (ART) {
     const had = !!spec.shop;
     if (ART.spec) Object.assign(spec, ART.spec);
-    if (ART.noShop) delete spec.shop;
-    else if (ART.shop) {
+    if (ART.noShop) {
+      delete spec.shop;
+      // (a hand plan's front with no shopfront that is a walk-in - the Northgate Clinic, WC072: glass doors at its
+      // doorway, not the plain door a front with no doors gets a fifth of the way along)
+      if (s.walk && s.doorX !== undefined && !s.turned) {
+        const dx0 = clamp(s.doorX - 3, 6, w - 60), dw0 = (s.doorW || 56) + 6;
+        spec.doors = [{ x: dx0, w: dw0, kind: 'door', open: true, h: 48 }];
+        spec.windows = winXs(w, [[dx0, dx0 + dw0]], 30);
+      }
+    } else if (ART.shop) {
       spec.shop = { ...(spec.shop || {}), ...ART.shop };
       if (s.walk && s.doorX !== undefined) { spec.shop.door = doorX; if (s.doorW) spec.shop.doorW = s.doorW; }
       if (ART.shop.sign === null) delete spec.shop.sign;
@@ -1278,8 +1290,11 @@ function specOf(c, b, A, s, D) {
     }
     if (ART.lights) lights.push(...ART.lights);
     // (a hand-planned front's own neon - the Neon Strip's: its name, a picture sign, a blade sign, the cornice tube)
-    if (ART.neon && s.south) handNeon(spec, { door: spec.shop && spec.shop.door, ...ART.neon }, { w, lights, rnd: rndOf(b.id * 31 + s.k, 979) });
+    if (ART.neon && s.south && !s.turned) handNeon(spec, { door: spec.shop && spec.shop.door, ...ART.neon }, { w, lights, rnd: rndOf(b.id * 31 + s.k, 979) });
   }
+  // (a walk-in turned round, its doorway on the north - sectionsOf: its south wall a plain back, no shopfront and no
+  // door on it that looks like the way in, whatever its trade or its hand plan draws there)
+  if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
@@ -3847,7 +3862,10 @@ function cutRecipe(c, b, s, spec, base) {
   // (ew / ee: the section has the building's west / east wall - a big walk-in is drawn in sections, open to each other;
   // a room starting on the line where a section behind it starts is drawn a pixel in from it, its back wall in front of
   // that section's own south wall so it shows over it)
-  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), Hb: buildingH(spec), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: inY0 === 0 ? 1 : inY0, inY1, back, ew: s.tx <= b.tx, ee: s.tx + s.tw >= b.tx + b.tw };
+  // (north: the room's doorway is in its north wall - shared/map.js walkInSouth turned it round, or a hand plan faces a
+  // street there - so that wall is drawn as its front, the glass and the doorways, and the south wall as its back, cut
+  // low and shut: makeCut)
+  return { t: 'cut', w: W, d: Dd, H: Math.min(buildingH(spec), 120), Hb: buildingH(spec), wall: spec.style || 'stucco', wallColor: spec.wallColor || null, seed: spec.seed, units, inY0: inY0 === 0 ? 1 : inY0, inY1, back, ew: s.tx <= b.tx, ee: s.tx + s.tw >= b.tx + b.tw, ...(wi.south ? null : { north: true }) };
 }
 function makeCut(r) {
   const { w, d } = r, CUT = 18, BY = r.inY0;
@@ -3886,21 +3904,34 @@ function makeCut(r) {
     for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) px(x, Y, 0, fo ? fo(x, Y, u.food) : sh ? shopFloorPx(sh.R, x + sh.ox, Y + sh.oy) : lob ? lob.floor(x + r.seed, Y) : groundPixel(fk, x + r.seed, Y, 3).c, [0, 0, 1], F_GROUND);
   }
   // the back wall: full height (up to the back rooms' roof, the building's own wall above the shop's), its face toward
-  // the camera, its top a cap (over the back rooms: their roof)
+  // the camera, its top a cap (over the back rooms: their roof). A room with its doorway on the north (r.north) has its
+  // front there instead: that wall is the shop's glass front seen from inside, open at the doorways under a lintel, and
+  // the south wall (below) is its back, cut low and shut (the owner's 2026-11-03 report: Yards Urgent Care drawn with its
+  // storefront and doorway gap on the south and its back-wall fittings on the north, its real doorway on the north)
+  const inDoor = (x) => r.units.some((u) => x >= u.dx && x < u.dx + u.dw), FRAME = [96, 104, 114], DOORH = 52, GTOP = 56;
+  const gx0 = r.ew === false ? 0 : 32, gx1 = r.ee === false ? w : w - 32;   // (the front between the building's side walls)
   for (let x = 0; x < w; x++) {
     const lu = r.units.find((u) => (LOBBY[u.kind] || u.food || (u.shop && u.shop.R.wall)) && x >= u.x0 && x < u.x1);   // (IN1-B / IN2-B: the lobby's own wall; IN8: a food place's; a shop's)
     const hx = fh ? fh[x] : H;
-    for (let v = 0; v < hx; v++) px(x, BY, v, v >= r.H ? wallAt(x, v) : lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : lu.shop ? shopWallPx(lu.shop.R, x + lu.shop.ox, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v), [0, 1, 0]);
+    const own = (v) => (v >= r.H ? wallAt(x, v) : lu ? (lu.food ? FOOD_WALL[lu.food.L.style](x, v) : lu.shop ? shopWallPx(lu.shop.R, x + lu.shop.ox, v) : LOBBY[lu.kind].wall(x, v)) : wallAt(x, v));
+    if (r.north && x >= gx0 && x < gx1) {
+      const door = inDoor(x), jamb = !door && (inDoor(x - 1) || inDoor(x + 1) || inDoor(x - 2) || inDoor(x + 2)), mul = (x - 32) % 40 < 2;
+      for (let v = door ? DOORH : 0; v < hx; v++) {
+        const c = door ? (v < DOORH + 3 ? FRAME : own(v)) : jamb && v < DOORH + 3 ? FRAME : v >= CUT && v < GTOP ? (mul || v === CUT || v === GTOP - 1 ? FRAME : [138 + ((v - CUT) >> 1), 178 + ((v - CUT) >> 2), 204]) : own(v);
+        px(x, BY, v, c, [0, 1, 0]);
+      }
+    } else for (let v = 0; v < hx; v++) px(x, BY, v, own(v), [0, 1, 0]);
     if (!O) for (let Y = 0; Y < r.inY0; Y++) px(x, Y, H, CAP[Y === 0 ? 4 : 2], [0, 0, 1]);
   }
-  // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open
+  // side walls and unit dividers cut low (caps), the front wall cut low with the doorways open (a room with its doorway
+  // on the north: its back wall, shut)
   const capRun = (xa, xb, Ya, Yb) => { for (let Y = Ya; Y < Yb; Y++) for (let x = xa; x < xb; x++) px(x, Y, CUT, CAP[x === xa || x === xb - 1 ? 3 : 2], [0, 0, 1]); for (let x = xa; x < xb; x++) for (let v = 0; v < CUT; v++) px(x, Yb, v, wallAt(x + 400, v), [0, 1, 0]); };
   if (r.ew !== false) capRun(0, 32, r.inY0, d);
   if (r.ee !== false) capRun(w - 32, w, r.inY0, d);
   for (let i = 1; i < r.units.length; i++) { const x = r.units[i].x0 - 4; capRun(x, x + 8, r.inY0, r.inY1); }
-  for (let x = r.ew === false ? 0 : 32; x < (r.ee === false ? w : w - 32); x++) {
-    if (r.units.some((u) => x >= u.dx && x < u.dx + u.dw)) continue;
-    const glass = r.units.some((u) => u.kind === 'hospital' && x >= u.x0 && x < u.x1), mul = (x - 32) % 40 < 2;   // (IN1-B: the hospital's glass front)
+  for (let x = gx0; x < gx1; x++) {
+    if (!r.north && inDoor(x)) continue;
+    const glass = !r.north && r.units.some((u) => u.kind === 'hospital' && x >= u.x0 && x < u.x1), mul = (x - 32) % 40 < 2;   // (IN1-B: the hospital's glass front)
     for (let Y = r.inY1; Y < d; Y++) px(x, Y, CUT, glass ? (mul || Y === r.inY1 || Y === d - 1 ? [112, 120, 130] : [150, 186, 204]) : CAP[2], [0, 0, 1]);
     for (let v = 0; v < CUT; v++) px(x, d, v, glass ? (mul || v < 3 || v > CUT - 3 ? [96, 104, 114] : [128 + v * 3, 172 + v * 2, 196]) : wallAt(x + 800, v), [0, 1, 0]);
   }
@@ -3916,8 +3947,18 @@ function makeCut(r) {
     for (let Y = u.cy + 6; Y < u.cy + 26; Y++) for (let x = ca; x < cb; x++) px(x, Y, 22, TOPC[Y === u.cy + 6 ? 4 : 2], [0, 0, 1]);
     for (let x = ca; x < cb; x++) for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, CT[v > 18 ? 4 : 2 + ((x >> 3) & 1)], [0, 1, 0]);
     if (u.cells) { cellRoom(u.cells, px); continue; }   // (the cells along the back: no shelves)
-    if (u.trade && TRADE_ROOM[u.trade]) { TRADE_ROOM[u.trade](u, r, px); continue; }
+    if (u.trade && TRADE_ROOM[u.trade] && !r.north) { TRADE_ROOM[u.trade](u, r, px); continue; }   // (fitted out from a back wall on the north)
     const goods = [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [226, 224, 214], [170, 100, 200]];
+    if (r.north) {
+      // the back wall is the south one, nearest the camera: the shelves along it low, so the clerk behind the counter
+      // stays in view - none where the counter stands a step from that wall
+      const Yf = r.inY1 - 2;
+      if (Yf - 10 < u.cy + 2 * TILE) continue;
+      for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 28; v++) { const sh = v % 13; px(x, Yf, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
+      for (let Y = Yf - 10; Y < Yf; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 28, MAT.metalDark[3], [0, 0, 1]);
+      if (u.kind === 'roadhouse') roadhouseRoom(u, r, px);
+      continue;
+    }
     for (let x = u.x0 + 4; x < u.x1 - 4; x++) for (let v = 0; v < 52; v++) { const sh = v % 13; px(x, r.inY0 + 10, v, sh < 2 ? MAT.metalDark[2] : goods[Math.floor(hash(x >> 1, v / 13 | 0, r.seed + u.x0) * goods.length)], [0, 1, 0]); }
     for (let Y = r.inY0; Y < r.inY0 + 10; Y++) for (let x = u.x0 + 4; x < u.x1 - 4; x++) px(x, Y, 52, MAT.metalDark[3], [0, 0, 1]);
     if (u.kind === 'roadhouse') roadhouseRoom(u, r, px);
@@ -4179,57 +4220,74 @@ const LOBBY = {
 };
 function lobbyRoom(u, r, px0_) {
   const px = (x, Y, z, c, n) => px0_(Math.round(x), Math.round(Y), z, c, n);
+  // (a room with its doorway on the north - r.north: the lobby laid out as for a door on the south and turned round,
+  // north for south - MY, what lies on the floor through pxF, a block's front face still the one toward the camera -
+  // the waiting area between the doors and the desk, the desk's staff side and the fittings along the back wall, the
+  // south one; cy: the counter row as it would be with the door on the south)
+  const N = !!r.north, MY = (Y) => (N ? r.inY0 + r.inY1 - Y : Y), pxF = (x, Y, z, c, n) => px(x, MY(Y), z, c, n);
+  const cy = N ? r.inY0 + r.inY1 - u.cy - TILE : u.cy;
   const slab = (x0, x1, Y0, Y1, z, top, side, z0 = 0) => {
     x0 = Math.round(x0); x1 = Math.round(x1); Y0 = Math.round(Y0); Y1 = Math.round(Y1);
+    if (N) { const a = MY(Y1), b = MY(Y0); Y0 = a; Y1 = b; }
     for (let Y = Y0; Y < Y1; Y++) for (let x = x0; x < x1; x++) px(x, Y, z, top[Y === Y0 || x === x0 || x === x1 - 1 ? 4 : 2], [0, 0, 1]);
     for (let x = x0; x < x1; x++) for (let v = z0; v < z; v++) px(x, Y1, v, side[v > z - 3 ? 3 : 1 + ((x - x0) % 6 === 0 ? 0 : 1)], [0, 1, 0]);
   };
-  const onWall = (x0, x1, v0, v1, f) => { for (let x = Math.round(x0); x < Math.round(x1); x++) for (let v = v0; v < v1; v++) { const c = f(x - Math.round(x0), v - v0, x1 - x0, v1 - v0); if (c) px(x, r.inY0, v, c, [0, 1, 0]); } };
+  const onWall = (x0, x1, v0, v1, f) => { for (let x = Math.round(x0); x < Math.round(x1); x++) for (let v = v0; v < v1; v++) { const c = f(x - Math.round(x0), v - v0, x1 - x0, v1 - v0); if (c) px(x, r.inY0, v, c, [0, 1, 0]); } };   // (only on a back wall to the north)
   const plant = (x, Y, big = 1) => {   // a terracotta pot, a leafy top
     slab(x - 5 * big, x + 5 * big, Y - 4, Y + 4, 9, ramp('#b0603c', 5, 2), ramp('#9a5030', 5, 2));
-    for (let k = 0; k < 140 * big; k++) { const a = hash(k, x, 81) * 6.283, d = Math.sqrt(hash(k, Y, 82)) * 8 * big, z = 9 + hash(k, 3, 83) * 15 * big * (1 - d / (10 * big)); px(x + Math.cos(a) * d, Y - 2 + Math.sin(a) * d * 0.6, Math.round(z), [[52, 120, 58], [78, 156, 70], [40, 96, 48], [100, 176, 84]][k & 3], [Math.cos(a) * 0.5, -0.4, 0.75]); }
+    for (let k = 0; k < 140 * big; k++) { const a = hash(k, x, 81) * 6.283, d = Math.sqrt(hash(k, Y, 82)) * 8 * big, z = 9 + hash(k, 3, 83) * 15 * big * (1 - d / (10 * big)); pxF(x + Math.cos(a) * d, Y - 2 + Math.sin(a) * d * 0.6, Math.round(z), [[52, 120, 58], [78, 156, 70], [40, 96, 48], [100, 176, 84]][k & 3], [Math.cos(a) * 0.5, -0.4, 0.75]); }
   };
   const chairs = (x0, n, Y, col = '#3a62a8') => {   // a row of linked waiting chairs facing the desk (backs to the door)
     const seat = ramp(col, 5, 2), back = ramp(col, 5, 1), leg = ramp('#7a7e86', 5, 2);
     for (let i = 0; i < n; i++) { const x = x0 + i * 13; slab(x, x + 11, Y, Y + 10, 9, seat, leg); slab(x, x + 11, Y + 10, Y + 13, 19, back, back, 9); }
     slab(x0 - 2, x0 + n * 13, Y + 4, Y + 6, 5, leg, leg);
   };
-  const cooler = (x, Y) => { slab(x, x + 10, Y, Y + 8, 22, ramp('#e2e4e6', 5, 3), ramp('#c8ccd2', 5, 3)); for (let v = 22; v < 31; v++) for (let xx = x + 2; xx < x + 8; xx++) px(xx, Y + 4, v, v > 28 ? [60, 110, 190] : [110, 170, 230], [0, 1, 0]); };
-  const mat = (cx, Y, w = 40, h = 14) => { for (let yy = Y; yy < Y + h; yy++) for (let x = cx - w / 2; x < cx + w / 2; x++) px(x, yy, 1, (x + yy) % 3 ? [58, 66, 80] : [70, 78, 92], [0, 0, 1]); };
+  const cooler = (x, Y) => { slab(x, x + 10, Y, Y + 8, 22, ramp('#e2e4e6', 5, 3), ramp('#c8ccd2', 5, 3)); for (let v = 22; v < 31; v++) for (let xx = x + 2; xx < x + 8; xx++) pxF(xx, Y + 4, v, v > 28 ? [60, 110, 190] : [110, 170, 230], [0, 1, 0]); };
+  const mat = (cx, Y, w = 40, h = 14) => { for (let yy = Y; yy < Y + h; yy++) for (let x = cx - w / 2; x < cx + w / 2; x++) pxF(x, yy, 1, (x + yy) % 3 ? [58, 66, 80] : [70, 78, 92], [0, 0, 1]); };
   // laid out over the whole unit (a big one is drawn in sections: each draws its share, the rest falls off its edges)
   const X0 = u.fx0, X1u = u.fx1, W = X1u - X0, dc = u.dx + u.dw / 2, gapR = X1u - (W > 128 ? 34 : 6), fy = r.inY1;
   const lo = X0 + 6;
   if (u.kind === 'hospital') {
     // the back wall: the vending machine and the water cooler, the red double doors to the back, the pharmacy window
-    // with its shelves under a green cross, the lifts
+    // with its shelves under a green cross, the lifts (a back wall to the south: the vending machine, the cooler, the
+    // pharmacy's cabinet and the plants)
     const at = (f) => X0 + Math.round(W * f);
-    onWall(at(0.47) - 24, at(0.47) + 24, 0, 58, (x, v, w) => (x < 2 || x >= w - 2 || v >= 54 ? [118, 122, 130] : Math.abs(x - w / 2) < 1 ? [90, 30, 30] : v > 36 && v < 46 && (x % 23 > 6 && x % 23 < 17) ? [160, 196, 214] : v > 22 && v < 25 ? [214, 214, 218] : [196 - (v & 1) * 6, 52, 48]));
-    onWall(at(0.47) - 8, at(0.47) + 8, 60, 66, (x, v) => (v === 0 || v === 5 ? [40, 44, 40] : [64, 200, 110]));
-    onWall(at(0.68) - 30, at(0.68) + 30, 14, 50, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [120, 128, 136] : v % 11 < 2 ? [150, 156, 162] : [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [236, 234, 228], [170, 120, 200]][(hash(x >> 1, v / 11 | 0, 84) * 6) | 0]));
-    onWall(at(0.68) - 5, at(0.68) + 5, 54, 64, (x, v) => ((x > 2 && x < 7) || (v > 2 && v < 7) ? [50, 170, 90] : [236, 240, 236]));
-    slab(at(0.68) - 32, at(0.68) + 32, r.inY0, r.inY0 + 8, 14, ramp('#e8e6e0', 5, 3), ramp('#b8bcc4', 5, 2));
-    for (const f of [0.86, 0.94]) if (at(f) + 18 < X1u - 8) {
-      onWall(at(f) - 15, at(f) + 15, 0, 56, (x, v, w) => (x < 2 || x >= w - 2 || v >= 52 ? [104, 110, 118] : Math.abs(x - w / 2) < 1 ? [120, 124, 132] : [176 + (x % 5 === 0 ? 8 : 0), 182, 190]));
-      onWall(at(f) - 3, at(f) + 3, 58, 61, () => [255, 190, 90]);
+    if (!N) {
+      onWall(at(0.47) - 24, at(0.47) + 24, 0, 58, (x, v, w) => (x < 2 || x >= w - 2 || v >= 54 ? [118, 122, 130] : Math.abs(x - w / 2) < 1 ? [90, 30, 30] : v > 36 && v < 46 && (x % 23 > 6 && x % 23 < 17) ? [160, 196, 214] : v > 22 && v < 25 ? [214, 214, 218] : [196 - (v & 1) * 6, 52, 48]));
+      onWall(at(0.47) - 8, at(0.47) + 8, 60, 66, (x, v) => (v === 0 || v === 5 ? [40, 44, 40] : [64, 200, 110]));
+      onWall(at(0.68) - 30, at(0.68) + 30, 14, 50, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [120, 128, 136] : v % 11 < 2 ? [150, 156, 162] : [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [236, 234, 228], [170, 120, 200]][(hash(x >> 1, v / 11 | 0, 84) * 6) | 0]));
+      onWall(at(0.68) - 5, at(0.68) + 5, 54, 64, (x, v) => ((x > 2 && x < 7) || (v > 2 && v < 7) ? [50, 170, 90] : [236, 240, 236]));
+      slab(at(0.68) - 32, at(0.68) + 32, r.inY0, r.inY0 + 8, 14, ramp('#e8e6e0', 5, 3), ramp('#b8bcc4', 5, 2));
+      for (const f of [0.86, 0.94]) if (at(f) + 18 < X1u - 8) {
+        onWall(at(f) - 15, at(f) + 15, 0, 56, (x, v, w) => (x < 2 || x >= w - 2 || v >= 52 ? [104, 110, 118] : Math.abs(x - w / 2) < 1 ? [120, 124, 132] : [176 + (x % 5 === 0 ? 8 : 0), 182, 190]));
+        onWall(at(f) - 3, at(f) + 3, 58, 61, () => [255, 190, 90]);
+      }
+    } else {
+      // (the back wall the south one, nearest the camera: nothing tall on it - the pharmacy's shelves a low cabinet
+      // along it, its goods along the front, its green cross standing on top)
+      const ax = at(0.68), Yb = r.inY1;
+      slab(ax - 32, ax + 32, r.inY0, r.inY0 + 10, 26, ramp('#e8e6e0', 5, 3), ramp('#b8bcc4', 5, 2));
+      for (let x = ax - 30; x < ax + 30; x++) for (let v = 4; v < 23; v++) px(x, Yb, v, v % 9 < 2 ? [150, 156, 162] : [[204, 72, 64], [236, 200, 80], [76, 146, 204], [116, 180, 100], [236, 234, 228], [170, 120, 200]][(hash(x >> 1, v / 9 | 0, 84) * 6) | 0], [0, 1, 0]);
+      for (let x = ax - 5; x < ax + 5; x++) for (let v = 27; v < 37; v++) { const X = x - (ax - 5), V = v - 27; px(x, Yb - 5, v, (X > 2 && X < 7) || (V > 2 && V < 7) ? [50, 170, 90] : [236, 240, 236], [0, 1, 0]); }
     }
     const vx = at(0.12), cx2 = at(0.2);
     slab(vx, vx + 20, r.inY0, r.inY0 + 12, 46, ramp('#2a2e38', 5, 2), ramp('#3a3e4a', 5, 2));
-    for (let x = vx + 3; x < vx + 15; x++) for (let v = 16; v < 42; v++) px(x, r.inY0 + 12, v, v % 7 < 1 ? [40, 44, 52] : [[230, 80, 70], [240, 200, 80], [90, 170, 230], [120, 200, 110]][((x >> 2) + (v / 7 | 0)) & 3], [0, 1, 0]);
+    for (let x = vx + 3; x < vx + 15; x++) for (let v = 16; v < 42; v++) px(x, N ? r.inY1 : r.inY0 + 12, v, v % 7 < 1 ? [40, 44, 52] : [[230, 80, 70], [240, 200, 80], [90, 170, 230], [120, 200, 110]][((x >> 2) + (v / 7 | 0)) & 3], [0, 1, 0]);
     cooler(cx2, r.inY0 + 2);
     plant(X0 + 16, r.inY0 + 14, 1.3); plant(at(0.36), r.inY0 + 12, 1.1); plant(X1u - 16, r.inY0 + 14, 1.3);
     // the desk: a long white top over a wood front with a blue stripe, its middle curving out toward the lobby
     const mid = (lo + gapR) / 2, half = (gapR - lo) / 2, bulge = (x) => Math.round(Math.max(0, Math.cos(Math.min(1, Math.abs(x - mid) / (half * 0.55)) * Math.PI / 2)) * 7);
     const TOP = ramp('#ecebe6', 5, 3), WOOD = ramp('#a07650', 6, 3);
     for (let x = lo; x < gapR; x++) {
-      const yf = u.cy + 26 + bulge(x);
-      for (let Y = u.cy + 6; Y < yf; Y++) px(x, Y, 22, TOP[Y === u.cy + 6 || Y === yf - 1 ? 4 : 2], [0, 0, 1]);
-      for (let v = 0; v < 22; v++) px(x, yf, v, v > 19 ? TOP[3] : v > 13 && v < 16 ? [58, 106, 168] : v < 2 ? [70, 52, 40] : (x - lo) % 32 === 0 ? WOOD[1] : WOOD[v > 8 ? 3 : 2], [0, 1, 0]);
+      const yf = cy + 26 + bulge(x), fY = N ? MY(cy + 6) : yf;
+      for (let Y = cy + 6; Y < yf; Y++) pxF(x, Y, 22, TOP[Y === cy + 6 || Y === yf - 1 ? 4 : 2], [0, 0, 1]);
+      for (let v = 0; v < 22; v++) px(x, fY, v, v > 19 ? TOP[3] : v > 13 && v < 16 ? [58, 106, 168] : v < 2 ? [70, 52, 40] : (x - lo) % 32 === 0 ? WOOD[1] : WOOD[v > 8 ? 3 : 2], [0, 1, 0]);
     }
-    for (const f of [0.38, 0.6]) { const x = lo + (gapR - lo) * f; slab(x, x + 9, u.cy + 9, u.cy + 12, 32, ramp('#2a2e36', 5, 2), ramp('#3a4a62', 5, 2), 22); }
-    for (let k = 0; k < 6; k++) px(lo + 20 + k * 3, u.cy + 14, 23, [244, 244, 240], [0, 0, 1]);
-    plant(lo + (gapR - lo) * 0.22, u.cy + 14, 0.7);
+    for (const f of [0.38, 0.6]) { const x = lo + (gapR - lo) * f; slab(x, x + 9, cy + 9, cy + 12, 32, ramp('#2a2e36', 5, 2), ramp('#3a4a62', 5, 2), 22); }
+    for (let k = 0; k < 6; k++) pxF(lo + 20 + k * 3, cy + 14, 23, [244, 244, 240], [0, 0, 1]);
+    plant(lo + (gapR - lo) * 0.22, cy + 14, 0.7);
     // the waiting area: rows of blue chairs either side of the aisle from the doors, plants, mats at the door and the desk
-    const Ya = u.cy + 70, Yb = fy - 44;
+    const Ya = cy + 70, Yb = fy - 44;
     for (let Y = Yb - 13, row = 0; Y >= Ya && row < 3; Y -= 46, row++) for (const side of [-1, 1]) {
       const room = side < 0 ? dc - 48 - (X0 + 40) : X1u - 40 - (dc + 48), n = Math.max(0, Math.min(5, Math.floor(room / 13)));
       if (n >= 2) for (let g = 0; g < (room > 190 ? 2 : 1); g++) chairs(side < 0 ? dc - 48 - n * 13 - g * (n * 13 + 30) : dc + 48 + g * (n * 13 + 30), n, Y);
@@ -4241,17 +4299,17 @@ function lobbyRoom(u, r, px0_) {
       const room = side < 0 ? dc - 48 - (X0 + 40) : X1u - 40 - (dc + 48), n = Math.max(0, Math.min(5, Math.floor(room / 13))), g = room > 190 ? 2 : 1;
       const free = room - (n >= 2 ? n * 13 * g + 30 * (g - 1) : 0) + 26;
       for (let k = 0; k < Math.min(2, Math.floor((free - 8) / 32)); k++) {
-        const bx = side < 0 ? X0 + 16 + k * 32 : X1u - 38 - k * 32, Y0 = u.cy + 78, Y1 = Math.min(Y0 + 38, fy - 50);
+        const bx = side < 0 ? X0 + 16 + k * 32 : X1u - 38 - k * 32, Y0 = cy + 78, Y1 = Math.min(Y0 + 38, fy - 50);
         if (Y1 - Y0 < 30) break;
         slab(bx, bx + 22, Y0, Y1, 10, ramp('#9aa0a8', 5, 2), ramp('#7a808a', 5, 2));
         slab(bx + 1, bx + 21, Y0 + 1, Y1 - 1, 12, ramp('#f0f2f2', 5, 3), ramp('#d8dcdc', 5, 2), 10);
         slab(bx + 1, bx + 21, Y0 + 14, Y1 - 1, 13, ramp('#b8d4dc', 5, 3), ramp('#98b8c4', 5, 2), 10);
         slab(bx + 4, bx + 18, Y0 + 2, Y0 + 8, 15, ramp('#ffffff', 5, 3), ramp('#e0e0dc', 5, 2), 12);
         const cx = side < 0 ? bx + 26 : bx - 4;
-        for (let Y = Y0 - 2; Y < Y1 + 2; Y++) { px(cx, Y, 44, [200, 204, 210], [0, 0, 1]); if (Y < Y0 + (Y1 - Y0) * 0.7) for (let v = 8; v < 43; v++) px(cx, Y, v, (Y + (v >> 2)) % 5 ? [150, 196, 176] : [120, 170, 150], [side, 0, 0]); }
+        for (let Y = Y0 - 2; Y < Y1 + 2; Y++) { pxF(cx, Y, 44, [200, 204, 210], [0, 0, 1]); if (Y < Y0 + (Y1 - Y0) * 0.7) for (let v = 8; v < 43; v++) pxF(cx, Y, v, (Y + (v >> 2)) % 5 ? [150, 196, 176] : [120, 170, 150], [side, 0, 0]); }
       }
     }
-    mat(dc, fy - 44, 44, 16); mat(mid, u.cy + 44, 50, 12);
+    mat(dc, fy - 44, 44, 16); mat(mid, cy + 44, 50, 12);
     return;
   }
   // police: the front desk in wood with the officer's computer, the flag beside it; the clock, the notice board and the
@@ -4259,22 +4317,22 @@ function lobbyRoom(u, r, px0_) {
   // in the officers' corner at the east end of the cells, rifles racked on its back wall, vests and ammo cases
   const TOP = ramp('#8a6040', 5, 3), FRONT = ramp('#6a4a32', 6, 3);
   for (let x = lo; x < gapR; x++) {
-    for (let Y = u.cy + 6; Y < u.cy + 26; Y++) px(x, Y, 22, TOP[Y === u.cy + 6 || Y === u.cy + 25 ? 4 : 2], [0, 0, 1]);
-    for (let v = 0; v < 22; v++) px(x, u.cy + 26, v, v > 19 ? TOP[4] : v < 2 ? [40, 30, 24] : (x - lo) % 24 === 0 ? FRONT[1] : FRONT[2 + (v > 10 ? 1 : 0)], [0, 1, 0]);
+    for (let Y = cy + 6; Y < cy + 26; Y++) pxF(x, Y, 22, TOP[Y === cy + 6 || Y === cy + 25 ? 4 : 2], [0, 0, 1]);
+    for (let v = 0; v < 22; v++) px(x, N ? MY(cy + 6) : cy + 26, v, v > 19 ? TOP[4] : v < 2 ? [40, 30, 24] : (x - lo) % 24 === 0 ? FRONT[1] : FRONT[2 + (v > 10 ? 1 : 0)], [0, 1, 0]);
   }
   const mx = (lo + gapR) / 2;
-  slab(mx - 4, mx + 6, u.cy + 9, u.cy + 12, 32, ramp('#22262e', 5, 2), ramp('#3a4a66', 5, 2), 22);
-  slab(mx + 12, mx + 22, u.cy + 12, u.cy + 18, 25, ramp('#d8d6d0', 5, 3), ramp('#b8b6b0', 5, 2), 22);
-  for (let k = 0; k < 5; k++) px(mx - 20 + k * 3, u.cy + 15, 23, [240, 238, 230], [0, 0, 1]);
-  plant(lo + 18, u.cy + 14, 0.6);
+  slab(mx - 4, mx + 6, cy + 9, cy + 12, 32, ramp('#22262e', 5, 2), ramp('#3a4a66', 5, 2), 22);
+  slab(mx + 12, mx + 22, cy + 12, cy + 18, 25, ramp('#d8d6d0', 5, 3), ramp('#b8b6b0', 5, 2), 22);
+  for (let k = 0; k < 5; k++) pxF(mx - 20 + k * 3, cy + 15, 23, [240, 238, 230], [0, 0, 1]);
+  plant(lo + 18, cy + 14, 0.6);
   // the flag on its stand, past the desk's west end
-  const fx = Math.max(X0 + 14, lo - 2), fY = u.cy + 40;
-  for (let v = 0; v < 52; v++) px(fx, fY, v, v > 49 ? [230, 200, 90] : [200, 176, 96], [1, 0, 0]);
+  const fx = Math.max(X0 + 14, lo - 2), fY = cy + 40;
+  for (let v = 0; v < 52; v++) pxF(fx, fY, v, v > 49 ? [230, 200, 90] : [200, 176, 96], [1, 0, 0]);
   slab(fx - 3, fx + 4, fY - 2, fY + 2, 2, ramp('#c8a860', 5, 3), ramp('#a88840', 5, 2));
-  for (let x = fx + 1; x < fx + 17; x++) for (let v = 30; v < 48; v++) px(x, fY, v, x < fx + 8 && v > 39 ? ((x + v) % 3 ? [40, 60, 140] : [230, 230, 236]) : ((v >> 1) & 1) ? [200, 40, 44] : [236, 234, 228], [0, 1, 0]);
+  for (let x = fx + 1; x < fx + 17; x++) for (let v = 30; v < 48; v++) pxF(x, fY, v, x < fx + 8 && v > 39 ? ((x + v) % 3 ? [40, 60, 140] : [230, 230, 236]) : ((v >> 1) & 1) ? [200, 40, 44] : [236, 234, 228], [0, 1, 0]);
   // the wall above the cells: the notice board, the clock, the shield
   const k = u.cells, wx = (f) => X0 + Math.round(W * f);
-  if (!k || k.dir > 0) {
+  if ((!k && !N) || (k && k.dir > 0)) {
     onWall(wx(0.3) - 26, wx(0.3) + 26, 42, 62, (x, v, w, h) => (x < 2 || x >= w - 2 || v < 2 || v >= h - 2 ? [96, 70, 44] : (hash(x >> 3, v >> 2, 85) > 0.55 ? [[240, 238, 228], [250, 236, 160], [200, 222, 240]][(x >> 3) % 3] : [176, 130, 86])));
     onWall(wx(0.52) - 7, wx(0.52) + 7, 46, 60, (x, v) => { const d = Math.hypot(x - 6.5, v - 6.5); return d > 7 ? null : d > 5.6 ? [40, 40, 44] : (Math.abs(x - 6.5) < 0.8 && v >= 6 && v < 11) || (Math.abs(v - 6.5) < 0.8 && x >= 6 && x < 10) ? [30, 30, 34] : [240, 240, 232]; });
     onWall(wx(0.7) - 7, wx(0.7) + 7, 44, 62, (x, v) => { const e = Math.abs(x - 6.5), top = v > 9 ? e < 6.5 : e < 6.5 - (9 - v) * 0.7; return !top ? null : e > 5 || v > 15 || v < 3 ? [214, 176, 70] : [40, 66, 140]; });
@@ -4294,7 +4352,7 @@ function lobbyRoom(u, r, px0_) {
     }
   }
   // the lobby: chairs either side of the doors along the front wall, the water cooler, plants, the mat
-  const Ya = u.cy + 76, Yb = fy - 44;
+  const Ya = cy + 76, Yb = fy - 44;
   for (let Y = Yb - 13, row = 0; Y >= Ya && row < 2; Y -= 50, row++) for (const side of [-1, 1]) {
     const room = side < 0 ? dc - 44 - (X0 + 44) : X1u - 44 - (dc + 44), n = Math.max(0, Math.min(4, Math.floor(room / 13)));
     if (n >= 2) for (let g = 0; g < Math.min(3, Math.floor((room + 30) / (n * 13 + 30))); g++) chairs(side < 0 ? dc - 44 - n * 13 - g * (n * 13 + 30) : dc + 44 + g * (n * 13 + 30), n, Y);
