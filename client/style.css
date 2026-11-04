@@ -336,7 +336,7 @@ body.touch #hud-msg { position: static; align-items: flex-start; width: min(100%
 #job.new { box-shadow: 0 0 0 1px var(--ink), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
 @keyframes jobnew { 50% { border-color: var(--cream); box-shadow: 0 0 0 1px var(--ink), 0 0 22px var(--gold-a); } }
 #job.paid { border-color: var(--money); }
-#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: clip; }   /* (clip: the pixel face has no ellipsis glyph) */
 .touch #job.chip { min-height: var(--tap); }
 .touch:not(.portrait) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
 .touch #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; pointer-events: none; }   /* (big for a few seconds, then a chip: a thumb on the move stick isn't caught by it) */

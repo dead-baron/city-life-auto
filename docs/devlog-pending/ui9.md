@@ -91,4 +91,12 @@ the weapon. Everything else comes when it starts or changes and goes on its own.
     lines (the job; the clock and how far), as UIC-14.
 
 ### Perf
-PERF_NOTES
+`node tools/perf.mjs --quick` against main: the page's start-up code 477 -> 485 KB gzipped (budget 520; the icon set,
+the kit and the HUD's motion), 83 files as before; the title screen's assets 246 -> 249 KB (budget 290; style.css
+28 -> 31 KB); the city, the renderer and the bake unchanged. No budget raised. The icons are built the first time
+each is asked for and kept (one SVG string per icon); the motion is CSS transitions and keyframes, the money's
+count-up one requestAnimationFrame loop for 300 ms, the reload ring one while reloading.
+
+### Found on the way
+- The kit's generic `.chip` (30 px tall) also matched the job card's `#job.chip` and pinned it to one line's height:
+  `#job.chip` now sets `height: auto`.
