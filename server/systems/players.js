@@ -315,6 +315,7 @@ export function spawnPlayerPed(world, p, useSaved, deathPos = null) {
     if (w && w.mag) ped.mag[id] = Math.min(w.mag, prof.weapons[id] || 0);
   }
   p.ped = ped;
+  ped.spawnedAt = world.time;   // (just woke up or came in: no driver's slip near them a while - slips.js)
   economy.syncLight(world, p); // a flashlight left switched on is still on
   homes.protect(world, ped); // ~2 s of blinking: move freely, can't shoot or be hurt
   p.faction = FACTION.CITIZEN; p.badge = false; p.hunter = false;

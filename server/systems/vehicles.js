@@ -203,6 +203,7 @@ function resolveVehicleHit(world, a, b, hit) {
     const pa = !!(da && da.player), pb = !!(db && db.player);
     if (a.ai && (pa || pb)) npc.onVehicleHit(world, a, aFaster ? null : db);
     if (b.ai && (pa || pb)) npc.onVehicleHit(world, b, aFaster ? da : null);
+    if (!pa && !pb) slips.bumped(world, a, b, impact);   // (one of the city's drivers into the back of another: on, words, or blows - slips.js)
   }
 }
 
@@ -216,6 +217,7 @@ function strikePed(world, v, ped, vn, h) {
   const driver = driverOf(world, v);
   // run over or up onto the hood (carhits.js), or knocked flying
   const how = carhits.outcome(world, v, ped, vn);
+  slips.noteStrike(world, v, ped);
   let killed;
   if (how !== 'fling') killed = carhits.apply(world, v, ped, vn, how, driver);
   else {
@@ -442,6 +444,7 @@ import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
 import * as grime from './grime.js';
+import * as slips from './slips.js';   // (fallible drivers: a rear-end between two of the city's drivers - slips.js)
 import { BATH } from '../../shared/rules-play.js';
 export { BAIL_SPEED };
 function bail(world, ped, v, spd, seat = ped.seat) {
