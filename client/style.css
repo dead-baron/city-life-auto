@@ -283,6 +283,7 @@ body.portrait.touch #bank { display: none; }
 .hchip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 5px; border-radius: var(--r2); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; }
 .hchip:not(:has(.pi24)) { padding-left: 10px; }
 .touch .hchip { height: 28px; font-size: var(--fs-2); --ic: 16px; }
+.touch .hchip b { font: 700 var(--fs-2) var(--ui); }   /* (a phone: the value in the narrow face, so a bounty's sum and time fit beside the minimap) */
 .hchip b { font: 700 var(--fs-2) var(--pixel); }
 .hchip.role { background: var(--navy3); letter-spacing: .5px; text-transform: uppercase; }
 .hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
@@ -353,7 +354,10 @@ body.portrait.touch #job.big .jc-d > :is(.jc-t, .jc-m) + :is(.jc-t, .jc-m) { pad
 body.portrait.touch #job.big .jc-d > span { gap: 3px; }
 body.portrait.touch #job.big .jc-d .jc-s { display: none; }
 body.portrait.touch #job.chip .jc-o { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: var(--fs-2); line-height: 1.15; }   /* (the chip upright: the objective on two short lines, not cut to a word - UIC-14) */
-body.portrait.touch #job.chip .jc-d { font-size: var(--fs-2); }
+body.portrait.touch #job.chip { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; row-gap: 1px; align-items: center; padding: var(--s1) var(--s2); }
+body.portrait.touch #job.chip > :not(.jc-dot) { grid-column: 2; }
+body.portrait.touch #job.chip > .jc-dot { grid-row: 1 / span 3; align-self: start; padding-top: 2px; }
+body.portrait.touch #job.chip .jc-d { font-size: var(--fs-2); color: var(--gold); }   /* (how far under the objective, as UIC-14's "320m") */
 @media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
 body.dead #job { display: none !important; }
 /* (upright with a bar up - a robbery, a ride, custody - the big card short: clear of the middle - UI-5) */

@@ -109,7 +109,7 @@ export const jobKey = (j) => (j ? `${j.k || ''}|${j.n || 0}|${j.step ? j.step.jo
 // ---- the hint strips ---------------------------------------------------------------------------------------------
 // each state's: [action, what it does] - the action named as shared/controls.js names it; per device where it differs
 export const HINTS = {
-  foot: { all: [['move', 'move'], ['sprint', 'sprint'], ['dive', 'roll'], ['vehicle', 'get in']], touch: [['move', 'walk - all the way out runs'], ['dive', 'roll'], ['vehicle', 'get in']] },
+  foot: { all: [['move', 'move'], ['sprint', 'sprint'], ['dive', 'roll'], ['vehicle', 'get in'], ['nextw', 'next weapon']], touch: [['move', 'walk - all the way out runs'], ['dive', 'roll'], ['vehicle', 'get in']] },
   drive: { all: [['move', 'steer and drive'], ['dive', 'handbrake'], ['horn', 'horn'], ['vehicle', 'get out']], pad: [['steer', 'steer'], ['gas', 'gas'], ['brake', 'brake'], ['vehicle', 'get out']] },
   air: { all: [['move', 'fly'], ['climb', 'climb'], ['descend', 'down'], ['vehicle', 'get out once landed']] },
   horse: { all: [['move', 'ride'], ['sprint', 'gallop'], ['dive', 'stop'], ['vehicle', 'get off']] },

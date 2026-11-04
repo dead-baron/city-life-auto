@@ -267,7 +267,7 @@ export class HUD {
       requestAnimationFrame(tick);
     } else if (!me.reloading && this.rlAt) { this.rlAt = 0; fb?.classList.remove('cooling'); }
     const ow = me.weapons.find((x) => x.id === me.weapon);
-    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : (me.weapons.length > 1 ? (input.device === 'touch' ? '' : input.device === 'gamepad' ? 'RB / LB: tap or hold' : `${keyName('nextw')} to switch`) : '');
+    $('w-ammo').textContent = w.mag ? (me.reloading ? 'RELOADING' : `${ow ? ow.mag : 0} | ${ow ? Math.max(0, ow.ammo - ow.mag) : 0}`) : '';   // (UI-9: no standing "TAB to switch" - the first-time hints and the README say it)
     const wi = $('w-icon'), wk = `${w.i}|${me.blade | 0}`;   // (the plasma blade in your colour)
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
