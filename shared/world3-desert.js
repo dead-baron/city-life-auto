@@ -22,6 +22,7 @@
 import { TILE, T } from './constants.js';
 import { skeletonLines, STATIONS, nearestOnPath } from './world3-skeleton.js';
 import { stamp, pull } from './world3-towns.js';
+import { cliffSolid } from './cliffshape.js';
 
 const SAND = 5, DRY = 3;   // (world3-land.js TERRAIN3: sand under the town becomes plain desert)
 const Z_TOWN = 8;             // (the mainland's built zone, as the towns')
@@ -203,8 +204,12 @@ export function buildDesert(m, addProp) {
     const [tx, ty] = DESERT.adit;
     let ok = true;
     for (let y = ty - 5; y <= ty + 6 && ok; y++) for (let x = tx - 9; x <= tx + 9; x++) if (!open(x, y)) { ok = false; break; }
+    // (2026-11-04) and solid where its face's rock is drawn: the ground its 150 px face hides north of the band too
+    // (shared/cliffshape.js - a walker there was drawn inside the rock)
+    const rock = cliffSolid((tx + 0.5) * TILE, (ty + 1) * TILE, 15 * TILE, 6 * TILE, 150, 41);
     if (ok) {
       for (let y = ty - 5; y <= ty; y++) for (let x = tx - 7; x <= tx + 7; x++) { const i = y * W + x; m.tiles[i] = T.WALL; m.reserve[i] |= 4; }
+      for (const [x, y] of rock) if (open(x, y)) { const i = y * W + x; m.tiles[i] = T.WALL; m.reserve[i] |= 4; }
       keep(tx - 10, ty - 7, tx + 11, ty + 9);
       const X = (tx + 0.5) * TILE, face = (ty + 1) * TILE;
       addProp(m, 'cliff', X, face, 0, { w: 15 * TILE, d: 6 * TILE, h: 150, s: 41, st: 'sandstone' });   // (Nature-B2: a face of red rock)

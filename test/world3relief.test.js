@@ -15,6 +15,7 @@ import { TOWNS } from '../shared/world3-skeleton.js';
 import { tableEdge as bakeEdge } from '../client/art2/game/groundbake.js';
 import { bakeChunk, loadProviders, providers } from '../client/art2/game/chunkbake.js';
 import { prepare } from '../tools/world3-build.mjs';
+import { cliffSolid } from '../shared/cliffshape.js';
 
 const fnv = (a) => { let h = 2166136261; for (let i = 0; i < a.length; i++) h = Math.imul(h ^ (Math.round(a[i] * 10) & 0xffff), 16777619); return h >>> 0; };
 
@@ -125,9 +126,11 @@ test('World v3: the land\'s relief - heights, cliff bands off the roads, the lan
   const towers = m.props.filter((p) => p.t === 'outcrop' && p.style === 'sandstone' && p.s < 4 && (m.tables || []).some((t) => tableEdge(t, p.x / TILE, p.y / TILE) < 16));   // (dress3's: s 0-3 - 8.18's lookout rock and hoodoos stand on its mesa by design)
   check(towers.length === 0, `small mesas on the tables or their talus: ${towers.length}`);
   let thin = 0;
+  const underFace = new Set();   // (2026-11-04: the rock under a face as it's drawn is solid, whatever its shape - shared/cliffshape.js)
+  for (const p of m.props) if (p.t === 'cliff' && p.relief) for (const [x, y] of cliffSolid(p.x, p.y, p.w, p.d, p.h, p.s || 1)) underFace.add(y * W + x);
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x;
-    if (!cliffAt[i] || (DISTRICTS[m.dist[i]] || {}).style === 'desert') continue;   // (b1c: the desert's band is what its faces stand on - their art over it, however thin)
+    if (!cliffAt[i] || (DISTRICTS[m.dist[i]] || {}).style === 'desert' || underFace.has(i)) continue;   // (b1c: the desert's band is what its faces stand on - their art over it, however thin)
     let ok = false;
     for (const [ox, oy] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) { const j = i + oy * W + ox; if (cliffAt[j] && cliffAt[j + 1] && cliffAt[j + W] && cliffAt[j + W + 1]) { ok = true; break; } }
     if (!ok) thin++;

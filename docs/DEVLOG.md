@@ -19835,3 +19835,35 @@ pad the key's chip is part of the prompt and fades with it (the key does what it
 to say what the button does here; after that they cover the street. **What doesn't fade**: a prompt that counts down,
 asks a question, wants a hold, or is waiting for safety mode's second press (client/notelog.js promptFades) - those are
 the ones you still have to read. test/promptfade.test.js.
+
+## 2026-11-04 - The desert's cliffs are solid where they're drawn
+The owner: "There are cliffs in the desert that you can walk into so the hit boxes aren't registering correctly to keep
+players or NPCs from walking into it." The collision was right about the tiles it had. It just covered a different
+area than the art. The relief (shared/world3-relief.js) made only the cliff band solid: the steep tiles, a strip about
+three tiles wide along each mesa's rim. Each face drawn over the band (client/art2/game/statics.js 'cliff') is a rock
+plateau filling a rounded box around its arc of band. On a curving rim that box is much wider than the strip, and the
+face also stands up the screen, up to 160 px over the ground north of it. A probe of the whole world build found
+2,258 of the desert's 2,541 faces leaking: 38,235 walkable tiles under a face's rock, and 69,541 where a walker
+would be drawn inside it. Players, NPCs, animals and cars walked or drove into the rock from above and from the sides.
+From below, the foot held.
+- shared/cliffshape.js: one shape for both sides. `cliffOutline` is the face's ragged outline. The art's plateau is now
+  cut to it (the same formula as before, with the superellipse's power taken by square roots so the world build is
+  the same in every engine). `cliffSolid` lists the tiles under the rock as drawn: the outline on the ground, plus
+  the ground the tiers hide as they stand up the screen.
+- The relief makes those tiles solid when it places each face (`T.WALL`, reserve 32, as the band). Desert band that
+  no face is drawn over goes back to its ground, as the b1c rule already did for faceless band. A face whose rock would
+  cover a road, track (within two tiles), place or water isn't placed. 153 of the desert's faces went this way, and
+  their band is open slope.
+- Copper Gulch Mine's adit (shared/world3-desert.js) is solid under its face's drawn rock too.
+- After: no walkable tile under a desert face's footprint, 55 of 141,717 drawn tiles still open at a tall face's top
+  edge (the plateau's jag), and every road, track and place of the desert still reachable on foot and by car (five
+  tinajas fenced in by faceless band before are reachable now). Goats still climb the cliffs (ROCK_BLOCK), as before.
+- test/cliffs.test.js (one world build) checks against the real sprites: no walkable tile under a relief face's rock,
+  no desert band drawn as nothing, players, NPC-style walkers and a car sent at a sample of the desert's faces from
+  below, above and the sides never end up inside the rock, and the desert's places, roads and tracks are reachable.
+  It fails on the old build.
+- Not changed: the hand-placed cliffs outside the desert (shared/naturesites.js: the cove's rim and the old mine's
+  face) still show a few tiles of the same mismatch. They're today's-world set pieces, so fixing them would change
+  today's world hash too. That's left for a follow-up.
+- World v3's `world3` / `art3` hashes change (the v3 world's tiles), so browsers fetch the World v3 regions and chunks
+  again. Today's `art` changes too (the cliff sprite's code), and today's `world` doesn't.
