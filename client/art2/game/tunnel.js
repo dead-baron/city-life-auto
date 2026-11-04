@@ -14,7 +14,7 @@
 // drawn by the engine as a layer of their own (engine.js layers: the city's chunks stay resident under them, so the
 // town is there when the train comes up). The host (host.js frame, F.sub) draws the trains and the riders over them.
 import { GBuf, F_GROUND, F_NOCAST } from '../gbuf.js';
-import { drawText, textWidth } from '../font.js';
+import { lineMask } from '../signfont.js';   // (wave A1: station names in Civic Sans, 5 x 7 at one art px)
 import { CHUNK } from './chunkgeom.js';
 import { TILE, T } from '../../../shared/constants.js';
 
@@ -284,17 +284,21 @@ export function bakeTunnel(map, cx, cy, ap = 2, into = null) {
   for (const st of G.stations) {
     const bx = st.x + st.nx * (TUNNEL.pout - 14), by = st.y + st.ny * (TUNNEL.pout - 14);
     if (bx < X0 - 300 || bx > X0 + CHUNK + 300 || by < Y0 - 300 || by > Y0 + CHUNK + 300 || !st.name) continue;
-    const tw = textWidth(st.name, { sx: 1 }) + 4, sw = tw * ap;
+    const NM = lineMask(st.name, 'civic'), tw = NM.w + 4, sw = tw * ap;
     for (let j = -1; j <= 1; j += 2) {   // (two signs along the platform)
       const sx = bx + st.ux * j * st.ph * 0.45, sy = by + st.uy * j * st.ph * 0.45;
-      // a sign on the floor of the platform, square to the screen: 9 art px tall, the name in white on blue
-      const u0 = Math.round((sx - X0) / ap - tw / 2), v0 = Math.round((sy - TUNNEL.plat - Y0) / ap - 4);
-      for (let dv = 0; dv < 9; dv++) for (let du = 0; du < tw; du++) {
+      // a sign on the floor of the platform, square to the screen: 11 art px tall, the name in white on blue
+      const u0 = Math.round((sx - X0) / ap - tw / 2), v0 = Math.round((sy - TUNNEL.plat - Y0) / ap - 5);
+      for (let dv = 0; dv < 11; dv++) for (let du = 0; du < tw; du++) {
         const uu = u0 + du, vv = v0 + dv;
         if (uu < 0 || vv < 0 || uu >= N || vv >= N) continue;
-        out.put(uu, vv, dv === 0 || dv === 8 || du === 0 || du === tw - 1 ? COL.edge : COL.sign, UP, TUNNEL.plat + 1, [20, 40, 90, 60], F_GROUND);
+        out.put(uu, vv, dv === 0 || dv === 10 || du === 0 || du === tw - 1 ? COL.edge : COL.sign, UP, TUNNEL.plat + 1, [20, 40, 90, 60], F_GROUND);
       }
-      drawText((px, py) => { const uu = u0 + 2 + px, vv = v0 + 2 + py; if (uu >= 0 && vv >= 0 && uu < N && vv < N) out.put(uu, vv, COL.signText, UP, TUNNEL.plat + 1, [200, 210, 230, 120], F_GROUND); }, st.name, 0, 0, { sx: 1 });
+      for (let py = 0; py < NM.h; py++) for (let px = 0; px < NM.w; px++) {
+        if (NM.m[py * NM.w + px] !== 1) continue;
+        const uu = u0 + 2 + px, vv = v0 + 2 + py;
+        if (uu >= 0 && vv >= 0 && uu < N && vv < N) out.put(uu, vv, COL.signText, UP, TUNNEL.plat + 1, [200, 210, 230, 120], F_GROUND);
+      }
       void sw;
     }
   }

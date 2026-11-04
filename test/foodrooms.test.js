@@ -69,8 +69,8 @@ test('the art builds: every food place cut away (art v2); the hospital front - o
     const bi = m.buildings.indexOf(b), cx0 = Math.floor(b.tx * TILE / CH), cx1 = Math.floor((b.tx + b.tw) * TILE / CH), cy = Math.floor((b.ty + b.th) * TILE / CH);
     const seen = new Map();
     for (let cx = cx0; cx <= cx1; cx++) for (const it of staticItems(m, cx, cy, {})) seen.set(it.key + '@' + it.x + ',' + it.y, it);
-    const mine = [...seen.values()].filter((it) => it.b === bi && it.recipe && it.recipe.spec), plaques = mine.flatMap((it) => (it.recipe.spec.plaques || []).filter((p) => p.text === 'HOSPITAL'));
-    assert.equal(plaques.length, 1, `hospital #${b.id}: one HOSPITAL plaque (${mine.length} sections)`);
+    const mine = [...seen.values()].filter((it) => it.b === bi && it.recipe && it.recipe.spec), plaques = mine.flatMap((it) => (it.recipe.spec.plaques || []).filter((p) => p.trade === 'hospital' || p.trade === 'clinic'));   // (its name plaque: HOSPITAL, or its own name - wave A1)
+    assert.equal(plaques.length, 1, `hospital #${b.id}: one name plaque (${mine.length} sections)`);
     const can = [...seen.values()].find((it) => it.recipe && it.recipe.t === 'v' && /hcan:er/.test(it.key) && it.x > b.tx * TILE && it.x < (b.tx + b.tw) * TILE);
     if (!can) continue;
     for (const p of m.props) if (p && p.t === 'lamp') assert.ok(!(Math.abs(p.x - can.x) < 64 && Math.abs(p.y - can.y) < 34), `hospital #${b.id}: no lamp stands through the canopy`);

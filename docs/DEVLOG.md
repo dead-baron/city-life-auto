@@ -19709,3 +19709,66 @@ The rest:
   - a late driver really runs into the car ahead, with dents on both;
   - a miss that hits someone;
   - nobody lying in the road is missed, and nor is a player who has just come in.
+
+## 2026-11-03 - Wave A1: shop signs you can read, in a face that suits the trade
+
+The owner's 11-03 note: "The text/font on building fronts can be hard to read sometimes in their stylized font. Would
+be best to make sure they're easy to read and not all necessarily the same font." His example, Northgate Clinic, was
+unreadable. The concept audit found why. Every sign used one 3x5 font, 3 world px tall (and 1 px wide for long names).
+That breaks on the game's 2 px art grid, so the bake's `downsample2` scrambled the letters. The colours were dealt at
+random from ten pairs (`statics.js` `SIGNC`), so a clinic could come out cream on dark red. OPEN, VACANCY, plaques and
+the tunnel's station names were 1 px wide and vanished.
+
+**The faces (`client/art2/signfont.js`, new).** Six faces and a small one, all built from the project's CLA Pixel 5x7
+bitmaps, all drawn at the art pixel (one glyph pixel = 2 x 2 world px, on even px):
+- **Civic Sans** (CLA caps): clinic, hospital, pharmacy, laundromat, police, fire, school, gas, offices, sports, surf.
+- **Block Bold** (caps a pixel wider, drop shadow): marts, grocers, liquor, pawn, gun shops, hardware, auto, tackle.
+- **Marquee** (Block Bold with an outline; bulbs round cinemas and arcades): diners, burgers, ice cream, cinema, bowling.
+- **Serif Caps** (slab feet, a lit lip under each stroke): bank, hotel, court, jeweller, tavern, barber, books.
+- **Script** (CLA mixed case, sheared, its own single-storey a): boutique, salon, cafe, bakery, florist.
+- **Neon Tube** (mixed case, a white-hot core and a halo): bars, clubs, motels, records, tattoo, the roadhouse.
+- **Small** (CLA mixed case): the narrowest, the last face tried before a word is shortened.
+
+**The rules.** Letters are 7 art px tall and no stroke is narrower than an art pixel. A long name goes onto two lines
+before it changes face, then takes Civic Sans, then Small, then shortens a trade word (PHARMACY to PHARM), and only then
+leaves words out (keeping the first word and the trade word). It never uses a smaller letter. A two-line board raises
+the shop's ground floor by the difference (`buildings.js` `signLift`), so the floor above stays clear. Ink against panel
+is at least 4.5:1 in every palette (`legible()` fixes hand-picked colours that fall short). The trade's icon sits in its
+own tile beside the words: cross, H, pill, washer, three balls, crosshair, hammer, cup, burger, columns, scissors, glass,
+mug, bottle, hook, star, book, dumbbell, pump or record.
+
+**Colours by trade.** A trade table (`TRADES`) replaces the random deal. Each trade has 2 to 5 sibling palettes, picked
+by building and section, so two clinics differ, neighbours differ, and both still read as clinics. Which trade a front
+is comes from its business (the walk-in unit's POI, or the POI named like the sign): its name's words first, then its
+POI kind, its store, the window's kind and the archetype. Hand-planned fronts (`b.art`) keep their own panel colour,
+take their trade's face and icon, and have their ink made legible.
+
+**After dark (gap 14).** The lighter of panel and ink carries the glow and the darker part stays dark, so a clinic's
+green letters stay sharp on its lit white face and gold letters glow on a dark board. Neon boards glow as tubes. Each
+sign's light on the pavement takes its palette's colour and strength (neon strongest, floodlit boards softest).
+
+**Wired in.** `buildings.js`: the shop board (painted after the grime, ivy and tags, so the words stay clean), plaques
+(the trade's face; two lines on a narrow wall), blades, the portico's inscription (Serif Caps; a bank's own name when it
+fits there), a neon OPEN in the window. `statics.js`: the trade styling, plaques by trade (a clinic says its own name,
+white and green), the roadside text boards and the roof neon, the motel sign's name and VACANCY. `neonsigns.js`: the
+names and blades in Neon Tube on the art grid. `game/tunnel.js`: station names in Civic Sans. `font.js` stays for road
+paint and small marks.
+
+**The art grid, end to end.** The engine bakes a chunk from (0, 0) with each sprite's top-left on an even px. Three
+things could shift a sign's rows to odd px, and now keep them even: a pitched roof added over the face (`padTop`), the
+rooftop kit's `grow` (rounded to even), and `group` (aligned to its first part, the sign).
+
+**Tests.** `test/signs.test.js` (new) checks five things:
+- every trade maps to its face, and every POI kind, store, window kind and archetype maps to a trade;
+- every face's glyphs, rendered from even and odd px, baked and compared, keep at least 99% of their ink pixels;
+- a shopfront sign is whole after the bake on flat and pitched roofs and on odd and even parapets (98% or more of
+  its art px as painted);
+- every palette's contrast is at least 4.5:1;
+- every one of World v3's shop signs and plaques fits its band, with no letters cut.
+
+`test/neonart.test.js` now measures blades with `bladeSize`.
+
+**Perf** (`node tools/perf.mjs`, a busy machine): the bake grows by one file, 81 to 82, of a budget of 90. Its code is
+947 KB of 1000, which includes main's clinic fix; signfont.js is about 13 KB gzipped. Bakes ran at 62.9x the
+yardstick (budget 90x; 60.1x before, on a quieter machine). The biggest kept chunk is unchanged at 758 KB. The renderer
+doesn't load signfont.js. No budget was raised.
