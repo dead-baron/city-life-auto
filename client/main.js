@@ -1918,8 +1918,8 @@ function syncHub() {
   const tab = Object.keys(HUB_TABS).find((k) => HUB_TABS[k] === id);
   $('hub').classList.toggle('solo', !S.playing);
   $('hub').dataset.tab = tab;
-  if (tab !== 'phone') $('hub-title').textContent = HUB_NAMES[tab];
-  else phoneClock();
+  if (tab !== 'phone' || phone.screen === 'home' || !phoneMod) $('hub-title').textContent = HUB_NAMES[tab];   // (in an app the phone names it: phoneCtx.title)
+  if (tab === 'phone') phoneClock();
   if (tab === 'pause') syncLogoff();
 }
 // the phone's status bar: the city's time, as on the HUD's clock

@@ -96,6 +96,7 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 .row, .opt { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); width: 100%; min-height: var(--tap); padding: 10px var(--s4); text-align: left; background: transparent; color: var(--cream); border: none; border-bottom: 1px solid var(--line); font: 600 var(--fs-row) var(--ui); cursor: pointer; transition: background var(--t1) var(--ease); }
 .row:hover, .row.focus, .opt:hover, .opt.focus, .pfocus, .opt.pfocus { background: var(--pick) !important; color: var(--cream) !important; box-shadow: inset 0 0 0 2px var(--gold); }
 .row[disabled], .opt[disabled] { opacity: .4; cursor: default; }
+:is(.tab, .chip, .seg > button).on.pfocus { background: var(--gold) !important; color: var(--ink) !important; box-shadow: 0 0 0 2px var(--cream) !important; }   /* (the one you're on, focused: still lit, a cream ring for the focus) */
 .opt .note, .row .note { color: var(--dim); font: 500 var(--fs-2) var(--ui); margin-left: var(--s2); }
 .opt.two .note { display: block; margin: 2px 0 0; }
 .opt .price { color: var(--money); font: 700 var(--fs-3) var(--pixel); } .opt .price.sell { color: var(--gold); }
