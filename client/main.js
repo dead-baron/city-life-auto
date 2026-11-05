@@ -259,6 +259,8 @@ function connect() {
   S.ws = ws;
   ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
+    if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
+    if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"welcome"')) setTimeout(() => spawnAt(null), 2000);   // (a server that doesn't say: not waited for longer)
     if (holding(ws, ev.data)) return;
     if (typeof ev.data !== 'string') { onBinary(ev.data); return; }
     let m; try { m = JSON.parse(ev.data); } catch { return; }
@@ -1200,6 +1202,15 @@ function holdForGenerator(m) {
   $('play').disabled = true;
   loadGenerator().then(releaseHeld);
   return true;
+}
+// Where the server started the character (server/session.js spawnat): the city worker still choosing its first window of
+// World v3 takes it (client/worldgen.js fetchWindow's where) - a first visit, or a fresh start after an update
+function spawnAt(d) {
+  let m = null; try { m = d && JSON.parse(d); } catch { m = null; }
+  const job = window.CLA_WORLD, ok = !!m && Number.isFinite(m.x) && Number.isFinite(m.y);
+  if (!job || !job.worker || job.map || job.taken || job.failed || (!ok && job.told)) return;
+  job.told = true;
+  try { job.worker.postMessage({ where0: ok ? [Math.floor(m.x / TILE), Math.floor(m.y / TILE)] : null }); } catch { /* gone */ }
 }
 function holding(ws, d) {
   if (!S.hold || S.holdWs !== ws) return false;

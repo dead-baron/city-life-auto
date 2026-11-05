@@ -77,7 +77,11 @@ const unzip = async (bytes) => new Uint8Array(await new Response(new Blob([bytes
 // (shared/regionpack.js readIndex, the keeper's signatures): a kept file that isn't right is dropped and downloaded again.
 // fresh: the files kept or cached weren't the server's world (client/main.js windowNotServers): the kept ones go, and
 // this window is downloaded past the HTTP cache (the v3 world's files keep their URL while today's world's hash does)
-export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fetch, ms = 8 * FETCH_MS, store, fresh: anew = false } = {}) {
+// where: () => a promise of the player's tile from the server's welcome (or null, not told in time) - asked when this
+// browser can't know where the player starts: a first visit (no `at`), or an update (the server starts players from an
+// older build afresh, at a hospital or their home: client/boot.js waitWhere). The window `at` names is downloaded
+// meanwhile; a window round the wrong place was 4 MB and its assembly for nothing, then the right one after it.
+export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fetch, ms = 8 * FETCH_MS, store, fresh: anew = false, where = null } = {}) {
   const world = String(key || '').split(':')[0];
   if (!base || !/^[0-9a-f]{6,40}(-v3)?$/.test(world) || typeof fetchFn !== 'function' || typeof DecompressionStream === 'undefined') return null;
   const url = `${base}${world}/${seed >>> 0}/`, until = Date.now() + ms, got = { kept: 0, fetched: 0 };
@@ -102,13 +106,26 @@ export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fe
   }
   const { frame } = X;
   const keeper = new WindowKeeper({ frame, fetchRegion: (k, fresh) => getGz(`${k}.bin`, fresh || anew), open: unzip, sigs: X.sigs, forget: (k) => store && store.drop(`${k}.bin`) });
-  const p = Array.isArray(at) && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? at : [frame[0] / 2, frame[1] / 2];
+  const hint = Array.isArray(at) && Number.isFinite(at[0]) && Number.isFinite(at[1]) ? at : null;
+  let p = hint || [frame[0] / 2, frame[1] / 2];
+  if (where) {
+    if (hint) keeper.prefetch(keeper.windowFor(hint[0], hint[1]).keys);
+    const told = await where().catch(() => null);
+    if (Array.isArray(told) && Number.isFinite(told[0]) && Number.isFinite(told[1])) { p = told; got.told = true; }
+  }
   const win = await keeper.start(p[0], p[1]);
   const data = await keeper.assemble(index, win);
   if ((data.seed >>> 0) !== (seed >>> 0)) throw new Error('another seed');
-  return { data, keeper, index, got, win: { keys: win.keys, rect: win.rect, sig: X.sig, kept: got.kept, fetched: got.fetched } };
+  return { data, keeper, index, got, win: { keys: win.keys, rect: win.rect, sig: X.sig, kept: got.kept, fetched: got.fetched, told: !!got.told } };
 }
 let WIN = null, moving = false;
+// the player's tile from the page (main.js, on the server's welcome: { where0 }), for the first window
+const FIRST = { at: null, told: false, wait: [] };
+export const WHERE_WAIT_MS = 12000;   // (a welcome later than this: the window is chosen without it, as before)
+function firstWhere(ms = WHERE_WAIT_MS) {
+  if (FIRST.told) return Promise.resolve(FIRST.at);
+  return new Promise((res) => { const t = setTimeout(() => res(null), ms); FIRST.wait.push((v) => { clearTimeout(t); res(v); }); });
+}
 async function windowAt(tx, ty) {
   if (!WIN || moving || performance.now() < WIN.retryAt) return;
   const nw = WIN.keeper.want(tx, ty);
@@ -129,11 +146,12 @@ if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof self.
   self.onmessage = async (e) => {
     const { seed, key, keep, base, at } = e.data || {};
     if (Array.isArray(e.data && e.data.where)) { windowAt(e.data.where[0], e.data.where[1]); return; }
+    if (e.data && 'where0' in e.data) { FIRST.at = Array.isArray(e.data.where0) ? e.data.where0 : null; FIRST.told = true; for (const f of FIRST.wait.splice(0)) f(FIRST.at); return; }   // (null: the server didn't say)
     const t0 = performance.now();
     // (World v3 from the server: its window, not the whole world - ?wholeworld asks for all of it, as before)
     if (isV3(key) && base && e.data.window !== false) {
       try {
-        const w = await fetchWindow(base, key, seed, at, { fresh: !!e.data.fresh3 });
+        const w = await fetchWindow(base, key, seed, at, { fresh: !!e.data.fresh3, where: !at || e.data.waitWhere ? firstWhere : null });
         if (!w) throw new Error('World v3\'s world could not be downloaded from the game server');
         WIN = { keeper: w.keeper, index: w.index, key, sig: w.win.sig, retryAt: 0 };
         self.postMessage({ ok: true, seed, key, from: 'served', ms: performance.now() - t0, data: w.data, win: w.win, alive: true }, layersOf(w.data, key));

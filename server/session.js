@@ -83,6 +83,9 @@ export function createSession(world, conn, opts) {
         // more from this connection reaches the character (the socket closes right after)
         const me = player;
         me.endSession = () => { if (player !== me) return; player = null; if (hooks) hooks.leave(me); };
+        // where the character starts (a fresh start after an update, a first visit: a hospital or their home): the page's
+        // city worker picks its first window of World v3 round it, not round where the page guessed (client/worldgen.js)
+        if (player.ped && Number.isFinite(player.ped.x)) conn.sendJSON({ t: 'spawnat', x: Math.round(player.ped.x), y: Math.round(player.ped.y) });
         conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
         if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17 }, res);
         return;
