@@ -397,7 +397,7 @@ function menuOf(world, p, h, what) {
       else {
         const t = mortgage.terms(f), beds = bedsIn(f);
         title = `${f.name} - for sale`;
-        sub = `A ${f.what || 'apartment'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
+        sub = `A ${f.what || 'unit'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
         opts.push({ id: 'hi:ltour', label: 'Take a look inside', note: 'walk around it first' });
         opts.push({ id: 'hi:lbuy', label: `Buy unit ${f.unit || 1}`, price: f.price });
         opts.push({ id: 'hi:lmort', label: `Buy it with a mortgage: ${t.days} payments of ${money(t.pay)} a day`, price: t.deposit, note: 'deposit' });
