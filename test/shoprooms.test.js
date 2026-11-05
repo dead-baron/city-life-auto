@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { makeWorld } from './helpers.js';
 import { TILE } from '../shared/constants.js';
 import { PED_BLOCK } from '../shared/map.js';
-import { shopRoom, planOf, PLANS, SHOP_PLAN, TRADE_PLAN } from '../shared/shoprooms.js';
+import { shopRoom, planOf, barPlan, coverage, PLANS, BAR_PLANS, SHOP_PLAN, TRADE_PLAN } from '../shared/shoprooms.js';
 import { spotsOf } from '../server/systems/activities.js';
 
 const BODY = 10;
@@ -43,6 +43,13 @@ function reaches(R, blockedTile) {
   }
   return 'no way from the door to the counter';
 }
+// a plan's kind of place (the bars by their names: IN5's three)
+const BAR_NAME = { lounge: 'Velvet Lounge', tavern: 'The Oak & Mug', sportsbar: 'The Local' };
+function specOf(plan) {
+  if (BAR_PLANS.includes(plan)) return { kind: null, trade: 'bar', name: BAR_NAME[plan] };
+  const kind = Object.keys(SHOP_PLAN).find((k) => SHOP_PLAN[k] === plan);
+  return { kind, trade: kind ? null : Object.keys(TRADE_PLAN).find((t) => TRADE_PLAN[t] === plan), name: '' };
+}
 const SIZES = [[3, 3], [4, 5], [5, 6], [6, 7], [7, 7], [8, 9], [10, 7], [12, 9], [14, 6], [16, 10], [24, 10]];
 
 test('each kind of place has a plan of its own', () => {
@@ -51,18 +58,21 @@ test('each kind of place has a plan of its own', () => {
   for (const [t, p] of Object.entries({ mart: 'corner', bar: 'bar', liquor: 'liquor', lobby: 'office', records: 'records' })) assert.equal(planOf({ kind: 'delivery', trade: t }), p, `the ${t} trade: its plan`);
   for (const t of ['laundry', 'books', 'clothes', 'florist', 'salon', 'arcade']) assert.equal(planOf({ kind: 'delivery', trade: t }), null, `${t}: keeps its own fit-out`);
   for (const k of ['coffee', 'hospital', 'police', 'bowling', 'cinema']) assert.equal(planOf({ kind: k }), null, `${k}: keeps its own fit-out`);
-  for (const p of [...Object.values(SHOP_PLAN), ...Object.values(TRADE_PLAN)]) assert.ok(PLANS.includes(p), p);
+  for (const p of [...Object.values(SHOP_PLAN), ...Object.values(TRADE_PLAN)]) assert.ok(PLANS.includes(p) || p === 'bar', p);
+  // IN5's three bars by their names; a name that says none of them, by the building - all three turn up
+  for (const [n, p] of [['Velvet', 'lounge'], ['The Blue Note Lounge', 'lounge'], ['The Oak & Mug', 'tavern'], ['Rose & Crown Pub', 'tavern'], ['The Local', 'sportsbar'], ['Dugout Sports Bar', 'sportsbar']]) assert.equal(barPlan(n.toUpperCase()), p, n);
+  assert.deepEqual(new Set(Array.from({ length: 24 }, (_, i) => barPlan('MIDNIGHT BAR', i * 8))), new Set(BAR_PLANS), 'unnamed bars come in all three');
   // each plan furnished in a fair-sized room: its floor and walls, the back wall dressed, things on the floor - and no two
   // plans the same
   const sig = new Map();
   for (const plan of PLANS) {
-    const kind = Object.keys(SHOP_PLAN).find((k) => SHOP_PLAN[k] === plan), trade = kind ? null : Object.keys(TRADE_PLAN).find((t) => TRADE_PLAN[t] === plan);
-    const { b, u } = room(kind, 12, 9, 0.75, 40, 30, trade);
+    const { kind, trade, name } = specOf(plan);
+    const { b, u } = room(kind, 12, 9, 0.75, 40, 30, trade, name);
     const R = shopRoom(b, u, TILE);
     assert.ok(R && R.plan === plan, `${plan}: laid out`);
-    if (plan !== 'saloon') assert.ok(R.floor && R.wall, `${plan}: its own floor and walls`);
+    assert.ok(R.floor && R.wall, `${plan}: its own floor and walls`);
     assert.ok(R.onWall.length >= 1, `${plan}: the back wall dressed`);
-    if (plan !== 'saloon') assert.ok(R.pieces.length >= 2, `${plan}: furnished (${R.pieces.length})`);
+    assert.ok(R.pieces.length >= 2, `${plan}: furnished (${R.pieces.length})`);
     const s = [R.onWall.map((w) => w.t).sort().join(), R.pieces.map((p) => p.t + (p.k || '')).sort().join(), R.counter.k].join('|');
     for (const [q, s2] of sig) assert.notEqual(s, s2, `${plan} looks just like ${q}`);
     sig.set(plan, s);
@@ -78,9 +88,9 @@ test('a building is fitted the same every time; buildings of a kind differ', () 
     looks.add(JSON.stringify([R.floor, R.wall, R.onWall.map((w) => w.text || w.t), R.pieces.map((p) => p.k || p.t)]));
   }
   assert.ok(looks.size >= 20, `forty corner stores, ${looks.size} looks`);
-  for (const plan of ['gunshop', 'pawn', 'bar', 'barber', 'bank']) {
-    const kind = Object.keys(SHOP_PLAN).find((k) => SHOP_PLAN[k] === plan), trade = kind ? null : 'bar', seen = new Set();
-    for (let i = 0; i < 12; i++) { const { b, u } = room(kind, 10, 8, 0.5, 30 + i * 11, 50 + i * 5, trade); const R = shopRoom(b, u, TILE); seen.add(JSON.stringify([R.floor, R.wall, R.onWall.map((w) => w.text || w.t)])); }
+  for (const plan of ['gunshop', 'pawn', 'tavern', 'barber', 'bank']) {
+    const { kind, trade, name } = specOf(plan), seen = new Set();
+    for (let i = 0; i < 12; i++) { const { b, u } = room(kind, 10, 8, 0.5, 30 + i * 11, 50 + i * 5, trade, name); const R = shopRoom(b, u, TILE); seen.add(JSON.stringify([R.floor, R.wall, R.onWall.map((w) => w.text || w.t), R.pieces.map((p) => p.t + p.x0)])); }
     assert.ok(seen.size >= 4, `${plan}: ${seen.size} looks in twelve`);
   }
 });
@@ -88,9 +98,9 @@ test('a building is fitted the same every time; buildings of a kind differ', () 
 test('in every size of room the door and the counter stay in reach, nothing stands in the way or off the floor', () => {
   let n = 0;
   for (const plan of PLANS) {
-    const kind = Object.keys(SHOP_PLAN).find((k) => SHOP_PLAN[k] === plan), trade = kind ? null : Object.keys(TRADE_PLAN).find((t) => TRADE_PLAN[t] === plan);
+    const { kind, trade, name } = specOf(plan);
     for (const [w, d] of SIZES) for (const at of [0, 0.5, 1]) for (const tx of [10, 77]) {
-      const { b, u } = room(kind, w, d, at, tx, 30 + w, trade, tx > 50 ? 'Quick Inn' : 'Clear View Optics');
+      const { b, u } = room(kind, w, d, at, tx, 30 + w, trade, name || (tx > 50 ? 'Quick Inn' : 'Clear View Optics'));
       const R = shopRoom(b, u, TILE), name = `${plan} ${w}x${d} door ${at}`;
       const ok = reaches(R);
       assert.equal(ok, true, `${name}: ${ok}`);
@@ -99,11 +109,52 @@ test('in every size of room the door and the counter stay in reach, nothing stan
         if (p.flat || p.t === 'stool') continue;
         for (const k of R.clear) assert.ok(!(p.x0 < k[2] && p.x1 > k[0] && p.y0 < k[3] && p.y1 > k[1]), `${name}: a ${p.t} in the way`);
       }
-      for (const q of R.people) assert.ok(q.x > R.X0 && q.x < R.X1 && q.y > R.Ya && q.y < R.Yb, `${name}: a customer off the floor`);
+      for (const q of R.people) {
+        assert.ok(q.x > R.X0 && q.x < R.X1 && q.y > R.Ya && q.y < R.Yb, `${name}: a customer off the floor`);
+        if (q.gt !== 'sit') for (const p of R.pieces) if (!p.flat && p.t !== 'stool') assert.ok(!(q.x > p.x0 + 2 && q.x < p.x1 - 2 && q.y > p.y0 + 2 && q.y < p.y1 - 2), `${name}: a customer stood in a ${p.t}`);
+      }
       n++;
     }
   }
   assert.ok(n > 500);
+});
+
+// wave D (the 11-03 concept audit, gap 6): the floors dressed like the concepts' - islands, racks, rugs - not pieces
+// hugging the walls round an empty floor. Over the floor that may be dressed (all but the kept-clear ways), every plan in
+// a 10 x 8 room dresses at least 30% whichever side its door is on, and none fills it solid; the fill target is 35-50%
+test('the floors dressed: no plan under 30% of its floor in a 10 x 8 room, none walled up solid', () => {
+  const all = [];
+  for (const plan of PLANS) {
+    const { kind, trade, name } = specOf(plan);
+    for (const at of [0, 0.25, 0.5, 0.75, 1]) for (const [tx, ty] of [[10, 40], [77, 52], [130, 21]]) {
+      const { b, u } = room(kind, 10, 8, at, tx, ty, trade, name), R = shopRoom(b, u, TILE), cv = coverage(R);
+      assert.ok(cv >= 0.3, `${plan} door at ${at} (#${b.id}): ${(cv * 100).toFixed(0)}% of its floor dressed`);
+      assert.ok(cv <= 0.8, `${plan} door at ${at}: ${(cv * 100).toFixed(0)}% - walled up`);
+      all.push(cv);
+    }
+  }
+  const mean = all.reduce((s, v) => s + v, 0) / all.length;
+  assert.ok(mean >= 0.35 && mean <= 0.5, `the mean fill ${(mean * 100).toFixed(0)}% (the target 35-50%)`);
+});
+
+test('the bank as IN3: a compass rose in the marble, the tellers behind glass, the roped queue, the vault door, the manager\'s office', () => {
+  const { b, u } = room('bank', 14, 9, 0.5, 40, 30);
+  const R = shopRoom(b, u, TILE), has = (t) => R.pieces.some((p) => p.t === t);
+  assert.equal(R.counter.k, 'teller');
+  assert.ok(['marble', 'stone'].includes(R.floor[0]), `marble or stone, not a diner's checks (${R.floor[0]})`);
+  for (const t of ['rose', 'posts', 'office']) assert.ok(has(t), `a ${t}`);
+  assert.ok(R.onWall.some((w) => w.t === 'vault'), 'the vault door on the back wall');
+  for (let i = 0; i < 20; i++) { const q = room('bank', 8 + (i % 6), 7 + (i % 3), (i % 5) / 4, 20 + i * 9, 40 + i * 3), B = shopRoom(q.b, q.u, TILE); assert.ok(['marble', 'stone'].includes(B.floor[0]), 'no bank on checks'); }
+});
+
+test('the bars as IN5\'s three, the saloon as MC4', () => {
+  const look = (plan, w = 12, d = 9) => { const { kind, trade, name } = specOf(plan), { b, u } = room(kind, w, d, 0.5, 40, 30, trade, name); return shopRoom(b, u, TILE); };
+  const L = look('lounge'), T = look('tavern'), S = look('sportsbar'), M = look('saloon');
+  assert.ok(L.pieces.some((p) => p.t === 'velvet') && L.pieces.some((p) => p.t === 'tableset' && p.candle), 'the lounge: velvet booths, candlelit tables');
+  assert.ok(T.onWall.some((w) => w.t === 'fireplace') && T.pieces.some((p) => p.t === 'longtable'), 'the tavern: the fireplace, long tables');
+  assert.ok(S.onWall.filter((w) => w.t === 'screen').length >= 2 && S.onWall.some((w) => w.t === 'dartboard') && S.pieces.some((p) => p.t === 'pool'), 'the sports bar: the TV wall, the dartboard, the pool table');
+  assert.ok(M.onWall.some((w) => w.t === 'skull') && M.pieces.some((p) => p.t === 'armwrestle') && M.pieces.some((p) => p.t === 'pool'), 'the saloon: the bull skull, arm wrestling, pool');
+  assert.notEqual(L.floor[0] + L.wall[1], T.floor[0] + T.wall[1]);
 });
 
 const w = makeWorld(), m = w.map;
@@ -129,13 +180,13 @@ test('the city\'s shops: fitted by their trade, the way to the counter, the ATM 
 test('the art draws every plan, and the fit-out rides in the cut-away', async () => {
   const { drawShop, shopFloorPx, shopWallPx } = await import('../client/art2/shopart.js');
   for (const plan of PLANS) {
-    const kind = Object.keys(SHOP_PLAN).find((k) => SHOP_PLAN[k] === plan), trade = kind ? null : Object.keys(TRADE_PLAN).find((t) => TRADE_PLAN[t] === plan);
-    const { b, u } = room(kind, 12, 9, 0.75, 40, 30, trade);
+    const { kind, trade, name } = specOf(plan);
+    const { b, u } = room(kind, 12, 9, 0.75, 40, 30, trade, name);
     const R = shopRoom(b, u, TILE), ox = b.tx * TILE, oy = b.ty * TILE;
     let n = 0, lit = 0;
     const px = (x, Y, z, c, nn, f, e) => { assert.ok(Array.isArray(c) && c.length >= 3 && c.every((v) => v >= 0 && v <= 255), `${plan}: a colour`); n++; if (e) lit++; };
     const cu = { x0: u.x0 * TILE - ox, x1: (u.x1 + 1) * TILE - ox, fx0: u.x0 * TILE - ox, fx1: (u.x1 + 1) * TILE - ox, cy: u.counterRow * TILE - oy };
-    drawShop(R, cu, { inY0: (b.walkIn.y0 - b.ty) * TILE }, px, ox, oy);
+    drawShop(R, cu, { inY0: (b.walkIn.y0 - b.ty) * TILE, inY1: (b.walkIn.y1 - b.ty + 1) * TILE, H: 90 }, px, ox, oy);
     assert.ok(n > 4000, `${plan}: drawn (${n} px)`);
     if (plan !== 'court') assert.ok(lit > 20, `${plan}: something glows (${lit})`);
     if (R.floor) for (let k = 0; k < 50; k++) { const c = shopFloorPx(R, k * 37, k * 53); assert.ok(c.length === 3 && c.every((v) => v >= 0 && v <= 255)); }

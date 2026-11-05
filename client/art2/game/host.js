@@ -389,6 +389,15 @@ export function exitHint(S, F, on, ready) {
 // (shop symbols: shopMarks - full within SHOP_NEAR px of where you'd stand, gone by SHOP_FAR; not the ones that have
 // marks of their own or aren't a door to walk into)
 const SHOP_NEAR = 150, SHOP_FAR = 260, SHOP_SKIP = new Set(['home', 'atm', 'station', 'ride', 'race', 'farm', 'sar']);
+// Where a walk-in's badge floats (wave A2, the 11-03 concept audit, gap 3): small, hung just under its door's lintel -
+// never in the shop's sign, whose board sits on the shopfront from the window head up (client/art2/buildings.js
+// storefront: a door 50 px tall, the board's foot 48 px up). (doorX, doorY): the door tile's middle, as shopMarks has it;
+// the wall's foot is half a tile below. test/storeicons.test.js checks it against a baked front.
+export const BADGE = { doorH: 50, drop: 13, size: 16 };
+export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { x: doorX, y: foot - BADGE.doorH + BADGE.drop, size: BADGE.size }; }
+// a hospital's badge is the red H on white, a clinic's the white cross on green (the owner, 2026-10-18: never the red
+// cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
+const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
 function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
 
@@ -965,16 +974,16 @@ export class World2 {
       for (const p of list) {
         if (!p || !kinds[p.kind] || SHOP_SKIP.has(p.kind)) continue;
         const at = doors.get(p.id) || p;
-        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, door: at !== p });
+        if (Math.abs(at.x - sp.x) < SHOP_FAR && Math.abs(at.y - sp.y) < SHOP_FAR) near.list.push({ x: at.x, y: at.y, kind: p.kind, glyph: glyphOf(p, kinds), door: at !== p });
       }
     }
     for (const p of near.list) {
       const d = Math.hypot(p.x - sp.x, p.y - sp.y), k = d < SHOP_NEAR ? 1 : Math.max(0, 1 - (d - SHOP_NEAR) / (SHOP_FAR - SHOP_NEAR));
       if (k <= 0.02) continue;
-      const y = p.y - (p.door ? 52 : 64) + Math.sin(F.now * 2.2 + p.x * 0.013) * 1.5;
+      const B = p.door ? badgeAt(p.x, p.y) : { x: p.x, y: p.y - 64, size: 24 }, y = B.y + Math.sin(F.now * 2.2 + p.x * 0.013) * (p.door ? 0.5 : 1.5);
       g.save();
       g.globalAlpha = k;
-      icon(g, kinds[p.kind], p.x, y, 30);   // (the round gold-rimmed badge: client/storeicons.js)
+      icon(g, p.glyph, B.x, y, B.size);   // (the round gold-rimmed badge: client/storeicons.js)
       g.restore();
     }
   }

@@ -16,14 +16,19 @@ export const STORE_ICON = {
 // a glyph: drawn in a 24-unit box (g scaled), centred on 12,12
 const fillPath = (g, c, d) => { g.fillStyle = c; g.fill(new Path2D(d)); };
 const strokePath = (g, c, w, d) => { g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(new Path2D(d)); };
-const C = { blue: '#6fa8ff', cyan: '#5ae0ff', gold: '#e2bd57', cream: '#f3ead2', red: '#ff5a4e', green: '#6cd06c', steel: '#c8d2e0', wood: '#c07a3a', amber: '#ffb43c', pink: '#ff6fd0', brown: '#a86a3a', dark: '#22325e', ink: '#070b16' };
+// (the medical glyphs' shapes, named so the test can find them: a rounded tile, the cross on it, the letter H)
+export const TILE_D = 'M6 2h12a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z', CROSS_D = 'M9.5 5h5v4.5H19v5h-4.5V19h-5v-4.5H5v-5h4.5z', H_D = 'M6.5 5h3.4v5.2h4.2V5h3.4v14h-3.4v-5.4H9.9V19H6.5z';
+const C = { medGreen: '#1f8a4c', white: '#f6f6f0', hRed: '#c8282c', blue: '#6fa8ff', cyan: '#5ae0ff', gold: '#e2bd57', cream: '#f3ead2', red: '#ff5a4e', green: '#6cd06c', steel: '#c8d2e0', wood: '#c07a3a', amber: '#ffb43c', pink: '#ff6fd0', brown: '#a86a3a', dark: '#22325e', ink: '#070b16' };
 export const GLYPHS = {
   gun: (g) => { g.translate(0, -2); fillPath(g, C.blue, 'M2 7h18v4h2v2h-8l-1 2h-3l-1-2H8l-2 7H2l2-7H2z'); fillPath(g, C.dark, 'M11.5 13h2l-1 2h-1z'); },
   shirt: (g) => fillPath(g, C.cyan, 'M8 4l-5 3 2 4 2-1v10h10V10l2 1 2-4-5-3c-1 2-2 2-4 2s-3 0-4-2z'),
   hammer: (g) => { strokePath(g, C.wood, 3, 'M7 19l8-8'); fillPath(g, C.steel, 'M12 4l3-1 6 6-2 2-3-3-2 2-3-3z'); },
   cart: (g) => { strokePath(g, C.gold, 2.2, 'M2 5h3l3 10h10l2-7H6'); g.fillStyle = C.gold; g.beginPath(); g.arc(9, 19.5, 1.7, 0, 6.3); g.arc(17, 19.5, 1.7, 0, 6.3); g.fill(); },
   pill: (g) => { g.save(); g.translate(12, 12); g.rotate(-0.8); fillPath(g, C.red, 'M-8 -3.5h8v7h-8a3.5 3.5 0 0 1 0-7z'); fillPath(g, C.cream, 'M0 -3.5h8a3.5 3.5 0 0 1 0 7h-8z'); g.restore(); },
-  cross: (g) => fillPath(g, C.red, 'M9 3h6v6h6v6h-6v6H9v-6H3V9h6z'),
+  // the medical badges (the owner, 2026-10-18: never the red cross, a protected emblem): a clinic's white cross on a
+  // green tile, a hospital's red H on a white one (host.js shopMarks picks between them by the name)
+  cross: (g) => { fillPath(g, C.medGreen, TILE_D); fillPath(g, C.white, CROSS_D); },
+  hosp: (g) => { fillPath(g, C.white, TILE_D); fillPath(g, C.hRed, H_D); },
   badge: (g) => { fillPath(g, C.blue, 'M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z'); fillPath(g, C.gold, 'M12 6.5l1.6 3.3 3.6.5-2.6 2.5.6 3.6L12 14.7l-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z'); },
   scales: (g) => { strokePath(g, C.gold, 2, 'M12 3v17M7 20h10M4 7h16M4 7l-3 6M4 7l3 6M20 7l-3 6M20 7l3 6'); fillPath(g, C.gold, 'M1 13h6a3 3 0 0 1-6 0zM17 13h6a3 3 0 0 1-6 0z'); },
   bank: (g) => { fillPath(g, C.cream, 'M12 2l10 5v2H2V7zM3 19h18v3H3z'); for (const x of [4.5, 9.5, 14.5, 19]) fillPath(g, C.cream, `M${x - 1} 10h2.4v8H${x - 1}z`); },
