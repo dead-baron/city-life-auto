@@ -157,6 +157,10 @@ async function session(ctx, label, first, upd = null) {
   // ---- title
   const tNav = Date.now();
   await page.goto(`${BASE}/?debug&splash${GAME ? `&server=${encodeURIComponent(GAME)}` : ''}`, { waitUntil: 'commit' });
+  // the page's thread slowed until the studio logo is up (the boot's own work; an update's reload: its boot); then not (see --citycpu: the city
+  // starts while the title is up for a returning player, and slowed WebGL here stalls everything behind it)
+  await waitFor(page, () => window.__bench && (window.__bench.marks.logo || (/[?&]fresh\b/.test(location.search) && window.CLA_BOOT && window.CLA_BOOT.done)), 15000);
+  if (CITY_CPU !== CPU) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CITY_CPU });
   const menuOk = await waitFor(page, () => window.__bench && window.__bench.marks.menu, 120000);
   const tm = await page.evaluate((tNav) => {
     const B = window.__bench, nav = performance.getEntriesByType('navigation')[0], menuAt = B.marks.menu - performance.timeOrigin;
