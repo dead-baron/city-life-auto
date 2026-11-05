@@ -4,13 +4,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES } from '../client/touchicons.js';
+import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES, setMelee } from '../client/touchicons.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 import { WEAPONS, ITEMS } from '../shared/items.js';
 import { itemGlyph } from '../client/bag.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
-const HAND = /^hand(-|$)|fist|finger|pointer|grab/;   // (a hand; not the handbag)
+const HAND = /^hand(-|$)|finger|pointer|grab/;   // (a pointing or grabbing hand; not the handbag. The fist is the owner's pick for bare-handed HIT, 11-05)
+const FIST_OK = new Set(['hand-fist']);
 
 test('every action kind maps to a line icon; with no match the neutral "interact" mark', () => {
   assert.equal(KIND_ICON.interact, 'circle-dot');
@@ -47,13 +48,18 @@ test('the prompt\'s words, as the server writes them, give the kind', () => {
 });
 
 test('no hand glyph is left on touch: the buttons in every state, every action kind, every weapon', () => {
-  for (const n of GLYPH_NAMES) assert.doesNotMatch(n, HAND, `${n}: a hand in the set`);
+  for (const n of GLYPH_NAMES) if (!FIST_OK.has(n)) assert.doesNotMatch(n, HAND, `${n}: a hand in the set`);
   for (const k of Object.keys(KIND_ICON)) {
     setActKind(k);
-    for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.doesNotMatch(iconOf(a, label), HAND, `${a} ${label} (${k})`);
+    for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) if (label !== 'HIT') assert.doesNotMatch(iconOf(a, label), HAND, `${a} ${label} (${k})`);
   }
   setActKind('interact');
-  for (const w of Object.values(WEAPONS)) assert.doesNotMatch(glyphOfWeapon(w.id, w.type), HAND, w.id);
+  for (const w of Object.values(WEAPONS)) if (w.id !== 'fists') assert.doesNotMatch(glyphOfWeapon(w.id, w.type), HAND, w.id);
+  // HIT shows what you hit with: a fist bare-handed, the weapon's own glyph otherwise (the owner, 11-05)
+  setMelee('fists', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'hand-fist');
+  setMelee('bat', 'melee'); assert.equal(iconOf('fire', 'HIT'), glyphOfWeapon('bat', 'melee'));
+  setMelee('knife', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'slice');
+  setMelee('fists', 'melee');
 });
 
 test('the page wires it: the prompt names the kind, the action button and its chip draw it', () => {

@@ -263,6 +263,7 @@ const LU = {
   menu: 'M4 5h16M4 12h16M4 19h16',
   target: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M6 12a6 6 0 1 0 12 0a6 6 0 1 0-12 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   crosshair: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M22 12L18 12M6 12L2 12M12 6L12 2M12 22L12 18',
+  'hand-fist': 'M12.035 17.012a3 3 0 0 0-3-3l-.311-.002a.72.72 0 0 1-.505-1.229l1.195-1.195A2 2 0 0 1 10.828 11H12a2 2 0 0 0 0-4H9.243a3 3 0 0 0-2.122.879l-2.707 2.707A4.83 4.83 0 0 0 3 14a8 8 0 0 0 8 8h2a8 8 0 0 0 8-8V7a2 2 0 1 0-4 0v2a2 2 0 1 0 4 0M13.888 9.662A2 2 0 0 0 17 8V5A2 2 0 1 0 13 5M9 5A2 2 0 1 0 5 5V10M9 7V4A2 2 0 1 1 13 4V7.268',
   swords: 'M13 19l6-6M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5M14.828 6.172l2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586M16 16l4 4M19 21l2-2M5 14l4 4M5 21l-2-2M7.5 16.5 4 20',
   'rotate-cw': 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5',
   infinity: 'M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8',
@@ -354,7 +355,7 @@ export function glyph(name, px = 0) {
 // what you hold, as its glyph (the weapon button and the bag: shared/items.js WEAPONS' type and id)
 const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
 export function glyphOfWeapon(id, type) {
-  if (!id || id === 'fists') return 'swords';   // (bare hands: the fight's mark - no hand on a touch button, 11-05)
+  if (!id || id === 'fists') return 'hand-fist';   // (bare hands: a fist - the owner, 11-05: the melee button shows what you hit with)
   if (LONG_GUNS.has(id)) return 'rifle';
   if (/knife/.test(id)) return 'slice';
   if (id === 'sword' || id === 'katana' || id === 'plasma') return 'sword';
@@ -427,7 +428,10 @@ export function setActKind(k) { actNow = KIND_ICON[k] ? k : 'interact'; return a
 export const actKindNow = () => actNow;
 
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
-const ICON = { HIT: 'swords', THROW: 'redo', TRICK: 'sparkles', BRAKE: 'circle-stop', STOP: 'circle-stop', OLLIE: 'arrow-big-up-dash', AIR: 'arrow-big-up', EXIT: 'log-out', OFF: 'log-out', SIREN: 'siren', GALLOP: 'fast-forward' };
+const ICON = { THROW: 'redo', TRICK: 'sparkles', BRAKE: 'circle-stop', STOP: 'circle-stop', OLLIE: 'arrow-big-up-dash', AIR: 'arrow-big-up', EXIT: 'log-out', OFF: 'log-out', SIREN: 'siren', GALLOP: 'fast-forward' };
 const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'infinity', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair' };
-export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
+// HIT shows what you hit with (the owner, 11-05): a fist bare-handed, else the melee weapon's own glyph (client/hud.js setMelee)
+let meleeNow = 'hand-fist';
+export function setMelee(id, type) { meleeNow = glyphOfWeapon(id, type); return meleeNow; }
+export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : label === 'HIT' ? meleeNow : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
 export const svg = (k) => glyph(k);

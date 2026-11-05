@@ -80,7 +80,7 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
 // - one container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
 test('the touch buttons: one line icon for every action and label a slot holds, the weapon as its class', () => {
   for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'HIT'), 'swords'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'circle-dot');
+  assert.equal(iconOf('fire', 'HIT'), 'hand-fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'circle-dot');
   assert.equal(iconOf('vehicle', 'CAR'), 'car-front'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield'); assert.equal(iconOf('use', 'ITEMS'), 'backpack');
   assert.equal(iconOf('reload', 'RELOAD'), 'rotate-cw'); assert.equal(iconOf('cruiser', 'COP CAR'), 'siren'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
   assert.ok(GLYPH_STROKE >= 2 && GLYPH_STROKE <= 3, 'between Lucide\'s 2 and 3');
@@ -94,7 +94,7 @@ test('the touch buttons: one line icon for every action and label a slot holds, 
   }
   assert.match(glyph('backpack', 40), /width="40" height="40"/);
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
-  assert.equal(glyphOfWeapon('fists', 'melee'), 'swords'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
+  assert.equal(glyphOfWeapon('fists', 'melee'), 'hand-fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
   assert.equal(glyphOfWeapon('knife', 'melee'), 'slice'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat'); assert.equal(glyphOfWeapon('grenade', 'grenade'), 'bomb'); assert.equal(glyphOfWeapon('bow', 'bow'), 'bow-arrow');
   // one container: the disc and its hairline; the state the only accent
   assert.match(CSS, /#tbtns button \{[^}]*border: 1px solid var\(--hair\); background: var\(--disc\);[^}]*color: var\(--cream\);/);

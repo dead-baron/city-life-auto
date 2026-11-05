@@ -20393,3 +20393,8 @@ screen icons in general need work or rethinking."
 - **Tests:** test/acticons.test.js (every kind maps to an icon in the set; the server's words give the right kinds; no
   hand glyph anywhere on touch - every state, every kind, every weapon; the page's wiring; every bag item has an icon;
   the license travels with the icons). uikit and hub follow the new names. Page code: 503 -> 509 KB of 520, 84 files.
+
+The owner's pick (11-05): the HIT button shows what you hit with. Bare-handed it's Lucide's `hand-fist`. With a melee
+weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the sledge's hammer (`setMelee` in
+client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
+still holds for every other button and every action kind.
