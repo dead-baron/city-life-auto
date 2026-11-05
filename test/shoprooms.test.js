@@ -98,9 +98,9 @@ test('a building is fitted the same every time; buildings of a kind differ', () 
 test('in every size of room the door and the counter stay in reach, nothing stands in the way or off the floor', () => {
   let n = 0;
   for (const plan of PLANS) {
-    const { kind, trade, name } = specOf(plan);
+    const { kind, trade, name: pn } = specOf(plan);
     for (const [w, d] of SIZES) for (const at of [0, 0.5, 1]) for (const tx of [10, 77]) {
-      const { b, u } = room(kind, w, d, at, tx, 30 + w, trade, name || (tx > 50 ? 'Quick Inn' : 'Clear View Optics'));
+      const { b, u } = room(kind, w, d, at, tx, 30 + w, trade, pn || (tx > 50 ? 'Quick Inn' : 'Clear View Optics'));
       const R = shopRoom(b, u, TILE), name = `${plan} ${w}x${d} door ${at}`;
       const ok = reaches(R);
       assert.equal(ok, true, `${name}: ${ok}`);
@@ -149,11 +149,12 @@ test('the bank as IN3: a compass rose in the marble, the tellers behind glass, t
 
 test('the bars as IN5\'s three, the saloon as MC4', () => {
   const look = (plan, w = 12, d = 9) => { const { kind, trade, name } = specOf(plan), { b, u } = room(kind, w, d, 0.5, 40, 30, trade, name); return shopRoom(b, u, TILE); };
-  const L = look('lounge'), T = look('tavern'), S = look('sportsbar'), M = look('saloon');
+  const L = look('lounge'), T = look('tavern'), S = look('sportsbar'), M = look('saloon', 10, 9), MB = look('saloon', 16, 10);
   assert.ok(L.pieces.some((p) => p.t === 'velvet') && L.pieces.some((p) => p.t === 'tableset' && p.candle), 'the lounge: velvet booths, candlelit tables');
   assert.ok(T.onWall.some((w) => w.t === 'fireplace') && T.pieces.some((p) => p.t === 'longtable'), 'the tavern: the fireplace, long tables');
   assert.ok(S.onWall.filter((w) => w.t === 'screen').length >= 2 && S.onWall.some((w) => w.t === 'dartboard') && S.pieces.some((p) => p.t === 'pool'), 'the sports bar: the TV wall, the dartboard, the pool table');
   assert.ok(M.onWall.some((w) => w.t === 'skull') && M.pieces.some((p) => p.t === 'armwrestle') && M.pieces.some((p) => p.t === 'pool'), 'the saloon: the bull skull, arm wrestling, pool');
+  assert.ok(MB.ext && MB.ext.some((p) => p.t === 'pool') && !MB.pieces.some((p) => MB.ext.some((q) => p.x0 < q.x1 && p.x1 > q.x0 && p.y0 < q.y1 && p.y1 > q.y0)), 'a big roadhouse: statics.js draws MC4\'s floor, the plan keeps off it');
   assert.notEqual(L.floor[0] + L.wall[1], T.floor[0] + T.wall[1]);
 });
 

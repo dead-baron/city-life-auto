@@ -199,7 +199,6 @@ export function drawShop(R, u, r, px0, ox, oy) {
   // the floor's pieces, north to south (so a nearer one's face covers what's behind it)
   const order = R.pieces.slice().sort((a, b) => (a.flat ? 0 : 1) - (b.flat ? 0 : 1) || a.y1 - b.y1);
   for (const p of order) {
-    if (p.ext) continue;   // (drawn by statics.js: the Rusty Spur's MC4 room)
     const x0 = X(p.x0), x1 = X(p.x1), y0 = Yl(p.y0), y1 = Yl(p.y1), g = (p.g || []).map(rgb), c = p.c || '#6a6e78', h = p.h, w = x1 - x0, d = y1 - y0;
     const f = PIECE[p.t];
     if (f) { f({ slab, px, dot, disc, H, R }, p, x0, y0, x1, y1, w, d, h, g, c); continue; }
@@ -529,9 +528,13 @@ const PIECE = {
   },
   // the surf shop's boards stood along the wall, side by side, noses up, each its colour with a stringer down it
   boards: (q, p, x0, y0, x1, y1, w, d, h, g) => {
-    for (let Y = y0 + 1, k = 0; Y + 7 <= y1; Y += 9, k++) {
-      const col = g[k % g.length], R = rp(col), len = h - (k % 3) * 4;
-      for (let v = 0; v < len; v++) { const t = v / len, half = 3.5 * Math.sin(Math.min(1, (t + 0.08) * 1.15) * Math.PI); for (let dy = -Math.floor(half); dy <= Math.floor(half); dy++) q.px(p.side < 0 ? x0 + 4 + (v >> 3) : x1 - 4 - (v >> 3), Y + 4 + dy, v, dy === 0 ? WHITE : Math.abs(dy) >= Math.floor(half) ? R[1] : R[2], [p.side < 0 ? 1 : -1, 0, 0]); }
+    // (ST1: a rack of surfboards stood on their tails side by side, decks to the room, noses up - an outline, the
+    // stringer down the middle, a stripe; a low rail at their feet)
+    const bw = 8;
+    q.slab(x0, x1, y0, y0 + 4, 6, '#6a4a30');
+    for (let x = x0 + 1, k = 0; x + bw <= x1; x += bw + 2, k++) {
+      const col = g[k % g.length], R = rp(col), len = h - (k % 3) * 6, Y = y0 + 6 + (k & 1);
+      for (let v = 0; v < len; v++) { const t = v / len, half = (bw / 2) * Math.sqrt(Math.sin(Math.min(1, t * 1.1 + 0.06) * Math.PI)); for (let i = 0; i < bw; i++) { const dx = i + 0.5 - bw / 2; if (Math.abs(dx) > half) continue; q.px(x + i, Y, v, Math.abs(dx) > half - 1 ? R[1] : Math.abs(dx) < 0.6 ? WHITE : t > 0.55 && t < 0.62 ? mix(rgb(col), WHITE, 0.6) : R[2 + (dx < 0 ? 1 : 0)], S); } }
     }
   },
   mirror: (q, p, x0, y0, x1, y1, w, d, h, g, c) => q.slab(x0, x1, y0, y1, h, c, (x, v) => (v < 12 ? rp(c)[1] : x < 2 || x > w - 3 || v > h - 3 ? rp(c)[3] : (x + v) % 13 < 2 ? [214, 230, 240] : [160, 188, 204])),
