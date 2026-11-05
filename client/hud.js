@@ -764,12 +764,34 @@ const POI_ICON = {
 const ICON_MERGE = 640;
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
-  const skip = new Set(), kept = [];
-  for (const p of map.places || map.pois) {   // (World v3's window: the whole world's places, from the index)
-    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
-    if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
-  }
+  const list = map.places || map.pois;   // (World v3's window: the whole world's places, from the index)
+  let skip = SKIPS.get(list);
+  if (!skip) SKIPS.set(list, (skip = iconMerge(list)));
   Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });
+  return skip;
+}
+// the places whose icon a nearer one of the same kind stands for (within ICON_MERGE, the first in the list kept): each
+// kept place goes in a grid of ICON_MERGE cells by kind, so a place looks at the 3 x 3 cells round it - it looked at
+// every place kept so far, of all kinds (World v3's thousands of places: 0.9 s of the page's start on a phone-slow
+// CPU, again at every window swap - tools/phonebench.mjs --profile, hud.js iconSkip)
+const SKIPS = new WeakMap();
+export function iconMerge(list) {
+  const skip = new Set(), byKind = new Map();
+  for (const p of list || []) {
+    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;   // (kept, and never near another: as Math.hypot of NaN)
+    let G = byKind.get(p.kind);
+    if (!G) byKind.set(p.kind, (G = new Map()));
+    const cx = Math.floor(p.x / ICON_MERGE), cy = Math.floor(p.y / ICON_MERGE);
+    let near = false;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
+      const cell = G.get(`${cx + dx},${cy + dy}`);
+      if (cell) for (const q of cell) if (Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE) { near = true; break; }
+    }
+    if (near) { skip.add(p.id); continue; }
+    const k = `${cx},${cy}`, cell = G.get(k);
+    if (cell) cell.push(p); else G.set(k, [p]);
+  }
   return skip;
 }
 
