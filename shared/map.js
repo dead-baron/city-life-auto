@@ -405,6 +405,7 @@ function buildCity(seed, opts = null, frame = null) {
   buildStreetAtms(m);
   if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
   m.atms = m.pois.filter((p) => p.kind === 'atm');
+  if (WD) breakPlainBlocks(m);   // (World v3: no huge plain buildings - the owner, 11-03)
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
@@ -1870,7 +1871,12 @@ function placePrefab(m, row, key, x, special, rand, dims = null) {
     m.pois.push({ id: m.pois.length, kind: 'home', home: id, label: home.name, x: dd.px, y: dd.py, r: 40, b: bid });
     b.home = id;
   } else if (key !== 'gas' && key !== 'construction') {
+    // (World v3: a big works or warehouse is a firm with its name over its doors - the owner's 11-03 "huge, plain
+    // buildings"; the name from where it stands, so no draw moves)
+    const firm = WD && b.tw * b.th > ROOF_CAP && rot === 0 ? BIG_FIRMS[key] || BIG_FIRMS.warehouse : null;
+    if (firm) b.name = firm[Math.floor(hash2(LX(x), LY(y), 1351) * firm.length)];
     m.pois.push({ id: m.pois.length, kind: 'delivery', label: b.name, x: doors[0].px, y: doors[0].py, r: 40, b: bid });
+    if (firm) b.signs.push({ x: doors[0].px, y: (b.ty + b.th - 0.6) * TILE, text: b.name });
   }
   // a v2 strip mall: its car park in front, bays nose-in toward the shops
   if (dims && key === 'strip' && pf.th - sy1 >= 5) {
@@ -1925,12 +1931,75 @@ function roofBuilding(m, row, x, y, w, h, st, rand) {
   const kind = kinds[Math.floor(rand() * kinds.length)];
   roofOne(m, row, x, y, w, h, kind, Math.floor(rand() * 1e9));
 }
-function roofOne(m, row, x, y, w, h, kind, seed) {
+// back: the building's front faces away from the camera (World v2: a plain back wall to the south)
+function roofOne(m, row, x, y, w, h, kind, seed, back = false) {
   const bid = m.buildings.length;
   const r = { tx: x, ty: y, tw: w, th: h, kind, seed, d: row.d, b: bid };
   m.roofs.push(r);
-  m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [] });
+  m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x, ty: y, tw: w, th: h, kind: 'roof', name: 'Building', business: null, signs: [], ...(back ? { back: true } : {}) });
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) { m.set(tx, ty, T.BUILDING); m.bld[ty * m.w + tx] = bid; }
+}
+// ---- no huge plain buildings (World v3 - the owner, 2026-11-03: "Huge, plain buildings block the street from view and
+// add nothing"; his screenshot: one blank block over half the screen) ---------------------------------------------------
+// Once the world is built, every plain building (a roof with no sign, no business, no home, no walk-in, no hand plan or
+// look: roofOne's - the slivers between side streets built over, a block's backs, its back lots) deeper than ROOF_DEEP
+// is a column of lots instead, each 10-15 tiles deep, with a paved passage between them from side to side: each lot
+// fronts onto open ground (the art draws a shopfront or a door there, not a blank wall) and the ground shows through
+// every few rows; and a lot bigger than ROOF_CAP tiles is split into neighbours. The building keeps its southmost lot
+// (and its id, its back wall if it had one); the other lots are new buildings at the end of the list, so no other
+// building's id - and no other building's look - moves. The cuts come from the rows alone (hash2 of its top and depth),
+// so a run of neighbours of one depth (roofBuilding, roofRowV2) is cut at the same rows and its passages run on through.
+const ROOF_DEEP = 20, ROOF_CAP = 400;
+const BIG_FIRMS = {
+  industrial: ['Ironside Works', 'Delta Metalworks', 'Keystone Machining', 'Bayline Fabrication', 'Harbor Plastics', 'Summit Castings'],
+  warehouse: ['Coastal Freight', 'Bayline Storage', 'Pacific Distribution', 'Redline Cargo', 'Gulf Logistics', 'Anchor Supply Co'],
+};
+function breakPlainBlocks(m) {
+  const placed = new Set();
+  for (const p of m.pois) if (p && p.b !== undefined) placed.add(p.b);
+  const n0 = m.buildings.length;
+  let cut = 0, made = 0;
+  for (let i = 0; i < n0; i++) {
+    const b = m.buildings[i];
+    if (!b || b.gone || b.prefab !== -1 || b.kind !== 'roof' || !(b.roof >= 0) || !m.roofs[b.roof] || b.hand || b.hero || b.art || b.look || b.business || b.walkIn || b.home !== undefined || (b.signs && b.signs.length) || placed.has(b.id)) continue;
+    if (b.th <= ROOF_DEEP && b.tw * b.th <= ROOF_CAP) continue;
+    const R = m.roofs[b.roof], x = b.tx, y = b.ty, w = b.tw, h = b.th;
+    // the column's lots, south to north: [top, depth] and the passage north of each but the last
+    const lots = [];
+    let yb = y + h, k = 0;
+    while (yb - y > ROOF_DEEP) {
+      const g = 3 + (hash2(y * 7 + h, yb, 1311 + k) < 0.35 ? 1 : 0);
+      const d = Math.min(10 + Math.floor(hash2(y * 7 + h, yb, 1301 + k) * 6), yb - y - g - 8);   // (the north end's lot: 8 deep at least)
+      lots.push([yb - d, d, g]);
+      yb -= d + g; k++;
+    }
+    lots.push([y, yb - y, 0]);
+    cut++;
+    lots.forEach(([ty, d, g], j) => {
+      // a lot bigger than the cap: neighbours side by side
+      const n = w * d > ROOF_CAP ? Math.ceil(w * d / ROOF_CAP) : 1, bw = Math.ceil(w / n);
+      for (let x0 = x, q = 0; x0 < x + w; x0 += bw, q++) {
+        const ww = Math.min(bw, x + w - x0);
+        if (j === 0 && q === 0) { b.ty = ty; b.th = d; b.tw = ww; R.ty = ty; R.th = d; R.tw = ww; continue; }   // (the building keeps the southmost lot)
+        const bid = m.buildings.length;
+        m.roofs.push({ tx: x0, ty, tw: ww, th: d, kind: R.kind, seed: Math.floor(hash2(x0, ty, 1321) * 1e9), d: R.d, b: bid });
+        m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x0, ty, tw: ww, th: d, kind: 'roof', name: b.name, business: null, signs: [], ...(j === 0 && b.back ? { back: true } : {}) });
+        for (let yy = ty; yy < ty + d; yy++) for (let xx = x0; xx < x0 + ww; xx++) m.bld[m.idx(xx, yy)] = bid;
+        made++;
+      }
+      if (g) passage(m, x, ty - g, w, g);
+    });
+  }
+  return { cut, made };
+}
+// A passage between two lots of a column: paved through from side to side, bins or a bike rack at one end against the
+// lot to the north, now and then a planter at the other (placed by where it is).
+function passage(m, x, y, w, g) {
+  for (let yy = y; yy < y + g; yy++) for (let xx = x; xx < x + w; xx++) { const i = m.idx(xx, yy); m.tiles[i] = T.PLAZA; m.bld[i] = -1; }
+  if (w < 6) return;
+  const east = hash2(x, y, 1341) < 0.5;
+  addProp(m, ['dump_g', 'dump_b', 'bikerack', 'trashcan'][Math.floor(hash2(x, y, 1342) * 4)], (east ? x + w - 1.6 : x + 1.6) * TILE, (y + 0.9) * TILE, 10);
+  if (hash2(x, y, 1343) < 0.5) addProp(m, ['planter_g', 'planter_sq', 'potted'][Math.floor(hash2(x, y, 1344) * 3)], (east ? x + 1.4 : x + w - 1.4) * TILE, (y + g - 0.8) * TILE, 10);
 }
 
 // ---------------------------------------------------------------------------
@@ -2047,8 +2116,7 @@ function roofRowV2(m, row, x, y, w, h, st, rand, back = false) {
     let bw = left <= W[1] ? left : W[0] + Math.floor(rand() * (W[1] - W[0] + 1));
     if (left - bw < W[0]) bw = left;
     if (bw < 3) break;
-    roofOne(m, row, x0, y, bw, h, kinds[Math.floor(rand() * kinds.length)], Math.floor(rand() * 1e9));
-    if (back) m.buildings[m.buildings.length - 1].back = true;
+    roofOne(m, row, x0, y, bw, h, kinds[Math.floor(rand() * kinds.length)], Math.floor(rand() * 1e9), back);
     x0 += bw;
   }
 }
@@ -5082,8 +5150,7 @@ function buildHeroCorner(m) {
       while (a1 - x >= 3) {
         let w = a1 - x <= 12 ? a1 - x : 6 + (hash2(LX(x), LY(fy), 811) * 5 | 0);
         if (a1 - x - w < 3) w = a1 - x;
-        roofOne(m, { d: b.d }, x, fy + (north ? 0 : 1), w, fh - (north ? 1 : 1), 'tar', Math.floor(hash2(LX(x), LY(fy), 812) * 1e9));
-        if (!north) m.buildings[m.buildings.length - 1].back = true;
+        roofOne(m, { d: b.d }, x, fy + (north ? 0 : 1), w, fh - (north ? 1 : 1), 'tar', Math.floor(hash2(LX(x), LY(fy), 812) * 1e9), !north);
         x += w;
       }
     }
