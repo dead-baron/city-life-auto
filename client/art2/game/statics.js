@@ -963,8 +963,10 @@ function townKit(I, list) {
 // ---- the signs' faces and colours by trade (wave A1; signfont.js) ---------------------------------------------------
 // the POIs standing in each building (by the building's record)
 let PB_M = null, PB = null;
+// (World v3's window: the lists keep the world's indexes, so the places outside it are holes - every page bake of a
+// shop's sign threw here and fell back without the statics, and was never kept: baked again each time it came in view)
 function poisOf(M, b) {
-  if (PB_M !== M) { PB_M = M; PB = new Map(); for (const p of M.pois || []) { const q = p.b !== undefined ? M.buildings[p.b] : null; if (!q) continue; let l = PB.get(q); if (!l) PB.set(q, (l = [])); l.push(p); } }
+  if (PB_M !== M) { PB_M = M; PB = new Map(); for (const p of M.pois || []) { const q = p && p.b !== undefined ? M.buildings[p.b] : null; if (!q) continue; let l = PB.get(q); if (!l) PB.set(q, (l = [])); l.push(p); } }
   return PB.get(b) || [];
 }
 // a shop sign's trade: its own business (the walk-in unit's POI, else the POI named like the sign, else the building's
