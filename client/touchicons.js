@@ -3,9 +3,10 @@
 // Drawn in code: each icon is a few shapes on the 24-px grid (rects, discs, rings, polygons, thick lines) filled pixel
 // by pixel at the pixel centres, then an outline one pixel wide round everything (the sheet's ink line); the result is
 // an inline SVG of whole-pixel rectangles (crisp at 24, 48, 72 px: style.css .pi24 keeps them on whole multiples).
-// Used by the HUD (index.html [data-ic], filled by paintIcons), the touch buttons (client/touchslots.js), the prompt,
-// the hint strips and the cues (client/glyphs.js, client/hudinfo.js) - one set, so a strip shows the button's icon.
-// Built the first time each is asked for, then kept.
+// Used by the HUD's plates and the screens (index.html [data-ic], filled by paintIcons). Below them the line icons
+// (Lucide, glyph): the touch buttons (client/touchslots.js), the HUD's round buttons ([data-gl]), the weapon card, the
+// bag, the prompt's chip, the hint strips and the cues (client/glyphs.js, client/hudinfo.js) - one set, so a strip shows
+// the button's icon. Built the first time each is asked for, then kept.
 
 // the palette: the UI kit's colours (style.css :root) and the shades the sheet draws with; '.' clears
 const PAL = {
@@ -241,92 +242,192 @@ export function paintIcons(root = document) {
   for (const el of root.querySelectorAll('[data-gl]')) if (el.dataset.icd !== el.dataset.gl) { el.innerHTML = glyph(el.dataset.gl); el.dataset.icd = el.dataset.gl; }
 }
 
-// ---- the touch buttons' glyphs (the owner, 11-03: "simplified UI icons ... cleaner, more consistent and better looking")
-// One line-icon language, vector, never scaled pixels: the 24-unit grid, a 2-unit stroke with round caps and joins, no
-// fill (variant 'line', the open-source line sets' style - Tabler, Lucide); or the same shapes solid (variant 'solid').
-// Drawn for City Life Auto in that style - no third-party path data (the icon packages couldn't be fetched in the
-// session that drew these; a set's own paths can replace any of them, they share the grid and the stroke). One color:
-// currentColor (the button's: off-white; ink on an accent disc). Each glyph: a - the line drawing; b - its solid
-// silhouette (fill, even-odd for holes); l - lines drawn in both; c - cuts drawn over the solid in the disc's color.
-const VG = {
-  // the actions
-  fist: { a: 'M7 10.5V8a1.5 1.5 0 0 1 3 0v1.5M10 9V7.5a1.5 1.5 0 0 1 3 0V9.5M13 9.5V7.5a1.5 1.5 0 0 1 3 0V10M16 10V8.5a1.5 1.5 0 0 1 3 0V14c0 3.9-2.7 6.5-6.5 6.5H12c-3.3 0-5.5-2.4-5.5-5.5v-2c0-1.1.9-2 2-2H11a1.5 1.5 0 0 1 0 3H9.5',
-    b: 'M6.5 13V8a1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.2-.5 1.6 1.6 0 0 1 3.2 0 1.6 1.6 0 0 1 3.4 1V14c0 3.9-2.8 6.5-6.6 6.5H12c-3.2 0-5.5-2.4-5.5-5.5z', c: 'M9.7 8.6v2.4M12.9 8v2.8M16.1 8.4v2.6M8.5 13.5h3' },
-  bullet: { a: 'M9 21V10c0-3 1.3-5.8 3-7 1.7 1.2 3 4 3 7v11zM9 16.5h6', b: 'M8.5 21.5V10c0-3.2 1.5-6.3 3.5-7.7 2 1.4 3.5 4.5 3.5 7.7v11.5z', c: 'M8.5 16.5h7' },
-  crosshair: { a: 'M12 12m-7 0a7 7 0 1 0 14 0a7 7 0 1 0-14 0M12 2v4M12 18v4M2 12h4M18 12h4', l: 'M12 12h.01' },
-  target: { a: 'M12 12m-8.5 0a8.5 8.5 0 1 0 17 0a8.5 8.5 0 1 0-17 0M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0', l: 'M12 12h.01', b: 'M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 1 1 0-19zM12 6a6 6 0 1 0 0 12 6 6 0 1 0 0-12zM12 9.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 1 1 0-5z' },
-  hand: { a: 'M9 13.5V5a1.5 1.5 0 0 1 3 0v6.5M12 11a1.5 1.5 0 0 1 3 0v1M15 11.5a1.5 1.5 0 0 1 3 0v1M18 12a1.5 1.5 0 0 1 3 0v4a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1L9 15', l: 'M4.5 4l1.5 1.5M3 9h2M15.5 4L14 5.5',
-    b: 'M9 15V5a1.5 1.5 0 0 1 3 0v5.6a1.5 1.5 0 0 1 3 .4 1.5 1.5 0 0 1 3 .5 1.5 1.5 0 0 1 3 .5V16a6 6 0 0 1-6 6h-1.6a6 6 0 0 1-4.9-2.5L5.3 15.6a1.6 1.6 0 0 1 2.4-2.1z', c: 'M12 11.5v2.5M15 11.8v2.4M18 12.3v2' },
-  car: { a: 'M3 16.5V13l2.2-5.5h11.3l3.2 5.5H21a1 1 0 0 1 1 1v2.5M3 16.5h1.5M9.5 16.5h5M19.5 16.5H22M5 13h14.7M11.5 7.5V13M7 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M17 16.5m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
-    b: 'M2 17v-4.2L4.4 7h12.4l3.3 5.5h1.4A1.5 1.5 0 0 1 23 14v3h-2.6a3.4 3.4 0 0 0-6.8 0H10.4a3.4 3.4 0 0 0-6.8 0zM6 12.2h4.6V8.6H7.5zM12.4 12.2h5.5l-2-3.6h-3.5zM7 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0M17 17m-2.2 0a2.2 2.2 0 1 0 4.4 0a2.2 2.2 0 1 0-4.4 0' },
-  roll: { a: 'M4.5 16.5a7.5 7.5 0 0 1 15 0M16.5 13.5l3 3 3-3M2.5 20.5h19' },
-  reload: { a: 'M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4h-4' },
-  shield: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6z', b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6z' },
-  badge: { a: 'M12 3l8 3v6c0 4.6-3.4 8-8 9-4.6-1-8-4.4-8-9V6zM12 8.2l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z',
-    b: 'M12 2.4l8.6 3.2V12c0 5-3.6 8.6-8.6 9.6C7 20.6 3.4 17 3.4 12V5.6zM12 7.8l-1.4 2.8-3 .5 2.2 2.1-.5 3 2.7-1.4 2.7 1.4-.5-3 2.2-2.1-3-.5z' },
-  siren: { a: 'M7 18v-5.5a5 5 0 0 1 10 0V18M5 21h14v-3H5zM12 3.5V5M5 7l1.2 1.2M19 7l-1.2 1.2M10 13a2 2 0 0 1 2-2',
-    b: 'M6.5 18v-5.5a5.5 5.5 0 0 1 11 0V18zM4.5 18.5h15v3h-15z', l: 'M12 3v2M5 6.5l1.4 1.4M19 6.5l-1.4 1.4', c: 'M10 13a2 2 0 0 1 2-2' },
-  horn: { a: 'M4 9.5h3l5-4v13l-5-4H4zM16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11', b: 'M3.5 9h3.3l5.7-4.5v15L6.8 15H3.5z', l: 'M16 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11' },
-  bag: { a: 'M6 21V10.5A4.5 4.5 0 0 1 10.5 6h3a4.5 4.5 0 0 1 4.5 4.5V21zM9.5 6V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5V6M6 13.5h12M10 13.5v2.5',
-    b: 'M5.5 21.5v-11a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v11z', l: 'M9.5 5.5V4.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v1', c: 'M5.5 13.5h13M10 13.5v2.5' },
-  light: { a: 'M3 9h8l3-2.5v11L11 15H3zM17.5 8l3-1.5M18 12h3M17.5 16l3 1.5', b: 'M2.5 8.5h8.3l3.7-3v13l-3.7-3H2.5z', l: 'M17.5 8l3-1.5M18 12h3M17.5 16l3 1.5' },
-  autofire: { a: 'M12 20V11c0-2.6 1.1-4.8 2.75-6 1.65 1.2 2.75 3.4 2.75 6v9zM12 16h5.5M3.5 9H8M2.5 12.5H8M3.5 16H8',
-    b: 'M11.5 20.5V11c0-2.8 1.3-5.2 3.25-6.5C16.7 5.8 18 8.2 18 11v9.5z', l: 'M3.5 9H8M2.5 12.5H8M3.5 16H8', c: 'M11.5 16h6.5' },
-  up: { a: 'M12 20V4M5.5 10.5L12 4l6.5 6.5' },
-  down: { a: 'M12 4v16M5.5 13.5L12 20l6.5-6.5' },
-  brake: { a: 'M12 12m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M12 9v3.5M12 15.25v.01M4.6 6.2a9 9 0 0 0 0 11.6M19.4 6.2a9 9 0 0 1 0 11.6', b: 'M12 5.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 1 1 0-13z', l: 'M4.6 6.2a9 9 0 0 0 0 11.6M19.4 6.2a9 9 0 0 1 0 11.6', c: 'M12 9v3.5M12 15.25v.01' },   // (the dashboard's brake light, ISO 7000: a pedal read as a speech bubble)
-  gallop: { a: 'M5 6l6 6-6 6M13 6l6 6-6 6' },
-  throw: { a: 'M5.5 18.5C8 11 12.5 7 19 5.5M14.5 4l4.5 1.5-1.5 4.5M5.5 18.5m-1.8 0a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0-3.6 0' },
-  star: { a: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z', b: 'M12 2.3l3 6 6.7 1-4.9 4.7 1.2 6.6-6-3.1-6 3.1 1.2-6.6-4.9-4.7 6.7-1z' },
-  ollie: { a: 'M3 17h18M6 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M18 20m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0M12 13V3.5M8 7.5l4-4 4 4' },
-  exit: { a: 'M14 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3M9.5 12H21M17.5 8.5L21 12l-3.5 3.5' },
-  swap: { a: 'M9.5 6l6 6-6 6' },
-  // what you hold: silhouettes pointing right
-  pistol: { a: 'M3.5 6.5h16v4h-9M5.5 10.5l-1.8 8.5h4.6l1.5-6.5h3a1 1 0 0 0 1-1v-1M19.5 6.5V5',
-    b: 'M3 6h17v5h-6.7v1a1.5 1.5 0 0 1-1.5 1.5H10.4L9 19.5H3.2L5 11H3z' },
-  rifle: { a: 'M2.5 9.5L6 9h13.5v2.5H22M6 9v3.5l-2 4M6 12.5h8L12.5 16H9.5l1-3.5M14 9V7h3',
-    b: 'M2 9.2L6 8.5h14v2.5h2.5v1.5H14l-1.6 4H9l1-4H6.6l-2 4.3H2.3L4.5 12H2z' },
-  knife: { a: 'M20.5 3.5C17 4.5 12.5 9 10 12.5l1.5 1.5c3.5-2.5 8-7 9-10.5zM10 12.5l-6 6 1.5 1.5 6-6',
-    b: 'M21 3c-3.8.8-8.8 5.6-11.6 9.4l2.2 2.2C15.4 11.8 20.2 6.8 21 3zM9.5 12.7l2 2L5.2 21 3 18.8z' },
-  sword: { a: 'M20 4v3.5L9.5 18l-3.5-3.5L16.5 4zM5.5 13.5l5 5M8 16l-4 4' },
-  bat: { a: 'M4 20l1.5-1.5M5.5 18.5l8.5-8.5c1.5-1.5 3.5-4 5-5.5s2.5 0 1 1.5-4 3.5-5.5 5L6 20.5z', b: 'M5 19l8.5-8.5c1.6-1.6 3.6-4.1 5.2-5.7 1.6-1.6 3.6.4 2 2-1.6 1.6-4.1 3.6-5.7 5.2L6.5 20.5zM3 20.5l1.5-1.5 1 1-1.5 1.5z' },
-  grenade: { a: 'M11 15m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M9 9V6.5h4V9M13 7.5l4.5-3M17.5 4.5l1.5 1.5', b: 'M11 15m-6.5 0a6.5 6.5 0 1 0 13 0a6.5 6.5 0 1 0-13 0M8.5 5.8h5V9h-5z', l: 'M13.5 7.2l4-2.7M17.5 4.5l1.5 1.5' },
-  bow: { a: 'M6 3c6 3 6 15 0 18M6 3v18M3 12h17M17.5 9l3 3-3 3' },
-  rocket: { a: 'M2.5 10h14v4h-14zM16.5 9.5L21 12l-4.5 2.5M6 14v3.5M10 14v2.5', b: 'M2 9.5h14.5V9l5.5 3-5.5 3v-.5H11v2.5H9v-2.5H7v3.5H5v-3.5H2z' },
-  bolt: { a: 'M13 3L5 13.5h6L10 21l8-10.5h-6z', b: 'M13.6 2.2L4 14h6.6L9.4 21.8 19 10h-6.5z' },
-  spray: { a: 'M8 21V10.5a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2V21zM10 8.5V5.5h3v3M13 6h3M19 4v.01M19 7.5v.01M21.5 5.5v.01', b: 'M7.5 21.5V10.5A2.5 2.5 0 0 1 10 8h3a2.5 2.5 0 0 1 2.5 2.5v11zM9.5 4.8h4V8h-4z', l: 'M13.5 6h2.5M19 4v.01M19 7.5v.01M21.5 5.5v.01' },
-  flame: { a: 'M12 21c3.6 0 6-2.6 6-6 0-4-3-6.5-4-10.5-2.6 2-3.6 4.6-3.6 7.2-1-1-1.5-2.1-1.5-3.6C7.4 10.2 6 12.4 6 15c0 3.4 2.4 6 6 6z', b: 'M12 21.6c3.9 0 6.6-2.8 6.6-6.6 0-4.4-3.3-7-4.4-11.6-2.9 2-4 4.8-4 7.6-1-1-1.6-2.3-1.6-3.9-2.4 2.1-4 4.5-4 7.9 0 3.8 2.7 6.6 7.4 6.6z' },
-  rod: { a: 'M4 20L19 5M19 5v11M19 16a1.5 1.5 0 1 1-1.5 1.5M3 21l1.5-1.5' },
-  spikes: { a: 'M3 18h18M4 18l2-6 2 6M10 18l2-6 2 6M16 18l2-6 2 6' },
+// ---- the line icons: the touch buttons, the HUD's round buttons, the weapon card and the bag - one family
+// (the owner, 11-05: "more generic and more professional and clean and polished"; the phone a mobile phone, the bag a
+// backpack, the action button no hand). Lucide 1.69.0 (lucide.dev), copied for the icons used only: each icon's SVG
+// elements as one path (circles, rects, lines and polylines made path commands) on Lucide's 24 grid, drawn with a round
+// stroke in currentColor (the button's: off-white; ink on an accent disc).
+/*! Lucide icons (path data below, LU): ISC License.
+ * Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT).
+ * All other copyright (c) for Lucide are held by Lucide Contributors 2022.
+ * Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby
+ * granted, provided that the above copyright notice and this permission notice appear in all copies.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+ * INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+ * AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE. (The full text: client/icons-LICENSE.txt.) */
+const LU = {
+  smartphone: 'M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-16a2 2 0 0 1 2-2zM12 18h.01',
+  map: 'M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0zM15 5.764v15M9 3.236v15',
+  menu: 'M4 5h16M4 12h16M4 19h16',
+  target: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M6 12a6 6 0 1 0 12 0a6 6 0 1 0-12 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  crosshair: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M22 12L18 12M6 12L2 12M12 6L12 2M12 22L12 18',
+  swords: 'M13 19l6-6M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5M14.828 6.172l2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586M16 16l4 4M19 21l2-2M5 14l4 4M5 21l-2-2M7.5 16.5 4 20',
+  'rotate-cw': 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5',
+  infinity: 'M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8',
+  'volume-2': 'M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298zM16 9a5 5 0 0 1 0 6M19.364 18.364a9 9 0 0 0 0-12.728',
+  siren: 'M7 18v-6a5 5 0 1 1 10 0v6M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2zM21 12h1M18.5 4.5 18 5M2 12h1M12 2v1M4.929 4.929l.707.707M12 12v6',
+  flashlight: 'M12 13v1M17 2a1 1 0 0 1 1 1v4a3 3 0 0 1-.6 1.8l-.6.8A4 4 0 0 0 16 12v8a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-8a4 4 0 0 0-.8-2.4l-.6-.8A3 3 0 0 1 6 7V3a1 1 0 0 1 1-1zM6 6h12',
+  'circle-stop': 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M10 9h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z',
+  'arrow-big-up': 'M9 19a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1v-6a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-7.086-7.086a1 1 0 0 0-1.414 0l-7.086 7.086a.707.707 0 0 0 .5 1.207H8a1 1 0 0 1 1 1z',
+  'arrow-big-down': 'M9 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 0 1 1h3.293a.707.707 0 0 1 .5 1.207l-7.086 7.086a1 1 0 0 1-1.414 0l-7.086-7.086a.707.707 0 0 1 .5-1.207H8a1 1 0 0 0 1-1z',
+  'arrow-big-up-dash': 'M14 16a1 1 0 0 0 1-1v-2a1 1 0 0 1 1-1h3.293a.707.707 0 0 0 .5-1.207l-6.939-6.939a1.207 1.207 0 0 0-1.708 0l-6.94 6.94a.707.707 0 0 0 .5 1.206H8a1 1 0 0 1 1 1v2a1 1 0 0 0 1 1zM9 20h6',
+  redo: 'M21 7v6h-6M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7',
+  sparkles: 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594zM20 2v4M22 4h-4M2 20a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  'fast-forward': 'M12 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 12 18zM2 6a2 2 0 0 1 3.414-1.414l6 6a2 2 0 0 1 0 2.828l-6 6A2 2 0 0 1 2 18z',
+  'log-out': 'M16 17l5-5-5-5M21 12H9M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4',
+  'car-front': 'M21 8l-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8M7 14h.01M17 14h.01M5 10h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zM5 18v2M19 18v2',
+  shield: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
+  backpack: 'M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM8 10h8M8 18h8M8 22v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2',
+  'chevron-right': 'M9 18l6-6-6-6',
+  slice: 'M11 16.586V19a1 1 0 0 1-1 1H2L18.37 3.63a1 1 0 1 1 3 3l-9.663 9.663a1 1 0 0 1-1.414 0L8 14',
+  sword: 'M11 19l-6-6M5 21l-2-2M8 16l-4 4M9.5 17.5 20.414 6.586A2 2 0 0021 5.172V3h-2.172a2 2 0 00-1.414.586L6.5 14.5',
+  hammer: 'M15 12l-9.373 9.373a1 1 0 0 1-3.001-3L12 9M18 15l4-4M21.5 11.5l-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5',
+  bomb: 'M2 13a9 9 0 1 0 18 0a9 9 0 1 0-18 0M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95M22 2l-1.5 1.5',
+  'bow-arrow': 'M17 3h4v4M18.575 11.082a13 13 0 0 1 1.048 9.027 1.17 1.17 0 0 1-1.914.597L14 17M7 10 3.29 6.29a1.17 1.17 0 0 1 .6-1.91 13 13 0 0 1 9.03 1.05M7 14a1.7 1.7 0 0 0-1.207.5l-2.646 2.646A.5.5 0 0 0 3.5 18H5a1 1 0 0 1 1 1v1.5a.5.5 0 0 0 .854.354L9.5 18.207A1.7 1.7 0 0 0 10 17v-2a1 1 0 0 0-1-1zM9.707 14.293 21 3',
+  rocket: 'M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05',
+  zap: 'M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z',
+  'spray-can': 'M3 3h.01M7 5h.01M11 7h.01M3 7h.01M7 9h.01M3 11h.01M15 5h4v4h-4zM19 9l2 2v10c0 .6-.4 1-1 1h-6c-.6 0-1-.4-1-1V11l2-2M13 14l8-2M13 19l8-2',
+  flame: 'M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4',
+  'fishing-rod': 'M4 11h1M8 15a2 2 0 0 1-4 0V3a1 1 0 0 1 1-1h.5C14 2 20 9 20 18v4M16 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
+  'door-open': 'M10 21H2M10 3H7a2 2 0 00-2 2v16M14 12h.01M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992zM22 21h-3',
+  'message-circle-more': 'M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719M8 12h.01M12 12h.01M16 12h.01',
+  sailboat: 'M10 2v15M7 22a4 4 0 0 1-4-4 1 1 0 0 1 1-1h16a1 1 0 0 1 1 1 4 4 0 0 1-4 4zM9.159 2.46a1 1 0 0 1 1.521-.193l9.977 8.98A1 1 0 0 1 20 13H4a1 1 0 0 1-.824-1.567z',
+  'train-front': 'M8 3.1V7a4 4 0 0 0 8 0V3.1M9 15l-1-1M15 15l1-1M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5ZM8 19l-2 3M16 19l2 3',
+  package: 'M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73zM12 22V12M3.29 7L12 12L20.71 7M7.5 4.27l9 5.15',
+  'package-check': 'M12 22V12M16 17l2 2 4-4M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753M3.29 7 12 12l8.71-5M7.5 4.27l8.997 5.148',
+  coins: 'M13.744 17.736a6 6 0 1 1-7.48-7.48M15 6h1v4M6.134 14.768l.866-.5 2 3.464M10 8a6 6 0 1 0 12 0a6 6 0 1 0-12 0',
+  landmark: 'M10 18v-7M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949zM14 18v-7M18 18v-7M3 22h18M6 18v-7',
+  banknote: 'M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0M6 12h.01M18 12h.01',
+  'lock-open': 'M5 11h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM7 11V7a5 5 0 0 1 9.9-1',
+  link: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
+  'heart-pulse': 'M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27',
+  bed: 'M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9',
+  armchair: 'M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0zM5 18v2M19 18v2',
+  utensils: 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7',
+  wrench: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z',
+  paintbrush: 'M14.622 17.897l-10.68-2.913M18.376 2.622a1 1 0 1 1 3.002 3.002L17.36 9.643a.5.5 0 0 0 0 .707l.944.944a2.41 2.41 0 0 1 0 3.408l-.944.944a.5.5 0 0 1-.707 0L8.354 7.348a.5.5 0 0 1 0-.707l.944-.944a2.41 2.41 0 0 1 3.408 0l.944.944a.5.5 0 0 0 .707 0zM9 8c-1.804 2.71-3.97 3.46-6.583 3.948a.507.507 0 0 0-.302.819l7.32 8.883a1 1 0 0 0 1.185.204C12.735 20.405 16 16.792 16 15',
+  'gamepad-2': 'M6 11L10 11M8 9L8 13M15 12L15.01 12M18 10L18.01 10M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z',
+  dices: 'M4 10h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM17.92 14l3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6M6 18h.01M10 14h.01M15 6h.01M18 9h.01',
+  eye: 'M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0M9 12a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  'pen-line': 'M13 21h8M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z',
+  sprout: 'M14 9.536V7a4 4 0 0 1 4-4h1.5a.5.5 0 0 1 .5.5V5a4 4 0 0 1-4 4 4 4 0 0 0-4 4c0 2 1 3 1 5a5 5 0 0 1-1 3M4 9a5 5 0 0 1 8 4 5 5 0 0 1-8-4M5 21h14',
+  axe: 'M14 12l-8.381 8.38a1 1 0 0 1-3.001-3L11 9M15 15.5a.5.5 0 0 0 .5.5A6.5 6.5 0 0 0 22 9.5a.5.5 0 0 0-.5-.5h-1.672a2 2 0 0 1-1.414-.586l-5.062-5.062a1.205 1.205 0 0 0-1.704 0L9.352 5.648a1.205 1.205 0 0 0 0 1.704l5.062 5.062A2 2 0 0 1 15 13.828z',
+  pickaxe: 'M14 13l-8.381 8.38a1 1 0 0 1-3.001-3L11 9.999M15.973 4.027A13 13 0 0 0 5.902 2.373c-1.398.342-1.092 2.158.277 2.601a19.9 19.9 0 0 1 5.822 3.024M16.001 11.999a19.9 19.9 0 0 1 3.024 5.824c.444 1.369 2.26 1.676 2.603.278A13 13 0 0 0 20 8.069M18.352 3.352a1.205 1.205 0 0 0-1.704 0l-5.296 5.296a1.205 1.205 0 0 0 0 1.704l2.296 2.296a1.205 1.205 0 0 0 1.704 0l5.296-5.296a1.205 1.205 0 0 0 0-1.704z',
+  lightbulb: 'M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4',
+  'shower-head': 'M4 4l2.5 2.5M13.5 6.5a4.95 4.95 0 0 0-7 7M15 5 5 15M14 17v.01M10 16v.01M13 13v.01M16 10v.01M11 20v.01M17 14v.01M20 11v.01',
+  shirt: 'M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z',
+  'paw-print': 'M9 4a2 2 0 1 0 4 0a2 2 0 1 0-4 0M16 8a2 2 0 1 0 4 0a2 2 0 1 0-4 0M18 16a2 2 0 1 0 4 0a2 2 0 1 0-4 0M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z',
+  'eighth-notes': 'M21 16V3a1 1 0 0 0-1.28-.96l-10 2.917a1 1 0 0 0-.72.96V19M15 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0M3 19a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
+  hourglass: 'M5 22h14M5 2h14M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2',
+  footprints: 'M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0ZM20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0ZM16 17h4M4 13h4',
+  briefcase: 'M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2v-10a2 2 0 0 1 2-2z',
+  'car-taxi-front': 'M10 2h4M21 8l-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8M7 14h.01M17 14h.01M5 10h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zM5 18v2M19 18v2',
+  'circle-dot': 'M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0',
 };
+// what Lucide has no picture for - a handgun, a long gun, a club, a spike strip, the dive roll (its circular arrows read
+// as RELOAD's): City Life Auto's own, drawn on the same grid for the same stroke, so they sit in the family
+const OWN = {
+  pistol: 'M3.5 6.5h16v4h-9M5.5 10.5l-1.8 8.5h4.6l1.5-6.5h3a1 1 0 0 0 1-1v-1M19.5 6.5V5',
+  rifle: 'M2.5 9.5L6 9h13.5v2.5H22M6 9v3.5l-2 4M6 12.5h8L12.5 16H9.5l1-3.5M14 9V7h3',
+  bat: 'M4 20l1.5-1.5M5.5 18.5l8.5-8.5c1.5-1.5 3.5-4 5-5.5s2.5 0 1 1.5-4 3.5-5.5 5L6 20.5z',
+  spikes: 'M3 18h18M4 18l2-6 2 6M10 18l2-6 2 6M16 18l2-6 2 6',
+  roll: 'M4.5 16.5a7.5 7.5 0 0 1 15 0M16.5 13.5l3 3 3-3M2.5 20.5h19',
+};
+const VG = { ...LU, ...OWN };
 export const GLYPH_NAMES = Object.keys(VG);
-export const GLYPH_VARIANTS = ['line', 'solid'];
-let VARIANT = 'solid';   // (the one in use - the owner's pick, 11-04: the solid set; 'line' stays as the shapes' outline, the solid set's fallback where a glyph has no fill of its own)
-export function setGlyphVariant(v) { if (GLYPH_VARIANTS.includes(v)) { VARIANT = v; gSvgs.clear(); } }
+// more of the set, from the module that draws them (client/bag.js: the things in the bag - loaded with it, off the page's
+// first load)
+export function addGlyphs(o) { for (const [k, d] of Object.entries(o)) { if (!VG[k]) GLYPH_NAMES.push(k); VG[k] = d; } }
+// the line's width in grid units (11-05: 2, 2.5 and 3, with and without a halo, compared at the real sizes over the
+// street - docs/DEVLOG.md): Lucide's own 2 thins out at 28 px on a see-through disc, 3 clogs the small ones (the
+// backpack's pocket, the coins' figures); 2.5, and a dark halo under it (style.css .gl .h) on the see-through discs
+// only - the accent discs and the HUD's plates are solid
+export const GLYPH_STROKE = 2.5;
 const gSvgs = new Map();
-const STROKE = (w = 2) => `fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"`;
-// '<svg class="pi24 gl">' for a glyph, in the button's text color (currentColor); a solid glyph's cuts in --cut (the disc's)
-export function glyph(name, px = 0, variant = VARIANT) {
-  const key = name + '|' + variant;
-  if (!gSvgs.has(key)) {
-    const g = VG[name] || VG.hand;
-    gSvgs.set(key, variant === 'solid' && g.b
-      ? `<path fill="currentColor" fill-rule="evenodd" d="${g.b}"/>${g.l ? `<path ${STROKE(2.2)} d="${g.l}"/>` : ''}${g.c ? `<path class="cut" ${STROKE(1.6)} d="${g.c}"/>` : ''}`
-      : `<path ${STROKE(variant === 'solid' ? 2.6 : 2)} d="${g.a}${g.l || ''}"/>`);
-  }
-  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} aria-hidden="true">${gSvgs.get(key)}</svg>`;
+// '<svg class="pi24 gl">' for a glyph: the line in the button's text color (currentColor), over its halo
+export function glyph(name, px = 0) {
+  if (!gSvgs.has(name)) { const d = VG[name] || VG['circle-dot']; gSvgs.set(name, `<path class="h" d="${d}"/><path d="${d}"/>`); }
+  return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${gSvgs.get(name)}</svg>`;
 }
-// what you hold, as its glyph (the weapon button: shared/items.js WEAPONS' type and id)
+// what you hold, as its glyph (the weapon button and the bag: shared/items.js WEAPONS' type and id)
 const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
 export function glyphOfWeapon(id, type) {
-  if (!id || id === 'fists') return 'fist';
+  if (!id || id === 'fists') return 'swords';   // (bare hands: the fight's mark - no hand on a touch button, 11-05)
   if (LONG_GUNS.has(id)) return 'rifle';
-  if (/knife/.test(id)) return 'knife';
+  if (/knife/.test(id)) return 'slice';
   if (id === 'sword' || id === 'katana' || id === 'plasma') return 'sword';
-  return { gun: 'pistol', melee: 'bat', grenade: 'grenade', bow: 'bow', rocket: 'rocket', taser: 'bolt', spray: 'spray', flame: 'flame', tool: 'rod', deploy: 'spikes' }[type] || 'pistol';
+  if (id === 'sledge') return 'hammer';
+  if (id === 'heavyflash') return 'flashlight';
+  return { gun: 'pistol', melee: 'bat', grenade: 'bomb', bow: 'bow-arrow', rocket: 'rocket', taser: 'zap', spray: 'spray-can', flame: 'flame', tool: 'fishing-rod', deploy: 'spikes' }[type] || 'pistol';
 }
+
+// ---- the action button says what pressing it will do (the owner, 11-05: "no hands"). The server's prompt ("E: Enter
+// St. Neon General") carries no kind of its own - dozens of systems word their own - so the page reads one from its
+// words: the first rule whose pattern matches the start of them (lower case) names the kind, and the kind its icon.
+// None matches: 'interact', a neutral "do the thing" mark. Order matters (a shower is taken before anything is picked up).
+export const ACT_KINDS = [
+  ['wait', 'hourglass', /\.\.\.|^waiting|^on the way|^not yet/],
+  ['arrest', 'link', /^(cuff|book the|detain|arrest|frisk|let .+ go\b)/],
+  ['run', 'footprints', /^(make a break|run for|escap)/],
+  ['job', 'briefcase', /^(job:|trucker:|take a mail|deliver the letters|drive a taxi|sign on|farm work|abandon current job)/],
+  ['door', 'door-open', /^(go(ing)? (inside|in|out)|step (outside|inside)|enter|exit|leave(?! (it|the package|your weapons|the syndicate))|out (the|to)\b|back (out|to|inside)|into |through |(up|down) the (stairs|footbridge)|ring the doorbell|let .+ in\b|the front door|the vault door)/],
+  ['talk', 'message-circle-more', /^(talk|speak|ask|chat|greet|the front desk|the hooded stranger|help the lost|break up the fight)/],
+  ['hail', 'car-taxi-front', /^(hail|call a (cab|taxi))/],
+  ['transit', 'train-front', /^(board the (train|bus|tram)|the train to|bus stop|the route board|ride the ferris|stop in a)/],
+  ['boat', 'sailboat', /^(board|moor|paddle|haul them aboard|deep-sea|launch the)/],
+  ['getin', 'car-front', /^(get in|get on|drive|steer|park|saddle up|ride the horse|ride it|rent a (horse|car|bike|scooter)|hitch|unhitch|hop on|car soccer|join car soccer)/],
+  ['bank', 'landmark', /^(deposit|withdraw|use atm|ironvault|.*\bvault\b)/],
+  ['rob', 'banknote', /^(rob|empty the till|take the cash|swipe the tips|hold up|run the product|snatch)/],
+  ['unlock', 'lock-open', /^(crack|unlock|hold to unlock|lift the manhole|break (in|open)|pick the lock|open the old|the drill)/],
+  ['buy', 'coins', /^(buy|sell|pay|rent|shop|fence|deal|trade|order|bring a customer|stake|.+ for sale)/],
+  ['revive', 'heart-pulse', /^(revive|hold to (revive|help)|help|hold: treat|treat|full treatment|pulling someone|heal)/],
+  ['rest', 'bed', /^(rest|sleep|wake up|lay down|go to bed|nap)/],
+  ['sit', 'armchair', /^(sit|get up)/],
+  ['eat', 'utensils', /^(eat|cook|pour|drink|a plate of|have a (meal|drink|bite))/],
+  ['wash', 'shower-head', /^(take a shower|shower|wash|in the shower|under the shower|car wash|bath)/],
+  ['repair', 'wrench', /^(repair|fix|respray|upgrade|tune up|service)/],
+  ['build', 'hammer', /^(make|build|craft|add a room|lay a new|decorat|done decorating|furniture|the workbench)/],
+  ['paint', 'paintbrush', /^paint/],
+  ['casino', 'dices', /^(blackjack|roulette|slots|video poker|shoot dice|double down|hit|stand|draw|the race book|pick another number|bet)/],
+  ['fish', 'fishing-rod', /^(fish|cast|reel|hook|net a|land it)/],
+  ['play', 'gamepad-2', /^(play|challenge|join this lane|shoot|session|freestyle|start a|rhythm game|tee off|serve|kickflip|carve|ride the exercise)/],
+  ['climb', 'arrow-big-up', /^(climb|up (the|off|onto)|straight up)/],
+  ['down', 'arrow-big-down', /^(down|jump off|jump down|open your parachute|slide off)/],
+  ['look', 'eye', /^(look|take a look|having a look|keep looking|watch|read|the telescope|the mirror|check)/],
+  ['sign', 'pen-line', /^(sign|register|turn in as|join|leave the syndicate|go (on|off) duty)/],
+  ['plant', 'sprout', /^(plant|pick the crop|harvest|water|forage|picked here|dig)/],
+  ['chop', 'axe', /^(hold to (fell|cut)|cutting|chop|fell|firewood|take a bundle)/],
+  ['mine', 'pickaxe', /^(mine|mining)/],
+  ['fire', 'flame', /^(light the|put out the|setting off|set off)/],
+  ['lights', 'lightbulb', /^(switch|turn (it|the|on|off)\b)/],
+  ['wear', 'shirt', /^(change outfit|quick change|get dressed|the fitting room|wardrobe|put on|try on|dress)/],
+  ['pet', 'paw-print', /^(adopt|feed|pet|walk the)/],
+  ['music', 'eighth-notes', /^(tune in|tape:|take the decks|dance|spin)/],
+  ['pickup', 'package', /^(pick|take|collect|grab|retrieve|lift the pallet|loot|let me pick)/],
+  ['drop', 'package-check', /^(put|set|leave|load|unload|stash|deliver|hand|give|return|stack|throw away|drop|place)/],
+];
+// (a prompt that starts with a name - "Harbor Heights - your door: go in": these words anywhere in it)
+const ACT_ANYWHERE = [['door', /\b(go in|go inside|the lobby)\b/], ['look', /\btake a look\b/], ['talk', /\bthe front desk\b/], ['mine', /\bvein\b/], ['drop', /\bstack the\b/], ['buy', /\bprize counter\b|\(\$\d/]];
+export const KIND_ICON = { interact: 'circle-dot' };
+for (const [k, ic] of ACT_KINDS) KIND_ICON[k] = ic;
+// the kind of what a prompt's words offer ("Enter St. Neon General" -> 'door')
+export function actKind(words) {
+  const t = String(words || '').trim().toLowerCase();
+  if (!t) return 'interact';
+  for (const [k, , re] of ACT_KINDS) if (re.test(t)) return k;
+  for (const [k, re] of ACT_ANYWHERE) if (re.test(t)) return k;
+  return 'interact';
+}
+// what the action button shows now (client/hud.js sets it as the prompt changes; the button, the prompt's chip and the
+// hint strips all draw it)
+let actNow = 'interact';
+export function setActKind(k) { actNow = KIND_ICON[k] ? k : 'interact'; return actNow; }
+export const actKindNow = () => actNow;
+
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
-const ICON = { HIT: 'fist', THROW: 'throw', TRICK: 'star', BRAKE: 'brake', STOP: 'brake', OLLIE: 'ollie', AIR: 'up', EXIT: 'exit', OFF: 'exit', SIREN: 'siren', GALLOP: 'gallop' };
-const ACTION_ICON = { fire: 'target', dive: 'roll', action: 'hand', vehicle: 'car', block: 'shield', firetog: 'autofire', reload: 'reload', horn: 'horn', climb: 'up', descend: 'down', use: 'bag', light: 'light', cruiser: 'badge', throw: 'throw', sprint: 'gallop', nextw: 'fist', stick: 'crosshair' };
-export const iconOf = (a, label) => ICON[label] || ACTION_ICON[a] || 'hand';
+const ICON = { HIT: 'swords', THROW: 'redo', TRICK: 'sparkles', BRAKE: 'circle-stop', STOP: 'circle-stop', OLLIE: 'arrow-big-up-dash', AIR: 'arrow-big-up', EXIT: 'log-out', OFF: 'log-out', SIREN: 'siren', GALLOP: 'fast-forward' };
+const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'infinity', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair' };
+export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
 export const svg = (k) => glyph(k);

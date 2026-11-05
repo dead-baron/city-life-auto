@@ -20353,3 +20353,43 @@ worker could hand it to them directly; and frame times need a real phone (the pe
   follows a `reworld` in a bake worker waits for that window. A replaced worker gets the current window with its init.
   The page's part of a swap (hostextra.js reworld), unthrottled on the bench machine: 170 -> 23 ms (a phone: about
   four times that).
+
+## 2026-11-05 - The touch, HUD and bag icons: Lucide, and an action button that says what it will do
+
+The owner (11-05): "the hand icons specially look not very good, anything more generic and more professional and clean
+and polished... the bag/inventory icons don't look very good, the phone icon is an old school phone... those touch
+screen icons in general need work or rethinking."
+
+- **One family: Lucide 1.69.0** (ISC; its Feather-derived parts MIT - client/icons-LICENSE.txt, and a header where the
+  path data lives). The touch buttons, the HUD's round buttons (now a smartphone, a map, a menu), the weapon card, the
+  bag's tiles, its carried slots, its details and its quick bar all draw from client/touchicons.js `glyph`. Only the
+  icons used are copied, each SVG's elements as one path (circles, rects, lines and polylines made path commands);
+  the bag's own (food, fish, pelts, tools, valuables: 55) live in client/bag.js and join the set when it loads
+  (`addGlyphs`), off the page's first load. The emoji in the bag are gone. The discs, sizes, colors, states and layout
+  are as they were; only the glyphs changed. The screens' pixel icons (the pause list, the phone, the store badges)
+  are untouched.
+- **The stroke: 2.5, with a halo on the see-through discs.** Compared at the real sizes over the street (28 px on a
+  52 disc, 40 px on a 72, 24 px on the HUD's plates; 2, 2.5 and 3, each with and without a dark halo): Lucide's own 2
+  thins out on the 55% disc over a bright sidewalk, 3 clogs the small details (the backpack's pocket, the coins'
+  figures). 2.5 reads at every size; a dark halo (--gl-halo, 2.2 units wider, under the line) only on the plain
+  see-through discs and the aim knob - the gold and red discs and the HUD's plates are solid and need none.
+- **The action button says what pressing it will do - no hands.** The server's prompt ("E: Enter St. Neon General")
+  has no kind field and dozens of systems word their own, so the page reads the kind from the words
+  (touchicons.js `ACT_KINDS`, first match wins, a few "anywhere in it" rules for prompts that start with a name):
+  door (enter, leave, go in), talk, get in (car-front), boat, transit, hail a cab, pick up (package), put down or
+  deliver (package-check), buy/sell/pay (coins), bank, rob (banknote), unlock, arrest, revive, rest, sit, eat, wash,
+  repair, build, paint, casino, fish, play, climb, down, look, sign, plant, chop, mine, fire, lights, wear, pet, music,
+  run, job, wait; anything else the neutral `circle-dot`. `formatPrompt` sets the kind, hud.js swaps ACT's glyph when
+  it changes, and the prompt's chip and the hint strips draw the same icon. The crime variant keeps its red disc and
+  the "!". Over the server's own prompt words (its `label:` literals), every common verb lands on a kind; what's left
+  are names and passive notes. **The server is unchanged.**
+- **The other buttons:** FIRE target, AIM crosshair, HIT swords (no fist), CAR car-front, ITEMS backpack, RELOAD
+  rotate-cw, BLOCK shield, FIRE ON infinity, HORN volume-2, SIREN and COP CAR siren, LIGHT flashlight, BRAKE/STOP
+  circle-stop, EXIT/OFF log-out, GALLOP fast-forward, THROW redo, TRICK sparkles, OLLIE arrow-big-up-dash, CLIMB/AIR
+  and DOWN the big arrows. **Weapons:** Lucide where it has one (sword, slice for knives, bomb, bow-arrow, rocket, zap,
+  spray-can, flame, fishing-rod, hammer for the sledge, flashlight for the heavy one, swords for bare hands); the
+  pistol, the long gun, the club and the spike strip keep our own drawings, and the dive roll keeps its arc (Lucide's
+  circular arrows read as RELOAD's), all on the same grid and stroke. Long-press names and aria labels as before.
+- **Tests:** test/acticons.test.js (every kind maps to an icon in the set; the server's words give the right kinds; no
+  hand glyph anywhere on touch - every state, every kind, every weapon; the page's wiring; every bag item has an icon;
+  the license travels with the icons). uikit and hub follow the new names. Page code: 503 -> 509 KB of 520, 84 files.

@@ -8,11 +8,20 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon } from './touchicons.js';
+import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon, setActKind, iconOf } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S, PROMPT_FADE_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
+// the action button's glyph for the kind of what it offers (client/touchicons.js actKind; touchslots.js draws the same
+// when it places the button): swapped only when the kind changes
+function actGlyph(kind) {
+  const b = document.querySelector('#tbtns [data-b="action"]');
+  if (!b || b.dataset.kind === kind) return;
+  b.dataset.kind = kind;
+  const g = b.querySelector('svg.gl');
+  if (g) g.outerHTML = monoGlyph(iconOf('action'));
+}
 export function crimeMarks(el, pcr) { el.classList.toggle('crime', pcr > 0); el.classList.toggle('felony', pcr === 2); }
 // what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
 export function calmState(sitAt, activeAt, now) {
@@ -155,6 +164,7 @@ export class HUD {
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         this.actBtn?.classList.add('pulse');
+        actGlyph(fp.kind);   // (the action button shows what it will do: a door, a speech bubble, coins...)
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
         pr.classList.remove('faded'); clearTimeout(this.fadeT);
@@ -170,6 +180,7 @@ export class HUD {
       pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
+      actGlyph(setActKind('interact'));
     }
     document.body.classList.toggle('carrying', !!me.carrying);
     this.info?.me(me, prev);   // (the vitals' numbers, the status line, the stars, the weapon plate, the job card: hudinfo.js)
