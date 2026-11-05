@@ -20287,3 +20287,52 @@ world's data: `world`, `art`, `world3` and `art3` all move, so players fetch the
 - Kept: Quay Street, Garden Crescent, Greystones, the Copper Spur and Hollow Saloons, Railway Express Agency, Velocity
   Parcel, Cay Post & Supply, Desert Junction Trading Post - American names, or names in their own right.
 - Tests that name the places moved with them: cinema, walkinrooms, world3water, world3scenes, world3world.
+
+## 2026-11-04 - Phone performance: a benchmark, and the load path's first fixes (the owner's Pixel 7 Pro)
+The owner, 11-04: on his Pixel 7 Pro the game "seems to be chugging and loading art slowly". Measured first, then fixed
+what the measurements pointed at; no art or graphics setting was lowered. No budget changed (page 84 files, 503 KB).
+- **tools/phonebench.mjs**: a repeatable benchmark - a local World v3 dev server, headless Chromium as a 892x412
+  landscape phone (touch, a Pixel user agent, the Medium preset a phone gets), DevTools' Fast 4G, the page's thread
+  slowed 4x until the studio logo. It measures the logo and the title menu, PLAY to the first art and the whole
+  screen, a far dev teleport, a drive, World v3's window swaps, the network by phase and (--profile) the CDP
+  profiler's top functions, for a first visit, a returning player and a returning player across a deploy
+  (--update <old version.json>); --root runs a snapshot of another build for before and after. This machine has no
+  GPU (WebGL in SwiftShader) and 2 cores: the city runs at a device scale of 1 and unthrottled (at 3.5, or slowed
+  2-4x, every frame took 2-4 s), and frames still crawl while chunks bake, so its frame times compare run to run only.
+- **Updates wait only for the page's code** (client/bootplan.js): after a deploy the title waited for every changed
+  file - the server's too (practice is paused) - and reloaded the page whenever the stylesheet changed. Now the
+  pictures, fonts and server/ are fetched in the background, and a new stylesheet alone is swapped in place. The deploy
+  players got today: 104 files waited for -> 51. Over the 69 deploys since 10-28: 18.3 files a deploy -> 9.1; 13
+  stylesheet-only reloads -> none.
+- **The first window is where the server starts you** (server/session.js spawnat, client/worldgen.js): the city worker
+  chose World v3's first window before the server had said where the player is - the middle of the world on a first
+  visit, the last place after an update (when the server starts players afresh at a hospital) - and the right one
+  followed after PLAY: 4 MB and an assembly for nothing.
+- **Shop signs in a window's bake** (client/art2/game/statics.js poisOf): the window's lists have holes where the world
+  is outside it; every page bake of a chunk with a shop's sign threw, fell back without the statics and was never kept -
+  baked again each time it came into view. Re-keys the art once (art3 dc0996318251 -> 8d91a0741852).
+- **The maps' icon merge** (client/hud.js iconMerge): quadratic over World v3's places, run at the start and after
+  every window swap - the page's biggest function of its own in the load profile (0.9 s at 4x). A grid by kind: the
+  same icons, 8,000 places 257 -> 15.5 ms.
+
+Before and after (tools/phonebench.mjs, two runs each, ms unless marked; noisy on this machine - SwiftShader shares
+two cores with the bake worker and the server):
+
+| | before | after |
+|---|---|---|
+| first visit: studio logo | 1302, 1346 | 1203, 1220 |
+| first visit: menu ready | 15872, 15116 | 15113, 12983 |
+| first visit: region files before the menu / after PLAY (KB) | 4205 + 1249, 4205 + 1613 | 3693 + 856, 2029 + 0 |
+| first visit: window swaps (assembly + swap, incl. the teleport's) | 2 (4455), 2 (3242) | 1 (1733), 1 (2374) |
+| first visit: PLAY -> first art | 30448, 40777 | 21503, 20407 |
+| after an update: studio logo | 5154, 5856 | 4007, 3698 |
+| after an update: menu ready | 15345, 17224 | 13790, 11734 |
+| returning: menu ready; PLAY -> whole screen | 14496, 12075; 42076, 5259 | 17115, 14912; 6869, 4432 |
+| drive: frame p50 (SwiftShader-bound) | 1483, 1483 | 1467, 1517 |
+
+Left for next time (the biggest expected wins not done): the art from the server is about 600 KB a chunk (a teleport
+downloaded 10-26 MB on Fast 4G) and lossless filters don't shrink it (the albedo is tens of thousands of colors a
+chunk; brotli -10%); every change to the bake code or World v3's code re-keys all the art (23 times since 10-28), so
+the server rebakes for hours and phones bake their own meanwhile - keying chunks by what they're baked from would keep
+most of them; a window swap clones the whole window to each bake worker on the page's thread (reworld) - the city
+worker could hand it to them directly; and frame times need a real phone (the perf HUD) or a machine with a GPU.
