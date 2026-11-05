@@ -241,6 +241,21 @@ function inWindow(cx, cy) {
   return x0 >= M.x0 && y0 >= M.y0 && x1 <= M.x0 + M.w && y1 <= M.y0 + M.h;
 }
 
+const WP = { port: null, got: new Map(), wait: new Map() };
+function gotWindow(d) {
+  if (!d || !d.wid) return;
+  WP.got.set(d.wid, d.data);
+  for (const k of WP.got.keys()) if (k < d.wid - 1) WP.got.delete(k);   // (the one before kept: a 'reworld' for it may still be on its way)
+  const f = WP.wait.get(d.wid);
+  if (f) { WP.wait.delete(d.wid); f(); }
+}
+// window number wid as the city worker sent it (null after 30 s: the old window stays, its bakes not kept - inWindow)
+function windowNo(wid) {
+  const take = () => { const m = WP.got.get(wid) || null; WP.got.delete(wid); return m; };
+  if (WP.got.has(wid)) return Promise.resolve(take());
+  return new Promise((res) => { const t = setTimeout(() => { WP.wait.delete(wid); res(null); }, 30000); WP.wait.set(wid, () => { clearTimeout(t); res(take()); }); });
+}
+
 async function handle(msg) {
   const { id, op, args } = msg;
   const t0 = performance.now();
@@ -253,6 +268,15 @@ async function handle(msg) {
     return;
   }
   if (op === 'world') { if (worldIn) { const f = worldIn; worldIn = null; f(args.M); } return; }   // (the city, when it wasn't kept)
+  // World v3's windows from the city worker itself (client/worldgen.js; pool.js linkWindows): its channel, then each window
+  // by number - 'reworld' { wid } names the one to take, and everything after it waits for it (ready)
+  if (op === 'windowPort') { WP.port = args.port; WP.port.onmessage = (e) => gotWindow(e.data); return; }
+  if (op === 'reworld' && args.wid) {
+    const before = ready || Promise.resolve();
+    ready = before.then(() => windowNo(args.wid)).then(async (m) => { const mods = await MODS; if (m) takeWorld(m, mods[2]); barrierAt.clear(); });
+    await ready;
+    return;
+  }
   if (op === 'reworld') { if (ready) await ready; const mods = await MODS; takeWorld(args.M, mods[2]); barrierAt.clear(); return; }   // (World v3's window moved: host.js setMap)
   if (ready) await ready; // (jobs that arrive while the providers load wait for them)
   if (op === 'patch') { // the world changed (props smashed or put back): no answer

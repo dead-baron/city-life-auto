@@ -20332,7 +20332,24 @@ two cores with the bake worker and the server):
 
 Left for next time (the biggest expected wins not done): the art from the server is about 600 KB a chunk (a teleport
 downloaded 10-26 MB on Fast 4G) and lossless filters don't shrink it (the albedo is tens of thousands of colors a
-chunk; brotli -10%); every change to the bake code or World v3's code re-keys all the art (23 times since 10-28), so
+chunk; brotli -10%); every change to the bake code or World v3's code re-keys all the art (8 deploys on main since 10-28; an earlier count of 23 read interleaved branches), so
 the server rebakes for hours and phones bake their own meanwhile - keying chunks by what they're baked from would keep
 most of them; a window swap clones the whole window to each bake worker on the page's thread (reworld) - the city
 worker could hand it to them directly; and frame times need a real phone (the perf HUD) or a machine with a GPU.
+
+## 2026-11-04 - Kept art survives a deploy; World v3's window swap off the page's thread
+- **Kept chunks carried over a new art build** (server/artcdn.js and artbake.js `same`, client/art2/game/chunkcarry.js,
+  worker.js fromCdn). Every deploy that touched the bake's code or World v3's code threw every kept chunk away - 8 on
+  main from 10-28 to 11-04, and every one changed bake code, so keying chunks by their world inputs alone would have
+  kept none. Instead the server, baking each chunk for the new build, compares it byte for byte with the build before's
+  and remembers the identical ones; a page keeps the build before's chunks beside this build's and asks with
+  `had=<prev>`; `x-art-same` (no body) means copy yours under the new key. A changed chunk is always sent whole; while
+  this build's isn't baked, the stale stand-in becomes the page's own copy (`x-art-yours`) instead of 600 KB.
+  chunkcarry.js stays out of the art hash. Replayed over the 8 deploys (160 World v3 land chunks baked under each of
+  the 9 builds): 6 kept 160/160, the nature overhaul 57, the neon signs and cliffs 84 - 86% carried over.
+- **The window swap's stall** (pool.js linkWindows, client/worldgen.js, worker.js windowNo). At each region crossing
+  the page cloned the whole new window once per bake worker on its own thread. Now the city worker sends each bake
+  worker its copy over a channel of its own, before the page's, and the page sends only the window's number; what
+  follows a `reworld` in a bake worker waits for that window. A replaced worker gets the current window with its init.
+  The page's part of a swap (hostextra.js reworld), unthrottled on the bench machine: 170 -> 23 ms (a phone: about
+  four times that).

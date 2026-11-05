@@ -1276,7 +1276,7 @@ function keepWindow(job) {
     if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world around you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
     const t = performance.now();
-    swapWorld(cityFromData(m.data));
+    swapWorld(cityFromData(m.data), m.wid || 0);
     S.win = m.win;
     console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms`);
   };
@@ -1304,7 +1304,7 @@ function windowNotServers(m) {
   send({ t: 'diag', what: `world v3 index signature ${S.win.sig} vs server ${m.sig}` });
   return false;
 }
-function swapWorld(m) {
+function swapWorld(m, wid = 0) {   // (wid: the bake workers have this window from the city worker already - pool.js linkWindows)
   const old = S.map;
   old.props.forEach((p, i) => { const q = m.props[i]; if (!q) return; if (p.broken) q.broken = p.broken; if (p.lit0 !== undefined) { q.lit0 = p.lit0; q.lit = p.lit; } });
   for (const [k, se] of old.propSolid) { const e = m.propSolid.get(k); if (e && se.off) e.off = true; }
@@ -1319,7 +1319,7 @@ function swapWorld(m) {
   if (!(S.spec && S.spec.on)) S.spec = newSpectator(m);
   S.hud.setMap(m);
   S.router = createRouter(m);
-  if (S.art2 && S.art2.setMap) S.art2.setMap(m); else startArt2(m);
+  if (S.art2 && S.art2.setMap) S.art2.setMap(m, wid); else startArt2(m);
   for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);   // (the server's broken props the old window didn't hold)
 }
 
@@ -1381,7 +1381,7 @@ async function startArt2(map) {
   // (a city read back from this browser's copy is read by the bake workers themselves: no copy sent from here)
   const worldKey = S.mapFrom === 'cache' && window.CLA_WORLD ? window.CLA_WORLD.key : null;
   // (offline practice: no chunks kept or read back - its city is today's world, CLA_ART_KEY the online world's art: World v3's)
-  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, artKey: (!S.practice && window.CLA_ART_KEY) || null, artCdn: artCdnBase() }); } catch (e) { console.error('[art2]', e); w = null; }
+  try { w = await mod.World2.create({ S, map, canvas: worldCv, gfx, lowMem: LOW_MEM, api, onFail: art2Failed, worldKey, cityWorker: () => (S.win && window.CLA_WORLD && window.CLA_WORLD.worker) || null, artKey: (!S.practice && window.CLA_ART_KEY) || null, artCdn: artCdnBase() }); } catch (e) { console.error('[art2]', e); w = null; }
   if (token !== S.art2Token || S.map !== map) { if (w) w.dispose(); return; }
   if (!w) { art2Failed(mod.World2.lastWhy || 'WebGL2 is not available'); return; }
   S.art2 = w; S.art2At = performance.now();

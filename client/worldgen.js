@@ -118,7 +118,8 @@ export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fe
   if ((data.seed >>> 0) !== (seed >>> 0)) throw new Error('another seed');
   return { data, keeper, index, got, win: { keys: win.keys, rect: win.rect, sig: X.sig, kept: got.kept, fetched: got.fetched, told: !!got.told } };
 }
-let WIN = null, moving = false;
+let WIN = null, moving = false, WID = 0;
+const PORTS = new Map();   // (the bake workers' channels: pool.js linkWindows - id -> port)
 // the player's tile from the page (main.js, on the server's welcome: { where0 }), for the first window
 const FIRST = { at: null, told: false, wait: [] };
 export const WHERE_WAIT_MS = 12000;   // (a welcome later than this: the window is chosen without it, as before)
@@ -135,7 +136,11 @@ async function windowAt(tx, ty) {
   try {
     const data = await WIN.keeper.assemble(WIN.index, nw);
     WIN.keeper.moved(nw);
-    self.postMessage({ window: true, data, win: { keys: nw.keys, rect: nw.rect, sig: WIN.sig }, ms: performance.now() - t0 }, layersOf(data, WIN.key));
+    // the bake workers' copies straight from here (pool.js linkWindows), before the page's (its layers are moved to it):
+    // made on this thread, not the page's
+    const wid = ++WID;
+    for (const port of PORTS.values()) { try { port.postMessage({ wid, data }); } catch { /* gone */ } }
+    self.postMessage({ window: true, data, wid: PORTS.size ? wid : 0, win: { keys: nw.keys, rect: nw.rect, sig: WIN.sig }, ms: performance.now() - t0 }, layersOf(data, WIN.key));
   } catch (err) {
     WIN.retryAt = performance.now() + 10000;   // (a region that isn't the server's, or no network: not asked for again at once)
     self.postMessage({ windowError: String((err && err.message) || err) });
@@ -146,6 +151,8 @@ if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof self.
   self.onmessage = async (e) => {
     const { seed, key, keep, base, at } = e.data || {};
     if (Array.isArray(e.data && e.data.where)) { windowAt(e.data.where[0], e.data.where[1]); return; }
+    if (e.data && e.data.bakePort) { PORTS.set(e.data.pid, e.data.bakePort); return; }
+    if (e.data && e.data.unport) { const p = PORTS.get(e.data.unport); PORTS.delete(e.data.unport); try { if (p) p.close(); } catch { /* gone */ } return; }
     if (e.data && 'where0' in e.data) { FIRST.at = Array.isArray(e.data.where0) ? e.data.where0 : null; FIRST.told = true; for (const f of FIRST.wait.splice(0)) f(FIRST.at); return; }   // (null: the server didn't say)
     const t0 = performance.now();
     // (World v3 from the server: its window, not the whole world - ?wholeworld asks for all of it, as before)
