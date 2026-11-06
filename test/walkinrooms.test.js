@@ -10,7 +10,7 @@ import { PED_BLOCK, roomDepth, WALKIN_ROOM } from '../shared/map.js';
 import { walkInAt } from '../server/systems/npc.js';
 
 const w = makeWorld(), m = w.map;
-const OWN = new Set(['bowling', 'cinema']);   // (Pinwheel Lanes and the Grand Theatre lay their halls out themselves)
+const OWN = new Set(['bowling', 'cinema']);   // (Pinwheel Lanes and the Grand Theater lay their halls out themselves)
 const rooms = m.walkIns.map((id) => m.buildings[id]).filter((b) => b && b.walkIn && !b.walkIn.units.some((u) => OWN.has(u.kind)));
 const deep = rooms.filter((b) => b.walkIn.south && b.walkIn.y0 - 1 > b.ty);
 

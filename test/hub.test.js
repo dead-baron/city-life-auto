@@ -18,7 +18,7 @@ test('the HUD row is PHONE · MAP · MENU as icons, and the hub has RESUME first
   const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
   // (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work")
   assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-phone', 'b-map', 'b-menu'], 'three buttons, the menu in the corner');
-  assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-ic="([a-z]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone handset P', 'Map map M', 'Menu menu ESC'], 'pixel icons (UI-9: client/touchicons.js), named for a screen reader and a tooltip, the keys on a keyboard');
+  assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-gl="([a-z]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone smartphone P', 'Map map M', 'Menu menu ESC'], 'line icons (11-05: Lucide, client/touchicons.js glyph - a mobile phone, not a handset), named for a screen reader and a tooltip, the keys on a keyboard');
   assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');
   assert.match(HTML, /<button id="b-dev"[^>]*aria-label="Debug menu"/, 'and the debug button (the owner wants it on the HUD), apart');
   for (const gone of ['b-bag', 'b-settings', 'b-fs', 'id="controls"', 'help-tpl', 'class="hub hub-float"']) assert.ok(!HTML.includes(gone), `${gone} is gone`);

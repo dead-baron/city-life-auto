@@ -80,7 +80,7 @@ export const tapePos = (id, t0, t) => { const L = trackSecs(id); return (((t - t
 // music: what it is to the server (music.js use): the boombox and the radio play out loud, set down or carried; the mat
 // is where you dance; an instrument is played (inst: INSTRUMENTS); a tape goes in the boombox. desc: the bag's line.
 export const MUSIC_ITEMS = {
-  boombox: { name: 'Boombox', tool: true, music: 'boombox', sell: 50, desc: 'take it out and it plays out loud for everyone round you - a tape or a station; use it again for the tapes, the stations, setting it down. Shoot one and it\'s wrecked' },
+  boombox: { name: 'Boombox', tool: true, music: 'boombox', sell: 50, desc: 'take it out and it plays out loud for everyone around you - a tape or a station; use it again for the tapes, the stations, setting it down. Shoot one and it\'s wrecked' },
   radio: { name: 'Pocket Radio', tool: true, music: 'radio', sell: 15, desc: 'the radio stations, out loud on your hip (quieter than a boombox) - use it again to tune it, set it down or switch it off' },
   dancemat: { name: 'Cardboard Mat', tool: true, music: 'mat', sell: 0, desc: 'put it down and dance on it: freestyle with the dance button, or the action button for the rhythm game - a crowd gathers for a good show, a hat collects the tips' },
   guitar: { name: 'Acoustic Guitar', tool: true, music: 'inst', sell: 90, desc: 'play it out loud: free play or a gig (the rhythm game) - busk for tips into your hat' },

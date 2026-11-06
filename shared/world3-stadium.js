@@ -144,7 +144,7 @@ function stadium(K, m, ctx) {
   // the pitch: grass, the soccer venue's rect (minigames.js plays matches on it; groundbake.js paints its lines)
   ground(K, px0, py0, px1, py1, T.GRASS);
   const r = { x: (px0 + 2) * TILE, y: (py0 + 2) * TILE, w: (px1 - px0 - 4) * TILE, h: (py1 - py0 - 4) * TILE };
-  m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Waves Stadium Pitch', rect: r, goalW: 6 * TILE });
+  m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Waves Stadium Field', rect: r, goalW: 6 * TILE });
   // the floodlight masts at the corners, the concourse round the bowl (paved), its food stands and bins
   for (const [x, y] of [[B.x0 - 3, B.y0 - 3], [B.x1 + 3, B.y0 - 3], [B.x0 - 3, B.y1 + 3], [B.x1 + 3, B.y1 + 3]]) prop('ymast', x, y, 6, { tall: 180 });
   ground(K, B.x0 - 9, B.y0 - 6, B.x1 + 9, B.y1 + 8, T.PLAZA);

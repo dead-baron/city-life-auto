@@ -18,7 +18,7 @@ export const SAR_HQS = [
   SAR_HQ,
   { name: 'Granite Peaks Ranger Station', at: [1000, 460], w: 34, h: 28, wild: true },   // (up in the peaks, by the road; the woods below)
   { name: 'Egret Coast Coastguard Station', at: [788, 2788], w: 34, h: 28, wild: true },   // (by the shore: the marsh, the open sea west)
-  { name: 'Red Rock Rescue Post', at: [4840, 1160], w: 34, h: 28, wild: true },   // (the canyons and mesas, off the desert road)
+  { name: 'Red Rock Rescue Station', at: [4840, 1160], w: 34, h: 28, wild: true },   // (the canyons and mesas, off the desert road)
   { name: 'Sandpiper Coastguard Station', at: [5492, 2764], w: 34, h: 28, wild: true },   // (on the east coast's shore, west of the point)
 ];
 const OPEN = new Set([T.GRASS, T.DIRT, T.SAND, T.FIELD, T.LOT, T.PLAZA]);

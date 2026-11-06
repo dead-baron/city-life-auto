@@ -487,21 +487,21 @@ function build(m, api, K) {
       if (kind === 'motel') { motel(x, w, yTop(x + w - 1), mileN(x), o); x += w; continue; }
       const box = lotBox(x, w, yTop(x), mileN(x), northOfMile);
       if (box && kind === 'theatre') {
-        // The Rose Theatre: the Mile's cabaret house - its marquee over the doors, the rose in neon up its face, the
+        // The Rose Theater: the Mile's cabaret house - its marquee over the doors, the rose in neon up its face, the
         // fly tower behind it
         const front = box.front - 4, dep = Math.min(30, front - box.top - 8);
         K.fill(x, front + 1, w, 4, T.PLAZA); K.take(x, front + 1, w, 4);
-        const tb = place({ x, y: front - dep + 1, w, h: dep, arch: 'theatre', key: 'theatre', name: 'The Rose Theatre', poi: { kind: 'delivery', label: 'The Rose Theatre' }, whole: true,
+        const tb = place({ x, y: front - dep + 1, w, h: dep, arch: 'theatre', key: 'theatre', name: 'The Rose Theater', poi: { kind: 'delivery', label: 'The Rose Theater' }, whole: true,
           art: { spec: { floors: 4, style: 'stucco', wallColor: '#4a2240', win: 'arch', cornice: 'step', parapet: 14, grime: 0.12, roofMat: 'gravel', lip: 10, rimW: 5, blades: [] },
-            shop: { kind: 'lobby', door: 'right', open: true, people: 4, sign: null, awning: ['#7a1e3a', '#7a1e3a'] }, neon: { name: 'ROSE THEATRE', kind: 'club', col: 2, pic: 'rose', picV: 150, blade: 'CABARET' } } });
+            shop: { kind: 'lobby', door: 'right', open: true, people: 4, sign: null, awning: ['#7a1e3a', '#7a1e3a'] }, neon: { name: 'ROSE THEATER', kind: 'club', col: 2, pic: 'rose', picV: 150, blade: 'CABARET' } } });
         if (tb) {
           out.shops++;
-          used.add('The Rose Theatre');
+          used.add('The Rose Theater');
           prop('marquee', x + w / 2, front + 1.4, 0);
           for (const dx of [2, w - 2]) prop('lamp', x + dx, front + 3, 0);
           // (the fly tower over the stage at the back, a storey higher)
           const fy0 = front - dep - 9, fw = Math.min(w - 6, 18);
-          if (fy0 >= box.top) K.building({ x: x + 3, y: fy0, w: fw, h: 9, arch: 'theatre', name: 'The Rose Theatre', poi: false, door: null, whole: true, art: { spec: { floors: 5, style: 'stucco', wallColor: '#3e1c36', parapet: 10, grime: 0.18, roofMat: 'tar', lip: 8, rimW: 4, blades: [], plaques: [], blank: true }, noShop: true, kit: [['neon|CABARET|2', Math.round(fw * TILE / 2), 14], ['vent', 80, 120], ['ac', fw * TILE - 80, 160]] } });
+          if (fy0 >= box.top) K.building({ x: x + 3, y: fy0, w: fw, h: 9, arch: 'theatre', name: 'The Rose Theater', poi: false, door: null, whole: true, art: { spec: { floors: 5, style: 'stucco', wallColor: '#3e1c36', parapet: 10, grime: 0.18, roofMat: 'tar', lip: 8, rimW: 4, blades: [], plaques: [], blank: true }, noShop: true, kit: [['neon|CABARET|2', Math.round(fw * TILE / 2), 14], ['vent', 80, 120], ['ac', fw * TILE - 80, 160]] } });
         }
       } else if (box) place({ x, y: box.front - (o.depth || 16) + 1, w, h: o.depth || 16, ...lit(x, box.front, w, o) });
       x += w;

@@ -445,7 +445,7 @@ export function blastTest(world, p, k) {
   }
   if (k === 'row') {
     const spots = rowSpots(world, at, ['tanker', ...BLAST_ROW], 270);
-    if (!spots.length) return '[dev] No room for a row of cars here: try an open street or a car park.';
+    if (!spots.length) return '[dev] No room for a row of cars here: try an open street or a parking lot.';
     spots.forEach((s, i) => { const v = world.spawnVehicle(s.m, s.x, s.y, s.a, { npcOwned: false }); if (!i) fire(v, BLAST_FUSE_S); });
     world.notify(p, `[dev] A fuel tanker on fire in a row of ${spots.length - 1} parked cars: it goes up in ${BLAST_FUSE_S} s.`, 'info');
     return null;
@@ -463,7 +463,7 @@ export function blastTest(world, p, k) {
         n++;
       }
     }
-    world.notify(p, `[dev] A fuel tanker on fire with ${n} people round it, near and far: it goes up in ${BLAST_FUSE_S + 1} s.`, 'info');
+    world.notify(p, `[dev] A fuel tanker on fire with ${n} people around it, near and far: it goes up in ${BLAST_FUSE_S + 1} s.`, 'info');
     return null;
   }
   return `[dev] Blast what? (${[...Object.keys(BLAST_SIZES), 'car', 'tanker', 'truck', 'row', 'crowd'].join(', ')})`;
@@ -594,7 +594,7 @@ function run(world, p, c, msg) {
     case 'die': if (ped && !ped.dead) combat.damage(world, ped, 99999, null, 'crash', 0); break;
     case 'snatch': npc.snatchEvent(world, p); world.notify(p, '[dev] A mugger is on the way to a nearby pedestrian.', 'info'); break;
     case 'happen': world.notify(p, happenings.startNow(world, String(msg.k || 'fight'), p, { cops: msg.cops ? true : undefined }) ? `[dev] Started: ${msg.k}.` : '[dev] Nobody about to start it with - try a busier street.', 'info'); break;
-    case 'street': world.notify(p, streetlife.startNow(world, String(msg.k || 'race'), p) ? `[dev] Started: ${msg.k || 'race'} - coming your way.` : '[dev] No street to start it on round here - try somewhere in town, out on the street.', 'info'); break;   // a street race (msg.k 'race'), a police chase ('chase'), an armored truck ('armored'): streetlife.js
+    case 'street': world.notify(p, streetlife.startNow(world, String(msg.k || 'race'), p) ? `[dev] Started: ${msg.k || 'race'} - coming your way.` : '[dev] No street to start it on around here - try somewhere in town, out on the street.', 'info'); break;   // a street race (msg.k 'race'), a police chase ('chase'), an armored truck ('armored'): streetlife.js
     case 'pet': { const pet = pets.spawnLost(world, p); world.notify(p, pet ? `[dev] ${pet.pet.name} ran off from ${pet.pet.house.name} - ${pet.pet.posters.length} posters up nearby.` : '[dev] No home near enough for a lost pet just now.', pet ? 'info' : 'warn'); break; }
     case 'samaritan': prof.samaritan += 50; world.notify(p, '[dev] +50 Samaritan', 'info'); break;
     case 'car': {
@@ -965,7 +965,7 @@ function devRescue(world, p, ped, at) {
       if (d > 400 && d < 900) { best = dd; to = { x, y }; }
     }
   }
-  if (!to) { world.notify(p, `[dev] Nowhere ${at === 'water' ? 'out on the water' : 'out in the wilds'} round here.`, 'warn'); return; }
+  if (!to) { world.notify(p, `[dev] Nowhere ${at === 'water' ? 'out on the water' : 'out in the wilds'} around here.`, 'warn'); return; }
   ped.x = to.x; ped.y = to.y; ped.lz = 0; ped.sub = false; ped.ug = 0; p.teleportAt = world.time; world.place(ped);
   p.profile.bank = Math.max(p.profile.bank, 1000);   // (the fee)
   p.amb = null; p.ambUsed = false;

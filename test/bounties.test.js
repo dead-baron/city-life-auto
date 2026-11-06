@@ -113,7 +113,7 @@ test('bounties: hunters take contracts in the Bounties app, and only they collec
   assert.equal(board.t, 'bounties');
   const c = board.list.find((q) => q.name === b.p.name);
   assert.ok(c && c.amount === 1000 && c.left === BOUNTY_RUN_S && c.on, 'the contract, its clock running');
-  assert.match(c.desc, /top, .* trousers/, 'what they\'re wearing');
+  assert.match(c.desc, /top, .* pants/, 'what they\'re wearing');
   assert.ok(c.seen && c.seen.d && c.seen.ago < 5, 'the district they were last seen in, and when');
   assert.equal(board.hunter, false);
   // licensed hunters (and officers on duty) only

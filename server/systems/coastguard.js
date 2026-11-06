@@ -88,7 +88,7 @@ export function start(world, p, mode = 'boat') {
     v.alt = 0; where = pad.name;
   } else {
     const sp = boatSpot(world, ped.x, ped.y);
-    if (!sp) return 'No harbour with room for the patrol boat near here.';
+    if (!sp) return 'No harbor with room for the patrol boat near here.';
     v = world.spawnVehicle('rescueboat', sp.x, sp.y, sp.a, { npcOwned: false });
     where = `the ${sp.name} docks`;
   }
@@ -377,7 +377,7 @@ export function devCoast(world, p, msg = {}) {
   if (!ped || ped.dead) return 'Not right now.';
   const mode = msg.mode === 'air' ? 'air' : 'boat';
   if (!p.job || p.job.type !== 'coast' || p.job.mode !== mode) {
-    if (p.job) jobs.failJob(world, p, 'Job cancelled.');
+    if (p.job) jobs.failJob(world, p, 'Job canceled.');
     const err = start(world, p, mode);
     if (err) return err;
   }

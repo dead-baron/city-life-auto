@@ -977,7 +977,7 @@ export function interiorArt(m, b) {
   }
   for (const u of b.walkIn.units) {
     if (u.kind === 'bowling' && m.bowling) { bowlingArt(g, m.bowling, b, u, ox, oy); continue; }   // (Pinwheel Lanes: shared/bowling.js)
-    if (u.kind === 'cinema' && m.cinema) { cinemaArt(g, m.cinema, b, ox, oy); continue; }   // (The Grand Theatre: shared/cinema.js)
+    if (u.kind === 'cinema' && m.cinema) { cinemaArt(g, m.cinema, b, ox, oy); continue; }   // (The Grand Theater: shared/cinema.js)
     if (ROOMS && ROOMS.roomArt(g, m, b, u, ox, oy, TILE)) continue;
     const dc = DECOR[u.kind] || ['#888', '#666'];
     const x0 = u.x0 * TILE - ox, x1 = (u.x1 + 1) * TILE - ox, cy = u.counterRow * TILE - oy;

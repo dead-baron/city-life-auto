@@ -76,7 +76,7 @@ export function blocked(world, p, ped) {
   const t = tileUnder(world, ped);
   if (WATER_T[t]) return 'Not in the water.';
   if (t === T.FLOOR || t === T.COUNTER) return 'Not indoors - ride it outside.';
-  if (boardGround(t) === 2) return 'Too rough to ride here - find a road, a pavement or a plaza.';
+  if (boardGround(t) === 2) return 'Too rough to ride here - find a road, a sidewalk or a plaza.';
   return null;
 }
 
@@ -96,7 +96,7 @@ export function hopOn(world, p, ped, deck = {}) {
     world.notify(p, 'On your board. The stick pushes and steers (all the way or sprint to push harder), pull it back to brake, the dive button ollies (Space / A / OLLIE). The vehicle button steps you off and leaves the board at your feet (F / X / CAR).', 'good');
   } else if (!p.profile.trickTold) {
     p.profile.trickTold = 1;
-    world.notify(p, 'Tricks: the trick button (click / RT / TRICK) pops a flip - the stick picks which - or, held in a big air, a grab. Come down onto a kerb, a ledge, a bench or a rail along it and you grind it: the stick across it keeps your balance. The stick pulled back with the trick button: a manual. Roll on to bank the combo.', 'good');
+    world.notify(p, 'Tricks: the trick button (click / RT / TRICK) pops a flip - the stick picks which - or, held in a big air, a grab. Come down onto a curb, a ledge, a bench or a rail along it and you grind it: the stick across it keeps your balance. The stick pulled back with the trick button: a manual. Roll on to bank the combo.', 'good');
   }
   return true;
 }
@@ -341,7 +341,7 @@ function tidy(world) {
 const withYou = (p) => !!(p.profile.board && p.profile.board.at === 'bag') || !!(p.ped && p.ped.held && p.ped.held.k === 'skate');
 export function shopOptions(p, opts, home = false) {
   if (owns(p)) { if (!withYou(p)) opts.push({ id: 'bd:out', label: home ? 'Take your skateboard out' : 'Your skateboard - bring it out', note: 'set down by the door', shut: true }); return; }
-  if (!home) opts.push({ id: 'bd:buy', label: 'Skateboard', price: SKATEBOARD_PRICE, note: 'set down by the door - ride it on roads, pavements and plazas', shut: true });
+  if (!home) opts.push({ id: 'bd:buy', label: 'Skateboard', price: SKATEBOARD_PRICE, note: 'set down by the door - ride it on roads, sidewalks and plazas', shut: true });
 }
 export function shopExecute(world, p, poi, what, pay) {
   const prof = p.profile;
@@ -441,7 +441,7 @@ function score(world, p, ped, dt) {
       case 'trick': if (t) add(world, p, S, nameOf(world, S, e.k), t.pts); break;
       case 'grab': if (t) add(world, p, S, nameOf(world, S, e.k), t.pts); break;
       case 'grabEnd': more(S, ps.grab * (e.t || 0)); break;
-      case 'grind': B.air0 = null; if (t) add(world, p, S, nameOf(world, S, e.k) + (e.q === 'kerb' ? ' (kerb)' : ''), t.pts); world.emit(ped.x, ped.y, { e: 'skgrind', id: ped.id, x: ped.x, y: ped.y, q: e.q }); break;
+      case 'grind': B.air0 = null; if (t) add(world, p, S, nameOf(world, S, e.k) + (e.q === 'kerb' ? ' (curb)' : ''), t.pts); world.emit(ped.x, ped.y, { e: 'skgrind', id: ped.id, x: ped.x, y: ped.y, q: e.q }); break;
       case 'grindEnd': more(S, ps.grind * (e.t || 0)); break;
       case 'manual': add(world, p, S, nameOf(world, S, SK.MANUAL), SK.TRICKS[SK.MANUAL].pts); break;
       case 'manualEnd': more(S, ps.manual * (e.t || 0)); break;

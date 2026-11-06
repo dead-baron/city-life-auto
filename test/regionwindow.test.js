@@ -4,6 +4,7 @@
 // stands in for the v3 world here: the same code, a quick build. Built once for the file.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { generateCity, cityFromData, CityMap } from '../shared/map.js';
 import { packRegions, assembleCity, readIndex, regionsNear, windowRect, regionRect, REGIONAL, OMIT } from '../shared/regionpack.js';
 import { windowOf } from '../shared/mapwindow.js';
@@ -290,4 +291,40 @@ test("a load afresh (the kept files weren't the server's world: main.js windowNo
   asked.length = 0;
   w.keeper.want(768 - 20, 640); await w.keeper.idle();
   assert.deepEqual(asked.map(([n, c]) => `${n} ${c}`).sort(), ['r4-1.bin reload', 'r4-2.bin reload', 'r4-3.bin reload']);
+});
+
+test("the city worker's first window waits for where the server starts the player (fetchWindow's where: a first visit, an update)", async () => {
+  const { gzipSync } = await import('node:zlib');
+  const { fetchWindow } = await import('../client/worldgen.js');
+  const pack = PACK(256), files = new Map([['index.bin', pack.index], ...pack.regions.map((r) => [`${r.key}.bin`, r.bytes])]);
+  const asked = [];
+  const fetchFn = async (url) => { const name = url.split('/').pop().split('?')[0]; asked.push(name); const b = files.get(name); return b ? new Response(gzipSync(b), { status: 200 }) : new Response('', { status: 404 }); };
+  // a first visit: no guess - nothing but the index until the server says, then only that window
+  let told = null;
+  const where = () => new Promise((res) => { told = res; });
+  const p = fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, null, { fetchFn, store: null, where });
+  while (!told) await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(asked, ['index.bin'], 'no region of a guessed window');
+  told([700, 600]);
+  const w = await p;
+  assert.deepEqual(w.win.rect, [256, 256, 768, 768]);
+  assert.equal(w.win.told, true);
+  assert.equal(asked.length, 10);
+  // an update: the last place is fetched meanwhile; the window is the one the server named
+  asked.length = 0;
+  const w2 = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [100, 100], { fetchFn, store: null, where: async () => [700, 600] });
+  assert.deepEqual(w2.win.rect, [256, 256, 768, 768]);
+  // not told in time (null): the guess, as before
+  const w3 = await fetchWindow('http://cdn/world/', 'abcdef123456-v3:1337', 1337, [700, 600], { fetchFn, store: null, where: async () => null });
+  assert.deepEqual(w3.win.rect, [256, 256, 768, 768]);
+  assert.equal(w3.win.told, false);
+});
+
+test('the page hands the city worker the spawn as soon as the server sends it (main.js spawnAt, server/session.js spawnat)', () => {
+  const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8'), srv = readFileSync(new URL('../server/session.js', import.meta.url), 'utf8');
+  assert.match(srv, /t: 'spawnat', x: Math\.round\(player\.ped\.x\)/);
+  assert.match(main, /startsWith\('\{"t":"spawnat"'\)\) \{ spawnAt\(ev\.data\); return; \}/, 'before the messages held for the city');
+  assert.match(main, /postMessage\(\{ where0:/);
+  const boot = readFileSync(new URL('../client/boot.js', import.meta.url), 'utf8');
+  assert.match(boot, /waitWhere: !!BOOT\.updated/);
 });

@@ -218,14 +218,14 @@ export function islandRoads(ctx) {
   // --- the Gull Isles: reached only by boat, so each village is laid out round where the boats come in, with no
   // more road than it needs (no junction bigger than a T, no traffic circles, no avenues to nowhere).
   // Gull Harbor: a fishing village round the sheltered bay on the big island's south side - Quay Street along the
-  // harbour (the quay and the jetties below it: map.js buildGullIsles), High Street up the hill from it with two lanes
+  // harbour (the quay and the jetties below it: map.js buildGullIsles), Main Street up the hill from it with two lanes
   // across, one lane on over the island to the car park behind Bonfire Beach, and dirt tracks out to the lighthouse
   // on the south-west point and the lookout on the west one.
   const gull = (pts, kind, name, minSea = 3) => {
     for (const p of clipLine(path(pts, 6), (x, y) => land(x, y) && zoneOf(x, y) === Z.GULL && seaD(x, y) >= minSea, 6 * TILE, 12)) lines.push({ pts: p, kind, lvl: 0, name, ...(kind === 'dirt' || /Track|Beach Road/.test(name) ? { culdesac: true } : {}) });
   };
   gull([[121, 1051], [138, 1053], [158, 1053], [176, 1052], [194, 1048]], 'st', 'Quay Street');
-  gull([[158, 1053], [158, 1030], [158, 1008]], 'st', 'High Street');
+  gull([[158, 1053], [158, 1030], [158, 1008]], 'st', 'Main Street');
   gull([[126, 1030], [158, 1030], [176, 1030]], 'minor', 'Chapel Lane');
   gull([[136, 1012], [158, 1012], [178, 1012]], 'minor', 'Mill Lane');
   gull([[124, 1030], [123, 1040], [122, 1051]], 'minor', 'Net Lane');

@@ -20237,3 +20237,164 @@ Merged together so players reconnect once (branches safeexit, rides, starter). T
   the arm) and the starter car's look took it to 402. Raising it by a little more than that leaves room for the next ride,
   so it doesn't need its own raise.
 - Bladers now count as skaters at the skate parks. npc.js looked for the gait 'blades', but the gait is 'blade'.
+
+## 2026-11-04 - American English: the player-facing text
+
+The owner's note (11-03): "American English everywhere", in spelling and in terms. This pass changes only what a player
+reads (HUD and prompts, notes, menus, the phone, item, clothing and vehicle names and blurbs, shop lines, NPC lines, job
+text, server messages, index.html, the README's controls table); code identifiers, CSS classes and data keys keep their
+spelling (`kerbdrive.js`, `pocketColour`, the hair tab's `'colour'` key, the store kind `'jeweller'`...). Place names
+are a separate change (the next entry) because they re-key the world; this one leaves `world`, `art`, `world3` and
+`art3` as they were.
+- Spellings: colour -> color, metres -> meters, tyres -> tires (knobbly -> knobby), kerb -> curb, harbour -> harbor,
+  neighbour -> neighbor, favourite -> favorite, grey -> gray, pyjamas -> pajamas, moustache -> mustache, plough ->
+  plow, licence -> license, offence -> offense, labour -> labor, authorised -> authorized, stabilise -> stabilize,
+  cancelled -> canceled, jewellery -> jewelry, towards -> toward, levelled -> leveled.
+- Terms: pavement -> sidewalk, car park -> parking lot, hire -> rent / rental (boats, horses), taxi rank -> taxi stand,
+  ring in -> call in, timetable -> schedule, trousers -> pants, flat -> apartment (an apartment block -> building, the
+  lift -> the elevator), a mail round -> a mail route, parcel -> package, post the letters -> deliver the letters, quay
+  -> dock (the fishing boat job), films / the pictures -> movies, home cinema -> home theater, pitch -> field, a draw ->
+  a tie (soccer; chess keeps its draw), railway -> railroad, level crossing -> railroad crossing, junction ->
+  intersection, bins and rubbish -> trash cans and trash, batteries flat -> dead, motorbike -> motorcycle, "round"
+  (around: look round, walk round, round here) -> around.
+- Clothing pieces are looked up by name in code (`item('Suit trousers')`), so every caller moved with the catalog
+  (personas, npclooks, look.js); saves keep the piece's index, so nobody's outfit changes. The cloth color keys stay
+  `'grey'` / `'light grey'` in code: lookcore.js maps them to the renamed Gray / Light gray.
+- Kept: "fence" (a buyer of stolen goods is American usage too, and the lines around it read American), "Earl Grey"
+  (a cat's name), "Flat cap", chess's "draw", "Full time" (US soccer says it too), the units (km/h and meters are a
+  separate decision).
+- The tutorial (paused) has its text Americanized too; its test still passes, TUTORIAL_VERSION is unchanged.
+- Tests that read the words moved with them: cinema (Movie Ticket), look (Uniform pants), bounties (pants), homeups and
+  felling (toward an upgrade), hudinfo (call in).
+
+## 2026-11-04 - American English: the place names (re-keys the world)
+
+The place names from the owner's "American English everywhere" note, kept to one commit because they change the
+world's data: `world`, `art`, `world3` and `art3` all move, so players fetch the world once more (the owner's plan:
+"Place names re-key the world once"). Ship it with the next world change.
+- Theatre -> Theater: The Grand Theater (Downtown, its sign, the cinema, its counter's menu), The Rose Theater (the
+  Pink Mile, its neon), the theater neon's default word. The generator's name tests (map.js: not into the front of a
+  theater, no gun shop in one; world3-medics.js NOT_INTO) match both spellings, so nothing is placed differently.
+- Harbour -> Harbor: Prison Harbor Office, Prison Island Harbor, Harbor Pottery (Old Town), Harborlight (a Bayside villa).
+- Hire -> Rental: Gull Harbor / Coral Cay / Kestrel Lake Boat Rental, Coastline Car Rental (beside Zipline Car Rental),
+  Egret Marsh / Silver Thread Canoe Rental, Redwood River Run - Kayak Rental, the BIKE RENTAL and CANOE RENTAL signs, and
+  the old city's rentals (map.js).
+- Pitch -> field: Greenfield Park Soccer Field, Linden Park Soccer Field, Waves Stadium Field, the old city's
+  "<park> Soccer Field".
+- Post -> Station: the four First Aid Stations (Coral Cay, Red Rock, Eastern Desert, Sandpiper Junction) and the Red
+  Rock Rescue Station.
+- High Street -> Main Street (the old core's street and Gull Harbor's, metro.js and islands.js).
+- Kept: Quay Street, Garden Crescent, Greystones, the Copper Spur and Hollow Saloons, Railway Express Agency, Velocity
+  Parcel, Cay Post & Supply, Desert Junction Trading Post - American names, or names in their own right.
+- Tests that name the places moved with them: cinema, walkinrooms, world3water, world3scenes, world3world.
+
+## 2026-11-04 - Phone performance: a benchmark, and the load path's first fixes (the owner's Pixel 7 Pro)
+The owner, 11-04: on his Pixel 7 Pro the game "seems to be chugging and loading art slowly". Measured first, then fixed
+what the measurements pointed at; no art or graphics setting was lowered. No budget changed (page 84 files, 503 KB).
+- **tools/phonebench.mjs**: a repeatable benchmark - a local World v3 dev server, headless Chromium as a 892x412
+  landscape phone (touch, a Pixel user agent, the Medium preset a phone gets), DevTools' Fast 4G, the page's thread
+  slowed 4x until the studio logo. It measures the logo and the title menu, PLAY to the first art and the whole
+  screen, a far dev teleport, a drive, World v3's window swaps, the network by phase and (--profile) the CDP
+  profiler's top functions, for a first visit, a returning player and a returning player across a deploy
+  (--update <old version.json>); --root runs a snapshot of another build for before and after. This machine has no
+  GPU (WebGL in SwiftShader) and 2 cores: the city runs at a device scale of 1 and unthrottled (at 3.5, or slowed
+  2-4x, every frame took 2-4 s), and frames still crawl while chunks bake, so its frame times compare run to run only.
+- **Updates wait only for the page's code** (client/bootplan.js): after a deploy the title waited for every changed
+  file - the server's too (practice is paused) - and reloaded the page whenever the stylesheet changed. Now the
+  pictures, fonts and server/ are fetched in the background, and a new stylesheet alone is swapped in place. The deploy
+  players got today: 104 files waited for -> 51. Over the 69 deploys since 10-28: 18.3 files a deploy -> 9.1; 13
+  stylesheet-only reloads -> none.
+- **The first window is where the server starts you** (server/session.js spawnat, client/worldgen.js): the city worker
+  chose World v3's first window before the server had said where the player is - the middle of the world on a first
+  visit, the last place after an update (when the server starts players afresh at a hospital) - and the right one
+  followed after PLAY: 4 MB and an assembly for nothing.
+- **Shop signs in a window's bake** (client/art2/game/statics.js poisOf): the window's lists have holes where the world
+  is outside it; every page bake of a chunk with a shop's sign threw, fell back without the statics and was never kept -
+  baked again each time it came into view. Re-keys the art once (art3 dc0996318251 -> 8d91a0741852).
+- **The maps' icon merge** (client/hud.js iconMerge): quadratic over World v3's places, run at the start and after
+  every window swap - the page's biggest function of its own in the load profile (0.9 s at 4x). A grid by kind: the
+  same icons, 8,000 places 257 -> 15.5 ms.
+
+Before and after (tools/phonebench.mjs, two runs each, ms unless marked; noisy on this machine - SwiftShader shares
+two cores with the bake worker and the server):
+
+| | before | after |
+|---|---|---|
+| first visit: studio logo | 1302, 1346 | 1203, 1220 |
+| first visit: menu ready | 15872, 15116 | 15113, 12983 |
+| first visit: region files before the menu / after PLAY (KB) | 4205 + 1249, 4205 + 1613 | 3693 + 856, 2029 + 0 |
+| first visit: window swaps (assembly + swap, incl. the teleport's) | 2 (4455), 2 (3242) | 1 (1733), 1 (2374) |
+| first visit: PLAY -> first art | 30448, 40777 | 21503, 20407 |
+| after an update: studio logo | 5154, 5856 | 4007, 3698 |
+| after an update: menu ready | 15345, 17224 | 13790, 11734 |
+| returning: menu ready; PLAY -> whole screen | 14496, 12075; 42076, 5259 | 17115, 14912; 6869, 4432 |
+| drive: frame p50 (SwiftShader-bound) | 1483, 1483 | 1467, 1517 |
+
+Left for next time (the biggest expected wins not done): the art from the server is about 600 KB a chunk (a teleport
+downloaded 10-26 MB on Fast 4G) and lossless filters don't shrink it (the albedo is tens of thousands of colors a
+chunk; brotli -10%); every change to the bake code or World v3's code re-keys all the art (8 deploys on main since 10-28; an earlier count of 23 read interleaved branches), so
+the server rebakes for hours and phones bake their own meanwhile - keying chunks by what they're baked from would keep
+most of them; a window swap clones the whole window to each bake worker on the page's thread (reworld) - the city
+worker could hand it to them directly; and frame times need a real phone (the perf HUD) or a machine with a GPU.
+
+## 2026-11-04 - Kept art survives a deploy; World v3's window swap off the page's thread
+- **Kept chunks carried over a new art build** (server/artcdn.js and artbake.js `same`, client/art2/game/chunkcarry.js,
+  worker.js fromCdn). Every deploy that touched the bake's code or World v3's code threw every kept chunk away - 8 on
+  main from 10-28 to 11-04, and every one changed bake code, so keying chunks by their world inputs alone would have
+  kept none. Instead the server, baking each chunk for the new build, compares it byte for byte with the build before's
+  and remembers the identical ones; a page keeps the build before's chunks beside this build's and asks with
+  `had=<prev>`; `x-art-same` (no body) means copy yours under the new key. A changed chunk is always sent whole; while
+  this build's isn't baked, the stale stand-in becomes the page's own copy (`x-art-yours`) instead of 600 KB.
+  chunkcarry.js stays out of the art hash. Replayed over the 8 deploys (160 World v3 land chunks baked under each of
+  the 9 builds): 6 kept 160/160, the nature overhaul 57, the neon signs and cliffs 84 - 86% carried over.
+- **The window swap's stall** (pool.js linkWindows, client/worldgen.js, worker.js windowNo). At each region crossing
+  the page cloned the whole new window once per bake worker on its own thread. Now the city worker sends each bake
+  worker its copy over a channel of its own, before the page's, and the page sends only the window's number; what
+  follows a `reworld` in a bake worker waits for that window. A replaced worker gets the current window with its init.
+  The page's part of a swap (hostextra.js reworld), unthrottled on the bench machine: 170 -> 23 ms (a phone: about
+  four times that).
+
+## 2026-11-05 - The touch, HUD and bag icons: Lucide, and an action button that says what it will do
+
+The owner (11-05): "the hand icons specially look not very good, anything more generic and more professional and clean
+and polished... the bag/inventory icons don't look very good, the phone icon is an old school phone... those touch
+screen icons in general need work or rethinking."
+
+- **One family: Lucide 1.69.0** (ISC; its Feather-derived parts MIT - client/icons-LICENSE.txt, and a header where the
+  path data lives). The touch buttons, the HUD's round buttons (now a smartphone, a map, a menu), the weapon card, the
+  bag's tiles, its carried slots, its details and its quick bar all draw from client/touchicons.js `glyph`. Only the
+  icons used are copied, each SVG's elements as one path (circles, rects, lines and polylines made path commands);
+  the bag's own (food, fish, pelts, tools, valuables: 55) live in client/bag.js and join the set when it loads
+  (`addGlyphs`), off the page's first load. The emoji in the bag are gone. The discs, sizes, colors, states and layout
+  are as they were; only the glyphs changed. The screens' pixel icons (the pause list, the phone, the store badges)
+  are untouched.
+- **The stroke: 2.5, with a halo on the see-through discs.** Compared at the real sizes over the street (28 px on a
+  52 disc, 40 px on a 72, 24 px on the HUD's plates; 2, 2.5 and 3, each with and without a dark halo): Lucide's own 2
+  thins out on the 55% disc over a bright sidewalk, 3 clogs the small details (the backpack's pocket, the coins'
+  figures). 2.5 reads at every size; a dark halo (--gl-halo, 2.2 units wider, under the line) only on the plain
+  see-through discs and the aim knob - the gold and red discs and the HUD's plates are solid and need none.
+- **The action button says what pressing it will do - no hands.** The server's prompt ("E: Enter St. Neon General")
+  has no kind field and dozens of systems word their own, so the page reads the kind from the words
+  (touchicons.js `ACT_KINDS`, first match wins, a few "anywhere in it" rules for prompts that start with a name):
+  door (enter, leave, go in), talk, get in (car-front), boat, transit, hail a cab, pick up (package), put down or
+  deliver (package-check), buy/sell/pay (coins), bank, rob (banknote), unlock, arrest, revive, rest, sit, eat, wash,
+  repair, build, paint, casino, fish, play, climb, down, look, sign, plant, chop, mine, fire, lights, wear, pet, music,
+  run, job, wait; anything else the neutral `circle-dot`. `formatPrompt` sets the kind, hud.js swaps ACT's glyph when
+  it changes, and the prompt's chip and the hint strips draw the same icon. The crime variant keeps its red disc and
+  the "!". Over the server's own prompt words (its `label:` literals), every common verb lands on a kind; what's left
+  are names and passive notes. **The server is unchanged.**
+- **The other buttons:** FIRE target, AIM crosshair, HIT swords (no fist), CAR car-front, ITEMS backpack, RELOAD
+  rotate-cw, BLOCK shield, FIRE ON infinity, HORN volume-2, SIREN and COP CAR siren, LIGHT flashlight, BRAKE/STOP
+  circle-stop, EXIT/OFF log-out, GALLOP fast-forward, THROW redo, TRICK sparkles, OLLIE arrow-big-up-dash, CLIMB/AIR
+  and DOWN the big arrows. **Weapons:** Lucide where it has one (sword, slice for knives, bomb, bow-arrow, rocket, zap,
+  spray-can, flame, fishing-rod, hammer for the sledge, flashlight for the heavy one, swords for bare hands); the
+  pistol, the long gun, the club and the spike strip keep our own drawings, and the dive roll keeps its arc (Lucide's
+  circular arrows read as RELOAD's), all on the same grid and stroke. Long-press names and aria labels as before.
+- **Tests:** test/acticons.test.js (every kind maps to an icon in the set; the server's words give the right kinds; no
+  hand glyph anywhere on touch - every state, every kind, every weapon; the page's wiring; every bag item has an icon;
+  the license travels with the icons). uikit and hub follow the new names. Page code: 503 -> 509 KB of 520, 84 files.
+
+The owner's pick (11-05): the HIT button shows what you hit with. Bare-handed it's Lucide's `hand-fist`. With a melee
+weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the sledge's hammer (`setMelee` in
+client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
+still holds for every other button and every action kind.

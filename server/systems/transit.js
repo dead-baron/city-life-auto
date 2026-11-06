@@ -697,7 +697,7 @@ function callTaxi(world, p, tier = 'std') {
   if (!best) best = spawnTaxi(world, ped.x, ped.y, tier);
   const cabbies = tier === 'std' ? taxijob.playerHail(world, p) : 0;   // (the on-duty players' cabs are sent too: first there gets you - taxijob.js)
   if (!best && cabbies) { world.notify(p, `${cabbies === 1 ? 'A cab driver is' : `${cabbies} cab drivers are`} on the way - wave them down.`, 'good'); return null; }
-  if (!best) return `No ${tier === 'std' ? 'taxis' : RIDESHARE[tier].name + ' cars'} free round here right now - try again in a moment.`;
+  if (!best) return `No ${tier === 'std' ? 'taxis' : RIDESHARE[tier].name + ' cars'} free around here right now - try again in a moment.`;
   const err = sendTaxi(world, p, best, tier);
   if (err) return err;
   if (cabbies) world.notify(p, `${cabbies === 1 ? 'A player\'s cab is' : `${cabbies} players' cabs are`} coming for you too - get in whichever's first.`, 'info');
@@ -869,7 +869,7 @@ export function standDown(world, p, why) { const v = taxiOf(world, p); if (v && 
 export function taxiPhone(world, p, msg) {
   const op = String(msg.op || '');
   if (op === 'call') { const err = callTaxi(world, p, TIERS.includes(msg.tier) ? msg.tier : 'std'); if (err) world.notify(p, err, 'warn'); }
-  else if (op === 'cancel') { const v = taxiOf(world, p); if (v && !(p.ped && p.ped.vehId === v.id)) releaseTaxi(world, v, 'Taxi cancelled.'); if (world.cabHails && world.cabHails.has(p.pid)) taxijob.hailOver(world, p, null, 'The fare cancelled.'); }
+  else if (op === 'cancel') { const v = taxiOf(world, p); if (v && !(p.ped && p.ped.vehId === v.id)) releaseTaxi(world, v, 'Taxi canceled.'); if (world.cabHails && world.cabHails.has(p.pid)) taxijob.hailOver(world, p, null, 'The fare canceled.'); }
   else if (op === 'dest') {
     const x = Number(msg.x), y = Number(msg.y);
     p.taxiDest = Number.isFinite(x) && Number.isFinite(y) && msg.x !== null ? { x: Math.round(x), y: Math.round(y), label: String(msg.label || '').slice(0, 60) } : null;

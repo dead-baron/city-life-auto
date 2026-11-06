@@ -8,11 +8,20 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon } from './touchicons.js';
+import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon, setActKind, iconOf, setMelee } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S, PROMPT_FADE_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
+// the action button's glyph for the kind of what it offers (client/touchicons.js actKind; touchslots.js draws the same
+// when it places the button): swapped only when the kind changes
+function actGlyph(kind) {
+  const b = document.querySelector('#tbtns [data-b="action"]');
+  if (!b || b.dataset.kind === kind) return;
+  b.dataset.kind = kind;
+  const g = b.querySelector('svg.gl');
+  if (g) g.outerHTML = monoGlyph(iconOf('action'));
+}
 export function crimeMarks(el, pcr) { el.classList.toggle('crime', pcr > 0); el.classList.toggle('felony', pcr === 2); }
 // what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
 export function calmState(sitAt, activeAt, now) {
@@ -155,6 +164,7 @@ export class HUD {
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         this.actBtn?.classList.add('pulse');
+        actGlyph(fp.kind);   // (the action button shows what it will do: a door, a speech bubble, coins...)
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
         pr.classList.remove('faded'); clearTimeout(this.fadeT);
@@ -170,6 +180,7 @@ export class HUD {
       pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
+      actGlyph(setActKind('interact'));
     }
     document.body.classList.toggle('carrying', !!me.carrying);
     this.info?.me(me, prev);   // (the vitals' numbers, the status line, the stars, the weapon plate, the job card: hudinfo.js)
@@ -255,7 +266,7 @@ export class HUD {
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus'); tb.classList.add('taxi'); tb.style.borderColor = '';
       $('tb-where').textContent = 'TAXI';
       $('tb-next').textContent = t.st === 'pickup' ? `On its way · about ${Math.max(5, t.eta)}s (the yellow square on your map)`
-        : t.st === 'wait' ? `At the kerb · ${keyName('action')} by the cab to get in (${t.wait}s)`
+        : t.st === 'wait' ? `At the curb · ${keyName('action')} by the cab to get in (${t.wait}s)`
           : t.st === 'dest' ? 'Where to? Set a waypoint (the map or the phone)'
             : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est})`
               : `${t.to} · $${t.fare} · ${keyName('vehicle')} to get out`;
@@ -295,6 +306,11 @@ export class HUD {
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
     if (wg && wg.dataset.g !== gk) { wg.dataset.g = gk; wg.innerHTML = monoGlyph(gk); }
+    if (this.meleeG !== gk) {   // (the HIT button shows what you hit with: a fist, the knife, the bat... - the owner, 11-05)
+      this.meleeG = gk; setMelee(me.weapon, w.type);
+      const hg = document.querySelector('#tbtns [data-lbl="HIT"] svg.gl');
+      if (hg) hg.outerHTML = monoGlyph(iconOf('fire', 'HIT'));
+    }
     // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
     // click takes one out: client/main.js)
     const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
@@ -764,12 +780,34 @@ const POI_ICON = {
 const ICON_MERGE = 640;
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
-  const skip = new Set(), kept = [];
-  for (const p of map.places || map.pois) {   // (World v3's window: the whole world's places, from the index)
-    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
-    if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
-  }
+  const list = map.places || map.pois;   // (World v3's window: the whole world's places, from the index)
+  let skip = SKIPS.get(list);
+  if (!skip) SKIPS.set(list, (skip = iconMerge(list)));
   Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });
+  return skip;
+}
+// the places whose icon a nearer one of the same kind stands for (within ICON_MERGE, the first in the list kept): each
+// kept place goes in a grid of ICON_MERGE cells by kind, so a place looks at the 3 x 3 cells round it - it looked at
+// every place kept so far, of all kinds (World v3's thousands of places: 0.9 s of the page's start on a phone-slow
+// CPU, again at every window swap - tools/phonebench.mjs --profile, hud.js iconSkip)
+const SKIPS = new WeakMap();
+export function iconMerge(list) {
+  const skip = new Set(), byKind = new Map();
+  for (const p of list || []) {
+    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;   // (kept, and never near another: as Math.hypot of NaN)
+    let G = byKind.get(p.kind);
+    if (!G) byKind.set(p.kind, (G = new Map()));
+    const cx = Math.floor(p.x / ICON_MERGE), cy = Math.floor(p.y / ICON_MERGE);
+    let near = false;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
+      const cell = G.get(`${cx + dx},${cy + dy}`);
+      if (cell) for (const q of cell) if (Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE) { near = true; break; }
+    }
+    if (near) { skip.add(p.id); continue; }
+    const k = `${cx},${cy}`, cell = G.get(k);
+    if (cell) cell.push(p); else G.set(k, [p]);
+  }
   return skip;
 }
 

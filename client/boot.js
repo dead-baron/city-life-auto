@@ -17,8 +17,6 @@
 const KEY = 'cla.build', FILES = 'cla.files', SEED = 'cla.seed';
 const BOOT = (window.CLA_BOOT = { start: performance.now(), done: 0, fetched: 0, fresh: false });   // (main.js's load timeline)
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-const isArt = (f) => (/\.(png|webp|woff)$/.test(f) ? 1 : 0);
-const PAGE = new Set(['index.html', 'client/boot.js', 'client/style.css', 'manifest.webmanifest']);   // (a change here needs a reload)
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode, full */ } };
 // World v3's world: the server ran it last time ('cla.world': main.js worldChanged keeps 'v3' or 'today'), ?world=v3
@@ -53,40 +51,39 @@ async function freshen() {
   let had = null;
   try { had = JSON.parse(lsGet(FILES) || 'null'); } catch { had = null; }
   const update = forced || !!last || !!had;
-  const hashes = Array.isArray(meta.hashes) && meta.hashes.length === (meta.files || []).length ? meta.hashes : null;
-  const diff = !!(last && had && hashes);
-  if (update && !diff && self.caches) { // the service worker's offline copies are from the old build
+  BOOT.updated = update;   // (a new build since this browser last played: the server may start the player afresh elsewhere - startWorld)
+  // (client/bootplan.js: loaded only for a new build - index.html preloads it beside this file, so it costs no round trip)
+  const { updatePlan } = await import('./bootplan.js');
+  const plan = updatePlan(meta, last ? had : null, /[?&]art=1\b/.test(location.search));
+  if (update && !plan.diff && self.caches) { // the service worker's offline copies are from the old build
     try { for (const k of await caches.keys()) if (k.startsWith('city-life-auto-')) await caches.delete(k); } catch { /* best effort */ }
   }
-  // (the classic renderer's picture sheets are skipped: the world is drawn by the new renderer, which makes its
-  // own art, so they are only fetched if something asks for them - ?art=1 or a browser that can't run it)
-  const classic = /[?&]art=1\b/.test(location.search);
-  const v1Sheet = (f) => /^assets\/(atlas\d|prefabs\d|blocks\d|scenes|ground|animals|interiors|chars\/)/.test(f);
-  const files = meta.files || [];
-  const changed = (f, i) => !diff || had[f] !== hashes[i];
-  const list = files.filter((f, i) => (classic || !v1Sheet(f)) && changed(f, i)).sort((a, b) => isArt(a) - isArt(b));
-  const pageChanged = !diff || files.some((f, i) => PAGE.has(f) && changed(f, i));
+  // the page's code is waited for (an old module from the HTTP cache must not run beside new ones); the pictures, the
+  // fonts and server/ are fetched in the background once the game is up (bootplan.js)
+  const list = plan.now;
   const status = document.getElementById('t-status');
-  let i = 0, done = 0, failed = 0;
+  let done = 0, failed = 0;
   const say = () => { if (status && update) status.textContent = `Updating to the latest version... ${Math.round((done / Math.max(1, list.length)) * 100)}%`; };
   if (update) say();
-  const worker = async () => {
-    while (i < list.length) {
-      const f = list[i++];
-      try { const r = await fetch(f, { cache: 'reload' }); if (!r.ok) failed++; } catch { failed++; /* offline */ }
-      done++; BOOT.fetched = done; say();
+  const fetcher = (files, count) => async () => {
+    while (files.length) {
+      const f = files.shift();
+      try { const r = await fetch(f, { cache: 'reload' }); if (!r.ok && count) failed++; } catch { if (count) failed++; /* offline */ }
+      if (count) { done++; BOOT.fetched = done; say(); }
     }
   };
+  const worker = fetcher(list.slice(), true);
+  const background = (files) => setTimeout(() => { const fl = files.slice(), f = fetcher(fl, false); Promise.all([f(), f()]).catch(() => {}); }, 20000);
   const remember = () => {
     lsSet(KEY, meta.version);
-    if (hashes) { const o = {}; files.forEach((f, k) => { o[f] = hashes[k]; }); lsSet(FILES, JSON.stringify(o)); }
+    if (Array.isArray(meta.hashes)) { const o = {}; (meta.files || []).forEach((f, k) => { o[f] = meta.hashes[k]; }); lsSet(FILES, JSON.stringify(o)); }
   };
   if (!update) {
     // a first visit: nothing old to mix in (the modules come from the network) - play now, and fetch the rest for
     // the offline copy once the game is up
     BOOT.fresh = true;
     remember();
-    setTimeout(() => { Promise.all([worker(), worker()]).catch(() => {}); }, 20000);
+    background([...list, ...plan.later]);
     return false;
   }
   let ok = false;
@@ -97,7 +94,16 @@ async function freshen() {
   });
   await Promise.race([all, wait(60000)]);
   BOOT.fresh = ok;
-  return ok && !forced && !!last && pageChanged;
+  const reload = ok && !forced && !!last && plan.reload;
+  if (!reload) {
+    background(plan.later);
+    // a new stylesheet alone: swapped in place, the old one dropped once the new one is in (no second start of the page)
+    if (ok && plan.css) {
+      const old = document.querySelector('link[rel="stylesheet"][href^="client/style.css"]');
+      if (old) { const n = old.cloneNode(); n.href = `client/style.css?v=${meta.version}`; n.onload = () => old.remove(); old.after(n); }
+    }
+  }
+  return reload;
 }
 
 // the city, started now in its own worker (client/worldgen.js): the seed the server ran last time (it hardly ever
@@ -129,7 +135,7 @@ function startWorld() {
   try { at = v3 ? JSON.parse(lsGet('cla.at3') || 'null') : null; } catch { at = null; }
   let fresh3 = false;   // (World v3: the files this browser had weren't the server's world - main.js windowNotServers: none kept, none cached)
   try { fresh3 = v3 && sessionStorage.getItem('cla.fresh3') === '1'; sessionStorage.removeItem('cla.fresh3'); } catch { fresh3 = false; }
-  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base, at, fresh3, window: !/[?&]wholeworld\b/.test(location.search) }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
+  const post = (base) => { try { w.postMessage({ seed, key, keep: BOOT.fresh && !v3, base, at, fresh3, waitWhere: !!BOOT.updated, window: !/[?&]wholeworld\b/.test(location.search) }); } catch { fail(new Error('the city worker could not start')); w.terminate(); } };
   if (!key || navigator.onLine === false || /[?&]worldcdn=0\b/.test(location.search)) post(null);
   else import('./config.js').then(({ serverUrl }) => { const u = new URL(serverUrl()); post(`${u.protocol === 'wss:' ? 'https:' : 'http:'}//${u.host}/world/`); }).catch(() => post(null));
   return job;

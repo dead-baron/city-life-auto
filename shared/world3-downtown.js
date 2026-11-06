@@ -54,7 +54,7 @@ export const DOWNTOWN = {
   streets,
   // the special businesses this plan places itself (shared/map.js SPECIALS of Downtown: placeSpecials leaves them;
   // Marlow & Finch is Midtown's, by hand)
-  specials: ['Metro City PD - HQ', 'First Pixel Bank', 'Grand Neon Hotel', 'The Grand Theatre', 'Vellori', 'Silk & Shears Salon', 'Marlow & Finch'],
+  specials: ['Metro City PD - HQ', 'First Pixel Bank', 'Grand Neon Hotel', 'The Grand Theater', 'Vellori', 'Silk & Shears Salon', 'Marlow & Finch'],
   build,
 };
 
@@ -303,14 +303,14 @@ function greenfieldPark(K, m, out) {
     // In the middle of where it was, the ends grass)
     const py0 = y0 + 9, py1 = 2443, len = Math.round((py1 - py0) * PITCH_LONG), mid = (x0 + 6 + 3056) / 2, px0 = Math.round(mid - len / 2), px1 = px0 + len;
     K.paint(px0 - 2, py0 - 6, px1 - px0 + 4, py1 - py0 + 8, T.GRASS);
-    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Park Pitch', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 5 * TILE });
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Greenfield Park Soccer Field', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 5 * TILE });
     prop('bleachers', (px0 + px1) / 2, py0 - 3.4, 10, { len: Math.round((px1 - px0 - 16) * TILE / 2), rows: 4 });
     prop('festoon', px0 + 8, py0 - 5.6, 0, { tx: Math.round((px1 - px0 - 16) * TILE), ty: 0, h: 70 });   // (the stand's roof line, lit at night)
     const fx0 = px0 - 1.6, fx1 = px1 + 1.6, fy0 = py0 - 1.6, fy1 = py1 + 1.6;
     prop('chainfence', fx0, fy0, 0, { tx: (fx1 - fx0) * TILE, ty: 0 }); prop('chainfence', fx0, fy1, 0, { tx: (fx1 - fx0 - 5) * TILE, ty: 0 });
     prop('chainfence', fx0, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE }); prop('chainfence', fx1, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE });
     for (const [lx, ly] of [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]]) prop('ymast', lx, ly, 0, { tall: 150 });
-    (out.places ||= []).push({ name: 'Greenfield Park Pitch', x0: px0, y0: py0, x1: px1, y1: py1 });
+    (out.places ||= []).push({ name: 'Greenfield Park Soccer Field', x0: px0, y0: py0, x1: px1, y1: py1 });
   }
   // ---- the courts in the north-east: two tennis courts (teal in green run-off), two basketball courts, chain-link round them
   {
@@ -516,9 +516,9 @@ function southBand(K, m, ctx) {
     prop('textsign', DX.axis + 0.5, rn[0] + 1.6, 0, { text: 'FOUNTAIN SQUARE', bg: '#2f5a4a', fg: [240, 232, 200], z: 30, sx: 2 });
     K.m.squares ||= []; K.m.squares.push({ x: DX.axis - 6, y: rn[1] - 10, w: 12, h: 10, name: 'Fountain Square' });
     (out.places ||= []).push({ name: 'Fountain Square', x0: sx0, y0: rn[0], x1: sx1, y1: rn[1] + 1 });
-    place({ x: c1[0], y: rn[0] + 4, w: 40, h: rn[1] - rn[0] - 3, arch: 'theatre', key: 'theatre', name: 'The Grand Theatre', poi: { kind: 'delivery', label: 'The Grand Theatre' }, whole: true,
+    place({ x: c1[0], y: rn[0] + 4, w: 40, h: rn[1] - rn[0] - 3, arch: 'theatre', key: 'theatre', name: 'The Grand Theater', poi: { kind: 'delivery', label: 'The Grand Theater' }, whole: true,
       art: { spec: { floors: 4, style: 'stone', wallColor: '#e2d6bc', win: 'arch', cornice: 'dentil', parapet: 16, grime: 0.05, roofMat: 'gravel', lip: 10, rimW: 5, date: '1924' },
-        shop: { kind: 'lobby', door: 'right', open: true, people: 4, awning: ['#7a1e2a', '#7a1e2a'], sign: { text: 'THE GRAND THEATRE', bg: '#7a1e2a', fg: [255, 214, 140], lit: true } } } });
+        shop: { kind: 'lobby', door: 'right', open: true, people: 4, awning: ['#7a1e2a', '#7a1e2a'], sign: { text: 'THE GRAND THEATER', bg: '#7a1e2a', fg: [255, 214, 140], lit: true } } } });
     for (let y = rn[0]; y < rn[0] + 4; y++) for (let x = c1[0]; x < c1[0] + 40; x++) if (K.free(x, y)) K.fill(x, y, 1, 1, T.GRASS);
     K.row(c1[0] + 41, sx0, rn[0], rn[1], (x, room) => room >= 10 ? { w: room, depth: 30, arch: 'mixed', name: 'Opera Bar', poi: { kind: 'delivery', label: 'Opera Bar' }, whole: true, art: tower(x, rn[1], { name: 'Opera Bar', style: 'stone', floors: 4, store: 'bar', awning: ['#5a2a2e', '#efe6d0'], win: 'arch', wall: '#d8ccb4' }), home: { kind: 'apartment' } } : room >= 1 ? { gap: room, kind: 'garden' } : null);
     place({ x: sx1 + 1, y: rn[1] - 17, w: 18, h: 18, arch: 'mixed', key: 'rest2', name: 'Cafe Fontaine', poi: { kind: 'coffee', label: 'Cafe Fontaine', food: true }, whole: true, art: tower(sx1 + 1, rn[1], { name: 'Cafe Fontaine', style: 'stone', floors: 3, store: 'cafe', awning: ['#2f6a5a', '#f0ece4'], wall: '#e8e2d2', win: 'arch' }) });

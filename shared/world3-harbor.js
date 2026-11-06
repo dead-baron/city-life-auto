@@ -298,7 +298,7 @@ function harborGreen(K, m, ctx) {
       for (let yy = ky + 5; yy < ky + 9; yy++) for (let xx = kx; xx < kx + 9; xx++) pave(xx, yy);
     }
     prop('bikerack', LX - 4.5, 1962, 0); prop('bikerack', LX - 4.5, 1964, 0);
-    prop('textsign', LX - 4.5, 1960, 0, { text: 'BIKE HIRE', bg: '#2f6a8a', fg: [240, 236, 220], z: 30, sx: 1 });
+    prop('textsign', LX - 4.5, 1960, 0, { text: 'BIKE RENTAL', bg: '#2f6a8a', fg: [240, 236, 220], z: 30, sx: 1 });
   }
   // the trees: plane trees by the walk, maples and oaks in groves, palms toward the water, a magnolia by the fountain
   const clear = (tx, ty, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (!m.inside(tx + dx, ty + dy) || m.tiles[m.idx(tx + dx, ty + dy)] !== T.GRASS) return false; return true; };

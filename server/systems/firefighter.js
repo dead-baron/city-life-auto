@@ -243,7 +243,7 @@ export function interaction(world, p) {
 
 // ---- the calls ---------------------------------------------------------------------------------------------------------
 const SAY = {
-  car: (w) => `a car's on fire at the kerb in ${w} - get the water on it before it blows`,
+  car: (w) => `a car's on fire at the curb in ${w} - get the water on it before it blows`,
   wreck: (w) => `a wreck's burning after a crash in ${w} - put it out before it spreads`,
   person: (w) => `someone's on fire ${w} - get there fast`,
   grass: (w) => `a grass fire in ${w} - it's spreading: stop the front`,

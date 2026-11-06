@@ -173,7 +173,7 @@ test('World v3: the whole world in one build - every city district on its island
   const kp = (m.subwayPlazas || []).filter((q) => q.name === 'Westport International');
   assert.equal(kp.length, 1, 'one plaza for the airport\'s subway kiosk');
   assert.ok(kp[0].y + kp[0].h <= hallB.ty + hallB.th + 6 && kp[0].y >= hallB.ty + hallB.th, 'the kiosk on the terminal\'s forecourt');
-  for (const [k, l] of [['coffee', 'Runway Diner'], ['gasstation', 'Approach Fuel'], ['delivery', 'Skyview Hotel'], ['delivery', 'Westport Air Cargo'], ['delivery', 'Zipline Car Rental'], ['delivery', 'Coastline Car Hire'], ['delivery', 'Westport Aviation']]) assert.ok(m.pois.some((p) => p.kind === k && p.label === l), l);
+  for (const [k, l] of [['coffee', 'Runway Diner'], ['gasstation', 'Approach Fuel'], ['delivery', 'Skyview Hotel'], ['delivery', 'Westport Air Cargo'], ['delivery', 'Zipline Car Rental'], ['delivery', 'Coastline Car Rental'], ['delivery', 'Westport Aviation']]) assert.ok(m.pois.some((p) => p.kind === k && p.label === l), l);
   assert.ok(m.pois.some((p) => p.kind === 'home' && /Jetway Motor Inn/.test(p.label)), 'a room to rent at the motel');
   // every soccer pitch shaped like one: half as long again as it's wide, give or take (the owner, 10-16: "Soccer fields
   // are far too long: make them normal size" - Greenfield Park's and Linden Park's ran twice as long as wide)

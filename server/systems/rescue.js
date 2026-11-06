@@ -53,7 +53,7 @@ function docksOf(m) {
     if (d0) { d0.berths.push({ x: b.x, y: b.y }); return; }
     const shore = nearestLand(m, near.x, near.y, 30);   // (past the end of a long pier, maybe)
     if (!shore) return;
-    const dd = m.districtAt(shore.x, shore.y), place = dd ? dd.name.replace(/^The /, '') : 'harbour';
+    const dd = m.districtAt(shore.x, shore.y), place = dd ? dd.name.replace(/^The /, '') : 'harbor';
     D.push({ x: b.x, y: b.y, berths: [{ x: b.x, y: b.y }], land: near === b ? pierBy(m, b) || shore : { x: near.x, y: near.y }, name: `the ${place} docks` });
   };
   for (const r of m.rentals || []) for (const s of r.spots) add(s, r.dock);

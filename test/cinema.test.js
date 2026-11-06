@@ -1,4 +1,4 @@
-// The Grand Theatre as a cinema (shared/cinema.js, server/systems/cinema.js): on the map as a walk-in with its lobby,
+// The Grand Theater as a cinema (shared/cinema.js, server/systems/cinema.js): on the map as a walk-in with its lobby,
 // counter and two screens; buying a ticket and popcorn; sitting down and watching a film; getting up, the film's end.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,12 +12,12 @@ import { nearTargets } from '../server/dev.js';
 let W = null;
 const world = () => (W ||= makeWorld());
 
-test('The Grand Theatre on the map: a walk-in cinema - the counter in the lobby, two screens with rows of seats, walls between', () => {
+test('The Grand Theater on the map: a walk-in cinema - the counter in the lobby, two screens with rows of seats, walls between', () => {
   const w = world(), m = w.map, C = m.cinema;
   assert.ok(C, 'a cinema');
   const b = m.buildings[C.b], poi = m.pois.find((q) => q.id === C.poi);
   assert.equal(poi.kind, 'cinema');
-  assert.equal(poi.label, 'The Grand Theatre');
+  assert.equal(poi.label, 'The Grand Theater');
   assert.ok(b.walkIn && m.walkIns.includes(b.id) && b.walkIn.units[0].kind === 'cinema', 'a walk-in');
   assert.ok(C.district, `in a district (${C.district})`);
   assert.equal(m.tileAtPx(C.counter.x, C.counter.y), T.FLOOR, 'in front of the counter');
@@ -54,7 +54,7 @@ test('buying a ticket and popcorn at the counter, sitting down in a screen, watc
   const { p } = joinPlayer(w, { cash: 100 });
   teleport(w, p.ped, C.counter.x, C.counter.y);
   const menu = economy.buildMenu(w, p, poi);
-  assert.ok(menu && JSON.stringify(menu).includes('Film Ticket'), 'the counter sells tickets');
+  assert.ok(menu && JSON.stringify(menu).includes('Movie Ticket'), 'the counter sells tickets');
   economy.handleMenu(w, p, poi.id, `i:filmTicket:${CINE.TICKET}:1`);
   economy.handleMenu(w, p, poi.id, `i:popcorn:${CINE.POPCORN}:1`);
   assert.equal(p.profile.inventory.filmTicket, 1, 'a ticket');

@@ -426,6 +426,7 @@ export class World2 {
     this.worldKey = o.worldKey || null;            // the city is in this browser's copy under this key: the workers read it
     this.artKey = o.artKey || null;                // baked chunks are kept in the browser under this build of the art (chunkstore.js)
     this.cdn = o.artCdn || null;                   // the art from the server: where its baked chunks are (server/artcdn.js; worker.js)
+    this.cityWorker = typeof o.cityWorker === 'function' ? o.cityWorker : null;   // (World v3's windows straight to the bake workers: pool.js linkWindows)
     this.E = engine; this.L = L; this.q = q; this.tier = TIERS[q];
     this.W = 0; this.H = 0; this.dpr = 1;
     this.prov = { ground: false, statics: false, actors: false, peds: false };
@@ -482,6 +483,7 @@ export class World2 {
     try {
       this.pool = takeWarmPool({ lowMem: this.lowMem, artPx: this.E.ap || 1 });
       const r = await this.pool.init(M, this.worldKey, { artKey: this.artKey, cdn: this.cdn });
+      if (this.cityWorker && this.pool.linkWindows) this.pool.linkWindows(this.cityWorker());   // (World v3's next windows: straight from the city worker)
       this.resync(false);   // (what players changed in the world so far: a city read from the browser's copy has none of it)
       this.t.post = r.ms.post; this.t.workerInit = r.ms.init;
       this._providers(r.providers);
@@ -539,13 +541,13 @@ export class World2 {
 
   // World v3's window moved (client/main.js swapWorld, docs/WORLD-V3.md 8.12): the map now, the rest - the workers' new
   // window, the chunks baked against the old one - as soon as hostextra.js is in (reworld; a few ms the first time)
-  setMap(map) {
+  setMap(map, wid = 0) {
     const old = this.workerMap || this.map;
     this.workerMap = this.workerMap || old;
     this.map = map; this.grid = artGrid(map);
     this.lampGrid = null; this.lampG = null; this.poiG = null; this.seaK = null;
     this.tunMap = null;   // (the tunnel's chunks baked from the old window: kept on screen, baked again from this one - _tunnel)
-    extra().then((X) => { if (!this.failed && this.map === map) X.reworld(this, map, this.workerMap || old); }, (e) => console.error('[art2] setMap', e));
+    extra().then((X) => { if (!this.failed && this.map === map) X.reworld(this, map, this.workerMap || old, wid); }, (e) => console.error('[art2] setMap', e));
   }
 
   // engine.onContextLost: 'lost', 'restored' (everything must be uploaded again: has* answer false, and what

@@ -29,7 +29,7 @@ export function menuOpts(world, p, poi) {
   const out = current(world, p);
   const left = out ? Math.max(0, Math.ceil(p.rental.until - world.time)) : 0;
   for (const id of modelsAt(r)) {
-    opts.push({ id: `rent:${id}`, label: `Hire a ${VEHICLES[id].name}`, price: BOAT_RENTAL_PRICE[id], note: `${Math.round(BOAT_RENTAL_S / 60)} min`, dis: !!out });
+    opts.push({ id: `rent:${id}`, label: `Rent a ${VEHICLES[id].name}`, price: BOAT_RENTAL_PRICE[id], note: `${Math.round(BOAT_RENTAL_S / 60)} min`, dis: !!out });
   }
   if (out) opts.push({ id: 'rentback', label: `Hand back the ${out.def.name}`, note: `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} left`, dis: nearDock(world, out) === null });
   return opts;
@@ -39,7 +39,7 @@ export function subFor(world, p, poi) {
   const r = rentalFor(world, poi);
   const out = current(world, p);
   if (out) return `You've got a ${out.def.name} out. Bring it back to any rental dock before the time runs out - overdue boats get reported stolen.`;
-  return `Hire a boat for ${Math.round(BOAT_RENTAL_S / 60)} minutes. It's waiting at the end of the pier. Return it to any rental dock, or leave it and we'll tow it back.${r && r.note ? ' ' + r.note : r && r.lake ? ' Lake craft only here.' : ''}`;   // (r.note: a place's own word - the river run's)
+  return `Rent a boat for ${Math.round(BOAT_RENTAL_S / 60)} minutes. It's waiting at the end of the pier. Return it to any rental dock, or leave it and we'll tow it back.${r && r.note ? ' ' + r.note : r && r.lake ? ' Lake craft only here.' : ''}`;   // (r.note: a place's own word - the river run's)
 }
 
 // Find a free berth at this dock (clearing empty boats tied up there).
@@ -54,7 +54,7 @@ function freeBerth(world, r) {
 
 export function rent(world, p, poi, model, pay) {
   const r = rentalFor(world, poi);
-  if (!r || !modelsAt(r).includes(model)) return 'Not for hire here.';
+  if (!r || !modelsAt(r).includes(model)) return 'Not for rent here.';
   if (current(world, p)) return 'Bring back the boat you already have out first.';
   const price = BOAT_RENTAL_PRICE[model];
   if (!pay(p, price)) return `You need $${price} (cash + bank).`;
@@ -77,7 +77,7 @@ export function nearDock(world, v) {
 
 export function giveBack(world, p) {
   const v = current(world, p);
-  if (!v) return 'You have no hire boat out.';
+  if (!v) return 'You have no rental boat out.';
   const r = nearDock(world, v);
   if (!r) return 'Bring it back to a rental dock first.';
   if (v.seats.some((s, i) => s && i > 0 && world.get(s))) return 'Passengers have to get off first.';
@@ -116,19 +116,19 @@ export function update(world) {
     const aboard = v.seats.some((s) => s);
     if (!p.rental.warned && left <= WARN_BEFORE_S && left > 0) {
       p.rental.warned = true;
-      world.notify(p, `One minute left on your ${v.def.name} hire - head back to a rental dock.`, 'warn');
+      world.notify(p, `One minute left on your ${v.def.name} rental - head back to a rental dock.`, 'warn');
     }
     if (left > 0) continue;
     if (!aboard) {
       // left lying about: the hire company tows it home
       world.remove(v);
       p.rental = null;
-      world.notify(p, 'Your boat hire is over - the company towed it back.', 'info');
+      world.notify(p, 'Your boat rental is over - the company towed it back.', 'info');
       continue;
     }
     if (!p.rental.overdue) {
       p.rental.overdue = true;
-      world.notify(p, `Your hire is up! Get the ${v.def.name} back to a rental dock in ${BOAT_RENTAL_GRACE_S} seconds or it's reported stolen.`, 'bad');
+      world.notify(p, `Your rental is up! Get the ${v.def.name} back to a rental dock in ${BOAT_RENTAL_GRACE_S} seconds or it's reported stolen.`, 'bad');
     } else if (left < -BOAT_RENTAL_GRACE_S) {
       // reported stolen: it becomes an ordinary (stolen) boat
       v.rentedBy = 0;
@@ -138,7 +138,7 @@ export function update(world) {
       p.rental = null;
       const drv = world.get(v.seats[0]);
       if (drv && drv.player === p) law.crime(world, drv, 'theft', null, v.x, v.y, { silentCheck: false });
-      world.notify(p, 'The hire company reported your boat stolen.', 'bad');
+      world.notify(p, 'The rental company reported your boat stolen.', 'bad');
     }
   }
 }

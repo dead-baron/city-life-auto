@@ -272,13 +272,13 @@ function build(m, api, K) {
     // the pitch in the west half: turf in chain-link half as long again as it's wide (it was 30 long, twice its width:
     // the owner, 10-16, "Soccer fields are far too long"), the bleachers along its north side
     const py0 = y0 + 5, py1 = y1 - 2, px0 = x0 + 3, px1 = px0 + Math.round((py1 - py0) * PITCH_LONG);
-    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Linden Park Pitch', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 4 * TILE });
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: 'Linden Park Soccer Field', rect: { x: px0 * TILE, y: py0 * TILE, w: (px1 - px0) * TILE, h: (py1 - py0) * TILE }, goalW: 4 * TILE });
     prop('bleachers', (px0 + px1) / 2, py0 - 3.2, 10, { len: Math.round((px1 - px0 - 10) * TILE / 2), rows: 3 });
     const fx0 = px0 - 1.4, fx1 = px1 + 1.4, fy0 = py0 - 1.4, fy1 = py1 + 1.4;
     prop('chainfence', fx0, fy0, 0, { tx: (fx1 - fx0) * TILE, ty: 0 }); prop('chainfence', fx0, fy1, 0, { tx: (fx1 - fx0 - 4) * TILE, ty: 0 });
     prop('chainfence', fx0, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE }); prop('chainfence', fx1, fy0, 0, { tx: 0, ty: (fy1 - fy0) * TILE });
     for (const [lx, ly] of [[fx0, fy0], [fx1, fy0], [fx0, fy1], [fx1, fy1]]) prop('ymast', lx, ly, 0, { tall: 130 });
-    (out.places ||= []).push({ name: 'Linden Park Pitch', x0: px0, y0: py0, x1: px1, y1: py1 });
+    (out.places ||= []).push({ name: 'Linden Park Soccer Field', x0: px0, y0: py0, x1: px1, y1: py1 });
     // the lily pond in the east half behind its railing: water, lilies, rocks, the path round it
     const qx0 = px1 + 6, qx1 = Math.min(x1 - 5, qx0 + 22), qy0 = y0 + 5, qy1 = y1 - 5;
     if (qx1 - qx0 >= 12) {

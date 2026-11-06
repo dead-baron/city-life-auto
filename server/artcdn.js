@@ -17,7 +17,7 @@
 // every chunk of the map for the qualities in PREWARM, the busiest first (towns before the country, the country before
 // open sea). What pages ask for goes to the front of the queue. CLA_ART_THREADS bake threads (0: off).
 import { Worker } from 'node:worker_threads';
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cpus, totalmem } from 'node:os';
 import { TILE } from '../shared/constants.js';
@@ -31,7 +31,7 @@ const FOCUS_Q_MS = 10 * 60000;                    // a quality pages asked for i
 export function createArtCdn({ map, root, dataDir, seed, world = null, threads = defaultThreads(), prewarm = defaultPrewarm(), log = console.log, onBytes = null } = {}) {
   const { CX, CY } = artChunks(map);   // (the art CDN's chunk grid over the world's frame: the map's m.frame)
   const S = {
-    art: null, dir: null, prev: null, prevDir: null, workers: [], idle: [], asked: [], askedSet: new Set(), pre: [], preAt: 0, inflight: new Map(),
+    art: null, dir: null, prev: null, prevDir: null, same: new Set(), sameFile: null, workers: [], idle: [], asked: [], askedSet: new Set(), pre: [], preAt: 0, inflight: new Map(),
     done: new Set(), focus: [], qSeen: new Map(),
     stats: { baked: 0, bakeMs: 0, served: 0, servedBytes: 0, missed: 0, errors: 0, stale: 0, focusBaked: 0, startedAt: Date.now() }, threads, stopped: false,
   };
@@ -82,6 +82,12 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       if (others.length) { S.prev = others[0][0]; S.prevDir = join(dataDir, 'art', S.prev); S.prevStands = worldOf(S.prevDir) === mine; }
       for (const [d] of others.slice(1)) rmSync(join(dataDir, 'art', d), { recursive: true, force: true });
     } catch { /* best effort */ }
+    // the chunks baked for this build byte for byte the same as the build before's (artbake.js same): a page that kept the
+    // one before is told so (handle: had) and keeps it - no download, no bake (a deploy that changes the bake's code or
+    // the world changes the art of a few chunks; it used to throw every page's kept art away). Kept in a file per pair
+    // of builds, so a restart remembers.
+    S.same = new Set(); S.sameFile = S.prev && S.prevStands ? join(S.dir, `same-${S.prev}.txt`) : null;
+    if (S.sameFile) { try { for (const k of readFileSync(S.sameFile, 'utf8').split('\n')) if (k) S.same.add(k); } catch { /* none yet */ } }
     S.pre = [];
     for (const q of prewarm) for (const i of order) S.pre.push([q, 2, i % CX, Math.floor(i / CX)]);
     for (let i = 0; i < threads; i++) spawn();
@@ -97,7 +103,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       if (m.ready) { slot.ready = true; S.idle.push(slot); pump(); return; }
       const job = slot.job; slot.job = null;
       if (job) S.inflight.delete(job.key);
-      if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
+      if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; if (m.same && slot.art === S.art && S.sameFile) { S.same.add(job.key); S.stats.same = (S.stats.same || 0) + 1; try { appendFileSync(S.sameFile, job.key + '\n'); } catch { /* best effort */ } } } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
       if (slot.art === S.art && !S.stopped) { S.idle.push(slot); pump(); }
     });
     w.on('error', (e) => { log(`[art] bake thread failed: ${e && e.message}`); S.idle = S.idle.filter((s) => s !== slot); S.workers = S.workers.filter((s) => s !== slot); if (slot.job) S.inflight.delete(slot.job.key); });
@@ -155,7 +161,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       if (!j) return;
       const slot = S.idle.shift();
       slot.job = j; S.inflight.set(j.key, j);
-      slot.w.postMessage({ cx: j.cx, cy: j.cy, q: j.q, ap: j.ap, file: j.file });
+      slot.w.postMessage({ cx: j.cx, cy: j.cy, q: j.q, ap: j.ap, file: j.file, prev: S.sameFile ? fileOf(j.q, j.ap, j.cx, j.cy, S.prevDir) : null });
     }
   }
   // a new build of the art on disk (a client-only push: the server wasn't restarted): the threads start again on its code
@@ -174,10 +180,10 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   // can wait for it when that beats baking it itself (worker.js).
   function handle(path, req, res) {
     if (!path.startsWith('/art/')) return false;
-    const qi = path.indexOf('?'), pre = qi >= 0 && /[?&]pre=1\b/.test(path.slice(qi));
+    const qi = path.indexOf('?'), pre = qi >= 0 && /[?&]pre=1\b/.test(path.slice(qi)), had = qi >= 0 ? (/[?&]had=([0-9a-f]{6,40}(?:-v3)?)/.exec(path.slice(qi)) || [])[1] || null : null;
     if (qi >= 0) path = path.slice(0, qi);
     const m = /^\/art\/([0-9a-f]{6,40}(?:-v3)?)\/([0-3])\/([12])\/(\d{1,3})\/(\d{1,3})$/.exec(path);
-    const head = { 'access-control-allow-origin': '*', 'cache-control': 'no-store', 'access-control-expose-headers': 'x-art-eta, x-art-stale' };
+    const head = { 'access-control-allow-origin': '*', 'cache-control': 'no-store', 'access-control-expose-headers': 'x-art-eta, x-art-stale, x-art-same, x-art-yours' };
     const serve = (st, file, extra = null) => {
       S.stats.served++; S.stats.servedBytes += st.size;
       if (onBytes) onBytes(st.size + 300);
@@ -201,7 +207,13 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     }
     S.qSeen.set(q, Date.now());
     const file = fileOf(q, ap, cx, cy), st = statOf(file);
-    if (st) { S.done.add(keyOf(q, ap, cx, cy)); return serve(st, file); }
+    // had: the page keeps the build before's chunk here - when this build's is the same, it's told to keep that (no body)
+    const mineToo = had && had === S.prev && S.prevStands;
+    if (st) {
+      S.done.add(keyOf(q, ap, cx, cy));
+      if (mineToo && S.same.has(keyOf(q, ap, cx, cy))) { S.stats.same = (S.stats.same || 0); S.stats.sameServed = (S.stats.sameServed || 0) + 1; res.writeHead(200, { ...head, 'content-length': 0, 'x-art-same': '1' }); res.end(); return true; }
+      return serve(st, file);
+    }
     // not baked yet: to the front of the queue (unless it's being baked now, or this is only a look ahead)
     const key = keyOf(q, ap, cx, cy);
     if (!pre && !S.inflight.has(key) && !S.askedSet.has(key) && S.workers.length) {
@@ -215,6 +227,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     // bake or this build's download replaces it) - not for a look ahead
     if (!pre && S.prevDir && S.prevStands) {   // (not another world's: start)
       const pf = fileOf(q, ap, cx, cy, S.prevDir), ps = statOf(pf);
+      if (ps && mineToo) { S.stats.stale++; res.writeHead(200, { ...head, ...etaH, 'content-length': 0, 'x-art-stale': '1', 'x-art-yours': '1' }); res.end(); return true; }   // (the page has it: its own copy stands in)
       if (ps) { S.stats.stale++; return serve(ps, pf, { 'cache-control': 'no-store', 'x-art-stale': '1', 'access-control-expose-headers': 'x-art-eta, x-art-stale', ...etaH }); }
     }
     res.writeHead(404, etaH ? { ...head, ...etaH } : head); res.end();

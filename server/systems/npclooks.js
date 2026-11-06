@@ -56,7 +56,7 @@ export const RECIPES = {
       if (r() < 0.5) L.outfit.glasses = item(r() < 0.6 ? 'Reading glasses' : 'Round glasses');
       if (!L.outfit.shoes || /High-tops|Skate|Platform|Combat|Stilettos|Flip/.test(slotOf(L, 'shoes').name)) L.outfit.shoes = item(f ? 'Ballet flats' : 'Loafers', pick(r, ['brown', 'black']));
       if (L.outfit.set && /Mini|Slip|Bodysuit|Tracksuit/.test(slotOf(L, 'set').name)) { L.outfit.set = null; L.outfit.top = item(f ? 'Blouse' : 'Button-up shirt', pick(r, ['cream', 'white', 'sky', 'lavender'])); L.outfit.bottoms = item(f ? 'Skirt' : 'Chinos', pick(r, ['brown', 'grey', 'navy', 'khaki'])); }
-      if (/Mini skirt|Ripped|Leather trousers|Leggings/.test((slotOf(L, 'bottoms') || {}).name || '')) L.outfit.bottoms = item(f ? 'Skirt' : 'Chinos', pick(r, ['brown', 'grey', 'navy']));
+      if (/Mini skirt|Ripped|Leather pants|Leggings/.test((slotOf(L, 'bottoms') || {}).name || '')) L.outfit.bottoms = item(f ? 'Skirt' : 'Chinos', pick(r, ['brown', 'grey', 'navy']));
       L.extras.piercings &= 1; L.extras.tattoos = 0;
     } },
   hustler: { styles: W('street:4 streetwear:4 nightclub:1'), fem: 0.25, age: [4, 3, 1, 0.3, 0, 0], shade: 0.25,
@@ -93,7 +93,7 @@ export const RECIPES = {
       L.outfit.set = null;
       L.outfit.top = item(r() < 0.6 ? 'Plain tee' : 'Polo shirt', 'black');
       L.outfit.jacket = r() < 0.55 ? item(r() < 0.6 ? 'Bomber jacket' : 'Leather jacket', 'black') : null;
-      L.outfit.bottoms = item(r() < 0.5 ? 'Black jeans' : 'Suit trousers', 'black');
+      L.outfit.bottoms = item(r() < 0.5 ? 'Black jeans' : 'Suit pants', 'black');
       L.outfit.shoes = item(r() < 0.6 ? 'Combat boots' : 'Work boots', 'black');
       L.outfit.hat = null; L.outfit.bag = null;
       L.outfit.glasses = r() < 0.35 ? item('Sunglasses') : null;
@@ -103,7 +103,7 @@ export const RECIPES = {
 };
 function workwear(L, r) {
   L.outfit.set = null; L.outfit.jacket = null;
-  L.outfit.bottoms = item(r() < 0.5 ? 'Work trousers' : r() < 0.5 ? 'Jeans' : 'Cargo pants', r() < 0.4 ? undefined : pick(r, ['charcoal', 'denim', 'khaki', 'navy']));
+  L.outfit.bottoms = item(r() < 0.5 ? 'Work pants' : r() < 0.5 ? 'Jeans' : 'Cargo pants', r() < 0.4 ? undefined : pick(r, ['charcoal', 'denim', 'khaki', 'navy']));
   L.outfit.shoes = item('Work boots', r() < 0.6 ? 'tan' : 'brown');
   L.outfit.bag = L.outfit.jewel = null; L.outfit.glasses = r() < 0.2 ? item('Sport shades') : null;
 }

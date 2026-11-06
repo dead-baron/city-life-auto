@@ -72,7 +72,7 @@ export function createMapWaypoints(ctx) {
     const T = ctx.transit();
     const rows = [];
     for (const L of (T && T.lines) || []) rows.push(`<div class="lg"><i class="ln" style="background:${esc(L.col)}"></i>${esc(L.name)}</div>`);
-    rows.push('<div class="lg"><i class="ln rail"></i>Railway</div>');
+    rows.push('<div class="lg"><i class="ln rail"></i>Railroad</div>');
     if (T && T.ferries && T.ferries.length) rows.push('<div class="lg"><i class="ln ferry"></i>Ferry route</div>');
     rows.push('<div class="lg"><i class="dot"></i>Bus stop</div>');
     rows.push(`<div class="lg">${iconImg('anchor', 14)}Ferry pier</div>`);

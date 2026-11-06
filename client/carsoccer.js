@@ -171,7 +171,7 @@ class SoccerView {
       if (st.ph === 'lobby') { g.font = 'bold 14px monospace'; g.fillStyle = '#fff'; g.fillText(`Kick-off in ${Math.ceil(left)} s - ${st.q || 0} player${st.q === 1 ? '' : 's'} in`, x0 + cw / 2, y0 + 60); }
       else if (st.ph === 'kick' && mine) big(left > 0.2 ? String(Math.ceil(left)) : 'GO!', 'Sprint: boost');
       else if (st.ph === 'goal' && st.goal) big('GOAL!', `${st.goal.who} - REPLAY`, TEAM_COL[st.goal.team]);
-      else if (st.ph === 'over') { const w = st.sc[0] === st.sc[1] ? -1 : st.sc[0] > st.sc[1] ? 0 : 1; big('FULL TIME', w < 0 ? 'A draw' : `${TEAMS[w]} win`, w < 0 ? '#fff' : TEAM_COL[w]); }
+      else if (st.ph === 'over') { const w = st.sc[0] === st.sc[1] ? -1 : st.sc[0] > st.sc[1] ? 0 : 1; big('FULL TIME', w < 0 ? 'A tie' : `${TEAMS[w]} win`, w < 0 ? '#fff' : TEAM_COL[w]); }
     }
     if (mine) {   // your boost: a ring filling round its number, bottom right
       const cx = W > 700 ? W - 70 : 44, cy = W > 700 ? H - 150 : H * 0.5, r = 30, k = Math.max(0, Math.min(1, st.me.boost / 100));   // (bottom right; on a narrow screen the left edge, clear of the sticks)

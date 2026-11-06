@@ -688,7 +688,7 @@ export function enterLabel(world, p, v) {
   if (v.def.surfboard) return v.owner === p.pid ? 'Pick up your surfboard' : 'Someone\'s surfboard';   // (gear.js)
   if (v.def.horse) switch (e.kind) {   // (a horse: up on it, not in it - horses.js)
     case 'own': return 'Up on your horse';
-    case 'rental': return 'Up on your hired horse';
+    case 'rental': return 'Up on your rented horse';
     case 'ride': return 'Up behind the rider';
     case 'jack': return `Pull the rider off the horse${crime}`;
     default: return c ? `Ride off on the horse${crime}` : 'Up on the horse';

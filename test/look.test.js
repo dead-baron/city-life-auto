@@ -277,7 +277,7 @@ test('server: at home (the quick change or the mirror) a new look is unseen - al
 test('the police uniform by rank (CC5): issued - never owned, sold or random - on the officer\'s own body, face and hair', () => {
   const me = LK.STARTERS[0].look;
   const names = (L) => Object.values(L.outfit).filter(Boolean).map((o) => LK.PIECES[o.id].name).sort();
-  assert.deepEqual(names(LK.policeLook(me, 0)), ['Police cap', 'Uniform shirt', 'Uniform trousers', 'Work boots']);
+  assert.deepEqual(names(LK.policeLook(me, 0)), ['Police cap', 'Uniform pants', 'Uniform shirt', 'Work boots']);
   assert.ok(names(LK.policeLook(me, 2)).includes("Sergeant's shirt"), 'a sergeant\'s chevrons');
   assert.ok(names(LK.policeLook(me, 3)).includes('Dress uniform') && names(LK.policeLook(me, 3)).includes("Officer's cap"), 'from lieutenant, the dress uniform');
   assert.ok(names(LK.policeLook(me, 5)).includes('Dress gloves'), 'the chief\'s white gloves');

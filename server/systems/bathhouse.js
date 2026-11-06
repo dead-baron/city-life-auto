@@ -254,7 +254,7 @@ function enterWater(world, p, h, s, u) {
       world.notify(p, `The cold after the heat - every nerve awake! Refreshed for ${Math.round(BATH.contrastBuffS / 60)} minutes.`, 'good');
     } else world.notify(p, 'Brr! The cold water knocks the breath out of you - wide awake.', 'info');
     p.meDirty = true;
-  } else world.notify(p, { bath: 'Into the hot water... ahh.', spring: 'Into the hot spring - the steam rising round you, the sky overhead.', steam: 'The steam rolls over you.', sauna: 'The dry heat of the sauna wraps round you.', lounge: 'The warmth soaks into you.' }[u.use] || 'Ahh.', 'info');
+  } else world.notify(p, { bath: 'Into the hot water... ahh.', spring: 'Into the hot spring - the steam rising around you, the sky overhead.', steam: 'The steam rolls over you.', sauna: 'The dry heat of the sauna wraps around you.', lounge: 'The warmth soaks into you.' }[u.use] || 'Ahh.', 'info');
   if (K.water && ped.bleeding) ped.bleeding = false;
   homeinside.send(world, p, true);
 }

@@ -203,7 +203,7 @@ export function interaction(world, p) {
   if (t.k === 'fire' && Math.hypot(t.x - ped.x, t.y - ped.y) < RANGER.fireR) return { label: 'Put out the unattended campfire', run: () => { setLit(world, t.i, false); world.emit(t.x, t.y, { e: 'splash', x: t.x, y: t.y, n: 6 }); taskDone(world, p, 'Fire\'s out - dirt kicked over the embers.'); } };
   if (t.k === 'hiker' && !t.found) {
     const h = world.get(t.hiker);
-    if (h && Math.hypot(h.x - ped.x, h.y - ped.y) < RANGER.findR) return { label: 'Help the lost hiker (they\'ll follow you)', run: () => { t.found = true; h.pp = null; h.appVer = (h.appVer || 0) + 1; world.emit(h.x, h.y, { e: 'say', id: h.id, x: h.x, y: h.y, text: 'Oh, thank goodness - I\'ve been going round in circles!' }); setText(p); } };
+    if (h && Math.hypot(h.x - ped.x, h.y - ped.y) < RANGER.findR) return { label: 'Help the lost hiker (they\'ll follow you)', run: () => { t.found = true; h.pp = null; h.appVer = (h.appVer || 0) + 1; world.emit(h.x, h.y, { e: 'say', id: h.id, x: h.x, y: h.y, text: 'Oh, thank goodness - I\'ve been going around in circles!' }); setText(p); } };
   }
   return null;
 }
@@ -310,5 +310,5 @@ export function devRanger(world, p, k = '') {
   if (KINDS.includes(k)) j.order = [k, ...KINDS.filter((q) => q !== k)];
   newTask(world, p);
   if (j.task && KINDS.includes(k) && j.task.k !== k) { dropTask(world, j); j.stage = 'wait'; j.nextAt = world.time + RANGER.gapS; setText(p); }
-  return j.task ? null : 'No task of that kind fits round this station.';
+  return j.task ? null : 'No task of that kind fits around this station.';
 }
