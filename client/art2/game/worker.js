@@ -26,6 +26,7 @@
 //   init       { key } instead of M: the city this browser keeps (client/worldcache.js) - read here, in parallel with
 //              the other workers, instead of copied over by the page; answers needWorld: true when it isn't there,
 //              and waits for a 'world' { M } (everything sent meanwhile waits too)
+//   init       + noWorld: the sprite lane (pool.js SPRITE_LANE, worker name 'art2-sprite'): no world, sprites only
 //   init       + cdn, saveData: the art from the server (server/artcdn.js) - a chunk it has baked already is downloaded
 //              instead of baked here (bakeChunk, prebakeChunk; not prebakeChunk with saveData: the phone's data saver)
 //   stats      {}                  cache sizes, hit rates and timings
@@ -84,8 +85,10 @@ function pack(g, transfer, under = null, run = 0) {
 }
 
 // The modules start loading as soon as the worker does (the pool is made while the page builds the city), so they
-// are in by the time the world arrives.
-const MODS = Promise.all([loadProviders(), loadActors(), import('../../../shared/mapcore.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
+// are in by the time the world arrives. The sprite lane (pool.js SPRITE_LANE: a worker of its own that only makes the
+// people's sprites, never bakes, and holds no world) loads only the actors and the people.
+const LANE = typeof self !== 'undefined' && /^art2-sprite/.test(self.name || '');
+const MODS = Promise.all([LANE ? Promise.resolve({ ground: false, statics: false, errors: {} }) : loadProviders(), loadActors(), import('../../../shared/mapcore.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
 MODS.catch(() => {});
 let ready = null, worldIn = null, KEEP = null, PHONE = false;
 const tidy = (art, cap) => (KEEP && KEEP.prevP ? KEEP.prevP : Promise.resolve(null)).then((prev) => tidyKeep(art, prev, cap));
@@ -111,7 +114,7 @@ async function init(args) {
   if (P.actors && P.actors.artFrom && args.art) P.actors.artFrom({ fleet: () => import(args.art.fleet), horse: () => import(args.art.horse) });   // (the newer art: loaded here when a sprite first wants it)
   const t1 = performance.now();
   const m = args.M || (args.key ? await readWorld(args.key) : null);
-  return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m } };
+  return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m && !args.noWorld } };
 }
 // ---- the art from the server (server/artcdn.js) ---------------------------------------------------------------------
 // The server bakes the world's chunks with this same code and keeps them: one it has is downloaded (about 250 KB, a
@@ -262,7 +265,7 @@ async function handle(msg) {
   if (op === 'init') {
     const p = init(args);
     // (everything after waits for the world: sent with this, read from the browser's copy, or a 'world' to come)
-    ready = p.then(({ m, mapMod }) => (m ? takeWorld(m, mapMod) : new Promise((res) => { worldIn = (w) => res(takeWorld(w, mapMod)); })));
+    ready = p.then(({ m, mapMod }) => (m ? takeWorld(m, mapMod) : args.noWorld ? null : new Promise((res) => { worldIn = (w) => res(takeWorld(w, mapMod)); })));   // (noWorld: the sprite lane)
     const { result } = await p;
     self.postMessage({ id, ok: true, result, ms: performance.now() - t0 });
     return;
@@ -292,7 +295,7 @@ async function handle(msg) {
     }
     return;
   }
-  if (!M && op !== 'stats') throw new Error('worker not initialized');
+  if (!M && op !== 'stats' && !(op === 'sprite' && args && args.kind !== 'prop')) throw new Error('worker not initialized');   // (the sprite lane: people, no world)
   if (op === 'peekChunk') {   // (a quick look in the store - or the server's: no baking)
     const { cx, cy, ck } = args;
     let got = null, exact = true;

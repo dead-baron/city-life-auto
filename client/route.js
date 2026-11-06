@@ -11,19 +11,28 @@ import { TILE } from '../shared/constants.js';
 const SEG_CELL = 1024;
 
 export function createRouter(map) {
-  // the roads' segments in a coarse grid, for the nearest-road search
-  const cells = new Map(), cols = Math.ceil((map.frame.w * TILE) / SEG_CELL) + 1;   // (the world's frame: the road list is the world's)
-  for (const e of map.edges || []) {
-    for (let i = 1; i < e.pts.length; i++) {
-      const a = e.pts[i - 1], b = e.pts[i];
-      const c0 = Math.floor(Math.min(a.x, b.x) / SEG_CELL), c1 = Math.floor(Math.max(a.x, b.x) / SEG_CELL);
-      const r0 = Math.floor(Math.min(a.y, b.y) / SEG_CELL), r1 = Math.floor(Math.max(a.y, b.y) / SEG_CELL);
-      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const k = r * cols + c; let l = cells.get(k); if (!l) cells.set(k, (l = [])); l.push([e, i]); }
+  // the roads' segments in a coarse grid, for the nearest-road search - made the first time a route is asked for, not
+  // with the router (the page makes one with every World v3 window it swaps in, and the road list is the world's: a
+  // phone's long task at each region's border, usually for no route at all)
+  const cols = Math.ceil((map.frame.w * TILE) / SEG_CELL) + 1;   // (the world's frame: the road list is the world's)
+  let cellsM = null;
+  const grid = () => {
+    if (cellsM) return cellsM;
+    const cells = (cellsM = new Map());
+    for (const e of map.edges || []) {
+      for (let i = 1; i < e.pts.length; i++) {
+        const a = e.pts[i - 1], b = e.pts[i];
+        const c0 = Math.floor(Math.min(a.x, b.x) / SEG_CELL), c1 = Math.floor(Math.max(a.x, b.x) / SEG_CELL);
+        const r0 = Math.floor(Math.min(a.y, b.y) / SEG_CELL), r1 = Math.floor(Math.max(a.y, b.y) / SEG_CELL);
+        for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { const k = r * cols + c; let l = cells.get(k); if (!l) cells.set(k, (l = [])); l.push([e, i]); }
+      }
     }
-  }
+    return cells;
+  };
   const usable = (e, driving) => (driving ? true : e.lvl === 0);
   // the nearest point of a usable road: { e, i (segment end index), s (distance along the edge to it), x, y, d }
   function nearest(x, y, driving) {
+    const cells = grid();
     let best = null;
     for (let ring = 0; ring <= 3 && !best; ring++) {
       const c0 = Math.floor(x / SEG_CELL) - ring, r0 = Math.floor(y / SEG_CELL) - ring;

@@ -34,7 +34,7 @@ function draw() {
     const up = nn.chunkUp ? (t.upSum || 0) / nn.chunkUp : 0;
     lines.push(`art ${TIER[s.q] || s.q} · workers ${P.workers || 0} · baking ${P.running || 0} queued ${P.queued || 0} · waiting up ${s.results} · on screen ${W ? `${W.scrHave}/${W.scr}` : '-'} (stand-ins ${W ? W.scr - W.scrHave : '-'})`);
     lines.push(`bake avg ${f0(t.bakeAvg)} ms · chunk upload avg ${f1(up)} max ${f1(t.upMax)} ms · kept ${nn.kept || 0} · server ${nn.cdn || 0} · art frame ${f1(t.frameMs)} ms · gpu ${f1(E.msGpuApprox)} ms (${E.timer || '?'})`);
-    lines.push(`sprites: making ${s.sprOut} · to upload ${s.upQ} · person ${f1(w.est && w.est.ped)} ms · made here ${nn.sync || 0} · late ${s.late && s.late.of ? f1(100 * s.late.frames / s.late.of) : 0}% · slots ${E.slots || 0} · ${f0(E.gpuMB)} MB`);
+    lines.push(`sprites: making ${s.sprOut} · to upload ${s.upQ} · person ${f1(w.est && w.est.ped)} ms · made here ${nn.sync || 0}${s.lane ? ` · lane ${s.lane.running}+${s.lane.queued}` : ''} · late ${s.late && s.late.of ? f1(100 * s.late.frames / s.late.of) : 0}% · slots ${E.slots || 0} · ${f0(E.gpuMB)} MB`);
     if (E.scene) lines.push(`scene ${E.scene[0]}x${E.scene[1]} world px`);
   } else lines.push(`art: ${S.art2Off ? `off (${S.art2Off})` : 'starting'}`);
   const wc = document.getElementById('world'), vc = document.getElementById('view'), dpr = window.devicePixelRatio || 1;

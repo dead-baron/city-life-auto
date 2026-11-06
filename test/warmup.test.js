@@ -104,6 +104,36 @@ test('a person is made on the page only while what one takes fits the frame (you
   assert.equal(w._now('d', []), true, 'yours with nothing to show yet: made now');
   w.meNone = false; w.est.ped = 6;
   assert.equal(w._now('e', []), true, 'yours within OWN_MS');
+  // the sprite lane up (pool.js SPRITE_LANE): nothing on this thread at all, not even yours with nothing to show
+  w.laneOn = true; w.meNone = true; w.est.ped = 1; w.syncLeft = 40;
+  assert.equal(w._now('f', []), false, 'the lane makes it');
+  assert.equal(made.length, 3);
+});
+
+test('the sprite lane: the people wanted now go to a worker of their own (no world, no bakes); asks ahead and the rest to the bake workers', () => {
+  const asked = [];
+  const fakePool = (name) => ({ name, dead: false, ready: true, jobs: new Map(), has(k) { return this.jobs.has(k); }, running(k) { return this.jobs.get(k) === 'run'; }, cancel(k) { this.jobs.delete(k); asked.push(`${name} cancel ${k}`); }, request(k, op, a, prio) { if (a) { this.jobs.set(k, 'queued'); asked.push(`${name} ${k} ${prio}`); } return true; } });
+  const w = Object.create(World2.prototype);
+  Object.assign(w, { pool: fakePool('bake'), lane: fakePool('lane'), laneOn: true, prov: { peds: true, actors: true }, sprOut: 0, tier: { sprJobs: 16 }, n: { sprReq: 0 }, badKeys: new Set(), upQ: new Map(), E: { hasSprite: () => false } });
+  w._ask('peds', 'ped', 'me', [], -3);
+  w._ask('peds', 'ped', 'him', [], -1);
+  w._ask('peds', 'ped', 'later', [], 0);
+  w._ask('actors', 'vehicle', 'car', [], -1);
+  assert.deepEqual(asked, ['lane sme -3', 'lane shim -1', 'bake slater 0', 'bake scar -1']);
+  // asked ahead of the bake workers, then wanted now: over to the lane (not yet started there)
+  asked.length = 0;
+  w._ask('peds', 'ped', 'later', [], -1);
+  assert.deepEqual(asked, ['bake cancel slater', 'lane slater -1']);
+  // ...unless a bake worker is making it already; and one on its way from the lane isn't asked of the bake workers again
+  asked.length = 0;
+  w.pool.jobs.set('snow', 'run'); w._ask('peds', 'ped', 'now', [], -1);
+  w._ask('peds', 'ped', 'me', [], 2);
+  assert.deepEqual(asked, []);
+  // the lane gone: the bake workers again
+  w.lane.dead = true;
+  w._ask('peds', 'ped', 'again', [], -1);
+  assert.deepEqual(asked, ['bake sagain -1']);
+  assert.equal(w.laneOn, false);
 });
 
 test('an 8 GB phone keeps more baked chunks; the canvas never asks for more pixels than the screen has', async () => {
