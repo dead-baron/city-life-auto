@@ -488,8 +488,7 @@ export class World2 {
     if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
     else this._startLane();
   }
-  // The sprite lane (pool.js SPRITE_LANE): a worker that only makes the people's sprites, so none is made on this thread
-  // (_now) once it's up. Not on a low-memory device, nor with ?nolane (comparisons: tools/drivebench.mjs).
+  // the sprite lane (pool.js SPRITE_LANE): people's sprites, none made here (_now) once it's up; not lowMem, nor ?nolane
   _startLane() {
     if (this.lane || this.lowMem || this.failed || !this.prov.peds || typeof Worker === 'undefined' || (typeof location !== 'undefined' && /[?&]nolane\b/.test(location.search))) return;
     let L = null;
@@ -501,8 +500,7 @@ export class World2 {
       this.laneOn = true;
     }, () => { if (this.lane === L) this.lane = null; L.dispose(); });
   }
-  // the pool a sprite is asked of: the people's - wanted now (prio < 0: on screen, yours) - of the sprite lane while it's
-  // up, everything else (and asks ahead) of the bake workers
+  // the pool a sprite is asked of: people wanted now (prio < 0) the lane's, the rest the bake workers'
   _sprPool(kind, prio) {
     const L = this.lane;
     if (kind === 'ped' && prio < 0 && L && this.laneOn) { if (!L.dead) return L; this.lane = null; this.laneOn = false; }
@@ -1023,9 +1021,7 @@ export class World2 {
     const pre = this.pre || (this.pre = { list: [], at: -1e9, out: new Set(), kept: new Set(), cx: -99, cy: -99, n: 0, done: 0, had: 0 });
     if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B') > 0) return;   // a bake for the screen or the road ahead waits
     for (const k of this.wantChunks.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if (!this.E.hasChunk(cx, cy) && !this.results.has(`c${cx},${cy},-1,${this.ver.get(k) || 0}`)) return; }
-    // (on a phone, two workers at most bake ahead: a phone with four bake workers and the sprite lane all busy for minutes on
-    // end ran hot - the owner's Pixel 7 Pro, 11-06, its bakes 62 -> 758 ms and its frame rate halved after a while of
-    // driving; what the screen needs still takes every worker - _chunks)
+    // (a phone: two at most - four workers and the sprite lane busy for minutes ran one hot, 11-06; the screen's take all)
     const room = Math.max(1, Math.min(isPhone() ? 2 : 99, (P.size || 1) - 1)) - pre.out.size;
     if (room <= 0) return;
     const now = F.now, pcx = Math.floor(this.camX / CHUNK), pcy = Math.floor(this.camY / CHUNK);
