@@ -33,6 +33,9 @@ const C = {
   yellow: '#e8b923', white: '#e6e4dc',
 };
 
+const PROP_SZ = [40, 40], PLANE_SZ = [140, 140];
+// a field worked out the first time it's read, then kept as a plain value
+function lazy(o, k, make) { Object.defineProperty(o, k, { configurable: true, enumerable: true, get() { const v = make(); Object.defineProperty(o, k, { value: v, writable: true, configurable: true, enumerable: true }); return v; } }); }
 export class GroundCache {
   get shores() { return this._shores || (this._shores = new Shores(this.map)); }
   // layers (spectator mode): { lots: painted lots and yards, props: street furniture and trees }
@@ -56,21 +59,29 @@ export class GroundCache {
       }
       return out;
     };
-    const propRect = (p) => { const s = PROP_SIZES[p.t] || (p.t === 'plane' ? [140, 140] : [40, 40]); return [p.x - s[0] / 2, p.y - s[1] / 2, p.x + s[0] / 2, p.y + s[1] / 2]; };
-    this.lowProps = this.byChunk(map.props.filter((p) => !OVERHEAD.has(p.t)), propRect);
-    this.highProps = this.byChunk(map.props.filter((p) => OVERHEAD.has(p.t)), propRect);
-    this.roofs = this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]);
-    this.prefabs = this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]);
-    this.handArt = this.byChunk(map.handArt || [], (a) => [a.x, a.y, a.x + a.w - 1, a.y + a.h - 1]);
-    this.brick = this.byChunk(map.brickWalls || [], (w) => [w.tx * TILE, w.ty * TILE - 20, (w.tx + w.tw) * TILE, (w.ty + 1) * TILE + 6]);
-    this.stalls = this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]);
-    this.signs = this.byChunk(map.buildings.filter((b) => b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]);
+    // the props by chunk, low and overhead (both renderers read these: the night's lights, the campfires and flares) - one
+    // pass, no lists copied
+    this.lowProps = new Map(); this.highProps = new Map();
+    for (const p of map.props) {
+      if (!p) continue;   // (World v3's window: an item it doesn't hold)
+      const sz = PROP_SIZES[p.t] || (p.t === 'plane' ? PLANE_SZ : PROP_SZ), out = OVERHEAD.has(p.t) ? this.highProps : this.lowProps;
+      const cx0 = Math.floor((p.x - sz[0] / 2) / CHUNK_PX), cx1 = Math.floor((p.x + sz[0] / 2) / CHUNK_PX), cy0 = Math.floor((p.y - sz[1] / 2) / CHUNK_PX), cy1 = Math.floor((p.y + sz[1] / 2) / CHUNK_PX);
+      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) { const k = this.key(cx, cy); const a = out.get(k); if (a) a.push(p); else out.set(k, [p]); }
+    }
+    // What only the classic renderer's ground bakes read (bake below): indexed the first time one is baked, not with the
+    // cache - the art v2 renderer never bakes here, and a World v3 window swap made all of them for nothing (11-06)
+    lazy(this, 'roofs', () => this.byChunk((map.roofs || []).filter((r) => !r.gone), (r) => [r.tx * TILE - 2, r.ty * TILE - 2, (r.tx + r.tw) * TILE + 10, (r.ty + r.th) * TILE + 10]));
+    lazy(this, 'prefabs', () => this.byChunk(map.prefabs, (p) => [p.tx * TILE, p.ty * TILE, (p.tx + p.tw) * TILE, (p.ty + p.th) * TILE]));
+    lazy(this, 'handArt', () => this.byChunk(map.handArt || [], (a) => [a.x, a.y, a.x + a.w - 1, a.y + a.h - 1]));
+    lazy(this, 'brick', () => this.byChunk(map.brickWalls || [], (w) => [w.tx * TILE, w.ty * TILE - 20, (w.tx + w.tw) * TILE, (w.ty + 1) * TILE + 6]));
+    lazy(this, 'stalls', () => this.byChunk(map.stalls, (s) => [s.x, s.y, s.x + s.w, s.y + s.h]));
+    lazy(this, 'signs', () => this.byChunk(map.buildings.filter((b) => b && b.signs && b.signs.length), (b) => [b.tx * TILE, b.ty * TILE, (b.tx + b.tw) * TILE, (b.ty + b.th) * TILE]));
     // ground-level streets (the deck and ramps are drawn lifted, render/highway.js)
-    this.roads = this.byChunk(map.edges.filter((e) => e.lvl === 0), edgeRect);
-    this.gores = this.byChunk(map.gores || [], (gr) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of gr.pts) { x0 = Math.min(x0, p.x, p.qx); y0 = Math.min(y0, p.y, p.qy); x1 = Math.max(x1, p.x, p.qx); y1 = Math.max(y1, p.y, p.qy); } const pad = gr.hw + gr.rhw + 8; return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; });
-    this.culdesacs = this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]);
-    this.rail = railIndex(map, (cx, cy) => this.key(cx, cy));
-    this.rails = map.rails ? map.rails.map((r) => railIndex(map, (cx, cy) => this.key(cx, cy), r)) : null;   // (World v3: every loop)
+    lazy(this, 'roads', () => this.byChunk(map.edges.filter((e) => e.lvl === 0), edgeRect));
+    lazy(this, 'gores', () => this.byChunk(map.gores || [], (gr) => { let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of gr.pts) { x0 = Math.min(x0, p.x, p.qx); y0 = Math.min(y0, p.y, p.qy); x1 = Math.max(x1, p.x, p.qx); y1 = Math.max(y1, p.y, p.qy); } const pad = gr.hw + gr.rhw + 8; return [x0 - pad, y0 - pad, x1 + pad, y1 + pad]; }));
+    lazy(this, 'culdesacs', () => this.byChunk(map.nodes.filter((n) => n.culdesac), (n) => [n.x - 200, n.y - 200, n.x + 200, n.y + 200]));
+    lazy(this, 'rail', () => railIndex(map, (cx, cy) => this.key(cx, cy)));
+    lazy(this, 'rails', () => (map.rails ? map.rails.map((r) => railIndex(map, (cx, cy) => this.key(cx, cy), r)) : null));   // (World v3: every loop)
     this._shores = null;   // (the coast traced once, when the classic renderer first draws: get shores)
   }
   key(cx, cy) { return cy * 1000 + cx; }
