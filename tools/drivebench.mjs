@@ -318,7 +318,15 @@ try {
     R.minutes.push(row);
     log(`min ${mi + 1}: ${JSON.stringify(row)}`);
   }
-  await page.evaluate(() => { const D = window.__drive; D.rec = false; D.apStop && D.apStop(); });
+  // then out of the car and a walk round, turning every way (your own figure's poses: the sprites made for it)
+  const hf = await page.evaluate(hudNow);
+  await page.evaluate(() => { const D = window.__drive; D.apStop && D.apStop(); });
+  await page.keyboard.press('KeyF'); await wait(1500);
+  for (const k of ['KeyA', 'KeyD', 'KeyA', 'KeyD', 'KeyA', 'KeyD']) { await page.keyboard.down('KeyW'); await page.keyboard.down(k); await wait(1800); await page.keyboard.up(k); await page.keyboard.up('KeyW'); await wait(300); }
+  const hw = await page.evaluate(hudNow);
+  R.onFoot = { madeHere: hw.madeHere - hf.madeHere, madeHereMs: hw.syncMs - hf.syncMs, sprReq: hw.sprReq - hf.sprReq, onFoot: await page.evaluate(() => !!(window.CLA.S.pred && window.CLA.S.pred.kind === 'ped')) };
+  log(`on foot: ${JSON.stringify(R.onFoot)}`);
+  await page.evaluate(() => { const D = window.__drive; D.rec = false; });
   if (TRACE) {
     const done = new Promise((res) => cdp.once('Tracing.tracingComplete', res));
     await cdp.send('Tracing.end');
