@@ -38,7 +38,7 @@ export function provoke(world, cop, x = cop.x, y = cop.y, why = '') {
   if (cop.npc && !cop.npc.war) cop.npc.war = firstGang.id;
   if (cop.player && now(world) - (cop.player.gangCopWarnAt || -99) > 20) {
     cop.player.gangCopWarnAt = now(world);
-    world.notify(cop.player, `The Syndicate takes offence${why ? ' - ' + why : ''}. Watch yourself!`, 'bad');
+    world.notify(cop.player, `The Syndicate takes offense${why ? ' - ' + why : ''}. Watch yourself!`, 'bad');
   }
   return n;
 }

@@ -7,7 +7,7 @@
 //   in   { cx, cy, q, ap, file }   out  { ok, cx, cy, q, ap, bytes, ms } | { ok: false, error }
 import { parentPort, workerData } from 'node:worker_threads';
 import { gzipSync } from 'node:zlib';
-import { writeFileSync, renameSync, mkdirSync } from 'node:fs';
+import { writeFileSync, renameSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { setPriority } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -44,7 +44,7 @@ export function chunkFile(r, ap, cx, cy) {
   return Buffer.concat([head, mj, z]);
 }
 
-parentPort.on('message', ({ cx, cy, q, ap, file }) => {
+parentPort.on('message', ({ cx, cy, q, ap, file, prev = null }) => {
   const t0 = performance.now();
   try {
     const r = bakeChunk(M, cx, cy, { quality: q, seed, lowMem: false, artPx: ap, scratch: ap > 1 }, cache, providers);
@@ -53,7 +53,10 @@ parentPort.on('message', ({ cx, cy, q, ap, file }) => {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file + '.part', buf);
     renameSync(file + '.part', file);
-    parentPort.postMessage({ ok: true, cx, cy, q, ap, bytes: buf.length, ms: performance.now() - t0 });
+    // the same bytes as the build before's file of this chunk (prev): the pages that kept that one keep it (artcdn.js same)
+    let same = false;
+    if (prev) { try { same = readFileSync(prev).equals(buf); } catch { same = false; } }
+    parentPort.postMessage({ ok: true, cx, cy, q, ap, bytes: buf.length, ms: performance.now() - t0, same });
   } catch (e) {
     parentPort.postMessage({ ok: false, cx, cy, q, ap, error: String((e && e.stack) || e).slice(0, 400) });
   }

@@ -22,7 +22,7 @@ import * as homes from './homes.js';
 
 export const COATS = 8;
 export const BARE = 8;
-export const COAT_NAMES = ['chestnut', 'bay', 'black', 'grey', 'palomino', 'paint', 'dun', 'appaloosa'];   // (client/art2/horse.js HORSE_COATS)
+export const COAT_NAMES = ['chestnut', 'bay', 'black', 'gray', 'palomino', 'paint', 'dun', 'appaloosa'];   // (client/art2/horse.js HORSE_COATS)
 const BOLT_S = 5;           // s it gallops off for before it slows (gone once nobody's watching)
 const RETURN_R = 340;       // a hired horse ridden within this of a co-op can be handed back
 const WARN_BEFORE_S = 60;
@@ -81,7 +81,7 @@ export function bolt(world, v, attackerPed = null) {
   world.emit(v.x, v.y, { e: 'whinny', x: Math.round(v.x), y: Math.round(v.y), id: v.id });
   // a hired one's hire is over; yours waits at the co-op (this one's gone home: nobody's now, and nobody gets back on it)
   for (const p of world.players.values()) {
-    if (p.horseHire && p.horseHire.vid === v.id) { p.horseHire = null; p.meDirty = true; world.notify(p, 'Your hired horse bolted for home - the hire is over.', 'info'); }
+    if (p.horseHire && p.horseHire.vid === v.id) { p.horseHire = null; p.meDirty = true; world.notify(p, 'Your rented horse bolted for home - the rental is over.', 'info'); }
     if (v.owner === p.pid) { world.notify(p, 'Your horse bolted - saddle it up again at any farm co-op.', 'info'); if (p.activeVehicle === v.id) p.activeVehicle = 0; }
   }
   v.rentedBy = 0; v.owner = null; v.ownerName = null; v.issuedTo = 0; v.npcOwned = true; v.despawnable = true; v.descVer = (v.descVer || 0) + 1;
@@ -123,7 +123,7 @@ export function spotAt(world, poi) {
 }
 export function menuOpts(world, p, poi) {
   const prof = p.profile, out = hired(world, p), opts = [];
-  opts.push({ id: 'horse:hire', label: 'Hire a horse', price: HORSE.hire, note: `${Math.round(HORSE.hireS / 60)} min`, dis: !!out });
+  opts.push({ id: 'horse:hire', label: 'Rent a horse', price: HORSE.hire, note: `${Math.round(HORSE.hireS / 60)} min`, dis: !!out });
   if (out) opts.push({ id: 'horse:back', label: `Hand back the ${coatName(out)} horse`, dis: Math.hypot(out.x - poi.x, out.y - poi.y) > RETURN_R });
   for (const c of paddock(world, poi)) opts.push({ id: `horse:buy:${c}`, label: `Buy the ${COAT_NAMES[c]} horse`, price: HORSE.price, note: 'yours to keep' });
   prof.vehicles.forEach((ov, i) => { if (ov.model === 'horse') opts.push({ id: `vg:${i}`, label: `Saddle up your ${COAT_NAMES[((ov.variant | 0) & 7) % COATS]} horse` }); });
@@ -142,7 +142,7 @@ export function hire(world, p, poi, pay) {
 }
 export function giveBack(world, p) {
   const v = hired(world, p);
-  if (!v) return 'You have no hired horse out.';
+  if (!v) return 'You have no rented horse out.';
   if (!farms(world).some((q) => Math.hypot(v.x - q.x, v.y - q.y) < RETURN_R)) return 'Ride it back to a farm co-op to hand it in.';
   for (const sid of [...v.seats]) { const ped = sid && world.get(sid); if (ped) vehicles.ejectPed(world, ped, false); }
   world.remove(v);
@@ -186,8 +186,8 @@ export function update(world) {
       const H = p.horseHire, left = H.until - now, aboard = v.seats.some((s) => s);
       if (!H.warned && left <= WARN_BEFORE_S && left > 0) { H.warned = true; world.notify(p, 'One minute left on your horse - ride it back to a farm co-op.', 'warn'); }
       if (left > 0) continue;
-      if (!aboard) { world.remove(v); p.horseHire = null; world.notify(p, 'Your horse hire is over - it found its own way home.', 'info'); continue; }
-      if (!H.overdue) { H.overdue = true; world.notify(p, `Your hire is up! Get the horse back to a co-op in ${HORSE.graceS} seconds or it's reported stolen.`, 'bad'); }
+      if (!aboard) { world.remove(v); p.horseHire = null; world.notify(p, 'Your horse rental is over - it found its own way home.', 'info'); continue; }
+      if (!H.overdue) { H.overdue = true; world.notify(p, `Your rental is up! Get the horse back to a co-op in ${HORSE.graceS} seconds or it's reported stolen.`, 'bad'); }
       else if (left < -HORSE.graceS) {
         v.rentedBy = 0; v.despawnable = true; v.npcOwned = true;
         (v.stolenBy ||= new Set()).add(p.pid);

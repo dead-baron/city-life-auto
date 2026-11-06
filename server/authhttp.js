@@ -133,7 +133,7 @@ export function createAuthHttp(opts) {
     flows.delete(state);   // (single use, whatever happens next)
     // CSRF: the browser that came back is the one that set off (the cookie set at /start)
     if (!safeEqual(cookies(req).cla_oauth || '', f.nonce)) return backErr(res, f.ret, 'The sign-in came back to a different browser - try again.');
-    if (url.searchParams.get('error')) return backErr(res, f.ret, 'Sign-in cancelled.');
+    if (url.searchParams.get('error')) return backErr(res, f.ret, 'Sign-in canceled.');
     const code = url.searchParams.get('code');
     if (!code || code.length > 2048) return backErr(res, f.ret, 'No code from the provider.');
     try {

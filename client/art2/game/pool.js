@@ -159,7 +159,25 @@ export class WorkerPool {
   // ('patch': props [[index, broken | null]], reset: that list is everything broken) are also kept, compacted, for
   // a worker that starts later.
   // World v3's window moved (host.js setMap): every worker, and one that starts later, gets the new window
-  reworld(M) { if (this.initArgs) this.initArgs.M = M; this.broadcast('reworld', { M }); }
+  // wid: the window's number when the city worker sends it to the bake workers itself (linkWindows): only the number
+  // goes from here - a copy of the whole window for each worker, made on the page's thread, was the swap's stall
+  reworld(M, wid = 0) {
+    if (this.initArgs) this.initArgs.M = M;
+    if (wid && this.cityWorker && this.workers.every((w) => !w.alive || w.linked)) this.broadcast('reworld', { wid });
+    else this.broadcast('reworld', { M });
+  }
+  // World v3's windows straight from the city worker (client/worldgen.js) to each bake worker, over a channel of their own
+  linkWindows(cityWorker) { this.cityWorker = cityWorker || null; for (const w of this.workers) this._link(w); }
+  _link(w) {
+    if (!this.cityWorker || !w.alive || w.linked || typeof MessageChannel === 'undefined') return;
+    try {
+      const ch = new MessageChannel(), pid = (this.portN = (this.portN || 0) + 1);
+      w.wk.postMessage({ id: 0, op: 'windowPort', args: { port: ch.port2 } }, [ch.port2]);
+      this.cityWorker.postMessage({ bakePort: ch.port1, pid }, [ch.port1]);
+      w.linked = pid;
+    } catch { w.linked = 0; }
+  }
+  _unlink(w) { if (w.linked && this.cityWorker) { try { this.cityWorker.postMessage({ unport: w.linked }); } catch { /* gone */ } } w.linked = 0; }
   broadcast(op, args) {
     if (op === 'patch' && args) {
       if (args.reset) this.props.clear();
@@ -244,6 +262,7 @@ export class WorkerPool {
   _kill(w, why) {
     if (!w.alive) return;
     w.alive = false; w.err = why; this.lastWhy = why;
+    this._unlink(w);   // (the city worker stops sending it windows)
     try { w.wk && w.wk.terminate(); } catch { /* gone */ }
     for (const job of [...w.running]) this._finish(job, null, why);
     if (!this.disposed && !this.dead && this.initArgs) this._scheduleRespawn(w.i);
@@ -274,6 +293,7 @@ export class WorkerPool {
     if (this.disposed || this.dead || !this.initArgs) return;
     const nw = this._spawn(i);
     this.workers[i] = nw; this.counts.restarted++;
+    this._link(nw);   // (its world comes with init; the next windows over its own channel)
     if (!nw.alive) { this.lastWhy = nw.err || 'the worker could not start'; this._scheduleRespawn(i); this._checkDead(); return; }
     // the world, then what has changed in it (applied once the world is in: the worker answers in order)
     if (!this._postInit(nw, () => {})) return;

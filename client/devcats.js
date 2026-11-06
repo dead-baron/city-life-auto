@@ -12,7 +12,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 const WORK = new Set(['flatbed', 'van', 'bus', 'police', 'swat', 'ambulance', 'armored', 'boxtruck', 'dumptruck', 'mixer', 'tanker', 'garbage', 'firetruck', 'towtruck', 'fbi', 'army', 'tractor', 'combine', 'movingvan', 'icecream', 'rescue4x4', 'taxi', 'policebike', 'policeboat', 'rescueboat', 'ferry', 'waterbus', 'trawler', 'semi', 'trailer', 'boxtrailer']);
 const ODD = new Set(['horse', 'cart', 'skateboard', 'surfboard', 'golfcart', 'tank']);
 export const vehGroup = (id) => { const d = VEHICLES[id]; return ODD.has(id) ? 'other' : WORK.has(id) ? 'work' : d.kind === 'air' ? 'air' : d.kind === 'boat' ? 'boats' : d.kind === 'bike' ? 'bikes' : 'cars'; };
-export const VEH_GROUPS = [['cars', '🚗 Spawn: cars'], ['bikes', '🏍 Spawn: bikes & motorbikes'], ['boats', '🚤 Spawn: boats'], ['air', '🚁 Spawn: aircraft'], ['work', '🚚 Spawn: work & emergency vehicles'], ['other', '🐴 Spawn: horses, carts, boards & the rest']];
+export const VEH_GROUPS = [['cars', '🚗 Spawn: cars'], ['bikes', '🏍 Spawn: bikes & motorcycles'], ['boats', '🚤 Spawn: boats'], ['air', '🚁 Spawn: aircraft'], ['work', '🚚 Spawn: work & emergency vehicles'], ['other', '🐴 Spawn: horses, carts, boards & the rest']];
 const spawnSections = () => VEH_GROUPS.map(([g, title]) => ({ id: 'v' + g, title, items: Object.keys(VEHICLES).filter((id) => vehGroup(id) === g).sort((a, b) => VEHICLES[a].name.localeCompare(VEHICLES[b].name)).map((id) => [`${VEHICLES[id].name} (${id})`, 'car', { m: id }]) }));
 export const DEV_SECTIONS = [
   { id: 'wx', title: '🌦 Weather & time', items: [
@@ -92,11 +92,11 @@ export const DEV_SECTIONS = [
   { id: 'boom', title: '💥 Explosions', items: [
     ['💥 Small blast ahead', 'blast', { k: 'small' }], ['💥 Medium blast ahead', 'blast', { k: 'medium' }], ['💥 Big blast ahead', 'blast', { k: 'big' }],
     ['💥 Ultra blast ahead', 'blast', { k: 'ultra' }], ['🚗 A car goes up', 'blast', { k: 'car' }], ['🛢 A tanker goes up', 'blast', { k: 'tanker' }],
-    ['🧨 An explosives truck goes up', 'blast', { k: 'truck' }], ['🔗 A tanker by a row of cars', 'blast', { k: 'row' }], ['🧍 A crowd round a tanker', 'blast', { k: 'crowd' }],
+    ['🧨 An explosives truck goes up', 'blast', { k: 'truck' }], ['🔗 A tanker by a row of cars', 'blast', { k: 'row' }], ['🧍 A crowd around a tanker', 'blast', { k: 'crowd' }],
   ] },
   { id: 'bikes', title: '🚲 Bike racks & horses', items: [
     ['🔒 Nearest bike rack', 'near', { k: 'bikerack' }],
-    ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to hire, buy; the farm horses)', 'near', { k: 'farm' }],
+    ['🐴 Me up on a horse', 'car', { m: 'horse', in: 1 }], ['🐴 A farm co-op (horses to rent, buy; the farm horses)', 'near', { k: 'farm' }],
   ] },
   { id: 'rail', title: '🚆 Trains', items: [
     ['🚉 Call a train to this station', 'calltrain'], ['🚆 Hop on the nearest train', 'train'], ['🚇 Hop on the nearest subway', 'train', { sub: 1 }],
@@ -114,7 +114,7 @@ export const DEV_SECTIONS = [
     ['🚂 The mail train (on the desert run if one is)', 'train', { mail: 1 }], ['🎁 Contraband drop', 'drop', { n: 4 }], ['👜 Snatch-and-grab nearby', 'snatch'], ['👊 A street fight nearby', 'happen', { k: 'fight' }], ['👮 A fight the police break up', 'happen', { k: 'fight', cops: 1 }], ['🚑 Someone collapses nearby', 'happen', { k: 'faint' }], ['👛 Someone drops a wallet nearby', 'happen', { k: 'wallet' }],
   ] },
   { id: 'fun', title: '🎉 Events & sport', items: [
-    ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Pitch or court', 'near', { k: 'venue' }],
+    ['🐶 Lost pet nearby', 'pet'], ['🏁 Water race start (craft waiting)', 'near', { k: 'race' }], ['🏐 Field or court', 'near', { k: 'venue' }],
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
     ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🏄 A surf break (with a board)', 'near', { k: 'surf' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['♨ Bathhouse', 'near', { k: 'bathhouse' }], ['⚽ Car soccer: the arena\'s gate', 'near', { k: 'carsoccer' }], ['🚗 Car soccer: a match now', 'soccer'], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
     ['🎰 Casino', 'near', { k: 'casino' }], ['🎲 Street dice', 'near', { k: 'dice' }],
@@ -130,10 +130,10 @@ export const DEV_SECTIONS = [
     ['🦌 Deer herd', 'animal', { k: 'deer' }], ['🦌 Elk herd', 'animal', { k: 'elk' }], ['🦌 Moose', 'animal', { k: 'moose' }],
     ['🐻 Black bear (maybe with cubs)', 'animal', { k: 'blackbear' }], ['🐻 Grizzly', 'animal', { k: 'grizzly' }],
     ['🐆 Mountain lion stalking you', 'animal', { k: 'cougar', stalk: 1 }], ['🐈 Bobcat', 'animal', { k: 'bobcat' }], ['🐺 Coyotes', 'animal', { k: 'coyote' }],
-    ['🦊 Red fox', 'animal', { k: 'redfox' }], ['🦊 Grey fox', 'animal', { k: 'greyfox' }], ['🐐 Mountain goats', 'animal', { k: 'mtgoat' }],
+    ['🦊 Red fox', 'animal', { k: 'redfox' }], ['🦊 Gray fox', 'animal', { k: 'greyfox' }], ['🐐 Mountain goats', 'animal', { k: 'mtgoat' }],
     ['🐗 Wild boar', 'animal', { k: 'boar' }], ['🦝 Raccoons', 'animal', { k: 'raccoon' }], ['🦫 Beavers', 'animal', { k: 'beaver' }],
     ['🦦 River otters', 'animal', { k: 'otter' }], ['🦦 Sea otters (protected)', 'animal', { k: 'seaotter' }], ['🦈 A great white (swim out to sea)', 'animal', { k: 'shark' }], ['🐇 Rabbits', 'animal', { k: 'rabbit' }],
-    ['🐺 Grey wolf pack', 'animal', { k: 'wolf' }], ['🪶 Great blue heron', 'animal', { k: 'heron' }], ['🦅 Osprey', 'animal', { k: 'osprey' }], ['🦅 Bald eagle', 'animal', { k: 'eagle' }],
+    ['🐺 Gray wolf pack', 'animal', { k: 'wolf' }], ['🪶 Great blue heron', 'animal', { k: 'heron' }], ['🦅 Osprey', 'animal', { k: 'osprey' }], ['🦅 Bald eagle', 'animal', { k: 'eagle' }],
     ['🎯 Watch: wolves run down a deer', 'animal', { scene: 'wolves' }], ['🎯 Watch: a lion stalks a deer', 'animal', { scene: 'cougar' }], ['🎯 Watch: an eagle takes a rabbit', 'animal', { scene: 'eagle' }],
     ['🎯 Watch: a fox mousing', 'animal', { scene: 'fox' }], ['🎯 Watch: a heron fishing', 'animal', { scene: 'heron' }], ['🎯 Watch: a bear fishing', 'animal', { scene: 'bear' }],
     ['🎯 Watch: an otter fishing', 'animal', { scene: 'otter' }], ['🎯 Watch: an osprey dives', 'animal', { scene: 'osprey' }],
@@ -161,11 +161,11 @@ export const DEV_SECTIONS = [
     ['🛥 Boats with people aboard (riders in open boats)', 'rescue', { at: 'crew' }], ['🚤 Rescue boat', 'car', { m: 'rescueboat' }],
   ] },
   // a night out (IN14: server/systems/bowling.js)
-  { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }], ['🎬 The Grand Theatre (cinema, at the ticket counter)', 'near', { k: 'cinema' }]] },
+  { id: 'nightout', title: '🎳 Bowling & cinema', items: [['🎳 Pinwheel Lanes (bowling alley, at the shoe counter)', 'near', { k: 'bowling' }], ['🎬 The Grand Theater (cinema, at the ticket counter)', 'near', { k: 'cinema' }]] },
   // people going about their lives (task #423: server/systems/activities.js) - the nearest spot, filled, you a little way off
   { id: 'activities', title: '🎣 People going about', items: [
     ['🎣 Anglers on a pier', 'act', { k: 'anglers' }], ['♟ Chess in the park', 'act', { k: 'chess' }], ['🧺 A picnic', 'act', { k: 'picnic' }],
-    ['🎨 A street painter', 'act', { k: 'painter' }], ['🧽 Washing the car', 'act', { k: 'carwash' }], ['💬 Neighbours chatting', 'act', { k: 'chat' }],
+    ['🎨 A street painter', 'act', { k: 'painter' }], ['🧽 Washing the car', 'act', { k: 'carwash' }], ['💬 Neighbors chatting', 'act', { k: 'chat' }],
     ['🍅 Pickers in a field', 'act', { k: 'pickers' }], ['⛏ Miners at the rock face', 'act', { k: 'miners' }],
     ['🦺 A hunter and his dog', 'act', { k: 'hunter' }], ['🏀 A pickup game at the courts', 'act', { k: 'hoops' }], ['🎱 Pool at the Rusty Spur', 'act', { k: 'pool' }],
     ['🍔 Eating at a diner (a cafe, a bistro)', 'act', { k: 'diners' }],
@@ -175,7 +175,7 @@ export const DEV_SECTIONS = [
     ['🎩 A park ranger on the beat (talk to them)', 'act', { k: 'ranger' }], ['🥾 Backpackers or a runner on a trail', 'act', { k: 'trail' }],
     ['🔭 A birdwatcher by the water', 'act', { k: 'birders' }], ['🎣 An angler at a creek\'s hold', 'act', { k: 'holds' }],
     ['🛶 A kayaker on the shore', 'act', { k: 'kayakers' }], ['🧗 Climbers at a crag', 'act', { k: 'climbers' }],
-    ['🍄 A forager on their round', 'act', { k: 'foragers' }], ['🏕 A camper cooking by the tent', 'act', { k: 'campcook' }],
+    ['🍄 A forager on their rounds', 'act', { k: 'foragers' }], ['🏕 A camper cooking by the tent', 'act', { k: 'campcook' }],
   ] },
   // vehicle damage you can see (task #402: server/dev.js 'vdmg')
   { id: 'vdmg', title: '🚗 Vehicle damage', items: [
@@ -205,11 +205,11 @@ export const DEV_SECTIONS = [
   ] },
   // driving for a living (H72: server taxijob.js, busjob.js, towjob.js)
   { id: 'drive', title: '🚕 Taxi, bus, tow truck, trucker & mail', items: [
-    ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'], ['🚖 Crazy Taxi: a run, me at the wheel', 'crazycab'], ['🚛 Trucker: a haul, the rig by me', 'haul'], ['📬 Mail round: the van', 'mailjob'], ['✉ Mail round: on foot', 'mailjob', { k: 'walk' }], ['✋ Hail a cab (players on duty)', 'cabhail'],
+    ['🚕 Taxi driver: a cab, a fare hailing beside me', 'cabjob'], ['🚌 Bus driver: the nearest line', 'busjob'], ['🛻 Tow truck: a car to tow', 'towjob'], ['🚖 Crazy Taxi: a run, me at the wheel', 'crazycab'], ['🚛 Trucker: a haul, the rig by me', 'haul'], ['📬 Mail route: the van', 'mailjob'], ['✉ Mail route: on foot', 'mailjob', { k: 'walk' }], ['✋ Hail a cab (players on duty)', 'cabhail'],
   ] },
   // working for a living, batch 8 (server forklift.js, fishboat.js, rangerjob.js)
   { id: 'work8', title: '🏗 Forklift, fishing boat & ranger', items: [
-    ['🏗 Forklift driver: the nearest yard, at the wheel', 'forklift'], ['🎣 Fishing boat: the trawler at the nearest quay', 'fishboat'],
+    ['🏗 Forklift driver: the nearest yard, at the wheel', 'forklift'], ['🎣 Fishing boat: the trawler at the nearest dock', 'fishboat'],
     ['🌲 Ranger: walk the trail', 'ranger', { k: 'patrol' }], ['🌲 Ranger: clear the litter', 'ranger', { k: 'litter' }], ['🌲 Ranger: a campfire left burning', 'ranger', { k: 'fire' }], ['🌲 Ranger: a lost hiker', 'ranger', { k: 'hiker' }],
   ] },
 ];

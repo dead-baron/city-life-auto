@@ -112,7 +112,7 @@ const SHOPS = [
   { name: 'Calzoleria Enzo', store: 'mart' },
   { name: 'Rope & Sail Chandlery', store: 'mart' },
   { name: "The Ship's Lantern", store: 'bar' },
-  { name: 'Harbour Pottery', store: 'mart' },
+  { name: 'Harbor Pottery', store: 'mart' },
   { name: 'Sapori di Mare', store: 'diner', food: true },
   { name: 'Tabacchi Nico', store: 'mart' },
   { name: 'Velluto Boutique', store: 'clothes' },

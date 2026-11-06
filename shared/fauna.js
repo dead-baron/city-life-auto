@@ -111,7 +111,7 @@ export const SPECIES = {
     hunts: { prey: ['rabbit', 'squirrel', 'quail'], how: 'chase', r: 620, spring: 170, chase: 7, p: 0.45 },
   },
   wolf: {
-    name: 'Grey Wolf', size: 'medium', hp: 85, walk: 55, trot: 170, run: 325,
+    name: 'Gray Wolf', size: 'medium', hp: 85, walk: 55, trot: 170, run: 325,
     sense: { sight: 380, hear: 390, smell: 560 }, temper: 'elusive', group: { kind: 'pack', n: [2, 4], young: 'pup', youngP: 0.2 },
     active: 'dawn-dusk', habitat: { mountain: 1.1, forest: 0.8, redwood: 0.5, meadow: 0.7 }, diet: 'hunt', howls: true, few: 4,
     loot: [['gameMeat', 2, 3], ['wolfPelt', 1, 1]], legend: { name: 'the White Wolf', p: 0.014 },
@@ -125,7 +125,7 @@ export const SPECIES = {
     hunts: { prey: ['rabbit', 'quail'], how: 'ambush', r: 480, spring: 95, chase: 3.5, p: 0.3 },
   },
   greyfox: {
-    name: 'Grey Fox', size: 'small', hp: 26, walk: 46, trot: 140, run: 280,
+    name: 'Gray Fox', size: 'small', hp: 26, walk: 46, trot: 140, run: 280,
     sense: { sight: 280, hear: 360, smell: 380 }, temper: 'curious', group: { kind: 'solo', n: [1, 1] },
     active: 'night', habitat: { redwood: 1.4, forest: 1.6, scrub: 1.2, desert: 0.5 }, diet: 'forage', climbs: true, mouses: true,
     loot: [['gameMeat', 1, 1], ['greyFoxPelt', 1, 1]], legend: { name: 'the Silver Fox', p: 0.014 },
@@ -163,7 +163,7 @@ export const SPECIES = {
     loot: [['rabbitMeat', 1, 1], ['rabbitPelt', 1, 1]], legend: { name: 'the Moon Hare', p: 0.012 },
   },
   squirrel: {
-    name: 'Grey Squirrel', size: 'tiny', hp: 8, walk: 40, trot: 120, run: 230,
+    name: 'Gray Squirrel', size: 'tiny', hp: 8, walk: 40, trot: 120, run: 230,
     sense: { sight: 240, hear: 260, smell: 160 }, temper: 'skittish', group: { kind: 'solo', n: [1, 2] },
     active: 'day', habitat: { redwood: 2.5, forest: 3, park: 2 }, diet: 'forage', climbs: true,
     loot: [['gameMeat', 1, 1], ['squirrelPelt', 1, 1]], legend: { name: 'the White Squirrel', p: 0.01 },

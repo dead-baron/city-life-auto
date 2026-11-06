@@ -36,7 +36,7 @@ test('World v3: the places on the water - Prison Island, the Long Reach, Kestrel
   for (let y = y0; y < y1; y++) for (const x of [x0, x1 - 1]) { const t = m.tiles[at(x, y)]; if (t === T.WALL || t === T.BUILDING) wall++; else holes.push([x, y]); }
   check(!holes.length, `the prison's walls whole but for the gate: ${JSON.stringify(holes.slice(0, 6))}`);
   check(bld('Guard Tower').length === 4, `four guard towers (${bld('Guard Tower').length})`);
-  for (const n of ['Cell Block A', 'Cell Block B', 'Cell Block C', 'Kitchen Block', 'Prison Gatehouse', "Warden's House", 'Prison Island Light', 'Prison Harbour Office']) {
+  for (const n of ['Cell Block A', 'Cell Block B', 'Cell Block C', 'Kitchen Block', 'Prison Gatehouse', "Warden's House", 'Prison Island Light', 'Prison Harbor Office']) {
     const b = bld(n)[0];
     check(b, `${n} built`);
     if (b) check(m.dist[at(b.tx + (b.tw >> 1), b.ty + (b.th >> 1))] === 55, `${n} on Prison Island's ground (${m.dist[at(b.tx + (b.tw >> 1), b.ty + (b.th >> 1))]})`);

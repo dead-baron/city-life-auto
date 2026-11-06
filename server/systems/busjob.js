@@ -62,7 +62,7 @@ export function start(world, p, L = null, k = -1) {
   p.job.due = world.time + 60 + Math.hypot(v.x - L.stops[k].x, v.y - L.stops[k].y) / BUSJOB.speed;
   waitAt(world, p, L, k);
   setText(world, p, L);
-  world.notify(p, `You drive the ${L.name} today: your bus is the green ring, on the line by the ${L.stops[k].name} stop. Pull up at each stop to let people off and on - and keep to the timetable.`, 'good', `Bus shift on the ${L.name}: your bus is the green ring`);
+  world.notify(p, `You drive the ${L.name} today: your bus is the green ring, on the line by the ${L.stops[k].name} stop. Pull up at each stop to let people off and on - and keep to the schedule.`, 'good', `Bus shift on the ${L.name}: your bus is the green ring`);
   p.meDirty = true;
   store.touch();
   return null;
@@ -160,7 +160,7 @@ function step(world, p, dt) {
   world.notify(p, onTime ? `${st.name} on time: +$${BUSJOB.perStop}.` : `${st.name}: ${Math.round(j.arrived)}s late - nothing for the stop.`, onTime ? 'good' : 'warn');
   store.touch();
   if (j.served >= L.stops.length) {
-    world.notify(p, `Shift done: round the ${L.name}, ${j.onTime} of ${j.served} stops on time, ${j.riders} passengers.`, 'good');
+    world.notify(p, `Shift done: around the ${L.name}, ${j.onTime} of ${j.served} stops on time, ${j.riders} passengers.`, 'good');
     endShift(world, p);
     jobs.jobDone(world, p);
     return;

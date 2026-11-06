@@ -154,7 +154,7 @@ function deliver(world, p, spotFor, where) {
   if (st.k === 'wait') return `Your starter car will be ready in ${mmss(st.secs)}.`;
   const spot = spotFor(st.v || null);
   if (!spot) return 'The lot is full right now - try again in a moment.';
-  if (st.k === 'out') { bringRound(world, st.v, spot); world.notify(p, `Your ${NAME()} has been brought round - ${where}.`, 'good'); return null; }
+  if (st.k === 'out') { bringRound(world, st.v, spot); world.notify(p, `Your ${NAME()} has been brought around - ${where}.`, 'good'); return null; }
   spawnAt(world, p, spot);
   world.notify(p, `Your starter car is ${where}: a ${NAME()}, registered to you. Free, as ever.`, 'good');
   return null;
@@ -165,7 +165,7 @@ export function fetch(world, p, poi) {
   if (!g) return 'There is no garage here.';
   const h = homeGarage(world, p.profile);
   if (h) return `Your starter car lives in your garage at ${h.name} now.`;
-  return deliver(world, p, (v) => freeSpot(world, g, v), g.station ? `in the car park at ${g.name}` : `out front at ${g.name}`);
+  return deliver(world, p, (v) => freeSpot(world, g, v), g.station ? `in the parking lot at ${g.name}` : `out front at ${g.name}`);
 }
 // At your home (economy.js menu: 'hstarter'): out of the garage onto the driveway (as homes.spawnOwnedAt: what's parked
 // there empty is moved off - a home's lot is its owner's)
@@ -192,7 +192,7 @@ function row(world, p, id, at) {
   const st = state(world, p);
   if (st.k === 'taken') return { id, label: 'Your starter car: someone else has it', dis: true, note: 'back once it\'s left' };
   if (st.k === 'wait') return { id, label: `Your starter car: ready in ${mmss(st.secs)}`, dis: true, note: 'free' };
-  if (st.k === 'out') return { id, label: `Bring your starter car round (${where(world, st.v)})`, note: 'free', shut: 1 };
+  if (st.k === 'out') return { id, label: `Bring your starter car around (${where(world, st.v)})`, note: 'free', shut: 1 };
   return { id, label: at === 'garage' ? `Take out your ${NAME()} (starter car)` : `Your starter car: a ${NAME()}`, note: 'free', shut: 1 };
 }
 const where = (world, v) => (world.map.districtAt && world.map.districtAt(v.x, v.y)?.name) || 'out in the world';
@@ -217,9 +217,9 @@ export function onJoin(world, p) {
   store.touch();
   if (carOf(world, p.pid) || homeGarage(world, prof) || !p.ped) return;
   const g = arrivalFor(world, p), sp = g && freeSpot(world, g);
-  if (!sp) { world.notify(p, 'Your starter car - a rusty compact, registered to you - is free at any public garage: a station car park, the Fresh Coat Garage or a dealership.', 'info'); return; }
+  if (!sp) { world.notify(p, 'Your starter car - a rusty compact, registered to you - is free at any public garage: a station parking lot, the Fresh Coat Garage or a dealership.', 'info'); return; }
   spawnAt(world, p, sp);
-  world.notify(p, `Your starter car is waiting in the car park at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');
+  world.notify(p, `Your starter car is waiting in the parking lot at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');
 }
 // homes.claim: a home with a garage - the starter lives there from now on (out and empty: moved in now)
 export function onHome(world, p, home) {

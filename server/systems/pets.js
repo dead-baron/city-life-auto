@@ -31,7 +31,7 @@ const KINDS = [
   { art: 'dog_spaniel', what: 'dog', look: 'A brown-and-white spaniel, floppy ears, very muddy by now.', names: ['Bella', 'Patches', 'Cooper'] },
   { art: 'dog_pup', what: 'puppy', look: 'A little cream puppy with a bell on its collar. Nervous of cars.', names: ['Peanut', 'Pip', 'Waffles'] },
   { art: 'cat_black', what: 'cat', look: 'A black cat, green eyes, a silver tag. Likes to hide.', names: ['Salem', 'Inky', 'Luna'] },
-  { art: 'cat_grey', what: 'cat', look: 'A grey tabby, shy - talk softly.', names: ['Smokey', 'Misty', 'Earl Grey'] },
+  { art: 'cat_grey', what: 'cat', look: 'A gray tabby, shy - talk softly.', names: ['Smokey', 'Misty', 'Earl Grey'] },
   { art: 'cat_ginger', what: 'cat', look: 'A big fluffy ginger cat. Will follow food anywhere.', names: ['Marmalade', 'Ginger', 'Tiger'] },
 ];
 const HOME_KINDS = new Set(['house', 'cottage', 'apartment']);   // (m.homes: the homes of the city, not a shack or a mansion)
@@ -173,8 +173,8 @@ function create(world, h, door, lost, posters) {
     area, posters, read: new Set(), foundX: at.x, foundY: at.y,
   };
   ownerOut(world, pet);
-  events.feed(world, { kind: 'pet', text: `"Lost ${k.what}" posters are up round ${pet.pet.house.where}: ${name}`, x: door.x, y: door.y });
-  events.tellNear(world, door.x, door.y, `Someone's put up "Lost ${k.what}" posters round here - read one.`, 'info');
+  events.feed(world, { kind: 'pet', text: `"Lost ${k.what}" posters are up around ${pet.pet.house.where}: ${name}`, x: door.x, y: door.y });
+  events.tellNear(world, door.x, door.y, `Someone's put up "Lost ${k.what}" posters around here - read one.`, 'info');
   return pet;
 }
 // its owner, out at their door
@@ -212,7 +212,7 @@ export function rewardFor(pet) {
 // what a poster says (to the one reading it at x, y)
 export function posterText(world, pet, x, y) {
   const pp = pet.pet, A = pp.area, H = pp.house, d = Math.hypot(A.x - x, A.y - y);
-  const seen = d < A.r ? 'right round here' : `${howFar(d)} ${compass(A.x - x, A.y - y)} of here`;
+  const seen = d < A.r ? 'right around here' : `${howFar(d)} ${compass(A.x - x, A.y - y)} of here`;
   return `LOST ${pp.kind.toUpperCase()}: ${pp.name}. ${pp.look} Last seen in ${districtName(world.map, A.x, A.y)}, ${seen} - marked on your map. Found it? Please bring ${pp.name} home to ${H.name} (${H.where}). REWARD.`;
 }
 
@@ -265,7 +265,7 @@ function abandon(world, pet, p) {
   pp.follow = 0; pp.until = 0;
   const a = rng() * Math.PI * 2, d = rng() * pp.area.r * 0.4;
   pp.area = { x: Math.round(pet.x + Math.cos(a) * d), y: Math.round(pet.y + Math.sin(a) * d), r: pp.area.r };
-  if (p) world.notify(p, `You let ${pp.name} go. It'll sniff about round here - the posters are still up.`, 'info');
+  if (p) world.notify(p, `You let ${pp.name} go. It'll sniff around here - the posters are still up.`, 'info');
   for (const q of world.players.values()) q.meDirty = true;
 }
 
@@ -409,7 +409,7 @@ export function update(world, dt) {
     if (pp.follow) {
       const lead = world.get(pp.follow);
       if (!lead || lead.dead || lead.vehId || lead.hidden || Math.hypot(lead.x - pet.x, lead.y - pet.y) > LEASH_PX) {
-        if (lead && lead.player) world.notify(lead.player, `${pp.name} slipped away! It'll be sniffing about round where you lost it.`, 'warn');
+        if (lead && lead.player) world.notify(lead.player, `${pp.name} slipped away! It'll be sniffing around where you lost it.`, 'warn');
         abandon(world, pet, null);   // (slipped away)
       } else {
         pace = 1;

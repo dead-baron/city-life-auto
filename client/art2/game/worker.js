@@ -37,7 +37,8 @@ import { bakeSteps, loadProviders, SpriteCache, providers as chunkProviders } fr
 import * as GB from '../gbuf.js';
 import { packPlanes } from './chunkpack.js';
 import { readWorld } from '../../worldcache.js';
-import { getChunk, hasChunk, putChunk, putChunkZ, packChunk, unpackChunk, parseChunkFile, tidy, canKeep } from './chunkstore.js';
+import { getChunk, hasChunk, putChunk, putChunkZ, packChunk, unpackChunk, parseChunkFile, canKeep } from './chunkstore.js';
+import { prevArt, tidyKeep, getRaw, prevKey } from './chunkcarry.js';
 import { BARRIER_PIECE } from '../../../shared/levels.js';
 
 // A pause that lets the messages already waiting for this worker run first (a message to ourselves goes to the
@@ -87,6 +88,7 @@ function pack(g, transfer, under = null, run = 0) {
 const MODS = Promise.all([loadProviders(), loadActors(), import('../../../shared/mapcore.js').catch((e) => { P.errors.map = String((e && e.message) || e); return null; })]);
 MODS.catch(() => {});
 let ready = null, worldIn = null, KEEP = null, PHONE = false;
+const tidy = (art, cap) => (KEEP && KEEP.prevP ? KEEP.prevP : Promise.resolve(null)).then((prev) => tidyKeep(art, prev, cap));
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 async function init(args) {
   ART = args.artPx === 1 ? 1 : 2;
@@ -94,6 +96,8 @@ async function init(args) {
   CDN.base = KEEP && typeof args.cdn === 'string' && /^https?:\/\//.test(args.cdn) && typeof fetch === 'function' ? args.cdn : null;
   CDN.saveData = !!args.saveData;
   PHONE = !!args.phone;
+  // (the build before's kept chunks stay, to be carried over when the server finds them unchanged: chunkcarry.js)
+  if (KEEP) { KEEP.prev = null; KEEP.prevP = prevArt(KEEP.art).then((p) => { if (KEEP) KEEP.prev = p; return p; }); }
   if (KEEP && KEEP.tidy) setTimeout(() => tidy(KEEP.art, KEEP.cap), 4000);   // (once things have settled; and every so often after)
   const lowMem = !!args.lowMem;
   // (the pool says how much; without that: four workers a little less each)
@@ -132,7 +136,11 @@ async function fromCdn(cx, cy, q, ck, o = null) {
   const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
   const timer = ctl ? setTimeout(() => ctl.abort(), CDN_TIMEOUT_MS) : 0;
   try {
-    const res = await fetch(`${CDN.base}${KEEP.art}/${q}/${ART}/${cx}/${cy}${o && o.pre ? '?pre=1' : ''}`, ctl ? { signal: ctl.signal } : {});
+    // (the build before's chunk kept here: the server says when this build's is the same - x-art-same, no body - and the
+    // page carries it over: chunkcarry.js)
+    const pk = prevKey(ck, KEEP.art, KEEP.prev), had = pk && (await hasChunk(pk)) ? KEEP.prev : null;
+    const qs = [o && o.pre ? 'pre=1' : '', had ? `had=${had}` : ''].filter(Boolean).join('&');
+    const res = await fetch(`${CDN.base}${KEEP.art}/${q}/${ART}/${cx}/${cy}${qs ? '?' + qs : ''}`, ctl ? { signal: ctl.signal } : {});
     const hdr = (k) => (res.headers && res.headers.get ? res.headers.get(k) : null);
     const eta = Number(hdr('x-art-eta')) || 0, soon = eta > 0 && eta < CDN_SOON_MS ? eta : 0;
     if (res.status !== 200) {
@@ -148,8 +156,9 @@ async function fromCdn(cx, cy, q, ck, o = null) {
       if (!(o && o.pre) && ++CDN.missRun >= 6) { CDN.missRun = 0; CDN.pauseUntil = now + 15000; }
       return null;
     }
-    const stale = hdr('x-art-stale') === '1';
-    const f = parseChunkFile(await res.arrayBuffer());
+    const stale = hdr('x-art-stale') === '1', mine = had && (hdr('x-art-same') === '1' || (stale && hdr('x-art-yours') === '1'));
+    const f = mine ? await getRaw(pk) : parseChunkFile(await res.arrayBuffer());
+    if (mine && f && !stale) CDN.same = (CDN.same || 0) + 1;
     if (!f) return null;
     CDN.missRun = 0; CDN.fails = 0; CDN.offs = 0;
     if (stale) {   // (the previous build's: shown until this build's comes, never kept)
@@ -232,6 +241,21 @@ function inWindow(cx, cy) {
   return x0 >= M.x0 && y0 >= M.y0 && x1 <= M.x0 + M.w && y1 <= M.y0 + M.h;
 }
 
+const WP = { port: null, got: new Map(), wait: new Map() };
+function gotWindow(d) {
+  if (!d || !d.wid) return;
+  WP.got.set(d.wid, d.data);
+  for (const k of WP.got.keys()) if (k < d.wid - 1) WP.got.delete(k);   // (the one before kept: a 'reworld' for it may still be on its way)
+  const f = WP.wait.get(d.wid);
+  if (f) { WP.wait.delete(d.wid); f(); }
+}
+// window number wid as the city worker sent it (null after 30 s: the old window stays, its bakes not kept - inWindow)
+function windowNo(wid) {
+  const take = () => { const m = WP.got.get(wid) || null; WP.got.delete(wid); return m; };
+  if (WP.got.has(wid)) return Promise.resolve(take());
+  return new Promise((res) => { const t = setTimeout(() => { WP.wait.delete(wid); res(null); }, 30000); WP.wait.set(wid, () => { clearTimeout(t); res(take()); }); });
+}
+
 async function handle(msg) {
   const { id, op, args } = msg;
   const t0 = performance.now();
@@ -244,6 +268,15 @@ async function handle(msg) {
     return;
   }
   if (op === 'world') { if (worldIn) { const f = worldIn; worldIn = null; f(args.M); } return; }   // (the city, when it wasn't kept)
+  // World v3's windows from the city worker itself (client/worldgen.js; pool.js linkWindows): its channel, then each window
+  // by number - 'reworld' { wid } names the one to take, and everything after it waits for it (ready)
+  if (op === 'windowPort') { WP.port = args.port; WP.port.onmessage = (e) => gotWindow(e.data); return; }
+  if (op === 'reworld' && args.wid) {
+    const before = ready || Promise.resolve();
+    ready = before.then(() => windowNo(args.wid)).then(async (m) => { const mods = await MODS; if (m) takeWorld(m, mods[2]); barrierAt.clear(); });
+    await ready;
+    return;
+  }
   if (op === 'reworld') { if (ready) await ready; const mods = await MODS; takeWorld(args.M, mods[2]); barrierAt.clear(); return; }   // (World v3's window moved: host.js setMap)
   if (ready) await ready; // (jobs that arrive while the providers load wait for them)
   if (op === 'patch') { // the world changed (props smashed or put back): no answer
@@ -259,7 +292,7 @@ async function handle(msg) {
     }
     return;
   }
-  if (!M && op !== 'stats') throw new Error('worker not initialised');
+  if (!M && op !== 'stats') throw new Error('worker not initialized');
   if (op === 'peekChunk') {   // (a quick look in the store - or the server's: no baking)
     const { cx, cy, ck } = args;
     let got = null, exact = true;
@@ -387,7 +420,7 @@ async function handle(msg) {
   }
   if (op === 'stats') {
     const c = (k) => (k ? { bytes: k.bytes, n: k.m.size, max: k.max, hits: k.hits, misses: k.misses } : null);
-    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '', soon: CDN.soon, waited: CDN.waited, fetched: CDN.fetched, stale: CDN.stale, slow: CDN.slow, paused: performance.now() < CDN.pauseUntil, queued: CDN.queued || 0 }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
+    self.postMessage({ id, ok: true, result: { ...stats, cdn: { n: CDN.n, same: CDN.same || 0, ms: Math.round(CDN.ms), misses: CDN.misses, fails: CDN.fails, off: CDN.off, on: !!CDN.base, err: CDN.err || '', soon: CDN.soon, waited: CDN.waited, fetched: CDN.fetched, stale: CDN.stale, slow: CDN.slow, paused: performance.now() < CDN.pauseUntil, queued: CDN.queued || 0 }, statBytes: statCache ? statCache.bytes : 0, statN: statCache ? statCache.m.size : 0, sprBytes: sprCache ? sprCache.bytes : 0, sprN: sprCache ? sprCache.m.size : 0, stat: c(statCache), spr: c(sprCache) }, ms: 0 });
     return;
   }
   throw new Error(`unknown op ${op}`);

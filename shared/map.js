@@ -109,7 +109,7 @@ const SPECIALS = [
   { d: 7, prefab: 'club', biz: ['delivery'], names: ['Luna Lounge'] },
   { d: 7, prefab: 'arcade', biz: ['delivery'], names: ['Pixel Arcade'] },
   { d: 17, prefab: 'clubeclipse', biz: ['delivery'], names: ['Pink Moon Lounge'] },
-  { d: 4, prefab: 'theatre', biz: ['delivery'], names: ['The Grand Theatre'] },
+  { d: 4, prefab: 'theatre', biz: ['delivery'], names: ['The Grand Theater'] },
   { d: 4, prefab: 'vellori', biz: ['delivery'], names: ['Vellori'] },
   { d: 16, prefab: 'monarch', biz: ['delivery'], names: ['Monarch'] },
   { d: 16, prefab: 'diamond', biz: ['delivery'], names: ['Diamond & Co.'] },
@@ -193,7 +193,7 @@ const GENERIC_NAMES = {
   house7: ['Residence'], house8: ['Residence'], house9: ['Residence'], diner: ['City Diner', 'Eat Drink Local'],
   royale: ['Royale Fashion'], vellori: ['Vellori'], monarch: ['Monarch'], shanty1: ['Shack'], shanty2: ['Shack'], shanty3: ['Shack'],
   arcade: ['Pixel Arcade', 'Game Zone'], tattoo: ['Bold Ink Tattoo'], crown: ['Crown Couture'], greenbistro: ['Garden Bistro'],
-  theatre: ['The Grand Theatre'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'],
+  theatre: ['The Grand Theater'], diamond: ['Diamond & Co.'], redawning: ['Cafe Rouge'],
 };
 // Lots with a nightclub inside: walk in after dark (closed by day)
 export const CLUB_LOTS = new Set(['club', 'clubnova', 'clubeclipse']);
@@ -393,7 +393,7 @@ function buildCity(seed, opts = null, frame = null) {
   if (OPTS?.clinics) OPTS.clinics(m);   // (World v3: a clinic in each part of the world that has none near - shared/world3-medics.js; walk-ins next)
   buildInteriors(m);
   buildBowlingAlley(m, { T, DISTRICTS, keep: OPTS?.quays ? OPTS.quays.map((q) => q.freight).filter(Boolean) : null });   // (Pinwheel Lanes: eight lanes in the biggest plain warehouse - shared/bowling.js; World v3's ports keep their freight stop)
-  buildCinema(m, { T, DISTRICTS });   // (The Grand Theatre becomes a cinema: the lobby, two screens - shared/cinema.js)
+  buildCinema(m, { T, DISTRICTS });   // (The Grand Theater becomes a cinema: the lobby, two screens - shared/cinema.js)
   buildCellBlocks(m);   // (task #362: the cells at the back of every police station - shared/cells.js)
   buildDealerLots(m);
   clearHospitalFronts(m);
@@ -2258,7 +2258,7 @@ function atmSpot(m, b, x, loose = false) {
   const F = loose ? FOOT_LOOSE : FOOT;
   const wy = (b.ty + b.th) * TILE;
   if (onSubwayPlaza(m, x, wy + 8)) return false;
-  if (/Museum|Playhouse|Theatre|Chapel/.test(b.name || '')) return false;   // (not set into the front of a museum or a theatre)
+  if (/Museum|Playhouse|Theat(?:re|er)|Chapel/.test(b.name || '')) return false;   // (not set into the front of a museum or a theatre)
   if (x < b.tx * TILE + 22 || x > (b.tx + b.tw) * TILE - 22) return false;
   for (const dx of [-18, 0, 18]) if (m.tileAtPx(x + dx, wy - 6) !== T.BUILDING || !F.has(m.tileAtPx(x + dx, wy + 8))) return false;
   if (!FOOT_LOOSE.has(m.tileAtPx(x, wy + 36))) return false; // room to stand at it
@@ -3680,7 +3680,7 @@ function buildGullIsles(m, rand) {
     (m.landmarks ||= []).push({ name: 'Gull Point Light', type: 'lighthouse', x: (lh[0] - 6) * TILE, y: (lh[1] - 8) * TILE, w: 14 * TILE, h: 14 * TILE });
   }
   (m.landmarks ||= []).push({ name: 'Gull Harbor', type: 'harbor', x: 128 * TILE, y: 1040 * TILE, w: 66 * TILE, h: 34 * TILE });
-  m.gullIsles.push({ name: 'Gull Harbor', x: 186 * TILE, y: 1060 * TILE, rent: 'Gull Harbor Boat Hire' });
+  m.gullIsles.push({ name: 'Gull Harbor', x: 186 * TILE, y: 1060 * TILE, rent: 'Gull Harbor Boat Rental' });
   // --- Coral Cay ---
   const lane = 1095;   // Cove Lane, along the cove's north shore
   const cabins = [[1090, 'Coral Cay Beach Bar'], [1116, 'Beach Cabin'], [1127, 'Beach Cabin'], [1138, 'Beach Cabin']];
@@ -3702,7 +3702,7 @@ function buildGullIsles(m, rand) {
     if (t === T.SAND && m.zone[at(tx, ty)] === Z.GULL && !m.reserve[at(tx, ty)]) addProp(m, j % 3 ? 'palm_a' : 'lounger', (tx + 0.5) * TILE, (ty + 0.5) * TILE, j % 3 ? 10 : 0, j % 3 ? { sp: 'coconut', k: 1.25 } : { a: Math.PI / 2, v: j % 4 });
   }
   (m.landmarks ||= []).push({ name: 'Coral Cay Cove', type: 'cove', x: 1096 * TILE, y: 1096 * TILE, w: 30 * TILE, h: 28 * TILE });
-  m.gullIsles.push({ name: 'Coral Cay', x: 1111 * TILE, y: 1101 * TILE, rent: 'Coral Cay Dive & Boat Hire' });
+  m.gullIsles.push({ name: 'Coral Cay', x: 1111 * TILE, y: 1101 * TILE, rent: 'Coral Cay Dive & Boat Rental' });
 }
 
 // Smuggler's Rock (today's world): the Syndicate's walled compound on its island, the gate members only, the dock
@@ -3846,7 +3846,7 @@ function buildGunShops(m) {
     if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
     const b = m.buildings[p.b], d = DISTRICTS[distOf(p)];
     if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || !d || d.turf) return false;
-    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theatre|playhouse|station|club|bar|cannery|freight|salvage|pool|records/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar/.test(b.kind || '');
+    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theat(?:re|er)|playhouse|station|club|bar|cannery|freight|salvage|pool|records/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar/.test(b.kind || '');
   });
   cands.sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 41) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 41));
   const used = new Set(have.map(distOf));
@@ -3909,7 +3909,7 @@ function buildClothesShops(m) {
     const b = m.buildings[p.b];
     if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(b.id) || CLUB_LOTS.has(b.kind)) return false;
     if (m.pois.some((q) => q.b === p.b && q !== p && !WALK_IN.has(q.kind) && !HELPER_POIS.has(q.kind) && q.kind !== 'delivery')) return false;   // (buildInteriors: every door in it a shop)
-    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theatre|playhouse|station|club|bar|cannery|freight|salvage|pool|records|gallery/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar|motors|dealer/.test(b.kind || '');
+    return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theat(?:re|er)|playhouse|station|club|bar|cannery|freight|salvage|pool|records|gallery/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar|motors|dealer/.test(b.kind || '');
   };
   const take = (p, kind, store, name) => {
     const old = p.label;
@@ -4104,7 +4104,7 @@ function buildPark(m, b, rand, info) {
     const y0 = cy + 6, y1 = iy + ih - 6, len = Math.min(iw - 13, Math.round((y1 - y0) * PITCH_LONG)), x0 = cx - Math.floor(len / 2);
     pitch = { x0, y0, x1: x0 + len, y1 };
     m.fill(pitch.x0 - 1, pitch.y0 - 1, pitch.x1 - pitch.x0 + 2, pitch.y1 - pitch.y0 + 2, T.GRASS);
-    m.venues.push({ id: m.venues.length, kind: 'soccer', name: `${info.label} Pitch`, rect: { x: pitch.x0 * TILE, y: pitch.y0 * TILE, w: (pitch.x1 - pitch.x0) * TILE, h: (pitch.y1 - pitch.y0) * TILE }, goalW: 5 * TILE });
+    m.venues.push({ id: m.venues.length, kind: 'soccer', name: `${info.label} Soccer Field`, rect: { x: pitch.x0 * TILE, y: pitch.y0 * TILE, w: (pitch.x1 - pitch.x0) * TILE, h: (pitch.y1 - pitch.y0) * TILE }, goalW: 5 * TILE });
   }
   const onPitch = (tx, ty) => pitch && tx >= pitch.x0 - 2 && tx <= pitch.x1 + 1 && ty >= pitch.y0 - 2 && ty <= pitch.y1 + 1;
   for (let k = 0; k < (iw * ih) / 12; k++) {
@@ -4500,10 +4500,10 @@ function buildBoatDocks(m) {
   const marinaPoi = m.pois.find((p) => p.kind === 'marina');
   if (m.publicPier) anchors.push({ x: m.publicPier.x, y: m.publicPier.y + 6 * TILE, name: 'Sunset Beach Boat Rentals' });
   for (const a of m.handRentals || []) anchors.push(a);   // (a handcrafted district's own boat hire: World v3's Coral Cay - shared/world3-coralcay.js)
-  if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Hire' });
+  if (marinaPoi) anchors.push({ x: marinaPoi.x, y: marinaPoi.y, name: 'Harbor Boat & Jet Ski Rental' });
   if (m.pelican) anchors.push({ x: m.pelican.dock.x, y: m.pelican.dock.y, name: 'Pelican Key Jet Skis' });
   for (const v of m.gullIsles || []) anchors.push({ x: v.x, y: v.y, name: v.rent });   // (the only way off the Gull Isles is by boat)
-  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (pin(lk[0] + lk[2] / 2, lk[1] + lk[3] / 2), QX((lk[0] + lk[2] / 2) * TILE)), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Hire`, lake: true });   // (QX / QY: World v3's gulf places)
+  for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (pin(lk[0] + lk[2] / 2, lk[1] + lk[3] / 2), QX((lk[0] + lk[2] / 2) * TILE)), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Rental`, lake: true });   // (QX / QY: World v3's gulf places)
   for (const an of anchors) {
     const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
     const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2);

@@ -213,19 +213,19 @@ function reports(e, victim, tier, sev, seq) {
 // car to where they are (police.js reportUnit), which looks for that suspect only: still about in the same clothes
 // (or the same car), the officer knows them - stars by what they did, and the chase is on. A change of clothes throws
 // it off; one call per REPORT_COOLDOWN_S per player.
-const COLOURS = [['black', [24, 24, 28]], ['white', [236, 236, 236]], ['grey', [128, 128, 132]], ['red', [200, 38, 43]], ['maroon', [122, 29, 36]], ['orange', [239, 122, 26]],
+const COLOURS = [['black', [24, 24, 28]], ['white', [236, 236, 236]], ['gray', [128, 128, 132]], ['red', [200, 38, 43]], ['maroon', [122, 29, 36]], ['orange', [239, 122, 26]],
   ['yellow', [242, 194, 27]], ['green', [47, 154, 58]], ['teal', [37, 184, 192]], ['blue', [35, 80, 200]], ['navy', [29, 42, 90]], ['purple', [122, 58, 200]],
   ['pink', [224, 74, 154]], ['brown', [107, 74, 42]], ['beige', [216, 196, 152]]];
 export function colourName(hex) {
   let s = String(hex || '#888').replace('#', ''); if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
   const n = parseInt(s, 16) || 0, r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  let best = 'grey', bd = Infinity;
+  let best = 'gray', bd = Infinity;
   for (const [name, [R, G, B]] of COLOURS) { const d = (r - R) ** 2 + (g - G) ** 2 + (b - B) ** 2; if (d < bd) { bd = d; best = name; } }
   return best;
 }
 // what someone is wearing, as a witness would put it, and the key a match is made on
 export const outfitKey = (ped) => { const a = ped.app || {}; return [a.t, a.tc, a.l, a.ht || 0, a.ht ? a.htc : ''].join('|'); };
-export const outfitText = (a) => { a = a || {}; return `${colourName(a.tc)} top, ${colourName(a.l)} trousers${a.ht ? `, a ${colourName(a.htc)} hat` : ''}`; };
+export const outfitText = (a) => { a = a || {}; return `${colourName(a.tc)} top, ${colourName(a.l)} pants${a.ht ? `, a ${colourName(a.htc)} hat` : ''}`; };
 function looks(world, ped) {
   const a = ped.app || {}, v = ped.vehId ? world.get(ped.vehId) : null;
   let d = outfitText(a);
@@ -534,7 +534,7 @@ export function update(world, dt) {
       // out past the map's edge there's nowhere to hide: the harbour patrol has you on radar (border.js)
       if (!seen && !ped.hidden && edgeInfo(ped.x, ped.y, EDGE_I, world.map.frame).d > 0) {
         seen = true;
-        if (now - (p.lastEdgePing || -99) > 15) { p.lastEdgePing = now; world.notify(p, 'The harbour patrol has you on radar out here - the police know where you are.', 'bad'); }
+        if (now - (p.lastEdgePing || -99) > 15) { p.lastEdgePing = now; world.notify(p, 'The harbor patrol has you on radar out here - the police know where you are.', 'bad'); }
       }
       if (seen) { p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y; p.searchR = 60; }
       const unseen = now - p.seenAt;

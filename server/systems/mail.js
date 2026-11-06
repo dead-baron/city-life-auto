@@ -14,7 +14,7 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 const LETTERS = [
   'A postcard from your cousin at the coast: "Weather\'s lovely, wish you were here."',
   'The residents\' newsletter: the block party is on Saturday, bring a dish.',
-  'A note from a neighbour: "Thanks for keeping an eye on the place while we were away."',
+  'A note from a neighbor: "Thanks for keeping an eye on the place while we were away."',
   'A flyer from Sunny Side Window Cleaning - first visit free.',
   'Your old school\'s reunion: "Ten years already! Drinks at the Lantern Room."',
   'A thank-you card, unsigned. Someone in this city thinks you\'re all right.',

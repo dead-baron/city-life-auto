@@ -131,7 +131,7 @@ test('start fresh: the stores forget the profile (the file store\'s next save le
 test('start fresh: two presses, a clear warning, then this browser forgets only the game\'s own data', () => {
   const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /<section data-sec="danger" hidden><h2>DANGER ZONE<\/h2>[\s\S]{0,300}<button id="s-fresh"/, 'in Settings\' Danger zone, apart from the rest (UI-3; the title screen\'s Settings too)');
+  assert.match(html, /<div class="set-danger"><h3>DANGER ZONE<\/h3>[\s\S]{0,300}<button id="s-fresh"/, 'in Settings\' Danger zone, at the foot of ACCOUNT, apart from the rest (UI-10; the title screen\'s Settings too)');
   assert.match(readFileSync(new URL('../client/devmenu.js', import.meta.url), 'utf8'), /'⟲ Start fresh: erase my character…'/, 'and in the debug menu (client/devmenu.js)');
   const press = main.slice(main.indexOf('function freshPress('), main.indexOf('function freshDisarm('));
   assert.match(press, /FRESH_ARM_MS/, 'the first press arms it for a few seconds');

@@ -64,7 +64,7 @@ export function devSkate(world, p, msg) {
   const err = free(p);
   if (err) return err;
   const ped = p.ped, k = String(msg.k || 'on');
-  if (k === 'on') { if (!boardUp(world, p)) return '[dev] Can\'t ride here - stand on a road, a pavement or a plaza.'; world.notify(p, '[dev] On your board.', 'info'); return null; }
+  if (k === 'on') { if (!boardUp(world, p)) return '[dev] Can\'t ride here - stand on a road, a sidewalk or a plaza.'; world.notify(p, '[dev] On your board.', 'info'); return null; }
   if (k === 'mine') {   // a board of your own, set down beside you (skate.js bringOut)
     p.profile.board ||= { paint: 3, variant: 7 };
     if (!skate.bringOut(world, p, ped)) return '[dev] Nowhere to set it down here.';

@@ -32,10 +32,10 @@ export const PLACE_GROUPS = [
 const KIND_NOTE = {
   hospital: 'heal up', police: 'badge, evidence', bank: 'deposit / withdraw', atm: 'deposit / withdraw', gunshop: 'guns & ammo', sports: 'bats, fishing',
   hardware: 'melee tools', pharmacy: 'med kits', coffee: 'stamina', grocery: 'produce drop-off', clothing: 'clothes, fitting room', barber: 'haircuts', pawn: 'buy & sell gear',
-  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', rental: 'hire a boat or jet ski', warehouse: 'courier jobs',
+  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', rental: 'rent a boat or jet ski', warehouse: 'courier jobs',
   farm: 'harvest jobs', convenience: 'snacks, drinks, bandages', gasstation: 'snacks, drinks, bandages', courthouse: 'bounties', gang: 'syndicate turf / join the gang', smuggler: 'members only - boat to the Rock', charter: 'deep-sea charters (boat)', sar: 'search & rescue: sign on for rescue shifts',
   winery: 'wine tasting; buys grapes', clubhouse: 'the clubhouse bar', roadhouse: 'biker roadhouse: beer, rye; the clubs hang out', market: 'bread, fruit, honey; buys fruit', fruitstand: 'fruit, cider; pick your own', farmstand: 'honey, lemonade; buys honey',
-  snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the pictures: tickets & popcorn',
+  snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the movies: tickets & popcorn',
 };
 
 const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
@@ -162,7 +162,7 @@ export function createPhone(ctx) {
       const J = board.jobs, f = (k) => jobFilter === 'all' || jobFilter === k;
       // (UIC-05: All / Driving / Delivery / Service along the top - one tap to narrow the list; the sections stay under it)
       el.innerHTML = curJob() + `<div class="ph-chips" role="tablist">${JOB_FILTERS.map(([k, n]) => `<button class="chip${k === jobFilter ? ' on' : ''}" role="tab" aria-selected="${k === jobFilter}" data-jf="${k}">${n}</button>`).join('')}</div>`
-        + (job ? '' : '<p class="ph-hint">One job at a time. Start one and it\'s on your map - or walk up to a hospital, a fire station or a taxi rank.</p>')
+        + (job ? '' : '<p class="ph-hint">One job at a time. Start one and it\'s on your map - or walk up to a hospital, a fire station or a taxi stand.</p>')
         + (ctx.isCop() && f('service') ? sec('Patrol calls', J.filter((j) => j.kind === 'patrol')) : '')
         + (f('service') ? sec('Emergency services', J.filter((j) => j.kind === 'fire' || j.kind === 'medic')) : '')
         + (f('driving') ? sec('Driving', J.filter((j) => j.kind === 'drive')) : '')
@@ -220,7 +220,7 @@ export function createPhone(ctx) {
       const c = bty && bty.list.find((q) => q.id === b.dataset.bseen);
       if (!c || !c.seen) return;
       ctx.setWaypoint({ x: c.seen.x, y: c.seen.y, label: `${c.name} - last seen` });
-      ctx.toast(`Waypoint: round where ${c.name} was last seen (${c.seen.d})`, 'info');
+      ctx.toast(`Waypoint: around where ${c.name} was last seen (${c.seen.d})`, 'info');
       ctx.close();
     };
     for (const b of el.querySelectorAll('[data-act="court"]')) b.onclick = () => {
@@ -280,7 +280,7 @@ export function createPhone(ctx) {
     // a taxi: call one (or hail one going by), or how yours is getting on
     const tx = transit.taxi;
     h += '<h3>🚕 Rides</h3>' + (tx
-      ? `<div class="ph-card">${tx.st === 'pickup' ? `Your ${tx.tier === 'std' ? 'taxi' : esc(tx.name)} is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the kerb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
+      ? `<div class="ph-card">${tx.st === 'pickup' ? `Your ${tx.tier === 'std' ? 'taxi' : esc(tx.name)} is on its way (about ${Math.max(5, tx.eta)}s) - the yellow square on your map.` : tx.st === 'wait' ? 'Your taxi is waiting at the curb - get in the back.' : tx.st === 'dest' ? 'Where to? Set a waypoint (Places, or tap the map).' : tx.st === 'ride' ? `On the way to ${esc(tx.to)}: ${tx.m} m, $${tx.fare} so far.` : `There: $${tx.fare}.`}${tx.st === 'pickup' || tx.st === 'wait' ? '<button data-act="taxicancel">Cancel the taxi</button>' : ''}</div>`
       : (transit.rs || []).map((r) => `<button class="ph-row" data-act="taxicall" data-tier="${r.k}"><span class="ic">${r.k === 'premium' ? '🎩' : r.k === 'saver' ? '🪫' : '🚕'}</span><span class="nm">${esc(r.name)}<small>${esc(r.note)}</small></span></button>`).join(''))
       + '<p class="ph-hint">Your waypoint is where the driver takes you. Skip the ride on the way for the whole fare.</p>';
     h += `<h3>🚌 Buses</h3><p class="ph-hint">Wait at a stop and board the bus when it pulls up. Free, any distance. Get off at any stop with the vehicle key. Tap a stop for a waypoint.</p>`;
@@ -304,7 +304,7 @@ export function createPhone(ctx) {
     const rail = ctx.map().rail;
     if (rail) {
       const sts = railStations(ctx.map()).map((st, i) => ({ st, i, d: dist(st) })).sort((a, b) => a.d - b.d).slice(0, 3);
-      h += `<h3>🚆 Railway</h3><p class="ph-hint">${ctx.map().rails ? 'The main line\'s services run both ways round their loops; walk onto a stopped train at its platform.' : 'Trains run the whole loop round the city; walk onto a stopped train at any station.'} Free.</p>`
+      h += `<h3>🚆 Railroad</h3><p class="ph-hint">${ctx.map().rails ? 'The main line\'s services run both ways around their loops; walk onto a stopped train at its platform.' : 'Trains run the whole loop around the city; walk onto a stopped train at any station.'} Free.</p>`
         + sts.map(({ st, i, d }) => `<button class="ph-row" data-rail="${i}"><span class="ic">≡</span><span class="nm">${esc(st.name)}<small>${st.services ? esc(st.services.join(' · ')) : st.under ? 'underground' : 'platform'}</small></span><span class="d">${m(d)}</span></button>`).join('');
     }
     return h;

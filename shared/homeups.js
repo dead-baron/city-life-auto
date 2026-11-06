@@ -41,11 +41,11 @@ export const matOfItem = (id) => MAT_IDS.find((m) => MATS[m].items.includes(id))
 // upgrades' own pieces - p fireplace, % hot tub, m bar, e exercise bike, z shelves, & a woodpile
 export const ROOMS = {
   bed: { name: 'Bedroom', up: 1, down: 0, what: 'a bed, a wardrobe, bedside lamps', rows: ['bBBbWW', '.BB...', '......', 'l.....'] },
-  bath: { name: 'Bathroom', up: 1, down: 1, what: 'a shower, a bath, a toilet and a basin', rows: ['HHtLNt', 'tttttt', 'hhtttP', 'tttttt'] },
+  bath: { name: 'Bathroom', up: 1, down: 1, what: 'a shower, a bath, a toilet and a sink', rows: ['HHtLNt', 'tttttt', 'hhtttP', 'tttttt'] },
   study: { name: 'Study', up: 1, down: 1, what: 'bookshelves, a desk, a reading chair', rows: ['QQ.QQ.', '......', '.TT.O.', 'l....P'] },
   gym: { name: 'Home gym', up: 1, down: 1, what: 'exercise bikes: stamina, a session a day', rows: ['e.e.e.', '......', '......', 'P....P'] },
   games: { name: 'Games room', up: 1, down: 1, what: 'a pool table and two arcade cabinets', rows: ['j.j..P', '...xxx', '...xxx', 'O.....'] },
-  cinema: { name: 'Home cinema', up: 1, down: 1, what: 'a big screen and a row of seats', rows: ['.VVVV.', '......', '..iiii', 'l....O'] },
+  cinema: { name: 'Home theater', up: 1, down: 1, what: 'a big screen and a row of seats', rows: ['.VVVV.', '......', '..iiii', 'l....O'] },
   workshop: { name: 'Workshop', up: 0, down: 1, what: 'a workbench to make furniture from your materials, shelves', rows: ['kk.zz&', '......', '......', '&&...P'] },
   cellar: { name: 'Wine cellar', up: 0, down: 1, what: 'a bar to pour a drink at, armchairs', rows: ['mmmm.z', '......', '.O..O.', '......'] },
   store: { name: 'Storeroom', up: 0, down: 1, what: 'shelves and woodpiles: room for more materials', rows: ['zz.zz.', '......', 'zz...&', '&&....'] },

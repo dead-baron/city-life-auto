@@ -46,7 +46,7 @@ export function holdForArt(S, $, go, off) {
       if (w) w.warming = true;
       const p = S.playing ? { done: true, why: 'skipped', k: 1 } : warmPlan(w && w.warmth ? w.warmth() : null, t, cap, off());   // (in already: Enter on the title)
       fill.style.width = `${Math.round(p.k * 100)}%`;
-      const msg = !w ? 'Starting the graphics...' : p.why === 'ring' ? 'Getting the streets round you ready...' : 'Getting the art ready...';
+      const msg = !w ? 'Starting the graphics...' : p.why === 'ring' ? 'Getting the streets around you ready...' : 'Getting the art ready...';
       if (st.textContent !== msg) st.textContent = msg;
       if (!p.done) { requestAnimationFrame(tick); return; }
       if (w) w.warming = false;

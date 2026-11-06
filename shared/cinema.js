@@ -6,7 +6,7 @@
 import { TILE } from './constants.js';
 
 export const CINE = {
-  NAME: 'The Grand Theatre',
+  NAME: 'The Grand Theater',
   ROOM_T: 5,              // tiles from the back wall to the room's own front wall (the screen's floor, three rows of seats, the walkway)
   SEAT_ROWS: 3, SEAT_PITCH: 16,
   TICKET: 12, POPCORN: 5, // at the counter

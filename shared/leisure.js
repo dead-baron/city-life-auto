@@ -9,8 +9,8 @@ import { FIREWORKS, CAMPKIT, DUCKS } from './rules-leisure.js';
 export const FW_KINDS = ['fwrocket', 'fwfountain', 'fwcake'];
 export const LEISURE_ITEMS = {
   fwrocket:   { name: 'Skyrocket', fun: 'fw', fw: 0, sell: 4, desc: 'Set it down, light the fuse and stand back: up it goes and bursts over the rooftops. Harmless - but in town after dark someone may call it in.' },
-  fwfountain: { name: 'Firework Fountain', fun: 'fw', fw: 1, sell: 3, desc: 'A cone of sparks a few metres high for a few seconds, changing colour as it burns.' },
-  fwcake:     { name: 'Firework Cake', fun: 'fw', fw: 2, sell: 12, desc: 'A twelve-shot barrage: one after another, bursts of every colour over your head.' },
+  fwfountain: { name: 'Firework Fountain', fun: 'fw', fw: 1, sell: 3, desc: 'A cone of sparks a few meters high for a few seconds, changing color as it burns.' },
+  fwcake:     { name: 'Firework Cake', fun: 'fw', fw: 2, sell: 12, desc: 'A twelve-shot barrage: one after another, bursts of every color over your head.' },
   campkit:    { name: 'Campfire Kit', fun: 'camp', sell: 8, desc: 'Split logs, kindling, matches and three log seats: build a campfire anywhere out on open ground. Sit by it to warm up.' },
 };
 Object.assign(ITEMS, LEISURE_ITEMS);

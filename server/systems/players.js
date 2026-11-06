@@ -946,7 +946,7 @@ export function findInteraction(world, p) {
   if (court) return court;
   const lane = bowling.interaction(world, p);
   if (lane) return lane;
-  const seat = cinema.interaction(world, p);   // (The Grand Theatre's screens: server/systems/cinema.js)
+  const seat = cinema.interaction(world, p);   // (The Grand Theater's screens: server/systems/cinema.js)
   if (seat) return seat;
   const rescue = sar.interaction(world, p);   // a hospital's helipad: sign on as a rescue pilot (sar.js)
   if (rescue) return rescue;

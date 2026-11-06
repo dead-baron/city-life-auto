@@ -40,7 +40,7 @@ export function interaction(world, p) {
   const R = C.rooms[ri], s = freeSeat(world, R, ped.x, ped.y, ped);
   if (s < 0 || Math.hypot(R.seats[s].x - ped.x, R.seats[s].y - ped.y) > SIT_PX * 3) return null;
   const has = (p.profile.inventory.filmTicket || 0) > 0;
-  return { label: has ? 'Sit down and watch the film (your ticket)' : `Sit down - you need a ticket ($${CINE.TICKET} at the counter)`, run: () => { const e = sit(world, p, ri, s); if (e) world.notify(p, e, 'bad'); } };
+  return { label: has ? 'Sit down and watch the movie (your ticket)' : `Sit down - you need a ticket ($${CINE.TICKET} at the counter)`, run: () => { const e = sit(world, p, ri, s); if (e) world.notify(p, e, 'bad'); } };
 }
 
 // take a seat with a ticket: the film starts or you join it
@@ -105,7 +105,7 @@ export function update(world) {
     const c = p.cine;
     if (!c) continue;
     const ped = p.ped;
-    if (!ped || ped.dead || ped.removed || ped.vehId || Math.hypot(ped.x - c.x, ped.y - c.y) > MOVE_PX) { leave(world, p, ped && !ped.dead ? 'You leave your seat - the film goes on without you.' : null); continue; }
+    if (!ped || ped.dead || ped.removed || ped.vehId || Math.hypot(ped.x - c.x, ped.y - c.y) > MOVE_PX) { leave(world, p, ped && !ped.dead ? 'You leave your seat - the movie goes on without you.' : null); continue; }
     const R = S.rooms[c.room];
     if (R.film !== c.film || world.time >= R.t0 + CINE.FILM_S) leave(world, p, `The end: "${FILMS[c.film].title}". The lights come up.`);
   }

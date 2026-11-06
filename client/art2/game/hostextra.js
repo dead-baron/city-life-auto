@@ -11,7 +11,7 @@ import { TILE } from '../../../shared/constants.js';
 // bake workers get it (each its own copy, as at the start), the grids worked out from the map are dropped; the chunks
 // baked stay (a chunk is the same art in both windows: a window keeps a region round the player). host.js setMap has
 // swapped the map in already; old is the window the workers had until now.
-export function reworld(w, map, old) {
+export function reworld(w, map, old, wid = 0) {
   const t = performance.now(), E = w.E, n = CHUNK / TILE;
   // A chunk baked against the old window while the player was outside it (a teleport) has its walls and open sea in
   // it - baked again, as is one within a chunk of the old window's edge; the rest is the same art in both windows. So
@@ -36,7 +36,7 @@ export function reworld(w, map, old) {
   for (const k of [...w.phs.keys()]) if (outside(k)) w.phs.delete(k);
   w.seaK = null;
   if (E.setCanopy) { try { E.setCanopy(canopyGrid(map)); } catch (e) { console.warn('[art2] canopy', e); } }
-  if (w.pool && w.pool.reworld) w.pool.reworld(worldData(map));
+  if (w.pool && w.pool.reworld) w.pool.reworld(worldData(map), wid);   // (wid: the workers have it from the city worker - only its number goes)
   w.workerMap = map;
   w.resync(false);
   w.t.reworld = performance.now() - t;

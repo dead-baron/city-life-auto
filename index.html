@@ -41,7 +41,7 @@
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-ic="handset"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-ic="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-ic="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
           <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
@@ -54,7 +54,7 @@
       </div>
       <div id="stars"></div>
       <div id="vchip" class="hidden"></div>
-      <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="swap"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
+      <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
       <div id="clock"></div>
     </div>
     <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="ftue-line" class="off" aria-live="polite"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
@@ -207,7 +207,7 @@
       <section data-sec="chat" hidden><h2>CHAT</h2>
         <div id="s-chatbox" data-slot="chat">
           <p class="set-note">Chat is coming soon. These are the channels it will have:</p>
-          <label class="srow"><span>Nearby (people round you)</span><input type="checkbox" disabled checked></label>
+          <label class="srow"><span>Nearby (people around you)</span><input type="checkbox" disabled checked></label>
           <label class="srow"><span>Crew</span><input type="checkbox" disabled checked></label>
           <label class="srow"><span>City (everyone)</span><input type="checkbox" disabled checked></label>
           <label class="srow"><span>Private messages</span><input type="checkbox" disabled checked></label>
@@ -291,6 +291,7 @@
   </div></div>
 </div>
 <script type="module" src="client/splash.js"></script>   <!-- (the studio sting, over the title while the game loads: client/splash.js) -->
+<link rel="modulepreload" href="client/bootplan.js">
 <script type="module" src="client/boot.js"></script>
 </body>
 </html>

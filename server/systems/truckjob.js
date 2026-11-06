@@ -74,10 +74,10 @@ export function start(world, p, depot = null) {
   if (!p.ped || p.ped.dead) return 'Not right now.';
   if (p.job) return 'You already have a job - cancel it first.';
   const o = offerFor(world, p), m = world.map;
-  if (!o) return 'No freight going out round here.';
+  if (!o) return 'No freight going out around here.';
   const from = depot || m.pois[o.from], to = m.pois[o.to];
   const rig = parkRig(world, from.x, from.y);
-  if (!rig) return 'No room to bring a rig round here.';
+  if (!rig) return 'No room to bring a rig around here.';
   const [t, tr] = rig, goods = goodsOf(from), n = Math.min(RIG.crates, tr.def.slots.length), crates = [];
   const each = Math.max(20, Math.round(o.pay / n / 5) * 5);
   for (let i = 0; i < n; i++) {

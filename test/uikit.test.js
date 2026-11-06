@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ICON_NAMES, grid, icon, iconOf, GLYPH_NAMES, glyph, glyphOfWeapon } from '../client/touchicons.js';
+import { ICON_NAMES, grid, icon, iconOf, GLYPH_NAMES, GLYPH_STROKE, glyph, glyphOfWeapon } from '../client/touchicons.js';
 import { WEAPONS } from '../shared/items.js';
 import { GEO } from '../client/touchslots.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
@@ -61,40 +61,41 @@ test('UIC-09: every icon on the sheet, a 24 x 24 pixel picture with its dark out
   assert.match(CSS, /\.pi24 \{ display: block; width: var\(--ic\); height: var\(--ic\);/);
 });
 
-test('the HUD and the touch buttons use the pixel icons', () => {
+test('the HUD\'s plates use the pixel icons, its round buttons the line icons', () => {
   const hud = HTML.slice(HTML.indexOf('<div id="hud"'), HTML.indexOf('<div id="interior"'));
   const used = [...hud.matchAll(/data-ic="([a-z0-9]+)"/g)].map((m) => m[1]);
-  assert.ok(used.length >= 8, `${used.length} icons in the HUD's markup`);
+  assert.ok(used.length >= 5, `${used.length} icons in the HUD's markup`);
   for (const n of used) assert.ok(ICON_NAMES.includes(n), `index.html's ${n}`);
-  for (const n of ['handset', 'map', 'menu', 'heart', 'shield', 'bank', 'sun']) assert.ok(used.includes(n), n);
-  assert.doesNotMatch(hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">')), /<svg/, 'no line icons left on the round buttons');
+  for (const n of ['heart', 'shield', 'bank', 'sun']) assert.ok(used.includes(n), n);
+  const lines = [...HTML.matchAll(/data-gl="([a-z0-9-]+)"/g)].map((m) => m[1]);
+  for (const n of lines) assert.ok(GLYPH_NAMES.includes(n), `index.html's line icon ${n}`);
+  const row = hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">'));
+  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 3), ['smartphone', 'map', 'menu'], 'the round buttons: Lucide\'s phone, map and menu (11-05)');
+  assert.doesNotMatch(row, /<svg/, 'filled in by the page');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
 });
 
-// the touch buttons (the owner, 11-03: "simplified UI icons", then "cleaner, more consistent and better looking"): one
-// line-icon language - vector paths on the 24 grid, a 2-unit round stroke (or the same shapes solid), currentColor - one
-// container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
-test('the touch buttons: one vector glyph for every action and label a slot holds, the weapon as a silhouette', () => {
+// the touch buttons (the owner, 11-03: "simplified UI icons"; 11-05: "more generic and more professional and clean and
+// polished"): one line-icon family, Lucide's - vector paths on the 24 grid, one round stroke (GLYPH_STROKE), currentColor
+// - one container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
+test('the touch buttons: one line icon for every action and label a slot holds, the weapon as its class', () => {
   for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'hand');
-  assert.equal(iconOf('vehicle', 'CAR'), 'car'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield');
-  assert.equal(iconOf('reload', 'RELOAD'), 'reload'); assert.equal(iconOf('cruiser', 'COP CAR'), 'badge'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
+  assert.equal(iconOf('fire', 'HIT'), 'hand-fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'circle-dot');
+  assert.equal(iconOf('vehicle', 'CAR'), 'car-front'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield'); assert.equal(iconOf('use', 'ITEMS'), 'backpack');
+  assert.equal(iconOf('reload', 'RELOAD'), 'rotate-cw'); assert.equal(iconOf('cruiser', 'COP CAR'), 'siren'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
+  assert.ok(GLYPH_STROKE >= 2 && GLYPH_STROKE <= 3, 'between Lucide\'s 2 and 3');
   for (const n of GLYPH_NAMES) {
-    for (const v of ['line', 'solid']) {
-      const g = glyph(n, 0, v);
-      assert.match(g, /^<svg class="pi24 gl" viewBox="0 0 24 24" aria-hidden="true">/, `${n} ${v}`);
-      assert.ok(!/fill="#|stroke="#|<image|<rect/.test(g), `${n} ${v}: one color, no bitmaps`);
-      assert.match(g, /currentColor/);
-    }
-    assert.match(glyph(n, 0, 'line'), /stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/, `${n}: the 2-unit round stroke`);
-    // inside the grid's margin: every coordinate of its line drawing between 1 and 23
-    const nums = (glyph(n, 0, 'line').match(/d="([^"]+)"/) || [])[1].match(/-?\d*\.?\d+/g).map(Number);
-    assert.ok(nums.length > 4, n);
+    const g = glyph(n);
+    assert.match(g, new RegExp(`^<svg class="pi24 gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">`), n);
+    assert.ok(!/fill="#|stroke="#|<image|<rect/.test(g), `${n}: one color, no bitmaps`);
+    const d = g.match(/<path class="h" d="([^"]+)"\/><path d="([^"]+)"\/>/);
+    assert.ok(d && d[1] === d[2], `${n}: the line over its halo`);
+    assert.ok(d[2].match(/-?\d*\.?\d+/g).length > 4 && !/NaN/.test(d[2]), n);
   }
-  assert.equal(glyph('bag'), glyph('bag', 0, 'solid'), 'the owner\'s pick (11-04): the solid set by default');
+  assert.match(glyph('backpack', 40), /width="40" height="40"/);
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
-  assert.equal(glyphOfWeapon('fists', 'melee'), 'fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
-  assert.equal(glyphOfWeapon('knife', 'melee'), 'knife'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat');
+  assert.equal(glyphOfWeapon('fists', 'melee'), 'hand-fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
+  assert.equal(glyphOfWeapon('knife', 'melee'), 'slice'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat'); assert.equal(glyphOfWeapon('grenade', 'grenade'), 'bomb'); assert.equal(glyphOfWeapon('bow', 'bow'), 'bow-arrow');
   // one container: the disc and its hairline; the state the only accent
   assert.match(CSS, /#tbtns button \{[^}]*border: 1px solid var\(--hair\); background: var\(--disc\);[^}]*color: var\(--cream\);/);
   assert.match(CSS, /#tbtns \[data-slot=fire\] \{ background: var\(--fire-disc\);/, 'FIRE: the red disc');
