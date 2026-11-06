@@ -2,7 +2,7 @@
 // left off as the old look at every place kept so far - which took the page's start 0.9 s at World v3's size.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { iconMerge } from '../client/hud.js';
+import { iconMerge, poiNear } from '../client/hud.js';
 
 const NO = new Set(['delivery', 'vending', 'reception', 'evidence']);
 function naive(list) {   // (the old iconSkip)
@@ -30,4 +30,18 @@ test('the grid leaves off the same places as the old merge, and in a fraction of
   assert.ok(a.size > 50);
   assert.deepEqual([...b].sort((x, y) => x - y), [...a].sort((x, y) => x - y));
   assert.ok(tGrid < tNaive, `grid ${tGrid.toFixed(1)} ms vs ${tNaive.toFixed(1)} ms`);
+});
+
+test('the radar looks only at the places round it (hud.js poiNear: a grid), and finds every one in its range, in order', () => {
+  const pois = [];
+  for (let i = 0; i < 4000; i++) pois.push(i % 97 === 0 ? null : { id: i, kind: 'shop', x: rnd() * 60000, y: rnd() * 60000 });
+  const map = { pois };
+  for (const [x, y] of [[30000, 30000], [500, 59000], [100, 100]]) {
+    const r = 1750, got = [...poiNear(map, x, y, r)];
+    const want = pois.map((p, i) => (p && Math.abs(p.x - x) <= r && Math.abs(p.y - y) <= r ? i : -1)).filter((i) => i >= 0);
+    for (const i of want) assert.ok(got.includes(i), `place ${i} in range`);
+    assert.ok(got.length < pois.length / 20, `a few cells' worth: ${got.length}`);
+    assert.deepEqual(got, [...got].sort((a, b) => a - b));
+  }
+  assert.equal(poiNear(map, 0, 0, Infinity).length, pois.length, 'the big map: all of them');
 });

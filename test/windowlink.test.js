@@ -39,9 +39,11 @@ test('linked: a window swap sends the bake workers its number, not the window; a
 
 test('the city worker sends the bake workers their copies before the page\'s; the bake worker waits for the one named', () => {
   const g = readFileSync(new URL('../client/worldgen.js', import.meta.url), 'utf8'), w = readFileSync(new URL('../client/art2/game/worker.js', import.meta.url), 'utf8');
-  assert.ok(g.indexOf('port.postMessage({ wid, data })') < g.indexOf('self.postMessage({ window: true, data, wid:'), 'before the page\'s (whose layers are moved to it)');
+  assert.ok(g.indexOf('port.postMessage({ wid, data })') < g.indexOf('self.postMessage({ window: true, data: page, wid:'), 'before the page\'s (whose layers are moved to it)');
   assert.match(w, /ready = before\.then\(\(\) => windowNo\(args\.wid\)\)/, 'what follows a reworld waits for its window');
   const main = readFileSync(new URL('../client/main.js', import.meta.url), 'utf8');
-  assert.match(main, /swapWorld\(cityFromData\(m\.data\), m\.wid \|\| 0\)/);
+  assert.match(main, /swapWorld\(cityFromData\(m\.data\), m\.wid \|\| 0(, parts)?\)/);
+  assert.match(g, /page = \{ \.\.\.data, steady: WIN\.steady \}/, 'the page\'s copy without the fields every window has the same (client/worldwindow.js windowSteady)');
+  assert.match(main, /for \(const k of st\) m\.data\[k\] = S\.map\[k\]/, '...which the page keeps from the window before');
   assert.match(main, /cityWorker: \(\) => \(S\.win && window\.CLA_WORLD && window\.CLA_WORLD\.worker\) \|\| null/);
 });

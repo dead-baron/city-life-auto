@@ -99,7 +99,8 @@ export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fe
       return b;
     }
   };
-  const { WindowKeeper } = await import('./worldwindow.js');
+  const { WindowKeeper, windowSteady } = await import('./worldwindow.js');
+  STEADY = windowSteady;
   let index = null, X = null;
   for (const fresh of [anew, true]) {   // (a kept index that doesn't read: dropped, downloaded again)
     try { index = await unzip(await getGz('index.bin', fresh)); X = readIndex(index); break; } catch (e) { if (fresh) throw e; if (store) await store.drop('index.bin').catch(() => {}); }
@@ -118,7 +119,7 @@ export async function fetchWindow(base, key, seed, at, { fetchFn = globalThis.fe
   if ((data.seed >>> 0) !== (seed >>> 0)) throw new Error('another seed');
   return { data, keeper, index, got, win: { keys: win.keys, rect: win.rect, sig: X.sig, kept: got.kept, fetched: got.fetched, told: !!got.told } };
 }
-let WIN = null, moving = false, WID = 0;
+let WIN = null, moving = false, WID = 0, STEADY = null;   // (STEADY: worldwindow.js windowSteady, loaded with it)
 const PORTS = new Map();   // (the bake workers' channels: pool.js linkWindows - id -> port)
 // the player's tile from the page (main.js, on the server's welcome: { where0 }), for the first window
 const FIRST = { at: null, told: false, wait: [] };
@@ -140,7 +141,12 @@ async function windowAt(tx, ty) {
     // made on this thread, not the page's
     const wid = ++WID;
     for (const port of PORTS.values()) { try { port.postMessage({ wid, data }); } catch { /* gone */ } }
-    self.postMessage({ window: true, data, wid: PORTS.size ? wid : 0, win: { keys: nw.keys, rect: nw.rect, sig: WIN.sig }, ms: performance.now() - t0 }, layersOf(data, WIN.key));
+    // (the page: without the fields every window has the same - worldwindow.js windowSteady - which it keeps from
+    // the window before; once more in full if it says it hasn't them: { full: 1 })
+    let page = data;
+    if (!WIN.full && STEADY) { WIN.steady ||= STEADY(WIN.index); page = { ...data, steady: WIN.steady }; for (const k of WIN.steady) delete page[k]; }
+    WIN.full = false;
+    self.postMessage({ window: true, data: page, wid: PORTS.size ? wid : 0, win: { keys: nw.keys, rect: nw.rect, sig: WIN.sig }, ms: performance.now() - t0 }, layersOf(data, WIN.key));
   } catch (err) {
     WIN.retryAt = performance.now() + 10000;   // (a region that isn't the server's, or no network: not asked for again at once)
     self.postMessage({ windowError: String((err && err.message) || err) });
@@ -151,6 +157,7 @@ if (typeof self !== 'undefined' && typeof window === 'undefined' && typeof self.
   self.onmessage = async (e) => {
     const { seed, key, keep, base, at } = e.data || {};
     if (Array.isArray(e.data && e.data.where)) { windowAt(e.data.where[0], e.data.where[1]); return; }
+    if (e.data && e.data.full && WIN) { WIN.full = true; WIN.keeper.keys = null; WIN.keeper.home = [-1e6, -1e6]; return; }   // (the page hadn't a window's steady fields: the next in full, now)
     if (e.data && e.data.bakePort) { PORTS.set(e.data.pid, e.data.bakePort); return; }
     if (e.data && e.data.unport) { const p = PORTS.get(e.data.unport); PORTS.delete(e.data.unport); try { if (p) p.close(); } catch { /* gone */ } return; }
     if (e.data && 'where0' in e.data) { FIRST.at = Array.isArray(e.data.where0) ? e.data.where0 : null; FIRST.told = true; for (const f of FIRST.wait.splice(0)) f(FIRST.at); return; }   // (null: the server didn't say)

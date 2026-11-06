@@ -13,7 +13,7 @@
 // Each region is checked as it's assembled against the index's signature for it (part 8 item 5): one that doesn't match
 // (or doesn't open) is dropped - here and in the browser's store (forget) - and fetched again past every cache; if that
 // one doesn't match either, the window isn't assembled and the error says so.
-import { assembleCity, regionsNear, regionXYOf, windowRect, regionMatches } from '../shared/regionpack.js';
+import { assembleCity, regionsNear, regionXYOf, windowRect, regionMatches, readPack } from '../shared/regionpack.js';
 
 const OFFS = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const same = (a, b) => !!a && !!b && a.length === b.length && a.every((k, i) => k === b[i]);
@@ -95,4 +95,24 @@ export class WindowKeeper {
     }
   }
   moved(win) { this.keys = win.keys.slice(); this.rect = win.rect.slice(); this.home = win.home ? win.home.slice() : regionXYOf(this.frame, win.rect[0] + win.rect[2] / 2, win.rect[1] + win.rect[3] / 2); this.trim(); }
+}
+
+// The fields of a window that are the same in every window of the world (perf, 11-06): those its index holds whole - not a
+// layer, not a regional list's (or one holding one), not one an index ref ties to such a field, nor the window's own
+// place and size - plus the whole world's places, the districts' middles and the picture. The page keeps its own copy of
+// these from the window before (client/worldgen.js sends a moved window without them: the world's roads, rail, nodes and
+// network were most of the 0.3 s - more on a phone - its message took to read at every region's border). Here, not in
+// shared/regionpack.js: that file is part of World v3's hash (a change there is a new world for every server and browser).
+export function windowSteady(indexBytes) {
+  const { d: X } = readPack(indexBytes);
+  const layers = new Set(X.layers.map(([k]) => k)), out = new Set(['places', 'mids', 'picture']);
+  const no = new Set(['x0', 'y0', 'w', 'h', 'frame']);
+  for (const f of Object.keys(X.regional)) no.add(f.split('.')[0]);
+  // (a ref between two fields: both go, or both stay - what one points at in the other stays the same object)
+  for (let more = true; more;) {
+    more = false;
+    for (const [p, h] of X.refs) { const a = String(p[0]), b = String(h[0]); if (no.has(a) !== no.has(b)) { no.add(a); no.add(b); more = true; } }
+  }
+  for (const k of X.order) if (!layers.has(k) && !no.has(k) && k in X.root) out.add(k);
+  return [...out];
 }

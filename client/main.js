@@ -1272,6 +1272,13 @@ function keepWindow(job) {
   job.onWindow = (m) => {
     if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world around you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
+    // (the fields every window has the same come from the window before: client/worldgen.js, client/worldwindow.js windowSteady)
+    if (m.data.steady) {
+      const st = m.data.steady;
+      delete m.data.steady;
+      if (st.some((k) => !(k in S.map))) { console.warn('[world] the window came without fields this page has not got: asked for in full'); try { job.worker.postMessage({ full: 1 }); } catch { /* gone */ } return; }
+      for (const k of st) m.data[k] = S.map[k];
+    }
     const t = performance.now(), parts = {};
     swapWorld(cityFromData(m.data), m.wid || 0, parts);
     S.win = m.win;
@@ -5124,6 +5131,28 @@ function carriedLights(L, peds, night, haze) {
     L.beam(x, y, a, len * 0.7, 40, c, LD ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
   }
 }
+// A map's list (lamps, pois) by 512 px cell, the items' indices - made once per map (a World v3 window: once per swap) -
+// and the cells round a view (margin m px)
+const GRID_CELL = 512, GRIDS = new WeakMap();
+function gridOf(m, key) {
+  let per = GRIDS.get(m);
+  if (!per) GRIDS.set(m, (per = {}));
+  if (per[key]) return per[key];
+  const g = (per[key] = new Map()), list = m[key] || [];
+  for (let i = 0; i < list.length; i++) {
+    const o = list[i];
+    if (!o || !Number.isFinite(o.x) || !Number.isFinite(o.y)) continue;
+    const k = Math.floor(o.y / GRID_CELL) * 4096 + Math.floor(o.x / GRID_CELL);
+    let a = g.get(k);
+    if (!a) g.set(k, (a = []));
+    a.push(i);
+  }
+  return g;
+}
+function forCells(g, view, m, fn) {
+  const gx0 = Math.floor((view.x0 - m) / GRID_CELL), gx1 = Math.floor((view.x1 + m) / GRID_CELL), gy0 = Math.floor((view.y0 - m) / GRID_CELL), gy1 = Math.floor((view.y1 + m) / GRID_CELL);
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) { const a = g.get(gy * 4096 + gx); if (a) for (let j = 0; j < a.length; j++) fn(a[j]); }
+}
 function collectLights(sky, view, vehs, peds, dt) {
   selfLit.length = 0; countryLit.length = 0;
   const L = S.light;
@@ -5133,22 +5162,26 @@ function collectLights(sky, view, vehs, peds, dt) {
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
   for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
-  // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js)
+  // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js) - only those round the view,
+  // through a grid (a World v3 window holds thousands: every one of them looked at every frame was a phone's 11-06 night
+  // drive); by day they're all out, once (_lv: the renderers' lamp levels - art2/game/host.js too)
   const lamps = S.map.lamps;
-  for (let i = 0; i < lamps.length; i++) {
+  if (night <= 0.05) { if (S.lampsOn !== false) { S.lampsOn = false; for (const l of lamps) if (l) l._lv = 0; } }
+  else S.lampsOn = true;
+  if (night > 0.05) forCells(gridOf(S.map, 'lamps'), view, 400, (i) => {
     const l = lamps[i];
-    if (!l) continue;   // (World v3's window: a lamp it doesn't hold)
-    if (l.broken || night <= 0.05) { l._lv = 0; continue; }
-    if (!inV(l.x, l.y, 220)) continue;
+    if (!l) return;   // (World v3's window: a lamp it doesn't hold)
+    if (l.broken) { l._lv = 0; return; }
+    if (!inV(l.x, l.y, 220)) return;
     const lv = lampLevel(i, t, night, l);
     l._lv = lv;
-    if (lv <= 0) continue;
+    if (lv <= 0) return;
     const h = lampHead(l);
     L.add(h.x, h.y, 190, LIGHT.sodium, 1.05 * lv);
     L.glow(h.x, h.y, 22, LIGHT.warm, 0.6 * lv);                 // the bulb
     L.glow(h.x, h.y, 130, LIGHT.sodium, 0.1 * lv * haze);       // light hanging in the air round it
     reflSrc.push({ x: h.x, y: h.y, c: LIGHT.sodium, a: 0.9 * lv });
-  }
+  });
   if (night > 0.05) {
     // lit windows and shop fronts throw light out onto the pavement
     for (const it of S.buildings.inView(view)) {
@@ -5161,14 +5194,16 @@ function collectLights(sky, view, vehs, peds, dt) {
         L.glow(x, it.y1 + 6, 42, LIGHT.window, 0.05 * k * haze);
       }
     }
-    // shop doors, ATMs and screens
-    for (const p of S.map.pois) {
-      if (!p || !inV(p.x, p.y, 120)) continue;
-      if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); continue; }
-      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') continue;   // (a race's start: out on the track or the water)
+    // shop doors, ATMs and screens (round the view: the grid)
+    const pois = S.map.pois;
+    forCells(gridOf(S.map, 'pois'), view, 120, (i) => {
+      const p = pois[i];
+      if (!p || !inV(p.x, p.y, 120)) return;
+      if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); return; }
+      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') return;   // (a race's start: out on the track or the water)
       L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
       reflSrc.push({ x: p.x, y: p.y, c: LIGHT.warm, a: 0.4 * night });
-    }
+    });
     const [cx0, cx1, cy0, cy1] = S.chunkView;
     for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) {
       for (const p of S.ground.lowProps.get(cy * 1000 + cx) || []) {

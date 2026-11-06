@@ -7,9 +7,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { generateCity, cityFromData, CityMap } from '../shared/map.js';
 import { packRegions, assembleCity, readIndex, regionsNear, windowRect, regionRect, REGIONAL, OMIT } from '../shared/regionpack.js';
+import { isDeepStrictEqual } from 'node:util';
 import { windowOf } from '../shared/mapwindow.js';
 import { MAP_W, MAP_H, TILE } from '../shared/constants.js';
-import { WindowKeeper } from '../client/worldwindow.js';
+import { WindowKeeper, windowSteady } from '../client/worldwindow.js';
 
 let city = null, packs = new Map();
 const CITY = () => (city ||= generateCity(1337));
@@ -327,4 +328,20 @@ test('the page hands the city worker the spawn as soon as the server sends it (m
   assert.match(main, /postMessage\(\{ where0:/);
   const boot = readFileSync(new URL('../client/boot.js', import.meta.url), 'utf8');
   assert.match(boot, /waitWhere: !!BOOT\.updated/);
+});
+
+// (perf, 11-06: a moved window's message took the page 0.3 s and more to read; the city worker leaves out what it has)
+test("the fields every window has the same (windowSteady): the same in windows far apart, none of a regional list's; a window put back together from them is the window", () => {
+  const pack = PACK(256), st = windowSteady(pack.index);
+  assert.ok(st.length > 20, `${st.length} fields`);
+  for (const k of ['nodes', 'edges', 'places']) assert.ok(st.includes(k), `${k} is the same in every window`);
+  for (const f of Object.keys(REGIONAL)) assert.ok(!st.includes(f.split('.')[0]), `${f}: regional`);
+  for (const k of ['x0', 'y0', 'w', 'h', 'frame']) assert.ok(!st.includes(k));
+  const frame = readIndex(pack.index).frame, wins = [[300, 300], [1300, 300], [700, 1100]].map(([x, y]) => { const keys = regionsNear(frame, x, y); return assembleCity(pack.index, filesOf(pack, keys), { window: windowRect(frame, keys) }); });
+  for (const k of st) assert.ok(isDeepStrictEqual(wins[0][k], wins[1][k]) && isDeepStrictEqual(wins[0][k], wins[2][k]), `${k}: the same in each window`);
+  // the page's swap (main.js keepWindow): the steady fields from the window before, the rest as sent - the same map
+  const sent = { ...wins[1] };
+  for (const k of st) delete sent[k];
+  const back = cityFromData({ ...sent, ...Object.fromEntries(st.map((k) => [k, wins[0][k]])) }), whole = cityFromData(wins[1]);
+  for (const k of Object.keys(whole)) assert.ok(isDeepStrictEqual(back[k], whole[k]), k);
 });

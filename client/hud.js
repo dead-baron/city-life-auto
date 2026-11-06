@@ -595,9 +595,9 @@ export class HUD {
     }
     // POIs
     g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const skipIc = iconSkip(this.map);
-    for (const p of this.map.pois) {
-      const icon = p && POI_ICON[p.kind];
+    const skipIc = iconSkip(this.map), pois = this.map.pois, rr = (size / 2 + 10) / scale;
+    for (const i of poiNear(this.map, cx, cy, big ? Infinity : rr)) {   // (the radar: only the cells round it - a window holds thousands, every frame)
+      const p = pois[i], icon = p && POI_ICON[p.kind];
       if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
       if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
@@ -779,6 +779,23 @@ const POI_ICON = {
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
 // another is left off the maps
 const ICON_MERGE = 640;
+// the map's places by 1024 px cell (once per map: a World v3 window, once per swap), and the indices of those within r px
+// of (x, y) - every one when r is Infinity (the big map)
+const POI_CELL = 1024, POI_GRIDS = new WeakMap(), NEAR = [];
+export function poiNear(map, x, y, r) {
+  const list = map.pois || [];
+  NEAR.length = 0;
+  if (!(r < Infinity)) { for (let i = 0; i < list.length; i++) NEAR.push(i); return NEAR; }
+  let g = POI_GRIDS.get(map);
+  if (!g) {
+    POI_GRIDS.set(map, (g = new Map()));
+    for (let i = 0; i < list.length; i++) { const p = list[i]; if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue; const k = Math.floor(p.y / POI_CELL) * 4096 + Math.floor(p.x / POI_CELL); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }
+  }
+  const gx0 = Math.floor((x - r) / POI_CELL), gx1 = Math.floor((x + r) / POI_CELL), gy0 = Math.floor((y - r) / POI_CELL), gy1 = Math.floor((y + r) / POI_CELL);
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) { const a = g.get(gy * 4096 + gx); if (a) for (const i of a) NEAR.push(i); }
+  NEAR.sort((a, b) => a - b);   // (drawn in the list's order, as before)
+  return NEAR;
+}
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
   const list = map.places || map.pois;   // (World v3's window: the whole world's places, from the index)
