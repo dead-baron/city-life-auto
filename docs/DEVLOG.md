@@ -20524,3 +20524,96 @@ beach's edge.
   shared/cliffshape.js (4 KB, 364 of 380 KB). Only the generator fallback loads it; a served city loads 5 files.
 - World v3's `world3` / `art3` change. Today's `world` changes too, because the cove and the mine are today's set
   pieces as well, so browsers fetch today's city again.
+
+## 2026-11-06 - Interiors at the real city's sizes: small shops as stocked as before, and bars wide enough for IN5
+The owner reviewed the wave D captures and found that in the real World v3 city, where most shops are 3-6 tiles wide,
+the new layouts looked emptier than live main. Lucky Pawn (RT9) had lost its display cases and goods, and Fresh Stop
+(RT3) had lost its shelving. The coverage test passed only because it measured a 10 x 8 room. The bars were narrow too
+(3-6 tiles inside), so they showed one TV and a row of booths instead of IN5's full room.
+
+**What was wrong.** The 531 shop rooms of World v3 (seed 1337) are 3-50 tiles wide, mostly 4-8. A small shop's door
+lane takes the middle of the room, which leaves a strip 18-70 px wide on each side. Wave D filled those strips with
+units seen end-on: a shelf along the side wall and gondolas running north-south. From the street camera that shows a
+14-20 px end and a sliver of top. The rest of the strip was left empty, because the kit's islands didn't fit. Floor
+coverage (the share of dressable floor under a piece) still read 40-70%, so the test passed. What you see is different:
+the old plan's east-west rows show their stocked faces to the camera.
+
+**A new measure.** `shopRoom`'s output is now measured the way it looks. In the test, *drawn fill* is the share of the
+front floor's picture (counter to door, wall to wall) that `drawShop` covers. The lamps' pools don't count. A piece
+covers its top and, above it in the picture, its south face. `seenOf(R)` in shared/shoprooms.js estimates the same thing
+from the plan's rectangles, so `fill` can steer by it.
+
+**shared/shoprooms.js**
+- `aisles`: rows of units across a region, as main had them. In a strip too narrow to walk (under 26 px) they stack
+  closer and no customer stands between them.
+- `gondolas`: RT3 and IN6's north-south gondolas only where three of them fit with a row beside them, and where the floor
+  is deep enough (90 px or more) for them to read as gondolas. Up to three, each 26 px wide, with 20 px lanes and an end
+  cap facing the door. The rest of the region gets rows. Anywhere else, rows of the same shelving.
+- `sideWall`: shelving along a side wall only where it leaves 160 px of the region. Booths and banquettes are the
+  exception (`need: 0`).
+- `fill`: kit pieces marked shrinkable (cases, shelves, crates, bins, racks, tables, ice) narrow to fit a strip, down to
+  14 px. Fill keeps going past its floor target until the picture reads full (`seenOf` 36-44%), but never past 60% floor
+  coverage.
+- Lucky Pawn's plan (RT9): a glass case of guns, then a tall shelf of electronics and tools, then a gold case, each across
+  the strip. A fence shop is all shelving. A small pawn's back wall is all goods and TVs (guitars only where there's
+  room for more than one bay), and its signs shorten to fit (`PAWN SHOP` -> `PAWN`, `WE BUY GOLD` -> `GOLD`): `sign`
+  takes a list of texts and uses the first that fits.
+- Grocery and hardware use rows (they read fuller than gondolas at every size). The bank's runner rug goes from the
+  compass rose to the door. A small lounge, sports bar or saloon gets booths in rows down a narrow strip (`boothRows`),
+  not one long booth against the wall.
+- Bar stools skip an ATM's spot. A customer is kept only if a body could walk to them from the door (`inReach`). A
+  seated customer only needs to be next to a way in. The fill could close the gap a customer was put in.
+
+**test/shoprooms.test.js**: the 10 x 8 coverage test is replaced by one at the real city's sizes. Every plan is
+measured at 3, 4, 5, 6, 7, 8, 10 and 14 wide, 6, 7, 8 and 10 deep, with the door at every column and an ATM on a side
+wall in a third of the rooms. At each width the plan's mean drawn fill must not be under `FLOOR`. `FLOOR` is main's
+(94089ae7) mean in the same rooms with its own plans and art, less a point. In every one of those rooms the door lane,
+the counter strip and the ATM spot stay clear, the counter is reachable, every standing customer is reachable and not
+inside furniture, every seated customer is next to a way in, and nothing of 5 or more tiles is walled up (over 80%).
+Drawn fill, main -> now (%):
+
+| plan | 3 wide | 4 | 5 | 6 | 7 | 8 | 10 | 14 |
+|---|---|---|---|---|---|---|---|---|
+| corner | 12 -> 19 | 21 -> 28 | 28 -> 34 | 33 -> 40 | 34 -> 42 | 39 -> 46 | 41 -> 46 | 43 -> 46 |
+| pawn | 12 -> 12 | 19 -> 30 | 26 -> 41 | 30 -> 44 | 31 -> 44 | 36 -> 50 | 37 -> 49 | 39 -> 50 |
+| pharmacy | 11 -> 19 | 17 -> 25 | 24 -> 31 | 27 -> 35 | 28 -> 36 | 32 -> 40 | 33 -> 39 | 34 -> 41 |
+| grocery | 13 -> 15 | 20 -> 20 | 27 -> 28 | 33 -> 33 | 35 -> 36 | 40 -> 40 | 42 -> 44 | 45 -> 46 |
+| bank | 2 -> 9 | 18 -> 27 | 27 -> 31 | 32 -> 33 | 32 -> 32 | 30 -> 30 | 26 -> 29 | 23 -> 29 |
+| boutique | 6 -> 27 | 10 -> 28 | 12 -> 28 | 13 -> 29 | 12 -> 29 | 13 -> 28 | 12 -> 29 | 13 -> 29 |
+| lounge | 0 -> 12 | 11 -> 17 | 15 -> 17 | 19 -> 22 | 19 -> 18 | 20 -> 20 | 17 -> 20 | 14 -> 18 |
+| tavern | 0 -> 11 | 11 -> 21 | 15 -> 29 | 19 -> 31 | 19 -> 31 | 20 -> 32 | 17 -> 29 | 14 -> 32 |
+| sports bar | 0 -> 12 | 11 -> 16 | 15 -> 20 | 19 -> 24 | 19 -> 25 | 20 -> 26 | 17 -> 26 | 14 -> 23 |
+
+The other plans are at or above main at every width. In the real city's 530 rooms, 4 are emptier than main by more than
+2 points: Rosa's Liquor (52 -> 48), Neon Pawn & Guns (51 -> 48), Mile Pawn & Loan (47 -> 44) and First Pixel Bank -
+Pelican (30 -> 27). On average the city's corner stores go from 31% to 39%, pawns from 30% to 37% and pharmacies from
+23% to 33%.
+
+**Wider bars (World v3).** All of World v3's bars now stand on 12-tile lots, which gives 10 tiles inside: room for IN5's
+whole lounge, tavern or sports bar.
+- shared/world3-midtown.js `BAR_W = 12`. The Trestle Tap and the Last Stop Lounge, which the plan places by hand, are 12
+  wide (they were 7 and 6). In the generic mix, `genericShop` picks the shop before the lot's width: a bar gets 12 tiles,
+  and where fewer than 12 are left in the row, a shop goes there instead of the bar. Midtown's eleven bars are all 10 inside
+  now (they were 3-6).
+- shared/world3-civic.js: a bar on a lot that can be wider is widened to 12. Where a row's end leaves less than 12, the
+  next shop that isn't a bar takes the lot. Bench & Bar and The Bailiff Pub are 10 inside. The Verdict Wine Bar (7
+  inside) is no longer built, because its turn came at a row's end.
+- shared/world3-downtown.js: Cask & Cork 11 -> 12, so 10 inside. The bakery next door, Gilt & Grain, gives up the tile
+  (13 -> 12), so the rest of the row stays where it was.
+- The bar mix the owner approved holds: the Tap names are sports bars (The Trestle Tap, now Ferro Taproom too),
+  the Last Stop Lounge and The Brass Rail are lounges, and the rest are taverns.
+- It re-keys the world. 57 of World v3's 6,007 POIs moved: 44 in Midtown's rows that hold a bar, 12 in the courthouse
+  district's two shop rows and Cask & Cork's pair, and one food cart in Bayside Heights. The generic names
+  after a moved lot change: Ibarra Pub is gone, and Black Cat Saloon and Ferro Taproom are new. Fresh Stop moves from
+  the Trestle row (4 x 6) to a 6 x 9 lot on another row. 19 home spots moved. Homes are numbered through the city, so
+  most home ids after Midtown are renumbered, as in the 10-24 update. `WORLD_VERSION` is not bumped (see the owner's
+  decision in the report).
+- Tests run: shoprooms, storeicons, foodrooms, shopmarks, walkinrooms, mapwindow, dmath, facades and art2 (50 pass);
+  signs, walkinfront, plainblocks, cliffs and worldbuild (20 pass); all 43 world3*.test.js (126 pass); perf (6 pass).
+  test/dmath-world.mjs gives the same signature and hash with and without the nudge, and calls none of the approximated
+  Math functions.
+- Performance (tools/perf.mjs, main -> now): page 84 files / 509 KB -> the same; city worker 34 files / 360 KB -> 35 / 364
+  (the merged plain-blocks branch's cliffshape.js); renderer 402 -> 403 KB (budget 404); bake worker 953 -> 973 KB
+  (wave D's shop art; budget 1000); city build 27.4x -> 29.6x the yardstick (budget 40x); bakes 62x -> 60.4x (budget
+  90x); city 39 MB and the biggest kept chunk 758 KB, both unchanged. No budget raised. The renderer has 1 KB of headroom
+  left.
