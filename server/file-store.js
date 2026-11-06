@@ -38,7 +38,10 @@ export class FileStore {
       if ([...this.profiles.values()].some(oldEpoch)) {
         const was = join(config.dataDir, `profiles-before-epoch${PROGRESS_EPOCH}.json`);
         try { if (!existsSync(was)) { copyFileSync(FILE, was); console.log(`[store] progress epoch ${PROGRESS_EPOCH}: the profiles as they were are kept in ${was}`); } }
-        catch (e) { console.error('[store] could not keep the profiles before the new epoch:', e.message); }
+        catch (e) {   // no reset without the copy kept: fail the start (the deploy's health check rolls the version back)
+          console.error('[store] could not keep the profiles before the new epoch - not resetting:', e.message);
+          throw e;
+        }
         const n = resetOldEpochs(this);
         console.log(`[store] progress epoch ${PROGRESS_EPOCH}: ${n} profile${n === 1 ? '' : 's'} reset to new characters (accounts kept)`);
       }
