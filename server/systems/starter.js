@@ -20,7 +20,7 @@
 //   it there (onHome).
 import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { STARTER } from '../../shared/rules.js';
+import { STARTER, FTUE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { inAnyView } from '../view.js';
 import * as homes from './homes.js';
@@ -62,9 +62,11 @@ export function publicGarages(map) {
 export const garageAt = (world, poi) => (poi ? publicGarages(world.map).find((g) => g.poi === poi.id) || null : null);
 
 // The arrival station: where a new character gets off the train (the FTUE: server/systems/ftue.js) and where their
-// starter waits on their first day - the station with a car park nearest where they first woke up (a hospital:
-// homes.resolveSpawn). The hook for the region choice to come (city, coast, forest, desert - the design's later step):
-// pick the region's stations here, nearest the region's spawn.
+// starter waits on their first day. They pick it (the owner, 11-06: "We can have multiple stations to choose from"):
+// arrivalChoices - World v3's arrival lines (shared/world3-arrivals.js: a station each in the city, on the coast, in the
+// desert and in the country, each with a short line of its own beside it), or on a map without them a few stations with a
+// car park, spread out - the default first (FTUE.arriveDefault's region; else the one nearest where new characters wake).
+// arrivalStation(x, y): the station with a car park nearest a point.
 export function arrivalStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const g of publicGarages(world.map)) {
@@ -74,14 +76,64 @@ export function arrivalStation(world, x, y) {
   }
   return best;
 }
-// A player's arrival station (a public garage's entry): the one their FTUE record keeps (profile.ftue.stn), else picked
-// now from where they stand and kept - so the train and the car park are always the same station, whichever asks first
+// [{ poi, name, key (World v3's region: 'city', 'coast', 'desert', 'country'; null on a map without arrival lines),
+//    line (the arrival line's index in map.arrivals, or -1), def (the default: true for one) }], the default first
+const CHOICES = new WeakMap();
+export function arrivalChoices(world) {
+  const m = world.map;
+  let out = CHOICES.get(m);
+  if (out) return out;
+  out = [];
+  for (const a of m.arrivals || []) {
+    const g = garageAt(world, m.pois[a.poi]);
+    if (g && g.station && !out.some((c) => c.poi === g.poi)) out.push({ poi: g.poi, name: g.name, key: a.key || null, line: a.id });
+  }
+  if (!out.length) {   // (no arrival lines: up to four stations with a car park, the nearest where new characters wake first, then each the furthest from those taken)
+    const sp = m.spawns && (m.spawns.default || m.spawns.hospital), gs = publicGarages(m).filter((g) => g.station);
+    const first = sp ? arrivalStation(world, sp.x, sp.y) : gs[0];
+    if (first) out.push({ poi: first.poi, name: first.name, key: null, line: -1 });
+    while (out.length < Math.min(4, gs.length)) {
+      let best = null, bd = -1;
+      for (const g of gs) {
+        if (out.some((c) => c.poi === g.poi)) continue;
+        const q = m.pois[g.poi], d = Math.min(...out.map((c) => Math.hypot(m.pois[c.poi].x - q.x, m.pois[c.poi].y - q.y)));
+        if (d > bd) { bd = d; best = g; }
+      }
+      if (!best) break;
+      out.push({ poi: best.poi, name: best.name, key: null, line: -1 });
+    }
+  }
+  const di = Math.max(0, out.findIndex((c) => c.key === FTUE.arriveDefault));
+  if (di) out.unshift(out.splice(di, 1)[0]);
+  out.forEach((c, i) => { c.def = i === 0; });
+  CHOICES.set(m, out);
+  return out;
+}
+export const defaultArrival = (world) => arrivalChoices(world)[0] || null;
+// A player's arrival station (a public garage's entry): the one their FTUE record keeps (profile.ftue.stn: picked, or
+// the default kept), else the default - kept, so the train and the car park are always the same station
 export function arrivalFor(world, p) {
   const f = p.profile.ftue;
   if (f && f.stn != null) { const g = garageAt(world, world.map.pois[f.stn]); if (g && g.station) return g; }
-  const g = p.ped ? arrivalStation(world, p.ped.x, p.ped.y) : null;
+  const c = defaultArrival(world), g = c ? garageAt(world, world.map.pois[c.poi]) : p.ped ? arrivalStation(world, p.ped.x, p.ped.y) : null;
   if (g && f && f.st !== 'done') { f.stn = g.poi; store.touch(); }
   return g;
+}
+// The arrival station picked (ftue.js): the first day's starter car follows it - out in the old lot and empty, it's
+// brought round to the new one's; none out yet (a first day still to come, or none was free), one put there now
+export function followArrival(world, p) {
+  const g = arrivalFor(world, p);
+  if (!g || homeGarage(world, p.profile)) return null;
+  const v = carOf(world, p.pid);
+  if (v) {
+    if (v.seats.some((s) => s) || v.towedBy || v.onDeck || Math.hypot(v.x - world.map.pois[g.poi].x, v.y - world.map.pois[g.poi].y) <= STARTER.lotR) return v;
+    const sp = freeSpot(world, g, v);
+    if (sp) bringRound(world, v, sp);
+    return v;
+  }
+  if (state(world, p).k !== 'ready') return null;
+  const sp = freeSpot(world, g);
+  return sp ? spawnAt(world, p, sp) : null;
 }
 
 // A space on a garage's lot for it: a free one, else one with only empty, nobody's cars in it (moved off); null if full

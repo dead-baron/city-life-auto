@@ -1,8 +1,13 @@
 // The first-time experience on the page (the server decides it all: server/systems/ftue.js) - loaded the first time the
 // server speaks of it (client/main.js), never with the page:
-//   the arrival   a short staged scene: inside the carriage, its doors' windows on the city going by as the camera rides
-//                 in along the line, the next-stop sign; a chime, the doors slide open onto the platform and you. Esc,
-//                 B, a tap or Skip ends it ({ t: 'intro', a: 'skip' }); played to the end, { a: 'arrived' }
+//   where to      the arrival stations' card: each station's name, region and one line, the default first; a pick goes
+//                 back ({ t: 'intro', a: 'pick', stn }), Esc, B or Skip takes the default ({ a: 'skip' })
+//   the arrival   a short staged scene on the station's own arrival line (shared/world3-arrivals.js): the train - this
+//                 page's alone, drawn into the frame (main.js S.stageCars), never the server's - comes out of the first
+//                 tunnel, slows into the platform and stops; a chime, the doors open and you step off (your own
+//                 character hidden till then: S.hideMe); the station's card; then it pulls out into the far tunnel behind
+//                 the question. Esc, B, a tap or Skip ends it ({ t: 'intro', a: 'skip' }); played to the end,
+//                 { a: 'arrived' }. No line (the Guide's replay, a map without one): the card over a slow pan
 //   the question  the server's menu on the conversation screen (client/hud.js openMenu) - nothing of its own here
 //   the steps     one line in the prompt's style with the control's glyph for the device in hand (client/glyphs.js), up
 //                 FTUE_LINE_S then fading (the owner's minimal HUD); the way itself is the job card's and the job's arrow
@@ -12,24 +17,28 @@
 import { glyph } from './glyphs.js';
 import { KIND_ICON, actKind, svg } from './touchicons.js';
 import { input } from './input.js';
+import { K } from '../shared/constants.js';
+import { TRAIN_CARS, CONSIST, CAR_GAP } from '../shared/mapcore.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 // a step's control as the device in hand shows it; on touch the action button's icon is what the line offers (the
 // contextual action icons: client/touchicons.js actKind) - a briefcase for a job, the rod to cast, a speech bubble to talk
 const ctlGlyph = (ctl, text) => (ctl === 'action' && input.device === 'touch' ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[actKind(text)])}</span>` : glyph(ctl));
 const LINE_S = 7;   // (shared/rules.js FTUE.lineS: kept here so the page doesn't load rules.js for one number)
-let C = null, A = null, lineSig = '', lineT = 0;
+let C = null, A = null, P = null, TR = null, lineSig = '', lineT = 0;
 
 export function init(ctx) {
   C = ctx;
-  $('arrival').addEventListener('pointerdown', (e) => { if (A && !e.target.closest('#arr-skip')) { e.preventDefault(); end(true); } });
-  $('arr-skip').onclick = () => end(true);
+  $('arrival').addEventListener('pointerdown', (e) => { if (A && !P && !e.target.closest('#arr-skip')) { e.preventDefault(); end(true); } });
+  $('arr-skip').onclick = () => (P ? choose(null) : end(true));
+  $('arr-pick').addEventListener('click', (e) => { const b = e.target.closest('[data-stn]'); if (b && P) choose(Number(b.dataset.stn)); });
   $('ftue-line').addEventListener('click', (e) => { const b = e.target.closest('[data-guide]'); if (b) { C.openGuide(b.dataset.guide); hideLine(); } });
 }
 
 // ---- the server's messages: { t: 'ftue', a: 'arrive' | 'end' | 'tip' } ------------------------------------------------
 export function onMsg(m) {
-  if (m.a === 'arrive') arrive(m);
+  if (m.a === 'pick') pick(m);
+  else if (m.a === 'arrive') arrive(m);
   else if (m.a === 'end') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('cash', 0.8); }
   else if (m.a === 'tip') showLine(m.ctl, m.text, m.sec, `tip:${m.id}`);
 }
@@ -59,52 +68,122 @@ function hideLine() { const el = $('ftue-line'); if (el) { el.classList.add('fad
 // a new device in hand (a pad picked up): the line's glyph again
 export function redraw() { const me = C.S.me; if (me && me.ftue && me.ftue.st === 'goal') { lineSig = ''; onMe(me); } }
 
+// ---- where to: the arrival stations' card ---------------------------------------------------------------------------
+// m: { title, sub, opts: [{ id, name, region, vibe, def }], s }
+function pick(m) {
+  if (A) end(false, true);
+  P = { m };
+  const el = $('arrival');
+  el.classList.remove('open', 'leaving', 'lit', 'replay');
+  el.classList.add('picking');
+  $('arr-pick').innerHTML = `<small>${esc(m.title || 'Where to?')}</small><p>${esc(m.sub || '')}</p>` + m.opts.map((o) => `<button class="ap-opt${o.def ? ' def' : ''}" data-stn="${o.id}"><b>${esc(o.name)}</b><i>${esc(o.region)}${o.def ? ' &middot; suggested' : ''}</i>${o.vibe ? `<span>${esc(o.vibe)}</span>` : ''}</button>`).join('');
+  $('arr-skip-g').innerHTML = input.device === 'touch' ? '' : glyph('back');
+  if (C.topOverlay() !== 'arrival') C.openOverlay('arrival');
+  else C.refocus && C.refocus();
+}
+// a station picked (null: the default)
+function choose(stn) {
+  if (!P) return;
+  P = null;
+  $('arrival').classList.remove('picking');
+  C.send(stn === null ? { t: 'intro', a: 'skip' } : { t: 'intro', a: 'pick', stn });
+}
+
 // ---- the arrival --------------------------------------------------------------------------------------------------------
-// m: { name, place, from: [x, y], to: [x, y], s (seconds), replay }
-// The timeline (k: the share of s): the doors shut to 0.72 while the camera rides in (fast, then easing to a stop at the
-// platform); the chime at 0.7; the doors slide open 0.74-0.84; the bars and the card go at 0.92; done at 1
+// m: { name, place, from: [x, y], to: [x, y], s (seconds), replay, line?: { x, y, a, len, in, out, stop, door }, stop,
+// door, leave (seconds: the train stopped, the doors open, it pulls out) }
+// The timeline (k: the share of s): with a line, the train in and stopped by `stop`, the chime, the doors open at `door`
+// (you on the platform), the card, the bars away at 0.92, done at 1 - the train pulls out at `leave`, on its own after.
+// Without one: the camera eases in from `from`, the card at 0.74, the same end.
 function arrive(m) {
   if (A) end(false, true);
-  const S = C.S, dur = Math.max(4, m.s || 14) * 1000;
-  A = { m, t0: performance.now(), dur, chimed: false, opened: false };
+  P = null;
+  const dur = Math.max(4, m.s || 12) * 1000;
+  A = { m, t0: performance.now(), dur, chimed: false, opened: false, line: m.line || null };
   A.iv = setInterval(() => { if (A) tick(Math.min(1, (performance.now() - A.t0) / A.dur)); }, 200);   // (its own clock too: the scene ends on time even when the frames stall - a phone loading the area)
   $('arr-name').textContent = m.name || '';
   $('arr-place').textContent = m.place || '';
-  $('arr-led').textContent = `NEXT STOP · ${String(m.name || '').toUpperCase()}`;
+  $('arr-led').textContent = `NEXT STOP · ${String(m.name || '').replace(/ Station$/, '').toUpperCase()}`;
   $('arr-skip-g').innerHTML = input.device === 'touch' ? '' : glyph('back');
   const el = $('arrival');
-  el.classList.remove('open', 'leaving', 'lit');
+  el.classList.remove('open', 'leaving', 'lit', 'picking');
   el.classList.toggle('replay', !!m.replay);
   if (C.topOverlay() !== 'arrival') C.openOverlay('arrival');
   void el.offsetWidth;
   el.classList.add('lit');
-  const [fx, fy] = m.from, [tx, ty] = m.to;
+  if (A.line) train(m, A.t0);
+  const [fx, fy] = m.from, [tx, ty] = m.to, L = A.line;
   C.setCam((now) => {
     if (!A) return null;
-    const k = Math.min(1, (now - A.t0) / A.dur), r = Math.min(1, k / 0.72), e = 1 - (1 - r) * (1 - r) * (1 - r);   // (ease out: in fast, slowing into the platform)
+    const k = Math.min(1, (now - A.t0) / A.dur);
     tick(k);
-    return [fx + (tx - fx) * e, fy + (ty - fy) * e];
+    if (!L || !TR) { const r = Math.min(1, k / 0.72), e = 1 - (1 - r) * (1 - r) * (1 - r); return [fx + (tx - fx) * e, fy + (ty - fy) * e]; }
+    // on the line: by the first portal, then along with the front car, settling on the doors you step out of
+    const t = (now - A.t0) / 1000, f = trainFront(t), u = Math.max(L.in + 170, Math.min(L.door, f - 150)), ca = Math.cos(L.a), sa = Math.sin(L.a);
+    const x = L.x + ca * u - sa * 30, y = L.y + sa * u + ca * 30, s = Math.min(1, Math.max(0, (t - m.stop) / 1.2));
+    return [x + (tx - x) * s * s * (3 - 2 * s), y + (ty - y) * s * s * (3 - 2 * s)];
   });
-  void S;
 }
 function tick(k) {
   const el = $('arrival');
   if (!A || !el) return;
-  if (!A.chimed && k >= 0.7) { A.chimed = true; C.sfx && C.sfx('good', 0.7); $('arr-led').textContent = `${String(A.m.name || '').toUpperCase()} · DOORS OPENING`; }
-  if (!A.opened && k >= 0.74) { A.opened = true; el.classList.add('open'); }
+  const m = A.m, t = k * A.dur / 1000, line = !!A.line;
+  const chimeAt = line ? (m.stop || 6) + 0.3 : 0.7 * A.dur / 1000, openAt = line ? (m.door || 7.2) : 0.74 * A.dur / 1000;
+  if (!A.chimed && t >= chimeAt) { A.chimed = true; C.sfx && C.sfx('good', 0.7); $('arr-led').textContent = `${String(m.name || '').replace(/ Station$/, '').toUpperCase()} · DOORS OPENING`; }
+  if (!A.opened && t >= openAt) { A.opened = true; el.classList.add('open'); C.S.hideMe = false; }
   if (k >= 0.92 && !el.classList.contains('leaving')) el.classList.add('leaving');
   if (k >= 1) end(false);
 }
-// skipped (Esc, B, a tap, Skip), or played to the end: the overlay away, the server told
+// skipped (Esc, B, a tap, Skip), or played to the end: the overlay away, the server told; the train, if it's in, pulls
+// out (still coming in: gone)
 function end(skipped, quiet = false) {
   if (!A) return;
   clearInterval(A.iv);
+  const t = (performance.now() - A.t0) / 1000, m = A.m;
   A = null;
   C.setCam(null);
+  C.S.hideMe = false;
+  if (TR) { if (t < (m.stop || 6)) stopTrain(); else if (t < TR.leave) TR.leave = t; }
   if (C.topOverlay() === 'arrival') C.closeOverlay('arrival');
   else $('arrival').classList.add('hidden');
   if (!quiet) C.send({ t: 'intro', a: skipped ? 'skip' : 'arrived' });
 }
-// main.js closeOverlay('arrival') - Esc or B backed out of it: a skip
-export function closed() { if (A) end(true); }
-export const playing = () => !!A;
+// main.js closeOverlay('arrival') - Esc or B backed out of it: a skip (the card: the default)
+export function closed() { if (P) choose(null); else if (A) end(true); }
+export const playing = () => !!A || !!P;
+
+// ---- the train ---------------------------------------------------------------------------------------------------------
+// This page's own: three cars (shared/mapcore.js CONSIST) drawn as the server's trains are, along the arrival line (a
+// straight run: { x, y } its start, a its heading, in / out the portals, stop the middle where it stops). Inside the
+// hill a car isn't drawn (the hill over the portal hides the part of one coming out). Out past the far portal, gone.
+const OFF = [];   // (each car's middle behind the front, px)
+{ let o = 0; for (const k of CONSIST) { const L = TRAIN_CARS.find((c) => c.kind === k).L; OFF.push(o + L / 2); o += L + CAR_GAP; } }
+const LEN = OFF[OFF.length - 1] + TRAIN_CARS.find((c) => c.kind === CONSIST[CONSIST.length - 1]).L / 2;
+function train(m, t0) {
+  const L = m.line;
+  TR = { L, t0, stop: m.stop || 6, leave: m.leave || 9, f0: L.in - 110, f1: L.stop + LEN / 2, f2: L.len + LEN + 40, door: m.door || 7.2, cars: CONSIST.map((k, i) => ({ id: -9000 - i, kind: K.TRAIN, rx: L.x, ry: L.y, ra: L.a, rz: 0, flags: 8, extra: 0, buf: [], d: { c: TRAIN_CARS.findIndex((c) => c.kind === k), tr: -9, n: i + 1, l: -1 } })) };
+  C.S.hideMe = true;
+  C.S.camPull = innerHeight > innerWidth ? 1.55 : 1.15;   // (pulled back a little: the whole train in the picture - an upright phone most)
+  C.S.stageCars = stage;
+}
+// where the front car's nose is, t seconds in: easing in to the stop, standing, then away
+function trainFront(t) {
+  if (!TR) return 0;
+  if (t <= TR.stop) { const e = Math.max(0, t / TR.stop); return TR.f0 + (TR.f1 - TR.f0) * (1 - (1 - e) * (1 - e) * (1 - e)); }
+  if (t <= TR.leave) return TR.f1;
+  const e = (t - TR.leave) / 6;
+  return TR.f1 + (TR.f2 - TR.f1) * e * e;
+}
+function stage(cars) {
+  if (!TR) return;
+  const t = (performance.now() - TR.t0) / 1000, f = trainFront(t), L = TR.L, ca = Math.cos(L.a), sa = Math.sin(L.a);
+  if (f >= TR.f2) { stopTrain(); return; }
+  const doors = t >= TR.door - 0.6 && t < TR.leave ? 2 : 0;
+  TR.cars.forEach((c, i) => {
+    const s = f - OFF[i];
+    if (s < L.in || s > L.out) return;   // (inside a hill)
+    c.rx = L.x + ca * s; c.ry = L.y + sa * s; c.flags = 8 | doors;
+    cars.push(c);
+  });
+}
+function stopTrain() { TR = null; C.S.stageCars = null; C.S.camPull = null; }

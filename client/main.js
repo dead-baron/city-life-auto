@@ -36,7 +36,7 @@ import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.j
 // lines, a first-time moment's tip - never with the page.
 let FT = null, ftP = null;
 const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
-  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; } });
+  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
@@ -3210,7 +3210,7 @@ function prepFrame(dt) {
   const fallH = S.ctrlKind === CTRL.RIDER ? (S.ents.get(S.myPedId)?.rsky || 0) : 0;
   const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : fallH > 0 ? Math.min(S.airMax, 1 + Math.min(1.3, fallH / 650)) : 1;
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1) * (DIR ? DIR.zoomK : 1);
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1, S.camPull || 1) * (DIR ? DIR.zoomK : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -3293,7 +3293,7 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
-    if (DIR && DIR.hideMe && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture)
+    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
     if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
@@ -3304,6 +3304,7 @@ function prepFrame(dt) {
     else if (e.kind === K.PROJ) projs.push(e);
     else if (e.kind === K.BALL) balls.push(e);
   }
+  if (S.stageCars) S.stageCars(cars, sp);   // (the arrival's train, this page's alone: client/ftue.js)
   // at the water's level: swimmers and boats (drawn under bridge decks)
   const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
   const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');

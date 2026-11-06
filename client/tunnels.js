@@ -111,6 +111,7 @@ function drawInside(g, t, k, F, map) {
 function drawPortals(g, t, k) {
   for (let m = 0; m < 2; m++) {
     const mo = t.mouths[m], ox = mo.ox, oy = mo.oy, nx = -oy, ny = ox, half = t.hw + TUNNEL_WALL + 18;
+    if (mo.blind) continue;   // (an arrival line's far end: the other side of its hill, where nothing comes out - shared/world3-arrivals.js)
     const x = mo.x, y = mo.y;
     // the dark opening, just inside the face (gone once you're in and the hill has faded)
     if (k < 1) {

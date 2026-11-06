@@ -12,7 +12,7 @@ import * as economy from '../server/systems/economy.js';
 import * as homes from '../server/systems/homes.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as dealer from '../server/systems/dealer.js';
-import { publicGarages, arrivalStation } from '../server/systems/starter.js';
+import { publicGarages, arrivalStation, arrivalFor, defaultArrival } from '../server/systems/starter.js';
 
 const starters = (w, pid) => [...w.entities.values()].filter((e) => e.kind === K.VEH && !e.removed && e.starter === pid);
 const one = (w, pid) => { const s = starters(w, pid); assert.equal(s.length, 1, `one starter for the player (${s.length})`); return s[0]; };
@@ -41,10 +41,14 @@ test('first day: a new character finds their starter car in the arrival station\
   assert.equal(v.paint, STARTER.paint); assert.equal(v.tint, STARTER.paint);   // (the rust brown, over the Hatchback's art)
   assert.equal(VEHICLES.starter.art, 'compact'); assert.equal(VEHICLES.starter.look, 'compact');
   assert.ok(VEHICLES.starter.max < VEHICLES.compact.max && VEHICLES.starter.accel < VEHICLES.compact.accel, 'slow: slower than the Hatchback');
-  // the arrival station: the one with a car park nearest where they woke up - and the car is in its car park
-  const g = arrivalStation(w, p.ped.x, p.ped.y), st = w.map.pois[g.poi];
+  // the arrival station: until they pick one (the FTUE's card - test/ftue.test.js), the default of the stations to
+  // choose from - on a map without arrival lines the station with a car park nearest where new characters wake - and the
+  // car is in its car park
+  const g = arrivalFor(w, p), st = w.map.pois[g.poi], sp = w.map.spawns.default;
   assert.equal(st.kind, 'station');
-  for (const o of publicGarages(w.map)) if (o.station) { const q = w.map.pois[o.poi]; assert.ok(Math.hypot(q.x - p.ped.x, q.y - p.ped.y) >= Math.hypot(st.x - p.ped.x, st.y - p.ped.y) - 1, `${q.label} is no nearer`); }
+  assert.equal(g.poi, defaultArrival(w).poi);
+  assert.equal(arrivalStation(w, sp.x, sp.y).poi, g.poi, 'the nearest where new characters wake');
+  for (const o of publicGarages(w.map)) if (o.station) { const q = w.map.pois[o.poi]; assert.ok(Math.hypot(q.x - sp.x, q.y - sp.y) >= Math.hypot(st.x - sp.x, st.y - sp.y) - 1, `${q.label} is no nearer`); }
   assert.ok(Math.hypot(v.x - st.x, v.y - st.y) <= STARTER.lotR, 'in the station\'s car park');
   assert.ok(w.map.parking.some((sp) => Math.hypot(sp.x - v.x, sp.y - v.y) < 1), 'in a parking space');
   assert.ok(p.toasts.some((t) => t.text.includes(st.label)), 'told where it waits');

@@ -161,6 +161,7 @@ export function send(world) {
     const myTrain = ped && ped.onTrain ? ped.onTrain.t : -1, mySub = !!(ped && ped.sub);
     const visit = (e, check) => {
       if (e._mark === mark && e._markP === p) return;
+      if (e.ftueHid && e !== ped) return;   // (a new player on their arrival's train: seen as its doors open - systems/ftue.js)
       if (check) { // inside the window, or already known and not yet past the keep margin
         const x = e.x, y = e.y;
         if (x < kx0 || x > kx1 || y < ky0 || y > ky1) return;

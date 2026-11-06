@@ -1,9 +1,17 @@
 // The first-time experience (the owner, 11-04: "the tutorial should be short and sweet and give people general
 // direction"; the design: the FTUE is the tutorial - no tour). A new character (store.js defaultProfile: ftue { st: 'new' })
 // gets, once their look is picked:
+//   0. where to arrive (the owner, 11-06: "We can have multiple stations to choose from"): one card of the arrival
+//      stations (starter.js arrivalChoices - World v3's: a station in the city, on the coast, in the desert and in the
+//      country, each with an arrival line of its own: shared/world3-arrivals.js), each its name, region and a line of
+//      what it's like, the default first. Picked: { t: 'intro', a: 'pick', stn }; skipped (Esc, B, Skip) or left
+//      FTUE.pickS: the default. The starter car's lot follows it (starter.js followArrival);
 //   1. the arrival: off a train at the arrival station - the one the starter car waits at (starter.js arrivalFor, the
-//      same function) - a short staged scene on the page (client/ftue.js: the camera rides in along the line, the doors,
-//      onto the platform), FTUE.arriveS long, skippable (the page's Esc / B / a tap: { t: 'intro', a: 'skip' });
+//      same function) - a short staged scene on the page (client/ftue.js): on its arrival line the train comes out of
+//      the first tunnel, slows into the platform, stops, the doors open and you step off; then it pulls out into the
+//      far tunnel. The train is the page's alone - no server train, so arrivals never meet; everyone else sees you
+//      appear on the platform as the doors open (FTUE.doorS: ped.ftueHid till then - net.js). FTUE.arriveS long,
+//      skippable (the page's Esc / B / a tap: { t: 'intro', a: 'skip' });
 //   2. one question on the platform, "What brings you to town?", on the conversation screen's kit (a menu at ASK_POI,
 //      the answers numbered): Honest work, A little hustle, The great outdoors, Just let me roam. Not a class - it only
 //      picks the first goal;
@@ -18,9 +26,10 @@
 // Everyone goes through it once (the owner, 11-04): profiles from before it are reset to new characters as the store loads
 // (server/store.js PROGRESS_EPOCH). A wiped profile (players.js wipeProgress, wipeAccount: Start fresh) is a new character
 // too - store.js defaultProfile's ftue { st: 'new' } and starter { first } - so it gets the arrival on its next join.
-// Every number: shared/rules.js FTUE. Analytics (server/launch.js world.track 'ftue'): ftue_arrive, ftue_answer_<which>,
+// Every number: shared/rules.js FTUE. Analytics (server/launch.js world.track 'ftue'): ftue_pick (a station picked) or
+// ftue_pick_default (skipped, or left to the default), ftue_arrive, ftue_answer_<which>,
 // ftue_step1..3 (reached), ftue_done, ftue_skip, moment_<id>, guide_open.
-//   profile.ftue: { st: 'new' | 'arrive' | 'ask' | 'goal' | 'done', stn (the arrival station's poi), ans, step,
+//   profile.ftue: { st: 'new' | 'pick' | 'arrive' | 'ask' | 'goal' | 'done', stn (the arrival station's poi), ans, step,
 //                   goal { k, x, y, name, poi? }, how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
 //                   tips (0: off), replay (1: the Guide's replay - no move to the station) }
 import { FTUE } from '../../shared/rules.js';
@@ -54,8 +63,16 @@ export const MOMENTS = {
   hurt: { text: 'Hurt? Hold for your quick wheel - a bandage patches you up.', ctl: 'use', sec: 'items' },
 };
 
+// The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
+// ARRIVAL_PICKS); a map without arrival lines names the station's district
+export const REGIONS = {
+  city: { region: 'The city', vibe: 'Downtown towers, the bay and the bright lights. Work is never far.' },
+  coast: { region: 'The north coast', vibe: 'Beach towns, the boardwalk and the surf. Easy days by the water.' },
+  desert: { region: 'The red rock desert', vibe: 'Mesas, mines and open highway. Room to roam.' },
+  country: { region: 'Willow Valley', vibe: 'Farms, rivers and quiet roads. The great outdoors.' },
+};
 const rec = (prof) => prof.ftue;
-const active = (f) => !!f && (f.st === 'arrive' || f.st === 'ask' || f.st === 'goal');
+const active = (f) => !!f && (f.st === 'pick' || f.st === 'arrive' || f.st === 'ask' || f.st === 'goal');
 const stamp = (f, k) => { (f.at ||= {})[k] = Date.now(); };
 const track = (world, p, step) => { if (world.track) world.track('ftue', p, { step }); };
 const send = (p, m) => { if (p.conn) p.conn.sendJSON(m); };
@@ -68,6 +85,8 @@ export const fresh = () => ({ st: 'new', tips: 1, m: {} });
 // The arrival station's platform: { x, y, from } - from: a point back along the line it came in on (where the page's
 // camera starts). Open-air platforms only (not the El's deck, not the subway): else a spot by the station's board.
 export function platformOf(world, poi) {
+  const A = (world.map.arrivals || []).find((q) => q.poi === poi.id);
+  if (A) return arrivalSpot(world, A);
   const rails = world.map.rails || (world.map.rail ? [world.map.rail] : []);
   let best = null, bd = 900;
   for (const r of rails) for (const st of r.stations || []) {
@@ -88,6 +107,16 @@ export function platformOf(world, poi) {
     from = { x: P[i].x, y: P[i].y };
   }
   return { x: at.x, y: at.y, from };
+}
+
+// An arrival line's (shared/world3-arrivals.js): where you step off - on the platform at the middle coach's doors (the
+// train stops with its middle at the platform's: client/ftue.js) - and the line for the page's train: its start, heading,
+// length, the portals' and the stop's distances along it
+const DOOR_U = 8, DOOR_O = 76;   // (px: the middle coach's doors along the line from the platform's middle; off the track)
+export function arrivalSpot(world, A) {
+  const st = A.stations[0], ca = Math.cos(A.a), sa = Math.sin(A.a), nx = -sa, ny = ca;   // (the platform on the right of the way it runs)
+  const x = st.x + ca * DOOR_U + nx * DOOR_O, y = st.y + sa * DOOR_U + ny * DOOR_O, p0 = A.pts[0];
+  return { x, y, from: { x: A.portals[0].x, y: A.portals[0].y }, line: { x: Math.round(p0.x), y: Math.round(p0.y), a: +A.a.toFixed(4), len: A.len, in: A.portals[0].s, out: A.portals[1].s, stop: st.s, door: st.s + DOOR_U } };
 }
 
 const nearestOf = (list, x, y) => {
@@ -179,7 +208,8 @@ export function onJoin(world, p) {
   if (!prof.ftue) { prof.ftue = fresh(); store.touch(); }   // (no record: a new character's - every profile from before the FTUE was reset to one: store.js PROGRESS_EPOCH)
   const f = prof.ftue;
   f.m ||= {};
-  if (f.st === 'arrive') { f.st = 'ask'; p.ftueAskAt = world.time + 1.5; }   // (left during the arrival: straight to the question)
+  if (f.st === 'pick') { p.ftuePickAt = world.time + 1.5; p.ftuePickUntil = p.ftuePickAt + FTUE.pickS; }   // (left at the arrival stations' card: it comes up again)
+  else if (f.st === 'arrive') { f.st = 'ask'; p.ftueAskAt = world.time + 1.5; }   // (left during the arrival: straight to the question)
   else if (f.st === 'ask') p.ftueAskAt = world.time + 1.5;
   p.meDirty = true;
 }
@@ -187,7 +217,7 @@ export function onJoin(world, p) {
 // ---- the arrival -------------------------------------------------------------------------------------------------------
 function arrive(world, p, replay = false) {
   const f = rec(p.profile), ped = p.ped;
-  let name, place, to, from;
+  let name, place, to, from, line = null;
   if (!replay) {
     const g = starter.arrivalFor(world, p), poi = g ? world.map.pois[g.poi] : null;
     if (!poi) { f.st = 'ask'; p.ftueAskAt = world.time; return; }   // (no station anywhere: the question where you are)
@@ -196,19 +226,50 @@ function arrive(world, p, replay = false) {
     ped.x = pl.x; ped.y = pl.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; ped.a = Math.PI / 2;
     world.place(ped); moved(ped);
     p.profile.pos = { x: Math.round(pl.x), y: Math.round(pl.y) };
-    name = poi.label; place = districtName(world, pl.x, pl.y); to = pl; from = pl.from;
+    name = poi.label; place = regionOf(world, poi); to = pl; from = pl.from; line = pl.line || null;
+    if (line) { ped.ftueHid = true; p.ftueShowAt = world.time + FTUE.doorS; ped.a = line.a + Math.PI / 2; }   // (out of everyone else's sight until the doors open; facing out of the train)
   } else {
     name = districtName(world, ped.x, ped.y) || 'the city'; place = ''; to = { x: ped.x, y: ped.y }; from = { x: ped.x - 700, y: ped.y - 500 };
   }
   homes.protect(world, ped, FTUE.arriveS + 3);
   f.st = 'arrive'; f.replay = replay ? 1 : 0; stamp(f, 'arrive');
   p.ftueUntil = world.time + FTUE.arriveS + 4;   // (the page says when its scene is over: this only if it never does)
-  send(p, { t: 'ftue', a: 'arrive', name, place, from: [Math.round(from.x), Math.round(from.y)], to: [Math.round(to.x), Math.round(to.y)], s: FTUE.arriveS, replay: replay ? 1 : 0 });
+  send(p, { t: 'ftue', a: 'arrive', name, place, from: [Math.round(from.x), Math.round(from.y)], to: [Math.round(to.x), Math.round(to.y)], s: FTUE.arriveS, replay: replay ? 1 : 0, ...(line ? { line, stop: FTUE.stopS, door: FTUE.doorS, leave: FTUE.leaveS } : null) });
   if (!replay) track(world, p, 'ftue_arrive');
   store.touch(); p.meDirty = true;
 }
+// seen again by everyone: the doors open (or the arrival skipped, cut short)
+function reveal(p) { if (p.ped && p.ped.ftueHid) { p.ped.ftueHid = false; p.meDirty = true; } p.ftueShowAt = 0; }
+// the arrival stations' card (0.)
+export function choices(world) {
+  return starter.arrivalChoices(world).map((c) => {
+    const poi = world.map.pois[c.poi], R = (c.key && REGIONS[c.key]) || null;
+    return { id: c.poi, name: c.name.replace(/ Station$/, ''), region: R ? R.region : districtName(world, poi.x, poi.y) || 'The city', vibe: R ? R.vibe : '', def: c.def ? 1 : 0 };
+  });
+}
+const regionOf = (world, poi) => { const c = starter.arrivalChoices(world).find((q) => q.poi === poi.id), R = c && c.key && REGIONS[c.key]; return R ? R.region : districtName(world, poi.x, poi.y); };
+function offer(world, p) {
+  const f = rec(p.profile), opts = choices(world);
+  if (opts.length < 2) { pick(world, p, null); return; }   // (one station, or none: nothing to choose)
+  f.st = 'pick'; stamp(f, 'pick'); p.ftuePickAt = 0;
+  p.ftuePickUntil = world.time + FTUE.pickS;
+  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in. Your car waits there.', opts, s: FTUE.pickS });
+  store.touch(); p.meDirty = true;
+}
+// picked (stn: a station's poi from the card), or the default (null: skipped, left, or not one of the card's)
+export function pick(world, p, stn) {
+  const f = rec(p.profile);
+  if (!f || (f.st !== 'pick' && f.st !== 'new')) return false;
+  const c = starter.arrivalChoices(world), ch = c.find((q) => q.poi === stn) || c[0] || null;
+  if (ch) f.stn = ch.poi;
+  if (f.st === 'pick') track(world, p, ch && ch.poi === stn ? 'ftue_pick' : 'ftue_pick_default');
+  starter.followArrival(world, p);
+  arrive(world, p);
+  return true;
+}
 function ask(world, p) {
   const f = rec(p.profile);
+  reveal(p);
   f.st = 'ask'; stamp(f, 'ask'); p.ftueAskAt = 0; p.ftueAsked = world.time;
   send(p, { t: 'menu', poi: ASK_POI, ask: 1, title: 'What brings you to town?', sub: 'Pick one - it only sets your first goal. You can do all of it, any time.', opts: ANSWERS.map((a) => ({ id: a.id, label: a.label, note: a.note, shut: true })) });
   store.touch(); p.meDirty = true;
@@ -248,6 +309,7 @@ function setStep(world, p, n) {
 }
 function finish(world, p, how) {
   const f = rec(p.profile);
+  reveal(p);
   f.st = 'done'; f.how = how; f.replay = 0; stamp(f, 'done');
   p.ftueTipAt = world.time;   // (the first-time moments wait their gap after it)
   if (how === 'skip') track(world, p, 'ftue_skip');
@@ -265,7 +327,9 @@ function complete(world, p) {
 }
 
 // ---- the page's messages: { t: 'intro', a } ----------------------------------------------------------------------------
-//   skip      the arrival (on to the question), the question (no goal), or the goal - whichever is on
+//   pick      the arrival stations' card: { stn } the station picked
+//   skip      the card (the default station), the arrival (on to the question), the question (no goal), or the goal -
+//             whichever is on
 //   arrived   the arrival's scene played to its end (on to the question)
 //   replay    the Guide's "Replay the arrival": from where you stand, the question and a first goal again
 //   tips      the Guide's "Show tips again": the first-time moments from the start
@@ -273,6 +337,8 @@ function complete(world, p) {
 export function handle(world, p, msg) {
   const f = rec(p.profile), a = String(msg.a || '');
   if (!f) return;
+  if (a === 'pick') { if (f.st === 'pick') pick(world, p, Number(msg.stn)); return; }
+  if (a === 'skip' && f.st === 'pick') { pick(world, p, null); return; }   // (the card skipped: the default)
   if (a === 'skip' || a === 'arrived') {
     if (f.st === 'arrive') { if (a === 'skip') stamp(f, 'skipArrive'); ask(world, p); return; }
     if (a !== 'skip') return;
@@ -348,8 +414,9 @@ export function update(world) {
     if (!f || !p.conn || !ped) continue;
     if (f.st === 'done') { moments(world, p); continue; }
     if (ped.dead) continue;
-    if (f.st === 'new') { if (p.profile.lookPicked !== false) arrive(world, p); continue; }
-    if (f.st === 'arrive') { if (world.time >= (p.ftueUntil ?? 0)) ask(world, p); continue; }
+    if (f.st === 'new') { if (p.profile.lookPicked !== false) offer(world, p); continue; }
+    if (f.st === 'pick') { if (p.ftuePickAt && world.time >= p.ftuePickAt) offer(world, p); else if (world.time >= (p.ftuePickUntil ?? 0)) pick(world, p, null); continue; }
+    if (f.st === 'arrive') { if (p.ftueShowAt && world.time >= p.ftueShowAt) reveal(p); if (world.time >= (p.ftueUntil ?? 0)) ask(world, p); continue; }
     if (f.st === 'ask') { if (p.ftueAskAt && world.time >= p.ftueAskAt) ask(world, p); continue; }
     if (f.st === 'goal') stepGoal(world, p, f);
   }

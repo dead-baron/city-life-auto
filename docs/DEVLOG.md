@@ -20468,3 +20468,53 @@ is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.
   a price or an item shows in the Guide, the map's counts, search, and that it loads lazily.
 - CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
   each system change).
+
+## 2026-11-06 - Arrival stations: pick where you arrive, and the train on its own line (re-keys the world)
+
+The owner (11-06): "Train ride is a staged scene yes. We can have multiple stations to choose from. Perhaps on their own
+track and it comes out of a tunnel and then goes to the station then leaves station and goes into another tunnel, all
+for the purpose of onboarding new players (without overlapping on each other if that's possible)."
+- **The arrival lines** (`shared/world3-arrivals.js` `arrivalLines3`, run last in World v3's `done` pass so it moves
+  nothing else - a pass of its own, for an easy merge with the generator's other work). One per region in
+  `ARRIVAL_PICKS` - city, coast, desert, country - beside the first of the region's main-line stations (with a car park:
+  spaces within `STARTER.lotR`) that has room: an axis-aligned corridor of open ground 40 tiles long (no road, building,
+  water, lot, place, door, parking space, designed place or non-natural prop; the main line at least 5 tiles off, a road
+  2), its platform within 1400 px of the station and a path off the platform's back (at most 22 tiles) to a pavement,
+  plaza, car park or road. It lays the track's bed (dirt, reserve bit 2 as the main line's), the platform and the path
+  paved, and two 6-tile bores (`m.tunnels` / `m.cover`, shared/tunnels.js' kind: the hill drawn over them, sight blocked,
+  a train in one hidden) - the portal facing the platform, the far end blind (rock across it, no portal drawn:
+  client/tunnels.js `blind`). The trees and rocks in the way go. `m.arrivals` keeps each line (its points, the station,
+  the portals, the bores, the path). It is none of the main line's loops: no server train runs on it, nothing joins it.
+- **Picked (seed 1337):** city - **Metro Central** (the lawn north of the station's forecourt loop, across Bayside
+  Avenue: the city's core stations - Midtown, Old Quarter, Westport Center, Southside - have no 40-tile run of open
+  ground near them); coast - **Northshore** (between the promenade and the main line, by the beach); desert - **Red
+  Rock** (out on the sand south of the station's road); country - **Willow Valley** (the meadow south of the station's
+  car park loop). No mountain station: the main line has none in the peaks.
+- **`STARTER.lotR` 900 -> 960 px**: Metro Central's own car park is 934 px from its building, so it wasn't a public
+  garage before (no starter car could wait there).
+- **The art:** the bake draws each line's track and platform as the main line's (client/art2/game/groundbake.js
+  `railField`), the platform's canopies, benches, lamps and name board (statics.js `addRailLoop`, no route board - it
+  has no timetable), and keeps the plants off its bed (`railClear`). The hills and portals are the tunnels'.
+- **Choose your station** (server/systems/ftue.js, step 0): once the look is picked, one card - each station's name,
+  region and a line of what it's like (`REGIONS`), the suggested one (`FTUE.arriveDefault`, the city) first. A pick
+  (`{ t: 'intro', a: 'pick', stn }`) sets `ftue.stn` and the starter car follows it (`starter.followArrival`: brought
+  round to the new station's lot, or put there); Esc, B, Skip or `FTUE.pickS` (60 s) left on the card take the default.
+  A player who leaves on the card gets it again on rejoining. `starter.arrivalChoices` is the list (on a map without
+  arrival lines: up to four stations with a car park, spread out, the one nearest where new characters wake first).
+- **The arrival on the line** (client/ftue.js): the train is the page's own - three cars drawn into the frame
+  (main.js `S.stageCars`), never a server train, so two arrivals never meet. It comes out of the first tunnel, eases into
+  the platform and stops (`FTUE.stopS` 6 s), the chime, the doors open and you're on the platform (`FTUE.doorS` 7.2 s:
+  your own character hidden till then, `S.hideMe`); the card; the scene ends at `FTUE.arriveS` (14 -> 12 s) and the
+  question comes up while the train pulls out (`FTUE.leaveS` 9 s) into the far tunnel behind it. The camera waits by
+  the portal, follows the front car in and settles on your doors, pulled back a little (`S.camPull`: 1.55 on an
+  upright phone, 1.15 otherwise) so the train fits. On the server, the newcomer is out of everyone else's sight
+  (`ped.ftueHid`, server/net.js) until the doors open - others see them appear on the platform. Skip: the train still
+  coming in is gone, one in the station pulls out. The carriage-door overlay is gone; the Guide's replay (no line where
+  you stand) is the card over a slow pan.
+- **The Guide:** a new entry, Arriving (Getting around). Analytics: `ftue_pick`, `ftue_pick_default`.
+- **Tests:** `test/world3arrivals.test.js` (one world build: a line per region at a station with a car park, straight,
+  its platform paved between the portals, two bores with their hills, the far ends blind and walled; no main-line track
+  within 4 tiles, no road on or across it; walkable off the platform to the street and the car park; the card on a v3
+  world, the coast picked, the line sent to the page, the car at that station, the newcomer unseen by another player
+  until the doors open). `test/ftue.test.js`: the card, a pick moving the car, skip and the timeout taking the default,
+  a station not on the card, a rejoin mid-choice. `test/starter.test.js`: the first day's station is the default.

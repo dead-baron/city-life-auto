@@ -66,6 +66,7 @@ export function guideSections(map = null) {
     { id: 'around', title: 'Getting around', blurb: 'On foot, at the wheel, and the city\'s free transit.', entries: [
       { id: 'move', t: 'On foot', b: '[[move]] moves you; push all the way to run. [[sprint]] sprints and [[dive]] dives out of the way.' },
       { id: 'drive', t: 'Driving', b: `Walk up to any vehicle and press [[vehicle]] to get in. [[gas]] goes, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Driving earns driving skill (up to ${drive.cap} xp a day).` },
+      { id: 'arrive', t: 'Arriving', b: 'New in town, you pick the station your train comes in at - in the city, on the coast, in the desert or out in the country - and your starter car waits in its parking lot. Every station\'s trains go everywhere else.' },
       { id: 'starter', t: 'Your starter car', b: `A ${starter}, registered to you and free. Lose it and another is free at any public garage - a station parking lot, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there.` },
       { id: 'map', t: 'The map and waypoints', b: '[[map]] opens the map: pick a place, or tap anywhere, for a waypoint and a route along the roads.' },
       { id: 'bus', t: 'Buses', b: 'Free, any distance. Wait at a stop and press [[action]] when the bus pulls up; [[vehicle]] gets you off at any stop. Your phone\'s Transit app shows when the next one comes.' },
