@@ -27,6 +27,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = fileURLToPath(new URL('..', import.meta.url));
 const arg0 = (k) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? null : process.argv[i + 1]; };
+// The server bakes no art of its own here (CLA_ART_THREADS 0: its bake thread builds the world again, 1.5 GB - with the
+// server's own 3.9 GB and the browser's, this machine's memory ran out and killed the server or the page mid-drive).
 // --root <dir>: run another build - its server and its page (a snapshot: git worktree add <dir> <commit>, or git archive),
 // with the world and the art kept in this tree's data/ (the same chunks)
 const ROOT = arg0('root') ? join(arg0('root'), '/') : HERE;
@@ -43,7 +45,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 // ---- the servers: the game (World v3, dev) and the page's files as GitHub Pages serves them (gzipped, cached) ------
 let server = null, pages = null;
 async function startServer() {
-  server = spawn(process.execPath, ['server/index.js'], { cwd: ROOT, env: { CLA_ART_PREWARM: 'none', CLA_DATA_DIR: join(HERE, 'data'), ...process.env, CLA_WORLD: 'v3', CLA_DEV: '1', PORT: String(PORT) }, stdio: ['ignore', 'pipe', 'pipe'] });
+  server = spawn(process.execPath, ['server/index.js'], { cwd: ROOT, env: { CLA_ART_PREWARM: 'none', CLA_ART_THREADS: '0', CLA_DATA_DIR: join(HERE, 'data'), ...process.env, CLA_WORLD: 'v3', CLA_DEV: '1', PORT: String(PORT) }, stdio: ['ignore', 'pipe', 'pipe'] });
   let out = '';
   server.stderr.on('data', (d) => { out += d; if (out.length > 20000) out = out.slice(-8000); });
   await new Promise((res, rej) => {
