@@ -19922,5 +19922,10 @@ columns ran over 50. The worst: Southside's back rows (16 x 109), Westport Cente
 - test/plainblocks.test.js (one world build): no plain footprint over 400 tiles, no plain roof deeper than 20, no plain
   run over 44 tiles, the lots of a cut column front onto paved passages, the big works and warehouses carry their
   names, every place still stands in a building. It fails on the old build (70 over the cap, runs of 146).
+- Cost (the whole v3 build and cut, this machine): the region files 18.03 -> 18.07 MB gzipped (+0.2%), 518.3 -> 518.4
+  MB raw; +434 buildings and roofs, +594 props (the passages' bins and planters). Baking the 60 chunks round the ten
+  worst spots from cold: Medium 743 -> 709 ms a chunk, Ultra 563 -> 531 (the same within this machine's noise: the
+  lots' fronts cost about what the roofs they replace did). The world's build time doesn't move (one pass over the
+  buildings).
 - Today's world (`world`) doesn't change: everything is World v3's (WD). `world3` / `art3` change, so browsers fetch the
   v3 regions and chunks again; today's `art` changes too (the roof kit's code).
