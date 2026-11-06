@@ -268,6 +268,11 @@ export function vehicleSprite(d, st, hi = 0, N = 32) {
 // hips go on bikes, jet skis and boats; the driver's seat in cars), exhaust, fire [[x, y, z]] (where the
 // flames go when it burns), wake [x, y] (boats), bed (cargo floor height), L, W, H (art size), kind
 const LIGHTS = new Map();
+// a vehicle's length (px) for the page's lights (host.js _lights: the headlamps at its nose) - its model's dimensions, the
+// same as its built model's (test/art2.test.js), without building the model: vehicleLights does (vehicles.js
+// vehicleAnchors: 30-70 ms a model on the bench machine, a phone's long task each time a new kind of vehicle came into
+// view - 11-06); null for one without
+export function vehicleLength(d) { const D = VEHICLE_DIMS[vehType(d)]; return D ? D[0] : null; }
 export function vehicleLights(d) {
   const t = vehType(d);
   let r = LIGHTS.get(t);

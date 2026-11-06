@@ -2631,8 +2631,8 @@ export class World2 {
       if (def.kind === 'air') { if (this.AM) this.AM.airLights(this, v, now, night); continue; }   // (their lamps, the searchlight's pool - H66)
       if (def.horse) continue;   // (a horse: no lamps)
       const f = v.flags, c = Math.cos(v.ra), s = Math.sin(v.ra), zb = this._z0(v, def.kind === 'boat');
-      const vl = this.prov.actors && this.A.vehicleLights ? this.A.vehicleLights(v.d) : null;
-      const hl = (vl ? vl.L : def.L) / 2;
+      const vL = this.prov.actors && this.A.vehicleLength ? this.A.vehicleLength(v.d) : null;   // (not vehicleLights: that builds the model here)
+      const hl = (vL || def.L) / 2;
       if (f & VF.LIGHTS) {
         const fx = v.rx + c * hl, fy = v.ry + s * hl;
         this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
