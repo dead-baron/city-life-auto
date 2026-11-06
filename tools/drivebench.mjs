@@ -285,7 +285,13 @@ try {
   R.start = h0;
   R.mapSizes = await page.evaluate(() => { const m = window.CLA.S.map, n = (a) => (a ? a.length : 0); return { w: m.w, h: m.h, props: n(m.props), lamps: n(m.lamps), pois: n(m.pois), buildings: n(m.buildings), edges: n(m.edges), nodes: n(m.nodes), lots: n(m.lots) }; });
   log(`the window: ${JSON.stringify(R.mapSizes)}`);
-  await page.evaluate(() => { const D = window.__drive; D.rec = true; D.t0 = performance.now(); });
+  await page.evaluate(() => {
+    const D = window.__drive; D.rec = true; D.t0 = performance.now();
+    // every chunk drawn from here on (the engine's uploads), to set against what was baked or fetched ahead of need
+    const w = window.CLA.S.art2, E = w.E, up0 = E.uploadChunk.bind(E);
+    D.shown = new Set(); D.pre0 = w.pre ? new Set(w.pre.kept) : new Set();
+    E.uploadChunk = (cx, cy, ...a) => { D.shown.add(cy * 1000 + cx); return up0(cx, cy, ...a); };
+  });
   log(`driving for ${MIN} min (cpu x${CPU}, ${NIGHT ? 'night' : 'day'}, ${RAIN ? 'rain' : 'dry'})`);
   let prevFt = 0, prevLong = 0;
   for (let mi = 0; mi < MIN; mi++) {
@@ -315,6 +321,13 @@ try {
   const D = await page.evaluate(() => { const D = window.__drive; const ap = D.apSpans; D.long = D.long.filter((L) => !ap.some(([t, ms]) => t < L.at + L.ms && t + ms > L.at - 1)); return { apSpans: ap.length, ft: D.ft, long: D.long, slow: D.slow, heap: D.heap, kinds: D.kinds, t0: D.t0, ap: D.ap, partSum: D.partSum, partN: D.partN, cbSum: D.cbSum }; });
   const h1 = await page.evaluate(hudNow);
   R.end = h1;
+  // the bakes and downloads ahead of need: how many, and how many of those chunks were drawn after all
+  R.ahead = await page.evaluate(() => {
+    const D = window.__drive, w = window.CLA.S.art2, pre = w.pre, fa = w.fa;
+    const ahead = pre ? [...pre.kept].filter((k) => !D.pre0.has(k)).map((k) => +k.split(':')[1]) : [];
+    return { baked: pre ? pre.done : 0, had: pre ? pre.had : 0, fetched: fa ? fa.got : 0, aheadChunks: ahead.length, aheadShown: ahead.filter((k) => D.shown.has(k)).length, shown: D.shown.size, chunkUp: w.n.chunkUp, pool: w.pool ? w.pool.stats() : null, lane: w.lane ? w.lane.stats() : null };
+  });
+  log(`ahead of need: ${JSON.stringify(R.ahead)}`);
   // each long task with the slow callbacks inside it (what was running), and what's left over (the browser's own: a
   // message's decoding, garbage collection, style and layout - not inside any callback timed)
   const by = {};
