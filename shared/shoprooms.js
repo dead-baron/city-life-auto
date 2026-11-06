@@ -118,7 +118,26 @@ export function shopRoom(b, u, TILE, M) {
   }
   const ctx = { R, r, regs, atm, name, TILE, X0, X1, Ya, Yb, y0, y1, back, cy, dx, dw, dc, tillX, W: X1 - X0, FH: Yb - Ya, BH: cy - back, H: wi.h || 0 };
   FIT[plan](ctx);
+  R.people = R.people.filter(inReach(R));
   return R;
+}
+// the customers kept are those a body could walk to from the door, round everything standing on the floor (one sat by a
+// way in): the fit-out fills in round where they were put, and in a small shop it can close a gap
+const BODY = 10;
+function inReach(R) {
+  const st = 4, solid = R.pieces.filter((p) => !p.flat && p.t !== 'stool'), seen = new Set();
+  const free = (x, y) => x - BODY >= R.X0 && x + BODY <= R.X1 && y - BODY >= R.Ya && y + BODY <= R.Yb && !solid.some((p) => x + BODY > p.x0 && x - BODY < p.x1 && y + BODY > p.y0 && y - BODY < p.y1);
+  const sx = Math.round(R.dc / st), sy = Math.round((R.Yb - BODY - 1) / st);
+  if (free(sx * st, sy * st)) {
+    const q = [[sx, sy]];
+    seen.add(sx * 65536 + sy);
+    while (q.length) {
+      const [i, j] = q.pop();
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const k = (i + di) * 65536 + (j + dj); if (!seen.has(k) && free((i + di) * st, (j + dj) * st)) { seen.add(k); q.push([i + di, j + dj]); } }
+    }
+  }
+  const near = (x, y, r) => { for (let i = Math.floor((x - r) / st); i <= Math.ceil((x + r) / st); i++) for (let j = Math.floor((y - r) / st); j <= Math.ceil((y + r) / st); j++) if (seen.has(i * 65536 + j) && Math.hypot(i * st - x, j * st - y) <= r) return true; return false; };
+  return (q) => (q.gt === 'sit' ? near(q.x, q.y, 30) : near(q.x, q.y, 6) && !solid.some((p) => q.x > p.x0 - 2 && q.x < p.x1 + 2 && q.y > p.y0 - 2 && q.y < p.y1 + 2));
 }
 
 // ---- placing ---------------------------------------------------------------------------------------------------------
@@ -144,23 +163,51 @@ const shopper = (c, x, y, a = -Math.PI / 2, gt) => {
   c.R.people.push({ x: Math.round(x), y: Math.round(y), a: Math.round(a * 100) / 100, ...(gt ? { gt } : null) });
 };
 const lamp = (c, x, y, rad = 40, col = WARM, k = 1) => c.R.lamps.push({ x: Math.round(x), y: Math.round(y), r: Math.round(rad), c: col, k: Math.round(k * 100) / 100 });
+// rows of units across a region (east-west: their goods-laden faces to the street, as the old fit-out had them), an aisle
+// between each; in a strip too narrow to walk (under WALK px: the side of a small shop's door lane) they stack closer and
+// nobody is stood between them
+const WALK = 26;
 function aisles(c, reg, d, aisle, mk) {
   let n = 0;
-  const W = reg.x1 - reg.x0, k = Math.max(1, Math.round(W / 170)), sw = (W - (k - 1) * 26) / k;
+  const W = reg.x1 - reg.x0, k = Math.max(1, Math.round(W / 170)), sw = (W - (k - 1) * 26) / k, walk = W >= WALK;
+  if (!walk) aisle = Math.min(aisle, 16);
   for (let y = reg.y0; y + d <= reg.y1; y += d + aisle) {
     let any = false;
     for (let i = 0; i < k; i++) { const xa = reg.x0 + i * (sw + 26); if (mk(xa, y, xa + sw, y + d, n)) any = true; }
-    if (any) { n++; if (y + d + 14 < reg.y1 && c.r() < 0.45) shopper(c, reg.x0 + 10 + c.r() * Math.max(1, W - 20), y + d + 12); }
+    if (any) { n++; if (walk && y + d + 14 < reg.y1 && c.r() < 0.45) shopper(c, reg.x0 + 10 + c.r() * Math.max(1, W - 20), y + d + 12); }
   }
   return n;
 }
-// gondolas running north-south down a region (RT3, IN6: the shelves stand end-on to the counter), a lane between each
+// gondolas running north-south down a region (RT3, IN6: the shelves stand end-on to the counter), a lane between each -
+// in a region too narrow for three of them and a row beside (a small shop: 3-8 tiles wide, its door's lane taking the
+// middle), rows of the same shelving east-west instead (aisles: their stocked faces to the street), so a narrow shop is as
+// stocked as a wide one
 function gondolas(c, reg, wd, lane, mk) {
   let n = 0;
+  wd = Math.max(wd, 24);
   const len = reg.y1 - reg.y0 - 6;
-  if (len < 30) return 0;
-  const from = reg.side < 0 ? reg.x0 + 18 : reg.x0 + 4;
-  for (let x = from; x + wd <= reg.x1 - (reg.side < 0 ? 4 : 18); x += wd + lane) { if (mk(x, reg.y0 + 2, x + wd, reg.y0 + 2 + len, n)) { n++; if (c.r() < 0.4) shopper(c, x + wd + lane / 2, reg.y0 + 14 + c.r() * Math.max(1, len - 28)); } }
+  if (reg.x1 - reg.x0 < 3 * wd + 2 * lane + 62 || len < 30) {
+    const k0 = c.R.pieces.length;
+    n = aisles(c, reg, 14, 26, mk);
+    for (let i = k0; i < c.R.pieces.length; i++) delete c.R.pieces[i].ns;
+    return n;
+  }
+  // (a deep floor: the gondolas down its back half, rows of the same shelving across the front - RT3's snack island by
+  // the door - so the floor reads stocked from the street, not as lanes)
+  // (RT3's three gondolas at most, from the side wall in; the rest of a wide region rows of the same shelving east-west)
+  const glen = len >= 120 ? Math.round(len * 0.55) : len, west = reg.side < 0;
+  let g = 0, x = west ? reg.x0 + 18 : reg.x1 - 18 - wd;
+  for (; g < 3 && x >= reg.x0 + 4 && x + wd <= reg.x1 - 4; g++, x += west ? wd + lane : -(wd + lane)) {
+    if (!mk(x, reg.y0 + 2, x + wd, reg.y0 + glen - 14, n)) continue;
+    // (its end cap facing the door: a short run of the same shelving across the gondola's south end)
+    const k = c.R.pieces.length, e = mk(x - 2, reg.y0 + glen - 12, x + wd + 2, reg.y0 + glen + 2, n);
+    if (e && c.R.pieces.length > k) delete c.R.pieces[k].ns;
+    n++; if (c.r() < 0.4) shopper(c, west ? x + wd + lane / 2 : x - lane / 2, reg.y0 + 14 + c.r() * Math.max(1, glen - 40));
+  }
+  const rest = west ? { ...reg, x0: x + 4 } : { ...reg, x1: x + wd - 4 }, k0 = c.R.pieces.length, n0 = n;
+  if (rest.x1 - rest.x0 >= 40) n += aisles(c, rest, 14, 26, (x0, y, x1, y1, k) => mk(x0, y, x1, y1, n0 + k));
+  if (glen < len) n += aisles(c, { ...reg, y0: reg.y0 + 2 + glen + 24 }, 14, 26, (x0, y, x1, y1, k) => mk(x0, y, x1, y1, n0 + 10 + k));
+  for (let i = k0; i < c.R.pieces.length; i++) delete c.R.pieces[i].ns;
   return n;
 }
 const wall = (c, t, x0, x1, v0, v1, o = {}) => c.R.onWall.push({ t, x0: Math.round(x0), x1: Math.round(x1), v0, v1, ...o });
@@ -169,13 +216,15 @@ const wall = (c, t, x0, x1, v0, v1, o = {}) => c.R.onWall.push({ t, x0: Math.rou
 // along the wall where no other sign is
 const PER_CHAR = { neon: 14, block: 14, serif: 16, script: 16, civic: 12 };
 function sign(c, text, col, x, face = 'neon') {
+  if (Array.isArray(text)) { for (const t of text) if (sign(c, t, col, x, face)) return true; return false; }   // (the first of the texts that fits: a small shop's wall takes the short one)
   const w = text.length * (PER_CHAR[face] || 12) + 18, s = c.r() < 0.5 ? -1 : 1, at = [x, c.tillX + s * 70, c.tillX - s * 70, c.tillX + s * 46, c.tillX - s * 46, c.X0 + w / 2 + 8, c.X1 - w / 2 - 8, c.tillX];
   for (const cx of at) {
     if (cx === undefined || cx - w / 2 < c.X0 + 6 || cx + w / 2 > c.X1 - 6) continue;
     if (c.R.onWall.some((q) => (q.t === 'sign' || q.v1 > 52) && q.x0 < cx + w / 2 + 4 && q.x1 > cx - w / 2 - 4)) continue;
     wall(c, 'sign', cx - w / 2, cx + w / 2, 50, 70, { text, c: col, face });
-    return;
+    return true;
   }
+  return false;
 }
 function waiting(c) {
   const x = c.tillX + (c.r() < 0.5 ? -1 : 1) * (32 + c.r() * 20);
@@ -185,9 +234,10 @@ const corner = (reg, w, h, nearDoor) => { const x = (nearDoor ? reg.side < 0 : r
 // along a region's outer side wall (the room's west or east wall), a unit running north-south
 function sideWall(c, reg, t, d, h, o = {}) {
   const atW = reg.x0 <= c.X0 + 6, atE = reg.x1 >= c.X1 - 6;
-  if (!atW && !atE) return null;
+  const { need = 120, ...oo } = o;   // (need: what it must leave of the region - a narrow strip: shelving end-on along the wall would show nothing, aisles fill it; a booth (need 0) is the strip)
+  if ((!atW && !atE) || reg.x1 - reg.x0 < d + (need ? 22 + need : 4)) return null;
   const x0 = atW ? c.X0 + 3 : c.X1 - 3 - d;
-  const p = put(c, t, x0, reg.y0, x0 + d, reg.y1, h, { side: atW ? -1 : 1, ...o });
+  const p = put(c, t, x0, reg.y0, x0 + d, reg.y1, h, { side: atW ? -1 : 1, ...oo });
   if (p) { if (atW) reg.x0 = Math.max(reg.x0, x0 + d + 22); else reg.x1 = Math.min(reg.x1, x0 - 22); }
   return p;
 }
@@ -204,18 +254,34 @@ export function coverage(R) {
   for (let i = 0; i < m.length; i++) if (m[i] !== 2) { all++; n += m[i]; }
   return all ? n / all : 1;
 }
+// how full the shop floor reads from the street (the camera looks down from the south: a piece covers its top and, above
+// it in the picture, its south face as tall as it stands) - the share of the floor's picture, counter to door, under the
+// fit-out (client/art2/shopart.js draws it; test/shoprooms.test.js measures the drawn art)
+export function seenOf(R) {
+  const S = 4, w = Math.ceil((R.X1 - R.X0) / S), h = Math.ceil((R.Yb - R.Ya) / S);
+  if (w <= 0 || h <= 0) return 0;
+  const m = new Uint8Array(w * h);
+  for (const p of R.pieces.concat(R.ext || [])) {
+    const y0 = p.flat ? p.y0 : p.y0 - (p.h || 0), a = Math.max(0, Math.floor((p.x0 - R.X0) / S)), b = Math.min(w, Math.ceil((p.x1 - R.X0) / S)), c0 = Math.max(0, Math.floor((y0 - R.Ya) / S)), d = Math.min(h, Math.ceil((p.y1 - R.Ya) / S));
+    for (let y = c0; y < d; y++) m.fill(1, y * w + a, y * w + Math.max(a, b));
+  }
+  let n = 0;
+  for (let i = 0; i < m.length; i++) n += m[i];
+  return n / m.length;
+}
 // dress the floor out to a fill target: islands from the plan's kit tried along each region (a lane of about 16 px
 // round each so you can walk between them), then the side walls, then rugs, until the target is reached or nothing fits
 function fill(c, kit, o = {}) {
-  const R = c.R, T = o.target ?? 0.37 + c.r() * 0.1;
-  let cov = coverage(R);
-  if (cov >= T || !kit.length) return cov;
+  const R = c.R, T = o.target ?? 0.37 + c.r() * 0.1, TS = o.seen ?? 0.36 + c.r() * 0.08;
+  let cov = coverage(R), sn = seenOf(R);
+  const short = () => cov < T || (sn < TS && cov < 0.6);   // (the floor dressed to its target, and on until it reads full from the street - never past 60%)
+  if (!short() || !kit.length) return cov;
   const regs = c.regs.slice();
-  for (let pass = 0; pass < 3 && cov < T; pass++) {
+  for (let pass = 0; pass < 3 && short(); pass++) {
     let any = false;
     for (const reg of regs) {
-      for (let k = 0; k < kit.length * 2 && cov < T; k++) {
-        const K = kit[(k + pass + (c.R.seed & 7)) % kit.length], [w, d] = K.size(c, reg);
+      for (let k = 0; k < kit.length * 2 && short(); k++) {
+        const K = kit[(k + pass + (c.R.seed & 7)) % kit.length], [w0, d] = K.size(c, reg), w = K.shrink && reg.x1 - reg.x0 < w0 + 4 ? Math.max(K.shrink, reg.x1 - reg.x0 - 4) : w0;
         if ((K.n | 0) >= K.max || reg.x1 - reg.x0 < w + 4 || reg.y1 - reg.y0 < d + 4) continue;
         let done = false;
         for (let y = reg.y0 + 2; !done && y + d <= reg.y1; y += 8) {
@@ -223,7 +289,7 @@ function fill(c, kit, o = {}) {
             const x = reg.side < 0 ? reg.x0 + 2 + i * 8 : reg.x1 - 2 - w - i * 8;
             if (x < reg.x0 || x + w > reg.x1) continue;
             const p = K.put(c, x, y, x + w, y + d, o.gap ?? 14);
-            if (p) { done = true; any = true; K.n = (K.n | 0) + 1; cov = coverage(R); }
+            if (p) { done = true; any = true; K.n = (K.n | 0) + 1; cov = coverage(R); sn = seenOf(R); }
           }
         }
       }
@@ -240,8 +306,10 @@ function placeAny(c, w, d, f) {
   }
   return null;
 }
-// a kit entry: its size in a region, and how it's put down
-const K = (size, f, max = 99) => ({ size: typeof size === 'function' ? size : () => size, put: f, max });
+// a kit entry: its size in a region, and how it's put down (shrink: how narrow it may be made to fit a strip - a case, a
+// shelf, crates, a rack - else 0, its size or nothing)
+const K = (size, f, max = 99, shrink = 0) => ({ size: typeof size === 'function' ? size : () => size, put: f, max, shrink });
+const KS = (size, f, shrink = 14, max = 99) => K(size, f, max, shrink);
 
 // ---- the plans --------------------------------------------------------------------------------------------------------
 const FIT = {};
@@ -272,10 +340,10 @@ FIT.corner = (c, fuel) => {
   }
   put(c, 'mat', c.dc - 22, c.Yb - 16, c.dc + 22, c.Yb - 3, 1, { c: '#3a3a40', flat: true });
   fill(c, [
-    K([18, 14], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 20, { g: ['#c8a070', '#b08a58', '#d8b888'] }, g)),
-    K([30, 14], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 18, { c: '#5a5e68', g: G.snacks, gk: 'snacks' }, g)),
+    KS([18, 14], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 20, { g: ['#c8a070', '#b08a58', '#d8b888'] }, g)),
+    KS([30, 14], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 18, { c: '#5a5e68', g: G.snacks, gk: 'snacks' }, g)),
     K([14, 14], (c, x0, y0, x1, y1, g) => put(c, 'spinner', x0, y0, x1, y1, 30, { g: G.snacks, gk: 'chips' }, g)),
-    K([10, 8], (c, x0, y0, x1, y1, g) => put(c, 'wetfloor', x0, y0, x1, y1, 14, {}, g)),
+    K([10, 8], (c, x0, y0, x1, y1, g) => put(c, 'wetfloor', x0, y0, x1, y1, 14, {}, g), 1),
   ]);
   lamp(c, c.tillX, c.Ya - 8, 46, COOL, 0.8);
   for (const reg of c.regs) lamp(c, (reg.x0 + reg.x1) / 2, (reg.y0 + reg.y1) / 2, 50, COOL, 0.6);
@@ -289,7 +357,7 @@ FIT.grocery = (c) => {
   if (c.BH >= 24) wall(c, 'fridge', c.X0 + 6, c.X1 - 6, 2, 44, { g: G.drinks, gk: 'drinks' }); else wall(c, 'goods', c.X0 + 6, c.X1 - 6, 0, 40, { g: G.produce, gk: 'produce' });
   sign(c, pick(r, ['FRESH', 'DELI', 'PRODUCE', 'MARKET']), pick(r, ['#7aff7a', '#ffd24a', '#ff7a5a']));
   const [a, b] = c.regs;
-  if (a) gondolas(c, a, 20, 22, (x0, y, x1, y1, n) => put(c, 'shelf', x0, y, x1, y1, 24, { c: '#6a6e78', g: n & 1 ? G.drinks : G.snacks, gk: n & 1 ? 'drinks' : 'snacks', ns: true }));
+  if (a) aisles(c, a, 14, 28, (x0, y, x1, y1, n) => put(c, 'shelf', x0, y, x1, y1, 24, { c: '#6a6e78', g: n & 1 ? G.drinks : G.snacks, gk: n & 1 ? 'drinks' : 'snacks' }));
   if (b) {
     let y = b.y0;
     for (let k = 0; k < 3 && y + 20 <= b.y1; k++, y += 28) put(c, 'bins', b.x0, y, Math.min(b.x1, b.x0 + 72), y + 20, 12, { c: '#8a6440', g: G.produce });
@@ -297,8 +365,8 @@ FIT.grocery = (c) => {
   }
   if (c.regs.length) { const reg = c.regs[c.regs.length - 1], q = corner(reg, 30, 14, true); put(c, 'carts', ...q, 14); }
   fill(c, [
-    K([40, 18], (c, x0, y0, x1, y1, g) => put(c, 'bins', x0, y0, x1, y1, 12, { c: '#8a6440', g: G.produce }, g)),
-    K([18, 14], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 16, { g: ['#c8a070', '#b08a58', '#5aa83a'] }, g)),
+    KS([40, 18], (c, x0, y0, x1, y1, g) => put(c, 'bins', x0, y0, x1, y1, 12, { c: '#8a6440', g: G.produce }, g)),
+    KS([18, 14], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 16, { g: ['#c8a070', '#b08a58', '#5aa83a'] }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 8, 46, COOL, 0.7);
   waiting(c); waiting(c);
@@ -314,8 +382,8 @@ FIT.liquor = (c) => {
   if (b) { put(c, 'cooler', b.x0, b.y0, Math.min(b.x1, b.x0 + 70), b.y0 + 12, 46, { c: '#2a2c34', g: ['#e8c040', '#c8283a', '#3a6ab0', '#e8e8e8'], gk: 'drinks' }); put(c, 'winerack', b.x0, b.y0 + 34, Math.min(b.x1, b.x0 + 54), b.y0 + 50, 24, { c: '#6a4630' }); }
   fill(c, [
     K([22, 16], (c, x0, y0, x1, y1, g) => put(c, 'barrel', x0, y0, x1, y1, 22, { c: '#7a5434' }, g)),
-    K([28, 18], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 18, { g: ['#8a6440', '#6a4a30', '#c8a070'], bottles: true }, g)),
-    K([32, 12], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 22, { c: '#4a3020', g: G.bottles, gk: 'bottles', bottles: true }, g)),
+    KS([28, 18], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 18, { g: ['#8a6440', '#6a4a30', '#c8a070'], bottles: true }, g)),
+    KS([32, 12], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 22, { c: '#4a3020', g: G.bottles, gk: 'bottles', bottles: true }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 6, 40, WARM, 0.8);
   waiting(c);
@@ -331,9 +399,9 @@ FIT.gunshop = (c) => {
   if (a) { sideWall(c, a, 'gunrack', 12, 34, { c: '#5a3a24', v: true }); aisles(c, a, 16, 24, (x0, y, x1, y1, n) => put(c, 'glasscase', x0, y, x1, y1, 20, { c: '#3a3a40', g: G.guns, gk: 'guns', felt: '#7a2a2a' })); }
   if (b) { put(c, 'pile', b.x0, b.y0, Math.min(b.x1, b.x0 + 40), b.y0 + 22, 20, { g: ['#4a5a2a', '#5a6a34', '#3a4a22', '#6a5a2a'], boxes: true }); put(c, 'mannequin', b.x0 + 4, b.y0 + 32, b.x0 + 18, b.y0 + 42, 40, { c: '#5a6a3a', c2: '#e86a20' }); if (b.x1 - b.x0 > 70) put(c, 'gunrack', b.x0 + 30, b.y0 + 30, Math.min(b.x1, b.x0 + 84), b.y0 + 44, 34, { c: '#5a3a24' }); }
   fill(c, [
-    K([40, 18], (c, x0, y0, x1, y1, g) => put(c, 'glasscase', x0, y0, x1, y1, 20, { c: '#3a3a40', g: G.guns, gk: 'guns', felt: '#7a2a2a' }, g)),
+    KS([40, 18], (c, x0, y0, x1, y1, g) => put(c, 'glasscase', x0, y0, x1, y1, 20, { c: '#3a3a40', g: G.guns, gk: 'guns', felt: '#7a2a2a' }, g)),
     K([14, 10], (c, x0, y0, x1, y1, g) => put(c, 'mannequin', x0, y0, x1, y1, 40, { c: pick(c.r, ['#5a6a3a', '#4a5a2a', '#6a5a3a']), c2: pick(c.r, ['#e86a20', '#3a3a30']) }, g)),
-    K([26, 18], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 18, { g: ['#4a5a2a', '#5a6a34', '#3a4a22', '#6a5a2a'], boxes: true }, g)),
+    KS([26, 18], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 18, { g: ['#4a5a2a', '#5a6a34', '#3a4a22', '#6a5a2a'], boxes: true }, g)),
   ]);
   put(c, 'mat', c.dc - 22, c.Yb - 16, c.dc + 22, c.Yb - 3, 1, { c: '#4a3a2a', flat: true });
   for (const reg of c.regs) lamp(c, (reg.x0 + reg.x1) / 2, reg.y0 + 14, 44, WARM, 0.7);
@@ -346,7 +414,7 @@ FIT.hardware = (c) => {
   wall(c, 'tools', c.X0 + 6, c.X1 - 6, 4, 48, { g: G.tools });
   sign(c, pick(r, ['TOOLS', 'HARDWARE', 'KEYS CUT', 'PAINT']), pick(r, ['#ffb04a', '#ffffff', '#ffd24a']), undefined, 'block');
   const [a, b] = c.regs;
-  if (a) gondolas(c, a, 20, 22, (x0, y, x1, y1, n) => put(c, n === 1 ? 'paint' : 'shelf', x0, y, x1, y1, n === 1 ? 18 : 26, { c: '#d86a20', g: G.tools, gk: 'tools', ns: true }));
+  if (a) aisles(c, a, 14, 28, (x0, y, x1, y1, n) => put(c, n === 1 ? 'paint' : 'shelf', x0, y, x1, y1, n === 1 ? 18 : 26, { c: '#d86a20', g: G.tools, gk: 'tools' }));
   if (b) {
     put(c, 'lumber', b.x0, b.y0, Math.min(b.x1, b.x0 + 70), b.y0 + 18, 14, { c: '#d8b884' });
     const hero = pick(r, ['mower', 'barrow', 'mower']), q = corner(b, hero === 'mower' ? 30 : 24, 20, true);
@@ -354,10 +422,10 @@ FIT.hardware = (c) => {
     if (b.y1 - b.y0 > 70) put(c, 'ladder', b.x0, b.y0 + 30, b.x0 + 8, b.y0 + 60, 44, { c: '#c8ccd2' });
   }
   fill(c, [
-    K([34, 14], (c, x0, y0, x1, y1, g) => put(c, 'paint', x0, y0, x1, y1, 18, { c: '#7a7e86', g: G.tools }, g)),
+    KS([34, 14], (c, x0, y0, x1, y1, g) => put(c, 'paint', x0, y0, x1, y1, 18, { c: '#7a7e86', g: G.tools }, g)),
     K([24, 18], (c, x0, y0, x1, y1, g) => put(c, 'machine', x0, y0, x1, y1, 18, { k: pick(c.r, ['mower', 'barrow']) }, g)),
-    K([30, 14], (c, x0, y0, x1, y1, g) => put(c, 'lumber', x0, y0, x1, y1, 12, { c: '#d8b884' }, g)),
-    K([20, 16], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 18, { g: ['#c8a070', '#b08a58', '#d86a20'] }, g)),
+    KS([30, 14], (c, x0, y0, x1, y1, g) => put(c, 'lumber', x0, y0, x1, y1, 12, { c: '#d8b884' }, g)),
+    KS([20, 16], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 18, { g: ['#c8a070', '#b08a58', '#d86a20'] }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 6, 46, COOL, 0.6);
   waiting(c);
@@ -370,11 +438,11 @@ FIT.pawn = (c, fence) => {
   R.floor = fence ? pick(r, F.dark) : pick(r, F.conc.concat(F.wood.slice(0, 3))); R.wall = fence ? pick(r, W.gun) : pick(r, W.pawn);
   R.counter = { top: '#2a2a2e', front: '#4a3a2e', trim: '#c8a050', k: 'glass', g: G.gold, felt: '#2a3a6a', on: ['scale'] };
   const n = Math.max(1, Math.floor((c.W - 12) / 70));
-  for (let i = 0; i < n; i++) { const x0 = c.X0 + 6 + i * ((c.W - 12) / n), x1 = x0 + (c.W - 12) / n - 4; wall(c, i === 0 && !fence ? 'guitars' : pick(r, fence ? ['goods', 'tvs', 'goods'] : ['guitars', 'tvs', 'goods', 'tvs']), x0, x1, 6, 48, { g: G.clutter, gk: 'clutter' }); }
-  if (!fence) { sign(c, 'PAWN SHOP', '#ffd24a', c.tillX, 'block'); sign(c, pick(r, ['LOANS', 'WE BUY GOLD', 'CASH 4 GOLD']), '#ff4a5a'); if (c.W >= 200) wall(c, 'head', c.X1 - 40, c.X1 - 14, 50, 72); }
+  for (let i = 0; i < n; i++) { const x0 = c.X0 + 6 + i * ((c.W - 12) / n), x1 = x0 + (c.W - 12) / n - 4; wall(c, i === 0 && !fence && n > 1 ? 'guitars' : pick(r, fence ? ['goods', 'tvs', 'goods'] : n > 1 ? ['guitars', 'tvs', 'goods', 'tvs'] : ['goods', 'tvs']), x0, x1, 6, 48, { g: G.clutter, gk: 'clutter' }); }
+  if (!fence) { sign(c, ['PAWN SHOP', 'PAWN'], '#ffd24a', c.tillX, 'block'); const l = pick(r, [['LOANS'], ['WE BUY GOLD', 'GOLD'], ['CASH 4 GOLD', 'CASH']]); sign(c, l, '#ff4a5a'); if (c.W >= 200) wall(c, 'head', c.X1 - 40, c.X1 - 14, 50, 72); }
   const [a, b] = c.regs;
   if (!fence) put(c, 'rug', c.dc - 36, c.Ya + STRIP + 6, c.dc + 36, Math.min(c.Yb - 14, c.Ya + STRIP + 84), 1, { c: '#8a2a24', c2: '#d8a050', text: c.dw >= 64 ? 'GOOD STUFF' : null, flat: true });
-  if (a) { sideWall(c, a, 'shelf', 14, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter', ns: true }); aisles(c, a, 18, 26, (x0, y, x1, y1, k) => put(c, 'glasscase', x0, y, Math.min(x1, x0 + 70), y1, 20, { c: '#2a2a2e', g: k === 0 ? G.guns : G.gold, gk: k === 0 && !fence ? 'guns' : 'gold', felt: k === 0 ? '#7a2a2a' : '#2a3a6a' })); }
+  if (a) { sideWall(c, a, 'shelf', 14, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter', ns: true }); aisles(c, a, 18, 26, (x0, y, x1, y1, k) => (fence || k === 1 ? put(c, 'shelf', x0, y, x1, y1, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter' }) : put(c, 'glasscase', x0, y, Math.min(x1, x0 + 130), y1, 20, { c: '#2a2a2e', g: k === 0 ? G.guns : G.gold, gk: k === 0 ? 'guns' : 'gold', felt: k === 0 ? '#7a2a2a' : '#2a3a6a' }))); }
   if (b) {
     sideWall(c, b, 'shelf', 14, 30, { c: '#5a4632', g: G.tools, gk: 'tools', ns: true });
     put(c, 'pile', b.x0, b.y0, Math.min(b.x1, b.x0 + 46), b.y0 + 24, 24, { g: G.clutter, boxes: !!fence });
@@ -382,11 +450,11 @@ FIT.pawn = (c, fence) => {
     put(c, 'machine', ...q, hero === 'bike' ? 20 : 30, { k: hero });
   }
   fill(c, [
-    K([44, 18], (c, x0, y0, x1, y1, g) => put(c, 'glasscase', x0, y0, x1, y1, 20, { c: '#2a2a2e', g: G.gold, gk: 'gold', felt: '#2a3a6a' }, g)),
+    KS([44, 18], (c, x0, y0, x1, y1, g) => put(c, 'glasscase', x0, y0, x1, y1, 20, { c: '#2a2a2e', g: G.gold, gk: 'gold', felt: '#2a3a6a' }, g)),
     K([40, 16], (c, x0, y0, x1, y1, g) => put(c, 'sofa', x0, y0, x1, y1, 16, { c: '#5a3424' }, g)),
     K([22, 16], (c, x0, y0, x1, y1, g) => put(c, 'machine', x0, y0, x1, y1, 30, { k: pick(c.r, ['safe', 'tvstack', 'jukebox']) }, g)),
     K([34, 14], (c, x0, y0, x1, y1, g) => put(c, 'machine', x0, y0, x1, y1, 20, { k: 'bike' }, g)),
-    K([26, 18], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 22, { g: G.clutter, boxes: !!fence }, g)),
+    KS([26, 18], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 22, { g: G.clutter, boxes: !!fence }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 4, 50, WARM, 0.9);
   for (const reg of c.regs) lamp(c, (reg.x0 + reg.x1) / 2, (reg.y0 + reg.y1) / 2, 46, WARM, 0.7);
@@ -411,7 +479,9 @@ FIT.bank = (c, court) => {
     const rw = Math.min(c.dw + 32, 96), rh = Math.min(56, c.Yb - c.Ya - STRIP - 26);
     if (rh >= 30) put(c, 'rose', c.dc - rw / 2, c.Ya + STRIP + 8, c.dc + rw / 2, c.Ya + STRIP + 8 + rh, 1, { c: '#b8a070', c2: '#5a4a3a', flat: true });
   }
-  put(c, 'rug', c.dx + 6, court ? c.Ya + STRIP : c.Yb - 30, c.dx + c.dw - 6, c.Yb - 2, 1, { c: court ? '#2a3a6a' : '#7a2a2a', c2: '#c8a050', flat: true, under: true });
+  // the runner from the door up to the rose (the court's all the way to the bench)
+  const rose = R.pieces.find((p) => p.t === 'rose');
+  put(c, 'rug', c.dx - 4, court || !rose ? c.Ya + STRIP : rose.y1 - 6, c.dx + c.dw + 4, c.Yb - 2, 1, { c: court ? '#2a3a6a' : '#7a2a2a', c2: '#c8a050', flat: true, under: true });
   const [a, b] = c.regs;
   if (court) for (const reg of c.regs) aisles(c, reg, 10, 22, (x0, y, x1, y1) => put(c, 'bench', x0, y, x1, y1, 16, { c: '#6a4630' }));
   else {
@@ -430,7 +500,7 @@ FIT.bank = (c, court) => {
     K([40, 16], (c, x0, y0, x1, y1, g) => put(c, 'sofa', x0, y0, x1, y1, 16, { c: court ? '#3a2a20' : '#2a5a46' }, g)),
     K([14, 12], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 26, { big: true }, g)),
     K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: court ? '#2a3a6a' : '#2a4a3a', c2: '#c8a050', flat: true }, g)),
-    K([22, 14], (c, x0, y0, x1, y1, g) => put(c, 'table', x0, y0, x1, y1, 16, { c: '#5a3a26', g: ['#e8e4dc', '#c8a050'] }, g)),
+    KS([22, 14], (c, x0, y0, x1, y1, g) => put(c, 'table', x0, y0, x1, y1, 16, { c: '#5a3a26', g: ['#e8e4dc', '#c8a050'] }, g)),
   ]);
   for (const reg of c.regs) { const q = corner(reg, 12, 10, false); put(c, 'plant', q[0], reg.y0, q[2], reg.y0 + 10, 24, { big: true }); }
   for (let x = c.X0 + 40; x < c.X1 - 20; x += 90) lamp(c, x, c.Ya - 4, 40, WARM, 0.9);
@@ -450,7 +520,7 @@ FIT.pharmacy = (c) => {
   if (a) gondolas(c, a, 20, 22, (x0, y, x1, y1) => put(c, 'shelf', x0, y, x1, y1, 24, { c: '#e8eaec', g: G.meds, gk: 'meds', ns: true }));
   if (b) { sideWall(c, b, 'shelf', 14, 30, { c: '#e8eaec', g: G.meds, gk: 'meds', ns: true }); put(c, 'chairs', b.x0, b.y1 - 12, Math.min(b.x1, b.x0 + 54), b.y1, 18, { c: '#3a62a8' }); const q = corner(b, 18, 14, false); put(c, 'machine', q[0], b.y0, q[2], b.y0 + 14, 26, { k: 'bp' }); }
   fill(c, [
-    K([20, 50], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 22, { c: '#e8eaec', g: G.meds, gk: 'meds', ns: true }, g)),
+    KS([20, 50], (c, x0, y0, x1, y1, g) => put(c, 'shelf', x0, y0, x1, y1, 22, { c: '#e8eaec', g: G.meds, gk: 'meds', ns: true }, g)),
     K([14, 14], (c, x0, y0, x1, y1, g) => put(c, 'spinner', x0, y0, x1, y1, 30, { g: G.meds, gk: 'meds' }, g)),
     K([30, 12], (c, x0, y0, x1, y1, g) => put(c, 'chairs', x0, y0, x1, y1, 18, { c: '#3a62a8' }, g)),
     K([12, 10], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 20, {}, g)),
@@ -476,7 +546,7 @@ FIT.barber = (c) => {
   if (b) { put(c, 'bench', b.x0, b.y1 - 12, Math.min(b.x1, b.x0 + 60), b.y1, 14, { c: '#7a2a26' }); if (r() < 0.6) shopper(c, b.x0 + 14, b.y1 - 8, -Math.PI / 2, 'sit'); const q = corner(b, 26, 10, false); put(c, 'machine', q[0], b.y0, q[2], b.y0 + 10, 30, { k: pick(r, ['tank', 'tv', 'tank']) }); }
   fill(c, [
     K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: '#2a3a5a', c2: '#c8a050', flat: true }, g)),
-    K([20, 14], (c, x0, y0, x1, y1, g) => put(c, 'table', x0, y0, x1, y1, 14, { c: '#5a3a26', g: ['#e8e4dc', '#d83a3a', '#3a8ad8'] }, g)),
+    KS([20, 14], (c, x0, y0, x1, y1, g) => put(c, 'table', x0, y0, x1, y1, 14, { c: '#5a3a26', g: ['#e8e4dc', '#d83a3a', '#3a8ad8'] }, g)),
     K([12, 10], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 20, {}, g)),
     K([34, 12], (c, x0, y0, x1, y1, g) => put(c, 'bench', x0, y0, x1, y1, 14, { c: '#7a2a26' }, g)),
   ]);
@@ -506,11 +576,11 @@ FIT.boutique = (c, sport) => {
   put(c, 'rug', c.dc - 30, c.Ya + STRIP + 4, c.dc + 30, Math.min(c.Yb - 20, c.Ya + STRIP + 50), 1, { c: surf ? '#c8b080' : skate ? '#7a2a2a' : '#c8b8a0', c2: surf ? '#2a6a9a' : '#3a3a40', flat: true });
   fill(c, [
     K([30, 30], (c, x0, y0, x1, y1, gp) => put(c, 'roundrack', x0, y0, x1, y1, 26, { g }, gp)),
-    K([44, 20], (c, x0, y0, x1, y1, gp) => put(c, 'table', x0, y0, x1, y1, 18, { c: '#8a6440', g, folded: true }, gp)),
+    KS([44, 20], (c, x0, y0, x1, y1, gp) => put(c, 'table', x0, y0, x1, y1, 18, { c: '#8a6440', g, folded: true }, gp)),
     K([16, 12], (c, x0, y0, x1, y1, gp) => put(c, 'mannequin', x0, y0, x1, y1, 42, { c: pick(c.r, g), c2: pick(c.r, g), plinth: true }, gp)),
     ...(sport ? [K([30, 20], (c, x0, y0, x1, y1, gp) => put(c, 'pile', x0, y0, x1, y1, 18, { g: ['#f07a2a', '#e8e8e8', '#2a5ab0', '#8a5a3a'], balls: true }, gp)), K([34, 16], (c, x0, y0, x1, y1, gp) => put(c, 'machine', x0, y0, x1, y1, 20, { k: 'bike' }, gp))] : []),
     K([14, 14], (c, x0, y0, x1, y1, gp) => put(c, 'spinner', x0, y0, x1, y1, 32, { g: ['#2a2a2e', '#e8c040', '#5aa0d0', '#d83a3a'], gk: 'shades' }, gp)),
-    K([52, 14], (c, x0, y0, x1, y1, gp) => put(c, 'rack', x0, y0, x1, y1, 26, { c: '#a8aab0', g }, gp)),
+    KS([52, 14], (c, x0, y0, x1, y1, gp) => put(c, 'rack', x0, y0, x1, y1, 26, { c: '#a8aab0', g }, gp)),
     K([12, 10], (c, x0, y0, x1, y1, gp) => put(c, 'plant', x0, y0, x1, y1, surf ? 30 : 20, { palm: surf }, gp), 3),
   ], { gap: 12 });
   lamp(c, c.tillX, c.Ya - 6, 46, WARM, 0.8);
@@ -532,7 +602,7 @@ FIT.tackle = (c) => {
   }
   fill(c, [
     K([26, 14], (c, x0, y0, x1, y1, g) => put(c, 'machine', x0, y0, x1, y1, 22, { k: 'tank' }, g)),
-    K([22, 14], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 16, { g: ['#e8e8e8', '#3a7ad8', '#d83a3a'], boxes: true }, g)),
+    KS([22, 14], (c, x0, y0, x1, y1, g) => put(c, 'pile', x0, y0, x1, y1, 16, { g: ['#e8e8e8', '#3a7ad8', '#d83a3a'], boxes: true }, g)),
     K([22, 16], (c, x0, y0, x1, y1, g) => put(c, 'barrel', x0, y0, x1, y1, 20, { c: '#3a6a8a' }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 6, 44, WARM, 0.7);
@@ -548,8 +618,8 @@ FIT.fishmarket = (c) => {
   for (const reg of c.regs) aisles(c, reg, 18, 24, (x0, y, x1, y1) => put(c, 'ice', x0, y, Math.min(x1, x0 + 80), y1, 16, { c: '#d8dcde' }));
   if (c.regs[0]) { const q = corner(c.regs[0], 26, 14, true); put(c, 'machine', ...q, 22, { k: 'lobster' }); }
   fill(c, [
-    K([36, 18], (c, x0, y0, x1, y1, g) => put(c, 'ice', x0, y0, x1, y1, 16, { c: '#d8dcde' }, g)),
-    K([20, 16], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 16, { g: ['#2a6a8a', '#e8e8e8', '#3a8a5a'] }, g)),
+    KS([36, 18], (c, x0, y0, x1, y1, g) => put(c, 'ice', x0, y0, x1, y1, 16, { c: '#d8dcde' }, g)),
+    KS([20, 16], (c, x0, y0, x1, y1, g) => put(c, 'crates', x0, y0, x1, y1, 16, { g: ['#2a6a8a', '#e8e8e8', '#3a8a5a'] }, g)),
   ]);
   lamp(c, c.tillX, c.Ya - 6, 50, COOL, 0.7);
   waiting(c);
@@ -564,7 +634,16 @@ function barBase(c, club, saloon) {
   R.counter = { top: lounge ? '#e8e4dc' : '#3a2418', front: club ? '#1c1a24' : lounge ? '#1c2038' : '#5a3a24', trim: '#c8a050', k: 'bar', on: ['taps'] };
   wall(c, 'bottles', c.X0 + 6, c.X1 - 6, 6, 48, { g: G.bottles, lit: true });
   const sc = club ? '#e84aa8' : lounge ? '#c8283a' : '#8a2a26';
-  for (let x = c.X0 + 12; x < c.X1 - 12; x += 18) if (Math.abs(x - c.tillX) > 30 && (x < c.dx - 14 || x > c.dx + c.dw + 14)) { R.pieces.push({ t: 'stool', x0: x - 4, y0: c.Ya + 1, x1: x + 4, y1: c.Ya + 9, h: 14, c: sc }); if (r() < 0.22) shopper(c, x, c.Ya + 6, -Math.PI / 2, 'sit'); }
+  for (let x = c.X0 + 12; x < c.X1 - 12; x += 18) if (Math.abs(x - c.tillX) > 30 && (x < c.dx - 14 || x > c.dx + c.dw + 14) && !R.clear.slice(2).some((k) => hit([x - 4, c.Ya + 1, x + 4, c.Ya + 9], k))) { R.pieces.push({ t: 'stool', x0: x - 4, y0: c.Ya + 1, x1: x + 4, y1: c.Ya + 9, h: 14, c: sc }); if (r() < 0.22) shopper(c, x, c.Ya + 6, -Math.PI / 2, 'sit'); }
+}
+// booths in rows down a narrow strip beside the door's lane (a small bar: a booth and its table every row, someone sat in
+// one now and then)
+function boothRows(c, reg, col) {
+  return aisles(c, reg, 26, 18, (x0, y, x1, y1) => {
+    const w = Math.min(44, x1 - x0), x = reg.side > 0 ? x1 - w : x0, p = put(c, 'booth', x, y, x + w, y1, 22, { c: col });
+    if (p && c.r() < 0.5) shopper(c, p.x0 + 6, (p.y0 + p.y1) / 2, 0, 'sit');
+    return p;
+  });
 }
 // a table and its chairs (round or square, by kind), two or four seats
 function seated(c, x0, y0, x1, y1, gap, o) {
@@ -580,7 +659,8 @@ FIT.lounge = (c) => {
   sign(c, pick(r, ['COCKTAILS', 'LOUNGE', 'MARTINIS', 'JAZZ']), pick(r, ['#ff6ab0', '#ffd24a', '#9a7aff']), undefined, 'neon');
   for (const x of [c.X0 + 52, c.X1 - 22]) wall(c, 'sconce', x, x + 6, 40, 50);
   for (const reg of c.regs) {
-    const v = sideWall(c, reg, 'velvet', 16, 18, { c: '#a8202a' });
+    if (reg.x1 - reg.x0 < 120) { boothRows(c, reg, '#a8202a'); continue; }   // (a small lounge: its velvet booths in rows down the side)
+    const v = sideWall(c, reg, 'velvet', 16, 18, { c: '#a8202a', need: 0 });
     if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x1 + 4 : v.x0 - 4, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit');
   }
   fill(c, [
@@ -623,7 +703,7 @@ FIT.sportsbar = (c) => {
   const [a, b] = c.regs;
   let pool = null;
   if (a && a.x1 - a.x0 >= 110 && a.y1 - a.y0 >= 60) { const x = a.side < 0 ? a.x0 + 10 : a.x1 - 110; pool = put(c, 'pool', x, a.y0 + 6, x + 100, a.y0 + 58, 20, { c: '#5a3a24', c2: pick(r, ['#2f7a4a', '#2a4a8a']) }); if (pool) shopper(c, x + 50, a.y0 + 66, -Math.PI / 2); }
-  for (const reg of [a, b]) if (reg) { const v = sideWall(c, reg, 'booth', 44, 22, { c: '#8a2a26', run: true }); if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x0 + 8 : v.x1 - 8, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit'); }
+  for (const reg of [a, b]) if (reg) { if (reg.x1 - reg.x0 < 120) { boothRows(c, reg, '#8a2a26'); continue; } const v = sideWall(c, reg, 'booth', 44, 22, { c: '#8a2a26', run: true, need: 0 }); if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x0 + 8 : v.x1 - 8, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit'); }
   if (b) { const q = corner(b, 22, 14, true); put(c, 'machine', ...q, 34, { k: 'jukebox' }); }
   fill(c, [
     K([22, 22], (c, x0, y0, x1, y1, g) => seated(c, x0, y0, x1, y1, g, { round: true, high: true, c: '#3a2a20', c2: '#8a6440', chairs: '#8a2a26', mugs: true, h: 24 })),
@@ -639,7 +719,7 @@ FIT.club = (c) => {
   barBase(c, true);
   sign(c, pick(r, ['DANCE', 'VIP', 'LIVE DJ', 'NIGHTS']), pick(r, ['#ff4ab0', '#5ae8ff', '#ffd24a', '#9a7aff']));
   put(c, 'dance', c.X0 + 16, c.Ya + 2 * c.TILE, c.X1 - 16, c.Yb - c.TILE, 1, { g: ['#ff4ab0', '#5ae8ff', '#ffd24a', '#9a7aff'], flat: true });
-  for (const reg of c.regs) sideWall(c, reg, 'velvet', 14, 18, { c: '#5a1e6a' });
+  for (const reg of c.regs) sideWall(c, reg, 'velvet', 14, 18, { c: '#5a1e6a', need: 0 });
   lamp(c, (c.X0 + c.X1) / 2, (c.Ya + c.Yb) / 2, 80, [255, 90, 200], 0.8);
 };
 // MC4: the bar of bottles under the neon bull skull and the motorbike mounted on the wall; the jukebox, the booths along
@@ -669,7 +749,8 @@ FIT.saloon = (c) => {
     lamp(c, x0 + W * 0.8 + 36, mid, 44, WARM, 0.9);
   } else {
     const [a, b] = c.regs;
-    if (a) { const v = sideWall(c, a, 'booth', 44, 22, { c: '#7a2a26', run: true }); if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x0 + 8 : v.x1 - 8, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit'); }
+    if (a && a.x1 - a.x0 < 120) boothRows(c, a, '#7a2a26');
+    else if (a) { const v = sideWall(c, a, 'booth', 44, 22, { c: '#7a2a26', run: true, need: 0 }); if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x0 + 8 : v.x1 - 8, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit'); }
     let pool = null;
     for (const reg of c.regs) if (!pool && reg.x1 - reg.x0 >= 104 && reg.y1 - reg.y0 >= 60) { const x = reg.side < 0 ? reg.x0 + 2 : reg.x1 - 102; put(c, 'rug', x - 4, reg.y0 + 2, x + 104, reg.y0 + 62, 1, { c: '#8a2a24', c2: '#c8a050', flat: true }); pool = put(c, 'pool', x, reg.y0 + 6, x + 100, reg.y0 + 58, 20, { c: '#5a3a24', c2: '#2f7a4a' }); }
     if (pool) lamp(c, (pool.x0 + pool.x1) / 2, (pool.y0 + pool.y1) / 2, 56, [200, 255, 170], 1);
@@ -732,7 +813,7 @@ FIT.records = (c) => {
     if (b.y1 - b.y0 > 60) put(c, 'bins', b.x0, b.y0 + 34, Math.min(b.x1, b.x0 + 70), b.y0 + 48, 12, { c: '#5a3a24', g: G.sleeves, sleeves: true });
   }
   fill(c, [
-    K([46, 14], (c, x0, y0, x1, y1, g) => put(c, 'bins', x0, y0, x1, y1, 12, { c: '#5a3a24', g: G.sleeves, sleeves: true }, g)),
+    KS([46, 14], (c, x0, y0, x1, y1, g) => put(c, 'bins', x0, y0, x1, y1, 12, { c: '#5a3a24', g: G.sleeves, sleeves: true }, g)),
     K([30, 30], (c, x0, y0, x1, y1, g) => put(c, 'rug', x0, y0, x1, y1, 1, { c: '#3a2a4a', c2: '#ff6ab0', flat: true }, g)),
     K([14, 14], (c, x0, y0, x1, y1, g) => put(c, 'spinner', x0, y0, x1, y1, 30, { g: G.sleeves, gk: 'sleeves' }, g)),
   ]);
