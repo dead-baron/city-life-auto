@@ -246,7 +246,9 @@ try {
     userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36',
   });
   await ctx.addInitScript(probe, { nodraw: NODRAW, cores: CORES, mem: 8 });
-  await ctx.addInitScript(() => { try { localStorage.setItem('cla.settings', JSON.stringify({ gfxPreset: 'medium' })); localStorage.setItem('cla.perfhud', '1'); } catch { /* none */ } });
+  // (Medium, the perf readout on, and the first-launch gate answered: its modal - 17+ and the analytics choice, client/account.js -
+  // holds the keys while it's up, so the car never moved)
+  await ctx.addInitScript(() => { try { localStorage.setItem('cla.settings', JSON.stringify({ gfxPreset: 'medium' })); localStorage.setItem('cla.perfhud', '1'); localStorage.setItem('cla.gate', JSON.stringify({ age17: true, consent: 'essential', at: Date.now() })); } catch { /* none */ } });
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e.message || e).slice(0, 200)));
@@ -287,8 +289,8 @@ try {
   // (a check that the car goes: full throttle a moment)
   const p0 = await page.evaluate(() => { const P = window.CLA.S.pred; return [P.s.x, P.s.y]; });
   await page.keyboard.down('KeyW'); await wait(2500); await page.keyboard.up('KeyW');
-  const p1 = await page.evaluate(() => { const P = window.CLA.S.pred, H = window.CLA.S.hud; return [P.s.x, P.s.y, !!(H && H.menuOpen), window.CLA.S.me && window.CLA.S.me.ftue ? window.CLA.S.me.ftue.st : null]; });
-  log(`the car: ${Math.round(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))} px in 2.5 s (a menu open: ${p1[2]}, first-time experience: ${p1[3]})`);
+  const p1 = await page.evaluate(() => { const P = window.CLA.S.pred, H = window.CLA.S.hud; return [P.s.x, P.s.y, !!(H && H.menuOpen), window.CLA.S.me && window.CLA.S.me.ftue ? window.CLA.S.me.ftue.st : null, [...document.querySelectorAll('[data-cla-modal]')].map((e) => e.id || e.className || 'modal').join(',')]; });
+  log(`the car: ${Math.round(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))} px in 2.5 s (a menu open: ${p1[2]}, first-time experience: ${p1[3]}, modals: ${p1[4] || 'none'})`);
   await page.evaluate(autopilot, plan.slice(1).concat([plan[0]]));
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   if (TRACE) await cdp.send('Tracing.start', { transferMode: 'ReturnAsStream', traceConfig: { includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute', 'v8', 'blink.user_timing'], excludedCategories: ['*'] } });
