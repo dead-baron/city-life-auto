@@ -177,6 +177,7 @@ export function createLaunch(opts) {
     if (kind === 'crime') { analytics.event('crime', p, { type: d.type }); note(p.acct, 'crime', d.type); }
     else if (kind === 'death') { analytics.event('death', p, { cause: d.cause, killer: d.killer }); note(p.acct, 'death', String(d.cause || '').slice(0, 80)); }
     else if (kind === 'crewed' && d.other) chat.addContact(p, d.other, 'crew');
+    else if (kind === 'ftue') analytics.ftue(p, p.acct, d.step);   // (the first-time experience's funnel: systems/ftue.js)
   };
 
   function onMoney(p, src, net, opt) {

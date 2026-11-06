@@ -57,7 +57,7 @@
       <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
       <div id="clock"></div>
     </div>
-    <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
+    <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="ftue-line" class="off" aria-live="polite"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
     <div id="hints" class="off"></div>
     <div id="edgewarn" class="hidden"></div>
     <div id="w-carry"></div>
@@ -125,7 +125,7 @@
     <div id="t-row2"><button id="t-char" class="btn" disabled><i class="ic" data-ic="user"></i>CHARACTER</button><button id="t-settings" class="btn"><i class="ic" data-ic="settings"></i>SETTINGS</button></div>
     <div id="t-gfx"><span class="t-gl">Graphics</span><div id="t-gfxseg" role="radiogroup" aria-label="Graphics"></div><small id="t-gfxwhy"></small></div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
-    <div id="t-tools"><button id="t-tutorial" class="btn">VIEW TUTORIAL</button><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button></div>
+    <div id="t-tools"><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button></div>
     <div id="t-foot">
       <div id="t-card" class="hidden"><i class="t-av ic" data-ic="user"></i><div class="t-who"><b id="t-name"></b><small id="t-xp"></small><small id="t-sam"></small></div><button id="t-signin" class="t-sign" type="button">SIGN IN</button></div>
       <div id="t-online" class="hidden"><i></i><span></span></div>
@@ -275,30 +275,14 @@
     <button id="i-go" class="sbtn hidden">⬇ Install now</button>
     <button id="i-repair" class="sbtn">↻ Repair install and reload</button>
   </div></div>
-  <div id="tut-ask" class="hidden overlay"><div class="panel">
-    <div class="mhead"><h2 id="tut-ask-h">FIRST TIME IN THE CITY?</h2><button class="x" data-close>✕</button></div>
-    <p class="msub" id="tut-ask-p">A quick guided tour shows where everything is, how the law works, and the citizen, criminal and police paths. You can watch it again any time from the title screen.</p>
-    <div class="m-opts">
-      <button class="opt" id="tut-ask-watch">▶ Watch the tutorial</button>
-      <button class="opt" id="tut-ask-skip">Skip - straight into the city</button>
-    </div>
-  </div></div>
-  <div id="tutorial" class="hidden overlay">
-    <canvas id="tut-cv"></canvas>
-    <div id="tut-panel">
-      <div id="tut-kicker"></div>
-      <h2 id="tut-title"></h2>
-      <div id="tut-text"></div>
-      <div id="tut-progress"><div id="tut-bar"></div></div>
-      <div id="tut-btns">
-        <button id="tut-next">NEXT ▶</button>
-        <button id="tut-prev">◀ BACK</button>
-        <button id="tut-pause">❚❚ PAUSE</button>
-        <span id="tut-count"></span>
-        <button id="tut-skip">SKIP TUTORIAL ✕</button>
-      </div>
-    </div>
-    <div id="tut-chapters"></div>
+  <!-- the first-time experience's arrival (client/ftue.js; server/systems/ftue.js): inside the carriage as it pulls in -
+       the next-stop sign, the doors' windows on the city going by; the doors slide open onto the platform. Esc, B, a tap
+       or Skip ends it -->
+  <div id="arrival" class="hidden overlay" role="dialog" aria-label="Arriving by train">
+    <div class="arr-doors" aria-hidden="true"><i class="arr-door l"><b></b></i><i class="arr-door r"><b></b></i></div>
+    <div class="arr-led"><span id="arr-led"></span></div>
+    <div class="arr-card"><small>ARRIVING</small><b id="arr-name"></b><span id="arr-place"></span></div>
+    <button id="arr-skip" class="btn">Skip <span id="arr-skip-g"></span></button>
   </div>
   <div id="devpw" class="hidden overlay"><div class="panel">
     <div class="mhead"><h2>DEV DEBUG MODE</h2><button class="x" data-close>✕</button></div>

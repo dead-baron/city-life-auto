@@ -36,6 +36,7 @@ import * as racebook from './systems/racebook.js';
 import * as safety from './systems/safety.js';
 import * as cinefollow from './systems/cinefollow.js';
 import * as logoff from './systems/logoff.js';
+import * as ftue from './systems/ftue.js';
 
 // opts: { seed, dev, maxPlayers, label, login(token) -> { profile, token } }
 // opts.hooks (server/launch.js, the online server only): the launch foundation - accounts, chat, roles, anti-cheat,
@@ -159,6 +160,7 @@ export function createSession(world, conn, opts) {
         conn.close(4005, 'wiped');
         return;
       }
+      if (msg.t === 'intro') { ftue.handle(world, player, msg); return; }   // the first-time experience: skip, the arrival played, the Guide's replay and tips (systems/ftue.js)
       if (msg.t === 'safety') { safety.set(player, !!msg.on); return; }   // (Settings: Safety mode - server/systems/safety.js)
       if (msg.t === 'name') { players.rename(world, player, msg.name); return; }   // (Settings: your name - players.js rename)
       if (msg.t === 'plist') { conn.sendJSON(devmode.playerList(world, player)); return; } // who's online (options / map)

@@ -85,7 +85,7 @@ test('two faces, both shipped: CLA Pixel and Barlow Condensed - no Rubik, Anton,
   assert.doesNotMatch(CSS, FONTS);
   // canvas text over the game (the HUD, the map, the panels, notes in the world); the art's own painted signs and the
   // arcade cabinets' screens keep their pixels
-  const UI = ['main.js', 'hud.js', 'ridehud.js', 'skate.js', 'fishing.js', 'jobway.js', 'worldmap.js', 'deathscreen.js', 'interiors.js', 'spectator.js', 'devtp.js', 'devhomes.js', 'stargaze.js', 'tutorial.js', 'render/fx.js'];
+  const UI = ['main.js', 'hud.js', 'ridehud.js', 'skate.js', 'fishing.js', 'jobway.js', 'worldmap.js', 'deathscreen.js', 'interiors.js', 'spectator.js', 'devtp.js', 'devhomes.js', 'stargaze.js', 'render/fx.js'];
   const bad = [];
   for (const f of UI) for (const m of read(`client/${f}`).matchAll(/\.font = ([`'][^`']*[`'])/g)) if (FONTS.test(m[1]) || !/CLA Pixel|Barlow Condensed|PIXEL/.test(m[1])) bad.push(`${f}: ${m[1]}`);
   for (const m of read('client/render/homeview.js').matchAll(/\.font = ([`'][^`']*[`'])/g)) if (/system-ui|Rubik|Anton/.test(m[1])) bad.push(`homeview.js: ${m[1]}`);

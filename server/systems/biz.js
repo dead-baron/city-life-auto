@@ -203,6 +203,8 @@ function claimAll(world, prof) {
   }
 }
 export const ownerOf = (world, id) => owners(world).get(id) || null;
+// a profile reset to a new character (players.js wipeProgress): its sites free again (the profile's own biz goes with it)
+export function release(world, prof) { const B = world.biz; if (B && B.owner) for (const [id, pid] of [...B.owner]) if (pid === prof.pid) B.owner.delete(id); }
 const entryOf = (p, id) => (p.profile.biz && p.profile.biz[id]) || null;
 const mine = (world, p, s) => !!s && (s.t === 'truck' ? !!entryOf(p, 'truck') : ownerOf(world, s.id) === p.pid);
 // the businesses a profile owns: [{ s (the site), e (its entry) }]

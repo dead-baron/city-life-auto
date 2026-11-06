@@ -1098,28 +1098,49 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arcade .arc-frame { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3); border-radius: var(--r2); background: var(--cab); box-shadow: 0 0 0 3px var(--neon), 0 0 40px var(--neon); }
 #arc-cv { width: min(92vw, calc((92vh - 60px) * 256 / 224)); height: auto; aspect-ratio: 256 / 224; image-rendering: pixelated; image-rendering: crisp-edges; background: var(--ink); touch-action: none; border-radius: var(--r1); }
 #arc-hint { color: var(--dim); font: 400 var(--fs-1)/1 var(--pixel); letter-spacing: .05em; }
-/* the city tour (paused: client/tutorial.js) */
-#tutorial { position: absolute; inset: 0; z-index: 45; background: var(--navy); }
-#tut-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-#tut-chapters { position: absolute; left: 0; right: 0; top: 0; display: flex; gap: 2px; padding: 6px max(10px, env(safe-area-inset-left)); background: var(--scrim-hi); overflow-x: auto; scrollbar-width: none; }
-.tut-ch { flex: 0 0 auto; padding: var(--s1) 10px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--dim); font: 700 var(--fs-3) var(--ui); letter-spacing: 1px; cursor: pointer; }
-.tut-ch.on { color: var(--cream); border-bottom-color: var(--gold); }
-#tut-panel { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(820px, calc(100vw - 24px)); padding: var(--s3) var(--s4) 10px; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); color: var(--cream); }
-#tut-kicker { font: 700 var(--fs-1) var(--pixel); letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
-#tut-title { margin: 2px 0 6px; font: 700 var(--fs-5) var(--pixel); letter-spacing: 1px; color: var(--cream); text-shadow: var(--lift); }
-#tut-text { max-height: 26vh; overflow: auto; font-size: var(--fs-3); line-height: 1.45; }
-#tut-text .tut-extra { display: block; margin-top: 6px; color: var(--info); font-size: var(--fs-2); }
-#tut-text .g-key, #tut-text .g-pad, #tut-text .g-touch { vertical-align: 1px; }
-#tut-progress { height: 3px; margin: 10px 0 var(--s2); background: var(--line); }
-#tut-bar { height: 100%; background: var(--gold); transform-origin: left; transform: scaleX(0); }
-#tut-btns { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
-#tut-btns button { min-height: 36px; padding: 0 14px; border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 700 var(--fs-3) var(--ui); letter-spacing: 1px; cursor: pointer; }
-#tut-btns button:disabled { opacity: .35; }
-#tut-next { order: 4; background: var(--gold) !important; color: var(--ink) !important; border-color: var(--gold) !important; }
-#tut-prev { order: 1; } #tut-pause { order: 2; } #tut-count { order: 3; margin-left: auto; color: var(--dim); font-size: var(--fs-2); } #tut-skip { order: 5; }
-#tut-btns .pfocus { outline: 3px solid var(--cream); outline-offset: 2px; }
-@media (max-height: 500px) { #tut-title { font-size: var(--fs-4); margin: 0 0 3px; } #tut-text { font-size: var(--fs-2); max-height: 30vh; } #tut-panel { padding: var(--s2) var(--s3); } #tut-progress { margin: 6px 0; } .tut-ch { padding: 2px var(--s2); } }
-body.portrait #tut-text { font-size: var(--fs-2); max-height: 30vh; }
+/* ==== the first-time experience (client/ftue.js; server/systems/ftue.js) ====
+   the arrival: inside the carriage as it pulls in - the doors' windows on the city going by (the world shows through
+   them), the next-stop sign over them, the place's card; a chime, the doors slide apart, the bars and the card go */
+#arrival { position: absolute; inset: 0; z-index: 46; overflow: hidden; background: transparent; cursor: pointer; }
+#arrival::before, #arrival::after { content: ''; position: absolute; left: 0; right: 0; height: 9vh; z-index: 3; background: var(--ink); transition: transform 700ms var(--ease); }
+#arrival::before { top: 0; } #arrival::after { bottom: 0; }
+#arrival.leaving::before { transform: translateY(-100%); } #arrival.leaving::after { transform: translateY(100%); }
+.arr-doors { position: absolute; inset: 0; display: flex; z-index: 1; opacity: 0; transition: opacity 600ms var(--ease); }
+#arrival.lit .arr-doors { opacity: 1; }
+#arrival.replay .arr-doors { display: none; }
+.arr-door { position: relative; flex: 1; display: block; overflow: hidden; background: transparent; box-shadow: inset 0 0 0 3px var(--ink); transition: transform 1100ms cubic-bezier(.6, 0, .3, 1); }   /* (the door's panel is its window's shadow, so the window is a hole: the city shows through) */
+.arr-door.l { border-right: 6px solid var(--ink); } .arr-door.r { border-left: 6px solid var(--ink); }
+.arr-door b { position: absolute; left: 14%; right: 14%; top: 16%; bottom: 30%; display: block; border-radius: var(--r4); background: var(--ink-a); box-shadow: 0 0 0 10px var(--edge), 0 0 0 13px var(--ink), 0 0 0 1400px var(--navy2), inset 0 0 40px var(--ink-a); }
+.arr-door::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 14%; height: var(--s2); border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 12px var(--heat); }
+#arrival.open .arr-door.l { transform: translateX(-102%); } #arrival.open .arr-door.r { transform: translateX(102%); }
+.arr-led { position: absolute; z-index: 4; top: calc(9vh + var(--s3)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s2) var(--s4); border-radius: var(--r1); background: var(--ink); box-shadow: 0 0 0 2px var(--navy3), 0 0 18px var(--ink); color: var(--heat); font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 8px var(--heat); transition: opacity 500ms var(--ease); }
+#arrival.leaving .arr-led { opacity: 0; }
+.arr-card { position: absolute; z-index: 4; left: max(var(--s5), env(safe-area-inset-left)); bottom: calc(9vh + var(--s5)); display: flex; flex-direction: column; gap: 2px; padding: var(--s3) var(--s5) var(--s3) var(--s4); border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); transition: opacity 500ms var(--ease), transform 500ms var(--ease); }
+#arrival.open .arr-card, #arrival.replay.lit .arr-card { opacity: 1; transform: none; }
+#arrival.leaving .arr-card { opacity: 0; transform: translateY(-6px); }
+.arr-card small { color: var(--gold); font: 700 var(--fs-1) var(--pixel); letter-spacing: 3px; }
+.arr-card b { color: var(--cream); font: 700 var(--fs-5) var(--pixel); letter-spacing: 1px; text-shadow: var(--lift); }
+.arr-card span { color: var(--dim); font: 600 var(--fs-3) var(--ui); }
+.arr-card span:empty { display: none; }
+#arr-skip { position: absolute; z-index: 5; right: max(var(--s4), env(safe-area-inset-right)); bottom: calc(9vh + var(--s4)); display: inline-flex; align-items: center; gap: var(--s2); }
+#arr-skip .g-key, #arr-skip .g-pad { min-width: 28px; height: 28px; font-size: var(--fs-1); }
+body.portrait .arr-card { left: var(--s4); right: var(--s4); bottom: calc(9vh + 76px); }
+body.portrait .arr-card b { font-size: var(--fs-4); }
+body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
+body.portrait .arr-door b { left: 18%; right: 18%; top: 22%; bottom: 36%; }
+/* the first goal's step line and a first-time moment's tip: the prompt's plate, the control's glyph in front; up a few
+   seconds, then it fades (client/ftue.js) - a tip's "More in your Guide" opens the phone's Guide at its section */
+#ftue-line { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 16px 6px 6px; border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream); pointer-events: auto; transition: opacity .6s var(--ease), transform var(--t2) var(--ease); }
+#ftue-line.in { animation: prpop var(--t-pop) var(--ease); }
+#ftue-line.off { display: none; }
+#ftue-line.faded { opacity: 0; transform: translateY(6px); pointer-events: none; }
+#ftue-line.tip { border-color: var(--info); padding-left: 14px; }
+#ftue-line > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
+#ftue-line > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
+#ftue-line .fl-more { flex: none; min-height: 32px; padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--info); background: transparent; color: var(--info); font: 700 var(--fs-2) var(--ui); cursor: pointer; }
+.touch #ftue-line { font-size: var(--fs-3); }
+.touch #ftue-line .fl-more { min-height: var(--tap); }
+body.portrait #ftue-line { flex-wrap: wrap; }
 
 /* ==== the character creator (client/creator.js; concepts CC1, CC7-CC10) ==== */
 #creator { position: absolute; inset: 0; z-index: 70; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
@@ -1473,6 +1494,7 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 .ph-grp { min-height: var(--tap-l); margin: 0; border: 2px solid var(--gold-a); background: var(--navy); font: 600 var(--fs-4) var(--ui); }
 .ph-grp.open { background: var(--gold); border-color: var(--gold); color: var(--ink); }
 .ph-grp.open .chev { transform: rotate(90deg); filter: brightness(0); }
+.ph-grp.open small { color: var(--ink); }   /* (a section's blurb on the open row's gold: the Guide) */
 .ph-sub { display: flex; flex-direction: column; gap: 2px; margin: -2px 0 var(--s1); padding: 0 0 0 var(--s2); animation: enter var(--t2) var(--ease); }
 .ph-place { margin: 0; background: transparent; border: 2px solid transparent; }
 .ph-place.on { border-color: var(--gold); background: var(--navy2); }
@@ -1494,7 +1516,24 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 .ph-skl .pbar > i { background: linear-gradient(var(--info-hi), var(--info) 55%); }
 .ph-skl small { color: var(--dim); font: 500 var(--fs-2) var(--ui); }
 /* the Guide (the in-game wiki: its place, built later) */
-.ph-guide { text-align: center; } .ph-guide .ph-row { text-align: left; opacity: .6; }
+/* the Guide (client/guide.js): its head, the first goal while it's on, the search, the sections folding open, each entry a
+   title over its words (the controls' glyphs inline), the replay and tips buttons at the foot */
+.ph-guide-top { display: flex; align-items: center; gap: var(--s3); margin: var(--s1) 0 var(--s2); }
+.ph-guide-top h3 { margin: 0; }
+.ph-guide-top .ph-hint { margin: 2px 0 0; }
+.ph-card.gd-goal { border-left-color: var(--gold); }
+.ph-card.gd-goal button { border-color: var(--gold-a); background: transparent; }
+.gd-search { margin-top: var(--s2); }
+.gd-sec { gap: var(--s2); padding-top: var(--s1); }
+.gd-e { padding: var(--s2) var(--s3); border-radius: var(--r2); background: var(--navy2); }
+.gd-e b { display: block; color: var(--gold); font: 700 var(--fs-3) var(--ui); }
+.gd-e p { margin: 3px 0 0; color: var(--cream); font: 500 var(--fs-3) var(--ui); line-height: 1.35; }
+.gd-e p :is(.g-key, .g-pad, .g-touch) { vertical-align: 1px; }
+.gd-e mark { background: var(--gold-t); color: inherit; border-radius: var(--r1); }
+.gd-hits { display: flex; flex-direction: column; gap: var(--s1); }
+.gd-in { margin: var(--s2) 2px 0; color: var(--dim); font: 700 var(--fs-1) var(--pixel); letter-spacing: 2px; text-transform: uppercase; }
+.gd-acts { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s4) 0 var(--s2); }
+.gd-acts .btn { flex: 1 1 140px; }
 @media (max-height: 560px) { #ph-screen { padding: var(--s2) var(--s3); } .ph-grid { gap: var(--s2); } .ph-tile { width: 52px; height: 52px; } .ph-tile .pi24 { width: 40px; height: 40px; } .ph-grid .ph-app { font-size: var(--fs-2); } }
 
 /* a job's card (client/jobcard.js): in the Jobs app (UIC-05) a rimmed card - the icon, what it is, the pay in green, how

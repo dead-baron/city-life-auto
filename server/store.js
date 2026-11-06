@@ -2,9 +2,18 @@
 // FileStore (server/file-store.js); offline practice and tests use this in-memory store.
 import { WORLD_VERSION } from '../shared/constants.js';
 
+// The progress epoch (the owner, 11-04: "every player is reset totally, so everyone goes through the FTUE" - when the
+// first-time experience ships). A profile saved under an older epoch is reset to a new character the first time it's
+// loaded (resetOldEpochs: FileStore's load, before the world claims anyone's homes or businesses; players.join checks
+// again) - the same reset as CLA_FRESH_ON_UPDATE=all (players.js wipeProgress): progress gone, the name, the look, the
+// clothes owned and the account (acct: role, sign-ins, passkeys, ban, mute, contacts) kept. A future launch reset is
+// this number bumped. 1: everything before the FTUE (profiles with no epoch); 2: the FTUE ships (2026-11-04).
+export const PROGRESS_EPOCH = 2;
+
 export function defaultProfile(pid) {
   return {
     pid,
+    epoch: PROGRESS_EPOCH,   // the progress epoch this profile's progress belongs to (resetOldEpochs)
     wv: WORLD_VERSION, // the world layout this profile's homes and position belong to (homes.checkWorld)
     name: 'Guest' + String(Math.floor(1000 + Math.random() * 9000)),
     created: Date.now(),
@@ -33,7 +42,41 @@ export function defaultProfile(pid) {
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
     safety: true,    // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - on for new characters
     starter: { first: true },   // the starter car (server/systems/starter.js): first - waiting at the arrival station on their first day
+    ftue: { st: 'new', tips: 1, m: {} },   // the first-time experience (server/systems/ftue.js): a new character's arrival, question and first goal
   };
+}
+
+// A profile back to a brand-new character: what's kept (the name, the look and the clothes owned, the account) and a new
+// profile for the rest - its FTUE not started (ftue { st: 'new' }) and the starter car's first day to come (starter
+// { first }), stamped with this epoch. (players.js wipeProgress: also lets go of its homes in a running world)
+export function resetProfile(prof) {
+  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
+  if (prof.acct) { keep.acct = prof.acct; keep.nameAt = prof.nameAt; }   // (the account outlives the progress, as with Start fresh: wipeAccount)
+  for (const k of Object.keys(prof)) if (keep[k] === undefined) delete prof[k];
+  for (const k of Object.keys(keep)) if (keep[k] === undefined) delete keep[k];
+  Object.assign(prof, defaultProfile(keep.pid), keep);
+  return prof;
+}
+export const oldEpoch = (prof) => !!prof && (Number(prof.epoch) || 1) < PROGRESS_EPOCH;
+// Every profile under an older epoch reset (resetProfile), and what the world keeps for players outside the profiles: the
+// crews (store.kept.crews) lose the reset members - a crew left with one is gone - and the fish records board
+// (store.kept.fishRecords: the biggest catches, by name) starts again. Idempotent: a profile on this epoch is left alone,
+// so a second load resets nothing; a crash before the save just does the same again from the same file. -> how many
+export function resetOldEpochs(st) {
+  const reset = new Set();
+  for (const prof of st.all()) if (oldEpoch(prof)) { resetProfile(prof); reset.add(prof.pid); }
+  if (!reset.size) return 0;
+  const kept = st.kept || {};
+  if (kept.crews) for (const [id, c] of Object.entries(kept.crews)) {
+    c.members = (c.members || []).filter((pid) => !reset.has(pid));
+    if (c.names) for (const pid of Object.keys(c.names)) if (reset.has(pid)) delete c.names[pid];
+    if (c.members.length < 2) delete kept.crews[id];
+    else if (reset.has(c.lead)) c.lead = c.members[0];
+  }
+  if (kept.fishRecords && kept.epoch !== PROGRESS_EPOCH) kept.fishRecords = {};
+  kept.epoch = PROGRESS_EPOCH;
+  st.touch();
+  return reset.size;
 }
 
 export class MemoryStore {

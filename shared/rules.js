@@ -1,5 +1,5 @@
-// Gameplay rules shared by the authoritative server and the client (tutorial, HUD hints).
-// Change a number here and both the game and the tutorial text follow automatically.
+// Gameplay rules shared by the authoritative server and the client (the phone's Guide, HUD hints).
+// Change a number here and both the game and the Guide's text (shared/guide.js) follow automatically.
 // Nothing here may change what the art draws: the art hash leaves this file out (tools/stamp-version.mjs ART_SKIP), so
 // tweaking a rule doesn't throw away the chunks every browser has baked.
 
@@ -27,6 +27,17 @@ export const POLICE_RANKS = [
 // station (px) its car park's spaces are looked for. paint: shared/vehicles.js PAINTS index (the rust brown). The car's
 // own numbers (slower, weaker than the Hatchback it's drawn as) are its model's: shared/vehicles.js 'starter'.
 export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
+
+// The first-time experience (server/systems/ftue.js; the owner, 11-04: "short and sweet and give people general
+// direction"): a new character arrives by train (arriveS: the staged arrival's length, skippable), is asked one question
+// and gets a first goal of at most three steps. carR: how near the starter car (px) is "at it"; goalR: how near the goal
+// is "there"; the goal is looked for goalMin..goalMax px from the station (the nearest beyond goalMin, else the nearest);
+// fishR: how far (tiles) round the station for a bank to fish from. The end: reward ($, cash) and xp goes of SKILL.act
+// 'drive' (skills.js gain). The outdoors answer brings a rod and bait if you have none (rod, bait: shared/items.js ids).
+// lineS: a step's or a tip's line on screen this long, then it fades. The first-time moments (once each, ever): tipGapS
+// apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier.
+// (Everyone goes through it once: profiles from before it are reset to new characters - server/store.js PROGRESS_EPOCH.)
+export const FTUE = { arriveS: 14, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170 };
 
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;

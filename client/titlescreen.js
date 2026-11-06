@@ -7,7 +7,7 @@
 
 import { paintIcons } from './touchicons.js';
 
-// tips, true of the game as it is (the paused tour's facts: shared/tutorial.js); one at a time, in a shuffled order
+// tips, true of the game as it is (the Guide's facts: shared/guide.js); one at a time, in a shuffled order
 export const TIPS = [
   'Explore the city to find new opportunities.',
   'Cash you carry drops where you go down. Bank it at any ATM.',

@@ -13,7 +13,7 @@ import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as looks from './looks.js';
-import { store, defaultProfile } from '../store.js';
+import { store, defaultProfile, resetProfile, oldEpoch } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
@@ -56,6 +56,7 @@ import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as starter from './starter.js';   // (the starter car: first day at the arrival station, the cooldown carried over)
+import * as ftue from './ftue.js';   // (the first-time experience: the arrival, the question, the first goal, the first-time moments)
 import * as races from './races.js';
 import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
@@ -159,6 +160,7 @@ export function join(world, conn, profile, opts = {}) {
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
   const replanned = homes.replanDecor(world, profile);   // (a home's rooms changed under its furniture: back in storage)
   looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
+  if (oldEpoch(profile)) wipeProgress(world, profile);   // (a profile from before the progress epoch: a new character - store.js)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
@@ -197,6 +199,7 @@ export function join(world, conn, profile, opts = {}) {
   bounties.onJoin(world, p);   // bounties still on their head from before they logged off
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
+  ftue.onJoin(world, p);   // (the first-time experience: a profile from before it marked done; one left mid-way picks up - ftue.js)
   starter.onJoin(world, p);   // (a new character's starter car in the arrival station's car park; a lost one's cooldown carried on)
   return p;
 }
@@ -249,12 +252,13 @@ export function freshStart(world, prof) {
 
 // CLA_FRESH_ON_UPDATE=all: back to a brand-new character (name, look and account kept). Homes go back on
 // the market.
-function wipeProgress(world, prof) {
+// (A profile under an older progress epoch gets the same: store.js PROGRESS_EPOCH - normally reset as the store loads,
+// checked again here.) Its businesses' sites and its crew go too.
+export function wipeProgress(world, prof) {
   for (const [id, pid] of [...world.homeOwner]) if (pid === prof.pid) world.homeOwner.delete(id);
-  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
-  if (prof.acct) { keep.acct = prof.acct; keep.nameAt = prof.nameAt; }   // (the account outlives the progress, as with Start fresh: wipeAccount)
-  for (const k of Object.keys(prof)) delete prof[k];
-  Object.assign(prof, defaultProfile(keep.pid), keep);
+  biz.release(world, prof);
+  crews.forget(prof.pid);
+  resetProfile(prof);
   store.touch();
 }
 
@@ -1113,7 +1117,8 @@ export function buildMe(world, p) {
     offNow: homes.ownsInside(world, p) ? 1 : undefined,   // LOG OFF here is at once: inside a home of your own (logoff.js)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p),
+    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
+    ftue: ftue.meInfo(world, p),
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

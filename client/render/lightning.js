@@ -40,7 +40,7 @@ const clampTo = (v, a, b) => (v < a ? a : v > b ? b : v);
 
 // ---- the storm ----------------------------------------------------------------------------------------------------
 export const STORM_S = 150;
-export const PX_PER_M = 32;     // (the world's scale: 1 tile = 32 px = 1 m, as shared/tutorial.js counts km/h)
+export const PX_PER_M = 32;     // (the world's scale: 1 tile = 32 px = 1 m, as shared/guide.js counts metres)
 export const SOUND_MPS = 340;   // (sound in air)
 const MOODS = [[0.45, 0], [0.24, 1], [0.21, 2], [0.1, 3]];   // [chance, mood]: no lightning, distant flashes, a burst, a storm
 const spells = new Map();

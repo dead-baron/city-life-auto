@@ -16,7 +16,8 @@ import * as fishing from './fishing.js';
 import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
-import * as starter from './starter.js';   // (the starter car: free at the public garages - a station's car park, a Fresh Coat Garage, a dealership)
+import * as starter from './starter.js';
+import * as ftue from './ftue.js';   // (the first-time experience: its question's answers, a place's menu opened)   // (the starter car: free at the public garages - a station's car park, a Fresh Coat Garage, a dealership)
 import * as station from './station.js';
 import * as taxijob from './taxijob.js';
 import * as truckjob from './truckjob.js';
@@ -529,7 +530,9 @@ export function openMenu(world, p, poi) {
   p.menu = { poi: poi.id };
   p.furnShop = null; p.lobbyUnit = null; p.atmFull = null;
   if (casino.isCasino(poi)) casino.open(world, p, poi);
-  p.conn.sendJSON(buildMenu(world, p, poi));
+  const m = buildMenu(world, p, poi);
+  p.conn.sendJSON(m);
+  ftue.menuOpened(world, p, poi, m);   // (the hustle's contact talked to; the first shop's tip: ftue.js)
 }
 
 export function handleMenu(world, p, poiId, optId) {
@@ -537,6 +540,7 @@ export function handleMenu(world, p, poiId, optId) {
   if (homeups.onMenu(world, p, poiId, String(optId || ''))) return;   // (your garage, the home's upgrades: homeups.js)
   if (homeinside.onMenu(world, p, poiId, String(optId || ''), execute)) return;   // (the bed, the safe, the fridge... at home: homeinside.js)
   if (music.onMenu(world, p, poiId, String(optId || ''))) return;   // (your boombox's, your mat's: music.js)
+  if (ftue.onMenu(world, p, poiId, String(optId || ''))) return;   // (the first-time experience's question: ftue.js)
   const poi = world.map.pois[poiId];
   const ped = p.ped;
   if (optId === 'cabcard' && poiId === -1 && ped && !ped.dead) { const it = taxijob.interaction(world, p); if (it && !phone.offerCard(world, p, it.card)) it.run(); return; }   // (a station's route board: its taxi rank - trains.js readRouteBoard)

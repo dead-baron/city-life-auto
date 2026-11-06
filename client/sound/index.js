@@ -29,7 +29,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const places = new Places(E, music);
   const people = new People(E);
   const stage = new StageSound(E);   // (boomboxes, radios, car radios, mats, instruments: client/sound/stage.js)
-  const titleEl = document.getElementById('title'), tutEl = document.getElementById('tutorial');
+  const titleEl = document.getElementById('title');
   let S = null, quiet = false, scene = 'title', lastFrame = 0, inside = false, lastT = ctx.currentTime;
   const unquiet = () => { quiet = false; };
   const A = {
@@ -83,7 +83,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
     },
     // a few times a second whatever the frame does: the scene (the title screen has its music), the music's notes
     pulse() {
-      const title = !!(titleEl && !titleEl.classList.contains('hidden')) || !!(tutEl && !tutEl.classList.contains('hidden'));   // (the title screen, the city tour)
+      const title = !!(titleEl && !titleEl.classList.contains('hidden'));   // (the title screen)
       const was = scene;
       scene = title ? 'title' : 'game';
       // the title's music: the owner's recorded track (nothing fetched while the music is off); the old tune only where
