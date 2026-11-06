@@ -20483,3 +20483,43 @@ stays up `FTUE.lineS`), so it sat over the down screen, where a bandage is no he
   dropped if you went down meanwhile.
 - `test/ftue.test.js`: a new test - hurt then down (the hurt one dropped), nothing but `down` while down, nothing during
   the wake-up, then the held one, and the hurt one taught again later.
+
+## 2026-11-06 - Phone performance: the long drive (the owner's Pixel 7 Pro "starting to chug")
+The owner, 11-06, with the perf readout on: right after a teleport, 119 fps (p95 33 ms, 5 long tasks); after driving
+round a residential area for a while, at night in the rain, 60 fps (p95 50 ms), "long tasks 63 (8297 ms)", bakes
+62 -> 758 ms, "made here 40" person sprites (~9 ms each). Measured first, then fixed what the measurements pointed at;
+no art, graphics, resolution or render quality was lowered. No budget changed (page 511 of 520 KB, renderer 403 of 404).
+- **tools/drivebench.mjs**: a repeatable long drive - the owner's screen (411x891 portrait at 2.6, touch, a Pixel user
+  agent, Medium, the perf readout on, told 8 cores and 8 GB: four bake workers), night and rain held, the first-launch
+  gate answered and the first-time experience skipped, a car driven by an autopilot along the GPS route
+  (client/route.js) from district to district (Pine Hills, Southside, Downtown, Midtown, Northgate, Old Town...) across
+  World v3's region borders, then a walk round on foot. Every task the page runs is timed where it starts (animation
+  frames, worker / socket / channel messages, timers, IndexedDB events); a long one is put down to its source, an
+  animation frame to its parts (main.js's S.perf and the renderer's marks, their running averages unwound). This
+  machine has no GPU: WebGL in SwiftShader took 1.2 s a night frame, every frame a "long task" waiting on it, so by
+  default nothing is rasterized (--nodraw: every WebGL call is made, the draws are no-ops). --root runs a snapshot of
+  another build, --cpu slows the page's thread, --trace records a Chrome trace for **tools/longtrace.mjs** (what the
+  long tasks held: JS by function, GC, message decoding, style, paint).
+- **The perf readout** (client/perfhud.js) counts the long tasks behind a loading screen apart from those while you
+  play ("long tasks N · loading M": the first load, a respawn's or a teleport's "Loading the area..." spend a frame's
+  time freely by design - the owner's 63 held both), and shows the window swaps (how many, the last one's ms), the
+  sprite lane and the sprites the atlas let go.
+- **The window swap at every region border** (client/main.js swapWorld; measured on the bench, unthrottled: 220 ms of
+  the page's thread - the minimap's new picture 149, the classic renderer's ground indexes 53, the GPS router 9 - a phone
+  about four times that): the minimap's picture of the new window is painted a few ms at a time between frames (the old
+  one shows meanwhile: client/hud.js); the classic renderer's ground indexes are made the first time it bakes (the art
+  v2 renderer never reads them; the props by chunk both renderers read in one pass: client/render/tiles.js - the page's
+  heap 220 -> 152 MB at the start of the drive); the router's road grid when a route is first asked for
+  (client/route.js). And the window's message is smaller: the city worker leaves out the 89 fields every window has the
+  same (the world's roads, nodes, network, places...: client/worldwindow.js windowSteady), which the page keeps from the
+  window before - about a quarter of what the page decoded (in node: 238 -> 176 ms to clone the window).
+- **People's sprites from a worker of their own** (the sprite lane: pool.js SPRITE_LANE, host.js _startLane): one more
+  worker that only makes people's sprites (no world, never a bake), so the ones on screen - yours first - come back in a
+  frame or two however busy the bake workers are, and none is made on the page's thread once it's up (host.js _now). Your
+  own figure was made on the page whenever it had nothing to show (a respawn, a new look, out of a car) or a person took
+  under OWN_MS (8 ms: on the owner's phone ~9, so it hovered either side). Not on a low-memory device (as before there).
+- **The night, every frame** (client/main.js collectLights, client/hud.js drawRadar): the street lamps, the shop lights
+  and the radar's places are looked at round the view through grids, not the whole window's (11,220 lamps, 6,007 places
+  every frame); the lights the wet ground and the rain catch are pooled records, not a few hundred new objects a frame.
+- **Baking ahead on a phone** (host.js _prebake): two bake workers at most bake into the store ahead of need (what the
+  screen needs still takes them all) - four workers and now the lane busy for minutes on end is what heats a phone.
