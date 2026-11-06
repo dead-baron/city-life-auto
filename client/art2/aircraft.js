@@ -5,8 +5,8 @@
 // plane (white, a red stripe, its wings banking). Each drawn by the art v2 host (game/host.js _air) up the screen by its
 // height as render/aircraft.js lifts it (V2_LIFT), its main rotor its own sprite over the mast: the blades turning while
 // it spools, a blurred disc at speed (the tips' paint a ring). Loaded the first time an aircraft is near (the renderer's
-// code budget is full: this stays out of it - test/perf.test.js), made here on the page a heading at a time (the host's
-// generated-sprite budget), at half resolution (the live game draws 2 world px a pixel anyway).
+// code budget is full: this stays out of it - test/perf.test.js); its sprites made by the workers (worker.js 'air',
+// 'airRotor': the sprite lane), at half resolution (the live game draws 2 world px a pixel anyway).
 //   drawAir(H, v, now, me) -> true once drawn (the overlay then leaves the aircraft to it)
 //   airLights(H, v, now, night) its lamps after dark, the searchlight's pool on the ground
 //   bodyModel(type, o) / rotorModel(R, disc, tip) the Vox models (tests)
@@ -262,10 +262,10 @@ export function drawAir(H, v, now, me) {
   // the plane's bank: yours from the prediction, the others' from their turning (render/aircraft.js keeps v._bank)
   const bank = isPlane(def) ? (v._own ? v.rbank : v._bank) || 0 : 0, bi = Math.max(0, Math.min(4, Math.round(bank / 0.3) + 2));
   const key = `air|${type}${li}|${bi}|${hi}|${N}`;
-  const mk = () => bodySprite(type, hi, N, bi, px, true, li);
-  let k = H._conv(key, mk, true);
-  // (past the frame's time for made sprites: the nearest heading made, or this one now if there's none - host.js GEN_MS)
-  if (!k) k = H._near((h) => `air|${type}${li}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}${li}|2|${h}|${N}`, hi, N) || H._conv(key, mk, 2);
+  // (made by the workers - the sprite lane, worker.js 'air': a model built here took 70-210 ms of the page's thread on the
+  // bench machine, 11-06; meanwhile the nearest heading made, or none yet: the overlay draws it - render/aircraft.js)
+  let k = H._spr('actors', 'air', key, [type, hi, N, bi, px, false, li]);
+  if (!k) k = H._near((h) => `air|${type}${li}|${bi}|${h}|${N}`, hi, N) || H._near((h) => `air|${type}${li}|2|${h}|${N}`, hi, N);
   if (!k) return false;
   const o = H.opts, z0 = lift + (alt < 1 ? H._z0(v, false) : 0) - (T.plane ? zoffOf(BANKS[bi]) : 0);
   o.alpha = 1; o.flash = 0; o.xray = !!me && alt < 30; o.flipX = false; o.shadow = alt < 6; o.under = 0; o.air = alt > 24;   // (off the ground its shadow is the overlay's: render/aircraft.js airShadow - the march would make a column of it)
@@ -273,7 +273,7 @@ export function drawAir(H, v, now, me) {
   E.drawSprite(k, v.rx, v.ry, z0, o);
   H.n.drawn++;
   // yours: the headings either side made ahead while the frame has time, so a turn finds them made
-  if (me) for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; H._conv(`air|${type}${li}|${bi}|${h}|${N}`, () => bodySprite(type, h, N, bi, px, true, li), true); }
+  if (me) for (let d = -1; d <= 1; d += 2) { const h = (hi + d + N) % N; H._ask('actors', 'air', `air|${type}${li}|${bi}|${h}|${N}`, [type, h, N, bi, px, false, li], -2); }
   // the main rotor over the mast: the blades while it spools (turning), the blurred disc once it's up to speed
   if (!T.plane && !(f & VF.WRECK)) {
     const R = def.rotor || 76, s = v._spin || 0, c = Math.cos(v.ra), sn = Math.sin(v.ra), mx = v.rx + c * def.L * MAST, my = v.ry + sn * def.L * MAST;
@@ -281,7 +281,7 @@ export function drawAir(H, v, now, me) {
     // (up to speed, the blurred disc is the overlay's - render/aircraft.js rotorDisc: a canvas blends, the renderer only
     // dithers - and here only the blades while they're still to be seen)
     if (s < 0.9) {
-      const bh = quant((v._ph || 0) % (Math.PI / 2), N), bk = H._conv(`air|blades|${R}|${T.tip}|${bh}|${N}`, () => rotorSprite(R, false, T.tip, bh, N, px, true), true) || H._near((h) => `air|blades|${R}|${T.tip}|${h}|${N}`, bh, N);
+      const bh = quant((v._ph || 0) % (Math.PI / 2), N), bk = H._spr('actors', 'airRotor', `air|blades|${R}|${T.tip}|${bh}|${N}`, [R, false, T.tip, bh, N, px, false]) || H._near((h) => `air|blades|${R}|${T.tip}|${h}|${N}`, bh, N);
       if (bk) { o.alpha = 1 - Math.max(0, (s - 0.55) / 0.35); E.drawSprite(bk, mx, my, z0 + MAST_Z, o); }
     }
     o.alpha = 1;

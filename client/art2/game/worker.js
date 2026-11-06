@@ -11,7 +11,8 @@
 //                                  layer, or null when the chunk has no buildings); it pauses every few ms
 //                                  (chunkbake.bakeSteps), so sprite jobs sent meanwhile run in between
 //   sprite     { kind, key, a }    kind: ped (peds.pedSprite) or any actors.SPRITES kind (vehicle, animal, crate,
-//                                  bag, ball, proj, train, fx, muzzle, tracer, critter); a: its arguments
+//                                  bag, ball, proj, train, fx, muzzle, tracer, critter; air, airRotor: art2/aircraft.js);
+//                                  a: its arguments
 //                                  -> { g } (the provider's G-buffer as art-resolution planes)
 //   init       + cacheMB, sprMB, modelMB: what the caches may hold (pool.js cacheBudget: far less on a phone)
 //   init       + artKey, keepCap, tidy: baked chunks are kept in the browser (chunkstore.js) under artKey (version.json's
@@ -65,12 +66,14 @@ async function loadActors() {
     P.actors.useArt({ ferrisCab: pk && pk.ferrisCab, hotAirBalloon: ru && ru.hotAirBalloon, starfish: wl && wl.starfish });
   }
 }
+const AIR = { m: null, url: null };
 const SPRITE_FN = {
   vehicle: () => P.actors && P.actors.vehicleSprite, animal: () => P.actors && P.actors.animalSprite,
   crate: () => P.actors && P.actors.crateSprite, bag: () => P.actors && P.actors.bagSprite, ball: () => P.actors && P.actors.ballSprite,
   proj: () => P.actors && P.actors.projSprite, train: () => P.actors && P.actors.trainCarSprite, fx: () => P.actors && P.actors.fxSprite,
   ped: () => P.peds && P.peds.pedSprite,
   prop: () => chunkProviders.statics && ((pi) => chunkProviders.statics.propSprite(M, pi)),   // (a felled tree as it stood: carryfx.js)
+  air: () => AIR.m && AIR.m.bodySprite, airRotor: () => AIR.m && AIR.m.rotorSprite,   // (the aircraft and their rotors: art2/aircraft.js, loaded the first time)
 };
 
 // a G-buffer as a message: packed into the engine's three planes and turned into art pixels (chunkpack.js, the same
@@ -112,6 +115,7 @@ async function init(args) {
   if (P.actors && P.actors.setArtPx) P.actors.setArtPx(ART);   // (voxel things render straight at the art pixel)
   if (P.actors && P.actors.setActorBudget) P.actors.setActorBudget(args.modelMB ? { modelMB: args.modelMB } : { lowMem });
   if (P.actors && P.actors.artFrom && args.art) P.actors.artFrom({ fleet: () => import(args.art.fleet), horse: () => import(args.art.horse) });   // (the newer art: loaded here when a sprite first wants it)
+  AIR.url = (args.art && args.art.air) || null;   // (the aircraft's: the first time one's sprite is asked for)
   const t1 = performance.now();
   const m = args.M || (args.key ? await readWorld(args.key) : null);
   return { mapMod, m, result: { ground: pc.ground, statics: pc.statics, actors: !!P.actors, peds: !!P.peds, errors: { ...pc.errors, ...P.errors }, modsMs, readMs: args.M ? 0 : performance.now() - t1, needWorld: !m && !args.noWorld } };
@@ -411,6 +415,7 @@ async function handle(msg) {
   if (op === 'sprite') {
     const { kind, key, a } = args;
     if (P.actors && P.actors.needsArt && P.actors.needsArt(kind, a)) await P.actors.loadArt();   // (the newer art, the first time it's wanted: actors.js artFrom)
+    if ((kind === 'air' || kind === 'airRotor') && !AIR.m && AIR.url) AIR.m = await import(AIR.url);
     const fn = kind === 'ped' ? P.peds && P.peds.pedSprite : (P.actors && P.actors.SPRITES && P.actors.SPRITES[kind]) || (SPRITE_FN[kind] && SPRITE_FN[kind]());
     if (!fn) throw new Error(`no provider for ${kind} sprites`);
     const g = key ? sprCache.get(key, () => fn(...a)) : fn(...a);

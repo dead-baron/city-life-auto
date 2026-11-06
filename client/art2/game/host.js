@@ -500,10 +500,10 @@ export class World2 {
       this.laneOn = true;
     }, () => { if (this.lane === L) this.lane = null; L.dispose(); });
   }
-  // the pool a sprite is asked of: people wanted now (prio < 0) the lane's, the rest the bake workers'
+  // the pool a sprite is asked of: people wanted now (prio < 0) and aircraft the lane's, the rest the bake workers'
   _sprPool(kind, prio) {
     const L = this.lane;
-    if (kind === 'ped' && prio < 0 && L && this.laneOn) { if (!L.dead) return L; this.lane = null; this.laneOn = false; }
+    if ((kind === 'ped' ? prio < 0 : kind === 'air' || kind === 'airRotor') && L && this.laneOn) { if (!L.dead) return L; this.lane = null; this.laneOn = false; }
     return this.pool;
   }
   // the load timeline (main.js): the workers ready, the first chunk of art, the whole screen drawn - each once
