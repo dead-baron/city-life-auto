@@ -20398,3 +20398,29 @@ The owner's pick (11-05): the HIT button shows what you hit with. Bare-handed it
 weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the sledge's hammer (`setMelee` in
 client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
 still holds for every other button and every action kind.
+
+## 2026-11-06 - Drivers find their way round again (three failing reroute tests)
+
+`test/reroute.test.js` had three failures on main (94089ae7). The 11-04 re-key of the world (American English place
+names) moved the roads the tests pick, and that exposed three real bugs in the drivers:
+- **The free lane was looked for in the wrong place** (`reroute.js arcOn`). A driver's place along its lane was the arc
+  along the road's center line from the node. The lane paths that `laneClear`, `laneHeading` and `enterEdge` measure
+  along start trimmed clear of the junction box. Past a big junction (this avenue's is trimmed 237 px), the car counted
+  as a junction's width further on than it was. `laneClear` then looked at the next lane past the wreck, ran off the
+  lane's end, and never found it free. The driver went round on the wrong side of the road instead. Now it projects the
+  car onto the lane's own path, and the turn round does the same for the lane back.
+- **A red light past the wreck kept the driver waiting** (`traffic.js`). A car stopped behind a wreck counted as "held at
+  the lights" while the light beyond the wreck was red, so it didn't look for another way until the light changed (16 s
+  here). Now the lights don't hold it when what it's stopped behind is standing in the road short of the line (`standing`).
+- **A queue nose to tail behind a car left in the lane locked for good** (`reroute.js roomFromBehind`). The second car in
+  the queue (38 px behind the empty car, a pickup 16 px behind it) had no room to back off for the swing out. Without
+  a siren it waits for the queue behind to sort itself out, but nothing ever made the car behind move. The car behind
+  counts as not jammed (the one ahead is about to go round), so it waited too. Now the car queued right behind backs off
+  a little, if it has the room, and the one in front tries again as it stops.
+
+The turn-round test failed only after the avenue test. That car went round over the kerb and knocked down a prop on the
+test map, which every `makeWorld` shares. It passes again with the avenue fixed.
+
+Tests: reroute (8/8), roadends, signals, slips, trafficbox, trafficwalls, transit, tow, police, policeair, ems, bikes,
+fleet, jobway, npcpeople, townfolk, drivejobs, carts, kbdrive (117/117); stops, skate, world3fleet, world3passes,
+world3rail, townwork, airtraffic (57/57).

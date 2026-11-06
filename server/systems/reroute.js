@@ -11,7 +11,7 @@
 // memory holds MEMORY roads for TTL seconds.
 import { K, T } from '../../shared/constants.js';
 import { lanePath, nearestEdge } from '../../shared/roads.js';
-import { pointAt } from '../../shared/geom.js';
+import { pointAt, project } from '../../shared/geom.js';
 import { vehForwardSpeed } from '../../shared/physics.js';
 import { sameLevel } from '../../shared/levels.js';
 import { enterEdge } from './traffic.js';
@@ -68,7 +68,14 @@ export function unjam(world, v, holding) {
   return findWay(world, v);
 }
 
-function arcOn(e, from, v) {
+// how far along its lane v is: the arc length on lane k's own path from `from` - the path laneClear, laneHeading and
+// enterEdge measure along, which starts trimmed clear of the junction box. (It used to be the arc along the road's
+// centre line from the node: past a big junction - an avenue's, trimmed 200 px and more - that put the car a junction's
+// width further on than it was, so laneClear looked at the lane alongside past what was in the way, ran off the lane's
+// end and never found it free.)
+function arcOn(net, e, from, k, v) {
+  const lp = lanePath(net, e, from, Math.max(0, Math.min(k || 0, e.nl - 1))), pr = project(lp, v);
+  if (pr) return pr.s;
   const ne = nearestEdge({ edges: [e] }, v.x, v.y);
   const s = ne ? ne.s : 0;
   return from === e.a ? s : e.len - s;
@@ -95,7 +102,7 @@ function findWay(world, v) {
   const ai = v.ai, net = world.map.net, e = net.edges[ai.edge], now = world.time;
   if (!e) return false;
   const blk = v._blk ? world.get(v._blk) : null;
-  const s = arcOn(e, ai.from, v);
+  const s = arcOn(net, e, ai.from, ai.lane, v);
   // 1. a free lane alongside, the same way
   if (e.nl > 1 && !v.def.pedal) {
     const order = [...Array(e.nl).keys()].filter((k) => k !== ai.lane).sort((a, b) => Math.abs(a - ai.lane) - Math.abs(b - ai.lane));
@@ -126,7 +133,7 @@ function findWay(world, v) {
   // 3. turn round and take another way (a taxi plans a new way to where it's going) - where there's room to; otherwise
   //    it waits its turn (roadends.js roomToTurn: not over the kerb into the shop fronts with the far lane blocked)
   if (!roomToTurn(world, v, e.id, ai.from)) { ai.howOut = 'wait'; world.turnsHeld = (world.turnsHeld || 0) + 1; makeWay(world, v, blk); return false; }
-  const other = e.a === ai.from ? e.b : e.a, s2 = Math.max(0, e.len - s);
+  const other = e.a === ai.from ? e.b : e.a, s2 = arcOn(net, e, other, 0, v);   // (where it is along the lane back)
   if (ai.route && v.taxi && rejoin(world, v, e, other, s2)) { /* (on its new way) */ }
   else { delete ai.route; enterEdge(world, v, e.id, other, 0, s2); }
   ai.passBlk = 0; ai.passUntil = 0;
@@ -189,7 +196,7 @@ export function goRound(world, v, ai, speed, desired) {
   // would catch the other's and shove it on up the street; the queue behind sorts itself out first)
   const gap0 = (b.x - v.x) * Math.cos(a) + (b.y - v.y) * Math.sin(a) - b.def.L / 2 - v.def.L / 2;
   const back0 = gap0 < v.def.L * 1.2 ? roomBehind(world, v, 90) : 0;
-  if (!v.siren && gap0 + back0 < v.def.L * 0.8) return null;
+  if (!v.siren && gap0 + back0 < v.def.L * 0.8) { roomFromBehind(world, v, ai, v.def.L * 0.8 - gap0 - back0); return null; }
   for (const side of v.siren ? [-1, 1] : [-1]) {           // (-1: the other side of the road; 1: the kerb side, the pavement)
     if (!stripClear(world, v, b, a, side * off0, !!v.siren)) continue;
     if (!v.siren && oncoming(world, v, b, a, side * off0)) continue;   // (without a siren: only with nothing coming the other way)
@@ -202,6 +209,27 @@ export function goRound(world, v, ai, speed, desired) {
     return goRound(world, v, ai, speed, desired);
   }
   return null;
+}
+// Nose up to what it's going round with the queue behind it right up to its bumper: no room to back off for the swing
+// out, and the car behind it waits on it for good (it isn't jammed: it's about to go round) - the queue never sorted
+// itself out (a compact 38 px behind a car left in the lane, a pickup 16 px behind it: stood there for good). So the car
+// queued right behind it backs off a little, and it tries again as that one stops.
+function roomFromBehind(world, v, ai, short) {
+  const now = world.time;
+  let f = null;
+  for (const q of world.query(v.x, v.y, v.def.L + 120, K.VEH)) {
+    if (q._blk !== v.id || !q.ai || q.ai.kind !== 'traffic' || q.ai.turn || q.ai.reverseUntil > now || Math.hypot(q.vx, q.vy) > 10 || !sameLevel(q.lz, v.lz)) continue;
+    const drv = q.seats[0] && world.get(q.seats[0]);
+    if (drv && drv.player) continue;
+    f = q; break;
+  }
+  if (!f) return;
+  const room = roomBehind(world, f, 96);
+  if (room < 12) return;   // (it has the queue right behind it too: that one waits its turn)
+  const back = Math.min(room, short + 16), dur = Math.min(1.4, 0.3 + back / 70);
+  f.ai.reverseUntil = now + dur; f.ai.stuck = 0;
+  ai.roundT = Math.max(0, ROUND_BUS_S - dur - 0.15);   // (and tries again as it stops)
+  world.roomFromBehind = (world.roomFromBehind || 0) + 1;
 }
 // something coming the other way down the strip beside b that v would drive round it in (off px over), near enough to
 // meet it before it's past: wait for it
