@@ -266,7 +266,12 @@ try {
   await wait(800);
   // a fresh profile is a new character: the first-time experience's arrival and question (server/systems/ftue.js) hold the
   // keys - skipped (the arrival, then the question), and anything left open closed
-  for (let i = 0; i < 3; i++) { await page.evaluate(() => window.CLA.send({ t: 'intro', a: 'skip' })); await wait(700); }
+  // (it starts once the server sees the character: skipped and closed until it says done, 40 s at most)
+  for (let i = 0; i < 40; i++) {
+    const st = await page.evaluate(() => { const S = window.CLA.S, f = S.me && S.me.ftue; if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (!f || f.st !== 'done') window.CLA.send({ t: 'intro', a: 'skip' }); return f ? f.st : null; });
+    if (st === 'done' && i >= 3) break;
+    await wait(1000);
+  }
   await page.keyboard.press('Escape').catch(() => {});
   await page.evaluate(() => { const H = window.CLA.S.hud; if (H && H.menuOpen) H.closeMenu(); });
   await wait(500);
