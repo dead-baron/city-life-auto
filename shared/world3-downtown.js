@@ -136,8 +136,8 @@ function northBand(K, m, ctx) {
   let k = 0;
   const westShops = [
     { w: 13, name: 'Silk & Shears Salon', sign: 'SILK & SHEARS', store: 'salon', poi: { kind: 'barber', label: 'Silk & Shears Salon' }, awning: ['#2a2420', '#2a2420'] },
-    { w: 11, name: 'Cask & Cork', store: 'bar', awning: ['#5a2a2e', '#efe6d0'] },
-    { w: 13, name: 'Gilt & Grain', store: 'cafe', poi: { kind: 'coffee', label: 'Gilt & Grain Bakery', food: true }, awning: ['#8a6a2a', '#f0ece4'] },
+    { w: 12, name: 'Cask & Cork', store: 'bar', awning: ['#5a2a2e', '#efe6d0'] },   // (12: 10 inside, IN5's whole room - the owner, 11-06; the bakery next door gives up the tile)
+    { w: 12, name: 'Gilt & Grain', store: 'cafe', poi: { kind: 'coffee', label: 'Gilt & Grain Bakery', food: true }, awning: ['#8a6a2a', '#f0ece4'] },
     { w: 10, name: 'Fernwood Florist', store: 'florist', awning: ['#2f6a4e', '#f0ece4'] },
     // (2026-10-23: downtown's gun shop and hardware store - the shops where you need them, world3-shops.js)
     { w: 11, name: 'Ironside Hardware', sign: 'IRONSIDE HARDWARE', store: 'mart', poi: { kind: 'hardware', label: 'Ironside Hardware' }, awning: ['#a83a2a', '#e8e4dc'] },

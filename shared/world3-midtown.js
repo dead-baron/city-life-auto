@@ -148,6 +148,9 @@ const AWNINGS = [['#2f7a5c', '#f0ece4'], ['#a8343a', '#f0ece4'], ['#2a3e7a', '#e
   ['#a8343a', '#a8343a'], ['#3a3a44', '#e8e4dc'], ['#6a3a8a', '#f0ece4'], ['#2e6a8a', '#f0ece4'], ['#1e2a3a', '#1e2a3a'], ['#8a5a2a', '#efe6d0']];
 const SIGNS = [['#2a2c38', [236, 206, 120]], ['#e8e0cc', [180, 40, 46]], ['#1e3a5e', [240, 236, 220]], ['#f0ece4', [40, 110, 80]], ['#2f6a4e', [240, 232, 200]],
   ['#8a2a2e', [250, 230, 190]], ['#232838', [236, 214, 150]], ['#e8c040', [40, 40, 50]], ['#2a4a7a', [250, 250, 240]], ['#f4f0e8', [40, 60, 120]]];
+// a bar's lot: 12 tiles, 10 inside - room for IN5's whole room (the lounge's booths and tables, the tavern's fireplace
+// and long tables, the sports bar's pool table and TV wall: shared/shoprooms.js; the owner, 11-06)
+const BAR_W = 12;
 // Midtown's own shops (invented names): [name, storefront kind, poi kind or null]
 const SHOPS = {
   cafe: [['Daily Grind', 'cafe'], ['Milk & Honey', 'cafe'], ['Golden Crust', 'cafe'], ['Corner Cup', 'cafe'], ['Tea Leaf', 'cafe']],
@@ -308,19 +311,19 @@ function build(m, api, K) {
       }
       // the generic mix: shops 5-8 wide, now and then a walk-up, a passage to the alley, a pocket garden
       const r = rnd(x, y1, 90);
-      if (room <= 9) return rnd(x, y1, 91) < 0.5 ? { w: room, depth, ...walkup(x, y1, room, { arch: 'walkup', corner }) } : { w: room, depth, ...shopLot(x, y1, room, { ...genericShop(x, y1), corner }) };
+      if (room <= 9) return rnd(x, y1, 91) < 0.5 ? { w: room, depth, ...walkup(x, y1, room, { arch: 'walkup', corner }) } : { w: room, depth, ...shopLot(x, y1, room, { ...genericShop(x, y1, room), corner }) };
       if (r < 0.06 && o.passages !== false) return { gap: 2 + Math.floor(rnd(x, y1, 92) * 2), kind: 'passage' };
       if (r < 0.09 && o.gardens !== false) return { gap: 5 + Math.floor(rnd(x, y1, 93) * 3), kind: 'garden' };
       if (r < 0.32) { const w = Math.min(room, 8 + Math.floor(rnd(x, y1, 94) * 4)); return { w, depth, ...walkup(x, y1, w, { corner, scaffold: rnd(x, y1, 96) < 0.05 }) }; }
-      const w = Math.min(room, 5 + Math.floor(rnd(x, y1, 95) * 4));
-      return { w, depth, ...shopLot(x, y1, w, { ...genericShop(x, y1), corner }) };
+      const S = genericShop(x, y1, room), w = S.store === 'bar' ? BAR_W : Math.min(room, 5 + Math.floor(rnd(x, y1, 95) * 4));
+      return { w, depth, ...shopLot(x, y1, w, { ...S, corner }) };
     }, o);
     if (o.yard !== false) backYards(K, made, y0, o);
     return made;
   };
-  // a shop with a name not used yet in Midtown
-  const genericShop = (x, y) => {
-    const r = rnd(x, y, 100), cat = r < 0.2 ? 'cafe' : r < 0.44 ? 'food' : r < 0.52 ? 'bar' : 'shop';
+  // a shop with a name not used yet in Midtown (a bar only where its wide lot fits: room, the tiles left in the row)
+  const genericShop = (x, y, room = 99) => {
+    const r = rnd(x, y, 100), cat = r < 0.2 ? 'cafe' : r < 0.44 ? 'food' : r < 0.52 ? (room >= BAR_W ? 'bar' : 'shop') : 'shop';
     if (rnd(x, y, 103) < 0.25) { const [name, store] = pick(SHOPS[cat], rnd(x, y, 101)); if (!named.has(name)) { named.add(name); return { name, store }; } }
     return composeShop(named, cat, (k) => rnd(x + k, y, 104)) || composeShop(named, 'shop', (k) => rnd(x, y + k, 105));
   };
@@ -392,12 +395,12 @@ function build(m, api, K) {
   {
     // Bridge Avenue to Main Avenue: one long rail-side row, the Trestle Tap and a pocket park by the El
     const [x0, x1] = span(MX.bridge, 'ave', MX.main, 'ave');
-    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: 7, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }, { gap: 13, kind: 'park' }, { kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
+    railRow(x0, x1, [{ kind: 'walkup', w: 10 }, { kind: 'shop', w: BAR_W, name: 'The Trestle Tap', store: 'bar', awning: null, people: 3 }, { gap: 13, kind: 'park' }, { kind: 'walkup', w: 9 }, { kind: 'shop', w: 6, ...pickShop('food', 0) }]);
   }
   // the station blocks either side of Madison Street (the stair towers stand on Trestle Street's pavement: the rail pass)
   {
     const [x0, x1] = span(MX.main, 'ave', MX.madison, 'st');
-    railRow(x0, x1, [{ kind: 'shop', w: 8, name: 'Station News', store: 'mart', awning: ['#1e3a5e', '#e8e4dc'] }, { kind: 'shop', w: 6, name: 'Last Stop Lounge', store: 'bar', awning: null }]);
+    railRow(x0, x1, [{ kind: 'shop', w: 8, name: 'Station News', store: 'mart', awning: ['#1e3a5e', '#e8e4dc'] }, { kind: 'shop', w: BAR_W, name: 'Last Stop Lounge', store: 'bar', awning: null }]);
   }
   {
     const [x0, x1] = span(MX.madison, 'st', MX.civic, 'ave');

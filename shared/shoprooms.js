@@ -180,13 +180,13 @@ function aisles(c, reg, d, aisle, mk) {
 }
 // gondolas running north-south down a region (RT3, IN6: the shelves stand end-on to the counter), a lane between each -
 // in a region too narrow for three of them and a row beside (a small shop: 3-8 tiles wide, its door's lane taking the
-// middle), rows of the same shelving east-west instead (aisles: their stocked faces to the street), so a narrow shop is as
+// middle) or too shallow for them to read as gondolas, rows of the same shelving east-west instead (aisles: their stocked faces to the street), so a narrow shop is as
 // stocked as a wide one
 function gondolas(c, reg, wd, lane, mk) {
   let n = 0;
-  wd = Math.max(wd, 24);
+  wd = Math.max(wd, 26); lane = Math.min(lane, 20);
   const len = reg.y1 - reg.y0 - 6;
-  if (reg.x1 - reg.x0 < 3 * wd + 2 * lane + 62 || len < 30) {
+  if (reg.x1 - reg.x0 < 3 * wd + 2 * lane + 62 || len < 90) {
     const k0 = c.R.pieces.length;
     n = aisles(c, reg, 14, 26, mk);
     for (let i = k0; i < c.R.pieces.length; i++) delete c.R.pieces[i].ns;
@@ -234,7 +234,7 @@ const corner = (reg, w, h, nearDoor) => { const x = (nearDoor ? reg.side < 0 : r
 // along a region's outer side wall (the room's west or east wall), a unit running north-south
 function sideWall(c, reg, t, d, h, o = {}) {
   const atW = reg.x0 <= c.X0 + 6, atE = reg.x1 >= c.X1 - 6;
-  const { need = 120, ...oo } = o;   // (need: what it must leave of the region - a narrow strip: shelving end-on along the wall would show nothing, aisles fill it; a booth (need 0) is the strip)
+  const { need = 160, ...oo } = o;   // (need: what it must leave of the region - a narrow strip: shelving end-on along the wall would show nothing, aisles fill it; a booth (need 0) is the strip)
   if ((!atW && !atE) || reg.x1 - reg.x0 < d + (need ? 22 + need : 4)) return null;
   const x0 = atW ? c.X0 + 3 : c.X1 - 3 - d;
   const p = put(c, t, x0, reg.y0, x0 + d, reg.y1, h, { side: atW ? -1 : 1, ...oo });
@@ -442,7 +442,7 @@ FIT.pawn = (c, fence) => {
   if (!fence) { sign(c, ['PAWN SHOP', 'PAWN'], '#ffd24a', c.tillX, 'block'); const l = pick(r, [['LOANS'], ['WE BUY GOLD', 'GOLD'], ['CASH 4 GOLD', 'CASH']]); sign(c, l, '#ff4a5a'); if (c.W >= 200) wall(c, 'head', c.X1 - 40, c.X1 - 14, 50, 72); }
   const [a, b] = c.regs;
   if (!fence) put(c, 'rug', c.dc - 36, c.Ya + STRIP + 6, c.dc + 36, Math.min(c.Yb - 14, c.Ya + STRIP + 84), 1, { c: '#8a2a24', c2: '#d8a050', text: c.dw >= 64 ? 'GOOD STUFF' : null, flat: true });
-  if (a) { sideWall(c, a, 'shelf', 14, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter', ns: true }); aisles(c, a, 18, 26, (x0, y, x1, y1, k) => (fence || k === 1 ? put(c, 'shelf', x0, y, x1, y1, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter' }) : put(c, 'glasscase', x0, y, Math.min(x1, x0 + 130), y1, 20, { c: '#2a2a2e', g: k === 0 ? G.guns : G.gold, gk: k === 0 ? 'guns' : 'gold', felt: k === 0 ? '#7a2a2a' : '#2a3a6a' }))); }
+  if (a) { sideWall(c, a, 'shelf', 14, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter', ns: true, need: 220 }); aisles(c, a, 18, 26, (x0, y, x1, y1, k) => (fence || k === 1 ? put(c, 'shelf', x0, y, x1, y1, 34, { c: '#5a4632', g: G.clutter, gk: 'clutter' }) : put(c, 'glasscase', x0, y, Math.min(x1, x0 + 170), y1, 20, { c: '#2a2a2e', g: k === 0 ? G.guns : G.gold, gk: k === 0 ? 'guns' : 'gold', felt: k === 0 ? '#7a2a2a' : '#2a3a6a' }))); }
   if (b) {
     sideWall(c, b, 'shelf', 14, 30, { c: '#5a4632', g: G.tools, gk: 'tools', ns: true });
     put(c, 'pile', b.x0, b.y0, Math.min(b.x1, b.x0 + 46), b.y0 + 24, 24, { g: G.clutter, boxes: !!fence });
