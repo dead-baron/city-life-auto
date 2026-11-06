@@ -262,6 +262,12 @@ try {
   if (!inCity) { await page.screenshot({ path: `/tmp/drivebench-stuck.png` }).catch(() => {}); throw new Error('never got into the city'); }
   await page.evaluate(() => { window.CLA.send({ t: 'devmode', pw: '' }); });
   await wait(800);
+  // a fresh profile is a new character: the first-time experience's arrival and question (server/systems/ftue.js) hold the
+  // keys - skipped (the arrival, then the question), and anything left open closed
+  for (let i = 0; i < 3; i++) { await page.evaluate(() => window.CLA.send({ t: 'intro', a: 'skip' })); await wait(700); }
+  await page.keyboard.press('Escape').catch(() => {});
+  await page.evaluate(() => { const H = window.CLA.S.hud; if (H && H.menuOpen) H.closeMenu(); });
+  await wait(500);
   await page.evaluate(({ NIGHT, RAIN }) => { const s = window.CLA.send; s({ t: 'dev', c: 'time', m: NIGHT ? 23 * 60 : 12 * 60 }); s({ t: 'dev', c: 'clockhold' }); if (RAIN) s({ t: 'dev', c: 'rain', s: 3600 }); else s({ t: 'dev', c: 'clear' }); s({ t: 'dev', c: 'wxhold' }); s({ t: 'dev', c: 'god' }); }, { NIGHT, RAIN });
   // the route: from the houses of Pine Hills to Southside, Downtown, Midtown, Northgate, Old Town and back (the first that
   // the map has: district middles - client/devtp.js)
@@ -278,6 +284,11 @@ try {
   await page.evaluate((m) => window.CLA.send({ t: 'dev', c: 'car', m, in: true }), CAR);
   await waitFor(page, () => window.CLA.S.pred && window.CLA.S.pred.kind === 'veh', 30000);
   await wait(4000);
+  // (a check that the car goes: full throttle a moment)
+  const p0 = await page.evaluate(() => { const P = window.CLA.S.pred; return [P.s.x, P.s.y]; });
+  await page.keyboard.down('KeyW'); await wait(2500); await page.keyboard.up('KeyW');
+  const p1 = await page.evaluate(() => { const P = window.CLA.S.pred, H = window.CLA.S.hud; return [P.s.x, P.s.y, !!(H && H.menuOpen), window.CLA.S.me && window.CLA.S.me.ftue ? window.CLA.S.me.ftue.st : null]; });
+  log(`the car: ${Math.round(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))} px in 2.5 s (a menu open: ${p1[2]}, first-time experience: ${p1[3]})`);
   await page.evaluate(autopilot, plan.slice(1).concat([plan[0]]));
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   if (TRACE) await cdp.send('Tracing.start', { transferMode: 'ReturnAsStream', traceConfig: { includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute', 'v8', 'blink.user_timing'], excludedCategories: ['*'] } });
