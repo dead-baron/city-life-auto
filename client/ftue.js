@@ -10,9 +10,13 @@
 //   a tip         a first-time moment: one fading line and "More in your Guide" (the phone's Guide, at its section)
 // ctx: { S, send, openOverlay, closeOverlay, topOverlay, sfx, hud(), openGuide(sec), setCam(fn|null) }
 import { glyph } from './glyphs.js';
+import { KIND_ICON, actKind, svg } from './touchicons.js';
 import { input } from './input.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// a step's control as the device in hand shows it; on touch the action button's icon is what the line offers (the
+// contextual action icons: client/touchicons.js actKind) - a briefcase for a job, the rod to cast, a speech bubble to talk
+const ctlGlyph = (ctl, text) => (ctl === 'action' && input.device === 'touch' ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[actKind(text)])}</span>` : glyph(ctl));
 const LINE_S = 7;   // (shared/rules.js FTUE.lineS: kept here so the page doesn't load rules.js for one number)
 let C = null, A = null, lineSig = '', lineT = 0;
 
@@ -43,7 +47,7 @@ function showLine(ctl, text, sec, sig) {
   const el = $('ftue-line');
   if (!el) return;
   lineSig = sig;
-  el.innerHTML = `${ctl ? glyph(ctl) : ''}<span>${esc(text)}</span>${sec ? `<button class="fl-more" data-guide="${esc(sec)}">More in your Guide</button>` : ''}`;
+  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? `<button class="fl-more" data-guide="${esc(sec)}">More in your Guide</button>` : ''}`;
   el.classList.remove('off', 'faded');
   el.classList.toggle('tip', !!sec);
   void el.offsetWidth;

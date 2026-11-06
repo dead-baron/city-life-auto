@@ -131,7 +131,7 @@ export function goalFor(world, ans, x, y) {
 }
 
 // ---- the lines ---------------------------------------------------------------------------------------------------------
-const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Ask ${g.name} for courier work`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Face the water and hold to cast' };
+const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Ask ${g.name} for courier work`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Cast a line: face the water, hold and let go' };
 const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.name, gang: (g) => g.name, fish: (g) => g.name };
 // the step's line (the page puts its control's glyph in front of it) and the job card's objective
 export function stepLine(world, p, f) {

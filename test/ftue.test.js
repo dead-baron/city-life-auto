@@ -15,6 +15,7 @@ import * as starter from '../server/systems/starter.js';
 import * as economy from '../server/systems/economy.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as mailjob from '../server/systems/mailjob.js';
+import * as jobs from '../server/systems/jobs.js';
 import * as fishing from '../server/systems/fishing.js';
 import * as combat from '../server/systems/combat.js';
 import { FTUE_STEPS } from '../server/analytics.js';
@@ -34,7 +35,7 @@ function newcomer(w) {
 const sent = (conn, f) => conn.sent.filter((m) => typeof m === 'object' && f(m));
 const me = (w, p) => players.buildMe(w, p);
 const toArrival = (w) => run(w, 0.6);
-const toQuestion = (w) => run(w, FTUE.arriveS + 2.2);
+const toQuestion = (w) => run(w, FTUE.arriveS + 4.6);   // (the page says when its scene is over; else the server's own timeout)
 // drive (by teleport) to the goal: the car moved with you in it
 function arriveAtGoal(w, p) {
   const g = p.profile.ftue.goal, v = p.ped.vehId ? w.get(p.ped.vehId) : null;
@@ -69,8 +70,8 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   assert.equal(prof.ftue.st, 'goal');
   assert.equal(prof.ftue.ans, 'work');
   const goal = prof.ftue.goal;
-  assert.equal(goal.k, 'mail');
-  assert.ok(mailjob.officesOf(w.map).some((o) => o.id === goal.poi), 'a post office');
+  assert.ok(goal.k === 'mail' || goal.k === 'courier', goal.k);   // (World v3: a post office's walking round; a city with none, a depot's courier work)
+  assert.ok(mailjob.officesOf(w.map).some((o) => o.id === goal.poi), 'a post office (or the depot standing in for one)');
   // step 1: walk to the car
   let m = me(w, p);
   assert.equal(prof.ftue.step, 1);
@@ -90,18 +91,18 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   // step 3: the action - take the round
   m = me(w, p);
   assert.equal(m.ftue.step, 3); assert.equal(m.ftue.ctl, 'action');
-  assert.match(m.ftue.line, /^Take a mail round at /);
+  assert.match(m.ftue.line, goal.k === 'mail' ? /^Take a mail round at / : /^Ask .+ for courier work/);
   vehicles.ejectPed(w, p.ped, true);
   const cash0 = prof.cash;
   conn.sent.length = 0;
-  assert.equal(mailjob.start(w, p, w.map.pois[goal.poi], 'walk'), null);
+  assert.equal(goal.k === 'mail' ? mailjob.start(w, p, w.map.pois[goal.poi], 'walk') : jobs.startCourier(w, p, w.map.pois[goal.poi]), null);
   run(w, 0.6);
   assert.equal(prof.ftue.st, 'done'); assert.equal(prof.ftue.how, 'goal');
   assert.equal(prof.cash, cash0 + FTUE.reward, 'the reward');
   const end = sent(conn, (m2) => m2.t === 'ftue' && m2.a === 'end')[0];
   assert.ok(end && end.title === 'FIRST GOAL DONE' && end.sub.startsWith(`+$${FTUE.reward}`), 'the big moment');
   assert.equal(me(w, p).ftue, null);
-  assert.equal(me(w, p).job.k, 'Mail carrier', 'the round itself now');
+  assert.equal(me(w, p).job.k, goal.k === 'mail' ? 'Mail carrier' : 'Courier', 'the job itself now');
   assert.deepEqual(steps, ['ftue_arrive', 'ftue_answer_work', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done']);
   for (const s of steps) assert.ok(FTUE_STEPS.includes(s), `${s}: a funnel step the analytics keep`);
   // under three minutes of play from the platform to done, by the timings kept
@@ -138,7 +139,7 @@ test('the hustle and the great outdoors: a contact to talk to; a rod, bait and a
   const spot = fishing.spotFor(w, b.p.ped);
   assert.ok(spot, 'water in front of you at the goal');
   fishing.begin(w, b.p, spot);
-  b.p.ped.fishing.P = {};   // (the line out: the cast landed)
+  b.p.ped.fishing.P = {}; b.p.ped.fishing.fish = 'bluegill';   // (the line out: the cast landed)
   run(w, 0.6);
   assert.equal(b.prof.ftue.st, 'done');
   // roam: no goal, the one line
@@ -249,7 +250,8 @@ test('the epoch checked again on joining: an old profile that reaches a running 
   assert.equal(w2.homeOwner.get(h.id), undefined, 'let go');
   assert.equal(prof.ftue.st, 'new');
   // a profile with no FTUE record at all (none should be left): a new character's
-  const { prof: q } = joinPlayer(w2, { ftue: undefined, lookPicked: true, lookIntro: 1 });
+  const { prof: q } = joinPlayer(w2, { ftue: undefined });
+  q.lookPicked = true;
   run(w2, 0.6);
   assert.equal(q.ftue.st, 'arrive');
 });
@@ -297,6 +299,7 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   const tips = () => sent(conn, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
   const gap = () => { w.time += FTUE.tipGapS + 1; run(w, 0.6); };
   w.loopTime = 60;   // (broad day: night on its own turn)
+  prof.ftue.m.transit = 1;   // (off the train on a platform: transit on its own turn, below)
   const wanted = (n) => { p.heat = n ? STAR_HEAT[n] + 8 : 0; p.wanted = n; };
   // not during the gap after the FTUE
   wanted(1); run(w, 0.6);
@@ -318,6 +321,7 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   assert.equal(tips().filter((t) => t === 'shop').length, 1);
   // a station's platform (a stop for transit)
   const st = w.map.pois.find((q) => q.kind === 'station');
+  delete prof.ftue.m.transit;
   teleport(w, p.ped, st.x + 20, st.y); gap();
   assert.ok(tips().includes('transit'));
   // the night
@@ -397,6 +401,7 @@ test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDAT
   const b = newcomer(w2);
   toArrival(w2); toQuestion(w2);
   economy.handleMenu(w2, b.p, ASK_POI, 'roam');
+  b.prof.acct = { v: 1, kind: 'guest', logins: [], passkeys: [] };   // (every online profile has its account record: kept)
   players.wipeAccount(w2, b.p);
   assert.equal(b.prof.ftue.st, 'new'); assert.equal(b.prof.starter.first, true);
 });

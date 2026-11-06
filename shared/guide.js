@@ -22,7 +22,7 @@ import { VEHICLES } from './vehicles.js';
 const $ = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const pct = (k) => `${Math.round(k * 100)}%`;
 const mins = (s) => { const m = s / 60; return `${Number.isInteger(m) ? m : m.toFixed(1)} minute${m === 1 ? '' : 's'}`; };
-const metres = (px) => `${Math.round(px / 32)} m`;   // (32 px a metre: the map's own scale)
+const meters = (px) => `${Math.round(px / 32)} m`;   // (32 px a meter: the map's own scale)
 const priceOf = (shop, id, kind) => { const o = SHOPS[shop] && SHOPS[shop].buy.find((q) => q.id === id && (!kind || q.kind === kind)); return o ? o.price : null; };
 const shopName = (shop) => (SHOPS[shop] ? SHOPS[shop].title : shop);
 const rodName = (id) => RODS[id].name;
@@ -34,13 +34,13 @@ const PLACE_NOTES = [
   ['police', 'Police stations', () => `Sign up for the force (${ENFORCER_MIN_SAMARITAN}+ Samaritan, no felonies), pay off felonies (${$(FELONY_FINE)} each).`],
   ['courthouse', 'Courthouses', () => `Register as a bounty hunter (${HUNTER_MIN_SAMARITAN}+ Samaritan); pay off felonies.`],
   ['bank', 'Banks and ATMs', () => 'Walk up to a cash machine and everything you carry goes into your bank, where nobody can take it.'],
-  ['station', 'Train stations', () => 'Free trains both ways round the line; a car park and a taxi rank at most of them.'],
+  ['station', 'Train stations', () => 'Free trains both ways around the line; a parking lot and a taxi stand at most of them.'],
   ['convenience', 'Corner stores', () => `Snacks, coffee, energy drinks, bandages (${$(priceOf('convenience', 'bandage'))}) and flashlights.`],
   ['pharmacy', 'Pharmacies', () => `Med kits (${$(priceOf('pharmacy', 'medkit'))}), bandages and revive kits (${$(priceOf('pharmacy', 'revivekit'))}).`],
   ['gunshop', 'Gun stores', () => `From a pistol at ${$(priceOf('gunshop', 'pistol', 'weapon'))} up; ammunition too.`],
   ['clothing', 'Clothing stores', () => 'New clothes - and a change of look drops your wanted level if no officer is watching.'],
   ['garage', 'Fresh Coat Garages', () => `Repairs, a respray (${$(priceOf('garage', 'respray'))}) and your starter car if you've lost it.`],
-  ['paint', 'Spray & Go', () => `Drive into the bay unseen: a new colour and a clean wanted level (${$(PAINT_PRICE)}).`],
+  ['paint', 'Spray & Go', () => `Drive into the bay unseen: a new color and a clean wanted level (${$(PAINT_PRICE)}).`],
   ['dealer', 'Car dealerships', () => 'Buy a car; it goes in your garage. Your starter car is free here too.'],
   ['marina', 'Marinas', () => 'Buy a boat or a jet ski.'],
   ['rental', 'Boat hire', () => `A jet ski (${$(BOAT_RENTAL_PRICE.jetski)}) or a speedboat (${$(BOAT_RENTAL_PRICE.speedboat)}) for ${mins(BOAT_RENTAL_S)}.`],
@@ -66,7 +66,7 @@ export function guideSections(map = null) {
     { id: 'around', title: 'Getting around', blurb: 'On foot, at the wheel, and the city\'s free transit.', entries: [
       { id: 'move', t: 'On foot', b: '[[move]] moves you; push all the way to run. [[sprint]] sprints and [[dive]] dives out of the way.' },
       { id: 'drive', t: 'Driving', b: `Walk up to any vehicle and press [[vehicle]] to get in. [[gas]] goes, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Driving earns driving skill (up to ${drive.cap} xp a day).` },
-      { id: 'starter', t: 'Your starter car', b: `A ${starter}, registered to you and free. Lose it and another is free at any public garage - a station car park, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there.` },
+      { id: 'starter', t: 'Your starter car', b: `A ${starter}, registered to you and free. Lose it and another is free at any public garage - a station parking lot, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there.` },
       { id: 'map', t: 'The map and waypoints', b: '[[map]] opens the map: pick a place, or tap anywhere, for a waypoint and a route along the roads.' },
       { id: 'bus', t: 'Buses', b: 'Free, any distance. Wait at a stop and press [[action]] when the bus pulls up; [[vehicle]] gets you off at any stop. Your phone\'s Transit app shows when the next one comes.' },
       { id: 'train', t: 'Trains', b: 'Free. When a train is in, walk up to its doors and press [[action]] to board; [[vehicle]] gets you off at a station. Each platform counts down to the next train.' },
@@ -90,7 +90,7 @@ export function guideSections(map = null) {
       { id: 'stars', t: 'Wanted stars', b: `Each reported crime adds heat: one star at ${STAR_HEAT[1]}, five at ${STAR_HEAT[5]}. Get out of the officers' sight and lie low - the heat fades. Change your look unseen, or drive a car into a Spray & Go, to lose it faster.` },
       { id: 'busted', t: 'Busted', b: `Knocked out by an officer and cuffed: fined ${$(BUST_FINE_PER_STAR)} a star, and illegal gear taken. Felonies stay on your record until you pay ${$(FELONY_FINE)} each at a police station or a courthouse.` },
       { id: 'down', t: 'Knocked down', b: `Down, you drop your cash and what you carry. You have ${RESPAWN_SECONDS} seconds to pick where to wake up - a hospital or a home of yours - or call for help and wait up to ${mins(HELP_S)} for a revive. An ambulance costs ${$(AMBULANCE_FEE)} if it brings you round.` },
-      { id: 'hot', t: 'Hot money', b: `A robbery's takings go in a bag on your back. Bank them at an ATM at least ${metres(HOT_FAR_PX)} from where you took them (while no one's after you), stash them at a home, or sell them to a fence for a ${pct(HOT_FENCE_CUT)} cut.` },
+      { id: 'hot', t: 'Hot money', b: `A robbery's takings go in a bag on your back. Bank them at an ATM at least ${meters(HOT_FAR_PX)} from where you took them (while no one's after you), stash them at a home, or sell them to a fence for a ${pct(HOT_FENCE_CUT)} cut.` },
       { id: 'robbery', t: 'Holding up a store', b: `Point a gun at a clerk and they hand over the till. A silent alarm trips ${ROB_ALARM_S.slice(0, -1).join(', ')} or ${ROB_ALARM_S[ROB_ALARM_S.length - 1]} seconds in - you never know which.` },
       { id: 'badge', t: 'Joining the force', b: `With ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and no felonies, sign up at a police station: a uniform, a cruiser, patrol calls. Bounty hunting takes ${HUNTER_MIN_SAMARITAN}+ points.` },
       { id: 'leave', t: 'Logging off', b: `Close the game mid-fight and your body stays in the city ${GHOST_SECONDS} seconds. The pause menu's Log off counts you out safely.` },

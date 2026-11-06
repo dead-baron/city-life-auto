@@ -7,10 +7,13 @@
 //                     Guide" - once) }
 import { guideSections, searchGuide } from '../shared/guide.js';
 import { glyph } from './glyphs.js';
-import { icon as pix } from './touchicons.js';
+import { icon as pix, KIND_ICON, svg } from './touchicons.js';
+import { input } from './input.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const body = (b) => esc(b).replace(/\[\[(\w+)\]\]/g, (s, a) => glyph(a));
+// (on touch the action button wears what it does there - client/touchicons.js KIND_ICON: the entry's kind)
+const ACT_OF = { fishing: 'fish', bus: 'transit', train: 'transit', ferry: 'boat', revive: 'revive', jobs: 'job', mail: 'job' };
+const body = (b, id) => esc(b).replace(/\[\[(\w+)\]\]/g, (s, a) => (a === 'action' && input.device === 'touch' && ACT_OF[id] ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[ACT_OF[id]])}</span>` : glyph(a)));
 const mark = (h, q) => { if (!q) return h; let out = h; for (const w of q.toLowerCase().split(/\s+/).filter((x) => x.length > 1)) out = out.replace(new RegExp(`(?![^<]*>)(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>'); return out; };
 const SEC_PIX = { around: 'transit', earn: 'jobs', law: 'siren', places: 'places', activities: 'arcade', property: 'homes', items: 'bag' };
 let open = null, query = '', secs = null, secsMap = null;
@@ -26,7 +29,7 @@ export function render(el, ctx) {
   const map = ctx.map(), S = sections(map), me = ctx.me && ctx.me(), f = me && me.ftue;
   const want = ctx.take && ctx.take();
   if (want) { open = want; query = ''; }
-  const entry = (sec, e) => `<div class="gd-e" id="gd-${esc(sec.id)}-${esc(e.id)}"><b>${mark(esc(e.t), query)}</b><p>${mark(body(e.b), query)}</p></div>`;
+  const entry = (sec, e) => `<div class="gd-e" id="gd-${esc(sec.id)}-${esc(e.id)}"><b>${mark(esc(e.t), query)}</b><p>${mark(body(e.b, e.id), query)}</p></div>`;
   let h = '<div class="ph-guide-top"><span class="ph-tile">' + pix('guide') + '</span><div><h3>The city guide</h3><p class="ph-hint">Honest work, a hustle, the great outdoors - you can do all of it. Here\'s how.</p></div></div>';
   if (f && f.st === 'goal') h += `<div class="ph-card gd-goal"><b>Your first goal · step ${f.step} of 3</b><small>${esc(f.line || '')}</small><button class="btn" data-gd="skip">Skip the first goal</button></div>`;
   h += `<label class="bm-search gd-search">${pix('search')}<input id="gd-q" class="field" type="search" placeholder="Search the guide" autocomplete="off" spellcheck="false" value="${esc(query)}"></label>`;
