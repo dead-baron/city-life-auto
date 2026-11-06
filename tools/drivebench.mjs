@@ -283,6 +283,8 @@ try {
   if (TRACE) await cdp.send('Tracing.start', { transferMode: 'ReturnAsStream', traceConfig: { includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute', 'v8', 'blink.user_timing'], excludedCategories: ['*'] } });
   const h0 = await page.evaluate(hudNow);
   R.start = h0;
+  R.mapSizes = await page.evaluate(() => { const m = window.CLA.S.map, n = (a) => (a ? a.length : 0); return { w: m.w, h: m.h, props: n(m.props), lamps: n(m.lamps), pois: n(m.pois), buildings: n(m.buildings), edges: n(m.edges), nodes: n(m.nodes), lots: n(m.lots) }; });
+  log(`the window: ${JSON.stringify(R.mapSizes)}`);
   await page.evaluate(() => { const D = window.__drive; D.rec = true; D.t0 = performance.now(); });
   log(`driving for ${MIN} min (cpu x${CPU}, ${NIGHT ? 'night' : 'day'}, ${RAIN ? 'rain' : 'dry'})`);
   let prevFt = 0, prevLong = 0;
@@ -327,7 +329,7 @@ try {
     frames: D.ft.length, p50: pct(D.ft, 0.5), p95: pct(D.ft, 0.95), p99: pct(D.ft, 0.99), over50: D.ft.filter((x) => x > 50).length,
     longN: D.long.length, longMs: D.long.reduce((a, e) => a + e.ms, 0), longBy: Object.fromEntries(Object.entries(by).sort((a, b) => b[1].ms - a[1].ms)),
     madeHere: h1.madeHere - h0.madeHere, madeHereMs: h1.syncMs - h0.syncMs, evicted: h1.evicted - h0.evicted, sprReq: h1.sprReq - h0.sprReq, late: h1.late, bakes: h1.bakeN - h0.bakeN, kept: h1.kept - h0.kept, server: h1.server - h0.server,
-    heapStart: h0.heapMB, heapEnd: h1.heapMB, heapMax: Math.max(0, ...D.heap.map((x) => x[1])), gpuMB: h1.gpuMB, reworld: h1.reworld - h0.reworld, swaps,
+    heapStart: h0.heapMB, heapEnd: h1.heapMB, heapMax: Math.max(0, ...D.heap.map((x) => x[1])), allocMBs: Math.round(10 * D.heap.reduce((a, x, i) => a + (i && x[1] > D.heap[i - 1][1] ? x[1] - D.heap[i - 1][1] : 0), 0) / Math.max(1, (D.heap.length - 1))) / 10, gcDrops: D.heap.filter((x, i) => i && x[1] < D.heap[i - 1][1] - 1).length, gpuMB: h1.gpuMB, reworld: h1.reworld - h0.reworld, swaps,
     kinds: Object.fromEntries(Object.entries(D.kinds).map(([k, v]) => [k, { n: v.n, ms: Math.round(v.ms), slowN: v.slowN, slowMs: Math.round(v.slowMs), max: Math.round(v.max) }])),
     autopilot: D.ap,
     frameMs: Math.round(100 * D.cbSum / Math.max(1, D.partN)) / 100,
