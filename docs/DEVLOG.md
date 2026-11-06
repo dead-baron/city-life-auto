@@ -20438,3 +20438,20 @@ columns ran over 50. The worst: Southside's back rows (16 x 109), Westport Cente
   buildings).
 - Today's world (`world`) doesn't change: everything is World v3's (WD). `world3` / `art3` change, so browsers fetch the
   v3 regions and chunks again; today's `art` changes too (the roof kit's code).
+
+## 2026-11-06 - The hand-placed cliffs are solid where they're drawn too
+The follow-up the desert's fix left ("The desert's cliffs are solid where they're drawn", 11-04): the hand-placed
+faces outside the desert, in shared/naturesites.js, still let walkers a few tiles into their rock. The Old Granite
+Mine's 120 px face made only its band solid, so the ground its face hides to the north was open. Granite Cove's six
+granite faces stood over the rim's ellipse of rock, but their drawn rock reached past it onto the cliff top and the
+beach's edge.
+- Both now use shared/cliffshape.js `cliffSolid`, as the relief and Copper Gulch's adit do. Every tile under a face's
+  drawn rock is made rock: the mine's grass and dirt, and the cove's grass, dirt and sand. The cove leaves alone the
+  bay's water and the gap its steps go up.
+- test/cliffs.test.js checks the hand-placed faces too: the mine's one and the cove's six (and the desert's adit).
+  No walkable tile is left under their rock except at the cove's steps. Before: 120 of 417 drawn tiles open. After:
+  within 1%.
+- Budget: the city worker's code is 34 -> 35 files (tools/perf.mjs), because the generator now loads
+  shared/cliffshape.js (4 KB, 364 of 380 KB). Only the generator fallback loads it; a served city loads 5 files.
+- World v3's `world3` / `art3` change. Today's `world` changes too, because the cove and the mine are today's set
+  pieces as well, so browsers fetch today's city again.
