@@ -20467,3 +20467,60 @@ light. Built from the concepts RT9 (pawn), RT3 (corner store), ST1 (surf and ska
 Tests: `test/shoprooms.test.js` gains the coverage floor (every plan in a 10 x 8 room, five door positions, three
 buildings: at least 30% dressed, at most 80%, the mean between 35 and 50%), the bank as IN3, the three bars and the
 saloon, and keeps its reachability checks (every size of room, door to counter). `test/storeicons.test.js` is new.
+
+## 2026-11-06 - No huge plain buildings: the slivers become rows of lots with passages
+The owner (11-03): "Huge, plain buildings block the street from view and add nothing." His screenshot showed one blank
+block over half the screen. A survey of World v3 (tools/plainblocks.mjs: it builds the live world and lists every
+building by footprint and by how plain it is - no front on open ground, no sign, no place, no hand look) found 1,819
+plain buildings of 6,701, and 70 plain footprints over 400 tiles (48,246 tiles). Almost all (67) were plain roofs
+(shared/map.js roofOne) 8-16 tiles wide and 50-109 deep: a block between two side streets with no street at either
+end is "built over" as one building (v2Block's sliver, roofBuilding in the older fill), and a long block's backs and
+back lots stack on that. Down a column of tiles, plain buildings ran unbroken for up to 146 tiles (five screens); 678
+columns ran over 50. The worst: Southside's back rows (16 x 109), Westport Center's slivers (12 x 96), West Hills (14 x
+78, 9 x 108), Lucky Mesa's Old Downtown (10 x 89), Port Westport's warehouse rows (12 x 63).
+- shared/map.js `breakPlainBlocks` (World v3 only, after the shops and before the lamps are aimed): every plain roof
+  deeper than 20 tiles becomes a column of lots 10-15 tiles deep (the north end's 8 at least) with a paved passage of
+  3-4 tiles between them, side street to side street. Each lot fronts onto its passage, so the art draws a shopfront, a
+  door or a warehouse's roller doors there instead of another stretch of roof, and the ground shows every few rows. A
+  lot bigger than 400 tiles is split into neighbours. A passage gets bins, a dumpster or a bike rack at one end and
+  sometimes a planter at the other. The cuts come from the rows alone (hash2 of the top and depth), so a run of
+  neighbours of one depth is cut at the same rows and its passages run on through. The building keeps its southmost
+  lot (its id, and its back wall if it had one); the other lots are new buildings at the end of the list, so no other
+  building's id, and so no other building's look, moves (the art seeds each building by its id). 217 buildings were
+  cut into 651 lots (+434 buildings).
+- Big works and warehouses (placePrefab, World v3): a generic warehouse or factory lot over 400 tiles is a named firm
+  (Coastal Freight, Ironside Works...) with its name over its doors and on its delivery stop. Downtown's 26 x 22 Motor
+  Pool roof by the police headquarters carries METRO PD GARAGE.
+- The art (client/art2/game/statics.js kitFor): a big plain roof (over about 100 tiles of section) gets more on it, the
+  roof types of the buildings kit: the sheds' and works' solar arrays, an air handler and ducts; the blocks' water
+  tower, a row of skylights, more units and a dish. Up to 9 units instead of 6.
+- After: no plain footprint over 400 tiles (none over 340 of a roof), the longest unbroken plain run down a column 41
+  tiles (146 before), no column over 50 (678 before), 62 over 30 (851 before) - the rest are Southside's old fragments
+  of blocks inside blocks. 7,135 buildings, 2,235 plain (the new lots are plain too, but small and fronted).
+- test/plainblocks.test.js (one world build): no plain footprint over 400 tiles, no plain roof deeper than 20, no plain
+  run over 44 tiles, the lots of a cut column front onto paved passages, the big works and warehouses carry their
+  names, every place still stands in a building. It fails on the old build (70 over the cap, runs of 146).
+- Cost (the whole v3 build and cut, this machine): the region files 18.03 -> 18.07 MB gzipped (+0.2%), 518.3 -> 518.4
+  MB raw; +434 buildings and roofs, +594 props (the passages' bins and planters). Baking the 60 chunks round the ten
+  worst spots from cold: Medium 743 -> 709 ms a chunk, Ultra 563 -> 531 (the same within this machine's noise: the
+  lots' fronts cost about what the roofs they replace did). The world's build time doesn't move (one pass over the
+  buildings).
+- Today's world (`world`) doesn't change: everything is World v3's (WD). `world3` / `art3` change, so browsers fetch the
+  v3 regions and chunks again; today's `art` changes too (the roof kit's code).
+
+## 2026-11-06 - The hand-placed cliffs are solid where they're drawn too
+The follow-up the desert's fix left ("The desert's cliffs are solid where they're drawn", 11-04): the hand-placed
+faces outside the desert, in shared/naturesites.js, still let walkers a few tiles into their rock. The Old Granite
+Mine's 120 px face made only its band solid, so the ground its face hides to the north was open. Granite Cove's six
+granite faces stood over the rim's ellipse of rock, but their drawn rock reached past it onto the cliff top and the
+beach's edge.
+- Both now use shared/cliffshape.js `cliffSolid`, as the relief and Copper Gulch's adit do. Every tile under a face's
+  drawn rock is made rock: the mine's grass and dirt, and the cove's grass, dirt and sand. The cove leaves alone the
+  bay's water and the gap its steps go up.
+- test/cliffs.test.js checks the hand-placed faces too: the mine's one and the cove's six (and the desert's adit).
+  No walkable tile is left under their rock except at the cove's steps. Before: 120 of 417 drawn tiles open. After:
+  within 1%.
+- Budget: the city worker's code is 34 -> 35 files (tools/perf.mjs), because the generator now loads
+  shared/cliffshape.js (4 KB, 364 of 380 KB). Only the generator fallback loads it; a served city loads 5 files.
+- World v3's `world3` / `art3` change. Today's `world` changes too, because the cove and the mine are today's set
+  pieces as well, so browsers fetch today's city again.

@@ -656,9 +656,10 @@ function layout(w, d, rnd, m, avoid = []) {
   return L;
 }
 // the kit for a flat roof by archetype (counts grow with the roof's area): { kit, pads }
-function kitFor(A, w, d, rnd, tier, spec, avoid = null) {
+// plain: a plain building's roof (no sign, no hand look: map.js roofOne's) - a big one gets more on it (below)
+function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
   if (w < 64 || d < 56) return { kit: [], pads: [] };
-  const area = w * d - (avoid ? avoid[2] * avoid[3] : 0), n = clamp(Math.round(area / 15000), 1, 6), r = rnd, big = area > 40000, rough = tier === 'rough';
+  const area = w * d - (avoid ? avoid[2] * avoid[3] : 0), n = clamp(Math.round(area / 15000), 1, plain && area > 100000 ? 9 : 6), r = rnd, big = area > 40000, rough = tier === 'rough';
   const L = layout(w, d, r, (spec.rimW || 4) + 6, avoid ? [avoid] : []);
   // (a roof garden - spec.garden, World v3's handcrafted districts, or a 'green' roof: its beds and furniture go round
   // the roof's own kit, laid after it: gardenKit)
@@ -717,6 +718,12 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null) {
       if (A === 'mixed' && w >= 150 && r() < 0.18) L.free('bill', 1, true);
       if (big && r() < 0.5) L.row('hvac', 1); L.row('ac', n, r() < 0.3); L.free('acs', n >> 1); L.free('vent', 1 + (n >> 1)); if (r() < 0.3) L.free('sky', 1);
       if (r() < 0.15) L.grid('solar', 2 + (r() * 3 | 0), 2); if (A === 'mixed' && r() < 0.2) L.free('tank', 1, true); L.free('hatch', 1); if (r() < 0.2) L.edge('plant', 2);
+  }
+  // (the owner, 2026-11-03: "Huge, plain buildings ... add nothing": a big plain roof is dressed as the buildings kit's
+  // roofs are - the sheds' and works' solar arrays and plant, the blocks' water tower, skylight rows, more units)
+  if (plain && area > 100000) {
+    if (A === 'warehouse' || A === 'factory' || A === 'shed' || A === 'hangar') { L.grid('solar', 2 + (r() * 3 | 0), 2); L.row('hvac', 1, true); if (r() < 0.5) L.free('duct', 1, false, 0.5); }
+    else { if (r() < 0.6) L.corner('tank'); L.grid('skyL', 2 + (r() < 0.5 ? 1 : 0), 1, 8); L.row('acs', 2); if (r() < 0.4) L.free('dish', 1); }
   }
   if (spec.garden || spec.roofMat === 'green') gardenKit(L, A, w, d, spec);
   return { kit: L.out, pads: L.pads };
@@ -1354,7 +1361,7 @@ function specOf(c, b, A, s, D) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
-    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null);   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
+    const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
     // the lit kit lights its roof: festoons, neon signs, skylights
