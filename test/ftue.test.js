@@ -92,7 +92,7 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   // step 3: the action - take the round
   m = me(w, p);
   assert.equal(m.ftue.step, 3); assert.equal(m.ftue.ctl, 'action');
-  assert.match(m.ftue.line, goal.k === 'mail' ? /^Take a mail round at / : /^Ask .+ for courier work/);
+  assert.match(m.ftue.line, goal.k === 'mail' ? /^Take a mail round at / : /^Sign on for work at /);
   vehicles.ejectPed(w, p.ped, true);
   const cash0 = prof.cash;
   conn.sent.length = 0;

@@ -1110,7 +1110,7 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arrival.replay .arr-doors { display: none; }
 .arr-door { position: relative; flex: 1; display: block; overflow: hidden; background: transparent; box-shadow: inset 0 0 0 3px var(--ink); transition: transform 1100ms cubic-bezier(.6, 0, .3, 1); }   /* (the door's panel is its window's shadow, so the window is a hole: the city shows through) */
 .arr-door.l { border-right: 6px solid var(--ink); } .arr-door.r { border-left: 6px solid var(--ink); }
-.arr-door b { position: absolute; left: 14%; right: 14%; top: 16%; bottom: 30%; display: block; border-radius: var(--r4); background: var(--ink-a); box-shadow: 0 0 0 10px var(--edge), 0 0 0 13px var(--ink), 0 0 0 3000px var(--navy2), inset 0 0 40px var(--ink-a); }
+.arr-door b { position: absolute; left: 14%; right: 14%; top: 16%; bottom: 30%; display: block; border-radius: var(--r4); background: var(--ink-a); box-shadow: 0 0 0 10px var(--edge), 0 0 0 13px var(--ink), 0 0 0 1400px var(--navy2), inset 0 0 40px var(--ink-a); }
 .arr-door::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 14%; height: var(--s2); border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 12px var(--heat); }
 #arrival.open .arr-door.l { transform: translateX(-102%); } #arrival.open .arr-door.r { transform: translateX(102%); }
 .arr-led { position: absolute; z-index: 4; top: calc(9vh + var(--s3)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s2) var(--s4); border-radius: var(--r1); background: var(--ink); box-shadow: 0 0 0 2px var(--navy3), 0 0 18px var(--ink); color: var(--heat); font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 8px var(--heat); transition: opacity 500ms var(--ease); }
@@ -1494,6 +1494,7 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 .ph-grp { min-height: var(--tap-l); margin: 0; border: 2px solid var(--gold-a); background: var(--navy); font: 600 var(--fs-4) var(--ui); }
 .ph-grp.open { background: var(--gold); border-color: var(--gold); color: var(--ink); }
 .ph-grp.open .chev { transform: rotate(90deg); filter: brightness(0); }
+.ph-grp.open small { color: var(--ink); }   /* (a section's blurb on the open row's gold: the Guide) */
 .ph-sub { display: flex; flex-direction: column; gap: 2px; margin: -2px 0 var(--s1); padding: 0 0 0 var(--s2); animation: enter var(--t2) var(--ease); }
 .ph-place { margin: 0; background: transparent; border: 2px solid transparent; }
 .ph-place.on { border-color: var(--gold); background: var(--navy2); }

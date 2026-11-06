@@ -134,7 +134,7 @@ export function goalFor(world, ans, x, y) {
 }
 
 // ---- the lines ---------------------------------------------------------------------------------------------------------
-const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Ask ${g.name} for courier work`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Cast a line: face the water, hold and let go' };
+const THERE = { mail: (g) => `Take a mail round at ${g.name}`, courier: (g) => `Sign on for work at ${g.name}`, fence: (g) => `Talk to the fence at ${g.name}`, gang: (g) => `Talk to the Syndicate at ${g.name}`, fish: () => 'Cast a line: face the water, hold and let go' };
 const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.name, gang: (g) => g.name, fish: (g) => g.name };
 // the step's line (the page puts its control's glyph in front of it) and the job card's objective
 export function stepLine(world, p, f) {
@@ -367,7 +367,9 @@ function stepGoal(world, p, f) {
   if (jobDone(p, g)) { complete(world, p); return; }
   if (g.k === 'fish' && ped.fishing && ped.fishing.P) complete(world, p);   // (the line's out: cast)
 }
-const jobDone = (p, g) => !!p.job && ((g.k === 'mail' && p.job.type === 'mail') || (g.k === 'courier' && p.job.type === 'courier'));
+// (honest work: a mail round or a courier contract, whichever the place offers - a depot standing in for a post office
+// offers the mail round too)
+const jobDone = (p, g) => !!p.job && (g.k === 'mail' || g.k === 'courier') && (p.job.type === 'mail' || p.job.type === 'courier');
 // (dev and tests: the record as it stands)
 export const recordOf = (p) => rec(p.profile);
 export const isActive = (p) => active(rec(p.profile));
