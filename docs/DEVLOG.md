@@ -20529,3 +20529,41 @@ no art, graphics, resolution or render quality was lowered. No budget changed (p
   (the lane: worker.js 'air', 'airRotor'; the nearest heading made, or the overlay's helicopter, meanwhile).
 - **Baking ahead on a phone** (host.js _prebake): two bake workers at most bake into the store ahead of need (what the
   screen needs still takes them all) - four workers and now the lane busy for minutes on end is what heats a phone.
+- **Found by the bench, fixed on the way**: a moved window must bring its seed (the page checks a window against its city by
+  the seed before taking the rest; left out with the steady fields, every moved window was dropped).
+
+Before and after (tools/drivebench.mjs, 3 minutes' drive at night in the rain from Pine Hills, the page's thread slowed
+2x, then a walk; this machine: 2 cores for the server, the page, four bake workers and the lane; ms unless marked):
+
+| | before (base3) | after (after3) | before (base4) | after (after4*) |
+|---|---|---|---|---|
+| distance driven (px; the autopilot stalls and circles) | 15,553 | 2,592 | 28,707 | 380,800 |
+| frame p50 / p95 / p99 | 16.7 / 50 / 83 | 16.7 / 33 / 67 | 16.7 / 67 / 133 | 16.7 / 50 / 100 |
+| frames over 50 ms | 340 | 204 | 695 | 366 |
+| long tasks (n / total ms) | 242 / 17,702 | 140 / 9,622 | 523 / 39,359 | 259 / 18,664 |
+| page work a frame (mean) | 3.97 | 2.57 | 7.07 | 3.82 |
+| person sprites made on the page (n / ms) | 1 / 97 | 0 | 52 / 841 | 0 |
+| JS heap start / end / max (MB) | 363 / 288 / 478 | 160 / 137 / 207 | 202 / 252 / 416 | 108 / 121 / 239 |
+| sprites the atlas let go | 103 | 0 | 1,982 | 1,355 |
+| a window swap on the page (ms: its steps) | 594 (ground 389, minimap 140), 229 | (none in the drive) | 197 (minimap 103, ground 78) | (none: *the seed bug) |
+
+(*after4 ran before the seed fix: its windows never moved. A run with it, after5, drove 32,000 px in 2 minutes with three
+window swaps - 262 long tasks, 19.6 s, against base4's 360, 27.6 s in its first two minutes - before this machine ran
+out of memory and killed the page. Runs vary: the autopilot gets stuck and circles, the bakes share 2 cores with the
+server; read the table for its direction. In node, unthrottled: a moved window's message 238 -> 176 ms to clone; the
+minimap's 2.3 M-pixel paint and the ground indexes now off the swap.)
+
+The perf readout's other leads, checked:
+- **60 fps after a while**: nothing in the game caps the frame rate (main.js govern only lowers the render scale, and the
+  owner's readout says 1.0x); a 120 Hz screen drops to 60 when a frame's work passes 8.3 ms - the page's own was 6.1 ms
+  in the rain at night (now less: the lights and the radar through grids, no garbage for the rain's lights) - or when
+  the phone runs hot (a Pixel caps its refresh rate then). Only the phone can tell which: the readout's page ms against
+  its fps over a long drive, before and after.
+- **Memory**: "kept 247" counts the chunks read back from the browser's store over the session, not what's held; the
+  page's JS heap peaked at 416 MB on the bench before (478 in another run) and 239 after - the classic renderer's ground
+  indexes were most of it - and no cache grew without bound over a drive.
+- **Left**: the chunk stand-ins' index (art2/game/standin.js) is built over a whole window the first time one is drawn
+  after a swap (~40 ms on the bench machine); a moved window's message still costs the page its decoding (the window's
+  props and their collision maps: ~175 ms to clone in node, of which the page pays the decoding half); this machine's
+  headless browser commits its frames in software (the "not in a callback" long tasks here, 'Commit' in a trace - a
+  phone's GPU does that).
