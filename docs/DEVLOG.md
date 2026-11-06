@@ -20398,3 +20398,72 @@ The owner's pick (11-05): the HIT button shows what you hit with. Bare-handed it
 weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the sledge's hammer (`setMelee` in
 client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
 still holds for every other button and every action kind.
+
+## 2026-11-04 - Waves A2 and D: the store badge, the medical emblem, and the interiors (the concept audit's gaps 3, 6, 7 inside, 11)
+
+From the art director's concept audit (2026-11-03): the floating store badge sat on the shop's sign, the clinic's badge
+was a red cross, and the cut-away interiors had the right parts but empty floors, goods drawn as coloured noise and flat
+light. Built from the concepts RT9 (pawn), RT3 (corner store), ST1 (surf and skate), IN6 (pharmacy), IN3 (bank), IN5
+(the three bars), MC4 (the biker bar) and IN8 (the diner).
+
+### Wave A2 - the badge and the medical emblem (gap 3)
+- `client/art2/game/host.js` `shopMarks`: a walk-in's badge now hangs small (16 px, was 30) just under its door's
+  lintel (`badgeAt`: the door top + 13 px), clear of the sign board, which starts 48 px up the shopfront. It barely bobs
+  (0.5 px), so it never drifts into the sign. Counters that aren't doors keep their badge over the counter, at 24 px.
+- `client/storeicons.js` (the glyphs only, the API unchanged): the clinic's badge is a white cross on a green tile; a
+  hospital's (its name says HOSPITAL or MEDICAL CENTER, as the signs decide) is a red H on a white tile (`hosp`).
+  Never the red cross (the owner, 2026-10-18).
+- The lifeguard tower's red cross (`client/art2/props-road.js`) became a white cross on a red panel.
+- `test/storeicons.test.js`: no glyph paints the cross red, the sign faces' cross tiles are green, a guard over the
+  client's sources, and the badge is checked against real baked shopfronts (`makeBuilding` with 1- and 2-line signs):
+  it never overlaps the sign's rectangle.
+- Not done: hiding the badge where the baked sign's icon tile is on screen. The bake doesn't report sign rectangles to
+  the page; that needs a field from `statics.js` through the chunk bake, and `statics.js` belongs to another wave
+  today. The badge now sits under the sign, never on it.
+
+### Wave D - shops, the bank and the bars (gaps 6, 7 inside, 11)
+`shared/shoprooms.js` (the plans) and `client/art2/shopart.js` (their painters):
+- **The floors dressed.** After each plan's own fit-out, a fill pass puts down islands from the plan's kit (glass
+  display cases, round and straight clothes racks, display tables of folded clothes, mannequins on plinths, rugs,
+  spinner racks, crates, barrels, sofas, card tables...) with a lane of about 14 px round each, plus shelving along the
+  side walls, until 37-47% of the floor is dressed (seeded per building). `coverage(R)` measures the floor in front of
+  the counter that may be dressed: all of it but the kept-clear ways (the door's lane, the counter strip, an ATM's
+  spot). Gondolas now run north-south, end-on to the counter, as in RT3 and IN6.
+- **Goods as objects.** Shelves, wall fixtures, fridges, coolers and glass cases draw their goods as items standing on
+  the shelf in facings on the 2 px art grid: bags with crimped tops, boxes with label bands, bottles with necks, cans
+  with rims, jugs, pill packs, TVs, radios, boots, record sleeves, rings and pistols in cases. Shelf tops show packed
+  goods from above. Clothes rails hang shirt shapes.
+- **Wall signs in the sign faces** (`signfont.js`): neon tubes on a dark backing, or lettered boards (Block for the
+  pawn shop, hardware and gun shop, Civic for the pharmacy and sports, Serif for the tavern, Script for boutiques), top
+  edge on the art grid. The pawn shop's rug reads GOOD STUFF COSTS LESS.
+- **Lamp pools.** Each plan sets pools of lamplight (`R.lamps`): over the counter, the islands, the pool table, the
+  candles, the fire. The floor under each is warmed and gets a little emission, so it glows after dark. Brass sconces,
+  lanterns and desk lamps are lit.
+- **The bank (IN3, gap 7 inside):** marble or stone floors only (no more diner checks), a compass rose set in the
+  marble before the door, the tellers behind a glass screen with brass posts and rail, a speaking grille and a green
+  lamp at each window, the roped queue (brass stanchions, sagging red rope), the vault door on the back wall (bolts
+  round its rim, the spoked wheel, the hinge), the manager's glass office in a corner (desk, lamp, chair, palm), loan
+  desks with lamps, green sofas and palms.
+- **The bars (IN5, gap 11):** the bar trade's plan splits into `lounge`, `tavern` and `sportsbar` by the name (`barPlan`:
+  LOUNGE/VELVET/COCKTAIL..., TAVERN/PUB/OAK/MUG..., SPORTS/LOCAL/TAP/DUGOUT...; otherwise by the building, so all three turn
+  up). The lounge: blue carpet, a white marble bar, red velvet banquettes and curved booths, candlelit cocktail tables,
+  a neon martini, sconces. The tavern: planks, the stone fireplace with its fire and the deer head over it, long tables
+  with benches and mugs, barrels, a rug, a chalkboard, lanterns. The sports bar: the TV wall over the bar with games
+  on, the dartboard, pennants, the pool table under its lamp, red booths down the wall, high tables, a jukebox.
+- **The saloon is MC4's room:** the neon bull skull, the motorbike on the wall, COLD BEER, the booths down the wall, the
+  pool table on its rug under a green-tinted lamp, the arm-wrestling table with two stools, card tables, barrels, the
+  wood stove. A big roadhouse (`statics.js` `roadhouseRoom` draws the Rusty Spur's MC4 floor itself) lists those
+  pieces in `R.ext`, and the plan keeps its own pieces and customers off them.
+- **Other plans** (corner store, fuel, grocery, liquor, gun shop, hardware, fence, court, pharmacy, barber, sports,
+  tackle, fish market, club, office, records) each got their kit for the fill, side shelving where it fits, and mats.
+- `shared/foodrooms.js` (IN8): the diner's jukebox moves to the head of the booths by the counter's end, and a wide
+  diner with its door in the middle gets a second column of booths down the other wall. The fast-food tables and the
+  restaurant's tables are set a little closer. (The diner's art is `statics.js` `foodRoom`, another wave's file; the
+  layout changes only.)
+- `client/art2/interior.js` (the scene cut-aways): wall signs are lettered in the sign faces, and a wall lamp throws a
+  real light (`sc.light`) instead of only a painted strip.
+- Customers are never stood inside furniture (a check in `shopper` and in the test).
+
+Tests: `test/shoprooms.test.js` gains the coverage floor (every plan in a 10 x 8 room, five door positions, three
+buildings: at least 30% dressed, at most 80%, the mean between 35 and 50%), the bank as IN3, the three bars and the
+saloon, and keeps its reachability checks (every size of room, door to counter). `test/storeicons.test.js` is new.

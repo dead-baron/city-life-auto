@@ -29,7 +29,7 @@ export function barPlan(name, seed = 0) {
   const n = String(name || '').toUpperCase();
   if (/LOUNGE|VELVET|COCKTAIL|MARTINI|JAZZ|SUPPER|SILK|SATIN|BLUE NOTE|CLUB ROOM|ROOFTOP|\bWINE\b/.test(n)) return 'lounge';
   if (/TAVERN|\bPUB\b|\bINN\b|\bARMS\b|\bOAK\b|\bMUG\b|\bALE\b|CROWN|\bHEAD\b|\bSTAG\b|\bFOX\b|ANCHOR|BREW|SALOON|\bTAP ROOM/.test(n)) return 'tavern';
-  if (/SPORT|LOCAL|\bGAME\b|SCORE|DUGOUT|BULLPEN|PLAYOFF|HUDDLE|\bGOAL\b|TOUCHDOWN|STADIUM/.test(n)) return 'sportsbar';
+  if (/SPORT|LOCAL|\bTAP\b|TAPHOUSE|\bGAME\b|SCORE|DUGOUT|BULLPEN|PLAYOFF|HUDDLE|\bGOAL\b|TOUCHDOWN|STADIUM/.test(n)) return 'sportsbar';
   return BAR_PLANS[(seed >>> 3) % 3];
 }
 
