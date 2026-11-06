@@ -59,6 +59,10 @@ function drawHill(g, t, a) {
   const P = pts(t), W = 2 * (t.hw + TUNNEL_WALL) + 48;
   g.globalAlpha = a; g.lineCap = 'butt'; g.lineJoin = 'round';
   g.save(); g.translate(10, 14); band(g, P, 0, W + 10, 'rgba(0,0,0,0.28)'); g.restore();   // its shadow on the ground
+  // (an arrival line's short bore - shared/world3-arrivals.js: the hill rounded off over its blind end, a mound, not a
+  // slab; its shadow too)
+  const caps = (t.mouths || []).filter((mo) => mo.blind), cap = (r, col, dx = 0, dy = 0) => { for (const mo of caps) { g.fillStyle = col; g.beginPath(); g.arc(mo.x + dx, mo.y + dy, r, 0, 6.283); g.fill(); } };
+  if (caps.length) { g.globalAlpha = a; cap((W + 10) / 2, 'rgba(0,0,0,0.28)', 10, 14); cap((W + 10) / 2, '#3b372f'); cap(W / 2, '#6f6858'); }
   band(g, P, 0, W + 10, '#3b372f');
   band(g, P, 0, W, '#6f6858');
   band(g, P, -W * 0.12, W * 0.55, '#827a66');

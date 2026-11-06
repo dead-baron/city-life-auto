@@ -26,6 +26,8 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const ctlGlyph = (ctl, text) => (ctl === 'action' && input.device === 'touch' ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[actKind(text)])}</span>` : glyph(ctl));
 const LINE_S = 7;   // (shared/rules.js FTUE.lineS: kept here so the page doesn't load rules.js for one number)
 let C = null, A = null, P = null, TR = null, lineSig = '', lineT = 0;
+// the scene's clock: the page's, or a time pinned by a capture (S.arrClock: ?debug's tools hold a moment to photograph it)
+const clock = () => (C && C.S.arrClock != null ? C.S.arrClock : performance.now());
 
 export function init(ctx) {
   C = ctx;
@@ -80,6 +82,19 @@ function pick(m) {
   $('arr-skip-g').innerHTML = input.device === 'touch' ? '' : glyph('back');
   if (C.topOverlay() !== 'arrival') C.openOverlay('arrival');
   else C.refocus && C.refocus();
+  warm();
+}
+// while the card is up: the train's pictures asked for (each car, the four ways a line can run), far off the screen -
+// so the train is drawn as it comes out of the tunnel, not a moment later (a phone's sprite bakes)
+function warm() {
+  if (C.S.stageCars) return;
+  const S = C.S, W = [];
+  for (let i = 0; i < 2; i++) for (let k = 0; k < 4; k++) W.push({ id: -9100 - i * 4 - k, kind: K.TRAIN, rx: 0, ry: 0, ra: k * Math.PI / 2, rz: 0, flags: 8, extra: 0, buf: [], d: { c: i, tr: -9, n: 1, l: -1 } });
+  S.stageCars = (cars) => {
+    if (!P) { if (S.stageCars && !TR) S.stageCars = null; return; }
+    const x = (S.cam ? S.cam.x : 0) + 9000, y = S.cam ? S.cam.y : 0;
+    for (const c of W) { c.rx = x; c.ry = y; cars.push(c); }
+  };
 }
 // a station picked (null: the default)
 function choose(stn) {
@@ -99,8 +114,8 @@ function arrive(m) {
   if (A) end(false, true);
   P = null;
   const dur = Math.max(4, m.s || 12) * 1000;
-  A = { m, t0: performance.now(), dur, chimed: false, opened: false, line: m.line || null };
-  A.iv = setInterval(() => { if (A) tick(Math.min(1, (performance.now() - A.t0) / A.dur)); }, 200);   // (its own clock too: the scene ends on time even when the frames stall - a phone loading the area)
+  A = { m, t0: clock(), dur, chimed: false, opened: false, line: m.line || null };
+  A.iv = setInterval(() => { if (A) tick(Math.min(1, (clock() - A.t0) / A.dur)); }, 200);   // (its own clock too: the scene ends on time even when the frames stall - a phone loading the area)
   $('arr-name').textContent = m.name || '';
   $('arr-place').textContent = m.place || '';
   $('arr-led').textContent = `NEXT STOP · ${String(m.name || '').replace(/ Station$/, '').toUpperCase()}`;
@@ -113,9 +128,9 @@ function arrive(m) {
   el.classList.add('lit');
   if (A.line) train(m, A.t0);
   const [fx, fy] = m.from, [tx, ty] = m.to, L = A.line;
-  C.setCam((now) => {
+  C.setCam(() => {
     if (!A) return null;
-    const k = Math.min(1, (now - A.t0) / A.dur);
+    const now = clock(), k = Math.min(1, (now - A.t0) / A.dur);
     tick(k);
     if (!L || !TR) { const r = Math.min(1, k / 0.72), e = 1 - (1 - r) * (1 - r) * (1 - r); return [fx + (tx - fx) * e, fy + (ty - fy) * e]; }
     // on the line: by the first portal, then along with the front car, settling on the doors you step out of
@@ -139,7 +154,7 @@ function tick(k) {
 function end(skipped, quiet = false) {
   if (!A) return;
   clearInterval(A.iv);
-  const t = (performance.now() - A.t0) / 1000, m = A.m;
+  const t = (clock() - A.t0) / 1000, m = A.m;
   A = null;
   C.setCam(null);
   C.S.hideMe = false;
@@ -176,7 +191,7 @@ function trainFront(t) {
 }
 function stage(cars) {
   if (!TR) return;
-  const t = (performance.now() - TR.t0) / 1000, f = trainFront(t), L = TR.L, ca = Math.cos(L.a), sa = Math.sin(L.a);
+  const t = (clock() - TR.t0) / 1000, f = trainFront(t), L = TR.L, ca = Math.cos(L.a), sa = Math.sin(L.a);
   if (f >= TR.f2) { stopTrain(); return; }
   const doors = t >= TR.door - 0.6 && t < TR.leave ? 2 : 0;
   TR.cars.forEach((c, i) => {

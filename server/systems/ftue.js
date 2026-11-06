@@ -233,7 +233,7 @@ function arrive(world, p, replay = false) {
   }
   homes.protect(world, ped, FTUE.arriveS + 3);
   f.st = 'arrive'; f.replay = replay ? 1 : 0; stamp(f, 'arrive');
-  p.ftueUntil = world.time + FTUE.arriveS + 4;   // (the page says when its scene is over: this only if it never does)
+  p.ftueUntil = world.time + FTUE.arriveS + 10;   // (the page says when its scene is over: this only if it never does - a page whose frames stall, a capture)
   send(p, { t: 'ftue', a: 'arrive', name, place, from: [Math.round(from.x), Math.round(from.y)], to: [Math.round(to.x), Math.round(to.y)], s: FTUE.arriveS, replay: replay ? 1 : 0, ...(line ? { line, stop: FTUE.stopS, door: FTUE.doorS, leave: FTUE.leaveS } : null) });
   if (!replay) track(world, p, 'ftue_arrive');
   store.touch(); p.meDirty = true;

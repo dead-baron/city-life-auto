@@ -38,7 +38,7 @@ const me = (w, p) => players.buildMe(w, p);
 // the arrival stations' card up, then skipped (the default station) - every new character's in the world
 const toPick = (w) => run(w, 0.6);
 const toArrival = (w) => { toPick(w); for (const p of w.players.values()) if (p.profile.ftue && p.profile.ftue.st === 'pick') ftue.handle(w, p, { a: 'skip' }); };
-const toQuestion = (w) => run(w, FTUE.arriveS + 4.6);   // (the page says when its scene is over; else the server's own timeout)
+const toQuestion = (w) => run(w, FTUE.arriveS + 10.6);   // (the page says when its scene is over; else the server's own timeout)
 // drive (by teleport) to the goal: the car moved with you in it
 function arriveAtGoal(w, p) {
   const g = p.profile.ftue.goal, v = p.ped.vehId ? w.get(p.ped.vehId) : null;
