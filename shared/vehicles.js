@@ -8,6 +8,10 @@ import { HORSE } from './rules-base.js';
 
 export const VEHICLES = {
   compact:   { i: 0, name: 'Hatchback',        kind: 'car',  L: 84,  W: 44, max: 520, accel: 330, brake: 720, rev: 160, turn: 3.0, grip: 9.0, drift: 2.2, mass: 1.0, hp: 180, seats: 2, slots: [[-4, 0]], price: 2500 },
+  // the starter car (server/systems/starter.js; shared/rules.js STARTER): a tired old Hatchback - slower off the line and
+  // flat out, softer, never for sale (no price). art / look: drawn as the Hatchback (the classic view's sprite, art2's
+  // model - client/art2/game/actors.js vehType), in the rust brown (its tint: STARTER.paint)
+  starter:   { i: 87, name: 'Rusty Compact',    kind: 'car',  L: 84,  W: 44, max: 400, accel: 230, brake: 640, rev: 140, turn: 2.8, grip: 8.6, drift: 2.3, mass: 1.0, hp: 140, seats: 2, slots: [[-4, 0]], art: 'compact', sprite: 'compact', look: 'compact' },
   sedan:     { i: 1, name: 'Sedan',            kind: 'car',  L: 100, W: 48, max: 560, accel: 300, brake: 700, rev: 170, turn: 2.7, grip: 8.5, drift: 2.0, mass: 1.2, hp: 220, seats: 4, slots: [[-8, 0]], price: 4000 },
   taxi:      { i: 2, name: 'Checker Taxi',     kind: 'car',  L: 100, W: 48, max: 560, accel: 310, brake: 700, rev: 170, turn: 2.7, grip: 8.5, drift: 2.0, mass: 1.2, hp: 230, seats: 4, slots: [[-28, 0]] },
   sports:    { i: 3, name: 'Street Racer',     kind: 'car',  L: 96,  W: 48, max: 790, accel: 490, brake: 820, rev: 180, turn: 3.0, grip: 9.5, drift: 2.0, mass: 1.1, hp: 200, seats: 2, slots: [[-30, 0]], price: 15000 },
@@ -48,7 +52,7 @@ export const VEHICLES = {
   // pedal power (a bike buckles, pedal). rough: how much grass, dirt and sand slow it (1: as a car). seat: where the
   // rider sits, px forward of the middle. (the commuter keeps the id 'bicycle')
   bicycle:   { i: 25, name: 'Commuter Bike',    kind: 'bike', L: 40,  W: 14, max: 330, accel: 260, brake: 620, rev: 50,  turn: 3.9, grip: 10,  drift: 3.0, mass: 0.25, hp: 50, seats: 1, slots: [[-14, 0]], price: 250, pedal: true, rough: 1, seat: 2, blurb: 'everyday, quick in town' },
-  cruiser:   { i: 26, name: 'Beach Cruiser',    kind: 'bike', L: 42,  W: 16, max: 290, accel: 220, brake: 560, rev: 50,  turn: 3.4, grip: 11.5, drift: 3.4, mass: 0.3, hp: 55, seats: 1, slots: [[-15, 0]], price: 220, pedal: true, rough: 0.5, seat: 0, blurb: 'steady, fat tyres for the beach' },
+  cruiser:   { i: 26, name: 'Beach Cruiser',    kind: 'bike', L: 42,  W: 16, max: 290, accel: 220, brake: 560, rev: 50,  turn: 3.4, grip: 11.5, drift: 3.4, mass: 0.3, hp: 55, seats: 1, slots: [[-15, 0]], price: 220, pedal: true, rough: 0.5, seat: 0, blurb: 'steady, fat tires for the beach' },
   mtb:       { i: 27, name: 'Mountain Bike',    kind: 'bike', L: 42,  W: 16, max: 340, accel: 290, brake: 700, rev: 50,  turn: 3.9, grip: 10.5, drift: 3.0, mass: 0.28, hp: 65, seats: 1, slots: [[-15, 0]], price: 480, pedal: true, rough: 0.25, seat: 2, blurb: 'rides rough ground' },
   roadbike:  { i: 28, name: 'Road Bike',        kind: 'bike', L: 42,  W: 12, max: 430, accel: 300, brake: 600, rev: 50,  turn: 3.6, grip: 9.5, drift: 2.8, mass: 0.2, hp: 40, seats: 1, slots: [[-15, 0]], price: 650, pedal: true, rough: 1.5, seat: 3, blurb: 'fastest on the road, poor off it' },
   bmx:       { i: 29, name: 'BMX',              kind: 'bike', L: 34,  W: 14, max: 310, accel: 330, brake: 720, rev: 50,  turn: 4.5, grip: 10.5, drift: 3.2, mass: 0.2, hp: 55, seats: 1, slots: [[-11, 0]], price: 300, pedal: true, rough: 0.6, seat: 1, blurb: 'small and nimble' },
@@ -62,6 +66,8 @@ export const VEHICLES = {
   cart:      { i: 50, name: 'Shopping Cart',    kind: 'bike', L: 30,  W: 20, max: 330, accel: 250, brake: 420, rev: 60,  turn: 3.7, grip: 7.0, drift: 2.4, mass: 0.22, hp: 60, seats: 2, slots: [[1, 0]], pedal: true, cart: true, rough: 2.4, crew: [[-20, 0], [3, 0]], blurb: 'kick it along, ride the back rail; one rides in the basket' },
   // the skateboard (2026-10-24): lying about like the carts, ridden as the board (server skate.js)
   skateboard: { i: 52, name: 'Skateboard', kind: 'bike', L: 26, W: 10, max: 300, accel: 300, brake: 430, rev: 0, turn: 4, grip: 14, drift: 3, mass: 0.1, hp: 40, seats: 1, slots: [], pedal: true, board: true, rough: 3 },
+  // a surfboard set down (2026-11-04): lying on the sand till you pick it up, or it goes home (server gear.js) - never ridden as a vehicle
+  surfboard: { i: 86, name: 'Surfboard', kind: 'bike', L: 44, W: 14, max: 0, accel: 0, brake: 400, rev: 0, turn: 0, grip: 14, drift: 3, mass: 0.1, hp: 40, seats: 1, slots: [], pedal: true, surfboard: true, rough: 3 },
   cargobike: { i: 30, name: 'Cargo Bike',       kind: 'bike', L: 58,  W: 18, max: 280, accel: 190, brake: 520, rev: 50,  turn: 3.0, grip: 10,  drift: 2.8, mass: 0.45, hp: 75, seats: 1, slots: [[15, 0], [-19, 0]], price: 900, pedal: true, rough: 1.1, seat: -11, blurb: 'slow, carries two crates' },
   // the five-star response (police.js): the FBI's black SUVs, the army's olive trucks
   fbi:       { i: 33, name: 'Federal SUV',      kind: 'car',  L: 104, W: 50, max: 660, accel: 380, brake: 780, rev: 180, turn: 2.6, grip: 8.8, drift: 2.2, mass: 1.8, hp: 520, seats: 4, slots: [[-36, 0]], police: true },
@@ -71,9 +77,9 @@ export const VEHICLES = {
   vtwin:     { i: 35, name: 'Dustwing 1200',    kind: 'bike', L: 54,  W: 20, max: 640, accel: 400, brake: 700, rev: 70,  turn: 3.0, grip: 10.5, drift: 3.2, mass: 0.6, hp: 120, seats: 2, slots: [[-20, 0]], price: 5200, rough: 1.1, seat: -4, sprite: 'bike', moto: 'cruiser', blurb: 'the classic cruiser: low, heavy, steady' },
   tourer:    { i: 36, name: 'Longhaul GT',      kind: 'bike', L: 58,  W: 26, max: 660, accel: 380, brake: 720, rev: 70,  turn: 2.8, grip: 10.5, drift: 3.2, mass: 0.75, hp: 140, seats: 2, slots: [[-24, 0]], price: 9800, rough: 1.1, seat: -1, sprite: 'bike', moto: 'tourer', blurb: 'fairing, panniers, a seat for two' },
   chopper:   { i: 37, name: 'Hellfork Chopper', kind: 'bike', L: 66,  W: 20, max: 650, accel: 420, brake: 600, rev: 60,  turn: 2.1, grip: 9.5, drift: 3.0, mass: 0.55, hp: 110, seats: 1, slots: [[-26, 0]], price: 7400, rough: 1.2, seat: -9, ride: 'chop', sprite: 'bike', moto: 'cruiser', blurb: 'the long fork: wide turns, all style' },
-  bobber:    { i: 38, name: 'Stubtail Bobber',  kind: 'bike', L: 50,  W: 20, max: 620, accel: 430, brake: 700, rev: 70,  turn: 3.2, grip: 10.5, drift: 3.2, mass: 0.5, hp: 110, seats: 1, slots: [[-18, 0]], price: 4800, rough: 1.1, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'stripped down, fat tyres, one seat' },
+  bobber:    { i: 38, name: 'Stubtail Bobber',  kind: 'bike', L: 50,  W: 20, max: 620, accel: 430, brake: 700, rev: 70,  turn: 3.2, grip: 10.5, drift: 3.2, mass: 0.5, hp: 110, seats: 1, slots: [[-18, 0]], price: 4800, rough: 1.1, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'stripped down, fat tires, one seat' },
   caferacer: { i: 39, name: 'Ton-Up Racer',     kind: 'bike', L: 50,  W: 18, max: 700, accel: 470, brake: 760, rev: 70,  turn: 3.6, grip: 10.5, drift: 3.0, mass: 0.42, hp: 95, seats: 1, slots: [[-18, 0]], price: 4400, rough: 1.3, seat: -2, ride: 'tuck', sprite: 'bike', moto: 'single', blurb: 'clip-ons and a hump seat: quick on the bends' },
-  dirtbike:  { i: 40, name: 'Clodhopper 250',   kind: 'bike', L: 48,  W: 18, max: 520, accel: 480, brake: 700, rev: 70,  turn: 3.8, grip: 10,  drift: 3.4, mass: 0.32, hp: 80, seats: 1, slots: [[-18, 0]], price: 2600, rough: 0.2, seat: -1, sprite: 'bike', moto: 'dirt', blurb: 'knobbly tyres: flies over dirt and grass' },
+  dirtbike:  { i: 40, name: 'Clodhopper 250',   kind: 'bike', L: 48,  W: 18, max: 520, accel: 480, brake: 700, rev: 70,  turn: 3.8, grip: 10,  drift: 3.4, mass: 0.32, hp: 80, seats: 1, slots: [[-18, 0]], price: 2600, rough: 0.2, seat: -1, sprite: 'bike', moto: 'dirt', blurb: 'knobby tires: flies over dirt and grass' },
   scooter:   { i: 41, name: 'Zuzu 50',          kind: 'bike', L: 40,  W: 18, max: 330, accel: 300, brake: 640, rev: 60,  turn: 4.3, grip: 10,  drift: 3.0, mass: 0.28, hp: 60, seats: 2, slots: [[-14, 0]], price: 1400, rough: 1.4, seat: -3, sprite: 'bike', moto: 'scooter', blurb: 'slow, nimble, cheap to run' },
   trike:     { i: 42, name: 'Tribuck Trike',    kind: 'bike', L: 60,  W: 38, max: 560, accel: 330, brake: 680, rev: 80,  turn: 2.6, grip: 11,  drift: 3.4, mass: 0.9, hp: 160, seats: 2, slots: [[-26, 0]], price: 8600, rough: 1.1, seat: 4, stable: true, sprite: 'bike', moto: 'cruiser', blurb: 'three wheels: never throws you off' },
   ratbike:   { i: 43, name: 'Rustbucket',       kind: 'bike', L: 54,  W: 22, max: 600, accel: 420, brake: 640, rev: 70,  turn: 3.0, grip: 10,  drift: 3.4, mass: 0.6, hp: 140, seats: 1, slots: [[-20, 0]], price: 2200, rough: 0.8, seat: -3, sprite: 'bike', moto: 'cruiser', blurb: 'wire, rust and leather bags: goes anywhere' },
@@ -124,7 +130,7 @@ export const VEHICLES = {
 };
 // the motorcycles (the sport bike 'bike' and the police tourer among them)
 export const MOTOS = Object.keys(VEHICLES).filter((id) => VEHICLES[id].kind === 'bike' && !VEHICLES[id].pedal);
-export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal && !VEHICLES[id].cart && !VEHICLES[id].board);
+export const PEDAL_BIKES = Object.keys(VEHICLES).filter((id) => VEHICLES[id].pedal && !VEHICLES[id].cart && !VEHICLES[id].board && !VEHICLES[id].surfboard);
 
 export const VEHICLE_BY_INDEX = [];
 for (const [id, v] of Object.entries(VEHICLES)) {

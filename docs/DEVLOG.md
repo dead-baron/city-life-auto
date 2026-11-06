@@ -19890,7 +19890,516 @@ apart flipped together.
   heading, and changes only a small share of the pixels. Each clock holds every frame at least 0.75 s, glances 4-10
   times in two minutes, and a crowd of twelve is never all on one frame. It fails on the old pose.
 
-## 2026-11-04 - No huge plain buildings: the slivers become rows of lots with passages
+## 2026-11-03 · UI-10: every screen on the kit (stage 2 of the owner's UI concepts)
+
+The owner's screen concepts of 2026-11-03 (docs/art-v2/targets/ui: UIC-01 the map, UIC-02..05 the phone, UIC-06 the
+settings, UIC-07 the pause list, UIC-08 the title and the loading screen, UIC-15 the big moments, UIC-16 a conversation,
+UIC-17 a job offer, UIC-18 the gun store, UIC-19 the bag, UIC-20's phone slide) built on stage 1's kit (UI-9), with his
+standing rules: minimal and clean, build on the systems the game has, the touch sticks untouched, a strong UX pass, and
+American English in everything new or touched.
+
+### What's in, screen by screen
+- **The title (UIC-08)** - client/titlescreen.js. Two states. While the city loads: the logo, "Connecting..." (or what
+  it's doing - building the city, getting the art ready), the bar and a tip that changes every 6 s (true facts only,
+  from the paused tour). The bar creeps toward each real stage (the socket, the welcome, the city built), then
+  client/warmup.js drives it with the art's real progress after PLAY. Then the menu: PLAY big and gold, CHARACTER and
+  SETTINGS under it, the graphics row, your card bottom left (name, Criminal XP, Samaritan, SIGN IN) and "Online - N
+  players" bottom right (the plist the server already answers). Behind it the dusk over a pixel skyline drawn once in
+  code (the same skyline under the pause list's logo and the phone's home). The splash's entrance still steps the rows
+  in; the logo's mosaic canvas still follows the logo.
+- **The sign-in slot and the first-launch gate** - index.html #signin and #gate, main.js setAccountUi (also on
+  window.CLA): the launch code (client/account.js, branch launch) hands over signIn(el, close), gate(el, done),
+  gateNeeded(), chat(el) and legal(el). Until it does, SIGN IN opens a panel saying sign-in is coming soon with the six
+  ways (Guest, Google, Discord, Reddit, email link, passkey) greyed, and there's no gate. The gate, once there, comes
+  before the first PLAY and can't be backed out of (Esc, B, Start).
+- **The pause list (UIC-07)**: RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF, LEAVE GAME, the logo on the dusk,
+  PAUSED, A / B (Enter / Esc) along the foot. LOG OFF sends { t: 'logoff' }; a server that answers runs the 10 s count
+  ({ t: 'logoff', s: 'start' | 'cancel' | 'done', left, why }: the row fills green and counts down, pressed again it's
+  called off); one that doesn't answer in 1.5 s gets today's behavior - back to the title. LEAVE GAME is the old Help
+  line "Exit to the title screen", moved here (one place).
+- **Every screen's head**: back and its name top left (Esc and B the same; ESC's badge on a keyboard), close top right.
+  The frame takes each screen's shape: settings a panel left of center (upright, a sheet from the foot), the phone a
+  phone on the right (UIC-20 05: up 150 ms, past it, settled at 250; full screen upright), the map full screen, the bag
+  and people big. The world stays on behind at 60%.
+- **Settings (UIC-06)**: tabs along the top - GRAPHICS, SOUND, CONTROLS, GAME, then CHAT, ACCOUNT, HELP, LEGAL. GAME has
+  the game's own options (safety mode, shop symbols) moved out of Controls. CHAT (the channel toggles) and LEGAL (the
+  terms, the privacy policy, the mature-content notice) are slots for the launch work, filled with a stub. The Danger
+  zone sits at the foot of ACCOUNT, apart, with a red rim; ACCOUNT has SIGN IN.
+- **The phone (UIC-02..05)**: the apps as gold-rimmed tiles with the icon sheet's pixel icons, four across, over the
+  skyline; a GUIDE app last - the in-game wiki's place, a placeholder page for now. Places: each kind of place a rimmed
+  row; open one and its nearest four are under it with how far (All N for the rest); a tap sets the waypoint, the place
+  you're headed for framed. Skills: your standing in a gold card (Samaritan, Criminal XP, felonies), then each skill's
+  icon, level and a blue bar. Jobs: All / Driving / Delivery / Service, then the cards - the icon, what it is, the pay in
+  green, how far, the first step, START.
+- **The map (UIC-01)**: the legend on the right (a sheet under the map upright): a search box (any place by name,
+  nearest first, a tap sets the waypoint and centers the map), your job and your waypoint, then each kind of place a row
+  - its name lists them, its switch shows or hides them. Zoom out, in and find me along the map's foot.
+- **The bag (UIC-19)**: EQUIPMENT on the left - the carried slots (GUN 1, GUN 2, MELEE, THROWN) and the carry gear's
+  locked slots (shoulder holster +1 gun, back sling +1 long gun, chest rig +1 throwable +1 melee; caps 4 / 2 / 2); the
+  bag's grid of tiles; the picked thing with USE, DROP and EQUIP always in the same three places (greyed when they
+  don't apply); the quick bar along the foot. The server doesn't limit what you carry yet (the owner's decision of 11-03
+  isn't built): the slots show the first of each kind and anything past them stays in the grid under Weapons.
+- **A counter's menu (UIC-16, UIC-18)**: docked at the foot, the scene in view. A few lines with no prices are a
+  conversation: the place's face (there are no portraits), its name, what they say, the answers in boxes numbered as
+  their keys (1-9 pick them on a keyboard, now counted among the rows on show). A shop has the wallet in its head; a gun
+  store a tab per kind (pistols, rifles, melee, throwables, ammo, gear), each gun's damage and range as eight steps from
+  the weapons' own numbers, BUY on each row (OWNED, greyed when it's yours or you can't afford it) and "Not enough cash
+  for ..." under the list for the one you're on.
+- **The job offer (UIC-17)**: JOB OFFER, the job's icon big, what it is and where from, what it's about, REWARD and
+  how it's paid in two boxes (the game has no time limits), ACCEPT and DECLINE - bottom left (upright, across the foot).
+- **Big moments (UIC-15)**: hud.js moment - BUSTED when the cuffs go on, LEVEL UP for a skill up (the note's line goes
+  to the Log instead of a toast), JOB DONE with the pay when a job finishes; big over the middle 2.6 s, then gone, one
+  at a time.
+- **The knocked-out screen**: to the kit and UIC-15 - YOU'RE DOWN (WASTED when it's over) with a ring running down the
+  time till you wake on your own, the calls for help with pixel icons, RESPAWN AT and the places with their numbers or
+  a home's icon and a check on the one picked, RESPAWN HERE.
+
+### The UX decisions (each with its reason)
+1. **One root for the menus: Esc, Start and MENU open the pause list** (it used to reopen the hub on its last tab).
+   Why: the same thing every time, and UIC-07. P, M, I (D-pad left and right, the HUD's buttons) still open their screen
+   straight away - shortcuts to the same screens, not second ways.
+2. **Back and close in the same place on every screen**: back with the screen's name top left, close top right; Esc
+   and B are back. Back steps out one level - an app or a thing's details, then the pause list if you came from it,
+   then the game; close always goes to the game. Why: the owner's "back and close in the same place on every screen",
+   and the screens keep the platforms' convention.
+3. **No tab strip in the hub any more**: the pause list is the way to the screens. LB / RB (Tab) still step through
+   them, shown on a pad's foot with A SELECT and B BACK. Why: one way to do each thing; the strip and the list were two.
+4. **Each screen keeps a frame of its own shape** (the pause list a compact panel, the settings a panel, the phone a
+   phone, the map full screen) instead of one big panel. Why: the concepts; and the world showing round a small screen
+   says the game runs on behind it.
+5. **Upright, the pause list, the settings, the map's legend and a counter's menu come up from the foot.** Why: thumb
+   reach on a phone.
+6. **The title shows the menu only when PLAY works** - before that the loading state. Why: no button that can't be
+   pressed; the bar and the tip say what's happening.
+7. **"Connecting..." without the server's address; no "Signed in as" line.** Why: the address means nothing to a
+   player; the card says who you are.
+8. **The card has SIGN IN, not the concept's pencil.** Why: CHARACTER already edits your look (one way); the card is
+   about your account.
+9. **The graphics row stays on the title** though UIC-08 leaves it out. Why: the owner asked for it there on 10-11 (the
+   owner to decide - see below).
+10. **RESUME first and gold when you come back to the title**, PLAY second and navy.
+11. **LOG OFF counts on the server; closing the menu calls it off.** Why: it's only safe if the server says so; one
+    clear state - you watch it count or you're playing.
+12. **LEAVE GAME moves from Settings > Help to the pause list.** Why: one place, where the concept has it.
+13. **Settings: a GAME tab for the game's options**, the Danger zone at the foot of ACCOUNT. Why: Controls is about the
+    controls; erasing your character belongs with your account, apart and red so it's never pressed by mistake.
+14. **A tap on a place still sets the waypoint at once** (Places, the map's lists and search) - the concepts' SET
+    WAYPOINT step isn't added; the place you're headed for is framed instead. Why: one tap is faster than pick then
+    confirm, and the waypoint can always be changed.
+15. **No count badges on the phone's tiles.** Why: the game has no "new" count for jobs or the rest; the board's
+    total would always be up and mean nothing.
+16. **The map's legend: one row a kind**, its name listing them and its switch showing or hiding them (the SHOW chips
+    and FIND A PLACE were two lists of the same kinds).
+17. **The menus at a counter dock at the foot** on every device. Why: the scene above stays in view (UIC-16 / 18), and
+    one place to look.
+18. **Number keys on a keyboard show on the rows** (1-9). Why: they always worked; now you can see it.
+19. **USE / DROP / EQUIP always in the same three places in the bag**, the ones that don't apply greyed. Why: the hand
+    learns where each is.
+20. **The job offer's second box is how it's paid** (or how far, away from its place). Why: the game has no time
+    limits.
+21. **Big moments go by themselves in 2.6 s and never wait for a press.** Why: the owner's "nothing lingers"; the Log
+    keeps the words.
+22. **Focus**: every screen starts on its first line; the pad's focus is the kit's gold frame; a finger gets none.
+
+### The review rounds (captures beside the concepts: scratchpad ui10-flow)
+Built, captured at 1920x1080, 1366x768, 360x780 (dpr 3) and 780x360 beside each concept, fixed, captured again:
+- The bag's tiles overlapped: square tiles (aspect-ratio) in the scrolling grid let its rows collapse onto each other -
+  a fixed height now (96 px; 84 upright).
+- The title on a phone on its side lost its graphics row off the foot: the logo left and the menu right on a short
+  landscape screen, INSTALL APP and FULLSCREEN top left. Upright on a narrow phone the graphics row's label sits over
+  its five choices, which get the width.
+- A pad's focus dimmed the title's gold RESUME / PLAY (the kit's .pfocus fill): the title's buttons keep their own
+  fill and get the cream ring.
+- The job offer away from its place lost how it's paid (HOW FAR took its box): "a call" now sits under the pay.
+- The touch buttons' rework (UI-10a) and the HUD round them were checked in the same rounds.
+- Test drift fixed: the hub tests still looked for the pre-UI-10 head, exit, README rows and tab style.
+
+### The second review (11-04)
+- **A desktop's screens at the concepts' size.** At 1920x1080 every panel was about half the concept's and its text hard
+  to read. The screens now scale with the window: client/main.js uiScale sets --zk (1.25 at 768 px tall, 1.6 at 1080,
+  never under 1 or over 1.6) and style.css zooms the panels with it - the hub's frames but the map's, a counter's menu,
+  the job offer, the knocked-out panel - so the type, the rows, the buttons and the icons grow together and body text is
+  16 px and more at 1080. The frames' widths are set for the concepts' proportions: the pause list about a quarter of
+  the screen, settings about a third (its tabs wrap to two rows), the phone a phone, the bag a little over half, a
+  counter's menu three quarters along the foot. Why a zoom and not bigger tokens: the panels' many fixed sizes (tiles,
+  rows, the phone's frame) would each need a rule; one zoom keeps every proportion. Phones (body.touch) are as they were;
+  the HUD and the map aren't zoomed.
+- **The bag's weapons that drew as bars.** The weapons' top-down sprites are thin bars or blocks at a tile's size and
+  read as broken art: every weapon in the bag (its tiles, its carried slots, its details) now shows its class's glyph -
+  pistol, rifle, knife, bat, grenade, bow... - the touch buttons' solid set, cream on the navy tile. The desktop HUD's
+  weapon plate keeps the sprite.
+- **The title's slots get the launch code** (client/account.js, on main since the 11-04 ship): SIGN IN (the title's
+  card, Settings > Account) opens its account panel inside the sign-in screen - with no sign-in provider switched on,
+  which is today, it still offers the transfer code and the name - and the 17+ gate shows inside the gate's screen before
+  the first PLAY (boot with noGate: the title shows it). PLAY pressed before the launch code is in waits for it. While
+  either is up the pad and Esc are the panel's (launchPad); closing the screen closes the panel. The stub stays only
+  for a page where the launch code didn't load.
+- **LOG OFF to the end** (the server's side: branch safeexit, server/systems/logoff.js): its 'done' carries the
+  session's summary and the socket then closes with 4016 - final, like the refusals: no reconnecting, the title with one
+  calm plate, "SAVED - SAFE TRAVELS" and the numbers (earned, spent, XP; Criminal EXP and Samaritan only when they moved;
+  the time played), PLAY connects again. "At once here" in the pause list comes from the server's me.offNow. A server
+  that doesn't answer still gets the old way after 1.5 s.
+- **The title at a desktop's size** (the third review): the title's menu, card, tools and the sign-in, the 17+ gate
+  and the "Saved" plate over it zoom with --zk like the screens; the logo is sized by the height (38vh) so it all fits
+  at 1366x768; INSTALL APP moves to the top left. PLAY is about a fifth of the screen at 1080 and the gate's text 25 px.
+  Phones as they were.
+- **The gun store's rows** show each gun's class glyph too (the sprites drew as thin bars).
+- **The bag's chips upright** ran off the edge ("Fi..."): they scroll sideways with a fade at the edge saying there's more.
+
+### Performance (tools/perf.mjs --quick, 11-04)
+All within budget: the page 84 files, 498 KB gzipped (budget 84 files, 520 KB) - client/titlescreen.js is on the page
+from the start, the title being the first thing you see; the bag, the phone, the hub, the job card and the map's lists
+still load the first time they open. The title screen's assets 257 KB (budget 290). No budget raised.
+
+### For the owner to decide
+- The graphics row on the title (your 10-11 request) - UIC-08 doesn't show it.
+- The bag's carry slots are drawn and the caps written, but nothing limits what you carry until the server does it
+  (and the home stash) - the slots show the first of each kind.
+- LOG OFF needs its server side ({ t: 'logoff' }); until then it leaves to the title as before.
+- The conversation has no portraits: the place's icon stands in.
+- The concepts' "Police are searching - break line of sight" pill (UIC-15 01) needs a "searching" state from the server.
+
+## 2026-11-04 - The safe exit: LOG OFF without leaving a body behind (server)
+
+The launch plan's item 11 (the owner's design, 11-03). Before this, closing the tab left your body in the city for 30 s
+(`GHOST_SECONDS`), or 5 min after a quiet disconnect, and the pause menu's LOG OFF only went back to the title. Now LOG
+OFF in the pause menu asks the server (`server/systems/logoff.js`):
+
+- **A 10-second count while you stand still** (`LOGOFF.countS` in `shared/rules.js`). The page shows its ring.
+- **Called off** by moving (the stick or any button but the aim), being moved by the server (`server/movemark.js`: a
+  seat, a door, a ride, a rescue, a teleport - your situation changed), being pushed more than half a tile, taking
+  damage, dealing damage, or becoming wanted. The page's own cancel (LOG OFF again, or the pause menu closed) stops it
+  without an answer.
+- **At once inside a home of your own** (`homes.ownsInside`: its rooms; not a look round one for sale, a visit, a
+  lobby, an arcade or a bathhouse). Renting and hotel rooms don't exist yet; they belong in that function when they do.
+  The `me` message carries `offNow: 1` there, so the page can say so.
+- **Refused** while wanted, within 60 s of taking or dealing damage (`LOGOFF.calmS`; the answer says how long is left),
+  in custody, while down, in a vehicle (on foot only: one rule for every kind of ride, and stepping out is one button),
+  riding (a train, a ride, a board, a skydive) or carrying a crate.
+- **A clean exit** takes the body out of the world at once (`players.logOut`: saved where you stood, or back inside your
+  own home next time, nothing dropped, no ghost). It ends the session through the launch hooks' leave, as every leaving
+  does (the money settled and the watcher let go, the analytics session closed). It answers with the session's summary
+  and closes the socket with code 4016.
+- **Combat-logging never pays.** The quiet disconnect's guard (`players.js` `safeToIdle`) now counts dealing damage as
+  well as taking it, over the same 60 s. Someone who hit someone and closed the tab gets the usual 30 s and the drop
+  rule, not five quiet minutes.
+- **A disconnect mid-count** is an ordinary disconnect: the count is dropped and the ghost timer runs. A reconnect from
+  another tab drops it too.
+
+**The protocol.** The page sends `{ t: 'logoff' }` (again while counting: the count goes on, its state re-sent) or
+`{ t: 'logoff', a: 'cancel' }`. The server answers with one of:
+- `{ t: 'logoff', s: 'start', left }`
+- `{ t: 'logoff', s: 'cancel', why, c, left? }`. `c` is the cause: move, hurt, fight, wanted, down, custody, vehicle,
+  riding or crate. `left` comes with fight: the seconds until you may.
+- `{ t: 'logoff', s: 'done', left: 0, earned, spent, xp, cexp, sam, secs }`
+
+**The summary.** Earned and spent come from the money watcher's sources as they settle (`launch.js` `onMoney`). The
+debug menu's money is left out, and moving cash to the bank at an ATM counts as neither. XP is the skills' xp gained.
+`cexp` and `sam` are the Criminal EXP and Samaritan points gained, and `secs` is the time played. A reconnect inside the
+ghost window is the same session. Without a money watcher (offline practice), the net change of cash and bank stands in.
+
+**The page** (UI-10's `client/main.js`) works as it is for start, cancel and done. Two changes finish it:
+- treat close code 4016 as final, with no reconnecting, and show "Saved - safe travels" with the summary;
+- use `me.offNow` for the "at once" note.
+
+Until then, the page reconnects a second after a clean exit, as it would after any lost connection, and the character
+comes back where it logged off.
+
+**Tests.** `test/logoff.test.js` (new) covers the count, a second request, each cause of a cancel, the page's cancel, a
+disconnect mid-count, at once at home (and back inside next time), counted in someone else's rooms, on foot only,
+refusals while wanted and after a fight (and allowed once the minute is up), a tab closed after dealing damage (30 s,
+then the drop rule), no ghost after a clean exit, and the summary's numbers. All 7 fail on the code before this
+change (the closed-tab test on "not the quiet five minutes"). The launch-*,
+startfresh, gameplay, core, world3server, pagemodules and perf tests all pass (171 of 171).
+
+## 2026-11-04 - Rides you own and carry: skateboards, surfboards, rollerblades
+
+The owner's note (11-03): skateboards, rollerblades and surfboards should be "things you find, keep or carry, and lose",
+"not something you can just equip and go faster on". He also reported that the surfboard was slower than swimming, and
+that you couldn't swim while you carried one. The approved design, built on the systems already there
+(`server/systems/skate.js`, `surf.js`) with a new `server/systems/gear.js` for the carrying, the bag and the blades:
+
+**Skateboard.** Still a world vehicle (the vehicle button gets on and off), now tightened:
+- A skate park's rack boards are borrowed. They only serve the park: ride one more than `RIDE_GEAR.borrowPad` (3)
+  tiles past the park's edge and you're off it where you stand, and it's back on its rack (put out again once nobody's
+  looking, as before). The racks by the shops and the boardwalks are unchanged.
+- A board you bought is yours to carry. In the bag (it's an item again: `ITEMS.skateboard`), or in your hand (the bag's
+  Use, the quick wheel, or the action button by it lying on the ground). Carrying it takes a hand: the fire button does
+  nothing but say so. With it in hand the vehicle button rides it; the action button puts it in the bag. On your own
+  board, the action button steps off and picks it up. Getting into a vehicle, going inside or picking up a crate puts it
+  in the bag; going down drops it where you fall.
+- It wears with each bail: `RIDE_GEAR.wear` (0.1), plus up to `hard` (0.25) more for a bail at full speed into a wall: the third full-speed wall snaps it, a trick's bail is about 0.16.
+  Past `warnAt` (0.6) you're told it's cracking. At 1 it snaps (the page shows SNAPPED!): it's gone until you buy another.
+  In a skate session it's replaced on the spot instead (a fresh board lands where it stopped; the owner's exception).
+- One in the bag is yours; one gone from the bag (dropped, sold, lost with your pack) is gone. An old bag's skateboard
+  now stays in the bag as your board (it used to be taken out of it, 2026-10-24).
+
+**Surfboard.** The same model:
+- The bag no longer puts you on it. In the sea, the action button sets it down and you're on it, paddling. The vehicle
+  button does the same with it in your hand. Otherwise you swim like anyone, with it in the bag or under your arm.
+- The action button slides you off (it's under your arm, and you swim). Up the beach you walk out with it. Into a boat,
+  inside or onto a train, it goes in the bag; gone down in the water, it goes home.
+- Paddling is faster than swimming: `SURF_PADDLE` 88 px/s (it was 70; swimming is 75 at full stick, 86 at the top of the
+  swimming skill). The waves roll in at 100 px/s (they were 84), so a wave still outruns a paddle (the catch needs that).
+  A ride is about 1.3 s shorter.
+- Set down on dry land (the vehicle button with it in hand) it lies on the sand (a new vehicle type, `surfboard`, which
+  is never driven; the vehicle button picks up your own, and nobody else can take it). After `RIDE_GEAR.surfLieS` (180 s),
+  or once you're gone or 2,000 px away, it goes home once nobody's looking. Take it out at home, at a surf shop or at
+  a sports shop (into your bag). Logging off with it out: it's home when you come back.
+
+**Rollerblades.** Wearable gear (`ITEMS.rollerblades`, $70 at the skate shops and the sports shops):
+- Sit on a park bench to put them on or take them off: `BLADES.laceS` (3 s), and moving the stick gets you up. You're
+  seen sitting on the bench, then back where you stood.
+- On them: `BLADES.speedMul` 1.12 times the walk-to-run curve. That's about 200 px/s at full stick: quicker than walking,
+  slower than a board's 270. No sprint and no getting into a vehicle (buses, trains and ferries still take you). The
+  page predicts it from the snapshot's speed and sprint flag, so nothing new goes on the wire. You're drawn with the
+  bladers' gait (`gt 'blade'`).
+- On grass, dirt or sand you clump along at `roughMul` (0.34). Rolling onto it faster than `fallV` (70 px/s) puts you
+  down for `fallS` (1.2 s). In the water you swim as anyone. They stay on through a respawn and a rejoin.
+
+**The page.** The client stays a dumb window, so its changes are small: a surfboard carried under the arm (`pp
+'surfboard'`, `client/art2/people.js`, `game/peds.js`), a surfboard lying on the sand (`client/art2/vehicles.js`), the
+SNAPPED text (`client/skate.js`), and the bag's lines and buttons for the three (`client/bag.js`, `inventory.js` icons).
+The board in hand uses the skaters' existing board prop. Everything else goes through the prompts and notes.
+
+**Not done / for the owner.** A blader standing still is drawn standing, not on blades (the art draws the wheels only
+in the blade stride). The free boards by the shops and the boardwalks are still free to ride off on and aren't
+borrowed. There's no skate "event" beyond the sessions, so the snap exception covers sessions only.
+
+**Tests.** `test/ridegear.test.js` (new, 7 tests) covers each rule: a borrowed board going back on its rack; a board in
+hand blocking the gun (and firing again once it's in the bag); the wear, the warning, the snap, and the fresh board in a
+session; the surfboard (swimming with it in the bag, the action button putting you on it, paddling faster than swimming,
+swimming again after sliding off, a board on the sand going home, taking it out at the surf shop); and the rollerblades
+(on and off at a bench, the speeds, no sprint, no vehicles, the fall on the grass, kept on through a rejoin). Against
+origin/main the file fails outright (`gear.js` doesn't exist there). `skate.test.js`, `surf.test.js` and
+`gameplay.test.js` were updated to the new design. Their changes: an old bag's board stays in the bag; the action
+button puts you on a surfboard; up the beach the board is in your hand; a surfboard has no crate slot; a test park
+clears the real racks' boards first (their places are numbered on the map's own list). In the white-water test, the
+tumble no longer carries the speed of the test's one-step jump along the beach. Run under the shared lock with
+`--test-concurrency=2`, all pass: ridegear, skate, surf, gameplay, core, pagemodules, lazypage, perf, deathpack, carts,
+bikes, fleet, devplay, sound, skills, water, riders, horses, blades, homes, homeinside, hub, transit, revive. The one
+exception is core's "world tick stays fast" (avg tick under 20 ms). It failed once in the big batch at 23 ms. Run
+twice on its own on this busy machine, origin/main failed both times (23.3 and 20.2 ms) and this branch passed both
+times. It's the machine's load, not this change. No perf budget was raised.
+
+## 2026-11-04 - The starter car, and public garages
+The owner, 11-03: "A starter vehicle: low-level, waiting in the arrival station's lot (stations in the city, the desert,
+the forest, the coast), and always available from public garages if lost or despawned, unless you own a property with
+a garage." The approved design: a rusty compact, registered to you. It can't be sold, it's slow, and it steals easily.
+It solves early travel without making the cars you buy worth less.
+- The car: a new model, `starter` (shared/vehicles.js): the Rusty Compact. Its top speed is 400 (the Hatchback's is 520),
+  it accelerates at 230 (the Hatchback's is 330) and it has 140 hp (the Hatchback's is 180). It has no price, so no
+  dealer stocks it and nothing buys or sells it. It's drawn as the Hatchback in rust brown: the classic view's sprite
+  (`art`), art2's model (`look`: client/art2/game/actors.js `vehType`, one line) and the tint over the bodywork (PAINTS
+  11). Its engine sounds like the Hatchback's (client/sound/vehicles.js, one entry). No new art.
+- Registered to you: `v.owner` and `v.starter` carry your id, and the name over it is yours. It's never one of the cars
+  you own (`profile.vehicles`), so it takes no garage slot. Nobody else's garage takes it in: a thief parking it at their
+  home is told whose it is. It has no lock, so taking it is plain theft, like any parked car.
+- First day: a new character (store.js `defaultProfile`: `starter: { first: true }`) finds it in the car park of the
+  arrival station. Until the FTUE exists, that's `arrivalStation()` (server/systems/starter.js): the station with a car
+  park nearest where a new character wakes up (a hospital). The FTUE replaces that one function. Characters from before
+  this change get no car in a car park, but theirs is free at any public garage.
+- Public garages, from what the map already has (nothing added to the world, so no hash changes):
+  - every train station with a car park: the parking spaces within 900 px of its board. These are the countryside
+    stations' lots and World v3's station car parks, or the street spaces by a station in town;
+  - the Fresh Coat Garage(s);
+  - the dealerships, which already bring a car you own round (economy.js `vg`).
+  At one, the menu has a row for your starter. If it's been lost and the cooldown is over, a new one is free. If it's
+  still out somewhere and nobody's in it, it's brought round as it is. If someone else has it, it isn't. The prompt
+  adds "· your starter car" when one is waiting for you there.
+- Lost: wrecked, sunk, towed or taken away by anything (a despawn, a tidy-up when you log off). `starter.update` sees it
+  gone and starts the 5-minute cooldown. The cooldown is also saved on the profile (`starter.readyAt`), so it holds
+  across a rejoin and a restart. If someone else drove it off and left it empty, it's taken away after 90 s out of
+  everyone's sight, and it's free again after the cooldown.
+- One per player: handing one out takes away any other of yours. An empty one is removed. One with someone in it
+  becomes nobody's starter (theirs to drive off in), as Start fresh does with your cars.
+- Own a home with a garage and the starter lives there. Buying the home moves it in if it's out and empty. The home's
+  menu takes it out onto the driveway. Parking it in your garage puts it away with no cooldown and no slot used. The
+  public garages tell you it's at home.
+- Numbers: shared/rules.js `STARTER` (cooldownS 300, strayS 90, lotR 900, paint 11). The car's own stats are in its
+  model.
+- Shared files changed (small): server/world.js (the `starter` system), server/store.js (one profile field),
+  server/systems/players.js (`onJoin` at the end of a join, `forget` in Start fresh), server/systems/homes.js (a
+  thief's garage refuses it; parking yours puts it away; buying a home moves it), server/systems/economy.js (the rows
+  in the station, garage, dealer and home menus, the two options, the prompt's tag), shared/rules.js, shared/vehicles.js,
+  client/art2/game/actors.js, client/sound/vehicles.js.
+- Not built: there's no chop shop and no way to sell a car in the game today, so "unsellable" holds by construction (no
+  price, not in your owned cars). A future chop shop or car sale should check `v.starter`.
+- test/starter.test.js covers the first day in the lot, registered and unsellable, lost then free at a public garage
+  after the cooldown, the move to an owned garage, one per player, and a rejoin and a restart. It fails on the old build.
+
+## 2026-11-04 - One server update: the safe exit, rides you own and carry, the starter car
+
+Merged together so players reconnect once (branches safeexit, rides, starter). Two fixes from putting them together:
+- The starter car and the set-down surfboard had both taken vehicle index 86; the starter car is now 87
+  (test/fleet.test.js checks each index is unique).
+- The renderer's code budget goes from 401 to 404 KB (tools/perf.mjs). The rides' art (the surfboard on the sand and under
+  the arm) and the starter car's look took it to 402. Raising it by a little more than that leaves room for the next ride,
+  so it doesn't need its own raise.
+- Bladers now count as skaters at the skate parks. npc.js looked for the gait 'blades', but the gait is 'blade'.
+
+## 2026-11-04 - American English: the player-facing text
+
+The owner's note (11-03): "American English everywhere", in spelling and in terms. This pass changes only what a player
+reads (HUD and prompts, notes, menus, the phone, item, clothing and vehicle names and blurbs, shop lines, NPC lines, job
+text, server messages, index.html, the README's controls table); code identifiers, CSS classes and data keys keep their
+spelling (`kerbdrive.js`, `pocketColour`, the hair tab's `'colour'` key, the store kind `'jeweller'`...). Place names
+are a separate change (the next entry) because they re-key the world; this one leaves `world`, `art`, `world3` and
+`art3` as they were.
+- Spellings: colour -> color, metres -> meters, tyres -> tires (knobbly -> knobby), kerb -> curb, harbour -> harbor,
+  neighbour -> neighbor, favourite -> favorite, grey -> gray, pyjamas -> pajamas, moustache -> mustache, plough ->
+  plow, licence -> license, offence -> offense, labour -> labor, authorised -> authorized, stabilise -> stabilize,
+  cancelled -> canceled, jewellery -> jewelry, towards -> toward, levelled -> leveled.
+- Terms: pavement -> sidewalk, car park -> parking lot, hire -> rent / rental (boats, horses), taxi rank -> taxi stand,
+  ring in -> call in, timetable -> schedule, trousers -> pants, flat -> apartment (an apartment block -> building, the
+  lift -> the elevator), a mail round -> a mail route, parcel -> package, post the letters -> deliver the letters, quay
+  -> dock (the fishing boat job), films / the pictures -> movies, home cinema -> home theater, pitch -> field, a draw ->
+  a tie (soccer; chess keeps its draw), railway -> railroad, level crossing -> railroad crossing, junction ->
+  intersection, bins and rubbish -> trash cans and trash, batteries flat -> dead, motorbike -> motorcycle, "round"
+  (around: look round, walk round, round here) -> around.
+- Clothing pieces are looked up by name in code (`item('Suit trousers')`), so every caller moved with the catalog
+  (personas, npclooks, look.js); saves keep the piece's index, so nobody's outfit changes. The cloth color keys stay
+  `'grey'` / `'light grey'` in code: lookcore.js maps them to the renamed Gray / Light gray.
+- Kept: "fence" (a buyer of stolen goods is American usage too, and the lines around it read American), "Earl Grey"
+  (a cat's name), "Flat cap", chess's "draw", "Full time" (US soccer says it too), the units (km/h and meters are a
+  separate decision).
+- The tutorial (paused) has its text Americanized too; its test still passes, TUTORIAL_VERSION is unchanged.
+- Tests that read the words moved with them: cinema (Movie Ticket), look (Uniform pants), bounties (pants), homeups and
+  felling (toward an upgrade), hudinfo (call in).
+
+## 2026-11-04 - American English: the place names (re-keys the world)
+
+The place names from the owner's "American English everywhere" note, kept to one commit because they change the
+world's data: `world`, `art`, `world3` and `art3` all move, so players fetch the world once more (the owner's plan:
+"Place names re-key the world once"). Ship it with the next world change.
+- Theatre -> Theater: The Grand Theater (Downtown, its sign, the cinema, its counter's menu), The Rose Theater (the
+  Pink Mile, its neon), the theater neon's default word. The generator's name tests (map.js: not into the front of a
+  theater, no gun shop in one; world3-medics.js NOT_INTO) match both spellings, so nothing is placed differently.
+- Harbour -> Harbor: Prison Harbor Office, Prison Island Harbor, Harbor Pottery (Old Town), Harborlight (a Bayside villa).
+- Hire -> Rental: Gull Harbor / Coral Cay / Kestrel Lake Boat Rental, Coastline Car Rental (beside Zipline Car Rental),
+  Egret Marsh / Silver Thread Canoe Rental, Redwood River Run - Kayak Rental, the BIKE RENTAL and CANOE RENTAL signs, and
+  the old city's rentals (map.js).
+- Pitch -> field: Greenfield Park Soccer Field, Linden Park Soccer Field, Waves Stadium Field, the old city's
+  "<park> Soccer Field".
+- Post -> Station: the four First Aid Stations (Coral Cay, Red Rock, Eastern Desert, Sandpiper Junction) and the Red
+  Rock Rescue Station.
+- High Street -> Main Street (the old core's street and Gull Harbor's, metro.js and islands.js).
+- Kept: Quay Street, Garden Crescent, Greystones, the Copper Spur and Hollow Saloons, Railway Express Agency, Velocity
+  Parcel, Cay Post & Supply, Desert Junction Trading Post - American names, or names in their own right.
+- Tests that name the places moved with them: cinema, walkinrooms, world3water, world3scenes, world3world.
+
+## 2026-11-04 - Phone performance: a benchmark, and the load path's first fixes (the owner's Pixel 7 Pro)
+The owner, 11-04: on his Pixel 7 Pro the game "seems to be chugging and loading art slowly". Measured first, then fixed
+what the measurements pointed at; no art or graphics setting was lowered. No budget changed (page 84 files, 503 KB).
+- **tools/phonebench.mjs**: a repeatable benchmark - a local World v3 dev server, headless Chromium as a 892x412
+  landscape phone (touch, a Pixel user agent, the Medium preset a phone gets), DevTools' Fast 4G, the page's thread
+  slowed 4x until the studio logo. It measures the logo and the title menu, PLAY to the first art and the whole
+  screen, a far dev teleport, a drive, World v3's window swaps, the network by phase and (--profile) the CDP
+  profiler's top functions, for a first visit, a returning player and a returning player across a deploy
+  (--update <old version.json>); --root runs a snapshot of another build for before and after. This machine has no
+  GPU (WebGL in SwiftShader) and 2 cores: the city runs at a device scale of 1 and unthrottled (at 3.5, or slowed
+  2-4x, every frame took 2-4 s), and frames still crawl while chunks bake, so its frame times compare run to run only.
+- **Updates wait only for the page's code** (client/bootplan.js): after a deploy the title waited for every changed
+  file - the server's too (practice is paused) - and reloaded the page whenever the stylesheet changed. Now the
+  pictures, fonts and server/ are fetched in the background, and a new stylesheet alone is swapped in place. The deploy
+  players got today: 104 files waited for -> 51. Over the 69 deploys since 10-28: 18.3 files a deploy -> 9.1; 13
+  stylesheet-only reloads -> none.
+- **The first window is where the server starts you** (server/session.js spawnat, client/worldgen.js): the city worker
+  chose World v3's first window before the server had said where the player is - the middle of the world on a first
+  visit, the last place after an update (when the server starts players afresh at a hospital) - and the right one
+  followed after PLAY: 4 MB and an assembly for nothing.
+- **Shop signs in a window's bake** (client/art2/game/statics.js poisOf): the window's lists have holes where the world
+  is outside it; every page bake of a chunk with a shop's sign threw, fell back without the statics and was never kept -
+  baked again each time it came into view. Re-keys the art once (art3 dc0996318251 -> 8d91a0741852).
+- **The maps' icon merge** (client/hud.js iconMerge): quadratic over World v3's places, run at the start and after
+  every window swap - the page's biggest function of its own in the load profile (0.9 s at 4x). A grid by kind: the
+  same icons, 8,000 places 257 -> 15.5 ms.
+
+Before and after (tools/phonebench.mjs, two runs each, ms unless marked; noisy on this machine - SwiftShader shares
+two cores with the bake worker and the server):
+
+| | before | after |
+|---|---|---|
+| first visit: studio logo | 1302, 1346 | 1203, 1220 |
+| first visit: menu ready | 15872, 15116 | 15113, 12983 |
+| first visit: region files before the menu / after PLAY (KB) | 4205 + 1249, 4205 + 1613 | 3693 + 856, 2029 + 0 |
+| first visit: window swaps (assembly + swap, incl. the teleport's) | 2 (4455), 2 (3242) | 1 (1733), 1 (2374) |
+| first visit: PLAY -> first art | 30448, 40777 | 21503, 20407 |
+| after an update: studio logo | 5154, 5856 | 4007, 3698 |
+| after an update: menu ready | 15345, 17224 | 13790, 11734 |
+| returning: menu ready; PLAY -> whole screen | 14496, 12075; 42076, 5259 | 17115, 14912; 6869, 4432 |
+| drive: frame p50 (SwiftShader-bound) | 1483, 1483 | 1467, 1517 |
+
+Left for next time (the biggest expected wins not done): the art from the server is about 600 KB a chunk (a teleport
+downloaded 10-26 MB on Fast 4G) and lossless filters don't shrink it (the albedo is tens of thousands of colors a
+chunk; brotli -10%); every change to the bake code or World v3's code re-keys all the art (8 deploys on main since 10-28; an earlier count of 23 read interleaved branches), so
+the server rebakes for hours and phones bake their own meanwhile - keying chunks by what they're baked from would keep
+most of them; a window swap clones the whole window to each bake worker on the page's thread (reworld) - the city
+worker could hand it to them directly; and frame times need a real phone (the perf HUD) or a machine with a GPU.
+
+## 2026-11-04 - Kept art survives a deploy; World v3's window swap off the page's thread
+- **Kept chunks carried over a new art build** (server/artcdn.js and artbake.js `same`, client/art2/game/chunkcarry.js,
+  worker.js fromCdn). Every deploy that touched the bake's code or World v3's code threw every kept chunk away - 8 on
+  main from 10-28 to 11-04, and every one changed bake code, so keying chunks by their world inputs alone would have
+  kept none. Instead the server, baking each chunk for the new build, compares it byte for byte with the build before's
+  and remembers the identical ones; a page keeps the build before's chunks beside this build's and asks with
+  `had=<prev>`; `x-art-same` (no body) means copy yours under the new key. A changed chunk is always sent whole; while
+  this build's isn't baked, the stale stand-in becomes the page's own copy (`x-art-yours`) instead of 600 KB.
+  chunkcarry.js stays out of the art hash. Replayed over the 8 deploys (160 World v3 land chunks baked under each of
+  the 9 builds): 6 kept 160/160, the nature overhaul 57, the neon signs and cliffs 84 - 86% carried over.
+- **The window swap's stall** (pool.js linkWindows, client/worldgen.js, worker.js windowNo). At each region crossing
+  the page cloned the whole new window once per bake worker on its own thread. Now the city worker sends each bake
+  worker its copy over a channel of its own, before the page's, and the page sends only the window's number; what
+  follows a `reworld` in a bake worker waits for that window. A replaced worker gets the current window with its init.
+  The page's part of a swap (hostextra.js reworld), unthrottled on the bench machine: 170 -> 23 ms (a phone: about
+  four times that).
+
+## 2026-11-05 - The touch, HUD and bag icons: Lucide, and an action button that says what it will do
+
+The owner (11-05): "the hand icons specially look not very good, anything more generic and more professional and clean
+and polished... the bag/inventory icons don't look very good, the phone icon is an old school phone... those touch
+screen icons in general need work or rethinking."
+
+- **One family: Lucide 1.69.0** (ISC; its Feather-derived parts MIT - client/icons-LICENSE.txt, and a header where the
+  path data lives). The touch buttons, the HUD's round buttons (now a smartphone, a map, a menu), the weapon card, the
+  bag's tiles, its carried slots, its details and its quick bar all draw from client/touchicons.js `glyph`. Only the
+  icons used are copied, each SVG's elements as one path (circles, rects, lines and polylines made path commands);
+  the bag's own (food, fish, pelts, tools, valuables: 55) live in client/bag.js and join the set when it loads
+  (`addGlyphs`), off the page's first load. The emoji in the bag are gone. The discs, sizes, colors, states and layout
+  are as they were; only the glyphs changed. The screens' pixel icons (the pause list, the phone, the store badges)
+  are untouched.
+- **The stroke: 2.5, with a halo on the see-through discs.** Compared at the real sizes over the street (28 px on a
+  52 disc, 40 px on a 72, 24 px on the HUD's plates; 2, 2.5 and 3, each with and without a dark halo): Lucide's own 2
+  thins out on the 55% disc over a bright sidewalk, 3 clogs the small details (the backpack's pocket, the coins'
+  figures). 2.5 reads at every size; a dark halo (--gl-halo, 2.2 units wider, under the line) only on the plain
+  see-through discs and the aim knob - the gold and red discs and the HUD's plates are solid and need none.
+- **The action button says what pressing it will do - no hands.** The server's prompt ("E: Enter St. Neon General")
+  has no kind field and dozens of systems word their own, so the page reads the kind from the words
+  (touchicons.js `ACT_KINDS`, first match wins, a few "anywhere in it" rules for prompts that start with a name):
+  door (enter, leave, go in), talk, get in (car-front), boat, transit, hail a cab, pick up (package), put down or
+  deliver (package-check), buy/sell/pay (coins), bank, rob (banknote), unlock, arrest, revive, rest, sit, eat, wash,
+  repair, build, paint, casino, fish, play, climb, down, look, sign, plant, chop, mine, fire, lights, wear, pet, music,
+  run, job, wait; anything else the neutral `circle-dot`. `formatPrompt` sets the kind, hud.js swaps ACT's glyph when
+  it changes, and the prompt's chip and the hint strips draw the same icon. The crime variant keeps its red disc and
+  the "!". Over the server's own prompt words (its `label:` literals), every common verb lands on a kind; what's left
+  are names and passive notes. **The server is unchanged.**
+- **The other buttons:** FIRE target, AIM crosshair, HIT swords (no fist), CAR car-front, ITEMS backpack, RELOAD
+  rotate-cw, BLOCK shield, FIRE ON infinity, HORN volume-2, SIREN and COP CAR siren, LIGHT flashlight, BRAKE/STOP
+  circle-stop, EXIT/OFF log-out, GALLOP fast-forward, THROW redo, TRICK sparkles, OLLIE arrow-big-up-dash, CLIMB/AIR
+  and DOWN the big arrows. **Weapons:** Lucide where it has one (sword, slice for knives, bomb, bow-arrow, rocket, zap,
+  spray-can, flame, fishing-rod, hammer for the sledge, flashlight for the heavy one, swords for bare hands); the
+  pistol, the long gun, the club and the spike strip keep our own drawings, and the dive roll keeps its arc (Lucide's
+  circular arrows read as RELOAD's), all on the same grid and stroke. Long-press names and aria labels as before.
+- **Tests:** test/acticons.test.js (every kind maps to an icon in the set; the server's words give the right kinds; no
+  hand glyph anywhere on touch - every state, every kind, every weapon; the page's wiring; every bag item has an icon;
+  the license travels with the icons). uikit and hub follow the new names. Page code: 503 -> 509 KB of 520, 84 files.
+
+The owner's pick (11-05): the HIT button shows what you hit with. Bare-handed it's Lucide's `hand-fist`. With a melee
+weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the sledge's hammer (`setMelee` in
+client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
+still holds for every other button and every action kind.
+
+## 2026-11-06 - No huge plain buildings: the slivers become rows of lots with passages
 The owner (11-03): "Huge, plain buildings block the street from view and add nothing." His screenshot showed one blank
 block over half the screen. A survey of World v3 (tools/plainblocks.mjs: it builds the live world and lists every
 building by footprint and by how plain it is - no front on open ground, no sign, no place, no hand look) found 1,819

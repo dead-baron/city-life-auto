@@ -4,7 +4,7 @@
 import { input } from './input.js';
 
 import { KEY_ACTION, PAD, TOUCH, KB } from '../shared/controls.js';
-import { iconOf, svg } from './touchicons.js';
+import { iconOf, svg, actKind, setActKind } from './touchicons.js';
 
 export function actionOfKey(k) { return KEY_ACTION[String(k).toUpperCase()] || null; }
 
@@ -26,11 +26,13 @@ export function keyName(action) {
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 // "E: Enter St. Neon General" -> { action: 'action', html: '<glyph> Enter St. Neon General' }
+// (the action button's: what pressing it will do, read from the words - client/touchicons.js actKind; the button, this
+// chip and the hint strips show its icon from here on)
 export function formatPrompt(p) {
   const m = /^([A-Za-z]+):\s*(.*)$/.exec(p || '');
-  if (!m || !actionOfKey(m[1])) return { action: null, html: esc(p || '') };
-  const action = actionOfKey(m[1]);
-  return { action, html: `${glyph(action)} <span>${esc(m[2])}</span>` };
+  if (!m || !actionOfKey(m[1])) return { action: null, kind: setActKind('interact'), html: esc(p || '') };
+  const action = actionOfKey(m[1]), kind = setActKind(action === 'action' ? actKind(m[2]) : 'interact');
+  return { action, kind, html: `${glyph(action)} <span>${esc(m[2])}</span>` };
 }
 
 // rewrite "press E" / "(E)" style hints inside server notifications for the current device

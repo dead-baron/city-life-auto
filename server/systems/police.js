@@ -707,7 +707,7 @@ function runCallUnit(world, v, crew, dt) {
   }
   if (!call.arrived && Math.hypot(call.x - v.x, call.y - v.y) < 260) call.arrived = now;
   if (v.wreckAt || (call.arrived && now - call.arrived > REPORT_SEARCH_S) || now - ai.since > REPORT_SEARCH_S + 60) {
-    if (caller && !call.told) { call.told = true; world.notify(caller, '911: "The officer took a look round but couldn\'t see anyone matching your description."', 'info'); }
+    if (caller && !call.told) { call.told = true; world.notify(caller, '911: "The officer took a look around but couldn\'t see anyone matching your description."', 'info'); }
     standDown(world, v, crew, dt);
     return;
   }

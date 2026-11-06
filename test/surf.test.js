@@ -1,6 +1,6 @@
 // Surfing (the owner's #312 - server/systems/surf.js, shared/surf.js): the breaks on the map's sandy beaches facing the
-// open sea; the waves in sets, the same arithmetic on the page and the server; a surfboard in the bag: in the sea you're on
-// it, paddling; paddling for the beach as a wave comes you're up, riding it; carving along the face for the points; the
+// open sea; the waves in sets, the same arithmetic on the page and the server; a surfboard in the bag: in the sea the action
+// button puts you on it, paddling (since 2026-11-04 - server gear.js; test/ridegear.test.js); paddling for the beach as a wave comes you're up, riding it; carving along the face for the points; the
 // white water behind the break gets you; riding it in counts the ride and keeps your best.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,6 +15,8 @@ import * as players from '../server/systems/players.js';
 
 let seq = 1;
 const steer = (w, p, mx, my, bits = 0, n = 1) => { for (let i = 0; i < n; i++) { players.queueInput(p, { seq: seq++, bits: i === 0 ? bits : 0, mx, my, aim: 0 }); w.step(); } };
+// in the sea with a board in the bag: the action button puts you on it (since 2026-11-04 the bag doesn't: server gear.js)
+const paddleOut = (w, p) => { steer(w, p, 0, 0, 0); steer(w, p, 0, 0, IN.ACTION); };
 
 test('the waves: sets rolling in, breaking from one end, the break peeling along; the same at the same tick', () => {
   const B = { id: 3, x: 0, y: 0, nx: 0, ny: -1, half: 400, ph: 2.5, side: 1 };
@@ -57,7 +59,9 @@ test('a ride: on the board in the sea, paddling for the beach as a wave comes, u
   assert.equal(p.ped.surf, undefined, 'no board: swimming');
   prof.inventory.surfboard = 1;
   run(w, 0.2);
-  assert.equal(p.ped.surf && p.ped.surf.st, 'pad', 'on the board');
+  assert.ok(!p.ped.surf, 'a board in the bag: still swimming');
+  paddleOut(w, p);
+  assert.equal(p.ped.surf && p.ped.surf.st, 'pad', 'the action button: on the board');
   assert.equal(players.buildMe(w, p).surf.b[0][0], B.id, 'the break near, for the page');
   // a wave's crest about to reach you: paddle for the beach and you're up
   const t = w.tick * DT;
@@ -82,11 +86,11 @@ test('a ride: on the board in the sea, paddling for the beach as a wave comes, u
   assert.ok(p.ped.surf && (p.ped.surf.st === 'pad' || p.ped.surf.st === 'wipe'), `the ride over (${p.ped.surf && p.ped.surf.st})`);
   assert.ok(prof.surfRides === 1 && prof.surfBest > SURF.pts.air, `counted, the air in it (${prof.surfBest})`);
   assert.ok(Math.abs(p.ped.surf.a - a0) > 40 || p.ped.surf.st === 'wipe', 'rode along the face');
-  // up the beach: off the board, it's in the bag
+  // up the beach: off the board, it's under your arm
   const beach = breakPt(B, 0, -3 * TILE);
   teleport(w, p.ped, beach.x, beach.y);
   run(w, 0.2);
-  assert.ok(!p.ped.surf && prof.inventory.surfboard === 1, 'on the sand: off it');
+  assert.ok(!p.ped.surf && p.ped.held && p.ped.held.k === 'surf', 'on the sand: off it, the board in hand');
 });
 
 test('paddling in early: the wave rolls in faster than you paddle, catches you up and you are up', () => {
@@ -98,6 +102,7 @@ test('paddling in early: the wave rolls in faster than you paddle, catches you u
   const at = breakPt(B, 0, SURF.start - 60);
   teleport(w, p.ped, at.x, at.y);
   run(w, 0.2);
+  paddleOut(w, p);   // (the action button: on the board - server gear.js)
   assert.equal(p.ped.surf && p.ped.surf.st, 'pad');
   // wait out where the waves rise for the next one to start, then paddle in straight away - well ahead of its crest
   let k = 0;
@@ -116,6 +121,7 @@ test('the white water: stay where the wave has broken and it gets you', () => {
   const at = breakPt(B, 0, SURF.brk + 20);
   teleport(w, p.ped, at.x, at.y);
   run(w, 0.2);
+  paddleOut(w, p);   // (the action button: on the board - server gear.js)
   // straight into the white water: a ride on a wave already broken where you are
   const s = p.ped.surf;
   let wave = null;
@@ -124,6 +130,7 @@ test('the white water: stay where the wave has broken and it gets you', () => {
   s.st = 'ride'; s.w = wave.id; s.a = -B.side * (B.half - 40); s.va = 0; s.pts = 0; s.b = B.id;
   steer(w, p, 0, 0, 0, 3);
   assert.equal(p.ped.surf.st, 'wipe', 'tumbling');
+  p.ped.vx = 0; p.ped.vy = 0;   // (the test put the ride along the beach in one step: not a speed to tumble on with)
   assert.equal(prof.surfRides, 1);
   run(w, SURF.wipeS + 0.2);
   assert.equal(p.ped.surf.st, 'pad', 'back on the board');
@@ -137,6 +144,7 @@ test('airs: one a second at most, and landing in the white water still gets you;
   const at = breakPt(B, 0, SURF.brk + 200);
   teleport(w, p.ped, at.x, at.y);
   run(w, 0.2);
+  paddleOut(w, p);   // (the action button: on the board - server gear.js)
   let k = 0, wave = null;
   for (; k < 800 && !wave; k++) wave = wavesAt(B, (w.tick + k) * DT).find((q) => q.green && Math.abs(crestD(B, q, 0) - (SURF.brk + 200)) < 4 && !gapAt(B, q, 0) && heightAt(B, q, 0) > Math.max(SURF.minH, q.size * SURF.gapK) + 0.03) || null;
   steer(w, p, 0, 0, 0, Math.max(0, k - 6));
@@ -164,12 +172,13 @@ test('lying on the board: the vehicle button still boards a boat beside you', ()
   const at = breakPt(B, 0, SURF.start + 100);
   teleport(w, p.ped, at.x, at.y);
   run(w, 0.3);
+  paddleOut(w, p);   // (the action button: on the board - server gear.js)
   assert.equal(p.ped.surf && p.ped.surf.st, 'pad');
   const v = w.spawnVehicle('speedboat', at.x + 20, at.y, 0, { npcOwned: false });
   v.issuedTo = p.pid;
   steer(w, p, 0, 0, IN.VEHICLE); steer(w, p, 0, 0, 0, 20);
   assert.equal(p.ped.vehId, v.id, 'aboard');
-  assert.ok(!p.ped.surf && prof.inventory.surfboard === 1, 'the board in the bag');
+  assert.ok(!p.ped.surf && prof.inventory.surfboard === 1 && prof.surfboard.at === 'bag', 'the board in the bag');
 });
 
 // (the owner's notes 2, p7: "smaller waves and bigger waves, have them swell and curl over and behave more like real waves")
@@ -245,6 +254,7 @@ test('riding: the server keeps you on the face of the crest the page draws, and 
   const at = breakPt(B, 0, SURF.brk + 120);
   teleport(w, p.ped, at.x, at.y);
   run(w, 0.2);
+  paddleOut(w, p);   // (the action button: on the board - server gear.js)
   let k = 0, wave = null;
   for (; k < 1600 && !wave; k++) wave = wavesAt(B, (w.tick + k) * DT).find((q) => q.green && Math.abs(crestD(B, q, 0) - (SURF.brk + 120)) < 4 && !gapAt(B, q, 0) && heightAt(B, q, 0) > Math.max(SURF.minH, q.size * SURF.gapK) + 0.03) || null;
   assert.ok(wave, 'a catchable wave comes');

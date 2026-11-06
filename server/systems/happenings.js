@@ -223,7 +223,7 @@ function fall(world, ev, a) {
   ev.phase = 'down'; ev.downAt = now; ev.x = a.x; ev.y = a.y;
   world.emit(a.x, a.y, { e: 'collapse', id: a.id, k: 'F', d: FAINT_S + 150, x: a.x, y: a.y });   // (face down, still)
   npc.spectacle(world, a.x, a.y, { r: 300, near: 60, chance: 0.35, secs: 8 });
-  events.tellNear(world, a.x, a.y, 'Someone just collapsed on the pavement - hold ACT beside them to help them up.', 'info');
+  events.tellNear(world, a.x, a.y, 'Someone just collapsed on the sidewalk - hold ACT beside them to help them up.', 'info');
 }
 
 function helpUp(world, p, ev, a) {
@@ -301,7 +301,7 @@ export function update(world, dt) {
       if (!ev.emsTried && now - ev.downAt > FAINT_EMS_S) {
         ev.emsTried = true;
         const v = ems.dispatchFor(world, a);
-        if (v) { ev.amb = v.id; events.tellNear(world, a.x, a.y, 'Somebody\'s called an ambulance for the person lying on the pavement.', 'info'); }
+        if (v) { ev.amb = v.id; events.tellNear(world, a.x, a.y, 'Somebody\'s called an ambulance for the person lying on the sidewalk.', 'info'); }
       }
       const amb = ev.amb && world.get(ev.amb);
       if ((!amb || amb.removed) && now > ev.downAt + (ev.amb ? FAINT_EMS_S : FAINT_S)) {

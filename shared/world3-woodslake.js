@@ -27,7 +27,7 @@ export const WOODSLAKE3 = {
   name: 'Silver Thread Lake', near: [1720, 1095], box: [1560, 980, 1910, 1190],
   shore: { amp: 9, scale: 30, keep: 6, falls: 24, outlet: 20 },
   isles: { n: 3, r: [4, 11], off: 7, apart: 44 },
-  boat: { name: 'Silver Thread Boathouse', rent: 'Silver Thread Canoe Hire', jetty: 9, models: ['rowboat', 'kayak', 'dinghy'] },
+  boat: { name: 'Silver Thread Boathouse', rent: 'Silver Thread Canoe Rental', jetty: 9, models: ['rowboat', 'kayak', 'dinghy'] },
 };
 
 export function woodsLake3(m, H3) {
@@ -171,7 +171,7 @@ export function woodsLake3(m, H3) {
     put('lamp', (sx + 0.5) * TILE, (sy - B.jetty + 1) * TILE, 0);
     for (let k = 0; k < 3; k++) put('canoe', (sx - 1.3) * TILE, (sy - 2.5 - k * 2.3) * TILE, 0, { a: -Math.PI / 2, c: k });
     put('pbench', (sx - 3.5) * TILE, (sy + 2.5) * TILE, 0, { a: -Math.PI / 2 });
-    put('textsign', (sx + 4) * TILE, (sy + 2.6) * TILE, 0, { text: 'CANOE HIRE', bg: '#5a3a22', fg: [250, 230, 180], z: 30 });
+    put('textsign', (sx + 4) * TILE, (sy + 2.6) * TILE, 0, { text: 'CANOE RENTAL', bg: '#5a3a22', fg: [250, 230, 180], z: 30 });
     for (let dy = -2; dy <= 4; dy++) for (let dx = -6; dx <= 8; dx++) changed.add(idx(sx + dx, sy + dy));   // (what stood there goes)
     // (a clearing round the landing, and no tall tree south of it standing up the screen over the jetty: the giants'
     // sprites reach some 20 tiles up)

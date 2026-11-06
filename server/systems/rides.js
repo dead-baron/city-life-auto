@@ -110,7 +110,7 @@ function end(world, p, landed) {
     world.place(ped);
     homes.protect(world, ped, 1.5);
     if (R.k === 'slide') world.emit(ped.x, ped.y, { e: 'splash', x: Math.round(ped.x), y: Math.round(ped.y - 16), n: 34 });
-    else world.notify(p, R.k === 'ferris' ? 'Round you come, and out onto the deck.' : 'A gentle bump and you\'re down. Thanks for flying.', 'info');
+    else world.notify(p, R.k === 'ferris' ? 'Around you come, and out onto the deck.' : 'A gentle bump and you\'re down. Thanks for flying.', 'info');
   }
   world.broadcast({ e: 'rideend', id: R.id });
   p.meDirty = true;

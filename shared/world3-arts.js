@@ -395,7 +395,7 @@ function build(m, api, K) {
       art: { spec: { floors: 5, style: 'brick', brickTone: '#7a3a2e', parapet: 10, grime: 0.18, roofMat: 'tar', lip: 8, rimW: 4, blades: [], plaques: [], blank: true }, noShop: true, kit: [['neon|PLAYHOUSE|5', Math.round((pw - 6) * TILE / 2), 14], ['vent', 80, 120]] } });
     const ph0 = place({ x: px0, y: py, w: pw, h: ph, arch: 'theatre', key: 'theatre', name: 'The Playhouse', poi: { kind: 'delivery', label: 'The Playhouse' }, whole: true,
       art: { spec: { floors: 3, style: 'brick', brickTone: '#8e4a3a', win: 'arch', cornice: 'step', parapet: 14, grime: 0.1, roofMat: 'gravel', lip: 10, rimW: 5, blades: [] },
-        shop: { kind: 'lobby', door: 'left', open: true, people: 4, sign: null, awning: ['#7a1e2a', '#7a1e2a'] }, neon: { name: 'THE PLAYHOUSE', kind: 'club', col: 5, pic: 'masks', picV: 120, blade: 'THEATRE' } } });
+        shop: { kind: 'lobby', door: 'left', open: true, people: 4, sign: null, awning: ['#7a1e2a', '#7a1e2a'] }, neon: { name: 'THE PLAYHOUSE', kind: 'club', col: 5, pic: 'masks', picV: 120, blade: 'THEATER' } } });
     if (ph0) { used.add('The Playhouse'); prop('marquee', px0 + pw / 2, py + ph + 1.4, 0); }
     void ft;
     // the forecourt: the museum's steps (paving), the banners either side, the two sculptures

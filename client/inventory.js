@@ -11,7 +11,7 @@ import { wheelPicker } from '../shared/input.js';
 import { weaponIcon } from './render/peds.js';
 
 export const ITEM_ICON = {
-  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', parachute: '🪂', drill: '🛠',
+  medkit: '✚', bandage: '🩹', coffee: '☕', energy: '⚡', cocktail: '🍸', revivekit: '⚕', flashlight: '🔦', surfboard: '🏄', skateboard: '🛹', rollerblades: '🛼', parachute: '🪂', drill: '🛠',
   lure: '🎣', worms: '🪱', shrimp: '🦐', squid: '🦑', glowlure: '✨', crickets: '🦗', minnows: '🐟', doughballs: '⚪', chum: '🪣', dryfly: '🪰',
   caneRod: '🎣', baitcaster: '🎣', flyRod: '🎣', surfRod: '🎣', gameRod: '🎣',
   bass: '🐟', catfish: '🐟', salmon: '🐟', tuna: '🐟', grouper: '🐟', swordfish: '🐟', marlin: '🐟',
@@ -21,7 +21,7 @@ export const ITEM_ICON = {
   wildBerries: '🫐', wildHerbs: '🌿', wildHoneycomb: '🍯', blackTruffle: '🟤', geode: '🪨', amethystGeode: '💜', fossilFern: '🪨', ammonite: '🐚', arrowhead: '🔺', riverMussels: '🦪', riverPearl: '⚪', goldFlakes: '✨', antlerShed: '🦌', eagleFeather: '🪶', trowel: '🔧', goldPan: '🥘',
   headlamp: '🔦', hardhat: '⛑', lantern: '🏮', flare: '🧨', glowstick: '🟢', batteries: '🔋', hatchet: '🪓', axe: '🪓', fellaxe: '🪓', chainsaw: '🪚', sawfuel: '⛽',   // (lights and felling: #358, #359)
   venison: '🥩', rabbitMeat: '🥩', venisonSteak: '🍖', rabbitRoast: '🍗', deerHide: '🟫', antlers: '🦌', rabbitPelt: '🐇', coyotePelt: '🐺', wolfPelt: '🐺', raccoonPelt: '🦝',
-  filmTicket: '🎟', popcorn: '🍿',   // (The Grand Theatre's counter)
+  filmTicket: '🎟', popcorn: '🍿',   // (The Grand Theater's counter)
   seed_tomato: '🌱', seed_carrot: '🌱', seed_lettuce: '🌱', seed_pumpkin: '🌱', tomato: '🍅', carrot: '🥕', lettuce: '🥬', pumpkin: '🎃', prize_tomato: '🍅', prize_carrot: '🥕', prize_lettuce: '🥬', prize_pumpkin: '🎃',   // (gardening: H61)
   seed_corn: '🌱', seed_strawberry: '🌱', seed_sunflower: '🌱', corn: '🌽', strawberry: '🍓', sunflower: '🌻', prize_corn: '🌽', prize_strawberry: '🍓', prize_sunflower: '🌻',   // (H78)
 };

@@ -28,7 +28,7 @@ import * as jobs from './jobs.js';
 export const KINDS = ['minor', 'serious', 'player'];
 const SAY = {
   minor: (w) => `someone's had a fall ${w} - treat them on the spot`,
-  serious: (w) => `someone's badly hurt ${w} - stabilise them and get them to a hospital`,
+  serious: (w) => `someone's badly hurt ${w} - stabilize them and get them to a hospital`,
   player: (w) => `a player's down ${w} - get them back on their feet`,
 };
 const NAMES = ['a cyclist', 'a jogger', 'a shopper', 'a pensioner', 'a delivery rider', 'a tourist', 'a dog walker', 'a builder'];

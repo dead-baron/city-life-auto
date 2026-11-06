@@ -11,7 +11,7 @@ const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 
 test('the title: the graphics you are on sit right under Play, and Join asks nothing about graphics', () => {
   const html = read('index.html'), main = read('client/main.js');
-  const title = html.slice(html.indexOf('<div id="title">'), html.indexOf('<div id="settings"'));
+  const title = html.slice(html.indexOf('<div id="title"'), html.indexOf('<div id="settings"'));
   assert.ok(title.includes('id="t-gfx"') && title.includes('<div id="t-gfxseg" role="radiogroup"'), 'a graphics row on the title: U18\'s segmented control');
   assert.match(title, /<button id="play" disabled><i class="t-tri"><\/i>PLAY<\/button>/, 'a big PLAY with the play triangle (U18)');
   const seg = main.slice(main.indexOf('function syncTitleGfx('), main.indexOf('syncTitleGfx();'));

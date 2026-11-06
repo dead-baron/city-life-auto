@@ -7,6 +7,7 @@ import { TILE } from '../shared/constants.js';
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const d = map.dist[map.idx(Math.floor(x / TILE), Math.floor(y / TILE))]; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
 import { iconImg } from './pixicons.js';
+import { icon as pix } from './touchicons.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -48,7 +49,7 @@ function loadCats() {
 export function createMapWaypoints(ctx) {
   // ctx: { map(), pos(), setWaypoint(w|null), waypoint(), refocus(), setFilter(list|null), myHomes(), players(), transit(),
   //        police(), zoom(k), findMe(), markHere(), device() }
-  let group = null;
+  let group = null, query = '';
   const cats = loadCats();
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify([...cats])); } catch { /* private mode */ } };
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
@@ -71,7 +72,7 @@ export function createMapWaypoints(ctx) {
     const T = ctx.transit();
     const rows = [];
     for (const L of (T && T.lines) || []) rows.push(`<div class="lg"><i class="ln" style="background:${esc(L.col)}"></i>${esc(L.name)}</div>`);
-    rows.push('<div class="lg"><i class="ln rail"></i>Railway</div>');
+    rows.push('<div class="lg"><i class="ln rail"></i>Railroad</div>');
     if (T && T.ferries && T.ferries.length) rows.push('<div class="lg"><i class="ln ferry"></i>Ferry route</div>');
     rows.push('<div class="lg"><i class="dot"></i>Bus stop</div>');
     rows.push(`<div class="lg">${iconImg('anchor', 14)}Ferry pier</div>`);
@@ -89,8 +90,10 @@ export function createMapWaypoints(ctx) {
       const j = ctx.job && ctx.job();
       el.innerHTML = (j ? `<div class="bm-card job" data-job="1"><small>${ctx.police() ? 'DISPATCH' : 'YOUR JOB'}</small><b>${esc(j.text)}</b><div class="bm-cr"><span>${fmt(dist(j))}</span><button class="btn" data-jobgo="1">Show</button></div></div>` : '')
         + (wp ? `<div class="bm-card"><small>WAYPOINT</small><b>${esc(wp.label)}</b><div class="bm-cr"><span>${fmt(dist(wp))}</span><button class="btn" data-clear="1">Clear</button></div></div>` : '')
-        + '<div class="bm-h">SHOW</div><div class="bm-show">' + MAP_CATS.map((c) => `<button class="bm-chip${cats.has(c.id) ? ' on' : ''}" data-toggle="${c.id}" aria-pressed="${cats.has(c.id)}">${iconImg(c.icon, 16)}${c.title}</button>`).join('') + '</div>'
-        + '<div class="bm-h">FIND A PLACE</div><div class="bm-cats">' + MAP_CATS.map((c) => `<div class="bm-cat"><button class="bm-catname" data-group="${c.id}">${iconImg(c.icon, 20)}<span>${c.title}</span></button></div>`).join('') + '</div>'
+        // (UI-10, UIC-01: a search box; then the legend - each kind of place a row: its name lists them nearest first, its
+        // switch shows or hides its marks on the map - one row a kind, where the chips and the list were two)
+        + `<label class="bm-search">${pix('search')}<input class="field" id="bm-q" type="search" placeholder="Search places..." autocomplete="off" spellcheck="false" value="${esc(query)}"></label><div id="bm-found"></div>`
+        + '<div class="bm-h">LEGEND</div><div class="bm-cats">' + MAP_CATS.map((c) => `<div class="bm-cat"><button class="bm-catname" data-group="${c.id}">${iconImg(c.icon, 20)}<span>${c.title}</span></button><input type="checkbox" class="toggle bm-chip" data-toggle="${c.id}" aria-label="Show ${esc(c.title)} on the map"${cats.has(c.id) ? ' checked' : ''}></div>`).join('') + '</div>'
         + (ctx.device() === 'gamepad' ? `<button class="bm-setwp" data-mark="1">${padGlyph('Y', 'Set Waypoint')}</button>` : '')
         + legend()
         + '<div class="bm-more">'
@@ -116,7 +119,9 @@ export function createMapWaypoints(ctx) {
       el.querySelectorAll('[data-i]').forEach((b) => { b.onclick = () => { const { p } = list[Number(b.dataset.i)]; ctx.setWaypoint({ x: p.x, y: p.y, label: p.label }); render(); }; });
     }
     el.querySelectorAll('[data-group]').forEach((b) => { b.onclick = () => { group = b.dataset.group; render(); }; });
-    el.querySelectorAll('[data-toggle]').forEach((b) => { b.onclick = () => toggle(b.dataset.toggle); });
+    el.querySelectorAll('[data-toggle]').forEach((b) => { b.onchange = () => toggle(b.dataset.toggle, b.checked); });
+    const q = el.querySelector('#bm-q');
+    if (q) { q.oninput = () => { query = q.value; found(); }; q.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Escape') q.blur(); }; found(); }
     el.querySelectorAll('[data-mine]').forEach((b) => { b.onclick = () => { group = 'mine'; render(); }; });
     el.querySelectorAll('[data-players]').forEach((b) => { b.onclick = () => { group = 'players'; render(); }; });
     el.querySelectorAll('[data-back]').forEach((b) => { b.onclick = () => { group = null; render(); }; });
@@ -127,11 +132,23 @@ export function createMapWaypoints(ctx) {
     el.querySelectorAll('[data-mark]').forEach((b) => { b.onclick = () => { ctx.markHere(); render(); }; });
     ctx.refocus();
   }
-  function toggle(id) {
-    if (cats.has(id)) cats.delete(id); else cats.add(id);
+  function toggle(id, on = !cats.has(id)) {
+    if (on) cats.add(id); else cats.delete(id);
     save();
     const b = $('bm-list').querySelector(`[data-toggle="${id}"]`);
-    if (b) { b.classList.toggle('on', cats.has(id)); b.setAttribute('aria-pressed', String(cats.has(id))); }
+    if (b) b.checked = cats.has(id);
+  }
+  // the search: every place whose name has the words in it, nearest first (a tap sets the waypoint)
+  function found() {
+    const el = $('bm-found');
+    if (!el) return;
+    const w = query.trim().toLowerCase();
+    if (w.length < 2) { el.innerHTML = ''; return; }
+    const map = ctx.map(), seen = new Set();
+    const hits = (map.places || map.pois).filter((p) => p && p.label && p.label.toLowerCase().includes(w)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
+      .filter(({ p }) => { if (seen.has(p.label)) return false; seen.add(p.label); return true; }).slice(0, 6);
+    el.innerHTML = hits.length ? hits.map(({ p, d }, i) => `<button class="bm-row" data-hit="${i}"><span class="ic">${iconImg(KIND_ICON[p.kind] || 'star', 16)}</span><span class="nm">${esc(p.label)}<small>${esc((DISTRICTS[p.d] && DISTRICTS[p.d].name) || districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${fmt(d)}</span></button>`).join('') : '<p class="bm-hint">Nothing by that name.</p>';
+    el.querySelectorAll('[data-hit]').forEach((b) => { b.onclick = () => { const { p } = hits[Number(b.dataset.hit)]; ctx.setWaypoint({ x: p.x, y: p.y, label: p.label }); ctx.center(p.x, p.y); render(); }; });
   }
 
   return {

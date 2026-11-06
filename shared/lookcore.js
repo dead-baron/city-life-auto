@@ -21,7 +21,7 @@
 
 export const LOOK_VERSION = 1;
 export const SLOTS = ['top', 'jacket', 'bottoms', 'set', 'shoes', 'hat', 'glasses', 'jewel', 'bag'];
-export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewellery', bag: 'Bags' };
+export const SLOT_NAMES = { top: 'Tops', jacket: 'Jackets', bottoms: 'Bottoms', set: 'Dresses & sets', shoes: 'Shoes', hat: 'Hats', glasses: 'Glasses & masks', jewel: 'Jewelry', bag: 'Bags' };
 export const STYLES = [
   ['hifashion', 'High fashion'], ['business', 'Business'], ['smart', 'Smart casual'], ['streetwear', 'Streetwear'], ['street', 'Street'],
   ['casual', 'Casual'], ['skater', 'Skater'], ['beach', 'Beach'], ['lounge', 'Lounge'], ['nightclub', 'Nightclub'], ['punk', 'Punk'],
@@ -38,11 +38,11 @@ export const SKIN_ORDER = [6, 0, 7, 8, 1, 9, 10, 2, 11, 3, 12, 4, 13, 14, 5, 15]
 export const HAIR_COLORS = [
   ['#1a1410', 'Black'], ['#2e2422', 'Soft black'], ['#3b2414', 'Dark brown'], ['#6b3e1e', 'Brown'], ['#8a4a26', 'Chestnut'], ['#8a2e1e', 'Auburn'],
   ['#b06a30', 'Ginger'], ['#c8602a', 'Copper'], ['#d8906a', 'Strawberry'], ['#b5862f', 'Dark blonde'], ['#e2c066', 'Blonde'], ['#ece4c8', 'Platinum'],
-  ['#8a8a8a', 'Grey'], ['#e8e8e8', 'White'], ['#b8202a', 'Red'], ['#e070a8', 'Pink'], ['#3a5ad8', 'Blue'], ['#7a3ac8', 'Purple'], ['#2a9a5a', 'Green'],
+  ['#8a8a8a', 'Gray'], ['#e8e8e8', 'White'], ['#b8202a', 'Red'], ['#e070a8', 'Pink'], ['#3a5ad8', 'Blue'], ['#7a3ac8', 'Purple'], ['#2a9a5a', 'Green'],
 ];
-export const EYE_COLORS = [['#3a2414', 'Dark brown'], ['#6b4020', 'Brown'], ['#8a6a30', 'Hazel'], ['#b8862a', 'Amber'], ['#4a7a3a', 'Green'], ['#3a6ab8', 'Blue'], ['#7a8a94', 'Grey'], ['#7ab0e0', 'Light blue']];
+export const EYE_COLORS = [['#3a2414', 'Dark brown'], ['#6b4020', 'Brown'], ['#8a6a30', 'Hazel'], ['#b8862a', 'Amber'], ['#4a7a3a', 'Green'], ['#3a6ab8', 'Blue'], ['#7a8a94', 'Gray'], ['#7ab0e0', 'Light blue']];
 export const CLOTH = [
-  ['#f0eee8', 'White'], ['#e8dcc0', 'Cream'], ['#b8b8bc', 'Light grey'], ['#7a7a80', 'Grey'], ['#3a3a40', 'Charcoal'], ['#1a1a1e', 'Black'],
+  ['#f0eee8', 'White'], ['#e8dcc0', 'Cream'], ['#b8b8bc', 'Light gray'], ['#7a7a80', 'Gray'], ['#3a3a40', 'Charcoal'], ['#1a1a1e', 'Black'],
   ['#1d2a4a', 'Navy'], ['#2a4a8a', 'Denim'], ['#2350c8', 'Royal blue'], ['#6aa8e0', 'Sky'], ['#25b8c0', 'Teal'], ['#2e6a3a', 'Forest'],
   ['#2f9a3a', 'Green'], ['#5a6236', 'Olive'], ['#b8a878', 'Khaki'], ['#c8a070', 'Tan'], ['#6b4a2a', 'Brown'], ['#3e2a1e', 'Chocolate'],
   ['#7a1d2a', 'Burgundy'], ['#c8262b', 'Red'], ['#e2765e', 'Coral'], ['#ef7a1a', 'Orange'], ['#d8a030', 'Mustard'], ['#f2c21b', 'Yellow'],
@@ -51,6 +51,7 @@ export const CLOTH = [
   ['#4a5a6a', 'Slate'], ['#5a1a2a', 'Wine'], ['#5af04a', 'Neon green'], ['#d8f03a', 'Hi-vis'],
 ];
 const CI = {}; CLOTH.forEach(([, n], i) => { CI[n.toLowerCase()] = i; });
+CI.grey = CI.gray; CI['light grey'] = CI['light gray'];   // (the code's colour keys keep the old spelling: the names shown are American)
 export const col = (n) => (typeof n === 'number' ? n : CI[n] ?? 0);
 export const MAKEUP_COLORS = [['#b8202a', 'Red'], ['#e04a7a', 'Rose'], ['#c87a6a', 'Nude'], ['#7a1d3a', 'Berry'], ['#1a1a1e', 'Black'], ['#7a3ac8', 'Violet'], ['#d9a21b', 'Gold'], ['#3a6ab8', 'Blue']];
 
@@ -147,7 +148,7 @@ add('bottoms', 'Jeans', 'mf', 'casual streetwear street western punk retro', 55,
 add('bottoms', 'Ripped jeans', 'mf', 'punk streetwear alt festival', 60, 'clothing', { k: 'jeans', ripped: 1 }, 'sky');
 add('bottoms', 'Black jeans', 'mf', 'alt punk nightclub', 55, 'clothing', { k: 'jeans' }, 'black');
 add('bottoms', 'Chinos', 'mf', 'smart preppy casual', 50, 'clothing', { k: 'pants' }, 'khaki');
-add('bottoms', 'Suit trousers', 'mf', 'business formal', 90, 'boutique', { k: 'pants' }, 'charcoal');
+add('bottoms', 'Suit pants', 'mf', 'business formal', 90, 'boutique', { k: 'pants' }, 'charcoal');
 add('bottoms', 'Cargo pants', 'mf', 'streetwear outdoors work skater', 50, 'clothing', { k: 'cargo' }, 'olive');
 add('bottoms', 'Joggers', 'mf', 'athletic street streetwear lounge', 40, 'sports', { k: 'track' }, 'grey', 'white');
 add('bottoms', 'Shorts', 'mf', 'casual beach skater athletic', 30, 'clothing', { k: 'shorts' }, 'khaki');
@@ -157,12 +158,12 @@ add('bottoms', 'Mini skirt', 'f', 'nightclub festival punk hifashion', 40, 'bout
 add('bottoms', 'Skirt', 'f', 'smart business preppy casual', 45, 'clothing', { k: 'skirt' }, 'navy');
 add('bottoms', 'Maxi skirt', 'f', 'festival hifashion lounge', 55, 'boutique', { k: 'skirt', len: -1 }, 'mustard');
 add('bottoms', 'Plaid skirt', 'f', 'preppy punk alt', 45, 'clothing', { k: 'skirt', len: 1, p: 2 }, 'red', 'black');
-add('bottoms', 'Work trousers', 'mf', 'work', 45, 'workwear', { k: 'cargo' }, 'charcoal');
-add('bottoms', 'Leather trousers', 'mf', 'nightclub punk hifashion', 140, 'boutique', { k: 'pants', gloss: 1 }, 'black');
+add('bottoms', 'Work pants', 'mf', 'work', 45, 'workwear', { k: 'cargo' }, 'charcoal');
+add('bottoms', 'Leather pants', 'mf', 'nightclub punk hifashion', 140, 'boutique', { k: 'pants', gloss: 1 }, 'black');
 add('bottoms', 'Swim trunks', 'm', 'beach', 25, 'beach', { k: 'trunks' }, 'royal blue');
 add('bottoms', 'Bikini bottoms', 'f', 'beach', 22, 'beach', { k: 'bikini' }, 'coral');
 add('bottoms', 'Flares', 'mf', 'retro festival', 60, 'clothing', { k: 'pants', flare: 1 }, 'denim');
-add('bottoms', 'Pyjama bottoms', 'mf', 'lounge', 30, 'clothing', { k: 'pants', p: 2 }, 'sky', 'white');
+add('bottoms', 'Pajama bottoms', 'mf', 'lounge', 30, 'clothing', { k: 'pants', p: 2 }, 'sky', 'white');
 // dresses and sets (instead of a top and bottoms)
 add('set', 'Slip dress', 'f', 'nightclub hifashion', 120, 'boutique', { k: 'dress' }, 'wine');
 add('set', 'Mini dress', 'f', 'nightclub festival', 90, 'boutique', { k: 'dress', len: 1 }, 'black');
@@ -177,7 +178,7 @@ add('set', 'Coveralls', 'mf', 'work disguise', 55, 'workwear', { k: 'longsleeve'
 add('set', 'Jumpsuit', 'f', 'hifashion nightclub retro', 140, 'boutique', { k: 'longsleeve', bk: 'pants' }, 'olive');
 add('set', 'Scrubs', 'mf', 'work disguise', 45, 'workwear', { k: 'scrubs', bk: 'pants' }, 'teal');
 add('set', 'Swimsuit', 'f', 'beach athletic', 45, 'beach', { k: 'swimsuit', bk: 'bikini' }, 'red');
-add('set', 'Pyjamas', 'mf', 'lounge', 45, 'clothing', { k: 'shirt', bk: 'pants', p: 1 }, 'sky', 'white');
+add('set', 'Pajamas', 'mf', 'lounge', 45, 'clothing', { k: 'shirt', bk: 'pants', p: 1 }, 'sky', 'white');
 add('set', 'Wetsuit', 'mf', 'beach outdoors athletic', 110, 'beach', { k: 'longsleeve', bk: 'leggings' }, 'black', 'teal');
 add('set', 'Underwear', 'mf', 'lounge', 15, 'clothing', { k: 'under', bk: 'trunks' }, 'white');
 add('set', 'Ski suit', 'mf', 'winter outdoors', 210, 'outdoor', { k: 'puffer', bk: 'cargo' }, 'red', 'black');
@@ -291,7 +292,7 @@ add('hat', 'Skate helmet', 'mf', 'skater athletic', 45, 'sports', { k: 'skatehel
 // city's officers (server npclooks.js)
 add('top', 'Uniform shirt', 'mf', 'work', 0, 'police', { k: 'uniform', issued: 1 }, 'navy', 'gold');
 add('top', "Sergeant's shirt", 'mf', 'work', 0, 'police', { k: 'uniform', chevrons: 1, issued: 1 }, 'navy', 'gold');
-add('bottoms', 'Uniform trousers', 'mf', 'work', 0, 'police', { k: 'pants', issued: 1 }, 'navy');
+add('bottoms', 'Uniform pants', 'mf', 'work', 0, 'police', { k: 'pants', issued: 1 }, 'navy');
 add('set', 'Dress uniform', 'mf', 'work formal', 0, 'police', { k: 'dressuni', bk: 'pants', issued: 1 }, 'navy', 'gold');
 add('hat', 'Police cap', 'mf', 'work', 0, 'police', { k: 'police', issued: 1 }, 'navy', 'gold');
 add('hat', "Officer's cap", 'mf', 'work', 0, 'police', { k: 'police', braid: 1, issued: 1 }, 'navy', 'gold');

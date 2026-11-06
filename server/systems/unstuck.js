@@ -162,7 +162,7 @@ export function update(world) {
     if (!ped || ped.dead) { p.unstuck = null; continue; }
     if (Math.hypot(ped.x - u.x, ped.y - u.y) > STILL_PX || ped.hp < u.hp || canUnstick(world, p)) {
       p.unstuck = null;
-      world.notify(p, 'Unstuck cancelled.', 'warn');
+      world.notify(p, 'Unstuck canceled.', 'warn');
       continue;
     }
     if (world.time - u.at < UNSTUCK_S) continue;

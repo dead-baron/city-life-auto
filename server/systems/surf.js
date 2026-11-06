@@ -1,5 +1,8 @@
-// Surfing (the owner's #312, 10-08). A surfboard in your bag (shared/items.js surfboard: the surf shops and the sports
-// shops) and the sea: you lie on it and paddle, faster than you swim. At a surf break (shared/surf.js findBreaks: a
+// Surfing (the owner's #312, 10-08). A surfboard (shared/items.js surfboard: the surf shops and the sports shops) and the
+// sea: you lie on it and paddle, faster than you swim (rules.js SURF_PADDLE). Since 2026-11-04 (the owner, 11-03: it was
+// slower than swimming, and you couldn't swim while you carried one) it's a ride you own and carry (server gear.js): in
+// your bag or your hand you swim like anyone, the action button in the sea sets it down and you're on it, and off it
+// (the action button, up the beach) it's in your hand. At a surf break (shared/surf.js findBreaks: a
 // straight sandy beach facing the open sea) the waves roll in, in sets; paddle for the beach as one comes and you're up
 // on it (ped.surf.st 'ride'). Then ride it: the stick carves you along the face - left or right along the beach - while
 // the wave carries you in. It breaks from one end and the break peels along the crest toward the other: ride ahead of
@@ -17,8 +20,9 @@ import { SURF, wavesAt, onBreak, breakPt, broken, findBreaks, crestD, heightAt, 
 import { store } from '../store.js';
 import * as skills from './skills.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import * as gear from './gear.js';   // (the board in your bag, your hand, under you: gear.js)
 
-export const hasBoard = (p) => !!(p && p.profile && (p.profile.inventory.surfboard || 0) > 0);
+export const hasBoard = (p) => !!(p && p.profile && (p.profile.surfboard || (p.profile.inventory.surfboard || 0) > 0));
 const GRID = 2048;
 // the map's breaks, once, and a grid of them
 const BR = new WeakMap();
@@ -52,7 +56,7 @@ export function breaksNear(world, x, y, r = SURF.near) {
 }
 const now = (world) => world.tick * DT;   // (the waves' clock: the tick's, as the page has it)
 // the sea, not a river, a lake or a pond
-function seaAt(map, x, y) {
+export function seaAt(map, x, y) {
   const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
   if (!map.inside(tx, ty)) return true;
   const i = map.idx(tx, ty), t = map.tiles[i];
@@ -60,21 +64,25 @@ function seaAt(map, x, y) {
 }
 const descOn = (ped, st) => { const sf = st === 'pad' ? 1 : st === 'ride' ? 2 : st === 'air' ? 3 : st === 'wipe' ? 4 : 0; if (ped.surfSf !== sf) { ped.surfSf = sf; ped.appVer = (ped.appVer || 0) + 1; } };
 
-function start(world, p) {
+// on the board (gear.js paddleOut: the board set down in the sea from your hand or your bag)
+export function start(world, p) {
   const ped = p.ped;
   ped.surf = { st: 'pad', b: -1, mx: 0, my: 0, w: -1, a: 0, va: 0, pts: 0, until: 0, carveAt: 0, sign: 0 };
   ped.vx *= 0.5; ped.vy *= 0.5;
   descOn(ped, 'pad');
   p.meDirty = true;
-  if (!(p.profile.surfRides > 0) && !p.surfTold) { p.surfTold = true; world.notify(p, 'On your board. At a surf break, paddle for the beach as a wave comes to catch it.', 'info'); }
+  if (!(p.profile.surfRides > 0) && !p.surfTold) { p.surfTold = true; world.notify(p, 'On your board. At a surf break, paddle for the beach as a wave comes to catch it. The action button slides you off.', 'info'); }
 }
-export function stop(world, p) {
+// Off the board: to 'hand' (slid off, up the beach: you've got it under your arm), 'bag' (into a boat, inside, onto a
+// train...) or 'home' (gone down in the water) - gear.js offBoard
+export function stop(world, p, to = 'hand') {
   const ped = p.ped;
   if (!ped || !ped.surf) return;
   if (ped.surf.st === 'ride' || ped.surf.st === 'air') endRide(world, p, null);
   ped.surf = null;
   descOn(ped, null);
   p.meDirty = true;
+  gear.offBoard(world, p, to);
 }
 function endRide(world, p, why) {
   const ped = p.ped, s = ped.surf, prof = p.profile, pts = Math.round(s.pts);
@@ -121,13 +129,9 @@ export function update(world, dt) {
     const ped = p.ped;
     if (!ped) continue;
     const s = ped.surf;
-    if (!s) {
-      if (!hasBoard(p) || ped.dead || ped.vehId || ped.hidden || ped.onTrain || ped.sky || ped.cuffed || ped.ride || ped.board || ped.carrying || ped.fishing) continue;
-      if (isSwimming(world.map, ped) && seaAt(world.map, ped.x, ped.y)) start(world, p);
-      continue;
-    }
-    if (ped.dead || ped.vehId || ped.hidden || ped.onTrain || ped.sky || ped.cuffed || ped.ride || !hasBoard(p)) { stop(world, p); continue; }
-    try { step(world, p, ped, s, dt); } catch (e) { world.reportError('surf', e); stop(world, p); }
+    if (!s) continue;   // (in the water with a board in your bag or your hand: you swim - the action button puts you on it: gear.js)
+    if (ped.dead || ped.vehId || ped.hidden || ped.onTrain || ped.sky || ped.cuffed || ped.ride) { stop(world, p, ped.dead ? 'home' : 'bag'); continue; }
+    try { step(world, p, ped, s, dt); } catch (e) { world.reportError('surf', e); stop(world, p, 'bag'); }
   }
 }
 
@@ -147,10 +151,10 @@ function step(world, p, ped, s, dt) {
     if (Math.hypot(ped.vx, ped.vy) > 12) ped.a = Math.atan2(ped.vy, ped.vx);
     const nx = ped.x + ped.vx * dt, ny = ped.y + ped.vy * dt, tile = m.tileAtPx(nx, ny);
     if (WATER_T[tile] === 1 || tile === T.BRIDGE) { ped.x = nx; ped.y = ny; }   // (a bridge: paddling under it)
-    else if (!PED_BLOCK[tile]) { ped.x = nx; ped.y = ny; world.place(ped); stop(world, p); return; }   // (up the beach, onto a dock or a quay: off the board, it's in your bag)
+    else if (!PED_BLOCK[tile]) { ped.x = nx; ped.y = ny; world.place(ped); stop(world, p, 'hand'); return; }   // (up the beach, onto a dock or a quay: off the board, it's under your arm)
     else { ped.vx = 0; ped.vy = 0; }
     world.place(ped);
-    if (!isSwimming(m, ped)) { stop(world, p); return; }
+    if (!isSwimming(m, ped)) { stop(world, p, 'hand'); return; }
     if (Math.hypot(ped.vx, ped.vy) > 30) skills.gain(world, p, 'swim', dt);
     // a wave coming: paddling for the beach as its crest reaches you (where it hasn't broken and stands high enough - not
     // in a gap in its lip: shared/surf.js heightAt), you're up

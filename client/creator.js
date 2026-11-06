@@ -484,7 +484,7 @@ function renderPage() {
       }).join('') + '</div>';
       const P = LK.PIECES[shopSel], it = P && look.outfit[P.slot];
       if (it && it.id === shopSel) {
-        h += row(`Colour: ${esc(P.name)}`, chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't')) + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('sh-colour', i, hx, it[ctarget] === i, n)).join('')}</div>`;
+        h += row(`Color: ${esc(P.name)}`, chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't')) + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('sh-colour', i, hx, it[ctarget] === i, n)).join('')}</div>`;
         if (PATTERNED.has(P.slot)) h += row('Pattern', LK.PATTERNS.map((pp, i) => chip('sh-pattern', i, pp === 'tiedye' ? 'Tie-dye' : pp[0].toUpperCase() + pp.slice(1), it.p === i)).join(''));
       }
     }
@@ -493,9 +493,9 @@ function renderPage() {
     const price = (what, same) => `<span class="cc-price">${same ? 'yours' : '$' + WD.hairPrice(k, what)}</span>`;
     const heads = (list, what) => `<div class="cc-grid">${list.map(([n, i, fn, on, same]) => `<button class="cc-card hd ${on ? 'on' : ''}" data-act="${what}" data-v="${i}">${th(variant(fn), 'head')}<span>${esc(n)}</span>${price(hairTab, same)}</button>`).join('')}</div>`;
     if (hairTab === 'cut') h = heads(LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base)).map(([s, i]) => [s[0], i, (V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }, L.hair.style === i, cur.hair.style === i]), 'hb-style');
-    else if (hairTab === 'colour') h = row(`Colour <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
+    else if (hairTab === 'colour') h = row(`Color <b>${WD.hairPrice(k, 'colour') ? '$' + WD.hairPrice(k, 'colour') : ''}</b>`, LK.HAIR_COLORS.map(([hx, n], i) => sw('hb-col', i, hx, L.hair.color === i, n)).join(''));
     else h = heads((hairTab === 'beard' ? WD.BEARDS : WD.MOUSTACHES).map((i) => [i ? LK.FACIAL_HAIR[i][0] : 'Clean shaven', i, (V) => { V.hair.facial = i; V.outfit.glasses = null; }, L.hair.facial === i, cur.hair.facial === i]), 'hb-fac');
-    h = `<p class="cc-note">${k === 'salon' ? 'Cuts and colour' : 'Cuts, colour, beards and moustaches'}: see it on you, then Confirm to pay.</p>` + h;
+    h = `<p class="cc-note">${k === 'salon' ? 'Cuts and color' : 'Cuts, color, beards and mustaches'}: see it on you, then Confirm to pay.</p>` + h;
   } else if (mode === 'start') {
     // (U18: the looks standing on round stages side by side, the picked one under a spotlight with its name on a plate,
     // "+ New character" at the end of the row; under it "Play as <name>" and "Customize this character")
@@ -525,7 +525,7 @@ function renderPage() {
     const fr2 = (k, label) => row(label, `<div class="cc-grid fc">${o[k].map((n, i) => `<button class="cc-card fc ${F[k] === i ? 'on' : ''}" data-act="face" data-v="${k}:${i}">${th(variant((V) => { V.face[k] = i; V.outfit.glasses = null; V.outfit.hat = null; }), 'face')}<span>${n}</span></button>`).join('')}</div>`);
     h = row('Face shape', `<div class="cc-grid">${o.shape.map((n, i) => `<button class="cc-card hd ${F.shape === i ? 'on' : ''}" data-act="face" data-v="shape:${i}">${th(variant((V) => { V.face.shape = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`)
       + fr2('eyes', 'Eyes')
-      + row('Eye colour', LK.EYE_COLORS.map(([hx, n], i) => sw('face', `eyeColor:${i}`, hx, F.eyeColor === i, n)).join(''))
+      + row('Eye color', LK.EYE_COLORS.map(([hx, n], i) => sw('face', `eyeColor:${i}`, hx, F.eyeColor === i, n)).join(''))
       + fr2('brows', 'Brows') + fr2('nose', 'Nose') + fr2('lips', 'Lips')
       + row('Marks', `<div class="cc-grid fc">${[['freckles', 'Freckles'], ['mole', 'Beauty mark'], ['dimples', 'Dimples']].map(([k, n]) => `<button class="cc-card fc ${F[k] ? 'on' : ''}" data-act="ftog" data-v="${k}">${th(variant((V) => { V.face[k] = 1; V.outfit.glasses = null; V.outfit.hat = null; }), 'face')}<span>${F[k] ? '✓ ' : ''}${n}</span></button>`).join('')}</div>`);
   } else if (tab === 'hair') {
@@ -534,7 +534,7 @@ function renderPage() {
     const styles = LK.HAIR_STYLES.map((s, i) => [s, i]).filter(([s]) => s[1].includes(B.base) && (hairLen === 'all' || lenOf(s[2]) === hairLen));
     h = row('Hair length', ['all', 'short', 'medium', 'long'].map((k) => chip('hlen', k, k[0].toUpperCase() + k.slice(1), hairLen === k)).join(''))
       + row('Hairstyle', `<div class="cc-grid">${styles.map(([s, i]) => `<button class="cc-card hd ${L.hair.style === i ? 'on' : ''}" data-act="hair" data-v="${i}">${th(variant((V) => { V.hair.style = i; V.outfit.hat = null; V.outfit.glasses = null; }), 'head')}<span>${esc(s[0])}</span></button>`).join('')}</div>`)
-      + row('Hair colour', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
+      + row('Hair color', LK.HAIR_COLORS.map(([hx, n], i) => sw('hcol', i, hx, L.hair.color === i, n)).join(''))
       + (B.base === 'm' ? row('Facial hair', `<div class="cc-grid">${LK.FACIAL_HAIR.map(([n], i) => `<button class="cc-card hd ${L.hair.facial === i ? 'on' : ''}" data-act="facial" data-v="${i}">${th(variant((V) => { V.hair.facial = i; V.outfit.glasses = null; }), 'head')}<span>${n}</span></button>`).join('')}</div>`) : '');
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
@@ -555,14 +555,14 @@ function renderPage() {
       + row('Show', chip('obase', 'f', "Women's", base === 'f') + chip('obase', 'm', "Men's", base === 'm') + chip('obase', 'all', 'All', base === 'all'))
       + `<div class="cc-slots">${LK.SLOTS.map((s) => `<button class="cc-tab sm ${s === outSlot ? 'on' : ''}" data-act="slot" data-v="${s}">${LK.SLOT_NAMES[s]}</button>`).join('')}</div>`
       + `<div class="cc-grid">${none}${tiles || '<p class="cc-note">Nothing in this style for this slot.</p>'}</div>`
-      + (slotItem ? row('Colour', chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't'))
+      + (slotItem ? row('Color', chip('ctarget', 'c', 'Main', ctarget === 'c') + chip('ctarget', 't', 'Trim', ctarget === 't'))
         + `<div class="cc-opts sw">${LK.CLOTH.map(([hx, n], i) => sw('colour', i, hx, slotItem[ctarget] === i, n)).join('')}</div>`
         + row('Pattern', LK.PATTERNS.map((p, i) => chip('pattern', i, p === 'tiedye' ? 'Tie-dye' : p[0].toUpperCase() + p.slice(1), slotItem.p === i)).join('')) : '')
       + row(`Complete looks${outStyle ? ': ' + LK.STYLES.find((s) => s[0] === outStyle)[1] : ''}`, `<div class="cc-grid">${strip}</div>`);
   } else if (tab === 'extras') {
     const E = L.extras;
     h = row('Makeup', LK.MAKEUP.map((n, i) => chip('makeup', i, n, E.makeup === i)).join(''))
-      + (E.makeup ? row('Makeup colour', LK.MAKEUP_COLORS.map(([hx, n], i) => sw('mcol', i, hx, E.makeupColor === i, n)).join('')) : '')
+      + (E.makeup ? row('Makeup color', LK.MAKEUP_COLORS.map(([hx, n], i) => sw('mcol', i, hx, E.makeupColor === i, n)).join('')) : '')
       + row('Tattoos', LK.TATTOO_AREAS.map(([, n], i) => chip('tat', i, n, !!(E.tattoos & (1 << i)))).join(''))
       + row('Piercings', LK.PIERCINGS.map(([, n], i) => chip('pierce', i, n, !!(E.piercings & (1 << i)))).join(''))
       + row('Scars', LK.SCARS.map((n, i) => chip('scar', i, n, E.scar === i)).join(''));
@@ -577,7 +577,7 @@ function renderPage() {
           <div class="cc-svb">${renaming === i ? `<button class="cc-btn" data-act="sv-ok" data-v="${i}">OK</button>` : `<button class="cc-btn gold" data-act="sv-apply" data-v="${i}">Apply</button><button class="cc-btn" data-act="sv-ren" data-v="${i}">Rename</button><button class="cc-btn" data-act="sv-del" data-v="${i}">Delete</button>`}</div></div>`;
       }).join('') + '</div>';
   }
-  if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, colour and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
+  if (lockedHere) h = here(tab === 'hair' ? '✂ Try any style here: cuts, color and beards are done at a barbershop or a hair salon.' : '🪞 Try anything here: these change at the mirror at home.') + h;
   const row0 = pg.querySelector('.cc-stages'), sl = row0 ? row0.scrollLeft : -1, stp = row0 ? row0.scrollTop : 0;
   pg.innerHTML = h;
   // (the row keeps its place; opened, the picked one is brought into view. Not called `row`: that shadowed the row()

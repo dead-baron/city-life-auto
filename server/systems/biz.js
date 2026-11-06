@@ -788,7 +788,7 @@ function vanOut(world, p, s, e) {
   if (truckOf(world, p)) return 'Your van is out already.';
   if (e.wrecked && !pay(p, BIZ.truck.replace)) return `A new van is ${money(BIZ.truck.replace)}.`;
   const spot = s.lot || (() => { const at = standNear(world.map, s.x, s.y + 90, 260); return at ? { x: at.x, y: at.y, a: -Math.PI / 2 } : null; })();
-  if (!spot) return 'Nowhere to bring it round.';
+  if (!spot) return 'Nowhere to bring it around.';
   for (const q of world.query(spot.x, spot.y, 80, K.VEH)) if (!q.seats.some((z) => z)) world.remove(q);
   const v = world.spawnVehicle('icecream', spot.x, spot.y, spot.a ?? 0, { paint: 0, owner: p.pid, ownerName: p.name, npcOwned: false });
   v.despawnable = false; v.foodTruck = p.pid; v.hatch = false;

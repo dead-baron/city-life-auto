@@ -1,4 +1,4 @@
-import { STONE_PRICE, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
+import { STONE_PRICE, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, ROLLERBLADES_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -97,7 +97,10 @@ export const ITEMS = {
   medkit:  { name: 'Medical Kit',   heal: 60, stopBleed: true, sell: 30 },
   revivekit: { name: 'Revive Kit', tool: true, sell: 20 },   // defib paddles: revive a downed player to full health (never used up; not on yourself)
   flashlight: { name: 'Flashlight', tool: true, light: true, sell: 10 }, // switched on and off (never used up); no hand slot: you keep your weapon
-  surfboard: { name: 'Surfboard', tool: true, sell: 55 },   // (in the sea you lie on it and paddle; at a surf break, the waves: server/systems/surf.js)
+  // the rides you own and carry (ride: server/systems/gear.js - in the bag, in your hand, under you, lying about or at home)
+  surfboard: { name: 'Surfboard', tool: true, ride: 'surf', sell: 55 },   // (in the sea, the action button: on it, paddling; at a surf break, the waves - server/systems/surf.js)
+  skateboard: { name: 'Skateboard', tool: true, ride: 'skate', sell: 25 },   // (your own board, in the bag: take it in your hand, ride it - server/systems/skate.js)
+  rollerblades: { name: 'Rollerblades', tool: true, ride: 'blades', sell: 25 },   // (put on at a bench: worn, not ridden - server/systems/gear.js)
   parachute: { name: 'Parachute', chute: true, sell: 40 },   // out of an aircraft up in the air, the action button opens it - one jump (server skydive.js)   // ridden anywhere smooth: hop on and off with the vehicle button or from the bag (server skate.js)
   bandage: { name: 'Field Bandage', heal: 15, stopBleed: true, sell: 8 },
   coffee:  { name: 'Hot Coffee',    stamina: true, buff: 'coffee', sell: 0 },
@@ -206,9 +209,9 @@ export const ITEMS = {
   cougarPelt: { name: 'Mountain Lion Pelt', game: true, pelt: true, sell: 120 },
   bobcatPelt: { name: 'Bobcat Pelt',    game: true, pelt: true, sell: 60 },
   coyotePelt: { name: 'Coyote Pelt',    game: true, pelt: true, sell: 24 },
-  wolfPelt: { name: 'Grey Wolf Pelt',  game: true, pelt: true, sell: 95 },
+  wolfPelt: { name: 'Gray Wolf Pelt',  game: true, pelt: true, sell: 95 },
   redFoxPelt: { name: 'Red Fox Pelt',   game: true, pelt: true, sell: 55 },
-  greyFoxPelt: { name: 'Grey Fox Pelt', game: true, pelt: true, sell: 50 },
+  greyFoxPelt: { name: 'Gray Fox Pelt', game: true, pelt: true, sell: 50 },
   raccoonPelt: { name: 'Raccoon Pelt',  game: true, pelt: true, sell: 14 },
   beaverPelt: { name: 'Beaver Pelt',    game: true, pelt: true, sell: 60 },
   otterPelt: { name: 'River Otter Pelt', game: true, pelt: true, sell: 75 },
@@ -247,7 +250,7 @@ export const ITEMS = {
   redwine: { name: 'Willow River Red',  buff: 'wine', sell: 12 },   // a glass or two: you heal faster for a couple of minutes
   whitewine: { name: 'Willow River White', buff: 'wine', sell: 12 },
   // The Grand Theatre's counter (shared/cinema.js): a ticket gets you a seat in a screen (server/systems/cinema.js); popcorn's eaten
-  filmTicket: { name: 'Film Ticket',     sell: 0 },
+  filmTicket: { name: 'Movie Ticket',     sell: 0 },
   popcorn: { name: 'Popcorn',           food: true, heal: 8, sell: 0 },
   // cooked at home from what's in the fridge (server/systems/homeinside.js cook: the owner's 10-06 "home life: cooking")
   homeMeal: { name: 'Home-cooked Meal',  food: true, heal: 60, hearty: true, sell: 0, cooked: true },
@@ -394,7 +397,7 @@ export const SHOPS = {
   sports: { title: 'Home Run Sports', buy: [
     { kind: 'weapon', id: 'bat', price: 120 }, { kind: 'weapon', id: 'rod', price: 60 },
     { kind: 'weapon', id: 'pepper', price: 70 }, { kind: 'ammo', id: 'pepper', price: 15, qty: 6 },
-    { kind: 'item', id: 'lure', price: 20, qty: 3 }, { kind: 'item', id: 'surfboard', price: SURFBOARD_PRICE, qty: 1 }, { kind: 'item', id: 'parachute', price: PARACHUTE_PRICE, qty: 1 },
+    { kind: 'item', id: 'lure', price: 20, qty: 3 }, { kind: 'item', id: 'surfboard', price: SURFBOARD_PRICE, qty: 1 }, { kind: 'item', id: 'rollerblades', price: ROLLERBLADES_PRICE, qty: 1 }, { kind: 'item', id: 'parachute', price: PARACHUTE_PRICE, qty: 1 },
   ] },
   hardware: { title: 'Nail & Gear Hardware', buy: [
     { kind: 'weapon', id: 'knife', price: 90 }, { kind: 'weapon', id: 'crowbar', price: 110 },
@@ -516,7 +519,7 @@ Object.assign(SHOPS.assay.sellPrice, Object.fromEntries(['geode', 'amethystGeode
 const FIND_KIT = [{ kind: 'item', id: 'trowel', price: 25, qty: 1 }, { kind: 'item', id: 'goldPan', price: 45, qty: 1 }];
 SHOPS.hardware.buy.push(...FIND_KIT); SHOPS.lodge.buy.push(...FIND_KIT); SHOPS.huntcamp.buy.push(...FIND_KIT);
 // The Grand Theatre's ticket and popcorn counter (shared/cinema.js; the prices are CINE's there)
-SHOPS.cinema = { title: 'The Grand Theatre - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
+SHOPS.cinema = { title: 'The Grand Theater - tickets & popcorn', buy: [{ kind: 'item', id: 'filmTicket', price: 12, qty: 1 }, { kind: 'item', id: 'popcorn', price: 5, qty: 1 }] };
 // ---- gardening (H61: server/systems/gardening.js; the numbers: shared/rules.js GARDEN, GARDEN_CROPS): a packet of seeds
 // for each crop (planted at an empty plot in your yard: seed_<crop>), what it grows (<crop>: eaten for a little health,
 // sold to the grocery or the co-op) and the prize ones now and then (prize_<crop>: worth GARDEN.prizeX times as much)

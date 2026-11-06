@@ -187,7 +187,7 @@ function cut(world, p, msg) {
   if (!poi || poi.kind !== 'barber') { world.notify(p, 'You got up out of the chair.', 'warn'); return shopState(world, p); }
   const next = decodeLook(msg.c);
   const cost = next && W.hairCost(poi.salon ? 'salon' : 'barber', decodeLook(prof.look), next);
-  if (!cost) { world.notify(p, poi.salon ? 'The salon does cuts and colour.' : 'They only do hair here.', 'warn'); return shopState(world, p); }
+  if (!cost) { world.notify(p, poi.salon ? 'The salon does cuts and color.' : 'They only do hair here.', 'warn'); return shopState(world, p); }
   if (!cost.parts.length) return shopState(world, p);
   const why = storeBlocked(world, p, true);
   if (why) { world.notify(p, why, 'warn'); return shopState(world, p); }

@@ -970,8 +970,10 @@ function townKit(I, list) {
 // ---- the signs' faces and colours by trade (wave A1; signfont.js) ---------------------------------------------------
 // the POIs standing in each building (by the building's record)
 let PB_M = null, PB = null;
+// (World v3's window: the lists keep the world's indexes, so the places outside it are holes - every page bake of a
+// shop's sign threw here and fell back without the statics, and was never kept: baked again each time it came in view)
 function poisOf(M, b) {
-  if (PB_M !== M) { PB_M = M; PB = new Map(); for (const p of M.pois || []) { const q = p.b !== undefined ? M.buildings[p.b] : null; if (!q) continue; let l = PB.get(q); if (!l) PB.set(q, (l = [])); l.push(p); } }
+  if (PB_M !== M) { PB_M = M; PB = new Map(); for (const p of M.pois || []) { const q = p && p.b !== undefined ? M.buildings[p.b] : null; if (!q) continue; let l = PB.get(q); if (!l) PB.set(q, (l = [])); l.push(p); } }
   return PB.get(b) || [];
 }
 // a shop sign's trade: its own business (the walk-in unit's POI, else the POI named like the sign, else the building's
@@ -1212,7 +1214,7 @@ function specOf(c, b, A, s, D) {
     case 'theatre': {
       Object.assign(spec, { floors: 3, style: 'stone', wallColor: '#b89a7a', parapet: 10 });
       shop('lobby', null, { awning: null, people: 3 });
-      neon(named || 'THEATRE', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', cx: w / 2, v: 128, bg: '#2a1e1a', fg: [255, 236, 190], lit: true, face: 'marquee', bulbs: true });
+      neon(named || 'THEATER', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', cx: w / 2, v: 128, bg: '#2a1e1a', fg: [255, 236, 190], lit: true, face: 'marquee', bulbs: true });
       blade('CINEMA', [255, 200, 90], 70);
       break;
     }
@@ -3907,7 +3909,7 @@ function cutRecipe(c, b, s, spec, base) {
     const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
     const bw = u.kind === 'bowling' && c.M.bowling ? c.M.bowling : null;   // (Pinwheel Lanes: shared/bowling.js lays the lanes out)
     const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len })), ca: (u.x1 - 3 - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE } : null;
-    const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theatre: shared/cinema.js lays the screens out)
+    const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theater: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
     const sr = !fl && !blk && !LOBBY[u.kind] ? shopRoom(b, u, TILE, c.M) : null, shop = sr ? { R: sr, ox, oy } : null;   // (a shop by its trade: shared/shoprooms.js)

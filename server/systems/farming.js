@@ -231,14 +231,14 @@ export function startWork(world, p, poi, model = 'tractor') {
   if (p.job) return 'You already have a job - finish it first.';
   const only = model === 'combine' ? 'harvest' : null;
   const at = nextRow(world, poi.x, poi.y, -1, only);
-  if (!at) return only ? 'Nothing is ripe for the combine just now - try the tractor, or come back later.' : 'The fields are all growing - nothing to plough, sow or harvest just now. Try again later.';
+  if (!at) return only ? 'Nothing is ripe for the combine just now - try the tractor, or come back later.' : 'The fields are all growing - nothing to plow, sow or harvest just now. Try again later.';
   p.job = { type: 'fieldwork', field: at.F.i, rows: FARM.rows, done: 0, expires: world.time + FARM.contractS, tx: at.e.x, ty: at.e.y, text: '', pickupText: '', only };
   track(world, p);
   const pad = poi.cargoPad || { x: poi.x, y: poi.y + 60 };
   const v = jobs.workTruck(world, p, pad, model, poi);
   if (v) v.paint = 0;   // (the co-op's machines are red)
   if (only) world.notify(p, `Harvest! ${FARM.rows} rows of the ripe crop by ${poi.label} with the co-op's combine: its header takes two rows at once as you drive down them. $${FARM.pay.harvest} a row.${v ? ' The combine is parked by the yard (the green ring).' : ''}`, 'good', 'Harvest: drive the combine down the rows');
-  else world.notify(p, `Farm work! ${FARM.rows} rows of the field by ${poi.label}: drive the co-op tractor down a row and it does what the row needs - plough the stubble, sow the ploughed, harvest the ripe. $${FARM.pay.plough}-$${FARM.pay.harvest} a row.${v ? ' The tractor is parked by the yard (the green ring).' : ''}`, 'good', 'Farm work: drive the tractor down the rows');
+  else world.notify(p, `Farm work! ${FARM.rows} rows of the field by ${poi.label}: drive the co-op tractor down a row and it does what the row needs - plow the stubble, sow the plowed, harvest the ripe. $${FARM.pay.plough}-$${FARM.pay.harvest} a row.${v ? ' The tractor is parked by the yard (the green ring).' : ''}`, 'good', 'Farm work: drive the tractor down the rows');
   p.meDirty = true;
   return null;
 }

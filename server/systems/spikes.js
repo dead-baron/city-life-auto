@@ -47,7 +47,7 @@ export function update(world) {
       v.flat = true;
       world.emit(v.x, v.y, { e: 'pop', x: v.x, y: v.y });
       const drv = world.get(v.seats[0]);
-      if (drv && drv.player) world.notify(drv.player, 'Spike strip! Your tyres are shredded - a garage can fit new ones.', 'bad');
+      if (drv && drv.player) world.notify(drv.player, 'Spike strip! Your tires are shredded - a garage can put new ones on.', 'bad');
     }
   }
   world.spikes = list.filter((s) => now < s.until);

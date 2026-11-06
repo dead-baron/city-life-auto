@@ -443,6 +443,7 @@ import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
+import * as gear from './gear.js';   // (a surfboard set down: picked up; on rollerblades, no vehicles; a board in hand into the bag - gear.js)
 import * as grime from './grime.js';
 import * as slips from './slips.js';   // (fallible drivers: a rear-end between two of the city's drivers - slips.js)
 import { BATH } from '../../shared/rules-play.js';
@@ -575,7 +576,7 @@ export function acrossBridge(map, ped, v) {
 export function nearestVehicle(world, ped, range, noBoard = false) {   // (noBoard: past the skateboards on the ground)
   let best = null, bestD = Infinity;
   for (const v of world.query(ped.x, ped.y, range + 100, K.VEH)) {
-    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && v.def.board) || v.def.trailer) continue;   // (a trailer: never driven - rigs.js)   // (an aircraft overhead: out of reach - no Act prompt for it)
+    if (!sameLevel(v.lz, ped.lz) || aircraft.inAir(v) || (noBoard && (v.def.board || v.def.surfboard)) || v.def.trailer) continue;   // (a trailer: never driven - rigs.js)   // (an aircraft overhead: out of reach - no Act prompt for it)
     if (acrossBridge(world.map, ped, v)) continue;   // (up on a bridge's deck and down on the water under it: out of reach)
     const h = circleVsObb(ped.x, ped.y, range, v.x, v.y, v.a, v.def.L / 2, v.def.W / 2);
     if (!h) continue;
@@ -597,6 +598,8 @@ export function tryEnter(world, ped, noBoard = false) {
   if (v.bolt) { if (p) world.notify(p, "It's bolted - you won't catch it now.", 'warn'); return false; }   // (a horse off at a gallop: horses.js)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
+  if (v.def.surfboard) return !!p && gear.pickUp(world, p, v);   // (a surfboard set down: up under your arm - yours only: gear.js)
+  if (p && !gear.canEnter(world, p, ped)) return false;   // (not on rollerblades; a board in your hand goes in your bag - gear.js)
   if (v.def.board) {   // a skateboard on the ground: taken up and ridden as the board (skate.js) - someone else's, theft
     const crime = p ? entryInfo(world, p, v).crime : null, victim = v.owner ? world.players.get(v.owner)?.ped || null : null, x = v.x, y = v.y;
     if (!p || !skate.mount(world, p, ped, v)) return false;
@@ -659,7 +662,7 @@ function carjack(world, ped, v, driver) {
 const mineOf = (p, v) => v.owner === p.pid || v.rentedBy === p.pid || v.issuedTo === p.pid || (v.motorPool !== undefined && p.badge);
 // taking an empty vehicle: the crime it is (none: yours, or nobody's). Someone else's company truck is theft too.
 function takeCrime(p, v) {
-  if (mineOf(p, v)) return null;
+  if (mineOf(p, v) || v.def.surfboard) return null;   // (someone else's surfboard: not yours to pick up at all - gear.js)
   if (v.def.police && !p.badge) return 'policeTheft';
   if (v.npcOwned || v.owner || (v.workTruck && v.issuedTo)) return v.def.horse ? 'horseTheft' : v.def.pedal ? 'bikeTheft' : 'theft';
   return null;
@@ -682,9 +685,10 @@ export function enterLabel(world, p, v) {
   const n = v.def.name, e = entryInfo(world, p, v), c = e.crime && law.CRIMES[e.crime];
   const crime = c ? ` - ${c.label}${c.felony ? ' (felony)' : ''}` : '';
   if (v.def.board) return e.kind === 'own' ? 'Get on your skateboard' : c ? `Ride off on the skateboard${crime}` : 'Get on the skateboard';   // (skate.js)
+  if (v.def.surfboard) return v.owner === p.pid ? 'Pick up your surfboard' : 'Someone\'s surfboard';   // (gear.js)
   if (v.def.horse) switch (e.kind) {   // (a horse: up on it, not in it - horses.js)
     case 'own': return 'Up on your horse';
-    case 'rental': return 'Up on your hired horse';
+    case 'rental': return 'Up on your rented horse';
     case 'ride': return 'Up behind the rider';
     case 'jack': return `Pull the rider off the horse${crime}`;
     default: return c ? `Ride off on the horse${crime}` : 'Up on the horse';

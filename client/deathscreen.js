@@ -15,6 +15,7 @@
 import { DEATH_REVEAL_S } from '../shared/rules.js';
 import { input } from './input.js';
 import { keyName } from './glyphs.js';
+import { icon as pix } from './touchicons.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -23,7 +24,7 @@ export const WAKE_ROWS = 5;   // the nearest few, drawn big on the map; the rest
 
 // the phase for D { at: when you went down, fold } at now (ms): 'off' alive, 'scene', then 'open' or 'bar'
 export function deathPanel(D, dead, now) {
-  if (!dead) { D.at = 0; D.fold = false; D.fit = false; return 'off'; }
+  if (!dead) { D.at = 0; D.fold = false; D.fit = false; D.full = 0; return 'off'; }
   if (!D.at) D.at = now;
   return now - D.at < DEATH_REVEAL_S * 1000 ? 'scene' : D.fold ? 'bar' : 'open';
 }
@@ -52,7 +53,7 @@ export function deathChoices(me, pick = null) {
     dn.amb ? ['ambx', `Cancel the ${aw}`, 'amb on', false] : ['amb', `${wet ? 'Rescue boat' : 'Ambulance'} $${dn.fee}${dn.ambUsed ? ' (used)' : ''}`, 'amb', !dn.canAmb],
     ...(dn.help ? [['cancel', 'Cancel request', 'cancel', false]] : []),
   ];
-  return { title: down ? 'KNOCKED OUT' : 'WASTED', cause: me.deathCause || '', help, places: places.map((o) => ({ ...o, d: far(o) / 32, on: !!ch && o.id === ch.id })), chosen: ch || places[0] || null, wake: !!(ch || places.length), down, fee: dn ? dn.fee : 0, wet, canAmb: !!(dn && dn.canAmb) };
+  return { title: down ? 'YOU\'RE DOWN' : 'WASTED', cause: me.deathCause || '', help, places: places.map((o) => ({ ...o, d: far(o) / 32, on: !!ch && o.id === ch.id })), chosen: ch || places[0] || null, wake: !!(ch || places.length), down, fee: dn ? dn.fee : 0, wet, canAmb: !!(dn && dn.canAmb) };
 }
 const km = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1)} KM` : `${Math.max(10, Math.round(m / 10) * 10)} M`);
 const left = (s) => (s >= 60 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : `${Math.ceil(s)} S`);
@@ -66,7 +67,13 @@ const CSS = `
 #d-map canvas { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; cursor: crosshair; }
 #d-map .dm-tip { position: absolute; left: var(--s3); bottom: var(--s2); font: 600 var(--fs-2) var(--ui); color: var(--cream); text-shadow: var(--halo-s); pointer-events: none; }
 #d-side { padding: var(--s3) var(--s4); gap: var(--s2); }
-#d-side h2 { margin: 0; display: flex; align-items: center; gap: var(--s2); font: 700 var(--fs-5) var(--pixel); letter-spacing: 2px; color: var(--danger); text-shadow: var(--lift); }
+#d-side h2 { margin: 0; display: flex; align-items: center; gap: var(--s3); font: 700 var(--fs-5) var(--pixel); letter-spacing: 2px; color: var(--gold); text-shadow: var(--lift); }
+#d-ring { --k: 0; flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: var(--r3); background: conic-gradient(var(--gold) calc(var(--k) * 1turn), var(--navy3) 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), var(--ink) calc(100% - 7px)); mask: radial-gradient(farthest-side, transparent calc(100% - 7px), var(--ink) calc(100% - 7px)); }
+#d-ringw { position: relative; flex: none; display: grid; place-items: center; width: 64px; height: 64px; }
+#d-ringw > b { position: absolute; font: 700 var(--fs-3) var(--pixel); color: var(--cream); letter-spacing: 0; }
+#d-help button { display: inline-flex; align-items: center; gap: var(--s2); }
+#d-help .pi24, #d-rows .pi24 { width: 24px; height: 24px; }
+#d-rows .ck { flex: none; width: 24px; }
 #d-side h2 .d-x { margin-left: auto; }
 #d-cause { margin: 0; color: var(--cream); font: 600 var(--fs-3) var(--ui); line-height: 1.25; }
 #d-help { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -85,12 +92,13 @@ const CSS = `
 #d-rows { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 #d-rows button { display: flex; align-items: center; gap: 10px; min-height: var(--tap-l); padding: 0 var(--s3); border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 700 var(--fs-3) var(--ui); text-align: left; cursor: pointer; touch-action: manipulation; }
 #d-rows button.on { border-color: var(--gold); background: var(--navy3); }
-#d-rows .n { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--r3); background: var(--danger); color: var(--ink); font: 700 var(--fs-2) var(--pixel); }
+#d-rows .n { flex: none; display: grid; place-items: center; min-width: 26px; height: 26px; padding: 0 2px; border-radius: var(--r3); background: var(--danger); color: var(--ink); font: 700 var(--fs-2) var(--pixel); }
 #d-rows button.on .n { background: var(--gold); }
+#d-rows button.on { box-shadow: 0 0 0 2px var(--gold-a); }
 #d-rows .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #d-rows .dd { flex: none; font: 400 var(--fs-2) var(--pixel); color: var(--dim); }
 #d-go { display: flex; align-items: center; gap: var(--s3); }
-#d-wake { flex: 1; min-height: 52px; border: 0; border-radius: var(--r2); background: var(--gold); color: var(--ink); font: 700 var(--fs-4) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
+#d-wake { flex: 1; min-height: 52px; border: 0; border-radius: var(--r2); background: var(--gold); color: var(--ink); box-shadow: 0 0 0 2px var(--ink), inset 0 -4px 0 var(--gold-d); font: 700 var(--fs-4) var(--pixel); letter-spacing: 2px; cursor: pointer; touch-action: manipulation; }
 #d-wake:active { transform: scale(.97); }
 #d-auto { flex: none; text-align: right; font: 400 var(--fs-2) var(--pixel); color: var(--dim); line-height: 1.3; }
 #d-bar { display: none; }
@@ -109,8 +117,8 @@ function build(H) {
   const p = document.createElement('div');
   p.id = 'd-panel';
   p.innerHTML = '<section id="d-map"><canvas></canvas><span class="dm-tip">Tap a marker or a row to choose</span></section>'
-    + '<section id="d-side"><h2><span id="d-tag">KNOCKED OUT</span><button class="d-x" type="button" id="d-hide"></button></h2><p id="d-cause"></p><div id="d-help"></div><p id="d-note" aria-live="polite"></p><span class="d-lbl">WAKE UP AT</span><div id="d-rows"></div>'
-    + '<div id="d-go"><button id="d-wake" type="button">WAKE UP HERE</button><span id="d-auto"></span></div></section>'
+    + '<section id="d-side"><h2><span id="d-ringw"><i id="d-ring"></i><b id="d-ring-t"></b></span><span id="d-tag">YOU\'RE DOWN</span><button class="d-x" type="button" id="d-hide"></button></h2><p id="d-cause"></p><div id="d-help"></div><p id="d-note" aria-live="polite"></p><span class="d-lbl">RESPAWN AT</span><div id="d-rows"></div>'
+    + '<div id="d-go"><button id="d-wake" type="button">RESPAWN HERE</button><span id="d-auto"></span></div></section>'
     + '<div id="d-bar"><b id="d-bar-t"></b><span id="d-bar-l"></span><span class="open" id="d-bar-o"></span></div>';
   $('death').appendChild(p);
   p.addEventListener('click', (e) => {
@@ -154,7 +162,7 @@ export function draw(H, me) {
   const hb = $('d-help');
   if (hb.dataset.sig !== hsig) {
     hb.dataset.sig = hsig;
-    hb.innerHTML = C.help.map(([a, l, cls, dis]) => `<button type="button" class="${cls}" data-a="${a}"${dis ? ' aria-disabled="true"' : ''}>${a === 'help' ? '✚ ' : a === 'cancel' ? '✕ ' : C.wet ? '🚤 ' : '🚑 '}${esc(l)}${k(...keys[a])}</button>`).join('')
+    hb.innerHTML = C.help.map(([a, l, cls, dis]) => `<button type="button" class="${cls}" data-a="${a}"${dis ? ' aria-disabled="true"' : ''}>${pix(a === 'help' ? 'medkit' : a === 'cancel' ? 'close' : C.wet ? 'boat' : 'hospital')}${esc(l)}${k(...keys[a])}</button>`).join('')
       + (C.down && !C.canAmb && !me.down.amb && !me.down.ambUsed ? `<small>(${C.wet ? 'a rescue boat' : 'an ambulance'} needs $${C.fee} in the bank)</small>` : '');
   }
   // what happened to a choice (the server's answer: on its way, can't reach you, not enough in the bank) - the HUD's
@@ -169,13 +177,18 @@ export function draw(H, me) {
   const rows = $('d-rows'), rsig = C.places.map((o) => o.id + (o.on ? '*' : '')).join();
   if (rows.dataset.sig !== rsig) {
     rows.dataset.sig = rsig;
-    rows.innerHTML = C.places.map((o, i) => `<button type="button" data-id="${esc(o.id)}" class="${o.on ? 'on' : ''}"><span class="n">${o.kind === 'home' ? '⌂' : i + 1}</span><span class="nm">${esc(o.label)}</span>${me.deadAt && o.x !== undefined ? `<span class="dd">${km(o.d)}</span>` : ''}</button>`).join('');
+    rows.innerHTML = C.places.map((o, i) => `<button type="button" data-id="${esc(o.id)}" class="${o.on ? 'on' : ''}">${o.kind === 'home' ? pix('home') : `<span class="n">${i + 1}</span>`}<span class="nm">${esc(o.label)}</span>${me.deadAt && o.x !== undefined ? `<span class="dd">${km(o.d)}</span>` : ''}<span class="ck">${o.on ? pix('check') : ''}</span></button>`).join('');
     requestAnimationFrame(() => rows.querySelector('.on')?.scrollIntoView({ block: 'nearest' }));
   }
   const rem = deathLeft(H.dp, me, now), dn = me.down;
+  // the ring by the title (UIC-15): the time till you wake on your own, running down
+  if (!H.dp.full || rem > H.dp.full) H.dp.full = Math.max(1, rem);
+  $('d-ring').style.setProperty('--k', String(Math.max(0, Math.min(1, rem / H.dp.full))));
+  const rs = Math.ceil(rem), rt = `${Math.floor(rs / 60)}:${String(rs % 60).padStart(2, '0')}`;
+  if ($('d-ring-t').textContent !== rt) $('d-ring-t').textContent = rt;
   const auto = rem > 0 ? (C.down && dn.help ? `HELP COMING<br>AUTO IN ${left(rem)}` : `AUTO IN<br>${left(rem)}`) : 'WAKING...';
   if ($('d-auto').innerHTML !== auto) $('d-auto').innerHTML = auto;
-  const wk = H.dp.woke ? `✓ WAKING UP HERE${kb ? ' <i class="k">ENTER</i>' : pad ? ' <i class="k">A</i>' : ''}` : `WAKE UP HERE${kb ? ' <i class="k">ENTER</i>' : pad ? ' <i class="k">A</i>' : ''}`;
+  const wk = H.dp.woke ? `✓ RESPAWNING HERE${kb ? ' <i class="k">ENTER</i>' : pad ? ' <i class="k">A</i>' : ''}` : `RESPAWN HERE${kb ? ' <i class="k">ENTER</i>' : pad ? ' <i class="k">A</i>' : ''}`;
   if ($('d-wake').innerHTML !== wk) $('d-wake').innerHTML = wk;
   $('d-wake').disabled = !C.wake;
   // the bar, folded

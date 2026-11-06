@@ -41,7 +41,7 @@
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-ic="handset"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-ic="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-ic="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
           <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
@@ -54,7 +54,7 @@
       </div>
       <div id="stars"></div>
       <div id="vchip" class="hidden"></div>
-      <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="swap"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
+      <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
       <div id="clock"></div>
     </div>
     <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
@@ -100,52 +100,83 @@
   <div id="spec-pad" class="hidden"></div>
   <div id="spec" class="hidden"></div>
   <div id="arcade" class="hidden"><div class="arc-frame"><canvas id="arc-cv" width="256" height="224"></canvas><div id="arc-hint">Esc / B to leave the cabinet</div></div></div>
-  <div id="menu" class="hidden"><div class="panel"><div class="mhead"><h2 id="m-title"></h2><button id="m-close">✕</button></div><p id="m-sub"></p><div id="m-board" class="hidden"></div><div id="m-money"></div><div id="m-opts"></div></div></div>
+  <!-- a counter, a shop, someone to talk to (client/hud.js openMenu; UI-10 after UIC-16 and UIC-18): docked at the foot -
+       a few lines with no prices are a conversation (who, what they say, the answers numbered), a shop has your wallet in
+       its head and, with guns, their damage and range and a tab for each kind -->
+  <div id="menu" class="hidden"><div class="panel"><div class="mhead"><span id="m-face" class="ic"></span><h2 id="m-title"></h2><span id="m-wallet"></span><button id="m-close" aria-label="Close"><i class="ic" data-ic="close"></i></button></div><p id="m-sub"></p><div id="m-board" class="hidden"></div><div id="m-money"></div><div id="m-tabs" class="tabs hidden" role="tablist"></div><div id="m-opts"></div><p id="m-foot"></p></div></div>
 
   <div id="death" class="hidden"><h1 id="d-title">WASTED</h1></div>   <!-- (the panel and its map: client/deathscreen.js) -->
   <div id="district"></div>
 
   <div id="dev" class="hidden"></div>
-  <div id="title">
+  <!-- the title screen (UIC-08): the logo; while the city loads its "Connecting..." line, the bar and a rotating tip
+       (client/titlescreen.js); then the menu - PLAY, CHARACTER and SETTINGS, the graphics you're on - with your card
+       bottom left (the sign-in slot on it) and who's online bottom right -->
+  <div id="title" class="loading">
     <img id="logo" src="assets/logo.png" alt="City Life Auto">
-    <div id="t-status">Connecting to the city...</div>
+    <div id="t-status" role="status">Connecting...</div>
+    <div id="t-off" class="hidden" role="status" aria-live="polite"></div>
+    <div id="t-load"><div id="t-warm" class="pbar"><i></i></div><p id="t-tip"></p></div>
     <div id="t-buttons">
-      <button id="t-resume" class="hidden">▶ RESUME GAME</button>
+      <button id="t-resume" class="hidden"><i class="t-tri"></i>RESUME</button>
       <button id="play" disabled><i class="t-tri"></i>PLAY</button>
       <button id="practice">PRACTICE OFFLINE</button>
     </div>
+    <div id="t-row2"><button id="t-char" class="btn" disabled><i class="ic" data-ic="user"></i>CHARACTER</button><button id="t-settings" class="btn"><i class="ic" data-ic="settings"></i>SETTINGS</button></div>
     <div id="t-gfx"><span class="t-gl">Graphics</span><div id="t-gfxseg" role="radiogroup" aria-label="Graphics"></div><small id="t-gfxwhy"></small></div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
-    <div id="t-tools"><button id="t-tutorial">📖 VIEW TUTORIAL</button><button id="t-install" class="hidden">⬇ INSTALL APP</button><button id="t-settings">⚙ SETTINGS</button><button id="t-fs">⛶ FULLSCREEN</button></div>
+    <div id="t-tools"><button id="t-tutorial" class="btn">VIEW TUTORIAL</button><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button></div>
+    <div id="t-foot">
+      <div id="t-card" class="hidden"><i class="t-av ic" data-ic="user"></i><div class="t-who"><b id="t-name"></b><small id="t-xp"></small><small id="t-sam"></small></div><button id="t-signin" class="t-sign" type="button">SIGN IN</button></div>
+      <div id="t-online" class="hidden"><i></i><span></span></div>
+    </div>
     <div id="t-ver"></div>
-    <div id="t-note">Online progress saves automatically to this browser. Account sign-in and chat are coming later.</div>
+    <div id="t-note">Online progress saves automatically to this browser.</div>
   </div>
-  <!-- the hub (UI-3): RESUME, then MAP, PHONE, BAG, PEOPLE, SETTINGS - one tab at a time (client/main.js openHub) -->
+  <!-- the sign-in panel and the first-launch gate: slots for the launch work (client/account.js on branch launch) to
+       fill - main.js accountUi(); until it's there the panel says sign-in is coming soon (UI-10) -->
+  <div id="signin" class="hidden overlay"><div class="panel" role="dialog" aria-labelledby="signin-h">
+    <div class="mhead"><button class="x back" type="button" data-back aria-label="Back"><i class="ic" data-ic="back"></i></button><h2 id="signin-h">SIGN IN</h2></div>
+    <div id="signin-body" data-slot="account"></div>
+  </div></div>
+  <div id="gate" class="hidden overlay"><div class="panel" role="dialog" aria-labelledby="gate-h" aria-modal="true">
+    <div class="mhead"><h2 id="gate-h">BEFORE YOU PLAY</h2></div>
+    <div id="gate-body" data-slot="gate"></div>
+  </div></div>
+  <!-- the hub (UI-3; UI-10 after UIC-07): the pause list first (Esc, Start, MENU) - RESUME, MAP, PHONE, BAG, PEOPLE,
+       SETTINGS, LOG OFF, LEAVE GAME - and each screen with the same head: back and its name top left, close top right
+       (client/main.js openHub, hubBack) -->
   <div id="hub" class="hidden">
     <div class="hub-frame" role="dialog" aria-label="Menu">
+      <div id="ph-status" aria-hidden="true"><i class="ph-sig"><b></b><b></b><b></b><b></b></i><span id="ph-time"></span><i class="ph-bat"></i></div>
       <div id="hub-bar">
-        <button id="hub-resume" class="btn btn-1 hub-resume" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>RESUME<span class="kchip kbm-only">ESC</span></button>
+        <button id="hub-back" type="button" aria-label="Back"><i class="ic" data-ic="back"></i><span class="kchip kbm-only">ESC</span></button>
         <h1 id="hub-title">MAP</h1>
-        <span class="g-pad g-bumper pad-only">LB</span>
-        <div id="hub-tabs" class="tabs" role="tablist" aria-label="Menu">
-          <button class="tab" role="tab" data-tab="map">MAP<span class="kchip kbm-only">M</span></button>
-          <button class="tab" role="tab" data-tab="phone">PHONE<span class="kchip kbm-only">P</span></button>
-          <button class="tab" role="tab" data-tab="bag">BAG<span class="kchip kbm-only">I</span></button>
-          <button class="tab" role="tab" data-tab="people">PEOPLE</button>
-          <button class="tab" role="tab" data-tab="settings">SETTINGS</button>
-        </div>
-        <span class="g-pad g-bumper pad-only">RB</span>
-        <button id="hub-close" class="x" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M5 5l14 14M19 5L5 19"/></svg></button>
+        <button id="hub-close" class="x" type="button" aria-label="Close"><i class="ic" data-ic="close"></i></button>
       </div>
       <div id="hub-body">
+  <div id="pause" class="hidden overlay hubtab"><div class="pz">
+    <div class="pz-head"><img src="assets/logo.png" alt="City Life Auto"><b>PAUSED</b></div>
+    <div class="pz-list" role="menu" aria-label="Paused">
+      <button class="pz-row pz-go" role="menuitem" data-p="resume"><i class="ic" data-ic="play"></i><span>RESUME</span><span class="kchip kbm-only">ESC</span></button>
+      <button class="pz-row" role="menuitem" data-p="map"><i class="ic" data-ic="map"></i><span>MAP</span><span class="kchip kbm-only">M</span></button>
+      <button class="pz-row" role="menuitem" data-p="phone"><i class="ic" data-ic="handset"></i><span>PHONE</span><span class="kchip kbm-only">P</span></button>
+      <button class="pz-row" role="menuitem" data-p="bag"><i class="ic" data-ic="bag"></i><span>BAG</span><span class="kchip kbm-only">I</span></button>
+      <button class="pz-row" role="menuitem" data-p="people"><i class="ic" data-ic="people"></i><span>PEOPLE</span></button>
+      <button class="pz-row" role="menuitem" data-p="settings"><i class="ic" data-ic="settings"></i><span>SETTINGS</span></button>
+      <button class="pz-row" role="menuitem" data-p="logoff" id="pz-logoff"><i class="ic" data-ic="logoff"></i><span>LOG OFF<small id="pz-off-note">safe: stand still 10 s</small></span></button>
+      <button class="pz-row pz-leave" role="menuitem" data-p="leave"><i class="ic" data-ic="door"></i><span>LEAVE GAME</span></button>
+    </div>
+    <div class="pz-foot not-touch"><span class="pad-only"><span class="g-pad g-a">A</span> SELECT</span><span class="pad-only"><span class="g-pad g-b">B</span> BACK</span><span class="kbm-only"><span class="kchip">ENTER</span> SELECT</span><span class="kbm-only"><span class="kchip">ESC</span> BACK</span></div>
+  </div></div>
   <div id="bigmap" class="hidden hubtab">
     <div id="bm-body">
       <div id="bm-panel"><div id="bm-list"></div><div id="bigmap-hint"></div></div>
-      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="bm-zoom"><button type="button" data-z="+" aria-label="Zoom in">+</button><button type="button" data-z="-" aria-label="Zoom out">−</button><button type="button" data-z="me" aria-label="Find me">⌖</button></div><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
+      <div id="bm-mapwrap"><canvas id="bigmap-c"></canvas><div class="bm-zoom"><button type="button" data-z="-" aria-label="Zoom out"><i class="ic" data-ic="minus"></i></button><button type="button" data-z="+" aria-label="Zoom in"><i class="ic" data-ic="plus"></i></button><button type="button" data-z="me" aria-label="Find me"><i class="ic" data-ic="aim"></i></button></div><button id="bm-tp" class="hidden" title="Debug: teleport to your waypoint">🛠 TELEPORT HERE</button></div>
     </div>
   </div>
   <div id="phone" class="hidden overlay hubtab at-home"><div class="ph-body">
-    <div class="ph-top"><button id="ph-back" class="btn hidden" type="button">◀ Back</button><span id="ph-clock">Phone</span></div>
+    <div class="ph-top hidden"><button id="ph-back" class="btn hidden" type="button">Back</button><span id="ph-clock">Phone</span></div>
     <div id="ph-screen"></div>
   </div></div>
   <div id="inv" class="hidden overlay hubtab"></div>
@@ -154,12 +185,11 @@
     <section><h2>CREW</h2><div id="pp-crew"></div></section>
   </div></div>
   <div id="settings" class="hidden overlay hubtab"><div class="panel set-wrap">
-    <nav id="set-nav" role="tablist" aria-label="Settings sections">
-      <button role="tab" data-sec="controls">Controls</button><button role="tab" data-sec="sound">Sound</button><button role="tab" data-sec="graphics">Graphics</button><button role="tab" data-sec="account">Account</button><button role="tab" data-sec="help">Help</button>
-      <button role="tab" data-sec="danger" class="danger">Danger zone</button>
+    <nav id="set-nav" class="tabs" role="tablist" aria-label="Settings sections">
+      <button class="tab" role="tab" data-sec="graphics">GRAPHICS</button><button class="tab" role="tab" data-sec="sound">SOUND</button><button class="tab" role="tab" data-sec="controls">CONTROLS</button><button class="tab" role="tab" data-sec="game">GAME</button><button class="tab" role="tab" data-sec="chat">CHAT</button><button class="tab" role="tab" data-sec="account">ACCOUNT</button><button class="tab" role="tab" data-sec="help">HELP</button><button class="tab" role="tab" data-sec="legal">LEGAL</button>
     </nav>
     <div id="set-body">
-      <section data-sec="controls">
+      <section data-sec="controls" hidden>
         <div class="set-head"><h2>CONTROLS</h2><div id="set-dev" class="seg" role="tablist" aria-label="Device"><button role="tab" data-dev="kbm">Keyboard and mouse</button><button role="tab" data-dev="pad">Gamepad</button><button role="tab" data-dev="touch">Touch</button></div></div>
         <div id="set-binds"></div>
         <h3>OPTIONS</h3>
@@ -168,30 +198,47 @@
         <label class="srow" data-for="touch"><span>The aim stick pushed into its red ring fires (the FIRE ON button)</span><input type="checkbox" id="s-edgefire"></label>
         <label class="srow" data-for="pad"><span>The right stick pushed all the way fires too</span><input type="checkbox" id="s-padfire"></label>
         <label class="srow" data-for="pad touch"><span>Vibration</span><input type="checkbox" id="s-vibrate"></label>
-        <label class="srow"><span>Safety mode: ask again before a crime</span><input type="checkbox" id="s-safety"></label>
-        <label class="srow"><span>Shop symbols over doors near you</span><input type="checkbox" id="s-shopmarks"></label>
         <p id="set-note"></p>
       </section>
+      <section data-sec="game" hidden><h2>GAME</h2>
+        <label class="srow"><span>Safety mode: ask again before a crime</span><input type="checkbox" id="s-safety"></label>
+        <label class="srow"><span>Shop symbols over doors near you</span><input type="checkbox" id="s-shopmarks"></label>
+      </section>
+      <section data-sec="chat" hidden><h2>CHAT</h2>
+        <div id="s-chatbox" data-slot="chat">
+          <p class="set-note">Chat is coming soon. These are the channels it will have:</p>
+          <label class="srow"><span>Nearby (people around you)</span><input type="checkbox" disabled checked></label>
+          <label class="srow"><span>Crew</span><input type="checkbox" disabled checked></label>
+          <label class="srow"><span>City (everyone)</span><input type="checkbox" disabled checked></label>
+          <label class="srow"><span>Private messages</span><input type="checkbox" disabled checked></label>
+        </div>
+      </section>
       <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>
-      <section data-sec="graphics" hidden><h2>GRAPHICS</h2>
+      <section data-sec="graphics"><h2>GRAPHICS</h2>
         <div id="s-gfxbox" class="gfxbox"></div>
         <label class="srow"><span>Keep it smooth (ease off the sharpness when the frame rate drops)</span><input type="checkbox" id="s-smooth"></label>
         <label class="srow"><span>Fullscreen when playing on a phone</span><input type="checkbox" id="s-autofs"></label>
         <label class="srow"><span>Performance overlay (for bug reports)</span><input type="checkbox" id="s-diag"></label>
-        <button id="s-fs" class="sbtn">⛶ Fullscreen on or off</button>
+        <button id="s-fs" class="sbtn">Fullscreen on or off</button>
       </section>
       <section data-sec="account" hidden><h2>ACCOUNT</h2>
         <div class="sacct">
           <p class="msub">Your name - what other players see over your head and in their crews:</p>
           <div class="m-opts devpw-row"><input id="s-name-in" type="text" maxlength="16" placeholder="Your name" autocomplete="off" spellcheck="false"><button class="btn" id="s-name-use">Save</button></div>
           <p class="msub" id="s-name-msg"></p>
+          <button class="sbtn" id="s-signin">Sign in</button>
           <button class="sbtn play-only" data-h="look">Change how you look</button>
-          <label class="srow"><span>Plasma blade colour</span><select id="s-blade"></select></label>
+          <label class="srow"><span>Plasma blade color</span><select id="s-blade"></select></label>
           <p class="msub">Your character lives in this browser - no sign-up. To play it on another phone or computer, copy your transfer code here and paste it there.</p>
           <button id="s-code-copy" class="sbtn">⧉ Copy my transfer code</button>
           <div class="m-opts devpw-row"><input id="s-code-in" type="text" placeholder="Paste a transfer code" autocomplete="off" spellcheck="false"><button class="btn" id="s-code-use">Use it</button></div>
           <button id="s-code-back" class="sbtn hidden">↶ Back to the character I had before</button>
           <p class="msub" id="s-code-msg"></p>
+        </div>
+        <div class="set-danger"><h3>DANGER ZONE</h3>
+          <p>This erases your character for good: money, homes, cars, clothes, weapons, your record. It can't be undone.</p>
+          <button id="s-fresh" class="sbtn">Start fresh (erase my character)</button>
+          <p class="msub" id="s-fresh-msg"></p>
         </div>
       </section>
       <section data-sec="help" hidden><h2>HELP</h2>
@@ -200,7 +247,6 @@
           <button class="opt play-only" data-h="surrender"><span class="t">Surrender</span><span class="note">respawn, or turn yourself in</span></button>
           <button class="opt play-only" data-h="cine"><span class="t">Cinematic mode</span><span class="note">clean screen, cameras, time of day</span></button>
           <button class="opt" data-h="fullscreen"><span class="t">Fullscreen</span></button>
-          <button class="opt play-only" data-h="title"><span class="t">Exit to the title screen</span></button>
         </div>
         <button id="s-install" class="sbtn">⬇ Install the app / install help</button>
         <button id="s-repair" class="sbtn">↻ Repair install (clear offline data)</button>
@@ -209,14 +255,17 @@
           <button class="opt quiet play-only" data-h="dev"><span class="t">Debug menu</span></button>
         </div>
       </section>
-      <section data-sec="danger" hidden><h2>DANGER ZONE</h2>
-        <p>This erases your character for good: money, homes, cars, clothes, weapons, your record. It can't be undone.</p>
-        <button id="s-fresh" class="sbtn">⟲ Start fresh (erase my character)</button>
-        <p class="msub" id="s-fresh-msg"></p>
+      <section data-sec="legal" hidden><h2>LEGAL</h2>
+        <div id="s-legalbox" data-slot="legal">
+          <div class="set-card warn"><b>MATURE CONTENT</b><p>City Life Auto has mature themes: crime, violence, and online play with other people that isn't rated. Never share personal information with other players.</p></div>
+          <button class="opt" disabled><span class="t">Terms of service</span><span class="note">coming with the launch</span></button>
+          <button class="opt" disabled><span class="t">Privacy policy</span><span class="note">coming with the launch</span></button>
+        </div>
       </section>
     </div>
   </div></div>
       </div>
+      <div id="hub-foot" class="pad-only"><span><span class="g-pad g-a">A</span> SELECT</span><span><span class="g-pad g-b">B</span> BACK</span><span class="hub-lr"><span class="g-pad g-bumper">LB</span><span class="g-pad g-bumper">RB</span> SWITCH</span></div>
     </div>
   </div>
   <div id="install" class="hidden overlay"><div class="panel">
@@ -258,6 +307,7 @@
   </div></div>
 </div>
 <script type="module" src="client/splash.js"></script>   <!-- (the studio sting, over the title while the game loads: client/splash.js) -->
+<link rel="modulepreload" href="client/bootplan.js">
 <script type="module" src="client/boot.js"></script>
 </body>
 </html>

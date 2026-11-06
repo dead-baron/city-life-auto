@@ -6,7 +6,7 @@
    loader's version.json check keeps working); the cached copy is just the offline fallback.
    Requests to other origins (the game server's WebSocket, fonts CDNs, analytics) are left alone. */
 const CACHE = 'city-life-auto-v2';
-const CORE = ['./', 'index.html', 'manifest.webmanifest', 'client/boot.js', 'assets/logo.png', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png'];
+const CORE = ['./', 'index.html', 'manifest.webmanifest', 'client/boot.js', 'client/bootplan.js', 'assets/logo.png', 'assets/icons/icon-192.png', 'assets/icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).catch(() => {}).then(() => self.skipWaiting()));

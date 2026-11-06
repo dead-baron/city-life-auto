@@ -8,11 +8,20 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon } from './touchicons.js';
+import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon, setActKind, iconOf, setMelee } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S, PROMPT_FADE_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
+// the action button's glyph for the kind of what it offers (client/touchicons.js actKind; touchslots.js draws the same
+// when it places the button): swapped only when the kind changes
+function actGlyph(kind) {
+  const b = document.querySelector('#tbtns [data-b="action"]');
+  if (!b || b.dataset.kind === kind) return;
+  b.dataset.kind = kind;
+  const g = b.querySelector('svg.gl');
+  if (g) g.outerHTML = monoGlyph(iconOf('action'));
+}
 export function crimeMarks(el, pcr) { el.classList.toggle('crime', pcr > 0); el.classList.toggle('felony', pcr === 2); }
 // what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
 export function calmState(sitAt, activeAt, now) {
@@ -21,6 +30,23 @@ export function calmState(sitAt, activeAt, now) {
 }
 const thumbs = new Map();
 function weaponThumb(i) { if (!thumbs.has(i)) thumbs.set(i, weaponIcon(i).toDataURL()); return thumbs.get(i); }
+// a shop's rows (UI-10, UIC-18): a gun's damage and range as eight steps, from the weapons' own numbers; the kind of each
+// row for a gun store's tabs; the face beside a conversation (the place's icon: there are no portraits yet)
+const WEAPON_BY_I = new Map(Object.values(WEAPONS).map((w) => [w.i, w]));
+const LONG = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
+const steps = (v) => Math.max(1, Math.min(8, Math.round(v * 8)));
+const gunDmg = (w) => steps((w.dmg * (w.pellets || 1)) / (w.cd || 1) / 150);
+const gunRng = (w) => steps((w.range || 0) / 1050);
+const statBar = (k, v) => `<i>${k}<b>${'<u></u>'.repeat(v)}${'<s></s>'.repeat(8 - v)}</b></i>`;
+function optKind(o) {
+  const [t, id] = String(o.id).split(':');
+  if (t === 'a') return 'ammo';
+  if (t !== 'w' || !WEAPONS[id]) return 'gear';
+  const ty = WEAPONS[id].type;
+  return ty === 'melee' ? 'melee' : ty === 'grenade' || ty === 'deploy' ? 'throw' : LONG.has(id) || ty === 'rocket' || ty === 'bow' || ty === 'flame' ? 'rifles' : 'pistols';
+}
+const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
+const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
@@ -99,6 +125,7 @@ export class HUD {
       const held = this.held; this.held = [];
       for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone, t.short);
     }
+    if (prev && !prev.custody && me.custody && !me.dead) this.moment('BUSTED', 'The police have you.', 'bad');   // (UIC-15: cuffed)
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
@@ -137,6 +164,7 @@ export class HUD {
         document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         this.actBtn?.classList.add('pulse');
+        actGlyph(fp.kind);   // (the action button shows what it will do: a door, a speech bubble, coins...)
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
         pr.classList.remove('faded'); clearTimeout(this.fadeT);
@@ -152,6 +180,7 @@ export class HUD {
       pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
       document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
       this.actBtn = null;
+      actGlyph(setActKind('interact'));
     }
     document.body.classList.toggle('carrying', !!me.carrying);
     this.info?.me(me, prev);   // (the vitals' numbers, the status line, the stars, the weapon plate, the job card: hudinfo.js)
@@ -237,7 +266,7 @@ export class HUD {
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus'); tb.classList.add('taxi'); tb.style.borderColor = '';
       $('tb-where').textContent = 'TAXI';
       $('tb-next').textContent = t.st === 'pickup' ? `On its way · about ${Math.max(5, t.eta)}s (the yellow square on your map)`
-        : t.st === 'wait' ? `At the kerb · ${keyName('action')} by the cab to get in (${t.wait}s)`
+        : t.st === 'wait' ? `At the curb · ${keyName('action')} by the cab to get in (${t.wait}s)`
           : t.st === 'dest' ? 'Where to? Set a waypoint (the map or the phone)'
             : t.st === 'ride' ? `To ${t.to} · ${t.m} m · $${t.fare} (~$${t.est})`
               : `${t.to} · $${t.fare} · ${keyName('vehicle')} to get out`;
@@ -277,6 +306,11 @@ export class HUD {
     if (wi.dataset.w !== wk) { wi.dataset.w = wk; wi.innerHTML = ''; wi.appendChild(weaponIcon(w.i, me.blade)); }
     const wg = $('w-glyph'), gk = glyphOfWeapon(me.weapon, w.type);   // (on touch the button shows what you hold as a one-color silhouette - the owner, 11-03)
     if (wg && wg.dataset.g !== gk) { wg.dataset.g = gk; wg.innerHTML = monoGlyph(gk); }
+    if (this.meleeG !== gk) {   // (the HIT button shows what you hit with: a fist, the knife, the bat... - the owner, 11-05)
+      this.meleeG = gk; setMelee(me.weapon, w.type);
+      const hg = document.querySelector('#tbtns [data-lbl="HIT"] svg.gl');
+      if (hg) hg.outerHTML = monoGlyph(iconOf('fire', 'HIT'));
+    }
     // the quick weapons (UIC-11/12: under what you hold, the next ones you carry - their number keys on a keyboard; a
     // click takes one out: client/main.js)
     const qk = me.weapons.map((x, n) => [x, n]).filter(([x]) => x.id !== me.weapon).slice(0, 3), qs = qk.map(([x, n]) => `${x.id}:${n}`).join() + (me.dead ? 'd' : '');
@@ -362,6 +396,28 @@ export class HUD {
     document.querySelectorAll('#tbtns .armed').forEach((b) => b.classList.remove('armed'));
   }
 
+  // a big moment (UI-10, UIC-15): BUSTED, LEVEL UP, JOB DONE - big in the pixel face over the middle for a moment, then
+  // gone by itself (nothing lingers); one at a time, the next waits its turn. WASTED and the knocked-out screen are the
+  // death screen's (client/deathscreen.js)
+  moment(title, sub = '', tone = 'good') {
+    (this.moments ||= []).push([title, sub, tone]);
+    if (this.moments.length > 3) this.moments.shift();
+    if (!this.momentOn) this.nextMoment();
+  }
+  nextMoment() {
+    const q = this.moments && this.moments.shift();
+    let el = $('moment');
+    if (!q) { this.momentOn = false; if (el) el.className = 'hidden'; return; }
+    if (!el) { el = document.createElement('div'); el.id = 'moment'; el.setAttribute('role', 'status'); $('hud').appendChild(el); }
+    this.momentOn = true;
+    el.className = '';
+    el.innerHTML = `<b>${esc(q[0])}</b>${q[1] ? `<small>${esc(q[1])}</small>` : ''}`;
+    void el.offsetWidth;
+    el.className = `on ${q[2]}`;
+    clearTimeout(this.momentT);
+    this.momentT = setTimeout(() => { el.classList.add('out'); this.momentT = setTimeout(() => this.nextMoment(), 420); }, 2600);
+  }
+
   toast(text, tone = 'info', short = '') {
     if (tone === 'safety') { if (!$('hud').classList.contains('hidden')) this.safetyNudge(); return; }
     // still on the title screen (you sign in there, before PLAY): held back and shown once you're in, if
@@ -374,6 +430,8 @@ export class HUD {
     const msg = localizeText(text);
     if (this.deathRevealed && this.DS && performance.now() - (this.downAsked || 0) < 4000) this.DS.note(this, msg, tone);   // (the answer to a choice on the death panel, which covers the notes: it says it there)
     logNote(msg, tone);   // (kept in full for the phone's Log: client/notelog.js)
+    const lv = /^(.+?) up: level (\d+)/.exec(msg);   // (a skill up - server skills.js: the big moment says it, the Log keeps the line)
+    if (lv) { this.moment('LEVEL UP', `${lv[1]} - level ${lv[2]}`, 'good'); return; }
     // one line on the screen (UI-4): the server's short line for it, else its first sentence - a long one cut with an
     // ellipsis and a tap away from the Log; two at most, each up a few seconds; the same note again while it's still up
     // isn't stacked: it moves to the front with its time restarted and a count (the user, 2026-10-08)
@@ -432,36 +490,65 @@ export class HUD {
   }
 
   // ---- menu ----
+  // (UI-10: docked at the foot. A few lines with no prices are a conversation - UIC-16: who, what they say, the answers
+  // numbered as their keys; a shop has your wallet in its head - UIC-18: with guns their damage and range as bars, a tab
+  // for each kind, BUY on each row, a line saying why when you can't afford the one you're on)
   openMenu(m) {
+    if (!this.menu || this.menu.poi !== m.poi || this.menu.title !== m.title) this.menuTab = null;
     this.menu = m;
-    $('menu').classList.remove('hidden');
+    const el = $('menu'), store = m.opts.some((o) => o.price !== undefined), guns = m.opts.some((o) => o.wpn !== undefined);
+    const talk = !store && !m.board && m.opts.length <= 4, funds = (m.cash || 0) + (m.bank || 0);
+    el.classList.remove('hidden');
+    el.classList.toggle('m-talk', talk); el.classList.toggle('m-store', store); el.classList.toggle('m-guns', guns);
     $('m-title').textContent = m.title;
     $('m-sub').textContent = localizeText(m.sub || '');
+    const poi = this.map && this.map.pois && this.map.pois[m.poi];
+    $('m-face').innerHTML = talk ? icon(MENU_FACE[poi && poi.kind] || 'talk') : '';
+    $('m-wallet').innerHTML = store ? `${icon('money')}<b>$${(m.cash || 0).toLocaleString('en-US')}</b><small>bank $${(m.bank || 0).toLocaleString('en-US')}</small>` : '';
     const bd = $('m-board');   // (a casino's table: server casino.js)
     bd.classList.toggle('hidden', !m.board);
     bd.innerHTML = (m.board || []).map((r) => `<div class="brow${r.cls ? ' ' + esc(r.cls) : ''}"><span class="bk">${esc(r.k)}</span><span class="bi">${r.items.map((i) => `<b class="${i.c}">${esc(i.t)}</b>`).join('')}</span><span class="bv">${esc(r.v)}</span></div>`).join('');
-    $('m-money').textContent = `Wallet $${m.cash.toLocaleString()} · Bank $${m.bank.toLocaleString()}`;
+    $('m-money').textContent = store || talk ? '' : `Wallet $${m.cash.toLocaleString('en-US')} · Bank $${m.bank.toLocaleString('en-US')}`;
+    // a gun store's tabs: each kind it has (pistols, rifles, melee, throwables, ammo, gear)
+    const kinds = guns ? [...new Set(m.opts.map(optKind))] : [];
+    const tabs = $('m-tabs');
+    tabs.classList.toggle('hidden', kinds.length < 2);
+    if (kinds.length >= 2) {
+      if (!kinds.includes(this.menuTab)) this.menuTab = kinds[0];
+      tabs.innerHTML = kinds.map((k) => `<button class="tab${k === this.menuTab ? ' on' : ''}" role="tab" aria-selected="${k === this.menuTab}" data-k="${k}">${KIND_NAME[k]}</button>`).join('');
+      for (const b of tabs.querySelectorAll('[data-k]')) b.onclick = () => { this.menuTab = b.dataset.k; this.menuFocus = this.menuShown().find((i) => i >= 0) ?? 0; this.openMenu(this.menu); };
+    } else this.menuTab = null;
+    const shown = this.menuShown();
+    if (!shown.includes(this.menuFocus)) this.menuFocus = shown[0] ?? 0;
     const box = $('m-opts');
     box.innerHTML = '';
-    m.opts.forEach((o, i) => {
+    shown.forEach((i, n) => {
+      const o = m.opts[i];
       const b = document.createElement('button');
       b.className = 'opt' + (i === this.menuFocus ? ' focus' : '');
       b.disabled = !!o.dis;
-      const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${-o.price}</span>` : `<span class="price">$${o.price.toLocaleString()}</span>`;
-      // weapon offers carry a picture (placeholder pixel art until the final weapon art lands) and,
-      // in the armory, rough stat bars
-      const pic = o.wpn !== undefined ? `<img class="wpn" alt="" src="${weaponThumb(o.wpn)}">` : '';
-      const bars = o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => `<i>${k}<b style="width:${v * 8}px"></b></i>`).join('')}</span>` : '';
+      const short = o.price !== undefined && o.price > 0 && o.price > funds;
+      const price = o.price === undefined ? '' : o.price < 0 ? `<span class="price sell">+$${(-o.price).toLocaleString('en-US')}</span>` : `<span class="price${short ? ' short' : ''}">$${o.price.toLocaleString('en-US')}</span>`;
+      // weapon offers carry a picture (placeholder pixel art until the final weapon art lands), their damage and range
+      // (its class's glyph - pistol, rifle, knife...: the top-down sprites read as thin bars at a row's size, 11-04 review)
+      const w = o.wpn !== undefined ? WEAPON_BY_I.get(o.wpn) : null;
+      const pic = w ? `<span class="wpn">${monoGlyph(glyphOfWeapon(w.id, w.type), 30)}</span>` : '';
+      const bars = w ? `<span class="stats">${statBar('DMG', gunDmg(w))}${statBar('RNG', gunRng(w))}</span>` : o.stats ? `<span class="stats">${[['PWR', o.stats.pow], ['RNG', o.stats.rng], ['ACC', o.stats.acc]].map(([k, v]) => statBar(k, Math.round(v * 8 / 5))).join('')}</span>` : '';
+      const buy = store && o.price > 0 ? `<span class="buy${o.dis || short ? ' off' : ''}">${o.note === 'owned' ? 'OWNED' : 'BUY'}</span>` : '';
       if (pic) b.classList.add('has-wpn');
       if (o.note && o.label.length + o.note.length > 40) b.classList.add('two');   // (a long row: its note on a line of its own, not run on from a label that wraps)
-      b.innerHTML = `${pic}<span>${esc(o.label)}${o.note ? `<span class="note">${esc(o.note)}</span>` : ''}${bars}</span>${price}`;
+      const key = n < 9 ? `<span class="okey">${n + 1}</span>` : '';
+      b.innerHTML = `${key}${pic}<span class="olab">${esc(o.label)}${o.note && o.note !== 'owned' ? `<span class="note">${esc(o.note)}</span>` : ''}</span>${bars}${price}${buy}`;
       b.onclick = () => this.choose(i);
       box.appendChild(b);
     });
-    if (this.menuFocus >= m.opts.length) this.menuFocus = 0;
+    const f = m.opts[this.menuFocus];
+    $('m-foot').textContent = f && f.price > 0 && f.price > funds && !f.dis ? `Not enough cash for ${f.label}.` : '';
     const cue = () => box.classList.toggle('cue-down', box.scrollTop + box.clientHeight < box.scrollHeight - 4);   // (more below: a fade at the foot)
     box.onscroll = cue; requestAnimationFrame(cue);
   }
+  // the options on show (the tab's, in a gun store), as indexes into menu.opts
+  menuShown() { const m = this.menu; return m ? m.opts.map((o, i) => (!this.menuTab || optKind(o) === this.menuTab ? i : -1)).filter((i) => i >= 0) : []; }
   choose(i) {
     const o = this.menu && this.menu.opts[i];
     if (!o || o.dis) return;
@@ -472,9 +559,12 @@ export class HUD {
   }
   navMenu(d) {
     if (!this.menu) return;
-    this.menuFocus = (this.menuFocus + d + this.menu.opts.length) % this.menu.opts.length;
+    const sh = this.menuShown(), k = Math.max(0, sh.indexOf(this.menuFocus));
+    this.menuFocus = sh[(k + d + sh.length) % sh.length] ?? 0;
     this.openMenu(this.menu);
   }
+  // a number key: the n-th option on show
+  pickMenu(n) { const i = this.menuShown()[n]; if (i !== undefined) this.choose(i); }
   closeMenu() {
     this.menu = null; this.menuFocus = 0;
     $('menu').classList.add('hidden');
@@ -690,12 +780,34 @@ const POI_ICON = {
 const ICON_MERGE = 640;
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
-  const skip = new Set(), kept = [];
-  for (const p of map.places || map.pois) {   // (World v3's window: the whole world's places, from the index)
-    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
-    if (kept.some((q) => q.kind === p.kind && Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE)) skip.add(p.id); else kept.push(p);
-  }
+  const list = map.places || map.pois;   // (World v3's window: the whole world's places, from the index)
+  let skip = SKIPS.get(list);
+  if (!skip) SKIPS.set(list, (skip = iconMerge(list)));
   Object.defineProperty(map, '_iconSkip', { value: skip, enumerable: false, configurable: true });
+  return skip;
+}
+// the places whose icon a nearer one of the same kind stands for (within ICON_MERGE, the first in the list kept): each
+// kept place goes in a grid of ICON_MERGE cells by kind, so a place looks at the 3 x 3 cells round it - it looked at
+// every place kept so far, of all kinds (World v3's thousands of places: 0.9 s of the page's start on a phone-slow
+// CPU, again at every window swap - tools/phonebench.mjs --profile, hud.js iconSkip)
+const SKIPS = new WeakMap();
+export function iconMerge(list) {
+  const skip = new Set(), byKind = new Map();
+  for (const p of list || []) {
+    if (!p || p.kind === 'delivery' || p.kind === 'vending' || p.kind === 'reception' || p.kind === 'evidence') continue;   // (no icons)
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;   // (kept, and never near another: as Math.hypot of NaN)
+    let G = byKind.get(p.kind);
+    if (!G) byKind.set(p.kind, (G = new Map()));
+    const cx = Math.floor(p.x / ICON_MERGE), cy = Math.floor(p.y / ICON_MERGE);
+    let near = false;
+    for (let dy = -1; dy <= 1 && !near; dy++) for (let dx = -1; dx <= 1 && !near; dx++) {
+      const cell = G.get(`${cx + dx},${cy + dy}`);
+      if (cell) for (const q of cell) if (Math.hypot(q.x - p.x, q.y - p.y) < ICON_MERGE) { near = true; break; }
+    }
+    if (near) { skip.add(p.id); continue; }
+    const k = `${cx},${cy}`, cell = G.get(k);
+    if (cell) cell.push(p); else G.set(k, [p]);
+  }
   return skip;
 }
 

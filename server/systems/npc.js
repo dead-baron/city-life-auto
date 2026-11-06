@@ -461,7 +461,7 @@ function pickWaypoint(world, ped) {
 // skateboarding or hanging out"). A wanderer's next waypoint is never in it nor across it; one who finds themselves on
 // it (spawned there before, scared onto it) heads off it the nearest way; nobody's spawned on it.
 const SKATE_PAD = 12;
-const skating = (ped) => ped.gt === 'skate' || ped.gt === 'blades' || !!ped.board;
+const skating = (ped) => ped.gt === 'skate' || ped.gt === 'blade' || !!ped.board;
 export function skateAt(map, x, y) {
   const L = map.skateSpots;
   if (!L) return null;

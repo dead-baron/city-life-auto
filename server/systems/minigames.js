@@ -216,7 +216,7 @@ export function update(world, dt) {
       if (!alive[0] || !alive[1]) { finish(world, venue, st, alive[0] ? 0 : 1, 'last team standing'); return; }
       if (venue.kind === 'soccer' && now - st.t > SOCCER_MATCH_S) {
         const w = st.score[0] === st.score[1] ? -1 : st.score[0] > st.score[1] ? 0 : 1;
-        if (w < 0) { tellAll(world, st, 'Full time - it\'s a draw!', 'info'); st.phase = 'results'; st.t = now + RESULTS_S; world.broadcast({ e: 'teams', v: venue.id, t: [[], []] }); }
+        if (w < 0) { tellAll(world, st, 'Full time - it\'s a tie!', 'info'); st.phase = 'results'; st.t = now + RESULTS_S; world.broadcast({ e: 'teams', v: venue.id, t: [[], []] }); }
         else finish(world, venue, st, w, 'full time');
         return;
       }

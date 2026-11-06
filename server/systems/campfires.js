@@ -169,7 +169,7 @@ export function build(world, p) {
   const b = { id: world.campN, x, y, a: Math.atan2(y - ped.y, x - ped.x), owner: p.pid, at: world.time, lit: true, away: 0 };
   B.set(b.id, b);
   send(world, b);
-  world.notify(p, 'You stack the logs, set the seats round and get it going. Sit by it a while to warm up.', 'good');
+  world.notify(p, 'You stack the logs, set the seats around and get it going. Sit by it a while to warm up.', 'good');
   p.meDirty = true;
   store.touch();
   return true;

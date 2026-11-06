@@ -41,7 +41,7 @@ export const REACH = {
 // the boathouse on its south shore by Lake Road - world3-towns.js TOWN_ROADS3)
 export const KESTREL = {
   island: { at: [3390, 1050], rx: 28, ry: 19 },
-  lookout: [3430, 860], camp: [3200, 930, 3236, 968], boathouse: [3350, 1192], rentName: 'Kestrel Lake Boat Hire',
+  lookout: [3430, 860], camp: [3200, 930, 3236, 968], boathouse: [3350, 1192], rentName: 'Kestrel Lake Boat Rental',
   belt: [3100, 700, 3660, 1230],   // (the lake's green belt: the box it's looked for in; its outlet, the Long Reach, below it)
   // (v3b: the east shore's dock north of where Lakeshore Drive runs along the shore)
   fishing: [['East Shore Fishing Dock', [3600, 1046], [-1, 0]], ['North Shore Fishing Dock', [3450, 950], [0, 1]], ['Reed Bay Fishing Dock', [3250, 1192], [0, -1]]],
@@ -482,10 +482,10 @@ export function waterDone(m, H3) {
     const pathTiles = gone.size - before.size;
     clearTiles();
     let office = null;
-    for (const o of [6, 9, 12]) { if (office) break; for (const s of [1, -1]) { const x = cx - ox * o + px * s * 7, y = cy - oy * o + py * s * 7; office = K.addBld(Math.round(x) - 3, Math.round(y) - 2, 6, 5, 'prison', 'Prison Harbour Office', 'tar', { spec: { ...STONE, floors: 1 } }); if (office) break; } }
+    for (const o of [6, 9, 12]) { if (office) break; for (const s of [1, -1]) { const x = cx - ox * o + px * s * 7, y = cy - oy * o + py * s * 7; office = K.addBld(Math.round(x) - 3, Math.round(y) - 2, 6, 5, 'prison', 'Prison Harbor Office', 'tar', { spec: { ...STONE, floors: 1 } }); if (office) break; } }
     m.prison.dock = { x: (cx + ox * 14 + 0.5) * TILE, y: (cy + oy * 14 + 0.5) * TILE };
     for (const [dx, dy] of [[0, -1], [0, 1]]) m.prison.guards.push({ x: (cx - ox * 2 + px * 3 * dy + 0.5) * TILE, y: (cy - oy * 2 + py * 3 * dy + 0.5) * TILE, harbour: true });
-    K.landmark('Prison Island Harbour', 'harbour', Math.min(cx, cx + ox * 14) - 4, Math.min(cy, cy + oy * 14) - 4, Math.max(cx, cx + ox * 14) + 5, Math.max(cy, cy + oy * 14) + 5);
+    K.landmark('Prison Island Harbor', 'harbour', Math.min(cx, cx + ox * 14) - 4, Math.min(cy, cy + oy * 14) - 4, Math.max(cx, cx + ox * 14) + 5, Math.max(cy, cy + oy * 14) + 5);
     out.harbour = { stop: st.name, shore: [sx, sy], pier, path: pathTiles, office: office ? office.id : -1 };
   }
   if (m.prison) { const [x0, y0] = PRISON.box; m.prison.gate = m.gates.findIndex((g) => g.rule === 'police' && g.rect && g.rect.tx === x0 && g.rect.ty === y0); if (out.prison) out.prison.gate = m.prison.gate; }

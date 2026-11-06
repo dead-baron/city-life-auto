@@ -47,7 +47,7 @@ export function toggle(world, p, on) {
   }
   const want = on === undefined ? !prof.light : !!on;
   if (want && fuelLeft(prof, kind) <= 0 && !refill(world, p, kind)) {
-    if (world.time - (p.noLightAt ?? -99) > 4) { p.noLightAt = world.time; world.notify(p, `Your ${LIGHTS[kind].name.toLowerCase()}'s batteries are flat - batteries at hardware stores and gas stations.`, 'warn'); }
+    if (world.time - (p.noLightAt ?? -99) > 4) { p.noLightAt = world.time; world.notify(p, `Your ${LIGHTS[kind].name.toLowerCase()}'s batteries are dead - batteries at hardware stores and gas stations.`, 'warn'); }
     return false;
   }
   prof.light = want;
@@ -164,7 +164,7 @@ export function interaction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.carrying) return null;
   const g = lanternNear(world, ped);
-  return g ? { label: g.dark ? 'Pick up the lantern (its batteries are flat)' : 'Pick up the lantern', run: () => pickUp(world, p, g) } : null;
+  return g ? { label: g.dark ? 'Pick up the lantern (its batteries are dead)' : 'Pick up the lantern', run: () => pickUp(world, p, g) } : null;
 }
 // for a player joining: every light on the ground as [id, code, x, y, colour, seconds left (-1: on batteries), dark]
 export function groundList(world) {
@@ -185,7 +185,7 @@ export function update(world, dt) {
     const left = fuelLeft(p.profile, kind) - step;
     setFuel(p.profile, kind, left);
     if (left <= 0 && !refill(world, p, kind)) {
-      world.notify(p, `Your ${L.name.toLowerCase()} flickers and dies: the batteries are flat. Batteries at hardware stores and gas stations.`, 'warn');
+      world.notify(p, `Your ${L.name.toLowerCase()} flickers and dies: the batteries are dead. Batteries at hardware stores and gas stations.`, 'warn');
       sync(world, p);
     }
   }

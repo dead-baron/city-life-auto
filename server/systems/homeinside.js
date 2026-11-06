@@ -86,7 +86,7 @@ export function doorInteraction(world, p) {
     h = world.map.homes[poi.home];
   } else if ((h = homes.backDoorNear(world, ped.x, ped.y))) back = true;   // (the mansion's garden door, its south side)
   if (!h) return null;
-  if (!world.homeOwner.has(h.id)) return back ? { label: `${h.name}'s garden door - for sale: its front door is round the north side`, passive: true, run: () => {} } : null;
+  if (!world.homeOwner.has(h.id)) return back ? { label: `${h.name}'s garden door - for sale: its front door is around the north side`, passive: true, run: () => {} } : null;
   if (world.homeOwner.get(h.id) === p.pid) {
     if (!p.homePre && p.conn) { p.homePre = 1; p.conn.sendJSON({ t: 'home', pre: 1 }); }   // (the page fetches the rooms' drawing now, so they're there the moment you're in)
     return { label: `Go inside ${h.name}`, run: () => goIn(world, p, h) };
@@ -124,10 +124,10 @@ const ownsIn = (world, p, block) => (world.unitsOf.get(block) || []).some((id) =
 const nameOf = (world, pid) => { const q = world.players.get(pid), prof = q ? q.profile : store.get(pid); return (q && q.name) || (prof && prof.name) || 'someone'; };
 function lobbyInteraction(world, p, h, s) {
   const L = planFor(h), u = useAt(L, s.x, s.y, HOME_IN.reach), base = world.map.homes[h.block], none = () => {};
-  if (!u) return { label: `${base.name} - the lobby: the flats' doors along the landing, the mailboxes`, passive: true, run: none };
+  if (!u) return { label: `${base.name} - the lobby: the apartments' doors along the landing, the mailboxes`, passive: true, run: none };
   if (u.use === 'door') return { label: 'Out to the street', run: () => leave(world, p) };
   if (u.use === 'mail') {
-    if (!ownsIn(world, p, h.block)) return { label: 'The mailboxes - one for each flat', passive: true, run: none };
+    if (!ownsIn(world, p, h.block)) return { label: 'The mailboxes - one for each apartment', passive: true, run: none };
     const n = mail.unread(p.profile);
     return { label: `Your mailbox${n ? ` - ${n} new` : ''}`, run: () => { openMenu(world, p, 'mail'); send(world, p, true); } };
   }
@@ -136,7 +136,7 @@ function lobbyInteraction(world, p, h, s) {
   if (!f) return { label: `Unit ${u.n}`, passive: true, run: none };
   const o = world.homeOwner.get(f.id), nm = `Unit ${u.n}`;
   if (o === p.pid) return { label: `${nm} - your door: go in`, run: () => homes.goInside(world, p, f) };
-  if (!o) return { label: `${nm} - for sale, ${money(f.price)}: look round or buy`, run: () => { p.lobbyPick = f.id; openMenu(world, p, 'unit'); } };
+  if (!o) return { label: `${nm} - for sale, ${money(f.price)}: look around or buy`, run: () => { p.lobbyPick = f.id; openMenu(world, p, 'unit'); } };
   const host = hostIn(world, f);
   if (!host) return { label: `${nm} - ${nameOf(world, o)}'s (nobody's in)`, passive: true, run: none };
   if (p.knock && p.knock.home === f.id && world.time - p.knock.at < 20) return { label: `Waiting for ${host.name} to open the door...`, passive: true, run: none };
@@ -223,7 +223,7 @@ export function tour(world, p, h) {
   ped.home = { id: h.id, x: L.spawn.x, y: L.spawn.y, a: -Math.PI / 2, mv: false, sleep: 0, shower: 0, eatAt: -9, tour: 1 };
   p.homeMenu = null; p.knock = null; p.meDirty = true;
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
-  world.notify(p, `Having a look round ${h.name} - ${money(h.price)}. To buy it, the front door.`, 'info');
+  world.notify(p, `Having a look around ${h.name} - ${money(h.price)}. To buy it, the front door.`, 'info');
   send(world, p, true);
   return null;
 }
@@ -303,7 +303,7 @@ export function interaction(world, p) {
   if (s.tour) {   // a visitor: the door is the way out (or the sale), the rest is to look at - the door first when it's in reach
     const L = planFor(h), D = L.door, dd = Math.hypot(Math.max(D.x - TILE_IN / 2 - s.x, 0, s.x - D.x - TILE_IN / 2), Math.max(D.y - TILE_IN / 2 - s.y, 0, s.y - D.y - TILE_IN / 2));
     if ((u && u.use === 'door') || dd <= HOME_IN.reach + 2) return { label: `The front door - buy ${h.name} (${money(h.price)}) or step outside`, run: () => openMenu(world, p, 'tour') };
-    return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look round - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
+    return { label: `${u ? `${THING[u.use] || 'That'} comes with the place - ` : 'Having a look around - '}${h.name}, ${money(h.price)}`, passive: true, run: () => {} };
   }
   if (s.seat) return { label: s.soak ? 'In the hot tub - move to get out' : s.ride ? 'Riding the exercise bike - move to get off' : tvOn(world, h) ? 'Watching TV - move to get up' : 'Sitting down - move to get up', passive: true, run: () => {} };
   const f = furnitureAt(world, h, s);   // (a seat or the TV - the couch, an armchair, the cinema's rows; the decor's too)
@@ -397,8 +397,8 @@ function menuOf(world, p, h, what) {
       else {
         const t = mortgage.terms(f), beds = bedsIn(f);
         title = `${f.name} - for sale`;
-        sub = `A ${f.what || 'flat'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
-        opts.push({ id: 'hi:ltour', label: 'Take a look inside', note: 'walk round it first' });
+        sub = `A ${f.what || 'unit'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
+        opts.push({ id: 'hi:ltour', label: 'Take a look inside', note: 'walk around it first' });
         opts.push({ id: 'hi:lbuy', label: `Buy unit ${f.unit || 1}`, price: f.price });
         opts.push({ id: 'hi:lmort', label: `Buy it with a mortgage: ${t.days} payments of ${money(t.pay)} a day`, price: t.deposit, note: 'deposit' });
       }
@@ -519,7 +519,7 @@ function own(world, p, h, parts) {
       return homes.sell(world, p, h);
     }
     case 'tbuy': {   // bought on a look round: yours, and you're in it
-      if (!ped.home || !ped.home.tour) return 'Not on a look round.';
+      if (!ped.home || !ped.home.tour) return 'Not while looking around.';
       const err = homes.buy(world, p, h, economy.payFrom);
       if (err) return err;
       ped.home.tour = 0;
@@ -528,7 +528,7 @@ function own(world, p, h, parts) {
       return null;
     }
     case 'tmort': {   // on a mortgage (mortgage.js)
-      if (!ped.home || !ped.home.tour) return 'Not on a look round.';
+      if (!ped.home || !ped.home.tour) return 'Not while looking around.';
       const err = mortgage.buyWith(world, p, h, economy.payFrom);
       if (err) return err;
       ped.home.tour = 0;

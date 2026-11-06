@@ -182,6 +182,7 @@ export function createLaunch(opts) {
   function onMoney(p, src, net, opt) {
     analytics.money(p, src, net, opt);
     if (net > 0 && src !== 'dev') p.anEarnTotal = (p.anEarnTotal || 0) + net;
+    if (p.sess && src !== 'dev') { if (net > 0) p.sess.earned += net; else p.sess.spent -= net; }   // (the safe exit's summary: players.js sessionSummary)
     const a = p.acct;
     if (Math.abs(net) >= 1) note(a, net > 0 ? 'earn' : 'spend', `${net > 0 ? '+' : '-'}$${Math.abs(Math.round(net))} ${src}${opt ? ' ' + String(opt).slice(0, 30) : ''}`);
     if (net < 0 && src.startsWith('shop:')) { notePurchase(a, -net, `${src.slice(5)}${opt ? ' ' + String(opt).slice(0, 30) : ''}`); analytics.event('purchase', p, { what: src.slice(5) }); }

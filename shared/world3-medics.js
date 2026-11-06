@@ -37,23 +37,23 @@ export const CLINICS3 = [
 ];
 // [name, the spot (tiles) or a place's name, roof] - built by the road nearest the spot (or by the place)
 export const POSTS3 = [
-  ['Coral Cay First Aid Post', 'Tiki Point', 'shingle'],   // (by the north beach's bar: a lifeguard tower - the key is built up to its beaches)
+  ['Coral Cay First Aid Station', 'Tiki Point', 'shingle'],   // (by the north beach's bar: a lifeguard tower - the key is built up to its beaches)
   ['Egret Point Clinic', [1137, 3140], 'shingle'],
   ['Egret Marsh Ranger Station', [900, 2450], 'shingle'],
   ['Pine Gulch Ranger Station', [600, 1800], 'shingle'],         // (Highland Woods' south-west and the Egret Coast's north)
   ['Highland Ranger Station', [1117, 650], 'shingle'],
   ['Granite Peaks Ranger Station', [600, 850], 'shingle'],
   ['Summit Road Ranger Station', [1850, 400], 'shingle'],
-  ['Red Rock First Aid Post', [5600, 1700], 'tar'],
-  ['Eastern Desert First Aid Post', [5950, 1000], 'tar'],
-  ['Sandpiper Junction First Aid Post', [4800, 2250], 'shingle'],
+  ['Red Rock First Aid Station', [5600, 1700], 'tar'],
+  ['Eastern Desert First Aid Station', [5950, 1000], 'tar'],
+  ['Sandpiper Junction First Aid Station', [4800, 2250], 'shingle'],
 ];
 export const DROP_SPECIALS3 = new Set(['Northshore Medical']);
 
 // the lot buildings a clinic may move into (the prefab's key): storefronts, shops, restaurants, small offices (the shops
 // pass takes one by the same rules where a gun shop or a store can go nowhere else - world3-shops.js storefront)
 export const STORE_KEYS = /^(apt1|apt2|rest1|rest2|strip|shanty|shops|liquor|conv|quickstop|diner|boutique|tattoo|trail|repair|bank2)/;
-export const NOT_INTO = /church|chapel|hotel|motel|inn\b|lodge|warehouse|factory|freight|cargo|stadium|galleria|station|school|library|museum|theatre|club|bar\b|saloon|tap\b|pub\b|bank|police|fire|casino|salvage|mill|elevator/i;
+export const NOT_INTO = /church|chapel|hotel|motel|inn\b|lodge|warehouse|factory|freight|cargo|stadium|galleria|station|school|library|museum|theat(?:re|er)|club|bar\b|saloon|tap\b|pub\b|bank|police|fire|casino|salvage|mill|elevator/i;
 
 // The wall a lot building's doorway goes in: where its own door is, else its prefab's front (map.js walkInSouth wants
 // the same first)
