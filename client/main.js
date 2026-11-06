@@ -5102,6 +5102,10 @@ function drawWorldLabels(peds, vehs, now, z) {
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
 // pick up, in world px.
 const reflSrc = [], selfLit = [], countryLit = [];
+// the lights wet ground and the rain catch (reflSrc): pooled records, filled afresh each frame - a night in the rain made
+// a few hundred new objects a frame here (11-06: the page's garbage, its collector's pauses)
+const REFL_POOL = [];
+function refl(x, y, c, a) { const r = REFL_POOL[reflSrc.length] || (REFL_POOL[reflSrc.length] = { x: 0, y: 0, c: null, a: 0 }); r.x = x; r.y = y; r.c = c; r.a = a; reflSrc.push(r); }
 // shadow sizes (height, footprint) of the tall country props
 // props that lie flat (or draw their own) and cast nothing
 const NO_CAST = new Set(['gravel', 'rubble', 'flowerbed', 'mosaic', 'rwlight', 'painted', 'plamp', 'sigpole', 'atmw', 'plane', 'solar', 'subway_l', 'subway_r', 'roof_ac', 'roof_heli', 'roof_tanks', 'roof_sky', 'roof_access']);
@@ -5181,7 +5185,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     L.add(h.x, h.y, 190, LIGHT.sodium, 1.05 * lv);
     L.glow(h.x, h.y, 22, LIGHT.warm, 0.6 * lv);                 // the bulb
     L.glow(h.x, h.y, 130, LIGHT.sodium, 0.1 * lv * haze);       // light hanging in the air round it
-    reflSrc.push({ x: h.x, y: h.y, c: LIGHT.sodium, a: 0.9 * lv });
+    refl(h.x, h.y, LIGHT.sodium, 0.9 * lv);
   });
   if (night > 0.05) {
     // lit windows and shop fronts throw light out onto the pavement
@@ -5203,7 +5207,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); return; }
       if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') return;   // (a race's start: out on the track or the water)
       L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
-      reflSrc.push({ x: p.x, y: p.y, c: LIGHT.warm, a: 0.4 * night });
+      refl(p.x, p.y, LIGHT.warm, 0.4 * night);
     });
     const [cx0, cx1, cy0, cy1] = S.chunkView;
     for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) {
@@ -5229,7 +5233,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         if (!p.lit) continue;
         L.add(p.x, p.y - 8, 170, LIGHT.fire, (0.35 + 0.8 * night) * fl);
         L.glow(p.x, p.y - 10, 26, LIGHT.fire, (0.15 + 0.4 * night) * fl);
-        reflSrc.push({ x: p.x, y: p.y - 8, c: LIGHT.fire, a: 0.7 * night });
+        refl(p.x, p.y - 8, LIGHT.fire, 0.7 * night);
         if (Math.random() < dt * 1.6) S.fx.smoke(p.x + (Math.random() - 0.5) * 4, p.y - 16, false);
         if (night > 0.05) countryLit.push(p);
       } else if (p.t === 'flare') {
@@ -5240,7 +5244,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         if (night > 0.05) countryLit.push(p);
       } else if (night > 0.05) {
         countryLit.push(p);
-        if (p.t === 'dscreen') { const sy = countryLightY(p, 0.65); L.add(p.x, sy + 120, 340, LIGHT.white, 0.75 * night); L.glow(p.x, sy, 160, LIGHT.white, 0.06 * night * haze); reflSrc.push({ x: p.x, y: sy + 120, c: LIGHT.white, a: 0.6 * night }); }
+        if (p.t === 'dscreen') { const sy = countryLightY(p, 0.65); L.add(p.x, sy + 120, 340, LIGHT.white, 0.75 * night); L.glow(p.x, sy, 160, LIGHT.white, 0.06 * night * haze); refl(p.x, sy + 120, LIGHT.white, 0.6 * night); }
         else if (p.t === 'marquee') { L.add(p.x, p.y - 50, 110, LIGHT.warm, 0.8 * night); L.glow(p.x, p.y - 56, 40, LIGHT.amber, 0.12 * night * haze); }
         else if (p.t === 'dome') { L.add(p.x, p.y - 30, 160, LIGHT.window, 0.5 * night); }
         else if (p.t === 'radiotower' || p.t === 'turbine') L.glow(p.x, countryLightY(p, 0.95), 30, LIGHT.red, 0.12 * night * haze);
@@ -5253,7 +5257,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) for (const p of S.ground.overhead(cx, cy)) {
       if (p.broken) continue;
       if (p.t === 'billboard' || p.t === 'busstop') selfLit.push(p);
-      if (p.t === 'billboard') { const y = p.y - 26; L.add(p.x, y, 110, LIGHT.white, 0.8 * night); L.glow(p.x, y - 6, 60, LIGHT.white, 0.08 * night * haze); reflSrc.push({ x: p.x, y, c: LIGHT.white, a: 0.6 * night }); }
+      if (p.t === 'billboard') { const y = p.y - 26; L.add(p.x, y, 110, LIGHT.white, 0.8 * night); L.glow(p.x, y - 6, 60, LIGHT.white, 0.08 * night * haze); refl(p.x, y, LIGHT.white, 0.6 * night); }
       else if (p.t === 'busstop') { L.add(p.x + 26, p.y - 4, 75, LIGHT.white, 0.6 * night); L.glow(p.x + 26, p.y - 10, 16, LIGHT.warm, 0.3 * night); }
       else if (p.t === 'phonebox') { L.add(p.x, p.y, 45, LIGHT.warm, 0.5 * night); }
     }
@@ -5261,7 +5265,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   // traffic signals (last frame's heads: signalsTick runs later in the frame)
   for (const h of S.sigHeads || []) {
     const c = h.rgb || (h.rgb = hexRgb(h.c));
-    if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); reflSrc.push({ x: h.x, y: h.y, c, a: 0.8 * night }); }
+    if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); refl(h.x, h.y, c, 0.8 * night); }
     L.glow(h.x, h.y, 9, c, 0.25 + 0.6 * night);
     L.glow(h.x, h.y, 34, c, (0.04 + 0.1 * night) * haze);
   }
@@ -5285,7 +5289,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         L.add(tx, ty, br ? 60 : 36, LIGHT.red, br ? 0.85 : 0.45);
         L.glow(tx, ty, br ? 12 : 7, LIGHT.red, br ? 0.9 : 0.55);
       }
-      reflSrc.push({ x: fx, y: fy, c: LIGHT.head, a: 0.9 });
+      refl(fx, fy, LIGHT.head, 0.9);
     } else if (v.flags & VF.BRAKE) {
       for (const sd of [-1, 1]) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
     }
@@ -5293,7 +5297,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       const ph = Math.floor(S.loopClock * 6) % 2, col = ph ? LIGHT.red : LIGHT.blue;
       L.add(v.rx, vy, 260, col, 0.9);
       L.glow(v.rx, vy, 70, col, 0.35 + 0.15 * night);
-      reflSrc.push({ x: v.rx, y: vy, c: col, a: 0.9 });
+      refl(v.rx, vy, col, 0.9);
     }
     if (v.flags & VF.BURN) {
       const f = 0.75 + 0.25 * Math.sin(S.loopClock * 23 + v.id);
