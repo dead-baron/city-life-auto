@@ -67,6 +67,7 @@ function arrive(m) {
   if (A) end(false, true);
   const S = C.S, dur = Math.max(4, m.s || 14) * 1000;
   A = { m, t0: performance.now(), dur, chimed: false, opened: false };
+  A.iv = setInterval(() => { if (A) tick(Math.min(1, (performance.now() - A.t0) / A.dur)); }, 200);   // (its own clock too: the scene ends on time even when the frames stall - a phone loading the area)
   $('arr-name').textContent = m.name || '';
   $('arr-place').textContent = m.place || '';
   $('arr-led').textContent = `NEXT STOP · ${String(m.name || '').toUpperCase()}`;
@@ -97,6 +98,7 @@ function tick(k) {
 // skipped (Esc, B, a tap, Skip), or played to the end: the overlay away, the server told
 function end(skipped, quiet = false) {
   if (!A) return;
+  clearInterval(A.iv);
   A = null;
   C.setCam(null);
   if (C.topOverlay() === 'arrival') C.closeOverlay('arrival');

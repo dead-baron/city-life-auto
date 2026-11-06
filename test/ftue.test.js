@@ -8,6 +8,7 @@ import { makeWorld, joinPlayer, run, teleport, fakeConn, players, store } from '
 import { PROGRESS_EPOCH, resetOldEpochs } from '../server/store.js';
 import * as homes from '../server/systems/homes.js';
 import { FTUE, STAR_HEAT } from '../shared/rules.js';
+import { K } from '../shared/constants.js';
 import { DAY_PART_S } from '../shared/constants.js';
 import { STEP_CTL, ASK_POI, ANSWERS, MOMENTS, goalFor } from '../server/systems/ftue.js';
 import * as ftue from '../server/systems/ftue.js';
@@ -85,7 +86,8 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   assert.equal(m.ftue.step, 2); assert.equal(m.ftue.ctl, 'vehicle');
   assert.match(m.ftue.line, /^Get in and drive to /);
   assert.deepEqual([m.job.x, m.job.y], [goal.x, goal.y], 'the way on to the post office');
-  teleport(w, p.ped, car.x, car.y + car.def.W / 2 + 8);   // (right by its door: not the parked car beside it)
+  for (const e of w.query(car.x, car.y, 160, K.VEH)) if (e !== car) w.remove(e);   // (not the parked car beside it)
+  teleport(w, p.ped, car.x, car.y + car.def.W / 2 + 8);
   assert.ok(vehicles.tryEnter(w, p.ped), 'in the car');
   assert.equal(p.ped.vehId, car.id);
   arriveAtGoal(w, p);

@@ -192,6 +192,7 @@ function arrive(world, p, replay = false) {
     const g = starter.arrivalFor(world, p), poi = g ? world.map.pois[g.poi] : null;
     if (!poi) { f.st = 'ask'; p.ftueAskAt = world.time; return; }   // (no station anywhere: the question where you are)
     const pl = platformOf(world, poi);
+    ped.hidden = false; ped.inside = null; ped.interior = null; ped.entering = null; ped.sub = false; ped.ug = 0;   // (out of wherever they woke: a hospital's waiting room)
     ped.x = pl.x; ped.y = pl.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; ped.a = Math.PI / 2;
     world.place(ped); moved(ped);
     p.profile.pos = { x: Math.round(pl.x), y: Math.round(pl.y) };
