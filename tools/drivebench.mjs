@@ -260,6 +260,8 @@ try {
   const errors = [];
   page.on('pageerror', (e) => errors.push(String(e.message || e).slice(0, 200)));
   const swaps = [];
+  const worldLog = [];
+  page.on('console', (m) => { const t0w = m.text(); if (/^\[world\]|\[art2\]/.test(t0w) && worldLog.length < 60) worldLog.push(t0w.slice(0, 300)); });
   page.on('console', (m) => { const t = m.text(), q = /the window moved to .*assembled in (\d+) ms, swapped in (\d+) ms/.exec(t); if (q) swaps.push({ at: Date.now() - t0, assembleMs: +q[1], swapMs: +q[2], parts: (/swapped in \d+ ms \((.*)\)/.exec(t) || [])[1] || '' }); });
   const cdp = await ctx.newCDPSession(page);
   await page.goto(`${BASE}/?debug&server=${encodeURIComponent(GAME)}`, { waitUntil: 'commit' });
@@ -397,6 +399,8 @@ try {
   R.hostSlow = await page.evaluate(() => (window.__drive.hostSlow || []).sort((a, b) => b.ms - a.ms).slice(0, 120));
   log(`the renderer's slow steps: ${JSON.stringify(R.hostSlow.slice(0, 30))}`);
   R.errors = errors.slice(0, 10);
+  R.worldLog = worldLog;
+  log(`the page's [world] / [art2] lines: ${JSON.stringify(worldLog.slice(-12))}`);
   log(`drive: ${JSON.stringify({ ...R.drive, longBy: undefined, kinds: undefined, autopilot: undefined })}`);
   log(`long tasks by source: ${JSON.stringify(R.drive.longBy, null, 1)}`);
   log(`callbacks: ${JSON.stringify(R.drive.kinds)}`);

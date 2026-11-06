@@ -20521,5 +20521,11 @@ no art, graphics, resolution or render quality was lowered. No budget changed (p
 - **The night, every frame** (client/main.js collectLights, client/hud.js drawRadar): the street lamps, the shop lights
   and the radar's places are looked at round the view through grids, not the whole window's (11,220 lamps, 6,007 places
   every frame); the lights the wet ground and the rain catch are pooled records, not a few hundred new objects a frame.
+- **Models built on the page** (found by drivebench --hostprof, which times the renderer's own steps): the night's
+  headlamps built each new kind of vehicle's whole voxel model on the page's thread to read its length (art2/vehicles.js
+  vehicleAnchors: 30-70 ms a kind on the bench machine - the "lights" part's 100-250 ms frames as new traffic came into
+  view); now its dimensions' length, the same number for all 80 kinds (actors.js vehicleLength; test/art2.test.js). And the
+  aircraft's sprites - a police helicopter's model and each of its headings, 70-210 ms a time - are made by the workers
+  (the lane: worker.js 'air', 'airRotor'; the nearest heading made, or the overlay's helicopter, meanwhile).
 - **Baking ahead on a phone** (host.js _prebake): two bake workers at most bake into the store ahead of need (what the
   screen needs still takes them all) - four workers and now the lane busy for minutes on end is what heats a phone.
