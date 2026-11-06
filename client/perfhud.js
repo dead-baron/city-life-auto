@@ -45,7 +45,7 @@ function draw() {
     lines.push(`art ${TIER[s.q] || s.q} · workers ${P.workers || 0} · baking ${P.running || 0} queued ${P.queued || 0} · waiting up ${s.results} · on screen ${W ? `${W.scrHave}/${W.scr}` : '-'} (stand-ins ${W ? W.scr - W.scrHave : '-'})`);
     lines.push(`bake avg ${f0(t.bakeAvg)} ms · chunk upload avg ${f1(up)} max ${f1(t.upMax)} ms · kept ${nn.kept || 0} · server ${nn.cdn || 0} · art frame ${f1(t.frameMs)} ms · gpu ${f1(E.msGpuApprox)} ms (${E.timer || '?'})`);
     lines.push(`sprites: making ${s.sprOut} · to upload ${s.upQ} · person ${f1(w.est && w.est.ped)} ms · made here ${nn.sync || 0}${s.lane ? ` · lane ${s.lane.running}+${s.lane.queued}` : ''} · late ${s.late && s.late.of ? f1(100 * s.late.frames / s.late.of) : 0}% · slots ${E.slots || 0} · ${f0(E.gpuMB)} MB`);
-    if (E.scene) lines.push(`scene ${E.scene[0]}x${E.scene[1]} world px`);
+    if (E.scene) lines.push(`scene ${E.scene[0]}x${E.scene[1]} world px${S.winStat ? ` · windows ${S.winStat.n} (last ${f0(S.winStat.ms)} ms)` : ''} · atlas out ${E.evicted || 0}`);
   } else lines.push(`art: ${S.art2Off ? `off (${S.art2Off})` : 'starting'}`);
   const wc = document.getElementById('world'), vc = document.getElementById('view'), dpr = window.devicePixelRatio || 1;
   lines.push(`canvas ${wc ? `${wc.width}x${wc.height}` : '-'} (overlay ${vc ? `${vc.width}x${vc.height}` : '-'}) for ${innerWidth}x${innerHeight} css @${f1(dpr)} = ${f0(innerWidth * dpr)}x${f0(innerHeight * dpr)} · render ${vc ? f1(vc.width / innerWidth) : '-'}x · ${gfx.preset}`);

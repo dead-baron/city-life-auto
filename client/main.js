@@ -1282,6 +1282,7 @@ function keepWindow(job) {
     const t = performance.now(), parts = {};
     swapWorld(cityFromData(m.data), m.wid || 0, parts);
     S.win = m.win;
+    const ws = S.winStat || (S.winStat = { n: 0, ms: 0 }); ws.n++; ws.ms = performance.now() - t;   // (the perf readout: client/perfhud.js)
     console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms (${Object.entries(parts).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(', ')})`);
   };
   let saved = 0;
