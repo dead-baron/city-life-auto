@@ -1272,10 +1272,10 @@ function keepWindow(job) {
   job.onWindow = (m) => {
     if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world around you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
-    const t = performance.now();
-    swapWorld(cityFromData(m.data), m.wid || 0);
+    const t = performance.now(), parts = {};
+    swapWorld(cityFromData(m.data), m.wid || 0, parts);
     S.win = m.win;
-    console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms`);
+    console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms (${Object.entries(parts).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(', ')})`);
   };
   let saved = 0;
   clearInterval(S.winTimer);
@@ -1301,23 +1301,27 @@ function windowNotServers(m) {
   send({ t: 'diag', what: `world v3 index signature ${S.win.sig} vs server ${m.sig}` });
   return false;
 }
-function swapWorld(m, wid = 0) {   // (wid: the bake workers have this window from the city worker already - pool.js linkWindows)
+function swapWorld(m, wid = 0, T = {}) {   // (wid: the bake workers have this window from the city worker already - pool.js linkWindows; T: ms by step)
+  let t = performance.now();
+  const mk = (k) => { const n = performance.now(); T[k] = n - t; t = n; };
   const old = S.map;
   old.props.forEach((p, i) => { const q = m.props[i]; if (!q) return; if (p.broken) q.broken = p.broken; if (p.lit0 !== undefined) { q.lit0 = p.lit0; q.lit = p.lit; } });
   for (const [k, se] of old.propSolid) { const e = m.propSolid.get(k); if (e && se.off) e.off = true; }
   if (old.levels && m.levels && old.levels.broken) m.levels.broken = old.levels.broken;
   (old.gates || []).forEach((gt, i) => { const g2 = m.gates && m.gates[i]; if (g2) gt.props.forEach((pr, j) => { if (pr && g2.props[j]) g2.props[j].off = pr.off; }); });
-  S.map = m;
-  S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas);
-  S.ground = new GroundCache(m, LOW_MEM ? 12 : 24);
+  S.map = m; mk('carry');
+  S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas); mk('flora');
+  S.ground = new GroundCache(m, LOW_MEM ? 12 : 24); mk('ground');
   S.wx.map = m; S.wx.sites.clear(); S.wx.vents.clear();
   S.poleAt = null; S._hw = null;
-  S.buildings = new BuildingLayer(m, S.ground);
+  S.buildings = new BuildingLayer(m, S.ground); mk('buildings');
   if (!(S.spec && S.spec.on)) S.spec = newSpectator(m);
-  S.hud.setMap(m);
-  S.router = createRouter(m);
+  S.hud.setMap(m); mk('hud');
+  S.router = createRouter(m); mk('router');
   if (S.art2 && S.art2.setMap) S.art2.setMap(m, wid); else startArt2(m);
+  mk('art');
   for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);   // (the server's broken props the old window didn't hold)
+  mk('breaks');
 }
 
 // ---- the classic (v1) art ------------------------------------------------------------------------------
@@ -3063,6 +3067,7 @@ function render(dt) {
   // into the subway's tunnel or back out: the light eases over it (the owner's 10-07 note: "light easing in and out")
   if (!!F.sub !== !!S.subWas) { S.subWas = !!F.sub; S.subFadeAt = performance.now(); }
   drawOverlays(F, v2);
+  F.mark('overlays');   // (the HUD, the radar, the name tags: in the perf readout's page ms too)
   const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
   if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
 }
