@@ -336,7 +336,7 @@ test("the fields every window has the same (windowSteady): the same in windows f
   assert.ok(st.length > 20, `${st.length} fields`);
   for (const k of ['nodes', 'edges', 'places']) assert.ok(st.includes(k), `${k} is the same in every window`);
   for (const f of Object.keys(REGIONAL)) assert.ok(!st.includes(f.split('.')[0]), `${f}: regional`);
-  for (const k of ['x0', 'y0', 'w', 'h', 'frame']) assert.ok(!st.includes(k));
+  for (const k of ['x0', 'y0', 'w', 'h', 'frame', 'seed']) assert.ok(!st.includes(k), k);   // (seed: main.js keepWindow checks it before taking the rest)
   const frame = readIndex(pack.index).frame, wins = [[300, 300], [1300, 300], [700, 1100]].map(([x, y]) => { const keys = regionsNear(frame, x, y); return assembleCity(pack.index, filesOf(pack, keys), { window: windowRect(frame, keys) }); });
   for (const k of st) assert.ok(isDeepStrictEqual(wins[0][k], wins[1][k]) && isDeepStrictEqual(wins[0][k], wins[2][k]), `${k}: the same in each window`);
   // the page's swap (main.js keepWindow): the steady fields from the window before, the rest as sent - the same map

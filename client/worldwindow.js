@@ -106,7 +106,7 @@ export class WindowKeeper {
 export function windowSteady(indexBytes) {
   const { d: X } = readPack(indexBytes);
   const layers = new Set(X.layers.map(([k]) => k)), out = new Set(['places', 'mids', 'picture']);
-  const no = new Set(['x0', 'y0', 'w', 'h', 'frame']);
+  const no = new Set(['x0', 'y0', 'w', 'h', 'frame', 'seed']);   // (seed: the page checks a window against its city by it, first)
   for (const f of Object.keys(X.regional)) no.add(f.split('.')[0]);
   // (a ref between two fields: both go, or both stay - what one points at in the other stays the same object)
   for (let more = true; more;) {
