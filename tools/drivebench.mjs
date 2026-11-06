@@ -349,6 +349,9 @@ try {
   const hw = await page.evaluate(hudNow);
   R.onFoot = { madeHere: hw.madeHere - hf.madeHere, madeHereMs: hw.syncMs - hf.syncMs, sprReq: hw.sprReq - hf.sprReq, onFoot: await page.evaluate(() => !!(window.CLA.S.pred && window.CLA.S.pred.kind === 'ped')) };
   log(`on foot: ${JSON.stringify(R.onFoot)}`);
+  // then a teleport to the farthest place on the route: a World v3 window swap or two (their page ms by step: swaps)
+  const far = await page.evaluate((plan) => { const S = window.CLA.S; let b = null, bd = -1; for (const p of plan) { const d = Math.hypot(p.x - S.cam.x, p.y - S.cam.y); if (d > bd) { bd = d; b = p; } } return b; }, plan);
+  if (far) { const n0 = swaps.length; await page.evaluate((p) => window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y, snap: true }), far); for (let i = 0; i < 30 && swaps.length === n0; i++) await wait(1000); await wait(8000); log(`teleported to ${far.name}: ${swaps.length - n0} window swap(s)`); }
   await page.evaluate(() => { const D = window.__drive; D.rec = false; });
   if (TRACE) {
     const done = new Promise((res) => cdp.once('Tracing.tracingComplete', res));

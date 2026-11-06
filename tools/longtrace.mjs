@@ -49,7 +49,7 @@ const KIND = (e) => {
   if (/Paint|Raster|Composite|Commit/.test(n)) return 'paint / commit';
   return null;
 };
-const total = { n: tasks.length, ms: 0 }, by = new Map(), fns = new Map(), other = new Map();
+const total = { n: tasks.length, ms: 0 }, by = new Map(), fns = new Map(), other = new Map(), named = new Map();
 let j = 0;
 for (const t of tasks) {
   total.ms += t.dur / 1000;
@@ -60,7 +60,8 @@ for (const t of tasks) {
     if (e === t) continue;
     const kd = KIND(e);
     if (!kd) { const o = other.get(e.name) || { n: 0, ms: 0 }; o.n++; o.ms += e.dur / 1000; other.set(e.name, o); continue; }
-    const key = kd.startsWith('js ') ? 'js' : kd;
+    const key = kd.startsWith('js') ? 'js' : kd;
+    if (key !== 'js') { const o = named.get(`${key}: ${e.name}`) || { n: 0, ms: 0 }; o.n++; o.ms += e.dur / 1000; named.set(`${key}: ${e.name}`, o); }
     // (the outermost of each kind: nested calls of the same kind are inside it)
     const last = inner.get(key);
     if (last && e.ts < last.end) continue;
@@ -74,6 +75,8 @@ const r1 = (v) => Math.round(v);
 console.log(`long tasks (over ${MIN / 1000} ms) on the page's thread: ${total.n}, ${r1(total.ms)} ms`);
 console.log('inside them, by kind:');
 for (const [k, v] of [...by].sort((a, b) => b[1].ms - a[1].ms)) console.log(`  ${k.padEnd(24)} ${String(v.n).padStart(5)}  ${r1(v.ms)} ms`);
+console.log('...by the trace\'s names:');
+for (const [k, v] of [...named].sort((a, b) => b[1].ms - a[1].ms).slice(0, TOP)) console.log(`  ${String(r1(v.ms)).padStart(6)} ms ${String(v.n).padStart(5)}x  ${k}`);
 console.log('the JS they ran (outermost calls):');
 for (const [k, v] of [...fns].sort((a, b) => b[1].ms - a[1].ms).slice(0, TOP)) console.log(`  ${String(r1(v.ms)).padStart(6)} ms ${String(v.n).padStart(4)}x  ${k}`);
 console.log('other events inside them (the trace\'s own names, summed with what they hold):');
