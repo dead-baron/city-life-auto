@@ -12,11 +12,12 @@
 //   memory     the JS heap each minute, the engine's GPU MB, the renderer's kept chunks and sprites
 // Heavy - run it under `flock /tmp/cla-heavy.lock`:
 //   node tools/drivebench.mjs [--min 4] [--cpu 1] [--root <another build>] [--out file.json] [--label x] [--day] [--dry] [--port 8094]
-//                             [--url http://... --game ws://...] [--trace trace.json] [--car sedan] [--draw] [--cores 8]
+//                             [--url http://... --game ws://...] [--trace trace.json] [--car sedan] [--draw] [--cores 8] [--hostprof]
 // --cpu slows the page's thread (CDP; not the workers). This machine has no GPU: WebGL runs in SwiftShader on the CPU (a
 // night frame took 1.2 s, every frame a "long task" waiting on it), so by default nothing is rasterized (--nodraw: every
 // WebGL call is made, the draws are no-ops; --draw to draw). The page is told it has 8 cores and 8 GB (--cores): the
-// phone's four bake workers. Compare runs with each other, not with the phone.
+// phone's four bake workers. --hostprof times the renderer's own steps (its methods: any call over 15 ms, with its key).
+// Compare runs with each other, not with the phone.
 import { spawn } from 'node:child_process';
 import { writeFileSync, readFileSync, existsSync, statSync, createWriteStream } from 'node:fs';
 import { createServer } from 'node:http';
@@ -34,7 +35,7 @@ const arg0 = (k) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? n
 const ROOT = arg0('root') ? join(arg0('root'), '/') : HERE;
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? d : process.argv[i + 1] === undefined || process.argv[i + 1].startsWith('--') ? true : process.argv[i + 1]; };
 const PORT = +arg('port', 8094), CPU = +arg('cpu', 1), MIN = +arg('min', 4), OUT = arg('out', null), LABEL = arg('label', 'run'), TRACE = arg('trace', null);
-const NIGHT = !arg('day', false), RAIN = !arg('dry', false), CAR = arg('car', 'sedan'), NODRAW = !arg('draw', false), CORES = +arg('cores', 8);
+const HOSTPROF = !!arg('hostprof', false), NIGHT = !arg('day', false), RAIN = !arg('dry', false), CAR = arg('car', 'sedan'), NODRAW = !arg('draw', false), CORES = +arg('cores', 8);
 const req = createRequire(import.meta.url);
 let pw;
 for (const p of ['playwright', '/opt/npm-tools/node_modules/playwright', '/home/claude/.npm-global/lib/node_modules/playwright']) { try { pw = req(p); break; } catch { /* next */ } }
@@ -184,7 +185,8 @@ function autopilot(plan) {
     // (the first-time experience's question, should it come up now: closed, skipped - it holds the keys)
     { const f = S.me && S.me.ftue, now = performance.now(); if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (f && f.st !== 'done' && now - skipAt > 1000) { skipAt = now; window.CLA.send({ t: 'intro', a: 'skip' }); } }
     const p = pos();
-    if (!p) { want([]); return; }
+    // (out of the car - wrecked, pulled out: another, at most every 5 s)
+    if (!p) { want([]); const now = performance.now(); if (S.pred && S.pred.kind === 'ped' && now - (A.carAt || 0) > 5000) { A.carAt = now; A.newCars = (A.newCars || 0) + 1; window.CLA.send({ t: 'dev', c: 'car', m: D.car || 'sedan', in: true }); } return; }
     if (lastPos) { const d = Math.hypot(p.x - lastPos.x, p.y - lastPos.y); A.dist += d; if (d > 6) lastMove = performance.now(); }
     lastPos = p; A.at = [Math.round(p.x), Math.round(p.y)];
     const t = performance.now();
@@ -301,6 +303,7 @@ try {
   await page.keyboard.down('KeyW'); await wait(2500); await page.keyboard.up('KeyW');
   const p1 = await page.evaluate(() => { const P = window.CLA.S.pred, H = window.CLA.S.hud; return [P.s.x, P.s.y, !!(H && H.menuOpen), window.CLA.S.me && window.CLA.S.me.ftue ? window.CLA.S.me.ftue.st : null, [...document.querySelectorAll('[data-cla-modal]')].map((e) => e.id || e.className || 'modal').join(',')]; });
   log(`the car: ${Math.round(Math.hypot(p1[0] - p0[0], p1[1] - p0[1]))} px in 2.5 s (a menu open: ${p1[2]}, first-time experience: ${p1[3]}, modals: ${p1[4] || 'none'})`);
+  await page.evaluate((c) => { window.__drive.car = c; }, CAR);
   await page.evaluate(autopilot, plan.slice(1).concat([plan[0]]));
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
   if (TRACE) await cdp.send('Tracing.start', { transferMode: 'ReturnAsStream', traceConfig: { includedCategories: ['devtools.timeline', 'disabled-by-default-devtools.timeline', 'v8.execute', 'v8', 'blink.user_timing'], excludedCategories: ['*'] } });
@@ -308,13 +311,21 @@ try {
   R.start = h0;
   R.mapSizes = await page.evaluate(() => { const m = window.CLA.S.map, n = (a) => (a ? a.length : 0); return { w: m.w, h: m.h, props: n(m.props), lamps: n(m.lamps), pois: n(m.pois), buildings: n(m.buildings), edges: n(m.edges), nodes: n(m.nodes), lots: n(m.lots) }; });
   log(`the window: ${JSON.stringify(R.mapSizes)}`);
-  await page.evaluate(() => {
+  await page.evaluate((HOSTPROF) => {
     const D = window.__drive; D.rec = true; D.t0 = performance.now();
     // every chunk drawn from here on (the engine's uploads), to set against what was baked or fetched ahead of need
     const w = window.CLA.S.art2, E = w.E, up0 = E.uploadChunk.bind(E);
     D.shown = new Set(); D.pre0 = w.pre ? new Set(w.pre.kept) : new Set();
+    // the renderer's own steps timed (its methods, on this instance): any call over 15 ms kept with its first argument
+    D.hostSlow = [];
+    const P = Object.getPrototypeOf(w);
+    if (HOSTPROF) for (const k of Object.getOwnPropertyNames(P)) {
+      if (k === 'constructor' || k === 'frame' || k === 'stats' || typeof P[k] !== 'function') continue;
+      const f = P[k];
+      w[k] = function (...a) { const t = performance.now(); try { return f.apply(this, a); } finally { const ms = performance.now() - t; if (ms > 15 && D.rec && D.hostSlow.length < 400) D.hostSlow.push({ at: Math.round(t), ms: Math.round(ms), fn: k, a: typeof a[0] === 'string' ? a[0].slice(0, 60) : typeof a[1] === 'string' ? a[1].slice(0, 60) : '' }); } };
+    }
     E.uploadChunk = (cx, cy, ...a) => { D.shown.add(cy * 1000 + cx); return up0(cx, cy, ...a); };
-  });
+  }, HOSTPROF);
   log(`driving for ${MIN} min (cpu x${CPU}, ${NIGHT ? 'night' : 'day'}, ${RAIN ? 'rain' : 'dry'})`);
   let prevFt = 0, prevLong = 0;
   for (let mi = 0; mi < MIN; mi++) {
@@ -380,6 +391,8 @@ try {
     partsMs: Object.fromEntries(Object.entries(D.partSum).map(([k, v]) => [k, Math.round(100 * v / Math.max(1, D.partN)) / 100]).sort((a, b) => b[1] - a[1])),
   };
   R.slow = D.slow.sort((a, b) => b.ms - a.ms).slice(0, 80);
+  R.hostSlow = await page.evaluate(() => (window.__drive.hostSlow || []).sort((a, b) => b.ms - a.ms).slice(0, 120));
+  log(`the renderer's slow steps: ${JSON.stringify(R.hostSlow.slice(0, 30))}`);
   R.errors = errors.slice(0, 10);
   log(`drive: ${JSON.stringify({ ...R.drive, longBy: undefined, kinds: undefined, autopilot: undefined })}`);
   log(`long tasks by source: ${JSON.stringify(R.drive.longBy, null, 1)}`);
