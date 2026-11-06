@@ -20504,13 +20504,17 @@ for the purpose of onboarding new players (without overlapping on each other if 
 - **The arrival on the line** (client/ftue.js): the train is the page's own - three cars drawn into the frame
   (main.js `S.stageCars`), never a server train, so two arrivals never meet. It comes out of the first tunnel, eases into
   the platform and stops (`FTUE.stopS` 6 s), the chime, the doors open and you're on the platform (`FTUE.doorS` 7.2 s:
-  your own character hidden till then, `S.hideMe`); the card; the scene ends at `FTUE.arriveS` (14 -> 12 s) and the
-  question comes up while the train pulls out (`FTUE.leaveS` 9 s) into the far tunnel behind it. The camera waits by
-  the portal, follows the front car in and settles on your doors, pulled back a little (`S.camPull`: 1.55 on an
-  upright phone, 1.15 otherwise) so the train fits. On the server, the newcomer is out of everyone else's sight
+  your own character hidden till then, `S.hideMe`); it pulls out (`FTUE.leaveS` 8.4 s) and is into the far tunnel
+  `FTUE.goneS` (4.6 s) later; the scene ends at `FTUE.arriveS` (14 -> 13 s) and the question comes up. The camera
+  waits by the portal, follows the front car in, settles on your doors, looks after the train toward the far portal
+  as it leaves (an upright phone's view is narrow) and comes back to you, pulled back a little (`S.camPull`: 1.55 on
+  an upright phone, 1.15 otherwise) so the train fits. The touch buttons are hidden while it plays (`body.arriving`). On the server, the newcomer is out of everyone else's sight
   (`ped.ftueHid`, server/net.js) until the doors open - others see them appear on the platform. Skip: the train still
   coming in is gone, one in the station pulls out. The carriage-door overlay is gone; the Guide's replay (no line where
-  you stand) is the card over a slow pan.
+  you stand) is the card over a slow pan. While the card of stations is up, the page asks for the train's pictures
+  (each car, the four ways a line runs) so a phone has them baked before the train comes out of the tunnel. A page that
+  never says its scene is over gets the question `FTUE.arriveS` + 10 s in (was + 4: a stalled phone's frames).
+  `S.arrClock` (debug tools) holds the scene's clock at a moment to photograph it.
 - **The Guide:** a new entry, Arriving (Getting around). Analytics: `ftue_pick`, `ftue_pick_default`.
 - **Tests:** `test/world3arrivals.test.js` (one world build: a line per region at a station with a car park, straight,
   its platform paved between the portals, two bores with their hills, the far ends blind and walled; no main-line track

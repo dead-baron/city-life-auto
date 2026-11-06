@@ -1107,6 +1107,7 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arrival.leaving::before { transform: translateY(-100%); } #arrival.leaving::after { transform: translateY(100%); }
 .arr-pick { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 2 * var(--s4))); display: none; flex-direction: column; gap: var(--s2); padding: var(--s4); border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: var(--shadow); cursor: default; }
 #arrival.picking .arr-pick { display: flex; }
+body.arriving #touch { visibility: hidden; }
 #arrival.picking .arr-led, #arrival.picking .arr-card { display: none; }
 #arrival.picking { background: var(--ink-a); }
 .arr-pick small { color: var(--gold); font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; }

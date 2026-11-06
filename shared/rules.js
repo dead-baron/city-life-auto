@@ -33,7 +33,7 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, paint: 11 };
 // direction"): a new character picks where they arrive (pickS: the card waits this long, then the default -
 // arriveDefault, World v3's region: shared/world3-arrivals.js) and arrives by train (arriveS: the staged arrival's length,
 // skippable; on its own line the train stops stopS in, its doors open and you step off at doorS - when everyone else sees
-// you there - and it pulls out at leaveS, into the far tunnel behind the question), is asked one question
+// you there - and it pulls out at leaveS, into the far tunnel goneS later), is asked one question
 // and gets a first goal of at most three steps. carR: how near the starter car (px) is "at it"; goalR: how near the goal
 // is "there"; the goal is looked for goalMin..goalMax px from the station (the nearest beyond goalMin, else the nearest);
 // fishR: how far (tiles) round the station for a bank to fish from. The end: reward ($, cash) and xp goes of SKILL.act
@@ -41,7 +41,7 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, paint: 11 };
 // lineS: a step's or a tip's line on screen this long, then it fades. The first-time moments (once each, ever): tipGapS
 // apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier.
 // (Everyone goes through it once: profiles from before it are reset to new characters - server/store.js PROGRESS_EPOCH.)
-export const FTUE = { pickS: 60, arriveDefault: 'city', arriveS: 12, stopS: 6, doorS: 7.2, leaveS: 9, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170 };
+export const FTUE = { pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170 };
 
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;

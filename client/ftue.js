@@ -106,7 +106,7 @@ function choose(stn) {
 
 // ---- the arrival --------------------------------------------------------------------------------------------------------
 // m: { name, place, from: [x, y], to: [x, y], s (seconds), replay, line?: { x, y, a, len, in, out, stop, door }, stop,
-// door, leave (seconds: the train stopped, the doors open, it pulls out) }
+// door, leave, gone (seconds: the train stopped, the doors open, it pulls out, and how long it takes to be gone) }
 // The timeline (k: the share of s): with a line, the train in and stopped by `stop`, the chime, the doors open at `door`
 // (you on the platform), the card, the bars away at 0.92, done at 1 - the train pulls out at `leave`, on its own after.
 // Without one: the camera eases in from `from`, the card at 0.74, the same end.
@@ -124,6 +124,7 @@ function arrive(m) {
   el.classList.remove('open', 'leaving', 'lit', 'picking');
   el.classList.toggle('replay', !!m.replay);
   if (C.topOverlay() !== 'arrival') C.openOverlay('arrival');
+  document.body.classList.add('arriving');   // (the touch buttons out of the picture: style.css)
   void el.offsetWidth;
   el.classList.add('lit');
   if (A.line) train(m, A.t0);
@@ -133,10 +134,14 @@ function arrive(m) {
     const now = clock(), k = Math.min(1, (now - A.t0) / A.dur);
     tick(k);
     if (!L || !TR) { const r = Math.min(1, k / 0.72), e = 1 - (1 - r) * (1 - r) * (1 - r); return [fx + (tx - fx) * e, fy + (ty - fy) * e]; }
-    // on the line: by the first portal, then along with the front car, settling on the doors you step out of
+    // on the line: by the first portal, then along with the front car, settling on the doors you step out of; as it
+    // pulls out, a look after it toward the far portal (an upright phone's narrow view), back to you as the scene ends
     const t = (now - A.t0) / 1000, f = trainFront(t), u = Math.max(L.in + 170, Math.min(L.door, f - 150)), ca = Math.cos(L.a), sa = Math.sin(L.a);
     const x = L.x + ca * u - sa * 30, y = L.y + sa * u + ca * 30, s = Math.min(1, Math.max(0, (t - m.stop) / 1.2));
-    return [x + (tx - x) * s * s * (3 - 2 * s), y + (ty - y) * s * s * (3 - 2 * s)];
+    let cx = x + (tx - x) * s * s * (3 - 2 * s), cy = y + (ty - y) * s * s * (3 - 2 * s);
+    const t1 = A.dur / 1000, w = t < m.leave ? 0 : Math.min(1, (t - m.leave - 0.2) / 1) * Math.min(1, Math.max(0, (t1 - 0.2 - t) / 1.2));
+    if (w > 0) { const d = Math.max(0, Math.min(L.out - 140, f - 450) - L.door) * w * w * (3 - 2 * w); cx += ca * d; cy += sa * d; }
+    return [cx, cy];
   });
 }
 function tick(k) {
@@ -158,6 +163,7 @@ function end(skipped, quiet = false) {
   A = null;
   C.setCam(null);
   C.S.hideMe = false;
+  document.body.classList.remove('arriving');
   if (TR) { if (t < (m.stop || 6)) stopTrain(); else if (t < TR.leave) TR.leave = t; }
   if (C.topOverlay() === 'arrival') C.closeOverlay('arrival');
   else $('arrival').classList.add('hidden');
@@ -176,7 +182,7 @@ const OFF = [];   // (each car's middle behind the front, px)
 const LEN = OFF[OFF.length - 1] + TRAIN_CARS.find((c) => c.kind === CONSIST[CONSIST.length - 1]).L / 2;
 function train(m, t0) {
   const L = m.line;
-  TR = { L, t0, stop: m.stop || 6, leave: m.leave || 9, f0: L.in - 110, f1: L.stop + LEN / 2, f2: L.len + LEN + 40, door: m.door || 7.2, cars: CONSIST.map((k, i) => ({ id: -9000 - i, kind: K.TRAIN, rx: L.x, ry: L.y, ra: L.a, rz: 0, flags: 8, extra: 0, buf: [], d: { c: TRAIN_CARS.findIndex((c) => c.kind === k), tr: -9, n: i + 1, l: -1 } })) };
+  TR = { L, t0, stop: m.stop || 6, leave: m.leave || 8.4, gone: m.gone || 4.6, f0: L.in - 110, f1: L.stop + LEN / 2, f2: L.len + LEN + 40, door: m.door || 7.2, cars: CONSIST.map((k, i) => ({ id: -9000 - i, kind: K.TRAIN, rx: L.x, ry: L.y, ra: L.a, rz: 0, flags: 8, extra: 0, buf: [], d: { c: TRAIN_CARS.findIndex((c) => c.kind === k), tr: -9, n: i + 1, l: -1 } })) };
   C.S.hideMe = true;
   C.S.camPull = innerHeight > innerWidth ? 1.55 : 1.15;   // (pulled back a little: the whole train in the picture - an upright phone most)
   C.S.stageCars = stage;
@@ -186,7 +192,7 @@ function trainFront(t) {
   if (!TR) return 0;
   if (t <= TR.stop) { const e = Math.max(0, t / TR.stop); return TR.f0 + (TR.f1 - TR.f0) * (1 - (1 - e) * (1 - e) * (1 - e)); }
   if (t <= TR.leave) return TR.f1;
-  const e = (t - TR.leave) / 6;
+  const e = (t - TR.leave) / TR.gone;
   return TR.f1 + (TR.f2 - TR.f1) * e * e;
 }
 function stage(cars) {
