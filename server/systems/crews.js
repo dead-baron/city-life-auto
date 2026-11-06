@@ -32,6 +32,18 @@ function idx() {
 }
 const changed = () => { index = null; store.touch(); };
 
+// a profile reset to a new character (players.js wipeProgress): out of its crew with nothing said (the reset itself is
+// the news); a crew left with one is gone
+export function forget(pid) {
+  const K = kept();
+  for (const [id, c] of Object.entries(K)) {
+    if (!c.members.includes(pid)) continue;
+    c.members = c.members.filter((q) => q !== pid);
+    if (c.names) delete c.names[pid];
+    if (c.members.length < 2) delete K[id]; else if (c.lead === pid) c.lead = c.members[0];
+  }
+  changed();
+}
 export function crewOf(pid) { const id = idx().get(pid); return id ? kept()[id] : null; }
 export function crewIdOf(pid) { return idx().get(pid) || null; }
 // the same crew (two different players)

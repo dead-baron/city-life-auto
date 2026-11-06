@@ -1,5 +1,5 @@
 // World events shown to players as colour-coded radar blips and a short-lived guide arrow.
-// Shared so the HUD, the server and the tutorial agree on names and colours.
+// Shared so the HUD, the server and the Guide agree on names and colours.
 export const EVENT_KINDS = {
   snatch: { color: '#ff9a1a', label: 'Snatch-and-grab', hint: 'Stop the thief' },
   drop: { color: '#c07aff', label: 'Contraband drop', hint: 'Rare crate landed' },

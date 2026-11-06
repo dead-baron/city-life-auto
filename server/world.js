@@ -33,6 +33,7 @@ import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
 import * as starter from './systems/starter.js';
+import * as ftue from './systems/ftue.js';
 import * as gates from './systems/gates.js';
 import * as nightclubs from './systems/nightclubs.js';
 import * as boats from './systems/boats.js';
@@ -197,6 +198,7 @@ const SYSTEMS = [
   ['unstuck', unstuck.update],      // unstuck requests: hold still, then a nudge to open ground
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
   ['logoff', logoff.update],        // the safe exit's count: called off by a move, a hit, the police; out when it's done (logoff.js)
+  ['ftue', ftue.update],            // the first-time experience: the arrival, the question, the first goal's steps, the first-time moments (ftue.js)
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups

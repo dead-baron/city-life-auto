@@ -6,8 +6,7 @@
 // world (spawnAt). The numbers: shared/rules.js STARTER.
 //
 // - First day: a new character (store.js defaultProfile: starter { first }) finds it in the car park of the arrival
-//   station - arrivalStation(), the station nearest where they woke up (the FTUE, arriving by train at a station you
-//   pick, replaces that one function).
+//   station - arrivalFor(), the one function the FTUE's train arrives at too (server/systems/ftue.js).
 // - Public garages: what the map already has, nothing added to the world. Every train station with a car park (its
 //   parking spaces within STARTER.lotR of the station's board - the main line's lots in the countryside and World v3's
 //   station car parks, the street spaces by a station in town), the Fresh Coat Garage(s) and the dealerships (they bring
@@ -62,9 +61,10 @@ export function publicGarages(map) {
 }
 export const garageAt = (world, poi) => (poi ? publicGarages(world.map).find((g) => g.poi === poi.id) || null : null);
 
-// The arrival station: where a new character's starter waits on their first day. Until the FTUE (arriving by train at a
-// station you pick) exists, the station with a car park nearest where a new character first wakes up (a hospital:
-// homes.resolveSpawn). The FTUE replaces this function.
+// The arrival station: where a new character gets off the train (the FTUE: server/systems/ftue.js) and where their
+// starter waits on their first day - the station with a car park nearest where they first woke up (a hospital:
+// homes.resolveSpawn). The hook for the region choice to come (city, coast, forest, desert - the design's later step):
+// pick the region's stations here, nearest the region's spawn.
 export function arrivalStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const g of publicGarages(world.map)) {
@@ -73,6 +73,15 @@ export function arrivalStation(world, x, y) {
     if (d < bd) { bd = d; best = g; }
   }
   return best;
+}
+// A player's arrival station (a public garage's entry): the one their FTUE record keeps (profile.ftue.stn), else picked
+// now from where they stand and kept - so the train and the car park are always the same station, whichever asks first
+export function arrivalFor(world, p) {
+  const f = p.profile.ftue;
+  if (f && f.stn != null) { const g = garageAt(world, world.map.pois[f.stn]); if (g && g.station) return g; }
+  const g = p.ped ? arrivalStation(world, p.ped.x, p.ped.y) : null;
+  if (g && f && f.st !== 'done') { f.stn = g.poi; store.touch(); }
+  return g;
 }
 
 // A space on a garage's lot for it: a free one, else one with only empty, nobody's cars in it (moved off); null if full
@@ -207,7 +216,7 @@ export function onJoin(world, p) {
   delete r.first;
   store.touch();
   if (carOf(world, p.pid) || homeGarage(world, prof) || !p.ped) return;
-  const g = arrivalStation(world, p.ped.x, p.ped.y), sp = g && freeSpot(world, g);
+  const g = arrivalFor(world, p), sp = g && freeSpot(world, g);
   if (!sp) { world.notify(p, 'Your starter car - a rusty compact, registered to you - is free at any public garage: a station car park, the Fresh Coat Garage or a dealership.', 'info'); return; }
   spawnAt(world, p, sp);
   world.notify(p, `Your starter car is waiting in the car park at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');

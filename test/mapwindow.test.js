@@ -182,7 +182,7 @@ test('the art v2 ground bake of a chunk inside the window: the same bytes as fro
 // by nature - each with its reason. (What means the whole world - the edge and the sea past it, the camera's bounds, the
 // chunk grids, the map pictures, the router's grid, the underground, the ferry planner, the server's net chunks - follows
 // the world's frame the map carries, m.frame: test/worldframe.test.js.)
-const PAUSED = new Set(['shared/tutorial.js', 'client/tutorial.js']);   // (the tour is paused: CLAUDE.md)
+const PAUSED = new Set();   // (none: the old city tour, which read the map whole, is retired - 11-04)
 const WHOLE_FRAME = {
   'shared/constants.js': 'today\'s frame is defined here (MAP_W x MAP_H tiles, WORLD_W x WORLD_H px)',
 };

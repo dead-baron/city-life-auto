@@ -550,9 +550,10 @@ export class HUD {
   // a number key: the n-th option on show
   pickMenu(n) { const i = this.menuShown()[n]; if (i !== undefined) this.choose(i); }
   closeMenu() {
+    const m = this.menu;
     this.menu = null; this.menuFocus = 0;
     $('menu').classList.add('hidden');
-    this.closeMenuCb?.();
+    this.closeMenuCb?.(m);
   }
   get menuOpen() { return !!this.menu; }
 

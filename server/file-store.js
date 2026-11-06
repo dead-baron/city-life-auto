@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync, renameSync, copyFileSync } fro
 import { writeFile, rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
-import { defaultProfile } from './store.js';
+import { defaultProfile, resetOldEpochs, oldEpoch, PROGRESS_EPOCH } from './store.js';
 import { WORLD_VERSION } from '../shared/constants.js';
 
 const FILE = join(config.dataDir, 'profiles.json');
@@ -33,6 +33,15 @@ export class FileStore {
           console.log(`[store] world ${WORLD_VERSION}: the profiles as they were are kept in ${before}`);
         }
       } catch (e) { console.error('[store] could not keep the profiles before the new world:', e.message); }
+      // A new progress epoch (store.js PROGRESS_EPOCH): the file as it was kept once, then every older profile reset to a
+      // new character - here, before the world claims anyone's homes or businesses from the profiles
+      if ([...this.profiles.values()].some(oldEpoch)) {
+        const was = join(config.dataDir, `profiles-before-epoch${PROGRESS_EPOCH}.json`);
+        try { if (!existsSync(was)) { copyFileSync(FILE, was); console.log(`[store] progress epoch ${PROGRESS_EPOCH}: the profiles as they were are kept in ${was}`); } }
+        catch (e) { console.error('[store] could not keep the profiles before the new epoch:', e.message); }
+        const n = resetOldEpochs(this);
+        console.log(`[store] progress epoch ${PROGRESS_EPOCH}: ${n} profile${n === 1 ? '' : 's'} reset to new characters (accounts kept)`);
+      }
     }
   }
   get(pid) { return this.profiles.get(pid) || null; }

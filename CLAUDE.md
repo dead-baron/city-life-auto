@@ -14,14 +14,19 @@
 PRACTICE OFFLINE is hidden on the title screen (`PRACTICE_ON` in `client/main.js`): it plays the old city, not World v3
 (`client/practice-worker.js`). Don't build on it until the owner and Claude agree a plan; keep its test passing.
 
-## The tutorial is paused (user, 2026-10-06)
-The tour is disabled in the game (`TUTORIAL_ON` in `client/main.js`) and its tests are skipped: don't spend time
-updating it with each change. The user will redesign it later; the rules below apply again once it is back.
-
-## Keep the tutorial in sync (standing rule, paused - see above)
-The city tour lives in `shared/tutorial.js` and is played by `client/tutorial.js` over the live map.
-- Whenever gameplay, rules, controls, places or the map change, update the tour in the same change.
-- Places are referenced by POI kind / district / island, never coordinates; `{{kind}}` / `{{kind:where}}` resolve to live names and districts, and island stops list their places from the map automatically.
-- Player-facing numbers belong in `shared/rules.js` (server and tutorial both import them); controls belong in `shared/controls.js`.
-- `test/tutorial.test.js` fails if a place type, island, turf, control action or rule is missing from the tour, or if any stop no longer resolves on the map. Don't silence it - teach the new thing.
-- Bump `TUTORIAL_VERSION` when the tour changes meaningfully, so returning players are offered the updated tour.
+## The first-time experience (FTUE; owner-approved 2026-11-04)
+The old city tour is retired (`shared/tutorial.js`, `client/tutorial.js`, `TUTORIAL_ON` are gone). The tutorial IS the
+first goal: new characters get the FTUE (`server/systems/ftue.js`, page side `client/ftue.js`) - the arrival by train at
+the starter car's station (`starter.js` `arrivalFor`: one function for both), one question ("What brings you to town?"),
+a first goal of at most three steps, then the first-time moments. The phone's Guide (`shared/guide.js`, `client/guide.js`)
+is the in-game wiki. The owner: "short and sweet and give people general direction".
+- Teach the new thing: when a system changes, update its Guide entry (`shared/guide.js`) and, if it has one, its
+  first-time moment (`ftue.js` `MOMENTS`) in the same change. A new job, place, activity or control gets a Guide entry.
+- The Guide's numbers come from the data (`shared/rules.js`, `items.js`, `fish.js`, `vehicles.js`) and its controls are
+  `[[action]]` names from `shared/controls.js` (the page draws each device's glyph): never type a number or a key into
+  it. `test/guide.test.js` checks.
+- Player-facing numbers belong in `shared/rules.js` (the FTUE's own: `FTUE`); controls in `shared/controls.js`.
+- Keep it light: at most three steps, one fading line each, skippable everywhere, never blocking play; only new
+  characters - and every character once: profiles from before were reset (`server/store.js` `PROGRESS_EPOCH`; a future
+  full reset is that number bumped). All of it decided on the server; `test/ftue.test.js`.
+- `client/ftue.js` and the Guide load lazily (the page is at its file budget).
