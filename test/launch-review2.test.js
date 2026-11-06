@@ -122,7 +122,9 @@ test('C. the admin log: queued lines are written at stop; a crash between the li
 test('D. the update wipe (CLA_FRESH_ON_UPDATE=all) keeps the account, as Start fresh does', () => {
   const src = read('server/systems/players.js');
   const i = src.indexOf('function wipeProgress'), body = src.slice(i, src.indexOf('\n}\n', i));
-  assert.match(body, /if \(prof\.acct\) \{ keep\.acct = prof\.acct;/);
+  assert.match(body, /resetProfile\(prof\)/, 'the one reset (server/store.js), shared with the progress epoch');
+  const st = read('server/store.js'), j = st.indexOf('export function resetProfile'), reset = st.slice(j, st.indexOf('\n}\n', j));
+  assert.match(reset, /if \(prof\.acct\) \{ keep\.acct = prof\.acct;/);
 });
 
 test('E. the keyboard on the 17+ gate: Enter doesn\'t start the game under it; Tab, Enter and Space work inside it', () => {

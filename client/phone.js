@@ -59,15 +59,13 @@ export const ICON = {
   clear: P('<path d="M6 6l12 12M18 6L6 18"/>'),
   cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
 };
-// the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide last - the in-game wiki's place, built later)
+// the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide last - the in-game wiki: client/guide.js)
 const APPS = [['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['guide', 'Guide']];
 // their pixel icons (client/touchicons.js, the icon sheet's phone apps), a place group's, a skill's
 const APP_PIX = { jobs: 'jobs', places: 'places', transit: 'transit', feed: 'feed', bounties: 'bounties', homes: 'homes', skills: 'skills', crew: 'crew', radio: 'radioapp', log: 'log', camera: 'camera', guide: 'guide' };
 const GROUP_PIX = { emergency: 'hospital', money: 'bank', shops: 'shop', out: 'food', baths: 'bathhouse', sell: 'sell', cars: 'car', work: 'legal', gang: 'gang' };
 const SKILL_PIX = { strength: 'hit', stamina: 'sprint', swimming: 'swim', driving: 'car', shooting: 'aim', constitution: 'heart' };
-// the Guide (the in-game wiki, to come): what it will cover
 const JOB_FILTERS = [['all', 'All'], ['driving', 'Driving'], ['delivery', 'Delivery'], ['service', 'Service']];
-const GUIDE = ['Getting started', 'Money and jobs', 'The law and your record', 'Homes and garages', 'Places and transit', 'Fishing, hunting and the outdoors'];
 const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Home']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
 const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
@@ -75,6 +73,7 @@ export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
   let homes = null, RE = null, RADIO = null, jobFilter = 'all';   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
+  let GD = null;   // the Guide's code (client/guide.js), loaded when it opens
   let taking = null;   // the job just accepted: its waypoint once the server says yes
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -119,9 +118,10 @@ export function createPhone(ctx) {
       const g = PLACE_GROUPS.find((q) => q.id === group);
       const pois = placesIn(g);
       el.innerHTML = `<h3>${g.title}</h3>` + (pois.length ? pois.map(({ p, d }, i) => placeRow(p, d, i)).join('') : '<p class="ph-empty">None in the city yet.</p>');
-    } else if (screen === 'guide') {   // (the in-game wiki's place: built later - UI-10)
-      el.innerHTML = '<div class="ph-guide"><span class="ph-tile big">' + pix('guide') + '</span><h3>The city guide</h3><p class="ph-hint">How the city works, every place and job, the law and your record - all in one place, here on your phone. Coming soon.</p>'
-        + GUIDE.map((t) => `<div class="ph-row" aria-disabled="true"><span class="nm">${t}<small>coming soon</small></span></div>`).join('') + '</div>';
+    } else if (screen === 'guide') {   // (the in-game wiki, built from the game's data: client/guide.js, shared/guide.js)
+      if (GD) { GD.render(el, { map: ctx.map, send: ctx.send, close: ctx.close, refocus: ctx.refocus, me: ctx.me, take: ctx.guideSec }); return; }
+      el.innerHTML = '<p class="ph-empty">Loading…</p>';
+      import('./guide.js').then((mod) => { GD = mod; if (screen === 'guide') render(); }).catch((e) => console.warn('[guide]', e));
     } else if (screen === 'feed') {
       const ago = (s) => (s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
       el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
@@ -184,7 +184,7 @@ export function createPhone(ctx) {
   }
   function wire(el) {
     for (const b of el.querySelectorAll('[data-go="camera"]')) b.onclick = () => ctx.cine();   // (the Camera: the cinematic mode - client/director.js)
-    for (const b of el.querySelectorAll('[data-go]:not([data-go="camera"])')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'crew') ctx.send({ t: 'phone', a: 'crew' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } render(); };
+    for (const b of el.querySelectorAll('[data-go]:not([data-go="camera"])')) b.onclick = () => { screen = b.dataset.go; if (screen === 'jobs') ctx.send({ t: 'phone', a: 'board' }); if (screen === 'feed') { feed = null; ctx.send({ t: 'phone', a: 'feed' }); } if (screen === 'skills') ctx.send({ t: 'phone', a: 'skills' }); if (screen === 'crew') ctx.send({ t: 'phone', a: 'crew' }); if (screen === 'bounties') ctx.send({ t: 'phone', a: 'bounties' }); if (screen === 'transit') ctx.send({ t: 'phone', a: 'transit' }); if (screen === 'homes') { homes = null; ctx.send({ t: 'phone', a: 'homes' }); } if (screen === 'guide') guideOpened(); render(); };
     for (const b of el.querySelectorAll('[data-stop]')) b.onclick = () => {
       const [l, k] = b.dataset.stop.split(':').map(Number);
       const L = transit && transit.lines.find((q) => q.id === l), st = L && L.stops[k];
@@ -267,6 +267,9 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };
   }
 
+  // the Guide opened: its rules read afresh, the server told (analytics: server/systems/ftue.js)
+  function guideOpened() { if (GD) GD.reset(); ctx.send({ t: 'intro', a: 'guide' }); }
+
   // ---- the Transit app -----------------------------------------------------------------------------------------------
   // The bus lines (server transit.js): each line's stops in the order its buses call at them, when the next bus comes to
   // each (the nearest stop starred), and the railway's nearest stations. Tap a stop or a station for a waypoint.
@@ -341,7 +344,7 @@ export function createPhone(ctx) {
   return {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     // straight to one app (the hub's JOBS tab: 'jobs')
-    openApp(s) { screen = s || 'home'; group = null; render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
+    openApp(s) { screen = s || 'home'; group = null; if (s === 'guide') guideOpened(); render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else { screen = 'home'; group = null; } render(); return true; },
     onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
     onSkills(msg) { skl = msg; if (screen === 'skills') render(); },

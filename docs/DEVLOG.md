@@ -20617,3 +20617,73 @@ whole lounge, tavern or sports bar.
   (wave D's shop art; budget 1000); city build 27.4x -> 29.6x the yardstick (budget 40x); bakes 62x -> 60.4x (budget
   90x); city 39 MB and the biggest kept chunk 758 KB, both unchanged. No budget raised. The renderer has 1 KB of headroom
   left.
+
+## 2026-11-06 - The first-time experience: the arrival, one question, the first goal, first-time moments, the Guide
+
+The owner's design (11-04): "the tutorial should be short and sweet and give people general direction". The tutorial
+is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.js`, `client/tutorial.js`,
+`TUTORIAL_ON`, the title's VIEW TUTORIAL, `test/tutorial.test.js`).
+- **The server decides it all** (`server/systems/ftue.js`, a system in world.js). The profile keeps `ftue { st, stn,
+  ans, step, goal, how, at, m, tips }`. `st` is new, arrive, ask, goal or done. Numbers: shared/rules.js `FTUE`.
+- **The arrival** (about 14 s, `FTUE.arriveS`). Once the look is picked, the character is put on the platform of the
+  arrival station, and the page plays a staged scene (`client/ftue.js`, the `#arrival` overlay). You're inside the
+  carriage, with the city going by in the doors' windows as the camera rides in along the line. The next-stop sign
+  counts in, a chime plays, the doors slide open, and the station's card shows. Esc, B, a tap or Skip ends it. It's a
+  staged scene, not a real train: a real train runs on its own timetable and can be up to a headway away, and boarding
+  a player mid-run through the riders' code is fragile. The camera runs along the real track (`platformOf`: 1100 px
+  back along the loop), so it reads as arriving by rail. The arrival station and the starter car's lot are one function
+  (`starter.arrivalFor`, kept on the profile as `ftue.stn`). The hook for the region choice (city, coast, forest,
+  desert) is `starter.arrivalStation`.
+- **The question**, "What brings you to town?". It uses the conversation screen's kit: a menu at `ASK_POI` (-31), four
+  numbered answers. Closing it is a skip.
+  - Honest work: a walking mail round at the nearest post office (`mailjob.js`, five letters). It's short and honest,
+    and it's on foot once you're there. Where there's no post office, courier work at a depot.
+  - A little hustle: the fence, the Back-Alley Exchange. It buys stolen cargo and has the mail-train job. Talking to it
+    (its menu opened) is the goal. Where there's no fence, a gang HQ.
+  - The great outdoors: a cane pole and 5 worms if you have no rod or bait, and a bank to fish from 700-5200 px away.
+    It's never a park's koi pond, which would be a crime. Casting is the goal.
+  - Just let me roam: "Your phone's Guide has everything. The city's yours."
+- **The first goal: three steps**, each teaching one control. The page shows that control's glyph for the device in
+  hand, and on touch the action button's contextual icon (Lucide, `actKind`).
+  1. Walk to your car (move). The way goes to the starter car, with its ring.
+  2. Get in and drive there (vehicle). The way moves to the goal.
+  3. Do it (action).
+  The steps ride the HUD's job card ("FIRST GOAL", step N of 3) and the job's arrow and route, through `me.job`. Each
+  step's line is in the prompt's style and fades after 7 s. At the end: +$100 and driving xp, and the big moment
+  "FIRST GOAL DONE".
+- **First-time moments**, once each, ever (`ftue.m`), at least 25 s apart, never during the FTUE: the first wanted star,
+  the first time knocked down, the first shop, the first transit stop, the first night and the first time hurt. Each is
+  one fading line with "More in your Guide", which opens the Guide at its section.
+- **The Guide**, the phone's app (`shared/guide.js`, `client/guide.js`, loaded the first time it opens). Seven
+  sections: getting around, ways to earn, the law, places, activities, property, items. Every number comes from
+  rules.js, items.js (prices and items), fish.js and vehicles.js; Places counts the map's own places. Controls are
+  `[[action]]` names drawn per device. It has a search box, "Replay the arrival" (from where you stand: the scene, the
+  question, a goal), "Show tips again", and "Skip the first goal" while it's on.
+- **Analytics** (server/launch.js `world.track('ftue')` into the FTUE funnel): ftue_arrive, ftue_answer_<which>,
+  ftue_step1-3, ftue_done, ftue_skip, moment_<id> and guide_open. GA gets tutorial_begin and tutorial_complete.
+- **Everyone goes through it once: the progress epoch** (the owner, 11-04: the full reset ships with the FTUE).
+  `server/store.js` `PROGRESS_EPOCH` is 2; profiles from before have none (epoch 1). When the FileStore loads, it keeps
+  `profiles-before-epoch2.json` once, then `resetOldEpochs` resets every older profile before the world claims any
+  homes or businesses. The reset is the same as `CLA_FRESH_ON_UPDATE=all` (`resetProfile`, used by
+  players.js `wipeProgress`). players.join checks the epoch again. It's idempotent: a profile on this epoch is left
+  alone, and a crash before the save just does it again from the same file. The 5 s save loop is untouched. **A future
+  launch reset is this number bumped.**
+  - Reset: money, bank, record, felonies, Criminal XP and Samaritan points, skills, weapons and items, cars, homes and
+    their contents (deeds, stash, decor, upgrades and materials), mortgages, businesses (`biz.release` too), bounties,
+    the starter car's state (`first: true` again), the FTUE (not started), crews (`crews.forget`; a crew left with one
+    member is gone) and the fish records board (the biggest catches, by name).
+  - Kept: the account (`acct`: role, sign-ins, passkeys, ban, mute, strikes, devices, contacts), the name and when it
+    was set, the look, the saved looks and the clothes owned, and `created`. World-level state is kept too: the
+    farms' fields, the moderation reviews and the analytics.
+- Wiped profiles are new characters: `wipeProgress`, Start fresh (`wipeAccount`) and the epoch all leave
+  `ftue { st: 'new' }` and `starter { first: true }` from `defaultProfile`.
+- The page stays within its budget: client/ftue.js, client/guide.js and shared/guide.js all load lazily (lazypage,
+  perf).
+- Tests: `test/ftue.test.js` covers a new character's whole run; the hustle, outdoors and roam answers; every answer
+  having a goal from the stations; skip at the arrival, the question and each step; the epoch reset (account kept,
+  idempotent, the arrival and the car on the next join, the home back on the market); the check on joining; a rejoin
+  mid-goal and at the question; each moment once; "Show tips again"; the Guide's replay; and after `wipeProgress` and
+  Start fresh, the arrival and the starter car. `test/guide.test.js` checks the seven sections, that changing a rule,
+  a price or an item shows in the Guide, the map's counts, search, and that it loads lazily.
+- CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
+  each system change).

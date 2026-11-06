@@ -1,4 +1,4 @@
-// Logical actions and how each device triggers them. The HUD prompts and the tutorial both read
+// Logical actions and how each device triggers them. The HUD prompts, the first goal's lines and the Guide all read
 // these tables, so a rebind here updates every hint in the game.
 export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance' };
 // (on a skateboard the fire button is the trick button: shared/skate.js)

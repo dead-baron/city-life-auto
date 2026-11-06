@@ -20,7 +20,7 @@ test('the title: the graphics you are on sit right under Play, and Join asks not
   assert.match(seg, /if \(k === 'custom'\) openOverlay\('settings'\)/, 'Custom: every effect, in Settings');
   assert.ok(title.indexOf('id="t-gfx"') > title.indexOf('id="play"') && title.indexOf('id="t-gfx"') < title.indexOf('id="t-tools"'), 'right under the Play buttons');
   assert.ok(!html.includes('id="gfx-ask"') && !/askGfx\(/.test(main), 'no graphics question at Join');
-  const fp = main.slice(main.indexOf('function firstPlay('), main.indexOf('let tutAskGo'));
+  const fp = main.slice(main.indexOf('function firstPlay('), main.indexOf('// ---- graphics: the first-run choice'));
   assert.match(fp, /if \(!gfxChosen\(\)\) applyPreset\(/, 'a new player keeps the device\'s pick, silently');
   assert.match(main, /function syncGfxPanel\(\) \{\s*syncTitleGfx\(\);/, 'the title row follows the settings');
 });

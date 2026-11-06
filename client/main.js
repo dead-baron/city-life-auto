@@ -31,20 +31,15 @@ import { iconImg } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
-// The city tour is paused (TUTORIAL_ON below): its code (client/tutorial.js) is fetched only if it's switched back on,
-// so the page doesn't carry it. Until it's here, nothing of it runs (and the tour counts as seen).
-let TUT = null;
-const loadTutorial = () => import('./tutorial.js').then((m) => (TUT = m));
-const startTutorial = (o) => { loadTutorial().then((m) => m.startTutorial(o)); };
-const stopTutorial = () => { if (TUT) TUT.stopTutorial(); };
-const tutorialActive = () => !!TUT && TUT.tutorialActive();
-const tutorialNext = () => { if (TUT) TUT.tutorialNext(); };
-const tutorialPrev = () => { if (TUT) TUT.tutorialPrev(); };
-const tutorialTogglePause = () => { if (TUT) TUT.tutorialTogglePause(); };
-const tutorialKey = (k) => !!TUT && TUT.tutorialKey(k);
-const tutorialSeen = () => !TUT || TUT.tutorialSeen();
-const tutorialSeenOld = () => !!TUT && TUT.tutorialSeenOld();
-const markTutorialSeen = () => { if (TUT) TUT.markTutorialSeen(); };
+// The first-time experience (the old city tour's place - retired 11-04): the server runs it (server/systems/ftue.js); its
+// page side, client/ftue.js, loads the first time the server speaks of it - a new character's arrival, the first goal's
+// lines, a first-time moment's tip - never with the page.
+let FT = null, ftP = null;
+const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
+  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; } });
+  FT = m;
+  return m;
+}).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
@@ -433,6 +428,7 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      if (FT) FT.onMe(m); else if (m.ftue) loadFtue().then((f) => f.onMe(S.me)).catch(() => {});   // (the first goal's step line: client/ftue.js)
       if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
@@ -443,7 +439,8 @@ function onText(m) {
       if (!!m.devMode !== !!S.devMode) { S.devMode = !!m.devMode; setupDev(); if (topOverlay() === 'devpw' && S.devMode) closeOverlay('devpw'); requestPlayers(); if (S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('dev'); } }
       { const g = document.getElementById('dev-god'); if (g) g.classList.toggle('on', !!m.god); }
       break;
-    case 'menu': S.hud.openMenu(m); break;
+    case 'menu': S.hud.openMenu(m); break;   // (a counter, a shop, someone to talk to - and the first-time experience's question: m.ask)
+    case 'ftue': loadFtue().then((f) => f.onMsg(m)).catch(() => {}); break;   // the first-time experience: the arrival, the first goal's end, a first-time moment (client/ftue.js)
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
     case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; S.ugFind = m.find || null; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
@@ -1253,7 +1250,7 @@ function setupWorld(seed, here = false, given = null) {
   S._hw = null;
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
-  S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), () => {});
+  S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), (m) => { if (m && m.ask) send({ t: 'menu', poi: m.poi, opt: 'close' }); });   // (a question closed unanswered - the first-time experience's: server/systems/ftue.js)
   S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log');   // (client/hudinfo.js; a note cut short: the Log)
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
@@ -1613,7 +1610,6 @@ initInput(canvas, {
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
     if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;
-    if (topOverlay() === 'tutorial' && tutorialKey(k)) return;
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (topOverlay() === 'dev' && S.devNav && S.devNav.key(k)) return;   // (the debug menu's own keys: client/devmenu.js)
     if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
@@ -1636,7 +1632,7 @@ initInput(canvas, {
       if (k === 'KeyC') { const me = selfPos(); S.hud.centerMap(me.x, me.y); return; }
     }
     // menus with the keyboard: W/S or arrows move, Enter / Space / E selects, A/D or arrows change a setting
-    if (topOverlay() && topOverlay() !== 'tutorial' && menuKey(k)) return;
+    if (topOverlay() && menuKey(k)) return;
     if (!topOverlay() && S.hud && S.hud.menuOpen) {
       if (k === 'ArrowUp' || k === 'KeyW') { S.hud.navMenu(-1); return; }
       if (k === 'ArrowDown' || k === 'KeyS') { S.hud.navMenu(1); return; }
@@ -1669,7 +1665,7 @@ initInput(canvas, {
   onSettings() { openOverlay('settings'); },
   onFullscreen() { toggleFullscreen(); },
 });
-input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } }, 0);
+input.onDevice = () => setTimeout(() => { onResize(); if (S.hud && S.me) { $('helpbox').dataset.sig = ''; S.hud.setMe(S.me); } if (FT) FT.redraw(); }, 0);   // (and the first goal's line: client/ftue.js)
 detectDevice();
 
 // Downed: call for help, the ambulance, give up waiting.
@@ -1737,7 +1733,6 @@ $('wheel').addEventListener('pointerdown', (e) => { if (e.target === $('wheel'))
 $('wheel').addEventListener('pointermove', (e) => { if (wheel.open && e.pointerType === 'mouse') wheel.point(e.clientX - innerWidth / 2, e.clientY - innerHeight / 2); });
 // every pop-up panel (bag, players, settings...) closes when you tap the dark space around it
 for (const ov of document.querySelectorAll('.overlay')) {
-  if (ov.id === 'tutorial') continue;
   ov.addEventListener('pointerdown', (e) => { if (e.target === ov && topOverlay() === ov.id) closeOverlay(ov.id); });
 }
 
@@ -1935,6 +1930,7 @@ const phoneCtx = {
   canCruiser: () => !!(S.me && S.me.cruiser),
   cruiser: () => { closeHub(); callCruiser(); },
   title: (t) => { $('ph-clock').textContent = t; if (topOverlay() === 'phone') $('hub-title').textContent = t.toUpperCase(); },
+  guideSec: () => { const s = S.guideSec; S.guideSec = null; return s; },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();
@@ -2112,33 +2108,12 @@ function checkWaypoint() {
   if (Math.hypot(p.x - S.waypoint.x, p.y - S.waypoint.y) < 140) { S.hud.toast(`Arrived: ${S.waypoint.label}`, 'good'); S.waypoint = null; S.hud.waypoint = null; }
 }
 
-// ---- tutorial: guided tour over the live city map ---------------------------------------------
-// Paused (user, 2026-10-06): the tour is not offered and not kept in sync with the game until it is redesigned.
-const TUTORIAL_ON = false;
-if (TUTORIAL_ON) loadTutorial();   // (back on: fetched at once, ready by the time Play is pressed)
-let tutMap = null;
-// `then` runs once the tour is finished or skipped (first play: tour first, then into the city)
-function openTutorial(chapter, then) {
-  if (!S.map && !tutMap && !GEN) { loadGenerator().then((g) => { if (g) openTutorial(chapter, then); }); return; }   // (no city yet: the generator first)
-  ensureV1Art(); // (the tour draws the map with the classic art)
-  const map = S.map || (tutMap ||= GEN.generateCity(1337));
-  openOverlay('tutorial');
-  startTutorial({ map, fallback: S.hud ? S.hud.mini : null, chapter, onClose: () => { if (overlays.includes('tutorial')) closeOverlay('tutorial'); if (then) setTimeout(then, 0); } });
-}
-// first-time players see the tour before their first game (SKIP is always there)
+// The title's PLAY (and practice): a new player plays on the device's pick (the title's graphics row shows it and changes
+// it), kept silently. (The old city tour asked here first; the first-time experience now happens in the city:
+// server/systems/ftue.js, client/ftue.js)
 function firstPlay(go0) {
-  return () => withGate(() => {
-    // a new player plays on the device's pick (the title's graphics row shows it and changes it): kept silently
-    const go = () => { if (!gfxChosen()) applyPreset(gfx.preset === 'custom' ? getDevice().recommended : gfx.preset); go0(); };
-    if (!TUTORIAL_ON || tutorialSeen()) { go(); return; }
-    if (input.device === 'touch' && settings.autoFullscreen !== false) toggleFullscreen(true, true); // needs this tap's user gesture
-    // ask in a popup (nothing on the title screen moves around)
-    tutAskGo = go;
-    if (tutorialSeenOld()) { $('tut-ask-h').textContent = 'THE CITY TOUR HAS BEEN UPDATED'; $('tut-ask-p').textContent = 'New places, rules and features since you last watched it. Take the tour?'; }
-    openOverlay('tut-ask');
-  });
+  return () => withGate(() => { if (!gfxChosen()) applyPreset(gfx.preset === 'custom' ? getDevice().recommended : gfx.preset); go0(); });
 }
-let tutAskGo = null;
 
 // ---- graphics: the first-run choice and the settings section ------------------------------------
 // (the owner, 2026-10-11: "I would just have the graphics settings below the play button in the main menu so you see what
@@ -2207,10 +2182,6 @@ function syncGfxPanel() {
     if (el.type === 'checkbox') el.checked = !!v; else el.value = String(v);
   }
 }
-$('tut-ask-watch').onclick = () => { const go = tutAskGo; tutAskGo = null; closeOverlay('tut-ask'); openTutorial(null, go); };
-$('tut-ask-skip').onclick = () => { const go = tutAskGo; tutAskGo = null; markTutorialSeen(); closeOverlay('tut-ask'); if (go) go(); };
-$('t-tutorial').onclick = () => openTutorial();
-if (!TUTORIAL_ON) $('t-tutorial').classList.add('hidden');
 // back to the game you left (the city kept running while you were on the title screen)
 $('t-resume').onclick = () => {
   if (!S.welcomed) { $('t-resume').classList.add('hidden'); return; }
@@ -2219,11 +2190,6 @@ $('t-resume').onclick = () => {
   S.playing = true;
   S.inputMuteUntil = performance.now() + 300;
 };
-$('tut-next').onclick = () => tutorialNext();
-$('tut-prev').onclick = () => tutorialPrev();
-$('tut-pause').onclick = () => tutorialTogglePause();
-$('tut-skip').onclick = () => closeOverlay('tutorial');
-$('tut-cv').addEventListener('click', () => tutorialNext());
 
 // ---- fullscreen, landscape tip, settings ------------------------------------------------------
 const fsSupported = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
@@ -2385,7 +2351,7 @@ function closeOverlay(id = topOverlay()) {
   if (id === 'inv') bag.hide();
   if (id === 'signin' && S.launch) S.launch.acc.closePanel();   // (client/account.js: its panel and its pad off with the screen)
   if (id === 'dev') $('dev').classList.remove('as-overlay');
-  if (id === 'tutorial') stopTutorial();
+  if (id === 'arrival' && FT) FT.closed();   // (Esc or B out of the arrival: skipped - client/ftue.js)
   if (id === 'arcade' && S.arcadeMod) S.arcadeMod.stop();   // (the cabinet left: the score so far goes in)
   if (id === 'settings' && S.afterSettings) { const g2 = S.afterSettings; S.afterSettings = null; settings.gfxPreset ||= gfx.preset; setTimeout(g2, 0); }
   if (id === 'bigmap') { S.bigmap = false; if (S.hud) S.hud.mapFilter = null; }
@@ -2458,7 +2424,6 @@ function overlayPad() {
   if (topOverlay() === 'gate' && input.menuBack) return true;   // (the first-launch gate is answered, not backed out of)
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-chip'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }
-  if (topOverlay() === 'tutorial' && input.menuLR) { if (input.menuLR > 0) tutorialNext(); else tutorialPrev(); return true; }
   // up and down, left and right: to the nearest button that way as they sit (a grid of apps, a row of tabs); up or
   // down past the end wraps round the list; a choice box or a tick box takes left and right for itself
   const ownLR = el && (el.tagName === 'SELECT' || el.type === 'checkbox');
@@ -3036,7 +3001,7 @@ function frameBody(nowMs) {
     const k = Math.exp(-(S.pred && S.pred.kind === 'veh' ? 7 : 10) * dt);
     S.smooth.x *= k; S.smooth.y *= k; S.smooth.a = (S.smooth.a || 0) * k;
     if (nowMs - pingAt > 2000) { pingAt = nowMs; send({ t: 'ping', ts: performance.now() }); }
-    if (!tutorialActive()) render(dt);
+    render(dt);
     tickInterior();
     checkWaypoint();
     expirePredictedBreaks();
@@ -3267,6 +3232,7 @@ function prepFrame(dt) {
     if (t > L.dur || Math.hypot(sp.x - L.px, sp.y - L.py) > 24) S.look = null;
     else { const e = Math.min(1, t / 900, (L.dur - t) / 900), k = e * e * (3 - 2 * e); S.cam.x = tx + (L.x - tx) * k; S.cam.y = ty + (L.y - ty) * k; }
   }
+  if (S.camOver) { const oc = S.camOver(performance.now()); if (oc) { S.cam.x = oc[0]; S.cam.y = oc[1]; } }   // (the arrival's staged ride in along the line: client/ftue.js)
   if (S.dinView) { const dc = S.dinView.cam(tx, ty); if (dc) { S.cam.x = dc[0]; S.cam.y = dc[1]; } }   // (watching at the drive-in: the screen and your stall)
   if (S.rides && S.rides.size) {   // rides: forget the ones long over (the end can be missed: a rider gone), point my camera
     const nowS = performance.now() / 1000;
