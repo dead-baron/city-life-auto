@@ -20468,3 +20468,18 @@ is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.
   a price or an item shows in the Guide, the map's counts, search, and that it loads lazily.
 - CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
   each system change).
+
+## 2026-11-06 - First-time moments wait until you're back up
+
+The owner's screenshot from a night drive: the first-time moment "Hurt? Hold for your quick wheel - a bandage patches
+you up." on top of the YOU'RE DOWN screen. The hurt line had gone out a moment before the player went down (the line
+stays up `FTUE.lineS`), so it sat over the down screen, where a bandage is no help.
+- Server (`server/systems/ftue.js`): no moment fires while you're down or dead (only `down` itself, which is about that
+  screen), nor for `FTUE.wakeS` (10 s, `shared/rules.js`) after you're back up (the wake-up screen and the area
+  loading): they are held until then. Going down while the hurt line is still up drops it: it's not counted as taught,
+  so it comes again the next time you're hurt and on your feet.
+- Page (`client/ftue.js`): a tip on screen goes as you go down (not `down`'s own); a tip that arrives while you're
+  down or while the "Loading the area..." veil is up waits until you're up and the veil has gone; a held hurt tip is
+  dropped if you went down meanwhile.
+- `test/ftue.test.js`: a new test - hurt then down (the hurt one dropped), nothing but `down` while down, nothing during
+  the wake-up, then the held one, and the hurt one taught again later.

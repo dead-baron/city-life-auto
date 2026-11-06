@@ -35,9 +35,10 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
 // fishR: how far (tiles) round the station for a bank to fish from. The end: reward ($, cash) and xp goes of SKILL.act
 // 'drive' (skills.js gain). The outdoors answer brings a rod and bait if you have none (rod, bait: shared/items.js ids).
 // lineS: a step's or a tip's line on screen this long, then it fades. The first-time moments (once each, ever): tipGapS
-// apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier.
+// apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier; wakeS: none
+// while you're down or dead, nor this long after you're back up (the wake-up screen: server/systems/ftue.js moment).
 // (Everyone goes through it once: profiles from before it are reset to new characters - server/store.js PROGRESS_EPOCH.)
-export const FTUE = { arriveS: 14, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170 };
+export const FTUE = { arriveS: 14, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10 };
 
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
