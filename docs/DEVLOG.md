@@ -20619,7 +20619,6 @@ whole lounge, tavern or sports bar.
   left.
 
 
-<<<<<<< HEAD
 ## 2026-11-06 - Drivers find their way round again (three failing reroute tests)
 
 `test/reroute.test.js` had three failures on main (94089ae7). The 11-04 re-key of the world (American English place
@@ -20645,7 +20644,7 @@ test map, which every `makeWorld` shares. It passes again with the avenue fixed.
 Tests: reroute (8/8), roadends, signals, slips, trafficbox, trafficwalls, transit, tow, police, policeair, ems, bikes,
 fleet, jobway, npcpeople, townfolk, drivejobs, carts, kbdrive (117/117); stops, skate, world3fleet, world3passes,
 world3rail, townwork, airtraffic (57/57).
-=======
+
 ## 2026-11-06 - The first-time experience: the arrival, one question, the first goal, first-time moments, the Guide
 
 The owner's design (11-04): "the tutorial should be short and sweet and give people general direction". The tutorial
@@ -20715,4 +20714,3 @@ is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.
   a price or an item shows in the Guide, the map's counts, search, and that it loads lazily.
 - CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
   each system change).
->>>>>>> origin/main
