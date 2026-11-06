@@ -24,6 +24,7 @@
 //                   goal { k, x, y, name, poi? }, how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
 //                   tips (0: off), replay (1: the Guide's replay - no move to the station) }
 import { FTUE } from '../../shared/rules.js';
+import { PED_BLOCK } from '../../shared/mapcore.js';
 import { ITEMS } from '../../shared/items.js';
 import { store } from '../store.js';
 import { moved } from '../movemark.js';
@@ -74,7 +75,9 @@ export function platformOf(world, poi) {
     const d = Math.hypot(st.platform.x - poi.x, st.platform.y - poi.y);
     if (d < bd) { bd = d; best = { st, r }; }
   }
-  const at = best ? homes.spawnSpot(world, best.st.platform.x, best.st.platform.y, () => 0.5) : homes.spawnSpot(world, poi.x, poi.y, () => 0.5);
+  const P0 = best ? best.st.platform : null, m = world.map;
+  const on = P0 && !PED_BLOCK[m.tileAtPx(P0.x, P0.y)] && !PED_BLOCK[m.tileAtPx(P0.x + 10, P0.y)] && !PED_BLOCK[m.tileAtPx(P0.x - 10, P0.y)];
+  const at = on ? { x: P0.x, y: P0.y } : best ? homes.spawnSpot(world, P0.x, P0.y, () => 0.5) : homes.spawnSpot(world, poi.x, poi.y, () => 0.5);   // (on the platform itself where you can stand)
   let from = { x: at.x, y: at.y - 900 };
   const P = best && best.r.pts;
   if (P && P.length > 2) {   // (1100 px back along the track from where it passes the platform)

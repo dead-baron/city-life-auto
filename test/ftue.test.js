@@ -85,6 +85,7 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   assert.equal(m.ftue.step, 2); assert.equal(m.ftue.ctl, 'vehicle');
   assert.match(m.ftue.line, /^Get in and drive to /);
   assert.deepEqual([m.job.x, m.job.y], [goal.x, goal.y], 'the way on to the post office');
+  teleport(w, p.ped, car.x, car.y + car.def.W / 2 + 8);   // (right by its door: not the parked car beside it)
   assert.ok(vehicles.tryEnter(w, p.ped), 'in the car');
   assert.equal(p.ped.vehId, car.id);
   arriveAtGoal(w, p);
@@ -331,7 +332,7 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   // knocked down
   combat.damage(w, p.ped, 9999, null, 'test');
   assert.ok(p.ped.dead);
-  gap();
+  p.ftueTipAt = -1e9; run(w, 0.6);   // (no clock jump: that would wake them before the moment's look)
   assert.ok(tips().includes('down'));
   const all = tips();
   assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'all six, once each');
