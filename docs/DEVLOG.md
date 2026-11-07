@@ -20550,7 +20550,7 @@ a walk; this machine: 2 cores for the server, the page, the bake workers and the
 
 (2 minutes and the walk, --cores 6: three bake workers - four, and the server, the browser and the bench ran this
 machine out of memory twice. Runs vary - the autopilot gets stuck and circles, the bakes share 2 cores with the server -
-but all four pairs went the same way: long tasks down by about half or more, p99 frames halved,
+but all four pairs went the same way: long tasks down by 40-60%, the p99 frame down a fifth to a half,
 no person sprite made on the page, the heap a third smaller. In node, unthrottled: a moved window's message 238 -> 176
 ms to clone. The scratchpad's perf3/table.md has every run.)
 
