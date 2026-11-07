@@ -21670,3 +21670,7 @@ The owner (11-06): "Can't figure out the rocket league arena... How do I get it 
 - The Guide has a Car soccer entry (Activities), the README's row is updated. test/carsoccer.test.js: driving onto the
   pad, the call and the feed, the longer lobby, out of your car at kick-off; the lobby stretched once; the BOOST slot.
 - (rules-games.js is in World v3's code hash: the stamp's `world3` changes with these numbers.)
+
+## 2026-11-07 - The police helicopter at 4 stars (was 3)
+The owner (11-07): "wait for 4 to 5 star wanted levels before the cops get better". The police overhaul left the
+helicopter at 3 stars (`POLICE_AIR.stars`); it now comes at 4, with the sharp drivers and the ramming.
