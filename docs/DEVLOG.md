@@ -21395,3 +21395,127 @@ inside baked first when you enter (interiorload), the forklift's loading bays, a
 low-detail stand-ins, the look-ahead scaled by speed, the aircraft camera. Merged, they come to 405 KB. Rather than strip
 more comments out of host.js, the budget goes to 410 (tools/perf.mjs), leaving room for the visibility pass's under-deck
 draw order. The renderer loads once you're in the city, never at the title screen.
+
+## 2026-11-06 - The first car is earned by the path you pick; the city's arrival by Greenfield Park (re-keys World v3)
+
+The owner (11-06, 22:49): "give the player enough money to buy a really cheap car from a dealership (one stationed close
+by each FTUE train station) and if they follow the tutorial it will have them go to the dealer to choose a car to buy?
+Or junk yard, or whatever is appropriate for the part of the world they spawn in. But also if you choose a crime path
+maybe the first thing you do is steal a car but it directs you to an alley with some cars parked that are meant to steal
+as part of the crime path tutorial." He also saw new players' cars spawning on top of each other in one spot. And the
+city's arrival moves beside Greenfield Park, "beautiful and interesting and hand crafted".
+
+**The first car, by path** (server/systems/firstcar.js; the FTUE's three steps are 1 get your car, 2 drive there, 3 do
+it - server/systems/ftue.js):
+- **Honest work**: +`FTUE.cash` ($450, on top of a new character's $200) at the answer. Step 1 "Buy a cheap car at <the
+  used lot>": walk to the station's used lot and buy a beater, off its display (dealer.js, the lot's `used` stock at its
+  price) or from its menu (`ub:<model>`). Then the drive to the post office and the round, as before.
+- **A little hustle**: no cash. Step 1 "Steal a car in <the alley>": a car is spawned for you on a free space in the
+  station's alley (`markCar`: unlocked, nobody's, ringed by the job's marker) - the one theft nobody calls in
+  (vehicles.js tryEnter -> law.crime `gentle`: the Criminal XP and the line "nobody saw this one. Next time someone
+  might call it in", no witnesses, no stars). With Safety mode on, the step says "press twice" and the first press
+  warns as usual. Getting into any car you don't own counts. Then the drive to the fence.
+- **The great outdoors**: the cash, the rod and bait as before; step 1 the same used lot (the Rusty Pickup's bed suits
+  the gear). Then the water and the cast.
+- **Just let me roam**: the cash, the used lot set as your waypoint (`{ t: 'ftue', a: 'mark' }`, client/ftue.js), no
+  steps.
+- Every step skippable as before; driving any car finishes step 1; a replay with a car of yours out goes straight to
+  step 2. The cash is given once per character, ever (`ftue.paid`), not again on the Guide's replay.
+- **Plenty, per player** (the owner's "cars spawning on top of each other"): every car a new player gets goes on a free
+  space of its own - the lot's or the alley's spaces first, then the overflow round them (starter.js `overflowNear`:
+  the nearest parking spaces, an open field, further spaces), each taken at once. The dealerships' own "brought round"
+  and bought cars (economy.js spawnOwned) use the same free spaces now; before, everyone's went to one spot
+  (`poi.spawnLot`), each clearing the last (homes.spawnOwnedAt's 80 px sweep - `keep` skips it).
+
+**The economy** (shared/rules.js `FTUE.cash`, `FTUE.lot`, `FTUE.lotR`): two beaters with no list price (shared/vehicles.js),
+sold only by the used lots and the dealerships' back row: the **Rusty Compact** (the old starter car's model) at **$600**
+and the new **Rusty Pickup** (index 88, drawn as the Pickup in the rust tint, four cargo slots, slower than the Pickup)
+at **$640**. A new character with the answer's cash has $650: one beater, only just ($50 or $10 left); no list-price car
+(the cheapest, the Hatchback, is $2,500). test/firstcar.test.js checks the margin.
+
+**The starter car**: retired for new characters, kept for those who have one.
+- New characters get none: store.js defaultProfile has no `starter`. A profile still waiting for its first day
+  (`starter { first }`: reset by the epoch and not joined since) has the record dropped on joining - a new character.
+- A profile with a starter record keeps everything (starter.js `hasStarter`): its car, the public garages' free one
+  after the cooldown, home garages, the logoff put-away. The public garages' rows and the prompt's tag show only for
+  them; a new character asking gets "You have no starter car."
+- The YOUR CAR marker (`me.car`) now marks your first car - the one you bought or stole first (`profile.firstCar`) -
+  full until you've driven it; after, a bought one's small plate when your car is near; a stolen one's marker ends
+  once driven (it isn't yours). A starter car's marker still comes first for those who have one.
+- The 50-new-players overflow parking now serves the lots and alleys (above); the starter's first-day lot is gone.
+- The arrival stations (`arrivalChoices`, `arrivalFor`) moved to firstcar.js and no longer need a car park.
+
+**The city's arrival: Greenfield Park Station and the Park West block** (shared/world3-firstcars.js `parkWest3`, at the
+very end of the world build's `done` hook): on the park's west lawn south of the soccer pitch, across Park West Avenue
+from Park West Tower. From north to south, all low enough for the camera to see over:
+- **Park West Motors**, the used lot: paving, its little brick office, seven beaters on display, bunting and a USED CARS
+  board, open onto the lane and the avenue.
+- **The alley** beside it (four tiles wide, between the lot's chain-link fence and the shops' side wall, a dead end at the
+  pitch's fence): three spaces nose-out (`m.stealAlleys`), a dumpster, bags, crates, a pallet and a trash pile, a lamp.
+- **Three small shops** facing the lane (two floors of brick, awnings, lit signs): **Lane Mart** (a corner store),
+  **Park West Coffee** (tables out front) and **Greenfield Flowers** (buckets of flowers by the door).
+- **Park West Lane**: asphalt off the avenue, a dead end (bollards, a hot dog cart, a bike rack), strung lights over it,
+  lamps and a bench; the spaces for cars bought from the lot's menu along its kerb. It is paving, not a road, so no
+  traffic routes into it (no road tile or road edge in the block - tested).
+- **The station**: the walk behind the platform, then the arrival line itself (shared/world3-arrivals.js: the city's is
+  laid by hand now - `m.handArrivals.city`, checked as any corridor is): the train comes out of a hill by the pond, stops
+  with its doors on the lane's side and goes into a hill under the avenue. Its stop is a delivery place, "Greenfield
+  Park Station" (no timetable, no menu). The park's trees in front of it gave way to flower beds; the park's loop path,
+  cut by the west hill, runs on along the avenue's pavement.
+- **Seen from the camera** (the owner: hidden signs): the name board is drawn only on an east-west line and now sits on
+  the platform's north side, in front of its canopies, with nothing taller south of it; test/world3arrivals.test.js
+  checks that no building, tree, mast, hill or canopy is drawn over the board, where you step off, the lot's office and
+  display spaces, the alley's spaces or the shops' fronts.
+
+**The other three stations** (`firstCars3`, after the arrival lines): each gets a small yard on open ground fronting a
+road, the nearest to its platform's way out: a used lot (an office, six display spaces, its spaces for bought cars) and a
+back alley (three spaces, a dumpster, dressing) beside it - **Northshore Beach Motors** and the alley behind it,
+**Red Rock Salvage & Sales** (a dirt junkyard) and its scrap lane, **Willow Valley Farm Trucks** (pickups only) and its
+barn lane. No existing dealer was near enough to any of them.
+
+**Shared files changed**: server/systems/ftue.js, starter.js, economy.js (the used lot's menu, the beaters on the
+dealers' back row, free spaces for brought-round cars), homes.js (`keep`), dealer.js (the used lots' stock), vehicles.js
+and law.js (the gentle theft), players.js (the marker, the alley's car let go at logoff), store.js; shared/rules.js,
+vehicles.js, guide.js, world3-arrivals.js, world3-world.js; the client's icon tables (a car for 'usedlot': hud.js,
+mapwaypoints.js, storeicons.js, phone.js' Places under Cars & boats) and client/ftue.js (the waypoint).
+
+**The Guide**: "Arriving" names the park and the lot and alley by each station; a new entry "Your first car" (the cash, the
+beaters and their prices, the alley's car with [[vehicle]], the one gentle theft, the marker); "A starter car" for those
+who have one; Places' new "Used car lots" and the dealers' back row. test/guide.test.js checks the cash and the prices
+follow FTUE.
+
+**Numbers and ids** (seed 1337, World v3): buildings 7,129 -> 7,136 (the Park West block's office and three shops,
+7129-7132, then the three yards' offices, 7133-7135); places 6,018 -> 6,026 (Greenfield Park Station 6018, Park West
+Motors 6019, the three shops 6020-6022, then the coast's, the desert's and the country's used lots 6023-6025); homes
+3,467, unchanged - nothing renumbered, nothing moved but the park's props on the west lawn (trees, lamps, benches round
+the old loop path) and what stood on each yard. Metro Central (place 5417) is no longer an arrival station; its lawn line
+is gone, and the four lines' bores keep tunnel ids in the same order (8 in all). `WORLD_VERSION` stays 13 (no home
+moved: the lead's call). Walks off the platform (test/world3arrivals.test.js): Greenfield Park - the street 4 tiles,
+Park West Motors 27, its alley 12; Northshore - Beach Motors 84, its alley 91; Red Rock - the salvage yard 80, its lane
+87; Willow Valley - Farm Trucks 56, its lane 37. Fifty new players at the park (half buying, half stealing) within a
+minute: fifty cars, none within 40 px of another, the furthest 36 tiles from the station.
+
+**Tests**: test/firstcar.test.js (new, today's map: the economy's margin; each path's first step - buy, steal with and
+without Safety mode, the pickup, roam; at every arrival station; fifty at once; the cash once, a replay). test/world3arrivals.test.js
+(rewritten: the park line by Park West Tower; the lot and alley a walk off every platform; the park block seen from the
+camera, no road in it, its places last; each path's first step at each of the four stations on the real world; fifty at
+the park). test/starter.test.js: the first day and the fifty-in-the-lot tests retired with their code; the rest run on a
+profile that has a starter car; a new test for new and reset characters getting none. test/ftue.test.js and
+test/guide.test.js follow the new step 1 and the Guide. Run (under the lock): firstcar, starter, ftue, guide,
+honestliving, fleet, bikes, motorbikes, core, biz (111 pass); world3arrivals, world3hubs, world3shops, world3server,
+plainblocks, mapwindow, dmath, perf, pagemodules, lazypage, worldmap, firstcar (72 pass, then world3arrivals again after
+a fix to two of its own test points); test/dmath-world.mjs (1led2u3 / 66e5ad22, as before). The world map's picture
+didn't need a rebake (today's `world` is unchanged; worldmap passes).
+
+**Performance** (tools/perf.mjs): page 84 files / 513 KB (was 513), city 366, renderer 404 (unchanged - no renderer
+code), bake 973. No budget raised.
+
+**The car to steal's plate** says UNLOCKED, not YOUR CAR (it isn't yours until you take it): the job marker's plate takes
+an optional word from the server (`me.job.veh[3]`; client/main.js drawJobTruck, one line - page 513 KB, unchanged).
+
+**The capture** (phone upright 411 x 891 @2.6, the hustle picked): stepping off as the doors open, the board once the
+train has gone, the lane and its shops, Park West Motors with its beaters priced on the lot, the alley's car.
+
+**Not done / for the owner**: the yards at Northshore and Red Rock are 80-90 tiles' walk off their platforms (the nearest
+open ground fronting a road); a hand-placed spot would bring them closer. The used lots' display cars are the server's
+dealer-lot stock (dealer.js), restocked a minute after one sells; the menu always has more, so nobody waits.

@@ -25,14 +25,14 @@ export const PLACE_GROUPS = [
   { id: 'out', icon: '🎡', title: 'Food & days out', kinds: ['winery', 'clubhouse', 'roadhouse', 'market', 'fruitstand', 'farmstand', 'snack', 'ride', 'race', 'bowling', 'cinema'] },
   { id: 'baths', icon: '♨', title: 'Bathhouses & spas', kinds: ['bathhouse'] },
   { id: 'sell', icon: '⇄', title: 'Sell stuff', kinds: ['pawn', 'fence', 'fishmarket', 'tackle', 'winery', 'market', 'fruitstand', 'farmstand', 'salvage'] },
-  { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['garage', 'dealer', 'marina', 'rental'] },
+  { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['usedlot', 'dealer', 'garage', 'marina', 'rental'] },
   { id: 'work', icon: '💼', title: 'Work & law', kinds: ['warehouse', 'farm', 'courthouse'] },
   { id: 'gang', icon: '☠', title: 'Gang HQs', kinds: ['gang', 'smuggler'] },
 ];
 const KIND_NOTE = {
   hospital: 'heal up', police: 'badge, evidence', bank: 'deposit / withdraw', atm: 'deposit / withdraw', gunshop: 'guns & ammo', sports: 'bats, fishing',
   hardware: 'melee tools', pharmacy: 'med kits', coffee: 'stamina', grocery: 'produce drop-off', clothing: 'clothes, fitting room', barber: 'haircuts', pawn: 'buy & sell gear',
-  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', rental: 'rent a boat or jet ski', warehouse: 'courier jobs',
+  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', usedlot: 'cheap used cars', marina: 'buy boats', rental: 'rent a boat or jet ski', warehouse: 'courier jobs',
   farm: 'harvest jobs', convenience: 'snacks, drinks, bandages', gasstation: 'snacks, drinks, bandages', courthouse: 'bounties', gang: 'syndicate turf / join the gang', smuggler: 'members only - boat to the Rock', charter: 'deep-sea charters (boat)', sar: 'search & rescue: sign on for rescue shifts',
   winery: 'wine tasting; buys grapes', clubhouse: 'the clubhouse bar', roadhouse: 'biker roadhouse: beer, rye; the clubs hang out', market: 'bread, fruit, honey; buys fruit', fruitstand: 'fruit, cider; pick your own', farmstand: 'honey, lemonade; buys honey',
   snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the movies: tickets & popcorn',

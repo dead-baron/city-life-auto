@@ -40,6 +40,17 @@ test('the numbers come from the data: change a rule, a price or an item and the 
     STARTER.cooldownS = was.cd; MAILJOB.walk = was.walk; MAILJOB.letter = was.letter; BOAT_RENTAL_PRICE.jetski = was.jet; MORTGAGE.deposit = was.dep; ITEMS.bandage.heal = was.heal; band.price = bp;
   }
   assert.match(entry(guideSections(), 'items', 'rods').b, new RegExp(`${FTUE.bait[1]} ${ITEMS[FTUE.bait[0]].name.toLowerCase()}`), 'the outdoors start\'s gear: FTUE');
+  // the first car (the owner, 11-06 22:49: earned by the path you pick): the answer's cash and the used lots' prices
+  const fc = { cash: FTUE.cash, lot: FTUE.lot.starter };
+  try {
+    FTUE.cash = 777; FTUE.lot.starter = 555;
+    const S = guideSections();
+    assert.match(entry(S, 'around', 'firstcar').b, /with \$777 more/, 'FTUE.cash');
+    assert.match(entry(S, 'around', 'firstcar').b, /Rusty Compact at \$555/, 'FTUE.lot');
+    assert.match(entry(S, 'places', 'usedlot').b, /Rusty Compact \(\$555\)/, 'the used lots\' entry');
+    assert.match(entry(S, 'places', 'dealer').b, /from \$555/, 'the dealers\' back row');
+  } finally { FTUE.cash = fc.cash; FTUE.lot.starter = fc.lot; }
+  assert.match(entry(guideSections(), 'around', 'firstcar').b, /\[\[vehicle\]\]/, 'the steal: its control by name');
 });
 
 test('places count what the built map has; search finds an entry by any of its words', () => {

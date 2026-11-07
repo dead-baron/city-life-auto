@@ -42,14 +42,13 @@ export function defaultProfile(pid) {
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
     safety: false,   // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - off unless turned on in Settings (the owner, 11-06)
     safetyOff: 1,    // (the one-time switch-off of Safety mode on profiles from before that has run: migrateSafety)
-    starter: { first: true },   // the starter car (server/systems/starter.js): first - waiting at the arrival station on their first day
     ftue: { st: 'new', tips: 1, m: {} },   // the first-time experience (server/systems/ftue.js): a new character's arrival, question and first goal
   };
 }
 
 // A profile back to a brand-new character: what's kept (the name, the look and the clothes owned, the account) and a new
-// profile for the rest - its FTUE not started (ftue { st: 'new' }) and the starter car's first day to come (starter
-// { first }), stamped with this epoch. (players.js wipeProgress: also lets go of its homes in a running world)
+// profile for the rest - its FTUE not started (ftue { st: 'new' }: the first car earned by its path - server/systems/
+// firstcar.js; no starter car), stamped with this epoch. (players.js wipeProgress: also lets go of its homes in a running world)
 export function resetProfile(prof) {
   const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
   if (prof.acct) { keep.acct = prof.acct; keep.nameAt = prof.nameAt; }   // (the account outlives the progress, as with Start fresh: wipeAccount)

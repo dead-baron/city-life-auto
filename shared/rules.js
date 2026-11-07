@@ -19,8 +19,9 @@ export const POLICE_RANKS = [
   { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
 ];
 
-// The starter car (server/systems/starter.js; the owner, 11-03): a rusty compact registered to you, slow, unsellable and
-// easy to steal (no lock). On your first day it waits in the arrival station's car park; after that, lost (wrecked, sunk,
+// The starter car (server/systems/starter.js; the owner, 11-03), kept for the players who have one (the owner, 11-06: the
+// first car is earned now - FTUE below; a new character gets none): a rusty compact registered to you, slow, unsellable and
+// easy to steal (no lock). It was waiting in the arrival station's car park on their first day; after that, lost (wrecked, sunk,
 // towed, taken away) it's free again at any public garage - a station's car park, a Fresh Coat Garage, a dealership -
 // cooldownS after it was lost; own a home with a garage and it lives there instead. Taken and left empty by someone else
 // (strayed), out of everyone's sight strayS, it's taken away (lost: free again after the cooldown). lotR: how far round a
@@ -35,7 +36,8 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, overflow: 400, p
 // arriveDefault, World v3's region: shared/world3-arrivals.js) and arrives by train (arriveS: the staged arrival's length,
 // skippable; on its own line the train stops stopS in, its doors open and you step off at doorS - when everyone else sees
 // you there - and it pulls out at leaveS, into the far tunnel goneS later), is asked one question
-// and gets a first goal of at most three steps. carR: how near the starter car (px) is "at it"; goalR: how near the goal
+// and gets a first goal of at most three steps (the first car's - bought or stolen - then the drive, then the action).
+// carR: (no longer read - the first step is the car got, not walked to); goalR: how near the goal
 // is "there"; the goal is looked for goalMin..goalMax px from the station (the nearest beyond goalMin, else the nearest);
 // fishR: how far (tiles) round the station for a bank to fish from. The end: reward ($, cash) and xp goes of SKILL.act
 // 'drive' (skills.js gain). The outdoors answer brings a rod and bait if you have none (rod, bait: shared/items.js ids).
@@ -43,7 +45,14 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, overflow: 400, p
 // apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier; wakeS: none
 // while you're down or dead, nor this long after you're back up (the wake-up screen: server/systems/ftue.js moment).
 // (Everyone goes through it once: profiles from before it are reset to new characters - server/store.js PROGRESS_EPOCH.)
-export const FTUE = { pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10, hurtMax: 2, tipsPlayH: 3, tipsDays: 7 };
+// The first car is earned, by the path you pick (the owner, 11-06 22:49; server/systems/firstcar.js): honest work, the
+// great outdoors and "just let me roam" get cash (added to a new character's own) - enough for one of the used lots'
+// beaters, only just - and the hustle steals one in the alley by the station, once without anyone calling it in. cash: what
+// the answer adds to a new character's own (store.js defaultProfile's); lot:
+// the used lots' beaters and their prices (the cheap stock by every arrival station - a used lot in the city, a junkyard
+// in the desert, a farm stand's truck lot in the country, a beach lot on the coast; the dealerships sell them too);
+// lotR: how far from the station (px) its used lot and its alley are looked for.
+export const FTUE = { cash: 450, lot: { starter: 600, rustpickup: 640 }, lotR: 2600, pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10, hurtMax: 2, tipsPlayH: 3, tipsDays: 7 };
 // (the first-time moments only while a character is new: none after tipsPlayH hours played or tipsDays days after the
 // FTUE ended - the six come up in a new player's first hour or so; anyone still missing one after three hours or a
 // week has found their feet or the Guide. hurtMax: the hurt line, un-marked by going down right after it, twice at most)

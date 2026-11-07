@@ -5030,12 +5030,12 @@ function tagPlate(x, cy, tw, u) {
 }
 // (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above - "YOUR HELICOPTER", "YOUR CAB"...: the
 // vehicle's word, from the one in view or the model the server sends with the mark)
-function drawJobTruck([x, y, m3], view, now, z, vehs) {
+function drawJobTruck([x, y, m3, tag], view, now, z, vehs) {   // (tag: the server's own plate - the hustle's car to take: server ftue.js)
   const col = '#45b8ff', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m, u = 1 / z;
   let v = null;
   for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
   const def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[m3] || null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
-  const plate = `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
+  const plate = tag || `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
   if (v) { x = v.rx; y = v.ry; }
   g.save(); g.lineWidth = 3 * u; g.setLineDash([12 * u, 7 * u]); g.lineDashOffset = -now * 24 * u;
   let hh = 0;

@@ -28,7 +28,7 @@ export const KIND_ICON = {
   convenience: 'shop', gasstation: 'fuel', gunshop: 'gun', sports: 'activity', hardware: 'services', pharmacy: 'pharmacy', grocery: 'shop',
   clothing: 'shirt', tackle: 'fish', pawn: 'shop', fishmarket: 'fish', butcher: 'shop', lodge: 'tent', barber: 'shirt',
   warehouse: 'jobs', farm: 'farm', courthouse: 'jobs', salvage: 'services', huntcamp: 'tent', trapper: 'tent', sar: 'hospital',
-  hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car',
+  hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car', usedlot: 'car',
   station: 'transit', airport: 'plane', marina: 'anchor', rental: 'anchor', charter: 'anchor',
   home: 'home', ride: 'star', race: 'car', clubhouse: 'activity', roadhouse: 'bar', winery: 'bar', market: 'shop', fruitstand: 'shop', farmstand: 'shop', snack: 'food',
   club: 'bar', coffee: 'food', gang: 'skull', smuggler: 'skull', fence: 'skull', bowling: 'activity', cinema: 'activity', bathhouse: 'activity',

@@ -55,7 +55,8 @@ import * as wildfolk from './wildfolk.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
-import * as starter from './starter.js';   // (the starter car: first day at the arrival station, the cooldown carried over)
+import * as starter from './starter.js';   // (the starter car of a player who has one: its cooldown carried over, put away at logoff)
+import * as firstcar from './firstcar.js';   // (your first car's marker; the alley's car let go at logoff)
 import * as ftue from './ftue.js';   // (the first-time experience: the arrival, the question, the first goal, the first-time moments)
 import * as races from './races.js';
 import * as minigames from './minigames.js';
@@ -201,7 +202,7 @@ export function join(world, conn, profile, opts = {}) {
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
   ftue.onJoin(world, p);   // (the first-time experience: a profile from before it marked done; one left mid-way picks up - ftue.js)
-  starter.onJoin(world, p);   // (a new character's starter car in the arrival station's car park; a lost one's cooldown carried on)
+  starter.onJoin(world, p);   // (a starter car's lost cooldown carried on, one put away back out; none for a new character - starter.js)
   return p;
 }
 
@@ -436,6 +437,7 @@ function finalizeLogout(world, p, dropLoot) {
   rentals.onPlayerGone(world, p);
   horses.onPlayerGone(world, p);
   starter.onPlayerGone(world, p);   // (the starter car parked and empty: put away till you're back - starter.js)
+  firstcar.dropMark(world, p);   // (a car still waiting in the alley for you to steal: taken away - firstcar.js)
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
@@ -469,7 +471,7 @@ export function wipeAccount(world, p) {
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
   revive.clearDown(world, p);
   bounties.onWipe(world, p);
-  starter.forget(world, p.pid);   // (the new character's own starter, at the arrival station again: starter.js)
+  starter.forget(world, p.pid);   // (none of the old character's starter car: starter.js)
   crews.leave(world, p);   // (out of any crew: a fresh character starts in none - crews.js)
   p.conn = null; p.ghostUntil = 0;
   if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
@@ -1121,7 +1123,7 @@ export function buildMe(world, p) {
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
     ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0,   // (Settings' First-time tips: ftue.js)
-    car: starter.marker(world, p),   // (your starter car, parked and empty while you're on foot: its marker - starter.js marker)
+    car: starter.marker(world, p) || firstcar.marker(world, p),   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,
