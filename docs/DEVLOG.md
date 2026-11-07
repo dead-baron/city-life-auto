@@ -21032,21 +21032,14 @@ exit of the cave look like an exit so it's clear how to get back out." Concepts:
   and `mouthLevel` at night goes 0.22 -> 0.34 so the way out still shows.
 - **The prompt:** "Walk out of the cave, into the daylight" (or "into the night"), or "Walk out of the sea cave onto
   the beach". It is offered anywhere along the way out's passage, from just inside out to the mouth
-  (`CAVE_WAY.leaveReach`), not only near where you came in.
-- **The arrow (only when it helps):** the server decides (`server/systems/underground.js` `wayHint`, a few times a
-  second). It works out the way out by the way you'd walk (`shared/caverns.js` `wayField` / `wayFrom`: a breadth-first
-  walk over the cave's cells from every mouth). Someone gets the arrow only when they are more than `CAVE_WAY.farTiles`
-  from a mouth, have been in more than `afterS`, and either have got no nearer by `gainTiles` in `stallS`, or have been
-  in the dark without a light for `darkS`. It points `aheadTiles` along the way, never through the rock. The page draws
-  a small gold chevron at the screen's edge, clear of the button rows ('ugway' message), and nothing else on the HUD.
-- **Guide:** a new Activities entry, "Caves and mining": going in, your light, how the way out shows, the arrow, the
-  pickaxes and the assay office.
+  (`CAVE_LEAVE_REACH`), not only near where you came in.
+- **Guide:** a new Activities entry, "Caves and mining": going in, your light, how the way out shows, the pickaxes
+  and the assay office.
 
 ### Measured (the cave view alone in Chromium, the same map, a loaded machine)
 - A tile's paint goes from 51 to 59 ms on a warm pass (100 -> 123 cold), with the things now baked into it.
 - A frame of the view goes from 112 to 18 ms. The dark at the art pixel and the baked things do most of that.
-- Page and renderer: unchanged but for `main.js`'s three small hooks (`drawPed` to the view, 'ugway', clearing it on
-  the surface). The cave art loads only with the cave view.
+- Page and renderer: unchanged but for `main.js` handing `drawPed` to the view. The cave art loads only with the cave view.
 
 ### Tests
 - New **test/caveexit.test.js**:
@@ -21055,8 +21048,7 @@ exit of the cave look like an exit so it's clear how to get back out." Concepts:
   - a cave's tile is painted at 2 px an art pixel and drawn exactly 2x with no smoothing, the ground past the mouth is
     brighter than the floor, and the WAY OUT board is baked in;
   - in a frame, the tiles and the dark are drawn at whole device pixels with no smoothing;
-  - the way out is offered along its passage, and the arrow shows only when you are deep in and lost: not at first,
-    not while you are getting nearer, not near the mouth.
+  - the way out is offered all along its passage, and not from deep in.
 - **test/cavelight.test.js:** the spots past the mouth, and moonlight at night is now 0.25-0.4.
 =======
 ## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default

@@ -431,7 +431,6 @@ function onText(m) {
       if (FT) FT.onMe(m); else if (m.ftue) loadFtue().then((f) => f.onMe(S.me)).catch(() => {});   // (the first goal's step line: client/ftue.js)
       if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)
-      if (!m.ug) S.ugWay = null;
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
@@ -445,7 +444,6 @@ function onText(m) {
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
     case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; S.ugFind = m.find || null; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
-    case 'ugway': S.ugWay = m.w; break;   // (lost in a cave: the arrow toward the way out - underground.js wayHint)
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;

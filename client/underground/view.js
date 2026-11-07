@@ -14,7 +14,7 @@
 // art; the shafts of daylight, the hung lanterns, the timbering and the finds: shared/caverns.js lightCave); the sewers'
 // are still made here in the game's palette (the sewer sheets SW1-SW2 replace them).
 import { undergroundOf, C, UG, UG_AMBIENT, LANTERN, SHAFT, cellAtPx, mouthsOf } from '../../shared/underground.js';
-import { bakeCave, glowThing, lantern, shaftBeam, find, drip, roostBats, exitBeam, exitGround, wayArrow, A } from './caveart.js';
+import { bakeCave, glowThing, lantern, shaftBeam, find, drip, roostBats, exitBeam, exitGround, A } from './caveart.js';
 import '../../shared/caverns.js';   // (the caverns' layout, registered with it: the page doesn't carry it till you're near one)
 import { TILE, K, PF } from '../../shared/constants.js';
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
@@ -208,15 +208,6 @@ class UgView {
     this.effects(g, now, dt);
     this.darkness(g, F, W, H, DPR, now);
     this.glows(g, view, now, F);
-    this.wayArrow(g, F, W, H, DPR, now);
-  }
-  // lost in a cave: the arrow at the screen's edge toward the way out (S.ugWay, the server's: only when it helps)
-  wayArrow(g, F, W, H, DPR, now) {
-    const w = this.S.ugWay, me = F.meEnt;
-    if (!w || !me || (this.S.ugLayer || 0) !== UG.CAVE) return;
-    const tf = this.S.worldTf, cx = tf[0] * me.rx + tf[4], cy = tf[3] * me.ry + tf[5];
-    wayArrow(g, cx, cy, Math.atan2(w[1] - me.ry, w[0] - me.rx), g.canvas.width, g.canvas.height, 0.5 + 0.5 * Math.sin(now * 3), DPR);
-    g.setTransform(...this.S.worldTf);
   }
 
   water(g, view, now) {

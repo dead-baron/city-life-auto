@@ -6,14 +6,12 @@
 //     past it, the WAY OUT board baked with the cave's things);
 //   - the cave's tiles are painted at the game's art pixel and drawn up with no smoothing, at whole device pixels, and
 //     the dark is laid over them the same way (crisp, never blurred);
-//   - the way out is offered all along its passage, and the arrow toward it (server/systems/underground.js wayHint) shows
-//     only for someone deep in and lost: not at first, not near a mouth, not while they're getting nearer.
+//   - the way out is offered all along its passage, from just in from where you come in out to the mouth.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { undergroundOf, mouthsOf, cellAtPx, lightAt, UG, C } from '../shared/underground.js';
-import { wayFrom, EXIT } from '../shared/caverns.js';
-import { CAVE_WAY } from '../shared/rules.js';
+import { EXIT } from '../shared/caverns.js';
 import { TILE } from '../shared/constants.js';
 import * as players from '../server/systems/players.js';
 import * as ug from '../server/systems/underground.js';
@@ -115,41 +113,20 @@ test('a cave is painted crisp: at the art pixel, drawn up with no smoothing at w
   for (const q of onScreen) { assert.equal(q.smooth, false, 'no smoothing'); for (const v of q.a) assert.ok(Number.isInteger(v), `at whole device pixels (${q.a})`); }
 });
 
-test('the way out: offered all along its passage; the arrow only for someone deep in and lost', () => {
+test('the way out: offered all along its passage, out to the mouth', () => {
   const w = makeWorld();
   const L = undergroundOf(w.map), K = L.caves[0], M = mouthsOf(K)[0];
   const { p } = joinPlayer(w);
-  const sent = [];
-  p.conn = { open: true, sendJSON: (o) => sent.push(o), sendText() {}, sendBinary() {} };
   ug.enterCave(w, p, K, M);
   for (const f of [0, 0.5, 0.9]) {
     teleport(w, p.ped, M.inside.x + (M.x - M.inside.x) * f, M.inside.y + (M.y - M.inside.y) * f);
     const a = players.findInteraction(w, p);
     assert.ok(a && /Walk out of the cave/.test(a.label), `the way out offered ${f} of the way to the mouth (${a && a.label})`);
   }
-  // the way out by the way you'd walk: from the den, fewer tiles each step along it
-  const d0 = wayFrom(K, K.den.x, K.den.y, 0), d1 = wayFrom(K, K.den.x, K.den.y, CAVE_WAY.aheadTiles);
-  assert.ok(d0.d > CAVE_WAY.farTiles, `the den is deep in (${d0.d} tiles)`);
-  assert.equal(wayFrom(K, d1.x, d1.y).d, d0.d - CAVE_WAY.aheadTiles, 'the arrow points a few tiles along the way');
-  assert.equal(wayFrom(K, M.inside.x, M.inside.y).d, 0);
-  // deep in: nothing at first; then, stuck there, the arrow
-  teleport(w, p.ped, K.den.x, K.den.y);
-  p.ugWay = null;
-  const t0 = w.time;
-  assert.equal(ug.wayHint(w, p, K), null, 'not at first');
-  w.time = t0 + CAVE_WAY.afterS + CAVE_WAY.stallS + 1;
-  const arrow = ug.wayHint(w, p, K);
-  assert.ok(arrow, 'lost: the arrow');
-  assert.ok(wayFrom(K, arrow[0], arrow[1]).d < d0.d, 'toward the way out');
-  assert.deepEqual(sent.filter((m) => m.t === 'ugway').pop().w, arrow, 'sent to the page');
-  // walking out along it with a light on: gone once you're getting nearer, and near the mouth (in the dark without a
-  // light it stays: the screen is all dark then)
-  p.ped.lightCode = 1;
-  let q = { x: K.den.x, y: K.den.y };
-  for (let i = 0; i < 4; i++) { q = wayFrom(K, q.x, q.y, CAVE_WAY.gainTiles + 2); teleport(w, p.ped, q.x, q.y); w.time += 1; ug.wayHint(w, p, K); }
-  assert.equal(ug.wayHint(w, p, K), null, 'getting nearer: no arrow');
+  teleport(w, p.ped, K.ch.hall.x, K.ch.hall.y);
+  const a = players.findInteraction(w, p);
+  assert.ok(!a || !/Walk out/.test(a.label), 'not from deep in');
   teleport(w, p.ped, M.inside.x, M.inside.y);
-  w.time += CAVE_WAY.stallS + CAVE_WAY.darkS + 5;
-  assert.equal(ug.wayHint(w, p, K), null, 'near the mouth: no arrow');
-  assert.equal(sent.filter((m) => m.t === 'ugway').pop().w, null, 'and the page told it\'s gone');
+  players.findInteraction(w, p).run();
+  assert.equal(p.ped.ug, 0, 'out');
 });

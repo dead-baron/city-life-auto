@@ -743,22 +743,6 @@ export function exitBeam(g, E, now, k, tint) {
     g.fillStyle = `rgba(255,250,235,${(0.25 + 0.45 * Math.abs(Math.sin(now * 1.1 + i * 2.1))) * k * Math.sin(u * Math.PI)})`; g.fillRect(Math.round(x / A) * A, Math.round(y / A) * A, A, A);
   }
 }
-// the arrow toward the way out (S.ugWay: the server's - only when you're lost; server/systems/underground.js wayHint),
-// at the screen's edge in the way to go, in screen px (cx, cy: you; a: the angle; W, H: the screen; k: its pulse)
-export function wayArrow(g, cx, cy, a, W, H, k, px) {
-  const ca = Math.cos(a), sa = Math.sin(a), m = 30 * px;
-  let t = Infinity;
-  if (ca > 1e-3) t = Math.min(t, (W - m - cx) / ca); else if (ca < -1e-3) t = Math.min(t, (m - cx) / ca);
-  if (sa > 1e-3) t = Math.min(t, (H - m * 2.6 - cy) / sa); else if (sa < -1e-3) t = Math.min(t, (m * 3 - cy) / sa);   // (clear of the top and bottom rows of buttons)
-  t = Math.max(60 * px, Math.min(t, Math.min(W, H) * 0.42));
-  const x = Math.round(cx + ca * t), y = Math.round(cy + sa * t), s = Math.max(2, Math.round(3 * px));
-  g.save(); g.setTransform(1, 0, 0, 1, x, y); g.rotate(a);
-  g.globalAlpha = 0.55 + 0.35 * k;
-  g.fillStyle = 'rgba(20,14,8,.85)'; g.beginPath(); g.moveTo(5 * s, 0); g.lineTo(-3 * s, -4.5 * s); g.lineTo(-1 * s, 0); g.lineTo(-3 * s, 4.5 * s); g.closePath(); g.fill();
-  g.fillStyle = '#ffe2a0'; g.beginPath(); g.moveTo(3.6 * s, 0); g.lineTo(-2 * s, -3 * s); g.lineTo(-0.4 * s, 0); g.lineTo(-2 * s, 3 * s); g.closePath(); g.fill();
-  g.restore();
-}
-
 // ---- the things that don't move, baked into a tile's art pixels (sg: its canvas, in world px; x0, y0: the tile's corner)
 export function bakeProps(V, sg, caves, x0, y0) {
   const M2 = 180, inT = (x, y, m = M2) => x > x0 - m && x < x0 + 512 + m && y > y0 - m && y < y0 + 512 + m + 60;
