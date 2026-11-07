@@ -774,6 +774,29 @@ function door(G, x0, y0, w, h, open, night, seed, gated = false) {
   }
 }
 
+// (11-07, the owner: "The arcade exterior needs a clear door [to go] inside") an arcade's way in: glass double doors lit
+// violet from the floor inside, their push bars; a pink neon tube round the doorway; over it a marquee box ringed with
+// chasing bulbs, its arrows lit pointing in
+function arcadeDoor(G, dx, y0, dw, night) {
+  const top = y0 - 50, mid = dx + dw / 2, k = 0.45 + night * 0.55;
+  for (let y = top + 2; y < y0 - 1; y++) for (let x = dx + 2; x < dx + dw - 2; x++) {
+    const bar = Math.abs(x + 0.5 - mid) < 1.2 || y === top + 2 || (y === top + 26 && Math.abs(x + 0.5 - mid) > 3 && Math.abs(x + 0.5 - mid) < 9), t = (y - top) / 50;
+    setC(G, x, y, bar ? step(MAT.metal, 0.6, x, y, 0) : [Math.round(120 + 60 * t), Math.round(80 + 40 * (1 - t)), 220]);
+    if (!bar) glow(G, x, y, [170, 110, 255, Math.round(70 * k + 30)]);
+    if (G.inside(x, y)) G.flag[y * G.w + x] |= F_GLASS;
+  }
+  for (let y = top - 2; y < y0; y++) for (const x of [dx - 3, dx + dw + 2]) { setC(G, x, y, [255, 120, 210]); glow(G, x, y, [255, 90, 200, 220]); }
+  for (let x = dx - 3; x < dx + dw + 3; x++) { setC(G, x, top - 2, [255, 120, 210]); glow(G, x, top - 2, [255, 90, 200, 220]); }
+  const m0 = top - 18, m1 = top - 4;   // the marquee
+  for (let y = m0; y < m1; y++) for (let x = dx - 6; x < dx + dw + 6; x++) {
+    const e = y === m0 || y === m1 - 1 || x === dx - 6 || x === dx + dw + 5, bulb = e && (x + y) % 3 === 0, cx = x + 0.5 - mid, cy = y - m0;
+    const arrow = cy >= 3 && cy <= 9 && [-8, 0, 8].some((o) => Math.abs(Math.abs(cx - o) - (9 - cy) * 0.7) < 0.8 && Math.abs(cx - o) < 5);
+    const c = bulb ? [255, 230, 120] : e ? [60, 40, 90] : arrow ? [90, 230, 255] : [26, 18, 44];
+    setC(G, x, y, c);
+    if (bulb || arrow) glow(G, x, y, bulb ? [255, 220, 110, 200] : [80, 220, 255, 210]);
+  }
+}
+
 // A door that opens live (shared/doors.js: spec.shop.live / spec.doors[i].live 'slide' | 'hinge'), baked shut - the page
 // draws it opening over this as someone comes up to it (client/art2/game/doorart.js, the same leaves): sliding glass in
 // a steel frame, the shop dim behind it; or a painted door (DOOR_COLS[c]) with a glass light, a brass knob, a kick plate
@@ -803,7 +826,7 @@ export function liveDoor(G, x0, y0, w, h, style, night, c = 0) {
 function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const shop = spec.shop, y0 = d + H;
   const winTop = fy(gH - signLift(spec) - 18), winBot = y0 - 7;
-  const doorW = shop.doorW || 22, doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
+  const doorW = shop.doorW || (shop.kind === 'arcade' ? 30 : 22), doorX = shop.door === 'right' ? w - doorW - 10 : shop.door === 'left' ? 10 : (shop.door | 0);
   // windows with the interior
   for (let y = winTop; y < winBot; y++) for (let x = 4; x < w - 4; x++) {
     if (x >= doorX - 2 && x < doorX + doorW + 2) continue;
@@ -917,6 +940,7 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   for (let y = winBot; y < y0; y++) for (let x = 2; x < w - 2; x++) if (!(x >= doorX && x < doorX + doorW)) setC(G, x, y, step(shop.kind === 'diner' ? MAT.dinerRed : MAT.stone, 0.4 + (y === winBot ? 0.35 : 0), x, y, 0.4));
   if (shop.live) liveDoor(G, doorX, y0 - 50, doorW, 50, shop.live, night, shop.doorC | 0);
   else door(G, doorX, y0 - 50, doorW, 50, shop.open !== false, night, seed);
+  if (shop.kind === 'arcade') arcadeDoor(G, doorX, y0, doorW, night);
   // (the sign itself is painted by makeBuilding once the face is dressed: signBoard)
   // striped fascia band above the windows
   if (!(shop.sign && shop.sign.text) && shop.band) for (let y = winTop - 22; y < winTop - 2; y++) for (let x = 2; x < w - 2; x++) { const k = y - (winTop - 22); setC(G, x, y, k < 3 || k > 17 ? MAT.paintWhiteCar[k < 3 ? 4 : 2] : step(ramp(shop.band[Math.floor((k - 3) / 5) & 1], 5, 2), 0.6 - ((k - 3) % 5 === 4 ? 0.2 : 0), x, y, 0)); }
