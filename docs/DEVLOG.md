@@ -21477,15 +21477,17 @@ its tests are unchanged. The ball is no longer a world entity: the server sends 
 pages roll it (`client/bowling.js`), as big as the lane. The room is filled out (`alleyKit`, solid where it should be):
 behind each pair of lanes a ball return, a lit scoring console and a curved settee round a table; the snack bar with
 its menu boards and stools; tables and chairs; lounges either side of the lanes; arcade cabinets along the east wall;
-plants; the shoe counter by the door. A smaller building keeps the old eight lanes.
+plants; the shoe counter by the door. A smaller building (the old generator city's Pinwheel Lanes, 14 x 13) keeps the
+old eight lanes.
 
 **5. Chess tables.** Six more public tables out in the open (`chess: 1, open: 1`): two on Westport Center's fountain
 court, two on the Sunset Boardwalk between the palms, two on Greenfield Park's fountain plaza. The park's old table is
-left where it is for the visibility pass. test/chesstables.test.js: each is a chess table, nothing tall over it.
+left where it is for the visibility pass. test/world3server.test.js: each is a chess table with nothing tall drawn
+over it; test/chesstables.test.js: at a table playing the regular, a second player can only watch.
 
 **6. The Guide** (`shared/guide.js`): Arcades, Pool, Air hockey, Bowling, Chess, and Playing other people - the numbers
 from `ARCADE`, `BOWL`, `BIG`, `CHESS`.
 
 Budgets: the page 518 / 520 KB (main.js routes 'pool' messages and the 'bowlroll' event; the classic tiles draw the big
 lanes), the renderer 405 / 410, the bake 980 / 1000 (the alley's kit, the arcade's door). Tests: test/poolmatch.test.js,
-test/chesstables.test.js, the arcade, bowling and lazypage tests extended.
+test/chesstables.test.js, the arcade, bowling, world3server and lazypage tests extended.
