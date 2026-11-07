@@ -85,7 +85,10 @@ function build(m, api, K) {
   // A row of shops with flats over them, fronts on the street south of it: three to six floors of stone or brick
   const shopRow = (x0, x1, y0, y1, depth = 14) => K.row(x0, x1, y0, y1, (x, room) => {
     if (room < 6) return room >= 1 ? { gap: room, kind: 'garden' } : null;
-    const w = room <= 15 ? room : 9 + Math.floor(rnd(x, y1, 41) * 5);
+    let w = room <= 15 ? room : 9 + Math.floor(rnd(x, y1, 41) * 5);
+    // (a bar gets a lot 12 wide, 10 inside - IN5's whole room, shared/shoprooms.js; the owner, 11-06: where the row's
+    // end leaves less, the next shop that isn't a bar goes there instead)
+    if (SHOPS[si % SHOPS.length].store === 'bar') { if (room > 15) w = Math.max(w, 12); else if (room < 12) si++; }
     const S = SHOPS[si++ % SHOPS.length], brick = rnd(x, y1, 42) < 0.45, floors = 3 + Math.floor(rnd(x, y1, 43) * 4);
     const art = tower(x, y1, { name: S.name, style: brick ? 'brick' : 'stone', ...(brick ? { tone: pick(TONES, rnd(x, y1, 44)) } : { wall: pick(STONES, rnd(x, y1, 45)) }), floors, store: S.store, awning: S.awning, win: pick(['pair', 'even', 'tall'], rnd(x, y1, 46)), cornice: pick(['bracket', 'dentil'], rnd(x, y1, 47)), parapet: 6, roofMat: 'gravel' });
     const poi = S.poi === 'coffee' ? { kind: 'coffee', label: S.name, food: S.store === 'diner' } : S.poi ? { kind: S.poi, label: S.name } : { kind: 'delivery', label: S.name, walk: true, store: S.store === 'cafe' || S.store === 'diner' ? 'mart' : S.store };

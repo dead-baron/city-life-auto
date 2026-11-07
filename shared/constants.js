@@ -35,7 +35,7 @@ export const WORLD_H = MAP_H * TILE;
 //  12  World v3, handcrafted (the owner's World v3 Handcraft Plan, 2026-10-17): Midtown laid out by hand and the main
 //      line up on the El over Trestle Street - the homes' list moved, so the homes bought since are bought back at what was
 //      paid for them (their deeds)
-export const WORLD_VERSION = 12;
+export const WORLD_VERSION = 13;
 export const CHUNK_TILES = 24;          // net-culling chunk = one city block pitch
 export const CHUNK_PX = CHUNK_TILES * TILE; // 768 px
 export const CHUNKS_X = Math.ceil(MAP_W / CHUNK_TILES);

@@ -26,21 +26,25 @@ export function foodLayout(b, u, TILE) {
   // the cook at the kitchen line along the back wall, west of the till (the clerk's at the till: shared/map.js)
   if (cy - back >= TILE && W >= 4 * TILE) L.cook = { x: X0 + Math.min(40, W * 0.22), y: cy - TILE / 2, a: -Math.PI / 2 };
   if (style === 'diner') {
+    // IN8's diner: the red booths in a column down the side wall away from the door (and down the other wall too when
+    // the room is wide enough and the door leaves it free), the stools along the counter, the jukebox at the head of the
+    // booths by the counter's end, the checker floor open down the middle
+    const col = (bx0) => { const bx1 = bx0 + 36; for (let y = Ya + 8; y + 34 <= Yb - 4; y += 40) { if (!free(bx0, y, bx1, y + 34)) continue; L.booths.push({ x0: bx0, x1: bx1, y0: y, y1: y + 34, seats: [{ x: bx0 + 18, y: y + 5, a: Math.PI / 2 }, { x: bx0 + 18, y: y + 29, a: -Math.PI / 2 }] }); } };
     const bx0 = side < 0 ? X0 + 4 : X1 - 40, bx1 = bx0 + 36;
-    for (let y = Ya + 8; y + 34 <= Yb - 4; y += 40) {
-      if (!free(bx0, y, bx1, y + 34)) continue;
-      L.booths.push({ x0: bx0, x1: bx1, y0: y, y1: y + 34, seats: [{ x: bx0 + 18, y: y + 5, a: Math.PI / 2 }, { x: bx0 + 18, y: y + 29, a: -Math.PI / 2 }] });
-    }
-    const sx0 = side < 0 ? bx1 + 14 : X0 + 14, sx1 = side < 0 ? X1 - TILE - 4 : bx0 - 14;
+    col(bx0);
+    const ox0 = side < 0 ? X1 - 40 : X0 + 4, wide = W >= 9 * TILE && (side < 0 ? dx + dw + 52 < ox0 : dx - 52 > ox0 + 36);
+    if (wide) col(ox0);
+    const sx0 = side < 0 ? bx1 + 14 : (wide ? ox0 + 50 : X0 + 14), sx1 = side < 0 ? (wide ? ox0 - 14 : X1 - TILE - 4) : bx0 - 14;
     for (let x = sx0; x + 10 <= sx1; x += 18) L.stools.push({ x: x + 5, y: Ya + 7, a: -Math.PI / 2 });
-    const jx = side < 0 ? X1 - 24 : X0 + 4;
-    if (free(jx, Yb - 20, jx + 20, Yb - 6) && Yb - Ya > 90) L.jukebox = { x0: jx, y0: Yb - 20, x1: jx + 20, y1: Yb - 6 };
+    const jx = side < 0 ? bx1 + 6 : bx0 - 26, jy = Ya + 22;
+    if (Yb - Ya > 90 && free(jx, jy, jx + 20, jy + 14)) { L.jukebox = { x0: jx, y0: jy, x1: jx + 20, y1: jy + 14 }; L.stools = L.stools.filter((q) => q.x < jx - 8 || q.x > jx + 28); }
+    else { const jx2 = side < 0 ? X1 - 24 : X0 + 4; if (free(jx2, Yb - 20, jx2 + 20, Yb - 6) && Yb - Ya > 90 && !L.booths.some((q) => q.x0 < jx2 + 20 && q.x1 > jx2 && q.y1 > Yb - 22)) L.jukebox = { x0: jx2, y0: Yb - 20, x1: jx2 + 20, y1: Yb - 6 }; }
   } else if (style === 'fastfood') {
     const qy1 = Math.min(Ya + 64, Yb - 40);
     if (qy1 - Ya >= 24) L.queue = { x0: tillX - 15, x1: tillX + 15, y0: Ya + 3, y1: qy1 };
     const mx = side < 0 ? X0 + 4 : X1 - 24;
     if (free(mx, Ya + 2, mx + 20, Ya + 14) && (!L.queue || mx + 20 < L.queue.x0 - 4 || mx > L.queue.x1 + 4)) L.drinks = { x0: mx, y0: Ya + 2, x1: mx + 20, y1: Ya + 14 };
-    for (let y = Ya + 44; y + 16 <= Yb - 8; y += 46) for (let x = X0 + 22; x + 44 <= X1 - 4; x += 58) {
+    for (let y = Ya + 44; y + 16 <= Yb - 8; y += 42) for (let x = X0 + 20; x + 44 <= X1 - 4; x += 52) {
       const t = { x0: x + 13, x1: x + 31, y0: y, y1: y + 16 };
       if (!free(x, y - 2, x + 44, y + 18) || (L.queue && x + 44 > L.queue.x0 - 4 && x < L.queue.x1 + 4 && y < L.queue.y1 + 6) || (L.drinks && y < L.drinks.y1 + 8 && x + 44 > L.drinks.x0 && x < L.drinks.x1)) continue;
       t.seats = [{ x: x + 6, y: y + 8, a: 0 }, { x: x + 38, y: y + 8, a: Math.PI }];
@@ -49,7 +53,7 @@ export function foodLayout(b, u, TILE) {
   } else {
     const hx = dx - 18 >= X0 + 6 ? dx - 18 : dx + dw + 6;
     if (Yb - Ya >= 70) L.host = { x0: hx, y0: Yb - 34, x1: hx + 12, y1: Yb - 24 };
-    for (let y = Ya + 20; y + 22 <= Yb - 10; y += 52) for (let x = X0 + 10; x + 50 <= X1 - 4; x += 60) {
+    for (let y = Ya + 20; y + 22 <= Yb - 10; y += 48) for (let x = X0 + 8; x + 50 <= X1 - 4; x += 56) {
       const t = { x0: x + 14, x1: x + 36, y0: y, y1: y + 22, cloth: true };
       if (!free(x, y - 2, x + 50, y + 24) || (L.host && x + 50 > L.host.x0 - 6 && x < L.host.x1 + 6 && y + 24 > L.host.y0 - 6)) continue;
       t.seats = [{ x: x + 6, y: y + 11, a: 0 }, { x: x + 44, y: y + 11, a: Math.PI }];

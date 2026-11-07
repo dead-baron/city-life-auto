@@ -23,7 +23,7 @@ import { inAnyView, cineEyes } from '../view.js';
 import { pointGrid } from '../pointgrid.js';
 import { HIGHWAY_SPEED } from '../../shared/rules.js';
 import { routeSteps, haltsOn, haltCap, haltAt, rejoin } from './transit.js';
-import { isBlocked, unjam, goRound } from './reroute.js';   // (drivers who find another way round a backup: task #315)
+import { isBlocked, unjam, goRound, standing } from './reroute.js';   // (drivers who find another way round a backup: task #315)
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd, clearance, OPEN_ANY as OPEN_ANY_GROUND } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
@@ -710,6 +710,10 @@ function steerTraffic(world, v, t) {
     if (hold) desired = Math.min(desired, Math.max(0, gap * 1.6));
     else if (ai.turning && ds < 260) desired = Math.min(desired, 150 + ds * 0.4);
     holding = hold && gap < 220;
+    // (not held by the lights when what it's stopped behind is something standing in the road short of the line - a
+    // wreck, a car left there: that's what it waits on, and the red beyond it only kept it from looking for a way round
+    // until the light changed)
+    if (holding && v._blk) { const b = world.get(v._blk); if (b && standing(world, b) && Math.hypot(b.x - v.x, b.y - v.y) < ds - 20) holding = false; }
     if (ai.next && ai.next.edge === ai.edge) {
       // the road's end: up to it slowly, to turn round there - one car at a time (the next waits short of the turning
       // circle: roadends.js)
