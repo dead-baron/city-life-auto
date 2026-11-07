@@ -400,6 +400,15 @@ export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { 
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
 function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
+// The bake order round a walk-in (the owner's 11-06 report: "interiors take a long time to load in general"). A pool job
+// with a lower prio goes first; the screen's are their distance from the camera (0 - about 1500 px; 2000 and up for the
+// road ahead), a look in the store's d - 1e6, baking ahead into the store 40000 and up.
+//   entryPrio   standing inside, its inside not drawn yet: the chunk under you first, then the rest on screen, then the
+//               rest of the building - before anything else, the store's looks too
+//   precutPrio  about to walk in (WALKIN_SOON_PX): its inside baked ahead into the store after the screen's own chunks
+//               (nearest you first) but before the ring round the view
+export function entryPrio(under, onScreen, prio) { return (under ? -3e6 : onScreen ? -2.5e6 : -2e6) + Math.min(prio, 1e5); }
+export function precutPrio(chunksAway) { return 900 + chunksAway * 50; }
 
 export class World2 {
   // null when it can't run here; World2.lastWhy then says why
@@ -806,9 +815,15 @@ export class World2 {
     }
     const jobs = this.wantJobs; jobs.clear();
     const baking = !this.noBake && this.pool && !this.pool.dead && this.pool.ready && (this.prov.ground || this.prov.statics);
+    // (inside a walk-in whose inside isn't drawn yet: its cut-away bakes go first of all - the one you stand in, then the
+    // rest on screen, then the rest of the building - ahead of the ring and the road ahead; the owner's 11-06 report: "a
+    // nightclub ... not loading after quite some time")
+    const inWait = cut >= 0 && !this.insideReady(F.insideB), sx = Math.floor(F.sp.x / CHUNK), sy = Math.floor(F.sp.y / CHUNK);
+    this.entering = inWait;
     if (baking) {
-      for (const [k, prio] of bake) {
+      for (const [k, prio0] of bake) {
         const cx = k % 1000, cy = Math.floor(k / 1000), mode = modeOf(cx, cy);
+        const prio = inWait && mode >= 0 ? entryPrio(cx === sx && cy === sy, need.has(k) && (cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1, prio0) : prio0;
         const st = this.chunkState.get(k), ver = this.ver.get(k) || 0;
         if (st && st.mode === mode && st.ver === ver && !st.preview && E.hasChunk(cx, cy)) continue;
         const fail = this.chunkFails.get(k);
@@ -865,7 +880,7 @@ export class World2 {
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
       // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
       // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
-      const jmp = !!this.jump && !this.jump.drawn && !this.jump.over;   // (the screen all stand-ins: not held to the budget)
+      const jmp = (!!this.jump && !this.jump.drawn && !this.jump.over) || !!this.entering;   // (the screen all stand-ins, or a walk-in's inside on its way: not held to the budget)
       let n = this.warming ? 2 * JUMP_UP : jmp ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0 || (!jmp && !this._upOk('chunk'))) break;
@@ -956,8 +971,12 @@ export class World2 {
     const b = F.nearB, P = this.pool;
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
     if (typeof document !== 'undefined' && document.hidden) return;
-    if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B' && k[1] !== 'C') > 0) return;   // (the screen's bakes first)
+    // (the screen's own bakes first - a chunk on screen with nothing drawn; then the walk-in's inside, ahead of the ring
+    // round the view: precutPrio)
+    const need = this.needChunks;
+    if (need) for (const k of need.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if ((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1 && !this.E.hasChunk(cx, cy)) return; }
     const pc = this.pc || (this.pc = { kept: new Set(), out: new Set(), b: -1 }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);
+    const sx = Math.floor(F.sp.x / CHUNK), sy = Math.floor(F.sp.y / CHUNK);
     // (walking on past one shop to the next: what's still queued for the last is let go - one shop's at a time, not a
     // street's worth holding the workers while the screen's bakes wait)
     if (pc.b !== b.id) {
@@ -971,7 +990,7 @@ export class World2 {
       if (pc.out.has(jk) && !P.has(jk)) pc.out.delete(jk);   // (cancelled: asked again)
       if (pc.kept.has(kk) || pc.out.has(jk) || P.has(jk)) continue;
       pc.out.add(jk);
-      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem, cutaway: b.id }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}|c${b.id}` }, 40000, (r, err) => {
+      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem, cutaway: b.id }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}|c${b.id}` }, precutPrio(Math.hypot(cx - sx, cy - sy)), (r, err) => {
         pc.out.delete(jk);
         if (err === 'no workers') return;
         pc.kept.add(kk);   // (kept now - or failed: not tried again this session)
