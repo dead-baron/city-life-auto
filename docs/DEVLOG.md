@@ -21225,3 +21225,26 @@ this frame (`client/render/fx.js` `windowMuzzle`): out of the window on the side
 seats' for a back-seat shooter), or over the roof aiming ahead or behind; the flash stays there for its frames
 (collectLights) and the tracer starts from the same point. For a moment after each shot an arm and a gun show out of
 that window (`drawLeans`, on the overlay). Bikes, horses and open boats keep the rider's own point. test/drivefx.test.js.
+
+## 2026-11-07 - Car soccer: easy to find, start and boost
+The owner (11-06): "Can't figure out the rocket league arena... How do I get it to start and have people join?" and
+"How do you boost?" Joining meant standing on foot within 120 px of the gate and pressing Act; boost was Sprint.
+- **The join pad:** a lit, pulsing ring on Stadium Way by the gate with a CAR SOCCER sign (a ball badge on a post;
+  "JOIN HERE", or the count to kick-off while a lobby's open) - drawn by client/carsoccer.js `gate` for the players
+  the server already tells about the arena (`nearR`). `shared/carsoccer.js` `joinPad`, `CARSOCCER.padDX` / `padR`.
+- **Wider reach, and from a car:** `joinR` 120 -> 200 px, the pad counts too; driving onto the pad joins (`padCheck`,
+  once each time onto it; never an arena car or an aircraft). At kick-off you step out and your car waits by the gate.
+- **On the map and the phone:** the arena's gate is a place (`client/mapwaypoints.js` `arenaPlaces`, `placesOf`: the
+  arenas aren't among the world's POIs) - an icon on the big map (Activities), in its panel's lists and search, and in
+  the phone's Places (Food & days out), where a tap sets the waypoint. No change to the world itself.
+- **The call:** opening a lobby tells every player within `callR` (1600 px, a few blocks): "Car soccer kicking off at
+  Waves Arena in 40 s - join at the gate", and the city feed says the same (a ball icon); later joiners are named to
+  the players about. With another player near, the lobby waits `lobbyNearS` (40 s) rather than `lobbyS` (20) -
+  decided at opening, or stretched once if someone comes near during it.
+- **Boost:** on touch, in an arena car, a BOOST button (hold) in C1 by the right thumb (`shared/touchcontrols.js` state
+  `arena`: no FIRE, the sticks unmoved; client/touchslots.js passes the flag); on keyboard and pad the boost key's name
+  under the boost ring (glyphs.js `keyName('sprint')`); the kick-off says "Hold BOOST to boost - the pads refill it"
+  (the countdown, the start's note, the prompt at the wheel).
+- The Guide has a Car soccer entry (Activities), the README's row is updated. test/carsoccer.test.js: driving onto the
+  pad, the call and the feed, the longer lobby, out of your car at kick-off; the lobby stretched once; the BOOST slot.
+- (rules-games.js is in World v3's code hash: the stamp's `world3` changes with these numbers.)

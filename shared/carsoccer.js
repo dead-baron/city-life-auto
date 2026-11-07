@@ -57,6 +57,9 @@ export function bankRamps(a) {
   for (const x of [a.ix0, a.ix1]) { J(x, (a.iy0 + a.my0) / 2, x === a.ix0 ? Math.PI : 0, a.my0 - a.iy0); J(x, (a.my1 + a.iy1) / 2, x === a.ix0 ? Math.PI : 0, a.iy1 - a.my1); }
   return out;
 }
+// the join pad by an arena's gate (on the street: drive onto it, or walk up, to join - server carsoccer.js, drawn by
+// client/carsoccer.js)
+export const joinPad = (a) => ({ x: a.gate.x + C.padDX, y: a.gate.y, r: C.padR });
 export const arenaAt = (m, x, y) => { for (const a of (m && m.arenas) || []) if (x > a.x0 && x < a.x1 && y > a.y0 && y < a.y1) return a; return null; };
 
 // How far up a bank (x, y) is: 0 on the flat (or out of the play area), 1 at the wall's foot - with the way back down

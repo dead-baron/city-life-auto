@@ -1,6 +1,7 @@
 // Car soccer at the Waves Arena (the owner, 10-16: "Rocket League-style car soccer arena (boosts, banked walls, a giant
 // ball)"): the match at each of the map's arenas (m.arenas: shared/carsoccer.js), the giant ball the server simulates.
-//   - Join at the gate on Stadium Way (on foot: "Join car soccer"). The first to join opens the lobby; CARSOCCER.lobbyS s
+//   - Join at the gate on Stadium Way (on foot: "Join car soccer"; or drive onto its join pad). The first to join opens the
+//     lobby (lobbyNearS with another player about: they hear of it, and the city feed); CARSOCCER.lobbyS s
 //     later the match starts: the players split between ORANGE (defending the west goal) and BLUE (the east), the city's
 //     drivers filling each side to teamMin (up to teamMax a side with more players); everyone is put at the wheel of an
 //     arena car in the team's paint on the kick-off spots inside the walls.
@@ -19,7 +20,8 @@
 // the pads, the score and the clock, predicts the ball between them). world.soccer: [state per arena].
 import { K } from '../../shared/constants.js';
 import { CARSOCCER as C } from '../../shared/rules-games.js';
-import { TEAMS, TEAM_PAINT, newBall, stepBall, carOf, padAt, carStep, arenaAt } from '../../shared/carsoccer.js';
+import { TEAMS, TEAM_PAINT, newBall, stepBall, carOf, padAt, carStep, arenaAt, joinPad } from '../../shared/carsoccer.js';
+import * as events from './events.js';
 import { setArena } from '../../shared/physics.js';
 import { store } from '../store.js';
 import { spawnNpc, despawnNpc } from './npc.js';
@@ -49,12 +51,17 @@ export function matchOf(world, p) {
 }
 
 // ---- the gate --------------------------------------------------------------------------------------------------------
+// (the owner, 11-06: "Can't figure out the rocket league arena... How do I get it to start and have people join?") The
+// gate has a lit join pad on the street (joinPad; client/carsoccer.js draws it and its sign, the big map and the phone's
+// Places show the arena): walk up to it and press Act, or drive onto it. The first in opens the lobby and the players
+// within callR hear it (and the city feed); with one of them about, it waits lobbyNearS for them.
+const atGate = (a, x, y) => { const P = joinPad(a); return Math.hypot(x - a.gate.x, y - a.gate.y) <= C.joinR || Math.hypot(x - P.x, y - P.y) <= P.r; };
 // On foot at an arena's gate: join (or, waiting, how long till it starts)
 export function gateInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.hidden || ped.carrying) return null;
   for (const a of arenas(world)) {
-    if (Math.hypot(ped.x - a.gate.x, ped.y - a.gate.y) > C.joinR) continue;
+    if (!atGate(a, ped.x, ped.y)) continue;
     const st = stOf(world, arenas(world).indexOf(a));
     if (st.queue.includes(p.pid)) return { label: `Car soccer at ${a.name}: kick-off in ${Math.max(0, Math.ceil(st.t - world.time))} s - ${st.queue.length} player${st.queue.length === 1 ? '' : 's'} in`, passive: true, run: () => {} };
     if (st.phase !== 'idle' && st.phase !== 'lobby') return { label: `${a.name}: a match is on - ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]} (join the next one here)`, passive: true, run: () => {} };
@@ -63,25 +70,47 @@ export function gateInteraction(world, p) {
   }
   return null;
 }
-export function join(world, p, a) {
+// another player (not in the queue) within callR of the gate: worth waiting for
+const othersNear = (world, a, st) => [...world.players.values()].some((q) => q.conn && q.ped && !q.ped.dead && !st.queue.includes(q.pid) && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < C.callR);
+// opts.car: driving onto the join pad (padCheck) - they get out at kick-off
+export function join(world, p, a, opts = {}) {
   const i = arenas(world).indexOf(a), st = stOf(world, i), ped = p.ped;
-  if (!ped || ped.dead || ped.vehId || ped.hidden) return 'Not right now.';
+  if (!ped || ped.dead || (ped.vehId && !opts.car) || ped.hidden) return 'Not right now.';
   if (st.phase !== 'idle' && st.phase !== 'lobby') return 'A match is on - join the next one.';
   if (p.wanted > 0) { world.notify(p, 'Not with the police after you.', 'warn'); return 'Wanted.'; }
   if (st.queue.includes(p.pid)) return null;
   if (st.queue.length >= 2 * C.teamMax) return 'The next match is full.';
   st.queue.push(p.pid);
-  if (st.phase === 'idle') { st.phase = 'lobby'; st.t = world.time + C.lobbyS; }
-  world.notify(p, `You're in: car soccer at ${a.name}. Kick-off in ${Math.ceil(st.t - world.time)} s - wait by the gate. At the wheel the Sprint button boosts.`, 'good');
-  for (const q of world.players.values()) if (q !== p && q.ped && Math.hypot(q.ped.x - a.cx, q.ped.y - a.cy) < C.nearR) world.notify(q, `${p.name} is up for car soccer at ${a.name} - join at the gate.`, 'info');
+  const opened = st.phase === 'idle';
+  if (opened) { st.phase = 'lobby'; st.opened = world.time; st.longer = othersNear(world, a, st); st.t = world.time + (st.longer ? C.lobbyNearS : C.lobbyS); }
+  world.notify(p, `You're in: car soccer at ${a.name}. Kick-off in ${Math.ceil(st.t - world.time)} s - wait by the gate. Hold BOOST to boost.`, 'good');
+  const left = Math.ceil(st.t - world.time);
+  if (opened) {
+    for (const q of world.players.values()) if (q !== p && q.ped && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < C.callR) world.notify(q, `Car soccer kicking off at ${a.name} in ${left} s - join at the gate.`, 'info');
+    events.feed(world, { kind: 'soccer', text: `Car soccer kicking off at ${a.name} in ${left} s - join at the gate`, x: a.gate.x, y: a.gate.y });
+  } else for (const q of world.players.values()) if (q !== p && !st.queue.includes(q.pid) && q.ped && Math.hypot(q.ped.x - a.cx, q.ped.y - a.cy) < C.nearR) world.notify(q, `${p.name} is up for car soccer at ${a.name} too - kick-off in ${left} s, join at the gate.`, 'info');
   return null;
+}
+// driving onto a gate's join pad (every few ticks): in, once each time onto it; not in an arena car, nor flying
+function padCheck(world, a, st) {
+  if (st.phase !== 'idle' && st.phase !== 'lobby') return;
+  const P = joinPad(a), i = st.i;
+  for (const q of world.players.values()) {
+    const ped = q.ped, v = ped && ped.vehId ? world.get(ped.vehId) : null;
+    const on = !!(v && ped.seat === 0 && !v.arena && !v.fly && !(v.alt > 0) && Math.hypot(v.x - P.x, v.y - P.y) <= P.r);
+    if (!on) { if (q.socPad === i) q.socPad = null; continue; }
+    if (q.socPad === i) continue;
+    q.socPad = i;
+    if (!st.queue.includes(q.pid)) { const why = join(world, q, a, { car: true }); if (why && why !== 'Wanted.') world.notify(q, why, 'info'); }
+  }
 }
 
 // ---- the match ---------------------------------------------------------------------------------------------------------
 function start(world, a, st) {
-  const ps = st.queue.map((pid) => world.players.get(pid)).filter((q) => q && q.ped && !q.ped.dead && !q.ped.vehId && !q.ped.hidden && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < LEAVE_R);
+  const ps = st.queue.map((pid) => world.players.get(pid)).filter((q) => q && q.ped && !q.ped.dead && !q.ped.hidden && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < LEAVE_R);
   st.queue = [];
   if (!ps.length) { st.phase = 'idle'; return; }
+  for (const q of ps) if (q.ped.vehId) vehicles.ejectPed(world, q.ped, false);   // (came in a car, onto the pad: it's left parked by the gate)
   const n = Math.max(C.teamMin, Math.min(C.teamMax, Math.ceil(ps.length / 2)));
   st.slots = []; st.score = [0, 0]; st.clock = C.matchS; st.ot = false; st.last = null; st.rp = null; st.goal = null;
   st.pads = a.pads.map(() => 0);
@@ -97,7 +126,7 @@ function start(world, a, st) {
   st.ball = newBall(a);
   st.hist = [];
   kickoff(world, a, st);
-  tell(world, st, `Car soccer: ${TEAMS[0]} v ${TEAMS[1]}, ${n} a side - ${Math.round(C.matchS / 60)} minutes. Boost with the Sprint button; the pads fill it.`, 'good');
+  tell(world, st, `Car soccer: ${TEAMS[0]} v ${TEAMS[1]}, ${n} a side - ${Math.round(C.matchS / 60)} minutes. Hold BOOST to boost - the pads refill it.`, 'good');
 }
 function seatPlayer(world, st, s, q) {
   const v = world.get(s.veh), ped = q.ped;
@@ -193,10 +222,12 @@ export function update(world, dt) {
   const A = arenas(world);
   for (let i = 0; i < A.length; i++) {
     const a = A[i], st = stOf(world, i), now = world.time;
+    if (world.tick % 5 === 3) padCheck(world, a, st);
     if (st.phase === 'idle') continue;
     if (st.phase === 'lobby') {
-      st.queue = st.queue.filter((pid) => { const q = world.players.get(pid); return q && q.ped && !q.ped.dead && !q.ped.vehId && !q.ped.hidden && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < LEAVE_R; });
+      st.queue = st.queue.filter((pid) => { const q = world.players.get(pid); return q && q.ped && !q.ped.dead && !q.ped.hidden && Math.hypot(q.ped.x - a.gate.x, q.ped.y - a.gate.y) < LEAVE_R; });
       if (!st.queue.length) { st.phase = 'idle'; continue; }
+      if (!st.longer && world.tick % 20 === 7 && othersNear(world, a, st)) { st.longer = true; st.t = Math.max(st.t, st.opened + C.lobbyNearS); st.ver++; }   // (someone came near: a little longer for them)
       if (now >= st.t) start(world, a, st);
       continue;
     }
@@ -306,7 +337,7 @@ export function interaction(world, p) {
   const m = p.ped && p.ped.vehId ? matchOf(world, p) : null;
   if (!m || !m.slot) return null;
   const st = m.st;
-  return { label: `Car soccer - ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}${st.ot ? ' (overtime)' : ''}. Sprint: boost (${Math.round(m.slot.boost)}). The vehicle button leaves the match`, passive: true, run: () => {} };
+  return { label: `Car soccer - ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}${st.ot ? ' (overtime)' : ''}. Hold BOOST to boost (${Math.round(m.slot.boost)}). The vehicle button leaves the match`, passive: true, run: () => {} };
 }
 
 // ---- dev (server/dev.js 'soccer'): a match now - msg.bots: only the city's drivers with you; msg.score [a, b]; msg.ball [x, y, vx, vy]

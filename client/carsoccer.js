@@ -8,11 +8,13 @@
 // seconds), full time; at the wheel your boost and an arrow to the ball when it's off the screen. Drawn over the world
 // (main.js drawOverlays, either renderer), in the world's own coordinates; the HUD over the screen.
 import { CARSOCCER as C } from '../shared/rules-games.js';
-import { TEAMS, TEAM_COL, stepBall, carStep, local, groundZ } from '../shared/carsoccer.js';
+import { TEAMS, TEAM_COL, stepBall, carStep, local, groundZ, joinPad } from '../shared/carsoccer.js';
 import { setArena } from '../shared/physics.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { K } from '../shared/constants.js';
 import { sfx } from './audio.js';
+import { input } from './input.js';
+import { keyName } from './glyphs.js';
 
 export function onMsg(S, m) {
   if (!S.soc) S.soc = new SoccerView(S);
@@ -75,6 +77,7 @@ class SoccerView {
       this.roll += Math.hypot(B.vx, B.vy) * dt / C.ball.r;
     }
     if (onScreen) { this.goals(g, a); this.pads(g, a, st, now); }
+    if ((st.ph === 'idle' || st.ph === 'lobby' || !st.ph) && !st.me) this.gate(g, a, st, now, view);
     if (B && onScreen && st.ph !== 'goal') this.drawBall(g, a, B.x, B.y, B.z, this.roll, 1);
     if (st.ph === 'goal' && st.rp && st.rp.length > 1) this.replay(g, a, st, now);
     this.drawConfetti(g, dt);
@@ -107,6 +110,31 @@ class SoccerView {
       g.strokeStyle = on ? '#ffd25a' : '#6a6a6a'; g.lineWidth = 2; g.beginPath(); g.ellipse(p.x, p.y, r, r * 0.7, 0, 0, 6.28); g.stroke();
       if (on && p.big) { g.fillStyle = `rgba(255,236,170,${0.6 * pulse})`; g.beginPath(); g.ellipse(p.x, p.y - 6 - 4 * pulse, 7, 9, 0, 0, 6.28); g.fill(); }
     });
+    g.restore();
+  }
+  // the join pad by the gate (the owner, 11-06: "Can't figure out the rocket league arena... How do I get it to start"):
+  // a lit ring on the street, its sign over it - CAR SOCCER / JOIN HERE - and, a lobby open, the count to kick-off
+  gate(g, a, st, now, view) {
+    const P = joinPad(a);
+    if (view && (P.x + 160 < view.x0 || P.x - 160 > view.x1 || P.y + 160 < view.y0 || P.y - 200 > view.y1)) return;
+    const pulse = 0.7 + 0.3 * Math.sin(now * 4), lob = st.ph === 'lobby';
+    g.save();
+    g.fillStyle = `rgba(255,138,42,${(lob ? 0.3 : 0.18) * pulse})`; g.beginPath(); g.ellipse(P.x, P.y, P.r * 0.8, P.r * 0.55, 0, 0, 6.28); g.fill();
+    g.setLineDash([10, 8]); g.lineDashOffset = -now * 20; g.strokeStyle = '#ffb02a'; g.lineWidth = 3;
+    g.beginPath(); g.ellipse(P.x, P.y, P.r * 0.8, P.r * 0.55, 0, 0, 6.28); g.stroke(); g.setLineDash([]);
+    // the ball on its post: the arena's own badge
+    const by = P.y - 74, r = 13;
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(P.x - 1.5, by, 3, 74);
+    g.fillStyle = '#ff8a2a'; g.beginPath(); g.arc(P.x, by, r + 3, 0, 6.28); g.fill();
+    g.fillStyle = '#f4f6f8'; g.beginPath(); g.arc(P.x, by, r, 0, 6.28); g.fill();
+    g.fillStyle = '#2a3140'; for (const [dx, dy] of [[0, 0], [-6, -6], [6, -6], [-6, 6], [6, 6]]) { g.beginPath(); g.arc(P.x + dx, by + dy, 2.6, 0, 6.28); g.fill(); }
+    const line = lob ? `KICK-OFF IN ${Math.ceil(Math.max(0, (st.tl || 0) - (performance.now() / 1000 - st.at)))} S` : 'JOIN HERE';
+    g.font = 'bold 13px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const w = Math.max(g.measureText('CAR SOCCER').width, g.measureText(line).width) + 16, ty = by - r - 30;
+    g.fillStyle = 'rgba(10,14,22,.85)'; g.fillRect(P.x - w / 2, ty - 13, w, 34);
+    g.fillStyle = '#ff8a2a'; g.fillRect(P.x - w / 2, ty - 13, w, 3);
+    g.fillStyle = '#fff'; g.fillText('CAR SOCCER', P.x, ty);
+    g.fillStyle = lob ? '#ffd25a' : '#ffb02a'; g.font = 'bold 10px monospace'; g.fillText(line, P.x, ty + 13);
     g.restore();
   }
   // the giant ball: its shadow on the ground (up a bank where it is), the sphere lit from the north-west, its panels
@@ -169,7 +197,7 @@ class SoccerView {
       const big = (t, sub, col = '#fff') => { g.font = 'bold 54px monospace'; g.fillStyle = 'rgba(0,0,0,.5)'; g.fillText(t, W / 2 + 3, H * 0.36 + 3); g.fillStyle = col; g.fillText(t, W / 2, H * 0.36); if (sub) { g.font = 'bold 16px monospace'; g.fillStyle = '#fff'; g.fillText(sub, W / 2, H * 0.36 + 40); } };
       const left = Math.max(0, (st.tl || 0) - (now - st.at));
       if (st.ph === 'lobby') { g.font = 'bold 14px monospace'; g.fillStyle = '#fff'; g.fillText(`Kick-off in ${Math.ceil(left)} s - ${st.q || 0} player${st.q === 1 ? '' : 's'} in`, x0 + cw / 2, y0 + 60); }
-      else if (st.ph === 'kick' && mine) big(left > 0.2 ? String(Math.ceil(left)) : 'GO!', 'Sprint: boost');
+      else if (st.ph === 'kick' && mine) big(left > 0.2 ? String(Math.ceil(left)) : 'GO!', 'Hold BOOST to boost - the pads refill it');
       else if (st.ph === 'goal' && st.goal) big('GOAL!', `${st.goal.who} - REPLAY`, TEAM_COL[st.goal.team]);
       else if (st.ph === 'over') { const w = st.sc[0] === st.sc[1] ? -1 : st.sc[0] > st.sc[1] ? 0 : 1; big('FULL TIME', w < 0 ? 'A tie' : `${TEAMS[w]} win`, w < 0 ? '#fff' : TEAM_COL[w]); }
     }
@@ -179,6 +207,12 @@ class SoccerView {
       g.strokeStyle = k > 0.25 ? '#ffb02a' : '#e8503a'; g.beginPath(); g.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + k * 6.28); g.stroke();
       g.font = 'bold 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(String(Math.round(st.me.boost)), cx, cy);
       g.font = 'bold 8px monospace'; g.fillText('BOOST', cx, cy + r + 12);
+      if (input.device !== 'touch') {   // (the key or the pad's button that boosts, by the ring; on touch the BOOST button: client/touchslots.js)
+        const k = keyName('sprint');
+        g.font = 'bold 10px monospace'; const kw = g.measureText(k).width + 10;
+        g.fillStyle = 'rgba(10,14,22,.8)'; g.fillRect(cx - kw / 2, cy + r + 19, kw, 15); g.strokeStyle = '#ffb02a'; g.lineWidth = 1; g.strokeRect(cx - kw / 2 + 0.5, cy + r + 19.5, kw - 1, 14);
+        g.fillStyle = '#fff'; g.fillText(k, cx, cy + r + 27);
+      }
       const B = this.ball, T = S.worldTf;
       if (B && T && st.ph === 'play') {   // the ball off the screen: an arrow at the edge toward it
         const sx = (B.x * T[0] + T[4]) / dpr, sy = ((B.y - B.z - C.ball.r) * T[3] + T[5]) / dpr;

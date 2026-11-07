@@ -19,7 +19,7 @@ export const MAP_CATS = [
   { id: 'services', icon: 'services', title: 'Services', kinds: ['hospital', 'police', 'bank', 'atm', 'garage', 'paint', 'dealer'] },
   { id: 'transit', icon: 'transit', title: 'Transit', kinds: ['station', 'airport', 'marina', 'rental', 'charter'] },
   { id: 'homes', icon: 'home', title: 'Safehouses', kinds: ['home'] },
-  { id: 'fun', icon: 'activity', title: 'Activities', kinds: ['ride', 'race', 'clubhouse', 'roadhouse', 'winery', 'market', 'fruitstand', 'farmstand', 'snack', 'club', 'coffee', 'bowling', 'cinema'] },
+  { id: 'fun', icon: 'activity', title: 'Activities', kinds: ['ride', 'race', 'clubhouse', 'roadhouse', 'winery', 'market', 'fruitstand', 'farmstand', 'snack', 'club', 'coffee', 'bowling', 'cinema', 'arena'] },
   { id: 'baths', icon: 'activity', title: 'Bathhouses', kinds: ['bathhouse'] },   // (nat5: shared/regionpack.js lists a bathhouse's door as one)
   { id: 'gangs', icon: 'skull', title: 'Gangs', kinds: ['gang', 'smuggler', 'fence'] },
 ];
@@ -31,11 +31,15 @@ export const KIND_ICON = {
   hospital: 'hospital', police: 'police', bank: 'bank', atm: 'bank', garage: 'car', paint: 'car', dealer: 'car',
   station: 'transit', airport: 'plane', marina: 'anchor', rental: 'anchor', charter: 'anchor',
   home: 'home', ride: 'star', race: 'car', clubhouse: 'activity', roadhouse: 'bar', winery: 'bar', market: 'shop', fruitstand: 'shop', farmstand: 'shop', snack: 'food',
-  club: 'bar', coffee: 'food', gang: 'skull', smuggler: 'skull', fence: 'skull', bowling: 'activity', cinema: 'activity', bathhouse: 'activity',
+  club: 'bar', coffee: 'food', gang: 'skull', smuggler: 'skull', fence: 'skull', bowling: 'activity', cinema: 'activity', bathhouse: 'activity', arena: 'star',
 };
+// the car soccer arenas (map.arenas: not among the world's places) as places at their gates - the big map, this panel
+// and the phone's Places list them (the owner, 11-06: "Can't figure out the rocket league arena")
+export const arenaPlaces = (map) => (map.arenas || []).map((a, i) => ({ id: `arena${i}`, kind: 'arena', label: `${a.name} (car soccer)`, x: a.gate.x, y: a.gate.y }));
+export const placesOf = (map) => [...(map.places || map.pois), ...arenaPlaces(map)];
 // shown zoomed all the way out; the rest (the corner shops, the ATMs) once zoomed in
 export const MAJOR_KINDS = new Set(['hospital', 'sar', 'police', 'bank', 'gunshop', 'station', 'airport', 'garage', 'paint', 'dealer', 'clothing', 'farm', 'warehouse',
-  'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema', 'bathhouse']);
+  'courthouse', 'marina', 'ride', 'race', 'clubhouse', 'roadhouse', 'gang', 'smuggler', 'winery', 'club', 'pawn', 'fence', 'salvage', 'huntcamp', 'lodge', 'bowling', 'cinema', 'bathhouse', 'arena']);
 
 export const ROLE_ICON = { citizen: '•', criminal: '☠', police: '★', hunter: '◎' };
 export const ROLE_NAME = { citizen: 'Citizen', criminal: 'Wanted', police: 'Police', hunter: 'Bounty hunter' };
@@ -57,7 +61,7 @@ export function createMapWaypoints(ctx) {
 
   function places(g) {
     const map = ctx.map();
-    let list = (map.places || map.pois).filter((p) => p && g.kinds.includes(p.kind));   // (World v3's window: the whole world's places)
+    let list = placesOf(map).filter((p) => p && g.kinds.includes(p.kind));   // (World v3's window: the whole world's places)
     if (g.id === 'homes') {
       const mine = new Set(ctx.myHomes().map((h) => h.id));
       list = list.filter((p) => !mine.has(p.home));
@@ -145,7 +149,7 @@ export function createMapWaypoints(ctx) {
     const w = query.trim().toLowerCase();
     if (w.length < 2) { el.innerHTML = ''; return; }
     const map = ctx.map(), seen = new Set();
-    const hits = (map.places || map.pois).filter((p) => p && p.label && p.label.toLowerCase().includes(w)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
+    const hits = placesOf(map).filter((p) => p && p.label && p.label.toLowerCase().includes(w)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
       .filter(({ p }) => { if (seen.has(p.label)) return false; seen.add(p.label); return true; }).slice(0, 6);
     el.innerHTML = hits.length ? hits.map(({ p, d }, i) => `<button class="bm-row" data-hit="${i}"><span class="ic">${iconImg(KIND_ICON[p.kind] || 'star', 16)}</span><span class="nm">${esc(p.label)}<small>${esc((DISTRICTS[p.d] && DISTRICTS[p.d].name) || districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${fmt(d)}</span></button>`).join('') : '<p class="bm-hint">Nothing by that name.</p>';
     el.querySelectorAll('[data-hit]').forEach((b) => { b.onclick = () => { const { p } = hits[Number(b.dataset.hit)]; ctx.setWaypoint({ x: p.x, y: p.y, label: p.label }); ctx.center(p.x, p.y); render(); }; });
