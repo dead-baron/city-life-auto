@@ -77,6 +77,10 @@ import { K9 } from '../../shared/rules-play.js';
 // apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. "Hurt lately" is the safe
 // exit's own guard (rules.js LOGOFF.calmS: taking or dealing damage), so a tab closed in a fight is never a safe way out.
 export const AWAY_SECONDS = 300;
+// ...and one with trouble after it waits at least AWAY_GRACE_S when the page had said it went into the background first
+// (main.js 'away': a phone switching apps) - a short tab-out comes back to the same session (unsafeGrace). (Here, not in
+// rules.js: that file is in World v3's code hash.)
+export const AWAY_GRACE_S = 90;
 export const AWAY_HURT_S = LOGOFF.calmS;
 // the last time this body took or dealt damage (combat.js damage: lastHitAt on whoever was hurt, lastCombatAt on both;
 // 0, a new body's: never)
@@ -136,6 +140,7 @@ export function join(world, conn, profile, opts = {}) {
   if (p) {
     // reconnect: within the ghost window (or replacing another tab)
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
+    const wasAway = !!p.away && !!p.ghostUntil;   // (dropped while in the background: a phone back from another app)
     p.conn = conn;
     p.ghostUntil = 0; p.ghostSafe = false; p.away = 0;
     p.logoff = null;   // (a count to a safe exit belonged to the page before: logoff.js)
@@ -154,7 +159,7 @@ export function join(world, conn, profile, opts = {}) {
     // (inside a home: the new page has never seen its rooms - all of it again, the menu you had open closed; the owner,
     // 10-16: "Reconnecting inside a home leaves you stuck")
     if (p.ped && p.ped.home) { p.homeMenu = null; p.ped.home.mv = false; homeinside.send(world, p, true); }
-    world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
+    if (!wasAway) world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');   // (a tab-out: just back, quietly)
     return p;
   }
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
@@ -379,12 +384,16 @@ export function leave(world, p) {
     // nothing after them: the body waits longer and goes without dropping anything (a phone switching apps - the owner,
     // 2026-10-15: "tabbing out of the game for a second on mobile boots you out"); otherwise the drop rule's 30 s
     p.ghostSafe = safeToIdle(world, p);
-    p.ghostUntil = world.time + (p.ghostSafe ? AWAY_SECONDS : GHOST_SECONDS);
+    p.ghostUntil = world.time + (p.ghostSafe ? AWAY_SECONDS : unsafeGrace(p));
   } else {
     finalizeLogout(world, p, false);
   }
 }
 
+// A ghost with trouble after it: the drop rule's GHOST_SECONDS - or AWAY_GRACE_S when the page had gone into the background
+// before the connection dropped (setAway: the phone suspended it; the owner, 11-06: "it would be nice if it didn't
+// disconnect so quickly tabbing in and out")
+export const unsafeGrace = (p) => (p.away ? Math.max(GHOST_SECONDS, AWAY_GRACE_S) : GHOST_SECONDS);
 // Safe to stand idle with nobody at the keys: not wanted, not hurt lately, not down, not in custody, carrying no crate and
 // driving none.
 export function safeToIdle(world, p) {
@@ -1040,7 +1049,7 @@ export function update(world, dt) {
     const ped = p.ped;
     if (ped) economy.syncLight(world, p); // the flashlight goes out when you go down or lose it
     // (left idle and then trouble came - hurt, wanted: the drop rule's 30 s from now)
-    if (p.ghostUntil && p.ghostSafe && !safeToIdle(world, p)) { p.ghostSafe = false; p.ghostUntil = Math.min(p.ghostUntil, now + GHOST_SECONDS); }
+    if (p.ghostUntil && p.ghostSafe && !safeToIdle(world, p)) { p.ghostSafe = false; p.ghostUntil = Math.min(p.ghostUntil, now + unsafeGrace(p)); }
     if (p.ghostUntil && now >= p.ghostUntil) {
       // GDD §9 drop rule: timer expired -> body despawns, everything on them jettisoned (not when an
       // update came out meanwhile: they come back fresh on it instead)

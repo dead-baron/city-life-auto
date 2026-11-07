@@ -42,7 +42,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
-import { noteServerBuild, myBuild } from './update.js';
+import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL } from '../shared/rules-page.js';
 import { bonusOf } from '../shared/skills.js';
@@ -254,6 +254,7 @@ function connect() {
   S.ws = ws;
   ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
+    S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"welcome"')) setTimeout(() => spawnAt(null), 2000);   // (a server that doesn't say: not waited for longer)
     if (holding(ws, ev.data)) return;
@@ -318,7 +319,7 @@ function scheduleReconnect(why, toTitle = false) {
       : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
-  S.reconnectT = setTimeout(connect, document.hidden ? Math.max(S.reconnectIn, 5000) : S.reconnectIn);
+  S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
 function reconnecting(on) {
@@ -340,9 +341,17 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   try { sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
+  S.visibleAt = performance.now();
   send({ t: 'away', on: false });
-  if (!S.ws && S.connectFailed && S.everConnected) { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  const act = onVisible(S);
+  if (act === 'connect') { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  else if (act === 'probe') {   // (a socket the phone's sleep killed can still say it's open: answered, or made again)
+    const ws = S.ws;
+    send({ t: 'ping', ts: performance.now() });
+    setTimeout(() => { if (S.ws === ws && !((S.lastMsgAt || 0) >= S.visibleAt)) { S.ws = null; try { ws.close(); } catch { /* gone */ } scheduleReconnect('Connection lost'); } }, PROBE_MS);
+  }
 });
+addEventListener('pagehide', () => { if (!S.practice) send({ t: 'away', on: true }); });   // (iOS: sometimes the only word before it's suspended)
 function resumeWanted() {
   let t = 0;
   try { t = Number(sessionStorage.getItem(RESUME_KEY)) || 0; sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
@@ -3025,7 +3034,7 @@ function frameBody(nowMs) {
     checkWaypoint();
     expirePredictedBreaks();
   } else {
-    g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
+    if (!holdFrame(S)) { g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height); }   // (getting back in: the last frame stays)
     // title screen before the city connects: the pad still drives the menus
     if (pollPadForMenus() && !overlayPad() && !launchPad()) titlePad();
   }
