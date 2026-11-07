@@ -569,7 +569,7 @@ function southBand(K, m, ctx) {
     for (let k = 0; k < 3; k++) prop('fountain', px0 + pw * (k + 1) / 4, py0 + 4, 0, { s: 0.7 });
     for (let k = 0; k < Math.floor(pw / 6); k++) { prop('cafetable', px0 + 3 + k * 6, py0 + 12, 0); prop(k % 2 ? 'umbrella_b' : 'umbrella_g', px0 + 3 + k * 6, py0 + 11.9, 0); }
     for (const fx of [qx0 + 2, qx1 - 2]) for (let y = ty0 + 3; y < ty0 + th - 2; y += 8) prop('tree_a', fx, y, 10, { sp: 'streetPl', k: 1.05, grate: true });
-    prop('textsign', (qx0 + qx1) / 2, ty0 + th - 1.4, 0, { text: 'STERLING PLAZA', bg: '#1e2a3a', fg: [240, 236, 220], z: 30, sx: 1 });
+    prop('textsign', (qx0 + qx1) / 2, ty0 + 1.4, 0, { text: 'STERLING PLAZA', bg: '#1e2a3a', fg: [240, 236, 220], z: 30, sx: 1 });   // (at the plaza's north end, by the street: at its south end the building beyond hid it - the 11-06 visibility pass)
     (out.places ||= []).push({ name: 'Sterling Plaza', x0: qx0, y0: ty0, x1: qx1, y1: ty0 + th });
     // the bank, its van bay, the jeweller
     const by0 = ty0 + th + 1, bw = 36;

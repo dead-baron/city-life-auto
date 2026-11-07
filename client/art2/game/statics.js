@@ -1393,6 +1393,7 @@ function specOf(c, b, A, s, D) {
     kl(kit, 0, 0, zD);
     if (up) kl(up.kit, up.x, up.y, zD + roofDeckZ(up.spec));
   }
+  if (b.low) { spec.floors = 1; delete spec.height; if (spec.pitch) spec.slope = Math.min(spec.slope || 0.5, 0.26); for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > 60) lights.splice(j, 1); }   // (just south of a platform: one storey under a shallow roof, a hand-built one's too - shared/world3-rail.js lowByPlatforms)
   return { spec, kit: kit || [], lights, pitched, up };
 }
 
@@ -3011,7 +3012,18 @@ function railHubs(I, hubs) {
     put(I, vitem(`sth:${hd.toFixed(3)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
     lightAt(I, h.x + Math.cos(h.a) * 70, h.y + Math.sin(h.a) * 70, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
     lightAt(I, h.x - Math.cos(h.a) * 20, h.y - Math.sin(h.a) * 20, 70, 150, [1, 0.94, 0.8], 1.3, 'lamp');
-    put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
+    // (its name board on the side the camera sees, just south of the house: north of it - at the doors on a street side to
+    // the north - the house stood over it, the owner's 11-06 "station with the sign hidden"; along the house, clear of the
+    // footbridge's flights coming down by it)
+    const hy = h.y + oy + 46 * Math.abs(Math.sin(h.a)) + 70 * Math.abs(Math.cos(h.a)) + 16, fl = [];
+    for (const f of h.bridges || []) for (const e of f.ends || [{ fx: f.x, fy: f.y, tx: f.x, ty: f.y }]) fl.push(e);
+    const clear = (x, y) => { let d = 1e9; for (const e of fl) { const dx = e.tx - e.fx, dy = e.ty - e.fy, t = clamp(((x - e.fx) * dx + (y - e.fy) * dy) / (dx * dx + dy * dy || 1), 0, 1); d = Math.min(d, Math.hypot(e.fx + dx * t - x, e.fy + dy * t - y)); } return d; };
+    let hb = null;
+    for (const k of [0, 1, -1]) { const x = h.x + ox + Math.sin(h.a) * k * 112, y = hy - Math.cos(h.a) * k * 112, d = clear(x, y); if (!hb || d > hb.d) hb = { x, y, d }; if (d > 100) break; }
+    // (and at doors on the street side to the south it stands on its posts in front of them; on the platforms' side, up over
+    // their canopies' roofs)
+    const hz = Math.sin(h.a) > 0.3 ? 26 : 64;
+    put(I, { key: `stb:${h.name}:${hz}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: hz, posts: true }, x: Math.round(hb.x), y: Math.round(hb.y), ext: [80, hz + 34, 80, 12] });
     for (const f of h.bridges || []) {
       const fh = qa(f.a, STATION_TURNS);
       if (!f.ends) { put(I, vitem(`fbr:${f.len}:${fh.toFixed(3)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); continue; }
@@ -3064,8 +3076,11 @@ function addRailLoop(c, I, R, once, arrival = false) {
     for (const f of [-0.96, -0.6, 0.6, 0.96]) { const p = at(f * L, 98); if (!ok(p)) continue; put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], p.x, p.y)); lightAt(I, p.x, p.y + 2, 76, 180, LAMP_LIGHT.cast, 3, 'lamp'); }
     const rb = arrival ? null : routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out; an arrival line has no timetable)
     if (rb) { put(I, vitem('rboard', 'routeBoard', [], rb.x, rb.y, 0)); lightAt(I, rb.x, rb.y - 4, 30, 60, [0.75, 0.85, 1], 0.9, 'sign'); }
-    const mid = at(0, 50);
-    if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: mid.x, y: mid.y, ext: [80, 60, 80, 12] });
+    // the name board by the platform's outer edge (the owner's 11-06: at the track's edge it was hidden - under the canopy's
+    // roof on a platform south of its track, behind a train standing at one north of it): on its posts at the front of a
+    // platform south of the track, up over the canopy's roof at the back of one north of it (tools/visaudit.mjs)
+    const mid = at(0, 100), bz = Math.cos(mid.a) * sd > 0 ? 26 : 64;
+    if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}:${bz}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: bz, posts: true }, x: mid.x, y: mid.y, ext: [80, bz + 34, 80, 12] });
   }
   // tunnel mouths where the line goes under
   if (arrival) return;
@@ -3131,7 +3146,10 @@ function addEl(c, I) {
     for (const side of [-1, 1]) {
       const py = yc + side * 136;
       for (const dx of [-200, 0, 200]) put(I, vitem('pcan:192:0.00', 'platformCanopy', [192, 40, 1], sx + dx, py, 0, null, { z0: Z }));
-      put(I, { key: 'elsign:MIDTOWN', recipe: { t: 'sign', text: 'MIDTOWN', sx: 1, bg: '#1c4a8a', lit: true, z: 26, posts: true }, x: sx - 160, y: py + 6, z0: Z, ext: [80, 60 + Z, 80, 12] });
+      // (its name board by the platform's outer edge: under the canopy's roof it was half hidden - south, on its posts in
+      // front of the canopy; north, up over the canopy's roof behind it)
+      const bz = side > 0 ? 26 : 64;
+      put(I, { key: `elsign:MIDTOWN:${bz}`, recipe: { t: 'sign', text: 'MIDTOWN', sx: 1, bg: '#1c4a8a', lit: true, z: bz, posts: true }, x: sx - 160, y: yc + side * 162, z0: Z, ext: [80, bz + 34 + Z, 80, 12] });
       lightAt(I, sx, py, Z + 52, 200, [1, 0.94, 0.8], 1.6, 'lamp', 1);
     }
   }
@@ -3894,8 +3912,22 @@ function trackClear(M) {
   TRACKCLEAR.set(M, s);
   return s;
 }
+// (the owner, 11-06: nothing meant to be seen behind a tree) the tiles in front of what is - a door on a front, an ATM, a
+// standing sign, a chess table, a bus stop: up to 6 tiles south of it, a big crown's width either side - grow nothing tall
+// (shared/world3-greens.js sightlines3 moves the map's own trees; tools/visaudit.mjs measures it)
+const SIGHT = new WeakMap();
+function sightTiles(M) {
+  let s = SIGHT.get(M);
+  if (s) return s;
+  s = new Set();
+  const mark = (x, y, hw) => { for (let ty = Math.floor(y / TILE); ty <= Math.floor(y / TILE) + 6; ty++) for (let tx = Math.floor((x - hw - 96) / TILE); tx <= Math.floor((x + hw + 96) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty)); };
+  for (const p of M.pois || []) { const b = p && p.b !== undefined ? M.buildings[p.b] : null; if (b && p.y >= (b.ty + b.th) * TILE - 4) mark(p.x, (b.ty + b.th) * TILE, 16); else if (p) mark(p.x, p.y, 8); }
+  for (const p of M.props) if (p && (p.t === 'textsign' || p.chess || p.t === 'busstop' || p.t === 'mapboard' || p.t === 'campfire')) mark(p.x, p.y, p.t === 'textsign' ? 60 : 16);
+  SIGHT.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M);
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M);
   // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed - no wild
   // flowers or scrub among the rows, a tuft of grass now and then just outside them: shared/world3-biomes.js m.orchards)
   const X0 = cx * CH - 120, Y0 = cy * CH - 80, X1 = (cx + 1) * CH + 120, Y1 = (cy + 1) * CH + 140;
@@ -3921,6 +3953,7 @@ function coverItems(c, I, cx, cy) {
       r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
     }
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
+    if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
   }
   return out;

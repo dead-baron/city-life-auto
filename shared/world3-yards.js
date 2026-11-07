@@ -290,7 +290,7 @@ function sidings(K, m, ctx) {
     }
   }
   for (const y of [Y0 + 4, Y1 - 12]) prop('ymast', X0 + 2, y, 0, { tall: 160 });
-  if (o) prop('textsign', X0 + 5.5, Y1 - 1.4, 0, { text: 'YARDS FREIGHT', bg: '#7a2e2e', fg: [250, 230, 190], z: 28, sx: 1 });
+  if (o) prop('textsign', X0 + 5.5, Y1 - 1.4, 0, { text: 'YARDS FREIGHT', bg: '#7a2e2e', fg: [250, 230, 190], z: 120, sx: 1 });   // (up on a tall pole: the strip it stands in is under the freight shed's roof south of it - the 11-06 visibility pass)
   (out.places ||= []).push({ name: 'The Freight Sidings', x0: X0, y0: Y0, x1: X1, y1: Y1, wagons: n });
 }
 
@@ -452,7 +452,7 @@ function tankFarm(K, m, ctx) {
     if (lot(x + 6, y)) prop('pipes', x + 6, y + 0.5, 0);
   }
   fence(K, X0, Y0, X1, Y0, [[X0 + 1, X0 + 12]]); fence(K, X0, Y0, X0, Y1); fence(K, X1, Y0, X1, Y1);
-  prop('textsign', X0 + 20, Y0 + 0.6, 0, { text: 'GULF FUEL TERMINAL', bg: '#7a2e2e', fg: [250, 230, 190], z: 30, sx: 1 });
+  prop('textsign', X0 + 36, Y0 + 0.6, 0, { text: 'GULF FUEL TERMINAL', bg: '#7a2e2e', fg: [250, 230, 190], z: 30, sx: 1 });   // (east of the highway over the front: at X0 + 20 it stood half under its deck - the owner's 11-06 "GUL...")
   (out.places ||= []).push({ name: 'Gulf Fuel Terminal', x0: X0, y0: Y0, x1: X1, y1: Y1, tanks: n });
 }
 

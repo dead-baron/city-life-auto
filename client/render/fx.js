@@ -43,6 +43,12 @@ function puff(col) {
   return c;
 }
 
+// The water under a deck (the owner's 11-06 report: blood from a hit in the water under a bridge drawn on top of its deck):
+// on a deck's tile, is anyone afloat close by - swimming, in a boat - under it? ents: the entities (rx, ry), afloat(e)
+export function afloatUnder(ents, x, y, afloat, r = 48) {
+  for (const e of ents) if (e.rx !== undefined && Math.abs(e.rx - x) < r && Math.abs(e.ry - y) < r && afloat(e)) return true;
+  return false;
+}
 export class FX {
   constructor() {
     this.p = new Array(MAX_P);
@@ -77,8 +83,11 @@ export class FX {
     o.on = true; o.x = x; o.y = y; o.a = a; o.small = small ? 1 : 0; o.born = now; o.alpha = alpha;
   }
   decal(type, x, y, a, size, color, now, alpha = 1) {
-    // blood on open water: a cloud in it (art2/game/waterlife.js blood), not a stain
-    if ((type === 1 || type === 5) && color !== '#1a1a1e' && this.water && this.water(x, y)) { const B = (this.bc ||= []), i = this.bi = ((this.bi | 0) + 1) % 48, o = B[i] || (B[i] = {}); o.on = true; o.x = x; o.y = y; o.s = size; o.born = now; o.a = a; return; }
+    // blood on open water: a cloud in it (art2/game/waterlife.js blood), not a stain; under a bridge's deck (water() 2:
+    // someone afloat under it) nothing lands on the deck's top - blood clouds the water the deck hides (11-06)
+    const w = this.water ? this.water(x, y) : 0;
+    if (w === 2 && type !== 1 && type !== 5) return;
+    if ((type === 1 || type === 5) && color !== '#1a1a1e' && w) { const B = (this.bc ||= []), i = this.bi = ((this.bi | 0) + 1) % 48, o = B[i] || (B[i] = {}); o.on = true; o.x = x; o.y = y; o.s = size; o.born = now; o.a = a; return; }
     const o = this.d[this.di];
     this.di = (this.di + 1) % MAX_D;
     o.on = true; o.type = type; o.x = x; o.y = y; o.a = a; o.size = size; o.color = color; o.born = now; o.alpha = alpha;
