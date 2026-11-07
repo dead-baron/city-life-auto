@@ -21135,3 +21135,33 @@ mapwaypoints.js, storeicons.js, phone.js' Places under Cars & boats) and client/
 beaters and their prices, the alley's car with [[vehicle]], the one gentle theft, the marker); "A starter car" for those
 who have one; Places' new "Used car lots" and the dealers' back row. test/guide.test.js checks the cash and the prices
 follow FTUE.
+
+**Numbers and ids** (seed 1337, World v3): buildings 7,129 -> 7,136 (the Park West block's office and three shops,
+7129-7132, then the three yards' offices, 7133-7135); places 6,018 -> 6,026 (Greenfield Park Station 6018, Park West
+Motors 6019, the three shops 6020-6022, then the coast's, the desert's and the country's used lots 6023-6025); homes
+3,467, unchanged - nothing renumbered, nothing moved but the park's props on the west lawn (trees, lamps, benches round
+the old loop path) and what stood on each yard. Metro Central (place 5417) is no longer an arrival station; its lawn line
+is gone, and the four lines' bores keep tunnel ids in the same order (8 in all). `WORLD_VERSION` stays 13 (no home
+moved: the lead's call). Walks off the platform (test/world3arrivals.test.js): Greenfield Park - the street 4 tiles,
+Park West Motors 27, its alley 12; Northshore - Beach Motors 84, its alley 91; Red Rock - the salvage yard 80, its lane
+87; Willow Valley - Farm Trucks 56, its lane 37. Fifty new players at the park (half buying, half stealing) within a
+minute: fifty cars, none within 40 px of another, the furthest 36 tiles from the station.
+
+**Tests**: test/firstcar.test.js (new, today's map: the economy's margin; each path's first step - buy, steal with and
+without Safety mode, the pickup, roam; at every arrival station; fifty at once; the cash once, a replay). test/world3arrivals.test.js
+(rewritten: the park line by Park West Tower; the lot and alley a walk off every platform; the park block seen from the
+camera, no road in it, its places last; each path's first step at each of the four stations on the real world; fifty at
+the park). test/starter.test.js: the first day and the fifty-in-the-lot tests retired with their code; the rest run on a
+profile that has a starter car; a new test for new and reset characters getting none. test/ftue.test.js and
+test/guide.test.js follow the new step 1 and the Guide. Run (under the lock): firstcar, starter, ftue, guide,
+honestliving, fleet, bikes, motorbikes, core, biz (111 pass); world3arrivals, world3hubs, world3shops, world3server,
+plainblocks, mapwindow, dmath, perf, pagemodules, lazypage, worldmap, firstcar (72 pass, then world3arrivals again after
+a fix to two of its own test points); test/dmath-world.mjs (1led2u3 / 66e5ad22, as before). The world map's picture
+didn't need a rebake (today's `world` is unchanged; worldmap passes).
+
+**Performance** (tools/perf.mjs): page 84 files / 513 KB (was 513), city 366, renderer 404 (unchanged - no renderer
+code), bake 973. No budget raised.
+
+**Not done / for the owner**: the yards at Northshore and Red Rock are 80-90 tiles' walk off their platforms (the nearest
+open ground fronting a road); a hand-placed spot would bring them closer. The used lots' display cars are the server's
+dealer-lot stock (dealer.js), restocked a minute after one sells; the menu always has more, so nobody waits.
