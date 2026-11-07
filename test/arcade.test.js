@@ -79,7 +79,7 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   const cabs = arcade.GAMES.map((g) => mach.find((m) => m.game === g));
   const games = [];
   for (const c of cabs) {
-    await walkTo(w, p, c.x + c.w / 2, c.y + c.h + 14);
+    p.ped.home.x = c.x + c.w / 2; p.ped.home.y = c.y + c.h + 14;   // (stood at its front)
     const a = players.findInteraction(w, p);
     assert.match(a.label, /^Play /, `at the ${c.game} machine: ${a.label}`);
     games.push(arcade.cabinetAt(L, p.ped.home.x, p.ped.home.y).game);
@@ -87,7 +87,7 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   assert.deepEqual(games, arcade.GAMES, 'a different game at each');
   // the first: STARFALL - a credit, the page told to play it, the score worth tickets (no more than the time allows)
   const c0 = cabs[0];
-  await walkTo(w, p, c0.x + c0.w / 2, c0.y + c0.h + 14);
+  p.ped.home.x = c0.x + c0.w / 2; p.ped.home.y = c0.y + c0.h + 14;
   const a0 = players.findInteraction(w, p);
   assert.match(a0.label, new RegExp(`STARFALL - \\$${ARCADE.price}`));
   a0.run();
@@ -109,13 +109,13 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   assert.ok(prof.tickets - 30 <= Math.floor(4 * ARCADE.maxRate / ARCADE.perTicket), `no more than the time allows (${prof.tickets - 30})`);
   // the skee-ball cabinet: its own credit and its own game on the page
   const c1 = cabs[1], cash1 = prof.cash;
-  await walkTo(w, p, c1.x + c1.w / 2, c1.y + c1.h + 14);
+  p.ped.home.x = c1.x + c1.w / 2; p.ped.home.y = c1.y + c1.h + 14;
   players.findInteraction(w, p).run();
   assert.equal(lastOf(conn, 'arcade').game, 'skee'); assert.equal(prof.cash, cash1 - ARCADE.skee.price);
   // the prize counter: walked up to, Act, the prizes; redeemed
   prof.tickets = 60;
   const G = L.pieces.find((z) => z.use === 'prizes');
-  await walkTo(w, p, G.x - 14, G.y + G.h / 2);
+  p.ped.home.x = G.x + G.w / 2; p.ped.home.y = G.y + G.h + 14;
   const pc = players.findInteraction(w, p);
   assert.match(pc.label, /prize counter - 60 tickets/);
   pc.run();
@@ -135,7 +135,7 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   const out = [...w.entities.values()].find((v) => v.def && v.def.board && v.owner === p.pid);
   assert.ok(out && Math.hypot(out.x - poi.x, out.y - poi.y) < 160, 'by the door');
   // out by the door: back in the street at the arcade's door
-  await walkTo(w, p, L.door.x, L.door.y - 20);
+  p.ped.home.x = L.door.x; p.ped.home.y = L.door.y - 20;
   const d = players.findInteraction(w, p);
   assert.match(d.label, /Out to the street/);
   d.run();
@@ -441,7 +441,7 @@ test('the tickets are one balance at every arcade: won at one, spent at the flag
   assert.equal(lastOf(conn, 'home').plan, 'arcadeflag', 'onto the flagship\'s floor');
   assert.equal(p.ped.home.id, arcade.hallOf(w, F).id);
   const G = counter[0];
-  await walkTo(w, p, G.x - 14, G.y + G.h / 2);
+  p.ped.home.x = G.x + G.w / 2; p.ped.home.y = G.y + G.h + 14;   // (stood at the counter)
   const pc = players.findInteraction(w, p);
   assert.match(pc.label, /prize counter - 30 tickets - good at every arcade/);
   pc.run();

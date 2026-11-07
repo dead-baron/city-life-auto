@@ -57,7 +57,7 @@ test('eight-ball: the break, the groups set by the first ball down, a foul gives
 test('a table: one waits, a second sits in and pays; a third can only watch; shots only on your turn; leaving forfeits', () => {
   const w = fakeWorld(), A = player(w, 'Ann'), B = player(w, 'Bob'), C = player(w, 'Cy');
   const a1 = pm.interaction(w, A, 'k1', opt());
-  assert.match(a1.label, /^Play pool - \$/);
+  assert.match(a1.label, /^The pool table - \$/);
   a1.run();
   assert.equal(A.profile.cash, 100 - ARCADE.pool, 'the table paid for');
   assert.equal(A.conn.sent.find((m) => m.t === 'arcade').mp, 1, 'the screen opens on the choice');

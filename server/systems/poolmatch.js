@@ -37,7 +37,7 @@ export const matchOf = (world, p) => (p && p.pool ? matches(world).get(p.pool.ke
 export function interaction(world, p, key, o) {
   if (p.pool) return null;
   const M = matches(world).get(key);
-  if (!M) return { label: `Play pool - $${o.fee} (a player, the computer, or a frame alone)`, run: () => sitDown(world, p, key, o) };
+  if (!M) return { label: `The pool table - $${o.fee}: play someone, the computer, or a frame alone`, run: () => sitDown(world, p, key, o) };
   const free = M.st === 'wait' && !M.seats[1];
   if (free) return { label: `Play pool with ${nameOf(M.seats[0])} - $${o.fee}`, run: () => join(world, p, M) };
   return { label: `Watch the pool game - ${nameOf(M.seats[0])} v ${nameOf(M.seats[1])}`, run: () => watch(world, p, M) };

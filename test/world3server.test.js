@@ -475,3 +475,26 @@ test('forklift yards: every one\'s pallets and loading bay a real drive apart, t
     jobs.failJob(w, p, 'next');
   }
 });
+
+// (11-07, the owner: "put a few [chess] tables in the world"; "Bowling alley is huge interior with tiny lanes") the six
+// new public chess tables out in the open - nothing tall drawn over them - each one the chess system plays at; Pinwheel
+// Lanes in the Old Freight House: the big hall's fewer, wider lanes and its room filled out
+test('World v3\'s new chess tables: out in the open, nothing tall over them; Pinwheel Lanes\' big lanes in the Old Freight House', async () => {
+  const chess = await import('../server/systems/chess.js'), { BIG } = await import('../shared/bowling.js');
+  const T = chess.tables(M), open = M.props.filter((p) => p.t === 'cafetable' && p.chess && p.open);
+  assert.ok(open.length >= 5, `at least five new tables (${open.length})`);
+  const TALL = [[/^(tree|palm|pine|oak|maple|birch|cypress|willow)/, 3, 5, 1.5], [/^(lamp|umbrella|textsign|parksign|statue|ymast|festoon|bleachers|foodcart|ferris|clock)/, 1.4, 3, 0.3]];
+  const where = new Set();
+  for (const p of open) {
+    assert.ok(T.some((q) => Math.abs(q.x - p.x) < 1 && Math.abs(q.y - p.y) < 1), `the table at ${(p.x / TILE).toFixed(1)}, ${(p.y / TILE).toFixed(1)} is a chess table`);
+    for (const q of M.props) for (const [re, hw, south, north] of TALL) {
+      if (q === p || !re.test(q.t)) continue;
+      const dx = Math.abs(q.x - p.x) / TILE, dy = (q.y - p.y) / TILE;
+      assert.ok(!(dx < hw && dy > -north && dy < south), `${q.t} at ${(q.x / TILE).toFixed(1)}, ${(q.y / TILE).toFixed(1)} over the table at ${(p.x / TILE).toFixed(1)}, ${(p.y / TILE).toFixed(1)}`);
+    }
+    where.add(Math.round(p.x / 4096) + ',' + Math.round(p.y / 4096));
+  }
+  assert.ok(where.size >= 3, 'in three places round the world');
+  const A = M.bowling;
+  assert.ok(A && A.big && A.lanes.length === BIG.lanes && A.kit && A.kit.length > 20, `Pinwheel Lanes' big hall (${A && A.lanes.length} lanes)`);
+});
