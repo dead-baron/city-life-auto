@@ -21219,7 +21219,7 @@ towers downtown.
     lot stay where they were; lower - two floors less, at most 12 with its crown, its wall over the street north of it
     at most about 14 tiles, and lower still (down to 7) while it would cover a place or a sign there; its top two or
     three floors a setback crown (`art.up`, drawn by the art's existing setback: client/art2/game/statics.js upperArt);
-  - either side, in pieces of at most 22 tiles: a wing set back behind a podium of one or two floors of shops (cafes,
+  - either side, in pieces of at most 26 tiles: a wing set back behind a podium of one or two floors of shops (cafes,
     florists, bookshops, tailors, bars, a diner, a dry cleaner, a grocer, a record shop - their signs, awnings, their roof
     gardens), or a mid-rise of three to six floors with its shop on the pavement; the floors step down away from the
     tower, and each piece has its own skin (stone by glass, brick by stone), windows and cornice;
@@ -21230,11 +21230,21 @@ towers downtown.
   The tiles don't change: the footprint stays one built mass, its parts buildings of their own (m.bld). The tower keeps
   the building's id (and its look's seed); the other parts are new buildings at the very end of the list (after the
   Syndicate's den, the last building World v3 makes), so no other building's id, look, POI or home moves. Every choice is
-  a hash of the footprint's corner. 39 towers became 215 buildings (+176).
+  a hash of the footprint's corner. A tower becomes at most five buildings (one back block, then the outer podiums made
+  mid-rises, when there'd be more): 39 towers became 185 buildings (+146). The new shops' signs are the buildings' signs
+  too, so the street-greens pass (world3-greens.js) runs again after the split and keeps the street trees off them and
+  off the slimmer towers' fronts (a front of 12 tiles or less is all sign to it).
 - After: no plain slab but the landmarks (the survey: 4, all landmarks; Union Trust Tower isn't plain - its helipad);
-  the split towers 7-12 floors; Park West Tower 11 floors over 15 tiles of front, with a lower wing, a mid-rise of shops and
-  a back block behind them.
+  the split towers 7-12 floors (12 of them at 7: the shorter ones, and those whose wall would hide a place or a sign); Park West Tower 12 floors
+  with its crown over 15 tiles of front (16 floors over 48), a brick mid-rise with its shop on the pavement to the
+  west, a wing over a podium of shops to the east, the back block behind. No POI or home moved (all 6,018 and 3,467 the same, ids and places);
+  the only new building ids are the parts', after the last building the world had (#7128, the Syndicate's den).
 - test/plainblocks.test.js (the same world build): no plain slab but the landmarks, and the landmarks whole; no plain tower
   over 12 floors or a slim tower's front; each split tower's parts tile its footprint, its street side all fronts with
   a shopfront or the lobby, the shops low and signed, the tower the tallest and the heights varied, the tower's door and
   POIs at its front, the new parts after every plan building; no split tower's wall over a place to the north.
+- Cost (tools/perf.mjs, this machine): the city 26.1x the yardstick to build (budget 40x), 39 MB as sent (budget 46); the
+  bakes 57.5x (budget 90x), the biggest kept chunk 758 KB; the bake's code 977 KB of its 1,000 KB (the crown: a few lines
+  in statics.js `upperArt`, the art's own setback drawing). The parts are buildings the bake already draws: fewer, lower
+  walls over the street.
+- Today's world (`world`) doesn't change - World v3's (`world3`, `art3`) do, and `art` (statics.js).
