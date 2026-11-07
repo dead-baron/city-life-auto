@@ -20,6 +20,9 @@ import * as jobs from '../server/systems/jobs.js';
 import * as fishing from '../server/systems/fishing.js';
 import * as combat from '../server/systems/combat.js';
 import { FTUE_STEPS } from '../server/analytics.js';
+import * as transit from '../server/systems/transit.js';
+import { guideSections } from '../shared/guide.js';
+import { readFileSync } from 'node:fs';
 
 // a world with the analytics' funnel listened to (server/launch.js world.track)
 function world() {
@@ -509,4 +512,131 @@ test('where to arrive: skipped or left, the default; rejoining mid-choice, the c
   // a pick after the card is gone does nothing
   ftue.handle(w2, p2, { a: 'pick', stn: def.poi });
   assert.equal(d.prof.ftue.stn, far.id);
+
+// ---- the owner's 11-06 report: the shop line at a house for sale's door; "only new players ... after they appear once
+// or twice"; tapping the tip should take you to the Guide ------------------------------------------------------------
+const doneChar = (w) => {
+  const j = newcomer(w);
+  toArrival(w); toQuestion(w);
+  economy.handleMenu(w, j.p, ASK_POI, 'roam');
+  j.prof.ftue.m.transit = 1;   // (off the train on a platform: not this test's)
+  w.loopTime = 60;
+  w.time += FTUE.tipGapS + 1;
+  const tips = () => sent(j.conn, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
+  return { ...j, tips };
+};
+
+test('the shop moment fires at a shop\'s counter only - not a house for sale, a dealer, the garage, the hospital', () => {
+  const { w } = world();
+  const { p, tips } = doneChar(w);
+  const poiOf = (f) => w.map.pois.find(f);
+  const house = poiOf((q) => q.kind === 'home' && !homes.unitsAt(w, q) && !w.homeOwner.has(w.map.homes[q.home].id));
+  const others = [house, poiOf((q) => q.kind === 'dealer'), poiOf((q) => q.kind === 'garage'), poiOf((q) => q.kind === 'hospital'), poiOf((q) => q.kind === 'marina')].filter(Boolean);
+  assert.ok(house && others.length >= 3, 'a house for sale and the others on the map');
+  for (const q of others) {
+    const m = economy.buildMenu(w, p, q);
+    if (q === house) assert.ok(m.opts.some((o) => o.price > 0), 'the house\'s menu has a price (the old trigger fired on it)');
+    w.time += FTUE.tipGapS + 1;
+    economy.openMenu(w, p, q);
+    assert.ok(!tips().includes('shop'), `no shop line at ${q.kind}`);
+    assert.equal(ftue.isShop(q), false, q.kind);
+  }
+  const shop = poiOf((q) => q.kind === 'convenience');
+  assert.ok(ftue.isShop(shop));
+  w.time += FTUE.tipGapS + 1; economy.openMenu(w, p, shop);
+  assert.deepEqual(tips(), ['shop']);
+  for (let i = 0; i < 3; i++) { w.time += FTUE.tipGapS + 1; economy.openMenu(w, p, shop); }
+  assert.deepEqual(tips(), ['shop'], 'once');
+});
+
+test('each moment at most once on a character - across a rejoin and a server restart; the hurt one at most twice, however often you go down', () => {
+  const { w } = world();
+  const { p, prof, conn, tips } = doneChar(w);
+  const hurt = () => { p.ped.hp = p.ped.maxHp * (FTUE.hurtAt - 0.1); };
+  const cycle = () => {   // hurt, the line, straight down (un-marks it), up again past the wake-up
+    p.ftueTipAt = -1e9; hurt(); run(w, 0.6);
+    combat.damage(w, p.ped, 9999, null, 'test'); run(w, 0.6);
+    p.respawnAt = w.time; run(w, 1.2);
+    w.time += FTUE.wakeS + FTUE.tipGapS + 1; run(w, 0.6);
+  };
+  for (let i = 0; i < 6; i++) cycle();
+  const n = (id) => tips().filter((t) => t === id).length;
+  assert.equal(n('hurt'), FTUE.hurtMax, 'the hurt line twice, not round and round');
+  assert.equal(n('down'), 1);
+  assert.ok(prof.ftue.m.hurt, 'kept as taught after the second');
+  for (const id of Object.keys(MOMENTS)) assert.ok(n(id) <= (id === 'hurt' ? FTUE.hurtMax : 1), id);
+  // a restart: the profile as saved, a new world - nothing again
+  const saved = JSON.parse(JSON.stringify(prof));
+  players.leave(w, p); void conn;
+  const w2 = makeWorld({ keepKept: true });
+  const conn2 = fakeConn(), p2 = players.join(w2, conn2, Object.assign(prof, saved));
+  w2.loopTime = 60; run(w2, 0.6);
+  const tips2 = () => sent(conn2, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
+  w2.time += FTUE.tipGapS + 1;
+  p2.heat = STAR_HEAT[1] + 8; p2.wanted = 1; run(w2, 0.6);
+  const before = tips2().length;
+  w2.time += FTUE.tipGapS + 1; p2.ped.hp = p2.ped.maxHp * 0.3; run(w2, 0.6);
+  economy.openMenu(w2, p2, w2.map.pois.find((q) => q.kind === 'convenience'));
+  assert.ok(!tips2().includes('hurt'), 'the hurt line not a third time after a restart');
+  assert.ok(tips2().length <= before + 1 && tips2().every((t) => !tips().includes(t)), 'only moments not yet seen');
+});
+
+test('only while the character is new: none after FTUE.tipsPlayH hours played or FTUE.tipsDays days after the FTUE; none with tips off; Settings turns them on and off', () => {
+  const { w } = world();
+  const { p, prof, tips } = doneChar(w);
+  const wanted = () => { p.heat = STAR_HEAT[1] + 8; p.wanted = 1; };
+  // played long enough
+  prof.ftue.pt = FTUE.tipsPlayH * 3600 + 1;
+  wanted(); run(w, 0.6);
+  assert.deepEqual(tips(), [], 'no tip after the hours');
+  assert.equal(ftue.moment(w, p, 'shop'), false);
+  // play time counts up while connected
+  prof.ftue.pt = 0; const t0 = prof.ftue.pt;
+  ftue.handle(w, p, { a: 'tipset', on: false });
+  assert.equal(players.buildMe(w, p).tips, 0, 'the page knows (Settings)');
+  run(w, 2);
+  assert.ok(prof.ftue.pt >= t0 + 1.5, 'time played counted');
+  assert.deepEqual(tips(), [], 'tips off: nothing');
+  ftue.handle(w, p, { a: 'tipset', on: true });
+  assert.equal(players.buildMe(w, p).tips, 1);
+  w.time += FTUE.tipGapS + 1; wanted(); run(w, 0.6);
+  assert.deepEqual(tips(), ['wanted'], 'on again: the ones not yet seen');
+  // the FTUE long over
+  prof.ftue.at.done = Date.now() - (FTUE.tipsDays * 86400e3 + 60e3);
+  w.time += FTUE.tipGapS + 1; p.ped.hp = p.ped.maxHp * 0.3; run(w, 0.6);
+  assert.deepEqual(tips(), ['wanted'], 'none once the FTUE is over by more than the days');
+  // ...unless asked for: the Guide's "Show tips again"
+  ftue.handle(w, p, { a: 'tips' });
+  run(w, 4);
+  assert.ok(tips().length > 1, 'shown again when asked');
+  assert.ok(FTUE.tipsPlayH > 0 && FTUE.tipsDays > 0 && FTUE.hurtMax === 2);
+});
+
+test('the transit moment: not at a marina (the boat dealer\'s)', () => {
+  const { w } = world();
+  const { p, prof, tips } = doneChar(w);
+  delete prof.ftue.m.transit;
+  const far = (q) => w.map.pois.every((o) => o.kind !== 'station' || Math.hypot(o.x - q.x, o.y - q.y) > 600);
+  const marina = w.map.pois.find((q) => q.kind === 'marina' && far(q));
+  if (marina) {
+    teleport(w, p.ped, marina.x + 20, marina.y);
+    if (!transit.stopNote(w, p)) { w.time += FTUE.tipGapS + 1; run(w, 0.6); assert.ok(!tips().includes('transit'), 'no transit line at the marina'); }
+  }
+});
+
+test('the tip\'s Guide link: each moment names a Guide section; a tap on the tip opens the phone\'s Guide there, above the touch layer', () => {
+  const ids = new Set(guideSections(makeWorld().map).map((s) => s.id));
+  for (const [id, M] of Object.entries(MOMENTS)) assert.ok(ids.has(M.sec), `${id}: ${M.sec}`);
+  const src = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const page = src('client/ftue.js'), main = src('client/main.js'), css = src('client/style.css'), html = src('index.html');
+  assert.match(page, /\$\('ftue-line'\)\.addEventListener\('click'/, 'the whole line listens');
+  assert.match(page, /C\.openGuide\(sec\)/, 'a tap opens the Guide at the tip\'s section');
+  assert.match(page, /el\.dataset\.guide = sec/);
+  assert.match(page, /fl-x/, 'and a way to put it away');
+  assert.match(main, /openGuide: \(sec\) => \{ S\.guideSec = sec; openHub\('phone', 'guide'\); \}/);
+  // above the touch layer's stick zone while it's up (a tap on its words reached the move stick: #zone-l), and not once faded
+  const z = (re) => +(re.exec(css) || [])[1];
+  assert.ok(z(/#ftue-line\.tip \{[^}]*z-index: (\d+)/) > z(/#touch \{[^}]*z-index: (\d+)/), 'the tip over #touch');
+  assert.match(css, /#ftue-line\.faded \{[^}]*pointer-events: none/, 'faded: back to the sticks');
+  assert.match(html, /id="s-tips"/, 'Settings: First-time tips');
 });

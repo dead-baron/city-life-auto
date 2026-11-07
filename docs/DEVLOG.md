@@ -21005,3 +21005,34 @@ have it on by default".
   you're in it or someone else is; put away on logoff and back where it was on rejoining, no cooldown.
   `test/honestliving.test.js` - Safety off for a new character, the warning when on, the one-time switch-off kept to.
   `test/flight.test.js`, `test/horses.test.js` updated (one press now).
+
+## 2026-11-06 - First-time tips: a tap opens the Guide, the right place, only while you're new
+The owner's report from his Pixel 7 Pro: the tip "Shopping: pick a line to buy it" came up at the front door of a house
+for sale. He wants a tap to take him to the Guide, and the tips to stop after once or twice, for new players only.
+- **The tap.** Tested in Playwright (Pixel 7 Pro, 892x412, touch). "More in your Guide" worked, but the rest of the
+  line didn't. On touch the line sits inside the move stick's zone (`#zone-l`, the left 40% of the screen, `#touch`
+  z-index 5), so a tap on its words went to the stick. A tip line now sits over the touch layer while it's up
+  (`#ftue-line.tip`, z-index 6, like the job card) and drops back under it as it fades (`pointer-events: none`). A tap
+  anywhere on it opens the phone's Guide at the tip's section, and a small x dismisses it. The client also no longer
+  forgets which tip is on screen at the next self record (`lineSig` was cleared), so a tip goes away when you go down.
+- **The wrong place.** The shop moment fired on any menu with a price: a home for sale, the dealers, the garage, the
+  hospital. It now fires only at a shop's counter: `ftue.js` `SHOP_KINDS` and `isShop` (the shop kinds and the walk-in
+  counters, never a casino, arcade or bathhouse). The transit moment no longer fires near a marina (that's the boat
+  dealer). It now fires near a ferry that's in, and for a bus's passengers, not its driver.
+- **Once, and only while new.** The moments were already once each per character (`profile.ftue.m`, saved). Going down
+  within the hurt line's time un-marked it, so the hurt line could come back after every death. It now shows at most
+  `FTUE.hurtMax` (2) times. New in `FTUE`: no moments after `tipsPlayH` (3) hours played (`ftue.pt`, counted while
+  connected) or `tipsDays` (7) days after the FTUE ended. The six moments come up in a new player's first hour or so.
+  Anyone still missing one after three hours or a week has found their feet, or the Guide. The Guide's "Show tips
+  again" lifts both limits. Settings > Game has a new "First-time tips" toggle (`{ t: 'intro', a: 'tipset' }`,
+  `me.tips`).
+- **The action button at a home for sale** showed coins: "Look around X - for sale, $N" matched the buy rule. A new
+  `home` kind (Lucide `house`) comes before it. Tests: ftue (new: shop places, at most once and hurt at most twice
+  across a restart, the new-player limits and the toggle, the marina, the Guide link wiring), acticons, guide,
+  uiscreens, hudlayers, pagemodules, lazypage, perf.
+
+## 2026-11-06 - The forklift is a forklift (vehicle words)
+The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `vehicleWord` names a vehicle in the
+game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
+"truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
+4x4. test/jobrecall.test.js checks the forklift and the golf cart.

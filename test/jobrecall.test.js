@@ -88,6 +88,8 @@ test('a job\'s vehicle is named for what it is (not "your truck" for a helicopte
   assert.equal(vehicleWord(VEHICLES.rescueboat), 'boat');
   assert.equal(vehicleWord(VEHICLES.ambulance), 'ambulance');
   assert.equal(vehicleWord(VEHICLES.taxi), 'cab');
+  assert.equal(vehicleWord(VEHICLES.forklift), 'forklift');   // (the owner, 11-06: the forklift job said "car")
+  assert.equal(vehicleWord(VEHICLES.golfcart), 'golf cart');
   assert.equal(vehicleWord(VEHICLES.flatbed), 'truck');
   assert.equal(vehicleWord(VEHICLES.firetruck), 'fire engine');
   const { p, v } = onJob('charter');

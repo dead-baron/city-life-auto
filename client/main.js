@@ -2486,6 +2486,7 @@ function syncSettings() {
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
   $('s-vibrate').checked = settings.vibrate;
   $('s-shopmarks').checked = settings.shopMarks !== false;
+  $('s-tips').checked = !(S.me && S.me.tips === 0); $('s-tips').disabled = !S.welcomed;   // (First-time tips: the server's - server/systems/ftue.js)
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
   $('s-diag').checked = diag.on;
@@ -2553,6 +2554,7 @@ $('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c
 $('s-safety').onchange = (e) => { if (S.welcomed) send({ t: 'safety', on: e.target.checked }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-shopmarks').onchange = (e) => { settings.shopMarks = e.target.checked; saveSettings(); };
+$('s-tips').onchange = (e) => { if (S.welcomed) send({ t: 'intro', a: 'tipset', on: e.target.checked }); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
 $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettings(); if (!settings.smooth && GOV.scale !== 1) { GOV.scale = 1; onResize(); } };
