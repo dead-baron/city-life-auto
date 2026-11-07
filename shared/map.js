@@ -405,7 +405,10 @@ function buildCity(seed, opts = null, frame = null) {
   buildStreetAtms(m);
   if (OPTS?.shops) { ATM_PG = propGrid(m); try { OPTS.shops(m, { addProp, removeProps, simpleBuilding, wallAtm: (b, x, look, loose) => wallAtm(m, b, x, look, false, loose) }); } finally { ATM_PG = null; } }   // (World v3: shops where you need them - shared/world3-shops.js)
   m.atms = m.pois.filter((p) => p.kind === 'atm');
-  if (WD) breakPlainBlocks(m);   // (World v3: no huge plain buildings - the owner, 11-03)
+  if (WD) {
+    const L = breakPlainBlocks(m);   // (World v3: no huge plain buildings - the owner, 11-03)
+    if (OPTS?.lots) OPTS.lots(m, { addProp, walkInRoom, lots: L.lots });   // (Southside's lots on a street: rough small shops - shared/world3-lots.js)
+  }
   aimLamps(m);
   m.levels = buildLevels(m);
   buildCameras(m, rand);
@@ -1957,7 +1960,7 @@ const BIG_FIRMS = {
 function breakPlainBlocks(m) {
   const placed = new Set();
   for (const p of m.pois) if (p && p.b !== undefined) placed.add(p.b);
-  const n0 = m.buildings.length;
+  const n0 = m.buildings.length, lots3 = [];   // (lots3: each lot [building, its row in the column - 0 the southmost, the column])
   let cut = 0, made = 0;
   for (let i = 0; i < n0; i++) {
     const b = m.buildings[i];
@@ -1980,17 +1983,18 @@ function breakPlainBlocks(m) {
       const n = w * d > ROOF_CAP ? Math.ceil(w * d / ROOF_CAP) : 1, bw = Math.ceil(w / n);
       for (let x0 = x, q = 0; x0 < x + w; x0 += bw, q++) {
         const ww = Math.min(bw, x + w - x0);
-        if (j === 0 && q === 0) { b.ty = ty; b.th = d; b.tw = ww; R.ty = ty; R.th = d; R.tw = ww; continue; }   // (the building keeps the southmost lot)
+        if (j === 0 && q === 0) { b.ty = ty; b.th = d; b.tw = ww; R.ty = ty; R.th = d; R.tw = ww; lots3.push([b.id, j, cut]); continue; }   // (the building keeps the southmost lot)
         const bid = m.buildings.length;
         m.roofs.push({ tx: x0, ty, tw: ww, th: d, kind: R.kind, seed: Math.floor(hash2(x0, ty, 1321) * 1e9), d: R.d, b: bid });
         m.buildings.push({ id: bid, prefab: -1, roof: m.roofs.length - 1, tx: x0, ty, tw: ww, th: d, kind: 'roof', name: b.name, business: null, signs: [], ...(j === 0 && b.back ? { back: true } : {}) });
         for (let yy = ty; yy < ty + d; yy++) for (let xx = x0; xx < x0 + ww; xx++) m.bld[m.idx(xx, yy)] = bid;
+        lots3.push([bid, j, cut]);
         made++;
       }
       if (g) passage(m, x, ty - g, w, g);
     });
   }
-  return { cut, made };
+  return { cut, made, lots: lots3 };
 }
 // A passage between two lots of a column: paved through from side to side, bins or a bike rack at one end against the
 // lot to the north, now and then a planter at the other (placed by where it is).
@@ -3141,11 +3145,18 @@ function buildInteriors(m) {
     if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
     // has its own door beside it - shared/world3-hand.js)
-    const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk;
     const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
     if (!main.some(isWalk) || list.some((p) => !isWalk(p) && !HELPER_POIS.has(p.kind) && p.kind !== 'delivery' && !(b.hand && p.kind === 'home'))) continue;
-    const x0 = b.tx + 1, x1 = b.tx + b.tw - 2; // inside the side walls (inclusive)
-    const south = walkInSouth(m, b, x0, x1);
+    walkInRoom(m, b, list, main, walkInSouth(m, b, b.tx + 1, b.tx + b.tw - 2));
+  }
+}
+const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk;
+// A walk-in's room laid out in building b (buildInteriors; World v3's Southside shops on the plain blocks' lots, later:
+// shared/world3-lots.js): its units along the front from `main` (its doors' POIs, west to east), the floor, the doorways,
+// the counters, each unit's POI moved in front of its counter. south: the doorways in the south wall. -> false if no unit fits
+function walkInRoom(m, b, list, main, south) {
+  {
+    const bid = b.id, x0 = b.tx + 1, x1 = b.tx + b.tw - 2; // inside the side walls (inclusive)
     main.sort((a, c) => a.x - c.x);
     // the units along the front, split halfway between their doors (a walk-in's spot, once laid out, is in front of its
     // counter: where the next one along splits from it); other storefronts in the row stay closed
@@ -3158,7 +3169,7 @@ function buildInteriors(m) {
       spans.push({ p, dc, ux0, ux1 });
       at[i] = (ux0 + ux1 + 1) / 2 * TILE;
     });
-    if (!spans.length) continue;
+    if (!spans.length) return false;
     // the room: just inside the front wall, as deep as the widest unit wants (roomDepth); behind it, a wall and the back
     // rooms, solid
     const depth = roomDepth(spans.map((q) => q.p.kind), Math.max(...spans.map((q) => q.ux1 - q.ux0 + 1)), b.th - 2);
@@ -3199,6 +3210,7 @@ function buildInteriors(m) {
     b.walkIn = { south, units, x0, x1, y0, y1 };
     if (WD && b.door && (b.door.ty < b.ty) === south) { b.door = { tx: units[0].door.tx, ty: south ? b.ty + b.th : b.ty - 1 }; if (b.hand && !south) b.back = true; }
     m.walkIns.push(bid);
+    return true;
   }
 }
 

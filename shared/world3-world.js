@@ -78,6 +78,7 @@ import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
+import { lots3 } from './world3-lots.js';   // (Southside's lots on a street: rough small shops; dice down a passage)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
 import { streetGreens3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
@@ -329,6 +330,7 @@ export function worldOpts(asked) {
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
     clinics: city ? (m) => { m.world3.clinics = clinics3(m); } : null,   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
     shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
+    lots: city ? (m, H2) => { m.world3.lots = lots3(m, H2); } : null,   // (after the plain blocks are cut: Southside's shops and sheds - world3-lots.js)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own
     special: (sp) => built.has(sp.d) && !DROP_SPECIALS3.has(sp.names[0]) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
