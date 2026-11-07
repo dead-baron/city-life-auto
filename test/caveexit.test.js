@@ -142,7 +142,9 @@ test('the way out: offered all along its passage; the arrow only for someone dee
   assert.ok(arrow, 'lost: the arrow');
   assert.ok(wayFrom(K, arrow[0], arrow[1]).d < d0.d, 'toward the way out');
   assert.deepEqual(sent.filter((m) => m.t === 'ugway').pop().w, arrow, 'sent to the page');
-  // walking out along it: gone once you're getting nearer, and near the mouth
+  // walking out along it with a light on: gone once you're getting nearer, and near the mouth (in the dark without a
+  // light it stays: the screen is all dark then)
+  p.ped.lightCode = 1;
   let q = { x: K.den.x, y: K.den.y };
   for (let i = 0; i < 4; i++) { q = wayFrom(K, q.x, q.y, CAVE_WAY.gainTiles + 2); teleport(w, p.ped, q.x, q.y); w.time += 1; ug.wayHint(w, p, K); }
   assert.equal(ug.wayHint(w, p, K), null, 'getting nearer: no arrow');
