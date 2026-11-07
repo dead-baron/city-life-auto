@@ -179,11 +179,16 @@ export function sightTargets(m) {
   }
   return out;
 }
-// (a tree's crown: about 36 px either side of its trunk times its scale, from about 30 up to 150 px up times its scale)
-const CROWN = { side: 36, lo: 30, hi: 150 };
+// (a tree's crown on screen, by species - [half its width, its height] at scale 1, as client/art2/game/statics.js SPECIES
+// draws it, a little inside the sprite's margin; the trunk's bottom quarter hides little)
+const CROWNS = { oak: [60, 124], leaning: [98, 133], coconut: [68, 151], cocoUp: [68, 151], royal: [50, 150], date: [52, 140], fanSkirt: [46, 126],
+  coastCypress: [72, 98], banana: [54, 99], paloVerde: [48, 115], joshua: [46, 101], whitePine: [44, 114], cypress: [16, 108], young: [24, 114],
+  fir: [34, 134], cedar: [34, 138], pondPine: [30, 138], pine: [30, 138], mtnPine: [32, 150], mtnFir: [36, 157], larch: [34, 154] };
+const CROWN0 = [44, 128];
+const crownOf = (p) => CROWNS[p.sp] || (/^palm_/.test(p.t) ? CROWNS.date : CROWN0);
 const hidesIt = (p, q) => {
-  const k = p.k || 1, dy = p.y - q.y;
-  return Math.abs(p.x - q.x) < q.hw + CROWN.side * k && dy > Math.max(6, CROWN.lo * k - q.z1) && dy < CROWN.hi * k - q.z0;
+  const k = p.k || 1, [cw, ch] = crownOf(p), dy = p.y - q.y;
+  return Math.abs(p.x - q.x) < q.hw + cw * k && dy > Math.max(6, ch * k * 0.25 - q.z1) && dy < ch * k - q.z0;
 };
 const grid = (list) => { const g = new Map(); for (const q of list) { const k = Math.floor(q.y / 512) * 65536 + Math.floor(q.x / 512); if (!g.has(k)) g.set(k, []); g.get(k).push(q); } return g; };
 const hidden = (g, p) => {
@@ -216,7 +221,7 @@ export function sightlines3(m) {
     const q = hidden(g, p);
     if (!q) return;
     const t0 = tileOf(p.x, p.y), self = m.propSolid.get(pi) || null, k = p.k || 1, side = p.x < q.x ? -1 : 1;
-    const step = Math.ceil(q.hw + CROWN.side * k + 6 - Math.abs(p.x - q.x));
+    const step = Math.ceil(q.hw + crownOf(p)[0] * k + 6 - Math.abs(p.x - q.x));
     for (const s of [side, -side]) for (let d = 0; d < 4 * TILE; d += 16) {
       const x = Math.round(p.x + s * (s === side ? step : step + 2 * Math.abs(p.x - q.x)) + s * d);
       if (tileOf(x, p.y) !== t0 || hidden(g, { ...p, x }) || blocks(sg, x, p.y) || solidNear(x, p.y, self)) continue;
@@ -229,9 +234,20 @@ export function sightlines3(m) {
   });
   // a standing sign out from under a deck (a highway over the street is drawn DECK_LIFT px up: over a sign a tile or
   // three north of it - the owner's 11-06 "GUL..." sign half under the highway): along its row to where none is over it
+  // (the elevated roads as their edges: the deck layer, map.js m.deck, isn't laid yet when this runs)
+  const decks = [];
+  for (const e of m.edges || []) if (e.lvl === 1 || e.lvl === 'ramp') for (let i = 1; i < e.pts.length; i++) { const a = e.pts[i - 1], b = e.pts[i]; decks.push([a.x, a.y, b.x, b.y, e.hw + 6, Math.min(a.x, b.x) - e.hw - 6, Math.max(a.x, b.x) + e.hw + 6, Math.min(a.y, b.y) - e.hw - 6, Math.max(a.y, b.y) + e.hw + 6]); }
+  const deckAt = (X, Y) => {
+    for (const [ax, ay, bx, by, r, x0, x1, y0, y1] of decks) {
+      if (X < x0 || X > x1 || Y < y0 || Y > y1) continue;
+      const dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((X - ax) * dx + (Y - ay) * dy) / (dx * dx + dy * dy || 1)));
+      if (Math.hypot(ax + dx * t - X, ay + dy * t - Y) < r) return true;
+    }
+    return false;
+  };
   const under = (x, p) => {
     const hw = Math.min(150, String(p.text || '').length * 7 + 8), z = p.z || 40;
-    for (let Y = p.y + 60 - z; Y <= p.y + 150 - z; Y += 16) for (let X = x - hw; X <= x + hw; X += 16) { const tx = Math.floor(X / TILE), ty = Math.floor(Y / TILE); if (m.inside(tx, ty) && m.deck && m.deck[m.idx(tx, ty)]) return true; }
+    for (let Y = p.y + 60 - z; Y <= p.y + 150 - z; Y += 16) for (let X = x - hw; X <= x + hw; X += 16) if (deckAt(X, Y)) return true;
     return false;
   };
   for (const p of m.props) {

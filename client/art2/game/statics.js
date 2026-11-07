@@ -3887,8 +3887,22 @@ function trackClear(M) {
   TRACKCLEAR.set(M, s);
   return s;
 }
+// (the owner, 11-06: nothing meant to be seen behind a tree) the tiles in front of what is - a door on a front, an ATM, a
+// standing sign, a chess table, a bus stop: up to 4 tiles south of it, a crown's width either side - grow nothing tall
+// (shared/world3-greens.js sightlines3 moves the map's own trees; tools/visaudit.mjs measures it)
+const SIGHT = new WeakMap();
+function sightTiles(M) {
+  let s = SIGHT.get(M);
+  if (s) return s;
+  s = new Set();
+  const mark = (x, y, hw) => { for (let ty = Math.floor(y / TILE); ty <= Math.floor(y / TILE) + 4; ty++) for (let tx = Math.floor((x - hw - 56) / TILE); tx <= Math.floor((x + hw + 56) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty)); };
+  for (const p of M.pois || []) { const b = p && p.b !== undefined ? M.buildings[p.b] : null; if (b && p.y >= (b.ty + b.th) * TILE - 4) mark(p.x, (b.ty + b.th) * TILE, 16); else if (p) mark(p.x, p.y, 8); }
+  for (const p of M.props) if (p && (p.t === 'textsign' || p.chess || p.t === 'busstop' || p.t === 'mapboard' || p.t === 'campfire')) mark(p.x, p.y, p.t === 'textsign' ? 60 : 16);
+  SIGHT.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M);
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M);
   // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed - no wild
   // flowers or scrub among the rows, a tuft of grass now and then just outside them: shared/world3-biomes.js m.orchards)
   const X0 = cx * CH - 120, Y0 = cy * CH - 80, X1 = (cx + 1) * CH + 120, Y1 = (cy + 1) * CH + 140;
@@ -3914,6 +3928,7 @@ function coverItems(c, I, cx, cy) {
       r = [/^(creosote|bursage|brittle|dryGrass|sage|tumble|dFlowers|dPoppies|barrel|pear|agave|cholla|saguaroSmall|yucca|heather|juniper|twisted|aDaisies|aLupine|paintbrush)$/.test(r[0]) ? 'dryTuft' : 'weed', 1];
     }
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
+    if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
   }
   return out;

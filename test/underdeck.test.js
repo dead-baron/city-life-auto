@@ -21,30 +21,31 @@ const UNDER_Z = num('client/art2/game/host.js', 'UNDER_Z'), FISH_Z = num('client
 
 test('a highway bridge\'s deck, its median too, hides a swimmer and the blood in the water under it', () => {
   const m = generateCity(1337), CH = 768;
-  // a highway bridge with a median: an edge of kind hwy whose middle is a bridge tile with bridge all round it
-  const inner = (tx, ty) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (!m.inside(tx + i, ty + j) || m.tiles[m.idx(tx + i, ty + j)] !== T.BRIDGE) return false; return true; };
+  // a highway bridge with a median, a point on its centre line well out over the water (bridge all round it)
+  const inner = (tx, ty) => { for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) if (!m.inside(tx + i, ty + j) || m.tiles[m.idx(tx + i, ty + j)] !== T.BRIDGE) return false; return true; };
   let at = null;
   for (const e of m.edges) {
     if (e.kind !== 'hwy' || !(e.median > 8)) continue;
     for (let k = 1; k < e.pts.length && !at; k++) {
       const a = e.pts[k - 1], b = e.pts[k], n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 32);
-      for (let j = 1; j < n && !at; j++) { const x = a.x + (b.x - a.x) * j / n, y = a.y + (b.y - a.y) * j / n; if (inner(Math.floor(x / TILE), Math.floor(y / TILE))) at = [x, y]; }
+      for (let j = 1; j < n && !at; j++) { const x = a.x + (b.x - a.x) * j / n, y = a.y + (b.y - a.y) * j / n; if (inner(Math.floor(x / TILE), Math.floor(y / TILE))) at = [x, y, e]; }
     }
     if (at) break;
   }
   assert.ok(at, 'a highway bridge with a median');
-  const cx = Math.floor(at[0] / CH), cy = Math.floor(at[1] / CH), G = bakeGround(m, cx, cy, { quality: 2 });
+  // the deck's pixels within the median's width of that point (the median and the lanes either side)
+  const R = at[2].median / 2 + 24, cx = Math.floor(at[0] / CH), cy = Math.floor((at[1] - 6) / CH), G = bakeGround(m, cx, cy, { quality: 2 });
   let n = 0, low = 0, minZ = 1e9;
   for (let y = 0; y < CH; y++) for (let x = 0; x < CH; x++) {
     const i = y * CH + x;
     if (!(G.flag[i] & F_GROUND) || !G.col[i * 4 + 3]) continue;
     const z = G.z[i], X = cx * CH + x, Y = cy * CH + y + z;   // (screen y = Y - Z)
-    if (!inner(Math.floor(X / TILE), Math.floor(Y / TILE))) continue;
+    if (Math.hypot(X - at[0], Y - at[1]) > R) continue;
     n++; minZ = Math.min(minZ, z);
     if (z - GSINK <= UNDER_Z) low++;
   }
-  assert.ok(n > 2000, `the deck's pixels (${n})`);
-  assert.equal(low, 0, `${low} of the deck's ${n} pixels let a swimmer under it through (lowest ${minZ} px)`);
+  assert.ok(n > 400, `the deck's pixels round the median (${n})`);
+  assert.equal(low, 0, `${low} of the deck's ${n} pixels round its median let a swimmer under it through (lowest ${minZ} px)`);
   assert.ok(minZ - GSINK > DECAL_H + FISH_Z, 'the blood in the water under it is under the deck');
   assert.ok(DECAL_H > minZ - GSINK, 'a stain from a fight up on the deck lands on its top');
 });
