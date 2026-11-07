@@ -20790,3 +20790,109 @@ garages, street dice down a passage or two, and Port Westport stays industrial.
 - Not done (each its own job, if the owner wants it): a check-cashing counter, an off-track betting window on the race
   book (`server/systems/racebook.js` is there; a counter would open its view the way the casinos' floor does), a
   laundromat you use, a tire shop that sells tires. The dice crew is the existing street dice, not a new game.
+
+## 2026-11-06 - First-time moments wait until you're back up
+
+The owner's screenshot from a night drive: the first-time moment "Hurt? Hold for your quick wheel - a bandage patches
+you up." on top of the YOU'RE DOWN screen. The hurt line had gone out a moment before the player went down (the line
+stays up `FTUE.lineS`), so it sat over the down screen, where a bandage is no help.
+- Server (`server/systems/ftue.js`): no moment fires while you're down or dead (only `down` itself, which is about that
+  screen), nor for `FTUE.wakeS` (10 s, `shared/rules.js`) after you're back up (the wake-up screen and the area
+  loading): they are held until then. Going down while the hurt line is still up drops it: it's not counted as taught,
+  so it comes again the next time you're hurt and on your feet.
+- Page (`client/ftue.js`): a tip on screen goes as you go down (not `down`'s own); a tip that arrives while you're
+  down or while the "Loading the area..." veil is up waits until you're up and the veil has gone; a held hurt tip is
+  dropped if you went down meanwhile.
+- `test/ftue.test.js`: a new test - hurt then down (the hurt one dropped), nothing but `down` while down, nothing during
+  the wake-up, then the held one, and the hurt one taught again later.
+
+## 2026-11-06 - Phone performance: the long drive (the owner's Pixel 7 Pro "starting to chug")
+The owner, 11-06, with the perf readout on: right after a teleport, 119 fps (p95 33 ms, 5 long tasks); after driving
+round a residential area for a while, at night in the rain, 60 fps (p95 50 ms), "long tasks 63 (8297 ms)", bakes
+62 -> 758 ms, "made here 40" person sprites (~9 ms each). Measured first, then fixed what the measurements pointed at;
+no art, graphics, resolution or render quality was lowered. No budget changed (page 511 of 520 KB, renderer 403 of 404).
+- **tools/drivebench.mjs**: a repeatable long drive - the owner's screen (411x891 portrait at 2.6, touch, a Pixel user
+  agent, Medium, the perf readout on, told 8 cores and 8 GB: four bake workers), night and rain held, the first-launch
+  gate answered and the first-time experience skipped, a car driven by an autopilot along the GPS route
+  (client/route.js) from district to district (Pine Hills, Southside, Downtown, Midtown, Northgate, Old Town...) across
+  World v3's region borders, then a walk round on foot. Every task the page runs is timed where it starts (animation
+  frames, worker / socket / channel messages, timers, IndexedDB events); a long one is put down to its source, an
+  animation frame to its parts (main.js's S.perf and the renderer's marks, their running averages unwound). This
+  machine has no GPU: WebGL in SwiftShader took 1.2 s a night frame, every frame a "long task" waiting on it, so by
+  default nothing is rasterized (--nodraw: every WebGL call is made, the draws are no-ops). --root runs a snapshot of
+  another build, --cpu slows the page's thread, --trace records a Chrome trace for **tools/longtrace.mjs** (what the
+  long tasks held: JS by function, GC, message decoding, style, paint).
+- **The perf readout** (client/perfhud.js) counts the long tasks behind a loading screen apart from those while you
+  play ("long tasks N · loading M": the first load, a respawn's or a teleport's "Loading the area..." spend a frame's
+  time freely by design - the owner's 63 held both), and shows the window swaps (how many, the last one's ms), the
+  sprite lane and the sprites the atlas let go.
+- **The window swap at every region border** (client/main.js swapWorld; measured on the bench, unthrottled: 220 ms of
+  the page's thread - the minimap's new picture 149, the classic renderer's ground indexes 53, the GPS router 9 - a phone
+  about four times that): the minimap's picture of the new window is painted a few ms at a time between frames (the old
+  one shows meanwhile: client/hud.js); the classic renderer's ground indexes are made the first time it bakes (the art
+  v2 renderer never reads them; the props by chunk both renderers read in one pass: client/render/tiles.js - the page's
+  heap 220 -> 152 MB at the start of the drive); the router's road grid when a route is first asked for
+  (client/route.js). And the window's message is smaller: the city worker leaves out the 89 fields every window has the
+  same (the world's roads, nodes, network, places...: client/worldwindow.js windowSteady), which the page keeps from the
+  window before - about a quarter of what the page decoded (in node: 238 -> 176 ms to clone the window).
+- **People's sprites from a worker of their own** (the sprite lane: pool.js SPRITE_LANE, host.js _startLane): one more
+  worker that only makes people's sprites (no world, never a bake), so the ones on screen - yours first - come back in a
+  frame or two however busy the bake workers are, and none is made on the page's thread once it's up (host.js _now). Your
+  own figure was made on the page whenever it had nothing to show (a respawn, a new look, out of a car) or a person took
+  under OWN_MS (8 ms: on the owner's phone ~9, so it hovered either side). Not on a low-memory device (as before there).
+- **The night, every frame** (client/main.js collectLights, client/hud.js drawRadar): the street lamps, the shop lights
+  and the radar's places are looked at round the view through grids, not the whole window's (11,220 lamps, 6,007 places
+  every frame); the lights the wet ground and the rain catch are pooled records, not a few hundred new objects a frame.
+- **Models built on the page** (found by drivebench --hostprof, which times the renderer's own steps): the night's
+  headlamps built each new kind of vehicle's whole voxel model on the page's thread to read its length (art2/vehicles.js
+  vehicleAnchors: 30-70 ms a kind on the bench machine - the "lights" part's 100-250 ms frames as new traffic came into
+  view); now its dimensions' length, the same number for all 80 kinds (actors.js vehicleLength; test/art2.test.js). And the
+  aircraft's sprites - a police helicopter's model and each of its headings, 70-210 ms a time - are made by the workers
+  (the lane: worker.js 'air', 'airRotor'; the nearest heading made, or the overlay's helicopter, meanwhile).
+- **Baking ahead on a phone** (host.js _prebake): two bake workers at most bake into the store ahead of need (what the
+  screen needs still takes them all) - four workers and now the lane busy for minutes on end is what heats a phone.
+- **Found by the bench, fixed on the way**: a moved window must bring its seed (the page checks a window against its city by
+  the seed before taking the rest; left out with the steady fields, every moved window was dropped).
+
+Before and after (tools/drivebench.mjs: a drive at night in the rain from the arrival, the page's thread slowed 2x, then
+a walk; this machine: 2 cores for the server, the page, the bake workers and the lane; ms unless marked):
+
+| | before | after |
+|---|---|---|
+| distance driven (px; the autopilot gets stuck and circles) | 27,129 | 21,780 |
+| frames | 4,853 | 6,251 |
+| frame p50 / p95 / p99 | 16.7 / 66.7 / 133.3 | 16.7 / 50 / 66.7 |
+| frames over 50 ms | 407 | 161 |
+| long tasks (n / total ms) | 321 / 26,048 | 127 / 8,239 |
+| the page's work a frame (mean) | 6.29 | 3.89 |
+| person sprites made on the page (n / ms) | 14 / 258 | 0 |
+| JS heap start / max (MB) | 334 / 433 | 207 / 304 |
+| a window swap on the page (ms) | 425, 181, 397, 246 | 75, 59 |
+| ...its steps, the slowest swap | carry 99, ground 111, minimap 177, router 36 | ground 56, buildings 15 |
+
+(2 minutes and the walk, --cores 6: three bake workers - four, and the server, the browser and the bench ran this
+machine out of memory twice. Runs vary - the autopilot gets stuck and circles, the bakes share 2 cores with the server -
+but all four pairs went the same way: long tasks down by 40-60%, the p99 frame down a fifth to a half,
+no person sprite made on the page, the heap a third smaller. In node, unthrottled: a moved window's message 238 -> 176
+ms to clone. The scratchpad's perf3/table.md has every run.)
+
+The perf readout's other leads, checked:
+- **60 fps after a while**: nothing in the game caps the frame rate (main.js govern only lowers the render scale, and the
+  owner's readout says 1.0x); a 120 Hz screen drops to 60 when a frame's work passes 8.3 ms - the page's own was 6.1 ms
+  in the rain at night (now less: the lights and the radar through grids, no garbage for the rain's lights) - or when
+  the phone runs hot (a Pixel caps its refresh rate then). Only the phone can tell which: the readout's page ms against
+  its fps over a long drive, before and after.
+- **Memory**: "kept 247" counts the chunks read back from the browser's store over the session, not what's held; the
+  page's JS heap peaked at 416-478 MB on the bench before and 207-304 after - the classic renderer's ground
+  indexes were most of it - and no cache grew without bound over a drive.
+- **Left**: the chunk stand-ins' index (art2/game/standin.js) is built over a whole window the first time one is drawn
+  after a swap (~40 ms on the bench machine); a moved window's message still costs the page its decoding (the window's
+  props and their collision maps: ~175 ms to clone in node, of which the page pays the decoding half); this machine's
+  headless browser commits its frames in software (the "not in a callback" long tasks here, 'Commit' in a trace - a
+  phone's GPU does that).
+
+## 2026-11-06 - The world map's picture rebaked for world 13
+The interiors update (05d58ec9: the plain blocks' lots, the wider bars, the solid cliffs) changed the world without
+rebaking the map screen's picture, so the live map fell back to the plain tile map (test/worldmap.test.js: "baked for
+another world"). `node tools/build-worldmap2.mjs` (10.5 min here) rebaked assets/map/ for the live world; the test passes.
+A world change's job now includes the rebake and test/worldmap.test.js.

@@ -23,7 +23,7 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
 const TURRET_TOP = 47;   // (_turret)
-import { WorkerPool, takeWarmPool, isPhone } from './pool.js';
+import { WorkerPool, takeWarmPool, isPhone, SPRITE_LANE, laneBudget } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
@@ -495,6 +495,25 @@ export class World2 {
     } catch (e) { console.error('[art2] worker pool', e); this.pool = null; }
     // without its workers nothing but people could be drawn: main.js starts the renderer again
     if (!this.failed && (!this.pool || this.pool.dead)) this._noWorkers();
+    else this._startLane();
+  }
+  // the sprite lane (pool.js SPRITE_LANE): people's sprites, none made here (_now) once it's up; not lowMem, nor ?nolane
+  _startLane() {
+    if (this.lane || this.lowMem || this.failed || !this.prov.peds || typeof Worker === 'undefined' || (typeof location !== 'undefined' && /[?&]nolane\b/.test(location.search))) return;
+    let L = null;
+    try { L = new WorkerPool({ name: SPRITE_LANE.name, size: SPRITE_LANE.size, lowMem: false, artPx: this.E.ap || 1, budget: laneBudget(this.pool.budget) }); } catch (e) { console.warn('[art2] sprite lane', e); return; }
+    this.lane = L;
+    L.init(null, null, { noWorld: true }).then((r) => {
+      if (this.failed || this.lane !== L) { L.dispose(); return; }
+      if (!r || !r.providers || !r.providers.peds || L.dead) { console.warn('[art2] no sprite lane:', L.lastWhy || 'no people provider'); L.dispose(); this.lane = null; return; }
+      this.laneOn = true;
+    }, () => { if (this.lane === L) this.lane = null; L.dispose(); });
+  }
+  // the pool a sprite is asked of: people wanted now (prio < 0) and aircraft the lane's, the rest the bake workers'
+  _sprPool(kind, prio) {
+    const L = this.lane;
+    if ((kind === 'ped' ? prio < 0 : kind === 'air' || kind === 'airRotor') && L && this.laneOn) { if (!L.dead) return L; this.lane = null; this.laneOn = false; }
+    return this.pool;
   }
   // the load timeline (main.js): the workers ready, the first chunk of art, the whole screen drawn - each once
   _loadMark(k, ms) {
@@ -568,6 +587,7 @@ export class World2 {
 
   dispose() {
     this.ready = false; this.failed = true;
+    if (this.lane) { this.lane.dispose(); this.lane = null; this.laneOn = false; }
     if (typeof document !== 'undefined') { const el = document.getElementById('exithint'); if (el) el.classList.add('hidden'); }   // (the way-out note: nothing hides it once we're gone)
     if (this.pool) this.pool.dispose();
     try { this.E.dispose(); } catch { /* gone */ }
@@ -1010,7 +1030,8 @@ export class World2 {
     const pre = this.pre || (this.pre = { list: [], at: -1e9, out: new Set(), kept: new Set(), cx: -99, cy: -99, n: 0, done: 0, had: 0 });
     if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B') > 0) return;   // a bake for the screen or the road ahead waits
     for (const k of this.wantChunks.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if (!this.E.hasChunk(cx, cy) && !this.results.has(`c${cx},${cy},-1,${this.ver.get(k) || 0}`)) return; }
-    const room = Math.max(1, (P.size || 1) - 1) - pre.out.size;
+    // (a phone: two at most - four workers and the sprite lane busy for minutes ran one hot, 11-06; the screen's take all)
+    const room = Math.max(1, Math.min(isPhone() ? 2 : 99, (P.size || 1) - 1)) - pre.out.size;
     if (room <= 0) return;
     const now = F.now, pcx = Math.floor(this.camX / CHUNK), pcy = Math.floor(this.camY / CHUNK);
     if (now - pre.at > 1.5 || pcx !== pre.cx || pcy !== pre.cy) { pre.list = this._prebakeList(); pre.at = now; pre.cx = pcx; pre.cy = pcy; }
@@ -1454,6 +1475,7 @@ export class World2 {
   // whatever it takes when you have no figure yet (this.meNone: _ped)
   _now(key, args) {
     const fn = this.Pd && this.Pd.pedSprite, est = this.est.ped;
+    if (this.laneOn) return false;   // (the sprite lane makes them: nothing on this thread)
     if (!fn || (this.sprPrio === -3 ? !this.meNone && est > Math.max(OWN_MS, this.syncLeft) : this.syncLeft <= 0 || est > this.syncLeft)) return false;
     const t = performance.now();
     let G = null;
@@ -1468,11 +1490,15 @@ export class World2 {
   // At most a tier's worth of jobs are out at once (asking ahead: half of that). An ask already queued only
   // has its priority raised. true when a job went out.
   _ask(prov, kind, key, args, prio = -1) {
-    const pool = this.pool;
+    const pool = this._sprPool(kind, prio);
     if (!key || !pool || pool.dead || !pool.ready || !this.prov[prov]) return false;
     if (this.E.hasSprite(key) || this.upQ.has(key) || this.badKeys.has(key)) return false;
     const jk = 's' + key;
     if (pool.has(jk)) { pool.request(jk, 'sprite', null, prio, null); return false; }
+    // (asked ahead of the bake workers, wanted now: over to the lane unless it's being made already)
+    if (pool !== this.lane && this.lane && this.lane.has(jk)) return false;   // (on its way from the lane)
+    const other = pool === this.lane ? this.pool : null;
+    if (other && other.has(jk)) { if (!other.running(jk)) { other.cancel(jk); this.sprOut = Math.max(0, this.sprOut - 1); } else return false; }
     if (this.sprOut >= (prio >= 0 ? this.tier.sprJobs >> 1 : this.tier.sprJobs)) return false;
     this.n.sprReq++; this.sprOut++;
     pool.request(jk, 'sprite', { kind, key, a: args }, prio, (r, err) => {
@@ -2610,8 +2636,8 @@ export class World2 {
       if (def.kind === 'air') { if (this.AM) this.AM.airLights(this, v, now, night); continue; }   // (their lamps, the searchlight's pool - H66)
       if (def.horse) continue;   // (a horse: no lamps)
       const f = v.flags, c = Math.cos(v.ra), s = Math.sin(v.ra), zb = this._z0(v, def.kind === 'boat');
-      const vl = this.prov.actors && this.A.vehicleLights ? this.A.vehicleLights(v.d) : null;
-      const hl = (vl ? vl.L : def.L) / 2;
+      const vL = this.prov.actors && this.A.vehicleLength ? this.A.vehicleLength(v.d) : null;   // (not vehicleLights: that builds the model here)
+      const hl = (vL || def.L) / 2;
       if (f & VF.LIGHTS) {
         const fx = v.rx + c * hl, fy = v.ry + s * hl;
         this._light(fx, fy, zb + 8, 340, C.head, 2.4 * (0.35 + 0.65 * nightK), [v.ra, 0.42, 340]);
@@ -2785,7 +2811,7 @@ export class World2 {
     const es = this.E.stats ? this.E.stats() : {};
     return {
       q: this.q, providers: this.prov, chunks: this.chunkState.size, placeholders: this.fallbacks.size, results: this.results.size,
-      pool: this.pool ? this.pool.stats() : null, t: { ...this.t, bakeAvg: this.t.bakeN ? this.t.bakeSum / this.t.bakeN : 0 }, n: { ...this.n },
+      pool: this.pool ? this.pool.stats() : null, lane: this.laneOn && this.lane ? this.lane.stats() : null, t: { ...this.t, bakeAvg: this.t.bakeN ? this.t.bakeSum / this.t.bakeN : 0 }, n: { ...this.n },
       upQ: this.upQ.size, sprOut: this.sprOut, warmQ: this.warmQ.length, fades: this.fades.size, badKeys: this.badKeys.size, lastErr: this.lastErr, engine: es, part: this.part,
       ahead: this.pre ? { baked: this.pre.done, had: this.pre.had, out: this.pre.out.size, list: this.pre.list.length } : null, late: this.late || null,
       fetched: this.fa ? { got: this.fa.got, had: this.fa.had, miss: this.fa.miss, out: this.fa.out.size, off: !!this.cdnOff } : null,

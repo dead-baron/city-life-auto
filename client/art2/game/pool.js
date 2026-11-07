@@ -15,6 +15,7 @@
 //   pool.cancelWhere(fn)      the same for every queued / running job whose key fn(key) picks
 //   pool.broadcast(op, args)  a message to every worker (world patches), in order with later jobs
 //   pool.has(key), pool.idle, pool.stats(), pool.dispose()
+//   new WorkerPool({ name: SPRITE_LANE.name, size: 1 }).init(null, null, { noWorld: true })   the sprite lane (below)
 //
 // At most four jobs are out on a worker at a time (the rest wait in its message queue, so a worker never
 // sits idle between jobs), and at most one of them is a chunk bake: a bake takes a few hundred ms (a second or
@@ -41,6 +42,12 @@ const STREAK = { s: 8, c: 1 }; // jobs of a class in a row before another waitin
 const RESPAWN_MS = [1000, 2000, 4000, 8000]; // wait before replacing a worker, by how many were replaced lately
 const RESPAWN_WINDOW = 120000, RESPAWN_MAX = 8;
 
+// The sprite lane (host.js): one more worker that only makes the people's sprites - never a bake, no world (worker.js
+// noWorld) - so the sprite a person on screen (above all your own figure) waits for comes back in a frame or two however
+// busy the bake workers are, and none is ever made on the page's thread (the owner's Pixel 7 Pro, 11-06: "made here
+// 40", 9 ms each, after a while of driving). Not on a low-memory device (one worker in all there).
+export const SPRITE_LANE = { name: 'art2-sprite', size: 1 };
+export const laneBudget = (b) => ({ stat: 1, spr: b.spr, model: b.model });
 export function poolSize(lowMem) {
   const hc = (typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 2;
   return lowMem ? 1 : hc >= 8 ? 4 : Math.max(1, Math.min(3, hc - 1));
@@ -70,8 +77,8 @@ export function keepCap(lowMem, nav = typeof navigator !== 'undefined' ? navigat
 
 export class WorkerPool {
   // (timing: the waits, for the tests - { respawn: [ms...], stuck, initStuck, watch })
-  constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url), budget = null, timing = null } = {}) {
-    this.url = url; this.lowMem = lowMem; this.artPx = artPx;
+  constructor({ lowMem = false, artPx = 2, size = poolSize(lowMem), url = new URL('./worker.js', import.meta.url), budget = null, timing = null, name = 'art2-bake' } = {}) {
+    this.url = url; this.lowMem = lowMem; this.artPx = artPx; this.name = name;
     this.T = { respawn: RESPAWN_MS, stuck: STUCK_MS, initStuck: INIT_STUCK_MS, watch: 5000, ...(timing || {}) };
     this.budget = budget || cacheBudget(lowMem, size);
     this.workers = [];
@@ -93,7 +100,7 @@ export class WorkerPool {
   }
   _spawn(i) {
     const w = { i, wk: null, busy: 0, baking: 0, light: 0, alive: true, running: new Set() };
-    try { w.wk = new Worker(this.url, { type: 'module', name: `art2-bake-${i}` }); } catch (e) { w.alive = false; w.err = String(e); return w; }
+    try { w.wk = new Worker(this.url, { type: 'module', name: `${this.name}-${i}` }); } catch (e) { w.alive = false; w.err = String(e); return w; }
     w.wk.onmessage = (e) => this._onMessage(w, e.data);
     w.wk.onerror = (e) => { e.preventDefault && e.preventDefault(); this._kill(w, `worker error: ${e.message || e}`); };
     w.wk.onmessageerror = () => this._kill(w, 'worker message could not be read');
@@ -105,9 +112,9 @@ export class WorkerPool {
   // Send the world to every worker (or, with key, let each read it from the browser's copy). Resolves once all have
   // answered (or failed).
   init(M, key = null, keep = null) {
-    this.initArgs = { M, lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem),
+    this.initArgs = { M, noWorld: !!(keep && keep.noWorld), lowMem: this.lowMem, workers: this.workers.length, artPx: this.artPx, cacheMB: this.budget.stat, sprMB: this.budget.spr, modelMB: this.budget.model, artKey: (keep && keep.artKey) || null, keepCap: keepCap(this.lowMem),
       cdn: (keep && keep.cdn) || null, saveData: !!(typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData), phone: isPhone(),   // (the art from the server: worker.js; a phone's bakes are slow - worth waiting for the server's)
-      art: { fleet: new URL('../fleet.js', import.meta.url).href, horse: new URL('../horse.js', import.meta.url).href } };   // (the newer art, loaded when a sprite first wants it: actors.js artFrom)
+      art: { fleet: new URL('../fleet.js', import.meta.url).href, horse: new URL('../horse.js', import.meta.url).href, air: new URL('../aircraft.js', import.meta.url).href } };   // (the newer art, loaded when a sprite first wants it: actors.js artFrom)
     let post = 0;
     const answers = this.workers.filter((w) => w.alive).map((w) => new Promise((res) => {
       const t = performance.now();
@@ -153,6 +160,7 @@ export class WorkerPool {
     return true;
   }
   has(key) { return this.jobs.has(key); }
+  running(key) { const j = this.jobs.get(key); return !!(j && j.w); }
   // how many jobs fn(key) picks are queued and not started yet (host.js: no baking ahead while a bake for the screen waits)
   waiting(fn) { let n = 0; for (const j of this.queue) if (fn(j.key)) n++; return n; }
   // a message every worker gets, in order with the jobs sent to it after (no answer expected). World patches

@@ -10,6 +10,13 @@ const TIER = ['Low', 'Medium', 'High', 'Ultra'];
 const N = 240;
 const ft = new Float32Array(N);
 let n = 0, last = 0, el = null, on = false, timer = 0, raf = 0, longN = 0, longMs = 0, obs = null, S = null;
+// long tasks behind a loading screen (the first load, a respawn's or a teleport's "Loading the area...": the renderer
+// warming - host.js, which spends a frame's time freely there) counted apart from those while you play (11-06: the owner's
+// "long tasks 63 (8297 ms)" after a drive held both): the spans the screen was loading, by performance.now()
+let ldN = 0, ldMs = 0, ldFrom = -1;
+const spans = [];
+const loading = () => !!S && (!S.playing || !(window.CLA && window.CLA.load && window.CLA.load.at && window.CLA.load.at.screen !== undefined) || !!(S.art2 && S.art2.warming));
+const inLoading = (t) => (ldFrom >= 0 && t >= ldFrom) || spans.some(([a, b]) => t >= a && t <= b);
 
 export const isOn = () => on;
 // the p-th part of a list of frame times (ms)
@@ -19,6 +26,9 @@ export function pct(a, cnt, p) {
 }
 function sample(now) {
   if (!on) return;
+  const ld = loading();
+  if (ld && ldFrom < 0) ldFrom = now;
+  else if (!ld && ldFrom >= 0) { spans.push([ldFrom, now]); if (spans.length > 40) spans.shift(); ldFrom = -1; }
   if (last && now - last < 250) ft[n++ % N] = now - last;
   last = now;
   raf = requestAnimationFrame(sample);
@@ -27,15 +37,15 @@ const f1 = (v) => (v || 0).toFixed(1), f0 = (v) => Math.round(v || 0);
 function draw() {
   const lines = [], k = Math.min(n, N), p50 = pct(ft, k, 0.5), p95 = pct(ft, k, 0.95), fps = p50 ? 1000 / p50 : 0;
   const main = S.perf ? Object.values(S.perf).reduce((a, b) => a + b, 0) : 0;
-  lines.push(`fps ${f0(fps)} · frame p50 ${f1(p50)} p95 ${f1(p95)} ms · page ${f1(main)} ms/frame · long tasks ${longN} (${f0(longMs)} ms)`);
+  lines.push(`fps ${f0(fps)} · frame p50 ${f1(p50)} p95 ${f1(p95)} ms · page ${f1(main)} ms/frame · long tasks ${longN} (${f0(longMs)} ms) · loading ${ldN} (${f0(ldMs)} ms)`);
   const w = S.art2;
   if (w && w.stats) {
     const s = w.stats(), t = s.t || {}, nn = s.n || {}, P = s.pool || {}, E = s.engine || {}, W = w.warmth ? w.warmth() : null;
     const up = nn.chunkUp ? (t.upSum || 0) / nn.chunkUp : 0;
     lines.push(`art ${TIER[s.q] || s.q} · workers ${P.workers || 0} · baking ${P.running || 0} queued ${P.queued || 0} · waiting up ${s.results} · on screen ${W ? `${W.scrHave}/${W.scr}` : '-'} (stand-ins ${W ? W.scr - W.scrHave : '-'})`);
     lines.push(`bake avg ${f0(t.bakeAvg)} ms · chunk upload avg ${f1(up)} max ${f1(t.upMax)} ms · kept ${nn.kept || 0} · server ${nn.cdn || 0} · art frame ${f1(t.frameMs)} ms · gpu ${f1(E.msGpuApprox)} ms (${E.timer || '?'})`);
-    lines.push(`sprites: making ${s.sprOut} · to upload ${s.upQ} · person ${f1(w.est && w.est.ped)} ms · made here ${nn.sync || 0} · late ${s.late && s.late.of ? f1(100 * s.late.frames / s.late.of) : 0}% · slots ${E.slots || 0} · ${f0(E.gpuMB)} MB`);
-    if (E.scene) lines.push(`scene ${E.scene[0]}x${E.scene[1]} world px`);
+    lines.push(`sprites: making ${s.sprOut} · to upload ${s.upQ} · person ${f1(w.est && w.est.ped)} ms · made here ${nn.sync || 0}${s.lane ? ` · lane ${s.lane.running}+${s.lane.queued}` : ''} · late ${s.late && s.late.of ? f1(100 * s.late.frames / s.late.of) : 0}% · slots ${E.slots || 0} · ${f0(E.gpuMB)} MB`);
+    if (E.scene) lines.push(`scene ${E.scene[0]}x${E.scene[1]} world px${S.winStat ? ` · windows ${S.winStat.n} (last ${f0(S.winStat.ms)} ms)` : ''} · atlas out ${E.evicted || 0}`);
   } else lines.push(`art: ${S.art2Off ? `off (${S.art2Off})` : 'starting'}`);
   const wc = document.getElementById('world'), vc = document.getElementById('view'), dpr = window.devicePixelRatio || 1;
   lines.push(`canvas ${wc ? `${wc.width}x${wc.height}` : '-'} (overlay ${vc ? `${vc.width}x${vc.height}` : '-'}) for ${innerWidth}x${innerHeight} css @${f1(dpr)} = ${f0(innerWidth * dpr)}x${f0(innerHeight * dpr)} · render ${vc ? f1(vc.width / innerWidth) : '-'}x · ${gfx.preset}`);
@@ -52,8 +62,8 @@ export function show(s, yes = !on) {
     el.style.cssText = 'position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 40px);transform:translateX(-50%);z-index:40;margin:0;padding:4px 8px;max-width:calc(100vw - 16px);overflow:hidden;white-space:pre-wrap;background:rgba(8,10,16,.72);color:#e8f0c8;font:10px/1.35 ui-monospace,Menlo,monospace;border-radius:4px;pointer-events:none';
     document.body.appendChild(el);
   }
-  n = 0; last = 0; longN = 0; longMs = 0;
-  try { obs = new PerformanceObserver((l) => { for (const e of l.getEntries()) { longN++; longMs += e.duration; } }); obs.observe({ type: 'longtask' }); } catch { obs = null; }
+  n = 0; last = 0; longN = 0; longMs = 0; ldN = 0; ldMs = 0; spans.length = 0; ldFrom = -1;
+  try { obs = new PerformanceObserver((l) => { for (const e of l.getEntries()) { if (inLoading(e.startTime)) { ldN++; ldMs += e.duration; } else { longN++; longMs += e.duration; } } }); obs.observe({ type: 'longtask' }); } catch { obs = null; }
   raf = requestAnimationFrame(sample);
   clearInterval(timer); timer = setInterval(draw, 500);
   return on;

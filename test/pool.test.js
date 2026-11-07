@@ -9,8 +9,9 @@ import assert from 'node:assert/strict';
 const made = [];
 let failNew = false;
 class FakeWorker {
-  constructor() {
+  constructor(url, opts) {
     if (failNew) throw new Error('no more workers');
+    this.name = opts && opts.name;
     this.onmessage = null; this.onerror = null; this.inbox = []; this.dead = false; this.hang = false;
     made.push(this);
   }
@@ -121,4 +122,21 @@ test('pool: downloads (fetchChunk) go out in their own lane, never stuck behind 
   assert.ok(out.r && out.r.kept, 'answered');
   assert.ok(pool.jobs.get('f3,1,1') && pool.jobs.get('f3,1,1').w, 'the third went out');
   pool.dispose();
+});
+
+test('pool: the sprite lane - its own worker by name, sent no world (worker.js noWorld), sprites only', async () => {
+  made.length = 0;
+  const { SPRITE_LANE, laneBudget } = await import('../client/art2/game/pool.js');
+  const lane = new WorkerPool({ name: SPRITE_LANE.name, size: SPRITE_LANE.size, url: 'x', timing: fast, budget: laneBudget({ stat: 40, spr: 10, model: 20 }) });
+  const r = await lane.init(null, null, { noWorld: true });
+  assert.equal(r.workers, 1);
+  assert.equal(made[0].name, 'art2-sprite-0');
+  const init = made[0].inbox[0];
+  assert.equal(init.args.noWorld, true);
+  assert.equal(init.args.M, null);
+  assert.equal(init.args.cacheMB, 1, 'no statics cache: it never bakes');
+  assert.equal(init.args.sprMB, 10);
+  lane.request('sa', 'sprite', {}, -3, () => {});
+  assert.ok(lane.running('sa'), 'sent at once');
+  lane.dispose();
 });

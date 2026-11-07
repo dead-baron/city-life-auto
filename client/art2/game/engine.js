@@ -736,7 +736,7 @@ export class Art2Engine {
   spriteInfo(key) { return this.sprites.get(key) || null; }
   dropSprite(key) { const r = this.sprites.get(key); if (r) this._unlink(r); }
   _unlink(r) { const l = r.shelf.list, i = l.indexOf(r); if (i >= 0) l.splice(i, 1); this.sprites.delete(r.key); }
-  _clearShelf(s) { for (const r of s.list) this.sprites.delete(r.key); s.list.length = 0; s.x = 0; }
+  _clearShelf(s) { this.evicted = (this.evicted || 0) + s.list.length; for (const r of s.list) this.sprites.delete(r.key); s.list.length = 0; s.x = 0; }
   // a w x h rectangle in the atlas: a shelf of similar height with room, a new shelf, or the least recently
   // drawn shelf (then page) that was not drawn this frame
   _place(w, h) {
@@ -1150,7 +1150,7 @@ export class Art2Engine {
     const T2 = this.ctx * this.ctx;
     const bytes = this.slots.length * T2 * 12 + this.slots.filter((x) => x.t[3]).length * T2 * 4 + this.pages.length * ATLAS_PX * ATLAS_PX * 12 + this.cw * this.ch * 14 + (this.light ? this.light.bytes() : 0);
     return {
-      chunks: this.chunks.size, baked, slots: this.slots.length, sprites: this.sprites.size, pages: this.pages.length, shelves, artPx: this.ap,
+      chunks: this.chunks.size, baked, slots: this.slots.length, sprites: this.sprites.size, pages: this.pages.length, shelves, artPx: this.ap, evicted: this.evicted || 0,
       gpuMB: Math.round(bytes / 1048576 * 10) / 10, msGpuApprox: Math.round(this.msGpu * 100) / 100, lights: this.lightsUsed,
       lightsIn: this.last.lights, drawn: this.last.sprites, decals: this.last.decals, chunksDrawn: this.last.chunks, quality: this.q,
       scene: [this.SW, this.SH], capacity: [this.cw, this.ch], timer: this.profile ? 'sync' : this.timer ? 'ext' : 'cpu', passes: this.times,
