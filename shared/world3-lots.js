@@ -57,7 +57,7 @@ const pick = (a, r) => a[Math.floor(r * a.length) % a.length];
 
 // H: { addProp, walkInRoom (shared/map.js: a walk-in's room in a building), lots: [[building, row in its column, column]] }
 export function lots3(m, H) {
-  const out = { lots: 0, street: 0, shops: {}, sheds: 0, small: 0, dice: 0 };
+  const out = { lots: 0, street: 0, shops: {}, sheds: 0, small: 0, dice: 0, list: [] };   // (list: Southside's lots [building, kind or ''] - test/plainblocks.test.js)
   const tile = (x, y) => (m.inside(x, y) ? m.tiles[m.idx(x, y)] : -1);
   const free = (x, y) => m.inside(x, y) && m.bld[m.idx(x, y)] < 0;
   // a real street at (x, y): its pavement, or a street's asphalt (not an alley's or a highway's); never a passage's paving
@@ -70,6 +70,7 @@ export function lots3(m, H) {
     const cx = b.tx + (b.tw >> 1), cy = b.ty + (b.th >> 1);
     if (!m.inside(cx, cy) || m.dist[m.idx(cx, cy)] !== D) continue;
     out.lots++;
+    out.list.push([bid, '']);
     // its front: the row south of it open paving (a passage, the pavement, a yard's)
     const fy = b.ty + b.th;
     if (b.back || along(b.tw, (i) => free(b.tx + i, fy) && (tile(b.tx + i, fy) === T.PLAZA || tile(b.tx + i, fy) === T.SIDEWALK || tile(b.tx + i, fy) === T.LOT)) < b.tw * 0.8) { out.sheds++; continue; }
@@ -80,22 +81,23 @@ export function lots3(m, H) {
     out.street++;
     cands.push({ b, j, col, side: S ? 'S' : W && E ? (hash2(b.tx, b.ty, 1401) < 0.5 ? 'W' : 'E') : W ? 'W' : 'E', blk: blockOf(m, cx, cy) });
   }
-  // the mix: a block at a time, south to north, west to east; each lot the first kind (in an order drawn by place) that
-  // fits it, isn't its neighbors' and hasn't come up its share in the block yet
+  // the mix: a block at a time, south to north, west to east; each lot the first kind (the district's fewest so far first,
+  // then in an order drawn by place) that fits it, isn't its neighbors' and hasn't come up its share in the block yet
   cands.sort((p, q) => p.blk - q.blk || p.b.ty - q.b.ty || p.b.tx - q.b.tx);
   const inBlock = new Map();
   for (const c of cands) inBlock.set(c.blk, (inBlock.get(c.blk) || 0) + 1);
   const used = new Map(), done = [], names = {};
-  const near = (a, c) => Math.max(0, Math.max(a.tx, c.tx) - Math.min(a.tx + a.tw, c.tx + c.tw)) <= 2 && Math.max(0, Math.max(a.ty, c.ty) - Math.min(a.ty + a.th, c.ty + c.th)) <= 5;
   for (const c of cands) {
     const { b } = c, cap = 1 + Math.floor((inBlock.get(c.blk) - 1) / 8), U = used.get(c.blk) || {};
-    const next = done.filter((q) => near(q.b, b)).map((q) => q.kind);
-    const order = LOT_KINDS.slice().sort((p, q) => hash2(b.tx, b.ty, 1411 + LOT_KINDS.indexOf(p)) - hash2(b.tx, b.ty, 1411 + LOT_KINDS.indexOf(q)));
+    const next = done.filter((q) => lotsNear(q.b, b)).map((q) => q.kind);
+    // (the kinds Southside has fewest of so far first, so the mix spreads over all eight; among them, by place)
+    const order = LOT_KINDS.slice().sort((p, q) => (out.shops[p] || 0) - (out.shops[q] || 0) || hash2(b.tx, b.ty, 1411 + LOT_KINDS.indexOf(p)) - hash2(b.tx, b.ty, 1411 + LOT_KINDS.indexOf(q)));
     const fits = (k) => b.tw >= LOT_SHOPS[k].min[0] && b.th >= LOT_SHOPS[k].min[1];
     const kind = order.find((k) => fits(k) && !next.includes(k) && (U[k] || 0) < cap) || order.find((k) => fits(k) && !next.includes(k));
     if (!kind) { out.small++; out.sheds++; continue; }
     U[kind] = (U[kind] || 0) + 1; used.set(c.blk, U);
     c.kind = kind; done.push(c);
+    out.list.find((q) => q[0] === b.id)[1] = kind;
     const L = LOT_SHOPS[kind], n = names[kind] = (names[kind] ?? Math.floor(hash2(b.tx, b.ty, 1421) * L.names.length)) + 1;
     shop(m, H, c, L, L.names[n % L.names.length]);
     out.shops[kind] = (out.shops[kind] || 0) + 1;
@@ -104,6 +106,19 @@ export function lots3(m, H) {
   return out;
 }
 
+// two lots next to each other: side by side, or across a passage (gaps of 2 and 5 tiles at most)
+export const lotsNear = (a, c) => Math.max(0, Math.max(a.tx, c.tx) - Math.min(a.tx + a.tw, c.tx + c.tw)) <= 2 && Math.max(0, Math.max(a.ty, c.ty) - Math.min(a.ty + a.th, c.ty + c.th)) <= 5;
+// The lot shops' POIs into the list, last of all (the world build's done hook, at its end): each its number, and its
+// walk-in unit's
+export function lotPoisLast(m) {
+  for (const p of m.lotPois || []) {
+    p.id = m.pois.length;
+    m.pois.push(p);
+    const b = m.buildings[p.b];
+    if (b && b.walkIn) for (const u of b.walkIn.units) if (u.poi === -1) u.poi = p.id;
+  }
+  if (m.lotPois) delete m.lotPois;
+}
 // the m.blocks index a tile is in (-1: none)
 function blockOf(m, x, y) {
   for (let i = 0; i < m.blocks.length; i++) { const k = m.blocks[i]; if (k && x >= k.x && x < k.x + k.w && y >= k.y && y < k.y + k.h) return i; }
@@ -118,9 +133,11 @@ function shop(m, H, c, L, label) {
   const dtx = side === 'W' ? x + 2 : side === 'E' ? x + w - 2 : x + (w >> 1);
   b.name = label; b.whole = true; b.door = { tx: dtx, ty: fy };
   b.signs.push({ x: (x + w / 2) * TILE, y: (fy - 0.6) * TILE, text: label });
-  const poi = { id: m.pois.length, kind: L.poi || 'delivery', label, x: (dtx + 0.5) * TILE, y: (fy + 0.7) * TILE, r: L.poi ? 48 : 40, b: b.id, fixed: true };
+  // (its POI joins the list last of all - lotPoisLast - so the places the world build adds after this keep their numbers)
+  const poi = { id: -1, kind: L.poi || 'delivery', label, x: (dtx + 0.5) * TILE, y: (fy + 0.7) * TILE, r: L.poi ? 48 : 40, b: b.id, fixed: true };
   if (L.walk) { poi.walk = true; poi.store = L.walk; }
-  m.pois.push(poi);
+  if (!m.lotPois) Object.defineProperty(m, 'lotPois', { value: [], enumerable: false, configurable: true });
+  m.lotPois.push(poi);
   if (L.poi) b.business = L.poi;
   const brick = r(1) < 0.72, spec = { floors: 1 + (r(2) < 0.55 ? 1 : 0), style: brick ? (r(3) < 0.6 ? 'brickDark' : 'brick') : 'stucco', ...(brick ? { brickTone: pick(BRICK, r(4)) } : { wallColor: pick(STUCCO, r(4)) }),
     win: pick(['pair', 'even'], r(5)), cornice: null, parapet: 6, grime: 0.65 + r(6) * 0.3, roofMat: pick(['tar', 'rubber', 'tar'], r(7)), lip: 10, rimW: 5,
