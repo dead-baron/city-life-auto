@@ -235,12 +235,9 @@ async function enterRun(page, tag, cdp) {
     };
     requestAnimationFrame(tick);
   }, door.id);
-  // the walk in: up through the doorway (or down, for a door in the north wall), until inside, then a step further
-  const key = door.south ? 'KeyW' : 'KeyS';
-  await page.keyboard.down(key);
+  // in through the doorway: a step (the dev teleport, two tiles - a phone's touch stick can't be driven from here)
+  await page.evaluate((p) => window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y, snap: true }), { x: door.x, y: door.y + (door.south ? -80 : 80) });
   await waitFor(page, () => window.__in.inAt > 0, 15000);
-  await wait(900);
-  await page.keyboard.up(key);
   const ok = await waitFor(page, () => window.__in.readyAt > 0, 120000);
   const R = await page.evaluate(() => window.__in);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
@@ -277,6 +274,21 @@ try {
       await page.evaluate(() => { const s = window.CLA.send; s({ t: 'dev', c: 'time', m: 13 * 60 + 55 }); s({ t: 'dev', c: 'clockhold' }); });
       await wait(4000);
       await shot(page, join(OUT, `inside-${sz}-day.jpg`));
+    }
+    if (PHASES.includes('jump')) {   // (a teleport across the world: the "Loading the area..." veil watched)
+      const R = [];
+      for (const [i, where] of [[0, 'Pine Hills'], [1, 'Downtown']].entries()) {
+        await page.evaluate(() => window.__load.start());
+        await page.evaluate(async (n) => { const m = await import('./client/devtp.js'), p = m.teleportPlaces(window.CLA.S.map).find((q) => q.name === n && q.kind === 'district'); if (p) window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y, snap: true }); }, where[1]);
+        await wait(20000);
+        const L = await page.evaluate(() => window.__load.log);
+        let on = 0, flips = 0, prev = false;
+        for (const e of L) { if (e.veil !== prev) { flips++; if (e.veil) on++; prev = e.veil; } }
+        R.push({ to: where[1], veilOn: on, flips, log: L.map((e) => `${e.t} veil ${e.veil ? 1 : 0}`) });
+        log(`jump to ${where[1]}: veil on ${on} time(s), ${flips} flips`);
+      }
+      writeFileSync(join(OUT, `jump-${sz}.json`), JSON.stringify(R, null, 1));
+      ALL.jump = R.map((q) => ({ to: q.to, veilOn: q.veilOn, flips: q.flips }));
     }
     if (arg('again', false)) {   // (out and in again: the second time, from the store)
       await page.keyboard.down('KeyS'); await wait(2500); await page.keyboard.up('KeyS'); await wait(3000);

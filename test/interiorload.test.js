@@ -144,3 +144,24 @@ test('one loading screen: one message per phase, in order, never back; a bar tha
   loadStep(T, { phase: PHASE.connect, sub: 0 });
   assert.equal(T.k, 1);
 });
+
+test('the teleport veil: up at once for a jump, down once - no flapping between a jump and the next frame\'s', async () => {
+  const { veilStep, VEIL_HOLD, VEIL_CALM } = await import('../client/warmup.js');
+  const V = { on: false };
+  const run = (wants, t0 = 0, dt = 16) => { const out = []; wants.forEach((w, i) => out.push(veilStep(V, w, t0 + i * dt))); return out; };
+  // a teleport: wanted for a while, then drawn - a frame of "drawn" between two of "not" (a chunk let go and taken back)
+  const a = run([true, true, true, false, true, true, ...Array(40).fill(false)]);
+  assert.equal(a[0], true, 'up at once');
+  let flips = 0; for (let i = 1; i < a.length; i++) if (a[i] !== a[i - 1]) flips++;
+  assert.equal(flips, 1, 'down once');
+  // a second jump a moment after it went down (the window swapped under the teleport): not up again for a frame or two
+  const down = 46 * 16, b = run([true, true, false, ...Array(30).fill(false)], down + 100);
+  assert.ok(b.every((x) => !x), 'a blip right after: no pop');
+  // ...but one that really isn't drawn shows after VEIL_HOLD
+  const c = run(Array(40).fill(true), down + 1000);
+  assert.ok(!c[0] && c[c.length - 1], 'held back, then up');
+  assert.ok(c.findIndex((x) => x) * 16 >= VEIL_HOLD - 16);
+  // a fresh teleport long after: at once
+  for (let i = 0; i < 40; i++) veilStep(V, false, 5000 + i * 16);
+  assert.equal(veilStep(V, true, 5000 + VEIL_CALM + 1000), true);
+});

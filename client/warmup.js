@@ -106,9 +106,22 @@ export function holdForArt(S, $, go, off) {
 
 // Every frame while playing: the fade over the world after a jump (the renderer bakes behind it at the loading screen's
 // pace). Returns whether it's showing.
+// The veil doesn't flap (the owner's 11-06 report of the loading screen popping in and out): once up it stays until
+// what's on screen has been drawn for VEIL_HOLD ms (a chunk let go and taken back, a second jump a frame later - a
+// teleport's window swap - don't take it down and put it up again), and once down it comes back only for a jump that
+// still isn't drawn after VEIL_HOLD ms within VEIL_CALM ms of it going (a fresh teleport later shows it at once).
+export const VEIL_HOLD = 250, VEIL_CALM = 2000;
+export function veilStep(V, want, now) {
+  if (want) { V.offAt = 0; if (!V.on) { V.wantAt ||= now; if (!V.downAt || now - V.downAt > VEIL_CALM || now - V.wantAt >= VEIL_HOLD) { V.on = true; V.n = (V.n || 0) + 1; } } }
+  else { V.wantAt = 0; if (V.on) { V.offAt ||= now; if (now - V.offAt >= VEIL_HOLD) { V.on = false; V.downAt = now; V.offAt = 0; } } }
+  return V.on;
+}
 let veil = null, veilOn = false;
+const VS = { on: false, wantAt: 0, offAt: 0, downAt: 0 };
 export function veilTick(S, drawn = true) {
-  const w = S.art2, on = !!(w && drawn && S.playing && !(S.spec && S.spec.on) && jumpPlan(w.jump, capOf(JUMP_CAP_MS)).veil);
+  const w = S.art2, live = !!(w && S.playing && !(S.spec && S.spec.on));
+  const on = live && veilStep(VS, !!(drawn && jumpPlan(w.jump, capOf(JUMP_CAP_MS)).veil), performance.now());
+  if (!live) { VS.on = false; VS.wantAt = 0; VS.offAt = 0; }
   if (on === veilOn) return on;
   veilOn = on;
   if (w) w.warming = on;
