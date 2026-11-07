@@ -1146,7 +1146,7 @@ function markings(C, G) {
       if (e.kind === 'hwy' || e.kind === 'ramp') wear = Math.min(wear, 0.12);
       if (e.kind === 'hwy' && Math.abs(v) < e.median / 2 - 4 && s > I.t0 - 6 && s < I.t1 + 6) {     // the concrete median
         const av = Math.abs(v), edge = av > e.median / 2 - 6;
-        setC(G, gi, sd(MEDIAN, edge ? 0.3 : 0.55 + (hh(X >> 2, Y, C.seed) - 0.5) * 0.12, X, Y, 0.3)); G.z[gi] = edge ? 2 : 4; putN(G, gi, 0, edge ? 0.8 : 0);
+        setC(G, gi, sd(MEDIAN, edge ? 0.3 : 0.55 + (hh(X >> 2, Y, C.seed) - 0.5) * 0.12, X, Y, 0.3)); G.z[gi] = (m === M_.DECK || m === M_.DECKF ? G.z[gi] : 0) + (edge ? 2 : 4); putN(G, gi, 0, edge ? 0.8 : 0);   // (on a bridge: up on its deck - at 4 it was under it, a swimmer seen through it)
         continue;
       }
       if (e.kind === 'blvd' && Math.abs(v) < Math.max(6, e.median / 2 - 1) && s > I.t0 && s < I.t1) {   // a planted median (as wide as the boulevard's: World v3's Midtown Boulevard, 3 tiles)

@@ -19,7 +19,7 @@ import { initInput, sample, input, takeNumberPick, settings, saveSettings, detec
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
-import { FX } from './render/fx.js';
+import { FX, afloatUnder } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD, fitLine } from './hud.js';
@@ -111,7 +111,8 @@ if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection 
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
-S.fx.water = (x, y) => !!S.map && WATER_T[S.map.tileAtPx(x, y)] === 1;   // (render/fx.js)
+const afloat = (e) => e.swim || (e.kind === K.VEH && !!e.d && (VEHICLE_BY_INDEX[e.d.m] || {}).kind === 'boat');
+S.fx.water = (x, y) => { const t = S.map ? S.map.tileAtPx(x, y) : -1; return WATER_T[t] === 1 ? 1 : t === T.BRIDGE && afloatUnder(S.ents.values(), x, y, afloat) ? 2 : 0; };   // (render/fx.js: 2 under a deck)
 
 // ---- the load timeline -------------------------------------------------------------------------------------
 // How long each step of getting into the city took on this device, in ms since the page started loading: the
