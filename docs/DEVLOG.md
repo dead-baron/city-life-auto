@@ -20925,7 +20925,7 @@ until its inside is drawn cut away (host.js insideReady).
 - **The clubs as NE9 / IN15** (`shared/shoprooms.js` FIT.club, `client/art2/shopart.js`): the DJ booth in the middle of
   the bar (a lit console, the decks and the mixer, the bartender behind it is the DJ), speakers and an equalizer screen
   behind it, the bottles either side, neon tubes at the ends, the club's word in neon; the bar's neon edge and stools;
-  the lit dance floor (a neon strip round it, speakers at its back corners, the mirror ball over it, pools of coloured
+  the lit dance floor (a neon strip round it, the mirror ball over it, pools of coloured
   light); velvet booths with candlelit tables down one side wall; in a room 16 tiles wide or more the VIP corner on the
   side away from the door (a raised red carpet, curved booths and tables, the rope on brass posts, the VIP sign); high
   tables and palms in what's left. `clubFloor` is the lit floor's one rectangle: server/systems/nightclubs.js keeps the

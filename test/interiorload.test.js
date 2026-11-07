@@ -45,13 +45,13 @@ test('a club is a nightclub: the DJ booth in the bar, the lit floor, booths down
       assert.ok(has('vip') === 1 && has('rope') === 1 && R.onWall.some((q) => q.t === 'sign' && q.text === 'VIP'), `${nm}: the VIP corner, its rope and its sign`);
       const v = R.pieces.find((p) => p.t === 'vip'), F = R.pieces.find((p) => p.t === 'dance');
       assert.ok(Math.abs((v.x0 + v.x1) / 2 - R.dc) > Math.abs((F.x0 + F.x1) / 2 - R.dc) - 1, `${nm}: the VIP corner away from the door`);
-      assert.ok(has('disco') === 1 && has('speaker') >= 1, `${nm}: the mirror ball, the speakers`);
+      assert.ok(has('disco') === 1, `${nm}: the mirror ball`);
     }
     // nothing stands on the dance floor, in the door's way or along the bar
     const F = R.pieces.find((p) => p.t === 'dance');
     for (const p of R.pieces) {
       if (p.flat || p.t === 'stool') continue;
-      if (p.t !== 'speaker') assert.ok(!(p.x0 < F.x1 && p.x1 > F.x0 && p.y0 < F.y1 && p.y1 > F.y0), `${nm}: a ${p.t} on the dance floor`);
+      assert.ok(!(p.x0 < F.x1 && p.x1 > F.x0 && p.y0 < F.y1 && p.y1 > F.y0), `${nm}: a ${p.t} on the dance floor`);
       assert.ok(!(p.x0 < R.dx + R.dw + 8 && p.x1 > R.dx - 8 && p.y1 > R.Ya), `${nm}: a ${p.t} in the door's way`);
     }
     // the dancers' floor (server/systems/nightclubs.js) is the lit floor

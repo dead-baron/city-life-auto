@@ -399,17 +399,11 @@ export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { 
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
-// (its sides and its foot: the building's sprites reach 2 px past its walls and 4 below its foot - statics.js ext; a
-// 40 px margin there took in the chunks either side of a building that ends near a chunk's edge, baked again cut away
-// with nothing in them changed: The Violet Room's 3 chunks were 9)
+// (its sprites reach 2 px past its walls, 4 below its foot: statics.js ext)
 export function cutBoxOf(b) { return [b.tx * TILE - 4, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 4, (b.ty + b.th) * TILE + 8]; }
-// The bake order round a walk-in (the owner's 11-06 report: "interiors take a long time to load in general"). A pool job
-// with a lower prio goes first; the screen's are their distance from the camera (0 - about 1500 px; 2000 and up for the
-// road ahead), a look in the store's d - 1e6, baking ahead into the store 40000 and up.
-//   entryPrio   standing inside, its inside not drawn yet: the chunk under you first, then the rest on screen, then the
-//               rest of the building - before anything else, the store's looks too
-//   precutPrio  about to walk in (WALKIN_SOON_PX): its inside baked ahead into the store after the screen's own chunks
-//               (nearest you first) but before the ring round the view
+// A walk-in's bakes (lower goes first; the screen's: their distance, the store's looks d - 1e6, ahead 40000 up). entryPrio:
+// inside, not drawn yet - under you, on screen, the rest - before all else. precutPrio: about to walk in - after the
+// screen's own, before the ring.
 export function entryPrio(under, onScreen, prio) { return (under ? -3e6 : onScreen ? -2.5e6 : -2e6) + Math.min(prio, 1e5); }
 export function precutPrio(chunksAway) { return 900 + chunksAway * 50; }
 
@@ -818,10 +812,8 @@ export class World2 {
     }
     const jobs = this.wantJobs; jobs.clear();
     const baking = !this.noBake && this.pool && !this.pool.dead && this.pool.ready && (this.prov.ground || this.prov.statics);
-    // (inside a walk-in whose inside isn't drawn yet: its cut-away bakes go first of all - the one you stand in, then the
-    // rest on screen, then the rest of the building - ahead of the ring and the road ahead; the owner's 11-06 report: "a
-    // nightclub ... not loading after quite some time")
-    const inWait = cut >= 0 && !this.insideReady(F.insideB), sx = Math.floor(F.sp.x / CHUNK), sy = Math.floor(F.sp.y / CHUNK);
+    // (inside a walk-in not drawn yet: its cut-away first - entryPrio)
+    const inWait = cut >= 0 && !this.insideReady(F.insideB), me = F.sp || { x: this.camX, y: this.camY }, sx = Math.floor(me.x / CHUNK), sy = Math.floor(me.y / CHUNK);
     this.entering = inWait;
     if (baking) {
       for (const [k, prio0] of bake) {
@@ -883,7 +875,7 @@ export class World2 {
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
       // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
       // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
-      const jmp = (!!this.jump && !this.jump.drawn && !this.jump.over) || !!this.entering;   // (the screen all stand-ins, or a walk-in's inside on its way: not held to the budget)
+      const jmp = (!!this.jump && !this.jump.drawn && !this.jump.over) || !!this.entering;   // (all stand-ins, or entering: not held to the budget)
       let n = this.warming ? 2 * JUMP_UP : jmp ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0 || (!jmp && !this._upOk('chunk'))) break;
@@ -974,8 +966,7 @@ export class World2 {
     const b = F.nearB, P = this.pool;
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
     if (typeof document !== 'undefined' && document.hidden) return;
-    // (the screen's own bakes first - a chunk on screen with nothing drawn; then the walk-in's inside, ahead of the ring
-    // round the view: precutPrio)
+    // (after the screen's own - a chunk on screen with nothing drawn - before the ring: precutPrio)
     const need = this.needChunks;
     if (need) for (const k of need.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if ((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1 && !this.E.hasChunk(cx, cy)) return; }
     const pc = this.pc || (this.pc = { kept: new Set(), out: new Set(), b: -1 }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);

@@ -717,9 +717,8 @@ FIT.sportsbar = (c) => {
 };
 // NE9 / IN15 (the owner, 11-06: The Violet Room "only a floor and a few people"): the DJ booth in the middle of the bar -
 // the decks on a lit console, speakers either side, a screen and the club's neon behind - the bar either side of it with
-// its stools, the lit dance floor in the middle of the room (its edge a neon strip, a mirror ball over it, speakers at
-// its back corners), velvet booths with candlelit tables down one side wall and, in a big room, the VIP corner on the
-// other: a raised carpet, a curved booth, the rope on brass posts and the VIP sign over it. The dancers (server/systems/
+// its stools, the lit dance floor in the middle of the room (its edge a neon strip, a mirror ball over it), velvet
+// booths with candlelit tables down one side wall and, in a big room, the VIP corner on the other: a raised carpet, a curved booth, the rope on brass posts and the VIP sign over it. The dancers (server/systems/
 // nightclubs.js) keep to the lit floor: clubFloor is both sides'.
 // clubFloor(X0, X1, Ya, Yb, TILE, dc) -> { x0, y0, x1, y1, side: [west strip px, east strip px], vip: -1 | 0 | 1 }
 //   (X0..X1 the room, Ya the counter's front, Yb the front wall, dc the door's middle: the VIP corner away from it)
@@ -752,7 +751,6 @@ FIT.club = (c) => {
   const Fl = clubFloor(c.X0, c.X1, c.Ya, c.Yb, TILE, c.dc);
   const flo = put(c, 'dance', Fl.x0, Fl.y0, Fl.x1, Fl.y1, 1, { g: CLUB_NEON, edge: neon, flat: true });
   if (flo && Fl.x1 - Fl.x0 >= 160 && Fl.y1 - Fl.y0 >= 80) {
-    for (const x of [Fl.x0 + 2, Fl.x1 - 18]) put(c, 'speaker', x, Fl.y0 + 2, x + 16, Fl.y0 + 14, 34, {}, 0);
     put(c, 'disco', (Fl.x0 + Fl.x1) / 2 - 7, (Fl.y0 + Fl.y1) / 2 - 7, (Fl.x0 + Fl.x1) / 2 + 7, (Fl.y0 + Fl.y1) / 2 + 7, 64, { flat: true, under: true });
   }
   if (flo) {
