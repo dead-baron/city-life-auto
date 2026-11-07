@@ -293,14 +293,15 @@ export function alleyKit(lanes, unit, wi) {
   put('snack', X0 + 2 * T_, X0 + 12 * T_, sy, sy - dir * 30);
   for (let k = 0; k < 8; k++) put('stool', X0 + 2.6 * T_ + k * 40, X0 + 2.6 * T_ + k * 40 + 10, sy - dir * 44, sy - dir * 54, false);
   // the tables and chairs in front, clear of the way in from the door and the counters
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 6; c++) {
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 10; c++) {
     const x = X0 + 15 * T_ + c * 4 * T_, y = ry(140 + r * 64);
-    if (x > lx1 + 2 * T_ || (x + 2 * T_ > dx0 - 2 * T_ && x < dx1 + 2 * T_) || (front - y) * dir < 5 * T_) continue;
+    if (x > X1 - 10 * T_ || (x + 2 * T_ > dx0 - 2 * T_ && x < dx1 + 2 * T_) || (front - y) * dir < 5 * T_) continue;
     put('table', x, x + 24, y, y + dir * 24); put('chair', x - 14, x - 4, y + dir * 6, y + dir * 18, false); put('chair', x + 28, x + 38, y + dir * 6, y + dir * 18, false);
   }
-  // the lounge beside the lanes (west) and the arcade cabinets along the east wall, by the lanes
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 2; c++) { const x = X0 + 2 * T_ + c * 5 * T_, y = Fy - dir * (4 * T_ + r * 4 * T_); if (x + 3 * T_ < lx0 - T_) { put('table', x, x + 24, y, y + dir * 24); put('chair', x - 14, x - 4, y + dir * 6, y + dir * 18, false); put('chair', x + 28, x + 38, y + dir * 6, y + dir * 18, false); } }
+  // the lounges either side of the lanes, the arcade cabinets along the east wall by them, plants along the lanes' sides
+  for (let r = 0; r < 4; r++) for (const x of [X0 + 2 * T_, X0 + 7 * T_, X1 - 12 * T_, X1 - 7 * T_]) { const y = Fy - dir * (4 * T_ + r * 4 * T_); if (x + 3 * T_ < lx0 - T_ || x > lx1 + T_) { put('table', x, x + 24, y, y + dir * 24); put('chair', x - 14, x - 4, y + dir * 6, y + dir * 18, false); put('chair', x + 28, x + 38, y + dir * 6, y + dir * 18, false); } }
   for (let k = 0; k < 6; k++) { const y = Fy - dir * (2 * T_ + k * 34); if (X1 - 2 * T_ > lx1 + T_) put('cabinet', X1 - 26, X1 - 4, y, y - dir * 26); }
+  for (let r = 0; r < 4; r++) for (const x of [lx0 - 28, lx1 + 8]) { const y = Fy - dir * (3 * T_ + r * 5 * T_); put('plant', x, x + 20, y, y - dir * 20); }
   // plants in the corners by the door
   for (const x of [X0 + 6, X1 - 26]) put('plant', x, x + 20, front - dir * 8, front - dir * 28);
   return out;

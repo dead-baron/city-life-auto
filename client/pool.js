@@ -26,7 +26,7 @@ export function start(o) {
   cv.width = W; cv.height = H; cv.style.aspectRatio = `${W} / ${H}`;
   g.imageSmoothingEnabled = false;
   G = { o, cv, g, mp: !!o.mp, S: null, sel: 0, btns: [], balls: rack(o.mp ? 'eight' : 'nine'), shots: 0, aim: 0, power: 0, charging: false, chargeT: 0, moving: false, done: false, t0: performance.now(), keys: new Set(), drag: null, acc: 0, last: performance.now(), msg: 'Clear the table in as few shots as you can', msgT: 3, sent: false, padHeld: false };
-  if (G.mp) { G.msg = ''; G.msgT = 0; }
+  if (G.mp) { G.msg = ''; G.msgT = 0; o.send({ t: 'pool', a: 'state' }); }   // (the table as it stands: what came before this module loaded was missed)
   G.onKey = (e) => {
     if (e.repeat) return;
     if (e.type === 'keydown') { G.keys.add(e.code); if (G.btns.length && !myTurn()) { if (/Arrow(Left|Up)|KeyA|KeyW/.test(e.code)) G.sel = (G.sel + G.btns.length - 1) % G.btns.length; else if (/Arrow(Right|Down)|KeyD|KeyS/.test(e.code)) G.sel = (G.sel + 1) % G.btns.length; else if (/Space|Enter/.test(e.code)) press(G.btns[G.sel]); } }
