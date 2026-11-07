@@ -293,13 +293,28 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
     // against one with its way on past it, it backs out (wallGuard)
     if ((v.lz || 0) < 0.3) ({ speed, wx, wy } = wallGuard(world, v, wx, wy, speed, fwd));
     if (Math.abs(fwd) < 12 && desired > 60 && speed > 40) ai.stuck = (ai.stuck || 0) + 0.05; else ai.stuck = Math.max(0, (ai.stuck || 0) - 0.1);
-    if (ai.stuck > 2.5) { ai.reverseUntil = world.time + 1.3; ai.stuck = 0; }
+    // wedged (nose to something it doesn't brake for - a lamp post on a car park's island it was shoved onto): it backs
+    // off as far as there's room behind it, never into the car queued behind. It used to back off 1.3 s blind - by Metro
+    // Central's loop a sedan nosed into a lamp post backed into the box truck behind it every 4.5 s for minutes (the
+    // owner, 11-06: "this white car keeps ramming the car around it"). No room, wedged again and again: an NPC's car
+    // gives up (parkIt) - the queue goes round it, and it's cleared away once nobody's looking. (Wedged again where it
+    // was wedged last time, WEDGE_N times over: it isn't getting anywhere.)
+    if (ai.stuck > 2.5) {
+      ai.stuck = 0;
+      const w0 = ai.wedgedAt;
+      ai.wedged = w0 && Math.hypot(v.x - w0[0], v.y - w0[1]) < 60 ? (ai.wedged || 0) + 1 : 1;
+      ai.wedgedAt = [v.x, v.y];
+      const room = roomBehind(world, v, 90);
+      if (ai.kind === 'traffic' && ai.wedged >= WEDGE_N) { parkIt(v); world.wedgedGaveUp = (world.wedgedGaveUp || 0) + 1; return; }
+      if (room >= 12) ai.reverseUntil = world.time + Math.min(1.3, 0.25 + room / 70);
+    }
     reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
     ai.ctl = { wx, wy, speed, reversing, t: world.tick };   // (vehicles.js re-trims to it between sub-steps - this tick only)
   }
   pedals(v, wx, wy, speed, reversing);
 }
 
+const WEDGE_N = 4;   // (wedged this many times running in one spot: an NPC's car gives up - driveToward)
 // Steering and pedals toward (wx, wy) at `speed`: the wheel eases toward the target heading with
 // a damping term on the yaw rate (no weaving), and the throttle anticipates - it lifts early
 // when the car is coming up to the speed it wants, and brakes progressively harder the further
@@ -508,9 +523,8 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
     // (the other's half-extents across this one's way and along it, as it stands: a car side on or at a slant reaches
-    // further across than its half width - counted as if it lay the same way, a pickup turned across the corner of a
-    // station's loop stood "beside" the queue's lane by its middle, and the car behind drove into its end, stuck, backed
-    // off and drove into it again: the owner's notes, 11-06, "this white car keeps ramming the car around it")
+    // further across than its half width - counted as if it lay the same way, one turned across a jammed corner stood
+    // "beside" the lane by its middle, and the car behind drove into its end, stuck, backed off and drove into it again)
     const ca = e.kind === K.VEH ? Math.abs(Math.cos(e.a - v.a)) : 1, sa = e.kind === K.VEH ? Math.abs(Math.sin(e.a - v.a)) : 0;
     const halfOther = e.kind === K.VEH ? sa * e.def.L / 2 + ca * e.def.W / 2 : 10, halfAlong = e.kind === K.VEH ? ca * e.def.L / 2 + sa * e.def.W / 2 : 10;
     if (lx < 0 || lx > look + 40 || Math.abs(ly) > v.def.W / 2 + halfOther - 4) continue;

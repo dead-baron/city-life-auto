@@ -215,7 +215,7 @@ export function buildNetwork(lines, seed = 1) {
         w: (l.w || K.w) * TILE, hw: ((l.w || K.w) * TILE) / 2, nl: K.nl, median: l.median ?? K.median, oneway: !!(l.oneway || K.oneway), bridge: false, culdesac: !!l.culdesac,
       };
       if (l.lvl === 'ramp' && l.zr && c0.s < 1 && c1.s > l.len - 1) e.zr = l.zr.slice(); // (a whole ramp: its climb as laid)
-      if (l.notraffic || l.dropoff) e.notraffic = true;   // (World v3's wild tracks, the stations' drop-off loops - shared/world3-stations.js: the traffic keeps off them - server/systems/traffic.js)
+      if (l.notraffic || l.dropoff) e.notraffic = true;   // (World v3's wild tracks; the stations' own roads - shared/world3-stations.js: the traffic keeps off them - server/systems/traffic.js)
       if (l.park) e.park = l.park;   // (a parking lane along each kerb, px: the traffic lanes inside it - roadcore.js laneOffset)
       e.len = measure(e.pts);
       edges.push(e);

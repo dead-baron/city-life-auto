@@ -156,3 +156,34 @@ test('a car stopped side on with its end out across the lane: the car behind sto
   assert.ok(Math.hypot(pk.x - px, pk.y - py) < 4, `the pickup unmoved (${Math.round(Math.hypot(pk.x - px, pk.y - py))} px)`);
   assert.ok(v.x < pk.x - 28 - v.def.L / 2 + 4 || v.ai.roundUntil > w.time, 'stopped short of it (or on its way round)');
 });
+
+// (the owner, 11-06, off the arrival train at Metro Central: "this white car keeps ramming the car around it" - a sedan
+// shoved onto the corner of the car park's island, nose to a lamp post it doesn't brake for: wedged, it backed off for
+// 1.3 s whatever was behind it - into the box truck queued there - drove on into the post and did it again, every 4.5 s)
+test('wedged nose to something it doesn\'t brake for, a car queued right behind: it never backs into it, and gives up', () => {
+  const w = makeWorld(), m = w.map, net = m.net;
+  const e = m.edges.filter((q) => q.lvl === 0 && q.kind === 'st' && !q.oneway && q.len > 700 && q.pts.every((p) => Math.abs(p.y - q.pts[0].y) < 2)).sort((a, b) => b.len - a.len)[0];
+  const from = e.pts[0].x < e.pts[e.pts.length - 1].x ? e.a : e.b, lp = lanePath(net, e, from, 0), p0 = pointAt(lp, 300);
+  const a = joinPlayer(w);
+  teleport(w, a.p.ped, p0.x + 200, p0.y - 300);
+  const v = car(w, 'sedan', p0.x, p0.y, 0);
+  traffic.joinTraffic(w, v);
+  // what it's wedged against: a bus standing in the lane that it doesn't brake for (as if a lamp post), and a van close behind
+  const bus = w.spawnVehicle('bus', p0.x + v.def.L / 2 + 82 + 20, p0.y, 0, { parked: true });
+  const van = car(w, 'van', p0.x - v.def.L / 2 - 51 - 16, p0.y, 0);
+  van.ai = { kind: 'traffic', parkIt: true };   // (queued there)
+  const inside = (q, x, y) => { const c = Math.cos(q.a), s = Math.sin(q.a), dx = x - q.x, dy = y - q.y; return Math.abs(dx * c + dy * s) < q.def.L / 2 && Math.abs(-dx * s + dy * c) < q.def.W / 2; };
+  let hits = 0, was = false;
+  const vx = van.x;
+  for (let t = 0; t < 20 * 20; t++) {
+    if (v.ai && !v.ai.parkIt) { v.ai.passBlk = bus.id; v.ai.passUntil = w.time + 1; }
+    w.step();
+    const c = Math.cos(v.a), s = Math.sin(v.a), bx = v.x - c * (v.def.L / 2 + 2), by = v.y - s * (v.def.L / 2 + 2);
+    const now = [-1, 0, 1].some((k) => inside(van, bx - s * k * (v.def.W / 2 - 2), by + c * k * (v.def.W / 2 - 2)));
+    if (now && !was) hits++;
+    was = now;
+  }
+  assert.equal(hits, 0, 'never backs into the van');
+  assert.ok(Math.abs(van.x - vx) < 4, `the van unmoved (${Math.round(van.x - vx)} px)`);
+  assert.ok(v.ai && v.ai.parkIt && (w.wedgedGaveUp || 0) >= 1, 'wedged in one spot again and again, it gives up (the queue goes round it)');
+});
