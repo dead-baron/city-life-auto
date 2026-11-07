@@ -147,7 +147,8 @@ for (const [id, v] of Object.entries(VEHICLES)) {
 
 // A vehicle in a word, the way a job names the one it issues you ("your helicopter", "your cab" - the owner, 10-23:
 // "Helicopter is referred to as 'your truck' during a job"): client/main.js drawJobTruck's plate, the jobs' notes.
-const WORD_OF = { ambulance: 'ambulance', taxi: 'cab', bus: 'bus', firetruck: 'fire engine', tractor: 'tractor', combine: 'combine', towtruck: 'tow truck', police: 'cruiser', semi: 'rig', trailer: 'trailer', boxtrailer: 'trailer', van: 'van' };
+const WORD_OF = { ambulance: 'ambulance', taxi: 'cab', bus: 'bus', firetruck: 'fire engine', tractor: 'tractor', combine: 'combine', towtruck: 'tow truck', police: 'cruiser', semi: 'rig', trailer: 'trailer', boxtrailer: 'trailer', van: 'van',
+  forklift: 'forklift', golfcart: 'golf cart', tank: 'tank', mixer: 'cement mixer', armored: 'armored van', movingvan: 'moving van', icecream: 'ice cream van', swat: 'SWAT truck', fbi: 'SUV', jeep: '4x4', rescue4x4: '4x4' };
 export function vehicleWord(def) {
   if (!def) return 'vehicle';
   if (WORD_OF[def.id]) return WORD_OF[def.id];

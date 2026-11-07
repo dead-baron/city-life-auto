@@ -20906,3 +20906,9 @@ A world change's job now includes the rebake and test/worldmap.test.js.
   shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
   change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
   worldmap and perf (8 pass).
+
+## 2026-11-06 - The forklift is a forklift (vehicle words)
+The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `vehicleWord` names a vehicle in the
+game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
+"truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
+4x4. test/jobrecall.test.js checks the forklift and the golf cart.
