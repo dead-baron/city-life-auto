@@ -3888,14 +3888,14 @@ function trackClear(M) {
   return s;
 }
 // (the owner, 11-06: nothing meant to be seen behind a tree) the tiles in front of what is - a door on a front, an ATM, a
-// standing sign, a chess table, a bus stop: up to 4 tiles south of it, a crown's width either side - grow nothing tall
+// standing sign, a chess table, a bus stop: up to 6 tiles south of it, a big crown's width either side - grow nothing tall
 // (shared/world3-greens.js sightlines3 moves the map's own trees; tools/visaudit.mjs measures it)
 const SIGHT = new WeakMap();
 function sightTiles(M) {
   let s = SIGHT.get(M);
   if (s) return s;
   s = new Set();
-  const mark = (x, y, hw) => { for (let ty = Math.floor(y / TILE); ty <= Math.floor(y / TILE) + 4; ty++) for (let tx = Math.floor((x - hw - 56) / TILE); tx <= Math.floor((x + hw + 56) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty)); };
+  const mark = (x, y, hw) => { for (let ty = Math.floor(y / TILE); ty <= Math.floor(y / TILE) + 6; ty++) for (let tx = Math.floor((x - hw - 96) / TILE); tx <= Math.floor((x + hw + 96) / TILE); tx++) if (M.inside(tx, ty)) s.add(M.idx(tx, ty)); };
   for (const p of M.pois || []) { const b = p && p.b !== undefined ? M.buildings[p.b] : null; if (b && p.y >= (b.ty + b.th) * TILE - 4) mark(p.x, (b.ty + b.th) * TILE, 16); else if (p) mark(p.x, p.y, 8); }
   for (const p of M.props) if (p && (p.t === 'textsign' || p.chess || p.t === 'busstop' || p.t === 'mapboard' || p.t === 'campfire')) mark(p.x, p.y, p.t === 'textsign' ? 60 : 16);
   SIGHT.set(M, s);

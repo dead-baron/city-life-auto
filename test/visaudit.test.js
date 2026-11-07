@@ -27,10 +27,13 @@ const say = (l) => l.slice(0, 8).map((r) => `${r.name} (${r.x}, ${r.y}) ${Math.r
 //                  the pavement in front of them (the engine fades a building you stand behind)
 //   spot:picnic    back yards' tables behind their houses; a rest stop's under its pergola
 //   spot:campfire  the wild camps' fire rings under their own trees and logs
+//   sign           the two trail signs in Highland Woods' old growth under the giant redwoods (which fade round you), a
+//                  rest stop's number post under its pergola
+//   route-board    the Airport station's, beside its canopy on a north-south platform
 //   place-spot, spot:*  the odd one under an awning, a pergola or a cliff
 const ALLOW = {
-  'place-front': 230, 'place-door-n': 4, 'place-spot': 14, atm: 38, vending: 0, 'station-board': 0, 'route-board': 1, platform: 0, chess: 0, sign: 2,
-  'spot:busstop': 70, 'spot:picnic': 26, 'spot:campfire': 10, 'spot:mapboard': 3, 'spot:shower': 4, 'spot:pierrail': 1, 'spot:vend_cola': 1,
+  'place-front': 205, 'place-door-n': 2, 'place-spot': 12, atm: 37, vending: 0, 'station-board': 0, 'route-board': 1, platform: 0, chess: 0, sign: 3,
+  'spot:busstop': 68, 'spot:picnic': 28, 'spot:campfire': 7, 'spot:mapboard': 2, 'spot:shower': 4, 'spot:pierrail': 1, 'spot:vend_cola': 1,
 };
 
 test('the stations\' name boards and platforms, the chess tables and the standing signs are seen', () => {
@@ -39,7 +42,7 @@ test('the stations\' name boards and platforms, the chess tables and the standin
   assert.deepEqual(hid('platform'), [], `platforms hidden: ${say(hid('platform'))}`);
   assert.ok((A.counts.chess || [0])[0] >= 10, 'the chess tables');
   assert.deepEqual(hid('chess'), [], `chess tables hidden: ${say(hid('chess'))}`);
-  for (const name of ['GULF FUEL TERMINAL', 'TAXI', 'MARKET SQUARE', 'STERLING PLAZA', 'THE RUSTY ANCHOR', 'YARDS FREIGHT', 'FIRE LOOKOUT', 'LINDEN WALK', 'DOG RUN', 'BIKE RENTAL'])
+  for (const name of ['GULF FUEL TERMINAL', 'TAXI', 'MARKET SQUARE', 'STERLING PLAZA', 'THE RUSTY ANCHOR', 'YARDS FREIGHT', 'LINDEN WALK', 'DOG RUN', 'BIKE RENTAL', 'MADISON COURT', 'TIKI HUT', 'TIKI POINT'])
     assert.equal(hid('sign').filter((r) => r.name === name).length, 0, `${name} hidden: ${say(hid('sign').filter((r) => r.name === name))}`);
 });
 

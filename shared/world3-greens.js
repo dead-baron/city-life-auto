@@ -252,9 +252,9 @@ export function sightlines3(m) {
   };
   for (const p of m.props) {
     if (p.t !== 'textsign' || !under(p.x, p)) continue;
-    const t0 = tileOf(p.x, p.y);
+    const ground = (t) => t !== T.ROAD && t !== T.BUILDING && t !== T.WATER && t !== T.DEEP && t !== T.WALL && t !== T.BRIDGE;
     let to = null;
-    for (let d = TILE; d <= 16 * TILE && to === null; d += TILE) for (const s of [1, -1]) { const x = p.x + s * d; if (tileOf(x, p.y) === t0 && !under(x, p)) { to = x; break; } }
+    for (let d = TILE; d <= 16 * TILE && to === null; d += TILE) for (const s of [1, -1]) { const x = p.x + s * d; if (ground(tileOf(x, p.y)) && !under(x, p)) { to = x; break; } }
     if (to !== null) { p.x = to; out.signs = (out.signs || 0) + 1; }
   }
   return out;
