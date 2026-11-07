@@ -20896,3 +20896,13 @@ The interiors update (05d58ec9: the plain blocks' lots, the wider bars, the soli
 rebaking the map screen's picture, so the live map fell back to the plain tile map (test/worldmap.test.js: "baked for
 another world"). `node tools/build-worldmap2.mjs` (10.5 min here) rebaked assets/map/ for the live world; the test passes.
 A world change's job now includes the rebake and test/worldmap.test.js.
+- **Follow-up: the lot shops' signs say their trade.** Soap & Spin's sign came out gray on near-black. Its name's
+  words (`\bSPIN\b`, client/art2/signfont.js WORDS) made it a record shop, and a record shop's board is neon: a dark
+  board whose letters are a tube, gray by day. The laundry kind's own colors were never used. Each kind in
+  `LOT_SHOPS` now says its trade outright (pawn, liquor, barber, mart, office, street, laundromat), so a name can't
+  pick a face, and none of them is neon. On every other face statics.js `styleSign` keeps a hand-planned board's colors
+  and makes them legible. Every lot shop's sign reads at least 4.5:1: across each kind's colors and its trade's
+  palettes the drawn contrast is 4.5-11.6. No shared sign art changed. `test/plainblocks.test.js` checks that each lot
+  shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
+  change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
+  worldmap and perf (8 pass).
