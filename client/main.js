@@ -3236,7 +3236,7 @@ function prepFrame(dt) {
   S.camLead = S.camLead || { x: 0, y: 0 };
   S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
   S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
-  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.liftOf ? S.airMod.liftOf(myAir.ralt ?? (myAir.extra | 0) * 4) * 0.66 : fallH > 0 && S.art2 && S.art2.ready ? fallH * SKY_LIFT * 0.66 : 0);   // (art v2 draws an aircraft up by its height: two thirds of the way up to it)
+  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.camLift ? S.airMod.camLift(myAir.ralt ?? (myAir.extra | 0) * 4) : fallH > 0 && S.art2 && S.art2.ready ? fallH * SKY_LIFT * 0.66 : 0);   // (art v2 draws an aircraft up by its height: the camera all the way up to it - render/aircraft.js camLift)
   // The camera is locked to the (already smoothed) character + a smoothed look-ahead: a
   // chasing camera with a frame-time-dependent lag made the car slide around on screen when
   // frame times vary (phones). Teleports / respawns still snap.
@@ -3304,7 +3304,9 @@ function prepFrame(dt) {
   const ug = S.ugLayer || 0;   // down the sewers or in the cave (shared/underground.js): the underground view draws the frame
   const sub = !!ug || !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   // who is on screen, by kind
-  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
+  // (an aircraft: drawn up the screen by its height - on screen when any of it, from its shadow on the ground to it, is)
+  const upOf = (e) => (e.kind === K.VEH && S.airMod && S.airMod.liftOf && airDefOf(e) ? S.airMod.liftOf(e.ralt ?? (e.extra | 0) * 4) : 0);
+  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry - upOf(e) < view.y1 + 160;
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;

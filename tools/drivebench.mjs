@@ -277,6 +277,16 @@ async function fly(page, cdp, R) {
   R.fly.summary = { seconds: S.length, legs: S.length ? S[S.length - 1].legs : 0, avgSpeed: avg((s) => s.sp), standInsAvg: avg((s) => s.standIns), flatAvg: avg((s) => s.flat), lowAvg: avg((s) => s.lo), screenAvg: avg((s) => s.scr), secondsWithFlat: S.filter((s) => s.flat > 0).length, late: h1.late, server: h1.server - h0.server, bakedHere: h1.bakeN - h0.bakeN, kept: h1.kept - h0.kept, highAir: S.filter((s) => s.hi).length, low: S.length ? S[S.length - 1].low : null };
   log(`flight: ${JSON.stringify(R.fly.summary)}`);
   log(`hud at the end:\n${h1.hud}`);
+  // the phone turned to landscape, still up at ALT (the owner, 11-06: a helicopter "disappearing" in landscape): where it is
+  // on the screen - its drawn self against the view's middle - and a capture
+  if (SHOTS) {
+    await page.setViewportSize({ width: 891, height: 411 }); await wait(5000);
+    const f = join(SHOTS, 'land-high.jpg'); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {});
+    R.fly.shots.push(f);
+    R.fly.landscape = await page.evaluate(() => { const S = window.CLA.S, e = S.ents.get(S.ctrlId), v = S.viewRect, lift = S.airMod && e ? S.airMod.liftOf(e.ralt ?? 0) : 0; return e && v ? { alt: Math.round(e.ralt || 0), drawnY: Math.round(e.ry - lift), midY: Math.round((v.y0 + v.y1) / 2), halfH: Math.round((v.y1 - v.y0) / 2), offScreen: e.ry - lift < v.y0 || e.ry - lift > v.y1 } : null; });
+    log(`landscape: ${JSON.stringify(R.fly.landscape)}`);
+    await page.setViewportSize({ width: 411, height: 891 }); await wait(2000);
+  }
   // the rotor wash: over open water (the corridor's start moved to the nearest deep water), at ALT then low
   if (SHOTS) {
     const wpt = await page.evaluate((C) => { const m = window.CLA.S.map; for (let r = 0; r < 60000; r += 768) for (let a = 0; a < 16; a++) { const x = C.from.x + Math.cos(a * Math.PI / 8) * r, y = C.from.y + Math.sin(a * Math.PI / 8) * r, tx = Math.floor(x / 32), ty = Math.floor(y / 32); if (m.inside(tx, ty) && m.tileAt(tx, ty) === 7) { let ok = true; for (let d = -8; d <= 8 && ok; d += 4) for (let e = -8; e <= 8; e += 4) if (m.tileAt(tx + d, ty + e) !== 7) { ok = false; break; } if (ok) return { x, y }; } } return null; }, C);
