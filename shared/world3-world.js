@@ -329,12 +329,13 @@ export function worldOpts(asked) {
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
       lotPoisLast(m);   // (last: Southside's lot shops' POIs at the end of the list, so no other place's number moves - world3-lots.js)
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
+      if (city) m.world3.towers = towers3(m);   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
     clinics: city ? (m) => { m.world3.clinics = clinics3(m); } : null,   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
     shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
-    lots: city ? (m, H2) => { m.world3.lots = lots3(m, H2); m.world3.towers = towers3(m); } : null,   // (after the plain blocks are cut: Southside's shops and sheds - world3-lots.js; then the big plain towers split - world3-towers.js)
+    lots: city ? (m, H2) => { m.world3.lots = lots3(m, H2); } : null,   // (after the plain blocks are cut: Southside's shops and sheds - world3-lots.js)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
     // handcrafted district's plan, which places its own
     special: (sp) => built.has(sp.d) && !DROP_SPECIALS3.has(sp.names[0]) && !(city && HAND_PLANS.some((P) => P.d === sp.d && P.specials.includes(sp.names[0]))),
