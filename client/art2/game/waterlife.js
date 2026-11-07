@@ -975,7 +975,8 @@ export class WaterLife {
       o.x = p.rx; o.y = p.ry; o.sp = q.sp; o.wet = wet; o.id = p.id; o.a = q.a; o.hw = hw; n++;
     };
     // (in the water: a person, or an animal - a duck's wake small, a goose's or an otter's bigger)
-    for (const p of F.peds) if (!(p.flags & PF.INVEH)) add(p, !!p.swim, p.swim ? (p.d && p.d.ar && p.d.ar.startsWith('pet:') ? (/duck|quail|:y/.test(p.d.ar) ? 2.5 : 4) : 4.5) : 0);
+    // (a bird in flight over the water - the server's "in the water" bit is where it is, not how high: host.js p._up - no wake)
+    for (const p of F.peds) if (!(p.flags & PF.INVEH)) add(p, !!p.swim && !(p._up > 8), p.swim && !(p._up > 8) ? (p.d && p.d.ar && p.d.ar.startsWith('pet:') ? (/duck|quail|:y/.test(p.d.ar) ? 2.5 : 4) : 4.5) : 0);
     // (an aircraft: nothing to the water up high - only a helicopter low over it blows it about, _wash - the owner, 10-23:
     // "Water under helicopter has a weird effect happening even when you're high up": the fish fled anything over them)
     const wash = this.washL || (this.washL = []);

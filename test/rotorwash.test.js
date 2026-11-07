@@ -42,3 +42,7 @@ test('an aircraft over the water is not sinking in it unless it is down on it (m
   const wx = readFileSync(new URL('../client/render/weather.js', import.meta.url), 'utf8');
   assert.match(wx, /\|\| e\._up\) continue;/);
 });
+
+// (the owner, 11-07: "eagles/birds cause waves/wake above water") a bird in flight leaves no wake: host.js keeps how high it's
+// drawn (p._up), waterlife.js's swimmers are only those in the water and not up in the air
+test('a bird in flight over the water leaves no wake', () => { const wl = readFileSync(new URL('../client/art2/game/waterlife.js', import.meta.url), 'utf8'), host = readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8'); assert.match(wl, /add\(p, !!p\.swim && !\(p\._up > 8\), p\.swim && !\(p\._up > 8\)/); assert.match(host, /const up = p\._up = pose === 'fly'/); });

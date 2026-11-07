@@ -21120,3 +21120,10 @@ point: with the shadow off the bottom of a short view, the aircraft itself wasn'
 all of the lift (`camLift`, `AIR_CAM` 1; the cinematic camera too, `director.js`), easing as it climbs and descends as
 the height does; its shadow stays on the ground under it. An aircraft is on screen when any of it is, from its shadow up
 to it. test/aircam.test.js; `tools/drivebench.mjs --fly` turns the phone to landscape at height for a capture.
+
+## 2026-11-07 - Birds in flight leave no wake
+The owner (11-07, 01:01): "eagles/birds cause waves/wake above water, they shouldnt though" - an eagle over a marsh with
+a swimmer's V of foam behind its shadow. The server's "in the water" bit on an animal (`extra` bit 7, `e.swim`) says
+where it is, not how high: `waterlife.js` took a bird flying over water for a swimmer. `host.js` `_pet` now keeps how
+high it draws the animal (`p._up`: flying, soaring, stooping, carrying a fish), and a swimmer's wake needs it to be down
+(8 px or less). A bird diving in still makes its splash and rings (`waterlife.js`). test/rotorwash.test.js.

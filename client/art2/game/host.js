@@ -1749,7 +1749,7 @@ export class World2 {
     // up in the air (a bird in flight: its shadow on the ground below), up a trunk (a squirrel), or a happy pet's hops
     // (up at its owner standing, a bounce in its stride racing round them: its shadow stays on the ground)
     const hop = happy ? (pose === 'idle' ? petHop(now, p.id) : pose === 'run' || pose === 'walk' ? petHop(now * 1.6, p.id) * 0.35 : 0) : 0;
-    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;
+    const up = p._up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;   // (p._up: waterlife.js - no wake in the air)
     o.air = pose === 'fly' || hop > 0.5 || !!HIGH[pose];
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
     // a bird up in the air: its own shape on the ground, not the column the shadow march makes of something up off it
