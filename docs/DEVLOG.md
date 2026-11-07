@@ -20952,3 +20952,11 @@ until its inside is drawn cut away (host.js insideReady).
   and a three-line tip moved everything under them. The line and the tip keep their room in portrait. The teleport's
   "Loading the area..." veil: one teleport measured on and off once; `veilStep` keeps it from flapping on a second jump
   a frame later (up at once, down after 250 ms drawn, back within 2 s only for a jump still not drawn after 250 ms).
+- **Measured** (tools/interiorbench.mjs, 411x891 @2.6, the page's CPU slowed 4x, a single run each): the step into The
+  Violet Room until its inside counted as drawn 4.3 s before - and what was drawn was bare ground, as the owner saw it -
+  3.3 s after, fitted out (unslowed and rasterized: 9.7 s -> 3.2 s); its cut-away 3 chunks, not 9. A first load: before,
+  the bar went back 15 times and dropped from 59% to 0 at PLAY; after, never back, the five messages once each in order,
+  one fade. A teleport's veil: on once, off once, before and after. Tests: test/interiorload.test.js (new) with
+  nightclubs, shoprooms, warmup, perf, art2, pagemodules, lazypage, walkinrooms, regionwindow, uiscreens, hudlayers,
+  mapwindow and dmath pass. The renderer's code is at its 404 KB budget (host.js's new comments trimmed to fit). The
+  world's hashes don't change (world, world3); the art's do.
