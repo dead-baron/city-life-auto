@@ -2,7 +2,7 @@
 // direction"; the design: the FTUE is the tutorial - no tour). A new character (store.js defaultProfile: ftue { st: 'new' })
 // gets, once their look is picked:
 //   0. where to arrive (the owner, 11-06: "We can have multiple stations to choose from"): one card of the arrival
-//      stations (starter.js arrivalChoices - World v3's: a station in the city, on the coast, in the desert and in the
+//      stations (firstcar.js arrivalChoices - World v3's: a station in the city, on the coast, in the desert and in the
 //      country, each with an arrival line of its own: shared/world3-arrivals.js), each its name, region and a line of
 //      what it's like, the default first. Picked: { t: 'intro', a: 'pick', stn }; skipped (Esc, B, Skip) or left
 //      FTUE.pickS: the default (firstcar.js arrivalChoices);
@@ -29,7 +29,7 @@
 // the question and a first goal again from where you stand; "Show tips again" clears the moments.
 // Everyone goes through it once (the owner, 11-04): profiles from before it are reset to new characters as the store loads
 // (server/store.js PROGRESS_EPOCH). A wiped profile (players.js wipeProgress, wipeAccount: Start fresh) is a new character
-// too - store.js defaultProfile's ftue { st: 'new' } and starter { first } - so it gets the arrival on its next join.
+// too - store.js defaultProfile's ftue { st: 'new' } - so it gets the arrival on its next join (and the first car to earn).
 // Every number: shared/rules.js FTUE. Analytics (server/launch.js world.track 'ftue'): ftue_pick (a station picked) or
 // ftue_pick_default (skipped, or left to the default), ftue_arrive, ftue_answer_<which>,
 // ftue_step1..3 (reached), ftue_done, ftue_skip, moment_<id>, guide_open.

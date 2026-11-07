@@ -303,7 +303,7 @@ export function onPlayerGone(world, p) {
 }
 // homes.claim: a home with a garage - the starter lives there from now on (out and empty: moved in now)
 export function onHome(world, p, home) {
-  if (!home || !home.garage || homeGarage(world, p.profile) !== home) return;   // (only the first: it moves once)
+  if (!hasStarter(p.profile) || !home || !home.garage || homeGarage(world, p.profile) !== home) return;   // (only the first: it moves once)
   const v = carOf(world, p.pid);
   if (v && !v.seats.some((s) => s) && !v.towedBy && !v.onDeck) { putAway(world, p.pid); world.remove(v); }
   world.notify(p, `Your starter car lives in the garage at ${home.name} now.`, 'info');

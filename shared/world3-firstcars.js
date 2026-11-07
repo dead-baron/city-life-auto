@@ -175,9 +175,11 @@ const YARDS = {
   country: { lot: 'Willow Valley Farm Trucks', alley: 'the barn lane behind Farm Trucks', stock: ['rustpickup'], ground: T.DIRT, sign: ['#2f6a4e', [250, 240, 200]], tone: '#84463a', dress: ['pallet', 'crates'] },
 };
 const YW = 21, YH = 16;   // (the yard: the lot 15 wide, a fence, the alley 5; 16 deep)
-// open ground for the yard at (x, y)..(x + YW, y + YH): grass, dirt or sand, nothing built or kept, no track, platform or
-// tunnel; the row in front of it (south) a road, a pavement or paving to drive and walk out onto
-function yardFits(m, x, y, keepOut) {
+const GO = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT]);
+// open ground for the yard at (x, y)..(x + YW, y + YH): grass, dirt or sand (a beach's kept-open sand too), nothing built,
+// no track, platform, tunnel or a station's ground; along its south side (or its north - `north`) a road, a pavement or
+// paving to drive and walk out onto, `share` of its width at least
+function yardFits(m, x, y, keepOut, share, north) {
   for (let ty = y - 1; ty <= y + YH; ty++) for (let tx = x - 1; tx <= x + YW; tx++) {
     if (!m.inside(tx, ty)) return false;
     const i = m.idx(tx, ty), t = m.tiles[i];
@@ -185,8 +187,9 @@ function yardFits(m, x, y, keepOut) {
     if (keepOut(tx, ty)) return false;
   }
   let front = 0;
-  for (let tx = x; tx < x + YW; tx++) { const t = m.tiles[m.idx(tx, y + YH + 1)]; if (t === T.ROAD || t === T.SIDEWALK || t === T.PLAZA || t === T.LOT) front++; }
-  return front >= YW * 0.6;
+  const fy = north ? y - 2 : y + YH + 1;
+  for (let tx = x; tx < x + YW; tx++) if (m.inside(tx, fy) && GO.has(m.tiles[m.idx(tx, fy)])) front++;
+  return front >= YW * share;
 }
 export function firstCars3(m, H3) {
   const out = { yards: [], missed: [] };
@@ -198,26 +201,33 @@ export function firstCars3(m, H3) {
   for (const A of m.arrivals || []) {
     const Y = YARDS[A.key];
     if (!Y) continue;
-    // the nearest fit to the platform's way out, a short walk (within 60 tiles)
+    // the nearest fit to the platform's way out, a short walk: a road along its south side first, then its north, then
+    // less of its width on a road, out to 80 tiles
     const ex = Math.floor((A.exit[2]) / TILE), ey = Math.floor((A.exit[3]) / TILE);
-    let best = null, bd = Infinity;
-    for (let dy = -60; dy <= 60; dy += 2) for (let dx = -60; dx <= 60; dx += 2) {
-      const d = Math.hypot(dx, dy);
-      if (d >= bd || d > 60) continue;
-      const x = ex + dx - (YW >> 1), y = ey + dy - YH;
-      if (yardFits(m, x, y, keepOut)) { best = { x, y }; bd = d; }
+    let best = null;
+    for (const [share, R] of [[0.6, 60], [0.35, 80]]) {
+      let bd = Infinity;
+      for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) {
+        const d = Math.hypot(dx, dy);
+        if (d >= bd || d > R) continue;
+        const x = ex + dx - (YW >> 1), y = ey + dy - (YH >> 1);
+        for (const north of [false, true]) if (yardFits(m, x, y, keepOut, share, north)) { best = { x, y, north }; bd = d; break; }
+      }
+      if (best) break;
     }
     if (!best) { out.missed.push(A.key); continue; }
-    out.yards.push(yard(m, H3, K, A, Y, best.x, best.y));
+    out.yards.push(yard(m, H3, K, A, Y, best.x, best.y, best.north));
   }
   return out;
 }
-function yard(m, H3, K, A, Y, x, y) {
+// (the road on its north side, `north`: the way out that side; the office still at its back, the lot open to the road)
+function yard(m, H3, K, A, Y, x, y, north = false) {
   K.clearProps(x - 1, y - 1, x + YW, y + YH);
   const lx0 = x, lx1 = x + 14, ax0 = x + 16, ax1 = x + YW - 1, y1 = y + YH - 1;
   K.fill(lx0, y, lx1, y1, Y.ground);
   K.fill(ax0, y, ax1, y1, Y.ground);
-  K.fill(x, y1 + 1, x + YW - 1, y1 + 1, Y.ground === T.LOT ? T.LOT : T.DIRT);   // (the way out onto the road)
+  const wy = north ? y - 1 : y1 + 1;
+  K.fill(x, wy, x + YW - 1, wy, Y.ground === T.LOT ? T.LOT : T.DIRT);   // (the way out onto the road)
   const office = K.building(lx0 + 1, y + 1, 6, 4, Y.lot, K.shopArt(lx0 + 1, y + 1, { floors: 1, store: 'mart', sign: Y.lot.split(' ').slice(-2).join(' '), signC: Y.sign, awning: [Y.sign[0], '#f0ece4'], door: 'right', people: 1, tone: Y.tone, cornice: 'step' }));
   office.door = { tx: lx0 + 5, ty: y + 5 };
   office.business = 'usedlot';
@@ -227,7 +237,7 @@ function yard(m, H3, K, A, Y, x, y) {
   const lot = [];
   for (const sx of [lx0 + 2.5, lx0 + 5.5, lx0 + 8.5, lx0 + 11.5]) lot.push({ x: Math.round(sx * TILE), y: Math.round((y + 13) * TILE), a: Math.PI / 2 });
   K.prop('chainfence', lx1 + 1, y, 0, { tx: 0, ty: Math.round((YH - 1) * TILE) });
-  K.prop('chainfence', lx0, y, 0, { tx: Math.round((YW - 0.4) * TILE), ty: 0 });
+  K.prop('chainfence', lx0, north ? y1 + 0.9 : y, 0, { tx: Math.round((YW - 0.4) * TILE), ty: 0 });
   K.prop('festoon', lx0 + 0.3, y1 + 0.6, 0, { tx: Math.round(14 * TILE), ty: 0, h: 40 });
   K.prop('textsign', lx0 + 2, y1 + 0.3, 0, { text: A.key === 'country' ? 'FARM TRUCKS' : A.key === 'desert' ? 'USED & SALVAGE' : 'USED CARS', bg: Y.sign[0], fg: Y.sign[1], z: 30, sx: 1, lit: true });
   const acx = (ax0 + ax1 + 1) / 2, aspots = [y + 3, y + 7, y + 11].map((sy) => ({ x: Math.round(acx * TILE), y: Math.round(sy * TILE), a: Math.PI / 2 }));
@@ -238,5 +248,5 @@ function yard(m, H3, K, A, Y, x, y) {
   const lp = K.poi({ kind: 'usedlot', label: Y.lot, x: Math.round((office.door.tx + 0.5) * TILE), y: Math.round((y + 5.7) * TILE), b: office.id, lot, stn: A.poi, stock: Y.stock });
   (m.dealerLots ||= []).push({ poi: lp.id, slots, used: 1, stock: Y.stock });
   (m.stealAlleys ||= []).push({ name: Y.alley, x: Math.round(acx * TILE), y: Math.round((y + YH / 2) * TILE), spots: aspots, stn: A.poi });
-  return { key: A.key, lot: lp.id, at: [x, y], office: office.id };
+  return { key: A.key, lot: lp.id, at: [x, y], north, office: office.id };
 }

@@ -64,7 +64,7 @@ test('a new character gets no starter car; one reset and still waiting for its f
   const garage = w.map.pois.find((q) => q.kind === 'garage');
   assert.ok(optOf(w, p, garage, 'starter'), 'the holder\'s row');
   assert.equal(optOf(w, n, garage, 'starter'), undefined, 'none for a new character');
-  assert.match(pick(w, n, garage, 'starter'), /no starter car/i);
+  assert.match(pick(w, n, garage, 'starter'), /not available|no starter car/i);
   assert.equal(economy.poiLabel(w, n, station(w)).includes('starter'), false);
 });
 

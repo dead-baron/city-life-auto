@@ -125,7 +125,7 @@ function freeSpot(world, lists, except = null) {
     for (const sp of L) if (!near(sp).length) return sp;
     for (const sp of L) {
       const vs = near(sp);
-      if (vs.every((e) => !e.owner && !e.forSale && !e.onEvent && !e.towedBy && !e.ftueMark && !e.starter && !e.seats.some((s) => s))) { for (const e of vs) world.remove(e); return sp; }
+      if (vs.every((e) => !e.owner && !e.forSale && !e.onEvent && !e.towedBy && !e.ftueMark && !e.starter && !e.stolenBy && !e.seats.some((s) => s))) { for (const e of vs) world.remove(e); return sp; }
     }
   }
   return null;
