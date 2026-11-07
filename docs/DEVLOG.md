@@ -21088,7 +21088,16 @@ ocean ... wait for 4 to 5 star wanted levels before the cops get better."
   officer on you counts for less at low stars (`STRUGGLE_SECOND` 0.35 at 1 star, 0.45 at 2, 0.6 from 3 - was 0.6 at
   every level). The bar says "Mash or hold", and "you're winning - keep going!" while the meter rises (`me.fight.up`).
   Simulated (full health; mashing about 7 a second unless said; the before is the code at cac27136):
-  RESULTS_TABLE
+  | stars | one officer, mashing | two officers, mashing | mashing half as fast | holding the button | holding, two officers |
+  |---|---|---|---|---|---|
+  | 1 | 100% -> 100% | 79% -> 98% | 76% -> 70% | 0% -> 68% | 0% -> 26% |
+  | 2 | 100% -> 100% | 60% -> 76% | 65% -> 64% | 0% -> 57% | 0% -> 7% |
+  | 3 | 50% -> 49% | 1% -> 1% | 1% -> 0% | 0% -> 0% | 0% -> 0% |
+  | 4 | 5% -> 4% | 0% | 0% | 0% | 0% |
+  | 5 | 0% -> 0% | 0% | 0% | 0% | 0% |
+
+  (200 struggles each; a few points either way are the dice. 1 star at half health 72% -> 73%, a third 40% -> 42%; 3
+  stars against an agent 27% -> 25%, SWAT 8% -> 8%; the stick alone still never frees you.) 4-5 stars stay as hard.
 - **A break for it from the back of the car** (`custody.js carBreak`): while the car is crawling or stopped (under 60
   px/s, its crew aboard: at the lights, in a jam) the action button kicks the door: a try that works 50% of the time at
   1 star, 35% at 2, 12% at 3, 3% at 4, 1% at 5 (`BREAK_CAR`; x your strength, less after each miss, a try every 2.5 s).
