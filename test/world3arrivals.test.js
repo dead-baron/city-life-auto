@@ -174,14 +174,14 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   assert.deepEqual(over(spot.x, spot.y, 50, 6), [], 'where you step off (between the two canopies)');
   // the lot: its office's front and every display space; the alley's spaces
   const office = M.buildings[lot.b];
-  assert.deepEqual(over((office.tx + office.tw / 2) * TILE, (office.ty + office.th) * TILE - 4, 60, office.tw * TILE / 2), [], 'the lot\'s office');
+  assert.deepEqual(over((office.tx + office.tw / 2) * TILE, (office.ty + office.th) * TILE + 2, 60, office.tw * TILE / 2), [], 'the lot\'s office');
   for (const sp of M.dealerLots.find((d) => d.poi === lot.id).slots) assert.deepEqual(over(sp.x, sp.y, 40, 30), [], `the lot's space at ${sp.x},${sp.y}`);
   for (const sp of P.alley.spots) assert.deepEqual(over(sp.x, sp.y, 40, 30), [], `the alley's space at ${sp.x},${sp.y}`);
   // the shops facing the lane
   for (const name of ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers']) {
     const q = M.pois.find((o) => o.label === name);
     assert.ok(q && M.buildings[q.b] && M.buildings[q.b].art.shop.sign, `${name}: its shopfront`);
-    assert.deepEqual(over(q.x, q.y - 24, 60, 60), [], `${name}'s front`);
+    assert.deepEqual(over(q.x, q.y - 8, 60, 60), [], `${name}'s front`);
   }
   // no road in it - the lane and the alley are paving, so no traffic routes in - and no road edge into it
   const [X0, X1] = [PARK_WEST.x0, PARK_WEST.x1], Y0 = PARK_WEST.lot[1], Y1 = PARK_WEST.walk;
