@@ -93,7 +93,7 @@ test('the switches: turnouts where a loop leaves another\'s track, diamonds wher
 });
 
 test('the mountain tunnels: bores under the hill\'s cover, a train inside hidden from outside', () => {
-  const bores = M.tunnels.filter((t) => t.kind === 'rail');
+  const bores = M.tunnels.filter((t) => t.kind === 'rail' && !t.arrival);   // (the main line's: the arrival lines' short bores are their own - test/world3arrivals.test.js)
   // every stretch of the main line below ground (off its underpasses) is a bore through a hill or under the city's or a
   // town's streets or the water (shared/world3-rail.js mountainBores) - none runs under open, dry country uncovered
   const W = new Set([T.WATER, T.DEEP, T.BRIDGE, T.ROAD]);
