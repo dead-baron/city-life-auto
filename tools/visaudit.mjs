@@ -7,7 +7,8 @@
 // the bake's art grid, the bake's depth rule (chunkbake.js compositeDepth: the taller pixel wins, ties go to the later),
 // buildings last; and a train standing at the platform (live, drawn over the chunk: it wins ties).
 //   visTargets(M)            -> [{ kind, id, name, x, y, ... }]   what is meant to be seen
-//   visAudit(M, opt)         -> { rows: [{ kind, id, name, x, y, cover, by }], counts: { kind: [n, hidden] } }
+//   visAudit(M, opt)         -> { rows: [{ kind, id, name, x, y, cover, by }], counts: { kind: [n, hidden] } }   (opt.all: the
+//                               rows of what is seen too, ok: true; opt.kinds: only these kinds)
 //      cover: the share of its pixels drawn over; by: what covers most of them ('building', 'tree', 'deck', 'train',
 //      'rail', 'prop:<kind>', 'item:<key prefix>'); a row is hidden at cover >= opt.cover (0.4).
 // Run: node --max-old-space-size=4096 tools/visaudit.mjs [--json out.json]   (builds World v3: under the heavy lock)
@@ -23,7 +24,8 @@ const isBld = (it) => !!(it.fade || (it.recipe && it.recipe.t === 'b' && !it.rec
 const RAIL_KEYS = /^(pcan|bn:|lp:|stb:|rboard|sth:|sbr:|els:|fbr:|elsign|elp:|el:|ptl:|xs:)/;
 // what the activities and interactions are played at (server/systems/activities.js ANCHOR, chess.js, the arcades,
 // the fishing piers, the hoops and the lanes): props meant to be found
-export const SPOT_PROPS = new Set(['cafetable', 'picnic', 'fishtable', 'pierrail', 'rods', 'arcade', 'arcademachine', 'pinball', 'claw', 'hoop', 'shower', 'payphone', 'vend_cola', 'vend', 'atm', 'mapboard', 'firepit', 'campfire', 'grill', 'busstop', 'shelter', 'taxisign', 'textsign', 'jobboard', 'noticeboard', 'telescope', 'mailbox']);
+// (a street's mailboxes, lamps and benches are dressing: not in it)
+export const SPOT_PROPS = new Set(['cafetable', 'picnic', 'fishtable', 'pierrail', 'rods', 'arcade', 'arcademachine', 'pinball', 'claw', 'hoop', 'shower', 'payphone', 'vend_cola', 'vend', 'atm', 'mapboard', 'firepit', 'campfire', 'grill', 'busstop', 'shelter', 'taxisign', 'textsign', 'jobboard', 'noticeboard', 'telescope']);
 
 const catOf = (M, it) => {
   if (it.train) return 'train';
@@ -84,17 +86,20 @@ function trainSprite(R, st) {
 // item targets: { kind, id, name, x, y, match(it), pix: 'board' | 'all' }; virtual: { kind, id, name, x, y, pts: [[sx, sy, z]], skip(it) }
 export function visTargets(M) {
   const out = [];
-  // the places: a door on the south face - the doorway and the sign over it (z 4..48, 32 px wide) - else the step outside
+  // the places: a door on the south face - the top of the doorway and the sign over it (z 16..56, 32 px wide: a low
+  // hedge or a bed of flowers in front of it hides nothing that matters) - else the step outside
   for (const p of M.pois || []) {
     if (!p || p.x === undefined) continue;
     const b = p.b !== undefined ? M.buildings[p.b] : null, pts = [];
     const south = b && p.y >= (b.ty + b.th) * TILE - 4;
-    if (south) { const Y = (b.ty + b.th) * TILE; for (let x = -16; x <= 16; x += 2) for (let z = 4; z <= 48; z += 2) pts.push([Math.round(p.x + x), Y - z, z]); }
+    if (south) { const Y = (b.ty + b.th) * TILE; for (let x = -16; x <= 16; x += 2) for (let z = 16; z <= 56; z += 2) pts.push([Math.round(p.x + x), Y - z, z]); }
     else for (let x = -6; x <= 6; x += 2) for (let z = 2; z <= 26; z += 2) pts.push([Math.round(p.x + x), Math.round(p.y) - z, z]);
     const kind = p.kind === 'atm' || p.kind === 'vending' ? p.kind : south ? 'place-front' : b ? 'place-door-n' : 'place-spot';
     // (a front is part of its building: drawn with the buildings, after everything else, in order; a spot is someone
     // standing there - drawn over the chunk, winning ties)
-    out.push({ kind, id: `poi${p.id}`, name: p.label || p.kind, x: p.x, y: south ? (b.ty + b.th) * TILE : p.y, pts, b: p.b, tie: south ? 'bld' : 'win' });
+    // (a door on the north face is behind its own building, by design - the building fades round you there: only what
+    // else stands over its step counts; a station's own house, canopies and furniture are its own)
+    out.push({ kind, id: `poi${p.id}`, name: p.label || p.kind, x: p.x, y: south ? (b.ty + b.th) * TILE : p.y, pts, b: p.b, foot: b ? [b.tx * TILE - 8, b.ty * TILE - 8, (b.tx + b.tw) * TILE + 8, (b.ty + b.th) * TILE + 40] : null, noBld: kind === 'place-door-n', rail: p.kind === 'station', tie: south ? 'bld' : 'win' });
   }
   // the stations: each name board (and the El's), the route boards; the platforms (their paving, z 6: ground sinks 4)
   out.push({ kind: 'station-board', items: (it) => /^(stb:|elsign:)/.test(it.key), pix: 'board', train: true });
@@ -161,20 +166,20 @@ export function visAudit(M, opt = {}) {
   };
   // resolve the item targets: walk the chunks the targets' anchors are in
   const T0 = visTargets(M), targets = [];
+  if (opt.kinds) for (let i = T0.length - 1; i >= 0; i--) if (!opt.kinds.some((k) => T0[i].kind.startsWith(k))) T0.splice(i, 1);
   const itemKinds = T0.filter((t) => t.items && t.pi === undefined);
   const propT = new Map(); for (const t of T0) if (t.pi !== undefined) propT.set(t.pi, t);
   for (const t of T0) if (!t.items) targets.push(t);
   // global items (boards): every chunk that has any; props: the chunk their anchor is in
   const want = new Set();
-  for (const t of propT.values()) want.add(Math.floor(t.y / CH) * 4096 + Math.floor(t.x / CH));
+  for (const t of propT.values()) for (const dy of [-300, 0]) want.add(Math.floor((t.y + dy) / CH) * 4096 + Math.floor(t.x / CH));   // (an item is listed in the chunks its picture is in)
   for (const R of [...(M.rails || [M.rail]), ...(M.arrivals || [])]) for (const st of (R && R.stations) || []) want.add(Math.floor(st.y / CH) * 4096 + Math.floor(st.x / CH));
-  if (M.el) for (let x = M.el.x0; x < M.el.x3; x += CH) want.add(Math.floor(M.el.y / CH) * 4096 + Math.floor(x / CH));
+  if (M.el) for (let x = M.el.x0; x < M.el.x3 + CH; x += CH) for (const dy of [-400, -200, 0, 200]) want.add(Math.floor((M.el.y + dy) / CH) * 4096 + Math.floor(x / CH));
   for (const h of M.railHubs || []) want.add(Math.floor(h.y / CH) * 4096 + Math.floor(h.x / CH));
   const got = new Set();
   for (const k of [...want].sort((a, b) => a - b)) {
     const cx = k % 4096, cy = Math.floor(k / 4096);
     for (const it of staticItems(M, cx, cy)) {
-      if (it.x < cx * CH || it.x >= (cx + 1) * CH || it.y < cy * CH || it.y >= (cy + 1) * CH) continue;   // (its anchor's chunk only)
       const id = `${it.key}@${it.x},${it.y},${it.z0 || 0}`;
       if (got.has(id)) continue;
       const pt = it.pi !== undefined ? propT.get(it.pi) : null;
@@ -199,7 +204,15 @@ export function visAudit(M, opt = {}) {
     const ord = (it) => [isBld(it) ? 1 : 0, it.y, it.x];
     const later = (a, b) => { const p = ord(a), q = ord(b); return p[0] - q[0] || p[1] - q[1] || p[2] - q[2]; };
     const occ = [];
-    const own = (it) => it === self || (self && it.key === self.key && it.x === self.x && it.y === self.y) || (t.b !== undefined && it.b === t.b) || (t.rail && catOf(M, it) === 'rail');
+    // its own: itself; its building and what stands on its footprint or at its door (a hotel's canopy, a market's stalls,
+    // a farm's barn - not a tree); a station's own furniture
+    const own = (it) => {
+      if (it === self || (self && it.key === self.key && it.x === self.x && it.y === self.y) || (t.b !== undefined && it.b === t.b)) return true;
+      const c = catOf(M, it);
+      if (t.rail && c === 'rail') return true;
+      if (t.noBld && c === 'building') return true;
+      return !!t.foot && c !== 'tree' && c !== 'deck' && it.x >= t.foot[0] && it.x <= t.foot[2] && it.y >= t.foot[1] && it.y <= t.foot[3];
+    };
     for (const it of itemsIn(r)) {
       if (own(it)) continue;
       const s = spr(it); if (!s) continue;
@@ -224,7 +237,7 @@ export function visAudit(M, opt = {}) {
     const cv = hid / pts.length, top = [...by].sort((a, b) => b[1] - a[1])[0];
     const k = t.kind, row = { kind: k, id: t.id, name: t.name, x: Math.round(t.x), y: Math.round(t.y), cover: +cv.toFixed(2), by: top ? top[0] : null };
     (counts[k] ||= [0, 0])[0]++;
-    if (cv >= cover) { counts[k][1]++; rows.push(row); }
+    if (cv >= cover) { counts[k][1]++; rows.push(row); } else if (opt.all) rows.push({ ...row, ok: true });
   }
   return { rows, counts, n: targets.length };
 }

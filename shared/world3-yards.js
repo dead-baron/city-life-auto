@@ -452,7 +452,7 @@ function tankFarm(K, m, ctx) {
     if (lot(x + 6, y)) prop('pipes', x + 6, y + 0.5, 0);
   }
   fence(K, X0, Y0, X1, Y0, [[X0 + 1, X0 + 12]]); fence(K, X0, Y0, X0, Y1); fence(K, X1, Y0, X1, Y1);
-  prop('textsign', X0 + 20, Y0 + 0.6, 0, { text: 'GULF FUEL TERMINAL', bg: '#7a2e2e', fg: [250, 230, 190], z: 30, sx: 1 });
+  prop('textsign', X0 + 36, Y0 + 0.6, 0, { text: 'GULF FUEL TERMINAL', bg: '#7a2e2e', fg: [250, 230, 190], z: 30, sx: 1 });   // (east of the highway over the front: at X0 + 20 it stood half under its deck - the owner's 11-06 "GUL...")
   (out.places ||= []).push({ name: 'Gulf Fuel Terminal', x0: X0, y0: Y0, x1: X1, y1: Y1, tanks: n });
 }
 

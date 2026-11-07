@@ -3003,7 +3003,18 @@ function railHubs(I, hubs) {
     put(I, vitem(`sth:${hd.toFixed(3)}`, 'stationHouse', [1, 140], h.x + ox, h.y + oy, hd));
     lightAt(I, h.x + Math.cos(h.a) * 70, h.y + Math.sin(h.a) * 70, 60, 140, [1, 0.85, 0.6], 1.5, 'sign');
     lightAt(I, h.x - Math.cos(h.a) * 20, h.y - Math.sin(h.a) * 20, 70, 150, [1, 0.94, 0.8], 1.3, 'lamp');
-    put(I, { key: `stb:${h.name}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: h.x, y: h.y - 40, ext: [80, 60, 80, 12] });
+    // (its name board on the side the camera sees, just south of the house: north of it - at the doors on a street side to
+    // the north - the house stood over it, the owner's 11-06 "station with the sign hidden"; along the house, clear of the
+    // footbridge's flights coming down by it)
+    const hy = h.y + oy + 46 * Math.abs(Math.sin(h.a)) + 70 * Math.abs(Math.cos(h.a)) + 16, fl = [];
+    for (const f of h.bridges || []) for (const e of f.ends || [{ fx: f.x, fy: f.y, tx: f.x, ty: f.y }]) fl.push(e);
+    const clear = (x, y) => { let d = 1e9; for (const e of fl) { const dx = e.tx - e.fx, dy = e.ty - e.fy, t = clamp(((x - e.fx) * dx + (y - e.fy) * dy) / (dx * dx + dy * dy || 1), 0, 1); d = Math.min(d, Math.hypot(e.fx + dx * t - x, e.fy + dy * t - y)); } return d; };
+    let hb = null;
+    for (const k of [0, 1, -1]) { const x = h.x + ox + Math.sin(h.a) * k * 112, y = hy - Math.cos(h.a) * k * 112, d = clear(x, y); if (!hb || d > hb.d) hb = { x, y, d }; if (d > 100) break; }
+    // (and at doors on the street side to the south it stands on its posts in front of them; on the platforms' side, up over
+    // their canopies' roofs)
+    const hz = Math.sin(h.a) > 0.3 ? 26 : 64;
+    put(I, { key: `stb:${h.name}:${hz}`, recipe: { t: 'sign', text: h.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: hz, posts: true }, x: Math.round(hb.x), y: Math.round(hb.y), ext: [80, hz + 34, 80, 12] });
     for (const f of h.bridges || []) {
       const fh = qa(f.a, STATION_TURNS);
       if (!f.ends) { put(I, vitem(`fbr:${f.len}:${fh.toFixed(3)}`, 'footbridge', [f.len, 30, 6], f.x, f.y, fh)); continue; }
@@ -3126,7 +3137,10 @@ function addEl(c, I) {
     for (const side of [-1, 1]) {
       const py = yc + side * 136;
       for (const dx of [-200, 0, 200]) put(I, vitem('pcan:192:0.00', 'platformCanopy', [192, 40, 1], sx + dx, py, 0, null, { z0: Z }));
-      put(I, { key: 'elsign:MIDTOWN', recipe: { t: 'sign', text: 'MIDTOWN', sx: 1, bg: '#1c4a8a', lit: true, z: 26, posts: true }, x: sx - 160, y: py + 6, z0: Z, ext: [80, 60 + Z, 80, 12] });
+      // (its name board by the platform's outer edge: under the canopy's roof it was half hidden - south, on its posts in
+      // front of the canopy; north, up over the canopy's roof behind it)
+      const bz = side > 0 ? 26 : 64;
+      put(I, { key: `elsign:MIDTOWN:${bz}`, recipe: { t: 'sign', text: 'MIDTOWN', sx: 1, bg: '#1c4a8a', lit: true, z: bz, posts: true }, x: sx - 160, y: yc + side * 162, z0: Z, ext: [80, bz + 34 + Z, 80, 12] });
       lightAt(I, sx, py, Z + 52, 200, [1, 0.94, 0.8], 1.6, 'lamp', 1);
     }
   }
