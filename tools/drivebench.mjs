@@ -240,42 +240,44 @@ async function fly(page, cdp, R) {
   await waitFor(page, () => window.CLA.S.pred && window.CLA.S.pred.air, 30000);
   await wait(1500);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
-  // the autopilot: full ahead (W), turned toward the corridor's far end (A / D), Space to hold the height; back at the end
-  await page.evaluate(({ C, ALT }) => {
-    const S = window.CLA.S, D = window.__drive, key = (code, down) => dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key: code, bubbles: true }));
-    const held = new Set(), want = (codes) => { for (const c of ['KeyW', 'KeyA', 'KeyD', 'Space', 'ShiftLeft']) { const on = codes.includes(c); if (on && !held.has(c)) { key(c, true); held.add(c); } else if (!on && held.has(c)) { key(c, false); held.delete(c); } } };
-    let to = C.to, legs = 0;
-    D.flyTimer = D.si0(() => {
-      const P = S.pred; if (!P || !P.air) { want([]); return; }
-      const s = P.s; if (Math.hypot(to.x - s.x, to.y - s.y) < 900) { to = to === C.to ? C.from : C.to; legs++; D.legs = legs; }
-      let da = Math.atan2(to.y - s.y, to.x - s.x) - s.a; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
-      const k = ['KeyW']; if (Math.abs(da) > 0.06) k.push(da > 0 ? 'KeyD' : 'KeyA'); if ((s.alt || 0) < ALT - 30) k.push('Space'); else if ((s.alt || 0) > ALT + 60) k.push('ShiftLeft');
-      want(k);
-    }, 100);
-    D.flyStop = () => { clearInterval(D.flyTimer); want([]); };
-    D.rec = true;
-  }, { C, ALT });
+  // the autopilot (here, with the browser's own keys): full ahead (W - the keyboard flies car-style: W the throttle, A / D the
+  // tail rotor), turned toward the corridor's far end, Space to hold the height; back again at the end
+  const held = new Set(), want = async (codes) => { for (const c of ['KeyW', 'KeyA', 'KeyD', 'Space', 'ShiftLeft']) { const on = codes.includes(c); if (on && !held.has(c)) { await page.keyboard.down(c); held.add(c); } else if (!on && held.has(c)) { await page.keyboard.up(c); held.delete(c); } } };
+  let to = C.to, legs = 0;
+  const steer = async () => {
+    const s = await page.evaluate(() => { const P = window.CLA.S.pred; return P && P.air && P.s ? { x: P.s.x, y: P.s.y, a: P.s.a, alt: P.s.alt || 0, vx: P.s.vx, vy: P.s.vy, spool: P.s.spool } : null; });
+    if (!s) { await want([]); return null; }
+    if (Math.hypot(to.x - s.x, to.y - s.y) < 900) { to = to === C.to ? C.from : C.to; legs++; }
+    let da = Math.atan2(to.y - s.y, to.x - s.x) - s.a; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    const k = ['KeyW']; if (Math.abs(da) > 0.12) k.push(da > 0 ? 'KeyD' : 'KeyA'); if (s.alt < ALT - 30) k.push('Space'); else if (s.alt > ALT + 60) k.push('ShiftLeft');
+    await want(k);
+    return s;
+  };
+  // a capture: drawing switched on a moment (the run itself draws nothing: SwiftShader's frames would slow the flight to a crawl)
+  const shot = async (f) => { if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(1500); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {}); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU }); R.fly.shots.push(f); };
+  for (let j = 0; j < 30; j++) { await steer(); await wait(100); }
+  log(`after 3 s at the controls: ${JSON.stringify(await steer())}`);
+  await page.evaluate(() => { window.__drive.rec = true; });
   const h0 = await page.evaluate(hudNow);
   log(`flying: from ${JSON.stringify(C.from)} to ${JSON.stringify(C.to)} at ${ALT} px (cpu x${CPU})`);
-  // a capture: drawing switched on a moment (the run itself draws nothing: SwiftShader's frames would slow the flight to a crawl)
-  const shot = async (f) => { await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(2500); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {}); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); R.fly.shots.push(f); };
   const t1 = Date.now() + MIN * 60000;
   let shotAt = 0, i = 0;
   if (SHOTS) mkdirSync(SHOTS, { recursive: true });
   while (Date.now() < t1) {
-    await wait(1000);
+    for (let j = 0; j < 5; j++) { await steer(); await wait(180); }
     const s = await page.evaluate(() => {
       const S = window.CLA.S, w = S.art2, W = w.warmth && w.warmth(), E = w.E, P = S.pred, n = w.n || {}, t = w.t || {};
       let lo = 0, flat = 0;
       for (const k of w.fallbacks) { const cx = k % 1000, cy = Math.floor(k / 1000); if ((cx + 1) * 768 > w.vx0 && cx * 768 < w.vx1 && (cy + 1) * 768 > w.vy0 && cy * 768 < w.vy1 && !E.hasChunk(cx, cy)) { const cv = w.phs.get(k); if (cv && cv.lo) lo++; else flat++; } }
-      return { sp: P && P.s ? Math.round(Math.hypot(P.s.vx, P.s.vy)) : 0, alt: P && P.s ? Math.round(P.s.alt || 0) : 0, x: Math.round(S.cam.x), scr: W ? W.scr : 0, standIns: W ? W.scr - W.scrHave : 0, lo, flat, late: w.late && w.late.of ? Math.round(1000 * w.late.frames / w.late.of) / 10 : 0, server: n.cdn || 0, kept: n.kept || 0, bakes: t.bakeN || 0, hi: !!w.hi, low: w.low ? w.low.stats() : null, pool: w.pool ? { run: w.pool.stats().running, q: w.pool.stats().queued } : null, legs: window.__drive.legs || 0 };
+      return { sp: P && P.s ? Math.round(Math.hypot(P.s.vx, P.s.vy)) : 0, alt: P && P.s ? Math.round(P.s.alt || 0) : 0, x: Math.round(S.cam.x), scr: W ? W.scr : 0, standIns: W ? W.scr - W.scrHave : 0, lo, flat, late: w.late && w.late.of ? Math.round(1000 * w.late.frames / w.late.of) / 10 : 0, server: n.cdn || 0, kept: n.kept || 0, bakes: t.bakeN || 0, hi: !!w.hi, low: w.low ? w.low.stats() : null, pool: w.pool ? { run: w.pool.stats().running, q: w.pool.stats().queued } : null, legs: 0 };
     });
+    s.legs = legs;
     s.t = ++i; R.fly.samples.push(s);
     if (i % 10 === 0) log(`fly ${i} s: ${JSON.stringify(s)}`);
     if (SHOTS && Date.now() - shotAt > SHOT_S * 1000) { shotAt = Date.now(); await shot(join(SHOTS, `fly-${String(i).padStart(3, '0')}.jpg`)); }
   }
   const h1 = await page.evaluate(hudNow);
-  await page.evaluate(() => window.__drive.flyStop());
+  await want([]);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
   const S = R.fly.samples, avg = (f) => Math.round(10 * S.reduce((a, s) => a + f(s), 0) / Math.max(1, S.length)) / 10;
   R.fly.summary = { seconds: S.length, legs: S.length ? S[S.length - 1].legs : 0, avgSpeed: avg((s) => s.sp), standInsAvg: avg((s) => s.standIns), flatAvg: avg((s) => s.flat), lowAvg: avg((s) => s.lo), screenAvg: avg((s) => s.scr), secondsWithFlat: S.filter((s) => s.flat > 0).length, late: h1.late, server: h1.server - h0.server, bakedHere: h1.bakeN - h0.bakeN, kept: h1.kept - h0.kept, highAir: S.filter((s) => s.hi).length, low: S.length ? S[S.length - 1].low : null };
