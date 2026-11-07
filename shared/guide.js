@@ -13,8 +13,10 @@ import {
   GANG_JOIN_FEE, MAILJOB, CAB, BUSJOB, TOWJOB, MEDIC, FISHING, DEEPSEA_PAY, DEEPSEA_CATCH, PAINT_PRICE, HIDE_TIME_S, AMBULANCE_FEE,
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
-  PICK_PRICES, ASSAY_PAYS,
+  PICK_PRICES, ASSAY_PAYS, ARCADE,
 } from './rules.js';
+import { BOWL, BIG } from './bowling.js';
+import { CHESS } from './rules-leisure.js';
 import { FORK, RANGER } from './rules-work.js';
 import { SHOPS, ITEMS } from './items.js';
 import { RODS } from './fish.js';
@@ -52,7 +54,7 @@ const PLACE_NOTES = [
   ['pawn', 'Pawn shops', () => `Buy and sell gear; they take hot money for a ${pct(HOT_PAWN_CUT)} cut.`],
   ['fence', 'The black market', () => `Buys stolen cargo and hot money (a ${pct(HOT_FENCE_CUT)} cut), sells silent guns, and has the mail train job.`],
   ['gang', 'Gang HQs', () => `Join the Syndicate for ${$(GANG_JOIN_FEE)}: its turf leaves members be.`],
-  ['bowling', 'Bowling alleys', () => 'Rent a lane.'],
+  ['bowling', 'Bowling alleys', () => `Rent a lane and shoes at the counter (${$(BOWL.FEE)}); friends join your lane and take turns.`],
   ['cinema', 'Cinemas', () => 'Tickets, popcorn and a film.'],
   ['bathhouse', 'Bathhouses', () => 'Showers, hot baths and a sauna.'],
 ];
@@ -103,6 +105,13 @@ export function guideSections(map = null) {
     { id: 'activities', title: 'Activities', blurb: 'Things to do that aren\'t work.', entries: [
       { id: 'fishing', t: 'Fishing', b: `Face the water with a rod and hold [[action]] to cast - let go for the distance. When the bobber dives, press to strike, then hold to keep the fish in your bar. Rods: ${andList(rods)}. Bait changes what bites.` },
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
+      // (11-07: the arcades' machines, pool, air hockey, bowling and chess against other players - teach the new thing)
+      { id: 'arcade', t: 'Arcades', b: `Walk in and up to a machine and press [[action]] to play it: STARFALL on the upright cabinets (${$(ARCADE.price)}), skee-ball (${$(ARCADE.skee.price)}), pinball and air hockey (${$(ARCADE.hockey.price)} each), and a pool table. Scores win tickets - one balance, good at every arcade's prize counter.` },
+      { id: 'pool', t: 'Pool', b: `At a pool table (an arcade's, the Rusty Spur's) [[action]] pays the table (${$(ARCADE.pool)}): wait for a player, play the computer, or clear a frame alone. A game is eight-ball - solids or stripes, the 8 last; a foul gives your opponent the shot. A win in an arcade pays ${ARCADE.match.win} tickets against a player, ${ARCADE.match.cpu} against the computer.` },
+      { id: 'hockey', t: 'Air hockey', b: `Against the machine, first to ${ARCADE.hockey.to}: your mallet follows your finger, the mouse or the stick. A win pays ${ARCADE.hockey.win} tickets, a loss ${ARCADE.hockey.perGoal} a goal.` },
+      { id: 'bowl', t: 'Bowling', b: `Rent a lane at Pinwheel Lanes' shoe counter (${$(BOWL.FEE)}), step onto its approach and pick up a ball with [[action]] - it sets your hook too. Face where you want it to go, hold [[fire]] and let go to roll. Up to ${BIG.lanes} wide lanes; friends join yours and take turns, and every bowler's score is on the lane's screen.` },
+      { id: 'chess', t: 'Chess', b: `Sit down at a chess table in a park, a square or on the boardwalk with [[action]]. Wait for a player or play the computer (a park regular); a game left mid-way is resigned. The regular thinks ${CHESS.thinkS[0]}-${CHESS.thinkS[1]} seconds a move.` },
+      { id: 'join', t: 'Playing other people', b: 'Pool, chess and bowling take other players: walk up to a table or a lane where someone is waiting and press [[action]] to join. A game against the computer is never interrupted - you can watch it instead. Leaving a game against a player forfeits it.' },
       { id: 'dice', t: 'Street dice', b: `A crew shooting dice down an alley or a back passage in a rough part of town, like Southside's: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
       { id: 'races', t: 'Races and skating', b: 'Pull up to a race\'s start to enter. Skate parks score your tricks; beaches have surf.' },
       { id: 'caves', t: 'Caves and mining', b: `Walk up to a mine's adit or a cave's mouth and press [[action]] to go in. It's dark inside - [[light]] switches your light on. The way out shows by the daylight coming in, a lantern either side and a WAY OUT board. A pickaxe (from ${$(PICK_PRICES.pickStone)} at hardware stores) works the ore veins; the assay office pays ${pct(ASSAY_PAYS - 1)} more than a pawn shop.` },

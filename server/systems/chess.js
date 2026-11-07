@@ -12,6 +12,10 @@
 //     the descriptor's pp 'chess', as the old men's games show it), so anyone passing sees the game going on.
 //   - The board screen (client/leisure/chess.js, on the arcade's overlay: its keys are the game's) is what you play
 //     on; closing it gets you up - a game against someone else in progress is resigned, against the regular it's left.
+//   - (11-07, the owner: "other players can come up and play against you (but not necessarily interrupt your current
+//     game if you're playing against PC)") a table whose seats are both taken - two players, or a player and the
+//     regular - can't be sat at: anyone walking up can watch the game on the board screen instead (G.watch), till they
+//     close it or walk off.
 // On the wire: { t: 'arcade', game: 'chess', id } opens the screen; { t: 'chess', ... } (state) every change, to the
 // players at the table; 'chessmv' (a piece set down: its click) near the table.
 import { start, find, make, san, status, key, boardStr, inCheck, STATUS_WORDS, DRAWN } from '../../shared/chess.js';
@@ -59,9 +63,9 @@ export function interaction(world, p) {
   const G = games(world).get(T.id);
   if (G) {
     const free = G.seats.indexOf(null);
-    if (free < 0) return null;
-    const other = G.seats[free ^ 1];
+    const other = free < 0 ? null : G.seats[free ^ 1];
     if (other && other.pid) return { label: `Play chess with ${occName(world, other)}`, run: () => sit(world, p, T, free) };
+    if (free < 0 && G.st !== 'wait') return { label: `Watch the chess game - ${occName(world, G.seats[G.white])} v ${occName(world, G.seats[G.white ^ 1])}`, run: () => watch(world, p, G) };
     return null;
   }
   const A = world.acts && world.acts.get(T.id);
@@ -73,6 +77,13 @@ export function interaction(world, p) {
   return { label: 'Sit down at the chess table', run: () => sit(world, p, T, 0) };
 }
 
+// someone watching a game (the board screen, nothing to move)
+function watch(world, p, G) {
+  (G.watch ||= new Set()).add(p.pid);
+  p.chess = { g: G.id, seat: -1 };
+  if (p.conn) p.conn.sendJSON({ t: 'arcade', game: 'chess', id: `chess${G.id}` });
+  push(world, G);
+}
 function newGame(T) { return { id: T.id, T, seats: [null, null], white: 0, s: start(), seen: {}, sans: [], last: null, st: 'wait', res: '', win: -1, offer: -1, at: 0, think: null, moveAt: 0, gameN: 0 }; }
 function begin(world, G) {
   G.s = start(); G.seen = { [key(G.s)]: 1 }; G.sans = []; G.last = null; G.st = 'play'; G.res = ''; G.win = -1; G.offer = -1; G.at = world.time; G.think = null; G.gameN++;
@@ -174,6 +185,7 @@ function end(world, G, win, how) {
 export function onMsg(world, p, msg) {
   const C = p.chess, G = C && games(world).get(C.g);
   if (!G || !p.ped) return;
+  if (C.seat < 0) { if (msg.a === 'leave') getUp(world, p, 'left'); else if (msg.a === 'state') push(world, G); return; }   // (a watcher)
   const me = C.seat, other = G.seats[me ^ 1];
   switch (msg.a) {
     case 'move': {
@@ -220,6 +232,7 @@ export function getUp(world, p, why = 'left') {
   const C = p.chess;
   if (!C) return;
   p.chess = null;
+  if (C.seat < 0) { const G = games(world).get(C.g); if (G && G.watch) G.watch.delete(p.pid); if (p.conn && why !== 'left') p.conn.sendJSON({ t: 'chess', close: 1 }); return; }   // (a watcher: just goes)
   const ped = p.ped;
   if (ped) { ped.gt = null; ped.pp = null; ped.cv = null; ped.appVer = (ped.appVer || 0) + 1; ped.y += 14; if (world.place) world.place(ped); }
   p.meDirty = true;
@@ -230,12 +243,13 @@ export function getUp(world, p, why = 'left') {
   if (G.st === 'play' && other && other.pid) end(world, G, C.seat ^ 1, `${p.name} left the table`);
   G.seats[C.seat] = null;
   if (other && other.npc) { dismiss(world, G, other); G.seats[C.seat ^ 1] = null; }
-  if (!G.seats.some(Boolean)) { games(world).delete(G.id); return; }
+  if (!G.seats.some(Boolean)) { games(world).delete(G.id); unwatch(world, G); return; }
   G.st = 'wait'; G.think = null;
   const q = playerOf(world, G.seats[C.seat ^ 1]);
   if (q && why !== 'over') world.notify(q, `${p.name} got up from the table. Wait for someone else - or call the park regular over.`, 'info');
   push(world, G);
 }
+function unwatch(world, G) { for (const id of G.watch || []) { const q = world.players.get(id); if (q && q.chess && q.chess.g === G.id) { q.chess = null; if (q.conn) q.conn.sendJSON({ t: 'chess', close: 1 }); } } if (G.watch) G.watch.clear(); }
 function dismiss(world, G, o) {
   const n = npcOf(world, o);
   if (!n || !n.npc) return;
@@ -256,6 +270,7 @@ function wire(world, G, seat) {
 }
 function push(world, G) {
   G.seats.forEach((o, i) => { const q = playerOf(world, o); if (q && q.conn) q.conn.sendJSON(wire(world, G, i)); });
+  if (G.watch && G.watch.size) { const m = { ...wire(world, G, G.white), watch: 1 }; for (const id of G.watch) { const q = world.players.get(id); if (q && q.conn) q.conn.sendJSON(m); } }
 }
 
 export function update(world) {
@@ -263,6 +278,7 @@ export function update(world) {
   if (!A || !A.size) return;
   const now = world.time;
   for (const G of [...A.values()]) {
+    for (const id of [...(G.watch || [])]) { const q = world.players.get(id), ped = q && q.ped; if (!q || !q.chess || q.chess.g !== G.id || !ped || ped.dead || ped.vehId || Math.hypot(ped.x - G.T.x, ped.y - G.T.y) > CHESS.reach + 90) { G.watch.delete(id); if (q && q.chess && q.chess.g === G.id) getUp(world, q, 'gone'); } }   // (the watchers still near)
     // the players still sat there: held in their seats, facing the board; dead, gone, in a car: up they get
     for (let i = 0; i < 2; i++) {
       const o = G.seats[i];
@@ -283,13 +299,13 @@ export function update(world) {
           const q = playerOf(world, G.seats[i ^ 1]);
           if (G.st === 'play' && q) { G.st = 'over'; G.win = -1; G.res = 'Your opponent ran off - the game is off'; world.notify(q, 'The park regular has gone - the game is off.', 'warn'); }
           G.st = G.st === 'over' ? 'over' : 'wait';
-          if (!G.seats.some(Boolean)) { A.delete(G.id); break; }
+          if (!G.seats.some(Boolean)) { A.delete(G.id); unwatch(world, G); break; }
           push(world, G);
         }
       }
     }
     if (!A.has(G.id)) continue;
-    if (!G.seats.some(Boolean)) { A.delete(G.id); continue; }
+    if (!G.seats.some(Boolean)) { A.delete(G.id); unwatch(world, G); continue; }
     if (G.st !== 'play') continue;
     if (now - G.at > CHESS.idleS) { G.st = 'over'; G.win = -1; G.res = 'Nobody moved for a long while - the game is off'; push(world, G); continue; }
     // the regular's move: thought out a few milliseconds a tick, played once he's sat a moment over it

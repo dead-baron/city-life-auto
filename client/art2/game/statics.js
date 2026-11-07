@@ -3937,7 +3937,7 @@ function cutRecipe(c, b, s, spec, base) {
     const blk = u.cells !== undefined && c.M.cellBlocks ? c.M.cellBlocks[u.cells] : null, ox = s.tx * TILE, oy = s.ty * TILE;   // (a police station's cells: shared/cells.js)
     const cells = blk ? { bars: blk.bars.map((q) => [q[0] - ox, q[1] - oy, q[2] - ox, q[3] - oy]), cells: blk.cells.map((q) => ({ door: [q.door.x - ox, q.door.y - oy], bench: [q.bench.x - ox, q.bench.y - oy], toilet: [q.toilet.x - ox, q.toilet.y - oy] })), dir: blk.south ? 1 : -1, back: (blk.south ? blk.y0 : blk.y1) - oy } : null;
     const bw = u.kind === 'bowling' && c.M.bowling ? c.M.bowling : null;   // (Pinwheel Lanes: shared/bowling.js lays the lanes out)
-    const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len })), ca: (u.x1 - 3 - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE } : null;
+    const bowl = bw ? { lanes: bw.lanes.map((L) => ({ ax: L.ax - ox, foul: L.foulY - oy, back: L.backEdge - oy, dir: L.dir, len: L.len, k: L.k || 1, w: L.w || 44, ap: L.appr || 2 * TILE })), ca: (u.x1 - (bw.big ? 6 : 3) - s.tx) * TILE, cb: (u.x1 - s.tx) * TILE, kit: bw.kit ? bw.kit.map((q) => ({ t: q.t, b: [q.b[0] - ox, q.b[1] - oy, q.b[2] - ox, q.b[3] - oy] })) : null } : null;
     const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theater: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
@@ -4121,23 +4121,23 @@ function bowlingFloor(u, r, px) {
   const C0 = hexRGB('#1e2a52'), C1 = hexRGB('#25335f'), FL = [[230, 80, 120], [80, 200, 230], [240, 200, 80]].map((c) => c);
   for (let Y = r.inY0; Y < r.inY1; Y++) for (let x = u.x0; x < u.x1; x++) {
     let c = null;
-    for (const L of B.lanes) {
-      if (x < L.ax || x >= L.ax + 44) continue;
-      const lx = x - L.ax, v = (L.foul - Y) * L.dir;   // (down the lane from the foul line)
-      const end = (L.foul - L.back) * L.dir;
+    for (const L of B.lanes) {   // (11-07: a big alley's lanes drawn k times the size - measured here in lane units)
+      if (x < L.ax || x >= L.ax + L.w) continue;
+      const k = L.k, lx = Math.floor((x - L.ax) / k), v = Math.floor((L.foul - Y) * L.dir / k);   // (down the lane from the foul line)
+      const end = (L.foul - L.back) * L.dir / k;
       if (v >= 0 && v < end) {
         if (lx < 2 || lx >= 42) c = cap;
         else if (lx < 7 || lx >= 37) c = lx === 2 || lx === 41 ? gutLip : gut;
         else if (v > end - 10) c = pit;
         else if (v > L.len - 8) c = deck[lx & 1];
-        else c = maple[(lx + ((v >> 5) & 1)) & 3];
+        else c = maple[(lx + ((v >> 5) & 1) + (k > 1 && (x - L.ax) % k === 0 ? 1 : 0)) & 3];
         if (c !== cap && c !== gut && c !== gutLip && c !== pit) {
           const b = lx - 7;
           if (b % 5 === 2 && b > 1 && b < 29 && Math.abs(v - (L.len * 0.3 + 10 - Math.abs(b - 15) * 0.7)) < 2) c = arrow;   // (the arrows, a chevron)
           if (Math.abs(v - 14) < 1 && b % 5 === 2 && b > 1 && b < 29) c = arrow;   // (the dots)
         }
         if (v < 1.5 && lx >= 7 && lx < 37) c = foul;
-      } else if (v < 0 && v >= -2 * TILE) {
+      } else if (v < 0 && (L.foul - Y) * L.dir >= -L.ap) {
         c = lx < 2 || lx >= 42 ? cap : app[(lx >> 1) & 1];
         if (v > -1.5) c = foul;
         if ((v === -20 || v === -36) && lx % 5 === 2 && lx > 6 && lx < 38) c = arrow;   // (the approach dots)
@@ -4158,24 +4158,41 @@ function bowlingRoom(u, r, px0_) {
   const BALLC = [[200, 40, 40], [40, 150, 70], [40, 80, 200], [130, 60, 190], [230, 160, 40]];
   B.lanes.forEach((L, i) => {
     // the masking unit and the scoreboard over each lane, on the back wall: a dark panel, the screen lit with the frames
-    const Yw = Math.min(L.back, L.back + L.dir) + 1;
-    for (let x = L.ax + 3; x < L.ax + 41; x++) for (let v = 26; v < 52; v++) {
-      const sx = x - L.ax - 3, sv = v - 26, edge = sx === 0 || sx === 37 || sv === 0 || sv === 25;
-      const lit = !edge && sv > 3 && sv < 22 && sx > 2 && sx < 35;
+    const Yw = Math.min(L.back, L.back + L.dir) + 1, K = L.k, v0 = K > 1 ? 22 : 26, v1 = K > 1 ? 90 : 52, sw = L.w - 6 * K, sh = v1 - v0;
+    for (let x = L.ax + 3 * K; x < L.ax + L.w - 3 * K; x++) for (let v = v0; v < v1; v++) {
+      const sx = x - L.ax - 3 * K, sv = v - v0, edge = sx === 0 || sx === sw - 1 || sv === 0 || sv === sh - 1;
+      const lit = !edge && sv > 3 && sv < sh - 4 && sx > 2 && sx < sw - 3;
       const bar = lit && (sv % 6 < 3) && ((sx + i * 3) % 11 < 7);
       px(x, Yw, v, edge ? [20, 20, 26] : bar ? [[90, 200, 255], [255, 120, 80], [120, 255, 140], [255, 220, 90]][(i + (sv / 6 | 0)) & 3] : lit ? screen[1] : [34, 36, 44], [0, 1, 0]);
     }
-    for (let x = L.ax + 7; x < L.ax + 37; x++) for (let v = 0; v < 12; v++) px(x, Yw, v, [16, 16, 20], [0, 1, 0]);   // (the dark pit's mouth)
+    for (let x = L.ax + 7 * K; x < L.ax + L.w - 7 * K; x++) for (let v = 0; v < 12 * K; v++) px(x, Yw, v, [16, 16, 20], [0, 1, 0]);   // (the dark pit's mouth)
     // a ball return between each pair of lanes, at the back of the approach, a few balls on it
-    if (i % 2 === 1) {
+    if (i % 2 === 1 && !B.kit) {
       const xm = (L.dir > 0 ? L.ax : L.ax + 44) - 4, Ya = L.foul + L.dir * 34, Yb = L.foul + L.dir * 58;
       slab(xm, xm + 8, Math.min(Ya, Yb), Math.max(Ya, Yb), 9, metal, metal);
       for (let k = 0; k < 3; k++) { const c = BALLC[(i + k) % BALLC.length], by = Math.min(Ya, Yb) + 4 + k * 6; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (dx * dx + dy * dy <= 5) px(xm + 4 + dx, by + dy, 11 + (dx * dx + dy * dy < 2 ? 1 : 0), dx < 0 && dy < 0 ? c.map((q) => Math.min(255, q + 60)) : c, [0, 0, 1]); }
     }
   });
+  // (11-07, IN14) a big alley's room filled out: its kit (shared/bowling.js alleyKit) - the returns with their balls, the
+  // scoring consoles lit, the curved settees round their tables, the snack bar's counter, menu and stools, the tables and
+  // chairs, the arcade cabinets, the plants
+  if (B.kit) for (const q of B.kit) {
+    const [x0, y0, x1, y1] = q.b, w = x1 - x0, mx = (x0 + x1) / 2;
+    if (q.t === 'return') { slab(x0, x1, y0, y1, 12, metal, metal); slab(x0 + 3, x1 - 3, y0, y0 + 10, 22, metal, metal); for (let k = 0; k < 4; k++) { const c = BALLC[k % BALLC.length], by = y0 + 14 + k * 8; for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) px(mx + dx, by + dy, 13 + (dx * dx + dy * dy < 3 ? 1 : 0), dx < 0 && dy < 0 ? c.map((v) => Math.min(255, v + 70)) : c, [0, 0, 1]); } }
+    else if (q.t === 'console') { slab(x0, x1, y0, y1, 16, counterTop, metal); for (let xx = x0 + 2; xx < x1 - 2; xx++) for (let yy = y0 + 2; yy < y1 - 6; yy++) px(xx, yy, 17, [[90, 200, 255], [120, 255, 140]][(xx + yy) % 5 ? 0 : 1], [0, 0, 1]); }
+    else if (q.t === 'settee') { slab(x0, x1, y0, y1, 10, red, red); if (w > 40) slab(x0, x1, y1 - 6, y1, 20, red, red); }
+    else if (q.t === 'table') { slab(x0, x1, y0, y1, 16, wood, wood); px(mx, (y0 + y1) / 2, 17, [240, 220, 160], [0, 0, 1]); }
+    else if (q.t === 'chair' || q.t === 'stool') slab(x0, x1, y0, y1, q.t === 'stool' ? 12 : 10, q.t === 'stool' ? red : wood, metal);
+    else if (q.t === 'snack') {
+      slab(x0, x1, y0, y1, 22, counterTop, wood);
+      for (let xx = x0 + 6; xx < x1 - 6; xx += 22) { slab(xx, xx + 10, y0 + 4, y0 + 12, 30, metal, metal); for (let v = 30; v < 34; v++) px(xx + 5, y0 + 8, v, [240, 200, 80], [0, 0, 1]); }   // (the popcorn, the drinks' taps)
+      for (let xx = x0 + 4; xx < x1 - 4; xx++) for (let v = 40; v < 58; v++) px(xx, Math.min(y0, y1) - 2, v, v > 54 || v < 42 ? [30, 22, 18] : [[255, 214, 90], [255, 120, 80], [120, 220, 255]][((xx - x0) / 40 | 0) % 3], [0, 1, 0]);   // (the menu boards lit over it)
+    } else if (q.t === 'cabinet') { slab(x0, x1, y0, y1, 34, metal, [[30, 20, 60], [40, 26, 80], [50, 34, 96], [60, 40, 110], [70, 46, 130]]); for (let yy = y0 + 4; yy < y1 - 4; yy++) for (let zz = 26; zz < 33; zz++) px(x0 + 1, yy, zz, [[60, 220, 255], [120, 255, 140], [255, 220, 90]][((yy >> 2) + zz) % 3], [-1, 0, 0]); }
+    else if (q.t === 'plant') { slab(x0 + 5, x1 - 5, y0 + 6, y1 - 2, 10, wood, wood); slab(x0, x1, y0, y1 - 6, 26, ramp('#3e7a3a', 5, 2), ramp('#2e5a2a', 5, 2)); }
+  }
   // the settees behind the approach (the west half, clear of the door), little tables between
   const L0 = B.lanes[0], dir = L0.dir, Ys = L0.foul + dir * (2 * TILE + 6);
-  const xs0 = u.x0 + 8, xs1 = Math.min(u.dx - 12, u.x1 - 8);
+  const xs0 = u.x0 + 8, xs1 = B.kit ? xs0 : Math.min(u.dx - 12, u.x1 - 8);
   for (let x = xs0; x + 34 <= xs1; x += 46) {
     slab(x, x + 34, Math.min(Ys, Ys + dir * 10), Math.max(Ys, Ys + dir * 10), 10, red, red);
     slab(x, x + 34, Math.min(Ys + dir * 10, Ys + dir * 14), Math.max(Ys + dir * 10, Ys + dir * 14), 18, red, red);
@@ -4187,7 +4204,7 @@ function bowlingRoom(u, r, px0_) {
   for (let k = 0; k < 4; k++) { const c = [[200, 40, 40], [40, 80, 200], [230, 230, 230], [40, 150, 70]][k], x = B.ca + 10 + k * 18; for (const o of [0, 4]) for (let dy = 0; dy < 6; dy++) for (let dx = 0; dx < 3; dx++) px(x + o + dx, cy + 12 + dy, 23, dy === 0 ? [240, 240, 240] : c, [0, 0, 1]); }
   // the arcade machines along the front, west of the door: tall cabinets, their screens and marquees lit
   const Ya = r.inY1 - 14;
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < (B.kit ? 0 : 2); k++) {
     const x = u.x0 + 10 + k * 22;
     if (x + 16 > u.dx - 8) break;
     slab(x, x + 16, Ya - 8, Ya, 34, metal, [[30, 20, 60], [40, 26, 80], [50, 34, 96], [60, 40, 110], [70, 46, 130]]);

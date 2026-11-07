@@ -248,6 +248,19 @@ function build(m, api, K) {
     prop('foodcart', 2668, y0 + 2.6, 10); prop('umbrella_y', 2669.6, y0 + 3.1, 4);
     m.pois.push({ id: m.pois.length, kind: 'snack', label: 'Boardwalk Ice Cream Cart', x: 2668 * TILE, y: Math.round((y0 + 3.6) * TILE), r: 36, counter: true });
     prop('textsign', 2600, y0 + 0.4, 0, { text: 'SUNSET BOARDWALK', bg: '#2a5a8a', fg: [255, 226, 140], z: 46, sx: 1 });
+    // (11-07, the owner: "put a few [chess] tables in the world") chess on the boardwalk: two tables out in the open between
+    // the palms, clear of the lamps, the carts and the ways down to the sand (server/systems/chess.js plays at them)
+    let nChess = 0;
+    for (const g of gaps.slice(1)) {
+      if (nChess >= 2) break;
+      for (const x of [g + 9.5, g + 14, g + 18.5]) {
+        const palm = Math.abs(((x - 4.5) % 9 + 9) % 9 - 4.5), lamp = Math.abs(((x - 8.5) % 12 + 12) % 12 - 6);
+        if (palm > 3 || lamp < 4 || Math.abs(x - (BX.sunset - 6)) < 7 || Math.abs(x - 2668) < 6 || Math.abs(x - BX.sunset) < 6 || x > x1 - 4) continue;
+        prop('cafetable', x, y0 + 3.2, 0, { chess: 1, seat: 27, open: 1 }); prop('chair', x - 0.9, y0 + 3.3, 0, { v: 2, a: 0 }); prop('chair', x + 0.9, y0 + 3.3, 0, { v: 2, a: 3.1416 });
+        nChess++;
+        break;
+      }
+    }
     placeName('Sunset Boardwalk', x0, y0, x1, y1);
     return { x0, x1, y0, y1 };
   }

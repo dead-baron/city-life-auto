@@ -295,6 +295,9 @@ function greenfieldPark(K, m, out) {
   prop('fountain', F[0], F[1], 36); prop('statue', F[0], F[1] - 0.3, 0);
   for (const [dx, dy] of [[-5.5, -3], [5.5, -3], [-6, 3.4], [6, 3.4]]) prop('pbench', F[0] + dx, F[1] + dy, 0);
   for (const [dx, dy] of [[-8.6, 0], [8.6, 0], [-4, -6.4], [4, -6.4]]) prop('flowers_big', F[0] + dx, F[1] + dy, 0);
+  // (11-07, the owner: "put a few [chess] tables in the world") two chess tables on the fountain's plaza, below the
+  // benches, open to the sky (server/systems/chess.js plays at them)
+  for (const dx of [-4.5, 4.5]) { prop('cafetable', F[0] + dx, F[1] + 6, 0, { chess: 1, seat: 27, open: 1 }); prop('chair', F[0] + dx - 0.9, F[1] + 6.1, 0, { v: 2, a: 0 }); prop('chair', F[0] + dx + 0.9, F[1] + 6.1, 0, { v: 2, a: 3.1416 }); }
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(F[0]) - 6, y: F[1] - 5, w: 12, h: 10, name: 'Greenfield Fountain' });
   // ---- the soccer pitch in the north-west: turf in chain-link, the covered stand along its north side, floodlights
   {
