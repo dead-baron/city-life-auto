@@ -30,6 +30,7 @@ import { payFrom as pay } from './economy.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as skate from './skate.js';
+import * as poolmatch from './poolmatch.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -45,14 +46,29 @@ export const label = (poi) => `${poi.label} - the arcade`;
 
 // ---- the floor -------------------------------------------------------------------------------------------------------
 export const ARC0 = 5000000;   // (an arcade's floor's id: clear of the homes' and the flats' - homes.js UNIT0)
-// the cabinets along the back wall, west to east (shared/homelayout.js 'arcade': its j pieces in order), a game each
+// the games, and the machine each is played on (shared/homelayout.js PLANS.arcade: 11-07, the owner: "skeeball would have
+// a skeeball machine, air hockey is an air hockey table") - j an upright cabinet, 7 a skee-ball lane, 5 a pinball
+// machine (a run of them side by side, a tile each), 4 an air hockey table, x a pool table (the whole piece)
 export const GAMES = ['starfall', 'skee', 'pinball', 'hockey'];
+export const MACHINE = { j: 'starfall', 7: 'skee', 5: 'pinball', 4: 'hockey', x: 'pool' };
 const GAME = {
   starfall: { name: 'STARFALL', price: () => ARCADE.price, note: () => `tickets for every ${ARCADE.perTicket} points` },
   skee: { name: 'Skee-ball', price: () => ARCADE.skee.price, note: () => `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points` },
   pinball: { name: 'Pinball - NEON NIGHTS', price: () => ARCADE.pinball.price, note: () => `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points` },
   hockey: { name: 'Air hockey against the machine', price: () => ARCADE.hockey.price, note: () => `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win` },
+  pool: { name: 'Pool', price: () => ARCADE.pool, note: () => 'clear the table in as few shots as you can' },
 };
+// every machine on a floor, one a game: a run of cabinets, lanes or pinball machines is one each per tile
+export function machines(L) {
+  const out = [];
+  for (const q of L.pieces) {
+    const game = MACHINE[q.ch];
+    if (!game) continue;
+    const n = q.ch === '4' || q.ch === 'x' ? 1 : q.tw;
+    for (let k = 0; k < n; k++) out.push({ piece: q, game, k, x: q.x + k * q.w / n, y: q.y, w: q.w / n, h: q.h });
+  }
+  return out;
+}
 const PLAN = 'arcade', FLAG = 'arcadeflag', TIER = 3;   // (the mansion's palette: the deep purple carpet, the dark walls)
 export const hallLayout = (h = null) => layout((h && h.plan) || PLAN, TIER);
 // (the tickets' word, everywhere they're shown: one balance, every arcade's)
@@ -63,7 +79,7 @@ export function hallOf(world, poi) {
   const id = ARC0 + poi.id, H = (world.arcadeHalls ||= new Map());
   let h = H.get(id);
   if (!h) H.set(id, (h = { id, isArcade: 1, poi: poi.id, kind: 'arcade', plan: poi.flagship ? FLAG : PLAN, price: 60000, name: poi.label, x: poi.x, y: poi.y, slots: 0,
-    welcome: poi.flagship ? `${poi.label}, the flagship: eighteen cabinets, the big prize counter - and your tickets from every arcade count here.` : `In ${poi.label}: walk up to a cabinet to play, the prize counter for your tickets (from any arcade).` }));
+    welcome: poi.flagship ? `${poi.label}, the flagship: rows of cabinets, skee-ball, air hockey, pinball and pool, the big prize counter - and your tickets from every arcade count here.` : `In ${poi.label}: walk up to a machine to play, the prize counter for your tickets (from any arcade).` }));
   return h;
 }
 export const hallById = (world, id) => (world.arcadeHalls ? world.arcadeHalls.get(Number(id)) || null : null);
@@ -89,11 +105,13 @@ export function goIn(world, p, poi) {
   homes.goInside(world, p, h);
   return null;
 }
-// the cabinet within reach of (x, y) - the nearest, to its edge - with its game, or null
+// the machine within reach of (x, y) - the nearest, to its edge - with its game, or null
 const edge = (q, x, y) => Math.hypot(Math.max(q.x - x, 0, x - (q.x + q.w)), Math.max(q.y - y, 0, y - (q.y + q.h)));
+const MACH = new WeakMap();
 export function cabinetAt(L, x, y) {
-  let best = null, bd = HOME_IN.reach + 2;
-  L.pieces.filter((q) => q.ch === 'j').forEach((q, i) => { const d = edge(q, x, y); if (d < bd) { bd = d; best = { piece: q, game: GAMES[i % GAMES.length], d }; } });
+  let list = MACH.get(L), best = null, bd = HOME_IN.reach + 2;
+  if (!list) MACH.set(L, (list = machines(L)));
+  for (const m of list) { const d = edge(m, x, y); if (d < bd) { bd = d; best = { ...m, d }; } }
   return best;
 }
 // What the action button does where you stand on the floor (homeinside.js interaction)
@@ -101,14 +119,18 @@ export function hallInteraction(world, p, h, s) {
   const L = hallLayout(h), poi = world.map.pois[h.poi], none = () => {};
   const u = useAt(L, s.x, s.y, HOME_IN.reach), cab = cabinetAt(L, s.x, s.y);
   if (cab && (!u || cab.d <= edge(u, s.x, s.y))) {
+    if (cab.game === 'pool') {   // (a pool table: against a player, the computer, or a frame alone - poolmatch.js)
+      const q = cab.piece, key = `a${h.id}:${q.tx},${q.ty}`;
+      return poolmatch.interaction(world, p, key, { fee: ARCADE.pool, tickets: true, cpu: 'the CPU', poi: poi ? poi.id : null, at: (o) => !!(o.ped && o.ped.home && o.ped.home.id === h.id && edge(q, o.ped.home.x, o.ped.home.y) < HOME_IN.reach + 40) });
+    }
     const G = GAME[cab.game], best = bestOf(p.profile, cab.game);
     return { label: `Play ${G.name} - $${G.price()} (${G.note()}${best ? `; your best ${best.toLocaleString('en-US')}` : ''})`, run: () => credit(world, p, poi, cab.game) };
   }
   if (u && u.use === 'door') return { label: 'Out to the street', run: () => homeinside.leave(world, p) };
   if (u && u.use === 'prizes') { const t = p.profile.tickets || 0; return { label: `The prize counter - ${ticketsLine(t)}`, run: () => openCounter(world, p, poi) }; }
-  return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to a cabinet to play, the prize counter for your tickets`, passive: true, run: none } : null;
+  return world.time - (s.inAt ?? -1e9) < HOME_IN.hintS ? { label: `${h.name} - walk up to a machine to play, the prize counter for your tickets`, passive: true, run: none } : null;
 }
-const bestOf = (prof, game) => ({ skee: prof.skeeBest, hockey: prof.hockeyWins, pinball: prof.pinballBest }[game] ?? prof.arcadeBest) || 0;
+const bestOf = (prof, game) => ({ skee: prof.skeeBest, hockey: prof.hockeyWins, pinball: prof.pinballBest, pool: prof.poolBest }[game] ?? prof.arcadeBest) || 0;
 // a credit in a cabinet: paid for, and the page plays it (play)
 export function credit(world, p, poi, game) {
   const G = GAME[game];
@@ -135,7 +157,7 @@ export function menu(world, p, poi) {
   }
   opts.push({ id: 'ar:in', label: 'Go inside', note: 'the cabinets and the prize counter', shut: true });
   opts.push({ id: 'close', label: 'Leave' });
-  return { t: 'menu', poi: poi.id, title: poi.label, sub: `${poi.flagship ? 'The flagship arcade: eighteen cabinets in rows, the big prize counter. ' : ''}The cabinets blinking in the dark, the bleeps and the high scores. You have ${ticketsLine(t)}.`, opts, cash: prof.cash, bank: prof.bank };
+  return { t: 'menu', poi: poi.id, title: poi.label, sub: `${poi.flagship ? 'The flagship arcade: rows of cabinets, skee-ball, air hockey, pinball and pool, the big prize counter. ' : ''}The cabinets blinking in the dark, the bleeps and the high scores. You have ${ticketsLine(t)}.`, opts, cash: prof.cash, bank: prof.bank };
 }
 const prizeName = (q) => (q.item ? ITEMS[q.item].name : q.board ? 'A skateboard of your own' : DECOR[q.decor].name);
 
@@ -180,7 +202,8 @@ export function poolInteraction(world, p) {
   const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
   if (!T || !ped || ped.dead || ped.vehId) return null;
   if (Math.hypot(Math.max(T.x0 - ped.x, 0, ped.x - T.x1), Math.max(T.y0 - ped.y, 0, ped.y - T.y1)) > POOL_REACH) return null;
-  return { label: `Rack 'em up at the pool table ($${ARCADE.pool})`, run: () => { if (pay(p, ARCADE.pool)) play(world, p, true, null, 'pool'); else world.notify(p, 'Not enough money.', 'warn'); } };
+  const near = (o) => !!(o.ped && !o.ped.dead && !o.ped.vehId && Math.hypot(Math.max(T.x0 - o.ped.x, 0, o.ped.x - T.x1), Math.max(T.y0 - o.ped.y, 0, o.ped.y - T.y1)) <= POOL_REACH + 40);
+  return poolmatch.interaction(world, p, 'spur', { fee: ARCADE.pool, tickets: false, cpu: 'Hank (a regular)', free: true, at: near });   // (11-07: against a player, a regular, or a frame alone - poolmatch.js)
 }
 
 // skee-ball's points or air hockey's goals: tickets, if it could be true (no more than the game allows, and no quicker)

@@ -348,31 +348,178 @@ export function poolTable(w = 96, d = 64, tier = 3) {
   m.box(w * 0.08, d / 2 + 6, 26, w * 0.32, d / 2 + 7, 27, cue);
   return m;
 }
-// an arcade cabinet: tall, its screen lit (brighter at night), the marquee over it, the joystick and buttons on the deck
+// ---- an arcade's machines (the owner, 11-06: "not just the same arcade cabinet over and over... skeeball would have a
+// skeeball machine, air hockey is an air hockey table"; the AC1 / AC2 / AC7 concepts) - each lit from within, so the
+// dark hall glows (homeart2.js lights an arcade's floor by them). A run of cabinets, lanes or pinball machines is one
+// piece: a machine to each 32 px of it.
+const glow = (m, hex, a, k = 3) => m.mat({ ramp: R(hex, 5, 2), k, emi: [...hexRGB(hex), a], flag: F_NOCAST });
+const hexRGB = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const TRIM = ['#c8263a', '#2a5ad8', '#e8b820', '#7a3ac8', '#1e9a6a', '#e8602a'];
+// the upright video cabinets side by side (STARFALL: client/arcade.js): the side art in its colour, the marquee lit
+// over the screen - the attract mode's waves of invaders in their rows, the ship below - the control deck's stick and
+// buttons, the coin door's lit slots
 export function arcade(w = 32, d = 32, tier = 3, on = 0) {
-  const m = new Vox(w, d, 60);
-  const cab = m.mat({ ramp: R('#2a2e5a'), k: 3, shade: (x, y, z) => (x < 7 || x > w - 8 ? (Math.round(z) % 10 < 3 ? 0.6 : 0) : 0) }), blk = m.mat({ ramp: R('#141418'), k: 2 });
-  const scr = m.mat({ ramp: R('#3ad0e8'), k: 2, emi: [80, 220, 255, 90 + on * 120], flag: F_NOCAST, shade: (x, y, z) => (Math.round(z) % 3 === 0 ? -0.4 : hash(Math.round(x), Math.round(z), 3) > 0.8 ? 0.6 : 0) });
-  const mq = m.mat({ ramp: R('#e85a9a'), k: 3, emi: [255, 110, 190, 60 + on * 120], flag: F_NOCAST }), btn = ['#e83a3a', '#e8d03a', '#3ae86a'].map((c) => m.mat({ ramp: R(c), k: 3 }));
-  m.box(6, 6, 0, w - 6, d - 6, 58, cab);
-  m.box(7, d - 6, 0, w - 7, d - 2, 22, cab);                  // the base, out toward you
-  m.box(7, d - 8, 22, w - 7, d - 1, 25, blk);                 // the control deck
-  m.box(10, d - 6, 28, w - 10, d - 5, 44, scr);               // the screen
-  m.box(7, d - 7, 48, w - 7, d - 5, 56, mq);                  // the marquee
-  m.box(11, d - 5, 25, 13, d - 3, 30, blk); btn.forEach((b, i) => m.box(16 + i * 3, d - 5, 25, 18 + i * 3, d - 3, 26, b));
+  const m = new Vox(w, d, 62), n = Math.max(1, Math.round(w / 32)), u = w / n;
+  const blk = m.mat({ ramp: R('#16161c'), k: 2 }), deck = m.mat({ ramp: R('#2a2a34'), k: 3 }), cap = m.mat({ ramp: R('#3a3a46'), k: 3 });
+  const bg = glow(m, '#0c1640', 60 + on * 60, 2), ship = glow(m, '#5ae0ff', 200), al = ['#ff5a8a', '#ffd23a', '#8aff6a'].map((c) => glow(m, c, 200));
+  const coin = glow(m, '#ff8a2a', 160), stick = m.mat({ ramp: R('#e83a3a'), k: 3 });
+  for (let i = 0; i < n; i++) {
+    const x0 = i * u, tc = TRIM[(i * 5 + (seedOf(w) | 0)) % TRIM.length];
+    const side = m.mat({ ramp: R(tc), k: 3, shade: (x, y, z) => (Math.round(z / 6 + y / 9) % 3 === 0 ? 0.7 : 0) }), body = m.mat({ ramp: R(tc, 6, 4), k: 1 });
+    const mq = glow(m, tc, 120 + on * 100, 4);
+    m.box(x0 + 3, 4, 0, x0 + 6, d - 3, 60, side); m.box(x0 + u - 6, 4, 0, x0 + u - 3, d - 3, 60, side);   // the side panels, their art
+    m.box(x0 + 6, 6, 0, x0 + u - 6, 22, 60, body);                       // the cabinet
+    m.box(x0 + 6, 22, 0, x0 + u - 6, d - 4, 24, body);                   // the lower front, out toward you
+    m.box(x0 + 11, d - 5, 8, x0 + u - 11, d - 4, 16, blk); m.box(x0 + 13, d - 5, 10, x0 + 15, d - 3, 14, coin); m.box(x0 + u - 15, d - 5, 10, x0 + u - 13, d - 3, 14, coin);   // the coin door
+    m.box(x0 + 5, 20, 24, x0 + u - 5, d - 2, 27, deck);                  // the control deck
+    m.box(x0 + 10, d - 8, 27, x0 + 12, d - 6, 31, blk); m.ell(x0 + 11, d - 7, 32, 1.6, 1.6, 1.6, stick);   // the stick
+    al.forEach((c, j) => m.box(x0 + 15 + j * 3, d - 8, 27, x0 + 17 + j * 3, d - 6, 28, c));   // the buttons
+    m.box(x0 + 6, 20, 27, x0 + u - 6, 22, 48, blk);                      // the bezel
+    for (let z = 29; z < 46; z++) for (let x = x0 + 8; x < x0 + u - 8; x++) {   // the screen: the attract mode
+      const sx = x - x0 - 8, sz = 45 - z;
+      let c = bg;
+      if (sz >= 2 && sz < 9 && sz % 3 !== 1 && sx % 3 !== 2) c = al[Math.floor((sz - 2) / 3) % 3];
+      if (sz === 14 && sx >= 6 && sx < 10) c = ship; if (sz === 13 && sx >= 7 && sx < 9) c = ship;
+      if (c === bg && hash(sx, sz, i + 3) > 0.93) c = ship;   // (a star)
+      m.set(x, 21, z, c);
+    }
+    m.box(x0 + 5, 18, 48, x0 + u - 5, 23, 57, mq);                       // the marquee, lit
+    for (let x = x0 + 8; x < x0 + u - 8; x += 2) m.set(x, 22, 52, blk);  // (its lettering)
+    m.box(x0 + 4, 4, 57, x0 + u - 4, 23, 61, cap);
+  }
   void tier;
   return m;
 }
-// an arcade's prize counter (shared/homelayout.js G; server arcade.js): a dark counter, its front a glass case of prizes
-// lit from inside, the top glass over more, and plush toys along the back of it
+const seedOf = (w) => Math.round(w / 32) * 7;
+// skee-ball lanes side by side, rolled at from their foot (the south): the maple lane up to the hump, the lit rails,
+// the rings at the back - 10, 20, 30, 40, 50, the 100 pockets in the corners - the score box lit over them, the balls
+// waiting in the return
+export function skeeBall(w = 32, d = 96, tier = 3) {
+  const m = new Vox(w, d, 64), n = Math.max(1, Math.round(w / 32)), u = w / n;
+  const maple = m.mat({ ramp: R('#d8a060'), k: 3, shade: (x, y) => (Math.round(y) % 12 === 0 ? -0.6 : hash(Math.round(x), Math.round(y / 4), 2) > 0.8 ? 0.4 : 0) });
+  const wood = m.mat({ ramp: R('#b07a3a'), k: 3 }), ringM = m.mat({ ramp: R('#e8cc90'), k: 4 }), hole = m.mat({ ramp: R('#141012'), k: 1 }), net = m.mat({ ramp: R('#2a2a30'), k: 2, flag: F_NOCAST });
+  const rail = m.mat({ ramp: R('#a8261e'), k: 3 }), amber = glow(m, '#ffb020', 170), red = glow(m, '#ff4a3a', 170, 3), ball = m.mat({ ramp: R('#8a4a1e'), k: 3 }), score = glow(m, '#ffd23a', 220, 4), box = m.mat({ ramp: R('#2a1418'), k: 2 });
+  for (let i = 0; i < n; i++) {
+    const x0 = i * u, cx = x0 + u / 2;
+    m.box(x0 + 1, 30, 0, x0 + u - 1, d, 8, wood);                                   // the cabinet under the lane
+    for (let y = 34; y < d - 6; y++) { const z = 8 + Math.round((d - 6 - y) * 0.06) + (y >= 34 && y < 40 ? 3 : 0); m.box(x0 + 5, y, 8, x0 + u - 5, y + 1, z + 1, maple); }   // the lane, rising to the hump
+    for (let y = 30; y < d; y++) { const z = 14 + Math.round((d - y) * 0.12); m.box(x0 + 1, y, 0, x0 + 5, y + 1, z, rail); m.box(x0 + u - 5, y, 0, x0 + u - 1, y + 1, z, rail); if (y % 6 < 3) { m.set(x0 + 2, y, z, amber); m.set(x0 + u - 3, y, z, amber); } }   // the rails, their lights chasing
+    for (let y = 6; y < 34; y++) {                                                 // the target: the rings on the slope up to the back
+      const z = 12 + Math.round((34 - y) * 1.1);
+      for (let x = x0 + 2; x < x0 + u - 2; x++) {
+        const r = Math.hypot(x + 0.5 - cx, (y - 20) * 1.15);
+        const c = r < 2.6 ? hole : r < 4 ? ringM : r < 5.2 ? hole : r < 7.6 ? ringM : r < 8.6 ? hole : r < 11 ? ringM : wood;
+        m.box(x, y, 8, x + 1, y + 1, z, wood); m.set(x, y, z, c); m.set(x, y, z - 1, c);
+      }
+    }
+    for (const sx of [x0 + 4, x0 + u - 5]) m.box(sx, 8, 40, sx + 2, 10, 42, hole);   // the 100 pockets
+    m.box(x0 + 1, 0, 0, x0 + u - 1, 6, 62, box);                                   // the back, the score box over it
+    m.box(x0 + 3, 5, 46, x0 + u - 3, 7, 58, score);
+    for (let x = x0 + 5; x < x0 + u - 5; x += 3) m.box(x, 6, 49, x + 2, 8, 55, red);
+    m.box(x0 + 1, 2, 34, x0 + 2, 34, 50, net); m.box(x0 + u - 2, 2, 34, x0 + u - 1, 34, 50, net);   // the side nets
+    m.box(x0 + 5, d - 6, 6, x0 + u - 5, d, 11, box);                               // the ball return at the foot
+    for (let k = 0; k < 3; k++) m.ell(x0 + 9 + k * 7, d - 3, 12, 2.6, 2.6, 2.6, ball);
+  }
+  void tier;
+  return m;
+}
+// an air hockey table (AC7): the lit blue top with its air holes, the red centre line and circle, the goal slots in the
+// ends, the chrome rails with their light strips, the starred apron, the two mallets and the puck, the score tower
+export function airHockey(w = 96, d = 64, tier = 3) {
+  const m = new Vox(w, d, 44), cx = w / 2, cy = d / 2;
+  const apron = m.mat({ ramp: R('#1e2a6a'), k: 3, shade: (x, y, z) => (Math.abs(((Math.round(x) % 16) - 8)) + Math.abs(Math.round(z) - 12) < 3 ? 1.4 : 0) });
+  const leg = m.mat({ ramp: R('#2a2a34'), k: 2 }), chrome = m.mat({ ramp: R('#c8d0dc'), k: 4 }), slot = m.mat({ ramp: R('#08080c'), k: 1 });
+  const top = m.mat({ ramp: R('#3a86e8', 6, 3), k: 3, emi: [60, 130, 255, 50], shade: (x, y) => ((Math.round(x) % 5 === 2 && Math.round(y) % 5 === 2) ? -0.9 : 0) });
+  const line = m.mat({ ramp: R('#e83040'), k: 3 }), blue = glow(m, '#40a0ff', 200), orange = glow(m, '#ff8030', 200);
+  const malR = m.mat({ ramp: R('#e83a3a'), k: 3 }), malB = m.mat({ ramp: R('#2a6ae8'), k: 3 }), puck = m.mat({ ramp: R('#1e1e24'), k: 2 }), digit = glow(m, '#ff3a2a', 230);
+  for (const [x, y] of [[8, 12], [w - 12, 12], [8, d - 14], [w - 12, d - 14]]) m.box(x, y, 0, x + 4, y + 4, 8, leg);
+  m.box(4, 8, 8, w - 4, d - 4, 22, apron);
+  m.box(6, 10, 22, w - 6, d - 6, 24, top);
+  m.box(cx - 1, 10, 23, cx + 1, d - 6, 24, line);
+  m.fill((x, y) => { const r = Math.hypot(x - cx, y - cy); return r > 8 && r < 9.6 ? line : -1; }, cx - 10, cy - 10, 23, cx + 10, cy + 10, 24);
+  for (const ex of [6, w - 6]) m.fill((x, y) => { const r = Math.hypot(x - ex, y - cy); return r > 13 && r < 14.6 ? line : -1; }, ex - 15, cy - 15, 23, ex + 15, cy + 15, 24);
+  m.box(4, 8, 22, w - 4, 10, 28, chrome); m.box(4, d - 6, 22, w - 4, d - 4, 28, chrome);   // the rails
+  m.box(4, 10, 22, 6, d - 6, 28, chrome); m.box(w - 6, 10, 22, w - 4, d - 6, 28, chrome);
+  m.box(4, cy - 8, 22, 6, cy + 8, 28, slot); m.box(w - 6, cy - 8, 22, w - 4, cy + 8, 28, slot);   // the goal slots
+  for (let x = 8; x < w - 8; x++) { m.set(x, 9, 28, x < cx ? blue : orange); m.set(x, d - 5, 28, x < cx ? blue : orange); }
+  m.cyl('z', 20, cy + 4, 0, 4.5, 24, 27, malB); m.cyl('z', 20, cy + 4, 0, 1.8, 27, 31, malB);
+  m.cyl('z', w - 22, cy - 6, 0, 4.5, 24, 27, malR); m.cyl('z', w - 22, cy - 6, 0, 1.8, 27, 31, malR);
+  m.cyl('z', cx + 9, cy + 3, 0, 2.6, 24, 25, puck);
+  m.box(cx - 8, 2, 8, cx + 8, 8, 40, leg); m.box(cx - 6, 7, 32, cx - 1, 9, 38, digit); m.box(cx + 1, 7, 32, cx + 6, 9, 38, digit);   // the score tower
+  void tier;
+  return m;
+}
+// pinball machines side by side (NEON NIGHTS: client/pinball.js): on their legs, the playfield under its glass sloping
+// up to the backbox - the bumpers, the slingshots, the flippers, the sunset over the skyline lit - the backbox's art
+// glowing at the back, the plunger and the buttons at the front
+export function pinball(w = 32, d = 64, tier = 3) {
+  const m = new Vox(w, d, 64), n = Math.max(1, Math.round(w / 32)), u = w / n;
+  const leg = m.mat({ ramp: R('#c8ccd4'), k: 4 }), field = glow(m, '#1a1a5a', 70, 2), sunA = glow(m, '#ff8a3a', 170), sunB = glow(m, '#ff4a8a', 170);
+  const city = m.mat({ ramp: R('#14102a'), k: 2 }), bump = glow(m, '#ff3a4a', 190), bumpW = glow(m, '#f4f0e8', 160, 4), flip = glow(m, '#ffd23a', 150), lane = glow(m, '#3ae86a', 160), cyan = glow(m, '#3ad0ff', 170);
+  const steel = m.mat({ ramp: R('#9aa0aa'), k: 3 });
+  for (let i = 0; i < n; i++) {
+    const x0 = i * u, tc = TRIM[(i * 3 + 1) % TRIM.length], body = m.mat({ ramp: R(tc), k: 2, shade: (x, y, z) => (Math.round(y / 5 + z / 3) % 4 === 0 ? 0.8 : 0) });
+    for (const [x, y] of [[x0 + 5, 16], [x0 + u - 8, 16], [x0 + 5, d - 6], [x0 + u - 8, d - 6]]) m.box(x, y, 0, x + 3, y + 3, 22, leg);
+    for (let y = 14; y < d - 2; y++) {                               // the cabinet, its playfield sloping up to the back
+      const z = 24 + Math.round((d - 2 - y) * 0.12);
+      m.box(x0 + 3, y, 18, x0 + u - 3, y + 1, z, body);
+      for (let x = x0 + 5; x < x0 + u - 5; x++) {
+        const fx = x - x0 - u / 2, fy = y - 14, L = d - 16;
+        let c = field;
+        if (fy < L * 0.36 && Math.hypot(fx, fy - L * 0.32) < 7) c = (fy + Math.round(fx)) % 4 < 2 ? sunA : sunB;   // the sunset
+        if (fy > L * 0.22 && fy < L * 0.36 && hash(x, 1, 7) > 0.5 && fy > L * 0.36 - 2 - hash(x >> 1, 2, 9) * 6) c = city;
+        for (const [bx, by] of [[-5, 0.46], [5, 0.46], [0, 0.56]]) { const r = Math.hypot(fx - bx, fy - L * by); if (r < 3.2) c = r < 1.8 ? bumpW : bump; }
+        if (Math.abs(Math.abs(fx) - 9) < 1 && fy > L * 0.3 && fy < L * 0.8) c = lane;
+        if (fy > L * 0.72 && fy < L * 0.86 && Math.abs(Math.abs(fx) - 7) < 1.2) c = cyan;   // the slingshots
+        if (fy > L * 0.88 && fy < L * 0.93 && Math.abs(fx) > 1.5 && Math.abs(fx) < 7) c = flip;   // the flippers
+        m.set(x, y, z, c);
+      }
+      m.set(x0 + 4, y, z, steel); m.set(x0 + u - 5, y, z, steel);
+    }
+    m.box(x0 + u - 7, d - 3, 18, x0 + u - 5, d, 22, steel);          // the plunger
+    m.box(x0 + 2, 4, 18, x0 + u - 2, 16, 62, body);                  // the backbox, its art lit
+    for (let z = 34; z < 60; z++) for (let x = x0 + 4; x < x0 + u - 4; x++) {
+      const bx = x - x0 - u / 2, bz = z - 34;
+      const c = Math.hypot(bx, bz - 13) < 7 ? (bz % 3 ? sunA : sunB) : bz < 9 ? (hash(x, 3, 4) > 0.4 && bz < 3 + hash(x >> 1, 4, 5) * 7 ? city : field) : bz > 21 ? cyan : field;
+      m.set(x, 16, z, c);
+    }
+  }
+  void tier;
+  return m;
+}
+// claw machines (just for show): the cabinet, the glass case full of plush, the claw hanging over them, the lit top
+export function clawMachine(w = 32, d = 32, tier = 3) {
+  const m = new Vox(w, d, 62), n = Math.max(1, Math.round(w / 32)), u = w / n;
+  const base = m.mat({ ramp: R('#d83a7a'), k: 3 }), frame = m.mat({ ramp: R('#e8e0f0'), k: 4 });
+  const top = glow(m, '#ffd23a', 190), claw = m.mat({ ramp: R('#c8ccd4'), k: 4 }), toys = ['#f4a0c0', '#ffe070', '#8ae8ff', '#a8f08a', '#f4f0e8'].map((c) => m.mat({ ramp: R(c), k: 3 }));
+  for (let i = 0; i < n; i++) {
+    const x0 = i * u;
+    m.box(x0 + 3, 4, 0, x0 + u - 3, d - 3, 22, base);
+    for (let k = 0; k < 9; k++) m.ell(x0 + 8 + (k % 3) * 8, 10 + Math.floor(k / 3) * 6, 25 + (k % 2) * 2, 3.4, 3, 3.4, toys[(k + i) % 5]);
+    for (const [x, y] of [[x0 + 3, 4], [x0 + u - 5, 4], [x0 + 3, d - 5], [x0 + u - 5, d - 5]]) m.box(x, y, 22, x + 2, y + 2, 52, frame);
+    m.box(x0 + 3, d - 4, 22, x0 + u - 3, d - 3, 25, frame); m.box(x0 + 3, 4, 22, x0 + u - 3, 6, 52, base);   // (the glass: open to see in)
+    m.box(x0 + 3, 4, 52, x0 + u - 3, d - 3, 60, top);
+    m.box(x0 + u / 2 - 1, d / 2 - 1, 40, x0 + u / 2 + 1, d / 2 + 1, 52, claw); m.box(x0 + u / 2 - 3, d / 2 - 2, 37, x0 + u / 2 + 3, d / 2 + 2, 40, claw);
+  }
+  void tier;
+  return m;
+}
+// an arcade's prize counter (shared/homelayout.js G; server arcade.js): the shelves of plush up the back wall lit along
+// their edges, the counter in front - its glass case of prizes lit from inside, the ticket counter on it
 export function prizeCounter(w = 96, d = 32, tier = 3) {
-  const m = new Vox(w, d, 40);
-  const base = m.mat({ ramp: R('#3a2a4a'), k: 3 }), trim = m.mat({ ramp: R('#e85a9a'), k: 3, emi: [255, 110, 190, 70], flag: F_NOCAST });
-  const gl = m.mat({ ramp: R('#cfe6ee', 5, 3), k: 3, flag: F_GLASS | F_NOCAST }), toys = ['#e85a9a', '#f2c21b', '#3ad0e8', '#7ae86a', '#f08a3a'].map((c) => m.mat({ ramp: R(c), k: 3 }));
-  m.box(0, 2, 0, w, d, 8, base); m.box(0, 2, 8, 2, d, 24, base); m.box(w - 2, 2, 8, w, d, 24, base); m.box(0, 2, 8, w, 6, 24, base);
-  for (let x = 4, i = 0; x < w - 6; x += 7, i++) { m.box(x, 10, 8, x + 4, 14, 12 + (i % 3) * 2, toys[i % 5]); m.box(x + 2, 20, 8, x + 5, 23, 11, toys[(i + 2) % 5]); }
-  m.box(2, d - 1, 8, w - 2, d, 24, gl); m.box(2, 6, 24, w - 2, d, 25, gl); m.box(0, d - 1, 24, w, d, 26, trim);
-  for (let x = 6, i = 0; x < w - 6; x += 9, i++) m.ell(x, 4, 28, 3, 2.5, 3.5, toys[(i + 1) % 5]);
+  const deep = d >= 56, m = new Vox(w, d, deep ? 62 : 40);
+  const base = m.mat({ ramp: R('#3a2a4a'), k: 3 }), trim = glow(m, '#e85a9a', 90), shelf = m.mat({ ramp: R('#5a3a2a'), k: 3 });
+  const gl = m.mat({ ramp: R('#cfe6ee', 5, 3), k: 3, flag: F_GLASS | F_NOCAST }), toys = ['#e85a9a', '#f2c21b', '#3ad0e8', '#7ae86a', '#f08a3a', '#f4f0e8', '#a87ae8'].map((c) => m.mat({ ramp: R(c), k: 3 }));
+  const lit = glow(m, '#fff0c0', 120), reg = m.mat({ ramp: R('#2a2c34'), k: 2 }), regS = glow(m, '#5ae0ff', 180);
+  const c0 = deep ? d - 30 : 2;   // (the counter's back)
+  if (deep) {
+    m.box(0, 0, 0, w, 10, 60, shelf);
+    for (const z of [14, 30, 46]) { m.box(0, 0, z - 2, w, 14, z, shelf); for (let x = 2; x < w - 2; x++) m.set(x, 13, z - 1, lit); for (let x = 5, k = 0; x < w - 5; x += 8, k++) m.ell(x, 8, z + 4, 3.6, 3.2, 4 + (k % 2), toys[(k + z) % 7]); }
+  }
+  m.box(0, c0, 0, w, d, 8, base); m.box(0, c0, 8, 2, d, 24, base); m.box(w - 2, c0, 8, w, d, 24, base); m.box(0, c0, 8, w, c0 + 4, 24, base);
+  for (let x = 4, i = 0; x < w - 6; x += 7, i++) { m.box(x, c0 + 8, 8, x + 4, c0 + 12, 12 + (i % 3) * 2, toys[i % 7]); m.box(x + 2, c0 + 18, 8, x + 5, c0 + 21, 11, toys[(i + 2) % 7]); }
+  m.box(2, d - 1, 8, w - 2, d, 24, gl); m.box(2, c0 + 4, 24, w - 2, d, 25, gl); m.box(0, d - 1, 24, w, d, 26, trim); for (let x = 2; x < w - 2; x++) m.set(x, d - 2, 9, lit);
+  m.box(w - 20, c0 + 6, 25, w - 8, c0 + 16, 34, reg); m.box(w - 18, c0 + 15, 30, w - 10, c0 + 16, 34, regS);   // the ticket counter
   void tier;
   return m;
 }
@@ -592,4 +739,4 @@ export function woodpile(w = 32, d = 32, tier = 1) {
   void tier;
   return m;
 }
-export const MAKERS = { '^': homeStairs, p: fireplace, '%': hotTub, m: homeBar, e: exBike, z: shelves, '&': woodpile, M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, G: prizeCounter, i: cinemaSeats, n: island, s: sectional, h: bathtub };
+export const MAKERS = { '^': homeStairs, p: fireplace, '%': hotTub, m: homeBar, e: exBike, z: shelves, '&': woodpile, M: mailboxes, d: turntable, q: recordCrates, Z: stairs, B: bed, W: wardrobe, S: safe, F: fridge, H: shower, A: hallTable, Y: keyBoard, K: counter, T: table, C: couch, V: tv, L: toilet, N: basin, O: armchair, Q: bookshelf, P: plant, b: bedside, l: lamp, v: walltv, a: art, w: washer, k: workbench, x: poolTable, j: arcade, G: prizeCounter, 7: skeeBall, 4: airHockey, 5: pinball, 6: clawMachine, i: cinemaSeats, n: island, s: sectional, h: bathtub };

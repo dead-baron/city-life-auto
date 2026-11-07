@@ -6,7 +6,7 @@ import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
 import { IN } from '../shared/input.js';
 import { DT, T, TILE } from '../shared/constants.js';
 import { SWING_S } from '../shared/golf.js';
-import { BOWL, ALL_PINS, scoreCard, totalScore, nextBall, knockPins, rollBall, pinCount, alleyLanes, approachAt, lanePt } from '../shared/bowling.js';
+import { BOWL, BIG, ALL_PINS, scoreCard, totalScore, nextBall, knockPins, rollBall, pinCount, alleyLanes, approachAt, lanePt } from '../shared/bowling.js';
 import * as bowling from '../server/systems/bowling.js';
 
 const left = (mask) => { const up = []; for (let i = 0; i < 10; i++) if (!(mask & (1 << i))) up.push(i + 1); return up; };
@@ -60,21 +60,47 @@ test('the pins fall from the ball\'s line and speed: the pocket strikes, a gutte
   assert.ok(rollBall(lane, 0, 0, 1, 0).speed > rollBall(lane, 0, 0, 0.2, 0).speed, 'power is speed');
 });
 
-test('Pinwheel Lanes on the map: a walk-in with eight lanes, the approach to stand on, the lanes off limits, the counter', () => {
+test('Pinwheel Lanes on the map: a walk-in with its lanes, the approach to stand on, the lanes off limits, the counter', () => {
   const w = makeWorld(), m = w.map, A = m.bowling;
-  assert.ok(A && A.lanes.length === BOWL.LANES, 'eight lanes');
   const b = m.buildings[A.b], poi = m.pois.find((q) => q.id === A.poi);
+  assert.ok(A && A.lanes.length === (A.big ? BIG.lanes : BOWL.LANES), 'its lanes');
   assert.equal(poi.kind, 'bowling');
   assert.ok(b.walkIn && m.walkIns.includes(b.id) && b.walkIn.units[0].kind === 'bowling', 'a walk-in');
   assert.ok(A.district, `in a district (${A.district})`);
   for (const L of A.lanes) {
-    assert.ok(L.ax >= (b.walkIn.x0) * TILE && L.ax + BOWL.PITCH <= (b.walkIn.x1 + 1) * TILE, `lane ${L.i + 1} inside`);
-    const mid = lanePt(L, 0, L.len / 2), app = lanePt(L, 0, -TILE);
+    assert.ok(L.ax >= (b.walkIn.x0) * TILE && L.ax + L.w <= (b.walkIn.x1 + 1) * TILE, `lane ${L.i + 1} inside`);
+    const mid = lanePt(L, 0, L.len / 2), app = lanePt(L, 0, -TILE / L.k);
     assert.equal(m.tileAtPx(mid.x, mid.y), T.COUNTER, 'nobody walks down a lane');
     assert.equal(m.tileAtPx(app.x, app.y), T.FLOOR, 'the approach is floor');
     assert.equal(approachAt(A, app.x, app.y), L.i, 'standing on its approach');
   }
   assert.equal(m.tileAtPx(A.counter.x, A.counter.y), T.FLOOR, 'in front of the counter');
+});
+
+// (11-07, the owner: "Bowling alley is huge interior with tiny lanes. How about making the lanes much bigger?... bigger,
+// wider lanes with more visible pins") a big hall - World v3's Old Freight House, 62 x 40 (test/world3server.test.js
+// finds Pinwheel Lanes in it) - gets fewer lanes, BIG.k times the size, the room filled out round them
+test('a big hall\'s alley: fewer, much wider and longer lanes, the pins spread wide; the ball returns, consoles, settees, snack bar and tables on the floor', async () => {
+  const { alleyKit } = await import('../shared/bowling.js');
+  const wi = { south: true, x0: 101, x1: 160, y0: 101, y1: 138 }, lanes = alleyLanes(wi);
+  assert.equal(lanes.length, BIG.lanes); assert.ok(lanes.length < BOWL.LANES, 'fewer than the old eight');
+  for (const L of lanes) {
+    assert.ok(L.k === BIG.k && L.w === BOWL.PITCH * BIG.k && L.w >= 4 * TILE, `lane ${L.i + 1}: ${L.w} px wide`);
+    const pins = [lanePt(L, -1.5 * BOWL.PIN_SP, L.len), lanePt(L, 1.5 * BOWL.PIN_SP, L.len)];
+    assert.ok(Math.abs(pins[1].x - pins[0].x) >= 3 * BOWL.PIN_SP * BIG.k - 0.01, 'the pins k times as far apart');
+    assert.ok((L.foulY - L.backEdge) >= 18 * TILE && L.appr >= 3 * TILE, 'a long lane, a long approach');
+    assert.ok(Math.abs(L.len - alleyLanes({ south: true, x0: 10, x1: 21, y0: 10, y1: 20 })[0].len) < 1, 'the same lane in lane units: the roll and the pins as before');
+  }
+  const unit = { x0: wi.x0, x1: wi.x1, door: { tx: 130, ty: 139, w: 2 } }, kit = alleyKit(lanes, unit, wi), n = (t) => kit.filter((q) => q.t === t).length;
+  assert.equal(n('return'), lanes.length / 2); assert.equal(n('console'), lanes.length / 2);
+  assert.ok(n('settee') >= lanes.length / 2 && n('snack') === 1 && n('table') >= 6 && n('stool') >= 4 && n('cabinet') >= 3, 'seating, the snack bar, tables, cabinets');
+  const lx0 = lanes[0].ax, lx1 = lanes.at(-1).ax + lanes.at(-1).w, Fy = lanes[0].foulY;
+  for (const q of kit) {
+    const onLane = q.b[2] > lx0 && q.b[0] < lx1 && q.b[1] < Fy + lanes[0].appr;
+    assert.ok(!onLane, `${q.t} off the lanes and their approaches`);
+    assert.ok(q.b[0] >= wi.x0 * TILE && q.b[2] <= (wi.x1 + 1) * TILE && q.b[1] >= wi.y0 * TILE && q.b[3] <= (wi.y1 + 1) * TILE, `${q.t} inside`);
+  }
+  assert.equal(alleyLanes({ south: true, x0: 10, x1: 21, y0: 10, y1: 20 }).length, BOWL.LANES, 'a small hall keeps the old eight');
 });
 
 function rollAt(w, p, power) {
@@ -101,15 +127,19 @@ test('renting a lane: pay at the counter, pick up a ball, roll; the card fills, 
   assert.ok(/Pick up a ball/.test(act.label), act.label);
   act.run();
   assert.ok(/Hook/.test(players.findInteraction(w, p).label), 'the hook to pick');
+  const evs = [], em = w.emit.bind(w);
+  w.emit = (x, y, e) => { evs.push(e); return em(x, y, e); };
   rollAt(w, p, 0.7);
-  assert.ok([...w.entities.values()].some((e) => e.ballKind === 'bowl'), 'the ball rolls');
+  w.emit = em;
+  const ev = { ev: evs.find((e) => e.e === 'bowlroll') };
+  assert.ok(w.bowl.lanes[p.bowl.lane].game.roll && ev.ev && ev.ev.pts.length > 5, 'the ball rolls - its line sent to the pages near');
   run(w, 3);
   const me = players.buildMe(w, p);
   assert.ok(me.bowl && me.bowl.card[0].rolls.length === 1, 'the first ball on the card');
   assert.ok(/Bowling, lane/.test(me.job.text), 'the HUD tracker');
   // a friend joins the lane
   const { p: q } = joinPlayer(w, { cash: 50 });
-  const spot2 = lanePt(L, 10, -8);   // (up by the foul line: the counter's front is on the nearest lanes' approaches)
+  const spot2 = lanePt(L, 10, -8);   // (up by the foul line)
   teleport(w, q.ped, spot2.x, spot2.y);
   act = players.findInteraction(w, q);
   assert.ok(/Join this lane/.test(act.label), act.label);
@@ -149,7 +179,7 @@ test('NPC groups bowl on the other lanes while someone is near, and go when nobo
 test("Pinwheel Lanes' settees, little tables and ball returns are solid: nobody walks through them", async () => {
   const { alleyFurniture } = await import('../shared/bowling.js');
   const w = makeWorld(), m = w.map, A = m.bowling, unit = m.buildings[A.b].walkIn.units[0];
-  const boxes = alleyFurniture(A.lanes, unit);
+  const boxes = alleyFurniture(A.lanes, unit, A.kit);
   assert.equal(boxes.filter((q) => q[2] - q[0] === 8 && q[3] - q[1] === 24).length, BOWL.LANES / 2, 'a ball return between each pair of lanes');
   assert.ok(boxes.some((q) => q[2] - q[0] === 34), 'settees');
   const solidAt = (x, y) => [...(m.solidProps.get(Math.floor(y / TILE) * m.w + Math.floor(x / TILE)) || [])].some((e) => !e.off && Math.hypot(e.x - x, e.y - y) <= e.r + 0.01);

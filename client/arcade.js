@@ -188,7 +188,10 @@ function draw() {
   text(g, `SCORE ${G.score}`, 6, 5, '#fff');
   const hi = `HI ${Math.max(G.best, G.score)}`;
   text(g, hi, W - 6 - textW(hi), 5, '#ffd23a');
-  if (G.phase === 'attract') {
+  if (G.phase === 'attract') {   // (the attract screen: a planet rising, its glow along the horizon, the title over it)
+    for (let y = 150; y < H; y++) { g.fillStyle = `rgba(${90 + (y - 150) * 2},40,${140 - (y - 150)},${(y - 150) / 160})`; g.fillRect(0, y, W, 1); }
+    for (let y = 0; y < 40; y++) { const w = Math.sqrt(1600 - (40 - y) * (40 - y)) * 2.2; g.fillStyle = y % 6 < 4 ? '#3a2a6a' : '#2a1e52'; g.fillRect(Math.round(W / 2 - w), 184 + y, Math.round(w * 2), 1); }
+    text(g, 'STARFALL', W / 2 - textW('STARFALL', 3) / 2 + 2, 62, '#1a3a7a', 3);
     text(g, 'STARFALL', W / 2 - textW('STARFALL', 3) / 2, 60, '#5ae0ff', 3);
     sprite(g, 'a3', 96, 100); text(g, '50', 112, 102, '#8aff6a'); sprite(g, 'a2', 96, 114); text(g, '30', 112, 116, '#ffd23a'); sprite(g, 'a1', 96, 128); text(g, '20', 112, 130, '#ff5a8a');
     text(g, 'DIVERS SCORE DOUBLE', W / 2 - textW('DIVERS SCORE DOUBLE') / 2, 146, '#aab');

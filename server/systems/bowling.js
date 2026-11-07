@@ -4,10 +4,10 @@
 // and the pins it takes are worked out from its line and speed; ten frames with strikes and spares on the lane's score
 // card. Others can join your lane (they pay too) and take their turns; NPC groups bowl on the other lanes while anyone
 // is near. Walk out of the building and your game ends.
-import { K, DT } from '../../shared/constants.js';
+import { DT } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { swingMeter } from '../../shared/golf.js';
-import { BOWL, ALL_PINS, rollBall, knockPins, pinCount, nextBall, totalScore, approachAt, lanePt } from '../../shared/bowling.js';
+import { BOWL, ALL_PINS, rollBall, knockPins, pinCount, nextBall, totalScore, approachAt, lanePt, rollAt } from '../../shared/bowling.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { payFrom } from './economy.js';
 import { spawnNpc, despawnNpc } from './npc.js';
@@ -101,7 +101,7 @@ export function leave(world, p, say) {
     if (k < G.turn) G.turn--;
     if (G.turn >= G.bowlers.length) G.turn = 0;
   }
-  if (!G.bowlers.length) { if (G.ball) { const b = world.get(G.ball); if (b) world.remove(b); } st(world).lanes[B.lane].game = null; }
+  if (!G.bowlers.length) st(world).lanes[B.lane].game = null;
 }
 
 // The attack button with a ball in your hands on your turn (players.js applyInput, like hoops): press, hold, let go.
@@ -127,20 +127,20 @@ export function input(world, p, ped, inp, pressed, dt = DT) {
   return held;
 }
 
-// let the ball go from where the bowler stands, the way they face
+// let the ball go from where the bowler stands, the way they face (11-07: no ball in the world any more - the pages
+// near the alley are sent its line once, 'bowlroll', and roll it themselves, as big as the lane: client/bowling.js)
 export function roll(world, li, ped, power, hook) {
   const A = alley(world), L = A.lanes[li], G = st(world).lanes[li].game;
   const down = L.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
   let ang = (ped.a || 0) - down;
   while (ang > Math.PI) ang -= Math.PI * 2;
   while (ang < -Math.PI) ang += Math.PI * 2;
-  const u0 = (ped.x - L.cx) * L.right;
+  const u0 = (ped.x - L.cx) * L.right / (L.k || 1);
   const r = rollBall(L, u0, ang, power, hook);
   const k = r.gutter ? { down: 0, flights: [] } : knockPins(G.up, r.entry.u, r.entry.slope, r.speed);
-  const at = lanePt(L, r.pts[0][0], 0);
-  const b = world.add({ id: world.newId(), kind: K.BALL, x: at.x, y: at.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'bowl', cx: -1, cy: -1 });
-  G.ball = b.id;
   G.roll = { pts: r.pts, speed: r.speed, t0: world.time, gutter: r.gutter, down: k.down & G.up, flights: k.flights, bowler: G.turn };
+  const at = lanePt(L, r.pts[0][0], 0);
+  world.emit(at.x, at.y, { e: 'bowlroll', lane: li, x: Math.round(at.x), y: Math.round(at.y), pts: r.pts.map(([u, v]) => [Math.round(u * 10) / 10, Math.round(v * 10) / 10]), sp: Math.round(r.speed) });
   dirty(world, G);
   ped.attackAnimUntil = world.time + 0.3;
   return G.roll;
@@ -148,15 +148,10 @@ export function roll(world, li, ped, power, hook) {
 
 // the ball along its line (6 px apart, at its speed); at the pins, the pins
 function stepRoll(world, li, G) {
-  const A = alley(world), L = A.lanes[li], R = G.roll, b = world.get(G.ball);
-  const s = (world.time - R.t0) * R.speed, pts = R.pts;
-  // distance along the line
-  let acc = 0, i = 1;
-  for (; i < pts.length; i++) { const seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (acc + seg >= s) break; acc += seg; }
-  if (i >= pts.length) { if (b) world.remove(b); G.ball = 0; G.roll = null; settle(world, li, G, R); return; }
-  const seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]) || 1, f = (s - acc) / seg;
-  const u = pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, v = pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f;
-  if (b) { const at = lanePt(L, u, v); b.x = at.x; b.y = at.y; b.a = (b.a || 0) + 0.4; }
+  const R = G.roll;
+  if (!rollAt(R.pts, R.speed, world.time - R.t0).done) return;
+  G.roll = null;
+  settle(world, li, G, R);
 }
 
 // the pins fall: the count goes on the card, the pinsetter clears them (or sets a new rack) in a moment
@@ -164,7 +159,7 @@ function settle(world, li, G, R) {
   const A = alley(world), L = A.lanes[li], bw = G.bowlers[R.bowler];
   const n = pinCount(R.down), head = lanePt(L, 0, L.len);
   G.up &= ~R.down;
-  world.emit(head.x, head.y, { e: 'bowl', lane: li, x: head.x, y: head.y, down: R.down, up: G.up, n, fl: R.flights.map((q) => [q.i, q.du, q.dw]) });
+  world.emit(head.x, head.y, { e: 'bowl', lane: li, x: head.x, y: head.y, down: R.down, up: G.up, n, fl: R.flights.map((q) => [q.i, q.du, q.dw]), sc: G.npc ? undefined : scores(G) });
   if (!bw) { G.settleAt = world.time + SETTLE_S; return; }
   const before = nextBall(bw.rolls);
   bw.rolls.push(n);
@@ -181,6 +176,8 @@ function settle(world, li, G, R) {
   G.settleAt = world.time + SETTLE_S;
   G.next = { frameDone: after.done || after.frame !== before.frame, reset: after.up === 10 };
 }
+// the lane's screen: each bowler's name and score (everyone near the alley sees them over the lane - client/bowling.js)
+const scores = (G) => G.bowlers.map((b, i) => [String(b.name).slice(0, 10), totalScore(b.rolls), i === G.turn ? 1 : 0]);
 function afterSettle(world, li, G) {
   const nx = G.next || { frameDone: true, reset: true };
   G.settleAt = 0; G.next = null;
@@ -218,7 +215,7 @@ function finish(world, li, G) {
 }
 
 // ---- NPCs bowling on the other lanes while anyone's near -----------------------------------------------------------------
-function npcSpot(L, k) { return lanePt(L, (k ? 8 : -8), -BOWL.APPROACH_T * 32 + 14); }
+function npcSpot(L, k) { return lanePt(L, (k ? 8 : -8), -(L.appr + 18) / (L.k || 1)); }   // (just behind the approach)
 function startNpcGame(world, li) {
   const A = alley(world), L = A.lanes[li], G = newGame(true);
   for (let k = 0; k < 2; k++) {
@@ -233,7 +230,6 @@ function endNpcGame(world, li) {
   const G = st(world).lanes[li].game;
   if (!G) return;
   for (const b of G.bowlers) { const c = b.npc && world.get(b.npc); if (c && !c.removed) despawnNpc(world, c); }
-  if (G.ball) { const b = world.get(G.ball); if (b) world.remove(b); }
   st(world).lanes[li].game = null;
 }
 function npcTurn(world, li, G) {
@@ -280,7 +276,7 @@ export function update(world) {
   // (within the server's NPC budget like everyone else: none in a world without NPCs, as in most tests)
   if (near > NEAR_PX || !(world.npcBudget > 0) || world.npcCount >= world.npcBudget * 0.85) return;
   let n = S.lanes.filter((ln) => ln.game && ln.game.npc).length;
-  for (const li of [0, 2, 4, 6, 1, 3, 5, 7]) {
+  for (const li of [0, 2, 4, 6, 1, 3, 5, 7].filter((i) => i < S.lanes.length)) {
     if (n >= NPC_LANES) break;
     if (!S.lanes[li].game) { startNpcGame(world, li); n++; }
   }

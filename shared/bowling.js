@@ -29,30 +29,49 @@ export const pinCount = (mask) => { let n = 0; for (let i = 0; i < 10; i++) if (
 // ---- the lanes in a building ----------------------------------------------------------------------------------------
 // One alley: the building's interior (tiles x0..x1, y0..y1), its doors on the south (south: true) or the north. The
 // lanes run from the back wall toward the front; the approach, then the settees and the counters by the door.
+// (11-07, the owner: "Bowling alley is huge interior with tiny lanes. How about making the lanes much bigger?... bigger,
+// wider lanes with more visible pins") a big building - the Old Freight House - gets BIG.lanes lanes drawn BIG.k times
+// the size: everything about the roll and the pins is worked out at the old size (lane units: u, v, the pins' spots, the
+// ball's line), and a lane's k scales it out onto the floor (lanePt) - the lanes, the pins, the ball BIG.k times bigger,
+// the same game. A lane: ax its west edge, w its width, appr its approach (world px), k its scale, len (lane units).
+export const BIG = { lanes: 6, k: 3, lenT: 21, apprT: 4, needW: 30, needD: 34 };   // (needW / needD: the interior it takes, tiles)
+export const bigAlley = (wi) => wi.x1 - wi.x0 + 1 >= BIG.needW && wi.y1 - wi.y0 + 1 >= BIG.needD;
 export function alleyLanes(wi) {
-  const south = wi.south, dir = south ? 1 : -1;
+  const south = wi.south, dir = south ? 1 : -1, big = bigAlley(wi), k = big ? BIG.k : 1, n = big ? BIG.lanes : BOWL.LANES;
+  const lenT = big ? BIG.lenT : BOWL.LEN_T, appr = (big ? BIG.apprT : BOWL.APPROACH_T) * TILE, w = BOWL.PITCH * k;
   const backEdge = south ? wi.y0 * TILE : (wi.y1 + 1) * TILE;
-  const foulY = backEdge + dir * BOWL.LEN_T * TILE;
-  const span = BOWL.LANES * BOWL.PITCH, left = Math.round(((wi.x0 + wi.x1 + 1) * TILE - span) / 2);
+  const foulY = backEdge + dir * lenT * TILE;
+  const span = n * w, left = Math.round(((wi.x0 + wi.x1 + 1) * TILE - span) / 2);
   const lanes = [];
-  for (let i = 0; i < BOWL.LANES; i++) {
+  for (let i = 0; i < n; i++) {
     // (lane 1 is on the bowler's left: the west for a south door, the east for a north one)
-    const k = south ? i : BOWL.LANES - 1 - i, ax = left + k * BOWL.PITCH;
-    lanes.push({ i, ax, cx: ax + BOWL.PITCH / 2, foulY, backEdge, dir, right: south ? 1 : -1, len: BOWL.LEN_T * TILE - BOWL.HEAD_BACK });
+    const j = south ? i : n - 1 - i, ax = left + j * w;
+    lanes.push({ i, ax, cx: ax + w / 2, w, k, appr, foulY, backEdge, dir, right: south ? 1 : -1, len: lenT * TILE / k - BOWL.HEAD_BACK });
   }
   return lanes;
 }
-// world position of a lane point (u across, v down the lane from the foul line)
-export function lanePt(lane, u, v) { return { x: lane.cx + u * lane.right, y: lane.foulY - lane.dir * v }; }
+// world position of a lane point (u across, v down the lane from the foul line - lane units)
+export function lanePt(lane, u, v) { const k = lane.k || 1; return { x: lane.cx + u * k * lane.right, y: lane.foulY - lane.dir * v * k }; }
 export function pinSpots(lane) { return PINS.map((p) => lanePt(lane, p.u, lane.len + p.w)); }
 // the lane whose approach (x, y) stands on, or -1
 export function approachAt(alley, x, y, pad = 0) {
   for (const L of alley.lanes) {
-    if (x < L.ax - pad || x >= L.ax + BOWL.PITCH + pad) continue;
+    if (x < L.ax - pad || x >= L.ax + L.w + pad) continue;
     const d = (y - L.foulY) * L.dir;   // (behind the foul line, toward the door)
-    if (d >= -2 && d <= BOWL.APPROACH_T * TILE + pad) return L.i;
+    if (d >= -2 && d <= L.appr + pad) return L.i;
   }
   return -1;
+}
+// how long a roll takes down its line (s) and where the ball is along it at t s (lane units)
+export function rollAt(pts, speed, t) {
+  let s = t * speed;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], seg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (s <= seg) { const f = seg ? s / seg : 0; return { u: a[0] + (b[0] - a[0]) * f, v: a[1] + (b[1] - a[1]) * f, done: false }; }
+    s -= seg;
+  }
+  const z = pts[pts.length - 1];
+  return { u: z[0], v: z[1], done: true };
 }
 
 // ---- the roll ---------------------------------------------------------------------------------------------------------
@@ -222,15 +241,18 @@ export function buildBowlingAlley(m, { T, DISTRICTS, keep = null }) {   // (keep
   if (!best) return;
   const b = best, p = byB.get(b.id)[0], south = m.prefabs[b.prefab].rot === 0, dir = south ? 1 : -1;
   const x0 = b.tx + 1, x1 = b.tx + b.tw - 2, y0 = b.ty + 1, y1 = b.ty + b.th - 2;
-  const back = south ? y0 : y1;
+  const back = south ? y0 : y1, wi0 = { south, x0, x1, y0, y1 }, big = bigAlley(wi0), lanes = alleyLanes(wi0), L0 = lanes[0];
+  const lenT = Math.round((L0.foulY - L0.backEdge) * dir / TILE), apprT = Math.round(L0.appr / TILE);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) m.set(tx, ty, T.FLOOR);
-  // the lanes and the pin decks: nobody walks down them (counter tiles block people, not sight)
-  for (let k = 0; k < BOWL.LEN_T; k++) for (let tx = x0; tx <= x1; tx++) m.set(tx, back + dir * k, T.COUNTER);
+  // the lanes and the pin decks: nobody walks down them (counter tiles block people, not sight) - a big alley's only under
+  // its lanes, the floor either side of them open
+  const lx0 = big ? Math.floor(Math.min(...lanes.map((L) => L.ax)) / TILE) : x0, lx1 = big ? Math.floor((Math.max(...lanes.map((L) => L.ax + L.w)) - 1) / TILE) : x1;
+  for (let k = 0; k < lenT; k++) for (let tx = lx0; tx <= lx1; tx++) m.set(tx, back + dir * k, T.COUNTER);
   // the door: two tiles of the front wall, in the middle
   const fy = south ? b.ty + b.th - 1 : b.ty, dc = Math.floor((x0 + x1) / 2);
   m.set(dc, fy, T.FLOOR); m.set(dc + 1, fy, T.FLOOR);
-  // the shoe counter on the right as you come in, the clerk behind it, by the door
-  const counterRow = back + dir * (BOWL.LEN_T + BOWL.APPROACH_T), cx0 = x1 - 3, cx1 = x1;
+  // the shoe counter on the right as you come in, the clerk behind it, by the door (a big alley's: four rows in from it)
+  const counterRow = big ? (south ? y1 : y0) - dir * 4 : back + dir * (lenT + apprT), cx0 = x1 - (big ? 6 : 3), cx1 = x1;
   for (let tx = cx0; tx < cx1; tx++) m.set(tx, counterRow, T.COUNTER);
   const cx = (cx0 + cx1) / 2 * TILE;
   const old = p.label;
@@ -244,14 +266,52 @@ export function buildBowlingAlley(m, { T, DISTRICTS, keep = null }) {   // (keep
   b.business = 'bowling';
   m.walkIns.push(b.id);
   const d = m.dist[m.idx(Math.floor(p.x / TILE), Math.floor(p.y / TILE))];
-  m.bowling = { b: b.id, poi: p.id, name: p.label, district: DISTRICTS[d] ? DISTRICTS[d].name : '', south, lanes: alleyLanes(b.walkIn), counter: { x: p.x, y: p.y } };
-  for (const q of alleyFurniture(m.bowling.lanes, unit)) solidBox(m, q);
+  m.bowling = { b: b.id, poi: p.id, name: p.label, district: DISTRICTS[d] ? DISTRICTS[d].name : '', south, lanes, counter: { x: p.x, y: p.y }, big };
+  if (big) m.bowling.kit = alleyKit(lanes, unit, b.walkIn);
+  for (const q of alleyFurniture(lanes, unit, m.bowling.kit)) solidBox(m, q);
+}
+// (11-07, the IN14 concept) a big alley's room filled out: behind each pair of lanes the ball return, the scoring console
+// and a curved settee round a little table; the snack bar along the side with its stools, the tables and chairs in front,
+// the lounge's tables beside the lanes, the shoe counter's cubbies by the door, a row of arcade cabinets and plants -
+// [{ t, b: [x0, y0, x1, y1] (world px), solid }], for the art (client/art2/game/statics.js bowlingRoom) and the solids alike
+export function alleyKit(lanes, unit, wi) {
+  const out = [], L0 = lanes[0], dir = L0.dir, Fy = L0.foulY, T_ = TILE, put = (t, x0, x1, ya, yb, solid = true) => out.push({ t, b: [Math.round(x0), Math.round(Math.min(ya, yb)), Math.round(x1), Math.round(Math.max(ya, yb))], solid });
+  const ry = (r) => Fy + dir * (L0.appr + r);   // (r px on from the back of the approach)
+  for (let i = 0; i + 1 < lanes.length; i += 2) {
+    const A = lanes[i], B = lanes[i + 1], mid = (Math.max(A.ax, B.ax) + Math.min(A.ax + A.w, B.ax + B.w)) / 2 + (A.ax < B.ax ? 0 : 0), xm = A.ax < B.ax ? A.ax + A.w : B.ax + B.w;
+    void mid;
+    put('return', xm - 10, xm + 10, ry(4), ry(46));
+    put('console', xm - 30, xm - 14, ry(20), ry(34));
+    put('table', xm + 16, xm + 36, ry(54), ry(70));
+    put('settee', xm - 110, xm + 110, ry(84), ry(104));
+    put('settee', xm - 110, xm - 90, ry(56), ry(84)); put('settee', xm + 90, xm + 110, ry(56), ry(84));
+  }
+  const X0 = wi.x0 * T_, X1 = (wi.x1 + 1) * T_, lx0 = Math.min(...lanes.map((L) => L.ax)), lx1 = Math.max(...lanes.map((L) => L.ax + L.w));
+  const front = dir > 0 ? (wi.y1 + 1) * T_ : wi.y0 * T_, dx0 = unit.door.tx * T_, dx1 = (unit.door.tx + unit.door.w) * T_;
+  // the snack bar along the west side, nearer the door: its counter, the stools in front of it
+  const sy = front - dir * 9 * T_;
+  put('snack', X0 + 2 * T_, X0 + 12 * T_, sy, sy - dir * 30);
+  for (let k = 0; k < 8; k++) put('stool', X0 + 2.6 * T_ + k * 40, X0 + 2.6 * T_ + k * 40 + 10, sy - dir * 44, sy - dir * 54, false);
+  // the tables and chairs in front, clear of the way in from the door and the counters
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 10; c++) {
+    const x = X0 + 15 * T_ + c * 4 * T_, y = ry(140 + r * 64);
+    if (x > X1 - 10 * T_ || (x + 2 * T_ > dx0 - 2 * T_ && x < dx1 + 2 * T_) || (front - y) * dir < 5 * T_) continue;
+    put('table', x, x + 24, y, y + dir * 24); put('chair', x - 14, x - 4, y + dir * 6, y + dir * 18, false); put('chair', x + 28, x + 38, y + dir * 6, y + dir * 18, false);
+  }
+  // the lounges either side of the lanes, the arcade cabinets along the east wall by them, plants along the lanes' sides
+  for (let r = 0; r < 4; r++) for (const x of [X0 + 2 * T_, X0 + 7 * T_, X1 - 12 * T_, X1 - 7 * T_]) { const y = Fy - dir * (4 * T_ + r * 4 * T_); if (x + 3 * T_ < lx0 - T_ || x > lx1 + T_) { put('table', x, x + 24, y, y + dir * 24); put('chair', x - 14, x - 4, y + dir * 6, y + dir * 18, false); put('chair', x + 28, x + 38, y + dir * 6, y + dir * 18, false); } }
+  for (let k = 0; k < 6; k++) { const y = Fy - dir * (2 * T_ + k * 34); if (X1 - 2 * T_ > lx1 + T_) put('cabinet', X1 - 26, X1 - 4, y, y - dir * 26); }
+  for (let r = 0; r < 4; r++) for (const x of [lx0 - 28, lx1 + 8]) { const y = Fy - dir * (3 * T_ + r * 5 * T_); put('plant', x, x + 20, y, y - dir * 20); }
+  // plants in the corners by the door
+  for (const x of [X0 + 6, X1 - 26]) put('plant', x, x + 20, front - dir * 8, front - dir * 28);
+  return out;
 }
 // The furniture you can't walk through, as art v2 draws it (client/art2/game/statics.js bowlingRoom): a ball return between
 // each pair of lanes at the back of the approach, the settees behind the approach (the west half, clear of the door) and
-// the little tables between them. -> boxes [x0, y0, x1, y1] in world px; solid: a row of circles each (map solidProps), so
-// the player's prediction and the server agree.
-export function alleyFurniture(lanes, unit) {
+// the little tables between them - a big alley's: its kit's solid pieces (alleyKit). -> boxes [x0, y0, x1, y1] in world px;
+// solid: a row of circles each (map solidProps), so the player's prediction and the server agree.
+export function alleyFurniture(lanes, unit, kit = null) {
+  if (kit) return kit.filter((q) => q.solid).map((q) => q.b);
   const out = [], L0 = lanes[0], dir = L0.dir, box = (x0, x1, ya, yb) => out.push([x0, Math.min(ya, yb), x1, Math.max(ya, yb)]);
   lanes.forEach((L, i) => { if (i % 2 === 1) { const xm = (L.dir > 0 ? L.ax : L.ax + BOWL.PITCH) - 4; box(xm, xm + 8, L.foulY + L.dir * 34, L.foulY + L.dir * 58); } });
   const Ys = L0.foulY + dir * (2 * TILE + 6), xs0 = unit.x0 * TILE + 8, xs1 = Math.min(unit.door.tx * TILE - 12, (unit.x1 + 1) * TILE - 8);

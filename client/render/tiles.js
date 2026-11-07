@@ -923,19 +923,19 @@ function bowlingArt(g, A, b, u, ox, oy) {
   const wi = b.walkIn;
   g.fillStyle = '#22305c'; g.fillRect((wi.x0 - b.tx) * TILE, (wi.y0 - b.ty) * TILE, (wi.x1 - wi.x0 + 1) * TILE, (wi.y1 - wi.y0 + 1) * TILE);
   for (const L of A.lanes) {
-    const x = L.ax - ox, ya = Math.min(L.backEdge, L.foulY + L.dir * 2 * TILE) - oy, yb = Math.max(L.backEdge, L.foulY + L.dir * 2 * TILE) - oy;
-    g.fillStyle = '#cfd0d6'; g.fillRect(x, ya, 44, yb - ya);
-    g.fillStyle = '#34363e'; g.fillRect(x + 2, Math.min(L.backEdge, L.foulY) - oy, 40, Math.abs(L.foulY - L.backEdge));
-    g.fillStyle = '#e2b878'; g.fillRect(x + 7, ya, 30, yb - ya);
-    g.fillStyle = '#0c0c10'; g.fillRect(x + 2, Math.min(L.backEdge, L.backEdge + L.dir * 10) - oy, 40, 10);
-    g.fillStyle = '#8a1c1c'; g.fillRect(x + 2, L.foulY - oy - 1, 40, 2);
-    g.fillStyle = '#1a2448'; g.fillRect(x + 4, Math.min(L.backEdge, L.backEdge + L.dir * 6) - oy - (L.dir > 0 ? 0 : 0), 36, 4);
-    g.fillStyle = '#5a3418'; for (let k = 0; k < 5; k++) g.fillRect(x + 9 + k * 6, L.foulY - oy - L.dir * (L.len * 0.3 + 10 - Math.abs(k - 2) * 4), 2, 3);
+    const x = L.ax - ox, k = L.k || 1, ap = L.appr || 2 * TILE, ya = Math.min(L.backEdge, L.foulY + L.dir * ap) - oy, yb = Math.max(L.backEdge, L.foulY + L.dir * ap) - oy;   // (a big alley's lanes: k times the size)
+    g.fillStyle = '#cfd0d6'; g.fillRect(x, ya, 44 * k, yb - ya);
+    g.fillStyle = '#34363e'; g.fillRect(x + 2 * k, Math.min(L.backEdge, L.foulY) - oy, 40 * k, Math.abs(L.foulY - L.backEdge));
+    g.fillStyle = '#e2b878'; g.fillRect(x + 7 * k, ya, 30 * k, yb - ya);
+    g.fillStyle = '#0c0c10'; g.fillRect(x + 2 * k, Math.min(L.backEdge, L.backEdge + L.dir * 10 * k) - oy, 40 * k, 10 * k);
+    g.fillStyle = '#8a1c1c'; g.fillRect(x + 2 * k, L.foulY - oy - 1, 40 * k, 2);
+    g.fillStyle = '#5a3418'; for (let j = 0; j < 5; j++) g.fillRect(x + (9 + j * 6) * k, L.foulY - oy - L.dir * (L.len * 0.3 + 10 - Math.abs(j - 2) * 4) * k, 2 * k, 3 * k);
   }
+  for (const q of A.kit || []) { g.fillStyle = q.t === 'settee' || q.t === 'stool' ? '#b02a2a' : q.t === 'table' || q.t === 'chair' ? '#6a4630' : q.t === 'plant' ? '#3e7a3a' : '#2a2c38'; g.fillRect(q.b[0] - ox, q.b[1] - oy, q.b[2] - q.b[0], q.b[3] - q.b[1]); }
   const L0 = A.lanes[0], ys = L0.foulY + L0.dir * (2 * TILE + 6) - oy, dxp = u.door.tx * TILE - ox;
   g.fillStyle = '#b02a2a';
-  for (let x = (u.x0 - b.tx) * TILE + 8; x + 34 <= dxp - 12; x += 46) g.fillRect(x, Math.min(ys, ys + L0.dir * 14), 34, 14);
-  const cy = u.counterRow * TILE - oy, ca = (u.x1 - 3 - b.tx) * TILE, cb = (u.x1 - b.tx) * TILE;
+  if (!A.kit) for (let x = (u.x0 - b.tx) * TILE + 8; x + 34 <= dxp - 12; x += 46) g.fillRect(x, Math.min(ys, ys + L0.dir * 14), 34, 14);
+  const cy = u.counterRow * TILE - oy, ca = (u.x1 - (A.big ? 6 : 3) - b.tx) * TILE, cb = (u.x1 - b.tx) * TILE;
   g.fillStyle = '#2a2c38'; g.fillRect(ca + 2, cy + 4, cb - ca - 4, TILE - 8);
   g.fillStyle = '#6a4630'; g.fillRect(ca + 2, cy + TILE - 8, cb - ca - 4, 4);
 }

@@ -18,7 +18,19 @@ import { VEHICLES } from '../../shared/vehicles.js';
 
 const T = TILE_IN;
 export const HF = 46, HC = 10;   // the walls' heights (world px): a lobby's back wall full, every other wall cut low (H77: a home's every wall - HO6)
-export const YARD = 88;          // the ground drawn round the place (world px)
+export const YARD = 88;
+// (11-07) an arcade's floor lit by its machines, whatever the hour (the AC1 concept: the dark hall, the glow off the
+// screens, the lanes and the tables): per machine, its light's colour, height, and one to each tile of a run
+const ARC_GLOW = { j: [[0.5, 0.75, 1.3], 40, 1], 7: [[1.3, 0.8, 0.35], 30, 1], 4: [[0.45, 0.75, 1.4], 30, 0], 5: [[1.2, 0.5, 1.0], 34, 1], 6: [[1.3, 0.6, 1.0], 40, 1], G: [[1.25, 1.0, 0.75], 40, 0], x: [[1.15, 1.0, 0.7], 60, 0] };
+const HA = 100;   // (an arcade's back wall: over its machines, the neon signs on it)
+// the neon on an arcade's back wall (art px, '#' a lit tube): a palm tree, a game pad, a lightning bolt, a star, a joystick
+const NEON = [
+  [[255, 90, 200], ['.....##.##....', '...##.##..##..', '..#...##....#.', '.....#.#......', '....#..#......', '.......#......', '.......#......', '......#.......', '..##########..', '....######....']],
+  [[80, 220, 255], ['..##......##..', '.############.', '##..####..####', '#.#.####.#.#.#', '##..####..####', '.############.', '..###....###..']],
+  [[255, 214, 60], ['....###', '...###.', '..###..', '.######', '...###.', '..###..', '.###...', '.##....']],
+  [[140, 255, 120], ['....#....', '....#....', '...###...', '#########', '.#######.', '..#####..', '.##...##.', '##.....##']],
+  [[255, 120, 60], ['..###..', '.#####.', '..###..', '...#...', '...#...', '.#####.', '#######']],
+];
 const UP = [0, 0, 1], SOUTH = [0, 1, 0];
 const WALLISH = new Set(['#', '=', 'D', 'R', 'U', 'E']);   // (U a flat's door, E the lift: a lobby's back wall - H71)
 const FLOORISH = new Set(['.', 'c', 't', 'g', '+', ':']);   // (: a bathhouse's floor open to the sky - the onsen's flagstones)
@@ -56,6 +68,7 @@ const WOOD = ['#8c7458', '#9a6c44', '#a8784a', '#c49464'].map((c) => ramp(c, 6, 
 const CARPET = ['#6e6a5c', '#5a6a86', '#7a4e48', '#4a3a5e'].map((c) => ramp(c, 6, 3));
 const TILE = [['#c8c6b6', '#a8a696'], ['#dcdcd2', '#7a9ab0'], ['#e6e4da', '#c8d0d6'], ['#f2f0ea', '#dedad0']].map((p) => p.map((c) => ramp(c, 5, 2)));
 const CONC = ramp('#8e8c88', 6, 3);
+const ARCARP = ramp('#1e2250', 6, 3), ARCPAL = [[236, 72, 170], [72, 210, 236], [240, 206, 60], [120, 230, 110], [160, 110, 240]], ARCWALL = ramp('#2a1e44', 6, 3);
 const RUNNER = ramp('#8a2e2a', 6, 3);   // (H71: a lobby's landing)
 const PAPER = { living: ['#b8a888', '#c8b48e', '#d8c49a', '#3e4a5a'], bed: ['#a8a090', '#8aa0b4', '#9ab08e', '#6a2e36'], kitchen: ['#d0ccb8', '#e0dcc8', '#e8e4d4', '#e8e6de'], bath: ['#c8ccc4', '#d8e4ea', '#d8e4ea', '#e8eef0'] };
 const OUTSIDE = ['#8a929a', '#8e4a3c', '#b8a07a', '#d8d0c0'];   // the front wall's outside: tin, brick, siding, stone
@@ -76,6 +89,14 @@ function floorPx(kind, tier, wx, wy, x, y, sc = 0) {
     return step(P[ch ? 1 : 0], t, x, y, 0.4);
   }
   if (kind === 'u') { const e = Math.min(wy - 36, 156 - wy); return step(RUNNER, e < 8 ? (e < 2 ? 0.25 : 0.62) : 0.45 + (vnoise(wx, wy, 6, 4) - 0.5) * 0.2 + ((Math.floor(wx / 8) + Math.floor(wy / 8)) & 1 ? 0.06 : 0), x, y, 0.5); }   // (H71: a lobby's runner, its border)
+  if (kind === 'a') {   // (11-07) an arcade's carpet (AC1): deep navy, neon squiggles, rings, dots and zig-zags scattered on it
+    const cx = Math.floor(wx / 14), cy = Math.floor(wy / 14), h = hash(cx, cy, 31), u = wx - cx * 14 - 7, v = wy - cy * 14 - 7;
+    if (h > 0.62) {
+      const k = Math.floor(h * 997) % 4, r = Math.hypot(u, v), on = k === 0 ? r > 2.5 && r < 4.2 : k === 1 ? r < 1.8 : k === 2 ? Math.abs(v - Math.round(Math.sin(u * 0.9) * 2.2)) < 1 && Math.abs(u) < 5 : Math.abs(v - (Math.abs(((u + 8) % 4) - 2) - 1)) < 1 && Math.abs(u) < 5;
+      if (on) return ARCPAL[Math.floor(h * 131) % ARCPAL.length];
+    }
+    return step(ARCARP, 0.42 + (vnoise(wx, wy, 8, 4) - 0.5) * 0.25 + (hash(wx >> 1, wy >> 1, 9) - 0.5) * 0.15, x, y, 0.6);
+  }
   if (kind === 'c') return step(CARPET[tier], 0.5 + (vnoise(wx, wy, 6, 4) - 0.5) * 0.3 + (hash(wx, wy, 7) - 0.5) * 0.12, x, y, 0.6);
   if (kind === 'g') {
     let t = 0.52 + (vnoise(wx, wy, 26, 5) - 0.5) * 0.22 + (hash(wx >> 1, wy >> 1, 6) - 0.5) * 0.08;
@@ -114,7 +135,7 @@ export class HomeArt {
   // kept where the change didn't touch them (a piece placed, moved or turned: only the furniture and the floor's shadows
   // and rugs are made again; the paint: the walls; a new floor: the floor), so a change is a moment, not seconds
   constructor(L, ap = 2, prev = null, id = 0) {
-    this.L = L; this.ap = ap; this.tier = L.tier; this.sc = schemeOf(id); this.R = prev && prev.R && (prev.L.base || prev.L) === (L.base || L) ? prev.R : rooms(L);
+    this.L = L; this.ap = ap; this.tier = L.tier; this.arc = /^arcade/.test(L.key); this.sc = schemeOf(id); this.R = prev && prev.R && (prev.L.base || prev.L) === (L.base || L) ? prev.R : rooms(L);
     this.items = []; this.lamps = []; this.windows = []; this.floor = null;
     this.envKey = ''; this.people = new Map(); this.cars = new Map(); this.figs = new Map();
     this.prev = prev; this.models = new Map();
@@ -165,6 +186,7 @@ export class HomeArt {
     if (f) return f[1] === '.' ? '.' : f[1];
     const ch = this.L.cell(tx, ty);
     if (ch === 'c' && /^lobby/.test(this.L.key)) return 'u';   // (H71: a lobby's landing - the red runner)
+    if (ch === 'c' && this.arc) return 'a';   // (an arcade's carpet: floorPx)
     if (ch === 't' || ch === 'g' || ch === 'c' || ch === ':') return ch;
     const r = this.R.at(tx, ty);
     if (r && r.kind === 'garage') return 'g';
@@ -302,7 +324,13 @@ export class HomeArt {
       else if (p.ch === 'T' && t >= 2) r = { x: p.x - 6, y: p.y - 6, w: p.w + 12, h: p.h + 12 };
       if (r) rug(G, ap, r.x, r.y, r.w, r.h, t, p.tx * 7 + p.ty);
     }
-    if (L.door) rug(G, ap, L.door.x - 20, L.door.y - T / 2 - 18, 40, 16, Math.min(1, t), 5);
+    if (L.door && this.arc) {   // (an arcade's way out: a lit mat inside the door, a green EXIT glow over it)
+      for (let y = Math.floor((L.door.y - T / 2 - 22) / ap); y < (L.door.y - T / 2 - 2) / ap; y++) for (let x = Math.floor((L.door.x - 26) / ap); x < (L.door.x + 26) / ap; x++) {
+        const e = Math.min(x * ap - L.door.x + 26, L.door.x + 26 - x * ap, y * ap - L.door.y + T / 2 + 22, L.door.y - T / 2 - 2 - y * ap);
+        G.put(x, y, e < 3 ? [90, 255, 140] : step(ramp('#2a2a34', 4, 2), 0.5 + ((x + y) & 1 ? 0.1 : 0), x, y, 0.3), UP, 0, e < 3 ? [90, 255, 140, 200] : null);
+      }
+      this.lamps.push({ x: L.door.x, y: L.door.y - T / 2 - 6, z: 30, kind: 'neon', c: [0.4, 1.3, 0.6] });
+    } else if (L.door) rug(G, ap, L.door.x - 20, L.door.y - T / 2 - 18, 40, 16, Math.min(1, t), 5);
     for (const p of L.pieces) if (p.flat) rug(G, ap, p.x + 3, p.y + 3, p.w - 6, p.h - 6, Math.max(1, t), p.tx * 5 + p.ty * 3 + p.dec);   // (H67: the rugs you've put down)
     this.floor = { G, x: 0, y: 0 };
   }
@@ -332,7 +360,7 @@ export class HomeArt {
     for (const r of L.wallRects) { const k = r.ty + '|' + (r.y + r.h); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
     const dr = ramp(t >= 3 ? '#4a2a1c' : t >= 2 ? '#7a3a2a' : '#6a5038', 5, 2), steel = ramp('#a8acb2', 5, 2);
     for (const rs of groups.values()) {
-      const ty = rs[0].ty, h = lobby && ty === 0 ? HF : HC, hp = Math.round(h / ap);
+      const ty = rs[0].ty, h = this.arc && ty === 0 ? HA : lobby && ty === 0 ? HF : HC, hp = Math.round(h / ap);
       let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
       for (const r of rs) { x0 = Math.min(x0, r.x); x1 = Math.max(x1, r.x + r.w); y0 = Math.min(y0, r.y); y1 = Math.max(y1, r.y + r.h); }
       const gx0 = Math.floor(x0 / ap), gy0 = Math.floor(y0 / ap), gx1 = Math.ceil(x1 / ap), gy1 = Math.ceil(y1 / ap);
@@ -360,6 +388,7 @@ export class HomeArt {
         if (glass) G.flag[y * G.w + x] |= F_GLASS;
       }
       if (lobby && ty === 0 && t >= 1) this.decorateBack(G, wx0, wy0, Math.floor(x0 / T), Math.floor((x1 - 1) / T), h);
+      if (this.arc && ty === 0) this.neonBack(G, wx0, wy0, Math.floor(x0 / T), Math.floor((x1 - 1) / T));
       this.items.push({ G, x: wx0, y: wy0, base: y1 + (ty === last ? 1 : 0), wall: true });
       yield;
     }
@@ -368,6 +397,7 @@ export class HomeArt {
   inGlass(tx, ty, wx, v) { const u = wx - tx * T; return v >= 14 && v < 38 && u >= (L4ch(this.L, tx - 1, ty) ? 0 : 4) && u < (L4ch(this.L, tx + 1, ty) ? T : T - 4); }
   facePx(ch, tx, ty, wx, v, h, x, y) {
     const L = this.L, t = this.tier, last = L.rows - 1;
+    if (this.arc && ty === 0) return v >= h - 7 && v < h - 5 ? [255, 90, 200] : step(ARCWALL, 0.5 + (wx % 16 < 1 ? -0.3 : 0) + (v < 4 ? -0.2 : 0) + (vnoise(wx, v, 10, 3) - 0.5) * 0.12, x, y, 0.4);   // (an arcade's back wall: dark panels, the pink tube along its top)
     if (ty === last) {   // the outside of the front wall (the roller door in it)
       if (ch === 'R') return step(ramp('#a8acb2', 5, 2), 0.5 + (v % 3 === 0 ? -0.35 : 0.1), x, y, 0.2);
       const kind = L.key === 'trailer' ? 0 : L.key === 'apartment' || /^lobby/.test(L.key) ? 1 : L.key === 'mansion' ? 3 : 2;
@@ -429,6 +459,15 @@ export class HomeArt {
     }
     void h;
   }
+  // (11-07) an arcade's back wall: its neon - the AC1 concept's palm, game pad, bolt - over the machines, every few tiles
+  neonBack(G, wx0, wy0, tx0, tx1) {
+    const ap = this.ap;
+    for (let tx = tx0 + 2, k = 0; tx <= tx1 - 2; tx += 5, k++) {
+      const [c, rows] = NEON[(k + this.L.cols) % NEON.length], u0 = tx * T + 2, v0 = HA - 10;
+      rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') { const x = Math.floor((u0 + i * ap - wx0) / ap), v = v0 - j * ap, y = Math.floor((T - v - wy0) / ap); G.put(x, y, c.map((q) => Math.min(255, q + 40)), SOUTH, v, [...c, 230]); } });
+      this.lamps.push({ x: u0 + 14, y: T + 6, z: v0 - 8, kind: 'neon', c: c.map((q) => q / 200) });
+    }
+  }
   // the furniture: each piece a voxel model turned to face the room
   *buildFurniture() {
     const L = this.L, ap = this.ap;
@@ -439,7 +478,7 @@ export class HomeArt {
       if (p.flat) continue;   // (H67: a rug - drawn on the floor)
       let face = 's';
       if (p.face) face = p.face;   // (H67: the shop's pieces face the way you turned them)
-      else if (p.ch === 'Z' || p.ch === 'M' || p.ch === '^' || (L.bath && '!_$@u'.includes(p.ch))) face = 's';   // (a bathhouse's baths, pools, sauna, heated floor: drawn facing the camera)   // (^: a home's stairs between its floors - homeups.js)   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
+      else if (p.ch === 'Z' || p.ch === 'M' || p.ch === '^' || (L.bath && '!_$@u'.includes(p.ch)) || (this.arc && 'j7456G'.includes(p.ch))) face = 's';   // (an arcade's machines: played from the south - shared/homelayout.js PLANS.arcade)   // (a bathhouse's baths, pools, sauna, heated floor: drawn facing the camera)   // (^: a home's stairs between its floors - homeups.js)   // (H71: a lobby's stairs climb away to the back wall; the mailboxes on it)
       else if (p.ch === 'C' || p.ch === 'O') face = p.h > p.w ? (wall(p.tx - 1, p.ty) ? 'e' : 'w') : wall(p.tx, p.ty + p.th) ? 'n' : 's';
       else if (p.ch === 'V') { const c = L.pieces.find((q) => q.ch === 'C'); face = c ? (c.y + c.h <= p.y && Math.abs(c.x + c.w / 2 - p.x - p.w / 2) < p.y - c.y ? 'n' : 's') : wall(p.tx, p.ty + p.th) ? 'n' : 's'; }   // (the couch north of it: it faces north - it measured that the wrong way round, so a set against the south wall faced the wall: the owner, 10-16, "A TV faces the wall"; no couch: away from the wall it stands against)   // (seen from the side a set is a sliver: it faces the camera unless the couch is north of it)
       else if (p.ch !== 'T' && p.ch !== 'P' && p.ch !== 'B') face = wall(p.tx, p.ty - 1) ? 's' : wall(p.tx, p.ty + p.th) ? 'n' : wall(p.tx - 1, p.ty) ? 'e' : wall(p.tx + p.tw, p.ty) ? 'w' : 's';
@@ -458,7 +497,8 @@ export class HomeArt {
       this.items.push(it);
       if (p.ch === 'A') this.lamps.push({ x: p.x + 9, y: p.y + 18, z: 44, kind: 'lamp' });
       if (p.ch === 'V') this.lamps.push({ x: cx, y: cy, z: 24, kind: 'tv' });
-      if (p.ch === 'j') this.lamps.push({ x: cx, y: cy + 8, z: 36, kind: 'tv' });   // (H77: an arcade cabinet's screen)
+      if (p.ch === 'j' && !this.arc) this.lamps.push({ x: cx, y: cy + 8, z: 36, kind: 'tv' });   // (H77: an arcade cabinet's screen)
+      if (this.arc && ARC_GLOW[p.ch]) { const [c, z, n] = ARC_GLOW[p.ch], k = n ? Math.max(1, Math.round(p.w / T)) : 1; for (let i = 0; i < k; i++) this.lamps.push({ x: p.x + (i + 0.5) * p.w / k, y: p.y + p.h - (p.ch === 'G' ? 12 : 4), z, kind: 'neon', c }); }   // (an arcade's machines light the floor in front of them)
       if (L.bath && (p.ch === 'y' || p.ch === '!')) this.lamps.push({ x: cx, y: cy, z: 20, kind: 'lamp' });   // (the hot stones' glow, a sauna's stove)
       if (L.bath && (p.ch === 'u' || p.ch === '@')) for (let k = 0; k < Math.max(2, Math.round(p.w / 96)); k++) this.lamps.push({ x: p.x + (k + 0.5) * p.w / Math.max(2, Math.round(p.w / 96)), y: p.y - 8, z: 60, kind: 'lamp' });   // (the paper lanterns over the bath, the stone lanterns round a rock pool)
       yield;
@@ -474,6 +514,7 @@ export class HomeArt {
   // ---- the light --------------------------------------------------------------------------------------------------
   // d: daylight 0 night .. 1 day. The day comes in through the windows; at night each room's light and the lamps are on.
   env(d) {
+    if (this.arc) return this.arcEnv();
     const L = this.L, night = 1 - d, dusk = Math.max(0, 1 - Math.abs(d - 0.5) * 3);
     const amb = [0.2 + 0.58 * d + 0.08 * dusk, 0.21 + 0.53 * d, 0.3 + 0.42 * d - 0.06 * dusk];
     const lights = [];
@@ -496,6 +537,15 @@ export class HomeArt {
     for (const l of lights) l.r2 = l.r * l.r;
     const sky = d > 0.6 ? [150 + 60 * d, 196 + 30 * d, 238] : d > 0.05 ? [236, 150 + 40 * d, 90 + 60 * d] : [26, 36, 70];
     return { d, amb, lights, sky, emiK: 0.35 + 0.9 * night, on: night > 0.25 ? 1 : 0 };
+  }
+  // (11-07) an arcade's light, the same day and night: a dim violet hall, a soft pool from each light over the aisles,
+  // the machines' glow strongest
+  arcEnv() {
+    const L = this.L, lights = [];
+    for (let ty = 2; ty < L.rows - 1; ty += 4) for (let tx = 3; tx < L.cols - 1; tx += 6) lights.push({ x: (tx + 0.5) * T, y: (ty + 0.5) * T, z: 90, r: 170, c: [0.8, 0.62, 0.95], k: 0.55 });
+    for (const l of this.lamps) if (l.kind === 'neon') lights.push({ x: l.x, y: l.y, z: l.z, r: 88, c: l.c, k: 0.75 });
+    for (const l of lights) l.r2 = l.r * l.r;
+    return { d: 0, amb: [0.42, 0.38, 0.56], lights, sky: [26, 36, 70], emiK: 1.15, on: 1 };
   }
   // light a buffer whose top-left is at world (ox, oy) into a canvas
   shade(G, ox, oy, ap, E, cv, sky = false) {

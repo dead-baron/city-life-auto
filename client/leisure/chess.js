@@ -78,7 +78,7 @@ export function stop() {
 export function update(m) {
   if (!G) return;
   G.st = m; G.pos = fromWire(m); G.sel = -1; G.promo = null;
-  G.moves = m.st === 'play' && m.w === m.me ? legal(G.pos) : [];
+  G.moves = m.st === 'play' && !m.watch && m.w === m.me ? legal(G.pos) : [];   // (watching a game: nothing to move)
   if (G.sure && m.st !== 'play') G.sure = 0;
 }
 
@@ -143,8 +143,8 @@ function draw() {
   g.clearRect(0, 0, W, H);
   // the bar over the board: who's playing whom, whose move
   if (s) {
-    const yours = s.st === 'play' && s.w === s.me;
-    const line = s.st === 'wait' ? (s.come ? 'The park regular is on his way...' : 'Waiting for an opponent') : s.st === 'over' ? (s.res || 'Game over') : yours ? (s.chk ? 'Check! Your move' : 'Your move') : `${s.names[s.w]} is thinking${s.chk ? ' (check)' : ''}...`;
+    const yours = s.st === 'play' && !s.watch && s.w === s.me;
+    const line = s.watch && s.st === 'play' ? `Watching - ${s.names[s.w]} to move` : s.st === 'wait' ? (s.come ? 'The park regular is on his way...' : 'Waiting for a player - or play the computer') : s.st === 'over' ? (s.res || 'Game over') : yours ? (s.chk ? 'Check! Your move' : 'Your move') : `${s.names[s.w]} is thinking${s.chk ? ' (check)' : ''}...`;
     text(g, `${s.names[0] || '?'} (W) v ${s.names[1] || '...'} (B)`, W / 2, 8, '#a6aec4', 8, 'center', false);
     text(g, line, W / 2, 20, s.st === 'over' ? '#e2bd57' : yours ? '#6cd06c' : '#f3ead2', 10, 'center');
   } else text(g, 'Sitting down...', W / 2, 14, '#f3ead2', 10, 'center');
@@ -183,12 +183,13 @@ function draw() {
     g.strokeStyle = on ? '#e2bd57' : 'rgba(226,189,87,.35)'; g.lineWidth = 1; g.strokeRect(x + 0.5, by + 0.5, w - 1, bh - 1);
     text(g, label, x + w / 2, by + bh / 2 + 1, hot ? '#070b16' : on ? '#f3ead2' : '#6a7290', 8, 'center');
   };
-  if (s && s.st === 'play') {
+  if (s && s.watch) btn('leave', 'Stop watching', BX + 60, 116);
+  else if (s && s.st === 'play') {
     btn('resign', G.sure ? 'Sure?' : 'Resign', BX, 56, true, !!G.sure);
     btn('draw', s.offer === (s.me ^ 1) ? 'Take draw' : s.offer === s.me ? 'Offered' : 'Draw', BX + 60, 56, s.offer !== s.me, s.offer === (s.me ^ 1));
     btn('leave', 'Get up', BX + 120, 56);
   } else if (s && s.st === 'wait') {
-    btn('npc', s.come ? 'Coming...' : 'Play the regular', BX, 116, !s.come, !s.come);
+    btn('npc', s.come ? 'Coming...' : 'Play the computer', BX, 116, !s.come, !s.come);
     btn('leave', 'Get up', BX + 120, 56);
   } else if (s && s.st === 'over') {
     btn('again', 'Rematch', BX, 116, true, true);

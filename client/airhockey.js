@@ -5,6 +5,7 @@
 //   start({ id, best, send, close, sfx }) / stop()
 // The mallet: the mouse or a finger (it follows where you point), or the keys, the stick or the d-pad. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
+import { layer, blit, ballSprite, shadow, text, banner, led, panel, ramp, tone, hash } from './arcart.js';
 const W = 256, H = 224, STEP = 1 / 120;
 const T = { x0: 14, x1: 242, y0: 28, y1: 206 };   // the rails (the puck's centre stays inside by its radius)
 const GOAL = 30, PUCK_R = 6, MAL_R = 11, TO = 7;  // the goal mouth's half-width, the puck, the mallets, first to
@@ -142,43 +143,67 @@ function step(dt) {
   } else if (r === 'rail') G.o.sfx('click', 0.15);
 }
 
-function draw() {
-  const g = G.g, Tb = G.T;
-  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
-  g.fillStyle = '#06080f'; g.fillRect(0, 0, W, H);
-  // the table: the rails, the ice-blue top with its air holes, the centre line and circle, the goals
-  g.fillStyle = '#c8202a'; g.fillRect(T.x0 - 6, T.y0 - 6, T.x1 - T.x0 + 12, T.y1 - T.y0 + 12);
-  g.fillStyle = '#dff2ff'; g.fillRect(T.x0, T.y0, T.x1 - T.x0, T.y1 - T.y0);
-  g.fillStyle = '#c4def0'; for (let y = T.y0 + 6; y < T.y1; y += 10) for (let x = T.x0 + 6 + ((y / 10) % 2 ? 5 : 0); x < T.x1; x += 10) g.fillRect(x, y, 1, 1);
-  g.fillStyle = '#e04050'; g.fillRect(W / 2 - 1, T.y0, 2, T.y1 - T.y0);
-  g.strokeStyle = '#e04050'; g.lineWidth = 1.5; g.beginPath(); g.arc(W / 2, CY, 22, 0, Math.PI * 2); g.stroke();
-  g.strokeStyle = '#4060e0'; g.beginPath(); g.arc(T.x0, CY, 34, -Math.PI / 2, Math.PI / 2); g.stroke(); g.beginPath(); g.arc(T.x1, CY, 34, Math.PI / 2, Math.PI * 1.5); g.stroke();
-  g.fillStyle = '#10141c'; g.fillRect(T.x0 - 6, CY - GOAL, 6, GOAL * 2); g.fillRect(T.x1, CY - GOAL, 6, GOAL * 2);
-  // the puck, the mallets
-  const P = Tb.puck;
-  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.arc(P.x + 1, P.y + 1.5, PUCK_R, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#20242c'; g.beginPath(); g.arc(P.x, P.y, PUCK_R, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#ffd23a'; g.beginPath(); g.arc(P.x, P.y, 2, 0, Math.PI * 2); g.fill();
-  mallet(g, Tb.me, '#2a8aff', '#8ac4ff');
-  mallet(g, Tb.cpu, '#ff4a3a', '#ffa08a');
-  // the score
-  g.textBaseline = 'top'; g.font = 'bold 10px monospace'; g.textAlign = 'center';
-  g.fillStyle = '#8ac4ff'; g.fillText(String(Tb.us), W / 2 - 24, 8);
-  g.fillStyle = '#ffa08a'; g.fillText(String(Tb.them), W / 2 + 24, 8);
-  g.fillStyle = '#8a90b8'; g.font = '7px monospace'; g.fillText('YOU', W / 2 - 24, 19); g.fillText('CPU', W / 2 + 24, 19); g.fillText('-', W / 2, 10);
-  if (G.msgT > 0 || G.done) {
-    g.font = '8px monospace';
-    const m = G.msg, w = g.measureText(m).width + 12;
-    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect((W - w) / 2, CY - 8, w, 16);
-    g.fillStyle = G.done ? '#ffd23a' : '#fff'; g.fillText(m, W / 2, CY - 4);
-  }
-  g.textAlign = 'left';
+// ---- the screen (AC7, the owner's air hockey concept: the SNES look) -------------------------------------------------------
+// the rink, painted once: the arcade's carpet round it, the table's dark apron, the chrome rails with their light
+// strips - blue down your half, orange down the machine's - the goal slots in the ends, the lit blue top (brighter in
+// the middle) with its rows of air holes, the red centre line, circle and creases
+let BG = null;
+function rinkArt() {
+  const carpet = ramp('#1e2250', 5, 2), chrome = ramp('#a8b0c0', 6, 3), top = ramp('#2a6ad8', 7, 3), red = [232, 52, 64], apron = ramp('#1a1e3a', 5, 2);
+  const NEON = [[236, 72, 170], [72, 210, 236], [240, 206, 60]];
+  return layer(W, H, (put) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const o = Math.max(T.x0 - x, x - T.x1 + 1, T.y0 - y, y - T.y1 + 1);   // (how far outside the surface)
+      let c;
+      if (o > 9) {   // the carpet, its neon confetti
+        const h = hash(x >> 3, y >> 3, 5);
+        c = h > 0.86 && Math.hypot((x & 7) - 3.5, (y & 7) - 3.5) < 1.6 ? NEON[(h * 97 | 0) % 3] : tone(carpet, 0.4 + (hash(x, y, 2) - 0.5) * 0.3, x, y);
+        if (o < 13) c = c.map((v) => v * 0.5);   // (the table's shadow)
+      } else if (o > 6) c = tone(apron, o === 9 ? 0.15 : 0.5, x, y);
+      else if (o > 0) {   // the rails: chrome, lit along their inner edge
+        const mouth = (x < T.x0 || x >= T.x1) && Math.abs(y + 0.5 - CY) < GOAL;
+        if (mouth) c = o > 4 ? [10, 10, 16] : [4, 4, 8];
+        else if (o === 1) c = x < W / 2 ? [90, 180, 255] : [255, 150, 70];
+        else c = tone(chrome, o === 6 ? 0.2 : o === 2 ? 0.35 : 0.55 + (o === 5 ? 0.3 : 0) + Math.sin((x + y) * 0.3) * 0.05, x, y, 0.5);
+      } else {   // the top: lit from over the middle, the air holes, the lines
+        const q = ((x - W / 2) / 130) ** 2 + ((y - CY) / 100) ** 2;
+        let t = 0.7 - q * 0.38 + (hash(x, y, 1) - 0.5) * 0.05;
+        if ((x - T.x0) % 8 === 4 && (y - T.y0 + ((x - T.x0) % 16 === 4 ? 0 : 4)) % 8 === 4) t -= 0.3;
+        c = tone(top, t, x, y, 0.6);
+        const dc = Math.hypot(x + 0.5 - W / 2, y + 0.5 - CY), dl = Math.hypot(x + 0.5 - T.x0, y + 0.5 - CY), dr = Math.hypot(x + 0.5 - T.x1, y + 0.5 - CY);
+        if (Math.abs(x + 0.5 - W / 2) < 1.1 || Math.abs(dc - 22) < 0.8 || dc < 2 || Math.abs(dl - 34) < 0.8 || Math.abs(dr - 34) < 0.8) c = red;
+        if (Math.abs(x + 0.5 - (T.x0 + 56)) < 0.6 || Math.abs(x + 0.5 - (T.x1 - 56)) < 0.6) c = c.map((v, i) => (i === 2 ? v : v * 0.8));   // (the faint blue lines)
+      }
+      put(x, y, c);
+    }
+  });
 }
-function mallet(g, m, c, hi) {
-  g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(m.x + 1.5, m.y + 2, MAL_R, 0, Math.PI * 2); g.fill();
-  g.fillStyle = c; g.beginPath(); g.arc(m.x, m.y, MAL_R, 0, Math.PI * 2); g.fill();
-  g.fillStyle = hi; g.beginPath(); g.arc(m.x, m.y, MAL_R - 4, 0, Math.PI * 2); g.fill();
-  g.fillStyle = c; g.beginPath(); g.arc(m.x, m.y, 3.5, 0, Math.PI * 2); g.fill();
+function draw() {
+  const g = G.g, Tb = G.T, P = Tb.puck;
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: the pixels square, the numbers sharp)
+  BG ||= rinkArt();
+  blit(g, BG, 0, 0);
+  // the puck - its trail when it flies - and the mallets, shaded, their shadows
+  const sp = Math.hypot(P.vx, P.vy);
+  if (sp > 160) for (let k = 3; k >= 1; k--) { g.globalAlpha = 0.12 * (4 - k); blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - P.vx * 0.012 * k - PUCK_R - 0.5, P.y - P.vy * 0.012 * k - PUCK_R - 0.5); }
+  g.globalAlpha = 1;
+  shadow(g, P.x + 1.5, P.y + 2, PUCK_R, PUCK_R * 0.8, 0.3);
+  blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - PUCK_R - 0.5, P.y - PUCK_R - 0.5);
+  mallet(g, Tb.me, '#2a6ae8');
+  mallet(g, Tb.cpu, '#e83a3a');
+  // the score: LED digits in their panels, you and the machine
+  panel(g, W / 2 - 62, 2, 124, 20, '#c8a050');
+  text(g, 'YOU', W / 2 - 56, 9, '#8ac4ff'); led(g, Tb.us, W / 2 - 40, 6, '#5ab0ff', 12);
+  text(g, 'CPU', W / 2 + 56, 9, '#ffa08a', 1, 'r'); led(g, Tb.them, W / 2 + 14, 6, '#ff5a3a', 12);
+  text(g, 'TO 7', W / 2, 9, '#c8a050', 1, 'c');
+  if (G.msgT > 0 || G.done) banner(g, W, CY - 7, G.msg, G.done ? '#ffd23a' : '#fff');
+}
+// a mallet: its rim, the dome, the knob on top lit from the top left
+function mallet(g, m, c) {
+  shadow(g, m.x + 2, m.y + 3, MAL_R, MAL_R * 0.8, 0.32);
+  blit(g, ballSprite(c, MAL_R, { flat: 1 }), m.x - MAL_R - 0.5, m.y - MAL_R - 0.5);
+  blit(g, ballSprite(c, MAL_R - 4), m.x - MAL_R + 3.5, m.y - MAL_R + 3.5);
+  blit(g, ballSprite(c, 3.5), m.x - 4.5, m.y - 4.5);
 }
 // (tests: the table without a screen)
 // The failsafe: a puck that hasn't got anywhere for STUCK_S - stopped, or trapped moving on one spot (in a corner, under a

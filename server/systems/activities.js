@@ -158,7 +158,7 @@ export function spotsOf(map) {
       // says which of its tables are for chess - p.chess: its pocket parks', the Commons', Union Square's)
       if (!chessTable(map, p)) continue;
       const sd = p.chess ? (p.seat || 22) : 15;
-      if (walkable(map, p.x - sd, p.y) && walkable(map, p.x + sd, p.y) && walkable(map, p.x, p.y - 26) && clear(p.x, p.y, 160)) s = { x: p.x, y: p.y, a: 0, seat: sd };
+      if (walkable(map, p.x - sd, p.y) && walkable(map, p.x + sd, p.y) && walkable(map, p.x, p.y - 26) && (p.open || clear(p.x, p.y, 160))) s = { x: p.x, y: p.y, a: 0, seat: sd };   // (p.open: a public table placed for chess - 11-07 - is one, whatever's near)
     } else if (k === 'picnic') {   // on the blanket
       if (clear(p.x, p.y, 120)) s = { x: p.x, y: p.y, a: 0 };
     } else if (k === 'painter') {   // a little way off the landmark, on open ground, facing it

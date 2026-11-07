@@ -981,6 +981,9 @@ export const ARCADE = {
   hockey: { price: 1, to: 7, win: 20, perGoal: 2, minS: 20 },
   // pinball (client/pinball.js, NEON NIGHTS): a ticket for every pinball.perTicket points, no more than maxRate points a second
   pinball: { price: 1, perTicket: 1000, maxRate: 400, minS: 10 },
+  // a game of pool against someone (server/systems/poolmatch.js): won in an arcade, match.win tickets against a player,
+  // match.cpu against the computer (a table's game costs each player ARCADE.pool)
+  match: { win: 30, cpu: 15 },
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { board: 1, t: 500 }],
 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };

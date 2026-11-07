@@ -466,9 +466,9 @@ function onText(m) {
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
       $('arc-hint').textContent = input.device === 'touch' ? 'Tap ✕ to leave' : 'Esc / B to leave';
-      (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
+      (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : m.mp ? { t: 'pool', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
-    case 'chess': if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); } else if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the park's chess board (server chess.js; client/leisure/chess.js)
+    case 'pool': case 'chess': if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); } else if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the park's chess board (server chess.js; client/leisure/chess.js)
     case 'racebook': if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the race book's screen: where the race is (server racebook.js)
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)
@@ -1038,7 +1038,7 @@ function onEvent(ev) {
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
     case 'hoop': sfx(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', distVol(ev.x, ev.y)); break;   // (shooting hoops: server/systems/hoops.js)
-    case 'bowl': case 'bowlset': case 'bowlx': if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
+    case 'bowl': case 'bowlset': case 'bowlx': case 'bowlroll': if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)

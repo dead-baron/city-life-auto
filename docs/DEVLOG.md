@@ -21727,3 +21727,69 @@ towers downtown.
   in statics.js `upperArt`, the art's own setback drawing). The parts are buildings the bake already draws: fewer, lower
   walls over the street.
 - Today's world (`world`) doesn't change - World v3's (`world3`, `art3`) do, and `art` (statics.js).
+
+## 2026-11-07 - The arcades, the mini-games' art, pool against someone, big bowling lanes, more chess tables
+
+The owner's notes of 11-06: "not just the same arcade cabinet over and over... skeeball would have a skeeball machine,
+air hockey is an air hockey table", "the art on some of the arcade stuff looks like a placeholder", "make sure
+everything (that can be) is available for multiplayer... (but not necessarily interrupt your current game if you're
+playing against PC)", pool's "placeholder art" and "is it built to let other people join?", "a few [chess] tables in the
+world", and "Bowling alley is huge interior with tiny lanes".
+
+**1. The arcades (AC1 / AC2 / AC7).** Every arcade's floor (`shared/homelayout.js` PLANS.arcade, arcadeflag) is laid out
+as the concept: rows of upright cabinets along the back wall (and an island of them at the flagship), skee-ball lanes,
+air hockey tables, pinball machines, pool tables, claw machines, the prize counter on the back wall with its shelves of
+plush. Each game is its own machine - new plan letters `7` skee-ball, `4` air hockey, `5` pinball, `6` a claw machine
+(just for show) beside `j` and `x`; a run of cabinets, lanes or pinball machines is one piece, a machine to each tile
+(`server/systems/arcade.js` MACHINE, machines, cabinetAt) - and walking up to one plays its game. The models are new
+(`client/art2/props-home.js` arcade, skeeBall, airHockey, pinball, clawMachine, prizeCounter: lit marquees, attract
+screens, rings, playfields, lit tops), and the hall is lit like an arcade at any hour (`client/render/homeart2.js`
+arcEnv: a dim violet hall, each machine's glow on the floor), on the arcade carpet's neon confetti, under a tall back
+wall with neon signs (palm, game pad, bolt, star, joystick); a lit mat marks the way out. Outside, an arcade's
+storefront (`client/art2/buildings.js` arcadeDoor: every World v3 arcade - the Neon Strip's, the Pier Arcade, the Game
+Zones - draws its front through it) has wider glass double doors lit violet from inside, a pink neon frame and a bulb
+marquee with arrows pointing in.
+
+**2. The mini-games' screens, the SNES way** (`client/arcart.js`, loaded with the games): what stays still is painted
+once pixel by pixel at the screen's own resolution in a few dithered tones - pool's plank floor, mahogany rails with
+grain, bevels and pearl diamond sights, leather pockets, the felt lit from over the middle (GM2); air hockey's lit blue
+rink with its air holes, chrome rails with blue / orange light strips, goal slots, lines (AC7); skee-ball's maple lane,
+amber chasing rails, starred sides and raised rings; pinball's NEON NIGHTS sunset playfield and backglass - and what
+moves is a shaded sprite (balls with stripes and number dots, the cue with its tip, ferrule, wrap and butt, the
+ghost-ball aim, mallets, puck with its trail, flippers). LED scores, a pixel font. STARFALL's attract screen gets a
+rising planet. The games' logic is unchanged.
+
+**3. Multiplayer.** Pool (`shared/pool.js`, `server/systems/poolmatch.js`): at a pool table (an arcade's, the Rusty
+Spur's) the action button pays the table and the screen offers "Waiting for a player - or: PLAY THE COMPUTER / A FRAME
+ALONE". Anyone walking up to a waiting table sits in; it's eight-ball, every shot played out on the server from the aim
+and power sent, judged (groups, fouls, the 8), and sent to both players and any watchers to animate. A game against the
+computer (the CPU, or Hank at the Spur - `cpuShot`) can't be joined, only watched. Closing the screen (Esc, the X) or
+walking off forfeits a game against a player (the other wins) and loses one against the computer. A win in an arcade
+pays `ARCADE.match` tickets; everywhere it goes on `profile.poolRec`. Chess (`server/systems/chess.js`): a table whose
+seats are both taken - two players, or a player and the regular - offers "Watch the chess game" instead of a seat;
+the board screen says "Waiting for a player - or play the computer". Bowling: each lane's screen now shows every bowler
+on it with their score, for everyone in the alley ('bowl' events carry `sc`). **Air hockey stays against the machine**:
+real-time two-player air hockey over the network needs the puck simulated on the server at a high rate and the
+mallets predicted - left for its own change.
+
+**4. Bowling (IN14).** A building big enough (`shared/bowling.js` BIG: the Old Freight House, 62 x 40) gets 6 lanes at
+3 times the size - 132 px wide, 21 tiles long, pins 27 px apart - instead of 8 at 44 px. The roll and the pins are
+worked out at the old size in lane units and a lane's `k` scales them onto the floor (`lanePt`), so the physics and
+its tests are unchanged. The ball is no longer a world entity: the server sends its line once ('bowlroll') and the
+pages roll it (`client/bowling.js`), as big as the lane. The room is filled out (`alleyKit`, solid where it should be):
+behind each pair of lanes a ball return, a lit scoring console and a curved settee round a table; the snack bar with
+its menu boards and stools; tables and chairs; lounges either side of the lanes; arcade cabinets along the east wall;
+plants; the shoe counter by the door. A smaller building (the old generator city's Pinwheel Lanes, 14 x 13) keeps the
+old eight lanes.
+
+**5. Chess tables.** Six more public tables out in the open (`chess: 1, open: 1`): two on Westport Center's fountain
+court, two on the Sunset Boardwalk between the palms, two on Greenfield Park's fountain plaza. The park's old table is
+left where it is for the visibility pass. test/world3server.test.js: each is a chess table with nothing tall drawn
+over it; test/chesstables.test.js: at a table playing the regular, a second player can only watch.
+
+**6. The Guide** (`shared/guide.js`): Arcades, Pool, Air hockey, Bowling, Chess, and Playing other people - the numbers
+from `ARCADE`, `BOWL`, `BIG`, `CHESS`.
+
+Budgets: the page 518 / 520 KB (main.js routes 'pool' messages and the 'bowlroll' event; the classic tiles draw the big
+lanes), the renderer 405 / 410, the bake 980 / 1000 (the alley's kit, the arcade's door). Tests: test/poolmatch.test.js,
+test/chesstables.test.js, the arcade, bowling, world3server and lazypage tests extended.
