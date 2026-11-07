@@ -20906,3 +20906,60 @@ A world change's job now includes the rebake and test/worldmap.test.js.
   shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
   change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
   worldmap and perf (8 pass).
+
+## 2026-11-06 - Forklift: a marked loading bay across the yard; quitting a job from the job card
+The owner (11-06): "How do you quit a job you started? Specifically looking at the forklift job. We should have it make
+you take the pallets further away into a clear marked loading bay area. It also says get in car when it should say
+forklift."
+- **The loading bays are world data** (`shared/loadbays.js`, one generator pass near the end of `shared/map.js`:
+  `m.loadBays`). For every yard (the forklifts parked about the port's container yard, the warehouses and the fish
+  markets, and each warehouse's door) it plans a pallets' row near the yard's forklift or door and a loading bay across
+  the yard: three numbered slots (two pallets a slot), `FORK.drive` = 25-60 tiles away by the way a forklift drives,
+  aiming at about 40. A bay backed by a building's wall scores best, so most of The Yards' bays sit at a warehouse's dock
+  door. The way between and both places stay clear: no building, wall, water, bridge, walk-in floor, prop (a tree's
+  crown and a parked forklift or container count their size), fence or parking bay, with a tile of room either side.
+  No place sits in a building's lee (the four tiles north of one, which the camera sees under its roof), and no two
+  yards share ground. It's data only: no tile or prop changes, so the map's signature and the world map's picture
+  stand. World v3 has 9 yards with a bay, at drives of 31-48 tiles (most about 41). Before, the bays were 5-13 tiles
+  from the pallets. Four street-front docks in The Yards (Gulf Coast Freight, Ironhorse Logistics, Bayline Paper Co,
+  Atlas Moving & Storage) have their forklift parked on the street and no open ground within reach, so they aren't
+  yards any more. Their neighbors' yards are. The plan takes about 0.5-1 s of World v3's ~100 s build, and 30-120 ms
+  of today's. Yards are named for the business they're at ("the Kessler Bros. Produce yard"), no more "the The Yards
+  yard".
+- **Marked in the world**: the ground bake (`groundbake.js loadBays`) paints hazard stripes along the bay's back and
+  ends, a yellow line along its open front, white lines between the slots, each slot's number on the apron, and
+  LOADING BAY across the apron, upright as the camera sees it. Each pallet's place gets yellow corner marks. The statics
+  (`statics.js`) stand a lit LOADING BAY sign at one front corner and a floodlight on its arm at the other, its pool on
+  the slots at night. The prefab lots' art-only dressing (pallets, a forklift, a container) keeps off a yard's plan.
+  The slot your pallet goes in is the server's choice (`forklift.js target`: `slot`), and the page lights it
+  (`client/jobway.js slotMark`): a marching yellow-and-white edge, a soft fill, a chevron at its open side, SLOT n.
+- **The job** (`server/systems/forklift.js`): the yards are `m.loadBays`, and the pallets go in the row. The forklift is
+  parked on the row's apron facing them (or the nearest free one). A second driver can't take a bay already in use, and
+  a new shift clears the last one's pallets from the slots. Lines say slot, not bay. The first line is "Forklift: get on
+  your forklift - tap this card to quit", then "lift a pallet", "take it to the loading bay - slot n".
+- **Pay, retuned for the longer runs** (`shared/rules-work.js FORK`, still per pallet): a pallet pays `perLoad` $40 plus
+  `perTile` $1 a tile of that yard's drive, so $71-$88 at World v3's yards and $80 at 40 tiles. A stacked pallet pays
+  $30 more (was $20), and the lot pays a $200 bonus (was $120). A 41-tile yard's shift comes to 6 x $81 + 3 x $30 + $200
+  = $776. Before, any yard paid 6 x $45 + 3 x $20 + $120 = $450. A run is about three times the drive it was, about 30
+  s a pallet against about 15, so a shift takes about 3 minutes against 1.5. That is $260 a minute against $300: a
+  little less a minute, a lot more a shift. A yard further across pays more for its longer drive. The board's card
+  shows the yard's own figures and its drive in meters.
+- **Quitting** was Phone, then the job at the top, then Quit job pressed twice, and the owner couldn't find it. A tap or
+  a click on the HUD's job card now opens the phone's Jobs app, with the job you're on at its top: Show on map, Quit
+  job. It used to fold the card. The card's own first line says so, and so does the Guide's Finding work ("To quit, tap
+  the job card on your screen (or [[phone]])"). Keyboard and pad have P and the pad's phone button, with the job at the
+  top of the phone's home. Quitting the forklift job (`jobs.js failJob` -> `forklift.endShift`, via a new `jobs.onFail`
+  hook) removes every pallet not in the bay, the one on the forks too (the forks lowered). The forklift is recalled as
+  every job's vehicle is, and you're set down beside it if you're at the wheel. Pallets already in the bay go a minute
+  and a half later.
+- **"Get in car"**: every line the forklift job shows (the card, the step, the notes, the prompts, the tracker) says
+  forklift. The YOUR CAR plate over the issued forklift and the recall's "takes its car back" come from
+  `vehicleWord`, fixed on the `vehword` branch (d28e3ac9), which isn't merged here yet.
+- **Guide**: the forklift has its own entry (the drive, the slot that's lit, the pay range from FORK). Ranger and farm
+  keep theirs.
+- Tests: `test/loadbays.test.js` (today's world: every yard planned, the plan deterministic and leaving tiles and props
+  alone, the bay painted, its sign and floodlight lit, the planner kept off the page). `test/loadbayscheck.js` checks
+  every bay against the map itself, and `test/world3server.test.js` runs it on World v3 as the server builds it: the
+  port's yards and every warehouse's included, then a shift started at each. `test/workjobs.test.js` covers a full run
+  to the bay with the slot lit, the pay, quitting with a pallet on the forks, a second driver kept off a busy bay, and
+  no "car" in any line. `test/uiscreens.test.js` checks that the job card opens the phone's job with Quit job.

@@ -21,7 +21,7 @@
 //   forkStage(v)                   the forks' height as the wire carries it (net.js: a forklift's extra byte, bits 4-5; bit 3 is a hitched trailer)
 import { K } from '../../shared/constants.js';
 import { FORK } from '../../shared/rules-work.js';
-import { BAY } from '../../shared/loadbays.js';
+import { BAY, routeTiles } from '../../shared/loadbays.js';
 import { slotWorld } from './cargo.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
@@ -255,10 +255,12 @@ export function devFork(world, p, k = '') {
   if (!p.job) { const err = start(world, p); if (err) return err; }
   const v = world.get(p.job.truck);
   if (v && !ped.vehId && !v.seats[0]) { v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; ped.x = v.x; ped.y = v.y; p.teleportAt = world.time; world.place(ped); p.meDirty = true; }
-  // k 'lift': the forks under the nearest pallet, lifted; 'bay': carried up to the next bay
+  // k 'lift': the forks under the nearest pallet, lifted; 'bay': carried up to the next slot
   const at = (x, y, a) => { const f = v.def.slots[0][0]; v.x = x - Math.cos(a) * f; v.y = y - Math.sin(a) * f; v.a = a; v.vx = v.vy = 0; world.place(v); ped.x = v.x; ped.y = v.y; p.teleportAt = world.time; world.place(ped); };
   const B = (world.map.loadBays || [])[p.job.bay];
-  if (v && (k === 'lift' || k === 'bay') && !v.cargo[0]) { const t = target(world, p, p.job); at(t.x, t.y, B ? Math.atan2(B.pick.fy, B.pick.fx) : Math.PI / 2); const q = palletAtForks(world, v, p.job); if (q) lift(world, p, v, q); }
+  if (v && (k === 'lift' || k === 'bay' || k === 'drive') && !v.cargo[0]) { const t = target(world, p, p.job); at(t.x, t.y, B ? Math.atan2(B.pick.fy, B.pick.fx) : Math.PI / 2); const q = palletAtForks(world, v, p.job); if (q) lift(world, p, v, q); }
+  // 'drive': a pallet on the forks, half way along the way to the bay (shared/loadbays.js route), heading along it
+  if (v && k === 'drive' && B && v.cargo[0]) { const R = routeTiles(B.route), i = R.length >> 1, a = R[Math.max(0, i - 1)], b = R[Math.min(R.length - 1, i)], h = Math.atan2(b[1] - a[1], b[0] - a[0]) || 0, f = v.def.slots[0][0]; at((a[0] + 0.5) * 32 + Math.cos(h) * f, (a[1] + 0.5) * 32 + Math.sin(h) * f, h); }
   if (v && k === 'bay' && v.cargo[0]) { const b = p.job.bays[Math.max(0, nextBay(p.job))]; at(b.x, b.y, B ? Math.atan2(B.bay.fy, B.bay.fx) : -Math.PI / 2); }
   return null;
 }
