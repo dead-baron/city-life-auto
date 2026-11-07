@@ -367,6 +367,42 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   assert.ok(steps.includes('moment_wanted') && steps.includes('moment_down'));
 });
 
+// the owner's 11-06 screenshot: "Hurt? Hold for your quick wheel - a bandage patches you up." over YOU'RE DOWN
+test('no first-time moment over the down screen or the wake-up: held until you are back up; the hurt one dropped if you went down', () => {
+  const { w } = world();
+  const { p, prof, conn } = newcomer(w);
+  toArrival(w); toQuestion(w);
+  economy.handleMenu(w, p, ASK_POI, 'roam');
+  const tips = () => sent(conn, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
+  w.loopTime = 60; prof.ftue.m.transit = 1;
+  w.time += FTUE.tipGapS + 1; run(w, 0.6);
+  // hurt, then down within the line's time: the hurt line goes (the page) and it's not counted as taught
+  p.ped.hp = p.ped.maxHp * (FTUE.hurtAt - 0.1); run(w, 0.6);
+  assert.deepEqual(tips(), ['hurt']);
+  combat.damage(w, p.ped, 9999, null, 'test'); run(w, 0.6);
+  assert.ok(p.ped.dead);
+  assert.ok(!prof.ftue.m.hurt, 'the hurt moment dropped: it went down with you');
+  // down: only 'down' (the screen's own) - nothing else while you're down, however long
+  p.ftueTipAt = -1e9; run(w, 0.6);
+  assert.deepEqual(tips(), ['hurt', 'down']);
+  p.heat = STAR_HEAT[1] + 8; p.wanted = 1;
+  p.ftueTipAt = -1e9; run(w, 2);
+  assert.ok(!tips().includes('wanted'), 'no moment while down');
+  // back up: not during the wake-up either, then the held one
+  p.respawnAt = w.time; run(w, 1.2);
+  assert.ok(!p.ped.dead, 'woke up');
+  const hurtNow = () => { p.ped.hp = p.ped.maxHp * (FTUE.hurtAt - 0.1); p.heat = STAR_HEAT[1] + 8; p.wanted = 1; };   // (health comes back, heat fades: kept up)
+  p.ftueTipAt = -1e9;
+  for (let t = 0; t < FTUE.wakeS - 3; t += 0.5) { hurtNow(); run(w, 0.5); }
+  assert.equal(tips().length, 2, 'nothing during the wake-up');
+  for (let t = 0; t < 5; t += 0.5) { hurtNow(); run(w, 0.5); }
+  assert.equal(tips().length, 3, 'then one');
+  assert.ok(['wanted', 'hurt'].includes(tips()[2]));
+  // and the hurt one is taught again later, standing
+  p.ftueTipAt = -1e9; hurtNow(); run(w, 0.6);
+  assert.ok(tips().includes('hurt') && tips().includes('wanted'));
+});
+
 test('the Guide\'s replay: the arrival from where you stand, then the question and a first goal again', () => {
   const { w } = world();
   const { p, prof, conn } = newcomer(w);

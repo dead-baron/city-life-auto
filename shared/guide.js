@@ -101,7 +101,7 @@ export function guideSections(map = null) {
     { id: 'activities', title: 'Activities', blurb: 'Things to do that aren\'t work.', entries: [
       { id: 'fishing', t: 'Fishing', b: `Face the water with a rod and hold [[action]] to cast - let go for the distance. When the bobber dives, press to strike, then hold to keep the fish in your bar. Rods: ${andList(rods)}. Bait changes what bites.` },
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
-      { id: 'dice', t: 'Street dice', b: `A crew shooting dice in a rough part of town: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
+      { id: 'dice', t: 'Street dice', b: `A crew shooting dice down an alley or a back passage in a rough part of town, like Southside's: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
       { id: 'races', t: 'Races and skating', b: 'Pull up to a race\'s start to enter. Skate parks score your tricks; beaches have surf.' },
       { id: 'crazy', t: 'Crazy Taxi', b: `A run against the clock from any taxi rank: ${CRAZY.startS} seconds on it to start, more for each fare you get there fast.` },
       { id: 'skills', t: 'Skills', b: `Six skills level up as you do things, ${SKILL.max} levels each - up to +${pct(SKILL.top)} at the top. Your phone's Skills app shows them.` },

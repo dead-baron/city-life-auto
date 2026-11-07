@@ -595,9 +595,9 @@ export class HUD {
     }
     // POIs
     g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const skipIc = iconSkip(this.map);
-    for (const p of this.map.pois) {
-      const icon = p && POI_ICON[p.kind];
+    const skipIc = iconSkip(this.map), pois = this.map.pois, rr = (size / 2 + 10) / scale;
+    for (const i of poiNear(this.map, cx, cy, big ? Infinity : rr)) {   // (the radar: only the cells round it - a window holds thousands, every frame)
+      const p = pois[i], icon = p && POI_ICON[p.kind];
       if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
       if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
@@ -694,7 +694,7 @@ export class HUD {
   centerMap(x, y) { if (this.worldmap) this.worldmap.center(x, y); }
   resetMap() { if (this.worldmap) this.worldmap.reset(); }
   // World v3's window moved (client/main.js swapWorld): the minimap paints the new window's part over what it had
-  setMap(map) { this.map = map; paintMinimap(this.mini, map); this.resetMap(); }
+  setMap(map) { this.map = map; paintMinimap(this.mini, map, true); this.resetMap(); }
   get mapView() { return this.worldmap ? this.worldmap.view : null; }
   drawBigMap(cx, cy, heading, opts = {}) { if (this.worldmap) this.worldmap.draw($('bigmap-c'), this, cx, cy, heading, opts); }
 
@@ -779,6 +779,23 @@ const POI_ICON = {
 // one icon for a place with more than one counter (the market's rows of stalls): the same kind within this of
 // another is left off the maps
 const ICON_MERGE = 640;
+// the map's places by 1024 px cell (once per map: a World v3 window, once per swap), and the indices of those within r px
+// of (x, y) - every one when r is Infinity (the big map)
+const POI_CELL = 1024, POI_GRIDS = new WeakMap(), NEAR = [];
+export function poiNear(map, x, y, r) {
+  const list = map.pois || [];
+  NEAR.length = 0;
+  if (!(r < Infinity)) { for (let i = 0; i < list.length; i++) NEAR.push(i); return NEAR; }
+  let g = POI_GRIDS.get(map);
+  if (!g) {
+    POI_GRIDS.set(map, (g = new Map()));
+    for (let i = 0; i < list.length; i++) { const p = list[i]; if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue; const k = Math.floor(p.y / POI_CELL) * 4096 + Math.floor(p.x / POI_CELL); let a = g.get(k); if (!a) g.set(k, (a = [])); a.push(i); }
+  }
+  const gx0 = Math.floor((x - r) / POI_CELL), gx1 = Math.floor((x + r) / POI_CELL), gy0 = Math.floor((y - r) / POI_CELL), gy1 = Math.floor((y + r) / POI_CELL);
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) { const a = g.get(gy * 4096 + gx); if (a) for (const i of a) NEAR.push(i); }
+  NEAR.sort((a, b) => a - b);   // (drawn in the list's order, as before)
+  return NEAR;
+}
 export function iconSkip(map) {
   if (map._iconSkip) return map._iconSkip;
   const list = map.places || map.pois;   // (World v3's window: the whole world's places, from the index)
@@ -827,8 +844,12 @@ function coarseMinimap(c, map) {
   return c;
 }
 // (a new window: its part of the coarse picture when the index had none - what was seen before stays - and its own)
-function paintMinimap(c, map) {
+// sliced: a window swapped in while you play (setMap) has its own picture painted a few ms at a time, between frames - the
+// window before's shows meanwhile (11-06: 2.3 million pixels at once was a phone's long task at every region's border)
+const SLICE_MS = 4;
+function paintMinimap(c, map, sliced = false) {
   if (!c || !c.getContext) return;
+  if (sliced && map.picture) { paintWinSliced(c, map); return; }
   const k = c.k || 1, g = c.getContext('2d'), col = MINI_COL();
   if (!map.picture) {
     const x0 = Math.ceil(map.x0 / k), y0 = Math.ceil(map.y0 / k), w = Math.floor((map.x0 + map.w) / k) - x0, h = Math.floor((map.y0 + map.h) / k) - y0;
@@ -849,16 +870,43 @@ function paintMinimap(c, map) {
   if (W !== c.win) { W.width = map.w; W.height = map.h; }
   W.x0 = map.x0; W.y0 = map.y0;
   const wg = W.getContext('2d'), img = wg.createImageData(map.w, map.h);
-  for (let ty = map.y0; ty < map.y0 + map.h; ty++) {
-    const row = map.row(ty), o = (ty - map.y0) * map.w;
-    for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
-      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (o + tx - map.x0) * 4;
-      img.data[i] = c3[0]; img.data[i + 1] = c3[1]; img.data[i + 2] = c3[2]; img.data[i + 3] = 255;
-    }
-  }
+  winRows(map, img, map.y0, map.y0 + map.h, col);
   wg.putImageData(img, 0, 0);
   wg.save(); wg.translate(-map.x0, -map.y0); miniLines(wg, map); wg.restore();
   c.win = W;
+}
+// the window's tiles, a pixel each, rows ty0..ty1 into img
+function winRows(map, img, ty0, ty1, col) {
+  const d = img.data;
+  for (let ty = ty0; ty < ty1; ty++) {
+    const row = map.row(ty), o = (ty - map.y0) * map.w;
+    for (let tx = map.x0; tx < map.x0 + map.w; tx++) {
+      const c3 = col[map.tiles[row + map.col(tx)]] || [0, 0, 0], i = (o + tx - map.x0) * 4;
+      d[i] = c3[0]; d[i + 1] = c3[1]; d[i + 2] = c3[2]; d[i + 3] = 255;
+    }
+  }
+}
+// ...a slice at a time (SLICE_MS), between frames; a newer window's painting takes over from an older one's
+function paintWinSliced(c, map) {
+  const job = (c.job = { map }), col = MINI_COL(), W = document.createElement('canvas');
+  W.width = map.w; W.height = map.h; W.x0 = map.x0; W.y0 = map.y0;
+  const wg = W.getContext('2d'), img = wg.createImageData(map.w, map.h);
+  let ty = map.y0, put = 0;
+  const step = () => {
+    if (c.job !== job) return;
+    const t = performance.now();
+    if (ty < map.y0 + map.h) {
+      while (ty < map.y0 + map.h && performance.now() - t < SLICE_MS) { const n = Math.min(map.y0 + map.h, ty + 64); winRows(map, img, ty, n, col); ty = n; }
+      setTimeout(step, 0); return;
+    }
+    // (the pixels put in a band at a time, then the lines over them)
+    if (put < map.h) { const n = Math.min(map.h, put + 384); wg.putImageData(img, 0, 0, 0, put, map.w, n - put); put = n; setTimeout(step, 0); return; }
+    const k = c.k || 1, g = c.getContext('2d');
+    g.save(); g.scale(1 / k, 1 / k); g.beginPath(); g.rect(map.x0, map.y0, map.w, map.h); g.clip(); miniLines(g, map); g.restore();
+    wg.save(); wg.translate(-map.x0, -map.y0); miniLines(wg, map); wg.restore();
+    c.win = W; c.job = null;
+  };
+  setTimeout(step, 0);
 }
 // the minimap's part (sx, sy, sw, sh: in tiles) drawn into (dx, dy, dw, dh): today's world one canvas, a pixel a tile;
 // World v3's window the coarse picture with the window's own over it

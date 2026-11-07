@@ -42,10 +42,32 @@ export function onMsg(m) {
   if (m.a === 'pick') pick(m);
   else if (m.a === 'arrive') arrive(m);
   else if (m.a === 'end') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('cash', 0.8); }
-  else if (m.a === 'tip') showLine(m.ctl, m.text, m.sec, `tip:${m.id}`);
+  else if (m.a === 'tip') tip(m);
 }
-// the self record: the step's line when the step changes
+// A first-time moment never shows over the down / death screen or the wake-up's "Loading the area..." veil (the owner's
+// 11-06 screenshot: "Hurt? ... a bandage" over YOU'RE DOWN; the server holds them too: server/systems/ftue.js moment):
+// one that comes then waits until you're up and the veil has gone; the hurt one is dropped if you went down meanwhile
+// (and one on screen as you go down goes) - 'down' itself is about that screen and shows on it.
+let held = null, heldT = 0;
+const isDown = () => !!(C && C.S.me && C.S.me.dead);
+const veiled = () => { const v = $('veil'); return !!(v && v.classList.contains('on')); };
+function tip(m) {
+  if (m.id === 'down' || (!isDown() && !veiled())) { held = null; showLine(m.ctl, m.text, m.sec, `tip:${m.id}`); return; }
+  held = { m, down: isDown() };
+  clearInterval(heldT); heldT = setInterval(heldTick, 500);
+}
+function heldTick() {
+  if (!held) { clearInterval(heldT); return; }
+  if (isDown()) { held.down = true; return; }
+  if (veiled()) return;
+  const { m, down } = held;
+  held = null; clearInterval(heldT);
+  if (!(down && m.id === 'hurt')) showLine(m.ctl, m.text, m.sec, `tip:${m.id}`);
+}
+// the self record: the step's line when the step changes; a tip on screen goes as you go down
 export function onMe(me) {
+  if (me.dead && lineSig.startsWith('tip:') && lineSig !== 'tip:down') { hideLine(); lineSig = ''; }
+  if (held && me.dead) held.down = true;
   const f = me.ftue;
   if (!f || f.st !== 'goal') { if (lineSig.startsWith('step:')) hideLine(); lineSig = f ? lineSig : ''; return; }
   const sig = `step:${f.step}:${f.line}`;

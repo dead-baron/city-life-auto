@@ -21,7 +21,7 @@ export const BAR_PLANS = ['lounge', 'tavern', 'sportsbar'];
 export const PLANS = ['corner', 'fuel', 'grocery', 'liquor', 'gunshop', 'hardware', 'pawn', 'fence', 'bank', 'court', 'pharmacy', 'barber', 'boutique', 'sports', 'tackle', 'fishmarket', 'lounge', 'tavern', 'sportsbar', 'club', 'saloon', 'office', 'records'];
 export function planOf(u) {
   if (!u) return null;
-  return SHOP_PLAN[u.kind] || (u.trade && TRADE_PLAN[u.trade]) || null;
+  return (u.kind === 'convenience' && u.trade === 'liquor' ? 'liquor' : SHOP_PLAN[u.kind]) || (u.trade && TRADE_PLAN[u.trade]) || null;   // (a corner store that's a liquor store: its shelves of bottles - world3-lots.js)
 }
 // IN5's three bars: the cocktail lounge (Velvet), the tavern (The Oak & Mug), the sports bar (The Local) - by the words
 // in its name, else by the building

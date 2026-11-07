@@ -20772,3 +20772,194 @@ for the purpose of onboarding new players (without overlapping on each other if 
   `test/world3hubs.test.js` counts the main line's bores only (`!t.arrival`).
 - Today's world (the map picture's) is untouched by this: its `world` hash is main's. The world map's picture was
   rebaked here anyway (`tools/build-worldmap2.mjs`) because main's wider bars had changed today's world signature.
+
+## 2026-11-06 - Southside's shops and sheds: rough small shops on the street lots, dice down the passages
+The plain blocks' cut ("No huge plain buildings", above) left Southside's long back rows as columns of lots 10-15 tiles
+deep with paved passages between them. Every lot fronts its passage, and in Southside the art draws them as sheds and
+garages (a metal roof there is a `shed`, a tar one a `rough` walk-up with a random shopfront). The owner asked for a
+mix that keeps the neighborhood's rough vibe and matches its concepts (D6 Southside, RT10 the pawn shop on the corner,
+RT5 the liquor store, OS21, ST3 the barber, IN11 the row of rough shops, GM8 the dice game down an alley). The plan he
+approved: the lots on a real street become rough small shops, the lots that front only the passages stay sheds and
+garages, street dice down a passage or two, and Port Westport stays industrial.
+
+**shared/world3-lots.js** (new; World v3 only - the world build's `lots` hook, which map.js calls right after
+`breakPlainBlocks`; the page and the city worker never load it):
+- **Which lots.** Southside's 149 cut lots: 53 are the southmost lot of a column, whose front faces north, away from the
+  camera (`back`); they stay as they are. Of the other 96, which front a passage, 22 also stand on a real street: a
+  side or main street's pavement or asphalt along their west or east side, or across the pavement in front. An alley's
+  asphalt or a passage's paving doesn't count. The other 74 front only their passages and stay sheds and garages.
+- **The mix.** Eight kinds. The four you walk into use place kinds the game already has, with their counters and their
+  rooms (`shared/shoprooms.js`): a **pawn shop** (`pawn`: buys and sells, takes hot money), a **liquor store** (a corner
+  store, `convenience`, that sells what one sells and can be robbed like one; its room is the liquor plan's shelves of
+  bottles, OS21), a **barber** (`barber`: the chair, cut, color, beard and mustache) and a **bodega** (`convenience`,
+  the corner store's plan). The other four are storefronts only, with a sign, a window and a delivery stop, like Wash
+  World and Lucky 7 Check Cashing on Pelican Avenue: **check cashing** (a counter window behind a grille), a **betting
+  shop** (its window full of screens; the sign in the street trade's yellow on black), a **laundromat** (the washers in
+  the window, the washer sign) and a **tire shop** (the garage's roller doors with its name over them, stacks of tires
+  out front). Each would need a new system to be more than a front - a check-cashing counter, an off-track window on
+  the race book, a wash for your clothes, tires for your car - so none was invented here.
+- Rooms: a walk-in kind needs a lot at least 6 wide and 8 deep (4 tiles inside, and the 6 rows `roomDepth` wants), a
+  storefront 5 x 6 (the tire shop 6 x 6, for two roller doors). A lot too small stays a shed. All 22 had room.
+- The door is at the street's end of the shop's front (in the middle when the street is in front), so it opens onto
+  the passage's mouth by the pavement. A walk-in's room is laid by the same code as every other walk-in's: map.js
+  `buildInteriors` now lays each room with `walkInRoom`, which the hook calls for the lot shops. Nothing else changes.
+- No two neighbors are alike: side by side, or across a passage, the kinds always differ. A kind comes up at most once
+  in a block (twice in a block of more than eight shops). The kinds Southside has fewest of so far go first, so the
+  mix spreads over all eight. Names and signs are invented, from each kind's own list, never a brand.
+- The look: rough brick (dark or red, the Riverway Houses' tones) or Southside's stucco, one or two floors over the
+  shop, grime, tags, now and then a boarded window, a grille on most of the pawn shops, liquor stores and check
+  cashers, an OPEN sign on most of the liquor stores and bodegas, an awning now and then on a barber, a bodega or a
+  laundromat. These are building data (`b.art`, `b.arch`), drawn by the art as it draws the hand plans' shops: no art
+  code changed.
+- **IDs.** The lots keep their ids and their footprints (breakPlainBlocks appended them). The shops' POIs join the list
+  last of all, at the end of the world build's `done` hook (`lotPoisLast`), so every place before stays where it was
+  and keeps its number. Without that, 48 places added later in the build (ATMs, boat rentals, race starts, a snack bar,
+  Smuggler's Den) would have been renumbered.
+- **Street dice (GM8).** The game already has a dice game. `server/systems/activities.js` sets a crew of three
+  crouched round the dice down an alley in a rough part of town, mostly after dark, and `server/systems/streetdice.js`
+  lets you in on it: craps' pass line for `DICE.bet` a roll, with a sore loser now and then. The hook picks two of
+  Southside's passages between sheds, away from the shops and the streets, the farthest apart, and puts a spot against
+  each one's south wall (`m.diceSpots`). activities.js plays the crew's game there too. The passage gets milk crates,
+  trash bags and a trash pile, a burn barrel, a pallet and a lamp. The Guide's "Street dice" entry now says "down an alley or a back passage in a rough
+  part of town, like Southside's".
+- **shared/shoprooms.js `planOf`:** a corner store whose trade is liquor (a walk-in `convenience` with `store: 'liquor'`)
+  gets the liquor plan. Riverway Liquor and the generator's liquor stores have no trade and keep the corner plan.
+- **The world map's picture** (assets/map/) rebaked: `node tools/build-worldmap2.mjs`.
+- **Tests.** `test/plainblocks.test.js` (it already builds the world once) gains three. (1) Southside's street lots are
+  a mix of rough small shops: at least 15 shops of at least 7 kinds, none of them over a quarter of the shops; each
+  one in Southside, on a street, not a back, with room for its kind; never two neighbors alike; a kind no more than its
+  share of a block; one door each, of its kind's POI, with its sign and its look; a walk-in's room laid from the south
+  with its trade's plan, its doorway open and onto paving; a storefront not a walk-in. (2) The passage lots stay plain
+  sheds, and no lot shop stands outside Southside, so Port Westport's cut lots are as they were. (3) One or two dice
+  spots, on a passage in Southside, and activities.js `spotsOf` plays the crew's game at each one.
+- Tests run: shoprooms, storeicons, shopmarks, walkinrooms, facades, art2, mapwindow, dmath, guide, signs and
+  walkinfront (58 pass); test/dmath-world.mjs gives the same signature and hash with and without the nudge (1led2u3 /
+  66e5ad22) and calls none of the approximated Math functions; plainblocks and worldbuild (14 pass); world3shops,
+  world3city, world3doors and world3server (24 pass); perf and worldmap (8 pass).
+- **Places outside Southside:** none moved and none renumbered (the lot shops' 22 POIs are the last 22 of the list).
+  No home moved: 3,467 before and after, every one where it was. `WORLD_VERSION` stays 13. The buildings keep their
+  ids: 7,129 before and after.
+- **Performance** (tools/perf.mjs, before -> after): page 84 files / 509 KB, the same; city worker 35 files / 364 ->
+  365 KB (map.js's `walkInRoom` split and the hook; world3-lots.js is the world build's only); renderer 403 KB and bake
+  worker 973 KB, the same (the art code is untouched but for `planOf`'s one line); city build 29.6x -> 29.1x the
+  yardstick and bakes 60.4x -> 60.6x (this machine's noise); the city 39 MB and the biggest kept chunk 758 KB,
+  unchanged. No budget raised.
+- Not done (each its own job, if the owner wants it): a check-cashing counter, an off-track betting window on the race
+  book (`server/systems/racebook.js` is there; a counter would open its view the way the casinos' floor does), a
+  laundromat you use, a tire shop that sells tires. The dice crew is the existing street dice, not a new game.
+
+## 2026-11-06 - First-time moments wait until you're back up
+
+The owner's screenshot from a night drive: the first-time moment "Hurt? Hold for your quick wheel - a bandage patches
+you up." on top of the YOU'RE DOWN screen. The hurt line had gone out a moment before the player went down (the line
+stays up `FTUE.lineS`), so it sat over the down screen, where a bandage is no help.
+- Server (`server/systems/ftue.js`): no moment fires while you're down or dead (only `down` itself, which is about that
+  screen), nor for `FTUE.wakeS` (10 s, `shared/rules.js`) after you're back up (the wake-up screen and the area
+  loading): they are held until then. Going down while the hurt line is still up drops it: it's not counted as taught,
+  so it comes again the next time you're hurt and on your feet.
+- Page (`client/ftue.js`): a tip on screen goes as you go down (not `down`'s own); a tip that arrives while you're
+  down or while the "Loading the area..." veil is up waits until you're up and the veil has gone; a held hurt tip is
+  dropped if you went down meanwhile.
+- `test/ftue.test.js`: a new test - hurt then down (the hurt one dropped), nothing but `down` while down, nothing during
+  the wake-up, then the held one, and the hurt one taught again later.
+
+## 2026-11-06 - Phone performance: the long drive (the owner's Pixel 7 Pro "starting to chug")
+The owner, 11-06, with the perf readout on: right after a teleport, 119 fps (p95 33 ms, 5 long tasks); after driving
+round a residential area for a while, at night in the rain, 60 fps (p95 50 ms), "long tasks 63 (8297 ms)", bakes
+62 -> 758 ms, "made here 40" person sprites (~9 ms each). Measured first, then fixed what the measurements pointed at;
+no art, graphics, resolution or render quality was lowered. No budget changed (page 511 of 520 KB, renderer 403 of 404).
+- **tools/drivebench.mjs**: a repeatable long drive - the owner's screen (411x891 portrait at 2.6, touch, a Pixel user
+  agent, Medium, the perf readout on, told 8 cores and 8 GB: four bake workers), night and rain held, the first-launch
+  gate answered and the first-time experience skipped, a car driven by an autopilot along the GPS route
+  (client/route.js) from district to district (Pine Hills, Southside, Downtown, Midtown, Northgate, Old Town...) across
+  World v3's region borders, then a walk round on foot. Every task the page runs is timed where it starts (animation
+  frames, worker / socket / channel messages, timers, IndexedDB events); a long one is put down to its source, an
+  animation frame to its parts (main.js's S.perf and the renderer's marks, their running averages unwound). This
+  machine has no GPU: WebGL in SwiftShader took 1.2 s a night frame, every frame a "long task" waiting on it, so by
+  default nothing is rasterized (--nodraw: every WebGL call is made, the draws are no-ops). --root runs a snapshot of
+  another build, --cpu slows the page's thread, --trace records a Chrome trace for **tools/longtrace.mjs** (what the
+  long tasks held: JS by function, GC, message decoding, style, paint).
+- **The perf readout** (client/perfhud.js) counts the long tasks behind a loading screen apart from those while you
+  play ("long tasks N · loading M": the first load, a respawn's or a teleport's "Loading the area..." spend a frame's
+  time freely by design - the owner's 63 held both), and shows the window swaps (how many, the last one's ms), the
+  sprite lane and the sprites the atlas let go.
+- **The window swap at every region border** (client/main.js swapWorld; measured on the bench, unthrottled: 220 ms of
+  the page's thread - the minimap's new picture 149, the classic renderer's ground indexes 53, the GPS router 9 - a phone
+  about four times that): the minimap's picture of the new window is painted a few ms at a time between frames (the old
+  one shows meanwhile: client/hud.js); the classic renderer's ground indexes are made the first time it bakes (the art
+  v2 renderer never reads them; the props by chunk both renderers read in one pass: client/render/tiles.js - the page's
+  heap 220 -> 152 MB at the start of the drive); the router's road grid when a route is first asked for
+  (client/route.js). And the window's message is smaller: the city worker leaves out the 89 fields every window has the
+  same (the world's roads, nodes, network, places...: client/worldwindow.js windowSteady), which the page keeps from the
+  window before - about a quarter of what the page decoded (in node: 238 -> 176 ms to clone the window).
+- **People's sprites from a worker of their own** (the sprite lane: pool.js SPRITE_LANE, host.js _startLane): one more
+  worker that only makes people's sprites (no world, never a bake), so the ones on screen - yours first - come back in a
+  frame or two however busy the bake workers are, and none is made on the page's thread once it's up (host.js _now). Your
+  own figure was made on the page whenever it had nothing to show (a respawn, a new look, out of a car) or a person took
+  under OWN_MS (8 ms: on the owner's phone ~9, so it hovered either side). Not on a low-memory device (as before there).
+- **The night, every frame** (client/main.js collectLights, client/hud.js drawRadar): the street lamps, the shop lights
+  and the radar's places are looked at round the view through grids, not the whole window's (11,220 lamps, 6,007 places
+  every frame); the lights the wet ground and the rain catch are pooled records, not a few hundred new objects a frame.
+- **Models built on the page** (found by drivebench --hostprof, which times the renderer's own steps): the night's
+  headlamps built each new kind of vehicle's whole voxel model on the page's thread to read its length (art2/vehicles.js
+  vehicleAnchors: 30-70 ms a kind on the bench machine - the "lights" part's 100-250 ms frames as new traffic came into
+  view); now its dimensions' length, the same number for all 80 kinds (actors.js vehicleLength; test/art2.test.js). And the
+  aircraft's sprites - a police helicopter's model and each of its headings, 70-210 ms a time - are made by the workers
+  (the lane: worker.js 'air', 'airRotor'; the nearest heading made, or the overlay's helicopter, meanwhile).
+- **Baking ahead on a phone** (host.js _prebake): two bake workers at most bake into the store ahead of need (what the
+  screen needs still takes them all) - four workers and now the lane busy for minutes on end is what heats a phone.
+- **Found by the bench, fixed on the way**: a moved window must bring its seed (the page checks a window against its city by
+  the seed before taking the rest; left out with the steady fields, every moved window was dropped).
+
+Before and after (tools/drivebench.mjs: a drive at night in the rain from the arrival, the page's thread slowed 2x, then
+a walk; this machine: 2 cores for the server, the page, the bake workers and the lane; ms unless marked):
+
+| | before | after |
+|---|---|---|
+| distance driven (px; the autopilot gets stuck and circles) | 27,129 | 21,780 |
+| frames | 4,853 | 6,251 |
+| frame p50 / p95 / p99 | 16.7 / 66.7 / 133.3 | 16.7 / 50 / 66.7 |
+| frames over 50 ms | 407 | 161 |
+| long tasks (n / total ms) | 321 / 26,048 | 127 / 8,239 |
+| the page's work a frame (mean) | 6.29 | 3.89 |
+| person sprites made on the page (n / ms) | 14 / 258 | 0 |
+| JS heap start / max (MB) | 334 / 433 | 207 / 304 |
+| a window swap on the page (ms) | 425, 181, 397, 246 | 75, 59 |
+| ...its steps, the slowest swap | carry 99, ground 111, minimap 177, router 36 | ground 56, buildings 15 |
+
+(2 minutes and the walk, --cores 6: three bake workers - four, and the server, the browser and the bench ran this
+machine out of memory twice. Runs vary - the autopilot gets stuck and circles, the bakes share 2 cores with the server -
+but all four pairs went the same way: long tasks down by 40-60%, the p99 frame down a fifth to a half,
+no person sprite made on the page, the heap a third smaller. In node, unthrottled: a moved window's message 238 -> 176
+ms to clone. The scratchpad's perf3/table.md has every run.)
+
+The perf readout's other leads, checked:
+- **60 fps after a while**: nothing in the game caps the frame rate (main.js govern only lowers the render scale, and the
+  owner's readout says 1.0x); a 120 Hz screen drops to 60 when a frame's work passes 8.3 ms - the page's own was 6.1 ms
+  in the rain at night (now less: the lights and the radar through grids, no garbage for the rain's lights) - or when
+  the phone runs hot (a Pixel caps its refresh rate then). Only the phone can tell which: the readout's page ms against
+  its fps over a long drive, before and after.
+- **Memory**: "kept 247" counts the chunks read back from the browser's store over the session, not what's held; the
+  page's JS heap peaked at 416-478 MB on the bench before and 207-304 after - the classic renderer's ground
+  indexes were most of it - and no cache grew without bound over a drive.
+- **Left**: the chunk stand-ins' index (art2/game/standin.js) is built over a whole window the first time one is drawn
+  after a swap (~40 ms on the bench machine); a moved window's message still costs the page its decoding (the window's
+  props and their collision maps: ~175 ms to clone in node, of which the page pays the decoding half); this machine's
+  headless browser commits its frames in software (the "not in a callback" long tasks here, 'Commit' in a trace - a
+  phone's GPU does that).
+
+## 2026-11-06 - The world map's picture rebaked for world 13
+The interiors update (05d58ec9: the plain blocks' lots, the wider bars, the solid cliffs) changed the world without
+rebaking the map screen's picture, so the live map fell back to the plain tile map (test/worldmap.test.js: "baked for
+another world"). `node tools/build-worldmap2.mjs` (10.5 min here) rebaked assets/map/ for the live world; the test passes.
+A world change's job now includes the rebake and test/worldmap.test.js.
+- **Follow-up: the lot shops' signs say their trade.** Soap & Spin's sign came out gray on near-black. Its name's
+  words (`\bSPIN\b`, client/art2/signfont.js WORDS) made it a record shop, and a record shop's board is neon: a dark
+  board whose letters are a tube, gray by day. The laundry kind's own colors were never used. Each kind in
+  `LOT_SHOPS` now says its trade outright (pawn, liquor, barber, mart, office, street, laundromat), so a name can't
+  pick a face, and none of them is neon. On every other face statics.js `styleSign` keeps a hand-planned board's colors
+  and makes them legible. Every lot shop's sign reads at least 4.5:1: across each kind's colors and its trade's
+  palettes the drawn contrast is 4.5-11.6. No shared sign art changed. `test/plainblocks.test.js` checks that each lot
+  shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
+  change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
+  worldmap and perf (8 pass).

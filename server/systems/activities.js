@@ -258,6 +258,8 @@ export function spotsOf(map) {
     if (!open(x, y) || !open(x + q.tx * 16, y + q.ty * 16) || !open(x - q.tx * 16, y - q.ty * 16) || !open(x + ix * 14, y + iy * 14) || !clear(x, y, 400)) continue;
     list.push({ k: 'dice', x, y, a: Math.atan2(q.ty, q.tx), ix, iy, wild: false }); taken.push({ x, y });
   }
+  // (and down Southside's passages between the sheds, against a back wall - shared/world3-lots.js diceSpots, GM8)
+  for (const q of map.diceSpots || []) if (walkable(map, q.x, q.y) && clear(q.x, q.y, 400)) { list.push({ k: 'dice', x: q.x, y: q.y, a: q.a, ix: q.ix, iy: q.iy, wild: false }); taken.push({ x: q.x, y: q.y }); }
   // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
   const pt = poolTable(map);
   if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }

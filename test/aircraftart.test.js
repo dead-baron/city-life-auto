@@ -64,3 +64,23 @@ test('in the game a model is made over frames, a stage a frame - the overlay sta
   assert.ok(got[firstAt].w > 10 && got[firstAt].h > 10, 'then the sprite');
   assert.ok(AM.bodySprite('rescueheli', 9, 32, 2, 2, true), 'its other headings straight away (the model is kept)');
 });
+
+// (perf, 11-06: the bench's police helicopter at night - its model and each heading made on the page's thread, 70-210 ms a
+// time on the bench machine: the long frames while one was about)
+test('in the game the workers make them (the sprite lane): asked for, nothing built on the page - the nearest heading made, or the overlay, meanwhile', () => {
+  const asked = [], drawn = [];
+  const H = { E: { ap: 2, drawSprite: (k) => drawn.push(k) }, tier: { N: 32 }, opts: {}, n: { drawn: 0 }, _z0: () => 0,
+    _spr: (prov, kind, key, a) => { asked.push([kind, key, a.length]); return null; }, _ask: (prov, kind, key) => { asked.push([kind, key, 'ahead']); return true; },
+    _near: () => null, _conv: () => { throw new Error('made on the page'); } };
+  const v = { d: { m: 61, vr: 0 }, ra: 0.3, rx: 100, ry: 100, flags: 0, extra: 0, _spin: 0.2 };
+  assert.equal(AM.drawAir(H, v, 1, false), false, 'not drawn yet: the overlay stands in');
+  assert.ok(asked.some(([k, key]) => k === 'air' && key.startsWith('air|policeheli')), 'its body asked of the workers');
+  asked.length = 0;
+  H._spr = (prov, kind, key) => (kind === 'air' ? key : null);
+  assert.equal(AM.drawAir(H, v, 1, true), true, 'drawn once made');
+  assert.ok(asked.filter(([, , w]) => w === 'ahead').length === 2, 'yours: the headings either side asked for ahead');
+  assert.ok(drawn.length >= 1);
+  const host = readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8'), wk = readFileSync(new URL('../client/art2/game/worker.js', import.meta.url), 'utf8');
+  assert.match(host, /kind === 'air' \|\| kind === 'airRotor'/, 'the lane takes them');
+  assert.match(wk, /air: \(\) => AIR\.m && AIR\.m\.bodySprite/, 'the workers make them');
+});

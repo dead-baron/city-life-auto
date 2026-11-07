@@ -375,14 +375,17 @@ export function menuOpened(world, p, poi, menu) {
 }
 
 // ---- the first-time moments --------------------------------------------------------------------------------------------
-// Once each, ever (profile.ftue.m), while tips are on, never during the FTUE itself, FTUE.tipGapS apart at least. Returns
+// Once each, ever (profile.ftue.m), while tips are on, never during the FTUE itself, FTUE.tipGapS apart at least. Never
+// while you're down or dead (the owner's 11-06 screenshot: "Hurt? ... a bandage" over YOU'RE DOWN) - only 'down' itself,
+// which is about that screen - nor FTUE.wakeS after you're back up (the wake-up screen): held till then (downs). Returns
 // whether it fired.
 export function moment(world, p, id) {
   const f = rec(p.profile), M = MOMENTS[id];
   if (!f || !M || active(f) || !f.tips || (f.m && f.m[id]) || !p.conn) return false;
   if (world.time - (p.ftueTipAt ?? -1e9) < FTUE.tipGapS) return false;
+  if (id !== 'down' && (!p.ped || p.ped.dead || world.time - (p.ftueUpAt ?? -1e9) < FTUE.wakeS)) return false;
   (f.m ||= {})[id] = 1;
-  p.ftueTipAt = world.time;
+  p.ftueTipAt = world.time; p.ftueTipId = id;
   send(p, { t: 'ftue', a: 'tip', id, text: M.text, ctl: M.ctl || null, sec: M.sec });
   track(world, p, `moment_${id}`);
   store.touch();
@@ -394,6 +397,17 @@ const NEAR_TRANSIT = (world, ped) => {
   for (const q of world.map.pois) if ((q.kind === 'station' || q.kind === 'marina') && Math.abs(q.x - ped.x) < R && Math.abs(q.y - ped.y) < R) return true;
   return false;
 };
+// Down and back up (each half second, whatever the FTUE's state): the moment you're back up starts the wake-up gap; going
+// down while the hurt line is still up drops it (the page hides it: client/ftue.js) - it's taught again the next time
+// you're hurt and on your feet.
+function downs(world, p) {
+  const f = rec(p.profile), ped = p.ped;
+  if (ped.dead) {
+    if (p.ftueDown) return;
+    p.ftueDown = true;
+    if (f && f.m && f.m.hurt && p.ftueTipId === 'hurt' && world.time - (p.ftueTipAt ?? -1e9) < FTUE.lineS + 1) { delete f.m.hurt; p.ftueTipId = null; }
+  } else if (p.ftueDown) { p.ftueDown = false; p.ftueUpAt = world.time; }
+}
 function moments(world, p) {
   const f = rec(p.profile), ped = p.ped;
   if (!f || !f.tips || active(f) || !ped) return;
@@ -412,6 +426,7 @@ export function update(world) {
   for (const p of world.players.values()) {
     const f = rec(p.profile), ped = p.ped;
     if (!f || !p.conn || !ped) continue;
+    downs(world, p);
     if (f.st === 'done') { moments(world, p); continue; }
     if (ped.dead) continue;
     if (f.st === 'new') { if (p.profile.lookPicked !== false) offer(world, p); continue; }

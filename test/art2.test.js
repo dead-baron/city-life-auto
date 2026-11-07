@@ -195,3 +195,14 @@ test('the tunnel view: every line\'s underground stretches', async () => {
   assert.equal(segs.length, 3, 'the second line\'s three underground segments');
   assert.ok(segs.every((s) => s.x1 >= 5000), 'and none of the open first line');
 });
+
+// (perf, 11-06: the page built a vehicle's whole model - vehicles.js vehicleAnchors, 30-70 ms here - the first time each
+// kind came into view, for nothing but its length: host.js _lights now reads actors.js vehicleLength)
+test('a vehicle\'s length for the page\'s lights is its built model\'s, without building it', async () => {
+  const V = await import('../client/art2/vehicles.js'), A = await import('../client/art2/game/actors.js');
+  const { VEHICLES } = await import('../shared/vehicles.js');
+  for (const t of Object.keys(V.VEHICLE_DIMS)) assert.equal(V.vehicleAnchors(t).L, V.VEHICLE_DIMS[t][0], t);
+  for (const v of Object.values(VEHICLES)) { if (v.kind === 'air') continue; const d = { m: v.i }; assert.equal(A.vehicleLength(d), A.vehicleLights(d).L, v.id); }
+  const host = (await import('node:fs')).readFileSync(new URL('../client/art2/game/host.js', import.meta.url), 'utf8');
+  assert.ok(!/A\.vehicleLights\(/.test(host), 'the page never builds a vehicle model for its lights');
+});

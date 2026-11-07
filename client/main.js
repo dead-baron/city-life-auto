@@ -1272,10 +1272,18 @@ function keepWindow(job) {
   job.onWindow = (m) => {
     if (m.windowError) { console.warn('[world] the next window:', m.windowError); if (S.hud && S.winErr !== m.windowError) { S.winErr = m.windowError; S.hud.toast('The world around you didn\'t load (trying again): ' + m.windowError, 'warn'); } return; }
     if (!S.map || !m.data || (m.data.seed >>> 0) !== S.map.seed) return;
-    const t = performance.now();
-    swapWorld(cityFromData(m.data), m.wid || 0);
+    // (the fields every window has the same come from the window before: client/worldgen.js, client/worldwindow.js windowSteady)
+    if (m.data.steady) {
+      const st = m.data.steady;
+      delete m.data.steady;
+      if (st.some((k) => !(k in S.map))) { console.warn('[world] the window came without fields this page has not got: asked for in full'); try { job.worker.postMessage({ full: 1 }); } catch { /* gone */ } return; }
+      for (const k of st) m.data[k] = S.map[k];
+    }
+    const t = performance.now(), parts = {};
+    swapWorld(cityFromData(m.data), m.wid || 0, parts);
     S.win = m.win;
-    console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms`);
+    const ws = S.winStat || (S.winStat = { n: 0, ms: 0 }); ws.n++; ws.ms = performance.now() - t;   // (the perf readout: client/perfhud.js)
+    console.info(`[world] the window moved to ${m.win.rect.join(', ')} (${m.win.keys.join(' ')}): assembled in ${m.ms.toFixed(0)} ms, swapped in ${(performance.now() - t).toFixed(0)} ms (${Object.entries(parts).map(([k, v]) => `${k} ${v.toFixed(0)}`).join(', ')})`);
   };
   let saved = 0;
   clearInterval(S.winTimer);
@@ -1301,23 +1309,27 @@ function windowNotServers(m) {
   send({ t: 'diag', what: `world v3 index signature ${S.win.sig} vs server ${m.sig}` });
   return false;
 }
-function swapWorld(m, wid = 0) {   // (wid: the bake workers have this window from the city worker already - pool.js linkWindows)
+function swapWorld(m, wid = 0, T = {}) {   // (wid: the bake workers have this window from the city worker already - pool.js linkWindows; T: ms by step)
+  let t = performance.now();
+  const mk = (k) => { const n = performance.now(); T[k] = n - t; t = n; };
   const old = S.map;
   old.props.forEach((p, i) => { const q = m.props[i]; if (!q) return; if (p.broken) q.broken = p.broken; if (p.lit0 !== undefined) { q.lit0 = p.lit0; q.lit = p.lit; } });
   for (const [k, se] of old.propSolid) { const e = m.propSolid.get(k); if (e && se.off) e.off = true; }
   if (old.levels && m.levels && old.levels.broken) m.levels.broken = old.levels.broken;
   (old.gates || []).forEach((gt, i) => { const g2 = m.gates && m.gates[i]; if (g2) gt.props.forEach((pr, j) => { if (pr && g2.props[j]) g2.props[j].off = pr.off; }); });
-  S.map = m;
-  S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas);
-  S.ground = new GroundCache(m, LOW_MEM ? 12 : 24);
+  S.map = m; mk('carry');
+  S.flora = new Flora(m); S.flora.configure(gfx); if (atlas.ready) S.flora.registerAtlas(atlas); mk('flora');
+  S.ground = new GroundCache(m, LOW_MEM ? 12 : 24); mk('ground');
   S.wx.map = m; S.wx.sites.clear(); S.wx.vents.clear();
   S.poleAt = null; S._hw = null;
-  S.buildings = new BuildingLayer(m, S.ground);
+  S.buildings = new BuildingLayer(m, S.ground); mk('buildings');
   if (!(S.spec && S.spec.on)) S.spec = newSpectator(m);
-  S.hud.setMap(m);
-  S.router = createRouter(m);
+  S.hud.setMap(m); mk('hud');
+  S.router = createRouter(m); mk('router');
   if (S.art2 && S.art2.setMap) S.art2.setMap(m, wid); else startArt2(m);
+  mk('art');
   for (const i of S.confirmedBreaks) setPropBroken(i, 0, false);   // (the server's broken props the old window didn't hold)
+  mk('breaks');
 }
 
 // ---- the classic (v1) art ------------------------------------------------------------------------------
@@ -3063,6 +3075,7 @@ function render(dt) {
   // into the subway's tunnel or back out: the light eases over it (the owner's 10-07 note: "light easing in and out")
   if (!!F.sub !== !!S.subWas) { S.subWas = !!F.sub; S.subFadeAt = performance.now(); }
   drawOverlays(F, v2);
+  F.mark('overlays');   // (the HUD, the radar, the name tags: in the perf readout's page ms too)
   const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
   if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
 }
@@ -5090,6 +5103,10 @@ function drawWorldLabels(peds, vehs, now, z) {
 // (render/lighting.js does the compositing). Also returns the light sources the puddles and the rain
 // pick up, in world px.
 const reflSrc = [], selfLit = [], countryLit = [];
+// the lights wet ground and the rain catch (reflSrc): pooled records, filled afresh each frame - a night in the rain made
+// a few hundred new objects a frame here (11-06: the page's garbage, its collector's pauses)
+const REFL_POOL = [];
+function refl(x, y, c, a) { const r = REFL_POOL[reflSrc.length] || (REFL_POOL[reflSrc.length] = { x: 0, y: 0, c: null, a: 0 }); r.x = x; r.y = y; r.c = c; r.a = a; reflSrc.push(r); }
 // shadow sizes (height, footprint) of the tall country props
 // props that lie flat (or draw their own) and cast nothing
 const NO_CAST = new Set(['gravel', 'rubble', 'flowerbed', 'mosaic', 'rwlight', 'painted', 'plamp', 'sigpole', 'atmw', 'plane', 'solar', 'subway_l', 'subway_r', 'roof_ac', 'roof_heli', 'roof_tanks', 'roof_sky', 'roof_access']);
@@ -5120,6 +5137,28 @@ function carriedLights(L, peds, night, haze) {
     L.beam(x, y, a, len * 0.7, 40, c, LD ? 0.16 * (1 - night) + 0.06 * haze * night : 0.045 * haze * night);
   }
 }
+// A map's list (lamps, pois) by 512 px cell, the items' indices - made once per map (a World v3 window: once per swap) -
+// and the cells round a view (margin m px)
+const GRID_CELL = 512, GRIDS = new WeakMap();
+function gridOf(m, key) {
+  let per = GRIDS.get(m);
+  if (!per) GRIDS.set(m, (per = {}));
+  if (per[key]) return per[key];
+  const g = (per[key] = new Map()), list = m[key] || [];
+  for (let i = 0; i < list.length; i++) {
+    const o = list[i];
+    if (!o || !Number.isFinite(o.x) || !Number.isFinite(o.y)) continue;
+    const k = Math.floor(o.y / GRID_CELL) * 4096 + Math.floor(o.x / GRID_CELL);
+    let a = g.get(k);
+    if (!a) g.set(k, (a = []));
+    a.push(i);
+  }
+  return g;
+}
+function forCells(g, view, m, fn) {
+  const gx0 = Math.floor((view.x0 - m) / GRID_CELL), gx1 = Math.floor((view.x1 + m) / GRID_CELL), gy0 = Math.floor((view.y0 - m) / GRID_CELL), gy1 = Math.floor((view.y1 + m) / GRID_CELL);
+  for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) { const a = g.get(gy * 4096 + gx); if (a) for (let j = 0; j < a.length; j++) fn(a[j]); }
+}
 function collectLights(sky, view, vehs, peds, dt) {
   selfLit.length = 0; countryLit.length = 0;
   const L = S.light;
@@ -5129,22 +5168,26 @@ function collectLights(sky, view, vehs, peds, dt) {
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
   for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
-  // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js)
+  // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js) - only those round the view,
+  // through a grid (a World v3 window holds thousands: every one of them looked at every frame was a phone's 11-06 night
+  // drive); by day they're all out, once (_lv: the renderers' lamp levels - art2/game/host.js too)
   const lamps = S.map.lamps;
-  for (let i = 0; i < lamps.length; i++) {
+  if (night <= 0.05) { if (S.lampsOn !== false) { S.lampsOn = false; for (const l of lamps) if (l) l._lv = 0; } }
+  else S.lampsOn = true;
+  if (night > 0.05) forCells(gridOf(S.map, 'lamps'), view, 400, (i) => {
     const l = lamps[i];
-    if (!l) continue;   // (World v3's window: a lamp it doesn't hold)
-    if (l.broken || night <= 0.05) { l._lv = 0; continue; }
-    if (!inV(l.x, l.y, 220)) continue;
+    if (!l) return;   // (World v3's window: a lamp it doesn't hold)
+    if (l.broken) { l._lv = 0; return; }
+    if (!inV(l.x, l.y, 220)) return;
     const lv = lampLevel(i, t, night, l);
     l._lv = lv;
-    if (lv <= 0) continue;
+    if (lv <= 0) return;
     const h = lampHead(l);
     L.add(h.x, h.y, 190, LIGHT.sodium, 1.05 * lv);
     L.glow(h.x, h.y, 22, LIGHT.warm, 0.6 * lv);                 // the bulb
     L.glow(h.x, h.y, 130, LIGHT.sodium, 0.1 * lv * haze);       // light hanging in the air round it
-    reflSrc.push({ x: h.x, y: h.y, c: LIGHT.sodium, a: 0.9 * lv });
-  }
+    refl(h.x, h.y, LIGHT.sodium, 0.9 * lv);
+  });
   if (night > 0.05) {
     // lit windows and shop fronts throw light out onto the pavement
     for (const it of S.buildings.inView(view)) {
@@ -5157,14 +5200,16 @@ function collectLights(sky, view, vehs, peds, dt) {
         L.glow(x, it.y1 + 6, 42, LIGHT.window, 0.05 * k * haze);
       }
     }
-    // shop doors, ATMs and screens
-    for (const p of S.map.pois) {
-      if (!p || !inV(p.x, p.y, 120)) continue;
-      if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); continue; }
-      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') continue;   // (a race's start: out on the track or the water)
+    // shop doors, ATMs and screens (round the view: the grid)
+    const pois = S.map.pois;
+    forCells(gridOf(S.map, 'pois'), view, 120, (i) => {
+      const p = pois[i];
+      if (!p || !inV(p.x, p.y, 120)) return;
+      if (p.kind === 'atm') { L.add(p.x, p.y - 24, 60, LIGHT.cyan, 0.6 * night); L.glow(p.x, p.y - 26, 10, LIGHT.cyan, 0.55 * night); return; }
+      if (p.kind === 'home' || p.kind === 'evidence' || p.kind === 'reception' || p.kind === 'race') return;   // (a race's start: out on the track or the water)
       L.add(p.x, p.y - 8, 120, LIGHT.warm, 0.55 * night);
-      reflSrc.push({ x: p.x, y: p.y, c: LIGHT.warm, a: 0.4 * night });
-    }
+      refl(p.x, p.y, LIGHT.warm, 0.4 * night);
+    });
     const [cx0, cx1, cy0, cy1] = S.chunkView;
     for (let cy = Math.max(0, cy0); cy <= cy1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) {
       for (const p of S.ground.lowProps.get(cy * 1000 + cx) || []) {
@@ -5189,7 +5234,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         if (!p.lit) continue;
         L.add(p.x, p.y - 8, 170, LIGHT.fire, (0.35 + 0.8 * night) * fl);
         L.glow(p.x, p.y - 10, 26, LIGHT.fire, (0.15 + 0.4 * night) * fl);
-        reflSrc.push({ x: p.x, y: p.y - 8, c: LIGHT.fire, a: 0.7 * night });
+        refl(p.x, p.y - 8, LIGHT.fire, 0.7 * night);
         if (Math.random() < dt * 1.6) S.fx.smoke(p.x + (Math.random() - 0.5) * 4, p.y - 16, false);
         if (night > 0.05) countryLit.push(p);
       } else if (p.t === 'flare') {
@@ -5200,7 +5245,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         if (night > 0.05) countryLit.push(p);
       } else if (night > 0.05) {
         countryLit.push(p);
-        if (p.t === 'dscreen') { const sy = countryLightY(p, 0.65); L.add(p.x, sy + 120, 340, LIGHT.white, 0.75 * night); L.glow(p.x, sy, 160, LIGHT.white, 0.06 * night * haze); reflSrc.push({ x: p.x, y: sy + 120, c: LIGHT.white, a: 0.6 * night }); }
+        if (p.t === 'dscreen') { const sy = countryLightY(p, 0.65); L.add(p.x, sy + 120, 340, LIGHT.white, 0.75 * night); L.glow(p.x, sy, 160, LIGHT.white, 0.06 * night * haze); refl(p.x, sy + 120, LIGHT.white, 0.6 * night); }
         else if (p.t === 'marquee') { L.add(p.x, p.y - 50, 110, LIGHT.warm, 0.8 * night); L.glow(p.x, p.y - 56, 40, LIGHT.amber, 0.12 * night * haze); }
         else if (p.t === 'dome') { L.add(p.x, p.y - 30, 160, LIGHT.window, 0.5 * night); }
         else if (p.t === 'radiotower' || p.t === 'turbine') L.glow(p.x, countryLightY(p, 0.95), 30, LIGHT.red, 0.12 * night * haze);
@@ -5213,7 +5258,7 @@ function collectLights(sky, view, vehs, peds, dt) {
     for (let cy = Math.max(0, cy0); cy <= cy1 + 1; cy++) for (let cx = Math.max(0, cx0); cx <= cx1; cx++) for (const p of S.ground.overhead(cx, cy)) {
       if (p.broken) continue;
       if (p.t === 'billboard' || p.t === 'busstop') selfLit.push(p);
-      if (p.t === 'billboard') { const y = p.y - 26; L.add(p.x, y, 110, LIGHT.white, 0.8 * night); L.glow(p.x, y - 6, 60, LIGHT.white, 0.08 * night * haze); reflSrc.push({ x: p.x, y, c: LIGHT.white, a: 0.6 * night }); }
+      if (p.t === 'billboard') { const y = p.y - 26; L.add(p.x, y, 110, LIGHT.white, 0.8 * night); L.glow(p.x, y - 6, 60, LIGHT.white, 0.08 * night * haze); refl(p.x, y, LIGHT.white, 0.6 * night); }
       else if (p.t === 'busstop') { L.add(p.x + 26, p.y - 4, 75, LIGHT.white, 0.6 * night); L.glow(p.x + 26, p.y - 10, 16, LIGHT.warm, 0.3 * night); }
       else if (p.t === 'phonebox') { L.add(p.x, p.y, 45, LIGHT.warm, 0.5 * night); }
     }
@@ -5221,7 +5266,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   // traffic signals (last frame's heads: signalsTick runs later in the frame)
   for (const h of S.sigHeads || []) {
     const c = h.rgb || (h.rgb = hexRgb(h.c));
-    if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); reflSrc.push({ x: h.x, y: h.y, c, a: 0.8 * night }); }
+    if (night > 0.05) { L.add(h.x, h.y, 56, c, 0.75 * night); refl(h.x, h.y, c, 0.8 * night); }
     L.glow(h.x, h.y, 9, c, 0.25 + 0.6 * night);
     L.glow(h.x, h.y, 34, c, (0.04 + 0.1 * night) * haze);
   }
@@ -5245,7 +5290,7 @@ function collectLights(sky, view, vehs, peds, dt) {
         L.add(tx, ty, br ? 60 : 36, LIGHT.red, br ? 0.85 : 0.45);
         L.glow(tx, ty, br ? 12 : 7, LIGHT.red, br ? 0.9 : 0.55);
       }
-      reflSrc.push({ x: fx, y: fy, c: LIGHT.head, a: 0.9 });
+      refl(fx, fy, LIGHT.head, 0.9);
     } else if (v.flags & VF.BRAKE) {
       for (const sd of [-1, 1]) { const tx = v.rx - c * hl - sn * hw * 0.62 * sd, ty = vy - sn * hl + c * hw * 0.62 * sd; L.glow(tx, ty, 8, LIGHT.red, 0.5); }
     }
@@ -5253,7 +5298,7 @@ function collectLights(sky, view, vehs, peds, dt) {
       const ph = Math.floor(S.loopClock * 6) % 2, col = ph ? LIGHT.red : LIGHT.blue;
       L.add(v.rx, vy, 260, col, 0.9);
       L.glow(v.rx, vy, 70, col, 0.35 + 0.15 * night);
-      reflSrc.push({ x: v.rx, y: vy, c: col, a: 0.9 });
+      refl(v.rx, vy, col, 0.9);
     }
     if (v.flags & VF.BURN) {
       const f = 0.75 + 0.25 * Math.sin(S.loopClock * 23 + v.id);
