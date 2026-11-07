@@ -232,8 +232,8 @@ export function sightlines3(m) {
     const paved = t0 === T.SIDEWALK || t0 === T.PLAZA;
     p.t = paved ? PLANTERS[Math.floor(hh(Math.floor(p.x / TILE), Math.floor(p.y / TILE), 66) * 2)] : 'bush_c'; delete p.sp; delete p.k; out.lowered++;
   });
-  // a standing sign out from under a deck (a highway over the street is drawn DECK_LIFT px up: over a sign a tile or
-  // three north of it - the owner's 11-06 "GUL..." sign half under the highway): along its row to where none is over it
+  // a standing sign out from under a deck (a highway over the street is drawn DECK_LIFT px up: over a sign under it or
+  // a tile or three north of it - the owner's 11-06 "GUL..." sign half under the highway): along its row to where none is over it
   // (the elevated roads as their edges: the deck layer, map.js m.deck, isn't laid yet when this runs)
   const decks = [];
   for (const e of m.edges || []) if (e.lvl === 1 || e.lvl === 'ramp') for (let i = 1; i < e.pts.length; i++) { const a = e.pts[i - 1], b = e.pts[i]; decks.push([a.x, a.y, b.x, b.y, e.hw + 6, Math.min(a.x, b.x) - e.hw - 6, Math.max(a.x, b.x) + e.hw + 6, Math.min(a.y, b.y) - e.hw - 6, Math.max(a.y, b.y) + e.hw + 6]); }
@@ -247,14 +247,14 @@ export function sightlines3(m) {
   };
   const under = (x, p) => {
     const hw = Math.min(150, String(p.text || '').length * 7 + 8), z = p.z || 40;
-    for (let Y = p.y + 60 - z; Y <= p.y + 150 - z; Y += 16) for (let X = x - hw; X <= x + hw; X += 16) if (deckAt(X, Y)) return true;
+    for (let Y = p.y - 16; Y <= p.y + 150 - z; Y += 16) for (let X = x - hw; X <= x + hw; X += 16) if (deckAt(X, Y)) return true;
     return false;
   };
   for (const p of m.props) {
     if (p.t !== 'textsign' || !under(p.x, p)) continue;
     const t0 = tileOf(p.x, p.y);
     let to = null;
-    for (let d = TILE; d <= 12 * TILE && to === null; d += TILE) for (const s of [1, -1]) { const x = p.x + s * d; if (tileOf(x, p.y) === t0 && !under(x, p)) { to = x; break; } }
+    for (let d = TILE; d <= 16 * TILE && to === null; d += TILE) for (const s of [1, -1]) { const x = p.x + s * d; if (tileOf(x, p.y) === t0 && !under(x, p)) { to = x; break; } }
     if (to !== null) { p.x = to; out.signs = (out.signs || 0) + 1; }
   }
   return out;

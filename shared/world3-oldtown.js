@@ -352,7 +352,7 @@ function bridgeFoot(K, m, ctx) {
   const y = 1908;
   const anchor = place({ x: 2652, y, w: 18, h: 13, arch: 'mixed', face: 'N', name: 'The Rusty Anchor', poi: { kind: 'delivery', label: 'Rusty Anchor Motel' }, whole: true,
     art: { spec: { floors: 3, style: 'brick', brickTone: '#7a3a2e', cornice: 'bracket', parapet: 6, roofMat: 'tar', lip: 6, rimW: 4, grime: 0.2 }, noShop: true } });
-  if (anchor) { prop('barrel', 2654, y - 1.2, 6); prop('barrel', 2655.4, y - 1.4, 6); prop('textsign', 2661, y - 1.6, 0, { text: 'THE RUSTY ANCHOR', bg: '#2a2420', fg: [236, 200, 120], z: 110, sx: 1, lit: true }); }   // (a motel's tall pole sign at its door on the north: at 30 px up the motel stood over it - the owner's 11-06 visibility pass)
+  if (anchor) { prop('barrel', 2654, y - 1.2, 6); prop('barrel', 2655.4, y - 1.4, 6); prop('textsign', 2649, y - 1.6, 0, { text: 'THE RUSTY ANCHOR', bg: '#2a2420', fg: [236, 200, 120], z: 30, sx: 1, lit: true }); }   // (on the corner west of its front on the north: in front of the door the motel stood over it - the owner's 11-06 visibility pass)
   // (the bank on the avenue's north side, its columned front onto it: a lot east of Market Street's corner)
   const bank = place({ x: 2750, y: 1882, w: 18, h: 13, arch: 'bank', key: 'bank', name: 'First Pixel Bank - Old Town', poi: { kind: 'bank', label: 'First Pixel Bank - Old Town' }, whole: true,
     art: { spec: { floors: 2, style: 'stone', wallColor: '#d8ccb4', cornice: 'dentil', parapet: 10, roofMat: 'gravel', lip: 8, rimW: 4 } } });

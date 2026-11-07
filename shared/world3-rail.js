@@ -499,11 +499,15 @@ export function clearRailDressing(m, removeProps) {
 // (the owner, 11-06: "a main-line station whose south platform and name board are covered by the roofs of the houses to
 // its south") A building standing just south of a platform that is south of its track - its north wall within LOW_REACH
 // of the platform's outer edge - is drawn low: one storey under a shallow roof (client/art2/game/statics.js b.low), so
-// its roof stays off the platform and the board at its front (tools/visaudit.mjs). A platform north of its track has
-// only the track south of it. Nothing moves: a flag on the building. Called last, from shared/world3-world.js' done hook.
-const LOW_REACH = 6 * TILE;
+// its roof stays off the platform and the board at its front (tools/visaudit.mjs); one closer than LOW_GAP steps back -
+// its northern rows given to a garden (along an east-west track; its doors on the south or the sides keep their place,
+// one with a door on the north keeps its footprint). A platform north of its track has only the track south of it.
+// Every building keeps its number. Called last, from shared/world3-world.js' done hook.
+const LOW_REACH = 6 * TILE, LOW_GAP = 2 * TILE;
 export function lowByPlatforms(m) {
-  const low = new Set();
+  const low = new Set(), need = new Map();
+  const northDoor = new Set();
+  for (const p of m.pois || []) if (p && p.b !== undefined && p.b >= 0) { const b = m.buildings[p.b]; if (b && p.y < b.ty * TILE + TILE) northDoor.add(b.id); }
   for (const R of [...(m.rails || []), ...(m.arrivals || [])]) for (const st of (R && R.stations) || []) {
     if (st.under || st.el) continue;
     const sd = st.side || 1, L = st.half || 112, outer = st.outer || 104;
@@ -515,8 +519,16 @@ export function lowByPlatforms(m) {
         if (!m.inside(tx, ty) || m.tiles[m.idx(tx, ty)] !== T.BUILDING) continue;
         const b = m.buildings[m.bld[m.idx(tx, ty)]];
         if (b && !b.gone && !low.has(b.id)) { b.low = 1; low.add(b.id); }
+        if (b && !b.gone && ny > 0.9) need.set(b.id, Math.max(need.get(b.id) || 0, q.y + ny * outer + LOW_GAP));
       }
     }
   }
-  return low.size;
+  let back = 0;
+  for (const [id, y] of need) {
+    const b = m.buildings[id], k = Math.ceil((y - b.ty * TILE) / TILE);
+    if (k <= 0 || b.th - k < 4 || northDoor.has(id) || b.walkIn) continue;
+    for (let ty = b.ty; ty < b.ty + k; ty++) for (let tx = b.tx; tx < b.tx + b.tw; tx++) { const i = m.idx(tx, ty); if (m.bld[i] !== id) continue; m.tiles[i] = T.GRASS; m.bld[i] = -1; }
+    b.ty += k; b.th -= k; back++;
+  }
+  return { low: low.size, back };
 }

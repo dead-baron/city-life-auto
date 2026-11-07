@@ -210,7 +210,7 @@ export function visAudit(M, opt = {}) {
     const own = (it) => {
       if (it === self || (self && it.key === self.key && it.x === self.x && it.y === self.y) || (t.b !== undefined && it.b === t.b)) return true;
       const c = catOf(M, it);
-      if (t.rail && c === 'rail') return true;
+      if (t.rail && (c === 'rail' || c === 'deck')) return true;   // (a station's footbridge is a deck: shared/levels.js)
       if (t.noBld && c === 'building') return true;
       return !!t.foot && !c.startsWith('tree') && c !== 'deck' && it.x >= t.foot[0] && it.x <= t.foot[2] && it.y >= t.foot[1] && it.y <= t.foot[3];
     };
@@ -221,7 +221,7 @@ export function visAudit(M, opt = {}) {
       occ.push({ it, s, sx, sy, z0: it.z0 || 0, after: self ? later(it, self) >= 0 : t.tie === 'bld' ? isBld(it) && it.y > t.y : t.tie === 'lose' });
     }
     if (t.train) { const st = stationAt(t.x, t.y); if (st) { const tr = trainFor(st[0], st[1]); occ.push({ it: tr, s: tr.spr, sx: tr.sx, sy: tr.sy, z0: 0, after: true, live: true }); } }
-    const by = new Map();
+    const by = new Map(), keys = opt.keys ? new Map() : null;
     let hid = 0;
     for (const [px, py, pz] of pts) {
       let win = null;
@@ -233,10 +233,11 @@ export function visAudit(M, opt = {}) {
         const hz = z + o.z0;
         if (hz > pz || (hz === pz && o.after)) { win = o; break; }
       }
-      if (win) { hid++; const c = catOf(M, win.it); by.set(c, (by.get(c) || 0) + 1); }
+      if (win) { hid++; const c = catOf(M, win.it); by.set(c, (by.get(c) || 0) + 1); if (opt.keys) keys.set(win.it.key, (keys.get(win.it.key) || 0) + 1); }
     }
     const cv = hid / pts.length, top = [...by].sort((a, b) => b[1] - a[1])[0];
     const k = t.kind, row = { kind: k, id: t.id, name: t.name, x: Math.round(t.x), y: Math.round(t.y), cover: +cv.toFixed(2), by: top ? top[0] : null };
+    if (keys && keys.size) row.key = [...keys].sort((a, b) => b[1] - a[1])[0][0];
     (counts[k] ||= [0, 0])[0]++;
     if (cv >= cover) { counts[k][1]++; rows.push(row); } else if (opt.all) rows.push({ ...row, ok: true });
   }
