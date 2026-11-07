@@ -6,6 +6,7 @@
 // Aiming: the mouse or a finger - drag up from the ball and let go (the way it goes, how hard); or left / right to aim
 // (the keys, the stick, the d-pad) and hold the button (Space, Enter, A) for the power, let go to roll. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
+import { layer, blit, ballSprite, shadow, text, banner, led, panel, ramp, tone, hash } from './arcart.js';
 const W = 256, H = 224, STEP = 1 / 60;
 const LANE = { x0: 76, x1: 180, top: 92, ball: 206 };   // the lane (px), the hump at its top, where the ball sits
 const RING = { x: 128, y: 48, r: [7, 16, 26, 36, 46], pts: [50, 40, 30, 20, 10] };   // the target: the cup, the rings
@@ -129,55 +130,75 @@ function step(dt) {
   if (G.pop) { G.pop.t += dt; if (G.pop.t > 1) G.pop = null; }
 }
 
+// ---- the screen (AC7, the owner's skee-ball concept: the SNES look) -------------------------------------------------------
+// the machine, painted once: its sides in the arcade's blue with gold stars, the nets beside the target, the rails lit
+// in amber down either side of the lane, the maple lane's boards (lit toward the top) with the chevrons by the ball, the
+// hump; the target's raised rings in pale wood - 10 to 50 - the dark gaps between, the cup, the two 100 pockets' gold rims
+let BG = null;
+function laneArt() {
+  const side = ramp('#26306a', 6, 3), maple = ramp('#d89a52', 7, 3), ringW = ramp('#e8cc90', 6, 3), back = ramp('#3a1e14', 5, 2), rail = ramp('#a8261e', 5, 2), gold = [242, 194, 48];
+  const star = (x, y, cx, cy, r) => { const P = 1.2566, k = (((Math.atan2(y - cy, x - cx) + 1.5708) % P) + P) % P / P; return Math.hypot(x - cx, y - cy) < r * (0.42 + 0.58 * Math.abs(k - 0.5) * 2); };
+  return layer(W, H, (put) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let c;
+      const inL = x >= LANE.x0 && x < LANE.x1;
+      if (x < LANE.x0 - 14 || x >= LANE.x1 + 14) {   // the cabinet's sides: stars on the blue
+        const sx = x < W / 2 ? 34 : W - 34;
+        c = tone(side, 0.45 + (hash(x, y, 3) - 0.5) * 0.12 - Math.abs(x - sx) * 0.006, x, y);
+        for (const sy of [86, 146, 202]) if (star(x, y, sx, sy, 11)) c = star(x, y, sx, sy, 8) ? gold : [200, 150, 30];
+        if (x === LANE.x0 - 15 || x === LANE.x1 + 14) c = [14, 14, 30];
+      } else if (!inL) {   // the rails: lit in amber, chasing
+        const o = x < LANE.x0 ? LANE.x0 - 1 - x : x - LANE.x1;
+        c = o === 6 && y % 8 < 4 ? [255, 190, 60] : tone(rail, o < 2 ? 0.25 : o > 11 ? 0.2 : 0.55, x, y, 0.5);
+        if (y < LANE.top - 4 && o > 2) c = (x + y) % 4 === 0 ? [70, 70, 84] : [24, 18, 30];   // (the nets beside the target)
+      } else if (y >= LANE.top) {   // the lane: maple boards, the hump at its top, the chevrons
+        const bx = (x - LANE.x0) % 13;
+        let t = 0.6 - (y - LANE.top) / (H - LANE.top) * 0.18 + (hash(Math.floor((x - LANE.x0) / 13), y >> 5, 2) - 0.5) * 0.06 + (hash(x, y >> 2, 6) > 0.92 ? -0.12 : 0);
+        if (bx === 0) t -= 0.25;
+        if (y < LANE.top + 6) t = y < LANE.top + 2 ? 0.25 : 0.82;
+        c = tone(maple, t, x, y, 0.35);
+        for (const k of [-1, 0, 1]) { const cx = (LANE.x0 + LANE.x1) / 2 + k * 18, dy = y - 186; if (dy >= 0 && dy < 6 && Math.abs(Math.abs(x + 0.5 - cx) - (5 - dy)) < 1) c = [232, 120, 40]; }
+      } else {   // the target: the back, the rings, the pockets
+        const d = Math.hypot(x + 0.5 - RING.x, y + 0.5 - RING.y);
+        c = tone(back, 0.4 + (hash(x, y, 4) - 0.5) * 0.15, x, y);
+        let i = RING.r.findIndex((r) => d < r);
+        if (i >= 0) { const r0 = i ? RING.r[i - 1] : 0, e = Math.min(d - r0, RING.r[i] - d); c = i === 0 && d < 5 ? [6, 4, 4] : e < 1.3 ? [20, 12, 10] : tone(ringW, 0.4 + (y < RING.y ? 0.25 : 0) - (e < 2.5 ? 0.15 : 0), x, y, 0.5); }
+        for (const [px, py] of POCKETS) { const e = Math.hypot(x + 0.5 - px, y + 0.5 - py); if (e < POCKET_R) c = e > POCKET_R - 2 ? gold : [6, 4, 4]; }
+        if (y >= LANE.top - 4) c = tone(rail, 0.3, x, y);
+      }
+      put(x, y, c);
+    }
+  });
+}
 function draw() {
   const g = G.g, b = G.ball;
-  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp rings and text)
-  g.fillStyle = '#0c0614'; g.fillRect(0, 0, W, H);
-  // the cabinet's sides, the lane, the hump
-  g.fillStyle = '#3a1a5a'; g.fillRect(LANE.x0 - 14, 0, LANE.x1 - LANE.x0 + 28, H);
-  g.fillStyle = '#c9a26a'; g.fillRect(LANE.x0, LANE.top, LANE.x1 - LANE.x0, H - LANE.top);
-  g.fillStyle = '#b48a52'; for (let x = LANE.x0 + 8; x < LANE.x1; x += 13) g.fillRect(x, LANE.top, 1, H - LANE.top);   // (the boards)
-  g.fillStyle = '#8a5a2a'; g.fillRect(LANE.x0, LANE.top - 4, LANE.x1 - LANE.x0, 6);
-  // the target: the netting, the rings, the cup, the pockets
-  g.fillStyle = '#1a1030'; g.fillRect(LANE.x0 - 8, 0, LANE.x1 - LANE.x0 + 16, LANE.top - 4);
-  const ringCol = ['#ff5a8a', '#ffd23a', '#5ae0ff', '#8aff6a', '#c07aff'];
-  for (let i = RING.r.length - 1; i >= 0; i--) {
-    g.fillStyle = i % 2 ? '#2a1a44' : '#3a2458'; g.beginPath(); g.arc(RING.x, RING.y, RING.r[i], 0, Math.PI * 2); g.fill();
-    g.strokeStyle = ringCol[i]; g.lineWidth = 1; g.beginPath(); g.arc(RING.x, RING.y, RING.r[i], 0, Math.PI * 2); g.stroke();
-  }
-  g.fillStyle = '#05030a'; g.beginPath(); g.arc(RING.x, RING.y, 5, 0, Math.PI * 2); g.fill();
-  for (const [px, py] of POCKETS) { g.strokeStyle = '#ffd23a'; g.beginPath(); g.arc(px, py, POCKET_R, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#05030a'; g.beginPath(); g.arc(px, py, POCKET_R - 2, 0, Math.PI * 2); g.fill(); }
-  g.fillStyle = '#e8e0ff'; g.font = '6px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  for (let i = 1; i < RING.r.length; i++) g.fillText(String(RING.pts[i]), RING.x, RING.y + (RING.r[i] + RING.r[i - 1]) / 2 + 0.5);
-  g.fillText('50', RING.x, RING.y - 9.5);
-  for (const [px, py] of POCKETS) g.fillText('100', px, py + 11);
-  // the balls waiting in the rack, the aim line
-  g.fillStyle = '#d8d0c0';
-  for (let i = 0; i < G.left - (b ? 0 : 1); i++) { g.beginPath(); g.arc(LANE.x1 + 9, H - 10 - i * 9, 3.5, 0, Math.PI * 2); g.fill(); }
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: the pixels square, the words sharp)
+  BG ||= laneArt();
+  blit(g, BG, 0, 0);
+  for (let i = 1; i < RING.r.length; i++) text(g, String(RING.pts[i]), RING.x, RING.y + (RING.r[i] + RING.r[i - 1]) / 2 - 2, '#4a1e0c', 1, 'c', false);
+  for (const [px, py] of POCKETS) text(g, '100', px, py + 9, '#ffd23a', 1, 'c');
+  // the balls waiting in the return, the aim, the power
+  for (let i = 0; i < G.left - (b ? 0 : 1); i++) blit(g, ballSprite('#9a5a2a', 3.5), LANE.x1 + 5, H - 14 - i * 9);
   if (!b && !G.done && G.left > 0) {
-    g.strokeStyle = 'rgba(255,255,255,.4)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(RING.x, LANE.ball); g.lineTo(RING.x + Math.tan(G.aim) * (LANE.ball - LANE.top), LANE.top); g.stroke(); g.setLineDash([]);
+    g.fillStyle = 'rgba(255,255,255,.7)';
+    for (let k = 6; k < LANE.ball - LANE.top; k += 4) g.fillRect(Math.round(RING.x + Math.tan(G.aim) * k), LANE.ball - k, 1, 1);
     ball(g, RING.x, LANE.ball, 0);
-    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(8, H - 14, 52, 6); g.fillStyle = G.power > 0.85 ? '#ff5a5a' : '#ffd23a'; g.fillRect(9, H - 13, 50 * G.power, 4);
+    panel(g, 6, H - 13, 56, 9, '#c8a050');
+    for (let i = 0; i < 13; i++) { g.fillStyle = i / 13 < G.power ? (i < 7 ? '#5ae05a' : i < 10 ? '#f2c21b' : '#ff4a3a') : 'rgba(255,255,255,.08)'; g.fillRect(8 + i * 4, H - 11, 3, 5); }
   }
   if (b && b.ph !== 'in') ball(g, b.x, b.y, b.z);
   else if (b) { const s = Math.max(0, 1 - b.t * 2); if (s > 0) { g.globalAlpha = s; ball(g, b.tx, b.ty, 0); g.globalAlpha = 1; } }
-  if (G.pop) { g.fillStyle = G.pop.pts >= 50 ? '#ffd23a' : '#ffffff'; g.font = 'bold 8px monospace'; g.fillText(`+${G.pop.pts}`, G.pop.x, G.pop.y - 10 - G.pop.t * 10); }
-  // the score, the balls left, the best
-  g.textAlign = 'left'; g.textBaseline = 'top'; g.font = '8px monospace'; g.fillStyle = '#f4f2ea';
-  g.fillText(`SCORE ${G.score}`, 6, 6); g.fillText(`BALLS ${G.left + (b ? 1 : 0)}`, 6, 18);
-  if (G.o.best) { const t = `BEST ${G.o.best}`; g.fillText(t, W - 6 - g.measureText(t).width, 6); }
-  if (G.msgT > 0 || G.done) {
-    const m = G.done ? `${G.msg}${G.o.best && G.score > G.o.best ? ' - a new best!' : ''}` : G.msg;
-    const w = g.measureText(m).width + 12, y = G.done ? H / 2 - 8 : H - 40;
-    g.fillStyle = 'rgba(0,0,0,.7)'; g.fillRect((W - w) / 2, y, w, 16);
-    g.fillStyle = G.done ? '#ffd23a' : '#fff'; g.fillText(m, (W - w) / 2 + 6, y + 4);
-  }
+  if (G.pop) text(g, `+${G.pop.pts}`, G.pop.x, G.pop.y - 10 - G.pop.t * 10, G.pop.pts >= 50 ? '#ffd23a' : '#ffffff', 2, 'c');
+  // the score and the tickets' worth on the cabinet's sides, the balls left, the best
+  panel(g, 4, 4, 54, 30, '#c8a050'); text(g, 'SCORE', 31, 8, '#f4f2ea', 1, 'c'); led(g, G.score, 12, 16, '#ffb020', 12, 3);
+  panel(g, 4, 38, 54, 18, '#c8a050'); text(g, `BALLS ${G.left + (b ? 1 : 0)}`, 31, 44, '#f4f2ea', 1, 'c');
+  if (G.o.best) { panel(g, W - 58, 4, 54, 18, '#c8a050'); text(g, `BEST ${G.o.best}`, W - 31, 10, '#ffd23a', 1, 'c'); }
+  if (G.msgT > 0 || G.done) banner(g, W, G.done ? H / 2 - 7 : H - 40, G.done ? `${G.msg}${G.o.best && G.score > G.o.best ? ' - a new best!' : ''}` : G.msg, G.done ? '#ffd23a' : '#fff');
 }
 function ball(g, x, y, z) {
   const r = 4 + z * 0.12;
-  g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.arc(x + 1, y + 1.5, 4, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#e8e0d0'; g.beginPath(); g.arc(x, y - z, r, 0, Math.PI * 2); g.fill();
-  g.fillStyle = '#fff'; g.fillRect(x - 1.5, y - z - 2, 1.2, 1.2);
+  shadow(g, x + 1, y + 1.5, 4, 3, 0.35);
+  blit(g, ballSprite('#9a5a2a', r), x - Math.ceil(r) - 0.5, y - z - Math.ceil(r) - 0.5);
 }
 // (tests: the lane without a screen)
 export const _test = { landing, pointsAt, RING, POCKETS, LANE };

@@ -7,6 +7,7 @@
 // Controls: the left flipper - Left / A / Z / LB, or the left half of the screen; the right - Right / D / M / RB, or the
 // right half; the plunger - hold Space / Enter / Down / pad A (or a finger on the shooter lane) and let go. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
+import { layer, blit, ballSprite, shadow, text, banner, led, panel, ramp, tone, hash } from './arcart.js';
 const W = 256, H = 224, STEP = 1 / 240, R = 3.5, GRAV = 300, BALLS = 3;
 // the table: walls as segments [x1, y1, x2, y2] (the outer case, the shooter lane, the inlanes and the slingshots)
 const X0 = 70, X1 = 186, LANE = 176;   // the playfield's sides, the shooter lane's wall
@@ -173,39 +174,73 @@ function step(dt) {
   }
 }
 
+// ---- the screen (AC7, the owner's pinball concept: the SNES look) ---------------------------------------------------------
+// the table, painted once: the cabinet's dark wood round it, the backglass beside it (NEON NIGHTS: the sunset over the
+// skyline, the palms), the playfield's night sky - the sunset behind the bumpers, the stars, the lit arrows up the
+// lanes - and the chrome guide rails along the walls; the bumpers, slingshots, targets and flippers drawn over it as
+// they light and move
+let BG = null;
+function tableArt() {
+  const sky = ramp('#1a1450', 7, 3), wood = ramp('#3a2418', 5, 2), chrome = ramp('#b0b8c8', 5, 2), sunR = ramp('#ff6a3a', 5, 2);
+  const seg = (x, y, w) => { const [cx, cy] = closest(x, y, w[0], w[1], w[2], w[3]); return Math.hypot(x - cx, y - cy); };
+  const inField = (x, y) => x > X0 && x < X1 && y > 14 && !(y < 40 && (y < 14 + (92 - x) * 26 / 22 || y < 14 + (x - 164) * 20 / 22));
+  const sun = (x, y, cx, cy, r) => { const d = Math.hypot(x - cx, y - cy); return d < r && (y < cy - r * 0.3 || (y - cy + r) % 4 > 1); };
+  const skyline = (x, y, base, s) => y > base - 4 - Math.floor(hash(x >> 2, s, 9) * 14) && y < base;
+  return layer(W, H, (put) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let c;
+      if (inField(x, y)) {
+        const q = Math.hypot(x - 123, y - 130) / 120;
+        c = tone(sky, 0.5 - q * 0.35 + (y / H) * 0.12, x, y, 0.6);
+        if (hash(x, y, 7) > 0.985) c = [220, 220, 255];
+        if (sun(x, y, 123, 128, 22)) c = tone(sunR, 0.72 - (y - 106) / 44 * 0.6, x, y, 0.5);
+        if (skyline(x, y, 140, 3)) c = [22, 14, 40];
+        for (const lx of [X0 + 12, LANE - 12]) { const dy = (y - 60) % 22; if (dy >= 0 && dy < 6 && Math.abs(Math.abs(x + 0.5 - lx) * 1.4 - dy) < 1.2 && y > 60 && y < 150) c = [90, 240, 120]; }   // (the arrows up the lanes)
+      } else if (x >= 4 && x < 64 && y >= 4 && y < 124) {   // the backglass: NEON NIGHTS
+        c = tone(sky, 0.2 + (y - 4) / 120 * 0.5, x, y);
+        if (sun(x, y, 34, 92, 16)) c = tone(sunR, 0.75 - (y - 76) / 32 * 0.6, x, y, 0.5);
+        if (skyline(x, y, 106, 5)) c = [20, 12, 36];
+        if (y >= 106) c = tone(sky, 0.15, x, y);
+        if (x === 4 || x === 63 || y === 4 || y === 123) c = [242, 194, 48];
+      } else c = tone(wood, 0.35 + Math.sin(y * 0.15 + (x >> 3)) * 0.08 + (hash(x >> 1, y, 2) - 0.5) * 0.1, x, y);
+      for (const w of WALLS) { const d = seg(x + 0.5, y + 0.5, w); if (d < 1.6) c = tone(chrome, d < 0.8 ? 0.85 : 0.35, x, y, 0.3); }
+      for (const sl of SLINGS) { const d = seg(x + 0.5, y + 0.5, sl); if (d < 2.2) c = d < 1.2 ? [255, 210, 60] : [40, 30, 20]; }
+      put(x, y, c);
+    }
+  });
+}
+// a flipper: a thick yellow bat, rounded, its rubber edge red
+function flipper(g, f) {
+  const [ex, ey] = flipperEnd(f);
+  for (let t = 0; t <= 1; t += 0.04) {
+    const x = f.px + (ex - f.px) * t, y = f.py + (ey - f.py) * t, r = 3.2 - t * 1.4;
+    g.fillStyle = '#7a1a1a'; g.fillRect(Math.round(x - r - 0.5), Math.round(y - r + 0.5), Math.round(2 * r + 1), Math.round(2 * r));
+    g.fillStyle = '#ffd23a'; g.fillRect(Math.round(x - r + 0.5), Math.round(y - r), Math.round(2 * r - 1), Math.round(2 * r - 1));
+    g.fillStyle = '#fff0a0'; g.fillRect(Math.round(x - 1), Math.round(y - r), 1, 1);
+  }
+}
 function draw() {
   const g = G.g, T = G.T, now = performance.now() / 1000;
-  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
-  g.fillStyle = '#080510'; g.fillRect(0, 0, W, H);
-  // the cabinet's glass: the table's dark blue with its neon stripes
-  g.fillStyle = '#121a3a'; g.fillRect(X0 - 4, 10, X1 - X0 + 8, H - 10);
-  g.fillStyle = '#1a2450'; for (let y = 30; y < H; y += 24) g.fillRect(X0, y, LANE - X0, 2);
-  g.strokeStyle = '#ff3aa0'; g.lineWidth = 2;
-  for (const w of WALLS) { g.beginPath(); g.moveTo(w[0], w[1]); g.lineTo(w[2], w[3]); g.stroke(); }
-  SLINGS.forEach((s, i) => { g.lineWidth = 2.5; g.strokeStyle = T.sling[i] > 0 ? '#ffffff' : '#ffd23a'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(s[0], s[1]); g.lineTo(s[2], s[3]); g.stroke(); });
-  BUMPERS.forEach((p, i) => {
-    g.fillStyle = T.lit[i] > 0 ? '#ffffff' : '#5ae0ff'; g.beginPath(); g.arc(p.x, p.y, p.r, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#ff3aa0'; g.beginPath(); g.arc(p.x, p.y, p.r - 3, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff'; g.font = '5px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('100', p.x, p.y + 0.5);
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: the pixels square, the numbers sharp)
+  BG ||= tableArt();
+  blit(g, BG, 0, 0);
+  SLINGS.forEach((s, i) => { if (T.sling[i] > 0) { g.fillStyle = '#fff'; for (let t = 0; t <= 1; t += 0.05) g.fillRect(Math.round(s[0] + (s[2] - s[0]) * t), Math.round(s[1] + (s[3] - s[1]) * t), 2, 2); } });
+  BUMPERS.forEach((p, i) => {   // the pop bumpers: their skirts, the caps lit when they kick
+    shadow(g, p.x + 1.5, p.y + 2, p.r, p.r * 0.8, 0.4);
+    blit(g, ballSprite('#e8e4dc', p.r, { flat: 1 }), p.x - p.r - 0.5, p.y - p.r - 0.5);
+    blit(g, ballSprite(T.lit[i] > 0 ? '#ffffff' : '#e8304a', p.r - 2.5), p.x - p.r + 2, p.y - p.r + 2);
+    text(g, '100', p.x, p.y - 2, T.lit[i] > 0 ? '#e8304a' : '#ffffff', 1, 'c');
   });
-  T.targets.forEach((up, i) => { const t = TARGETS[i]; g.fillStyle = up ? '#8aff6a' : '#24402a'; g.fillRect(t.x - 2, t.y - 5, up ? 4 : 2, 10); });
-  for (const f of T.flips) { const [ex, ey] = flipperEnd(f); g.strokeStyle = '#ffd23a'; g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(f.px, f.py); g.lineTo(ex, ey); g.stroke(); g.lineCap = 'butt'; }
-  // the plunger
-  g.fillStyle = '#c0c4d0'; g.fillRect(178, 214 + T.plunge * 8, 6, 8);
-  if (T.ball) { const b = T.ball; g.fillStyle = '#e8ecf4'; g.beginPath(); g.arc(b.x, b.y, R, 0, Math.PI * 2); g.fill(); g.fillStyle = '#fff'; g.fillRect(b.x - 1.5, b.y - 2, 1.2, 1.2); }
-  // the backglass beside the table: the name, the score, the balls, the best
-  g.textAlign = 'center'; g.textBaseline = 'top';
-  g.fillStyle = (now * 2 | 0) % 2 ? '#ff3aa0' : '#ff7ac4'; g.font = 'bold 9px monospace'; g.fillText('NEON', 34, 14); g.fillText('NIGHTS', 34, 25);
-  g.fillStyle = '#f4f2ea'; g.font = '8px monospace'; g.fillText('SCORE', 34, 52); g.fillStyle = '#ffd23a'; g.fillText(String(T.score), 34, 63);
-  g.fillStyle = '#f4f2ea'; g.fillText('BALL', 34, 86); g.fillText(String(Math.min(BALLS, BALLS - T.left + 1)), 34, 97);
-  if (G.o.best) { g.fillText('BEST', 222, 14); g.fillText(String(G.o.best), 222, 25); }
-  if (G.msgT > 0 || G.done) {
-    const m = G.done ? `${G.msg}${G.o.best && T.score > G.o.best ? ' - a new best!' : ''}` : G.msg;
-    const w = g.measureText(m).width + 12, y = G.done ? H / 2 - 8 : 120;
-    g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect((W - w) / 2, y, w, 16);
-    g.fillStyle = G.done ? '#ffd23a' : '#fff'; g.fillText(m, W / 2, y + 4);
-  }
-  g.textAlign = 'left';
+  T.targets.forEach((up, i) => { const t = TARGETS[i]; g.fillStyle = up ? '#5ae05a' : '#1e3a24'; g.fillRect(t.x - 2, t.y - 5, up ? 4 : 2, 10); if (up) { g.fillStyle = '#c8ffc0'; g.fillRect(t.x - 2, t.y - 5, 1, 10); } });
+  for (const f of T.flips) flipper(g, f);
+  g.fillStyle = '#c0c4d0'; g.fillRect(178, 214 + T.plunge * 8, 6, 8); g.fillStyle = '#e8304a'; g.fillRect(178, 220 + T.plunge * 8, 6, 3);   // the plunger
+  if (T.ball) { const b = T.ball; shadow(g, b.x + 1, b.y + 1.5, R, R * 0.8, 0.4); blit(g, ballSprite('#c8ccd8', R), b.x - R - 0.5, b.y - R - 0.5); }
+  // the backglass's name over its art, the score, the ball, the best beside the table
+  text(g, 'NEON', 34, 14, (now * 2 | 0) % 2 ? '#ff3aa0' : '#ff7ac4', 2, 'c'); text(g, 'NIGHTS', 34, 28, (now * 2 | 0) % 2 ? '#ff7ac4' : '#ff3aa0', 2, 'c');
+  panel(g, 4, 130, 60, 30, '#c8a050'); text(g, 'SCORE', 34, 134, '#f4f2ea', 1, 'c'); led(g, T.score, 8, 143, '#ffb020', 11, 6);
+  panel(g, 4, 164, 60, 16, '#c8a050'); text(g, `BALL ${Math.min(BALLS, BALLS - T.left + 1)}`, 34, 169, '#f4f2ea', 1, 'c');
+  if (G.o.best) { panel(g, 192, 4, 60, 26, '#c8a050'); text(g, 'BEST', 222, 8, '#f4f2ea', 1, 'c'); text(g, String(G.o.best), 222, 18, '#ffd23a', 1, 'c'); }
+  if (G.msgT > 0 || G.done) banner(g, W, G.done ? H / 2 - 7 : 120, G.done ? `${G.msg}${G.o.best && T.score > G.o.best ? ' - a new best!' : ''}` : G.msg, G.done ? '#ffd23a' : '#fff');
 }
 // (tests: the table without a screen)
 export const _test = { newTable, physics, flipperEnd, BUMPERS, TARGETS, FLIP };

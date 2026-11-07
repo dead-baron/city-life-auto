@@ -7,11 +7,14 @@
 // left / right (the stick, the d-pad, A D or the arrows; up / down to fine-tune), hold the shoot button (Space, Enter, A)
 // to build the power and let go. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
+import { layer, blit, ballSprite, shadow, text, panel, banner, ramp, tone, hash } from './arcart.js';
 const W = 256, H = 160, STEP = 1 / 120;
 const T = { x0: 22, y0: 24, x1: 234, y1: 136 };   // the cloth inside the cushions
 const R = 4.2, PR = 8.5;   // a ball's radius, a pocket's
 const POCKETS = [[T.x0, T.y0], [(T.x0 + T.x1) / 2, T.y0 - 2], [T.x1, T.y0], [T.x0, T.y1], [(T.x0 + T.x1) / 2, T.y1 + 2], [T.x1, T.y1]];
-const COLS = ['#f4f2ea', '#f2c21b', '#2350c8', '#c8262b', '#7a3ac8', '#ef7a1a', '#2f9a3a', '#7a1d24', '#1a1a1e', '#f2c21b'];
+const BASE = ['#f2c21b', '#2350c8', '#c8262b', '#6a2ab8', '#ef7a1a', '#2f9a3a', '#8a1d24', '#1a1a1e'];
+const colOf = (n) => (n === 0 ? '#f4f2ea' : BASE[(n - 1) % 8]);   // (1 yellow .. 7 maroon, 8 black; 9-15 the same striped)
+const ballArt = (n) => ballSprite(colOf(n), R, { stripe: n > 8, dot: n > 0 && n !== 8 ? 1 : n === 8 });
 const HEAD = { x: T.x0 + (T.x1 - T.x0) * 0.25, y: (T.y0 + T.y1) / 2 }, FOOT = { x: T.x0 + (T.x1 - T.x0) * 0.72, y: (T.y0 + T.y1) / 2 };
 let G = null;
 
@@ -154,42 +157,103 @@ function step(dt) {
   }
 }
 
+// ---- the screen (GM2, the owner's pool concept: the SNES look) -----------------------------------------------------------
+// the table, painted once: the bar's plank floor round it and the table's shadow, the mahogany rails with their grain,
+// bevels and the pearl diamond sights, the cushions, the felt lit from the lamp over the middle (darker to the rails, its
+// nap in the noise), the head string and the foot spot, the leather drop pockets
+let BG = null;
+function tableArt() {
+  const floor = ramp('#4a2c1c', 6, 3), wood = ramp('#8a4320', 7, 3), felt = ramp('#2a8a4e', 7, 3), cush = ramp('#1f7040', 6, 3), lea = ramp('#5a3420', 5, 2);
+  const cx = (T.x0 + T.x1) / 2, cy = (T.y0 + T.y1) / 2, O = 12, C = 4;
+  const sights = [];
+  for (const k of [1, 2, 3, 5, 6, 7]) { const x = T.x0 + (T.x1 - T.x0) * k / 8; sights.push([x, T.y0 - 8], [x, T.y1 + 8]); }
+  for (const k of [1, 2, 3]) { const y = T.y0 + (T.y1 - T.y0) * k / 4; sights.push([T.x0 - 8, y], [T.x1 + 8, y]); }
+  return layer(W, H, (put) => {
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const inR = x >= T.x0 - O && x < T.x1 + O && y >= T.y0 - O && y < T.y1 + O, inC = x >= T.x0 - C && x < T.x1 + C && y >= T.y0 - C && y < T.y1 + C;
+      const inF = x >= T.x0 && x < T.x1 && y >= T.y0 && y < T.y1;
+      let c;
+      if (!inR) {   // the floor: planks, their seams, a vignette; the table's shadow
+        const row = y >> 3, off = Math.floor(hash(row, 1, 4) * 40), seam = y % 8 === 0 || (x + off) % 40 === 0;
+        const sh = x >= T.x0 - O + 3 && x < T.x1 + O + 4 && y >= T.y0 - O + 4 && y < T.y1 + O + 5;
+        const v = Math.max(Math.abs(x - W / 2) / (W / 2), Math.abs(y - H / 2) / (H / 2));
+        c = tone(floor, seam ? 0.1 : 0.42 + (hash((x + off) / 40 | 0, row, 2) - 0.5) * 0.25 + Math.sin((x + off) * 0.21 + row) * 0.06 - v * v * 0.25 - (sh ? 0.28 : 0), x, y);
+      } else if (!inC) {   // the rails: the grain along them, the bevels
+        const hz = y < T.y0 - C || y >= T.y1 + C, along = hz ? x : y, acr = hz ? (y < T.y0 ? y - (T.y0 - O) : T.y1 + O - 1 - y) : (x < T.x0 ? x - (T.x0 - O) : T.x1 + O - 1 - x);
+        const lit = hz ? y < T.y0 : x < T.x0;   // (the top and the left catch the lamp)
+        let t = 0.5 + Math.sin(along * 0.07 + acr * 0.9 + hash(acr, hz ? 1 : 2, 7) * 9) * 0.12 + (hash(along >> 2, acr, 9) - 0.5) * 0.1;
+        if (acr === 0) t = 0.05; else if (acr === 1) t += lit ? 0.3 : -0.12; else if (acr >= O - C - 1) t -= 0.2;
+        c = tone(wood, t, x, y, 0.6);
+        for (const [sx, sy] of sights) { const d = Math.abs(x + 0.5 - sx) + Math.abs(y + 0.5 - sy); if (d < 1.6) c = [244, 236, 214]; else if (d < 2.4) c = tone(wood, 0.15, x, y); }
+      } else if (!inF) {   // the cushions: the rubber's nose lit on the far side
+        const e = Math.min(x - (T.x0 - C), T.x1 + C - 1 - x, y - (T.y0 - C), T.y1 + C - 1 - y);
+        c = tone(cush, e === 3 ? 0.78 : e === 0 ? 0.2 : 0.48, x, y, 0.5);
+      } else {   // the felt
+        const q = ((x - cx) / 120) ** 2 + ((y - cy) / 74) ** 2;
+        let t = 0.66 - q * 0.42 + (hash(x, y, 1) - 0.5) * 0.07 + (hash(x >> 1, y >> 1, 3) - 0.5) * 0.06;
+        if (x < T.x0 + 2 || y < T.y0 + 2) t -= 0.18;   // (the cushions' shadow)
+        if (x === Math.round(HEAD.x)) t += 0.08;
+        if (Math.hypot(x + 0.5 - FOOT.x, y + 0.5 - FOOT.y) < 1.2) t += 0.4;
+        c = tone(felt, t, x, y);
+      }
+      for (const [px, py] of POCKETS) {   // the leather pockets over the corners
+        const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+        if (d < PR - 1.5) c = d < PR - 3.5 ? [6, 4, 4] : [20, 12, 10];
+        else if (d < PR + 1) c = tone(lea, 0.35 + ((x - px) < 0 && (y - py) < 0 ? 0.35 : (y - py) * -0.02), x, y, 0.5);
+      }
+      put(x, y, c);
+    }
+  });
+}
+// the cue: the blue tip, the white ferrule, the maple shaft, the black wrap, the butt with its gold rings, along the aim
+function cue(g, cb, ax, ay, back) {
+  const seg = (d) => (d < 2 ? '#3a6ad8' : d < 4 ? '#f4f0e6' : d < 54 ? (d < 30 ? '#e8cc96' : '#dcb880') : d < 64 ? ((d | 0) % 3 ? '#26262c' : '#3a3a44') : d < 66 || (d > 84 && d < 86) ? '#e8c050' : '#6a2812');
+  for (let d = 0; d < 90; d += 0.7) { const x = cb.x - ax * (back + d), y = cb.y - ay * (back + d); g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(Math.round(x + 2), Math.round(y + 3), 1, 1); }
+  for (let d = 0; d < 90; d += 0.6) {
+    const x = cb.x - ax * (back + d), y = cb.y - ay * (back + d), w = d > 50 ? 2 : 1;
+    g.fillStyle = seg(d); g.fillRect(Math.round(x), Math.round(y), w, w);
+    if (d > 4 && d < 54) { g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(Math.round(x - ay), Math.round(y + ax), 1, 1); }
+  }
+}
+// where the cue ball first meets a ball (the ghost ball) or a cushion, along the aim
+export function aimHit(balls, cb, ax, ay) {
+  let best = 220;
+  for (const b of balls) {
+    if (b === cb || b.in) continue;
+    const fx = b.x - cb.x, fy = b.y - cb.y, t = fx * ax + fy * ay, d2 = fx * fx + fy * fy - t * t, r2 = 4 * R * R;
+    if (t > 0 && d2 < r2) best = Math.min(best, t - Math.sqrt(r2 - d2));
+  }
+  for (const [lim, v, p] of [[T.x0 + R, ax, cb.x], [T.x1 - R, ax, cb.x], [T.y0 + R, ay, cb.y], [T.y1 - R, ay, cb.y]]) if (v && (lim - p) / v > 0) best = Math.min(best, (lim - p) / v);
+  return best;
+}
 function draw() {
   const g = G.g, cb = G.balls[0];
-  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: sharp)
-  g.fillStyle = '#1a0f08'; g.fillRect(0, 0, W, H);
-  g.fillStyle = '#5a3418'; g.fillRect(T.x0 - 12, T.y0 - 12, T.x1 - T.x0 + 24, T.y1 - T.y0 + 24);   // the rails
-  g.fillStyle = '#1e6a3a'; g.fillRect(T.x0 - 4, T.y0 - 4, T.x1 - T.x0 + 8, T.y1 - T.y0 + 8);   // the cushions
-  g.fillStyle = '#2a8a4c'; g.fillRect(T.x0, T.y0, T.x1 - T.x0, T.y1 - T.y0);   // the cloth
-  g.fillStyle = 'rgba(255,255,255,.15)'; g.fillRect(HEAD.x, T.y0, 1, T.y1 - T.y0);
-  g.fillStyle = '#0a0a0a';
-  for (const [px, py] of POCKETS) { g.beginPath(); g.arc(px, py, PR - 1.5, 0, Math.PI * 2); g.fill(); }
+  fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: the pixels square, the words sharp)
+  BG ||= tableArt();
+  blit(g, BG, 0, 0);
   for (const b of G.balls) {
     if (b.in) continue;
-    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.arc(b.x + 1, b.y + 1.2, R, 0, Math.PI * 2); g.fill();
-    g.fillStyle = COLS[b.n]; g.beginPath(); g.arc(b.x, b.y, R, 0, Math.PI * 2); g.fill();
-    if (b.n === 9) { g.fillStyle = '#f4f2ea'; g.fillRect(b.x - R + 0.5, b.y - 1.5, 2 * R - 1, 3); g.fillStyle = COLS[9]; g.fillRect(b.x - 2.5, b.y - 1.5, 5, 3); }   // (the striped 9)
-    if (b.n) { g.fillStyle = '#fff'; g.beginPath(); g.arc(b.x, b.y, 1.5, 0, Math.PI * 2); g.fill(); }
-    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(b.x - 2, b.y - 2.5, 1.5, 1.5);
+    shadow(g, b.x + 1.3, b.y + 1.8, R * 0.95, R * 0.7, 0.32);
+    blit(g, ballArt(b.n), b.x - 5.5, b.y - 5.5);
   }
   if (!G.moving && !G.done && !cb.in) {
-    // the aim line (to the first thing it meets, roughly) and the cue behind the ball, drawn back by the power
-    const ax = Math.cos(G.aim), ay = Math.sin(G.aim);
-    g.strokeStyle = 'rgba(255,255,255,.35)'; g.setLineDash([2, 3]); g.beginPath(); g.moveTo(cb.x + ax * 6, cb.y + ay * 6); g.lineTo(cb.x + ax * 70, cb.y + ay * 70); g.stroke(); g.setLineDash([]);
-    const back = 6 + G.power * 22;
-    g.strokeStyle = '#e8d2a0'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(cb.x - ax * back, cb.y - ay * back); g.lineTo(cb.x - ax * (back + 70), cb.y - ay * (back + 70)); g.stroke(); g.lineWidth = 1;
-    g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(8, H - 12, 60, 6); g.fillStyle = G.power > 0.8 ? '#ff5a5a' : '#ffd23a'; g.fillRect(9, H - 11, 58 * G.power, 4);
+    // the aim: dots to the ghost ball, the ghost ball's ring; the cue behind the ball, drawn back by the power
+    const ax = Math.cos(G.aim), ay = Math.sin(G.aim), t = aimHit(G.balls, cb, ax, ay);
+    g.fillStyle = 'rgba(255,255,255,.7)';
+    for (let d = 7; d < t; d += 4) g.fillRect(Math.round(cb.x + ax * d), Math.round(cb.y + ay * d), 1, 1);
+    const gx = cb.x + ax * t, gy = cb.y + ay * t;
+    for (let k = 0; k < 12; k++) g.fillRect(Math.round(gx + Math.cos(k * 0.524) * R), Math.round(gy + Math.sin(k * 0.524) * R), 1, 1);
+    cue(g, cb, ax, ay, 6 + G.power * 22);
+    // the power: a gauge at the bottom left, green to red
+    panel(g, 6, H - 13, 64, 9, '#c8a050');
+    for (let i = 0; i < 15; i++) { g.fillStyle = i / 15 < G.power ? (i < 8 ? '#5ae05a' : i < 12 ? '#f2c21b' : '#ff4a3a') : 'rgba(255,255,255,.08)'; g.fillRect(8 + i * 4, H - 11, 3, 5); }
   }
-  g.fillStyle = '#f4f2ea'; g.font = '8px monospace'; g.textBaseline = 'top';
-  g.fillText(`SHOTS ${G.shots}`, 8, 6);
-  const best = G.o.best ? `BEST ${G.o.best}` : '';
-  if (best) g.fillText(best, W - 8 - g.measureText(best).width, 6);
-  if (G.msgT > 0 || G.done) {
-    const m = G.done ? `${G.msg}${G.o.best && G.shots < G.o.best ? ' - a new best!' : ''}` : G.msg;
-    const y = G.done ? H / 2 - 9 : T.y1 - 22;   // (below the rack while you play; the middle of the cleared table at the end)
-    g.fillStyle = 'rgba(0,0,0,.6)'; const w = g.measureText(m).width + 12; g.fillRect((W - w) / 2, y, w, 16);
-    g.fillStyle = G.done ? '#ffd23a' : '#fff'; g.fillText(m, (W - w) / 2 + 6, y + 4);
-  }
+  hud(g);
+}
+function hud(g) {
+  text(g, `SHOTS ${G.shots}`, 8, 3, '#f4f2ea');
+  if (G.o.best) text(g, `BEST ${G.o.best}`, W - 8, 3, '#ffd23a', 1, 'r');
+  if (G.msgT > 0 || G.done) banner(g, W, G.done ? H / 2 - 7 : T.y1 - 24, G.done ? `${G.msg}${G.o.best && G.shots < G.o.best ? ' - a new best!' : ''}` : G.msg, G.done ? '#ffd23a' : '#fff');
 }
 // (tests: the table without a screen)
 export const _test = { rack, physics, POCKETS, T, R };
