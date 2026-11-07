@@ -295,8 +295,8 @@ async function fly(page, cdp, R) {
     log(`landscape: ${JSON.stringify(R.fly.landscape)}`);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 411, height: 891, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'portraitPrimary', angle: 0 } }); await wait(2000);
   }
-  // the rotor wash: over open water (the corridor's start moved to the nearest deep water), at ALT then low
-  if (SHOTS) {
+  // the rotor wash: over open water (the corridor's start moved to the nearest deep water), at ALT then low (--wash)
+  if (SHOTS && arg('wash', false)) {
     const wpt = await page.evaluate((C) => { const m = window.CLA.S.map; for (let r = 0; r < 60000; r += 768) for (let a = 0; a < 16; a++) { const x = C.from.x + Math.cos(a * Math.PI / 8) * r, y = C.from.y + Math.sin(a * Math.PI / 8) * r, tx = Math.floor(x / 32), ty = Math.floor(y / 32); if (m.inside(tx, ty) && m.tileAt(tx, ty) === 7) { let ok = true; for (let d = -8; d <= 8 && ok; d += 4) for (let e = -8; e <= 8; e += 4) if (m.tileAt(tx + d, ty + e) !== 7) { ok = false; break; } if (ok) return { x, y }; } } return null; }, C);
     if (wpt) {
       for (const [alt, nm] of [[ALT, 'high'], [30, 'low']]) {
