@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildWorld3 } from '../server/world3.js';
-import { T } from '../shared/constants.js';
+import { T, TILE } from '../shared/constants.js';
 import { surveyBuildings, oversized, plainRuns, PLAIN_CAP } from '../tools/plainmeasure.mjs';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
@@ -149,5 +149,83 @@ test('southside lots: street dice down a passage or two (the existing street dic
     assert.equal(M.dist[M.idx(tx, ty)], 6, 'in Southside');
     assert.equal(M.tiles[M.idx(tx, ty)], T.PLAZA, 'on a passage');
     assert.ok(S.some((s) => s.x === q.x && s.y === q.y), `the crew plays there (${q.x}, ${q.y})`);
+  }
+});
+
+// ---- no huge tall plain towers (the owner, 2026-11-06: "there are still a lot of really huge tall plain buildings, like
+// park west tower ... make those buildings more interesting, less tall, maybe split them up into multiple buildings") -----
+// shared/world3-towers.js: a big plain tower is a slim tower over its door, wings set back behind podiums of shops and
+// mid-rises stepping down from it, a lower back block; a few landmarks stay (TOWER_LANDMARKS). tools/towers.mjs surveys.
+const { surveyTowers } = await import('../tools/plainmeasure.mjs');
+const { TOWER3, TOWER_LANDMARKS } = await import('../shared/world3-towers.js');
+const TW = surveyTowers(M), TS = M.world3 && M.world3.towers;
+const capPx = 26 + 56 * TOWER3.cap;
+
+test('tall towers: no plain slab - big and tall with nothing but the towers\' kit - but the landmarks', () => {
+  const slabs = TW.filter((q) => q.slab && !TOWER_LANDMARKS.includes(q.name));
+  assert.deepEqual(slabs.map((q) => `#${q.id} ${q.name} ${q.tw}x${q.th} ${q.floors} fl`), [], 'plain slabs left');
+  // (before: 43 - Park West Tower 48 x 46 tiles of 16 floors, Harborview Tower 65 x 59 of 15)
+  assert.ok(TS && TS.split >= 35, `towers split: ${TS && TS.split}`);
+  // the landmarks stand as they were planned, each one building
+  for (const name of TOWER_LANDMARKS) {
+    const b = M.buildings.find((q) => q && q.hand && q.name === name);
+    assert.ok(b && !b.towerPart && b.art.spec.floors >= 16, `${name}: kept whole (${b && b.art.spec.floors} floors)`);
+  }
+  // no plain tower over the cap of floors (its crown included) or its front over the slim tower's, landmarks aside
+  for (const q of TW) {
+    if (!q.plain || TOWER_LANDMARKS.includes(q.name) || !q.tall) continue;
+    assert.ok(q.floors <= TOWER3.cap, `#${q.id} ${q.name}: ${q.floors} floors (its crown's too)`);
+    assert.ok(q.tw < TOWER3.front && q.area < TOWER3.area, `#${q.id} ${q.name}: ${q.tw} x ${q.th}`);
+  }
+});
+
+test('tall towers: a split tower is several buildings of different heights, its street side shops and lobbies', () => {
+  let groups = 0, shops = 0, crowns = 0, podiums = 0;
+  const open = (x, y) => { const t = M.tiles[M.idx(x, y)]; return t !== T.BUILDING && t !== T.WALL && t !== T.WATER && t !== T.DEEP; };
+  const firstNew = Math.min(...TS.list.flatMap((g) => g.slice(1)));
+  for (const g of TS.list) {
+    const P = g.map((id) => M.buildings[id]), tw = P[0];
+    groups++;
+    assert.ok(P.length >= 2 && P.length <= TOWER3.most, `${tw.name}: ${P.length} buildings`);
+    assert.ok(P.every((b) => b && !b.gone && b.towerPart && b.towerPart.of === tw.id && b.art && b.whole), `${tw.name}: its parts`);
+    // one footprint, no overlaps: each part's tiles its own
+    for (const b of P) for (let y = b.ty; y < b.ty + b.th; y++) for (let x = b.tx; x < b.tx + b.tw; x++) assert.equal(M.bld[M.idx(x, y)], b.id, `${b.name} at ${x},${y}`);
+    // the street side: the parts on the footprint's south edge run its whole width, each fronting open ground, with a
+    // shopfront or the tower's lobby
+    const sy = tw.ty + tw.th, x0 = Math.min(...P.map((b) => b.tx)), x1 = Math.max(...P.map((b) => b.tx + b.tw));
+    const front = P.filter((b) => b.ty + b.th === sy).sort((a, b) => a.tx - b.tx);
+    assert.equal(front.reduce((a, b) => a + b.tw, 0), x1 - x0, `${tw.name}: its street side all fronts`);
+    for (const b of front) {
+      let o = 0; for (let x = b.tx; x < b.tx + b.tw; x++) if (open(x, sy)) o++;
+      assert.ok(o >= b.tw * 0.5, `${b.name}: fronts the street (${o} of ${b.tw})`);
+      assert.ok(b.art.shop && b.art.shop.kind, `${b.name}: a shopfront or a lobby`);
+      if (b !== tw) { shops++; assert.ok(b.art.shop.sign && b.art.shop.sign.text, `${b.name}: its sign`); assert.ok(b.art.spec.floors <= 6, `${b.name}: low (${b.art.spec.floors})`); }
+      if (b.towerPart.role === 'podium') podiums++;
+    }
+    for (let i = 1; i < front.length; i++) if (front[i] !== tw && front[i - 1] !== tw) assert.notEqual(front[i].art.shop.kind, front[i - 1].art.shop.kind, `${tw.name}: ${front[i - 1].name} and ${front[i].name} side by side`);
+    // heights: the tower the tallest, at most the cap, the rest lower and not all one height
+    const fl = (b) => b.art.spec.floors + (b.art.up ? b.art.up.floors : 0);
+    assert.ok(fl(tw) <= TOWER3.cap, `${tw.name}: ${fl(tw)} floors`);
+    for (const b of P.slice(1)) assert.ok(fl(b) < fl(tw), `${b.name} (${fl(b)}) under ${tw.name} (${fl(tw)})`);
+    if (P.length >= 3) assert.ok(new Set(P.map(fl)).size >= 3, `${tw.name}: heights ${P.map(fl).join(', ')}`);
+    if (tw.art.up) crowns++;
+    // the tower keeps its door, its sign, its places and its lot: its POIs at its front, inside its span
+    assert.ok(tw.door.tx >= tw.tx && tw.door.tx < tw.tx + tw.tw && tw.door.ty === sy, `${tw.name}: its door`);
+    for (const p of M.pois.filter((q) => q.b === tw.id)) assert.ok(p.x >= tw.tx * TILE && p.x < (tw.tx + tw.tw) * TILE && p.y > sy * TILE - 8, `${tw.name}: ${p.kind} at its front`);
+    // additive: the new parts at the end of the list, after every building the plans placed
+    for (const id of g.slice(1)) assert.ok(id >= firstNew, `${tw.name}: part #${id}`);
+  }
+  assert.ok(M.buildings.slice(firstNew).every((b) => !b || !b.hand || b.towerPart), 'no plan building after the parts');
+  assert.ok(groups >= 35 && shops >= 70 && podiums >= 25 && crowns >= 15, `groups ${groups}, street shops ${shops}, podiums ${podiums}, crowns ${crowns}`);
+});
+
+test('tall towers: no split tower\'s wall covers a place to the north of it (unless it is down to seven floors)', () => {
+  // (the camera draws a tall thing up over what's north of it: a tower stands lower where its wall would hide a place)
+  for (const g of TS.list) {
+    const tw = M.buildings[g[0]], P = new Set(g), f = tw.art.spec.floors + (tw.art.up ? tw.art.up.floors : 0), H = 26 + 56 * f;
+    assert.ok(H <= capPx, `${tw.name}: ${H} px`);
+    if (f <= 7) continue;
+    const hid = M.pois.filter((p) => !P.has(p.b) && p.kind !== 'delivery' && p.x >= tw.tx * TILE && p.x < (tw.tx + tw.tw) * TILE && p.y >= tw.ty * TILE - H && p.y < tw.ty * TILE);
+    assert.deepEqual(hid.map((p) => `${p.kind} ${p.label}`), [], `${tw.name} (${f} floors) hides`);
   }
 });

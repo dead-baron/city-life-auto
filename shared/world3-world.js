@@ -80,7 +80,8 @@ import { parkWest3, firstCars3 } from './world3-firstcars.js';   // (the first c
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
-import { lots3, lotPoisLast } from './world3-lots.js';   // (Southside's lots on a street: rough small shops; dice down a passage)
+import { lots3, lotPoisLast } from './world3-lots.js';
+import { towers3 } from './world3-towers.js';   // (the big plain towers split into towers, wings, podiums of shops - the owner, 11-06)   // (Southside's lots on a street: rough small shops; dice down a passage)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
 import { streetGreens3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
@@ -331,6 +332,7 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.parkWest = parkWest3(m, H3);   // (then: the city's arrival by Greenfield Park - its used lot, its alley, its shops - all at the ends of the lists: world3-firstcars.js)
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
+      if (city) { m.world3.towers = towers3(m); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)

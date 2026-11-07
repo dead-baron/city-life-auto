@@ -21674,3 +21674,56 @@ The owner (11-06): "Can't figure out the rocket league arena... How do I get it 
 ## 2026-11-07 - The police helicopter at 4 stars (was 3)
 The owner (11-07): "wait for 4 to 5 star wanted levels before the cops get better". The police overhaul left the
 helicopter at 3 stars (`POLICE_AIR.stars`); it now comes at 4, with the sharp drivers and the ramming.
+
+## 2026-11-07 - No huge tall plain towers: the big ones split into a tower, wings, shops and a back block
+The owner (11-06): "there are still a lot of really huge tall plain buildings, like park west tower. If we need those big
+buildings in to share the performance costs then that's understandable, but it would be cool to make those buildings
+more interesting, less tall, maybe split them up into multiple buildings." His call: split the biggest plain towers into
+several buildings of different heights, with setbacks, rooftop detail and street-level shops; keep a few real landmark
+towers downtown.
+- The survey (`node tools/towers.mjs`, the measure `tools/plainmeasure.mjs` surveyTowers): the hand plans' towers
+  (shared/world3-downtown.js towerKit, shared with the Civic Center and Westport) are drawn whole - their floors across
+  their whole front - so a big one is one wall of glass or stone as wide as its lot. A plain slab: 8+ floors, a front of
+  24+ tiles or 600+ tiles of footprint, and nothing but the kit's look (no business but its delivery stop, a home behind
+  its lobby at most, no walk-in, no set-piece kit, no neon). Before: 43 slabs - Downtown 32, Westport Center 6, the Civic
+  Center 4, the airport 1. The worst: Harborview Tower 65 x 59 tiles of 15 floors, the Grand Neon Hotel 56 x 44 of 16,
+  Grand Neon Residences 65 x 57 of 12, the Harborlight Hotel 52 x 18 of 15, Park West Tower 48 x 46 of 16 (922 px of
+  wall: 29 tiles of the street north of it under it), Commerce Tower 52 x 59 of 14, Kestrel Tower 48 x 68 of 15.
+- The landmarks kept whole (shared/world3-towers.js `TOWER_LANDMARKS`): Greenfield Tower (the city's crown on the park's
+  axis, WC355), Union Trust Tower and Sterling Tower (the bank plaza's pair, WC353/354), the Grand Neon Hotel (its
+  fountain drive, WC356), and Westport Center Tower (Westport's own crown).
+- The split (shared/world3-towers.js `towers3`, World v3's last building pass): each of the other 39, in its own
+  footprint -
+  - the tower: slim (10-20 tiles of front) over its own door, so its lobby and name, its delivery stop, its home and its
+    lot stay where they were; lower - two floors less, at most 12 with its crown, its wall over the street north of it
+    at most about 14 tiles, and lower still (down to 7) while it would cover a place or a sign there; its top two or
+    three floors a setback crown (`art.up`, drawn by the art's existing setback: client/art2/game/statics.js upperArt);
+  - either side, in pieces of at most 26 tiles: a wing set back behind a podium of one or two floors of shops (cafes,
+    florists, bookshops, tailors, bars, a diner, a dry cleaner, a grocer, a record shop - their signs, awnings, their roof
+    gardens), or a mid-rise of three to six floors with its shop on the pavement; the floors step down away from the
+    tower, and each piece has its own skin (stone by glass, brick by stone), windows and cornice;
+  - a footprint deeper than 28 tiles: a back block behind them (two over the widest), brick with a water tank and
+    chimneys or offices, four to six floors (it stands on the street to the north);
+  - the roofs: the towers' and offices' plant by the art's kit, the wings' terraces (planters, palms, umbrellas) or roof
+    gardens, the podiums' roof gardens, the back blocks' water tanks.
+  The tiles don't change: the footprint stays one built mass, its parts buildings of their own (m.bld). The tower keeps
+  the building's id (and its look's seed); the other parts are new buildings at the very end of the list (after the
+  Syndicate's den, the last building World v3 makes), so no other building's id, look, POI or home moves. Every choice is
+  a hash of the footprint's corner. A tower becomes at most five buildings (one back block, then the outer podiums made
+  mid-rises, when there'd be more): 39 towers became 185 buildings (+146). The new shops' signs are the buildings' signs
+  too, so the street-greens pass (world3-greens.js) runs again after the split and keeps the street trees off them and
+  off the slimmer towers' fronts (a front of 12 tiles or less is all sign to it).
+- After: no plain slab but the landmarks (the survey: 4, all landmarks; Union Trust Tower isn't plain - its helipad);
+  the split towers 7-12 floors (12 of them at 7: the shorter ones, and those whose wall would hide a place or a sign); Park West Tower 12 floors
+  with its crown over 15 tiles of front (16 floors over 48), a brick mid-rise with its shop on the pavement to the
+  west, a wing over a podium of shops to the east, the back block behind. No POI or home moved (all 6,018 and 3,467 the same, ids and places);
+  the only new building ids are the parts', after the last building the world had (#7128, the Syndicate's den).
+- test/plainblocks.test.js (the same world build): no plain slab but the landmarks, and the landmarks whole; no plain tower
+  over 12 floors or a slim tower's front; each split tower's parts tile its footprint, its street side all fronts with
+  a shopfront or the lobby, the shops low and signed, the tower the tallest and the heights varied, the tower's door and
+  POIs at its front, the new parts after every plan building; no split tower's wall over a place to the north.
+- Cost (tools/perf.mjs, this machine): the city 26.1x the yardstick to build (budget 40x), 39 MB as sent (budget 46); the
+  bakes 57.5x (budget 90x), the biggest kept chunk 758 KB; the bake's code 977 KB of its 1,000 KB (the crown: a few lines
+  in statics.js `upperArt`, the art's own setback drawing). The parts are buildings the bake already draws: fewer, lower
+  walls over the street.
+- Today's world (`world`) doesn't change - World v3's (`world3`, `art3`) do, and `art` (statics.js).

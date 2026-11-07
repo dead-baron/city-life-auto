@@ -923,6 +923,14 @@ function upperOf(A, D, rnd, spec, w, d) {
   roofOf(A, D, rnd, us); gardenRoof(us, uw, ud);
   return { spec: us, x: inW, y: inN };
 }
+// a hand look's setback (b.art.up: shared/world3-towers.js - a split tower's crown): insets w, e, n, s (tiles) and floors
+function upperArt(u, A, D, rnd, spec, w, d) {
+  const inW = u.w * TILE, inN = u.n * TILE, uw = w - inW - u.e * TILE, ud = d - inN - u.s * TILE;
+  if (uw < 90 || ud < 70) return null;
+  const us = { w: uw, d: ud, seed: spec.seed + 17, glowOnly: true, night: NIGHT, floors: u.floors + 1, groundH: 0, blank: true, style: spec.style, wallColor: spec.wallColor, ...(spec.brickTone ? { brickTone: spec.brickTone } : {}), win: spec.win, parapet: 6, roof: 'flat' };
+  roofOf(A, D, rnd, us);
+  return { spec: us, x: inW, y: inN };
+}
 const winXs = (w, avoid = [], gap = 36, m = 10) => { const out = []; for (let x = m; x + 16 <= w - m; x += gap) if (!avoid.some(([a, b]) => x + 16 > a - 5 && x < b + 5)) out.push(x); return out; };
 
 // the small towns' wood looks (World v3, 8.13.1): by district - Timber Bend, Willow Crossing, Sandpiper Bay and
@@ -1370,7 +1378,7 @@ function specOf(c, b, A, s, D) {
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
-    up = ART || b.look ? null : upperOf(A, D, rnd, spec, w, d);
+    up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look ? null : upperOf(A, D, rnd, spec, w, d);
     const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
