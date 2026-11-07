@@ -4751,7 +4751,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   g.save();
   if (!swimming) { // contact shadow, and the body's shadow thrown away from the sun
     const sk = S.sky;
-    if (sk && sk.sun > 0.05 && gfx.shadows >= 2) {
+    if (sk && sk.sun > 0.05 && gfx.shadows >= 2 && !S.ugLayer) {   // (no sun under the ground)
       const L = Math.max(0.35, Math.min(1.7, sk.shadowLen * 0.75)) * 30 * bs, dx = sk.sunDir.x, dy = Math.max(0.28, sk.sunDir.y);
       const n = Math.hypot(dx, dy);
       g.fillStyle = `rgba(12,15,34,${(0.36 * sk.sun).toFixed(3)})`;

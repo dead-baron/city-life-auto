@@ -583,7 +583,7 @@ class UgView {
     }
     for (const K2 of L.caves) for (const l of K2.lanterns || []) {   // the lanterns' warm light
       if (l.x < view.x0 - 160 || l.x > view.x1 + 160 || l.y < view.y0 - 160 || l.y > view.y1 + 160) continue;
-      const R = LANTERN.r * (l.big ? 1.25 : 1), gr = g.createRadialGradient(l.x, l.y - 16, 0, l.x, l.y - 16, R), fl = 0.92 + 0.08 * Math.sin(now * 9 + l.x), kb = l.big ? 1.25 : 1;   // (a warm pool, flickering; the kit's bigger and warmer)
+      const R = LANTERN.r * (l.big ? 1.25 : 1), gr = g.createRadialGradient(l.x, l.y - 16, 0, l.x, l.y - 16, R), fl = 0.92 + 0.08 * Math.sin(now * 9 + l.x), kb = l.big ? 1.25 : l.exit ? 0.4 : 1;   // (a way out's pair: faint - the daylight is there already, and it washed out whoever stood in it)   // (a warm pool, flickering; the kit's bigger and warmer)
       gr.addColorStop(0, `rgba(255,190,100,${0.3 * fl * kb})`); gr.addColorStop(0.45, `rgba(255,150,70,${0.11 * fl * kb})`); gr.addColorStop(1, 'rgba(255,140,60,0)');
       g.fillStyle = gr; g.beginPath(); g.arc(l.x, l.y - 16, R, 0, 6.283); g.fill();
     }

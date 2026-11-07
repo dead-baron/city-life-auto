@@ -21115,3 +21115,18 @@ game's words (the job's "YOUR ..." plate, the company taking it back); anything 
 "truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
 4x4. test/jobrecall.test.js checks the forklift and the golf cart.
 >>>>>>> origin/main
+
+## 2026-11-06 · Caves, round 2: no arrow; the game's own characters checked in the game
+
+The owner (11-06, 21:12): "I don't think we need an arrow pointing the way out of the cave. The cave art is looking okay
+but the character is an old placeholder I believe."
+- **No arrow:** the server's hint, the 'ugway' message, the page's chevron, `CAVE_WAY` and their test and Guide words are
+  gone. The way out is still offered all along its passage (`CAVE_LEAVE_REACH` in shared/rules.js), with its lanterns,
+  daylight and WAY OUT board.
+- **The character:** the live game drew people underground as placeholder ovals (view.js `ped`). The cave view now
+  draws people and animals with the page's own `drawPed` (`main.js` hands it over), so they look as they do in the city.
+  Checked in the real game (a local World v3 server, a phone-portrait page at 411x891 @2.6, in the Old Granite Mine by
+  day and by night): the real sprite at the city's scale, facing the way it walks, walking, with its contact shadow, and
+  darkened or lit by the cave's light like everything else.
+  - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
+  - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
