@@ -21120,7 +21120,16 @@ ocean ... wait for 4 to 5 star wanted levels before the cops get better."
     (or the nearest), straight into a cell. It comes when the ride gets no nearer for 20 s (`CUSTODY_SKIP_S`, was 30 and a
     teleport), when the ride runs out of time, when no car came in time, and at once where no road from you reaches a
     station (an island without one: no car is sent at all).
-  - island stations: ISLANDS_LINE
+  - island stations (`shared/world3-medics.js` `precincts3`, World v3): the road network has four pieces - the mainland
+    with every bridged island (1,501 junctions, all ten stations), Gull Harbor (17), Coral Cay (19) and a six-junction
+    stretch in West Hills. Gull Harbor now has **Gull Harbor Police**: the "Gull Harbor Lobster Co." building (a courier's
+    address, 12 x 8 tiles, by the harbor) is the precinct - a walk-in with the front desk and a cell block (the 11th;
+    there were 10). Its POI is the building's own (id 3498, its kind and label changed; it moved in to the counter, from
+    1666,3727 to 1666,3724 tiles): no POI is added or removed, and a dump of all 6,018 POIs before and after differs in
+    that one only. Coral Cay gets none: every shop on it is a real one and its only other building is the eco lodge (the
+    first-aid post there is a lifeguard tower for the same reason) - an arrest there fades to the nearest cells, and the
+    West Hills stretch the same. A car sent for a prisoner now comes from their piece of the network
+    (`police.js sendTransport`, `spawnPoint`'s `ok`), and one on its way to them stops short of open water too.
 - **Prison only for the worst** (`prison.js prisonWorthy`, rules.js `PRISON`): a booking at 5 stars with a long record -
   4 bookings before it (`profile.bookings`, counted from now on; the last 8 times were all that was kept) or a criminal
   rating of 2,000 Criminal EXP. It was 4 stars, or the third booking in two hours - so a 1-star player whose car got stuck
