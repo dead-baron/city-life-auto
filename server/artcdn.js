@@ -15,12 +15,20 @@
 // world is a new hash: everything is baked afresh, the old files deleted); World v3's world: '<art3>-v3' (artKey). Client-only pushes don't restart the
 // server: when version.json's art changes on disk, the bake threads start again on the new code. In the background,
 // every chunk of the map for the qualities in PREWARM, the busiest first (towns before the country, the country before
-// open sea). What pages ask for goes to the front of the queue. CLA_ART_THREADS bake threads (0: off).
+// open sea). What pages ask for goes to the front of the queue. CLA_ART_THREADS bake threads (0: no baking here - what is
+// on disk already is still served: a world baked elsewhere, or by this server before).
+//
+// The low-detail picture (server/artlow.js, 2026-11-06): every bake leaves the chunk's thumbnail (1/16) in a store kept
+// across builds of the art (<dataDir>/artlow/<world>/); the chunks already on disk that have none get theirs first (a
+// few ms each, before the background's bakes). GET /art/low/<world>/<bx>_<by>.png: a block of LOW_BLOCK x LOW_BLOCK
+// chunks' thumbnails (transparent where there's none yet; x-low-have: which have one) - the page's stand-ins
+// (client/art2/game/lowres.js).
 import { Worker } from 'node:worker_threads';
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync, createReadStream, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cpus, totalmem } from 'node:os';
 import { TILE } from '../shared/constants.js';
+import { createLowStore } from './artlow.js';
 
 const CHUNK = 768;                                // (client/art2/game/chunkbake.js CHUNK: the art's chunks, not the net's)
 const ASK_MAX = 400;                              // chunks asked for and waiting, at most (the oldest go)
@@ -32,7 +40,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   const { CX, CY } = artChunks(map);   // (the art CDN's chunk grid over the world's frame: the map's m.frame)
   const S = {
     art: null, dir: null, prev: null, prevDir: null, same: new Set(), sameFile: null, workers: [], idle: [], asked: [], askedSet: new Set(), pre: [], preAt: 0, inflight: new Map(),
-    done: new Set(), focus: [], qSeen: new Map(),
+    done: new Set(), focus: [], qSeen: new Map(), thumbQ: [], low: null,
     stats: { baked: 0, bakeMs: 0, served: 0, servedBytes: 0, missed: 0, errors: 0, stale: 0, focusBaked: 0, startedAt: Date.now() }, threads, stopped: false,
   };
   const keyOf = (q, ap, cx, cy) => `${q}/${ap}/${cx}/${cy}`;
@@ -61,11 +69,16 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     return all.sort((a, b) => score[b] - score[a]);
   })();
 
+  // the low-detail picture's store (kept across builds: not under the art's directory, which a new build clears)
+  try { S.low = createLowStore({ dir: join(dataDir, 'artlow', world || 'today') }); } catch (e) { log(`[art] no low-detail picture: ${e && e.message}`); S.low = null; }
+  const lowFlush = S.low ? setInterval(() => S.low.flush(), 30000) : null;
+  if (lowFlush && lowFlush.unref) lowFlush.unref();
   function start() {
     S.art = readArt();
     S.done = new Set();
-    if (!S.art || !threads) return;
+    if (!S.art) return;
     S.dir = join(dataDir, 'art', S.art);
+    if (!threads) { log(`[art] serving what's on disk of art ${S.art} (no bake threads)`); return; }
     mkdirSync(S.dir, { recursive: true });
     // which world an art directory's chunks are of (world.txt: 'v3' or 'today'; none - from before 2026-10-11 - is
     // today's): both worlds' builds share one art hash (docs/WORLD-V3.md 8.23), so this build's directory holding the
@@ -90,6 +103,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     if (S.sameFile) { try { for (const k of readFileSync(S.sameFile, 'utf8').split('\n')) if (k) S.same.add(k); } catch { /* none yet */ } }
     S.pre = [];
     for (const q of prewarm) for (const i of order) S.pre.push([q, 2, i % CX, Math.floor(i / CX)]);
+    S.thumbQ = backfill();
     for (let i = 0; i < threads; i++) spawn();
     log(`[art] serving chunks of art ${S.art} from ${S.dir} (${threads} bake thread${threads === 1 ? '' : 's'}; background: quality ${prewarm.join(', ')})`);
   }
@@ -103,7 +117,8 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       if (m.ready) { slot.ready = true; S.idle.push(slot); pump(); return; }
       const job = slot.job; slot.job = null;
       if (job) S.inflight.delete(job.key);
-      if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; if (m.same && slot.art === S.art && S.sameFile) { S.same.add(job.key); S.stats.same = (S.stats.same || 0) + 1; try { appendFileSync(S.sameFile, job.key + '\n'); } catch { /* best effort */ } } } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
+      if (m.thumb && S.low) { S.low.put(m.cx, m.cy, m.thumb); S.stats.thumbs = (S.stats.thumbs || 0) + 1; }
+      if (m.ok && m.thumbOnly) { /* (a thumbnail from a chunk on disk: nothing baked) */ } else if (m.ok) { S.stats.baked++; S.stats.bakeMs += m.ms; if (job) { S.done.add(job.key); if (job.focus) S.stats.focusBaked++; if (m.same && slot.art === S.art && S.sameFile) { S.same.add(job.key); S.stats.same = (S.stats.same || 0) + 1; try { appendFileSync(S.sameFile, job.key + '\n'); } catch { /* best effort */ } } } } else { S.stats.errors++; if (S.stats.errors < 20) log(`[art] bake failed ${m.q}/${m.ap}/${m.cx},${m.cy}: ${m.error}`); }
       if (slot.art === S.art && !S.stopped) { S.idle.push(slot); pump(); }
     });
     w.on('error', (e) => { log(`[art] bake thread failed: ${e && e.message}`); S.idle = S.idle.filter((s) => s !== slot); S.workers = S.workers.filter((s) => s !== slot); if (slot.job) S.inflight.delete(slot.job.key); });
@@ -120,6 +135,10 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     }
     const f = nextFocus();
     if (f) return f;
+    while (S.thumbQ.length) {   // (the thumbnails of chunks on disk that have none: a few ms each)
+      const t = S.thumbQ.shift();
+      if (S.low && !S.low.has(t.cx, t.cy)) return t;
+    }
     while (S.pre.length) {
       const [q, ap, cx, cy] = S.pre.shift(), key = keyOf(q, ap, cx, cy), file = fileOf(q, ap, cx, cy);
       if (!S.inflight.has(key) && !onDisk(key, file)) return { key, q, ap, cx, cy, file };
@@ -161,8 +180,39 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
       if (!j) return;
       const slot = S.idle.shift();
       slot.job = j; S.inflight.set(j.key, j);
-      slot.w.postMessage({ cx: j.cx, cy: j.cy, q: j.q, ap: j.ap, file: j.file, prev: S.sameFile ? fileOf(j.q, j.ap, j.cx, j.cy, S.prevDir) : null });
+      if (j.thumbOnly) { slot.w.postMessage({ thumbOnly: true, cx: j.cx, cy: j.cy, file: j.file }); continue; }
+      slot.w.postMessage({ cx: j.cx, cy: j.cy, q: j.q, ap: j.ap, file: j.file, prev: S.sameFile ? fileOf(j.q, j.ap, j.cx, j.cy, S.prevDir) : null, thumb: !!S.low });
     }
+  }
+  // the chunks on disk (this build's, then the one before's) whose thumbnail the low-detail picture doesn't have yet, the
+  // busiest first (the background's order)
+  function backfill() {
+    if (!S.low) return [];
+    const have = new Map();
+    for (const dir of [S.dir, S.prevStands ? S.prevDir : null]) {
+      if (!dir) continue;
+      for (const q of [...new Set([...prewarm, 0, 1, 2, 3])]) {
+        let names = [];
+        try { names = readdirSync(join(dir, `q${q}a2`)); } catch { continue; }
+        for (const nm of names) { const mm = /^(\d+)_(\d+)\.bin$/.exec(nm); if (!mm) continue; const k = +mm[2] * CX + +mm[1]; if (!have.has(k)) have.set(k, join(dir, `q${q}a2`, nm)); }
+      }
+    }
+    const out = [];
+    for (const i of order) { const file = have.get(i); if (file && !S.low.has(i % CX, Math.floor(i / CX))) out.push({ key: `t/${i}`, cx: i % CX, cy: Math.floor(i / CX), file, thumbOnly: true }); }
+    if (out.length) log(`[art] ${out.length} chunks on disk get their low-detail thumbnails`);
+    return out;
+  }
+  // GET /art/low/<world>/<bx>_<by>.png (the low-detail picture: a block of thumbnails)
+  function handleLow(path, res) {
+    const m = /^\/art\/low\/(v3|today)\/(\d{1,3})_(\d{1,3})\.png$/.exec(path), head = { 'access-control-allow-origin': '*', 'access-control-expose-headers': 'x-low-have, x-low-n' };
+    const b = m && S.low && m[1] === (world || 'today') ? S.low.png(+m[2], +m[3]) : null;
+    if (!b) { res.writeHead(404, { ...head, 'cache-control': 'no-store' }); res.end(); return true; }
+    S.stats.lowServed = (S.stats.lowServed || 0) + 1; S.stats.lowBytes = (S.stats.lowBytes || 0) + b.png.length;
+    if (onBytes) onBytes(b.png.length + 300);
+    // (a block fills in as the bakes go on: a page looks again now and then - cached a minute)
+    res.writeHead(200, { ...head, 'content-type': 'image/png', 'content-length': b.png.length, 'cache-control': 'public, max-age=60', 'x-low-have': b.have, 'x-low-n': String(b.n) });
+    res.end(b.png);
+    return true;
   }
   // a new build of the art on disk (a client-only push: the server wasn't restarted): the threads start again on its code
   function rebuild() {
@@ -180,6 +230,7 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
   // can wait for it when that beats baking it itself (worker.js).
   function handle(path, req, res) {
     if (!path.startsWith('/art/')) return false;
+    if (path.startsWith('/art/low/')) return handleLow(path.split('?')[0], res);
     const qi = path.indexOf('?'), pre = qi >= 0 && /[?&]pre=1\b/.test(path.slice(qi)), had = qi >= 0 ? (/[?&]had=([0-9a-f]{6,40}(?:-v3)?)/.exec(path.slice(qi)) || [])[1] || null : null;
     if (qi >= 0) path = path.slice(0, qi);
     const m = /^\/art\/([0-9a-f]{6,40}(?:-v3)?)\/([0-3])\/([12])\/(\d{1,3})\/(\d{1,3})$/.exec(path);
@@ -246,9 +297,9 @@ export function createArtCdn({ map, root, dataDir, seed, world = null, threads =
     const s = S.stats;
     let have = 0;
     try { for (const q of prewarm) have += readdirSync(join(S.dir, `q${q}a2`)).filter((f) => f.endsWith('.bin')).length; } catch { /* none yet */ }
-    return { art: S.art, prev: S.prev, threads: S.workers.length, baked: s.baked, avgBakeMs: s.baked ? Math.round(s.bakeMs / s.baked) : 0, have, of: CX * CY * prewarm.length, served: s.served, servedMB: +(s.servedBytes / 1e6).toFixed(1), missed: s.missed, stale: s.stale, asked: S.asked.length, focus: S.focus.length, focusBaked: s.focusBaked, qualities: [...S.qSeen.keys()], errors: s.errors };
+    return { art: S.art, prev: S.prev, threads: S.workers.length, thumbs: s.thumbs || 0, thumbsLeft: S.thumbQ.length, lowServed: s.lowServed || 0, baked: s.baked, avgBakeMs: s.baked ? Math.round(s.bakeMs / s.baked) : 0, have, of: CX * CY * prewarm.length, served: s.served, servedMB: +(s.servedBytes / 1e6).toFixed(1), missed: s.missed, stale: s.stale, asked: S.asked.length, focus: S.focus.length, focusBaked: s.focusBaked, qualities: [...S.qSeen.keys()], errors: s.errors };
   }
-  function stop() { S.stopped = true; for (const s of S.workers) { try { s.w.terminate(); } catch { /* gone */ } } S.workers = []; }
+  function stop() { if (S.low) S.low.flush(); if (lowFlush) clearInterval(lowFlush); S.stopped = true; for (const s of S.workers) { try { s.w.terminate(); } catch { /* gone */ } } S.workers = []; }
 
   start();
   return { handle, rebuild, summary, stop, focus, get art() { return S.art; }, _state: S, _next: next, _order: order };
@@ -297,6 +348,11 @@ export function askAhead(asked, key) {
   }
   return n;
 }
+
+// How far ahead of a player's vehicle the bakes round players go (server/index.js, every few seconds): the next 15 s at its
+// speed, 9000 px at most - an aircraft (a helicopter at 1,350 px/s, a plane faster, high up seeing more) the next 20 s,
+// up to 24,000 px: the page asks for what it will see well before it's there (client/art2/game/streamplan.js aheadPlan)
+export const aheadFocusPx = (sp, air = false) => (air ? Math.min(sp * 20, 24000) : Math.min(sp * 15, 9000));
 
 // The key a world's art is baked, served and kept under (docs/WORLD-V3.md 8.23, step 0 a): today's world - version.json's
 // art, as always; World v3's (CLA_WORLD=v3) - its art3 (the art's hash of the v3 world's: tools/stamp-version.mjs) with

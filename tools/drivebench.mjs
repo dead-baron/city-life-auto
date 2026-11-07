@@ -18,8 +18,13 @@
 // WebGL call is made, the draws are no-ops; --draw to draw). The page is told it has 8 cores and 8 GB (--cores): the
 // phone's four bake workers. --hostprof times the renderer's own steps (its methods: any call over 15 ms, with its key).
 // Compare runs with each other, not with the phone.
+// --fly <sizes.json> (2026-11-06, the owner's helicopter over the desert): instead of the drive, a helicopter at --alt (900 px)
+// flown east and back along the corridor tools/artsize.mjs --corridor baked (its 'corridor': the server's art for it in the data
+// dir - CLA_DATA_DIR - which a server with CLA_ART_THREADS 0 serves as it is) for --min minutes, every second: the chunks on
+// screen still stand-ins (and how many of those drawn from the low-detail picture), late %, chunks from the server, bakes on
+// the page; a capture every --shot s into --shots <dir> (needs --draw); then the rotor wash over open water at 900 px and 30 px.
 import { spawn } from 'node:child_process';
-import { writeFileSync, readFileSync, existsSync, statSync, createWriteStream } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync, statSync, createWriteStream, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join, normalize, extname } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -35,6 +40,7 @@ const arg0 = (k) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? n
 const ROOT = arg0('root') ? join(arg0('root'), '/') : HERE;
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i < 0 ? d : process.argv[i + 1] === undefined || process.argv[i + 1].startsWith('--') ? true : process.argv[i + 1]; };
 const PORT = +arg('port', 8094), CPU = +arg('cpu', 1), MIN = +arg('min', 4), OUT = arg('out', null), LABEL = arg('label', 'run'), TRACE = arg('trace', null);
+const FLY = arg('fly', null), ALT = +arg('alt', 900), SHOTS = arg('shots', null), SHOT_S = +arg('shot', 15);
 const HOSTPROF = !!arg('hostprof', false), NIGHT = !arg('day', false), RAIN = !arg('dry', false), CAR = arg('car', 'sedan'), NODRAW = !arg('draw', false), CORES = +arg('cores', 8);
 const req = createRequire(import.meta.url);
 let pw;
@@ -87,7 +93,9 @@ function probe(o) {
   // the page runs at a frame rate and its own work is what's measured
   if (o && o.nodraw && window.WebGL2RenderingContext) {
     const P = WebGL2RenderingContext.prototype, nop = function () {};
-    for (const k of ['drawArrays', 'drawArraysInstanced', 'drawElements', 'drawElementsInstanced', 'drawRangeElements', 'blitFramebuffer', 'clear', 'clearBufferfv', 'clearBufferuiv', 'clearBufferiv', 'clearBufferfi']) if (P[k]) P[k] = nop;
+    const orig = {}, ks = ['drawArrays', 'drawArraysInstanced', 'drawElements', 'drawElementsInstanced', 'drawRangeElements', 'blitFramebuffer', 'clear', 'clearBufferfv', 'clearBufferuiv', 'clearBufferiv', 'clearBufferfi'];
+    for (const k of ks) if (P[k]) { orig[k] = P[k]; P[k] = nop; }
+    window.__drawOn = (on) => { for (const k of ks) if (orig[k]) P[k] = on ? orig[k] : nop; };   // (a capture now and then: --fly)
   }
   // the owner's phone: 8 cores, 8 GB (the pool's four bake workers, its caches and the chunks it keeps follow these)
   if (o && o.cores) { try { Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => o.cores, configurable: true }); Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: () => o.mem, configurable: true }); } catch { /* sealed */ } }
@@ -220,6 +228,89 @@ function autopilot(plan) {
   D.apStop = () => { clearInterval(D.apTimer); want([]); };
 }
 
+// ---- the flight (--fly) ------------------------------------------------------------------------------------------------
+async function fly(page, cdp, R) {
+  const C = JSON.parse(readFileSync(FLY, 'utf8')).corridor;
+  if (!C) throw new Error(`${FLY} has no corridor (tools/artsize.mjs --corridor)`);
+  R.fly = { corridor: C, alt: ALT, samples: [], shots: [] };
+  const send = (m) => page.evaluate((m) => window.CLA.send(m), m);
+  await send({ t: 'dev', c: 'tp', x: C.from.x, y: C.from.y, snap: true });
+  await wait(2500);
+  await send({ t: 'dev', c: 'car', m: 'heli', in: true, alt: ALT, x: C.from.x, y: C.from.y, a: 0 });
+  await waitFor(page, () => window.CLA.S.pred && window.CLA.S.pred.air, 30000);
+  await wait(1500);
+  if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
+  // the autopilot (here, with the browser's own keys): full ahead (W - the keyboard flies car-style: W the throttle, A / D the
+  // tail rotor), turned toward the corridor's far end, Space to hold the height; back again at the end
+  const held = new Set(), want = async (codes) => { for (const c of ['KeyW', 'KeyA', 'KeyD', 'Space', 'ShiftLeft']) { const on = codes.includes(c); if (on && !held.has(c)) { await page.keyboard.down(c); held.add(c); } else if (!on && held.has(c)) { await page.keyboard.up(c); held.delete(c); } } };
+  let to = C.to, legs = 0;
+  let skipAt = 0;
+  const steer = async () => {
+    // (the first-time experience's arrival and question come back and hold the keys: skipped, and any menu closed)
+    if (Date.now() - skipAt > 1000) { skipAt = Date.now(); const open = await page.evaluate(() => { const S = window.CLA.S, f = S.me && S.me.ftue; if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (f && f.st !== 'done') window.CLA.send({ t: 'intro', a: 'skip' }); return !!(f && f.st !== 'done'); }); if (open) await page.keyboard.press('Escape').catch(() => {}); }
+    const s = await page.evaluate(() => { const P = window.CLA.S.pred; return P && P.air && P.s ? { x: P.s.x, y: P.s.y, a: P.s.a, alt: P.s.alt || 0, vx: P.s.vx, vy: P.s.vy, spool: P.s.spool } : null; });
+    if (!s) { await want([]); return null; }
+    if (Math.hypot(to.x - s.x, to.y - s.y) < 900) { to = to === C.to ? C.from : C.to; legs++; }
+    let da = Math.atan2(to.y - s.y, to.x - s.x) - s.a; while (da > Math.PI) da -= 2 * Math.PI; while (da < -Math.PI) da += 2 * Math.PI;
+    const k = ['KeyW']; if (Math.abs(da) > 0.12) k.push(da > 0 ? 'KeyD' : 'KeyA'); if (s.alt < ALT - 30) k.push('Space'); else if (s.alt > ALT + 60) k.push('ShiftLeft');
+    await want(k);
+    return s;
+  };
+  // a capture: drawing switched on a moment (the run itself draws nothing: SwiftShader's frames would slow the flight to a crawl)
+  const shot = async (f) => { if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(1500); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {}); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU }); R.fly.shots.push(f); };
+  for (let j = 0; j < 30; j++) { await steer(); await wait(100); }
+  log(`after 3 s at the controls: ${JSON.stringify(await steer())}`);
+  await page.evaluate(() => { window.__drive.rec = true; });
+  const h0 = await page.evaluate(hudNow);
+  log(`flying: from ${JSON.stringify(C.from)} to ${JSON.stringify(C.to)} at ${ALT} px (cpu x${CPU})`);
+  const t1 = Date.now() + MIN * 60000;
+  let shotAt = 0, i = 0;
+  if (SHOTS) mkdirSync(SHOTS, { recursive: true });
+  while (Date.now() < t1) {
+    for (let j = 0; j < 5; j++) { await steer(); await wait(180); }
+    const s = await page.evaluate(() => {
+      const S = window.CLA.S, w = S.art2, W = w.warmth && w.warmth(), E = w.E, P = S.pred, n = w.n || {}, t = w.t || {};
+      let lo = 0, flat = 0;
+      for (const k of w.fallbacks) { const cx = k % 1000, cy = Math.floor(k / 1000); if ((cx + 1) * 768 > w.vx0 && cx * 768 < w.vx1 && (cy + 1) * 768 > w.vy0 && cy * 768 < w.vy1 && !E.hasChunk(cx, cy)) { const cv = w.phs.get(k); if (cv && cv.lo) lo++; else flat++; } }
+      return { sp: P && P.s ? Math.round(Math.hypot(P.s.vx, P.s.vy)) : 0, alt: P && P.s ? Math.round(P.s.alt || 0) : 0, x: Math.round(S.cam.x), scr: W ? W.scr : 0, standIns: W ? W.scr - W.scrHave : 0, lo, flat, late: w.late && w.late.of ? Math.round(1000 * w.late.frames / w.late.of) / 10 : 0, server: n.cdn || 0, kept: n.kept || 0, bakes: t.bakeN || 0, hi: !!w.hi, low: w.low ? w.low.stats() : null, pool: w.pool ? { run: w.pool.stats().running, q: w.pool.stats().queued } : null, legs: 0 };
+    });
+    s.legs = legs;
+    s.t = ++i; R.fly.samples.push(s);
+    if (i % 10 === 0) log(`fly ${i} s: ${JSON.stringify(s)}`);
+    if (SHOTS && Date.now() - shotAt > SHOT_S * 1000) { shotAt = Date.now(); await shot(join(SHOTS, `fly-${String(i).padStart(3, '0')}.jpg`)); }
+  }
+  const h1 = await page.evaluate(hudNow);
+  await want([]);
+  if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  const S = R.fly.samples, avg = (f) => Math.round(10 * S.reduce((a, s) => a + f(s), 0) / Math.max(1, S.length)) / 10;
+  R.fly.summary = { seconds: S.length, legs: S.length ? S[S.length - 1].legs : 0, avgSpeed: avg((s) => s.sp), standInsAvg: avg((s) => s.standIns), flatAvg: avg((s) => s.flat), lowAvg: avg((s) => s.lo), screenAvg: avg((s) => s.scr), secondsWithFlat: S.filter((s) => s.flat > 0).length, late: h1.late, server: h1.server - h0.server, bakedHere: h1.bakeN - h0.bakeN, kept: h1.kept - h0.kept, highAir: S.filter((s) => s.hi).length, low: S.length ? S[S.length - 1].low : null };
+  log(`flight: ${JSON.stringify(R.fly.summary)}`);
+  log(`hud at the end:\n${h1.hud}`);
+  // the phone turned to landscape, still up at ALT (the owner, 11-06: a helicopter "disappearing" in landscape): where it is
+  // on the screen - its drawn self against the view's middle - and a capture
+  if (SHOTS) {
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 891, height: 411, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } }); await wait(5000);
+    { const f = join(SHOTS, 'land-high.jpg'); if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(2500); const r = await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 70 }); writeFileSync(f, Buffer.from(r.data, 'base64')); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); R.fly.shots.push(f); R.fly.landSize = await page.evaluate(() => [innerWidth, innerHeight]); }
+    R.fly.landscape = await page.evaluate(() => { const S = window.CLA.S, e = S.ents.get(S.ctrlId), v = S.viewRect, lift = S.airMod && e ? S.airMod.liftOf(e.ralt ?? 0) : 0; return e && v ? { alt: Math.round(e.ralt || 0), drawnY: Math.round(e.ry - lift), midY: Math.round((v.y0 + v.y1) / 2), halfH: Math.round((v.y1 - v.y0) / 2), offScreen: e.ry - lift < v.y0 || e.ry - lift > v.y1 } : null; });
+    log(`landscape: ${JSON.stringify(R.fly.landscape)}`);
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 411, height: 891, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'portraitPrimary', angle: 0 } }); await wait(2000);
+  }
+  // the rotor wash: over open water (the corridor's start moved to the nearest deep water), at ALT then low (--wash)
+  if (SHOTS && arg('wash', false)) {
+    const wpt = await page.evaluate((C) => { const m = window.CLA.S.map; for (let r = 0; r < 60000; r += 768) for (let a = 0; a < 16; a++) { const x = C.from.x + Math.cos(a * Math.PI / 8) * r, y = C.from.y + Math.sin(a * Math.PI / 8) * r, tx = Math.floor(x / 32), ty = Math.floor(y / 32); if (m.inside(tx, ty) && m.tileAt(tx, ty) === 7) { let ok = true; for (let d = -8; d <= 8 && ok; d += 4) for (let e = -8; e <= 8; e += 4) if (m.tileAt(tx + d, ty + e) !== 7) { ok = false; break; } if (ok) return { x, y }; } } return null; }, C);
+    if (wpt) {
+      for (const [alt, nm] of [[ALT, 'high'], [30, 'low']]) {
+        await send({ t: 'dev', c: 'tp', x: wpt.x, y: wpt.y, snap: true }); await wait(2000);
+        await send({ t: 'dev', c: 'car', m: 'heli', in: true, alt, x: wpt.x, y: wpt.y, a: 0 });
+        await wait(9000);
+        await shot(join(SHOTS, `wash-${nm}.jpg`));
+        R.fly['wash_' + nm] = await page.evaluate(() => { const S = window.CLA.S, wl = S.art2 && S.art2.WL; return { alt: Math.round(S.pred && S.pred.s ? S.pred.s.alt : -1), fx: S.fx && S.fx.count ? S.fx.count() : null }; });
+        log(`wash ${nm}: ${JSON.stringify(R.fly['wash_' + nm])}`);
+      }
+    } else log('no open water near the corridor for the wash shots');
+  }
+}
+
 const pct = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return +s[Math.min(s.length - 1, Math.floor(s.length * p))].toFixed(1); };
 async function waitFor(page, fn, ms, a) {
   const end = Date.now() + ms;
@@ -285,6 +376,8 @@ try {
   await page.evaluate(() => { const H = window.CLA.S.hud; if (H && H.menuOpen) H.closeMenu(); });
   await wait(500);
   await page.evaluate(({ NIGHT, RAIN }) => { const s = window.CLA.send; s({ t: 'dev', c: 'time', m: NIGHT ? 23 * 60 : 12 * 60 }); s({ t: 'dev', c: 'clockhold' }); if (RAIN) s({ t: 'dev', c: 'rain', s: 3600 }); else s({ t: 'dev', c: 'clear' }); s({ t: 'dev', c: 'wxhold' }); s({ t: 'dev', c: 'god' }); }, { NIGHT, RAIN });
+  if (FLY) await fly(page, cdp, R);
+  else {
   // the route: from the houses of Pine Hills to Southside, Downtown, Midtown, Northgate, Old Town and back (the first that
   // the map has: district middles - client/devtp.js)
   const plan = await page.evaluate(async () => {
@@ -407,6 +500,7 @@ try {
   log(`a frame's page work: ${R.drive.frameMs} ms - by part ${JSON.stringify(R.drive.partsMs)}`);
   log(`slowest: ${JSON.stringify(R.slow.slice(0, 25), null, 0)}`);
   log(`hud at the end:\n${h1.hud}`);
+  }
   await page.screenshot({ path: OUT ? OUT.replace(/\.json$/, '.png') : '/tmp/drivebench.png' }).catch(() => {});
   await ctx.close();
 } finally { await browser.close(); stop(); }

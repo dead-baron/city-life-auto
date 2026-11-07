@@ -20,7 +20,7 @@ import * as custody from './systems/custody.js';
 import * as casino from './systems/casino.js';
 import * as racebook from './systems/racebook.js';
 import { readBuild, watchBuild } from './build.js';
-import { createArtCdn } from './artcdn.js';
+import { createArtCdn, aheadFocusPx } from './artcdn.js';
 import { cutWorld, createWorldCdn, keptWorld } from './worldcdn.js';
 import { generateCity } from '../shared/map.js';
 import { mapSignature } from '../shared/mapcore.js';
@@ -207,7 +207,7 @@ if (artCdn) setInterval(() => {
     pts.push({ x: ped.x, y: ped.y });
     if (ped.onTrain) { for (const q of trainAhead(world, ped, 9000, 768)) ahead.push({ x: q.x, y: q.y, r: 1 }); continue; }
     const v = ped.vehId ? world.get(ped.vehId) : null, sp = v ? Math.hypot(v.vx || 0, v.vy || 0) : 0;
-    if (sp > 300) for (let d = 768; d <= Math.min(sp * 15, 9000); d += 768) ahead.push({ x: v.x + (v.vx / sp) * d, y: v.y + (v.vy / sp) * d, r: 1 });
+    if (sp > 300) for (let d = 768, L = aheadFocusPx(sp, !!(v.def && v.def.kind === 'air')); d <= L; d += 768) ahead.push({ x: v.x + (v.vx / sp) * d, y: v.y + (v.vy / sp) * d, r: 1 });
   }
   artCdn.focus([...pts, ...ahead]);
 }, 4000).unref();

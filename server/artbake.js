@@ -5,6 +5,8 @@
 //   'CLA1' [u32 meta length, little-endian] [meta JSON, utf-8] [gzip of the arrays end to end]
 // meta and the arrays are chunkstore.js packChunk's, so a page keeps a download in its store as it is.
 //   in   { cx, cy, q, ap, file }   out  { ok, cx, cy, q, ap, bytes, ms } | { ok: false, error }
+//   in   + thumb: true             out  + thumb: its low-detail thumbnail (server/artlow.js thumbFromGBuf: RGB)
+//   in   { thumbOnly, cx, cy, file }   the thumbnail of a chunk already on disk (its packed planes)  out { ok, thumbOnly, cx, cy, thumb }
 import { parentPort, workerData } from 'node:worker_threads';
 import { gzipSync } from 'node:zlib';
 import { writeFileSync, renameSync, mkdirSync, readFileSync } from 'node:fs';
@@ -21,6 +23,7 @@ const { bakeChunk, loadProviders, SpriteCache, providers } = await imp('client/a
 const GB = await imp('client/art2/gbuf.js');
 const { packChunk } = await imp('client/art2/game/chunkstore.js');
 const { packPlanes } = await imp('client/art2/game/chunkpack.js');
+const { thumbFromGBuf, thumbOfFile } = await imp('server/artlow.js');
 await loadProviders();
 // the world as a bake worker has it: the city's data (a structured clone) with its methods back - the world the server
 // runs: World v3's built as the server builds it (server/world3.js; before, the thread built today's world from the seed
@@ -44,11 +47,17 @@ export function chunkFile(r, ap, cx, cy) {
   return Buffer.concat([head, mj, z]);
 }
 
-parentPort.on('message', ({ cx, cy, q, ap, file, prev = null }) => {
+parentPort.on('message', ({ cx, cy, q, ap, file, prev = null, thumb = false, thumbOnly = false }) => {
   const t0 = performance.now();
+  if (thumbOnly) {
+    try { const t = thumbOfFile(readFileSync(file)); if (!t) throw new Error('not a chunk file'); parentPort.postMessage({ ok: true, thumbOnly: true, cx, cy, thumb: t, ms: performance.now() - t0 }, [t.buffer]); }
+    catch (e) { parentPort.postMessage({ ok: false, thumbOnly: true, cx, cy, error: String((e && e.message) || e).slice(0, 200) }); }
+    return;
+  }
   try {
     const r = bakeChunk(M, cx, cy, { quality: q, seed, lowMem: false, artPx: ap, scratch: ap > 1 }, cache, providers);
     if (r.errors) throw new Error(`bake errors: ${JSON.stringify(r.errors).slice(0, 200)}`);
+    const th = thumb ? thumbFromGBuf(r.g) : null;
     const buf = chunkFile(r, ap, cx, cy);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file + '.part', buf);
@@ -56,7 +65,7 @@ parentPort.on('message', ({ cx, cy, q, ap, file, prev = null }) => {
     // the same bytes as the build before's file of this chunk (prev): the pages that kept that one keep it (artcdn.js same)
     let same = false;
     if (prev) { try { same = readFileSync(prev).equals(buf); } catch { same = false; } }
-    parentPort.postMessage({ ok: true, cx, cy, q, ap, bytes: buf.length, ms: performance.now() - t0, same });
+    parentPort.postMessage({ ok: true, cx, cy, q, ap, bytes: buf.length, ms: performance.now() - t0, same, thumb: th }, th ? [th.buffer] : []);
   } catch (e) {
     parentPort.postMessage({ ok: false, cx, cy, q, ap, error: String((e && e.stack) || e).slice(0, 400) });
   }

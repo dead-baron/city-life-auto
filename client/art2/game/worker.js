@@ -127,7 +127,9 @@ async function init(args) {
 // baked next there; here it's baked meanwhile and not asked for again for a while; a run of them (the server is still
 // at it) pauses the asking. A failing network pauses it longer, and stops it for the session after a few failures; so
 // do downloads that turn out slower than bakes here (a weak connection).
-const CDN_TIMEOUT_MS = 4000, CDN_SOON_MS = 6000;
+// (a land chunk is 300-650 KB, not the 250 KB first thought - tools/artsize.mjs, 11-06 - and a phone flying fast has six or
+// eight on the way at once: 4 s cut good downloads off and paused the server's art; the slow check looks over more of them)
+const CDN_TIMEOUT_MS = 9000, CDN_SOON_MS = 6000, CDN_SLOW_N = 12, CDN_SLOW_X = 3;
 const CDN = { base: null, saveData: false, pauseUntil: 0, miss: new Map(), missRun: 0, fails: 0, offs: 0, off: false, n: 0, ms: 0, misses: 0, soon: 0, waited: 0, fetched: 0, stale: 0, slow: 0 };
 // what a bake here takes, on average (none yet: a guess by device)
 const bakeHereMs = () => { const n = stats.chunks - (stats.kept || 0); return n >= 2 ? (stats.bakeOnlyMs || 0) / n : PHONE ? 1600 : 600; };
@@ -185,7 +187,7 @@ async function fromCdn(cx, cy, q, ck, o = null) {
       CDN.n++; CDN.ms += ms;
       // (slower than a bake here, over a good few of each: the connection's the bottleneck - bake here a while, then
       // try again with a clean slate)
-      if (CDN.n >= 8 && stats.chunks - (stats.kept || 0) >= 4 && CDN.ms / CDN.n > 2 * bakeHereMs()) { CDN.slow++; CDN.n = 0; CDN.ms = 0; CDN.pauseUntil = now + 180000; }
+      if (CDN.n >= CDN_SLOW_N && stats.chunks - (stats.kept || 0) >= 4 && CDN.ms / CDN.n > CDN_SLOW_X * bakeHereMs()) { CDN.slow++; CDN.n = 0; CDN.ms = 0; CDN.pauseUntil = now + 180000; }
     }
     if (ck) KEEP.q = KEEP.q.then(() => putChunkZ(ck, f.meta, f.z)).then(() => { if (KEEP.tidy && ++KEEP.n % 12 === 0) return tidy(KEEP.art, KEEP.cap); return null; }).catch(() => {});
     got.dlMs = ms; got.cdn = true;

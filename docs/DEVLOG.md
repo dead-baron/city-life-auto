@@ -21255,3 +21255,109 @@ but the character is an old placeholder I believe."
   darkened or lit by the cave's light like everything else.
   - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
   - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
+
+## 2026-11-06 - A helicopter's rotor wash only near the surface
+The owner (11-06, Pixel 7 Pro): "Helicopters still affect water below at really high distances, should only be happening
+when closer to the water or ground" - rings and splashes on the water under the helicopter at ALT 31 m, the ceiling.
+- **The cause** wasn't the rotor wash (`waterlife.js` already stopped it at 150 px): `client/main.js` `vehSinking` took
+  any vehicle that isn't a boat over a water tile for a land vehicle sinking in it, so an aircraft at any height threw
+  splashes at its ground point every frame (and the classic view darkened it as if it sank). An aircraft now sinks only
+  when it's down on the water (`AIR_UP`, 6 px - `FLY.AIRBORNE`), a floatplane never; up in the air it splashes no rain
+  puddles either (`render/weather.js` `splashes`, `v._up`). The grass bent round you (`host.js` `_push`) had no height
+  either: a helicopter bent it round its rotor at 31 m.
+- **The numbers** (`shared/rules-page.js`, re-exported by `rules.js`; not `constants.js`, which is part of the art's hash):
+  `ROTOR_WASH` full within 48 px of the surface (1.5 m, the skids just off it), a smoothstep down to nothing at 256 px (8 m,
+  about 1.5 rotor spans - the Skylark's rotor is 152 px across; a real downwash dies away within one to two). `washK`
+  drives the rings and spray on the water (`waterlife.js`, was a power curve to 150 px) and the grass, bent round the
+  rotor (1.3 x its radius) low down, not at all from 8 m up. A plane bends the grass only on the ground (its propeller).
+- Tests: `test/rotorwash.test.js` (wash vs altitude, the grass push for a helicopter low, mid and high, a plane, a car;
+  vehSinking and the puddles), waterlife, flight.
+
+## 2026-11-06 - The game's numbers no longer re-key World v3's whole art
+Found while answering the owner's "the world is still loading slowly ... while flying" (below): World v3's art key
+(`art3`, what the server's art CDN and every browser keep chunks under) is the art's hash of `world3`, a hash of the v3
+build's code - and that code reaches `shared/rules.js` and its `rules-*.js` (the starter cars' spots, the car soccer
+arena, a barrier's strength). So every change to a price or a timer re-keyed the whole v3 art: the server started baking
+all 45,864 chunks again (about five hours on the live server's two threads) and every page threw its kept chunks away.
+On 11-06 art3 changed eight times on main; four of those commits touched no world or art code at all (rules.js alone, or
+with guide.js / vehicles.js: 09:07, 15:15, 19:35 and 20:33 - the last half an hour before the owner flew over a desert of
+stand-ins). `tools/stamp-version.mjs` now hashes the rules' files by the values the build and the bake read from them
+(`rulesValues`: each `import { A } from './rules...'` / `export { A } from` in their code, its value; a rules file reached
+any other way still counts whole), for `world3` and for `art`/`art3` (`rules-base.js` reaches the bake: `BARRIER_BREAK_SPEED`,
+`CELL_CAP`). Today the values are STARTER, CARSOCCER, HORSE, BARRIER_BREAK_SPEED and CELL_CAP. The new formula moves
+`art`, `world3` and `art3` once (this deploy: one more full rebake); after that a price or a timer leaves them be.
+test/world3keys.test.js: a new number in rules.js and a comment in rules-base.js leave both keys; a value the build reads
+moves both.
+
+## 2026-11-06 - Flying: the server's low-detail picture for the stand-ins, the look-ahead by speed
+The owner (11-06, 21:05, Pixel 7 Pro, a helicopter over open desert): the ground was big flat tan blocks, the readout
+"baking 13 queued 8 ... stand-ins 6, bake avg 1076 ms, server 71, late 27.4%". "Can we not do a large download of the game
+ahead of time?"
+- **Why the phone baked.** The art CDN only has what the server has baked for the current art key, and World v3 is
+  45,864 chunks - about five hours on the live server's two bake threads. On 11-06 the v3 art key changed eight times on
+  main, the last at 20:33, half an hour before the flight: the server had baked a few thousand chunks round players and
+  along the railway and highways (its background order puts open desert late), and kept only the build before's as
+  stand-ins. Every chunk it didn't have, the page baked itself (a 404 with an eta over 6 s, or a look-ahead - those are
+  never queued on the server). Four of the eight re-keys were rules.js alone: fixed in the entry above.
+- **How big the world is** (`node --expose-gc tools/artsize.mjs`: every chunk sorted by kind, 14 of each baked at Medium
+  and packed as the CDN keeps them): 45,864 chunks, ~14.6 GB gzipped (11.4 GB without the open sea, 20,867 chunks); a land
+  chunk 300-635 KB (city 299, desert 445, country 497, wild 635), a region (21 x 21 chunks, 504 m) 140 MB median and up to
+  270 MB. So no whole-world or per-region download of the full art (see docs: the owner's decisions below).
+- **The low-detail picture** (`server/artlow.js`): every chunk the server bakes, of any build, leaves a thumbnail at 1/16
+  (48 px, lit softly, shaded south-east of what stands tall) in `<data>/artlow/<world>/`, kept across builds of the art;
+  the chunks already on disk get theirs first (a few ms each, before the background's bakes). `GET /art/low/<world>/<bx>_<by>.png`
+  serves a block of 21 x 21 (a region) as one PNG (zlib, no dependency; ~6 KB a land chunk, ~2.6 MB a land region, ~150 MB
+  the whole land), `x-low-have` saying which chunks it has. The page (`client/art2/game/lowres.js`, loaded lazily) fetches
+  the block you're in, the view's corners and ~20 s ahead, at most two at once and nine held; a chunk not ready is drawn
+  from its thumbnail (`host.js _placeholder`), the flat stand-in (`standin.js`) only where there's none yet, and the flat
+  ones already up are redrawn when a block lands.
+- **High flight** (`lowres.js highAir`: 480 px up and 260 px/s or more, off below 400 px or 160 px/s): no chunk is baked
+  on the page where a thumbnail stands in (`_chunks`, `_prebake`); the server's chunks still come down (the looks in the
+  store and on the server, the downloads ahead). Descend or slow down and the page bakes as before.
+- **The look-ahead by speed** (`lowres.js aheadPlan`): driving 12 s ahead (up to 14,000 px), flying 20 s (up to 30,000 px:
+  a helicopter flat out, 27,000 px), the list as long as the line (up to 80% of what the browser keeps), six downloads at
+  once flying fast (four on a phone). The server's bakes round players reach 20 s ahead of an aircraft (`aheadFocusPx`, up
+  to 24,000 px; a car 15 s, 9,000 px).
+- **The CDN with no bake threads** (`CLA_ART_THREADS=0`) still serves what's on disk (it served nothing before): a server
+  short of memory, or art baked elsewhere.
+- The renderer's first load stays at its budget (28 files, 404 KB): the new code loads with `lowres.js`, and some of
+  host.js's comments were shortened to make room for its hooks.
+- `tools/drivebench.mjs --fly <sizes.json>`: a helicopter flown east and back along the desert corridor `artsize.mjs
+  --corridor` bakes into a data dir (the server's art and thumbnails for it), stand-ins / late / server / baked here each
+  second, captures, the rotor wash over water high and low.
+- Tests: lowres (the look-ahead by speed, high flight, the blocks wanted, a block landing redraws the flat stand-ins,
+  `_placeholder` from the thumbnail), artlow (thumbnails, the PNG, the store, the CDN serving from disk with no threads,
+  the low blocks, the focus ahead of an aircraft).
+
+## 2026-11-06 - Your aircraft stays in the middle of the screen
+The owner (11-06, 21:58, his son's Pixel 10a): "Helicopters disappearing when flying in landscape mode on mobile. The
+helicopter isn't centered on the screen when up in the air". Art v2 draws an aircraft up the screen by its height
+(`render/aircraft.js` `liftOf`: 0.66 px a px, 660 px at the ceiling). The camera followed two thirds of that, so a high
+one sat a third of its lift (up to 220 px) above the middle - near the top of a portrait view, off the top of a landscape
+one (some 300 px each side of the middle). And the frame's list of what's on screen (`main.js` `vis`) went by the ground
+point: with the shadow off the bottom of a short view, the aircraft itself wasn't drawn at all. Now the camera follows
+all of the lift (`camLift`, `AIR_CAM` 1; the cinematic camera too, `director.js`), easing as it climbs and descends as
+the height does; its shadow stays on the ground under it. An aircraft is on screen when any of it is, from its shadow up
+to it. test/aircam.test.js; `tools/drivebench.mjs --fly` turns the phone to landscape at height for a capture.
+
+## 2026-11-07 - Birds in flight leave no wake
+The owner (11-07, 01:01): "eagles/birds cause waves/wake above water, they shouldnt though" - an eagle over a marsh with
+a swimmer's V of foam behind its shadow. The server's "in the water" bit on an animal (`extra` bit 7, `e.swim`) says
+where it is, not how high: `waterlife.js` took a bird flying over water for a swimmer. `host.js` `_pet` now keeps how
+high it draws the animal (`p._up`: flying, soaring, stooping, carrying a fish), and a swimmer's wake needs it to be down
+(8 px or less). A bird diving in still makes its splash and rings (`waterlife.js`). test/rotorwash.test.js.
+
+## 2026-11-07 - The flight bench: before and after
+`tools/drivebench.mjs --fly` (phone screen and user agent, the page's thread slowed 4x, Medium, day), a Skylark at 900 px
+flown east along the Red Rock corridor (`tools/artsize.mjs --corridor`: the server's art for 3 rows of it and thumbnails
+for 7) - before: the build this branch started from (its server, with no bake threads, serves nothing: the owner's case,
+the server not having the chunks); after: this branch (the server serves the corridor from disk and the thumbnails):
+| | before | after |
+|---|---|---|
+| chunks drawn from the server | 0 | 54 (+148 downloaded ahead) |
+| chunks baked on the phone, per minute flown | 64 | 7 |
+| stand-ins on screen that were flat blocks | all (up to 6 of 6) | none (0 s with one; the rest thumbnails) |
+| helicopter's height above the view's middle, landscape | 202 px | 0 |
+The page's own readout ran so slowly before (its thread busy with the bakes) that the bench took 4 samples in its minute.
+Not measured here: a high flight where the server has the thumbnails but not this build's chunks (just after a deploy):
+there the page bakes nothing (highAir) and shows the thumbnails until the server's chunks come.

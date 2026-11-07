@@ -23,6 +23,7 @@
 // they do from what's about them; nothing of it is sent or kept. update() is the simulation, draw() puts it on the
 // frame (the test harness runs them without the rest of the renderer); frame() is the renderer's glue.
 import { TILE, T, PF, VF } from '../../../shared/constants.js';
+import { ROTOR_WASH, washK } from '../../../shared/rules-page.js';
 import { DISTRICTS } from '../../../shared/mapcore.js';
 import { PH, nibbles } from '../../../shared/fish.js';
 import { wind } from '../../render/flora/wind.js';
@@ -125,9 +126,9 @@ function wcls(m, x, y) {
   if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return 0;
   return m.lake && m.lake[i] ? (m.lake[i] === 2 ? 3 : 2) : m.river && m.river[i] ? 4 : 1;
 }
-// a helicopter's downwash on the water: none above WASH_H px, full at the surface (k 0..1)
-export const WASH_H = 150;
-export const washK = (alt) => (alt >= WASH_H ? 0 : Math.pow(1 - Math.max(0, alt) / WASH_H, 1.5));
+// a helicopter's downwash on the water: full low down, none from WASH_H px up (k 0..1: shared/constants.js ROTOR_WASH)
+export const WASH_H = ROTOR_WASH.TOP;
+export { washK };
 // (x, y) and r px round it all the same water
 const clearAt = (m, x, y, c, r) => wcls(m, x, y) === c && wcls(m, x + r, y) === c && wcls(m, x - r, y) === c && wcls(m, x, y + r) === c && wcls(m, x, y - r) === c;
 
@@ -974,7 +975,8 @@ export class WaterLife {
       o.x = p.rx; o.y = p.ry; o.sp = q.sp; o.wet = wet; o.id = p.id; o.a = q.a; o.hw = hw; n++;
     };
     // (in the water: a person, or an animal - a duck's wake small, a goose's or an otter's bigger)
-    for (const p of F.peds) if (!(p.flags & PF.INVEH)) add(p, !!p.swim, p.swim ? (p.d && p.d.ar && p.d.ar.startsWith('pet:') ? (/duck|quail|:y/.test(p.d.ar) ? 2.5 : 4) : 4.5) : 0);
+    // (a bird in flight over the water - the server's "in the water" bit is where it is, not how high: host.js p._up - no wake)
+    for (const p of F.peds) if (!(p.flags & PF.INVEH)) add(p, !!p.swim && !(p._up > 8), p.swim && !(p._up > 8) ? (p.d && p.d.ar && p.d.ar.startsWith('pet:') ? (/duck|quail|:y/.test(p.d.ar) ? 2.5 : 4) : 4.5) : 0);
     // (an aircraft: nothing to the water up high - only a helicopter low over it blows it about, _wash - the owner, 10-23:
     // "Water under helicopter has a weird effect happening even when you're high up": the fish fled anything over them)
     const wash = this.washL || (this.washL = []);

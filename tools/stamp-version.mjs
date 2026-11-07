@@ -84,9 +84,11 @@ export const ART_SKIP = new Set(['shared/rules.js', 'client/art2/game/actors.js'
 // browser's kept chunks and the server's baked ones.
 export const ART_ROOTS = ['client/art2/game/chunkbake.js', 'client/art2/game/chunkpack.js', 'client/art2/game/chunkstore.js'];
 export async function artHash(root = ROOT, world = null) {
-  const codes = ART_ROOTS.map((f) => codeHash(f, root, ART_SKIP)), w = world || (await worldHash(root)).hash;
-  const files = [...new Set(codes.flatMap((c) => c.files))].sort();
-  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + w).digest('hex').slice(0, 12), files };
+  // (the rules' files - rules-base.js reaches the bake - by the values it reads, as world3Hash: not every number in them)
+  const skip = new Set([...ART_SKIP, ...readdirSync(join(root, 'shared')).map((f) => `shared/${f}`).filter((f) => VALUE_FILES.test(f))]);
+  const codes = ART_ROOTS.map((f) => codeHash(f, root, skip)), w = world || (await worldHash(root)).hash;
+  const files = [...new Set(codes.flatMap((c) => c.files))].sort(), vals = await rulesValues(files, root);
+  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + w + vals.join('\n')).digest('hex').slice(0, 12), files, values: vals.map((v) => v.slice(0, v.indexOf('='))) };
 }
 // World v3's world (a server run with CLA_WORLD=v3; docs/WORLD-V3.md 8.23, step 0 b): `world3`, a hash of what builds it
 // - the v3 build's code (server/world3.js and everything it imports: the generator, shared/world3-*.js), the cut into
@@ -96,10 +98,42 @@ export async function artHash(root = ROOT, world = null) {
 // when the v3 world's code changes - and a code change that leaves the world as it was re-keys them too (the price
 // of not building it). Today's `world` and `art` don't move with it.
 export const WORLD3_ROOTS = ['server/world3.js', 'shared/regionpack.js'];
-export function world3Hash(root = ROOT, world) {
-  const codes = WORLD3_ROOTS.map((f) => codeHash(f, root));
+// The game's numbers (shared/rules.js and its rules-*.js) are read by the v3 build in a few places only (the starter cars'
+// spots, the car soccer arena's size, a barrier's strength): the hash takes the values the build's code imports from
+// them, not the files - a change to a price or a timer re-keyed the whole v3 world and its art before, and the server baked
+// all 45,864 chunks again (2026-11-06: four of that day's eight art3 changes were rules.js alone, the last half an hour
+// before the owner flew over a desert of flat stand-ins).
+export const VALUE_FILES = /^shared\/rules(-[a-z]+)?\.js$/;
+// the names a set of files imports (or re-exports) from the rules (import { A, B as C } from './rules.js'), with their values: ['file:NAME', ...]
+export async function rulesValues(files, root = ROOT) {
+  const want = new Map(), whole = new Set();
+  for (const f of files) {
+    const src = readFileSync(join(root, f), 'utf8');
+    // (a rules file reached some other way - import * as, a dynamic import, a path handed on: the whole file, as before)
+    for (const m of src.matchAll(/['"](\.\.?\/[^'"\s]+\.js)['"]/g)) { const g = relative(root, resolve(dirname(join(root, f)), m[1])); if (VALUE_FILES.test(g) && !new RegExp(`(?:import|export)\\s*\\{[^}]*\\}\\s*from\\s*['"]${m[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`).test(src)) whole.add(g); }
+    for (const m of src.matchAll(/(?:import|export)\s*\{([^}]*)\}\s*from\s*['"](\.\.?\/[^'"]+\.js)['"]/g)) {
+      const g = relative(root, resolve(dirname(join(root, f)), m[2]));
+      if (!VALUE_FILES.test(g)) continue;
+      const s = want.get(g) || new Set();
+      for (const n of m[1].split(',')) { const k = n.trim().split(/\s+as\s+/)[0]; if (k) s.add(k); }
+      want.set(g, s);
+    }
+  }
+  const vals = [];
+  const plain = (k, v) => (typeof v === 'function' ? String(v) : v instanceof Set || v instanceof Map ? [...v] : ArrayBuffer.isView(v) ? [...v] : v);
+  for (const g of [...want.keys()].sort()) {
+    const mod = await import(pathToFileURL(join(root, g)).href);
+    for (const k of [...want.get(g)].sort()) vals.push(`${g}:${k}=${JSON.stringify(mod[k], plain)}`);
+  }
+  for (const g of [...whole].sort()) vals.push(`${g}:*=${createHash('sha1').update(readFileSync(join(root, g))).digest('hex')}`);
+  return vals;
+}
+export async function world3Hash(root = ROOT, world) {
+  const skip = new Set(readdirSync(join(root, 'shared')).map((f) => `shared/${f}`).filter((f) => VALUE_FILES.test(f)));
+  const codes = WORLD3_ROOTS.map((f) => codeHash(f, root, skip));
   const files = [...new Set(codes.flatMap((c) => c.files))].sort();
-  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + world).digest('hex').slice(0, 12), files };
+  const vals = await rulesValues(files, root);
+  return { hash: createHash('sha1').update(codes.map((c) => c.hash).join('') + world + vals.join('\n')).digest('hex').slice(0, 12), files, values: vals.map((v) => v.slice(0, v.indexOf('='))) };
 }
 // the stamp (only when run as a script: tests import worldHash)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -122,7 +156,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   for (const f of files) { const b = readFileSync(join(ROOT, f)); h.update(f); h.update(b); hashes.push(createHash('sha1').update(b).digest('hex').slice(0, 10)); }
   const version = h.digest('hex').slice(0, 12);
   const world = (await worldHash()).hash, art = (await artHash(ROOT, world)).hash;
-  const world3 = world3Hash(ROOT, world).hash, art3 = (await artHash(ROOT, world3)).hash;
+  const world3 = (await world3Hash(ROOT, world)).hash, art3 = (await artHash(ROOT, world3)).hash;
   writeFileSync(join(ROOT, 'version.json'), JSON.stringify({ version, built: new Date().toISOString(), world, art, world3, art3, live: LIVE_WORLD, files, hashes }, null, 0) + '\n');
   console.log('version', version, files.length, 'files', 'world', world, 'art', art, 'world3', world3, 'art3', art3);
 }
