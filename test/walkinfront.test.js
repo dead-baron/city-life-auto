@@ -52,7 +52,7 @@ test('every walk-in seen cut away: its front - the doorway open, the glass - on 
   const CH = CHUNK_TILES * TILE;
   const all = M.walkIns.map((id) => M.buildings[id]).filter((b) => b && b.walkIn && !b.walkIn.units.some((u) => u.kind === 'bowling' || u.kind === 'cinema'));
   const north = all.filter((b) => !b.walkIn.south);
-  const south = all.filter((b) => b.walkIn.south).filter((_, i) => i % 8 === 0);
+  const south = all.filter((b) => b.walkIn.south).filter((b, i) => i % 8 === 0 || b.walkIn.units.some((u) => u.kind === 'hospital'));   // (one in eight, and every clinic: its glass front looked at - a one-in-eight sample can miss them all when the list shifts)
   assert.ok(north.length >= 5, `walk-ins with their doorway on the north (${north.length})`);
   const bad = [], badGlass = [];
   let seen = 0, glass = 0, outside = 0;

@@ -21857,6 +21857,10 @@ swimmer showing through the deck's median and blood from a hit in the water draw
   hidden at 40% of its pixels drawn over (a door: its top and the sign over it, z 16..56). Its own building, a station's
   own furniture and what stands on a place's footprint (a hotel's canopy, a market's stalls) don't count.
   `node tools/visaudit.mjs [--json out.json]` prints counts by kind and what hides them.
+- **On batch3** (with the split towers and the arcade's chess tables): Westport Center's two new chess tables moved up
+  the fountain court, either side of the benches - at the court's south edge the west one stood under the six-floor wall
+  of Bayview House across the street. `sightlines3` runs a second time after `towers3` and its street greens (it moves
+  nothing today), so the park block's, the used lots' and the towers' parts' trees are held to it too.
 - **Counts** (hidden of all, before -> after): station name boards 13/18 -> 0, platforms 1/28 -> 0, chess tables 5/11 -> 0,
   standing signs 16/176 -> 3, doors and fronts 217/3282 -> 199, ATMs 37/386 -> 35, bus stops 69/295 -> 65, campfires
   10/59 -> 7, map boards 3/24 -> 2, places' spots 13/131 -> 12; 121 map trees moved, 15 lowered to shrubs, 1 building

@@ -34,7 +34,10 @@ test('World v3: an arrival line for each region - the city\'s by Greenfield Park
   const city = A.find((a) => a.key === 'city'), cp = M.pois[city.poi];
   assert.equal(cp.label, 'Greenfield Park Station'); assert.equal(cp.kind, 'delivery', 'its stop: no timetable, no menu');
   const park = M.places ? null : null; void park;
-  const pwt = M.buildings.find((b) => b.name === 'Park West Tower');
+  // (Park West Tower is split - shared/world3-towers.js: a slim tower over its door, a wing, a podium, a court behind - its
+  // parts together the footprint it had: the station across the avenue from that)
+  const pwt0 = M.buildings.find((b) => b.name === 'Park West Tower'), pw = M.buildings.filter((b) => b === pwt0 || (b.towerPart && b.towerPart.of === pwt0.id));
+  const pwt = { tx: Math.min(...pw.map((b) => b.tx)), ty: Math.min(...pw.map((b) => b.ty)) }; pwt.tw = Math.max(...pw.map((b) => b.tx + b.tw)) - pwt.tx; pwt.th = Math.max(...pw.map((b) => b.ty + b.th)) - pwt.ty;
   assert.ok(cp.x > (pwt.tx + pwt.tw) * TILE && cp.x - (pwt.tx + pwt.tw) * TILE < 50 * TILE && cp.y > pwt.ty * TILE && cp.y < (pwt.ty + pwt.th + 10) * TILE, 'across Park West Avenue from Park West Tower');
   assert.ok(Math.abs(city.a) > 3, 'the train runs west: its platform on the lane\'s (north) side');
   for (const a of A) {
@@ -191,7 +194,11 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   const first = Math.min(city.poi, ...M.pois.filter((q) => q.kind === 'usedlot').map((q) => q.id));
   const ours = new Set(['Greenfield Park Station', 'Lane Mart', 'Park West Coffee', 'Greenfield Flowers']);
   for (const q of M.pois.slice(first)) assert.ok(q.kind === 'usedlot' || ours.has(q.label), `${q.kind} ${q.label} (${q.id}) is the block's or a used lot's`);
-  assert.ok(M.buildings.slice(office.id).every((b) => b.whole && (b.business === 'usedlot' || ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers'].includes(b.name))), 'the block\'s buildings last');
+  // (then only the split towers' new parts - shared/world3-towers.js, the very last buildings: appended after the block's)
+  const tail = M.buildings.slice(office.id), k = tail.findIndex((b) => b.towerPart);
+  const block = k < 0 ? tail : tail.slice(0, k), parts = k < 0 ? [] : tail.slice(k);
+  assert.ok(block.length >= 4 && block.every((b) => b.whole && !b.towerPart && (b.business === 'usedlot' || ['Lane Mart', 'Park West Coffee', 'Greenfield Flowers'].includes(b.name))), 'the block\'s buildings last but the towers\' parts');
+  assert.ok(parts.every((b) => b.towerPart && b.towerPart.role !== 'tower' && b.towerPart.of < office.id), 'after them only the split towers\' new parts');
 });
 
 test('World v3: the arrival on a line - the page\'s train, the newcomer unseen by others until the doors open', () => {

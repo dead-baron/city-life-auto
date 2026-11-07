@@ -334,6 +334,7 @@ export function worldOpts(asked) {
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
       if (city) { m.world3.towers = towers3(m); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
+      if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
       m.world3.lowByPlatforms = lowByPlatforms(m);   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)

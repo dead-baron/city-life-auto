@@ -116,8 +116,10 @@ function build(m, api, K) {
     for (const dx of [-12, 12]) { prop('bench_m', ax + dx, by0 + 1, 0); prop('bench_m', ax + dx, by0 + bh - 1, 0); }
     for (const dx of [-6, 0, 6]) prop('bench_m', ax + dx, by0 + bh + 3, 0);
     // (11-07, the owner: "put a few [chess] tables in the world") two public chess tables out in the open on the fountain
-    // court below the benches - clear of the trees and the carts (server/systems/chess.js plays at them)
-    for (const dx of [-10, 10]) { prop('cafetable', ax + dx, y0 + 24.5, 0, { chess: 1, seat: 27, open: 1 }); prop('chair', ax + dx - 0.9, y0 + 24.6, 0, { v: 2, a: 0 }); prop('chair', ax + dx + 0.9, y0 + 24.6, 0, { v: 2, a: 3.1416 }); }
+    // court either side of the benches below it - clear of the trees and the carts, and north of the wall of the tower
+    // across the street south of the court (Bayview House's six floors are drawn 11 tiles up over the court: at y0 + 24.5
+    // the west table was under it - tools/visaudit.mjs) (server/systems/chess.js plays at them)
+    for (const dx of [-10, 10]) { prop('cafetable', ax + dx, y0 + 20.5, 0, { chess: 1, seat: 27, open: 1 }); prop('chair', ax + dx - 0.9, y0 + 20.6, 0, { v: 2, a: 0 }); prop('chair', ax + dx + 0.9, y0 + 20.6, 0, { v: 2, a: 3.1416 }); }
     for (const dx of [-17, 17]) for (const dy of [6, 18]) prop('tree_a', ax + dx, y0 + dy, 10, { sp: 'magnolia', k: 1.1 });
     // the food carts' courts: three carts, their tables and umbrellas, the festoon over them, bins
     for (const side of [-1, 1]) {
