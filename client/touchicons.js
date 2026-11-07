@@ -263,10 +263,8 @@ const LU = {
   menu: 'M4 5h16M4 12h16M4 19h16',
   target: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M6 12a6 6 0 1 0 12 0a6 6 0 1 0-12 0M10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   crosshair: 'M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0M22 12L18 12M6 12L2 12M12 6L12 2M12 22L12 18',
-  'hand-fist': 'M12.035 17.012a3 3 0 0 0-3-3l-.311-.002a.72.72 0 0 1-.505-1.229l1.195-1.195A2 2 0 0 1 10.828 11H12a2 2 0 0 0 0-4H9.243a3 3 0 0 0-2.122.879l-2.707 2.707A4.83 4.83 0 0 0 3 14a8 8 0 0 0 8 8h2a8 8 0 0 0 8-8V7a2 2 0 1 0-4 0v2a2 2 0 1 0 4 0M13.888 9.662A2 2 0 0 0 17 8V5A2 2 0 1 0 13 5M9 5A2 2 0 1 0 5 5V10M9 7V4A2 2 0 1 1 13 4V7.268',
   swords: 'M13 19l6-6M14.5 17.5 3.586 6.586A2 2 0 013 5.172V3h2.172a2 2 0 011.414.586L17.5 14.5M14.828 6.172l2.586-2.586A2 2 0 0118.828 3H21v2.172a2 2 0 01-.586 1.414l-2.586 2.586M16 16l4 4M19 21l2-2M5 14l4 4M5 21l-2-2M7.5 16.5 4 20',
   'rotate-cw': 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5',
-  infinity: 'M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8',
   'volume-2': 'M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298zM16 9a5 5 0 0 1 0 6M19.364 18.364a9 9 0 0 0 0-12.728',
   siren: 'M7 18v-6a5 5 0 1 1 10 0v6M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2zM21 12h1M18.5 4.5 18 5M2 12h1M12 2v1M4.929 4.929l.707.707M12 12v6',
   flashlight: 'M12 13v1M17 2a1 1 0 0 1 1 1v4a3 3 0 0 1-.6 1.8l-.6.8A4 4 0 0 0 16 12v8a2 2 0 0 1-2 2H10a2 2 0 0 1-2-2v-8a4 4 0 0 0-.8-2.4l-.6-.8A3 3 0 0 1 6 7V3a1 1 0 0 1 1-1zM6 6h12',
@@ -282,14 +280,8 @@ const LU = {
   shield: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z',
   backpack: 'M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM8 10h8M8 18h8M8 22v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2',
   'chevron-right': 'M9 18l6-6-6-6',
-  slice: 'M11 16.586V19a1 1 0 0 1-1 1H2L18.37 3.63a1 1 0 1 1 3 3l-9.663 9.663a1 1 0 0 1-1.414 0L8 14',
-  sword: 'M11 19l-6-6M5 21l-2-2M8 16l-4 4M9.5 17.5 20.414 6.586A2 2 0 0021 5.172V3h-2.172a2 2 0 00-1.414.586L6.5 14.5',
   hammer: 'M15 12l-9.373 9.373a1 1 0 0 1-3.001-3L12 9M18 15l4-4M21.5 11.5l-1.914-1.914A2 2 0 0 1 19 8.172v-.344a2 2 0 0 0-.586-1.414l-1.657-1.657A6 6 0 0 0 12.516 3H9l1.243 1.243A6 6 0 0 1 12 8.485V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5',
   bomb: 'M2 13a9 9 0 1 0 18 0a9 9 0 1 0-18 0M14.35 4.65 16.3 2.7a2.41 2.41 0 0 1 3.4 0l1.6 1.6a2.4 2.4 0 0 1 0 3.4l-1.95 1.95M22 2l-1.5 1.5',
-  'bow-arrow': 'M17 3h4v4M18.575 11.082a13 13 0 0 1 1.048 9.027 1.17 1.17 0 0 1-1.914.597L14 17M7 10 3.29 6.29a1.17 1.17 0 0 1 .6-1.91 13 13 0 0 1 9.03 1.05M7 14a1.7 1.7 0 0 0-1.207.5l-2.646 2.646A.5.5 0 0 0 3.5 18H5a1 1 0 0 1 1 1v1.5a.5.5 0 0 0 .854.354L9.5 18.207A1.7 1.7 0 0 0 10 17v-2a1 1 0 0 0-1-1zM9.707 14.293 21 3',
-  rocket: 'M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2zM9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05',
-  zap: 'M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z',
-  'spray-can': 'M3 3h.01M7 5h.01M11 7h.01M3 7h.01M7 9h.01M3 11h.01M15 5h4v4h-4zM19 9l2 2v10c0 .6-.4 1-1 1h-6c-.6 0-1-.4-1-1V11l2-2M13 14l8-2M13 19l8-2',
   flame: 'M12 3q1 4 4 6.5t3 5.5a1 1 0 0 1-14 0 5 5 0 0 1 1-3 1 1 0 0 0 5 0c0-2-1.5-3-1.5-5q0-2 2.5-4',
   'fishing-rod': 'M4 11h1M8 15a2 2 0 0 1-4 0V3a1 1 0 0 1 1-1h.5C14 2 20 9 20 18v4M16 18a2 2 0 1 0 4 0a2 2 0 1 0-4 0',
   'door-open': 'M10 21H2M10 3H7a2 2 0 00-2 2v16M14 12h.01M19 21V5a2 2 0 00-1.675-1.974l-6.163-1.013A1 1 0 0010 3v18a1 1 0 001.124.992zM22 21h-3',
@@ -299,6 +291,7 @@ const LU = {
   package: 'M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73zM12 22V12M3.29 7L12 12L20.71 7M7.5 4.27l9 5.15',
   'package-check': 'M12 22V12M16 17l2 2 4-4M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753M3.29 7 12 12l8.71-5M7.5 4.27l8.997 5.148',
   house: 'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  'dollar-sign': 'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6',
   coins: 'M13.744 17.736a6 6 0 1 1-7.48-7.48M15 6h1v4M6.134 14.768l.866-.5 2 3.464M10 8a6 6 0 1 0 12 0a6 6 0 1 0-12 0',
   landmark: 'M10 18v-7M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949zM14 18v-7M18 18v-7M3 22h18M6 18v-7',
   banknote: 'M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0M6 12h.01M18 12h.01',
@@ -328,12 +321,48 @@ const LU = {
   'car-taxi-front': 'M10 2h4M21 8l-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8M7 14h.01M17 14h.01M5 10h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-14a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2zM5 18v2M19 18v2',
   'circle-dot': 'M11 12a1 1 0 1 0 2 0a1 1 0 1 0-2 0M2 12a10 10 0 1 0 20 0a10 10 0 1 0-20 0',
 };
-// what Lucide has no picture for - a handgun, a long gun, a club, a spike strip, the dive roll (its circular arrows read
-// as RELOAD's): City Life Auto's own, drawn on the same grid for the same stroke, so they sit in the family
+// what Lucide has no picture for: City Life Auto's own, drawn on the same grid for the same stroke, so they sit in the
+// family - every weapon its own picture (the owner, 11-06: "better more representative art for the weapon icons,
+// including the fists"), told apart by its outline at 24 px: guns level, muzzle to the right (a pistol's slide and grip,
+// an SMG's grip and magazine hanging under a short body, a long gun's stock, magazine, scope or pump); blades and clubs
+// on the diagonal, handle bottom left; the fist from the front. Also the spike strip, the dive roll (Lucide's circular
+// arrows read as RELOAD's), FIRE ON's three bullets (auto-fire) and the fire engine's hose
 const OWN = {
-  pistol: 'M3.5 6.5h16v4h-9M5.5 10.5l-1.8 8.5h4.6l1.5-6.5h3a1 1 0 0 0 1-1v-1M19.5 6.5V5',
-  rifle: 'M2.5 9.5L6 9h13.5v2.5H22M6 9v3.5l-2 4M6 12.5h8L12.5 16H9.5l1-3.5M14 9V7h3',
-  bat: 'M4 20l1.5-1.5M5.5 18.5l8.5-8.5c1.5-1.5 3.5-4 5-5.5s2.5 0 1 1.5-4 3.5-5.5 5L6 20.5z',
+  'fist': 'M4.5 10a1.88 1.88 0 0 1 3.75 0a1.88 1.88 0 0 1 3.75 0a1.88 1.88 0 0 1 3.75 0a1.88 1.88 0 0 1 3.75 0v5.5a6 6 0 0 1-6 6h-3a6 6 0 0 1-6-6zM8.25 10V12M12 10V12M15.75 10V12M4.5 14.5H12.5a2 2 0 0 1 0 4H9',
+  'bat': 'M3.66 18.36L5.64 20.34M5.28 18.72L10.23 13.77M9.45 12.99L16.38 4.22A2.4 2.4 0 0 1 19.78 7.62L11.01 14.55',
+  'knife': 'M4.01 18.15L7.97 14.19L9.81 16.03L5.85 19.99A1.3 1.3 0 0 1 4.01 18.15ZM7.33 12.14L11.86 16.67M9.03 12.42L18.51 2.95Q19.28 7.26 15.75 10.8L11.58 14.97',
+  'hunting-knife': 'M3.44 18.29L6.91 14.83L9.17 17.09L5.71 20.56A1.6 1.6 0 0 1 3.44 18.29ZM6.2 12.71L11.29 17.8M7.33 12.42L12.14 7.62Q14.97 5.07 19.92 4.36Q20.41 8.39 16.88 11.93L11.86 16.95',
+  'crowbar': 'M6.91 21.62L5.92 18.08L16.1 7.9A2.8 2.8 0 1 0 11.29 6.2L12.71 5.92',
+  'sledgehammer': 'M3.73 18.58L13.84 8.46L15.54 10.16L5.42 20.27ZM10.59 4.93L14.26 1.25L22.75 9.74L19.07 13.41Z',
+  'nightstick': 'M3.51 18.36L18.36 3.51L20.49 5.64L5.64 20.49ZM8.82 17.3L13.06 21.55',
+  'sword': 'M8.39 13.2L16.6 5L19.92 4.08L19 7.4L10.8 15.61M5.35 11.58L12.42 18.65M8.46 15.54L5.78 18.22M4.79 19.21L4.86 19.14',
+  'katana': 'M8.68 13.48Q13.77 8.11 17.23 1.96Q16.95 9.03 10.52 15.32M6.91 13.13L10.87 17.09M8.25 15.75L4.58 19.42',
+  'plasma-blade': 'M3.66 18.08L7.76 13.98L10.02 16.24L5.92 20.34ZM7.47 12.28L11.72 16.53M9.31 12.42L17.37 4.36A1.6 1.6 0 0 1 19.64 6.63L11.58 14.69M5.35 16.38L7.62 18.65',
+  'heavy-flashlight': 'M3.51 18.22L11.29 10.44L11.29 6.48L15.54 2.24L21.76 8.46L17.52 12.71L13.56 12.71L5.78 20.49ZM6.98 14.76L6.13 13.91L7.9 12.14L8.75 12.99M13.41 4.36L19.64 10.59',
+  'taser': 'M2.5 7H12.5V11H2.5ZM12.5 6H15.5V12H12.5ZM4.5 11L3.3 18.5H7.3L8.3 13.8H10M20.5 2.5L17.5 8.5H21.5L18.5 15',
+  'pepper-spray': 'M4.5 9.5H10.5V21H4.5ZM5.5 9.5V6H9L10.5 7.5M4.5 13.5H10.5M14 7.5H14.01M17 5H17.01M17 10H17.01M20 3H20.01M20 7.5H20.01M20 12H20.01',
+  'bow': 'M8 2.5C17.5 5 17.5 19 8 21.5M8 2.5L4.5 12L8 21.5M2.5 12H21.5M18.5 9L21.5 12L18.5 15',
+  'fire-bow': 'M7 2.5C16.5 5 16.5 19 7 21.5M7 2.5L3.5 12L7 21.5M1.5 12H16.5M19 5.5C19.5 8 22.5 9.5 22.5 12.5A3 3 0 0 1 16.5 12.5C16.5 11 17 10 18 9.5C18 10.8 18.6 11.3 19.4 11C19.2 9.5 18.5 7.8 19 5.5Z',
+  'grenade': 'M5.5 15a5.5 6.5 0 1 0 11 0a5.5 6.5 0 1 0-11 0M9 8.6V6.4H13V8.6M13 6.4C15.8 6.4 17.8 8.2 17.8 11.2V14M8 5.4A2 2 0 1 1 4 5.4A2 2 0 1 1 8 5.4M11 11.5V18.5M7.5 15H14.5',
+  'bazooka': 'M2 8H17.5V12H2ZM17.5 7.5C20.5 7.5 22.5 9 22.5 10C22.5 11 20.5 12.5 17.5 12.5M9 12L8 17.5H11L12 12M5 8V5.5H7.5V8M13.5 12V14.5',
+  'sam-launcher': 'M2.24 15.09L16.53 6.84L18.73 10.66L4.44 18.91ZM15.93 5.81L18.53 4.31L21.93 10.19L19.33 11.69ZM2.5 7.55L7.18 4.85L9.38 8.66L4.7 11.36ZM7.04 10.01L8.04 11.74M13.53 13.66L15.13 17.82L17.55 16.42L15.87 12.31',
+  'flamethrower': 'M1.5 12.6L6 12V15.5L1.5 17ZM6 12H14V15.5H6ZM14 13.75H18M7.5 15.5L6.8 19.5H9.5L10 15.5M11.2 17.4H14.4A1.5 1.5 0 0 1 14.4 20.4H11.2A1.5 1.5 0 0 1 11.2 17.4ZM19.5 1.5C20 4 22.5 5.5 22.5 8.5A3 3 0 0 1 16.5 8.5C16.5 7 17 6 18 5.5C18 6.8 18.6 7.3 19.4 7C19.2 5.5 19 3.5 19.5 1.5Z',
+  'pistol': 'M3 6.5H20V10.5H3ZM5.5 10.5L3.8 19.5H8.3L9.6 14H13V10.5',
+  'service-pistol': 'M3 6.5H20V10.5H3ZM5.5 10.5L3.8 19.5H8.3L9.6 14H12.5V10.5M14.5 10.5V13H19.5V10.5',
+  'silenced-pistol': 'M2 7H12.5V11H2ZM12.5 7.7H22.2V10.3H12.5ZM4.2 11L2.8 19H6.8L7.8 14H10.5V11',
+  'revolver': 'M8 6H12.5V12H8ZM12.5 6.5H21V9H12.5ZM20.5 6.5V5M8 6.5H6.5L5 4.5M6.5 6.5C4.5 11 3 15 3.5 19.5H6.5C6 15.5 7 12.5 8 11M8.5 12C8.5 14.5 11.5 14.5 11.5 12',
+  'smg': 'M5 6.5H17V10.5H5ZM17 8.5H20.5M7.5 10.5L6.5 16H9.5L10.2 10.5M12.5 10.5V18.5H15V10.5M5 7.3H2.5V10.5',
+  'rifle': 'M15 8.5H22.5M7 7H15V10.5H7ZM7 7.5L1.5 9.5V14L7 10.5M10.5 10.5V15.5H13.5V10.5',
+  'assault-rifle': 'M15 8.5H22.5M15 6.6H19M21.6 8.5V6.6M7 7H15V10.5H7ZM7 7.5L1.5 9.5V14L7 10.5M10.5 10.5Q11 14.5 13 17L15.5 15.5Q14 13.5 13.8 10.5',
+  'patrol-rifle': 'M15 8.5H22M7 7H15V10.5H7ZM8.5 7V4.2H13.5V7M7 8.5H3.5M3.5 6.7V11.8M10.5 10.5V15.5H13V10.5M8 10.5L7 14',
+  'police-assault-rifle': 'M15 8.5H22.5M20.5 8.5V5.8M7 7H15V10.5H7ZM8 7V4.5H13V7M7 8L1.5 8V12.5L7 10.5M10.5 10.5V15.5H13V10.5M8 10.5L7 14',
+  'marksman-rifle': 'M14 9H22.8M6 7.5H14V10.5H6ZM7 7.5V5.5M7 4H14.5M6.5 3V5.5M15 3V5.5M6 8L1.5 9.5V13.5L6 10.5M18 9L16.5 15M18 9L19.5 15',
+  'hunting-rifle': 'M13 8.8H22.8M5.5 7.3H13V10.3H5.5ZM6.5 5H13.5M5 3.8V6.2M15 3.4V6.6M10.8 10.3A1.2 1.2 0 1 0 10.8 12.7M5.5 7.8L1.5 9.3V14C4 13 5.5 11.5 5.5 10.3',
+  'varmint-rifle': 'M12 8.8H22.8M5.5 7.3H12V10.3H5.5ZM7.5 5.6H11.5M5.5 7.8L1.5 9.3V13.8L5.5 10.3M2.8 11L4.5 9.8M8.5 10.3V13.5H10.5V10.3',
+  'shotgun': 'M10.5 7.2H22.5V9.6H10.5ZM13 9.6V12.6H19V9.6M6.5 6.5H10.5V11.5H6.5ZM6.5 7.5L1.5 9V14.5L6.5 11.5M7.5 11.5Q8 14 10.2 12',
+  'riot-shotgun': 'M10.5 7.2H22.5V9.6H10.5ZM13 9.6V12.6H19V9.6M4.5 6.5H10.5V11.5H4.5ZM6 11.5L4.8 18.5H8.2L9 11.5',
+  'auto-fire': 'M4 20.5V10.5C4 8 4.6 6 5.5 4.5C6.4 6 7 8 7 10.5V20.5ZM10.5 20.5V10.5C10.5 8 11.1 6 12 4.5C12.9 6 13.5 8 13.5 10.5V20.5ZM17 20.5V10.5C17 8 17.6 6 18.5 4.5C19.4 6 20 8 20 10.5V20.5Z',
+  'hose': 'M7 15C4.5 17.5 2.5 18.5 2.5 21.5M5.6 13.6L11.8 8.8L13.2 10.2L8.4 16.4ZM18 2.5C19.7 4.7 21 6.2 21 8A3 3 0 0 1 15 8C15 6.2 16.3 4.7 18 2.5ZM20.5 13H20.51M16 15.5H16.51M14.5 5.5H14.51',
   spikes: 'M3 18h18M4 18l2-6 2 6M10 18l2-6 2 6M16 18l2-6 2 6',
   roll: 'M4.5 16.5a7.5 7.5 0 0 1 15 0M16.5 13.5l3 3 3-3M2.5 20.5h19',
 };
@@ -353,17 +382,14 @@ export function glyph(name, px = 0) {
   if (!gSvgs.has(name)) { const d = VG[name] || VG['circle-dot']; gSvgs.set(name, `<path class="h" d="${d}"/><path d="${d}"/>`); }
   return `<svg class="pi24 gl" viewBox="0 0 24 24"${px ? ` width="${px}" height="${px}"` : ''} fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${gSvgs.get(name)}</svg>`;
 }
-// what you hold, as its glyph (the weapon button and the bag: shared/items.js WEAPONS' type and id)
-const LONG_GUNS = new Set(['shotgun', 'rifle', 'smg', 'prifle', 'psniper', 'passault', 'pshotgun', 'huntrifle', 'varmint', 'arifle']);
-export function glyphOfWeapon(id, type) {
-  if (!id || id === 'fists') return 'hand-fist';   // (bare hands: a fist - the owner, 11-05: the melee button shows what you hit with)
-  if (LONG_GUNS.has(id)) return 'rifle';
-  if (/knife/.test(id)) return 'slice';
-  if (id === 'sword' || id === 'katana' || id === 'plasma') return 'sword';
-  if (id === 'sledge') return 'hammer';
-  if (id === 'heavyflash') return 'flashlight';
-  return { gun: 'pistol', melee: 'bat', grenade: 'bomb', bow: 'bow-arrow', rocket: 'rocket', taser: 'zap', spray: 'spray-can', flame: 'flame', tool: 'fishing-rod', deploy: 'spikes' }[type] || 'pistol';
-}
+// what you hold, as its glyph (the weapon button, HIT and the bag: shared/items.js WEAPONS' id, else its type)
+const WEAPON_GLYPH = { fists: 'fist', bat: 'bat', knife: 'knife', huntknife: 'hunting-knife', crowbar: 'crowbar', sledge: 'sledgehammer', baton: 'nightstick',
+  sword: 'sword', katana: 'katana', plasma: 'plasma-blade', heavyflash: 'heavy-flashlight', taser: 'taser', pepper: 'pepper-spray', spikes: 'spikes', rod: 'fishing-rod',
+  bow: 'bow', firebow: 'fire-bow', grenade: 'grenade', boomtest: 'bomb', rocket: 'bazooka', sam: 'sam-launcher', flamer: 'flamethrower',
+  pistol: 'pistol', service: 'service-pistol', spistol: 'silenced-pistol', revolver: 'revolver', smg: 'smg', rifle: 'rifle', arifle: 'assault-rifle', prifle: 'patrol-rifle',
+  passault: 'police-assault-rifle', psniper: 'marksman-rifle', huntrifle: 'hunting-rifle', varmint: 'varmint-rifle', shotgun: 'shotgun', pshotgun: 'riot-shotgun' };
+const TYPE_GLYPH = { gun: 'pistol', melee: 'bat', grenade: 'grenade', bow: 'bow', rocket: 'bazooka', taser: 'taser', spray: 'pepper-spray', flame: 'flamethrower', tool: 'fishing-rod', deploy: 'spikes' };
+export function glyphOfWeapon(id, type) { return WEAPON_GLYPH[id || 'fists'] || TYPE_GLYPH[type] || 'pistol'; }
 
 // ---- the action button says what pressing it will do (the owner, 11-05: "no hands"). The server's prompt ("E: Enter
 // St. Neon General") carries no kind of its own - dozens of systems word their own - so the page reads one from its
@@ -384,7 +410,7 @@ export const ACT_KINDS = [
   ['rob', 'banknote', /^(rob|empty the till|take the cash|swipe the tips|hold up|run the product|snatch)/],
   ['unlock', 'lock-open', /^(crack|unlock|hold to unlock|lift the manhole|break (in|open)|pick the lock|open the old|the drill)/],
   ['home', 'house', /^look around .+ - for sale\b|^.+ - for sale, \$/],   // (a home for sale's door: economy.js prompt, homeinside.js - a house, not coins: the owner's 11-06 screenshot)
-  ['buy', 'coins', /^(buy|sell|pay|rent|shop|fence|deal|trade|order|bring a customer|stake|.+ for sale)/],
+  ['buy', 'dollar-sign', /^(buy|sell|pay|rent|shop|fence|deal|trade|order|bring a customer|stake|.+ for sale)/],
   ['revive', 'heart-pulse', /^(revive|hold to (revive|help)|help|hold: treat|treat|full treatment|pulling someone|heal)/],
   ['rest', 'bed', /^(rest|sleep|wake up|lay down|go to bed|nap)/],
   ['sit', 'armchair', /^(sit|get up)/],
@@ -431,9 +457,13 @@ export const actKindNow = () => actNow;
 
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
 const ICON = { THROW: 'redo', TRICK: 'sparkles', BRAKE: 'circle-stop', STOP: 'circle-stop', OLLIE: 'arrow-big-up-dash', AIR: 'arrow-big-up', EXIT: 'log-out', OFF: 'log-out', SIREN: 'siren', GALLOP: 'fast-forward' };
-const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'infinity', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair' };
+const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'auto-fire', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair' };
 // HIT shows what you hit with (the owner, 11-05): a fist bare-handed, else the melee weapon's own glyph (client/hud.js setMelee)
-let meleeNow = 'hand-fist';
+let meleeNow = 'fist';
 export function setMelee(id, type) { meleeNow = glyphOfWeapon(id, type); return meleeNow; }
-export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : label === 'HIT' ? meleeNow : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
+// on foot on a Firefighter shift by your engine the fire button sprays water (server/systems/firefighter.js hose): it
+// shows the hose (the owner, 11-06; client/touchslots.js tick sets it)
+let hoseNow = false;
+export function setHose(on) { hoseNow = !!on; return hoseNow; }
+export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : a === 'fire' && hoseNow ? 'hose' : label === 'HIT' ? meleeNow : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
 export const svg = (k) => glyph(k);

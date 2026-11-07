@@ -277,7 +277,9 @@ export const FIRE_HEAL = 2;             // health per second while sitting by a 
 export const FIRE_AFTER_HIT_S = 5;      // ...once you've been out of the fight this long
 export const FIRE_BURN_S = 900;         // how long a change lasts
 export { CALM_PROMPT_S, PROMPT_FADE_S } from './rules-page.js';   // sitting by a fire this long without touching anything: its prompt fades...
-export { CALM_HUD_S } from './rules-page.js';   // ...and this long, the whole HUD, for the scene (task #375)
+export { CALM_HUD_S } from './rules-page.js';
+import { HOSE_LEN } from './rules-page.js';
+export { HOSE_LEN };   // ...and this long, the whole HUD, for the scene (task #375)
 
 // Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
 export const WINE_S = 120;
@@ -886,7 +888,7 @@ export const AIR_TRAFFIC = { firstS: 60, everyS: 150, nearPx: 3200, approachPx: 
 // near: tile fires within this many px of you are sent to your page.
 export const FIRE = {
   firstS: 15, gapS: 30, shiftS: 1800, minD: 700, maxD: 5000, callS: 300,
-  hose: { len: 420, range: 190, w: 24, rate: 1 },
+  hose: { len: HOSE_LEN, range: 190, w: 24, rate: 1 },
   car: { boomS: 80, douseS: 4, hold: 3 },
   wreck: { burnS: 160, douseS: 5, spreadS: 70 },
   person: { nearR: 520, lifeS: 20 },
