@@ -486,7 +486,9 @@ function clearOfLane(world, v, b) {
   let ok = false;
   if (e) {
     const lp = lanePath(net, e, ai.from, Math.min(ai.lane || 0, e.nl - 1)), pr = project(lp, b);
-    ok = !!pr && pr.s > 1 && pr.s < lp[lp.length - 1].s - 1 && pr.d >= v.def.W / 2 + b.def.W / 2 - 3;   // (beside the lane, not past its end - in the junction)
+    // (its half-extent across the lane as it stands: one nosed in at a slant reaches further in than its half width)
+    const t = pr && pointAt(lp, pr.s), rel = t ? b.a - Math.atan2(t.ty, t.tx) : 0, half = Math.abs(Math.sin(rel)) * b.def.L / 2 + Math.abs(Math.cos(rel)) * b.def.W / 2;
+    ok = !!pr && pr.s > 1 && pr.s < lp[lp.length - 1].s - 1 && pr.d >= v.def.W / 2 + half - 3;   // (beside the lane, not past its end - in the junction)
   }
   b._clr = [v.id, ai.edge, b.x, b.y, ok];
   return ok;
@@ -505,11 +507,16 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
-    const halfOther = e.kind === K.VEH ? e.def.W / 2 : 10;
+    // (the other's half-extents across this one's way and along it, as it stands: a car side on or at a slant reaches
+    // further across than its half width - counted as if it lay the same way, a pickup turned across the corner of a
+    // station's loop stood "beside" the queue's lane by its middle, and the car behind drove into its end, stuck, backed
+    // off and drove into it again: the owner's notes, 11-06, "this white car keeps ramming the car around it")
+    const ca = e.kind === K.VEH ? Math.abs(Math.cos(e.a - v.a)) : 1, sa = e.kind === K.VEH ? Math.abs(Math.sin(e.a - v.a)) : 0;
+    const halfOther = e.kind === K.VEH ? sa * e.def.L / 2 + ca * e.def.W / 2 : 10, halfAlong = e.kind === K.VEH ? ca * e.def.L / 2 + sa * e.def.W / 2 : 10;
     if (lx < 0 || lx > look + 40 || Math.abs(ly) > v.def.W / 2 + halfOther - 4) continue;
     // a car coming the other way in the other lane (a narrow road: their sides all but touch) squeezes past
     if (e.kind === K.VEH && ly < -(v.def.W / 2 + halfOther) * 0.45 && Math.abs(angleDiff(e.a, v.a)) > 2.6) continue;
-    const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
+    const gap = lx - v.def.L / 2 - halfAlong - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     // a car standing beside its way that it only overlaps at the edge - one parked in a kerb bay, with this one a little
     // off its lane's line (eased over for a siren, out of a bend): it crawls on and steers back onto its line (lookAhead)
     // rather than stopping short of it for good. (By Southside station a taxi eased over for an ambulance stopped nose

@@ -125,3 +125,34 @@ test('nosed at a slant into the corner of a car parked at the kerb: it backs off
   assert.ok(Math.abs(parked.x - px) < 4, `without touching it (${Math.round(parked.x - px)} px)`);
   assert.ok((w.straightened || 0) >= 1 && t < 12 * 20, 'by straightening up, within a few seconds');
 });
+
+// (the owner, 11-06, off the arrival train at Metro Central: "this white car keeps ramming the car around it" - a pickup
+// turned across the corner of the station's loop, its end out into the lane and its middle beside it: the car behind
+// braked only for what stood across its way by the middle, with a half width either side, so it drove into the
+// pickup's end, stuck there, backed off and drove into it again)
+test('a car stopped side on with its end out across the lane: the car behind stops short of it - no ramming', () => {
+  const w = makeWorld(), m = w.map, net = m.net;
+  const e = m.edges.filter((q) => q.lvl === 0 && q.kind === 'st' && !q.oneway && q.len > 700 && q.pts.every((p) => Math.abs(p.y - q.pts[0].y) < 2)).sort((a, b) => b.len - a.len)[0];
+  const from = e.pts[0].x < e.pts[e.pts.length - 1].x ? e.a : e.b, lp = lanePath(net, e, from, 0), p0 = pointAt(lp, 200);
+  const a = joinPlayer(w);
+  teleport(w, a.p.ped, p0.x + 200, p0.y - 300);
+  const v = car(w, 'sedan', p0.x, p0.y, 0);
+  traffic.joinTraffic(w, v);
+  // the pickup 320 px on, side on, its middle just clear of the sedan's way as if it lay along it - its end across it
+  const off = v.def.W / 2 + 28 + 2, side = p0.y < e.pts[0].y ? 1 : -1;   // (toward the road's middle)
+  const pk = car(w, 'pickup', p0.x + 320, p0.y + side * off, Math.PI / 2);
+  pk.ai = { kind: 'traffic', parkIt: true };   // (stopped there)
+  const inside = (q, x, y) => { const c = Math.cos(q.a), s = Math.sin(q.a), dx = x - q.x, dy = y - q.y; return Math.abs(dx * c + dy * s) < q.def.L / 2 && Math.abs(-dx * s + dy * c) < q.def.W / 2; };
+  let hits = 0, was = false;
+  const px = pk.x, py = pk.y;
+  for (let t = 0; t < 8 * 20; t++) {
+    w.step();
+    const c = Math.cos(v.a), s = Math.sin(v.a), fx = v.x + c * (v.def.L / 2 + 2), fy = v.y + s * (v.def.L / 2 + 2);
+    const now = [-1, 0, 1].some((k) => inside(pk, fx - s * k * (v.def.W / 2 - 2), fy + c * k * (v.def.W / 2 - 2)));
+    if (now && !was) hits++;
+    was = now;
+  }
+  assert.equal(hits, 0, 'never nose into the pickup');
+  assert.ok(Math.hypot(pk.x - px, pk.y - py) < 4, `the pickup unmoved (${Math.round(Math.hypot(pk.x - px, pk.y - py))} px)`);
+  assert.ok(v.x < pk.x - 28 - v.def.L / 2 + 4 || v.ai.roundUntil > w.time, 'stopped short of it (or on its way round)');
+});
