@@ -21,7 +21,7 @@
 //   ped.cuffed: short of the cell - can't move or do anything; the server moves them (net.js: no prediction)
 // In the cell they're a real person in the world (cells.js: walk round it, sit, the toilet, hold the bars), not hidden;
 // out by time or bail, the cell door opens and they're put outside the station's front door.
-import { K, TILE } from '../../shared/constants.js';
+import { K, TILE, T } from '../../shared/constants.js';
 import { pedStep, PED } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
 import { localToWorld } from '../../shared/math.js';
@@ -31,6 +31,7 @@ import {
   HOLD_S, ESCORT_WALK_PX, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
   BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S, CUSTODY_STUCK_S, CUSTODY_WAIT_BREAK_S, CUSTODY_SKIP_S,
   CELL_WALK_S, BREAK_CHANCE, BREAK_FAIL_K, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_TRIP_SHARE, STRUGGLE_KIND, STRUGGLE_GRACE_S,
+  CUSTODY_FADE_S, CUSTODY_REPLAN_S, BREAK_CAR, copLevel,
 } from '../../shared/rules.js';
 import { inCellRect } from '../../shared/cells.js';
 import * as cells from './cells.js';
@@ -65,6 +66,45 @@ const stations = (world) => world.map.pois.filter((q) => q.kind === 'police');
 export function nearestStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const st of stations(world)) { const d = Math.hypot(st.x - x, st.y - y); if (d < bd) { bd = d; best = st; } }
+  return best;
+}
+// The road network in pieces that join up (the mainland and the islands its bridges reach; an island of its own): each
+// junction's piece, worked out once per map, and each station's (its kerb's nearest junction).
+const PIECES = new WeakMap();
+function piecesOf(m) {
+  let P = PIECES.get(m);
+  if (P) return P;
+  const net = m.net, n = net ? net.nodes.length : 0, of = new Int32Array(n).fill(-1);
+  for (let i = 0, k = 0; i < n; i++) {
+    if (of[i] >= 0) continue;
+    const q = [i]; of[i] = k;
+    for (let j = 0; j < q.length; j++) for (const nid of Object.values(net.nodes[q[j]].links)) if (of[nid] < 0) { of[nid] = k; q.push(nid); }
+    k++;
+  }
+  PIECES.set(m, (P = { of, st: new Map() }));
+  return P;
+}
+// the piece of road network at (x, y): its nearest junction's (-1: no roads at all)
+export function pieceAt(m, x, y) {
+  const n = m.net && m.nearestNode(x, y);
+  return n ? piecesOf(m).of[n.id] : -1;
+}
+function stationPiece(world, st) {
+  const P = piecesOf(world.map);
+  if (!P.st.has(st.id)) { const k = kerbOf(world, st.id); P.st.set(st.id, k ? pieceAt(world.map, k.x, k.y) : -1); }
+  return P.st.get(st.id);
+}
+// The nearest station a police car at (x, y) can drive to (on its piece of the road network), or null: an island whose
+// roads reach no station (its prisoners fade to the nearest cells - fadeIn)
+export function reachableStation(world, x, y) {
+  const piece = pieceAt(world.map, x, y);
+  if (piece < 0) return null;
+  let best = null, bd = Infinity;
+  for (const st of stations(world)) {
+    if (stationPiece(world, st) !== piece) continue;
+    const d = Math.hypot(st.x - x, st.y - y);
+    if (d < bd) { bd = d; best = st; }
+  }
   return best;
 }
 // Where a car pulls up for the front door: the nearest point of a street to it (cached per station)
@@ -146,6 +186,7 @@ function step(world, p, dt) {
   if (c.stage === 'cell') { if (now >= c.until) release(world, p, 'Your time\'s up - you\'re free to go.'); else if (world.tick % 10 === 0) p.meDirty = true; return; }
   if (ped.dead) { onDeath(world, p); return; }   // (killed in custody: the usual death - the stars went with it)
   if (c.stage === 'walkin') { walkStep(world, p, dt); return; }
+  if (c.stage === 'fade') { if (now >= c.until) book(world, p); else if (!ped.vehId) pin(world, ped, null, dt); return; }   // (the screen black: booked at the end of it)
   p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y;   // (the police have them)
   if (c.stage === 'held' || c.stage === 'fetch') {
     const h = live(world, c.holder);
@@ -153,7 +194,7 @@ function step(world, p, dt) {
     pin(world, ped, h, dt);
     if (c.stage === 'held') { if (now >= c.until && !walkToCar(world, p)) fetch(world, p); return; }
     if (c.car && wrecked(live(world, c.car))) { c.car = 0; fetch(world, p, true); return; }   // (the car coming was wrecked: another)
-    if (now >= c.until) { book(world, p); return; }   // (nothing got there in time: taken in anyway)
+    if (now >= c.until) { fadeIn(world, p, 'You\'re taken in.'); return; }   // (nothing got there in time: taken in anyway)
     // the car isn't coming (stuck, or going round in circles), or is taking too long: they can make a break for it
     const v = live(world, c.car);
     const stuck = v ? progress(c, Math.hypot(v.x - ped.x, v.y - ped.y), now) : 0;
@@ -193,6 +234,7 @@ function walk(world, e, x, y, dt, speed = 1) {
 function walkToCar(world, p) {
   const c = p.custody, ped = p.ped, now = world.time, h = live(world, c.holder);
   if (!h || !h.npc || !h.npc.unit || h.vehId || ped.sub || floored(world, h)) return false;
+  if (!reachableStation(world, ped.x, ped.y)) return false;   // (no station on these roads: fetch fades them in)
   const v = live(world, h.npc.unit);
   if (wrecked(v) || !v.ai || v.ai.prisoner || v.def.kind !== 'car' || (v.lz || 0) > 0.3 || v.ferry) return false;
   if (police.crewOf(world, v).length >= v.seats.length || backSeat(v) < 0) return false;   // (no room in the back)
@@ -218,6 +260,9 @@ function clearWalk(world, x0, y0, x1, y1) {
 function fetch(world, p, again = false) {
   const c = p.custody, ped = p.ped, now = world.time;
   c.stage = 'fetch'; c.since = now; c.best = undefined; c.brk = false;
+  // no station on the roads from here (an island with no station of its own): no car drives off into the sea with them -
+  // the screen fades, and they're booked at the nearest cells
+  if (!ped.sub && !reachableStation(world, ped.x, ped.y)) { fadeIn(world, p, 'There\'s no road to a police station from here - you\'re taken to the nearest cells.'); return; }
   const h = live(world, c.holder);
   let v = pickCar(world, p, h);
   if (!v && !ped.sub) v = police.sendTransport(world, p);
@@ -341,9 +386,23 @@ function seat(world, p, v, esc) {
     const fs = !v.seats[0] ? 0 : v.seats.findIndex((q) => !q);
     if (fs >= 0) { v.seats[fs] = esc.id; esc.vehId = v.id; esc.seat = fs; esc.vx = 0; esc.vy = 0; }
   }
-  const st = nearestStation(world, v.x, v.y);
-  Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false });
-  world.notify(p, `In the back of the police car - on the way to ${st ? st.label : 'the station'}.`, 'bad');
+  const st = reachableStation(world, v.x, v.y);
+  Object.assign(c, { stage: 'ride', since: now, until: now + RIDE_MAX_S, holder: 0, station: st ? st.id : -1, blastSeen: v.blastAt || 0, hitSeen: v.hardHitAt || 0, best: undefined, brk: false, tries: 0, tryAt: now + BREAK_RETRY_S });
+  if (!st) { fadeIn(world, p, 'There\'s no road to a police station from here - you\'re taken to the nearest cells.'); return; }
+  world.notify(p, `In the back of the police car - on the way to ${st.label}.`, 'bad');
+  p.meDirty = true;
+}
+// The ride can't be finished (no station on these roads, stuck for good, off the road network, the sea ahead): the screen
+// fades to black (CUSTODY_FADE_S; the page draws it from me.custody's 'fade') and they're booked at the nearest station
+// they could be driven to - else the nearest of all. Nobody is left in the back of a police car going nowhere.
+export function fadeIn(world, p, why) {
+  const c = p.custody, ped = p.ped, now = world.time;
+  if (!c || c.stage === 'fade' || c.stage === 'cell' || c.stage === 'walkin') return;
+  const st = (c.stage === 'ride' && world.map.pois[c.station] && world.map.pois[c.station].kind === 'police' ? world.map.pois[c.station] : null)
+    || reachableStation(world, ped.x, ped.y) || nearestStation(world, ped.x, ped.y);
+  lead(live(world, c.holder), 0);
+  Object.assign(c, { stage: 'fade', since: now, until: now + CUSTODY_FADE_S, station: st ? st.id : -1, brk: false });
+  world.notify(p, why, 'bad');
   p.meDirty = true;
 }
 
@@ -380,11 +439,12 @@ function rideStep(world, p) {
   const k = kerbOf(world, c.station);
   const d = k ? Math.hypot(v.x - k.x, v.y - k.y) : 0;
   if (k && d < DROP_PX) { book(world, p, v); return; }   // (pulled up outside: walked in)
-  if (now >= c.until) { book(world, p); return; }
-  // stuck, or going round in circles: after a while they can make a break for it, and in the end the police get them
-  // there anyway (the user's 2026-10-08 notes: never stuck for ever in the back of a police car)
+  if (now >= c.until || !k) { fadeIn(world, p, 'You\'re taken in.'); return; }
+  // stuck, or going round in circles: it backs up and plans again (runCar), after a while they can make a break for it,
+  // and in the end the screen fades and they're booked (the owner, 11-07: "they always get stuck somewhere ... and then
+  // after a while I end up in prison" - never stuck for ever in the back of a police car)
   const stuck = progress(c, d, now);
-  if (stuck > CUSTODY_SKIP_S) { book(world, p); return; }
+  if (stuck > CUSTODY_SKIP_S) { fadeIn(world, p, 'The police car is going nowhere - you\'re taken in.'); return; }
   if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
 }
 // how long the car has got no nearer (by 40 px) to where it's going
@@ -404,29 +464,49 @@ function offerBreak(world, p) {
 // it's a try - no fighting needed: it works by the stars (rules.js BREAK_*), your strength (health, as in the struggle) and
 // who has you, less each time it fails, a try every BREAK_RETRY_S.
 const loose = (c) => c.stage === 'held' || c.stage === 'fetch' || c.stage === 'escort';
+// in the back of an NPC unit's car while it crawls or stands (at the lights, in a jam): a kick at the door (BREAK_CAR)
+function carTry(world, p) {
+  const c = p.custody, v = live(world, c.car);
+  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && Math.hypot(v.vx, v.vy) < BREAK_CAR.speed;
+}
 function canTry(world, p) {
   const c = p.custody, h = live(world, c.holder);
-  return loose(c) && !!(h && h.npc) && !p.ped.vehId && world.time >= (c.tryAt || 0);
+  if (world.time < (c.tryAt || 0)) return false;
+  return c.stage === 'ride' ? carTry(world, p) : loose(c) && !!(h && h.npc) && !p.ped.vehId;
 }
-export const canBreak = (p, world = null) => !!(p.custody && p.custody.stage !== 'cell' && p.custody.stage !== 'walkin'
-  && (p.custody.brk || (world ? canTry(world, p) : loose(p.custody))));
+export const canBreak = (p, world = null) => !!(p.custody && p.custody.stage !== 'cell' && p.custody.stage !== 'walkin' && p.custody.stage !== 'fade'
+  && (p.custody.brk || (world ? canTry(world, p) : loose(p.custody) || p.custody.stage === 'ride')));
 export function breakOut(world, p) {
   if (!canBreak(p, world)) return;
-  const c = p.custody, ped = p.ped, now = world.time;
+  const c = p.custody, ped = p.ped, now = world.time, st = Math.max(1, Math.min(5, c.stars | 0));
   if (!c.brk) {
-    const h = live(world, c.holder), st = Math.max(1, Math.min(5, c.stars | 0));
-    const chance = BREAK_CHANCE[st] * struggle.power(ped, now) / (STRUGGLE_KIND[h.archetype] ?? 1) * Math.pow(BREAK_FAIL_K, c.tries || 0);
+    const h = live(world, c.holder), car = c.stage === 'ride';
+    const chance = (car ? BREAK_CAR.chance[st] : BREAK_CHANCE[st] / (STRUGGLE_KIND[h.archetype] ?? 1)) * struggle.power(ped, now) * Math.pow(BREAK_FAIL_K, c.tries || 0);
     c.tries = (c.tries || 0) + 1; c.tryAt = now + BREAK_RETRY_S;
     world.emit(ped.x, ped.y, { e: 'struggle', x: ped.x, y: ped.y, id: ped.id });   // (a heave: the grunts and the scuffle)
     p.meDirty = true;
-    if (world.rand() >= chance) { world.notify(p, 'The officer holds on to you - not this time.', 'bad'); return; }
-    breakAway(world, p, h, st);
+    if (world.rand() >= chance) { world.notify(p, car ? 'The door holds - not this time.' : 'The officer holds on to you - not this time.', 'bad'); return; }
+    if (car) carBreak(world, p, live(world, c.car), st, 'You kicked the door open - run!');
+    else breakAway(world, p, h, st);
     return;
   }
-  if (ped.vehId) { const v = world.get(ped.vehId); if (v) throwOut(world, ped, v, 60); else vehicles.ejectPed(world, ped, true); }
+  const v = ped.vehId ? world.get(ped.vehId) : null;
+  if (v) { carBreak(world, p, v, st, 'You made a break for it - run!'); return; }
+  if (ped.vehId) vehicles.ejectPed(world, ped, true);
   const h = live(world, c.holder);
-  if (h && h.npc && !h.vehId) knockBack(world, h, ped, Math.max(1, Math.min(5, c.stars | 0)));
+  if (h && h.npc && !h.vehId) knockBack(world, h, ped, st);
   escape(world, p, 'You made a break for it - run!');
+}
+// Out of the back of the police car: a head start - the crew take COP_LEVEL's exitS to get out after them (police.js
+// runUnit waits for it: ai.holdUntil), no tackle lands on them meanwhile, and those who come after them may trip
+function carBreak(world, p, v, st, msg) {
+  const ped = p.ped, now = world.time, L = copLevel(st);
+  throwOut(world, ped, v, 60);
+  if (v.ai) v.ai.holdUntil = now + L.exitS;
+  for (const q of police.crewOf(world, v)) if (world.rand() < BREAK_TRIP_SHARE[st]) { q.npc.tripAt = now + L.exitS + 0.4 + world.rand() * 1.8; q.npc.tripBy = now + L.exitS + 5; }
+  escape(world, p, msg);
+  ped.graceUntil = now + L.exitS + STRUGGLE_GRACE_S;
+  world.emit(ped.x, ped.y, { e: 'door', x: ped.x, y: ped.y });
 }
 // Away from the officer who had them: they stumble back, or go over backwards or roll; the prisoner's up and off (a grace
 // from the next tackle, as after the struggle), and the officers who come after them may trip (police.js stumble)
@@ -493,11 +573,24 @@ function escape(world, p, msg) {
   cuff(ped, false);
   if (ped && !ped.dead) {
     ped.downUntil = Math.min(ped.downUntil, world.time + 0.4);
-    law.crime(world, ped, 'escape', null, ped.x, ped.y, { silentCheck: false });
+    law.escaped(world, ped);   // (a felony, and a star more: rules.js ESCAPE_STARS)
   }
   world.notify(p, msg, 'good');
   const o = c && c.by ? world.players.get(c.by) : null;
   if (o && o !== p) world.notify(o, `${p.name} got away!`, 'bad');
+  p.meDirty = true;
+}
+// Out of custody for good, and no escape (an admin sending them to Prison Island - admin.js): the car let go, the cuffs
+// off, out of the cell
+export function takeOut(world, p) {
+  const c = p.custody, ped = p.ped;
+  if (p.struggle) { p.struggle = null; if (ped) { ped.struggling = false; ped.appVer = (ped.appVer || 0) + 1; } }
+  if (!c) return;
+  if (c.stage === 'walkin') endWalk(world, c);
+  releaseCar(world, c);
+  lead(live(world, c.holder), 0);
+  p.custody = null;
+  if (ped) { if (ped.vehId) vehicles.ejectPed(world, ped, true); cuff(ped, false); cells.clearPose(ped); ped.hidden = false; ped.interior = null; ped.downUntil = 0; }
   p.meDirty = true;
 }
 // Killed in custody (players.onPedDeath): the cuffs come off the body; the usual death.
@@ -695,7 +788,7 @@ export function payBail(world, p) {
 export function onLeave(world, p) {
   if (!p.custody) return;
   if (p.custody.stage === 'walkin') lockIn(world, p);
-  else if (inCustody(p)) book(world, p);
+  else if (inCustody(p)) book(world, p);   // (the fade too: booked now)
 }
 export function saveJail(world, p) {
   if (prison.save(p, world)) { store.touch(); return; }   // (doing time on Prison Island: prison.js)
@@ -755,6 +848,7 @@ export function runCar(world, v, crew, dt) {
     return;
   }
   v.sirenOn = false;
+  if (c.stage === 'fade') { halt(v); return; }   // (the screen black: booked in a moment)
   if (c.stage === 'escort') {
     halt(v);
     for (const q of crew) if (!q.vehId && q.id !== c.holder) board(world, q, v, dt);
@@ -770,8 +864,34 @@ export function runCar(world, v, crew, dt) {
     v.seats[q.seat] = 0; v.seats[0] = q.id; q.seat = 0; drv = q;
   }
   const k = kerbOf(world, c.station);
-  if (k) route(world, v, k.x, k.y, Math.hypot(v.x - k.x, v.y - k.y) < 420 ? 200 : 430);
-  else halt(v);
+  if (!k) { halt(v); return; }
+  const d = Math.hypot(v.x - k.x, v.y - k.y);
+  // the siren on, most of the way: the traffic ahead pulls over (traffic.js sirenBehind) and a jam is gone round
+  // (reroute.js) - it used to drive in with it off, and sat in every queue
+  v.sirenOn = d > 420;
+  // getting no nearer (rideStep's progress): back up a little, and plan the way again
+  if (c.bestAt !== undefined && now - c.bestAt > CUSTODY_REPLAN_S && now - (c.replanAt || 0) > CUSTODY_REPLAN_S) {
+    c.replanAt = now; v.ai.route = null;
+    if (Math.hypot(v.vx, v.vy) < 30) v.ai.reverseUntil = now + 1.2;
+  }
+  // never into the sea: open water just ahead, it stops (and backs up); still facing it a moment later, it fades in
+  if (waterAhead(world, v)) {
+    halt(v);
+    if (c.wetAt === undefined) { c.wetAt = now; v.ai.reverseUntil = now + 1; v.ai.route = null; }
+    else if (now - c.wetAt > 2.5) fadeIn(world, p, 'You\'re taken in.');
+    if (now < v.ai.reverseUntil) driveToward(world, v, v.x - Math.cos(v.a) * 60, v.y - Math.sin(v.a) * 60, 120, {});
+    return;
+  }
+  if (c.wetAt !== undefined && now - c.wetAt > 4) c.wetAt = undefined;
+  const planned = route(world, v, k.x, k.y, d < 420 ? 200 : 430);
+  if (planned && v.ai.route.length <= 1 && d > 500) fadeIn(world, p, 'You\'re taken in.');   // (no way there on the roads after all)
+}
+// open water (not a bridge) just ahead of a vehicle on the ground, by its speed
+function waterAhead(world, v) {
+  if ((v.lz || 0) > 0.3 || v.def.kind === 'boat') return false;
+  const c = Math.cos(v.a), s = Math.sin(v.a), fwd = Math.max(0, v.vx * c + v.vy * s), look = v.def.L / 2 + 10 + fwd * 0.45;
+  const t = world.map.tileAtPx(v.x + c * look, v.y + s * look);
+  return t === T.WATER || t === T.DEEP;
 }
 // The holder's own unit when another car is taking them in: parked, the others standing round the prisoner.
 export function standBy(world, v, crew, p, dt) {
@@ -785,8 +905,9 @@ function route(world, v, x, y, speed) {
   // way it came, then forward again (round and round) - only a new destination, or the car well off its route, replans
   // (well off it: further than 300 px from the stretch of route between the last waypoint and the next)
   const lost = ai.route && ai.route.length && segDist(v.x, v.y, ai.routePrev || ai.route[0], ai.route[0]) > 300;
+  let planned = false;
   if (!ai.route || !ai.route.length || ai.routeKey !== key || lost || now - ai.routeAt > 25) {
-    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y };
+    ai.route = trimBehind(planRoute(world, v.x, v.y, x, y), v); ai.routeAt = now; ai.routeKey = key; ai.routePrev = { x: v.x, y: v.y }; planned = true;
   }
   // on to the next waypoint once this one's reached (the faster, the sooner), or driven past while still on the line
   // of the route (never cutting a corner across: onto a bridge it'd be straight into the water beside it)
@@ -798,6 +919,7 @@ function route(world, v, x, y, speed) {
   }
   const wp = ai.route[0] || { x, y };
   driveToward(world, v, wp.x, wp.y, cornerSpeed(v, ai.route, speed), {});
+  return planned;
 }
 // slow down for a sharp corner coming up (taken flat out, the car swings wide - off a bridge's end, into the water)
 export function cornerSpeed(v, r, speed) {
@@ -911,6 +1033,7 @@ export function meInfo(world, p) {
   const st = c.station >= 0 ? world.map.pois[c.station] : null;
   if (c.stage === 'cell') return { s: 'cell', at: st ? st.label : '', left: Math.max(0, Math.ceil(c.until - world.time)), bail: c.bail, can: p.profile.bank + p.profile.cash >= c.bail };
   if (c.stage === 'walkin') return { s: 'walkin', at: st ? st.label : '', brk: 0 };
+  if (c.stage === 'fade') return { s: 'fade', at: st ? st.label : '', brk: 0 };
   const o = c.driver ? world.players.get(c.driver) : null;
   // brk: the action button makes a break for it now; stuck: the car isn't coming, or is going nowhere (offerBreak)
   return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null, brk: canBreak(p, world) ? 1 : 0, stuck: c.brk ? 1 : 0 };

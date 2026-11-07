@@ -1,6 +1,6 @@
 // Prison Island (the owner, 10-05: "Prison island: sentenced after many arrests, about 5 min max, breakouts, prison-break
-// quests"; Kestrel Bay Penitentiary was built in World v3 with nobody sent there). Booked for the third time in a day,
-// or at four stars or more (shared/rules.js PRISON), it isn't the station's cells: it's a sentence out on the island -
+// quests"; Kestrel Bay Penitentiary was built in World v3 with nobody sent there). Booked at five stars with a long record
+// (shared/rules.js PRISON; the owner, 11-07), or sent by an admin, it isn't the station's cells: it's a sentence out on the island -
 // no bail - two to five minutes inside the walls of Kestrel Bay Penitentiary. Inside, the weapons are put away and
 // nobody hurts anyone (as in the cells: ped.cellSafe); the gate opens for the officers, never for a prisoner. Time
 // served, you're let out and the Prison Boat brings you back to the mainland (Sandpiper Bay Police Dock).
@@ -26,19 +26,43 @@ const inCompound = (P, x, y) => { const c = P.compound; return x > c.tx * TILE &
 export const inPrison = (p) => !!(p && p.prison);
 
 // ---- who goes there -------------------------------------------------------------------------------------------------------
-// every booking is noted (the last few, as wall-clock times: a day's are counted)
+// every booking is noted: the last few as wall-clock times (the sentence counts the recent ones), and the record's count
 export function noteArrest(p) {
   const a = (p.profile.arrests ||= []);
+  p.profile.bookings = record(p) + 1;
   a.push(Date.now());
   while (a.length > 8) a.shift();
 }
 const recent = (p) => (p.profile.arrests || []).filter((t) => Date.now() - t < PR.repeatMs).length;
+// the bookings on their record (a character from before the count: the times kept)
+export const record = (p) => Math.max(p.profile.bookings || 0, (p.profile.arrests || []).length);
+// Prison, or the cells? Five stars with a long record behind it (PRISON.record bookings before this one, or a criminal
+// rating of PRISON.rating) - rules.js PRISON; everyone else, the station's cells
+export const prisonWorthy = (p, stars) => stars >= PR.stars && (record(p) >= PR.record || (p.profile.criminalExp || 0) >= PR.rating);
 // the sentence for a booking at `stars` (s), or 0: the station's cells as ever
 export function sentenceFor(world, p, stars) {
-  if (!live(world)) return 0;
-  const n = recent(p);   // (the bookings before this one, in the while)
-  if (stars < PR.stars && n + 1 < PR.repeat) return 0;
-  return Math.min(PR.max, PR.base + PR.perStar * stars + PR.perRepeat * n);
+  if (!live(world) || !prisonWorthy(p, stars)) return 0;
+  return Math.min(PR.max, PR.base + PR.perStar * stars + PR.perRepeat * recent(p));
+}
+// An admin sends someone there (server/admin.js prison): out of custody or a cell first, then the sentence (mins, up to
+// PRISON.adminMins); mins 0 lets them out. Offline, it waits for them on the character (custody.js onJoin). -> null or why not
+export function adminSentence(world, p, prof, mins, custodyOut) {
+  const secs = Math.round(Math.max(0, Math.min(PR.adminMins, Number(mins) || 0)) * 60);
+  if (!live(world)) return 'There\'s no prison in this world.';
+  if (!secs) {
+    if (p && p.prison) { release(world, p, 'An admin let you out of prison.'); return null; }
+    if (prof.jail && prof.jail.prison) { delete prof.jail; store.touch(); return null; }
+    return 'They aren\'t in prison.';
+  }
+  if (!p || !p.ped) { prof.jail = { prison: true, left: secs, stars: 5, admin: true }; store.touch(); return null; }
+  if (p.ped.dead) return 'Not while they\'re down - try again in a moment.';
+  if (p.prison) { p.prison.until = world.time + secs; p.meDirty = true; world.notify(p, `An admin set your sentence: ${fmt(secs)}.`, 'bad'); return null; }
+  custodyOut(p);   // (cuffed, in a car, in a cell: out of it - custody.js)
+  law.clearWanted(world, p);
+  if (!sentence(world, p, secs, 5, true)) return 'Couldn\'t put them there.';
+  p.prison.admin = true;
+  world.notify(p, `An admin sent you to ${live(world).name} on Prison Island: ${fmt(secs)}.`, 'bad');
+  return null;
 }
 
 // ---- in -------------------------------------------------------------------------------------------------------------------
@@ -100,7 +124,7 @@ export function interaction(world, p) {
   const P = live(world), S = p.prison, ped = p.ped;
   if (!S || !P || !ped || ped.dead) return null;
   if (S.climb) return { label: 'Climbing...', passive: true, run: () => {} };
-  const over = wallBy(world, P, ped);
+  const over = !S.admin && wallBy(world, P, ped);   // (an admin's sentence: no way over the wall)
   if (over) return { label: 'Climb the wall - the guards will see', crime: 'escape', run: () => climb(world, p, over) };
   return { label: `Doing time: out in ${fmt(S.until - world.time)}`, passive: true, run: () => {} };
 }
@@ -124,7 +148,7 @@ export function update(world, dt) {
     if (!ped || ped.removed || ped.dead) continue;
     any = true;
     // a new body (died in there - on fire when booked, say - and woke up in a hospital): back inside, the time left
-    if (S.ped !== ped.id) { const w = S.weapon; if (sentence(world, p, Math.max(5, S.until - world.time), S.stars, true)) { p.prison.weapon = w; world.notify(p, `Patched up and taken back to ${P.name}: ${fmt(p.prison.until - world.time)} left.`, 'warn'); } continue; }
+    if (S.ped !== ped.id) { const w = S.weapon; if (sentence(world, p, Math.max(5, S.until - world.time), S.stars, true)) { p.prison.weapon = w; p.prison.admin = S.admin; world.notify(p, `Patched up and taken back to ${P.name}: ${fmt(p.prison.until - world.time)} left.`, 'warn'); } continue; }
     // away from the keys (the page closed, a ghost waiting to log off): the clock stops - time offline doesn't count
     if (!p.conn) { S.until += dt; if (S.climb) S.climb.until += dt; }
     ped.weapon = 'fists'; ped.cellSafe = !S.climb;
@@ -133,6 +157,7 @@ export function update(world, dt) {
       if (world.time >= S.climb.until) { ped.x = S.climb.x; ped.y = S.climb.y; world.place(ped); p.teleportAt = world.time; escaped(world, p, 'Over the wall! The alarm\'s going - get off the island.'); }
       continue;
     }
+    if (!inCompound(P, ped.x, ped.y) && S.admin) { const at = intake(world, P); ped.x = at.x; ped.y = at.y; moved(ped); world.place(ped); p.teleportAt = world.time; continue; }   // (an admin's sentence: back inside)
     if (!inCompound(P, ped.x, ped.y)) { escaped(world, p, 'Out of the compound! The alarm\'s going - get off the island.'); continue; }
     if (world.time >= S.until) { release(world, p); continue; }
     if (world.tick % 20 === 0) p.meDirty = true;
@@ -235,7 +260,7 @@ export function meInfo(world, p) {
 export function save(p, world) {
   const S = p.prison;
   if (!S) return false;
-  p.profile.jail = { prison: true, left: Math.max(1, Math.ceil(S.until - world.time)), stars: S.stars, weapon: S.weapon };
+  p.profile.jail = { prison: true, left: Math.max(1, Math.ceil(S.until - world.time)), stars: S.stars, weapon: S.weapon, admin: !!S.admin };
   if (S.weapon && p.ped) p.ped.weapon = S.weapon;
   p.prison = null;
   return true;
@@ -243,6 +268,7 @@ export function save(p, world) {
 export function resume(world, p, j) {
   if (!sentence(world, p, j.left, j.stars || 4, true)) return false;
   if (j.weapon) p.prison.weapon = j.weapon;
+  if (j.admin) p.prison.admin = true;
   world.notify(p, `Still doing time at ${live(world).name}: ${fmt(j.left)} left.`, 'warn');
   return true;
 }

@@ -24,7 +24,7 @@ import { angleDiff } from '../../shared/math.js';
 import {
   STRUGGLE_START, STRUGGLE_PRESS, STRUGGLE_WRIGGLE, STRUGGLE_HOLD, STRUGGLE_STARS, STRUGGLE_KIND, STRUGGLE_BUILD, STRUGGLE_GRIP_VAR,
   STRUGGLE_RAMP, STRUGGLE_CUFF_S, STRUGGLE_HP_FLOOR, STRUGGLE_HP_CAP, STRUGGLE_ENERGY, STRUGGLE_STUNNED, STRUGGLE_GRACE_S,
-  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND, STRUGGLE_PUSH, STRUGGLE_MOVE_K,
+  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND, STRUGGLE_PUSH, STRUGGLE_MOVE_K, STRUGGLE_HELD, copLevel,
 } from '../../shared/rules.js';
 import * as law from './law.js';
 
@@ -36,6 +36,8 @@ const SOUND_GAP = 0.22;   // the grunts and scuffles: at most this often
 
 export const of = (p) => (p && p.struggle) || null;
 const stars = (p) => Math.max(1, Math.min(5, p.wanted | 0));
+// how long they take to get the cuffs on, by the stars (rules.js COP_LEVEL cuffS: longer at 1-3; STRUGGLE_CUFF_S at 4-5)
+const cuffS = (p) => copLevel(stars(p)).cuffS ?? STRUGGLE_CUFF_S;
 
 // How strong they are right now: health is strength (to STRUGGLE_HP_CAP: a hearty meal's extra counts); an energy drink
 // helps, a taser's or the pepper spray's lingering twitch doesn't.
@@ -95,6 +97,8 @@ export function input(world, p, ped, inp, pressed, dt = 0.05) {
     if (now - s.heard >= SOUND_GAP) { s.heard = now; world.emit(ped.x, ped.y, { e: 'struggle', x: ped.x, y: ped.y, id: ped.id }); }
     p.meDirty = true;
   }
+  // the attack button held down (a thumb on a touch screen's FIRE): a steady heave, less than mashing it (STRUGGLE_HELD)
+  else if ((inp.bits & IN.FIRE) && !(pressed & IN.FIRE)) { s.m += STRUGGLE_HELD * k * dt; ped.attackAnimUntil = now + 0.1; }
   // a wriggle: the move stick swung round to a new direction (left-right, round and round)
   if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.5) {
     const mk = STRUGGLE_MOVE_K[stars(p)];
@@ -124,13 +128,15 @@ function step(world, p, dt) {
   // the officers bear down: the meter goes back down, faster the longer they've had you
   const held = now - s.since;
   let grip = 0;
-  on.forEach((c, i) => { grip += (s.grip[c.id] || 1) * (i ? STRUGGLE_SECOND : 1); });   // (a second officer on top: STRUGGLE_SECOND)
+  on.forEach((c, i) => { grip += (s.grip[c.id] || 1) * (i ? STRUGGLE_SECOND[stars(p)] : 1); });   // (a second officer on top: STRUGGLE_SECOND)
   s.m -= STRUGGLE_HOLD * STRUGGLE_STARS[stars(p)] * grip * (1 + STRUGGLE_RAMP * held) * dt;
+  // which way it's going (the HUD: winning or losing it), over the last half second or so
+  s.trend = (s.trend || 0) * 0.85 + (s.m - (s.prevM ?? s.m)) * 0.15 / dt; s.prevM = s.m;
   // held down, the officers kneeling on them
   ped.downUntil = Math.max(ped.downUntil || 0, now + 0.3); ped.vx = 0; ped.vy = 0; ped.rollT = 0;
   for (const c of on) kneel(world, c, ped);
   if (s.m >= 1) { free(world, p, on); return; }
-  if (s.m <= 0 || held >= STRUGGLE_CUFF_S) { cuffed(world, p, on[0]); return; }
+  if (s.m <= 0 || held >= cuffS(p)) { cuffed(world, p, on[0]); return; }
   p.meDirty = true;
 }
 
@@ -217,5 +223,5 @@ export function npcBreaksFree(world, c, t) {
 export function meInfo(world, p) {
   const s = p.struggle;
   if (!s) return null;
-  return { m: Math.max(0, Math.min(1, Math.round(s.m * 100) / 100)), n: s.by.length, left: Math.max(0, Math.round((STRUGGLE_CUFF_S - (world.time - s.since)) * 10) / 10) };
+  return { m: Math.max(0, Math.min(1, Math.round(s.m * 100) / 100)), n: s.by.length, left: Math.max(0, Math.round((cuffS(p) - (world.time - s.since)) * 10) / 10), up: s.trend > 0 ? 1 : 0 };
 }
