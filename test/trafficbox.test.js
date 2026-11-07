@@ -168,21 +168,22 @@ test('wedged nose to something it doesn\'t brake for, a car queued right behind:
   teleport(w, a.p.ped, p0.x + 200, p0.y - 300);
   const v = car(w, 'sedan', p0.x, p0.y, 0);
   traffic.joinTraffic(w, v);
-  // what it's wedged against: a bus standing in the lane that it doesn't brake for (as if a lamp post), and a van close behind
-  const bus = w.spawnVehicle('bus', p0.x + v.def.L / 2 + 82 + 20, p0.y, 0, { parked: true });
+  // what it's wedged against: a post in the lane just ahead of it (a lamp post on an island's corner), a van close behind
+  const post = { x: p0.x + v.def.L / 2 + 30, y: p0.y, r: 12 }, pk = m.idx(Math.floor(post.x / 32), Math.floor(post.y / 32)), had = m.solidProps.get(pk);
+  m.solidProps.set(pk, (had || []).concat([post]));
   const van = car(w, 'van', p0.x - v.def.L / 2 - 51 - 16, p0.y, 0);
   van.ai = { kind: 'traffic', parkIt: true };   // (queued there)
   const inside = (q, x, y) => { const c = Math.cos(q.a), s = Math.sin(q.a), dx = x - q.x, dy = y - q.y; return Math.abs(dx * c + dy * s) < q.def.L / 2 && Math.abs(-dx * s + dy * c) < q.def.W / 2; };
   let hits = 0, was = false;
   const vx = van.x;
   for (let t = 0; t < 20 * 20; t++) {
-    if (v.ai && !v.ai.parkIt) { v.ai.passBlk = bus.id; v.ai.passUntil = w.time + 1; }
     w.step();
     const c = Math.cos(v.a), s = Math.sin(v.a), bx = v.x - c * (v.def.L / 2 + 2), by = v.y - s * (v.def.L / 2 + 2);
     const now = [-1, 0, 1].some((k) => inside(van, bx - s * k * (v.def.W / 2 - 2), by + c * k * (v.def.W / 2 - 2)));
     if (now && !was) hits++;
     was = now;
   }
+  if (had) m.solidProps.set(pk, had); else m.solidProps.delete(pk);
   assert.equal(hits, 0, 'never backs into the van');
   assert.ok(Math.abs(van.x - vx) < 4, `the van unmoved (${Math.round(van.x - vx)} px)`);
   assert.ok(v.ai && v.ai.parkIt && (w.wedgedGaveUp || 0) >= 1, 'wedged in one spot again and again, it gives up (the queue goes round it)');

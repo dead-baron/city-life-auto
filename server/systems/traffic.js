@@ -1182,7 +1182,7 @@ function manage(world) {
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
-      if (sp.kerb && world.query(sp.x, sp.y, 70, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by)
+      if (world.query(sp.x, sp.y, sp.kerb ? 70 : 40, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by; any space: not on a car already in it - a newcomer's starter car in the station's car park had a parked sedan put on top of it)
       let pm = sp.model && VEHICLES[sp.model] ? sp.model : sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(parkedMix(world.map.districtAt(sp.x, sp.y).style));   // (sp.model: a van in a shop's loading bay - World v3's Midtown)
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const fit = bayRoom(world.map, sp, i);   // (a bay at the street's end: nothing so long it sticks out into the junction)
