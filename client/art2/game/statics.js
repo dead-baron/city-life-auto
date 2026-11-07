@@ -1321,6 +1321,7 @@ function specOf(c, b, A, s, D) {
     else if (!pitched) spec.parapet = 10;   // (the false front)
   } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
   if (b.look && !b.art && !s.frame && !s.vox) pitched = townLook(spec, b, s, TL || TOWN_LOOK.log, rnd, w, pitched);   // (H40: the towns' own buildings)
+  if (b.low) { spec.floors = 1; delete spec.height; if (pitched) spec.slope = Math.min(spec.slope || 0.5, 0.26); for (let i = lights.length - 1; i >= 0; i--) if (lights[i][2] > 60) lights.splice(i, 1); }   // (just south of a platform: one storey under a shallow roof - shared/world3-rail.js lowByPlatforms)
   if (s.bay) {
     delete spec.shop; delete spec.portico; delete spec.arches;
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', cx: w / 2, v: 66, bg: '#2a3a6a', fg: [250, 236, 200], lit: true, face: 'block' }] });

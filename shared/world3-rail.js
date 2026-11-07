@@ -16,6 +16,7 @@ import { TILE, T } from './constants.js';
 import { buildLevels } from './levels.js';
 import { MAIN_LINE, MAIN_JUNCTIONS, SERVICES, STATIONS, RADIUS } from './world3-skeleton.js';
 import { treeSize } from './felling.js';
+import { railAt } from './mapcore.js';
 import { cityRailUnder, STATION_OPEN } from './world3-city.js';
 import { TOWNS3 } from './world3-towns.js';
 import { MESA } from './world3-mesa.js';
@@ -493,4 +494,29 @@ export function clearRailDressing(m, removeProps) {
   }
   if (gone.size) removeProps(m, (x, y) => gone.has(x + ',' + y));
   return out;
+}
+
+// (the owner, 11-06: "a main-line station whose south platform and name board are covered by the roofs of the houses to
+// its south") A building standing just south of a platform that is south of its track - its north wall within LOW_REACH
+// of the platform's outer edge - is drawn low: one storey under a shallow roof (client/art2/game/statics.js b.low), so
+// its roof stays off the platform and the board at its front (tools/visaudit.mjs). A platform north of its track has
+// only the track south of it. Nothing moves: a flag on the building. Called last, from shared/world3-world.js' done hook.
+const LOW_REACH = 6 * TILE;
+export function lowByPlatforms(m) {
+  const low = new Set();
+  for (const R of [...(m.rails || []), ...(m.arrivals || [])]) for (const st of (R && R.stations) || []) {
+    if (st.under || st.el) continue;
+    const sd = st.side || 1, L = st.half || 112, outer = st.outer || 104;
+    for (let s = -L; s <= L; s += 16) {
+      const q = railAt(R, st.s + s), nx = -Math.sin(q.a) * sd, ny = Math.cos(q.a) * sd;
+      if (ny < 0.5) break;
+      for (let d = 0; d <= LOW_REACH; d += 16) {
+        const tx = Math.floor((q.x + nx * outer) / TILE), ty = Math.floor((q.y + ny * outer + d) / TILE);
+        if (!m.inside(tx, ty) || m.tiles[m.idx(tx, ty)] !== T.BUILDING) continue;
+        const b = m.buildings[m.bld[m.idx(tx, ty)]];
+        if (b && !b.gone && !low.has(b.id)) { b.low = 1; low.add(b.id); }
+      }
+    }
+  }
+  return low.size;
 }

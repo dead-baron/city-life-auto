@@ -9,7 +9,8 @@
 //   visTargets(M)            -> [{ kind, id, name, x, y, ... }]   what is meant to be seen
 //   visAudit(M, opt)         -> { rows: [{ kind, id, name, x, y, cover, by }], counts: { kind: [n, hidden] } }   (opt.all: the
 //                               rows of what is seen too, ok: true; opt.kinds: only these kinds)
-//      cover: the share of its pixels drawn over; by: what covers most of them ('building', 'tree', 'deck', 'train',
+//      cover: the share of its pixels drawn over; by: what covers most of them ('building', 'tree' (a map's), 'tree*' (the
+//      bake's own greenery), 'deck', 'train',
 //      'rail', 'prop:<kind>', 'item:<key prefix>'); a row is hidden at cover >= opt.cover (0.4).
 // Run: node --max-old-space-size=4096 tools/visaudit.mjs [--json out.json]   (builds World v3: under the heavy lock)
 import { staticItems, makeStatic } from '../client/art2/game/statics.js';
@@ -29,9 +30,9 @@ export const SPOT_PROPS = new Set(['cafetable', 'picnic', 'fishtable', 'pierrail
 
 const catOf = (M, it) => {
   if (it.train) return 'train';
-  if (isBld(it)) return it.recipe && it.recipe.t === 'f' ? 'tree' : 'building';
   const r = it.recipe || {};
-  if (r.t === 'f') return 'tree';
+  if (r.t === 'f') return it.pi !== undefined ? 'tree' : 'tree*';   // (tree*: the bake's own greenery, not the map's)
+  if (isBld(it)) return 'building';
   if (it.deck || r.t === 'deck' || r.t === 'el' || /^(dk:|el:|deck)/.test(it.key)) return 'deck';
   if (RAIL_KEYS.test(it.key)) return 'rail';
   if (it.pi !== undefined && M.props[it.pi]) return 'prop:' + M.props[it.pi].t;
@@ -211,7 +212,7 @@ export function visAudit(M, opt = {}) {
       const c = catOf(M, it);
       if (t.rail && c === 'rail') return true;
       if (t.noBld && c === 'building') return true;
-      return !!t.foot && c !== 'tree' && c !== 'deck' && it.x >= t.foot[0] && it.x <= t.foot[2] && it.y >= t.foot[1] && it.y <= t.foot[3];
+      return !!t.foot && !c.startsWith('tree') && c !== 'deck' && it.x >= t.foot[0] && it.x <= t.foot[2] && it.y >= t.foot[1] && it.y <= t.foot[3];
     };
     for (const it of itemsIn(r)) {
       if (own(it)) continue;

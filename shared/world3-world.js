@@ -20,7 +20,7 @@ import { ISLANDS, PIECES, ARTERIALS, PORT_WESTPORT } from './world3-skeleton.js'
 import { WATER3, TERRAIN3 } from './world3-land.js';
 import { joinPlace } from './world3-crossings.js';
 import { layRoads, roadTunnels } from './world3-roads.js';
-import { mainLineLoops, clearRailDressing, seatStationHouses, elFurniture, buryStubs } from './world3-rail.js';
+import { mainLineLoops, clearRailDressing, seatStationHouses, elFurniture, buryStubs, lowByPlatforms } from './world3-rail.js';
 import { beachStreets, beachFront, clearBeachFront } from './world3-beach.js';
 import { groundOf3, dress3, terrain3, skeletonRoom, dressedBy3, pineAt3, peakHeight, SNOW_LINE, SNOW_CLS } from './world3-biomes.js';
 import { terrainAt } from './mapcore.js';
@@ -82,7 +82,7 @@ import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores 
 import { lots3, lotPoisLast } from './world3-lots.js';   // (Southside's lots on a street: rough small shops; dice down a passage)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
 import { kerbStreets3, kerbBays3 } from './world3-kerbs.js';   // (notes 2: street parking in some neighbourhoods)
-import { streetGreens3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
+import { streetGreens3, sightlines3 } from './world3-greens.js';   // (notes 2: trees off the signs, more than palms)
 import { squareCrossings3, planStations3, stampStations3, underpassLeft } from './world3-stations.js';   // (2026-10-15: the level crossings square on, the stations' streets and car parks)
 
 // a TERRAIN3 class as today's wild class (map.js terrainAt: 1 grass, 2 forest, 3 desert, 4 rock, 5 sand): farm and
@@ -326,8 +326,10 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
+      if (city) m.world3.sightlines = sightlines3(m);   // (no tree's crown over a door, a standing sign, a chess table, an ATM, a bus stop - the owner, 11-06: world3-greens.js)
       lotPoisLast(m);   // (last: Southside's lot shops' POIs at the end of the list, so no other place's number moves - world3-lots.js)
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
+      m.world3.lowByPlatforms = lowByPlatforms(m);   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)

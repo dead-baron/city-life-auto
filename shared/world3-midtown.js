@@ -903,7 +903,7 @@ function marketSquare(K, x, y, w, h, ctx) {
   for (const tx0 of [x + 3, x + w - 10]) for (let j = 0; j < 3; j++) { const tx = tx0 + j * 3, ty = y + sd - 5 + (j % 2) * 1.4; prop('cafetable', tx, ty, 0); prop(pick(['umbrella_g', 'umbrella_r', 'umbrella_y'], rnd(tx, ty, 951)), tx, ty - 0.1, 0); }
   prop('foodcart', x + w - 3.5, cy - 1, 14);
   prop('bikerack', x + 3.5, y + 5.5, 0);
-  prop('textsign', cx, y + sd - 0.8, 0, { text: 'MARKET SQUARE', bg: '#2f6a4e', fg: [250, 240, 200], z: 30, sx: 1 });
+  prop('textsign', cx, y + sd - 4.5, 0, { text: 'MARKET SQUARE', bg: '#2f6a4e', fg: [250, 240, 200], z: 30, sx: 1 });   // (out in the square: at its south edge the shops' roofs south of it hid it - the 11-06 visibility pass)
   // the stalls are Midtown Market: bread, fruit and honey to buy, fruit and honey bought (server/systems/economy.js)
   m.pois.push({ id: m.pois.length, kind: 'market', label: 'Midtown Market', x: Math.round(cx * TILE), y: Math.round((cy - 6) * TILE), r: 48, counter: true });
   m.squares ||= []; m.squares.push({ x: Math.round(cx) - 8, y: Math.round(cy) - 6, w: 16, h: 12, name: 'Market Square' });

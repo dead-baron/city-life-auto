@@ -290,7 +290,7 @@ function sidings(K, m, ctx) {
     }
   }
   for (const y of [Y0 + 4, Y1 - 12]) prop('ymast', X0 + 2, y, 0, { tall: 160 });
-  if (o) prop('textsign', X0 + 5.5, Y1 - 1.4, 0, { text: 'YARDS FREIGHT', bg: '#7a2e2e', fg: [250, 230, 190], z: 28, sx: 1 });
+  if (o) prop('textsign', X0 + 5.5, Y1 - 1.4, 0, { text: 'YARDS FREIGHT', bg: '#7a2e2e', fg: [250, 230, 190], z: 120, sx: 1 });   // (up on a tall pole: the strip it stands in is under the freight shed's roof south of it - the 11-06 visibility pass)
   (out.places ||= []).push({ name: 'The Freight Sidings', x0: X0, y0: Y0, x1: X1, y1: Y1, wagons: n });
 }
 

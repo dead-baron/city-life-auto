@@ -154,3 +154,92 @@ function moveProp(m, fests, p, e, x) {
   }
   p.x = x;
 }
+
+// ---- what's meant to be seen, in sight (the owner, 11-06: "make sure things that are supposed to be visible are
+// visible" - the park's chess table behind a tree; tools/visaudit.mjs measures it as drawn) ----------------------------
+// A tree's crown is drawn up the screen over whatever stands north of it: a door, a standing sign, a chess table, an ATM,
+// a bus stop. Each such thing as { x, y (its ground point), hw (half its width), z0, z1 (its height on screen) }:
+const SEEN = {
+  cafetable: [16, 0, 16], textsign: [0, 0, 0], mapboard: [12, 0, 32], busstop: [28, 0, 40], campfire: [10, 0, 10],
+  shower: [10, 0, 40], fishtable: [16, 0, 16], rods: [12, 0, 20], hoop: [14, 0, 56], vend_cola: [10, 0, 30],
+};
+export function sightTargets(m) {
+  const out = [];
+  for (const p of m.pois || []) {
+    if (!p || p.x === undefined) continue;
+    const b = p.b !== undefined ? m.buildings[p.b] : null;
+    if (b && !b.gone && p.y >= (b.ty + b.th) * TILE - 4) out.push({ x: p.x, y: (b.ty + b.th) * TILE, hw: 16, z0: 16, z1: 56 });   // (a door on the front: its top, the sign over it)
+    else if (p.kind === 'atm' || p.kind === 'vending') out.push({ x: p.x, y: p.y, hw: 8, z0: 0, z1: 24 });
+  }
+  for (const p of m.props) {
+    const s = SEEN[p.t];
+    if (!s || (p.t === 'cafetable' && !p.chess)) continue;
+    if (p.t === 'textsign') { const z = p.z || 40; out.push({ x: p.x, y: p.y, hw: Math.min(150, String(p.text || '').length * 7 + 8), z0: z, z1: z + 18 }); continue; }
+    out.push({ x: p.x, y: p.y, hw: s[0], z0: s[1], z1: s[2] });
+  }
+  return out;
+}
+// (a tree's crown: about 36 px either side of its trunk times its scale, from about 30 up to 150 px up times its scale)
+const CROWN = { side: 36, lo: 30, hi: 150 };
+const hidesIt = (p, q) => {
+  const k = p.k || 1, dy = p.y - q.y;
+  return Math.abs(p.x - q.x) < q.hw + CROWN.side * k && dy > Math.max(6, CROWN.lo * k - q.z1) && dy < CROWN.hi * k - q.z0;
+};
+const grid = (list) => { const g = new Map(); for (const q of list) { const k = Math.floor(q.y / 512) * 65536 + Math.floor(q.x / 512); if (!g.has(k)) g.set(k, []); g.get(k).push(q); } return g; };
+const hidden = (g, p) => {
+  for (let cy = Math.floor((p.y - 220) / 512); cy <= Math.floor(p.y / 512); cy++) for (let cx = Math.floor((p.x - 260) / 512); cx <= Math.floor((p.x + 260) / 512); cx++) for (const q of g.get(cy * 65536 + cx) || []) if (hidesIt(p, q)) return q;
+  return null;
+};
+// every tree whose crown hides something meant to be seen: [{ p, q }] (test/visaudit.test.js: none)
+export function sightBlocked(m) {
+  const g = grid(sightTargets(m)), out = [];
+  for (const p of m.props) if (TREES.test(p.t)) { const q = hidden(g, p); if (q) out.push({ p, q }); }
+  return out;
+}
+// Each such tree moves aside - along its row, the nearest spot on the same ground where it hides nothing, off the doors
+// and clear of what stands there - or, with none near, gives way to a low shrub (a planter on a pavement). Nothing is
+// taken away: every prop keeps its number. Last in the world's build (shared/world3-world.js's done hook).
+export function sightlines3(m) {
+  const out = { moved: 0, lowered: 0 };
+  const g = grid(sightTargets(m)), sg = spanGrid(signSpans(m)), fests = m.props.filter((f) => f.t === 'festoon');
+  const tileOf = (x, y) => m.tileAtPx(x, y);
+  const solidNear = (x, y, self) => {
+    const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!m.inside(tx + dx, ty + dy)) continue;
+      for (const e of m.solidProps.get(m.idx(tx + dx, ty + dy)) || []) if (e !== self && Math.hypot(e.x - x, e.y - y) < e.r + 22) return true;
+    }
+    return false;
+  };
+  m.props.forEach((p, pi) => {
+    if (!TREES.test(p.t)) return;
+    const q = hidden(g, p);
+    if (!q) return;
+    const t0 = tileOf(p.x, p.y), self = m.propSolid.get(pi) || null, k = p.k || 1, side = p.x < q.x ? -1 : 1;
+    const step = Math.ceil(q.hw + CROWN.side * k + 6 - Math.abs(p.x - q.x));
+    for (const s of [side, -side]) for (let d = 0; d < 4 * TILE; d += 16) {
+      const x = Math.round(p.x + s * (s === side ? step : step + 2 * Math.abs(p.x - q.x)) + s * d);
+      if (tileOf(x, p.y) !== t0 || hidden(g, { ...p, x }) || blocks(sg, x, p.y) || solidNear(x, p.y, self)) continue;
+      moveProp(m, fests, p, self, x);
+      out.moved++;
+      return;
+    }
+    const paved = t0 === T.SIDEWALK || t0 === T.PLAZA;
+    p.t = paved ? PLANTERS[Math.floor(hh(Math.floor(p.x / TILE), Math.floor(p.y / TILE), 66) * 2)] : 'bush_c'; delete p.sp; delete p.k; out.lowered++;
+  });
+  // a standing sign out from under a deck (a highway over the street is drawn DECK_LIFT px up: over a sign a tile or
+  // three north of it - the owner's 11-06 "GUL..." sign half under the highway): along its row to where none is over it
+  const under = (x, p) => {
+    const hw = Math.min(150, String(p.text || '').length * 7 + 8), z = p.z || 40;
+    for (let Y = p.y + 60 - z; Y <= p.y + 150 - z; Y += 16) for (let X = x - hw; X <= x + hw; X += 16) { const tx = Math.floor(X / TILE), ty = Math.floor(Y / TILE); if (m.inside(tx, ty) && m.deck && m.deck[m.idx(tx, ty)]) return true; }
+    return false;
+  };
+  for (const p of m.props) {
+    if (p.t !== 'textsign' || !under(p.x, p)) continue;
+    const t0 = tileOf(p.x, p.y);
+    let to = null;
+    for (let d = TILE; d <= 12 * TILE && to === null; d += TILE) for (const s of [1, -1]) { const x = p.x + s * d; if (tileOf(x, p.y) === t0 && !under(x, p)) { to = x; break; } }
+    if (to !== null) { p.x = to; out.signs = (out.signs || 0) + 1; }
+  }
+  return out;
+}
