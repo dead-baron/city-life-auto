@@ -21127,3 +21127,18 @@ a swimmer's V of foam behind its shadow. The server's "in the water" bit on an a
 where it is, not how high: `waterlife.js` took a bird flying over water for a swimmer. `host.js` `_pet` now keeps how
 high it draws the animal (`p._up`: flying, soaring, stooping, carrying a fish), and a swimmer's wake needs it to be down
 (8 px or less). A bird diving in still makes its splash and rings (`waterlife.js`). test/rotorwash.test.js.
+
+## 2026-11-07 - The flight bench: before and after
+`tools/drivebench.mjs --fly` (phone screen and user agent, the page's thread slowed 4x, Medium, day), a Skylark at 900 px
+flown east along the Red Rock corridor (`tools/artsize.mjs --corridor`: the server's art for 3 rows of it and thumbnails
+for 7) - before: the build this branch started from (its server, with no bake threads, serves nothing: the owner's case,
+the server not having the chunks); after: this branch (the server serves the corridor from disk and the thumbnails):
+| | before | after |
+|---|---|---|
+| chunks drawn from the server | 0 | 54 (+148 downloaded ahead) |
+| chunks baked on the phone, per minute flown | 64 | 7 |
+| stand-ins on screen that were flat blocks | all (up to 6 of 6) | none (0 s with one; the rest thumbnails) |
+| helicopter's height above the view's middle, landscape | 202 px | 0 |
+The page's own readout ran so slowly before (its thread busy with the bakes) that the bench took 4 samples in its minute.
+Not measured here: a high flight where the server has the thumbnails but not this build's chunks (just after a deploy):
+there the page bakes nothing (highAir) and shows the thumbnails until the server's chunks come.
