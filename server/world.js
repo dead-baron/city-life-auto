@@ -61,6 +61,7 @@ import * as foraging from './systems/foraging.js';
 import * as hunting from './systems/hunting.js';
 import * as campfires from './systems/campfires.js';
 import * as chess from './systems/chess.js';
+import * as poolmatch from './systems/poolmatch.js';
 import * as fireworks from './systems/fireworks.js';
 import * as lights from './systems/lights.js';
 import * as music from './systems/music.js';
@@ -190,6 +191,7 @@ const SYSTEMS = [
   ['campfires', campfires.update],  // fires lit and put out, warming up by one; the players' own campfires
   ['fireworks', fireworks.update],  // fireworks going off (fireworks.js)
   ['chess', chess.update],          // the park's chess games, the regular's thinking (chess.js)
+  ['poolmatch', poolmatch.update],  // games of pool against someone: the computer's shots, the players still at their tables (poolmatch.js)
   ['lights', lights.update],        // lights to carry: batteries running down, flares and glow sticks burning out
   ['music', music.update],          // boomboxes, radios, the car radio, performances and their crowds (music.js)
   ['felling', felling.update],      // cutting trees, the falls, the logs, the stumps growing back

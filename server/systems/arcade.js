@@ -30,6 +30,7 @@ import { payFrom as pay } from './economy.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as skate from './skate.js';
+import * as poolmatch from './poolmatch.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -118,6 +119,10 @@ export function hallInteraction(world, p, h, s) {
   const L = hallLayout(h), poi = world.map.pois[h.poi], none = () => {};
   const u = useAt(L, s.x, s.y, HOME_IN.reach), cab = cabinetAt(L, s.x, s.y);
   if (cab && (!u || cab.d <= edge(u, s.x, s.y))) {
+    if (cab.game === 'pool') {   // (a pool table: against a player, the computer, or a frame alone - poolmatch.js)
+      const q = cab.piece, key = `a${h.id}:${q.tx},${q.ty}`;
+      return poolmatch.interaction(world, p, key, { fee: ARCADE.pool, tickets: true, cpu: 'the CPU', poi: poi ? poi.id : null, at: (o) => !!(o.ped && o.ped.home && o.ped.home.id === h.id && edge(q, o.ped.home.x, o.ped.home.y) < HOME_IN.reach + 40) });
+    }
     const G = GAME[cab.game], best = bestOf(p.profile, cab.game);
     return { label: `Play ${G.name} - $${G.price()} (${G.note()}${best ? `; your best ${best.toLocaleString('en-US')}` : ''})`, run: () => credit(world, p, poi, cab.game) };
   }
@@ -197,7 +202,8 @@ export function poolInteraction(world, p) {
   const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
   if (!T || !ped || ped.dead || ped.vehId) return null;
   if (Math.hypot(Math.max(T.x0 - ped.x, 0, ped.x - T.x1), Math.max(T.y0 - ped.y, 0, ped.y - T.y1)) > POOL_REACH) return null;
-  return { label: `Rack 'em up at the pool table ($${ARCADE.pool})`, run: () => { if (pay(p, ARCADE.pool)) play(world, p, true, null, 'pool'); else world.notify(p, 'Not enough money.', 'warn'); } };
+  const near = (o) => !!(o.ped && !o.ped.dead && !o.ped.vehId && Math.hypot(Math.max(T.x0 - o.ped.x, 0, o.ped.x - T.x1), Math.max(T.y0 - o.ped.y, 0, o.ped.y - T.y1)) <= POOL_REACH + 40);
+  return poolmatch.interaction(world, p, 'spur', { fee: ARCADE.pool, tickets: false, cpu: 'Hank (a regular)', free: true, at: near });   // (11-07: against a player, a regular, or a frame alone - poolmatch.js)
 }
 
 // skee-ball's points or air hockey's goals: tickets, if it could be true (no more than the game allows, and no quicker)

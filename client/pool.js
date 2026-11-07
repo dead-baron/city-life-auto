@@ -2,74 +2,41 @@
 // mansion's (server arcade.js play 'pool'), nine balls racked in a diamond to clear in as few shots as you can - a
 // scratch (the cue ball down a pocket) costs a shot and the cue ball goes back on the spot. Played on its own screen
 // like the arcade's cabinet (main.js: the 'arcade' overlay), and the shots it took go to the server (the best kept).
-//   start({ id, best, send, close, sfx }) / stop()
+//   start({ id, best, send, close, sfx, mp }) / stop() / update(m)
+// (11-07) mp: a table's game against someone (server/systems/poolmatch.js) - the choice first (wait for a player, play
+// the computer, a frame alone), then eight-ball: your shot's aim and power go to the server, which plays every shot out
+// (shared/pool.js) and sends it back to animate, to both players and anyone watching (update); closing the screen gets
+// you up (a game against someone forfeited).
 // Aiming: the mouse or a finger - drag back from the cue ball and let go (the further, the harder); or turn the cue with
 // left / right (the stick, the d-pad, A D or the arrows; up / down to fine-tune), hold the shoot button (Space, Enter, A)
 // to build the power and let go. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
 import { layer, blit, ballSprite, shadow, text, panel, banner, ramp, tone, hash } from './arcart.js';
-const W = 256, H = 160, STEP = 1 / 120;
-const T = { x0: 22, y0: 24, x1: 234, y1: 136 };   // the cloth inside the cushions
-const R = 4.2, PR = 8.5;   // a ball's radius, a pocket's
-const POCKETS = [[T.x0, T.y0], [(T.x0 + T.x1) / 2, T.y0 - 2], [T.x1, T.y0], [T.x0, T.y1], [(T.x0 + T.x1) / 2, T.y1 + 2], [T.x1, T.y1]];
+import { T, R, PR, POCKETS, HEAD, FOOT, STEP, rack, physics, strikeCue, spotCue, groupOf } from '../shared/pool.js';
+export { rack, physics };
+const W = 256, H = 160;
 const BASE = ['#f2c21b', '#2350c8', '#c8262b', '#6a2ab8', '#ef7a1a', '#2f9a3a', '#8a1d24', '#1a1a1e'];
 const colOf = (n) => (n === 0 ? '#f4f2ea' : BASE[(n - 1) % 8]);   // (1 yellow .. 7 maroon, 8 black; 9-15 the same striped)
 const ballArt = (n) => ballSprite(colOf(n), R, { stripe: n > 8, dot: n > 0 && n !== 8 ? 1 : n === 8 });
-const HEAD = { x: T.x0 + (T.x1 - T.x0) * 0.25, y: (T.y0 + T.y1) / 2 }, FOOT = { x: T.x0 + (T.x1 - T.x0) * 0.72, y: (T.y0 + T.y1) / 2 };
 let G = null;
-
-export function rack() {   // the cue ball on the head spot, the nine in a diamond on the foot spot (the 9 in the middle)
-  const balls = [{ n: 0, x: HEAD.x, y: HEAD.y, vx: 0, vy: 0, in: false }];
-  const rows = [[1], [2, 3], [4, 9, 5], [6, 7], [8]], d = R * 2 + 0.3;
-  rows.forEach((row, i) => row.forEach((n, j) => balls.push({ n, x: FOOT.x + i * d * 0.87, y: FOOT.y + (j - (row.length - 1) / 2) * d, vx: 0, vy: 0, in: false })));
-  return balls;
-}
-// a step of the table: friction, the cushions, the balls off each other, the pockets; true while anything's moving
-export function physics(balls, dt, onPot) {
-  let moving = false;
-  for (const b of balls) {
-    if (b.in) continue;
-    const sp = Math.hypot(b.vx, b.vy);
-    if (sp > 0) {
-      const ns = Math.max(0, sp - 55 * dt);
-      b.vx *= ns / sp; b.vy *= ns / sp;
-      b.x += b.vx * dt; b.y += b.vy * dt;
-      if (ns > 0) moving = true;
-    }
-    for (const [px, py] of POCKETS) if (Math.hypot(b.x - px, b.y - py) < PR) { b.in = true; b.vx = b.vy = 0; onPot(b); break; }
-    if (b.in) continue;
-    if (b.x < T.x0 + R) { b.x = T.x0 + R; b.vx = Math.abs(b.vx) * 0.78; }
-    if (b.x > T.x1 - R) { b.x = T.x1 - R; b.vx = -Math.abs(b.vx) * 0.78; }
-    if (b.y < T.y0 + R) { b.y = T.y0 + R; b.vy = Math.abs(b.vy) * 0.78; }
-    if (b.y > T.y1 - R) { b.y = T.y1 - R; b.vy = -Math.abs(b.vy) * 0.78; }
-  }
-  for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {
-    const a = balls[i], b = balls[j];
-    if (a.in || b.in) continue;
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d >= 2 * R || d === 0) continue;
-    const nx = dx / d, ny = dy / d, o = (2 * R - d) / 2;
-    a.x -= nx * o; a.y -= ny * o; b.x += nx * o; b.y += ny * o;
-    const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
-    if (rel <= 0) continue;
-    const k = rel * 0.96;   // (equal balls: the push along the line between them changes hands)
-    a.vx -= k * nx; a.vy -= k * ny; b.vx += k * nx; b.vy += k * ny;
-    moving = true;
-  }
-  return moving;
-}
 
 export function start(o) {
   stop();
   const cv = document.getElementById('arc-cv'), g = cv.getContext('2d');
   cv.width = W; cv.height = H; cv.style.aspectRatio = `${W} / ${H}`;
   g.imageSmoothingEnabled = false;
-  G = { o, cv, g, balls: rack(), shots: 0, aim: 0, power: 0, charging: false, chargeT: 0, moving: false, done: false, t0: performance.now(), keys: new Set(), drag: null, acc: 0, last: performance.now(), msg: 'Clear the table in as few shots as you can', msgT: 3, sent: false, padHeld: false };
-  G.onKey = (e) => { if (e.repeat) return; if (e.type === 'keydown') G.keys.add(e.code); else { G.keys.delete(e.code); if ((e.code === 'Space' || e.code === 'Enter') && G.charging) shoot(); } };
+  G = { o, cv, g, mp: !!o.mp, S: null, sel: 0, btns: [], balls: rack(o.mp ? 'eight' : 'nine'), shots: 0, aim: 0, power: 0, charging: false, chargeT: 0, moving: false, done: false, t0: performance.now(), keys: new Set(), drag: null, acc: 0, last: performance.now(), msg: 'Clear the table in as few shots as you can', msgT: 3, sent: false, padHeld: false };
+  if (G.mp) { G.msg = ''; G.msgT = 0; }
+  G.onKey = (e) => {
+    if (e.repeat) return;
+    if (e.type === 'keydown') { G.keys.add(e.code); if (G.btns.length && !myTurn()) { if (/Arrow(Left|Up)|KeyA|KeyW/.test(e.code)) G.sel = (G.sel + G.btns.length - 1) % G.btns.length; else if (/Arrow(Right|Down)|KeyD|KeyS/.test(e.code)) G.sel = (G.sel + 1) % G.btns.length; else if (/Space|Enter/.test(e.code)) press(G.btns[G.sel]); } }
+    else { G.keys.delete(e.code); if ((e.code === 'Space' || e.code === 'Enter') && G.charging) shoot(); }
+  };
   G.onPtr = (e) => {
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H, cb = G.balls[0];
     if (G.done && e.type === 'pointerdown') { finish(); return; }
-    if (G.moving || cb.in) return;
+    if (e.type === 'pointerdown') { const b = G.btns.find((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h); if (b) { press(b); return; } }
+    if (G.moving || cb.in || (G.mp && !myTurn())) return;
     if (e.type === 'pointerdown') G.drag = { x, y };
     else if (e.type === 'pointermove') {
       if (G.drag) { const dx = cb.x - x, dy = cb.y - y; if (Math.hypot(dx, dy) > 3) { G.aim = Math.atan2(dy, dx); G.power = Math.min(1, Math.hypot(x - cb.x, y - cb.y) / 60); } }   // (drawn back from the ball like a sling: the way it goes, how hard)
@@ -92,8 +59,34 @@ export function stop() {
   removeEventListener('keydown', G.onKey); removeEventListener('keyup', G.onKey);
   for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) G.cv.removeEventListener(t, G.onPtr);
   G.cv.width = 256; G.cv.height = 224; G.cv.style.aspectRatio = '';   // (the arcade's screen as it was)
-  report();
+  if (G.mp) G.o.send({ t: 'pool', a: 'leave' }); else report();
   G = null;
+}
+// ---- a game against someone (mp) ------------------------------------------------------------------------------------
+const myTurn = () => !!(G && G.S && G.S.st === 'play' && G.S.me === G.S.turn && !G.moving && !G.waitShot);
+const setBalls = (list) => { G.balls = list.map(([n, x, y, i]) => ({ n, x, y, vx: 0, vy: 0, in: !!i })); };
+// the table from the server: a shot to animate from where the balls were, else the balls where they are
+export function update(m) {
+  if (!G || !G.mp || m.t !== 'pool') return;
+  const was = G.S;
+  G.S = m;
+  if (m.shot) { setBalls(m.shot.from); strikeCue(G.balls, m.shot.aim, m.shot.pow); G.moving = true; G.snap = m.balls; G.o.sfx('click', 0.6); }
+  else if (!G.moving) setBalls(m.balls);
+  G.waitShot = false;
+  if (m.line && (!was || m.line !== was.line)) { G.msg = m.line; G.msgT = m.st === 'play' ? 2.5 : 99; }
+  if (m.st === 'over' && (!was || was.st !== 'over')) G.o.sfx(m.win === m.me ? 'good' : 'bad', 0.6);
+  G.sel = 0;
+}
+function press(b) { if (b.a === 'leave') G.o.close(); else G.o.send({ t: 'pool', a: b.a }); }
+// the choice on the screen: waiting (the computer, a frame alone), a game over (a rematch), always a way out
+function buttons() {
+  const S = G.S, list = [];
+  if (S && S.st === 'wait' && S.me === 0) list.push({ a: 'cpu', t: 'PLAY THE COMPUTER' }, { a: 'solo', t: 'A FRAME ALONE' });
+  if (S && S.st === 'over' && S.me >= 0 && S.seats[0] && S.seats[1]) list.push({ a: 'again', t: 'REMATCH' });
+  if (S && (S.st !== 'play' || S.me < 0)) list.push({ a: 'leave', t: S.me < 0 ? 'STOP WATCHING' : 'LEAVE' });
+  let x = W / 2 - list.reduce((w, b) => w + b.t.length * 4 + 14, -6) / 2;
+  for (const b of list) { b.w = b.t.length * 4 + 8; b.h = 13; b.x = Math.round(x); b.y = T.y1 - 30; x += b.w + 6; }
+  return list;
 }
 function report() {
   if (G.sent || !G.done) return;   // (a frame left unfinished: no score)
@@ -106,8 +99,8 @@ function shoot() {
   const cb = G.balls[0];
   G.charging = false;
   if (G.moving || cb.in || G.power < 0.04) { G.power = 0; return; }
-  const sp = 60 + G.power * 420;
-  cb.vx = Math.cos(G.aim) * sp; cb.vy = Math.sin(G.aim) * sp;
+  if (G.mp) { if (myTurn()) { G.o.send({ t: 'pool', a: 'shot', aim: G.aim, pow: G.power }); G.waitShot = true; } G.power = 0; return; }   // (the server plays it: update)
+  strikeCue(G.balls, G.aim, G.power);
   G.shots++; G.power = 0; G.moving = true;
   if (!G.done && G.shots === 1) G.msgT = 0;   // (the opening words gone once you've broken)
   G.o.sfx('click', 0.6);
@@ -116,6 +109,10 @@ function shoot() {
 function step(dt) {
   const cb = G.balls[0];
   G.msgT -= dt;
+  if (G.mp) {   // (a game against someone: aim on your turn; a shot animated, then the table as the server has it)
+    if (G.moving) { G.moving = physics(G.balls, dt, (b) => G.o.sfx(b.n ? 'coin' : 'bad', 0.45)); if (!G.moving && G.snap) setBalls(G.snap); return; }
+    if (!myTurn()) { G.charging = false; let a = false; for (const p of navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) if (p.buttons[0] && p.buttons[0].pressed) a = true; if (a && !G.padHeld && G.btns.length) press(G.btns[G.sel]); G.padHeld = a; return; }
+  }
   if (!G.moving && !G.done) {
     // the cue round by the keys or a pad, and the power built while the button's held
     let turn = 0, fine = 0, btn = false;
@@ -149,8 +146,7 @@ function step(dt) {
     });
     if (!G.moving) {
       if (cb.in) {   // (the cue ball back on the spot, clear of the others)
-        G.shots++; cb.in = false; cb.vx = cb.vy = 0; cb.x = HEAD.x; cb.y = HEAD.y;
-        for (let k = 0; k < 40 && G.balls.some((b) => b !== cb && !b.in && Math.hypot(b.x - cb.x, b.y - cb.y) < 2 * R + 1); k++) cb.y += k % 2 ? -k * 2 : k * 2;
+        G.shots++; spotCue(G.balls);
       }
       if (G.balls.every((b) => b.n === 0 || b.in)) { G.done = true; G.msgT = 3; G.msg = `Cleared in ${G.shots} shots`; G.o.sfx('good', 0.7); report(); }
     }
@@ -236,7 +232,7 @@ function draw() {
     shadow(g, b.x + 1.3, b.y + 1.8, R * 0.95, R * 0.7, 0.32);
     blit(g, ballArt(b.n), b.x - 5.5, b.y - 5.5);
   }
-  if (!G.moving && !G.done && !cb.in) {
+  if (!G.moving && !G.done && !cb.in && (!G.mp || myTurn())) {
     // the aim: dots to the ghost ball, the ghost ball's ring; the cue behind the ball, drawn back by the power
     const ax = Math.cos(G.aim), ay = Math.sin(G.aim), t = aimHit(G.balls, cb, ax, ay);
     g.fillStyle = 'rgba(255,255,255,.7)';
@@ -251,9 +247,29 @@ function draw() {
   hud(g);
 }
 function hud(g) {
+  G.btns = G.mp ? buttons() : [];
+  if (G.mp) { hudMatch(g); return; }
   text(g, `SHOTS ${G.shots}`, 8, 3, '#f4f2ea');
   if (G.o.best) text(g, `BEST ${G.o.best}`, W - 8, 3, '#ffd23a', 1, 'r');
   if (G.msgT > 0 || G.done) banner(g, W, G.done ? H / 2 - 7 : T.y1 - 24, G.done ? `${G.msg}${G.o.best && G.shots < G.o.best ? ' - a new best!' : ''}` : G.msg, G.done ? '#ffd23a' : '#fff');
+}
+// a game's HUD: each player's name over their side - lit when it's their shot - their group's balls still on the table,
+// the word of the last shot, the choice when there is one
+function hudMatch(g) {
+  const S = G.S;
+  if (!S) { banner(g, W, H / 2 - 7, 'At the table...'); return; }
+  S.seats.forEach((o, i) => {
+    const up = S.st === 'play' && S.turn === i, gp = S.groups[i], x = i ? W - 8 : 8, al = i ? 'r' : 'l';
+    const name = o ? (S.me === i ? 'YOU' : o.n.slice(0, 12)) : 'WAITING...';
+    const w = text(g, `${up ? '> ' : ''}${name}`, x, 3, up ? '#ffd23a' : o ? '#f4f2ea' : '#8a90b0', 1, al);
+    if (!gp) return;
+    const left = G.balls.filter((b) => !b.in && groupOf(b.n) === gp).map((b) => b.n);
+    left.forEach((n, k) => blit(g, ballSprite(colOf(n), 3, { stripe: n > 8 }), i ? x - w - 10 - k * 7 : x + w + 3 + k * 7, 1));
+  });
+  text(g, '8-BALL', W / 2, 3, '#c8a050', 1, 'c');
+  if (S.watch) text(g, `${S.watch} WATCHING`, W - 8, H - 10, '#8a90b0', 1, 'r');
+  if (G.msgT > 0 || S.st !== 'play') banner(g, W, S.st === 'play' ? T.y1 - 24 : H / 2 - 22, S.st === 'wait' && S.me === 0 ? 'Waiting for a player - or:' : G.msg || S.line, S.st === 'over' ? '#ffd23a' : '#fff');
+  G.btns.forEach((b, i) => { panel(g, b.x, b.y, b.w, b.h, i === G.sel ? '#ffd23a' : '#c8a050', i === G.sel ? 'rgba(60,40,10,.92)' : undefined); text(g, b.t, b.x + 4, b.y + 4, i === G.sel ? '#ffd23a' : '#f4f2ea'); });
 }
 // (tests: the table without a screen)
 export const _test = { rack, physics, POCKETS, T, R };
