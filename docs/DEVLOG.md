@@ -21047,3 +21047,48 @@ chased a puck against its back rail from behind (`cpuMove`: the target x past it
 corner. It now comes at a puck by its back rail from the side away from the rail, drawing it out; and a failsafe
 (`unstick`): a puck that hasn't moved more than 14 px in 3 s is faced off on the half it was on. test/arcade.test.js
 checks both corners and the failsafe.
+
+## 2026-11-06 - Weapon icons of their own, a $ for buying, auto-fire bullets, the hose, and the upright thumb cluster
+
+The owner (11-06): "The coin UI for that yellow button should change though. Maybe just a $ or something." "Can we draw
+better more representative art for the weapon icons? Including the fists." "UX still feels off on mobile portrait,
+like the buttons on the bottom right are really spread out far, like the fire in and off button is really far away.
+Not sure the infinity symbol is the right symbol either, needs more of an auto fire style symbol."
+
+- **Buy, sell, pay: a dollar sign** (Lucide `dollar-sign`; `circle-dollar-sign` drew a ring inside the gold disc's ring
+  and was busier at 24 px). The bag's gold nuggets keep `coins`.
+- **Every weapon its own drawing** (client/touchicons.js OWN, `WEAPON_GLYPH` by id, then by class for a weapon yet to
+  come): 36 weapons, 36 glyphs, on Lucide's 24 grid with the same 2.5 round stroke and halo rule. Guns level with the
+  muzzle right, told apart by their outline at 24 px: the pistol a slide over an angled grip (the service pistol with a
+  light under it, the silenced one with its can), the revolver a cylinder, a thin barrel and a curved grip, the SMG a
+  short body with its grip and a long magazine hanging under it and a wire stock, the long guns by what they carry -
+  the rifle a box magazine, the assault rifle a curved one, the police assault rifle a carry handle, the patrol rifle an
+  optic and a collapsed stock, the marksman rifle a scope and a bipod, the hunting rifle a scope and its bolt, the
+  varmint rifle a skeleton stock, the shotgun its pump, the police one a pistol grip and no stock. Blades and clubs on
+  the diagonal: knife, hunting knife (broad, clipped), sword, katana (curved, a long grip), plasma blade (the beam
+  outlined), bat (tapered, a knob), crowbar (the hook), sledgehammer (a block head), nightstick (the side handle), heavy
+  flashlight. And the taser (a bolt at its muzzle), pepper spray, bow, Emberfang bow (a flame at the arrow's tip),
+  grenade (pin, lever, segments), bazooka, SAM launcher (raised, its sight), flamethrower (tank, flame). The fists: a
+  fist from the front, four knuckles and the thumb across - chunky enough at 28 px. The dev boom tester keeps Lucide's
+  cartoon bomb, the fishing pole Lucide's rod. Lucide's stand-ins are gone (hand-fist, slice, sword, swords for bare
+  hands, hammer for the sledge, flashlight for the heavy one, rocket, zap, spray-can, bow-arrow) and with them their
+  paths, those Lucide icons still used keep the license header.
+- **FIRE ON: three bullets** (`auto-fire`, ours), the fire-mode mark shooters use for automatic, for the infinity sign.
+- **The hose**: on foot on a Firefighter shift within twice the hose's length of your engine the fire button shows the
+  hose and a spray of water (`hose`): there the server's `firefighter.js hose` takes the fire button - it sprays within
+  the length and says "doesn't reach" past it, never your weapon. The page already knows: the job card names the job
+  and carries the engine's place while you're out of it (phone.js `jobTarget` veh), so client/touchslots.js `tick`
+  sets it (`setHose`), no new field; the length moved to shared/rules-page.js `HOSE_LEN` (rules.js FIRE.hose.len reads
+  it). The slots redraw a button when its icon changes, not only its label.
+- **Upright, one tight cluster round the aim stick** (client/touchslots.js GEO.port; the stick itself, its zone, size
+  and input untouched): FIRE ON beside the stick under FIRE (it sat at mid-height on the right edge, 384 px away), ACT
+  over the stick, ROLL between them, the weapon card, C1 and C2 in a row above, CAR and the switches (ITEMS, LIGHT, COP
+  CAR) in two short columns up the right edge. The farthest button is 304 px from the stick's centre on the owner's
+  411 x 891 phone (449 before), the gaps 6-8 px. Nothing reaches past the middle (the left half is the move stick's)
+  nor over the middle of the screen, so the switches still need the two columns. The prompt and the hint strip keep
+  left of the cluster (--lo-r, --lo-c). On its side and on a desktop as it was.
+- **Tests** (test/acticons.test.js): the buy kind is the dollar; every weapon maps to a glyph of its own and a drawing
+  of its own, no two guns share one, no stand-ins; FIRE ON is the bullets, infinity gone; upright every right-hand
+  button within 300 units of the stick (316 px at 411 wide) on five phones, FIRE ON within 110 of the stick and FIRE;
+  the hose on FIRE and HIT, never THROW, its length the server's. test/uikit.test.js follows the names. Page code: 513 ->
+  514 KB of 520 (the new drawings, less the Lucide paths dropped).
