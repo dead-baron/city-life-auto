@@ -29,32 +29,55 @@ function fakeRes() {
 test('version.json knows World v3\'s world and art (run node tools/stamp-version.mjs): world3 the v3 build\'s code, art3 the art\'s of it', async () => {
   const v = V();
   assert.match(v.world3, /^[0-9a-f]{12}$/);
-  assert.equal(v.world3, world3Hash(undefined, v.world).hash, 'the v3 build\'s code changed since version.json was stamped: browsers would keep the v3 regions and chunks of the world before');
+  assert.equal(v.world3, (await world3Hash(undefined, v.world)).hash, 'the v3 build\'s code changed since version.json was stamped: browsers would keep the v3 regions and chunks of the world before');
   assert.equal(v.art3, (await artHash(undefined, v.world3)).hash, 'art3 is the art\'s hash of the v3 world');
   assert.notEqual(v.world3, v.world); assert.notEqual(v.art3, v.art);
-  const { files } = world3Hash(undefined, v.world);
+  const { files } = await world3Hash(undefined, v.world);
   for (const f of ['server/world3.js', 'shared/map.js', 'shared/world3-islands.js', 'shared/world3-world.js', 'shared/world3-land.js', 'shared/world3-passes.js', 'shared/regionpack.js']) assert.ok(files.includes(f), `the hash reads ${f}`);
   assert.ok(!files.some((f) => f.startsWith('client/')), 'no page code in it');
   assert.ok(WORLD3_ROOTS.every((f) => existsSync(join(ROOT, f))));
 });
 
-test('world3 moves with the v3 build\'s code and today\'s world, not with the rest', () => {
+test('world3 moves with the v3 build\'s code and today\'s world, not with the rest', async () => {
   const tmp = mkdtempSync(join(tmpdir(), 'cla-w3hash-'));
   try {
     for (const d of ['server', 'shared', 'client']) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
-    const base = world3Hash(tmp, 'aaaaaaaaaaaa').hash;
-    assert.equal(base, world3Hash(ROOT, 'aaaaaaaaaaaa').hash, 'a copy hashes the same');
-    assert.notEqual(world3Hash(tmp, 'bbbbbbbbbbbb').hash, base, 'today\'s world changed: the v3 world reads it');
+    const base = (await world3Hash(tmp, 'aaaaaaaaaaaa')).hash;
+    assert.equal(base, (await world3Hash(ROOT, 'aaaaaaaaaaaa')).hash, 'a copy hashes the same');
+    assert.notEqual((await world3Hash(tmp, 'bbbbbbbbbbbb')).hash, base, 'today\'s world changed: the v3 world reads it');
     writeFileSync(join(tmp, 'client/hud.js'), readFileSync(join(tmp, 'client/hud.js'), 'utf8') + '\n// x\n');
     writeFileSync(join(tmp, 'server/systems/trains.js'), readFileSync(join(tmp, 'server/systems/trains.js'), 'utf8') + '\n// x\n');
-    assert.equal(world3Hash(tmp, 'aaaaaaaaaaaa').hash, base, 'the page and the server\'s systems don\'t build the world');
+    assert.equal((await world3Hash(tmp, 'aaaaaaaaaaaa')).hash, base, 'the page and the server\'s systems don\'t build the world');
     writeFileSync(join(tmp, 'shared/world3-wild.js'), readFileSync(join(tmp, 'shared/world3-wild.js'), 'utf8') + '\n// x\n');
-    const wild = world3Hash(tmp, 'aaaaaaaaaaaa').hash;
+    const wild = (await world3Hash(tmp, 'aaaaaaaaaaaa')).hash;
     assert.notEqual(wild, base, 'a v3 build module changed');
     writeFileSync(join(tmp, 'shared/regionpack.js'), readFileSync(join(tmp, 'shared/regionpack.js'), 'utf8') + '\n// x\n');
-    assert.notEqual(world3Hash(tmp, 'aaaaaaaaaaaa').hash, wild, 'the cut into region files changed');
+    assert.notEqual((await world3Hash(tmp, 'aaaaaaaaaaaa')).hash, wild, 'the cut into region files changed');
     assert.equal(codeHash('shared/map.js', tmp).hash, codeHash('shared/map.js', ROOT).hash, 'today\'s generator untouched by it');
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+});
+
+// The game's numbers don't re-key the v3 world and its art (2026-11-06: four of the day's eight art3 changes were shared/rules.js
+// alone, each a rebake of all 45,864 chunks on the server): only the values the build and the bake import from the rules do.
+test('world3 and art3 move with the rules\' values the build and the bake read, not with every number in the rules', async () => {
+  const copy = (edit) => {
+    const tmp = mkdtempSync(join(tmpdir(), 'cla-w3rules-'));
+    for (const d of ['server', 'shared', 'client']) cpSync(join(ROOT, d), join(tmp, d), { recursive: true });
+    if (edit) edit(tmp);
+    return tmp;
+  };
+  const dirs = [];
+  try {
+    const keys = async (tmp) => { const w = (await world3Hash(tmp, 'aaaaaaaaaaaa')).hash; return [w, (await artHash(tmp, w)).hash]; };
+    const base = await keys(dirs[dirs.length] = copy(null));
+    const price = await keys(dirs[dirs.length] = copy((t) => writeFileSync(join(t, 'shared/rules.js'), readFileSync(join(t, 'shared/rules.js'), 'utf8') + '\nexport const ZZ_SOME_PRICE = 125;\n')));
+    assert.deepEqual(price, base, 'a new price in rules.js: the same world and art keys');
+    const base2 = await keys(dirs[dirs.length] = copy((t) => { const f = join(t, 'shared/rules-base.js'); writeFileSync(f, readFileSync(f, 'utf8') + '\n// a note\n'); }));
+    assert.deepEqual(base2, base, 'a comment in rules-base.js: the same');
+    const brk = await keys(dirs[dirs.length] = copy((t) => { const f = join(t, 'shared/rules-base.js'), s = readFileSync(f, 'utf8'); writeFileSync(f, s.replace(/export const BARRIER_BREAK_SPEED = ([0-9.]+)/, (m, n) => `export const BARRIER_BREAK_SPEED = ${+n + 1}`)); }));
+    assert.notEqual(brk[0], base[0], 'a value the build reads: a new world key');
+    assert.notEqual(brk[1], base[1], '...and a new art key (the bake reads it too)');
+  } finally { for (const d of dirs) rmSync(d, { recursive: true, force: true }); }
 });
 
 test('the server\'s keys: today\'s world and art as they were, World v3\'s <world3>-v3 and <art3>-v3', () => {
