@@ -306,7 +306,7 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
       ai.wedgedAt = [v.x, v.y];
       const room = roomBehind(world, v, 90);
       if (ai.kind === 'traffic' && ai.wedged >= WEDGE_N) { parkIt(v); world.wedgedGaveUp = (world.wedgedGaveUp || 0) + 1; return; }
-      if (room >= 12) ai.reverseUntil = world.time + Math.min(1.3, 0.25 + room / 70);
+      if (room >= 20) ai.reverseUntil = world.time + Math.min(1.3, Math.sqrt((room - 12) / 60));   // (from a standstill a car backs off ~60 t^2 px in t s, braking included)
     }
     reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
     ai.ctl = { wx, wy, speed, reversing, t: world.tick };   // (vehicles.js re-trims to it between sub-steps - this tick only)

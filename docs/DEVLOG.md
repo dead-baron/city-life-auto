@@ -21062,11 +21062,13 @@ island, never getting back out; and a crash at one spot every 4.5 s.
 - **The ramming:** a sedan shoved onto the corner of the car park's island, its nose to a lamp post - something a
   driver doesn't brake for - was "stuck" (traffic.js `driveToward`: barely moving while it meant to go), and backed off
   for 1.3 s whatever was behind it: into the box truck queued there, then on into the post again, and again. Now it
-  backs off only as far as there's room behind it (roadends.js `roomBehind`), and an NPC's car wedged in one spot four
-  times running gives up (`parkIt`): the queue goes round it, and it's cleared away once nobody's looking.
+  backs off only as far as there's room behind it (roadends.js `roomBehind`, allowing for the car's way of running on),
+  and an NPC's car wedged in one spot four times running gives up (`parkIt`): the queue goes round it, and it's cleared away once nobody's looking.
 - **A car side on across the lane** is braked for by how far it really reaches across (traffic.js `obstacleSpeed`,
   `clearOfLane`: its half length and half width as it stands to this one's way). Counted as if it lay along the lane, a
   pickup turned across a lane with its middle just off it was "beside" the lane, and the car behind drove into its end.
+- **No parked car on top of another** (traffic.js `manage`): a space with a car already in it gets no parked car put
+  there - in that run a newcomer's starter car in Metro Central's car park had a parked sedan spawned on top of it.
 - (Metro Central's bigger car park was dropped: the city's arrival moves to Greenfield Park and the free starter car
   becomes a first car you earn, in other jobs.)
 Tests: test/world3arrivals.test.js (every station road `notraffic`, still a road; a minute of traffic round the four
