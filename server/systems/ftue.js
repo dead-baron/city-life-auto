@@ -219,7 +219,7 @@ export function target(world, p) {
   if (f.step === 1 && f.car) {   // (the used lot's gate; the car to steal itself, ringed)
     t.x = Math.round(f.car.x); t.y = Math.round(f.car.y);
     const v = f.car.k === 'steal' ? firstcar.markOf(world, p) : null;
-    if (v) { t.x = Math.round(v.x); t.y = Math.round(v.y); t.veh = [t.x, t.y, v.def.i]; }
+    if (v) { t.x = Math.round(v.x); t.y = Math.round(v.y); t.veh = [t.x, t.y, v.def.i, 'UNLOCKED']; }   // (not yours - yet: its plate says what it is - client main.js drawJobTruck)
   }
   return t;
 }

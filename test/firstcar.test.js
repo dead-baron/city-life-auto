@@ -115,7 +115,7 @@ test('a little hustle: no cash, step 1 the car left in the alley - stolen, and n
   assert.equal(f.step, 1); assert.equal(f.car.k, 'steal');
   const v = firstcar.markOf(w, p), m = me(w, p);
   assert.ok(v && v.ftueMark === prof.pid && !v.owner && v.npcOwned, 'a parked car, nobody\'s - left for you');
-  assert.deepEqual(m.job.veh, [Math.round(v.x), Math.round(v.y), v.def.i], 'the car ringed');
+  assert.deepEqual(m.job.veh, [Math.round(v.x), Math.round(v.y), v.def.i, 'UNLOCKED'], 'the car ringed, UNLOCKED on its plate');
   assert.match(m.ftue.line, /Steal a car/); assert.equal(m.ftue.ctl, 'vehicle');
   assert.doesNotMatch(m.ftue.line, /Safety/);
   const cx0 = prof.criminalExp;
