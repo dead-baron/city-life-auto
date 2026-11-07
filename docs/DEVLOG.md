@@ -20815,3 +20815,9 @@ The perf readout's other leads, checked:
   props and their collision maps: ~175 ms to clone in node, of which the page pays the decoding half); this machine's
   headless browser commits its frames in software (the "not in a callback" long tasks here, 'Commit' in a trace - a
   phone's GPU does that).
+
+## 2026-11-06 - The world map's picture rebaked for world 13
+The interiors update (05d58ec9: the plain blocks' lots, the wider bars, the solid cliffs) changed the world without
+rebaking the map screen's picture, so the live map fell back to the plain tile map (test/worldmap.test.js: "baked for
+another world"). `node tools/build-worldmap2.mjs` (10.5 min here) rebaked assets/map/ for the live world; the test passes.
+A world change's job now includes the rebake and test/worldmap.test.js.
