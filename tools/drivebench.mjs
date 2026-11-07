@@ -93,7 +93,9 @@ function probe(o) {
   // the page runs at a frame rate and its own work is what's measured
   if (o && o.nodraw && window.WebGL2RenderingContext) {
     const P = WebGL2RenderingContext.prototype, nop = function () {};
-    for (const k of ['drawArrays', 'drawArraysInstanced', 'drawElements', 'drawElementsInstanced', 'drawRangeElements', 'blitFramebuffer', 'clear', 'clearBufferfv', 'clearBufferuiv', 'clearBufferiv', 'clearBufferfi']) if (P[k]) P[k] = nop;
+    const orig = {}, ks = ['drawArrays', 'drawArraysInstanced', 'drawElements', 'drawElementsInstanced', 'drawRangeElements', 'blitFramebuffer', 'clear', 'clearBufferfv', 'clearBufferuiv', 'clearBufferiv', 'clearBufferfi'];
+    for (const k of ks) if (P[k]) { orig[k] = P[k]; P[k] = nop; }
+    window.__drawOn = (on) => { for (const k of ks) if (orig[k]) P[k] = on ? orig[k] : nop; };   // (a capture now and then: --fly)
   }
   // the owner's phone: 8 cores, 8 GB (the pool's four bake workers, its caches and the chunks it keeps follow these)
   if (o && o.cores) { try { Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: () => o.cores, configurable: true }); Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: () => o.mem, configurable: true }); } catch { /* sealed */ } }
@@ -255,6 +257,8 @@ async function fly(page, cdp, R) {
   }, { C, ALT });
   const h0 = await page.evaluate(hudNow);
   log(`flying: from ${JSON.stringify(C.from)} to ${JSON.stringify(C.to)} at ${ALT} px (cpu x${CPU})`);
+  // a capture: drawing switched on a moment (the run itself draws nothing: SwiftShader's frames would slow the flight to a crawl)
+  const shot = async (f) => { await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(2500); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {}); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); R.fly.shots.push(f); };
   const t1 = Date.now() + MIN * 60000;
   let shotAt = 0, i = 0;
   if (SHOTS) mkdirSync(SHOTS, { recursive: true });
@@ -268,7 +272,7 @@ async function fly(page, cdp, R) {
     });
     s.t = ++i; R.fly.samples.push(s);
     if (i % 10 === 0) log(`fly ${i} s: ${JSON.stringify(s)}`);
-    if (SHOTS && Date.now() - shotAt > SHOT_S * 1000) { shotAt = Date.now(); const f = join(SHOTS, `fly-${String(i).padStart(3, '0')}.jpg`); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {}); R.fly.shots.push(f); }
+    if (SHOTS && Date.now() - shotAt > SHOT_S * 1000) { shotAt = Date.now(); await shot(join(SHOTS, `fly-${String(i).padStart(3, '0')}.jpg`)); }
   }
   const h1 = await page.evaluate(hudNow);
   await page.evaluate(() => window.__drive.flyStop());
@@ -280,12 +284,11 @@ async function fly(page, cdp, R) {
   // the phone turned to landscape, still up at ALT (the owner, 11-06: a helicopter "disappearing" in landscape): where it is
   // on the screen - its drawn self against the view's middle - and a capture
   if (SHOTS) {
-    await page.setViewportSize({ width: 891, height: 411 }); await wait(5000);
-    const f = join(SHOTS, 'land-high.jpg'); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {});
-    R.fly.shots.push(f);
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 891, height: 411, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } }); await wait(5000);
+    await shot(join(SHOTS, 'land-high.jpg'));
     R.fly.landscape = await page.evaluate(() => { const S = window.CLA.S, e = S.ents.get(S.ctrlId), v = S.viewRect, lift = S.airMod && e ? S.airMod.liftOf(e.ralt ?? 0) : 0; return e && v ? { alt: Math.round(e.ralt || 0), drawnY: Math.round(e.ry - lift), midY: Math.round((v.y0 + v.y1) / 2), halfH: Math.round((v.y1 - v.y0) / 2), offScreen: e.ry - lift < v.y0 || e.ry - lift > v.y1 } : null; });
     log(`landscape: ${JSON.stringify(R.fly.landscape)}`);
-    await page.setViewportSize({ width: 411, height: 891 }); await wait(2000);
+    await cdp.send('Emulation.setDeviceMetricsOverride', { width: 411, height: 891, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'portraitPrimary', angle: 0 } }); await wait(2000);
   }
   // the rotor wash: over open water (the corridor's start moved to the nearest deep water), at ALT then low
   if (SHOTS) {
@@ -295,8 +298,7 @@ async function fly(page, cdp, R) {
         await send({ t: 'dev', c: 'tp', x: wpt.x, y: wpt.y, snap: true }); await wait(2000);
         await send({ t: 'dev', c: 'car', m: 'heli', in: true, alt, x: wpt.x, y: wpt.y, a: 0 });
         await wait(9000);
-        const f = join(SHOTS, `wash-${nm}.jpg`); await page.screenshot({ path: f, type: 'jpeg', quality: 70 }).catch(() => {});
-        R.fly.shots.push(f);
+        await shot(join(SHOTS, `wash-${nm}.jpg`));
         R.fly['wash_' + nm] = await page.evaluate(() => { const S = window.CLA.S, wl = S.art2 && S.art2.WL; return { alt: Math.round(S.pred && S.pred.s ? S.pred.s.alt : -1), fx: S.fx && S.fx.count ? S.fx.count() : null }; });
         log(`wash ${nm}: ${JSON.stringify(R.fly['wash_' + nm])}`);
       }
