@@ -244,7 +244,10 @@ async function fly(page, cdp, R) {
   // tail rotor), turned toward the corridor's far end, Space to hold the height; back again at the end
   const held = new Set(), want = async (codes) => { for (const c of ['KeyW', 'KeyA', 'KeyD', 'Space', 'ShiftLeft']) { const on = codes.includes(c); if (on && !held.has(c)) { await page.keyboard.down(c); held.add(c); } else if (!on && held.has(c)) { await page.keyboard.up(c); held.delete(c); } } };
   let to = C.to, legs = 0;
+  let skipAt = 0;
   const steer = async () => {
+    // (the first-time experience's arrival and question come back and hold the keys: skipped, and any menu closed)
+    if (Date.now() - skipAt > 1000) { skipAt = Date.now(); const open = await page.evaluate(() => { const S = window.CLA.S, f = S.me && S.me.ftue; if (S.hud && S.hud.menuOpen) S.hud.closeMenu(); if (f && f.st !== 'done') window.CLA.send({ t: 'intro', a: 'skip' }); return !!(f && f.st !== 'done'); }); if (open) await page.keyboard.press('Escape').catch(() => {}); }
     const s = await page.evaluate(() => { const P = window.CLA.S.pred; return P && P.air && P.s ? { x: P.s.x, y: P.s.y, a: P.s.a, alt: P.s.alt || 0, vx: P.s.vx, vy: P.s.vy, spool: P.s.spool } : null; });
     if (!s) { await want([]); return null; }
     if (Math.hypot(to.x - s.x, to.y - s.y) < 900) { to = to === C.to ? C.from : C.to; legs++; }
@@ -287,7 +290,7 @@ async function fly(page, cdp, R) {
   // on the screen - its drawn self against the view's middle - and a capture
   if (SHOTS) {
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 891, height: 411, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } }); await wait(5000);
-    await shot(join(SHOTS, 'land-high.jpg'));
+    { const f = join(SHOTS, 'land-high.jpg'); if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); await page.evaluate(() => window.__drawOn && window.__drawOn(true)); await wait(2500); const r = await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 70 }); writeFileSync(f, Buffer.from(r.data, 'base64')); await page.evaluate(() => window.__drawOn && window.__drawOn(false)); R.fly.shots.push(f); R.fly.landSize = await page.evaluate(() => [innerWidth, innerHeight]); }
     R.fly.landscape = await page.evaluate(() => { const S = window.CLA.S, e = S.ents.get(S.ctrlId), v = S.viewRect, lift = S.airMod && e ? S.airMod.liftOf(e.ralt ?? 0) : 0; return e && v ? { alt: Math.round(e.ralt || 0), drawnY: Math.round(e.ry - lift), midY: Math.round((v.y0 + v.y1) / 2), halfH: Math.round((v.y1 - v.y0) / 2), offScreen: e.ry - lift < v.y0 || e.ry - lift > v.y1 } : null; });
     log(`landscape: ${JSON.stringify(R.fly.landscape)}`);
     await cdp.send('Emulation.setDeviceMetricsOverride', { width: 411, height: 891, deviceScaleFactor: 2.6, mobile: true, screenOrientation: { type: 'portraitPrimary', angle: 0 } }); await wait(2000);
