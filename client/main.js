@@ -3093,7 +3093,7 @@ function drawUnderground(F) {
   if (S.ugView && S.ugView.map === S.map) { S.ugView.draw(g, F, W, H, DPR); return; }
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#030304'; g.fillRect(0, 0, canvas.width, canvas.height);
   if (S.ugViewP) return;
-  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
+  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights, drawPed }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
 }
 // the ore veins up at the quarry and the mine's outcrops (their state: S.ugVeins), and the ring round you while you mine
 function drawVeinsTop(F) {
@@ -3122,7 +3122,7 @@ function drawMineRing(F) {
 function nearVeins(sp) {
   if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
   const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;   // (every pit and mine: World v3 has two of each)
-  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
+  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights, drawPed }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 // (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)
@@ -4756,7 +4756,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   g.save();
   if (!swimming) { // contact shadow, and the body's shadow thrown away from the sun
     const sk = S.sky;
-    if (sk && sk.sun > 0.05 && gfx.shadows >= 2) {
+    if (sk && sk.sun > 0.05 && gfx.shadows >= 2 && !S.ugLayer) {   // (no sun under the ground)
       const L = Math.max(0.35, Math.min(1.7, sk.shadowLen * 0.75)) * 30 * bs, dx = sk.sunDir.x, dy = Math.max(0.28, sk.sunDir.y);
       const n = Math.hypot(dx, dy);
       g.fillStyle = `rgba(12,15,34,${(0.36 * sk.sun).toFixed(3)})`;

@@ -13,6 +13,7 @@ import {
   GANG_JOIN_FEE, MAILJOB, CAB, BUSJOB, TOWJOB, MEDIC, FISHING, DEEPSEA_PAY, DEEPSEA_CATCH, PAINT_PRICE, HIDE_TIME_S, AMBULANCE_FEE,
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
+  PICK_PRICES, ASSAY_PAYS,
 } from './rules.js';
 import { FORK, RANGER } from './rules-work.js';
 import { SHOPS, ITEMS } from './items.js';
@@ -103,6 +104,7 @@ export function guideSections(map = null) {
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
       { id: 'dice', t: 'Street dice', b: `A crew shooting dice down an alley or a back passage in a rough part of town, like Southside's: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
       { id: 'races', t: 'Races and skating', b: 'Pull up to a race\'s start to enter. Skate parks score your tricks; beaches have surf.' },
+      { id: 'caves', t: 'Caves and mining', b: `Walk up to a mine's adit or a cave's mouth and press [[action]] to go in. It's dark inside - [[light]] switches your light on. The way out shows by the daylight coming in, a lantern either side and a WAY OUT board. A pickaxe (from ${$(PICK_PRICES.pickStone)} at hardware stores) works the ore veins; the assay office pays ${pct(ASSAY_PAYS - 1)} more than a pawn shop.` },
       { id: 'crazy', t: 'Crazy Taxi', b: `A run against the clock from any taxi rank: ${CRAZY.startS} seconds on it to start, more for each fare you get there fast.` },
       { id: 'skills', t: 'Skills', b: `Six skills level up as you do things, ${SKILL.max} levels each - up to +${pct(SKILL.top)} at the top. Your phone's Skills app shows them.` },
     ] },

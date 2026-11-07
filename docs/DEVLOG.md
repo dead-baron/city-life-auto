@@ -21027,6 +21027,85 @@ until its inside is drawn cut away (host.js insideReady).
   mapwindow and dmath pass. The renderer's code is at its 404 KB budget (host.js's new comments trimmed to fit). The
   world's hashes don't change (world, world3); the art's do.
 
+
+<<<<<<< HEAD
+## 2026-11-06 · The caves finished inside, and a way out that looks like one
+
+The owner (11-06, 19:38, on his phone, 14:45 in the game): "Cave interior art looks unfinished. Also we want to have the
+exit of the cave look like an exit so it's clear how to get back out." Concepts: N3, MI1, MI2, MI5.
+
+### Which cave, and why it looked unfinished
+- **The cave:** the Redwood Caverns, just in from the Redwood Creek Falls mouth. The minimap's green ground, the creek and
+  the road are the falls' surroundings. The cobbles in the screenshot are the caverns' basalt colors. A capture of today's
+  view standing there matches his screenshot.
+- **Why:** none of the suspected fallbacks. Every cave goes through `caveart.js`, the tiles were drawn with no smoothing,
+  and every cave type has its stone. The art itself was the problem:
+  - the rock: since nat4, every cave's rock top was one even Voronoi of small round stones (15 px cells) lit flat. At the
+    phone's zoom (0.665) it reads as cobblestone paving. The south faces were 26 px tall, so the walls had no height;
+  - the floor: low-contrast value noise, dithered all over, plus long contour lines (the cracks, and the kit paths'
+    noisy ruts) that read like wood grain: "smeared";
+  - the light: the dark was cut at full device resolution with smooth gradients that fell off from the middle, so the art
+    showed only in a soft blob round each light. The props were vector shapes drawn each frame with antialiasing, so
+    they were soft too;
+  - the way out was a dead end of the passage with a white blob of light in it: no opening, nothing outside, no sign;
+  - people were drawn as placeholder ellipses.
+
+### The art (client/underground/caveart.js, every cave type: the mines' scene caves, their template chambers, the caverns)
+- **Walls:** each south face now stands 30-56 px tall, varying along the wall. It is built of rock columns, lit on
+  the left and shadowed on the right, with ledges across them and the foot in shadow. Flowstone teeth hang from the lip,
+  and the rock is wet and dark by the water. Above, the rock's top is heaped with boulders of different sizes (26 px
+  cells). The nearer ones overlap the further ones, and each is a dome lit from the top left in steps, its facets
+  tilted. Dark crevices run between them, a little moss sits on the tops near the open, and they fade into the dark.
+- **Floor:** packed earth in patches with crisp edges, grit and specks, pebbles with a lit side and a shadow, and bigger
+  rubble at the walls' feet. Cracks are short, three jagged legs from a point. The kit's paths have straight ruts. The
+  docks' planks are painted with the floor.
+- **Things baked in:** everything that doesn't move is drawn into the tile's art pixels once, nearest last: rails,
+  trestles, docks' posts, stairs, timber sets, stalagmites, stalactites, the kit's and the caverns' things, the lanterns'
+  posts and brackets, mushrooms and crystals, the den's bed and every way out's dressing (`bakeProps`). Each frame
+  draws only what moves, snapped to the art pixels: flames, drops, glow-worms, bats, cascades, chests, finds.
+- **Crisp:** tiles are drawn at whole device pixels with no smoothing (no `CH + 0.5` stretch). The dark is drawn on its
+  own canvas at one pixel per art pixel, on the art's grid, then laid over with no smoothing. That is a fifteenth of the
+  pixels a phone filled before.
+- **Light that shows the art:** a light's pool is fully lit in the middle and then falls off (`hole`). The lanterns' warm
+  wash and the glow-worms' halos are softer, so the floor no longer washes out. The dark places stay dark: a mine's den,
+  its glow-worm and crystal caves (lit only by their glow), the caverns' echo hall, the den and the passages between.
+- **People:** the cave view draws people and animals with the page's own `drawPed` (`main.js` passes it), not ellipses.
+
+### The way out (every mouth: the mines' adits, the falls mouth, the sea cave)
+- **shared/caverns.js `lightCave`:** `K.exits`, one for each mouth. Each has its opening (`EXIT.hw`), the way out of it
+  (from where you come in, out through the mouth) and a pair of lanterns on posts just inside. The lanterns are the
+  cave's own, so they light the way on the server too.
+- **Painted (caveart.js):** toward the mouth, the floor turns to the ground outside in creeping patches. The ground is
+  read from the map at the mouth when the page has it (grass, dirt, sand, the desert's red sand), else taken from the
+  mouth's kind. The opening widens past the mouth into daylight glare, then fades into the dark. The rock either side is
+  lit by the day.
+- **Dressing:** an adit gets a timbered portal across the mouth (posts, a heavy cap beam, braces, iron straps) with a WAY
+  OUT board hung from it on chains. A cave mouth gets the board on a post beside the path in. The board is weathered
+  planks, WAY / OUT painted in a 3x5 pixel font, and an arrow pointing out.
+- **Light:** the dark is lifted up the passage as before, and now also out past the mouth (`MOUTH.past`). A fan of the
+  sky's light lies along the floor from the opening, with dust drifting in it (`exitBeam`). By night it is moonlight,
+  and `mouthLevel` at night goes 0.22 -> 0.34 so the way out still shows.
+- **The prompt:** "Walk out of the cave, into the daylight" (or "into the night"), or "Walk out of the sea cave onto
+  the beach". It is offered anywhere along the way out's passage, from just inside out to the mouth
+  (`CAVE_LEAVE_REACH`), not only near where you came in.
+- **Guide:** a new Activities entry, "Caves and mining": going in, your light, how the way out shows, the pickaxes
+  and the assay office.
+
+### Measured (the cave view alone in Chromium, the same map, a loaded machine)
+- A tile's paint goes from 51 to 59 ms on a warm pass (100 -> 123 cold), with the things now baked into it.
+- A frame of the view goes from 112 to 18 ms. The dark at the art pixel and the baked things do most of that.
+- Page and renderer: unchanged but for `main.js` handing `drawPed` to the view. The cave art loads only with the cave view.
+
+### Tests
+- New **test/caveexit.test.js**:
+  - every way out of every cave has its exit, its two lanterns standing on the floor and lit, and its daylight up the
+    passage and past the mouth;
+  - a cave's tile is painted at 2 px an art pixel and drawn exactly 2x with no smoothing, the ground past the mouth is
+    brighter than the floor, and the WAY OUT board is baked in;
+  - in a frame, the tiles and the dark are drawn at whole device pixels with no smoothing;
+  - the way out is offered all along its passage, and not from deep in.
+- **test/cavelight.test.js:** the spots past the mouth, and moonlight at night is now 0.25-0.4.
+=======
 ## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default
 
 The owner (11-06, 19:15): "For your first car you own we should make sure there's a visual indicator that it's your car
@@ -21101,3 +21180,20 @@ chased a puck against its back rail from behind (`cpuMove`: the target x past it
 corner. It now comes at a puck by its back rail from the side away from the rail, drawing it out; and a failsafe
 (`unstick`): a puck that hasn't moved more than 14 px in 3 s is faced off on the half it was on. test/arcade.test.js
 checks both corners and the failsafe.
+
+
+## 2026-11-06 · Caves, round 2: no arrow; the game's own characters checked in the game
+
+The owner (11-06, 21:12): "I don't think we need an arrow pointing the way out of the cave. The cave art is looking okay
+but the character is an old placeholder I believe."
+- **No arrow:** the server's hint, the 'ugway' message, the page's chevron, `CAVE_WAY` and their test and Guide words are
+  gone. The way out is still offered all along its passage (`CAVE_LEAVE_REACH` in shared/rules.js), with its lanterns,
+  daylight and WAY OUT board.
+- **The character:** the live game drew people underground as placeholder ovals (view.js `ped`). The cave view now
+  draws people and animals with the page's own `drawPed` (`main.js` hands it over), so they look as they do in the city.
+  Checked in the real game (a local World v3 server, a phone-portrait page at 411x891 @2.6, in the Old Granite Mine by
+  day and by night): the real sprite at the city's scale, facing the way it walks, walking, with its contact shadow, and
+  darkened or lit by the cave's light like everything else.
+  - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
+  - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
+>>>>>>> caves

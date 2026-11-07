@@ -645,6 +645,9 @@ export const CHEST_LOOT = { items: [['doubloon', 1, 4], ['nugget', 0, 2], ['geod
 // a light someone left behind (notes 2): now and then on going into a cave (chance a visit) a lantern or a flashlight lies
 // somewhere in its light (shared/caverns.js K.finds) for you to find - its batteries this share of full; reach: px
 export const CAVE_FIND = { chance: 0.12, reach: 36, fuel: 0.35, items: ['lantern', 'flashlight'] };
+// the way out of a cave (the owner, 11-06: "have the exit of the cave look like an exit"): px from the way out's passage
+// (from just in from where you come in out to the mouth) to be offered it
+export const CAVE_LEAVE_REACH = 56;
 export { PICK_PRICES } from './rules-base.js';   // (the numbers: shared/rules-base.js)
 export { ASSAY_PAYS } from './rules-base.js';             // the quarry's assay office pays this much over what a pawn shop does
 
