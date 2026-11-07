@@ -365,7 +365,9 @@ function makeKit(m, api, P) {
         fill(x + 1, y + 2, w - 2, 2, T.PLAZA);
         for (const tx of [x + 2.5, x + w - 2.5]) prop(pick(['tree_b', 'tree_a'], rnd(tx, y, 22)), tx, y + Math.min(h - 3, 6), 12, { sp: pick(['streetPl', 'maple', 'magnolia', 'cherry'], rnd(tx, y, 23)), k: 1.2 });
         prop('bench_m', mx - 2.6, y + h - 3.2, 0); prop('bench_m', mx + 2.4, y + h - 3.2, 0);
-        prop('cafetable', x + 3, y + 3, 0, { chess: 1, seat: 25 }); prop('chair', x + 2.2, y + 3.1, 0, { v: 1, a: 0 }); prop('chair', x + 3.8, y + 3.1, 0, { v: 1, a: 3.1416 });   // (chess: server activities.js plays there)
+        // (at the head of the path, between the trees: just north of the west tree its crown was drawn over it - the
+        // owner's 11-06 "chess table hidden behind a tree")
+        prop('cafetable', mx, y + 3, 0, { chess: 1, seat: 25 }); prop('chair', mx - 0.8, y + 3.1, 0, { v: 1, a: 0 }); prop('chair', mx + 0.8, y + 3.1, 0, { v: 1, a: 3.1416 });   // (chess: server activities.js plays there)
         for (const fx of [x + 1.4, x + w - 1.6]) prop('flowers_big', fx, y + h - 1.6, 0);
         if (h >= 10) prop('flowers_a', mx, y + 1.2, 0);
         prop('fenceline', x + 0.2, y + h - 0.3, 0, { kind: 'iron', tx: (mx - 1.6 - x) * TILE, ty: 0 });

@@ -3056,8 +3056,11 @@ function addRailLoop(c, I, R, once, arrival = false) {
     for (const f of [-0.96, -0.6, 0.6, 0.96]) { const p = at(f * L, 98); if (!ok(p)) continue; put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], p.x, p.y)); lightAt(I, p.x, p.y + 2, 76, 180, LAMP_LIGHT.cast, 3, 'lamp'); }
     const rb = arrival ? null : routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out; an arrival line has no timetable)
     if (rb) { put(I, vitem('rboard', 'routeBoard', [], rb.x, rb.y, 0)); lightAt(I, rb.x, rb.y - 4, 30, 60, [0.75, 0.85, 1], 0.9, 'sign'); }
-    const mid = at(0, 50);
-    if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: mid.x, y: mid.y, ext: [80, 60, 80, 12] });
+    // the name board by the platform's outer edge (the owner's 11-06: at the track's edge it was hidden - under the canopy's
+    // roof on a platform south of its track, behind a train standing at one north of it): on its posts at the front of a
+    // platform south of the track, up over the canopy's roof at the back of one north of it (tools/visaudit.mjs)
+    const mid = at(0, 100), bz = Math.cos(mid.a) * sd > 0 ? 26 : 64;
+    if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}:${bz}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: bz, posts: true }, x: mid.x, y: mid.y, ext: [80, bz + 34, 80, 12] });
   }
   // tunnel mouths where the line goes under
   if (arrival) return;
