@@ -20931,3 +20931,9 @@ for sale. He wants a tap to take him to the Guide, and the tips to stop after on
   `home` kind (Lucide `house`) comes before it. Tests: ftue (new: shop places, at most once and hurt at most twice
   across a restart, the new-player limits and the toggle, the marina, the Guide link wiring), acticons, guide,
   uiscreens, hudlayers, pagemodules, lazypage, perf.
+
+## 2026-11-06 - The forklift is a forklift (vehicle words)
+The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `vehicleWord` names a vehicle in the
+game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
+"truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
+4x4. test/jobrecall.test.js checks the forklift and the golf cart.
