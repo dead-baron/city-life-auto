@@ -4,14 +4,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES, setMelee } from '../client/touchicons.js';
+import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES, setMelee, setHose, glyph } from '../client/touchicons.js';
+import { slotGeometry } from '../client/touchslots.js';
+import { HOSE_LEN, FIRE } from '../shared/rules.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
 import { WEAPONS, ITEMS } from '../shared/items.js';
 import { itemGlyph } from '../client/bag.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 const HAND = /^hand(-|$)|finger|pointer|grab/;   // (a pointing or grabbing hand; not the handbag. The fist is the owner's pick for bare-handed HIT, 11-05)
-const FIST_OK = new Set(['hand-fist']);
+const FIST_OK = new Set(['fist']);
 
 test('every action kind maps to a line icon; with no match the neutral "interact" mark', () => {
   assert.equal(KIND_ICON.interact, 'circle-dot');
@@ -56,9 +58,9 @@ test('no hand glyph is left on touch: the buttons in every state, every action k
   setActKind('interact');
   for (const w of Object.values(WEAPONS)) if (w.id !== 'fists') assert.doesNotMatch(glyphOfWeapon(w.id, w.type), HAND, w.id);
   // HIT shows what you hit with: a fist bare-handed, the weapon's own glyph otherwise (the owner, 11-05)
-  setMelee('fists', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'hand-fist');
+  setMelee('fists', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'fist');
   setMelee('bat', 'melee'); assert.equal(iconOf('fire', 'HIT'), glyphOfWeapon('bat', 'melee'));
-  setMelee('knife', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'slice');
+  setMelee('knife', 'melee'); assert.equal(iconOf('fire', 'HIT'), 'knife');
   setMelee('fists', 'melee');
 });
 
@@ -84,4 +86,71 @@ test('the Lucide license travels with the icons', () => {
     assert.match(t, /Lucide Contributors 2022/);
   }
   assert.match(lic, /Permission to use, copy, modify, and\/or distribute this software for any purpose/);
+});
+
+// the owner, 11-06: "The coin UI for that yellow button should change though. Maybe just a $"
+test('buying, selling and paying: a dollar sign on the gold disc, no coins', () => {
+  assert.equal(KIND_ICON.buy, 'dollar-sign');
+  for (const w of ['Buy Coffee ($4)', 'Sell the catch', 'Pay the fine ($200)', 'Shop at the counter - Corner Mart']) { setActKind(actKind(w)); assert.equal(iconOf('action', 'ACT'), 'dollar-sign', w); }
+  setActKind('interact');
+  assert.ok(!ACT_KINDS.some(([, ic]) => ic === 'coins'), 'no action shows coins (the bag\'s gold nuggets still do)');
+});
+
+// the owner, 11-06: "better more representative art for the weapon icons. Including the fists" - every weapon its own
+// drawing, the guns told apart (a pistol, an SMG and a rifle by their outline); none of the Lucide stand-ins of 11-05
+test('every weapon has its own glyph; no two guns share one; no stand-ins', () => {
+  const by = new Map();
+  for (const [id, w] of Object.entries(WEAPONS)) {
+    const g = glyphOfWeapon(id, w.type);
+    assert.ok(GLYPH_NAMES.includes(g), `${id}: ${g} is in the set`);
+    assert.ok(!by.has(g), `${id} and ${by.get(g)} share ${g}`);
+    by.set(g, id);
+    assert.ok(!['hand-fist', 'swords', 'slice', 'hammer', 'flashlight', 'rocket', 'zap', 'spray-can', 'bow-arrow', 'flame'].includes(g), `${id}: ${g} is a stand-in`);
+  }
+  const guns = Object.values(WEAPONS).filter((w) => w.type === 'gun').map((w) => glyphOfWeapon(w.id, w.type));
+  assert.ok(guns.length >= 10 && new Set(guns).size === guns.length, `the guns: ${guns}`);
+  assert.deepEqual(['pistol', 'smg', 'rifle'].map((id) => glyphOfWeapon(id, 'gun')), ['pistol', 'smg', 'rifle']);
+  // and different drawings, not one picture under three names
+  const d = (n) => glyph(n).match(/<path d="([^"]+)"/)[1];
+  assert.equal(new Set([...by.keys()].map(d)).size, by.size, 'every weapon glyph a drawing of its own');
+  assert.equal(glyphOfWeapon(undefined, undefined), 'fist', 'bare hands');
+  assert.equal(glyphOfWeapon('newgun', 'gun'), 'pistol', 'a weapon yet to come: its class');
+});
+
+// the owner, 11-06: "Not sure the infinity symbol is the right symbol either, needs more of an auto fire style symbol"
+test('FIRE ON: three bullets (auto-fire), not infinity', () => {
+  for (const l of ['FIRE ON', 'FIRE OFF']) { assert.equal(iconOf('firetog', l), 'auto-fire'); assert.notEqual(iconOf('firetog', l), 'infinity'); }
+  assert.ok(!GLYPH_NAMES.includes('infinity'), 'infinity is gone from the set');
+});
+
+// the owner, 11-06: "UX still feels off on mobile portrait, like the buttons on the bottom right are really spread out
+// far, like the fire in and off button is really far away": upright every right-hand button within NEAR of the aim
+// stick (centre to centre, in units of a 390-wide phone: 300, so 316 px on the owner's 411 x 891 - it was 449 px),
+// and FIRE ON beside the stick and FIRE
+const NEAR = 300, BESIDE = 110;
+test('upright: one tight cluster round the aim stick, FIRE ON beside the stick and FIRE', () => {
+  const mid = (b) => [b.x + b.w / 2, b.y + b.h / 2], far = (a, b) => Math.hypot(mid(a)[0] - mid(b)[0], mid(a)[1] - mid(b)[1]);
+  for (const [W, H, safe] of [[411, 891, {}], [390, 844, { t: 47, b: 34 }], [360, 780, {}], [430, 932, { t: 47, b: 34 }], [412, 892, { t: 36 }]]) {
+    const g = slotGeometry(W, H, safe), s = Math.min(1.3, Math.max(0.86, W / 390)), tag = `${W}x${H}`;
+    for (const [k, b] of Object.entries(g)) if (k !== 'stick') assert.ok(far(b, g.stick) <= NEAR * s, `${tag}: ${k} ${Math.round(far(b, g.stick))} px from the stick (${Math.round(NEAR * s)} at most)`);
+    assert.ok(far(g.u4, g.stick) <= BESIDE * s && far(g.u4, g.fire) <= BESIDE * s, `${tag}: FIRE ON beside the stick and FIRE`);
+  }
+  // (on its side as it was: the switches' row along the top of the arc)
+  const L = slotGeometry(844, 390);
+  assert.ok(L.u4.y < L.c1.y && L.u4.y < L.wp.y, 'on its side FIRE ON stays in the switches\' row');
+});
+
+// a Firefighter on foot by the engine: FIRE sprays water, so it shows the hose (server/systems/firefighter.js hose)
+test('the fire button shows the hose by your fire engine', () => {
+  setHose(true);
+  assert.equal(iconOf('fire', 'HIT'), 'hose'); assert.equal(iconOf('fire', 'FIRE'), 'hose');
+  assert.notEqual(iconOf('throw', 'THROW'), 'hose', 'a crate in your hands: no hose (the server\'s neither)');
+  assert.notEqual(iconOf('action', 'ACT'), 'hose');
+  setHose(false); setMelee('fists', 'melee');
+  assert.equal(iconOf('fire', 'HIT'), 'fist');
+  assert.equal(FIRE.hose.len, HOSE_LEN, 'the page\'s length is the server\'s');
+  const ts = read('client/touchslots.js');
+  assert.match(ts, /const hose = setHose\(!inVeh && !air && !board && hoseNear\(S, me, VEHICLE_BY_INDEX\)\);/, 'set on foot each frame');
+  assert.match(ts, /j\.k === 'Firefighter' && j\.veh/); assert.match(ts, /\.id !== 'firetruck'/); assert.match(ts, /<= HOSE_LEN \* 2/);
+  assert.match(ts, /b\.dataset\.ic !== ic/, 'the button redrawn when its icon changes');
 });

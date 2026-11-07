@@ -33,3 +33,4 @@ export const SKILL = {
     bike: { skill: 'stamina', xp: 1, cap: 15, name: 'the exercise bike at home' },
   },
 };
+export const HOSE_LEN = 420;          // a firefighter's hose reaches this far from the engine (FIRE.hose.len; the touch fire button shows the hose near it)
