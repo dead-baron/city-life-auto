@@ -21036,3 +21036,14 @@ The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `veh
 game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
 "truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
 4x4. test/jobrecall.test.js checks the forklift and the golf cart.
+
+## 2026-11-06 - A way out of the mini-games on touch; air hockey's stuck puck
+The owner (11-06): "We need a way out of most mini games on mobile like arcade and skee ball and air hockey and
+everything" - the mini-games' screen (the 'arcade' overlay: the cabinets, pool, skee-ball, air hockey, pinball, chess,
+the race book, the music games) said only "Esc / B to leave". It now has a close button (index.html `#arc-x`, a tap
+target in its top corner, wired in main.js to the same close as Esc), and the hint says "Tap ✕ to leave" on touch.
+"On air hockey playing against the PC the puck got stuck in the corner and hung there infinitely": the machine's mallet
+chased a puck against its back rail from behind (`cpuMove`: the target x past its own reach, clamped), pinning it in the
+corner. It now comes at a puck by its back rail from the side away from the rail, drawing it out; and a failsafe
+(`unstick`): a puck that hasn't moved more than 14 px in 3 s is faced off on the half it was on. test/arcade.test.js
+checks both corners and the failsafe.

@@ -1098,6 +1098,8 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arcade .arc-frame { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3); border-radius: var(--r2); background: var(--cab); box-shadow: 0 0 0 3px var(--neon), 0 0 40px var(--neon); }
 #arc-cv { width: min(92vw, calc((92vh - 60px) * 256 / 224)); height: auto; aspect-ratio: 256 / 224; image-rendering: pixelated; image-rendering: crisp-edges; background: var(--ink); touch-action: none; border-radius: var(--r1); }
 #arc-hint { color: var(--dim); font: 400 var(--fs-1)/1 var(--pixel); letter-spacing: .05em; }
+#arcade .arc-frame { position: relative; }
+#arc-x { position: absolute; top: -18px; right: -18px; width: var(--tap, 44px); height: var(--tap, 44px); z-index: 1; }   /* (the way out on a touch screen: every mini-game on this screen - the owner, 11-06) */
 /* ==== the first-time experience (client/ftue.js; server/systems/ftue.js) ====
    the arrival: inside the carriage as it pulls in - the doors' windows on the city going by (the world shows through
    them), the next-stop sign over them, the place's card; a chime, the doors slide apart, the bars and the card go */
