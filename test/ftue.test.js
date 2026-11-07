@@ -512,6 +512,7 @@ test('where to arrive: skipped or left, the default; rejoining mid-choice, the c
   // a pick after the card is gone does nothing
   ftue.handle(w2, p2, { a: 'pick', stn: def.poi });
   assert.equal(d.prof.ftue.stn, far.id);
+});
 
 // ---- the owner's 11-06 report: the shop line at a house for sale's door; "only new players ... after they appear once
 // or twice"; tapping the tip should take you to the Guide ------------------------------------------------------------
