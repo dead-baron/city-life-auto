@@ -21028,7 +21028,6 @@ until its inside is drawn cut away (host.js insideReady).
   world's hashes don't change (world, world3); the art's do.
 
 
-<<<<<<< HEAD
 ## 2026-11-06 · The caves finished inside, and a way out that looks like one
 
 The owner (11-06, 19:38, on his phone, 14:45 in the game): "Cave interior art looks unfinished. Also we want to have the
@@ -21105,7 +21104,7 @@ exit of the cave look like an exit so it's clear how to get back out." Concepts:
   - in a frame, the tiles and the dark are drawn at whole device pixels with no smoothing;
   - the way out is offered all along its passage, and not from deep in.
 - **test/cavelight.test.js:** the spots past the mouth, and moonlight at night is now 0.25-0.4.
-=======
+
 ## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default
 
 The owner (11-06, 19:15): "For your first car you own we should make sure there's a visual indicator that it's your car
@@ -21196,4 +21195,3 @@ but the character is an old placeholder I believe."
   darkened or lit by the cave's light like everything else.
   - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
   - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
->>>>>>> caves
