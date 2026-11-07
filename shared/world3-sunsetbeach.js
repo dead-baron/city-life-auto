@@ -254,8 +254,8 @@ function build(m, api, K) {
     for (const g of gaps.slice(1)) {
       if (nChess >= 2) break;
       for (const x of [g + 9.5, g + 14, g + 18.5]) {
-        const palm = Math.abs(((x - 4.5) % 9 + 9) % 9 - 4.5), lamp = Math.abs(((x - 8.5) % 12 + 12) % 12 - 6);
-        if (palm > 3 || lamp < 4 || Math.abs(x - (BX.sunset - 6)) < 7 || Math.abs(x - 2668) < 6 || Math.abs(x - BX.sunset) < 6 || x > x1 - 4) continue;
+        const r9 = ((x - 4.5) % 9 + 9) % 9, r12 = ((x - 8.5) % 12 + 12) % 12, palm = Math.min(r9, 9 - r9), lamp = Math.min(r12, 12 - r12);   // (how far from the nearest palm and lamp)
+        if (palm < 2.5 || lamp < 2.5 || Math.abs(x - (BX.sunset - 6)) < 7 || Math.abs(x - 2668) < 6 || Math.abs(x - BX.sunset) < 6 || x > x1 - 4) continue;
         prop('cafetable', x, y0 + 3.2, 0, { chess: 1, seat: 27, open: 1 }); prop('chair', x - 0.9, y0 + 3.3, 0, { v: 2, a: 0 }); prop('chair', x + 0.9, y0 + 3.3, 0, { v: 2, a: 3.1416 });
         nChess++;
         break;
