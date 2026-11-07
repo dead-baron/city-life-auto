@@ -20767,3 +20767,26 @@ garages, street dice down a passage or two, and Port Westport stays industrial.
   part of town, like Southside's".
 - **shared/shoprooms.js `planOf`:** a corner store whose trade is liquor (a walk-in `convenience` with `store: 'liquor'`)
   gets the liquor plan. Riverway Liquor and the generator's liquor stores have no trade and keep the corner plan.
+- **The world map's picture** (assets/map/) rebaked: `node tools/build-worldmap2.mjs`.
+- **Tests.** `test/plainblocks.test.js` (it already builds the world once) gains three. (1) Southside's street lots are
+  a mix of rough small shops: at least 15 shops of at least 7 kinds, none of them over a quarter of the shops; each
+  one in Southside, on a street, not a back, with room for its kind; never two neighbors alike; a kind no more than its
+  share of a block; one door each, of its kind's POI, with its sign and its look; a walk-in's room laid from the south
+  with its trade's plan, its doorway open and onto paving; a storefront not a walk-in. (2) The passage lots stay plain
+  sheds, and no lot shop stands outside Southside, so Port Westport's cut lots are as they were. (3) One or two dice
+  spots, on a passage in Southside, and activities.js `spotsOf` plays the crew's game at each one.
+- Tests run: shoprooms, storeicons, shopmarks, walkinrooms, facades, art2, mapwindow, dmath, guide, signs and
+  walkinfront (58 pass); test/dmath-world.mjs gives the same signature and hash with and without the nudge (1led2u3 /
+  66e5ad22) and calls none of the approximated Math functions; plainblocks and worldbuild (14 pass); world3shops,
+  world3city, world3doors and world3server (24 pass); perf and worldmap (8 pass).
+- **Places outside Southside:** none moved and none renumbered (the lot shops' 22 POIs are the last 22 of the list).
+  No home moved: 3,467 before and after, every one where it was. `WORLD_VERSION` stays 13. The buildings keep their
+  ids: 7,129 before and after.
+- **Performance** (tools/perf.mjs, before -> after): page 84 files / 509 KB, the same; city worker 35 files / 364 ->
+  365 KB (map.js's `walkInRoom` split and the hook; world3-lots.js is the world build's only); renderer 403 KB and bake
+  worker 973 KB, the same (the art code is untouched but for `planOf`'s one line); city build 29.6x -> 29.1x the
+  yardstick and bakes 60.4x -> 60.6x (this machine's noise); the city 39 MB and the biggest kept chunk 758 KB,
+  unchanged. No budget raised.
+- Not done (each its own job, if the owner wants it): a check-cashing counter, an off-track betting window on the race
+  book (`server/systems/racebook.js` is there; a counter would open its view the way the casinos' floor does), a
+  laundromat you use, a tire shop that sells tires. The dice crew is the existing street dice, not a new game.

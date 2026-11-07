@@ -135,7 +135,7 @@ test('southside lots: the lots on the passages stay sheds and garages; Port West
 test('southside lots: street dice down a passage or two (the existing street dice: server/systems/streetdice.js)', () => {
   const D = M.diceSpots || [];
   assert.ok(D.length >= 1 && D.length <= 2, `dice spots: ${D.length}`);
-  const S = spotsOf(M).filter((s) => s.k === 'dice');
+  const S = spotsOf(M).list.filter((s) => s.k === 'dice');
   for (const q of D) {
     const tx = Math.floor(q.x / 32), ty = Math.floor(q.y / 32);
     assert.equal(M.dist[M.idx(tx, ty)], 6, 'in Southside');
