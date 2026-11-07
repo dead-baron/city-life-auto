@@ -18,29 +18,31 @@ import { hash2 } from './rng.js';
 
 const D = 6;   // Southside (shared/mapcore.js DISTRICTS)
 // the kinds: poi (a POI kind you walk into: its counter and room by its kind or its trade; else a delivery stop at a
-// storefront), store (what the window shows: client/art2/buildings.js storefront), trade (the sign's face, when its name
-// doesn't say), min [width, depth] (tiles: a walk-in's room wants 4 inside and 6 deep - shared/map.js roomDepth), the
-// names (invented) and sign colors [board, letters]
+// storefront), store (what the window shows: client/art2/buildings.js storefront), trade (the sign's face and icon,
+// client/art2/signfont.js TRADES - said outright: by its name's words 'Soap & Spin' was a record shop's dark neon board,
+// gray on black by day; on any face but neon a hand plan's board keeps its colors, made legible), min [width, depth]
+// (tiles: a walk-in's room wants 4 inside and 6 deep - shared/map.js roomDepth), the names (invented) and sign colors
+// [board, letters]
 export const LOT_SHOPS = {
-  pawn: { poi: 'pawn', store: 'pawn', min: [6, 8], grille: 0.9,
+  pawn: { poi: 'pawn', store: 'pawn', trade: 'pawn', min: [6, 8], grille: 0.9,
     names: ['Southside Pawn', 'King Pawn & Loan', 'Pelican Pawn', "Big Al's Pawn", 'Ace Pawn & Gold', 'Riverbend Pawn', 'Lucky Strike Pawn', 'Second Hand Pawn', 'Gold Coast Pawn', 'Top Dollar Pawn'],
     signs: [['#232838', [236, 214, 150]], ['#e8c040', [34, 32, 31]], ['#3a1e10', [240, 216, 96]]] },
-  liquor: { poi: 'convenience', walk: 'liquor', store: 'liquor', min: [6, 8], grille: 0.8, open: 0.7,
+  liquor: { poi: 'convenience', walk: 'liquor', store: 'liquor', trade: 'liquor', min: [6, 8], grille: 0.8, open: 0.7,
     names: ['Corner Liquor', "Lou's Liquor", 'Bottle King Liquor', 'Southside Spirits', 'Last Call Liquor', 'Gold Star Liquor', 'Quick Sip Liquor', 'Night Owl Liquor', 'Beer Wine Spirits', 'Low Price Liquor'],
     signs: [['#1a3a2a', [120, 230, 140]], ['#8a2a2e', [255, 220, 160]], ['#1e1a18', [232, 192, 112]]] },
-  barber: { poi: 'barber', store: 'salon', min: [6, 8], grille: 0.2, awning: 0.5,
+  barber: { poi: 'barber', store: 'salon', trade: 'barber', min: [6, 8], grille: 0.2, awning: 0.5,
     names: ['Fresh Fade Barbers', 'Southside Cuts', 'Kings Barbershop', 'Sharp Line Barber', "Rudy's Barber Shop", 'Clean Cut Barbers', 'Top Notch Barber', 'Razor Barbers', 'Low Fade Barbers', 'Corner Barber'],
     signs: [['#f2ece0', [30, 42, 90]], ['#1e2a5a', [242, 236, 224]], ['#7a1e24', [242, 236, 224]]] },
-  bodega: { poi: 'convenience', store: 'mart', min: [6, 8], grille: 0.6, open: 0.8, awning: 0.45,
+  bodega: { poi: 'convenience', store: 'mart', trade: 'mart', min: [6, 8], grille: 0.6, open: 0.8, awning: 0.45,
     names: ['Southside Bodega', 'Mi Barrio Bodega', 'Quick Stop Deli', 'Night & Day Bodega', 'Sunrise Deli', 'Lucky Bodega', '24-7 Deli & Grocery', 'Pelican Deli', 'El Primo Bodega', 'Twin Stars Deli'],
     signs: [['#7a1e2a', [250, 240, 220]], ['#2a6a3a', [250, 246, 236]], ['#e8c040', [34, 32, 31]], ['#1e4a8a', [250, 246, 236]]] },
-  checks: { store: 'lobby', min: [5, 6], grille: 0.9,
+  checks: { store: 'lobby', trade: 'office', min: [5, 6], grille: 0.9,
     names: ['Check Cashing', 'Fast Checks', 'Payday Cash', 'Cash Express', 'Checks Cashed', 'Money Now', 'Easy Checks', 'Same Day Cash'],
     signs: [['#e8c040', [30, 30, 30]], ['#2a6a3a', [250, 246, 236]], ['#1e3a5e', [240, 236, 220]]] },
   betting: { store: 'arcade', trade: 'street', min: [5, 6], grille: 0.4,
     names: ['Off-Track Betting', 'Lucky Odds', 'Long Shot Betting', 'Photo Finish OTB', 'Daily Double', 'Winning Post OTB', 'Sure Bet', 'Odds On'],
     signs: [['#1e1e24', [240, 224, 64]], ['#2a5a2a', [250, 240, 200]], ['#7a1e2a', [255, 220, 120]]] },
-  laundry: { store: 'laundry', min: [5, 6], grille: 0.1, awning: 0.4,
+  laundry: { store: 'laundry', trade: 'laundromat', min: [5, 6], grille: 0.1, awning: 0.4,
     names: ['Suds City', 'Wash & Fold', 'Spin Cycle Laundry', 'Coin Laundry', 'Bubble Wash', 'Southside Suds', 'Clean Machine Wash', 'Soap & Spin'],
     signs: [['#2a6ab0', [250, 250, 240]], ['#f2f4f6', [36, 84, 154]], ['#1e6a8a', [255, 255, 255]]] },
   tires: { arch: 'garage', min: [6, 6],

@@ -72,6 +72,7 @@ test('plain blocks: every place still stands in a building', () => {
 // front only the passages stay sheds and garages. Port Westport stays industrial.
 const { LOT_SHOPS, lotsNear, lotPoiKind } = await import('../shared/world3-lots.js');
 const { shopRoom } = await import('../shared/shoprooms.js');
+const { TRADES, contrast, rgbOf } = await import('../client/art2/signfont.js');
 const { spotsOf } = await import('../server/systems/activities.js');
 const LS = M.world3 && M.world3.lots;
 const distOf = (b) => M.dist[M.idx(b.tx + (b.tw >> 1), b.ty + (b.th >> 1))];
@@ -102,6 +103,13 @@ test('southside lots: the street lots are a mix of rough small shops', () => {
     assert.equal(pois[0].kind, lotPoiKind(q.k), `${q.b.name}: a ${lotPoiKind(q.k)}`);
     assert.equal(pois[0].label, q.b.name);
     assert.ok(q.b.signs.length === 1 && q.b.art, `${q.b.name}: its sign and its look`);
+    // its sign reads: its trade said outright and not a neon board (a name's words once made 'Soap & Spin' a record
+    // shop's gray-on-black neon), its own colors at least 4.5:1 (statics.js styleSign keeps them, made legible)
+    const sh = q.b.art.shop;
+    if (sh) {
+      assert.ok(TRADES[sh.trade] && TRADES[sh.trade].face !== 'neon', `${q.b.name}: its sign's trade (${sh.trade})`);
+      assert.ok(contrast(rgbOf(sh.sign.bg), sh.sign.fg) >= 4.5, `${q.b.name}: its sign's colors read`);
+    }
     if (LOT_SHOPS[q.k].poi) {
       const wi = q.b.walkIn;
       assert.ok(wi && wi.south && wi.units.length === 1, `${q.b.name}: you walk in from the south`);
