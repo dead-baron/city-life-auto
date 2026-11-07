@@ -1251,7 +1251,7 @@ function setupWorld(seed, here = false, given = null) {
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), (m) => { if (m && m.ask) send({ t: 'menu', poi: m.poi, opt: 'close' }); });   // (a question closed unanswered - the first-time experience's: server/systems/ftue.js)
-  S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log');   // (client/hudinfo.js; a note cut short: the Log)
+  S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log'); S.hud.openJob = () => { if (S.playing) openHub('phone', 'jobs'); };   // (client/hudinfo.js; a note cut short: the Log; the job card tapped: the phone's Jobs, the job you're on at the top with Quit job)
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
   import('../shared/fences.js').then((F) => { S.fence = F; setFences(F.FENCES); }).catch(() => {});   // (the fences: held off them, the hop - predicted like the server)

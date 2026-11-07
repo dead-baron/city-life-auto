@@ -2,11 +2,15 @@
 // jobs"): the numbers the jobs pay and play by. The server's jobs read them (server/systems/forklift.js, fishboat.js,
 // rangerjob.js); the job cards show the pay from them.
 
-// The forklift driver (forklift.js): a shift at a warehouse's or a port's yard - `pallets` pallets waiting in a row,
-// lifted on the forks (the fork tips within `reach` px of one, the forklift slow), carried to the marked bay and set down
-// there (its middle within `bayR` px); a bay takes two, the second stacked on the first (`palletH` px up). Paid perLoad a
-// pallet, `stack` more for one stacked, `bonus` for the lot; liftS to raise or lower the forks; shiftS to do it in
-export const FORK = { pallets: 6, perLoad: 45, stack: 20, bonus: 120, reach: 18, bayR: 24, slowPx: 45, liftS: 0.8, palletH: 24, carryZ: 3, shiftS: 1500, rowGap: 46, bayGap: 58, yard: [150, 420] };
+// The forklift driver (forklift.js): a shift at a warehouse's or a port's yard - `pallets` pallets waiting in their row,
+// lifted on the forks (the fork tips within `reach` px of one, the forklift slow), carried across the yard to its
+// loading bay (`drive` tiles' drive away: the map plans it - shared/loadbays.js) and set down in the slot lit up (its middle within `bayR`
+// px); a slot takes two, the second stacked on the first (`palletH` px up). A pallet pays perLoad and perTile a tile of
+// that yard's drive to the bay (a 40-tile yard: $80), `stack` more for one stacked, `bonus` for the lot; liftS to raise or
+// lower the forks; shiftS to do it in. (11-06, the runs from ~10 tiles to 25-60: about three times the drive, a pallet's
+// run ~25 s; the shift's ~$770 at a 40-tile yard in ~3 minutes - $450 before in ~2 - the same rate an hour, and more for
+// a yard further across)
+export const FORK = { pallets: 6, drive: [25, 60], perLoad: 40, perTile: 1, stack: 30, bonus: 200, reach: 18, bayR: 24, slowPx: 45, liftS: 0.8, palletH: 24, carryZ: 3, shiftS: 1500 };
 
 // The fishing boat (fishboat.js): the skipper takes the trawler out from a fish market's quay to `spots` fishing grounds
 // in turn - a net (trawl: keep moving through the ground between trawl[0] and trawl[1] px/s for netS s) or a string of

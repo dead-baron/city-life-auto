@@ -447,3 +447,31 @@ test('the record shops: walk-ins fitted out with crates and instruments, their c
   }
   assert.ok(fitted >= Math.ceil(shops.length / 2), `fitted out with crates of vinyl (${fitted} of ${shops.length})`);
 });
+
+// the forklift yards' loading bays (shared/loadbays.js; the owner, 11-06: "take the pallets further away into a clear
+// marked loading bay area"): the port's container yard and the warehouses' each with its pallets and its bay, the drive
+// between a real one and clear of everything at every yard (test/loadbayscheck.js); the forklift job runs at each
+test('forklift yards: every one\'s pallets and loading bay a real drive apart, the way clear - the port\'s container yard and the warehouses\' too', async () => {
+  const { checkYards } = await import('./loadbayscheck.js');
+  const { FORK } = await import('../shared/rules-work.js');
+  const R = checkYards(M);
+  assert.deepEqual(R.problems, []);
+  assert.ok(R.bays.length >= 8, `${R.bays.length} yards with a bay (of ${R.sites.length} places with a forklift or a warehouse door)`);
+  for (const q of M.pois.filter((p) => p.kind === 'warehouse')) assert.ok(R.bays.some((b) => b.yard.poi && Math.hypot(b.yard.x - q.x, b.yard.y - q.y) < 2), `${q.label}: its yard has a bay`);
+  const port = R.bays.filter((b) => DISTRICTS[M.dist[M.idx(Math.floor(b.pick.x / TILE), Math.floor(b.pick.y / TILE))]]?.style === 'harbor');
+  assert.ok(port.length >= 3, `the harbor's yards, the container yard's among them (${port.map((b) => b.yard.name).join(', ')})`);
+  assert.ok(R.bays.filter((b) => b.bay.back).length >= 3, 'some at a warehouse\'s dock doors');
+  for (const b of R.bays) assert.ok(b.len >= FORK.drive[0] && b.len <= FORK.drive[1]);
+  // a shift at each: the pallets laid in the row, the forklift on the apron, the bay's slots the job's
+  const forklift = await import('../server/systems/forklift.js');
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p } = joinPlayer(w);
+  for (const y of forklift.yardsOf(M)) {
+    teleport(w, p.ped, y.x, y.y);
+    assert.equal(forklift.start(w, p, y), null, y.name);
+    assert.equal(p.job.pallets.length, FORK.pallets);
+    assert.deepEqual(p.job.bays.map((q) => [q.x, q.y]), M.loadBays[y.bay].bay.slots.map((q) => [q.x, q.y]));
+    const jobs = await import('../server/systems/jobs.js');
+    jobs.failJob(w, p, 'next');
+  }
+});

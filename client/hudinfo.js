@@ -169,7 +169,13 @@ export function createInfo(H) {
   const jobEl = $('job');
   if (jobEl) {
     jobEl.setAttribute('role', 'button');
-    jobEl.addEventListener('click', () => { const J = I.job; J.bigUntil = jobEl.classList.contains('big') ? 0 : performance.now() + JOB_BIG_MS; drawJob(performance.now()); });
+    // (a tap or a click on it: the phone's Jobs app, the job you're on at its top with Show on map and Quit job - the
+    // owner, 11-06: "How do you quit a job you started?"; the card done and showing its pay: folded away as before)
+    jobEl.addEventListener('click', () => {
+      const J = I.job;
+      if (J.key && H.openJob) { H.openJob(); return; }
+      J.bigUntil = jobEl.classList.contains('big') ? 0 : performance.now() + JOB_BIG_MS; drawJob(performance.now());
+    });
   }
 
   function me(me, prev) {
@@ -243,7 +249,7 @@ export function createInfo(H) {
     el.classList.toggle('new', !!(J.isNew && now - J.at < 1600));
     el.classList.toggle('paid', !!paid);
     el.classList.toggle('hot', run && left > 0 && left < 10);
-    el.setAttribute('aria-label', big ? 'The job: tap to fold' : 'The job: tap for the details');
+    el.setAttribute('aria-label', done ? 'The job: done' : 'The job: open it on your phone (Show on map, Quit job)');
     el.innerHTML = jobHtml(j, { big, done, dist, time, paid, clock: run });
   }
 
