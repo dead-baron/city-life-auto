@@ -18,8 +18,9 @@ export { iconOf } from './touchicons.js';
 // row: style.css). Upright one tight cluster round the stick (the owner, 11-06: "the buttons on the bottom right are
 // really spread out far, like the fire on and off button is really far away"): FIRE ON beside the stick under FIRE,
 // ACT over the stick, ROLL between them, the weapon card, C1 and C2 in a row above, CAR and the switches in two short
-// columns up the right edge (the left half is the move stick's, the middle the view's: nothing wider fits). Kept clear of each other, of the left 40%, of the middle (you) and inside the safe areas
-// (test/touchslots.test.js; the HUD: test/hudlayout.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
+// columns up the right edge (the left half is the move stick's, the middle the view's: nothing wider fits). Kept clear
+// of each other, of the left 40%, of the middle (you) and inside the safe areas (test/touchslots.test.js, acticons.test.js;
+// the HUD: test/hudlayout.test.js). wp, the weapon button (UI-6): the HUD's weapon plate as a card.
 export const GEO = {
   land: { stick: [88, 88, 132], fire: [202, 88, 72], act: [167, 167, 72], roll: [263, 38, 52], car: [271, 104, 52], c1: [203, 228, 52], c2: [143, 241, 52],
     wp: [70, 206, 76, 52], u4: [32, 300, 52], u3: [92, 300, 52], u2: [152, 300, 52], u1: [212, 300, 52] },
