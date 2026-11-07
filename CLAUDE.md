@@ -17,8 +17,10 @@ PRACTICE OFFLINE is hidden on the title screen (`PRACTICE_ON` in `client/main.js
 ## The first-time experience (FTUE; owner-approved 2026-11-04)
 The old city tour is retired (`shared/tutorial.js`, `client/tutorial.js`, `TUTORIAL_ON` are gone). The tutorial IS the
 first goal: new characters get the FTUE (`server/systems/ftue.js`, page side `client/ftue.js`) - the arrival by train at
-the starter car's station (`starter.js` `arrivalFor`: one function for both), one question ("What brings you to town?"),
-a first goal of at most three steps, then the first-time moments. The phone's Guide (`shared/guide.js`, `client/guide.js`)
+the station they pick (`firstcar.js` `arrivalFor`: one function for the train, the used lot and the steal alley), one
+question ("What brings you to town?"), a first goal of at most three steps - the first car earned by the answer's path
+(bought at the station's used lot, or stolen in its alley: `server/systems/firstcar.js`; the free starter car stays only
+with the players who had one) - then the first-time moments. The phone's Guide (`shared/guide.js`, `client/guide.js`)
 is the in-game wiki. The owner: "short and sweet and give people general direction".
 - Teach the new thing: when a system changes, update its Guide entry (`shared/guide.js`) and, if it has one, its
   first-time moment (`ftue.js` `MOMENTS`) in the same change. A new job, place, activity or control gets a Guide entry.

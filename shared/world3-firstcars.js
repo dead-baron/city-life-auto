@@ -170,20 +170,20 @@ export function parkWest3(m, H3) {
 // ---- the other arrival stations: a small used lot and a back alley each --------------------------------------------------
 // what each region's is: its name, its stock, its ground and dressing
 const YARDS = {
-  coast: { lot: 'Northshore Beach Motors', alley: 'the alley behind Beach Motors', stock: ['starter', 'rustpickup'], ground: T.LOT, sign: ['#2a6a8a', [255, 246, 220]], tone: '#a49484', dress: ['planter_g', 'bikerack'] },
-  desert: { lot: 'Red Rock Salvage & Sales', alley: 'the scrap lane behind Red Rock Salvage', stock: ['rustpickup', 'starter'], ground: T.DIRT, sign: ['#8a3a22', [255, 226, 160]], tone: '#9a5040', dress: ['tires', 'trashpile'] },
-  country: { lot: 'Willow Valley Farm Trucks', alley: 'the barn lane behind Farm Trucks', stock: ['rustpickup'], ground: T.DIRT, sign: ['#2f6a4e', [250, 240, 200]], tone: '#84463a', dress: ['pallet', 'crates'] },
+  coast: { lot: 'Northshore Beach Motors', alley: 'the alley behind Beach Motors', stock: ['starter', 'rustpickup'], short: 'BEACH MOTORS', sign: ['#2a6a8a', [255, 246, 220]], tone: '#a49484', dress: ['planter_g', 'bikerack'] },
+  desert: { lot: 'Red Rock Salvage & Sales', alley: 'the scrap lane behind Red Rock Salvage', stock: ['rustpickup', 'starter'], short: 'RED ROCK SALVAGE', sign: ['#8a3a22', [255, 226, 160]], tone: '#9a5040', dress: ['tires', 'trashpile'] },
+  country: { lot: 'Willow Valley Farm Trucks', alley: 'the barn lane behind Farm Trucks', stock: ['rustpickup'], short: 'FARM TRUCKS', sign: ['#2f6a4e', [250, 240, 200]], tone: '#84463a', dress: ['pallet', 'crates'] },
 };
 const YW = 21, YH = 16;   // (the yard: the lot 15 wide, a fence, the alley 5; 16 deep)
 const GO = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT]);
 // open ground for the yard at (x, y)..(x + YW, y + YH): grass, dirt or sand (a beach's kept-open sand too), nothing built,
 // no track, platform, tunnel or a station's ground; along its south side (or its north - `north`) a road, a pavement or
 // paving to drive and walk out onto, `share` of its width at least
-function yardFits(m, x, y, keepOut, share, north) {
+function yardFits(m, x, y, keepOut, share, north, paved = false) {
   for (let ty = y - 1; ty <= y + YH; ty++) for (let tx = x - 1; tx <= x + YW; tx++) {
     if (!m.inside(tx, ty)) return false;
     const i = m.idx(tx, ty), t = m.tiles[i];
-    if (!(t === T.GRASS || t === T.DIRT || t === T.SAND) || m.bld[i] >= 0 || (m.reserve[i] & ~16) || (m.cover && m.cover[i]) || (m.deck && m.deck[i])) return false;
+    if (!(t === T.GRASS || t === T.DIRT || t === T.SAND || (paved && (t === T.PLAZA || t === T.LOT))) || m.bld[i] >= 0 || (m.reserve[i] & ~16) || (m.cover && m.cover[i]) || (m.deck && m.deck[i])) return false;
     if (keepOut(tx, ty)) return false;
   }
   let front = 0;
@@ -205,13 +205,14 @@ export function firstCars3(m, H3) {
     // less of its width on a road, out to 80 tiles
     const ex = Math.floor((A.exit[2]) / TILE), ey = Math.floor((A.exit[3]) / TILE);
     let best = null;
-    for (const [share, R] of [[0.6, 60], [0.35, 80]]) {
+    // (and last, open paving too - a seafront's promenade or a paved yard, nothing standing on it)
+    for (const [share, R, paved] of [[0.6, 60, false], [0.35, 80, false], [0.2, 90, true]]) {
       let bd = Infinity;
       for (let dy = -R; dy <= R; dy += 2) for (let dx = -R; dx <= R; dx += 2) {
         const d = Math.hypot(dx, dy);
         if (d >= bd || d > R) continue;
         const x = ex + dx - (YW >> 1), y = ey + dy - (YH >> 1);
-        for (const north of [false, true]) if (yardFits(m, x, y, keepOut, share, north)) { best = { x, y, north }; bd = d; break; }
+        for (const north of [false, true]) if (yardFits(m, x, y, keepOut, share, north, paved)) { best = { x, y, north }; bd = d; break; }
       }
       if (best) break;
     }
@@ -224,11 +225,11 @@ export function firstCars3(m, H3) {
 function yard(m, H3, K, A, Y, x, y, north = false) {
   K.clearProps(x - 1, y - 1, x + YW, y + YH);
   const lx0 = x, lx1 = x + 14, ax0 = x + 16, ax1 = x + YW - 1, y1 = y + YH - 1;
-  K.fill(lx0, y, lx1, y1, Y.ground);
-  K.fill(ax0, y, ax1, y1, Y.ground);
+  K.fill(lx0, y, lx1, y1, T.LOT);   // (paved: nothing grows over it - the bake dresses open dirt with the wild's plants)
+  K.fill(ax0, y, ax1, y1, T.LOT);
   const wy = north ? y - 1 : y1 + 1;
-  K.fill(x, wy, x + YW - 1, wy, Y.ground === T.LOT ? T.LOT : T.DIRT);   // (the way out onto the road)
-  const office = K.building(lx0 + 1, y + 1, 6, 4, Y.lot, K.shopArt(lx0 + 1, y + 1, { floors: 1, store: 'mart', sign: Y.lot.split(' ').slice(-2).join(' '), signC: Y.sign, awning: [Y.sign[0], '#f0ece4'], door: 'right', people: 1, tone: Y.tone, cornice: 'step' }));
+  K.fill(x, wy, x + YW - 1, wy, T.LOT);   // (the way out onto the road)
+  const office = K.building(lx0 + 1, y + 1, 6, 4, Y.lot, K.shopArt(lx0 + 1, y + 1, { floors: 1, store: 'mart', sign: Y.short, signC: Y.sign, awning: [Y.sign[0], '#f0ece4'], door: 'right', people: 1, tone: Y.tone, cornice: 'step' }));
   office.door = { tx: lx0 + 5, ty: y + 5 };
   office.business = 'usedlot';
   const slots = [];

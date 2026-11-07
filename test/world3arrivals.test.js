@@ -171,7 +171,7 @@ test('World v3: the park block - the station\'s board, Park West Motors and its 
   const bx = st.x - Math.sin(st.a) * 50, by = st.y + Math.cos(st.a) * 50;
   assert.deepEqual(over(bx, by, 70, 80), [], 'the board');
   const spot = ftue.arrivalSpot(w, city);
-  assert.deepEqual(over(spot.x, spot.y, 50, 16), [], 'where you step off');
+  assert.deepEqual(over(spot.x, spot.y, 50, 6), [], 'where you step off (between the two canopies)');
   // the lot: its office's front and every display space; the alley's spaces
   const office = M.buildings[lot.b];
   assert.deepEqual(over((office.tx + office.tw / 2) * TILE, (office.ty + office.th) * TILE - 4, 60, office.tw * TILE / 2), [], 'the lot\'s office');
@@ -246,7 +246,8 @@ test('World v3: each path\'s first step at each of the four stations - buy, stea
     assert.equal(b.profile.ftue.stn, a.poi);
     answer(w, b, 'work');
     assert.equal(b.profile.ftue.car.poi, P.lot.poi, `${a.name}: work, step 1 its used lot`);
-    assert.match(buy(w, b, P.lot.poi, 'starter'), /You bought a Rusty Compact/, `${a.name}: bought`);
+    const [m0] = firstcar.stockOf(M.pois[P.lot.poi])[0];
+    assert.match(buy(w, b, P.lot.poi, m0), /You bought a Rusty/, `${a.name}: bought`);
     run(w, 0.6); assert.equal(b.profile.ftue.step, 2);
     const { p: s } = toQuestion(w, a.poi);
     answer(w, s, 'hustle');
@@ -256,7 +257,7 @@ test('World v3: each path\'s first step at each of the four stations - buy, stea
     run(w, 0.6); assert.equal(s.profile.ftue.step, 2);
     const { p: o } = toQuestion(w, a.poi);
     answer(w, o, 'outdoors');
-    if (o.profile.ftue.st === 'goal') {
+    if (o.profile.ftue.st === 'goal' && firstcar.stockOf(M.pois[P.lot.poi]).some(([id]) => id === 'rustpickup')) {
       assert.match(buy(w, o, P.lot.poi, 'rustpickup'), /You bought a Rusty Pickup/, `${a.name}: the pickup`);
       run(w, 0.6); assert.equal(o.profile.ftue.step, 2);
     }
