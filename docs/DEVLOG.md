@@ -21214,6 +21214,10 @@ swimmer showing through the deck's median and blood from a hit in the water draw
   hidden at 40% of its pixels drawn over (a door: its top and the sign over it, z 16..56). Its own building, a station's
   own furniture and what stands on a place's footprint (a hotel's canopy, a market's stalls) don't count.
   `node tools/visaudit.mjs [--json out.json]` prints counts by kind and what hides them.
+- **Counts** (hidden of all, before -> after): station name boards 13/18 -> 0, platforms 1/28 -> 0, chess tables 5/11 -> 0,
+  standing signs 16/176 -> 3, doors and fronts 217/3282 -> 199, ATMs 37/386 -> 35, bus stops 69/295 -> 65, campfires
+  10/59 -> 7, map boards 3/24 -> 2, places' spots 13/131 -> 12; 121 map trees moved, 15 lowered to shrubs, 1 building
+  drawn low and stepped back.
 - **Station name boards** (`statics.js`): by the platform's outer edge - on its posts at the front of a platform south of
   the track (at the track's edge the canopy's roof was over it), up over the canopy's roof at the back of one north of it
   (a train standing there hid it). The station house's board on the side the camera sees, along the house clear of the
