@@ -4,10 +4,12 @@
 // (client/underground/view.js), the tests. Integer hashes and plain arithmetic, no trigonometry: the same everywhere.
 import { TILE } from './constants.js';
 import { mulberry32 } from './rng.js';
-import { UG, C, registerCaverns, _ug } from './underground.js';
+import { UG, C, registerCaverns, _ug, mouthsOf } from './underground.js';
 import { carveScene, kitCavern, dressKit } from './cavekit.js';
 
 const { region, cellAt, setCell, capsule, disc, wallSpots, floorSpots, pickN, vnoise, segDist, len, kSeed } = _ug;
+// a way out's opening (px): half its width; its lanterns this far in from the mouth and out from the middle
+export const EXIT = { hw: 40, lampIn: 40, lampOut: 30 };
 
 // A cavern (World v3's map.caverns: shared/world3-caves.js lays each out - its mouths, chambers, river, docks... all in
 // px): its chambers and passages as a mine cave's are, its mouths (mouths[0] is the cave's mouth and inside, as a mine
@@ -215,6 +217,20 @@ export function lightCave(L, K) {
   }
   K.lanterns = [...(K.lanterns || []), ...hung];
   dressKit(K);
+  // the ways out (the owner, 11-06: "have the exit of the cave look like an exit so it's clear how to get back out"): at
+  // each mouth the opening (u: the way out of it, hw: half its width), a pair of lanterns on posts just inside, and an
+  // adit's timbered portal; the view (client/underground/caveart.js) lets the daylight in through it, turns the floor to
+  // the ground outside and hangs the WAY OUT board
+  K.exits = [];
+  for (const M of mouthsOf(K)) {
+    const dx = M.x - M.inside.x, dy = M.y - M.inside.y, l = len(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    const E = { x: M.x, y: M.y, ux: Math.round(ux * 1000) / 1000, uy: Math.round(uy * 1000) / 1000, hw: EXIT.hw, kind: M.kind || 'adit', name: M.name, lamps: [] };
+    for (const sd of [-1, 1]) {
+      const q = { x: Math.round(M.x - ux * EXIT.lampIn - uy * sd * EXIT.lampOut), y: Math.round(M.y - uy * EXIT.lampIn + ux * sd * EXIT.lampOut), exit: 1 };
+      E.lamps.push(q); K.lanterns.push(q);
+    }
+    K.exits.push(E);
+  }
   // where a find can lie: dry floor in the light (a shaft's pool, by a lantern), clear of the way in
   const spots = [];
   for (const s of K.shafts) spots.push(...floorSpots(R, s.x, s.y, s.r * 0.55).filter((q) => len(q.x - s.x, q.y - s.y) < s.r * 0.55));

@@ -40,7 +40,8 @@ export function defaultProfile(pid) {
     lastSpawn: null, // the death screen's wake-up spot you last woke at ('h:<i>' | 'home:<id>'): the next one's default
     pos: null,       // (and inHome: the home you logged off inside, back in it next time - players.savePos; absent when you weren't)
     stats: { kills: 0, deaths: 0, arrests: 0, deliveries: 0, fish: 0 },
-    safety: true,    // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - on for new characters
+    safety: false,   // Safety mode: an act that'd be a crime asks first (server/systems/safety.js) - off unless turned on in Settings (the owner, 11-06)
+    safetyOff: 1,    // (the one-time switch-off of Safety mode on profiles from before that has run: migrateSafety)
     starter: { first: true },   // the starter car (server/systems/starter.js): first - waiting at the arrival station on their first day
     ftue: { st: 'new', tips: 1, m: {} },   // the first-time experience (server/systems/ftue.js): a new character's arrival, question and first goal
   };
@@ -57,6 +58,14 @@ export function resetProfile(prof) {
   Object.assign(prof, defaultProfile(keep.pid), keep);
   return prof;
 }
+// Safety mode off by default (the owner, 11-06: "let's not make the double tap to steal a car ... not have it on by
+// default"): profiles made before then had it on as a default, not a choice - switched off once (safetyOff marks it run;
+// turned back on in Settings after, it stays on). Run as the store loads (resetOldEpochs) and on joining (players.js).
+export function migrateSafety(prof) {
+  if (!prof || prof.safetyOff) return false;
+  prof.safety = false; prof.safetyOff = 1;
+  return true;
+}
 export const oldEpoch = (prof) => !!prof && (Number(prof.epoch) || 1) < PROGRESS_EPOCH;
 // Every profile under an older epoch reset (resetProfile), and what the world keeps for players outside the profiles: the
 // crews (store.kept.crews) lose the reset members - a crew left with one is gone - and the fish records board
@@ -64,7 +73,9 @@ export const oldEpoch = (prof) => !!prof && (Number(prof.epoch) || 1) < PROGRESS
 // so a second load resets nothing; a crash before the save just does the same again from the same file. -> how many
 export function resetOldEpochs(st) {
   const reset = new Set();
-  for (const prof of st.all()) if (oldEpoch(prof)) { resetProfile(prof); reset.add(prof.pid); }
+  let safe = 0;
+  for (const prof of st.all()) { if (oldEpoch(prof)) { resetProfile(prof); reset.add(prof.pid); } if (migrateSafety(prof)) safe++; }
+  if (safe) st.touch();
   if (!reset.size) return 0;
   const kept = st.kept || {};
   if (kept.crews) for (const [id, c] of Object.entries(kept.crews)) {

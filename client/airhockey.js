@@ -45,6 +45,9 @@ export function cpuMove(Tb, dt) {
   const c = Tb.cpu, P = Tb.puck;
   let tx = T.x1 - 34, ty = CY + (P.y - CY) * 0.5;
   if (P.x > W / 2 - 10 && (P.vx > -60 || P.x > W * 0.7)) { tx = P.x + 8; ty = P.y + (P.y > CY ? 3 : -3); }
+  // a puck in against its back rail: from behind it can't be got at (the mallet pinned it in the corner for good - the
+  // owner, 11-06) - come at it from the side away from the rail it's on, drawing it back out into play
+  if (P.x > T.x1 - PUCK_R - MAL_R * 1.5) { tx = P.x - MAL_R; ty = P.y + (P.y > CY ? -(PUCK_R + MAL_R) : PUCK_R + MAL_R) * 0.8; }
   moveTo(c, tx, ty, CPU_SPEED, dt, W / 2 + MAL_R, T.x1 - MAL_R);
 }
 function moveTo(m, tx, ty, max, dt, xmin, xmax) {
@@ -128,6 +131,7 @@ function step(dt) {
   if (Tb.wait > 0) { Tb.wait -= dt; return; }
   if (strike(P, me) || strike(P, Tb.cpu)) G.o.sfx('click', 0.35);
   const r = glide(P, dt);
+  if (unstick(Tb, dt)) { G.msg = 'Face-off'; G.msgT = 1; return; }
   if (r === 'us' || r === 'them') {
     Tb[r]++;
     G.o.sfx(r === 'us' ? 'good' : 'bad', 0.5);
@@ -177,4 +181,16 @@ function mallet(g, m, c, hi) {
   g.fillStyle = c; g.beginPath(); g.arc(m.x, m.y, 3.5, 0, Math.PI * 2); g.fill();
 }
 // (tests: the table without a screen)
-export const _test = { newTable, strike, glide, cpuMove, T, TO, CY };
+// The failsafe: a puck that hasn't got anywhere for STUCK_S - stopped, or trapped moving on one spot (in a corner, under a
+// mallet) - is faced off: back on the half it was on, at the middle, a moment's wait
+const STUCK_S = 3, STUCK_R = 14;
+export function unstick(Tb, dt) {
+  const P = Tb.puck, s = Tb.stuck || (Tb.stuck = { x: P.x, y: P.y, t: 0 });
+  if (Math.hypot(P.x - s.x, P.y - s.y) > STUCK_R) { s.x = P.x; s.y = P.y; s.t = 0; return false; }
+  s.t += dt;
+  if (s.t < STUCK_S) return false;
+  P.x = P.x > W / 2 ? W / 2 + 40 : W / 2 - 40; P.y = CY; P.vx = 0; P.vy = 0; Tb.wait = 0.8;
+  s.x = P.x; s.y = P.y; s.t = 0;
+  return true;
+}
+export const _test = { newTable, strike, glide, cpuMove, unstick, T, TO, CY, STUCK_S };

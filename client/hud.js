@@ -679,6 +679,7 @@ export class HUD {
       if (me.job) target(me.job.x, me.job.y, '#3ddc5a', 'job');
       if (me.job && me.job.dest) target(me.job.dest[0], me.job.dest[1], '#ff9a2e');   // (picking up: where it goes after)
       if (me.job && me.job.veh) target(me.job.veh[0], me.job.veh[1], '#45b8ff', 'car');   // (the job's truck, until you're in it)
+      else if (me.car) target(me.car[0], me.car[1], '#45b8ff', 'car');   // (your starter car, parked: starter.js marker)
       if (this.waypoint) target(this.waypoint.x, this.waypoint.y, '#ff4fa8', 'wp');
     }
     // player arrow

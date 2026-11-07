@@ -99,7 +99,7 @@
   <div id="wwheel" class="hidden"></div>
   <div id="spec-pad" class="hidden"></div>
   <div id="spec" class="hidden"></div>
-  <div id="arcade" class="hidden"><div class="arc-frame"><canvas id="arc-cv" width="256" height="224"></canvas><div id="arc-hint">Esc / B to leave the cabinet</div></div></div>
+  <div id="arcade" class="hidden"><div class="arc-frame"><canvas id="arc-cv" width="256" height="224"></canvas><div id="arc-hint">Esc / B to leave the cabinet</div><button id="arc-x" class="x" type="button" aria-label="Leave the game">✕</button></div></div>
   <!-- a counter, a shop, someone to talk to (client/hud.js openMenu; UI-10 after UIC-16 and UIC-18): docked at the foot -
        a few lines with no prices are a conversation (who, what they say, the answers numbered), a shop has your wallet in
        its head and, with guns, their damage and range and a tab for each kind -->
@@ -201,8 +201,9 @@
         <p id="set-note"></p>
       </section>
       <section data-sec="game" hidden><h2>GAME</h2>
-        <label class="srow"><span>Safety mode: ask again before a crime</span><input type="checkbox" id="s-safety"></label>
+        <label class="srow"><span>Safety mode: ask again before a crime (off by default)</span><input type="checkbox" id="s-safety"></label>
         <label class="srow"><span>Shop symbols over doors near you</span><input type="checkbox" id="s-shopmarks"></label>
+        <label class="srow"><span>First-time tips (a line the first time you meet something new)</span><input type="checkbox" id="s-tips"></label>
       </section>
       <section data-sec="chat" hidden><h2>CHAT</h2>
         <div id="s-chatbox" data-slot="chat">
@@ -275,11 +276,11 @@
     <button id="i-go" class="sbtn hidden">⬇ Install now</button>
     <button id="i-repair" class="sbtn">↻ Repair install and reload</button>
   </div></div>
-  <!-- the first-time experience's arrival (client/ftue.js; server/systems/ftue.js): inside the carriage as it pulls in -
-       the next-stop sign, the doors' windows on the city going by; the doors slide open onto the platform. Esc, B, a tap
-       or Skip ends it -->
+  <!-- the first-time experience's arrival (client/ftue.js; server/systems/ftue.js): first the card of the stations to
+       arrive at, then the train on the station's own line - out of the tunnel, into the platform, the doors open - the
+       next-stop sign and the station's card. Esc, B, a tap or Skip ends it (the card: the default station) -->
   <div id="arrival" class="hidden overlay" role="dialog" aria-label="Arriving by train">
-    <div class="arr-doors" aria-hidden="true"><i class="arr-door l"><b></b></i><i class="arr-door r"><b></b></i></div>
+    <div id="arr-pick" class="arr-pick"></div>
     <div class="arr-led"><span id="arr-led"></span></div>
     <div class="arr-card"><small>ARRIVING</small><b id="arr-name"></b><span id="arr-place"></span></div>
     <button id="arr-skip" class="btn">Skip <span id="arr-skip-g"></span></button>

@@ -22,7 +22,7 @@ import { pedStep } from '../../shared/physics.js';
 import {
   MANHOLE_REACH, LADDER_REACH, MINE_REACH, VEIN_REGROW_S, POLICE_FOLLOW_R, POLICE_FOLLOW_S, POLICE_GIVE_UP_S,
   ROCKFALL_WARN_S, ROCKFALL_DMG, ROCKFALL_R, ROCKFALL_EVERY_S, BATS_REST_S, BEAR_WAKE_R, BEAR_BITE, BEAR_BITE_S,
-  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT, CAVE_FIND,
+  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT, CAVE_FIND, CAVE_LEAVE_REACH,
 } from '../../shared/rules.js';
 import { LIGHTS } from '../../shared/lights.js';
 import * as combat from './combat.js';
@@ -82,8 +82,8 @@ export function interaction(world, p) {
     }
     const K2 = ped.ug === UG.CAVE && caveOf(L, ped.x, ped.y);
     if (K2) {
-      const w = wayOut(K2, ped.x, ped.y);
-      if (w && w.d < 56) return { label: w.M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : 'Walk out of the cave', run: () => leaveCave(world, p, K2, w.M) };
+      const M = exitNear(K2, ped.x, ped.y);
+      if (M) return { label: M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : `Walk out of the cave, into the ${dayOut(world) ? 'daylight' : 'night'}`, run: () => leaveCave(world, p, K2, M) };
       const c = chestInteraction(world, p, K2, ped);
       if (c) return c;
       const f = p.caveFind;
@@ -107,6 +107,19 @@ function mineInteraction(world, p, ped) {
   if (PICKS[pick].tier < q.v.need) return { label: `${name} vein - needs a ${PICK_NAME[q.v.need]} or better`, run: () => world.notify(p, `Your ${PICK_NAME[PICKS[pick].tier]} just skids off it. ${name} needs a ${PICK_NAME[q.v.need]} or better.`, 'warn') };
   return { label: `Mine the ${oreName(q.v.ore)} vein (${PICK_NAME[PICKS[pick].tier]})`, run: () => beginMining(world, p, q.i) };
 }
+
+// the way out you're standing in (within CAVE_LEAVE_REACH of its passage, from just in from where you came in out to
+// the mouth): its mouth, or null
+function exitNear(K2, x, y) {
+  let best = null, bd = CAVE_LEAVE_REACH;
+  for (const M of mouthsOf(K2)) {
+    const ax = M.inside.x, ay = M.inside.y, dx = M.x - ax, dy = M.y - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2));
+    const d = Math.hypot(ax + dx * t - x, ay + dy * t - y);
+    if (d < bd) { bd = d; best = M; }
+  }
+  return best;
+}
+const dayOut = (world) => { const m = world.clock ? world.clock.minutes : 720; return m >= 360 && m < 1200; };
 
 // ---- down and up -------------------------------------------------------------------------------------------------------
 function moveTo(world, p, x, y, ug) {
@@ -170,7 +183,7 @@ export function leaveCave(world, p, K = null, M = null) {
   const M2 = M || wayOut(K2, p.ped.x, p.ped.y).M;
   p.caveFind = null;
   moveTo(world, p, M2.out.x, M2.out.y, 0);
-  world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : 'Out into the daylight.', 'info');
+  world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : dayOut(world) ? 'Out into the daylight.' : 'Out into the night air.', 'info');
   return true;
 }
 // ---- a cavern's old chests ------------------------------------------------------------------------------------------------
@@ -450,4 +463,4 @@ export function update(world, dt) {
   }
 }
 // regrowing veins: anyone near hears about them (a vein's state is sent with the layer: sendLayer)
-export const _test = { manholeNear, doorNear, veinList, chestList, caveState };
+export const _test = { manholeNear, doorNear, veinList, chestList, caveState, exitNear };

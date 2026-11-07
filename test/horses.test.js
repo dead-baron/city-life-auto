@@ -97,8 +97,7 @@ test('a farm horse: up on it bareback with the vehicle button - horse theft; its
   const coat = a.wild.coat, exp0 = prof.criminalExp;
   const act = players.findInteraction(w, p);
   assert.match(act.label, /Ride the horse bareback - Horse theft/);
-  steer(w, p, 0, 0, IN.VEHICLE); steer(w, p, 0, 0, 0, 2);   // (Safety mode: press again)
-  steer(w, p, 0, 0, IN.VEHICLE); steer(w, p, 0, 0, 0, 2);
+  steer(w, p, 0, 0, IN.VEHICLE); steer(w, p, 0, 0, 0, 2);   // (Safety mode off - the default since 11-06: one press)
   const v = w.get(p.ped.vehId);
   assert.ok(v && v.def.horse, 'riding it');
   assert.ok(a.removed, 'the animal is the horse now');

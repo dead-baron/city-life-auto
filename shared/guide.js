@@ -13,6 +13,7 @@ import {
   GANG_JOIN_FEE, MAILJOB, CAB, BUSJOB, TOWJOB, MEDIC, FISHING, DEEPSEA_PAY, DEEPSEA_CATCH, PAINT_PRICE, HIDE_TIME_S, AMBULANCE_FEE,
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
+  PICK_PRICES, ASSAY_PAYS,
 } from './rules.js';
 import { FORK, RANGER } from './rules-work.js';
 import { SHOPS, ITEMS } from './items.js';
@@ -66,7 +67,8 @@ export function guideSections(map = null) {
     { id: 'around', title: 'Getting around', blurb: 'On foot, at the wheel, and the city\'s free transit.', entries: [
       { id: 'move', t: 'On foot', b: '[[move]] moves you; push all the way to run. [[sprint]] sprints and [[dive]] dives out of the way.' },
       { id: 'drive', t: 'Driving', b: `Walk up to any vehicle and press [[vehicle]] to get in. [[gas]] goes, [[brake]] brakes and reverses. Taking one that isn't yours is a crime if anyone sees it. Driving earns driving skill (up to ${drive.cap} xp a day).` },
-      { id: 'starter', t: 'Your starter car', b: `A ${starter}, registered to you and free. Lose it and another is free at any public garage - a station parking lot, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there.` },
+      { id: 'arrive', t: 'Arriving', b: 'New in town, you pick the station your train comes in at - in the city, on the coast, in the desert or out in the country - and your starter car waits in its parking lot. Every station\'s trains go everywhere else.' },
+      { id: 'starter', t: 'Your starter car', b: `A ${starter}, registered to you and free. Lose it and another is free at any public garage - a station parking lot, a Fresh Coat Garage or a dealership - ${mins(STARTER.cooldownS)} later. Own a home with a garage and it lives there. Until you've driven it, a marker shows you where it's parked; after, a small plate when it's near.` },
       { id: 'map', t: 'The map and waypoints', b: '[[map]] opens the map: pick a place, or tap anywhere, for a waypoint and a route along the roads.' },
       { id: 'bus', t: 'Buses', b: 'Free, any distance. Wait at a stop and press [[action]] when the bus pulls up; [[vehicle]] gets you off at any stop. Your phone\'s Transit app shows when the next one comes.' },
       { id: 'train', t: 'Trains', b: 'Free. When a train is in, walk up to its doors and press [[action]] to board; [[vehicle]] gets you off at a station. Each platform counts down to the next train.' },
@@ -87,7 +89,7 @@ export function guideSections(map = null) {
       { id: 'hustle', t: 'A little hustle', b: `The black market buys stolen cargo and has the mail train job (${$(TRAIN_JOB_PAY)} when the strongbox is fenced). Robbing a till pays about ${$(ROB_TAKE.convenience)} a wad; a bank's vault up to ${$(HEIST.cash)}. All of it is a crime - see The law.` },
     ] },
     { id: 'law', title: 'The law', blurb: 'What counts as a crime, the stars, and getting back up.', entries: [
-      { id: 'witness', t: 'Crimes need a witness', b: 'A crime counts only if someone sees it: a passer-by, an officer or a camera. Safety mode (Settings) asks before you do something that would be one.' },
+      { id: 'witness', t: 'Crimes need a witness', b: 'A crime counts only if someone sees it: a passer-by, an officer or a camera. Turn on Safety mode in Settings and the game asks before you do something that would be one (press again to do it).' },
       { id: 'stars', t: 'Wanted stars', b: `Each reported crime adds heat: one star at ${STAR_HEAT[1]}, five at ${STAR_HEAT[5]}. Get out of the officers' sight and lie low - the heat fades. Change your look unseen, or drive a car into a Spray & Go, to lose it faster.` },
       { id: 'busted', t: 'Busted', b: `Knocked out by an officer and cuffed: fined ${$(BUST_FINE_PER_STAR)} a star, and illegal gear taken. Felonies stay on your record until you pay ${$(FELONY_FINE)} each at a police station or a courthouse.` },
       { id: 'down', t: 'Knocked down', b: `Down, you drop your cash and what you carry. You have ${RESPAWN_SECONDS} seconds to pick where to wake up - a hospital or a home of yours - or call for help and wait up to ${mins(HELP_S)} for a revive. An ambulance costs ${$(AMBULANCE_FEE)} if it brings you round.` },
@@ -103,6 +105,7 @@ export function guideSections(map = null) {
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
       { id: 'dice', t: 'Street dice', b: `A crew shooting dice down an alley or a back passage in a rough part of town, like Southside's: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
       { id: 'races', t: 'Races and skating', b: 'Pull up to a race\'s start to enter. Skate parks score your tricks; beaches have surf.' },
+      { id: 'caves', t: 'Caves and mining', b: `Walk up to a mine's adit or a cave's mouth and press [[action]] to go in. It's dark inside - [[light]] switches your light on. The way out shows by the daylight coming in, a lantern either side and a WAY OUT board. A pickaxe (from ${$(PICK_PRICES.pickStone)} at hardware stores) works the ore veins; the assay office pays ${pct(ASSAY_PAYS - 1)} more than a pawn shop.` },
       { id: 'crazy', t: 'Crazy Taxi', b: `A run against the clock from any taxi rank: ${CRAZY.startS} seconds on it to start, more for each fare you get there fast.` },
       { id: 'skills', t: 'Skills', b: `Six skills level up as you do things, ${SKILL.max} levels each - up to +${pct(SKILL.top)} at the top. Your phone's Skills app shows them.` },
     ] },

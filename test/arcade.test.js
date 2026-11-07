@@ -236,6 +236,21 @@ test('skee-ball and air hockey: the lane\'s rings, the table\'s puck, and their 
   const y0 = T2.cpu.y;
   for (let k = 0; k < 60; k++) Hk.cpuMove(T2, 1 / 120);
   assert.ok(T2.cpu.y < y0, 'the machine goes for it');
+  // the owner, 11-06: the puck hung in the machine's corner for good - the machine no longer pins it, and a puck stuck
+  // anywhere is faced off within STUCK_S
+  for (const cy of [Hk.T.y0 + 7, Hk.T.y1 - 7]) {
+    const T3 = Hk.newTable(); T3.puck.x = Hk.T.x1 - 7; T3.puck.y = cy; T3.wait = 0;
+    let free = false;
+    for (let k = 0; k < 120 * 6 && !free; k++) {
+      Hk.cpuMove(T3, 1 / 120); Hk.strike(T3.puck, T3.cpu); Hk.glide(T3.puck, 1 / 120);
+      if (Hk.unstick(T3, 1 / 120) || T3.puck.x < Hk.T.x1 - 40) free = true;
+    }
+    assert.ok(free, `out of the corner at y ${cy}`);
+  }
+  const T4 = Hk.newTable(); T4.puck.x = 60; T4.puck.y = Hk.T.y0 + 7;
+  let faced = false;
+  for (let k = 0; k < 120 * (Hk.STUCK_S + 1) && !faced; k++) faced = Hk.unstick(T4, 1 / 120);
+  assert.ok(faced && T4.puck.y === Hk.CY, 'a puck that stays put is faced off');
   // the server: points into tickets, if they could be true
   const w = makeWorld();
   const { p, conn, prof } = joinPlayer(w, { cash: 50 });

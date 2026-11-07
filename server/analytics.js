@@ -14,7 +14,7 @@ import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 export const FTUE_STEPS = ['first_join', 'look_picked', 'moved', 'title_play', 'in_world', 'first_job', 'first_job_done', 'first_crime', 'first_purchase', 'first_death', 'first_chat', 'played_10m', 'played_30m', 'came_back', 'signed_up', 'tutorial_begin', 'tutorial_complete',
   // the first-time experience (server/systems/ftue.js): the arrival, the answer, each step reached, done or skipped; the
   // first-time moments fired; the Guide app opened
-  'ftue_arrive', 'ftue_answer_work', 'ftue_answer_hustle', 'ftue_answer_outdoors', 'ftue_answer_roam', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done', 'ftue_skip',
+  'ftue_pick', 'ftue_pick_default', 'ftue_arrive', 'ftue_answer_work', 'ftue_answer_hustle', 'ftue_answer_outdoors', 'ftue_answer_roam', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done', 'ftue_skip',
   'moment_wanted', 'moment_down', 'moment_shop', 'moment_transit', 'moment_night', 'moment_hurt', 'guide_open'];
 const CLIENT_FTUE = new Set(['title_play', 'in_world', 'tutorial_begin', 'tutorial_complete', 'look_picked']);
 const DAYS_KEPT = 90, CONC_KEPT = 14 * 24 * 12;

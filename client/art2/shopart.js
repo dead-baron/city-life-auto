@@ -162,6 +162,7 @@ export function drawShop(R, u, r, px0, ox, oy) {
       if (C.k === 'glass' && Y > cy + 8 && Y < cy + 24 && x > ca + 2 && x < cb - 3) c = caseTop(x - ca, Y - cy - 9, cg, felt, R.seed, C.gk);
       if (C.k === 'ice' && Y > cy + 8 && Y < cy + 24) c = (hash(x >> 3, Y >> 2, 1612) > 0.7 && (x & 7) < 6) ? [150, 160, 170] : hash(x, Y, 1613) > 0.7 ? WHITE : [214, 228, 234];
       if (C.k === 'bar' && Y === cy + 8) c = BRASS;
+      if (C.k === 'club' && Y === cy + 7) c = lit(rgb(C.trim || '#ff4ab0'), 200);   // (the club's bar: a neon edge along its top)
       px(x, Y, 22, c, UP, c.length > 3 ? c : undefined);
     }
     for (let v = 0; v < 22; v++) {
@@ -169,6 +170,8 @@ export function drawShop(R, u, r, px0, ox, oy) {
       if (trim && v >= 18 && v < 20) c = trim;
       if (C.k === 'glass' && v > 4 && v < 17 && (x - ca) % 40 > 1) { const it = v >= 6 && v < 14 ? itemRow(C.gk || 'gold', C.g || ['#e8c040'], x - ca, v - 6, 8, R.seed + 77) : null; c = it ? lit(it, 40) : mix(felt, GLASS, v > 12 ? 0.6 : 0.3); if (v === 15 || v === 16) c = lit([220, 236, 244], 60); }
       if (C.k === 'bar' && v === 6) c = BRASS;
+      if (C.k === 'club' && (v === 17 || v === 18)) c = lit(rgb(C.trim || '#ff4ab0'), v === 17 ? 230 : 150);   // (and a neon strip along its front)
+      if (C.k === 'club' && v === 4) c = CHROME;
       if (C.k === 'ice' && v > 4 && v < 17) c = mix([200, 220, 228], [120, 150, 170], v / 20);
       px(x, cy + 26, v, c, S, c.length > 3 ? c : undefined);
     }
@@ -188,7 +191,16 @@ export function drawShop(R, u, r, px0, ox, oy) {
     }
   }
   const tx = X(R.tillX);
-  slab(tx - 6, tx + 6, cy + 9, cy + 16, 29, '#34363c', '#4a4e58', 22); dot(tx - 3, cy + 10, 30, [120, 220, 140], 3, lit([120, 220, 140], 150));
+  if (C.dj) {   // the DJ booth (NE9): a raised console in the bar - the decks and the mixer on top, its front a lit panel
+    const d0 = X(C.dj[0]), d1 = X(C.dj[1]), n2 = rgb(C.neon || '#5ae8ff'), n1 = rgb(C.trim || '#ff4ab0');
+    slab(d0, d1, cy + 4, cy + 27, 30, (x, Y) => (Y === 0 ? lit(n2, 200) : [34, 32, 42]), (x, v) => (v === 28 ? lit(n2, 220) : v > 4 && v < 26 && x > 2 && x < d1 - d0 - 3 ? (((x >> 2) + (v >> 2)) & 1 ? lit(mix(n1, DARK, 0.35), 150) : lit(mix(n2, DARK, 0.5), 120)) : [26, 24, 32]));
+    const mid = (d0 + d1) / 2, my = cy + 15, rr = Math.min(8, Math.max(4, ((d1 - d0) / 2 - 16) / 2));
+    for (const s of [-1, 1]) disc(Math.round(mid + s * (rr + 10)), my, rr, 31, (dx, dy, dd) => (dd < 1.5 ? [200, 200, 210] : dd > rr - 1 ? [70, 70, 80] : (Math.round(dd) & 1 ? [22, 22, 26] : [40, 40, 46])));
+    slab(mid - 6, mid + 6, my - 5, my + 6, 32, (x, Y) => ((x + Y) % 3 === 0 ? lit(x < 6 ? n1 : n2, 200) : [50, 50, 58]), [40, 40, 48], 30);
+  } else if (C.k !== 'club') {
+    slab(tx - 6, tx + 6, cy + 9, cy + 16, 29, '#34363c', '#4a4e58', 22); dot(tx - 3, cy + 10, 30, [120, 220, 140], 3, lit([120, 220, 140], 150));
+  }
+  if (C.k === 'club') for (const x of [ca + 14, cb - 26]) ON.taps(slab, dot, px, x + 6, cy);
   let side = 1;
   for (const k of C.on || []) {
     const x = tx + side * 24 + (side > 0 ? 0 : -12); side = -side;
@@ -283,6 +295,10 @@ const WALLF = {
   frames: (x, v, w, h) => (v % 12 < 2 ? [214, 210, 200] : v % 12 > 3 && v % 12 < 8 && ((x % 14 > 1 && x % 14 < 6) || (x % 14 > 7 && x % 14 < 12)) ? (x % 14 === 2 || x % 14 === 5 || x % 14 === 8 || x % 14 === 11 || v % 12 === 4 || v % 12 === 7 ? rgb(['#2a2a2e', '#8a2a2a', '#c8a050', '#2a5a8a'][(x / 14 | 0) % 4]) : [200, 220, 230]) : [236, 232, 224]),
   files: (x, v, w, h) => (x % 18 > 15 ? null : v % 11 < 1 || x % 18 < 1 || x % 18 > 14 ? [110, 114, 120] : v % 11 === 5 && x % 18 > 5 && x % 18 < 10 ? [60, 60, 64] : [160, 164, 170]),
   // a brass wall lamp with its lit shade
+  // the club's (NE9): the screen behind the DJ - a lit wall of colour bars; a speaker cabinet; a neon tube up the wall
+  ledwall: (x, v, w, h, g) => { if (frame(x, v, w, h, 2)) return [26, 24, 32]; const k = x >> 2, bh = 2 + (0.25 + 0.75 * hash(k, 1, 1662)) * (h - 6); if ((x & 3) === 3 || v > bh) return [30, 26, 40]; const t = (v - 2) / Math.max(1, h - 6); return lit(mix(rgb(g[1 % g.length]), rgb(g[0]), Math.min(1, t * 1.3)), 190); },
+  speaker: (x, v, w, h) => { const cx = w / 2; for (const cy of [h * 0.28, h * 0.68]) { const d = Math.hypot(x + 0.5 - cx, v + 0.5 - cy); if (d < w * 0.36) return d < w * 0.12 ? [70, 70, 80] : d > w * 0.3 ? [60, 60, 68] : [22, 22, 26]; } return frame(x, v, w, h, 1) ? [50, 50, 58] : [30, 30, 36]; },
+  tube: (x, v, w, h, g, c) => (x === 0 || x === w - 1 ? lit(mix(c || [255, 80, 180], [24, 20, 30], 0.4), 140) : lit(mix(c || [255, 80, 180], WHITE, 0.45), 230)),
   sconce: (x, v, w, h) => (v < 3 ? (x === 2 || x === 3 ? BRASS : null) : v < 4 ? BRASS : lit(mix([255, 224, 170], WHITE, (v - 4) / 12), 230)),
   lantern: (x, v, w, h) => (v > h - 2 ? (x > 2 && x < 5 ? DARK : null) : v < 2 || x < 1 || x >= w - 1 ? [40, 34, 30] : lit([255, 190, 100], 230)),
   // IN5 Velvet's martini glass in neon on the dark wall
@@ -540,7 +556,29 @@ const PIECE = {
   mirror: (q, p, x0, y0, x1, y1, w, d, h, g, c) => q.slab(x0, x1, y0, y1, h, c, (x, v) => (v < 12 ? rp(c)[1] : x < 2 || x > w - 3 || v > h - 3 ? rp(c)[3] : (x + v) % 13 < 2 ? [214, 230, 240] : [160, 188, 204])),
   ice: (q, p, x0, y0, x1, y1, w, d, h) => q.slab(x0, x1, y0, y1, h, (x, Y) => { const fx = (x % 20) - 10, fy = (Y % 10) - 5; return Y > 2 && Y < d - 2 && fx * fx / 50 + fy * fy / 6 < 1 ? (fx > 6 ? [120, 130, 140] : [168, 180, 190]) : hash(x, Y, 1632) > 0.6 ? WHITE : [210, 226, 232]; }, '#7a8a96'),
   stool: (q, p, x0, y0, x1, y1, w, d, h) => { const mx = (x0 + x1) / 2, my = (y0 + y1) / 2; for (let v = 0; v < h; v++) q.px(mx, my + 2, v, CHROME, [1, 0, 0]); q.disc(mx, my, 3, h + 1, (dx, dy) => (dx + dy < -2 ? mix(rgb(p.c), WHITE, 0.3) : rgb(p.c))); },
-  dance: (q, p, x0, y0, x1, y1, w, d, h, g) => { for (let Y = y0; Y < y1; Y++) for (let x = x0; x < x1; x++) { const i = ((x - x0) >> 4) + ((Y - y0) >> 4) * 7, on = hash(i, 1, q.R.seed & 255) > 0.45, col = g[i % g.length]; if ((x & 15) === 0 || (Y & 15) === 0) q.px(x, Y, 1, [20, 18, 26]); else if (on) q.px(x, Y, 1, mix(col, [30, 26, 40], 0.35), UP, lit(col, 110)); } },
+  // the dance floor: lit squares in the club's colours between dark grout, (NE9) a neon strip round its edge
+  dance: (q, p, x0, y0, x1, y1, w, d, h, g) => {
+    const edge = p.edge ? rgb(p.edge) : null;
+    for (let Y = y0; Y < y1; Y++) for (let x = x0; x < x1; x++) {
+      if (edge && (x - x0 < 2 || x1 - 1 - x < 2 || Y - y0 < 2 || y1 - 1 - Y < 2)) { q.px(x, Y, 1, mix(edge, WHITE, 0.3), UP, lit(edge, 200)); continue; }
+      const i = ((x - x0) >> 4) + ((Y - y0) >> 4) * 7, on = hash(i, 1, q.R.seed & 255) > 0.4, col = g[i % g.length], lx = (x - x0) & 15, ly = (Y - y0) & 15;
+      if (lx === 0 || ly === 0) q.px(x, Y, 1, [20, 18, 26]);
+      else if (on) q.px(x, Y, 1, lx < 3 && ly < 3 ? mix(col, WHITE, 0.35) : mix(col, [30, 26, 40], 0.3), UP, lit(col, 120));
+      else q.px(x, Y, 1, mix(col, [24, 22, 32], 0.82));
+    }
+  },
+  // a speaker stack on the floor: the cabinet, its two cones facing the room
+  speaker: (q, p, x0, y0, x1, y1, w, d, h) => q.slab(x0, x1, y0, y1, h, '#26262e', (x, v) => { const cx = w / 2; for (const cy of [h * 0.3, h * 0.7]) { const dd = Math.hypot(x + 0.5 - cx, v + 0.5 - cy); if (dd < w * 0.36) return dd < w * 0.12 ? [80, 80, 90] : dd > w * 0.29 ? [64, 64, 72] : [20, 20, 24]; } return x < 1 || x >= w - 1 ? [54, 54, 62] : [34, 34, 40]; }),
+  // the mirror ball over the floor, sparkling
+  disco: (q, p, x0, y0, x1, y1, w, d, h) => { const cx = (x0 + x1) / 2, cY = (y0 + y1) / 2, rr = Math.min(w, d) / 2 - 1; q.disc(cx, cY, rr, h, (dx, dy, dd) => { const f = ((dx + 99) >> 1) + ((dy + 99) >> 1) * 3; return dd > rr - 1 ? [110, 114, 126] : hash(f, 1, 1661) > 0.82 ? lit(WHITE, 230) : dx + dy < -rr * 0.4 ? [214, 218, 230] : (f & 1 ? [150, 156, 172] : [180, 186, 200]); }); for (let k = 0; k < 6; k++) q.px(cx, cY - rr - 1, h + k, [70, 70, 76]); },
+  // the VIP corner's raised carpet: a gold border, deep red pile, a step at its edge
+  vip: (q, p, x0, y0, x1, y1, w, d) => { const a = rp(p.c), b = rgb(p.c2); for (let Y = y0; Y < y1; Y++) for (let x = x0; x < x1; x++) { const e = Math.min(x - x0, x1 - 1 - x, Y - y0, y1 - 1 - Y); q.px(x, Y, 2, e < 2 ? b : ((x + Y) & 7) === 0 ? a[1] : a[2]); } for (let x = x0; x < x1; x++) for (let v = 0; v < 2; v++) q.px(x, y1, v, a[1], S); },
+  // the velvet rope: brass posts down the line, the red rope sagging between them
+  rope: (q, p, x0, y0, x1, y1, w, d, h) => {
+    const pc = rgb(p.c), lx = Math.round((x0 + x1) / 2), n = Math.max(1, Math.round(d / 26)), step = d / n;
+    for (let k = 0; k <= n; k++) { const Y = Math.round(y0 + k * step); q.slab(lx - 2, lx + 3, Y - 2, Y + 2, 2, '#b8943a', '#8a6a2a'); q.slab(lx - 1, lx + 2, Y - 1, Y + 1, h + 2, '#e8c860', '#c8a040', 2); q.dot(lx - 1, Y - 2, h + 3, GOLD, 3); }
+    for (let Y = y0; Y <= y1; Y++) for (const o of [0, 1]) q.px(lx + o, Y, h - 1 - Math.round(Math.sin(((Y - y0) % step) / step * Math.PI) * 4), pc);
+  },
   plant: (q, p, x0, y0, x1, y1, w, d, h) => {
     const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, big = p.big || p.palm ? 1.35 : 1;
     q.slab(mx - 5, mx + 5, my - 4, my + 4, 9, p.palm ? '#d8c8a8' : '#b0603c', p.palm ? '#b8a888' : '#9a5030');

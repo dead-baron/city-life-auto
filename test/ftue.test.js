@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, fakeConn, players, store } from './helpers.js';
 import { PROGRESS_EPOCH, resetOldEpochs } from '../server/store.js';
 import * as homes from '../server/systems/homes.js';
-import { FTUE, STAR_HEAT } from '../shared/rules.js';
+import { FTUE, STAR_HEAT, STARTER } from '../shared/rules.js';
 import { K } from '../shared/constants.js';
 import { DAY_PART_S } from '../shared/constants.js';
 import { STEP_CTL, ASK_POI, ANSWERS, MOMENTS, goalFor } from '../server/systems/ftue.js';
@@ -20,6 +20,9 @@ import * as jobs from '../server/systems/jobs.js';
 import * as fishing from '../server/systems/fishing.js';
 import * as combat from '../server/systems/combat.js';
 import { FTUE_STEPS } from '../server/analytics.js';
+import * as transit from '../server/systems/transit.js';
+import { guideSections } from '../shared/guide.js';
+import { readFileSync } from 'node:fs';
 
 // a world with the analytics' funnel listened to (server/launch.js world.track)
 function world() {
@@ -35,8 +38,10 @@ function newcomer(w) {
 }
 const sent = (conn, f) => conn.sent.filter((m) => typeof m === 'object' && f(m));
 const me = (w, p) => players.buildMe(w, p);
-const toArrival = (w) => run(w, 0.6);
-const toQuestion = (w) => run(w, FTUE.arriveS + 4.6);   // (the page says when its scene is over; else the server's own timeout)
+// the arrival stations' card up, then skipped (the default station) - every new character's in the world
+const toPick = (w) => run(w, 0.6);
+const toArrival = (w) => { toPick(w); for (const p of w.players.values()) if (p.profile.ftue && p.profile.ftue.st === 'pick') ftue.handle(w, p, { a: 'skip' }); };
+const toQuestion = (w) => run(w, FTUE.arriveS + 10.6);   // (the page says when its scene is over; else the server's own timeout)
 // drive (by teleport) to the goal: the car moved with you in it
 function arriveAtGoal(w, p) {
   const g = p.profile.ftue.goal, v = p.ped.vehId ? w.get(p.ped.vehId) : null;
@@ -48,13 +53,28 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   const { w, steps } = world();
   const { p, prof, conn } = newcomer(w);
   assert.equal(prof.ftue.st, 'new', 'a new character\'s record');
-  toArrival(w);
+  // where to arrive: the card of the arrival stations, the default first; one picked - not the default - and the starter
+  // car's lot follows it
+  toPick(w);
+  assert.equal(prof.ftue.st, 'pick');
+  const card = sent(conn, (m) => m.t === 'ftue' && m.a === 'pick')[0];
+  const choices = starter.arrivalChoices(w);
+  assert.ok(card && card.opts.length >= 2 && card.opts.length <= 4, 'a short card of stations');
+  assert.deepEqual(card.opts.map((o) => o.id), choices.map((c) => c.poi));
+  assert.ok(card.opts[0].def && card.opts.slice(1).every((o) => !o.def), 'the default first, marked');
+  for (const o of card.opts) assert.ok(o.name && o.region && w.map.pois[o.id].kind === 'station', `${o.name}: a station, its region`);
+  const car0 = starter.carOf(w, prof.pid), d0 = w.map.pois[card.opts[0].id];
+  assert.ok(car0 && Math.hypot(car0.x - d0.x, car0.y - d0.y) <= STARTER.lotR, 'the car waits at the default till then');
+  assert.deepEqual(me(w, p).ftue, { st: 'pick' });
+  const choice = card.opts[card.opts.length - 1];
+  ftue.handle(w, p, { a: 'pick', stn: choice.id });
   assert.equal(prof.ftue.st, 'arrive');
+  assert.equal(prof.ftue.stn, choice.id, 'the profile remembers the station');
   // the arrival: on the platform of the station whose car park has the starter car (one function: starter.arrivalFor)
   const g = starter.arrivalFor(w, p), st = w.map.pois[g.poi], car = starter.carOf(w, prof.pid);
   assert.equal(prof.ftue.stn, g.poi);
   assert.ok(Math.hypot(p.ped.x - st.x, p.ped.y - st.y) < 900, 'off the train at the arrival station');
-  assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= 900, 'the starter car in that station\'s car park');
+  assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR, 'the starter car in that station\'s car park');
   const arr = sent(conn, (m) => m.t === 'ftue' && m.a === 'arrive')[0];
   assert.ok(arr && arr.name === st.label && arr.s === FTUE.arriveS && arr.from.length === 2, 'the page plays the arrival');
   assert.deepEqual(me(w, p).ftue, { st: 'arrive' });
@@ -106,7 +126,7 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   assert.ok(end && end.title === 'FIRST GOAL DONE' && end.sub.startsWith(`+$${FTUE.reward}`), 'the big moment');
   assert.equal(me(w, p).ftue, null);
   assert.equal(me(w, p).job.k, goal.k === 'mail' ? 'Mail carrier' : 'Courier', 'the job itself now');
-  assert.deepEqual(steps, ['ftue_arrive', 'ftue_answer_work', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done']);
+  assert.deepEqual(steps, ['ftue_pick', 'ftue_arrive', 'ftue_answer_work', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done']);
   for (const s of steps) assert.ok(FTUE_STEPS.includes(s), `${s}: a funnel step the analytics keep`);
   // under three minutes of play from the platform to done, by the timings kept
   const at = prof.ftue.at;
@@ -233,10 +253,10 @@ test('everyone goes through it once: a profile from an older progress epoch is r
   const p2 = players.join(w2, conn, prof);
   const car = starter.carOf(w2, prof.pid);
   assert.ok(car, 'the starter car in the lot');
-  run(w2, 0.6);
+  toArrival(w2);
   assert.equal(prof.ftue.st, 'arrive');
   const st = w2.map.pois[starter.arrivalFor(w2, p2).poi];
-  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= 900 && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
+  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
 });
 
 test('the epoch checked again on joining: an old profile that reaches a running world is reset there, its home let go', () => {
@@ -255,7 +275,7 @@ test('the epoch checked again on joining: an old profile that reaches a running 
   // a profile with no FTUE record at all (none should be left): a new character's
   const { prof: q } = joinPlayer(w2, { ftue: undefined });
   q.lookPicked = true;
-  run(w2, 0.6);
+  toArrival(w2);
   assert.equal(q.ftue.st, 'arrive');
 });
 
@@ -431,10 +451,10 @@ test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDAT
   assert.deepEqual({ st: prof.ftue.st, first: prof.starter.first }, { st: 'new', first: undefined }, 'a new character: the FTUE not started (the car\'s first day spent at once - below)');
   const car = starter.carOf(w2, prof.pid);
   assert.ok(car, 'the starter car in the lot');
-  run(w2, 0.6);
+  toArrival(w2);
   assert.equal(prof.ftue.st, 'arrive', 'the arrival');
   const g = starter.arrivalFor(w2, p2), st = w2.map.pois[g.poi];
-  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= 900 && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
+  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
   assert.ok(sent(conn, (m) => m.t === 'ftue' && m.a === 'arrive').length);
   // Start fresh (players.wipeAccount): the same
   const b = newcomer(w2);
@@ -443,4 +463,181 @@ test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDAT
   b.prof.acct = { v: 1, kind: 'guest', logins: [], passkeys: [] };   // (every online profile has its account record: kept)
   players.wipeAccount(w2, b.p);
   assert.equal(b.prof.ftue.st, 'new'); assert.equal(b.prof.starter.first, true);
+});
+
+test('where to arrive: skipped or left, the default; rejoining mid-choice, the card again; the car\'s lot follows the pick', () => {
+  const { w, steps } = world();
+  const choices = starter.arrivalChoices(w), def = choices[0];
+  assert.ok(choices.length >= 2 && def.def, 'stations to choose from, the default first');
+  // skipped (Esc, B, Skip): the default, on to the arrival
+  const a = newcomer(w);
+  toPick(w);
+  ftue.handle(w, a.p, { a: 'skip' });
+  assert.equal(a.prof.ftue.st, 'arrive'); assert.equal(a.prof.ftue.stn, def.poi);
+  // a station not on the card: the default too
+  const b = newcomer(w);
+  toPick(w);
+  ftue.handle(w, b.p, { a: 'pick', stn: 999999 });
+  assert.equal(b.prof.ftue.stn, def.poi);
+  // left on the card: the default once FTUE.pickS is up
+  const c = newcomer(w);
+  toPick(w);
+  w.time += FTUE.pickS + 1; run(w, 0.6);
+  assert.equal(c.prof.ftue.st, 'arrive'); assert.equal(c.prof.ftue.stn, def.poi);
+  assert.equal(steps.filter((s) => s === 'ftue_pick_default').length, 3);
+  // left mid-choice and back (a restart): the card again, and the pick still moves the car
+  const d = newcomer(w);
+  toPick(w);
+  const saved = JSON.parse(JSON.stringify(d.prof));
+  players.leave(w, d.p);
+  const w2 = makeWorld({ keepKept: true });
+  const conn2 = fakeConn();
+  const p2 = players.join(w2, conn2, Object.assign(d.prof, saved));
+  assert.equal(d.prof.ftue.st, 'pick');
+  run(w2, 0.6);
+  assert.equal(sent(conn2, (m) => m.t === 'ftue' && m.a === 'pick').length, 0, 'not at once');
+  run(w2, 1.6);
+  const card = sent(conn2, (m) => m.t === 'ftue' && m.a === 'pick');
+  assert.equal(card.length, 1, 'the card again');
+  assert.equal(d.prof.ftue.st, 'pick', 'still choosing - no default picked while away');
+  const far = card[0].opts[card[0].opts.length - 1], st = w2.map.pois[far.id];
+  ftue.handle(w2, p2, { a: 'pick', stn: far.id });
+  const car = starter.carOf(w2, d.prof.pid);
+  assert.equal(d.prof.ftue.stn, far.id);
+  assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR, 'the starter car in the picked station\'s lot');
+  assert.ok(Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'off the train there');
+  assert.equal(starter.arrivalFor(w2, p2).poi, far.id, 'one function for both');
+  assert.ok(p2.toasts.some((t) => t.text.includes(`waiting in the parking lot at ${st.label}`)), 'told where it waits: the station picked');
+  assert.ok(!p2.toasts.some((t) => /waiting in the parking lot/.test(t.text) && !t.text.includes(st.label)), 'never the default station\'s lot');
+  // a pick after the card is gone does nothing
+  ftue.handle(w2, p2, { a: 'pick', stn: def.poi });
+  assert.equal(d.prof.ftue.stn, far.id);
+});
+
+// ---- the owner's 11-06 report: the shop line at a house for sale's door; "only new players ... after they appear once
+// or twice"; tapping the tip should take you to the Guide ------------------------------------------------------------
+const doneChar = (w) => {
+  const j = newcomer(w);
+  toArrival(w); toQuestion(w);
+  economy.handleMenu(w, j.p, ASK_POI, 'roam');
+  j.prof.ftue.m.transit = 1;   // (off the train on a platform: not this test's)
+  w.loopTime = 60;
+  w.time += FTUE.tipGapS + 1;
+  const tips = () => sent(j.conn, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
+  return { ...j, tips };
+};
+
+test('the shop moment fires at a shop\'s counter only - not a house for sale, a dealer, the garage, the hospital', () => {
+  const { w } = world();
+  const { p, tips } = doneChar(w);
+  const poiOf = (f) => w.map.pois.find(f);
+  const house = poiOf((q) => q.kind === 'home' && !homes.unitsAt(w, q) && !w.homeOwner.has(w.map.homes[q.home].id));
+  const others = [house, poiOf((q) => q.kind === 'dealer'), poiOf((q) => q.kind === 'garage'), poiOf((q) => q.kind === 'hospital'), poiOf((q) => q.kind === 'marina')].filter(Boolean);
+  assert.ok(house && others.length >= 3, 'a house for sale and the others on the map');
+  for (const q of others) {
+    const m = economy.buildMenu(w, p, q);
+    if (q === house) assert.ok(m.opts.some((o) => o.price > 0), 'the house\'s menu has a price (the old trigger fired on it)');
+    w.time += FTUE.tipGapS + 1;
+    economy.openMenu(w, p, q);
+    assert.ok(!tips().includes('shop'), `no shop line at ${q.kind}`);
+    assert.equal(ftue.isShop(q), false, q.kind);
+  }
+  const shop = poiOf((q) => q.kind === 'convenience');
+  assert.ok(ftue.isShop(shop));
+  w.time += FTUE.tipGapS + 1; economy.openMenu(w, p, shop);
+  assert.deepEqual(tips(), ['shop']);
+  for (let i = 0; i < 3; i++) { w.time += FTUE.tipGapS + 1; economy.openMenu(w, p, shop); }
+  assert.deepEqual(tips(), ['shop'], 'once');
+});
+
+test('each moment at most once on a character - across a rejoin and a server restart; the hurt one at most twice, however often you go down', () => {
+  const { w } = world();
+  const { p, prof, conn, tips } = doneChar(w);
+  const hurt = () => { p.ped.hp = p.ped.maxHp * (FTUE.hurtAt - 0.1); };
+  const cycle = () => {   // hurt, the line, straight down (un-marks it), up again past the wake-up
+    p.ftueTipAt = -1e9; hurt(); run(w, 0.6);
+    combat.damage(w, p.ped, 9999, null, 'test'); run(w, 0.6);
+    p.respawnAt = w.time; run(w, 1.2);
+    w.time += FTUE.wakeS + FTUE.tipGapS + 1; run(w, 0.6);
+  };
+  for (let i = 0; i < 6; i++) cycle();
+  const n = (id) => tips().filter((t) => t === id).length;
+  assert.equal(n('hurt'), FTUE.hurtMax, 'the hurt line twice, not round and round');
+  assert.equal(n('down'), 1);
+  assert.ok(prof.ftue.m.hurt, 'kept as taught after the second');
+  for (const id of Object.keys(MOMENTS)) assert.ok(n(id) <= (id === 'hurt' ? FTUE.hurtMax : 1), id);
+  // a restart: the profile as saved, a new world - nothing again
+  const saved = JSON.parse(JSON.stringify(prof));
+  players.leave(w, p); void conn;
+  const w2 = makeWorld({ keepKept: true });
+  const conn2 = fakeConn(), p2 = players.join(w2, conn2, Object.assign(prof, saved));
+  w2.loopTime = 60; run(w2, 0.6);
+  const tips2 = () => sent(conn2, (m) => m.t === 'ftue' && m.a === 'tip').map((m) => m.id);
+  w2.time += FTUE.tipGapS + 1;
+  p2.heat = STAR_HEAT[1] + 8; p2.wanted = 1; run(w2, 0.6);
+  const before = tips2().length;
+  w2.time += FTUE.tipGapS + 1; p2.ped.hp = p2.ped.maxHp * 0.3; run(w2, 0.6);
+  economy.openMenu(w2, p2, w2.map.pois.find((q) => q.kind === 'convenience'));
+  assert.ok(!tips2().includes('hurt'), 'the hurt line not a third time after a restart');
+  assert.ok(tips2().length <= before + 1 && tips2().every((t) => !tips().includes(t)), 'only moments not yet seen');
+});
+
+test('only while the character is new: none after FTUE.tipsPlayH hours played or FTUE.tipsDays days after the FTUE; none with tips off; Settings turns them on and off', () => {
+  const { w } = world();
+  const { p, prof, tips } = doneChar(w);
+  const wanted = () => { p.heat = STAR_HEAT[1] + 8; p.wanted = 1; };
+  // played long enough
+  prof.ftue.pt = FTUE.tipsPlayH * 3600 + 1;
+  wanted(); run(w, 0.6);
+  assert.deepEqual(tips(), [], 'no tip after the hours');
+  assert.equal(ftue.moment(w, p, 'shop'), false);
+  // play time counts up while connected
+  prof.ftue.pt = 0; const t0 = prof.ftue.pt;
+  ftue.handle(w, p, { a: 'tipset', on: false });
+  assert.equal(players.buildMe(w, p).tips, 0, 'the page knows (Settings)');
+  run(w, 2);
+  assert.ok(prof.ftue.pt >= t0 + 1.5, 'time played counted');
+  assert.deepEqual(tips(), [], 'tips off: nothing');
+  ftue.handle(w, p, { a: 'tipset', on: true });
+  assert.equal(players.buildMe(w, p).tips, 1);
+  w.time += FTUE.tipGapS + 1; wanted(); run(w, 0.6);
+  assert.deepEqual(tips(), ['wanted'], 'on again: the ones not yet seen');
+  // the FTUE long over
+  prof.ftue.at.done = Date.now() - (FTUE.tipsDays * 86400e3 + 60e3);
+  w.time += FTUE.tipGapS + 1; p.ped.hp = p.ped.maxHp * 0.3; run(w, 0.6);
+  assert.deepEqual(tips(), ['wanted'], 'none once the FTUE is over by more than the days');
+  // ...unless asked for: the Guide's "Show tips again"
+  ftue.handle(w, p, { a: 'tips' });
+  run(w, 4);
+  assert.ok(tips().length > 1, 'shown again when asked');
+  assert.ok(FTUE.tipsPlayH > 0 && FTUE.tipsDays > 0 && FTUE.hurtMax === 2);
+});
+
+test('the transit moment: not at a marina (the boat dealer\'s)', () => {
+  const { w } = world();
+  const { p, prof, tips } = doneChar(w);
+  delete prof.ftue.m.transit;
+  const far = (q) => w.map.pois.every((o) => o.kind !== 'station' || Math.hypot(o.x - q.x, o.y - q.y) > 600);
+  const marina = w.map.pois.find((q) => q.kind === 'marina' && far(q));
+  if (marina) {
+    teleport(w, p.ped, marina.x + 20, marina.y);
+    if (!transit.stopNote(w, p)) { w.time += FTUE.tipGapS + 1; run(w, 0.6); assert.ok(!tips().includes('transit'), 'no transit line at the marina'); }
+  }
+});
+
+test('the tip\'s Guide link: each moment names a Guide section; a tap on the tip opens the phone\'s Guide there, above the touch layer', () => {
+  const ids = new Set(guideSections(makeWorld().map).map((s) => s.id));
+  for (const [id, M] of Object.entries(MOMENTS)) assert.ok(ids.has(M.sec), `${id}: ${M.sec}`);
+  const src = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
+  const page = src('client/ftue.js'), main = src('client/main.js'), css = src('client/style.css'), html = src('index.html');
+  assert.match(page, /\$\('ftue-line'\)\.addEventListener\('click'/, 'the whole line listens');
+  assert.match(page, /C\.openGuide\(sec\)/, 'a tap opens the Guide at the tip\'s section');
+  assert.match(page, /el\.dataset\.guide = sec/);
+  assert.match(page, /fl-x/, 'and a way to put it away');
+  assert.match(main, /openGuide: \(sec\) => \{ S\.guideSec = sec; openHub\('phone', 'guide'\); \}/);
+  // above the touch layer's stick zone while it's up (a tap on its words reached the move stick: #zone-l), and not once faded
+  const z = (re) => +(re.exec(css) || [])[1];
+  assert.ok(z(/#ftue-line\.tip \{[^}]*z-index: (\d+)/) > z(/#touch \{[^}]*z-index: (\d+)/), 'the tip over #touch');
+  assert.match(css, /#ftue-line\.faded \{[^}]*pointer-events: none/, 'faded: back to the sticks');
+  assert.match(html, /id="s-tips"/, 'Settings: First-time tips');
 });

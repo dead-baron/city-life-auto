@@ -20716,6 +20716,72 @@ is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.
 - CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
   each system change).
 
+## 2026-11-06 - Arrival stations: pick where you arrive, and the train on its own line (re-keys the world)
+
+The owner (11-06): "Train ride is a staged scene yes. We can have multiple stations to choose from. Perhaps on their own
+track and it comes out of a tunnel and then goes to the station then leaves station and goes into another tunnel, all
+for the purpose of onboarding new players (without overlapping on each other if that's possible)."
+- **The arrival lines** (`shared/world3-arrivals.js` `arrivalLines3`, run last in World v3's `done` pass so it moves
+  nothing else - a pass of its own, for an easy merge with the generator's other work). One per region in
+  `ARRIVAL_PICKS` - city, coast, desert, country - beside the first of the region's main-line stations (with a car park:
+  spaces within `STARTER.lotR`) that has room: an axis-aligned corridor of open ground 40 tiles long (no road, building,
+  water, lot, place, door, parking space, designed place or non-natural prop; the main line at least 5 tiles off, a road
+  2), its platform within 1400 px of the station and a path off the platform's back (at most 22 tiles) to a pavement,
+  plaza, car park or road. It lays the track's bed (dirt, reserve bit 2 as the main line's), the platform and the path
+  paved, and two 6-tile bores (`m.tunnels` / `m.cover`, shared/tunnels.js' kind: the hill drawn over them, sight blocked,
+  a train in one hidden) - the portal facing the platform, the far end blind (rock across it, no portal drawn:
+  client/tunnels.js `blind`). The trees and rocks in the way go. `m.arrivals` keeps each line (its points, the station,
+  the portals, the bores, the path). It is none of the main line's loops: no server train runs on it, nothing joins it.
+- **Picked (seed 1337):** city - **Metro Central** (the lawn north of the station's forecourt loop, across Bayside
+  Avenue: the city's core stations - Midtown, Old Quarter, Westport Center, Southside - have no 40-tile run of open
+  ground near them); coast - **Northshore** (between the promenade and the main line, by the beach); desert - **Red
+  Rock** (out on the sand south of the station's road); country - **Willow Valley** (the meadow south of the station's
+  car park loop). No mountain station: the main line has none in the peaks.
+- **`STARTER.lotR` 900 -> 960 px**: Metro Central's own car park is 934 px from its building, so it wasn't a public
+  garage before (no starter car could wait there).
+- **The art:** the bake draws each line's track and platform as the main line's (client/art2/game/groundbake.js
+  `railField`), the platform's canopies, benches, lamps and name board (statics.js `addRailLoop`, no route board - it
+  has no timetable), and keeps the plants off its bed (`railClear`). The hills and portals are the tunnels'.
+- **Choose your station** (server/systems/ftue.js, step 0): once the look is picked, one card - each station's name,
+  region and a line of what it's like (`REGIONS`), the suggested one (`FTUE.arriveDefault`, the city) first. A pick
+  (`{ t: 'intro', a: 'pick', stn }`) sets `ftue.stn` and the starter car follows it (`starter.followArrival`: brought
+  round to the new station's lot, or put there); Esc, B, Skip or `FTUE.pickS` (60 s) left on the card take the default.
+  A player who leaves on the card gets it again on rejoining. `starter.arrivalChoices` is the list (on a map without
+  arrival lines: up to four stations with a car park, spread out, the one nearest where new characters wake first).
+- **The arrival on the line** (client/ftue.js): the train is the page's own - three cars drawn into the frame
+  (main.js `S.stageCars`), never a server train, so two arrivals never meet. It comes out of the first tunnel, eases into
+  the platform and stops (`FTUE.stopS` 6 s), the chime, the doors open and you're on the platform (`FTUE.doorS` 7.2 s:
+  your own character hidden till then, `S.hideMe`); it pulls out (`FTUE.leaveS` 8.4 s) and is into the far tunnel
+  `FTUE.goneS` (4.6 s) later; the scene ends at `FTUE.arriveS` (14 -> 13 s) and the question comes up. The camera
+  waits by the portal, follows the front car in, settles on your doors, looks after the train toward the far portal
+  as it leaves (an upright phone's view is narrow) and comes back to you, pulled back a little (`S.camPull`: 1.55 on
+  an upright phone, 1.15 otherwise) so the train fits. The touch buttons are hidden while it plays (`body.arriving`). On the server, the newcomer is out of everyone else's sight
+  (`ped.ftueHid`, server/net.js) until the doors open - others see them appear on the platform. Skip: the train still
+  coming in is gone, one in the station pulls out. The carriage-door overlay is gone; the Guide's replay (no line where
+  you stand) is the card over a slow pan. While the card of stations is up, the page asks for the train's pictures
+  (each car, the four ways a line runs) so a phone has them baked before the train comes out of the tunnel. A page that
+  never says its scene is over gets the question `FTUE.arriveS` + 10 s in (was + 4: a stalled phone's frames).
+  `S.arrClock` (debug tools) holds the scene's clock at a moment to photograph it.
+- **The Guide:** a new entry, Arriving (Getting around). Analytics: `ftue_pick`, `ftue_pick_default`.
+- **Tests:** `test/world3arrivals.test.js` (one world build: a line per region at a station with a car park, straight,
+  its platform paved between the portals, two bores with their hills, the far ends blind and walled; no main-line track
+  within 4 tiles, no road on or across it; walkable off the platform to the street and the car park; the card on a v3
+  world, the coast picked, the line sent to the page, the car at that station, the newcomer unseen by another player
+  until the doors open). `test/ftue.test.js`: the card, a pick moving the car, skip and the timeout taking the default,
+  a station not on the card, a rejoin mid-choice. `test/starter.test.js`: the first day's station is the default.
+  `test/world3hubs.test.js` counts the main line's bores only (`!t.arrival`).
+- **Fixed: "Something went wrong drawing the game" at the end of every arrival played through.** The camera's callback
+  ran the scene's clock (`tick`), which ends the scene on its last frame (`A = null`), then read `A.t0` - a TypeError in
+  the frame, caught and toasted. It now reads what it needs before the tick and stops when the scene is over. (Seen in
+  the real-time captures only: the photographed ones held the clock before the end.)
+- Also from the hunt (9 runs: 5 desktop, a phone, a skip on the card, mid-approach and at the platform): a skip at the
+  platform right after the far teleport drew a station clock for a main-line loop with none of its points in the new
+  window yet (`railAt` on an empty list: the same toast) - main.js `drawStationClocks` skips such a loop. And the
+  starter car's note named the default station's lot even when another was picked: it now waits for the pick
+  (`starter.onJoin` silent while the card is to come, `followArrival` says where it is).
+- Today's world (the map picture's) is untouched by this: its `world` hash is main's. The world map's picture was
+  rebaked here anyway (`tools/build-worldmap2.mjs`) because main's wider bars had changed today's world signature.
+
 ## 2026-11-06 - Southside's shops and sheds: rough small shops on the street lots, dice down the passages
 The plain blocks' cut ("No huge plain buildings", above) left Southside's long back rows as columns of lots 10-15 tiles
 deep with paved passages between them. Every lot fronts its passage, and in Southside the art draws them as sheds and
@@ -20966,3 +21032,226 @@ forklift."
   port's yards and every warehouse's included, then a shift started at each. `test/workjobs.test.js` covers a full run
   to the bay with the slot lit, the pay, quitting with a pallet on the forks, a second driver kept off a busy bay, and
   no "car" in any line. `test/uiscreens.test.js` checks that the job card opens the phone's job with Quit job.
+
+## 2026-11-06 - Walking into a building on a phone: The Violet Room, the entry bakes, one loading screen
+The owner, on a Pixel 7 Pro: "This interior for a nightclub is not loading after quite some time. Seems like interiors
+take a long time to load in general" (The Violet Room, Neon District: a plain gray tiled floor, a few people, nothing
+else), and in portrait "the message for loading art flips between two messages and it just pops in and out over and
+over". `tools/interiorbench.mjs` (new) measures both on a 411x891 @2.6 portrait phone against a local World v3 server:
+the loading screen's every change and a filmstrip, cold and warm; a step into a walk-in with the page's CPU slowed 4x
+until its inside is drawn cut away (host.js insideReady).
+- **The bare floor was a crash, not a slow load.** The page's map is a window onto World v3: its POI list keeps the
+  window's places at their world-wide indexes, with holes for the rest. `shopRoom`'s look for an ATM in the room
+  (`for (const p of M.pois) if (p.kind === 'atm' ...)`) threw on the first hole. It runs inside `staticItems` (the
+  cut-away's recipe), so the whole chunk's statics went: the chunk baked as bare ground - no building, no wall, no prop -
+  and, its bake "done", the page counted the inside as drawn (no exit hint, nothing queued). Every walk-in fitted out by
+  its trade (the shops, the bars, the clubs: wave D) did this in the game; the tests and tools/area-shot.mjs build the
+  whole world, with no holes, so never saw it. Fixed (`p &&`), and statics.js `cutOf`: a fit-out that throws leaves the
+  building roofed instead of emptying the chunk. `test/interiorload.test.js` cuts a club away in a window with holes.
+- **The clubs as NE9 / IN15** (`shared/shoprooms.js` FIT.club, `client/art2/shopart.js`): the DJ booth in the middle of
+  the bar (a lit console, the decks and the mixer, the bartender behind it is the DJ), speakers and an equalizer screen
+  behind it, the bottles either side, neon tubes at the ends, the club's word in neon; the bar's neon edge and stools;
+  the lit dance floor (a neon strip round it, the mirror ball over it, pools of coloured
+  light); velvet booths with candlelit tables down one side wall; in a room 16 tiles wide or more the VIP corner on the
+  side away from the door (a raised red carpet, curved booths and tables, the rope on brass posts, the VIP sign); high
+  tables and palms in what's left. `clubFloor` is the lit floor's one rectangle: server/systems/nightclubs.js keeps the
+  dancers on it (not in the booths). Every club in World v3 is a walk-in with this plan (The Violet Room, Club Ultraviolet,
+  The Midnight, Luna Lounge, Afterdark, Volt, Dock 9, Starlet Club, Club Paradiso, Pink Moon Lounge, The Garter Room, The
+  Boiler House, The Anchor, The Conch Bar, The Bell Buoy, The Salty Dog, the tiki bars, Club Nova, Club Eclipse, Club Neon
+  Cactus, Club Mojave Nights, Club Neon, Bass Cave, Pink Flamingo, The Copper Spur Saloon): all had the same crash in the
+  page, all fixed by it. The other big venues (The Grand Theater's cinema, Pinwheel Lanes' bowling) draw their own rooms
+  and never called shopRoom; the casinos, the theatres and the lounges that aren't walk-ins have no inside to draw.
+- **The entry's bakes first** (host.js): inside a walk-in whose inside isn't drawn yet, its cut-away bakes go ahead of
+  everything (`entryPrio`: the chunk under you, then the rest on screen, then the rest of the building - before the
+  ring, the road ahead and the store's looks), and their uploads aren't held to the frame's budget (as after a jump).
+  About to walk in, its inside is baked ahead into the store after the screen's own chunks but before the ring
+  (`precutPrio`; it used to wait until nothing at all was queued for the screen, which near a busy street was never).
+  The cut box is the building's chunks only: its 40 px margin took in the chunks either side of a building ending near a
+  chunk's edge, baked again with nothing changed - The Violet Room's 3 chunks were 9.
+- **One loading screen** (`client/warmup.js` LOAD_PHASES, loadStep; titlescreen.js and holdForArt share the record): the
+  title's line and bar from "Connecting..." to the city - connect, city, graphics, the streets on screen, the ring and
+  the people - each message once, in order (it changes only when the phase moves on), the bar only forward and full at
+  the end, then one fade out (`#title.t-out`, main.js enterCity hides it after FADE_MS). Before: the art's message
+  flipped between "Getting the art ready..." and "Getting the streets around you ready..." as the sprites came and went
+  a frame at a time (warmPlan's `why` between 'view' and 'ring'), the bar dropped from the city's 59% to 0 at PLAY and
+  then jumped 10% <-> 20% <-> 10% (spr) - 15 steps back in one cold load on the bench - and, upright, a two-line message
+  and a three-line tip moved everything under them. The line and the tip keep their room in portrait. The teleport's
+  "Loading the area..." veil: one teleport measured on and off once; `veilStep` keeps it from flapping on a second jump
+  a frame later (up at once, down after 250 ms drawn, back within 2 s only for a jump still not drawn after 250 ms).
+- **Measured** (tools/interiorbench.mjs, 411x891 @2.6, the page's CPU slowed 4x, a single run each): the step into The
+  Violet Room until its inside counted as drawn 4.3 s before - and what was drawn was bare ground, as the owner saw it -
+  3.3 s after, fitted out (unslowed and rasterized: 9.7 s -> 3.2 s); its cut-away 3 chunks, not 9. A first load: before,
+  the bar went back 15 times and dropped from 59% to 0 at PLAY; after, never back, the five messages once each in order,
+  one fade. A teleport's veil: on once, off once, before and after. Tests: test/interiorload.test.js (new) with
+  nightclubs, shoprooms, warmup, perf, art2, pagemodules, lazypage, walkinrooms, regionwindow, uiscreens, hudlayers,
+  mapwindow and dmath pass. The renderer's code is at its 404 KB budget (host.js's new comments trimmed to fit). The
+  world's hashes don't change (world, world3); the art's do.
+
+
+## 2026-11-06 · The caves finished inside, and a way out that looks like one
+
+The owner (11-06, 19:38, on his phone, 14:45 in the game): "Cave interior art looks unfinished. Also we want to have the
+exit of the cave look like an exit so it's clear how to get back out." Concepts: N3, MI1, MI2, MI5.
+
+### Which cave, and why it looked unfinished
+- **The cave:** the Redwood Caverns, just in from the Redwood Creek Falls mouth. The minimap's green ground, the creek and
+  the road are the falls' surroundings. The cobbles in the screenshot are the caverns' basalt colors. A capture of today's
+  view standing there matches his screenshot.
+- **Why:** none of the suspected fallbacks. Every cave goes through `caveart.js`, the tiles were drawn with no smoothing,
+  and every cave type has its stone. The art itself was the problem:
+  - the rock: since nat4, every cave's rock top was one even Voronoi of small round stones (15 px cells) lit flat. At the
+    phone's zoom (0.665) it reads as cobblestone paving. The south faces were 26 px tall, so the walls had no height;
+  - the floor: low-contrast value noise, dithered all over, plus long contour lines (the cracks, and the kit paths'
+    noisy ruts) that read like wood grain: "smeared";
+  - the light: the dark was cut at full device resolution with smooth gradients that fell off from the middle, so the art
+    showed only in a soft blob round each light. The props were vector shapes drawn each frame with antialiasing, so
+    they were soft too;
+  - the way out was a dead end of the passage with a white blob of light in it: no opening, nothing outside, no sign;
+  - people were drawn as placeholder ellipses.
+
+### The art (client/underground/caveart.js, every cave type: the mines' scene caves, their template chambers, the caverns)
+- **Walls:** each south face now stands 30-56 px tall, varying along the wall. It is built of rock columns, lit on
+  the left and shadowed on the right, with ledges across them and the foot in shadow. Flowstone teeth hang from the lip,
+  and the rock is wet and dark by the water. Above, the rock's top is heaped with boulders of different sizes (26 px
+  cells). The nearer ones overlap the further ones, and each is a dome lit from the top left in steps, its facets
+  tilted. Dark crevices run between them, a little moss sits on the tops near the open, and they fade into the dark.
+- **Floor:** packed earth in patches with crisp edges, grit and specks, pebbles with a lit side and a shadow, and bigger
+  rubble at the walls' feet. Cracks are short, three jagged legs from a point. The kit's paths have straight ruts. The
+  docks' planks are painted with the floor.
+- **Things baked in:** everything that doesn't move is drawn into the tile's art pixels once, nearest last: rails,
+  trestles, docks' posts, stairs, timber sets, stalagmites, stalactites, the kit's and the caverns' things, the lanterns'
+  posts and brackets, mushrooms and crystals, the den's bed and every way out's dressing (`bakeProps`). Each frame
+  draws only what moves, snapped to the art pixels: flames, drops, glow-worms, bats, cascades, chests, finds.
+- **Crisp:** tiles are drawn at whole device pixels with no smoothing (no `CH + 0.5` stretch). The dark is drawn on its
+  own canvas at one pixel per art pixel, on the art's grid, then laid over with no smoothing. That is a fifteenth of the
+  pixels a phone filled before.
+- **Light that shows the art:** a light's pool is fully lit in the middle and then falls off (`hole`). The lanterns' warm
+  wash and the glow-worms' halos are softer, so the floor no longer washes out. The dark places stay dark: a mine's den,
+  its glow-worm and crystal caves (lit only by their glow), the caverns' echo hall, the den and the passages between.
+- **People:** the cave view draws people and animals with the page's own `drawPed` (`main.js` passes it), not ellipses.
+
+### The way out (every mouth: the mines' adits, the falls mouth, the sea cave)
+- **shared/caverns.js `lightCave`:** `K.exits`, one for each mouth. Each has its opening (`EXIT.hw`), the way out of it
+  (from where you come in, out through the mouth) and a pair of lanterns on posts just inside. The lanterns are the
+  cave's own, so they light the way on the server too.
+- **Painted (caveart.js):** toward the mouth, the floor turns to the ground outside in creeping patches. The ground is
+  read from the map at the mouth when the page has it (grass, dirt, sand, the desert's red sand), else taken from the
+  mouth's kind. The opening widens past the mouth into daylight glare, then fades into the dark. The rock either side is
+  lit by the day.
+- **Dressing:** an adit gets a timbered portal across the mouth (posts, a heavy cap beam, braces, iron straps) with a WAY
+  OUT board hung from it on chains. A cave mouth gets the board on a post beside the path in. The board is weathered
+  planks, WAY / OUT painted in a 3x5 pixel font, and an arrow pointing out.
+- **Light:** the dark is lifted up the passage as before, and now also out past the mouth (`MOUTH.past`). A fan of the
+  sky's light lies along the floor from the opening, with dust drifting in it (`exitBeam`). By night it is moonlight,
+  and `mouthLevel` at night goes 0.22 -> 0.34 so the way out still shows.
+- **The prompt:** "Walk out of the cave, into the daylight" (or "into the night"), or "Walk out of the sea cave onto
+  the beach". It is offered anywhere along the way out's passage, from just inside out to the mouth
+  (`CAVE_LEAVE_REACH`), not only near where you came in.
+- **Guide:** a new Activities entry, "Caves and mining": going in, your light, how the way out shows, the pickaxes
+  and the assay office.
+
+### Measured (the cave view alone in Chromium, the same map, a loaded machine)
+- A tile's paint goes from 51 to 59 ms on a warm pass (100 -> 123 cold), with the things now baked into it.
+- A frame of the view goes from 112 to 18 ms. The dark at the art pixel and the baked things do most of that.
+- Page and renderer: unchanged but for `main.js` handing `drawPed` to the view. The cave art loads only with the cave view.
+
+### Tests
+- New **test/caveexit.test.js**:
+  - every way out of every cave has its exit, its two lanterns standing on the floor and lit, and its daylight up the
+    passage and past the mouth;
+  - a cave's tile is painted at 2 px an art pixel and drawn exactly 2x with no smoothing, the ground past the mouth is
+    brighter than the floor, and the WAY OUT board is baked in;
+  - in a frame, the tiles and the dark are drawn at whole device pixels with no smoothing;
+  - the way out is offered all along its passage, and not from deep in.
+- **test/cavelight.test.js:** the spots past the mouth, and moonlight at night is now 0.25-0.4.
+
+## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default
+
+The owner (11-06, 19:15): "For your first car you own we should make sure there's a visual indicator that it's your car
+to take"; enough parking when many new players arrive at once; "let's not make the double tap to steal a car ... not
+have it on by default".
+- **Your car's marker** (server `starter.marker` -> `me.car` [x, y, model, full]; the page's `drawMyCar`): your starter
+  car, parked and empty, while you're on foot (not in a vehicle, a home, a train, below ground, or still on the
+  arrival's train), whatever the FTUE is doing - on the platform, after "Just let me roam", after the goal, in a crowded
+  lot. Until you've first driven it (`profile.starter.drove`, set the first time you drive it off), the job truck's
+  look: the turning rings, the "YOUR CAR" plate and the arrow at the screen's edge. After, a small "YOUR CAR" plate
+  when it's within about a screen of you. A dot on the minimap and the big map either way. `me` is each player's own,
+  so nobody else ever sees it. (The FTUE's step 1 marks it already through `me.job.veh`: then only that.)
+- **Logged off: the car put away** (`starter.onPlayerGone`, from players.js finalizeLogout past the ghost window): a
+  starter parked and empty leaves the world (`profile.starter.away`: where, its health), not lost - no cooldown - and
+  comes back there on rejoining (or the nearest free space if something's on it), across a restart too. Before, an
+  offline player's car sat in the arrival lot for good.
+- **Overflow** (`starter.overflowOf`): a station's lot full, its car goes to the parking spaces within twice the lot's
+  reach, then an **overflow field** on open ground near the station (`fieldSpots`: rows of spaces on grass, dirt, sand
+  or lot paving, clear of buildings, props, roads, plazas, tracks, reserved ground and the arrival lines), then the
+  nearest parking spaces anywhere (`STARTER.overflow`: 400 tried). Each space is taken at once, so no two cars share
+  one; a new character always gets a car. The note and the step-1 line say "parked down the street" when it's out of
+  the lot. Capacity (lot + field; seed 1337, World v3): **Metro Central 7 + 45, Northshore 8 + 58, Red Rock 16 + 140,
+  Willow Valley 16 + 201**; fifty players at each are all within 24-46 tiles of the station.
+- **Safety mode off by default** (`store.js` defaultProfile `safety: false`; Settings still has it, its label says
+  "off by default"). Profiles from before had it on as a default, not a choice: `migrateSafety` switches it off once
+  (as the store loads and on joining; `safetyOff: 1` marks it run, so turning it back on in Settings is kept). Guide's
+  "Crimes need a witness" says how to turn it on.
+- Tests: `test/starter.test.js` - fifty new players at the default station inside a minute each get a car on a space of
+  its own and a marker at their own car; the marker is yours alone, full until first driven, small after, gone while
+  you're in it or someone else is; put away on logoff and back where it was on rejoining, no cooldown.
+  `test/honestliving.test.js` - Safety off for a new character, the warning when on, the one-time switch-off kept to.
+  `test/flight.test.js`, `test/horses.test.js` updated (one press now).
+
+## 2026-11-06 - First-time tips: a tap opens the Guide, the right place, only while you're new
+The owner's report from his Pixel 7 Pro: the tip "Shopping: pick a line to buy it" came up at the front door of a house
+for sale. He wants a tap to take him to the Guide, and the tips to stop after once or twice, for new players only.
+- **The tap.** Tested in Playwright (Pixel 7 Pro, 892x412, touch). "More in your Guide" worked, but the rest of the
+  line didn't. On touch the line sits inside the move stick's zone (`#zone-l`, the left 40% of the screen, `#touch`
+  z-index 5), so a tap on its words went to the stick. A tip line now sits over the touch layer while it's up
+  (`#ftue-line.tip`, z-index 6, like the job card) and drops back under it as it fades (`pointer-events: none`). A tap
+  anywhere on it opens the phone's Guide at the tip's section, and a small x dismisses it. The client also no longer
+  forgets which tip is on screen at the next self record (`lineSig` was cleared), so a tip goes away when you go down.
+- **The wrong place.** The shop moment fired on any menu with a price: a home for sale, the dealers, the garage, the
+  hospital. It now fires only at a shop's counter: `ftue.js` `SHOP_KINDS` and `isShop` (the shop kinds and the walk-in
+  counters, never a casino, arcade or bathhouse). The transit moment no longer fires near a marina (that's the boat
+  dealer). It now fires near a ferry that's in, and for a bus's passengers, not its driver.
+- **Once, and only while new.** The moments were already once each per character (`profile.ftue.m`, saved). Going down
+  within the hurt line's time un-marked it, so the hurt line could come back after every death. It now shows at most
+  `FTUE.hurtMax` (2) times. New in `FTUE`: no moments after `tipsPlayH` (3) hours played (`ftue.pt`, counted while
+  connected) or `tipsDays` (7) days after the FTUE ended. The six moments come up in a new player's first hour or so.
+  Anyone still missing one after three hours or a week has found their feet, or the Guide. The Guide's "Show tips
+  again" lifts both limits. Settings > Game has a new "First-time tips" toggle (`{ t: 'intro', a: 'tipset' }`,
+  `me.tips`).
+- **The action button at a home for sale** showed coins: "Look around X - for sale, $N" matched the buy rule. A new
+  `home` kind (Lucide `house`) comes before it. Tests: ftue (new: shop places, at most once and hurt at most twice
+  across a restart, the new-player limits and the toggle, the marina, the Guide link wiring), acticons, guide,
+  uiscreens, hudlayers, pagemodules, lazypage, perf.
+
+## 2026-11-06 - The forklift is a forklift (vehicle words)
+The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `vehicleWord` names a vehicle in the
+game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
+"truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
+4x4. test/jobrecall.test.js checks the forklift and the golf cart.
+
+## 2026-11-06 - A way out of the mini-games on touch; air hockey's stuck puck
+The owner (11-06): "We need a way out of most mini games on mobile like arcade and skee ball and air hockey and
+everything" - the mini-games' screen (the 'arcade' overlay: the cabinets, pool, skee-ball, air hockey, pinball, chess,
+the race book, the music games) said only "Esc / B to leave". It now has a close button (index.html `#arc-x`, a tap
+target in its top corner, wired in main.js to the same close as Esc), and the hint says "Tap ✕ to leave" on touch.
+"On air hockey playing against the PC the puck got stuck in the corner and hung there infinitely": the machine's mallet
+chased a puck against its back rail from behind (`cpuMove`: the target x past its own reach, clamped), pinning it in the
+corner. It now comes at a puck by its back rail from the side away from the rail, drawing it out; and a failsafe
+(`unstick`): a puck that hasn't moved more than 14 px in 3 s is faced off on the half it was on. test/arcade.test.js
+checks both corners and the failsafe.
+
+
+## 2026-11-06 · Caves, round 2: no arrow; the game's own characters checked in the game
+
+The owner (11-06, 21:12): "I don't think we need an arrow pointing the way out of the cave. The cave art is looking okay
+but the character is an old placeholder I believe."
+- **No arrow:** the server's hint, the 'ugway' message, the page's chevron, `CAVE_WAY` and their test and Guide words are
+  gone. The way out is still offered all along its passage (`CAVE_LEAVE_REACH` in shared/rules.js), with its lanterns,
+  daylight and WAY OUT board.
+- **The character:** the live game drew people underground as placeholder ovals (view.js `ped`). The cave view now
+  draws people and animals with the page's own `drawPed` (`main.js` hands it over), so they look as they do in the city.
+  Checked in the real game (a local World v3 server, a phone-portrait page at 411x891 @2.6, in the Old Granite Mine by
+  day and by night): the real sprite at the city's scale, facing the way it walks, walking, with its contact shadow, and
+  darkened or lit by the cave's light like everything else.
+  - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
+  - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).

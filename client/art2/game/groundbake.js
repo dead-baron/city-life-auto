@@ -725,7 +725,7 @@ function railField(C) {
   C.railBridge = [];
   // (World v3's main line is a list of loops, M.rails: two loops on the same track draw it once - a later one takes a
   // pixel only where it is clearly the nearer track - so the sleepers keep one loop's spacing)
-  const list = M.rails || [M.rail];
+  const list = (M.rails || [M.rail]).concat(M.arrivals || []);   // (and World v3's arrival lines: shared/world3-arrivals.js)
   for (let li = 0; li < list.length; li++) railLoop(C, list[li], li ? 6 : 0);
 }
 function railLoop(C, R, bias) {
