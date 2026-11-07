@@ -28,6 +28,7 @@ import * as lights from './systems/lights.js';
 import { brokenList } from './systems/props.js';
 import { brokenBarrierList } from './systems/barriers.js';
 import { setView } from './view.js';
+const AWAY_QUIET_MS = 120000;   // (= ws.js AWAY_QUIET_MS - not imported: the practice worker loads this file)
 import * as devmode from './devmode.js';
 import * as looks from './systems/looks.js';
 import * as arcade from './systems/arcade.js';
@@ -112,7 +113,7 @@ export function createSession(world, conn, opts) {
       if (msg.t === 'cine') { if (msg.tour) player.cineTourMs = Date.now(); if (msg.f !== undefined) cinefollow.request(world, player, msg, !!(opts.dev || player.devMode)); return; }   // (f: its follow scenes - systems/cinefollow.js)
       if (msg.t === 'view') { setView(player, msg.hw, msg.hh); return; } // how much world the screen shows
       if (msg.t === 'ping') { conn.sendJSON({ t: 'pong', ts: msg.ts }); return; }
-      if (msg.t === 'away') { players.setAway(world, player, !!msg.on); return; }   // (the page in the background, or back)
+      if (msg.t === 'away') { players.setAway(world, player, !!msg.on); conn.quietMs = msg.on ? AWAY_QUIET_MS : 0; return; }   // (and its socket may stay silent longer: ws.js)   // (the page in the background, or back)
       // a client noticing something wrong on its side (it built a different map from the same build): logged, once a connection
       if (msg.t === 'diag') { if (!conn.diagSaid && typeof msg.what === 'string') { conn.diagSaid = true; console.warn(`[diag] ${player.name}: ${msg.what.slice(0, 300)}`); } return; }
       // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)

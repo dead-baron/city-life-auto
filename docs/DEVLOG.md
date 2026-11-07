@@ -21617,3 +21617,56 @@ ocean ... wait for 4 to 5 star wanted levels before the cops get better."
   more - at 1 and 4 stars; the ride to the reachable station with the siren; stuck: replanned, the fade, the cells; no
   road to a station: the fade, no car, never in the water); test/prison.test.js (the new rule, the admin's sentence,
   the island stations and an island ride that never touches water); struggle, arrests, touchslots and guide updated.
+
+## 2026-11-07 - Tabbing out on a phone: back in the same session, no black screen
+The owner (11-06): "I tabbed out of the game on my phone then tabbed back in and it will show a black screen and say
+reconnecting for a bit. It would be nice if it didn't disconnect so quickly tabbing in and out though."
+- **The black screen** was the page's own: while the socket was down (`S.welcomed` false) every frame filled the
+  canvas black. Getting back into the game now keeps the last frame up, with the "Reconnecting..." chip over it
+  (`client/update.js` `holdFrame`). (A WebGL context lost while hidden is already rebuilt by the renderer:
+  art2/game/engine.js `webglcontextrestored`, host.js `_contextLost`.)
+- **Back at once:** on coming back into view a socket lost meanwhile is made again straight away, an open one is pinged
+  and, if nothing answers in `PROBE_MS` (a socket the phone's sleep killed can still say it's open), made again; a
+  drop noticed in the first seconds back retries with no backoff wait (`update.js` `onVisible`, `retryDelay`). The page
+  also says it's away on `pagehide` (iOS: sometimes the only word before it's suspended).
+- **The server waits longer for a backgrounded page:** after `{ t: 'away' }` its socket may stay silent 120 s rather
+  than 45 s before it's dropped (`ws.js` `AWAY_QUIET_MS`, set per connection in session.js), so a short tab-out keeps
+  the same socket. If it drops all the same, the body waits at least `AWAY_GRACE_S` (90 s, players.js) even with
+  trouble after it (the drop rule's 30 s otherwise; the quiet case keeps its 5 minutes) - `players.js` `unsafeGrace`.
+  Back inside it is the same session and character (no new arrival, no reload), without the "Reconnected" toast.
+- test/tabout.test.js (new): a backgrounded, wanted player dropped for a minute is the same session and body on
+  return; an ordinary drop keeps 30 s; the away message sets and clears the socket's quiet time; the page's decisions.
+
+## 2026-11-07 - Drive-bys: the muzzle flash out of the car's window
+The owner (11-06): "when driving in a car and shooting you'll see the muzzle flash way outside of the car like lagging
+behind it by itself... at the very least have the muzzle flash coming out of the car window or the top of the car."
+The page put the flash and the tracer at the shooter's own entity: in a car that's the ped riding in it, interpolated
+from the server's snapshots, while your own car is drawn where the prediction has it (ahead) - so the flash trailed
+behind the car, and further the faster you drove. Now a shot from a closed vehicle starts at the car as it's drawn
+this frame (`client/render/fx.js` `windowMuzzle`): out of the window on the side aimed at (the front row, or the back
+seats' for a back-seat shooter), or over the roof aiming ahead or behind; the flash stays there for its frames
+(collectLights) and the tracer starts from the same point. For a moment after each shot an arm and a gun show out of
+that window (`drawLeans`, on the overlay). Bikes, horses and open boats keep the rider's own point. test/drivefx.test.js.
+
+## 2026-11-07 - Car soccer: easy to find, start and boost
+The owner (11-06): "Can't figure out the rocket league arena... How do I get it to start and have people join?" and
+"How do you boost?" Joining meant standing on foot within 120 px of the gate and pressing Act; boost was Sprint.
+- **The join pad:** a lit, pulsing ring on Stadium Way by the gate with a CAR SOCCER sign (a ball badge on a post;
+  "JOIN HERE", or the count to kick-off while a lobby's open) - drawn by client/carsoccer.js `gate` for the players
+  the server already tells about the arena (`nearR`). `shared/carsoccer.js` `joinPad`, `CARSOCCER.padDX` / `padR`.
+- **Wider reach, and from a car:** `joinR` 120 -> 200 px, the pad counts too; driving onto the pad joins (`padCheck`,
+  once each time onto it; never an arena car or an aircraft). At kick-off you step out and your car waits by the gate.
+- **On the map and the phone:** the arena's gate is a place (`client/mapwaypoints.js` `arenaPlaces`, `placesOf`: the
+  arenas aren't among the world's POIs) - an icon on the big map (Activities), in its panel's lists and search, and in
+  the phone's Places (Food & days out), where a tap sets the waypoint. No change to the world itself.
+- **The call:** opening a lobby tells every player within `callR` (1600 px, a few blocks): "Car soccer kicking off at
+  Waves Arena in 40 s - join at the gate", and the city feed says the same (a ball icon); later joiners are named to
+  the players about. With another player near, the lobby waits `lobbyNearS` (40 s) rather than `lobbyS` (20) -
+  decided at opening, or stretched once if someone comes near during it.
+- **Boost:** on touch, in an arena car, a BOOST button (hold) in C1 by the right thumb (`shared/touchcontrols.js` state
+  `arena`: no FIRE, the sticks unmoved; client/touchslots.js passes the flag); on keyboard and pad the boost key's name
+  under the boost ring (glyphs.js `keyName('sprint')`); the kick-off says "Hold BOOST to boost - the pads refill it"
+  (the countdown, the start's note, the prompt at the wheel).
+- The Guide has a Car soccer entry (Activities), the README's row is updated. test/carsoccer.test.js: driving onto the
+  pad, the call and the feed, the longer lobby, out of your car at kick-off; the lobby stretched once; the BOOST slot.
+- (rules-games.js is in World v3's code hash: the stamp's `world3` changes with these numbers.)

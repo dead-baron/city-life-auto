@@ -17,6 +17,7 @@ import {
   LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON,
 } from './rules.js';
 import { FORK, RANGER } from './rules-work.js';
+import { CARSOCCER } from './rules-games.js';
 import { SHOPS, ITEMS } from './items.js';
 import { RODS } from './fish.js';
 import { VEHICLES } from './vehicles.js';
@@ -109,6 +110,7 @@ export function guideSections(map = null) {
       { id: 'fishing', t: 'Fishing', b: `Face the water with a rod and hold [[action]] to cast - let go for the distance. When the bobber dives, press to strike, then hold to keep the fish in your bar. Rods: ${andList(rods)}. Bait changes what bites.` },
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
       { id: 'dice', t: 'Street dice', b: `A crew shooting dice down an alley or a back passage in a rough part of town, like Southside's: ${$(DICE.bet)} a roll from the cash you carry, even money.` },
+      { id: 'carsoccer', t: 'Car soccer', b: `At the Waves Arena on Stadium Way (Places lists it): walk up to the lit CAR SOCCER pad by the gate and press [[action]], or drive onto it. The first in opens the lobby - ${CARSOCCER.lobbyS} seconds, ${CARSOCCER.lobbyNearS} with other players about, who hear of it - and the city's drivers fill each side to ${CARSOCCER.teamMin}. Hold [[sprint]] to boost; the pads on the pitch refill it. ${mins(CARSOCCER.matchS)} on the clock, the winners ${$(CARSOCCER.prize)} each. [[vehicle]] leaves the match.` },
       { id: 'races', t: 'Races and skating', b: 'Pull up to a race\'s start to enter. Skate parks score your tricks; beaches have surf.' },
       { id: 'caves', t: 'Caves and mining', b: `Walk up to a mine's adit or a cave's mouth and press [[action]] to go in. It's dark inside - [[light]] switches your light on. The way out shows by the daylight coming in, a lantern either side and a WAY OUT board. A pickaxe (from ${$(PICK_PRICES.pickStone)} at hardware stores) works the ore veins; the assay office pays ${pct(ASSAY_PAYS - 1)} more than a pawn shop.` },
       { id: 'crazy', t: 'Crazy Taxi', b: `A run against the clock from any taxi rank: ${CRAZY.startS} seconds on it to start, more for each fare you get there fast.` },

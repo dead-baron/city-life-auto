@@ -19,7 +19,7 @@ import { initInput, sample, input, takeNumberPick, settings, saveSettings, detec
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
-import { FX } from './render/fx.js';
+import { FX, windowMuzzle, drawLeans } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD, fitLine } from './hud.js';
@@ -42,7 +42,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
-import { noteServerBuild, myBuild } from './update.js';
+import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
 import { NPC_CRITICAL, AIR_UP } from '../shared/rules-page.js';
 import { bonusOf } from '../shared/skills.js';
@@ -254,6 +254,7 @@ function connect() {
   S.ws = ws;
   ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
+    S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"welcome"')) setTimeout(() => spawnAt(null), 2000);   // (a server that doesn't say: not waited for longer)
     if (holding(ws, ev.data)) return;
@@ -318,7 +319,7 @@ function scheduleReconnect(why, toTitle = false) {
       : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
-  S.reconnectT = setTimeout(connect, document.hidden ? Math.max(S.reconnectIn, 5000) : S.reconnectIn);
+  S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
 function reconnecting(on) {
@@ -340,9 +341,17 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   try { sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
+  S.visibleAt = performance.now();
   send({ t: 'away', on: false });
-  if (!S.ws && S.connectFailed && S.everConnected) { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  const act = onVisible(S);
+  if (act === 'connect') { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  else if (act === 'probe') {   // (a socket the phone's sleep killed can still say it's open: answered, or made again)
+    const ws = S.ws;
+    send({ t: 'ping', ts: performance.now() });
+    setTimeout(() => { if (S.ws === ws && !((S.lastMsgAt || 0) >= S.visibleAt)) { S.ws = null; try { ws.close(); } catch { /* gone */ } scheduleReconnect('Connection lost'); } }, PROBE_MS);
+  }
 });
+addEventListener('pagehide', () => { if (!S.practice) send({ t: 'away', on: true }); });   // (iOS: sometimes the only word before it's suspended)
 function resumeWanted() {
   let t = 0;
   try { t = Number(sessionStorage.getItem(RESUME_KEY)) || 0; sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
@@ -882,10 +891,15 @@ function onEvent(ev) {
       const sh = ev.id ? S.ents.get(ev.id) : null, still = ev.x2 === ev.x1 && ev.y2 === ev.y1;
       const a = still ? (sh && sh.ra !== undefined ? sh.ra : 0) : Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1);
       const off = w && w.type === 'rocket' ? 20 : 14, follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
-      const x1 = follow ? sh.rx + Math.cos(a) * off : ev.x1, y1 = follow ? sh.ry + Math.sin(a) * off : ev.y1;
+      // (from a car: out of its window as the car's drawn, not at the shooter lagging behind it - render/fx.js windowMuzzle)
+      const car = follow && sh.parent ? S.ents.get(sh.parent) : null, cd = car && car.kind === K.VEH && car.d && car.rx !== undefined ? VEHICLE_BY_INDEX[car.d.m] : null;
+      const win = cd && cd.kind !== 'bike' && cd.kind !== 'air' && !cd.crew && !cd.horse ? { car: car.id, def: cd, back: !!sh.back, aim: a } : null;
+      const m = win && windowMuzzle(car.rx, car.ry, car.ra, cd.L, cd.W, a, win.back);
+      const x1 = m ? m.x : follow ? sh.rx + Math.cos(a) * off : ev.x1, y1 = m ? m.y : follow ? sh.ry + Math.sin(a) * off : ev.y1;
       fx.tracer(x1, y1, ev.x2, ev.y2);
+      if (win) { win.until = S.loopClock + 0.45; (S.leans ||= []).push(win); }   // (the arm and the gun out of the window: drawLeans)
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow ? ev.id : 0, off });
+      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
       fx.spawn(4, x1, y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
@@ -3025,7 +3039,7 @@ function frameBody(nowMs) {
     checkWaypoint();
     expirePredictedBreaks();
   } else {
-    g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
+    if (!holdFrame(S)) { g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height); }   // (getting back in: the last frame stays)
     // title screen before the city connects: the pad still drives the menus
     if (pollPadForMenus() && !overlayPad() && !launchPad()) titlePad();
   }
@@ -3643,6 +3657,7 @@ function drawOverlays(F, v2) {
   if (S.carry && !F.sub) S.carry.over(g, F);   // (both views: a tree falling, the trunks lying, the police dogs' leads)
   if (S.mus && !F.sub) S.mus.draw(g, F);
   if (S.fun && !F.sub) S.fun.draw(g, F);
+  if (S.leans && !F.sub) drawLeans(g, S, S.loopClock);   // (shooting out of a car's window: the arm and the gun - render/fx.js)
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
@@ -5196,6 +5211,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   reflSrc.length = 0;
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
   for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
+    else if (f.win) { const c = S.ents.get(f.win.car); if (c && c.rx !== undefined) { const m = windowMuzzle(c.rx, c.ry, c.ra, f.win.def.L, f.win.def.W, f.a, f.win.back); f.x = m.x; f.y = m.y; } }   // (on the car's window)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
   // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js) - only those round the view,
   // through a grid (a World v3 window holds thousands: every one of them looked at every frame was a phone's 11-06 night

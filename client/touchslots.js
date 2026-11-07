@@ -28,7 +28,7 @@ export const LONG_MS = 450;        // (a long press: the button's name in a tip)
 export const NEAR_CAR_PX = 140;    // (how near a vehicle has to be for CAR to show on foot: a little past where you can get in)
 // what each button is called in its tip (its slot's label otherwise)
 export const BUTTON_NAME = { HIT: 'Hit', FIRE: 'Fire', ROLL: 'Dive roll', ACT: 'Act', CAR: 'Get in', EXIT: 'Get out', OFF: 'Get off', BLOCK: 'Block', RELOAD: 'Reload', ITEMS: 'Items',
-  LIGHT: 'Light', 'COP CAR': 'Call a cruiser', 'FIRE ON': 'Auto-fire: on', 'FIRE OFF': 'Auto-fire: off', HORN: 'Horn', SIREN: 'Siren', BRAKE: 'Brake', STOP: 'Stop', GALLOP: 'Gallop',
+  LIGHT: 'Light', 'COP CAR': 'Call a cruiser', 'FIRE ON': 'Auto-fire: on', 'FIRE OFF': 'Auto-fire: off', HORN: 'Horn', SIREN: 'Siren', BRAKE: 'Brake', STOP: 'Stop', GALLOP: 'Gallop', BOOST: 'Boost',
   CLIMB: 'Climb', DOWN: 'Descend', THROW: 'Throw', TRICK: 'Trick', OLLIE: 'Ollie', AIR: 'Air' };
 // every slot's box ({ x, y, w, h }, px from the top left) on a W x H screen; safe: the insets { t, r, b, l }
 export function slotGeometry(W, H, safe = {}) {
@@ -147,7 +147,7 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
   function tick(inVeh, air, board) {
     const { S, CTRL, WEAPONS, VEHICLE_BY_INDEX } = ctx, me = S.me || {}, w = WEAPONS[me.weapon] || WEAPONS.fists, b = document.body.classList;
     const wq = btn.nextw ? btn.nextw.classList : b, cv = inVeh ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m], pe = S.ents.get(S.myPedId), driver = S.ctrlKind === CTRL.DRIVER;
-    return set({ custody: !me.dead && (!!me.fight || !!(me.custody && me.custody.s !== 'cell')), fight: !!me.fight, home: !!S.homeIn, fish: !!me.fishing, air, inVeh, driver, horse: !!(cd && cd.horse), boat: !!(cd && cd.kind === 'boat'), items: !!(me.inv && Object.values(me.inv).some((n) => n > 0)), surf: !!me.surf, swim: !!(pe && pe.swim && !inVeh), board, carrying: !!me.carrying,
+    return set({ custody: !me.dead && (!!me.fight || !!(me.custody && me.custody.s !== 'cell')), fight: !!me.fight, home: !!S.homeIn, fish: !!me.fishing, air, inVeh, driver, arena: !!(inVeh && S.soc && S.soc.st && S.soc.st.me), horse: !!(cd && cd.horse), boat: !!(cd && cd.kind === 'boat'), items: !!(me.inv && Object.values(me.inv).some((n) => n > 0)), surf: !!me.surf, swim: !!(pe && pe.swim && !inVeh), board, carrying: !!me.carrying,
       armed: w.type !== 'melee' && w.type !== 'tool', guard: !!w.guard, shoot: w.type === 'gun' || !!(cd && driver && (cd.missiles || cd.turret)), prompt: !!me.prompt, siren: !!(cd && (cd.police || cd.siren)), light: b.contains('has-light'), call: b.contains('can-call'),
       wpn: !me.dead && !wq.contains('none') && (!inVeh || wq.contains('gun')), near: !inVeh && nearCar(S, pe) });   // (client/hudinfo.js: the plate's none and gun)
   }

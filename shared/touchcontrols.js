@@ -29,6 +29,9 @@ export const TOUCH_STATES = {
   air: { fire: VFIRE, car: ['vehicle', 'EXIT'], c1: ['descend', 'DOWN'], c2: ['climb', 'CLIMB'], ...AT },   // (C1 and C2: an arrow down and an arrow up)
   boat: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
   horse: { fire: VFIRE, roll: ['dive', 'STOP'], car: ['vehicle', 'OFF'], c1: ['sprint', 'GALLOP'], c2: VRELOAD, ...AT },
+  // at the wheel in a car soccer match (the owner, 11-06: "How do you boost?"): BOOST held in C1 by the right thumb - no
+  // shooting in there (server players.js)
+  arena: { roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: ['sprint', 'BOOST'], ...AT },
   board: { fire: ['fire', 'TRICK'], roll: ['dive', 'OLLIE'], act: ['action', 'ACT'], car: ['vehicle', 'OFF'], ...UV },
   surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
   swim: { act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
@@ -41,13 +44,13 @@ export const TOUCH_STATES = {
   // for the cuffs (it pulses: client/hud.js), ACT while there's a break for it to make (the prompt) - nothing else
   custody: { fire: ['fire', 'HIT', 'fight'], act: ['action', 'ACT', 'prompt'] },
 };
-// what you're doing, from the page's flags: { custody, home, fish, air, inVeh, driver, horse, boat, surf, swim, board, carrying, armed }
+// what you're doing, from the page's flags: { custody, home, fish, air, inVeh, driver, arena, horse, boat, surf, swim, board, carrying, armed }
 export function touchState(f) {
   if (f.custody) return 'custody';
   if (f.home) return 'home';
   if (f.fish) return 'fish';
   if (f.air) return 'air';
-  if (f.inVeh) return f.horse ? 'horse' : !f.driver ? 'ride' : f.boat ? 'boat' : 'drive';
+  if (f.inVeh) return f.horse ? 'horse' : !f.driver ? 'ride' : f.arena ? 'arena' : f.boat ? 'boat' : 'drive';
   if (f.surf) return 'surf';
   if (f.swim) return 'swim';
   if (f.board) return 'board';
