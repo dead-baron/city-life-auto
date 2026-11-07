@@ -11,7 +11,7 @@ import { TILE } from '../shared/constants.js';
 import { shopRoom, clubFloor } from '../shared/shoprooms.js';
 import { drawShop } from '../client/art2/shopart.js';
 import { loadTracker, loadStep, artPhase, LOAD_PHASES, PHASE, warmPlan, WARM_CAP_MS } from '../client/warmup.js';
-import { World2, entryPrio, precutPrio } from '../client/art2/game/host.js';
+import { World2, entryPrio, precutPrio, cutBoxOf } from '../client/art2/game/host.js';
 
 // a made-up club: w tiles wide, d rows deep, its door at the given share of the front (as test/shoprooms.test.js room())
 function club(w, d, doorAt = 0.5, name = 'The Violet Room') {
@@ -110,6 +110,10 @@ test('walking in: the inside you stand in bakes before anything else, then the r
   assert.deepEqual([first.cx, first.cy], [8, 8], 'the chunk under you first');
   for (const q of others) for (const c of cuts) assert.ok(c.prio < q.prio, `${c.jk} before ${q.jk}`);
   assert.equal(w.entering, true, 'entering: uploads not held to the frame budget');
+  // only the chunks its sprites are in: The Violet Room (22 x 41 tiles, a chunk's width from its edges) is one column of
+  // chunks, not three
+  const [x0, , x1] = cutBoxOf({ tx: 3169, ty: 2150, tw: 22, th: 41 });
+  assert.deepEqual([Math.floor(x0 / 768), Math.floor((x1 - 1) / 768)], [132, 132]);
 });
 
 test('one loading screen: one message per phase, in order, never back; a bar that only moves forward and covers every phase', () => {
@@ -164,4 +168,31 @@ test('the teleport veil: up at once for a jump, down once - no flapping between 
   // a fresh teleport long after: at once
   for (let i = 0; i < 40; i++) veilStep(V, false, 5000 + i * 16);
   assert.equal(veilStep(V, true, 5000 + VEIL_CALM + 1000), true);
+});
+
+test('a page\'s window onto the world (its lists with holes): every walk-in still fitted out and cut away', async () => {
+  // (the owner's 11-06 report, The Violet Room "only a floor and a few people": the page's map is a window of World v3,
+  // its POI list holding only the window's places at their world-wide indexes - shopRoom's look for an ATM threw on the
+  // first hole, and staticItems with it: the chunk baked as bare ground, no building, no prop, no wall)
+  const { makeWorld } = await import('./helpers.js');
+  const { staticItems, makeStatic } = await import('../client/art2/game/statics.js');
+  const m = makeWorld().map;
+  const clubs = m.buildings.filter((b) => b && b.walkIn && b.walkIn.south && b.walkIn.units.some((u) => u.kind === 'club'));
+  assert.ok(clubs.length >= 2, `clubs in the city (${clubs.length})`);
+  const b = clubs.reduce((a, q) => (q.tw > a.tw ? q : a)), bi = m.buildings.indexOf(b);
+  // the window: the POIs of a few blocks round the club kept at their indexes, the rest holes
+  const near = (p) => p && Math.abs(p.x - (b.tx + b.tw / 2) * TILE) < 1500 && Math.abs(p.y - (b.ty + b.th / 2) * TILE) < 1500;
+  const pois = new Array(m.pois.length);
+  m.pois.forEach((p, i) => { if (near(p)) pois[i] = p; });
+  assert.ok(pois.includes(undefined) || pois.length > Object.keys(pois).length, 'holes');
+  for (const u of b.walkIn.units) { const R = shopRoom(b, u, TILE, { ...m, pois }); assert.ok(R && R.plan === 'club', 'fitted out in a window'); }
+  const W = Object.create(m, { pois: { value: pois } });
+  const cx = Math.floor((b.tx + b.tw / 2) * TILE / 768), cy = Math.floor((b.walkIn.y1 * TILE) / 768);
+  const items = staticItems(W, cx, cy, { cutaway: bi });
+  const cut = items.find((it) => it.b === bi && it.recipe && it.recipe.t === 'cut');
+  assert.ok(cut, 'its cut-away in the chunk');
+  assert.ok(cut.recipe.units.some((u) => u.shop && u.shop.R.pieces.some((p) => p.t === 'dance')), 'fitted out as a club');
+  assert.ok(items.filter((it) => it.recipe && it.recipe.t === 'b').length >= 1, 'the rest of the chunk\'s buildings still there');
+  const G = makeStatic(cut.recipe);
+  assert.ok(G && G.w > 0);
 });

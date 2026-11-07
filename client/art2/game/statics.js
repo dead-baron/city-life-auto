@@ -301,6 +301,16 @@ function lightAt(I, x, y, z, r, col, k, kind = 'lamp', night = 1) {
   l.push({ x: Math.round(x), y: Math.round(y), z: Math.round(z), r: Math.round(r), col, k, kind, night });
 }
 
+// A walk-in's cut-away, or the building as it stands if its fit-out can't be laid out: a fit-out that throws must not take
+// the whole chunk's statics with it (staticItems throwing left the chunk bare ground - every building, prop and wall in
+// it gone: the owner's 11-06 "only a floor and a few people" in The Violet Room)
+let cutWarned = false;
+function cutOf(it) {
+  try { return it.cut(); } catch (e) {
+    if (!cutWarned) { cutWarned = true; console.warn('[art2] a walk-in\'s cut-away failed - drawn roofed', it.key, (e && e.message) || e); }
+    return it;
+  }
+}
 export function staticItems(M, cx, cy, opt = {}) {
   const I = staticIndex(M);
   const list = I.cells.get(ck(cx, cy)) || [], props = propItemsIn(I.c, I, ck(cx, cy));
@@ -310,7 +320,7 @@ export function staticItems(M, cx, cy, opt = {}) {
     if (it.pi !== undefined && M.props[it.pi] && M.props[it.pi].broken) o = brokenVariant(it, M.props[it.pi]);
     else if (it.wp && it.wp.some(([a, b]) => (M.props[a] && M.props[a].broken) || (M.props[b] && M.props[b].broken))) o = spanBroken(it, M);   // (a span wire's pole knocked over)
     else if (it.deck && M.levels && M.levels.broken && M.levels.broken.size) o = deckBroken(it, M.levels);
-    else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = it.cut();
+    else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = cutOf(it);
     if (!o) continue;
     out.push(o);
   }

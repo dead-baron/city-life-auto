@@ -105,7 +105,7 @@ async function newCtx() {
     ...(screen.mobile ? { userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' } : null),
   });
   await ctx.addInitScript(probe, { nodraw: !DRAW });
-  await ctx.addInitScript(() => { try { localStorage.setItem('cla.settings', JSON.stringify({ gfxPreset: 'medium', autoFullscreen: false })); localStorage.setItem('cla.perfhud', '1'); localStorage.setItem('cla.gate', JSON.stringify({ age17: true, consent: 'essential', at: Date.now() })); } catch { /* none */ } });
+  await ctx.addInitScript((hud) => { try { localStorage.setItem('cla.settings', JSON.stringify({ gfxPreset: 'medium', autoFullscreen: false })); localStorage.setItem('cla.perfhud', hud ? '1' : '0'); localStorage.setItem('cla.gate', JSON.stringify({ age17: true, consent: 'essential', at: Date.now() })); } catch { /* none */ } }, !PHASES.includes('load'));
   return ctx;
 }
 async function waitFor(page, fn, ms, a) {
@@ -123,13 +123,13 @@ async function shot(page, path, o = {}) {
   return false;
 }
 // the filmstrip's frames side by side in one JPEG (python3 + PIL), at most 600 KB
-function strip(files, out, cols = 8) {
+function strip(files, out, cols = files.length > 48 ? 12 : 8) {
   const py = `
 import sys
 from PIL import Image, ImageDraw
 fs = sys.argv[2:]; cols = int(sys.argv[1]); out = fs.pop(0)
 ims = [Image.open(f) for f in fs]
-w, h = ims[0].size; k = 200.0 / w; tw, th = int(w * k), int(h * k)
+w, h = ims[0].size; k = (200.0 if len(ims) <= 48 else 120.0) / w; tw, th = int(w * k), int(h * k)
 rows = (len(ims) + cols - 1) // cols
 S = Image.new('RGB', (cols * tw, rows * (th + 14)), (16, 16, 20)); d = ImageDraw.Draw(S)
 for i, im in enumerate(ims):
@@ -150,9 +150,8 @@ while True:
 async function loadRun(page, tag, cold) {
   if (cold) await page.goto(`${BASE}/?debug&server=${encodeURIComponent(GAME)}`, { waitUntil: 'commit' });
   else await page.reload({ waitUntil: 'commit' });
-  const ready = await waitFor(page, () => { const p = document.getElementById('play'); return p && !p.disabled; }, 300000);
-  if (!ready) throw new Error('PLAY never came up');
-  await wait(800);
+  // (filmed from the page's first frame: the city's load, PLAY pressed as soon as it can be, the art's)
+  await waitFor(page, () => !!(window.__load && document.getElementById('title')), 60000);
   await page.evaluate(() => window.__load.start());
   const t = Date.now(), frames = [];
   let n = 0, done = 0;
@@ -162,11 +161,13 @@ async function loadRun(page, tag, cold) {
       const t1 = Date.now();
       if (await shot(page, f, { scale: 'css' })) frames.push(f);
       n++;
-      if (n > 400) break;
+      if (n > 600) break;
       await wait(Math.max(0, EVERY - (Date.now() - t1)));
     }
   })();
-  await page.evaluate(() => document.getElementById('play').click());
+  const ready = await waitFor(page, () => { const p = document.getElementById('play'); return (p && !p.disabled) || (window.CLA && window.CLA.S && window.CLA.S.playing); }, 300000);
+  if (!ready) throw new Error('PLAY never came up');
+  await page.evaluate(() => { const p = document.getElementById('play'); if (!(window.CLA && window.CLA.S && window.CLA.S.playing)) p.click(); });
   const inCity = await waitFor(page, () => window.CLA && window.CLA.S && window.CLA.S.playing && document.getElementById('title').classList.contains('hidden') && !(document.getElementById('loadscr') && document.getElementById('loadscr').classList.contains('on')), 300000);
   done = Date.now();
   await filming;
@@ -188,7 +189,16 @@ async function loadRun(page, tag, cold) {
 
 // into the walk-in: outside its door (it's night: a club's shutter is up), the screen drawn, then the CPU slowed and
 // a walk in through the door; until its inside is drawn cut away
+// the new character's starting look (client/creator.js, 'start'): the first one taken, so nothing's over the view
+async function pickLook(page) {
+  for (let i = 0; i < 10; i++) {
+    const open = await page.evaluate(() => { const c = document.getElementById('creator'); if (!c || c.classList.contains('hidden')) return false; const b = [...c.querySelectorAll('button')].find((q) => /^\s*Play as/i.test(q.textContent)); if (b) b.click(); return true; });
+    if (!open) return;
+    await wait(700);
+  }
+}
 async function enterRun(page, tag, cdp) {
+  await pickLook(page);
   await page.evaluate(() => { window.CLA.send({ t: 'devmode', pw: '' }); });
   await wait(800);
   for (let i = 0; i < 30; i++) {
@@ -236,8 +246,9 @@ async function enterRun(page, tag, cdp) {
     requestAnimationFrame(tick);
   }, door.id);
   // in through the doorway: a step (the dev teleport, two tiles - a phone's touch stick can't be driven from here)
-  await page.evaluate((p) => window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y, snap: true }), { x: door.x, y: door.y + (door.south ? -80 : 80) });
+  await page.evaluate((p) => window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y }), { x: door.x, y: door.y + (door.south ? -80 : 80) });
   await waitFor(page, () => window.__in.inAt > 0, 15000);
+  log(`inside? ${JSON.stringify(await page.evaluate(() => { const S = window.CLA.S, m = S.map, p = S.pred && S.pred.s ? S.pred.s : S.me, x = S.cam.x, y = S.cam.y, tx = Math.floor(x / 32), ty = Math.floor(y / 32), b = m.buildings[m.bld[m.idx(tx, ty)]]; return { cam: [Math.round(x), Math.round(y)], tile: m.tileAt(tx, ty), b: b ? [b.id, b.name, !!b.walkIn] : null, inB: S.art2.F && S.art2.F.insideB ? S.art2.F.insideB.id : null }; }))}`);
   const ok = await waitFor(page, () => window.__in.readyAt > 0, 120000);
   const R = await page.evaluate(() => window.__in);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
@@ -269,15 +280,18 @@ try {
   if (PHASES.includes('enter')) {
     ALL.enter = await enterRun(page, `enter-${sz}`, cdp);
     if (DRAW) {
+      await pickLook(page);
+      await page.evaluate(() => { const h = document.getElementById('perfhud'); if (h) h.style.display = 'none'; });
       await wait(1500);
-      await shot(page, join(OUT, `inside-${sz}-${NIGHT ? 'night' : 'night'}.jpg`));
+      await shot(page, join(OUT, `inside-${sz}-night.jpg`));
+      log(`fades: ${JSON.stringify(await page.evaluate(() => { const w = window.CLA.S.art2; return { fades: [...w.fades.entries()].map(([b, f]) => [b, Math.round(f * 100) / 100]), states: [...w.chunkState.entries()].filter(([k, s]) => s.mode >= 0).map(([k, s]) => [k, s.mode, s.blds ? s.blds.map((r) => r[0]) : null]) }; }))}`);
       await page.evaluate(() => { const s = window.CLA.send; s({ t: 'dev', c: 'time', m: 13 * 60 + 55 }); s({ t: 'dev', c: 'clockhold' }); });
       await wait(4000);
       await shot(page, join(OUT, `inside-${sz}-day.jpg`));
     }
     if (PHASES.includes('jump')) {   // (a teleport across the world: the "Loading the area..." veil watched)
       const R = [];
-      for (const [i, where] of [[0, 'Pine Hills'], [1, 'Downtown']].entries()) {
+      for (const [i, where] of [[0, 'Pine Hills']].entries()) {
         await page.evaluate(() => window.__load.start());
         await page.evaluate(async (n) => { const m = await import('./client/devtp.js'), p = m.teleportPlaces(window.CLA.S.map).find((q) => q.name === n && q.kind === 'district'); if (p) window.CLA.send({ t: 'dev', c: 'tp', x: p.x, y: p.y, snap: true }); }, where[1]);
         await wait(20000);

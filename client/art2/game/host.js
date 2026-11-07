@@ -399,7 +399,10 @@ export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { 
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
-function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
+// (its sides and its foot: the building's sprites reach 2 px past its walls and 4 below its foot - statics.js ext; a
+// 40 px margin there took in the chunks either side of a building that ends near a chunk's edge, baked again cut away
+// with nothing in them changed: The Violet Room's 3 chunks were 9)
+export function cutBoxOf(b) { return [b.tx * TILE - 4, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 4, (b.ty + b.th) * TILE + 8]; }
 // The bake order round a walk-in (the owner's 11-06 report: "interiors take a long time to load in general"). A pool job
 // with a lower prio goes first; the screen's are their distance from the camera (0 - about 1500 px; 2000 and up for the
 // road ahead), a look in the store's d - 1e6, baking ahead into the store 40000 and up.

@@ -109,7 +109,9 @@ export function shopRoom(b, u, TILE, M) {
     onWall: [], pieces: [], people: [], lamps: [], clear: [[X0, Ya, X1, Ya + STRIP], [dx - 8, Ya, dx + dw + 8, Yb]],
   };
   let atm = false;
-  for (const p of (M && M.pois) || []) if (p.kind === 'atm' && p.b === b.id && p.x >= X0 && p.x < X1 && p.y > back && p.y < Yb + TILE) { R.clear.push([p.x - 18, p.y - 44, p.x + 18, p.y + 16]); atm = true; }
+  // (a page's map is a window onto World v3's: its POI list has holes where the places outside it are - the owner's 11-06
+  // report of The Violet Room drawn as a bare floor: this loop threw on the first hole, the cut-away with it)
+  for (const p of (M && M.pois) || []) if (p && p.kind === 'atm' && p.b === b.id && p.x >= X0 && p.x < X1 && p.y > back && p.y < Yb + TILE) { R.clear.push([p.x - 18, p.y - 44, p.x + 18, p.y + 16]); atm = true; }
   const y0 = Ya + STRIP + 4, y1 = Yb - 6, regs = [];
   if (y1 - y0 >= 14) {
     if (dx - 10 - (X0 + 4) >= 18) regs.push({ x0: X0 + 4, y0, x1: dx - 10, y1, side: -1 });
