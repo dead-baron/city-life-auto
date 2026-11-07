@@ -126,6 +126,15 @@ export class HUD {
       for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone, t.short);
     }
     if (prev && !prev.custody && me.custody && !me.dead) this.moment('BUSTED', 'The police have you.', 'bad');   // (UIC-15: cuffed)
+    // the fade to black (server custody.js fadeIn: a ride that can't be driven - an island with no station on its roads, a
+    // car stuck for good): a black curtain while it lasts, lifted once you're in the cell
+    const fading = !!(me.custody && me.custody.s === 'fade' && !me.dead);
+    if (fading !== !!this.fadeOn) {
+      this.fadeOn = fading;
+      let el = $('cufade');
+      if (!el) { el = document.createElement('div'); el.id = 'cufade'; el.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:30'; document.body.appendChild(el); }
+      requestAnimationFrame(() => { el.style.opacity = fading ? '1' : '0'; });
+    }
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
@@ -204,16 +213,19 @@ export class HUD {
       $('tb-where').textContent = 'FIGHT BACK!';
       $('tb-crack').classList.remove('hidden');
       $('tb-fill').style.width = Math.round(Math.max(0, Math.min(1, fg.m)) * 100) + '%';
-      $('tb-next').innerHTML = `Mash ${glyph('fire')} · wriggle ${glyph('move')}${fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ''}`;
+      // (mash it - or hold it down, a thumb on FIRE on a phone: server struggle.js STRUGGLE_HELD; up: the meter's rising)
+      $('tb-next').innerHTML = `Mash or hold ${glyph('fire')} · wriggle ${glyph('move')}${fg.up ? ' · you\'re winning - keep going!' : fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ' · harder!'}`;
     } else if (cu && cu.s !== 'cell' && !me.dead) {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
       $('tb-where').textContent = 'IN CUSTODY';
       // (the action button makes a break for it: on the ground or walked to the car, a try - custody.js breakOut; the car
       // stuck or not coming, it always works - offerBreak, and the bar pulses)
-      const brk = cu.brk ? ` · make a break for it [${input.device === 'gamepad' ? 'B' : input.device === 'touch' ? 'ACT' : 'E'}]` : '';
-      $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
-        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells`
+      // (the hint names the button by its glyph on every device: the touch buttons carry no words since UI-8)
+      const brk = cu.brk ? ` · make a break for it ${glyph('action')}` : '';
+      const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
+      $('tb-next').innerHTML = esc(cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
+        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells` : cu.s === 'fade' ? `Taken in to ${cu.at || 'the station'}`
           : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
       tb.classList.toggle('brk', !!cu.stuck);
       $('tb-crack').classList.add('hidden');

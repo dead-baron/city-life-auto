@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, straightRoad } from './helpers.js';
 import { K } from '../shared/constants.js';
 import { STAR_HEAT } from '../shared/rules.js';
-import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS, ESCORT_WALK_PX, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_DAZE_S, STRUGGLE_GRACE_S } from '../shared/rules.js';
+import { JAIL_S, BAIL_PER_STAR, BUST_FINE_PER_STAR, HOLD_S, ARREST_REWARD_PER_STAR, DELIVER_BONUS, CUSTODY_STUCK_S, CUSTODY_SKIP_S, CUSTODY_FADE_S, CUSTODY_WAIT_BREAK_S, GHOST_SECONDS, ESCORT_WALK_PX, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_DAZE_S, STRUGGLE_GRACE_S } from '../shared/rules.js';
 import { mulberry32 } from '../shared/rng.js';
 import { IN } from '../shared/input.js';
 import { PED_BLOCK } from '../shared/map.js';
@@ -515,8 +515,8 @@ test('the car stuck or going round in circles: make a break for it, or they get 
   const freeze = () => { car.vx = 0; car.vy = 0; car.x = car.fx ?? (car.fx = car.x); car.y = car.fy ?? (car.fy = car.y); };
   for (let i = 0; i < (CUSTODY_STUCK_S + 1) * 20; i++) { w2.step(); freeze(); }
   assert.ok(custody.canBreak(q), 'offered');
-  for (let i = 0; i < (CUSTODY_SKIP_S - CUSTODY_STUCK_S + 1) * 20 && q.custody.stage !== 'cell'; i++) { w2.step(); if (q.custody.stage === 'ride') freeze(); }
-  assert.equal(q.custody.stage, 'cell', 'got there in the end');
+  for (let i = 0; i < (CUSTODY_SKIP_S - CUSTODY_STUCK_S + CUSTODY_FADE_S + 1) * 20 && q.custody.stage !== 'cell'; i++) { w2.step(); if (q.custody.stage === 'ride') freeze(); }
+  assert.equal(q.custody.stage, 'cell', 'got there in the end (a fade to black: test/custody.test.js)');
 });
 
 test('killed by the police you wake up in a hospital, never at home', () => {

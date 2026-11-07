@@ -132,6 +132,58 @@ export function clinics3(m) {
   return out;
 }
 
+// A police station on each island town whose roads reach no other (the owner, 11-07: "on the islands they will just drive
+// into the ocean, so we might need to have a little police station on the islands with cities in it"): a storefront in
+// the island's town becomes its station - a walk-in with the front desk and, where the room's wide enough, the cells
+// (map.js buildInteriors and shared/cells.js buildCellBlocks, which run after this). Picked as clinics3 picks (and after
+// it: a clinic's storefront isn't taken), the door nearest the spot, a wide one first (room for the cells); with none
+// (the island towns are handcrafted, every shop a real one), any plain named building of the town's that's only a
+// courier's address - not an inn, a church, a barn, a ticket booth (loose). The POI is the building's own, its kind
+// changed - nothing is added, so no other place's id moves. sub: a precinct (the police spawn and the helicopter stay at
+// the headquarters). An island town with neither (Coral Cay: its one plain building is the eco lodge) has no station:
+// its arrests fade to the nearest cells (server/systems/custody.js fadeIn). [district, name, the spot (tiles)]
+export const PRECINCTS3 = [
+  [43, 'Gull Harbor Police', [1697, 3537]],   // (Gull Harbor's roads join nobody else's: 17 junctions of its own)
+  [44, 'Coral Cay Police', [4250, 3440]],      // (Coral Cay's: 19)
+];
+export function precincts3(m) {
+  const out = { made: [], none: [] };
+  const over = overhead3(m);
+  const busyKinds = new Map();
+  for (const p of m.pois) if (p.b !== undefined && p.b !== null) { let s = busyKinds.get(p.b); if (!s) busyKinds.set(p.b, (s = new Set())); s.add(p.kind); }
+  const distAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.dist[m.idx(tx, ty)] : -1; };
+  for (const [d, name, at] of PRECINCTS3) {
+    let best = null;
+    for (const loose of [false, true]) {
+      let bk = Infinity;
+      for (const p of m.pois) {
+        if (p.kind !== 'delivery' || p.b === undefined || p.b === null || distAt(p.x, p.y) !== d) continue;
+        const b = m.buildings[p.b];
+        if (!b || b.gone || b.prefab < 0 || b.tw < 8 || b.th < 6) continue;
+        const key = (m.prefabs[b.prefab] && m.prefabs[b.prefab].key) || '';
+        if ((!loose && !STORE_KEYS.test(key)) || /church|chapel|warehouse|hotel|barn/.test(key) || NOT_INTO.test(p.label || '') || NOT_INTO.test(b.name || '') || /barn|farm/i.test(p.label || '')) continue;
+        const ks = busyKinds.get(p.b);
+        if (ks && [...ks].some((k) => k !== 'delivery')) continue;
+        const dx = Math.floor(p.x / TILE) - at[0], dy = Math.floor(p.y / TILE) - at[1];
+        const k = dx * dx + dy * dy + (b.tw >= 10 ? 0 : 60 * 60) + (p.fixed ? 120 * 120 : 0);   // (wide enough for the cells first)
+        if (k >= bk || (!loose && !streetFront3(m, b, doorSouth3(m, b), over))) continue;
+        bk = k; best = p;
+      }
+      if (best) break;
+    }
+    if (!best) { out.none.push(name); continue; }
+    const b = m.buildings[best.b], old = best.label;
+    best.kind = 'police'; best.label = name; best.fixed = true; best.r = 48; best.sub = true;
+    let signed = false;
+    for (const sg of b.signs || []) if (sg.text === old) { sg.text = name; signed = true; }
+    if (!signed) { const south = doorSouth3(m, b); (b.signs ||= []).push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: name }); }
+    if (b.name === old) b.name = name;
+    busyKinds.get(best.b).add('police');
+    out.made.push([name, Math.floor(best.x / TILE), Math.floor(best.y / TILE), old, best.id]);
+  }
+  return out;
+}
+
 // the ground-level road tile (no highway's) nearest (tx, ty) within r tiles, searched in rings every 2 tiles
 export function roadNear3(m, tx, ty, r = 260) {
   for (let k = 0; k <= r; k += 2) {

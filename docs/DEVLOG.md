@@ -21519,3 +21519,101 @@ train has gone, the lane and its shops, Park West Motors with its beaters priced
 **Not done / for the owner**: the yards at Northshore and Red Rock are 80-90 tiles' walk off their platforms (the nearest
 open ground fronting a road); a hand-placed spot would bring them closer. The used lots' display cars are the server's
 dealer-lot stock (dealer.js), restocked a minute after one sells; the menu always has more, so nobody waits.
+
+## 2026-11-07 - The police: lenient before the first star, easier at 1-3 stars, a break for it that works, taken in for sure, prison for the worst
+The owner (11-07, 00:57): "it's hard to fight the cop off when you're in custody ... make it a bit harder to get arrested
+and have cops be more lenient building up to a 1 star. Making a break for it out of the cop car the cop instantly jumps
+out and catches you ... cops at low star wanted should be a little less good at driving ... when I'm in a cop car they
+don't seem to make it to a police station ... Prison should be saved for very very high criminal ratings with 5 stars
+and long arrest records (or for admins to put misbehaving players in) ... on the islands they will just drive into the
+ocean ... wait for 4 to 5 star wanted levels before the cops get better."
+- **Leniency before the first star** (`server/systems/law.js` `tallied`, rules.js `LENIENCY`): with no stars, a lesser
+  crime people see - a vehicle stolen, a hit and run, a carjacking, shots fired, cargo lifted - goes on a tally of its
+  heat instead of being a star: "the police have your description" (and "once more and they'll come for you" before the
+  one that does it). 24 of it is the first star (the usual chase); an officer's sighting counts double; the tally fades
+  0.4 a second after 45 s quiet. Before -> after: a car stolen in front of a witness, 1 star -> a warning (the third in a
+  while is the star, the second in front of an officer); a carjacking 1 star -> a warning (the second a star). Murder,
+  assault (with a weapon), striking or killing an officer, a robbery, an escape: stars at once, as before (`CRIMES.now`
+  marks the two that aren't felonies). Small crimes (a punch, a ram, a bike) keep their own count (task #405).
+- **The police by your stars** (rules.js `COP_LEVEL`, one row a star; `copLevel(stars)`):
+
+  | stars | drive (x top speed) | react (s behind your turns) | ram / PIT | foot (x your pace) | drain | cuffS | lostS | cool | exitS |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 1 | 0.72 | 0.6 | no | 0.90 | 0.8 | 5.5 | 8 | 1.8 | 2.4 |
+  | 2 | 0.78 | 0.5 | no | 0.93 | 0.7 | 5 | 10 | 1.6 | 2 |
+  | 3 | 0.86 | 0.35 | no | 0.97 | 0.5 | 4.5 | 14 | 1.3 | 1.5 |
+  | 4-5 | 1 | 0 | yes | 1 | 0.35 | 4 | 20 | 1 | 0.8 / 0.6 |
+
+  - driving (`police.js runUnit`): after a car they asked for 720 px/s at every level (the interceptor tops out at 690);
+    at 1 star 518 (a sedan's cruise), 562 at 2, 619 at 3. Close behind a car they drove into it to spin it at every level
+    (`ignoreObstacles` within 200 px); now only at 4-5 - at 1-3 they brake for it. At 1-3 they steer for where you were
+    `react` seconds ago (`ai.trail`): they turn late and go wide. On the roads 520 x drive.
+  - on foot (`copMods(world, c, stars)`): officers ran at your pace and tired at a third of your rate at every level; at
+    1 star 90% of it, tiring at 80% - sprint and you pull away. After NPC crooks, as before.
+  - the cuffs (`struggle.js`): 4 s at every level; now 5.5 s at 1 star down to 4 at 4-5 - more time to fight.
+  - giving up (`law.js update`): out of sight, the heat cooled at 1.2 a second and twice that after 20 s, at every
+    level; now the faster rate comes after `lostS` and both are `cool` times faster: 1 star at 25 heat is gone about
+    9 s after you're out of sight (was 15.5 s); 3 stars at 85 heat are 2 after about 16.5 s (was 21.9 s).
+  - exitS: the head start out of the back of their car (below).
+- **Fighting the officer off** (`struggle.js`): holding the attack button down now counts (`STRUGGLE_HELD`, 0.27 a
+  second at full health; only fresh presses counted before - a thumb held on FIRE on a phone did nothing); a second
+  officer on you counts for less at low stars (`STRUGGLE_SECOND` 0.35 at 1 star, 0.45 at 2, 0.6 from 3 - was 0.6 at
+  every level). The bar says "Mash or hold", and "you're winning - keep going!" while the meter rises (`me.fight.up`).
+  Simulated (full health; mashing about 7 a second unless said; the before is the code at cac27136):
+  | stars | one officer, mashing | two officers, mashing | mashing half as fast | holding the button | holding, two officers |
+  |---|---|---|---|---|---|
+  | 1 | 100% -> 100% | 79% -> 98% | 76% -> 70% | 0% -> 68% | 0% -> 26% |
+  | 2 | 100% -> 100% | 60% -> 76% | 65% -> 64% | 0% -> 57% | 0% -> 7% |
+  | 3 | 50% -> 49% | 1% -> 1% | 1% -> 0% | 0% -> 0% | 0% -> 0% |
+  | 4 | 5% -> 4% | 0% | 0% | 0% | 0% |
+  | 5 | 0% -> 0% | 0% | 0% | 0% | 0% |
+
+  (200 struggles each; a few points either way are the dice. 1 star at half health 72% -> 73%, a third 40% -> 42%; 3
+  stars against an agent 27% -> 25%, SWAT 8% -> 8%; the stick alone still never frees you.) 4-5 stars stay as hard.
+- **A break for it from the back of the car** (`custody.js carBreak`): while the car is crawling or stopped (under 60
+  px/s, its crew aboard: at the lights, in a jam) the action button kicks the door: a try that works 50% of the time at
+  1 star, 35% at 2, 12% at 3, 3% at 4, 1% at 5 (`BREAK_CAR`; x your strength, less after each miss, a try every 2.5 s).
+  Out of the car - this way or the old way, when the car is stuck - the crew stay in it for `exitS` (2.4 s at 1 star,
+  0.6 at 5: `ai.holdUntil`, police.js) and no tackle lands meanwhile; they used to be out and on you the same tick.
+  Some of them trip on the way (as after a break from the ground). Getting away puts you up one star (`ESCAPE_STARS`;
+  law.js `escaped`): its 25 heat put a 1-star prisoner on 3 stars.
+- **Touch** (`shared/touchcontrols.js` 'custody'): held by the police, the right-hand buttons are only FIRE (while an
+  officer's going for the cuffs; it pulses) and ACT (while there's a break for it - its footprints icon); the custody
+  bar names the button by its glyph on every device (it said "[ACT]", and the buttons carry no words since UI-8).
+- **Taken in** (`custody.js`):
+  - the nearest station the car can drive to (`reachableStation`: the road network's joined-up pieces, worked out once
+    per map; a station's piece is its kerb's): it was the nearest as the crow flies - from an island, a mainland station
+    across the sea, and with no road there `planRoute` handed back a straight line: into the ocean.
+  - the siren on until the last 420 px (it drove in with it off and sat in every queue; with it the traffic pulls over -
+    traffic.js `sirenBehind` - and a jam is gone round - reroute.js).
+  - getting no nearer for 6 s (`CUSTODY_REPLAN_S`): it backs up a moment and plans its way again; open water just ahead
+    (not a bridge): it stops and backs up, and still facing it 2.5 s later, the fade.
+  - the fade to black (`fadeIn`, me.custody 's: fade', client/hud.js `#cufade`): 1.5 s and you're booked at that station
+    (or the nearest), straight into a cell. It comes when the ride gets no nearer for 20 s (`CUSTODY_SKIP_S`, was 30 and a
+    teleport), when the ride runs out of time, when no car came in time, and at once where no road from you reaches a
+    station (an island without one: no car is sent at all).
+  - island stations (`shared/world3-medics.js` `precincts3`, World v3): the road network has four pieces - the mainland
+    with every bridged island (1,501 junctions, all ten stations), Gull Harbor (17), Coral Cay (19) and a six-junction
+    stretch in West Hills. Gull Harbor now has **Gull Harbor Police**: the "Gull Harbor Lobster Co." building (a courier's
+    address, 12 x 8 tiles, by the harbor) is the precinct - a walk-in with the front desk and a cell block (the 11th;
+    there were 10). Its POI is the building's own (id 3498, its kind and label changed; it moved in to the counter, from
+    1666,3727 to 1666,3724 tiles): no POI is added or removed, and a dump of all 6,018 POIs before and after differs in
+    that one only. Coral Cay gets none: every shop on it is a real one and its only other building is the eco lodge (the
+    first-aid post there is a lifeguard tower for the same reason) - an arrest there fades to the nearest cells, and the
+    West Hills stretch the same. A car sent for a prisoner now comes from their piece of the network
+    (`police.js sendTransport`, `spawnPoint`'s `ok`), and one on its way to them stops short of open water too.
+- **Prison only for the worst** (`prison.js prisonWorthy`, rules.js `PRISON`): a booking at 5 stars with a long record -
+  4 bookings before it (`profile.bookings`, counted from now on; the last 8 times were all that was kept) or a criminal
+  rating of 2,000 Criminal EXP. It was 4 stars, or the third booking in two hours - so a 1-star player whose car got stuck
+  three times ended up on Prison Island. Everyone else: the station's cells, 60 s or the bail, as before.
+- **Admins** (`server/admin.js` `prison { id, mins, why }`, power `prison`: admin): to Prison Island for up to 60 minutes,
+  out of custody or a cell first; no bail, no climbing the wall, put back inside if they get out some other way; kept
+  over a logout; `mins: 0` lets them out; an offline player gets it when they next play. In the admin log.
+- **Guide** (`shared/guide.js`, The law): Wanted stars (the warning first), How hard the police come (new), Busted (fight
+  back, break for it, the cells), Prison Island (new) - their numbers from rules.js. README's custody rows.
+- **Tests:** test/law.test.js (new: the tally and its warnings, serious crimes at once, the per-star table, the driving -
+  speed asked, steering late, braking or ramming - and the running, the struggle at 1 vs 5 stars mashing, two on you and
+  holding); test/custody.test.js (new: a break from the back seat - not while moving, a missed try, the head start, a star
+  more - at 1 and 4 stars; the ride to the reachable station with the siren; stuck: replanned, the fade, the cells; no
+  road to a station: the fade, no car, never in the water); test/prison.test.js (the new rule, the admin's sentence,
+  the island stations and an island ride that never touches water); struggle, arrests, touchslots and guide updated.

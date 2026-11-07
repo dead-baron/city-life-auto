@@ -18,7 +18,7 @@ import * as biz from './biz.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
-import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST, HEAT_TOP } from '../../shared/rules.js';
+import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST, HEAT_TOP, ESCAPE_STARS, LENIENCY, copLevel } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -26,7 +26,7 @@ const EDGE_I = { d: 0, nx: 0, ny: 0 };
 // passers-by see of it adds up to a star, one an officer sees is a star at once (smallCrime, task #405)
 export const CRIMES = {
   punch:       { heat: 15, label: 'Assault', sev: 1, minor: true },   // (bare fists: a punch, a shove - onDamage; a weapon's is an assault)
-  assault:     { heat: 15, label: 'Assault', sev: 1 },
+  assault:     { heat: 15, label: 'Assault', sev: 1, now: true },   // (with a weapon: a star at once - LENIENCY's tally is for the lesser ones)
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
   murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
   copMurder:   { heat: 90, label: 'Killing an officer', felony: true, sev: 2 },
@@ -58,7 +58,7 @@ export const CRIMES = {
   // (the owner, 2026-10-11: "tone down the severity of some less severe crimes so it's not as easy to get a felony")
   carjackHurt: { heat: 25, label: 'Violent carjacking', felony: true, sev: 1.3 },   // (the driver thrown out of a moving car: vehicles.js carjack)
   copCarjack:  { heat: 30, label: 'Carjacking a police vehicle', felony: true, sev: 1.3 },
-  copPunch:    { heat: 40, label: 'Striking an officer', sev: 1.3 },   // (bare fists on an officer: the same chase, no felony - a weapon's is copAssault)
+  copPunch:    { heat: 40, label: 'Striking an officer', sev: 1.3, now: true },   // (bare fists on an officer: the same chase, no felony - a weapon's is copAssault; now: stars at once, no LENIENCY)
 };
 
 import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, MISCONDUCT_WEIGHT, FIRED_LOCKOUT_MS, SERVICE_AMMO, SERVICE_MAG, SUBDUE_S, POLICE_RANKS, ARREST_REWARD_PER_STAR, WILD_SIGHT, COVER_SIGHT, WILD_COOL,
@@ -270,8 +270,9 @@ export function calledIn(world, sp, call, caller) {
   if (!spec || !sp.ped) return;
   if (spec.minor && !usual(sp)) { if (!soft(sp)) star(world, sp, call.type, sp.ped.x, sp.ped.y, 'witness'); }   // (on that star already: likely the same punches - no more of it)
   else {
+    if (lenient(sp, spec) && !tallied(world, sp, call.type, false)) { if (caller) { caller.profile.samaritan += 2; caller.meDirty = true; } store.touch(); return; }
     if (spec.felony) sp.profile.felonies++;
-    addHeat(world, sp, spec.heat, sp.ped.x, sp.ped.y, true);
+    addHeat(world, sp, firstHeat(sp, spec), sp.ped.x, sp.ped.y, true);
     logDispatch(world, call.type, sp.ped.x, sp.ped.y, sp, sp.wanted, 'witness');
     world.notify(sp, `${spec.label}: a witness called you in, and the police know your description!`, 'bad');
   }
@@ -303,6 +304,30 @@ function smallCrime(world, p, type, x, y, w) {
   star(world, p, type, x, y, w.cop ? 'officer' : w.cam ? 'camera' : 'witness', w.copId);
   return true;
 }
+// ---- before the first star (rules.js LENIENCY; the owner, 11-07: "have cops be more lenient building up to a 1 star")
+// With no stars, a crime people see that isn't a felony (nor an assault, nor striking an officer: CRIMES now) - a vehicle
+// stolen, a hit and run, a carjacking, shots fired - goes on a tally of its heat,
+// an officer's sighting counting LENIENCY.cop times; LENIENCY.star of it is the first star (the usual chase), and till
+// then a warning. The tally fades LENIENCY.fade a second once LENIENCY.holdS go by without another.
+const lenient = (p, spec) => !spec.felony && !spec.now && !(p.wanted > 0);
+export function tallyOf(world, p) {
+  const t = p.tally || 0, quiet = world.time - (p.tallyAt ?? world.time) - LENIENCY.holdS;
+  return quiet > 0 ? Math.max(0, t - quiet * LENIENCY.fade) : t;
+}
+// on the tally: true when it makes the star
+function tallied(world, p, type, cop) {
+  const spec = CRIMES[type], add = spec.heat * (cop ? LENIENCY.cop : 1);
+  p.tally = tallyOf(world, p) + add; p.tallyAt = world.time;
+  if (p.tally >= LENIENCY.star - 1e-6) { p.tally = 0; return true; }
+  const close = p.tally + add >= LENIENCY.star - 1e-6;   // (one more like it: the star - always said)
+  world.notify(p, `${spec.label} reported - ${cop ? 'an officer saw that' : 'the police have your description'}. ${close ? 'Once more and they\'ll come for you.' : 'Keep your head down and it blows over.'}`, 'warn');
+  p.meDirty = true;
+  store.touch();
+  return false;
+}
+// the heat a crime adds: at least the first star's when it makes one off the tally (shots fired alone are less)
+const firstHeat = (p, spec) => (p.wanted > 0 || spec.felony || spec.now ? spec.heat : Math.max(spec.heat, STAR_HEAT[1] + 2 - (p.heat || 0)));
+
 // The star small crimes make: 1, the kind that brings an officer for a word (by: an NPC officer who saw it - theirs to deal
 // with, stops.js); on that star already, 2 stars and the usual kind
 export { star as smallStar };   // (dev.js: the debug menu's 1 star)
@@ -384,8 +409,9 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
     return;
   }
   if (spec.minor && !usual(p)) return smallCrime(world, p, type, x, y, w);   // (a small crime: it adds up - task #405)
+  if (lenient(p, spec) && !tallied(world, p, type, w.cop)) return;   // (no stars yet: it goes on the tally - LENIENCY)
   if (spec.felony) p.profile.felonies++; // only crimes someone saw go on your record
-  addHeat(world, p, spec.heat, x, y, true);
+  addHeat(world, p, firstHeat(p, spec), x, y, true);
   logDispatch(world, type, x, y, p, p.wanted, w.cam ? 'camera' : w.cop ? 'officer' : 'witness');
   world.notify(p, `${spec.label} reported${w.cam ? (w.secCam ? ' by a security camera' : ' by a traffic camera') : w.cop ? ' by police' : ''}!`, 'bad');
   return true;   // (called in: robbery.js starts the heat growing)
@@ -428,6 +454,18 @@ export function addHeat(world, p, amount, x, y, damp = false) {
   if (p.hunter && p.wanted > 0) { p.hunter = false; world.notify(p, 'Bounty Hunter license suspended while wanted.', 'bad'); }
   p.meDirty = true;
   store.touch();
+}
+
+// Escaping custody (custody.js): a felony on the record, and a star more than you had (rules.js ESCAPE_STARS) - its heat
+// used to be added like any crime's, and a 1-star prisoner who got away was on 3
+export function escaped(world, ped) {
+  const p = ped && ped.player;
+  if (!p) return;
+  const want = Math.min(5, Math.max(1, p.wanted) + ESCAPE_STARS);
+  p.profile.felonies++;
+  p.profile.criminalExp += Math.round(CRIMES.escape.heat / 2);
+  addHeat(world, p, Math.max(0, STAR_HEAT[want] + 4 - p.heat), ped.x, ped.y);
+  logDispatch(world, 'escape', ped.x, ped.y, p, p.wanted, 'officer');
 }
 
 export function clearWanted(world, p) {
@@ -550,7 +588,8 @@ export function update(world, dt) {
         // out in the wilds the trail goes cold faster: the search spreads wider and heat cools quicker
         const wild = sight < 1;
         p.searchR = Math.min(wild ? 1500 : 1100, p.searchR + (wild ? 42 : 28) * dt);
-        const rate = (unseen > 20 ? 2.4 : 1.2) * (wild ? WILD_COOL : 1);
+        // (at 1-3 stars they give up sooner: the faster rate comes sooner and both are faster - rules.js COP_LEVEL)
+        const L = copLevel(p.wanted), rate = (unseen > L.lostS ? 2.4 : 1.2) * L.cool * (wild ? WILD_COOL : 1);
         p.heat = Math.max(0, p.heat - rate * dt);
         const stars = starsForHeat(p.heat);
         if (stars < p.wanted) {

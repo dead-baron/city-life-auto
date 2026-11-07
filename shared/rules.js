@@ -74,7 +74,9 @@ export const RIDE_MAX_S = 150;         // a ride to the station that takes longe
 export const CUSTODY_STUCK_S = 12;     // the car coming for you, or the one you're in, getting no nearer this long (stuck, or going
                                        //   round in circles): "Make a break for it" comes up (an escape: wanted again)
 export const CUSTODY_WAIT_BREAK_S = 20; // ...and the same once you've waited this long for the car to come at all
-export const CUSTODY_SKIP_S = 30;      // the ride getting no nearer this long: they get you to the station anyway (booked)
+export const CUSTODY_SKIP_S = 20;      // the ride getting no nearer this long: a fade to black, booked at the station (was 30)
+export const CUSTODY_FADE_S = 1.5;     // ...the fade (and the same for a ride that can't be driven: an island with no station on its roads)
+export const CUSTODY_REPLAN_S = 6;     // ...and before that: getting no nearer this long, it backs up and plans its way again
 export const JAIL_S = 60;              // in the cell this long...
 export const BAIL_PER_STAR = 100;      // ...or out now for this much a star (from the bank, then cash)
 export { CELL_CAP } from './rules-base.js';             // people a cell takes (a prisoner goes to the cell with the fewest in it - shared/cells.js)
@@ -86,6 +88,38 @@ export const CELL_REGULARS = 2;        // ...and a block you're booked into has 
 export const GUARD_PX = 420;           // a player officer who leaves their prisoner further away than this loses them
 export const BREAKOUT_IMPACT = 380;    // a crash at least this hard (closing speed, px/s) can throw the prisoner out
 export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in themselves earns this much more again
+// The owner's note of 11-07: "make it a bit harder to get arrested and have cops be more lenient building up to a 1 star
+// ... wait for 4 to 5 star wanted levels before the cops get better".
+// Leniency before the first star (law.js tallied): with no stars, a lesser crime people see (a vehicle stolen, a hit and
+// run, a carjacking, shots fired - not a felony, not an assault) goes on a tally rather than being a star: `star` of its
+// heat makes the first star, and until then you're told the police have your description. An officer who sees it counts
+// it `cop` times over; the tally fades `fade` a second once `holdS` go by without another. So a car stolen is a warning
+// and the third in a while a star (the second in front of an officer); a carjacking a warning, the second a star. Felonies
+// (murder, hitting or killing an officer, a robbery, an escape) and assaults are stars at once, as ever; small crimes
+// (a punch, a bike lifted) have their own count (SUSPICION_*).
+export const LENIENCY = { star: 24, cop: 2, holdS: 45, fade: 0.4 };
+// The police by your stars (police.js, struggle.js, custody.js, law.js): sharp at 4-5 as they've always been, worse at
+// 1-3. drive: their top speed in a chase (x 720 px/s after a car, 520 on the roads); react: how stale (s) the spot they
+// steer for is - they turn late and wide; ram: they lean on your car to spin it (a PIT) - only at 4-5; foot / drain:
+// their running pace (x yours - a player sprinting at 1-2 stars pulls away) and how fast they tire (x yours); cuffS:
+// how long they take to get the cuffs on in the struggle (s: more time to fight); lostS / cool: out of their sight this
+// long the heat cools at the faster rate (was 20 s at every level), and cools this many times faster; exitS: you made a
+// break for it out of the back of their car - the crew take this long to get out after you. Numbers, 1 -> 5 stars:
+// a 1-star car tops out near a fast sedan's cruise (520) rather than a sports car's, 0.6 s behind your turns.
+export const COP_LEVEL = [null,
+  { drive: 0.72, react: 0.6, ram: false, foot: 0.9, drain: 0.8, cuffS: 5.5, lostS: 8, cool: 1.8, exitS: 2.4 },
+  { drive: 0.78, react: 0.5, ram: false, foot: 0.93, drain: 0.7, cuffS: 5, lostS: 10, cool: 1.6, exitS: 2 },
+  { drive: 0.86, react: 0.35, ram: false, foot: 0.97, drain: 0.5, cuffS: 4.5, lostS: 14, cool: 1.3, exitS: 1.5 },
+  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.8 },
+  { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.6 },
+];
+export const copLevel = (stars) => COP_LEVEL[Math.max(1, Math.min(5, stars | 0))];
+// Escaping custody puts you up a star (ESCAPE_STARS) - not two or three as its heat used to (CRIMES.escape's 25)
+export const ESCAPE_STARS = 1;
+// Making a break for it from the back of the police car (custody.js): while the car is crawling or stopped (under
+// `speed` px/s - at the lights, in a jam) the action button kicks at the door, a try that works chance[stars] of the time
+// (x your strength; less each time it fails, as on the ground); the car stuck or going nowhere, it always works.
+export const BREAK_CAR = { speed: 60, chance: [0, 0.5, 0.35, 0.12, 0.03, 0.01] };
 // How hard the police come at you, by stars (server/systems/police.js; design notes 2026-10-08): 1-2 they chase you
 // down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
 // fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.
@@ -124,8 +158,10 @@ export const STRUGGLE_STARS = [1, 0.9, 1, 1.3, 1.7, 2];   // ...times this by yo
 export const STRUGGLE_KIND = { cop: 1, agent: 1.2, swat: 1.45, soldier: 1.55 };   // ...and by who's on you
 export const STRUGGLE_BUILD = 0.35;    // ...and their build (a brute's grip: 1 + 0.35 x 0.6 stronger than an average officer's)
 export const STRUGGLE_GRIP_VAR = 0.4;  // ...and how well they got hold of you this time (rolled: +-40%)
-export const STRUGGLE_SECOND = 0.6;    // a second officer on you adds this much of their own hold (a patrol car brings two: at
-                                       //   1 star they cut your odds by about a fifth; at 3, two on you is nearly always the cuffs)
+// a second officer on you adds this much of their own hold, by your stars (a patrol car brings two; 0.6 at every level
+// until 11-07, when two on you at 1 star was about a coin toss - the owner: "it's hard to fight the cop off")
+export const STRUGGLE_SECOND = [0, 0.35, 0.45, 0.6, 0.6, 0.6];
+export const STRUGGLE_HELD = 0.27;     // the attack button held down rather than mashed (a thumb on FIRE): this much a second
 export const STRUGGLE_RAMP = 0.3;      // the hold grows this much (x its start) for every second you've been held...
 export const STRUGGLE_CUFF_S = 4;      // ...and this long after they got you, the cuffs are on, whatever the meter says
 export const STRUGGLE_HP_FLOOR = 0.45; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
@@ -920,10 +956,13 @@ export const GRENADE = { speed: 320, carry: 0.5, lift: 230, grav: 720, bounce: 0
 // proStretch more at the edge of its reach; prize to the bank for beating it; leave px off the court ends the game;
 // between s between points; a serve not hit in serveWait s ends it
 export const TENNIS = { pace: 430, spray: 120, proSpeed: 0.92, proMiss: 0.06, proStretch: 0.25, prize: 60, leave: 90, between: 1.6, serveWait: 45 };
-// Prison Island (server/systems/prison.js): a booking at `stars` or more, or the `repeat`th within repeatMs (wall-clock
-// ms), is a sentence at Kestrel Bay Penitentiary instead of the station's cells: base s + perStar a star + perRepeat for
-// each booking before it in that time, up to max s; the wall takes climbS s to get over; over it, escapeStars stars
-export const PRISON = { stars: 4, repeat: 3, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, climbS: 5, escapeStars: 3 };
+// Prison Island (server/systems/prison.js): only for the worst - a booking at `stars` (five) with a long record behind it:
+// `record` bookings before this one, or a criminal rating (Criminal EXP) of `rating` - or an admin sending someone there
+// (server/admin.js prison). Everyone else does their time in a station's cells (the owner, 11-07: "Prison should be saved
+// for very very high criminal ratings with 5 stars and long arrest records"; it was four stars, or the third booking in
+// two hours). The sentence: base s + perStar a star + perRepeat for each booking in the last repeatMs (wall-clock ms), up
+// to max s; adminMins: an admin's sentence, minutes at most; the wall takes climbS s to get over; over it, escapeStars
+export const PRISON = { stars: 5, record: 4, rating: 2000, repeatMs: 2 * 3600e3, base: 90, perStar: 35, perRepeat: 30, max: 300, adminMins: 60, climbS: 5, escapeStars: 3 };
 // casinos (server/systems/casino.js): slot spins and table stakes ($); the reels' weights and three-of-a-kind pays
 // street dice (server/systems/streetdice.js): the stake a roll ($, cash), what the crew has on them, the chance (at its
 // most, cleaned out) one takes a winner badly; a roll at most every gapS s

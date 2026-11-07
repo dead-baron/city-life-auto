@@ -61,7 +61,7 @@ import { desertWaters3 } from './world3-tinajas.js';
 import { desertKit3 } from './redrock.js';
 import { moreMansions3 } from './world3-mansions.js';
 import { desertCompound3 } from './world3-compound.js';
-import { clinics3, DROP_SPECIALS3 } from './world3-medics.js';
+import { clinics3, precincts3, DROP_SPECIALS3 } from './world3-medics.js';
 import { fenceGaps3 } from './world3-fencegaps.js';
 import { waterOutlets3 } from './world3-outlets.js';
 import { woodsLake3 } from './world3-woodslake.js';
@@ -334,7 +334,7 @@ export function worldOpts(asked) {
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
-    clinics: city ? (m) => { m.world3.clinics = clinics3(m); } : null,   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
+    clinics: city ? (m) => { m.world3.clinics = clinics3(m); m.world3.precincts = precincts3(m); } : null,   // (and a police station on the islands with none: precincts3)   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
     shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
     lots: city ? (m, H2) => { m.world3.lots = lots3(m, H2); } : null,   // (after the plain blocks are cut: Southside's shops and sheds - world3-lots.js)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a
