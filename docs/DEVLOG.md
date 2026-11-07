@@ -21195,3 +21195,46 @@ but the character is an old placeholder I believe."
   darkened or lit by the cave's light like everything else.
   - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
   - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
+
+## 2026-11-07 - What's meant to be seen is seen: the visibility audit, station boards, trees, signs, under the bridges
+
+The owner (11-06): "Another train station with the sign hidden, lets make sure we're checking for hidden signs or
+activities or things that have gotten hidden behind stuff like we've seen for the chess board or station signs, stuff
+like that. Just want to make sure things that are supposed to be visible are visible." His cases: a main-line station's
+south platform and name board under the roofs of the houses south of it; an arrival platform's board behind its canopy
+and train; a red "GUL..." sign half under an elevated highway; the park's chess table behind a tree; under a bridge, a
+swimmer showing through the deck's median and blood from a hit in the water drawn on top of the deck.
+
+- **The audit (`tools/visaudit.mjs`, `test/visaudit.test.js`).** For everything meant to be seen - every place's door
+  and the sign over it (or its step, for a door on a north face), every station name board, platform and route board,
+  every chess table, activity spot (picnic tables, fishing tables and rails, hoops, showers, campfires, map boards, bus
+  stops), ATM and vending machine, every standing sign - its pixels on screen and what the bake draws over them: the same
+  static items (`statics.js staticItems`), their own sprites (`makeStatic`) on the art grid, the bake's depth rule (the
+  taller pixel wins, ties to the later; buildings last), plus a train standing at the platform for the boards. A thing is
+  hidden at 40% of its pixels drawn over (a door: its top and the sign over it, z 16..56). Its own building, a station's
+  own furniture and what stands on a place's footprint (a hotel's canopy, a market's stalls) don't count.
+  `node tools/visaudit.mjs [--json out.json]` prints counts by kind and what hides them.
+- **Station name boards** (`statics.js`): by the platform's outer edge - on its posts at the front of a platform south of
+  the track (at the track's edge the canopy's roof was over it), up over the canopy's roof at the back of one north of it
+  (a train standing there hid it). The station house's board on the side the camera sees, along the house clear of the
+  footbridge's flights (north of the house, at doors on a north street, the house stood over it). The El's MIDTOWN boards
+  the same way. 13 of 18 boards were hidden; none now.
+- **Platforms under roofs** (`world3-rail.js lowByPlatforms`, `statics.js b.low`): a building just south of a platform
+  south of its track is drawn one storey under a shallow roof. Nothing moves; a flag on the building.
+- **Trees off what's meant to be seen** (`world3-greens.js sightlines3`, last in the world's build): a map tree whose
+  crown (by species, as the art draws it) would be drawn over a door, a standing sign, a chess table, an ATM, a bus stop or
+  a campfire moves along its row to the nearest spot where it hides nothing, or gives way to a shrub (a planter on a
+  pavement). Nothing is removed: every prop keeps its number. The bake's own greenery (`statics.js coverItems`) grows
+  nothing tall in front of the same things. The pocket parks' chess table moved to the head of the path.
+- **Signs**: standing signs slide along their row out from under a highway's deck (the "GUL..." sign was the Gulf Fuel
+  Terminal's: moved east of the highway; the Pink Mile's TAXI boards); MARKET SQUARE and STERLING PLAZA moved out from
+  in front of the buildings south of them; The Rusty Anchor's and Yards Freight's on tall poles over the roofs south of them.
+- **Under a bridge** (`groundbake.js`, `render/fx.js`, `main.js`): a highway bridge's median was baked at 2-4 px while
+  its deck is at 6 - under the swimmer's depth cap (host.js `UNDER_Z`), so a swimmer showed through it; it now stands on
+  the deck. Blood from someone afloat under a deck (`fx.water` 2: a bridge tile with a swimmer or a boat close by) clouds
+  the water under it instead of staining the deck's top; nothing else lands there. `test/underdeck.test.js`.
+- **Left, by kind** (`test/visaudit.test.js ALLOW`): doors with another building's roof over them (dense blocks built
+  back to back - the downtown towers, the Midtown apartments, a farm's barn in front of its house), bus stops on the south
+  kerb of an east-west street (the buildings behind them are drawn up over the pavement), back yards' picnic tables
+  behind their houses, a few ATMs and doors under the El and the highways, the wild camps' fire rings under their own
+  trees. The engine fades a building you stand behind; these need the layout changed, not a prop moved.
