@@ -153,15 +153,16 @@ function arrive(m) {
   const [fx, fy] = m.from, [tx, ty] = m.to, L = A.line;
   C.setCam(() => {
     if (!A) return null;
-    const now = clock(), k = Math.min(1, (now - A.t0) / A.dur);
+    const now = clock(), t0 = A.t0, dur = A.dur, k = Math.min(1, (now - t0) / dur);
     tick(k);
+    if (!A) return null;   // (that was its last frame: tick ended the scene - the camera is the player's again)
     if (!L || !TR) { const r = Math.min(1, k / 0.72), e = 1 - (1 - r) * (1 - r) * (1 - r); return [fx + (tx - fx) * e, fy + (ty - fy) * e]; }
     // on the line: by the first portal, then along with the front car, settling on the doors you step out of; as it
     // pulls out, a look after it toward the far portal (an upright phone's narrow view), back to you as the scene ends
-    const t = (now - A.t0) / 1000, f = trainFront(t), u = Math.max(L.in + 170, Math.min(L.door, f - 150)), ca = Math.cos(L.a), sa = Math.sin(L.a);
+    const t = (now - t0) / 1000, f = trainFront(t), u = Math.max(L.in + 170, Math.min(L.door, f - 150)), ca = Math.cos(L.a), sa = Math.sin(L.a);
     const x = L.x + ca * u - sa * 30, y = L.y + sa * u + ca * 30, s = Math.min(1, Math.max(0, (t - m.stop) / 1.2));
     let cx = x + (tx - x) * s * s * (3 - 2 * s), cy = y + (ty - y) * s * s * (3 - 2 * s);
-    const t1 = A.dur / 1000, w = t < m.leave ? 0 : Math.min(1, (t - m.leave - 0.2) / 1) * Math.min(1, Math.max(0, (t1 - 0.2 - t) / 1.2));
+    const t1 = dur / 1000, w = t < m.leave ? 0 : Math.min(1, (t - m.leave - 0.2) / 1) * Math.min(1, Math.max(0, (t1 - 0.2 - t) / 1.2));
     if (w > 0) { const d = Math.max(0, Math.min(L.out - 140, f - 450) - L.door) * w * w * (3 - 2 * w); cx += ca * d; cy += sa * d; }
     return [cx, cy];
   });

@@ -20770,6 +20770,10 @@ for the purpose of onboarding new players (without overlapping on each other if 
   until the doors open). `test/ftue.test.js`: the card, a pick moving the car, skip and the timeout taking the default,
   a station not on the card, a rejoin mid-choice. `test/starter.test.js`: the first day's station is the default.
   `test/world3hubs.test.js` counts the main line's bores only (`!t.arrival`).
+- **Fixed: "Something went wrong drawing the game" at the end of every arrival played through.** The camera's callback
+  ran the scene's clock (`tick`), which ends the scene on its last frame (`A = null`), then read `A.t0` - a TypeError in
+  the frame, caught and toasted. It now reads what it needs before the tick and stops when the scene is over. (Seen in
+  the real-time captures only: the photographed ones held the clock before the end.)
 - Today's world (the map picture's) is untouched by this: its `world` hash is main's. The world map's picture was
   rebaked here anyway (`tools/build-worldmap2.mjs`) because main's wider bars had changed today's world signature.
 
