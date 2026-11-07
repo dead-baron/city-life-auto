@@ -136,8 +136,8 @@ function northBand(K, m, ctx) {
   let k = 0;
   const westShops = [
     { w: 13, name: 'Silk & Shears Salon', sign: 'SILK & SHEARS', store: 'salon', poi: { kind: 'barber', label: 'Silk & Shears Salon' }, awning: ['#2a2420', '#2a2420'] },
-    { w: 11, name: 'Cask & Cork', store: 'bar', awning: ['#5a2a2e', '#efe6d0'] },
-    { w: 13, name: 'Gilt & Grain', store: 'cafe', poi: { kind: 'coffee', label: 'Gilt & Grain Bakery', food: true }, awning: ['#8a6a2a', '#f0ece4'] },
+    { w: 12, name: 'Cask & Cork', store: 'bar', awning: ['#5a2a2e', '#efe6d0'] },   // (12: 10 inside, IN5's whole room - the owner, 11-06; the bakery next door gives up the tile)
+    { w: 12, name: 'Gilt & Grain', store: 'cafe', poi: { kind: 'coffee', label: 'Gilt & Grain Bakery', food: true }, awning: ['#8a6a2a', '#f0ece4'] },
     { w: 10, name: 'Fernwood Florist', store: 'florist', awning: ['#2f6a4e', '#f0ece4'] },
     // (2026-10-23: downtown's gun shop and hardware store - the shops where you need them, world3-shops.js)
     { w: 11, name: 'Ironside Hardware', sign: 'IRONSIDE HARDWARE', store: 'mart', poi: { kind: 'hardware', label: 'Ironside Hardware' }, awning: ['#a83a2a', '#e8e4dc'] },
@@ -532,7 +532,7 @@ function southBand(K, m, ctx) {
     const hw = 46, hx = c1[0] + 30, hd = 26, hy = rs[1] - hd + 1;
     place({ x: hx, y: hy, w: hw, h: hd, arch: 'police', key: 'police', name: 'Metro City PD - HQ', poi: { kind: 'police', label: 'Metro City PD - HQ', hq: true }, front: 4, whole: true,
       art: { spec: { floors: 5, style: 'stone', wallColor: '#cfc6b2', win: 'tall', cornice: 'dentil', parapet: 14, grime: 0.08, roofMat: 'gravel', lip: 10, rimW: 5 } } });
-    place({ x: hx + hw + 1, y: hy + 4, w: 26, h: hd - 4, name: 'Motor Pool', roof: 'tar', poi: false });
+    place({ x: hx + hw + 1, y: hy + 4, w: 26, h: hd - 4, name: 'Motor Pool', roof: 'tar', poi: false, signs: [{ x: hx + hw + 14, text: 'METRO PD GARAGE' }] });   // (its name over its door: no big blank block - the owner, 11-03)
     // the impound yard behind: asphalt behind chain-link, the towed cars in rows, the yard's hut
     const iy0 = rs[0], iy1 = hy - 1, ix0 = hx, ix1 = hx + hw + 27;
     if (iy1 - iy0 >= 10) {

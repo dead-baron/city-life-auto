@@ -16,7 +16,7 @@
 import { GBuf, hash, vnoise, step, F_GLASS, F_NOCAST } from './gbuf.js';
 import { MAT, ramp, LIGHT } from './palette.js';
 import { paintRect } from './ground.js';
-import { drawText, textWidth } from './font.js';
+import { layoutSign, paintBoard, palOf, legible, luminance } from './signfont.js';
 
 const S_N = [0, 1, 0], UP = [0, 0, 1];
 const set = (G, x, y, c, n = S_N, z = null) => { x |= 0; y |= 0; if (!G.inside(x, y)) return; const i = y * G.w + x, j = i * 4; G.col[j] = c[0]; G.col[j + 1] = c[1]; G.col[j + 2] = c[2]; G.col[j + 3] = 255; if (n) { G.nrm[j] = (n[0] * 0.5 + 0.5) * 255; G.nrm[j + 1] = (n[1] * 0.5 + 0.5) * 255; G.nrm[j + 2] = (n[2] * 0.5 + 0.5) * 255; G.nrm[j + 3] = 255; } if (z !== null) G.z[i] = z; G.emi[j + 3] = 0; G.flag[i] = 0; };
@@ -65,6 +65,8 @@ export function room(sc, o) {
     for (let k = 0; k < t; k++) for (let x = x0 - t; x < x0 + w + t; x++) set(G, x, y0 - H - k, step(capC, k === 0 ? 0.8 : 0.5, x, k, 0.3), UP, H);
     for (const dd of gaps('n')) backDoor(G, x0 + dd.at, y0, dd.w, dd.h || 56, dd, sc.night);
     for (const dc of o.deco || []) deco(G, x0 + dc.at, y0, dc, sc.night, seed);
+    // a wall lamp throws its pool of light down the wall and onto the floor in front of it (a light, not paint)
+    if (sc.light) for (const dc of o.deco || []) if (dc.kind === 'lamp') sc.light(x0 + dc.at + (dc.w ?? 30) / 2, y0 + 14, (dc.v ?? 20) + 4, Math.max(70, (dc.w ?? 30) * 2.2), LIGHT.warmWindow, sc.isNight ? 1.3 : 0.7);
   }
   // side walls: cut low, shown as their caps (gaps for side doorways)
   for (const [side, xs] of [['w', x0 - t], ['e', x0 + w]]) if (o[side === 'w' ? 'west' : 'east'] !== false) {
@@ -140,10 +142,12 @@ function deco(G, x0, y0, dc, night, seed) {
       let c = edge ? [30, 30, 36] : step(ramp('#4a6a88', 5, 2), 0.2 + hash(Math.floor(x / 3) + Math.floor(x / sw) * 31, Math.floor(v / 3), seed) * 0.45, x, v, 0.4);
       px(x, v, c, edge ? null : [150, 190, 230, 30 + night * 40]);
     }
-  } else if (dc.kind === 'sign') {
-    const sx = dc.sx || 2, tw = textWidth(dc.text || '', { sx, gap: 1 }), ww = Math.max(w, tw + 10), hh = 5 * sx + 8, bg = ramp(dc.col || '#2a4a8a', 5, 2), fg = dc.fg || [250, 248, 240];
-    for (let v = 0; v < hh; v++) for (let x = 0; x < ww; x++) px(x, v, (x === 0 || v === 0 || x === ww - 1 || v === hh - 1) ? MAT.metalDark[2] : bg[2], dc.lit ? [...bg[3], 40 + night * 80] : null);
-    drawText((x, y) => { set(G, x0 + x, y0 - v0 - hh + y, fg, S_N, v0 + 4); if (dc.lit) glow(G, x0 + x, y0 - v0 - hh + y, [...fg, 120 + night * 100]); }, dc.text || '', Math.floor((ww - tw) / 2), 4, { sx, sy: sx, gap: 1 });
+  } else if (dc.kind === 'sign') {                                        // a lettered board in the sign faces (signfont.js): whole art px, its face by dc.face
+    const bg = dc.col || '#2a4a8a', fg = dc.fg || [250, 248, 240], face = dc.face || (luminance(typeof bg === 'string' ? ramp(bg, 5, 2)[2] : bg) > 0.3 ? 'civic' : 'block');
+    const L = layoutSign(dc.text || '', Math.max(12, Math.floor(Math.max(w, ((dc.text || '').length * 7 + 6) * 2) / 2)), { face, lines: 1 });
+    const P = legible(palOf([ramp(bg, 5, 2)[2], fg]));
+    let top = y0 - v0 - L.h * 2; if (top & 1) top--;
+    paintBoard((x, y, c, e) => { set(G, x, y, c, S_N, y0 - y); if (dc.lit && e) glow(G, x, y, [e[0], e[1], e[2], Math.min(255, e[3] + night * 80)]); }, L, P, x0, top, { lit: dc.lit ? 'panel' : false, night });
   } else if (dc.kind === 'window') {
     for (let v = 0; v < h; v++) for (let x = 0; x < w; x++) {
       const frame = x < 2 || v < 2 || x >= w - 2 || v >= h - 2 || x % 16 === 0, streak = (x + v) % 13 < 3;

@@ -6,7 +6,8 @@
 // drawn inside the rock) - and that no relief rock in the desert is drawn as nothing; then walks players, townsfolk
 // (the NPCs' and animals' step: pedStep on PED_BLOCK) and a car at a sample of the desert's faces from below, from
 // above and from the sides, and none ends up inside the rock; and every road, track and place of the desert can still
-// be reached from the roads, on foot and by car. One world build.
+// be reached from the roads, on foot and by car. The hand-placed faces too (the Old Granite Mine's, Granite Cove's: the
+// owner's same report, 2026-11-04). One world build.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateCity } from '../shared/map.js';
@@ -66,6 +67,26 @@ test('World v3: the cliffs are solid where they are drawn - on foot, by car, fro
     if (desert.includes(p)) rocks.set(p, R);
   }
   assert.ok(drawn > 20000, `tiles under the faces' rock: ${drawn}`);
+
+  // 1b. the hand-placed faces too (shared/naturesites.js: the Old Granite Mine's adit, Granite Cove's rim; the desert's
+  // Copper Gulch adit, shared/world3-desert.js): no walkable tile under their rock but the steps up the cove's cliff
+  const hand = m.props.filter((p) => p.t === 'cliff' && !p.relief);
+  const stairs = m.props.filter((p) => p.t === 'stairs');
+  const onSteps = (k) => { const x = (k % W + 0.5) * TILE, y = (((k / W) | 0) + 0.5) * TILE; return stairs.some((q) => Math.abs(q.x - x) < TILE * 1.6 && y <= q.y + TILE && y >= q.y - (q.len || 120) - 3 * TILE); };
+  const mine = hand.filter((p) => p.s === 33 && p.h === 120), cove = hand.filter((p) => p.s >= 41 && p.s <= 46 && !p.st);
+  assert.ok(mine.length === 1 && cove.length === 6, `the Old Granite Mine's face (${mine.length}) and Granite Cove's six (${cove.length})`);
+  let hDrawn = 0, hOpen = 0;
+  const hOpenAt = [];
+  for (const p of hand) {
+    for (const [k, n] of rockOf(p).tiles) {
+      if (n < TILE * TILE / 2 || onSteps(k)) continue;
+      hDrawn++;
+      const t = m.tiles[k];
+      if (!PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP) { hOpen++; if (hOpenAt.length < 12) hOpenAt.push(`${k % W}, ${(k / W) | 0} (s ${p.s})`); }
+    }
+  }
+  assert.ok(hDrawn > 150, `tiles under the hand-placed faces' rock: ${hDrawn}`);
+  assert.ok(hOpen <= hDrawn * 0.01, `walkable tiles under a hand-placed face's rock: ${hOpen} of ${hDrawn} (${hOpenAt.join('; ')})`);
   assert.ok(open <= drawn * 0.003, `walkable tiles under a face's rock: ${open} of ${drawn} (${openAt.join('; ')})`);
   // (the relief's cliff bands in the desert: every tile of them under a face's rock - the b1c rule, no flat red rock you
   // can't walk on - and, the other way, that rock stands where it's drawn)

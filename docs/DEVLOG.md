@@ -20399,6 +20399,253 @@ weapon in hand it's that weapon's own glyph: the knife, the bat, the sword, the 
 client/touchicons.js, set from the weapon update in client/hud.js). It replaces the crossed swords. The no-hands test
 still holds for every other button and every action kind.
 
+## 2026-11-04 - Waves A2 and D: the store badge, the medical emblem, and the interiors (the concept audit's gaps 3, 6, 7 inside, 11)
+
+From the art director's concept audit (2026-11-03): the floating store badge sat on the shop's sign, the clinic's badge
+was a red cross, and the cut-away interiors had the right parts but empty floors, goods drawn as coloured noise and flat
+light. Built from the concepts RT9 (pawn), RT3 (corner store), ST1 (surf and skate), IN6 (pharmacy), IN3 (bank), IN5
+(the three bars), MC4 (the biker bar) and IN8 (the diner).
+
+### Wave A2 - the badge and the medical emblem (gap 3)
+- `client/art2/game/host.js` `shopMarks`: a walk-in's badge now hangs small (16 px, was 30) just under its door's
+  lintel (`badgeAt`: the door top + 13 px), clear of the sign board, which starts 48 px up the shopfront. It barely bobs
+  (0.5 px), so it never drifts into the sign. Counters that aren't doors keep their badge over the counter, at 24 px.
+- `client/storeicons.js` (the glyphs only, the API unchanged): the clinic's badge is a white cross on a green tile; a
+  hospital's (its name says HOSPITAL or MEDICAL CENTER, as the signs decide) is a red H on a white tile (`hosp`).
+  Never the red cross (the owner, 2026-10-18).
+- The lifeguard tower's red cross (`client/art2/props-road.js`) became a white cross on a red panel.
+- `test/storeicons.test.js`: no glyph paints the cross red, the sign faces' cross tiles are green, a guard over the
+  client's sources, and the badge is checked against real baked shopfronts (`makeBuilding` with 1- and 2-line signs):
+  it never overlaps the sign's rectangle.
+- Not done: hiding the badge where the baked sign's icon tile is on screen. The bake doesn't report sign rectangles to
+  the page; that needs a field from `statics.js` through the chunk bake, and `statics.js` belongs to another wave
+  today. The badge now sits under the sign, never on it.
+
+### Wave D - shops, the bank and the bars (gaps 6, 7 inside, 11)
+`shared/shoprooms.js` (the plans) and `client/art2/shopart.js` (their painters):
+- **The floors dressed.** After each plan's own fit-out, a fill pass puts down islands from the plan's kit (glass
+  display cases, round and straight clothes racks, display tables of folded clothes, mannequins on plinths, rugs,
+  spinner racks, crates, barrels, sofas, card tables...) with a lane of about 14 px round each, plus shelving along the
+  side walls, until 37-47% of the floor is dressed (seeded per building). `coverage(R)` measures the floor in front of
+  the counter that may be dressed: all of it but the kept-clear ways (the door's lane, the counter strip, an ATM's
+  spot). Gondolas now run north-south, end-on to the counter, as in RT3 and IN6.
+- **Goods as objects.** Shelves, wall fixtures, fridges, coolers and glass cases draw their goods as items standing on
+  the shelf in facings on the 2 px art grid: bags with crimped tops, boxes with label bands, bottles with necks, cans
+  with rims, jugs, pill packs, TVs, radios, boots, record sleeves, rings and pistols in cases. Shelf tops show packed
+  goods from above. Clothes rails hang shirt shapes.
+- **Wall signs in the sign faces** (`signfont.js`): neon tubes on a dark backing, or lettered boards (Block for the
+  pawn shop, hardware and gun shop, Civic for the pharmacy and sports, Serif for the tavern, Script for boutiques), top
+  edge on the art grid. The pawn shop's rug reads GOOD STUFF COSTS LESS.
+- **Lamp pools.** Each plan sets pools of lamplight (`R.lamps`): over the counter, the islands, the pool table, the
+  candles, the fire. The floor under each is warmed and gets a little emission, so it glows after dark. Brass sconces,
+  lanterns and desk lamps are lit.
+- **The bank (IN3, gap 7 inside):** marble or stone floors only (no more diner checks), a compass rose set in the
+  marble before the door, the tellers behind a glass screen with brass posts and rail, a speaking grille and a green
+  lamp at each window, the roped queue (brass stanchions, sagging red rope), the vault door on the back wall (bolts
+  round its rim, the spoked wheel, the hinge), the manager's glass office in a corner (desk, lamp, chair, palm), loan
+  desks with lamps, green sofas and palms.
+- **The bars (IN5, gap 11):** the bar trade's plan splits into `lounge`, `tavern` and `sportsbar` by the name (`barPlan`:
+  LOUNGE/VELVET/COCKTAIL..., TAVERN/PUB/OAK/MUG..., SPORTS/LOCAL/TAP/DUGOUT...; otherwise by the building, so all three turn
+  up). The lounge: blue carpet, a white marble bar, red velvet banquettes and curved booths, candlelit cocktail tables,
+  a neon martini, sconces. The tavern: planks, the stone fireplace with its fire and the deer head over it, long tables
+  with benches and mugs, barrels, a rug, a chalkboard, lanterns. The sports bar: the TV wall over the bar with games
+  on, the dartboard, pennants, the pool table under its lamp, red booths down the wall, high tables, a jukebox.
+- **The saloon is MC4's room:** the neon bull skull, the motorbike on the wall, COLD BEER, the booths down the wall, the
+  pool table on its rug under a green-tinted lamp, the arm-wrestling table with two stools, card tables, barrels, the
+  wood stove. A big roadhouse (`statics.js` `roadhouseRoom` draws the Rusty Spur's MC4 floor itself) lists those
+  pieces in `R.ext`, and the plan keeps its own pieces and customers off them.
+- **Other plans** (corner store, fuel, grocery, liquor, gun shop, hardware, fence, court, pharmacy, barber, sports,
+  tackle, fish market, club, office, records) each got their kit for the fill, side shelving where it fits, and mats.
+- `shared/foodrooms.js` (IN8): the diner's jukebox moves to the head of the booths by the counter's end, and a wide
+  diner with its door in the middle gets a second column of booths down the other wall. The fast-food tables and the
+  restaurant's tables are set a little closer. (The diner's art is `statics.js` `foodRoom`, another wave's file; the
+  layout changes only.)
+- `client/art2/interior.js` (the scene cut-aways): wall signs are lettered in the sign faces, and a wall lamp throws a
+  real light (`sc.light`) instead of only a painted strip.
+- Customers are never stood inside furniture (a check in `shopper` and in the test).
+
+Tests: `test/shoprooms.test.js` gains the coverage floor (every plan in a 10 x 8 room, five door positions, three
+buildings: at least 30% dressed, at most 80%, the mean between 35 and 50%), the bank as IN3, the three bars and the
+saloon, and keeps its reachability checks (every size of room, door to counter). `test/storeicons.test.js` is new.
+
+## 2026-11-06 - No huge plain buildings: the slivers become rows of lots with passages
+The owner (11-03): "Huge, plain buildings block the street from view and add nothing." His screenshot showed one blank
+block over half the screen. A survey of World v3 (tools/plainblocks.mjs: it builds the live world and lists every
+building by footprint and by how plain it is - no front on open ground, no sign, no place, no hand look) found 1,819
+plain buildings of 6,701, and 70 plain footprints over 400 tiles (48,246 tiles). Almost all (67) were plain roofs
+(shared/map.js roofOne) 8-16 tiles wide and 50-109 deep: a block between two side streets with no street at either
+end is "built over" as one building (v2Block's sliver, roofBuilding in the older fill), and a long block's backs and
+back lots stack on that. Down a column of tiles, plain buildings ran unbroken for up to 146 tiles (five screens); 678
+columns ran over 50. The worst: Southside's back rows (16 x 109), Westport Center's slivers (12 x 96), West Hills (14 x
+78, 9 x 108), Lucky Mesa's Old Downtown (10 x 89), Port Westport's warehouse rows (12 x 63).
+- shared/map.js `breakPlainBlocks` (World v3 only, after the shops and before the lamps are aimed): every plain roof
+  deeper than 20 tiles becomes a column of lots 10-15 tiles deep (the north end's 8 at least) with a paved passage of
+  3-4 tiles between them, side street to side street. Each lot fronts onto its passage, so the art draws a shopfront, a
+  door or a warehouse's roller doors there instead of another stretch of roof, and the ground shows every few rows. A
+  lot bigger than 400 tiles is split into neighbours. A passage gets bins, a dumpster or a bike rack at one end and
+  sometimes a planter at the other. The cuts come from the rows alone (hash2 of the top and depth), so a run of
+  neighbours of one depth is cut at the same rows and its passages run on through. The building keeps its southmost
+  lot (its id, and its back wall if it had one); the other lots are new buildings at the end of the list, so no other
+  building's id, and so no other building's look, moves (the art seeds each building by its id). 217 buildings were
+  cut into 651 lots (+434 buildings).
+- Big works and warehouses (placePrefab, World v3): a generic warehouse or factory lot over 400 tiles is a named firm
+  (Coastal Freight, Ironside Works...) with its name over its doors and on its delivery stop. Downtown's 26 x 22 Motor
+  Pool roof by the police headquarters carries METRO PD GARAGE.
+- The art (client/art2/game/statics.js kitFor): a big plain roof (over about 100 tiles of section) gets more on it, the
+  roof types of the buildings kit: the sheds' and works' solar arrays, an air handler and ducts; the blocks' water
+  tower, a row of skylights, more units and a dish. Up to 9 units instead of 6.
+- After: no plain footprint over 400 tiles (none over 340 of a roof), the longest unbroken plain run down a column 41
+  tiles (146 before), no column over 50 (678 before), 62 over 30 (851 before) - the rest are Southside's old fragments
+  of blocks inside blocks. 7,135 buildings, 2,235 plain (the new lots are plain too, but small and fronted).
+- test/plainblocks.test.js (one world build): no plain footprint over 400 tiles, no plain roof deeper than 20, no plain
+  run over 44 tiles, the lots of a cut column front onto paved passages, the big works and warehouses carry their
+  names, every place still stands in a building. It fails on the old build (70 over the cap, runs of 146).
+- Cost (the whole v3 build and cut, this machine): the region files 18.03 -> 18.07 MB gzipped (+0.2%), 518.3 -> 518.4
+  MB raw; +434 buildings and roofs, +594 props (the passages' bins and planters). Baking the 60 chunks round the ten
+  worst spots from cold: Medium 743 -> 709 ms a chunk, Ultra 563 -> 531 (the same within this machine's noise: the
+  lots' fronts cost about what the roofs they replace did). The world's build time doesn't move (one pass over the
+  buildings).
+- Today's world (`world`) doesn't change: everything is World v3's (WD). `world3` / `art3` change, so browsers fetch the
+  v3 regions and chunks again; today's `art` changes too (the roof kit's code).
+
+## 2026-11-06 - The hand-placed cliffs are solid where they're drawn too
+The follow-up the desert's fix left ("The desert's cliffs are solid where they're drawn", 11-04): the hand-placed
+faces outside the desert, in shared/naturesites.js, still let walkers a few tiles into their rock. The Old Granite
+Mine's 120 px face made only its band solid, so the ground its face hides to the north was open. Granite Cove's six
+granite faces stood over the rim's ellipse of rock, but their drawn rock reached past it onto the cliff top and the
+beach's edge.
+- Both now use shared/cliffshape.js `cliffSolid`, as the relief and Copper Gulch's adit do. Every tile under a face's
+  drawn rock is made rock: the mine's grass and dirt, and the cove's grass, dirt and sand. The cove leaves alone the
+  bay's water and the gap its steps go up.
+- test/cliffs.test.js checks the hand-placed faces too: the mine's one and the cove's six (and the desert's adit).
+  No walkable tile is left under their rock except at the cove's steps. Before: 120 of 417 drawn tiles open. After:
+  within 1%.
+- Budget: the city worker's code is 34 -> 35 files (tools/perf.mjs), because the generator now loads
+  shared/cliffshape.js (4 KB, 364 of 380 KB). Only the generator fallback loads it; a served city loads 5 files.
+- World v3's `world3` / `art3` change. Today's `world` changes too, because the cove and the mine are today's set
+  pieces as well, so browsers fetch today's city again.
+
+## 2026-11-06 - Interiors at the real city's sizes: small shops as stocked as before, and bars wide enough for IN5
+The owner reviewed the wave D captures and found that in the real World v3 city, where most shops are 3-6 tiles wide,
+the new layouts looked emptier than live main. Lucky Pawn (RT9) had lost its display cases and goods, and Fresh Stop
+(RT3) had lost its shelving. The coverage test passed only because it measured a 10 x 8 room. The bars were narrow too
+(3-6 tiles inside), so they showed one TV and a row of booths instead of IN5's full room.
+
+**What was wrong.** The 531 shop rooms of World v3 (seed 1337) are 3-50 tiles wide, mostly 4-8. A small shop's door
+lane takes the middle of the room, which leaves a strip 18-70 px wide on each side. Wave D filled those strips with
+units seen end-on: a shelf along the side wall and gondolas running north-south. From the street camera that shows a
+14-20 px end and a sliver of top. The rest of the strip was left empty, because the kit's islands didn't fit. Floor
+coverage (the share of dressable floor under a piece) still read 40-70%, so the test passed. What you see is different:
+the old plan's east-west rows show their stocked faces to the camera.
+
+**A new measure.** `shopRoom`'s output is now measured the way it looks. In the test, *drawn fill* is the share of the
+front floor's picture (counter to door, wall to wall) that `drawShop` covers. The lamps' pools don't count. A piece
+covers its top and, above it in the picture, its south face. `seenOf(R)` in shared/shoprooms.js estimates the same thing
+from the plan's rectangles, so `fill` can steer by it.
+
+**shared/shoprooms.js**
+- `aisles`: rows of units across a region, as main had them. In a strip too narrow to walk (under 26 px) they stack
+  closer and no customer stands between them.
+- `gondolas`: RT3 and IN6's north-south gondolas only where three of them fit with a row beside them, and where the floor
+  is deep enough (90 px or more) for them to read as gondolas. Up to three, each 26 px wide, with 20 px lanes and an end
+  cap facing the door. The rest of the region gets rows. Anywhere else, rows of the same shelving.
+- `sideWall`: shelving along a side wall only where it leaves 160 px of the region. Booths and banquettes are the
+  exception (`need: 0`).
+- `fill`: kit pieces marked shrinkable (cases, shelves, crates, bins, racks, tables, ice) narrow to fit a strip, down to
+  14 px. Fill keeps going past its floor target until the picture reads full (`seenOf` 36-44%), but never past 60% floor
+  coverage.
+- Lucky Pawn's plan (RT9): a glass case of guns, then a tall shelf of electronics and tools, then a gold case, each across
+  the strip. A fence shop is all shelving. A small pawn's back wall is all goods and TVs (guitars only where there's
+  room for more than one bay), and its signs shorten to fit (`PAWN SHOP` -> `PAWN`, `WE BUY GOLD` -> `GOLD`): `sign`
+  takes a list of texts and uses the first that fits.
+- Grocery and hardware use rows (they read fuller than gondolas at every size). The bank's runner rug goes from the
+  compass rose to the door. A small lounge, sports bar or saloon gets booths in rows down a narrow strip (`boothRows`),
+  not one long booth against the wall.
+- Bar stools skip an ATM's spot. A customer is kept only if a body could walk to them from the door (`inReach`). A
+  seated customer only needs to be next to a way in. The fill could close the gap a customer was put in.
+
+**test/shoprooms.test.js**: the 10 x 8 coverage test is replaced by one at the real city's sizes. Every plan is
+measured at 3, 4, 5, 6, 7, 8, 10 and 14 wide, 6, 7, 8 and 10 deep, with the door at every column and an ATM on a side
+wall in a third of the rooms. At each width the plan's mean drawn fill must not be under `FLOOR`. `FLOOR` is main's
+(94089ae7) mean in the same rooms with its own plans and art, less a point. In every one of those rooms the door lane,
+the counter strip and the ATM spot stay clear, the counter is reachable, every standing customer is reachable and not
+inside furniture, every seated customer is next to a way in, and nothing of 5 or more tiles is walled up (over 80%).
+Drawn fill, main -> now (%):
+
+| plan | 3 wide | 4 | 5 | 6 | 7 | 8 | 10 | 14 |
+|---|---|---|---|---|---|---|---|---|
+| corner | 12 -> 19 | 21 -> 28 | 28 -> 34 | 33 -> 40 | 34 -> 42 | 39 -> 46 | 41 -> 46 | 43 -> 46 |
+| pawn | 12 -> 12 | 19 -> 30 | 26 -> 41 | 30 -> 44 | 31 -> 44 | 36 -> 50 | 37 -> 49 | 39 -> 50 |
+| pharmacy | 11 -> 19 | 17 -> 25 | 24 -> 31 | 27 -> 35 | 28 -> 36 | 32 -> 40 | 33 -> 39 | 34 -> 41 |
+| grocery | 13 -> 15 | 20 -> 20 | 27 -> 28 | 33 -> 33 | 35 -> 36 | 40 -> 40 | 42 -> 44 | 45 -> 46 |
+| bank | 2 -> 9 | 18 -> 27 | 27 -> 31 | 32 -> 33 | 32 -> 32 | 30 -> 30 | 26 -> 29 | 23 -> 29 |
+| boutique | 6 -> 27 | 10 -> 28 | 12 -> 28 | 13 -> 29 | 12 -> 29 | 13 -> 28 | 12 -> 29 | 13 -> 29 |
+| lounge | 0 -> 12 | 11 -> 17 | 15 -> 17 | 19 -> 22 | 19 -> 18 | 20 -> 20 | 17 -> 20 | 14 -> 18 |
+| tavern | 0 -> 11 | 11 -> 21 | 15 -> 29 | 19 -> 31 | 19 -> 31 | 20 -> 32 | 17 -> 29 | 14 -> 32 |
+| sports bar | 0 -> 12 | 11 -> 16 | 15 -> 20 | 19 -> 24 | 19 -> 25 | 20 -> 26 | 17 -> 26 | 14 -> 23 |
+
+The other plans are at or above main at every width. In the real city's 530 rooms, 4 are emptier than main by more than
+2 points: Rosa's Liquor (52 -> 48), Neon Pawn & Guns (51 -> 48), Mile Pawn & Loan (47 -> 44) and First Pixel Bank -
+Pelican (30 -> 27). On average the city's corner stores go from 31% to 39%, pawns from 30% to 37% and pharmacies from
+23% to 33%.
+
+**Wider bars (World v3).** All of World v3's bars now stand on 12-tile lots, which gives 10 tiles inside: room for IN5's
+whole lounge, tavern or sports bar.
+- shared/world3-midtown.js `BAR_W = 12`. The Trestle Tap and the Last Stop Lounge, which the plan places by hand, are 12
+  wide (they were 7 and 6). In the generic mix, `genericShop` picks the shop before the lot's width: a bar gets 12 tiles,
+  and where fewer than 12 are left in the row, a shop goes there instead of the bar. Midtown's eleven bars are all 10 inside
+  now (they were 3-6).
+- shared/world3-civic.js: a bar on a lot that can be wider is widened to 12. Where a row's end leaves less than 12, the
+  next shop that isn't a bar takes the lot. Bench & Bar and The Bailiff Pub are 10 inside. The Verdict Wine Bar (7
+  inside) is no longer built, because its turn came at a row's end.
+- shared/world3-downtown.js: Cask & Cork 11 -> 12, so 10 inside. The bakery next door, Gilt & Grain, gives up the tile
+  (13 -> 12), so the rest of the row stays where it was.
+- The bar mix the owner approved holds: the Tap names are sports bars (The Trestle Tap, now Ferro Taproom too),
+  the Last Stop Lounge and The Brass Rail are lounges, and the rest are taverns.
+- It re-keys the world. 57 of World v3's 6,007 POIs moved: 44 in Midtown's rows that hold a bar, 12 in the courthouse
+  district's two shop rows and Cask & Cork's pair, and one food cart in Bayside Heights. The generic names
+  after a moved lot change: Ibarra Pub is gone, and Black Cat Saloon and Ferro Taproom are new. Fresh Stop moves from
+  the Trestle row (4 x 6) to a 6 x 9 lot on another row. 19 home spots moved. Homes are numbered through the city, so
+  most home ids after Midtown are renumbered. The owner chose to buy them back: `WORLD_VERSION` 12 -> 13, so
+  `homes.checkWorld` buys each owned home back at its deed and the player wakes at a hospital (cars, money and items
+  kept). The owner kept rows over IN6's gondolas in mid-size pharmacies (rows read fuller).
+- Tests run: shoprooms, storeicons, foodrooms, shopmarks, walkinrooms, mapwindow, dmath, facades and art2 (50 pass);
+  signs, walkinfront, plainblocks, cliffs and worldbuild (20 pass); all 43 world3*.test.js (126 pass); perf (6 pass).
+  test/dmath-world.mjs gives the same signature and hash with and without the nudge, and calls none of the approximated
+  Math functions.
+- Performance (tools/perf.mjs, main -> now): page 84 files / 509 KB -> the same; city worker 34 files / 360 KB -> 35 / 364
+  (the merged plain-blocks branch's cliffshape.js); renderer 402 -> 403 KB (budget 404); bake worker 953 -> 973 KB
+  (wave D's shop art; budget 1000); city build 27.4x -> 29.6x the yardstick (budget 40x); bakes 62x -> 60.4x (budget
+  90x); city 39 MB and the biggest kept chunk 758 KB, both unchanged. No budget raised. The renderer has 1 KB of headroom
+  left.
+
+
+## 2026-11-06 - Drivers find their way round again (three failing reroute tests)
+
+`test/reroute.test.js` had three failures on main (94089ae7). The 11-04 re-key of the world (American English place
+names) moved the roads the tests pick, and that exposed three real bugs in the drivers:
+- **The free lane was looked for in the wrong place** (`reroute.js arcOn`). A driver's place along its lane was the arc
+  along the road's center line from the node. The lane paths that `laneClear`, `laneHeading` and `enterEdge` measure
+  along start trimmed clear of the junction box. Past a big junction (this avenue's is trimmed 237 px), the car counted
+  as a junction's width further on than it was. `laneClear` then looked at the next lane past the wreck, ran off the
+  lane's end, and never found it free. The driver went round on the wrong side of the road instead. Now it projects the
+  car onto the lane's own path, and the turn round does the same for the lane back.
+- **A red light past the wreck kept the driver waiting** (`traffic.js`). A car stopped behind a wreck counted as "held at
+  the lights" while the light beyond the wreck was red, so it didn't look for another way until the light changed (16 s
+  here). Now the lights don't hold it when what it's stopped behind is standing in the road short of the line (`standing`).
+- **A queue nose to tail behind a car left in the lane locked for good** (`reroute.js roomFromBehind`). The second car in
+  the queue (38 px behind the empty car, a pickup 16 px behind it) had no room to back off for the swing out. Without
+  a siren it waits for the queue behind to sort itself out, but nothing ever made the car behind move. The car behind
+  counts as not jammed (the one ahead is about to go round), so it waited too. Now the car queued right behind backs off
+  a little, if it has the room, and the one in front tries again as it stops.
+
+The turn-round test failed only after the avenue test. That car went round over the kerb and knocked down a prop on the
+test map, which every `makeWorld` shares. It passes again with the avenue fixed.
+
+Tests: reroute (8/8), roadends, signals, slips, trafficbox, trafficwalls, transit, tow, police, policeair, ems, bikes,
+fleet, jobway, npcpeople, townfolk, drivejobs, carts, kbdrive (117/117); stops, skate, world3fleet, world3passes,
+world3rail, townwork, airtraffic (57/57).
+
 ## 2026-11-06 - The first-time experience: the arrival, one question, the first goal, first-time moments, the Guide
 
 The owner's design (11-04): "the tutorial should be short and sweet and give people general direction". The tutorial

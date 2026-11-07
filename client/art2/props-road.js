@@ -86,14 +86,14 @@ export function stationHouse(on = 1, len = 140) {
   m.box(0, 0, 38, len, y0 + 2, 41, can); m.box(0, 0, 36, len, 2, 41, trim);
   return m;
 }
-// a lifeguard tower on the beach: a hut on stilts with a ramp down to the sand, a red cross and a flag
+// a lifeguard tower on the beach: a hut on stilts with a ramp down to the sand, a white cross on red and a flag
 export function lifeguardTower() {
   const m = new Vox(46, 70, 66);
   const wood = m.mat({ ramp: R('#d8cdb4'), k: 3 }), hut = m.mat({ ramp: R('#5aa8c8'), k: 3, shade: (x, y, z) => (Math.round(x) % 6 === 0 ? -0.6 : 0) }), roof = m.mat({ ramp: R('#e8e4d8'), k: 3 }), red = m.mat({ ramp: R('#d8342a'), k: 3 }), glass = m.mat({ ramp: R('#2a3444'), k: 2, flag: F_GLASS });
   for (const [x, y] of [[8, 8], [36, 8], [8, 36], [36, 36]]) m.box(x, y, 0, x + 3, y + 3, 26, wood);
   m.box(4, 4, 26, 42, 42, 29, wood);
   m.box(8, 8, 29, 38, 38, 50, hut); m.box(9, 37, 36, 37, 38, 46, glass);
-  m.box(20, 37, 38, 26, 39, 44, red); m.box(22, 37, 36, 24, 39, 46, red);
+  m.box(18, 37, 35, 28, 39, 47, red); m.box(20, 36, 39, 26, 37, 43, roof); m.box(22, 36, 37, 24, 37, 45, roof);   // (a white cross on a red panel - the owner, 2026-10-18: never the red cross)
   m.box(5, 5, 50, 41, 41, 53, roof);
   for (let k = 0; k < 26; k++) m.box(18, 42 + k, 26 - k, 28, 43 + k, 27 - k, wood);
   m.box(40, 6, 53, 41, 7, 66, wood); m.box(41, 6, 60, 46, 7, 66, red);

@@ -15,6 +15,7 @@ import { T, TILE } from './constants.js';
 import { propGrid } from './propgrid.js';
 import { hash2 } from './rng.js';
 import { CANYON } from './mapcore.js';
+import { cliffSolid } from './cliffshape.js';   // (a cliff face's rock as drawn: solid there - test/cliffs.test.js)
 
 // the giant redwoods' trunks (solid radius, px) by size - Highland Woods' groves (map.js redwoodGroves) and the
 // ones placed by hand here; the art is client/art2/redwoods.js (statics.js SPECIES giantL ... redwood2)
@@ -1896,6 +1897,9 @@ function oldMine(m, H) {
   for (let y = ty - 5; y <= ty; y++) for (let x = tx - 7; x <= tx + 7; x++) { const i = y * m.w + x; m.tiles[i] = T.WALL; m.reserve[i] |= RES; }
   for (let y = ty - 7; y <= ty + 8; y++) for (let x = tx - 10; x <= tx + 10; x++) m.reserve[y * m.w + x] |= RES;
   const X = (tx + 0.5) * TILE, face = (ty + 1) * TILE;
+  // (2026-11-04: and solid where its face's rock is drawn - the ground its 120 px face hides north of the band too, as
+  // the desert's faces: shared/cliffshape.js. A walker there was drawn inside the rock)
+  for (const [x, y] of cliffSolid(X, face, 15 * TILE, 6 * TILE, 120, 33)) { const i = y * m.w + x; if (m.tiles[i] === T.GRASS || m.tiles[i] === T.DIRT) { m.tiles[i] = T.WALL; m.reserve[i] |= RES; } }
   H.addProp(m, 'cliff', X, face, 0, { w: 15 * TILE, d: 6 * TILE, h: 120, s: 33 });
   H.addProp(m, 'mineportal', X, face + 10, 0);
   // the rails out of the mouth, the cart on them, dirt under it all and down to the road
@@ -2810,7 +2814,17 @@ function graniteCove(m, H) {
   const P = (tx, ty) => [Math.round(tx * TILE), Math.round(ty * TILE)];
   // the cliffs: granite bands round the back (their faces to the beach) and down the sides; boulders at their feet
   const cliffs = [[CX - 4.6, CY - 7.6, 7, 4.2, 74, 41], [CX + 5.6, CY - 7.2, 7, 4.2, 82, 42], [CX - 9.6, CY - 2.2, 4.4, 5.6, 64, 43], [CX + 10.6, CY - 1.4, 4.4, 5.8, 70, 44], [CX - 10.8, CY + 4.4, 3.4, 4, 48, 45], [CX + 11.6, CY + 5.2, 3.4, 4, 52, 46]];
-  for (const [tx, ty, w, d, h, sd] of cliffs) { const [x, y] = P(tx, ty); H.addProp(m, 'cliff', x, y, 0, { w: Math.round(w * TILE), d: Math.round(d * TILE), h, s: sd }); }
+  for (const [tx, ty, w, d, h, sd] of cliffs) {
+    const [x, y] = P(tx, ty);
+    H.addProp(m, 'cliff', x, y, 0, { w: Math.round(w * TILE), d: Math.round(d * TILE), h, s: sd });
+    // (2026-11-04) solid where its rock is drawn, as the desert's faces (shared/cliffshape.js): the rim's ground under the
+    // rock and behind it (the beach's edge where a face's rock stands over it), never the bay or the gap the steps go up
+    for (const [qx, qy] of cliffSolid(x, y, Math.round(w * TILE), Math.round(d * TILE), h, sd)) {
+      const i = qy * m.w + qx, t = m.tiles[i];
+      if ((t !== T.GRASS && t !== T.DIRT && t !== T.SAND) || (Math.abs(qx + 0.5 - (CX + 0.5)) < 1.2 && qy < CY - 3)) continue;
+      set(qx, qy, T.WALL);
+    }
+  }
   for (const [tx, ty, r] of [[CX - 7.6, CY + 6.4, 18], [CX + 8.4, CY + 7.6, 16], [CX - 8.8, CY + 8.8, 22], [CX + 9.6, CY + 9.6, 20], [CX - 5.6, CY + 9.2, 12], [CX + 6.2, CY + 10.4, 14]]) { const [x, y] = P(tx, ty); H.addProp(m, 'boulder', x, y, r, { s: r * 2 + 6 }); }
   // the steps up the cliff in the gap, from the sand to the top; a map board up there and a trail to the campground road
   const stepFoot = P(CX + 0.5, CY - 4.6), stepTop = P(CX + 0.5, CY - 10.2);
