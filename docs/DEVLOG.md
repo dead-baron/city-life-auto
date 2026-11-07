@@ -20906,3 +20906,49 @@ A world change's job now includes the rebake and test/worldmap.test.js.
   shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
   change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
   worldmap and perf (8 pass).
+
+## 2026-11-06 - Walking into a building on a phone: The Violet Room, the entry bakes, one loading screen
+The owner, on a Pixel 7 Pro: "This interior for a nightclub is not loading after quite some time. Seems like interiors
+take a long time to load in general" (The Violet Room, Neon District: a plain gray tiled floor, a few people, nothing
+else), and in portrait "the message for loading art flips between two messages and it just pops in and out over and
+over". `tools/interiorbench.mjs` (new) measures both on a 411x891 @2.6 portrait phone against a local World v3 server:
+the loading screen's every change and a filmstrip, cold and warm; a step into a walk-in with the page's CPU slowed 4x
+until its inside is drawn cut away (host.js insideReady).
+- **The bare floor was a crash, not a slow load.** The page's map is a window onto World v3: its POI list keeps the
+  window's places at their world-wide indexes, with holes for the rest. `shopRoom`'s look for an ATM in the room
+  (`for (const p of M.pois) if (p.kind === 'atm' ...)`) threw on the first hole. It runs inside `staticItems` (the
+  cut-away's recipe), so the whole chunk's statics went: the chunk baked as bare ground - no building, no wall, no prop -
+  and, its bake "done", the page counted the inside as drawn (no exit hint, nothing queued). Every walk-in fitted out by
+  its trade (the shops, the bars, the clubs: wave D) did this in the game; the tests and tools/area-shot.mjs build the
+  whole world, with no holes, so never saw it. Fixed (`p &&`), and statics.js `cutOf`: a fit-out that throws leaves the
+  building roofed instead of emptying the chunk. `test/interiorload.test.js` cuts a club away in a window with holes.
+- **The clubs as NE9 / IN15** (`shared/shoprooms.js` FIT.club, `client/art2/shopart.js`): the DJ booth in the middle of
+  the bar (a lit console, the decks and the mixer, the bartender behind it is the DJ), speakers and an equalizer screen
+  behind it, the bottles either side, neon tubes at the ends, the club's word in neon; the bar's neon edge and stools;
+  the lit dance floor (a neon strip round it, speakers at its back corners, the mirror ball over it, pools of coloured
+  light); velvet booths with candlelit tables down one side wall; in a room 16 tiles wide or more the VIP corner on the
+  side away from the door (a raised red carpet, curved booths and tables, the rope on brass posts, the VIP sign); high
+  tables and palms in what's left. `clubFloor` is the lit floor's one rectangle: server/systems/nightclubs.js keeps the
+  dancers on it (not in the booths). Every club in World v3 is a walk-in with this plan (The Violet Room, Club Ultraviolet,
+  The Midnight, Luna Lounge, Afterdark, Volt, Dock 9, Starlet Club, Club Paradiso, Pink Moon Lounge, The Garter Room, The
+  Boiler House, The Anchor, The Conch Bar, The Bell Buoy, The Salty Dog, the tiki bars, Club Nova, Club Eclipse, Club Neon
+  Cactus, Club Mojave Nights, Club Neon, Bass Cave, Pink Flamingo, The Copper Spur Saloon): all had the same crash in the
+  page, all fixed by it. The other big venues (The Grand Theater's cinema, Pinwheel Lanes' bowling) draw their own rooms
+  and never called shopRoom; the casinos, the theatres and the lounges that aren't walk-ins have no inside to draw.
+- **The entry's bakes first** (host.js): inside a walk-in whose inside isn't drawn yet, its cut-away bakes go ahead of
+  everything (`entryPrio`: the chunk under you, then the rest on screen, then the rest of the building - before the
+  ring, the road ahead and the store's looks), and their uploads aren't held to the frame's budget (as after a jump).
+  About to walk in, its inside is baked ahead into the store after the screen's own chunks but before the ring
+  (`precutPrio`; it used to wait until nothing at all was queued for the screen, which near a busy street was never).
+  The cut box is the building's chunks only: its 40 px margin took in the chunks either side of a building ending near a
+  chunk's edge, baked again with nothing changed - The Violet Room's 3 chunks were 9.
+- **One loading screen** (`client/warmup.js` LOAD_PHASES, loadStep; titlescreen.js and holdForArt share the record): the
+  title's line and bar from "Connecting..." to the city - connect, city, graphics, the streets on screen, the ring and
+  the people - each message once, in order (it changes only when the phase moves on), the bar only forward and full at
+  the end, then one fade out (`#title.t-out`, main.js enterCity hides it after FADE_MS). Before: the art's message
+  flipped between "Getting the art ready..." and "Getting the streets around you ready..." as the sprites came and went
+  a frame at a time (warmPlan's `why` between 'view' and 'ring'), the bar dropped from the city's 59% to 0 at PLAY and
+  then jumped 10% <-> 20% <-> 10% (spr) - 15 steps back in one cold load on the bench - and, upright, a two-line message
+  and a three-line tip moved everything under them. The line and the tip keep their room in portrait. The teleport's
+  "Loading the area..." veil: one teleport measured on and off once; `veilStep` keeps it from flapping on a second jump
+  a frame later (up at once, down after 250 ms drawn, back within 2 s only for a jump still not drawn after 250 ms).
