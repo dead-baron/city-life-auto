@@ -21395,3 +21395,22 @@ inside baked first when you enter (interiorload), the forklift's loading bays, a
 low-detail stand-ins, the look-ahead scaled by speed, the aircraft camera. Merged, they come to 405 KB. Rather than strip
 more comments out of host.js, the budget goes to 410 (tools/perf.mjs), leaving room for the visibility pass's under-deck
 draw order. The renderer loads once you're in the city, never at the title screen.
+
+## 2026-11-07 - Tabbing out on a phone: back in the same session, no black screen
+The owner (11-06): "I tabbed out of the game on my phone then tabbed back in and it will show a black screen and say
+reconnecting for a bit. It would be nice if it didn't disconnect so quickly tabbing in and out though."
+- **The black screen** was the page's own: while the socket was down (`S.welcomed` false) every frame filled the
+  canvas black. Getting back into the game now keeps the last frame up, with the "Reconnecting..." chip over it
+  (`client/update.js` `holdFrame`). (A WebGL context lost while hidden is already rebuilt by the renderer:
+  art2/game/engine.js `webglcontextrestored`, host.js `_contextLost`.)
+- **Back at once:** on coming back into view a socket lost meanwhile is made again straight away, an open one is pinged
+  and, if nothing answers in `PROBE_MS` (a socket the phone's sleep killed can still say it's open), made again; a
+  drop noticed in the first seconds back retries with no backoff wait (`update.js` `onVisible`, `retryDelay`). The page
+  also says it's away on `pagehide` (iOS: sometimes the only word before it's suspended).
+- **The server waits longer for a backgrounded page:** after `{ t: 'away' }` its socket may stay silent 120 s rather
+  than 45 s before it's dropped (`ws.js` `AWAY_QUIET_MS`, set per connection in session.js), so a short tab-out keeps
+  the same socket. If it drops all the same, the body waits at least `AWAY_GRACE_S` (90 s, players.js) even with
+  trouble after it (the drop rule's 30 s otherwise; the quiet case keeps its 5 minutes) - `players.js` `unsafeGrace`.
+  Back inside it is the same session and character (no new arrival, no reload), without the "Reconnected" toast.
+- test/tabout.test.js (new): a backgrounded, wanted player dropped for a minute is the same session and body on
+  return; an ordinary drop keeps 30 s; the away message sets and clears the socket's quiet time; the page's decisions.

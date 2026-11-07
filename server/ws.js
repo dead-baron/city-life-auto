@@ -8,6 +8,9 @@ const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const MAX_PAYLOAD = 64 * 1024;
 // Every byte written to any WebSocket (frames included) - the server meters this for its data cap.
 export const wsStats = { bytesOut: 0 };
+// how long a connection may stay silent (no pong) before it's dropped; a page that said it went into the background gets
+// AWAY_QUIET_MS (session.js sets it; a suspended phone answers no pings: back within it, the same socket goes on)
+export const QUIET_MS = 45000, AWAY_QUIET_MS = 120000;
 
 export class WSConnection extends EventEmitter {
   constructor(socket, req) {
@@ -157,11 +160,11 @@ export function attachWebSocketServer(httpServer, { path = '/ws', onConnection, 
     conn.on('close', () => clients.delete(conn));
     onConnection(conn, req);
   });
-  // keepalive: ping every 15s, drop if silent for 45s
+  // keepalive: ping every 15s, drop if silent for 45s - or c.quietMs (a page in the background: session.js 'away')
   const timer = setInterval(() => {
     const now = Date.now();
     for (const c of clients) {
-      if (now - c.lastPong > 45000) c._closed();
+      if (now - c.lastPong > (c.quietMs || QUIET_MS)) c._closed();
       else c.ping();
     }
   }, 15000);

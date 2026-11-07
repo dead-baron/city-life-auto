@@ -109,3 +109,24 @@ async function hardRefresh(v) {
   u.searchParams.set('fresh', bust());
   location.replace(u.href);
 }
+
+// Back from the background (a phone switching apps, another tab): what the page does with its connection - main.js
+// visibilitychange, scheduleReconnect and frameBody (here with the page's other connection-and-build logic: the page is at
+// its file budget). The owner, 11-06: "I tabbed out of the game on my phone then tabbed
+// back in and it will show a black screen and say reconnecting for a bit". The server keeps the session (players.js
+// setAway / unsafeGrace, ws.js AWAY_QUIET_MS); the page gets back into it at once and keeps the last picture up meanwhile.
+export const PROBE_MS = 2500;   // an open socket that says nothing this long after coming back died while the phone slept
+// 'connect' (no socket: lost while hidden - straight away, not when the retry timer says), 'probe' (an open one: is it
+// still alive?) or 'none' (one on its way, or never in the game)
+export function onVisible(st) {
+  if (st.practice || !st.everConnected) return 'none';
+  if (!st.ws) return st.connectFailed ? 'connect' : 'none';
+  return st.ws.readyState === 1 ? 'probe' : 'none';
+}
+// the retry timer's wait: longer in the background, none just after coming back into view
+export function retryDelay(backoffMs, hidden, sinceVisibleMs) {
+  if (hidden) return Math.max(backoffMs, 5000);
+  return sinceVisibleMs < 5000 ? 0 : backoffMs;
+}
+// getting back into the game: the last frame stays up (no black screen), the "Reconnecting..." chip over it
+export const holdFrame = (st) => !!(st.playing && st.map && st.everConnected && !st.welcomed && !st.practice);
