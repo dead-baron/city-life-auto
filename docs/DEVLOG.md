@@ -21195,3 +21195,46 @@ but the character is an old placeholder I believe."
   darkened or lit by the cave's light like everything else.
   - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
   - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
+
+## 2026-11-07 - No huge tall plain towers: the big ones split into a tower, wings, shops and a back block
+The owner (11-06): "there are still a lot of really huge tall plain buildings, like park west tower. If we need those big
+buildings in to share the performance costs then that's understandable, but it would be cool to make those buildings
+more interesting, less tall, maybe split them up into multiple buildings." His call: split the biggest plain towers into
+several buildings of different heights, with setbacks, rooftop detail and street-level shops; keep a few real landmark
+towers downtown.
+- The survey (`node tools/towers.mjs`, the measure `tools/plainmeasure.mjs` surveyTowers): the hand plans' towers
+  (shared/world3-downtown.js towerKit, shared with the Civic Center and Westport) are drawn whole - their floors across
+  their whole front - so a big one is one wall of glass or stone as wide as its lot. A plain slab: 8+ floors, a front of
+  24+ tiles or 600+ tiles of footprint, and nothing but the kit's look (no business but its delivery stop, a home behind
+  its lobby at most, no walk-in, no set-piece kit, no neon). Before: 43 slabs - Downtown 32, Westport Center 6, the Civic
+  Center 4, the airport 1. The worst: Harborview Tower 65 x 59 tiles of 15 floors, the Grand Neon Hotel 56 x 44 of 16,
+  Grand Neon Residences 65 x 57 of 12, the Harborlight Hotel 52 x 18 of 15, Park West Tower 48 x 46 of 16 (922 px of
+  wall: 29 tiles of the street north of it under it), Commerce Tower 52 x 59 of 14, Kestrel Tower 48 x 68 of 15.
+- The landmarks kept whole (shared/world3-towers.js `TOWER_LANDMARKS`): Greenfield Tower (the city's crown on the park's
+  axis, WC355), Union Trust Tower and Sterling Tower (the bank plaza's pair, WC353/354), the Grand Neon Hotel (its
+  fountain drive, WC356), and Westport Center Tower (Westport's own crown).
+- The split (shared/world3-towers.js `towers3`, World v3's last building pass): each of the other 39, in its own
+  footprint -
+  - the tower: slim (10-20 tiles of front) over its own door, so its lobby and name, its delivery stop, its home and its
+    lot stay where they were; lower - two floors less, at most 12 with its crown, its wall over the street north of it
+    at most about 14 tiles, and lower still (down to 7) while it would cover a place or a sign there; its top two or
+    three floors a setback crown (`art.up`, drawn by the art's existing setback: client/art2/game/statics.js upperArt);
+  - either side, in pieces of at most 22 tiles: a wing set back behind a podium of one or two floors of shops (cafes,
+    florists, bookshops, tailors, bars, a diner, a dry cleaner, a grocer, a record shop - their signs, awnings, their roof
+    gardens), or a mid-rise of three to six floors with its shop on the pavement; the floors step down away from the
+    tower, and each piece has its own skin (stone by glass, brick by stone), windows and cornice;
+  - a footprint deeper than 28 tiles: a back block behind them (two over the widest), brick with a water tank and
+    chimneys or offices, four to six floors (it stands on the street to the north);
+  - the roofs: the towers' and offices' plant by the art's kit, the wings' terraces (planters, palms, umbrellas) or roof
+    gardens, the podiums' roof gardens, the back blocks' water tanks.
+  The tiles don't change: the footprint stays one built mass, its parts buildings of their own (m.bld). The tower keeps
+  the building's id (and its look's seed); the other parts are new buildings at the very end of the list (after the
+  Syndicate's den, the last building World v3 makes), so no other building's id, look, POI or home moves. Every choice is
+  a hash of the footprint's corner. 39 towers became 215 buildings (+176).
+- After: no plain slab but the landmarks (the survey: 4, all landmarks; Union Trust Tower isn't plain - its helipad);
+  the split towers 7-12 floors; Park West Tower 11 floors over 15 tiles of front, with a lower wing, a mid-rise of shops and
+  a back block behind them.
+- test/plainblocks.test.js (the same world build): no plain slab but the landmarks, and the landmarks whole; no plain tower
+  over 12 floors or a slim tower's front; each split tower's parts tile its footprint, its street side all fronts with
+  a shopfront or the lobby, the shops low and signed, the tower the tallest and the heights varied, the tower's door and
+  POIs at its front, the new parts after every plan building; no split tower's wall over a place to the north.

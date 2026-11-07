@@ -119,7 +119,7 @@ function splitTower(m, b) {
   // the sides, out from the tower: pieces of at most TOWER3.piece tiles, the floors stepping down
   const skins = sideSkins(glass, S, r);
   const sides = [[x, tx0 - x, -1], [tx0 + tw, x + w - tx0 - tw, 1]];
-  let q = 0;
+  let q = 0, lastShop = null;
   for (const [sx, sw, dir] of sides) {
     if (sw <= 0) continue;
     const n = Math.ceil(sw / TOWER3.piece), pieces = [];
@@ -139,10 +139,10 @@ function splitTower(m, b) {
       if (mode === 'podium') {
         const pd = 6 + Math.floor(r(kq + 2) * 3);
         add('wing', px, y + k, pw, D - pd, { name: name + ' Wing', arch: homes || r(kq + 3) < 0.4 ? 'condo' : 'office', art: partArt(skin, fl, r, kq, { noShop: true, terrace: true, balconies: homes || r(kq + 4) < 0.35 }) });
-        const shop = shopOf(r, kq + 5, pw);
+        const shop = shopOf(r, kq + 5, pw, lastShop); lastShop = shop.kind;
         add('podium', px, y + h - pd, pw, pd, { name: shop.name, arch: 'mixed', art: partArt(podiumSkin(skin, r, kq), 1 + (r(kq + 6) < 0.45 ? 1 : 0), r, kq + 50, { shop, garden: r(kq + 7) < 0.65 }) });
       } else {
-        const shop = shopOf(r, kq + 5, pw);
+        const shop = shopOf(r, kq + 5, pw, lastShop); lastShop = shop.kind;
         add('mid', px, y + k, pw, D, { name: shop.name, arch: 'mixed', art: partArt(skin, Math.min(fl, 6), r, kq, { shop, garden: r(kq + 7) < 0.3 }) });
       }
     });
@@ -166,7 +166,7 @@ function sideSkins(glass, S, r) {
   const st = (k) => ({ style: 'stone', wall: STONE[Math.floor(r(k) * STONE.length)], win: ['even', 'pair', 'arch', 'tall'][Math.floor(r(k + 1) * 4)], cornice: ['dentil', 'step', 'bracket'][Math.floor(r(k + 2) * 3)] });
   const br = (k) => ({ style: 'brick', tone: BRICK[Math.floor(r(k) * BRICK.length)], win: ['pair', 'even', 'arch', 'bay'][Math.floor(r(k + 1) * 4)], cornice: ['dentil', 'bracket'][Math.floor(r(k + 2) * 2)] });
   const gl = (k) => ({ style: 'glass', tint: GLASS.filter((c) => c !== S.wallColor)[Math.floor(r(k) * (GLASS.length - 1))], win: 'tall', cornice: null });
-  const list = glass ? [st(40), br(44), st(48), gl(52)] : [gl(40), br(44), gl(48), st(52)];
+  const list = glass ? [st(40), br(44), st(48), br(52)] : [gl(40), br(44), gl(48), st(52)];   // (never glass by a glass tower: it would read as the tower)
   const s = Math.floor(r(39) * list.length);
   return [...list.slice(s), ...list.slice(0, s)];
 }
@@ -175,8 +175,10 @@ function podiumSkin(skin, r, k) {
   if (skin.style === 'stone') return { ...skin, win: 'arch' };
   return r(k + 8) < 0.5 ? { style: 'stone', wall: STONE[Math.floor(r(k + 9) * STONE.length)], win: 'arch', cornice: 'dentil' } : { style: 'stucco', wall: ['#e8e2d2', '#d8ccb4', '#e6dccb'][Math.floor(r(k + 9) * 3)], win: 'even', cornice: 'step' };
 }
-function shopOf(r, k, pw) {
-  const [kind, names, awn] = SHOPS[Math.floor(r(k) * SHOPS.length)];
+function shopOf(r, k, pw, not = null) {
+  let si = Math.floor(r(k) * SHOPS.length);
+  if (SHOPS[si][0] === not) si = (si + 1 + Math.floor(r(k + 7) * (SHOPS.length - 1))) % SHOPS.length;   // (never two of a trade side by side)
+  const [kind, names, awn] = SHOPS[si];
   const name = names[Math.floor(r(k + 1) * names.length)], [bg, fg] = SIGNC[Math.floor(r(k + 2) * SIGNC.length)];
   return { kind, name, door: r(k + 3) < 0.5 ? 'left' : 'right', open: true, people: 1 + Math.floor(r(k + 4) * 2), awning: pw >= 6 && r(k + 5) < 0.7 ? awn[Math.floor(r(k + 6) * awn.length)] : null, sign: { text: name.toUpperCase(), bg, fg, lit: true } };
 }

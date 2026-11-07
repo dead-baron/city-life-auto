@@ -202,6 +202,7 @@ test('tall towers: a split tower is several buildings of different heights, its 
       if (b !== tw) { shops++; assert.ok(b.art.shop.sign && b.art.shop.sign.text, `${b.name}: its sign`); assert.ok(b.art.spec.floors <= 6, `${b.name}: low (${b.art.spec.floors})`); }
       if (b.towerPart.role === 'podium') podiums++;
     }
+    for (let i = 1; i < front.length; i++) if (front[i] !== tw && front[i - 1] !== tw) assert.notEqual(front[i].art.shop.kind, front[i - 1].art.shop.kind, `${tw.name}: ${front[i - 1].name} and ${front[i].name} side by side`);
     // heights: the tower the tallest, at most the cap, the rest lower and not all one height
     const fl = (b) => b.art.spec.floors + (b.art.up ? b.art.up.floors : 0);
     assert.ok(fl(tw) <= TOWER3.cap, `${tw.name}: ${fl(tw)} floors`);
