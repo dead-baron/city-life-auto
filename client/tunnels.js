@@ -56,13 +56,22 @@ function band(g, P, o, w, style) {
 
 // the ground over the bore: a granite ridge with scrub and boulders, its crest catching the light
 function drawHill(g, t, a) {
-  const P = pts(t), W = 2 * (t.hw + TUNNEL_WALL) + 48;
+  const W = 2 * (t.hw + TUNNEL_WALL) + 48;
+  // (an arrival line's short bore - shared/world3-arrivals.js: the hill rounded off over its blind end, a mound, not a
+  // slab - the ridge stops half its width short of the end and a round back closes it, so nothing hangs past the bore)
+  let P = pts(t);
+  const ends = [];
+  (t.mouths || []).forEach((mo, m) => {
+    if (!mo.blind || P.length < 2) return;
+    const q = m ? P[P.length - 1] : P[0], dx = m ? -q.tx : q.tx, dy = m ? -q.ty : q.ty, x = mo.x + dx * W / 2, y = mo.y + dy * W / 2;
+    const keep = P.filter((p) => (p.x - x) * dx + (p.y - y) * dy >= 0), e = { ...q, x, y };
+    P = m ? keep.concat([e]) : [e].concat(keep);
+    ends.push(e);
+  });
+  const cap = (r, col, dx = 0, dy = 0) => { for (const e of ends) { g.fillStyle = col; g.beginPath(); g.arc(e.x + dx, e.y + dy, r, 0, 6.283); g.fill(); } };
   g.globalAlpha = a; g.lineCap = 'butt'; g.lineJoin = 'round';
   g.save(); g.translate(10, 14); band(g, P, 0, W + 10, 'rgba(0,0,0,0.28)'); g.restore();   // its shadow on the ground
-  // (an arrival line's short bore - shared/world3-arrivals.js: the hill rounded off over its blind end, a mound, not a
-  // slab; its shadow too)
-  const caps = (t.mouths || []).filter((mo) => mo.blind), cap = (r, col, dx = 0, dy = 0) => { for (const mo of caps) { g.fillStyle = col; g.beginPath(); g.arc(mo.x + dx, mo.y + dy, r, 0, 6.283); g.fill(); } };
-  if (caps.length) { g.globalAlpha = a; cap((W + 10) / 2, 'rgba(0,0,0,0.28)', 10, 14); cap((W + 10) / 2, '#3b372f'); cap(W / 2, '#6f6858'); }
+  cap((W + 10) / 2, 'rgba(0,0,0,0.28)', 10, 14); cap((W + 10) / 2, '#3b372f'); cap(W / 2, '#6f6858');
   band(g, P, 0, W + 10, '#3b372f');
   band(g, P, 0, W, '#6f6858');
   band(g, P, -W * 0.12, W * 0.55, '#827a66');
