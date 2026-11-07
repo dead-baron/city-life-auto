@@ -31,6 +31,7 @@ import {
   CLUB_DANCERS_MAX, CLUB_PEAK_H, CLUB_MOVE_S, CLUB_COUPLE_P, CLUB_DROP_S, CLUB_FIGHT,
 } from '../../shared/rules.js';
 import { DANCE_SOLO, DANCE_COUPLES, DANCE_JUMP, COUPLE_PX } from '../../shared/dance.js';
+import { clubFloor } from '../../shared/shoprooms.js';
 import { ARCHETYPES, BUILDS } from '../entities.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, startFight, walkInAt, leaveBuilding, flee, startFilming, filmChance } from './npc.js';
@@ -90,7 +91,13 @@ function layout(world, b, u, i, poi) {
   }
   // the dance floor: between the bar and the doors
   const front = wi.south ? wi.y1 : wi.y0, fy0 = (u.counterRow + s * 2) * TILE, fy1 = (front - s) * TILE;
-  const floor = { x0: (u.x0 + 0.5) * TILE, x1: (u.x1 + 0.5) * TILE, y0: Math.min(fy0, fy1), y1: Math.min(fy0, fy1) + Math.max(8, Math.abs(fy1 - fy0)) };
+  let floor = { x0: (u.x0 + 0.5) * TILE, x1: (u.x1 + 0.5) * TILE, y0: Math.min(fy0, fy1), y1: Math.min(fy0, fy1) + Math.max(8, Math.abs(fy1 - fy0)) };
+  // (a room fitted out as a club - its door on the south: shared/shoprooms.js - has its lit floor between the booths and
+  // the VIP corner: the dancers keep to it)
+  if (wi.south) {
+    const F = clubFloor(u.x0 * TILE, (u.x1 + 1) * TILE, (u.counterRow + 1) * TILE, (wi.y1 + 1) * TILE, TILE, doorX);
+    if (F.x1 - F.x0 >= 64 && F.y1 - F.y0 >= 24) floor = { x0: F.x0 + 10, x1: F.x1 - 10, y0: F.y0 + 6, y1: Math.max(F.y0 + 14, F.y1 - 10) };
+  }
   // how popular it is (0..1: the bigger rooms and a roll of the dice; clubs() marks the top third hot) and how many the
   // floor holds (about one to every 22 x 22 px)
   const pop = Math.min(1, 0.55 * (((Math.imul(b.id * 16 + i + 1, 0x9e3779b1) >>> 0) % 1000) / 1000) + 0.45 * Math.min(1, (u.x1 - u.x0 + 1) / 12));

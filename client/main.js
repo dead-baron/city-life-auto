@@ -67,7 +67,7 @@ import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, P
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
-import { holdForArt, veilTick } from './warmup.js';
+import { holdForArt, veilTick, FADE_MS } from './warmup.js';
 import { createTitle, paintSky, offSummaryHtml } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
@@ -1496,7 +1496,10 @@ function startPlaying() {
 function enterCity() {
   if (!S.playing) launchCall('world');
   S.playing = true;
-  $('title').classList.add('hidden');
+  // (the loading screen's one fade out at the end - client/warmup.js holdForArt: hidden once it's over)
+  const tl = $('title');
+  if (tl.classList.contains('t-out')) setTimeout(() => { tl.classList.add('hidden'); tl.classList.remove('t-out'); }, FADE_MS);
+  else tl.classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
   if (S.looks && !S.looks.picked && topOverlay() !== 'creator') openCreator('start');

@@ -842,6 +842,10 @@ body.portrait #m-wallet small { display: none; }
 #t-buttons.t-wait { opacity: .45; pointer-events: none; }
 #title.loading :is(#t-buttons, #t-row2, #t-gfx, #t-tools, #t-practice) { display: none; }
 #title:not(.loading) #t-load { display: none; }
+/* (one loading screen - client/warmup.js LOAD_PHASES: the line and the tip keep their room as they change, so nothing
+   under them jumps on a narrow screen; it fades out once, at the end) */
+@media (orientation: portrait) { #title.loading #t-status { min-height: 2.5em; } #title.loading #t-tip { min-height: 4em; } }
+#title.t-out { opacity: 0; transition: opacity .45s ease; pointer-events: none; }
 /* logged off (LOG OFF, UI-10): one calm plate - the session in numbers - over PLAY */
 #t-off { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4); background: var(--plate); border: 2px solid var(--gold-a); border-radius: var(--r2); box-shadow: var(--plate-sh); color: var(--cream); }
 #t-off.hidden { display: none; }
