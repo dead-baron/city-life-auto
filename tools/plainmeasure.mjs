@@ -63,3 +63,39 @@ export function plainRuns(m, S, min = 20) {
   }
   return { runs, longest };
 }
+
+// ---- the tall plain towers (the owner, 2026-11-06: "there are still a lot of really huge tall plain buildings, like park
+// west tower ... make those buildings more interesting, less tall, maybe split them up into multiple buildings") --------
+// A hand plan's tower is drawn whole (one section: its spec's floors across the whole front), so a big one is one wall of
+// glass or stone as wide as its lot and as tall as its floors. Plain here is what the eye sees: a tower whose look is the
+// towers' kit alone (shared/world3-downtown.js towerKit: its floors, its skin, a lobby with its name) - no business but a
+// delivery stop (a home behind the lobby counts as plain: it shows nothing), no walk-in, no set-piece kit, no neon, no
+// light of its own. Height: the art's wall (client/art2/buildings.js buildingH, its ground floor a shop's), in px and tiles.
+export const TOWER_FLOORS = 8;      // tall: this many floors or more (8 floors: about 470 px, 15 tiles drawn up over the north)
+export const TOWER_FRONT = 24;      // big: a front this wide (tiles) or more ...
+export const TOWER_AREA = 600;      // ... or a footprint this big
+export const wallPx = (f, parapet = 12) => 64 + (Math.max(1, f) - 1) * 56 + 6 + parapet;
+export function surveyTowers(m) {
+  const pois = new Map();
+  for (const p of m.pois) if (p && p.b !== undefined) { const a = pois.get(p.b) || []; a.push(p); pois.set(p.b, a); }
+  const list = [];
+  for (const b of m.buildings) {
+    if (!b || b.gone || !b.art || !b.art.spec) continue;
+    const s = b.art.spec, f = s.height ? Math.round(s.height / 56) : s.floors || 0;
+    if (f < 6) continue;
+    const P = pois.get(b.id) || [];
+    const role = P.filter((p) => p.kind !== 'delivery' && p.kind !== 'home').map((p) => p.kind);
+    const plain = !!b.whole && !b.walkIn && (!b.business || b.business === 'delivery') && !role.length && !b.art.kit && !b.art.neon && !(b.art.lights && b.art.lights.length) && !b.hero && !b.towerPart;
+    const H = s.height || wallPx(f, s.parapet ?? 12), Ht = Math.ceil(H / 32);
+    // what it hides: the camera draws it up over the tiles north of it - the street tiles, the places and the signs of
+    // other buildings in the strip its wall covers
+    let road = 0, hidden = 0;
+    const y0 = b.ty - Ht;
+    for (let y = Math.max(m.y0, y0); y < b.ty; y++) for (let x = b.tx; x < b.tx + b.tw; x++) { if (!m.inside(x, y)) continue; const t = m.tiles[m.idx(x, y)]; if (t === T.ROAD || t === T.SIDEWALK || t === T.PLAZA) road++; }
+    for (const p of m.pois) if (p && p.b !== b.id && p.x >= b.tx * 32 && p.x < (b.tx + b.tw) * 32 && p.y >= y0 * 32 && p.y < b.ty * 32 && p.kind !== 'delivery') hidden++;
+    const d = m.dist[m.idx(Math.min(m.x0 + m.w - 1, b.tx + (b.tw >> 1)), Math.min(m.y0 + m.h - 1, b.ty + (b.th >> 1)))];
+    const big = b.tw >= TOWER_FRONT || b.tw * b.th >= TOWER_AREA, tall = f >= TOWER_FLOORS;
+    list.push({ id: b.id, name: b.name, tx: b.tx, ty: b.ty, tw: b.tw, th: b.th, area: b.tw * b.th, floors: f, H, Ht, d, arch: b.arch || b.kind, style: s.style || 'glass', home: b.home !== undefined, role, plain, big, tall, slab: plain && big && tall, road, hidden, part: b.towerPart || null });
+  }
+  return list;
+}
