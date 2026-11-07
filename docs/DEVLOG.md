@@ -20532,26 +20532,27 @@ no art, graphics, resolution or render quality was lowered. No budget changed (p
 - **Found by the bench, fixed on the way**: a moved window must bring its seed (the page checks a window against its city by
   the seed before taking the rest; left out with the steady fields, every moved window was dropped).
 
-Before and after (tools/drivebench.mjs, 3 minutes' drive at night in the rain from Pine Hills, the page's thread slowed
-2x, then a walk; this machine: 2 cores for the server, the page, four bake workers and the lane; ms unless marked):
+Before and after (tools/drivebench.mjs: a drive at night in the rain from the arrival, the page's thread slowed 2x, then
+a walk; this machine: 2 cores for the server, the page, the bake workers and the lane; ms unless marked):
 
-| | before (base3) | after (after3) | before (base4) | after (after4*) |
-|---|---|---|---|---|
-| distance driven (px; the autopilot stalls and circles) | 15,553 | 2,592 | 28,707 | 380,800 |
-| frame p50 / p95 / p99 | 16.7 / 50 / 83 | 16.7 / 33 / 67 | 16.7 / 67 / 133 | 16.7 / 50 / 100 |
-| frames over 50 ms | 340 | 204 | 695 | 366 |
-| long tasks (n / total ms) | 242 / 17,702 | 140 / 9,622 | 523 / 39,359 | 259 / 18,664 |
-| page work a frame (mean) | 3.97 | 2.57 | 7.07 | 3.82 |
-| person sprites made on the page (n / ms) | 1 / 97 | 0 | 52 / 841 | 0 |
-| JS heap start / end / max (MB) | 363 / 288 / 478 | 160 / 137 / 207 | 202 / 252 / 416 | 108 / 121 / 239 |
-| sprites the atlas let go | 103 | 0 | 1,982 | 1,355 |
-| a window swap on the page (ms: its steps) | 594 (ground 389, minimap 140), 229 | (none in the drive) | 197 (minimap 103, ground 78) | (none: *the seed bug) |
+| | before | after |
+|---|---|---|
+| distance driven (px; the autopilot gets stuck and circles) | 27,129 | 21,780 |
+| frames | 4,853 | 6,251 |
+| frame p50 / p95 / p99 | 16.7 / 66.7 / 133.3 | 16.7 / 50 / 66.7 |
+| frames over 50 ms | 407 | 161 |
+| long tasks (n / total ms) | 321 / 26,048 | 127 / 8,239 |
+| the page's work a frame (mean) | 6.29 | 3.89 |
+| person sprites made on the page (n / ms) | 14 / 258 | 0 |
+| JS heap start / max (MB) | 334 / 433 | 207 / 304 |
+| a window swap on the page (ms) | 425, 181, 397, 246 | 75, 59 |
+| ...its steps, the slowest swap | carry 99, ground 111, minimap 177, router 36 | ground 56, buildings 15 |
 
-(*after4 ran before the seed fix: its windows never moved. A run with it, after5, drove 32,000 px in 2 minutes with three
-window swaps - 262 long tasks, 19.6 s, against base4's 360, 27.6 s in its first two minutes - before this machine ran
-out of memory and killed the page. Runs vary: the autopilot gets stuck and circles, the bakes share 2 cores with the
-server; read the table for its direction. In node, unthrottled: a moved window's message 238 -> 176 ms to clone; the
-minimap's 2.3 M-pixel paint and the ground indexes now off the swap.)
+(2 minutes and the walk, --cores 6: three bake workers - four, and the server, the browser and the bench ran this
+machine out of memory twice. Runs vary - the autopilot gets stuck and circles, the bakes share 2 cores with the server -
+but all four pairs went the same way: long tasks down by about half or more, p99 frames halved,
+no person sprite made on the page, the heap a third smaller. In node, unthrottled: a moved window's message 238 -> 176
+ms to clone. The scratchpad's perf3/table.md has every run.)
 
 The perf readout's other leads, checked:
 - **60 fps after a while**: nothing in the game caps the frame rate (main.js govern only lowers the render scale, and the
@@ -20560,7 +20561,7 @@ The perf readout's other leads, checked:
   the phone runs hot (a Pixel caps its refresh rate then). Only the phone can tell which: the readout's page ms against
   its fps over a long drive, before and after.
 - **Memory**: "kept 247" counts the chunks read back from the browser's store over the session, not what's held; the
-  page's JS heap peaked at 416 MB on the bench before (478 in another run) and 239 after - the classic renderer's ground
+  page's JS heap peaked at 416-478 MB on the bench before and 207-304 after - the classic renderer's ground
   indexes were most of it - and no cache grew without bound over a drive.
 - **Left**: the chunk stand-ins' index (art2/game/standin.js) is built over a whole window the first time one is drawn
   after a swap (~40 ms on the bench machine); a moved window's message still costs the page its decoding (the window's
