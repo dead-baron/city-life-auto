@@ -81,7 +81,7 @@ export function surveyTowers(m) {
   const list = [];
   for (const b of m.buildings) {
     if (!b || b.gone || !b.art || !b.art.spec) continue;
-    const s = b.art.spec, f = s.height ? Math.round(s.height / 56) : s.floors || 0;
+    const s = b.art.spec, f = (s.height ? Math.round(s.height / 56) : s.floors || 0) + (b.art.up ? b.art.up.floors : 0);   // (a setback crown's floors too)
     if (f < 6) continue;
     const P = pois.get(b.id) || [];
     const role = P.filter((p) => p.kind !== 'delivery' && p.kind !== 'home').map((p) => p.kind);

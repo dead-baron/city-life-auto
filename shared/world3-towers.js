@@ -96,13 +96,15 @@ function splitTower(m, b) {
   // its height: two floors less, at most the cap, its wall over the street north of its back block 14 tiles at most -
   // and lower while it would cover a place or a sign to the north
   let Ft = Math.max(Math.min(F, 7), Math.min(TOWER3.cap, F - 2, floorsIn(k + 14)));
-  const hides = (f) => covered(m, b.id, tx0, tw, y, Math.ceil(wallPx(f) / TILE) - k);
-  while (Ft > 7 && hides(Ft)) Ft--;
+  // (a part standing back kb tiles from the footprint's north edge, f floors: lowered while its wall would hide a place or
+  // a sign north of the footprint, down to `min`)
+  const lower = (f, px, pw, py, kb, min) => { while (f > min && covered(m, b.id, px, pw, py, Math.ceil(wallPx(f) / TILE) - kb)) f--; return f; };
+  Ft = lower(Ft, tx0, tw, y, k, 7);
   const crown = Ft >= 9 && tw >= 10 && D >= 14 ? 2 + (r(4) < 0.4 ? 1 : 0) : 0;
   // the tower keeps the building: its footprint the slim front part, its art lower with its crown set back on it
   b.tx = tx0; b.tw = tw; b.ty = y + k; b.th = D;
   S.floors = Ft - crown;
-  if (b.art.shop) b.art.shop.door = Math.max(10, Math.min(tw * TILE - 32, (dtx - tx0) * TILE - 1));
+  if (b.art.shop) b.art.shop.door = Math.max(10, Math.min(tw * TILE - 32, (dtx - tx0) * TILE + 5));
   if (crown) b.art.up = { w: 1 + Math.floor(r(5) * 2), e: 1 + Math.floor(r(6) * 2), n: 1 + Math.floor(r(7) * 2), s: 2 + Math.floor(r(8) * 3), floors: crown };
   b.towerPart = { of: b.id, role: 'tower' };
   const parts = [b.id];
@@ -126,7 +128,7 @@ function splitTower(m, b) {
     let top = Ft - 3, last = null;
     pieces.forEach(([off, pw], j) => {
       const px = sx + off, kq = 20 + q * 10;
-      const fl = Math.max(3, Math.min(top, Math.round(Ft * (0.35 + 0.3 * r(kq))) - j));
+      const fl = lower(Math.max(3, Math.min(top, Math.round(Ft * (0.35 + 0.3 * r(kq))) - j)), px, pw, y, k, 3);
       top = fl - 1;
       const skin = skins[q++ % skins.length];
       // a wing behind a podium of shops, or a mid-rise with its shop on the pavement (neighbours differ)
@@ -147,9 +149,10 @@ function splitTower(m, b) {
   }
   // the back: a lower block (two over a wide footprint) behind the front zone
   if (k >= 8) {
-    const two = w > 34, cut = two ? x + Math.round(w * (0.4 + 0.2 * r(80))) : x + w;
+    const two = w > 44, cut = two ? x + Math.round(w * (0.4 + 0.2 * r(80))) : x + w;
     for (const [bx, bw, kk] of two ? [[x, cut - x, 81], [cut, x + w - cut, 86]] : [[x, w, 81]]) {
-      const fl = Math.max(4, Math.min(8, Ft - 3 - Math.floor(r(kk) * 3)));
+      // (on the street to the north: six floors at most, its wall no deeper over that street than its pavement and lanes)
+      const fl = lower(Math.max(4, Math.min(6, Ft - 4 - Math.floor(r(kk) * 3))), bx, bw, y, 0, 4);
       const brick = r(kk + 1) < 0.55;
       const skin = brick ? { style: 'brick', tone: pk(BRICK, kk + 2), win: pk(['pair', 'loft', 'even'], kk + 3), cornice: pk(['dentil', 'bracket'], kk + 4) } : { style: 'concrete', wall: pk(CONCRETE, kk + 2), win: pk(['even', 'loft'], kk + 3), cornice: null };
       add('back', bx, y, bw, k, { name: `${b.name} Court`, arch: brick ? 'walkup' : 'office', art: partArt(skin, fl, r, kk, { noShop: true, fire: brick }) });

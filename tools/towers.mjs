@@ -23,7 +23,7 @@ console.log(`plain slabs (${TOWER_FLOORS}+ floors, a front of ${TOWER_FRONT}+ ti
 const byD = {};
 for (const q of L.filter((q) => q.tall)) { const k = DISTRICTS[q.d]?.name || q.d; (byD[k] ||= { tall: 0, slabs: 0, wall: 0 }); byD[k].tall++; if (q.slab) { byD[k].slabs++; byD[k].wall += q.tw * q.Ht; } }
 console.log('by district (tall towers, slabs, slab wall tiles - front x height):'); for (const [k, v] of Object.entries(byD).sort((a, b) => b[1].wall - a[1].wall)) console.log(`  ${k.padEnd(22)} ${String(v.tall).padStart(3)} ${String(v.slabs).padStart(3)} ${String(v.wall).padStart(6)}`);
-const row = (q) => `  #${q.id} ${q.name} ${q.tw}x${q.th} ${q.floors} fl (${q.H} px, ${q.Ht} t) at ${q.tx},${q.ty} ${DISTRICTS[q.d]?.name} ${q.style}${q.home ? ' home' : ''}${q.role.length ? ' ' + q.role.join('/') : ''}${q.part ? ' part:' + q.part : ''} hides ${q.road} street tiles, ${q.hidden} places`;
+const row = (q) => `  #${q.id} ${q.name} ${q.tw}x${q.th} ${q.floors} fl (${q.H} px, ${q.Ht} t) at ${q.tx},${q.ty} ${DISTRICTS[q.d]?.name} ${q.style}${q.home ? ' home' : ''}${q.role.length ? ' ' + q.role.join('/') : ''}${q.part ? ' part:' + q.part.role + ' of #' + q.part.of : ''} hides ${q.road} street tiles, ${q.hidden} places`;
 console.log('\nthe slabs, widest walls first:'); for (const q of slabs) console.log(row(q));
 console.log('\nthe tall towers kept (not slabs):'); for (const q of L.filter((q) => q.tall && !q.slab && !q.part)) console.log(row(q));
 const parts = L.filter((q) => q.part);
