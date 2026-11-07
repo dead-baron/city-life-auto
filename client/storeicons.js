@@ -9,7 +9,7 @@ export const STORE_ICON = {
   gunshop: 'gun', clothing: 'shirt', hardware: 'hammer', convenience: 'cart', grocery: 'cart', pharmacy: 'pill', hospital: 'cross',
   police: 'badge', courthouse: 'scales', bank: 'bank', club: 'cocktail', roadhouse: 'beer', clubhouse: 'cocktail', winery: 'wine', coffee: 'coffee',
   snack: 'burger', fruitstand: 'apple', farmstand: 'shop', market: 'shop', gasstation: 'fuel', pawn: 'rings', fence: 'hood', smuggler: 'hood', gang: 'hood',
-  garage: 'wrench', salvage: 'wrench', paint: 'spray', dealer: 'car', barber: 'scissors', sports: 'dumbbell', tackle: 'hook', fishmarket: 'fish',
+  garage: 'wrench', salvage: 'wrench', paint: 'spray', dealer: 'car', usedlot: 'car', barber: 'scissors', sports: 'dumbbell', tackle: 'hook', fishmarket: 'fish',
   lodge: 'deer', huntcamp: 'deer', trapper: 'deer', butcher: 'cleaver', marina: 'anchor', rental: 'ship', charter: 'ship', airport: 'plane',
   assay: 'pick', cinema: 'film', bowling: 'pin', warehouse: 'box', vending: 'cup', bathhouse: 'bath',
 };

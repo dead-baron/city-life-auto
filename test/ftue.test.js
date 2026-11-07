@@ -7,12 +7,13 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, fakeConn, players, store } from './helpers.js';
 import { PROGRESS_EPOCH, resetOldEpochs } from '../server/store.js';
 import * as homes from '../server/systems/homes.js';
-import { FTUE, STAR_HEAT, STARTER } from '../shared/rules.js';
+import { FTUE, STAR_HEAT } from '../shared/rules.js';
 import { K } from '../shared/constants.js';
 import { DAY_PART_S } from '../shared/constants.js';
 import { STEP_CTL, ASK_POI, ANSWERS, MOMENTS, goalFor } from '../server/systems/ftue.js';
 import * as ftue from '../server/systems/ftue.js';
 import * as starter from '../server/systems/starter.js';
+import * as firstcar from '../server/systems/firstcar.js';
 import * as economy from '../server/systems/economy.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as mailjob from '../server/systems/mailjob.js';
@@ -49,32 +50,29 @@ function arriveAtGoal(w, p) {
   run(w, 0.6);
 }
 
-test('a new character: the arrival at the starter car\'s station, the question, three steps, done', () => {
+test('a new character: the arrival at the station they picked, the question, three steps (the first car bought), done', () => {
   const { w, steps } = world();
   const { p, prof, conn } = newcomer(w);
   assert.equal(prof.ftue.st, 'new', 'a new character\'s record');
-  // where to arrive: the card of the arrival stations, the default first; one picked - not the default - and the starter
-  // car's lot follows it
+  // where to arrive: the card of the arrival stations, the default first; one picked - not the default
   toPick(w);
   assert.equal(prof.ftue.st, 'pick');
   const card = sent(conn, (m) => m.t === 'ftue' && m.a === 'pick')[0];
-  const choices = starter.arrivalChoices(w);
+  const choices = firstcar.arrivalChoices(w);
   assert.ok(card && card.opts.length >= 2 && card.opts.length <= 4, 'a short card of stations');
   assert.deepEqual(card.opts.map((o) => o.id), choices.map((c) => c.poi));
   assert.ok(card.opts[0].def && card.opts.slice(1).every((o) => !o.def), 'the default first, marked');
   for (const o of card.opts) assert.ok(o.name && o.region && w.map.pois[o.id].kind === 'station', `${o.name}: a station, its region`);
-  const car0 = starter.carOf(w, prof.pid), d0 = w.map.pois[card.opts[0].id];
-  assert.ok(car0 && Math.hypot(car0.x - d0.x, car0.y - d0.y) <= STARTER.lotR, 'the car waits at the default till then');
+  assert.equal(starter.carOf(w, prof.pid), null, 'no starter car: the first car is earned (firstcar.js)');
   assert.deepEqual(me(w, p).ftue, { st: 'pick' });
   const choice = card.opts[card.opts.length - 1];
   ftue.handle(w, p, { a: 'pick', stn: choice.id });
   assert.equal(prof.ftue.st, 'arrive');
   assert.equal(prof.ftue.stn, choice.id, 'the profile remembers the station');
-  // the arrival: on the platform of the station whose car park has the starter car (one function: starter.arrivalFor)
-  const g = starter.arrivalFor(w, p), st = w.map.pois[g.poi], car = starter.carOf(w, prof.pid);
+  // the arrival: on the platform of the station picked (one function for the train, the lot and the alley: firstcar.arrivalFor)
+  const g = firstcar.arrivalFor(w, p), st = w.map.pois[g.poi];
   assert.equal(prof.ftue.stn, g.poi);
   assert.ok(Math.hypot(p.ped.x - st.x, p.ped.y - st.y) < 900, 'off the train at the arrival station');
-  assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR, 'the starter car in that station\'s car park');
   const arr = sent(conn, (m) => m.t === 'ftue' && m.a === 'arrive')[0];
   assert.ok(arr && arr.name === st.label && arr.s === FTUE.arriveS && arr.from.length === 2, 'the page plays the arrival');
   assert.deepEqual(me(w, p).ftue, { st: 'arrive' });
@@ -93,18 +91,22 @@ test('a new character: the arrival at the starter car\'s station, the question, 
   const goal = prof.ftue.goal;
   assert.ok(goal.k === 'mail' || goal.k === 'courier', goal.k);   // (World v3: a post office's walking round; a city with none, a depot's courier work)
   assert.ok(mailjob.officesOf(w.map).some((o) => o.id === goal.poi), 'a post office (or the depot standing in for one)');
-  // step 1: walk to the car
+  // step 1: walk to the used lot by the station and buy a beater with the answer's cash (firstcar.js)
   let m = me(w, p);
+  const lot = firstcar.placesFor(w, g.poi).lot;
   assert.equal(prof.ftue.step, 1);
-  assert.deepEqual(m.ftue, { st: 'goal', step: 1, ctl: 'move', line: 'Your car\'s in the lot - walk over to it', ans: 'work' });
+  assert.deepEqual(m.ftue, { st: 'goal', step: 1, ctl: 'move', line: `Buy a cheap car at ${lot.name} - you've the cash for one`, ans: 'work' });
   assert.equal(m.job.k, 'First goal'); assert.deepEqual(m.job.step, [1, 3]);
-  assert.deepEqual(m.job.veh, [Math.round(car.x), Math.round(car.y), car.def.i], 'the way to the car: its ring and arrows');
-  teleport(w, p.ped, car.x + 70, car.y);
+  assert.deepEqual([m.job.x, m.job.y], [Math.round(lot.x), Math.round(lot.y)], 'the way to the lot');
+  teleport(w, p.ped, lot.x, lot.y);
+  economy.handleMenu(w, p, lot.poi, 'ub:starter');
+  const car = w.get(p.activeVehicle);
+  assert.ok(car && car.owner === prof.pid, 'bought: out on the lot');
   run(w, 0.6);
   // step 2: get in and drive
   m = me(w, p);
   assert.equal(m.ftue.step, 2); assert.equal(m.ftue.ctl, 'vehicle');
-  assert.match(m.ftue.line, /^Get in and drive to /);
+  assert.match(m.ftue.line, /^Get in your car and drive to /);
   assert.deepEqual([m.job.x, m.job.y], [goal.x, goal.y], 'the way on to the post office');
   for (const e of w.query(car.x, car.y, 160, K.VEH)) if (e !== car) w.remove(e);   // (not the parked car beside it)
   teleport(w, p.ped, car.x, car.y + car.def.W / 2 + 8);
@@ -171,11 +173,11 @@ test('the hustle and the great outdoors: a contact to talk to; a rod, bait and a
   c.conn.sent.length = 0; c.p.toasts.length = 0;
   economy.handleMenu(w, c.p, ASK_POI, 'roam');
   assert.equal(c.prof.ftue.st, 'done'); assert.equal(c.prof.ftue.how, 'roam');
-  assert.ok(c.p.toasts.some((t) => t.text === ftue.ROAM_LINE));
+  assert.ok(c.p.toasts.some((t) => t.text.startsWith(ftue.ROAM_LINE)));
   assert.equal(me(w, c.p).job, null);
   assert.ok(steps.includes('ftue_answer_hustle') && steps.includes('ftue_answer_outdoors') && steps.includes('ftue_answer_roam'));
   // every answer finds a goal from every arrival station in the world
-  for (const gg of starter.publicGarages(w.map).filter((q) => q.station).slice(0, 6)) {
+  for (const gg of firstcar.arrivalChoices(w)) {
     const st = w.map.pois[gg.poi];
     for (const ans of ['work', 'hustle', 'outdoors']) assert.ok(goalFor(w, ans, st.x, st.y), `${ans} from ${st.label}`);
   }
@@ -235,7 +237,7 @@ test('everyone goes through it once: a profile from an older progress epoch is r
   assert.equal(prof.epoch, PROGRESS_EPOCH);
   assert.deepEqual({ cash: prof.cash, bank: prof.bank, cexp: prof.criminalExp, fel: prof.felonies, homes: prof.homes, vehicles: prof.vehicles, loans: prof.loans, bounties: prof.bounties }, { cash: 200, bank: 500, cexp: 0, fel: 0, homes: [], vehicles: [], loans: {}, bounties: undefined });
   assert.deepEqual(prof.ftue, { st: 'new', tips: 1, m: {} }, 'the FTUE not started');
-  assert.equal(prof.starter.first, true, 'the starter car\'s first day to come');
+  assert.equal(prof.starter, undefined, 'no starter car: the first car to earn (firstcar.js)');
   assert.equal(prof.acct.role, 'admin'); assert.equal(prof.acct.logins.length, 1); assert.equal(prof.acct.passkeys.length, 1); assert.deepEqual(prof.acct.mute, { until: 9 }, 'the account kept');
   assert.ok(prof.name && prof.look, 'the name and the look kept');
   assert.equal(store.kept.crews.c1, undefined, 'its crew of two broken up');
@@ -246,17 +248,16 @@ test('everyone goes through it once: a profile from an older progress epoch is r
   assert.equal(resetOldEpochs(store), 0);
   assert.equal(prof.cash, 4321);
   prof.cash = 200;
-  // back in a new world: the arrival, and the starter car in the lot; the home on the market again
+  // back in a new world: the arrival; the home on the market again
   const w2 = makeWorld({ keepKept: true });
   assert.equal(w2.homeOwner.get(h.id), undefined, 'its home back on the market');
   const conn = fakeConn();
   const p2 = players.join(w2, conn, prof);
-  const car = starter.carOf(w2, prof.pid);
-  assert.ok(car, 'the starter car in the lot');
+  assert.equal(starter.carOf(w2, prof.pid), null, 'no starter car');
   toArrival(w2);
   assert.equal(prof.ftue.st, 'arrive');
-  const st = w2.map.pois[starter.arrivalFor(w2, p2).poi];
-  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
+  const st = w2.map.pois[firstcar.arrivalFor(w2, p2).poi];
+  assert.ok(Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'at the arrival station');
 });
 
 test('the epoch checked again on joining: an old profile that reaches a running world is reset there, its home let go', () => {
@@ -284,8 +285,9 @@ test('kept across a rejoin: a goal half done carries on; a question unanswered i
   const { p, prof, conn } = newcomer(w);
   toArrival(w); toQuestion(w);
   economy.handleMenu(w, p, ASK_POI, 'work');
-  const car = starter.carOf(w, prof.pid);
-  teleport(w, p.ped, car.x + 60, car.y);
+  const lot = w.map.pois[prof.ftue.car.poi];
+  teleport(w, p.ped, lot.x, lot.y);
+  economy.handleMenu(w, p, lot.id, 'ub:starter');   // (the first car bought)
   run(w, 0.6);
   assert.equal(prof.ftue.step, 2);
   // a restart: the profile as saved, a new world
@@ -430,7 +432,7 @@ test('the Guide\'s replay: the arrival from where you stand, then the question a
   assert.ok(p.toasts.some((t) => /job/.test(t.text)));
 });
 
-test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDATE=all) or Start fresh, the arrival and the starter car in the lot', () => {
+test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDATE=all) or Start fresh, the arrival - and the first car to earn, no starter car', () => {
   const { w } = world();
   // a character who's played: the FTUE done, about the city
   const { p, prof } = newcomer(w);
@@ -448,13 +450,12 @@ test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDAT
   w2.build = 'build-2'; w2.freshOnUpdate = 'all';
   const conn = fakeConn();
   const p2 = players.join(w2, conn, Object.assign(prof, saved));
-  assert.deepEqual({ st: prof.ftue.st, first: prof.starter.first }, { st: 'new', first: undefined }, 'a new character: the FTUE not started (the car\'s first day spent at once - below)');
-  const car = starter.carOf(w2, prof.pid);
-  assert.ok(car, 'the starter car in the lot');
+  assert.deepEqual({ st: prof.ftue.st, starter: prof.starter, first: prof.firstCar }, { st: 'new', starter: undefined, first: undefined }, 'a new character: the FTUE not started, no starter car, no first car yet');
+  assert.equal(starter.carOf(w2, prof.pid), null, 'no starter car');
   toArrival(w2);
   assert.equal(prof.ftue.st, 'arrive', 'the arrival');
-  const g = starter.arrivalFor(w2, p2), st = w2.map.pois[g.poi];
-  assert.ok(Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR && Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'both at the arrival station');
+  const g = firstcar.arrivalFor(w2, p2), st = w2.map.pois[g.poi];
+  assert.ok(Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'at the arrival station');
   assert.ok(sent(conn, (m) => m.t === 'ftue' && m.a === 'arrive').length);
   // Start fresh (players.wipeAccount): the same
   const b = newcomer(w2);
@@ -462,12 +463,12 @@ test('a wiped profile is a new character: after wipeProgress (CLA_FRESH_ON_UPDAT
   economy.handleMenu(w2, b.p, ASK_POI, 'roam');
   b.prof.acct = { v: 1, kind: 'guest', logins: [], passkeys: [] };   // (every online profile has its account record: kept)
   players.wipeAccount(w2, b.p);
-  assert.equal(b.prof.ftue.st, 'new'); assert.equal(b.prof.starter.first, true);
+  assert.equal(b.prof.ftue.st, 'new'); assert.equal(b.prof.starter, undefined); assert.equal(b.prof.ftue.paid, undefined, 'the first car\'s cash to come again');
 });
 
-test('where to arrive: skipped or left, the default; rejoining mid-choice, the card again; the car\'s lot follows the pick', () => {
+test('where to arrive: skipped or left, the default; rejoining mid-choice, the card again; the lot and the alley follow the pick', () => {
   const { w, steps } = world();
-  const choices = starter.arrivalChoices(w), def = choices[0];
+  const choices = firstcar.arrivalChoices(w), def = choices[0];
   assert.ok(choices.length >= 2 && def.def, 'stations to choose from, the default first');
   // skipped (Esc, B, Skip): the default, on to the arrival
   const a = newcomer(w);
@@ -502,13 +503,13 @@ test('where to arrive: skipped or left, the default; rejoining mid-choice, the c
   assert.equal(d.prof.ftue.st, 'pick', 'still choosing - no default picked while away');
   const far = card[0].opts[card[0].opts.length - 1], st = w2.map.pois[far.id];
   ftue.handle(w2, p2, { a: 'pick', stn: far.id });
-  const car = starter.carOf(w2, d.prof.pid);
   assert.equal(d.prof.ftue.stn, far.id);
-  assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR, 'the starter car in the picked station\'s lot');
   assert.ok(Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'off the train there');
-  assert.equal(starter.arrivalFor(w2, p2).poi, far.id, 'one function for both');
-  assert.ok(p2.toasts.some((t) => t.text.includes(`waiting in the parking lot at ${st.label}`)), 'told where it waits: the station picked');
-  assert.ok(!p2.toasts.some((t) => /waiting in the parking lot/.test(t.text) && !t.text.includes(st.label)), 'never the default station\'s lot');
+  assert.equal(firstcar.arrivalFor(w2, p2).poi, far.id, 'one function for the train, the lot and the alley');
+  const P = firstcar.placesFor(w2, far.id), P0 = firstcar.placesFor(w2, def.poi);
+  ftue.handle(w2, p2, { a: 'arrived' }); economy.handleMenu(w2, p2, ASK_POI, 'work');
+  assert.equal(d.prof.ftue.car.poi, P.lot.poi, 'step 1: the picked station\'s used lot');
+  if (P.lot.poi !== P0.lot.poi) assert.notEqual(d.prof.ftue.car.poi, P0.lot.poi, 'not the default\'s');
   // a pick after the card is gone does nothing
   ftue.handle(w2, p2, { a: 'pick', stn: def.poi });
   assert.equal(d.prof.ftue.stn, far.id);

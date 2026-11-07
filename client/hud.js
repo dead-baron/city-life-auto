@@ -46,7 +46,7 @@ function optKind(o) {
   return ty === 'melee' ? 'melee' : ty === 'grenade' || ty === 'deploy' ? 'throw' : LONG.has(id) || ty === 'rocket' || ty === 'bow' || ty === 'flame' ? 'rifles' : 'pistols';
 }
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
-const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
+const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
@@ -768,7 +768,7 @@ export function districtCentroids(map) {
 const POI_ICON = {
   hospital: ['H', '#ff5a5a'], police: ['P', '#6aa6ff'], bank: ['$', '#3ddc84'], gunshop: ['G', '#ff9a3a'], pawn: ['¢', '#ffd36b'],
   sports: ['S', '#7de0ff'], hardware: ['T', '#ff9a3a'], pharmacy: ['+', '#3ddc84'], coffee: ['C', '#c89a6a'], garage: ['R', '#ffd400'],
-  clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
+  clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], usedlot: ['V', '#ff9a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], rental: ['⛵', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
   charter: ['≈', '#7de0ff'], sar: ['✚', '#ff6a4a'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
   airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], roadhouse: ['🍺', '#ff7a3a'], market: ['🧺', '#e8b060'],

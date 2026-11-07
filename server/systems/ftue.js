@@ -5,20 +5,23 @@
 //      stations (starter.js arrivalChoices - World v3's: a station in the city, on the coast, in the desert and in the
 //      country, each with an arrival line of its own: shared/world3-arrivals.js), each its name, region and a line of
 //      what it's like, the default first. Picked: { t: 'intro', a: 'pick', stn }; skipped (Esc, B, Skip) or left
-//      FTUE.pickS: the default. The starter car's lot follows it (starter.js followArrival);
-//   1. the arrival: off a train at the arrival station - the one the starter car waits at (starter.js arrivalFor, the
-//      same function) - a short staged scene on the page (client/ftue.js): on its arrival line the train comes out of
+//      FTUE.pickS: the default (firstcar.js arrivalChoices);
+//   1. the arrival: off a train at the arrival station (firstcar.js arrivalFor: the one function for the train, the used
+//      lot and the alley) - a short staged scene on the page (client/ftue.js): on its arrival line the train comes out of
 //      the first tunnel, slows into the platform, stops, the doors open and you step off; then it pulls out into the
 //      far tunnel. The train is the page's alone - no server train, so arrivals never meet; everyone else sees you
 //      appear on the platform as the doors open (FTUE.doorS: ped.ftueHid till then - net.js). FTUE.arriveS long,
 //      skippable (the page's Esc / B / a tap: { t: 'intro', a: 'skip' });
 //   2. one question on the platform, "What brings you to town?", on the conversation screen's kit (a menu at ASK_POI,
-//      the answers numbered): Honest work, A little hustle, The great outdoors, Just let me roam. Not a class - it only
-//      picks the first goal;
+//      the answers numbered): Honest work, A little hustle, The great outdoors, Just let me roam. Not a class - it picks
+//      the first goal and how you get your first car (the owner, 11-06 22:49: "The first car is earned, by the path you
+//      pick" - firstcar.js): honest work and the outdoors get cash (FTUE.cash) for a beater at the station's used lot,
+//      the hustle steals one in the station's alley, roam gets the cash and the lot on the map;
 //   3. the first goal, at most three steps, each teaching one control where it's needed (the page shows that control's
-//      glyph for the device in hand - shared/controls.js): walk to your car (move), get in and drive there (vehicle),
-//      do the thing (action). It rides the HUD's job card and the job's way-finding (players.js buildMe: me.job), the
-//      step's line in me.ftue. Done: a small reward (FTUE.reward, xp for driving) and the big moment.
+//      glyph for the device in hand - shared/controls.js): get your car - buy it at the used lot (move) or steal it in
+//      the alley (vehicle) - drive there (vehicle), do the thing (action). It rides the HUD's job card and the job's
+//      way-finding (players.js buildMe: me.job), the step's line in me.ftue. Done: a small reward (FTUE.reward, xp for
+//      driving) and the big moment. Already driving (a car of your own out, a replay): straight to the drive.
 // Then the first-time moments (once each, ever - the hurt one at most FTUE.hurtMax times - while tips are on, and only
 // while the character is new: FTUE.tipsPlayH hours played, FTUE.tipsDays days after the FTUE ended): the first wanted star, the first time knocked down,
 // the first shop, the first stop for transit, the first night, the first time hurt - one fading line each with "More in
@@ -31,16 +34,19 @@
 // ftue_pick_default (skipped, or left to the default), ftue_arrive, ftue_answer_<which>,
 // ftue_step1..3 (reached), ftue_done, ftue_skip, moment_<id>, guide_open.
 //   profile.ftue: { st: 'new' | 'pick' | 'arrive' | 'ask' | 'goal' | 'done', stn (the arrival station's poi), ans, step,
-//                   goal { k, x, y, name, poi? }, how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
+//                   goal { k, x, y, name, poi? }, car { k: 'buy' | 'steal', x, y, name, poi?, n (your cars when it
+//                   began) } (step 1's), paid (1: the answer's cash given - once, ever), how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
 //                   tips (0: off - Settings), replay (1: the Guide's replay - no move to the station), pt (seconds played
 //                   since the record began), hn (the hurt line's showings), again (1: the Guide's "Show tips again" - the
 //                   new-character window no longer applies) }
-import { FTUE, STARTER } from '../../shared/rules.js';
+import { FTUE } from '../../shared/rules.js';
 import { PED_BLOCK } from '../../shared/mapcore.js';
 import { ITEMS } from '../../shared/items.js';
 import { store } from '../store.js';
 import { moved } from '../movemark.js';
 import * as starter from './starter.js';
+import * as firstcar from './firstcar.js';
+import * as safety from './safety.js';
 import * as homes from './homes.js';
 import * as fishing from './fishing.js';
 import * as mailjob from './mailjob.js';
@@ -50,13 +56,14 @@ import * as ferries from './ferries.js';
 
 export const ASK_POI = -31;   // (the question's menu: not a place's - economy.js handleMenu asks onMenu first)
 export const ANSWERS = [
-  { id: 'work', label: 'Honest work', note: 'a first job nearby' },
-  { id: 'hustle', label: 'A little hustle', note: 'meet a contact' },
-  { id: 'outdoors', label: 'The great outdoors', note: 'a rod and a fishing spot' },
-  { id: 'roam', label: 'Just let me roam', note: 'no goal' },
+  { id: 'work', label: 'Honest work', note: 'cash for a cheap car, then a first job' },
+  { id: 'hustle', label: 'A little hustle', note: 'steal a car, then meet a contact' },
+  { id: 'outdoors', label: 'The great outdoors', note: 'cash for a pickup, a rod and a fishing spot' },
+  { id: 'roam', label: 'Just let me roam', note: 'cash for a cheap car, no goal' },
 ];
-// the controls the steps teach (shared/controls.js actions)
+// the controls the steps teach (shared/controls.js actions); stealing a car, step 1's: getting in (vehicle)
 export const STEP_CTL = [null, 'move', 'vehicle', 'action'];
+const stepCtl = (f) => (f.step === 1 && f.car && f.car.k === 'steal' ? 'vehicle' : STEP_CTL[f.step]);
 // The first-time moments: what each says (one line), the control it names, the Guide's section it opens on
 export const MOMENTS = {
   wanted: { text: 'You\'re wanted. Get out of sight and lie low until the stars fade.', sec: 'law' },
@@ -70,7 +77,7 @@ export const MOMENTS = {
 // The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
 // ARRIVAL_PICKS); a map without arrival lines names the station's district
 export const REGIONS = {
-  city: { region: 'The city', vibe: 'Downtown towers, the bay and the bright lights. Work is never far.' },
+  city: { region: 'The city', vibe: 'Greenfield Park, downtown\'s towers and the bright lights. Work is never far.' },
   coast: { region: 'The north coast', vibe: 'Beach towns, the boardwalk and the surf. Easy days by the water.' },
   desert: { region: 'The red rock desert', vibe: 'Mesas, mines and open highway. Room to roam.' },
   country: { region: 'Willow Valley', vibe: 'Farms, rivers and quiet roads. The great outdoors.' },
@@ -173,11 +180,20 @@ const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.nam
 export function stepLine(world, p, f) {
   const g = f.goal;
   if (!g) return '';
-  if (f.step === 1) { const v = starter.carOf(world, p.pid), st = f.stn != null ? world.map.pois[f.stn] : null; return v && st && Math.hypot(v.x - st.x, v.y - st.y) > STARTER.lotR ? 'Your car\'s parked down the street - walk over to it' : 'Your car\'s in the lot - walk over to it'; }   // (the lot full: its overflow - starter.js)
-  if (f.step === 2) return starter.carOf(world, p.pid) ? `Get in and drive to ${PLACE[g.k](g)}` : `Head for ${PLACE[g.k](g)}`;
+  if (f.step === 1) return carLine(world, p, f);
+  if (f.step === 2) return p.ped && p.ped.vehId ? `Drive to ${PLACE[g.k](g)}` : myCar(world, p) ? `Get in your car and drive to ${PLACE[g.k](g)}` : `Head for ${PLACE[g.k](g)}`;
   return THERE[g.k](g);
 }
-const cardText = (world, p, f) => (f.step === 1 ? 'Walk to your car in the lot' : f.step === 2 ? `${p.ped && p.ped.vehId ? 'Drive' : 'Get'} to ${PLACE[f.goal.k](f.goal)}` : THERE[f.goal.k](f.goal));
+// step 1's line: buy a car at the used lot, or steal the one in the alley (Safety mode on: it asks first - press again)
+function carLine(world, p, f) {
+  const c = f.car;
+  if (!c) return '';
+  if (c.k === 'steal') { const v = firstcar.markOf(world, p), far = v && Math.hypot(v.x - c.x, v.y - c.y) > 600; return `Steal a car ${far ? 'parked down the street from' : 'in'} ${c.name}: walk up to it and get in${safety.on(p) ? ' (Safety mode is on: press twice)' : ''}`; }
+  return `Buy a cheap car at ${c.name} - you've the cash for one`;
+}
+// your car out for step 2: the first one you bought or stole, a starter car, your car out in the world
+const myCar = (world, p) => starter.carOf(world, p.pid) || (() => { const v = world.get(p.firstCarId) || world.get(p.activeVehicle); return v && !v.removed && !v.wreckAt && (v.owner === p.pid || v.id === p.firstCarId) ? v : null; })();
+const cardText = (world, p, f) => (f.step === 1 ? (f.car && f.car.k === 'steal' ? `Steal a car in ${f.car.name}` : `Buy a car at ${f.car ? f.car.name : 'a dealership'}`) : f.step === 2 ? `${p.ped && p.ped.vehId ? 'Drive' : 'Get'} to ${PLACE[f.goal.k](f.goal)}` : THERE[f.goal.k](f.goal));
 const END = {
   mail: 'Post the letters on your round. After that, the city\'s yours - your phone\'s Guide has the rest.',
   courier: 'Haul the crate to its storefront. After that, the city\'s yours - your phone\'s Guide has the rest.',
@@ -193,15 +209,18 @@ export function meInfo(world, p) {
   const f = rec(p.profile);
   if (!active(f)) return null;
   if (f.st !== 'goal') return { st: f.st };
-  return { st: 'goal', step: f.step, ctl: STEP_CTL[f.step], line: stepLine(world, p, f), ans: f.ans };
+  return { st: 'goal', step: f.step, ctl: stepCtl(f), line: stepLine(world, p, f), ans: f.ans };
 }
 // me.job (players.js buildMe): the goal's way - the car first, then the place - with the job card's step N of 3
 export function target(world, p) {
   const f = rec(p.profile);
   if (!f || f.st !== 'goal' || !f.goal || p.job) return null;
   const t = { text: cardText(world, p, f), k: 'First goal', step: [f.step, 3], stage: `ftue${f.step}`, x: f.goal.x, y: f.goal.y };
-  const v = f.step === 1 ? starter.carOf(world, p.pid) : null;
-  if (v) { t.x = Math.round(v.x); t.y = Math.round(v.y); t.veh = [t.x, t.y, v.def.i]; }
+  if (f.step === 1 && f.car) {   // (the used lot's gate; the car to steal itself, ringed)
+    t.x = Math.round(f.car.x); t.y = Math.round(f.car.y);
+    const v = f.car.k === 'steal' ? firstcar.markOf(world, p) : null;
+    if (v) { t.x = Math.round(v.x); t.y = Math.round(v.y); t.veh = [t.x, t.y, v.def.i]; }
+  }
   return t;
 }
 
@@ -223,7 +242,7 @@ function arrive(world, p, replay = false) {
   const f = rec(p.profile), ped = p.ped;
   let name, place, to, from, line = null;
   if (!replay) {
-    const g = starter.arrivalFor(world, p), poi = g ? world.map.pois[g.poi] : null;
+    const g = firstcar.arrivalFor(world, p), poi = g ? world.map.pois[g.poi] : null;
     if (!poi) { f.st = 'ask'; p.ftueAskAt = world.time; return; }   // (no station anywhere: the question where you are)
     const pl = platformOf(world, poi);
     ped.hidden = false; ped.inside = null; ped.interior = null; ped.entering = null; ped.sub = false; ped.ug = 0;   // (out of wherever they woke: a hospital's waiting room)
@@ -246,28 +265,27 @@ function arrive(world, p, replay = false) {
 function reveal(p) { if (p.ped && p.ped.ftueHid) { p.ped.ftueHid = false; p.meDirty = true; } p.ftueShowAt = 0; }
 // the arrival stations' card (0.)
 export function choices(world) {
-  return starter.arrivalChoices(world).map((c) => {
+  return firstcar.arrivalChoices(world).map((c) => {
     const poi = world.map.pois[c.poi], R = (c.key && REGIONS[c.key]) || null;
     return { id: c.poi, name: c.name.replace(/ Station$/, ''), region: R ? R.region : districtName(world, poi.x, poi.y) || 'The city', vibe: R ? R.vibe : '', def: c.def ? 1 : 0 };
   });
 }
-const regionOf = (world, poi) => { const c = starter.arrivalChoices(world).find((q) => q.poi === poi.id), R = c && c.key && REGIONS[c.key]; return R ? R.region : districtName(world, poi.x, poi.y); };
+const regionOf = (world, poi) => { const c = firstcar.arrivalChoices(world).find((q) => q.poi === poi.id), R = c && c.key && REGIONS[c.key]; return R ? R.region : districtName(world, poi.x, poi.y); };
 function offer(world, p) {
   const f = rec(p.profile), opts = choices(world);
   if (opts.length < 2) { pick(world, p, null); return; }   // (one station, or none: nothing to choose)
   f.st = 'pick'; stamp(f, 'pick'); p.ftuePickAt = 0;
   p.ftuePickUntil = world.time + FTUE.pickS;
-  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in. Your car waits there.', opts, s: FTUE.pickS });
+  send(p, { t: 'ftue', a: 'pick', title: 'Where to?', sub: 'Pick where your train comes in. There\'s a cheap car to be had near each one.', opts, s: FTUE.pickS });
   store.touch(); p.meDirty = true;
 }
 // picked (stn: a station's poi from the card), or the default (null: skipped, left, or not one of the card's)
 export function pick(world, p, stn) {
   const f = rec(p.profile);
   if (!f || (f.st !== 'pick' && f.st !== 'new')) return false;
-  const c = starter.arrivalChoices(world), ch = c.find((q) => q.poi === stn) || c[0] || null;
+  const c = firstcar.arrivalChoices(world), ch = c.find((q) => q.poi === stn) || c[0] || null;
   if (ch) f.stn = ch.poi;
   if (f.st === 'pick') track(world, p, ch && ch.poi === stn ? 'ftue_pick' : 'ftue_pick_default');
-  starter.followArrival(world, p);
   arrive(world, p);
   return true;
 }
@@ -285,15 +303,38 @@ export function answer(world, p, ans) {
   if (!f || f.st !== 'ask' || !ANSWERS.some((a) => a.id === ans) || !p.ped || p.ped.dead) return false;
   f.ans = ans; stamp(f, 'answer');
   track(world, p, `ftue_answer_${ans}`);
-  if (ans === 'roam') { world.notify(p, ROAM_LINE, 'info'); finish(world, p, 'roam'); return true; }
-  const st = p.ped, g = goalFor(world, ans, st.x, st.y);
-  if (!g) { world.notify(p, ROAM_LINE, 'info'); finish(world, p, 'roam'); return true; }
-  f.goal = g; f.st = 'goal';
+  const st = p.ped, stn = f.stn != null ? f.stn : (firstcar.arrivalFor(world, p) || {}).poi, P = stn != null ? firstcar.placesFor(world, stn) : null;
+  if (ans !== 'hustle') pay(world, p);   // (the first car's cash: honest work, the outdoors, roam - firstcar.js)
+  if (ans === 'roam') { roam(world, p, P); return true; }
+  const g = goalFor(world, ans, st.x, st.y);
+  if (!g) { roam(world, p, P); return true; }
+  f.goal = g; f.st = 'goal'; f.car = null;
   if (ans === 'outdoors') gear(world, p);
-  // the car's step only when it's there to walk to (out, nobody in it) and you're not at it already
-  const v = starter.carOf(world, p.pid);
-  setStep(world, p, v && !v.seats.some((s) => s) && !st.vehId && Math.hypot(v.x - st.x, v.y - st.y) > FTUE.carR ? 1 : 2);
+  // step 1, your first car: bought at the used lot (honest work, the outdoors) or stolen in the alley (the hustle) - not
+  // when you've a car out to drive already (a starter car, one you own out in the world: a replay)
+  if (!st.vehId && !myCar(world, p) && P) {
+    if (ans === 'hustle' && P.alley) {
+      const v = firstcar.markCar(world, p, P.alley);
+      if (v) f.car = { k: 'steal', x: Math.round(P.alley.x), y: Math.round(P.alley.y), name: P.alley.name };
+    } else if (ans !== 'hustle' && P.lot) f.car = { k: 'buy', x: Math.round(P.lot.x), y: Math.round(P.lot.y), name: P.lot.name, poi: P.lot.poi, n: p.profile.vehicles.length };
+  }
+  setStep(world, p, f.car ? 1 : 2);
   return true;
+}
+// the answer's cash (FTUE.cash): once a character, ever - never again on the Guide's replay
+function pay(world, p) {
+  const f = rec(p.profile);
+  if (f.paid) return;
+  f.paid = 1; p.profile.cash += FTUE.cash;
+  world.notify(p, `+$${FTUE.cash} to get you started: enough for a cheap car.`, 'good');
+  store.touch(); p.meDirty = true;
+}
+// just let me roam (or no goal to be had): the cash, and the used lot on your map - no steps
+function roam(world, p, P) {
+  const lot = P && P.lot;
+  if (lot) send(p, { t: 'ftue', a: 'mark', x: Math.round(lot.x), y: Math.round(lot.y), label: lot.name });   // (the page's waypoint: client/ftue.js)
+  world.notify(p, lot ? `${ROAM_LINE} A cheap car at ${lot.name} - it's on your map.` : ROAM_LINE, 'info');
+  finish(world, p, 'roam');
 }
 // the outdoors answer: a rod and bait if you've none (shared/items.js: the cane pole, worms)
 function gear(world, p) {
@@ -314,6 +355,7 @@ function setStep(world, p, n) {
 function finish(world, p, how) {
   const f = rec(p.profile);
   reveal(p);
+  firstcar.dropMark(world, p);   // (a car still waiting in the alley: taken away)
   f.st = 'done'; f.how = how; f.replay = 0; stamp(f, 'done');
   p.ftueTipAt = world.time;   // (the first-time moments wait their gap after it)
   if (how === 'skip') track(world, p, 'ftue_skip');
@@ -448,6 +490,7 @@ export function update(world) {
     if (!f || !p.conn || !ped) continue;
     f.pt = (f.pt || 0) + 0.5;   // (time played: the tips' new-character window - saved with the profile's next write)
     downs(world, p);
+    firstcar.tick(world, p);   // (your first car driven: its marker small from now on)
     if (f.st === 'done') { moments(world, p); continue; }
     if (ped.dead) continue;
     if (f.st === 'new') { if (p.profile.lookPicked !== false) offer(world, p); continue; }
@@ -461,9 +504,10 @@ function stepGoal(world, p, f) {
   const ped = p.ped, at = posOf(world, p), g = f.goal;
   if (!g) { finish(world, p, 'skip'); return; }
   if (p.job && !(f.step === 3 && jobDone(p, g))) { finish(world, p, 'skip'); return; }   // (took another job: it's theirs now)
-  if (f.step === 1) {
-    const v = starter.carOf(world, p.pid);
-    if (!v || ped.vehId || Math.hypot(v.x - ped.x, v.y - ped.y) < FTUE.carR) setStep(world, p, 2);
+  if (f.step === 1) {   // your first car: bought (one more of your cars than when it began), or you're driving one
+    const c = f.car;
+    if (!c || (ped.vehId && ped.seat === 0) || (c.k === 'buy' && p.profile.vehicles.length > (c.n || 0))) { setStep(world, p, 2); return; }
+    if (c.k === 'steal' && !firstcar.markOf(world, p) && !p.ftueReMark) { p.ftueReMark = 1; firstcar.markCar(world, p, firstcar.placesFor(world, f.stn)?.alley); }   // (back after a logoff: its car again)
     return;
   }
   if (f.step === 2) { if (Math.hypot(at.x - g.x, at.y - g.y) < FTUE.goalR) setStep(world, p, 3); return; }

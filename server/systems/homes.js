@@ -417,8 +417,9 @@ export function boatOut(world, p, h, idx) {
   return null;
 }
 
-// Spawn an owned vehicle at a garage / lot spot, clearing empty parked cars there.
-export function spawnOwnedAt(world, p, idx, spot) {
+// Spawn an owned vehicle at a garage / lot spot, clearing empty parked cars there (opts.keep: a space found free already -
+// firstcar.js spotAt - nothing cleared, so a neighbour's car on the next space stays)
+export function spawnOwnedAt(world, p, idx, spot, opts = {}) {
   const prof = p.profile;
   const ov = prof.vehicles[idx];
   if (!ov || !VEHICLES[ov.model]) return 'No such vehicle.';
@@ -427,7 +428,7 @@ export function spawnOwnedAt(world, p, idx, spot) {
     if (old.seats.some((s) => s && s !== p.ped.id)) return 'Your other vehicle is occupied.';
     world.remove(old);
   }
-  for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
+  if (!opts.keep) for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
   const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, variant: ov.variant, owner: p.pid, ownerName: p.name, npcOwned: false });
   if (ov.tint !== undefined) v.tint = ov.tint;
   v.despawnable = false;
