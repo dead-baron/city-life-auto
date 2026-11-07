@@ -21036,3 +21036,36 @@ The owner (11-06): the forklift job said "get in car". `shared/vehicles.js` `veh
 game's words (the job's "YOUR ..." plate, the company taking it back); anything not in its list fell back to "car" or
 "truck". Added: forklift, golf cart, tank, cement mixer, armored van, moving van, ice cream van, SWAT truck, SUV and
 4x4. test/jobrecall.test.js checks the forklift and the golf cart.
+
+## 2026-11-06 - A helicopter's rotor wash only near the surface
+The owner (11-06, Pixel 7 Pro): "Helicopters still affect water below at really high distances, should only be happening
+when closer to the water or ground" - rings and splashes on the water under the helicopter at ALT 31 m, the ceiling.
+- **The cause** wasn't the rotor wash (`waterlife.js` already stopped it at 150 px): `client/main.js` `vehSinking` took
+  any vehicle that isn't a boat over a water tile for a land vehicle sinking in it, so an aircraft at any height threw
+  splashes at its ground point every frame (and the classic view darkened it as if it sank). An aircraft now sinks only
+  when it's down on the water (`AIR_UP`, 6 px - `FLY.AIRBORNE`), a floatplane never; up in the air it splashes no rain
+  puddles either (`render/weather.js` `splashes`, `v._up`). The grass bent round you (`host.js` `_push`) had no height
+  either: a helicopter bent it round its rotor at 31 m.
+- **The numbers** (`shared/rules-page.js`, re-exported by `rules.js`; not `constants.js`, which is part of the art's hash):
+  `ROTOR_WASH` full within 48 px of the surface (1.5 m, the skids just off it), a smoothstep down to nothing at 256 px (8 m,
+  about 1.5 rotor spans - the Skylark's rotor is 152 px across; a real downwash dies away within one to two). `washK`
+  drives the rings and spray on the water (`waterlife.js`, was a power curve to 150 px) and the grass, bent round the
+  rotor (1.3 x its radius) low down, not at all from 8 m up. A plane bends the grass only on the ground (its propeller).
+- Tests: `test/rotorwash.test.js` (wash vs altitude, the grass push for a helicopter low, mid and high, a plane, a car;
+  vehSinking and the puddles), waterlife, flight.
+
+## 2026-11-06 - The game's numbers no longer re-key World v3's whole art
+Found while answering the owner's "the world is still loading slowly ... while flying" (below): World v3's art key
+(`art3`, what the server's art CDN and every browser keep chunks under) is the art's hash of `world3`, a hash of the v3
+build's code - and that code reaches `shared/rules.js` and its `rules-*.js` (the starter cars' spots, the car soccer
+arena, a barrier's strength). So every change to a price or a timer re-keyed the whole v3 art: the server started baking
+all 45,864 chunks again (about five hours on the live server's two threads) and every page threw its kept chunks away.
+On 11-06 art3 changed eight times on main; four of those commits touched no world or art code at all (rules.js alone, or
+with guide.js / vehicles.js: 09:07, 15:15, 19:35 and 20:33 - the last half an hour before the owner flew over a desert of
+stand-ins). `tools/stamp-version.mjs` now hashes the rules' files by the values the build and the bake read from them
+(`rulesValues`: each `import { A } from './rules...'` / `export { A } from` in their code, its value; a rules file reached
+any other way still counts whole), for `world3` and for `art`/`art3` (`rules-base.js` reaches the bake: `BARRIER_BREAK_SPEED`,
+`CELL_CAP`). Today the values are STARTER, CARSOCCER, HORSE, BARRIER_BREAK_SPEED and CELL_CAP. The new formula moves
+`art`, `world3` and `art3` once (this deploy: one more full rebake); after that a price or a timer leaves them be.
+test/world3keys.test.js: a new number in rules.js and a comment in rules-base.js leave both keys; a value the build reads
+moves both.

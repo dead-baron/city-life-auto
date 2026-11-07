@@ -180,6 +180,7 @@ export const PATROL_SEARCH_S = [6, 14];      // how long you look around before 
 // Combat balance
 export const NPC_GUN_MULT = 6;          // gun damage vs NPCs and police (1-2 shots most people, ~3 for SWAT / brutes)
 export const NPC_GRIT = [[0.75, 30], [1, 45], [1.6, 17], [2.5, 8]]; // [how much more a bullet takes to drop them, % of people]: some go down at the first shot, a few take three or four
+export { ROTOR_WASH, AIR_UP, washK } from './rules-page.js';   // a helicopter's rotor wash: only near the surface (11-06)
 export { NPC_CRITICAL } from './rules-page.js';   // below this share of health people bleed; NPCs stop fighting and limp off
 export const LIMP_SPEED = 0.35;         // a critically hurt NPC limps along at this fraction of walking pace
 export const SHOTGUN_CLOSE_PX = 130;     // a shotgun blast (3+ pellets in) closer than this hits harder the closer it is and throws people off their feet...

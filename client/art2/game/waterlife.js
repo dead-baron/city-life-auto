@@ -23,6 +23,7 @@
 // they do from what's about them; nothing of it is sent or kept. update() is the simulation, draw() puts it on the
 // frame (the test harness runs them without the rest of the renderer); frame() is the renderer's glue.
 import { TILE, T, PF, VF } from '../../../shared/constants.js';
+import { ROTOR_WASH, washK } from '../../../shared/rules-page.js';
 import { DISTRICTS } from '../../../shared/mapcore.js';
 import { PH, nibbles } from '../../../shared/fish.js';
 import { wind } from '../../render/flora/wind.js';
@@ -125,9 +126,9 @@ function wcls(m, x, y) {
   if (t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE) return 0;
   return m.lake && m.lake[i] ? (m.lake[i] === 2 ? 3 : 2) : m.river && m.river[i] ? 4 : 1;
 }
-// a helicopter's downwash on the water: none above WASH_H px, full at the surface (k 0..1)
-export const WASH_H = 150;
-export const washK = (alt) => (alt >= WASH_H ? 0 : Math.pow(1 - Math.max(0, alt) / WASH_H, 1.5));
+// a helicopter's downwash on the water: full low down, none from WASH_H px up (k 0..1: shared/constants.js ROTOR_WASH)
+export const WASH_H = ROTOR_WASH.TOP;
+export { washK };
 // (x, y) and r px round it all the same water
 const clearAt = (m, x, y, c, r) => wcls(m, x, y) === c && wcls(m, x + r, y) === c && wcls(m, x - r, y) === c && wcls(m, x, y + r) === c && wcls(m, x, y - r) === c;
 

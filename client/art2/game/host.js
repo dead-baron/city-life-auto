@@ -29,6 +29,7 @@ import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
+import { AIR_UP, washK } from '../../../shared/rules-page.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -1320,7 +1321,9 @@ export class World2 {
   _push(F, sp) {
     const P = this.pushA || (this.pushA = new Float32Array(16)), S = this.S, v = S.pred && S.pred.kind === 'veh' ? S.pred.def : null;
     P.fill(0);
-    P[0] = sp.x; P[1] = sp.y - 4; P[2] = v ? Math.min(64, (v.W || 40) * 0.5 + 16) : 22; P[3] = v ? 5 : 4;
+    // (flying: a helicopter bends the grass round its rotor only low down - rules-page.js washK; a plane on the ground only)
+    const a = v && v.kind === 'air' ? S.pred.s.alt || 0 : -1, k = a < 0 ? 1 : v.rotor ? washK(a) : a > AIR_UP ? 0 : 1;
+    P[0] = sp.x; P[1] = sp.y - 4; P[2] = k < 0.02 ? 0 : v ? (a >= 0 && v.rotor ? v.rotor * 1.3 : Math.min(64, (v.W || 40) * 0.5 + 16)) : 22; P[3] = v ? 5 * k : 4;
     let n = 1;
     for (const p of F.peds || []) {
       if (n >= 4) break;

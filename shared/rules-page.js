@@ -3,6 +3,19 @@
 // skills.js): kept out of shared/rules.js so the page doesn't download all of it (30 KB gzipped, 2026-10-26).
 // shared/rules.js re-exports every one, so it stays the one place to import game numbers from; each keeps its note
 // there too.
+// A helicopter's rotor wash on what's under it - the rings and spray on water, the grass bent flat (the owner, 11-06: "should
+// only be happening when closer to the water or ground"): full with the skids within FULL px of the surface (1.5 m), easing
+// off (a smoothstep) to nothing at TOP px (8 m - about one and a half rotor spans: the Skylark's rotor is 152 px across, and
+// a real helicopter's downwash dies away within one to two). The ceiling is 1,000 px (31 m). A plane: only on the ground (its
+// propeller's blast) - nothing once it's AIR_UP px up (shared/flight.js FLY.AIRBORNE).
+export const ROTOR_WASH = { FULL: 48, TOP: 256 }, AIR_UP = 6;
+export function washK(above) {
+  const a = above > 0 ? above : 0;
+  if (a <= ROTOR_WASH.FULL) return 1;
+  if (a >= ROTOR_WASH.TOP) return 0;
+  const t = (ROTOR_WASH.TOP - a) / (ROTOR_WASH.TOP - ROTOR_WASH.FULL);
+  return t * t * (3 - 2 * t);
+}
 export const NPC_CRITICAL = 0.3;        // below this share of health people bleed; NPCs stop fighting and limp off
 export const TANKER_BLAST = { r: 330, dmg: 160 };
 export const EXPLOSIVES_BLAST = { r: 200, dmg: 110, per: 30, max: 410 };   // a crate, + per crate

@@ -44,7 +44,7 @@ import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } 
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
-import { NPC_CRITICAL } from '../shared/rules-page.js';
+import { NPC_CRITICAL, AIR_UP } from '../shared/rules-page.js';
 import { bonusOf } from '../shared/skills.js';
 import { cleanName } from '../shared/names.js';   // (Settings: your name - the server checks it too)
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
@@ -4312,7 +4312,9 @@ function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED
 // draws it): sinking in the water, leaning on corners, smoke, fire, skid marks, a boat's wake, the
 // siren and the horn.
 const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
-const vehSinking = (v, def) => def.kind !== 'boat' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+// (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
+// under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
+const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
