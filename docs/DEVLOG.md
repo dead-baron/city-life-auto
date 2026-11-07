@@ -21162,6 +21162,12 @@ didn't need a rebake (today's `world` is unchanged; worldmap passes).
 **Performance** (tools/perf.mjs): page 84 files / 513 KB (was 513), city 366, renderer 404 (unchanged - no renderer
 code), bake 973. No budget raised.
 
+**The car to steal's plate** says UNLOCKED, not YOUR CAR (it isn't yours until you take it): the job marker's plate takes
+an optional word from the server (`me.job.veh[3]`; client/main.js drawJobTruck, one line - page 513 KB, unchanged).
+
+**The capture** (phone upright 411 x 891 @2.6, the hustle picked): stepping off as the doors open, the board once the
+train has gone, the lane and its shops, Park West Motors with its beaters priced on the lot, the alley's car.
+
 **Not done / for the owner**: the yards at Northshore and Red Rock are 80-90 tiles' walk off their platforms (the nearest
 open ground fronting a road); a hand-placed spot would bring them closer. The used lots' display cars are the server's
 dealer-lot stock (dealer.js), restocked a minute after one sells; the menu always has more, so nobody waits.
