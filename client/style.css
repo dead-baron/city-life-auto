@@ -1134,7 +1134,9 @@ body.portrait .arr-door b { left: 18%; right: 18%; top: 22%; bottom: 36%; }
 #ftue-line.in { animation: prpop var(--t-pop) var(--ease); }
 #ftue-line.off { display: none; }
 #ftue-line.faded { opacity: 0; transform: translateY(6px); pointer-events: none; }
-#ftue-line.tip { border-color: var(--info); padding-left: 14px; }
+#ftue-line.tip { position: relative; z-index: 6; border-color: var(--info); padding-left: 14px; padding-right: 6px; cursor: pointer; touch-action: manipulation; }   /* (over the touch layer's move-stick zone while it's up, like #job: a tap opens the Guide - client/ftue.js) */
+#ftue-line .fl-x { flex: none; width: 32px; height: 32px; margin-left: -4px; padding: 0; border: 0; background: transparent; color: var(--cream); opacity: .7; font: 700 var(--fs-4) var(--ui); line-height: 1; cursor: pointer; }
+.touch #ftue-line .fl-x { width: 36px; height: var(--tap); }
 #ftue-line > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
 #ftue-line > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
 #ftue-line .fl-more { flex: none; min-height: 32px; padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--info); background: transparent; color: var(--info); font: 700 var(--fs-2) var(--ui); cursor: pointer; }

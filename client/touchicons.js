@@ -298,6 +298,7 @@ const LU = {
   'train-front': 'M8 3.1V7a4 4 0 0 0 8 0V3.1M9 15l-1-1M15 15l1-1M9 19c-2.8 0-5-2.2-5-5v-4a8 8 0 0 1 16 0v4c0 2.8-2.2 5-5 5ZM8 19l-2 3M16 19l2 3',
   package: 'M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73zM12 22V12M3.29 7L12 12L20.71 7M7.5 4.27l9 5.15',
   'package-check': 'M12 22V12M16 17l2 2 4-4M21 11.127V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.729l7 4a2 2 0 0 0 2 .001l1.32-.753M3.29 7 12 12l8.71-5M7.5 4.27l8.997 5.148',
+  house: 'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
   coins: 'M13.744 17.736a6 6 0 1 1-7.48-7.48M15 6h1v4M6.134 14.768l.866-.5 2 3.464M10 8a6 6 0 1 0 12 0a6 6 0 1 0-12 0',
   landmark: 'M10 18v-7M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949zM14 18v-7M18 18v-7M3 22h18M6 18v-7',
   banknote: 'M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2zM10 12a2 2 0 1 0 4 0a2 2 0 1 0-4 0M6 12h.01M18 12h.01',
@@ -382,6 +383,7 @@ export const ACT_KINDS = [
   ['bank', 'landmark', /^(deposit|withdraw|use atm|ironvault|.*\bvault\b)/],
   ['rob', 'banknote', /^(rob|empty the till|take the cash|swipe the tips|hold up|run the product|snatch)/],
   ['unlock', 'lock-open', /^(crack|unlock|hold to unlock|lift the manhole|break (in|open)|pick the lock|open the old|the drill)/],
+  ['home', 'house', /^look around .+ - for sale\b|^.+ - for sale, \$/],   // (a home for sale's door: economy.js prompt, homeinside.js - a house, not coins: the owner's 11-06 screenshot)
   ['buy', 'coins', /^(buy|sell|pay|rent|shop|fence|deal|trade|order|bring a customer|stake|.+ for sale)/],
   ['revive', 'heart-pulse', /^(revive|hold to (revive|help)|help|hold: treat|treat|full treatment|pulling someone|heal)/],
   ['rest', 'bed', /^(rest|sleep|wake up|lay down|go to bed|nap)/],

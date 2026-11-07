@@ -11,7 +11,8 @@
 //      glyph for the device in hand - shared/controls.js): walk to your car (move), get in and drive there (vehicle),
 //      do the thing (action). It rides the HUD's job card and the job's way-finding (players.js buildMe: me.job), the
 //      step's line in me.ftue. Done: a small reward (FTUE.reward, xp for driving) and the big moment.
-// Then the first-time moments (once each, ever, while tips are on): the first wanted star, the first time knocked down,
+// Then the first-time moments (once each, ever - the hurt one at most FTUE.hurtMax times - while tips are on, and only
+// while the character is new: FTUE.tipsPlayH hours played, FTUE.tipsDays days after the FTUE ended): the first wanted star, the first time knocked down,
 // the first shop, the first stop for transit, the first night, the first time hurt - one fading line each with "More in
 // your Guide" (the page's Guide app: shared/guide.js). The Guide replays it all: "Replay the arrival" runs the arrival,
 // the question and a first goal again from where you stand; "Show tips again" clears the moments.
@@ -22,7 +23,9 @@
 // ftue_step1..3 (reached), ftue_done, ftue_skip, moment_<id>, guide_open.
 //   profile.ftue: { st: 'new' | 'arrive' | 'ask' | 'goal' | 'done', stn (the arrival station's poi), ans, step,
 //                   goal { k, x, y, name, poi? }, how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
-//                   tips (0: off), replay (1: the Guide's replay - no move to the station) }
+//                   tips (0: off - Settings), replay (1: the Guide's replay - no move to the station), pt (seconds played
+//                   since the record began), hn (the hurt line's showings), again (1: the Guide's "Show tips again" - the
+//                   new-character window no longer applies) }
 import { FTUE } from '../../shared/rules.js';
 import { PED_BLOCK } from '../../shared/mapcore.js';
 import { ITEMS } from '../../shared/items.js';
@@ -34,6 +37,7 @@ import * as fishing from './fishing.js';
 import * as mailjob from './mailjob.js';
 import * as skills from './skills.js';
 import * as transit from './transit.js';
+import * as ferries from './ferries.js';
 
 export const ASK_POI = -31;   // (the question's menu: not a place's - economy.js handleMenu asks onMenu first)
 export const ANSWERS = [
@@ -269,6 +273,7 @@ function complete(world, p) {
 //   arrived   the arrival's scene played to its end (on to the question)
 //   replay    the Guide's "Replay the arrival": from where you stand, the question and a first goal again
 //   tips      the Guide's "Show tips again": the first-time moments from the start
+//   tipset    Settings' "First-time tips" ({ on }): on or off
 //   guide     the Guide app opened (analytics)
 export function handle(world, p, msg) {
   const f = rec(p.profile), a = String(msg.a || '');
@@ -286,7 +291,8 @@ export function handle(world, p, msg) {
     arrive(world, p, true);
     return;
   }
-  if (a === 'tips') { f.m = {}; f.tips = 1; p.ftueTipAt = world.time - FTUE.tipGapS + 3; store.touch(); world.notify(p, 'Tips are back on: a line the first time you meet each thing.', 'info'); return; }
+  if (a === 'tips') { f.m = {}; f.hn = 0; f.tips = 1; f.again = 1; p.ftueTipAt = world.time - FTUE.tipGapS + 3; store.touch(); p.meDirty = true; world.notify(p, 'Tips are back on: a line the first time you meet each thing.', 'info'); return; }
+  if (a === 'tipset') { f.tips = msg.on ? 1 : 0; store.touch(); p.meDirty = true; return; }   // (Settings: First-time tips on or off - nothing shown is forgotten)
   if (a === 'guide') { if (!p.guideSaid) { p.guideSaid = 1; track(world, p, 'guide_open'); } }
 }
 // the question's menu (economy.js handleMenu): an answer, or closed without one (skipped)
@@ -298,6 +304,12 @@ export function onMenu(world, p, poiId, optId) {
   else answer(world, p, String(optId));
   return true;
 }
+// The shop moment's places: a counter whose lines are things to buy (shared/items.js SHOPS' kinds, and the walk-in shops'
+// counters - economy.js walkCounter). Not a home for sale, a car or boat dealer, the garage, a charter, the farm co-op,
+// the grocery (it buys), the hospital, the bank, the police...: those menus have prices too, but "pick a line to buy it"
+// isn't what they're about (the owner's 11-06 screenshot: the shop line at a house for sale's door).
+export const SHOP_KINDS = new Set(['gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'convenience', 'gasstation', 'club', 'vending', 'pawn', 'fence', 'tackle', 'fishmarket', 'smuggler', 'clothing', 'winery', 'fruitstand', 'market', 'snack', 'roadhouse', 'clubhouse', 'farmstand', 'lodge', 'huntcamp', 'trapper', 'butcher', 'assay', 'cinema']);
+export const isShop = (poi) => !!poi && !poi.casino && !poi.bath && !poi.arcade && poi.store !== 'arcade' && (SHOP_KINDS.has(poi.kind) || (poi.kind === 'delivery' && !!poi.walk));
 // a place's menu opened (economy.js openMenu): the hustle's contact talked to; the first shop
 export function menuOpened(world, p, poi, menu) {
   const f = rec(p.profile);
@@ -305,7 +317,7 @@ export function menuOpened(world, p, poi, menu) {
     if (f.goal.k !== 'courier') complete(world, p);   // (the courier's is its contract taken: update)
     return;
   }
-  if (menu && menu.opts && menu.opts.some((o) => o.price > 0)) moment(world, p, 'shop');
+  if (isShop(poi) && menu && menu.opts && menu.opts.some((o) => o.price > 0)) moment(world, p, 'shop');
 }
 
 // ---- the first-time moments --------------------------------------------------------------------------------------------
@@ -313,23 +325,31 @@ export function menuOpened(world, p, poi, menu) {
 // while you're down or dead (the owner's 11-06 screenshot: "Hurt? ... a bandage" over YOU'RE DOWN) - only 'down' itself,
 // which is about that screen - nor FTUE.wakeS after you're back up (the wake-up screen): held till then (downs). Returns
 // whether it fired.
+// Only while the character is new (the owner, 11-06: "only new players, eventually these tip popups should stop"): none
+// after FTUE.tipsPlayH hours played, nor FTUE.tipsDays days after the FTUE ended - unless the Guide's "Show tips again"
+// asked for them (f.again).
+export const tipsNew = (f) => !!f && (!!f.again || ((f.pt || 0) < FTUE.tipsPlayH * 3600 && !(f.at && f.at.done && Date.now() - f.at.done > FTUE.tipsDays * 86400e3)));
 export function moment(world, p, id) {
   const f = rec(p.profile), M = MOMENTS[id];
-  if (!f || !M || active(f) || !f.tips || (f.m && f.m[id]) || !p.conn) return false;
+  if (!f || !M || active(f) || !f.tips || (f.m && f.m[id]) || !p.conn || !tipsNew(f)) return false;
+  if (id === 'hurt' && (f.hn || 0) >= FTUE.hurtMax) return false;   // (un-marked when you go down right after it: downs - twice at most)
   if (world.time - (p.ftueTipAt ?? -1e9) < FTUE.tipGapS) return false;
   if (id !== 'down' && (!p.ped || p.ped.dead || world.time - (p.ftueUpAt ?? -1e9) < FTUE.wakeS)) return false;
   (f.m ||= {})[id] = 1;
+  if (id === 'hurt') f.hn = (f.hn || 0) + 1;
   p.ftueTipAt = world.time; p.ftueTipId = id;
   send(p, { t: 'ftue', a: 'tip', id, text: M.text, ctl: M.ctl || null, sec: M.sec });
   track(world, p, `moment_${id}`);
   store.touch();
   return true;
 }
-const NEAR_TRANSIT = (world, ped) => {
+// (a bus stop, a station, a ferry in at its pier - not a marina: that's the boat dealer's)
+const NEAR_TRANSIT = (world, p) => {
+  const ped = p.ped;
   if (transit.stopNote(world, { ped })) return true;
   const R = FTUE.transitR;
-  for (const q of world.map.pois) if ((q.kind === 'station' || q.kind === 'marina') && Math.abs(q.x - ped.x) < R && Math.abs(q.y - ped.y) < R) return true;
-  return false;
+  for (const q of world.map.pois) if (q.kind === 'station' && Math.abs(q.x - ped.x) < R && Math.abs(q.y - ped.y) < R) return true;
+  return !!ferries.interaction(world, p);
 };
 // Down and back up (each half second, whatever the FTUE's state): the moment you're back up starts the wake-up gap; going
 // down while the hurt line is still up drops it (the page hides it: client/ftue.js) - it's taught again the next time
@@ -339,18 +359,18 @@ function downs(world, p) {
   if (ped.dead) {
     if (p.ftueDown) return;
     p.ftueDown = true;
-    if (f && f.m && f.m.hurt && p.ftueTipId === 'hurt' && world.time - (p.ftueTipAt ?? -1e9) < FTUE.lineS + 1) { delete f.m.hurt; p.ftueTipId = null; }
+    if (f && f.m && f.m.hurt && p.ftueTipId === 'hurt' && (f.hn || 0) < FTUE.hurtMax && world.time - (p.ftueTipAt ?? -1e9) < FTUE.lineS + 1) { delete f.m.hurt; p.ftueTipId = null; store.touch(); }
   } else if (p.ftueDown) { p.ftueDown = false; p.ftueUpAt = world.time; }
 }
 function moments(world, p) {
   const f = rec(p.profile), ped = p.ped;
-  if (!f || !f.tips || active(f) || !ped) return;
+  if (!f || !f.tips || active(f) || !ped || !tipsNew(f)) return;
   const has = (k) => f.m && f.m[k];
   if (!has('down') && ped.dead) { moment(world, p, 'down'); return; }
   if (ped.dead) return;
   if (!has('wanted') && p.wanted > 0) { moment(world, p, 'wanted'); return; }
   if (!has('hurt') && ped.hp < ped.maxHp * FTUE.hurtAt) { moment(world, p, 'hurt'); return; }
-  if (!has('transit') && (ped.onTrain || (ped.vehId && world.get(ped.vehId)?.bus) || (!ped.vehId && NEAR_TRANSIT(world, ped)))) { moment(world, p, 'transit'); return; }
+  if (!has('transit') && (ped.onTrain || (ped.vehId && ped.seat > 0 && world.get(ped.vehId)?.bus) || (!ped.vehId && NEAR_TRANSIT(world, p)))) { moment(world, p, 'transit'); return; }   // (a bus's passenger: not its driver)
   if (!has('night') && world.clock.isNight && !ped.interior && !ped.hidden && !ped.ug) moment(world, p, 'night');
 }
 
@@ -360,6 +380,7 @@ export function update(world) {
   for (const p of world.players.values()) {
     const f = rec(p.profile), ped = p.ped;
     if (!f || !p.conn || !ped) continue;
+    f.pt = (f.pt || 0) + 0.5;   // (time played: the tips' new-character window - saved with the profile's next write)
     downs(world, p);
     if (f.st === 'done') { moments(world, p); continue; }
     if (ped.dead) continue;
@@ -389,3 +410,4 @@ const jobDone = (p, g) => !!p.job && (g.k === 'mail' || g.k === 'courier') && (p
 // (dev and tests: the record as it stands)
 export const recordOf = (p) => rec(p.profile);
 export const isActive = (p) => active(rec(p.profile));
+export const tipsOn = (p) => !!(rec(p.profile) && rec(p.profile).tips);

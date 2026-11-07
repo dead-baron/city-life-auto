@@ -34,7 +34,7 @@ test('the prompt\'s words, as the server writes them, give the kind', () => {
     'Talk to the bartender': 'talk', 'Ask Rico for work': 'talk',
     'Get in the Taxi': 'getin', 'Drive out in the cruiser': 'getin', 'Board the ferry': 'boat', 'Board the train': 'transit', 'Hail the taxi': 'hail',
     'Pick up the crate': 'pickup', 'Take the materials': 'pickup', 'Set crate down': 'drop', 'Load onto Pickup': 'drop', 'Stash 3 Apples': 'drop',
-    'Shop at the counter - Corner Mart': 'buy', 'Buy Coffee ($4)': 'buy', 'Sell the catch': 'buy', 'Deposit cash ($120)': 'bank', 'Use ATM': 'bank',
+    'Shop at the counter - Corner Mart': 'buy', 'Buy Coffee ($4)': 'buy', 'Sell the catch': 'buy', 'Look around Maple Cottage - for sale, $42,000': 'home', 'Unit 3B - for sale, $28,000: look around or buy': 'home', 'Deposit cash ($120)': 'bank', 'Use ATM': 'bank',
     'Empty the till': 'rob', 'Crack the strongbox': 'unlock', 'Cuff Suspect': 'arrest', 'Make a break for it!': 'run',
     'Hold to revive Sam': 'revive', 'Rest (full health, saves)': 'rest', 'Sit on the bench': 'sit', 'Cook a meal': 'eat', 'Take a shower': 'wash',
     'Repair body damage ($200)': 'repair', 'Play chess with Ann': 'play', 'Blackjack': 'casino', 'Climb the ladder': 'climb', 'Read the plaque': 'look',

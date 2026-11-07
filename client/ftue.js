@@ -24,7 +24,15 @@ export function init(ctx) {
   C = ctx;
   $('arrival').addEventListener('pointerdown', (e) => { if (A && !e.target.closest('#arr-skip')) { e.preventDefault(); end(true); } });
   $('arr-skip').onclick = () => end(true);
-  $('ftue-line').addEventListener('click', (e) => { const b = e.target.closest('[data-guide]'); if (b) { C.openGuide(b.dataset.guide); hideLine(); } });
+  // a tip: a tap anywhere on it opens the phone's Guide at its section; its x puts it away (on touch it sits over the
+  // move stick's zone while it's up - style.css #ftue-line.tip - and goes back under it as it fades)
+  $('ftue-line').addEventListener('click', (e) => {
+    const el = $('ftue-line');
+    if (el.classList.contains('faded')) return;
+    if (e.target.closest('.fl-x')) { hideLine(); return; }
+    const sec = el.dataset.guide;
+    if (sec && el.classList.contains('tip')) { C.openGuide(sec); hideLine(); }
+  });
 }
 
 // ---- the server's messages: { t: 'ftue', a: 'arrive' | 'end' | 'tip' } ------------------------------------------------
@@ -55,21 +63,22 @@ function heldTick() {
 }
 // the self record: the step's line when the step changes; a tip on screen goes as you go down
 export function onMe(me) {
-  if (me.dead && lineSig.startsWith('tip:') && lineSig !== 'tip:down') { hideLine(); lineSig = ''; }
+  if (((me.dead && lineSig !== 'tip:down') || me.tips === 0) && lineSig.startsWith('tip:')) { hideLine(); lineSig = ''; }   // (down, or tips turned off in Settings)
   if (held && me.dead) held.down = true;
   const f = me.ftue;
-  if (!f || f.st !== 'goal') { if (lineSig.startsWith('step:')) hideLine(); lineSig = f ? lineSig : ''; return; }
+  if (!f || f.st !== 'goal') { if (lineSig.startsWith('step:')) hideLine(); lineSig = f || lineSig.startsWith('tip:') ? lineSig : ''; return; }   // (a tip's sig kept: it goes as you go down)
   const sig = `step:${f.step}:${f.line}`;
   if (sig === lineSig) return;
   showLine(f.ctl, f.line, null, sig);
 }
 
-// ---- the line: [glyph] words (· More in your Guide), then it fades ----------------------------------------------------
+// ---- the line: [glyph] words (· More in your Guide · x), then it fades ----------------------------------------------------
 function showLine(ctl, text, sec, sig) {
   const el = $('ftue-line');
   if (!el) return;
   lineSig = sig;
-  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? `<button class="fl-more" data-guide="${esc(sec)}">More in your Guide</button>` : ''}`;
+  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? '<button class="fl-more">More in your Guide</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : ''}`;
+  if (sec) el.dataset.guide = sec; else delete el.dataset.guide;
   el.classList.remove('off', 'faded');
   el.classList.toggle('tip', !!sec);
   void el.offsetWidth;
