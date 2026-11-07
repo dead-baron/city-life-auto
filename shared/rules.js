@@ -81,12 +81,13 @@ export const BREAKOUT_IMPACT = 380;    // a crash at least this hard (closing sp
 export const DELIVER_BONUS = 0.5;      // an officer who drives the prisoner in themselves earns this much more again
 // The owner's note of 11-07: "make it a bit harder to get arrested and have cops be more lenient building up to a 1 star
 // ... wait for 4 to 5 star wanted levels before the cops get better".
-// Leniency before the first star (law.js charge): with no stars, a crime people see that isn't a felony (a theft, an
-// assault, a hit and run, a carjacking) goes on a tally rather than being a star - `star` of its heat makes the first star,
-// and until then you're told the police have your description. An officer who sees it counts it `cop` times over; the
-// tally fades `fade` a second once `holdS` go by without another. So one theft is a warning and the third in a while a
-// star; one assault a warning, the second a star (or one in front of an officer). Felonies (murder, hitting or killing
-// an officer, a robbery, an escape) are stars at once, as ever; small crimes have their own count (SUSPICION_*).
+// Leniency before the first star (law.js tallied): with no stars, a lesser crime people see (a vehicle stolen, a hit and
+// run, a carjacking, shots fired - not a felony, not an assault) goes on a tally rather than being a star: `star` of its
+// heat makes the first star, and until then you're told the police have your description. An officer who sees it counts
+// it `cop` times over; the tally fades `fade` a second once `holdS` go by without another. So a car stolen is a warning
+// and the third in a while a star (the second in front of an officer); a carjacking a warning, the second a star. Felonies
+// (murder, hitting or killing an officer, a robbery, an escape) and assaults are stars at once, as ever; small crimes
+// (a punch, a bike lifted) have their own count (SUSPICION_*).
 export const LENIENCY = { star: 24, cop: 2, holdS: 45, fade: 0.4 };
 // The police by your stars (police.js, struggle.js, custody.js, law.js): sharp at 4-5 as they've always been, worse at
 // 1-3. drive: their top speed in a chase (x 720 px/s after a car, 520 on the roads); react: how stale (s) the spot they

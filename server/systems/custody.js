@@ -467,7 +467,8 @@ const loose = (c) => c.stage === 'held' || c.stage === 'fetch' || c.stage === 'e
 // in the back of an NPC unit's car while it crawls or stands (at the lights, in a jam): a kick at the door (BREAK_CAR)
 function carTry(world, p) {
   const c = p.custody, v = live(world, c.car);
-  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && Math.hypot(v.vx, v.vy) < BREAK_CAR.speed;
+  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && Math.hypot(v.vx, v.vy) < BREAK_CAR.speed
+    && police.crewOf(world, v).every((q) => q.vehId === v.id);   // (the crew all aboard: off on the way, not still climbing in)
 }
 function canTry(world, p) {
   const c = p.custody, h = live(world, c.holder);

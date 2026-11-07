@@ -26,7 +26,7 @@ const EDGE_I = { d: 0, nx: 0, ny: 0 };
 // passers-by see of it adds up to a star, one an officer sees is a star at once (smallCrime, task #405)
 export const CRIMES = {
   punch:       { heat: 15, label: 'Assault', sev: 1, minor: true },   // (bare fists: a punch, a shove - onDamage; a weapon's is an assault)
-  assault:     { heat: 15, label: 'Assault', sev: 1 },
+  assault:     { heat: 15, label: 'Assault', sev: 1, now: true },   // (with a weapon: a star at once - LENIENCY's tally is for the lesser ones)
   copAssault:  { heat: 40, label: 'Assaulting an officer', felony: true, sev: 1.3 },
   murder:      { heat: 45, label: 'Murder', felony: true, sev: 1.5 },
   copMurder:   { heat: 90, label: 'Killing an officer', felony: true, sev: 2 },
@@ -305,7 +305,8 @@ function smallCrime(world, p, type, x, y, w) {
   return true;
 }
 // ---- before the first star (rules.js LENIENCY; the owner, 11-07: "have cops be more lenient building up to a 1 star")
-// With no stars, a crime people see that isn't a felony (nor striking an officer: CRIMES now) goes on a tally of its heat,
+// With no stars, a crime people see that isn't a felony (nor an assault, nor striking an officer: CRIMES now) - a vehicle
+// stolen, a hit and run, a carjacking, shots fired - goes on a tally of its heat,
 // an officer's sighting counting LENIENCY.cop times; LENIENCY.star of it is the first star (the usual chase), and till
 // then a warning. The tally fades LENIENCY.fade a second once LENIENCY.holdS go by without another.
 const lenient = (p, spec) => !spec.felony && !spec.now && !(p.wanted > 0);

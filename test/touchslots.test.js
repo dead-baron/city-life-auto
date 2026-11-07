@@ -46,9 +46,16 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
     assert.deepEqual(touchSlots({ ...f, fish: true, prompt: true }).slots, { act: { a: 'action', label: 'ACT' } }, JSON.stringify(f));
   }
   assert.equal(touchState({ home: true, fish: true }), 'home');
-  // the aim stick and FIRE ON beside it in every state but at home and fishing
+  // held by the police: FIRE while an officer's going for the cuffs, ACT while there's a break for it to make - on foot
+  // or in the back of the car, whatever else you have
+  for (const f of [{}, { armed: true, items: true, wpn: true }, { inVeh: true, prompt: false }]) {
+    assert.equal(touchState({ ...f, custody: true }), 'custody', JSON.stringify(f));
+    assert.deepEqual(acts({ ...f, custody: true, fight: true }), { fire: 'fire:HIT' }, 'fighting them off');
+    assert.deepEqual(acts({ ...f, custody: true, prompt: true }), { act: 'action:ACT' }, 'cuffed, a break for it to make');
+  }
+  // the aim stick and FIRE ON beside it in every state but at home, fishing and held by the police
   for (const [state, slots] of Object.entries(TOUCH_STATES)) {
-    const none = state === 'home' || state === 'fish';
+    const none = state === 'home' || state === 'fish' || state === 'custody';
     assert.equal(!!slots.stick, !none, `${state}: the aim stick`);
     assert.equal(slots.u4 && slots.u4[0], none ? undefined : 'firetog', `${state}: FIRE ON with it`);
   }

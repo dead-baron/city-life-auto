@@ -1,5 +1,7 @@
 // Prison Island (the owner, 10-05: "sentenced after many arrests, about 5 min max, breakouts" - server/systems/prison.js):
-// booked at four stars or more, or for the third time in a while, it's a sentence at Kestrel Bay Penitentiary - no bail,
+// booked at five stars with a long record (the owner, 11-07: "Prison should be saved for very very high criminal ratings
+// with 5 stars and long arrest records (or for admins to put misbehaving players in)"), it's a sentence at Kestrel Bay
+// Penitentiary - no bail,
 // up to five minutes inside its walls, the gate shut to prisoners, nobody hurt in there. Served, the Prison Boat brings
 // you back to the mainland; or climb the outer wall and you're out - three stars, and an island to get off.
 import { test } from 'node:test';
@@ -19,24 +21,32 @@ import { IN } from '../shared/input.js';
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const inside = (x, y) => { const c = M.prison.compound; return x > c.tx * TILE && x < (c.tx + c.tw) * TILE && y > c.ty * TILE && y < (c.ty + c.th) * TILE; };
 
-test('who goes to Prison Island: four stars, or the third booking in a while; capped at five minutes', () => {
+test('who goes to Prison Island: five stars with a long record, nobody else; capped at five minutes', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const { p } = joinPlayer(w);
-  p.profile.arrests = [];
+  p.profile.arrests = []; p.profile.bookings = 0; p.profile.criminalExp = 0;
   assert.equal(prison.sentenceFor(w, p, 2), 0, 'a first booking at two stars: the cells');
-  assert.ok(prison.sentenceFor(w, p, 4) > 0, 'four stars: prison');
+  assert.equal(prison.sentenceFor(w, p, 4), 0, 'four stars: the cells (it was prison before 11-07)');
+  assert.equal(prison.sentenceFor(w, p, 5), 0, 'five stars, a clean record: the cells');
   prison.noteArrest(p); prison.noteArrest(p);
-  assert.ok(prison.sentenceFor(w, p, 1) > 0, 'the third time: prison');
+  assert.equal(prison.sentenceFor(w, p, 3), 0, 'the third time in a while at three stars: the cells (it was prison)');
+  while (prison.record(p) < PRISON.record) prison.noteArrest(p);
+  assert.equal(prison.sentenceFor(w, p, 4), 0, 'a long record at four stars: the cells');
+  assert.ok(prison.sentenceFor(w, p, 5) > 0, `five stars and ${PRISON.record} bookings before: prison`);
+  const { p: q } = joinPlayer(w);
+  q.profile.arrests = []; q.profile.bookings = 0; q.profile.criminalExp = PRISON.rating;
+  assert.ok(prison.sentenceFor(w, q, 5) > 0 && prison.sentenceFor(w, q, 4) === 0, 'or five stars and a high criminal rating');
   for (let i = 0; i < 6; i++) prison.noteArrest(p);
   assert.ok(prison.sentenceFor(w, p, 5) <= PRISON.max && PRISON.max <= 300, 'five minutes at most');
+  assert.equal(prison.record(p), PRISON.record + 6, 'the record counts every booking (not only the last few kept)');
 });
 
-test('booked at four stars: inside the walls, weapons away, nobody hurt, the gate shut to you; served, back on the mainland', () => {
+test('booked at five stars with a long record: inside the walls, weapons away, nobody hurt, the gate shut to you; served, back on the mainland', () => {
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   const { p } = joinPlayer(w, { weapons: { fists: 0, pistol: 24 } });
-  p.profile.arrests = [];
+  p.profile.arrests = []; p.profile.bookings = PRISON.record;
   p.ped.weapon = 'pistol';
-  p.wanted = 4;
+  p.wanted = 5;
   custody.surrender(w, p);   // (turned themself in: booked at once)
   assert.ok(p.prison && !p.custody, 'sentenced, not in the cells');
   assert.ok(inside(p.ped.x, p.ped.y), 'inside the compound');
