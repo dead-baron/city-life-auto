@@ -21361,3 +21361,30 @@ the server not having the chunks); after: this branch (the server serves the cor
 The page's own readout ran so slowly before (its thread busy with the bakes) that the bench took 4 samples in its minute.
 Not measured here: a high flight where the server has the thumbnails but not this build's chunks (just after a deploy):
 there the page bakes nothing (highAir) and shows the thumbnails until the server's chunks come.
+
+## 2026-11-06 - No traffic jam at the station: the stations' roads kept for the station; a wedged car no longer rams
+The owner (11-06, 22:36), off the arrival train at Metro Central: "First thing I see coming off the FTUE train here is a
+traffic jam, this white car keeps ramming the car around it. Maybe we just keep the street here but not have it be a
+street cars go down". A headless run (a player on the platform, 90 s) had 18 of the city's cars turn into the
+station's drop-off loop off Bayside Avenue and 14 still in it at the end, queued nose to tail round the car park's
+island, never getting back out; and a crash at one spot every 4.5 s.
+- **The stations' own roads take no traffic** (shared/world3-stations.js `planStations3`: its lines `dropoff`, their
+  edges `notraffic` - shared/roads.js): Metro Central's loop off the avenue and every other station's road along its
+  front round to the nearest streets. The city's traffic keeps out of them unless there's no other way on (traffic.js
+  `chooseExit`, as with the wild tracks) and none is placed on them. They keep their look; anyone can drive them, and
+  the cars parked in their spaces are still there. The same run afterwards: no traffic car on any station road.
+- **The ramming:** a sedan shoved onto the corner of the car park's island, its nose to a lamp post - something a
+  driver doesn't brake for - was "stuck" (traffic.js `driveToward`: barely moving while it meant to go), and backed off
+  for 1.3 s whatever was behind it: into the box truck queued there, then on into the post again, and again. Now it
+  backs off only as far as there's room behind it (roadends.js `roomBehind`, allowing for the car's way of running on),
+  and an NPC's car wedged in one spot four times running gives up (`parkIt`): the queue goes round it, and it's cleared away once nobody's looking.
+- **A car side on across the lane** is braked for by how far it really reaches across (traffic.js `obstacleSpeed`,
+  `clearOfLane`: its half length and half width as it stands to this one's way). Counted as if it lay along the lane, a
+  pickup turned across a lane with its middle just off it was "beside" the lane, and the car behind drove into its end.
+- **No parked car on top of another** (traffic.js `manage`): a space with a car already in it gets no parked car put
+  there - in that run a newcomer's starter car in Metro Central's car park had a parked sedan spawned on top of it.
+- (Metro Central's bigger car park was dropped: the city's arrival moves to Greenfield Park and the free starter car
+  becomes a first car you earn, in other jobs.)
+Tests: test/world3arrivals.test.js (every station road `notraffic`, still a road; a minute of traffic round the four
+arrival stations, none on a station road), test/trafficbox.test.js (the side-on pickup: the car behind stops short;
+wedged with a van behind: never backs into it, and gives up).

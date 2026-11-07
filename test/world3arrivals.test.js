@@ -148,3 +148,26 @@ test('World v3: the arrival on a line - the page\'s train, the newcomer unseen b
   assert.ok(M.rails.every((r) => !M.arrivals.some((a) => a.pts === r.pts) && !(r.stations || []).some((st) => st.arrival)), 'not a loop the trains run');
   for (const e of w.entities.values()) if (e.kind === K.TRAIN) assert.ok(segDist(e.x, e.y, coast.pts[0], coast.pts[coast.pts.length - 1]) > 4 * TILE, 'no train on the line');
 });
+
+// (the owner, 11-06, off the arrival train at Metro Central: "First thing I see coming off the FTUE train here is a
+// traffic jam ... Maybe we just keep the street here but not have it be a street cars go down")
+test('World v3: the stations\' own roads - the arrival stations\' too - keep their look but take no traffic: none placed there, none turning in', () => {
+  const own = M.edges.filter((e) => e && / Station Road$/.test(e.name));
+  assert.ok(own.length >= 12 && own.every((e) => e.notraffic), `every station road kept off by the traffic (${own.filter((e) => !e.notraffic).map((e) => e.name)})`);
+  for (const a of M.arrivals) {
+    const es = own.filter((e) => e.name === `${a.name} Road`);
+    assert.ok(es.length, `${a.name}: its road`);
+    for (const e of es) { const p = e.pts[e.pts.length >> 1]; assert.equal(M.tileAtPx(p.x, p.y), T.ROAD, `${a.name}: still a road to drive`); }
+  }
+  const ids = new Set(own.map((e) => e.id)), w = new World(M, { npcBudget: 120, throwErrors: true });
+  for (const a of M.arrivals) { const q = joinPlayer(w, { ftue: { st: 'done', m: {}, tips: 0 } }); const pl = a.stations[0].platform; teleport(w, q.p.ped, pl.x, pl.y); }
+  const seen = new Set();
+  let traffic = 0;
+  for (let t = 0; t < 60 * 20; t++) {
+    w.step();
+    if (t % 10) continue;
+    for (const v of w.entities.values()) if (v.kind === K.VEH && v.ai && v.ai.kind === 'traffic') { traffic++; if (ids.has(v.ai.edge)) seen.add(`${v.id} ${v.model} on ${M.edges[v.ai.edge].name}`); }
+  }
+  assert.ok(traffic > 0, 'traffic about');
+  assert.deepEqual([...seen], [], 'no traffic on a station road');
+});

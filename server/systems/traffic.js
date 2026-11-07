@@ -293,13 +293,28 @@ export function driveToward(world, v, wx, wy, desired, opts = {}) {
     // against one with its way on past it, it backs out (wallGuard)
     if ((v.lz || 0) < 0.3) ({ speed, wx, wy } = wallGuard(world, v, wx, wy, speed, fwd));
     if (Math.abs(fwd) < 12 && desired > 60 && speed > 40) ai.stuck = (ai.stuck || 0) + 0.05; else ai.stuck = Math.max(0, (ai.stuck || 0) - 0.1);
-    if (ai.stuck > 2.5) { ai.reverseUntil = world.time + 1.3; ai.stuck = 0; }
+    // wedged (nose to something it doesn't brake for - a lamp post on a car park's island it was shoved onto): it backs
+    // off as far as there's room behind it, never into the car queued behind. It used to back off 1.3 s blind - by Metro
+    // Central's loop a sedan nosed into a lamp post backed into the box truck behind it every 4.5 s for minutes (the
+    // owner, 11-06: "this white car keeps ramming the car around it"). No room, wedged again and again: an NPC's car
+    // gives up (parkIt) - the queue goes round it, and it's cleared away once nobody's looking. (Wedged again where it
+    // was wedged last time, WEDGE_N times over: it isn't getting anywhere.)
+    if (ai.stuck > 2.5) {
+      ai.stuck = 0;
+      const w0 = ai.wedgedAt;
+      ai.wedged = w0 && Math.hypot(v.x - w0[0], v.y - w0[1]) < 60 ? (ai.wedged || 0) + 1 : 1;
+      ai.wedgedAt = [v.x, v.y];
+      const room = roomBehind(world, v, 90);
+      if (ai.kind === 'traffic' && ai.wedged >= WEDGE_N) { parkIt(v); world.wedgedGaveUp = (world.wedgedGaveUp || 0) + 1; return; }
+      if (room >= 20) ai.reverseUntil = world.time + Math.min(1.3, Math.sqrt((room - 12) / 60));   // (from a standstill a car backs off ~60 t^2 px in t s, braking included)
+    }
     reversing = !!(ai.reverseUntil && world.time < ai.reverseUntil);
     ai.ctl = { wx, wy, speed, reversing, t: world.tick };   // (vehicles.js re-trims to it between sub-steps - this tick only)
   }
   pedals(v, wx, wy, speed, reversing);
 }
 
+const WEDGE_N = 4;   // (wedged this many times running in one spot: an NPC's car gives up - driveToward)
 // Steering and pedals toward (wx, wy) at `speed`: the wheel eases toward the target heading with
 // a damping term on the yaw rate (no weaving), and the throttle anticipates - it lifts early
 // when the car is coming up to the speed it wants, and brakes progressively harder the further
@@ -486,7 +501,9 @@ function clearOfLane(world, v, b) {
   let ok = false;
   if (e) {
     const lp = lanePath(net, e, ai.from, Math.min(ai.lane || 0, e.nl - 1)), pr = project(lp, b);
-    ok = !!pr && pr.s > 1 && pr.s < lp[lp.length - 1].s - 1 && pr.d >= v.def.W / 2 + b.def.W / 2 - 3;   // (beside the lane, not past its end - in the junction)
+    // (its half-extent across the lane as it stands: one nosed in at a slant reaches further in than its half width)
+    const t = pr && pointAt(lp, pr.s), rel = t ? b.a - Math.atan2(t.ty, t.tx) : 0, half = Math.abs(Math.sin(rel)) * b.def.L / 2 + Math.abs(Math.cos(rel)) * b.def.W / 2;
+    ok = !!pr && pr.s > 1 && pr.s < lp[lp.length - 1].s - 1 && pr.d >= v.def.W / 2 + half - 3;   // (beside the lane, not past its end - in the junction)
   }
   b._clr = [v.id, ai.edge, b.x, b.y, ok];
   return ok;
@@ -505,11 +522,15 @@ function obstacleSpeed(world, v, fwd, ignore = null) {
     if (!sameLevel(e.lz, v.lz)) continue; // traffic up on the deck doesn't brake for the street below
     const dx = e.x - v.x, dy = e.y - v.y;
     const lx = dx * c + dy * s, ly = -dx * s + dy * c;
-    const halfOther = e.kind === K.VEH ? e.def.W / 2 : 10;
+    // (the other's half-extents across this one's way and along it, as it stands: a car side on or at a slant reaches
+    // further across than its half width - counted as if it lay the same way, one turned across a jammed corner stood
+    // "beside" the lane by its middle, and the car behind drove into its end, stuck, backed off and drove into it again)
+    const ca = e.kind === K.VEH ? Math.abs(Math.cos(e.a - v.a)) : 1, sa = e.kind === K.VEH ? Math.abs(Math.sin(e.a - v.a)) : 0;
+    const halfOther = e.kind === K.VEH ? sa * e.def.L / 2 + ca * e.def.W / 2 : 10, halfAlong = e.kind === K.VEH ? ca * e.def.L / 2 + sa * e.def.W / 2 : 10;
     if (lx < 0 || lx > look + 40 || Math.abs(ly) > v.def.W / 2 + halfOther - 4) continue;
     // a car coming the other way in the other lane (a narrow road: their sides all but touch) squeezes past
     if (e.kind === K.VEH && ly < -(v.def.W / 2 + halfOther) * 0.45 && Math.abs(angleDiff(e.a, v.a)) > 2.6) continue;
-    const gap = lx - v.def.L / 2 - (e.kind === K.VEH ? e.def.L / 2 : 10) - 10 - (e.kind === K.VEH ? standoff(v) : 0);
+    const gap = lx - v.def.L / 2 - halfAlong - 10 - (e.kind === K.VEH ? standoff(v) : 0);
     // a car standing beside its way that it only overlaps at the edge - one parked in a kerb bay, with this one a little
     // off its lane's line (eased over for a siren, out of a bend): it crawls on and steers back onto its line (lookAhead)
     // rather than stopping short of it for good. (By Southside station a taxi eased over for an ambulance stopped nose
@@ -1161,7 +1182,7 @@ function manage(world) {
       const fresh = world.time - (a.player?.joinedAt ?? -99) < 2 || world.time < 3 || world.time - (a.player?.teleportAt ?? -99) < 2;
       if (!fresh && inAnyView(world, sp.x, sp.y, 80)) continue; // never pops in on someone's screen
       if (world.npcCount + world.trafficCount > world.npcBudget) break;
-      if (sp.kerb && world.query(sp.x, sp.y, 70, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by)
+      if (world.query(sp.x, sp.y, sp.kerb ? 70 : 40, K.VEH).length) continue;   // (a kerb's bay on a live street: not on a car going by; any space: not on a car already in it - a newcomer's starter car in the station's car park had a parked sedan put on top of it)
       let pm = sp.model && VEHICLES[sp.model] ? sp.model : sp.drive ? DRIVEWAY_CARS[Math.floor(hash2(i, 5, 2) * DRIVEWAY_CARS.length)] : weighted(parkedMix(world.map.districtAt(sp.x, sp.y).style));   // (sp.model: a van in a shop's loading bay - World v3's Midtown)
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const fit = bayRoom(world.map, sp, i);   // (a bay at the street's end: nothing so long it sticks out into the junction)
