@@ -98,12 +98,12 @@ test('the server: parked aircraft at the pads and the apron; flying one, the alt
   for (const v of air) assert.ok(v.npcOwned || v.def.police, 'taking one is stealing it');
   // fly the airport's helicopter
   const v = air.find((q) => q.def.id === 'heli');
-  const { p } = joinPlayer(w);
+  const { p } = joinPlayer(w, { safety: true });   // (Safety mode on - Settings: off for a new character since 11-06)
   p.ped.x = v.x + 40; p.ped.y = v.y; w.place(p.ped);
   let seq = 0;
   const send = (bits, mx = 0, my = 0, secs = 0.05) => { for (let t = 0; t < secs; t += 0.05) { p.inputQ.push({ seq: ++seq, bits, mx, my, aim: 0 }); w.step(); } };
   send(IN.VEHICLE); send(0);
-  assert.equal(p.ped.vehId, 0, 'Safety mode asks first: taking it is theft (safety.js - on for a new character)');
+  assert.equal(p.ped.vehId, 0, 'Safety mode asks first: taking it is theft (safety.js - turned on here)');
   send(IN.VEHICLE); send(0);
   assert.equal(p.ped.vehId, v.id, 'in');
   assert.ok(v.stolenBy && v.stolenBy.has(p.pid), 'taken (a theft: vehicles.js tryEnter)');

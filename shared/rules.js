@@ -24,12 +24,17 @@ export const POLICE_RANKS = [
 // towed, taken away) it's free again at any public garage - a station's car park, a Fresh Coat Garage, a dealership -
 // cooldownS after it was lost; own a home with a garage and it lives there instead. Taken and left empty by someone else
 // (strayed), out of everyone's sight strayS, it's taken away (lost: free again after the cooldown). lotR: how far round a
-// station (px) its car park's spaces are looked for. paint: shared/vehicles.js PAINTS index (the rust brown). The car's
+// station (px) its car park's spaces are looked for (960: World v3's Metro Central has its own 934 px from its building).
+// overflow: a station's lot full, how many of the nearest parking spaces beyond it are tried (server/systems/starter.js).
+// paint: shared/vehicles.js PAINTS index (the rust brown). The car's
 // own numbers (slower, weaker than the Hatchback it's drawn as) are its model's: shared/vehicles.js 'starter'.
-export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
+export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, overflow: 400, paint: 11 };
 
 // The first-time experience (server/systems/ftue.js; the owner, 11-04: "short and sweet and give people general
-// direction"): a new character arrives by train (arriveS: the staged arrival's length, skippable), is asked one question
+// direction"): a new character picks where they arrive (pickS: the card waits this long, then the default -
+// arriveDefault, World v3's region: shared/world3-arrivals.js) and arrives by train (arriveS: the staged arrival's length,
+// skippable; on its own line the train stops stopS in, its doors open and you step off at doorS - when everyone else sees
+// you there - and it pulls out at leaveS, into the far tunnel goneS later), is asked one question
 // and gets a first goal of at most three steps. carR: how near the starter car (px) is "at it"; goalR: how near the goal
 // is "there"; the goal is looked for goalMin..goalMax px from the station (the nearest beyond goalMin, else the nearest);
 // fishR: how far (tiles) round the station for a bank to fish from. The end: reward ($, cash) and xp goes of SKILL.act
@@ -38,7 +43,10 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 900, paint: 11 };
 // apart at least; hurtAt: under this share of health is "hurt"; transitR: this near a stop, a station or a pier; wakeS: none
 // while you're down or dead, nor this long after you're back up (the wake-up screen: server/systems/ftue.js moment).
 // (Everyone goes through it once: profiles from before it are reset to new characters - server/store.js PROGRESS_EPOCH.)
-export const FTUE = { arriveS: 14, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10 };
+export const FTUE = { pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10, hurtMax: 2, tipsPlayH: 3, tipsDays: 7 };
+// (the first-time moments only while a character is new: none after tipsPlayH hours played or tipsDays days after the
+// FTUE ended - the six come up in a new player's first hour or so; anyone still missing one after three hours or a
+// week has found their feet or the Guide. hurtMax: the hurt line, un-marked by going down right after it, twice at most)
 
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;

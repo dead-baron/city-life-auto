@@ -36,7 +36,7 @@ import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.j
 // lines, a first-time moment's tip - never with the page.
 let FT = null, ftP = null;
 const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
-  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; } });
+  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
@@ -2488,6 +2488,7 @@ function syncSettings() {
   $('s-safety').checked = !!(S.me && S.me.safety); $('s-safety').disabled = !S.welcomed;   // (Safety mode: the server's too - server/systems/safety.js)
   $('s-vibrate').checked = settings.vibrate;
   $('s-shopmarks').checked = settings.shopMarks !== false;
+  $('s-tips').checked = !(S.me && S.me.tips === 0); $('s-tips').disabled = !S.welcomed;   // (First-time tips: the server's - server/systems/ftue.js)
   $('s-autofs').checked = settings.autoFullscreen !== false;
   syncGfxPanel();
   $('s-diag').checked = diag.on;
@@ -2555,6 +2556,7 @@ $('s-blade').onchange = (e) => { if (S.welcomed) send({ t: 'look', a: 'blade', c
 $('s-safety').onchange = (e) => { if (S.welcomed) send({ t: 'safety', on: e.target.checked }); };
 $('s-vibrate').onchange = (e) => { settings.vibrate = e.target.checked; saveSettings(); };
 $('s-shopmarks').onchange = (e) => { settings.shopMarks = e.target.checked; saveSettings(); };
+$('s-tips').onchange = (e) => { if (S.welcomed) send({ t: 'intro', a: 'tipset', on: e.target.checked }); };
 $('s-autofs').onchange = (e) => { settings.autoFullscreen = e.target.checked; saveSettings(); };
 $('s-diag').onchange = (e) => { settings.diag = e.target.checked; diag.on = e.target.checked; saveSettings(); if (!diag.on && diag.el) { diag.el.remove(); diag.el = null; } };
 $('s-smooth').onchange = (e) => { settings.smooth = e.target.checked; saveSettings(); if (!settings.smooth && GOV.scale !== 1) { GOV.scale = 1; onResize(); } };
@@ -3225,7 +3227,7 @@ function prepFrame(dt) {
   const fallH = S.ctrlKind === CTRL.RIDER ? (S.ents.get(S.myPedId)?.rsky || 0) : 0;
   const flying = !!(myAir && airDefOf(myAir)), airPull = flying ? Math.min(S.airMax, S.airMod.zoomOut(myAir.ralt ?? (myAir.extra | 0) * 4)) : fallH > 0 ? Math.min(S.airMax, 1 + Math.min(1.3, fallH / 650)) : 1;
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
-  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1) * (DIR ? DIR.zoomK : 1);
+  const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1, S.camPull || 1) * (DIR ? DIR.zoomK : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
@@ -3308,7 +3310,7 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
-    if (DIR && DIR.hideMe && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture)
+    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
     if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
@@ -3319,6 +3321,7 @@ function prepFrame(dt) {
     else if (e.kind === K.PROJ) projs.push(e);
     else if (e.kind === K.BALL) balls.push(e);
   }
+  if (S.stageCars) S.stageCars(cars, sp);   // (the arrival's train, this page's alone: client/ftue.js)
   // at the water's level: swimmers and boats (drawn under bridge decks)
   const swimmers = peds.filter((p) => !(p.flags & PF.INVEH) && p.swim);
   const boats = vehs.filter((v) => VEHICLE_BY_INDEX[v.d.m] && VEHICLE_BY_INDEX[v.d.m].kind === 'boat');
@@ -3666,6 +3669,7 @@ function drawOverlays(F, v2) {
   // name tags + public flares + rumor marker
   if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
+  else if (!clean && S.me && S.me.car && F.view && !(DIR && DIR.hideMe)) drawMyCar(S.me.car, F.view, now, z, F.vehs);   // (your starter car, parked: server starter.js marker)
   if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
@@ -4187,7 +4191,7 @@ function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 }, R = S.map.rails, by = new Map();
   const since = performance.now() / 1000 - tt.at;
   // (World v3: every loop's platforms, tt.l a list per loop; a platform two loops share shows the sooner train)
-  (R || [S.map.rail]).forEach((rail, ri) => rail && rail.stations.forEach((st, i) => {
+  (R || [S.map.rail]).forEach((rail, ri) => rail && rail.pts && rail.pts.length && rail.stations.forEach((st, i) => {   // (a loop with none of its points in the window yet - a far teleport's swap: nothing to hang its clocks on)
     const cx = st.under ? st.platform.x : st.x, cy = st.under ? st.platform.y : st.y;
     if (cx < view.x0 - 600 || cx > view.x1 + 600 || cy < view.y0 - 600 || cy > view.y1 + 600) return;
     const v = R ? (tt.l[ri] || [])[i] : tt.l[i];
@@ -5045,6 +5049,23 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
     g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.8, -s * 0.85); g.lineTo(-s * 0.35, 0); g.lineTo(-s * 0.8, s * 0.85); g.closePath(); g.fill(); g.stroke();
   }
+  g.restore();
+}
+// Your starter car, parked and empty while you're on foot (me.car: [x, y, model, full]): until you've first driven it,
+// the job truck's rings, plate and edge arrow; after, a small "YOUR CAR" plate when it's within about a screen of you
+function drawMyCar(c, view, now, z, vehs) {
+  if (c[3]) { drawJobTruck(c, view, now, z, vehs); return; }
+  let [x, y] = c, v = null;
+  for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
+  if (v) { x = v.rx; y = v.ry; }
+  const cx = (view.x0 + view.x1) / 2, cy = (view.y0 + view.y1) / 2, far = Math.max(view.x1 - view.x0, view.y1 - view.y0);
+  if (Math.hypot(x - cx, y - cy) > far) return;
+  const u = 1 / z, def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[c[2]] || null, plate = `YOUR ${vehicleWord(def).toUpperCase()}`;
+  g.save(); g.globalAlpha = 0.9;
+  g.font = `700 ${11 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const ty = y - (def ? Math.max(def.L, def.W) / 2 : 60) - 18 * u;
+  tagPlate(x, ty, g.measureText(plate).width + 16 * u, u);
+  g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   g.restore();
 }
 function drawWorldLabels(peds, vehs, now, z) {

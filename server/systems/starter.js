@@ -20,7 +20,7 @@
 //   it there (onHome).
 import { K } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { STARTER } from '../../shared/rules.js';
+import { STARTER, FTUE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { inAnyView } from '../view.js';
 import * as homes from './homes.js';
@@ -62,9 +62,11 @@ export function publicGarages(map) {
 export const garageAt = (world, poi) => (poi ? publicGarages(world.map).find((g) => g.poi === poi.id) || null : null);
 
 // The arrival station: where a new character gets off the train (the FTUE: server/systems/ftue.js) and where their
-// starter waits on their first day - the station with a car park nearest where they first woke up (a hospital:
-// homes.resolveSpawn). The hook for the region choice to come (city, coast, forest, desert - the design's later step):
-// pick the region's stations here, nearest the region's spawn.
+// starter waits on their first day. They pick it (the owner, 11-06: "We can have multiple stations to choose from"):
+// arrivalChoices - World v3's arrival lines (shared/world3-arrivals.js: a station each in the city, on the coast, in the
+// desert and in the country, each with a short line of its own beside it), or on a map without them a few stations with a
+// car park, spread out - the default first (FTUE.arriveDefault's region; else the one nearest where new characters wake).
+// arrivalStation(x, y): the station with a car park nearest a point.
 export function arrivalStation(world, x, y) {
   let best = null, bd = Infinity;
   for (const g of publicGarages(world.map)) {
@@ -74,25 +76,121 @@ export function arrivalStation(world, x, y) {
   }
   return best;
 }
-// A player's arrival station (a public garage's entry): the one their FTUE record keeps (profile.ftue.stn), else picked
-// now from where they stand and kept - so the train and the car park are always the same station, whichever asks first
+// [{ poi, name, key (World v3's region: 'city', 'coast', 'desert', 'country'; null on a map without arrival lines),
+//    line (the arrival line's index in map.arrivals, or -1), def (the default: true for one) }], the default first
+const CHOICES = new WeakMap();
+export function arrivalChoices(world) {
+  const m = world.map;
+  let out = CHOICES.get(m);
+  if (out) return out;
+  out = [];
+  for (const a of m.arrivals || []) {
+    const g = garageAt(world, m.pois[a.poi]);
+    if (g && g.station && !out.some((c) => c.poi === g.poi)) out.push({ poi: g.poi, name: g.name, key: a.key || null, line: a.id });
+  }
+  if (!out.length) {   // (no arrival lines: up to four stations with a car park, the nearest where new characters wake first, then each the furthest from those taken)
+    const sp = m.spawns && (m.spawns.default || m.spawns.hospital), gs = publicGarages(m).filter((g) => g.station);
+    const first = sp ? arrivalStation(world, sp.x, sp.y) : gs[0];
+    if (first) out.push({ poi: first.poi, name: first.name, key: null, line: -1 });
+    while (out.length < Math.min(4, gs.length)) {
+      let best = null, bd = -1;
+      for (const g of gs) {
+        if (out.some((c) => c.poi === g.poi)) continue;
+        const q = m.pois[g.poi], d = Math.min(...out.map((c) => Math.hypot(m.pois[c.poi].x - q.x, m.pois[c.poi].y - q.y)));
+        if (d > bd) { bd = d; best = g; }
+      }
+      if (!best) break;
+      out.push({ poi: best.poi, name: best.name, key: null, line: -1 });
+    }
+  }
+  const di = Math.max(0, out.findIndex((c) => c.key === FTUE.arriveDefault));
+  if (di) out.unshift(out.splice(di, 1)[0]);
+  out.forEach((c, i) => { c.def = i === 0; });
+  CHOICES.set(m, out);
+  return out;
+}
+export const defaultArrival = (world) => arrivalChoices(world)[0] || null;
+// A player's arrival station (a public garage's entry): the one their FTUE record keeps (profile.ftue.stn: picked, or
+// the default kept), else the default - kept, so the train and the car park are always the same station
 export function arrivalFor(world, p) {
   const f = p.profile.ftue;
   if (f && f.stn != null) { const g = garageAt(world, world.map.pois[f.stn]); if (g && g.station) return g; }
-  const g = p.ped ? arrivalStation(world, p.ped.x, p.ped.y) : null;
+  const c = defaultArrival(world), g = c ? garageAt(world, world.map.pois[c.poi]) : p.ped ? arrivalStation(world, p.ped.x, p.ped.y) : null;
   if (g && f && f.st !== 'done') { f.stn = g.poi; store.touch(); }
   return g;
 }
+// The arrival station picked (ftue.js): the first day's starter car follows it - out in the old lot and empty, it's
+// brought round to the new one's; none out yet (a first day still to come, or none was free), one put there now
+export function followArrival(world, p) {
+  const g = arrivalFor(world, p);
+  if (!g || homeGarage(world, p.profile)) return null;
+  const v = carOf(world, p.pid);
+  if (v) {
+    if (v.seats.some((s) => s) || v.towedBy || v.onDeck) return v;
+    if (Math.hypot(v.x - world.map.pois[g.poi].x, v.y - world.map.pois[g.poi].y) > STARTER.lotR) { const sp = freeSpot(world, g, v); if (sp) bringRound(world, v, sp); }
+    tellWhere(world, p, g);
+    return v;
+  }
+  if (state(world, p).k !== 'ready') return null;
+  const sp = freeSpot(world, g), nv = sp ? spawnAt(world, p, sp) : null;
+  if (nv) tellWhere(world, p, g);
+  return nv;
+}
 
-// A space on a garage's lot for it: a free one, else one with only empty, nobody's cars in it (moved off); null if full
+// A space on a garage's lot for it: a free one, else one with only empty, nobody's cars in it (moved off); null if full.
+// A station's lot full (many new players at once - the owner, 11-06): the nearest parking spaces beyond it, a street's
+// kerb bays or another lot, out as far as it takes (overflowOf) - a new character is never left without a car, and two
+// cars never share a space (each taken at once: the query sees the one just put there).
 function freeSpot(world, g, except = null) {
   const near = (sp) => world.query(sp.x, sp.y, 56, K.VEH).filter((e) => e !== except && !e.removed);
-  for (const sp of g.spots) if (!near(sp).length) return sp;
-  for (const sp of g.spots) {
-    const vs = near(sp);
-    if (vs.every((e) => !e.owner && !e.forSale && !e.onEvent && !e.towedBy && !e.seats.some((s) => s))) { for (const e of vs) world.remove(e); return sp; }
+  const lists = g.station ? [g.spots, overflowOf(world.map, g)] : [g.spots];
+  for (const L of lists) {
+    for (const sp of L) if (!near(sp).length) return sp;
+    for (const sp of L) {
+      const vs = near(sp);
+      if (vs.every((e) => !e.owner && !e.forSale && !e.onEvent && !e.towedBy && !e.seats.some((s) => s))) { for (const e of vs) world.remove(e); return sp; }
+    }
   }
   return null;
+}
+// a station's overflow, in order: the parking spaces within twice the lot's reach; then an overflow field on open ground
+// near the station (fieldSpots: the lawn, the dirt, the sand - in rows, clear of every building, prop, track, platform,
+// road and arrival line); then every other parking space by distance - the nearest STARTER.overflow of them all
+const OVERFLOW = new WeakMap();
+export function overflowOf(map, g) {
+  let per = OVERFLOW.get(map);
+  if (!per) OVERFLOW.set(map, (per = new Map()));
+  let L = per.get(g.poi);
+  if (L) return L;
+  const poi = map.pois[g.poi], lots = homes.homeLotSpots(map), own = new Set(g.spots.map((sp) => `${sp.x},${sp.y}`)), park = [];
+  (map.parking || []).forEach((sp, i) => { if (!lots.has(i) && !sp.model && !own.has(`${sp.x},${sp.y}`)) park.push({ x: sp.x, y: sp.y, a: sp.a ?? 0, d: Math.hypot(sp.x - poi.x, sp.y - poi.y) }); });
+  park.sort((a, b) => a.d - b.d);
+  const near = park.filter((q) => q.d <= 2 * STARTER.lotR), far = park.filter((q) => q.d > 2 * STARTER.lotR);
+  L = near.concat(fieldSpots(map, poi.x, poi.y), far).slice(0, STARTER.overflow).map(({ x, y, a }) => ({ x, y, a }));
+  per.set(g.poi, L);
+  return L;
+}
+// Open ground near (x, y) a car can be left on: rows of spaces (FIELD.dx apart along a row, facing east; FIELD.dy between
+// rows) whose whole footprint, and a margin, is grass, dirt, sand or a car park's paving - no building, wall, water,
+// road, plaza (forecourts, platforms, paths), track or kept-open ground (reserve), nothing over it (cover, deck), no
+// solid prop and no parking space within reach, clear of the arrival lines - nearest first
+const FIELD = { r: 1400, dx: 176, dy: 104, hl: 92, hw: 44 };
+const FIELD_T = new Set([1, 8, 10, 13]);   // (T.GRASS, T.SAND, T.DIRT, T.LOT)
+export function fieldSpots(map, x, y) {
+  const out = [], T0 = 32, res = map.reserve, pk = map.parking || [];
+  const okTile = (tx, ty) => { if (!map.inside(tx, ty)) return false; const i = map.idx(tx, ty); return FIELD_T.has(map.tiles[i]) && !(res && res[i] & ~16) && !(map.cover && map.cover[i]) && !(map.deck && map.deck[i]) && map.bld[i] < 0; };
+  const solidNear = (px, py, r) => { for (let ty = Math.floor((py - r) / T0); ty <= Math.floor((py + r) / T0); ty++) for (let tx = Math.floor((px - r) / T0); tx <= Math.floor((px + r) / T0); tx++) { if (!map.inside(tx, ty)) continue; const a = map.solidProps.get(map.idx(tx, ty)); if (a && a.some((e) => !e.off && Math.abs(e.x - px) < FIELD.hl + 8 + e.r && Math.abs(e.y - py) < FIELD.hw + 8 + e.r)) return true; } return false; };
+  const lines = (map.arrivals || []).map((A) => [A.pts[0], A.pts[A.pts.length - 1]]);
+  const nearLine = (px, py) => lines.some(([a, b]) => { const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / l2)); return Math.hypot(a.x + dx * t - px, a.y + dy * t - py) < 200; });
+  for (let cy = y - FIELD.r; cy <= y + FIELD.r; cy += FIELD.dy) for (let cx = x - FIELD.r; cx <= x + FIELD.r; cx += FIELD.dx) {
+    const gx = Math.round(cx / 8) * 8, gy = Math.round(cy / 8) * 8;
+    if (Math.hypot(gx - x, gy - y) > FIELD.r) continue;
+    let ok = true;
+    for (let ty = Math.floor((gy - FIELD.hw - 8) / T0); ok && ty <= Math.floor((gy + FIELD.hw + 8) / T0); ty++) for (let tx = Math.floor((gx - FIELD.hl - 8) / T0); ok && tx <= Math.floor((gx + FIELD.hl + 8) / T0); tx++) if (!okTile(tx, ty)) ok = false;
+    if (!ok || nearLine(gx, gy) || solidNear(gx, gy, 0) || pk.some((q) => Math.abs(q.x - gx) < 150 && Math.abs(q.y - gy) < 90)) continue;
+    out.push({ x: gx, y: gy, a: 0, d: Math.hypot(gx - x, gy - y) });
+  }
+  return out.sort((a, b) => a.d - b.d);
 }
 
 // ---- where it is ----------------------------------------------------------------------------------------------------
@@ -175,6 +273,20 @@ export function fromHome(world, p, h) {
   return deliver(world, p, (v) => { for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (e !== v && !e.seats.some((s) => s) && (!e.owner || e.owner === p.pid) && !e.forSale) world.remove(e); return spot; }, `in the driveway at ${h.name}`);
 }
 
+// ---- your car, marked (the owner, 11-06: "make sure there's a visual indicator that it's your car to take") -----------
+// me.car (players.js buildMe) - this player's alone, so nobody else ever sees it: [x, y, model index, full] while you're
+// on foot and your starter is parked and empty; full (1) until you've first driven it - the rings, the "YOUR CAR" plate,
+// the arrow at the screen's edge, a dot on the maps (client/main.js drawMyCar) - then 0: a small plate when it's near.
+// Not while the first goal's step 1 marks it already (me.job.veh: ftue.js target), nor in a home's garage.
+export function marker(world, p) {
+  const ped = p.ped, v = carOf(world, p.pid);
+  if (!v || !ped || ped.dead || ped.vehId || ped.hidden || ped.interior || ped.onTrain || ped.ug || ped.ftueHid) return null;
+  if (v.seats.some((s) => s) || v.towedBy || v.onDeck || v.scripted || v.wreckAt || v.sinkAt) return null;
+  const f = p.profile.ftue;
+  if (f && f.st === 'goal' && f.step === 1) return null;
+  return [Math.round(v.x), Math.round(v.y), v.def.i, rec(p.profile).drove ? 0 : 1];
+}
+
 // ---- the menus' rows ------------------------------------------------------------------------------------------------
 // a public garage's (economy.js buildMenu: station, garage, dealer)
 export function menuOpts(world, p, poi, opts) {
@@ -212,6 +324,12 @@ export function onJoin(world, p) {
     if (left > 0) St.lostAt.set(p.pid, world.time - (STARTER.cooldownS - Math.min(STARTER.cooldownS, left)));
     else delete r.readyAt;
   }
+  if (r.away && !carOf(world, p.pid) && !homeGarage(world, prof) && p.ped) {   // (put away when you logged off - onPlayerGone: back where you left it, or the nearest free space)
+    const A = r.away, here = { x: A.x, y: A.y, a: A.a }, g = arrivalStation(world, A.x, A.y);
+    const spot = !world.query(A.x, A.y, 56, K.VEH).some((e) => !e.removed) ? here : g ? freeSpot(world, g) : null;
+    delete r.away;
+    if (spot) { const v = spawnAt(world, p, spot); if (A.hp) v.hp = Math.min(v.def.hp, A.hp); }
+  }
   if (!r.first) { store.touch(); return; }
   delete r.first;
   store.touch();
@@ -219,7 +337,26 @@ export function onJoin(world, p) {
   const g = arrivalFor(world, p), sp = g && freeSpot(world, g);
   if (!sp) { world.notify(p, 'Your starter car - a rusty compact, registered to you - is free at any public garage: a station parking lot, the Fresh Coat Garage or a dealership.', 'info'); return; }
   spawnAt(world, p, sp);
-  world.notify(p, `Your starter car is waiting in the parking lot at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');
+  const f = prof.ftue;
+  if (f && (f.st === 'new' || f.st === 'pick')) return;   // (where to arrive still to pick: told where it waits once picked - followArrival)
+  tellWhere(world, p, g);
+}
+const tellWhere = (world, p, g) => {
+  const v = carOf(world, p.pid), poi = world.map.pois[g.poi], inLot = !v || Math.hypot(v.x - poi.x, v.y - poi.y) <= STARTER.lotR;
+  world.notify(p, inLot ? `Your starter car is waiting in the parking lot at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`
+    : `${g.name}'s lot is full: your starter car is parked down the street - follow its marker. A ${NAME()}, registered to you.`, 'good');
+};
+// players.js finalizeLogout: logged off for good (past the ghost window) - a starter parked and empty is put away, not
+// lost (no cooldown): it doesn't sit in an arrival station's lot while you're gone (the owner, 11-06: enough parking when
+// many new players arrive), and onJoin brings it back where it was (profile.starter.away). Out with someone else in it,
+// on a tow truck's hook or a ferry, it stays out as it is.
+export function onPlayerGone(world, p) {
+  const v = carOf(world, p.pid);
+  if (!v || v.seats.some((s) => s) || v.towedBy || v.onDeck || v.wreckAt || v.sinkAt) return;
+  rec(p.profile).away = { x: Math.round(v.x), y: Math.round(v.y), a: Math.round((v.a || 0) * 1000) / 1000, hp: Math.round(v.hp) };
+  S(world).car.delete(p.pid);
+  world.remove(v);
+  store.touch();
 }
 // homes.claim: a home with a garage - the starter lives there from now on (out and empty: moved in now)
 export function onHome(world, p, home) {
@@ -257,6 +394,7 @@ export function update(world) {
     if (!v || v.removed || v.starter !== pid || v.wreckAt || v.sinkAt) { lose(world, pid, v); continue; }
     const d = v.seats[0] ? world.get(v.seats[0]) : null;
     if (d) v.strayed = !(d.player && d.player.pid === pid);
+    if (d && !v.strayed && Math.hypot(v.vx || 0, v.vy || 0) > 40) { const prof = d.player.profile; if (prof && !rec(prof).drove) { rec(prof).drove = 1; store.touch(); d.player.meDirty = true; } }   // (first driven: its marker small from now on)
     if (v.strayed && !v.seats.some((s) => s) && !v.towedBy && !v.onDeck) {
       v.emptyAt ??= world.time;
       if (world.time - v.emptyAt >= STARTER.strayS && !inAnyView(world, v.x, v.y, 64)) { world.remove(v); lose(world, pid, v); }
