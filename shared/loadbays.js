@@ -19,14 +19,24 @@
 // floodlights (statics.js: lit at night). Nothing on the map's tiles or props changes (the map's signature stays).
 // Deterministic like the rest of the generator: tiles, props and integer arithmetic only, the same scan order every time.
 import { T, TILE } from './constants.js';
-import { fenceSegments } from './fences.js';
-import { FORK } from './rules-work.js';
 
-// the geometry (px): the shift's pallets (FORK.pallets) in a row at `rowGap`; half as many slots, `slotW` wide and
-// `slotD` deep; the way there FORK.drive tiles (the forklift's drive, carrying the load - about `aim` if it can); the
-// pallets within `pickR` tiles of the yard's forklift or door; the plan looks `search` tiles each way; `apron` tiles of
-// room in front of the row and the bay
-export const BAY = { pallets: FORK.pallets, rowGap: 46, slots: Math.ceil(FORK.pallets / 2), slotW: 60, slotD: 64, route: FORK.drive, aim: Math.round((FORK.drive[0] + FORK.drive[1]) / 2) - 2, pickR: 24, search: 76, apron: 2 };
+// the geometry (px): a shift's `pallets` in a row at `rowGap`; half as many slots, `slotW` wide and `slotD` deep; the way
+// there route[0]-route[1] tiles (the forklift's drive, carrying the load - about `aim` if it can; the job's FORK.drive,
+// shared/rules-work.js, is this); the pallets within `pickR` tiles of the yard's forklift or door; the plan looks
+// `search` tiles each way; `apron` tiles of room in front of the row and the bay. (No imports but the constants: the
+// generator's code is in the page's fallback - tools/perf.mjs city)
+export const BAY = { pallets: 6, rowGap: 46, slots: 3, slotW: 60, slotD: 64, route: [25, 60], aim: 40, pickR: 24, search: 76, apron: 2 };
+
+// the props drawn as a fence run (shared/fences.js fenceKindOf / fenceEnds: a forklift doesn't drive through one)
+function fenceSegments(m) {
+  const out = [];
+  for (const p of m.props || []) {
+    if (!p || !(p.t === 'fenceline' || p.t === 'chainfence' || p.t === 'yfence' || p.t === 'hedgerun' || p.t === 'rail')) continue;
+    const s = p.t === 'yfence' ? { x0: p.x, y0: p.y, x1: p.x1 ?? p.x, y1: p.y1 ?? p.y } : { x0: p.x, y0: p.y, x1: p.x + (p.tx || 0), y1: p.y + (p.ty || 0) };
+    if (Math.abs(s.x1 - s.x0) + Math.abs(s.y1 - s.y0) >= 2) out.push(s);
+  }
+  return out;
+}
 
 // The yards: a forklift prop (not the airport apron's) - one yard for any within 500 px of each other - and each
 // warehouse's door away from those. { x, y, name, poi }

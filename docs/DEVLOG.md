@@ -20920,7 +20920,7 @@ forklift."
   crown and a parked forklift or container count their size), fence or parking bay, with a tile of room either side.
   No place sits in a building's lee (the four tiles north of one, which the camera sees under its roof), and no two
   yards share ground. It's data only: no tile or prop changes, so the map's signature and the world map's picture
-  stand. World v3 has 9 yards with a bay, at drives of 31-48 tiles (most about 41). Before, the bays were 5-13 tiles
+  stand. World v3 has 9 yards with a bay, at drives of 31-48 tiles (most 40). Before, the bays were 5-13 tiles
   from the pallets. Four street-front docks in The Yards (Gulf Coast Freight, Ironhorse Logistics, Bayline Paper Co,
   Atlas Moving & Storage) have their forklift parked on the street and no open ground within reach, so they aren't
   yards any more. Their neighbors' yards are. The plan takes about 0.5-1 s of World v3's ~100 s build, and 30-120 ms
@@ -20939,9 +20939,9 @@ forklift."
   your forklift - tap this card to quit", then "lift a pallet", "take it to the loading bay - slot n".
 - **Pay, retuned for the longer runs** (`shared/rules-work.js FORK`, still per pallet): a pallet pays `perLoad` $40 plus
   `perTile` $1 a tile of that yard's drive, so $71-$88 at World v3's yards and $80 at 40 tiles. A stacked pallet pays
-  $30 more (was $20), and the lot pays a $200 bonus (was $120). A 41-tile yard's shift comes to 6 x $81 + 3 x $30 + $200
-  = $776. Before, any yard paid 6 x $45 + 3 x $20 + $120 = $450. A run is about three times the drive it was, about 30
-  s a pallet against about 15, so a shift takes about 3 minutes against 1.5. That is $260 a minute against $300: a
+  $30 more (was $20), and the lot pays a $200 bonus (was $120). A 40-tile yard's shift comes to 6 x $80 + 3 x $30 + $200
+  = $770. Before, any yard paid 6 x $45 + 3 x $20 + $120 = $450. A run is about three times the drive it was, about 30
+  s a pallet against about 15, so a shift takes about 3 minutes against 1.5. That is about $255 a minute against $300: a
   little less a minute, a lot more a shift. A yard further across pays more for its longer drive. The board's card
   shows the yard's own figures and its drive in meters.
 - **Quitting** was Phone, then the job at the top, then Quit job pressed twice, and the owner couldn't find it. A tap or
@@ -20955,6 +20955,9 @@ forklift."
 - **"Get in car"**: every line the forklift job shows (the card, the step, the notes, the prompts, the tracker) says
   forklift. The YOUR CAR plate over the issued forklift and the recall's "takes its car back" come from
   `vehicleWord`, fixed on the `vehword` branch (d28e3ac9), which isn't merged here yet.
+- **Perf**: the city code's budget goes from 35 to 36 files for `shared/loadbays.js` (tools/perf.mjs). Only the
+  generator fallback loads it, and its fence reading and its geometry stay inside it, so it's one file, not three.
+  `FORK.pallets` / `FORK.drive` read its `BAY`.
 - **Guide**: the forklift has its own entry (the drive, the slot that's lit, the pay range from FORK). Ranger and farm
   keep theirs.
 - Tests: `test/loadbays.test.js` (today's world: every yard planned, the plan deterministic and leaving tiles and props
