@@ -13,6 +13,7 @@ import * as homes from '../server/systems/homes.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as dealer from '../server/systems/dealer.js';
 import { publicGarages, arrivalStation, arrivalFor, defaultArrival } from '../server/systems/starter.js';
+import * as ftue from '../server/systems/ftue.js';
 
 const starters = (w, pid) => [...w.entities.values()].filter((e) => e.kind === K.VEH && !e.removed && e.starter === pid);
 const one = (w, pid) => { const s = starters(w, pid); assert.equal(s.length, 1, `one starter for the player (${s.length})`); return s[0]; };
@@ -51,7 +52,9 @@ test('first day: a new character finds their starter car in the arrival station\
   for (const o of publicGarages(w.map)) if (o.station) { const q = w.map.pois[o.poi]; assert.ok(Math.hypot(q.x - sp.x, q.y - sp.y) >= Math.hypot(st.x - sp.x, st.y - sp.y) - 1, `${q.label} is no nearer`); }
   assert.ok(Math.hypot(v.x - st.x, v.y - st.y) <= STARTER.lotR, 'in the station\'s car park');
   assert.ok(w.map.parking.some((sp) => Math.hypot(sp.x - v.x, sp.y - v.y) < 1), 'in a parking space');
-  assert.ok(p.toasts.some((t) => t.text.includes(st.label)), 'told where it waits');
+  assert.ok(!p.toasts.some((t) => t.text.includes('starter car is waiting')), 'not told yet: where to arrive is still to pick (the FTUE\'s card)');
+  ftue.pick(w, p, null);   // (the default taken)
+  assert.ok(p.toasts.some((t) => t.text.includes(st.label)), 'told where it waits once it\'s picked');
   assert.equal(prof.starter.first, undefined, 'the first day is over');
   // an existing character (from before starters) gets none in a car park - only from a public garage
   const { prof: old } = joinPlayer(w, { starter: undefined });

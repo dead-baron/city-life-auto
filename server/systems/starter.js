@@ -126,14 +126,15 @@ export function followArrival(world, p) {
   if (!g || homeGarage(world, p.profile)) return null;
   const v = carOf(world, p.pid);
   if (v) {
-    if (v.seats.some((s) => s) || v.towedBy || v.onDeck || Math.hypot(v.x - world.map.pois[g.poi].x, v.y - world.map.pois[g.poi].y) <= STARTER.lotR) return v;
-    const sp = freeSpot(world, g, v);
-    if (sp) bringRound(world, v, sp);
+    if (v.seats.some((s) => s) || v.towedBy || v.onDeck) return v;
+    if (Math.hypot(v.x - world.map.pois[g.poi].x, v.y - world.map.pois[g.poi].y) > STARTER.lotR) { const sp = freeSpot(world, g, v); if (sp) bringRound(world, v, sp); }
+    tellWhere(world, p, g);
     return v;
   }
   if (state(world, p).k !== 'ready') return null;
-  const sp = freeSpot(world, g);
-  return sp ? spawnAt(world, p, sp) : null;
+  const sp = freeSpot(world, g), nv = sp ? spawnAt(world, p, sp) : null;
+  if (nv) tellWhere(world, p, g);
+  return nv;
 }
 
 // A space on a garage's lot for it: a free one, else one with only empty, nobody's cars in it (moved off); null if full
@@ -271,8 +272,11 @@ export function onJoin(world, p) {
   const g = arrivalFor(world, p), sp = g && freeSpot(world, g);
   if (!sp) { world.notify(p, 'Your starter car - a rusty compact, registered to you - is free at any public garage: a station parking lot, the Fresh Coat Garage or a dealership.', 'info'); return; }
   spawnAt(world, p, sp);
-  world.notify(p, `Your starter car is waiting in the parking lot at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');
+  const f = prof.ftue;
+  if (f && (f.st === 'new' || f.st === 'pick')) return;   // (where to arrive still to pick: told where it waits once picked - followArrival)
+  tellWhere(world, p, g);
 }
+const tellWhere = (world, p, g) => world.notify(p, `Your starter car is waiting in the parking lot at ${g.name}: a ${NAME()}, registered to you. Lose it and another is free at any public garage.`, 'good');
 // homes.claim: a home with a garage - the starter lives there from now on (out and empty: moved in now)
 export function onHome(world, p, home) {
   if (!home || !home.garage || homeGarage(world, p.profile) !== home) return;   // (only the first: it moves once)

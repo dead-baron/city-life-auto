@@ -504,6 +504,8 @@ test('where to arrive: skipped or left, the default; rejoining mid-choice, the c
   assert.ok(car && Math.hypot(car.x - st.x, car.y - st.y) <= STARTER.lotR, 'the starter car in the picked station\'s lot');
   assert.ok(Math.hypot(p2.ped.x - st.x, p2.ped.y - st.y) < 900, 'off the train there');
   assert.equal(starter.arrivalFor(w2, p2).poi, far.id, 'one function for both');
+  assert.ok(p2.toasts.some((t) => t.text.includes(`waiting in the parking lot at ${st.label}`)), 'told where it waits: the station picked');
+  assert.ok(!p2.toasts.some((t) => /waiting in the parking lot/.test(t.text) && !t.text.includes(st.label)), 'never the default station\'s lot');
   // a pick after the card is gone does nothing
   ftue.handle(w2, p2, { a: 'pick', stn: def.poi });
   assert.equal(d.prof.ftue.stn, far.id);

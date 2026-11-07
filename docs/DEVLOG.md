@@ -20774,6 +20774,11 @@ for the purpose of onboarding new players (without overlapping on each other if 
   ran the scene's clock (`tick`), which ends the scene on its last frame (`A = null`), then read `A.t0` - a TypeError in
   the frame, caught and toasted. It now reads what it needs before the tick and stops when the scene is over. (Seen in
   the real-time captures only: the photographed ones held the clock before the end.)
+- Also from the hunt (9 runs: 5 desktop, a phone, a skip on the card, mid-approach and at the platform): a skip at the
+  platform right after the far teleport drew a station clock for a main-line loop with none of its points in the new
+  window yet (`railAt` on an empty list: the same toast) - main.js `drawStationClocks` skips such a loop. And the
+  starter car's note named the default station's lot even when another was picked: it now waits for the pick
+  (`starter.onJoin` silent while the card is to come, `followArrival` says where it is).
 - Today's world (the map picture's) is untouched by this: its `world` hash is main's. The world map's picture was
   rebaked here anyway (`tools/build-worldmap2.mjs`) because main's wider bars had changed today's world signature.
 

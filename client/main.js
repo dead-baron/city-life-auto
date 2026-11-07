@@ -4186,7 +4186,7 @@ function drawStationClocks(view, now) {
   const tt = S.tt || { l: [], at: 0 }, R = S.map.rails, by = new Map();
   const since = performance.now() / 1000 - tt.at;
   // (World v3: every loop's platforms, tt.l a list per loop; a platform two loops share shows the sooner train)
-  (R || [S.map.rail]).forEach((rail, ri) => rail && rail.stations.forEach((st, i) => {
+  (R || [S.map.rail]).forEach((rail, ri) => rail && rail.pts && rail.pts.length && rail.stations.forEach((st, i) => {   // (a loop with none of its points in the window yet - a far teleport's swap: nothing to hang its clocks on)
     const cx = st.under ? st.platform.x : st.x, cy = st.under ? st.platform.y : st.y;
     if (cx < view.x0 - 600 || cx > view.x1 + 600 || cy < view.y0 - 600 || cy > view.y1 + 600) return;
     const v = R ? (tt.l[ri] || [])[i] : tt.l[i];
