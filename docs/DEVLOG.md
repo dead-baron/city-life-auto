@@ -21388,3 +21388,10 @@ island, never getting back out; and a crash at one spot every 4.5 s.
 Tests: test/world3arrivals.test.js (every station road `notraffic`, still a road; a minute of traffic round the four
 arrival stations, none on a station road), test/trafficbox.test.js (the side-on pickup: the car behind stops short;
 wedged with a van behind: never backs into it, and gives up).
+
+## 2026-11-07 - The renderer's code budget: 404 -> 410 KB
+Tonight's fixes each fitted the renderer's 404 KB budget alone (each trimmed its own comments to get there): the walk-in's
+inside baked first when you enter (interiorload), the forklift's loading bays, and the world-streaming work - the
+low-detail stand-ins, the look-ahead scaled by speed, the aircraft camera. Merged, they come to 405 KB. Rather than strip
+more comments out of host.js, the budget goes to 410 (tools/perf.mjs), leaving room for the visibility pass's under-deck
+draw order. The renderer loads once you're in the city, never at the title screen.
