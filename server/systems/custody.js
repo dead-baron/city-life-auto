@@ -616,7 +616,7 @@ function book(world, p, car = null) {
   const taken = confiscate(world, p, c.stars);
   law.clearWanted(world, p);
   p.profile.peakWanted = 0; p.disguised = false;
-  // the third time in a while, or at four stars or more: Prison Island, not the cells (prison.js)
+  // five stars with a long record (or an admin's say): Prison Island, not the cells (prison.js prisonWorthy)
   const term = prison.sentenceFor(world, p, c.stars);
   prison.noteArrest(p);
   if (term) { p.custody = null; prison.sentence(world, p, term, c.stars); world.notify(p, `Booked at ${st.label}: ${taken}.`, 'bad'); return; }

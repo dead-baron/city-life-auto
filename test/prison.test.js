@@ -17,6 +17,10 @@ import * as custody from '../server/systems/custody.js';
 import * as unstuck from '../server/systems/unstuck.js';
 import * as gates from '../server/systems/gates.js';
 import { IN } from '../shared/input.js';
+import * as law from '../server/systems/law.js';
+import { spawnNpc } from '../server/systems/npc.js';
+// an officer right by them (no unit: a car is sent for them)
+const spawnCop = (w, p) => spawnNpc(w, 'cop', p.ped.x + 20, p.ped.y, 'cop');
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 const inside = (x, y) => { const c = M.prison.compound; return x > c.tx * TILE && x < (c.tx + c.tw) * TILE && y > c.ty * TILE && y < (c.ty + c.th) * TILE; };
@@ -162,4 +166,80 @@ test('over the wall, the guards come after you; the dev teleport out is no escap
   w.step();
   assert.ok(!q.prison && !(q.wanted > 0), 'no breakout');
   assert.ok(S);
+});
+
+test('an admin sends a misbehaving player to prison: no bail, no wall to climb, back inside if they get out; 0 lets them out; offline it waits for them', async () => {
+  const { store } = await import('../server/store.js');
+  const { createAccounts } = await import('../server/accounts.js');
+  const { createModeration } = await import('../server/moderation.js');
+  const { createAdminLog } = await import('../server/adminlog.js');
+  const { createAdmin } = await import('../server/admin.js');
+  const { POWERS } = await import('../server/roles.js');
+  assert.equal(POWERS.prison, 'admin');
+  const A = createAccounts({ store, secret: 'test-secret' }), log = createAdminLog(null);
+  const admin = createAdmin({ accounts: A, log, mod: createModeration({ store }), store });
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const { p: boss } = joinPlayer(w), { p } = joinPlayer(w);
+  for (const q of [boss, p]) A.ensure(q.profile).kind = 'member';
+  A.setRole(boss.pid, 'admin');
+  assert.equal(admin.handle(w, p, { a: 'prison', id: boss.pid, mins: 5 }).ok, false, 'not for a player');
+  // cuffed and on the way in: out of custody and straight there
+  p.wanted = 1; p.heat = 12;
+  custody.surrender(w, p);
+  assert.ok(custody.inCell(p));
+  const r = admin.handle(w, boss, { a: 'prison', id: p.pid, mins: 10, why: 'griefing' });
+  assert.ok(r.ok, r.err);
+  assert.ok(p.prison && p.prison.admin && !p.custody && !(p.wanted > 0) && inside(p.ped.x, p.ped.y), 'on Prison Island, out of the cell');
+  assert.ok(Math.abs(p.prison.until - w.time - 600) < 1, 'for ten minutes');
+  assert.ok(log.tail(5).some((e) => e.what === 'prison' && e.note === 'griefing'), 'in the admin log');
+  // no way over the wall; out of the compound some other way, back inside
+  const c = M.prison.compound;
+  teleport(w, p.ped, (c.tx + 2.5) * TILE, (c.ty + c.th / 2) * TILE);
+  assert.doesNotMatch(players.findInteraction(w, p).label, /Climb/, 'no climbing the wall');
+  teleport(w, p.ped, (c.tx - 6) * TILE, (c.ty + c.th / 2) * TILE);
+  w.step();
+  assert.ok(p.prison && inside(p.ped.x, p.ped.y) && !(p.wanted > 0), 'put back inside - no breakout');
+  // 0: let out
+  assert.ok(admin.handle(w, boss, { a: 'prison', id: p.pid, mins: 0 }).ok);
+  assert.ok(!p.prison, 'let out');
+  // offline: the sentence waits on the character
+  const off = store.create('ab12cd34ef56ab12cd34ef56');
+  off.name = 'Away';
+  assert.ok(admin.handle(w, boss, { a: 'prison', id: 'ab12cd34ef56ab12cd34ef56', mins: 3 }).ok);
+  assert.ok(off.jail && off.jail.prison && off.jail.admin && off.jail.left === 180, 'kept for when they next play');
+});
+
+// the islands (the owner, 11-07: "on the islands they will just drive into the ocean, so we might need to have a little
+// police station on the islands with cities in it ... if it's an island with no station you just end up in a nearby
+// jailcell") - custody.js reachableStation, shared/world3-medics.js precincts3
+test('island towns have a police station on their roads; a car taking you in never drives into the sea; no station, the fade', () => {
+  const P = M.world3.precincts;
+  assert.ok(P && P.made.length >= 1 && !P.none.length, `the island stations (${JSON.stringify(P)})`);
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  for (const [name, , , , id] of P.made) {
+    const st = M.pois[id];
+    assert.ok(st && st.kind === 'police' && st.label === name && st.sub, `${name}: a precinct`);
+    assert.equal(custody.reachableStation(w, st.x, st.y), st, `${name}: the nearest station its own roads reach`);
+  }
+  // arrested on an island town's street: driven to its own station, never in the water
+  const st = M.pois[P.made[0][4]], k = custody.kerbOf(w, st.id);
+  const { p } = joinPlayer(w);
+  const n = M.nearestNode(k.x + 500, k.y + 300);
+  teleport(w, p.ped, n.x + 20, n.y + 20);
+  p.wanted = 1; p.heat = 12; p.seenAt = w.time;
+  const cop = spawnCop(w, p);
+  p.ped.downUntil = w.time + 3;
+  law.arrest(w, cop, p.ped);
+  let wet = 0, stages = new Set();
+  for (let i = 0; i < 200 * 20 && !(p.custody && p.custody.stage === 'cell'); i++) {
+    w.step();
+    if (!p.custody) break;
+    stages.add(p.custody.stage);
+    const v = p.ped.vehId ? w.get(p.ped.vehId) : null, at = v || p.ped, t = M.tileAtPx(at.x, at.y);
+    if (t === T.WATER || t === T.DEEP) wet++;
+  }
+  assert.ok(p.custody && p.custody.stage === 'cell', `in a cell (${[...stages]})`);
+  assert.equal(wet, 0, 'never in the water');
+  assert.ok(stages.has('ride'), 'driven there');
+  assert.equal(p.custody.station, st.id, `at ${st.label}`);
 });

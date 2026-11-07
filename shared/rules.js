@@ -152,7 +152,7 @@ export const STRUGGLE_GRIP_VAR = 0.4;  // ...and how well they got hold of you t
 // a second officer on you adds this much of their own hold, by your stars (a patrol car brings two; 0.6 at every level
 // until 11-07, when two on you at 1 star was about a coin toss - the owner: "it's hard to fight the cop off")
 export const STRUGGLE_SECOND = [0, 0.35, 0.45, 0.6, 0.6, 0.6];
-export const STRUGGLE_HELD = 0.22;     // the attack button held down rather than mashed (a thumb on FIRE): this much a second
+export const STRUGGLE_HELD = 0.27;     // the attack button held down rather than mashed (a thumb on FIRE): this much a second
 export const STRUGGLE_RAMP = 0.3;      // the hold grows this much (x its start) for every second you've been held...
 export const STRUGGLE_CUFF_S = 4;      // ...and this long after they got you, the cuffs are on, whatever the meter says
 export const STRUGGLE_HP_FLOOR = 0.45; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
