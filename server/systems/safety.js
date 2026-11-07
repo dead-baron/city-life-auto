@@ -1,5 +1,6 @@
 // Safety mode (the owner, 2026-10-11: "Safety citizen mode, warns you before stealing a car accidentally or other crimes
-// to help you live a good life"). A setting (Settings, on for new characters: store.js defaultProfile; the page sends
+// to help you live a good life"). A setting (Settings, off by default since 11-06 - the owner: "not have it on by default" -
+// store.js defaultProfile, migrateSafety; the page sends
 // { t: 'safety', on }): with it on, the first press of an act the game knows is a crime before it happens - getting into
 // a car that isn't yours, pulling a driver out, picking up someone else's cargo, the armored truck's back doors, a break
 // from custody - only warns, naming the crime; the same act again within SAFETY_CONFIRM_S does it.

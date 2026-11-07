@@ -1102,6 +1102,8 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arcade .arc-frame { display: flex; flex-direction: column; align-items: center; gap: var(--s2); padding: var(--s3); border-radius: var(--r2); background: var(--cab); box-shadow: 0 0 0 3px var(--neon), 0 0 40px var(--neon); }
 #arc-cv { width: min(92vw, calc((92vh - 60px) * 256 / 224)); height: auto; aspect-ratio: 256 / 224; image-rendering: pixelated; image-rendering: crisp-edges; background: var(--ink); touch-action: none; border-radius: var(--r1); }
 #arc-hint { color: var(--dim); font: 400 var(--fs-1)/1 var(--pixel); letter-spacing: .05em; }
+#arcade .arc-frame { position: relative; }
+#arc-x { position: absolute; top: -18px; right: -18px; width: var(--tap, 44px); height: var(--tap, 44px); z-index: 1; }   /* (the way out on a touch screen: every mini-game on this screen - the owner, 11-06) */
 /* ==== the first-time experience (client/ftue.js; server/systems/ftue.js) ====
    the arrival: inside the carriage as it pulls in - the doors' windows on the city going by (the world shows through
    them), the next-stop sign over them, the place's card; a chime, the doors slide apart, the bars and the card go */
@@ -1109,14 +1111,21 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 #arrival::before, #arrival::after { content: ''; position: absolute; left: 0; right: 0; height: 9vh; z-index: 3; background: var(--ink); transition: transform 700ms var(--ease); }
 #arrival::before { top: 0; } #arrival::after { bottom: 0; }
 #arrival.leaving::before { transform: translateY(-100%); } #arrival.leaving::after { transform: translateY(100%); }
-.arr-doors { position: absolute; inset: 0; display: flex; z-index: 1; opacity: 0; transition: opacity 600ms var(--ease); }
-#arrival.lit .arr-doors { opacity: 1; }
-#arrival.replay .arr-doors { display: none; }
-.arr-door { position: relative; flex: 1; display: block; overflow: hidden; background: transparent; box-shadow: inset 0 0 0 3px var(--ink); transition: transform 1100ms cubic-bezier(.6, 0, .3, 1); }   /* (the door's panel is its window's shadow, so the window is a hole: the city shows through) */
-.arr-door.l { border-right: 6px solid var(--ink); } .arr-door.r { border-left: 6px solid var(--ink); }
-.arr-door b { position: absolute; left: 14%; right: 14%; top: 16%; bottom: 30%; display: block; border-radius: var(--r4); background: var(--ink-a); box-shadow: 0 0 0 10px var(--edge), 0 0 0 13px var(--ink), 0 0 0 1400px var(--navy2), inset 0 0 40px var(--ink-a); }
-.arr-door::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 14%; height: var(--s2); border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 12px var(--heat); }
-#arrival.open .arr-door.l { transform: translateX(-102%); } #arrival.open .arr-door.r { transform: translateX(102%); }
+.arr-pick { position: absolute; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 2 * var(--s4))); display: none; flex-direction: column; gap: var(--s2); padding: var(--s4); border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: var(--shadow); cursor: default; }
+#arrival.picking .arr-pick { display: flex; }
+body.arriving #touch { visibility: hidden; }
+#arrival.picking .arr-led, #arrival.picking .arr-card { display: none; }
+#arrival.picking { background: var(--ink-a); }
+.arr-pick small { color: var(--gold); font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; }
+.arr-pick p { margin: 0 0 var(--s1); color: var(--dim); font: 600 var(--fs-3) var(--ui); }
+.ap-opt { display: grid; grid-template-columns: 1fr auto; gap: 2px var(--s3); text-align: left; padding: var(--s2) var(--s3); border-radius: var(--r2); border: 2px solid var(--navy3); background: var(--navy); color: var(--cream); cursor: pointer; touch-action: manipulation; }
+.ap-opt b { font: 700 var(--fs-4) var(--pixel); letter-spacing: 1px; }
+.ap-opt i { justify-self: end; align-self: center; color: var(--gold); font: 700 var(--fs-1) var(--ui); font-style: normal; letter-spacing: 1px; text-transform: uppercase; }
+.ap-opt span { grid-column: 1 / -1; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
+.ap-opt.def { border-color: var(--gold); }
+.ap-opt:hover, .ap-opt:focus-visible, .ap-opt.pfocus { outline: none; border-color: var(--cream); filter: brightness(1.12); }
+body.portrait .arr-pick { top: auto; bottom: calc(9vh + 76px); transform: translateX(-50%); }
+body.portrait .ap-opt i { grid-column: 1 / -1; justify-self: start; }
 .arr-led { position: absolute; z-index: 4; top: calc(9vh + var(--s3)); left: 50%; transform: translateX(-50%); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s2) var(--s4); border-radius: var(--r1); background: var(--ink); box-shadow: 0 0 0 2px var(--navy3), 0 0 18px var(--ink); color: var(--heat); font: 700 var(--fs-4) var(--pixel); letter-spacing: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 8px var(--heat); transition: opacity 500ms var(--ease); }
 #arrival.leaving .arr-led { opacity: 0; }
 .arr-card { position: absolute; z-index: 4; left: max(var(--s5), env(safe-area-inset-left)); bottom: calc(9vh + var(--s5)); display: flex; flex-direction: column; gap: 2px; padding: var(--s3) var(--s5) var(--s3) var(--s4); border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); transition: opacity 500ms var(--ease), transform 500ms var(--ease); }
@@ -1131,14 +1140,15 @@ body.portrait.touch #jail { top: calc(max(10px, calc(var(--cam-top) + 4px)) + 15
 body.portrait .arr-card { left: var(--s4); right: var(--s4); bottom: calc(9vh + 76px); }
 body.portrait .arr-card b { font-size: var(--fs-4); }
 body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
-body.portrait .arr-door b { left: 18%; right: 18%; top: 22%; bottom: 36%; }
 /* the first goal's step line and a first-time moment's tip: the prompt's plate, the control's glyph in front; up a few
    seconds, then it fades (client/ftue.js) - a tip's "More in your Guide" opens the phone's Guide at its section */
 #ftue-line { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 16px 6px 6px; border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream); pointer-events: auto; transition: opacity .6s var(--ease), transform var(--t2) var(--ease); }
 #ftue-line.in { animation: prpop var(--t-pop) var(--ease); }
 #ftue-line.off { display: none; }
 #ftue-line.faded { opacity: 0; transform: translateY(6px); pointer-events: none; }
-#ftue-line.tip { border-color: var(--info); padding-left: 14px; }
+#ftue-line.tip { position: relative; z-index: 6; border-color: var(--info); padding-left: 14px; padding-right: 6px; cursor: pointer; touch-action: manipulation; }   /* (over the touch layer's move-stick zone while it's up, like #job: a tap opens the Guide - client/ftue.js) */
+#ftue-line .fl-x { flex: none; width: 32px; height: 32px; margin-left: -4px; padding: 0; border: 0; background: transparent; color: var(--cream); opacity: .7; font: 700 var(--fs-4) var(--ui); line-height: 1; cursor: pointer; }
+.touch #ftue-line .fl-x { width: 36px; height: var(--tap); }
 #ftue-line > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
 #ftue-line > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
 #ftue-line .fl-more { flex: none; min-height: 32px; padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--info); background: transparent; color: var(--info); font: 700 var(--fs-2) var(--ui); cursor: pointer; }

@@ -2984,6 +2984,7 @@ function addRail(c, I) {
   // signals at the same spot - is put once)
   const seen = new Set(), once = (x, y, k = '') => { const key = `${Math.round(x / 16)},${Math.round(y / 16)}${k}`; if (seen.has(key)) return false; seen.add(key); return true; };
   for (const R of c.M.rails || [c.M.rail]) addRailLoop(c, I, R, c.M.rails ? once : () => true);
+  for (const R of c.M.arrivals || []) addRailLoop(c, I, R, once, true);   // (World v3's arrival lines - shared/world3-arrivals.js: the platform's furniture and name board; their portals are the tunnels' - client/tunnels.js)
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
   if (c.M.railHubs) railHubs(I, c.M.railHubs);
   for (const t of c.M.lifeguards || []) put(I, vitem('lgt', 'lifeguardTower', [], t.x, t.y, 0));   // (H35: World v3's beach towns, shared/world3-beach.js)
@@ -3025,7 +3026,7 @@ function onFlight(M, p) {
   }
   return false;
 }
-function addRailLoop(c, I, R, once) {
+function addRailLoop(c, I, R, once, arrival = false) {
   if (!R || !R.pts) return;
   for (const st of R.stations || []) {
     if (!once(st.x, st.y, st.side)) continue;
@@ -3053,12 +3054,13 @@ function addRailLoop(c, I, R, once) {
     for (const f of [-0.42, 0.42]) { const p = at(f * L, 80); if (!ok(p)) continue; const hd = qa(p.a, STATION_TURNS); put(I, vitem(`pcan:${cl}:${hd.toFixed(3)}`, 'platformCanopy', [cl, 40, 1], p.x, p.y, hd)); lightAt(I, p.x, p.y, 52, 160, [1, 0.94, 0.8], 1.5, 'lamp'); }
     for (const f of [-0.85, -0.12, 0.12, 0.85]) { const p = at(f * L, 62); if (!ok(p)) continue; const n = Math.atan2(Math.cos(p.a) * sd, -Math.sin(p.a) * sd); put(I, vitem(`bn:${qa(n + PI / 2, STATION_TURNS).toFixed(3)}`, 'bench', [], p.x, p.y, qa(n + PI / 2, STATION_TURNS))); }
     for (const f of [-0.96, -0.6, 0.6, 0.96]) { const p = at(f * L, 98); if (!ok(p)) continue; put(I, vitem('lp:cast:1', 'lampPost', ['cast', 1], p.x, p.y)); lightAt(I, p.x, p.y + 2, 76, 180, LAMP_LIGHT.cast, 3, 'lamp'); }
-    const rb = routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out)
+    const rb = arrival ? null : routeBoardAt(R, st, c.at);   // (where the trains go: server/systems/trains.js reads it out; an arrival line has no timetable)
     if (rb) { put(I, vitem('rboard', 'routeBoard', [], rb.x, rb.y, 0)); lightAt(I, rb.x, rb.y - 4, 30, 60, [0.75, 0.85, 1], 0.9, 'sign'); }
     const mid = at(0, 50);
     if (ok(mid) && Math.abs(Math.cos(mid.a)) > 0.6) put(I, { key: `stb:${st.name}`, recipe: { t: 'sign', text: st.name.replace(/ Station$/, ''), sx: 1, bg: '#1c2a44', lit: true, z: 26, posts: true }, x: mid.x, y: mid.y, ext: [80, 60, 80, 12] });
   }
   // tunnel mouths where the line goes under
+  if (arrival) return;
   const pts = R.pts, n = pts.length;
   for (let i = 0; i < n; i++) {
     const p = pts[i], q = pts[(i + 1) % n];
@@ -3811,7 +3813,7 @@ function railClear(M) {
   let s = RAILCLEAR.get(M);
   if (s) return s;
   s = new Set();
-  for (const R of M.rails || (M.rail ? [M.rail] : [])) {
+  for (const R of (M.rails || (M.rail ? [M.rail] : [])).concat(M.arrivals || [])) {
     const P = R && R.pts, n = P ? P.length : 0;
     for (let i = 0; i < n; i++) {
       const a = P[i], b = P[(i + 1) % n];

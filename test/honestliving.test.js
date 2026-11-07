@@ -3,7 +3,9 @@
 // table's felonies, and no world car parked on a home's lot.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
+import { makeWorld, joinPlayer, run, teleport, fakeConn, store } from './helpers.js';
+import * as safety from '../server/systems/safety.js';
+import { resetOldEpochs } from '../server/store.js';
 import { K } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import { WORK_TRUCK, WORK_TRUCK_RETURN, SAFETY_CONFIRM_S } from '../shared/rules.js';
@@ -136,10 +138,12 @@ test('the Act prompt says what getting in is: your car, your work truck, your re
   if (act && act.key === 'F') assert.equal(act.label, 'Get in your Sedan');
 });
 
-test('Safety mode: on for new characters; the first press of a crime only warns, naming it; again within a few seconds does it', () => {
+test('Safety mode: off for new characters (on in Settings); then the first press of a crime only warns, naming it; again within a few seconds does it', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
-  assert.equal(prof.safety, true, 'on for a new character');
+  const { p, prof } = joinPlayer(w, { starter: {} });   // (no starter car of their own beside the one they'd take)
+  assert.equal(prof.safety, false, 'off for a new character (the owner, 11-06)');
+  safety.set(p, true);   // (Settings' toggle: { t: 'safety', on })
+  assert.equal(prof.safety, true);
   const v = w.spawnVehicle('sedan', p.ped.x + 300, p.ped.y, 0, {});
   beside(w, p.ped, v);
   assert.equal(vehicles.playerEnter(w, p.ped), false, 'first press: a question');
@@ -217,4 +221,22 @@ test('a job truck whose driver has left the game is let go: the company collects
   assert.ok(!w.players.has(p.pid), 'gone');
   run(w, 10);
   assert.ok(v.despawnable || v.removed, 'no longer kept');
+});
+
+test('Safety mode off by default: profiles from before had it on as a default - switched off once, a choice after that kept', () => {
+  const w = makeWorld();
+  // a profile from before (on, no mark): off on joining, marked
+  const { p, prof } = joinPlayer(w, { safety: true, safetyOff: undefined });
+  assert.equal(prof.safety, false); assert.equal(prof.safetyOff, 1);
+  // turned on again in Settings: kept across a rejoin and a store load
+  safety.set(p, true);
+  players.leave(w, p);
+  assert.equal(resetOldEpochs(store), 0);
+  players.join(makeWorld({ keepKept: true }), fakeConn(), prof);
+  assert.equal(prof.safety, true, 'a choice is kept');
+  // the store's load switches them off too, once
+  const q = store.create('safety-old-profile-000000');
+  q.safety = true; delete q.safetyOff;
+  resetOldEpochs(store);
+  assert.equal(q.safety, false); assert.equal(q.safetyOff, 1);
 });
