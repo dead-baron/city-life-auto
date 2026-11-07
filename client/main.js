@@ -431,6 +431,7 @@ function onText(m) {
       if (FT) FT.onMe(m); else if (m.ftue) loadFtue().then((f) => f.onMe(S.me)).catch(() => {});   // (the first goal's step line: client/ftue.js)
       if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)
+      if (!m.ug) S.ugWay = null;
       S.ugLayer = m.ug || 0;   // (under the ground: the physics steps you through its own map, the underground view draws)
       syncTaxiDest();
       if (m.ride && !(S.rides && S.rides.has(m.ride.id))) rideOn(m.ride);   // (back in mid-ride)
@@ -444,6 +445,7 @@ function onText(m) {
     case 'look': S.look = { x: m.x, y: m.y, t0: performance.now(), dur: (m.s || 6) * 1000, px: null, py: null }; break;   // (a telescope: the view swings out there a while)
     case 'stars': S.stars = { what: m.what, seed: m.seed | 0, dur: m.s || 9, t0: performance.now(), px: null, py: null }; if (!drawStarView) import('./stargaze.js').then((mod) => { drawStarView = mod.drawStarView; }).catch((e) => console.warn('[stargaze]', e)); break;   // (the observatory: the night sky through the eyepiece)
     case 'ug': S.ugLayer = m.ug || 0; S.ugVeins = m.veins || []; S.ugVeinsAt = performance.now(); S.ugChests = m.chests || []; S.ugFind = m.find || null; break;   // down the sewers / in the cave (1 / 2), and the ore veins' state (server/systems/underground.js)
+    case 'ugway': S.ugWay = m.w; break;   // (lost in a cave: the arrow toward the way out - underground.js wayHint)
     case 'garden': case 'fields': S[m.t] = m.t === 'garden' ? m.g : m.f; if (!S.farmArt && !S.farmP) S.farmP = import('./render/farmart.js').then((mod) => { S.farmArt = new mod.FarmArt(S); }).catch((e) => { S.farmP = null; console.warn('[farm]', e); }); break;   // (the garden plots and the fields' rows near you: gardening.js, farming.js)
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
@@ -3086,7 +3088,7 @@ function drawUnderground(F) {
   if (S.ugView && S.ugView.map === S.map) { S.ugView.draw(g, F, W, H, DPR); return; }
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#030304'; g.fillRect(0, 0, canvas.width, canvas.height);
   if (S.ugViewP) return;
-  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
+  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights, drawPed }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
 }
 // the ore veins up at the quarry and the mine's outcrops (their state: S.ugVeins), and the ring round you while you mine
 function drawVeinsTop(F) {
@@ -3115,7 +3117,7 @@ function drawMineRing(F) {
 function nearVeins(sp) {
   if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
   const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;   // (every pit and mine: World v3 has two of each)
-  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
+  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights, drawPed }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 // (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)

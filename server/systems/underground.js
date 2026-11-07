@@ -14,15 +14,15 @@
 //     and grows back after a while somewhere near it (seeded). The pickaxes' tiers gate the ores.
 //   * The caverns (World v3's Redwood Caverns): in by any of their mouths, out by the nearest; a rowboat at each of their
 //     docks that has one (while someone is down there); old chests to open (CHEST_LOOT), filling again in a while.
-import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear, mouthNear, mouthsOf, wayOut } from '../../shared/underground.js';
-import '../../shared/caverns.js';   // (the caverns' layout: registered with shared/underground.js)
+import { undergroundOf, UG, PICKS, ORE_BY_ID, bestPick, ugLos, openAt, caveOf, caveNear, mouthNear, mouthsOf, wayOut, lightAt } from '../../shared/underground.js';
+import { wayFrom } from '../../shared/caverns.js';   // (the caverns' layout: registered with shared/underground.js; the way out by the way you'd walk)
 import { ITEMS } from '../../shared/items.js';
 import { K } from '../../shared/constants.js';
 import { pedStep } from '../../shared/physics.js';
 import {
   MANHOLE_REACH, LADDER_REACH, MINE_REACH, VEIN_REGROW_S, POLICE_FOLLOW_R, POLICE_FOLLOW_S, POLICE_GIVE_UP_S,
   ROCKFALL_WARN_S, ROCKFALL_DMG, ROCKFALL_R, ROCKFALL_EVERY_S, BATS_REST_S, BEAR_WAKE_R, BEAR_BITE, BEAR_BITE_S,
-  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT, CAVE_FIND,
+  CHEST_REACH, CHEST_REFILL_S, CHEST_LOOT, CAVE_FIND, CAVE_WAY,
 } from '../../shared/rules.js';
 import { LIGHTS } from '../../shared/lights.js';
 import * as combat from './combat.js';
@@ -82,8 +82,8 @@ export function interaction(world, p) {
     }
     const K2 = ped.ug === UG.CAVE && caveOf(L, ped.x, ped.y);
     if (K2) {
-      const w = wayOut(K2, ped.x, ped.y);
-      if (w && w.d < 56) return { label: w.M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : 'Walk out of the cave', run: () => leaveCave(world, p, K2, w.M) };
+      const M = exitNear(K2, ped.x, ped.y);
+      if (M) return { label: M.kind === 'sea' ? 'Walk out of the sea cave onto the beach' : `Walk out of the cave, into the ${dayOut(world) ? 'daylight' : 'night'}`, run: () => leaveCave(world, p, K2, M) };
       const c = chestInteraction(world, p, K2, ped);
       if (c) return c;
       const f = p.caveFind;
@@ -107,6 +107,19 @@ function mineInteraction(world, p, ped) {
   if (PICKS[pick].tier < q.v.need) return { label: `${name} vein - needs a ${PICK_NAME[q.v.need]} or better`, run: () => world.notify(p, `Your ${PICK_NAME[PICKS[pick].tier]} just skids off it. ${name} needs a ${PICK_NAME[q.v.need]} or better.`, 'warn') };
   return { label: `Mine the ${oreName(q.v.ore)} vein (${PICK_NAME[PICKS[pick].tier]})`, run: () => beginMining(world, p, q.i) };
 }
+
+// the way out you're standing in (within CAVE_WAY.leaveReach of its passage, from just in from where you came in out to
+// the mouth): its mouth, or null
+function exitNear(K2, x, y) {
+  let best = null, bd = CAVE_WAY.leaveReach;
+  for (const M of mouthsOf(K2)) {
+    const ax = M.inside.x, ay = M.inside.y, dx = M.x - ax, dy = M.y - ay, l2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2));
+    const d = Math.hypot(ax + dx * t - x, ay + dy * t - y);
+    if (d < bd) { bd = d; best = M; }
+  }
+  return best;
+}
+const dayOut = (world) => { const m = world.clock ? world.clock.minutes : 720; return m >= 360 && m < 1200; };
 
 // ---- down and up -------------------------------------------------------------------------------------------------------
 function moveTo(world, p, x, y, ug) {
@@ -160,6 +173,7 @@ export function enterCave(world, p, K = null, M = null) {
   if (ped.carrying) { world.notify(p, 'Set the crate down first.', 'warn'); return false; }
   const M2 = M || mouthsOf(K2).reduce((b, q) => (!b || Math.hypot(q.x - ped.x, q.y - ped.y) < Math.hypot(b.x - ped.x, b.y - ped.y) ? q : b), null);
   p.caveFind = rollFind(world, p, K2);
+  p.ugWay = null;
   moveTo(world, p, M2.inside.x, M2.inside.y, UG.CAVE);
   world.notify(p, p.profile.light ? 'Into the cave. Your flashlight shows the way.' : 'Into the cave. It\'s pitch dark in here - switch on a flashlight if you have one.', 'info');
   return true;
@@ -170,7 +184,8 @@ export function leaveCave(world, p, K = null, M = null) {
   const M2 = M || wayOut(K2, p.ped.x, p.ped.y).M;
   p.caveFind = null;
   moveTo(world, p, M2.out.x, M2.out.y, 0);
-  world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : 'Out into the daylight.', 'info');
+  p.ugWay = null;
+  world.notify(p, M2.kind === 'sea' ? 'Out onto the cobbles of the beach, the sea in front of you.' : dayOut(world) ? 'Out into the daylight.' : 'Out into the night air.', 'info');
   return true;
 }
 // ---- a cavern's old chests ------------------------------------------------------------------------------------------------
@@ -334,6 +349,27 @@ function caveStep(world, dt) {
   const inCaves = L.caves.map(() => []);   // (who is in each cave: by where they are)
   for (const p of world.players.values()) if (p.ped && !p.ped.dead && p.ped.ug === UG.CAVE) inCaves[caveOf(L, p.ped.x, p.ped.y).k].push(p);
   for (const K2 of L.caves) oneCave(world, dt, K2, inCaves[K2.k], caveState(world, K2));
+  if (world.tick % 10 === 0) for (const [k, ps] of inCaves.entries()) for (const p of ps) wayHint(world, p, L.caves[k]);
+}
+// The arrow toward the way out (CAVE_WAY), decided here, a few times a second: only for someone deep in a cave who isn't
+// finding their way back - no nearer to a mouth (by the way you'd walk) for a while, or a while in the dark without a
+// light of their own. It points a few tiles along the way, not through the rock; the page draws it at the screen's edge
+// ('ugway': [x, y], or null when it goes).
+export function wayHint(world, p, K2) {
+  const ped = p.ped, st = p.ugWay || (p.ugWay = { since: world.time, best: Infinity, bestAt: world.time, darkAt: -1, w: null });
+  const q = wayFrom(K2, ped.x, ped.y, CAVE_WAY.aheadTiles);
+  if (q.d >= 0 && q.d < st.best - CAVE_WAY.gainTiles) { st.best = q.d; st.bestAt = world.time; }
+  const lit = !!ped.lightCode, L = layoutOf(world);
+  const dark = !lit && lightAt(L, ped.x, ped.y, [], dayOut(world) ? 1 : 0) < 0.08;
+  if (!dark) st.darkAt = -1; else if (st.darkAt < 0) st.darkAt = world.time;
+  const show = q.d > CAVE_WAY.farTiles && world.time - st.since > CAVE_WAY.afterS
+    && (world.time - st.bestAt > CAVE_WAY.stallS || (st.darkAt >= 0 && world.time - st.darkAt > CAVE_WAY.darkS));
+  const w = show ? [Math.round(q.x), Math.round(q.y)] : null;
+  if ((w === null) !== (st.w === null) || (w && (Math.abs(w[0] - st.w[0]) > 40 || Math.abs(w[1] - st.w[1]) > 40))) {
+    st.w = w;
+    if (p.conn) p.conn.sendJSON({ t: 'ugway', w });
+  }
+  return w;
 }
 // each cave's own state (world.caves[k]; world.cave: the first's)
 function caveState(world, K2) {
@@ -450,4 +486,4 @@ export function update(world, dt) {
   }
 }
 // regrowing veins: anyone near hears about them (a vein's state is sent with the layer: sendLayer)
-export const _test = { manholeNear, doorNear, veinList, chestList, caveState };
+export const _test = { manholeNear, doorNear, veinList, chestList, caveState, exitNear };

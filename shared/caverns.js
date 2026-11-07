@@ -4,10 +4,12 @@
 // (client/underground/view.js), the tests. Integer hashes and plain arithmetic, no trigonometry: the same everywhere.
 import { TILE } from './constants.js';
 import { mulberry32 } from './rng.js';
-import { UG, C, registerCaverns, _ug } from './underground.js';
+import { UG, C, registerCaverns, _ug, mouthsOf } from './underground.js';
 import { carveScene, kitCavern, dressKit } from './cavekit.js';
 
 const { region, cellAt, setCell, capsule, disc, wallSpots, floorSpots, pickN, vnoise, segDist, len, kSeed } = _ug;
+// a way out's opening (px): half its width; its lanterns this far in from the mouth and out from the middle
+export const EXIT = { hw: 40, lampIn: 40, lampOut: 30 };
 
 // A cavern (World v3's map.caverns: shared/world3-caves.js lays each out - its mouths, chambers, river, docks... all in
 // px): its chambers and passages as a mine cave's are, its mouths (mouths[0] is the cave's mouth and inside, as a mine
@@ -215,6 +217,20 @@ export function lightCave(L, K) {
   }
   K.lanterns = [...(K.lanterns || []), ...hung];
   dressKit(K);
+  // the ways out (the owner, 11-06: "have the exit of the cave look like an exit so it's clear how to get back out"): at
+  // each mouth the opening (u: the way out of it, hw: half its width), a pair of lanterns on posts just inside, and an
+  // adit's timbered portal; the view (client/underground/caveart.js) lets the daylight in through it, turns the floor to
+  // the ground outside and hangs the WAY OUT board
+  K.exits = [];
+  for (const M of mouthsOf(K)) {
+    const dx = M.x - M.inside.x, dy = M.y - M.inside.y, l = len(dx, dy) || 1, ux = dx / l, uy = dy / l;
+    const E = { x: M.x, y: M.y, ux: Math.round(ux * 1000) / 1000, uy: Math.round(uy * 1000) / 1000, hw: EXIT.hw, kind: M.kind || 'adit', name: M.name, lamps: [] };
+    for (const sd of [-1, 1]) {
+      const q = { x: Math.round(M.x - ux * EXIT.lampIn - uy * sd * EXIT.lampOut), y: Math.round(M.y - uy * EXIT.lampIn + ux * sd * EXIT.lampOut), exit: 1 };
+      E.lamps.push(q); K.lanterns.push(q);
+    }
+    K.exits.push(E);
+  }
   // where a find can lie: dry floor in the light (a shaft's pool, by a lantern), clear of the way in
   const spots = [];
   for (const s of K.shafts) spots.push(...floorSpots(R, s.x, s.y, s.r * 0.55).filter((q) => len(q.x - s.x, q.y - s.y) < s.r * 0.55));
@@ -222,5 +238,52 @@ export function lightCave(L, K) {
   K.finds = pickN(rnd, spots.filter((s) => dryAt(s.x, s.y) && mouthsOf2(K).every((M) => len(M.inside.x - s.x, M.inside.y - s.y) > 120)), 8).map((s) => ({ x: Math.round(s.x), y: Math.round(s.y) }));
 }
 const mouthsOf2 = (K) => K.mouths || [{ inside: K.inside }];
+
+// The way out by the way you'd walk (server/systems/underground.js: the arrow toward it when you're lost): how many tiles
+// from each open cell of a cave to the nearest of its mouths, worked out once per cave (a breadth-first walk over the
+// cells from every mouth's way in; rock and white water stop it, the water you can swim or row doesn't) - Int32 per
+// cell of its region, -1 where there's no way.
+export function wayField(K) {
+  if (K._way) return K._way;
+  const R = K.region, W = R.w, H = R.h, D = new Int32Array(W * H).fill(-1), Q = new Int32Array(W * H);
+  let qh = 0, qt = 0;
+  const pass = (v) => v > 0 && v !== C.CASCADE;
+  for (const M of mouthsOf(K)) for (const P of [M.inside, M]) {
+    const tx = Math.floor(P.x / TILE) - R.x0, ty = Math.floor(P.y / TILE) - R.y0;
+    if (tx < 0 || ty < 0 || tx >= W || ty >= H) continue;
+    const i = ty * W + tx;
+    if (D[i] < 0 && pass(R.c[i])) { D[i] = 0; Q[qt++] = i; }
+  }
+  while (qh < qt) {
+    const i = Q[qh++], x = i % W, y = (i - x) / W, d = D[i] + 1;
+    if (x > 0 && D[i - 1] < 0 && pass(R.c[i - 1])) { D[i - 1] = d; Q[qt++] = i - 1; }
+    if (x < W - 1 && D[i + 1] < 0 && pass(R.c[i + 1])) { D[i + 1] = d; Q[qt++] = i + 1; }
+    if (y > 0 && D[i - W] < 0 && pass(R.c[i - W])) { D[i - W] = d; Q[qt++] = i - W; }
+    if (y < H - 1 && D[i + W] < 0 && pass(R.c[i + W])) { D[i + W] = d; Q[qt++] = i + W; }
+  }
+  return (K._way = D);
+}
+// how many tiles you are from the way out (-1: none), and the spot n tiles further along it ({ d, x, y })
+export function wayFrom(K, x, y, n = 0) {
+  const R = K.region, D = wayField(K), W = R.w;
+  let tx = Math.floor(x / TILE) - R.x0, ty = Math.floor(y / TILE) - R.y0;
+  if (tx < 0 || ty < 0 || tx >= W || ty >= R.h) return { d: -1, x, y };
+  let i = ty * W + tx;
+  if (D[i] < 0) {   // (standing on a cell's edge in the rock: the nearest open cell round it)
+    let best = -1;
+    for (let j = -1; j <= 1; j++) for (let k = -1; k <= 1; k++) { const q = (ty + j) * W + tx + k; if (ty + j >= 0 && ty + j < R.h && tx + k >= 0 && tx + k < W && D[q] >= 0 && (best < 0 || D[q] < D[best])) best = q; }
+    if (best < 0) return { d: -1, x, y };
+    i = best;
+  }
+  const d0 = D[i];
+  for (let s = 0; s < n && D[i] > 0; s++) {
+    let nx = i;
+    for (const q of [i - 1, i + 1, i - W, i + W]) if (q >= 0 && q < D.length && D[q] >= 0 && D[q] < D[nx]) nx = q;
+    if (nx === i) break;
+    i = nx;
+  }
+  const cx = i % W;
+  return { d: d0, x: (cx + R.x0 + 0.5) * TILE, y: ((i - cx) / W + R.y0 + 0.5) * TILE };
+}
 
 registerCaverns({ buildCavern, carveCavern, dressCavern, lightCave, carveScene });
