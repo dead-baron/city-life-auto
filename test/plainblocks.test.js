@@ -186,7 +186,7 @@ test('tall towers: a split tower is several buildings of different heights, its 
   for (const g of TS.list) {
     const P = g.map((id) => M.buildings[id]), tw = P[0];
     groups++;
-    assert.ok(P.length >= 2 && P.length <= 7, `${tw.name}: ${P.length} buildings`);
+    assert.ok(P.length >= 2 && P.length <= TOWER3.most, `${tw.name}: ${P.length} buildings`);
     assert.ok(P.every((b) => b && !b.gone && b.towerPart && b.towerPart.of === tw.id && b.art && b.whole), `${tw.name}: its parts`);
     // one footprint, no overlaps: each part's tiles its own
     for (const b of P) for (let y = b.ty; y < b.ty + b.th; y++) for (let x = b.tx; x < b.tx + b.tw; x++) assert.equal(M.bld[M.idx(x, y)], b.id, `${b.name} at ${x},${y}`);

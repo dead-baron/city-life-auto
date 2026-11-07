@@ -14,7 +14,7 @@
 //   - the tower: slim (10-20 tiles of front) over its own door, so its lobby, its name, its delivery stop or its home stay
 //     where they were; lower (at most TOWER3.cap floors, two less than it had, and lower still where its wall would cover
 //     a place or a sign to the north), its top floors a setback crown (the art's `up`: client/art2/game/statics.js);
-//   - either side of it, in pieces of at most 22 tiles: a wing set back behind a podium of one or two floors of shops,
+//   - either side of it, in pieces of at most 26 tiles: a wing set back behind a podium of one or two floors of shops,
 //     or a mid-rise of three to six floors with its shop on the pavement - the floors stepping down away from the tower,
 //     its skin another of the city's (stone by glass, brick by stone), its windows and cornice its own;
 //   - a footprint deeper than TOWER3.deep: its back a lower block (or two) behind them, brick with a water tank or
@@ -33,8 +33,8 @@ import { hash2 } from './rng.js';
 export const TOWER_LANDMARKS = ['Greenfield Tower', 'Union Trust Tower', 'Sterling Tower', 'Grand Neon Hotel', 'Westport Center Tower'];
 // floors: a tower this tall or more is split if it's big - a front of `front` tiles or `area` of footprint; cap: the
 // tallest a split tower stands (its crown included); slim: its widest front; deep: a front zone's deepest (behind it, the
-// back block); piece: the widest of the side pieces
-export const TOWER3 = { floors: 8, front: 24, area: 600, cap: 12, slim: 20, deep: 28, piece: 22 };
+// back block); piece: the widest of the side pieces; most: the most buildings a tower becomes
+export const TOWER3 = { floors: 8, front: 24, area: 600, cap: 12, slim: 20, deep: 28, piece: 26, most: 5 };
 // the wall a tower of f floors draws (px: a shop's ground floor, the floors over it, the cornice and a 12 px parapet -
 // client/art2/buildings.js buildingH), and the most floors whose wall stays within t tiles
 const wallPx = (f) => 26 + 56 * f;
@@ -110,17 +110,19 @@ function splitTower(m, b) {
   const parts = [b.id];
   const add = (role, px, py, pw, ph, o) => {
     const id = m.buildings.length;
-    const nb = { id, prefab: -1, tx: px, ty: py, tw: pw, th: ph, kind: b.kind, name: o.name, business: null, signs: [], hand: true, arch: o.arch, whole: true, art: o.art, towerPart: { of: b.id, role } };
+    const sg = o.art.shop && o.art.shop.sign ? [{ x: Math.round((px + pw / 2) * TILE), y: Math.round((py + ph - 0.6) * TILE), text: o.art.shop.sign.text }] : [];   // (its shop's sign on the street: the street trees keep off it - world3-greens.js)
+    const nb = { id, prefab: -1, tx: px, ty: py, tw: pw, th: ph, kind: b.kind, name: o.name, business: null, signs: sg, hand: true, arch: o.arch, whole: true, art: o.art, towerPart: { of: b.id, role } };
     m.buildings.push(nb);
     for (let yy = py; yy < py + ph; yy++) for (let xx = px; xx < px + pw; xx++) m.bld[m.idx(xx, yy)] = id;
     parts.push(id);
     return nb;
   };
-  // the sides, out from the tower: pieces of at most TOWER3.piece tiles, the floors stepping down
-  const skins = sideSkins(glass, S, r);
-  const sides = [[x, tx0 - x, -1], [tx0 + tw, x + w - tx0 - tw, 1]];
-  let q = 0, lastShop = null;
-  for (const [sx, sw, dir] of sides) {
+  // the sides, out from the tower: pieces of at most TOWER3.piece tiles, the floors stepping down; each a wing set back
+  // behind a podium of shops or a mid-rise with its shop on the pavement (neighbours differ). Planned first, so the group
+  // stays at most TOWER3.most buildings: one back block, then the outermost podiums made mid-rises
+  const skins = sideSkins(glass, S, r), plan = [];
+  let q = 0;
+  for (const [sx, sw, dir] of [[x, tx0 - x, -1], [tx0 + tw, x + w - tx0 - tw, 1]]) {
     if (sw <= 0) continue;
     const n = Math.ceil(sw / TOWER3.piece), pieces = [];
     for (let i = 0, at = 0; i < n; i++) { const pw = i === n - 1 ? sw - at : Math.floor(sw / n); pieces.push([at, pw]); at += pw; }
@@ -130,26 +132,29 @@ function splitTower(m, b) {
       const px = sx + off, kq = 20 + q * 10;
       const fl = lower(Math.max(3, Math.min(top, Math.round(Ft * (0.35 + 0.3 * r(kq))) - j)), px, pw, y, k, 3);
       top = fl - 1;
-      const skin = skins[q++ % skins.length];
-      // a wing behind a podium of shops, or a mid-rise with its shop on the pavement (neighbours differ)
       let mode = D >= 16 && pw >= 6 && r(kq + 1) < 0.58 ? 'podium' : 'mid';
       if (mode === last && D >= 16 && pw >= 6) mode = mode === 'podium' ? 'mid' : 'podium';
       last = mode;
-      const name = `${b.name} ${dir < 0 ? 'West' : 'East'}${pieces.length > 1 ? ' ' + (j + 1) : ''}`;
-      if (mode === 'podium') {
-        const pd = 6 + Math.floor(r(kq + 2) * 3);
-        add('wing', px, y + k, pw, D - pd, { name: name + ' Wing', arch: homes || r(kq + 3) < 0.4 ? 'condo' : 'office', art: partArt(skin, fl, r, kq, { noShop: true, terrace: true, balconies: homes || r(kq + 4) < 0.35 }) });
-        const shop = shopOf(r, kq + 5, pw, lastShop); lastShop = shop.kind;
-        add('podium', px, y + h - pd, pw, pd, { name: shop.name, arch: 'mixed', art: partArt(podiumSkin(skin, r, kq), 1 + (r(kq + 6) < 0.45 ? 1 : 0), r, kq + 50, { shop, garden: r(kq + 7) < 0.65 }) });
-      } else {
-        const shop = shopOf(r, kq + 5, pw, lastShop); lastShop = shop.kind;
-        add('mid', px, y + k, pw, D, { name: shop.name, arch: 'mixed', art: partArt(skin, Math.min(fl, 6), r, kq, { shop, garden: r(kq + 7) < 0.3 }) });
-      }
+      plan.push({ px, pw, fl, kq, j, out: j, mode, skin: skins[q++ % skins.length], name: `${b.name} ${dir < 0 ? 'West' : 'East'}${pieces.length > 1 ? ' ' + (j + 1) : ''}` });
     });
   }
+  let backs = k >= 8 ? (w > 44 ? 2 : 1) : 0;
+  const count = () => 1 + backs + plan.reduce((a, p) => a + (p.mode === 'podium' ? 2 : 1), 0);
+  if (count() > TOWER3.most && backs === 2) backs = 1;
+  for (const p of plan.slice().sort((a, c) => c.out - a.out)) if (count() > TOWER3.most && p.mode === 'podium') p.mode = 'mid';
+  let lastShop = null;
+  for (const p of plan.slice().sort((a, c) => a.px - c.px)) {   // (west to east: no two of a trade side by side)
+    const { px, pw, fl, kq, skin, name } = p, shop = shopOf(r, kq + 5, pw, lastShop);
+    lastShop = shop.kind;
+    if (p.mode === 'podium') {
+      const pd = 6 + Math.floor(r(kq + 2) * 3);
+      add('wing', px, y + k, pw, D - pd, { name: name + ' Wing', arch: homes || r(kq + 3) < 0.4 ? 'condo' : 'office', art: partArt(skin, fl, r, kq, { noShop: true, terrace: true, balconies: homes || r(kq + 4) < 0.35 }) });
+      add('podium', px, y + h - pd, pw, pd, { name: shop.name, arch: 'mixed', art: partArt(podiumSkin(skin, r, kq), 1 + (r(kq + 6) < 0.45 ? 1 : 0), r, kq + 50, { shop, garden: r(kq + 7) < 0.65 }) });
+    } else add('mid', px, y + k, pw, D, { name: shop.name, arch: 'mixed', art: partArt(skin, Math.min(fl, 6), r, kq, { shop, garden: r(kq + 7) < 0.3 }) });
+  }
   // the back: a lower block (two over a wide footprint) behind the front zone
-  if (k >= 8) {
-    const two = w > 44, cut = two ? x + Math.round(w * (0.4 + 0.2 * r(80))) : x + w;
+  if (backs) {
+    const two = backs === 2, cut = two ? x + Math.round(w * (0.4 + 0.2 * r(80))) : x + w;
     for (const [bx, bw, kk] of two ? [[x, cut - x, 81], [cut, x + w - cut, 86]] : [[x, w, 81]]) {
       // (on the street to the north: six floors at most, its wall no deeper over that street than its pavement and lanes)
       const fl = lower(Math.max(4, Math.min(6, Ft - 4 - Math.floor(r(kk) * 3))), bx, bw, y, 0, 4);
