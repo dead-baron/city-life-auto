@@ -11,7 +11,7 @@
 //     once a block (twice in a block of more than eight shops). A lot too small for its shop stays a shed.
 //   - the lots that front only the passages stay the sheds and garages they are;
 //   - street dice in two of Southside's passages (m.diceSpots: server/systems/activities.js plays the crew's game there,
-//     server/systems/streetdice.js lets you in on it), dressed with milk crates, trash bags, a drum and a lamp.
+//     server/systems/streetdice.js lets you in on it), dressed with milk crates, trash, a burn barrel and a lamp.
 // Port Westport and every other district are left as they are. Deterministic: integer tiles, hash2 draws by place.
 import { TILE, T } from './constants.js';
 import { hash2 } from './rng.js';
@@ -161,8 +161,8 @@ function shop(m, H, c, L, label) {
 }
 
 // Street dice down two of Southside's passages (GM8): the passages between sheds, away from the shops' doors and the
-// streets, the farthest apart; the crew's spot against the passage's south wall (the back of the lot below), a milk
-// crate or two, trash bags, a drum, a lamp at the wall. -> how many
+// streets, the farthest apart; the crew's spot against the passage's south wall (the back of the lot below), milk
+// crates, trash bags and a pile, a burn barrel and a pallet, a lamp at the wall. -> how many
 function diceSpots(m, H, cands) {
   const shops = new Set(cands.filter((c) => c.kind).map((c) => c.col));
   const L = [];
@@ -186,9 +186,14 @@ function diceSpots(m, H, cands) {
     if (spots.some((s) => Math.abs(s.x - x) < 60 * TILE && Math.abs(s.y - y) < 60 * TILE)) continue;
     spots.push({ x: Math.round(x), y: Math.round(y), a: 0, ix: 0, iy: -1, name: 'Southside' });
     const fy = b.ty + b.th, e = hash2(b.tx, b.ty, 1452) < 0.5 ? 1 : -1, ex = e > 0 ? b.tx + b.tw - 1.2 : b.tx + 1.2;
+    // (the crew's crates to sit on beside them, the trash against the wall, a burn barrel and a pallet at the far end of
+    // the front wall, the lamp over the back wall: never on the crew's spot)
     H.addProp(m, 'crates', x + e * 2.2 * TILE, (fy + g - 0.5) * TILE, 0);
+    H.addProp(m, 'crates', x - e * 2.4 * TILE, (fy + g - 0.5) * TILE, 0);
     H.addProp(m, 'bags', (b.tx + (e > 0 ? 1.1 : b.tw - 1.1)) * TILE, (fy + g - 0.45) * TILE, 0);
-    H.addProp(m, 'drum', ex * TILE, (fy + 0.6) * TILE, 9);
+    H.addProp(m, 'trashpile', (b.tx + (e > 0 ? 2.4 : b.tw - 2.4)) * TILE, (fy + g - 0.5) * TILE, 0);
+    H.addProp(m, 'burnbarrel', ex * TILE, (fy + 0.6) * TILE, 9);
+    H.addProp(m, 'pallet', (ex - e * 1.4) * TILE, (fy + 0.5) * TILE, 0);
     H.addProp(m, 'lamp', (e > 0 ? b.tx + 0.5 : b.tx + b.tw - 0.5) * TILE, (fy + g - 0.4) * TILE, 0);
   }
   return spots.length;

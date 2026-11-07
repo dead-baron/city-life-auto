@@ -20715,3 +20715,55 @@ is the first goal: there's no tour. The old city tour is gone (`shared/tutorial.
   a price or an item shows in the Guide, the map's counts, search, and that it loads lazily.
 - CLAUDE.md: the two tutorial sections now describe the FTUE rule (teach the new thing: a Guide entry or moment with
   each system change).
+
+## 2026-11-06 - Southside's shops and sheds: rough small shops on the street lots, dice down the passages
+The plain blocks' cut ("No huge plain buildings", above) left Southside's long back rows as columns of lots 10-15 tiles
+deep with paved passages between them. Every lot fronts its passage, and in Southside the art draws them as sheds and
+garages (a metal roof there is a `shed`, a tar one a `rough` walk-up with a random shopfront). The owner asked for a
+mix that keeps the neighborhood's rough vibe and matches its concepts (D6 Southside, RT10 the pawn shop on the corner,
+RT5 the liquor store, OS21, ST3 the barber, IN11 the row of rough shops, GM8 the dice game down an alley). The plan he
+approved: the lots on a real street become rough small shops, the lots that front only the passages stay sheds and
+garages, street dice down a passage or two, and Port Westport stays industrial.
+
+**shared/world3-lots.js** (new; World v3 only - the world build's `lots` hook, which map.js calls right after
+`breakPlainBlocks`; the page and the city worker never load it):
+- **Which lots.** Southside's 149 cut lots: 53 are the southmost lot of a column, whose front faces north, away from the
+  camera (`back`); they stay as they are. Of the other 96, which front a passage, 22 also stand on a real street: a
+  side or main street's pavement or asphalt along their west or east side, or across the pavement in front. An alley's
+  asphalt or a passage's paving doesn't count. The other 74 front only their passages and stay sheds and garages.
+- **The mix.** Eight kinds. The four you walk into use place kinds the game already has, with their counters and their
+  rooms (`shared/shoprooms.js`): a **pawn shop** (`pawn`: buys and sells, takes hot money), a **liquor store** (a corner
+  store, `convenience`, that sells what one sells and can be robbed like one; its room is the liquor plan's shelves of
+  bottles, OS21), a **barber** (`barber`: the chair, cut, color, beard and mustache) and a **bodega** (`convenience`,
+  the corner store's plan). The other four are storefronts only, with a sign, a window and a delivery stop, like Wash
+  World and Lucky 7 Check Cashing on Pelican Avenue: **check cashing** (a counter window behind a grille), a **betting
+  shop** (its window full of screens; the sign in the street trade's yellow on black), a **laundromat** (the washers in
+  the window, the washer sign) and a **tire shop** (the garage's roller doors with its name over them, stacks of tires
+  out front). Each would need a new system to be more than a front - a check-cashing counter, an off-track window on
+  the race book, a wash for your clothes, tires for your car - so none was invented here.
+- Rooms: a walk-in kind needs a lot at least 6 wide and 8 deep (4 tiles inside, and the 6 rows `roomDepth` wants), a
+  storefront 5 x 6 (the tire shop 6 x 6, for two roller doors). A lot too small stays a shed. All 22 had room.
+- The door is at the street's end of the shop's front (in the middle when the street is in front), so it opens onto
+  the passage's mouth by the pavement. A walk-in's room is laid by the same code as every other walk-in's: map.js
+  `buildInteriors` now lays each room with `walkInRoom`, which the hook calls for the lot shops. Nothing else changes.
+- No two neighbors are alike: side by side, or across a passage, the kinds always differ. A kind comes up at most once
+  in a block (twice in a block of more than eight shops). The kinds Southside has fewest of so far go first, so the
+  mix spreads over all eight. Names and signs are invented, from each kind's own list, never a brand.
+- The look: rough brick (dark or red, the Riverway Houses' tones) or Southside's stucco, one or two floors over the
+  shop, grime, tags, now and then a boarded window, a grille on most of the pawn shops, liquor stores and check
+  cashers, an OPEN sign on most of the liquor stores and bodegas, an awning now and then on a barber, a bodega or a
+  laundromat. These are building data (`b.art`, `b.arch`), drawn by the art as it draws the hand plans' shops: no art
+  code changed.
+- **IDs.** The lots keep their ids and their footprints (breakPlainBlocks appended them). The shops' POIs join the list
+  last of all, at the end of the world build's `done` hook (`lotPoisLast`), so every place before stays where it was
+  and keeps its number. Without that, 48 places added later in the build (ATMs, boat rentals, race starts, a snack bar,
+  Smuggler's Den) would have been renumbered.
+- **Street dice (GM8).** The game already has a dice game. `server/systems/activities.js` sets a crew of three
+  crouched round the dice down an alley in a rough part of town, mostly after dark, and `server/systems/streetdice.js`
+  lets you in on it: craps' pass line for `DICE.bet` a roll, with a sore loser now and then. The hook picks two of
+  Southside's passages between sheds, away from the shops and the streets, the farthest apart, and puts a spot against
+  each one's south wall (`m.diceSpots`). activities.js plays the crew's game there too. The passage gets milk crates,
+  trash bags and a trash pile, a burn barrel, a pallet and a lamp. The Guide's "Street dice" entry now says "down an alley or a back passage in a rough
+  part of town, like Southside's".
+- **shared/shoprooms.js `planOf`:** a corner store whose trade is liquor (a walk-in `convenience` with `store: 'liquor'`)
+  gets the liquor plan. Riverway Liquor and the generator's liquor stores have no trade and keep the corner plan.
