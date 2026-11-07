@@ -21414,3 +21414,14 @@ reconnecting for a bit. It would be nice if it didn't disconnect so quickly tabb
   Back inside it is the same session and character (no new arrival, no reload), without the "Reconnected" toast.
 - test/tabout.test.js (new): a backgrounded, wanted player dropped for a minute is the same session and body on
   return; an ordinary drop keeps 30 s; the away message sets and clears the socket's quiet time; the page's decisions.
+
+## 2026-11-07 - Drive-bys: the muzzle flash out of the car's window
+The owner (11-06): "when driving in a car and shooting you'll see the muzzle flash way outside of the car like lagging
+behind it by itself... at the very least have the muzzle flash coming out of the car window or the top of the car."
+The page put the flash and the tracer at the shooter's own entity: in a car that's the ped riding in it, interpolated
+from the server's snapshots, while your own car is drawn where the prediction has it (ahead) - so the flash trailed
+behind the car, and further the faster you drove. Now a shot from a closed vehicle starts at the car as it's drawn
+this frame (`client/render/fx.js` `windowMuzzle`): out of the window on the side aimed at (the front row, or the back
+seats' for a back-seat shooter), or over the roof aiming ahead or behind; the flash stays there for its frames
+(collectLights) and the tracer starts from the same point. For a moment after each shot an arm and a gun show out of
+that window (`drawLeans`, on the overlay). Bikes, horses and open boats keep the rider's own point. test/drivefx.test.js.
