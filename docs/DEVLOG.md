@@ -20606,8 +20606,9 @@ whole lounge, tavern or sports bar.
   district's two shop rows and Cask & Cork's pair, and one food cart in Bayside Heights. The generic names
   after a moved lot change: Ibarra Pub is gone, and Black Cat Saloon and Ferro Taproom are new. Fresh Stop moves from
   the Trestle row (4 x 6) to a 6 x 9 lot on another row. 19 home spots moved. Homes are numbered through the city, so
-  most home ids after Midtown are renumbered, as in the 10-24 update. `WORLD_VERSION` is not bumped (see the owner's
-  decision in the report).
+  most home ids after Midtown are renumbered. The owner chose to buy them back: `WORLD_VERSION` 12 -> 13, so
+  `homes.checkWorld` buys each owned home back at its deed and the player wakes at a hospital (cars, money and items
+  kept). The owner kept rows over IN6's gondolas in mid-size pharmacies (rows read fuller).
 - Tests run: shoprooms, storeicons, foodrooms, shopmarks, walkinrooms, mapwindow, dmath, facades and art2 (50 pass);
   signs, walkinfront, plainblocks, cliffs and worldbuild (20 pass); all 43 world3*.test.js (126 pass); perf (6 pass).
   test/dmath-world.mjs gives the same signature and hash with and without the nudge, and calls none of the approximated
