@@ -84,6 +84,8 @@ function piecesOf(m) {
   PIECES.set(m, (P = { of, st: new Map() }));
   return P;
 }
+// the piece of road network a junction is on (police.js sendTransport: a car sent for a prisoner comes from their piece)
+export const nodePiece = (m, id) => piecesOf(m).of[id] ?? -1;
 // the piece of road network at (x, y): its nearest junction's (-1: no roads at all)
 export function pieceAt(m, x, y) {
   const n = m.net && m.nearestNode(x, y);
@@ -825,7 +827,8 @@ export function runCar(world, v, crew, dt) {
     const d = Math.hypot(v.x - gx, v.y - gy);
     v.sirenOn = d > 600;
     let fx = null;
-    if (d > PICKUP_PX && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
+    if (d > PICKUP_PX && drv && drv.npc && waterAhead(world, v)) { halt(v); v.ai.route = null; }   // (never into the sea on the way either)
+    else if (d > PICKUP_PX && drv && drv.npc) route(world, v, gx, gy, d < 450 ? 170 : 460);
     else {
       halt(v);
       if (d > PICKUP_PX) {

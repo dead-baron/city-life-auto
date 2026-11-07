@@ -87,7 +87,7 @@ function spawnPoint(world, p, tx, ty, o) {
   for (const [lo, hi] of [[minD, maxD], [maxD, maxD * 1.6], [maxD * 1.6, maxD * 2.4]]) {
     const ok = [], behind = [];
     for (const n of m.nodes) {
-      if (n.lvl !== 0) continue;
+      if (n.lvl !== 0 || (o.ok && !o.ok(n))) continue;
       const d = Math.hypot(n.x - tx, n.y - ty);
       if (d < lo || d > hi) continue;
       let near = false;
@@ -160,7 +160,9 @@ function spawnUnit(world, p, o = {}) {
 // A car sent to take a prisoner in (custody.js): from out of sight like any unit, no siren, straight to them.
 export function sendTransport(world, p) {
   const ped = p.ped;
-  const n = spawnPoint(world, p, ped.x, ped.y, { at: { x: ped.x, y: ped.y }, minD: 520, maxD: 1200, clearPx: 360 });
+  // (from the prisoner's own piece of the road network: across the water from an island, it could never get there)
+  const piece = custody.pieceAt(world.map, ped.x, ped.y);
+  const n = spawnPoint(world, p, ped.x, ped.y, { at: { x: ped.x, y: ped.y }, minD: 520, maxD: 1200, clearPx: 360, ok: (q) => custody.nodePiece(world.map, q.id) === piece });
   if (!n) return null;
   const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(ped.y - n.y, ped.x - n.x), {});
   v.despawnable = false;

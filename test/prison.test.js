@@ -214,7 +214,8 @@ test('an admin sends a misbehaving player to prison: no bail, no wall to climb, 
 // jailcell") - custody.js reachableStation, shared/world3-medics.js precincts3
 test('island towns have a police station on their roads; a car taking you in never drives into the sea; no station, the fade', () => {
   const P = M.world3.precincts;
-  assert.ok(P && P.made.length >= 1 && !P.none.length, `the island stations (${JSON.stringify(P)})`);
+  assert.ok(P && P.made.some(([n]) => n === 'Gull Harbor Police'), `the island stations (${JSON.stringify(P)})`);
+  assert.deepEqual(P.none, ['Coral Cay Police'], 'Coral Cay has no building to spare (every shop a real one): its arrests fade');
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   for (const [name, , , , id] of P.made) {
     const st = M.pois[id];
@@ -242,4 +243,24 @@ test('island towns have a police station on their roads; a car taking you in nev
   assert.equal(wet, 0, 'never in the water');
   assert.ok(stages.has('ride'), 'driven there');
   assert.equal(p.custody.station, st.id, `at ${st.label}`);
+  // arrested on Coral Cay's roads (no station on them): no car comes, the fade, and the nearest cells
+  const tile = (q) => M.dist[M.idx(Math.floor(q.x / TILE), Math.floor(q.y / TILE))];
+  const cn = M.nodes.find((q) => q.lvl === 0 && tile(q) === 44 && !custody.reachableStation(w, q.x, q.y));
+  assert.ok(cn, 'a junction on Coral Cay');
+  const { p: q } = joinPlayer(w);
+  teleport(w, q.ped, cn.x + 20, cn.y + 20);
+  q.wanted = 1; q.heat = 12; q.seenAt = w.time;
+  const cars = new Set(w.police || []);
+  law.arrest(w, spawnCop(w, q), q.ped);
+  let faded = false, sent = false, wet2 = 0;
+  for (let i = 0; i < 20 * 20 && !(q.custody && q.custody.stage === 'cell'); i++) {
+    w.step();
+    if (!q.custody) break;
+    if (q.custody.stage === 'fade') faded = true;
+    for (const id of w.police || []) if (!cars.has(id)) { const v = w.get(id); if (v && v.ai && v.ai.prisoner === q.pid) sent = true; }
+    const t = M.tileAtPx(q.ped.x, q.ped.y);
+    if (t === T.WATER || t === T.DEEP) wet2++;
+  }
+  assert.ok(q.custody && q.custody.stage === 'cell' && faded && !sent && !wet2, `the fade (${faded}), no car (${sent}), dry (${wet2}), a cell (${q.custody && q.custody.stage})`);
+  assert.equal(M.pois[q.custody.station].kind, 'police');
 });
