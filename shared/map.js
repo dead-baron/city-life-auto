@@ -40,6 +40,7 @@ import './props2.js'; // code-drawn street furniture: its sizes join PROP_SIZES
 import { buildCellBlocks, barsRay } from './cells.js';
 import { buildBowlingAlley } from './bowling.js';
 import { buildCinema } from './cinema.js';
+import { buildLoadingBays } from './loadbays.js';   // (the forklift yards' loading bays: m.loadBays)
 import {
   ISLANDS, PED_BLOCK, CAR_BLOCK, BOAT_BLOCK, SWIM_BLOCK, CAR_SPAWN_BLOCK, WATER_T, SURFACE, DISTRICTS,
   WILD_STYLES, WILD_DISTRICTS, CityMap, isSwimming, inHotSpring, nearestLand, isTurf, waterKind, cityData,
@@ -428,6 +429,7 @@ function buildCity(seed, opts = null, frame = null) {
   m.spawns.default = m.spawns.hospital;
   if (OPTS?.done) OPTS.done(m, { removeProps, addProp });   // (World v3: the terrain classes at the v3 frame - shared/world3-biomes.js; the main line's dressing cleared)
   naturalFinds(m);   // (Nature-D1: the wilds' finds - shared/foraging.js)
+  buildLoadingBays(m);   // (the forklift yards' pallet rows and their marked loading bays across the yard - shared/loadbays.js: data only, no tile or prop)
   mapSignature(m); // fingerprint the freshly built world (before anything changes at runtime)
   m.softEdge = true; // (from here on the sea runs on past the edge: tileAt)
   return m;

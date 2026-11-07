@@ -45,12 +45,13 @@ export function init(ctx) {
   });
 }
 
-// ---- the server's messages: { t: 'ftue', a: 'arrive' | 'end' | 'tip' } ------------------------------------------------
+// ---- the server's messages: { t: 'ftue', a: 'pick' | 'arrive' | 'end' | 'tip' | 'mark' } ------------------------------------------------
 export function onMsg(m) {
   if (m.a === 'pick') pick(m);
   else if (m.a === 'arrive') arrive(m);
   else if (m.a === 'end') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('cash', 0.8); }
   else if (m.a === 'tip') tip(m);
+  else if (m.a === 'mark') { const w = { x: m.x, y: m.y, label: m.label }, h = C.hud(); C.S.waypoint = w; if (h) h.waypoint = w; }   // (just let me roam: the used lot as your waypoint)
 }
 // A first-time moment never shows over the down / death screen or the wake-up's "Loading the area..." veil (the owner's
 // 11-06 screenshot: "Hurt? ... a bandage" over YOU'RE DOWN; the server holds them too: server/systems/ftue.js moment):

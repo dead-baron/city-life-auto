@@ -304,7 +304,7 @@ export class Weather {
       if (e._wx === undefined) { e._wx = e.rx; e._wy = e.ry; continue; }
       const sp = Math.hypot(e.rx - e._wx, e.ry - e._wy);
       e._wx = e.rx; e._wy = e.ry;
-      if (sp < 1.2 || (e.rz || 0) > 0.1) continue;
+      if (sp < 1.2 || (e.rz || 0) > 0.1 || e._up) continue;   // (_up: an aircraft in the air - main.js vehSinking)
       const p = this.puddleAt(e.rx, e.ry);
       if (!p) continue;
       const last = this.lastSplash.get(e.id) || 0;

@@ -148,7 +148,7 @@ test('the dev command sends it after you', async () => {
   dev.command(w, p, 'policeair', { near: 1 });
   const u = w.policeAir.get(p.pid);
   assert.ok(u, 'up after you');
-  assert.ok(p.wanted >= POLICE_AIR.stars, 'three stars at least');
+  assert.ok(p.wanted >= POLICE_AIR.stars, 'its stars at least');
   const v = w.get(u.vid);
   assert.ok(Math.hypot(v.x - p.ped.x, v.y - p.ped.y) < 400 && v.alt >= 300, 'already in the air close by (near)');
 });

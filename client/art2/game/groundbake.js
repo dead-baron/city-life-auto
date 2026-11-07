@@ -1194,7 +1194,7 @@ function markings(C, G) {
   }
   stopLines(C, G);
   crossings(C, G);
-  parking(C, G); venues(C, G); runways(C, G);                       // (at every quality: they matter for play)
+  parking(C, G); venues(C, G); runways(C, G); loadBays(C, G);       // (at every quality: they matter for play)
   if (q >= 1) { arrows(C, G); covers(C, G); }
   if (C.hasRail) railTrack(C, G);
   if (C.hasPlat) platforms(C, G);
@@ -1358,6 +1358,62 @@ function parking(C, G) {
       const X = gx + C.X0, Y = gy + C.Y0;
       if (Math.abs(Math.abs(w) - HW + 1) < 1.1 && u > -HL + 6) { if (hh(X, Y, seed + 3) > 0.1) setC(G, gi, sd(WHITE, 0.58, X, Y, 0)); }
       else if (Math.hypot(u - 22, w * 1.4) < 12 && vnc(X, Y, 4, seed + 71) > 0.45) darken(G, gi, 0.82);
+    });
+  }
+}
+// The forklift yards' loading bays (shared/loadbays.js m.loadBays): each slot's white lines and its number, a yellow
+// line along the open front, hazard stripes (yellow and black) along the back and the ends, LOADING BAY across the
+// apron in front; at the pallets' row a yellow corner mark at each pallet's place. Painted in the bay's own frame: u
+// along its slots, v the way the forks go in (its back at +d / 2), the words read from the apron.
+const BAYY = ramp('#e8c22a', 4, 2, { dark: 0.4 }), BAYK = ramp('#24221e', 4, 2);
+function loadBays(C, G) {
+  const { M, seed } = C;
+  for (const lb of M.loadBays || []) {
+    const B = lb.bay, P = lb.pick;
+    if (Math.abs(B.x - C.X0 - CHUNK / 2) < CHUNK / 2 + 200 && Math.abs(B.y - C.Y0 - CHUNK / 2) < CHUNK / 2 + 200) paintBay(C, G, B, seed);
+    if (Math.abs(P.x - C.X0 - CHUNK / 2) < CHUNK / 2 + 200 && Math.abs(P.y - C.Y0 - CHUNK / 2) < CHUNK / 2 + 200) paintPick(C, G, P, seed);
+  }
+}
+const wet = (C, X, Y) => { const t = C.M.tileAt(Math.floor(X / TILE), Math.floor(Y / TILE)); return t === T.WATER || t === T.DEEP; };
+function paintBay(C, G, B, seed) {
+  const hw = B.w / 2, hd = B.d / 2, ends = hw + 10, sw = B.w / (B.slots ? B.slots.length : 3);
+  // (the rect's u along fx, fy - the way in - and v across: rect() takes its u axis as (ux, uy))
+  rect(C, B.x, B.y, B.fx, B.fy, hd + 4, ends, (gi, a, b, gx, gy) => {
+    const X = gx + C.X0, Y = gy + C.Y0;
+    if (wet(C, X, Y)) return;
+    const v = a, u = b;   // (v: the way in; u: along the slots - rect's v is to the right of the way in, the reader's right)
+    const worn = hh(X, Y, seed + 61) < 0.06;
+    if (v > hd - 8 || Math.abs(u) > hw) { if (!worn) setC(G, gi, ((Math.floor((u + v) / 6) & 1) ? sd(BAYK, 0.45, X, Y, 0) : sd(BAYY, 0.6, X, Y, 0))); return; }   // (hazard stripes: the back and the ends)
+    if (v < -hd + 3) { if (!worn) setC(G, gi, sd(BAYY, 0.6, X, Y, 0)); return; }   // (the open front's yellow line)
+    const k = (u + hw) / sw, du = Math.abs(k - Math.round(k)) * sw;
+    if (du < 1.6 && Math.round(k) > 0 && Math.round(k) < B.slots.length) { if (!worn) setC(G, gi, sd(WHITE, 0.62, X, Y, 0)); return; }   // (the slots' white lines)
+  });
+  // the slots' numbers on the apron in front of each, LOADING BAY across the apron beyond - upright as the camera sees
+  // them (along +x, or reading up the screen for a bay whose slots run north-south)
+  const R = B.ay ? [0, -1] : [1, 0], U = [R[1], -R[0]];   // (the words' run, and their up)
+  const word = (text, s, cu, cv, col) => {   // (centred on the bay's u = cu along its slots, v = cv the way in)
+    const tw = text.length * 4 * s - s, th = 5 * s;
+    const cx = B.x + B.ax * cu + B.fx * cv, cy = B.y + B.ay * cu + B.fy * cv;   // (the words' middle)
+    drawText((px, py) => {
+      const tr = px - tw / 2, tu = th / 2 - py;
+      const X = cx + R[0] * tr + U[0] * tu, Y = cy + R[1] * tr + U[1] * tu;
+      if (!wet(C, X, Y) && hh(Math.floor(X), Math.floor(Y), seed + 63) > 0.05) plot(C, G, X, Y, (gi, x, y) => setC(G, gi, sd(col, 0.62, x, y, 0)));
+    }, text, 0, 0, { sx: s, sy: s, gap: 1 });
+  };
+  const along = (q) => (q.x - B.x) * B.ax + (q.y - B.y) * B.ay;
+  const R0 = R.slice(); R[0] = 1; R[1] = 0; U[0] = 0; U[1] = -1;   // (a slot's number: upright whichever way the bay faces)
+  B.slots.forEach((q, i) => word(String(i + 1), 4, along(q), -hd - 14, WHITE));   // (numbered as the server numbers them: the slots' order)
+  R[0] = R0[0]; R[1] = R0[1]; U[0] = R[1]; U[1] = -R[0];
+  // (LOADING BAY: across the apron for a bay facing north or south; for one facing east or west the apron's too shallow
+  // for it across - it runs along the bay's front instead, reading up the screen)
+  word('LOADING BAY', 3, 0, -hd - 40, BAYY);
+}
+function paintPick(C, G, P, seed) {
+  for (const q of P.pallets) {
+    rect(C, q.x, q.y, P.fx, P.fy, 25, 25, (gi, a, b, gx, gy) => {
+      const X = gx + C.X0, Y = gy + C.Y0, A = Math.abs(a), Bb = Math.abs(b);
+      if (wet(C, X, Y) || hh(X, Y, seed + 67) < 0.06) return;
+      if ((A > 22 && Bb > 12) || (Bb > 22 && A > 12)) setC(G, gi, sd(BAYY, 0.6, X, Y, 0));   // (an L at each corner)
     });
   }
 }

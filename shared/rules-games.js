@@ -80,7 +80,10 @@ export const BIZ = {
 // kick-off; the pads give small (refilled smallS s later) or big (bigS) within r px. goalW px the goals' mouths.
 // nearR: the arena's state goes to players this close; cheer: the crowd's roar's reach (px)
 export const CARSOCCER = {
-  teamMin: 2, teamMax: 3, lobbyS: 20, kickS: 3, matchS: 180, otS: 60, goalS: 4, overS: 8, prize: 150, model: 'hothatch', joinR: 120, nearR: 2600,
+  teamMin: 2, teamMax: 3, lobbyS: 20, kickS: 3, matchS: 180, otS: 60, goalS: 4, overS: 8, prize: 150, model: 'hothatch', joinR: 200, nearR: 2600,
+  // the join pad on Stadium Way by the gate (drive onto it to join: padDX px west of the gate, padR round); a lobby opened
+  // with another player within callR (a few blocks) waits lobbyNearS rather than lobbyS, and they're told
+  padDX: -100, padR: 110, callR: 1600, lobbyNearS: 40,
   ball: { r: 44, drag: 0.25, roll: 0.45, bounce: 0.72, g: 900, hit: 1.2, kick: 160, lift: 0.28, max: 1500 },
   bank: { w: 96, h: 40, g: 1500 },
   boost: { acc: 650, drain: 34, start: 34, small: 12, big: 100, smallS: 4, bigS: 10, r: 36 },

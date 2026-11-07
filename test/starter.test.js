@@ -1,6 +1,9 @@
-// The starter car (server/systems/starter.js; shared/rules.js STARTER): first day in the arrival station's car park,
-// registered to you and never sold, free again at any public garage once lost (after the cooldown), at home once you own
-// a garage, one per player, kept across a rejoin.
+// The starter car (server/systems/starter.js; shared/rules.js STARTER), kept for the players who have one: since the
+// owner's 11-06 22:49 decision a new character earns the first car by their path (server/systems/firstcar.js,
+// test/firstcar.test.js) and gets no starter car. A profile with one keeps it: registered to you and never sold, free
+// again at any public garage once lost (after the cooldown), at home once you own a garage, one per player, kept across
+// a rejoin and a logoff. (Retired with the code they covered: the first day in the arrival station's car park, the
+// fifty new players' starter cars in its lot and overflow - test/firstcar.test.js has the fifty buying and stealing.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, fakeConn, store } from './helpers.js';
@@ -12,8 +15,7 @@ import * as economy from '../server/systems/economy.js';
 import * as homes from '../server/systems/homes.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as dealer from '../server/systems/dealer.js';
-import { publicGarages, arrivalStation, arrivalFor, defaultArrival, onPlayerGone, overflowOf } from '../server/systems/starter.js';
-import * as ftue from '../server/systems/ftue.js';
+import { publicGarages, onPlayerGone, grant, hasStarter } from '../server/systems/starter.js';
 
 const starters = (w, pid) => [...w.entities.values()].filter((e) => e.kind === K.VEH && !e.removed && e.starter === pid);
 const one = (w, pid) => { const s = starters(w, pid); assert.equal(s.length, 1, `one starter for the player (${s.length})`); return s[0]; };
@@ -27,49 +29,53 @@ function pick(w, p, poi, id) {
   return p.toasts.map((t) => t.text).join(' | ');
 }
 const station = (w) => w.map.pois[publicGarages(w.map).find((g) => g.station).poi];   // (a station with a car park)
+// a player who has a starter car (from before 11-06): its record, the car in a station's car park
+function holder(w, o = {}) {
+  const j = joinPlayer(w, { starter: {}, ...o });
+  assert.ok(grant(w, j.p, publicGarages(w.map).find((g) => g.station)), 'a starter car in the lot');
+  return j;
+}
 // every note the world shows anyone: [player, text]
 function listen(w) { const out = [], n0 = w.notify.bind(w); w.notify = (pl, text, ...r) => { out.push([pl, text]); return n0(pl, text, ...r); }; return out; }
 const lose = (w, v) => { w.remove(v); run(w, 1); };
 // the clock on s seconds (no need to step the whole world through a five-minute wait), then a moment's ticks
 const skip = (w, s) => { w.time += s; run(w, 0.6); };
 
-test('first day: a new character finds their starter car in the arrival station\'s car park', () => {
+test('a new character gets no starter car; one reset and still waiting for its first day is a new character too; a profile that has one keeps it', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
-  const v = one(w, prof.pid);
+  const { p: n, prof } = joinPlayer(w);
+  assert.equal(starters(w, prof.pid).length, 0, 'none: the first car is earned (firstcar.js)');
+  assert.equal(prof.starter, undefined);
+  assert.ok(!hasStarter(prof));
+  const { prof: waiting } = joinPlayer(w, { starter: { first: true } });
+  assert.equal(starters(w, waiting.pid).length, 0);
+  assert.equal(waiting.starter, undefined, 'its record dropped: the first car\'s way');
+  // a profile with one keeps it - the car itself as it was
+  const { p, prof: hp } = holder(w);
+  const v = one(w, hp.pid);
+  assert.ok(hasStarter(hp));
   assert.equal(v.model, 'starter');
   assert.equal(v.def.name, 'Rusty Compact');
   assert.equal(v.paint, STARTER.paint); assert.equal(v.tint, STARTER.paint);   // (the rust brown, over the Hatchback's art)
   assert.equal(VEHICLES.starter.art, 'compact'); assert.equal(VEHICLES.starter.look, 'compact');
   assert.ok(VEHICLES.starter.max < VEHICLES.compact.max && VEHICLES.starter.accel < VEHICLES.compact.accel, 'slow: slower than the Hatchback');
-  // the arrival station: until they pick one (the FTUE's card - test/ftue.test.js), the default of the stations to
-  // choose from - on a map without arrival lines the station with a car park nearest where new characters wake - and the
-  // car is in its car park
-  const g = arrivalFor(w, p), st = w.map.pois[g.poi], sp = w.map.spawns.default;
-  assert.equal(st.kind, 'station');
-  assert.equal(g.poi, defaultArrival(w).poi);
-  assert.equal(arrivalStation(w, sp.x, sp.y).poi, g.poi, 'the nearest where new characters wake');
-  for (const o of publicGarages(w.map)) if (o.station) { const q = w.map.pois[o.poi]; assert.ok(Math.hypot(q.x - sp.x, q.y - sp.y) >= Math.hypot(st.x - sp.x, st.y - sp.y) - 1, `${q.label} is no nearer`); }
-  assert.ok(Math.hypot(v.x - st.x, v.y - st.y) <= STARTER.lotR, 'in the station\'s car park');
   assert.ok(w.map.parking.some((sp) => Math.hypot(sp.x - v.x, sp.y - v.y) < 1), 'in a parking space');
-  assert.ok(!p.toasts.some((t) => t.text.includes('starter car is waiting')), 'not told yet: where to arrive is still to pick (the FTUE\'s card)');
-  ftue.pick(w, p, null);   // (the default taken)
-  assert.ok(p.toasts.some((t) => t.text.includes(st.label)), 'told where it waits once it\'s picked');
-  assert.equal(prof.starter.first, undefined, 'the first day is over');
-  // an existing character (from before starters) gets none in a car park - only from a public garage
-  const { prof: old } = joinPlayer(w, { starter: undefined });
-  assert.equal(starters(w, old.pid).length, 0);
-  assert.deepEqual(old.starter, {});
+  // the public garages' starter row is a holder's alone
+  const garage = w.map.pois.find((q) => q.kind === 'garage');
+  assert.ok(optOf(w, p, garage, 'starter'), 'the holder\'s row');
+  assert.equal(optOf(w, n, garage, 'starter'), undefined, 'none for a new character');
+  assert.match(pick(w, n, garage, 'starter'), /not available|no starter car/i);
+  assert.equal(economy.poiLabel(w, n, station(w)).includes('starter'), false);
 });
 
 test('registered to you, never sold: no price, no dealer stock, no slot in your garage, no one else\'s garage - but it steals easily', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w, { bank: 1e6 });
+  const { p, prof } = holder(w, { bank: 1e6 });
   const v = one(w, prof.pid);
   assert.equal(v.owner, prof.pid); assert.equal(v.ownerName, p.name);
   assert.equal(v.despawnable, false, 'never tidied away like a stranger\'s car');
-  assert.equal(VEHICLES.starter.price, undefined, 'no price: nothing buys or sells it');
-  assert.ok(!SHOPS.dealer.buy.includes('starter'), 'no dealer sells it');
+  assert.equal(VEHICLES.starter.price, undefined, 'no list price: nothing buys or sells a starter car (a used Rusty Compact is the used lots\' - firstcar.js)');
+  assert.ok(!SHOPS.dealer.buy.includes('starter'), 'not in a dealer\'s own stock');
   const dl = w.map.pois.find((q) => q.kind === 'dealer');
   assert.ok(!economy.buildMenu(w, p, dl).opts.some((o) => o.id === 'vb:starter'));
   assert.match(pick(w, p, dl, 'vb:starter'), /not available/);
@@ -93,7 +99,7 @@ test('registered to you, never sold: no price, no dealer stock, no slot in your 
 
 test('lost: free again at any public garage once the cooldown is up - a station\'s car park, a Fresh Coat Garage, a dealership', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof } = holder(w);
   const v = one(w, prof.pid), notes = listen(w);
   v.wreckAt = w.time; run(w, 1);   // wrecked
   assert.equal(starters(w, prof.pid).length, 0, 'the burnt shell is no starter');
@@ -127,7 +133,7 @@ test('lost: free again at any public garage once the cooldown is up - a station\
 
 test('own a home with a garage: the starter moves there and comes out of it; the public garages send you home', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w, { bank: 1e6 });
+  const { p, prof } = holder(w, { bank: 1e6 });
   const v = one(w, prof.pid);
   const h = w.map.homes.find((q) => q.garage && !w.homeOwner.has(q.id) && q.kind !== 'apartment');
   const hp = w.map.pois.find((q) => q.kind === 'home' && q.home === h.id);
@@ -161,7 +167,7 @@ test('own a home with a garage: the starter moves there and comes out of it; the
 
 test('one per player: fetching again brings the same one round; a stolen one left empty is taken away and free again', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof } = holder(w);
   const { p: thief } = joinPlayer(w);
   const v = one(w, prof.pid);
   const st = station(w), garage = w.map.pois.find((q) => q.kind === 'garage');
@@ -197,9 +203,9 @@ test('one per player: fetching again brings the same one round; a stolen one lef
   assert.equal(v2.starter, 0); assert.equal(v2.owner, null);
 });
 
-test('kept across a rejoin and a restart: the first day isn\'t repeated, a lost one\'s cooldown carries on', () => {
+test('kept across a rejoin and a restart: no first day again, a lost one\'s cooldown carries on', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof } = holder(w);
   const v = one(w, prof.pid);
   // log off and come back on the same server: the same car, still waiting
   players.leave(w, p);
@@ -231,43 +237,9 @@ test('kept across a rejoin and a restart: the first day isn\'t repeated, a lost 
   assert.equal(prof.starter.readyAt, undefined);
 });
 
-test('many new players at once: fifty at the default station inside a minute - each a car, a space of its own, a marker to it', () => {
+test('your starter car marked: yours alone, parked and empty while you\'re on foot; full until first driven, then small', () => {
   const w = makeWorld();
-  const g = publicGarages(w.map).find((q) => q.poi === defaultArrival(w).poi), st = w.map.pois[g.poi], spaces = new Set();
-  const ps = [];
-  for (let i = 0; i < 50; i++) {
-    const j = joinPlayer(w);
-    j.prof.lookPicked = true;
-    ps.push(j);
-    run(w, 0.6);   // (the card comes up: fifty players over 30 s)
-  }
-  for (const { p } of ps) ftue.handle(w, p, { a: 'skip' });   // (each takes the default station)
-  const cars = ps.map(({ p, prof }) => {
-    const v = one(w, prof.pid);
-    assert.equal(arrivalFor(w, p).poi, g.poi, 'the default station');
-    const k = `${Math.round(v.x)},${Math.round(v.y)}`;
-    assert.ok(!spaces.has(k), `a space of its own (${k})`);
-    spaces.add(k);
-    assert.ok(g.spots.concat(overflowOf(w.map, g)).some((sp) => Math.hypot(sp.x - v.x, sp.y - v.y) < 1), 'in a space: the lot\'s, or its overflow\'s');
-    return v;
-  });
-  for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) assert.ok(Math.hypot(cars[i].x - cars[j].x, cars[i].y - cars[j].y) >= 40, 'no two cars on one space');
-  const inLot = cars.filter((v) => Math.hypot(v.x - st.x, v.y - st.y) <= STARTER.lotR).length;
-  assert.ok(inLot >= Math.min(g.spots.length, 1), `the lot first (${inLot} of ${g.spots.length})`);
-  // each one's marker (me.car) points at their own car, nobody else's
-  for (const { p, prof } of ps) {
-    teleport(w, p.ped, st.x, st.y + 40);
-    const m = players.buildMe(w, p).car, v = one(w, prof.pid);
-    assert.ok(m, 'a marker');
-    assert.deepEqual([m[0], m[1]], [Math.round(v.x), Math.round(v.y)], 'at their own car');
-    assert.equal(m[3], 1, 'the full marker until first driven');
-  }
-  console.log(`# ${g.name}: ${g.spots.length} spaces in its lot, ${inLot} of 50 there, the rest its overflow (${Math.round(Math.max(...cars.map((v) => Math.hypot(v.x - st.x, v.y - st.y))))} px at most)`);
-});
-
-test('your car marked: yours alone, parked and empty while you\'re on foot; full until first driven, then small', () => {
-  const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof } = holder(w);
   const { p: q } = joinPlayer(w, { starter: {} });
   const v = one(w, prof.pid);
   teleport(w, p.ped, v.x + 300, v.y);
@@ -293,7 +265,7 @@ test('your car marked: yours alone, parked and empty while you\'re on foot; full
 
 test('logged off: a parked starter is put away (no cooldown) and comes back where it was on rejoining - it doesn\'t fill the lot', () => {
   const w = makeWorld();
-  const { p, prof } = joinPlayer(w);
+  const { p, prof } = holder(w);
   const v = one(w, prof.pid), x = Math.round(v.x), y = Math.round(v.y);
   v.hp = v.def.hp * 0.5;
   // (players.js finalizeLogout, past the ghost window)

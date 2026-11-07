@@ -359,3 +359,36 @@ export class FX {
     g.font = '700 14px "CLA Pixel", "Barlow Condensed", sans-serif';
   }
 }
+
+// Shooting from a vehicle (the owner, 11-06: "the muzzle flash way outside of the car like lagging behind it by itself...
+// at the very least have the muzzle flash coming out of the car window or the top of the car"). The flash, the tracer and
+// the arm out of the window hang on the car as it's drawn this frame (predicted for your own, interpolated for others) -
+// the shooter's own position lagged behind a predicted car, and the server's was older still. main.js 'shot' and
+// collectLights; drawn on the overlay (drawLeans). (Here with the effects: the page is at its file budget.)
+const ROOF_SIN = 0.42;   // aiming within ~25 degrees of straight ahead or behind: over the roof, not out of a side window
+// Where the gun is: out of the window on the side you aim at (the front row, or the back seats' with back), or up over the
+// roof aiming ahead or behind; then barrel px along the aim. Car (cx, cy) heading ca, length L, width W.
+export function windowMuzzle(cx, cy, ca, L, W, aim, back = false, barrel = 6) {
+  const rel = aim - ca, s = Math.sin(rel), c = Math.cos(rel);
+  const lx = back ? -L * 0.18 : L * 0.06, roof = Math.abs(s) < ROOF_SIN;
+  const px = roof ? lx + c * W * 0.3 : lx, py = roof ? 0 : (s > 0 ? 1 : -1) * (W / 2 + 1);
+  const cs = Math.cos(ca), sn = Math.sin(ca);
+  return { x: cx + cs * px - sn * py + Math.cos(aim) * barrel, y: cy + sn * px + cs * py + Math.sin(aim) * barrel, roof };
+}
+// the arm and the gun out of the window for a moment after each shot (S.leans: { car, aim, back, until })
+export function drawLeans(g, S, now) {
+  if (!S.leans || !S.leans.length) return;
+  S.leans = S.leans.filter((l) => l.until > now);
+  for (const l of S.leans) {
+    const c = S.ents.get(l.car), d = c && l.def;
+    if (!c || !d || c.rx === undefined) continue;
+    const m = windowMuzzle(c.rx, c.ry, c.ra, d.L, d.W, l.aim, l.back, 0);
+    if (m.roof) continue;   // (over the roof: the flash alone)
+    const ux = Math.cos(l.aim), uy = Math.sin(l.aim);
+    g.lineCap = 'round';
+    g.strokeStyle = '#c98f6a'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(m.x - ux * 3, m.y - uy * 3); g.lineTo(m.x + ux * 5, m.y + uy * 5); g.stroke();
+    g.strokeStyle = '#222'; g.lineWidth = 2.5;
+    g.beginPath(); g.moveTo(m.x + ux * 4, m.y + uy * 4); g.lineTo(m.x + ux * 10, m.y + uy * 10); g.stroke();
+  }
+}

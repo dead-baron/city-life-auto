@@ -6,6 +6,8 @@ import { VEHICLES, PAINTS } from '../../shared/vehicles.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
+import * as firstcar from './firstcar.js';
+import { FTUE, STARTER } from '../../shared/rules.js';
 
 const rng = mulberry32(9090);
 // what turns up on the lot (weights) - mostly everyday cars, the odd sports car, motorbike or bicycle
@@ -38,10 +40,13 @@ function stock(world, i, force) {
     if (!force && world.time < st.restockAt) return;
     if (world.query(sp.x, sp.y, 50, K.VEH).length) return;
     if (!force && [...world.players.values()].some((q) => q.ped && Math.hypot(q.ped.x - sp.x, q.ped.y - sp.y) < 380)) return;
-    const model = pickModel();
+    // (a used lot by an arrival station - shared/world3-firstcars.js: its beaters, at their prices - shared/rules.js FTUE.lot)
+    const used = lot.used ? (lot.stock || Object.keys(FTUE.lot)).filter((id) => FTUE.lot[id]) : null;
+    const model = used ? used[Math.floor(rng() * used.length)] : pickModel();
     const d = VEHICLES[model];
-    const price = Math.round(((d.price || 4000) * (0.85 + rng() * 0.3)) / 50) * 50;
+    const price = used ? FTUE.lot[model] : Math.round(((d.price || 4000) * (0.85 + rng() * 0.3)) / 50) * 50;
     const nv = world.spawnVehicle(model, sp.x, sp.y, sp.a, { paint: Math.floor(rng() * PAINTS.length), variant: Math.floor(rng() * 1000) });
+    if (used) nv.tint = STARTER.paint;   // (the rust)
     nv.despawnable = false; nv.parked = true;
     nv.forSale = { lot: i, slot: j, price };
     nv.descVer = (nv.descVer || 0) + 1;
@@ -77,7 +82,8 @@ export function buy(world, p, v, pay) {
   v.forSale = null;
   v.owner = p.pid; v.ownerName = p.name; v.npcOwned = false; v.despawnable = false; v.parked = false;
   v.descVer = (v.descVer || 0) + 1;
-  prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant });
+  prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant, ...(v.tint !== undefined && v.tint !== null && v.tint >= 0 ? { tint: v.tint } : {}) });
+  firstcar.bought(p, v);   // (your first car, if it is: its marker - firstcar.js)
   const old = world.get(p.activeVehicle);
   if (old && old !== v && old.owner === p.pid && !old.seats.some((s) => s)) world.remove(old); // one of your cars out at a time
   p.activeVehicle = v.id;

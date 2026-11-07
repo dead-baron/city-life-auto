@@ -13,7 +13,7 @@ import { K, PF } from '../shared/constants.js';
 import { STAR_HEAT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import { mulberry32 } from '../shared/rng.js';
-import { STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_DOWN_S, TACKLE_RECOVER_S, TACKLE_APPROACH } from '../shared/rules.js';
+import { COP_LEVEL, STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_DOWN_S, TACKLE_RECOVER_S, TACKLE_APPROACH } from '../shared/rules.js';
 import { PED } from '../shared/physics.js';
 import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
@@ -186,10 +186,11 @@ test('two officers on you are harder: a second one joins in and pushes too', () 
   teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
   const one = odds(w, p, { stars: 1, seed: 51 }), two = odds(w, p, { stars: 1, who: ['cop', 'cop'], seed: 52 });
   if (process.env.DBG) console.log(`1 star: one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%`);
-  // (a patrol car brings two: at 1 star still a good chance)
-  assert.ok(two <= one - 0.08 && two >= 0.5, `one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%: harder, still a good chance`);
-  const three = odds(w, p, { stars: 3, who: ['cop', 'cop'], seed: 53 });
-  assert.ok(three <= 0.25, `3 stars, two on you: ${Math.round(three * 100)}% - rarely`);
+  // (a patrol car brings two: at 1 star the second counts for less - STRUGGLE_SECOND by stars, the owner 11-07 - still
+  // most of the time; at 3 stars two on you is rarely a way out)
+  assert.ok(two <= one && two >= 0.7, `one cop ${Math.round(one * 100)}%, two ${Math.round(two * 100)}%: no easier, still most of the time`);
+  const one3 = odds(w, p, { stars: 3, seed: 54 }), three = odds(w, p, { stars: 3, who: ['cop', 'cop'], seed: 53 });
+  assert.ok(three <= 0.25 && three < one3 - 0.2, `3 stars: one on you ${Math.round(one3 * 100)}%, two ${Math.round(three * 100)}% - rarely`);
   // in the world: the second officer to reach them joins the struggle; a third stands by
   wanted(w, p, 1);
   const a = officer(w, p), b = officer(w, p, 'cop', -16, 4), c3 = officer(w, p, 'cop', 4, -18);
@@ -250,7 +251,7 @@ test('the HUD and the descriptor: the meter, how many are on you, the time to th
   struggle.grab(w, cop, p.ped);
   for (let i = 0; i < 6; i++) { pad(p, i, 2); w.step(); }
   const f = players.buildMe(w, p).fight;
-  assert.ok(f && f.m > 0 && f.m < 1 && f.n === 1 && f.left > 0 && f.left < STRUGGLE_CUFF_S, `me.fight ${JSON.stringify(f)}`);
+  assert.ok(f && f.m > 0 && f.m < 1 && f.n === 1 && f.left > 0 && f.left < COP_LEVEL[2].cuffS, `me.fight ${JSON.stringify(f)}`);
   const sent = conn.sent.filter((s) => typeof s === 'string' && s.includes('"t":"me"')).map((s) => JSON.parse(s));
   assert.ok(sent.some((m) => m.fight && m.fight.m > 0), 'the meter went out to the client');
   assert.equal(_descriptor(p.ped).sg, 1, 'the descriptor says they\'re struggling (the client draws them thrashing)');

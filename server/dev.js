@@ -4,7 +4,7 @@ import { surfaceZ } from '../shared/levels.js';
 import { PED_BLOCK, CAR_SPAWN_BLOCK } from '../shared/map.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { DAY_LOOP_S, DAY_PART_S, T, K, WEATHER, TILE } from '../shared/constants.js';
-import { STAR_HEAT } from '../shared/rules.js';
+import { STAR_HEAT, POLICE_AIR } from '../shared/rules.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { blastSize } from '../shared/explosions.js';
 import { collideVehicleTiles } from '../shared/physics.js';
@@ -897,9 +897,9 @@ function run(world, p, c, msg) {
     }
     case 'medicjob': { const err = paramedic.devMedic(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the paramedic (H68): on the rota, a patient (msg.k 'minor' | 'serious') beside you
     case 'firejob': { const err = firefighter.devFire(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the firefighter (H68): on the crew, a call of kind msg.k beside you
-    case 'policeair': {   // the police air unit (H66): up after you now - 3 stars at least; msg.near: already in the air close by
+    case 'policeair': {   // the police air unit (H66): up after you now - its stars at least (POLICE_AIR.stars); msg.near: already in the air close by
       if (!ped) break;
-      if ((p.wanted | 0) < 3) law.addHeat(world, p, STAR_HEAT[3] - p.heat + 1, ped.x, ped.y);
+      if ((p.wanted | 0) < POLICE_AIR.stars) law.addHeat(world, p, STAR_HEAT[POLICE_AIR.stars] - p.heat + 1, ped.x, ped.y);
       const old = world.policeAir && world.policeAir.get(p.pid);
       if (old) { const ov = world.get(old.vid); world.policeAir.delete(p.pid); if (ov) { for (const id of ov.seats) { const c = id && world.get(id); if (c && !c.player) npc.despawnNpc(world, c); } world.remove(ov); } }
       p.airNextAt = 0;

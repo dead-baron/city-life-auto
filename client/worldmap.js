@@ -10,7 +10,7 @@ import { PACK_TIERS } from '../shared/items.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { mapSignature } from '../shared/mapcore.js';
 import { mapFrameOf, districtCentroids, iconSkip, packIcon, drawMini } from './hud.js';
-import { MAP_CATS, KIND_ICON, MAJOR_KINDS } from './mapwaypoints.js';
+import { MAP_CATS, KIND_ICON, MAJOR_KINDS, placesOf } from './mapwaypoints.js';
 import { drawIcon } from './pixicons.js';
 
 const PIXEL = '"CLA Pixel", "Barlow Condensed", sans-serif';
@@ -394,7 +394,7 @@ let RANKED = null;
 function placesByRank(map) {
   if (RANKED && RANKED.map === map) return RANKED.list;
   const skip = iconSkip(map), order = [...MAJOR_KINDS], rank = (k) => { const i = order.indexOf(k); return i < 0 ? 99 : i; };
-  const list = (map.places || map.pois).filter((p) => p && KIND_ICON[p.kind] && !skip.has(p.id)).sort((a, b) => rank(a.kind) - rank(b.kind) || a.id - b.id);   // (World v3's window: the whole world's places)
+  const list = placesOf(map).filter((p) => p && KIND_ICON[p.kind] && !skip.has(p.id)).sort((a, b) => rank(a.kind) - rank(b.kind) || (a.id > b.id) - (a.id < b.id));   // (World v3's window: the whole world's places)
   RANKED = { map, list };
   return list;
 }

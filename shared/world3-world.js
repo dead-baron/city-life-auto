@@ -61,7 +61,7 @@ import { desertWaters3 } from './world3-tinajas.js';
 import { desertKit3 } from './redrock.js';
 import { moreMansions3 } from './world3-mansions.js';
 import { desertCompound3 } from './world3-compound.js';
-import { clinics3, DROP_SPECIALS3 } from './world3-medics.js';
+import { clinics3, precincts3, DROP_SPECIALS3 } from './world3-medics.js';
 import { fenceGaps3 } from './world3-fencegaps.js';
 import { waterOutlets3 } from './world3-outlets.js';
 import { woodsLake3 } from './world3-woodslake.js';
@@ -75,7 +75,8 @@ import { outdoorShowers3 } from './world3-showers.js';
 import { buildAirstrips3 } from './world3-airstrips.js';
 import { buildSarHqs3 } from './world3-sarhq.js';   // (v3b: the rescue pilots' bases)   // (v3b: the crop dusters' strips and Lucky Mesa's)
 import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V3.md 9.6: the north coast's piers, the fish shack, North Point Light)
-import { arrivalLines3 } from './world3-arrivals.js';   // (the arrival lines: a short line of its own beside each station new players choose from)
+import { arrivalLines3 } from './world3-arrivals.js';
+import { parkWest3, firstCars3 } from './world3-firstcars.js';   // (the first cars: the used lots and steal alleys by the arrival stations; the city's arrival by Greenfield Park)   // (the arrival lines: a short line of its own beside each station new players choose from)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
@@ -327,11 +328,13 @@ export function worldOpts(asked) {
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
       lotPoisLast(m);   // (last: Southside's lot shops' POIs at the end of the list, so no other place's number moves - world3-lots.js)
+      if (H3 && city) m.world3.parkWest = parkWest3(m, H3);   // (then: the city's arrival by Greenfield Park - its used lot, its alley, its shops - all at the ends of the lists: world3-firstcars.js)
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
+      if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
-    clinics: city ? (m) => { m.world3.clinics = clinics3(m); } : null,   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
+    clinics: city ? (m) => { m.world3.clinics = clinics3(m); m.world3.precincts = precincts3(m); } : null,   // (and a police station on the islands with none: precincts3)   // (a clinic where a region has none near: world3-medics.js; POSTS3 with the shops)
     shops: city ? (m, H2) => { const s = shops3(m, H2); delete s.list; m.world3.shops = s; } : null,   // (the new places themselves: POIs with own: 1)
     lots: city ? (m, H2) => { m.world3.lots = lots3(m, H2); } : null,   // (after the plain blocks are cut: Southside's shops and sheds - world3-lots.js)
     // a planned business is built when its district is (Westport Freight's: Port Westport's new ground) - and not by a

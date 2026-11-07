@@ -10,6 +10,7 @@ import { TILE } from '../shared/constants.js';
 import { jobCardHtml } from './jobcard.js';
 import { noteLog, clearLog } from './notelog.js';
 import { icon as pix } from './touchicons.js';
+import { placesOf, arenaPlaces } from './mapwaypoints.js';
 const LISTED = new Set(['patrol', 'fire', 'medic', 'drive', 'delivery', 'mail', 'farm']);   // (the job list's own sections; the rest under Work)
 // the district a place is in, by name (as the paused tour's districtAt: kept here so the tour stays out of the page)
 const districtAt = (map, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE), d = map.inside(tx, ty) ? map.dist[map.idx(tx, ty)] : -1; return DISTRICTS[d] ? DISTRICTS[d].name : null; };
@@ -22,23 +23,23 @@ export const PLACE_GROUPS = [
   { id: 'emergency', icon: '<b class="ic-h">H</b>', title: 'Hospitals & police', kinds: ['hospital', 'police'] },
   { id: 'money', icon: '$', title: 'Banks & ATMs', kinds: ['bank', 'atm'] },
   { id: 'shops', icon: '🛒', title: 'Shops', kinds: ['convenience', 'gasstation', 'gunshop', 'sports', 'hardware', 'pharmacy', 'coffee', 'grocery', 'clothing', 'barber', 'tackle'] },
-  { id: 'out', icon: '🎡', title: 'Food & days out', kinds: ['winery', 'clubhouse', 'roadhouse', 'market', 'fruitstand', 'farmstand', 'snack', 'ride', 'race', 'bowling', 'cinema'] },
+  { id: 'out', icon: '🎡', title: 'Food & days out', kinds: ['winery', 'clubhouse', 'roadhouse', 'market', 'fruitstand', 'farmstand', 'snack', 'ride', 'race', 'bowling', 'cinema', 'arena'] },
   { id: 'baths', icon: '♨', title: 'Bathhouses & spas', kinds: ['bathhouse'] },
   { id: 'sell', icon: '⇄', title: 'Sell stuff', kinds: ['pawn', 'fence', 'fishmarket', 'tackle', 'winery', 'market', 'fruitstand', 'farmstand', 'salvage'] },
-  { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['garage', 'dealer', 'marina', 'rental'] },
+  { id: 'cars', icon: '🔧', title: 'Cars & boats', kinds: ['usedlot', 'dealer', 'garage', 'marina', 'rental'] },
   { id: 'work', icon: '💼', title: 'Work & law', kinds: ['warehouse', 'farm', 'courthouse'] },
   { id: 'gang', icon: '☠', title: 'Gang HQs', kinds: ['gang', 'smuggler'] },
 ];
 const KIND_NOTE = {
   hospital: 'heal up', police: 'badge, evidence', bank: 'deposit / withdraw', atm: 'deposit / withdraw', gunshop: 'guns & ammo', sports: 'bats, fishing',
   hardware: 'melee tools', pharmacy: 'med kits', coffee: 'stamina', grocery: 'produce drop-off', clothing: 'clothes, fitting room', barber: 'haircuts', pawn: 'buy & sell gear',
-  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', marina: 'buy boats', rental: 'rent a boat or jet ski', warehouse: 'courier jobs',
+  fence: 'black market', fishmarket: 'sell fish, rods', tackle: 'rods, bait, sell fish', paint: 'respray & lose the heat', garage: 'repair, respray', dealer: 'buy cars', usedlot: 'cheap used cars', marina: 'buy boats', rental: 'rent a boat or jet ski', warehouse: 'courier jobs',
   farm: 'harvest jobs', convenience: 'snacks, drinks, bandages', gasstation: 'snacks, drinks, bandages', courthouse: 'bounties', gang: 'syndicate turf / join the gang', smuggler: 'members only - boat to the Rock', charter: 'deep-sea charters (boat)', sar: 'search & rescue: sign on for rescue shifts',
   winery: 'wine tasting; buys grapes', clubhouse: 'the clubhouse bar', roadhouse: 'biker roadhouse: beer, rye; the clubs hang out', market: 'bread, fruit, honey; buys fruit', fruitstand: 'fruit, cider; pick your own', farmstand: 'honey, lemonade; buys honey',
-  snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the movies: tickets & popcorn',
+  snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the movies: tickets & popcorn', arena: 'car soccer: join at the gate',
 };
 
-const FEED_ICON = { snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
+const FEED_ICON = { soccer: '⚽', snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
 
 // line icons (24 x 24, the stroke in the text's colour): the apps and the quick actions
 const P = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -83,7 +84,7 @@ export function createPhone(ctx) {
   const PLACES_OPEN = 4;
   function placesIn(g) {
     const map = ctx.map();
-    return (map.places || map.pois).filter((p) => p && g.kinds.includes(p.kind)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
+    return placesOf(map).filter((p) => p && g.kinds.includes(p.kind)).map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d)
       .filter((q, i, all) => !all.slice(0, i).some((o) => o.p.label === q.p.label && Math.hypot(o.p.x - q.p.x, o.p.y - q.p.y) < 640));
   }
   function placeRow(p, d, i) {
@@ -252,7 +253,8 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-jf]')) b.onclick = () => { jobFilter = b.dataset.jf; render(); };
     for (const b of el.querySelectorAll('[data-grp]')) b.onclick = () => { group = group === b.dataset.grp ? null : b.dataset.grp; render(); };   // (Places: open a kind, or fold it)
     for (const b of el.querySelectorAll('[data-poi]')) b.onclick = () => {
-      const p = (ctx.map().places || ctx.map().pois)[Number(b.dataset.poi)];
+      const id = b.dataset.poi, p = /^\d+$/.test(id) ? (ctx.map().places || ctx.map().pois)[Number(id)] : arenaPlaces(ctx.map()).find((q) => q.id === id);
+      if (!p) return;
       ctx.setWaypoint({ x: p.x, y: p.y, label: p.label });
       ctx.toast(`Waypoint set: ${p.label}`, 'info');
       ctx.close();

@@ -516,11 +516,11 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (!D.clean) api.toast(m.n, 'info');
     render();
   };
-  // the subject's ground point (an aircraft drawn up by its height: two thirds of the way up, as main.js has your own)
+  // the subject's ground point (an aircraft drawn up by its height: all the way up, as main.js has your own - camLift)
   function subjectAt(e) {
     let ex = e.rx, ey = e.ry;
     const def = e.kind === K.VEH && e.d ? VEHICLE_BY_INDEX[e.d.m] : null;
-    if (def && def.kind === 'air' && S.airMod && S.airMod.liftOf && S.art2 && S.art2.ready) ey -= S.airMod.liftOf(e.ralt ?? (e.extra | 0) * 4) * 0.66;
+    if (def && def.kind === 'air' && S.airMod && S.airMod.camLift && S.art2 && S.art2.ready) ey -= S.airMod.camLift(e.ralt ?? (e.extra | 0) * 4);
     return [ex, ey];
   }
   function sceneStep(dt) {

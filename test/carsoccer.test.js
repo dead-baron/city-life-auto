@@ -239,3 +239,62 @@ test('the page: its own car held at a kick-off and boosting only with boost, fro
   onMsg(S, { t: 'soc', a: 0, off: 1 });
   assert.ok(!local.frz && !local.bok && !S.soc.st, 'away from the arena: nothing held');
 });
+
+// (the owner, 11-06: "Can't figure out the rocket league arena... How do I get it to start and have people join?" and
+// "How do you boost?") The gate's join pad, wider reach, joining from a car, the call to the players about, the wait.
+test('finding a match: drive onto the join pad to join; the players about hear of it (and the feed), and the lobby waits for them', async () => {
+  const { joinPad } = await import('../shared/carsoccer.js');
+  const events = await import('../server/systems/events.js');
+  const w = makeWorld(); const a = withArena(w);
+  const { p } = joinPlayer(w, { cash: 0, bank: 0 });
+  const { p: q, conn: qc } = joinPlayer(w, { cash: 0, bank: 0 });
+  teleport(w, q.ped, a.gate.x - 900, a.gate.y);   // (a few blocks off)
+  const P = joinPad(a);
+  assert.ok(P.r >= 100 && C.joinR > 120, 'a bigger reach than before');
+  // on foot by the pad, a step off the gate: the prompt is there
+  teleport(w, p.ped, P.x, P.y + 40);
+  assert.match(players.findInteraction(w, p).label, /Join car soccer/);
+  // in a car, onto the pad: in
+  const car = w.spawnVehicle('sedan', P.x + 300, P.y, Math.PI);
+  teleport(w, p.ped, car.x, car.y);
+  assert.ok(vehicles.tryEnter(w, p.ped), 'at the wheel');
+  play(w, 0.5);
+  const st = soc._test.stOf(w, 0);
+  assert.equal(st.phase, 'idle', 'not yet: off the pad');
+  car.x = P.x; car.y = P.y; car.vx = car.vy = 0; w.place(car);
+  play(w, 0.5);
+  assert.equal(st.phase, 'lobby', 'driving onto the pad opens the lobby');
+  assert.ok(st.queue.includes(p.pid));
+  assert.ok(Math.abs(st.t - st.opened - C.lobbyNearS) < 0.01, `another player about: ${C.lobbyNearS} s, not ${C.lobbyS}`);
+  assert.ok(q.toasts.some((t) => /kicking off at Test Arena/.test(t.text)) || JSON.stringify(qc.sent).includes('kicking off at Test Arena'), 'the player about is told');
+  assert.ok(events.feedFor(w).items.some((f) => /Car soccer kicking off at Test Arena in \d+ s - join at the gate/.test(f.text)), 'and the city feed');
+  // kick-off: out of your own car (left parked by the gate) and at the wheel of an arena car
+  play(w, C.lobbyNearS + 0.5);
+  assert.equal(st.phase, 'kick');
+  const mine = st.slots.find((s) => s.pid === p.pid);
+  assert.ok(mine && p.ped.vehId === mine.veh && p.ped.vehId !== car.id, 'in the match');
+  assert.ok(!car.removed && !car.seats[0], 'your car waits at the gate');
+});
+
+test('the lobby alone waits lobbyS; someone coming near stretches it to lobbyNearS once', () => {
+  const w = makeWorld(); const a = withArena(w);
+  const { p } = joinPlayer(w, { cash: 0, bank: 0 });
+  const { p: q } = joinPlayer(w, { cash: 0, bank: 0 });
+  teleport(w, q.ped, a.gate.x - C.callR - 2000, a.gate.y);
+  teleport(w, p.ped, a.gate.x, a.gate.y);
+  players.findInteraction(w, p).run();
+  const st = soc._test.stOf(w, 0);
+  assert.ok(Math.abs(st.t - st.opened - C.lobbyS) < 0.01, 'nobody about');
+  teleport(w, q.ped, a.gate.x - 600, a.gate.y);
+  play(w, 2);
+  assert.ok(Math.abs(st.t - st.opened - C.lobbyNearS) < 0.01, 'someone came near: longer');
+});
+
+test('boosting on touch: a BOOST button in the arena\'s car (C1, by the right thumb), none in an ordinary car', async () => {
+  const { touchSlots } = await import('../shared/touchcontrols.js');
+  const f = { inVeh: true, driver: true };
+  assert.equal(touchSlots({ ...f, arena: true }).slots.c1.a, 'sprint');
+  assert.equal(touchSlots({ ...f, arena: true }).slots.c1.label, 'BOOST');
+  assert.ok(!touchSlots({ ...f, arena: true }).slots.fire, 'no shooting from the arena\'s cars');
+  assert.notEqual(touchSlots(f).slots.c1 && touchSlots(f).slots.c1.label, 'BOOST');
+});

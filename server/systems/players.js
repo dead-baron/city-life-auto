@@ -55,7 +55,8 @@ import * as wildfolk from './wildfolk.js';
 import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
-import * as starter from './starter.js';   // (the starter car: first day at the arrival station, the cooldown carried over)
+import * as starter from './starter.js';   // (the starter car of a player who has one: its cooldown carried over, put away at logoff)
+import * as firstcar from './firstcar.js';   // (your first car's marker; the alley's car let go at logoff)
 import * as ftue from './ftue.js';   // (the first-time experience: the arrival, the question, the first goal, the first-time moments)
 import * as races from './races.js';
 import * as minigames from './minigames.js';
@@ -77,6 +78,10 @@ import { K9 } from '../../shared/rules-play.js';
 // apps) waits AWAY_SECONDS rather than GHOST_SECONDS and logs out without dropping anything. "Hurt lately" is the safe
 // exit's own guard (rules.js LOGOFF.calmS: taking or dealing damage), so a tab closed in a fight is never a safe way out.
 export const AWAY_SECONDS = 300;
+// ...and one with trouble after it waits at least AWAY_GRACE_S when the page had said it went into the background first
+// (main.js 'away': a phone switching apps) - a short tab-out comes back to the same session (unsafeGrace). (Here, not in
+// rules.js: that file is in World v3's code hash.)
+export const AWAY_GRACE_S = 90;
 export const AWAY_HURT_S = LOGOFF.calmS;
 // the last time this body took or dealt damage (combat.js damage: lastHitAt on whoever was hurt, lastCombatAt on both;
 // 0, a new body's: never)
@@ -136,6 +141,7 @@ export function join(world, conn, profile, opts = {}) {
   if (p) {
     // reconnect: within the ghost window (or replacing another tab)
     if (p.conn && p.conn !== conn) { try { p.conn.sendJSON({ t: 'kicked', reason: 'Signed in from another tab' }); p.conn.close(4000, 'replaced'); } catch { /* gone */ } }
+    const wasAway = !!p.away && !!p.ghostUntil;   // (dropped while in the background: a phone back from another app)
     p.conn = conn;
     p.ghostUntil = 0; p.ghostSafe = false; p.away = 0;
     p.logoff = null;   // (a count to a safe exit belonged to the page before: logoff.js)
@@ -154,7 +160,7 @@ export function join(world, conn, profile, opts = {}) {
     // (inside a home: the new page has never seen its rooms - all of it again, the menu you had open closed; the owner,
     // 10-16: "Reconnecting inside a home leaves you stuck")
     if (p.ped && p.ped.home) { p.homeMenu = null; p.ped.home.mv = false; homeinside.send(world, p, true); }
-    world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');
+    if (!wasAway) world.notify(p, 'Reconnected - you made it back before your ghost timer ran out.', 'good');   // (a tab-out: just back, quietly)
     return p;
   }
   homes.checkWorld(world, profile); // saved in an older world: homes bought back, wake at a hospital
@@ -201,7 +207,7 @@ export function join(world, conn, profile, opts = {}) {
   if (fresh) delete profile.jail; else custody.onJoin(world, p);   // (logged off in custody: back in the cell)
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
   ftue.onJoin(world, p);   // (the first-time experience: a profile from before it marked done; one left mid-way picks up - ftue.js)
-  starter.onJoin(world, p);   // (a new character's starter car in the arrival station's car park; a lost one's cooldown carried on)
+  starter.onJoin(world, p);   // (a starter car's lost cooldown carried on, one put away back out; none for a new character - starter.js)
   return p;
 }
 
@@ -379,12 +385,16 @@ export function leave(world, p) {
     // nothing after them: the body waits longer and goes without dropping anything (a phone switching apps - the owner,
     // 2026-10-15: "tabbing out of the game for a second on mobile boots you out"); otherwise the drop rule's 30 s
     p.ghostSafe = safeToIdle(world, p);
-    p.ghostUntil = world.time + (p.ghostSafe ? AWAY_SECONDS : GHOST_SECONDS);
+    p.ghostUntil = world.time + (p.ghostSafe ? AWAY_SECONDS : unsafeGrace(p));
   } else {
     finalizeLogout(world, p, false);
   }
 }
 
+// A ghost with trouble after it: the drop rule's GHOST_SECONDS - or AWAY_GRACE_S when the page had gone into the background
+// before the connection dropped (setAway: the phone suspended it; the owner, 11-06: "it would be nice if it didn't
+// disconnect so quickly tabbing in and out")
+export const unsafeGrace = (p) => (p.away ? Math.max(GHOST_SECONDS, AWAY_GRACE_S) : GHOST_SECONDS);
 // Safe to stand idle with nobody at the keys: not wanted, not hurt lately, not down, not in custody, carrying no crate and
 // driving none.
 export function safeToIdle(world, p) {
@@ -436,6 +446,7 @@ function finalizeLogout(world, p, dropLoot) {
   rentals.onPlayerGone(world, p);
   horses.onPlayerGone(world, p);
   starter.onPlayerGone(world, p);   // (the starter car parked and empty: put away till you're back - starter.js)
+  firstcar.dropMark(world, p);   // (a car still waiting in the alley for you to steal: taken away - firstcar.js)
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
@@ -469,7 +480,7 @@ export function wipeAccount(world, p) {
   struggle.onLeave(world, p); custody.onLeave(world, p);   // (the officers on them let go, as when anyone logs off)
   revive.clearDown(world, p);
   bounties.onWipe(world, p);
-  starter.forget(world, p.pid);   // (the new character's own starter, at the arrival station again: starter.js)
+  starter.forget(world, p.pid);   // (none of the old character's starter car: starter.js)
   crews.leave(world, p);   // (out of any crew: a fresh character starts in none - crews.js)
   p.conn = null; p.ghostUntil = 0;
   if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
@@ -1040,7 +1051,7 @@ export function update(world, dt) {
     const ped = p.ped;
     if (ped) economy.syncLight(world, p); // the flashlight goes out when you go down or lose it
     // (left idle and then trouble came - hurt, wanted: the drop rule's 30 s from now)
-    if (p.ghostUntil && p.ghostSafe && !safeToIdle(world, p)) { p.ghostSafe = false; p.ghostUntil = Math.min(p.ghostUntil, now + GHOST_SECONDS); }
+    if (p.ghostUntil && p.ghostSafe && !safeToIdle(world, p)) { p.ghostSafe = false; p.ghostUntil = Math.min(p.ghostUntil, now + unsafeGrace(p)); }
     if (p.ghostUntil && now >= p.ghostUntil) {
       // GDD §9 drop rule: timer expired -> body despawns, everything on them jettisoned (not when an
       // update came out meanwhile: they come back fresh on it instead)
@@ -1121,7 +1132,7 @@ export function buildMe(world, p) {
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
     ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0,   // (Settings' First-time tips: ftue.js)
-    car: starter.marker(world, p),   // (your starter car, parked and empty while you're on foot: its marker - starter.js marker)
+    car: starter.marker(world, p) || firstcar.marker(world, p),   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

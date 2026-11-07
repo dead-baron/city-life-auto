@@ -46,7 +46,7 @@ function optKind(o) {
   return ty === 'melee' ? 'melee' : ty === 'grenade' || ty === 'deploy' ? 'throw' : LONG.has(id) || ty === 'rocket' || ty === 'bow' || ty === 'flame' ? 'rifles' : 'pistols';
 }
 const KIND_NAME = { pistols: 'PISTOLS', rifles: 'RIFLES', melee: 'MELEE', throw: 'THROWABLES', ammo: 'AMMO', gear: 'GEAR' };
-const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
+const MENU_FACE = { police: 'police', hospital: 'hospital', bank: 'bank', atm: 'atm', gang: 'gang', smuggler: 'gang', garage: 'garage', dealer: 'car', usedlot: 'car', marina: 'boat', home: 'home', bathhouse: 'bathhouse', arcade: 'arcade', courthouse: 'legal', warehouse: 'jobs', farm: 'jobs' };
 const WEAPON_BY_ID = WEAPONS;
 export const WQ_MS = 4000;   // the quick weapons stay this long after a switch (UI-9)
 // a note's icon (UIK-00 6A/B): money in, a tick, a warning, an alarm, or the info mark
@@ -126,6 +126,15 @@ export class HUD {
       for (const t of held) if (performance.now() - t.at < 60000) this.toast(t.text, t.tone, t.short);
     }
     if (prev && !prev.custody && me.custody && !me.dead) this.moment('BUSTED', 'The police have you.', 'bad');   // (UIC-15: cuffed)
+    // the fade to black (server custody.js fadeIn: a ride that can't be driven - an island with no station on its roads, a
+    // car stuck for good): a black curtain while it lasts, lifted once you're in the cell
+    const fading = !!(me.custody && me.custody.s === 'fade' && !me.dead);
+    if (fading !== !!this.fadeOn) {
+      this.fadeOn = fading;
+      let el = $('cufade');
+      if (!el) { el = document.createElement('div'); el.id = 'cufade'; el.style.cssText = 'position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:30'; document.body.appendChild(el); }
+      requestAnimationFrame(() => { el.style.opacity = fading ? '1' : '0'; });
+    }
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
@@ -204,16 +213,19 @@ export class HUD {
       $('tb-where').textContent = 'FIGHT BACK!';
       $('tb-crack').classList.remove('hidden');
       $('tb-fill').style.width = Math.round(Math.max(0, Math.min(1, fg.m)) * 100) + '%';
-      $('tb-next').innerHTML = `Mash ${glyph('fire')} · wriggle ${glyph('move')}${fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ''}`;
+      // (mash it - or hold it down, a thumb on FIRE on a phone: server struggle.js STRUGGLE_HELD; up: the meter's rising)
+      $('tb-next').innerHTML = `Mash or hold ${glyph('fire')} · wriggle ${glyph('move')}${fg.up ? ' · you\'re winning - keep going!' : fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ' · harder!'}`;
     } else if (cu && cu.s !== 'cell' && !me.dead) {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
       $('tb-where').textContent = 'IN CUSTODY';
       // (the action button makes a break for it: on the ground or walked to the car, a try - custody.js breakOut; the car
       // stuck or not coming, it always works - offerBreak, and the bar pulses)
-      const brk = cu.brk ? ` · make a break for it [${input.device === 'gamepad' ? 'B' : input.device === 'touch' ? 'ACT' : 'E'}]` : '';
-      $('tb-next').textContent = (cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
-        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells`
+      // (the hint names the button by its glyph on every device: the touch buttons carry no words since UI-8)
+      const brk = cu.brk ? ` · make a break for it ${glyph('action')}` : '';
+      const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
+      $('tb-next').innerHTML = esc(cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
+        : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells` : cu.s === 'fade' ? `Taken in to ${cu.at || 'the station'}`
           : cu.stuck ? 'The police car is going nowhere' : `In the back of the police car${cu.at ? ` · to ${cu.at}` : ''}${cu.by ? ` · ${cu.by} driving` : ''}`) + brk;
       tb.classList.toggle('brk', !!cu.stuck);
       $('tb-crack').classList.add('hidden');
@@ -768,7 +780,7 @@ export function districtCentroids(map) {
 const POI_ICON = {
   hospital: ['H', '#ff5a5a'], police: ['P', '#6aa6ff'], bank: ['$', '#3ddc84'], gunshop: ['G', '#ff9a3a'], pawn: ['¢', '#ffd36b'],
   sports: ['S', '#7de0ff'], hardware: ['T', '#ff9a3a'], pharmacy: ['+', '#3ddc84'], coffee: ['C', '#c89a6a'], garage: ['R', '#ffd400'],
-  clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
+  clothing: ['D', '#e080ff'], dealer: ['V', '#ff5a5a'], usedlot: ['V', '#ff9a5a'], warehouse: ['W', '#ffd400'], fence: ['X', '#c07aff'], grocery: ['F', '#3ddc84'],
   fishmarket: ['≈', '#25b8c0'], marina: ['B', '#7de0ff'], rental: ['⛵', '#7de0ff'], farm: ['¥', '#b8e02a'], courthouse: ['J', '#e8d8a8'],
   charter: ['≈', '#7de0ff'], sar: ['✚', '#ff6a4a'], smuggler: ['☠', '#ff5a5a'], convenience: ['¤', '#ffd36b'], gasstation: ['⛽', '#ff9a3a'], station: ['≡', '#f0f0f0'],
   airport: ['✈', '#9fd0ff'], tackle: ['🎣', '#25b8c0'], winery: ['🍷', '#c04a7a'], clubhouse: ['⛳', '#7de07a'], roadhouse: ['🍺', '#ff7a3a'], market: ['🧺', '#e8b060'],

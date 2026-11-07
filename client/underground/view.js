@@ -14,7 +14,7 @@
 // art; the shafts of daylight, the hung lanterns, the timbering and the finds: shared/caverns.js lightCave); the sewers'
 // are still made here in the game's palette (the sewer sheets SW1-SW2 replace them).
 import { undergroundOf, C, UG, UG_AMBIENT, LANTERN, SHAFT, cellAtPx, mouthsOf } from '../../shared/underground.js';
-import { bakeCave, spike, glowThing, lantern, timber, shaftBeam, find, rails, trestle, drip, roostBats, kitThing } from './caveart.js';
+import { bakeCave, glowThing, lantern, shaftBeam, find, drip, roostBats, exitBeam, exitGround, A } from './caveart.js';
 import '../../shared/caverns.js';   // (the caverns' layout, registered with it: the page doesn't carry it till you're near one)
 import { TILE, K, PF } from '../../shared/constants.js';
 import { VEHICLE_BY_INDEX } from '../../shared/vehicles.js';
@@ -30,9 +30,9 @@ export function createUgView(S, api) { return new UgView(S, api); }
 
 // The light in at a cave's mouth (UgView.mouthSpots): n spots from just outside the mouth (`out` px) along the passage,
 // `reach` of the way to the entrance hall's middle; their radius r0 at the mouth to r1, their strength k0 there to nothing
-export const MOUTH = Object.freeze({ n: 7, reach: 0.95, r0: 130, r1: 52, k0: 1, out: 14 });
+export const MOUTH = Object.freeze({ n: 7, reach: 0.95, r0: 130, r1: 52, k0: 1, out: 14, past: 3 });
 // how much light comes in (0..1 of the darkness lifted at the mouth): the day's, a little moonlight at night
-export function mouthLevel(sky) { const day = sky ? 1 - Math.max(0, Math.min(1, sky.night || 0)) : 1; return 0.22 + 0.73 * day; }
+export function mouthLevel(sky) { const day = sky ? 1 - Math.max(0, Math.min(1, sky.night || 0)) : 1; return 0.34 + 0.61 * day; }
 // its colour: the sky's ambient light at its own hue, at full brightness ([r, g, b, alpha] - the wash fainter at night)
 export function mouthTint(sky, out = [0, 0, 0, 0]) {
   const a = (sky && sky.amb) || [1, 1, 1], m = Math.max(a[0], a[1], a[2], 0.001), day = sky ? 1 - Math.max(0, Math.min(1, sky.night || 0)) : 1;
@@ -52,6 +52,8 @@ class UgView {
     this.rubble = [];                // where rocks came down
     this.rats = (this.L.rats || []).map((r, i) => ({ ...r, ox: r.x, oy: r.y, u: hh(i, 3) * 120 - 60, sp: 0, flee: 0, i }));
     this.drop = 0;
+    // what lies outside each way out (caveart.js: the ground the floor turns to toward it)
+    for (const K2 of this.L.caves || []) { const st = (K2.chambers.find((c) => c.stone) || {}).stone; for (const E of K2.exits || []) E.ground ||= exitGround(E, S.map, st); }
   }
   dispose() { this.tiles.clear(); }
 
@@ -91,7 +93,7 @@ class UgView {
     for (let j = 0; j < CT; j++) for (let i = 0; i < CT; i++) {
       const tx = cx * CT + i, ty = cy * CT + j, v = cell(tx, ty), px = i * TILE, py = j * TILE;
       const sewer = this.ugAt(tx, ty) === UG.SEWER;
-      if (cave && !sewer && v !== C.DOCK) continue;
+      if (cave && !sewer) continue;   // (a cave's: painted whole, its docks too - caveart.js)
       if (v === C.ROCK) {
         // rock: black deep in; a face where it meets the open (brick in the sewers, rough stone in the cave)
         let open = 0;
@@ -166,17 +168,7 @@ class UgView {
       g.fillStyle = '#5e6a5a'; g.beginPath(); g.arc(lx, ly, 9, 0, 6.283); g.fill();
       g.fillStyle = '#1b1f1a'; g.beginPath(); g.arc(lx, ly, 6, 0, 6.283); g.fill();
     }
-    // the den: a bed of old leaves and bones (each cave's: a cave per mine)
-    for (const K2 of L.caves || []) {
-      const d = K2.den;
-      if (d.x > x0 - 80 && d.x < x0 + CH + 80 && d.y > y0 - 80 && d.y < y0 + CH + 80) {
-        const lx = d.x - x0, ly = d.y - y0;
-        g.fillStyle = '#5a4528'; g.beginPath(); g.ellipse(lx, ly, 46, 30, 0, 0, 6.283); g.fill();
-        g.fillStyle = '#6e5630'; for (let k = 0; k < 30; k++) g.fillRect(lx - 40 + hh(k, 1) * 80, ly - 24 + hh(k, 2) * 48, 4, 2);
-        g.fillStyle = '#d8d0bc'; for (let k = 0; k < 5; k++) { const bx = lx - 50 + hh(k, 7) * 100, by = ly + 20 + hh(k, 8) * 16; g.fillRect(bx, by, 10, 2); g.fillRect(bx - 1, by - 1, 3, 4); g.fillRect(bx + 9, by - 1, 3, 4); }
-      }
-    }
-    return cv;
+    return cv;   // (a cave's den, its bed of leaves and bones: baked with its things - caveart.js bakeProps)
   }
   onTrestle(x, y) { for (const K2 of this.L.caves || []) for (const t of (K2.kit && K2.kit.trestles) || []) { const dx = t.x1 - t.x0, dy = t.y1 - t.y0, l2 = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((x - t.x0) * dx + (y - t.y0) * dy) / l2)); if (Math.hypot(t.x0 + dx * u - x, t.y0 + dy * u - y) <= t.hw + 24) return true; } return false; }
   // inside one of the caverns' discs (K.moss, K.cobbles)?
@@ -195,13 +187,14 @@ class UgView {
     const S = this.S, L = this.L, view = F.view, now = performance.now() / 1000, dt = Math.min(0.1, F.dt || 0.016);
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = '#030304'; g.fillRect(0, 0, g.canvas.width, g.canvas.height);
-    g.setTransform(...S.worldTf);
     g.imageSmoothingEnabled = false;
     const budget = { n: this.tiles.size < 4 ? 6 : 1 };   // (a cave tile is painted pixel by pixel: one a frame once the first are in)
+    const tf = S.worldTf, dvx = (x) => Math.round(tf[0] * x + tf[4]), dvy = (y) => Math.round(tf[3] * y + tf[5]);
     for (let cy = Math.floor(view.y0 / CH); cy <= Math.floor(view.y1 / CH); cy++) for (let cx = Math.floor(view.x0 / CH); cx <= Math.floor(view.x1 / CH); cx++) {
       const t = this.tile(cx, cy, budget);
-      if (t) g.drawImage(t, cx * CH, cy * CH, CH + 0.5, CH + 0.5);
+      if (t) { const X0 = dvx(cx * CH), Y0 = dvy(cy * CH); g.drawImage(t, X0, Y0, dvx(cx * CH + CH) - X0, dvy(cy * CH + CH) - Y0); }   // (at whole device pixels: no seams, no smoothing - the art pixels stay crisp)
     }
+    g.setTransform(...S.worldTf);
     g.imageSmoothingEnabled = true;
     this.water(g, view, now);
     this.dressing(g, view, now, F);
@@ -211,7 +204,7 @@ class UgView {
     for (const v of F.vehs) this.vehicle(g, v);
     const peds = F.peds.filter((p) => !p.parent);
     peds.sort((a, b) => a.ry - b.ry);
-    for (const p of peds) this.ped(g, p, now);
+    for (const p of peds) if (this.api.drawPed) { g.save(); this.api.drawPed(p, F.now ?? now); g.restore(); } else this.ped(g, p, now);   // (the game's own characters and animals: main.js drawPed)
     this.effects(g, now, dt);
     this.darkness(g, F, W, H, DPR, now);
     this.glows(g, view, now, F);
@@ -254,22 +247,16 @@ class UgView {
       g.fillStyle = '#e8f4ea'; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText('METRO', d.x, d.y - 31.5);
     }
     if (!L.caves || !L.caves.length) return;
-    for (const K2 of L.caves) {   // (a cave per mine)
-      const kit = K2.kit;
-      if (kit) {   // (the mine cave's kit: shared/cavekit.js - the rails, the trestles, the stalactites on the roof's rim, its things)
-        for (const t of kit.trestles) if (inView((t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2, Math.abs(t.x1 - t.x0) / 2 + Math.abs(t.y1 - t.y0) / 2 + 80)) trestle(g, t, now);
-        for (const r of kit.rails) if (r.some(([x, y]) => inView(x, y, 200))) rails(g, r);
-        for (const d of kit.drips) if (inView(d.x, d.y, 80)) drip(g, d, now);
-        if (K2.kind !== 'cavern') for (const t of K2.things || []) if (inView(t.x, t.y, 90)) kitThing(g, t, now);
-      }
-      for (const t of K2.timbers || []) if (inView(t.x, t.y, 140)) timber(g, t);   // (the miners' timber sets)
-      for (const s of K2.spikes) if (inView(s.x, s.y, 80)) spike(g, s);            // (stalagmites, the stalactites over the tall ones)
-      for (const gl of K2.glow) if (inView(gl.x, gl.y, 120)) glowThing(g, gl, now);
+    // (a cave's things that don't move are baked into its tiles - caveart.js bakeProps; here only what moves: drops off the
+    // stalactites, the glow-worms twinkling, the lanterns' flames)
+    for (const K2 of L.caves) {
+      if (K2.kit) for (const d of K2.kit.drips) if (inView(d.x, d.y, 80)) drip(g, d, now);
+      for (const gl of K2.glow) if (gl.kind === 'worms' && inView(gl.x, gl.y, 120)) glowThing(g, gl, now);
     }
     const f = this.S.ugFind;   // (the find the server left lying in the light for you: [cave, x, y, item])
     if (f && inView(f[1], f[2])) find(g, f, now);
     for (const K2 of L.caves) if (K2.kind === 'cavern') this.cavern(g, K2, inView, now);
-    for (const K2 of L.caves) for (const l of K2.lanterns || []) if (inView(l.x, l.y, 80)) lantern(g, l, now);   // (on their posts, hung on the walls)
+    for (const K2 of L.caves) for (const l of K2.lanterns || []) if (inView(l.x, l.y, 80)) lantern(g, l, now);   // (their flames)
     for (const r of this.rubble) {
       if (!inView(r.x, r.y)) continue;
       const k = Math.min(1, (performance.now() / 1000 - r.fall) / 0.25);
@@ -281,21 +268,7 @@ class UgView {
   // a cavern's own things (its plan's: shared/world3-caves.js)
   cavern(g, K2, inView, now) {
     const S = this.S, shut = new Set((S.ugChests || []).filter((q) => q[0] === K2.k && q[2] > 0 && (performance.now() - (S.ugVeinsAt || 0)) / 1000 < q[2]).map((q) => q[1]));
-    for (const d of K2.docks || []) {   // the dock's posts and the rope along it
-      if (!inView((d.x0 + d.x1) / 2, (d.y0 + d.y1) / 2, 120)) continue;
-      const ux = d.x1 - d.x0, uy = d.y1 - d.y0, l = Math.hypot(ux, uy) || 1, nx = -uy / l * d.hw, ny = ux / l * d.hw;
-      g.fillStyle = '#3a2614';
-      for (const t of [0.15, 0.55, 0.95]) for (const s2 of [-1, 1]) { const x = d.x0 + ux * t + nx * s2, y = d.y0 + uy * t + ny * s2; g.fillRect(x - 2.5, y - 2.5, 5, 5); }
-      g.strokeStyle = 'rgba(200,180,130,.6)'; g.lineWidth = 1; g.beginPath(); g.moveTo(d.x0 + nx, d.y0 + ny); g.lineTo(d.x1 + nx, d.y1 + ny); g.stroke();
-    }
-    for (const st of K2.stairs || []) {   // timber stairs up the bank beside a cascade
-      if (!inView(st.x, st.y, 80)) continue;
-      g.save(); g.translate(st.x, st.y); g.rotate(Math.atan2(st.uy, st.ux));
-      g.fillStyle = '#4e3520'; g.fillRect(-st.len / 2, -14, st.len, 28);
-      g.fillStyle = '#7a5634'; for (let x = -st.len / 2 + 3; x < st.len / 2; x += 9) g.fillRect(x, -13, 6, 26);
-      g.fillStyle = '#2a1c10'; g.fillRect(-st.len / 2, -15, st.len, 2); g.fillRect(-st.len / 2, 13, st.len, 2);
-      g.restore();
-    }
+    // (its docks' posts, stairs and things are baked into the tiles: caveart.js bakeProps)
     for (const q of K2.cascades || []) {   // spray rising off the white water
       if (!inView(q.x, q.y, 140)) continue;
       for (let k = 0; k < 10; k++) { const t = (now * 0.7 + k / 10) % 1, ox = (hh(k, 3, q.x | 0) - 0.5) * q.w * 1.6, a = 0.22 * (1 - t); g.fillStyle = `rgba(220,235,240,${a})`; g.beginPath(); g.arc(q.x + ox * (-q.uy) + q.ux * (10 + t * 30), q.y + ox * q.ux + q.uy * (10 + t * 30) - t * 18, 4 + t * 8, 0, 6.283); g.fill(); }
@@ -313,16 +286,6 @@ class UgView {
       g.fillStyle = '#2a2a2e'; g.fillRect(c.x - 10, c.y - 8, 2, 14); g.fillRect(c.x + 8, c.y - 8, 2, 14);
       if (open) { g.fillStyle = '#1a120a'; g.fillRect(c.x - 11, c.y - 7, 22, 5); g.fillStyle = '#6e4a2a'; g.fillRect(c.x - 12, c.y - 18, 24, 6); }
       else { g.fillStyle = '#6e4a2a'; g.fillRect(c.x - 12, c.y - 12, 24, 6); g.fillStyle = '#d8b040'; g.fillRect(c.x - 1.5, c.y - 7, 3, 4); if ((now * 0.8 + c.i) % 3 < 0.25) { g.fillStyle = 'rgba(255,240,170,.9)'; g.fillRect(c.x + 4, c.y - 11, 2, 2); } }
-    }
-    for (const t of K2.things || []) {
-      if (!inView(t.x, t.y, 90) || kitThing(g, t, now)) continue;
-      g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(t.x + 3, t.y + 5, 12, 5, 0, 0, 6.283); g.fill();
-      if (t.t === 'barrel') { g.fillStyle = '#6a4426'; g.beginPath(); g.ellipse(t.x, t.y - 4, 9, 11, 0, 0, 6.283); g.fill(); g.fillStyle = '#2a2a2e'; g.fillRect(t.x - 9, t.y - 9, 18, 2); g.fillRect(t.x - 9, t.y + 1, 18, 2); }
-      else if (t.t === 'crate') { g.fillStyle = '#7a5a34'; g.fillRect(t.x - 11, t.y - 14, 22, 18); g.strokeStyle = '#4a3420'; g.lineWidth = 2; g.strokeRect(t.x - 11, t.y - 14, 22, 18); g.beginPath(); g.moveTo(t.x - 11, t.y - 14); g.lineTo(t.x + 11, t.y + 4); g.stroke(); }
-      else if (t.t === 'cart') { g.fillStyle = '#3a3a3e'; g.fillRect(t.x - 14, t.y - 12, 28, 14); g.fillStyle = '#7a7a82'; for (let k = 0; k < 5; k++) g.fillRect(t.x - 10 + k * 5, t.y - 15, 4, 4); g.fillStyle = '#1a1a1e'; for (const dx of [-9, 9]) g.fillRect(t.x + dx - 3, t.y + 1, 6, 4); }
-      else if (t.t === 'pick') { g.strokeStyle = '#7a5532'; g.lineWidth = 2.5; g.beginPath(); g.moveTo(t.x - 10, t.y + 6); g.lineTo(t.x + 8, t.y - 8); g.stroke(); g.strokeStyle = '#a9b0b8'; g.lineWidth = 3; g.beginPath(); g.moveTo(t.x + 2, t.y - 12); g.lineTo(t.x + 14, t.y - 4); g.stroke(); }
-      else if (t.t === 'shoring') { g.fillStyle = '#5a3c22'; g.fillRect(t.x - 30, t.y - 34, 7, 36); g.fillRect(t.x + 23, t.y - 34, 7, 36); g.fillRect(t.x - 34, t.y - 40, 68, 8); }
-      else if (t.t === 'gold') { for (let k = 0; k < 7; k++) { g.fillStyle = k % 2 ? '#c8961e' : '#ffe27a'; g.fillRect(t.x - 10 + hh(k, 2, t.x | 0) * 20, t.y - 6 + hh(k, 3, t.y | 0) * 10, 4, 3); } if ((now * 1.3 + t.x) % 2 < 0.2) { g.fillStyle = '#fff'; g.fillRect(t.x + 2, t.y - 4, 2, 2); } }
     }
   }
   veins(g, view, now) {
@@ -494,23 +457,25 @@ class UgView {
       g.fillStyle = 'rgba(170,160,140,.18)'; g.beginPath(); g.ellipse(d.x, d.y, 16, 7, 0, 0, 6.283); g.fill();
     }
   }
-  // The dark: everything above is covered but for round the lights. On its own canvas: black, with the lights cut out of
-  // it (destination-out), then laid over the frame.
+  // The dark: everything above is covered but for round the lights. On its own canvas, one pixel to the game's art pixel
+  // (2 world px, on the art's own grid): black, with the lights cut out of it (destination-out), then laid over the frame
+  // with no smoothing - the light's edges step with the art's pixels, and a phone fills a fifteenth of the pixels it did.
   darkness(g, F, W, H, DPR, now) {
-    const S = this.S, L = this.L, cv = this.dark;
-    if (cv.width !== g.canvas.width || cv.height !== g.canvas.height) { cv.width = g.canvas.width; cv.height = g.canvas.height; }
+    const S = this.S, L = this.L, cv = this.dark, view = F.view;
+    const ax0 = Math.floor(view.x0 / A) * A, ay0 = Math.floor(view.y0 / A) * A, cw = Math.ceil((view.x1 - ax0) / A) + 1, chh = Math.ceil((view.y1 - ay0) / A) + 1;
+    if (cv.width !== cw || cv.height !== chh) { cv.width = cw; cv.height = chh; }
     const d = cv.getContext('2d'), ug = S.ugLayer || 0;
     d.setTransform(1, 0, 0, 1, 0, 0);
     d.globalCompositeOperation = 'source-over';
     d.clearRect(0, 0, cv.width, cv.height);
     d.fillStyle = `rgba(2,2,5,${1 - (UG_AMBIENT[ug] || 0)})`;
     d.fillRect(0, 0, cv.width, cv.height);
-    d.setTransform(...S.worldTf);
+    d.setTransform(1 / A, 0, 0, 1 / A, -ax0 / A, -ay0 / A);
     d.globalCompositeOperation = 'destination-out';
-    const hole = (x, y, r, k, flat = 0.55) => {   // (flat: how much of it is left halfway out - a lantern's pool is broad, a spark's tight)
+    const hole = (x, y, r, k, flat = 0.55) => {   // (flat: how much of it is left two thirds out - a lantern's pool is broad, a spark's tight; the middle fully lit, so the art shows)
       if (k <= 0.01) return;
-      const gr = d.createRadialGradient(x, y, 0, x, y, r);
-      gr.addColorStop(0, `rgba(0,0,0,${Math.min(1, k)})`); gr.addColorStop(0.55, `rgba(0,0,0,${Math.min(1, k) * flat})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      const gr = d.createRadialGradient(x, y, 0, x, y, r), k1 = Math.min(1, k);
+      gr.addColorStop(0, `rgba(0,0,0,${k1})`); gr.addColorStop(0.4, `rgba(0,0,0,${k1 * (0.55 + 0.45 * flat)})`); gr.addColorStop(0.72, `rgba(0,0,0,${k1 * flat * 0.62})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
       d.fillStyle = gr; d.beginPath(); d.arc(x, y, r, 0, 6.283); d.fill();
     };
     // carried lights: whatever main.js's carriedLights records (the flashlight's cone and every light item)
@@ -549,8 +514,11 @@ class UgView {
     const me = F.meEnt;
     if (me) hole(me.rx, me.ry, 64, ug === UG.SEWER ? 0.3 : 0.18);
     d.globalCompositeOperation = 'source-over';
+    const tf = S.worldTf, X0 = Math.round(tf[0] * ax0 + tf[4]), Y0 = Math.round(tf[3] * ay0 + tf[5]);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(cv, 0, 0);
+    g.imageSmoothingEnabled = false;
+    g.drawImage(cv, X0, Y0, Math.round(tf[0] * (ax0 + cw * A) + tf[4]) - X0, Math.round(tf[3] * (ay0 + chh * A) + tf[5]) - Y0);
+    g.imageSmoothingEnabled = true;
     g.setTransform(...S.worldTf);
   }
   // The daylight coming in at each cave's mouth (the owner, 2026-10-15: "have the entrance of the cave lit up with light
@@ -568,6 +536,9 @@ class UgView {
         const t = i / (MOUTH.n - 1), u = 1 - t;
         out.push({ x: ax + (bx - ax) * t * MOUTH.reach, y: ay + (by - ay) * t * MOUTH.reach, r: MOUTH.r0 + (MOUTH.r1 - MOUTH.r0) * t, k: u * u * u * (MOUTH.k0 - 0.15) + 0.15 * u, t });
       }
+      // and out past the mouth: the day outside, as bright as it is (caveart.js paints the ground there and the glare)
+      const dx = M.x - M.inside.x, dy = M.y - M.inside.y, l = Math.hypot(dx, dy) || 1;
+      for (let i = 1; i <= MOUTH.past; i++) out.push({ x: M.x + dx / l * (MOUTH.out + 56 * i), y: M.y + dy / l * (MOUTH.out + 56 * i), r: MOUTH.r0 + 20, k: 1, t: 0, past: 1 });
     }
     return (this._mouth = out);
   }
@@ -579,12 +550,13 @@ class UgView {
     g.globalCompositeOperation = 'lighter';
     const sky = F && F.sky, tint = mouthTint(sky, this._tint || (this._tint = [0, 0, 0, 0]));
     for (const s of this.mouthSpots()) {
-      if (s.t > 0.5 || s.x < view.x0 - s.r || s.x > view.x1 + s.r || s.y < view.y0 - s.r || s.y > view.y1 + s.r) continue;
+      if (s.t > 0.5 || s.past || s.x < view.x0 - s.r || s.x > view.x1 + s.r || s.y < view.y0 - s.r || s.y > view.y1 + s.r) continue;
       const gr = g.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r);
-      gr.addColorStop(0, `rgba(${tint[0]},${tint[1]},${tint[2]},${tint[3] * s.k})`); gr.addColorStop(1, `rgba(${tint[0]},${tint[1]},${tint[2]},0)`);
+      gr.addColorStop(0, `rgba(${tint[0]},${tint[1]},${tint[2]},${tint[3] * s.k * 0.5})`); gr.addColorStop(1, `rgba(${tint[0]},${tint[1]},${tint[2]},0)`);   // (half: the way out's own beam is caveart.js exitBeam)
       g.fillStyle = gr; g.beginPath(); g.arc(s.x, s.y, s.r, 0, 6.283); g.fill();
     }
     const day = sky ? 1 - (sky.night || 0) : 1;
+    for (const K2 of L.caves) for (const E of K2.exits || []) if (E.x > view.x0 - 300 && E.x < view.x1 + 300 && E.y > view.y0 - 300 && E.y < view.y1 + 300) exitBeam(g, E, now, mouthLevel(sky), tint);   // (the daylight in at the way out - moonlight at night)
     for (const K2 of L.caves) for (const s of K2.shafts || []) if (s.x > view.x0 - 300 && s.x < view.x1 + 300 && s.y > view.y0 - 100 && s.y < view.y1 + 400) shaftBeam(g, s, now, SHAFT.moon + (1 - SHAFT.moon) * day, tint);   // (the daylight down its shafts)
     for (const K2 of L.caves) for (const q of (K2.kit && K2.kit.lakes) || []) {   // a lake that glows teal from its bed (the kit's)
       if (q.x < view.x0 - q.r || q.x > view.x1 + q.r || q.y < view.y0 - q.r || q.y > view.y1 + q.r) continue;
@@ -611,15 +583,15 @@ class UgView {
     }
     for (const K2 of L.caves) for (const l of K2.lanterns || []) {   // the lanterns' warm light
       if (l.x < view.x0 - 160 || l.x > view.x1 + 160 || l.y < view.y0 - 160 || l.y > view.y1 + 160) continue;
-      const R = LANTERN.r * (l.big ? 1.25 : 1), gr = g.createRadialGradient(l.x, l.y - 16, 0, l.x, l.y - 16, R), fl = 0.92 + 0.08 * Math.sin(now * 9 + l.x), kb = l.big ? 1.25 : 1;   // (a warm pool, flickering; the kit's bigger and warmer)
-      gr.addColorStop(0, `rgba(255,190,100,${0.42 * fl * kb})`); gr.addColorStop(0.45, `rgba(255,150,70,${0.16 * fl * kb})`); gr.addColorStop(1, 'rgba(255,140,60,0)');
+      const R = LANTERN.r * (l.big ? 1.25 : 1), gr = g.createRadialGradient(l.x, l.y - 16, 0, l.x, l.y - 16, R), fl = 0.92 + 0.08 * Math.sin(now * 9 + l.x), kb = l.big ? 1.25 : l.exit ? 0.4 : 1;   // (a way out's pair: faint - the daylight is there already, and it washed out whoever stood in it)   // (a warm pool, flickering; the kit's bigger and warmer)
+      gr.addColorStop(0, `rgba(255,190,100,${0.3 * fl * kb})`); gr.addColorStop(0.45, `rgba(255,150,70,${0.11 * fl * kb})`); gr.addColorStop(1, 'rgba(255,140,60,0)');
       g.fillStyle = gr; g.beginPath(); g.arc(l.x, l.y - 16, R, 0, 6.283); g.fill();
     }
     for (const K2 of L.caves) for (const gl of K2.glow) {
       if (gl.x < view.x0 - gl.r || gl.x > view.x1 + gl.r || gl.y < view.y0 - gl.r || gl.y > view.y1 + gl.r) continue;
       const pulse = 0.8 + 0.2 * Math.sin(now * 1.3 + gl.x * 0.01), col = gl.kind === 'crystal' ? (gl.hue ? '80,170,255' : '150,110,255') : gl.kind === 'worms' ? '90,200,255' : '60,230,200';
       const gr = g.createRadialGradient(gl.x, gl.y, 0, gl.x, gl.y, gl.r);
-      gr.addColorStop(0, `rgba(${col},${0.42 * gl.k * pulse})`); gr.addColorStop(0.4, `rgba(${col},${0.14 * gl.k * pulse})`); gr.addColorStop(1, `rgba(${col},0)`);
+      gr.addColorStop(0, `rgba(${col},${(gl.kind === 'worms' ? 0.26 : 0.42) * gl.k * pulse})`);   // (the worms' fainter: a grotto of them washed the floor out) gr.addColorStop(0.4, `rgba(${col},${0.14 * gl.k * pulse})`); gr.addColorStop(1, `rgba(${col},0)`);
       g.fillStyle = gr; g.beginPath(); g.arc(gl.x, gl.y, gl.r, 0, 6.283); g.fill();
     }
     g.restore();

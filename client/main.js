@@ -19,7 +19,7 @@ import { initInput, sample, input, takeNumberPick, settings, saveSettings, detec
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
-import { FX } from './render/fx.js';
+import { FX, windowMuzzle, drawLeans } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD, fitLine } from './hud.js';
@@ -42,9 +42,9 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
 import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
-import { noteServerBuild, myBuild } from './update.js';
+import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
-import { NPC_CRITICAL } from '../shared/rules-page.js';
+import { NPC_CRITICAL, AIR_UP } from '../shared/rules-page.js';
 import { bonusOf } from '../shared/skills.js';
 import { cleanName } from '../shared/names.js';   // (Settings: your name - the server checks it too)
 import { ferrisSite, ferrisCab, balloonSite, balloonRoutes, balloonAt, slideSite, slideRider } from '../shared/rides.js';
@@ -67,7 +67,7 @@ import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, P
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
-import { holdForArt, veilTick } from './warmup.js';
+import { holdForArt, veilTick, FADE_MS } from './warmup.js';
 import { createTitle, paintSky, offSummaryHtml } from './titlescreen.js';   // (the title's loading state, its tips, your card, who's online: UI-10)   // (the art made ready behind the title after PLAY, and behind a fade after a jump)
 
 const $ = (id) => document.getElementById(id);
@@ -254,6 +254,7 @@ function connect() {
   S.ws = ws;
   ws.onopen = () => { loadMark('socket'); S.reconnectIn = 1000; S.connectFailed = false; ws.send(JSON.stringify({ t: 'hello', token: S.token, cb: myBuild().v, cbt: myBuild().at, ...launchHello() })); }; // cb / cbt: this page's build (client/update.js)
   ws.onmessage = (ev) => {
+    S.lastMsgAt = performance.now();   // (the probe after coming back into view: update.js onVisible)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"spawnat"')) { spawnAt(ev.data); return; }   // (never held: the city waits for it)
     if (typeof ev.data === 'string' && ev.data.startsWith('{"t":"welcome"')) setTimeout(() => spawnAt(null), 2000);   // (a server that doesn't say: not waited for longer)
     if (holding(ws, ev.data)) return;
@@ -318,7 +319,7 @@ function scheduleReconnect(why, toTitle = false) {
       : `The online city isn't reachable right now (retrying every few seconds).${PRACTICE_ON ? ' Try PRACTICE OFFLINE below.' : ''}`;
   }
   clearTimeout(S.reconnectT);
-  S.reconnectT = setTimeout(connect, document.hidden ? Math.max(S.reconnectIn, 5000) : S.reconnectIn);
+  S.reconnectT = setTimeout(connect, retryDelay(S.reconnectIn, document.hidden, performance.now() - (S.visibleAt ?? -1e9)));
   S.reconnectIn = Math.min(15000, S.reconnectIn * 1.6);
 }
 function reconnecting(on) {
@@ -340,9 +341,17 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   try { sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
+  S.visibleAt = performance.now();
   send({ t: 'away', on: false });
-  if (!S.ws && S.connectFailed && S.everConnected) { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  const act = onVisible(S);
+  if (act === 'connect') { clearTimeout(S.reconnectT); S.reconnectIn = 1000; connect(); }
+  else if (act === 'probe') {   // (a socket the phone's sleep killed can still say it's open: answered, or made again)
+    const ws = S.ws;
+    send({ t: 'ping', ts: performance.now() });
+    setTimeout(() => { if (S.ws === ws && !((S.lastMsgAt || 0) >= S.visibleAt)) { S.ws = null; try { ws.close(); } catch { /* gone */ } scheduleReconnect('Connection lost'); } }, PROBE_MS);
+  }
 });
+addEventListener('pagehide', () => { if (!S.practice) send({ t: 'away', on: true }); });   // (iOS: sometimes the only word before it's suspended)
 function resumeWanted() {
   let t = 0;
   try { t = Number(sessionStorage.getItem(RESUME_KEY)) || 0; sessionStorage.removeItem(RESUME_KEY); } catch { /* storage blocked */ }
@@ -882,10 +891,15 @@ function onEvent(ev) {
       const sh = ev.id ? S.ents.get(ev.id) : null, still = ev.x2 === ev.x1 && ev.y2 === ev.y1;
       const a = still ? (sh && sh.ra !== undefined ? sh.ra : 0) : Math.atan2(ev.y2 - ev.y1, ev.x2 - ev.x1);
       const off = w && w.type === 'rocket' ? 20 : 14, follow = !!(sh && sh.rx !== undefined && Math.hypot(sh.rx - ev.x1, sh.ry - ev.y1) < 260);
-      const x1 = follow ? sh.rx + Math.cos(a) * off : ev.x1, y1 = follow ? sh.ry + Math.sin(a) * off : ev.y1;
+      // (from a car: out of its window as the car's drawn, not at the shooter lagging behind it - render/fx.js windowMuzzle)
+      const car = follow && sh.parent ? S.ents.get(sh.parent) : null, cd = car && car.kind === K.VEH && car.d && car.rx !== undefined ? VEHICLE_BY_INDEX[car.d.m] : null;
+      const win = cd && cd.kind !== 'bike' && cd.kind !== 'air' && !cd.crew && !cd.horse ? { car: car.id, def: cd, back: !!sh.back, aim: a } : null;
+      const m = win && windowMuzzle(car.rx, car.ry, car.ra, cd.L, cd.W, a, win.back);
+      const x1 = m ? m.x : follow ? sh.rx + Math.cos(a) * off : ev.x1, y1 = m ? m.y : follow ? sh.ry + Math.sin(a) * off : ev.y1;
       fx.tracer(x1, y1, ev.x2, ev.y2);
+      if (win) { win.until = S.loopClock + 0.45; (S.leans ||= []).push(win); }   // (the arm and the gun out of the window: drawLeans)
       if (w && w.silenced) { sfx('swing', distVol(ev.x1, ev.y1) * 0.5); break; } // a suppressed cough, no muzzle flash
-      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow ? ev.id : 0, off });
+      S.flashes.push({ x: x1, y: y1, t: 0.065, a, r: 170, id: follow && !win ? ev.id : 0, off, win });
       fx.spawn(4, x1, y1, 0, 0, 0.05, 6, '#fff3b0');
       sfx(w && (w.id === 'shotgun' || w.id === 'rifle' || w.id === 'rocket' || w.id === 'psniper' || w.id === 'pshotgun' || w.id === 'huntrifle') ? 'heavy' : 'shot', distVol(ev.x1, ev.y1));
       break;
@@ -1252,7 +1266,7 @@ function setupWorld(seed, here = false, given = null) {
   S.buildings = new BuildingLayer(S.map, S.ground);
   S.spec = newSpectator(S.map);   // (the free camera: made the first time it's used - client/spectator.js loads then)
   S.hud = new HUD(S.map, (poi, opt) => send({ t: 'menu', poi, opt }), (m) => { if (m && m.ask) send({ t: 'menu', poi: m.poi, opt: 'close' }); });   // (a question closed unanswered - the first-time experience's: server/systems/ftue.js)
-  S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log');   // (client/hudinfo.js; a note cut short: the Log)
+  S.hud.setInfoCtx({ pos: selfPos, self: () => worldToScreen(selfPos()), pid: () => S.pid }); S.hud.openLog = () => openHub('phone', 'log'); S.hud.openJob = () => { if (S.playing) openHub('phone', 'jobs'); };   // (client/hudinfo.js; a note cut short: the Log; the job card tapped: the phone's Jobs, the job you're on at the top with Quit job)
   S.hud.onRespawn = (choice) => send({ t: 'respawn', choice });
   S.router = createRouter(S.map);   // the GPS route to your waypoint (client/route.js)
   import('../shared/fences.js').then((F) => { S.fence = F; setFences(F.FENCES); }).catch(() => {});   // (the fences: held off them, the hop - predicted like the server)
@@ -1497,7 +1511,10 @@ function startPlaying() {
 function enterCity() {
   if (!S.playing) launchCall('world');
   S.playing = true;
-  $('title').classList.add('hidden');
+  // (the loading screen's one fade out at the end - client/warmup.js holdForArt: hidden once it's over)
+  const tl = $('title');
+  if (tl.classList.contains('t-out')) setTimeout(() => { tl.classList.add('hidden'); tl.classList.remove('t-out'); }, FADE_MS);
+  else tl.classList.add('hidden');
   $('hud').classList.remove('hidden');
   if (S.me) S.hud.setMe(S.me);
   if (S.looks && !S.looks.picked && topOverlay() !== 'creator') openCreator('start');
@@ -3022,7 +3039,7 @@ function frameBody(nowMs) {
     checkWaypoint();
     expirePredictedBreaks();
   } else {
-    g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height);
+    if (!holdFrame(S)) { g.fillStyle = '#0b0d14'; g.fillRect(0, 0, canvas.width, canvas.height); }   // (getting back in: the last frame stays)
     // title screen before the city connects: the pad still drives the menus
     if (pollPadForMenus() && !overlayPad() && !launchPad()) titlePad();
   }
@@ -3090,7 +3107,7 @@ function drawUnderground(F) {
   if (S.ugView && S.ugView.map === S.map) { S.ugView.draw(g, F, W, H, DPR); return; }
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#030304'; g.fillRect(0, 0, canvas.width, canvas.height);
   if (S.ugViewP) return;
-  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
+  S.ugViewP = import('./underground/view.js').then((mod) => { S.ugView = mod.createUgView(S, { carriedLights, drawPed }); S.ugMod = mod; }).catch((e) => console.warn('[underground]', e)).finally(() => { S.ugViewP = null; });
 }
 // the ore veins up at the quarry and the mine's outcrops (their state: S.ugVeins), and the ring round you while you mine
 function drawVeinsTop(F) {
@@ -3119,7 +3136,7 @@ function drawMineRing(F) {
 function nearVeins(sp) {
   if (S.ugMod || S.ugViewP || !S.map || !S.map.quarries || !S.map.quarries[0]) return;
   const near = (x, y) => Math.abs(sp.x - x) < 2500 && Math.abs(sp.y - y) < 2500;   // (every pit and mine: World v3 has two of each)
-  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
+  if (S.map.quarries.some((q) => near(q.x + q.w / 2, q.y + q.h / 2)) || (S.map.natureSites || []).some((n) => (n.kind === 'mine' || n.kind === 'cavemouth') && near(n.x, n.y))) S.ugViewP = import('./underground/view.js').then((mod) => { S.ugMod = mod; if (!S.ugView) S.ugView = mod.createUgView(S, { carriedLights, drawPed }); }).catch(() => {}).finally(() => { S.ugViewP = null; });
 }
 
 // (the tunnels' art: its module loads once one is near - shared/tunnels.js has where they are)
@@ -3238,7 +3255,7 @@ function prepFrame(dt) {
   S.camLead = S.camLead || { x: 0, y: 0 };
   S.camLead.x += (Math.max(-560, Math.min(560, lvx)) * 0.25 - S.camLead.x) * lk;
   S.camLead.y += (Math.max(-560, Math.min(560, lvy)) * 0.25 - S.camLead.y) * lk;
-  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.liftOf ? S.airMod.liftOf(myAir.ralt ?? (myAir.extra | 0) * 4) * 0.66 : fallH > 0 && S.art2 && S.art2.ready ? fallH * SKY_LIFT * 0.66 : 0);   // (art v2 draws an aircraft up by its height: two thirds of the way up to it)
+  const tx = sp.x + S.camLead.x, ty = sp.y + S.camLead.y - (myAir && airDefOf(myAir) && S.art2 && S.art2.ready && S.airMod.camLift ? S.airMod.camLift(myAir.ralt ?? (myAir.extra | 0) * 4) : fallH > 0 && S.art2 && S.art2.ready ? fallH * SKY_LIFT * 0.66 : 0);   // (art v2 draws an aircraft up by its height: the camera all the way up to it - render/aircraft.js camLift)
   // The camera is locked to the (already smoothed) character + a smoothed look-ahead: a
   // chasing camera with a frame-time-dependent lag made the car slide around on screen when
   // frame times vary (phones). Teleports / respawns still snap.
@@ -3306,7 +3323,9 @@ function prepFrame(dt) {
   const ug = S.ugLayer || 0;   // down the sewers or in the cave (shared/underground.js): the underground view draws the frame
   const sub = !!ug || !!(myCar && myCar.kind === K.TRAIN && (myCar.flags & 1)); // riding through the subway: only the tunnel
   // who is on screen, by kind
-  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry < view.y1 + 160;
+  // (an aircraft: drawn up the screen by its height - on screen when any of it, from its shadow on the ground to it, is)
+  const upOf = (e) => (e.kind === K.VEH && S.airMod && S.airMod.liftOf && airDefOf(e) ? S.airMod.liftOf(e.ralt ?? (e.extra | 0) * 4) : 0);
+  const vis = (e) => e.rx > view.x0 - 160 && e.rx < view.x1 + 160 && e.ry > view.y0 - 160 && e.ry - upOf(e) < view.y1 + 160;
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
@@ -3638,6 +3657,7 @@ function drawOverlays(F, v2) {
   if (S.carry && !F.sub) S.carry.over(g, F);   // (both views: a tree falling, the trunks lying, the police dogs' leads)
   if (S.mus && !F.sub) S.mus.draw(g, F);
   if (S.fun && !F.sub) S.fun.draw(g, F);
+  if (S.leans && !F.sub) drawLeans(g, S, S.loopClock);   // (shooting out of a car's window: the arm and the gun - render/fx.js)
   if (F.air.length) { if (S.airMod) S.airMod.drawAir(g, F, S, F.dt, v2); else loadAir(); }   // (helicopters and planes, their shadows: render/aircraft.js)
   else if (S.airMod && !F.sub) S.airMod.drawAir(g, F, S, F.dt, v2);   // (a rescue call's flare; the helipads' H only while you fly)
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
@@ -4314,7 +4334,9 @@ function driverBlinks(v) { for (const p of S.ents.values()) if (p.kind === K.PED
 // draws it): sinking in the water, leaning on corners, smoke, fire, skid marks, a boat's wake, the
 // siren and the horn.
 const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x - v.buf[v.buf.length - 2].x, v.buf[v.buf.length - 1].y - v.buf[v.buf.length - 2].y) * 20 : 0);
-const vehSinking = (v, def) => def.kind !== 'boat' && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+// (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
+// under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
+const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -4753,7 +4775,7 @@ function drawUpright(p, pose, fr, hitK, swimming, now) {
   g.save();
   if (!swimming) { // contact shadow, and the body's shadow thrown away from the sun
     const sk = S.sky;
-    if (sk && sk.sun > 0.05 && gfx.shadows >= 2) {
+    if (sk && sk.sun > 0.05 && gfx.shadows >= 2 && !S.ugLayer) {   // (no sun under the ground)
       const L = Math.max(0.35, Math.min(1.7, sk.shadowLen * 0.75)) * 30 * bs, dx = sk.sunDir.x, dy = Math.max(0.28, sk.sunDir.y);
       const n = Math.hypot(dx, dy);
       g.fillStyle = `rgba(12,15,34,${(0.36 * sk.sun).toFixed(3)})`;
@@ -5023,12 +5045,12 @@ function tagPlate(x, cy, tw, u) {
 }
 // (U17: two dashed ellipses round it, turned with it, and a "YOUR TRUCK" plate above - "YOUR HELICOPTER", "YOUR CAB"...: the
 // vehicle's word, from the one in view or the model the server sends with the mark)
-function drawJobTruck([x, y, m3], view, now, z, vehs) {
+function drawJobTruck([x, y, m3, tag], view, now, z, vehs) {   // (tag: the server's own plate - the hustle's car to take: server ftue.js)
   const col = '#45b8ff', m = 64 + 30 / z, x0 = view.x0 + m, x1 = view.x1 - m, y0 = view.y0 + m, y1 = view.y1 - m, u = 1 / z;
   let v = null;
   for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
   const def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[m3] || null, L = def ? def.L : 150, W = def ? def.W : 60, ra = v ? v.ra : 0;
-  const plate = `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
+  const plate = tag || `YOUR ${vehicleWord(def).toUpperCase()}`;   // (by what it is: your helicopter, your cab - shared/vehicles.js)
   if (v) { x = v.rx; y = v.ry; }
   g.save(); g.lineWidth = 3 * u; g.setLineDash([12 * u, 7 * u]); g.lineDashOffset = -now * 24 * u;
   let hh = 0;
@@ -5189,6 +5211,7 @@ function collectLights(sky, view, vehs, peds, dt) {
   reflSrc.length = 0;
   S.flashes = S.flashes.filter((f) => (f.t -= dt) > 0);
   for (const f of S.flashes) if (f.id) { const e = S.ents.get(f.id); if (e && e.rx !== undefined) { f.x = e.rx + Math.cos(f.a) * f.off; f.y = e.ry + Math.sin(f.a) * f.off; } }   // (on the gun as it moves)
+    else if (f.win) { const c = S.ents.get(f.win.car); if (c && c.rx !== undefined) { const m = windowMuzzle(c.rx, c.ry, c.ra, f.win.def.L, f.win.def.W, f.a, f.win.back); f.x = m.x; f.y = m.y; } }   // (on the car's window)
   const inV = (x, y, m) => x > view.x0 - m && x < view.x1 + m && y > view.y0 - m && y < view.y1 + m;
   // street lamps: they come on one by one at dusk, a few flicker or are out (render/atmos.js) - only those round the view,
   // through a grid (a World v3 window holds thousands: every one of them looked at every frame was a phone's 11-06 night

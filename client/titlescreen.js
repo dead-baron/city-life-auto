@@ -6,6 +6,7 @@
 // Also the pixel skyline the title, the pause panel and the phone's home stand on (one small canvas, drawn once).
 
 import { paintIcons } from './touchicons.js';
+import { loadTracker, loadStep, creep, PHASE } from './warmup.js';
 
 // tips, true of the game as it is (the Guide's facts: shared/guide.js); one at a time, in a shuffled order
 export const TIPS = [
@@ -85,13 +86,10 @@ export function createTitle(ctx) {
   order.unshift(0);   // (the first is the concept's own: explore)
   const nextTip = () => { tip.textContent = 'Tip: ' + TIPS[order[at++ % order.length]]; lastTip = performance.now(); };
   nextTip();
-  // where the load has got to, roughly: the socket, the welcome, the city built (each stage creeps toward its mark)
-  function target() {
-    if (S.welcomed) return 0.96;
-    if (S.hold) return 0.88;   // (the welcome is in; the city is still being built)
-    if (S.ws && S.ws.readyState === 1) return 0.45;
-    return 0.25;
-  }
+  // where the load has got to: the socket, then the city (the welcome in, the city still being built - a creep through
+  // it, there's no news of its own), then ready for PLAY - one record with the art's wait after PLAY (client/warmup.js
+  // LOAD_PHASES: its phase and its bar only go forward)
+  let phAt = 0, phWas = -1;
   function sync() {
     if (title.classList.contains('hidden')) return;
     const warm = ctx.warming(), now = performance.now();
@@ -99,9 +97,17 @@ export function createTitle(ctx) {
     if (isLoading !== loading) {
       loading = isLoading;
       title.classList.toggle('loading', loading);
-      if (loading) { k = Math.min(k, 0.1); bar.classList.remove('hidden'); }
+      if (loading) { if (S.loadT && S.loadT.done) S.loadT = null; bar.classList.remove('hidden'); }   // (a load again - back to the title, a reconnect: a new record)
     }
-    if (loading && !warm) { k += (target() - k) * 0.04; fill.style.width = `${Math.round(k * 100)}%`; }
+    if (loading && !warm) {
+      const T = S.loadT || (S.loadT = loadTracker());
+      const ph = S.welcomed ? PHASE.gfx : S.hold || (S.ws && S.ws.readyState === 1) ? PHASE.city : PHASE.connect;
+      if (ph !== phWas) { phWas = ph; phAt = now; }
+      loadStep(T, { phase: ph, sub: ph === PHASE.gfx ? 0 : creep(now - phAt, ph === PHASE.city ? 8000 : 3000) });
+      k = T.k;
+      const wd = `${Math.round(k * 100)}%`;
+      if (fill.style.width !== wd) fill.style.width = wd;
+    }
     if (loading && now - lastTip > 6000) nextTip();
     // your card: your name, your standing (the phone's Skills has the rest); who's online
     const me = S.me, card = $('t-card');

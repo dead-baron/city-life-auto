@@ -301,6 +301,16 @@ function lightAt(I, x, y, z, r, col, k, kind = 'lamp', night = 1) {
   l.push({ x: Math.round(x), y: Math.round(y), z: Math.round(z), r: Math.round(r), col, k, kind, night });
 }
 
+// A walk-in's cut-away, or the building as it stands if its fit-out can't be laid out: a fit-out that throws must not take
+// the whole chunk's statics with it (staticItems throwing left the chunk bare ground - every building, prop and wall in
+// it gone: the owner's 11-06 "only a floor and a few people" in The Violet Room)
+let cutWarned = false;
+function cutOf(it) {
+  try { return it.cut(); } catch (e) {
+    if (!cutWarned) { cutWarned = true; console.warn('[art2] a walk-in\'s cut-away failed - drawn roofed', it.key, (e && e.message) || e); }
+    return it;
+  }
+}
 export function staticItems(M, cx, cy, opt = {}) {
   const I = staticIndex(M);
   const list = I.cells.get(ck(cx, cy)) || [], props = propItemsIn(I.c, I, ck(cx, cy));
@@ -310,7 +320,7 @@ export function staticItems(M, cx, cy, opt = {}) {
     if (it.pi !== undefined && M.props[it.pi] && M.props[it.pi].broken) o = brokenVariant(it, M.props[it.pi]);
     else if (it.wp && it.wp.some(([a, b]) => (M.props[a] && M.props[a].broken) || (M.props[b] && M.props[b].broken))) o = spanBroken(it, M);   // (a span wire's pole knocked over)
     else if (it.deck && M.levels && M.levels.broken && M.levels.broken.size) o = deckBroken(it, M.levels);
-    else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = it.cut();
+    else if (opt.cutaway !== undefined && opt.cutaway !== null && it.b === opt.cutaway && it.cut) o = cutOf(it);
     if (!o) continue;
     out.push(o);
   }
@@ -3327,6 +3337,18 @@ function addSetPieces(c, I) {
     const a = p.a || 0;
     put(I, vitem(`ws:${qa(a + PI / 2, 4).toFixed(2)}`, 'wheelStop', [], p.x + Math.cos(a) * 54, p.y + Math.sin(a) * 54, qa(a + PI / 2, 4)));
   }
+  // the forklift yards' loading bays (shared/loadbays.js m.loadBays - the paint's the ground's: groundbake.js loadBays):
+  // the LOADING BAY sign at one end of the slots, lit, and a floodlight on its arm at the other leaning over them
+  for (const lb of M.loadBays || []) {
+    const B = lb.bay, sg = B.sign;
+    put(I, { key: 'tsign:LOADING BAY:#e8c22a:44:k', recipe: { t: 'sign', text: 'LOADING BAY', sx: 2, bg: '#e8c22a', fg: [26, 24, 20], lit: 1, z: 44, posts: true }, x: sg.x, y: sg.y, ext: [90, 84, 90, 10] });
+    lightAt(I, sg.x, sg.y + 4, 44, 90, [1, 0.9, 0.6], 0.9, 'sign');
+    for (const l of B.lamps) {
+      const a = Math.atan2(B.y - l.y, B.x - l.x), hd = qa(a, 32), arm = 36;
+      put(I, vitem(`lp:cobra:${arm}:${hd.toFixed(3)}`, 'armLamp', [arm, 1, 'cobra'], l.x, l.y, hd, [3.5, 5]));
+      lightAt(I, l.x + Math.cos(a) * (arm + 4), l.y + Math.sin(a) * (arm + 4), 90, 240, LAMP_LIGHT.cobra, 3.8, 'lamp');
+    }
+  }
   // brick walls along the street between buildings
   for (const bw of M.brickWalls || []) {
     if (!bw) continue;
@@ -3491,6 +3513,11 @@ function addNature(c, I) {
 // ================================================================================================
 // lot dressing for the painted-lot prefabs: what stood in the v1 paintings round the buildings
 // ================================================================================================
+// a forklift yard's (m.loadBays) pallets' row, bay or the way between in the box x, y, w, h (px)?
+function bayIn(M, x, y, w, h) {
+  const inBox = (px, py, m = 48) => px > x - m && px < x + w + m && py > y - m && py < y + h + m;
+  return (M.loadBays || []).some((b) => inBox(b.pick.x, b.pick.y, 160) || inBox(b.bay.x, b.bay.y, 160) || b.route.some(([tx, ty]) => inBox((tx + 0.5) * TILE, (ty + 0.5) * TILE)));
+}
 function addLots(c, I) {
   const M = c.M;
   M.prefabs.forEach((p, pi) => {
@@ -3577,7 +3604,7 @@ function addLots(c, I) {
     }
     if (key === 'club' || key === 'clubnova' || key === 'clubeclipse') { if (front >= 40) put(I, vitem('rope', 'ropeLine', [80], x0 + w / 2 - 60, by1 + 26)); return; }
     if (key === 'industrial' || key === 'warehouse' || key === 'repair') {
-      if (front < 64) return;
+      if (front < 64 || bayIn(M, x0, by1, w, front)) return;   // (a forklift yard's pallets, bay or the way between on it: kept clear - shared/loadbays.js)
       for (let k = 0; k < 3; k++) put(I, vitem(`pal:p:${k % 2}`, 'pallets', [k, 1 + k % 3], x0 + 40 + rnd() * (w - 80), by1 + 20 + rnd() * (front - 40)));
       if (rnd() < 0.6) put(I, vitem('fork', 'forklift', ['#e0b030', true], x0 + w * 0.7, by1 + front / 2, qa(rnd() * TAU, 8)));
       if (key === 'industrial' && rnd() < 0.7) put(I, vitem(`cont:${pi % 3}`, 'container', [pick(['#a8402e', '#2f5a8a', '#3a7a4a'], rnd()), 130], x0 + 90, by1 + front / 2, 0));

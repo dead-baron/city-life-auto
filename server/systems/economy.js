@@ -17,6 +17,7 @@ import * as jobs from './jobs.js';
 import * as combat from './combat.js';
 import * as homes from './homes.js';
 import * as starter from './starter.js';
+import * as firstcar from './firstcar.js';   // (the used lots' beaters: a new character's first car)
 import * as ftue from './ftue.js';   // (the first-time experience: its question's answers, a place's menu opened)   // (the starter car: free at the public garages - a station's car park, a Fresh Coat Garage, a dealership)
 import * as station from './station.js';
 import * as taxijob from './taxijob.js';
@@ -102,6 +103,7 @@ function baseLabel(world, p, poi) {
     case 'hospital': return 'Talk to the hospital front desk';
     case 'bank': return 'Talk to the bank teller';
     case 'pawn': return 'Sell at the pawn window';
+    case 'usedlot': return `Look over the cars at ${poi.label}`;
     case 'farm': return 'Talk to the Farm Co-op (contracts, seeds, horses)';
     case 'warehouse': return 'Ask Portside Logistics for courier work';
     default:
@@ -317,12 +319,21 @@ export function buildMenu(world, p, poi) {
       starter.menuOpts(world, p, poi, opts);   // (your starter car: starter.js)
       break;
     }
+    case 'usedlot': {   // a used lot by an arrival station: a small cheap stock (firstcar.js; prices shared/rules.js FTUE.lot)
+      title = poi.label;
+      sub = poi.sub || 'Cheap wheels, sold as seen. Each one parked out on the lot for you.';
+      firstcar.menuOpts(world, p, poi, opts);
+      ownedVehicleOpts(prof, opts, false);
+      starter.menuOpts(world, p, poi, opts);
+      break;
+    }
     case 'dealer': case 'marina': {
       title = SHOPS[kind].title;
       for (const o of SHOPS[kind].buy) {
         const d = VEHICLES[o.id];
         opts.push({ id: `vb:${o.id}`, label: `${d.name}${d.slots.length ? ` (${d.slots.length} cargo slot${d.slots.length > 1 ? 's' : ''})` : ''}`, price: d.price, note: d.blurb || '' });
       }
+      if (kind === 'dealer') firstcar.menuOpts(world, p, poi, opts);   // (the used beaters on the back row too)
       ownedVehicleOpts(prof, opts, kind === 'marina');
       starter.menuOpts(world, p, poi, opts);   // (a dealership: your starter car too - starter.js)
       break;
@@ -765,6 +776,7 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'vg': return spawnOwned(world, p, poi, Number(parts[1]));
+    case 'ub': return firstcar.buy(world, p, poi, parts[1], pay);   // (a used lot's beater: firstcar.js)
     case 'starter': return starter.fetch(world, p, poi);   // (a public garage: your starter car)
     case 'hstarter': return starter.fromHome(world, p, homes.homeFor(world, p, poi));   // (your home's garage: your starter car)
     case 'rent': return rentals.rent(world, p, poi, parts[1], pay);
@@ -880,7 +892,12 @@ function spawnOwned(world, p, poi, idx) {
     for (const m of world.map.marina) { const dd = Math.hypot(m.x - poi.x, m.y - poi.y); if (dd < bd) { bd = dd; best = m; } }
     spot = best;
   } else if (VEHICLES[ov.model].horse) spot = horses.spotAt(world, poi);   // (a horse: brought round onto open ground)
-  else spot = poi.spawnLot || { x: poi.x, y: poi.y + 90, a: -Math.PI / 2 };
+  else {   // (a free space on the lot, or round it when it's full - firstcar.js: many buying at once never share one - the owner, 11-06)
+    const old = world.get(p.activeVehicle);
+    spot = firstcar.spotAt(world, poi, old && old.owner === p.pid ? old : null);
+    if (!spot) return 'The lot is full right now - try again in a moment.';
+    return homes.spawnOwnedAt(world, p, idx, spot, { keep: true });
+  }
   return homes.spawnOwnedAt(world, p, idx, spot);
 }
 

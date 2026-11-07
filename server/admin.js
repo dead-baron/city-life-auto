@@ -11,6 +11,7 @@
 //   restore { id, item, n }                    -> an item (or a weapon, with n rounds) given back (helper)
 //   kick { id, why } · ban { id, hours (0: for good), why } · unban { id }               (admin)
 //   mute { id, hours } · unmute { id } · strike { id, why } · unstrike { id, i }         (admin)
+//   prison { id, mins, why }                   -> sent to Prison Island for mins (0: let out), no bail, no way over the wall (admin)
 //   reviews · resolve { rid, note }                                                     (admin)
 //   role { id, role: 'admin' | 'helper' | null }                                        (owner)
 //   pagelink { page: 'log' | 'dashboard' | 'reviews' } -> a one-time link to the protected pages (helper and up)
@@ -18,6 +19,8 @@ import { allowed, rankOf, GRANTABLE, POWERS } from './roles.js';
 import { ITEMS, WEAPONS } from '../shared/items.js';
 import { escapeSpot, safeSpot } from './systems/unstuck.js';
 import { ejectPed } from './systems/vehicles.js';
+import { adminSentence } from './systems/prison.js';
+import { takeOut } from './systems/custody.js';
 import { chatData } from './moderation.js';
 import * as devmode from './devmode.js';
 import { moved } from './movemark.js';
@@ -185,6 +188,16 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         else if (!mod.unstrike(t.acct, msg.i)) return reply(a, false, { err: 'No such strike.' });
         done({ what: a, before: { strikes: before }, after: { strikes: mod.activeStrikes(t.acct), muteUntil: chatData(t.acct).muteUntil || 0 } });
         return reply(a, true);
+      }
+      case 'prison': {
+        if (t.pid === p.pid || !over(p, t)) return reply(a, false, { err: 'Not on someone of your rank or above.' });
+        const why = String(msg.why || '').slice(0, 200), mins = Math.max(0, Number(msg.mins) || 0);
+        const before = t.p && t.p.prison ? Math.ceil(t.p.prison.until - world.time) : t.prof.jail && t.prof.jail.prison ? t.prof.jail.left : 0;
+        const err = adminSentence(world, t.p, t.prof, mins, (q) => takeOut(world, q));
+        if (err) return reply(a, false, { err });
+        const after = t.p && t.p.prison ? Math.ceil(t.p.prison.until - world.time) : t.prof.jail && t.prof.jail.prison ? t.prof.jail.left : 0;
+        done({ what: 'prison', before: { prisonS: before }, after: { prisonS: after }, note: why });
+        return reply(a, true, { data: { left: after } });
       }
       case 'reviews': log.append({ who: me(p), what: 'reviews', ok: true }); return reply(a, true, { data: mod.openReviews(100) });
       case 'resolve': {

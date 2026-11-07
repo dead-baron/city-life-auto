@@ -26,7 +26,7 @@ import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
-import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S, PATROL_PURSUE, BRAWL_AFTER_S } from '../../shared/rules.js';
+import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S, PATROL_PURSUE, BRAWL_AFTER_S, copLevel } from '../../shared/rules.js';
 
 const rng = mulberry32(911);
 
@@ -87,7 +87,7 @@ function spawnPoint(world, p, tx, ty, o) {
   for (const [lo, hi] of [[minD, maxD], [maxD, maxD * 1.6], [maxD * 1.6, maxD * 2.4]]) {
     const ok = [], behind = [];
     for (const n of m.nodes) {
-      if (n.lvl !== 0) continue;
+      if (n.lvl !== 0 || (o.ok && !o.ok(n))) continue;
       const d = Math.hypot(n.x - tx, n.y - ty);
       if (d < lo || d > hi) continue;
       let near = false;
@@ -160,7 +160,9 @@ function spawnUnit(world, p, o = {}) {
 // A car sent to take a prisoner in (custody.js): from out of sight like any unit, no siren, straight to them.
 export function sendTransport(world, p) {
   const ped = p.ped;
-  const n = spawnPoint(world, p, ped.x, ped.y, { at: { x: ped.x, y: ped.y }, minD: 520, maxD: 1200, clearPx: 360 });
+  // (from the prisoner's own piece of the road network: across the water from an island, it could never get there)
+  const piece = custody.pieceAt(world.map, ped.x, ped.y);
+  const n = spawnPoint(world, p, ped.x, ped.y, { at: { x: ped.x, y: ped.y }, minD: 520, maxD: 1200, clearPx: 360, ok: (q) => custody.nodePiece(world.map, q.id) === piece });
   if (!n) return null;
   const v = world.spawnVehicle('police', n.x + 32, n.y + 32, Math.atan2(ped.y - n.y, ped.x - n.x), {});
   v.despawnable = false;
@@ -202,8 +204,13 @@ function armCop(cop, stars, force, hot = false) {
   n.backup = stars >= 3 ? 'pistol' : 'baton';
 }
 
-// On foot: officers sprint longer than anyone (a chase is their job).
-export const copMods = (world, c) => ({ ...players.pedMods(world, c), drainMul: 0.35 });
+// On foot: at 4-5 stars officers sprint longer than anyone (a chase is their job); at 1-3 they're a step slower than you
+// and tire sooner (rules.js COP_LEVEL foot, drain: a player sprinting away pulls clear). stars: the suspect's (an NPC
+// crook: 5, as ever).
+export const copMods = (world, c, stars = 5) => {
+  const m = players.pedMods(world, c), L = copLevel(stars);
+  return { ...m, speedMul: m.speedMul * L.foot, drainMul: L.drain };
+};
 
 // A running dive at the suspect (the dive-roll: shared/physics.js), aimed a little ahead of where they're going.
 function dive(c, t, now) {
@@ -269,7 +276,7 @@ export function tackleStep(world, c, t, dt, gentle = false) {
     inp = down && gentle ? seek(c, wp.x, wp.y, false, TACKLE_APPROACH) : seek(c, wp.x, wp.y, true);
     if (d < 24) { inp.mx *= 0.2; inp.my *= 0.2; }
   }
-  const mods = copMods(world, c);
+  const mods = copMods(world, c, t.player ? t.player.wanted : 5);
   if (t.npc) mods.speedMul *= CHASE_NPC;
   pedStep(c, sidestep(world, c, inp, dt), dt, world.map, mods);
   if (c.rollT > 0) tackleHit(world, c, t);
@@ -754,7 +761,9 @@ function runUnit(world, v, dt) {
     if (crew.some((c) => c.id === p.custody.holder)) custody.standBy(world, v, crew, p, dt); else standDown(world, v, crew, dt);
     return;
   }
-  const t = p.ped;
+  // they broke out of the back of this car (custody.js carBreak): the crew take a moment to get out after them
+  if (ai.holdUntil > now && crew.length && crew.every((c) => c.vehId === v.id)) { custody.halt(v); return; }
+  const t = p.ped, L = copLevel(p.wanted);
   const held = !!struggle.of(p);   // (an officer on them, going for the cuffs while they fight back: struggle.js)
   // the suspect's been hitting the police: at 3 stars the tasers go away and the pistols come out
   const hot = crew.some((c) => now - (c.aggressors.get(t.id) ?? -99) < 15);
@@ -787,13 +796,23 @@ function runUnit(world, v, dt) {
       for (const c of crew) { vehicles.ejectPed(world, c, true); c.npc.state = 'chase'; }
       return;
     }
+    // by your stars (rules.js COP_LEVEL): at 1-3 slower, steering for where you were a moment ago (late, wide turns), and
+    // never leaning on your car to spin it; at 4-5 flat out, right on you, a shove into a spin up close (as ever)
     if (seen && dist < 520 && world.map.los(v.x, v.y, kx, ky)) {
-      driveToward(world, v, kx, ky, t.vehId ? 720 : 320, { ignoreObstacles: !!t.vehId && dist < 200 });
+      let ax = kx, ay = ky;
+      if (L.react > 0) {
+        const tr = (ai.trail ||= []);
+        tr.push({ t: now, x: kx, y: ky });
+        while (tr.length > 1 && tr[1].t <= now - L.react) tr.shift();
+        ax = tr[0].x; ay = tr[0].y;
+      }
+      driveToward(world, v, ax, ay, (t.vehId ? 720 : 320) * L.drive, { ignoreObstacles: L.ram && !!t.vehId && dist < 200 });
     } else {
+      if (ai.trail) ai.trail.length = 0;
       if (!ai.route || now - ai.routeAt > 3) { ai.route = planRoute(world, v.x, v.y, kx, ky); ai.routeAt = now; }
       while (ai.route.length > 1 && Math.hypot(ai.route[0].x - v.x, ai.route[0].y - v.y) < 60) ai.route.shift();
       const wp = ai.route[0];
-      driveToward(world, v, wp.x, wp.y, 520, {});
+      driveToward(world, v, wp.x, wp.y, 520 * L.drive, {});
     }
     return;
   }
@@ -808,7 +827,7 @@ function runUnit(world, v, dt) {
     if (c.vehId || c.npc.war || c.ug || c.npc.pursue) continue; // busy in a gang fight (gangwar.js drives them); gone down a manhole after a suspect (underground.js); after a crook (pursueStep)
     if (struggle.pinning(world, c)) continue;   // on top of the suspect, going for the cuffs (struggle.js moves them)
     // stumbling back from a prisoner who broke away (custody.js), or tripped running after them
-    if (now < (c.staggerUntil || 0)) { pedStep(c, { bits: 0, mx: 0, my: 0, aim: c.a }, dt, world.map, copMods(world, c)); continue; }
+    if (now < (c.staggerUntil || 0)) { pedStep(c, { bits: 0, mx: 0, my: 0, aim: c.a }, dt, world.map, copMods(world, c, p.wanted)); continue; }
     if (c.npc.tripAt && trips(world, c, now)) continue;
     if (so && standoff.hold(world, c, v, so, p, hot, dt)) continue;   // in cover or at a post round the building (the rest go in)
     const d = Math.hypot(t.x - c.x, t.y - c.y), n = c.npc;
@@ -870,7 +889,7 @@ function runUnit(world, v, dt) {
       }
     }
     if (now >= c.downUntil && now >= c.stunUntil) {
-      pedStep(c, sidestep(world, c, inp, dt), dt, world.map, copMods(world, c));
+      pedStep(c, sidestep(world, c, inp, dt), dt, world.map, copMods(world, c, p.wanted));
       if (inp.bits & IN.FIRE) combat.tryAttack(world, c, inp.aim);
       if (c.rollT > 0) tackleHit(world, c, t);
     }

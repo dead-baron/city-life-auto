@@ -521,7 +521,12 @@ export function planStations3(lines, m, loops = mainLineLoops()) {
         break;
       }
     }
-    for (const pts of pick.roads) lines.push({ pts: pts.map((p) => ({ x: p.x, y: p.y })), kind: STATION_KIND, lvl: 0, name: `${st.name} Station Road`, station: st.name, ...(pick.loop ? {} : { culdesac: true }) });
+    // (the station's own road - the drop-off loop off the street out front, or the road along its front round to the
+    // nearest streets - is for the station: the city's traffic keeps out of it unless there's no other way on (its edges
+    // notraffic: server/systems/traffic.js chooseExit) and none is placed on it; it keeps its look, and anyone can drive
+    // it. The owner, 11-06, off the arrival train at Metro Central: "First thing I see coming off the FTUE train here is
+    // a traffic jam ... Maybe we just keep the street here but not have it be a street cars go down")
+    for (const pts of pick.roads) lines.push({ pts: pts.map((p) => ({ x: p.x, y: p.y })), kind: STATION_KIND, lvl: 0, name: `${st.name} Station Road`, station: st.name, dropoff: true, ...(pick.loop ? {} : { culdesac: true }) });
     // the house: by the station's spot, or along a little where a road runs past it there
     const hc = (pick.houseC ?? HUB_C) * TILE, g2 = lineGrid(lines, ground);
     let ha = 0;

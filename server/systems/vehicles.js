@@ -1,4 +1,5 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
+import * as firstcar from './firstcar.js';   // (the hustle's first car: the one theft nobody calls in)
 import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
 import { vehStep, vehLateralSpeed, vehForwardSpeed, deadInput, horseWind } from '../../shared/physics.js';
@@ -622,8 +623,8 @@ export function tryEnter(world, ped, noBoard = false) {
   if (seat === 0 && p) {
     const already = v.stolenBy && v.stolenBy.has(p.pid);
     if (!already && !v.carjacked) {
-      const type = takeCrime(p, v);
-      if (type) law.crime(world, ped, type, v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y);
+      const type = takeCrime(p, v), gentle = firstcar.taken(world, p, v);   // (the hustle's first car, left in the alley for you: nobody calls this one in - firstcar.js)
+      if (type) law.crime(world, ped, type, v.owner ? world.players.get(v.owner)?.ped || null : null, v.x, v.y, gentle ? { gentle: true } : undefined);
     }
     (v.stolenBy ||= new Set()).add(p.pid);
   }

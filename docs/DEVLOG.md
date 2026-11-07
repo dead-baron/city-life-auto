@@ -20973,6 +20973,198 @@ A world change's job now includes the rebake and test/worldmap.test.js.
   change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
   worldmap and perf (8 pass).
 
+## 2026-11-06 - Forklift: a marked loading bay across the yard; quitting a job from the job card
+The owner (11-06): "How do you quit a job you started? Specifically looking at the forklift job. We should have it make
+you take the pallets further away into a clear marked loading bay area. It also says get in car when it should say
+forklift."
+- **The loading bays are world data** (`shared/loadbays.js`, one generator pass near the end of `shared/map.js`:
+  `m.loadBays`). For every yard (the forklifts parked about the port's container yard, the warehouses and the fish
+  markets, and each warehouse's door) it plans a pallets' row near the yard's forklift or door and a loading bay across
+  the yard: three numbered slots (two pallets a slot), `FORK.drive` = 25-60 tiles away by the way a forklift drives,
+  aiming at about 40. A bay backed by a building's wall scores best, so most of The Yards' bays sit at a warehouse's dock
+  door. The way between and both places stay clear: no building, wall, water, bridge, walk-in floor, prop (a tree's
+  crown and a parked forklift or container count their size), fence or parking bay, with a tile of room either side.
+  No place sits in a building's lee (the four tiles north of one, which the camera sees under its roof), and no two
+  yards share ground. It's data only: no tile or prop changes, so the map's signature and the world map's picture
+  stand. World v3 has 9 yards with a bay, at drives of 31-48 tiles (most 40). Before, the bays were 5-13 tiles
+  from the pallets. Four street-front docks in The Yards (Gulf Coast Freight, Ironhorse Logistics, Bayline Paper Co,
+  Atlas Moving & Storage) have their forklift parked on the street and no open ground within reach, so they aren't
+  yards any more. Their neighbors' yards are. The plan takes about 0.5-1 s of World v3's ~100 s build, and 30-120 ms
+  of today's. Yards are named for the business they're at ("the Kessler Bros. Produce yard"), no more "the The Yards
+  yard".
+- **Marked in the world**: the ground bake (`groundbake.js loadBays`) paints hazard stripes along the bay's back and
+  ends, a yellow line along its open front, white lines between the slots, each slot's number on the apron, and
+  LOADING BAY across the apron, upright as the camera sees it. Each pallet's place gets yellow corner marks. The statics
+  (`statics.js`) stand a lit LOADING BAY sign at one front corner and a floodlight on its arm at the other, its pool on
+  the slots at night. The prefab lots' art-only dressing (pallets, a forklift, a container) keeps off a yard's plan.
+  The slot your pallet goes in is the server's choice (`forklift.js target`: `slot`), and the page lights it
+  (`client/jobway.js slotMark`): a marching yellow-and-white edge, a soft fill, a chevron at its open side, SLOT n.
+- **The job** (`server/systems/forklift.js`): the yards are `m.loadBays`, and the pallets go in the row. The forklift is
+  parked on the row's apron facing them (or the nearest free one). A second driver can't take a bay already in use, and
+  a new shift clears the last one's pallets from the slots. Lines say slot, not bay. The first line is "Forklift: get on
+  your forklift - tap this card to quit", then "lift a pallet", "take it to the loading bay - slot n".
+- **Pay, retuned for the longer runs** (`shared/rules-work.js FORK`, still per pallet): a pallet pays `perLoad` $40 plus
+  `perTile` $1 a tile of that yard's drive, so $71-$88 at World v3's yards and $80 at 40 tiles. A stacked pallet pays
+  $30 more (was $20), and the lot pays a $200 bonus (was $120). A 40-tile yard's shift comes to 6 x $80 + 3 x $30 + $200
+  = $770. Before, any yard paid 6 x $45 + 3 x $20 + $120 = $450. A run is about three times the drive it was, about 30
+  s a pallet against about 15, so a shift takes about 3 minutes against 1.5. That is about $255 a minute against $300: a
+  little less a minute, a lot more a shift. A yard further across pays more for its longer drive. The board's card
+  shows the yard's own figures and its drive in meters.
+- **Quitting** was Phone, then the job at the top, then Quit job pressed twice, and the owner couldn't find it. A tap or
+  a click on the HUD's job card now opens the phone's Jobs app, with the job you're on at its top: Show on map, Quit
+  job. It used to fold the card. The card's own first line says so, and so does the Guide's Finding work ("To quit, tap
+  the job card on your screen (or [[phone]])"). Keyboard and pad have P and the pad's phone button, with the job at the
+  top of the phone's home. Quitting the forklift job (`jobs.js failJob` -> `forklift.endShift`, via a new `jobs.onFail`
+  hook) removes every pallet not in the bay, the one on the forks too (the forks lowered). The forklift is recalled as
+  every job's vehicle is, and you're set down beside it if you're at the wheel. Pallets already in the bay go a minute
+  and a half later.
+- **"Get in car"**: every line the forklift job shows (the card, the step, the notes, the prompts, the tracker) says
+  forklift. The YOUR CAR plate over the issued forklift and the recall's "takes its car back" come from
+  `vehicleWord`, fixed on the `vehword` branch (d28e3ac9), which isn't merged here yet.
+- **Perf**: the city code's budget goes from 35 to 36 files for `shared/loadbays.js` (tools/perf.mjs). Only the
+  generator fallback loads it, and its fence reading and its geometry stay inside it, so it's one file, not three.
+  `FORK.pallets` / `FORK.drive` read its `BAY`.
+- **Guide**: the forklift has its own entry (the drive, the slot that's lit, the pay range from FORK). Ranger and farm
+  keep theirs.
+- Tests: `test/loadbays.test.js` (today's world: every yard planned, the plan deterministic and leaving tiles and props
+  alone, the bay painted, its sign and floodlight lit, the planner kept off the page). `test/loadbayscheck.js` checks
+  every bay against the map itself, and `test/world3server.test.js` runs it on World v3 as the server builds it: the
+  port's yards and every warehouse's included, then a shift started at each. `test/workjobs.test.js` covers a full run
+  to the bay with the slot lit, the pay, quitting with a pallet on the forks, a second driver kept off a busy bay, and
+  no "car" in any line. `test/uiscreens.test.js` checks that the job card opens the phone's job with Quit job.
+
+## 2026-11-06 - Walking into a building on a phone: The Violet Room, the entry bakes, one loading screen
+The owner, on a Pixel 7 Pro: "This interior for a nightclub is not loading after quite some time. Seems like interiors
+take a long time to load in general" (The Violet Room, Neon District: a plain gray tiled floor, a few people, nothing
+else), and in portrait "the message for loading art flips between two messages and it just pops in and out over and
+over". `tools/interiorbench.mjs` (new) measures both on a 411x891 @2.6 portrait phone against a local World v3 server:
+the loading screen's every change and a filmstrip, cold and warm; a step into a walk-in with the page's CPU slowed 4x
+until its inside is drawn cut away (host.js insideReady).
+- **The bare floor was a crash, not a slow load.** The page's map is a window onto World v3: its POI list keeps the
+  window's places at their world-wide indexes, with holes for the rest. `shopRoom`'s look for an ATM in the room
+  (`for (const p of M.pois) if (p.kind === 'atm' ...)`) threw on the first hole. It runs inside `staticItems` (the
+  cut-away's recipe), so the whole chunk's statics went: the chunk baked as bare ground - no building, no wall, no prop -
+  and, its bake "done", the page counted the inside as drawn (no exit hint, nothing queued). Every walk-in fitted out by
+  its trade (the shops, the bars, the clubs: wave D) did this in the game; the tests and tools/area-shot.mjs build the
+  whole world, with no holes, so never saw it. Fixed (`p &&`), and statics.js `cutOf`: a fit-out that throws leaves the
+  building roofed instead of emptying the chunk. `test/interiorload.test.js` cuts a club away in a window with holes.
+- **The clubs as NE9 / IN15** (`shared/shoprooms.js` FIT.club, `client/art2/shopart.js`): the DJ booth in the middle of
+  the bar (a lit console, the decks and the mixer, the bartender behind it is the DJ), speakers and an equalizer screen
+  behind it, the bottles either side, neon tubes at the ends, the club's word in neon; the bar's neon edge and stools;
+  the lit dance floor (a neon strip round it, the mirror ball over it, pools of coloured
+  light); velvet booths with candlelit tables down one side wall; in a room 16 tiles wide or more the VIP corner on the
+  side away from the door (a raised red carpet, curved booths and tables, the rope on brass posts, the VIP sign); high
+  tables and palms in what's left. `clubFloor` is the lit floor's one rectangle: server/systems/nightclubs.js keeps the
+  dancers on it (not in the booths). Every club in World v3 is a walk-in with this plan (The Violet Room, Club Ultraviolet,
+  The Midnight, Luna Lounge, Afterdark, Volt, Dock 9, Starlet Club, Club Paradiso, Pink Moon Lounge, The Garter Room, The
+  Boiler House, The Anchor, The Conch Bar, The Bell Buoy, The Salty Dog, the tiki bars, Club Nova, Club Eclipse, Club Neon
+  Cactus, Club Mojave Nights, Club Neon, Bass Cave, Pink Flamingo, The Copper Spur Saloon): all had the same crash in the
+  page, all fixed by it. The other big venues (The Grand Theater's cinema, Pinwheel Lanes' bowling) draw their own rooms
+  and never called shopRoom; the casinos, the theatres and the lounges that aren't walk-ins have no inside to draw.
+- **The entry's bakes first** (host.js): inside a walk-in whose inside isn't drawn yet, its cut-away bakes go ahead of
+  everything (`entryPrio`: the chunk under you, then the rest on screen, then the rest of the building - before the
+  ring, the road ahead and the store's looks), and their uploads aren't held to the frame's budget (as after a jump).
+  About to walk in, its inside is baked ahead into the store after the screen's own chunks but before the ring
+  (`precutPrio`; it used to wait until nothing at all was queued for the screen, which near a busy street was never).
+  The cut box is the building's chunks only: its 40 px margin took in the chunks either side of a building ending near a
+  chunk's edge, baked again with nothing changed - The Violet Room's 3 chunks were 9.
+- **One loading screen** (`client/warmup.js` LOAD_PHASES, loadStep; titlescreen.js and holdForArt share the record): the
+  title's line and bar from "Connecting..." to the city - connect, city, graphics, the streets on screen, the ring and
+  the people - each message once, in order (it changes only when the phase moves on), the bar only forward and full at
+  the end, then one fade out (`#title.t-out`, main.js enterCity hides it after FADE_MS). Before: the art's message
+  flipped between "Getting the art ready..." and "Getting the streets around you ready..." as the sprites came and went
+  a frame at a time (warmPlan's `why` between 'view' and 'ring'), the bar dropped from the city's 59% to 0 at PLAY and
+  then jumped 10% <-> 20% <-> 10% (spr) - 15 steps back in one cold load on the bench - and, upright, a two-line message
+  and a three-line tip moved everything under them. The line and the tip keep their room in portrait. The teleport's
+  "Loading the area..." veil: one teleport measured on and off once; `veilStep` keeps it from flapping on a second jump
+  a frame later (up at once, down after 250 ms drawn, back within 2 s only for a jump still not drawn after 250 ms).
+- **Measured** (tools/interiorbench.mjs, 411x891 @2.6, the page's CPU slowed 4x, a single run each): the step into The
+  Violet Room until its inside counted as drawn 4.3 s before - and what was drawn was bare ground, as the owner saw it -
+  3.3 s after, fitted out (unslowed and rasterized: 9.7 s -> 3.2 s); its cut-away 3 chunks, not 9. A first load: before,
+  the bar went back 15 times and dropped from 59% to 0 at PLAY; after, never back, the five messages once each in order,
+  one fade. A teleport's veil: on once, off once, before and after. Tests: test/interiorload.test.js (new) with
+  nightclubs, shoprooms, warmup, perf, art2, pagemodules, lazypage, walkinrooms, regionwindow, uiscreens, hudlayers,
+  mapwindow and dmath pass. The renderer's code is at its 404 KB budget (host.js's new comments trimmed to fit). The
+  world's hashes don't change (world, world3); the art's do.
+
+
+## 2026-11-06 · The caves finished inside, and a way out that looks like one
+
+The owner (11-06, 19:38, on his phone, 14:45 in the game): "Cave interior art looks unfinished. Also we want to have the
+exit of the cave look like an exit so it's clear how to get back out." Concepts: N3, MI1, MI2, MI5.
+
+### Which cave, and why it looked unfinished
+- **The cave:** the Redwood Caverns, just in from the Redwood Creek Falls mouth. The minimap's green ground, the creek and
+  the road are the falls' surroundings. The cobbles in the screenshot are the caverns' basalt colors. A capture of today's
+  view standing there matches his screenshot.
+- **Why:** none of the suspected fallbacks. Every cave goes through `caveart.js`, the tiles were drawn with no smoothing,
+  and every cave type has its stone. The art itself was the problem:
+  - the rock: since nat4, every cave's rock top was one even Voronoi of small round stones (15 px cells) lit flat. At the
+    phone's zoom (0.665) it reads as cobblestone paving. The south faces were 26 px tall, so the walls had no height;
+  - the floor: low-contrast value noise, dithered all over, plus long contour lines (the cracks, and the kit paths'
+    noisy ruts) that read like wood grain: "smeared";
+  - the light: the dark was cut at full device resolution with smooth gradients that fell off from the middle, so the art
+    showed only in a soft blob round each light. The props were vector shapes drawn each frame with antialiasing, so
+    they were soft too;
+  - the way out was a dead end of the passage with a white blob of light in it: no opening, nothing outside, no sign;
+  - people were drawn as placeholder ellipses.
+
+### The art (client/underground/caveart.js, every cave type: the mines' scene caves, their template chambers, the caverns)
+- **Walls:** each south face now stands 30-56 px tall, varying along the wall. It is built of rock columns, lit on
+  the left and shadowed on the right, with ledges across them and the foot in shadow. Flowstone teeth hang from the lip,
+  and the rock is wet and dark by the water. Above, the rock's top is heaped with boulders of different sizes (26 px
+  cells). The nearer ones overlap the further ones, and each is a dome lit from the top left in steps, its facets
+  tilted. Dark crevices run between them, a little moss sits on the tops near the open, and they fade into the dark.
+- **Floor:** packed earth in patches with crisp edges, grit and specks, pebbles with a lit side and a shadow, and bigger
+  rubble at the walls' feet. Cracks are short, three jagged legs from a point. The kit's paths have straight ruts. The
+  docks' planks are painted with the floor.
+- **Things baked in:** everything that doesn't move is drawn into the tile's art pixels once, nearest last: rails,
+  trestles, docks' posts, stairs, timber sets, stalagmites, stalactites, the kit's and the caverns' things, the lanterns'
+  posts and brackets, mushrooms and crystals, the den's bed and every way out's dressing (`bakeProps`). Each frame
+  draws only what moves, snapped to the art pixels: flames, drops, glow-worms, bats, cascades, chests, finds.
+- **Crisp:** tiles are drawn at whole device pixels with no smoothing (no `CH + 0.5` stretch). The dark is drawn on its
+  own canvas at one pixel per art pixel, on the art's grid, then laid over with no smoothing. That is a fifteenth of the
+  pixels a phone filled before.
+- **Light that shows the art:** a light's pool is fully lit in the middle and then falls off (`hole`). The lanterns' warm
+  wash and the glow-worms' halos are softer, so the floor no longer washes out. The dark places stay dark: a mine's den,
+  its glow-worm and crystal caves (lit only by their glow), the caverns' echo hall, the den and the passages between.
+- **People:** the cave view draws people and animals with the page's own `drawPed` (`main.js` passes it), not ellipses.
+
+### The way out (every mouth: the mines' adits, the falls mouth, the sea cave)
+- **shared/caverns.js `lightCave`:** `K.exits`, one for each mouth. Each has its opening (`EXIT.hw`), the way out of it
+  (from where you come in, out through the mouth) and a pair of lanterns on posts just inside. The lanterns are the
+  cave's own, so they light the way on the server too.
+- **Painted (caveart.js):** toward the mouth, the floor turns to the ground outside in creeping patches. The ground is
+  read from the map at the mouth when the page has it (grass, dirt, sand, the desert's red sand), else taken from the
+  mouth's kind. The opening widens past the mouth into daylight glare, then fades into the dark. The rock either side is
+  lit by the day.
+- **Dressing:** an adit gets a timbered portal across the mouth (posts, a heavy cap beam, braces, iron straps) with a WAY
+  OUT board hung from it on chains. A cave mouth gets the board on a post beside the path in. The board is weathered
+  planks, WAY / OUT painted in a 3x5 pixel font, and an arrow pointing out.
+- **Light:** the dark is lifted up the passage as before, and now also out past the mouth (`MOUTH.past`). A fan of the
+  sky's light lies along the floor from the opening, with dust drifting in it (`exitBeam`). By night it is moonlight,
+  and `mouthLevel` at night goes 0.22 -> 0.34 so the way out still shows.
+- **The prompt:** "Walk out of the cave, into the daylight" (or "into the night"), or "Walk out of the sea cave onto
+  the beach". It is offered anywhere along the way out's passage, from just inside out to the mouth
+  (`CAVE_LEAVE_REACH`), not only near where you came in.
+- **Guide:** a new Activities entry, "Caves and mining": going in, your light, how the way out shows, the pickaxes
+  and the assay office.
+
+### Measured (the cave view alone in Chromium, the same map, a loaded machine)
+- A tile's paint goes from 51 to 59 ms on a warm pass (100 -> 123 cold), with the things now baked into it.
+- A frame of the view goes from 112 to 18 ms. The dark at the art pixel and the baked things do most of that.
+- Page and renderer: unchanged but for `main.js` handing `drawPed` to the view. The cave art loads only with the cave view.
+
+### Tests
+- New **test/caveexit.test.js**:
+  - every way out of every cave has its exit, its two lanterns standing on the floor and lit, and its daylight up the
+    passage and past the mouth;
+  - a cave's tile is painted at 2 px an art pixel and drawn exactly 2x with no smoothing, the ground past the mouth is
+    brighter than the floor, and the WAY OUT board is baked in;
+  - in a frame, the tiles and the dark are drawn at whole device pixels with no smoothing;
+  - the way out is offered all along its passage, and not from deep in.
+- **test/cavelight.test.js:** the spots past the mouth, and moonlight at night is now 0.25-0.4.
+
 ## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default
 
 The owner (11-06, 19:15): "For your first car you own we should make sure there's a visual indicator that it's your car
@@ -21092,3 +21284,438 @@ Not sure the infinity symbol is the right symbol either, needs more of an auto f
   button within 300 units of the stick (316 px at 411 wide) on five phones, FIRE ON within 110 of the stick and FIRE;
   the hose on FIRE and HIT, never THROW, its length the server's. test/uikit.test.js follows the names. Page code: 513 ->
   514 KB of 520 (the new drawings, less the Lucide paths dropped).
+
+
+## 2026-11-06 · Caves, round 2: no arrow; the game's own characters checked in the game
+
+The owner (11-06, 21:12): "I don't think we need an arrow pointing the way out of the cave. The cave art is looking okay
+but the character is an old placeholder I believe."
+- **No arrow:** the server's hint, the 'ugway' message, the page's chevron, `CAVE_WAY` and their test and Guide words are
+  gone. The way out is still offered all along its passage (`CAVE_LEAVE_REACH` in shared/rules.js), with its lanterns,
+  daylight and WAY OUT board.
+- **The character:** the live game drew people underground as placeholder ovals (view.js `ped`). The cave view now
+  draws people and animals with the page's own `drawPed` (`main.js` hands it over), so they look as they do in the city.
+  Checked in the real game (a local World v3 server, a phone-portrait page at 411x891 @2.6, in the Old Granite Mine by
+  day and by night): the real sprite at the city's scale, facing the way it walks, walking, with its contact shadow, and
+  darkened or lit by the cave's light like everything else.
+  - No sun-thrown shadow under the ground (`drawUpright`, `!S.ugLayer`).
+  - The lantern pair at a way out washes faintly (it had washed out whoever stood in the daylight at the mouth).
+
+## 2026-11-06 - A helicopter's rotor wash only near the surface
+The owner (11-06, Pixel 7 Pro): "Helicopters still affect water below at really high distances, should only be happening
+when closer to the water or ground" - rings and splashes on the water under the helicopter at ALT 31 m, the ceiling.
+- **The cause** wasn't the rotor wash (`waterlife.js` already stopped it at 150 px): `client/main.js` `vehSinking` took
+  any vehicle that isn't a boat over a water tile for a land vehicle sinking in it, so an aircraft at any height threw
+  splashes at its ground point every frame (and the classic view darkened it as if it sank). An aircraft now sinks only
+  when it's down on the water (`AIR_UP`, 6 px - `FLY.AIRBORNE`), a floatplane never; up in the air it splashes no rain
+  puddles either (`render/weather.js` `splashes`, `v._up`). The grass bent round you (`host.js` `_push`) had no height
+  either: a helicopter bent it round its rotor at 31 m.
+- **The numbers** (`shared/rules-page.js`, re-exported by `rules.js`; not `constants.js`, which is part of the art's hash):
+  `ROTOR_WASH` full within 48 px of the surface (1.5 m, the skids just off it), a smoothstep down to nothing at 256 px (8 m,
+  about 1.5 rotor spans - the Skylark's rotor is 152 px across; a real downwash dies away within one to two). `washK`
+  drives the rings and spray on the water (`waterlife.js`, was a power curve to 150 px) and the grass, bent round the
+  rotor (1.3 x its radius) low down, not at all from 8 m up. A plane bends the grass only on the ground (its propeller).
+- Tests: `test/rotorwash.test.js` (wash vs altitude, the grass push for a helicopter low, mid and high, a plane, a car;
+  vehSinking and the puddles), waterlife, flight.
+
+## 2026-11-06 - The game's numbers no longer re-key World v3's whole art
+Found while answering the owner's "the world is still loading slowly ... while flying" (below): World v3's art key
+(`art3`, what the server's art CDN and every browser keep chunks under) is the art's hash of `world3`, a hash of the v3
+build's code - and that code reaches `shared/rules.js` and its `rules-*.js` (the starter cars' spots, the car soccer
+arena, a barrier's strength). So every change to a price or a timer re-keyed the whole v3 art: the server started baking
+all 45,864 chunks again (about five hours on the live server's two threads) and every page threw its kept chunks away.
+On 11-06 art3 changed eight times on main; four of those commits touched no world or art code at all (rules.js alone, or
+with guide.js / vehicles.js: 09:07, 15:15, 19:35 and 20:33 - the last half an hour before the owner flew over a desert of
+stand-ins). `tools/stamp-version.mjs` now hashes the rules' files by the values the build and the bake read from them
+(`rulesValues`: each `import { A } from './rules...'` / `export { A } from` in their code, its value; a rules file reached
+any other way still counts whole), for `world3` and for `art`/`art3` (`rules-base.js` reaches the bake: `BARRIER_BREAK_SPEED`,
+`CELL_CAP`). Today the values are STARTER, CARSOCCER, HORSE, BARRIER_BREAK_SPEED and CELL_CAP. The new formula moves
+`art`, `world3` and `art3` once (this deploy: one more full rebake); after that a price or a timer leaves them be.
+test/world3keys.test.js: a new number in rules.js and a comment in rules-base.js leave both keys; a value the build reads
+moves both.
+
+## 2026-11-06 - Flying: the server's low-detail picture for the stand-ins, the look-ahead by speed
+The owner (11-06, 21:05, Pixel 7 Pro, a helicopter over open desert): the ground was big flat tan blocks, the readout
+"baking 13 queued 8 ... stand-ins 6, bake avg 1076 ms, server 71, late 27.4%". "Can we not do a large download of the game
+ahead of time?"
+- **Why the phone baked.** The art CDN only has what the server has baked for the current art key, and World v3 is
+  45,864 chunks - about five hours on the live server's two bake threads. On 11-06 the v3 art key changed eight times on
+  main, the last at 20:33, half an hour before the flight: the server had baked a few thousand chunks round players and
+  along the railway and highways (its background order puts open desert late), and kept only the build before's as
+  stand-ins. Every chunk it didn't have, the page baked itself (a 404 with an eta over 6 s, or a look-ahead - those are
+  never queued on the server). Four of the eight re-keys were rules.js alone: fixed in the entry above.
+- **How big the world is** (`node --expose-gc tools/artsize.mjs`: every chunk sorted by kind, 14 of each baked at Medium
+  and packed as the CDN keeps them): 45,864 chunks, ~14.6 GB gzipped (11.4 GB without the open sea, 20,867 chunks); a land
+  chunk 300-635 KB (city 299, desert 445, country 497, wild 635), a region (21 x 21 chunks, 504 m) 140 MB median and up to
+  270 MB. So no whole-world or per-region download of the full art (see docs: the owner's decisions below).
+- **The low-detail picture** (`server/artlow.js`): every chunk the server bakes, of any build, leaves a thumbnail at 1/16
+  (48 px, lit softly, shaded south-east of what stands tall) in `<data>/artlow/<world>/`, kept across builds of the art;
+  the chunks already on disk get theirs first (a few ms each, before the background's bakes). `GET /art/low/<world>/<bx>_<by>.png`
+  serves a block of 21 x 21 (a region) as one PNG (zlib, no dependency; ~6 KB a land chunk, ~2.6 MB a land region, ~150 MB
+  the whole land), `x-low-have` saying which chunks it has. The page (`client/art2/game/lowres.js`, loaded lazily) fetches
+  the block you're in, the view's corners and ~20 s ahead, at most two at once and nine held; a chunk not ready is drawn
+  from its thumbnail (`host.js _placeholder`), the flat stand-in (`standin.js`) only where there's none yet, and the flat
+  ones already up are redrawn when a block lands.
+- **High flight** (`lowres.js highAir`: 480 px up and 260 px/s or more, off below 400 px or 160 px/s): no chunk is baked
+  on the page where a thumbnail stands in (`_chunks`, `_prebake`); the server's chunks still come down (the looks in the
+  store and on the server, the downloads ahead). Descend or slow down and the page bakes as before.
+- **The look-ahead by speed** (`lowres.js aheadPlan`): driving 12 s ahead (up to 14,000 px), flying 20 s (up to 30,000 px:
+  a helicopter flat out, 27,000 px), the list as long as the line (up to 80% of what the browser keeps), six downloads at
+  once flying fast (four on a phone). The server's bakes round players reach 20 s ahead of an aircraft (`aheadFocusPx`, up
+  to 24,000 px; a car 15 s, 9,000 px).
+- **The CDN with no bake threads** (`CLA_ART_THREADS=0`) still serves what's on disk (it served nothing before): a server
+  short of memory, or art baked elsewhere.
+- The renderer's first load stays at its budget (28 files, 404 KB): the new code loads with `lowres.js`, and some of
+  host.js's comments were shortened to make room for its hooks.
+- `tools/drivebench.mjs --fly <sizes.json>`: a helicopter flown east and back along the desert corridor `artsize.mjs
+  --corridor` bakes into a data dir (the server's art and thumbnails for it), stand-ins / late / server / baked here each
+  second, captures, the rotor wash over water high and low.
+- Tests: lowres (the look-ahead by speed, high flight, the blocks wanted, a block landing redraws the flat stand-ins,
+  `_placeholder` from the thumbnail), artlow (thumbnails, the PNG, the store, the CDN serving from disk with no threads,
+  the low blocks, the focus ahead of an aircraft).
+
+## 2026-11-06 - Your aircraft stays in the middle of the screen
+The owner (11-06, 21:58, his son's Pixel 10a): "Helicopters disappearing when flying in landscape mode on mobile. The
+helicopter isn't centered on the screen when up in the air". Art v2 draws an aircraft up the screen by its height
+(`render/aircraft.js` `liftOf`: 0.66 px a px, 660 px at the ceiling). The camera followed two thirds of that, so a high
+one sat a third of its lift (up to 220 px) above the middle - near the top of a portrait view, off the top of a landscape
+one (some 300 px each side of the middle). And the frame's list of what's on screen (`main.js` `vis`) went by the ground
+point: with the shadow off the bottom of a short view, the aircraft itself wasn't drawn at all. Now the camera follows
+all of the lift (`camLift`, `AIR_CAM` 1; the cinematic camera too, `director.js`), easing as it climbs and descends as
+the height does; its shadow stays on the ground under it. An aircraft is on screen when any of it is, from its shadow up
+to it. test/aircam.test.js; `tools/drivebench.mjs --fly` turns the phone to landscape at height for a capture.
+
+## 2026-11-07 - Birds in flight leave no wake
+The owner (11-07, 01:01): "eagles/birds cause waves/wake above water, they shouldnt though" - an eagle over a marsh with
+a swimmer's V of foam behind its shadow. The server's "in the water" bit on an animal (`extra` bit 7, `e.swim`) says
+where it is, not how high: `waterlife.js` took a bird flying over water for a swimmer. `host.js` `_pet` now keeps how
+high it draws the animal (`p._up`: flying, soaring, stooping, carrying a fish), and a swimmer's wake needs it to be down
+(8 px or less). A bird diving in still makes its splash and rings (`waterlife.js`). test/rotorwash.test.js.
+
+## 2026-11-07 - The flight bench: before and after
+`tools/drivebench.mjs --fly` (phone screen and user agent, the page's thread slowed 4x, Medium, day), a Skylark at 900 px
+flown east along the Red Rock corridor (`tools/artsize.mjs --corridor`: the server's art for 3 rows of it and thumbnails
+for 7) - before: the build this branch started from (its server, with no bake threads, serves nothing: the owner's case,
+the server not having the chunks); after: this branch (the server serves the corridor from disk and the thumbnails):
+| | before | after |
+|---|---|---|
+| chunks drawn from the server | 0 | 54 (+148 downloaded ahead) |
+| chunks baked on the phone, per minute flown | 64 | 7 |
+| stand-ins on screen that were flat blocks | all (up to 6 of 6) | none (0 s with one; the rest thumbnails) |
+| helicopter's height above the view's middle, landscape | 202 px | 0 |
+The page's own readout ran so slowly before (its thread busy with the bakes) that the bench took 4 samples in its minute.
+Not measured here: a high flight where the server has the thumbnails but not this build's chunks (just after a deploy):
+there the page bakes nothing (highAir) and shows the thumbnails until the server's chunks come.
+
+## 2026-11-06 - No traffic jam at the station: the stations' roads kept for the station; a wedged car no longer rams
+The owner (11-06, 22:36), off the arrival train at Metro Central: "First thing I see coming off the FTUE train here is a
+traffic jam, this white car keeps ramming the car around it. Maybe we just keep the street here but not have it be a
+street cars go down". A headless run (a player on the platform, 90 s) had 18 of the city's cars turn into the
+station's drop-off loop off Bayside Avenue and 14 still in it at the end, queued nose to tail round the car park's
+island, never getting back out; and a crash at one spot every 4.5 s.
+- **The stations' own roads take no traffic** (shared/world3-stations.js `planStations3`: its lines `dropoff`, their
+  edges `notraffic` - shared/roads.js): Metro Central's loop off the avenue and every other station's road along its
+  front round to the nearest streets. The city's traffic keeps out of them unless there's no other way on (traffic.js
+  `chooseExit`, as with the wild tracks) and none is placed on them. They keep their look; anyone can drive them, and
+  the cars parked in their spaces are still there. The same run afterwards: no traffic car on any station road.
+- **The ramming:** a sedan shoved onto the corner of the car park's island, its nose to a lamp post - something a
+  driver doesn't brake for - was "stuck" (traffic.js `driveToward`: barely moving while it meant to go), and backed off
+  for 1.3 s whatever was behind it: into the box truck queued there, then on into the post again, and again. Now it
+  backs off only as far as there's room behind it (roadends.js `roomBehind`, allowing for the car's way of running on),
+  and an NPC's car wedged in one spot four times running gives up (`parkIt`): the queue goes round it, and it's cleared away once nobody's looking.
+- **A car side on across the lane** is braked for by how far it really reaches across (traffic.js `obstacleSpeed`,
+  `clearOfLane`: its half length and half width as it stands to this one's way). Counted as if it lay along the lane, a
+  pickup turned across a lane with its middle just off it was "beside" the lane, and the car behind drove into its end.
+- **No parked car on top of another** (traffic.js `manage`): a space with a car already in it gets no parked car put
+  there - in that run a newcomer's starter car in Metro Central's car park had a parked sedan spawned on top of it.
+- (Metro Central's bigger car park was dropped: the city's arrival moves to Greenfield Park and the free starter car
+  becomes a first car you earn, in other jobs.)
+Tests: test/world3arrivals.test.js (every station road `notraffic`, still a road; a minute of traffic round the four
+arrival stations, none on a station road), test/trafficbox.test.js (the side-on pickup: the car behind stops short;
+wedged with a van behind: never backs into it, and gives up).
+
+## 2026-11-07 - The renderer's code budget: 404 -> 410 KB
+Tonight's fixes each fitted the renderer's 404 KB budget alone (each trimmed its own comments to get there): the walk-in's
+inside baked first when you enter (interiorload), the forklift's loading bays, and the world-streaming work - the
+low-detail stand-ins, the look-ahead scaled by speed, the aircraft camera. Merged, they come to 405 KB. Rather than strip
+more comments out of host.js, the budget goes to 410 (tools/perf.mjs), leaving room for the visibility pass's under-deck
+draw order. The renderer loads once you're in the city, never at the title screen.
+
+## 2026-11-06 - The first car is earned by the path you pick; the city's arrival by Greenfield Park (re-keys World v3)
+
+The owner (11-06, 22:49): "give the player enough money to buy a really cheap car from a dealership (one stationed close
+by each FTUE train station) and if they follow the tutorial it will have them go to the dealer to choose a car to buy?
+Or junk yard, or whatever is appropriate for the part of the world they spawn in. But also if you choose a crime path
+maybe the first thing you do is steal a car but it directs you to an alley with some cars parked that are meant to steal
+as part of the crime path tutorial." He also saw new players' cars spawning on top of each other in one spot. And the
+city's arrival moves beside Greenfield Park, "beautiful and interesting and hand crafted".
+
+**The first car, by path** (server/systems/firstcar.js; the FTUE's three steps are 1 get your car, 2 drive there, 3 do
+it - server/systems/ftue.js):
+- **Honest work**: +`FTUE.cash` ($450, on top of a new character's $200) at the answer. Step 1 "Buy a cheap car at <the
+  used lot>": walk to the station's used lot and buy a beater, off its display (dealer.js, the lot's `used` stock at its
+  price) or from its menu (`ub:<model>`). Then the drive to the post office and the round, as before.
+- **A little hustle**: no cash. Step 1 "Steal a car in <the alley>": a car is spawned for you on a free space in the
+  station's alley (`markCar`: unlocked, nobody's, ringed by the job's marker) - the one theft nobody calls in
+  (vehicles.js tryEnter -> law.crime `gentle`: the Criminal XP and the line "nobody saw this one. Next time someone
+  might call it in", no witnesses, no stars). With Safety mode on, the step says "press twice" and the first press
+  warns as usual. Getting into any car you don't own counts. Then the drive to the fence.
+- **The great outdoors**: the cash, the rod and bait as before; step 1 the same used lot (the Rusty Pickup's bed suits
+  the gear). Then the water and the cast.
+- **Just let me roam**: the cash, the used lot set as your waypoint (`{ t: 'ftue', a: 'mark' }`, client/ftue.js), no
+  steps.
+- Every step skippable as before; driving any car finishes step 1; a replay with a car of yours out goes straight to
+  step 2. The cash is given once per character, ever (`ftue.paid`), not again on the Guide's replay.
+- **Plenty, per player** (the owner's "cars spawning on top of each other"): every car a new player gets goes on a free
+  space of its own - the lot's or the alley's spaces first, then the overflow round them (starter.js `overflowNear`:
+  the nearest parking spaces, an open field, further spaces), each taken at once. The dealerships' own "brought round"
+  and bought cars (economy.js spawnOwned) use the same free spaces now; before, everyone's went to one spot
+  (`poi.spawnLot`), each clearing the last (homes.spawnOwnedAt's 80 px sweep - `keep` skips it).
+
+**The economy** (shared/rules.js `FTUE.cash`, `FTUE.lot`, `FTUE.lotR`): two beaters with no list price (shared/vehicles.js),
+sold only by the used lots and the dealerships' back row: the **Rusty Compact** (the old starter car's model) at **$600**
+and the new **Rusty Pickup** (index 88, drawn as the Pickup in the rust tint, four cargo slots, slower than the Pickup)
+at **$640**. A new character with the answer's cash has $650: one beater, only just ($50 or $10 left); no list-price car
+(the cheapest, the Hatchback, is $2,500). test/firstcar.test.js checks the margin.
+
+**The starter car**: retired for new characters, kept for those who have one.
+- New characters get none: store.js defaultProfile has no `starter`. A profile still waiting for its first day
+  (`starter { first }`: reset by the epoch and not joined since) has the record dropped on joining - a new character.
+- A profile with a starter record keeps everything (starter.js `hasStarter`): its car, the public garages' free one
+  after the cooldown, home garages, the logoff put-away. The public garages' rows and the prompt's tag show only for
+  them; a new character asking gets "You have no starter car."
+- The YOUR CAR marker (`me.car`) now marks your first car - the one you bought or stole first (`profile.firstCar`) -
+  full until you've driven it; after, a bought one's small plate when your car is near; a stolen one's marker ends
+  once driven (it isn't yours). A starter car's marker still comes first for those who have one.
+- The 50-new-players overflow parking now serves the lots and alleys (above); the starter's first-day lot is gone.
+- The arrival stations (`arrivalChoices`, `arrivalFor`) moved to firstcar.js and no longer need a car park.
+
+**The city's arrival: Greenfield Park Station and the Park West block** (shared/world3-firstcars.js `parkWest3`, at the
+very end of the world build's `done` hook): on the park's west lawn south of the soccer pitch, across Park West Avenue
+from Park West Tower. From north to south, all low enough for the camera to see over:
+- **Park West Motors**, the used lot: paving, its little brick office, seven beaters on display, bunting and a USED CARS
+  board, open onto the lane and the avenue.
+- **The alley** beside it (four tiles wide, between the lot's chain-link fence and the shops' side wall, a dead end at the
+  pitch's fence): three spaces nose-out (`m.stealAlleys`), a dumpster, bags, crates, a pallet and a trash pile, a lamp.
+- **Three small shops** facing the lane (two floors of brick, awnings, lit signs): **Lane Mart** (a corner store),
+  **Park West Coffee** (tables out front) and **Greenfield Flowers** (buckets of flowers by the door).
+- **Park West Lane**: asphalt off the avenue, a dead end (bollards, a hot dog cart, a bike rack), strung lights over it,
+  lamps and a bench; the spaces for cars bought from the lot's menu along its kerb. It is paving, not a road, so no
+  traffic routes into it (no road tile or road edge in the block - tested).
+- **The station**: the walk behind the platform, then the arrival line itself (shared/world3-arrivals.js: the city's is
+  laid by hand now - `m.handArrivals.city`, checked as any corridor is): the train comes out of a hill by the pond, stops
+  with its doors on the lane's side and goes into a hill under the avenue. Its stop is a delivery place, "Greenfield
+  Park Station" (no timetable, no menu). The park's trees in front of it gave way to flower beds; the park's loop path,
+  cut by the west hill, runs on along the avenue's pavement.
+- **Seen from the camera** (the owner: hidden signs): the name board is drawn only on an east-west line and now sits on
+  the platform's north side, in front of its canopies, with nothing taller south of it; test/world3arrivals.test.js
+  checks that no building, tree, mast, hill or canopy is drawn over the board, where you step off, the lot's office and
+  display spaces, the alley's spaces or the shops' fronts.
+
+**The other three stations** (`firstCars3`, after the arrival lines): each gets a small yard on open ground fronting a
+road, the nearest to its platform's way out: a used lot (an office, six display spaces, its spaces for bought cars) and a
+back alley (three spaces, a dumpster, dressing) beside it - **Northshore Beach Motors** and the alley behind it,
+**Red Rock Salvage & Sales** (a dirt junkyard) and its scrap lane, **Willow Valley Farm Trucks** (pickups only) and its
+barn lane. No existing dealer was near enough to any of them.
+
+**Shared files changed**: server/systems/ftue.js, starter.js, economy.js (the used lot's menu, the beaters on the
+dealers' back row, free spaces for brought-round cars), homes.js (`keep`), dealer.js (the used lots' stock), vehicles.js
+and law.js (the gentle theft), players.js (the marker, the alley's car let go at logoff), store.js; shared/rules.js,
+vehicles.js, guide.js, world3-arrivals.js, world3-world.js; the client's icon tables (a car for 'usedlot': hud.js,
+mapwaypoints.js, storeicons.js, phone.js' Places under Cars & boats) and client/ftue.js (the waypoint).
+
+**The Guide**: "Arriving" names the park and the lot and alley by each station; a new entry "Your first car" (the cash, the
+beaters and their prices, the alley's car with [[vehicle]], the one gentle theft, the marker); "A starter car" for those
+who have one; Places' new "Used car lots" and the dealers' back row. test/guide.test.js checks the cash and the prices
+follow FTUE.
+
+**Numbers and ids** (seed 1337, World v3): buildings 7,129 -> 7,136 (the Park West block's office and three shops,
+7129-7132, then the three yards' offices, 7133-7135); places 6,018 -> 6,026 (Greenfield Park Station 6018, Park West
+Motors 6019, the three shops 6020-6022, then the coast's, the desert's and the country's used lots 6023-6025); homes
+3,467, unchanged - nothing renumbered, nothing moved but the park's props on the west lawn (trees, lamps, benches round
+the old loop path) and what stood on each yard. Metro Central (place 5417) is no longer an arrival station; its lawn line
+is gone, and the four lines' bores keep tunnel ids in the same order (8 in all). `WORLD_VERSION` stays 13 (no home
+moved: the lead's call). Walks off the platform (test/world3arrivals.test.js): Greenfield Park - the street 4 tiles,
+Park West Motors 27, its alley 12; Northshore - Beach Motors 84, its alley 91; Red Rock - the salvage yard 80, its lane
+87; Willow Valley - Farm Trucks 56, its lane 37. Fifty new players at the park (half buying, half stealing) within a
+minute: fifty cars, none within 40 px of another, the furthest 36 tiles from the station.
+
+**Tests**: test/firstcar.test.js (new, today's map: the economy's margin; each path's first step - buy, steal with and
+without Safety mode, the pickup, roam; at every arrival station; fifty at once; the cash once, a replay). test/world3arrivals.test.js
+(rewritten: the park line by Park West Tower; the lot and alley a walk off every platform; the park block seen from the
+camera, no road in it, its places last; each path's first step at each of the four stations on the real world; fifty at
+the park). test/starter.test.js: the first day and the fifty-in-the-lot tests retired with their code; the rest run on a
+profile that has a starter car; a new test for new and reset characters getting none. test/ftue.test.js and
+test/guide.test.js follow the new step 1 and the Guide. Run (under the lock): firstcar, starter, ftue, guide,
+honestliving, fleet, bikes, motorbikes, core, biz (111 pass); world3arrivals, world3hubs, world3shops, world3server,
+plainblocks, mapwindow, dmath, perf, pagemodules, lazypage, worldmap, firstcar (72 pass, then world3arrivals again after
+a fix to two of its own test points); test/dmath-world.mjs (1led2u3 / 66e5ad22, as before). The world map's picture
+didn't need a rebake (today's `world` is unchanged; worldmap passes).
+
+**Performance** (tools/perf.mjs): page 84 files / 513 KB (was 513), city 366, renderer 404 (unchanged - no renderer
+code), bake 973. No budget raised.
+
+**The car to steal's plate** says UNLOCKED, not YOUR CAR (it isn't yours until you take it): the job marker's plate takes
+an optional word from the server (`me.job.veh[3]`; client/main.js drawJobTruck, one line - page 513 KB, unchanged).
+
+**The capture** (phone upright 411 x 891 @2.6, the hustle picked): stepping off as the doors open, the board once the
+train has gone, the lane and its shops, Park West Motors with its beaters priced on the lot, the alley's car.
+
+**Not done / for the owner**: the yards at Northshore and Red Rock are 80-90 tiles' walk off their platforms (the nearest
+open ground fronting a road); a hand-placed spot would bring them closer. The used lots' display cars are the server's
+dealer-lot stock (dealer.js), restocked a minute after one sells; the menu always has more, so nobody waits.
+
+## 2026-11-07 - The police: lenient before the first star, easier at 1-3 stars, a break for it that works, taken in for sure, prison for the worst
+The owner (11-07, 00:57): "it's hard to fight the cop off when you're in custody ... make it a bit harder to get arrested
+and have cops be more lenient building up to a 1 star. Making a break for it out of the cop car the cop instantly jumps
+out and catches you ... cops at low star wanted should be a little less good at driving ... when I'm in a cop car they
+don't seem to make it to a police station ... Prison should be saved for very very high criminal ratings with 5 stars
+and long arrest records (or for admins to put misbehaving players in) ... on the islands they will just drive into the
+ocean ... wait for 4 to 5 star wanted levels before the cops get better."
+- **Leniency before the first star** (`server/systems/law.js` `tallied`, rules.js `LENIENCY`): with no stars, a lesser
+  crime people see - a vehicle stolen, a hit and run, a carjacking, shots fired, cargo lifted - goes on a tally of its
+  heat instead of being a star: "the police have your description" (and "once more and they'll come for you" before the
+  one that does it). 24 of it is the first star (the usual chase); an officer's sighting counts double; the tally fades
+  0.4 a second after 45 s quiet. Before -> after: a car stolen in front of a witness, 1 star -> a warning (the third in a
+  while is the star, the second in front of an officer); a carjacking 1 star -> a warning (the second a star). Murder,
+  assault (with a weapon), striking or killing an officer, a robbery, an escape: stars at once, as before (`CRIMES.now`
+  marks the two that aren't felonies). Small crimes (a punch, a ram, a bike) keep their own count (task #405).
+- **The police by your stars** (rules.js `COP_LEVEL`, one row a star; `copLevel(stars)`):
+
+  | stars | drive (x top speed) | react (s behind your turns) | ram / PIT | foot (x your pace) | drain | cuffS | lostS | cool | exitS |
+  |---|---|---|---|---|---|---|---|---|---|
+  | 1 | 0.72 | 0.6 | no | 0.90 | 0.8 | 5.5 | 8 | 1.8 | 2.4 |
+  | 2 | 0.78 | 0.5 | no | 0.93 | 0.7 | 5 | 10 | 1.6 | 2 |
+  | 3 | 0.86 | 0.35 | no | 0.97 | 0.5 | 4.5 | 14 | 1.3 | 1.5 |
+  | 4-5 | 1 | 0 | yes | 1 | 0.35 | 4 | 20 | 1 | 0.8 / 0.6 |
+
+  - driving (`police.js runUnit`): after a car they asked for 720 px/s at every level (the interceptor tops out at 690);
+    at 1 star 518 (a sedan's cruise), 562 at 2, 619 at 3. Close behind a car they drove into it to spin it at every level
+    (`ignoreObstacles` within 200 px); now only at 4-5 - at 1-3 they brake for it. At 1-3 they steer for where you were
+    `react` seconds ago (`ai.trail`): they turn late and go wide. On the roads 520 x drive.
+  - on foot (`copMods(world, c, stars)`): officers ran at your pace and tired at a third of your rate at every level; at
+    1 star 90% of it, tiring at 80% - sprint and you pull away. After NPC crooks, as before.
+  - the cuffs (`struggle.js`): 4 s at every level; now 5.5 s at 1 star down to 4 at 4-5 - more time to fight.
+  - giving up (`law.js update`): out of sight, the heat cooled at 1.2 a second and twice that after 20 s, at every
+    level; now the faster rate comes after `lostS` and both are `cool` times faster: 1 star at 25 heat is gone about
+    9 s after you're out of sight (was 15.5 s); 3 stars at 85 heat are 2 after about 16.5 s (was 21.9 s).
+  - exitS: the head start out of the back of their car (below).
+- **Fighting the officer off** (`struggle.js`): holding the attack button down now counts (`STRUGGLE_HELD`, 0.27 a
+  second at full health; only fresh presses counted before - a thumb held on FIRE on a phone did nothing); a second
+  officer on you counts for less at low stars (`STRUGGLE_SECOND` 0.35 at 1 star, 0.45 at 2, 0.6 from 3 - was 0.6 at
+  every level). The bar says "Mash or hold", and "you're winning - keep going!" while the meter rises (`me.fight.up`).
+  Simulated (full health; mashing about 7 a second unless said; the before is the code at cac27136):
+  | stars | one officer, mashing | two officers, mashing | mashing half as fast | holding the button | holding, two officers |
+  |---|---|---|---|---|---|
+  | 1 | 100% -> 100% | 79% -> 98% | 76% -> 70% | 0% -> 68% | 0% -> 26% |
+  | 2 | 100% -> 100% | 60% -> 76% | 65% -> 64% | 0% -> 57% | 0% -> 7% |
+  | 3 | 50% -> 49% | 1% -> 1% | 1% -> 0% | 0% -> 0% | 0% -> 0% |
+  | 4 | 5% -> 4% | 0% | 0% | 0% | 0% |
+  | 5 | 0% -> 0% | 0% | 0% | 0% | 0% |
+
+  (200 struggles each; a few points either way are the dice. 1 star at half health 72% -> 73%, a third 40% -> 42%; 3
+  stars against an agent 27% -> 25%, SWAT 8% -> 8%; the stick alone still never frees you.) 4-5 stars stay as hard.
+- **A break for it from the back of the car** (`custody.js carBreak`): while the car is crawling or stopped (under 60
+  px/s, its crew aboard: at the lights, in a jam) the action button kicks the door: a try that works 50% of the time at
+  1 star, 35% at 2, 12% at 3, 3% at 4, 1% at 5 (`BREAK_CAR`; x your strength, less after each miss, a try every 2.5 s).
+  Out of the car - this way or the old way, when the car is stuck - the crew stay in it for `exitS` (2.4 s at 1 star,
+  0.6 at 5: `ai.holdUntil`, police.js) and no tackle lands meanwhile; they used to be out and on you the same tick.
+  Some of them trip on the way (as after a break from the ground). Getting away puts you up one star (`ESCAPE_STARS`;
+  law.js `escaped`): its 25 heat put a 1-star prisoner on 3 stars.
+- **Touch** (`shared/touchcontrols.js` 'custody'): held by the police, the right-hand buttons are only FIRE (while an
+  officer's going for the cuffs; it pulses) and ACT (while there's a break for it - its footprints icon); the custody
+  bar names the button by its glyph on every device (it said "[ACT]", and the buttons carry no words since UI-8).
+- **Taken in** (`custody.js`):
+  - the nearest station the car can drive to (`reachableStation`: the road network's joined-up pieces, worked out once
+    per map; a station's piece is its kerb's): it was the nearest as the crow flies - from an island, a mainland station
+    across the sea, and with no road there `planRoute` handed back a straight line: into the ocean.
+  - the siren on until the last 420 px (it drove in with it off and sat in every queue; with it the traffic pulls over -
+    traffic.js `sirenBehind` - and a jam is gone round - reroute.js).
+  - getting no nearer for 6 s (`CUSTODY_REPLAN_S`): it backs up a moment and plans its way again; open water just ahead
+    (not a bridge): it stops and backs up, and still facing it 2.5 s later, the fade.
+  - the fade to black (`fadeIn`, me.custody 's: fade', client/hud.js `#cufade`): 1.5 s and you're booked at that station
+    (or the nearest), straight into a cell. It comes when the ride gets no nearer for 20 s (`CUSTODY_SKIP_S`, was 30 and a
+    teleport), when the ride runs out of time, when no car came in time, and at once where no road from you reaches a
+    station (an island without one: no car is sent at all).
+  - island stations (`shared/world3-medics.js` `precincts3`, World v3): the road network has four pieces - the mainland
+    with every bridged island (1,501 junctions, all ten stations), Gull Harbor (17), Coral Cay (19) and a six-junction
+    stretch in West Hills. Gull Harbor now has **Gull Harbor Police**: the "Gull Harbor Lobster Co." building (a courier's
+    address, 12 x 8 tiles, by the harbor) is the precinct - a walk-in with the front desk and a cell block (the 11th;
+    there were 10). Its POI is the building's own (id 3498, its kind and label changed; it moved in to the counter, from
+    1666,3727 to 1666,3724 tiles): no POI is added or removed, and a dump of all 6,018 POIs before and after differs in
+    that one only. Coral Cay gets none: every shop on it is a real one and its only other building is the eco lodge (the
+    first-aid post there is a lifeguard tower for the same reason) - an arrest there fades to the nearest cells, and the
+    West Hills stretch the same. A car sent for a prisoner now comes from their piece of the network
+    (`police.js sendTransport`, `spawnPoint`'s `ok`), and one on its way to them stops short of open water too.
+- **Prison only for the worst** (`prison.js prisonWorthy`, rules.js `PRISON`): a booking at 5 stars with a long record -
+  4 bookings before it (`profile.bookings`, counted from now on; the last 8 times were all that was kept) or a criminal
+  rating of 2,000 Criminal EXP. It was 4 stars, or the third booking in two hours - so a 1-star player whose car got stuck
+  three times ended up on Prison Island. Everyone else: the station's cells, 60 s or the bail, as before.
+- **Admins** (`server/admin.js` `prison { id, mins, why }`, power `prison`: admin): to Prison Island for up to 60 minutes,
+  out of custody or a cell first; no bail, no climbing the wall, put back inside if they get out some other way; kept
+  over a logout; `mins: 0` lets them out; an offline player gets it when they next play. In the admin log.
+- **Guide** (`shared/guide.js`, The law): Wanted stars (the warning first), How hard the police come (new), Busted (fight
+  back, break for it, the cells), Prison Island (new) - their numbers from rules.js. README's custody rows.
+- **Tests:** test/law.test.js (new: the tally and its warnings, serious crimes at once, the per-star table, the driving -
+  speed asked, steering late, braking or ramming - and the running, the struggle at 1 vs 5 stars mashing, two on you and
+  holding); test/custody.test.js (new: a break from the back seat - not while moving, a missed try, the head start, a star
+  more - at 1 and 4 stars; the ride to the reachable station with the siren; stuck: replanned, the fade, the cells; no
+  road to a station: the fade, no car, never in the water); test/prison.test.js (the new rule, the admin's sentence,
+  the island stations and an island ride that never touches water); struggle, arrests, touchslots and guide updated.
+
+## 2026-11-07 - Tabbing out on a phone: back in the same session, no black screen
+The owner (11-06): "I tabbed out of the game on my phone then tabbed back in and it will show a black screen and say
+reconnecting for a bit. It would be nice if it didn't disconnect so quickly tabbing in and out though."
+- **The black screen** was the page's own: while the socket was down (`S.welcomed` false) every frame filled the
+  canvas black. Getting back into the game now keeps the last frame up, with the "Reconnecting..." chip over it
+  (`client/update.js` `holdFrame`). (A WebGL context lost while hidden is already rebuilt by the renderer:
+  art2/game/engine.js `webglcontextrestored`, host.js `_contextLost`.)
+- **Back at once:** on coming back into view a socket lost meanwhile is made again straight away, an open one is pinged
+  and, if nothing answers in `PROBE_MS` (a socket the phone's sleep killed can still say it's open), made again; a
+  drop noticed in the first seconds back retries with no backoff wait (`update.js` `onVisible`, `retryDelay`). The page
+  also says it's away on `pagehide` (iOS: sometimes the only word before it's suspended).
+- **The server waits longer for a backgrounded page:** after `{ t: 'away' }` its socket may stay silent 120 s rather
+  than 45 s before it's dropped (`ws.js` `AWAY_QUIET_MS`, set per connection in session.js), so a short tab-out keeps
+  the same socket. If it drops all the same, the body waits at least `AWAY_GRACE_S` (90 s, players.js) even with
+  trouble after it (the drop rule's 30 s otherwise; the quiet case keeps its 5 minutes) - `players.js` `unsafeGrace`.
+  Back inside it is the same session and character (no new arrival, no reload), without the "Reconnected" toast.
+- test/tabout.test.js (new): a backgrounded, wanted player dropped for a minute is the same session and body on
+  return; an ordinary drop keeps 30 s; the away message sets and clears the socket's quiet time; the page's decisions.
+
+## 2026-11-07 - Drive-bys: the muzzle flash out of the car's window
+The owner (11-06): "when driving in a car and shooting you'll see the muzzle flash way outside of the car like lagging
+behind it by itself... at the very least have the muzzle flash coming out of the car window or the top of the car."
+The page put the flash and the tracer at the shooter's own entity: in a car that's the ped riding in it, interpolated
+from the server's snapshots, while your own car is drawn where the prediction has it (ahead) - so the flash trailed
+behind the car, and further the faster you drove. Now a shot from a closed vehicle starts at the car as it's drawn
+this frame (`client/render/fx.js` `windowMuzzle`): out of the window on the side aimed at (the front row, or the back
+seats' for a back-seat shooter), or over the roof aiming ahead or behind; the flash stays there for its frames
+(collectLights) and the tracer starts from the same point. For a moment after each shot an arm and a gun show out of
+that window (`drawLeans`, on the overlay). Bikes, horses and open boats keep the rider's own point. test/drivefx.test.js.
+
+## 2026-11-07 - Car soccer: easy to find, start and boost
+The owner (11-06): "Can't figure out the rocket league arena... How do I get it to start and have people join?" and
+"How do you boost?" Joining meant standing on foot within 120 px of the gate and pressing Act; boost was Sprint.
+- **The join pad:** a lit, pulsing ring on Stadium Way by the gate with a CAR SOCCER sign (a ball badge on a post;
+  "JOIN HERE", or the count to kick-off while a lobby's open) - drawn by client/carsoccer.js `gate` for the players
+  the server already tells about the arena (`nearR`). `shared/carsoccer.js` `joinPad`, `CARSOCCER.padDX` / `padR`.
+- **Wider reach, and from a car:** `joinR` 120 -> 200 px, the pad counts too; driving onto the pad joins (`padCheck`,
+  once each time onto it; never an arena car or an aircraft). At kick-off you step out and your car waits by the gate.
+- **On the map and the phone:** the arena's gate is a place (`client/mapwaypoints.js` `arenaPlaces`, `placesOf`: the
+  arenas aren't among the world's POIs) - an icon on the big map (Activities), in its panel's lists and search, and in
+  the phone's Places (Food & days out), where a tap sets the waypoint. No change to the world itself.
+- **The call:** opening a lobby tells every player within `callR` (1600 px, a few blocks): "Car soccer kicking off at
+  Waves Arena in 40 s - join at the gate", and the city feed says the same (a ball icon); later joiners are named to
+  the players about. With another player near, the lobby waits `lobbyNearS` (40 s) rather than `lobbyS` (20) -
+  decided at opening, or stretched once if someone comes near during it.
+- **Boost:** on touch, in an arena car, a BOOST button (hold) in C1 by the right thumb (`shared/touchcontrols.js` state
+  `arena`: no FIRE, the sticks unmoved; client/touchslots.js passes the flag); on keyboard and pad the boost key's name
+  under the boost ring (glyphs.js `keyName('sprint')`); the kick-off says "Hold BOOST to boost - the pads refill it"
+  (the countdown, the start's note, the prompt at the wheel).
+- The Guide has a Car soccer entry (Activities), the README's row is updated. test/carsoccer.test.js: driving onto the
+  pad, the call and the feed, the longer lobby, out of your car at kick-off; the lobby stretched once; the BOOST slot.
+- (rules-games.js is in World v3's code hash: the stamp's `world3` changes with these numbers.)
+
+## 2026-11-07 - The police helicopter at 4 stars (was 3)
+The owner (11-07): "wait for 4 to 5 star wanted levels before the cops get better". The police overhaul left the
+helicopter at 3 stars (`POLICE_AIR.stars`); it now comes at 4, with the sharp drivers and the ramming.

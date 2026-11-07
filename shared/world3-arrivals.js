@@ -31,8 +31,10 @@ import { STARTER } from './rules.js';
 
 // The regions new players choose from, and the stations each tries, in order (the first with room). The owner's
 // "general direction": a city start, the coast, the desert, the countryside.
+// The city's is laid by hand beside Greenfield Park (the owner, 11-06 22:49: shared/world3-firstcars.js parkWest3 makes
+// the ground ready and names it in m.handArrivals); its stations are the fallback if that ground isn't there.
 export const ARRIVAL_PICKS = [
-  { key: 'city', stations: ['Midtown', 'Metro Central', 'Old Quarter', 'Westport Center', 'Southside'] },
+  { key: 'city', hand: true, stations: ['Midtown', 'Metro Central', 'Old Quarter', 'Westport Center', 'Southside'] },
   { key: 'coast', stations: ['Northshore', 'Sunset Beach', 'Sandpiper Bay'] },
   { key: 'desert', stations: ['Red Rock', 'Lucky Mesa'] },
   { key: 'country', stations: ['Willow Valley', 'Airport'] },
@@ -258,6 +260,14 @@ export function arrivalLines3(m, H3 = null) {
   const out = { laid: [], missed: [] };
   for (const pick of ARRIVAL_PICKS) {
     let done = false;
+    const hand = pick.hand && m.handArrivals && m.handArrivals[pick.key], hp = hand && m.pois[hand.poi];
+    const hc = hp && handCorridor(m, hand, hp);
+    if (hc) {   // (a line laid by hand: its corridor checked as any other - open ground, its path off the platform, near its station)
+      m.arrivals.push(lay(m, hc, H3, m.arrivals.length, pick.key, hp));
+      out.laid.push([pick.key, hp.label]);
+      continue;
+    }
+    if (hand) out.handMissed = pick.key;
     for (const name of pick.stations) {
       const poi = stationPoi(m, name);
       if (!poi) continue;
@@ -271,6 +281,15 @@ export function arrivalLines3(m, H3 = null) {
     if (!done) out.missed.push(pick.key);
   }
   return out;
+}
+// a hand-placed corridor (shared/world3-firstcars.js: { cx, cy, h, sd }), checked as tryCorridor checks any - or null
+function handCorridor(m, H, poi) {
+  const X0 = Math.max(m.x0 + 1, H.cx - 30), Y0 = Math.max(m.y0 + 1, H.cy - 30 - LEN), X1 = Math.min(m.x0 + m.w - 1, H.cx + LEN + 30), Y1 = Math.min(m.y0 + m.h - 1, H.cy + LEN + 30);
+  const M = windowMask(m, X0, Y0, X1, Y1);
+  M.m = m;
+  const c = tryCorridor(M, H.cx, H.cy, H.h, H.sd, poi);
+  if (c) c.M = M;
+  return c;
 }
 // (tools, tests: the corridor a station would get, without laying it)
 export const _findCorridor = findCorridor;

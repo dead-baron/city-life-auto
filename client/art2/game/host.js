@@ -29,6 +29,7 @@ import { FORAGE_KINDS } from '../../../shared/foraging.js';
 import { drawStandIn, STANDIN_PX } from './standin.js';
 import { jumpLift } from './jumps.js';   // (the MX park's tabletops: a bike drawn up over them and through the air)
 import { TILE, K, PF, VF, DAY_LOOP_S, SKY_LIFT, DT } from '../../../shared/constants.js';
+import { AIR_UP, washK } from '../../../shared/rules-page.js';
 import { WATER_T, TRAIN_CARS, CROSSING_ARM, DISTRICTS, crossingGate } from '../../../shared/mapcore.js';
 import { T as TT } from '../../../shared/constants.js';
 import { signalFor } from '../../../shared/signals.js';   // (the signals' timing: green, yellow, red)
@@ -399,7 +400,13 @@ export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { 
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)
 const glyphOf = (p, kinds) => (p.kind === 'hospital' && /HOSPITAL|MEDICAL CENTER/i.test(p.label || '') ? 'hosp' : kinds[p.kind]);
 // The part of the world a walk-in's cut-away covers: round the building, and up the screen over it (its roof's height)
-function cutBoxOf(b) { return [b.tx * TILE - 40, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 40, (b.ty + b.th) * TILE + 40]; }
+// (its sprites reach 2 px past its walls, 4 below its foot: statics.js ext)
+export function cutBoxOf(b) { return [b.tx * TILE - 4, b.ty * TILE - 360, (b.tx + b.tw) * TILE + 4, (b.ty + b.th) * TILE + 8]; }
+// A walk-in's bakes (lower goes first; the screen's: their distance, the store's looks d - 1e6, ahead 40000 up). entryPrio:
+// inside, not drawn yet - under you, on screen, the rest - before all else. precutPrio: about to walk in - after the
+// screen's own, before the ring.
+export function entryPrio(under, onScreen, prio) { return (under ? -3e6 : onScreen ? -2.5e6 : -2e6) + Math.min(prio, 1e5); }
+export function precutPrio(chunksAway) { return 900 + chunksAway * 50; }
 
 export class World2 {
   // null when it can't run here; World2.lastWhy then says why
@@ -464,6 +471,8 @@ export class World2 {
     this.noBake = /[?&]art2nobake\b/.test(typeof location !== 'undefined' ? location.search : '');
     this.ready = true; // drawable at once: placeholders stand in until bakes land
     if (engine.onContextLost) engine.onContextLost((what) => this._contextLost(what));
+    // (the server's low-detail picture for the stand-ins, and the look-ahead's plan: lowres.js)
+    if (this.cdn) import('./lowres.js').then((m) => { this.LR = m; this.low = new m.LowRes(this); }, () => {});
     // the redwoods' canopy for the light (sunflecks, the beams through the gaps): once per map
     if (engine.setCanopy) { try { engine.setCanopy(canopyGrid(this.map)); } catch (e) { console.warn('[art2] canopy', e); } }
   }
@@ -772,7 +781,9 @@ export class World2 {
     const E = this.E, S = this.S, tier = this.tier;
     const need = this.needChunks || (this.needChunks = new Map()), bake = this.wantChunks;
     need.clear(); bake.clear();
-    const v = this._camVel(F);
+    const v = this._camVel(F), P = S.pred;
+    if (this.low) this.low.want();
+    this.hi = !!this.LR && !!P && !!P.air && this.LR.highAir(P.s.alt || 0, Math.hypot(v.x, v.y), this.hi);   // (high and fast: the low-detail ground, no bakes here)
     // the view the camera is easing toward (it zooms out with speed): the sweep uses the larger of the two
     const zt = Math.min(F.z, (S.cam && S.cam.tz) || F.z), grow = Math.max(0, (this.W / 2 / zt) - (this.W / 2 / F.z)), growY = Math.max(0, (this.H / 2 / zt) - (this.H / 2 / F.z));
     const soon = planBake(need, bake, { x0: this.vx0, y0: this.vy0, x1: this.vx1, y1: this.vy1, cx: this.camX, cy: this.camY, gx: grow, gy: growY }, v.x, v.y, E.margins || [36, 200, 300, 300][this.q], this.soonKeys || (this.soonKeys = []), this.grid);
@@ -806,13 +817,17 @@ export class World2 {
     }
     const jobs = this.wantJobs; jobs.clear();
     const baking = !this.noBake && this.pool && !this.pool.dead && this.pool.ready && (this.prov.ground || this.prov.statics);
+    // (inside a walk-in not drawn yet: its cut-away first - entryPrio)
+    const inWait = cut >= 0 && !this.insideReady(F.insideB), me = F.sp || { x: this.camX, y: this.camY }, sx = Math.floor(me.x / CHUNK), sy = Math.floor(me.y / CHUNK);
+    this.entering = inWait;
     if (baking) {
-      for (const [k, prio] of bake) {
+      for (const [k, prio0] of bake) {
         const cx = k % 1000, cy = Math.floor(k / 1000), mode = modeOf(cx, cy);
+        const prio = inWait && mode >= 0 ? entryPrio(cx === sx && cy === sy, need.has(k) && (cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1, prio0) : prio0;
         const st = this.chunkState.get(k), ver = this.ver.get(k) || 0;
         if (st && st.mode === mode && st.ver === ver && !st.preview && E.hasChunk(cx, cy)) continue;
         const fail = this.chunkFails.get(k);
-        if (fail && performance.now() < fail.t) continue;
+        if ((fail && performance.now() < fail.t) || (this.hi && this.low.has(cx, cy))) continue;
         const jk = `c${cx},${cy},${mode},${ver}`;
         jobs.add(jk);
         if (this.results.has(jk) || this.pool.has(jk) || this.results.size >= (tier.results || 6)) continue;
@@ -865,7 +880,7 @@ export class World2 {
       if (E.chunkKeys) for (const ck of E.chunkKeys()) { const [x, y] = typeof ck === 'string' ? ck.split(',') : ck; if (bake.has(+y * 1000 + +x)) held++; }
       // (just after a jump - a teleport, a respawn - the screen is all stand-ins: up to JUMP_UP a frame until it's drawn,
       // not one or two - in a slow page, a frame a chunk was most of the wait. docs/WORLD-V3.md 8.12.1)
-      const jmp = !!this.jump && !this.jump.drawn && !this.jump.over;   // (the screen all stand-ins: not held to the budget)
+      const jmp = (!!this.jump && !this.jump.drawn && !this.jump.over) || !!this.entering;   // (all stand-ins, or entering: not held to the budget)
       let n = this.warming ? 2 * JUMP_UP : jmp ? Math.max(tier.chunkUp, JUMP_UP) : tier.chunkUp, free = Math.max(0, cap - held);
       for (const res of ready) {
         if (n <= 0 || (!jmp && !this._upOk('chunk'))) break;
@@ -948,16 +963,17 @@ export class World2 {
   }
 
   // ---- baking ahead into the browser's store --------------------------------------------------------------
-  // When nothing on screen or ahead waits for a bake, the workers bake the chunks round you into the browser's store
-  // (chunkstore.js) undrawn, nearest first along your way and the roads from here, then a ring: later a bake is a read.
-  // One worker stays free for the screen; nothing while the page is hidden. A walk-in you're about to enter (F.nearB) is
-  // baked cut away ahead (10-16).
+  // Nothing waiting for the screen: the chunks round you and ahead baked into the store (chunkstore.js), one worker kept
+  // free, none while hidden or flying high (lowres.js); a walk-in you're about to enter (F.nearB) baked cut away (10-16).
   _precut(F) {
     const b = F.nearB, P = this.pool;
     if (!b || F.insideB || !this.artKey || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
     if (typeof document !== 'undefined' && document.hidden) return;
-    if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B' && k[1] !== 'C') > 0) return;   // (the screen's bakes first)
+    // (after the screen's own - a chunk on screen with nothing drawn - before the ring: precutPrio)
+    const need = this.needChunks;
+    if (need) for (const k of need.keys()) { const cx = k % 1000, cy = Math.floor(k / 1000); if ((cx + 1) * CHUNK > this.vx0 && cx * CHUNK < this.vx1 && (cy + 1) * CHUNK > this.vy0 && cy * CHUNK < this.vy1 && !this.E.hasChunk(cx, cy)) return; }
     const pc = this.pc || (this.pc = { kept: new Set(), out: new Set(), b: -1 }), q = this.q, [x0, y0, x1, y1] = cutBoxOf(b);
+    const sx = Math.floor(F.sp.x / CHUNK), sy = Math.floor(F.sp.y / CHUNK);
     // (walking on past one shop to the next: what's still queued for the last is let go - one shop's at a time, not a
     // street's worth holding the workers while the screen's bakes wait)
     if (pc.b !== b.id) {
@@ -971,7 +987,7 @@ export class World2 {
       if (pc.out.has(jk) && !P.has(jk)) pc.out.delete(jk);   // (cancelled: asked again)
       if (pc.kept.has(kk) || pc.out.has(jk) || P.has(jk)) continue;
       pc.out.add(jk);
-      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem, cutaway: b.id }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}|c${b.id}` }, 40000, (r, err) => {
+      P.request(jk, 'prebakeChunk', { cx, cy, opt: { quality: q, seed: this.map.seed, lowMem: this.lowMem, cutaway: b.id }, ck: `q${q}|a${this.E.ap || 1}|u1|${cx},${cy}|c${b.id}` }, precutPrio(Math.hypot(cx - sx, cy - sy)), (r, err) => {
         pc.out.delete(jk);
         if (err === 'no workers') return;
         pc.kept.add(kk);   // (kept now - or failed: not tried again this session)
@@ -1025,7 +1041,7 @@ export class World2 {
   }
   _prebake(F) {
     const P = this.pool;
-    if (!this.artKey || this.lowMem || this.noBake || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
+    if (!this.artKey || this.lowMem || this.noBake || this.hi || !P || P.dead || !P.ready || !(this.prov.ground || this.prov.statics)) return;
     if (typeof document !== 'undefined' && document.hidden) return;
     const pre = this.pre || (this.pre = { list: [], at: -1e9, out: new Set(), kept: new Set(), cx: -99, cy: -99, n: 0, done: 0, had: 0 });
     if (P.waiting && P.waiting((k) => k[0] === 'c' && k[1] !== 'B') > 0) return;   // a bake for the screen or the road ahead waits
@@ -1052,10 +1068,8 @@ export class World2 {
       });
     }
   }
-  // While the art comes from the server (server/artcdn.js, worker.js fetchChunk): the chunks round you and on the roads
-  // ahead are downloaded into the store in parallel - a download is cheap next to a bake, and it never waits on the bakes
-  // the screen needs. What the server hasn't baked yet is left to _prebake (baked here when there's time). Off with the
-  // phone's data saver, while the page is hidden, and for the session once the workers say the server's art is off.
+  // The server's chunks round you and ahead downloaded into the store (worker.js fetchChunk), never waiting on the bakes;
+  // what it hasn't baked is _prebake's. Off with the data saver, while hidden, and once the server's art is off.
   _fetchAhead(F) {
     const P = this.pool;
     if (!this.cdn || this.cdnOff || !this.artKey || this.lowMem || this.noBake || !P || P.dead || !P.ready) return;
@@ -1066,7 +1080,7 @@ export class World2 {
     if (now - fa.pausedAt < 15) return;   // (the server's still baking this part of the world: look again in a bit)
     const pcx = Math.floor(this.camX / CHUNK), pcy = Math.floor(this.camY / CHUNK);
     if (now - pre.at > 1.5 || pcx !== pre.cx || pcy !== pre.cy) { pre.list = this._prebakeList(); pre.at = now; pre.cx = pcx; pre.cy = pcy; }
-    const MAX = isPhone() ? 4 : 6;
+    const MAX = this.fetchN || (isPhone() ? 4 : 6);
     for (const k of pre.list) {
       if (fa.out.size >= MAX) break;
       const cx = k % 1000, cy = Math.floor(k / 1000), q = this.q, kk = `${q}:${k}`;
@@ -1104,8 +1118,11 @@ export class World2 {
       const w = Math.max(1, Math.min(2, Math.round(Math.max(this.vx1 - this.vx0, this.vy1 - this.vy0) / 2 / CHUNK + 0.25)));
       for (const [px, py, d] of rail) for (let oy = -w; oy <= w; oy++) for (let ox = -w; ox <= w; ox++) add(Math.floor(px / CHUNK) + ox, Math.floor(py / CHUNK) + oy, d * 0.5 + Math.max(Math.abs(ox), Math.abs(oy)) * 200);
     }
+    // (the plan: lowres.js aheadPlan - longer at speed, 20 s flying)
+    const pl = this.LR ? this.LR.aheadPlan(sp, { air, phone, big }) : null;
+    this.fetchN = pl && pl.fetch;
     if (sp > 120 && !rail) {
-      const ux = v.x / sp, uy = v.y / sp, L = Math.min(sp * AHEAD_S, 14000), w = air ? Math.min(3, Math.ceil((Math.abs(uy) * (this.vx1 - this.vx0) + Math.abs(ux) * (this.vy1 - this.vy0)) / 2 / CHUNK + 0.5)) : 1;   // (w: the chunks either side of the line - the view's half-width across the way you fly)
+      const ux = v.x / sp, uy = v.y / sp, L = pl ? pl.L : Math.min(sp * AHEAD_S, 14000), w = air ? Math.min(3, Math.ceil((Math.abs(uy) * (this.vx1 - this.vx0) + Math.abs(ux) * (this.vy1 - this.vy0)) / 2 / CHUNK + 0.5)) : 1;   // (w: the chunks either side of the line - the view's half-width across the way you fly)
       for (let d = 0; d <= L; d += CHUNK / 2) for (let o = -w; o <= w; o++) add(Math.floor((x0 + ux * d - uy * o * CHUNK) / CHUNK), Math.floor((y0 + uy * d + ux * o * CHUNK) / CHUNK), d * 0.5 + Math.abs(o) * (air ? 150 : 300));
     }
     // 2. along the roads from here, by the distance along them (the ground level: a deck's chunks are its ground's)
@@ -1139,11 +1156,10 @@ export class World2 {
     // 3. a ring round you
     const pcx = Math.floor(x0 / CHUNK), pcy = Math.floor(y0 / CHUNK);
     for (let dy = -RING; dy <= RING; dy++) for (let dx = -RING; dx <= RING; dx++) add(pcx + dx, pcy + dy, 2500 + Math.hypot(dx, dy) * CHUNK);
-    return [...out].sort((a, b) => a[1] - b[1]).slice(0, MAXN).map((e) => e[0]);
+    return [...out].sort((a, b) => a[1] - b[1]).slice(0, pl ? Math.max(MAXN, pl.maxN) : MAXN).map((e) => e[0]);
   }
-  // The line a train you ride runs on, ahead of (x, y) heading (vx, vy): points every ~400 px along it for L px, each with its
-  // distance along - [[x, y, d], ...] - or null. The points are kept by 512 px cell per map: each new window (setMap) is
-  // indexed afresh (10-22)
+  // The line a train you ride runs on ahead of (x, y) heading (vx, vy): [[x, y, d], ...] every ~400 px for L px, or null;
+  // indexed by 512 px cell per map (each new window afresh: 10-22)
   _railAhead(x, y, vx, vy, L) {
     const rails = this.map.rails || (this.map.rail ? [this.map.rail] : []);
     if (!rails.length) return null;
@@ -1197,9 +1213,8 @@ export class World2 {
     return o;
   }
   _fallback(cx, cy) { return this.E.hasFallback ? this.E.hasFallback(cx, cy) : this.fallbacks.has(cy * 1000 + cx); }
-  // Past the map's edge the sea runs on (shared/border.js): those chunks are baked like any other but kept apart (the
-  // keys above, cy * 1000 + cx, only hold inside the map), a flat deep-sea stand-in until then. Returns how many the
-  // view takes (the engine keeps that many slots more).
+  // Past the map's edge the sea runs on (shared/border.js): baked but kept apart (cy * 1000 + cx holds inside the map
+  // only), a deep-sea stand-in till then. Returns how many the view takes (the engine keeps that many slots more).
   _offSea() {
     const E = this.E, pool = this.pool;
     if (!E.hasFallback) return 0;   // (the 2D stub engine keys chunks the map's way: no sea past the edge there)
@@ -1246,15 +1261,15 @@ export class World2 {
     const g = cv.getContext('2d'); g.fillStyle = 'rgb(23,96,150)'; g.fillRect(0, 0, 16, 16);   // (the baked deep sea's average)
     return (this.seaCv = cv);
   }
-  // A chunk's stand-in until its bake lands: the map drawn simply in the new ground's colours - roads with
-  // their lines, building blocks, trees (standin.js, a millisecond or two). Never the old art.
+  // A chunk's stand-in until its bake lands: its thumbnail from the server's low-detail picture (lowres.js), else the
+  // map drawn simply (standin.js, a ms or two).
   _placeholder(cx, cy) {
     const k = cy * 1000 + cx;
     let cv = this.phs.get(k);
     if (cv) return cv;
     cv = document.createElement('canvas'); cv.width = cv.height = STANDIN_PX;
     const t = performance.now();
-    try { drawStandIn(cv.getContext('2d'), this.map, cx, cy); } catch (e) { if (!this.loggedStandIn) { this.loggedStandIn = true; console.warn('[art2] stand-in', e); } }
+    try { if (!(cv.lo = !!this.low && this.low.draw(cv.getContext('2d'), cx, cy, STANDIN_PX))) drawStandIn(cv.getContext('2d'), this.map, cx, cy); } catch (e) { if (!this.loggedStandIn) { this.loggedStandIn = true; console.warn('[art2] stand-in', e); } }
     this.t.standIn = (this.t.standIn || 0) * 0.8 + (performance.now() - t) * 0.2;
     if (this.phs.size >= 48) this.phs.delete(this.phs.keys().next().value);
     this.phs.set(k, cv);
@@ -1320,7 +1335,9 @@ export class World2 {
   _push(F, sp) {
     const P = this.pushA || (this.pushA = new Float32Array(16)), S = this.S, v = S.pred && S.pred.kind === 'veh' ? S.pred.def : null;
     P.fill(0);
-    P[0] = sp.x; P[1] = sp.y - 4; P[2] = v ? Math.min(64, (v.W || 40) * 0.5 + 16) : 22; P[3] = v ? 5 : 4;
+    // (flying: a helicopter bends the grass round its rotor only low down - rules-page.js washK; a plane on the ground only)
+    const a = v && v.kind === 'air' ? S.pred.s.alt || 0 : -1, k = a < 0 ? 1 : v.rotor ? washK(a) : a > AIR_UP ? 0 : 1;
+    P[0] = sp.x; P[1] = sp.y - 4; P[2] = k < 0.02 ? 0 : v ? (a >= 0 && v.rotor ? v.rotor * 1.3 : Math.min(64, (v.W || 40) * 0.5 + 16)) : 22; P[3] = v ? 5 * k : 4;
     let n = 1;
     for (const p of F.peds || []) {
       if (n >= 4) break;
@@ -1745,7 +1762,7 @@ export class World2 {
     // up in the air (a bird in flight: its shadow on the ground below), up a trunk (a squirrel), or a happy pet's hops
     // (up at its owner standing, a bounce in its stride racing round them: its shadow stays on the ground)
     const hop = happy ? (pose === 'idle' ? petHop(now, p.id) : pose === 'run' || pose === 'walk' ? petHop(now * 1.6, p.id) * 0.35 : 0) : 0;
-    const up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;
+    const up = p._up = pose === 'fly' ? 34 + Math.sin(now * 2.3 + p.id) * 5 : pose === 'climb' ? 16 : HIGH[pose] ? HIGH[pose] + Math.sin(now * 0.9 + p.id) * (pose === 'soar' ? 6 : 2) : hop;   // (p._up: waterlife.js - no wake in the air)
     o.air = pose === 'fly' || hop > 0.5 || !!HIGH[pose];
     if (p.hitAt !== undefined && now - p.hitAt < 0.12) o.flash = 0.6;   // (hit: a white flash, like people)
     // a bird up in the air: its own shape on the ground, not the column the shadow march makes of something up off it

@@ -136,3 +136,42 @@ test('LOG OFF to the end (the server\'s safe exit, f5d9fc16): done, the socket c
   assert.ok(!/Criminal EXP/.test(h), 'only when it moved');
   assert.equal(playedFor(20), 'under a minute'); assert.equal(playedFor(600), '10 min'); assert.equal(playedFor(7200), '2 h');
 });
+
+// the owner, 11-06: "How do you quit a job you started?" - the HUD's job card is the way in: a tap or a click on it
+// opens the phone's Jobs app with the job you're on at its top (what it is, Show on map, Quit job); P / the pad's phone
+// button open the phone at home, the job on top there too. The Guide's Finding work says so.
+test('the job card opens the phone\'s current job, with Quit job', async () => {
+  // a page of stand-in elements: enough for the HUD's information and the phone to run
+  const els = new Map();
+  const el = (id) => { if (!els.has(id)) els.set(id, { id, innerHTML: '', textContent: '', dataset: {}, style: {}, attrs: {}, listeners: {}, classList: { s: new Set(), toggle(c, on) { if (on === undefined ? !this.s.has(c) : on) this.s.add(c); else this.s.delete(c); }, add(c) { this.s.add(c); }, remove(c) { this.s.delete(c); }, contains(c) { return this.s.has(c); } }, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(k, f) { this.listeners[k] = f; }, querySelectorAll: () => [], querySelector: () => null, getBoundingClientRect: () => ({ x: 0, y: 0, width: 0, height: 0 }) }); return els.get(id); };
+  const had = { document: globalThis.document, window: globalThis.window };
+  globalThis.document = { getElementById: el, body: { classList: el('body').classList }, querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, createElement: () => el(Math.random()) };
+  globalThis.window ||= globalThis;
+  try {
+    const { createInfo } = await import('../client/hudinfo.js');
+    let opened = 0;
+    const H = { openJob: () => opened++ };
+    const info = createInfo(H);
+    const job = el('job');
+    assert.equal(typeof job.listeners.click, 'function', 'the card takes a tap or a click');
+    info.me({ hp: 100, cash: 50, weapon: 'fists', weapons: [], job: { k: 'Forklift', text: 'Forklift: get on your forklift - tap this card to quit', step: [1, 2], x: 10, y: 10 } }, null);
+    assert.match(job.innerHTML, /tap this card to quit/i, 'its first line says so');
+    job.listeners.click();
+    assert.equal(opened, 1, 'a tap on it opens the phone at the job');
+    assert.match(job.attrs['aria-label'], /Quit job/);
+    // the phone's Jobs app: the job you're on at its top, Quit job on it
+    const { createPhone } = await import('../client/phone.js');
+    const sent = [];
+    const ph = createPhone({ map: () => ({ pois: [], places: [] }), pos: () => ({ x: 0, y: 0 }), isCop: () => false, send: (m) => sent.push(m), setWaypoint() {}, waypoint: () => null, toast() {}, refocus() {}, close() {}, job: () => ({ text: 'Forklift: get on your forklift', x: 5, y: 5 }) });
+    ph.openApp('jobs');
+    assert.ok(sent.some((m) => m.t === 'phone' && m.a === 'board'), 'it asks for the board');
+    ph.onBoard({ job: { type: 'forklift', text: 'Forklift', pay: 770 }, jobs: [] });
+    const screen = el('ph-screen').innerHTML;
+    assert.match(screen, /ON A JOB · FORKLIFT/);
+    assert.match(screen, /data-act="cancel">Quit job</, 'Quit job, first on the screen');
+    assert.ok(screen.indexOf('Quit job') < screen.indexOf('ph-chips'), 'above the board');
+  } finally { globalThis.document = had.document; if (!had.window) delete globalThis.window; }
+  // the page wires it: the card's tap to the phone's Jobs app
+  assert.match(MAIN, /S\.hud\.openJob = \(\) => \{ if \(S\.playing\) openHub\('phone', 'jobs'\); \};/);
+  assert.match(read('shared/guide.js'), /To quit, tap the job card on your screen \(or \[\[phone\]\]\)/);
+});

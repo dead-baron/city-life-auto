@@ -109,7 +109,9 @@ export function shopRoom(b, u, TILE, M) {
     onWall: [], pieces: [], people: [], lamps: [], clear: [[X0, Ya, X1, Ya + STRIP], [dx - 8, Ya, dx + dw + 8, Yb]],
   };
   let atm = false;
-  for (const p of (M && M.pois) || []) if (p.kind === 'atm' && p.b === b.id && p.x >= X0 && p.x < X1 && p.y > back && p.y < Yb + TILE) { R.clear.push([p.x - 18, p.y - 44, p.x + 18, p.y + 16]); atm = true; }
+  // (a page's map is a window onto World v3's: its POI list has holes where the places outside it are - the owner's 11-06
+  // report of The Violet Room drawn as a bare floor: this loop threw on the first hole, the cut-away with it)
+  for (const p of (M && M.pois) || []) if (p && p.kind === 'atm' && p.b === b.id && p.x >= X0 && p.x < X1 && p.y > back && p.y < Yb + TILE) { R.clear.push([p.x - 18, p.y - 44, p.x + 18, p.y + 16]); atm = true; }
   const y0 = Ya + STRIP + 4, y1 = Yb - 6, regs = [];
   if (y1 - y0 >= 14) {
     if (dx - 10 - (X0 + 4) >= 18) regs.push({ x0: X0 + 4, y0, x1: dx - 10, y1, side: -1 });
@@ -628,13 +630,13 @@ FIT.fishmarket = (c) => {
 // lounge's velvet booths and candlelit cocktail tables on blue carpet; the tavern's stone fireplace, long tables with
 // benches, barrels and lanterns; the sports bar's TV wall and dartboard, the pool table under its lamp, red booths, the
 // jukebox. The club's dance floor.
-function barBase(c, club, saloon) {
+function barBase(c, club, saloon, keep = 0) {
   const { R, r } = c;
   const lounge = R.plan === 'lounge';
   R.counter = { top: lounge ? '#e8e4dc' : '#3a2418', front: club ? '#1c1a24' : lounge ? '#1c2038' : '#5a3a24', trim: '#c8a050', k: 'bar', on: ['taps'] };
   wall(c, 'bottles', c.X0 + 6, c.X1 - 6, 6, 48, { g: G.bottles, lit: true });
   const sc = club ? '#e84aa8' : lounge ? '#c8283a' : '#8a2a26';
-  for (let x = c.X0 + 12; x < c.X1 - 12; x += 18) if (Math.abs(x - c.tillX) > 30 && (x < c.dx - 14 || x > c.dx + c.dw + 14) && !R.clear.slice(2).some((k) => hit([x - 4, c.Ya + 1, x + 4, c.Ya + 9], k))) { R.pieces.push({ t: 'stool', x0: x - 4, y0: c.Ya + 1, x1: x + 4, y1: c.Ya + 9, h: 14, c: sc }); if (r() < 0.22) shopper(c, x, c.Ya + 6, -Math.PI / 2, 'sit'); }
+  for (let x = c.X0 + 12; x < c.X1 - 12; x += 18) if (Math.abs(x - c.tillX) > Math.max(30, keep) &&(x < c.dx - 14 || x > c.dx + c.dw + 14) && !R.clear.slice(2).some((k) => hit([x - 4, c.Ya + 1, x + 4, c.Ya + 9], k))) { R.pieces.push({ t: 'stool', x0: x - 4, y0: c.Ya + 1, x1: x + 4, y1: c.Ya + 9, h: 14, c: sc }); if (r() < 0.22) shopper(c, x, c.Ya + 6, -Math.PI / 2, 'sit'); }
 }
 // booths in rows down a narrow strip beside the door's lane (a small bar: a booth and its table every row, someone sat in
 // one now and then)
@@ -713,14 +715,81 @@ FIT.sportsbar = (c) => {
   if (pool) lamp(c, (pool.x0 + pool.x1) / 2, (pool.y0 + pool.y1) / 2, 56, [255, 220, 150], 1.1);
   lamp(c, c.tillX, c.Ya - 10, 56, WARM, 0.9);
 };
+// NE9 / IN15 (the owner, 11-06: The Violet Room "only a floor and a few people"): the DJ booth in the middle of the bar -
+// the decks on a lit console, speakers either side, a screen and the club's neon behind - the bar either side of it with
+// its stools, the lit dance floor in the middle of the room (its edge a neon strip, a mirror ball over it), velvet
+// booths with candlelit tables down one side wall and, in a big room, the VIP corner on the other: a raised carpet, a curved booth, the rope on brass posts and the VIP sign over it. The dancers (server/systems/
+// nightclubs.js) keep to the lit floor: clubFloor is both sides'.
+// clubFloor(X0, X1, Ya, Yb, TILE, dc) -> { x0, y0, x1, y1, side: [west strip px, east strip px], vip: -1 | 0 | 1 }
+//   (X0..X1 the room, Ya the counter's front, Yb the front wall, dc the door's middle: the VIP corner away from it)
+export function clubFloor(X0, X1, Ya, Yb, TILE, dc = (X0 + X1) / 2) {
+  const W = X1 - X0, strip = W >= 14 * TILE ? 72 : W >= 10 * TILE ? 44 : 0, vip = W >= 16 * TILE && Yb - Ya >= 6 * TILE ? (dc < (X0 + X1) / 2 ? 1 : -1) : 0;
+  const side = [vip < 0 ? 112 : strip, vip > 0 ? 112 : strip];
+  const deep = Yb - Ya >= 5 * TILE, y0 = Ya + (deep ? 2 * TILE : 40), y1 = Yb - (deep ? TILE : 8);
+  return { x0: X0 + side[0] + (strip ? 8 : 16), x1: X1 - side[1] - (strip ? 8 : 16), y0, y1, side, vip };
+}
+const CLUB_NEON = ['#ff4ab0', '#5ae8ff', '#9a7aff', '#ffd24a'];
 FIT.club = (c) => {
-  const { R, r } = c;
-  R.floor = pick(r, [['dance', '#1c1a24', '#2a2434']]); R.wall = pick(r, W.club);
-  barBase(c, true);
-  sign(c, pick(r, ['DANCE', 'VIP', 'LIVE DJ', 'NIGHTS']), pick(r, ['#ff4ab0', '#5ae8ff', '#ffd24a', '#9a7aff']));
-  put(c, 'dance', c.X0 + 16, c.Ya + 2 * c.TILE, c.X1 - 16, c.Yb - c.TILE, 1, { g: ['#ff4ab0', '#5ae8ff', '#ffd24a', '#9a7aff'], flat: true });
-  for (const reg of c.regs) sideWall(c, reg, 'velvet', 14, 18, { c: '#5a1e6a', need: 0 });
-  lamp(c, (c.X0 + c.X1) / 2, (c.Ya + c.Yb) / 2, 80, [255, 90, 200], 0.8);
+  const { R, r, TILE } = c;
+  R.floor = pick(r, [['dance', '#1c1a24', '#2a2434'], ['dance', '#18161e', '#221e2c']]); R.wall = pick(r, W.club);
+  const neon = pick(r, CLUB_NEON), neon2 = CLUB_NEON[(CLUB_NEON.indexOf(neon) + 1 + (r() * 2 | 0)) % CLUB_NEON.length];
+  // the DJ booth in the middle of the bar (the bartender behind it is the DJ at the decks)
+  const djW = c.W >= 8 * TILE ? Math.round(Math.min(132, c.W * 0.3) / 2) * 2 : 0, dj0 = c.tillX - djW / 2, dj1 = c.tillX + djW / 2;
+  barBase(c, true, false, djW ? djW / 2 + 10 : 0);
+  R.counter = { ...R.counter, top: '#3e3448', front: '#2e2838', trim: neon, k: 'club', on: [], ...(djW ? { dj: [dj0, dj1], neon: neon2 } : null) };
+  // the back wall: the bottles either side of the booth, the screen behind it, neon tubes at the ends, the club's word
+  R.onWall = R.onWall.filter((w) => w.t !== 'bottles');
+  if (djW) {
+    wall(c, 'bottles', c.X0 + 6, dj0 - 22, 6, 48, { g: G.bottles, lit: true });
+    wall(c, 'bottles', dj1 + 22, c.X1 - 6, 6, 48, { g: G.bottles, lit: true });
+    wall(c, 'ledwall', dj0 - 6, dj1 + 6, 30, 50, { g: [neon, neon2, '#5ae8ff'] });
+    for (const x of [dj0 - 18, dj1 + 4]) wall(c, 'speaker', x, x + 14, 0, 46);
+  } else wall(c, 'bottles', c.X0 + 6, c.X1 - 6, 6, 48, { g: G.bottles, lit: true });
+  for (const x of [c.X0 + 8, c.X1 - 12]) wall(c, 'tube', x, x + 4, 4, 70, { c: neon2 });
+  sign(c, pick(r, ['DANCE', 'LIVE DJ', 'NIGHTS', 'CLUB']), neon, djW ? c.tillX : undefined);
+  // the dance floor, its speakers and the mirror ball; its pools of coloured light
+  const Fl = clubFloor(c.X0, c.X1, c.Ya, c.Yb, TILE, c.dc);
+  const flo = put(c, 'dance', Fl.x0, Fl.y0, Fl.x1, Fl.y1, 1, { g: CLUB_NEON, edge: neon, flat: true });
+  if (flo && Fl.x1 - Fl.x0 >= 160 && Fl.y1 - Fl.y0 >= 80) {
+    put(c, 'disco', (Fl.x0 + Fl.x1) / 2 - 7, (Fl.y0 + Fl.y1) / 2 - 7, (Fl.x0 + Fl.x1) / 2 + 7, (Fl.y0 + Fl.y1) / 2 + 7, 64, { flat: true, under: true });
+  }
+  if (flo) {
+    const n = Math.max(1, Math.min(4, Math.round((Fl.x1 - Fl.x0) / 120)));
+    for (let k = 0; k < n; k++) lamp(c, Fl.x0 + (Fl.x1 - Fl.x0) * (k + 0.5) / n, (Fl.y0 + Fl.y1) / 2, Math.min(80, (Fl.x1 - Fl.x0) / n * 0.7), [[255, 90, 200], [90, 220, 255], [170, 120, 255], [255, 210, 90]][(k + (R.seed & 3)) & 3], 0.9);
+    R.clear.push([Fl.x0, Fl.y0, Fl.x1, Fl.y1]);   // (kept for dancing: nothing else stands on it)
+  }
+  // down the side walls: the booths, and the VIP corner (a big room)
+  const yA = c.Ya + 40, yB = c.Yb - 8;
+  for (const s of [-1, 1]) {
+    const sw = Fl.side[s < 0 ? 0 : 1];
+    if (!sw) continue;
+    const xw = s < 0 ? c.X0 + 3 : c.X1 - 3;   // (the wall)
+    if (Fl.vip === s) {
+      const x0 = s < 0 ? xw : xw - sw + 4, x1 = s < 0 ? xw + sw - 4 : xw;
+      const rug = put(c, 'vip', x0, yA, x1, yB, 2, { c: '#5a1424', c2: '#c8a050', flat: true });
+      if (!rug) continue;
+      for (let y = yA + 6, k = 0; y + 52 <= yB - 4 && k < 3; y += 60, k++) {
+        const b = put(c, 'velvet', x0 + 8, y, x1 - 22, y + 24, 18, { c: '#a8202a', curved: true });
+        const mx = Math.round((x0 + 8 + x1 - 22) / 2);
+        if (b) { seated(c, mx - 12, y + 28, mx + 12, y + 52, 2, { round: true, c: '#2a2a30', c2: '#c8a050', candle: true, chairs: '#a8202a' }); lamp(c, mx, y + 40, 24, [255, 200, 120], 0.9); }
+      }
+      put(c, 'rope', s < 0 ? x1 - 8 : x0, yA + 4, s < 0 ? x1 : x0 + 8, yB - 2, 16, { c: '#b01c2c', flat: true, under: true });
+      sign(c, 'VIP', '#ffd24a', (x0 + x1) / 2, 'neon');
+      continue;
+    }
+    for (let y = yA; y + 34 <= yB; y += 44) {
+      const bx0 = s < 0 ? xw : xw - 16, b = put(c, 'velvet', bx0, y, bx0 + 16, y + 34, 18, { c: pick(r, ['#5a1e6a', '#2a2a6a', '#7a1a3a']), side: s }, 2);
+      if (!b) continue;
+      const tx0 = s < 0 ? bx0 + 20 : bx0 - 26;
+      if (seated(c, tx0, y + 6, tx0 + 22, y + 28, 2, { round: true, c: '#3a3446', c2: '#6a5a7a', candle: true, chairs: '#7a2a5a' })) lamp(c, tx0 + 11, y + 17, 20, [255, 190, 110], 0.8);
+    }
+  }
+  // the rest of a small room's floor: high tables, plants
+  fill(c, [
+    K([20, 20], (c, x0, y0, x1, y1, g) => seated(c, x0, y0, x1, y1, g, { round: true, high: true, c: '#2a2a30', c2: '#3a3446', candle: true, chairs: '#2a2a30', h: 24 })),
+    K([14, 12], (c, x0, y0, x1, y1, g) => put(c, 'plant', x0, y0, x1, y1, 30, { palm: true }, g), 2),
+  ], { gap: 10, target: 0.3, seen: 0.3 });
+  for (const [x, y] of [[c.X0 + 6, c.Yb - 20], [c.X1 - 20, c.Yb - 20]]) put(c, 'plant', x, y, x + 14, y + 12, 30, { palm: true }, 2);
 };
 // MC4: the bar of bottles under the neon bull skull and the motorbike mounted on the wall; the jukebox, the booths along
 // the side wall, the arm-wrestling table in the middle, the pool table on its rugs under a green lamp, the card table,

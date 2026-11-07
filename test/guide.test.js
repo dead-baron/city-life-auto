@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { guideSections, searchGuide } from '../shared/guide.js';
-import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE } from '../shared/rules.js';
+import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE, LENIENCY, COP_LEVEL, JAIL_S, PRISON } from '../shared/rules.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
 import { ACTIONS } from '../shared/controls.js';
 import { closure } from '../tools/perf.mjs';
@@ -40,6 +40,17 @@ test('the numbers come from the data: change a rule, a price or an item and the 
     STARTER.cooldownS = was.cd; MAILJOB.walk = was.walk; MAILJOB.letter = was.letter; BOAT_RENTAL_PRICE.jetski = was.jet; MORTGAGE.deposit = was.dep; ITEMS.bandage.heal = was.heal; band.price = bp;
   }
   assert.match(entry(guideSections(), 'items', 'rods').b, new RegExp(`${FTUE.bait[1]} ${ITEMS[FTUE.bait[0]].name.toLowerCase()}`), 'the outdoors start\'s gear: FTUE');
+  // the first car (the owner, 11-06 22:49: earned by the path you pick): the answer's cash and the used lots' prices
+  const fc = { cash: FTUE.cash, lot: FTUE.lot.starter };
+  try {
+    FTUE.cash = 777; FTUE.lot.starter = 555;
+    const S = guideSections();
+    assert.match(entry(S, 'around', 'firstcar').b, /with \$777 more/, 'FTUE.cash');
+    assert.match(entry(S, 'around', 'firstcar').b, /Rusty Compact at \$555/, 'FTUE.lot');
+    assert.match(entry(S, 'places', 'usedlot').b, /Rusty Compact \(\$555\)/, 'the used lots\' entry');
+    assert.match(entry(S, 'places', 'dealer').b, /from \$555/, 'the dealers\' back row');
+  } finally { FTUE.cash = fc.cash; FTUE.lot.starter = fc.lot; }
+  assert.match(entry(guideSections(), 'around', 'firstcar').b, /\[\[vehicle\]\]/, 'the steal: its control by name');
 });
 
 test('places count what the built map has; search finds an entry by any of its words', () => {
@@ -64,4 +75,16 @@ test('the Guide loads with its app, not with the page; the phone opens it, and i
   for (const a of ['replay', 'tips', 'skip']) assert.match(gd, new RegExp(`data-gd="${a}"`), a);
   assert.match(gd, /ctx\.send\(\{ t: 'intro', a \}\)/);
   assert.match(gd, /type="search"/, 'a search box');
+});
+
+test('the law follows the rules: the warning before the first star, the police by stars, fighting back, breaking out, the cells and prison', () => {
+  const S = guideSections(), law = (id) => entry(S, 'law', id).b;
+  assert.match(law('stars'), new RegExp(`first star \\(${LENIENCY.star} heat`), 'LENIENCY');
+  assert.match(law('cops'), new RegExp(`${Math.round(COP_LEVEL[1].drive * 100)}% pace at one star`), 'COP_LEVEL drive');
+  assert.match(law('busted'), new RegExp(`about ${COP_LEVEL[1].cuffS} seconds at one star, ${COP_LEVEL[5].cuffS} at five`), 'COP_LEVEL cuffS');
+  assert.match(law('busted'), /\[\[fire\]\].*\[\[move\]\].*\[\[action\]\] makes a break for it/, 'the controls by name');
+  assert.match(law('busted'), new RegExp(`cell at the station for ${JAIL_S} seconds`), 'JAIL_S');
+  assert.match(law('prison'), new RegExp(`booked at ${PRISON.stars} stars with a long record \\(${PRISON.record} bookings`), 'PRISON');
+  const was = LENIENCY.star;
+  try { LENIENCY.star = 33; assert.match(entry(guideSections(), 'law', 'stars').b, /first star \(33 heat/); } finally { LENIENCY.star = was; }
 });

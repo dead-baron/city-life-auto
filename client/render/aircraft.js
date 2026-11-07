@@ -16,10 +16,16 @@ export function predict(s, inp, dt, map, def, engine) { flightStep(s, flightInpu
 export const zoomOut = (alt) => 1 + Math.min(1.3, Math.max(0, alt || 0) / 650);
 // Art v2 stands things up: something at a height is drawn that much up the screen. An aircraft is drawn lifted by its
 // altitude the same way (its shadow stays on the ground), so one down on a roof sits on the drawn roof - V2_LIFT: the
-// drawn height of a roof over its flying height (bldTop; measured on the hospitals' roofs). The camera follows two thirds of the
-// lift of your own (main.js), so you and the ground under you both stay on screen.
+// drawn height of a roof over its flying height (bldTop; measured on the hospitals' roofs).
 export const V2_LIFT = 0.66;
 export const liftOf = (alt) => Math.max(0, alt || 0) * V2_LIFT;
+// The camera follows the whole of your own aircraft's lift (main.js, director.js): it stays in the middle of the screen at
+// any height, its shadow on the ground under it. It followed two thirds before, so the ground under you showed too - and in
+// landscape on a phone (the owner, 11-06, his son's Pixel 10a: "Helicopters disappearing when flying in landscape mode") a
+// high one sat a third of its lift above the middle, off the top of the short view. The ground point and the drawn
+// aircraft are both kept in the frame's list (main.js vis: the span between them on screen, not the ground point alone).
+export const AIR_CAM = 1;
+export const camLift = (alt) => liftOf(alt) * AIR_CAM;
 
 const LIVERY = {
   news: { body: '#e9edf2', trim: '#2c55b8', dark: '#1d2a4a', glass: '#3a5f86', tip: 'rgba(255,200,50,0.5)', cam: true },

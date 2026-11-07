@@ -33,6 +33,7 @@ export function drawJobWay(g, S, view, sp, now, z) {
     }
   }
   if (j.marks) marks(g, j.marks, now, u);   // (Crazy Taxi's fares waving, a mail round's stops: rings on the ground)
+  if (j.slot) slotMark(g, j.slot, now, u);   // (the forklift's: the loading bay's slot the pallet goes in, lit up)
   if (j.crazy && !j.veh && j.stage !== 'wait') bigArrow(g, sp, j, now, u);   // (Crazy Taxi's arrow over you, at the target)
   if (j.veh) { g.restore(); return; }   // (get to the job's truck first: its own ring and arrow - main.js drawJobTruck)
   const [ml, mt, mr, mb] = open(), x = j.x, y = j.y, x0 = view.x0 + ml * u, x1 = view.x1 - mr * u, y0 = view.y0 + mt * u, y1 = view.y1 - mb * u;
@@ -62,6 +63,26 @@ function marks(g, L, now, u) {
     g.globalAlpha = 0.22; g.fillStyle = c; g.fill();
   }
   g.globalAlpha = 1;
+}
+// The loading bay's slot the server picked for your pallet (server forklift.js target: [x, y, fx, fy, w, d, n] - its
+// middle, the way the forks go in, its width and depth, its number): its box lit in a marching yellow-and-white edge, a
+// soft fill, and a chevron at its open side pointing the forks in
+function slotMark(g, [x, y, fx, fy, w, d, n], now, u) {
+  const a = Math.atan2(fy, fx), pulse = 0.75 + 0.25 * Math.sin(now * 5);
+  g.save(); g.translate(x, y); g.rotate(a);   // (+x: the way in, toward the bay's back)
+  const hx = d / 2, hy = w / 2 - 3;
+  g.globalAlpha = 0.18 + 0.1 * pulse; g.fillStyle = COL; g.fillRect(-hx, -hy, 2 * hx, 2 * hy);
+  g.globalAlpha = 1; g.lineWidth = 6 * u; g.strokeStyle = EDGE; g.strokeRect(-hx, -hy, 2 * hx, 2 * hy);
+  g.setLineDash([10 * u, 6 * u]); g.lineDashOffset = -now * 30 * u;
+  g.lineWidth = 3 * u; g.strokeStyle = COL; g.strokeRect(-hx, -hy, 2 * hx, 2 * hy);
+  g.lineDashOffset = -now * 30 * u + 8 * u; g.strokeStyle = '#fff'; g.globalAlpha = 0.6; g.strokeRect(-hx, -hy, 2 * hx, 2 * hy);
+  g.setLineDash([]); g.globalAlpha = pulse;
+  const cx = -hx - 14 - 6 * Math.sin(now * 4), s = 9;   // (outside the open side, nudging in)
+  g.fillStyle = COL; g.strokeStyle = EDGE; g.lineWidth = 2.5 * u;
+  g.beginPath(); g.moveTo(cx + s, 0); g.lineTo(cx - s * 0.6, -s); g.lineTo(cx - s * 0.1, 0); g.lineTo(cx - s * 0.6, s); g.closePath(); g.fill(); g.stroke();
+  g.restore();
+  g.globalAlpha = 1;
+  if (n) plate(g, x, y - Math.max(w, d) / 2 - 22 * u, `SLOT ${n}`, u, COL);
 }
 // Crazy Taxi's arrow: big, over your head, turning to point the way to the fare or the stop
 function bigArrow(g, sp, j, now, u) {

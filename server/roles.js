@@ -6,7 +6,7 @@
 // at launch it goes off and only admins and the owner get the debug powers.
 export const RANK = { helper: 1, admin: 2, owner: 3 };
 export const POWERS = {
-  dev: 'admin', kick: 'admin', ban: 'admin', unban: 'admin', mute: 'admin', unmute: 'admin', strike: 'admin', unstrike: 'admin', reviews: 'admin', resolve: 'admin',
+  dev: 'admin', kick: 'admin', ban: 'admin', unban: 'admin', mute: 'admin', unmute: 'admin', strike: 'admin', unstrike: 'admin', reviews: 'admin', resolve: 'admin', prison: 'admin',
   refund: 'helper', rescue: 'helper', restore: 'helper', plog: 'helper', players: 'helper',
   role: 'owner', adminlog: 'owner', dashboard: 'owner',
 };
