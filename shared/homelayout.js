@@ -17,7 +17,7 @@ export const TILE_IN = 32;
 // (H77) the concept's new pieces, lower case in a plan: x a pool table  j an arcade cabinet  i a row of cinema seats  n a
 // kitchen island and its stools  s a sectional sofa (its long side)  b a bedside table and its lamp  l a floor lamp  w a
 // washing machine  k a workbench  e an exercise bike  h a bathtub - furniture like the rest (solid, a run one piece)
-const PLAN_LOWER = 'xjinsblwkhuyof^pm%ez&@$!_';   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf; ^ p m % e z &: the
+const PLAN_LOWER = 'xjinsblwkhuyof^pm%ez&@$!_4567';   // (4 5 6 7: an arcade's machines - air hockey, pinball, a claw machine, skee-ball: PLANS.arcade)   // (u y o f: a bathhouse's bath, its hot stones, a bench, the towel shelf; ^ p m % e z &: the
 // home upgrades' stairs, fireplace, bar, hot tub, exercise bike, shelves, woodpile - shared/homeups.js)
 export const BODY_IN = 10;   // half the size of you, for the walls (px)
 // (H77, the owner's HO6 concept: thin walls) a wall is a thin line, not its whole tile: WALL_IN px thick, along the middle
@@ -107,33 +107,44 @@ const PLANS = {
 };
 export const PLAN_KEYS = Object.keys(PLANS);   // (the homes' plans: the lobbies' and the arcade's come after)
 // (2026-10-24, the owner: "The Arcade should be a building that has an interior you walk into") an arcade's floor, every
-// arcade's door opening into one of its own (server/systems/arcade.js): the cabinets along the back wall - one a game,
-// in arcade.js GAMES's order - and the prize counter down the east wall (G: use it), a plant by the door
+// arcade's door opening into one of its own (server/systems/arcade.js) - (11-07, the owner: "not just the same arcade
+// cabinet over and over... skeeball would have a skeeball machine, air hockey is an air hockey table") laid out as the
+// AC1 concept: each game its own machine (arcade.js MACHINE: j the upright video cabinets side by side along the back
+// wall, 7 skee-ball lanes, 4 an air hockey table, 5 pinball machines, x a pool table; 6 claw machines just for show),
+// the prize counter (G) on the back wall with its shelves of plush, plants, aisles between
 PLANS.arcade = [
-  '################',
-  '#cjccjccjccjccc#',
-  '#cccccccccccccG#',
-  '#PccccccccccccG#',
-  '#cccccccccccccG#',
-  '#cccccccccccccc#',
-  '#######D########',
+  '####################',
+  '#jjjjjcPGGGGGGPc66c#',
+  '#cccccccGGGGGGccccc#',
+  '#cccccccccccccccccc#',
+  '#cc444cccccccc7777c#',
+  '#cc444cccccccc7777c#',
+  '#ccccccccxxxcc7777c#',
+  '#ccccccccxxxccccccc#',
+  '#5555cccccccccccccc#',
+  '#5555cccccccccccccc#',
+  '#cccccccccccccccccP#',
+  '#########D##########',
 ];
 // (2026-10-25, the owner: "a really awesome arcade in the neon district") the flagship's floor - the Neon Strip's Pixel
-// Arcade (server/systems/arcade.js hallOf: poi.flagship): twice the floor, a row of cabinets along the back wall and
-// an island of them down the middle (each a game in arcade.js GAMES's order, round again), the long prize counter by
-// the east wall, plants by the door
+// Arcade (server/systems/arcade.js hallOf: poi.flagship): the back wall's cabinets and an island of them, two air hockey
+// tables, two banks of skee-ball, two pool tables, ten pinball machines, the long prize counter, the claw machines
 PLANS.arcadeflag = [
-  '########################',
-  '#jcjcjcjcjcjcjcjcjcjcjc#',
-  '#cccccccccccccccccccccc#',
-  '#cccccccccccccccccccccc#',
-  '#ccjcjcjcjcccccjcjcjcGG#',
-  '#ccccccccccccccccccccGG#',
-  '#PcccccccccccccccccccGG#',
-  '#ccccccccccccccccccccGG#',
-  '#cccccccccccccccccccccc#',
-  '#PccccccccccccccccccccP#',
-  '###########D############',
+  '##########################',
+  '#jjjjjjjjcPGGGGGGGGPc6666#',
+  '#ccccccccccGGGGGGGGcccccc#',
+  '#cccccccccccccccccccccccc#',
+  '#cc444ccc444ccc7777cc7777#',
+  '#cc444ccc444ccc7777cc7777#',
+  '#cccccccccccccc7777cc7777#',
+  '#cccccccccccccccccccccccc#',
+  '#jjjjjjjjccxxxcccxxxcPccc#',
+  '#ccccccccccxxxcccxxxccccc#',
+  '#cccccccccccccccccccccccc#',
+  '#55555cccccccccccccc55555#',
+  '#55555cccccccccccccc55555#',
+  '#PccccccccccccccccccccccP#',
+  '############D#############',
 ];
 // (the owner, 10-16: "Bathhouses and locker rooms with usable showers") a bathhouse (server/systems/bathhouse.js): in by
 // the front door to the lobby - the front desk (I: pay for the day there), the towels on the shelf behind it (f),

@@ -58,21 +58,30 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   const msg = lastOf(conn, 'home');
   assert.equal(msg.plan, 'arcade', 'the page draws its floor');
   const L = arcade.hallLayout();
-  // the plan: a cabinet a game, the prize counter, all within reach of the floor from the door
-  const cabs = L.pieces.filter((q) => q.ch === 'j');
-  assert.equal(cabs.length, arcade.GAMES.length, 'a cabinet for each game');
+  // the plan (11-07, the owner: "skeeball would have a skeeball machine, air hockey is an air hockey table"): each game
+  // on its own kind of machine - none of them the same piece - the prize counter, all within reach of the floor from the door
+  const mach = arcade.machines(L);
+  for (const g of [...arcade.GAMES, 'pool']) {
+    const of = mach.filter((m) => m.game === g);
+    assert.ok(of.length >= 1, `a ${g} machine`);
+    assert.equal(new Set(of.map((m) => m.piece.ch)).size, 1, `${g}: one kind of machine`);
+    assert.ok(!mach.some((m) => m.game !== g && m.piece.ch === of[0].piece.ch), `${g}'s machine is its own`);
+  }
   assert.deepEqual([...arcade.GAMES].sort(), ['hockey', 'pinball', 'skee', 'starfall'], 'every arcade game there is');
+  const size = (g) => { const q = mach.find((m) => m.game === g).piece; return [q.tw, q.th]; };
+  assert.ok(size('skee')[1] >= 3 && size('hockey')[0] >= 3 && size('pinball')[1] >= 2 && size('pool')[0] >= 3, 'a lane, a table, a machine of their own shapes - not a cabinet');
   assert.ok(L.pieces.some((q) => q.use === 'prizes'), 'the prize counter');
   const seen = new Set(), q = [[Math.floor(L.spawn.x / TILE_IN), Math.floor(L.spawn.y / TILE_IN)]], reach = new Set();
   while (q.length) { const [x, y] = q.pop(); if (seen.has(x + ',' + y) || L.solid(x, y)) continue; seen.add(x + ',' + y); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
   for (const c of seen) { const [x, y] = c.split(',').map(Number), px = (x + 0.5) * TILE_IN, py = (y + 0.5) * TILE_IN; const u = useAt(L, px, py, 26); if (u) reach.add(u.use); const cb = arcade.cabinetAt(L, px, py); if (cb) reach.add(cb.game); }
-  for (const u of ['door', 'prizes', ...arcade.GAMES]) assert.ok(reach.has(u), `the ${u} within reach`);
-  // up to each cabinet: its own game
+  for (const u of ['door', 'prizes', 'pool', ...arcade.GAMES]) assert.ok(reach.has(u), `the ${u} within reach`);
+  // up to one machine of each game, from its front: that game
+  const cabs = arcade.GAMES.map((g) => mach.find((m) => m.game === g));
   const games = [];
   for (const c of cabs) {
     await walkTo(w, p, c.x + c.w / 2, c.y + c.h + 14);
     const a = players.findInteraction(w, p);
-    assert.match(a.label, /^Play /, `at the cabinet: ${a.label}`);
+    assert.match(a.label, /^Play /, `at the ${c.game} machine: ${a.label}`);
     games.push(arcade.cabinetAt(L, p.ped.home.x, p.ped.home.y).game);
   }
   assert.deepEqual(games, arcade.GAMES, 'a different game at each');
@@ -403,15 +412,16 @@ test('the tickets are one balance at every arcade: won at one, spent at the flag
   // the flagship's floor: its own plan, more cabinets than a plain arcade's, the prize counter, all in reach from the door
   const LA = arcade.hallLayout(arcade.hallOf(w, A)), LF = arcade.hallLayout(arcade.hallOf(w, F));
   assert.equal(LA.key, 'arcade'); assert.equal(LF.key, 'arcadeflag');
-  const cabsF = LF.pieces.filter((q) => q.ch === 'j'), counter = LF.pieces.filter((q) => q.use === 'prizes');
-  assert.ok(cabsF.length >= 16 && cabsF.length > 3 * LA.pieces.filter((q) => q.ch === 'j').length, `the flagship's cabinets (${cabsF.length})`);
-  assert.equal(counter.length, 1); assert.ok(counter[0].th >= 3 && counter[0].tw >= 2, 'the long prize counter');
+  const mF = arcade.machines(LF), mA = arcade.machines(LA), counter = LF.pieces.filter((q) => q.use === 'prizes');
+  const cabsF = mF.filter((m) => m.game === 'starfall');
+  assert.ok(cabsF.length >= 16 && cabsF.length > 3 * mA.filter((m) => m.game === 'starfall').length, `the flagship's cabinets (${cabsF.length})`);
+  assert.equal(counter.length, 1); assert.ok(counter[0].tw >= 6 && counter[0].th >= 2, 'the long prize counter');
   assert.ok(LF.w > LA.w && LF.h > LA.h, 'a bigger floor');
-  for (const g of arcade.GAMES) assert.ok(cabsF.filter((c) => arcade.cabinetAt(LF, c.x + c.w / 2, c.y + c.h + 14).game === g).length >= 4, `${g}: four cabinets of it or more`);
+  for (const g of [...arcade.GAMES, 'pool']) assert.ok(mF.filter((m) => m.game === g).length >= 2 && mF.filter((m) => m.game === g).length > mA.filter((m) => m.game === g).length - (g === 'pool' ? 0 : 1), `${g}: more of it at the flagship`);
   const seen = new Set(), q = [[Math.floor(LF.spawn.x / TILE_IN), Math.floor(LF.spawn.y / TILE_IN)]];
   while (q.length) { const [x, y] = q.pop(); if (seen.has(x + ',' + y) || LF.solid(x, y)) continue; seen.add(x + ',' + y); q.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
   const near = (c) => [...seen].some((k) => { const [x, y] = k.split(',').map(Number); return Math.hypot(Math.max(c.x - (x + 0.5) * TILE_IN, 0, (x + 0.5) * TILE_IN - c.x - c.w), Math.max(c.y - (y + 0.5) * TILE_IN, 0, (y + 0.5) * TILE_IN - c.y - c.h)) < 28; });
-  for (const c of [...cabsF, ...counter]) assert.ok(near(c), `${c.ch} at ${c.tx},${c.ty}: walkable up to`);
+  for (const c of [...mF, ...counter]) assert.ok(near(c), `${c.game || c.ch} at ${c.x},${c.y}: walkable up to`);
   // tickets won at the corner arcade
   teleport(w, p.ped, A.x, A.y);
   players.findInteraction(w, p).run();
