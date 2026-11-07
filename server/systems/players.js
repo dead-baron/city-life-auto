@@ -13,7 +13,7 @@ import { PED_BLOCK, isSwimming } from '../../shared/map.js';
 import { surfaceZ } from '../../shared/levels.js';
 import { mulberry32 } from '../../shared/rng.js';
 import * as looks from './looks.js';
-import { store, defaultProfile, resetProfile, oldEpoch } from '../store.js';
+import { store, defaultProfile, resetProfile, oldEpoch, migrateSafety } from '../store.js';
 import * as vehicles from './vehicles.js';
 import * as carhits from './carhits.js';
 import * as combat from './combat.js';
@@ -161,6 +161,7 @@ export function join(world, conn, profile, opts = {}) {
   const replanned = homes.replanDecor(world, profile);   // (a home's rooms changed under its furniture: back in storage)
   looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   if (oldEpoch(profile)) wipeProgress(world, profile);   // (a profile from before the progress epoch: a new character - store.js)
+  if (migrateSafety(profile)) store.touch();   // (Safety mode off once on profiles from before it was off by default - store.js)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
@@ -434,6 +435,7 @@ function finalizeLogout(world, p, dropLoot) {
   law.onPlayerGone(world, p);
   rentals.onPlayerGone(world, p);
   horses.onPlayerGone(world, p);
+  starter.onPlayerGone(world, p);   // (the starter car parked and empty: put away till you're back - starter.js)
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
@@ -1119,6 +1121,7 @@ export function buildMe(world, p) {
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
     ftue: ftue.meInfo(world, p),
+    car: starter.marker(world, p),   // (your starter car, parked and empty while you're on foot: its marker - starter.js marker)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

@@ -12,7 +12,7 @@ import * as economy from '../server/systems/economy.js';
 import * as homes from '../server/systems/homes.js';
 import * as vehicles from '../server/systems/vehicles.js';
 import * as dealer from '../server/systems/dealer.js';
-import { publicGarages, arrivalStation, arrivalFor, defaultArrival } from '../server/systems/starter.js';
+import { publicGarages, arrivalStation, arrivalFor, defaultArrival, onPlayerGone, overflowOf } from '../server/systems/starter.js';
 import * as ftue from '../server/systems/ftue.js';
 
 const starters = (w, pid) => [...w.entities.values()].filter((e) => e.kind === K.VEH && !e.removed && e.starter === pid);
@@ -77,7 +77,7 @@ test('registered to you, never sold: no price, no dealer stock, no slot in your 
   dealer.update(w);
   assert.equal(prof.vehicles.length, 0, 'not one of your cars');
   // someone else takes it: no lock, plain theft - and their garage won't keep it
-  const { p: thief, prof: tp } = joinPlayer(w, { bank: 1e6 });
+  const { p: thief, prof: tp } = joinPlayer(w, { bank: 1e6, starter: {} });   // (no starter car of their own to get into instead)
   teleport(w, thief.ped, v.x + 40, v.y);
   assert.equal(vehicles.entryInfo(w, thief, v).crime, 'theft');
   assert.ok(vehicles.tryEnter(w, thief.ped));
@@ -229,4 +229,82 @@ test('kept across a rejoin and a restart: the first day isn\'t repeated, a lost 
   const p3 = players.join(w3, fakeConn(), prof);
   assert.equal(optOf(w3, p3, garage, 'starter').dis, undefined);
   assert.equal(prof.starter.readyAt, undefined);
+});
+
+test('many new players at once: fifty at the default station inside a minute - each a car, a space of its own, a marker to it', () => {
+  const w = makeWorld();
+  const g = publicGarages(w.map).find((q) => q.poi === defaultArrival(w).poi), st = w.map.pois[g.poi], spaces = new Set();
+  const ps = [];
+  for (let i = 0; i < 50; i++) {
+    const j = joinPlayer(w);
+    j.prof.lookPicked = true;
+    ps.push(j);
+    run(w, 0.6);   // (the card comes up: fifty players over 30 s)
+  }
+  for (const { p } of ps) ftue.handle(w, p, { a: 'skip' });   // (each takes the default station)
+  const cars = ps.map(({ p, prof }) => {
+    const v = one(w, prof.pid);
+    assert.equal(arrivalFor(w, p).poi, g.poi, 'the default station');
+    const k = `${Math.round(v.x)},${Math.round(v.y)}`;
+    assert.ok(!spaces.has(k), `a space of its own (${k})`);
+    spaces.add(k);
+    assert.ok(g.spots.concat(overflowOf(w.map, g)).some((sp) => Math.hypot(sp.x - v.x, sp.y - v.y) < 1), 'in a space: the lot\'s, or its overflow\'s');
+    return v;
+  });
+  for (let i = 0; i < cars.length; i++) for (let j = i + 1; j < cars.length; j++) assert.ok(Math.hypot(cars[i].x - cars[j].x, cars[i].y - cars[j].y) >= 40, 'no two cars on one space');
+  const inLot = cars.filter((v) => Math.hypot(v.x - st.x, v.y - st.y) <= STARTER.lotR).length;
+  assert.ok(inLot >= Math.min(g.spots.length, 1), `the lot first (${inLot} of ${g.spots.length})`);
+  // each one's marker (me.car) points at their own car, nobody else's
+  for (const { p, prof } of ps) {
+    teleport(w, p.ped, st.x, st.y + 40);
+    const m = players.buildMe(w, p).car, v = one(w, prof.pid);
+    assert.ok(m, 'a marker');
+    assert.deepEqual([m[0], m[1]], [Math.round(v.x), Math.round(v.y)], 'at their own car');
+    assert.equal(m[3], 1, 'the full marker until first driven');
+  }
+  console.log(`# ${g.name}: ${g.spots.length} spaces in its lot, ${inLot} of 50 there, the rest its overflow (${Math.round(Math.max(...cars.map((v) => Math.hypot(v.x - st.x, v.y - st.y))))} px at most)`);
+});
+
+test('your car marked: yours alone, parked and empty while you\'re on foot; full until first driven, then small', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const { p: q } = joinPlayer(w, { starter: {} });
+  const v = one(w, prof.pid);
+  teleport(w, p.ped, v.x + 300, v.y);
+  let m = players.buildMe(w, p).car;
+  assert.deepEqual(m, [Math.round(v.x), Math.round(v.y), v.def.i, 1]);
+  assert.equal(players.buildMe(w, q).car, null, 'nobody else\'s screen');
+  // in it: no marker; driven a little: from now on the small one
+  for (const e of w.query(v.x, v.y, 160, K.VEH)) if (e !== v) w.remove(e);
+  teleport(w, p.ped, v.x, v.y + v.def.W / 2 + 8);
+  assert.ok(vehicles.tryEnter(w, p.ped));
+  assert.equal(players.buildMe(w, p).car, null, 'in it');
+  v.vx = 200; run(w, 0.6);
+  assert.equal(prof.starter.drove, 1, 'first driven');
+  vehicles.ejectPed(w, p.ped, true); v.vx = 0; v.vy = 0;
+  run(w, 0.2);
+  m = players.buildMe(w, p).car;
+  assert.ok(m && m[3] === 0, 'the small marker after');
+  // someone else in it: none
+  teleport(w, q.ped, v.x, v.y + v.def.W / 2 + 8);
+  vehicles.tryEnter(w, q.ped); vehicles.tryEnter(w, q.ped);
+  if (q.ped.vehId === v.id) assert.equal(players.buildMe(w, p).car, null, 'out with someone in it');
+});
+
+test('logged off: a parked starter is put away (no cooldown) and comes back where it was on rejoining - it doesn\'t fill the lot', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  const v = one(w, prof.pid), x = Math.round(v.x), y = Math.round(v.y);
+  v.hp = v.def.hp * 0.5;
+  // (players.js finalizeLogout, past the ghost window)
+  players.leave(w, p); onPlayerGone(w, p);
+  assert.equal(starters(w, prof.pid).length, 0, 'put away');
+  assert.deepEqual([prof.starter.away.x, prof.starter.away.y], [x, y]);
+  assert.equal(prof.starter.readyAt, undefined, 'not lost: no cooldown');
+  const w2 = makeWorld({ keepKept: true });
+  players.join(w2, fakeConn(), prof);
+  const back = one(w2, prof.pid);
+  assert.deepEqual([Math.round(back.x), Math.round(back.y)], [x, y], 'back where it was');
+  assert.ok(Math.abs(back.hp - v.def.hp * 0.5) < 1, 'as it was');
+  assert.equal(prof.starter.away, undefined);
 });

@@ -25,9 +25,10 @@ export const POLICE_RANKS = [
 // cooldownS after it was lost; own a home with a garage and it lives there instead. Taken and left empty by someone else
 // (strayed), out of everyone's sight strayS, it's taken away (lost: free again after the cooldown). lotR: how far round a
 // station (px) its car park's spaces are looked for (960: World v3's Metro Central has its own 934 px from its building).
+// overflow: a station's lot full, how many of the nearest parking spaces beyond it are tried (server/systems/starter.js).
 // paint: shared/vehicles.js PAINTS index (the rust brown). The car's
 // own numbers (slower, weaker than the Hatchback it's drawn as) are its model's: shared/vehicles.js 'starter'.
-export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, paint: 11 };
+export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, overflow: 400, paint: 11 };
 
 // The first-time experience (server/systems/ftue.js; the owner, 11-04: "short and sweet and give people general
 // direction"): a new character picks where they arrive (pickS: the card waits this long, then the default -

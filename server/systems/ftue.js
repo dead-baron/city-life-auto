@@ -32,7 +32,7 @@
 //   profile.ftue: { st: 'new' | 'pick' | 'arrive' | 'ask' | 'goal' | 'done', stn (the arrival station's poi), ans, step,
 //                   goal { k, x, y, name, poi? }, how ('goal' | 'roam' | 'skip' | 'old'), at { stage: ms }, m { moment: 1 },
 //                   tips (0: off), replay (1: the Guide's replay - no move to the station) }
-import { FTUE } from '../../shared/rules.js';
+import { FTUE, STARTER } from '../../shared/rules.js';
 import { PED_BLOCK } from '../../shared/mapcore.js';
 import { ITEMS } from '../../shared/items.js';
 import { store } from '../store.js';
@@ -169,7 +169,7 @@ const PLACE = { mail: (g) => g.name, courier: (g) => g.name, fence: (g) => g.nam
 export function stepLine(world, p, f) {
   const g = f.goal;
   if (!g) return '';
-  if (f.step === 1) return 'Your car\'s in the lot - walk over to it';
+  if (f.step === 1) { const v = starter.carOf(world, p.pid), st = f.stn != null ? world.map.pois[f.stn] : null; return v && st && Math.hypot(v.x - st.x, v.y - st.y) > STARTER.lotR ? 'Your car\'s parked down the street - walk over to it' : 'Your car\'s in the lot - walk over to it'; }   // (the lot full: its overflow - starter.js)
   if (f.step === 2) return starter.carOf(world, p.pid) ? `Get in and drive to ${PLACE[g.k](g)}` : `Head for ${PLACE[g.k](g)}`;
   return THERE[g.k](g);
 }

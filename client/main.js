@@ -3665,6 +3665,7 @@ function drawOverlays(F, v2) {
   // name tags + public flares + rumor marker
   if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
+  else if (!clean && S.me && S.me.car && F.view && !(DIR && DIR.hideMe)) drawMyCar(S.me.car, F.view, now, z, F.vehs);   // (your starter car, parked: server starter.js marker)
   if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
   // out past the map's edge: the arrow home at your feet, and the warning (shared/border.js)
   const edge = S.playing && S.me && !S.me.dead ? edgeInfo(sp.x, sp.y, EDGE_I, S.map && S.map.frame) : null;
@@ -5044,6 +5045,23 @@ function drawJobTruck([x, y, m3], view, now, z, vehs) {
     g.fillStyle = col; g.strokeStyle = '#000'; g.lineWidth = 2 / z;
     g.beginPath(); g.moveTo(s, 0); g.lineTo(-s * 0.8, -s * 0.85); g.lineTo(-s * 0.35, 0); g.lineTo(-s * 0.8, s * 0.85); g.closePath(); g.fill(); g.stroke();
   }
+  g.restore();
+}
+// Your starter car, parked and empty while you're on foot (me.car: [x, y, model, full]): until you've first driven it,
+// the job truck's rings, plate and edge arrow; after, a small "YOUR CAR" plate when it's within about a screen of you
+function drawMyCar(c, view, now, z, vehs) {
+  if (c[3]) { drawJobTruck(c, view, now, z, vehs); return; }
+  let [x, y] = c, v = null;
+  for (const q of vehs || []) if (Math.abs(q.rx - x) < 60 && Math.abs(q.ry - y) < 60) { v = q; break; }
+  if (v) { x = v.rx; y = v.ry; }
+  const cx = (view.x0 + view.x1) / 2, cy = (view.y0 + view.y1) / 2, far = Math.max(view.x1 - view.x0, view.y1 - view.y0);
+  if (Math.hypot(x - cx, y - cy) > far) return;
+  const u = 1 / z, def = v ? VEHICLE_BY_INDEX[v.d.m] : VEHICLE_BY_INDEX[c[2]] || null, plate = `YOUR ${vehicleWord(def).toUpperCase()}`;
+  g.save(); g.globalAlpha = 0.9;
+  g.font = `700 ${11 * u}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const ty = y - (def ? Math.max(def.L, def.W) / 2 : 60) - 18 * u;
+  tagPlate(x, ty, g.measureText(plate).width + 16 * u, u);
+  g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   g.restore();
 }
 function drawWorldLabels(peds, vehs, now, z) {

@@ -20972,3 +20972,36 @@ A world change's job now includes the rebake and test/worldmap.test.js.
   shop's trade is set and not neon, and that its own colors are at least 4.5:1. Only World v3's `world3` / `art3`
   change; today's `world` doesn't, so the world map's picture stands. plainblocks, signs and facades (17 pass),
   worldmap and perf (8 pass).
+
+## 2026-11-06 - Your car marked, parking for a rush of new players, Safety mode off by default
+
+The owner (11-06, 19:15): "For your first car you own we should make sure there's a visual indicator that it's your car
+to take"; enough parking when many new players arrive at once; "let's not make the double tap to steal a car ... not
+have it on by default".
+- **Your car's marker** (server `starter.marker` -> `me.car` [x, y, model, full]; the page's `drawMyCar`): your starter
+  car, parked and empty, while you're on foot (not in a vehicle, a home, a train, below ground, or still on the
+  arrival's train), whatever the FTUE is doing - on the platform, after "Just let me roam", after the goal, in a crowded
+  lot. Until you've first driven it (`profile.starter.drove`, set the first time you drive it off), the job truck's
+  look: the turning rings, the "YOUR CAR" plate and the arrow at the screen's edge. After, a small "YOUR CAR" plate
+  when it's within about a screen of you. A dot on the minimap and the big map either way. `me` is each player's own,
+  so nobody else ever sees it. (The FTUE's step 1 marks it already through `me.job.veh`: then only that.)
+- **Logged off: the car put away** (`starter.onPlayerGone`, from players.js finalizeLogout past the ghost window): a
+  starter parked and empty leaves the world (`profile.starter.away`: where, its health), not lost - no cooldown - and
+  comes back there on rejoining (or the nearest free space if something's on it), across a restart too. Before, an
+  offline player's car sat in the arrival lot for good.
+- **Overflow** (`starter.overflowOf`): a station's lot full, its car goes to the parking spaces within twice the lot's
+  reach, then an **overflow field** on open ground near the station (`fieldSpots`: rows of spaces on grass, dirt, sand
+  or lot paving, clear of buildings, props, roads, plazas, tracks, reserved ground and the arrival lines), then the
+  nearest parking spaces anywhere (`STARTER.overflow`: 400 tried). Each space is taken at once, so no two cars share
+  one; a new character always gets a car. The note and the step-1 line say "parked down the street" when it's out of
+  the lot. Capacity (lot + field; seed 1337, World v3): **Metro Central 7 + 45, Northshore 8 + 58, Red Rock 16 + 140,
+  Willow Valley 16 + 201**; fifty players at each are all within 24-46 tiles of the station.
+- **Safety mode off by default** (`store.js` defaultProfile `safety: false`; Settings still has it, its label says
+  "off by default"). Profiles from before had it on as a default, not a choice: `migrateSafety` switches it off once
+  (as the store loads and on joining; `safetyOff: 1` marks it run, so turning it back on in Settings is kept). Guide's
+  "Crimes need a witness" says how to turn it on.
+- Tests: `test/starter.test.js` - fifty new players at the default station inside a minute each get a car on a space of
+  its own and a marker at their own car; the marker is yours alone, full until first driven, small after, gone while
+  you're in it or someone else is; put away on logoff and back where it was on rejoining, no cooldown.
+  `test/honestliving.test.js` - Safety off for a new character, the warning when on, the one-time switch-off kept to.
+  `test/flight.test.js`, `test/horses.test.js` updated (one press now).
