@@ -74,6 +74,8 @@ import * as golf from './systems/golf.js';
 import * as hoops from './systems/hoops.js';
 import * as bikers from './systems/bikers.js';
 import * as streetlife from './systems/streetlife.js';
+import * as extract from './systems/extract.js';   // (the valuable crates: paid on delivery, their markers, the lost ones)
+import * as calendar from './systems/calendar.js';   // (the event calendar: the armored truck run, the dock shipment)
 import * as slips from './systems/slips.js';
 import * as activities from './systems/activities.js';
 import * as burning from './systems/burning.js';
@@ -183,6 +185,7 @@ const SYSTEMS = [
   ['combat', combat.update],        // projectiles, bleeding, regen, stun timers
   ['grenades', grenades.update],    // grenades thrown: their arcs, bounces and fuses (grenades.js)
   ['cargo', cargo.update],          // crates, loot bags
+  ['extract', extract.update],      // the valuable crates in play: who's shown them on the map, the ones lost on the way (extract.js)
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['heist', heist.update],          // bank heists: the drill at a vault door, its jams, the vault opening (heist.js)
   ['law', law.update],              // heat decay, search circles
@@ -207,6 +210,7 @@ const SYSTEMS = [
   ['ftue', ftue.update],            // the first-time experience: the arrival, the question, the first goal's steps, the first-time moments (ftue.js)
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
+  ['calendar', calendar.update],    // the event calendar on the wall clock: the armored truck run, the dock shipment (calendar.js)
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theater: the films in the screens, the audience
   ['drivein', drivein.update],      // the Starlite Drive-In: who's watching (drivein.js)

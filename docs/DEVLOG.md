@@ -22015,3 +22015,42 @@ name: `map.districtAt`), from Feared to Loved, and the district reacts. All of i
   there needs the sign drawn live or a rebake per sale - left for later. Tenants' hello is in.
 - Tests: `test/reputation.test.js` (the math and the fade, the price and refusal thresholds through the real menus,
   the shotgun share, the police recognition rule, vouch-once, the inputs, the reactions, the phone list).
+
+## 2026-11-07 - Extraction payouts and the event calendar (progression build order 4)
+
+The progression design's "Extraction and scheduled events" (docs/PROGRESSION.md): the big money rides across town in the
+open, and announced events make the trips cross.
+- **Paid on delivery** (`server/systems/extract.js`; numbers: `shared/rules.js` `CRATE_PAY`, `EXTRACT`). The valuable
+  crates - an armored truck's, a bank vault's, the dock shipment's - carry `c.extract` and pay only at the door: a fence
+  or the black market pays the whole payout into the bank with Criminal EXP (not to an officer on duty); a bank's vault
+  takes one from an honest hauler who isn't wanted for 70%, clean; an officer or a licensed bounty hunter bringing a
+  stolen one back to a bank or a police station gets 80%, Samaritan points and an officer service points; or it goes
+  into the home's stash (`profile.stash.crates`, up to 6, taken out at the home's door; old saves load without it). A
+  bank or a station pays only once the crate has come 600 px from where it was put in play. Lost on the way - water, a
+  blast, cleared away - the carrier is told the payout went with it (and a carbon-gold case's loss is in the city feed).
+  The armored trucks' spilled crates and the vault's now carry `CRATE_PAY` values.
+- **Who sees them** (the owner accepted the default): a carbon-gold crate on the move, an event's one even lying in the
+  road, and a calendar armored truck still carrying its gold are on every player's map (`me.happen` kind `gold`,
+  position only); steel and iron are sent only to the players in the net-culling chunks round them (their own and the
+  eight about it: kind `cargo`). The server picks who gets which (`extract.visibleTo`); the page draws them as blips.
+- **The event calendar** (`server/systems/calendar.js`; `rules.js` `EVENTS`): a generic scheduler on the wall clock -
+  each event every `periodS` from `offsetS` past 1970-01-01 UTC, running up to `durationS`, so a restart keeps the
+  timetable (a server back up inside an event's first 90 s still starts it; later, it waits for the next). Nobody
+  online: it doesn't run. Gang war, the district crackdown, street race night and the car soccer cup are in the table,
+  not on yet.
+  - *The armored truck run*, every 30 minutes (:10 and :40): an IronVault truck leaves a bank with two carbon-gold
+    crates for another bank 5,000-40,000 px away by road, on the same land. The routes are the bank pairs whose
+    shortest road route (forward Dijkstra on the lanes, one-way streets honoured - the route the truck's driver takes)
+    keeps 900 px clear of every new character's arrival station, used lot and steal alley, taken in turn by occurrence.
+    Two guards with pistols, nobody in the back, no squad car: one player can rob it. Built on the streets' armored
+    trucks (`streetlife.js` `armoredRun` / `startArmored` / `spotOn`). Officers and bounty hunters who stay with it
+    (700 px) for 45 s each get $900 when it gets there.
+  - *The dock shipment*, hourly (:35): four steel and two iron crates swung down onto Port Westport's quay beside the
+    moored container ship (its hull's props; by the marina on today's world) - first come, first served; the ones
+    nobody takes are cleared at the end.
+- **Announced:** a line in the city feed when one starts; the phone's City feed app opens with "Coming up" - every event
+  in the calendar with its countdown (tap: a waypoint); `calendar.eventCards(player, now)` gives the "What's next" app
+  its cards (`{ id, source: 'event', title, sub, etaS, pay, action: { type: 'waypoint', x, y } }`).
+- Guide: "Valuable crates", "The event calendar". Tests: `test/calendar.test.js` (the timetable and a restart, the
+  routes on the roads and clear of the FTUE places, the run and its gold on a far player's map, the escort's pay, the
+  dock shipment's crates and who sees them, the payouts delivered / lost / recovered, the stash).

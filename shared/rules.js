@@ -715,6 +715,39 @@ export const ARMORED_ESCORT = 0.4;        // an armored truck with a squad car e
 export const ARMORED_UNLOCK_S = 3;        // hold ACT this long at the back of a stopped armored truck to get it open
 export const ARMORED_ASSESS_S = [0.8, 1.6];   // an armored truck's guards, out of it, size things up this long (s) before they fire
 
+// ---- Extraction payouts and the event calendar (docs/PROGRESSION.md "Extraction and scheduled events"; the server:
+// server/systems/extract.js, server/systems/calendar.js) ----------------------------------------------------------------
+// The valuable crates (an event's, an armored truck's, a bank vault's) pay only when they're delivered - CRATE_PAY by tier
+// (1 wood, 2 steel, 3 iron, 4 carbon-gold) times where they go: a fence or the black market (`fence`, into the bank, the
+// Criminal EXP a $xpPer), the bank vault for an honest hauler not wanted (`vault`, clean cash, vaultSam Samaritan), an
+// officer or a licensed bounty hunter bringing a stolen one back to a bank or a police station (`recover`, recoverSam,
+// an officer recoverPts service points), or your own home's stash (kept there, up to stashMax, to take out again). A
+// crate lost on the way - in the water, blown up, left lying till it's cleared - is a payout lost. A carbon-gold crate on
+// the move shows on every player's map (position only); steel and iron show to the players in the chunks round it (the
+// net-culling's: their own and the eight about it).
+export const CRATE_PAY = [0, 300, 1200, 3200, 8000];
+export const EXTRACT = { fence: 1, vault: 0.7, recover: 0.8, xpPer: 100, vaultSam: 5, recoverSam: 20, recoverPts: 2, stashMax: 6, reach: 80 };
+// The event calendar: each on a wall-clock schedule (so a restart keeps it): it starts every periodS seconds, offsetS
+// past each period (from 1970-01-01 UTC), and runs up to durationS; on: built and running (the rest are listed, coming).
+// A server that comes up inside an event's first graceS seconds still starts it; later than that it waits for the next.
+export const EVENTS = [
+  { id: 'armored', title: 'Armored truck run', periodS: 1800, offsetS: 600, durationS: 600, on: true },
+  { id: 'dock', title: 'Dock shipment', periodS: 3600, offsetS: 2100, durationS: 900, on: true },
+  { id: 'gangwar', title: 'Gang war', periodS: 28800, offsetS: 14400, durationS: 900, on: false },
+  { id: 'crackdown', title: 'District crackdown', periodS: 86400, offsetS: 61200, durationS: 3600, on: false },
+  { id: 'racenight', title: 'Street race night', periodS: 86400, offsetS: 3600, durationS: 7200, on: false },
+  { id: 'soccercup', title: 'Car soccer cup', periodS: 604800, offsetS: 237600, durationS: 3600, on: false },
+];
+export const EVENT_GRACE_S = 90;
+// The armored truck run: `gold` carbon-gold crates from one bank to another runPx apart by road (on the same land),
+// its route clear of the new characters' arrival stations, used lots and steal alleys by ftuePx; `guards` guards with
+// pistols, no one in the back and no squad car - one player can take it. Officers and licensed bounty hunters within
+// guardPx of the truck for guardMinS of its run each get guardPay (an officer guardPts service points too) when it gets there.
+export const ARMORED_EVENT = { gold: 2, guards: 2, runPx: [5000, 40000], ftuePx: 900, guardPx: 700, guardMinS: 45, guardPay: 900, guardPts: 2 };
+// The dock shipment: a cargo ship unloads `steel` steel and `iron` iron crates on Port Westport's quay - first come,
+// first served; the ones nobody takes are cleared away when it's over
+export const DOCK_EVENT = { steel: 4, iron: 2 };
+
 // Vehicle damage (task #402; the owner: "weapons damage vehicles (strong ones significantly); lightsabers destroy a
 // vehicle in a few hits"). What a weapon does to a vehicle, as a multiple of what it does to a person (then divided by
 // the vehicle's toughness, VEHICLE_TOUGH): a pistol plinks, a rifle or a shotgun blast tears into it - a sedan takes

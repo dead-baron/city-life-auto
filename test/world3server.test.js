@@ -498,3 +498,28 @@ test('World v3\'s new chess tables: out in the open, nothing tall over them; Pin
   const A = M.bowling;
   assert.ok(A && A.big && A.lanes.length === BIG.lanes && A.kit && A.kit.length > 20, `Pinwheel Lanes' big hall (${A && A.lanes.length} lanes)`);
 });
+
+test('the event calendar on World v3: the armored truck run\'s routes on the roads, clear of the arrivals; the dock shipment on Port Westport\'s quay', async () => {
+  const calendar = await import('../server/systems/calendar.js');
+  const { ARMORED_EVENT } = await import('../shared/rules.js');
+  const w = new World(M, { npcBudget: 0, throwErrors: true });
+  const R = calendar.armoredRoutes(w), spots = calendar.ftueSpots(w), net = M.net;
+  assert.ok(R.length >= 4, `routes to take turns on (${R.length})`);
+  const ROADISH = new Set([T.ROAD, T.BRIDGE, T.LOT, T.PLAZA, T.SIDEWALK]);
+  for (const r of R) {
+    let n = r.n0, pts = 0, on = 0;
+    for (const eid of r.edges) {
+      assert.ok(net.nodes[n].links[eid] !== undefined); n = net.nodes[n].links[eid];
+      const e = net.edges[eid];
+      for (const pt of e.pts) {
+        for (const q of spots) assert.ok(Math.hypot(q.x - pt.x, q.y - pt.y) >= ARMORED_EVENT.ftuePx, `${r.from.label} -> ${r.to.label}: clear of the FTUE places`);
+        if (!e.lvl) { pts++; if (ROADISH.has(M.tileAtPx(pt.x, pt.y))) on++; }
+      }
+    }
+    assert.ok(on / Math.max(1, pts) > 0.97, `${r.from.label} -> ${r.to.label} on the roads (${on}/${pts})`);
+  }
+  const s = calendar.dockSite(w);
+  assert.equal(s.name, 'Port Westport', 'by the container ship');
+  const t = M.tileAtPx(s.x, s.y);
+  assert.ok(!PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP, 'on the quay');
+});

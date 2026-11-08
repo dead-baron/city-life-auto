@@ -13,7 +13,7 @@ import {
   GANG_JOIN_FEE, MAILJOB, CAB, BUSJOB, TOWJOB, MEDIC, FISHING, DEEPSEA_PAY, DEEPSEA_CATCH, PAINT_PRICE, HIDE_TIME_S, AMBULANCE_FEE,
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
-  PICK_PRICES, ASSAY_PAYS, ARCADE,
+  PICK_PRICES, ASSAY_PAYS, ARCADE, CRATE_PAY, EXTRACT, EVENTS, ARMORED_EVENT, DOCK_EVENT,
   LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON, REPUTATION,
 } from './rules.js';
 import { BOWL, BIG } from './bowling.js';
@@ -93,6 +93,8 @@ export function guideSections(map = null) {
       { id: 'truck', t: 'The work truck', b: `A job's vehicle is yours while it lasts. Bring it back when you're done for ${$(WORK_TRUCK_RETURN)} more.` },
       { id: 'fishpay', t: 'Fishing for money', b: `Your cooler holds ${FISHING.creel} fish; sell them at a bait shop or a fish market. A deep-sea charter pays ${$(DEEPSEA_PAY)} for ${DEEPSEA_CATCH} offshore fish.` },
       { id: 'hustle', t: 'A little hustle', b: `The black market buys stolen cargo and has the mail train job (${$(TRAIN_JOB_PAY)} when the strongbox is fenced). Robbing a till pays about ${$(ROB_TAKE.convenience)} a wad; a bank's vault up to ${$(HEIST.cash)}. All of it is a crime - see The law.` },
+      { id: 'valuables', t: 'Valuable crates', b: `The big money rides in the open. Steel, iron and carbon-gold crates - an armored truck's, a bank vault's, a ship's - pay only once they're delivered: up to ${$(CRATE_PAY[4])} for a carbon-gold case at a fence; ${pct(EXTRACT.vault)} of it, clean, handed in to a bank if you're not wanted; an officer or a bounty hunter bringing a stolen one back to a bank or a police station gets ${pct(EXTRACT.recover)}. Or carry it to your home and stash it (up to ${EXTRACT.stashMax}). Lose it on the way and the money's gone with it. Carbon-gold on the move shows on everyone's map.` },
+      { id: 'calendar', t: 'The event calendar', b: (() => { const ev = (id) => EVENTS.find((e) => e.id === id); return `Your phone's City feed lists what's coming up, with a countdown. Every ${mins(ev('armored').periodS)} an armored truck leaves a bank with ${ARMORED_EVENT.gold} carbon-gold crates for another bank across town: rob it, or guard it on duty or as a bounty hunter (${$(ARMORED_EVENT.guardPay)} if it gets there). Every ${ev('dock').periodS === 3600 ? 'hour' : mins(ev('dock').periodS)} a cargo ship unloads ${DOCK_EVENT.steel} steel and ${DOCK_EVENT.iron} iron crates at the port: first come, first served.`; })() },
     ] },
     { id: 'law', title: 'The law', blurb: 'What counts as a crime, the stars, and getting back up.', entries: [
       { id: 'witness', t: 'Crimes need a witness', b: 'A crime counts only if someone sees it: a passer-by, an officer or a camera. Turn on Safety mode in Settings and the game asks before you do something that would be one (press again to do it).' },

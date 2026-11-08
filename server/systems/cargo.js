@@ -14,7 +14,7 @@ import * as skills from './skills.js';
 
 const GRAV = 620;
 // the crates cleared away when left lying a while: a job's, contraband, explosives (off a traffic truck, task #398)
-const fades = (c) => c.job || c.contraband || c.label === explosions.EXPLOSIVES;
+const fades = (c) => c.job || c.contraband || c.extract || c.label === explosions.EXPLOSIVES;   // (an event's crate too: extract.js)
 
 export function slotWorld(v, i) {
   const [lx, ly] = v.def.slots[i];
@@ -165,6 +165,7 @@ export function pickUp(world, ped, c) {
   c.state = 'carried'; c.parent = ped.id; c.z = 10; c.vx = 0; c.vy = 0; c.vz = 0; c.expires = 0;
   ped.carrying = c.id;
   if (p && c.contraband) c.holder = p.pid;
+  if (p && c.extract) c.extract.by = p.pid;   // (whose it was when it's lost: extract.js)
   if (p) p.meDirty = true;
   if (ped.fishing && p) ped.fishing = null;
 }
