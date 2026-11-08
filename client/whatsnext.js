@@ -99,7 +99,7 @@ let view = 'cards', BD = null;
 export function opened() { view = 'cards'; }   // (the app opened again: its cards first - client/phone.js)
 function seasonLine(Z) {
   if (!Z) return '';
-  return `<div class="wn-ssn"><span><b>${esc(Z.name)}</b>${Z.theme ? ` · ${esc(Z.theme)}` : ''} · ${esc(Z.note)}</span><button data-nxview aria-label="${view === 'boards' ? 'Back to the cards' : 'The leaderboards'}">${view === 'boards' ? 'Back' : 'Boards'}</button></div>`;
+  return `<div class="wn-ssn"><span><b>${esc(Z.name)}</b>${Z.theme ? ` · ${esc(Z.theme)}` : ''} · ${esc(Z.note)}</span><button data-nxview aria-label="${view === 'boards' ? 'Back to the cards' : 'The leaderboards'}">${view === 'boards' ? 'Cards' : 'Boards'}</button></div>`;
 }
 function boardsHtml(B) {
   if (!B) return '<p class="ph-empty">Loading…</p>';
