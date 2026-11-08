@@ -8,12 +8,14 @@ import { MORTGAGE } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as mail from './mail.js';
+import * as careers from './careers.js';
 
 const money = (n) => `$${Math.round(n).toLocaleString()}`;
 
 // a home's terms: the deposit, what's owed after it (with the bank's share), each day's payment
-export function terms(h) {
-  const deposit = Math.round((h.price * MORTGAGE.deposit) / 100) * 100;
+// (prof: whose - a business rank's smaller deposit: careers.js loanDeposit)
+export function terms(h, prof = null) {
+  const deposit = Math.round((h.price * careers.loanDeposit(prof, MORTGAGE.deposit)) / 100) * 100;
   const owed = Math.round((h.price - deposit) * (1 + MORTGAGE.rate));
   return { deposit, owed, pay: Math.ceil(owed / MORTGAGE.days), days: MORTGAGE.days };
 }
@@ -24,9 +26,10 @@ export function buyWith(world, p, h, pay) {
   const prof = p.profile;
   if (!h) return 'No such place.';
   if (world.homeOwner.has(h.id)) return 'Someone already owns this place.';
-  if (Object.keys(loansOf(prof)).length >= MORTGAGE.max) return `The bank won't lend on more than ${MORTGAGE.max} homes at once - pay one off first.`;
+  const max = careers.loanMax(prof, MORTGAGE.max);   // (more at a business rank: careers.js)
+  if (Object.keys(loansOf(prof)).length >= max) return `The bank won't lend on more than ${max} homes at once - pay one off first.`;
   if (p.wanted > 0) return 'The bank won\'t lend to someone the police are after.';
-  const t = terms(h);
+  const t = terms(h, prof);
   if (!pay(p, t.deposit)) return `The deposit is ${money(t.deposit)} (cash + bank).`;
   (prof.loans ||= {})[h.id] = { owed: t.owed, pay: t.pay, day: world.day, missed: 0 };
   homes.claim(world, p, h, t.deposit);

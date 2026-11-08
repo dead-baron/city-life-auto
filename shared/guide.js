@@ -14,7 +14,7 @@ import {
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
   PICK_PRICES, ASSAY_PAYS, ARCADE,
-  LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON,
+  LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON, CAREERS, GOALS, NEXT, POLICE_VEHICLE_RANK,
 } from './rules.js';
 import { BOWL, BIG } from './bowling.js';
 import { CHESS } from './rules-leisure.js';
@@ -92,6 +92,9 @@ export function guideSections(map = null) {
       { id: 'yard', t: 'Ranger, the farm', b: `A park ranger earns ${$(Math.min(...Object.values(RANGER.pay)))}-${$(Math.max(...Object.values(RANGER.pay)))} a task; farm work ${$(FARM.pay.harvest)} a harvested row.` },
       { id: 'truck', t: 'The work truck', b: `A job's vehicle is yours while it lasts. Bring it back when you're done for ${$(WORK_TRUCK_RETURN)} more.` },
       { id: 'fishpay', t: 'Fishing for money', b: `Your cooler holds ${FISHING.creel} fish; sell them at a bait shop or a fish market. A deep-sea charter pays ${$(DEEPSEA_PAY)} for ${DEEPSEA_CATCH} offshore fish.` },
+      { id: 'careers', t: 'Careers and ranks', b: `Three careers, ${CAREERS.crime.ranks.length} ranks each, and one character can climb all three. Crime: ${CAREERS.crime.ranks[0].name} to ${CAREERS.crime.ranks[CAREERS.crime.ranks.length - 1].name}, from criminal XP. Police: ${CAREERS.police.ranks[0].name} to ${CAREERS.police.ranks[CAREERS.police.ranks.length - 1].name}, from arrests, bounties brought in alive, patrol calls and Samaritan points on duty. Business: ${CAREERS.business.ranks[0].name} to ${CAREERS.business.ranks[CAREERS.business.ranks.length - 1].name}, from clean money and property. Each rank-up brings a call from your contact and an unlock - better fence prices, the ${CAREERS.police.ranks[POLICE_VEHICLE_RANK.policeheli].name}'s police helicopter, bigger loans. Your phone's What's next app shows every bar.` },
+      { id: 'whatsnext', t: 'What\'s next', b: `Your phone's What's next app always has three ideas: one from your main career, one of today's goals and something happening near you - each with one button. Skip one ${NEXT.skipDrop === 2 ? 'twice' : `${NEXT.skipDrop} times`} and it's gone for the day; now and then it suggests something you've never tried. Tap a career to lead with it. A dot on the phone means new cards.` },
+      { id: 'goals', t: 'Daily and weekly goals', b: `Three goals a day - your main career's, any career's and a side activity's - paid in cash and career XP, ${$(GOALS.allCash)} more for all three, more again for each day of a streak (up to ${GOALS.streakMax} days; one missed day pauses it). One free reroll a day. One weekly goal for your main career pays a crate's worth and a cosmetic token. New goals every day at the same time for everyone.` },
       { id: 'hustle', t: 'A little hustle', b: `The black market buys stolen cargo and has the mail train job (${$(TRAIN_JOB_PAY)} when the strongbox is fenced). Robbing a till pays about ${$(ROB_TAKE.convenience)} a wad; a bank's vault up to ${$(HEIST.cash)}. All of it is a crime - see The law.` },
     ] },
     { id: 'law', title: 'The law', blurb: 'What counts as a crime, the stars, and getting back up.', entries: [
@@ -103,7 +106,7 @@ export function guideSections(map = null) {
       { id: 'down', t: 'Knocked down', b: `Down, you drop your cash and what you carry. You have ${RESPAWN_SECONDS} seconds to pick where to wake up - a hospital or a home of yours - or call for help and wait up to ${mins(HELP_S)} for a revive. An ambulance costs ${$(AMBULANCE_FEE)} if it brings you round.` },
       { id: 'hot', t: 'Hot money', b: `A robbery's takings go in a bag on your back. Bank them at an ATM at least ${meters(HOT_FAR_PX)} from where you took them (while no one's after you), stash them at a home, or sell them to a fence for a ${pct(HOT_FENCE_CUT)} cut.` },
       { id: 'robbery', t: 'Holding up a store', b: `Point a gun at a clerk and they hand over the till. A silent alarm trips ${ROB_ALARM_S.slice(0, -1).join(', ')} or ${ROB_ALARM_S[ROB_ALARM_S.length - 1]} seconds in - you never know which.` },
-      { id: 'badge', t: 'Joining the force', b: `With ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and no felonies, sign up at a police station: a uniform, a cruiser, patrol calls. Bounty hunting takes ${HUNTER_MIN_SAMARITAN}+ points.` },
+      { id: 'badge', t: 'Joining the force', b: `With ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and no felonies, sign up at a police station: a uniform, a cruiser, patrol calls. Bounty hunting takes ${HUNTER_MIN_SAMARITAN}+ points. A ${CAREERS.police.lockStars}-star record keeps the badge from you for ${CAREERS.police.lockMin} minutes, and a crime costs a cop police XP (more on duty).` },
       { id: 'leave', t: 'Logging off', b: `Close the game mid-fight and your body stays in the city ${GHOST_SECONDS} seconds. The pause menu's Log off counts you out safely.` },
     ] },
     { id: 'places', title: 'Places', blurb: map ? 'What the city has, and what each is for. Your phone\'s Places app finds the nearest.' : 'What each place is for. Your phone\'s Places app finds the nearest.', entries:

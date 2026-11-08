@@ -12,6 +12,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { payFrom } from './economy.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { store } from '../store.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const rng = mulberry32(1010);
 const HOOKS = ['none', 'a little left', 'a little right'], HOOK_DIR = [0, -1, 1];
@@ -167,6 +168,7 @@ function settle(world, li, G, R) {
   const after = nextBall(bw.rolls);
   const strike = n === 10 && before.up === 10, spare = !strike && n === before.up && before.ball > 0;
   const q = bw.pid && world.players.get(bw.pid);
+  if (q) { careers.note(world, q, 'bowl'); if (strike) careers.note(world, q, 'strike'); }
   const say = strike ? 'Strike!' : spare ? 'Spare!' : R.gutter ? 'Gutter ball.' : n ? `${n} pin${n > 1 ? 's' : ''}.` : 'Missed them all.';
   if (q) {
     world.notify(q, `${say} ${after.done ? `Game over: ${totalScore(bw.rolls)}.` : ''}`, strike || spare ? 'good' : 'info');

@@ -16,6 +16,7 @@ import * as events from './events.js';
 import * as trains from './trains.js';
 import { pointGrid } from '../pointgrid.js';
 import * as vehicles from './vehicles.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const rng = mulberry32(5150);
 
@@ -321,6 +322,7 @@ function fence(world, p, crate, mult) {
   const gain = Math.round(crate.value * mult);
   prof.bank += gain; // sales go straight to the bank
   prof.criminalExp += Math.round(gain / 100);
+  careers.dirty(p, gain); careers.note(world, p, 'fence', { n: gain });   // (crime money, not clean: careers.js)
   consume(world, p, crate);
   trains.onFenced(world, p, crate);
   world.notify(p, `The Exchange wired $${gain} to your bank. +${Math.round(gain / 100)} Criminal EXP.`, 'good');
@@ -411,6 +413,7 @@ export function deliverPoach(world, p, crate) {
   const prof = p.profile;
   prof.cash += crate.value;
   prof.criminalExp = (prof.criminalExp || 0) + 40;
+  careers.dirty(p, crate.value);
   consume(world, p, crate);
   world.notify(p, `The Den pays out: +$${crate.value} cash. No questions asked.`, 'good');
   if (p.job && p.job.type === 'poach') { p.job = null; p.meDirty = true; }

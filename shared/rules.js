@@ -14,10 +14,99 @@ export const SERVICE_AMMO = 75;               // service pistol rounds issued / 
 export const SERVICE_MAG = 15;
 export const CALL_COOLDOWN_S = 15;            // wait before dispatch replaces a lost cruiser
 export const SUBDUE_S = 6;                    // a floored suspect stays down this long for the cuffs
-export const POLICE_RANKS = [
-  { name: 'Officer', pts: 0 }, { name: 'Senior Officer', pts: 40 }, { name: 'Sergeant', pts: 120 },
-  { name: 'Lieutenant', pts: 260 }, { name: 'Captain', pts: 480 }, { name: 'Chief of Police', pts: 800 },
-];
+// Careers (docs/PROGRESSION.md, owner-approved 11-07; server/systems/careers.js): Crime, Police and Business, 8 ranks each.
+// Rank comes from career XP, from what the game already hands out - crime: criminal EXP (profile.criminalExp; fencing adds
+// fencePer of it per $ fenced); police: service points (profile.policePts: arrests, bounties brought in alive, patrol calls -
+// dispatchXp - and Samaritan points earned on duty, samPer each); business: clean money earned (cleanPer XP per $, from the
+// honest sources: careers.js CLEAN) and property bought (propPer XP per $ paid). xp: the rank's threshold. The old police
+// ranks (Officer 0 .. Chief of Police 800) are the first ranks here at the same points (careers.js LEGACY_POLICE): nobody
+// drops. Each rank's unlocks: { k, v?, name, soon? } - k the key the game asks (careers.js hasUnlock / unlockValue: the
+// highest v at or under your rank), soon: listed as coming in the app, not built yet. contact: who calls at a rank-up
+// (early: below lateFrom; late from it). The tension: a cop who commits a crime loses crimeLoss x its heat of police XP
+// (dutyLoss on duty); a wanted record of lockStars+ stars (the peak-wanted memory) younger than lockMin locks police duty.
+export const CAREERS = {
+  crime: { name: 'Crime', icon: 'rob', contact: ['Rosa Vance', '"Deacon" Marsh'], lateFrom: 4, fencePer: 0.01, ranks: [
+    { name: 'Corner Kid', xp: 0 },
+    { name: 'Hustler', xp: 50, unlock: [{ k: 'fenceCut', v: 0.03, name: 'Better fence prices: a 3-point smaller cut' }] },
+    { name: 'Booster', xp: 150, unlock: [{ k: 'armor', name: 'Black-market armor tiers', soon: 1 }] },
+    { name: 'Enforcer', xp: 400, unlock: [{ k: 'fenceCut', v: 0.06, name: 'Better fence prices: a 6-point smaller cut' }] },
+    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'crew', name: 'A crew of your own', soon: 1 }] },
+    { name: 'Captain', xp: 1500, unlock: [{ k: 'fenceCut', v: 0.1, name: 'Better fence prices: a 10-point smaller cut' }, { k: 'heists', name: 'Heist contracts', soon: 1 }] },
+    { name: 'Underboss', xp: 2500, unlock: [{ k: 'hideout', name: 'A hideout', soon: 1 }] },
+    { name: 'Kingpin', xp: 4000, unlock: [{ k: 'kingpin', name: 'The Kingpin title over your name', soon: 1 }] },
+  ] },
+  police: { name: 'Police', icon: 'siren', contact: ['Sgt. Dana Okafor', 'Captain Luis Reyes'], lateFrom: 4, samPer: 1, dispatchXp: 8, crimeLoss: 0.25, dutyLoss: 0.5, lockStars: 3, lockMin: 60, ranks: [
+    { name: 'Recruit', xp: 0, unlock: [{ k: 'pool', name: 'Cruisers, motorcycles and patrol boats' }] },
+    { name: 'Officer', xp: 40, unlock: [{ k: 'dispatch', name: 'Dispatch priority: reports stay on your map longer' }] },
+    { name: 'Corporal', xp: 120, unlock: [{ k: 'k9', name: 'A K9 partner', soon: 1 }] },
+    { name: 'Sergeant', xp: 260, unlock: [{ k: 'swat', name: 'The SWAT truck' }] },
+    { name: 'Detective', xp: 480, unlock: [{ k: 'tracking', name: 'Detective tracking tools', soon: 1 }] },
+    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'patrolPay', v: 0.25, name: 'Patrol calls pay 25% more' }] },
+    { name: 'Captain', xp: 1300, unlock: [{ k: 'heli', name: 'The police helicopter' }] },
+    { name: 'Chief', xp: 2000, unlock: [{ k: 'office', name: 'A station office', soon: 1 }] },
+  ] },
+  business: { name: 'Business', icon: 'money', contact: ['Mae Holloway', 'Victor Lin'], lateFrom: 4, cleanPer: 0.02, propPer: 0.004, ranks: [
+    { name: 'Vendor', xp: 0 },
+    { name: 'Shopkeeper', xp: 60, unlock: [{ k: 'deposit', v: 0.18, name: 'Bigger loans: an 18% mortgage deposit' }] },
+    { name: 'Owner', xp: 200, unlock: [{ k: 'commercial', name: 'Commercial property', soon: 1 }] },
+    { name: 'Proprietor', xp: 500, unlock: [{ k: 'loans', v: 1, name: 'Bigger loans: one more mortgage at once' }] },
+    { name: 'Landlord', xp: 1000, unlock: [{ k: 'second', name: 'A second and third business', soon: 1 }] },
+    { name: 'Investor', xp: 1800, unlock: [{ k: 'deposit', v: 0.12, name: 'Bigger loans: a 12% mortgage deposit' }] },
+    { name: 'Mogul', xp: 3000, unlock: [{ k: 'staff', name: 'Staff to run a shop while you\'re away', soon: 1 }] },
+    { name: 'Tycoon', xp: 5000, unlock: [{ k: 'loans', v: 2, name: 'Bigger loans: two more mortgages at once' }, { k: 'penthouse', name: 'A penthouse', soon: 1 }] },
+  ] },
+};
+export const CAREER_KEYS = ['crime', 'police', 'business'];
+// police vehicles by rank (careers.js vehicleRank): an officer on duty below the rank can't take one (anyone else stealing
+// it is the crime it always was)
+export const POLICE_VEHICLE_RANK = { swat: 3, policeheli: 6 };
+// (the police ladder as law.js has always read it: { name, pts })
+export const POLICE_RANKS = CAREERS.police.ranks.map((r) => ({ name: r.name, pts: r.xp }));
+
+// The "What's next" app (server/systems/whatsnext.js; docs/PROGRESSION.md): three cards - the main career's, a daily goal's,
+// a happening near you - ranked on the server by fit (w.fit: your main career 1, another career's half, anyone's fitAny),
+// distance (w.dist / (1 + d / distPx)), novelty (w.novel: never tried) and pay per time (w.pay x $ a minute / payMin, at
+// most 1). A card skipped skipDrop times is gone for the day; every novelEvery-th card shown is something never tried.
+// everyS: cards worked out again this often per player; nearPx: a happening this close counts as near.
+export const NEXT = { w: { fit: 1, dist: 0.8, novel: 0.5, pay: 0.6 }, fitAny: 0.6, distPx: 2400, payMin: 150, skipDrop: 2, novelEvery: 5, everyS: 8, nearPx: 3200 };
+
+// Daily and weekly goals (server/systems/goals.js; docs/PROGRESSION.md): 3 a day - your main career's, any career's, a side
+// activity's - and 1 a week (the main career's, scaled to rank). The day turns at resetUtcH:00 UTC for everyone; the week
+// on Monday's. A goal's n by rank tier ([ranks 0-2, 3-5, 6-7]); its reward cash + xp of its career (a side goal's: your
+// main career's). All 3 done: allCash / allXp more, x (1 + streakStep per day of the streak after the first, up to
+// streakMax days); a day missed pauses the streak (graceDays), another resets it. One free reroll a day (rerolls). The
+// weekly: a crate of your career's tier by rank (weekTier) - paid as the crate's cash (shared/items.js CRATE_TIERS' middle)
+// until crates can be delivered home - plus a cosmetic token and weekXp. Every goal has a solo route.
+//   ev: what counts (careers.js note); min: d.lb at least; job: the shift's job type; need: 'cop' (fit for duty or on it),
+//   'biz' (owns a business), 'notcop' (not yet fit for duty); place: the kinds of place its card points at.
+export const GOALS = {
+  resetUtcH: 9, rerolls: 1, allCash: 300, allXp: 20, streakStep: 0.15, streakMax: 7, graceDays: 1,
+  weekTier: [1, 1, 2, 2, 3, 3, 4, 4], weekXp: 60,
+  daily: [
+    { id: 'fence', c: 'crime', ev: 'fence', n: [1000, 2000, 4000], money: 1, t: 'Fence {n} of hot money', cash: 250, xp: 15, place: ['fence', 'pawn'] },
+    { id: 'hotcar', c: 'crime', ev: 'hotEscape', n: [1, 1, 2], t: 'Steal a car at 2 stars and lose them', cash: 300, xp: 20 },
+    { id: 'cleanrob', c: 'crime', ev: 'cleanRob', n: [1, 1, 2], t: 'Rob a store without hurting anyone', cash: 250, xp: 20, place: ['convenience', 'gasstation'] },
+    { id: 'thefts', c: 'crime', ev: 'theft', n: [2, 3, 5], t: 'Steal {n} vehicles', cash: 200, xp: 12 },
+    { id: 'arrests', c: 'police', need: 'cop', ev: 'arrest', n: [2, 3, 5], t: 'Make {n} arrests', cash: 250, xp: 15, place: ['police'] },
+    { id: 'patrols', c: 'police', need: 'cop', ev: 'dispatch', n: [1, 2, 3], t: 'Answer {n} patrol calls', cash: 250, xp: 15, place: ['police'] },
+    { id: 'samaritan', c: 'police', need: 'notcop', ev: 'sam', n: [10, 15, 25], t: 'Earn {n} Samaritan points (help people out)', cash: 150, xp: 10 },
+    { id: 'shifts', c: 'business', ev: 'shift', n: [2, 3, 4], t: 'Finish {n} job shifts', cash: 200, xp: 12 },
+    { id: 'forklift', c: 'business', ev: 'shift', job: 'forklift', n: [1, 1, 2], t: 'A forklift shift', cash: 200, xp: 12, place: ['warehouse'] },
+    { id: 'fishsale', c: 'business', ev: 'fishSold', n: [500, 1500, 3000], money: 1, t: 'Sell {n} of fish', cash: 200, xp: 12, place: ['fishmarket', 'tackle'] },
+    { id: 'clean', c: 'business', ev: 'clean', n: [1000, 2500, 5000], money: 1, t: 'Earn {n} in clean money', cash: 250, xp: 15 },
+    { id: 'takings', c: 'business', need: 'biz', ev: 'takings', n: [1, 2, 2], t: 'Collect takings from your business {n} times', cash: 200, xp: 15 },
+    { id: 'bigfish', c: 'side', ev: 'fish', min: 10, n: [1, 1, 1], t: 'Land a 10 lb+ fish', cash: 150, xp: 10, place: ['tackle', 'fishmarket'] },
+    { id: 'catch', c: 'side', ev: 'fish', n: [3, 5, 8], t: 'Catch {n} fish', cash: 120, xp: 8, place: ['tackle', 'fishmarket'] },
+    { id: 'soccer', c: 'side', ev: 'soccerWin', n: [1, 1, 2], t: 'Win a car soccer match', cash: 200, xp: 10, place: ['arena'] },
+    { id: 'strike', c: 'side', ev: 'strike', n: [1, 2, 3], t: 'Bowl {n} strikes', cash: 150, xp: 8, place: ['bowling'] },
+    { id: 'racewin', c: 'side', ev: 'raceWin', n: [1, 1, 2], t: 'Win a race', cash: 200, xp: 10, place: ['race'] },
+  ],
+  weekly: {
+    crime: { ev: 'xp:crime', n: [150, 400, 900], t: 'Earn {n} crime XP this week' },
+    police: { ev: 'xp:police', n: [120, 350, 800], t: 'Earn {n} police XP this week' },
+    business: { ev: 'xp:business', n: [150, 400, 900], t: 'Earn {n} business XP this week' },
+  },
+};
 
 // The starter car (server/systems/starter.js; the owner, 11-03), kept for the players who have one (the owner, 11-06: the
 // first car is earned now - FTUE below; a new character gets none): a rusty compact registered to you, slow, unsellable and

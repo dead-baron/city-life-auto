@@ -380,7 +380,7 @@ function menuOf(world, p, h, what) {
     const L = planFor(h), beds = L.pieces.filter((q) => q.use === 'bed').length;
     const opts = [
       { id: 'hi:tbuy', label: `Buy ${h.name}`, price: h.price, note: `wallet ${money(prof.cash)} · bank ${money(prof.bank)}` },
-      { id: 'hi:tmort', label: `Buy it with a mortgage: ${mortgage.terms(h).days} payments of ${money(mortgage.terms(h).pay)} a day`, price: mortgage.terms(h).deposit, note: 'deposit' },
+      { id: 'hi:tmort', label: `Buy it with a mortgage: ${mortgage.terms(h, p.profile).days} payments of ${money(mortgage.terms(h, p.profile).pay)} a day`, price: mortgage.terms(h, p.profile).deposit, note: 'deposit' },
       { id: 'hi:tout', label: 'Step outside' },
       { id: 'close', label: 'Keep looking' },
     ];
@@ -395,7 +395,7 @@ function menuOf(world, p, h, what) {
       const f = homes.homeById(world, p.lobbyPick);
       if (!f || world.homeOwner.has(f.id)) { title = 'Sold'; sub = 'Someone has just bought it.'; }
       else {
-        const t = mortgage.terms(f), beds = bedsIn(f);
+        const t = mortgage.terms(f, p.profile), beds = bedsIn(f);
         title = `${f.name} - for sale`;
         sub = `A ${f.what || 'unit'}${(f.floor || 1) > 1 ? ` on floor ${f.floor}` : ' on the ground floor'}, ${beds} bedroom${beds === 1 ? '' : 's'}, parking out front for ${f.slots}. Wallet ${money(prof.cash)} · bank ${money(prof.bank)}.`;
         opts.push({ id: 'hi:ltour', label: 'Take a look inside', note: 'walk around it first' });

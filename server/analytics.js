@@ -162,6 +162,7 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     else if (kind === 'purchase') { bump(d.act, 'buy:' + data.what); if (p && p.acct) ftue(p, p.acct, 'first_purchase'); }
     else if (kind === 'error') bump(d.errors, data.where || 'page');
     else if (kind === 'flag') bump(d.flags, data.kind);
+    else if (kind === 'rank') bump(d.act, `rank:${data.career}:${data.rank}`);   // (a career rank-up: server/systems/careers.js)
     else if (kind === 'chat') { bump(d.act, 'chat:' + data.ch); if (p && p.acct) ftue(p, p.acct, 'first_chat'); }
   }
   function perf(r) {

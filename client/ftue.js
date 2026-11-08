@@ -40,8 +40,9 @@ export function init(ctx) {
     const el = $('ftue-line');
     if (el.classList.contains('faded')) return;
     if (e.target.closest('.fl-x')) { hideLine(); return; }
-    const sec = el.dataset.guide;
+    const sec = el.dataset.guide, app = el.dataset.app;
     if (sec && el.classList.contains('tip')) { C.openGuide(sec); hideLine(); }
+    else if (app && el.classList.contains('tip') && C.openApp) { C.openApp(app); hideLine(); }
   });
 }
 
@@ -50,6 +51,7 @@ export function onMsg(m) {
   if (m.a === 'pick') pick(m);
   else if (m.a === 'arrive') arrive(m);
   else if (m.a === 'end') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('cash', 0.8); }
+  else if (m.a === 'rank') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('good', 0.9); }   // (a career rank-up's title card: server careers.js rankUp)
   else if (m.a === 'tip') tip(m);
   else if (m.a === 'mark') { const w = { x: m.x, y: m.y, label: m.label }, h = C.hud(); C.S.waypoint = w; if (h) h.waypoint = w; }   // (just let me roam: the used lot as your waypoint)
 }
@@ -61,7 +63,7 @@ let held = null, heldT = 0;
 const isDown = () => !!(C && C.S.me && C.S.me.dead);
 const veiled = () => { const v = $('veil'); return !!(v && v.classList.contains('on')); };
 function tip(m) {
-  if (m.id === 'down' || (!isDown() && !veiled())) { held = null; showLine(m.ctl, m.text, m.sec, `tip:${m.id}`); return; }
+  if (m.id === 'down' || (!isDown() && !veiled())) { held = null; showLine(m.ctl, m.text, m.sec, `tip:${m.id}`, m.app); return; }
   held = { m, down: isDown() };
   clearInterval(heldT); heldT = setInterval(heldTick, 500);
 }
@@ -71,7 +73,7 @@ function heldTick() {
   if (veiled()) return;
   const { m, down } = held;
   held = null; clearInterval(heldT);
-  if (!(down && m.id === 'hurt')) showLine(m.ctl, m.text, m.sec, `tip:${m.id}`);
+  if (!(down && m.id === 'hurt')) showLine(m.ctl, m.text, m.sec, `tip:${m.id}`, m.app);
 }
 // the self record: the step's line when the step changes; a tip on screen goes as you go down
 export function onMe(me) {
@@ -85,14 +87,16 @@ export function onMe(me) {
 }
 
 // ---- the line: [glyph] words (· More in your Guide · x), then it fades ----------------------------------------------------
-function showLine(ctl, text, sec, sig) {
+// (app: a phone app the line opens - the "What's next" line, once a session: server whatsnext.js)
+function showLine(ctl, text, sec, sig, app = null) {
   const el = $('ftue-line');
   if (!el) return;
   lineSig = sig;
-  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? '<button class="fl-more">More in your Guide</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : ''}`;
+  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? '<button class="fl-more">More in your Guide</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : app ? '<button class="fl-more">Open</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : ''}`;
   if (sec) el.dataset.guide = sec; else delete el.dataset.guide;
+  if (app) el.dataset.app = app; else delete el.dataset.app;
   el.classList.remove('off', 'faded');
-  el.classList.toggle('tip', !!sec);
+  el.classList.toggle('tip', !!(sec || app));
   void el.offsetWidth;
   el.classList.add('in');
   clearTimeout(lineT);

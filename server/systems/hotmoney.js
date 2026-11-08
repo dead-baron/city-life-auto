@@ -10,7 +10,9 @@
 // anyone can take it. Booked into a cell (custody.js), it's confiscated. A second robbery adds to the bag and moves its
 // "stolen at" spot to the new one.
 import { HOT_FAR_PX, HOT_FENCE_CUT, HOT_PAWN_CUT, PACK_LIFE_S } from '../../shared/rules.js';
+import { CAREERS } from '../../shared/rules.js';
 import { store } from '../store.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 export const hotOf = (p) => Math.max(0, Math.round((p && p.profile && p.profile.hot) || 0));
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -56,7 +58,7 @@ function toBank(world, p, where) {
   if (where) world.emit(where.x, where.y, { e: 'deposit', x: where.x, y: where.y, n });
   world.notify(p, `${where && where.kind === 'atm' ? 'ATM' : 'Bank'}: the hot money went in clean - ${money(n)} deposited, bank ${money(p.profile.bank)}.`, 'good');
 }
-const cutAt = (poi) => (poi.kind === 'pawn' ? HOT_PAWN_CUT : HOT_FENCE_CUT);
+const cutAt = (poi, p) => careers.fenceCut(p, poi.kind === 'pawn' ? HOT_PAWN_CUT : HOT_FENCE_CUT);   // (a better rate by crime rank: careers.js)
 
 // The options at a counter (economy.js buildMenu): the bank and the ATMs, your homes, the fence and the pawn shops
 export function menuOpts(world, p, poi, opts) {
@@ -71,7 +73,7 @@ export function menuOpts(world, p, poi, opts) {
     const h = world.map.homes[poi.home];
     if ((h && world.homeOwner.get(h.id) === p.pid) || (us && us.some((id) => world.homeOwner.get(id) === p.pid))) opts.push({ id: 'hot:stash', label: `Stash the hot money (${money(n)})`, note: 'comes out clean' });
   } else if (k === 'fence' || k === 'pawn') {
-    const cut = cutAt(poi);
+    const cut = cutAt(poi, p);
     opts.push({ id: 'hot:fence', label: `${k === 'fence' ? 'Fence' : 'Pawn'} the hot money (${money(n)})`, price: -Math.round(n * (1 - cut)), note: `${Math.round(cut * 100)}% cut` });
   }
 }
@@ -93,9 +95,11 @@ export function execute(world, p, poi, what) {
     return null;
   }
   if (what === 'fence') {
-    const cut = cutAt(poi), get = Math.round(n * (1 - cut));
+    const cut = cutAt(poi, p), get = Math.round(n * (1 - cut));
     prof.cash += get;
     empty(world, p);
+    prof.criminalExp = (prof.criminalExp || 0) + Math.round(get * CAREERS.crime.fencePer);   // (fencing is crime XP - careers.js)
+    careers.note(world, p, 'fence', { n: get });
     world.notify(p, `${poi.kind === 'fence' ? 'The fence' : 'The pawn shop'} took the hot money: ${money(get)} clean (a ${Math.round(cut * 100)}% cut).`, 'good');
     return null;
   }

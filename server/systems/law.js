@@ -15,6 +15,7 @@ import * as bounties from './bounties.js';
 import * as custody from './custody.js';
 import * as cells from './cells.js';
 import * as biz from './biz.js';
+import * as careers from './careers.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
@@ -105,8 +106,9 @@ export function misconductFor(p) {
   return { n: list.length, max: MISCONDUCT_GRACE, reset: Math.ceil((list[0] + MISCONDUCT_RESET_MS - Date.now()) / 1000) };
 }
 
-// Police career: rank comes from service points (arrests, bounties, stops). Shown in the HUD;
-// every rank gets the dispatch map, higher ranks see crime reports for longer.
+// Police career (the police ladder of careers.js - shared/rules.js CAREERS.police): rank comes from service points
+// (arrests, bounties, stops, patrol calls, Samaritan points on duty). Shown in the HUD; every rank gets the dispatch map,
+// higher ranks see crime reports for longer. A promotion is the careers' moment (careers.js rankUp: the call, the card).
 export function policeRank(prof) {
   const pts = prof.policePts || 0;
   let r = 0;
@@ -114,11 +116,9 @@ export function policeRank(prof) {
   return r;
 }
 export function addPolicePts(world, p, n) {
-  const before = policeRank(p.profile);
   p.profile.policePts = (p.profile.policePts || 0) + n;
-  const after = policeRank(p.profile);
-  if (after > before) world.notify(p, `PROMOTED to ${POLICE_RANKS[after].name}!`, 'good');
   p.meDirty = true;
+  void world;
 }
 
 // Dispatch log: every crime that someone actually saw or reported (witness, cop or camera).
@@ -373,6 +373,7 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   const imm = immune(world, ped, victim);
   if (imm === 'turf') npc.gangAlert(world, ped);
   if (imm) return;
+  careers.onCrime(world, p, type, spec);   // (a cop's police XP, a stolen car's getaway, a clean robbery spoilt - careers.js)
 
   if (p.badge && type !== 'brandish') {
     // enforcer code of conduct: a few slips are forgiven (they expire after a while), then the
@@ -746,6 +747,7 @@ export function arrest(world, cop, target) {
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
       if (cop.player.badge) addPolicePts(world, cop.player, 10 * stars);
+      careers.note(world, cop.player, 'arrest', { stars });
       world.notify(cop.player, `Arrested ${t.name}! +$${reward}, +${5 * stars} Samaritan`, 'good');
       cop.player.meDirty = true;
     }
@@ -761,6 +763,7 @@ export function arrest(world, cop, target) {
     if (cop && cop.player) {
       cop.player.profile.cash += 60; cop.player.profile.samaritan += 4;
       if (cop.player.badge) addPolicePts(world, cop.player, 4);
+      careers.note(world, cop.player, 'arrest', { stars: 0 });
       world.notify(cop.player, 'Suspect taken into custody. +$60, +4 Samaritan', 'good');
       cop.player.meDirty = true;
     }
@@ -784,6 +787,8 @@ export function goOnDuty(world, p) {
   if (p.badge) return 'You are already on duty.';
   if (p.wanted > 0) return 'Wanted suspects cannot pick up a badge.';
   if (Date.now() < (prof.firedUntil || 0)) return 'You were fired recently. Come back later.';
+  const lock = careers.dutyLock(p);   // (a fresh record of 3+ stars: crime and the badge pull against each other - careers.js)
+  if (lock) return lock;
   if (prof.felonies > 0) return `Applicants need an unblemished felony record (you have ${prof.felonies}).`;
   if (prof.gang) return 'Known Syndicate members can\'t join the force - leave the gang first.';
   if (prof.samaritan < ENFORCER_MIN_SAMARITAN && !p.dev) return `You need ${ENFORCER_MIN_SAMARITAN} Good Samaritan Points (you have ${prof.samaritan}).`;
@@ -792,13 +797,14 @@ export function goOnDuty(world, p) {
   p.civvies = p.ped.app;
   // the uniform by rank (CC5), on their own body, face and hair (shared/look.js policeLook)
   const mine = prof.look ? decodeLook(prof.look) : null;
-  p.ped.app = mine ? lookToApp(policeLook(mine, policeRank(prof))) : { ...p.ped.app, lk: undefined, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
+  p.ped.app = mine ? lookToApp(policeLook(mine, careers.uniformRank(prof))) : { ...p.ped.app, lk: undefined, t: 6, tc: '#1d2a5a', tc2: '#f2c21b', l: '#1d2a5a', ht: 1, htc: '#1d2a5a' };
   p.ped.appVer = (p.ped.appVer || 0) + 1;
   prof.weapons.taser = prof.weapons.taser ?? 0;
   prof.weapons.baton = prof.weapons.baton ?? 0;
   prof.weapons.spikes = prof.weapons.spikes ?? 0;
   if (prof.weapons.service === undefined || prof.weapons.service < SERVICE_AMMO) { prof.weapons.service = SERVICE_AMMO; p.ped.mag.service = SERVICE_MAG; }
   p.ped.weapon = 'service';
+  careers.note(world, p, 'duty');
   p.meDirty = true;
   store.touch();
   return null;

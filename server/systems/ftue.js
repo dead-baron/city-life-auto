@@ -358,6 +358,7 @@ function finish(world, p, how) {
   reveal(p);
   firstcar.dropMark(world, p);   // (a car still waiting in the alley: taken away)
   f.st = 'done'; f.how = how; f.replay = 0; stamp(f, 'done');
+  p.nxDirty = true;   // (the "What's next" app takes over: whatsnext.js)
   p.ftueTipAt = world.time;   // (the first-time moments wait their gap after it)
   if (how === 'skip') track(world, p, 'ftue_skip');
   store.touch(); p.meDirty = true;

@@ -23,6 +23,7 @@ import * as events from './events.js';
 import * as homes from './homes.js';
 import * as crews from './crews.js';
 import { CREW } from '../../shared/rules.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const SELF_DEFENCE_S = 60;   // hit by the one you killed this recently, and you didn't start it: self-defence (as law.js immune)
 const FIGHT_S = 300;         // ...you started it if you threw the first blow this recently
@@ -168,6 +169,7 @@ export function collect(world, h, t, how) {
   for (const q of crew) { q.profile.bank += cut; q.meDirty = true; world.notify(q, `Your crew's cut of the bounty on ${t.name}: +${money(cut)} to your bank.`, 'good'); }
   h.profile.samaritan += CLAIM_SAM;
   if (h.badge) law.addPolicePts(world, h, 15);
+  if (how !== 'kill') careers.note(world, h, 'bounty');
   const them = how === 'arrest' ? 'arrested them' : how === 'detain' ? 'brought them in alive' : 'took them out';
   const did = how === 'arrest' ? `arrested ${t.name}` : how === 'detain' ? `brought ${t.name} in` : `took out ${t.name}`;
   world.notify(h, `Bounty on ${t.name} collected: +${money(paid - cut * crew.length)} to your bank${crew.length ? ` (split ${crew.length + 1} ways with your crew)` : ''}, +${CLAIM_SAM} Samaritan.`, 'good');

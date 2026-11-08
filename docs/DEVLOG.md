@@ -21973,3 +21973,46 @@ The game against the machine is the old one, played on the page as before (stuck
   the server's at the same step. A game plays to seven.
 - Guide: "Air hockey" and "Playing other people". main.js routes `hockey` words to the screen (4 bytes); the rest loads
   with the screen.
+
+## 2026-11-07 - Careers and ranks, the "What's next" app, daily and weekly goals (docs/PROGRESSION.md steps 1-2)
+
+The owner-approved progression plan's first two steps (docs/PROGRESSION.md), built from what the game already hands out.
+- **Careers and ranks** (`server/systems/careers.js`; the tables in `shared/rules.js CAREERS`): Crime (Corner Kid ..
+  Kingpin), Police (Recruit .. Chief), Business (Vendor .. Tycoon), 8 ranks each. Crime XP is criminal EXP (fencing hot
+  money now adds some); police XP is the service points (arrests, bounties alive, patrol calls - now worth XP too - and
+  Samaritan points earned on duty); business XP is clean money (the honest sources' takings, settled by
+  `server/moneywatch.js` through `launch.js onMoney`) and property bought. The old police ladder (Officer .. Chief of
+  Police) is the new one's first ranks at the same points: a profile from before keeps its rank and its uniform
+  (`careers.migrate` on joining; `LEGACY_POLICE`). `law.js` reads the new ladder (`POLICE_RANKS` is derived from it).
+- **Rank-ups are a moment**: a call from the career's contact (Rosa Vance / "Deacon" Marsh, Sgt. Dana Okafor / Captain
+  Luis Reyes, Mae Holloway / Victor Lin: a note, kept in the app) and a title card (`{ t: 'ftue', a: 'rank' }`, the HUD's
+  moment) with what it unlocks.
+- **Unlocks** through one API (`careerRank`, `hasUnlock`, `unlockValue`): wired now - a smaller fence cut (Hustler,
+  Enforcer, Captain), dispatch reports kept longer by rank, the SWAT truck (Sergeant) and the police helicopter (Captain)
+  for officers on duty (`vehicles.js tryEnter`), patrol calls paying more (Lieutenant), a smaller mortgage deposit and
+  more mortgages at once (Shopkeeper, Proprietor, Investor, Tycoon: `mortgage.terms(h, prof)`). Listed as coming in the
+  app, not built: armor tiers, an own crew, heist contracts, a hideout, the Kingpin title, K9, tracking tools, a station
+  office, commercial property, more businesses, staff, a penthouse.
+- **Crime against the badge**: a crime costs a cop police XP (a quarter of its heat off duty, half on); a 3-star record
+  (the peak-wanted memory) younger than an hour keeps the badge from you (`law.goOnDuty`).
+- **The "What's next" app** (the phone's first app; server `whatsnext.js`, page `client/whatsnext.js`, loaded when it
+  opens, its styles with it): the three careers' rank bars and next unlocks (tap one to lead with it), then three cards -
+  the main career's, a daily goal's, a happening near you - each with one button (waypoint, call the contact, accept),
+  ranked on the server by fit, distance, novelty and pay per time (`NEXT`). A card skipped twice is gone for the day;
+  every fifth card shown is something never tried. Cards come from a registry (`registerCardSource(name, fn, { slot })`;
+  the card's shape is documented in the module's header) so later features plug in - the event calendar wires in as
+  `registerCardSource('events', (world, p, now) => eventCards(p, now), { slot: 'near' })`. On the HUD: a dot on the
+  phone's button (and the app's tile) when the cards change (`me.nx`, the cards' signature) and, once a session, one
+  fading line (the first-time line, tap it to open the app). It takes over when the first-time experience is done.
+- **Daily and weekly goals** (`server/systems/goals.js`, `GOALS`): three a day (main career, any career, side activity),
+  sized by rank, one free reroll, cash and career XP each, a bonus for all three that grows with a streak up to day 7
+  (a missed day pauses it, a second resets it). The weekly is the main career's XP target, paid as the cash of a crate
+  of the career's tier (no crate delivery home exists yet) plus a cosmetic token (counted). Every goal is soloable: police
+  goals only for someone fit for duty (the others get "earn Samaritan points" toward it), takings only with a business.
+  The day turns at 09:00 UTC for everyone. Counted from progress events, one line at each emit point (`careers.note`):
+  fencing, thefts, a stolen car got away with at 2 stars, a robbery with nobody hurt, arrests, bounties, patrol calls,
+  job shifts (noticed from the job ending with pay), fish caught and sold, takings, strikes, car soccer and race wins.
+- Persisted on the profile (`profile.careers`, `profile.goals`; old saves load - missing fields are made). Guide: Careers
+  and ranks, What's next, Daily and weekly goals; Joining the force says what locks it. Tests: `test/careers.test.js`,
+  `test/whatsnext.test.js`, `test/goals.test.js`. No world or art rekey; the page's code is unchanged in size but for
+  the dot (the app and its styles load with the phone).
