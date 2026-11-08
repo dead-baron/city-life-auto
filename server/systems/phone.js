@@ -26,6 +26,9 @@ import * as paramedic from './paramedic.js';
 import { FARM } from '../../shared/rules.js';
 import { FIRE, MEDIC } from '../../shared/rules.js';
 import * as realestate from './realestate.js';
+import * as upkeep from './upkeep.js';
+import * as insurance from './insurance.js';
+import { payFrom } from './economy.js';   // (cash first, then the bank: the Homes app's payments)
 import * as taxijob from './taxijob.js';
 import * as busjob from './busjob.js';
 import * as towjob from './towjob.js';
@@ -303,6 +306,12 @@ export function handle(world, p, msg) {
   if (a === 'btake') { const err = bounties.take(world, p, msg.id); return { ...bounties.boardFor(world, p), err: err || null }; }
   if (a === 'bplace') { const err = bounties.place(world, p, String(msg.pid || ''), Number(msg.amt)); return { ...bounties.boardFor(world, p), err: err || null, ok: !err }; }
   if (a === 'homes') return realestate.listings(world, p, { sort: String(msg.sort || ''), kind: String(msg.kind || '') });   // the real-estate app (H65: realestate.js)
+  if (a === 'upkeep' || a === 'insure' || a === 'claim') {   // the Homes app: pay the upkeep owed, insure a vehicle, pay a held one's claim (upkeep.js, insurance.js)
+    const i = Number(msg.i) | 0;
+    const err = a === 'upkeep' ? upkeep.payAll(world, p, payFrom) : a === 'insure' ? insurance.buy(world, p, i, payFrom) : insurance.payHold(world, p, i, payFrom);
+    if (err) world.notify(p, err, 'warn');
+    return realestate.listings(world, p, { sort: String(msg.sort || ''), kind: String(msg.kind || ''), err });
+  }
   return null;
 }
 

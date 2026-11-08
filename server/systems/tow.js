@@ -28,6 +28,7 @@ import { kerbFor, planTo, follow, halt, exitNode, sinceProgress } from './kerbdr
 import { trimBehind } from './custody.js';
 import { planRoute } from './traffic.js';
 import { store } from '../store.js';
+import * as insurance from './insurance.js';   // (a player's own car impounded: insured or gone)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const MAX_TRUCKS = 2;
@@ -369,10 +370,13 @@ function impound(world, v) {
   const where = world.map.districtAt(v.x, v.y)?.name || 'the street';
   for (const p of world.players.values()) {
     if (v.owner && v.owner === p.pid) {
-      const fee = Math.min(TOW_FEE, Math.max(0, p.profile.bank));
-      p.profile.bank -= fee;
-      world.notify(p, `🚛 Your ${v.def.name} was towed from ${where} - left blocking traffic. It's back in your garage; the tow cost $${fee} from your bank.`, 'warn');
-      p.meDirty = true; store.touch();
+      // insured (or the goodwill, once): back in your garage for the tow fee; uninsured: gone (insurance.js)
+      if (!insurance.impounded(world, p, v, where)) {   // (not one in your garage list - the starter car: as before)
+        const fee = Math.min(TOW_FEE, Math.max(0, p.profile.bank));
+        p.profile.bank -= fee;
+        world.notify(p, `🚛 Your ${v.def.name} was towed from ${where} - left blocking traffic. It's back in your garage; the tow cost $${fee} from your bank.`, 'warn');
+        p.meDirty = true; store.touch();
+      }
     } else if (p.lastVehicle === v.id) {
       world.notify(p, `🚛 The ${v.def.name} you left in ${where} was blocking traffic - it's been towed away.`, 'info');
       p.lastVehicle = 0; p.meDirty = true;

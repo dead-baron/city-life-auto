@@ -19,6 +19,8 @@ import * as ems from './ems.js';
 import { inWater } from './rescue.js';
 import { sync as syncBounty } from './bounties.js';
 import * as crews from './crews.js';
+import { fee as rankFee } from './careers.js';
+const ambFee = (p) => rankFee(p, AMBULANCE_FEE);   // (the ambulance's fee by rank: careers.fee)
 
 const REACH = 48;      // stand this close to a downed player to work on them
 const KEEP_REACH = 70; // ...and don't wander further than this while you do
@@ -80,7 +82,7 @@ export function callAmbulance(world, p) {
   if (!isDowned(ped)) return;
   if (p.amb) { world.notify(p, `${p.amb.boat ? 'A rescue boat' : 'An ambulance'} is already on its way.`, 'info'); return; }
   if (p.ambUsed) { world.notify(p, 'You can only call one ambulance each time you go down.', 'warn'); return; }
-  if (p.profile.bank < AMBULANCE_FEE) { world.notify(p, `An ambulance costs $${AMBULANCE_FEE} from your bank - you only have $${p.profile.bank} banked.`, 'bad'); return; }
+  if (p.profile.bank < ambFee(p)) { world.notify(p, `An ambulance costs $${ambFee(p)} from your bank - you only have $${p.profile.bank} banked.`, 'bad'); return; }
   const v = ems.dispatchPaid(world, ped, p.pid);
   if (!v) { world.notify(p, inWater(world.map, ped) ? 'No rescue boat can reach you out here.' : 'No ambulance can reach you from here right now.', 'bad'); return; }
   if (!p.downHelp) callHelp(world, p);   // (an ambulance on its way is a call for help too: anyone near can still get to you first)
@@ -88,8 +90,8 @@ export function callAmbulance(world, p) {
   p.amb = { vehId: v.id, boat };
   p.ambUsed = true;
   p.respawnAt = now + HELP_S; // the clock starts again while it drives over
-  world.notify(p, boat ? `🚤 A rescue boat is on its way from ${v.ai.from} (watch for it on your map). $${AMBULANCE_FEE} comes from your bank only if they get you out.`
-    : `🚑 Ambulance on its way (watch for it on your map). $${AMBULANCE_FEE} comes from your bank only if they revive you.`, 'good');
+  world.notify(p, boat ? `🚤 A rescue boat is on its way from ${v.ai.from} (watch for it on your map). $${ambFee(p)} comes from your bank only if they get you out.`
+    : `🚑 Ambulance on its way (watch for it on your map). $${ambFee(p)} comes from your bank only if they revive you.`, 'good');
   p.meDirty = true;
 }
 
@@ -146,7 +148,7 @@ export function revive(world, ped, opts = {}) {
   const p = ped.player, now = world.time;
   if (!isDowned(ped)) return false;
   if (opts.ambulance) {
-    p.profile.bank = Math.max(0, p.profile.bank - AMBULANCE_FEE);
+    p.profile.bank = Math.max(0, p.profile.bank - ambFee(p));
     p.amb = null;
   }
   clearDown(world, p);
@@ -161,8 +163,8 @@ export function revive(world, ped, opts = {}) {
   if (p.downWanted) { p.heat = p.downWanted.heat; p.wanted = p.downWanted.wanted; p.cityBounty = p.downWanted.city || 0; p.downWanted = null; syncBounty(world, p); }
   world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
   const by = opts.by && opts.by.player;
-  world.notify(p, opts.boat ? `The rescue crew pulled you out of the water and patched you up. $${AMBULANCE_FEE} from your bank. They'll set you ashore - your things are in your backpack where you went down.`
-    : opts.ambulance ? `Paramedics got you back on your feet. $${AMBULANCE_FEE} from your bank. Your things are in your backpack beside you.`
+  world.notify(p, opts.boat ? `The rescue crew pulled you out of the water and patched you up. $${ambFee(p)} from your bank. They'll set you ashore - your things are in your backpack where you went down.`
+    : opts.ambulance ? `Paramedics got you back on your feet. $${ambFee(p)} from your bank. Your things are in your backpack beside you.`
     : opts.kit ? `${by ? by.name : 'Someone'} revived you with a Revive Kit. Your things are in your backpack beside you.`
       : `${by ? by.name : 'Someone'} got you back on your feet - you're hurt and bleeding: take it slow for a few seconds. Your things are in your backpack beside you.`, 'good');
   if (by) {
@@ -276,7 +278,7 @@ export function downState(world, p) {
   const v = p.amb && world.get(p.amb.vehId);
   return {
     help: !!p.downHelp, finished: !!p.finished, amb: v ? { x: Math.round(v.x), y: Math.round(v.y) } : null, ambUsed: !!p.ambUsed,
-    canAmb: !p.amb && !p.ambUsed && p.profile.bank >= AMBULANCE_FEE, fee: AMBULANCE_FEE,
+    canAmb: !p.amb && !p.ambUsed && p.profile.bank >= ambFee(p), fee: ambFee(p),
     ...(inWater(world.map, ped) ? { wet: 1 } : null),   // (down in the water: the call brings the rescue boat - task #409)
   };
 }

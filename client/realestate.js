@@ -2,6 +2,8 @@
 // (the district and how well-to-do it is), the price, the kind, the bedrooms, the parking, the yard, a picture of the
 // plan - a waypoint to each, and your own homes with what they're worth. Loaded the first time the app opens (the
 // page's start-up code only has its button: client/phone.js), so it costs the page nothing until then.
+// Also each place's upkeep (a day's, what's unpaid, shabby - server upkeep.js) with a button to pay it, and your vehicles'
+// insurance (insure one, pay a held one's claim - server insurance.js).
 import { layout } from '../shared/homelayout.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -37,6 +39,8 @@ function planPic(plan, tier) {
   return url;
 }
 
+// a place's upkeep line: a day's, what's unpaid, shabby (server upkeep.js rowInfo)
+const upLine = (u) => (u ? `<small${u.due ? ' class="re-bad"' : ''}>upkeep ${money(u.day)} a day${u.due ? ` · ${money(u.due)} unpaid (${u.n} day${u.n === 1 ? '' : 's'})${u.shab ? ' · looking shabby' : ''}` : ''}</small>` : '');
 let style = false;
 function addStyle() {
   if (style) return;
@@ -44,7 +48,7 @@ function addStyle() {
   const st = document.createElement('style');
   st.textContent = '.re-chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.re-chips button{padding:3px 8px;border-radius:10px;border:1px solid #4a5568;background:#1c2230;color:#cbd5e1;font-size:12px}.re-chips button.on{background:#2f855a;border-color:#48bb78;color:#fff}'
     + '.re-row{display:flex;gap:8px;align-items:center;width:100%;text-align:left}.re-row img{width:64px;height:auto;max-height:56px;object-fit:contain;image-rendering:pixelated;border-radius:3px;background:#111;flex:none}.re-row .nm{flex:1;min-width:0}.re-row .d{white-space:nowrap;text-align:right}.re-row .d b{display:block;color:#9ae6b4}'
-    + '.re-mine{border-left:3px solid #48bb78}';
+    + '.re-mine{border-left:3px solid #48bb78}.re-bad{color:#feb2b2}.re-act{flex:none;padding:4px 8px;border-radius:6px;border:1px solid #48bb78;background:#22543d;color:#fff;font-size:12px}';
   document.head.appendChild(st);
 }
 
@@ -61,11 +65,17 @@ export function render(el, msg, ctx) {
   if (msg.mine && msg.mine.length) {
     const worth = msg.mine.reduce((n, r) => n + r.worth, 0);
     h += `<p class="ph-hint">Yours: ${msg.mine.length} home${msg.mine.length === 1 ? '' : 's'}, worth ${money(worth)}.</p>`;
-    h += msg.mine.map((r) => `<button class="ph-row re-row re-mine" data-hwp="m${r.id}"><img alt="" src="${planPic(r.pl, r.tr)}"><span class="nm">${esc(r.n)}${r.spawn ? ' ★' : ''}<small>${what(r)} · ${where(r)}</small><small>${has(r)}</small>${r.owed ? `<small>mortgage: ${money(r.owed)} owed · ${money(r.pay)} a day${r.missed ? ` · ${r.missed} missed!` : ''}</small>` : ''}</span><span class="d">worth<b>${money(r.worth)}</b><small>sells ${money(r.back)}</small></span></button>`).join('');
+    h += msg.mine.map((r) => `<button class="ph-row re-row re-mine" data-hwp="m${r.id}"><img alt="" src="${planPic(r.pl, r.tr)}"><span class="nm">${esc(r.n)}${r.spawn ? ' ★' : ''}<small>${what(r)} · ${where(r)}</small><small>${has(r)}</small>${r.owed ? `<small>mortgage: ${money(r.owed)} owed · ${money(r.pay)} a day${r.missed ? ` · ${r.missed} missed!` : ''}</small>` : ''}${upLine(r.up)}</span><span class="d">worth<b>${money(r.worth)}</b><small>sells ${money(r.back)}</small></span></button>`).join('');
   }
   const B = msg.biz || { sale: [], mine: [], total: 0 };   // (the businesses - server/systems/biz.js: the farms, clubs, hideouts, auto shops, the food truck)
-  const bizRow = (r, m) => `<button class="ph-row re-row${m ? ' re-mine' : ''}" data-bwp="${m ? 'm' : 's'}${esc(r.id)}"><span class="nm">${BIZ_ICON[r.t] || ''} ${esc(r.n)}<small>${esc(r.w)}${r.f ? ` · ${r.f} field${r.f === 1 ? '' : 's'}` : ''} · ${where(r)}</small>${m ? `<small>${money(r.till)} in the till · ${r.stock} in stock</small>` : `<small>${esc(r.b)}</small>`}</span><span class="d">${m ? `sells<b>${money(r.worth)}</b>` : `<b>${money(r.p)}</b><small>${Math.round(ctx.dist(r) / 32)}m</small>`}</span></button>`;
+  const bizRow = (r, m) => `<button class="ph-row re-row${m ? ' re-mine' : ''}" data-bwp="${m ? 'm' : 's'}${esc(r.id)}"><span class="nm">${BIZ_ICON[r.t] || ''} ${esc(r.n)}<small>${esc(r.w)}${r.f ? ` · ${r.f} field${r.f === 1 ? '' : 's'}` : ''} · ${where(r)}</small>${m ? `<small>${money(r.till)} in the till · ${r.stock} in stock</small>${upLine(r.up)}` : `<small>${esc(r.b)}</small>`}</span><span class="d">${m ? `sells<b>${money(r.worth)}</b>` : `<b>${money(r.p)}</b><small>${Math.round(ctx.dist(r) / 32)}m</small>`}</span></button>`;
   if (B.mine.length) h += `<p class="ph-hint">Your businesses: ${B.mine.length} - collect their takings at the manager's office.</p>` + B.mine.map((r) => bizRow(r, true)).join('');
+  const U = msg.upkeep;   // (upkeep: a little a day from your bank - server/systems/upkeep.js)
+  if (U && U.day) h += `<p class="ph-hint">Upkeep: ${money(U.day)} a day from your bank.${U.due ? ` <b class="re-bad">${money(U.due)} unpaid</b> - unpaid ${U.shabby} days a place looks shabby, ${U.repo} and it's repossessed.` : ' All paid up.'}</p>${U.due ? `<button class="ph-row" data-hup="1">Pay the upkeep owed: ${money(U.due)}</button>` : ''}`;
+  if (msg.cars && msg.cars.length) {   // (your vehicles and their insurance: server/systems/insurance.js)
+    h += '<h3>Your vehicles</h3><p class="ph-hint">Insured, a wreck or a tow comes back to your garage for a claim; uninsured, it\'s gone.</p>';
+    h += msg.cars.map((c) => `<div class="ph-row re-row"><span class="nm">${esc(c.n)}<small>${c.no ? 'no insurance for this one' : c.hold ? `at the insurer's yard: ${money(c.hold)} to pay` : c.ins ? `insured · a claim ${money(c.fee)}${c.k ? ` (${c.k} lately)` : ''}` : `uninsured · worth ${money(c.v)}`}</small></span>${c.no || (c.ins && !c.hold) ? '' : `<button class="re-act" data-${c.hold ? 'hclaim' : 'hins'}="${c.i}">${c.hold ? `Pay ${money(c.hold)}` : `Insure ${money(c.prem)}`}</button>`}</div>`).join('');
+  }
   if (kind === 'biz') {
     h += `<h3>Businesses for sale <small>${B.total}</small></h3><div class="re-chips">${KINDS.map(([k, t]) => `<button data-hkind="${k}" class="${k === kind ? 'on' : ''}">${t}</button>`).join('')}</div>`;
     h += '<p class="ph-hint">Tap one for a waypoint. Buy it at the manager\'s office there - a club\'s at its bar, the garage\'s at its counter, the food truck at the dealership.</p>';
@@ -92,6 +102,9 @@ function wire(el, msg, ctx, B) {
     ctx.toast(k[0] === 'm' ? `Waypoint: ${r.n}` : `Waypoint: ${r.n} - ${money(r.p)}. Buy it at the manager's office there.`, 'info');
     ctx.close();
   };
+  for (const b of el.querySelectorAll('[data-hup]')) b.onclick = () => ctx.send({ t: 'phone', a: 'upkeep', sort, kind });
+  for (const b of el.querySelectorAll('[data-hins]')) b.onclick = () => ctx.send({ t: 'phone', a: 'insure', i: Number(b.dataset.hins), sort, kind });
+  for (const b of el.querySelectorAll('[data-hclaim]')) b.onclick = () => ctx.send({ t: 'phone', a: 'claim', i: Number(b.dataset.hclaim), sort, kind });
   for (const b of el.querySelectorAll('[data-hsort]')) b.onclick = () => { sort = b.dataset.hsort; ctx.send({ t: 'phone', a: 'homes', sort, kind }); };
   for (const b of el.querySelectorAll('[data-hkind]')) b.onclick = () => { kind = b.dataset.hkind; ctx.send({ t: 'phone', a: 'homes', sort, kind }); };
   for (const b of el.querySelectorAll('[data-hwp]')) b.onclick = () => {

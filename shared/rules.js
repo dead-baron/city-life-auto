@@ -983,6 +983,66 @@ export const HOME_IN = { walk: 150, reach: 26, sleepS: 6, wakeH: 7, showerS: 3, 
 // owed first. `max`: homes on a mortgage at once.
 export const MORTGAGE = { deposit: 0.2, rate: 0.1, days: 10, miss: 2, max: 3 };
 
+// ---- money sinks (docs/PROGRESSION.md "Money sinks", progression build item 6). The rule: a sink should feel like care,
+// never a tax - a typical day of play covers a modest lifestyle with some left over (the arithmetic: docs/DEVLOG.md,
+// 2026-11-08). The season these numbers belong to: SEASON (n 0 = the public beta - its gift: COSMETICS.beta).
+export const SEASON = { n: 0, name: 'Season 0 - the public beta', beta: true };
+// Property upkeep (server/systems/upkeep.js): every home and business you own costs a little a day - a home its price x
+// homeRate, a business what you paid x bizRate (the food truck: none, it's a van), each at least min and at most max -
+// charged from the bank when the wall-clock day turns (GOALS.resetUtcH: the goals' day), worked out from the days that have
+// passed when you're next in the city (a day away is billed too, but at most backDays of them at once). What the bank can't
+// cover waits (arrears, paid from the bank the moment it can, or in the Homes app); unpaid shabbyDays days the place looks
+// shabby (the Homes app, the line on going in); unpaid repoDays days it's repossessed - only after a final warning by phone
+// at least finalWarnH hours before, never while you're inside it: the city sells it and pays you repoBack of its price,
+// less what's owed (a mortgage's debt too); its furniture goes into storage, to place in your next home.
+export const UPKEEP = { homeRate: 0.003, bizRate: 0.0025, min: 20, max: 400, backDays: 7, shabbyDays: 3, repoDays: 7, finalWarnH: 12, repoBack: 0.5 };
+// Vehicle insurance (server/systems/insurance.js): optional, a policy per owned vehicle bought once (its value x premium,
+// at least minPremium) at a dealership, a marina, the used lots or in the phone's Homes app (Your vehicles). Insured, a
+// wrecked or sunk vehicle comes back to your garage for a claim (value x fee, at least minFee, x (1 + perWreck for each claim
+// in the last recentDays days), at most maxK times the base); an impounded one (towed: tow.js) for the tow fee (TOW_FEE).
+// Paid from the bank; what it can't cover holds the vehicle at the insurer's yard until it's paid. Uninsured, it's gone -
+// except the first time (goodwill: once per character, it's back for the claim). value: the model's list price (a used
+// lot's beater: its lot price; anything else: noValue).
+export const INSURANCE = { premium: 0.06, minPremium: 60, fee: 0.1, minFee: 50, perWreck: 0.5, recentDays: 7, maxK: 3, noValue: 2000 };
+// Status and cosmetics (server/systems/cosmetics.js) - priced as goals, no combat power. A name color and a title plate by
+// your name (the nameplate over your head), bought at any clothing store's style counter for cash or the weekly goals'
+// cosmetic tokens (GOALS weekly: one a week). Kept through a season's wipe (cosmetics carry over: docs/PROGRESSION.md).
+// colors: { id, name, hex, cash | tok }; plates: { id, t (the text), cash | tok | gift }, plus each career's ranks (a rank's
+// title on your plate while you hold it; the top rank's for good, with its season); paint: a color of your choice at a Fresh
+// Coat garage (shared/vehicles.js PAINTS) for cash or a token. beta: the gift of Season 0 (SEASON.beta) to every account
+// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate.
+export const COSMETICS = {
+  colors: [
+    { id: 'sky', name: 'Sky blue', hex: '#8fd3ff', cash: 2500 },
+    { id: 'mint', name: 'Mint', hex: '#9df5c4', cash: 2500 },
+    { id: 'coral', name: 'Coral', hex: '#ff9e86', cash: 3500 },
+    { id: 'lilac', name: 'Lilac', hex: '#cdb4ff', cash: 3500 },
+    { id: 'sun', name: 'Sunflower', hex: '#ffe066', cash: 5000 },
+    { id: 'crimson', name: 'Crimson', hex: '#ff5a6a', tok: 1 },
+    { id: 'emerald', name: 'Emerald', hex: '#3ee08f', tok: 1 },
+    { id: 'violet', name: 'Neon violet', hex: '#c86bff', tok: 2 },
+    { id: 'gold', name: 'Gold', hex: '#ffcc33', tok: 3 },
+  ],
+  plates: [
+    { id: 'local', t: 'Local', cash: 2000 },
+    { id: 'angler', t: 'Angler', cash: 4000 },
+    { id: 'nightowl', t: 'Night Owl', cash: 5000 },
+    { id: 'roadwarrior', t: 'Road Warrior', cash: 7500 },
+    { id: 'highroller', t: 'High Roller', cash: 25000 },
+    { id: 'grinder', t: 'Grinder', tok: 1 },
+    { id: 'regular', t: 'Regular', tok: 2 },
+    { id: 'legend', t: 'Legend', tok: 4 },
+    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1 },
+  ],
+  rankPlatesFrom: 1,   // a career's ranks from this one up are plates (rank 0 - Corner Kid, Recruit, Vendor - isn't)
+  paint: { cash: 600, tok: 1 },
+  beta: { season: 0, jacket: 'Founding Citizen jacket', plate: 'beta' },
+};
+// Existing fees scale gently with rank (your highest rank in any career, 0-7): bail, the arrest fine, felony fines, the
+// hospital and the ambulance cost x this. (The fence's cut already moves with rank the other way - the crime ladder's
+// smaller cut: careers.js fenceCut - so it's left alone.)
+export const FEES = { rank: [1, 1, 1, 1.1, 1.15, 1.2, 1.3, 1.4] };
+
 // ---- the police air unit (H66) - server/systems/policeair.js. At stars a police helicopter takes off from headquarters'
 // pad and follows the suspect overhead: alt px up (or clear px over the roofs round it, if they're taller), circling them
 // at orbitR px; its crew see them within sightPx (out in the open) and radio where they are to the cars. Unseen for lostS

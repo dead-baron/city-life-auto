@@ -36,6 +36,7 @@ import {
 import { inCellRect } from '../../shared/cells.js';
 import * as cells from './cells.js';
 import { store } from '../store.js';
+import * as careers from './careers.js';   // (the fees by rank: careers.fee)
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as cargo from './cargo.js';
@@ -622,7 +623,7 @@ function book(world, p, car = null) {
   const term = prison.sentenceFor(world, p, c.stars);
   prison.noteArrest(p);
   if (term) { p.custody = null; prison.sentence(world, p, term, c.stars); world.notify(p, `Booked at ${st.label}: ${taken}.`, 'bad'); return; }
-  const bail = BAIL_PER_STAR * c.stars, b = cells.blockOf(world, st.id);
+  const bail = careers.fee(p, BAIL_PER_STAR * c.stars), b = cells.blockOf(world, st.id);   // (by rank: careers.fee)
   if (car && b >= 0 && ped.vehId === car.id && !ped.dead) {
     walkIn(world, p, st, b, car, JAIL_S, bail, c.stars, c.by);
     world.notify(p, `Booked at ${st.label}: ${taken}. Walked in to the cells - ${JAIL_S}s, or pay the $${bail} bail.`, 'bad');
@@ -736,7 +737,7 @@ function endWalk(world, c) {
 // what the cells take: the fine out of your pocket, illegal guns (and the rocket launcher), contraband
 function confiscate(world, p, stars) {
   const prof = p.profile, ped = p.ped;
-  const fine = Math.min(prof.cash, BUST_FINE_PER_STAR * stars);
+  const fine = Math.min(prof.cash, careers.fee(p, BUST_FINE_PER_STAR * stars));   // (by rank: careers.fee)
   prof.cash -= fine;
   const guns = [];
   for (const id of Object.keys(prof.weapons)) {
@@ -811,7 +812,7 @@ export function onJoin(world, p) {
   if (j.prison) { prison.resume(world, p, j); return; }   // (back on Prison Island: prison.js)
   const st = (world.map.pois[j.station] && world.map.pois[j.station].kind === 'police' ? world.map.pois[j.station] : null) || nearestStation(world, ped.x, ped.y);
   if (!st) return;
-  jail(world, p, st, j.left, j.bail || BAIL_PER_STAR * (j.stars || 1), j.stars || 1, null);
+  jail(world, p, st, j.left, j.bail || careers.fee(p, BAIL_PER_STAR * (j.stars || 1)), j.stars || 1, null);
   world.notify(p, `Still in your cell at ${st.label}: ${j.left}s left - or pay the $${p.custody.bail} bail.`, 'warn');
 }
 

@@ -1,4 +1,5 @@
 // Vehicle physics, seats (multi-passenger binding), collisions, ped strikes, wrecks.
+import * as insurance from './insurance.js';   // (a player's own vehicle wrecked or sunk: its claim)
 import * as firstcar from './firstcar.js';   // (the hustle's first car: the one theft nobody calls in)
 import { K, T, VF, WEATHER } from '../../shared/constants.js';
 import { ugMapOf } from '../../shared/underground.js';
@@ -411,6 +412,7 @@ export function explode(world, v, attackerPed) {
   v.hp = 0;
   v.wreckAt = world.time;
   v.sirenOn = false;
+  if (v.owner) insurance.wrecked(world, v, 'wrecked');   // (one of a player's own: back for a claim if insured, else gone - insurance.js)
   if (v.def.pedal) {
     // a bicycle has nothing to blow up: it buckles and the rider comes off
     for (const sid of [...v.seats]) { const ped = sid && world.get(sid); if (ped) ejectPed(world, ped, true); }
@@ -545,6 +547,7 @@ function blownOut(world, ped, v, attackerPed) {
 // Drove off a dock or a bridge-less shore: everyone spills into the water and swims for it.
 function startSink(world, v) {
   v.sinkAt = world.time;
+  if (v.owner) insurance.wrecked(world, v, 'sunk');   // (insurance.js)
   v.sirenOn = false;
   world.emit(v.x, v.y, { e: 'splash', x: v.x, y: v.y, n: 30 });
   for (let i = 0; i < v.seats.length; i++) {

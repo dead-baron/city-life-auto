@@ -6,7 +6,8 @@ import { WORLD_VERSION } from '../shared/constants.js';
 // first-time experience ships). A profile saved under an older epoch is reset to a new character the first time it's
 // loaded (resetOldEpochs: FileStore's load, before the world claims anyone's homes or businesses; players.join checks
 // again) - the same reset as CLA_FRESH_ON_UPDATE=all (players.js wipeProgress): progress gone, the name, the look, the
-// clothes owned and the account (acct: role, sign-ins, passkeys, ban, mute, contacts) kept. A future launch reset is
+// clothes owned, the cosmetics (cosm: name colors, title plates, the beta gift - cosmetics.js) and the account (acct: role,
+// sign-ins, passkeys, ban, mute, contacts) kept. A future launch reset is
 // this number bumped. 1: everything before the FTUE (profiles with no epoch); 2: the FTUE ships (2026-11-04).
 export const PROGRESS_EPOCH = 2;
 
@@ -50,7 +51,7 @@ export function defaultProfile(pid) {
 // profile for the rest - its FTUE not started (ftue { st: 'new' }: the first car earned by its path - server/systems/
 // firstcar.js; no starter car), stamped with this epoch. (players.js wipeProgress: also lets go of its homes in a running world)
 export function resetProfile(prof) {
-  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe };   // (and the clothes they own: looks.js)
+  const keep = { pid: prof.pid, name: prof.name, created: prof.created, look: prof.look, lookPicked: prof.lookPicked, lookIntro: prof.lookIntro, looks: prof.looks, wardrobe: prof.wardrobe, cosm: prof.cosm };   // (and the clothes they own: looks.js; the cosmetics - name colors, plates, the season gifts - cosmetics.js)
   if (prof.acct) { keep.acct = prof.acct; keep.nameAt = prof.nameAt; }   // (the account outlives the progress, as with Start fresh: wipeAccount)
   for (const k of Object.keys(prof)) if (keep[k] === undefined) delete prof[k];
   for (const k of Object.keys(keep)) if (keep[k] === undefined) delete keep[k];

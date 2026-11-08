@@ -539,7 +539,7 @@ function renderPage() {
   } else if (tab === 'outfit') {
     const base = outBase || B.base;
     const slotItem = L.outfit[outSlot];
-    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
+    const pieces = LK.PIECES.filter((p) => p && p.slot === outSlot && (devWear || !p.d.issued) && (!p.d.gift || devWear || owned(p.i)) && (base === 'all' || LK.fits(p, base)) && (!outStyle || p.tags.includes(outStyle)) && (outView === 'all' || owned(p.i)));
     // each tile: you wearing it (a top or a set without the jacket over it; hats, glasses and masks as a close-up)
     const crop = outSlot === 'hat' || outSlot === 'glasses' ? 'head' : 'full';
     const dress = (V, id) => { V.outfit[outSlot] = id; if (outSlot === 'set' && id) { V.outfit.top = null; V.outfit.bottoms = null; } if ((outSlot === 'top' || outSlot === 'set') && id) V.outfit.jacket = null; if (outSlot === 'hair' || crop === 'head') V.outfit.glasses = outSlot === 'glasses' ? id : V.outfit.glasses; };

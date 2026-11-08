@@ -13,6 +13,7 @@
 // The gating API the rest of the game asks:
 //   careerRank(p | prof, c) -> 0..7        hasUnlock(p | prof, key) -> bool      unlockValue(p | prof, key, def) -> v
 //   fenceCut(p, base) · loanDeposit(prof, base) · loanMax(prof, base) · patrolPay(p, pay) · vehicleRefusal(p, model)
+//   fee(p | prof, base) (an existing fee by rank: FEES) · topRank(p | prof)
 //   uniformRank(prof) (the uniform's 0..5: shared/look.js policeLook) · dutyLock(p) -> null | why
 // Progress events (note(world, p, ev, d)): what the goals count and what you've tried (the app's novelty) - each a line
 // at its emit point: 'fence' {n: $}, 'theft', 'hotEscape', 'rob' {take, hurt} (-> 'cleanRob'), 'arrest', 'bounty',
@@ -21,7 +22,7 @@
 //   profile.careers: { v, main (the career you picked to lead with, or null: your highest), seen { c: rank shown },
 //                      biz (business XP), props [keys of property counted], tried { act: 1 }, calls [{ who, text, at }],
 //                      pv (the old police ranks checked) } - absent on old profiles (migrate adds it on joining)
-import { CAREERS, CAREER_KEYS, POLICE_VEHICLE_RANK } from '../../shared/rules.js';
+import { CAREERS, CAREER_KEYS, POLICE_VEHICLE_RANK, FEES } from '../../shared/rules.js';
 import { store } from '../store.js';
 
 export { CAREERS, CAREER_KEYS };
@@ -118,6 +119,10 @@ export const fenceCut = (p, base) => Math.max(0.05, base - unlockValue(p, 'fence
 export const loanDeposit = (prof, base) => (prof ? Math.min(base, unlockValue(prof, 'deposit', base)) : base);
 export const loanMax = (prof, base) => base + (prof ? unlockValue(prof, 'loans', 0) : 0);
 export const patrolPay = (p, pay) => Math.round(pay * (1 + unlockValue(p, 'patrolPay', 0)));
+// an existing fee scaled gently by your highest rank in any career (shared/rules.js FEES: bail, the arrest fine, felony
+// fines, the hospital, the ambulance - money sinks, progression item 6)
+export const topRank = (x) => (profOf(x) ? Math.max(...CAREER_KEYS.map((c) => careerRank(x, c))) : 0);
+export const fee = (x, base) => Math.round(base * (FEES.rank[topRank(x)] || 1));
 // the uniform by rank: the old ladder's 0..5 (shared/look.js policeLook) - the same rank as before for everyone migrated
 export const uniformRank = (prof) => Math.min(LEGACY_POLICE.length - 1, careerRank(prof, 'police'));
 // An officer on duty and a police vehicle above their rank: why not (null: fine). Off duty it's theft as it always was.

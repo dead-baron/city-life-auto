@@ -7,6 +7,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
 import * as homes from './homes.js';
 import * as firstcar from './firstcar.js';
+import * as insurance from './insurance.js';
 import { FTUE, STARTER } from '../../shared/rules.js';
 
 const rng = mulberry32(9090);
@@ -83,12 +84,13 @@ export function buy(world, p, v, pay) {
   v.owner = p.pid; v.ownerName = p.name; v.npcOwned = false; v.despawnable = false; v.parked = false;
   v.descVer = (v.descVer || 0) + 1;
   prof.vehicles.push({ model: v.model, paint: v.paint, variant: v.variant, ...(v.tint !== undefined && v.tint !== null && v.tint >= 0 ? { tint: v.tint } : {}) });
+  v.ownVid = insurance.vidOf(prof.vehicles[prof.vehicles.length - 1]);   // (which of yours it is: insurance.js)
   firstcar.bought(p, v);   // (your first car, if it is: its marker - firstcar.js)
   const old = world.get(p.activeVehicle);
   if (old && old !== v && old.owner === p.pid && !old.seats.some((s) => s)) world.remove(old); // one of your cars out at a time
   p.activeVehicle = v.id;
   store.touch();
   p.meDirty = true;
-  world.notify(p, `You bought the ${v.def.name} for $${price.toLocaleString()}! The keys are yours - it's in your garage list too.`, 'good');
+  world.notify(p, `You bought the ${v.def.name} for $${price.toLocaleString()}! The keys are yours - it's in your garage list too. Insure it at the dealership's counter or in the Homes app - uninsured, a wreck is gone for good.`, 'good');
   return null;
 }

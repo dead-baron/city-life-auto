@@ -46,6 +46,9 @@ import * as fireworks from './fireworks.js';   // (the fireworks and the Campfir
 import * as campfires from './campfires.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
+import * as careers from './careers.js';   // (a rank's fees: careers.fee)
+import * as cosmetics from './cosmetics.js';   // (the style counter, custom paint)
+import * as insurance from './insurance.js';   // (vehicle policies and claims)
 import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
 import * as extract from './extract.js';   // (the valuable crates in your home's stash: taken out at the door)
@@ -164,7 +167,7 @@ const sellPrice = (shop, id) => (shop && shop.sellPrice && shop.sellPrice[id]) |
 function recordOption(p, opts) {
   const n = p.profile.felonies || 0;
   if (n <= 0) return;
-  opts.push({ id: 'payrecord', label: `Pay felony fines - clear your record (${n} felon${n === 1 ? 'y' : 'ies'})`, price: n * FELONY_FINE, dis: p.wanted > 0, note: p.wanted > 0 ? 'not while wanted' : '' });
+  opts.push({ id: 'payrecord', label: `Pay felony fines - clear your record (${n} felon${n === 1 ? 'y' : 'ies'})`, price: careers.fee(p, n * FELONY_FINE), dis: p.wanted > 0, note: p.wanted > 0 ? 'not while wanted' : '' });
 }
 
 export function payFrom(p, amount) { return pay(p, amount); }
@@ -205,6 +208,8 @@ function menuOf(world, p, poi) {
   const opts = [];
   let title = poi.label, sub = '', interior = null;
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
+  if (kind === 'clothing' && p.cosShop === poi.id) return cosmetics.menu(world, p, poi);   // (the style counter: name colors, title plates - cosmetics.js)
+  if (kind === 'garage' && p.paintShop === poi.id) return cosmetics.paintMenu(p, poi, myVehicleNear(world, p, poi));   // (custom paint - cosmetics.js)
   if (casino.isCasino(poi)) return casino.menu(world, p, poi);   // (a casino's floor: casino.js)
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (bathhouse.isBath(world, poi)) return bathhouse.menu(world, p, poi);   // (a bathhouse's locker: bathhouse.js)
@@ -272,7 +277,7 @@ function menuOf(world, p, poi) {
       break;
     case 'hospital':
       sub = 'Step onto the ER reception mat to be healed instantly.';
-      opts.push({ id: 'heal', label: 'Full treatment + stop bleeding', price: HOSPITAL_FEE });
+      opts.push({ id: 'heal', label: 'Full treatment + stop bleeding', price: careers.fee(p, HOSPITAL_FEE) });
       opts.push({ id: `i:revivekit:${REVIVE_KIT_PRICE}:1`, label: 'Revive Kit (revive downed players, reusable)', price: REVIVE_KIT_PRICE, dis: (prof.inventory.revivekit || 0) > 0, note: prof.inventory.revivekit ? 'have one' : '' });
       break;
     case 'police': {
@@ -309,6 +314,7 @@ function menuOf(world, p, poi) {
       title = poi.label;
       sub = `${(STORES[storeOf(poi)] || {}).line || 'Clothes'}. Try things on in the fitting room. A fresh outfit drops your public wanted level to 0 (if no cop is watching); your peak record is remembered. They buy handmade furs and buckskin.`;
       opts.push({ id: 'outfit', label: 'Buy a new outfit (whatever fits)', price: 120, dis: p.badge, note: p.badge ? 'off duty only' : '' });
+      opts.push({ id: 'cos', label: 'The style counter: name colors and title plates', note: 'by your name, for everyone to see' });   // (cosmetics.js)
       if (storeOf(poi) === 'kickflip' || storeOf(poi) === 'surf') skate.shopOptions(p, opts);   // (the skate shop's decks, the surf shops' cruisers: set down by the door - skate.js)
       if (storeOf(poi) === 'surf') { const have = gear.owns(p, 'surf'); opts.push({ id: `i:surfboard:${SURFBOARD_PRICE}:1`, label: ITEMS.surfboard.name, price: SURFBOARD_PRICE, dis: have, note: have ? 'have one' : 'in the sea, the action button: on it, paddling - then catch a wave' }); gear.surfOptions(p, opts); }   // (surfing: surf.js; yours from home: gear.js)
       if (storeOf(poi) === 'kickflip') { const have = gear.owns(p, 'blades'); opts.push({ id: `i:rollerblades:${ROLLERBLADES_PRICE}:1`, label: ITEMS.rollerblades.name, price: ROLLERBLADES_PRICE, dis: have, note: have ? 'have a pair' : 'put them on sitting on a bench' }); }   // (rollerblades: gear.js)
@@ -321,6 +327,7 @@ function menuOf(world, p, poi) {
       opts.push({ id: 'respray', label: 'Respray (disguise, cleans blood)', price: 250, dis: !v });
       opts.push({ id: 'wash', label: 'Car wash (removes hood blood)', price: 20, dis: !v });
       opts.push({ id: 'repair', label: 'Repair body damage', price: 300, dis: !v });
+      opts.push({ id: 'cpaint', label: 'Custom paint: pick the color', note: 'for cash or a cosmetic token', dis: !v || !!v.def.horse });   // (cosmetics.js)
       ownedVehicleOpts(prof, opts, false);
       starter.menuOpts(world, p, poi, opts);   // (your starter car: starter.js)
       break;
@@ -330,6 +337,7 @@ function menuOf(world, p, poi) {
       sub = poi.sub || 'Cheap wheels, sold as seen. Each one parked out on the lot for you.';
       firstcar.menuOpts(world, p, poi, opts);
       ownedVehicleOpts(prof, opts, false);
+      insurance.menuOpts(prof, opts, false);   // (a policy on each of yours, a held one's claim - insurance.js)
       starter.menuOpts(world, p, poi, opts);
       break;
     }
@@ -341,6 +349,7 @@ function menuOf(world, p, poi) {
       }
       if (kind === 'dealer') firstcar.menuOpts(world, p, poi, opts);   // (the used beaters on the back row too)
       ownedVehicleOpts(prof, opts, kind === 'marina');
+      insurance.menuOpts(prof, opts, kind === 'marina');   // (insurance.js)
       starter.menuOpts(world, p, poi, opts);   // (a dealership: your starter car too - starter.js)
       break;
     }
@@ -513,7 +522,7 @@ function ownedVehicleOpts(prof, opts, boats) {
   prof.vehicles.forEach((ov, i) => {
     const d = VEHICLES[ov.model];
     if (!d || (d.kind === 'boat') !== boats) return;
-    opts.push({ id: `vg:${i}`, label: `Retrieve your ${d.name}`, note: 'owned' });
+    opts.push({ id: `vg:${i}`, label: `Retrieve your ${d.name}`, note: ov.hold > 0 ? "at the insurer's yard" : ov.ins ? 'owned · insured' : 'owned', dis: ov.hold > 0 });
   });
 }
 
@@ -546,7 +555,7 @@ function furnitureMenu(p, poi) {
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
-  p.furnShop = null; p.lobbyUnit = null; p.atmFull = null;
+  p.furnShop = null; p.cosShop = null; p.paintShop = null; p.paintTok = false; p.lobbyUnit = null; p.atmFull = null;
   if (casino.isCasino(poi)) casino.open(world, p, poi);
   const m = buildMenu(world, p, poi);
   p.conn.sendJSON(m);
@@ -567,7 +576,7 @@ export function handleMenu(world, p, poiId, optId) {
   const shut = !!(buildMenu(world, p, poi).opts.find((o) => o.id === optId) || {}).shut;   // (an option that closes its menu: the page closes it too)
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
-  if (optId === 'close' || shut) { p.furnShop = null; p.lobbyUnit = null; p.atmFull = null; }
+  if (optId === 'close' || shut) { p.furnShop = null; p.cosShop = null; p.paintShop = null; p.lobbyUnit = null; p.atmFull = null; }
   p.meDirty = true;
   if (!shut && !['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -590,6 +599,15 @@ function execute(world, p, poi, opt) {
     case 'wash': if (!pay(p, 6)) return 'Not enough money.'; world.notify(p, 'Forty minutes and a magazine later: your clothes come out clean and warm.', 'good'); return null;   // (a laundromat's machines)
     case 'furn': p.furnShop = poi.id; return null;   // (H67: the furniture counter - furnitureMenu)
     case 'fback': p.furnShop = null; return null;
+    case 'cos': p.cosShop = poi.id; return null;   // the style counter (cosmetics.js)
+    case 'cosback': p.cosShop = null; return null;
+    case 'cosc': case 'cosp': return cosmetics.pick(world, p, parts[0] === 'cosc' ? 'c' : 'p', parts[1], pay);
+    case 'cpaint': p.paintShop = poi.id; p.paintTok = false; return null;   // custom paint (cosmetics.js)
+    case 'cpback': p.paintShop = null; return null;
+    case 'cptok': p.paintTok = !p.paintTok; return null;
+    case 'cpk': { const v = myVehicleNear(world, p, poi); return cosmetics.paintPick(world, p, v, Number(parts[1]), pay, v && v.owner === p.pid ? insurance.entryOf(prof, v) : null); }
+    case 'insb': return insurance.buy(world, p, Number(parts[1]), pay);   // a policy on a vehicle of yours (insurance.js)
+    case 'insp': return insurance.payHold(world, p, Number(parts[1]), pay);   // a held vehicle's claim
     case 'fb': {
       const k = parts[1], P = DECOR_PIECES[k];
       if (!P) return 'Not sold here.';
@@ -683,7 +701,7 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'heal': {
-      if (!pay(p, HOSPITAL_FEE)) return 'You cannot afford treatment.';
+      if (!pay(p, careers.fee(p, HOSPITAL_FEE))) return 'You cannot afford treatment.';
       ped.hp = ped.maxHp; ped.bleeding = false;
       world.notify(p, 'Patched up. Good as new.', 'good');
       return null;
@@ -712,9 +730,10 @@ function execute(world, p, poi, opt) {
       const n = prof.felonies || 0;
       if (n <= 0) return 'Your record is already clean.';
       if (p.wanted > 0) return 'Turn yourself in first - you are wanted right now.';
-      if (!pay(p, n * FELONY_FINE)) return `You need $${n * FELONY_FINE} (cash or bank).`;
+      const fine = careers.fee(p, n * FELONY_FINE);
+      if (!pay(p, fine)) return `You need $${fine} (cash or bank).`;
       prof.felonies = 0; prof.peakWanted = 0;
-      world.notify(p, `Fines paid: $${n * FELONY_FINE}. Your record is clean.`, 'good');
+      world.notify(p, `Fines paid: $${fine}. Your record is clean.`, 'good');
       p.meDirty = true;
       store.touch();
       return null;
@@ -778,7 +797,7 @@ function execute(world, p, poi, opt) {
       if (!pay(p, d.price)) return 'Not enough money (cash + bank).';
       prof.vehicles.push({ model: parts[1], paint: Math.floor(rng() * PAINTS.length) });
       store.touch();
-      world.notify(p, `You bought a ${d.name}! It is waiting for you outside.`, 'good');
+      world.notify(p, `You bought a ${d.name}! It is waiting for you outside. Insure it here (the counter's list) or in the Homes app - uninsured, a wreck is gone for good.`, 'good');
       spawnOwned(world, p, poi, prof.vehicles.length - 1);
       return null;
     }
@@ -1048,10 +1067,10 @@ export function update(world) {
       if (ped.hp >= ped.maxHp && !ped.bleeding) continue;
       if (now - p.lastHealAt < 5) continue;
       p.lastHealAt = now;
-      if (!pay(p, HOSPITAL_FEE)) { world.notify(p, `ER treatment costs $${HOSPITAL_FEE}.`, 'warn'); continue; }
+      if (!pay(p, careers.fee(p, HOSPITAL_FEE))) { world.notify(p, `ER treatment costs $${careers.fee(p, HOSPITAL_FEE)}.`, 'warn'); continue; }
       ped.hp = ped.maxHp; ped.bleeding = false;
       world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y });
-      world.notify(p, `ER reception: fully healed for $${HOSPITAL_FEE}.`, 'good');
+      world.notify(p, `ER reception: fully healed for $${careers.fee(p, HOSPITAL_FEE)}.`, 'good');
     }
   }
 }

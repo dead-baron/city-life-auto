@@ -64,7 +64,7 @@ export function sellerOf(pid) {
 }
 
 // ---- owning ----------------------------------------------------------------------------------------------------
-export const free = (pid) => !!PIECES[pid] && PIECES[pid].price === 0 && !PIECES[pid].d.issued;   // (an issued uniform is nobody's to wear off duty)
+export const free = (pid) => !!PIECES[pid] && PIECES[pid].price === 0 && !PIECES[pid].d.issued && !PIECES[pid].d.gift;   // (an issued uniform is nobody's to wear off duty; a season's gift only its owners')
 export const owns = (own, pid) => free(pid) || (!!own && own.includes(pid));
 export function lookPieces(L) {
   const out = [];

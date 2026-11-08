@@ -129,6 +129,8 @@ import * as rangerjob from './systems/rangerjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 import * as reputation from './systems/reputation.js';
+import * as upkeep from './systems/upkeep.js';
+import * as cosmetics from './systems/cosmetics.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -238,6 +240,8 @@ const SYSTEMS = [
   ['homeinside', homeinside.update], // inside your home: sleeping, the shower, where you are in there to your page (H62)
   ['biz', biz.update],              // the businesses: a day's takings in the till, the hideouts' guards, the food trucks' hatches, the decks (biz.js)
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
+  ['upkeep', upkeep.update],        // property upkeep: the wall-clock day's bill from the bank, arrears, shabby, repossessed (upkeep.js)
+  ['cosmetics', cosmetics.update],  // name colors and title plates on the nameplate, the beta gift on a first session, top ranks kept (cosmetics.js)
   ['mail', mail.update],            // the mail: the week's utilities bill, letters, coupons (H71)
   ['policeair', policeair.update],  // the police air unit: up from headquarters at a high wanted level, following the suspect overhead (H66)
   ['airtraffic', airtraffic.update], // light planes in and out of the runways and airstrips, the news helicopter over a chase (H66)
