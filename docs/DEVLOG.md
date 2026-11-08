@@ -21997,7 +21997,7 @@ open, and announced events make the trips cross.
   online: it doesn't run. Gang war, the district crackdown, street race night and the car soccer cup are in the table,
   not on yet.
   - *The armored truck run*, every 30 minutes (:10 and :40): an IronVault truck leaves a bank with two carbon-gold
-    crates for another bank 3,000-12,000 px away by road, on the same land. The routes are the bank pairs whose
+    crates for another bank 5,000-40,000 px away by road, on the same land. The routes are the bank pairs whose
     shortest road route (forward Dijkstra on the lanes, one-way streets honoured - the route the truck's driver takes)
     keeps 900 px clear of every new character's arrival station, used lot and steal alley, taken in turn by occurrence.
     Two guards with pistols, nobody in the back, no squad car: one player can rob it. Built on the streets' armored

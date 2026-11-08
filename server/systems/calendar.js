@@ -232,17 +232,24 @@ export function dockSite(world) {
   const m = world.map;
   if (DOCKS.has(m)) return DOCKS.get(m);
   let site = null;
-  // the container ship moored at the quay (its hull's props, 'cship', north-south off the quay: World v3's Port Westport -
-  // shared/world3-port.js), the crates set down on the apron beside its middle, on the land side
-  const hull = (m.props || []).filter((q) => q && q.t === 'cship');
-  if (hull.length) {
-    const near = hull.filter((q) => Math.hypot(q.x - hull[0].x, q.y - hull[0].y) < 1200);   // (one ship)
-    const cx = near.reduce((a, q) => a + q.x, 0) / near.length, cy = near.reduce((a, q) => a + q.y, 0) / near.length;
+  // a container ship moored at a quay (its hull's props, 'cship'; World v3's Port Westport: shared/world3-port.js), the
+  // crates set down on the quay beside its middle, on the land side - Port Westport's ship first
+  const hull = (m.props || []).filter((q) => q && q.t === 'cship'), ships = [];
+  for (const q of hull) {
+    let sh = ships.find((g) => g.some((o) => Math.hypot(o.x - q.x, o.y - q.y) < 600));
+    if (!sh) ships.push((sh = []));
+    sh.push(q);
+  }
+  const quays = [];
+  for (const sh of ships) {
+    const xs = sh.map((q) => q.x), ys = sh.map((q) => q.y), cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    const ns = Math.max(...ys) - Math.min(...ys) >= Math.max(...xs) - Math.min(...xs);   // (lying north-south: the quay east or west of it)
     for (const side of [-1, 1]) {
-      const x = cx + side * (120 + 4.5 * TILE);
-      if (OPEN(m, x, cy)) { site = { x, y: cy }; break; }
+      const off = side * (120 + 4.5 * TILE), x = ns ? cx + off : cx, y = ns ? cy : cy + off;
+      if (OPEN(m, x, y)) { const d = m.districtAt(x, y); quays.push({ x, y, west: !!d && d.name === 'Port Westport' }); break; }
     }
   }
+  if (quays.length) site = quays.find((q) => q.west) || quays[0];
   if (!site && m.port && m.port.ship && m.port.apron) {
     const a = m.port.apron, sh = m.port.ship;
     site = { x: (a.x + a.w / 2) * TILE, y: sh.y + sh.h / 2 };

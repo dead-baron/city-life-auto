@@ -743,7 +743,7 @@ export const EVENT_GRACE_S = 90;
 // its route clear of the new characters' arrival stations, used lots and steal alleys by ftuePx; `guards` guards with
 // pistols, no one in the back and no squad car - one player can take it. Officers and licensed bounty hunters within
 // guardPx of the truck for guardMinS of its run each get guardPay (an officer guardPts service points too) when it gets there.
-export const ARMORED_EVENT = { gold: 2, guards: 2, runPx: [3000, 12000], ftuePx: 900, guardPx: 700, guardMinS: 45, guardPay: 900, guardPts: 2 };
+export const ARMORED_EVENT = { gold: 2, guards: 2, runPx: [5000, 40000], ftuePx: 900, guardPx: 700, guardMinS: 45, guardPay: 900, guardPts: 2 };
 // The dock shipment: a cargo ship unloads `steel` steel and `iron` iron crates on Port Westport's quay - first come,
 // first served; the ones nobody takes are cleared away when it's over
 export const DOCK_EVENT = { steel: 4, iron: 2 };
