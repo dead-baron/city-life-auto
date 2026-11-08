@@ -492,6 +492,21 @@ export function sell(world, p, s) {
   return null;
 }
 
+// taken off you (upkeep unpaid a week: upkeep.js repossess) - the entry gone, the site free; -> { paid, till } (the till's
+// takings are still yours: a hideout's as hot money where it stands, the rest the caller pays into the bank), or null
+export function forfeit(world, p, s) {
+  const prof = p.profile, e = s && s.t !== 'truck' ? entryOf(p, s.id) : null;
+  if (!e) return null;
+  const till = e.till | 0;
+  if (s.t === 'hideout' && till) hotmoney.add(world, p, till, s.x, s.y);
+  delete prof.biz[s.id];
+  owners(world).delete(s.id);
+  if (s.t === 'hideout') resetGuards(world, s);
+  if (prof.lastSpawn === `biz:${s.id}`) prof.lastSpawn = null;
+  store.touch(); p.meDirty = true;
+  return { paid: e.paid || 0, till: s.t === 'hideout' ? 0 : till };
+}
+
 // what a meal in a business's kitchen is cooked from: HOME_IN.cookN things to eat from your bag - the plainest first, never
 // a meal already cooked nor a prize (as a home's stove: homeinside.js cookPick, from the bag instead of the fridge)
 function cookPick(prof) {

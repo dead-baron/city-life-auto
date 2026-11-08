@@ -10,6 +10,7 @@ import { LEGACY_HOMES } from './legacy-homes.js';
 import * as homeinside from './homeinside.js';
 import * as biz from './biz.js';
 import * as homeups from './homeups.js';
+import * as insurance from './insurance.js';   // (a vehicle held for its claim; which entry a spawned one is)
 import * as starter from './starter.js';   // (the starter car: lives in your garage once you have one)
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 
@@ -423,6 +424,7 @@ export function spawnOwnedAt(world, p, idx, spot, opts = {}) {
   const prof = p.profile;
   const ov = prof.vehicles[idx];
   if (!ov || !VEHICLES[ov.model]) return 'No such vehicle.';
+  { const held = insurance.heldWhy(ov); if (held) return held; }   // (a claim unpaid: at the insurer's yard - insurance.js)
   const old = world.get(p.activeVehicle);
   if (old && !old.wreckAt && old.owner === p.pid) {
     if (old.seats.some((s) => s && s !== p.ped.id)) return 'Your other vehicle is occupied.';
@@ -431,6 +433,7 @@ export function spawnOwnedAt(world, p, idx, spot, opts = {}) {
   if (!opts.keep) for (const e of world.query(spot.x, spot.y, 80, K.VEH)) if (!e.seats.some((s) => s)) world.remove(e);
   const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, variant: ov.variant, owner: p.pid, ownerName: p.name, npcOwned: false });
   if (ov.tint !== undefined) v.tint = ov.tint;
+  v.ownVid = insurance.vidOf(ov);   // (which of your vehicles it is: a wreck's claim - insurance.js)
   v.despawnable = false;
   if (spot.home != null) world.emit(spot.x, spot.y, { e: 'garagedoor', home: spot.home });
   p.activeVehicle = v.id;
@@ -508,6 +511,7 @@ export function goInside(world, p, h) {
   world.place(ped);
   world.emit(h.x, h.y, { e: 'door', x: h.x, y: h.y });
   world.notify(p, h.welcome || `You're inside ${h.name}. Nobody can see or hurt you in here.`, 'good');   // (an arcade's floor: its own - arcade.js)
+  { const n = setEnterNote.fn && world.homeOwner.get(h.id) === p.pid ? setEnterNote.fn(world, p, h) : null; if (n) world.notify(p, n, 'warn'); }   // (upkeep unpaid: the place looks shabby - upkeep.js)
   p.meDirty = true;
   homeinside.enter(world, p, h);   // (the rooms to walk round: homeinside.js)
 }
@@ -523,6 +527,8 @@ export function openInside(world, p) {
 // run (homes.js -> homeinside.js -> economy.js), when a `let` here would still be uninitialised: so it's kept on the
 // function, whose binding is ready from the start)
 export function setMenuBuilder(fn) { setMenuBuilder.fn = fn; }
+// (upkeep.js hands over its line for a shabby home the same way: kept on the function, safe whichever module loads first)
+export function setEnterNote(fn) { setEnterNote.fn = fn; }
 const menuBuilder = (world, p, poi) => (setMenuBuilder.fn ? setMenuBuilder.fn(world, p, poi) : { t: 'menu', opts: [] });
 
 export function leaveHome(world, p) {

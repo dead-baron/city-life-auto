@@ -4,11 +4,13 @@
 // homes with what they're worth. All of it worked out here from the built map and who owns what (homes.js: the map's
 // homes and the apartment blocks' units); the page only draws the list (client/realestate.js, loaded when the app opens).
 //   msg: { a: 'homes', sort: 'near' | 'cheap' | 'dear', kind: 'all' | 'apartment' | 'house' | 'big' | 'cheap' }
-//   reply: { t: 'homes', sale: [row], mine: [row], total, shown, sort, kind, cash, bank, biz: { sale, mine, total } (biz.js listings) }
+//   reply: { t: 'homes', sale: [row], mine: [row], total, shown, sort, kind, cash, bank, biz: { sale, mine, total } (biz.js listings),
+//     upkeep: { day, due, repo, shabby } (upkeep.js summary), cars: [insurance.js rows], err }
+//   msg a: 'upkeep' (pay what's owed), 'insure' { i } (a policy), 'claim' { i } (a held vehicle's claim) - phone.js
 //   row: { id, n (name), k (kind), w (what: studio / apartment / penthouse / house...), pl (plan), tr (how well it's
 //     furnished, 0-3), p (price), beds, g (garage spaces), yard (plots), dock, x, y (the door), d (district), dt (its
 //     tier: lux / mid / low / rough), u (unit, in a block), fl (floor), worth / back (yours: what it's worth, what selling
-//     brings; owed / pay / missed: its mortgage), dep (for sale: a mortgage's deposit) }
+//     brings; owed / pay / missed: its mortgage; up: its upkeep - upkeep.js rowInfo), dep (for sale: a mortgage's deposit) }
 import { DISTRICTS } from '../../shared/map.js';
 import { TILE } from '../../shared/constants.js';
 import { planOf, tierOf } from '../../shared/homelayout.js';
@@ -17,6 +19,8 @@ import * as mortgage from './mortgage.js';
 import { plotSpots } from './gardening.js';
 import { bedsIn } from './homeinside.js';
 import * as biz from './biz.js';
+import * as upkeep from './upkeep.js';
+import * as insurance from './insurance.js';
 
 const SHOW = 30;   // rows of homes for sale in one reply (the nearest, the cheapest...)
 const SELL_BACK = 0.6;   // (homes.js sell: 60% of the price back)
@@ -67,5 +71,8 @@ export function listings(world, p, msg = {}) {
   const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), dep: mortgage.terms(h, p.profile).deposit }));   // (dep: a mortgage's deposit)
   const loans = prof.loans || {};
   const mine = homes.ownedHomes(world, prof).filter(Boolean).map((h) => ({ ...row(world, h), worth: h.price, back: Math.max(0, Math.round(h.price * SELL_BACK) - (loans[h.id] ? loans[h.id].owed : 0)), spawn: prof.spawnHome === h.id ? 1 : 0, ...(loans[h.id] ? { owed: loans[h.id].owed, pay: loans[h.id].pay, missed: loans[h.id].missed } : null) }));
-  return { t: 'homes', sale, mine, total: forSale.length, matching: pick.length, homes: all.length, sort, kind, cash: prof.cash, bank: prof.bank, biz: biz.listings(world, p) };   // (biz: the businesses for sale and yours - biz.js)
+  for (const r of mine) { const h = homes.homeById(world, r.id); if (h) r.up = upkeep.rowInfo(prof, `h:${h.id}`, upkeep.homeDaily(h)); }   // (its upkeep: a day's, what's unpaid, shabby - upkeep.js)
+  const B = biz.listings(world, p);   // (the businesses for sale and yours - biz.js)
+  for (const r of (B && B.mine) || []) { const s = r.t !== 'truck' ? biz.siteById(world, r.id) : null; if (s) r.up = upkeep.rowInfo(prof, `b:${s.id}`, upkeep.bizDaily(s)); }
+  return { t: 'homes', sale, mine, total: forSale.length, matching: pick.length, homes: all.length, sort, kind, cash: prof.cash, bank: prof.bank, biz: B, upkeep: upkeep.summary(world, prof), cars: insurance.rows(prof), ...(msg.err ? { err: msg.err } : null) };   // (upkeep, your vehicles and their insurance: upkeep.js, insurance.js)
 }

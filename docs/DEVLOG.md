@@ -22098,6 +22098,66 @@ The owner-approved progression plan's first two steps (docs/PROGRESSION.md), bui
   `test/whatsnext.test.js`, `test/goals.test.js`. No world or art rekey; the page's code is unchanged in size but for
   the dot (the app and its styles load with the phone).
 
+## 2026-11-08 - Money sinks: upkeep, insurance, cosmetics, the beta gift (progression build item 6)
+docs/PROGRESSION.md's "Money sinks" and the beta gift of "Seasons". The rule we priced by: a sink should feel like care,
+never a tax - a typical day of play covers a modest lifestyle with some left over. All the numbers are in
+`shared/rules.js` (`UPKEEP`, `INSURANCE`, `COSMETICS`, `FEES`, `SEASON`).
+- **Property upkeep** (`server/systems/upkeep.js`): every home costs 0.3% of its price a day and every business 0.25% of
+  its list price ($20-$400 a day each; the food truck none), taken from the bank on the wall-clock day (the goals' day,
+  09:00 UTC). It's worked out from timestamps when you're in the city (a tick every two seconds for the players online,
+  starting on joining) - no loop over the accounts; a day away is billed too, at most 7 at once. What the bank can't cover
+  waits as arrears, paid from the bank the moment it can or from the Homes app. Texts from the City Property Office (the
+  What's next app's calls, the HUD's note, a statement in a home's mailbox) at 1 day unpaid, at 3 (the place looks shabby:
+  a line in the Homes app and on going in - no art changed) and a final notice at 6. Repossessed at 7 only once the final
+  notice is 12 hours old - a player back after a month is warned before anything goes - and never while you're inside the
+  home (or on the business's lot). Repossession is the city selling it: you get 50% of its price (and its upgrades'), less
+  the arrears and a mortgage's debt (a normal sale is 60%: losing it costs something, not everything); the furniture goes
+  into storage (`homes.release` -> `stowDecor`, placed in your next home), cars and the stash stay yours. A business's
+  till comes to you (a hideout's as hot money). New: `biz.forfeit`, `homes.setEnterNote`.
+- **Vehicle insurance** (`server/systems/insurance.js`): optional, a policy per vehicle bought once (6% of its value, at
+  least $60) at a dealership, a marina, a used lot (their counters list your vehicles) or in the Homes app's new "Your
+  vehicles" list. Insured, a wreck or a sinking (`vehicles.js explode / startSink`) brings it back to your garage for a
+  claim: 10% of its value, +50% for each claim in the last 7 days (at most 3x); a tow to the impound (`tow.js`) for the
+  tow fee as before. A claim the bank can't cover holds it at the insurer's yard (`homes.spawnOwnedAt` refuses it) until
+  paid. Uninsured, it's gone - except once per character (the dealer's goodwill, with a word about insuring). Before this
+  a wrecked car of yours could simply be taken out of the garage again for nothing. Owned-car entries get a stable id
+  (`vid`, the spawned vehicle's `ownVid`) so the right one is claimed. The starter car, horses, rentals and company trucks
+  aren't covered (they have their own ways back).
+- **Cosmetics, priced as goals** (`server/systems/cosmetics.js`): a name color ($2,500-$5,000, or 1-3 of the weekly
+  goals' cosmetic tokens) and a title plate by your name - bought ones ($2,000-$25,000 or tokens), your careers' rank titles
+  while you hold the rank, the top rank's for good (with its season). Bought and worn at the new style counter in every
+  clothing store (a row on its menu); shown on the nameplate over your head (the ped's descriptor `np`, drawn by
+  `client/main.js drawWorldLabels`: the name in its color, the plate above it, gold for the Beta plate; your crew's green
+  and an officer's blue still win). A Fresh Coat garage paints your car the color you pick ($600 or a token; the random
+  respray stays the disguise). No combat power anywhere. Kept on `profile.cosm`, which `store.resetProfile` now keeps:
+  cosmetics survive a season's wipe (the tokens are the season's).
+- **The beta gift**: every account that plays during Season 0 (`SEASON.beta`) gets, on its first look in a session,
+  the Founding Citizen jacket and the gold Beta plate (worn unless another plate is). The jacket is a new catalogue piece
+  (`shared/lookcore.js`, appended - no look code changes) drawn with the varsity jacket's existing art in black and gold:
+  no new sprite art. It's a gift piece (`d.gift`): never sold, not free to others (`wardrobe.free`), never in a random
+  look, and the creator shows it only to its owners. Stored outside the progress epoch (the wardrobe and `cosm` are
+  kept), so it survives the wipe at launch. Flip `SEASON.beta` off (and bump `SEASON.n`) when Season 1 starts.
+- **Fees by rank** (`careers.fee`, `FEES.rank` by your highest rank in any career: 1x to rank 2, then 1.1, 1.15, 1.2,
+  1.3, 1.4): bail, the arrest fine, felony fines, the hospital and the ambulance. The fence's cut is left alone - it
+  already moves with rank the other way (the crime ladder's smaller cut), and scaling it up would undo that unlock.
+
+**The sanity check** (what a day of play earns against what living costs). Earning, an hour or two of ordinary play:
+delivery jobs $165-$475 each (`JOB_TIERS`, 5-9 minutes; about $2,000-$3,000 an hour), patrol calls $250-$450, the three
+daily goals $120-$300 each plus $300 for all three (up to $570 on a 7-day streak), a weekly goal's crate ($235-$7,250 by
+rank), and the crates themselves on delivery ($150-$9,500). Call a modest day $3,000-$5,000. Living modestly: a $25,000
+house ($75 a day upkeep, plus the utilities' $45 a week - about $6 a day) and an insured $6,000 pickup (a $360 policy once,
+a $600 claim when it's wrecked - say one every few days, ~$200 a day) and a hospital visit ($150): about $300-$450 a day,
+a tenth of the day's earnings. A landlord's day - three homes worth $150,000 and a nightclub - is ~$825 of upkeep, against
+a club that takes $1,400+ a night on its own. The top of the ladder pays at most 40% more in fees. Cosmetics are the
+"save up for it" end: a name color is about an hour of play, a plate one to several, tokens one a week.
+
+Guide: Upkeep, Vehicle insurance, Name colors and title plates, The beta gift (Property), and a line on fees in Careers
+and ranks. Tests: `test/sinks.test.js` (upkeep across days, the back-billing cap, arrears, shabby, the final notice and
+its hours, not while inside, the furniture to storage, the returning player; insurance claim, rising fee, hold and pay,
+goodwill once then gone, the tow; plates and colors for cash and tokens on the descriptor and through a reset; a top rank
+kept; the beta gift through an epoch bump; fees). No world rekey; the jacket adds a catalogue piece (people's art, not the
+baked chunks).
+
 ## 2026-11-08 - Contacts and mission chains: Rosa Vance and Sgt. Okafor (progression build order 3, first half)
 
 - **The system** (`server/systems/contacts.js`; the data: `shared/rules-contacts.js` `CONTACTS`, `CONTACT`,

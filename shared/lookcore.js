@@ -379,6 +379,10 @@ add('hat', 'Bridal veil', 'f', 'formal', 120, 'boutique', { k: 'veil' }, 'white'
 // nothing on at all - the bathhouses' lockers only (server/systems/bathhouse.js barOf): never sold, never in the creator
 // (issued), never in a random look (shared/look.js pieceList: never an issued piece); the renderer pixelates the private areas (client/art2/people.js censor)
 add('set', 'Nothing', 'mf', 'lounge', 0, 'bathhouse', { k: 'none', bk: 'none', issued: 1 }, 'white');
+// the season gifts (d.gift: never sold, not free - only the accounts given one own it: shared/wardrobe.js free; never in
+// a random look; the creator shows it only to its owners): Season 0's Founding Citizen jacket (server/systems/cosmetics.js,
+// shared/rules.js COSMETICS.beta) - the varsity jacket's art in black and gold, no new sprite art
+add('jacket', 'Founding Citizen jacket', 'mf', 'preppy streetwear retro', 0, 'gift', { k: 'jacket', varsity: 1, gift: 1 }, 'black', 'gold');
 
 export const PIECE_IDS = {}; for (const p of PIECES) if (p) PIECE_IDS[p.name] = p.i;
 export const byName = (n) => PIECE_IDS[n] || 0;
