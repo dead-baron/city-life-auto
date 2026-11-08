@@ -18,11 +18,14 @@
 // Progress events (note(world, p, ev, d)): what the goals count and what you've tried (the app's novelty) - each a line
 // at its emit point: 'fence' {n: $}, 'theft', 'hotEscape', 'rob' {take, hurt} (-> 'cleanRob'), 'arrest', 'bounty',
 // 'dispatch', 'duty', 'shift' {job}, 'fishSold' {n: $}, 'clean' {n: $}, 'takings', 'fish' {lb}, 'strike', 'soccerWin',
-// 'soccer', 'raceWin', 'race', 'bowl', 'heist', 'sam' {n}, 'xp:<career>' {n} (worked out each second from the counters).
+// 'soccer', 'raceWin', 'race', 'bowl', 'heist', 'sam' {n}, 'xp:<career>' {n} (worked out each second from the counters),
+// 'spiked', 'escort', 'recover' {crate, src}, 'haul' {crate, src} (a crate handed in at a bank vault), 'prop' {k} (property
+// bought); 'fence' carries {crate, src} for a crate.
 //   profile.careers: { v, main (the career you picked to lead with, or null: your highest), seen { c: rank shown },
 //                      biz (business XP), props [keys of property counted], tried { act: 1 }, calls [{ who, text, at }],
 //                      pv (the old police ranks checked) } - absent on old profiles (migrate adds it on joining)
 import { CAREERS, CAREER_KEYS, POLICE_VEHICLE_RANK, FEES } from '../../shared/rules.js';
+import { CONTACTS, CONTACT_ORDER } from '../../shared/rules-contacts.js';
 import { store } from '../store.js';
 
 export { CAREERS, CAREER_KEYS };
@@ -67,9 +70,16 @@ export function rankInfo(x, c) {
   const C = CAREERS[c], xp = careerXp(x, c), r = rankOfXp(c, xp), R = C.ranks, nx = R[r + 1] || null;
   const have = [];
   for (let i = 0; i <= r; i++) for (const u of unlocksAt(c, i)) have.push({ name: u.name, soon: u.soon ? 1 : 0 });
-  return { k: c, name: C.name, icon: C.icon, rank: r, title: R[r].name, xp, lo: R[r].xp, hi: nx ? nx.xp : null, next: nx ? { name: nx.name, unlocks: unlocksAt(c, r + 1).map((u) => ({ name: u.name, soon: u.soon ? 1 : 0 })) } : null, have, contact: contactOf(c, r) };
+  return { k: c, name: C.name, icon: C.icon, rank: r, title: R[r].name, xp, lo: R[r].xp, hi: nx ? nx.xp : null, next: nx ? { name: nx.name, unlocks: unlocksAt(c, r + 1).map((u) => ({ name: u.name, soon: u.soon ? 1 : 0 })) } : null, have, contact: contactOf(c, r, x && x.profile ? x : null) };
 }
-export const contactOf = (c, r) => CAREERS[c].contact[r >= CAREERS[c].lateFrom ? 1 : 0];
+// who speaks for a career: with a player, the contact whose chain they're on (met, not done - the later one if both), else
+// by rank (the early contact, the late one from lateFrom) - the names are the contacts' own (shared/rules-contacts.js)
+export function contactOf(c, r, p = null) {
+  const B = p && p.profile && p.profile.contacts;
+  let who = null;
+  if (B && B.c) for (const id of CONTACT_ORDER) { const C = CONTACTS[id], x = B.c[id]; if (C && C.career === c && x && x.met && !x.done) who = C.name; }
+  return who || CAREERS[c].contact[r >= CAREERS[c].lateFrom ? 1 : 0];
+}
 // the unlock's best value at or under your rank in any career (v, or true for a plain unlock), else undefined
 function unlockOf(x, key) {
   let best;
@@ -258,7 +268,7 @@ const LINES = {
   ],
 };
 export function rankUp(world, p, c, r) {
-  const C = CAREERS[c], name = rankName(c, r), who = contactOf(c, r);
+  const C = CAREERS[c], name = rankName(c, r), who = contactOf(c, r, p);
   const text = LINES[c][r].replace('{rank}', name);
   const R = rec(p.profile);
   R.calls.unshift({ who, text, c, at: Date.now() });
@@ -320,7 +330,7 @@ export function tick(world, p) {
     else if (p.hotCarHi && p.wanted === 0) { p.hotCar = 0; p.hotCarHi = false; note(world, p, 'hotEscape'); }
   }
   if (world.tick % 100 === 13) {   // (property bought: business XP for what it cost)
-    for (const [k, paid] of Object.entries(owned(prof))) if (!R.props.includes(k)) { R.props.push(k); R.biz = (R.biz || 0) + Math.floor(paid * CAREERS.business.propPer); store.touch(); }
+    for (const [k, paid] of Object.entries(owned(prof))) if (!R.props.includes(k)) { R.props.push(k); R.biz = (R.biz || 0) + Math.floor(paid * CAREERS.business.propPer); store.touch(); if (paid > 0) note(world, p, 'prop', { k }); }
   }
   checkRanks(world, p);
 }

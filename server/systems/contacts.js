@@ -6,6 +6,7 @@
 //   'visit'    be at the contact's place (placeOf: their kind of place, in their district, by name)
 //   'handover' a stolen car driven up to their place, handed over at the wheel (vehicleInteraction)
 //   'have'     an item in your bag; 'duty' also counts being on duty already
+//   'stakeout' at the dock shipment's quay (calendar.js dockSite) while a shipment is on (once a shipment)
 // The contact texts you (a line in the HUD's notes, kept with the rank-up calls in the What's next app: careers' calls)
 // when they first meet you (CONTACTS[].meet: metOk), when a mission is offered, when the next one waits for a rank, and
 // calls at the chain's end (a title card: { t: 'ftue', a: 'rank' }, the rank-up's own - the bump's rank-up folded into it).
@@ -18,13 +19,32 @@
 //           takes them out and puts a carried crate in (menuOpts / onMenu)
 //   car     your own patrol car: profile.contacts.car { unit } - the cruiser dispatch issues you is that unit, never
 //           towed back while you're on duty, back sooner when lost (cruiser.js reads it: assigned)
+//   hideout a hideout (biz.js's criminal hideout - the one nearest the contact's place nobody owns), given: paid 0
+//           (its sale brings back only its till); none to be had - CONTACT.giftCash into the bank. profile.contacts.hideout
+//           { site | null }
+//   office  a detective's office at the contact's precinct: profile.contacts.office { at } - its case board (the most
+//           wanted players online, where they were last seen) at the precinct's front desk (menuOpts) and, on duty, as a
+//           What's next card (caseCard)
+//   lease   a storefront lease: the auto shop nearest the contact's place nobody owns (else any business but a farm or a
+//           hideout), yours with nothing to pay up front - its entry in profile.biz carries lease { by, off } and its upkeep
+//           (the rent) is CONTACT.leaseOff less (upkeep.js props). profile.contacts.lease { site | null }
+//   stake   a share in a tower: profile.contacts.stake { at, tower, share, rent } - the rent paid into the bank each day,
+//           with the upkeep (upkeep.js check: clean money, business XP)
 //   xpTo    the career's XP brought up to that rank's threshold (never past it)
+// The Port job (a step's spawn: 'port'): accepting it puts a carbon-gold case on the quay by the cargo ship at Port
+// Westport (portCase: extract { src: 'port', stolen, ev: 'port:<pid>' } - it shows on everyone's map); fenced, it's
+// Deacon's step, brought to a police station Reyes's - whoever's case it was. Gone another way, the next is in the hold
+// CONTACT.portGapS later.
+// The chains cross (cross, once a second): a cop on duty on Reyes's chain and a criminal on one of Deacon's Port job steps
+// (step.port, accepted) - the cop's card points at the criminal (a tip, the waypoint), Reyes texts once a pairing; the
+// criminal's card says a detective's on them, Deacon texts once a step. Kept on the player objects (not saved).
 //   profile.contacts: { v, c: { [id]: { met, s (the mission), acc, got, said (the mission texted), gated (the mission
 //                       whose wait was texted), done, rep ({ k, tw, n, got, acc, t0 (accepted, ms), at }) | null,
-//                       next (ms: the next repeatable), nrep } }, lockup?, car? } - absent on old profiles (rec: made
-//                       on first use)
+//                       next (ms: the next repeatable), nrep, case? (the Port job's case: entity id), caseAt? (ms: the
+//                       next case), stk? (the dock shipment staked out) } }, lockup?, car?, hideout?, office?, lease?,
+//                       stake? } - absent on old profiles (rec: made on first use)
 import { K } from '../../shared/constants.js';
-import { CAREERS } from '../../shared/rules.js';
+import { CAREERS, CRATE_PAY } from '../../shared/rules.js';
 import { CONTACTS, CONTACT, CONTACT_ORDER } from '../../shared/rules-contacts.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
@@ -33,6 +53,8 @@ import { moved } from '../movemark.js';
 import * as careers from './careers.js';
 import { registerCardSource, nearest, appOn } from './whatsnext.js';
 import { copFit } from './goals.js';
+import * as calendar from './calendar.js';
+import * as biz from './biz.js';
 
 export { CONTACTS, CONTACT, CONTACT_ORDER };
 var clock = () => Date.now();   // (a var: tests set it, maybe while the systems are still loading)
@@ -95,11 +117,15 @@ export function say(world, p, C, line, kind = 'text') {
   store.touch();
 }
 // When they first get in touch: crime - you've done some crime, lead with it, or came to town to hustle; police - you've
-// served, are on duty, lead with it, or are fit for a badge
+// served, are on duty, lead with it, or are fit for a badge; business - you've earned clean money, picked it to lead with
+// (not just the default of a newcomer with no XP), came to town for work, or own a business; late - you've reached the
+// career's lateFrom rank
 export function metOk(p, C) {
   const prof = p.profile, main = careers.mainCareer(p);
   if (C.meet === 'crime') return careers.careerXp(prof, 'crime') > 0 || main === 'crime' || !!(prof.ftue && prof.ftue.ans === 'hustle');
   if (C.meet === 'police') return careers.careerXp(prof, 'police') > 0 || !!p.badge || main === 'police' || copFit(p);
+  if (C.meet === 'business') return careers.careerXp(prof, 'business') > 0 || (prof.careers && prof.careers.main) === 'business' || !!(prof.ftue && prof.ftue.ans === 'work') || Object.keys(prof.biz || {}).length > 0;
+  if (C.meet === 'late') return careers.careerRank(p, C.career) >= CAREERS[C.career].lateFrom;
   return careers.careerXp(prof, C.career) > 0 || main === C.career;
 }
 
@@ -109,6 +135,8 @@ export function counts(world, p, C, o, tw, ev, d = {}) {
   if (o.ev !== ev) return 0;
   const f = o.filt || {};
   if (f.crate && !d.crate) return 0;
+  if (f.tier && !((d.crate || 0) >= f.tier)) return 0;
+  if (f.src && d.src !== f.src) return 0;
   if ((f.gentle || (tw && tw.gentle)) && !d.gentle) return 0;
   if (ev === 'rob' && !(d.take > 0)) return 0;
   if (tw && tw.hurt === false && d.hurt) return 0;
@@ -158,6 +186,7 @@ export function complete(world, p, C, r) {
   if (S.xp) careers.addXp(world, p, C.career, S.xp);
   if (S.cash || S.xp) world.notify(p, `${C.short}: ${S.t} - done. ${[S.cash ? `+${money(S.cash)}` : '', S.xp ? `+${S.xp} ${CAREERS[C.career].name.toLowerCase()} XP` : ''].filter(Boolean).join(', ')}.`, 'good', `${S.t}: done`);
   r.s++; r.acc = 0; r.got = 0;
+  if (S.spawn) { r.case = 0; r.caseAt = 0; }
   if (r.s >= C.steps.length) finish(world, p, C, r);
   p.nxDirty = true; p.meDirty = true; store.touch();
 }
@@ -167,17 +196,22 @@ function finish(world, p, C, r) {
   r.done = 1; r.next = clock() + CONTACT.repeatGapS * 1000;
   if (E.lockup && !B.lockup) B.lockup = { at: C.id, cars: [], crates: [] };
   if (E.car && !B.car) B.car = { unit: unitFor(p.pid || prof.pid || '') };
+  let extra = '';
+  if (E.hideout && !B.hideout) extra = giveBiz(world, p, C, 'hideout');
+  if (E.lease && !B.lease) extra = giveBiz(world, p, C, 'lease');
+  if (E.office && !B.office) B.office = { at: C.id };
+  if (E.stake && !B.stake) { const t = towerFor(world, C); B.stake = { at: C.id, tower: t, share: CONTACT.stakeShare, rent: CONTACT.stakeRent }; extra = `${Math.round(CONTACT.stakeShare * 100)}% of ${t}, ${money(CONTACT.stakeRent)} a day`; }
   const c = C.career, seen = prof.careers && prof.careers.seen ? prof.careers.seen[c] : undefined;
   const before = seen ?? careers.careerRank(p, c);   // (the rank last shown: one the missions' own XP reached this second is folded in too)
   if (E.xpTo !== undefined) { const need = CAREERS[c].ranks[E.xpTo].xp - careers.careerXp(prof, c); if (need > 0) careers.addXp(world, p, c, need); }
   const after = careers.careerRank(p, c);
-  let title = E.title, sub = `${E.sub} - ${C.name}`;
+  let title = E.title, sub = `${E.sub}${extra ? ` (${extra})` : ''} - ${C.name}`;
   if (after > before) {
     if (!prof.careers) careers.migrate(prof);
     prof.careers.seen[c] = after;   // (careers.js checkRanks: no second moment for the same rank)
     const un = careers.unlocksAt(c, after).map((u) => (u.soon ? `coming: ${u.name}` : u.name));
     title = careers.rankName(c, after).toUpperCase();
-    sub = `${E.sub} · ${CAREERS[c].name} rank ${after + 1} of ${CAREERS[c].ranks.length}${un.length ? ` · ${un.join(' · ')}` : ''}`;
+    sub = `${E.sub}${extra ? ` (${extra})` : ''} · ${CAREERS[c].name} rank ${after + 1} of ${CAREERS[c].ranks.length}${un.length ? ` · ${un.join(' · ')}` : ''}`;
     if (world.track) world.track('rank', p, { career: c, rank: after });
   }
   say(world, p, C, E.line, 'call');
@@ -194,6 +228,77 @@ export function unitFor(pid) {
 }
 // the profile's own patrol car, if the chain gave one (cruiser.js)
 export const assigned = (p) => (p && p.profile && p.profile.contacts && p.profile.contacts.car) || null;
+
+// A business a chain gives (Deacon's hideout, Mae's storefront lease): the one nearest the contact's place that nobody owns,
+// yours through biz.js (grant). -> what it is (the title card's line); none to be had - CONTACT.giftCash into the bank
+function giveBiz(world, p, C, kind) {
+  const B = book(p.profile), q = placeOf(world, C), all = biz.sites(world).filter((s) => !biz.ownerOf(world, s.id));
+  const d = (s) => (q ? Math.hypot(s.x - q.x, s.y - q.y) : 0), near = (l) => [...l].sort((a, b) => d(a) - d(b));
+  const pick = kind === 'hideout' ? near(all.filter((s) => s.t === 'hideout')) : [...near(all.filter((s) => s.t === 'shop')), ...near(all.filter((s) => s.t === 'club'))];
+  for (const s of pick) {
+    if (biz.grant(world, p, s, kind === 'lease' ? { lease: { by: C.id, off: CONTACT.leaseOff } } : { gift: C.id })) continue;
+    B[kind] = { site: s.id };
+    return s.name;
+  }
+  B[kind] = { site: null };
+  p.profile.bank = (p.profile.bank || 0) + CONTACT.giftCash;
+  world.notify(p, `${C.short}: "Nothing's free to give you right now - here's ${money(CONTACT.giftCash)} instead. Buy your own."`, 'good');
+  return `${money(CONTACT.giftCash)} instead`;
+}
+// the tower a share is in: the contact's own (their place, a tower), else the tallest named tower in their district (else
+// anywhere), by name
+var TOWERS;
+export function towerFor(world, C) {
+  const m = world.map;
+  TOWERS ??= new WeakMap();
+  const k = TOWERS.get(m) || new Map();
+  TOWERS.set(m, k);
+  if (k.has(C.id)) return k.get(C.id);
+  const own = placeOf(world, C);
+  if (own && /Tower$/.test(own.label || '')) { k.set(C.id, own.label); return own.label; }   // (their own tower)
+  const named = (m.buildings || []).filter((b) => b && !b.gone && typeof b.name === 'string' && /Tower$/.test(b.name));
+  const inD = named.filter((b) => districtOf(world, (b.tx + b.tw / 2) * 32, (b.ty + b.th / 2) * 32) === C.place.district);
+  const best = [...(inD.length ? inD : named)].sort((a, b) => (b.floors || 0) - (a.floors || 0) || b.tw * b.th - a.tw * a.th || a.id - b.id)[0];
+  const n = best ? best.name : `${C.place.district} Tower`;
+  k.set(C.id, n);
+  return n;
+}
+
+// ---- the Port job's case, the crossing ---------------------------------------------------------------------------------
+const caseOk = (world, p, id) => { const c = world.get(id); return !!(c && !c.removed && c.kind === K.CRATE && c.extract && c.extract.ev === `port:${p.pid}`); };
+export function portCase(world, p, C, r) {
+  const site = calendar.dockSite(world);
+  if (!site) return null;
+  const c = world.spawnCrate(4, site.x, site.y, { contraband: true, label: 'Strongroom Case', value: CRATE_PAY[4], expires: world.time + CONTACT.portCaseS });
+  c.extract = { src: 'port', stolen: true, ev: `port:${p.pid}`, from: { x: site.x, y: site.y }, by: null };
+  r.case = c.id; r.caseAt = 0; p.portSeen = c.id;   // (seen this session: gone later is lost - one from before a restart is simply put back)
+  store.touch();
+  return c;
+}
+// a cop on Reyes's chain, a criminal on one of Deacon's Port job steps: pointed at each other
+const onPort = (p) => { const B = p.profile && p.profile.contacts, r = B && B.c.deacon, S = r ? stepOf(CONTACTS.deacon, r) : null; return !!(S && S.port && r.acc); };
+const onCase = (p) => { const B = p.profile && p.profile.contacts, r = B && B.c.reyes; return !!(r && r.met && !r.done && p.badge); };
+export function cross(world) {
+  const crims = [], cops = [];
+  for (const p of world.players.values()) {
+    if (!p.profile || !p.ped || p.ped.dead || !appOn(p)) continue;
+    p.cxHot = 0;
+    if (onPort(p)) crims.push(p);
+    if (onCase(p)) cops.push(p);
+    else p.cxTip = null;
+  }
+  for (const cop of cops) {
+    let best = null, bd = Infinity;
+    for (const q of crims) { if (q === cop) continue; const d = Math.hypot(q.ped.x - cop.ped.x, q.ped.y - cop.ped.y); if (d < bd) { bd = d; best = q; } }
+    if (!best) { cop.cxTip = null; continue; }
+    const at = posOf(world, best);
+    cop.cxTip = { pid: best.pid, name: best.name || 'Someone', x: Math.round(at.x), y: Math.round(at.y), d: districtOf(world, at.x, at.y) || 'town' };
+    best.cxHot = (best.cxHot || 0) + 1;
+    if (cop.cxTold !== best.pid) { cop.cxTold = best.pid; say(world, cop, CONTACTS.reyes, CONTACTS.reyes.cross.replace('{name}', cop.cxTip.name)); }
+    const r = best.profile.contacts.c.deacon;
+    if (best.cxWarned !== r.s) { best.cxWarned = r.s; say(world, best, CONTACTS.deacon, CONTACTS.deacon.cross); }
+  }
+}
 
 // ---- the repeatables -------------------------------------------------------------------------------------------------------
 const jobOf = (C, k) => (C.repeat ? C.repeat.jobs.find((j) => j.id === k) || null : null);
@@ -243,15 +348,27 @@ function check(world, p, C, r) {
     if (S.ev === 'visit' && nearPlace(world, C, posOf(world, p))) progress(world, p, C, r, 1);
     else if (S.ev === 'have' && (p.profile.inventory[S.item] || 0) > 0) progress(world, p, C, r, 1);
     else if (S.ev === 'duty' && p.badge) progress(world, p, C, r, 1);
+    else if (S.ev === 'stakeout') { const k = staked(world, p); if (k && r.stk !== k) { r.stk = k; progress(world, p, C, r, 1); } }
+    if (S.spawn === 'port' && stepOf(C, r) === S && r.acc && !caseOk(world, p, r.case)) {
+      if (r.case && p.portSeen === r.case) { r.case = 0; r.caseAt = clock() + CONTACT.portGapS * 1000; say(world, p, C, C.id === 'reyes' ? 'Lost it. There\'s another case in the hold - be quicker.' : 'Gone. There\'s another in the hold. Don\'t lose this one.'); }
+      else if (clock() >= (r.caseAt || 0)) portCase(world, p, C, r);
+    }
   }
   const R = r.done ? r.rep : null;
   if (R && R.acc) {
+    const J = jobOf(C, R.k);
+    if (J && J.ev === 'stakeout') { const k = staked(world, p); if (k && R.stk !== k) { R.stk = k; progressRep(world, p, C, r, 1); if (r.rep !== R) return; } }
     const T = twistOf(C, R.tw);
     if (T && T.limitS && clock() - R.t0 > T.limitS * 1000) {
       say(world, p, C, `Too slow - I gave it to someone else. Next time.`);
       r.rep = null; r.next = clock() + CONTACT.repeatGapS * 1000;
     }
   }
+}
+// on the quay while a dock shipment unloads: its key, else null
+function staked(world, p) {
+  const run = world.cal && world.cal.live && world.cal.live.find((q) => q.id === 'dock' && !q.over), s = run && calendar.dockSite(world), at = posOf(world, p);
+  return s && at && Math.hypot(at.x - s.x, at.y - s.y) < CONTACT.stakePx ? `${run.id}:${run.k}` : null;
 }
 export function tick(world, p) {
   if (!appOn(p) || !p.ped) return;
@@ -279,6 +396,7 @@ export function tick(world, p) {
 }
 export function update(world) {
   if (world.tick % 20 !== 9) return;
+  try { cross(world); } catch (e) { if (world.opts && world.opts.throwErrors) throw e; console.error('[contacts] cross', e); }
   for (const p of world.players.values()) {
     if (!p.profile || !p.conn || !p.ped || p.ped.dead) continue;
     try { tick(world, p); } catch (e) { if (world.opts && world.opts.throwErrors) throw e; console.error('[contacts]', e); }
@@ -287,10 +405,12 @@ export function update(world) {
 
 // ---- the What's next card --------------------------------------------------------------------------------------------------
 // where a mission points: their place, the nearest of its kinds of place, the armored truck run under way (its van)
-function whereOf(world, p, C, o) {
+function whereOf(world, p, C, o, r = null) {
   if (o.place === 'home') { const q = placeOf(world, C); return q ? { x: q.x, y: q.y, label: placeName(world, C) } : null; }
   if (Array.isArray(o.place)) { const q = nearest(world, posOf(world, p), o.place); return q ? { x: q.x, y: q.y, label: q.label } : null; }
-  if (o.ev === 'escort') {
+  if (o.spawn === 'port') { const c = r && r.case && caseOk(world, p, r.case) ? world.get(r.case) : null, s = calendar.dockSite(world); return c ? { x: c.x, y: c.y, label: 'The strongroom case' } : s ? { x: s.x, y: s.y, label: `The cargo ship, ${s.name}` } : null; }
+  if (o.place === 'dock') { const s = calendar.dockSite(world); return s ? { x: s.x, y: s.y, label: `The quay, ${s.name}` } : null; }
+  if (o.ev === 'escort' || o.place === 'armored') {
     const run = world.cal && world.cal.live && world.cal.live.find((q) => q.id === 'armored' && !q.over), van = run && run.sev ? world.get(run.sev.van) : null;
     return van && !van.removed ? { x: van.x, y: van.y, label: 'The armored truck' } : null;
   }
@@ -305,25 +425,46 @@ export function cardsFor(world, p) {
     if (!C || !r || !r.met) continue;
     const fit = C.career === main ? CONTACT.mainFit : 0.6, S = stepOf(C, r), base = { career: C.career, who: C.name, icon: C.icon, slot: 'career' };
     if (S) {
-      const w = whereOf(world, p, C, S), at = w ? { x: w.x, y: w.y } : {};
+      const w = whereOf(world, p, C, S, r), tip = C.id === 'reyes' && p.cxTip ? p.cxTip : null, at = tip ? { x: tip.x, y: tip.y } : w ? { x: w.x, y: w.y } : {};
+      const tag = tip ? `Tip: ${tip.name} is on a Port job in ${tip.d}. ` : C.id === 'deacon' && p.cxHot ? 'A detective is on you. ' : '';
       if (S.rank > rankIn(p, C)) {
         const need = CAREERS[C.career].ranks[S.rank], xp = careers.careerXp(p.profile, C.career), rk = need.name;
         out.push({ ...base, id: `contact:${id}:gate:${r.s}`, fit: 0.3, title: `${C.name}: the next job is for a ${rk}`, sub: `${xp} / ${need.xp} ${CAREERS[C.career].name.toLowerCase()} XP`, pay: 0, mins: 30, btn: { k: 'call', label: `Call ${C.short}` }, call: C.gate.replace('{rank}', rk) });
         continue;
       }
       const cop = S.need === 'cop' && !p.badge ? ' Go on duty first.' : '';
-      if (!r.acc) out.push({ ...base, ...at, id: `contact:${id}:${r.s}`, fit, title: `${C.name} has a job: ${S.t}`, sub: `${S.sub}${cop}`, pay: S.cash, mins: 8, btn: { k: 'accept', label: 'Accept' }, accept: (wd, q) => accept(wd, q, id) });
-      else out.push({ ...base, ...at, id: `contact:${id}:${r.s}:on`, fit, title: `${C.short}: ${S.t}`, sub: `${S.n > 1 || S.money ? `${amount(S, r.got)} / ${amount(S, S.n)} · ` : ''}${S.sub}${cop}`, pay: S.cash, mins: 6, btn: { k: 'call', label: `Call ${C.short}` }, call: S.call });
+      if (!r.acc) out.push({ ...base, ...at, id: `contact:${id}:${r.s}`, fit, title: `${C.name} has a job: ${S.t}`, sub: `${tag}${S.sub}${cop}`, pay: S.cash, mins: 8, btn: { k: 'accept', label: 'Accept' }, accept: (wd, q) => accept(wd, q, id) });
+      else out.push({ ...base, ...at, id: `contact:${id}:${r.s}:on`, fit, title: `${C.short}: ${S.t}`, sub: `${tag}${S.n > 1 || S.money ? `${amount(S, r.got)} / ${amount(S, S.n)} · ` : ''}${S.sub}${cop}`, pay: S.cash, mins: 6, btn: { k: 'call', label: `Call ${C.short}` }, call: tip ? `${tip.name}, ${tip.d}. Watch them - and the gold.` : S.call });
     } else if (r.done && r.rep) {
       const R = r.rep, J = jobOf(C, R.k), T = twistOf(C, R.tw);
       if (!J) continue;
-      const w = whereOf(world, p, C, J), at = w ? { x: w.x, y: w.y } : {}, pay = repPay(p, C, J, T);
+      const w = whereOf(world, p, C, J, r), at = w ? { x: w.x, y: w.y } : {}, pay = repPay(p, C, J, T);
       const left = T && T.limitS && R.acc ? Math.max(0, Math.ceil((T.limitS * 1000 - (clock() - R.t0)) / 60000)) : null;
       if (!R.acc) out.push({ ...base, ...at, id: `contact:${id}:rep:${r.nrep || 0}`, fit, title: `${C.name} has a job: ${repTitle(J, T, R.n)}`, sub: `+${pay.xp} XP${J.need === 'cop' && !p.badge ? ' · on duty' : ''}`, pay: pay.cash, mins: 8, btn: { k: 'accept', label: 'Accept' }, accept: (wd, q) => accept(wd, q, id) });
       else out.push({ ...base, ...at, id: `contact:${id}:rep:${r.nrep || 0}:on`, fit, title: `${C.short}: ${repTitle(J, T, R.n)}`, sub: `${amount(J, R.got)} / ${amount(J, R.n)}${left !== null ? ` · ${left} min left` : ''}`, pay: pay.cash, mins: 6, btn: { k: 'call', label: `Call ${C.short}` }, call: T && T.turf ? `In ${homeDistrict(world, C)}, mind - it only counts there.` : 'You know what to do.' });
     }
   }
+  const cs = caseCard(world, p);
+  if (cs) out.push(cs);
   return out;
+}
+// The office's case board: the most wanted players online (not you), stars first - [{ p, stars, x, y, d }]
+export function caseBoard(world, p) {
+  const out = [];
+  for (const q of world.players.values()) {
+    if (q === p || !q.ped || q.ped.dead || !((q.wanted || 0) > 0) || q.custody) continue;
+    const at = posOf(world, q);
+    out.push({ p: q, name: q.name || 'Someone', stars: q.wanted, x: Math.round(at.x), y: Math.round(at.y), d: districtOf(world, at.x, at.y) || 'town' });
+  }
+  return out.sort((a, b) => b.stars - a.stars || a.name.localeCompare(b.name)).slice(0, CONTACT.caseMax);
+}
+const officeOf = (p) => { const B = p.profile.contacts; return B && B.office ? B.office : null; };
+function caseCard(world, p) {
+  const O = officeOf(p), C = O && CONTACTS[O.at];
+  if (!C || !p.badge) return null;
+  const top = caseBoard(world, p)[0];
+  if (!top) return null;
+  return { career: C.career, who: C.name, icon: 'eye', slot: 'career', id: `contact:office:${top.p.pid}`, fit: 1.2, x: top.x, y: top.y, title: `Your case board: ${top.name} (${top.stars} star${top.stars === 1 ? '' : 's'})`, sub: `Last seen in ${top.d}`, pay: 0, mins: 5, btn: { k: 'way', label: 'Waypoint' } };
 }
 registerCardSource('contacts', (world, p) => cardsFor(world, p), { slot: 'career' });
 
@@ -383,6 +524,12 @@ export function intoLockup(world, p, v) {
 
 // ---- the lock-up at its place's counter --------------------------------------------------------------------------------------
 export function menuOpts(world, p, poi, opts) {
+  const O = officeOf(p), OC = O && CONTACTS[O.at], oq = OC && placeOf(world, OC);
+  if (oq && oq.id === poi.id) {
+    const L = caseBoard(world, p);
+    L.forEach((c, i) => opts.push({ id: `ofc:${i}`, label: `Your office, the case board: ${c.name}`, note: `${c.stars} star${c.stars === 1 ? '' : 's'}, last seen in ${c.d}`, dis: true }));
+    if (!L.length) opts.push({ id: 'ofc:0', label: 'Your office, the case board: nobody wanted right now', note: 'the cards on your phone show the top suspect on duty', dis: true });
+  }
   const L = lockupOf(p), C = L && CONTACTS[L.at], q = C && placeOf(world, C);
   if (!q || q.id !== poi.id) return;
   const ped = p.ped, crate = ped && ped.carrying ? world.get(ped.carrying) : null;
@@ -482,4 +629,4 @@ export function devJump(world, p, id) {
   complete(world, p, C, r);
   return `${C.short}: "${S.t}" done (${r.done ? 'the chain is over' : `mission ${r.s + 1} of ${C.steps.length} next`}).`;
 }
-export function devReset(p) { const B = p.profile.contacts; if (B) delete p.profile.contacts; store.touch(); p.nxDirty = true; return 'Contacts reset: chains, lock-up and patrol car gone.'; }
+export function devReset(p) { const B = p.profile.contacts; if (B) delete p.profile.contacts; store.touch(); p.nxDirty = true; return 'Contacts reset: chains, lock-up, patrol car, office and tower share gone (a business given stays yours).'; }

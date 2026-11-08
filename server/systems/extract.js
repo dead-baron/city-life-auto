@@ -105,8 +105,10 @@ export function deliver(world, p, crate, place) {
   world.notify(p, r.kind === 'fence' ? `Fenced: ${money(r.bank)} wired to your bank. +${r.xp} Criminal EXP.`
     : r.kind === 'recover' ? `Recovered: the stolen ${word} is back. ${money(r.bank)} reward to your bank, +${r.sam} Samaritan.`
       : `The bank took the ${word} into its vault: ${money(r.bank)} to your bank, +${r.sam} Samaritan.`, 'good');
-  if (r.kind === 'fence') careers.note(world, p, 'fence', { n: r.bank, crate: crate.tier });
-  else if (r.kind === 'recover') careers.note(world, p, 'recover', { crate: crate.tier });
+  const src = crate.extract.src;   // (where it came from: a contact's mission may want the dock's, the Port job's - contacts.js)
+  if (r.kind === 'fence') careers.note(world, p, 'fence', { n: r.bank, crate: crate.tier, src });
+  else if (r.kind === 'recover') careers.note(world, p, 'recover', { crate: crate.tier, src });
+  else if (r.kind === 'vault') careers.note(world, p, 'haul', { crate: crate.tier, src });   // (honest freight)
   if (crate.tier === 4) events.feed(world, { kind: 'cargo', text: r.kind === 'fence' ? 'A carbon-gold case was fenced' : 'A carbon-gold case is back in a bank vault', x: ped.x, y: ped.y });
   store.touch();
   return r;

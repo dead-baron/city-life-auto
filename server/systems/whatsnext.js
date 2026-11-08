@@ -99,7 +99,7 @@ export function pickThree(cands, ctx, state) {
 function careerCards(world, p) {
   const prof = p.profile, at = posOf(world, p), out = [];
   if (!at) return out;
-  const R = (c) => careers.careerRank(p, c), who = (c) => careers.contactOf(c, R(c));
+  const R = (c) => careers.careerRank(p, c), who = (c) => careers.contactOf(c, R(c), p);
   // crime: fence the hot money on you; a store's till; a car to boost; a vault
   const hot = prof.hot || 0;
   if (hot > 0) { const f = nearest(world, at, ['fence', 'pawn']); if (f) out.push({ id: `career:fence:${f.id}`, career: 'crime', act: 'fence', who: who('crime'), icon: 'money', title: `${who('crime')}: clean that ${money(hot)}`, sub: `${f.label} takes it for a cut`, x: f.x, y: f.y, pay: hot * (1 - careers.fenceCut(p, HOT_FENCE_CUT)), mins: 4, btn: { k: 'way', label: 'Waypoint' } }); }
@@ -152,7 +152,7 @@ function goalCards(world, p) {
   const G = goals.state(p), at = posOf(world, p), out = [];
   for (const g of G.list) {
     if (g.done) continue;
-    const T = goals.BY_ID[g.k], c = CAREERS[g.c] ? g.c : null, who = careers.contactOf(c || careers.mainCareer(p), careers.careerRank(p, c || careers.mainCareer(p)));
+    const T = goals.BY_ID[g.k], c = CAREERS[g.c] ? g.c : null, who = careers.contactOf(c || careers.mainCareer(p), careers.careerRank(p, c || careers.mainCareer(p)), p);
     const kinds = p.badge && T.need === 'cop' ? null : T.place;
     const q = kinds ? nearest(world, at, kinds) : null;
     const card = { id: `goal:${g.k}`, slot: 'goal', career: c, title: goals.textOf(T, g.n), sub: `${g.got}/${g.n} · +${money(T.cash)}, +${T.xp} XP${q ? ` · ${q.label}` : ''}`, pay: T.cash, mins: 10, fit: 1, icon: 'star' };
@@ -269,7 +269,7 @@ export function handle(world, p, msg) {
       return stateFor(world, p, { ok: 1, way, close: 1 });
     }
     if (c.btn.k === 'call') {
-      const who = c.who || careers.contactOf(careers.mainCareer(p), careers.careerRank(p, careers.mainCareer(p)));
+      const who = c.who || careers.contactOf(careers.mainCareer(p), careers.careerRank(p, careers.mainCareer(p)), p);
       world.notify(p, `${who}: "${c.call || 'Keep at it.'}"`, 'info', `${who} on the phone`);
       return stateFor(world, p, { ok: 1, way, close: way ? 1 : 0 });
     }
