@@ -48,7 +48,7 @@ function addStyle() {
   const st = document.createElement('style');
   st.textContent = '.re-chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}.re-chips button{padding:3px 8px;border-radius:10px;border:1px solid #4a5568;background:#1c2230;color:#cbd5e1;font-size:12px}.re-chips button.on{background:#2f855a;border-color:#48bb78;color:#fff}'
     + '.re-row{display:flex;gap:8px;align-items:center;width:100%;text-align:left}.re-row img{width:64px;height:auto;max-height:56px;object-fit:contain;image-rendering:pixelated;border-radius:3px;background:#111;flex:none}.re-row .nm{flex:1;min-width:0}.re-row .d{white-space:nowrap;text-align:right}.re-row .d b{display:block;color:#9ae6b4}'
-    + '.re-mine{border-left:3px solid #48bb78}.re-bad{color:#feb2b2}.re-act{flex:none;padding:4px 8px;border-radius:6px;border:1px solid #48bb78;background:#22543d;color:#fff;font-size:12px}';
+    + '.re-mine{border-left:3px solid #48bb78}.re-bad,.ph-row small.re-bad{color:#feb2b2}.re-act{flex:none;padding:4px 8px;border-radius:6px;border:1px solid #48bb78;background:#22543d;color:#fff;font-size:12px}';
   document.head.appendChild(st);
 }
 
