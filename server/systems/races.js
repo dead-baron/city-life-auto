@@ -79,6 +79,7 @@ export function update(world) {
             const prize = Math.round(race.prize * Math.max(1, n) * share / 10) * 10;
             if (prize) { p.profile.bank += prize; store.touch(); }
             careers.note(world, p, r.place === 1 ? 'raceWin' : 'race');
+            if (r.place === 1) { p.profile.raceWins = (p.profile.raceWins || 0) + 1; store.touch(); }   // (the season's Races won board: seasons.js)
             world.notify(p, `Finished ${ordinal(r.place)} in ${r.time.toFixed(1)}s${prize ? ` - +$${prize} to your bank` : ''}!`, r.place === 1 ? 'good' : 'info');
             live--;
           }

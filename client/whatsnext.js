@@ -4,6 +4,8 @@
 //   the cards    three: your main career's, a daily goal's, a happening near you - one button each (waypoint, call the
 //                contact, accept), a small x to skip one (twice and it's gone for the day)
 //   the goals    today's three with their bars and rewards, one free reroll, the streak, the weekly
+//   the season   a header line: the season, its theme, the days left; Boards opens the season's leaderboards (each
+//                career's and the side boards: the top 10 and your place - server seasons.js, worked out every few minutes)
 // ctx: { send, setWaypoint, toast, close, refocus }
 import { icon as pix } from './touchicons.js';
 
@@ -46,6 +48,15 @@ const CSS = `
 .wn-strk b{color:var(--heat)}
 .wn-call{margin:6px 0;padding:8px 10px;border-radius:var(--r2);background:var(--navy3);font-size:var(--fs-1);color:var(--cream)}
 .wn-call b{color:var(--gold)}
+.wn-ssn{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:var(--fs-1);color:var(--dim)}
+.wn-ssn span{flex:1;min-width:0}
+.wn-ssn b{font:700 var(--fs-1) var(--pixel);letter-spacing:1px;color:var(--gold);text-transform:uppercase}
+.wn-ssn button{flex:none;min-height:32px;padding:0 10px;border-radius:var(--r2);border:1px solid var(--gold);background:var(--navy);color:var(--cream);font:600 var(--fs-1) var(--ui);cursor:pointer}
+.wn-bd{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--edge);font-size:var(--fs-1);color:var(--cream)}
+.wn-bd i{flex:none;width:22px;font-style:normal;color:var(--dim);text-align:right}
+.wn-bd span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wn-bd em{flex:none;font-style:normal;color:var(--dim)}
+.wn-bd.me{color:var(--gold)}.wn-bd.me em{color:var(--gold)}
 `;
 let styled = false;
 function style() {
@@ -83,12 +94,29 @@ function goalsHtml(G) {
     + (W ? `<h3>This week</h3><div class="wn-goal${W.done ? ' done' : ''}"><span class="nm">${W.done ? '✓ ' : ''}${esc(W.t)}<small>${W.got} / ${W.n} · ${esc(W.crate)}'s worth (${money(W.cash)}) + a cosmetic token${G.tok ? ` · tokens: ${G.tok}` : ''}</small><i class="pbar"><i style="width:${Math.round((100 * W.got) / Math.max(1, W.n))}%"></i></i></span></div>` : '');
 }
 
+// the season's line, and the leaderboards (kept from the last boards answer: the state that follows doesn't carry them)
+let view = 'cards', BD = null;
+export function opened() { view = 'cards'; }   // (the app opened again: its cards first - client/phone.js)
+function seasonLine(Z) {
+  if (!Z) return '';
+  return `<div class="wn-ssn"><span><b>${esc(Z.name)}</b>${Z.theme ? ` · ${esc(Z.theme)}` : ''} · ${esc(Z.note)}</span><button data-nxview aria-label="${view === 'boards' ? 'Back to the cards' : 'The leaderboards'}">${view === 'boards' ? 'Back' : 'Boards'}</button></div>`;
+}
+function boardsHtml(B) {
+  if (!B) return '<p class="ph-empty">Loading…</p>';
+  const row = (e) => `<div class="wn-bd${e.me ? ' me' : ''}"><i>${e.i}</i><span>${esc(e.n)}</span><em>${esc(e.s)}</em></div>`;
+  return `<p class="ph-hint">This season's best, worked out every few minutes${B.at > 60 ? ` (${Math.round(B.at / 60)} min ago)` : ''}. The top ${B.top} of each career's board get a gold plate for good when the season ends.</p>`
+    + B.boards.map((b) => `<h3>${esc(b.t)}</h3>` + (b.top.length ? b.top.map(row).join('') : '<p class="ph-empty">Nobody yet - it could be you.</p>')
+      + (b.me && !b.top.some((e) => e.me) ? row({ i: b.me.i, n: 'You', s: b.me.s, me: 1 }) : !b.me && b.top.length ? '<p class="ph-hint">You\'re not on it yet.</p>' : '')).join('');
+}
+
 export function render(el, S, ctx) {
   style();
   if (!S) { el.innerHTML = '<p class="ph-empty">Loading…</p>'; return; }
   if (!S.on) { el.innerHTML = '<p class="ph-empty">Finish your first goal, then this is where the city tells you what\'s next.</p>'; return; }
+  if (S.boards) BD = S.boards;
+  if (view === 'boards') { el.innerHTML = seasonLine(S.season) + boardsHtml(BD); wire(el, S, ctx); return; }
   const call = S.calls && S.calls[0] && S.calls[0].ago < 3600 ? `<div class="wn-call"><b>${esc(S.calls[0].who)}:</b> "${esc(S.calls[0].text)}"</div>` : '';
-  el.innerHTML = S.careers.map((c) => careerRow(c, S.main)).join('')
+  el.innerHTML = seasonLine(S.season) + S.careers.map((c) => careerRow(c, S.main)).join('')
     + (S.picked ? '' : '<p class="ph-hint">Tap a career to lead with it - your main career picks the first card.</p>')
     + call
     + `<div class="wn-cards">${S.cards.length ? S.cards.map(cardHtml).join('') : '<p class="ph-empty">Nothing right now - take a look around.</p>'}</div>`
@@ -99,6 +127,7 @@ function wire(el, S, ctx) {
   for (const b of el.querySelectorAll('[data-nxgo]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'nextgo', id: b.dataset.nxgo }); };
   for (const b of el.querySelectorAll('[data-nxskip]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'nextskip', id: b.dataset.nxskip }); };
   for (const b of el.querySelectorAll('[data-nxmain]')) b.onclick = () => { if (b.dataset.nxmain !== S.main || !S.picked) ctx.send({ t: 'phone', a: 'nextmain', c: b.dataset.nxmain }); };
+  for (const b of el.querySelectorAll('[data-nxview]')) b.onclick = () => { view = view === 'boards' ? 'cards' : 'boards'; if (view === 'boards') { BD = null; ctx.send({ t: 'phone', a: 'boards' }); } render(el, S, ctx); };
   for (const b of el.querySelectorAll('[data-nxreroll]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'reroll', i: Number(b.dataset.nxreroll) }); };
   ctx.refocus && ctx.refocus();
 }

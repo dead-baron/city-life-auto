@@ -1,6 +1,7 @@
 // Environment-neutral profile store facade. The Node server plugs in the persistent
 // FileStore (server/file-store.js); offline practice and tests use this in-memory store.
 import { WORLD_VERSION } from '../shared/constants.js';
+import { SEASON } from '../shared/rules.js';
 
 // The progress epoch (the owner, 11-04: "every player is reset totally, so everyone goes through the FTUE" - when the
 // first-time experience ships). A profile saved under an older epoch is reset to a new character the first time it's
@@ -8,13 +9,15 @@ import { WORLD_VERSION } from '../shared/constants.js';
 // again) - the same reset as CLA_FRESH_ON_UPDATE=all (players.js wipeProgress): progress gone, the name, the look, the
 // clothes owned, the cosmetics (cosm: name colors, title plates, the beta gift - cosmetics.js) and the account (acct: role,
 // sign-ins, passkeys, ban, mute, contacts) kept. A future launch reset is
-// this number bumped. 1: everything before the FTUE (profiles with no epoch); 2: the FTUE ships (2026-11-04).
+// this number bumped. 1: everything before the FTUE (profiles with no epoch); 2: the FTUE ships (2026-11-04). (A season's
+// end is the same reset, run by the owner's command with a few things carried over: server/systems/seasons.js.)
 export const PROGRESS_EPOCH = 2;
 
 export function defaultProfile(pid) {
   return {
     pid,
     epoch: PROGRESS_EPOCH,   // the progress epoch this profile's progress belongs to (resetOldEpochs)
+    season: SEASON.n,        // the season it belongs to (absent on old profiles: 0, the beta) - a season's end resets the rest (systems/seasons.js)
     wv: WORLD_VERSION, // the world layout this profile's homes and position belong to (homes.checkWorld)
     name: 'Guest' + String(Math.floor(1000 + Math.random() * 9000)),
     created: Date.now(),

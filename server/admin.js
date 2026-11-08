@@ -15,6 +15,9 @@
 //   reviews · resolve { rid, note }                                                     (admin)
 //   role { id, role: 'admin' | 'helper' | null }                                        (owner)
 //   pagelink { page: 'log' | 'dashboard' | 'reviews' } -> a one-time link to the protected pages (helper and up)
+//   season                                     -> the season now, its days left and each board's top (owner)
+//   season { end: 1, confirm: <the season's n> } -> the season over and the next begun: the top-10 plates, everyone online
+//                                                 out to the title, every profile reset (systems/seasons.js endSeason; owner)
 import { allowed, rankOf, GRANTABLE, POWERS } from './roles.js';
 import { ITEMS, WEAPONS } from '../shared/items.js';
 import { escapeSpot, safeSpot } from './systems/unstuck.js';
@@ -24,6 +27,8 @@ import { takeOut } from './systems/custody.js';
 import { chatData } from './moderation.js';
 import * as devmode from './devmode.js';
 import { moved } from './movemark.js';
+import * as seasons from './systems/seasons.js';
+import { SEASON } from '../shared/rules.js';
 
 const PLOG_MAX = 60, BUYS_MAX = 20, REFUND_DAYS = 30;
 const CLAIM_TRIES = 5, CLAIM_WINDOW_MS = 10 * 60e3, REFUSAL_LOG_MS = 60e3;
@@ -97,7 +102,7 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       return reply(a, false, { err: 'You don\'t have that power.' });
     }
     const t = msg.id !== undefined ? resolve(world, msg.id) : null;
-    const need = !['players', 'reviews', 'resolve', 'pagelink'].includes(a);
+    const need = !['players', 'reviews', 'resolve', 'pagelink', 'season'].includes(a);
     if (need && !t) return reply(a, false, { err: 'No such player.' });
     if ((a === 'refund' || a === 'restore') && t && t.pid === p.pid && role !== 'owner') return reply(a, false, { err: 'Not on your own account - ask another helper.' });
     const done = (x) => { log.append({ who: me(p), target: tgt(t), ...x }); if (t && t.acct && x.ok !== false) note(t.acct, 'staff', `${a} by ${p.name}${x.note ? ': ' + x.note : ''}`); store.touch(); };
@@ -217,6 +222,17 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         if (t.p) { t.p.meDirty = true; world.notify(t.p, want ? `You're a ${want} now.` : 'Your staff role was removed.', 'info'); }
         done({ what: 'role', before, after: want });
         return reply(a, true);
+      }
+      case 'season': {
+        if (!msg.end) {
+          const C = seasons.cached() || seasons.refresh();
+          return reply(a, true, { data: { ...seasons.header(), boards: Object.fromEntries(seasons.BOARDS.map((B) => [B.id, C.boards[B.id].list.slice(0, SEASON.top).map((e) => ({ n: e.n, v: e.v }))])) } });
+        }
+        if (Number(msg.confirm) !== SEASON.n || msg.confirm === undefined || msg.confirm === null) return reply(a, false, { err: `To end ${SEASON.name}, send confirm: ${SEASON.n} with end.` });
+        const was = SEASON.n;
+        log.append({ who: me(p), what: 'season-end', before: { season: was }, after: { season: was + 1 }, ok: true });
+        const r = seasons.endSeason(world);
+        return reply(a, true, { data: { was: r.was, n: r.n, reset: r.reset, plates: r.plates.length } });
       }
       case 'pagelink': {
         if (!pageLink) return reply(a, false, { err: 'Not available here.' });
