@@ -21889,3 +21889,39 @@ swimmer showing through the deck's median and blood from a hit in the water draw
   kerb of an east-west street (the buildings behind them are drawn up over the pavement), back yards' picnic tables
   behind their houses, a few ATMs and doors under the El and the highways, the wild camps' fire rings under their own
   trees. The engine fades a building you stand behind; these need the layout changed, not a prop moved.
+
+## 2026-11-07 - Air hockey against someone (two players through the server)
+
+The owner (11-07): "id prefer it is 2 player". An arcade's air hockey table now works as its pool tables do
+(`server/systems/hockeymatch.js`): the action button pays the table and opens the screen on "Waiting for a player - or: PLAY
+THE MACHINE". Someone walking up to a waiting table takes the other end (they pay too); a game going on - two players,
+or one against the machine - can only be watched. First to `ARCADE.hockey.to`; a win against a player pays
+`ARCADE.match.win` tickets and goes on `profile.hockeyRec`; getting up (the X, Esc, walking off, logging off) forfeits.
+The game against the machine is the old one, played on the page as before (stuck-puck failsafe, tickets by
+`arcade.js onScore`); while someone watches it the page sends its table ten times a second for them.
+- **One physics** (`shared/airhockey.js`): the rink, `strike`, `glide`, `unstick`, the machine's mallet, `stepTable`
+  (a step of the puck), `advance` (the table along both mallets' sampled paths) and the wire's `pack` / `unpack`. Only
+  arithmetic and `Math.sqrt` (no `Math.hypot` / `Math.pow`), so the server and every browser agree to the bit
+  (`test/airhockey.test.js`). `client/airhockey.js` keeps only the screen.
+- **The server plays the puck** at 120 steps a second, inside its 20 Hz tick. Each page sends its mallet every 4th step
+  (30 a second, `{ t: 'hockey', m: [k, x, y] }`, about 38 bytes), stamped with the table's step - its clock kept to the
+  server's by pings (the quickest of the last eight). The server plays the table up to the last step both mallets are
+  known for, never more than 0.35 s behind (a quiet page's mallet is held), so a strike comes out on the server just as
+  the page that made it played it. Samples are kept to their half, in order, no further ahead than 0.25 s, and the
+  mallet follows them no faster than 640 px/s. The failsafe faces off a stuck puck here too.
+- **20 times a second** every page at the table gets `{ t: 'hockey', s: [k, puck x y vx vy, mallets, wait] }` (tenths;
+  about 65 bytes; nothing while the table is still, but once a second). Measured: about 1.3 KB/s down and 1.05 KB/s up a
+  player, 1.3 KB/s down to a watcher.
+- **The page predicts** (`client/hockeynet.js`, loaded with the screen): from each word it plays the table on to now -
+  its own mallet along the samples it sent and where it is now, the other's along where it was heading - and draws your
+  mallet now, the other's as the server last knew it (between its words), and the puck by where it is: now at your end,
+  where your strikes are; as known at theirs, where theirs are; the time it's drawn at sliding between the two at 0.45x to
+  1.7x the clock. A word that disagrees moves the puck smoothly (an error dying away over 90 ms), or straight there past
+  40 px (a goal, a face-off). Seat 1 sees the table turned round: you're always on the left, in blue.
+- **Over 100-150 ms and 30 ms of jitter** (`test/hockeysim.js`: the server, two players and a watcher over simulated
+  sockets): what a player's page draws is within a few px of the server's table at the step it's drawn for most of the
+  time (median 0, 90% under 10 px; the misses are the other player's strikes in the middle of the table, made before
+  their page's word could arrive); a watcher's is the server's (90% under 2 px); nearly all of a player's own strikes are
+  the server's at the same step. A game plays to seven.
+- Guide: "Air hockey" and "Playing other people". main.js routes `hockey` words to the screen (4 bytes); the rest loads
+  with the screen.

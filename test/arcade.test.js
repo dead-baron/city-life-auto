@@ -8,6 +8,7 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { ARCADE } from '../shared/rules.js';
 import * as arcade from '../server/systems/arcade.js';
 import * as economy from '../server/systems/economy.js';
+import * as hockeymatch from '../server/systems/hockeymatch.js';
 import * as A from '../client/arcade.js';
 
 const lastOf = (conn, t) => [...conn.sent].reverse().find((m) => m && m.t === t);
@@ -81,10 +82,20 @@ test('the arcade: a building you walk into - a cabinet for every game along the 
   for (const c of cabs) {
     p.ped.home.x = c.x + c.w / 2; p.ped.home.y = c.y + c.h + 14;   // (stood at its front)
     const a = players.findInteraction(w, p);
-    assert.match(a.label, /^Play /, `at the ${c.game} machine: ${a.label}`);
+    assert.match(a.label, c.game === 'hockey' ? /^Air hockey - \$\d+: play someone, or the machine/ : /^Play /, `at the ${c.game} machine: ${a.label}`);   // (air hockey's a table for two: hockeymatch.js)
     games.push(arcade.cabinetAt(L, p.ped.home.x, p.ped.home.y).game);
   }
   assert.deepEqual(games, arcade.GAMES, 'a different game at each');
+  {   // the air hockey table: it waits for a player at it, held through the ticks while you're there; up and it's free
+    const ch = cabs[arcade.GAMES.indexOf('hockey')];
+    p.ped.home.x = ch.x + ch.w / 2; p.ped.home.y = ch.y + ch.h + 14;
+    players.findInteraction(w, p).run();
+    assert.ok(p.hockey && lastOf(conn, 'arcade').mp === 1, 'at the table: its screen, waiting');
+    run(w, 1);
+    assert.equal(hockeymatch.matchOf(w, p).st, 'wait', 'still there');
+    hockeymatch.onMsg(w, p, { t: 'hockey', a: 'leave' });
+    assert.ok(!p.hockey && !hockeymatch.matchOf(w, p)); prof.cash += ARCADE.hockey.price;
+  }
   // the first: STARFALL - a credit, the page told to play it, the score worth tickets (no more than the time allows)
   const c0 = cabs[0];
   p.ped.home.x = c0.x + c0.w / 2; p.ped.home.y = c0.y + c0.h + 14;

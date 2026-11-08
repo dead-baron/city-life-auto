@@ -54,7 +54,7 @@ test('the page leaves shared/rules.js and the install help out of its start-up c
 // the page's start-up code; main.js imports each when it's first wanted
 test('the mini-games, their art and bowling load when first played, not with the page', () => {
   const page = new Set(closure(['client/boot.js', 'client/main.js']));
-  for (const f of ['client/arcade.js', 'client/pool.js', 'client/airhockey.js', 'client/skeeball.js', 'client/pinball.js', 'client/bowling.js', 'client/arcart.js', 'shared/pool.js', 'client/leisure/chess.js', 'client/render/homeart2.js', 'client/art2/props-home.js']) assert.ok(!page.has(f), `${f} loads lazily`);
+  for (const f of ['client/arcade.js', 'client/pool.js', 'client/airhockey.js', 'client/hockeynet.js', 'shared/airhockey.js', 'client/skeeball.js', 'client/pinball.js', 'client/bowling.js', 'client/arcart.js', 'shared/pool.js', 'client/leisure/chess.js', 'client/render/homeart2.js', 'client/art2/props-home.js']) assert.ok(!page.has(f), `${f} loads lazily`);
   const main = src('client/main.js');
   for (const f of ['arcade', 'pool', 'airhockey', 'skeeball', 'pinball', 'bowling']) assert.match(main, new RegExp(`import\\('\\./${f}\\.js'\\)`), `${f}.js imported when wanted`);
 });

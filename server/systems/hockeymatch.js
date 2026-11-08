@@ -129,7 +129,7 @@ function tellWatched(world, M) {
 function end(world, M, win, how) {
   M.st = 'over'; M.win = win; M.at = world.time;
   const sc = `${Math.max(M.Tb.us, M.Tb.them)}-${Math.min(M.Tb.us, M.Tb.them)}`;
-  M.line = `${how} - ${nameOf(M.seats[win])} wins ${sc}`;
+  M.line = `${how ? `${how} - ` : ''}${nameOf(M.seats[win])} wins ${sc}`;
   M.seats.forEach((o, i) => {
     const q = playerOf(world, o);
     if (!q) return;
@@ -137,7 +137,7 @@ function end(world, M, win, how) {
     if (i === win) rec.w++; else rec.l++;
     let t = 0;
     if (i === win && M.o.tickets) { t = ARCADE.match.win; q.profile.tickets = (q.profile.tickets || 0) + t; }
-    world.notify(q, `Air hockey: ${i === win ? 'you win' : `${nameOf(M.seats[win])} wins`} ${sc}${t ? ` - ${t} tickets (${q.profile.tickets} in all)` : ''}. (Air hockey: ${rec.w}-${rec.l})`, i === win ? 'good' : 'info');
+    world.notify(q, `Air hockey: ${i === win ? 'you win' : `${nameOf(M.seats[win])} wins`} ${sc}${how ? ` (${how})` : ''}${t ? ` - ${t} tickets (${q.profile.tickets} in all)` : ''}. (Air hockey: ${rec.w}-${rec.l})`, i === win ? 'good' : 'info');
     q.meDirty = true;
   });
   store.touch();
@@ -198,7 +198,7 @@ export function play(world, M) {
   M.k = kh;
   for (const L of S) while (L.length > 1 && L[1][0] <= M.k) L.shift();   // (the samples gone by: the last one before now kept)
   M.at = world.time;
-  if (M.Tb.us >= TO || M.Tb.them >= TO) { end(world, M, M.Tb.us >= TO ? 0 : 1, 'First to ' + TO); return; }
+  if (M.Tb.us >= TO || M.Tb.them >= TO) { end(world, M, M.Tb.us >= TO ? 0 : 1, ''); return; }
   if (said) { push(world, M); M.sent = null; }
   const s = pack(M.Tb, M.k);
   if (M.sent && world.time - M.sentAt < 1 && s.every((v, i) => !i || v === M.sent[i])) return;
