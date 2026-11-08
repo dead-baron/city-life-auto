@@ -23,7 +23,7 @@ import { store } from '../store.js';
 import * as events from './events.js';
 import * as law from './law.js';
 import * as homes from './homes.js';
-import * as streetlife from './streetlife.js';
+import * as jobs from './jobs.js';
 
 export const TIER_WORD = ['crate', 'wood box', 'steel barrel', 'iron vault', 'carbon-gold case'];
 const MIN_TRIP_PX = 600;
@@ -155,7 +155,7 @@ export function update(world) {
     marks.push({ id: e.id, x: Math.round(e.x), y: Math.round(e.y), all, carrier: carrierOf(world, e) });
   }
   // the calendar's armored trucks with their gold still aboard
-  for (const ev of streetlife.live(world)) {
+  for (const ev of (world.street && world.street.live) || []) {   // (streetlife.js's live ones - not imported: jobs.js imports this)
     if (!ev.sched || ev.spilled || !ev.load.some((t) => t === 4)) continue;
     const van = world.get(ev.van);
     if (van && !van.removed) marks.push({ id: `v${van.id}`, x: Math.round(van.x), y: Math.round(van.y), all: true, carrier: van.id });
@@ -190,3 +190,4 @@ export function visibleTo(world, p) {
   return out;
 }
 events.setCargoMarks(visibleTo);
+jobs.setExtractZone(zone);   // (jobs.deliveryZoneFor asks this first for a valuable crate)

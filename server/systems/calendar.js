@@ -22,6 +22,7 @@ import { EVENTS, EVENT_GRACE_S, ARMORED_EVENT, DOCK_EVENT, CRATE_PAY, EXTRACT } 
 import { PED_BLOCK } from '../../shared/map.js';
 import { store } from '../store.js';
 import * as events from './events.js';
+import * as phone from './phone.js';
 import * as law from './law.js';
 import * as streetlife from './streetlife.js';
 import * as firstcar from './firstcar.js';
@@ -316,3 +317,4 @@ export function eventCards(player, now = clock(), world = W) {
     id: `event:${e.id}`, source: 'event', title: e.title, sub: e.sub, etaS: e.etaS, pay: e.pay, action: { type: 'waypoint', x: e.x, y: e.y },
   }));
 }
+phone.setCalendarListing((world, p) => listing(world, p));   // (the City feed app's "Coming up")

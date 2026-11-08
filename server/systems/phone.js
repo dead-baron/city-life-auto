@@ -8,7 +8,6 @@ import { mulberry32 } from '../../shared/rng.js';
 import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN, SAR, CHARTER, COAST, DUST } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
-import * as calendar from './calendar.js';
 import * as events from './events.js';
 import { spawnNpc } from './npc.js';
 import * as law from './law.js';
@@ -264,10 +263,13 @@ export function phoneOut(world, p, on) {
   if (was !== on) ped.appVer = (ped.appVer || 0) + 1;
 }
 
+// the event calendar's listing for the City feed app (calendar.js sets it: not imported here - it imports half the systems)
+export function setCalendarListing(fn) { setCalendarListing.fn = fn; }   // (on the hoisted function: safe mid-way through an import cycle)
+
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
-  if (a === 'feed') return { ...events.feedFor(world), cal: calendar.listing(world, p) };   // (and what's coming up: the event calendar - calendar.js)
+  if (a === 'feed') return { ...events.feedFor(world), cal: setCalendarListing.fn ? setCalendarListing.fn(world, p) : null };   // (and what's coming up: the event calendar - calendar.js)
   if (a === 'skills') return skills.panel(world, p);   // the Skills app (skills.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
   if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);

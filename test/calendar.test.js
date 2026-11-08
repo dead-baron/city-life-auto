@@ -9,14 +9,9 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T, CHUNK_PX } from '../shared/constants.js';
 import { EVENTS, EVENT_GRACE_S, CRATE_PAY, EXTRACT, ARMORED_EVENT, DOCK_EVENT } from '../shared/rules.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
-import * as calendar from '../server/systems/calendar.js';
-import * as extract from '../server/systems/extract.js';
-import * as streetlife from '../server/systems/streetlife.js';
-import * as cargo from '../server/systems/cargo.js';
-import * as jobs from '../server/systems/jobs.js';
-import * as events from '../server/systems/events.js';
-import * as phone from '../server/systems/phone.js';
 import { guideSections } from '../shared/guide.js';
+// (the server's systems after the world: helpers.js loads it first - its import order is the server's)
+const [calendar, extract, streetlife, cargo, jobs, events, phone] = await Promise.all(['calendar', 'extract', 'streetlife', 'cargo', 'jobs', 'events', 'phone'].map((n) => import(`../server/systems/${n}.js`)));
 
 const ROADISH = new Set([T.ROAD, T.BRIDGE, T.LOT, T.PLAZA, T.SIDEWALK]);
 const AR = EVENTS.find((e) => e.id === 'armored'), DK = EVENTS.find((e) => e.id === 'dock');
