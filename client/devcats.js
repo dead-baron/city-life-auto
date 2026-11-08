@@ -80,6 +80,7 @@ export const DEV_SECTIONS = [
   { id: 'law', title: '🚨 Wanted & police', items: [
     ['★ 1 star (a word)', 'wanted', { soft: 1 }], ['★★ 2 stars', 'wanted', { n: 2 }], ['★★★★ 4 stars', 'wanted', { n: 4 }], ['🧽 Clear wanted', 'clean'],
     ['👮 Join the police', 'cop'], ['⬆ Promote police rank', 'promote'], ['🏛 Police station', 'near', { k: 'police' }],
+    ['⏭ Rosa Vance: next chain step', 'contact', { k: 'rosa' }], ['⏭ Sgt. Okafor: next chain step', 'contact', { k: 'okafor' }], ['↺ Reset the contacts\' chains', 'contact', { k: 'reset' }],
     ['⚖ Courthouse', 'near', { k: 'courthouse' }], ['💥 Gang vs police shootout', 'shootout'],
     ['💀 A test bounty on me (the golden skull)', 'bounty'], ['🎯 Licensed bounty hunter', 'hunter'], ['💀 Let me put a bounty on the nearest player', 'revenge'],
   ] },

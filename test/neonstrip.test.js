@@ -124,7 +124,7 @@ test('the flagship arcade: the Neon Strip\'s Pixel Arcade - its door onto the bi
   const cabs = L.pieces.filter((q) => q.ch === 'j').length;
   const others = M.pois.filter((q) => arcade.isArcade({ map: M }, q) && !q.flagship).map((q) => arcade.hallLayout(arcade.hallOf(w, q)).pieces.filter((z) => z.ch === 'j').length);
   assert.ok(others.length >= 7 && cabs > Math.max(...others), `more cabinets (${cabs}) than any other arcade (${Math.max(...others)})`);
-  assert.ok(L.pieces.some((q) => q.use === 'prizes' && q.th >= 3), 'the long prize counter');
+  assert.ok(L.pieces.some((q) => q.use === 'prizes' && Math.max(q.tw, q.th) >= 3), 'the long prize counter');
   // its building: the biggest arcade front on the strip, its signs the owner's game pad and GAME ZONE
   const b = M.buildings[poi.b];
   assert.ok(b.tw >= 24, `its front ${b.tw} tiles`);

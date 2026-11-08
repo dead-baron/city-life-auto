@@ -22157,3 +22157,42 @@ its hours, not while inside, the furniture to storage, the returning player; ins
 goodwill once then gone, the tow; plates and colors for cash and tokens on the descriptor and through a reset; a top rank
 kept; the beta gift through an epoch bump; fees). No world rekey; the jacket adds a catalogue piece (people's art, not the
 baked chunks).
+
+## 2026-11-08 - Contacts and mission chains: Rosa Vance and Sgt. Okafor (progression build order 3, first half)
+
+- **The system** (`server/systems/contacts.js`; the data: `shared/rules-contacts.js` `CONTACTS`, `CONTACT`,
+  `CONTACT_ORDER` - a rules file of its own, kept out of `shared/rules.js` so the page's startup code doesn't carry it;
+  only the Guide reads it on the page). A contact is a table entry: who, career, their place (a kind of place, preferred
+  by name and district), when they first get in touch, a chain of missions, what the chain ends with, and repeatable
+  jobs with twists. A mission counts an event the game already notes (`careers.note`) or one of three this module checks
+  itself (`visit` their place, `handover` a stolen car at their door, `have` an item). The other four contacts (Deacon
+  Marsh, Captain Reyes, Mae Holloway, Victor Lin) are an entry each, plus a `careers.note` wherever a mission needs
+  something counted that isn't yet.
+- **Rosa Vance** (crime; her shop is "Lucky Pawn" in text only - the place is Southside's pawn shop, its name on the
+  map unchanged; no world or art rekey). Texts anyone with crime XP, crime as their main career, or the hustle start.
+  Eight missions: boost a car, shake two stars, empty a till; from Hustler: wash $500 of hot money, fence a stolen crate
+  (hot cargo), drive a stolen car round to her back door, buy a thermal drill (she pays half), come by the shop. Ends
+  with **a Southside lock-up** of your own (`profile.contacts.lockup`: 2 cars, 3 crates - drive a car up to the shop and
+  put it in; the shop's counter takes them out, and a carried crate in) and crime XP brought up to Booster's threshold.
+- **Sgt. Dana Okafor** (police, the Midtown precinct - the nearest station on a map without it). Texts anyone with police
+  XP, on duty, police as their main career, or fit for a badge. Eight missions: report for duty, two patrol calls, a
+  traffic stop (a car stopped with your spike strip - the game has no pull-over, the strip is the stop), from Officer:
+  an arrest without force (the suspect cuffed with 85%+ of their health: taser, tackle, spray), a bounty brought in alive,
+  the armored truck run escorted (calendar.js), a stolen crate recovered, report to the precinct. Ends with **your own
+  patrol car** (`profile.contacts.car { unit }`: every cruiser dispatch issues you is your unit "4-Adam-27", it's never
+  towed back while you're on duty, and it's back 5 s after it's lost instead of 15 - `cruiser.js`) and Corporal.
+- **Rank gating, texts and calls.** Each mission waits for a rank in the contact's career; the contact texts the offer
+  (or, once, what rank they're waiting for) - a line in the HUD's notes and the What's next app's calls - and calls at
+  the end with the title card (the bump's rank-up folded into it: one card, `BOOSTER` / `CORPORAL`, the reward in its
+  line). One short line of character per mission. XP bumps go to the threshold, never past it; already past, no bump.
+- **What's next**: a card source (`registerCardSource('contacts', ...)`, slot career, fit `CONTACT.mainFit` for your
+  main career's contact so it's the main-career card): offered - **Accept**; under way - **Call** (their brief, the
+  waypoint: their place, the nearest place the mission needs, the armored truck itself); waiting for a rank - Call.
+- **Repeatables** after the chain: every 2 minutes after the last, a short job at your rank (sized 0-2 / 3-5 / 6-7, pay
+  +15% a rank) with a twist rotating against it - inside 8-10 minutes, on the contact's turf (counted only there),
+  nobody hurt, without force, twice over - each paying more.
+- **New progress events**: `spiked` (spikes.js), `escort` (calendar.js, the guard's pay), `recover` and a crate `fence`
+  (extract.js deliveries), `crate` on the Exchange's fence (jobs.js), `gentle` on arrests (law.js).
+- Saved on the profile (`profile.contacts`; old saves load - made on first use). Dev menu, Wanted & police: "Rosa Vance:
+  next chain step", "Sgt. Okafor: next chain step" (a gate's XP met, else the mission done), "Reset the contacts'
+  chains". Guide: Ways to earn - Contacts; Property - Your lock-up and patrol car. Tests: `test/contacts.test.js`.

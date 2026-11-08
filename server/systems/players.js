@@ -68,6 +68,7 @@ import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
 import * as careers from './careers.js';
+import * as contacts from './contacts.js';   // (a car handed over to a contact, put in your lock-up)
 import * as whatsnext from './whatsnext.js';
 import * as props from './props.js';
 import * as trains from './trains.js';
@@ -826,7 +827,7 @@ export function findInteraction(world, p) {
     if (fi) return fi;
     const work = forklift.vehicleInteraction(world, p) || fishboat.vehicleInteraction(world, p);   // at a forklift's or the trawler's wheel (batch 8)
     if (work) return work;
-    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || woodjob.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
+    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || woodjob.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || contacts.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;

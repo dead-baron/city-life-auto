@@ -63,10 +63,12 @@ function careerRow(c, main) {
     + `<span class="ic">${pix(C_ICON[c.k] || 'star')}</span><span class="nm"><span class="t"><b>${esc(c.title)}</b><i>${esc(c.name)}${c.k === main ? ' ★' : ''} · ${c.rank + 1}/8</i></span>`
     + `<i class="pbar"><i style="width:${pct}%"></i></i><small>${c.hi ? `${c.xp.toLocaleString('en-US')} / ${c.hi.toLocaleString('en-US')} XP · ` : ''}${nx}</small></span></button>`;
 }
-function cardHtml(c) {
+function cardHtml(c, i, all) {
+  // (a slot with nothing of its own takes another card - whatsnext.js pick: the second of a kind says so)
+  const again = all && all.slice(0, i).some((q) => q.slot === c.slot);
   const meta = [c.d ? `<span>${esc(c.d)}</span>` : '', c.pay && c.slot !== 'goal' ? `<span class="pay">~${money(c.pay)}</span>` : '', c.who && !c.title.includes(c.who) ? `<span>${esc(c.who)}</span>` : ''].filter(Boolean).join('');   // (a goal's pay is in its line; a contact named in the title once)
   const ic = c.btn.k === 'call' ? 'talk' : c.btn.k === 'accept' ? 'job' : 'pin';
-  return `<div class="wn-card ${esc(c.slot)}"><div class="sl">${SLOT[c.slot] || ''}${c.novel ? '<span class="new">NEW</span>' : ''}</div>`
+  return `<div class="wn-card ${esc(c.slot)}"><div class="sl">${again ? 'ALSO ON OFFER' : SLOT[c.slot] || ''}${c.novel ? '<span class="new">NEW</span>' : ''}</div>`
     + `<button class="skip" data-nxskip="${esc(c.id)}" aria-label="Not now">&times;</button>`
     + `<b>${esc(c.title)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ''}${meta ? `<div class="meta">${meta}</div>` : ''}`
     + `<button class="go" data-nxgo="${esc(c.id)}">${pix(ic)}${esc(c.btn.label)}</button></div>`;

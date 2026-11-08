@@ -25,7 +25,7 @@ const chunksOf = (b) => { const x0 = b.tx * TILE - 40, y0 = b.ty * TILE - 360, x
 
 test('near a walk-in\'s door: its chunks baked cut away into the store ahead, once', () => {
   const { h, asked } = host();
-  h._precut({ nearB: B, insideB: null });
+  h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: null });
   const want = chunksOf(B);
   assert.equal(asked.length, want.length, 'every chunk round it');
   for (const a of asked) {
@@ -33,23 +33,23 @@ test('near a walk-in\'s door: its chunks baked cut away into the store ahead, on
     assert.equal(a.args.opt.cutaway, B.id, 'cut away round this shop');
     assert.ok(a.args.ck.endsWith(`|c${B.id}`), 'kept under the cut-away\'s key');
   }
-  h._precut({ nearB: B, insideB: null });
+  h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: null });
   assert.equal(asked.length, want.length, 'not asked again while it\'s on its way');
   for (const [k, j] of h.pool.jobs) { h.pool.jobs.delete(k); j.done({ kept: true }); }
-  h._precut({ nearB: B, insideB: null });
+  h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: null });
   assert.equal(asked.length, want.length, 'nor once it\'s kept');
   // already inside: the bake for the screen does it
-  const o = host(); o.h._precut({ nearB: B, insideB: B }); assert.equal(o.asked.length, 0);
-  // the screen's own bakes first
-  const w = host(); w.h.pool.waiting = () => 1; w.h._precut({ nearB: B, insideB: null }); assert.equal(w.asked.length, 0);
+  const o = host(); o.h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: B }); assert.equal(o.asked.length, 0);
+  // the screen's own bakes first (a chunk on screen with nothing drawn yet: host.js needChunks)
+  const w = host(); Object.assign(w.h, { needChunks: new Map([[1001, 1]]), vx0: 0, vy0: 0, vx1: 1e5, vy1: 1e5 }); w.h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: null }); assert.equal(w.asked.length, 0);
 });
 
 test('walking on to the next shop: the last one\'s bakes still queued are let go', () => {
   const { h, asked } = host();
-  h._precut({ nearB: B, insideB: null });
+  h._precut({ sp: { x: (B.tx + B.tw / 2) * TILE, y: (B.ty + B.th) * TILE }, nearB: B, insideB: null });
   const n = asked.length;
   const B2 = { id: 9, tx: 80, ty: 40, tw: 6, th: 5 };
-  h._precut({ nearB: B2, insideB: null });
+  h._precut({ sp: { x: (B2.tx + B2.tw / 2) * TILE, y: (B2.ty + B2.th) * TILE }, nearB: B2, insideB: null });
   assert.ok(asked.length > n, 'the next shop\'s asked for');
   assert.ok([...h.pool.jobs.keys()].every((k) => k.includes(`,${B2.id},`)), 'only its bakes left queued');
   assert.ok([...h.pc.out].every((k) => k.includes(`,${B2.id},`)));

@@ -24,6 +24,7 @@ import * as events from './events.js';
 import * as law from './law.js';
 import * as homes from './homes.js';
 import * as jobs from './jobs.js';
+import * as careers from './careers.js';   // (progress events: a crate fenced, one recovered - careers.js note)
 
 export const TIER_WORD = ['crate', 'wood box', 'steel barrel', 'iron vault', 'carbon-gold case'];
 const MIN_TRIP_PX = 600;
@@ -104,6 +105,8 @@ export function deliver(world, p, crate, place) {
   world.notify(p, r.kind === 'fence' ? `Fenced: ${money(r.bank)} wired to your bank. +${r.xp} Criminal EXP.`
     : r.kind === 'recover' ? `Recovered: the stolen ${word} is back. ${money(r.bank)} reward to your bank, +${r.sam} Samaritan.`
       : `The bank took the ${word} into its vault: ${money(r.bank)} to your bank, +${r.sam} Samaritan.`, 'good');
+  if (r.kind === 'fence') careers.note(world, p, 'fence', { n: r.bank, crate: crate.tier });
+  else if (r.kind === 'recover') careers.note(world, p, 'recover', { crate: crate.tier });
   if (crate.tier === 4) events.feed(world, { kind: 'cargo', text: r.kind === 'fence' ? 'A carbon-gold case was fenced' : 'A carbon-gold case is back in a bank vault', x: ped.x, y: ped.y });
   store.touch();
   return r;

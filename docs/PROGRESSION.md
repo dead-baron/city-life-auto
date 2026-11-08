@@ -69,7 +69,7 @@ Six contacts, two per career, each with 6-8 missions built from existing systems
 
 | Contact | Career | Who | Chain ends with |
 | --- | --- | --- | --- |
-| Rosa Vance | Crime (early) | Runs Lucky Pawn in Southside; sharp, funny, owes everyone | A Southside lock-up of your own + Hustler-to-Booster |
+| Rosa Vance | Crime (early) | Runs Crown Pawn in Southside (the plan said Lucky Pawn; that one is in Midtown); sharp, funny, owes everyone | A Southside lock-up of your own + Hustler-to-Booster |
 | "Deacon" Marsh | Crime (late) | Old-school fixer at Port Westport docks; never raises his voice | The Port job: a heist chain on a cargo ship, a carbon-gold haul, the Underboss title |
 | Sgt. Dana Okafor | Police (early) | Training sergeant, Midtown precinct; by the book, quietly kind | Your own patrol car + the Corporal badge |
 | Captain Luis Reyes | Police (late) | Runs the detective squad; long game against Deacon | Bringing down Deacon's crew (mirror of the crime chain), a detective's office, the Captain rank |

@@ -51,6 +51,7 @@ import * as cosmetics from './cosmetics.js';   // (the style counter, custom pai
 import * as insurance from './insurance.js';   // (vehicle policies and claims)
 import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
+import * as contacts from './contacts.js';   // (the lock-up a contact gave you)
 import * as extract from './extract.js';   // (the valuable crates in your home's stash: taken out at the door)
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
@@ -484,6 +485,7 @@ function menuOf(world, p, poi) {
   if (storeOf(poi) && kind !== 'barber') opts.unshift({ id: 'fit', label: 'The fitting room: try on and buy clothes' });
   if (kind === 'club' || kind === 'garage' || kind === 'dealer') biz.menuRow(world, p, poi, opts);   // (the business: the manager's office - biz.js)
   hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
+  contacts.menuOpts(world, p, poi, opts);   // your lock-up, at the contact's place that gave it (contacts.js)
   if (atmMore) opts.push({ id: 'atmfull', label: 'Use ATM', note: 'deposit or withdraw an amount' });
   if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
   return { t: 'menu', poi: poi.id, title, sub, opts, cash: prof.cash, bank: prof.bank, interior };
@@ -832,6 +834,7 @@ function execute(world, p, poi, opt) {
     case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
     case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
+    case 'lku': return contacts.onMenu(world, p, poi, parts);   // (your lock-up: contacts.js)
     case 'htc': return extract.takeOut(world, p, Number(parts[1]));   // (a valuable crate out of the stash: extract.js)
     case 'hst': case 'htk': {
       const id = parts[1];

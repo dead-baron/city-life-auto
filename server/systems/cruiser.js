@@ -15,6 +15,7 @@ import { driveToward, planRoute, removeVehicle } from './traffic.js';
 import * as vehicles from './vehicles.js';
 
 import { CALL_COOLDOWN_S } from '../../shared/rules.js';
+import { CONTACT } from '../../shared/rules-contacts.js';
 export { CALL_COOLDOWN_S };
 const FAR_PX = 900;          // further than this from your parked cruiser starts the tow timer
 const TOW_AFTER_S = 25;      // ...and after this long it is towed away
@@ -23,6 +24,10 @@ const ARRIVE_PX = 170;       // the delivery driver parks this close to you
 const DELIVERY_MAX_S = 45;   // stuck in traffic for too long: dispatch "finds a spot" next to you
 
 const rng = mulberry32(4242);
+// Your own patrol car (Sgt. Okafor's chain - server/systems/contacts.js: profile.contacts.car { unit }): every cruiser
+// dispatch issues you is that unit, it waits where you left it while you're on duty (never towed back), and lost it's
+// back after CONTACT.carCooldownS instead of CALL_COOLDOWN_S
+const unitOf = (p) => (p && p.profile && p.profile.contacts && p.profile.contacts.car ? p.profile.contacts.car.unit : null);
 
 // A free spot near a ped where a vehicle of this size fits without overlapping walls or traffic.
 export function clearSpot(world, ped, def) {
@@ -48,6 +53,8 @@ function makeCruiser(world, p, x, y, a) {
   const v = world.spawnVehicle('police', x, y, a, { npcOwned: false });
   v.issuedTo = p.pid; v.despawnable = false; v.npcOwned = false;
   v.cruiserOf = p.pid;
+  const unit = unitOf(p);
+  if (unit) { v.unit = unit; v.ownerName = `Unit ${unit}`; }
   (v.stolenBy ||= new Set()).add(p.pid); // your own cruiser is never "theft"
   p.dutyVehicle = v.id;
   p.cruiserFar = 0;
@@ -123,7 +130,7 @@ export function issueAt(world, p, x, y, a) {
 }
 
 export function cooldownLeft(world, p) {
-  return p.cruiserLostAt ? Math.max(0, CALL_COOLDOWN_S - (world.time - p.cruiserLostAt)) : 0;
+  return p.cruiserLostAt ? Math.max(0, (unitOf(p) ? CONTACT.carCooldownS : CALL_COOLDOWN_S) - (world.time - p.cruiserLostAt)) : 0;
 }
 
 // "Call a cruiser": returns an error string or null.
@@ -235,7 +242,8 @@ export function update(world, dt) {
       p.dutyVehicle = 0;
       p.cruiserLostAt = world.time;
       p.meDirty = true;
-      world.notify(p, why === 'stolen' ? `Your cruiser was stolen! Dispatch can send another in ${CALL_COOLDOWN_S}s.` : `Your cruiser is wrecked. Dispatch can send another in ${CALL_COOLDOWN_S}s.`, 'bad');
+      const cd = unitOf(p) ? CONTACT.carCooldownS : CALL_COOLDOWN_S;
+      world.notify(p, why === 'stolen' ? `Your cruiser was stolen! Dispatch can send another in ${cd}s.` : `Your cruiser is wrecked. Dispatch can send another in ${cd}s.`, 'bad');
       continue;
     }
     const ped = p.ped;
@@ -243,6 +251,7 @@ export function update(world, dt) {
     if (ped.vehId === v.id) { v.lockedTo = 0; p.cruiserFar = 0; continue; }
     if (v.ai && v.ai.kind === 'delivery') continue;
     if (v.seats.some((s) => s)) { p.cruiserFar = 0; continue; }
+    if (v.unit && unitOf(p) === v.unit) { p.cruiserFar = 0; continue; }   // (your own patrol car: it waits for you)
     const d = Math.hypot(ped.x - v.x, ped.y - v.y);
     if (d < FAR_PX && !ped.dead) { p.cruiserFar = 0; continue; }
     p.cruiserFar = (p.cruiserFar || 0) + step;
