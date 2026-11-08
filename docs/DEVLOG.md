@@ -21908,3 +21908,11 @@ shopfront: CORAL CAY POLICE over a front desk's lobby, not clothes racks); the w
 cells. Every junction on Coral Cay reaches it. POIs dumped before and after: 6025 each, only 3361 differs (its kind,
 label and the door spot the walk-in sets). `test/prison.test.js` (both island stations: the desk, the cells, the ride,
 never in the water).
+
+## 2026-11-07 - Three bake threads on a 4-OCPU server
+The owner may resize the Oracle VM to the free tier's 4 OCPUs / 24 GB. `server/artcdn.js defaultThreads` starts three
+bake threads on 4+ cores with 20+ GB (a core left for the game's loop; three world builds beside the server's own come
+to about 7 GB), two on today's 2 OCPUs / 12 GB as before. The threads already run at the lowest priority: each worker
+calls `os.setPriority(19)` (`server/artbake.js`), which Linux applies to that thread alone - checked: a worker reads nice
+19 from /proc/thread-self/stat while the main thread stays at 0. `CLA_ART_THREADS` still wins. The service file's comment
+and docs/DEPLOY.md list the new default; `test/artcdn.test.js` (2 / 12 GB -> 2, 4 / 24 GB -> 3, 1 / 6 GB -> 1).

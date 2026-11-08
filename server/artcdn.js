@@ -316,11 +316,15 @@ function defaultPrewarm() {
 // of its own art - the owner, 2026-10-15, on a phone: "the graphics don't load fast enough"); two on two cores or more
 // with room for both (each builds the world too: World v3's, about 1.5 GB at its peak, beside the server's 2.2 GB - the
 // live server since 2026-10-15, 2 OCPUs and 12 GB: World v3's 45,864 chunks in about five hours instead of ten; an 8 GB
-// development machine keeps one); none where memory is short.
+// development machine keeps one); three on four cores or more with 20+ GB (the free tier's largest VM, 4 OCPUs / 24 GB,
+// should the live one be resized - the owner, 11-07: a core left for the game's loop; three builds of the world beside
+// the server's own fit in about 7 GB); none where memory is short. (Each thread's own priority: Linux keeps a nice
+// value per thread, so the game's loop on the main thread stays at its normal priority.)
 export function defaultThreads(n = cpus().length, mem = totalmem()) {
   const env = process.env.CLA_ART_THREADS;
   if (env !== undefined && env !== '') return Math.max(0, Number(env) || 0);
   if (mem < 4.5e9) return 0;
+  if (n >= 4 && mem >= 20e9) return 3;
   return n >= 2 && mem >= 11e9 ? 2 : 1;
 }
 // The order the asks are baked in (docs/WORLD-V3.md 8.12.1). A page asks for what its screen needs nearest first (the

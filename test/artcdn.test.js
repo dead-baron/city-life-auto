@@ -256,8 +256,9 @@ test('art of another world: the build before doesn\'t stand in, this build\'s di
 
 // The bake threads by default (CLA_ART_THREADS unset): one on a one-core server (the live one was, and baked nothing with
 // none), two on two cores with the memory for both (the live server's 2 OCPUs / 12 GB since 2026-10-15), one on an 8 GB
-// development machine, none under 4.5 GB.
-test('the bake threads: one on one core, two on two cores with room for both, none where memory is short', async () => {
+// development machine, three on four cores with 20+ GB (the free tier's 4 OCPUs / 24 GB: a core left for the game's
+// loop), none under 4.5 GB.
+test('the bake threads: one on one core, two on two cores with room for both, three on four, none where memory is short', async () => {
   const { defaultThreads } = await import('../server/artcdn.js');
   const env = process.env.CLA_ART_THREADS;
   delete process.env.CLA_ART_THREADS;
@@ -265,7 +266,11 @@ test('the bake threads: one on one core, two on two cores with room for both, no
     assert.equal(defaultThreads(1, 6.4e9), 1);
     assert.equal(defaultThreads(2, 12.6e9), 2);
     assert.equal(defaultThreads(2, 8.4e9), 1);
-    assert.equal(defaultThreads(4, 24e9), 2);
+    assert.equal(defaultThreads(2, 12e9), 2, 'today\'s live box: 2 OCPUs / 12 GB');
+    assert.equal(defaultThreads(4, 24e9), 3, 'resized to 4 OCPUs / 24 GB: three, a core for the game');
+    assert.equal(defaultThreads(1, 6e9), 1);
+    assert.equal(defaultThreads(4, 16e9), 2, 'four cores, not the memory for three');
+    assert.equal(defaultThreads(8, 64e9), 3, 'never more than three');
     assert.equal(defaultThreads(2, 4e9), 0);
     process.env.CLA_ART_THREADS = '0';
     assert.equal(defaultThreads(4, 24e9), 0, 'the setting wins');
