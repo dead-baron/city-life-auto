@@ -9,6 +9,8 @@ let petTarget = () => null; // set by pets.js (it imports this module)
 export function setPetTarget(fn) { petTarget = fn; }
 let walletTarget = () => null; // set by happenings.js: the owner of a dropped wallet you're carrying
 export function setWalletTarget(fn) { walletTarget = fn; }
+let cargoMarks = () => null; // set by extract.js: the valuable crates on the move this player is shown (gold: everyone's)
+export function setCargoMarks(fn) { cargoMarks = fn; }
 
 // Event text for the city feed when the caller doesn't give one.
 const FEED_TEXT = { snatch: 'Purse snatched', drop: 'Contraband crate spotted', shootout: 'Gang shootout with the police', robbery: 'Store robbery - alarm tripped' };
@@ -67,6 +69,7 @@ export function forPlayer(world, p) {
   for (const e of world.happenings || []) {
     if (e.kind === 'revive' && e.pid === p.pid) continue; // your own call for help
     if (e.lead && e.lead === ped.id) continue; // the lost pet at your heel (its owner is your arrow now)
+    if (e.sched) continue;   // (the calendar's armored truck: its gold's marker, everyone's - extract.js)
     if (Math.hypot(e.x - ped.x, e.y - ped.y) > (e.kind === 'revive' ? HELP_PING_PX : EVENT_RANGE)) continue;
     out.push({ id: e.id, k: e.kind, x: Math.round(e.x), y: Math.round(e.y) });
   }
@@ -77,6 +80,8 @@ export function forPlayer(world, p) {
   if (home) out.push(...[].concat(home));   // (pets.js: the owner you're leading a pet to; lost pets' owners about)
   const owner = walletTarget(world, p);
   if (owner) out.push(owner);
+  const marks = cargoMarks(world, p);
+  if (marks && marks.length) out.push(...marks);
   if ((p.profile.inventory.purse || 0) > 0) {
     let best = null, bd = EVENT_RANGE * 1.5;
     for (const e of world.query(ped.x, ped.y, bd, K.PED)) {

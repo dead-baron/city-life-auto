@@ -47,6 +47,7 @@ import * as campfires from './campfires.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
 import * as bathhouse from './bathhouse.js';
+import * as extract from './extract.js';   // (the valuable crates in your home's stash: taken out at the door)
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
 import { SURFBOARD_PRICE, ROLLERBLADES_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
@@ -395,6 +396,7 @@ export function buildMenu(world, p, poi) {
         if (h.garage) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind !== 'boat') opts.push({ id: `hcar:${i}`, label: inside ? `Garage: ${d.name}` : `Take out ${d.name}`, note: inside ? 'drive out' : 'garage' }); });
         starter.homeOpts(world, p, h, opts);   // (your starter car, kept in the garage: starter.js)
         if (h.dock) prof.vehicles.forEach((ov, i) => { const d = VEHICLES[ov.model]; if (d && d.kind === 'boat') opts.push({ id: `hboat:${i}`, label: inside ? `Boathouse: ${d.name}` : `Take out your ${d.name}`, note: inside ? 'head down to the dock' : 'boathouse' }); });
+        if (!inside) extract.homeOpts(p, opts);
         if (!inside) opts.push({ id: 'hsell', label: `Sell (+$${Math.round(h.price * 0.6).toLocaleString()} to bank)` });
       }
       break;
@@ -806,6 +808,7 @@ function execute(world, p, poi, opt) {
     case 'hrest': { ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up. Full health.', 'good'); return null; }
     case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
+    case 'htc': return extract.takeOut(world, p, Number(parts[1]));   // (a valuable crate out of the stash: extract.js)
     case 'hst': case 'htk': {
       const id = parts[1];
       const st = (prof.stash ||= { items: {}, weapons: {} }); st.items ||= {};

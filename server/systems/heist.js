@@ -18,7 +18,7 @@
 // 'drilljam', 'vaultopen'; client/vault.js draws the door, the drill and the open vault.
 //   world.vaults: building id -> { bid, x, y, sx, sy, label, tier, u, st: 'drill' | 'open' | 'shut', by (pid), at, work,
 //     jamAt [fractions], jammed, jamT, said, buzz, until, calls [[time, units]] }
-import { HEIST, CREW, ROB_TILL_TIER, ROB_SCENE_S } from '../../shared/rules.js';
+import { HEIST, CREW, ROB_TILL_TIER, ROB_SCENE_S, CRATE_PAY } from '../../shared/rules.js';
 import { vaultOf, bankAt } from '../../shared/heist.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
@@ -116,7 +116,8 @@ function open(world, V) {
   const load = HEIST.load[V.tier] || HEIST.load.mid, n = load.length;
   load.forEach((tier, i) => {
     const x = Math.max(V.x0 + 14, Math.min(V.x1 - 14, V.x + (i - (n - 1) / 2) * 24));
-    const c = world.spawnCrate(tier, x, V.sy, { contraband: true, label: `${V.label} vault`, expires: now + HEIST.cooldownS });
+    const c = world.spawnCrate(tier, x, V.sy, { contraband: true, label: `${V.label} vault`, expires: now + HEIST.cooldownS, value: CRATE_PAY[tier] });
+    c.extract = { src: 'vault', stolen: true, ev: null };   // (paid on delivery: extract.js)
     c.vx = (x - V.x) * 0.8; c.vy = Math.sign(V.sy - V.y) * 45; c.z = 4; c.vz = 40;
   });
   world.emit(V.x, V.y, { e: 'vaultopen', id: V.bid, x: Math.round(V.x), y: Math.round(V.y) });

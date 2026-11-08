@@ -16,6 +16,7 @@ import * as events from './events.js';
 import * as trains from './trains.js';
 import { pointGrid } from '../pointgrid.js';
 import * as vehicles from './vehicles.js';
+import * as extract from './extract.js';
 
 const rng = mulberry32(5150);
 
@@ -273,6 +274,7 @@ export function deliveryZoneFor(world, p, crate) {
   if (!crate) return null;
   const ped = p.ped;
   const near = (kind, r = 70) => world.map.pois.find((q) => q.kind === kind && Math.hypot(q.x - ped.x, q.y - ped.y) < r);
+  if (crate.extract) return extract.zone(world, p, crate);   // (a valuable crate: paid on delivery - a fence, a bank, the police, your stash: extract.js)
   if (crate.job && crate.job.type === 'courier' && crate.job.pid === p.pid) {
     const dest = world.map.pois[crate.job.dest];
     if (dest && Math.hypot(dest.x - ped.x, dest.y - ped.y) < 70) return { label: `Deliver (+$${crate.value})`, run: () => deliverLegit(world, p, crate, 'courier') };

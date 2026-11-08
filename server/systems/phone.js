@@ -8,6 +8,7 @@ import { mulberry32 } from '../../shared/rng.js';
 import { JOB_TIERS, PATROL_PAY, PATROL_SEARCH_S, WORK_TRUCK_RETURN, SAR, CHARTER, COAST, DUST } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as jobs from './jobs.js';
+import * as calendar from './calendar.js';
 import * as events from './events.js';
 import { spawnNpc } from './npc.js';
 import * as law from './law.js';
@@ -266,7 +267,7 @@ export function phoneOut(world, p, on) {
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
-  if (a === 'feed') return events.feedFor(world);
+  if (a === 'feed') return { ...events.feedFor(world), cal: calendar.listing(world, p) };   // (and what's coming up: the event calendar - calendar.js)
   if (a === 'skills') return skills.panel(world, p);   // the Skills app (skills.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
   if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);

@@ -22,7 +22,7 @@ import { localToWorld } from '../../shared/math.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { IN } from '../../shared/input.js';
 import { mulberry32 } from '../../shared/rng.js';
-import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S, ARMORED_ASSESS_S } from '../../shared/rules.js';
+import { STREET_EVERY_S, STREET_RACE_COPS, ARMORED_ESCORT, ARMORED_UNLOCK_S, ARMORED_ASSESS_S, CRATE_PAY } from '../../shared/rules.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, startFight } from './npc.js';
 import { enterEdge, joinTraffic } from './traffic.js';
@@ -190,26 +190,45 @@ function start(world, kind, p) {
     const to = (banks.length ? banks : far)[Math.floor(rng() * (banks.length || far.length))];
     let from = null, bd = Infinity;
     for (const q of places) { const d = Math.hypot(q.x - spot.p.x, q.y - spot.p.y); if (d < bd) { bd = d; from = q; } }
-    const goal = nodeNear(world, to.x, to.y);
-    const van = driven(world, 'armored', spot, 0, 0, 'cop', { goal });
-    const guard2 = spawnNpc(world, 'cop', van.x, van.y, 'driver');
-    guard2.vehId = van.id; guard2.seat = 1; van.seats[1] = guard2.id; guard2.npc.keep = true;
-    for (const g of [world.get(van.seats[0]), guard2]) { g.weapon = rng() < 0.5 ? 'smg' : 'pistol'; g.npc.armored = van.id; }
-    // the valuables: 3-5 crates, steel and iron mostly, now and then carbon-gold
-    const load = [];
-    for (let i = 3 + Math.floor(rng() * 3); i > 0; i--) { const r = rng(); load.push(r < 0.15 ? 3 : r < 0.6 ? 2 : 1); }
-    let escort = 0;
-    if (rng() < ARMORED_ESCORT) {
-      const lp = lanePath(world.map.net, spot.e, spot.from, 0), q = pointAt(lp, Math.max(5, spot.s - 200));
-      escort = police.escortUnit(world, q.x, q.y, Math.atan2(q.ty, q.tx), van).id;
-    }
-    const where = world.map.districtAt(to.x, to.y);
-    const ev = events.add(world, { kind: 'armored', x: van.x, y: van.y, until: world.time + ARMORED_S + 30, text: `IronVault armored truck moving valuables${where ? ` to ${where.name}` : ''}` });
-    Object.assign(ev, { sl: 'armored', van: van.id, guards: [van.seats[0], guard2.id], back: rng() < 0.5 ? 1 : 0, load, goal, from: from ? from.kind : '', to: to.kind, escort, hp: van.hp, alarm: false, ends: world.time + ARMORED_S });
-    events.tellNear(world, ev.x, ev.y, 'An IronVault armored truck is on the move nearby - guarded.', 'info');
-    return ev;
+    return armoredRun(world, spot, to, { from: from ? from.kind : '' });
   }
   return null;
+}
+
+// An armored truck's run from a street (spot: laneSpot's) to a place (to: { x, y, kind }) - the random ones (start) and
+// the calendar's (calendar.js: opts.sched, with its own load, guards' arms, no one in the back and no squad car). The
+// valuables: opts.load (tiers) or 3-5 crates, steel and iron mostly, now and then carbon-gold.
+function armoredRun(world, spot, to, opts = {}) {
+  const goal = nodeNear(world, to.x, to.y);
+  const van = driven(world, 'armored', spot, 0, 0, 'cop', { goal });
+  const guard2 = spawnNpc(world, 'cop', van.x, van.y, 'driver');
+  guard2.vehId = van.id; guard2.seat = 1; van.seats[1] = guard2.id; guard2.npc.keep = true;
+  for (const g of [world.get(van.seats[0]), guard2]) { g.weapon = opts.arms || (rng() < 0.5 ? 'smg' : 'pistol'); g.npc.armored = van.id; }
+  let load = opts.load;
+  if (!load) { load = []; for (let i = 3 + Math.floor(rng() * 3); i > 0; i--) { const r = rng(); load.push(r < 0.15 ? 3 : r < 0.6 ? 2 : 1); } }
+  let escort = 0;
+  if (opts.escort ?? rng() < ARMORED_ESCORT) {
+    const lp = lanePath(world.map.net, spot.e, spot.from, 0), q = pointAt(lp, Math.max(5, spot.s - 200));
+    escort = police.escortUnit(world, q.x, q.y, Math.atan2(q.ty, q.tx), van).id;
+  }
+  const where = world.map.districtAt(to.x, to.y), maxS = opts.maxS || ARMORED_S;
+  const ev = events.add(world, { kind: 'armored', x: van.x, y: van.y, until: world.time + maxS + 30, text: opts.text || `IronVault armored truck moving valuables${where ? ` to ${where.name}` : ''}` });
+  Object.assign(ev, { sl: 'armored', van: van.id, guards: [van.seats[0], guard2.id], back: opts.back ?? (rng() < 0.5 ? 1 : 0), load, goal, from: opts.from || '', to: to.kind, escort, hp: van.hp, alarm: false, ends: world.time + maxS, sched: opts.sched || null });
+  events.tellNear(world, ev.x, ev.y, 'An IronVault armored truck is on the move nearby - guarded.', 'info');
+  return ev;
+}
+// (the calendar's run: calendar.js - started and kept with the others)
+export function startArmored(world, spot, to, opts) {
+  if (!world.map.net) return null;
+  const ev = armoredRun(world, spot, to, opts);
+  if (ev) S(world).live.push(ev);
+  return ev;
+}
+// A spot on road e just out of junction `from`, for something to set off from (the calendar's armored truck, from its
+// bank: calendar.js) - { e, from, s, p } as laneSpot's
+export function spotOn(world, e, from) {
+  const lp = lanePath(world.map.net, e, from, 0), L = lp[lp.length - 1].s, s = Math.max(10, Math.min(70, L - 40));
+  return { e, from, s, p: pointAt(lp, s) };
 }
 
 function finish(world, ev, how) {
@@ -428,7 +447,9 @@ function spill(world, ev, van, how) {
   ev.load.forEach((tier, i) => {
     const off = (i - (n - 1) / 2) * 22;
     const [x, y] = localToWorld(van.x, van.y, van.a, -van.def.L / 2 - 14, off);
-    const crate = world.spawnCrate(tier, x, y, { contraband: true, label: 'IronVault Valuables' });
+    // (valuables: paid only once they're delivered - a fence, or a bank for the police bringing them back: extract.js)
+    const crate = world.spawnCrate(tier, x, y, { contraband: true, label: tier === 4 ? 'IronVault Gold' : 'IronVault Valuables', value: CRATE_PAY[tier] });
+    crate.extract = { src: 'armored', stolen: true, ev: ev.sched ? ev.sched.key : null };
     const out = 120 + rng() * 110;
     crate.vx = -c * out - s * off * 2 + van.vx * 0.3; crate.vy = -s * out + c * off * 2 + van.vy * 0.3;
     crate.z = 10; crate.vz = how === 'blown' ? 260 : 120;

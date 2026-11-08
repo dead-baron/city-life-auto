@@ -39,7 +39,8 @@ const KIND_NOTE = {
   snack: 'hot dogs, lemonade', bathhouse: 'showers, hot baths, a sauna', salvage: 'buys scrap', ride: 'rides', race: 'races: pull up to the start', bowling: 'ten-pin bowling: rent a lane', cinema: 'the movies: tickets & popcorn', arena: 'car soccer: join at the gate',
 };
 
-const FEED_ICON = { soccer: '⚽', snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚' };
+const FEED_ICON = { soccer: '⚽', snatch: '👜', drop: '📦', shootout: '💥', robbery: '🚨', arrest: '🚓', bounty: '🎯', wanted: '★', pet: '🐾', fight: '👊', faint: '🚑', wallet: '👛', streetrace: '🏁', copchase: '🚓', armored: '🚚', cargo: '📦', dock: '🚢' };
+const CAL_ICON = { armored: '🚚', dock: '🚢', gangwar: '💥', crackdown: '🚓', racenight: '🏁', soccercup: '⚽' };   // (the event calendar: server calendar.js)
 
 // line icons (24 x 24, the stroke in the text's colour): the apps and the quick actions
 const P = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
@@ -75,6 +76,7 @@ export function createPhone(ctx) {
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
   let homes = null, RE = null, RADIO = null, jobFilter = 'all';   // the real-estate app (H65): the server's list, and its code - client/realestate.js, loaded when it opens
   let GD = null;   // the Guide's code (client/guide.js), loaded when it opens
+  let cal = null, calAt = 0, calTick = 0;   // the event calendar's "Coming up" (server calendar.js listing), when it came, its countdown's timer
   let taking = null;   // the job just accepted: its waypoint once the server says yes
   const dist = (p) => { const me = ctx.pos(); return Math.hypot(p.x - me.x, p.y - me.y); };
   const m = (d) => `${Math.round(d / 32)}m`; // 1 tile = 1 m, same scale as the event arrows
@@ -125,7 +127,10 @@ export function createPhone(ctx) {
       import('./guide.js').then((mod) => { GD = mod; if (screen === 'guide') render(); }).catch((e) => console.warn('[guide]', e));
     } else if (screen === 'feed') {
       const ago = (s) => (s < 60 ? `${s}s ago` : `${Math.round(s / 60)} min ago`);
-      el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + (!feed ? '<p class="ph-empty">Loading…</p>'
+      const left = (c) => (c.live ? 'NOW' : c.etaS === null ? 'soon' : (() => { const s = Math.max(0, Math.round(c.etaS - (Date.now() - calAt) / 1000)); return s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.floor(s / 60) % 60}m` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; })());
+      const coming = cal && cal.length ? '<p class="ph-hint"><b>Coming up</b></p>' + cal.map((c, i) => `<button class="ph-row feed cal${c.on ? '' : ' off'}" data-cal="${i}"${c.x === null ? ' disabled' : ''}><span class="ic">${CAL_ICON[c.id] || '📅'}</span><span class="nm">${esc(c.title)}<small>${esc(c.sub)}${c.pay ? ` · up to $${Number(c.pay).toLocaleString('en-US')}` : ''}</small></span><span class="d" data-cal-eta="${i}">${left(c)}</span></button>`).join('') + '<p class="ph-hint"><b>Lately</b></p>' : '';
+      if (cal && !calTick) calTick = setInterval(() => { if (screen !== 'feed' || !cal) { clearInterval(calTick); calTick = 0; return; } for (const sp of document.querySelectorAll('[data-cal-eta]')) { const c = cal[Number(sp.dataset.calEta)]; if (c) sp.textContent = left(c); } }, 1000);
+      el.innerHTML = '<h3>City feed</h3><p class="ph-hint">What\'s going on anywhere in the city. Tap one to set a waypoint.</p>' + coming + (!feed ? '<p class="ph-empty">Loading…</p>'
         : feed.length ? feed.map((f, i) => `<button class="ph-row feed ${esc(f.kind)}" data-feed="${i}"${f.x === null ? ' disabled' : ''}><span class="ic">${FEED_ICON[f.kind] || '•'}</span><span class="nm">${esc(f.text)}<small>${esc(f.where || 'the city')} · ${ago(f.ago)}</small></span><span class="d">${f.x === null ? '' : m(dist(f))}</span></button>`).join('')
           : '<p class="ph-empty">Quiet out there right now.</p>');
     } else if (screen === 'skills') {   // (the six skills, levelled by doing things: server skills.js)
@@ -230,6 +235,13 @@ export function createPhone(ctx) {
       if (!ct) return;
       ctx.setWaypoint({ x: ct.x, y: ct.y, label: ct.label });
       ctx.toast(`Waypoint set: ${ct.label}`, 'info');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-cal]')) b.onclick = () => {
+      const c = cal && cal[Number(b.dataset.cal)];
+      if (!c || c.x === null) return;
+      ctx.setWaypoint({ x: c.x, y: c.y, label: c.title });
+      ctx.toast(`Waypoint set: ${c.title}`, 'info');
       ctx.close();
     };
     for (const b of el.querySelectorAll('[data-feed]')) b.onclick = () => {
@@ -348,7 +360,7 @@ export function createPhone(ctx) {
     // straight to one app (the hub's JOBS tab: 'jobs')
     openApp(s) { screen = s || 'home'; group = null; if (s === 'guide') guideOpened(); render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
     back() { if (screen === 'group') screen = 'places'; else { screen = 'home'; group = null; } render(); return true; },
-    onFeed(msg) { feed = msg.items || []; if (screen === 'feed') render(); },
+    onFeed(msg) { feed = msg.items || []; cal = msg.cal || null; calAt = Date.now(); if (screen === 'feed') render(); },
     onSkills(msg) { skl = msg; if (screen === 'skills') render(); },
     onCrew(msg) { crew = msg; if (screen === 'crew') render(); },
     onTransit(msg) { transit = msg; if (screen === 'transit') render(); },

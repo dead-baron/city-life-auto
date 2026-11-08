@@ -21,6 +21,9 @@ export const EVENT_KINDS = {
   armored: { color: '#e6c34a', label: 'Armored truck', hint: 'Valuables on the move - guarded' },
   petown: { color: '#7fd8ff', label: 'Lost pet\'s owner', hint: 'Waiting at their door for their pet', noArrow: 1, stay: 1 },   // (pets.js targetFor: "Lost my dog!" over them)
   poster: { color: '#f2ead2', label: 'Lost pet poster', hint: 'Read it', noArrow: 1, stay: 1 },
+  gold: { color: '#ffcf3a', label: 'Carbon-gold on the move', hint: 'Paid only when it\'s delivered', noArrow: 1, stay: 1 },   // (extract.js: everyone's map)
+  cargo: { color: '#c9d2dc', label: 'Valuable cargo', hint: 'Steel or iron crates - paid on delivery', noArrow: 1, stay: 1 },   // (extract.js: the players near)
+  dock: { color: '#4fc3d9', label: 'Dock shipment', hint: 'A cargo ship unloading crates - first come, first served' },   // (calendar.js)
   petarea: { color: '#7fd8ff', label: 'Lost pet last seen', hint: 'Search around here', stay: 1 },
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)
