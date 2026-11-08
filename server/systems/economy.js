@@ -367,7 +367,7 @@ function menuOf(world, p, poi) {
         sub = `A ${h.dock ? 'waterfront ' : ''}${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage${h.dock ? ' and its own boat dock and boathouse' : ''}. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
         opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk around it first' });   // (H65: homeinside.js tour)
         opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
-        { const t = mortgage.terms(h); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
+        { const t = mortgage.terms(h, prof); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
       } else {
         const st = prof.stash || {};
         const stashed = Object.entries(st.items || {}).filter(([, n]) => n > 0).length + Object.keys(st.weapons || {}).length;

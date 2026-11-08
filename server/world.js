@@ -34,6 +34,9 @@ import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
 import * as starter from './systems/starter.js';
 import * as ftue from './systems/ftue.js';
+import * as careers from './systems/careers.js';
+import * as whatsnext from './systems/whatsnext.js';
+import './systems/goals.js';   // (the daily and weekly goals: counted from careers.js note)
 import * as gates from './systems/gates.js';
 import * as nightclubs from './systems/nightclubs.js';
 import * as boats from './systems/boats.js';
@@ -208,6 +211,8 @@ const SYSTEMS = [
   ['players', players.update],      // ghost timers, respawns, prompts, persistence
   ['logoff', logoff.update],        // the safe exit's count: called off by a move, a hit, the police; out when it's done (logoff.js)
   ['ftue', ftue.update],            // the first-time experience: the arrival, the question, the first goal's steps, the first-time moments (ftue.js)
+  ['careers', careers.update],      // careers and ranks: XP from the counters, rank-ups' calls and title cards, shifts and getaways noticed (careers.js)
+  ['whatsnext', whatsnext.update],  // the "What's next" app's three cards, worked out again now and then; the session's one line (whatsnext.js)
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['calendar', calendar.update],    // the event calendar on the wall clock: the armored truck run, the dock shipment (calendar.js)

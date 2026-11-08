@@ -67,6 +67,8 @@ import { cleanName, nameKey, NAME } from '../../shared/names.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
+import * as careers from './careers.js';
+import * as whatsnext from './whatsnext.js';
 import * as props from './props.js';
 import * as trains from './trains.js';
 import * as transit from './transit.js';
@@ -168,6 +170,7 @@ export function join(world, conn, profile, opts = {}) {
   looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   if (oldEpoch(profile)) wipeProgress(world, profile);   // (a profile from before the progress epoch: a new character - store.js)
   if (migrateSafety(profile)) store.touch();   // (Safety mode off once on profiles from before it was off by default - store.js)
+  if (careers.migrate(profile)) store.touch();   // (careers and ranks: the record added, the old police ranks kept - careers.js)
   const fresh = freshStart(world, profile);
   if (fresh === 'all') wipeProgress(world, profile);
   if (world.build) profile.build = world.build; // the build this character's state now belongs to (saved with the profile)
@@ -1131,7 +1134,7 @@ export function buildMe(world, p) {
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
-    ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0,   // (Settings' First-time tips: ftue.js)
+    ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0, nx: whatsnext.meSig(p),   // (nx: the "What's next" cards' signature - the phone's dot when it changes: whatsnext.js)   // (Settings' First-time tips: ftue.js)
     car: starter.marker(world, p) || firstcar.marker(world, p),   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,

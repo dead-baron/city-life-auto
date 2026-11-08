@@ -24,6 +24,7 @@ import * as devmode from './devmode.js';
 import * as players from './systems/players.js';
 import * as crews from './systems/crews.js';
 import * as bounties from './systems/bounties.js';
+import * as careers from './systems/careers.js';
 
 const LEISURE = { arcade: 'arcade', chess: 'chess', mus: 'music', racebook: 'racebook', cine: 'cinematic' };
 
@@ -177,11 +178,13 @@ export function createLaunch(opts) {
     if (kind === 'crime') { analytics.event('crime', p, { type: d.type }); note(p.acct, 'crime', d.type); }
     else if (kind === 'death') { analytics.event('death', p, { cause: d.cause, killer: d.killer }); note(p.acct, 'death', String(d.cause || '').slice(0, 80)); }
     else if (kind === 'crewed' && d.other) chat.addContact(p, d.other, 'crew');
-    else if (kind === 'ftue') analytics.ftue(p, p.acct, d.step);   // (the first-time experience's funnel: systems/ftue.js)
+    else if (kind === 'ftue') analytics.ftue(p, p.acct, d.step);
+    else if (kind === 'rank') { analytics.event('rank', p, { career: d.career, rank: d.rank }); note(p.acct, 'rank', `${d.career} ${d.rank}`); }   // (careers.js rankUp)   // (the first-time experience's funnel: systems/ftue.js)
   };
 
   function onMoney(p, src, net, opt) {
     analytics.money(p, src, net, opt);
+    careers.onMoney(world, p, src, net);   // (clean money: business XP and the goals - careers.js)
     if (net > 0 && src !== 'dev') p.anEarnTotal = (p.anEarnTotal || 0) + net;
     if (p.sess && src !== 'dev') { if (net > 0) p.sess.earned += net; else p.sess.spent -= net; }   // (the safe exit's summary: players.js sessionSummary)
     const a = p.acct;

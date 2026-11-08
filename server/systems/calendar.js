@@ -23,6 +23,7 @@ import { PED_BLOCK } from '../../shared/map.js';
 import { store } from '../store.js';
 import * as events from './events.js';
 import * as phone from './phone.js';
+import { registerCardSource } from './whatsnext.js';
 import * as law from './law.js';
 import * as streetlife from './streetlife.js';
 import * as firstcar from './firstcar.js';
@@ -317,4 +318,12 @@ export function eventCards(player, now = clock(), world = W) {
     id: `event:${e.id}`, source: 'event', title: e.title, sub: e.sub, etaS: e.etaS, pay: e.pay, action: { type: 'waypoint', x: e.x, y: e.y },
   }));
 }
-phone.setCalendarListing((world, p) => listing(world, p));   // (the City feed app's "Coming up")
+phone.setCalendarListing((world, p) => listing(world, p));
+// ...and as "near you" cards in the What's next app (whatsnext.js's card shape): an event that's on now or starts
+// within NEXT_SOON_S, with a waypoint to it; gone a while after it starts
+const NEXT_SOON_S = 600;
+registerCardSource('events', (world, p, now) => eventCards(p, now, world).filter((c) => c.etaS <= NEXT_SOON_S).map((c) => ({
+  id: c.id, slot: 'near', career: null, act: c.id.slice(6), title: c.title, sub: c.etaS > 0 ? `In ${Math.ceil(c.etaS / 60)} min - ${c.sub}` : c.sub,
+  x: c.action.x, y: c.action.y, pay: c.pay, mins: Math.max(5, Math.ceil(c.etaS / 60) + 10), until: world.time + c.etaS + 300,
+  icon: c.id === 'event:dock' ? 'boat' : 'truck', btn: { k: 'way', label: 'Waypoint' },
+})), { slot: 'near' });   // (the City feed app's "Coming up")

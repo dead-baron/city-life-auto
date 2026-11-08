@@ -5,6 +5,7 @@
 // race carries on for everyone else.
 import { store } from '../store.js';
 import * as skills from './skills.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 export const COUNTDOWN_S = 15;
 const RESULTS_S = 8, MAX_S = 330, CP_R = 130, START_R = 190, LOST_PX = 3200;
@@ -77,6 +78,7 @@ export function update(world) {
             const share = n === 1 ? 0.5 : [0.6, 0.3, 0.1][r.place - 1] || 0;
             const prize = Math.round(race.prize * Math.max(1, n) * share / 10) * 10;
             if (prize) { p.profile.bank += prize; store.touch(); }
+            careers.note(world, p, r.place === 1 ? 'raceWin' : 'race');
             world.notify(p, `Finished ${ordinal(r.place)} in ${r.time.toFixed(1)}s${prize ? ` - +$${prize} to your bank` : ''}!`, r.place === 1 ? 'good' : 'info');
             live--;
           }

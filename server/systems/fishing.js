@@ -35,6 +35,7 @@ import { ITEMS } from '../../shared/items.js';
 import { FISHING, DEEPSEA_PAY } from '../../shared/rules.js';
 import { store } from '../store.js';
 import * as law from './law.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const { PH } = FS;
 const wet = (t) => t === T.WATER || t === T.DEEP;
@@ -317,6 +318,7 @@ function land(world, p, ped, f, lb, hab) {
   const log = (prof.fishLog ||= {}), had = log[f.id], first = !had, best = !had || lb > had[1];
   log[f.id] = [(had ? had[0] : 0) + 1, best ? lb : had[1]];
   prof.stats.fish = (prof.stats.fish || 0) + 1;
+  careers.note(world, p, 'fish', { lb });
   const recs = (store.kept.fishRecords ||= {}), rec = recs[f.id], world1 = !rec || lb > rec[0];
   if (world1) recs[f.id] = [lb, p.name || 'someone'];
   const kinds = Object.keys(log).length;
@@ -405,6 +407,7 @@ export function sellCatch(world, p, kind) {
   const n = c.length;
   prof.creel = [];
   prof.bank += v;
+  careers.note(world, p, 'fishSold', { n: v });
   world.notify(p, `Sold ${n} fish for $${v.toLocaleString()} (to your bank).`, 'good');
   p.meDirty = true;
   store.touch();

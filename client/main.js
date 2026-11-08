@@ -35,7 +35,7 @@ import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.j
 // lines, a first-time moment's tip - never with the page.
 let FT = null, ftP = null;
 const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
-  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
+  m.init({ S, send: (o) => send(o), openOverlay: (id) => openOverlay(id), closeOverlay: (id) => closeOverlay(id), topOverlay: () => topOverlay(), sfx: (n, v) => sfx(n, v), hud: () => S.hud, openGuide: (sec) => { S.guideSec = sec; openHub('phone', 'guide'); }, openApp: (k) => openHub('phone', k), setCam: (fn) => { S.camOver = fn; }, refocus: () => { ovFocus = startFocus(); focusOverlay(); } });
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
@@ -437,6 +437,7 @@ function onText(m) {
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
     case 'me':
       S.me = m; if (m.pedId) S.myPedId = m.pedId; S.hud && S.hud.setMe(m);
+      nextDot(m.nx);   // (the "What's next" cards changed: a dot on the phone)
       if (FT) FT.onMe(m); else if (m.ftue) loadFtue().then((f) => f.onMe(S.me)).catch(() => {});   // (the first goal's step line: client/ftue.js)
       if (m.sk) loadSkate();   // (on a board: riding it and its tricks - client/skate.js)
       if (m.fishing) loadFish();   // (a line out: client/fishing.js)
@@ -462,6 +463,7 @@ function onText(m) {
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
     case 'feed': phone.on('Feed', m); break;
     case 'skills': phone.on('Skills', m); break;   // the Skills app (server skills.js)
+    case 'next': phone.on('Next', m); break;   // the "What's next" app (server whatsnext.js; client/whatsnext.js)
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       openOverlay('arcade');
@@ -1960,8 +1962,18 @@ const phoneCtx = {
   canCruiser: () => !!(S.me && S.me.cruiser),
   cruiser: () => { closeHub(); callCruiser(); },
   title: (t) => { $('ph-clock').textContent = t; if (topOverlay() === 'phone') $('hub-title').textContent = t.toUpperCase(); },
-  guideSec: () => { const s = S.guideSec; S.guideSec = null; return s; },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
+  guideSec: () => { const s = S.guideSec; S.guideSec = null; return s; },
+  nextDot: () => S.nxSig !== undefined && S.nxSig !== S.nxSeen,
+  nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
+// The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
+// on the phone's button (the owner's minimal HUD: a dot, nothing more). What you last saw is kept across a reload.
+function nextDot(sig) {
+  if (S.nxSeen === undefined) { let v = null; try { v = localStorage.getItem('cla.nxSeen'); } catch { v = null; } S.nxSeen = v === null ? null : Number(v); }
+  S.nxSig = sig;
+  const on = sig !== undefined && sig !== S.nxSeen && !(topOverlay() === 'phone' && phone.screen === 'next');
+  $('b-phone').classList.toggle('dot', on);
+}
 let phoneMod = null, phoneP = null;
 const phoneQ = new Map();
 const loadPhone = () => (phoneP ||= import('./phone.js').then((mod) => {

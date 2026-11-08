@@ -30,6 +30,7 @@ import * as traffic from './traffic.js';
 import { protect } from './homes.js';
 import * as homeinside from './homeinside.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 setArena(carStep);   // (the banks and the boost in every vehicle step the server takes - shared/physics.js)
 
@@ -200,6 +201,7 @@ function finish(world, a, st) {
     if (!q) continue;
     const won = s.team === w;
     if (won) { q.profile.bank += C.prize; store.touch(); q.meDirty = true; }
+    careers.note(world, q, won ? 'soccerWin' : 'soccer');
     world.notify(q, `Full time: ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}. ${won ? `You win! +$${C.prize} to your bank.` : w < 0 ? 'A tie.' : 'You lost this one.'}`, won ? 'good' : 'info');
   }
   for (const s of st.slots) { const v = world.get(s.veh); if (v) { v.frz = true; v.bok = false; } }

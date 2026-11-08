@@ -444,6 +444,7 @@ import * as burning from './burning.js';   // (thrown out of it on fire: H58)
 import * as skills from './skills.js';
 import * as horses from './horses.js';   // (a horse: it bolts instead of burning - #325)
 import * as skate from './skate.js';   // (a skateboard on the ground: up on it - skate.js mount)
+import * as careers from './careers.js';
 import * as gear from './gear.js';   // (a surfboard set down: picked up; on rollerblades, no vehicles; a board in hand into the bag - gear.js)
 import * as grime from './grime.js';
 import * as slips from './slips.js';   // (fallible drivers: a rear-end between two of the city's drivers - slips.js)
@@ -599,6 +600,7 @@ export function tryEnter(world, ped, noBoard = false) {
   if (v.bolt) { if (p) world.notify(p, "It's bolted - you won't catch it now.", 'warn'); return false; }   // (a horse off at a gallop: horses.js)
   if (v.forSale) { if (p) world.notify(p, `It's for sale: $${v.forSale.price.toLocaleString()}. Walk up to it and press interact to buy it.`, 'info'); return false; }
   if (v.lockedTo && (!p || v.lockedTo !== p.pid)) { if (p) world.notify(p, 'Locked - this cruiser is reserved for another officer.', 'warn'); return false; }
+  { const no = p && v.def.police ? careers.vehicleRefusal(p, v.model) : null; if (no) { world.notify(p, no, 'warn'); return false; } }   // (the SWAT truck, the helicopter: by police rank - careers.js)
   if (v.def.surfboard) return !!p && gear.pickUp(world, p, v);   // (a surfboard set down: up under your arm - yours only: gear.js)
   if (p && !gear.canEnter(world, p, ped)) return false;   // (not on rollerblades; a board in your hand goes in your bag - gear.js)
   if (v.def.board) {   // a skateboard on the ground: taken up and ridden as the board (skate.js) - someone else's, theft

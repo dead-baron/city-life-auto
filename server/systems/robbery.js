@@ -22,6 +22,7 @@ import * as hot from './hotmoney.js';
 import * as standoff from './standoff.js';
 import { walkInAt, startFight } from './npc.js';
 import * as rep from './reputation.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 
 const rng = mulberry32(1919);
 const REACH = 300, AIM_CONE = 0.35, LET_GO_S = 1.6, CLERK_COOLDOWN_S = 120;
@@ -107,6 +108,7 @@ function end(world, p, why) {
     if (clerk.npc) { clerk.npc.blind = false; clerk.npc.robbedUntil = world.time + CLERK_COOLDOWN_S; }
     if (r.ducked) clerk.downUntil = Math.max(clerk.downUntil || 0, world.time + 6);   // (stays down a while)
   }
+  careers.note(world, p, 'rob', { take: r.take, hurt: !!r.hurt });   // (a clean robbery: nobody hurt - careers.js)
   if (r.take > 0) world.notify(p, `${why} You got away with $${r.take.toLocaleString('en-US')} in hot money - clean it far from here, at home or at a fence.`, r.called ? 'warn' : 'good');
   else world.notify(p, why, 'info');
 }

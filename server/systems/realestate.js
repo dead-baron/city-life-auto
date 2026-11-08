@@ -64,7 +64,7 @@ export function listings(world, p, msg = {}) {
   const pick = forSale.filter(KINDS[kind]);
   const dist = (h) => (me ? Math.hypot(h.x - me.x, h.y - me.y) : 0);
   pick.sort(sort === 'cheap' ? (a, b) => a.price - b.price || dist(a) - dist(b) : sort === 'dear' ? (a, b) => b.price - a.price || dist(a) - dist(b) : (a, b) => dist(a) - dist(b) || a.price - b.price);
-  const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), dep: mortgage.terms(h).deposit }));   // (dep: a mortgage's deposit)
+  const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), dep: mortgage.terms(h, p.profile).deposit }));   // (dep: a mortgage's deposit)
   const loans = prof.loans || {};
   const mine = homes.ownedHomes(world, prof).filter(Boolean).map((h) => ({ ...row(world, h), worth: h.price, back: Math.max(0, Math.round(h.price * SELL_BACK) - (loans[h.id] ? loans[h.id].owed : 0)), spawn: prof.spawnHome === h.id ? 1 : 0, ...(loans[h.id] ? { owed: loans[h.id].owed, pay: loans[h.id].pay, missed: loans[h.id].missed } : null) }));
   return { t: 'homes', sale, mine, total: forSale.length, matching: pick.length, homes: all.length, sort, kind, cash: prof.cash, bank: prof.bank, biz: biz.listings(world, p) };   // (biz: the businesses for sale and yours - biz.js)

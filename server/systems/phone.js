@@ -42,6 +42,8 @@ import { CAB, BUSJOB, TOWJOB, CRAZY, RIG, MAILJOB } from '../../shared/rules.js'
 import * as crazytaxi from './crazytaxi.js';
 import * as truckjob from './truckjob.js';
 import * as mailjob from './mailjob.js';
+import * as whatsnext from './whatsnext.js';
+import * as careers from './careers.js';
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -160,9 +162,12 @@ export function onCriminalStopped(world, copPed, target) {
   if (!pid) return;
   const p = world.players.get(pid);
   if (!p || !p.job || p.job.type !== 'patrol' || p.job.thief !== target.id) return;
-  p.profile.bank += p.job.pay;
+  const pay = careers.patrolPay(p, p.job.pay);   // (a Lieutenant's and up: more - careers.js)
+  p.profile.bank += pay;
   p.profile.samaritan += 5;
-  world.notify(p, `Patrol complete! Suspect stopped. +$${p.job.pay} to your bank.`, 'good');
+  if (p.badge) law.addPolicePts(world, p, careers.CAREERS.police.dispatchXp);
+  careers.note(world, p, 'dispatch');
+  world.notify(p, `Patrol complete! Suspect stopped. +$${pay} to your bank.`, 'good');
   p.job = null; p.meDirty = true;
   store.touch();
   void copPed;
@@ -270,6 +275,7 @@ export function setCalendarListing(fn) { setCalendarListing.fn = fn; }   // (on 
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
+  if (a === 'next' || a === 'nextgo' || a === 'nextskip' || a === 'nextmain' || a === 'reroll') return whatsnext.handle(world, p, msg);   // the "What's next" app (whatsnext.js)
   if (a === 'feed') return { ...events.feedFor(world), cal: setCalendarListing.fn ? setCalendarListing.fn(world, p) : null };   // (and what's coming up: the event calendar - calendar.js)
   if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p) };   // the Skills app (skills.js; your standing by district: reputation.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
@@ -405,3 +411,5 @@ function target(world, p, j) {
   if (j.type === 'patrol' && j.stage === 'crime') { const t = world.get(j.thief); if (t) return { text: j.text, x: Math.round(t.x), y: Math.round(t.y), stage: 'crime' }; }
   return { text: j.text, x: Math.round(j.tx), y: Math.round(j.ty), stage: j.stage || 'go' };
 }
+
+whatsnext.setHooks({ boardFor, handle });   // (the "What's next" app's job cards: whatsnext.js)

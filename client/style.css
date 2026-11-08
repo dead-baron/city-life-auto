@@ -1829,3 +1829,6 @@ body:not(.touch) #title { gap: var(--s2); padding-bottom: calc(var(--zk, 1) * 88
 body:not(.touch) #logo { width: min(520px, 84vw, 38vh); margin-bottom: 0; }
 body:not(.touch) #title > #t-tools { position: absolute; left: var(--s4); top: var(--s4); }
 body:not(.touch) #play { min-width: 240px; }
+/* the "What's next" cards changed (client/main.js nextDot): a dot on the phone's button and its app tile - nothing more */
+#b-phone.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
+.ph-app.dot .ph-tile { position: relative; }

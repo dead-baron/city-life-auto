@@ -72,7 +72,7 @@ test('the parts are there: panel and head, list row, buttons, chips, toggle, sli
 });
 
 test('no literal colours, type sizes or radii in the rules, here or in the panels that carry their own CSS', () => {
-  const bad = [...literals(CSS, 'style.css'), ...['client/director.js', 'client/devmenu.js', 'client/spectator.js', 'client/creator.js', 'client/deathscreen.js'].flatMap((f) => literals(ownCss(f), f))];
+  const bad = [...literals(CSS, 'style.css'), ...['client/director.js', 'client/devmenu.js', 'client/spectator.js', 'client/creator.js', 'client/deathscreen.js', 'client/whatsnext.js'].flatMap((f) => literals(ownCss(f), f))];
   assert.deepEqual(bad, [], bad.slice(0, 20).join('\n'));
 });
 

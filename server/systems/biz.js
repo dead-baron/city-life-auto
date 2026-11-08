@@ -43,6 +43,8 @@ import * as skills from './skills.js';
 import { spawnNpc, despawnNpc, startFight, markBrawl, leaveBuilding } from './npc.js';
 import { ITEMS } from '../../shared/items.js';
 import { HOME_IN, NPC_CRITICAL } from '../../shared/rules.js';
+import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import { setHooks as nextHooks } from './whatsnext.js';
 
 const rng = mulberry32(7411);
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -418,7 +420,7 @@ function run(world, p, s, opt, atTruck) {
       if (!amt) return 'Nothing in the till.';
       e.till = 0;
       if (s.t === 'hideout') { hotmoney.add(world, p, amt, s.x, s.y); world.notify(p, `${money(amt)} of product in the bag - it's hot: clean it at a fence, a home's stash or an ATM well away from here.`, 'warn'); }
-      else { prof.cash += amt; world.emit(p.ped.x, p.ped.y, { e: 'cash', x: p.ped.x, y: p.ped.y }); world.notify(p, `${money(amt)} from ${s.t === 'truck' ? 'the food truck' : s.name}'s till.`, 'good'); }
+      else { prof.cash += amt; careers.note(world, p, 'takings', { n: amt }); world.emit(p.ped.x, p.ped.y, { e: 'cash', x: p.ped.x, y: p.ped.y }); world.notify(p, `${money(amt)} from ${s.t === 'truck' ? 'the food truck' : s.name}'s till.`, 'good'); }
       store.touch();
       return null;
     }
@@ -848,3 +850,5 @@ export function update(world) {
   if (world.tick % 20 === 17 && world.biz && world.biz.owner && world.biz.owner.size) brawls(world);
   if (world.tick % 5 === 2) for (const p of world.players.values()) { if (p.bizFix) stepFix(world, p); if (p.bizRun) stepRun(world, p); }
 }
+
+nextHooks({ siteById });   // (the "What's next" app's takings card: whatsnext.js)
