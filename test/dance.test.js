@@ -79,6 +79,7 @@ test('the clubs fill up through the night, the most at the hot ones; the line ou
 
 test('the dancers dance moves - their own, a couple now and then, the whole floor jumping at the peak - and change them', () => {
   const { w, c } = peakClub(12);
+  c.nextDrop = w.time + 20;   // (the next drop inside the peak: a random gap of up to 80 s could land after it ends)
   const D = () => c.dancers.map((id) => w.get(id)).filter(Boolean);
   const first = new Map(D().map((e) => [e.id, e.dm]));
   for (const e of D()) {

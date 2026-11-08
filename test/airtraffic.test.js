@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run } from './helpers.js';
-import { STAR_HEAT } from '../shared/rules.js';
+import { STAR_HEAT, POLICE_AIR } from '../shared/rules.js';
 import { AIR_TRAFFIC } from '../shared/rules.js';
 import { onStrip, FLY } from '../shared/flight.js';
 import { VEHICLES } from '../shared/vehicles.js';
@@ -115,7 +115,7 @@ test('the news helicopter keeps its height clear of the police helicopter over a
     for (const e of [...w2.entities.values()]) if (e.npc && e.npc.role === 'cop' && !e.npc.air) w2.remove(e);
     if (w2.stops) w2.stops.clear();
   };
-  law.addHeat(w2, p, STAR_HEAT[3] - p.heat + 1, p.ped.x, p.ped.y);
+  law.addHeat(w2, p, STAR_HEAT[Math.max(3, POLICE_AIR.stars, AIR_TRAFFIC.newsStars)] - p.heat + 1, p.ped.x, p.ped.y);
   for (let i = 0; i < 30; i++) { noCars(); w2.step(); }
   const u = w2.policeAir.get(p.pid), pv = w2.get(u.vid);
   const nv = airtraffic.news(w2, A2, p);

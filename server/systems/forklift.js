@@ -229,7 +229,7 @@ export function endShift(world, j) {
   if (v && !v.removed && v.cargo && v.cargo[0] && j.pallets.includes(v.cargo[0])) { v.cargo[0] = 0; v.forkOp = { k: 'lower', to: 0 }; }
   for (const id of j.pallets || []) { const c = world.get(id); if (c && !c.removed && !c.placed) world.remove(c); else if (c && c.placed) c.expires = Math.min(c.expires || Infinity, world.time + 90); }
 }
-jobs.onFail.forklift = endShift;
+jobs.onFailSet('forklift', endShift);
 // the forks' height for the wire: 0 down, 1 carrying, 2 up a pallet's height (the stack's second), 3 higher (net.js)
 export const forkStage = (v) => { const z = v.forkZ || 0; return z < 1.5 ? 0 : z < FORK.palletH / 2 ? 1 : z < FORK.palletH * 1.5 ? 2 : 3; };
 

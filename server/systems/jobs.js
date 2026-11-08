@@ -257,10 +257,13 @@ export function returnTruck(world, p) {
 }
 
 // a job's own tidying when it ends undone - quit from the phone, its vehicle lost, its time up (forklift.js: the pallets)
-export const onFail = {};
+// (a var and a hoisted function: forklift.js registers while this module may still be loading - an import cycle; a
+// const here was in its temporal dead zone for devtp/devplay's import order)
+var FAIL;
+export function onFailSet(type, fn) { (FAIL ??= {})[type] = fn; }
 export function failJob(world, p, msg) {
   if (!p.job) return;
-  if (onFail[p.job.type]) onFail[p.job.type](world, p.job);
+  if (FAIL?.[p.job.type]) FAIL[p.job.type](world, p.job);
   releaseTruck(world, p, false);
   for (const id of p.job.crates || []) { const c = world.get(id); if (c && c.job) c.job = null; }
   p.job = null;
