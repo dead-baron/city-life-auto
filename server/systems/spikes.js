@@ -6,6 +6,7 @@ import { K, T } from '../../shared/constants.js';
 import { SPIKE_STRIP_S } from '../../shared/rules.js';
 import { segDist } from '../../shared/geom.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import * as careers from './careers.js';   // (a car stopped with your strip: 'spiked' - a contact's traffic stop)
 
 const HALF = 64;          // half the strip's length (px)
 const AHEAD = 70;         // thrown this far in front of you
@@ -48,6 +49,8 @@ export function update(world) {
       world.emit(v.x, v.y, { e: 'pop', x: v.x, y: v.y });
       const drv = world.get(v.seats[0]);
       if (drv && drv.player) world.notify(drv.player, 'Spike strip! Your tires are shredded - a garage can put new ones on.', 'bad');
+      const layer = world.get(s.by);
+      if (layer && layer.player && drv && drv !== layer && layer.vehId !== v.id) careers.note(world, layer.player, 'spiked');   // (someone's car stopped with your strip: contacts.js)
     }
   }
   world.spikes = list.filter((s) => now < s.until);

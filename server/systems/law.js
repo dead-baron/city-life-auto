@@ -17,6 +17,7 @@ import * as cells from './cells.js';
 import * as biz from './biz.js';
 import * as rep from './reputation.js';
 import * as careers from './careers.js';
+import { CONTACT } from '../../shared/rules-contacts.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
@@ -775,7 +776,7 @@ export function arrest(world, cop, target) {
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
       if (cop.player.badge) addPolicePts(world, cop.player, 10 * stars);
-      careers.note(world, cop.player, 'arrest', { stars });
+      careers.note(world, cop.player, 'arrest', { stars, gentle: unhurt(target) });
       world.notify(cop.player, `Arrested ${t.name}! +$${reward}, +${5 * stars} Samaritan`, 'good');
       cop.player.meDirty = true;
     }
@@ -791,12 +792,15 @@ export function arrest(world, cop, target) {
     if (cop && cop.player) {
       cop.player.profile.cash += 60; cop.player.profile.samaritan += 4;
       if (cop.player.badge) addPolicePts(world, cop.player, 4);
-      careers.note(world, cop.player, 'arrest', { stars: 0 });
+      careers.note(world, cop.player, 'arrest', { stars: 0, gentle: unhurt(target) });
       world.notify(cop.player, 'Suspect taken into custody. +$60, +4 Samaritan', 'good');
       cop.player.meDirty = true;
     }
   }
 }
+// cuffed without force (a contact's mission - contacts.js): the suspect still has most of their health - a taser, a
+// tackle or pepper spray, not fists or bullets
+const unhurt = (t) => !!t && (t.maxHp || 100) > 0 && (t.hp ?? t.maxHp ?? 100) >= (t.maxHp || 100) * CONTACT.gentleHp;
 // Not wanted, only a price on their head: questioned at the nearest station and let go (the officer collects any contract
 // they took on them).
 function questioned(world, cop, target) {
