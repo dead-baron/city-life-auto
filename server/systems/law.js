@@ -15,6 +15,7 @@ import * as bounties from './bounties.js';
 import * as custody from './custody.js';
 import * as cells from './cells.js';
 import * as biz from './biz.js';
+import * as rep from './reputation.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
@@ -126,7 +127,7 @@ export function addPolicePts(world, p, n) {
 const DISPATCH_TTL = 300;
 export function logDispatch(world, type, x, y, p, stars, via) {
   world.dispatch ??= [];
-  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching', fight: 'Street fight', flee: 'Ran from an officer' })[type] || type, s: stars, via, who: p ? p.pid : null });
+  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching', fight: 'Street fight', flee: 'Ran from an officer', recognized: 'Known offender sighted' })[type] || type, s: stars, via, who: p ? p.pid : null });
   if (world.dispatch.length > 60) world.dispatch.splice(0, world.dispatch.length - 60);
   for (const q of world.players.values()) if (q.badge) q.meDirty = true;
 }
@@ -403,8 +404,16 @@ export function crime(world, ped, type, victim, x = ped.x, y = ped.y, opts = {})
   if (opts.silentCheck === false) { if (spec.felony) p.profile.felonies++; addHeat(world, p, spec.heat, x, y, true); logDispatch(world, type, x, y, p, p.wanted, 'tip'); return true; }
   const w = witnesses(world, x, y, ped, victim, (type === 'brandish' || type === 'murder') && !opts.quiet, type);
   for (const q of w.saw) sawCrime(world, q, p, type, x, y);
+  if ((w.seen || w.count) && type !== 'robbery') rep.crimeSeen(world, p, spec, x, y);   // (the district remembers what it saw: reputation.js - a robbery's is robbery.js's)
   if (w.count === 0) {
     if (now - (p.lastSilentMsg || 0) > 6) { p.lastSilentMsg = now; world.notify(p, `${spec.label} - ${w.seen ? 'people saw, but nobody is calling it in.' : 'nobody saw it.'}`, 'info'); }
+    p.meDirty = true;
+    return;
+  }
+  // well liked here (reputation.js vouch): once, a passer-by who knows you talks the caller out of it - not a felony, not
+  // what an officer or a camera saw
+  if (!w.cop && !w.cam && !spec.felony && rep.vouch(world, p, x, y)) {
+    world.notify(p, `${spec.label} - someone was calling it in, but a passer-by who knows you talked them out of it: "Not them - they're one of the good ones." That favor's used up here for now.`, 'good');
     p.meDirty = true;
     return;
   }
@@ -601,6 +610,9 @@ export function update(world, dt) {
       // contraband in view of police
       if (seen) checkContraband(world, p, ped);
     }
+    // a repeat offender in this district with a record on file (reputation.js knownOffender): an officer who sees them
+    // knows them - 1 star, no witness needed (a disguise doesn't fool the local police: addHeat brings the old peak back)
+    else if (p.wanted === 0 && !p.custody && !ped.hidden && world.tick % 10 === 2 && rep.knownOffender(world, p, ped.x, ped.y)) recognize(world, p, ped);
     // peak-wanted memory cools by one star every 10 minutes clean
     const prof = p.profile;
     if (p.wanted === 0 && prof.peakWanted > 0 && Date.now() - prof.peakWantedAt > 600000) {
@@ -616,6 +628,22 @@ export function update(world, dt) {
       }
     }
   }
+}
+
+// An officer on foot (or at the wheel) who can see a known repeat offender: they're wanted again, 1 star (more with a
+// disguise blown - addHeat), the usual chase
+export function recognize(world, p, ped) {
+  const sight = sightFactor(world.map, ped.x, ped.y, !ped.vehId);
+  let cop = null;
+  for (const e of world.query(ped.x, ped.y, SIGHT_PX * sight, K.PED)) if (e.npc && isCop(e) && !e.dead && canSee(world, e, ped)) { cop = e; break; }
+  if (!cop) return false;
+  p.recognizedAt = world.time;
+  const D = world.map.districtAt(ped.x, ped.y);
+  addHeat(world, p, Math.max(0, STAR_HEAT[1] + 6 - p.heat), ped.x, ped.y);
+  logDispatch(world, 'recognized', ped.x, ped.y, p, p.wanted, 'officer');
+  world.emit(cop.x, cop.y, { e: 'say', id: cop.id, x: Math.round(cop.x), y: Math.round(cop.y), text: 'Hey - I know you!' });
+  world.notify(p, `An officer recognized you - you're a known offender in ${D ? D.name : 'this district'}. The police are after you!`, 'bad');
+  return true;
 }
 
 function checkContraband(world, p, ped) {

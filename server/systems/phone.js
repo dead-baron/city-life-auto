@@ -35,6 +35,7 @@ import * as rangerjob from './rangerjob.js';
 import { FORK, FISHBOAT, RANGER } from '../../shared/rules-work.js';
 import * as woodjob from './woodjob.js';
 import * as skills from './skills.js';
+import * as reputation from './reputation.js';
 import * as workout from './workout.js';
 import * as crews from './crews.js';
 import { CAB, BUSJOB, TOWJOB, CRAZY, RIG, MAILJOB } from '../../shared/rules.js';
@@ -267,7 +268,7 @@ export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
   if (a === 'feed') return events.feedFor(world);
-  if (a === 'skills') return skills.panel(world, p);   // the Skills app (skills.js)
+  if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p) };   // the Skills app (skills.js; your standing by district: reputation.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
   if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);
   if (a === 'workout') { phoneOut(world, p, false); const no = workout.start(world, p, String(msg.k || '')); if (no) world.notify(p, no, 'warn'); return null; }   // a set of push-ups or sit-ups (workout.js)

@@ -46,6 +46,7 @@ import * as fireworks from './fireworks.js';   // (the fireworks and the Campfir
 import * as campfires from './campfires.js';
 import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
+import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
@@ -191,7 +192,11 @@ function weaponOffer(o, prof) {
   return { id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : (w.illegal ? 'illegal' : ''), wpn: w.i };
 }
 
-export function buildMenu(world, p, poi) {
+// A counter's menu: the place's own (menuOf), then the district's word on you - a shop you robbed round here charges
+// more or won't serve you, a Samaritan gets a little off (reputation.js adjustMenu: the prices in the options' ids, which
+// execute checks against this same menu)
+export function buildMenu(world, p, poi) { return rep.adjustMenu(world, p, poi, menuOf(world, p, poi)); }
+function menuOf(world, p, poi) {
   let atmMore = false;   // (an ATM's pop-up: "Use ATM" last, after the hot money's row)
   const prof = p.profile;
   const ped = () => p.ped;

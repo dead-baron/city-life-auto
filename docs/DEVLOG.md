@@ -21973,3 +21973,45 @@ The game against the machine is the old one, played on the page as before (stuck
   the server's at the same step. A game plays to seven.
 - Guide: "Air hockey" and "Playing other people". main.js routes `hockey` words to the screen (4 bytes); the rest loads
   with the screen.
+
+## 2026-11-07 - District reputation and what the city does about it (progression build item 5)
+
+docs/PROGRESSION.md, "Visible consequences and identity": every player has a standing in each district (World v3's, by
+name: `map.districtAt`), from Feared to Loved, and the district reacts. All of it on the server
+(`server/systems/reputation.js`); the numbers are `shared/rules.js` `REPUTATION`.
+- **Saved with the account:** `profile.rep` = `{ [district name]: { s, r, o, t, v } }` - the standing (-100..100), the
+  shops robbed there, the offenses seen there, when it was last settled, when a passer-by last vouched for you there.
+  Older profiles have none (everywhere Neutral); the progress epoch's reset clears it with the rest (a season's wipe).
+- **It fades by the clock, not a tick:** an entry is settled toward neutral when it's next read (`settle`) - the bad side
+  `fadeBad` a day (Feared to Neutral in about a week), the good side `fadeGood`, robs and offenses `fadeRobs` /
+  `fadeOffenses`. Nothing loops over all players or all districts.
+- **In:** a shop robbed there (`robbery.js` start: -`robShop.s`, a rob, an offense); a crime someone saw there (`law.js`
+  crime, whether or not it was called in: -`crime.s` x its severity, x `crime.felony` for a felony, an offense unless
+  it's a small one); the Samaritan points you earn there (every half second the rise in `profile.samaritan` is credited
+  where you stand - so all thirty-odd places that award them count without touching each); owning a home or a business
+  there (`owner.bonus` on the standing while you own it, worked out from what you own, not saved).
+- **Shops** (`economy.js` `buildMenu` now runs the place's menu through `reputation.adjustMenu`): robbed there once,
+  `shops.markup[1]` times the price, twice `markup[2]`; `shops.refuse` robberies and they won't serve you (a Leave
+  option and a line). Liked: `shops.liked`, Loved: `shops.loved`. The goods' prices live in their option ids
+  (`i:id:price:qty`, `w:`, `a:`) and `execute` checks the id against the same adjusted menu, so the page can't buy at the
+  old price. Hospitals, the police, the courthouse and the banks are never shops.
+- **The shotgun:** `shops.shotgun` robberies there and a clerk you point a gun at may (`shotgunShare` of the clerks, by
+  their id) pull a shotgun from under the counter instead of the till - out from behind it at you (the NPC fight that
+  armed staff already had; once they've fired, hitting back is self-defense).
+- **Repeat offenders:** `repeat.offenses` offenses in a district with a record on file (felonies, or the peak-wanted
+  memory) and an NPC officer who sees you there knows you: 1 star, the usual chase, no witness needed ("Known offender
+  sighted" on the dispatch log), at most every `repeat.cooldownS`. A disguise doesn't fool the local police (addHeat
+  brings the old peak back, as it always did). Checked in `law.js` update, every half second, only for players it applies to.
+- **Vouching:** Liked or better, a crime that isn't a felony, called in by a passer-by (not an officer, not a camera):
+  once a district every `vouch.days`, someone who knows you talks the caller out of it - the report is dropped.
+- **People** (every half second, only for players on foot, one query round them): Feared (with `react.fearExp` criminal
+  EXP) - passers-by step out of your way, gang members nod, and now and then a small-time crook (a hustler) slips you
+  respect money; Liked - someone waves or thanks you; an owner near their property there - a neighbor says hello by
+  name. The page only shows the `say` bubbles it's sent (nothing new on the wire or in the HUD).
+- **The phone:** the Skills app's gold Standing card lists your districts as words (Feared, Disliked, Neutral, Liked,
+  Loved) - every one that isn't Neutral, where you own something and where you are, the worst first (`skills` reply's
+  `rep`). Guide: "Your name in each district".
+- **Not done: the owner's name on the storefront sign.** Shop signs are baked into the art; putting a player's name
+  there needs the sign drawn live or a rebake per sale - left for later. Tenants' hello is in.
+- Tests: `test/reputation.test.js` (the math and the fade, the price and refusal thresholds through the real menus,
+  the shotgun share, the police recognition rule, vouch-once, the inputs, the reactions, the phone list).

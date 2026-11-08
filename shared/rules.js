@@ -1044,3 +1044,39 @@ export const DRIVER_SLIPS = {
   argue: 0.22, fight: 0.08, argueS: [8, 14], fightS: [8, 14], fightStopHp: 0.55, police: 0.45, maxS: 40,
   safeR: 900, downR: 700, spawnS: 90, playerS: 600, cooldownS: 30,
 };
+
+// District reputation (docs/PROGRESSION.md, "Visible consequences and identity"; server/systems/reputation.js): each
+// player has a standing in each district, from feared (-100) to loved (+100), saved with the account (profile.rep). It
+// fades toward neutral by the clock, not by a tick: the bad side by fadeBad a day (Feared to Neutral in about a week of
+// good behavior), the good side by fadeGood a day. robs: the shops robbed there (fadeRobs a day); offenses: crimes seen
+// there (fadeOffenses a day).
+//   robShop: one shop robbed there - its standing down by s, a rob and an offense more
+//   crime: a crime someone saw there - down by s x the crime's severity (felony: x felony), an offense more (not a small one)
+//   samaritan: Samaritan points earned there - up by perPoint each, up to maxAct for one act
+//   owner: owning a home or a business there - standing up by bonus while you own it (not saved: worked out from what you own)
+//   words: the standing as a word (the phone), from the bottom: Feared up to feared, Disliked up to disliked, Neutral below
+//     liked, Liked below loved, then Loved
+//   shops: robbed there markup[n] times the price after n robs (the most that applies), refuse: they won't serve you after
+//     this many, shotgun: from this many a clerk you point a gun at may pull a shotgun instead (shotgunShare of them);
+//     Liked / Loved: a discount (x liked / x loved)
+//   repeat: a repeat offender there after this many offenses - with a record on file (felonies, or the peak-wanted memory),
+//     an officer who sees you there knows you: 1 star, no witness needed (at most once every cooldownS, game seconds)
+//   vouch: Liked or better, a passer-by may vouch for you once - a witness's call about a crime that isn't a felony (not an
+//     officer's, not a camera's) dropped; once a district every days
+//   react: what people do round you (every 0.5 s, only near you): feared (with fearExp criminal EXP) - passers-by within
+//     keepPx step out of your way, gang members within nodPx nod (each every nodS), and now and then (respectP a check, at
+//     most every respectS) a small-time crook pays respect money ($respect[0]-[1]); liked - someone within wavePx waves or
+//     thanks you (waveP a check, at most every waveS); owner - within ownPx of what you own there, someone greets you (every greetS)
+export const REPUTATION = {
+  min: -100, max: 100,
+  fadeBad: 15, fadeGood: 8, fadeRobs: 0.45, fadeOffenses: 0.6,
+  robShop: { s: 25 },
+  crime: { s: 4, felony: 2.5 },
+  samaritan: { perPoint: 1.5, maxAct: 15 },
+  owner: { bonus: 15 },
+  words: { feared: -60, disliked: -20, liked: 20, loved: 60 },
+  shops: { markup: [1, 1.15, 1.35], refuse: 3, shotgun: 2, shotgunShare: 0.35, liked: 0.95, loved: 0.9 },
+  repeat: { offenses: 3, cooldownS: 600 },
+  vouch: { days: 7 },
+  react: { fearExp: 100, keepPx: 120, nodPx: 220, nodS: 60, respectP: 0.04, respectS: 300, respect: [20, 60], wavePx: 150, waveP: 0.12, waveS: 20, ownPx: 700, greetS: 45 },
+};

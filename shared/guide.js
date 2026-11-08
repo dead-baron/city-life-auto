@@ -14,7 +14,7 @@ import {
   REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, BOAT_RENTAL_PRICE, BOAT_RENTAL_S, TRAIN_JOB_PAY, HOT_FENCE_CUT, HOT_PAWN_CUT, HOT_FAR_PX, JOB_TIERS,
   WORK_TRUCK_RETURN, ROB_TAKE, ROB_ALARM_S, HEIST, HELP_S, GHOST_SECONDS, DICE, MORTGAGE, POACH_PAY, SKILL, CRAZY, FARM,
   PICK_PRICES, ASSAY_PAYS, ARCADE,
-  LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON,
+  LENIENCY, COP_LEVEL, ESCAPE_STARS, JAIL_S, BAIL_PER_STAR, PRISON, REPUTATION,
 } from './rules.js';
 import { BOWL, BIG } from './bowling.js';
 import { CHESS } from './rules-leisure.js';
@@ -103,6 +103,8 @@ export function guideSections(map = null) {
       { id: 'down', t: 'Knocked down', b: `Down, you drop your cash and what you carry. You have ${RESPAWN_SECONDS} seconds to pick where to wake up - a hospital or a home of yours - or call for help and wait up to ${mins(HELP_S)} for a revive. An ambulance costs ${$(AMBULANCE_FEE)} if it brings you round.` },
       { id: 'hot', t: 'Hot money', b: `A robbery's takings go in a bag on your back. Bank them at an ATM at least ${meters(HOT_FAR_PX)} from where you took them (while no one's after you), stash them at a home, or sell them to a fence for a ${pct(HOT_FENCE_CUT)} cut.` },
       { id: 'robbery', t: 'Holding up a store', b: `Point a gun at a clerk and they hand over the till. A silent alarm trips ${ROB_ALARM_S.slice(0, -1).join(', ')} or ${ROB_ALARM_S[ROB_ALARM_S.length - 1]} seconds in - you never know which.` },
+      // (district reputation: server/systems/reputation.js - teach the new thing)
+      { id: 'rep', t: 'Your name in each district', b: `Each district remembers you, from Feared to Loved - your phone's Skills app shows where you stand. Rob a shop there and its shops charge you ${pct(REPUTATION.shops.markup[1] - 1)} more (${pct(REPUTATION.shops.markup[2] - 1)} after two); after ${REPUTATION.shops.refuse} they won't serve you, and some clerks keep a shotgun. Commit crimes there often enough (${REPUTATION.repeat.offenses}) with a record on file and the local police know you on sight. Feared, people step out of your way and crooks pay respect; helping people makes a district like you - a discount (${pct(1 - REPUTATION.shops.liked)}, ${pct(1 - REPUTATION.shops.loved)} when Loved), waves, and once in a while a passer-by who talks a witness out of calling you in. Owning a place there helps too. It all fades back to Neutral over about a week.` },
       { id: 'badge', t: 'Joining the force', b: `With ${ENFORCER_MIN_SAMARITAN}+ Samaritan points and no felonies, sign up at a police station: a uniform, a cruiser, patrol calls. Bounty hunting takes ${HUNTER_MIN_SAMARITAN}+ points.` },
       { id: 'leave', t: 'Logging off', b: `Close the game mid-fight and your body stays in the city ${GHOST_SECONDS} seconds. The pause menu's Log off counts you out safely.` },
     ] },

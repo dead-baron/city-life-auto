@@ -20,7 +20,8 @@ import * as events from './events.js';
 import * as police from './police.js';
 import * as hot from './hotmoney.js';
 import * as standoff from './standoff.js';
-import { walkInAt } from './npc.js';
+import { walkInAt, startFight } from './npc.js';
+import * as rep from './reputation.js';
 
 const rng = mulberry32(1919);
 const REACH = 300, AIM_CONE = 0.35, LET_GO_S = 1.6, CLERK_COOLDOWN_S = 120;
@@ -76,12 +77,24 @@ function start(world, p, clerk) {
   };
   p.robbery = r;
   p.robbedAt = { u: info.u, bid: Math.floor(key / 16), until: now + ROB_SCENE_S };   // (the scene: standoff.js)
+  rep.robbed(world, p, clerk.x, clerk.y);   // (the district remembers: prices up, then no service - reputation.js)
   clerk.handsUp = true; clerk.npc.blind = true;
   world.notify(p, left < 1 ? `Robbing ${info.poi.label} - but the till's empty: it was cleaned out not long ago.`
     : `Robbing ${info.poi.label}! Keep your gun on the clerk. The takings go in a bag - hot money: you can't spend it, or bank it anywhere near here.`, 'warn');
   // the clerk isn't a witness, but anyone else in the shop (or a camera outside) is: called in, that's 1 star
   if (law.crime(world, p.ped, 'robbery', null, clerk.x, clerk.y)) callIn(world, p, r);
   p.meDirty = true;
+}
+
+// Robbed round here before (reputation.js shotgun): this clerk doesn't put their hands up - a shotgun comes out from
+// under the counter, and they come round it at you (npc.js fight; hit back once they've fired: self-defense, law.js)
+function drawOn(world, p, clerk) {
+  const n = clerk.npc;
+  n.desk = null; n.keep = false; n.robbedUntil = world.time + CLERK_COOLDOWN_S;
+  clerk.weapon = 'shotgun';
+  startFight(world, clerk, p.ped, 25);
+  world.emit(clerk.x, clerk.y, { e: 'say', id: clerk.id, x: Math.round(clerk.x), y: Math.round(clerk.y), text: 'Not again. Not in my store!' });
+  world.notify(p, 'The clerk knows you - word got round about the robberies here. A shotgun comes out from under the counter!', 'bad');
 }
 
 function end(world, p, why) {
@@ -167,7 +180,8 @@ export function update(world) {
     if (!p.robbery) {
       if (ped.dead || ped.hidden || p.custody) continue;
       const clerk = targetClerk(world, ped);
-      if (clerk) start(world, p, clerk);
+      if (clerk && rep.shotgun(world, p, clerk)) drawOn(world, p, clerk);
+      else if (clerk) start(world, p, clerk);
       continue;
     }
     const r = p.robbery;

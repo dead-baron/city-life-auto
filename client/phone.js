@@ -70,6 +70,14 @@ const JOB_FILTERS = [['all', 'All'], ['driving', 'Driving'], ['delivery', 'Deliv
 const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Home']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
 const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
+// the Skills app's district standing (server reputation.js panel): a word a district - those that aren't Neutral, where
+// you own something and where you are
+const REP_TONE = { Feared: 'bad', Disliked: 'warn', Liked: 'good', Loved: 'good' };
+function repRows(rep) {
+  if (!rep) return '';
+  return '<h3>Districts</h3>' + rep.map((r) => `<div class="ph-st ph-rep"><span class="nm">${esc(r.n)}${r.here || r.own ? `<small>${[r.here ? 'you are here' : '', r.own ? 'you own property here' : ''].filter(Boolean).join(' · ')}</small>` : ''}</span><b class="${REP_TONE[r.w] || ''}">${esc(r.w)}</b></div>`).join('')
+    + '<p class="ph-hint">Everywhere else: Neutral. Robbing shops and crimes people see make a district fear you; helping people makes it like you. It fades over about a week.</p>';
+}
 export function createPhone(ctx) {
   // ctx: { map(), pos(), isCop(), send(obj), setWaypoint(wp|null), waypoint(), toast(text, tone), refocus() }
   let screen = 'home', group = null, board = null, feed = null, bty = null, transit = null, skl = null, crew = null;
@@ -131,7 +139,7 @@ export function createPhone(ctx) {
     } else if (screen === 'skills') {   // (the six skills, levelled by doing things: server skills.js)
       const me = ctx.me && ctx.me(), fel = me ? me.felonies | 0 : 0;
       // (UIC-03: your standing in a gold card - UI-8 took the numbers off the HUD - then each skill, its level and a bar)
-      const standing = me ? `<div class="ph-stand"><h3>Standing</h3><div class="ph-st"><span class="ic">${pix('friend')}</span>Samaritan<b class="good">${(me.sam | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('mask')}</span>Criminal XP<b class="warn">${(me.cexp | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('siren')}</span>${fel === 1 ? 'Felony' : 'Felonies'}<b class="${fel ? 'bad' : ''}">${fel}</b></div></div>` : '';
+      const standing = me ? `<div class="ph-stand"><h3>Standing</h3><div class="ph-st"><span class="ic">${pix('friend')}</span>Samaritan<b class="good">${(me.sam | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('mask')}</span>Criminal XP<b class="warn">${(me.cexp | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('siren')}</span>${fel === 1 ? 'Felony' : 'Felonies'}<b class="${fel ? 'bad' : ''}">${fel}</b></div>${repRows(skl && skl.rep)}</div>` : '';
       el.innerHTML = standing + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-skl"><span class="ic">${pix(SKILL_PIX[String(k.name).toLowerCase()] || 'skills')}</span><span class="nm"><span class="ph-skl-t">${esc(k.name)}<b>LV ${k.L}</b></span><i class="pbar"><i style="width:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></i><small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ' · the top level'}</small></span></div>`).join('')
         + '<h3>Train</h3><div class="ph-apps ph-says"><button class="ph-app" data-act="workout" data-k="pushups">Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps">Sit-ups here</button></div>'
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'

@@ -1519,6 +1519,7 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 #ph-screen .ph-stand h3 { margin: var(--s2) 0 var(--s1); padding-bottom: var(--s1); border-bottom: 1px solid var(--line); color: var(--cream); font-size: var(--fs-4); }
 .ph-st { display: flex; align-items: center; gap: var(--s3); min-height: 40px; border-bottom: 1px solid var(--line); font: 600 var(--fs-4) var(--ui); }
 .ph-st:last-child { border-bottom: 0; }
+.ph-rep .nm small { display: block; font: 500 var(--fs-2) var(--ui); color: var(--dim); }
 .ph-st .ic .pi24 { width: 24px; height: 24px; display: block; }
 .ph-st b { margin-left: auto; font: 700 var(--fs-4) var(--pixel); color: var(--cream); } .ph-st b.good { color: var(--money); } .ph-st b.warn { color: var(--heat); } .ph-st b.bad { color: var(--danger); }
 .ph-skl { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }

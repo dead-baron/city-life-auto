@@ -123,6 +123,7 @@ import * as fishboat from './systems/fishboat.js';
 import * as rangerjob from './systems/rangerjob.js';
 import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
+import * as reputation from './systems/reputation.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -185,6 +186,7 @@ const SYSTEMS = [
   ['robbery', robbery.update],      // store hold-ups, silent alarms, squad-car response
   ['heist', heist.update],          // bank heists: the drill at a vault door, its jams, the vault opening (heist.js)
   ['law', law.update],              // heat decay, search circles
+  ['reputation', reputation.update], // district reputation: Samaritan points credited where earned, people's reactions near you
   ['bounties', bounties.update],    // bounty clocks (while the target is out in the city), refunds, last seen
   ['jobs', jobs.update],            // contraband drops, fishing, jobs
   ['foraging', foraging.update],    // picked mushroom spots and tidepool stars growing back
