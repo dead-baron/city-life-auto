@@ -158,7 +158,7 @@ test('the knocked-out screen: where to wake up nearest first, the picked one amo
 });
 
 test('a store icon for every kind of shop: a round badge with a glyph per trade', () => {
-  const SKIP = new Set(['home', 'atm', 'station', 'ride', 'race', 'farm', 'sar']);   // (art2 host.js SHOP_SKIP: marks of their own)
+  const SKIP = new Set(['home', 'atm', 'station', 'ride', 'race', 'farm', 'sar', 'arena']);   // (art2 host.js SHOP_SKIP: marks of their own; the car soccer arenas aren't places with a shopfront - map.arenas, their gates)
   const kinds = new Set([...Object.keys(KIND_ICON), ...Object.keys(SHOPS)].filter((k) => !SKIP.has(k)));
   const missing = [...kinds].filter((k) => !STORE_ICON[k]);
   assert.deepEqual(missing, [], 'kinds with no icon');
