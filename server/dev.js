@@ -88,7 +88,7 @@ import * as chess from './systems/chess.js';
 import { parkPonds } from './systems/wildlife.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup', 'contact'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -582,6 +582,14 @@ function run(world, p, c, msg) {
       const err = p.badge ? null : law.goOnDuty(world, p);
       if (!err && !(ped && ped.vehId && world.get(ped.vehId)?.cruiserOf === p.pid)) cruiser.issueNow(world, p);
       world.notify(p, err ? `[dev] ${err}` : `[dev] On duty as ${law.POLICE_RANKS[law.policeRank(prof)].name}. Dispatch map: M / Start → Map / tap the radar.`, err ? 'bad' : 'good');
+      break;
+    }
+    case 'contact': { // a contact's chain one step on, or every chain reset (contacts.js - loaded when asked)
+      import('./systems/contacts.js').then((contacts) => {
+        const k = String(msg.k || '');
+        const said = k === 'reset' ? contacts.devReset(p) : contacts.devJump(world, p, k);
+        world.notify(p, `[dev] ${said}`, 'info');
+      });
       break;
     }
     case 'promote': { // jump to the next police rank

@@ -27,6 +27,7 @@ import { registerCardSource } from './whatsnext.js';
 import * as law from './law.js';
 import * as streetlife from './streetlife.js';
 import * as firstcar from './firstcar.js';
+import * as careers from './careers.js';   // (an escort that saw the gold through: 'escort' - contacts.js)
 import { wildStyle } from './wildlife.js';
 
 let clock = () => Date.now();
@@ -198,6 +199,7 @@ const RUNNERS = {
         p.profile.bank += ARMORED_EVENT.guardPay;
         p.profile.samaritan = (p.profile.samaritan || 0) + EXTRACT.vaultSam;
         if (p.badge) law.addPolicePts(world, p, ARMORED_EVENT.guardPts);
+        careers.note(world, p, 'escort');
         world.notify(p, `The gold got through - IronVault paid you ${money(ARMORED_EVENT.guardPay)} for the escort (to your bank).`, 'good');
         p.meDirty = true;
       }
