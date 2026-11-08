@@ -44,6 +44,7 @@ import { spawnNpc, despawnNpc, startFight, markBrawl, leaveBuilding } from './np
 import { ITEMS } from '../../shared/items.js';
 import { HOME_IN, NPC_CRITICAL } from '../../shared/rules.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import { setHooks as nextHooks } from './whatsnext.js';
 
 const rng = mulberry32(7411);
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -849,3 +850,5 @@ export function update(world) {
   if (world.tick % 20 === 17 && world.biz && world.biz.owner && world.biz.owner.size) brawls(world);
   if (world.tick % 5 === 2) for (const p of world.players.values()) { if (p.bizFix) stepFix(world, p); if (p.bizRun) stepRun(world, p); }
 }
+
+nextHooks({ siteById });   // (the "What's next" app's takings card: whatsnext.js)

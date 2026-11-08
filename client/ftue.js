@@ -46,13 +46,13 @@ export function init(ctx) {
   });
 }
 
-// ---- the server's messages: { t: 'ftue', a: 'pick' | 'arrive' | 'end' | 'tip' | 'mark' } ------------------------------------------------
+// ---- the server's messages: { t: 'ftue', a: 'pick' | 'arrive' | 'end' | 'tip' | 'line' | 'rank' | 'mark' } ------------------------------------------------
 export function onMsg(m) {
   if (m.a === 'pick') pick(m);
   else if (m.a === 'arrive') arrive(m);
   else if (m.a === 'end') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('cash', 0.8); }
   else if (m.a === 'rank') { const h = C.hud(); if (h) h.moment(m.title, m.sub, 'good'); C.sfx && C.sfx('good', 0.9); }   // (a career rank-up's title card: server careers.js rankUp)
-  else if (m.a === 'tip') tip(m);
+  else if (m.a === 'tip' || m.a === 'line') tip(m);   // (line: not a first-time moment - the "What's next" line, once a session, opening its app: server whatsnext.js)
   else if (m.a === 'mark') { const w = { x: m.x, y: m.y, label: m.label }, h = C.hud(); C.S.waypoint = w; if (h) h.waypoint = w; }   // (just let me roam: the used lot as your waypoint)
 }
 // A first-time moment never shows over the down / death screen or the wake-up's "Loading the area..." veil (the owner's

@@ -100,7 +100,7 @@ test('in the game: off until the FTUE is done; then three cards, the rank bars, 
   run(w, 1.2);
   assert.notEqual(players.buildMe(w, p).nx, undefined);
   run(w, NEXT.everyS + 1);
-  const lines = conn.sent.filter((m) => m && m.t === 'ftue' && m.a === 'tip' && m.id === 'next');
+  const lines = conn.sent.filter((m) => m && m.t === 'ftue' && m.a === 'line' && m.id === 'next');
   assert.equal(lines.length, 1, 'one line the first time this session');
   assert.equal(lines[0].app, 'next');
 });

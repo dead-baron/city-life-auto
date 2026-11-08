@@ -534,9 +534,9 @@ test('police dispatch: witnessed crimes reach on-duty officers, unseen ones do n
   const cop = joinPlayer(w).p, crook = joinPlayer(w).p;
   dev.command(w, cop, 'cop', {});
   assert.ok(cop.badge, 'dev join police');
-  assert.equal(players.buildMe(w, cop).rank, 'Officer');
+  assert.equal(players.buildMe(w, cop).rank, 'Recruit');   // (the police ladder's first rank: shared/rules.js CAREERS - docs/PROGRESSION.md)
   dev.command(w, cop, 'promote', {});
-  assert.equal(players.buildMe(w, cop).rank, 'Senior Officer');
+  assert.equal(players.buildMe(w, cop).rank, 'Officer');   // (the second rank at the same 40 points the old Senior Officer took)
   const sp = w.map.spawns.hospital;
   teleport(w, crook.ped, sp.x, sp.y);
   // unseen: nobody around at night in the middle of nowhere

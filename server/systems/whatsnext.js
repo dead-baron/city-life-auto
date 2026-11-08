@@ -29,8 +29,11 @@ import { EVENT_KINDS } from '../../shared/worldevents.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';
 import * as goals from './goals.js';
-import * as phone from './phone.js';
-import * as biz from './biz.js';
+
+// The job board and the businesses' sites, handed over by their own modules as they load (phone.js, biz.js) - this one
+// imports neither: the self record (players.js) reads it, and they sit deep in the systems' import cycles
+const hook = { boardFor: null, handle: null, siteById: null };
+export function setHooks(o) { Object.assign(hook, o); }
 
 const SOURCES = new Map();
 export function registerCardSource(name, fn, opts = {}) { SOURCES.set(name, { fn, slot: opts.slot || 'career' }); }
@@ -115,11 +118,11 @@ function careerCards(world, p) {
   // business: a till to empty; the job board's work
   for (const [id, e] of Object.entries(prof.biz || {})) {
     if (!e || !(e.till > 0) || e.t === 'hideout') continue;
-    const s = biz.siteById(world, id);
+    const s = hook.siteById ? hook.siteById(world, id) : null;
     if (s) out.push({ id: `career:till:${id}`, career: 'business', act: 'biz', who: who('business'), icon: 'money', title: `${money(e.till)} in the till at ${s.name}`, sub: 'Go and collect the takings.', x: s.x, y: s.y, pay: e.till, mins: 3, btn: { k: 'way', label: 'Waypoint' } });
   }
   let board = null;
-  try { board = phone.boardFor(world, p); } catch { board = null; }
+  try { board = hook.boardFor ? hook.boardFor(world, p) : null; } catch { board = null; }
   for (const j of (board && board.jobs) || []) {
     if (j.kind === 'patrol' || !(j.pay > 0) || !(j.x || j.y)) continue;
     const act = jobAct(j.id);
@@ -131,7 +134,7 @@ const JOB_ACT = { mailwalk: 'mail', coastair: 'coast' };
 export const jobAct = (id) => (/^\d+$/.test(String(id)) ? 'courier' : JOB_ACT[id] || String(id));
 function takeJob(world, p, id) {
   if (p.job) return 'You already have a job - quit it first (Phone, Jobs).';
-  const r = phone.handle(world, p, { a: 'take', id });
+  const r = hook.handle ? hook.handle(world, p, { a: 'take', id }) : { err: 'Not right now.' };
   return r && r.err ? r.err : null;
 }
 // a hint from the career's contact for a goal with no place to point at
@@ -283,7 +286,7 @@ export function update(world) {
     try { refresh(world, p); } catch (e) { if (world.opts && world.opts.throwErrors) throw e; console.error('[whatsnext]', e); continue; }
     if (!p.nxSaid && p.nx && p.nx.length && !p.ped.interior) {
       p.nxSaid = 1;
-      p.conn.sendJSON({ t: 'ftue', a: 'tip', id: 'next', text: `What's next: ${p.nx[0].title}`, ctl: 'phone', app: 'next' });
+      p.conn.sendJSON({ t: 'ftue', a: 'line', id: 'next', text: `What's next: ${p.nx[0].title}`, ctl: 'phone', app: 'next' });
     }
   }
 }

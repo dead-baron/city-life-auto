@@ -407,3 +407,5 @@ function target(world, p, j) {
   if (j.type === 'patrol' && j.stage === 'crime') { const t = world.get(j.thief); if (t) return { text: j.text, x: Math.round(t.x), y: Math.round(t.y), stage: 'crime' }; }
   return { text: j.text, x: Math.round(j.tx), y: Math.round(j.ty), stage: j.stage || 'go' };
 }
+
+whatsnext.setHooks({ boardFor, handle });   // (the "What's next" app's job cards: whatsnext.js)
