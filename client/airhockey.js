@@ -1,75 +1,40 @@
-// Air hockey at the arcades (the owner, 10-08: "Arcade: ... air hockey, skee-ball, pinball; tickets for prizes"):
-// against the machine, first to seven. Your mallet on the left half, the machine's on the right; the puck glides on
-// the air, off the rails and the mallets, into the goals at the ends. Played on the arcade's screen (main.js: the
-// 'arcade' overlay, loaded the first time someone plays); the goals go to the server (server arcade.js: tickets).
-//   start({ id, best, send, close, sfx }) / stop()
+// Air hockey at the arcades (the owner, 10-08: "Arcade: ... air hockey, skee-ball, pinball; tickets for prizes"; 11-07:
+// "id prefer it is 2 player"): first to seven. Your mallet on the left half, the other on the right; the puck glides on
+// the air, off the rails and the mallets, into the goals at the ends (the table: shared/airhockey.js). Played on the
+// arcade's screen (main.js: the 'arcade' overlay, loaded the first time someone plays).
+//   start({ id, best, send, close, sfx, mp, tbl }) / stop() / update(m)
+//   - Against the machine (no mp): played here, as it always was; the goals go to the server (server arcade.js:
+//     tickets). From a table (tbl), its watchers are shown the game (the server says when there are: { watch }) and
+//     getting up frees the table.
+//   - At a table (mp: server/systems/hockeymatch.js): the choice first (wait for a player, play the machine), then a
+//     game against someone - the puck the server's, predicted here (client/hockeynet.js): your mallet moves at once and
+//     goes to the server 30 times a second; seat 1 sees the table turned round, so you're always on the left. A
+//     watcher sees the table as the server has it.
 // The mallet: the mouse or a finger (it follows where you point), or the keys, the stick or the d-pad. Esc / B leaves.
 import { fitScreen } from './arcscreen.js';
 import { layer, blit, ballSprite, shadow, text, banner, led, panel, ramp, tone, hash } from './arcart.js';
-const W = 256, H = 224, STEP = 1 / 120;
-const T = { x0: 14, x1: 242, y0: 28, y1: 206 };   // the rails (the puck's centre stays inside by its radius)
-const GOAL = 30, PUCK_R = 6, MAL_R = 11, TO = 7;  // the goal mouth's half-width, the puck, the mallets, first to
-const MAX_PUCK = 560, MY_SPEED = 520, KEY_SPEED = 260, CPU_SPEED = 290;
-const CY = (T.y0 + T.y1) / 2;
+import { W, H, STEP, T, GOAL, PUCK_R, MAL_R, TO, MY_SPEED, KEY_SPEED, CY, STUCK_S, newTable, strike, glide, moveTo, cpuMove, unstick, stepTable } from '../shared/airhockey.js';
+import * as net from './hockeynet.js';
+export { newTable, strike, glide, cpuMove, unstick };
 let G = null;
 
-export function newTable() {
-  return { puck: { x: W / 2, y: CY, vx: 0, vy: 0 }, me: { x: T.x0 + 40, y: CY, vx: 0, vy: 0 }, cpu: { x: T.x1 - 40, y: CY, vx: 0, vy: 0 }, us: 0, them: 0, wait: 0 };
-}
-// a mallet into the puck: pushed apart, the puck off it with the mallet's own speed added
-export function strike(P, m) {
-  const dx = P.x - m.x, dy = P.y - m.y, d = Math.hypot(dx, dy), min = PUCK_R + MAL_R;
-  if (d >= min || d === 0) return false;
-  const nx = dx / d, ny = dy / d;
-  P.x = m.x + nx * min; P.y = m.y + ny * min;
-  const rv = (P.vx - m.vx) * nx + (P.vy - m.vy) * ny;
-  if (rv < 0) { P.vx -= 1.9 * rv * nx; P.vy -= 1.9 * rv * ny; }
-  P.vx += m.vx * 0.25; P.vy += m.vy * 0.25;
-  const sp = Math.hypot(P.vx, P.vy);
-  if (sp > MAX_PUCK) { P.vx *= MAX_PUCK / sp; P.vy *= MAX_PUCK / sp; }
-  return true;
-}
-// the puck a step: the air under it, the rails, the goals ('us' / 'them' when one goes in)
-export function glide(P, dt) {
-  P.x += P.vx * dt; P.y += P.vy * dt;
-  const f = Math.pow(0.8, dt); P.vx *= f; P.vy *= f;
-  let hit = false;
-  if (P.y < T.y0 + PUCK_R) { P.y = T.y0 + PUCK_R; P.vy = Math.abs(P.vy) * 0.92; hit = true; }
-  if (P.y > T.y1 - PUCK_R) { P.y = T.y1 - PUCK_R; P.vy = -Math.abs(P.vy) * 0.92; hit = true; }
-  const inMouth = Math.abs(P.y - CY) < GOAL;
-  if (P.x < T.x0 + PUCK_R) { if (inMouth && P.x < T.x0 - PUCK_R) return 'them'; if (!inMouth) { P.x = T.x0 + PUCK_R; P.vx = Math.abs(P.vx) * 0.92; hit = true; } }
-  if (P.x > T.x1 - PUCK_R) { if (inMouth && P.x > T.x1 + PUCK_R) return 'us'; if (!inMouth) { P.x = T.x1 - PUCK_R; P.vx = -Math.abs(P.vx) * 0.92; hit = true; } }
-  return hit ? 'rail' : null;
-}
-// the machine: after the puck on its own half (from behind it, toward your goal), back to guard its goal otherwise
-export function cpuMove(Tb, dt) {
-  const c = Tb.cpu, P = Tb.puck;
-  let tx = T.x1 - 34, ty = CY + (P.y - CY) * 0.5;
-  if (P.x > W / 2 - 10 && (P.vx > -60 || P.x > W * 0.7)) { tx = P.x + 8; ty = P.y + (P.y > CY ? 3 : -3); }
-  // a puck in against its back rail: from behind it can't be got at (the mallet pinned it in the corner for good - the
-  // owner, 11-06) - come at it from the side away from the rail it's on, drawing it back out into play
-  if (P.x > T.x1 - PUCK_R - MAL_R * 1.5) { tx = P.x - MAL_R; ty = P.y + (P.y > CY ? -(PUCK_R + MAL_R) : PUCK_R + MAL_R) * 0.8; }
-  moveTo(c, tx, ty, CPU_SPEED, dt, W / 2 + MAL_R, T.x1 - MAL_R);
-}
-function moveTo(m, tx, ty, max, dt, xmin, xmax) {
-  const dx = tx - m.x, dy = ty - m.y, d = Math.hypot(dx, dy), s = Math.min(d, max * dt);
-  const ox = m.x, oy = m.y;
-  if (d > 0) { m.x += dx / d * s; m.y += dy / d * s; }
-  m.x = Math.max(xmin, Math.min(xmax, m.x)); m.y = Math.max(T.y0 + MAL_R, Math.min(T.y1 - MAL_R, m.y));
-  m.vx = (m.x - ox) / dt; m.vy = (m.y - oy) / dt;
-}
-
 export function start(o) {
-  stop();
+  stop(true);   // (the table's choice turned into a game against the machine: the screen goes on, nobody's got up)
   const cv = document.getElementById('arc-cv'), g = cv.getContext('2d');
   cv.width = W; cv.height = H; cv.style.aspectRatio = '';
   g.imageSmoothingEnabled = false;
-  G = { o, cv, g, T: newTable(), done: false, t0: performance.now(), keys: new Set(), ptr: null, acc: 0, last: performance.now(), sent: false, padHeld: false, msg: 'First to seven', msgT: 2.5 };
+  G = { o, cv, g, mp: !!o.mp, T: newTable(), done: false, t0: performance.now(), keys: new Set(), ptr: null, acc: 0, last: performance.now(), sent: false, padHeld: false, msg: 'First to seven', msgT: 2.5, btns: [], sel: 0, watched: 0, relayAt: 0, S: null, N: null, m: null, lastK: null, pingAt: 0, pings: 0, relay: [], prev: null };
   G.T.wait = 1.2;
-  G.onKey = (e) => { if (e.repeat) return; if (e.type === 'keydown') G.keys.add(e.code); else G.keys.delete(e.code); };
+  if (G.mp) { G.msg = ''; G.msgT = 0; o.send({ t: 'hockey', a: 'state' }); }   // (the table as it stands: what came before this module loaded was missed)
+  G.onKey = (e) => {
+    if (e.repeat) return;
+    if (e.type === 'keydown') { G.keys.add(e.code); if (G.btns.length && !playing()) { if (/Arrow(Left|Up)|KeyA|KeyW/.test(e.code)) G.sel = (G.sel + G.btns.length - 1) % G.btns.length; else if (/Arrow(Right|Down)|KeyD|KeyS/.test(e.code)) G.sel = (G.sel + 1) % G.btns.length; else if (/Space|Enter/.test(e.code)) press(G.btns[G.sel]); } }
+    else G.keys.delete(e.code);
+  };
   G.onPtr = (e) => {
     const r = cv.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W, y = (e.clientY - r.top) / r.height * H;
     if (G.done && e.type === 'pointerdown') { finish(); return; }
+    if (e.type === 'pointerdown') { const b = G.btns.find((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h); if (b) { press(b); return; } }
     if (e.type === 'pointerup' || e.type === 'pointercancel') { if (e.pointerType !== 'mouse') G.ptr = null; return; }
     if (e.type === 'pointermove' || e.type === 'pointerdown') G.ptr = { x, y };
   };
@@ -78,18 +43,21 @@ export function start(o) {
   const tick = (now) => {
     if (!G) return;
     G.raf = requestAnimationFrame(tick);
+    if (G.mp) { mpFrame(now); if (G) draw(); return; }
     G.acc = Math.min(0.25, G.acc + (now - G.last) / 1000); G.last = now;
     while (G.acc >= STEP) { step(STEP); if (!G) return; G.acc -= STEP; }
+    if (G.o.tbl && G.watched && now - G.relayAt > 100) { G.relayAt = now; const P = G.T.puck, q = (v) => Math.round(v * 10); G.o.send({ t: 'hockey', v: [q(P.x), q(P.y), q(G.T.me.x), q(G.T.me.y), q(G.T.cpu.x), q(G.T.cpu.y), G.T.us, G.T.them] }); }   // (shown to whoever's watching: hockeymatch.js relay)
     draw();
   };
   G.raf = requestAnimationFrame(tick);
 }
-export function stop() {
+export function stop(quiet = false) {
   if (!G) return;
   cancelAnimationFrame(G.raf);
   removeEventListener('keydown', G.onKey); removeEventListener('keyup', G.onKey);
   for (const t of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel']) G.cv.removeEventListener(t, G.onPtr);
-  report();
+  if (!G.mp) report();
+  if (!quiet && (G.mp || G.o.tbl)) G.o.send({ t: 'hockey', a: 'leave' });   // (up from the table: a game against someone forfeited)
   G = null;
 }
 // the goals, whenever you leave: a loss counts what you scored, a win is a win
@@ -100,22 +68,14 @@ function report() {
 }
 function finish() { report(); G.o.close(); }
 
-function step(dt) {
-  const Tb = G.T, P = Tb.puck;
-  G.msgT -= dt;
-  if (G.done) {
-    let btn = G.keys.has('Space') || G.keys.has('Enter');
-    for (const p of navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) if (p.buttons[0] && p.buttons[0].pressed) btn = true;
-    if (btn && !G.padHeld && G.msgT < 2) { finish(); return; }
-    G.padHeld = btn;
-    return;
-  }
-  // your mallet: where you point, or pushed by the keys / the stick
+// where the controls put your mallet: the stick, the d-pad or the keys (a push, -1 .. 1), else where you point
+function controls() {
   let mx = 0, my = 0;
   if (G.keys.has('ArrowLeft') || G.keys.has('KeyA')) mx -= 1;
   if (G.keys.has('ArrowRight') || G.keys.has('KeyD')) mx += 1;
   if (G.keys.has('ArrowUp') || G.keys.has('KeyW')) my -= 1;
   if (G.keys.has('ArrowDown') || G.keys.has('KeyS')) my += 1;
+  let btn = false;
   for (const p of navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) {
     if (Math.abs(p.axes[0] || 0) > 0.15) mx = p.axes[0];
     if (Math.abs(p.axes[1] || 0) > 0.15) my = p.axes[1];
@@ -123,29 +83,130 @@ function step(dt) {
     if (p.buttons[15] && p.buttons[15].pressed) mx = 1;
     if (p.buttons[12] && p.buttons[12].pressed) my = -1;
     if (p.buttons[13] && p.buttons[13].pressed) my = 1;
+    if (p.buttons[0] && p.buttons[0].pressed) btn = true;
   }
-  const me = Tb.me;
-  if (mx || my) { G.ptr = null; moveTo(me, me.x + mx * 100, me.y + my * 100, KEY_SPEED * Math.min(1, Math.hypot(mx, my)), dt, T.x0 + MAL_R, W / 2 - MAL_R); }
-  else if (G.ptr) moveTo(me, G.ptr.x, G.ptr.y, MY_SPEED, dt, T.x0 + MAL_R, W / 2 - MAL_R);
-  else { me.vx = 0; me.vy = 0; }
+  if (mx || my) G.ptr = null;
+  return { mx, my, btn: btn || G.keys.has('Space') || G.keys.has('Enter') };
+}
+// your mallet a step: pushed by the keys / the stick, or after where you point (seat: 0 the left, 1 the right - its
+// page's left and right turned round)
+function moveMine(m, seat, c, dt) {
+  const f = seat === 1 ? -1 : 1;
+  if (c.mx || c.my) moveTo(m, m.x + f * c.mx * 100, m.y + c.my * 100, KEY_SPEED * Math.min(1, Math.hypot(c.mx, c.my)), dt, seat);
+  else if (G.ptr) moveTo(m, net.mirror(seat, G.ptr.x), G.ptr.y, MY_SPEED, dt, seat);
+  else { m.vx = 0; m.vy = 0; }
+}
+
+function step(dt) {
+  const Tb = G.T;
+  G.msgT -= dt;
+  const c = controls();
+  if (G.done) {
+    if (c.btn && !G.padHeld && G.msgT < 2) { finish(); return; }
+    G.padHeld = c.btn;
+    return;
+  }
+  moveMine(Tb.me, 0, c, dt);
   cpuMove(Tb, dt);
-  if (Tb.wait > 0) { Tb.wait -= dt; return; }
-  if (strike(P, me) || strike(P, Tb.cpu)) G.o.sfx('click', 0.35);
-  const r = glide(P, dt);
-  if (unstick(Tb, dt)) { G.msg = 'Face-off'; G.msgT = 1; return; }
-  if (r === 'us' || r === 'them') {
-    Tb[r]++;
+  const r = stepTable(Tb, dt);
+  if (r === 'hit') G.o.sfx('click', 0.35);
+  else if (r === 'rail') G.o.sfx('click', 0.15);
+  else if (r === 'face') { G.msg = 'Face-off'; G.msgT = 1; }
+  else if (r === 'us' || r === 'them') {
     G.o.sfx(r === 'us' ? 'good' : 'bad', 0.5);
     G.msg = r === 'us' ? 'GOAL!' : 'Their goal'; G.msgT = 1.2;
-    // the puck back on the half of whoever let it in
-    P.x = r === 'us' ? W / 2 + 40 : W / 2 - 40; P.y = CY; P.vx = 0; P.vy = 0; Tb.wait = 1;
     if (Tb.us >= TO || Tb.them >= TO) { G.done = true; G.msgT = 3; G.msg = Tb.us >= TO ? `You win ${Tb.us}-${Tb.them}!` : `The machine wins ${Tb.them}-${Tb.us}`; G.o.sfx(Tb.us >= TO ? 'good' : 'bad', 0.7); report(); }
-  } else if (r === 'rail') G.o.sfx('click', 0.15);
+  }
+}
+
+// ---- at a table: against someone, or watching (hockeymatch.js) -------------------------------------------------------
+const playing = () => !!(G && G.mp && G.S && G.S.st === 'play' && G.S.me >= 0);
+// the server's word: the table's players and score (st), the table 20 times a second (s), a ping back, a game against
+// the machine shown to its watchers (v), how many watch your game against the machine (watch)
+export function update(m) {
+  if (!G || m.t !== 'hockey') return;
+  if (!G.mp) { if (m.watch !== undefined) G.watched = m.watch; return; }
+  const now = performance.now();
+  if (m.pong !== undefined) { if (G.N) net.onPong(G.N, now, m.pong, m.now); return; }
+  if (m.st) {
+    const was = G.S;
+    G.S = m;
+    if (m.st === 'play' && (!was || was.st !== 'play' || !G.N || G.N.seat !== m.me)) {   // (a game begun: its clock from nothing)
+      G.N = net.makeNet(m.me); G.lastK = null; G.pings = 0; G.pingAt = 0;
+      G.m = m.me >= 0 ? { x: m.me ? T.x1 - 40 : T.x0 + 40, y: CY, vx: 0, vy: 0 } : null;
+    }
+    if (G.N) net.clockFrom(G.N, now, m.now);
+    if (was && was.sc && m.st === 'play' && (m.sc[0] !== was.sc[0] || m.sc[1] !== was.sc[1])) {
+      const mine = m.me >= 0 && m.sc[m.me] !== was.sc[m.me];
+      G.o.sfx(m.me < 0 || mine ? 'good' : 'bad', 0.5);
+    }
+    if (m.line && (!was || m.line !== was.line)) { G.msg = m.line; G.msgT = m.st === 'play' ? 1.4 : 99; }
+    if (m.st === 'over' && (!was || was.st !== 'over')) G.o.sfx(m.win === m.me ? 'good' : 'bad', 0.7);
+    G.sel = 0;
+  }
+  if (m.v) { G.relay.push([now, m.v]); if (G.relay.length > 4) G.relay.shift(); if (m.sc && G.S) G.S.sc = m.sc; }
+  if (m.s && G.N && G.S && G.S.st === 'play') net.onState(G.N, m.s, net.present(G.N, now), G.m);
+}
+function press(b) { if (b.a === 'leave') G.o.close(); else G.o.send({ t: 'hockey', a: b.a }); }
+// the choice on the screen: waiting (the machine), a game over (a rematch), always a way out but in a game
+function buttons() {
+  const S = G.S, list = [];
+  if (!S) return list;
+  if (S.st === 'wait' && S.me === 0) list.push({ a: 'cpu', t: 'PLAY THE MACHINE' });
+  if (S.st === 'over' && S.me >= 0 && S.seats[0] && S.seats[1]) list.push({ a: 'again', t: 'REMATCH' });
+  if (S.st !== 'play' || S.me < 0) list.push({ a: 'leave', t: S.me < 0 ? 'STOP WATCHING' : 'LEAVE' });
+  let x = W / 2 - list.reduce((w, b) => w + b.t.length * 4 + 14, -6) / 2;
+  for (const b of list) { b.w = b.t.length * 4 + 8; b.h = 13; b.x = Math.round(x); b.y = T.y1 - 36; x += b.w + 6; }
+  return list;
+}
+// a frame of a game against someone: your mallet each step since the last (its samples to the server), the prediction
+// on to now; pings to keep the clock
+function mpFrame(now) {
+  const N = G.N, dt = Math.min(0.1, (now - G.last) / 1000);
+  G.last = now; G.msgT -= dt;
+  const c = controls();
+  if (!playing()) { if (c.btn && !G.padHeld && G.btns.length) press(G.btns[G.sel]); G.padHeld = c.btn; }
+  if (!N || !G.S || G.S.st !== 'play') return;
+  if (now - G.pingAt > (G.pings < 5 ? 120 : 2000)) { G.pingAt = now; G.pings++; G.o.send({ t: 'hockey', a: 'ping', c: +now.toFixed(1) }); }
+  const k = net.present(N, now);
+  if (k === null) return;
+  if (G.m && N.pred) {
+    if (G.lastK === null) G.lastK = k - 1;
+    for (let j = Math.max(G.lastK + 1, k - 30); j <= k; j++) {
+      moveMine(G.m, N.seat, c, STEP);
+      const s = net.sample(N, j, G.m);
+      if (s) G.o.send({ t: 'hockey', m: s });
+    }
+    G.lastK = k;
+  }
+  net.frame(N, now * 0.12 + N.off, G.m, (ev) => { if (ev === 'hit') G.o.sfx('click', 0.35); else if (ev === 'rail') G.o.sfx('click', 0.15); });
+}
+// what to draw at a table: the puck and the two mallets (left and right as this page sees them), or null
+function view() {
+  const S = G.S;
+  if (!S) return null;
+  if (S.st === 'cpu') {   // (a game against the machine, watched: between its page's last two words, 150 ms behind)
+    const R = G.relay;
+    if (!R.length) return null;
+    const t = performance.now() - 150;
+    let a = R[0], b = R[0];
+    for (let i = 1; i < R.length; i++) if (R[i][0] <= t) a = R[i]; else { b = R[i]; break; }
+    if (b === a) b = R[R.length - 1];
+    const f = b[0] === a[0] ? 1 : Math.max(0, Math.min(1, (t - a[0]) / (b[0] - a[0])));
+    const p = (i) => (a[1][i] + (b[1][i] - a[1][i]) * f) / 10;
+    return { puck: { x: p(0), y: p(1) }, L: { x: p(2), y: p(3) }, R: { x: p(4), y: p(5) } };
+  }
+  const N = G.N;
+  if (S.st !== 'play' || !N || !N.pred) { const Tb = newTable(); return { puck: Tb.puck, L: Tb.me, R: Tb.cpu }; }
+  const seat = Math.max(0, S.me), mir = (q) => (q ? { x: net.mirror(seat, q.x), y: q.y } : null);
+  const puck = mir(net.drawn(N));
+  if (S.me < 0) return { puck, L: net.other(N, 0), R: net.other(N, 1) };
+  return { puck, L: mir(G.m), R: mir(net.other(N, seat ^ 1)) };
 }
 
 // ---- the screen (AC7, the owner's air hockey concept: the SNES look) -------------------------------------------------------
 // the rink, painted once: the arcade's carpet round it, the table's dark apron, the chrome rails with their light
-// strips - blue down your half, orange down the machine's - the goal slots in the ends, the lit blue top (brighter in
+// strips - blue down your half, orange down the other's - the goal slots in the ends, the lit blue top (brighter in
 // the middle) with its rows of air holes, the red centre line, circle and creases
 let BG = null;
 function rinkArt() {
@@ -179,24 +240,48 @@ function rinkArt() {
   });
 }
 function draw() {
-  const g = G.g, Tb = G.T, P = Tb.puck;
+  const g = G.g;
   fitScreen(G.cv, g, W, H);   // (drawn at the size it's shown: the pixels square, the numbers sharp)
   BG ||= rinkArt();
   blit(g, BG, 0, 0);
-  // the puck - its trail when it flies - and the mallets, shaded, their shadows
-  const sp = Math.hypot(P.vx, P.vy);
-  if (sp > 160) for (let k = 3; k >= 1; k--) { g.globalAlpha = 0.12 * (4 - k); blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - P.vx * 0.012 * k - PUCK_R - 0.5, P.y - P.vy * 0.012 * k - PUCK_R - 0.5); }
-  g.globalAlpha = 1;
-  shadow(g, P.x + 1.5, P.y + 2, PUCK_R, PUCK_R * 0.8, 0.3);
-  blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - PUCK_R - 0.5, P.y - PUCK_R - 0.5);
-  mallet(g, Tb.me, '#2a6ae8');
-  mallet(g, Tb.cpu, '#e83a3a');
+  const V = G.mp ? view() : { puck: G.T.puck, L: G.T.me, R: G.T.cpu };
+  if (V) {
+    // the puck - its trail when it flies (from how far it went since the last frame) - and the mallets, shaded, their shadows
+    const P = V.puck, q = G.prev || P, vx = (P.x - q.x) * 60, vy = (P.y - q.y) * 60;
+    G.prev = { x: P.x, y: P.y };
+    if (Math.hypot(vx, vy) > 160 && Math.hypot(vx, vy) < 2000) for (let k = 3; k >= 1; k--) { g.globalAlpha = 0.12 * (4 - k); blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - vx * 0.012 * k - PUCK_R - 0.5, P.y - vy * 0.012 * k - PUCK_R - 0.5); }
+    g.globalAlpha = 1;
+    shadow(g, P.x + 1.5, P.y + 2, PUCK_R, PUCK_R * 0.8, 0.3);
+    blit(g, ballSprite('#2a2a34', PUCK_R, { flat: 1 }), P.x - PUCK_R - 0.5, P.y - PUCK_R - 0.5);
+    if (V.L) mallet(g, V.L, '#2a6ae8');
+    if (V.R) mallet(g, V.R, '#e83a3a');
+  }
+  G.btns = G.mp ? buttons() : [];
+  if (G.mp) { hudMatch(g); return; }
   // the score: LED digits in their panels, you and the machine
-  panel(g, W / 2 - 62, 2, 124, 20, '#c8a050');
-  text(g, 'YOU', W / 2 - 56, 9, '#8ac4ff'); led(g, Tb.us, W / 2 - 40, 6, '#5ab0ff', 12);
-  text(g, 'CPU', W / 2 + 56, 9, '#ffa08a', 1, 'r'); led(g, Tb.them, W / 2 + 14, 6, '#ff5a3a', 12);
-  text(g, 'TO 7', W / 2, 9, '#c8a050', 1, 'c');
+  score(g, 'YOU', G.T.us, 'CPU', G.T.them);
+  if (G.o.tbl && G.watched) text(g, `${G.watched} WATCHING`, W - 8, H - 10, '#8a90b0', 1, 'r');
   if (G.msgT > 0 || G.done) banner(g, W, CY - 7, G.msg, G.done ? '#ffd23a' : '#fff');
+}
+function score(g, ln, ls, rn, rs) {
+  const k = ln.length > 3 || rn.length > 3 ? 20 : 0;   // (wider for a player's name, up to six letters)
+  panel(g, W / 2 - 62 - k, 2, 124 + 2 * k, 20, '#c8a050');
+  text(g, ln.slice(0, 6), W / 2 - 56 - k, 9, '#8ac4ff'); led(g, ls, W / 2 - 40 + (k ? -8 : 0), 6, '#5ab0ff', 12);
+  text(g, rn.slice(0, 6), W / 2 + 56 + k, 9, '#ffa08a', 1, 'r'); led(g, rs, W / 2 + 14 + (k ? 16 : 0), 6, '#ff5a3a', 12);
+  text(g, `TO ${TO}`, W / 2, 9, '#c8a050', 1, 'c');
+}
+// a table's HUD: the names at their ends (yours on the left), the score, the word of the moment, the choice
+function hudMatch(g) {
+  const S = G.S;
+  if (!S) { banner(g, W, CY - 7, 'At the table...'); return; }
+  const me = Math.max(0, S.me), nm = (i) => (S.me === i ? 'YOU' : S.seats[i] ? (S.seats[i].cpu ? 'CPU' : S.seats[i].n.toUpperCase()) : '...');
+  const sc = S.sc || [0, 0];
+  score(g, nm(me), sc[me], nm(me ^ 1), sc[me ^ 1]);
+  if (S.st === 'play' && S.me >= 0 && G.N && G.N.owd > 90) text(g, `${Math.round(G.N.owd * 2)} MS`, 8, H - 10, '#8a90b0');
+  if (S.watch) text(g, `${S.watch} WATCHING`, W - 8, H - 10, '#8a90b0', 1, 'r');
+  const word = S.st === 'wait' && S.me === 0 ? 'Waiting for a player - or:' : S.st === 'wait' ? 'Waiting for a player' : S.st === 'cpu' ? S.line : G.msgT > 0 || S.st === 'over' ? G.msg || S.line : '';
+  if (word) banner(g, W, S.st === 'play' || S.st === 'cpu' ? T.y0 + 4 : CY - 22, word, S.st === 'over' ? '#ffd23a' : '#fff');
+  G.btns.forEach((b, i) => { panel(g, b.x, b.y, b.w, b.h, i === G.sel ? '#ffd23a' : '#c8a050', i === G.sel ? 'rgba(60,40,10,.92)' : undefined); text(g, b.t, b.x + 4, b.y + 4, i === G.sel ? '#ffd23a' : '#f4f2ea'); });
 }
 // a mallet: its rim, the dome, the knob on top lit from the top left
 function mallet(g, m, c) {
@@ -206,16 +291,4 @@ function mallet(g, m, c) {
   blit(g, ballSprite(c, 3.5), m.x - 4.5, m.y - 4.5);
 }
 // (tests: the table without a screen)
-// The failsafe: a puck that hasn't got anywhere for STUCK_S - stopped, or trapped moving on one spot (in a corner, under a
-// mallet) - is faced off: back on the half it was on, at the middle, a moment's wait
-const STUCK_S = 3, STUCK_R = 14;
-export function unstick(Tb, dt) {
-  const P = Tb.puck, s = Tb.stuck || (Tb.stuck = { x: P.x, y: P.y, t: 0 });
-  if (Math.hypot(P.x - s.x, P.y - s.y) > STUCK_R) { s.x = P.x; s.y = P.y; s.t = 0; return false; }
-  s.t += dt;
-  if (s.t < STUCK_S) return false;
-  P.x = P.x > W / 2 ? W / 2 + 40 : W / 2 - 40; P.y = CY; P.vx = 0; P.vy = 0; Tb.wait = 0.8;
-  s.x = P.x; s.y = P.y; s.t = 0;
-  return true;
-}
 export const _test = { newTable, strike, glide, cpuMove, unstick, T, TO, CY, STUCK_S };

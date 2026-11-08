@@ -468,7 +468,7 @@ function onText(m) {
       $('arc-hint').textContent = input.device === 'touch' ? 'Tap ✕ to leave' : 'Esc / B to leave';
       (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : m.mp ? { t: 'pool', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
       break;
-    case 'pool': case 'chess': if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); } else if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the park's chess board (server chess.js; client/leisure/chess.js)
+    case 'pool': case 'chess': case 'hockey': if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); } else if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the park's chess board (server chess.js; client/leisure/chess.js)
     case 'racebook': if (S.arcadeMod && S.arcadeMod.update && topOverlay() === 'arcade') S.arcadeMod.update(m); break;   // the race book's screen: where the race is (server racebook.js)
     case 'bounties': phone.on('Bounties', m); break;
     case 'homes': phone.on('Homes', m); break;   // the real-estate app (H65)

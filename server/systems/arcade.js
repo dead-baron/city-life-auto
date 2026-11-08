@@ -31,6 +31,7 @@ import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
 import * as skate from './skate.js';
 import * as poolmatch from './poolmatch.js';
+import * as hockeymatch from './hockeymatch.js';
 
 // an arcade's door: a business place whose building is an arcade (the strip's storefronts, the Pixel Arcade)
 export function isArcade(world, poi) {
@@ -55,7 +56,7 @@ const GAME = {
   starfall: { name: 'STARFALL', price: () => ARCADE.price, note: () => `tickets for every ${ARCADE.perTicket} points` },
   skee: { name: 'Skee-ball', price: () => ARCADE.skee.price, note: () => `${ARCADE.skee.balls} balls - tickets for every ${ARCADE.skee.perTicket} points` },
   pinball: { name: 'Pinball - NEON NIGHTS', price: () => ARCADE.pinball.price, note: () => `three balls - a ticket for every ${ARCADE.pinball.perTicket.toLocaleString('en-US')} points` },
-  hockey: { name: 'Air hockey against the machine', price: () => ARCADE.hockey.price, note: () => `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win` },
+  hockey: { name: 'Air hockey', price: () => ARCADE.hockey.price, note: () => `first to ${ARCADE.hockey.to} - ${ARCADE.hockey.win} tickets for a win` },
   pool: { name: 'Pool', price: () => ARCADE.pool, note: () => 'clear the table in as few shots as you can' },
 };
 // every machine on a floor, one a game: a run of cabinets, lanes or pinball machines is one each per tile
@@ -123,6 +124,10 @@ export function hallInteraction(world, p, h, s) {
       const q = cab.piece, key = `a${h.id}:${q.tx},${q.ty}`;
       return poolmatch.interaction(world, p, key, { fee: ARCADE.pool, tickets: true, cpu: 'the CPU', poi: poi ? poi.id : null, at: (o) => !!(o.ped && o.ped.home && o.ped.home.id === h.id && edge(q, o.ped.home.x, o.ped.home.y) < HOME_IN.reach + 40) });
     }
+    if (cab.game === 'hockey') {   // (an air hockey table: against a player or the machine - hockeymatch.js)
+      const q = cab.piece;
+      return hockeymatch.interaction(world, p, `a${h.id}:${q.tx},${q.ty}`, { fee: ARCADE.hockey.price, tickets: true, poi: poi ? poi.id : null, at: (o) => !!(o.ped && o.ped.home && o.ped.home.id === h.id && edge(q, o.ped.home.x, o.ped.home.y) < HOME_IN.reach + 40) });
+    }
     const G = GAME[cab.game], best = bestOf(p.profile, cab.game);
     return { label: `Play ${G.name} - $${G.price()} (${G.note()}${best ? `; your best ${best.toLocaleString('en-US')}` : ''})`, run: () => credit(world, p, poi, cab.game) };
   }
@@ -188,11 +193,11 @@ export function execute(world, p, poi, opt) {
 
 // a credit: the page plays it (client/arcade.js STARFALL; client/pool.js a frame of pool - at the Rusty Spur's table
 // and the mansion's)
-export function play(world, p, free, poi = null, game = 'starfall') {
+export function play(world, p, free, poi = null, game = 'starfall', more = null) {   // (more: on the page's word - an air hockey table's game against the machine, tbl)
   if (!p.conn) return;
   p.arcade = { id: randomBytes(6).toString('hex'), at: world.time, free: !!free, poi, game };
   const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins, pinball: p.profile.pinballBest }[game] ?? p.profile.arcadeBest;
-  p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0 });
+  p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0, ...more });
 }
 // the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars - from anywhere round it, within
 // POOL_REACH px of its rim (the owner, 10-23: "Tried playing pool and it said you can't do it indoors": at the table's
