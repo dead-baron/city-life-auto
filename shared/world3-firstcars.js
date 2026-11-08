@@ -196,11 +196,27 @@ export function firstCars3(m, H3) {
   const K = kit(m, H3);
   const boxes = (m.arrivals || []).map((A) => { const xs = A.pts.map((p) => p.x), ys = A.pts.map((p) => p.y); return [Math.min(...xs) - 8 * TILE, Math.min(...ys) - 8 * TILE, Math.max(...xs) + 8 * TILE, Math.max(...ys) + 8 * TILE]; });
   const near = (tx, ty, x, y, r) => Math.abs((tx + 0.5) * TILE - x) < r && Math.abs((ty + 0.5) * TILE - y) < r;
+  // the ground kept clear - by the arrivals' lines, round every place and every parking bay - as a mask over the map,
+  // made again before each station's search (a yard adds a place): the same test as asking every place of every tile,
+  // which took the server's start over four minutes (2026-11-08)
+  let mask = null;
+  const keepMask = () => {
+    mask = new Uint8Array(m.w * m.h);
+    const mark = (x, y, r) => {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      const tx0 = Math.max(m.x0, Math.floor((x - r) / TILE) - 1), tx1 = Math.min(m.x0 + m.w - 1, Math.ceil((x + r) / TILE) + 1);
+      const ty0 = Math.max(m.y0, Math.floor((y - r) / TILE) - 1), ty1 = Math.min(m.y0 + m.h - 1, Math.ceil((y + r) / TILE) + 1);
+      for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) if (near(tx, ty, x, y, r)) mask[m.idx(tx, ty)] = 1;
+    };
+    for (const q of m.pois) mark(q.x, q.y, 3 * TILE);
+    for (const sp of m.parking || []) mark(sp.x, sp.y, 2 * TILE);
+  };
   const keepOut = (tx, ty) => boxes.some(([x0, y0, x1, y1]) => (tx + 0.5) * TILE >= x0 && (tx + 0.5) * TILE <= x1 && (ty + 0.5) * TILE >= y0 && (ty + 0.5) * TILE <= y1)
-    || m.pois.some((q) => near(tx, ty, q.x, q.y, 3 * TILE)) || (m.parking || []).some((s) => near(tx, ty, s.x, s.y, 2 * TILE));
+    || mask[m.idx(tx, ty)] === 1;
   for (const A of m.arrivals || []) {
     const Y = YARDS[A.key];
     if (!Y) continue;
+    keepMask();
     // the nearest fit to the platform's way out, a short walk: a road along its south side first, then its north, then
     // less of its width on a road, out to 80 tiles
     const ex = Math.floor((A.exit[2]) / TILE), ey = Math.floor((A.exit[3]) / TILE);
