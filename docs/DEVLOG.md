@@ -22196,3 +22196,42 @@ baked chunks).
 - Saved on the profile (`profile.contacts`; old saves load - made on first use). Dev menu, Wanted & police: "Rosa Vance:
   next chain step", "Sgt. Okafor: next chain step" (a gate's XP met, else the mission done), "Reset the contacts'
   chains". Guide: Ways to earn - Contacts; Property - Your lock-up and patrol car. Tests: `test/contacts.test.js`.
+
+## 2026-11-08 - Seasons and leaderboards, the beta as Season 0 (progression build item 7)
+
+docs/PROGRESSION.md "Seasons, the beta gift and the wipe". Server: `server/systems/seasons.js`; numbers and seasons:
+`shared/rules.js` `SEASONS`, `SEASON`.
+- **The season model.** `SEASONS` lists them: `{ n, name, theme, blurb, start, end, beta, mods }` - Season 0 is the
+  public beta (theme "The public beta", started 2026-11-08, `end: null`: it ends with the wipe before launch), Season 1
+  "Grand Opening" (its dates set when it starts: `SEASON.weeks`, 10, from then). `SEASON` is the season now: the server
+  keeps `store.kept.season { n, at }` and sets `SEASON` from it as the world starts (`seasons.init` -> `use`). New
+  profiles carry `season` (old ones: 0).
+- **A season ends only when the owner ends it** - never by itself. The owner's admin command: `season` (the season,
+  its days left, each board's top 10) and `season { end: 1, confirm: <n> }` (refused without the season's number). From
+  the browser console: `CLA.send({ t: 'admin', a: 'season', end: 1, confirm: 0 })`. Logged in the admin log. It:
+  works out the final boards; gives each career board's top 10 a gold plate for good (`cosm.bp`, plate `b:<s>:<career>`
+  "S0 Top 10 Kingpin" - on the style counter's menu); keeps the season and its boards' tops in the hall
+  (`store.kept.seasons`); sends everyone online to the title with why (`players.seasonOut`: out at once like Start
+  fresh, close code 4009 - PLAY brings them into the new season); starts the next season and resets every profile
+  (`seasons.resetOne`): the progress-epoch reset (`store.js resetProfile` - money, property, ranks and career XP,
+  district reputation, goals and tokens, the contacts' chains, the records), with first the season's badge
+  (`cosm.sb`; noted on each session's first tick too - the beta's go to everyone in it) and any top rank's title with its
+  season (`cosm.tops`), and after, the skills at `SEASON.skillKeep` (0.5) of their levels, rounded down. Homes and
+  businesses are let go in the running world and the reset players' cars in the street removed; the fish records board
+  starts again. Saved at once. A profile still behind the season when it joins gets the same (belt and braces).
+- **Kept:** the account, name, looks, clothes owned (the Founding Citizen jacket), cosmetics (name colors, plates, the
+  beta gift), crews (they hold nothing yet - a crew hideout's holdings would reset with the season when there is one).
+- **Leaderboards:** each career's (`Top Kingpin`, `Top Chief`, `Top Tycoon`: career XP, all of it this season's) and
+  side boards from the records kept - the biggest fish in your log, races won (new: `profile.raceWins`, races.js),
+  bowling's best game, STARFALL's high score. Worked out over every profile every `SEASON.refreshS` (300 s) by
+  `seasons.update` and kept; a request only reads the cache. Banned accounts are left off.
+- **Season themes:** a season's `mods` (`{ 'TABLE.key': multiplier | { set: v } }`) change rule values in
+  `shared/rules.js` on the server while it runs and are put back after - e.g. a "Gold Rush" season,
+  `mods: { 'CRATE_PAY.4': 1.5 }`. They reach what's read when it's used (the crate payouts, the calendar's tables).
+  Season 0 has none.
+- **The phone:** What's next has a header line (`SEASON 0 · The public beta · ends with the wipe before launch`, or the
+  days left) and a **Boards** button: each board's top 10 and your own place (client/whatsnext.js - loaded with the app,
+  not the page). The Skills app's Standing card shows your season badges and the titles kept with their season.
+- Guide: Ways to earn - Seasons; the beta gift's entry names Season 0 from `COSMETICS.beta`. Tests: `test/seasons.test.js`
+  (the bump resets and keeps the right things, the beta gift and cosmetics through it, the skills halved, ranking and
+  caching, the top-10 plates, mods applied and put back, the header, the owner's command).

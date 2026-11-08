@@ -103,6 +103,8 @@ export function createPhone(ctx) {
     return `<button class="ph-row ph-place${on ? ' on' : ''}" data-poi="${p.id}"><span class="ic">${pix(i === 0 || on ? 'pin' : 'places')}</span><span class="nm">${esc(p.label)}<small>${esc(KIND_NOTE[p.kind] || '')} · ${esc((DISTRICTS[p.d] && DISTRICTS[p.d].name) || districtAt(map, p.x, p.y) || '')}</small></span><span class="d">${km(d)}</span></button>`;
   }
 
+  // the season badges you've earned and the titles kept with their season (server seasons.js badges)
+  const seasRow = (z) => (z ? `<div class="ph-st"><span class="ic">${pix('star')}</span>Seasons<b>${z.played.length ? z.played.map((n) => `S${n}`).join(' · ') : `S${z.n}`}</b></div>${z.titles.length ? `<p class="ph-hint">Kept for good: ${z.titles.map(esc).join(', ')}</p>` : ''}` : '');
   function render() {
     const el = $('ph-screen');
     $('ph-back').classList.toggle('hidden', screen === 'home');
@@ -149,7 +151,7 @@ export function createPhone(ctx) {
     } else if (screen === 'skills') {   // (the six skills, levelled by doing things: server skills.js)
       const me = ctx.me && ctx.me(), fel = me ? me.felonies | 0 : 0;
       // (UIC-03: your standing in a gold card - UI-8 took the numbers off the HUD - then each skill, its level and a bar)
-      const standing = me ? `<div class="ph-stand"><h3>Standing</h3><div class="ph-st"><span class="ic">${pix('friend')}</span>Samaritan<b class="good">${(me.sam | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('mask')}</span>Criminal XP<b class="warn">${(me.cexp | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('siren')}</span>${fel === 1 ? 'Felony' : 'Felonies'}<b class="${fel ? 'bad' : ''}">${fel}</b></div>${repRows(skl && skl.rep)}</div>` : '';
+      const standing = me ? `<div class="ph-stand"><h3>Standing</h3><div class="ph-st"><span class="ic">${pix('friend')}</span>Samaritan<b class="good">${(me.sam | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('mask')}</span>Criminal XP<b class="warn">${(me.cexp | 0).toLocaleString('en-US')}</b></div><div class="ph-st"><span class="ic">${pix('siren')}</span>${fel === 1 ? 'Felony' : 'Felonies'}<b class="${fel ? 'bad' : ''}">${fel}</b></div>${repRows(skl && skl.rep)}${seasRow(skl && skl.seas)}</div>` : '';
       el.innerHTML = standing + (!skl ? '<p class="ph-empty">Loading…</p>' : skl.list.map((k) => `<div class="ph-skl"><span class="ic">${pix(SKILL_PIX[String(k.name).toLowerCase()] || 'skills')}</span><span class="nm"><span class="ph-skl-t">${esc(k.name)}<b>LV ${k.L}</b></span><i class="pbar"><i style="width:${k.need ? Math.round(100 * k.xp / k.need) : 100}%"></i></i><small>${esc(k.does)}: +${k.pct}%${k.need ? ` · ${k.xp}/${k.need} to the next` : ' · the top level'}</small></span></div>`).join('')
         + '<h3>Train</h3><div class="ph-apps ph-says"><button class="ph-app" data-act="workout" data-k="pushups">Push-ups here</button><button class="ph-app" data-act="workout" data-k="situps">Sit-ups here</button></div>'
         + '<h3>Today</h3><p class="ph-hint">Each counts up to a limit an in-game day - something else for the same skill still counts.</p>'
@@ -295,7 +297,7 @@ export function createPhone(ctx) {
   }
 
   // the "What's next" app opened: its state asked for; the phone's dot seen (client/main.js)
-  function nextOpened() { ctx.send({ t: 'phone', a: 'next' }); if (ctx.nextSeen) ctx.nextSeen(); }
+  function nextOpened() { if (WN) WN.opened(); ctx.send({ t: 'phone', a: 'next' }); if (ctx.nextSeen) ctx.nextSeen(); }
   // the Guide opened: its rules read afresh, the server told (analytics: server/systems/ftue.js)
   function guideOpened() { if (GD) GD.reset(); ctx.send({ t: 'intro', a: 'guide' }); }
 

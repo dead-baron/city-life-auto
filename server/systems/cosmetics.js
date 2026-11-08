@@ -11,9 +11,12 @@
 //     gold Beta plate, on its first session (update).
 // Kept outside the progress-epoch reset (server/store.js resetProfile keeps prof.cosm and the wardrobe), so all of it
 // survives a season's wipe; the tokens themselves are a season's (profile.goals).
+//   - a season's: a badge for each season played (sb - noted on a session's first tick; seasons.js at a season's end)
+//     and the gold plate of a career board's top 10 at a season's end (bp - seasons.js endSeason: 'S0 Top 10 Kingpin').
 //   profile.cosm: { c: [color ids owned], pl: [plate ids bought], tops: [{ c (career), s (season) }] (the top ranks
-//     reached), nc (the color worn, or null), tp (the plate worn, or null), gifts: { beta: { at, s } } } - absent on old
-//     profiles (made the first time)
+//     reached), nc (the color worn, or null), tp (the plate worn, or null), gifts: { beta: { at, s } }, sb: [seasons
+//     played], bp: [{ s (season), c (career), i (place), of (the top it was) }] } - absent on old profiles (made the
+//     first time; sb, bp on older ones too)
 import { COSMETICS, SEASON, CAREERS, CAREER_KEYS } from '../../shared/rules.js';
 import { PIECE_IDS } from '../../shared/lookcore.js';
 import { PAINTS } from '../../shared/vehicles.js';
@@ -28,8 +31,8 @@ export const PAINT_NAMES = ['Red', 'Blue', 'White', 'Black', 'Yellow', 'Orange',
 const TOP = (c) => CAREERS[c].ranks.length - 1;
 
 export const cosmOf = (prof) => {
-  const C = (prof.cosm ||= { c: [], pl: [], tops: [], nc: null, tp: null, gifts: {} });
-  C.c ||= []; C.pl ||= []; C.tops ||= []; C.gifts ||= {};
+  const C = (prof.cosm ||= { c: [], pl: [], tops: [], nc: null, tp: null, gifts: {}, sb: [], bp: [] });
+  C.c ||= []; C.pl ||= []; C.tops ||= []; C.gifts ||= {}; C.sb ||= []; C.bp ||= [];
   return C;
 };
 export const tokens = (prof) => (prof.goals && prof.goals.tok) || 0;
@@ -38,15 +41,23 @@ const spendTok = (prof, n) => { if (tokens(prof) < n) return false; prof.goals.t
 // ---- plates -------------------------------------------------------------------------------------------------------------
 // a rank plate's id: 'r:<career>:<rank>'
 const rankPlate = (id) => { const m = /^r:(\w+):(\d)$/.exec(id || ''); return m && CAREERS[m[1]] && +m[2] >= COSMETICS.rankPlatesFrom && +m[2] <= TOP(m[1]) ? { c: m[1], r: +m[2] } : null; };
-export function plateText(id) {
+// a season board's plate: 'b:<season>:<career>' (granted at the season's end: seasons.js)
+const boardPlate = (id) => { const m = /^b:(\d+):(\w+)$/.exec(id || ''); return m && CAREERS[m[2]] ? { s: +m[1], c: m[2] } : null; };
+export const boardPlateId = (s, c) => `b:${s}:${c}`;
+const boardOf = (prof, B) => cosmOf(prof).bp.find((q) => q.s === B.s && q.c === B.c) || null;
+export function plateText(id, prof = null) {
   const R = rankPlate(id);
   if (R) return CAREERS[R.c].ranks[R.r].name;
+  const B = boardPlate(id);
+  if (B) { const q = prof && boardOf(prof, B); return `S${B.s} Top ${(q && q.of) || SEASON.top} ${CAREERS[B.c].ranks[TOP(B.c)].name}`; }
   return PLATE[id] ? PLATE[id].t : null;
 }
 // may wear it: bought, gifted, a rank held now, a top rank once reached
 export function hasPlate(prof, id) {
   const C = cosmOf(prof), R = rankPlate(id);
   if (R) return careers.careerRank(prof, R.c) >= R.r || (R.r === TOP(R.c) && C.tops.some((t) => t.c === R.c));
+  const B = boardPlate(id);
+  if (B) return !!boardOf(prof, B);
   const P = PLATE[id];
   if (!P) return false;
   if (P.gift) return !!C.gifts[P.gift];
@@ -58,7 +69,7 @@ export const hasColor = (prof, id) => cosmOf(prof).c.includes(id);
 export function plateOf(prof) {
   const C = cosmOf(prof), out = {};
   if (C.nc && COLOR[C.nc] && hasColor(prof, C.nc)) out.c = COLOR[C.nc].hex;
-  if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp); if (PLATE[C.tp] && PLATE[C.tp].gold) out.g = 1; }
+  if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp)) out.g = 1; }
   return out.c || out.t ? out : null;
 }
 // the player's nameplate brought up to date (the ped's descriptor sent again when it changed)
@@ -87,12 +98,20 @@ export function grantBeta(world, p) {
 }
 
 // a career's top rank reached: its title for good, with its season
-function noteTops(p) {
-  const prof = p.profile, C = cosmOf(prof);
+export function noteTops(prof, s = SEASON.n) {
+  const C = cosmOf(prof);
   let moved = false;
-  for (const c of CAREER_KEYS) if (careers.careerRank(prof, c) >= TOP(c) && !C.tops.some((t) => t.c === c)) { C.tops.push({ c, s: SEASON.n }); moved = true; }
+  for (const c of CAREER_KEYS) if (careers.careerRank(prof, c) >= TOP(c) && !C.tops.some((t) => t.c === c)) { C.tops.push({ c, s }); moved = true; }
   if (moved) store.touch();
   return moved;
+}
+// this season played: its badge (kept for good - the Skills app shows them)
+export function noteSeason(prof, s = SEASON.n) {
+  const C = cosmOf(prof);
+  if (C.sb.includes(s)) return false;
+  C.sb.push(s); C.sb.sort((a, b) => a - b);
+  store.touch();
+  return true;
 }
 
 export function update(world) {
@@ -100,8 +119,8 @@ export function update(world) {
   const slow = world.tick % 200 === 9;
   for (const p of world.players.values()) {
     if (!p.profile || !p.ped) continue;
-    if (!p.cosmOk) { p.cosmOk = 1; grantBeta(world, p); noteTops(p); refresh(p); continue; }
-    if (slow) { noteTops(p); refresh(p); }   // (a rank lost: its plate comes off)
+    if (!p.cosmOk) { p.cosmOk = 1; grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
+    if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
   }
 }
 
@@ -117,10 +136,11 @@ export function menu(world, p, poi) {
   opts.push({ id: 'cosp:none', label: `${C.tp ? 'No title plate' : 'No title plate (wearing)'}`, dis: !C.tp });
   const plates = [];
   for (const c of CAREER_KEYS) for (let r = COSMETICS.rankPlatesFrom; r <= TOP(c); r++) if (hasPlate(prof, `r:${c}:${r}`)) plates.push({ id: `r:${c}:${r}`, own: 1, note: `${CAREERS[c].name} rank${r === TOP(c) ? ' - the top: yours for good' : ''}` });
+  for (const q of C.bp) plates.push({ id: boardPlateId(q.s, q.c), own: 1, note: `Season ${q.s}'s ${CAREERS[q.c].name} board: number ${q.i} - yours for good` });
   for (const q of COSMETICS.plates) { const own = hasPlate(prof, q.id); if (q.gift && !own) continue; plates.push({ id: q.id, own, q }); }
   for (const x of plates) {
     const on = C.tp === x.id, q = x.q;
-    opts.push({ id: `cosp:${x.id}`, label: `Title plate: ${plateText(x.id)}${on ? ' (wearing)' : ''}`, ...(x.own || !q || !q.cash ? {} : { price: q.cash }), dis: on || (!x.own && q && q.tok && tokens(prof) < q.tok), note: x.own ? (on ? '' : x.note || 'yours - wear it') : priceNote(q, prof) });
+    opts.push({ id: `cosp:${x.id}`, label: `Title plate: ${plateText(x.id, prof)}${on ? ' (wearing)' : ''}`, ...(x.own || !q || !q.cash ? {} : { price: q.cash }), dis: on || (!x.own && q && q.tok && tokens(prof) < q.tok), note: x.own ? (on ? '' : x.note || 'yours - wear it') : priceNote(q, prof) });
   }
   opts.push({ id: 'cosback', label: 'Back to the store' });
   opts.push({ id: 'close', label: 'Close' });
@@ -146,7 +166,7 @@ export function pick(world, p, kind, id, pay) {
     if (id === 'none') C.tp = null;
     else {
       const q = PLATE[id];
-      if (!plateText(id)) return 'No such plate.';
+      if (!plateText(id, prof)) return 'No such plate.';
       if (!hasPlate(prof, id)) {
         if (rankPlate(id)) return 'Reach that rank first.';
         if (!q || q.gift) return 'That one\'s a gift - it can\'t be bought.';

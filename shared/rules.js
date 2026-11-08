@@ -986,7 +986,25 @@ export const MORTGAGE = { deposit: 0.2, rate: 0.1, days: 10, miss: 2, max: 3 };
 // ---- money sinks (docs/PROGRESSION.md "Money sinks", progression build item 6). The rule: a sink should feel like care,
 // never a tax - a typical day of play covers a modest lifestyle with some left over (the arithmetic: docs/DEVLOG.md,
 // 2026-11-08). The season these numbers belong to: SEASON (n 0 = the public beta - its gift: COSMETICS.beta).
-export const SEASON = { n: 0, name: 'Season 0 - the public beta', beta: true };
+// Seasons (docs/PROGRESSION.md "Seasons, the beta gift and the wipe"; progression build item 7; server/systems/seasons.js).
+// About `weeks` weeks each; a season ends only when the owner ends it (the admin command 'season' with end - never by
+// itself), and the next one in SEASONS starts. Its end resets money, property, ranks and career XP, district reputation,
+// the contacts' chains and goals (the progress-epoch reset: server/store.js resetProfile - accounts, names, looks, clothes
+// and crews kept) and carries over the cosmetics, the top-of-ladder titles with their season, a season badge for each
+// season played, and the skill levels x skillKeep (rounded down). The leaderboards (each career's by career XP, and the
+// side boards from the records the game keeps) are worked out on the server every refreshS s, never per request; a career
+// board's top `top` at the end get a gold plate for good ("S0 Top 10 Kingpin").
+// A season: { n, name, theme (its name: one line in What's next), blurb, start / end (wall-clock dates, 'YYYY-MM-DD' UTC;
+// end null: `weeks` weeks from when it started - except the beta's, which ends with the wipe before launch), beta (the
+// public beta), mods }. mods: a few rule values changed for the season - { 'TABLE.key[.key]': x (a multiplier) |
+// { set: v } }, applied on the server as the season starts (and at load), put back when it ends; they reach what's read
+// when it's used, e.g. a "Gold Rush" season: mods: { 'CRATE_PAY.4': 1.5 } (carbon-gold crates pay half as much again).
+export const SEASONS = [
+  { n: 0, name: 'Season 0', theme: 'The public beta', blurb: 'Everything new and still changing. It ends with the wipe before launch - your cosmetics and a badge come with you.', start: '2026-11-08', end: null, beta: true, mods: {} },
+  { n: 1, name: 'Season 1', theme: 'Grand Opening', blurb: 'The city opens its doors for good.', start: null, end: null, beta: false, mods: {} },
+];
+// the season now (the server sets it from what it keeps: seasons.js use) and the seasons' numbers
+export const SEASON = { ...SEASONS[0], weeks: 10, skillKeep: 0.5, top: 10, refreshS: 300 };
 // Property upkeep (server/systems/upkeep.js): every home and business you own costs a little a day - a home its price x
 // homeRate, a business what you paid x bizRate (the food truck: none, it's a van), each at least min and at most max -
 // charged from the bank when the wall-clock day turns (GOALS.resetUtcH: the goals' day), worked out from the days that have

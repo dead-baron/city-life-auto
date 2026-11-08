@@ -27,6 +27,7 @@ import { FARM } from '../../shared/rules.js';
 import { FIRE, MEDIC } from '../../shared/rules.js';
 import * as realestate from './realestate.js';
 import * as upkeep from './upkeep.js';
+import * as seasons from './seasons.js';
 import * as insurance from './insurance.js';
 import { payFrom } from './economy.js';   // (cash first, then the bank: the Homes app's payments)
 import * as taxijob from './taxijob.js';
@@ -278,9 +279,9 @@ export function setCalendarListing(fn) { setCalendarListing.fn = fn; }   // (on 
 export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (a === 'board') return boardFor(world, p);
-  if (a === 'next' || a === 'nextgo' || a === 'nextskip' || a === 'nextmain' || a === 'reroll') return whatsnext.handle(world, p, msg);   // the "What's next" app (whatsnext.js)
+  if (a === 'next' || a === 'nextgo' || a === 'nextskip' || a === 'nextmain' || a === 'reroll' || a === 'boards') return whatsnext.handle(world, p, msg);   // the "What's next" app (whatsnext.js)
   if (a === 'feed') return { ...events.feedFor(world), cal: setCalendarListing.fn ? setCalendarListing.fn(world, p) : null };   // (and what's coming up: the event calendar - calendar.js)
-  if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p) };   // the Skills app (skills.js; your standing by district: reputation.js)
+  if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p), seas: seasons.badges(p) };   // (and the season badges and titles kept: seasons.js)   // the Skills app (skills.js; your standing by district: reputation.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
   if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);
   if (a === 'workout') { phoneOut(world, p, false); const no = workout.start(world, p, String(msg.k || '')); if (no) world.notify(p, no, 'warn'); return null; }   // a set of push-ups or sit-ups (workout.js)

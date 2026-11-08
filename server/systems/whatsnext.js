@@ -23,12 +23,14 @@
 //     btn     { k: 'way' | 'call' | 'accept', label } - way: the waypoint; call: the contact says `call` (and the
 //             waypoint, if x/y); accept: accept(world, p) -> null | why not (on the server only) }
 // The page's messages ({ t: 'phone', a }): next (the app's state), nextgo { id } (a card's button), nextskip { id },
-// nextmain { c } (lead with this career), reroll { i } (a daily goal) - each answered with the state, { t: 'next' }.
+// nextmain { c } (lead with this career), reroll { i } (a daily goal), boards (the season's leaderboards, with the state:
+// boards - seasons.js boardsFor) - each answered with the state, { t: 'next' } (its season: the header line).
 import { NEXT, CAREERS, CAREER_KEYS, GOALS, HOT_FENCE_CUT } from '../../shared/rules.js';
 import { EVENT_KINDS } from '../../shared/worldevents.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';
 import * as goals from './goals.js';
+import * as seasons from './seasons.js';   // (the header's season and days left; the Boards view)
 
 // The job board and the businesses' sites, handed over by their own modules as they load (phone.js, biz.js) - this one
 // imports neither: the self record (players.js) reads it, and they sit deep in the systems' import cycles
@@ -238,7 +240,7 @@ export function stateFor(world, p, extra = {}) {
   if (!p.nx || p.nxDirty || world.time - (p.nxAt || 0) > 2) refresh(world, p);
   const C = p.profile.careers;
   return {
-    t: 'next', on: 1, main: careers.mainCareer(p), picked: C.main ? 1 : 0,
+    t: 'next', on: 1, main: careers.mainCareer(p), picked: C.main ? 1 : 0, season: seasons.header(),
     careers: CAREER_KEYS.map((c) => careers.rankInfo(p, c)),
     cards: (p.nx || []).map((c) => forPage(world, p, c)),
     goals: goals.panel(p), calls: (C.calls || []).slice(0, 3).map((q) => ({ who: q.who, text: q.text, c: q.c, ago: Math.round((Date.now() - q.at) / 1000) })),
@@ -249,6 +251,7 @@ export function handle(world, p, msg) {
   const a = String(msg.a || '');
   if (!appOn(p)) return { t: 'next', on: 0 };
   if (a === 'next') return stateFor(world, p);
+  if (a === 'boards') return stateFor(world, p, { boards: seasons.boardsFor(p) });
   if (a === 'nextmain') { careers.setMain(p, String(msg.c || '')); refresh(world, p); return stateFor(world, p); }
   if (a === 'reroll') { const err = goals.reroll(p, Number(msg.i)); refresh(world, p); return stateFor(world, p, err ? { err } : {}); }
   const c = (p.nx || []).find((q) => q.id === String(msg.id || ''));

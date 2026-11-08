@@ -132,6 +132,7 @@ import * as bathhouse from './systems/bathhouse.js';
 import * as reputation from './systems/reputation.js';
 import * as upkeep from './systems/upkeep.js';
 import * as cosmetics from './systems/cosmetics.js';
+import * as seasons from './systems/seasons.js';
 
 // Fixed system order. Each runs isolated: one failing system never blocks the tick or snapshots.
 const SYSTEMS = [
@@ -244,6 +245,7 @@ const SYSTEMS = [
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
   ['upkeep', upkeep.update],        // property upkeep: the wall-clock day's bill from the bank, arrears, shabby, repossessed (upkeep.js)
   ['cosmetics', cosmetics.update],  // name colors and title plates on the nameplate, the beta gift on a first session, top ranks kept (cosmetics.js)
+  ['seasons', seasons.update],      // the season's leaderboards worked out again every SEASON.refreshS (seasons.js)
   ['mail', mail.update],            // the mail: the week's utilities bill, letters, coupons (H71)
   ['policeair', policeair.update],  // the police air unit: up from headquarters at a high wanted level, following the suspect overhead (H66)
   ['airtraffic', airtraffic.update], // light planes in and out of the runways and airstrips, the news helicopter over a chase (H66)
@@ -299,6 +301,7 @@ export class World {
     this.build = opts.build || null;
     this.buildAt = opts.buildAt || 0;
     this.freshOnUpdate = opts.freshOnUpdate || 'spawn'; // 'spawn' | 'all' | 'off' (server/config.js)
+    seasons.init(this);   // (the season the store keeps: SEASON and its rule mods - before anything reads them)
     env.init(this);
     homes.init(this);
     gates.init(this);

@@ -70,6 +70,7 @@ import * as phone from './phone.js';
 import * as careers from './careers.js';
 import * as contacts from './contacts.js';   // (a car handed over to a contact, put in your lock-up)
 import * as whatsnext from './whatsnext.js';
+import * as seasons from './seasons.js';   // (a profile behind the season: into this one - seasons.js)
 import * as props from './props.js';
 import * as trains from './trains.js';
 import * as transit from './transit.js';
@@ -170,6 +171,7 @@ export function join(world, conn, profile, opts = {}) {
   const replanned = homes.replanDecor(world, profile);   // (a home's rooms changed under its furniture: back in storage)
   looks.ensureLook(profile); // (an old random outfit becomes a look - before a wipe, which keeps it; a new player wears a starter until they pick)
   if (oldEpoch(profile)) wipeProgress(world, profile);   // (a profile from before the progress epoch: a new character - store.js)
+  if (seasons.behind(profile)) seasons.resetOne(world, profile);   // (from a season that's over: into this one - seasons.js)
   if (migrateSafety(profile)) store.touch();   // (Safety mode off once on profiles from before it was off by default - store.js)
   if (careers.migrate(profile)) store.touch();   // (careers and ranks: the record added, the old police ranks kept - careers.js)
   const fresh = freshStart(world, profile);
@@ -507,6 +509,21 @@ export function wipeAccount(world, p) {
   }
   store.remove(p.pid);
   return false;
+}
+
+// A season's end (seasons.js endSeason, the owner's command): out of the world at once, as with Start fresh - no ghost,
+// nothing dropped, the officers on them let go, the bounties on their head off - and the page back at the title with
+// why (4009: no reconnecting by itself; PLAY brings them into the new season). The profile's reset is the season's.
+export function seasonOut(world, p, reason) {
+  if (p.devMode) devmode.exit(world, p, true);
+  struggle.onLeave(world, p); custody.onLeave(world, p);
+  revive.clearDown(world, p);
+  bounties.onWipe(world, p);
+  starter.forget(world, p.pid);
+  const conn = p.conn;
+  p.conn = null; p.ghostUntil = 0; p.logoff = null;
+  if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
+  if (conn) try { conn.sendJSON({ t: 'kicked', reason }); conn.close(4009, 'season'); } catch { /* gone */ }
 }
 
 // Idle (decided 10-06 / 10-08: "Idle kick: 'Still there?' then a disconnect - 10 min for everyone"): a player whose
