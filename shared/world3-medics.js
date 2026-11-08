@@ -140,11 +140,14 @@ export function clinics3(m) {
 // (the island towns are handcrafted, every shop a real one), any plain named building of the town's that's only a
 // courier's address - not an inn, a church, a barn, a ticket booth (loose). The POI is the building's own, its kind
 // changed - nothing is added, so no other place's id moves. sub: a precinct (the police spawn and the helicopter stay at
-// the headquarters). An island town with neither (Coral Cay: its one plain building is the eco lodge) has no station:
-// its arrests fade to the nearest cells (server/systems/custody.js fadeIn). [district, name, the spot (tiles)]
+// the headquarters). take: a named shop of the town's given up for it where the owner said so (Coral Cay, 11-07: its one
+// plain building is the eco lodge, every shop a real one - Island Threads goes, the surf shop whose surfboards Coral Dive
+// Co. next door sells too; the island keeps its market, its cafe, its bar and its supply store); its front's own sign
+// and window (a hand plan's art) become the station's. An island town with no station has its arrests fade to the
+// nearest cells (server/systems/custody.js fadeIn). [district, name, the spot (tiles), take]
 export const PRECINCTS3 = [
   [43, 'Gull Harbor Police', [1697, 3537]],   // (Gull Harbor's roads join nobody else's: 17 junctions of its own)
-  [44, 'Coral Cay Police', [4250, 3440]],      // (Coral Cay's: 19)
+  [44, 'Coral Cay Police', [4250, 3440], 'Island Threads'],   // (Coral Cay's: 19)
 ];
 export function precincts3(m) {
   const out = { made: [], none: [] };
@@ -152,9 +155,14 @@ export function precincts3(m) {
   const busyKinds = new Map();
   for (const p of m.pois) if (p.b !== undefined && p.b !== null) { let s = busyKinds.get(p.b); if (!s) busyKinds.set(p.b, (s = new Set())); s.add(p.kind); }
   const distAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.dist[m.idx(tx, ty)] : -1; };
-  for (const [d, name, at] of PRECINCTS3) {
+  for (const [d, name, at, take] of PRECINCTS3) {
     let best = null;
+    if (take) {
+      best = m.pois.find((p) => p.label === take && p.b !== undefined && p.b !== null && distAt(p.x, p.y) === d && m.buildings[p.b] && !m.buildings[p.b].gone
+        && [...busyKinds.get(p.b)].every((k) => k === p.kind)) || null;
+    }
     for (const loose of [false, true]) {
+      if (best) break;
       let bk = Infinity;
       for (const p of m.pois) {
         if (p.kind !== 'delivery' || p.b === undefined || p.b === null || distAt(p.x, p.y) !== d) continue;
@@ -178,6 +186,10 @@ export function precincts3(m) {
     for (const sg of b.signs || []) if (sg.text === old) { sg.text = name; signed = true; }
     if (!signed) { const south = doorSouth3(m, b); (b.signs ||= []).push({ x: best.x, y: south ? (b.ty + b.th - 0.6) * TILE : (b.ty + 0.6) * TILE, text: name }); }
     if (b.name === old) b.name = name;
+    // (a hand plan's shopfront: its sign over the door and its window - a front desk's lobby, not the racks of a shop)
+    const sh = b.art && b.art.shop;
+    if (take && sh && sh.sign && sh.sign.text === old.toUpperCase().slice(0, 20)) { sh.sign = { ...sh.sign, text: name.toUpperCase().slice(0, 20) }; sh.kind = 'lobby'; }
+    if (take) delete best.store;
     busyKinds.get(best.b).add('police');
     out.made.push([name, Math.floor(best.x / TILE), Math.floor(best.y / TILE), old, best.id]);
   }

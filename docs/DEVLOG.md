@@ -21897,3 +21897,14 @@ $200: with a new character's own $200 it makes $400 - a 2-star bail, a 1-star bu
 but still $200 short of the cheapest used-lot beater ($600), so the hustle's first car stays the one in the alley. The
 notice says "pocket money: food, ammo or bail"; the Guide's "Your first car" names the amount. `test/firstcar.test.js`
 (the amount's bounds, paid once), `test/ftue.test.js`, `test/guide.test.js`.
+
+## 2026-11-07 - Coral Cay Police: Island Threads gives way
+The owner said yes to converting one of Coral Cay's shops, so its arrests ride to a station like Gull Harbor's instead
+of fading to the nearest cells. `world3-medics.js PRECINCTS3` takes a shop by name now (`take`): **Island Threads**
+(POI 3361, the surf shop on Harbor Street) - the least missed, since Coral Dive Co. next door sells the surfboards too;
+the island keeps its market, Reef Cafe, The Conch Bar, Cay Post & Supply and the dive shop. Converted in place as Gull
+Harbor Lobster Co. was (POI 3498): the same id, kind `police` (a precinct), its label, sign and window (the hand plan's
+shopfront: CORAL CAY POLICE over a front desk's lobby, not clothes racks); the walk-in gives it the front desk and two
+cells. Every junction on Coral Cay reaches it. POIs dumped before and after: 6025 each, only 3361 differs (its kind,
+label and the door spot the walk-in sets). `test/prison.test.js` (both island stations: the desk, the cells, the ride,
+never in the water).
