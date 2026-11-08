@@ -744,17 +744,6 @@ export function drawRoof(g, r) {
   }
 }
 
-// Night emissive layer of a lot (same geometry as drawPrefab), drawn additively after dark.
-export function drawPrefabGlow(g, p) {
-  const pf = PREFABS[p.key];
-  const [si, sx, sy, sw, sh] = pf.src;
-  const img = atlas.prefabGlow && atlas.prefabGlow[si];
-  if (!img) return;
-  const x = p.tx * TILE, y = p.ty * TILE, w = p.tw * TILE, h = p.th * TILE;
-  if (p.rot === 2) { g.save(); g.translate(x + w, y + h); g.rotate(Math.PI); g.drawImage(img, sx, sy, sw, sh, 0, 0, w, h); g.restore(); }
-  else g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-}
-
 
 export function drawProp(g, p) {
   if (p.t === 'painted' || p.t === 'plamp') return; // part of a painted block: the art already shows it
@@ -1027,17 +1016,6 @@ export function interiorArt(m, b) {
   if (artCache.has(b.id)) { freeCanvas(artCache.get(b.id)); artCache.delete(b.id); }
   capSet(artCache, b.id, cv, LOW_MEM ? 4 : 16);
   return cv;
-}
-
-// The building's roof art, clipped to its footprint (the lot in front stays as baked).
-export function drawRoofClip(g, m, b, alpha = 1) {
-  const p = m.prefabs[b.prefab];
-  if (!p) return;
-  g.save();
-  g.beginPath(); g.rect(b.tx * TILE, b.ty * TILE, b.tw * TILE, b.th * TILE); g.clip();
-  g.globalAlpha = alpha;
-  drawPrefab(g, p);
-  g.restore();
 }
 
 // Sliding glass doors: k = 0 closed .. 1 open.

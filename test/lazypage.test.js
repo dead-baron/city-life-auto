@@ -58,3 +58,14 @@ test('the mini-games, their art and bowling load when first played, not with the
   const main = src('client/main.js');
   for (const f of ['arcade', 'pool', 'airhockey', 'skeeball', 'pinball', 'bowling']) assert.match(main, new RegExp(`import\\('\\./${f}\\.js'\\)`), `${f}.js imported when wanted`);
 });
+
+// The trim pass of 2026-11-07 (the page's budget raised to 540 KB, the page at 520.5): the alleys' vents for the rain's
+// steam (shared/alleys.js, 5.6 KB) load after the page starts - render/weather.js asks for them, and a chunk looked at
+// before they're in is looked at again (its puddle sites aren't kept till then).
+test('the alleys\' vents load after the page starts', () => {
+  const page = new Set(closure(['client/boot.js', 'client/main.js']));
+  assert.ok(!page.has('shared/alleys.js'), 'shared/alleys.js loads lazily');
+  const wx = src('client/render/weather.js');
+  assert.match(wx, /import\('\.\.\/\.\.\/shared\/alleys\.js'\)/, 'render/weather.js asks for it');
+  assert.match(wx, /if \(ALLEYS\) this\.sites\.set/, 'a chunk is kept only once its vents are in');
+});

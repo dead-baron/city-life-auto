@@ -2,7 +2,7 @@
 // the local character/vehicle with the shared physics, interpolates everyone else from
 // authoritative snapshots, and renders the 16-bit city on a single canvas.
 import { TILE, CHUNK_PX, DT, K, T, PF, VF, WEATHER, gameClock, PED_RADIUS, DAY_LOOP_S, SKY_LIFT } from '../shared/constants.js';
-import { cityFromData, WATER_T, TRAIN_CARS, mapSignature, DISTRICTS } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
+import { cityFromData, WATER_T, TRAIN_CARS, mapSignature } from '../shared/mapcore.js';   // (the map's runtime: the generator, shared/map.js, loads only when the page builds the city - loadGenerator)
 import { coverHides, underCover } from '../shared/tunnels.js';
 import { signalFor } from '../shared/signals.js';
 import { pedStep, vehStep, driveInput, setFences } from '../shared/physics.js';
@@ -27,7 +27,6 @@ import { AreaTracker } from './areaname.js';   // (the title card's place name: 
 import { Flock } from './birds.js';   // (the pigeons and gulls: in from off screen)
 import { createMapWaypoints, ROLE_ICON, ROLE_NAME } from './mapwaypoints.js';
 import { createRouter } from './route.js';
-import { iconImg } from './pixicons.js';
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 import { drawInterior } from './interiors.js';
 import { EVENT_KINDS, ARROW_SHOW_S, ARROW_FADE_S } from '../shared/worldevents.js';
@@ -63,7 +62,7 @@ import { drawBuildingShadows, drawPropShadows, drawContactShade, drawSpriteShado
 import { registerNewProps } from './render/newprops.js';
 import { LOW_MEM, canvasStats, setDeviceKind } from './platform.js';
 import { Flora, FLORA_PROPS, wind } from './render/flora/index.js';
-import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESETS, PRESET_NAMES, OPTIONS, worldArtWanted, renderDpr } from './gfx.js';
+import { gfx, initGfx, applyPreset, setOption, stepDown, gfxChosen, getDevice, PRESET_NAMES, OPTIONS, worldArtWanted, renderDpr } from './gfx.js';
 initGfx();
 import { registerCountryProps, COUNTRY_TALL, GROW as COUNTRY_GROW, drawWires, drawCountryEmissive, countryLightY } from './render/country.js';
 import { lightOf, GLOW_COLS } from '../shared/lights.js';   // lights to carry (#359): each light's beam, reach and colour
@@ -1995,7 +1994,6 @@ const mapwp = createMapWaypoints({
   job: () => S.me && S.me.job,
   center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
-function openPhone() { if (S.playing && S.map) openHub('phone'); }
 // ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF,
 // LEAVE GAME - opened by Esc, Start and the HUD's MENU; P / M / I (D-pad left / right, the HUD's PHONE and MAP) open a
 // screen straight away. Every screen has the same head: back and its name top left (Esc, B), close top right. Back

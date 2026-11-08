@@ -10,7 +10,10 @@ import { T, TILE, CHUNK_PX } from '../../shared/constants.js';
 import { hash } from './atmos.js';
 import { freeCanvas } from '../platform.js';
 import { coversIn, coverSeed } from '../../shared/covers.js';   // (the street's manhole covers: the ones the ground draws)
-import { alleyVentsIn } from '../../shared/alleys.js';   // (the vents on the alleys' back walls)
+// (the vents on the alleys' back walls: shared/alleys.js, loaded after the page starts - 5.6 KB off its first load; a
+// chunk looked at before it's in has its puddles and covers' steam, and is looked at again for the vents once it is)
+let ALLEYS = null;
+import('../../shared/alleys.js').then((k) => { ALLEYS = k; }).catch(() => {});
 import { boltPath, drawBolt, lightningIn, strikePoint, flashAt, PX_PER_M, SOUND_MPS } from './lightning.js';    // (the storm's lightning: when, what, the bolt you see)
 
 const N = CHUNK_PX / TILE;
@@ -208,9 +211,9 @@ export class Weather {
     // ground draws), so steam only ever comes up out of a cover, and only in town
     const v = coversIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX, coverSeed(m)).map((c) => ({ x: c.x, y: c.y, id: Math.round(c.x) * 7919 + Math.round(c.y) }));
     // and the vent boxes on the back walls along the alleys (shared/alleys.js; the art draws them 8-22 px up the wall)
-    for (const a of alleyVentsIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX)) v.push({ x: a.x, y: a.y + 2 - 15, id: a.id });
+    if (ALLEYS) for (const a of ALLEYS.alleyVentsIn(m, cx * CHUNK_PX, cy * CHUNK_PX, (cx + 1) * CHUNK_PX, (cy + 1) * CHUNK_PX)) v.push({ x: a.x, y: a.y + 2 - 15, id: a.id });
     this.vents.set(key, v);
-    this.sites.set(key, s);
+    if (ALLEYS) this.sites.set(key, s);   // (kept once the vents are in; until then worked out again when next asked)
     return s;
   }
   _each(view, fn, vents = false) {

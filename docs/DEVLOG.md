@@ -21916,3 +21916,18 @@ to about 7 GB), two on today's 2 OCPUs / 12 GB as before. The threads already ru
 calls `os.setPriority(19)` (`server/artbake.js`), which Linux applies to that thread alone - checked: a worker reads nice
 19 from /proc/thread-self/stat while the main thread stays at 0. `CLA_ART_THREADS` still wins. The service file's comment
 and docs/DEPLOY.md list the new default; `test/artcdn.test.js` (2 / 12 GB -> 2, 4 / 24 GB -> 3, 1 / 6 GB -> 1).
+
+## 2026-11-07 - The page's code budget: 540 KB, 86 files
+The page's first-load code was at 520.47 KB of its 520 KB budget (84 of 84 files). The owner asked whether raising it is
+a problem: a modest raise is fine. `tools/perf.mjs BUDGET.code.page` is 540 KB and 86 files now. Why: on a phone over
+4G the first load costs roughly another 0.1 s per 20 KB gzipped, and tonight's features (the FTUE's first car, the tips,
+the icons, car soccer's screens, the reconnect) had used the room up - a trim before every feature costs more than the
+tenth of a second. The trim pass that came with it, kept to the safe ones:
+- `shared/alleys.js` (5.6 KB, the alleys' back-wall vents for the rain's steam) loads after the page starts:
+  `render/weather.js` asks for it at once, and a chunk's puddle sites are only kept once the vents are in (until then
+  worked out again when next looked at - a second or so at startup). Nothing else on the page imported it, and the
+  renderer's own code doesn't, so it moves to neither. `test/lazypage.test.js`.
+- dead code: `render/tiles.js drawPrefabGlow` and `drawRoofClip` (nothing calls them), and main.js's unused
+  `openPhone`, `iconImg`, `PRESETS` and `DISTRICTS` imports.
+Page: 520.47 -> 514.74 KB, 84 -> 83 files. Considered and left: `render/lightning.js` (5 KB) - `test/lightning.test.js`
+drives `Weather` synchronously, so it isn't a one-line change.
