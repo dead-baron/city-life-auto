@@ -188,7 +188,8 @@ export function precincts3(m) {
     if (b.name === old) b.name = name;
     // (a hand plan's shopfront: its sign over the door and its window - a front desk's lobby, not the racks of a shop)
     const sh = b.art && b.art.shop;
-    if (take && sh && sh.sign && sh.sign.text === old.toUpperCase().slice(0, 20)) { sh.sign = { ...sh.sign, text: name.toUpperCase().slice(0, 20) }; sh.kind = 'lobby'; }
+    // (every converted one: Gull Harbor Lobster Co.'s shed said LOBSTER CO. over its door until 11-07)
+    if (sh && sh.sign) { sh.sign = { ...sh.sign, text: name.toUpperCase().slice(0, 20) }; sh.kind = 'lobby'; }
     if (take) delete best.store;
     busyKinds.get(best.b).add('police');
     out.made.push([name, Math.floor(best.x / TILE), Math.floor(best.y / TILE), old, best.id]);

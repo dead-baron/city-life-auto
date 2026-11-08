@@ -21931,3 +21931,9 @@ tenth of a second. The trim pass that came with it, kept to the safe ones:
   `openPhone`, `iconImg`, `PRESETS` and `DISTRICTS` imports.
 Page: 520.47 -> 514.74 KB, 84 -> 83 files. Considered and left: `render/lightning.js` (5 KB) - `test/lightning.test.js`
 drives `Weather` synchronously, so it isn't a one-line change.
+
+## 2026-11-07 - Gull Harbor Police's front says so
+The Gull Harbor conversion (POI 3498) changed the POI and its map sign but not the hand plan's shopfront: the shed's
+sign over the door still read LOBSTER CO., over a shop's window. `precincts3` now redoes the front for every station it
+converts, as for Coral Cay: GULL HARBOR POLICE over the door, a front desk's lobby in the window.
+`test/prison.test.js` checks both island stations' facade signs say POLICE.

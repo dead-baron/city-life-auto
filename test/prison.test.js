@@ -219,9 +219,12 @@ test('island towns have a police station on their roads; a car taking you in nev
   // Coral Cay's (the owner, 11-07: a shop converted): Island Threads, its POI kept - its kind, label and front changed
   const cc = P.made.find(([n]) => n === 'Coral Cay Police');
   assert.equal(cc[3], 'Island Threads', 'the surf shop the dive shop next door covers');
-  const ccb = M.buildings[M.pois[cc[4]].b];
-  assert.equal(ccb.art.shop.sign.text, 'CORAL CAY POLICE', 'its sign');
-  assert.equal(ccb.art.shop.kind, 'lobby', 'its window: a front desk, not the racks');
+  for (const [name, , , , id] of P.made) {
+    const sh = M.buildings[M.pois[id].b].art.shop;
+    assert.equal(sh.sign.text, name.toUpperCase(), `${name}: its facade's sign`);
+    assert.match(sh.sign.text, /POLICE/, `${name}: the sign says POLICE`);
+    assert.equal(sh.kind, 'lobby', `${name}: its window a front desk's lobby, not the shop's`);
+  }
   for (const k of ['grocery', 'coffee', 'hardware', 'sports', 'club']) assert.ok(M.pois.some((q) => q.kind === k && q.b != null && M.dist[M.idx(Math.floor(q.x / TILE), Math.floor(q.y / TILE))] === 44), `Coral Cay keeps its ${k}`);
   const w = new World(M, { npcBudget: 0, throwErrors: true });
   for (const [name, , , , id] of P.made) {
