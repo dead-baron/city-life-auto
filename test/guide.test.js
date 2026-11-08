@@ -41,15 +41,16 @@ test('the numbers come from the data: change a rule, a price or an item and the 
   }
   assert.match(entry(guideSections(), 'items', 'rods').b, new RegExp(`${FTUE.bait[1]} ${ITEMS[FTUE.bait[0]].name.toLowerCase()}`), 'the outdoors start\'s gear: FTUE');
   // the first car (the owner, 11-06 22:49: earned by the path you pick): the answer's cash and the used lots' prices
-  const fc = { cash: FTUE.cash, lot: FTUE.lot.starter };
+  const fc = { cash: FTUE.cash, hc: FTUE.hustleCash, lot: FTUE.lot.starter };
   try {
-    FTUE.cash = 777; FTUE.lot.starter = 555;
+    FTUE.cash = 777; FTUE.hustleCash = 333; FTUE.lot.starter = 555;
     const S = guideSections();
     assert.match(entry(S, 'around', 'firstcar').b, /with \$777 more/, 'FTUE.cash');
+    assert.match(entry(S, 'around', 'firstcar').b, /\$333 of pocket money/, 'FTUE.hustleCash');
     assert.match(entry(S, 'around', 'firstcar').b, /Rusty Compact at \$555/, 'FTUE.lot');
     assert.match(entry(S, 'places', 'usedlot').b, /Rusty Compact \(\$555\)/, 'the used lots\' entry');
     assert.match(entry(S, 'places', 'dealer').b, /from \$555/, 'the dealers\' back row');
-  } finally { FTUE.cash = fc.cash; FTUE.lot.starter = fc.lot; }
+  } finally { FTUE.cash = fc.cash; FTUE.hustleCash = fc.hc; FTUE.lot.starter = fc.lot; }
   assert.match(entry(guideSections(), 'around', 'firstcar').b, /\[\[vehicle\]\]/, 'the steal: its control by name');
 });
 

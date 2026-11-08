@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players } from './helpers.js';
-import { FTUE, STAR_HEAT } from '../shared/rules.js';
+import { FTUE, STAR_HEAT, BAIL_PER_STAR, BUST_FINE_PER_STAR } from '../shared/rules.js';
 import { K } from '../shared/constants.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import * as ftue from '../server/systems/ftue.js';
@@ -60,6 +60,11 @@ test('the economy: a new character\'s cash and the answer\'s buy one beater at t
   assert.ok(have < Math.min(...Object.values(VEHICLES).filter((d) => d.price && d.kind === 'car').map((d) => d.price)), 'no list-price car with it');
   assert.ok(Math.min(...prices) >= 2 * base, 'not with a new character\'s own cash alone');
   assert.ok(VEHICLES.rustpickup.slots.length >= 4, 'the pickup\'s bed');
+  // the hustle's pocket money (the owner, 11-07): food, ammo or a bail - never a used-lot beater on top of your own
+  const hc = FTUE.hustleCash;
+  assert.ok(hc >= 150 && hc <= 250 && hc < FTUE.cash, `a smaller grant ($${hc})`);
+  assert.ok(base + hc < Math.min(...prices), `no beater with it ($${base + hc})`);
+  assert.ok(hc >= 2 * BAIL_PER_STAR && hc >= BUST_FINE_PER_STAR - base, 'a 2-star bail, or a 1-star bust\'s fine');
 });
 
 test('honest work: the cash, step 1 the used lot - a beater bought, on a space of its own - then the drive and the round', () => {
@@ -105,13 +110,13 @@ test('honest work: the cash, step 1 the used lot - a beater bought, on a space o
   void conn;
 });
 
-test('a little hustle: no cash, step 1 the car left in the alley - stolen, and nobody calls it in - then the fence', () => {
+test('a little hustle: pocket money, step 1 the car left in the alley - stolen, and nobody calls it in - then the fence', () => {
   const w = makeWorld();
   const { p, prof } = toQuestion(w);
   const cash0 = prof.cash;
   answer(w, p, 'hustle');
   const f = prof.ftue;
-  assert.equal(prof.cash, cash0, 'no cash: you take this one');
+  assert.equal(prof.cash, cash0 + FTUE.hustleCash, 'pocket money: the car you take');
   assert.equal(f.step, 1); assert.equal(f.car.k, 'steal');
   const v = firstcar.markOf(w, p), m = me(w, p);
   assert.ok(v && v.ftueMark === prof.pid && !v.owner && v.npcOwned, 'a parked car, nobody\'s - left for you');
@@ -234,6 +239,9 @@ test('the cash once, ever; a replay with a car of your own out goes straight to 
   answer(w, p, 'work');
   assert.equal(prof.cash, c0, 'no second helping');
   assert.equal(prof.ftue.step, 2, 'your car is out: straight to the drive');
+  ftue.handle(w, p, { a: 'skip' }); ftue.handle(w, p, { a: 'replay' }); ftue.handle(w, p, { a: 'arrived' });
+  answer(w, p, 'hustle');
+  assert.equal(prof.cash, c0, 'nor the hustle\'s on a replay');
   // a skipped hustle takes its waiting car away
   const { p: q } = toQuestion(w);
   answer(w, q, 'hustle');

@@ -4,7 +4,7 @@
 //   - honest work, the great outdoors: cash (FTUE.cash, added to a new character's own) and the used lot by the station -
 //     a small cheap stock (FTUE.lot: the Rusty Compact, the Rusty Pickup; the outdoors goes for the pickup) - where the
 //     first step sends you; the car you buy is parked on the lot, a space of its own;
-//   - a little hustle: no cash, but a car of your own to steal in the alley by the station - spawned for you on a space
+//   - a little hustle: a little pocket money (FTUE.hustleCash: not enough for the lot), and a car of your own to steal in the alley by the station - spawned for you on a space
 //     of its own (markCar), and nobody calls this one in (vehicles.js: law.crime's `gentle`);
 //   - just let me roam: the cash, and the used lot set as your waypoint.
 // The owner: "stock and stealable cars must be plentiful or per-player, so many new players at once each get one" - each

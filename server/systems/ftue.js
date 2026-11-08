@@ -16,7 +16,7 @@
 //      the answers numbered): Honest work, A little hustle, The great outdoors, Just let me roam. Not a class - it picks
 //      the first goal and how you get your first car (the owner, 11-06 22:49: "The first car is earned, by the path you
 //      pick" - firstcar.js): honest work and the outdoors get cash (FTUE.cash) for a beater at the station's used lot,
-//      the hustle steals one in the station's alley, roam gets the cash and the lot on the map;
+//      the hustle steals one in the station's alley (with a little pocket money, FTUE.hustleCash), roam gets the cash and the lot on the map;
 //   3. the first goal, at most three steps, each teaching one control where it's needed (the page shows that control's
 //      glyph for the device in hand - shared/controls.js): get your car - buy it at the used lot (move) or steal it in
 //      the alley (vehicle) - drive there (vehicle), do the thing (action). It rides the HUD's job card and the job's
@@ -304,7 +304,7 @@ export function answer(world, p, ans) {
   f.ans = ans; stamp(f, 'answer');
   track(world, p, `ftue_answer_${ans}`);
   const st = p.ped, stn = f.stn != null ? f.stn : (firstcar.arrivalFor(world, p) || {}).poi, P = stn != null ? firstcar.placesFor(world, stn) : null;
-  if (ans !== 'hustle') pay(world, p);   // (the first car's cash: honest work, the outdoors, roam - firstcar.js)
+  pay(world, p, ans === 'hustle');   // (the first car's cash: honest work, the outdoors, roam; the hustle's smaller grant - firstcar.js)
   if (ans === 'roam') { roam(world, p, P); return true; }
   const g = goalFor(world, ans, st.x, st.y);
   if (!g) { roam(world, p, P); return true; }
@@ -321,12 +321,13 @@ export function answer(world, p, ans) {
   setStep(world, p, f.car ? 1 : 2);
   return true;
 }
-// the answer's cash (FTUE.cash): once a character, ever - never again on the Guide's replay
-function pay(world, p) {
+// the answer's cash (FTUE.cash; the hustle's FTUE.hustleCash): once a character, ever - never again on the Guide's replay
+function pay(world, p, hustle) {
   const f = rec(p.profile);
   if (f.paid) return;
-  f.paid = 1; p.profile.cash += FTUE.cash;
-  world.notify(p, `+$${FTUE.cash} to get you started: enough for a cheap car.`, 'good');
+  const amt = hustle ? FTUE.hustleCash : FTUE.cash;
+  f.paid = 1; p.profile.cash += amt;
+  world.notify(p, hustle ? `+$${amt} pocket money: food, ammo or bail. The car you'll take.` : `+$${amt} to get you started: enough for a cheap car.`, 'good');
   store.touch(); p.meDirty = true;
 }
 // just let me roam (or no goal to be had): the cash, and the used lot on your map - no steps

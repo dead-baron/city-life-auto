@@ -48,11 +48,14 @@ export const STARTER = { cooldownS: 300, strayS: 90, lotR: 960, overflow: 400, p
 // The first car is earned, by the path you pick (the owner, 11-06 22:49; server/systems/firstcar.js): honest work, the
 // great outdoors and "just let me roam" get cash (added to a new character's own) - enough for one of the used lots'
 // beaters, only just - and the hustle steals one in the alley by the station, once without anyone calling it in. cash: what
-// the answer adds to a new character's own (store.js defaultProfile's); lot:
+// the answer adds to a new character's own (store.js defaultProfile's); hustleCash: the hustle's smaller grant (the owner,
+// 11-07: "let's add cash to the hustle path") - pocket money for food, an ammo top-up or a bail (a 2-star one, or a
+// 1-star bust's fine with the bail after it), but with a new character's own still short of a used-lot beater, so the
+// hustle's car stays the one in the alley; each once a character, like FTUE.cash; lot:
 // the used lots' beaters and their prices (the cheap stock by every arrival station - a used lot in the city, a junkyard
 // in the desert, a farm stand's truck lot in the country, a beach lot on the coast; the dealerships sell them too);
 // lotR: how far from the station (px) its used lot and its alley are looked for.
-export const FTUE = { cash: 450, lot: { starter: 600, rustpickup: 640 }, lotR: 2600, pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10, hurtMax: 2, tipsPlayH: 3, tipsDays: 7 };
+export const FTUE = { cash: 450, hustleCash: 200, lot: { starter: 600, rustpickup: 640 }, lotR: 2600, pickS: 60, arriveDefault: 'city', arriveS: 13, stopS: 6, doorS: 7.2, leaveS: 8.4, goneS: 4.6, carR: 120, goalR: 230, goalMin: 700, goalMax: 5200, fishR: 160, reward: 100, xp: 5, rod: 'caneRod', bait: ['worms', 5], lineS: 7, tipGapS: 25, hurtAt: 0.6, transitR: 170, wakeS: 10, hurtMax: 2, tipsPlayH: 3, tipsDays: 7 };
 // (the first-time moments only while a character is new: none after tipsPlayH hours played or tipsDays days after the
 // FTUE ended - the six come up in a new player's first hour or so; anyone still missing one after three hours or a
 // week has found their feet or the Guide. hurtMax: the hurt line, un-marked by going down right after it, twice at most)

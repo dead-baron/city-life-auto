@@ -21889,3 +21889,11 @@ swimmer showing through the deck's median and blood from a hit in the water draw
   kerb of an east-west street (the buildings behind them are drawn up over the pavement), back yards' picnic tables
   behind their houses, a few ATMs and doors under the El and the highways, the wild camps' fire rings under their own
   trees. The engine fades a building you stand behind; these need the layout changed, not a prop moved.
+
+## 2026-11-07 - Pocket money for the hustle path
+The owner: "let's add cash to the hustle path". A little hustle now gets `FTUE.hustleCash` ($200, `shared/rules.js`) at
+the answer, once a character like the others' $450 (`ftue.js pay`, the same `paid` flag: never again on a replay). Why
+$200: with a new character's own $200 it makes $400 - a 2-star bail, a 1-star bust's fine, a few meals or an ammo top-up,
+but still $200 short of the cheapest used-lot beater ($600), so the hustle's first car stays the one in the alley. The
+notice says "pocket money: food, ammo or bail"; the Guide's "Your first car" names the amount. `test/firstcar.test.js`
+(the amount's bounds, paid once), `test/ftue.test.js`, `test/guide.test.js`.

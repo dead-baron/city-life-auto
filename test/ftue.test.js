@@ -140,7 +140,9 @@ test('the hustle and the great outdoors: a contact to talk to; a rod, bait and a
   // the hustle: the fence's menu opened is the contact talked to
   const a = newcomer(w);
   toArrival(w); toQuestion(w);
+  const c0 = a.prof.cash;
   economy.handleMenu(w, a.p, ASK_POI, 'hustle');
+  assert.equal(a.prof.cash, c0 + FTUE.hustleCash, 'the hustle\'s pocket money');
   const g = a.prof.ftue.goal;
   assert.ok(g.k === 'fence' || g.k === 'gang', g.k);
   a.prof.ftue.step = 3;
