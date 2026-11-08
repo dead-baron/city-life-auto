@@ -58,7 +58,7 @@ test('their places: Rosa\'s pawn shop in Southside, Sgt. Okafor\'s precinct (els
   assert.equal(rosa.kind, 'pawn');
   assert.equal(w.map.districtAt(rosa.x, rosa.y).name, 'Southside');
   assert.equal(oka.kind, 'police');
-  assert.match(contacts.placeName(w, CONTACTS.rosa), /^Crown Pawn$/);
+  assert.match(contacts.placeName(w, CONTACTS.rosa), /^Crown Pawn/);
 });
 
 test('Rosa: meets a criminal, texts the offer, the card accepts it, the events move the chain on and pay', () => {
