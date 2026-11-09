@@ -330,7 +330,7 @@ function fence(world, p, crate, mult) {
   const gain = Math.round(crate.value * mult);
   prof.bank += gain; // sales go straight to the bank
   prof.criminalExp += Math.round(gain / 100);
-  careers.dirty(p, gain); careers.note(world, p, 'fence', { n: gain, crate: crate.tier || 1 });   // (crime money, not clean: careers.js)
+  careers.dirty(p, gain); careers.note(world, p, 'fence', { n: gain, crate: crate.tier || 1, src: crate.extract ? crate.extract.src : null });   // (crime money, not clean: careers.js)
   consume(world, p, crate);
   trains.onFenced(world, p, crate);
   world.notify(p, `The Exchange wired $${gain} to your bank. +${Math.round(gain / 100)} Criminal EXP.`, 'good');

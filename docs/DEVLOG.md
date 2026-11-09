@@ -22248,3 +22248,50 @@ byte, before and after). World v3 now builds in 131 s here (was 444 s). The upda
 minutes for a healthy start, not 5 - in force once an update gets through (a rollback puts the old script back too).
 The code change re-keys `world3` / `art3` (the hash is of the build's code): the chunks come out the same, so pages
 carry their kept ones over.
+
+## 2026-11-08 - Contacts, second half: Mae Holloway, "Deacon" Marsh, Captain Reyes, Victor Lin (progression build order 3)
+
+Four more entries in `shared/rules-contacts.js` `CONTACTS` on the same system (`server/systems/contacts.js`), 7-8
+missions each from what the game already counts, gated by rank, short lines in character, repeatables after.
+- **Mae Holloway** (business, early; Park West Motors - World v3 puts the lot in Greenfield Park, so that's the district
+  she names). Texts anyone with business XP or business as their main career. Come by the lot, a shift, $500 clean; from
+  Shopkeeper: honest freight (a crate handed in at a bank vault - the new `haul` event, extract.js), three shifts, $2,000
+  clean, sign the lease. Ends with **a storefront lease**: the auto shop nearest her lot nobody owns (else a club) is
+  yours through biz.js (`grant`: nothing paid up front, so a sale returns only the till), its entry carries
+  `lease { by, off }` and its upkeep - the rent - is `CONTACT.leaseOff` (50%) less (upkeep.js `leaseDaily`); and Owner.
+  World v3 has no shop on Park West Lane itself (the lane's three are a corner store, a cafe and a florist, not
+  businesses you can own), so the lease is the nearest real auto shop and the title card names it. No world or art rekey.
+- **"Deacon" Marsh** (crime, late - from Lieutenant, the career's `lateFrom`; Westport Freight on Pier Avenue, Port
+  Westport). The Port job: meet him; fence a crate off the dock shipment (crates now carry `src` on `fence` and `recover`:
+  'dock', 'armored', 'vault', 'port'); fence an iron vault or better (`filt.tier`); crack a bank vault (heist.js); from
+  Captain: the armored run's carbon-gold fenced; a getaway car handed over at the docks; **the Port job** - accepting it
+  puts a carbon-gold "Strongroom Case" on the quay by the cargo ship (calendar.js `dockSite`; `extract.ev` set, so it's on
+  everyone's map), fenced it's done; gone another way, the next is in the hold `CONTACT.portGapS` later (one saved from
+  before a restart is simply put back). Ends with **a hideout** (biz.js's, the one nearest the docks nobody owns - on
+  World v3 the Port Westport Den - given, paid 0) and Underboss's threshold exactly.
+- **Captain Luis Reyes** (police, late - from Detective; World v3 has no HQ building, so his squad is upstairs at the
+  Midtown precinct). The mirror: join the squad; a stakeout (the new `stakeout`: within `stakePx` of the quay while a dock
+  shipment is on, once a shipment); three arrests; a stolen iron crate recovered; from Lieutenant: guard the armored run;
+  a bounty alive; **seize the Port haul** (his own strongroom case on the same quay, to a police station: `recover` with
+  src 'port' - either side's case counts for either chain); close the file. Ends with **a detective's office**
+  (`profile.contacts.office`): its case board - the most wanted players online and where they were last seen - as rows
+  at the precinct's front desk and, on duty, a What's next card with the waypoint (the "detective tracking tools" this
+  rank promised, in the smallest form; homes/interiors have no room at a precinct without new art, so it's a record, not
+  a room) - and Captain.
+- **The chains cross** (`cross`, once a second, nothing saved): a cop on duty on Reyes's chain and a criminal on one of
+  Deacon's Port job steps (`port: 1`, accepted) - the cop's Reyes card points at the criminal ("Tip: X is on a Port job
+  in Y", the waypoint on Call) and Reyes texts once a pairing; the criminal's card says a detective is on them and Deacon
+  texts once a step.
+- **Victor Lin** (business, late - from Landlord; Union Trust Tower, downtown). Lunch; $3,000 of takings; $10,000 clean;
+  from Investor: buy a property (the new `prop` event, careers.js, a deed with a price); two crates to a bank vault;
+  from Mogul: $8,000 more takings; sign. Ends with **a 5% share of Union Trust Tower** (`profile.contacts.stake
+  { tower, share, rent }`) paying `CONTACT.stakeRent` ($750) a day into the bank with the upkeep (upkeep.js `check`, each
+  day billed, at most `backDays`; clean money - business XP) - and Tycoon (whose plate is kept for good: cosmetics.js).
+- **One name per contact**: `careers.contactOf(c, r, p)` now names the contact whose chain you're on (met, not done - the
+  later one once they're in touch), else by rank as before; the goal cards, career cards, rank-up calls and the app's
+  career lines pass the player, so a business goal card asks Mae Holloway while you work for her. The names in
+  `CAREERS[].contact` and `CONTACTS` are checked to match.
+- Numbers in `CONTACT` (with the first two's). Guide: Contacts (the four, and the crossing), Property - "A lease, a
+  hideout, an office, a share". Dev menu: a "next chain step" for each. Tests: `test/contacts2.test.js` (the four chains,
+  the crossing, the case lost and put back, the rent by the day, persistence and old saves, the one name),
+  `test/contacts2w3.test.js` (the places on World v3's map).

@@ -32,8 +32,8 @@ function acceptCard(w, p, id) {
 }
 
 test('the data: two contacts of 6-8 missions from existing systems, gated by rank, ending in something kept', () => {
-  assert.deepEqual(CONTACT_ORDER, ['rosa', 'okafor']);
-  for (const id of CONTACT_ORDER) {
+  assert.deepEqual(CONTACT_ORDER.slice(0, 2), ['rosa', 'okafor'], '(the other four: test/contacts2.test.js)');
+  for (const id of ['rosa', 'okafor']) {
     const C = CONTACTS[id];
     assert.ok(CAREERS[C.career], id);
     assert.ok(C.steps.length >= 6 && C.steps.length <= 8, `${id}: 6-8 missions`);
@@ -58,7 +58,7 @@ test('their places: Rosa\'s pawn shop in Southside, Sgt. Okafor\'s precinct (els
   assert.equal(rosa.kind, 'pawn');
   assert.equal(w.map.districtAt(rosa.x, rosa.y).name, 'Southside');
   assert.equal(oka.kind, 'police');
-  assert.match(contacts.placeName(w, CONTACTS.rosa), /^Crown Pawn/);
+  assert.match(contacts.placeName(w, CONTACTS.rosa), /^Crown Pawn( \(.+\))?$/, '(the test map\'s Southside pawn shop has a name of its own)');
 });
 
 test('Rosa: meets a criminal, texts the offer, the card accepts it, the events move the chain on and pay', () => {

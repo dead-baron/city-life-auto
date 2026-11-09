@@ -477,6 +477,20 @@ export function buy(world, p, s) {
   world.notify(p, s.t === 'truck' ? 'A food truck of your own! Take the van out, park it where people are and open the hatch.' : `You bought ${s.name}! A ${TYPES[s.t].word} - its takings go in the till every day you're in the city. It's on your map, and somewhere to wake up and rest.`, 'good');
   return null;
 }
+// Given, not bought (a contact's chain: contacts.js - Deacon's hideout, Mae's storefront lease): nothing paid (a sale
+// brings back only the till), extra on the entry (lease { by, off }: its upkeep is less - upkeep.js; gift: who gave it).
+// -> null, or why not
+export function grant(world, p, s, extra = {}) {
+  const prof = p.profile;
+  if (!s || s.t === 'truck') return 'Not that one.';
+  if (ownerOf(world, s.id)) return 'Someone owns it already.';
+  if (ownedBy(world, prof).filter((o) => o.s.t !== 'truck').length >= BIZ.max) return `You own ${BIZ.max} businesses already.`;
+  (prof.biz ||= {})[s.id] = { t: s.t, paid: 0, up: {}, stock: STOCK[s.t].qty, till: 0, day: world.day, ...extra };
+  owners(world).set(s.id, p.pid);
+  store.touch(); p.meDirty = true;
+  world.notify(p, `${s.name} is yours - a ${TYPES[s.t].word}${extra.lease ? `, on a lease at ${Math.round((1 - extra.lease.off) * 100)}% of the usual rent` : ''}. Its takings go in the till every day you're in the city; it's on your map.`, 'good');
+  return null;
+}
 export function sell(world, p, s) {
   const prof = p.profile, id = s.t === 'truck' ? 'truck' : s.id, e = entryOf(p, id);
   if (!e) return 'It isn\'t yours.';

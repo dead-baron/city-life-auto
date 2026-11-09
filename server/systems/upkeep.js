@@ -16,6 +16,9 @@
 //                     fw (the final notice's time, ms) } }, paidD (the day the last bill was paid) } - absent on old
 //                     profiles (made the first time they own something: billed from the next day)
 //   key: 'h:<home id>' | 'b:<business site id>' (the food truck: none - it's a van)
+// A business on a lease (a contact's: contacts.js - its entry's lease { by, off }) costs off less a day: the rent. A tower
+// share (profile.contacts.stake { tower, rent }: Victor Lin's chain) pays its rent into the bank for each day billed -
+// clean money (business XP: careers.js onMoney).
 import { UPKEEP } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { dayKey } from './goals.js';
@@ -23,18 +26,21 @@ import * as homes from './homes.js';
 import * as homeups from './homeups.js';
 import * as biz from './biz.js';
 import * as mail from './mail.js';
+import * as careers from './careers.js';   // (a tower share's rent is clean money)
 
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const clampDay = (n) => Math.max(UPKEEP.min, Math.min(UPKEEP.max, Math.round(n)));
 export const homeDaily = (h) => clampDay((h.price || 0) * UPKEEP.homeRate);
 export const bizDaily = (s) => clampDay((s.price || 0) * UPKEEP.bizRate);
+export const leaseDaily = (s, L) => Math.round(bizDaily(s) * (1 - (L.off || 0)));
+const stakeOf = (prof) => (prof.contacts && prof.contacts.stake) || null;
 const SENDER = 'City Property Office';
 
 // what you own that has upkeep: [{ key, name, daily, h | s }]
 export function props(world, prof) {
   const out = [];
   for (const h of homes.ownedHomes(world, prof)) if (h) out.push({ key: `h:${h.id}`, name: h.name, daily: homeDaily(h), h });
-  if (prof.biz) for (const { s, id } of biz.ownedBy(world, prof)) if (id !== 'truck' && s.t !== 'truck') out.push({ key: `b:${s.id}`, name: s.name, daily: bizDaily(s), s });
+  if (prof.biz) for (const { s, e, id } of biz.ownedBy(world, prof)) if (id !== 'truck' && s.t !== 'truck') out.push({ key: `b:${s.id}`, name: s.name, daily: e && e.lease ? leaseDaily(s, e.lease) : bizDaily(s), s });
   return out;
 }
 export const dailyTotal = (world, prof) => props(world, prof).reduce((t, q) => t + q.daily, 0);
@@ -66,7 +72,8 @@ export function check(world, p, now = Date.now()) {
   const prof = p.profile;
   if (!prof) return;
   const list = props(world, prof);
-  if (!list.length && !prof.upkeep) return;
+  const stake = stakeOf(prof);
+  if (!list.length && !prof.upkeep && !stake) return;
   const today = dayKey(now);
   const U = (prof.upkeep ||= { d: today, due: {} });
   U.due ||= {};
@@ -78,6 +85,12 @@ export function check(world, p, now = Date.now()) {
   if (today > (U.d ?? today)) {
     U.d = today; touched = true;
     if (days > 0) for (const q of list) { const D = (U.due[q.key] ||= { n: 0, amt: 0, w: 0 }); D.amt += q.daily * days; D.n += days; billed += q.daily * days; }
+    if (days > 0 && stake && stake.rent > 0) {   // (the tower share's rent: in before the bills are settled)
+      const rent = stake.rent * days;
+      prof.bank = (prof.bank || 0) + rent;
+      careers.onMoney(world, p, 'biz', rent);
+      world.notify(p, `Rent from your share of ${stake.tower}: ${money(rent)} to your bank${days > 1 ? ` (${days} days)` : ''}.`, 'good');
+    }
   }
   // settle: each place's arrears, all at once, when the bank covers them
   let paid = 0, n = 0, one = '';
