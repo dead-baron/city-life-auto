@@ -22235,3 +22235,16 @@ docs/PROGRESSION.md "Seasons, the beta gift and the wipe". Server: `server/syste
 - Guide: Ways to earn - Seasons; the beta gift's entry names Season 0 from `COSMETICS.beta`. Tests: `test/seasons.test.js`
   (the bump resets and keeps the right things, the beta gift and cosmetics through it, the skills halved, ranking and
   caching, the top-10 plates, mods applied and put back, the header, the owner's command).
+
+## 2026-11-08 · The server's start: back under the health check
+
+The live server had been running the 11-07 morning build for a day and a half: every update since then took over five
+minutes to start (472 s on a 2-core box), failed the updater's 300 s health check and was rolled back - while the pages
+(GitHub Pages) moved on and asked the old server for a World v3 city it didn't have ("could not be downloaded"). A
+profile of the build: 282 s of it was the first cars' yard search (`shared/world3-firstcars.js` `firstCars3`), whose
+keep-out test asked every one of the ~6,000 places, for every tile of every candidate yard. It now asks a mask made once
+per station (the same test, so the same world: the build's tiles, places, buildings, props and yards compared byte for
+byte, before and after). World v3 now builds in 131 s here (was 444 s). The updater (`deploy/auto-update.sh`) waits 15
+minutes for a healthy start, not 5 - in force once an update gets through (a rollback puts the old script back too).
+The code change re-keys `world3` / `art3` (the hash is of the build's code): the chunks come out the same, so pages
+carry their kept ones over.
