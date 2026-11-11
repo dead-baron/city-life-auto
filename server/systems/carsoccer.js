@@ -31,6 +31,7 @@ import { protect } from './homes.js';
 import * as homeinside from './homeinside.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import * as evhooks from './eventhooks.js';   // (the car soccer cup: its rounds at full time, its name at the gate - calevents.js)
 
 setArena(carStep);   // (the banks and the boost in every vehicle step the server takes - shared/physics.js)
 
@@ -67,7 +68,8 @@ export function gateInteraction(world, p) {
     if (st.queue.includes(p.pid)) return { label: `Car soccer at ${a.name}: kick-off in ${Math.max(0, Math.ceil(st.t - world.time))} s - ${st.queue.length} player${st.queue.length === 1 ? '' : 's'} in`, passive: true, run: () => {} };
     if (st.phase !== 'idle' && st.phase !== 'lobby') return { label: `${a.name}: a match is on - ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]} (join the next one here)`, passive: true, run: () => {} };
     if (st.queue.length >= 2 * C.teamMax) return { label: `${a.name}: the next match is full`, passive: true, run: () => {} };
-    return { label: `Join car soccer at ${a.name} (${C.teamMin}v${C.teamMin} or more - winners +$${C.prize})`, run: () => join(world, p, a) };
+    const cup = evhooks.first('soccerTag', world, p);   // (the cup on: 'The car soccer cup, round 1 of 2' or the like)
+    return { label: cup ? `${cup} - join at ${a.name}` : `Join car soccer at ${a.name} (${C.teamMin}v${C.teamMin} or more - winners +$${C.prize})`, run: () => join(world, p, a) };
   }
   return null;
 }
@@ -205,6 +207,7 @@ function finish(world, a, st) {
     world.notify(q, `Full time: ${TEAMS[0]} ${st.score[0]} - ${st.score[1]} ${TEAMS[1]}. ${won ? `You win! +$${C.prize} to your bank.` : w < 0 ? 'A tie.' : 'You lost this one.'}`, won ? 'good' : 'info');
   }
   for (const s of st.slots) { const v = world.get(s.veh); if (v) { v.frz = true; v.bok = false; } }
+  evhooks.first('soccerResult', world, a, st, w);   // (the cup: who goes through - calevents.js)
   st.ver++;
 }
 function scored(world, a, st, team) {

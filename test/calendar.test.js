@@ -35,9 +35,9 @@ const poi = (w, kind) => w.map.pois.find((q) => q.kind === kind);
 // what the player's been told (the toasts sent down their connection, and any not sent yet)
 const told = (p, re) => p.toasts.some((t) => re.test(t.text)) || p.conn.sent.some((m) => re.test(typeof m === 'string' ? m : JSON.stringify(m)));
 
-test('the calendar: the armored truck run and the dock shipment on, gang war, crackdown, race night and the cup listed for later', () => {
+test('the calendar: the armored truck run, the dock shipment, gang war, the crackdown, race night and the cup, all on', () => {
   assert.deepEqual(EVENTS.map((e) => e.id), ['armored', 'dock', 'gangwar', 'crackdown', 'racenight', 'soccercup']);
-  assert.deepEqual(EVENTS.filter((e) => e.on).map((e) => e.id), ['armored', 'dock']);
+  assert.deepEqual(EVENTS.filter((e) => e.on).map((e) => e.id), ['armored', 'dock', 'gangwar', 'crackdown', 'racenight', 'soccercup']);
   assert.equal(AR.periodS, 1800, 'every 30 minutes');
   assert.equal(DK.periodS, 3600, 'hourly');
   for (const e of EVENTS) assert.ok(e.periodS > 0 && e.durationS > 0 && e.durationS < e.periodS && e.offsetS >= 0 && e.offsetS < e.periodS && e.title, e.id);
@@ -83,13 +83,13 @@ test('the scheduler: occurrences on the wall clock; started inside the grace win
     assert.ok(L1.live && L1.etaS === 0 && L1.x !== null);
     // the phone's City feed app has it, with the rest of the calendar
     const msg = phone.handle(w, p, { a: 'feed' });
-    assert.ok(msg.cal && msg.cal.length === EVENTS.length && msg.cal.find((e) => e.id === 'gangwar').on === false);
+    assert.ok(msg.cal && msg.cal.length === EVENTS.length && msg.cal.find((e) => e.id === 'gangwar').on === true);
     // the "What's next" cards
     const cards = calendar.eventCards(p, now, w);
     assert.ok(cards.length >= 2);
     for (const c of cards) {
       assert.equal(c.source, 'event');
-      assert.ok(c.id && c.title && typeof c.sub === 'string' && Number.isFinite(c.etaS) && c.pay > 0);
+      assert.ok(c.id && c.title && typeof c.sub === 'string' && Number.isFinite(c.etaS) && c.pay >= 0);   // (a crackdown pays nothing of its own)
       assert.ok(c.action.type === 'waypoint' && Number.isFinite(c.action.x) && Number.isFinite(c.action.y));
     }
     assert.equal(cards[0].etaS, 0, 'the one on now first');

@@ -126,6 +126,7 @@ import * as biz from './biz.js';
 import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
 import * as showers from './showers.js';
+import * as evhooks from './eventhooks.js';   // (the event calendar's offers: a gang war's sides - calevents.js)
 
 export { GHOST_SECONDS, RESPAWN_SECONDS };
 
@@ -938,6 +939,7 @@ export function findInteraction(world, p) {
   if (hall) return hall;
   const baths = bathhouse.doorInteraction(world, p);   // a bathhouse's door: into its lobby (bathhouse.js)
   if (baths) return baths;
+  for (const f of evhooks.interactions) { const r = f(world, p); if (r) return r; }   // the event calendar's: fight for a side in a gang war (calevents.js)
   const gate = carsoccer.gateInteraction(world, p);   // car soccer at the arena's gate: join (carsoccer.js)
   if (gate) return gate;
   const door = homeinside.doorInteraction(world, p);   // your own front door: in you go (homeinside.js)
@@ -1151,7 +1153,7 @@ export function buildMe(world, p) {
     offNow: homes.ownsInside(world, p) ? 1 : undefined,   // LOG OFF here is at once: inside a home of your own (logoff.js)
     ug: (ped && ped.ug) || 0,   // down the sewers (1) or in the cave (2): server/systems/underground.js
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
-    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
+    prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || evhooks.first('target', world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
     ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0, nx: whatsnext.meSig(p),   // (nx: the "What's next" cards' signature - the phone's dot when it changes: whatsnext.js)   // (Settings' First-time tips: ftue.js)
     car: starter.marker(world, p) || firstcar.marker(world, p),   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),

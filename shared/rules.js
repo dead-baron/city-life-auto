@@ -822,10 +822,10 @@ export const EXTRACT = { fence: 1, vault: 0.7, recover: 0.8, xpPer: 100, vaultSa
 export const EVENTS = [
   { id: 'armored', title: 'Armored truck run', periodS: 1800, offsetS: 600, durationS: 600, on: true },
   { id: 'dock', title: 'Dock shipment', periodS: 3600, offsetS: 2100, durationS: 900, on: true },
-  { id: 'gangwar', title: 'Gang war', periodS: 28800, offsetS: 14400, durationS: 900, on: false },
-  { id: 'crackdown', title: 'District crackdown', periodS: 86400, offsetS: 61200, durationS: 3600, on: false },
-  { id: 'racenight', title: 'Street race night', periodS: 86400, offsetS: 3600, durationS: 7200, on: false },
-  { id: 'soccercup', title: 'Car soccer cup', periodS: 604800, offsetS: 237600, durationS: 3600, on: false },
+  { id: 'gangwar', title: 'Gang war', periodS: 28800, offsetS: 14400, durationS: 900, on: true },          // (3 a day: 04:00, 12:00, 20:00 UTC)
+  { id: 'crackdown', title: 'District crackdown', periodS: 86400, offsetS: 61200, durationS: 3600, on: true },   // (17:00 UTC daily)
+  { id: 'racenight', title: 'Street race night', periodS: 86400, offsetS: 3600, durationS: 1800, on: true },     // (01:00 UTC: evening in the Americas)
+  { id: 'soccercup', title: 'Car soccer cup', periodS: 604800, offsetS: 237600, durationS: 3600, on: true },     // (Saturdays 18:00 UTC)
 ];
 export const EVENT_GRACE_S = 90;
 // The armored truck run: `gold` carbon-gold crates from one bank to another runPx apart by road (on the same land),
@@ -836,6 +836,32 @@ export const ARMORED_EVENT = { gold: 2, guards: 2, runPx: [5000, 40000], ftuePx:
 // The dock shipment: a cargo ship unloads `steel` steel and `iron` iron crates on Port Westport's quay - first come,
 // first served; the ones nobody takes are cleared away when it's over
 export const DOCK_EVENT = { steel: 4, iron: 2 };
+// The gang war (server/systems/calevents.js): two gangs - the Syndicate and one of the biker clubs (shared/clubs.js), the
+// block's holder defending it - fight over a gang hideout's block (radius px round it) for the event's length. side
+// members a side on the block from the start and reserve more each as they fall, only while a player is within nearPx
+// (one more each every reinforceS, up to reserve waiting; nobody there: the result is the dice's, the holder favored by
+// holdOdds). Walk up to a side's end of the block (joinPx
+// of its rally point) to fight for it: each of the other side's members you take down pays killPay and killXp crime XP
+// (and standKill standing with your side); your side winning pays winPay into the bank, winXp crime XP and standWin
+// standing with it (the other gang: standLose). Officers on duty police it: an arrest on the block while it's on pays
+// copXp times the police XP, and the war's fighters - downed or stunned - can be cuffed. The winner holds the block.
+export const GANGWAR_EVENT = { radius: 560, side: 4, reserve: 6, reinforceS: 30, nearPx: 2400, joinPx: 170, killPay: 120, killXp: 6, standKill: 1, winPay: 1500, winXp: 60, standWin: 10, standLose: -5, copXp: 2, holdOdds: 0.6, ftuePx: 1200 };
+// The district crackdown: for its hour the police double in one district (taken in turn): the units sent after a wanted
+// player there doubled (units, at most extraUnits more), and up to beat more officers on foot about the players there;
+// criminals pay more there - bail and the fines fee times, the heat heat times as fast - and officers on duty earn more:
+// an arrest's cash copPay times, its police XP copXp times.
+export const CRACKDOWN_EVENT = { units: 2, extraUnits: 2, beat: 4, beatPx: [500, 900], heat: 1.5, fee: 1.5, copPay: 1.5, copXp: 1.5 };
+// Street race night: a chain of `races` street sprints, one every gapS from the start - the grid forms signupS before the
+// off at a start line on the city streets (drive any car or bike into startR of it), checkpoint to checkpoint along the
+// road route (cpR round each, one every cpEvery px; the course runPx long by road, ftuePx clear of the new characters'
+// places) to the finish. The city's racers fill the grid to `grid` (at npcSpeed px/s, no faster than their car). Places
+// score points; the pot - pot, plus perEntrant for each player entered in each race - goes to the night's top three by
+// points (share; a city racer's share stays with the house). A race is called after maxS.
+export const RACENIGHT_EVENT = { races: 3, gapS: 600, signupS: 150, grid: 6, startR: 240, cpR: 180, cpEvery: 1100, runPx: [4500, 9000], ftuePx: 900, lostPx: 2600, maxS: 300, npcSpeed: 600, pot: 2000, perEntrant: 500, share: [0.6, 0.3, 0.1], points: [10, 6, 4, 3, 2, 1] };
+// The car soccer cup at the arena (Waves Arena: server/systems/carsoccer.js): your own run through a short bracket -
+// win `rounds` matches in a row while it's on to lift the cup (a tie replays the round, a loss knocks you out). Each
+// round won pays roundPay; the cup, prize into the bank and xp of your main career (toward the week's goal).
+export const SOCCERCUP_EVENT = { rounds: 2, roundPay: 400, prize: 3000, xp: 80 };
 
 // Vehicle damage (task #402; the owner: "weapons damage vehicles (strong ones significantly); lightsabers destroy a
 // vehicle in a few hits"). What a weapon does to a vehicle, as a multiple of what it does to a person (then divided by

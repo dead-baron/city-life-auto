@@ -615,6 +615,7 @@ export function onAttacked(world, ped, attacker) {
   if (ped.hp < ped.maxHp * NPC_CRITICAL && n.role !== 'gang') { startLimp(world, ped, attacker.x, attacker.y); return; } // too hurt to fight back
   if (n.state === 'passed') { ped.passedOut = false; n.state = 'flee'; n.fx = attacker.x; n.fy = attacker.y; n.until = world.time + 6; return; }
   if (n.role === 'mugger') { onMuggerDowned(world, ped); flee(world, ped, attacker.x, attacker.y, 8); return; }
+  if (n.warSide) { startFight(world, ped, attacker, 30); for (const e of world.query(ped.x, ped.y, 420, K.PED)) if (e.npc && e.npc.warSide === n.warSide && !e.dead && e.npc.state !== 'fight') startFight(world, e, attacker, 30); return; }   // (a gang war's fighter: their side piles in - calevents.js)
   if (n.role === 'gang') { startFight(world, ped, attacker, 30); gangAlert(world, attacker); return; }
   if (n.state === 'fight' && n.target === attacker.id) return;
   if (rng() < n.fight) startFight(world, ped, attacker, 14);
@@ -731,7 +732,8 @@ export function onDeath(world, ped, attacker) {
 }
 
 export function startFight(world, ped, target, secs) {
-  if (target.npc && target.npc.role === ped.npc.role && ped.npc.role === 'gang') return;
+  if (target.npc && target.npc.role === ped.npc.role && ped.npc.role === 'gang' && (target.npc.warSide || 0) === (ped.npc.warSide || 0)) return;   // (gangs don't fight each other - but in a gang war the two sides do: calevents.js)
+  if (ped.npc.warSide && target.player && target.player.warSide === ped.npc.warSide && target.player.warKey === ped.npc.warKey) return;   // (nor a war's fighter the player fighting on their side)
   if (heldByPolice(target)) return;   // (the police have them: no fight starts - task #428)
   ped.npc.state = 'fight'; ped.npc.target = target.id; ped.npc.until = world.time + secs;
 }

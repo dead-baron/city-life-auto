@@ -25,6 +25,7 @@ import { K9 } from '../../shared/rules-play.js';
 import { IN } from '../../shared/input.js';
 import { inAnyView } from '../view.js';
 import { wildStyle } from './wildlife.js';
+import * as evhooks from './eventhooks.js';   // (a district crackdown: twice the units there, capped - calevents.js)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 import { WILD_UNITS, POLICE_UNITS, POLICE_FAR, REPORT_SEARCH_S, REPORT_SPOT_PX, TACKLE_PX, TACKLE_DOWN_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_RECOVER_S, TACKLE_APPROACH, PISTOL_SHARE_3, FBI_SHARE_5, ARMY_SHARE_5, BREAK_DAZE_S, PATROL_PURSUE, BRAWL_AFTER_S, copLevel } from '../../shared/rules.js';
 
@@ -58,7 +59,7 @@ function dispatch(world) {
     // lying low out in the wilds: once they've lost you, the cars already out keep searching but no more are sent
     const lost = world.time - p.seenAt > 3 && !!wildStyle(world.map, p.ped.x, p.ped.y);
     // police presence follows wealth: fewer cars in the rough parts of town, more in the rich ones (rules.js POLICE_UNITS)
-    const want = Math.max(1, Math.round(unitsWanted(p.wanted) * (POLICE_UNITS[tierAt(world, p.ped.x, p.ped.y)] ?? 1)));
+    const want = evhooks.units(world, p.ped.x, p.ped.y, Math.max(1, Math.round(unitsWanted(p.wanted) * (POLICE_UNITS[tierAt(world, p.ped.x, p.ped.y)] ?? 1))));
     if (have >= (lost ? Math.min(WILD_UNITS, want) : want)) continue;
     spawnUnit(world, p);
   }

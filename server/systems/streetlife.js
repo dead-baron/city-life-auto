@@ -84,7 +84,7 @@ function laneSpot(world, x, y, r0, r1, room = 300) {
 
 // A vehicle with an NPC at the wheel, on lane `lane` of spot's road `back` px behind its point, rolling, driving on the
 // lanes toward goal. who: the driver's archetype.
-function driven(world, model, spot, lane, back, who, ai) {
+export function driven(world, model, spot, lane, back, who, ai) {   // (calevents.js: street race night's grid too)
   const net = world.map.net, e = spot.e;
   lane = Math.min(lane, e.nl - 1);
   const lp = lanePath(net, e, spot.from, lane), L = lp[lp.length - 1].s;
@@ -102,7 +102,7 @@ function driven(world, model, spot, lane, back, who, ai) {
   return v;
 }
 // back to being ordinary traffic: no goal, no hurry, cleared away once out of everyone's sight (traffic.js manage)
-function letGo(world, v) {
+export function letGo(world, v) {
   if (!v || v.removed) return;
   v.despawnable = true; v.onEvent = false;
   if (v.ai && v.ai.kind === 'traffic') { v.ai.goal = null; v.ai.reckless = 0; }
@@ -111,7 +111,7 @@ function letGo(world, v) {
 }
 // A goal for a driver (traffic.js chooseExit): the junction nearest (x, y), and how far every junction is from it by road
 // (Dijkstra on the lanes, one-way streets honoured) - so they take the real way there, round the river and the blocks.
-function nodeNear(world, x, y) {
+export function nodeNear(world, x, y) {
   const n = world.map.nearestNode(Math.max(0, x), Math.max(0, y));
   return n ? { x: n.x, y: n.y, node: n.id, dist: distField(world.map.net, n.id) } : { x, y };
 }
