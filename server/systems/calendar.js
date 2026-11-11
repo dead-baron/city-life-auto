@@ -3,8 +3,9 @@
 // A generic scheduler: rules.js EVENTS, each { id, title, periodS, offsetS, durationS, on } on the wall clock (an
 // occurrence k starts at (k * periodS + offsetS) s past 1970-01-01 UTC), so a restart keeps the timetable: a server that
 // comes up inside an occurrence's first EVENT_GRACE_S still starts it, later than that it waits for the next. One with
-// nobody online doesn't run. Each event's runner (RUNNERS) starts it, steps it once a second and says when it's over;
-// gang war, the district crackdown, street race night and the car soccer cup are listed (on: false) for later.
+// nobody online doesn't run. Each event's runner (RUNNERS) starts it, steps it once a second (fast: a few times a second,
+// for a race's checkpoints) and says when it's over (stop: tidy up after it); gang war, the district crackdown, street race
+// night and the car soccer cup are calevents.js's.
 //   - the armored truck run (every 30 min): a calendar IronVault truck leaves a bank with ARMORED_EVENT.gold carbon-gold
 //     crates for another bank across town, by road - the same route for a given occurrence (armoredPlan: the bank pairs
 //     on the same land whose shortest road route is ARMORED_EVENT.runPx long and keeps ftuePx clear of every new
@@ -29,6 +30,7 @@ import * as streetlife from './streetlife.js';
 import * as firstcar from './firstcar.js';
 import * as careers from './careers.js';   // (an escort that saw the gold through: 'escort' - contacts.js)
 import { wildStyle } from './wildlife.js';
+import { RUNNERS as MORE, ICONS } from './calevents.js';   // (gang war, the district crackdown, street race night, the car soccer cup)
 
 let clock = () => Date.now();
 export function setClock(fn) { clock = fn || (() => Date.now()); }   // (tests)
@@ -60,6 +62,8 @@ export const liveRuns = (world) => C(world).live;
 
 export function update(world) {
   W = world;
+  const L = world.cal && world.cal.live;
+  if (L && L.length && world.tick % 5 === 3) for (const r of L) if (!r.over && RUNNERS[r.id].fast) RUNNERS[r.id].fast(world, r, clock());   // (a street race's checkpoints: a few times a second)
   if (world.tick % 20 !== 13) return;
   const ms = clock(), cal = C(world);
   for (const ev of EVENTS) {
@@ -75,7 +79,7 @@ export function update(world) {
   }
   for (const r of [...cal.live]) {
     RUNNERS[r.id].step(world, r, ms);
-    if (r.over || ms > r.end + 60e3) { r.over = true; cal.live = cal.live.filter((q) => q !== r); }
+    if (r.over || ms > r.end + 60e3) { if (RUNNERS[r.id].stop) RUNNERS[r.id].stop(world, r); r.over = true; cal.live = cal.live.filter((q) => q !== r); }
   }
 }
 function start(world, ev, o) {
@@ -88,7 +92,7 @@ function start(world, ev, o) {
 // (dev and tests: this event's current occurrence started now, whatever the clock says)
 export function startNow(world, id) {
   const ev = eventById(id);
-  if (!ev || !RUNNERS[id]) return null;
+  if (!ev || !RUNNERS[id] || C(world).live.some((r) => r.id === id && !r.over)) return null;   // (one at a time)
   const ms = clock(), o = { ...occurrence(ev, ms) };
   o.start = ms; o.end = ms + ev.durationS * 1000;
   C(world).started.add(keyOf(ev, o.k));
@@ -109,7 +113,8 @@ export function ftueSpots(world) {
   return out;
 }
 // shortest road routes out of junction s (forward, one-way streets honoured): { dist, prev (node), via (edge) }
-function dijkstra(net, s) {
+// ok(edge): the edges it may use (all of them, without it)
+export function dijkstra(net, s, ok = null) {
   const N = net.nodes.length, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), via = new Int32Array(N).fill(-1);
   const hn = [], hd = [];   // (a binary heap of [node, dist])
   const push = (n, d) => { let i = hn.length; hn.push(n); hd.push(d); while (i > 0) { const j = (i - 1) >> 1; if (hd[j] <= d) break; hn[i] = hn[j]; hd[i] = hd[j]; i = j; } hn[i] = n; hd[i] = d; };
@@ -127,6 +132,7 @@ function dijkstra(net, s) {
     const d0 = hd[0], u = pop();
     if (d0 > dist[u]) continue;
     for (const [eid, to] of Object.entries(net.nodes[u].links)) {
+      if (ok && !ok(net.edges[+eid])) continue;
       const d = d0 + net.edges[+eid].len;
       if (d < dist[to]) { dist[to] = d; prev[to] = u; via[to] = +eid; push(to, d); }
     }
@@ -228,6 +234,7 @@ const RUNNERS = {
       if (ms >= r.end || !left.length) r.over = true;
     },
   },
+  ...MORE,
 };
 
 // Where the dock shipment lands: on Port Westport's quay by its moored ship (m.port), else by the marina - { x, y, name }
@@ -272,7 +279,7 @@ export function dockSite(world) {
 }
 // open ground a person could stand on at or round (x, y)
 const OPEN = (m, x, y) => { const t = m.tileAtPx(x, y); return t !== undefined && !PED_BLOCK[t] && t !== T.WATER && t !== T.DEEP; };
-function landNear(m, x, y) {
+export function landNear(m, x, y) {
   if (OPEN(m, x, y)) return { x, y };
   for (let r = 16; r <= 320; r += 16) for (let k = 0; k < 16; k++) {
     const a = (k / 16) * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
@@ -306,7 +313,7 @@ export function listing(world, p, ms = clock()) {
       e.sub = run ? `Crates on the quay at ${s.name} - first come, first served` : `A cargo ship unloads steel and iron at ${s ? s.name : 'the docks'}`;
       if (s) { e.x = Math.round(s.x); e.y = Math.round(s.y); }
       e.pay = CRATE_PAY[3];
-    }
+    } else if (RUNNERS[ev.id].list) Object.assign(e, RUNNERS[ev.id].list(world, run, o, p, ms));   // (calevents.js: { sub, x, y, pay })
     out.push(e);
   }
   return out.sort((a, b) => (b.on - a.on) || ((a.etaS ?? 1e12) - (b.etaS ?? 1e12)));
@@ -327,5 +334,5 @@ const NEXT_SOON_S = 600;
 registerCardSource('events', (world, p, now) => eventCards(p, now, world).filter((c) => c.etaS <= NEXT_SOON_S).map((c) => ({
   id: c.id, slot: 'near', career: null, act: c.id.slice(6), title: c.title, sub: c.etaS > 0 ? `In ${Math.ceil(c.etaS / 60)} min - ${c.sub}` : c.sub,
   x: c.action.x, y: c.action.y, pay: c.pay, mins: Math.max(5, Math.ceil(c.etaS / 60) + 10), until: world.time + c.etaS + 300,
-  icon: c.id === 'event:dock' ? 'boat' : 'truck', btn: { k: 'way', label: 'Waypoint' },
+  icon: c.id === 'event:dock' ? 'boat' : ICONS[c.id.slice(6)] || 'truck', btn: { k: 'way', label: 'Waypoint' },
 })), { slot: 'near' });   // (the City feed app's "Coming up")

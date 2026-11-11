@@ -37,6 +37,7 @@ import { inCellRect } from '../../shared/cells.js';
 import * as cells from './cells.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';   // (the fees by rank: careers.fee)
+import * as evhooks from './eventhooks.js';   // (a district crackdown: bail and the fine up where you were cuffed - calevents.js)
 import * as law from './law.js';
 import * as vehicles from './vehicles.js';
 import * as cargo from './cargo.js';
@@ -162,7 +163,7 @@ export function start(world, p, by) {
   cuff(ped, true);
   p.unstuck = null;
   p.custody = { stage: 'held', since: now, until: now + HOLD_S, holder: by ? by.id : 0, car: 0, driver: null, by: by && by.player ? by.player.pid : null,
-    stars: Math.max(1, p.wanted), station: -1, picked: false };
+    stars: Math.max(1, p.wanted), station: -1, picked: false, feeK: evhooks.mult(world, ped.x, ped.y, 'fee') };
   p.seenAt = now; p.lastSeenX = ped.x; p.lastSeenY = ped.y;
   world.notify(p, by && by.player ? `Cuffed by ${by.player.name}!` : 'Cuffed! The police have you.', 'bad');
   if (by && by.player) world.notify(by.player, `${p.name} is cuffed. A car will take them in - stay with them, or put them in your own police car.`, 'good');
@@ -616,14 +617,14 @@ function book(world, p, car = null) {
   releaseCar(world, c);
   lead(live(world, c.holder), 0);
   const st = (world.map.pois[c.station] && world.map.pois[c.station].kind === 'police' ? world.map.pois[c.station] : null) || nearestStation(world, ped.x, ped.y);
-  const taken = confiscate(world, p, c.stars);
+  const taken = confiscate(world, p, c.stars, c.feeK || 1);
   law.clearWanted(world, p);
   p.profile.peakWanted = 0; p.disguised = false;
   // five stars with a long record (or an admin's say): Prison Island, not the cells (prison.js prisonWorthy)
   const term = prison.sentenceFor(world, p, c.stars);
   prison.noteArrest(p);
   if (term) { p.custody = null; prison.sentence(world, p, term, c.stars); world.notify(p, `Booked at ${st.label}: ${taken}.`, 'bad'); return; }
-  const bail = careers.fee(p, BAIL_PER_STAR * c.stars), b = cells.blockOf(world, st.id);   // (by rank: careers.fee)
+  const bail = Math.round(careers.fee(p, BAIL_PER_STAR * c.stars) * (c.feeK || 1)), b = cells.blockOf(world, st.id);   // (by rank: careers.fee)
   if (car && b >= 0 && ped.vehId === car.id && !ped.dead) {
     walkIn(world, p, st, b, car, JAIL_S, bail, c.stars, c.by);
     world.notify(p, `Booked at ${st.label}: ${taken}. Walked in to the cells - ${JAIL_S}s, or pay the $${bail} bail.`, 'bad');
@@ -735,9 +736,9 @@ function endWalk(world, c) {
   c.lead = 0; c.rear = 0;
 }
 // what the cells take: the fine out of your pocket, illegal guns (and the rocket launcher), contraband
-function confiscate(world, p, stars) {
+function confiscate(world, p, stars, k = 1) {
   const prof = p.profile, ped = p.ped;
-  const fine = Math.min(prof.cash, careers.fee(p, BUST_FINE_PER_STAR * stars));   // (by rank: careers.fee)
+  const fine = Math.min(prof.cash, Math.round(careers.fee(p, BUST_FINE_PER_STAR * stars) * k));   // (by rank: careers.fee)
   prof.cash -= fine;
   const guns = [];
   for (const id of Object.keys(prof.weapons)) {

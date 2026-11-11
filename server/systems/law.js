@@ -69,6 +69,7 @@ import { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCOND
 import { hash2 } from '../../shared/rng.js';
 import { decodeLook, lookToApp, policeLook } from '../../shared/look.js';
 import { PAINTS } from '../../shared/vehicles.js';
+import * as evhooks from './eventhooks.js';   // (the calendar's events: a crackdown's heat and pay, a gang war's police XP - calevents.js)
 export { ENFORCER_MIN_SAMARITAN, HUNTER_MIN_SAMARITAN, MISCONDUCT_GRACE, MISCONDUCT_RESET_MS, SERVICE_AMMO, SUBDUE_S, POLICE_RANKS };
 
 // How far the police can spot a wanted suspect at (x, y), as a share of their town range (420 px):
@@ -450,6 +451,7 @@ export function addHeat(world, p, amount, x, y, damp = false) {
     p.disguised = false;
     world.notify(p, `Disguise blown! Your ${prof.peakWanted}-star record was recognized.`, 'bad');
   }
+  if (amount > 0) amount *= evhooks.mult(world, x, y, 'heat');   // (a district crackdown: heat builds faster there)
   p.heat = Math.min(STAR_HEAT[5] + 60, damp ? heatAfter(p.heat, amount) : p.heat + amount);
   const before = p.wanted;
   p.wanted = Math.min(5, starsForHeat(p.heat));
@@ -686,6 +688,7 @@ export function arrestable(world, e) {
   const now = world.time;
   if (e.vehId || e.cuffed || (e.player && e.player.custody)) return false;
   if (e.dead) return !!(e.bookable || (e.npc && e.npc.flagged && e.npc.role !== 'gang'));
+  if (e.npc && e.npc.warSide && (now < e.downUntil || now < e.stunUntil)) return true;   // (a gang war's fighter, down: the police take them in - calevents.js)
   if (!isFlagged(world, e) || (e.npc && e.npc.role === 'gang')) return false;
   return now < e.downUntil || now < e.stunUntil || !!e.passedOut;
 }
@@ -770,12 +773,12 @@ export function arrest(world, cop, target) {
     t.soft = false;   // (cuffed: custody.js has them, and the police treat it as they always have)
     const stars = Math.max(1, t.wanted);
     if (cop && cop.player) {
-      const reward = ARREST_REWARD_PER_STAR * stars;
+      const reward = Math.round(ARREST_REWARD_PER_STAR * stars * evhooks.mult(world, target.x, target.y, 'copPay'));   // (a crackdown's district: more - calevents.js)
       bounties.collect(world, cop.player, t, 'arrest');
       cop.player.profile.cash += reward;
       cop.player.profile.samaritan += 5 * stars;
       cop.player.profile.stats.arrests++;
-      if (cop.player.badge) addPolicePts(world, cop.player, 10 * stars);
+      if (cop.player.badge) addPolicePts(world, cop.player, Math.round(10 * stars * evhooks.mult(world, target.x, target.y, 'copXp')));
       careers.note(world, cop.player, 'arrest', { stars, gentle: unhurt(target) });
       world.notify(cop.player, `Arrested ${t.name}! +$${reward}, +${5 * stars} Samaritan`, 'good');
       cop.player.meDirty = true;
@@ -790,10 +793,11 @@ export function arrest(world, cop, target) {
     cells.lockUp(world, target);   // (they do their time in the nearest station's cells: cells.js)
     world.remove(target);
     if (cop && cop.player) {
-      cop.player.profile.cash += 60; cop.player.profile.samaritan += 4;
-      if (cop.player.badge) addPolicePts(world, cop.player, 4);
+      const k = evhooks.mult(world, target.x, target.y, 'copPay'), kx = evhooks.mult(world, target.x, target.y, 'copXp');   // (a crackdown, a gang war: calevents.js)
+      cop.player.profile.cash += Math.round(60 * k); cop.player.profile.samaritan += 4;
+      if (cop.player.badge) addPolicePts(world, cop.player, Math.round(4 * kx));
       careers.note(world, cop.player, 'arrest', { stars: 0, gentle: unhurt(target) });
-      world.notify(cop.player, 'Suspect taken into custody. +$60, +4 Samaritan', 'good');
+      world.notify(cop.player, `Suspect taken into custody. +$${Math.round(60 * k)}, +4 Samaritan${kx > 1 ? ` (x${kx} police XP)` : ''}`, 'good');
       cop.player.meDirty = true;
     }
   }

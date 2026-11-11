@@ -119,7 +119,7 @@ export const DEV_SECTIONS = [
     ['🎬 Drive-in', 'near', { k: 'drivein' }], ['🏎 Raceway', 'near', { k: 'raceway' }], ['🪩 Club', 'near', { k: 'club' }],
     ['🎾 Tennis court', 'near', { k: 'tennis' }], ['🏄 A surf break (with a board)', 'near', { k: 'surf' }], ['🕹 Arcade', 'near', { k: 'arcade' }], ['♨ Bathhouse', 'near', { k: 'bathhouse' }], ['⚽ Car soccer: the arena\'s gate', 'near', { k: 'carsoccer' }], ['🚗 Car soccer: a match now', 'soccer'], ['🎱 Pool table (Rusty Spur)', 'near', { k: 'pooltable' }],
     ['🎰 Casino', 'near', { k: 'casino' }], ['🎲 Street dice', 'near', { k: 'dice' }],
-    ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }], ['💰 Calendar: armored truck run', 'street', { k: 'calarmored' }], ['🚢 Calendar: dock shipment', 'street', { k: 'caldock' }],
+    ['🏁 Street race nearby', 'street', { k: 'race' }], ['🚓 Police chase nearby', 'street', { k: 'chase' }], ['🚚 Armored truck nearby', 'street', { k: 'armored' }], ['💰 Calendar: armored truck run', 'street', { k: 'calarmored' }], ['🚢 Calendar: dock shipment', 'street', { k: 'caldock' }], ['🔫 Calendar: gang war', 'street', { k: 'calgangwar' }], ['🚔 Calendar: district crackdown', 'street', { k: 'calcrackdown' }], ['🏎️ Calendar: street race night', 'street', { k: 'calracenight' }], ['⚽ Calendar: car soccer cup', 'street', { k: 'calsoccercup' }],
   ] },
   { id: 'shops', title: '🏪 Shops & services', items: [
     ['🏥 Hospital', 'near', { k: 'hospital' }], ['💊 Pharmacy', 'near', { k: 'pharmacy' }], ['👕 Clothing', 'near', { k: 'clothing' }],

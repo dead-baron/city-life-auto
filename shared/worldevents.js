@@ -24,6 +24,10 @@ export const EVENT_KINDS = {
   gold: { color: '#ffcf3a', label: 'Carbon-gold on the move', hint: 'Paid only when it\'s delivered', noArrow: 1, stay: 1 },   // (extract.js: everyone's map)
   cargo: { color: '#c9d2dc', label: 'Valuable cargo', hint: 'Steel or iron crates - paid on delivery', noArrow: 1, stay: 1 },   // (extract.js: the players near)
   dock: { color: '#4fc3d9', label: 'Dock shipment', hint: 'A cargo ship unloading crates - first come, first served' },   // (calendar.js)
+  gangwar: { color: '#d23b5a', label: 'Gang war', hint: 'Two gangs fighting over a block - join a side or police it' },   // (calevents.js)
+  crackdown: { color: '#3a6dff', label: 'Police crackdown', hint: 'Twice the police in this district for the hour' },
+  racenight: { color: '#ff2fd0', label: 'Street race night', hint: 'Drive onto the line to race' },
+  soccercup: { color: '#ff9a1a', label: 'Car soccer cup', hint: 'Join at the arena\'s gate' },
   petarea: { color: '#7fd8ff', label: 'Lost pet last seen', hint: 'Search around here', stay: 1 },
 };
 export const EVENT_RANGE = 1300;    // events further away than this aren't popped up on screen (the phone's city feed has them all)

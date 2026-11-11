@@ -22346,3 +22346,50 @@ the What's next app. They're built now, on the systems that were already there. 
   `test/unlocks.test.js` (gating, persistence, the crew bank's flows and upkeep, the stash and lying low, the contract's
   pay and lapse, the tracker's rate limits, offline staff earnings, the penthouse's price). `test/biz.test.js` gives its
   owners the ranks.
+
+## 2026-11-10 - The event calendar's other four: gang war, district crackdown, street race night, the car soccer cup
+
+The rest of the progression design's event calendar (docs/PROGRESSION.md "Extraction and scheduled events"), all on now
+(`shared/rules.js` `EVENTS`; the numbers in `GANGWAR_EVENT`, `CRACKDOWN_EVENT`, `RACENIGHT_EVENT`, `SOCCERCUP_EVENT`).
+The runners are `server/systems/calevents.js` (calendar.js merges them with its own); they reach the systems they build
+on through `server/systems/eventhooks.js`, a module with no imports - `world.evMods` (an event's multipliers where it's
+on: `mult(world, x, y, k)`, `units(...)`), the action button's `interactions`, and named calls (`soccerResult`,
+`soccerTag`, `target`). With no event on, every hook is an empty list's length and the calendar steps nothing.
+- **Gang war** (3 a day - 04:00, 12:00, 20:00 UTC - for 15 minutes): the Syndicate against one of the biker clubs (taken
+  in turn) over a gang hideout's block (`gangwar.js` `turfSpots`, the turf's first, 1,200 px clear of the new
+  characters' places), announced with its district and street. The block's holder defends it (`store.kept.gangHolds`:
+  there's no turf-ownership map beyond this, so the winner "taking the block" is who holds it and defends it next time);
+  the Syndicate holds every block the first time. The fighters (the gang role with `npc.warSide`: `npc.js` `startFight`
+  now lets two war sides fight, and never a fighter on a player fighting for their side) exist only while a player is
+  within 2,400 px - four a side, a reserve of six, one more each every 30 s; nobody there, the dice decide (the holder at
+  60%). Walk up to either end of the block (the sides' rally points) and press Act to fight for them: $120 and 6 crime
+  XP a takedown, $1,500 and 60 crime XP if your side has more takedowns at the end, standing with that gang (+10, the
+  other -5; `profile.gangRep`, absent on old saves). Syndicate members can only fight for the Syndicate; officers on
+  duty police it: an arrest on the block pays 2x police XP, and a downed or stunned fighter can be cuffed
+  (`law.js` `arrestable`).
+- **District crackdown** (daily, 17:00 UTC, an hour): one town district, in turn by name. There: twice the units sent
+  after a wanted player (at most 2 more: `police.js` dispatch through `evhooks.units`), up to 4 more officers on foot
+  about the players in the district (spawned out of sight, despawned at the end), heat x1.5 (`law.js` `addHeat`), bail and
+  the bust fine x1.5 where you were cuffed (`custody.js`: `custody.feeK`), and an officer's arrest pays x1.5 cash and
+  x1.5 police XP (`law.js` `arrest`). The result line counts the officers' arrests there.
+- **Street race night** (evenings by the wall clock: 01:00 UTC, 8 pm Eastern - the scheduler's clock rather than the
+  game's day/night, so the timetable can be listed): three street sprints, one every 10 minutes. Each course is a road
+  route 4,500-9,000 px long on the city's streets (no alleys, dirt, highways or ramps; the calendar's Dijkstra, now with an
+  edge filter), clear of the new characters' places, a checkpoint every 1,100 px. The grid forms 150 s before the off:
+  drive any car or bike onto the line. The city's racers (`streetlife.js` `driven`, now exported with `letGo`,
+  `nodeNear`) fill the grid to six, so it's soloable. Checkpoints are checked a few times a second (the calendar's new
+  `fast` step, only for live runs) along the segment driven since the last look. Places score 10/6/4/3/2/1; the pot -
+  $2,000 plus $500 per player per race - goes 60/30/10% to the night's top three on points (a city racer's share stays
+  with the house). Races count for the goals and the season's Races won board as the others do.
+- **Car soccer cup** (Saturdays 18:00 UTC, an hour) at Waves Arena: join car soccer at the gate as ever (its line says
+  which round you're on); win two in a row to lift it - $400 a round, the cup $3,000 and 80 XP of your main career (the
+  weekly goal counts that career's XP: the hook), `careers.note` 'soccerCup'. A tie replays the round, a loss knocks you
+  out for the week. `carsoccer.js` calls `soccerResult` at full time.
+- Each: a city-feed line when it starts and with its result, a radar kind (`shared/worldevents.js`), the City feed's
+  "Coming up" and a near-you card in What's next from 10 minutes before (calendar.js `listing` asks each runner's
+  `list`), a Guide entry (Ways to earn), and a dev-menu "Calendar: ..." start-now (Street events).
+- Tests: `test/calevents.test.js` (the timetable and the cards, nothing about with none on, the war's sides and pay and
+  standing and the block held, the dice when nobody's there, the crackdown's multipliers in its district only and its
+  officers, a solo race night through the checkpoints to the pot, the cup round by round and knocked out).
+  On World v3 (seed 1337): blocks in The Yards and others, 29 crackdown districts, six courses (47 ms to work out, on
+  the first race night), Waves Arena; 20 s of play with all four on cost ~0.8 s over the same 20 s without.
