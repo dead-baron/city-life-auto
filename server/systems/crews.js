@@ -11,9 +11,20 @@
 //   taking someone off it.
 // The crews are kept with the profiles (store.kept.crews) so a restart doesn't break them up; you stay in yours while
 // you're offline.
-//   store.kept.crews: id -> { lead (pid), members [pid], names { pid: name } }; p.crewAsk: { from (pid), at } (asked in)
+// A crew of your own (the crime career's 'crew' unlock, docs/PROGRESSION.md - the numbers: CREW): its lead, at that rank,
+// founds it in the Crew app (found: CREW.foundCost; a crew of one to start, asking people in as before) - a name and a
+// tag (tagOf: by every member's name - the nameplate's k, cosmetics.js plateOf); a crew bank (CREW.cut of what a member
+// earns on a job done with a crewmate near - a shift, fencing, a heist contract: cutFrom - members put money in, the lead
+// pays it out evenly); its upkeep (CREW.upkeep a wall-clock day from the bank - bill; CREW.lapseDays unpaid in a row and
+// the name lapses: an ordinary crew again, the bank kept). A season's end empties the bank and the arrears (seasonReset:
+// the crews' holdings; the members and the name stay - seasons.js).
+//   store.kept.crews: id -> { lead (pid), members [pid], names { pid: name }, f? { name, tag, at } (founded), bank? ($),
+//                     up? { d (the day billed to), owed, n (days unpaid in a row) } }; p.crewAsk: { from (pid), at }
 import { CREW } from '../../shared/rules.js';
+import { cleanName, nameKey } from '../../shared/names.js';
 import { store } from '../store.js';
+import * as careers from './careers.js';   // (the 'crew' unlock; the jobs done together: careers.js onNote)
+import { dayKey } from './goals.js';
 
 const kept = () => (store.kept.crews ||= {});
 // Guests and crews (the owner, 11-04): while a sign-in is on offer (server/launch.js sets the policy), a guest can join a
@@ -40,10 +51,12 @@ export function forget(pid) {
     if (!c.members.includes(pid)) continue;
     c.members = c.members.filter((q) => q !== pid);
     if (c.names) delete c.names[pid];
-    if (c.members.length < 2) delete K[id]; else if (c.lead === pid) c.lead = c.members[0];
+    if (c.members.length < minOf(c)) delete K[id]; else if (c.lead === pid) c.lead = c.members[0];
   }
   changed();
 }
+// a founded crew stands with its lead alone; an ordinary one needs two
+export const minOf = (c) => (c && c.f ? 1 : 2);
 export function crewOf(pid) { const id = idx().get(pid); return id ? kept()[id] : null; }
 export function crewIdOf(pid) { return idx().get(pid) || null; }
 // the same crew (two different players)
@@ -118,6 +131,7 @@ export function accept(world, p) {
   }
   c.members.push(p.pid);
   c.names[p.pid] = p.name;
+  p.npDirty = true;
   changed();
   if (world.track) for (const pid of c.members) { const m = world.players.get(pid); if (m && m !== p) world.track('crewed', p, { other: m }); }   // (contacts for phone messages: server/chat.js)
   tell(world, c, `${p.name} joined the crew (${c.members.length}/${CREW.max}).`, 'good');
@@ -132,9 +146,13 @@ export function leave(world, p, why = 'left the crew') {
   delete c.names[p.pid];
   if (c.lead === p.pid) c.lead = c.members.find((pid) => { const m = world.players.get(pid); return !(m && limited(m)); }) || c.members[0] || null;   // (a signed-in member first: a guest leads only if there's nobody else)
   const who = p.name || 'Someone';
-  if (c.members.length < 2) { delete K[id]; for (const pid of c.members) { const q = world.players.get(pid); if (q) { world.notify(q, `${who} ${why} - the crew's broken up.`, 'info'); q.meDirty = true; } } }
-  else tell(world, c, `${who} ${why}.`, 'info');
+  if (c.members.length < minOf(c)) {
+    delete K[id];
+    if (c.bank > 0) { const last = c.members[0] || p.pid, prof = store.get(last); if (prof) prof.bank = (prof.bank || 0) + c.bank; }   // (the bank to whoever's left - or the last out)
+    for (const pid of c.members) { const q = world.players.get(pid); if (q) { world.notify(q, `${who} ${why} - the crew's broken up.`, 'info'); q.meDirty = true; } }
+  } else tell(world, c, `${who} ${why}.`, 'info');
   changed();
+  for (const pid of [p.pid, ...c.members]) { const q = world.players.get(pid); if (q) q.npDirty = true; }   // (the tag off: cosmetics.js)
   p.meDirty = true;
   return true;
 }
@@ -181,18 +199,163 @@ export function meInfo(world, p) {
 // The phone's Crew app
 export function panel(world, p) {
   const c = crewOf(p.pid), me = p.ped;
-  if (!c) return { t: 'crew', crew: null, max: CREW.max, says: CREW.says };
+  const fnd = { can: canFound(p, c) ? 1 : 0, need: careers.rankName('crime', unlockRank()), cost: CREW.foundCost };
+  if (!c) return { t: 'crew', crew: null, max: CREW.max, says: CREW.says, found: fnd };
   const members = c.members.map((pid, k) => {
     const q = world.players.get(pid), at = q && q.ped && !q.prison ? q.ped : null;
     if (q && q.name && c.names[pid] !== q.name) c.names[pid] = q.name;   // (a new name: the list keeps up)
     return { k, n: (q && q.name) || c.names[pid] || 'Someone', me: pid === p.pid, lead: pid === c.lead, on: !!q, x: at ? Math.round(at.x) : null, y: at ? Math.round(at.y) : null, d: at && me ? Math.round(Math.hypot(at.x - me.x, at.y - me.y)) : null, where: at ? world.map.districtAt(at.x, at.y).name : null };
   });
-  return { t: 'crew', crew: { lead: c.lead === p.pid, members }, max: CREW.max, says: CREW.says };
+  const own = c.f ? { name: c.f.name, tag: c.f.tag, bank: Math.round(c.bank || 0), day: CREW.upkeep, owed: Math.round((c.up && c.up.owed) || 0), n: (c.up && c.up.owed > 0 && c.up.n) || 0, lapse: CREW.lapseDays, cut: CREW.cut, put: CREW.put } : null;
+  return { t: 'crew', crew: { lead: c.lead === p.pid, members, own }, max: CREW.max, says: CREW.says, found: fnd };
 }
-// the phone's messages: { a: 'crewsay', i } / 'crewleave' / 'crewkick', k
+// the phone's messages: { a: 'crewsay', i } / 'crewleave' / 'crewkick', k / 'crewfound', name / 'crewput' / 'crewpay'
 export function phone(world, p, msg) {
+  let err = null;
   if (msg.a === 'crewsay') say(world, p, Number(msg.i));
   else if (msg.a === 'crewleave') leave(world, p);
-  else if (msg.a === 'crewkick') { const err = kick(world, p, Number(msg.k), msg.n); if (err) world.notify(p, err, 'warn'); }
+  else if (msg.a === 'crewkick') err = kick(world, p, Number(msg.k), msg.n);
+  else if (msg.a === 'crewfound') err = found(world, p, msg.name);
+  else if (msg.a === 'crewput') err = put(world, p);
+  else if (msg.a === 'crewpay') err = payout(world, p);
+  if (err) world.notify(p, err, 'warn');
   return panel(world, p);
+}
+
+// ---- a crew of your own --------------------------------------------------------------------------------------------------
+const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+// the crime rank the 'crew' unlock comes at
+export function unlockRank() { const R = careers.CAREERS.crime.ranks; for (let i = 0; i < R.length; i++) if ((R[i].unlock || []).some((u) => u.k === 'crew')) return i; return R.length - 1; }
+// may found one: the rank, signed in, and leading the crew you're in (or in none); not founded already
+export const canFound = (p, c = crewOf(p.pid)) => careers.hasUnlock(p, 'crew') && !limited(p) && (!c || (c.lead === p.pid && !c.f));
+// the tag by your name: the name's initials (a one-word name: its first letters), up to CREW.tagMax, capitals
+export function tagFor(name) {
+  const words = String(name).split(/[\s_.-]+/).filter(Boolean).map((w) => w.replace(/[^A-Za-z0-9]/g, '')).filter(Boolean);
+  const t = words.length > 1 ? words.map((w) => w[0]).join('') : (words[0] || 'CREW');
+  return t.slice(0, CREW.tagMax).toUpperCase();
+}
+export function tagOf(pid) { const c = crewOf(pid); return c && c.f ? c.f.tag : null; }
+// cash first, then the bank
+function spend(prof, n) {
+  if ((prof.cash || 0) + (prof.bank || 0) < n) return false;
+  const c = Math.min(prof.cash || 0, n);
+  prof.cash -= c; if (n - c > 0) prof.bank -= n - c;
+  return true;
+}
+// Found the crew (the Crew app): -> null, or why not
+export function found(world, p, raw) {
+  const c0 = crewOf(p.pid);
+  if (c0 && c0.f) return `Your crew is ${c0.f.name} already.`;
+  if (c0 && c0.lead !== p.pid) return 'Only whoever leads the crew can found it.';
+  if (limited(p)) return GUEST_LEAD;
+  if (!careers.hasUnlock(p, 'crew')) return `A crew of your own comes at ${careers.rankName('crime', unlockRank())} (crime).`;
+  const r = cleanName(raw);
+  if (r.err) return r.err.replace('A name', 'A crew\'s name');
+  const key = nameKey(r.name);
+  for (const q of Object.values(kept())) if (q.f && nameKey(q.f.name) === key) return `${r.name} is another crew's name - pick another.`;
+  if (!spend(p.profile, CREW.foundCost)) return `Founding a crew costs ${money(CREW.foundCost)} (cash + bank).`;
+  const K = kept();
+  let c = c0;
+  if (!c) { let id; do id = `c${Date.now().toString(36)}${(seq++).toString(36)}`; while (K[id]); c = K[id] = { lead: p.pid, members: [p.pid], names: { [p.pid]: p.name } }; }
+  c.f = { name: r.name, tag: tagFor(r.name), at: Date.now() };
+  c.bank = c.bank || 0;
+  c.up = { d: dayKey(), owed: 0, n: 0 };
+  changed();
+  for (const pid of c.members) { const q = world.players.get(pid); if (q) q.npDirty = true; }
+  tell(world, c, `${p.name} founded the crew: ${c.f.name} [${c.f.tag}]. The tag's by every member's name; the crew bank takes a ${Math.round(CREW.cut * 100)}% cut of jobs done together, and pays ${money(CREW.upkeep)} a day upkeep.`, 'good');
+  if (world.track) world.track('crewfound', p, { name: c.f.name });
+  return null;
+}
+// put CREW.put into the crew bank (any member)
+export function put(world, p) {
+  const c = crewOf(p.pid);
+  if (!c || !c.f) return 'Only a founded crew has a bank.';
+  if (!spend(p.profile, CREW.put)) return `You need ${money(CREW.put)}.`;
+  c.bank = (c.bank || 0) + CREW.put;
+  store.touch(); p.meDirty = true;
+  settle(world, c);
+  tell(world, c, `${p.name} put ${money(CREW.put)} in the crew bank (${money(c.bank)}).`, 'info');
+  return null;
+}
+// the lead pays the bank out evenly, into every member's bank (online or not); what doesn't divide stays
+export function payout(world, p) {
+  const c = crewOf(p.pid);
+  if (!c || !c.f) return 'Only a founded crew has a bank.';
+  if (c.lead !== p.pid) return 'Only the crew\'s lead pays out the bank.';
+  if (c.up && c.up.owed > 0) return `The crew owes ${money(c.up.owed)} of upkeep - that comes first.`;
+  const each = Math.floor((c.bank || 0) / c.members.length);
+  if (each < 1) return 'Nothing in the crew bank to pay out.';
+  for (const pid of c.members) { const prof = store.get(pid); if (prof) prof.bank = (prof.bank || 0) + each; const q = world.players.get(pid); if (q) q.meDirty = true; }
+  c.bank -= each * c.members.length;
+  store.touch();
+  tell(world, c, `${p.name} paid out the crew bank: ${money(each)} each, into your bank.`, 'good');
+  return null;
+}
+// The members' cut: money a member made on a job done together (a crewmate online, up and about within CREW.togetherPx)
+// - CREW.cut of it from them into the crew bank. -> the cut ($), 0 for none
+export function cutFrom(world, p, n, what = 'the job') {
+  const c = p && crewOf(p.pid);
+  if (!c || !c.f || !(n > 0) || !p.ped) return 0;
+  const near = matesOnline(world, p).some((q) => q.ped && !q.ped.dead && !q.prison && Math.hypot(q.ped.x - p.ped.x, q.ped.y - p.ped.y) <= CREW.togetherPx);
+  if (!near) return 0;
+  const prof = p.profile, cut = Math.min(Math.round(n * CREW.cut), Math.max(0, Math.floor((prof.cash || 0) + (prof.bank || 0))));
+  if (cut < 1 || !spend(prof, cut)) return 0;
+  c.bank = (c.bank || 0) + cut;
+  store.touch(); p.meDirty = true;
+  settle(world, c);
+  world.notify(p, `${money(cut)} of ${what} to ${c.f.name}'s crew bank - a job done together (${money(c.bank)} in it).`, 'info');
+  return cut;
+}
+careers.onNote((world, p, ev, d) => {
+  if (ev === 'shift' && d && d.n > 0) cutFrom(world, p, d.n, `that ${d.job || 'job'}'s pay`);
+  else if (ev === 'fence' && d && d.n > 0) cutFrom(world, p, d.n, d.crate ? 'the crate\'s pay' : 'the fenced money');   // (what the fence paid)
+});
+// arrears paid from the bank the moment it can
+function settle(world, c) {
+  const U = c.up;
+  if (!U || !(U.owed > 0) || !(c.bank > 0)) return;
+  const pay = Math.min(c.bank, U.owed);
+  c.bank -= pay; U.owed -= pay;
+  if (U.owed <= 0) { U.owed = 0; U.n = 0; }
+  store.touch();
+  void world;
+}
+// The crew's upkeep on the wall-clock day (goals.js dayKey): a day's worth for each day gone by (at most a week at once),
+// from the bank; unpaid CREW.lapseDays days in a row - the name lapses (an ordinary crew; with one left, none: its bank to
+// them). (now: ms - the tests' clock)
+export function bill(world, c, now = Date.now()) {
+  if (!c || !c.f) return;
+  const today = dayKey(now), U = (c.up ||= { d: today, owed: 0, n: 0 });
+  if (today <= U.d) return;
+  const days = Math.min(7, today - U.d);
+  U.d = today;
+  const was = U.owed > 0;
+  U.owed += CREW.upkeep * days;
+  const cover = Math.min(c.bank || 0, U.owed);
+  c.bank = (c.bank || 0) - cover; U.owed -= cover;
+  if (U.owed > 0) U.n += was ? days : Math.max(1, Math.ceil(U.owed / CREW.upkeep)); else U.n = 0;
+  store.touch();
+  if (U.owed <= 0) return;
+  if (U.n >= CREW.lapseDays) {
+    const name = c.f.name;
+    delete c.f; c.up = null;
+    tell(world, c, `${name}'s name has lapsed - ${CREW.lapseDays} days of crew upkeep unpaid. You're still a crew; found it again in the Crew app.`, 'bad');
+    for (const pid of c.members) { const q = world.players.get(pid); if (q) q.npDirty = true; }
+    if (c.members.length < 2) { const id = Object.keys(kept()).find((k) => kept()[k] === c), prof = store.get(c.members[0]); if (prof && c.bank > 0) prof.bank = (prof.bank || 0) + c.bank; if (id) delete kept()[id]; }
+    changed();
+  } else if (!was || U.n === CREW.lapseDays - 1) tell(world, c, `${c.f.name}'s crew bank couldn't cover the upkeep (${money(U.owed)} owed). Put money in from the Crew app - ${CREW.lapseDays - U.n} more day${CREW.lapseDays - U.n === 1 ? '' : 's'} and the name lapses.`, 'warn');
+}
+// A season's end (seasons.js endSeason): the crews' holdings - the bank and the arrears - gone; the members and the name kept
+export function seasonReset(now = Date.now()) {
+  for (const c of Object.values(kept())) { c.bank = 0; if (c.f) c.up = { d: dayKey(now), owed: 0, n: 0 }; }
+  store.touch();
+}
+// every few seconds: each crew with someone online billed
+export function update(world) {
+  if (world.tick % 40 !== 31) return;
+  const now = Date.now();
+  for (const c of Object.values(kept())) {
+    if (!c.f || !c.members.some((pid) => world.players.has(pid))) continue;
+    try { bill(world, c, now); } catch (e) { if (world.opts && world.opts.throwErrors) throw e; console.error('[crews]', e); }
+  }
 }

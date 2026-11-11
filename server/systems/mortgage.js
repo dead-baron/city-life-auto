@@ -15,8 +15,9 @@ const money = (n) => `$${Math.round(n).toLocaleString()}`;
 // a home's terms: the deposit, what's owed after it (with the bank's share), each day's payment
 // (prof: whose - a business rank's smaller deposit: careers.js loanDeposit)
 export function terms(h, prof = null) {
-  const deposit = Math.round((h.price * careers.loanDeposit(prof, MORTGAGE.deposit)) / 100) * 100;
-  const owed = Math.round((h.price - deposit) * (1 + MORTGAGE.rate));
+  const price = homes.priceFor(prof, h);   // (a penthouse for less at a business rank: homes.js)
+  const deposit = Math.round((price * careers.loanDeposit(prof, MORTGAGE.deposit)) / 100) * 100;
+  const owed = Math.round((price - deposit) * (1 + MORTGAGE.rate));
   return { deposit, owed, pay: Math.ceil(owed / MORTGAGE.days), days: MORTGAGE.days };
 }
 export const loansOf = (prof) => prof.loans || {};

@@ -22295,3 +22295,54 @@ missions each from what the game already counts, gated by rank, short lines in c
   hideout, an office, a share". Dev menu: a "next chain step" for each. Tests: `test/contacts2.test.js` (the four chains,
   the crossing, the case lost and put back, the rent by the day, persistence and old saves, the one name),
   `test/contacts2w3.test.js` (the places on World v3's map).
+
+## 2026-11-10 - The career unlocks that were "coming": crews, hideouts, heist contracts, tracking, more businesses, staff, the penthouse
+
+The approved progression plan (docs/PROGRESSION.md, "Careers and ranks") listed rank unlocks that showed as "coming" in
+the What's next app. They're built now, on the systems that were already there. The numbers are in `shared/rules.js`
+(`CREW`, `HIDEOUT`, `HEIST_JOB`, `TRACK`, `BIZ_RANK`, `STAFF`, `PENTHOUSE`), and none of it needed an art or world rekey.
+- **A crew of your own** (crime, Lieutenant; `server/systems/crews.js`, extending the friends' crews rather than adding
+  a second system). Anyone can still ask people into a crew of up to 4. At the rank, the crew's lead founds it in the
+  phone's Crew app for `CREW.foundCost`: a name (the names' own rules, one crew to a name) and a tag of its initials
+  (`[NO]`) drawn before every member's name (the nameplate's `k`: `cosmetics.js plateOf`, `client/main.js`). A founded
+  crew stands with one member. The crew bank: `CREW.cut` of what a member earns on a job done with a crewmate within
+  `CREW.togetherPx` (a shift, fencing, a heist contract: `cutFrom`, from careers.js progress events) goes into it.
+  Members put in `CREW.put` at a time, and the lead pays it out evenly into every member's bank. Upkeep (a money sink) is
+  `CREW.upkeep` per wall-clock day from the bank. With `CREW.lapseDays` unpaid in a row, the name lapses but the crew
+  stays. It's kept in `store.kept.crews` (`f`, `bank`, `up`). A season's end empties the bank and the arrears and keeps
+  the members and the name (`crews.seasonReset`, called from seasons.js `endSeason`). The epoch reset keeps a founded
+  crew of one.
+- **A hideout** (crime, Underboss; `server/systems/hideout.js`, on biz.js's criminal hideout). Each player or crew gets
+  one: buying needs the rank and no hideout of yours or a crewmate's. Deacon's chain still gives his at any rank, and a
+  hideout no longer counts toward the business cap. A crewmate's hideout is yours too. Its stash (on the owner's
+  business entry, `stash { cars, crates }`) holds `HIDEOUT.cars` cars, driven up to the door, and `HIDEOUT.crates`
+  crates, through the office's menu. Lying low: wanted, in its yard (`lieLowR`) and out of sight, the heat cools
+  `coolX` times as fast (`p.lieLowX`, multiplied into law.js cooling). Upkeep through upkeep.js, as for any business.
+- **Heist contracts** (crime, Captain; `server/systems/heistjobs.js`, card source `heists`). Your contact offers one
+  bank's vault, rotating by the hour and the player. Accept it and you have `limitMin` minutes. A thermal drill is
+  fronted if you have none, its price taken off the pay. When the vault opens with you there (the new heist.js `onOpen`
+  hook), you get `pay[tier]`, crime money (never clean), plus `xp`. The next contract comes `gapMin` minutes later. The
+  plain vault tip gives way to it at that rank. Kept in `profile.heists`.
+- **Detective tracking tools** (police, Detective; `server/systems/tracking.js`) are merged into Captain Reyes's case
+  board. The case board's What's next card now shows for a detective without an office too, with a **Track** button, and
+  the office's desk rows track too. The tracker follows one wanted player at a time. Their position, to `fuzzPx`, is
+  refreshed every `everyS` (or `officeS` with a station office), never faster whatever the page sends. A new suspect
+  can be tracked at most every `startGapS`. Indoors there's no fix, and after `lostS` the trail is lost. It ends when
+  they're not wanted, cuffed or gone, or when the officer goes off duty. Only that officer sees it, as a `track` blip on
+  the minimap and the big map.
+- **A station office** (police, Chief): a Chief without Reyes's office gets the same record (`{ at: 'reyes', rank: 1 }`),
+  which brings its case board and the faster tracker.
+- **A second and third business** (business, Landlord): before it, `BIZ_RANK.first` at a time. The food truck and a
+  hideout aren't counted. Nobody is made to sell what they already have, and a contact's gift ignores the rank cap.
+- **Staff** (business, Mogul): hired at a farm, club or auto shop's office for `STAFF.hireRate` of its price. While you're
+  away, each in-game day's worth of wall-clock time since `e.staff.at` (kept at now while you're in the city) puts
+  `STAFF.share` of that day's takings in the till, using stock as a day would, up to the till's cap (`biz.awayPay`). Your
+  first second back tells you what they took.
+- **The penthouse** (business, Tycoon): `PENTHOUSE.off` off a penthouse's price, cash or mortgage
+  (`homes.priceFor`; the listings, the tour and the lobby show it).
+- The unlock labels lost their `soon`, so the app and the rank-up title card show them as unlocked. Still coming: armor
+  tiers, the K9, commercial property, the Kingpin title. Guide entries: A crew of your own, Heist contracts, Detective
+  tracking, A hideout, Businesses and staff, Penthouses (the Seasons entry notes the crew bank empties). Tests:
+  `test/unlocks.test.js` (gating, persistence, the crew bank's flows and upkeep, the stash and lying low, the contract's
+  pay and lapse, the tracker's rate limits, offline staff earnings, the penthouse's price). `test/biz.test.js` gives its
+  owners the ranks.

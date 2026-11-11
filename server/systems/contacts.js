@@ -418,7 +418,8 @@ function whereOf(world, p, C, o, r = null) {
 }
 const amount = (o, n) => (o.money ? money(n) : String(n));
 export function cardsFor(world, p) {
-  if (!appOn(p) || !p.profile.contacts) return [];
+  if (!appOn(p)) return [];
+  if (!p.profile.contacts) { const cs = caseCard(world, p); return cs ? [cs] : []; }   // (a detective met no contact yet: the tracker's case board)
   const out = [], main = careers.mainCareer(p);
   for (const id of CONTACT_ORDER) {
     const C = CONTACTS[id], r = p.profile.contacts.c[id];
@@ -459,12 +460,24 @@ export function caseBoard(world, p) {
   return out.sort((a, b) => b.stars - a.stars || a.name.localeCompare(b.name)).slice(0, CONTACT.caseMax);
 }
 const officeOf = (p) => { const B = p.profile.contacts; return B && B.office ? B.office : null; };
+// the detective's tracker (tracking.js - it registers here: this module doesn't import it): can(p), on(p, pid), start(world, p, pid) -> null | why
+// (a var: tracking.js may register while this module is still loading - an import cycle)
+var tracker;
+export function setTracker(o) { tracker = { ...TRACK0, ...(tracker || {}), ...o }; }
+const TRACK0 = { can: () => false, on: () => false, start: () => 'No tracker.' };
+const trk = () => tracker || TRACK0;
+// the case board's card: an office's (on duty), or a detective's with the tracker - then its button tracks the top suspect
 function caseCard(world, p) {
-  const O = officeOf(p), C = O && CONTACTS[O.at];
+  const O = officeOf(p), C = (O && CONTACTS[O.at]) || (trk().can(p) ? CONTACTS.reyes : null);
   if (!C || !p.badge) return null;
   const top = caseBoard(world, p)[0];
   if (!top) return null;
-  return { career: C.career, who: C.name, icon: 'eye', slot: 'career', id: `contact:office:${top.p.pid}`, fit: 1.2, x: top.x, y: top.y, title: `Your case board: ${top.name} (${top.stars} star${top.stars === 1 ? '' : 's'})`, sub: `Last seen in ${top.d}`, pay: 0, mins: 5, btn: { k: 'way', label: 'Waypoint' } };
+  const card = { career: C.career, who: C.name, icon: 'eye', slot: 'career', id: `contact:office:${top.p.pid}`, fit: 1.2, x: top.x, y: top.y, title: `Your case board: ${top.name} (${top.stars} star${top.stars === 1 ? '' : 's'})`, sub: `Last seen in ${top.d}`, pay: 0, mins: 5, btn: { k: 'way', label: 'Waypoint' } };
+  if (trk().can(p)) {
+    if (trk().on(p, top.p.pid)) card.sub += ' · tracked: on your map';
+    else Object.assign(card, { btn: { k: 'accept', label: 'Track' }, accept: (w, q) => trk().start(w, q, top.p.pid) });
+  }
+  return card;
 }
 registerCardSource('contacts', (world, p) => cardsFor(world, p), { slot: 'career' });
 
@@ -526,8 +539,8 @@ export function intoLockup(world, p, v) {
 export function menuOpts(world, p, poi, opts) {
   const O = officeOf(p), OC = O && CONTACTS[O.at], oq = OC && placeOf(world, OC);
   if (oq && oq.id === poi.id) {
-    const L = caseBoard(world, p);
-    L.forEach((c, i) => opts.push({ id: `ofc:${i}`, label: `Your office, the case board: ${c.name}`, note: `${c.stars} star${c.stars === 1 ? '' : 's'}, last seen in ${c.d}`, dis: true }));
+    const L = caseBoard(world, p), can = trk().can(p);
+    L.forEach((c, i) => opts.push({ id: `ofc:${i}`, label: `Your office, the case board: ${can ? (trk().on(p, c.p.pid) ? `${c.name} - tracked` : `track ${c.name}`) : c.name}`, note: `${c.stars} star${c.stars === 1 ? '' : 's'}, last seen in ${c.d}`, dis: !can || trk().on(p, c.p.pid) }));
     if (!L.length) opts.push({ id: 'ofc:0', label: 'Your office, the case board: nobody wanted right now', note: 'the cards on your phone show the top suspect on duty', dis: true });
   }
   const L = lockupOf(p), C = L && CONTACTS[L.at], q = C && placeOf(world, C);
@@ -537,6 +550,12 @@ export function menuOpts(world, p, poi, opts) {
   L.crates.forEach((c, i) => opts.push({ id: `lku:t:${i}`, label: `Your lock-up: take out the ${TIER_WORD[c.t] || 'crate'}`, note: money(c.v), dis: !!(ped && ped.carrying) }));
   if (crate && crate.kind === K.CRATE && !crate.job) opts.push({ id: 'lku:p', label: `Your lock-up: put the ${TIER_WORD[crate.tier] || 'crate'} away`, note: `${L.crates.length}/${CONTACT.lockupCrates}`, dis: L.crates.length >= CONTACT.lockupCrates });
   if (!L.cars.length && !L.crates.length && !crate) opts.push({ id: 'lku:i', label: 'Your lock-up: empty', note: `drive a car up to it; carry a crate in`, dis: true });
+}
+// the case board's row picked (economy.js 'ofc'): track that suspect
+export function officeMenu(world, p, poi, parts) {
+  const c = caseBoard(world, p)[Number(parts[1])];
+  if (!c) return 'The board\'s changed - have another look.';
+  return trk().start(world, p, c.p.pid);
 }
 export function onMenu(world, p, poi, parts) {
   const L = lockupOf(p), ped = p.ped, prof = p.profile;

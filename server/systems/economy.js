@@ -376,7 +376,7 @@ function menuOf(world, p, poi) {
       if (!mine) {
         sub = `A ${h.dock ? 'waterfront ' : ''}${KIND_NAME[h.kind] || h.kind} with a ${h.slots}-car garage${h.dock ? ' and its own boat dock and boathouse' : ''}. Own as many homes as you like: each one is a respawn point, a safe place to hide and stash things, and adds garage space you can reach from any of your homes.`;
         opts.push({ id: 'htour', label: 'Take a look inside', note: 'walk around it first' });   // (H65: homeinside.js tour)
-        opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: h.price });
+        opts.push({ id: 'hbuy', label: `Buy this ${KIND_NAME[h.kind] || h.kind}`, price: homes.priceFor(prof, h) });
         { const t = mortgage.terms(h, prof); opts.push({ id: 'hmort', label: `Buy with a mortgage: ${t.days} payments of $${t.pay.toLocaleString()} a day`, price: t.deposit, note: 'deposit' }); }   // (H65: mortgage.js)
       } else {
         const st = prof.stash || {};
@@ -835,6 +835,7 @@ function execute(world, p, poi, opt) {
     case 'hhide': return homes.beginEnter(world, p, homes.homeFor(world, p, poi));
     case 'hleave': homes.leaveHome(world, p); return null;
     case 'lku': return contacts.onMenu(world, p, poi, parts);   // (your lock-up: contacts.js)
+    case 'ofc': return contacts.officeMenu(world, p, poi, parts);   // (your office's case board: track a suspect - tracking.js)
     case 'htc': return extract.takeOut(world, p, Number(parts[1]));   // (a valuable crate out of the stash: extract.js)
     case 'hst': case 'htk': {
       const id = parts[1];

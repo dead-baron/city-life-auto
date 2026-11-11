@@ -6,7 +6,8 @@
 //     endSeason): the final boards; each career board's top SEASON.top get a gold plate for good (cosmetics.js 'b:<s>:<c>');
 //     the season kept in the hall (store.kept.seasons); everyone online out to the title (players.js seasonOut); the next
 //     season; every profile reset (resetOne): the progress-epoch reset (store.js resetProfile - the account, name, looks,
-//     clothes and cosmetics kept; the crews kept as they are) with the season's badge and top-of-ladder titles noted
+//     clothes and cosmetics kept; the crews' members and names kept, their holdings - the crew bank, its arrears - emptied:
+//     crews.js seasonReset) with the season's badge and top-of-ladder titles noted
 //     first and the skills carried over at SEASON.skillKeep of their levels. The records board of fish starts again.
 //     A profile still behind the season when it joins (none should be: the end resets them all and saves) gets the same.
 //   - the leaderboards: each career's (career XP - all of it is this season's: a season's end resets it) and the side
@@ -23,6 +24,7 @@ import * as careers from './careers.js';
 import * as cosmetics from './cosmetics.js';
 import * as biz from './biz.js';
 import * as players from './players.js';
+import * as crews from './crews.js';   // (the crews' holdings: crews.js seasonReset)
 
 const { SEASON, SEASONS, CAREERS, CAREER_KEYS } = R;
 const DAY_MS = 86400000;
@@ -208,6 +210,7 @@ export function endSeason(world, { now = Date.now() } = {}) {
     else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; }
   }
   store.kept.fishRecords = {};
+  crews.seasonReset(now);   // (the crews' holdings - the bank, the arrears; the members and the name stay)
   cache = null;
   store.touch();
   try { store.flushSync(); } catch (e) { console.error('[seasons] save after the season\'s end failed (it saves again shortly):', e.message); }

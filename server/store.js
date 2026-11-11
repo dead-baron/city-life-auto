@@ -84,7 +84,7 @@ export function resetOldEpochs(st) {
   if (kept.crews) for (const [id, c] of Object.entries(kept.crews)) {
     c.members = (c.members || []).filter((pid) => !reset.has(pid));
     if (c.names) for (const pid of Object.keys(c.names)) if (reset.has(pid)) delete c.names[pid];
-    if (c.members.length < 2) delete kept.crews[id];
+    if (c.members.length < (c.f ? 1 : 2)) delete kept.crews[id];   // (a founded crew stands with one: crews.js minOf)
     else if (reset.has(c.lead)) c.lead = c.members[0];
   }
   if (kept.fishRecords && kept.epoch !== PROGRESS_EPOCH) kept.fishRecords = {};

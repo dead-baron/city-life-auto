@@ -3,7 +3,8 @@
 import { K, WORLD_VERSION } from '../../shared/constants.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK } from '../../shared/map.js';
-import { HIDE_TIME_S, SPAWN_PROTECT_S } from '../../shared/rules.js';
+import { HIDE_TIME_S, SPAWN_PROTECT_S, PENTHOUSE } from '../../shared/rules.js';
+import { hasUnlock } from './careers.js';   // (a penthouse for less at the business career's 'penthouse' rank)
 import { lobbyKey, planOf } from '../../shared/homelayout.js';
 import { store } from '../store.js';
 import { LEGACY_HOMES } from './legacy-homes.js';
@@ -154,10 +155,18 @@ export function garageCap(world, prof) {
   return Math.min(60, cap);
 }
 
+// what a home costs you: a penthouse PENTHOUSE.off less at the business career's 'penthouse' rank (its worth - the sale's
+// 60%, the upkeep - stays its price)
+export function priceFor(prof, h) {
+  if (!h || h.plan !== 'penthouse' || !prof || !hasUnlock(prof, 'penthouse')) return h ? h.price : 0;
+  return Math.round((h.price * (1 - PENTHOUSE.off)) / 500) * 500;
+}
 export function buy(world, p, home, pay) {
   if (world.homeOwner.has(home.id)) return 'Someone already owns this place.';
-  if (!pay(p, home.price)) return `You need $${home.price.toLocaleString()} (cash + bank).`;
-  claim(world, p, home, home.price);
+  const price = priceFor(p.profile, home);
+  if (!pay(p, price)) return `You need $${price.toLocaleString()} (cash + bank).`;
+  claim(world, p, home, price);
+  if (price < home.price) world.notify(p, `A Tycoon's price for the penthouse: $${(home.price - price).toLocaleString()} off.`, 'good');
   return null;
 }
 // (H65) a home released: back on the market (the bank taking it back - mortgage.js)

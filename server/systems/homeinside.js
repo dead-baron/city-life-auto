@@ -379,7 +379,7 @@ function menuOf(world, p, h, what) {
   if (what === 'tour') {   // a visitor at the front door: the price and Buy, or out
     const L = planFor(h), beds = L.pieces.filter((q) => q.use === 'bed').length;
     const opts = [
-      { id: 'hi:tbuy', label: `Buy ${h.name}`, price: h.price, note: `wallet ${money(prof.cash)} · bank ${money(prof.bank)}` },
+      { id: 'hi:tbuy', label: `Buy ${h.name}`, price: homes.priceFor(prof, h), note: `wallet ${money(prof.cash)} · bank ${money(prof.bank)}` },
       { id: 'hi:tmort', label: `Buy it with a mortgage: ${mortgage.terms(h, p.profile).days} payments of ${money(mortgage.terms(h, p.profile).pay)} a day`, price: mortgage.terms(h, p.profile).deposit, note: 'deposit' },
       { id: 'hi:tout', label: 'Step outside' },
       { id: 'close', label: 'Keep looking' },

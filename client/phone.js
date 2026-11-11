@@ -413,9 +413,15 @@ export function createPhone(ctx) {
 export function crewHtml(crew, m, inPeople = false) {
   const h = (t) => (inPeople ? '' : `<h3>${t}</h3>`);
   if (!crew) return h('Crew') + '<p class="ph-empty">Loading…</p>';
-  if (!crew.crew) return `${h('Crew')}<p class="ph-hint">No crew yet. Walk up to another player and press the action button to ask them in - up to ${crew.max} in a crew. In a crew you see each other on the map, can't hurt each other, send quick lines here, and split a bank job's drawers.</p>`;
-  const C = crew.crew, n = C.members.length;
-  return `${inPeople ? `<p class="ph-hint">${n} of ${crew.max} in your crew</p>` : `<h3>Your crew (${n}/${crew.max})</h3>`}`
+  const F = crew.found, money = (v) => '$' + Math.round(v).toLocaleString('en-US');
+  // found a crew of your own (server crews.js found): a name, the tag by everyone's names, the crew bank
+  const foundHtml = F && F.can ? `<h3>A crew of your own</h3><p class="ph-hint">Name it (${money(F.cost)}): a tag by every member's name and a crew bank.</p><div class="ph-row"><input id="crew-name" maxlength="16" placeholder="Crew name" aria-label="Crew name"><button data-act="crewfound">Found</button></div>` : '';
+  if (!crew.crew) return `${h('Crew')}<p class="ph-hint">No crew yet. Walk up to another player and press the action button to ask them in - up to ${crew.max} in a crew. In a crew you see each other on the map, can't hurt each other, send quick lines here, and split a bank job's drawers.${F && !F.can ? ` At ${esc(F.need)} (crime) you can found a crew of your own.` : ''}</p>${foundHtml}`;
+  const C = crew.crew, n = C.members.length, O = C.own;
+  const ownHtml = O ? `<h3>${esc(O.name)} [${esc(O.tag)}]</h3><p class="ph-hint">Crew bank ${money(O.bank)} · upkeep ${money(O.day)} a day${O.owed ? ` · <b>${money(O.owed)} owed</b> (${O.lapse - O.n} days before the name lapses)` : ''} · ${Math.round(O.cut * 100)}% of jobs done together goes in.</p>`
+    + `<button class="ph-row" data-act="crewput"><span class="ic">$</span><span class="nm">Put ${money(O.put)} in the crew bank</span></button>`
+    + (C.lead ? '<button class="ph-row" data-act="crewpay"><span class="ic">÷</span><span class="nm">Pay the bank out evenly</span></button>' : '') : foundHtml;
+  return ownHtml + `${inPeople ? `<p class="ph-hint">${n} of ${crew.max} in your crew</p>` : `<h3>Your crew (${n}/${crew.max})</h3>`}`
     + C.members.map((q, k) => `<div class="ph-row"><span class="ic">${q.lead ? '★' : '•'}</span><span class="nm">${esc(q.n)}${q.me ? ' (you)' : ''}<small>${q.me ? (q.where ? esc(q.where) : '') : q.on ? (q.where ? `${esc(q.where)} · ${m(q.d || 0)}` : 'online') : 'offline'}</small></span>`
       + (!q.me && q.x !== null ? `<button data-mate="${k}" aria-label="Waypoint to ${esc(q.n)}">📍</button>` : '') + (C.lead && !q.me ? `<button data-kick="${k}" aria-label="Take ${esc(q.n)} off the crew">✕</button>` : '') + '</div>').join('')
     + '<h3>Say to the crew</h3><div class="ph-apps ph-says">' + crew.says.map((t, i) => `<button class="ph-app" data-say="${i}">${esc(t)}</button>`).join('') + '</div>'
@@ -432,6 +438,9 @@ export function wireCrew(el, getCrew, ctx) {
     ctx.close();
   };
   for (const b of el.querySelectorAll('[data-kick]')) b.onclick = () => { b.disabled = true; const c = getCrew(), q = c && c.crew && c.crew.members[Number(b.dataset.kick)]; ctx.send({ t: 'phone', a: 'crewkick', k: Number(b.dataset.kick), n: q ? q.n : '' }); };
+  for (const b of el.querySelectorAll('[data-act="crewfound"]')) b.onclick = () => { const i = el.querySelector('#crew-name'), name = i ? i.value.trim() : ''; if (name) ctx.send({ t: 'phone', a: 'crewfound', name }); };
+  for (const b of el.querySelectorAll('[data-act="crewput"]')) b.onclick = () => ctx.send({ t: 'phone', a: 'crewput' });
+  for (const b of el.querySelectorAll('[data-act="crewpay"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewpay' }); else { b.dataset.sure = '1'; b.querySelector('.nm').textContent = 'Press again to pay it out'; } };
   for (const b of el.querySelectorAll('[data-act="crewleave"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'crewleave' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to leave the crew'; } };
 }
 

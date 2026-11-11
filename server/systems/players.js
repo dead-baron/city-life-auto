@@ -21,7 +21,7 @@ import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
 import * as gear from './gear.js';   // (the rides you own and carry - a board in your hand, rollerblades: the owner, 11-03)
-const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); return out; };   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
+const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); tracking.radar(world, p, out); return out; };   // (+ a detective's tracked suspect: tracking.js)   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
 import * as law from './law.js';
 import * as bounties from './bounties.js';
 import * as economy from './economy.js';
@@ -63,6 +63,8 @@ import * as minigames from './minigames.js';
 import * as robbery from './robbery.js';
 import * as heist from './heist.js';
 import * as crews from './crews.js';
+import * as hideout from './hideout.js';
+import * as tracking from './tracking.js';   // (a car into your crew's hideout's stash, at the wheel by its door)
 import { cleanName, nameKey, NAME } from '../../shared/names.js';
 import * as cruiser from './cruiser.js';
 import * as events from './events.js';
@@ -844,7 +846,7 @@ export function findInteraction(world, p) {
     if (fi) return fi;
     const work = forklift.vehicleInteraction(world, p) || fishboat.vehicleInteraction(world, p);   // at a forklift's or the trawler's wheel (batch 8)
     if (work) return work;
-    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || woodjob.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || contacts.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
+    return rigs.interaction(world, p) || mailjob.vanInteraction(world, p) || jobs.truckInteraction(world, p) || transit.rideInteraction(world, p) || ferries.interaction(world, p) || rentals.vehicleInteraction(world, p) || horses.vehicleInteraction(world, p) || woodjob.vehicleInteraction(world, p) || felling.vehicleInteraction(world, p) || homes.vehicleInteraction(world, p) || contacts.vehicleInteraction(world, p) || hideout.vehicleInteraction(world, p) || sar.interaction(world, p) || coastguard.interaction(world, p) || fishHere(world, p, ped) || drivein.interaction(world, p);   // (a boat sitting still: fish over the side; parked at the drive-in: tune in - drivein.js)
   }
   const now = world.time;
   if (now < ped.downUntil || now < ped.stunUntil) return null;

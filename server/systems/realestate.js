@@ -68,7 +68,7 @@ export function listings(world, p, msg = {}) {
   const pick = forSale.filter(KINDS[kind]);
   const dist = (h) => (me ? Math.hypot(h.x - me.x, h.y - me.y) : 0);
   pick.sort(sort === 'cheap' ? (a, b) => a.price - b.price || dist(a) - dist(b) : sort === 'dear' ? (a, b) => b.price - a.price || dist(a) - dist(b) : (a, b) => dist(a) - dist(b) || a.price - b.price);
-  const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), dep: mortgage.terms(h, p.profile).deposit }));   // (dep: a mortgage's deposit)
+  const sale = pick.slice(0, SHOW).map((h) => ({ ...row(world, h), p: homes.priceFor(p.profile, h), dep: mortgage.terms(h, p.profile).deposit }));   // (p: what it costs you - a penthouse for less at a rank)   // (dep: a mortgage's deposit)
   const loans = prof.loans || {};
   const mine = homes.ownedHomes(world, prof).filter(Boolean).map((h) => ({ ...row(world, h), worth: h.price, back: Math.max(0, Math.round(h.price * SELL_BACK) - (loans[h.id] ? loans[h.id].owed : 0)), spawn: prof.spawnHome === h.id ? 1 : 0, ...(loans[h.id] ? { owed: loans[h.id].owed, pay: loans[h.id].pay, missed: loans[h.id].missed } : null) }));
   for (const r of mine) { const h = homes.homeById(world, r.id); if (h) r.up = upkeep.rowInfo(prof, `h:${h.id}`, upkeep.homeDaily(h)); }   // (its upkeep: a day's, what's unpaid, shabby - upkeep.js)

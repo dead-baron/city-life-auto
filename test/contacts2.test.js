@@ -210,7 +210,7 @@ test('Captain Reyes: a stakeout while the ship unloads, the seized Port haul to 
   crook.name = 'Vinnie'; crook.wanted = 3;
   const opts = economy.buildMenu(w, p, hq).opts;
   const row = opts.find((o) => o.id === 'ofc:0');
-  assert.match(row.label, /case board: Vinnie/);
+  assert.match(row.label, /case board: (track )?Vinnie/);   // (a detective can track them from here: tracking.js)
   assert.match(row.note, /3 stars/);
   const cs = contacts.cardsFor(w, p).find((q) => q.id === `contact:office:${crook.pid}`);
   assert.equal(cs.x, Math.round(crook.ped.x));

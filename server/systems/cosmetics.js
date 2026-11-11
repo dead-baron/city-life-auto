@@ -23,6 +23,7 @@ import { PAINTS } from '../../shared/vehicles.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';
 import * as looks from './looks.js';
+import { tagOf } from './crews.js';   // (a founded crew's tag by its members' names)
 
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const COLOR = Object.fromEntries(COSMETICS.colors.map((c) => [c.id, c]));
@@ -65,12 +66,14 @@ export function hasPlate(prof, id) {
 }
 export const hasColor = (prof, id) => cosmOf(prof).c.includes(id);
 
-// what the nameplate shows: { c (name color, hex), t (plate text), g (gold plate) } or null
+// what the nameplate shows: { c (name color, hex), t (plate text), g (gold plate), k (a founded crew's tag: crews.js) } or null
 export function plateOf(prof) {
   const C = cosmOf(prof), out = {};
   if (C.nc && COLOR[C.nc] && hasColor(prof, C.nc)) out.c = COLOR[C.nc].hex;
   if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp)) out.g = 1; }
-  return out.c || out.t ? out : null;
+  const k = prof.pid ? tagOf(prof.pid) : null;
+  if (k) out.k = k;
+  return out.c || out.t || out.k ? out : null;
 }
 // the player's nameplate brought up to date (the ped's descriptor sent again when it changed)
 export function refresh(p) {
@@ -121,6 +124,7 @@ export function update(world) {
     if (!p.profile || !p.ped) continue;
     if (!p.cosmOk) { p.cosmOk = 1; grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
     if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
+    else if (p.npDirty) { p.npDirty = false; refresh(p); }   // (a crew's tag on or off: crews.js)
   }
 }
 

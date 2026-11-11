@@ -131,6 +131,10 @@ import * as carsoccer from './systems/carsoccer.js';
 import * as bathhouse from './systems/bathhouse.js';
 import * as reputation from './systems/reputation.js';
 import * as upkeep from './systems/upkeep.js';
+import * as crews from './systems/crews.js';
+import * as hideout from './systems/hideout.js';
+import * as heistjobs from './systems/heistjobs.js';
+import * as tracking from './systems/tracking.js';
 import * as cosmetics from './systems/cosmetics.js';
 import * as seasons from './systems/seasons.js';
 
@@ -244,6 +248,10 @@ const SYSTEMS = [
   ['biz', biz.update],              // the businesses: a day's takings in the till, the hideouts' guards, the food trucks' hatches, the decks (biz.js)
   ['mortgage', mortgage.update],    // mortgages: a payment each in-game day from the bank, the home taken back after too many missed (H65)
   ['upkeep', upkeep.update],        // property upkeep: the wall-clock day's bill from the bank, arrears, shabby, repossessed (upkeep.js)
+  ['crews', crews.update],          // founded crews' upkeep from the crew bank on the wall-clock day; a name lapsed (crews.js)
+  ['hideout', hideout.update],      // lying low in your crew's hideout's yard: the heat cools faster (hideout.js)
+  ['heistjobs', heistjobs.update],  // heist contracts lapsed (heistjobs.js)
+  ['tracking', tracking.update],    // detectives' trackers on wanted players: a fix now and then; the station office (tracking.js)
   ['cosmetics', cosmetics.update],  // name colors and title plates on the nameplate, the beta gift on a first session, top ranks kept (cosmetics.js)
   ['seasons', seasons.update],      // the season's leaderboards worked out again every SEASON.refreshS (seasons.js)
   ['mail', mail.update],            // the mail: the week's utilities bill, letters, coupons (H71)

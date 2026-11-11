@@ -24,8 +24,15 @@
 // Where: a farm's, a hideout's and a Spray & Go's office is a spot of its own (the action button there opens the
 // manager's menu); a club's is its bar's menu (a row), the garage's its counter's, the food truck's the dealership's and,
 // out on the street, the truck itself. Owned businesses show on your map (players.js self record: biz).
-//   profile.biz: { [site id]: { t, paid (what it cost, the upgrades too), up: { key: level }, stock, till, day } } - the
-//     food truck's under 'truck' (its site: the dealership it came from)
+// How many at once (progression, the business career's 'second' rank): BIZ_RANK.first before it, BIZ.max from it (the food
+// truck and a hideout not counted - a hideout is one a player or crew: hideout.js; nobody's made to sell what they have).
+// Staff (the 'staff' rank): hired at a farm, a club or an auto shop for STAFF.hireRate of its price, they run it while
+// you're away - each in-game day's worth of time you were gone (from the timestamps: e.staff.at, kept at now while you're
+// in the city) puts STAFF.share of the day's takings in the till (stock used as a day would), up to the till's cap; the
+// first second you're back says what they took (awayPay).
+//   profile.biz: { [site id]: { t, paid (what it cost, the upgrades too), up: { key: level }, stock, till, day, staff?
+//     { at (ms: credited to) }, stash? (a hideout's: hideout.js) } } - the food truck's under 'truck' (its site: the
+//     dealership it came from)
 //   world.biz: { sites, byId, owner (site id -> pid), guards (site id -> ids), trucks (pid -> vehicle id), dj, runs }
 //   the menus: the page's ordinary menus, a negative poi (-100 - the site's index; TRUCK_POI: your truck)
 import { K, T, TILE } from '../../shared/constants.js';
@@ -42,7 +49,8 @@ import * as crews from './crews.js';
 import * as skills from './skills.js';
 import { spawnNpc, despawnNpc, startFight, markBrawl, leaveBuilding } from './npc.js';
 import { ITEMS } from '../../shared/items.js';
-import { HOME_IN, NPC_CRITICAL } from '../../shared/rules.js';
+import { HOME_IN, NPC_CRITICAL, BIZ_RANK, STAFF } from '../../shared/rules.js';
+import { DAY_LOOP_S } from '../../shared/constants.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 import { setHooks as nextHooks } from './whatsnext.js';
 
@@ -72,6 +80,26 @@ const UPS = {
 };
 const STOCK = { farm: BIZ.farm.feed, club: BIZ.club.stock, hideout: BIZ.hideout.nutrients, shop: BIZ.shop.parts, truck: BIZ.truck.food };
 const lvl = (e, k) => (e && e.up && e.up[k]) | 0;
+// the hideouts' own rules (hideout.js, which imports this module): may you buy this one; its stash's menu rows and choices
+// (a var, made on first use: hideout.js registers as it loads, maybe while this module is still loading - an import cycle)
+var hide;
+export function setHideoutHooks(o) { hide = Object.assign(hide || {}, o); }
+// how many businesses count toward the cap (not the food truck, not a hideout) and the cap by rank
+const counted = (world, prof) => ownedBy(world, prof).filter((o) => o.s.t !== 'truck' && o.s.t !== 'hideout').length;
+export const bizCap = (prof) => (careers.hasUnlock(prof, 'second') ? BIZ.max : BIZ_RANK.first);
+const rankAt = (c, key) => { const R = careers.CAREERS[c].ranks; for (let i = 0; i < R.length; i++) if ((R[i].unlock || []).some((u) => u.k === key)) return careers.rankName(c, i); return ''; };
+// why you can't buy it (money aside), or null
+export function buyRefusal(world, p, s) {
+  const prof = p.profile;
+  if (s.t === 'truck') return null;
+  if (s.t === 'hideout') { if (p.badge) return 'Not with a badge on.'; return hide && hide.canBuy ? hide.canBuy(world, p, s) : null; }
+  const n = counted(world, prof);
+  if (n >= BIZ.max) return `You own ${BIZ.max} businesses already - sell one first.`;
+  if (n >= bizCap(prof)) return `A second business comes at ${rankAt('business', 'second')} (business) - sell this one first, or climb.`;
+  return null;
+}
+export const staffable = (s) => s.t === 'farm' || s.t === 'club' || s.t === 'shop';
+export const staffCost = (s) => Math.round((s.price * STAFF.hireRate) / 500) * 500;
 
 // ---- the places ------------------------------------------------------------------------------------------------------
 const distOf = (m, x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? DISTRICTS[m.dist[m.idx(tx, ty)]] || null : null; };
@@ -344,9 +372,12 @@ export function menuOf(world, p, s) {
   const head = { t: 'menu', poi: poiOfSite(s), cash: prof.cash, bank: prof.bank };
   if (!own) {
     const pid = s.t !== 'truck' ? ownerOf(world, s.id) : null;
-    if (pid) return { ...head, title: s.name, sub: `${nameOf(pid)}'s ${T0.word}.`, opts: [{ id: 'close', label: 'Leave' }] };
-    const n = ownedBy(world, prof).filter((o) => o.s.t !== 'truck').length, full = s.t !== 'truck' && n >= BIZ.max;
-    const why = full ? `you own ${BIZ.max} already` : s.t === 'hideout' && p.badge ? 'not with a badge' : '';
+    if (pid) {   // (a crewmate's hideout: its stash is the crew's - hideout.js)
+      if (s.t === 'hideout' && hide && hide.rows) hide.rows(world, p, s, opts);
+      opts.push({ id: 'close', label: 'Leave' });
+      return { ...head, title: s.name, sub: `${nameOf(pid)}'s ${T0.word}.${opts.length > 1 ? ' Your crew\'s hideout - its stash is yours too.' : ''}`, opts };
+    }
+    const why = buyRefusal(world, p, s) || '';
     opts.push({ id: 'buy', label: `Buy ${s.t === 'truck' ? 'a food truck and the van' : s.name}`, price: s.price, dis: !!why, note: why || T0.word });
     opts.push({ id: 'close', label: 'Leave' });
     return { ...head, title: `${s.name} - for sale`, sub: `${T0.blurb}${s.t === 'farm' ? ` ${s.fields.length} field${s.fields.length === 1 ? '' : 's'}.` : ''}`, opts };
@@ -358,6 +389,12 @@ export function menuOf(world, p, s) {
   } else opts.push({ id: 'take', label: 'Collect the takings', price: till ? -till : undefined, dis: !till });
   opts.push(stockRow(s, e));
   upRows(s, e, opts);
+  if (staffable(s)) {
+    const ok = careers.hasUnlock(prof, 'staff');
+    opts.push(e.staff ? { id: 'staff', label: 'Staff run it while you\'re away - let them go', note: `${Math.round(STAFF.share * 100)}% of a day's takings while you're away` }
+      : { id: 'staff', label: 'Hire staff to run it while you\'re away', price: staffCost(s), dis: !ok, note: ok ? `${Math.round(STAFF.share * 100)}% of a day's takings while you're away` : `at ${rankAt('business', 'staff')} (business)` });
+  }
+  if (s.t === 'hideout' && hide && hide.rows) hide.rows(world, p, s, opts);
   if (s.t === 'club') { const cool = S(world).dj.get(s.id); opts.push({ id: 'dj', label: 'Take the decks - a DJ set', dis: !world.clock.isNight || (cool && world.time < cool.next), note: !world.clock.isNight ? 'at night' : cool && world.time < cool.next ? 'catch your breath' : 'the floor drops, they tip' }); }
   if (s.t === 'shop') opts.push({ id: 'job', label: `Bring a customer's car in to fix (${money(BIZ.shop.fix.pay + BIZ.shop.perTools * lvl(e, 'tools'))})`, dis: !!p.bizFix || world.time < (e.fixAt || 0), note: p.bizFix ? 'one waiting' : world.time < (e.fixAt || 0) ? 'none waiting yet' : 'a part fitted' });
   if (s.t === 'truck') {
@@ -404,7 +441,7 @@ export function onMenu(world, p, poiId, optId) {
   }
   if (optId === 'close') return;
   const o = menu && menu.opts.find((q) => q.id === optId);
-  const err = !o ? 'That option is not available here.' : o.dis ? 'Not available.' : run(world, p, s, optId, poiId === TRUCK_POI);
+  const err = !o ? 'That option is not available here.' : o.dis ? 'Not available.' : String(optId).startsWith('hdo:') && hide && hide.run ? hide.run(world, p, s, optId) : run(world, p, s, optId, poiId === TRUCK_POI);
   if (err) world.notify(p, err, 'bad');
   p.meDirty = true;
   if (p.conn && optId !== 'van' && optId !== 'run' && optId !== 'job') { const again = poiId === TRUCK_POI ? truckMenu(world, p) : menuOf(world, p, s); if (again) p.conn.sendJSON(again); }
@@ -454,6 +491,16 @@ function run(world, p, s, opt, atTruck) {
       return null;
     }
     case 'spawn': prof.lastSpawn = `biz:${s.id}`; store.touch(); world.notify(p, `You'll wake up at ${s.name} after you die.`, 'good'); return null;
+    case 'staff': {
+      if (!staffable(s)) return 'No staff for this one.';
+      if (e.staff) { delete e.staff; store.touch(); world.notify(p, `You let ${s.name}'s staff go - it earns only while you're in town now.`, 'info'); return null; }
+      if (!careers.hasUnlock(prof, 'staff')) return `Staff come at ${rankAt('business', 'staff')} (business).`;
+      if (!pay(p, staffCost(s))) return `You need ${money(staffCost(s))}.`;
+      e.staff = { at: Date.now() };
+      store.touch();
+      world.notify(p, `Staff hired at ${s.name}: while you're away they run it - ${Math.round(STAFF.share * 100)}% of each day's takings in the till.`, 'good');
+      return null;
+    }
     case 'sell': return sell(world, p, s);
     case 'dj': return djSet(world, p, s);
     case 'job': return startFix(world, p, s, e);
@@ -467,8 +514,8 @@ export function buy(world, p, s) {
   const prof = p.profile;
   if (mine(world, p, s)) return 'It\'s yours already.';
   if (s.t !== 'truck' && ownerOf(world, s.id)) return 'Someone owns it already.';
-  if (s.t !== 'truck' && ownedBy(world, prof).filter((o) => o.s.t !== 'truck').length >= BIZ.max) return `You own ${BIZ.max} businesses already - sell one first.`;
-  if (s.t === 'hideout' && p.badge) return 'Not with a badge on.';
+  const why = buyRefusal(world, p, s);
+  if (why) return why;
   if (!pay(p, s.price)) return `You need ${money(s.price)} (cash + bank).`;
   const e = { t: s.t, paid: s.price, up: {}, stock: STOCK[s.t].qty, till: 0, day: world.day };   // (a first load of stock comes with it)
   if (s.t === 'truck') { e.site = s.id; prof.biz = { ...(prof.biz || {}), truck: e }; }
@@ -484,7 +531,7 @@ export function grant(world, p, s, extra = {}) {
   const prof = p.profile;
   if (!s || s.t === 'truck') return 'Not that one.';
   if (ownerOf(world, s.id)) return 'Someone owns it already.';
-  if (ownedBy(world, prof).filter((o) => o.s.t !== 'truck').length >= BIZ.max) return `You own ${BIZ.max} businesses already.`;
+  if (s.t !== 'hideout' && counted(world, prof) >= BIZ.max) return `You own ${BIZ.max} businesses already.`;   // (a gift: the rank's cap aside)
   (prof.biz ||= {})[s.id] = { t: s.t, paid: 0, up: {}, stock: STOCK[s.t].qty, till: 0, day: world.day, ...extra };
   owners(world).set(s.id, p.pid);
   store.touch(); p.meDirty = true;
@@ -863,6 +910,41 @@ function stepTrucks(world) {
   }
 }
 
+// ---- staff while you're away ----------------------------------------------------------------------------------------------
+// Each in-game day's worth of wall-clock time since e.staff.at: STAFF.share of the day's takings into the till (stock used
+// as a day would; nothing without it), up to the till's cap. -> [{ s, n ($) }] (now: ms - the tests' clock)
+const DAY_MS = DAY_LOOP_S * 1000;
+export function awayPay(world, prof, now = Date.now()) {
+  const out = [];
+  for (const { s, e } of ownedBy(world, prof)) {
+    if (!e || !e.staff || !staffable(s)) continue;
+    const days = Math.floor(Math.max(0, now - (e.staff.at || now)) / DAY_MS);
+    if (days <= 0) continue;
+    const cap = capOf(world, s, e), before = e.till | 0;
+    for (let k = 0; k < Math.min(days, 60) && (e.till | 0) < cap; k++) {
+      const d = dayOf(world, s, e);
+      if (d.earn <= 0) break;
+      e.stock = Math.max(0, (e.stock | 0) - d.used);
+      e.till = Math.min(cap, (e.till | 0) + Math.round(d.earn * STAFF.share));
+    }
+    e.staff.at = (e.till | 0) >= cap || days > 60 ? now : e.staff.at + days * DAY_MS;
+    if ((e.till | 0) > before) out.push({ s, n: (e.till | 0) - before });
+    store.touch();
+  }
+  return out;
+}
+// in the city: the staff's clock kept at now (your own time there isn't time away); the first time this session, what
+// they took while you were gone
+function staffTick(world, p, now = Date.now()) {
+  if (!p.staffSeen) {
+    p.staffSeen = 1;
+    const got = awayPay(world, p.profile, now);
+    if (got.length) { world.notify(p, `While you were away, your staff took ${got.map((q) => `${money(q.n)} at ${q.s.name}`).join(' · ')} - it's in the till${got.length > 1 ? 's' : ''}.`, 'good'); p.meDirty = true; }
+    return;
+  }
+  for (const { e } of ownedBy(world, p.profile)) if (e && e.staff) e.staff.at = now;
+}
+
 // ---- every tick -------------------------------------------------------------------------------------------------------
 export function update(world) {
   if (world.tick % 40 === 31) {
@@ -870,6 +952,7 @@ export function update(world) {
     for (const p of world.players.values()) {
       if (!p.profile.biz) continue;
       if (p.profile.biz && !p.bizClaimed) { p.bizClaimed = true; claimAll(world, p.profile); }   // (a profile that came after the start)
+      if (p.conn) staffTick(world, p);
       newDay(world, p);
     }
   }

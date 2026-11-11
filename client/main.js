@@ -5126,9 +5126,9 @@ function drawWorldLabels(peds, vehs, now, z) {
     }
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.d.n, p.rx + 1 / z, y + 1 / z);
-      const np = p.d.np;   // (their name color and title plate: server cosmetics.js)
-      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? '#7dffa0' : p.flags & PF.BADGE ? '#7ab0ff' : (np && np.c) || '#fff'; g.fillText(p.d.n, p.rx, y);   // (your crew's: green - crews.js)
+      const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
+      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z);
+      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? '#7dffa0' : p.flags & PF.BADGE ? '#7ab0ff' : (np && np.c) || '#fff'; g.fillText(nm, p.rx, y);   // (your crew's: green - crews.js)
       if (np && np.t) { const t = np.t.toUpperCase(); g.font = `700 ${9 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, p.rx + 1 / z, y - 10 / z); g.fillStyle = np.g ? '#ffcc33' : '#d8dee9'; g.fillText(t, p.rx, y - 11 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }

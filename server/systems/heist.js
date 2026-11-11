@@ -44,6 +44,9 @@ function vaultAt(world, b) {
   return { bid: b.id, x: v.x, y: v.y, sx: v.sx, sy: v.sy, x0: v.x0, x1: v.x1, u: v.u, label: poi ? poi.label : 'the bank', tier: tierAt(world, v.x, v.y) };
 }
 export const stateOf = (world, bid) => (world.vaults && world.vaults.get(bid)) || null;
+// told when a vault swings open (heistjobs.js: a heist contract on that bank): fn(world, V)
+const opened = [];
+export function onOpen(fn) { if (!opened.includes(fn)) opened.push(fn); }
 
 // The action button at a vault door (players.js interaction)
 export function interaction(world, p) {
@@ -124,6 +127,7 @@ function open(world, V) {
   world.emit(V.x, V.y, { e: 'vaultopen', id: V.bid, x: Math.round(V.x), y: Math.round(V.y) });
   say(world, V);
   events.feed(world, { kind: 'news', text: `${V.label}'s vault was cracked - the alarm's still ringing`, x: V.x, y: V.y });
+  for (const fn of opened) { try { fn(world, V); } catch (e) { if (world.opts && world.opts.throwErrors) throw e; console.error('[heist] onOpen', e); } }
   const p = world.players.get(V.by), ped = p && p.ped;
   if (!p) return;
   if (ped && !ped.dead && !p.custody && Math.hypot(ped.x - V.x, ped.y - V.y) < 400) {

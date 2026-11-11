@@ -29,6 +29,8 @@ function world() {
   w.notify = (p, text, tone) => { if (p) w.heard.push({ pid: p.pid, text }); n0(p, text, tone); };
   return w;
 }
+// (a Landlord and an Underboss: more than one business, and a hideout - the ranks' caps are test/unlocks.test.js's)
+const RANKED = { criminalExp: 2500, careers: { v: 1, main: null, seen: {}, biz: 1000, props: [], tried: {}, calls: [] } };
 const told = (w, p, re) => w.heard.some((q) => q.pid === p.pid && re.test(q.text));
 
 test('the businesses: every kind laid out, in the real-estate app, bought at its office - its menu, the map, a place to wake up', () => {
@@ -36,7 +38,7 @@ test('the businesses: every kind laid out, in the real-estate app, bought at its
   const kinds = new Set(biz.sites(w).map((s) => s.t));
   for (const t of ['farm', 'club', 'hideout', 'shop', 'truck']) assert.ok(kinds.has(t), `a ${t} for sale`);
   assert.ok(biz.sites(w).filter((s) => s.t === 'hideout').length >= 3, 'several hideouts round the world');
-  const { p, prof, conn } = joinPlayer(w, { bank: 2e6 });
+  const { p, prof, conn } = joinPlayer(w, { ...RANKED, bank: 2e6 });
   // the app's Businesses list
   const r = phone.handle(w, p, { a: 'homes', kind: 'biz' });
   assert.ok(r.biz && r.biz.sale.length >= 5, 'businesses listed for sale');
@@ -78,10 +80,12 @@ test('the businesses: every kind laid out, in the real-estate app, bought at its
   const wake = homes.resolveSpawn(w, p, `biz:${siteOf(w, 'farm').id}`, null);
   assert.ok(Math.hypot(wake.x - siteOf(w, 'farm').x, wake.y - siteOf(w, 'farm').y) < 20, 'woken there');
   assert.equal(phone.handle(w, p, { a: 'homes' }).biz.mine.length, 3, 'yours in the app');
-  // a fourth: no (BIZ.max)
+  // a third business (a hideout isn't counted), then a fourth: no (BIZ.max)
   const shop = siteOf(w, 'shop');
   at(w, p, shop);
-  assert.equal(biz.buy(w, p, shop), `You own ${BIZ.max} businesses already - sell one first.`);
+  assert.equal(biz.buy(w, p, shop), null);
+  const farm2 = biz.sites(w).filter((q) => q.t === 'farm')[1];
+  assert.equal(biz.buy(w, p, farm2), `You own ${BIZ.max} businesses already - sell one first.`);
   // sold: 60% of what it cost back, for sale again
   const club = siteOf(w, 'club'), b0 = prof.bank;
   at(w, p, club);
@@ -92,7 +96,7 @@ test('the businesses: every kind laid out, in the real-estate app, bought at its
 
 test('each one earns: a day\'s takings in its till, collected - the hideout\'s as hot money; short of stock, less', () => {
   const w = world();
-  const { p, prof, conn } = joinPlayer(w, { bank: 2e6, cash: 0 });
+  const { p, prof, conn } = joinPlayer(w, { ...RANKED, bank: 2e6, cash: 0 });
   const farm = siteOf(w, 'farm'), club = siteOf(w, 'club'), hide = siteOf(w, 'hideout');
   for (const s of [farm, club, hide]) assert.equal(biz.buy(w, p, s), null);
   at(w, p, farm);
@@ -130,7 +134,7 @@ test('each one earns: a day\'s takings in its till, collected - the hideout\'s a
 
 test('worked: a farm\'s rows harvested, a club\'s cover and bar, the DJ\'s tips', () => {
   const w = world();
-  const { p, prof } = joinPlayer(w, { bank: 2e6, cash: 500 });
+  const { p, prof } = joinPlayer(w, { ...RANKED, bank: 2e6, cash: 500 });
   const farm = siteOf(w, 'farm');
   biz.buy(w, p, farm);
   // a ripe row of the farm's, driven down in a tractor
@@ -171,7 +175,7 @@ test('worked: a farm\'s rows harvested, a club\'s cover and bar, the DJ\'s tips'
 
 test('the auto shop: a customer\'s car fixed by hand pays the till; other drivers\' bills a cut, yours free', () => {
   const w = world();
-  const { p, prof } = joinPlayer(w, { bank: 2e6 });
+  const { p, prof } = joinPlayer(w, { ...RANKED, bank: 2e6 });
   const shop = biz.sites(w).find((s) => s.t === 'shop' && s.poi != null);   // (the Fresh Coat garage)
   biz.buy(w, p, shop);
   at(w, p, shop);
@@ -212,7 +216,7 @@ test('the auto shop: a customer\'s car fixed by hand pays the till; other driver
 
 test('the food truck: bought at the dealership, the van out, parked by a crowd with the hatch up - it sells', () => {
   const w = world();
-  const { p, prof, conn } = joinPlayer(w, { bank: 1e5 });
+  const { p, prof, conn } = joinPlayer(w, { ...RANKED, bank: 1e5 });
   const s = siteOf(w, 'truck'), poi = w.map.pois[s.poi];
   teleport(w, p.ped, poi.x, poi.y);
   economy.openMenu(w, p, poi);
@@ -247,7 +251,7 @@ test('the food truck: bought at the dealership, the van out, parked by a crowd w
 
 test('the hideout\'s guards: posted while the owner is near, an outsider in the yard warned then shot at, the owner left be', () => {
   const w = world();
-  const { p } = joinPlayer(w, { bank: 1e6 });
+  const { p } = joinPlayer(w, { ...RANKED, bank: 1e6 });
   const s = siteOf(w, 'hideout');
   biz.buy(w, p, s);
   at(w, p, s);
@@ -282,7 +286,7 @@ test('an owned business whose place is gone (the world changed): bought back at 
 
 test('a home that earns: cooking in a business\'s kitchen from what\'s in your bag', () => {
   const w = world();
-  const { p, prof, conn } = joinPlayer(w, { bank: 2e6 });
+  const { p, prof, conn } = joinPlayer(w, { ...RANKED, bank: 2e6 });
   const farm = siteOf(w, 'farm');
   biz.buy(w, p, farm);
   at(w, p, farm);
@@ -302,7 +306,7 @@ test('a home that earns: cooking in a business\'s kitchen from what\'s in your b
 test('the club\'s drunk: a fight on the floor with the owner in - knocked down by the owner, no crime, the patrons tip; left alone, thrown out', async () => {
   const law = await import('../server/systems/law.js');
   const w = world();
-  const { p, prof } = joinPlayer(w, { bank: 2e6 });
+  const { p, prof } = joinPlayer(w, { ...RANKED, bank: 2e6 });
   const club = siteOf(w, 'club');
   biz.buy(w, p, club);
   // (the middle of the night, hours of it either side - it runs over the loop's end)

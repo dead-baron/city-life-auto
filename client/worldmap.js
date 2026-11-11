@@ -340,6 +340,10 @@ class WorldMap {
         } else if (r.k === 'crew') {   // a crewmate (crews.js)
           g.fillStyle = r.d ? '#2d6a40' : '#7dffa0'; g.strokeStyle = '#0a0f1d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, 6, 0, 6.28); g.fill(); g.stroke();
           plateText(g, x, y - 15, r.d ? `${r.n} (down)` : r.n, 11, '#7dffa0', true);
+        } else if (r.k === 'track') {   // a detective's tracked suspect: the last fix, to its fuzz (server tracking.js)
+          g.strokeStyle = '#ffd34a'; g.lineWidth = 2; g.setLineDash([3, 3]); g.beginPath(); g.arc(x, y, Math.max(7, r.r * sc), 0, 6.28); g.stroke(); g.setLineDash([]);
+          g.fillStyle = '#ffd34a'; g.beginPath(); g.arc(x, y, 3, 0, 6.28); g.fill();
+          plateText(g, x, y - Math.max(7, r.r * sc) - 10, `TRACKED ${r.n} · ${r.age}s`, 11, '#ffd34a', true);
         } else if (r.k === 'pack') {
           const TT = PACK_TIERS[r.t] || PACK_TIERS[1];
           packIcon(g, x, y, r, 1.6);

@@ -600,7 +600,7 @@ export function update(world, dt) {
         const wild = sight < 1;
         p.searchR = Math.min(wild ? 1500 : 1100, p.searchR + (wild ? 42 : 28) * dt);
         // (at 1-3 stars they give up sooner: the faster rate comes sooner and both are faster - rules.js COP_LEVEL)
-        const L = copLevel(p.wanted), rate = (unseen > L.lostS ? 2.4 : 1.2) * L.cool * (wild ? WILD_COOL : 1);
+        const L = copLevel(p.wanted), rate = (unseen > L.lostS ? 2.4 : 1.2) * L.cool * (wild ? WILD_COOL : 1) * (p.lieLowX || 1);   // (lying low in your crew's hideout's yard: hideout.js)
         p.heat = Math.max(0, p.heat - rate * dt);
         const stars = starsForHeat(p.heat);
         if (stars < p.wanted) {

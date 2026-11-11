@@ -30,9 +30,9 @@ export const CAREERS = {
     { name: 'Hustler', xp: 50, unlock: [{ k: 'fenceCut', v: 0.03, name: 'Better fence prices: a 3-point smaller cut' }] },
     { name: 'Booster', xp: 150, unlock: [{ k: 'armor', name: 'Black-market armor tiers', soon: 1 }] },
     { name: 'Enforcer', xp: 400, unlock: [{ k: 'fenceCut', v: 0.06, name: 'Better fence prices: a 6-point smaller cut' }] },
-    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'crew', name: 'A crew of your own', soon: 1 }] },
-    { name: 'Captain', xp: 1500, unlock: [{ k: 'fenceCut', v: 0.1, name: 'Better fence prices: a 10-point smaller cut' }, { k: 'heists', name: 'Heist contracts', soon: 1 }] },
-    { name: 'Underboss', xp: 2500, unlock: [{ k: 'hideout', name: 'A hideout', soon: 1 }] },
+    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'crew', name: 'A crew of your own: a name and tag, a crew bank' }] },
+    { name: 'Captain', xp: 1500, unlock: [{ k: 'fenceCut', v: 0.1, name: 'Better fence prices: a 10-point smaller cut' }, { k: 'heists', name: 'Heist contracts' }] },
+    { name: 'Underboss', xp: 2500, unlock: [{ k: 'hideout', name: 'A hideout: a stash, and somewhere to lie low' }] },
     { name: 'Kingpin', xp: 4000, unlock: [{ k: 'kingpin', name: 'The Kingpin title over your name', soon: 1 }] },
   ] },
   police: { name: 'Police', icon: 'siren', contact: ['Sgt. Dana Okafor', 'Captain Luis Reyes'], lateFrom: 4, samPer: 1, dispatchXp: 8, crimeLoss: 0.25, dutyLoss: 0.5, lockStars: 3, lockMin: 60, ranks: [
@@ -40,20 +40,20 @@ export const CAREERS = {
     { name: 'Officer', xp: 40, unlock: [{ k: 'dispatch', name: 'Dispatch priority: reports stay on your map longer' }] },
     { name: 'Corporal', xp: 120, unlock: [{ k: 'k9', name: 'A K9 partner', soon: 1 }] },
     { name: 'Sergeant', xp: 260, unlock: [{ k: 'swat', name: 'The SWAT truck' }] },
-    { name: 'Detective', xp: 480, unlock: [{ k: 'tracking', name: 'Detective tracking tools', soon: 1 }] },
+    { name: 'Detective', xp: 480, unlock: [{ k: 'tracking', name: 'Detective tracking tools' }] },
     { name: 'Lieutenant', xp: 800, unlock: [{ k: 'patrolPay', v: 0.25, name: 'Patrol calls pay 25% more' }] },
     { name: 'Captain', xp: 1300, unlock: [{ k: 'heli', name: 'The police helicopter' }] },
-    { name: 'Chief', xp: 2000, unlock: [{ k: 'office', name: 'A station office', soon: 1 }] },
+    { name: 'Chief', xp: 2000, unlock: [{ k: 'office', name: 'A station office' }] },
   ] },
   business: { name: 'Business', icon: 'money', contact: ['Mae Holloway', 'Victor Lin'], lateFrom: 4, cleanPer: 0.02, propPer: 0.004, ranks: [
     { name: 'Vendor', xp: 0 },
     { name: 'Shopkeeper', xp: 60, unlock: [{ k: 'deposit', v: 0.18, name: 'Bigger loans: an 18% mortgage deposit' }] },
     { name: 'Owner', xp: 200, unlock: [{ k: 'commercial', name: 'Commercial property', soon: 1 }] },
     { name: 'Proprietor', xp: 500, unlock: [{ k: 'loans', v: 1, name: 'Bigger loans: one more mortgage at once' }] },
-    { name: 'Landlord', xp: 1000, unlock: [{ k: 'second', name: 'A second and third business', soon: 1 }] },
+    { name: 'Landlord', xp: 1000, unlock: [{ k: 'second', name: 'A second and third business' }] },
     { name: 'Investor', xp: 1800, unlock: [{ k: 'deposit', v: 0.12, name: 'Bigger loans: a 12% mortgage deposit' }] },
-    { name: 'Mogul', xp: 3000, unlock: [{ k: 'staff', name: 'Staff to run a shop while you\'re away', soon: 1 }] },
-    { name: 'Tycoon', xp: 5000, unlock: [{ k: 'loans', v: 2, name: 'Bigger loans: two more mortgages at once' }, { k: 'penthouse', name: 'A penthouse', soon: 1 }] },
+    { name: 'Mogul', xp: 3000, unlock: [{ k: 'staff', name: 'Staff to run a shop while you\'re away' }] },
+    { name: 'Tycoon', xp: 5000, unlock: [{ k: 'loans', v: 2, name: 'Bigger loans: two more mortgages at once' }, { k: 'penthouse', name: 'A penthouse, for less' }] },
   ] },
 };
 export const CAREER_KEYS = ['crime', 'police', 'business'];
@@ -1207,7 +1207,33 @@ export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 export const CREW = {
   max: 4, inviteS: 30, askAgainS: 60, reach: 90, sayGapS: 2, share: 400,   // (askAgainS: the same asking again only this long after one lapsed)
   says: ['On my way!', 'Need backup!', 'Meet me where I am', 'Go go go!', 'Get in!', 'Lie low for a bit', 'Nice one!', 'Thanks!'],
+  // A crew of your own (the crime career's 'crew' unlock - docs/PROGRESSION.md): its lead, at that rank, founds it for
+  // foundCost - a name (shared/names.js's rules) and a tag of up to tagMax letters by every member's name; then a crew bank:
+  // cut of what a member earns on a job done with a crewmate within togetherPx goes into it (the members' cut), members
+  // put in `put` at a time, the lead pays it out evenly; upkeep a day from it (a money sink), and lapseDays unpaid in a row
+  // and the name lapses (the crew stays, the bank too)
+  foundCost: 5000, tagMax: 4, cut: 0.1, togetherPx: 1200, put: 500, upkeep: 150, lapseDays: 7,
 };
+// Progression unlocks built on what's there (docs/PROGRESSION.md "Careers and ranks"):
+// - a hideout (the crime 'hideout' rank; server/systems/hideout.js): one per player or crew - buyable at the rank (Deacon's
+//   chain gives one), a stash of `cars` cars and `crates` crates at its door, and inside its yard (`lieLowR` px of the
+//   door) the wanted heat cools coolX times as fast while no officer can see you
+// - heist contracts (the crime 'heists' rank; server/systems/heistjobs.js): a bank's vault to crack in limitMin minutes for
+//   pay (by the district's tier, else `base`) and xp on top of what's in it; a thermal drill fronted if you have none (its
+//   price off the pay); the next one gapMin minutes after
+// - detective tracking (the police 'tracking' rank; server/systems/tracking.js): one wanted player at a time, their
+//   position to fuzzPx refreshed every everyS seconds while they're wanted (officeS with a station office), a new one at
+//   most every startGapS; lost after lostS hidden from it
+// - businesses (biz.js): before the business 'second' rank only `first` at once (the food truck and a hideout not counted;
+//   none taken off anyone who has more); staff (the 'staff' rank) hired for hireRate of what the place cost run it while
+//   you're away - `share` of each in-game day's takings, up to the till's cap
+// - a penthouse (the 'penthouse' rank: homes.js priceFor): `off` off its price
+export const HIDEOUT = { cars: 3, crates: 4, lieLowR: 260, coolX: 3 };
+export const HEIST_JOB = { limitMin: 30, gapMin: 20, base: 6000, pay: { lux: 12000, suburb: 8000, mid: 7000, neon: 8000 }, xp: 80 };
+export const TRACK = { everyS: 10, officeS: 5, startGapS: 30, fuzzPx: 96, lostS: 90 };
+export const BIZ_RANK = { first: 1 };
+export const STAFF = { hireRate: 0.15, share: 0.5 };
+export const PENTHOUSE = { off: 0.25 };
 export const HEIST = {
   drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)

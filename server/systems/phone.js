@@ -283,7 +283,7 @@ export function handle(world, p, msg) {
   if (a === 'feed') return { ...events.feedFor(world), cal: setCalendarListing.fn ? setCalendarListing.fn(world, p) : null };   // (and what's coming up: the event calendar - calendar.js)
   if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p), seas: seasons.badges(p) };   // (and the season badges and titles kept: seasons.js)   // the Skills app (skills.js; your standing by district: reputation.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
-  if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick') return crews.phone(world, p, msg);
+  if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick' || a === 'crewfound' || a === 'crewput' || a === 'crewpay') return crews.phone(world, p, msg);   // (founding a crew of your own, its bank)
   if (a === 'workout') { phoneOut(world, p, false); const no = workout.start(world, p, String(msg.k || '')); if (no) world.notify(p, no, 'warn'); return null; }   // a set of push-ups or sit-ups (workout.js)
   if (a === 'out') { phoneOut(world, p, !!msg.on); return null; }   // the phone in your hand while its menu is open
   if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map
