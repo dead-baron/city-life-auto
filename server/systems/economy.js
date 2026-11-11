@@ -48,6 +48,8 @@ import { RECORD_STORE } from '../../shared/music.js';
 import * as biz from './biz.js';
 import * as careers from './careers.js';   // (a rank's fees: careers.fee)
 import * as cosmetics from './cosmetics.js';   // (the style counter, custom paint)
+import * as armor from './armor.js';   // (black-market body armor at the fence: armor.js)
+import * as k9 from './k9.js';   // (a K9 partner from the armory: k9.js)
 import * as insurance from './insurance.js';   // (vehicle policies and claims)
 import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
@@ -218,6 +220,7 @@ function menuOf(world, p, poi) {
     const W = walkCounter(poi) || { items: [], sub: 'Just looking.' }, none = !(prof.homes || []).length, furn = prof.furn || {};
     for (const [id, price] of W.items) { const one = !!(ITEMS[id].tool || ITEMS[id].music) && prof.inventory[id] > 0; opts.push({ id: `i:${id}:${price}:1`, label: ITEMS[id].name, price, dis: one, note: one ? 'have one' : prof.inventory[id] ? `have ${prof.inventory[id]}` : '' }); }   // (a tape, a boombox, an instrument: one's enough)
     if (W.wash) opts.push({ id: 'wash', label: 'Wash and dry your clothes', price: 6 });
+    if (biz.unitAt(world, poi)) biz.menuRow(world, p, poi, opts);   // (a commercial unit: its landlord's row - biz.js)
     for (const k of W.decor || []) opts.push({ id: `fb:${k}`, label: DECOR_PIECES[k].name, price: decorPrice(k), dis: none, note: `for your home${furn[k] ? ` · ${furn[k]} in storage` : ''}` });
     if (!opts.length) opts.push({ id: 'close', label: 'Leave' });
     return { t: 'menu', poi: poi.id, title: poi.label, sub: W.sub, opts, cash: prof.cash, bank: prof.bank };
@@ -291,6 +294,8 @@ function menuOf(world, p, poi) {
           const has = prof.weapons[id] !== undefined;
           opts.push({ id: `arm:${id}`, label: `${has ? 'Restock' : 'Take'} ${WEAPONS[id].name}`, note: has ? `carrying ${(prof.weapons[id] || 0) + (p.ped.mag[id] || 0)} rds` : `${WEAPONS[id].mag}-round mag`, wpn: WEAPONS[id].i, stats: weaponStats(id) });
         }
+        { const mine = k9.partnerOf(world, p), why = k9.partnerRefusal(world, p);   // (a K9 partner at the rank: k9.js)
+          opts.push({ id: 'k9', label: mine ? 'Your K9 partner is with you' : 'Take your K9 partner - it rides in your cruiser', dis: !!why, note: mine ? 'the K9 unit' : why || 'takes down suspects on foot' }); }
         opts.push({ id: 'armexit', label: 'Out the back door to the motor pool ▶' });
         opts.push({ id: 'sleave', label: 'Back out to the front desk' });
       } else {
@@ -440,6 +445,7 @@ function menuOf(world, p, poi) {
       sub = 'Carry contraband or stolen cargo to the door to sell it. No questions asked. Word is the mail train carries a strongbox...';
       opts.push({ id: 'trainjob', label: 'Job: rob the mail train', price: -TRAIN_JOB_PAY, dis: !!p.job, note: p.job ? 'busy' : 'when fenced' });
       if (p.job && p.job.type === 'trainjob') opts.push({ id: 'job:quit', label: 'Abandon current job' });
+      armor.menuOpts(p, opts);   // (body armor by your crime rank: armor.js)
       break;
     case 'rental':
       sub = rentals.subFor(world, p, poi);
@@ -483,7 +489,7 @@ function menuOf(world, p, poi) {
   }
   // clothes to buy (task #364): every store that sells clothes has a fitting room (looks.js openShop)
   if (storeOf(poi) && kind !== 'barber') opts.unshift({ id: 'fit', label: 'The fitting room: try on and buy clothes' });
-  if (kind === 'club' || kind === 'garage' || kind === 'dealer') biz.menuRow(world, p, poi, opts);   // (the business: the manager's office - biz.js)
+  if (kind === 'club' || kind === 'garage' || kind === 'dealer' || biz.unitAt(world, poi)) biz.menuRow(world, p, poi, opts);   // (a commercial unit's: its landlord's row)   // (the business: the manager's office - biz.js)
   hotmoney.menuOpts(world, p, poi, opts);   // the robbery bag: banked far from the robbery, stashed at home, fenced
   contacts.menuOpts(world, p, poi, opts);   // your lock-up, at the contact's place that gave it (contacts.js)
   if (atmMore) opts.push({ id: 'atmfull', label: 'Use ATM', note: 'deposit or withdraw an amount' });
@@ -631,6 +637,7 @@ function execute(world, p, poi, opt) {
     case 'bd': return skate.shopExecute(world, p, poi, parts[1], pay);   // (a skateboard bought, or yours brought out: skate.js)
     case 'sb': return gear.surfExecute(world, p);   // (your surfboard from home, into your bag: gear.js)
     case 'trainjob': return trains.startTrainJob(world, p);
+    case 'armor': return armor.buy(world, p, Number(parts[1]), pay);   // (a vest from the black market: armor.js)
     case 'w': {
       const id = parts[1], price = Number(parts[2]);
       if (!pay(p, price)) return 'Not enough money.';
@@ -727,6 +734,7 @@ function execute(world, p, poi, opt) {
     case 'deepsea': return jobs.startDeepSea(world, p, poi);
     case 'arm': return station.takeWeapon(world, p, parts[1]);
     case 'armexit': station.toMotorPool(world, p); return null;
+    case 'k9': return k9.takePartner(world, p);   // (your K9 partner for the shift: k9.js)
     case 'sleave': station.leave(world, p); return null;
     case 'payrecord': {
       const n = prof.felonies || 0;

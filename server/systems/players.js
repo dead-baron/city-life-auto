@@ -20,6 +20,7 @@ import * as combat from './combat.js';
 import * as tank from './tank.js';   // (H58)
 import * as cargo from './cargo.js';
 import * as skate from './skate.js';   // (riding a skateboard: the owner, 2026-10-17)
+import * as armor from './armor.js';   // (a heavy vest: a slower run - armor.js)
 import * as gear from './gear.js';   // (the rides you own and carry - a board in your hand, rollerblades: the owner, 11-03)
 const packRadar = (world, p, out) => { cargo.packRadar(world, p, out); crews.radar(world, p, out); tracking.radar(world, p, out); return out; };   // (+ a detective's tracked suspect: tracking.js)   // (+ your crewmates: crews.js)   // + the backpack you dropped when you died
 import * as law from './law.js';
@@ -582,6 +583,7 @@ export function pedMods(world, ped) {
   if (ped.limpUntil > now) speedMul *= REVIVE_LIMP_SPEED; // just revived bare-handed: limping
   if (now < (ped.guardUntil || 0)) speedMul *= GUARD.speed;   // guarding: a careful step (rules.js GUARD)
   if (now < (ped.k9Until || 0)) speedMul *= K9.drag;   // a police dog hanging on to you (k9.js)
+  if (ped.player && ped.player.profile.armor) speedMul *= armor.speedMul(ped);   // (a heavier vest: a slower run - armor.js)
   if (ped.blades) speedMul *= gear.bladeMul(world, ped);   // on rollerblades: a glide, a clump over the rough (gear.js)
   return {
     canMove, canSprint: !ped.carrying && !ped.blades, speedMul, tumble: now < (ped.tumbleUntil || 0), air: now < (ped.airUntil || 0),

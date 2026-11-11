@@ -20,6 +20,11 @@
 //            the tools, the parts to fit), a cut of what other players pay there (yours is free: economy.js, paint.js),
 //            and a customer's car brought in to fix by hand
 //   truck    a food truck - the Mr. Frosty van, from the dealership: park it where people are, open the hatch and sell
+//   unit     a commercial unit (the business career's 'commercial' unlock: shared/rules.js COMMERCIAL) - a shop already in
+//            the city that nobody runs as a business here (a corner store, a cafe, a clothes shop...): bought at its
+//            counter (a row in its menu), let to the tenant who keeps it open - their rent goes into your bank for each
+//            day the upkeep bills (upkeep.js: the wall-clock day, days away too), clean money. As many as the rank's v
+//            (unitCap); not counted toward BIZ.max - it isn't a business you run. Not a home.
 // Every one but the truck is a home too: wake up there, rest in the back room, cook in its kitchen.
 // Where: a farm's, a hideout's and a Spray & Go's office is a spot of its own (the action button there opens the
 // manager's menu); a club's is its bar's menu (a row), the garage's its counter's, the food truck's the dealership's and,
@@ -49,7 +54,7 @@ import * as crews from './crews.js';
 import * as skills from './skills.js';
 import { spawnNpc, despawnNpc, startFight, markBrawl, leaveBuilding } from './npc.js';
 import { ITEMS } from '../../shared/items.js';
-import { HOME_IN, NPC_CRITICAL, BIZ_RANK, STAFF } from '../../shared/rules.js';
+import { HOME_IN, NPC_CRITICAL, BIZ_RANK, STAFF, COMMERCIAL } from '../../shared/rules.js';
 import { DAY_LOOP_S } from '../../shared/constants.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
 import { setHooks as nextHooks } from './whatsnext.js';
@@ -68,6 +73,7 @@ export const TYPES = {
   hideout: { short: "product every day, guards at the door", word: 'criminal hideout', icon: 'gang', stock: 'bags of nutrients', home: true, blurb: 'A grow room in the back: product every day, taken as hot money or run to a buyer across the world for clean cash. The Syndicate\'s soldiers guard the door while it\'s yours - outsiders who come into the yard are warned off, then shot at.' },
   shop: { short: "customers' cars, a cut of the counter, your paint free", word: 'auto shop', icon: 'garage', stock: 'parts', home: true, blurb: 'Customers\' cars every day - more with a better lift and tools, a part fitted on each. A cut of what other drivers pay here; your own paint and repairs are free. Bring a customer\'s car in to fix it yourself for more.' },
   truck: { short: "park where people are and sell", word: 'food truck', icon: 'snack', stock: 'meals', home: false, blurb: 'Your own Mr. Frosty van: park it where people are, open the hatch and sell - the bigger the crowd, the quicker it goes. Stock up on meals, a better menu sells dearer, a grill serves quicker.' },
+  unit: { short: "rent into your bank every day", word: 'commercial unit', icon: 'convenience', stock: '', home: false, blurb: 'A shop unit let to the tenant who runs it: their rent goes into your bank every day, even while you\'re away. It pays upkeep like any business.' },
 };
 // the upgrades of each type: { key, name, prices (a level each), what (its effect, for the menu) }
 const UPS = {
@@ -77,22 +83,35 @@ const UPS = {
   hideout: [{ key: 'lamps', name: 'Grow lamps', prices: BIZ.hideout.lamps, what: (n) => `${money(BIZ.hideout.grow[n])} of product a day` }, { key: 'guards', name: 'More guards', prices: BIZ.hideout.guards, what: (n) => `${BIZ.hideout.guards0 + n} at the door` }],
   shop: [{ key: 'lift', name: 'A better lift', prices: BIZ.shop.lift, what: (n) => `${BIZ.shop.jobs + BIZ.shop.perLift * n} cars a day` }, { key: 'tools', name: 'Better tools', prices: BIZ.shop.tools, what: (n) => `${money(BIZ.shop.perJob + BIZ.shop.perTools * n)} a car` }],
   truck: [{ key: 'menu', name: 'A better menu', prices: BIZ.truck.menu, what: (n) => `${money(BIZ.truck.meal[n])} a meal` }, { key: 'grill', name: 'A bigger grill', prices: BIZ.truck.grill, what: (n) => `serves ${Math.round(BIZ.truck.grillCut * n * 100)}% quicker` }],
+  unit: [],
 };
-const STOCK = { farm: BIZ.farm.feed, club: BIZ.club.stock, hideout: BIZ.hideout.nutrients, shop: BIZ.shop.parts, truck: BIZ.truck.food };
+const STOCK = { farm: BIZ.farm.feed, club: BIZ.club.stock, hideout: BIZ.hideout.nutrients, shop: BIZ.shop.parts, truck: BIZ.truck.food, unit: { price: 0, qty: 0 } };
 const lvl = (e, k) => (e && e.up && e.up[k]) | 0;
 // the hideouts' own rules (hideout.js, which imports this module): may you buy this one; its stash's menu rows and choices
 // (a var, made on first use: hideout.js registers as it loads, maybe while this module is still loading - an import cycle)
 var hide;
 export function setHideoutHooks(o) { hide = Object.assign(hide || {}, o); }
 // how many businesses count toward the cap (not the food truck, not a hideout) and the cap by rank
-const counted = (world, prof) => ownedBy(world, prof).filter((o) => o.s.t !== 'truck' && o.s.t !== 'hideout').length;
+const counted = (world, prof) => ownedBy(world, prof).filter((o) => o.s.t !== 'truck' && o.s.t !== 'hideout' && o.s.t !== 'unit').length;
 export const bizCap = (prof) => (careers.hasUnlock(prof, 'second') ? BIZ.max : BIZ_RANK.first);
+// commercial units: how many you may own (the rank's v), how many you do, a unit's rent a day
+export const unitCap = (prof) => careers.unlockValue(prof, 'commercial', 0) | 0;
+export const unitsOwned = (world, prof) => ownedBy(world, prof).filter((o) => o.s.t === 'unit').length;
+export const rentOf = (s) => Math.round((s.price || 0) * COMMERCIAL.rent);
+// a shop's counter that's a commercial unit's (economy.js: its menu gets the unit's row)
+export const unitAt = (world, poi) => !!poi && sites(world).some((s) => s.t === 'unit' && s.poi === poi.id);
 const rankAt = (c, key) => { const R = careers.CAREERS[c].ranks; for (let i = 0; i < R.length; i++) if ((R[i].unlock || []).some((u) => u.k === key)) return careers.rankName(c, i); return ''; };
 // why you can't buy it (money aside), or null
 export function buyRefusal(world, p, s) {
   const prof = p.profile;
   if (s.t === 'truck') return null;
   if (s.t === 'hideout') { if (p.badge) return 'Not with a badge on.'; return hide && hide.canBuy ? hide.canBuy(world, p, s) : null; }
+  if (s.t === 'unit') {
+    const cap = unitCap(prof), have = unitsOwned(world, prof), R = careers.CAREERS.business.ranks, more = R.find((r, i) => i > careers.careerRank(prof, 'business') && (r.unlock || []).some((u) => u.k === 'commercial' && u.v > cap));
+    if (!cap) return `Commercial property comes at ${rankAt('business', 'commercial')} (business).`;
+    if (have >= cap) return `You own ${cap} commercial unit${cap === 1 ? '' : 's'} already${more ? ` - ${more.name} (business) owns more` : ' - sell one first'}.`;
+    return null;
+  }
   const n = counted(world, prof);
   if (n >= BIZ.max) return `You own ${BIZ.max} businesses already - sell one first.`;
   if (n >= bizCap(prof)) return `A second business comes at ${rankAt('business', 'second')} (business) - sell this one first, or climb.`;
@@ -186,6 +205,26 @@ function hideoutSites(m) {
   }
   return out;
 }
+// the commercial units (COMMERCIAL): the city's shops of those kinds (a walk-in shop's counter too) in town - not a business
+// here already - picked by a hash of their id, at most perDistrict a district and gapPx apart, max in all
+function unitSites(m, taken) {
+  const C = COMMERCIAL, kinds = new Set(C.kinds), cands = [];
+  for (const poi of m.pois) {
+    if (!poi || !kinds.has(poi.kind) || taken.has(poi.id) || (poi.kind === 'delivery' && !poi.walk)) continue;
+    const D = distOf(m, poi.x, poi.y);
+    if (!D || C.price[D.tier] === undefined || /Prison/.test(D.name)) continue;
+    cands.push({ poi, D, k: Math.imul(poi.id + 31, 0x9e3779b1) >>> 0 });
+  }
+  cands.sort((a, b) => a.k - b.k || a.poi.id - b.poi.id);
+  const out = [], per = new Map();
+  for (const { poi, D } of cands) {
+    if (out.length >= C.max) break;
+    if ((per.get(D.name) || 0) >= C.perDistrict || out.some((s) => Math.hypot(s.x - poi.x, s.y - poi.y) < C.gapPx)) continue;
+    per.set(D.name, (per.get(D.name) || 0) + 1);
+    out.push(site(m, 'unit', `unit:${poi.id}`, poi.label, poi.x, poi.y, C.price[D.tier] ?? C.base, { poi: poi.id }));
+  }
+  return out;
+}
 export function sites(world) {
   const B = S(world);
   if (B.sites) return B.sites;
@@ -202,6 +241,7 @@ export function sites(world) {
     if (at) out.push(site(m, 'shop', `shop:b${i}`, poi ? poi.label : 'Spray & Go', at.x, at.y, BIZ.shop.price, { bay: i }));
   });
   for (const poi of m.pois) if (poi && poi.kind === 'dealer') out.push(site(m, 'truck', `truck:${poi.id}`, `${poi.label} - food trucks`, poi.x, poi.y, BIZ.truck.price, { poi: poi.id, lot: poi.spawnLot || null }));
+  out.push(...unitSites(m, new Set(out.filter((s) => s.poi != null).map((s) => s.poi))));   // (last: the others keep their places)
   B.sites = out;
   B.byId = new Map(out.map((s, i) => { s.i = i; return [s.id, s]; }));
   return out;
@@ -345,6 +385,7 @@ export function menuRow(world, p, poi, opts) {
   if (!s) return;
   const own = mine(world, p, s), pid = s.t !== 'truck' ? ownerOf(world, s.id) : null;
   if (s.t === 'truck') opts.push({ id: 'biz', label: own ? 'Your food truck business - the manager\'s menu' : 'A food truck of your own - a business', note: own ? 'stock, upgrades, the van' : `the Mr. Frosty van - ${money(s.price)}`, shut: 1 });
+  else if (s.t === 'unit') opts.push({ id: 'biz', label: own ? 'The landlord\'s office - this unit is yours' : pid ? `The unit's landlord: ${nameOf(pid)}` : 'Buy this shop\'s unit - commercial property', note: own ? `${money(rentOf(s))} rent a day` : pid ? '' : `${money(s.price)} · ${money(rentOf(s))} rent a day`, dis: !own && !!pid, shut: 1 });
   else opts.push({ id: 'biz', label: own ? `The manager's office - ${s.name} is yours` : pid ? `The manager's office (${nameOf(pid)}'s ${TYPES[s.t].word})` : `The manager's office - ${s.name} is for sale`, note: own ? 'the till, stock, upgrades' : pid ? '' : `${money(s.price)} - a business`, shut: 1 });
 }
 export function openFrom(world, p, poi) {
@@ -378,11 +419,16 @@ export function menuOf(world, p, s) {
       return { ...head, title: s.name, sub: `${nameOf(pid)}'s ${T0.word}.${opts.length > 1 ? ' Your crew\'s hideout - its stash is yours too.' : ''}`, opts };
     }
     const why = buyRefusal(world, p, s) || '';
-    opts.push({ id: 'buy', label: `Buy ${s.t === 'truck' ? 'a food truck and the van' : s.name}`, price: s.price, dis: !!why, note: why || T0.word });
+    opts.push({ id: 'buy', label: `Buy ${s.t === 'truck' ? 'a food truck and the van' : s.t === 'unit' ? `${s.name}'s unit` : s.name}`, price: s.price, dis: !!why, note: why || (s.t === 'unit' ? `${T0.word} · ${money(rentOf(s))} rent a day` : T0.word) });
     opts.push({ id: 'close', label: 'Leave' });
     return { ...head, title: `${s.name} - for sale`, sub: `${T0.blurb}${s.t === 'farm' ? ` ${s.fields.length} field${s.fields.length === 1 ? '' : 's'}.` : ''}`, opts };
   }
   const e = s.t === 'truck' ? entryOf(p, 'truck') : entryOf(p, s.id), till = e.till | 0;
+  if (s.t === 'unit') {   // (a commercial unit: the rent comes by itself - upkeep.js)
+    opts.push({ id: 'sell', label: `Sell ${s.name}'s unit`, price: -Math.round((e.paid || 0) * BIZ.sellBack) });
+    opts.push({ id: 'close', label: 'Close' });
+    return { ...head, title: `${s.name} - your commercial unit`, sub: `The tenant runs the shop and pays ${money(rentOf(s))} rent a day into your bank, even while you're away. Its upkeep: the Homes app.`, opts };
+  }
   if (s.t === 'hideout') {
     opts.push({ id: 'take', label: 'Take the product (hot money - clean it after)', price: till ? -till : undefined, dis: !till });
     opts.push({ id: 'run', label: `Run the product to a buyer (clean cash, x${BIZ.hideout.runMult})`, dis: !till || !!p.bizRun, note: p.bizRun ? 'a run on already' : till ? 'far across the world' : 'nothing ready' });
@@ -521,7 +567,7 @@ export function buy(world, p, s) {
   if (s.t === 'truck') { e.site = s.id; prof.biz = { ...(prof.biz || {}), truck: e }; }
   else { (prof.biz ||= {})[s.id] = e; owners(world).set(s.id, p.pid); }
   store.touch(); p.meDirty = true;
-  world.notify(p, s.t === 'truck' ? 'A food truck of your own! Take the van out, park it where people are and open the hatch.' : `You bought ${s.name}! A ${TYPES[s.t].word} - its takings go in the till every day you're in the city. It's on your map, and somewhere to wake up and rest.`, 'good');
+  world.notify(p, s.t === 'truck' ? 'A food truck of your own! Take the van out, park it where people are and open the hatch.' : s.t === 'unit' ? `You bought ${s.name}'s unit - its tenant pays ${money(rentOf(s))} rent a day into your bank, less its upkeep. It's on your map.` : `You bought ${s.name}! A ${TYPES[s.t].word} - its takings go in the till every day you're in the city. It's on your map, and somewhere to wake up and rest.`, 'good');
   return null;
 }
 // Given, not bought (a contact's chain: contacts.js - Deacon's hideout, Mae's storefront lease): nothing paid (a sale
@@ -620,11 +666,11 @@ export function mapList(world, prof) {
 // (realestate.js) the businesses for sale - nearest first - and yours
 export function listings(world, p, n = 30) {
   const ped = p.ped, near = (s) => (ped ? Math.hypot(s.x - ped.x, s.y - ped.y) : 0);
-  const row = (s) => ({ id: s.id, n: s.name, t: s.t, w: TYPES[s.t].word, p: s.price, x: s.x, y: s.y, d: s.d, dt: s.dt, b: TYPES[s.t].short, ...(s.t === 'farm' ? { f: s.fields.length } : null) });
+  const row = (s) => ({ id: s.id, n: s.name, t: s.t, w: TYPES[s.t].word, p: s.price, x: s.x, y: s.y, d: s.d, dt: s.dt, b: s.t === 'unit' ? `${money(rentOf(s))} rent a day` : TYPES[s.t].short, ...(s.t === 'farm' ? { f: s.fields.length } : null) });
   const all = sites(world), free = all.filter((s) => (s.t === 'truck' ? !entryOf(p, 'truck') : !ownerOf(world, s.id)));
   const trucks = free.filter((s) => s.t === 'truck').sort((a, b) => near(a) - near(b)).slice(0, 1);
   const sale = [...free.filter((s) => s.t !== 'truck'), ...trucks].sort((a, b) => near(a) - near(b)).slice(0, n).map(row);
-  const yours = ownedBy(world, p.profile).map(({ s, e }) => ({ ...row(s), till: e.till | 0, stock: e.stock | 0, worth: Math.round((e.paid || 0) * BIZ.sellBack) }));
+  const yours = ownedBy(world, p.profile).map(({ s, e }) => ({ ...row(s), till: e.till | 0, stock: e.stock | 0, worth: Math.round((e.paid || 0) * BIZ.sellBack), ...(s.t === 'unit' ? { rent: rentOf(s) } : null) }));
   return { sale, mine: yours, total: free.length };
 }
 

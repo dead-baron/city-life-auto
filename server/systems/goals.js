@@ -34,7 +34,7 @@ function seed(pid, day, salt) {
 
 // fit for police duty, or on it (the 'cop' goals); a business with takings to collect (not a hideout's product)
 export const copFit = (p) => !!p.badge || ((p.profile.samaritan || 0) >= ENFORCER_MIN_SAMARITAN && !(p.profile.felonies > 0) && !p.profile.gang);
-const hasBiz = (p) => Object.values(p.profile.biz || {}).some((e) => e && e.t !== 'hideout');
+const hasBiz = (p) => Object.values(p.profile.biz || {}).some((e) => e && e.t !== 'hideout' && e.t !== 'unit');   // (a till to collect: not a hideout's product, nor a commercial unit's rent)
 export function eligible(p, T) {
   if (T.need === 'cop') return copFit(p);
   if (T.need === 'notcop') return !copFit(p);

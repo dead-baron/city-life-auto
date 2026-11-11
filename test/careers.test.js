@@ -102,7 +102,10 @@ test('the gating hooks: hasUnlock, unlockValue - fence cut, loans, patrol pay, p
   assert.equal(careers.hasUnlock(low, 'fenceCut'), false);
   assert.equal(careers.unlockValue(mid, 'fenceCut'), 0.06);
   assert.equal(careers.unlockValue(top, 'fenceCut'), 0.1);
-  assert.equal(careers.hasUnlock(top, 'kingpin'), false, 'a coming unlock is not unlocked');
+  assert.equal(careers.hasUnlock(top, 'kingpin'), true, 'the top of the ladder: its title');
+  assert.equal(careers.hasUnlock(mid, 'kingpin'), false);
+  assert.equal(careers.unlockValue(mid, 'armor'), 1, 'a light vest at Enforcer');
+  assert.equal(careers.unlockValue(top, 'armor'), 3, 'the heaviest at the top');
   assert.ok(Math.abs(careers.fenceCut({ profile: top }, HOT_FENCE_CUT) - (HOT_FENCE_CUT - 0.1)) < 1e-9);
   assert.equal(careers.loanDeposit(low, MORTGAGE.deposit), MORTGAGE.deposit);
   assert.equal(careers.loanDeposit(mid, MORTGAGE.deposit), 0.18);

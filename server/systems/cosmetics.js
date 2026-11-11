@@ -5,6 +5,10 @@
 //     drawn by client/main.js drawWorldLabels). Bought and picked at any clothing store's style counter (economy.js
 //     'cos': the menu below). Plates: the ones bought, a season's gift's, and each career's rank titles - a rank's while
 //     you hold it, the top rank's for good (with its season).
+//   - the top of a ladder (Kingpin, Chief, Tycoon - the careers' 'kingpin', 'chief', 'tycoon' unlocks): reaching it puts
+//     its title over your name for everyone, in gold (worn the moment it's reached: noteTops; take it off or swap it at the
+//     style counter). Kept for good with its season: "Kingpin" while you hold the rank, "S0 Kingpin" once a season's wipe
+//     has taken the rank (a top reached again in a later season: the latest season's).
 //   - a car's paint in the color you pick, at a Fresh Coat garage (economy.js 'cpaint': paintMenu / paintPick).
 //   - the beta gift (SEASON.beta - Season 0, the public beta): every account that plays during it gets the Founding
 //     Citizen jacket (shared/lookcore.js: a gift piece - never sold, the varsity jacket's art in black and gold) and the
@@ -15,8 +19,8 @@
 //     and the gold plate of a career board's top 10 at a season's end (bp - seasons.js endSeason: 'S0 Top 10 Kingpin').
 //   profile.cosm: { c: [color ids owned], pl: [plate ids bought], tops: [{ c (career), s (season) }] (the top ranks
 //     reached), nc (the color worn, or null), tp (the plate worn, or null), gifts: { beta: { at, s } }, sb: [seasons
-//     played], bp: [{ s (season), c (career), i (place), of (the top it was) }] } - absent on old profiles (made the
-//     first time; sb, bp on older ones too)
+//     played], bp: [{ s (season), c (career), i (place), of (the top it was) }], tw (a top's title put on once: 1) } -
+//     absent on old profiles (made the first time; sb, bp, tw on older ones too). tops: one { c, s } a career a season.
 import { COSMETICS, SEASON, CAREERS, CAREER_KEYS } from '../../shared/rules.js';
 import { PIECE_IDS } from '../../shared/lookcore.js';
 import { PAINTS } from '../../shared/vehicles.js';
@@ -46,8 +50,12 @@ const rankPlate = (id) => { const m = /^r:(\w+):(\d)$/.exec(id || ''); return m 
 const boardPlate = (id) => { const m = /^b:(\d+):(\w+)$/.exec(id || ''); return m && CAREERS[m[2]] ? { s: +m[1], c: m[2] } : null; };
 export const boardPlateId = (s, c) => `b:${s}:${c}`;
 const boardOf = (prof, B) => cosmOf(prof).bp.find((q) => q.s === B.s && q.c === B.c) || null;
+// the season a top rank was last reached in (profile.cosm.tops), or null
+const topSeason = (prof, c) => { let s = null; for (const t of cosmOf(prof).tops) if (t.c === c && (s === null || t.s > s)) s = t.s; return s; };
+export const isTopPlate = (id) => { const R = rankPlate(id); return !!R && R.r === TOP(R.c); };
 export function plateText(id, prof = null) {
   const R = rankPlate(id);
+  if (R && R.r === TOP(R.c) && prof && careers.careerRank(prof, R.c) < R.r) { const s = topSeason(prof, R.c); if (s !== null) return `S${s} ${CAREERS[R.c].ranks[R.r].name}`; }   // (kept from its season)
   if (R) return CAREERS[R.c].ranks[R.r].name;
   const B = boardPlate(id);
   if (B) { const q = prof && boardOf(prof, B); return `S${B.s} Top ${(q && q.of) || SEASON.top} ${CAREERS[B.c].ranks[TOP(B.c)].name}`; }
@@ -70,7 +78,7 @@ export const hasColor = (prof, id) => cosmOf(prof).c.includes(id);
 export function plateOf(prof) {
   const C = cosmOf(prof), out = {};
   if (C.nc && COLOR[C.nc] && hasColor(prof, C.nc)) out.c = COLOR[C.nc].hex;
-  if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp)) out.g = 1; }
+  if (C.tp && hasPlate(prof, C.tp)) { out.t = plateText(C.tp, prof); if ((PLATE[C.tp] && PLATE[C.tp].gold) || boardPlate(C.tp) || isTopPlate(C.tp)) out.g = 1; }   // (gold: a gift's, a season board's, the top of a ladder)
   const k = prof.pid ? tagOf(prof.pid) : null;
   if (k) out.k = k;
   return out.c || out.t || out.k ? out : null;
@@ -100,11 +108,16 @@ export function grantBeta(world, p) {
   return true;
 }
 
-// a career's top rank reached: its title for good, with its season
+// a career's top rank reached: its title for good, with its season - and over your name from that moment (worn: the
+// unlock), for everyone to see. Once a season (a top reached again in a later one: that season noted too).
 export function noteTops(prof, s = SEASON.n) {
   const C = cosmOf(prof);
   let moved = false;
-  for (const c of CAREER_KEYS) if (careers.careerRank(prof, c) >= TOP(c) && !C.tops.some((t) => t.c === c)) { C.tops.push({ c, s }); moved = true; }
+  for (const c of CAREER_KEYS) if (careers.careerRank(prof, c) >= TOP(c) && !C.tops.some((t) => t.c === c && t.s === s)) { C.tops.push({ c, s }); C.tp = `r:${c}:${TOP(c)}`; moved = true; }
+  if (!C.tw && C.tops.length) {   // (a top reached before the title went over names - 2026-11-11: worn once, unless another plate is)
+    C.tw = 1; moved = true;
+    if (!C.tp) { const t = C.tops.reduce((a, b) => (b.s >= a.s ? b : a)); C.tp = `r:${t.c}:${TOP(t.c)}`; }
+  }
   if (moved) store.touch();
   return moved;
 }
@@ -124,7 +137,7 @@ export function update(world) {
     if (!p.profile || !p.ped) continue;
     if (!p.cosmOk) { p.cosmOk = 1; grantBeta(world, p); noteSeason(p.profile); noteTops(p.profile); refresh(p); continue; }
     if (slow) { noteTops(p.profile); refresh(p); }   // (a rank lost: its plate comes off)
-    else if (p.npDirty) { p.npDirty = false; refresh(p); }   // (a crew's tag on or off: crews.js)
+    else if (p.npDirty) { p.npDirty = false; noteTops(p.profile); refresh(p); }   // (a crew's tag on or off: crews.js; a rank-up: careers.js)
   }
 }
 

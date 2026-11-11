@@ -31,6 +31,7 @@ import * as grenades from './grenades.js';
 import * as crews from './crews.js';   // (no friendly fire in a crew)   // (the explosion tester: H58)
 import { FLY, isAir } from '../../shared/flight.js';   // (an aircraft well up: a blast on the ground doesn't reach it)
 import * as grime from './grime.js';
+import * as armor from './armor.js';   // (a black-market vest takes a share of a hit: armor.js)
 import { BATH } from '../../shared/rules-play.js';
 
 // two players in one crew (crews.js): no friendly fire - a swing, a zap or a spray passes them by
@@ -460,7 +461,7 @@ function shotHits(world, t, shooter, w, h) {
   let dmg = h.dmg;
   // (point blank stays almost always a kill, a player's grit or not)
   if (h.n >= 3 && h.dist < SHOTGUN_CLOSE_PX) dmg *= (1 + (SHOTGUN_CLOSE_MULT - 1) * (1 - h.dist / SHOTGUN_CLOSE_PX)) * gritOf(t, 'gun');
-  if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - dmg / gritOf(t, 'gun') <= 0 });
+  if (!t.dead && hurtable(world, t)) reactions.shot(world, t, shooter, w, { n: h.n, dist: h.dist, a: h.a, lethal: t.hp - (dmg / gritOf(t, 'gun') - armor.share(t, dmg / gritOf(t, 'gun'), 'gun', shooter)) <= 0 });
   if (shooter && shooter.player && !t.dead && hurtable(world, t)) skills.gain(world, shooter.player, 'shoot');
   damage(world, t, dmg, shooter, 'gun', h.a);
 }
@@ -520,6 +521,7 @@ export function damage(world, ped, amount, attacker, cause, dir = 0) {
   if (ped.player && cause !== 'nonlethal') {
     // players are tougher (rules.js PLAYER_GRIT); a train that would kill throws you clear now and then, critically hurt
     amount /= gritOf(ped, cause);
+    amount = armor.absorb(world, ped, amount, cause, attacker);   // (a vest worn: what gets through - armor.js)
     if (cause === 'train' && amount >= ped.hp && world.rand() < TRAIN_SURVIVE) {
       amount = Math.max(0, ped.hp - Math.max(1, ped.maxHp * TRAIN_SURVIVE_HP));
       ped.bleeding = true;

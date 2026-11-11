@@ -12,7 +12,8 @@
 // wear only what you own; the stores sell the rest (the fitting room: 'buy', with Buy and wear), the barbershops
 // and salons change the hair ('cut'), the mirror at home the body, face and extras. A new player's first session
 // (the starting look, "Make it yours") is free, and whatever they leave it wearing is theirs.
-import { decodeLook, encodeLook, validLook, lookToApp, lookFromOutfit, starterFor, randomLook, SLOTS, PIECES } from '../../shared/look.js';
+import { decodeLook, encodeLook, validLook, lookToApp, lookFromOutfit, starterFor, randomLook, SLOTS, PIECES, item } from '../../shared/look.js';
+import { ARMOR } from '../../shared/rules.js';
 import * as W from '../../shared/wardrobe.js';
 import { BLADE_COLORS } from '../../shared/items.js';
 import { mulberry32 } from '../../shared/rng.js';
@@ -53,6 +54,11 @@ export function grant(prof, L) {
 }
 export function appOf(prof) {
   ensureLook(prof);
+  const T = prof.armor && prof.armor.pts > 0 ? ARMOR.tiers[(prof.armor.t | 0) - 1] : null;
+  if (T) {   // (a black-market vest on: the tactical vest over your clothes, in its tier's color - armor.js; your own look untouched)
+    const L = decodeLook(prof.look), vest = L && item('Tactical vest', T.color);
+    if (vest) { L.outfit.jacket = vest; const V = validLook(L); if (V) { const code = encodeLook(V); return lookToApp(decodeLook(code), code); } }
+  }
   return lookToApp(decodeLook(prof.look), prof.look);
 }
 export function stateMsg(p, world = null) {

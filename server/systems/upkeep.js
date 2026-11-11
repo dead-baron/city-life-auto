@@ -18,7 +18,8 @@
 //   key: 'h:<home id>' | 'b:<business site id>' (the food truck: none - it's a van)
 // A business on a lease (a contact's: contacts.js - its entry's lease { by, off }) costs off less a day: the rent. A tower
 // share (profile.contacts.stake { tower, rent }: Victor Lin's chain) pays its rent into the bank for each day billed -
-// clean money (business XP: careers.js onMoney).
+// clean money (business XP: careers.js onMoney). So does each commercial unit (biz.js type 'unit': biz.rentOf) - billed its
+// upkeep like any business, its rent in first.
 import { UPKEEP } from '../../shared/rules.js';
 import { store } from '../store.js';
 import { dayKey } from './goals.js';
@@ -85,6 +86,14 @@ export function check(world, p, now = Date.now()) {
   if (today > (U.d ?? today)) {
     U.d = today; touched = true;
     if (days > 0) for (const q of list) { const D = (U.due[q.key] ||= { n: 0, amt: 0, w: 0 }); D.amt += q.daily * days; D.n += days; billed += q.daily * days; }
+    const units = list.filter((q) => q.s && q.s.t === 'unit');
+    if (days > 0 && units.length) {   // (commercial units' rent: in before the bills are settled - clean money)
+      const rent = units.reduce((t, q) => t + biz.rentOf(q.s), 0) * days;
+      prof.bank = (prof.bank || 0) + rent;
+      careers.onMoney(world, p, 'biz', rent);
+      careers.note(world, p, 'rent', { n: rent, units: units.length });
+      world.notify(p, `Rent from your commercial unit${units.length === 1 ? '' : 's'}: ${money(rent)} to your bank${days > 1 ? ` (${days} days)` : ''}.`, 'good');
+    }
     if (days > 0 && stake && stake.rent > 0) {   // (the tower share's rent: in before the bills are settled)
       const rent = stake.rent * days;
       prof.bank = (prof.bank || 0) + rent;

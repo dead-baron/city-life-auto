@@ -22393,3 +22393,56 @@ on: `mult(world, x, y, k)`, `units(...)`), the action button's `interactions`, a
   officers, a solo race night through the checkpoints to the pot, the cup round by round and knocked out).
   On World v3 (seed 1337): blocks in The Yards and others, 29 crackdown districts, six courses (47 ms to work out, on
   the first race night), Waves Arena; 20 s of play with all four on cost ~0.8 s over the same 20 s without.
+
+## 2026-11-11 - The last four "coming" unlocks: armor tiers, the K9 partner, commercial property, the title over your name
+
+Nothing in the careers is "coming" any more (`shared/rules.js` `CAREERS`: no `soon` left; the What's next app and the
+rank-up title card show them unlocked). All four are built on systems that were there, with no new art (no art or world
+rekey).
+- **Black-market armor** (crime; `server/systems/armor.js`, numbers `ARMOR`). The crime `armor` unlock now carries a tier:
+  a light vest at Booster, a plated vest at Lieutenant, a heavy plate carrier at Underboss (`careers.unlockValue(p,
+  'armor')`). There was no armor item before, so it's a worn thing on the profile (`profile.armor { t, pts }`, absent on
+  old saves), sold at the black market's counter (the fence's menu: one row a tier, the rank on the locked ones). Worn, it
+  takes `absorb` of a gun's, blade's, fist's or arrow's hit, after the player's grit (`combat.js damage`), until it has
+  taken `pts` in all - then it's spent and gone. It doesn't stop blasts, fire, cars or falls. Others see it as the K9
+  handler's tactical vest over your clothes, in the tier's color (`looks.js appOf`: the look on the wire, your own look
+  untouched; on duty the uniform stays and the clothes kept for after get it).
+  Balance (the police's guns): the service pistol (20, /1.4 grit = 14.3 a hit) drops someone bare in 7 hits; a vest adds
+  at most its `pts` of health - light 30%/20 pts (9 hits, $1,800), plated 40%/35 (10 hits, $4,200, 3% slower running),
+  heavy 50%/50 (11 hits, $8,500, 7% slower running). Rifle rounds go partly through (`pierce` by the shooter's weapon:
+  the patrol rifle x0.6, the marksman rifle x0.5, SWAT's rifle x0.7...), so the marksman rifle still drops anyone in the
+  heaviest vest in two, and the patrol rifle takes 6-8 hits where it took 5. The slower run means a vest never helps
+  anyone get away. Priced like the black market's guns: a goal at each rank.
+- **A K9 partner** (police, Corporal; `server/systems/k9.js` partner, numbers `K9_UNIT`). It reuses the K9 units' German
+  shepherd (`pet:dog_shepherd`) and its `hurt()`: hurt, it limps off and is never killed. On duty at the rank, the armory
+  has a row to take your partner. It waits in the kennel while you're in there, walks at your heel in the motor pool, and
+  jumps into your police cruiser with you (that car is the K9 unit: `v.k9`). When you get out by the car, it gets out
+  too. With you on foot and it ready, a suspect on foot within 650 px that you can see (wanted, or a flagged NPC:
+  `law.isSuspectFor`) gets a bark and the dog sent after them, a little faster than a run, for 12 s at most. It goes round
+  people in its way. Reaching them, it takes them down and holds them 4 s (`downUntil`, so `law.arrestable`: cuff them).
+  This is non-lethal: no damage. Mashing attack 6 times shakes it off, and so does hurting it. After each go it needs
+  45 s before it's sent again. Off duty, dead, gone, the cruiser wrecked, or left 1,600 px behind: back to the kennels
+  (take it again next shift).
+- **Commercial property** (business; `biz.js` type `unit`, numbers `COMMERCIAL`). Up to 24 of the city's shops that
+  nobody runs as a business here are commercial units: corner stores, cafes, clothes shops, barbers, gun shops,
+  pharmacies and the walk-in shops. At most 2 a district, 900 px apart, picked by a hash of the POI id, and added after
+  the other sites so their menu ids don't move. Each is bought at its own counter (a row in the shop's menu) and is in
+  the Homes app's Businesses list. The tenant keeps the shop open and pays 3% of its price a day in rent into your bank
+  through upkeep.js's wall-clock day: days away count, up to `UPKEEP.backDays`, the rent in before the bills are settled.
+  It's clean money (business XP), and a `rent` progress event. It pays upkeep like a business (`bizRate`), unpaid upkeep
+  ends in repossession as for any place, and it counts as owning in that district for reputation. Prices by the district's
+  tier: $30k (rough) to $80k (lux). A $35k unit pays $1,050 a day less $88 upkeep, back in about five weeks. The number
+  you may own is the unlock's value: 2 at Owner, 4 at Landlord. Units don't count toward `BIZ.max`, since a unit isn't a
+  business you run, and they're not a "business" for the takings goal.
+- **The title over your name** (`cosmetics.js`). Reaching the top of a ladder (Kingpin, and likewise Chief and Tycoon,
+  whose ranks now list it: unlocks `chief`, `tycoon`) puts its title plate on at once, in gold, over your name for
+  everyone (the nameplate on the wire). A rank-up now flags the nameplate, so it's there within a second. It's kept with
+  its season: "Kingpin" while you hold the rank, "S0 Kingpin" once a season's wipe has taken it. `tops` now notes one
+  `{ c, s }` per career per season (a later season's top: that season). A top reached before today is put on once
+  (`cosm.tw`), unless another plate is worn; it can be swapped at the style counter as before.
+- Guide: Body armor (Items), Your K9 partner (The law), Commercial property (Property), and the style entry's titles.
+  Homes app: a unit's row shows its rent. Tests: `test/unlocks2.test.js` (gating; the armor math - 7 / 9 / 10 / 11 hits,
+  the marksman rifle's two, spent, the vest on the wire, the slower run, saved; the K9's cruiser, takedown held for the
+  cuffs, the cooldown, shaken off, back to the kennels; units' caps, not a business slot, rent and upkeep for a day and
+  for days away, sold; Kingpin / Chief / Tycoon gold over the name, "S0 Kingpin" after the rank's gone).
+  `test/careers.test.js`: kingpin is unlocked now.

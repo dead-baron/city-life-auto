@@ -20,7 +20,7 @@
 // 'dispatch', 'duty', 'shift' {job}, 'fishSold' {n: $}, 'clean' {n: $}, 'takings', 'fish' {lb}, 'strike', 'soccerWin',
 // 'soccer', 'raceWin', 'race', 'bowl', 'heist', 'sam' {n}, 'xp:<career>' {n} (worked out each second from the counters),
 // 'spiked', 'escort', 'recover' {crate, src}, 'haul' {crate, src} (a crate handed in at a bank vault), 'prop' {k} (property
-// bought); 'fence' carries {crate, src} for a crate.
+// bought), 'rent' {n: $, units} (commercial units' rent: upkeep.js); 'fence' carries {crate, src} for a crate.
 //   profile.careers: { v, main (the career you picked to lead with, or null: your highest), seen { c: rank shown },
 //                      biz (business XP), props [keys of property counted], tried { act: 1 }, calls [{ who, text, at }],
 //                      pv (the old police ranks checked) } - absent on old profiles (migrate adds it on joining)
@@ -277,6 +277,7 @@ export function rankUp(world, p, c, r) {
   const un = unlocksAt(c, r), live = un.filter((u) => !u.soon).map((u) => u.name), soon = un.filter((u) => u.soon).map((u) => u.name);
   const sub = `${C.name} rank ${r + 1} of ${C.ranks.length}${live.length ? ` · ${live.join(' · ')}` : ''}${soon.length ? ` · coming: ${soon.join(' · ')}` : ''}`;
   if (p.conn) p.conn.sendJSON({ t: 'ftue', a: 'rank', c, title: name.toUpperCase(), sub });
+  p.npDirty = true;   // (the nameplate looked at again: a rank's plate, the top's title over your name - cosmetics.js)
   if (world.track) world.track('rank', p, { career: c, rank: r });
   store.touch();
 }

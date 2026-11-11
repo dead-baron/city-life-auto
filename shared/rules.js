@@ -28,32 +28,32 @@ export const CAREERS = {
   crime: { name: 'Crime', icon: 'rob', contact: ['Rosa Vance', '"Deacon" Marsh'], lateFrom: 4, fencePer: 0.01, ranks: [
     { name: 'Corner Kid', xp: 0 },
     { name: 'Hustler', xp: 50, unlock: [{ k: 'fenceCut', v: 0.03, name: 'Better fence prices: a 3-point smaller cut' }] },
-    { name: 'Booster', xp: 150, unlock: [{ k: 'armor', name: 'Black-market armor tiers', soon: 1 }] },
+    { name: 'Booster', xp: 150, unlock: [{ k: 'armor', v: 1, name: 'Black-market armor: a light vest' }] },
     { name: 'Enforcer', xp: 400, unlock: [{ k: 'fenceCut', v: 0.06, name: 'Better fence prices: a 6-point smaller cut' }] },
-    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'crew', name: 'A crew of your own: a name and tag, a crew bank' }] },
+    { name: 'Lieutenant', xp: 800, unlock: [{ k: 'crew', name: 'A crew of your own: a name and tag, a crew bank' }, { k: 'armor', v: 2, name: 'Black-market armor: a plated vest' }] },
     { name: 'Captain', xp: 1500, unlock: [{ k: 'fenceCut', v: 0.1, name: 'Better fence prices: a 10-point smaller cut' }, { k: 'heists', name: 'Heist contracts' }] },
-    { name: 'Underboss', xp: 2500, unlock: [{ k: 'hideout', name: 'A hideout: a stash, and somewhere to lie low' }] },
-    { name: 'Kingpin', xp: 4000, unlock: [{ k: 'kingpin', name: 'The Kingpin title over your name', soon: 1 }] },
+    { name: 'Underboss', xp: 2500, unlock: [{ k: 'hideout', name: 'A hideout: a stash, and somewhere to lie low' }, { k: 'armor', v: 3, name: 'Black-market armor: a heavy plate carrier' }] },
+    { name: 'Kingpin', xp: 4000, unlock: [{ k: 'kingpin', name: 'The Kingpin title over your name' }] },
   ] },
   police: { name: 'Police', icon: 'siren', contact: ['Sgt. Dana Okafor', 'Captain Luis Reyes'], lateFrom: 4, samPer: 1, dispatchXp: 8, crimeLoss: 0.25, dutyLoss: 0.5, lockStars: 3, lockMin: 60, ranks: [
     { name: 'Recruit', xp: 0, unlock: [{ k: 'pool', name: 'Cruisers, motorcycles and patrol boats' }] },
     { name: 'Officer', xp: 40, unlock: [{ k: 'dispatch', name: 'Dispatch priority: reports stay on your map longer' }] },
-    { name: 'Corporal', xp: 120, unlock: [{ k: 'k9', name: 'A K9 partner', soon: 1 }] },
+    { name: 'Corporal', xp: 120, unlock: [{ k: 'k9', name: 'A K9 partner: a police dog in your cruiser' }] },
     { name: 'Sergeant', xp: 260, unlock: [{ k: 'swat', name: 'The SWAT truck' }] },
     { name: 'Detective', xp: 480, unlock: [{ k: 'tracking', name: 'Detective tracking tools' }] },
     { name: 'Lieutenant', xp: 800, unlock: [{ k: 'patrolPay', v: 0.25, name: 'Patrol calls pay 25% more' }] },
     { name: 'Captain', xp: 1300, unlock: [{ k: 'heli', name: 'The police helicopter' }] },
-    { name: 'Chief', xp: 2000, unlock: [{ k: 'office', name: 'A station office' }] },
+    { name: 'Chief', xp: 2000, unlock: [{ k: 'office', name: 'A station office' }, { k: 'chief', name: 'The Chief title over your name' }] },
   ] },
   business: { name: 'Business', icon: 'money', contact: ['Mae Holloway', 'Victor Lin'], lateFrom: 4, cleanPer: 0.02, propPer: 0.004, ranks: [
     { name: 'Vendor', xp: 0 },
     { name: 'Shopkeeper', xp: 60, unlock: [{ k: 'deposit', v: 0.18, name: 'Bigger loans: an 18% mortgage deposit' }] },
-    { name: 'Owner', xp: 200, unlock: [{ k: 'commercial', name: 'Commercial property', soon: 1 }] },
+    { name: 'Owner', xp: 200, unlock: [{ k: 'commercial', v: 2, name: 'Commercial property: up to 2 shop units for rent' }] },
     { name: 'Proprietor', xp: 500, unlock: [{ k: 'loans', v: 1, name: 'Bigger loans: one more mortgage at once' }] },
-    { name: 'Landlord', xp: 1000, unlock: [{ k: 'second', name: 'A second and third business' }] },
+    { name: 'Landlord', xp: 1000, unlock: [{ k: 'second', name: 'A second and third business' }, { k: 'commercial', v: 4, name: 'Commercial property: up to 4 units' }] },
     { name: 'Investor', xp: 1800, unlock: [{ k: 'deposit', v: 0.12, name: 'Bigger loans: a 12% mortgage deposit' }] },
     { name: 'Mogul', xp: 3000, unlock: [{ k: 'staff', name: 'Staff to run a shop while you\'re away' }] },
-    { name: 'Tycoon', xp: 5000, unlock: [{ k: 'loans', v: 2, name: 'Bigger loans: two more mortgages at once' }, { k: 'penthouse', name: 'A penthouse, for less' }] },
+    { name: 'Tycoon', xp: 5000, unlock: [{ k: 'loans', v: 2, name: 'Bigger loans: two more mortgages at once' }, { k: 'penthouse', name: 'A penthouse, for less' }, { k: 'tycoon', name: 'The Tycoon title over your name' }] },
   ] },
 };
 export const CAREER_KEYS = ['crime', 'police', 'business'];
@@ -1260,6 +1260,41 @@ export const TRACK = { everyS: 10, officeS: 5, startGapS: 30, fuzzPx: 96, lostS:
 export const BIZ_RANK = { first: 1 };
 export const STAFF = { hireRate: 0.15, share: 0.5 };
 export const PENTHOUSE = { off: 0.25 };
+// The last four unlocks (docs/PROGRESSION.md "Careers and ranks"; 2026-11-11):
+// - black-market armor (the crime 'armor' unlock - its v the best tier you may buy: a light vest at Booster, plated at
+//   Lieutenant, a heavy plate carrier at Underboss; server/systems/armor.js), sold at the black market (the fence). Worn,
+//   it takes `absorb` of a gun's, a blade's, a fist's or an arrow's hit (after a player's grit: PLAYER_GRIT) until it has
+//   taken `pts` in all - then it's spent. So a vest is at most `pts` more health: a police service pistol drops someone
+//   in 7 hits, 9 / 10 / 11 in a vest. Rifle rounds - the police's and SWAT's above all - go partly through it (pierce:
+//   absorb x that, by the shooter's weapon), so the marksman rifle still drops anyone in two; a blast, fire, a car or a fall it doesn't stop. The heavier ones slow your running
+//   (slow: your speed x it) - a vest doesn't make anyone faster to get away. Others see it: a tactical vest over your
+//   clothes in its tier's color (shared/lookcore.js - the K9 handler's vest; no new art). Kept with the account until spent
+//   (profile.armor { t, pts }); buying another replaces it. Prices: a goal to save for at each rank, priced like its guns.
+export const ARMOR = {
+  tiers: [
+    { id: 'light', name: 'Light vest', price: 1800, absorb: 0.3, pts: 20, slow: 1, color: 'charcoal' },
+    { id: 'plated', name: 'Plated vest', price: 4200, absorb: 0.4, pts: 35, slow: 0.97, color: 'olive' },
+    { id: 'heavy', name: 'Heavy plate carrier', price: 8500, absorb: 0.5, pts: 50, slow: 0.93, color: 'black' },
+  ],
+  causes: ['gun', 'melee', 'arrow'], pierce: { prifle: 0.6, psniper: 0.5, passault: 0.8, rifle: 0.7, arifle: 0.8, huntrifle: 0.5, varmint: 0.7 },
+};
+// - a K9 partner (the police 'k9' unlock, Corporal; server/systems/k9.js partner): taken at the armory on duty, the dog
+//   comes out to the motor pool with you and rides in your cruiser (the K9 unit) - out of it, at your heel. A suspect on
+//   foot (wanted, or a flagged NPC) within `sight` px of you that you can see: it's sent after them (a bark - the heads-up),
+//   `speed` x a run, and gives up after chaseS; reaching them it takes them down and holds them `holdS` s - down, so you
+//   can cuff them (law.js arrestable). It never bites to hurt: non-lethal. A suspect can shake it off by mashing attack
+//   (`mash` presses), or by hitting it (it limps off: never killed). After each go - a takedown, shaken off, given up -
+//   it needs cooldownS before it's sent again. Left more than strayPx from you, out of your cruiser, it goes back to the
+//   kennels (take it again at the armory); it jumps in with you within boardPx of the car.
+export const K9_UNIT = { sight: 650, speed: 1.4, reach: 22, holdS: 4, mash: 6, chaseS: 12, cooldownS: 45, boardPx: 220, strayPx: 1600 };
+// - commercial property (the business 'commercial' unlock - its v how many units you may own: 2 at Owner, 4 at Landlord;
+//   server/systems/biz.js type 'unit'): shops already in the city that nobody runs as a player business (kinds; the walk-in
+//   shops too), at most perDistrict a district, gapPx apart, max in all - each a commercial unit you buy and let: its tenant
+//   keeps the shop running and pays rent (price x rent) into your bank for each day upkeep bills (upkeep.js: the wall-clock
+//   day; days away count, up to UPKEEP.backDays) - clean money. Its upkeep is a business's (UPKEEP.bizRate). Not counted
+//   toward BIZ.max (a unit isn't a business you run); price: by the district's tier (else `base`)
+export const COMMERCIAL = { kinds: ['convenience', 'coffee', 'clothing', 'barber', 'gunshop', 'pharmacy', 'delivery'], max: 24, perDistrict: 2, gapPx: 900,
+  base: 40000, price: { lux: 80000, neon: 60000, mid: 55000, red: 50000, suburb: 45000, low: 35000, rough: 30000 }, rent: 0.03 };
 export const HEIST = {
   drillPrice: DRILL_PRICE, drillS: 60, jams: 2, abandonS: 150, heat: 62, heatS: 0.4, responseS: [8, 14], units: 4, wave2S: 25,
   openS: 300, cooldownS: 1800, cash: 3000, reach: 46, xp: 60, seizeSam: 5,   // (seizeSam: Samaritan points for an officer who takes the drill off)
