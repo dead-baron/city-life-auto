@@ -1,17 +1,24 @@
-// The owner's protected pages: the admin log (/admin/log), the analytics dashboard (/admin/dashboard) and the review
-// list (/admin/reviews). Plain HTML and tables, no scripts, no libraries. The way in: the game hands a signed-in owner
+// The owner's protected pages: the admin log (/admin/log), the analytics dashboard (/admin/dashboard), the review
+// list (/admin/reviews) and the players (/admin/players: server/staffplayers.js). Plain HTML and tables, no scripts, no
+// libraries. The way in: the game hands a signed-in owner
 // (or an admin, for the reviews) a one-time link (server/admin.js pagelink: a code good once for a minute); it sets an
 // HttpOnly, SameSite=Strict session cookie for an hour. The role is checked again on every request.
+// The one page that changes anything (the players' actions) takes a POST carrying the session's own token (csrf, in
+// each form) on top of the Strict cookie, and hands the command to the staff commands themselves (act: server/admin.js
+// handle - the same powers, the same admin log).
 import { randomBytes } from 'node:crypto';
 import { allowed } from './roles.js';
-import { sendHTML, cookies, setCookie, esc, createRateLimiter } from './httputil.js';
+import { sendHTML, cookies, setCookie, esc, createRateLimiter, readForm } from './httputil.js';
+import { safeEqual } from './auth.js';
 import { FTUE_STEPS } from './analytics.js';
+import { createStaffPlayers, ACTIONS } from './staffplayers.js';
 
 const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
 
 // texts: { perf() -> string, errors() -> string } - the devices' reports and the pages' errors (server/perfreports.js),
 // read at /admin/perf and /admin/clienterrors by admins and the owner (the owner's call, 11-04: not public any more)
-export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, now = Date.now, stats = null, texts = null }) {
+// world, store, act(actor, msg) -> the staff command's reply, said(p) -> their recent chat lines: the players page (none: off)
+export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null }) {
   const links = new Map(), sessions = new Map();
   const rl = createRateLimiter(now);
   const secure = publicUrl.startsWith('https://');
@@ -27,15 +34,16 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
     const s = sessions.get(cookies(req).cla_admin || '');
     if (!s) return null;
     if (accounts.banned(s.pid)) return null;
-    return { pid: s.pid, role: accounts.role(s.pid), name: (accounts.profileOf(s.pid) || {}).name || '?' };
+    return { pid: s.pid, role: accounts.role(s.pid), name: (accounts.profileOf(s.pid) || {}).name || '?', s };
   }
 
-  const shell = (title, body, w) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)} - City Life Auto</title>
-<style>body{font:14px/1.4 system-ui,sans-serif;background:#14161a;color:#e8e8e8;margin:16px}a{color:#8cc8ff}table{border-collapse:collapse;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #333;padding:3px 7px;text-align:left;vertical-align:top}th{background:#22252b}h1{font-size:20px}h2{font-size:16px;margin-top:24px}.n{text-align:right;font-variant-numeric:tabular-nums}.bad{color:#ff8a80}.ok{color:#9be29b}nav a{margin-right:14px}.bar{display:inline-block;height:9px;background:#5b9bd5;vertical-align:middle}</style>
-<nav>${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}<a href="/admin/reviews">Review list</a><a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a> · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
+  const shell = (title, body, w, head = '') => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">${head}<title>${esc(title)} - City Life Auto</title>
+<style>body{font:14px/1.4 system-ui,sans-serif;background:#14161a;color:#e8e8e8;margin:16px}a{color:#8cc8ff}table{border-collapse:collapse;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #333;padding:3px 7px;text-align:left;vertical-align:top}th{background:#22252b}h1{font-size:20px}h2{font-size:16px;margin-top:24px}.n{text-align:right;font-variant-numeric:tabular-nums}.bad{color:#ff8a80}.ok{color:#9be29b}nav a{margin-right:14px}.bar{display:inline-block;height:9px;background:#5b9bd5;vertical-align:middle}.wide{overflow-x:auto}form.act{display:inline-block;margin:0 10px 10px 0;padding:6px 8px;border:1px solid #333;background:#1b1e23}form.act input,form.act select{background:#22252b;color:#e8e8e8;border:1px solid #444;padding:3px 5px;margin-right:6px}button{background:#2d4f73;color:#fff;border:0;padding:5px 11px;cursor:pointer;font:inherit}button.danger{background:#8a2b2b}</style>
+<nav>${allowed(w.role, 'players') ? '<a href="/admin/players">Players</a>' : ''}${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}${allowed(w.role, 'reviews') ? '<a href="/admin/reviews">Review list</a><a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a>' : ''} · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
   const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c) => (typeof c === 'number' ? `<td class="n">${c.toLocaleString('en-US')}</td>` : `<td>${c}</td>`)).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">nothing yet</td></tr>`}</table>`;
   const when = (t) => (t ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') : '');
   const j = (v) => (v === undefined ? '' : esc(typeof v === 'string' ? v : JSON.stringify(v)));
+  const SP = world && store && act ? createStaffPlayers({ accounts, mod, analytics, store, world, said, now }, { table, when }) : null;
   const sumObj = (days, f) => { const o = {}; for (const d of days) for (const [k, v] of Object.entries(d[f] || {})) o[k] = (o[k] || 0) + v; return o; };
   const top = (o, n = 25) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n);
   const bars = (o, n = 25, money = false) => { const l = top(o, n), max = l.length ? l[0][1] : 1; return table(['', money ? 'dollars' : 'count', ''], l.map(([k, v]) => [esc(k), Math.round(v), `<span class="bar" style="width:${Math.max(1, Math.round((v / max) * 240))}px"></span>`])); };
@@ -88,7 +96,46 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
     return out;
   }
 
-  function handle(req, res, url) {
+  // the staff member as the staff commands know them: their character when they're in the game (the same refusal
+  // memory as in-game), else a stand-in with their id and name
+  const standIns = new Map();
+  function actor(w) {
+    const q = world.players.get(w.pid);
+    if (q && q.conn) return q;
+    let a = standIns.get(w.pid);
+    if (!a) { a = { pid: w.pid, name: w.name }; standIns.set(w.pid, a); }
+    a.name = w.name;
+    return a;
+  }
+  function playersGet(res, url, w) {
+    const id = url.searchParams.get('id');
+    if (!id) { sendHTML(res, 200, shell('Players', SP.listPage(), w, '<meta http-equiv="refresh" content="15">')); return; }
+    if (!allowed(w.role, 'plog')) { sendHTML(res, 403, 'Not for your role.'); return; }
+    // a look at their log is the staff command 'plog' (logged, as in the game)
+    const r = act(actor(w), { a: 'plog', id });
+    const flash = w.s.flash || null;
+    w.s.flash = null;
+    const d = r && r.ok ? SP.detailPage(w.role, w.s.csrf, id, r.data, flash) : null;
+    if (!d) { sendHTML(res, 404, shell('Players', `<p>No such player. <a href="/admin/players">All players</a></p>`, w)); return; }
+    sendHTML(res, 200, shell(d.title, d.body, w));
+  }
+  async function playersPost(req, res, w) {
+    // cross-site: refused before anything is read (the Strict cookie already keeps another site's form out; the token too)
+    if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
+    const form = await readForm(req);
+    if (!form || typeof form.csrf !== 'string' || !w.s.csrf || !safeEqual(form.csrf, w.s.csrf)) { sendHTML(res, 403, 'This form is out of date - open the page again.'); return; }
+    const msg = SP.command(form);
+    if (!msg) { sendHTML(res, 400, 'No such action.'); return; }
+    // a destructive one asks again (a page of its own, no script): Yes posts it with confirm=1
+    const A = ACTIONS[msg.a];
+    if (A.confirm && form.confirm !== '1') { sendHTML(res, 200, shell('Are you sure?', SP.confirmPage(w.s.csrf, msg), w)); return; }
+    const r = act(actor(w), msg) || { ok: false, err: 'No reply.' };
+    w.s.flash = { ok: !!r.ok, text: r.ok ? `Done: ${A.label.toLowerCase()}.` : `Not done: ${r.err || 'refused'}` };
+    res.writeHead(303, { location: `/admin/players?id=${encodeURIComponent(msg.id)}`, 'cache-control': 'no-store' });
+    res.end();
+  }
+
+  async function handle(req, res, url) {
     const path = url.pathname;
     if (!path.startsWith('/admin/')) return false;
     if (!rl.hit(`admin:${ip(req)}`, 120, 60e3)) { sendHTML(res, 429, 'Too many requests.'); return true; }
@@ -98,7 +145,7 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
       if (!l) { sendHTML(res, 410, 'This link has expired or was used - open it again from the game.'); return true; }
       links.delete(c);
       const sid = randomBytes(32).toString('base64url');
-      sessions.set(sid, { pid: l.pid, exp: now() + SESSION_TTL_MS });
+      sessions.set(sid, { pid: l.pid, exp: now() + SESSION_TTL_MS, csrf: randomBytes(24).toString('base64url'), flash: null });
       // the link is opened from the game's page, another site: a Strict cookie isn't sent on the redirect that follows a
       // cross-site navigation - so a small page of our own takes the next step, same-site (a meta refresh, no script)
       sendHTML(res, 200, `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/admin/${l.page}"><title>City Life Auto</title><body style="font:16px system-ui;background:#14161a;color:#eee"><p><a style="color:#8cc8ff" href="/admin/${l.page}">Continue</a></p>`, { 'set-cookie': setCookie('cla_admin', sid, { maxAge: SESSION_TTL_MS / 1000, path: '/admin', sameSite: 'Strict', secure }) });
@@ -107,6 +154,12 @@ export function createAdminHttp({ accounts, log, mod, analytics, publicUrl, ip, 
     const w = who(req);
     if (!w) { sendHTML(res, 401, 'Signed out - open this page from the game (Settings -> Account -> staff tools).'); return true; }
     const page = path.slice(7);
+    if (page === 'players') {
+      if (!SP) { sendHTML(res, 404, 'No such page.'); return true; }
+      if (!allowed(w.role, 'players')) { sendHTML(res, 403, 'Not for your role.'); return true; }
+      if (req.method === 'POST') await playersPost(req, res, w); else playersGet(res, url, w);
+      return true;
+    }
     if (page === 'perf' || page === 'clienterrors') {
       if (!allowed(w.role, 'reviews')) { sendHTML(res, 403, 'Not for your role.'); return true; }
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });

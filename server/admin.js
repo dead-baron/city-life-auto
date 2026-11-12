@@ -14,7 +14,8 @@
 //   prison { id, mins, why }                   -> sent to Prison Island for mins (0: let out), no bail, no way over the wall (admin)
 //   reviews · resolve { rid, note }                                                     (admin)
 //   role { id, role: 'admin' | 'helper' | null }                                        (owner)
-//   pagelink { page: 'log' | 'dashboard' | 'reviews' } -> a one-time link to the protected pages (helper and up)
+//   pagelink { page: 'log' | 'dashboard' | 'reviews' | 'perf' | 'clienterrors' | 'players' } -> a one-time link to the
+//                                                 protected pages (helper and up: each page its own power)
 //   season                                     -> the season now, its days left and each board's top (owner)
 //   season { end: 1, confirm: <the season's n> } -> the season over and the next begun: the top-10 plates, everyone online
 //                                                 out to the title, every profile reset (systems/seasons.js endSeason; owner)
@@ -236,8 +237,8 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
       }
       case 'pagelink': {
         if (!pageLink) return reply(a, false, { err: 'Not available here.' });
-        const page = ['log', 'dashboard', 'reviews', 'perf', 'clienterrors'].includes(msg.page) ? msg.page : 'reviews';
-        const pw = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : 'reviews';
+        const page = ['log', 'dashboard', 'reviews', 'perf', 'clienterrors', 'players'].includes(msg.page) ? msg.page : 'reviews';
+        const pw = page === 'log' ? 'adminlog' : page === 'dashboard' ? 'dashboard' : page === 'players' ? 'players' : 'reviews';
         if (!allowed(role, pw)) return reply(a, false, { err: 'You don\'t have that power.' });
         log.append({ who: me(p), what: 'pagelink', note: page, ok: true });
         return reply(a, true, { data: { url: pageLink(p.pid, page) } });

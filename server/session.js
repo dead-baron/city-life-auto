@@ -121,7 +121,7 @@ export function createSession(world, conn, opts) {
       // how this device loaded and runs the game (once a connection: server/perfreports.js, listed at /perf)
       if (msg.t === 'perf') {   // (one report a connection, and one more four minutes into play: main.js perfReport)
         const play = !!(msg.r && msg.r.stage === 'play'), said = play ? 'perfPlaySaid' : 'perfSaid';
-        if (!conn[said] && !opts.practice) { conn[said] = true; const c = perf.addReport(world, msg.r); if (hooks && c) hooks.perf(c); }
+        if (!conn[said] && !opts.practice) { conn[said] = true; const c = perf.addReport(world, msg.r); if (hooks && c) hooks.perf(c, player); }
         return;
       }
       if (msg.t === 'cerr') { if (perf.addClientError(world, conn, msg) && hooks) hooks.error(player, msg.where); return; }   // (an error in the page: /clienterrors)

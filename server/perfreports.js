@@ -34,10 +34,14 @@ export function deviceName(r) {
   const parts = m ? m[1].split(';').map((x) => x.trim()).filter((x) => x && !/^(Linux|U|K|wv|Mobile|X11)$/.test(x)) : [];
   const ios = ua.match(/(iPhone|iPad|iPod).*? OS (\d+[_\d]*)/);
   const os = ios ? `${ios[1]} · iOS ${ios[2].replace(/_/g, '.')}` : parts.slice(0, 2).join(' ').replace(/^Macintosh Intel Mac OS X/, 'Mac').replace(/_/g, '.');
-  const pick = (re, name) => { const v = ua.match(re); return v ? `${name} ${v[1]}` : null; };
-  const br = pick(/Edg\/(\d+)/, 'Edge') || pick(/CriOS\/(\d+)/, 'Chrome (iOS)') || pick(/FxiOS\/(\d+)/, 'Firefox (iOS)') || pick(/Firefox\/(\d+)/, 'Firefox')
-    || pick(/SamsungBrowser\/(\d+)/, 'Samsung Internet') || pick(/Chrome\/(\d+)/, 'Chrome') || pick(/Version\/(\d+[.\d]*).*Safari/, 'Safari') || 'a browser';
-  return `${os || r.kind || 'a device'} · ${br}`;
+  const b = browserOf(ua);
+  return `${os || r.kind || 'a device'} · ${b ? `${b.name} ${b.v}` : 'a browser'}`;
+}
+// the browser a user agent names: { name, v } | null
+const BROWSERS = [[/Edg\/(\d+)/, 'Edge'], [/CriOS\/(\d+)/, 'Chrome (iOS)'], [/FxiOS\/(\d+)/, 'Firefox (iOS)'], [/Firefox\/(\d+)/, 'Firefox'], [/SamsungBrowser\/(\d+)/, 'Samsung Internet'], [/Chrome\/(\d+)/, 'Chrome'], [/Version\/(\d+[.\d]*).*Safari/, 'Safari']];
+export function browserOf(ua) {
+  for (const [re, name] of BROWSERS) { const v = String(ua || '').match(re); if (v) return { name, v: v[1] }; }
+  return null;
 }
 
 const s1 = (ms) => (ms === undefined ? '-' : (ms / 1000).toFixed(1));
