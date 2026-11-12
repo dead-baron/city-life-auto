@@ -24,6 +24,7 @@ import { CARSOCCER, BIZ } from './rules-games.js';
 import { CONTACTS, CONTACT, CONTACT_ORDER } from './rules-contacts.js';
 import { SHOPS, ITEMS } from './items.js';
 import { RODS } from './fish.js';
+import { CHAT } from './chatdefs.js';
 import { VEHICLES } from './vehicles.js';
 
 const $ = (n) => '$' + Math.round(n).toLocaleString('en-US');
@@ -138,6 +139,7 @@ export function guideSections(map = null) {
     { id: 'places', title: 'Places', blurb: map ? 'What the city has, and what each is for. Your phone\'s Places app finds the nearest.' : 'What each place is for. Your phone\'s Places app finds the nearest.', entries:
       PLACE_NOTES.map(([kind, t, b]) => ({ id: kind, t: map && count(kind) ? `${t} (${count(kind)})` : t, b: b() })).filter((e) => !map || count(e.id) || e.id === 'paint') },
     { id: 'activities', title: 'Activities', blurb: 'Things to do that aren\'t work.', entries: [
+      { id: 'chat', t: 'Chat', b: `[[chat]] opens chat. Near reaches about ${CHAT.nearM} m and shows as a speech bubble over your head; Crew reaches your crew wherever they are; Faction the police on duty, or your gang. There's no city-wide chat. Quick lines and emotes go with one tap. The phone's Messages app texts anyone you've met - within ${CHAT.metM} m of each other for ${CHAT.metS} seconds - or crewed with, and keeps what comes while you're away. Tap a name or a bubble to mute, block or report someone; Settings › Chat switches each channel off.` },
       { id: 'fishing', t: 'Fishing', b: `Face the water with a rod and hold [[action]] to cast - let go for the distance. When the bobber dives, press to strike, then hold to keep the fish in your bar. Rods: ${andList(rods)}. Bait changes what bites.` },
       { id: 'games', t: 'Games in town', b: 'Arcades, bowling, pool, the cinema, the drive-in after dark, chess in the park and back-alley dice.' },
       // (11-07: the arcades' machines, pool, air hockey, bowling and chess against other players - teach the new thing)

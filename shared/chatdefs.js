@@ -30,3 +30,13 @@ export const EMOTES = {
 // the factions that have a chat: biker groups don't exist yet (the owner, 11-04) - their channel waits behind this flag
 export const FACTIONS = { police: true, gang: true, biker: false };
 export const REPORT_WHY = ['hate', 'sexual', 'harassment', 'spam', 'cheating', 'name', 'other'];
+export const REPORT_LABEL = { hate: 'Hate speech', sexual: 'Sexual content', harassment: 'Harassment or bullying', spam: 'Spam', cheating: 'Cheating', name: 'An offensive name', other: 'Something else' };
+// The quick lines (the chat's chips and the phone's Messages app - a pad or a thumb picks one, no typing): each goes as an
+// ordinary line of its channel, through the same filter and limits as anything typed. The crew's are the Crew app's
+// own (shared/rules.js CREW.says reads them from here).
+export const QUICK = {
+  near: ['Hi!', 'Need a ride?', 'Follow me', 'Wait up!', 'Thanks!', 'Sorry!', 'Nice ride!', 'Race you?', 'Watch out!', 'Bye!'],
+  crew: ['On my way!', 'Need backup!', 'Meet me where I am', 'Go go go!', 'Get in!', 'Lie low for a bit', 'Nice one!', 'Thanks!'],
+  faction: ['Need backup!', 'On my way!', 'Heads up - trouble here', 'All clear', 'Fall back!', 'Good work'],
+  phone: ['Hey!', 'Where are you?', 'On my way', 'Want to team up?', 'Thanks!', 'Later!'],
+};

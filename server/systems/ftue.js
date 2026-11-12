@@ -42,6 +42,7 @@
 import { FTUE } from '../../shared/rules.js';
 import { PED_BLOCK } from '../../shared/mapcore.js';
 import { ITEMS } from '../../shared/items.js';
+import { CHAT } from '../../shared/chatdefs.js';
 import { store } from '../store.js';
 import { moved } from '../movemark.js';
 import * as starter from './starter.js';
@@ -72,6 +73,7 @@ export const MOMENTS = {
   transit: { text: 'Buses, trains and ferries are free - wait at the stop and board.', ctl: 'action', sec: 'around' },
   night: { text: 'Night falls. A flashlight lights your way.', ctl: 'light', sec: 'items' },
   hurt: { text: 'Hurt? Hold for your quick wheel - a bandage patches you up.', ctl: 'use', sec: 'items' },
+  chat: { text: 'Another player\'s near - say hi. Quick lines and emotes too, no typing needed.', ctl: 'chat', sec: 'activities' },
 };
 
 // The arrival stations' card: each region's name and its one line (World v3's regions: shared/world3-arrivals.js
@@ -481,8 +483,18 @@ function moments(world, p) {
   if (!has('wanted') && p.wanted > 0) { moment(world, p, 'wanted'); return; }
   if (!has('hurt') && ped.hp < ped.maxHp * FTUE.hurtAt) { moment(world, p, 'hurt'); return; }
   if (!has('transit') && (ped.onTrain || (ped.vehId && ped.seat > 0 && world.get(ped.vehId)?.bus) || (!ped.vehId && NEAR_TRANSIT(world, p)))) { moment(world, p, 'transit'); return; }   // (a bus's passenger: not its driver)
-  if (!has('night') && world.clock.isNight && !ped.interior && !ped.hidden && !ped.ug) moment(world, p, 'night');
+  if (!has('night') && world.clock.isNight && !ped.interior && !ped.hidden && !ped.ug) { moment(world, p, 'night'); return; }
+  if (!has('chat') && SOMEONE_NEAR(world, p)) moment(world, p, 'chat');
 }
+// another player near enough to meet (shared/chatdefs.js CHAT.metM), on foot or not, on the same level: chat's moment
+const SOMEONE_NEAR = (world, p) => {
+  const ped = p.ped, r = CHAT.metM * 32;
+  for (const q of world.players.values()) {
+    const o = q !== p && q.conn && q.ped;
+    if (o && !o.dead && !o.hidden && (o.ug || 0) === (ped.ug || 0) && Math.abs(o.x - ped.x) < r && Math.abs(o.y - ped.y) < r) return true;
+  }
+  return false;
+};
 
 // ---- each half second --------------------------------------------------------------------------------------------------
 export function update(world) {

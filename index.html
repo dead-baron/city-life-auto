@@ -25,7 +25,7 @@
   <!-- the HUD (UI-8, after the owner's concepts U1-U4 and U17; the owner 2026-10-30: "polished and finalized"): two
        corners and the low slot. Top left, where you are: the clock's plate (above the minimap upright, beside it on a
        wider screen), the minimap, the status, a bar while one is up (a robbery, a ride, custody), the job card, upright
-       the notes. Top right, how you are and what you have: the icon buttons (phone, map, menu), then one plate - health
+       the notes. Top right, how you are and what you have: the icon buttons (chat - not on a pad, whose chat is the phone's Messages app - phone, map, menu), then one plate - health
        and stamina with their numbers, the cash (the bank on a desktop) - the stars, the vehicle chip, what you hold. The
        prompt and the hint strip low (client/hudinfo.js); the debug button quiet beside the minimap -->
   <div id="hud" class="hidden">
@@ -41,7 +41,7 @@
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat (T)"><i class="ic" data-gl="message-circle-more"></i><span class="kchip kbm-only">T</span></button><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
           <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
@@ -207,11 +207,7 @@
       </section>
       <section data-sec="chat" hidden><h2>CHAT</h2>
         <div id="s-chatbox" data-slot="chat">
-          <p class="set-note">Chat is coming soon. These are the channels it will have:</p>
-          <label class="srow"><span>Nearby (people around you)</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>Crew</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>City (everyone)</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>Private messages</span><input type="checkbox" disabled checked></label>
+          <p class="msub">Chat's settings come up once you're online: the channels (near, crew, faction, phone messages), and who you've muted or blocked.</p>
         </div>
       </section>
       <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>

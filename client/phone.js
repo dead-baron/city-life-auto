@@ -62,9 +62,9 @@ export const ICON = {
   cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
 };
 // the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide last - the in-game wiki: client/guide.js)
-const APPS = [['next', "What's next"], ['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['guide', 'Guide']];
+const APPS = [['next', "What's next"], ['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['msgs', 'Messages'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['guide', 'Guide']];
 // their pixel icons (client/touchicons.js, the icon sheet's phone apps), a place group's, a skill's
-const APP_PIX = { next: 'star', jobs: 'jobs', places: 'places', transit: 'transit', feed: 'feed', bounties: 'bounties', homes: 'homes', skills: 'skills', crew: 'crew', radio: 'radioapp', log: 'log', camera: 'camera', guide: 'guide' };
+const APP_PIX = { next: 'star', jobs: 'jobs', places: 'places', transit: 'transit', feed: 'feed', bounties: 'bounties', homes: 'homes', skills: 'skills', crew: 'crew', msgs: 'chat', radio: 'radioapp', log: 'log', camera: 'camera', guide: 'guide' };
 const GROUP_PIX = { emergency: 'hospital', money: 'bank', shops: 'shop', out: 'food', baths: 'bathhouse', sell: 'sell', cars: 'car', work: 'legal', gang: 'gang' };
 const SKILL_PIX = { strength: 'hit', stamina: 'sprint', swimming: 'swim', driving: 'car', shooting: 'aim', constitution: 'heart' };
 const JOB_FILTERS = [['all', 'All'], ['driving', 'Driving'], ['delivery', 'Delivery'], ['service', 'Service']];
@@ -119,7 +119,7 @@ export function createPhone(ctx) {
       if (wp) quick.push(['clearwp', 'Clear waypoint']);
       el.innerHTML = saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')
         + curJob()
-        + `<div class="ph-grid">${APPS.map(([k, n]) => `<button class="ph-app${k === 'next' && ctx.nextDot && ctx.nextDot() ? ' dot' : ''}" data-go="${k}"><span class="ph-tile">${pix(APP_PIX[k])}</span>${n}</button>`).join('')}</div>`
+        + `<div class="ph-grid">${APPS.map(([k, n]) => `<button class="ph-app${(k === 'next' && ctx.nextDot && ctx.nextDot()) || (k === 'msgs' && ctx.msgsDot && ctx.msgsDot()) ? ' dot' : ''}" data-go="${k}"><span class="ph-tile">${pix(APP_PIX[k])}</span>${n}</button>`).join('')}</div>`
         + `<div class="ph-quick">${quick.map(([k, n]) => `<button class="btn" data-act="${k === 'atm' ? 'atm' : k === 'clearwp' ? 'clearwp' : k}">${ICON[k === 'clearwp' ? 'clear' : k]}${n}</button>`).join('')}</div>`
         + (wp ? `<p class="ph-hint">Waypoint: <b>${esc(wp.label)}</b> · ${m(dist(wp))}</p>` : '');
     } else if (screen === 'places') {   // (UIC-02: each kind of place a row; open one and its nearest few are under it - a tap sets the waypoint)
@@ -162,6 +162,8 @@ export function createPhone(ctx) {
       el.innerHTML = '<p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
         + STATIONS.map((S, i) => `<button class="ph-row" data-st="${i}"><span class="ic">📻</span><span class="nm">${esc(S.freq)} ${esc(S.name)}<small>now: ${esc(TRACK[stationAt(i, now).track].title)}</small></span></button>`).join('')
         + '<button class="ph-row" data-st="-1"><span class="ic">⏻</span><span class="nm">Off</span></button>';
+    } else if (screen === 'msgs') {   // (the Messages app: threads, quick lines and emotes - client/chat.js renderApp, with the launch code)
+      if (ctx.chatApp) ctx.chatApp(el); else el.innerHTML = '<p class="ph-empty">No messages here.</p>';
     } else if (screen === 'crew') {
       el.innerHTML = crewHtml(crew, m);
     } else if (screen === 'bounties') {
@@ -376,7 +378,7 @@ export function createPhone(ctx) {
     open() { screen = 'home'; group = null; render(); ctx.send({ t: 'phone', a: 'board' }); },
     // straight to one app (the hub's JOBS tab: 'jobs')
     openApp(s) { screen = s || 'home'; group = null; if (s === 'guide') guideOpened(); if (s === 'next') nextOpened(); render(); if (s === 'jobs' || !s) ctx.send({ t: 'phone', a: 'board' }); },
-    back() { if (screen === 'group') screen = 'places'; else { screen = 'home'; group = null; } render(); return true; },
+    back() { if (screen === 'msgs' && ctx.chatBack && ctx.chatBack()) return true; if (screen === 'group') screen = 'places'; else { screen = 'home'; group = null; } render(); return true; },
     onFeed(msg) { feed = msg.items || []; cal = msg.cal || null; calAt = Date.now(); if (screen === 'feed') render(); },
     onSkills(msg) { skl = msg; if (screen === 'skills') render(); },
     onNext(msg) {   // (the "What's next" app's state, and a button's answer: a waypoint, a refusal)

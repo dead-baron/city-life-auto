@@ -318,7 +318,7 @@ test('kept across a rejoin: a goal half done carries on; a question unanswered i
   assert.ok(sent(c3, (m) => m.t === 'menu' && m.poi === ASK_POI).length, 'asked again');
 });
 
-test('the first-time moments fire once each, ever: wanted, knocked down, a shop, transit, night, hurt', () => {
+test('the first-time moments fire once each, ever: wanted, knocked down, a shop, transit, night, hurt, someone to chat with', () => {
   const { w, steps } = world();
   const { p, prof, conn } = newcomer(w);
   toArrival(w); toQuestion(w);
@@ -355,13 +355,20 @@ test('the first-time moments fire once each, ever: wanted, knocked down, a shop,
   teleport(w, p.ped, shop.x + 600, shop.y + 600);
   w.loopTime = DAY_PART_S + 30; gap();
   assert.ok(tips().includes('night'));
+  // another player near (shared/chatdefs.js CHAT.metM): chat - not one further off
+  const other = joinPlayer(w);
+  teleport(w, other.p.ped, p.ped.x + 30 * 32, p.ped.y); gap();
+  assert.ok(!tips().includes('chat'), 'nobody near enough yet');
+  teleport(w, other.p.ped, p.ped.x + 64, p.ped.y); gap();
+  assert.ok(tips().includes('chat'), 'someone near: the chat moment');
+  players.leave(w, other.p);
   // knocked down
   combat.damage(w, p.ped, 9999, null, 'test');
   assert.ok(p.ped.dead);
   p.ftueTipAt = -1e9; run(w, 0.6);   // (no clock jump: that would wake them before the moment's look)
   assert.ok(tips().includes('down'));
   const all = tips();
-  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'all six, once each');
+  assert.deepEqual([...all].sort(), Object.keys(MOMENTS).sort(), 'all seven, once each');
   // each line names its Guide section, and the profile remembers them
   for (const m of sent(conn, (x) => x.t === 'ftue' && x.a === 'tip')) assert.ok(['around', 'earn', 'law', 'places', 'activities', 'property', 'items'].includes(m.sec), m.id);
   assert.deepEqual(Object.keys(prof.ftue.m).sort(), Object.keys(MOMENTS).sort());

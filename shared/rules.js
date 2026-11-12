@@ -371,6 +371,7 @@ export const FIRE_BURN_S = 900;         // how long a change lasts
 export { CALM_PROMPT_S, PROMPT_FADE_S } from './rules-page.js';   // sitting by a fire this long without touching anything: its prompt fades...
 export { CALM_HUD_S } from './rules-page.js';
 import { HOSE_LEN } from './rules-page.js';
+import { QUICK } from './chatdefs.js';
 export { HOSE_LEN };   // ...and this long, the whole HUD, for the scene (task #375)
 
 // Wine (the winery, the golf club bar): health comes back this many times faster for WINE_S
@@ -1232,7 +1233,7 @@ export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 // split with the crew there (`share` px of the vault)
 export const CREW = {
   max: 4, inviteS: 30, askAgainS: 60, reach: 90, sayGapS: 2, share: 400,   // (askAgainS: the same asking again only this long after one lapsed)
-  says: ['On my way!', 'Need backup!', 'Meet me where I am', 'Go go go!', 'Get in!', 'Lie low for a bit', 'Nice one!', 'Thanks!'],
+  says: QUICK.crew,   // (the chat's crew chips too: shared/chatdefs.js QUICK)
   // A crew of your own (the crime career's 'crew' unlock - docs/PROGRESSION.md): its lead, at that rank, founds it for
   // foundCost - a name (shared/names.js's rules) and a tag of up to tagMax letters by every member's name; then a crew bank:
   // cut of what a member earns on a job done with a crewmate within togetherPx goes into it (the members' cut), members

@@ -373,6 +373,7 @@ body.dead #job { display: none !important; }
    work"; round, as U3): phone, map, the menu in the corner - the icon alone; on a keyboard the key's badge on the
    corner (P, M, Esc); 44 px or more to tap */
 #hud-btns { display: flex; gap: var(--gap); pointer-events: auto; }
+body.pad #b-chat { display: none; }   /* (chat on a pad: the phone's Messages app - D-pad left) */
 #hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border-radius: var(--r3); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t-pop) var(--ease), border-color var(--t1) var(--ease), color var(--t1) var(--ease), box-shadow var(--t1) var(--ease); }
 #hud-btns button:hover, #b-dev:hover { background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
 #hud-btns button:active, #b-dev:active { transform: scale(var(--press)); background: var(--navy3); }
@@ -1830,5 +1831,5 @@ body:not(.touch) #logo { width: min(520px, 84vw, 38vh); margin-bottom: 0; }
 body:not(.touch) #title > #t-tools { position: absolute; left: var(--s4); top: var(--s4); }
 body:not(.touch) #play { min-width: 240px; }
 /* the "What's next" cards changed (client/main.js nextDot): a dot on the phone's button and its app tile - nothing more */
-#b-phone.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
+#b-phone.dot::after, #b-chat.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
 .ph-app.dot .ph-tile { position: relative; }

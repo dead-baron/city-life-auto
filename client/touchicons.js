@@ -457,7 +457,7 @@ export const actKindNow = () => actNow;
 
 // the touch buttons' glyphs by the action and the label the slot gives it (shared/touchcontrols.js)
 const ICON = { THROW: 'redo', TRICK: 'sparkles', BRAKE: 'circle-stop', STOP: 'circle-stop', OLLIE: 'arrow-big-up-dash', AIR: 'arrow-big-up', EXIT: 'log-out', OFF: 'log-out', SIREN: 'siren', GALLOP: 'fast-forward' };
-const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'auto-fire', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair' };
+const ACTION_ICON = { fire: 'target', dive: 'roll', vehicle: 'car-front', block: 'shield', firetog: 'auto-fire', reload: 'rotate-cw', horn: 'volume-2', climb: 'arrow-big-up', descend: 'arrow-big-down', use: 'backpack', light: 'flashlight', cruiser: 'siren', throw: 'redo', sprint: 'fast-forward', nextw: 'swords', stick: 'crosshair', chat: 'message-circle-more' };
 // HIT shows what you hit with (the owner, 11-05): a fist bare-handed, else the melee weapon's own glyph (client/hud.js setMelee)
 let meleeNow = 'fist';
 export function setMelee(id, type) { meleeNow = glyphOfWeapon(id, type); return meleeNow; }

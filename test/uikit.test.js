@@ -33,7 +33,7 @@ test('UIK-00 3-6: plates, buttons in their states, the controls and the feedback
   assert.match(CSS, /\.rbtn > \.kchip \{ position: absolute; right: -7px; top: -7px;/, 'the key badge on the round button\'s corner (4E)');
   assert.match(CSS, /\.tab\.on, \.tab\[aria-selected=true\] \{ background: var\(--gold\); color: var\(--ink\)/, 'the tab you\'re on, gold (5A)');
   // the HUD wears them: the round buttons, the plates
-  for (const id of ['b-phone', 'b-map', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
+  for (const id of ['b-chat', 'b-phone', 'b-map', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
   assert.match(CSS, /#rclock, #hud-stat, #vchip, #job, \.hchip, #weapon, #hud-btns button, #b-dev, #stars, \.toast, #helpbox, #rob, #hints \{ background: var\(--plate\); border: 2px solid var\(--plate-rim\)/, 'one plate for all of the HUD');
 });
 
@@ -70,7 +70,7 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
   const lines = [...HTML.matchAll(/data-gl="([a-z0-9-]+)"/g)].map((m) => m[1]);
   for (const n of lines) assert.ok(GLYPH_NAMES.includes(n), `index.html's line icon ${n}`);
   const row = hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">'));
-  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 3), ['smartphone', 'map', 'menu'], 'the round buttons: Lucide\'s phone, map and menu (11-05)');
+  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 4), ['message-circle-more', 'smartphone', 'map', 'menu'], 'the round buttons: Lucide\'s chat bubble, phone, map and menu (11-05)');
   assert.doesNotMatch(row, /<svg/, 'filled in by the page');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
 });
