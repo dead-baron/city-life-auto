@@ -34,7 +34,19 @@ Google, Discord, Reddit and email buttons stay hidden until their keys are set (
 
 ## Where the settings go
 
-On the Oracle server, put the secrets in an environment file that only root can read, and point the service at it:
+The easy way: on the Oracle server (SSH in, or the SSH button in the Oracle Cloud console), run
+
+```
+sudo bash ~/city-life-auto/deploy/set-keys.sh
+```
+
+It asks for each key in turn: paste the value and press Enter, press Enter alone to keep or skip one, or type `-` to
+clear it. Secrets stay hidden while you paste them. It writes them to `/etc/city-life-auto.env` (readable by root
+only), points the game service at that file the first time, restarts the server and prints which sign-ins are now on.
+Run it again whenever you add a key. The settings it doesn't ask about (the table below) can go in the same file by
+hand.
+
+By hand, the same thing:
 
 ```
 sudo install -m 600 /dev/null /etc/city-life-auto.env

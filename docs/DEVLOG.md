@@ -22446,3 +22446,12 @@ rekey).
   cuffs, the cooldown, shaken off, back to the kennels; units' caps, not a business slot, rent and upkeep for a day and
   for days away, sold; Kingpin / Chief / Tycoon gold over the name, "S0 Kingpin" after the rank's gone).
   `test/careers.test.js`: kingpin is unlocked now.
+
+## 2026-11-12 - The launch keys in one command (`deploy/set-keys.sh`)
+
+The owner found the environment-file step in LAUNCH-SETUP.md confusing. `sudo bash ~/city-life-auto/deploy/set-keys.sh`
+on the Oracle server now asks for each sign-in, email and analytics key in turn (Google, Discord, Reddit, Resend, GA4,
+the owner id): paste and Enter, Enter alone keeps or skips, `-` clears. Secrets are read hidden and never printed;
+values with spaces are refused. It keeps `/etc/city-life-auto.env` root-only (600), adds a systemd drop-in
+(`city-life-auto.service.d/keys.conf`, `EnvironmentFile=`) the first time, restarts only if something changed, waits
+for `/launch.json` and prints which sign-ins and GA are on. LAUNCH-SETUP.md leads with it; the by-hand steps stay.
