@@ -22516,7 +22516,9 @@ without end, their flanks flashing as they turned: fast bright glints in exactly
 a body lying still in the water (under 15 px/s: `STILL_SP`) only nudges a fish that swims right up to it (20 px), and not one
 already lying low after a fright; a boat under way still scatters them as before. Round a moored boat the fish of a shore
 patch dart 1.8% of the time (11.6% before). The same holds for the new snorkelers resting at the ends of their reach.
-Test: `test/waterlife.test.js`.
+Test: `test/waterlife.test.js`. (The in-game Playwright check against open sea couldn't be run on the shared 2-core box this
+evening - the World v3 dev server and the browser didn't fit beside the other branches' runs - so the measure is the
+simulation's own, the page's code run in node.)
 
 ## 2026-11-12 - No tall plain blocks over the street (the art's street cap)
 The owner (11-12, a big flat grey roof over much of the screen): "there are still a lot of tall buildings that don't really
@@ -22555,7 +22557,8 @@ two Gas-N-Gos, Fuel Stop, Highland Fuel, Route 9 Fuel); the four hand-placed one
   shop, two tiles clear of its front - paved where the lot lay on grass or dirt out of town - two rows of two or three
   pumps four tiles apart, clear of the parking and anything solid. The art puts its canopy and light over each group
   (statics.js addSetPieces, as before).
-- Every pump is a prop now (`fuelpump`: shared/mapcore.js BREAKABLE and HEAVY_PROPS; map.js `pumpProps`), its solid its own,
+- Every pump is a prop now (`fuelpump`: shared/mapcore.js BREAKABLE and HEAVY_PROPS; shared/world3-world.js `pumpProps3`, the
+  build's last step, so no other prop's number moves), its solid its own,
   drawn with the props and its wreck when broken - a scorch, the charred base, the housing torn open and bits about.
 - They go up (server props.js; numbers in shared/rules.js `FUEL_PUMP`): rammed hard enough (the street furniture's smash,
   which the driver's page predicts), shot six times (combat.js hitscan: a pump in the shot's way, nearer than anyone, stops

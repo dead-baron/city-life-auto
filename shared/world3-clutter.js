@@ -154,7 +154,7 @@ function context(m) {
 
 // why prop p may not stand where it is (null: it may)
 function judge(m, X, p, solidR, hand = null) {
-  if (p.t === 'atmw' || p.t === 'atm' || MARKS.has(p.t)) return null;
+  if (p.t === 'atmw' || p.t === 'atm' || p.t === 'fuelpump' || MARKS.has(p.t)) return null;   // (a filling station's pump: where its forecourt is - map.js forecourts, world3-world.js pumpProps3)
   // (a handcrafted district's own dressing - its medians' palms, the lights strung over its streets, its market stalls,
   // its yards' fences - stands where its plan put it: only something solid on a door goes)
   if (hand && hand.has(p)) { if (solidR > 0) { const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE); if (m.inside(tx, ty) && X.doors.has(m.idx(tx, ty))) return 'door'; } return null; }
