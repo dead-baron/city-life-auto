@@ -277,3 +277,23 @@ test('blood in the water: a cloud that blooms, drifts with the current and thins
   assert.ok(moved > 30, `carried by the current (${moved.toFixed(0)} px)`);
   assert.ok(((c.x - x0) * f0[0] + (c.y - y0) * f0[1]) > 0, 'downstream');
 });
+
+// (the owner, 11-12, by a pier with boats moored either side: "surface reflections were going really fast" - every boat in
+// the water was 70 px of fright to the fish every frame, moored or not, so a shoal under a moored boat darted and its silver
+// flanks flashed without end; what lies still in the water only nudges a fish that swims right up to it)
+test('a boat moored over the fish leaves them be; a boat under way scatters them', () => {
+  const at = waterView('shore') || waterView('lake');
+  const V = view(at.x, at.y), wl = new WaterLife(2);
+  let now = sim(wl, V, 8);
+  const fish = wl.fish.filter((q) => !q.taker && !q.S.jelly);
+  assert.ok(fish.length > 3, 'fish');
+  const g = fish[0].g, boat = { x: g.lx ?? fish[0].x, y: g.ly ?? fish[0].y, sp: 0, wet: true, id: 77, a: 0, hw: 0 };
+  let dart = 0, n = 0;
+  for (let i = 0; i < 30 * 20; i++) { wl.update(M, V, now, 1 / 30, [boat], [], ENV); now += 1 / 30; for (const f of fish) { n++; if (f.st === 1) dart++; } }
+  assert.ok(dart / n < 0.05, `round a moored boat the fish dart ${(100 * dart / n).toFixed(1)}% of the time`);
+  // under way through them: they scatter
+  const f = fish.find((q) => q.g) || fish[0], run = { x: f.x - 40, y: f.y, sp: 180, wet: true, id: 78, a: 0, hw: 0 };
+  let darted = false;
+  for (let i = 0; i < 20; i++) { run.x += 6; wl.update(M, V, now, 1 / 30, [run], [], ENV); now += 1 / 30; if (f.st === 1) darted = true; }
+  assert.ok(darted, 'a boat coming through sends them off');
+});

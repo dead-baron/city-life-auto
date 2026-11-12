@@ -32,6 +32,7 @@ import { altOfByte } from '../../../shared/flight.js';
 import { flowAt } from '../../../shared/flow.js';
 
 const TAU = Math.PI * 2;
+export const STILL_SP = 15;         // (px/s) a boat or a body in the water slower than this is lying still: the fish don't mind it
 const CELL = 6 * TILE;              // the patches of water fish are placed by (px)
 const MAXF = [30, 64, 72, 80];      // fish at once, by the renderer's quality tier
 const MAXR = 96, MAXP = 260, MAXW = 240;   // rings on the water, puffs of mist and foam, swimmers' wake points
@@ -623,11 +624,14 @@ export class WaterLife {
     }
     f.vis = Math.max(0, Math.min(1, f.vis + (g.out ? -dt : dt)));
     if (f.air >= 0) { this._airStep(m, f, now, dt); return; }
-    // startled: anyone in the water close by, anyone running along the bank (walking, right at its edge), a boat or
-    // anything fast; the park's koi are used to people
-    const tame = S === SP.koi;
+    // startled: anyone moving in the water close by, anyone running along the bank (walking, right at its edge), a boat
+    // under way or anything fast; the park's koi are used to people. What lies still in the water - a boat moored, someone
+    // floating - only nudges a fish that comes right up to it, and not one still lying low (the owner, 11-12, by a pier
+    // with boats moored either side: "surface reflections were going really fast" - a moored boat was 70 px of fright
+    // every frame, so the silver shoals under it darted and flashed without end)
+    const tame = S === SP.koi, hid = now < f.hide;
     for (const q of movers) {
-      const R = q.wet ? 70 + q.sp * 0.25 : q.sp > 150 ? 50 + q.sp * 0.1 : q.sp > 40 && !tame ? 26 : 0;
+      const R = q.wet ? (q.sp > STILL_SP ? 70 + q.sp * 0.25 : hid ? 0 : 20) : q.sp > 150 ? 50 + q.sp * 0.1 : q.sp > 40 && !tame ? 26 : 0;
       if (!R) continue;
       const dx = f.x - q.x, dy = f.y - q.y;
       if (dx * dx + dy * dy < R * R) { this._spook(f, q.x, q.y, now); break; }

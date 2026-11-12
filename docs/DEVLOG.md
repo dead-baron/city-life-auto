@@ -22502,3 +22502,18 @@ Strip, dawn at the tarn). Each is looked up by name in the debug teleport's list
   day (WASD / the stick fly on from there; your character stays where it was).
 - The Tour: "All the sights" as before, or "Showcase only" - each place in turn at its own zoom and time of day.
 Test: `test/fixwave.test.js` (the list's shape, the look-up, the panel's wiring); the names checked against World v3's places.
+
+## 2026-11-12 - The water by a pier with boats moored: no more racing flashes
+The owner (11-12, a long wooden pier out from a beach, small boats moored either side): "Surface reflections were going
+really fast. Overall seemed improved but noticed that one spot." The light pass's water (client/art2/game/lightgame.js
+waterSurf) runs at one speed everywhere - its time is the frame's, its waves, glints and caustics anchored to the world, the
+only local term the bake's word for the water (the sea's, a lake's, a running river's: running water's ripples are about ten
+times the sea's speed). Every pier in World v3 with boats or a river's water by it was baked and its water's words counted:
+not one running-water word in the sea anywhere. What did race there was the life in the water (client/art2/game/
+waterlife.js): every vehicle in the water counted as someone moving through it - a moored boat at 0 px/s was 70 px of fright
+to the fish every frame - so a silver shoal or the mullet in the shallows under a marina's boats darted at 170-200 px/s
+without end, their flanks flashing as they turned: fast bright glints in exactly the spots with boats moored. Now a boat or
+a body lying still in the water (under 15 px/s: `STILL_SP`) only nudges a fish that swims right up to it (20 px), and not one
+already lying low after a fright; a boat under way still scatters them as before. Round a moored boat the fish of a shore
+patch dart 1.8% of the time (11.6% before). The same holds for the new snorkelers resting at the ends of their reach.
+Test: `test/waterlife.test.js`.
