@@ -93,7 +93,7 @@ export function initInput(canvas, hooks) {
     const k = e.code;
     if (!keys.has(k)) { pressedOnce.add(k); tappedKeys.add(k); }
     keys.add(k);
-    if (k === 'Tab' || k === 'Space' || k.startsWith('Arrow')) e.preventDefault();
+    if (k === 'Tab' || k === 'Space' || k === 'KeyT' || k.startsWith('Arrow')) e.preventDefault();   // (T: chat - its letter mustn't land in the line it opens)
     if (/^Digit[1-9]$/.test(k)) numberPick = Number(k.slice(5)) - 1;
     if (k === 'KeyC') walkToggle = !walkToggle;
     hooks.onKey?.(k);
