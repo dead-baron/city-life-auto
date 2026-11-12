@@ -59,8 +59,10 @@ out.focused = document.activeElement === $('.cht-in');
 $('.q-row .cht-chip').click();
 $('.em-row .cht-chip').click();
 $('.cht-in').value = 'typed line'; $('.cht-row').requestSubmit();
-$('.cht-in').value = '/c to the crew'; $('.cht-row').requestSubmit();
-$('.cht-in').value = '/wave'; $('.cht-row').requestSubmit();
+out.closedOnSend = $('.cht-sheet').hidden;   // (a keyboard: Enter sends and gives the keys back)
+C.open(); $('.cht-in').value = '/c to the crew'; $('.cht-row').requestSubmit();
+C.open(); $('.cht-in').value = '/wave'; $('.cht-row').requestSubmit();
+C.open();
 document.querySelectorAll('.cht-tab')[1].click();
 out.crewChips = [...document.querySelectorAll('.q-row .cht-chip')].map((b) => b.textContent);
 out.crewEmotes = document.querySelectorAll('.em-row .cht-chip').length;
@@ -194,6 +196,7 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.equal(o.feed.length, 2, 'two lines in the feed on a desktop');
   assert.ok(o.feed[1].includes('Ann') && o.feed[1].includes(EMOTES.wave.text));
   assert.ok(o.sheetOpen && o.focused, 'T: the sheet, its line ready to type in');
+  assert.ok(o.closedOnSend, 'Enter sends and closes it on a keyboard');
   assert.deepEqual(o.tabs, ['Near*', 'Crew', 'Faction-'], 'Near first; no faction greyed');
   assert.deepEqual(o.chips, QUICK.near);
   assert.equal(o.emotes, Object.keys(EMOTES).length);

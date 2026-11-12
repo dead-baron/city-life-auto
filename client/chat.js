@@ -296,9 +296,13 @@ export function createChat(ctx) {
     const cmd = text.match(/^\/(\w+)\s*(.*)$/);
     const e2 = cmd && (cmd[1] === 'me' ? cmd[2].trim().toLowerCase() : cmd[1].toLowerCase());
     if (cmd && Object.hasOwn(EMOTES, e2)) { emote(e2); return; }
-    if (cmd && (cmd[1] === 'c' || cmd[1] === 'f' || cmd[1] === 'n')) { say(cmd[1] === 'c' ? 'crew' : cmd[1] === 'f' ? 'faction' : 'near', cmd[2]); return; }
-    say(sayCh, text);
+    if (cmd && (cmd[1] === 'c' || cmd[1] === 'f' || cmd[1] === 'n')) say(cmd[1] === 'c' ? 'crew' : cmd[1] === 'f' ? 'faction' : 'near', cmd[2]);
+    else say(sayCh, text);
+    if (ctx.device() === 'keyboard') close();   // (a keyboard: Enter sends and gives the keys back, as T took them; a phone keeps it up)
   };
+  // the T that opened it would land in the line as its first letter: that one keystroke is dropped
+  let openedAt = -1e9;
+  inEl.addEventListener('beforeinput', (e) => { if (performance.now() - openedAt < 250 && !inEl.value && /^t$/i.test(e.data || '')) { e.preventDefault(); openedAt = -1e9; } });
   inEl.addEventListener('keydown', (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); close(); }
@@ -337,7 +341,7 @@ export function createChat(ctx) {
     }
     renderSheet();
     fit();
-    if (ctx.device() !== 'touch') { inEl.focus({ preventScroll: true }); if (ctx.focus) ctx.focus(true); }   // (a phone: the keyboard only when the line's tapped)
+    if (ctx.device() !== 'touch') { openedAt = performance.now(); inEl.focus({ preventScroll: true }); if (ctx.focus) ctx.focus(true); }   // (a phone: the keyboard only when the line's tapped)
   }
   function close() {
     if (!isOpen) return;
