@@ -71,21 +71,26 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   assert.deepEqual(wpn, [], wpn.slice(0, 30).join('\n'));
   assert.deepEqual(ctl, [], ctl.slice(0, 30).join('\n'));
   // the HUD's buttons (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon
-  // should work"): chat (touch only), phone, map and the menu - icons, no words (each named for a screen reader and a tooltip), the keys'
+  // should work"): phone, map and the menu - icons, no words (each named for a screen reader and a tooltip), the keys'
   // badges on a keyboard (P / M / Esc), none on a pad or a phone; square, 44 px or more on touch, side by side in the
-  // top-right corner, the menu in the corner; the debug button apart from them, quiet beside the minimap
+  // top-right corner, the menu in the corner; the debug button apart from them, quiet beside the minimap; on touch the
+  // chat button in the top-left cluster
   const row = [];
   for (const r of all) {
     const { w, h, dev, st } = r.sc, tag = `${w}x${h} ${dev} ${st}`, bs = r.keep.filter((k) => k.name.startsWith('b-'));
-    const nav = bs.filter((b) => b.name !== 'b-dev'), dbg = bs.find((b) => b.name === 'b-dev');
-    const pad = dev !== 'touch';   // (the chat button is touch's: a keyboard has T, a pad the phone's Messages app)
-    if (nav.map((b) => b.name).join() !== (pad ? 'b-phone,b-map,b-menu' : 'b-chat,b-phone,b-map,b-menu')) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
+    const nav = bs.filter((b) => b.name !== 'b-dev' && b.name !== 'b-chat'), dbg = bs.find((b) => b.name === 'b-dev');
+    // the chat button (client/chat.js): touch's only, in the top-left cluster - beside the clock on its side, under the
+    // minimap upright; 44 px, in the top band, clear of everything (the overlap checks below take it in)
+    const chat = bs.find((b) => b.name === 'b-chat'), mm0 = r.keep.find((k) => k.name === 'minimap');
+    if ((dev === 'touch') !== !!chat) row.push(`${tag}: the chat button ${chat ? 'shown' : 'missing'}`);
+    if (chat && (chat.x0 > w / 2 || chat.y1 > (h > w ? h * 0.3 : h * 0.4) || (h > w ? chat.y0 < mm0.y1 : chat.x0 < mm0.x1))) row.push(`${tag}: the chat button isn't by the minimap (${chat.x0},${chat.y0}-${chat.x1},${chat.y1})`);
+    if (nav.map((b) => b.name).join() !== 'b-phone,b-map,b-menu') { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);
     if (nav.some((b) => b.label)) row.push(`${tag}: words on the buttons ${nav.map((b) => b.label)}`);
-    if (nav.map((b) => b.name2).join() !== (pad ? 'Phone,Map,Menu' : 'Chat,Phone,Map,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
+    if (nav.map((b) => b.name2).join() !== 'Phone,Map,Menu') row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
     const keys = nav.map((b) => b.key).join();
-    if (dev === 'kbm' ? keys !== 'P,M,ESC' : keys !== (pad ? ',,' : ',,,')) row.push(`${tag}: key badges ${keys}`);
-    const m = nav[nav.length - 1];
+    if (dev === 'kbm' ? keys !== 'P,M,ESC' : keys !== ',,') row.push(`${tag}: key badges ${keys}`);
+    const m = nav[2];
     if (w - m.x1 > 30 || m.y0 > 30 + (r.sc.cam || 0)) row.push(`${tag}: the menu isn't in the top-right corner (${m.x0},${m.y0}-${m.x1},${m.y1})`);
     for (const [i, a] of nav.entries()) {
       if (i && Math.abs(a.y0 - nav[0].y0) > 1) row.push(`${tag}: ${a.name} out of the row`);

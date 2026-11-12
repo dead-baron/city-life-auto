@@ -22455,11 +22455,12 @@ nothing on screen until someone talks.
 
 **Where it opens**
 - Keyboard: T (unchanged). Enter sends, Esc closes; `/c` crew, `/f` faction, `/n` near, `/wave` or `/me wave`.
-- Touch: a chat button, first in the round buttons' row top right - CHAT · PHONE · MAP · MENU (Lucide's
-  message-circle-more, the same family as the others). A dot on it for unread phone messages. A tap opens the sheet, a
-  tap again closes it. The touch sticks aren't touched: they hide while the sheet is up and come back as they were.
-  The button shows on touch only: a keyboard has T, a pad the phone. A fourth button on a short desktop window pushed
-  the weapon plate into the train bar (test/hudlayout.test.js).
+- Touch: a round chat button (Lucide's message-circle-more, the HUD's line-icon family) in the top-left cluster: on a
+  phone on its side beside the clock's plate, right of the minimap (the debug button moves one place along); upright
+  under the minimap. It's touch only: a keyboard has T, and a pad has the phone. The owner's top-right row (PHONE · MAP ·
+  MENU) is unchanged: a fourth button there pushed the cash too far from the right edge and, upright, into the
+  top-centre band (test/hudlayout.test.js). A dot on it means unread phone messages. A tap opens the sheet; another
+  tap closes it. The touch sticks keep their behavior: they hide while the sheet is up and come back as they were.
 - Gamepad: the phone (D-pad left) → Messages. Its Near / Crew / Faction tabs have the quick lines and the emotes as
   buttons the D-pad walks, so a pad needs no typing. `PAD.chat` reads
   "📱 MESSAGES".
@@ -22517,4 +22518,5 @@ sheet does this at most every 15 s, for the tabs). Nothing else changes.
 
 Tests: test/chatui.test.js, in headless Chromium: the bubbles, the feed, the sheet, the chips, a name's panel, the
 Messages app, Settings, and the keyboard on a 915x412 phone. Also test/ftue.test.js (the seventh moment),
-test/hudlayout.test.js, test/hub.test.js and test/uikit.test.js (the row), and test/uitokens.test.js (chat.js's CSS).
+test/hudlayout.test.js and test/hudpage.js (the chat button measured with the HUD on every screen), and
+test/uitokens.test.js (chat.js's CSS).

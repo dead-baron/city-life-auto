@@ -26,7 +26,7 @@ export const TOUCH = {
   move: 'LEFT THUMB', aim: 'DRAG FIRE', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
-  chat: 'CHAT',   // (the HUD's chat button, first in the round buttons' row: client/chat.js)
+  chat: 'CHAT',   // (the HUD's chat button, top left by the minimap: client/chat.js)
   trick: 'TRICK',
   radio: '📱 RADIO', lanes: 'TAP THE LANES', pads: 'TAP THE PADS', chord: 'CHORD',
   climb: 'CLIMB', descend: 'DOWN',
