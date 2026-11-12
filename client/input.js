@@ -386,7 +386,7 @@ export function sample(view) {
       mx = p.lx; my = -(p.rt - p.lt);
     } else if (Math.abs(p.lx) + Math.abs(p.ly) > 0) { mx = p.lx; my = p.ly; }
     if (p.a) bits |= IN.DIVE;
-    if (p.bb) bits |= IN.ACTION;
+    if (p.bb) bits |= view.arena ? IN.SPRINT : IN.ACTION;   // (in a car soccer match B is the boost: shared/controls.js boost)
     if (p.x) bits |= IN.VEHICLE;
     if (p.y) bits |= IN.THROW;
     if (bump.tap < 0) bits |= IN.PREVW;
@@ -413,7 +413,8 @@ export function sample(view) {
     const ta = touchAim ? touchAim(tf, view, performance.now()) : { bits: (tf.fire || tf.ring ? IN.FIRE : 0) | (held ? IN.AIMING : 0), aim: touch.aim };   // (till the touch controls' module is in)
     bits |= ta.bits; if (ta.bits & IN.AIMING) aim = ta.aim;
     if (((held && touch.guard) || tb.has('block')) && !view.inVehicle) bits |= IN.BLOCK;   // (the stick held short of its ring, or BLOCK: the guard; FIRE from it, a blow - server players.js)
-    if ((!view.inVehicle || view.horse) && (Math.hypot(touch.lx, touch.ly) > FULL_STICK || tb.has('sprint'))) bits |= IN.SPRINT;  // (nor on touch: the thumb all the way out; on a horse GALLOP too)
+    if ((!view.inVehicle || view.horse) && (Math.hypot(touch.lx, touch.ly) > FULL_STICK || tb.has('sprint'))) bits |= IN.SPRINT;
+    else if (view.arena && tb.has('sprint')) bits |= IN.SPRINT;   // (car soccer: the BOOST button, held)  // (nor on touch: the thumb all the way out; on a horse GALLOP too)
     if (tb.has('dive') || tt.has('dive')) bits |= IN.DIVE;
     if (tb.has('action') || tt.has('action')) bits |= IN.ACTION;
     if (tb.has('vehicle') || tt.has('vehicle')) bits |= IN.VEHICLE;

@@ -22491,3 +22491,11 @@ Players**, at `/admin/players` (`server/staffplayers.js`, served by `server/admi
   is logged, unban / mute / unmute / strike, an action not on the page refused, a helper sees no Ban, and the command
   refuses a forged one and logs that). `docs/LAUNCH-SETUP.md` section 7 lists the page.
 
+
+## 2026-11-12 - Car soccer boost on a controller and on touch
+
+The owner: no way to boost with a controller. Only the keyboard's Shift boosted: the pad's "stick all the way out" and
+the touch BOOST button set the sprint bit only on a horse, never at a car's wheel. A new action `boost`
+(shared/controls.js: Shift, B on a pad, the touch BOOST button): in a match (the page's `view.arena`, the driver with a
+car soccer slot) the pad's B boosts in place of interact, and the held BOOST button boosts. The boost ring's key and the
+Guide's car soccer entry name it by device ([[boost]]); the README row no longer claims RT or the full thumb boosts.

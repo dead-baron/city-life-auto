@@ -208,7 +208,7 @@ class SoccerView {
       g.font = 'bold 16px monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(String(Math.round(st.me.boost)), cx, cy);
       g.font = 'bold 8px monospace'; g.fillText('BOOST', cx, cy + r + 12);
       if (input.device !== 'touch') {   // (the key or the pad's button that boosts, by the ring; on touch the BOOST button: client/touchslots.js)
-        const k = keyName('sprint');
+        const k = keyName('boost');
         g.font = 'bold 10px monospace'; const kw = g.measureText(k).width + 10;
         g.fillStyle = 'rgba(10,14,22,.8)'; g.fillRect(cx - kw / 2, cy + r + 19, kw, 15); g.strokeStyle = '#ffb02a'; g.lineWidth = 1; g.strokeRect(cx - kw / 2 + 0.5, cy + r + 19.5, kw - 1, 14);
         g.fillStyle = '#fff'; g.fillText(k, cx, cy + r + 27);

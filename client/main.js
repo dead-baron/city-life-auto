@@ -618,7 +618,7 @@ function fixedStep() {
   const wcur = S.me ? WEAPONS[S.me.weapon] : null;
   const armed = !!(wcur && wcur.type !== 'melee' && wcur.type !== 'tool' && !(S.me && S.me.carrying));
   const inVehicle = S.ctrlKind === CTRL.DRIVER || S.ctrlKind === CTRL.PASSENGER, ce = S.ents.get(S.ctrlId);
-  let inp = sample({ selfScreen, inVehicle, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, face: S.pred ? S.pred.s.a : ce && ce.ra !== undefined ? ce.ra : S.lastAim, target: () => (S.slots ? S.slots.target(inVehicle, wcur) : null), air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse) });   // (horse: on one - the stick all the way out gallops, #325)
+  let inp = sample({ selfScreen, inVehicle, driver: S.ctrlKind === CTRL.DRIVER, lastAim: S.lastAim, armed, face: S.pred ? S.pred.s.a : ce && ce.ra !== undefined ? ce.ra : S.lastAim, target: () => (S.slots ? S.slots.target(inVehicle, wcur) : null), air: S.ctrlKind === CTRL.DRIVER && !!airDefOf(S.ents.get(S.ctrlId)), horse: S.ctrlKind === CTRL.DRIVER && !!(S.pred && S.pred.def && S.pred.def.horse), arena: S.ctrlKind === CTRL.DRIVER && !!(S.soc && S.soc.st && S.soc.st.me) });   // (horse: on one - the stick all the way out gallops, #325)
   const inOverlay = overlayPad() || launchPad();
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);

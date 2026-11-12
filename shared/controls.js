@@ -10,7 +10,7 @@ export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', 
 export const PAD = {
   action: ['B', 'b'], vehicle: ['X', 'x'], throw: ['Y', 'y'], dive: ['A', 'a'], reload: ['R3', 'stick'], use: ['VIEW', 'sys'],
   horn: ['D↑', 'sys'], nextw: ['RB', 'bumper'], prevw: ['LB', 'bumper'], wpnwheel: ['HOLD RB / LB', 'bumper'], map: ['MENU', 'sys'], fire: ['RT', 'bumper'], drivefire: ['R3', 'stick'],
-  sprint: ['FULL STICK', 'stick'], cruiser: ['D↓', 'sys'], phone: ['D←', 'sys'], bag: ['D→', 'sys'], light: ['D↑', 'sys'],
+  sprint: ['FULL STICK', 'stick'], boost: ['B', 'b'], cruiser: ['D↓', 'sys'], phone: ['D←', 'sys'], bag: ['D→', 'sys'], light: ['D↑', 'sys'],
   move: ['L-STICK', 'stick'], aim: ['R-STICK', 'stick'], gas: ['RT', 'bumper'], brake: ['LT', 'bumper'], pause: ['MENU', 'sys'], back: ['B', 'b'],
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
@@ -21,7 +21,7 @@ export const PAD = {
 };
 // (back: the death screen's choices folded away to watch the scene, and opened again - task #403)
 export const TOUCH = {
-  action: 'ACT', vehicle: 'CAR', throw: 'THROW', dive: 'ROLL', reload: 'RELOAD', use: 'ITEMS', bag: '🎒', horn: 'HORN', nextw: 'TAP WEAPON', prevw: 'TAP WEAPON', wpnwheel: 'HOLD WEAPON', map: 'MAP', fire: 'FIRE', drivefire: 'FIRE', sprint: 'FULL THUMB', cruiser: 'COP CAR', phone: '📱', light: 'LIGHT',
+  action: 'ACT', vehicle: 'CAR', throw: 'THROW', dive: 'ROLL', reload: 'RELOAD', use: 'ITEMS', bag: '🎒', horn: 'HORN', nextw: 'TAP WEAPON', prevw: 'TAP WEAPON', wpnwheel: 'HOLD WEAPON', map: 'MAP', fire: 'FIRE', drivefire: 'FIRE', sprint: 'FULL THUMB', boost: 'BOOST', cruiser: 'COP CAR', phone: '📱', light: 'LIGHT',
   move: 'LEFT THUMB', aim: 'DRAG FIRE', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
@@ -34,7 +34,7 @@ export const TOUCH = {
 // rather than in the lines above, which the touch controls' own work keeps)
 Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE', aim: 'AIM STICK' });   // (the aim stick: back, by the owner's call)
 export const KB = {
-  action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
+  action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', boost: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
   move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',
   steer: 'A/D', block: 'RMB',
   dance: 'G',
