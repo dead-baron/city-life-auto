@@ -174,6 +174,7 @@ export function createChat(ctx) {
     if (!b) {
       b = { el: doc.createElement('div'), l: [] };
       b.el.className = 'cht-bub';
+      b.el.dataset.eid = eid;
       b.el.onclick = () => { if (b.id && !b.me) who(b.id, b.n); };
       layer.appendChild(b.el);
       bubbles.set(eid, b);
