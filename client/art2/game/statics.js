@@ -1390,7 +1390,7 @@ function specOf(c, b, A, s, D) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look ? null : upperOf(A, D, rnd, spec, w, d);
-    if (capped) up = null;   // (lowered over the street: no setback storeys on top either - streetCap)
+    if (up && (capped || upBlocks(c, b, s, roofDeckZ(spec) + buildingH(up.spec)))) up = null;   // (lowered over the street, or its setback storeys would cover it: none on top - streetCap)
     const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
@@ -1448,6 +1448,11 @@ function streetCap(c, b, s, spec, pitched, lights) {
   return true;
 }
 const FLOOR_PX = 56;
+// a setback's storeys on top (statics.js upperOf, a hand plan's art.up) that would take the wall's reach over the street
+// past the cap: left off
+function upBlocks(c, b, s, H) {
+  return STREET_CAP.on && !purposeful(c).has(b.id) && blocks(streetUnder(c, s.tx, s.ty, s.tw, H), s.tw);
+}
 
 // ================================================================================================
 // the back alleys (shared/alleys.js says what goes where; alleyart.js draws it; concepts AL1-A..H)

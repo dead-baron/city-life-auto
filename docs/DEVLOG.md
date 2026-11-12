@@ -22517,3 +22517,50 @@ a body lying still in the water (under 15 px/s: `STILL_SP`) only nudges a fish t
 already lying low after a fright; a boat under way still scatters them as before. Round a moored boat the fish of a shore
 patch dart 1.8% of the time (11.6% before). The same holds for the new snorkelers resting at the ends of their reach.
 Test: `test/waterlife.test.js`.
+
+## 2026-11-12 - No tall plain blocks over the street (the art's street cap)
+The owner (11-12, a big flat grey roof over much of the screen): "there are still a lot of tall buildings that don't really
+add anything to the game, it just blocks views of the street behind it ... If there are large buildings that have a reason
+to be tall by design that might be different, but tall huge buildings that don't need to be there and just block views we
+should adjust." The 11-06 and 11-07 passes cut the huge footprints and split the hand plans' big towers; the heights of
+everything else are the art's (client/art2/game/statics.js `specOf`: an office in a towers district 5-9 storeys, glass
+7-11, a walk-up 3-5, with setback storeys on top), and the camera draws each one up over the ground north of it.
+- The survey (`node tools/tallblocks.mjs`; the measure `tools/plainmeasure.mjs` `surveyBlockers`): every building section
+  as the art draws it - its height with its setback on top - and the street, pavement, plaza and car park tiles north of
+  it that height covers. A blocker: no reason to stand tall (no walk-in, no trade but deliveries, no place of its own - a
+  station, a casino, a hospital, the police: the POIs - not a landmark tower, a split tower's own slim tower, a hand
+  plan's set piece with its own roof kit, neon or lights, a named hand-placed building with its name on its front, or the
+  hero corner) and its wall over more than 10 rows of street across its front (a street and its pavements: a mid-rise
+  of four or five storeys still stands) and 72 tiles in all. Before: 194 sections of 188 buildings, 32,190 street tiles
+  under them - Westport Center 156 (its office and glass blocks of 10-17 storeys round the Plaza), the Old Quarter 21,
+  Northgate 5, Southside 3 (the Riverway Houses), Falls Center 3, Sunset Beach 2, Pelican Key 2, Downtown 1, the Civic
+  Center 1. After: none.
+- The fix is the art's (`streetCap`): such a section comes down a storey at a time (to two at the least) until its wall
+  is back within the cap, its setback storeys left off when they'd take it past (`upBlocks`); the lit windows of the
+  storeys gone go too. Most land at five storeys (13 to 5, 9 to 5, 14 to 5...), about 130 sections in all. Nothing with a
+  reason is touched; the landmark towers (shared/world3-towers.js `TOWER_LANDMARKS`) now carry `landmark` so the art knows.
+  Still tall over a street, by design: the five landmark towers, St. Neon General, the Bayside Ritz, the Strip's casino
+  towers, Linden Court and Park West Annex - 25 sections, listed by the tool, for a later look.
+- The footprints, tiles, POIs and homes don't change - only how tall the art draws them. Re-keys the art (`art3`; the
+  landmark flag re-keys `world3`). test/plainblocks.test.js: the survey finds them, none left above the minimum, nothing
+  with a reason lowered, the landmarks flagged. World v3's build: 124-148 s on this shared 2-core machine with the tests of
+  other branches running (131 s alone on 11-08); the art's cap runs when the chunks bake, not at the server's start.
+
+## 2026-11-12 - Filling stations with pumps, and pumps that go up
+The owner (11-12): the "GAS-N-GO" by Pizza Express was an empty paved lot - no pumps, no canopy. The city generator's
+filling stations (the prefabs `gas` and `fuel`, a shop on its lot) had their pumps and canopy in the old painted lot; art
+v2 draws the lot bare and only pumps on the map (m.pumps) get drawn. Five of World v3's nine stations were bare lots (the
+two Gas-N-Gos, Fuel Stop, Highland Fuel, Route 9 Fuel); the four hand-placed ones have their plans' own (m.sitePumps).
+- The forecourts (shared/map.js `forecourts`, World v3 only): on each such lot, the open part in front of (or beside) the
+  shop, two tiles clear of its front - paved where the lot lay on grass or dirt out of town - two rows of two or three
+  pumps four tiles apart, clear of the parking and anything solid. The art puts its canopy and light over each group
+  (statics.js addSetPieces, as before).
+- Every pump is a prop now (`fuelpump`: shared/mapcore.js BREAKABLE and HEAVY_PROPS; map.js `pumpProps`), its solid its own,
+  drawn with the props and its wreck when broken - a scorch, the charred base, the housing torn open and bits about.
+- They go up (server props.js; numbers in shared/rules.js `FUEL_PUMP`): rammed hard enough (the street furniture's smash,
+  which the driver's page predicts), shot six times (combat.js hitscan: a pump in the shot's way, nearer than anyone, stops
+  the round), or caught in a blast. 0.45 s later it's a fuel blast (explosions.js `blastAt`, 150 px, 85 damage) - which
+  breaks the pumps round it, and they go in turn, at most eight in a station's go. The wreck stands until the tidy-up crew
+  puts a new one in: seven minutes on, and only with nobody within 1,400 px to see it happen.
+Tests: `test/fixwave.test.js` (shot, the blast, the chain, back out of view), `test/plainblocks.test.js` (pumps at every
+station, one prop each). (Re-keys the world: world3.)

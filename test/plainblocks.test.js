@@ -256,8 +256,9 @@ test('tall blocks: no building without a reason to stand tall hides the street b
 test('filling stations: pumps on every forecourt, each one a prop that can go up', () => {
   const st = M.prefabs.map((p, i) => [p, i]).filter(([p]) => p.key === 'gas' || p.key === 'fuel');
   assert.ok(st.length >= 5, `${st.length} filling stations`);
-  const bare = st.filter(([p]) => M.pumps.filter((q) => q.x >= p.tx * TILE && q.x < (p.tx + p.tw) * TILE && q.y >= p.ty * TILE && q.y < (p.ty + p.th) * TILE).length < 2);
-  assert.ok(bare.length <= Math.floor(st.length * 0.1), `forecourts with no pumps: ${bare.length} of ${st.length} - ${bare.slice(0, 5).map(([p]) => `${p.key} at ${p.tx},${p.ty}`).join('; ')}`);
+  // (a hand-placed station's forecourt is its plan's own, out in front of it: m.sitePumps - near it, not in its lot)
+  const bare = st.filter(([p]) => M.pumps.filter((q) => Math.hypot(q.x / TILE - (p.tx + p.tw / 2), q.y / TILE - (p.ty + p.th / 2)) < 30).length < 2);
+  assert.equal(bare.length, 0, `stations with no pumps: ${bare.slice(0, 5).map(([p]) => `${p.key} at ${p.tx},${p.ty}`).join('; ')}`);
   const props = M.props.map((p, i) => [p, i]).filter(([p]) => p.t === 'fuelpump');
   assert.equal(props.length, M.pumps.length, 'a prop for every pump');
   for (const [p, i] of props) { const e = M.propSolid.get(i); assert.ok(e && e.x === p.x && e.y === p.y && e.r === 9, `pump ${i}: its solid is its own`); }

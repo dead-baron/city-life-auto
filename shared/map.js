@@ -3127,12 +3127,15 @@ function forecourts(m) {
     x0 += 1; x1 -= 1; y0 += 1; y1 -= 1;
     const w = x1 - x0, h = y1 - y0;
     if (w < 4 || h < 3) return;
+    // (a lot laid on the district's grass or dirt - out of town: paved for its forecourt)
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) if (m.inside(x, y) && m.bld[m.idx(x, y)] < 0) { const t = m.tiles[m.idx(x, y)]; if (t === T.GRASS || t === T.DIRT) m.set(x, y, T.LOT); }
     const nx = w >= 12 ? 3 : w >= 8 ? 2 : 1, ny = h >= 6 ? 2 : 1, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const spots = [];
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       const tx = cx + (i - (nx - 1) / 2) * 4, ty = cy + (j - (ny - 1) / 2) * 3.2, x = Math.round(tx * TILE), y = Math.round(ty * TILE);
       if (!pave(Math.floor(tx), Math.floor(ty)) || !pave(Math.floor(tx), Math.floor(ty) + 1) || !pave(Math.floor(tx), Math.floor(ty) - 1)) continue;
       if (m.parking.some((s) => Math.abs(s.x - x) < 52 && Math.abs(s.y - y) < 60)) continue;
+      if ((m.solidProps.get(m.idx(Math.floor(tx), Math.floor(ty))) || []).some((e) => Math.hypot(e.x - x, e.y - y) < e.r + 14)) continue;   // (a tree, a lamp already there)
       spots.push({ x, y });
     }
     if (spots.length < 2) return;
