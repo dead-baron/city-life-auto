@@ -28,7 +28,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // (the kit's tokens only: test/uitokens.test.js reads this)
 const CSS = `
 #cht-bubs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 2px; max-width: 220px; padding: var(--s1) var(--s2); background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--r1); box-shadow: var(--lift); font: 700 var(--fs-2) var(--pixel); line-height: 1.25; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transition: opacity var(--t3) var(--ease); will-change: transform; }
+.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 2px; max-width: 220px; padding: var(--s1) var(--s2); background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--r1); box-shadow: var(--lift); font: 700 var(--fs-2) var(--pixel); line-height: 1.25; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transition: opacity var(--t3) var(--ease); }
 .cht-bub::after { content: ''; position: absolute; left: 50%; bottom: -8px; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
 .cht-bub > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .cht-bub > span.em { font-style: italic; color: var(--navy3); }
@@ -217,7 +217,7 @@ export function createChat(ctx) {
       const a = shown[i];
       for (let k = 0; k < i; k++) { const o = shown[k]; if (a.x < o.x + o.w && o.x < a.x + a.w && a.y < o.y + o.h + 4 && o.y < a.y + a.h) a.y = o.y - a.h - 6; }
       a.y = Math.max(4, Math.min(H - a.h - 4, a.y));
-      a.b.el.style.transform = `translate(${Math.round(a.x)}px, ${Math.round(a.y)}px)`;
+      a.b.el.style.left = `${Math.round(a.x)}px`; a.b.el.style.top = `${Math.round(a.y)}px`;
     }
     if (bubbles.size) raf = requestAnimationFrame(place);
   }
