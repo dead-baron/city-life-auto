@@ -170,7 +170,8 @@ export function createInfo(H) {
   if (jobEl) {
     jobEl.setAttribute('role', 'button');
     // (a tap or a click on it: the phone's Jobs app, the job you're on at its top with Show on map and Quit job - the
-    // owner, 11-06: "How do you quit a job you started?"; the card done and showing its pay: folded away as before)
+    // owner, 11-06: "How do you quit a job you started?" - or the activity, Quit golf, Quit bowling...: 11-12; the card
+    // done and showing its pay: folded away as before)
     jobEl.addEventListener('click', () => {
       const J = I.job;
       if (J.key && H.openJob) { H.openJob(); return; }

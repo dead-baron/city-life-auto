@@ -3,7 +3,8 @@
 // hook, and the attack button sets the power (hold, let go - the meter swings like golf's). The ball rolls down the lane
 // and the pins it takes are worked out from its line and speed; ten frames with strikes and spares on the lane's score
 // card. Others can join your lane (they pay too) and take their turns; NPC groups bowl on the other lanes while anyone
-// is near. Walk out of the building and your game ends.
+// is near. Walk out of the building (QUIT.awayS after a warning: walkaway.js), go down or use the phone's Quit
+// (activityquit.js) and your game ends.
 import { DT } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { swingMeter } from '../../shared/golf.js';
@@ -13,6 +14,7 @@ import { payFrom } from './economy.js';
 import { spawnNpc, despawnNpc } from './npc.js';
 import { store } from '../store.js';
 import * as careers from './careers.js';   // (progress events: the goals, what you've tried - careers.js note)
+import { walkedOff, awayText } from './walkaway.js';   // (walking out: a warning, then the game's over)
 
 const rng = mulberry32(1010);
 const HOOKS = ['none', 'a little left', 'a little right'], HOOK_DIR = [0, -1, 1];
@@ -266,8 +268,9 @@ export function update(world) {
   for (const p of world.players.values()) {
     if (!p.bowl) continue;
     const ped = p.ped, b = world.map.buildings[A.b];
-    const inside = ped && !ped.dead && !ped.removed && !ped.vehId && ped.x >= b.tx * 32 && ped.x < (b.tx + b.tw) * 32 && ped.y >= b.ty * 32 - 16 && ped.y < (b.ty + b.th) * 32 + 16;
-    if (!inside) leave(world, p, true);
+    if (!ped || ped.dead || ped.removed || ped.vehId) { leave(world, p, true); continue; }
+    const inside = ped.x >= b.tx * 32 && ped.x < (b.tx + b.tw) * 32 && ped.y >= b.ty * 32 - 16 && ped.y < (b.ty + b.th) * 32 + 16;
+    if (walkedOff(world, p, p.bowl, !inside)) { leave(world, p, false); world.notify(p, 'You walked out of the alley - your game is over.', 'info'); }
   }
   for (const ln of S.lanes) if (ln.game && !ln.game.npc) for (const b of [...ln.game.bowlers]) if (b.pid && !world.players.get(b.pid)) { const q = { pid: b.pid, bowl: { lane: S.lanes.indexOf(ln) }, name: b.name }; leave(world, q, false); }
   // the NPC groups: up to three lanes nobody's rented, while a player is near
@@ -300,5 +303,5 @@ export function targetFor(world, p) {
   const A = alley(world), G = st(world).lanes[B.lane].game;
   if (!A || !G) return null;
   const me = G.bowlers.find((b) => b.pid === p.pid), nb = me ? nextBall(me.rolls) : null, L = A.lanes[B.lane];
-  return { text: `Bowling, lane ${B.lane + 1}: ${nb && !nb.done ? `frame ${nb.frame + 1}` : 'done'} · ${me ? totalScore(me.rolls) : 0}`, x: L.cx, y: L.foulY, stage: 'bowling' };
+  return { text: awayText(world, B) || `Bowling, lane ${B.lane + 1}: ${nb && !nb.done ? `frame ${nb.frame + 1}` : 'done'} · ${me ? totalScore(me.rolls) : 0}`, x: L.cx, y: L.foulY, stage: 'bowling' };
 }

@@ -425,7 +425,7 @@ const RACENIGHT = {
         const c = R.course;
         for (const p of world.players.values()) {
           const v = carOf(world, p);
-          if (!wheels(v) || R.grid.has(p.pid)) continue;
+          if (!wheels(v) || R.grid.has(p.pid) || (R.quit && R.quit.has(p.pid))) continue;   // (pulled out with the phone's Quit: out this race)
           if (Math.hypot(v.x - c.start.x, v.y - c.start.y) < RN.startR) { R.grid.add(p.pid); world.notify(p, `You're on the grid: race ${R.i + 1} of ${RN.races}, off in ${Math.max(0, Math.ceil((R.opens + RN.signupS * 1000 - ms) / 1000))} s. Stay on the line.`, 'good'); p.meDirty = true; }
         }
         if (ms >= R.opens + RN.signupS * 1000) raceGo(world, r, R);
@@ -491,6 +491,23 @@ evhooks.on('target', (world, p) => {
     if (R.phase === 'signup' && R.grid.has(p.pid)) return { text: `Street race ${R.i + 1} of ${RN.races}: stay on the line`, x: Math.round(R.course.start.x), y: Math.round(R.course.start.y), stage: 'race' };
     const q = R.phase === 'running' && R.racers.get(p.pid);
     if (q && !q.done) { const cp = R.course.cps[q.cp]; return { text: `Street race ${R.i + 1} of ${RN.races}: checkpoint ${q.cp + 1}/${R.course.cps.length}`, x: Math.round(cp.x), y: Math.round(cp.y), stage: 'race' }; }
+  }
+  return null;
+});
+
+// the phone's Quit (activityquit.js): off the grid, or out of the race under way - a forfeit, as dropping out is
+evhooks.on('quit', (world, p) => {
+  const r = live(world, 'racenight');
+  if (!r) return null;
+  for (const R of r.races) {
+    const q = R.phase === 'running' && R.racers.get(p.pid);
+    if ((R.phase === 'signup' && R.grid.has(p.pid)) || (q && !q.done)) {
+      return { k: 'streetrace', n: 'the street race', end() {
+        if (q) { q.done = true; q.forfeit = true; } else { R.grid.delete(p.pid); (R.quit ||= new Set()).add(p.pid); }
+        p.meDirty = true;
+        return `You pulled out of street race ${R.i + 1}.`;
+      } };
+    }
   }
   return null;
 });

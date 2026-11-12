@@ -198,7 +198,19 @@ export function createPhone(ctx) {
 
   // the job you're on (the board's job; the step from your self record): what it is, the step, the pay; Show on map, Quit
   function curJob() {
-    const j = board && board.job, live = ctx.job && ctx.job();
+    return curAct() + jobNow();
+  }
+  // an activity going on (golf, bowling, a match, the movie... - server activityquit.js): what the tracker says, Show on
+  // map, and Quit <it> - pressed twice, as Quit job is (the owner, 11-12: walking away left golf's waypoint up)
+  function curAct() {
+    const A = board && board.act, live = ctx.job && ctx.job();
+    if (!A) return '';
+    return `<div class="ph-cur ph-act"><div class="ph-cur-top"><span>NOW · ${esc(String(A.n || '').toUpperCase())}</span></div>`
+      + (live && live.text ? `<b>${esc(live.text)}</b>` : '')
+      + `<div class="ph-cur-acts">${live && (live.x || live.y) ? '<button class="btn btn-1" data-act="showjob">Show on map</button>' : ''}<button class="btn btn-x" data-act="quitact" data-k="${esc(A.k)}">Quit ${esc(A.n)}</button></div></div>`;
+  }
+  function jobNow() {
+    const j = board && board.job, live = board && board.act ? null : ctx.job && ctx.job();   // (an activity's in the tracker: the job's own line)
     if (!j) return '';
     return `<div class="ph-cur"><div class="ph-cur-top"><span>ON A JOB · ${esc(JOB_NAME[j.type] || String(j.type || '').toUpperCase())}</span>${j.pay ? `<span>$${Math.round(j.pay).toLocaleString('en-US')}</span>` : ''}</div>`
       + `<b>${esc((live && live.text) || j.text)}</b><div class="ph-cur-acts">${live && (live.x || live.y) ? '<button class="btn btn-1" data-act="showjob">Show on map</button>' : ''}<button class="btn btn-x" data-act="cancel">Quit job</button></div></div>`;
@@ -291,6 +303,7 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="cruiser"]')) b.onclick = () => ctx.cruiser();
     for (const b of el.querySelectorAll('[data-act="clearlog"]')) b.onclick = () => { clearLog(); render(); };
     for (const b of el.querySelectorAll('[data-report]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'report', id: b.dataset.report }); };
+    for (const b of el.querySelectorAll('[data-act="quitact"]')) b.onclick = () => { if (b.dataset.sure) { b.disabled = true; ctx.send({ t: 'phone', a: 'quit', k: b.dataset.k }); ctx.close(); } else { b.dataset.sure = '1'; b.textContent = 'Press again to quit'; } };
     for (const b of el.querySelectorAll('[data-act="cancel"]')) b.onclick = () => { if (b.dataset.sure) ctx.send({ t: 'phone', a: 'cancel' }); else { b.dataset.sure = '1'; b.textContent = 'Press again to quit'; } };
     wireCrew(el, () => crew, ctx);   // (the Crew app: server crews.js)
     for (const b of el.querySelectorAll('[data-act="clearwp"]')) b.onclick = () => { ctx.setWaypoint(null); render(); };

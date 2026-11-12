@@ -466,6 +466,7 @@ function onText(m) {
     case 'next': phone.on('Next', m); break;   // the "What's next" app (server whatsnext.js; client/whatsnext.js)
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
+      if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); break; }   // (quit from the server - activityquit.js: the score so far goes in as Esc's does)
       openOverlay('arcade');
       $('arc-hint').textContent = input.device === 'touch' ? 'Tap ✕ to leave' : 'Esc / B to leave';
       (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : m.mp ? { t: 'pool', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });

@@ -8,6 +8,7 @@ import { IN } from '../shared/input.js';
 import { DT } from '../shared/constants.js';
 import { GOLF_FEE, HOLE_IN_ONE_PRIZE, CLUBS, LIES, swingMeter, lieAt, clubFor, launchSpeed, carry, SWING_S } from '../shared/golf.js';
 import * as golf from '../server/systems/golf.js';
+import { QUIT } from '../shared/rules.js';
 import { courtHoops, idealPower, shotWindow } from '../shared/hoops.js';
 
 // a swing: press the attack button by the ball, hold it while the meter rises to `power`, let go - through the input
@@ -71,7 +72,7 @@ test('golf: tee off ($5), drive down the fairway with the meter, and the ball co
   assert.ok(['fairway', 'rough', 'sand', 'green', 'path'].includes(p.golf.lie), `lies ${p.golf.lie}`);
   // walking off the course a while gives the hole up and takes the ball away
   teleport(w, p.ped, b2.x + 3000, b2.y);
-  run(w, 26);
+  run(w, QUIT.awayS + 1);
   assert.equal(p.golf, null, 'hole given up');
   assert.ok(!w.get(b2.id), 'the ball is gone');
 });
@@ -159,7 +160,9 @@ test('hoops at North Point Courts: pick up a ball, hold and let go in the band -
   // too close: no shot
   teleport(w, p.ped, rim.x, rim.y + 20);
   assert.ok(/Too close/.test(players.findInteraction(w, p).label), 'too close');
-  // off the court: the ball goes down
+  // off the court: a warning, then the ball goes down (QUIT.awayS: test/activityquit.test.js)
   teleport(w, p.ped, rim.x + 2000, rim.y + 400); run(w, 0.2);
+  assert.ok(p.hoops && /Walk back/.test(players.buildMe(w, p).job.text), 'warned first');
+  run(w, QUIT.awayS + 0.5);
   assert.equal(p.hoops, null, 'walked off');
 });

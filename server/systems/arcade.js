@@ -245,6 +245,15 @@ function ticketGame(world, p, A, msg) {
 }
 
 // the score back from the page (session.js): the tickets it's worth, if it's this credit's and could be true
+// the phone's Quit (activityquit.js): the page shuts the game's screen, and the score so far comes in as when it's closed
+// with Esc or the X; with no page there, the credit's just over
+export function quit(world, p) {
+  const A = p.arcade;
+  if (!A || A.quit) return false;
+  if (p.conn) { A.quit = true; p.conn.sendJSON({ t: 'arcade', close: 1 }); } else p.arcade = null;
+  return true;
+}
+
 export function onScore(world, p, msg) {
   const A = p.arcade;
   if (!A || String(msg.id || '') !== A.id) return;

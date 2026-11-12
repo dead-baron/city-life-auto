@@ -48,6 +48,7 @@ import * as truckjob from './truckjob.js';
 import * as mailjob from './mailjob.js';
 import * as whatsnext from './whatsnext.js';
 import * as careers from './careers.js';
+import * as activityquit from './activityquit.js';   // (the Jobs app's Quit for any activity: golf, bowling, a match...)
 
 const rng = mulberry32(7331);
 const BOARD_SIZE = 7;          // civilian deliveries kept on the board
@@ -220,7 +221,8 @@ export function boardFor(world, p) {
   const wood = woodjob.boardEntry(world, p);   // a firewood order from a diner, a cafe, a camp... (woodjob.js)
   if (wood) list.push(wood);
   const pj = p.job;
-  return { t: 'board', jobs: list, job: pj ? { text: pj.text, type: pj.type, pay: Number.isFinite(pj.pay) ? pj.pay : null } : null, saw: law.sawList(world, p) };
+  const act = activityquit.current(world, p);   // (an activity going on - golf, bowling, a match: its own Quit card)
+  return { t: 'board', jobs: list, job: pj ? { text: pj.text, type: pj.type, pay: Number.isFinite(pj.pay) ? pj.pay : null } : null, act: act && act.k !== 'job' ? act : null, saw: law.sawList(world, p) };
 }
 
 function drivingJobs(world, p, list) {
@@ -289,6 +291,10 @@ export function handle(world, p, msg) {
   if (a === 'transit') return { ...transit.transitInfo(world, p), ferries: ferries.ferryInfo(world) };   // the Transit app and the lines on the map
   if (a === 'taxi') return transit.taxiPhone(world, p, msg);    // call a taxi / cancel it / where you want to go
   if (a === 'dance') { phoneOut(world, p, false); dance.next(world, p); return null; }   // the Dance button: dance (the next move each press, dance.js)
+  if (a === 'quit') {   // Quit <activity> (activityquit.js): k the one the page showed
+    const err = activityquit.quit(world, p, activityquit.KINDS.includes(String(msg.k)) ? String(msg.k) : null);
+    return { ...boardFor(world, p), err };
+  }
   if (a === 'cancel') {
     if (!p.job) return { ...boardFor(world, p), err: 'You have no job.' };
     jobs.failJob(world, p, 'Job canceled.');

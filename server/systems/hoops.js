@@ -3,12 +3,14 @@
 // swings up and back while you hold, and there's a band on it that drops the ball in from where you stand (narrower
 // further out). The ball arcs up to the hoop: in, short off the front of the rim or long off the backboard, then
 // bounces back to you. Makes in a row are your streak; your best streak is kept and the day's best are listed. Walk
-// off the court and you put the ball down.
+// off the court (QUIT.awayS after a warning: walkaway.js), get in a vehicle or use the phone's Quit (activityquit.js)
+// and you put the ball down.
 import { K, DT } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { swingMeter } from '../../shared/golf.js';
 import { courtHoops, hoopAt, idealPower, shotWindow, HOOP_MIN, HOOP_MAX, HOOP_HANDS } from '../../shared/hoops.js';
 import { store } from '../store.js';
+import { walkedOff, awayText } from './walkaway.js';
 
 const FLIGHT_S = 0.95, DROP_S = 0.45, LEAVE_PAD = 48;
 
@@ -39,7 +41,7 @@ export function start(world, p, k) {
   return null;
 }
 
-function stop(world, p, say) {
+export function stop(world, p, say) {
   const H = p.hoops;
   if (!H) return;
   const b = H.ball && world.get(H.ball);
@@ -132,10 +134,12 @@ export function update(world) {
     const H = p.hoops;
     if (!H) continue;
     const ped = p.ped;
-    if (!ped || ped.dead || ped.removed || ped.vehId || ped.hidden) { stop(world, p, false); continue; }
+    if (ped && !ped.dead && ped.vehId) { stop(world, p, false); world.notify(p, 'You got in a vehicle - you put the ball down.', 'info'); continue; }
+    if (!ped || ped.dead || ped.removed || ped.hidden) { stop(world, p, false); continue; }
     const b = H.ball && world.get(H.ball);
     if (b) stepBall(world, p, H, b); else if (H.ball) H.ball = 0;
-    if (!H.ball && hoopAt(world.map, ped.x, ped.y, LEAVE_PAD) !== H.k) stop(world, p, true);   // (walked off the court)
+    if (!p.hoops) continue;
+    if (walkedOff(world, p, H, !H.ball && hoopAt(world.map, ped.x, ped.y, LEAVE_PAD) !== H.k)) { stop(world, p, false); world.notify(p, `You walked off the court - you put the ball down${H.shots ? ` (${H.made} of ${H.shots})` : ''}.`, 'info'); }   // (walked off the court)
   }
   // balls whose shooter has gone
   if (world.tick % 40 === 9) for (const e of world.entities.values()) if (e.kind === K.BALL && e.ballKind === 'hoop' && ![...world.players.values()].some((q) => q.hoops && q.hoops.ball === e.id)) world.remove(e);
@@ -153,5 +157,5 @@ export function targetFor(world, p) {
   const H = p.hoops;
   if (!H) return null;
   const rim = courtHoops(world.map)[H.k].rim;
-  return { text: `Hoops: ${H.streak} in a row · ${H.made}/${H.shots}`, x: rim.x, y: rim.y, stage: 'hoops' };
+  return { text: awayText(world, H) || `Hoops: ${H.streak} in a row · ${H.made}/${H.shots}`, x: rim.x, y: rim.y, stage: 'hoops' };
 }
