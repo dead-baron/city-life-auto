@@ -54,7 +54,12 @@ test('Coral Cay\'s east lobe and Macaw Cove, by hand after NA1-E and SC3-H', { t
   assert.ok(m.land[at(ix, iy)] && m.dist[at(ix, iy)] === 44, 'the islet');
   assert.ok(m.props.some((p) => p.t === 'stilthut' && Math.abs(p.x / TILE - ix) < 20 && Math.abs(p.y / TILE - iy) < 6), 'its stilt house');
   // the life: macaws, turtles, snorkelers, mangroves; the lodge's cabins still to rent
-  for (const [t, n] of [['macaw', 8], ['turtle', 3], ['snorkeler', 3], ['mangrove', 12], ['ginger', 10]]) assert.ok(m.props.filter((p) => p.t === t).length >= n, `${t}s`);
+  for (const [t, n] of [['macaw', 8], ['turtle', 3], ['mangrove', 12], ['ginger', 10]]) assert.ok(m.props.filter((p) => p.t === t).length >= n, `${t}s`);
+  // (the snorkelers are live people now - server wildfolk.js 'snorkel' at m.snorkelSpots - and no bird is painted in mid-air:
+  // the owner, 11-12, a static snorkeler and a frozen macaw over Coral Cay's lagoon)
+  assert.ok((m.snorkelSpots || []).length >= 3, 'the snorkelling spots');
+  assert.ok(!m.props.some((p) => p.t === 'snorkeler'), 'no snorkeler painted into the art');
+  assert.ok(!m.props.some((p) => p.t === 'macaw' && p.fly), 'no macaw painted in flight');
   // the lodge's seven cabins, still to rent, one after another in the homes' order (the ids players own them by)
   const cabins = m.homes.filter((h) => h && /^Cabin \d, Coral Cay Eco Lodge$/.test(h.name));
   assert.equal(cabins.length, 7, 'the lodge\'s seven cabins');

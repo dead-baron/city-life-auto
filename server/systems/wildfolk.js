@@ -34,6 +34,7 @@ import { BUILDS } from '../entities.js';
 // day / night: the chance a spot is on when someone comes near (activities.js KINDS)
 export const WILD_KINDS = {
   ranger: { day: 0.85, night: 0.3, cap: 1 },
+  snorkel: { day: 0.6, night: 0, cap: 1 },   // (someone snorkelling in a reef's shallows: map.snorkelSpots)
   trail: { day: 0.7, night: 0.04 },
   birders: { day: 0.7, night: 0, cap: 1 },
   holds: { day: 0.7, night: 0.3 },
@@ -54,6 +55,13 @@ export const WILD_LOOKS = {
     L.outfit.bottoms = item('Cargo pants', pk(r, ['olive', 'olive', 'brown'])); L.outfit.shoes = item('Hiking boots', 'brown');
     L.outfit.hat = item('Ranger hat', 'tan', 'brown'); L.outfit.glasses = r() < 0.3 ? item('Sunglasses') : null;
   }, 0.4, [['work', 1]]),
+  snorkeler: R((L, r) => {   // in the water: swimwear and the goggles (the snorkel's mask)
+    clear(L);
+    const f = L.body && L.body.base === 'f';
+    if (f) { L.outfit.top = item('Bikini top', pk(r, ['coral', 'teal', 'yellow', 'royal blue'])); L.outfit.bottoms = item('Bikini bottoms', pk(r, ['coral', 'teal', 'yellow', 'royal blue'])); }
+    else L.outfit.bottoms = item('Swim trunks', pk(r, ['royal blue', 'red', 'teal', 'orange', 'yellow']));
+    L.outfit.glasses = item('Swim goggles', pk(r, ['royal blue', 'black', 'yellow']));
+  }, 0.45, [['beach', 1]]),
   backpacker: R((L, r) => {   // the tall trekking pack, boots, a sun hat or a cap
     clear(L);
     L.outfit.top = item(pk(r, ['Long-sleeve tee', 'Flannel shirt', 'Thermal top']), pk(r, ['red', 'forest', 'navy', 'mustard', 'teal', 'grey']), 'black');
@@ -166,6 +174,14 @@ export function wildSpots(map, list, taken, h) {
     for (const [dx, dy] of [[0, 22], [24, 22], [-24, 22], [0, 46], [48, 30], [-48, 30]]) if (!s && ok(cx + dx, cy + dy)) s = { x: cx + dx, y: cy + dy };
     const e = s && legFrom(s.x, s.y, 300);
     if (e && room('ranger', s.x, s.y, 600)) add({ k: 'ranger', x: s.x, y: s.y, a: Math.atan2(e.y - s.y, e.x - s.x), x2: e.x, y2: e.y, wild: true });
+  }
+  // the reefs' shallows (map.snorkelSpots: World v3's tropic coves and Coral Cay's lagoon): someone snorkelling, drifting
+  // face down over the coral from one end of a short reach to the other and back (activities.js patrol: in the water they
+  // swim - players.js pedMods, an NPC in the water swims), a spell still at each end
+  for (const q of map.snorkelSpots || []) {
+    const c = Math.cos(q.a || 0), sn = Math.sin(q.a || 0), x2 = q.x + c * 150, y2 = q.y + sn * 150;
+    if (!WATER(map.tileAtPx(q.x, q.y)) || !WATER(map.tileAtPx(x2, y2))) continue;
+    add({ k: 'snorkel', x: q.x, y: q.y, a: q.a || 0, x2, y2, wild: true });
   }
   // the trailheads: a map board, a fingerpost - backpackers and runners along the trail, now and then a ranger
   for (const p of map.props || []) {
@@ -294,6 +310,7 @@ function trailRoute(map, x, y, h) {
 export function wildMembers(s, rng) {
   const c = Math.cos(s.a), sn = Math.sin(s.a), out = [];
   if (s.k === 'ranger') out.push({ x: s.x, y: s.y, a: s.a, arche: 'hiker', look: 'ranger', patrol: [{ x: s.x, y: s.y }, { x: s.x2, y: s.y2 }], ranger: true });
+  else if (s.k === 'snorkel') out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'snorkeler', patrol: [{ x: s.x, y: s.y }, { x: s.x2, y: s.y2 }] });
   else if (s.k === 'trail') {
     if (rng() < 0.4) out.push({ x: s.x, y: s.y, a: s.a, arche: 'hiker', look: 'runner', route: s.route, pace: 1, leg: rng() < 0.5 ? 0 : 1 });   // (a runner: out along the trail and back at a run)
     else {

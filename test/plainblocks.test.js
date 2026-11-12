@@ -229,3 +229,37 @@ test('tall towers: no split tower\'s wall covers a place to the north of it (unl
     assert.deepEqual(hid.map((p) => `${p.kind} ${p.label}`), [], `${tw.name} (${f} floors) hides`);
   }
 });
+
+// ---- the tall blocks over the street (the owner, 2026-11-12: "tall buildings that don't really add anything to the game, it
+// just blocks views of the street behind it"): the art lowers a section with no reason to stand tall while its wall covers
+// more street north of it than STREET_CAP lets it (client/art2/game/statics.js streetCap); tools/tallblocks.mjs surveys it
+test('tall blocks: no building without a reason to stand tall hides the street behind it', async () => {
+  const { surveyBlockers, blockersOf } = await import('../tools/plainmeasure.mjs');
+  const { STREET_CAP } = await import('../client/art2/game/statics.js');
+  const before = await surveyBlockers(M, { on: false }), after = await surveyBlockers(M, { on: true });
+  const B0 = await blockersOf(before), B1 = await blockersOf(after);
+  assert.ok(B0.length > 100, `the survey finds the tall plain blocks the cap is for (${B0.length})`);
+  // (left over: only a section already at its lowest - minFl storeys - over a street on both sides of a corner)
+  const left = B1.filter((q) => q.floors > STREET_CAP.minFl);
+  assert.equal(left.length, 0, `still hiding the street: ${left.slice(0, 6).map((q) => `#${q.b} ${q.name} ${q.tw}x${q.th} at ${q.tx},${q.ty}: ${q.floors} floors, ${q.hidden} tiles`).join('; ')}`);
+  // the landmark towers and the walk-ins keep their height; nothing that has a reason is lowered
+  const was = new Map(before.map((q) => [q.b + ':' + q.tx + ':' + q.ty, q]));
+  for (const q of after) if (q.purpose) { const w = was.get(q.b + ':' + q.tx + ':' + q.ty); assert.ok(!w || w.H === q.H, `#${q.b} ${q.name} kept its height`); }
+  for (const n of ['Greenfield Tower', 'Union Trust Tower', 'Sterling Tower', 'Grand Neon Hotel', 'Westport Center Tower']) {
+    const b = M.buildings.find((q) => q && q.name === n);
+    assert.ok(b && b.landmark, `${n}: a landmark`);
+  }
+});
+
+// the filling stations by the street (the owner, 2026-11-12: "GAS-N-GO is just an empty paved lot"): pump islands on every
+// forecourt (shared/map.js forecourts), each pump a prop that goes up (pumpProps; server props.js) - its solid its own
+test('filling stations: pumps on every forecourt, each one a prop that can go up', () => {
+  const st = M.prefabs.map((p, i) => [p, i]).filter(([p]) => p.key === 'gas' || p.key === 'fuel');
+  assert.ok(st.length >= 5, `${st.length} filling stations`);
+  const bare = st.filter(([p]) => M.pumps.filter((q) => q.x >= p.tx * TILE && q.x < (p.tx + p.tw) * TILE && q.y >= p.ty * TILE && q.y < (p.ty + p.th) * TILE).length < 2);
+  assert.ok(bare.length <= Math.floor(st.length * 0.1), `forecourts with no pumps: ${bare.length} of ${st.length} - ${bare.slice(0, 5).map(([p]) => `${p.key} at ${p.tx},${p.ty}`).join('; ')}`);
+  const props = M.props.map((p, i) => [p, i]).filter(([p]) => p.t === 'fuelpump');
+  assert.equal(props.length, M.pumps.length, 'a prop for every pump');
+  for (const [p, i] of props) { const e = M.propSolid.get(i); assert.ok(e && e.x === p.x && e.y === p.y && e.r === 9, `pump ${i}: its solid is its own`); }
+  for (const q of M.pumps) { const t = M.tiles[M.idx(Math.floor(q.x / TILE), Math.floor(q.y / TILE))]; assert.ok(t !== T.BUILDING && t !== T.ROAD, 'on the forecourt'); }
+});

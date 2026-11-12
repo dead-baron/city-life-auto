@@ -22446,3 +22446,59 @@ rekey).
   cuffs, the cooldown, shaken off, back to the kennels; units' caps, not a business slot, rent and upkeep for a day and
   for days away, sold; Kingpin / Chief / Tycoon gold over the name, "S0 Kingpin" after the rank's gone).
   `test/careers.test.js`: kingpin is unlocked now.
+
+## 2026-11-12 - One name on a front: no double sign over a walk-in (the Old Town Infirmary)
+The owner (11-12, a phone shot by the Old Town Infirmary while its inside loaded): "OLD TOWN INFIRMARY" twice, one under
+the other. It wasn't the loading: the front itself said it twice. A hospital's, a clinic's or a police station's section
+gets its trade's name plaque over the door (client/art2/game/statics.js, the `hospital` / `police` archetypes), and a hand
+plan whose front has its own shop sign (the infirmary's `art.shop.sign`, shared/world3-oldtown.js) put its signboard on top
+of that - the plaque on the fascia and the board above it, a few pixels apart. Now a front with a sign drops any plaque
+that says the same name or a word of it (`sameName`: OLD TOWN INFIRMARY, POLICE on GULL HARBOR POLICE); the EMERGENCY
+plaque and the clinic's cross stay. The same front is drawn in every state - the bake while the inside is on its way, the
+cut-away once it's in, the stand-ins draw no signs - so it's one name in each. All 1,776 shop signs in World v3 checked:
+no plaque repeats its sign. Test: `test/fixwave.test.js`. (Re-keys the art: statics.js.)
+
+## 2026-11-12 - A player's name tag on the aircraft they fly
+The owner (11-12): "BETA Claw16" on the grass well below a helicopter its player was flying. The tag was drawn at the
+player's ground point, and art v2 draws an aircraft up the screen by its height. A player in a vehicle now has the tag over
+the vehicle they're in (the nearest one under them): above its body, and for a helicopter or a plane lifted by the same
+amount the art and the camera lift it (render/aircraft.js `camLift`), so it rides with the aircraft at any height
+(client/main.js `tagY`). Cars, boats and bikes: over the vehicle instead of its middle.
+
+## 2026-11-12 - No knots of walkers: a cap on the passers-by round a player
+The owner (11-12, Coral Cay's jungle trail): about eight people on one short stretch of path at once. The passers-by meander
+back toward the nearest player (server npc.js `pickWaypoint`: 60% of the time when they're over 520 px off - it keeps the
+streets round you lively); out where there's one path to walk, they all end up on it, round you. Now (server npc.js
+`spread`, every half second with the density pass) past `CROWD_CAP` within 320 px of a player - on pavements and plazas 9 x
+the place's crowd (downtown's 1.5: 14, so busy streets and the stations at the rush stay busy), out on trails, grass and
+sand 3 - the nearest stay and the rest are sent off another way, not drifting back toward anyone for 40 s. Nobody at an
+activity, a post, a counter or their campground is moved. Numbers: shared/rules.js `CROWD_CAP`. Test: `test/fixwave.test.js`.
+
+## 2026-11-12 - Coral Cay: the snorkelers are people now, no birds frozen in mid-air
+The owner (11-12, the lagoon by the T-pier): a static snorkeler painted into the art, and a red bird stuck in mid-air with
+its shadow on the water. The four snorkelers baked into World v3's tropic coves (shared/world3-tropic.js: Coral Cay's lagoon,
+Macaw Cove, the jungle falls' pool) were the only people drawn into the art anywhere (the rest are statues); they're gone,
+and three places for them are `m.snorkelSpots` - a new kind of the people of the wilds (server wildfolk.js `snorkel`, by day, one
+round a player at most): someone in swimwear and goggles out in the shallows, swimming slowly from one end of a short
+reach to the other and back with a spell still at each end (activities.js's patrol; an NPC in the water swims). The two
+macaws painted in flight and the five painted hanging in the air round the falls are gone too (the jungle's own still sit
+up in the palms, and the live gulls - client/birds.js - come and go on the beaches). Tests: `test/world3tropic.test.js`,
+`test/fixwave.test.js`. (Re-keys the world.)
+
+## 2026-11-12 - The cinematic Showcase: the hand-crafted places, a press away
+The owner (11-12) is about to make cinematics of the best-looking hand-crafted areas: "add locations that have a great hand
+crafted touch to the cinematic lists so it's easy to find them". The Tour glided through the map's landmarks and paintings,
+nearest first. Now there's a Showcase (client/showcase.js, loaded with the director): 39 places from the handcrafted and
+"by hand" work in this log - the coasts and islands (Lighthouse Rock, Gull Point Light and the harbour village, Sunset Beach
+Pier, Coral Cay's lagoon, Macaw Cove, Pelican Point, North Point, the Bluffs, North Cape, Redwood Cove, Northshore), the
+wild (Lakeside Greens, Kestrel Beach, Granite Hot Springs, Summit Tarn, Eagle Crag, Silver Thread Falls, Redwood Creek Falls,
+Hidden Pool, the Redwood Caverns, Red Rock Canyon, Canyon Oasis, Mirage Lake, the balloon field) and the city and the towns
+(Greenfield Park, Piazza Vecchia, the night market, Lucky Mesa's casinos, the Pink Mile, the El over Trestle Street, the
+museum square, the Bayside Ritz, Lantern Lane, the Harbor waterfront, Waves Stadium, Westport Center Plaza, Falls Green,
+Westport International) - each with its zoom and a time of day to shoot it at (golden hour at the lighthouse, night on the
+Strip, dawn at the tarn). Each is looked up by name in the debug teleport's list of the world's places (client/devtp.js
+`teleportPlaces`, loaded the first time the panel shows the list), so it's where the world puts it.
+- The cinematic panel (F4) has a Showcase section: press a place and the drone camera is there, at its zoom and time of
+  day (WASD / the stick fly on from there; your character stays where it was).
+- The Tour: "All the sights" as before, or "Showcase only" - each place in turn at its own zoom and time of day.
+Test: `test/fixwave.test.js` (the list's shape, the look-up, the panel's wiring); the names checked against World v3's places.

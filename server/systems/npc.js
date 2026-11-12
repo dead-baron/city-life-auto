@@ -27,7 +27,7 @@ import * as personas from './personas.js';
 import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
-import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS } from '../../shared/rules.js';
+import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
@@ -411,7 +411,7 @@ function pickWaypoint(world, ped) {
   const n = ped.npc;
   // pedestrians far from every player meander back toward them (keeps visible streets lively)
   let towards = null;
-  if (n.role === 'civ' && !n.country && rng() < 0.6) {
+  if (n.role === 'civ' && !n.country && !(n.offUntil > world.time) && rng() < 0.6) {
     let bd = Infinity;
     for (const p of world.players.values()) {
       if (!p.ped || p.ped.dead) continue;
@@ -850,6 +850,7 @@ function manageDensity(world) {
     for (const a of anchors) if ((a.x - e.x) ** 2 + (a.y - e.y) ** 2 < 1500 * 1500) { near = true; break; }
     if (!near && !(e.dead && world.bodies.has(e)) && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e);
   }
+  spread(world, anchors, night);
   if (world.npcCount >= world.npcBudget * 0.6) return;
   for (const a of anchors) {
     // out in the open country it's quiet: a few people, where they belong (spawnCountry)
@@ -874,6 +875,29 @@ function manageDensity(world) {
       }
       spawnByDemographic(world, x, y, night);
       break;
+    }
+  }
+}
+
+// No knots of walkers round a player (CROWD_CAP; the owner, 11-12: eight people on one stretch of a jungle trail - the
+// passers-by meander back toward the nearest player, and where the only way to walk is one path they all end up on it,
+// round you): past the cap within r px the nearest stay, the rest are sent off another way and don't drift back for a while.
+// Only passers-by on their way somewhere: nobody at an activity, a post, a counter or their campground.
+export function spread(world, anchors, night) {
+  const now = world.time, R = CROWD_CAP.r;
+  for (const a of anchors) {
+    const t = world.map.tileAtPx(a.x, a.y), cap = PREFERRED.has(t) || t === T.FLOOR ? Math.round(CROWD_CAP.town * crowdAt(world, a.x, a.y, night)) : CROWD_CAP.open;
+    const near = [];
+    for (const e of world.query(a.x, a.y, R, K.PED)) {
+      const n = e.npc;
+      if (!n || e.dead || e.vehId || n.role !== 'civ' || n.keep || n.guard || n.desk || n.patch || n.act || n.sar || (n.state !== 'wander' && n.state !== 'idle')) continue;
+      near.push([(e.x - a.x) ** 2 + (e.y - a.y) ** 2, e]);
+    }
+    if (near.length <= cap) continue;
+    near.sort((p, q) => p[0] - q[0]);
+    for (let i = cap; i < near.length; i++) {
+      const e = near[i][1], n = e.npc;
+      n.offUntil = now + CROWD_CAP.offS; n.awayFrom = Math.atan2(e.y - a.y, e.x - a.x); n.state = 'wander'; n.until = 0;
     }
   }
 }

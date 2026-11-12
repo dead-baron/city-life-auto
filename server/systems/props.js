@@ -7,6 +7,8 @@ import { K } from '../../shared/constants.js';
 import { BREAKABLE } from '../../shared/map.js';
 import { breakGrid, propRadius, smashProps, geyserDrag, GEYSER_S } from '../../shared/smash.js';
 import * as vehicles from './vehicles.js';
+import * as explosions from './explosions.js';
+import { FUEL_PUMP } from '../../shared/rules.js';
 
 const TILE = 32;
 const RESPAWN_S = 240;
@@ -47,8 +49,54 @@ export function breakProp(world, i, ax = 0, ay = 0, by = null) {
     world.geysers ??= [];
     world.geysers.push({ x: p.x, y: p.y, until: world.time + GEYSER_S });
   }
+  if (p.t === 'fuelpump') pumpGoes(world, i, by);
   if (by && by.player) by.player.profile.stats.smashed = (by.player.profile.stats.smashed || 0) + 1;
   return true;
+}
+
+// ---- a filling station's pumps (FUEL_PUMP; map.js pumpProps) ---------------------------------------------------------
+// A pump broken (rammed, shot to pieces, caught in a blast) goes up a beat later: a fuel blast (explosions.blastAt) that
+// breaks the pumps round it in turn (combat.blast -> blastBreak), a station's chain capped. The wreck stays (the prop's
+// broken look) till the tidy-up crew, out of everyone's view (update).
+function pumpGoes(world, i, by) {
+  const P = FUEL_PUMP, now = world.time;
+  const ch = (world.pumpChain ||= { at: -1e9, n: 0 });
+  if (now - ch.at > P.chainS) { ch.at = now; ch.n = 0; }
+  if (ch.n >= P.chain) return;   // (wrecked with the rest, no blast of its own: the chain's cap)
+  ch.n++;
+  (world.pumpBooms ||= []).push({ i, at: now + P.delay, by: by ? by.id : 0 });
+}
+// a shot that hits a pump (combat.js hitscan): enough of them and it goes
+export function pumpShot(world, i, by) {
+  world.pumpHits ??= new Map();
+  const n = (world.pumpHits.get(i) || 0) + 1;
+  if (n >= FUEL_PUMP.shots) { world.pumpHits.delete(i); breakProp(world, i, 0, 0, by); } else world.pumpHits.set(i, n);
+}
+// the nearest standing pump along a shot from (x1, y1) to (x2, y2) before t (0..1): { i, t } or null
+const pumpList = (map) => map._pumpProps || Object.defineProperty(map, '_pumpProps', { value: map.props.map((p, i) => (p && p.t === 'fuelpump' ? i : -1)).filter((i) => i >= 0), enumerable: false, configurable: true })._pumpProps;
+export function pumpOnLine(world, x1, y1, x2, y2, tMax = 1) {
+  const L = pumpList(world.map);
+  if (!L.length) return null;
+  const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy || 1;
+  let best = null;
+  for (const i of L) {
+    if (world.brokenProps && world.brokenProps.has(i)) continue;
+    const p = world.map.props[i], t = ((p.x - x1) * dx + (p.y - y1) * dy) / l2;
+    if (t < 0 || t >= tMax) continue;
+    const ex = x1 + dx * t - p.x, ey = y1 + dy * t - p.y;
+    if (ex * ex + ey * ey < 11 * 11 && (!best || t < best.t)) best = { i, t };
+  }
+  return best;
+}
+function pumpStep(world) {
+  const now = world.time, Q = world.pumpBooms;
+  if (!Q || !Q.length) return;
+  world.pumpBooms = Q.filter((q) => q.at > now);
+  for (const q of Q) {
+    if (q.at > now) continue;
+    const p = world.map.props[q.i];
+    explosions.blastAt(world, p.x, p.y, { r: FUEL_PUMP.r, dmg: FUEL_PUMP.dmg, big: FUEL_PUMP.big }, q.by ? world.get(q.by) || null : null);
+  }
 }
 
 export function blastBreak(world, x, y, r) {
@@ -98,13 +146,15 @@ export function update(world, dt) {
     for (const v of world.entities.values()) if (v.kind === K.VEH && v.def.kind !== 'air' && v.ownStepTick !== world.tick) geyserDrag(v, world.geysers, dt);   // (not an aircraft: the page predicts no spray for one)
   }
   blowholes(world);
-  // tidy-up crew: smashed props reappear after a while, but never in front of a player
+  pumpStep(world);
+  // tidy-up crew: smashed props reappear after a while, but never in front of a player (a pump: later, and with nobody
+  // anywhere near it)
   if (world.tick % 40 === 7 && world.brokenProps.size) {
     for (const [i, t] of world.brokenProps) {
-      if (world.time - t < RESPAWN_S) continue;
-      const p = map.props[i];
+      const p = map.props[i], pump = p.t === 'fuelpump';
+      if (world.time - t < (pump ? FUEL_PUMP.respawnS : RESPAWN_S)) continue;
       let seen = false;
-      for (const pl of world.players.values()) if (pl.ped && Math.hypot(pl.ped.x - p.x, pl.ped.y - p.y) < 1000) { seen = true; break; }
+      for (const pl of world.players.values()) if (pl.ped && Math.hypot(pl.ped.x - p.x, pl.ped.y - p.y) < (pump ? FUEL_PUMP.seePx : 1000)) { seen = true; break; }
       if (seen) continue;
       world.brokenProps.delete(i);
       const e = map.propSolid.get(i);

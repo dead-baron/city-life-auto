@@ -70,7 +70,7 @@ export function towers3(m) {
     if (F < TOWER3.floors || (b.tw < TOWER3.front && b.tw * b.th < TOWER3.area)) continue;
     if (b.art.kit || b.art.neon || (b.art.lights && b.art.lights.length) || S.height) continue;
     if ((b.business && b.business !== 'delivery') || (roles.get(b.id) || []).some((k) => k !== 'delivery' && k !== 'home')) continue;
-    if (TOWER_LANDMARKS.includes(b.name)) { out.kept.push(b.id); continue; }
+    if (TOWER_LANDMARKS.includes(b.name)) { b.landmark = 1; out.kept.push(b.id); continue; }   // (landmark: the art keeps it tall - statics.js purposeful)
     const parts = splitTower(m, b);
     out.split++; out.made += parts.length - 1;
     out.list.push([b.id, ...parts.slice(1)]);

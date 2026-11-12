@@ -254,6 +254,7 @@ function ctxOf(M) {
 // the index: every static item of the map, bucketed by the chunks its screen rectangle touches
 // ================================================================================================
 const INDEX = new WeakMap();
+export const dropIndex = (M) => INDEX.delete(M);   // (tools/tallblocks.mjs: the index again, after a change to STREET_CAP)
 export function staticIndex(M) {
   let I = INDEX.get(M);
   if (!I) {
@@ -1023,6 +1024,12 @@ function styleSign(spec, c, b, A, s, named, lights, hand) {
   const col = pal.neon ? pal.h : st.lit === 'panel' && contrast(pal.p, [0, 0, 0]) > 8 ? pal.p : pal.i;
   lights.push([spec.w / 2, 10, 60 + signLift(spec), 90, col.map((v) => 0.4 + (v / 255) * 0.6), SIGN_LIGHT[st.lit] || 0.5, 'sign']);
 }
+// a plaque that says what the front's sign already says: the same name, or a word of it (POLICE on GULL HARBOR POLICE)
+const nameKey = (t) => String(t || '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+export function sameName(a, b) {
+  const p = nameKey(a), q = nameKey(b);
+  return !!p && !!q && (p === q || (p.length >= 5 && (' ' + q + ' ').includes(' ' + p + ' ')) || (q.length >= 5 && (' ' + p + ' ').includes(' ' + q + ' ')));
+}
 // a plaque styled: its trade's face and palette when it has one (a clinic's white and green, the fire station's red), its
 // own colours made legible otherwise, in the small face
 function stylePlaque(pq, A, seed) {
@@ -1373,12 +1380,17 @@ function specOf(c, b, A, s, D) {
   // (a walk-in turned round, its doorway on the north - sectionsOf: its south wall a plain back, no shopfront and no
   // door on it that looks like the way in, whatever its trade or its hand plan draws there)
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
+  // (one name on a front: a hand plan's shop sign says the building's name, so the trade's own name plaque - a clinic's,
+  // a police station's, painted over the door - goes; the owner, 11-12: "OLD TOWN INFIRMARY" twice, one under the other)
+  if (spec.plaques && spec.plaques.length && spec.shop && spec.shop.sign && spec.shop.sign.text) spec.plaques = spec.plaques.filter((pq) => !sameName(pq.text, spec.shop.sign.text));
   if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
+  const capped = streetCap(c, b, s, spec, pitched, lights);
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
     up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look ? null : upperOf(A, D, rnd, spec, w, d);
+    if (capped) up = null;   // (lowered over the street: no setback storeys on top either - streetCap)
     const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;
     if (up) { const KU = kitFor(A, up.spec.w, up.spec.d, rnd, tier, up.spec); up.kit = KU.kit; if (KU.pads.length) up.spec.pads = KU.pads; }
@@ -1396,6 +1408,46 @@ function specOf(c, b, A, s, D) {
   if (b.low) { spec.floors = 1; delete spec.height; if (spec.pitch) spec.slope = Math.min(spec.slope || 0.5, 0.26); for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > 60) lights.splice(j, 1); }   // (just south of a platform: one storey under a shallow roof, a hand-built one's too - shared/world3-rail.js lowByPlatforms)
   return { spec, kit: kit || [], lights, pitched, up };
 }
+
+// ---- no tall plain blocks over the street (the owner, 11-12: "there are still a lot of tall buildings that don't really
+// add anything to the game, it just blocks views of the street behind it ... tall huge buildings that don't need to be there
+// and just block views we should adjust"). The camera draws a building up over the ground north of it, its wall's height
+// deep: a section of a building with no reason to stand tall - no walk-in, no trade but deliveries, no place of its own
+// (a station, a casino, a hospital: the POIs), not a landmark tower (shared/world3-towers.js TOWER_LANDMARKS), a split
+// tower's own slim tower, a hand-planned set piece (its own roof kit, neon, lights), a named hand-placed building with its
+// name on its front, or the hero corner - comes down a storey
+// at a time (to STREET_CAP.minFl at the least) while its wall covers more than `rows` rows of street, pavement, plaza or
+// car park north of it across its front (a street and its pavements: a mid-rise of four or five storeys still stands) and
+// more than `tiles` of them in all. tools/tallblocks.mjs surveys it (test/plainblocks.test.js).
+export const STREET_CAP = { rows: 10, tiles: 72, minFl: 2, on: true };
+export const STREET_T = new Set([T.ROAD, T.SIDEWALK, T.PLAZA, T.LOT]);
+// the street tiles a wall H px high over the section (tx, ty, tw) hides: the rows north of it its height reaches
+export function streetUnder(c, tx, ty, tw, H) {
+  let n = 0;
+  for (let y = ty - Math.ceil(H / TILE); y < ty; y++) for (let x = tx; x < tx + tw; x++) if (STREET_T.has(c.tile(x, y))) n++;
+  return n;
+}
+export const blocks = (hidden, tw) => hidden > STREET_CAP.tiles && hidden > STREET_CAP.rows * tw;
+// the buildings with a reason of their own to stand tall (once per map)
+export function purposeful(c) {
+  if (c._purpose) return c._purpose;
+  const P = new Set(), M = c.M;
+  for (const p of M.pois || []) if (p && p.b !== undefined && p.kind !== 'delivery' && p.kind !== 'home') P.add(p.b);
+  M.buildings.forEach((b, i) => { if (b && (b.walkIn || b.hero || b.landmark || (b.business && b.business !== 'delivery') || (b.towerPart && b.towerPart.role === 'tower') || (b.art && (b.art.kit || b.art.neon || (b.art.lights && b.art.lights.length))) || (b.hand && b.name && b.signs && b.signs.length && !b.towerPart))) P.add(i); });
+  return (c._purpose = P);
+}
+function streetCap(c, b, s, spec, pitched, lights) {
+  if (!STREET_CAP.on || pitched || s.frame || s.vox || purposeful(c).has(b.id)) return false;
+  const low = 64 + (STREET_CAP.minFl - 1) * FLOOR_PX, over = () => blocks(streetUnder(c, s.tx, s.ty, s.tw, buildingH(spec)), s.tw);
+  if (spec.height ? spec.height <= low : (spec.floors || 1) <= STREET_CAP.minFl) return false;
+  if (!over()) return false;
+  if (spec.height) { while (spec.height - FLOOR_PX >= low && over()) { spec.height -= FLOOR_PX; if (spec.floors > STREET_CAP.minFl) spec.floors--; } }
+  else while (spec.floors > STREET_CAP.minFl && over()) spec.floors--;
+  const H = buildingH(spec);
+  for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > H) lights.splice(j, 1);   // (the windows' light on the storeys gone)
+  return true;
+}
+const FLOOR_PX = 56;
 
 // ================================================================================================
 // the back alleys (shared/alleys.js says what goes where; alleyart.js draws it; concepts AL1-A..H)
@@ -2220,6 +2272,7 @@ function propItems(c, p, pi, I) {
     return;
   }
   switch (t) {
+    case 'fuelpump': V('pump', 'fuelPump', [pick(['#c8342e', '#2f6ab0', '#2f8a5a'], hh(x >> 9, y >> 9, 3)), 1]); return;   // (a filling station's pump: drawn as a prop, so its wreck is too - brokenVariant)
     case 'lamp': case 'plamp': {
       if (p.wall) { V(`wl:${qa(p.a ?? 0, 8).toFixed(2)}`, 'wallLamp', [1, 46], qa((p.a ?? 0) - PI / 2, 8)); const hx = x + Math.cos(p.a ?? 0) * 8, hy = y + Math.sin(p.a ?? 0) * 8; lightAt(I, hx, hy, 44, 140, [1, 0.85, 0.6], 2.2, 'lamp'); return; }
       const style = lampStyle(c, p), a = t === 'plamp' ? Math.atan2(p.hy - y, p.hx - x) : (p.a ?? -PI / 2);
@@ -2608,7 +2661,7 @@ export function propSprite(M, pi) {
 }
 // what a smashed prop leaves: a fallen post, a stump, glass and bits (it.pi's prop has .broken)
 function brokenVariant(it, p) {
-  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : PLANTS.has(p.t) ? 'tree' : 'bits';
+  const a = p.broken && p.broken.a !== undefined ? p.broken.a : 0, kind = p.broken && p.broken.f ? 'stump' : p.t === 'lamp' || p.t === 'plamp' ? 'pole' : p.t === 'sigpole' ? 'sigpole' : p.t === 'fuelpump' ? 'pump' : PLANTS.has(p.t) ? 'tree' : 'bits';
   const q = qa(a, 16);
   return { key: `deb:${kind}:${q.toFixed(2)}:${p.t}`, recipe: { t: 'debris', kind, a: q, prop: p.t }, x: it.x, y: it.y, z0: 0, ext: [68, 58, 68, 58], pi: it.pi };
 }
@@ -2621,6 +2674,12 @@ function makeDebris(r) {
     for (let k = 0; k < 12; k++) for (let w = -5; w <= 5; w++) put1(c * (50 + k) - s * w, s * (50 + k) + c * w, r.kind === 'sigpole' ? [20, 22, 26] : DK[1], 4, 0);
     for (let i = 0; i < 26; i++) put1(c * 56 + (hash(i, 1, 7) - 0.5) * 30, s * 56 + (hash(i, 2, 7) - 0.5) * 24, GL[hash(i, 3, 7) * 4 | 0], 1);
     for (let w = -4; w <= 4; w++) for (let v = -4; v <= 4; v++) if (w * w + v * v < 18) put1(w, v, DK[1], 3, 0);
+  } else if (r.kind === 'pump') {   // (a pump blown up: its charred base on a scorch, the housing torn open, bits thrown about)
+    const CH = ramp('#2a2624', 5, 2), SC = ramp('#1c1a1a', 4, 2), MT = ramp('#6a6460', 5, 2);
+    for (let w = -30; w <= 30; w++) for (let v = -22; v <= 22; v++) { const d = Math.hypot(w, v * 1.35); if (d < 30 && hash(w + 40, v + 40, 17) < 0.85 - d / 45) put1(w, v, SC[hash(w, v, 19) * 4 | 0], 0, 0); }
+    for (let w = -8; w <= 8; w++) for (let v = -5; v <= 5; v++) put1(w, v, CH[Math.abs(w) > 6 || Math.abs(v) > 4 ? 1 : 3], 4 + (hash(w + 9, v + 9, 23) * 6 | 0), 0);
+    for (let k = 0; k < 14; k++) for (let w = -2; w <= 2; w++) put1(c * k - s * w + 6, s * k + c * w, MT[w < 0 ? 3 : 1], 3 + (k < 4 ? 6 : 1), 0);
+    for (let i = 0; i < 34; i++) { const d = 12 + hash(i, 1, 29) * 30, an = r.a + (hash(i, 2, 29) - 0.5) * 3; put1(Math.cos(an) * d, Math.sin(an) * d, (hash(i, 3, 29) < 0.5 ? MT : CH)[1 + (hash(i, 4, 29) * 3 | 0)], 1, 0); }
   } else if (r.kind === 'stump') {
     const R = r.prop === 'redwood' ? 15 : 7, TOP = ramp('#c89a64', 5, 2), BK = r.prop === 'redwood' ? ramp('#7a3a24', 5, 2) : WD;
     for (let w = -R - 1; w <= R + 1; w++) for (let v = -R - 1; v <= R + 1; v++) { const d = Math.hypot(w, v * 1.25); if (d > R + 0.6) continue; const rim = d > R - 1.6; put1(w, v, rim ? BK[w < 0 ? 3 : 1] : TOP[(Math.round(d * 0.9) & 1) ? 2 : 3], rim ? 5 : 6, 0); }
@@ -3235,9 +3294,10 @@ function fenceLine(I, kind, x0, y0, x1, y1, opt = {}, keyX = '') {
 function addSetPieces(c, I) {
   const M = c.M;
   // fuel pumps, and a canopy over each group of them
-  const pumps = (M.pumps || []).slice(), used = new Set();
+  const pumps = (M.pumps || []).slice(), used = new Set(), asProp = new Set();
+  for (const p of M.props) if (p && p.t === 'fuelpump') asProp.add(p.x + ',' + p.y);   // (a pump that's a prop: drawn with the props - propItems)
   pumps.forEach((p, i) => {
-    put(I, vitem('pump', 'fuelPump', [pick(['#c8342e', '#2f6ab0', '#2f8a5a'], hh(p.x >> 9, p.y >> 9, 3)), 1], p.x, p.y, 0));
+    if (!asProp.has(p.x + ',' + p.y)) put(I, vitem('pump', 'fuelPump', [pick(['#c8342e', '#2f6ab0', '#2f8a5a'], hh(p.x >> 9, p.y >> 9, 3)), 1], p.x, p.y, 0));
     if (used.has(i)) return;
     const grp = pumps.map((q, j) => [q, j]).filter(([q]) => Math.abs(q.x - p.x) < 260 && Math.abs(q.y - p.y) < 160);
     grp.forEach(([, j]) => used.add(j));

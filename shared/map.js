@@ -3105,6 +3105,51 @@ function buildCornerStores(m) {
     } else p.kind = 'convenience';
     for (const s of m.buildings[p.b].signs) if (s.text === p.label || gas.includes(p)) s.text = gas.includes(p) ? "Gas 'n Go" : s.text;
   }
+  if (WD) { forecourts(m); pumpProps(m); }
+}
+
+// World v3's filling stations by the street (the prefabs 'gas' and 'fuel': a shop on a paved lot - the old painted lot
+// had its pumps and canopy in the picture; art v2 draws the lot bare: the owner, 11-12, "GAS-N-GO is just an empty paved
+// lot"): pump islands on the forecourt, the open part of the lot in front of (or beside) the shop - two rows of two or
+// three, four tiles apart, clear of the shop's front and the parking; the art puts a canopy over them (statics.js
+// addSetPieces). Positions from the lot alone: no draw.
+export const FORECOURT_KEYS = new Set(['gas', 'fuel']);
+function forecourts(m) {
+  const pave = (tx, ty) => { if (!m.inside(tx, ty)) return false; const t = m.tiles[m.idx(tx, ty)]; return t === T.LOT || t === T.PLAZA || t === T.SIDEWALK; };
+  m.prefabs.forEach((pf, pi) => {
+    if (!FORECOURT_KEYS.has(pf.key)) return;
+    const b = m.buildings.find((q) => q && q.prefab === pi);
+    if (!b || m.pumps.some((q) => q.x >= pf.tx * TILE && q.x < (pf.tx + pf.tw) * TILE && q.y >= pf.ty * TILE && q.y < (pf.ty + pf.th) * TILE)) return;
+    // the open part of the lot: beside the shop when it runs the lot's depth, else in front of it (the bigger side)
+    let x0 = pf.tx, x1 = pf.tx + pf.tw, y0 = pf.ty, y1 = pf.ty + pf.th;
+    if (b.th >= pf.th - 2) { if (b.tx - pf.tx >= pf.tx + pf.tw - (b.tx + b.tw)) x1 = b.tx - 1; else x0 = b.tx + b.tw + 1; }
+    else if (b.ty - pf.ty >= pf.ty + pf.th - (b.ty + b.th)) y1 = b.ty - 1; else y0 = b.ty + b.th + 2;   // (two tiles clear of the shop's front)
+    x0 += 1; x1 -= 1; y0 += 1; y1 -= 1;
+    const w = x1 - x0, h = y1 - y0;
+    if (w < 4 || h < 3) return;
+    const nx = w >= 12 ? 3 : w >= 8 ? 2 : 1, ny = h >= 6 ? 2 : 1, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const spots = [];
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const tx = cx + (i - (nx - 1) / 2) * 4, ty = cy + (j - (ny - 1) / 2) * 3.2, x = Math.round(tx * TILE), y = Math.round(ty * TILE);
+      if (!pave(Math.floor(tx), Math.floor(ty)) || !pave(Math.floor(tx), Math.floor(ty) + 1) || !pave(Math.floor(tx), Math.floor(ty) - 1)) continue;
+      if (m.parking.some((s) => Math.abs(s.x - x) < 52 && Math.abs(s.y - y) < 60)) continue;
+      spots.push({ x, y });
+    }
+    if (spots.length < 2) return;
+    for (const s of spots) { m.pumps.push(s); m.addSolidProp(s.x, s.y, 9); }
+  });
+}
+// Every pump is a prop too ('fuelpump': BREAKABLE - rammed, shot or caught in a blast it goes up, server props.js), its
+// solid entry the prop's: the art draws it from the prop (broken: its wreck), the canopy from m.pumps
+function pumpProps(m) {
+  for (const pu of m.pumps) {
+    const arr = m.solidProps.get(m.idx(Math.floor(pu.x / TILE), Math.floor(pu.y / TILE))) || [];
+    const e = arr.find((q) => q.pi < 0 && q.x === pu.x && q.y === pu.y);
+    m.props.push({ t: 'fuelpump', x: pu.x, y: pu.y });
+    const pi = m.props.length - 1;
+    if (e) { e.pi = pi; e.brk = true; m.propSolid.set(pi, e); }
+    else { const s = m.addSolidProp(pu.x, pu.y, 9); s.pi = pi; s.brk = true; m.propSolid.set(pi, s); }
+  }
 }
 
 // Walk-in buildings: shops, banks, hospitals, the courthouse and police stations get a real
