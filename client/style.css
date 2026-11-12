@@ -373,7 +373,7 @@ body.dead #job { display: none !important; }
    work"; round, as U3): phone, map, the menu in the corner - the icon alone; on a keyboard the key's badge on the
    corner (P, M, Esc); 44 px or more to tap */
 #hud-btns { display: flex; gap: var(--gap); pointer-events: auto; }
-body.pad #b-chat { display: none; }   /* (chat on a pad: the phone's Messages app - D-pad left) */
+body:not(.touch) #b-chat { display: none; }   /* (the chat button is touch's: a keyboard has T, a pad the phone's Messages app - D-pad left) */
 #hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border-radius: var(--r3); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t-pop) var(--ease), border-color var(--t1) var(--ease), color var(--t1) var(--ease), box-shadow var(--t1) var(--ease); }
 #hud-btns button:hover, #b-dev:hover { background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
 #hud-btns button:active, #b-dev:active { transform: scale(var(--press)); background: var(--navy3); }

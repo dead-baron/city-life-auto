@@ -17,7 +17,7 @@ const hubHtml = HTML.slice(HTML.indexOf('<div id="hub"'), HTML.indexOf('<div id=
 test('the HUD row is (CHAT) · PHONE · MAP · MENU as icons, and the hub has RESUME first, then its five tabs, each one of the panels', () => {
   const row = HTML.slice(HTML.indexOf('<div id="hud-btns">'), HTML.indexOf('</div>', HTML.indexOf('<div id="hud-btns">')));
   // (UI-8, the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should work")
-  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-chat', 'b-phone', 'b-map', 'b-menu'], 'four buttons, the menu in the corner (chat first: hidden on a pad - client/chat.js)');
+  assert.deepEqual([...row.matchAll(/<button id="(b-[a-z]+)"/g)].map((m) => m[1]), ['b-chat', 'b-phone', 'b-map', 'b-menu'], 'four buttons, the menu in the corner (chat first: on touch only - client/chat.js)');
   assert.match(row, /<button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat \(T\)"><i class="ic" data-gl="message-circle-more"><\/i><span class="kchip kbm-only">T<\/span>/, 'chat: Lucide\'s speech bubble, T on a keyboard');
   assert.deepEqual([...row.matchAll(/aria-label="([A-Za-z]+)" title="[^"]+"><i class="ic" data-gl="([a-z]+)"><\/i><span class="kchip kbm-only">([A-Z]+)<\/span>/g)].map((m) => m.slice(1).join(' ')), ['Phone smartphone P', 'Map map M', 'Menu menu ESC'], 'line icons (11-05: Lucide, client/touchicons.js glyph - a mobile phone, not a handset), named for a screen reader and a tooltip, the keys on a keyboard');
   assert.ok(!/<\/svg>[A-Z]/.test(row), 'no words on them');

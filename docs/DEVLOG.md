@@ -22458,8 +22458,10 @@ nothing on screen until someone talks.
 - Touch: a chat button, first in the round buttons' row top right - CHAT · PHONE · MAP · MENU (Lucide's
   message-circle-more, the same family as the others). A dot on it for unread phone messages. A tap opens the sheet, a
   tap again closes it. The touch sticks aren't touched: they hide while the sheet is up and come back as they were.
+  The button shows on touch only: a keyboard has T, a pad the phone. A fourth button on a short desktop window pushed
+  the weapon plate into the train bar (test/hudlayout.test.js).
 - Gamepad: the phone (D-pad left) → Messages. Its Near / Crew / Faction tabs have the quick lines and the emotes as
-  buttons the D-pad walks, so a pad needs no typing. The chat button isn't shown on a pad. `PAD.chat` reads
+  buttons the D-pad walks, so a pad needs no typing. `PAD.chat` reads
   "📱 MESSAGES".
 - `chat` is an action in shared/controls.js (T / 📱 MESSAGES / CHAT), so the Guide, the first-time line and Settings ›
   Controls show each device's glyph.
