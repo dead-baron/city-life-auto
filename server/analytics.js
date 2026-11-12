@@ -8,7 +8,7 @@
 //          earn{source}, spend{source}, deaths{cause}, jobs{type}, errors{where}, dev{class}, preset{p}, fps{bucket},
 //          load{bucket}, flags{kind} }
 //   cohorts: { day: { n, d1, d7, w1 } } - accounts first seen that day, back on day 1, day 7, any day of the first week
-// Per account (acct.an): { first, last, days, d1, d7, w1, ftue{} }.
+// Per account (acct.an): { first, last, days, sess (sessions; absent on accounts from before 11-12), d1, d7, w1, ftue{} }.
 import { existsSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 
 export const FTUE_STEPS = ['first_join', 'look_picked', 'moved', 'title_play', 'in_world', 'first_job', 'first_job_done', 'first_crime', 'first_purchase', 'first_death', 'first_chat', 'played_10m', 'played_30m', 'came_back', 'signed_up', 'tutorial_begin', 'tutorial_complete',
@@ -60,7 +60,7 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     dirty = true;
     return d;
   }
-  const an = (acct) => (acct.an ||= { first: 0, last: 0, days: 0, d1: 0, d7: 0, w1: 0, ftue: {} });
+  const an = (acct) => (acct.an ||= { first: 0, last: 0, days: 0, sess: 0, d1: 0, d7: 0, w1: 0, ftue: {} });
   const gaEvent = (p, name, params) => { if (ga) ga.event(p, name, params); };
 
   function ftue(p, acct, step, fromClient = false) {
@@ -77,6 +77,7 @@ export function createAnalytics({ file = null, now = Date.now, ga = null, onEarn
     const t = now(), d = day(t), a = an(acct), dn = dayNum(t);
     p.anStart = t; p.anPlayed = 0;
     d.sessions++;
+    a.sess = (a.sess || 0) + 1;   // (sessions all told: the staff's Players page - server/staffplayers.js)
     if (!a.first) {
       a.first = dn; d.newAcc++;
       const c = (S.cohorts[a.first] ||= { n: 0, d1: 0, d7: 0, w1: 0 }); c.n++;

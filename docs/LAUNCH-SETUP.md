@@ -181,6 +181,12 @@ How it behaves:
   the one before it, so the log page says whether the file was edited.
 - **The protected pages** open from Settings → Account → Staff tools. A one-time link (a minute) sets a session cookie
   for an hour:
+  - `/admin/players`: who's online now (account and sign-in, role, district, wanted, money, session and total play time,
+    first seen, sessions, device class and browser, what they're doing, chat strikes, anti-cheat flags) and who was on in
+    the last 24 hours. It refreshes itself every 15 s. Each player has a page with their recent log, purchases, strikes,
+    ban, recent chat and review-list items. Its buttons (kick, ban, unban, mute, unmute, strike, rescue, prison) are the
+    staff commands themselves, so the same powers apply and each one goes in the admin log. Kick, ban, mute, strike and
+    prison ask again first. Helpers and up can see it; helpers only get Rescue;
   - `/admin/dashboard`: analytics, owner only;
   - `/admin/log`: the admin log, owner only;
   - `/admin/reviews`: reports, filter hits and cheat flags, admins and up;

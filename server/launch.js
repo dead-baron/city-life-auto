@@ -14,7 +14,8 @@ import { filter as loadFilter } from './chatfilter.js';
 import { createModeration } from './moderation.js';
 import { createChat } from './chat.js';
 import { createAntiCheat } from './anticheat.js';
-import { createAnalytics } from './analytics.js';
+import { createAnalytics, deviceClass } from './analytics.js';
+import { browserOf } from './perfreports.js';
 import { createGA } from './ga.js';
 import { watch, settle, release } from './moneywatch.js';
 import { createRateLimiter } from './httputil.js';
@@ -43,7 +44,7 @@ export function createLaunch(opts) {
   const modWithStats = { ...mod, review: (kind, who, noteText, data, by) => { if (['teleport', 'speed', 'rate', 'input', 'econ'].includes(kind)) { analytics.event('flag', null, { kind }); const a = who && accounts.get(who.id); if (a) note(a, 'flag', `${kind}: ${noteText}`); } return mod.review(kind, who, noteText, data, by); } };
   ac = createAntiCheat({ mod: modWithStats, now, log });
   const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }) });
-  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
+  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
@@ -145,7 +146,8 @@ export function createLaunch(opts) {
     leave(p) { settle(world, onMoney); release(p); analytics.sessionEnd(p); ga.clear(p); },
     allow(p, t) { return ac.allow(p, t); },
     input(p) { return ac.input(p); },
-    perf(c) { analytics.perf(c); },
+    // (and the device's class and browser on the player, in memory only: the staff's Players page - server/staffplayers.js)
+    perf(c, p) { analytics.perf(c); if (p && c.stage !== 'play') { const b = browserOf(c.ua); p.device = `${deviceClass(c)} · ${b ? b.name : 'a browser'}`; } },
     error(p, where) { analytics.event('error', p, { where: String(where || 'page').slice(0, 20) }); },
     devCommand(p, c, msg) { admin.devCommand(p, c, msg); },
     // a message for the launch foundation: undefined when it isn't one (session.js goes on routing it)
@@ -231,7 +233,7 @@ export function createLaunch(opts) {
 
   async function http(req, res, url) {
     if (await authHttp.handle(req, res, url)) return true;
-    if (adminHttp.handle(req, res, url)) return true;
+    if (await adminHttp.handle(req, res, url)) return true;
     return false;
   }
   return { login, hooks, http, start, stop, halfSecond, accounts, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };

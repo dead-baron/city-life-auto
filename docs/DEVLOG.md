@@ -22446,3 +22446,39 @@ rekey).
   cuffs, the cooldown, shaken off, back to the kennels; units' caps, not a business slot, rent and upkeep for a day and
   for days away, sold; Kingpin / Chief / Tycoon gold over the name, "S0 Kingpin" after the rank's gone).
   `test/careers.test.js`: kingpin is unlocked now.
+
+## 2026-11-12 - The staff's Players page
+
+The owner can now see who is in the game and act on them from the staff tools: **Settings → Account → Staff tools →
+Players**, at `/admin/players` (`server/staffplayers.js`, served by `server/adminhttp.js`).
+
+- **The list** shows everyone online: name, guest or signed in (and with which providers), role, district, wanted stars,
+  cash and bank, time this session, total play time (`acct.playMin`), first seen, sessions and days played, the
+  device's class and browser, what they're doing (`analytics.activityOf`, plus prison), active chat strikes and mutes,
+  and anti-cheat flags. The flags come from the review list's teleport / speed / rate / input / econ items for the
+  account, plus this session's `p.acLog`. Below it are players seen in the last 24 hours who are offline now
+  (`profile.lastSeen`, the latest 100). The page refreshes itself every 15 s with a meta refresh, since the admin pages'
+  CSP allows no script.
+- **A player's page** (`?id=`) adds the recent log, purchases, every strike kept, the ban record, their recent chat
+  lines (`chat.said`, in memory, online only) and their review-list items. Opening it is the staff command `plog`, so
+  it's logged as a look at their log, the same as in the game.
+- **Actions**: kick, ban (with a duration and reason), unban, mute and unmute chat, strike, rescue, and send to prison
+  (or let out). They're forms that POST to `/admin/players`. The server turns each into the same `{ a, id, ... }`
+  message the game sends and hands it to `admin.handle`, so the powers, the rank checks and the admin log are the
+  same; the actor is the staff member's character when they're online, otherwise a stand-in with their id and name.
+  Each staff session has its own token in every form and a POST without it is refused (403), as is any request with
+  `Sec-Fetch-Site: cross-site`. This is on top of the `SameSite=Strict` cookie. Kick, ban, mute, strike and prison
+  open a "are you sure?" page first, with Yes and Cancel and no `alert()`. The result shows once on the player's page
+  (post, redirect, get).
+- **Who sees it**: the `players` and `plog` powers, so helpers and up (the role table already lets helpers view a
+  player's log). Each button only appears for the roles that have its power, so a helper sees Rescue only. The server
+  refuses the rest anyway, and the refusal is logged. The nav now shows each role only the pages it can open.
+- **New data, kept small**: `acct.an.sess` counts sessions (absent on accounts from before: shown as `?`, with the
+  days played next to it). The device label (`p.device`, for example "phone · Safari") is built from the page's first
+  perf report (`hooks.perf(c, player)`; `perfreports.js browserOf`) and is kept in memory only. No addresses or anything
+  else personal are stored.
+- Tests: `test/staffplayers.test.js` (the session and the role needed, the list's and the player page's columns,
+  offline in the last day only, the token needed and bound to its session, cross-site refused, ban asks then works and
+  is logged, unban / mute / unmute / strike, an action not on the page refused, a helper sees no Ban, and the command
+  refuses a forged one and logs that). `docs/LAUNCH-SETUP.md` section 7 lists the page.
+
