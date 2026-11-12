@@ -63,6 +63,7 @@ export function towers3(m) {
   const roles = new Map();   // (building -> its POIs' kinds)
   for (const p of m.pois) if (p && p.b !== undefined) { const a = roles.get(p.b) || []; a.push(p.kind); roles.set(p.b, a); }
   const n0 = m.buildings.length;
+  for (const b of m.buildings) if (b && !b.gone && TOWER_LANDMARKS.includes(b.name)) b.landmark = 1;   // (the landmarks: the art keeps them tall - statics.js purposeful)
   for (let i = 0; i < n0; i++) {
     const b = m.buildings[i];
     if (!b || b.gone || !b.hand || !b.whole || b.back || !b.door || !b.art || !b.art.spec || b.walkIn || b.hero) continue;
@@ -70,7 +71,7 @@ export function towers3(m) {
     if (F < TOWER3.floors || (b.tw < TOWER3.front && b.tw * b.th < TOWER3.area)) continue;
     if (b.art.kit || b.art.neon || (b.art.lights && b.art.lights.length) || S.height) continue;
     if ((b.business && b.business !== 'delivery') || (roles.get(b.id) || []).some((k) => k !== 'delivery' && k !== 'home')) continue;
-    if (TOWER_LANDMARKS.includes(b.name)) { b.landmark = 1; out.kept.push(b.id); continue; }   // (landmark: the art keeps it tall - statics.js purposeful)
+    if (TOWER_LANDMARKS.includes(b.name)) { out.kept.push(b.id); continue; }
     const parts = splitTower(m, b);
     out.split++; out.made += parts.length - 1;
     out.list.push([b.id, ...parts.slice(1)]);

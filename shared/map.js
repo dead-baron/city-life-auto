@@ -3105,7 +3105,7 @@ function buildCornerStores(m) {
     } else p.kind = 'convenience';
     for (const s of m.buildings[p.b].signs) if (s.text === p.label || gas.includes(p)) s.text = gas.includes(p) ? "Gas 'n Go" : s.text;
   }
-  if (WD) { forecourts(m); pumpProps(m); }
+  if (WD) forecourts(m);   // (every pump a prop once the world's done: world3-world.js pumpProps3)
 }
 
 // World v3's filling stations by the street (the prefabs 'gas' and 'fuel': a shop on a paved lot - the old painted lot
@@ -3141,18 +3141,6 @@ function forecourts(m) {
     if (spots.length < 2) return;
     for (const s of spots) { m.pumps.push(s); m.addSolidProp(s.x, s.y, 9); }
   });
-}
-// Every pump is a prop too ('fuelpump': BREAKABLE - rammed, shot or caught in a blast it goes up, server props.js), its
-// solid entry the prop's: the art draws it from the prop (broken: its wreck), the canopy from m.pumps
-function pumpProps(m) {
-  for (const pu of m.pumps) {
-    const arr = m.solidProps.get(m.idx(Math.floor(pu.x / TILE), Math.floor(pu.y / TILE))) || [];
-    const e = arr.find((q) => q.pi < 0 && q.x === pu.x && q.y === pu.y);
-    m.props.push({ t: 'fuelpump', x: pu.x, y: pu.y });
-    const pi = m.props.length - 1;
-    if (e) { e.pi = pi; e.brk = true; m.propSolid.set(pi, e); }
-    else { const s = m.addSolidProp(pu.x, pu.y, 9); s.pi = pi; s.brk = true; m.propSolid.set(pi, s); }
-  }
 }
 
 // Walk-in buildings: shops, banks, hospitals, the courthouse and police stations get a real
