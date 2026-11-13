@@ -343,7 +343,7 @@ body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order:
 .touch:not(.portrait) #hud-tr > * { grid-column: 1; }
 .touch:not(.portrait) #hud-tr > #hud-btns { grid-area: 1 / 2; margin: 0; }
 .touch:not(.portrait) #hud-tr > #vchip { justify-self: start; }   /* (under the plate's left end: clear of the touch switches' row under the system buttons) */
-@media (max-height: 500px) { .touch:not(.portrait) #hud-tr > #vchip { justify-self: end; grid-template-columns: auto; justify-items: end; margin-right: calc(var(--u-l, 0px) - var(--sr)); max-width: calc(100% - var(--u-l, 0px) + var(--sr)); } }   /* (a phone on its side: left of the switches' row - client/touchslots.js --u-l - its readouts one over the other) */
+@media (max-height: 500px) { .touch:not(.portrait) #hud-tr > #vchip { grid-column: 1 / -1; justify-self: end; grid-template-columns: auto; justify-items: end; margin-right: calc(var(--u-l, 0px) - var(--sr)); max-width: calc(100% - var(--u-l, 0px) + var(--sr)); } }   /* (a phone on its side: left of the switches' row - client/touchslots.js --u-l - its readouts one over the other) */
 @media (max-height: 430px) {
   body:not(.touch) #vchip { grid-template-columns: auto auto; gap: 0 var(--s2); padding: var(--s1) var(--s2); } body:not(.touch) #vchip > b { display: none; } body:not(.touch) #vchip .vc-spd { font-size: var(--fs-3); }
 }
@@ -400,6 +400,7 @@ body.portrait.touch #b-talk { left: max(16px, env(safe-area-inset-left)); bottom
 @media (max-width: 800px) { .touch:not(.portrait) #hud-stat { grid-template-columns: 88px auto; } .touch:not(.portrait) .vrow b { display: none; } }   /* (a small phone on its side: the bars without their numbers - the objective keeps some room) */
 /* (on its side the notices reach under the plate, as far as the switches' row - client/touchslots.js --u-l) */
 .touch:not(.portrait) #toasts { align-self: flex-start; align-items: flex-start; width: calc(100vw - var(--sl) - var(--map) - 4 * var(--gap) - var(--u-l, 260px)); }
+.touch:not(.portrait) #hud:has(#vchip:not(.hidden)) #toasts { width: 100%; }   /* (the vehicle's readout is there) */
 @media (max-height: 430px) { body:not(.touch) #hud-stat { min-width: 0; grid-template-columns: 112px auto; padding: 4px 8px; } }
 body.portrait.touch #hud-stat { width: var(--trw); grid-template-columns: 1fr; row-gap: 4px; }
 /* (upright on touch the row first - three buttons, right of the top-centre band where a centred camera sits: UI-5 - and
