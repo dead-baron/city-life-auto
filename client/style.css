@@ -132,7 +132,7 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 .rbtn:hover, .rbtn:focus-visible { outline: none; background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
 .rbtn:active { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
 .rbtn[disabled] { border-color: var(--grey); opacity: .7; cursor: default; }
-.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }   /* (on the foot corner: over the top one the plate above cut them off - the owner, 11-13) */
 /* a pixel icon (client/touchicons.js): 24 px, or a whole multiple, never smoothed */
 .pi24 { display: block; width: var(--ic); height: var(--ic); flex: none; image-rendering: pixelated; }
 i.ic { display: inline-grid; place-items: center; flex: none; font-style: normal; line-height: 0; }
@@ -357,7 +357,7 @@ body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order:
 #hud-btns button:hover { background: var(--navy3); }
 #hud-btns button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 2px; }
 #hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
-#hud-btns .kchip { position: absolute; right: -7px; top: -7px; bottom: auto; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+#hud-btns .kchip { position: absolute; right: -6px; top: auto; bottom: -8px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
 .touch #hud-btns { --ic: 24px; }
 #b-chat { pointer-events: auto; }
 body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-talk) */
