@@ -635,6 +635,7 @@ function fixedStep() {
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (input.menuBack && !inOverlay && S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (B: the chat sheet away, as Esc and its ✕)
+  if (input.menuBack && !inOverlay && wpick.open) wpick.close();   // (and the weapon picker)
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub('pause');
   if (!inOverlay && !S.playing) titlePad();
@@ -1693,6 +1694,7 @@ initInput(canvas, {
       return;
     }
     if (k === 'Escape' && wheel.open) { wheel.close(); return; }
+    if (k === 'Escape' && wpick.open) { wpick.close(); return; }   // (the weapon picker: its ✕, Esc and B)
     if (k === 'KeyP' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) { hubToggle('phone'); return; }
     if (k === 'Escape') { if (topOverlay()) { if (topOverlay() !== 'gate') closeOverlay(); } else if (S.hud?.menuOpen) S.hud.closeMenu(); else if (S.bigmap) toggleMap(false); else if (S.playing) openHub('pause'); }
     if (k === 'KeyM' && S.playing && (!topOverlay() || HUB_IDS.includes(topOverlay()))) hubToggle('map');

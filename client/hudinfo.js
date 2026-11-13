@@ -133,7 +133,8 @@ export function hintStrip(state, dev) {
   const touchName = (a) => { for (const k in slots) if (slots[k][0] === a) return slots[k][1]; return TOUCH[a] || a.toUpperCase(); };
   // (on touch the move stick goes without saying in a vehicle or on a board: the slots' own names, what each does)
   // (and a button that says its own words needs no words beside it: HORN horn, CLIMB climb - Direction A's words)
-  const L = dev === 'touch' && ['drive', 'air', 'horse', 'boat', 'board'].includes(state) ? list.filter(([a, w]) => a !== 'move' && touchName(a).toLowerCase() !== w) : list;
+  let L = dev === 'touch' && ['drive', 'air', 'horse', 'boat', 'board'].includes(state) ? list.filter(([a]) => a !== 'move') : list;
+  if (dev === 'touch') while (L.length > 2) { const i = L.findIndex(([a, w]) => touchName(a).toLowerCase() === w); if (i < 0) break; L = L.filter((_, k) => k !== i); }   // (two at least)
   return L.map(([a, w]) => [dev === 'pad' ? (PAD[a] || [a.toUpperCase()])[0] : dev === 'touch' ? (a === 'move' ? 'LEFT THUMB' : touchName(a)) : (KB[a] || a.toUpperCase()), w, kind, a]);   // (the action: on touch the chip is the button's own icon - UI-8)
 }
 // how many times each strip has shown, per character, on this device (localStorage - a convenience: none in a private
