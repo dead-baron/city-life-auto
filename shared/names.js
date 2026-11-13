@@ -13,6 +13,9 @@ const BAD = ['fuck', 'shit', 'cunt', 'nigg', 'fagg', 'whore', 'hitler', 'retard'
 
 // one name with another's look: the same letters and digits, any case, separators aside ("Big_Al" is "big al")
 export function nameKey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+// one name another's lookalike (a guest may not take a member's - server/launch.js): nameKey with the usual digit
+// swaps undone and the letters that run together read as one ("B0b" is "bob", "BigA1" and "BigAI" are "BigAl", "Barn" is "bam")
+export function lookKey(s) { return nameKey(s).replace(/0/g, 'o').replace(/[1i]/g, 'l').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/7/g, 't').replace(/8/g, 'b').replace(/rn/g, 'm').replace(/vv/g, 'w'); }
 
 export function cleanName(raw) {
   const s = String(raw || '').replace(/\s+/g, ' ').trim();

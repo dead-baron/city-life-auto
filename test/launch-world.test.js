@@ -107,15 +107,15 @@ test('launch mode (devOpen off): a non-admin is refused every privileged message
   B.L.stop();
 });
 
-test('chat through the session; once a sign-in is offered guests can\'t rename, members pick a filtered username', () => {
+test('chat through the session; guests pick a name a member doesn\'t own, members a filtered username', () => {
   const B = boot({ google: true });
   const a = B.connect(null), b = B.connect(null);
   b.p.ped.x = a.p.ped.x + 64; b.p.ped.y = a.p.ped.y; B.world.place(b.p.ped);
   a.say({ t: 'chat', ch: 'near', text: 'hello neighbour' });
   assert.equal(b.last('chat').text, 'hello neighbour');
-  const was = a.p.name;
-  a.say({ t: 'name', name: 'BigAl' });
-  assert.equal(a.p.name, was, 'a guest keeps the Guest number');
+  a.say({ t: 'name', name: 'Saltwater' });
+  assert.equal(a.p.name, 'Saltwater', 'a guest picks a name');
+  a.p.profile.nameAt = 0;   // (players.js's ten minutes between renames, passed)
   B.L.accounts.signIn('google', 'g-world-1', { linkPid: a.p.pid });
   a.p.acRate = null;
   a.say({ t: 'acct', a: 'name', name: 'Big_D1ck' });

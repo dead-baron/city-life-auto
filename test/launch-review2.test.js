@@ -1,5 +1,5 @@
 // The fix check's findings on the launch foundation's review fixes (11-04), one test each (each failed before its fix):
-// email sign-in codes and other browsers, the previous characters, the admin log at shutdown and after a crash, the
+// sign-in codes and other browsers (the email links are gone since: the OAuth codes stay bound), the previous characters, the admin log at shutdown and after a crash, the
 // update wipe keeping the account, the keyboard on the gate, a stale refusal reason, a wipe's session end, several
 // sign-ins under way at once, and sign-out-everywhere's order.
 import { clock, call, fakeWorld, fakePlayer } from './launchkit.js';
@@ -19,49 +19,41 @@ import { keepPrev, keepPn } from '../client/account.js';
 const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
 const quiet = { log() {}, warn() {}, error() {} };
 const PN = 'page-nonce-0123456789abcdef', OTHER = 'other-page-nonce-0000000000';
-const L0 = { publicUrl: 'https://play.example', pageOrigins: ['https://game.example'], rpId: 'game.example', rpName: 'CLA', devOpen: true, google: { id: 'gid', secret: 'gs' }, discord: { id: '', secret: '' }, reddit: { id: '', secret: '' }, email: { key: 'rkey', from: 'x <a@b.c>' }, gaMeasurementId: '' };
+const L0 = { publicUrl: 'https://play.example', pageOrigins: ['https://game.example'], rpId: 'game.example', rpName: 'CLA', devOpen: true, google: { id: 'gid', secret: 'gs' }, discord: { id: '', secret: '' }, email: { key: 'rkey', from: 'x <a@b.c>' }, gaMeasurementId: '' };
 function auth(fetchImpl) {
   const c = clock(), s = new MemoryStore(), A = createAccounts({ store: s, secret: 's', now: c.now });
   const H = createAuthHttp({ launch: L0, accounts: A, secret: 's', now: c.now, ip: (r) => r.ip, fetch: fetchImpl, log: quiet });
   return { A, s, h: (o) => call(H.handle, o) };
 }
-async function emailCode(S, email, pn) {
-  const sent = S.sent;
-  await S.h({ method: 'POST', url: '/auth/email/start', body: { email, ret: 'https://game.example/', pn } });
-  await new Promise((z) => setImmediate(z));
-  const t = JSON.parse(sent[sent.length - 1].opt.body).text.match(/t=([A-Za-z0-9_-]+)/)[1];
-  const r = await S.h({ method: 'POST', url: '/auth/email/confirm', body: `t=${t}` });
+// a Google sign-in through the fake provider: the hash the page gets back
+async function googleBack(S, pn) {
+  let r = await S.h({ url: `/auth/google/start?ret=${encodeURIComponent('https://game.example/')}&pn=${pn}&mode=login` });
+  const st = new URL(r.headers.location).searchParams.get('state'), ck = r.headers['set-cookie'].match(/cla_oauth=([^;]+)/)[1];
+  r = await S.h({ url: `/auth/google/callback?state=${st}&code=x`, headers: { cookie: `cla_oauth=${ck}` } });
   return new URLSearchParams(new URL(r.headers.location).hash.slice(1));
 }
-function emailSetup() {
-  const sent = [];
-  const S = auth(async (url, opt) => { sent.push({ url, opt }); return { ok: true, status: 200, json: async () => ({}) }; });
-  S.sent = sent;
-  return S;
+function googleSetup(sub) {
+  return auth(async (url) => ({ ok: true, status: 200, json: async () => (/token/.test(url) ? { access_token: 't' } : { sub }) }));
 }
 
-test('A. an email sign-in code from another page (another browser, or sent by someone else) asks before it switches; OAuth\'s never does', async () => {
-  const S = emailSetup();
-  const attacker = S.A.signIn('email', (await import('../server/auth.js')).keyedHash('email', 'mallory@example.com', 's')).pid;
+test('A. a sign-in code from another page (another browser, or sent by someone else) is refused and spent - never a switch (the email links that could ask are gone)', async () => {
+  const S = googleSetup('mallory-g');
+  const attacker = S.A.signIn('google', 'mallory-g').pid;
   S.s.get(attacker).name = 'Mallory';
-  const back = await emailCode(S, 'mallory@example.com', OTHER);
+  const back = await googleBack(S, OTHER);
   const code = back.get('cla_login');
-  assert.ok(code, 'a known email: a login code');
+  assert.ok(code, 'a known identity: a login code');
   let r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code, pns: [PN] } });
-  assert.equal(r.status, 409, 'not this page\'s: a question, not a switch');
-  assert.equal(r.json().confirm, true);
-  assert.equal(r.json().name, 'Mallory');
+  assert.equal(r.status, 403, 'not this page\'s');
   assert.ok(!r.json().token);
-  r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code, pns: [PN], confirm: true } });
-  assert.equal(r.status, 200, 'with the player\'s say-so');
-  assert.equal(r.json().pid, attacker);
-  const back2 = await emailCode(S, 'mallory@example.com', PN);
+  r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code, pns: [OTHER] } });
+  assert.equal(r.status, 400, 'spent');
+  const back2 = await googleBack(S, PN);
   assert.equal((await S.h({ method: 'POST', url: '/auth/redeem', body: { code: back2.get('cla_login'), pns: [PN] } })).status, 200, 'this page\'s own: straight in');
-  const acc = read('client/account.js');
-  assert.match(acc, /Sign in as \$\{e\.body\.name\}\? This replaces the character on this device/);
+  assert.ok(!/confirm: true/.test(read('client/account.js')), 'no question for a code that can\'t come any more');
 });
 
-test('I. several sign-ins under way: an emailed link still finishes after Google was pressed', async () => {
+test('I. several sign-ins under way: a Google sign-in still finishes after another was started', async () => {
   assert.ok(pnMatches({ pns: ['a'.repeat(20), PN] }, PN));
   assert.ok(!pnMatches({ pns: ['a'.repeat(20)] }, PN));
   assert.ok(pnMatches({ pn: PN }, PN));
@@ -72,11 +64,11 @@ test('I. several sign-ins under way: an emailed link still finishes after Google
   for (let i = 0; i < 9; i++) l = keepPn(l, `n${i}-nonce-0000000000000`, t0 + 2000 + i);
   assert.equal(l.length, 5, 'a few, not all');
   assert.equal(keepPn(l, 'late-nonce-00000000000', t0 + 3600e3).length, 1, 'old ones dropped');
-  const S = emailSetup();
-  const pid = S.A.signIn('email', (await import('../server/auth.js')).keyedHash('email', 'ann@example.com', 's')).pid;
-  const back = await emailCode(S, 'ann@example.com', 'email-flow-nonce-00000000');
-  // (then Google was pressed: a newer nonce at the front)
-  const r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code: back.get('cla_login'), pns: ['google-flow-nonce-0000000', 'email-flow-nonce-00000000'] } });
+  const S = googleSetup('ann-g');
+  const pid = S.A.signIn('google', 'ann-g').pid;
+  const back = await googleBack(S, 'google-flow-nonce-00000000');
+  // (then another sign-in was pressed: a newer nonce at the front)
+  const r = await S.h({ method: 'POST', url: '/auth/redeem', body: { code: back.get('cla_login'), pns: ['other-flow-nonce-0000000', 'google-flow-nonce-00000000'] } });
   assert.equal(r.status, 200);
   assert.equal(r.json().pid, pid);
 });
@@ -190,7 +182,7 @@ test('J. the devices\' reports and the pages\' errors are for admins and the own
 function crewWorld(providers) {
   useStore(new MemoryStore());
   const world = fakeWorld(); world.stats = { tickMs: 0 }; world.time = 100;
-  const cfg = { ...config, launch: { ...config.launch, google: providers ? { id: 'g', secret: 's' } : { id: '', secret: '' }, discord: { id: '', secret: '' }, reddit: { id: '', secret: '' }, email: { key: '', from: '' } } };
+  const cfg = { ...config, launch: { ...config.launch, google: providers ? { id: 'g', secret: 's' } : { id: '', secret: '' }, discord: { id: '', secret: '' }, passwords: !!providers, email: { key: '', from: '' } } };
   const L = createLaunch({ config: cfg, store, world, ip: () => '1', dataDir: null, log: quiet });
   const P = (member) => { const p = fakePlayer(world, store, { x: 0, y: 0 }); L.hooks.join(p, {}, {}); if (member) L.accounts.get(p.pid).kind = 'member'; return p; };
   return { L, world, P };
@@ -213,7 +205,7 @@ test('K. while a sign-in is on offer, guests can\'t start or lead a crew or post
   assert.ok(crews.accept(S.world, m2));
   crews.leave(S.world, m);
   assert.equal(crews.crewOf(g.pid).lead, m2.pid);
-  // no provider switched on: today's game
+  // no sign-in switched on (no keys, CLA_PASSWORDS=0): the open game of before
   S = crewWorld(false);
   const g2 = S.P(false), g3 = S.P(false);
   assert.ok(crews.invite(S.world, g2, g3), 'guests start crews as before');

@@ -5,11 +5,14 @@
 //                           then Google Analytics if it was accepted (client/analytics.js)
 //   gateNeeded() / showGate(onDone) / gate() / setConsent('all' | 'essential')
 //   launchInfo()            what the server has switched on (/launch.json: providers, passkeys, the GA id)
-//   signIn(provider) (log in) · signIn(provider, { link: true }) (link to this account) · emailLink(email, { link })
+//   signIn(provider) (log in) · signIn(provider, { link: true }) (link to this account)
+//   passwordSignIn(email, pw) · passwordSignUp({ email, password, confirm, news }) (asks: link or a new account) ·
+//   forgotPassword(email)
 //   passkeyRegister() (add one to this account) · passkeySignIn() · pad(inp) / padActive() (gamepad: main.js)
 //   makeTransferCode() (asks the server: the code arrives in onMessage) · useTransferCode(code)
 //   pickUsername(name) · signOutEverywhere() · claimOwner(code) · staffPage('log' | 'dashboard' | 'reviews')
 //   onMessage(m)            the server's 'acct', 'admin' and 'agegate' messages
+//   newsBox(el) / legal(el) Settings > Account's "Game news by email" and Settings > Legal's two pages (main.js slots)
 //   openPanel({ into })     a minimal working account panel, in a container of the page's or over everything (the
 //                           polished screens come with UI stage 2); closePanel()
 // Self-contained: no imports, browser APIs only, its own inline styles - it drops into the title screen's slot.
@@ -149,11 +152,12 @@ export function showGate(onDone, { into = null } = {}) {
 //                               previous one, Settings goes back to it).
 //   signIn(provider, { link })  link it to the character on this page (Settings: "Link to this account").
 // Each flow carries a nonce this page keeps to itself (localStorage cla.pn) and shows again to finish: a sign-in set off
-// in your browser by someone else can't be finished by your page.
+// in your browser by someone else can't be finished by your page. Email + password (the owner, 11-12) works the same
+// way: signing in logs into that account; making an account asks first - link it to this character, or start anew.
 const PNS_KEY = 'cla.pns', PREV_KEY = 'cla.token.prev', PREVS_KEY = 'cla.prevs';
 const PN_TTL_MS = 30 * 60e3, PN_MAX = 5, PREV_MAX = 3;
-// the page's live nonces, newest first: one per flow started in the last half hour (an email link sent, then Google
-// pressed: both still finish)
+// the page's live nonces, newest first: one per flow started in the last half hour (Google pressed, then Discord: both
+// still finish)
 export function keepPn(list, pn, at) { return [{ pn, at }, ...(Array.isArray(list) ? list : []).filter((x) => x && x.pn !== pn && at - x.at < PN_TTL_MS)].slice(0, PN_MAX); }
 const livePns = () => { try { return (JSON.parse(ls.get(PNS_KEY) || '[]') || []).filter((x) => Date.now() - x.at < PN_TTL_MS).map((x) => x.pn); } catch { return []; } };
 function newPn() {
@@ -168,12 +172,25 @@ export function signIn(provider, { link = false } = {}) {
   const ret = location.href.split('#')[0];
   location.href = `${httpBase()}/auth/${provider}/start?ret=${encodeURIComponent(ret)}&pn=${encodeURIComponent(newPn())}&mode=${link ? 'link' : 'login'}`;
 }
-export async function emailLink(email, { link = false } = {}) {
-  const r = await fetch(httpBase() + '/auth/email/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, ret: location.href.split('#')[0], pn: newPn(), mode: link ? 'link' : 'login' }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.err || 'Could not send the link.');
-  return true;
+// email + password: -> { reload } (another account: this character kept as the previous one) | { same }
+export async function passwordSignIn(email, password) {
+  const j = await api('/auth/password/login', { email, password });
+  if (state && j.pid === state.id) { C.setToken(j.token); return { same: true }; }
+  takeToken(j.token);
+  return { reload: true };
 }
+// a new email + password: linked to the character on this page, or a new account - the player picks (never merged
+// silently) -> { linked } | { reload } | null (canceled)
+export async function passwordSignUp({ email, password, confirm, news }) {
+  const s = state || {}, opts = s.email ? [] : [['link', s.guest ? 'Link it to the character I’m playing (keeps its progress)' : 'Add it to this account (another way to sign in)']];
+  const go = await choose(`Make ${email} a sign-in.`, [...opts, ['new', 'Start a new account (you can switch back to this character from Settings → Account)'], ['cancel', 'Cancel']]);
+  if (go !== 'link' && go !== 'new') return null;
+  const j = await api('/auth/password/signup', { email, password, confirm, news: news === true, action: go }, { auth: go === 'link' });
+  if (go === 'link') { C.setToken(j.token); C.send({ t: 'acct', a: 'state' }); return { linked: true, verifySent: j.verifySent }; }
+  takeToken(j.token);
+  return { reload: true };
+}
+export async function forgotPassword(email) { const j = await api('/auth/password/forgot', { email }); return j.msg; }
 // a new token for this page; the one it replaces kept as the previous one (Settings -> go back to it)
 // The characters this page played before a sign-in or a code switched it (up to PREV_MAX, newest first, with their
 // names): Settings -> Account -> "Switch back to <name>". The newest also goes in cla.token.prev, which main.js's
@@ -201,7 +218,7 @@ export function switchBack(i) {
   location.reload();
   return true;
 }
-const NAMES = { google: 'Google', discord: 'Discord', reddit: 'Reddit', email: 'Email link', passkey: 'Passkey' };
+const NAMES = { google: 'Google', discord: 'Discord', password: 'Email', passkey: 'Passkey' };
 // A sign-in that came back (the hash): a login code swapped for its token; a link confirmed with this page's own token;
 // an identity no account has yet: the choice. -> { reload } | { error } | { linked } | null
 export async function consumeLoginHash() {
@@ -213,15 +230,7 @@ export async function consumeLoginHash() {
   const pns = livePns(), pn = pns[0] || '';
   try {
     if (code) {
-      let j;
-      try { j = await api('/auth/redeem', { code, pns }); }
-      catch (e) {
-        if (!e.body || !e.body.confirm) throw e;
-        // an email link from another browser (or sent by someone else): only with the player's say-so
-        const go = await choose(`Sign in as ${e.body.name}? This replaces the character on this device (it stays in Settings as a previous character).`, [['yes', `Sign in as ${e.body.name}`], ['cancel', 'Cancel']]);
-        if (go !== 'yes') return null;
-        j = await api('/auth/redeem', { code, pns, confirm: true });
-      }
+      const j = await api('/auth/redeem', { code, pns });
       takeToken(j.token);
       return { method: j.method, reload: true };
     }
@@ -295,7 +304,8 @@ export function onMessage(m) {
   if (m.t === 'acct') {
     if (m.a === 'transfer') { C.toast(`Your transfer code: ${m.code} - enter it on your other device within 10 minutes. It works once.`, 'info'); if (panel) panel.querySelector('#a-code').textContent = m.code; return; }
     if (m.a === 'name') { C.toast(m.ok ? `You're ${m.name} now.` : m.err, m.ok ? 'good' : 'warn'); return; }
-    if (!m.a) { state = m; if (panel) renderPanel(); }
+    if (m.a === 'news') { if (!m.ok) C.toast(m.err, 'warn'); return; }
+    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); }
     return;
   }
   if (m.t === 'admin') { const r = pendingAdmin.get(m.a); if (r) { pendingAdmin.delete(m.a); r(m); } else if (!m.ok && m.err) C.toast(m.err, 'warn'); return; }
@@ -303,32 +313,77 @@ export function onMessage(m) {
 }
 
 // ---- the minimal panel ----
+// (email + password first - it needs no third party - then Google, Discord, a passkey; the forms are real forms, so the
+// browser's password manager fills and saves them)
+const inp = 'display:block;width:100%;box-sizing:border-box;margin:4px 0 8px;padding:9px;font:inherit;font-size:16px;background:#111318;color:#fff;border:1px solid #3a3f49;border-radius:6px';
+const tab = (on) => `flex:1;padding:8px;border:0;border-bottom:2px solid ${on ? '#ffd27f' : 'transparent'};background:none;color:${on ? '#ffd27f' : '#aab'};font:inherit;font-weight:700;cursor:pointer`;
+const linkBtn = 'border:0;background:none;color:#8cc8ff;font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline';
+let pwTab = 'in';
 function renderPanel() {
   const s = state || {}, pr = (info && info.providers) || s.providers || {};
-  const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && pr[p]);
+  const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && p !== 'password' && pr[p]);
+  const pwOn = !!pr.password, min = (info && info.password && info.password.min) || 10;
   const inner = panel.querySelector('#a-body');
+  const legalUrl = (k) => `${httpBase()}/legal/${k}`;
   inner.innerHTML = `
-    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}</p>
-    ${on.length || passkeysWork() ? `<p style="margin:6px 0 2px">Sign in (an account you have, on any device):</p>
+    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" aria-selected="${pwTab === 'in'}" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" aria-selected="${pwTab === 'up'}" style="${tab(pwTab === 'up')}">Create account</button></div>
+    <form id="a-fin" ${pwTab === 'in' ? '' : 'hidden'} autocomplete="on">
+      <label>Email<input id="a-ine" name="email" type="email" autocomplete="username" inputmode="email" required style="${inp}"></label>
+      <label>Password<input id="a-inp" name="password" type="password" autocomplete="current-password" required style="${inp}"></label>
+      <button id="a-ingo" style="${btn};width:100%;margin:2px 0 0">Sign in</button>
+      <button type="button" id="a-forgot" class="a-link" style="${linkBtn}">Forgot password?</button>
+    </form>
+    <form id="a-fup" ${pwTab === 'up' ? '' : 'hidden'} autocomplete="on">
+      <label>Email<input id="a-upe" name="email" type="email" autocomplete="username" inputmode="email" required style="${inp}"></label>
+      <label>Password <small style="color:#9aa0aa">(at least ${min} characters - a few words together work well)</small><input id="a-upp" name="new-password" type="password" autocomplete="new-password" minlength="${min}" required style="${inp}"></label>
+      <label>The same again<input id="a-upc" type="password" autocomplete="new-password" minlength="${min}" required style="${inp}"></label>
+      <label style="display:flex;gap:8px;align-items:center;margin:2px 0 8px"><input id="a-news" type="checkbox"> Email me game news and updates</label>
+      <button id="a-upgo" style="${btn};width:100%;margin:2px 0 0">Create account</button>
+      <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept (drafts).</p>
+    </form>` : ''}
+    ${on.length || passkeysWork() ? `<p style="margin:12px 0 2px">${pwOn ? 'Or sign in with' : 'Sign in (an account you have, on any device)'}:</p>
     <div>${on.map((p) => `<button data-in="${p}" style="${btn}">${NAMES[p]}</button>`).join('')}${passkeysWork() ? `<button id="a-pks" style="${btn}">Passkey</button>` : ''}</div>
     <p style="margin:10px 0 2px">Link to this account (${s.guest ? 'keeps this character’s progress on every device' : 'another way in'}):</p>
-    <div>${on.map((p) => `<button data-link="${p}" style="${btn2}">${NAMES[p]}${linked.has(p) ? ' ✓' : ''}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>
-    <div id="a-email" style="display:none;margin-top:8px"><input id="a-em" type="email" placeholder="you@example.com" style="padding:7px;width:16em"> <button id="a-ems" style="${btn}">Send link</button></div>` : ''}
-    ${s.canRename ? `<p style="margin:12px 0 2px">${s.guest ? 'Name' : 'Username'}${s.renameIn ? ` (next change in ${Math.ceil(s.renameIn / 86400e3)} days)` : ''}:</p><input id="a-name" maxlength="16" value="${esc(s.name || '')}" style="padding:7px"> <button id="a-namego" style="${btn}">Save</button>` : s.guest ? '<p style="margin:12px 0 2px">Sign in to pick a username.</p>' : ''}
+    <div>${on.map((p) => `<button data-link="${p}" style="${btn2}">${NAMES[p]}${linked.has(p) ? ' ✓' : ''}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>` : ''}
+    ${pwOn && !s.email ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0 0">Email and password: Create account asks whether to link it to ${s.guest ? 'this character' : 'this account'}.</p>` : ''}
+    ${s.canRename ? `<p style="margin:12px 0 2px">${s.guest ? 'Name' : 'Username'}${s.renameIn ? ` (next change in ${Math.ceil(s.renameIn / 86400e3)} days)` : ''}${s.guest ? ' <small style="color:#9aa0aa">(sign in to keep it yours)</small>' : ''}:</p><input id="a-name" maxlength="16" value="${esc(s.name || '')}" style="padding:7px"> <button id="a-namego" style="${btn}">Save</button>` : ''}
     ${previousCharacters().map((p, i) => `<div><button data-back="${i}" style="${btn2}">Switch back to ${esc(p.name)}</button></div>`).join('')}
     <p style="margin:12px 0 2px">Move to another device:</p><button id="a-xfer" style="${btn2}">Make a transfer code</button> <code id="a-code" style="font-size:18px;margin-left:6px"></code>
     <div style="margin-top:6px"><input id="a-xin" placeholder="ABCDE-FGHJK" style="padding:7px;width:9em;text-transform:uppercase"> <button id="a-xuse" style="${btn2}">Use a code</button></div>
     ${s.claim ? `<p style="margin:12px 0 2px">Claim ownership (the code in the server log):</p><input id="a-claim" style="padding:7px"> <button id="a-claimgo" style="${btn2}">Claim</button>` : ''}
-    ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button>` : ''}` : ''}
+    ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button><button data-page="news" style="${btn2}">News list</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button>` : ''}` : ''}
     <p id="a-msg" style="min-height:1.2em;margin:10px 0 0;color:#ffd27f"></p>`;
   const msg = (t) => { inner.querySelector('#a-msg').textContent = t; };
   const tryIt = (f) => async () => { try { const r = await f(); if (typeof r === 'string') msg(r); } catch (e) { msg(e.message || String(e)); } };
-  let emailLinkMode = false;
-  const pick = (p, link) => { if (p === 'email') { emailLinkMode = link; inner.querySelector('#a-email').style.display = 'block'; return; } signIn(p, { link }); };
+  const pick = (p, link) => signIn(p, { link });
   for (const b of inner.querySelectorAll('[data-in]')) b.onclick = () => pick(b.dataset.in, false);
   for (const b of inner.querySelectorAll('[data-link]')) b.onclick = () => pick(b.dataset.link, true);
+  for (const b of inner.querySelectorAll('[data-tab]')) b.onclick = () => { pwTab = b.dataset.tab; renderPanel(); const f = inner.querySelector(pwTab === 'in' ? '#a-ine' : '#a-upe'); if (f) f.focus(); };
+  const val = (id) => { const e = inner.querySelector(id); return e ? e.value : ''; };
+  const form = (id, f) => { const e = inner.querySelector(id); if (e) e.onsubmit = (ev) => { ev.preventDefault(); tryIt(f)(); }; };
+  form('#a-fin', async () => {
+    msg('Signing in...');
+    const r = await passwordSignIn(val('#a-ine'), val('#a-inp'));
+    if (r.reload) { location.reload(); return 'Signed in.'; }
+    return 'You\'re signed in to this account already.';
+  });
+  form('#a-fup', async () => {
+    const pw = val('#a-upp');
+    if (pw.length < min) return `A password is at least ${min} characters.`;
+    if (pw !== val('#a-upc')) return 'The two passwords don\'t match.';
+    const r = await passwordSignUp({ email: val('#a-upe'), password: pw, confirm: val('#a-upc'), news: !!(inner.querySelector('#a-news') || {}).checked });
+    if (!r) return '';
+    if (r.reload) { location.reload(); return 'Account made.'; }
+    return `Linked - this character signs in with your email now.${r.verifySent ? ' Check your inbox to confirm the address.' : ''}`;
+  });
   const onc = (id, f) => { const e = inner.querySelector(id); if (e) e.onclick = tryIt(f); };
-  onc('#a-ems', async () => { await emailLink(inner.querySelector('#a-em').value, { link: emailLinkMode }); return 'Check your email for the sign-in link (open it in this browser).'; });
+  onc('#a-forgot', async () => {
+    if (!(info && info.resets)) return 'Password resets aren\'t available yet - they come with the launch.';
+    const e = val('#a-ine').trim();
+    if (!e) return 'Type your email above, then press Forgot password again.';
+    return forgotPassword(e);
+  });
   onc('#a-pk', async () => { await passkeyRegister(); return 'Passkey added - sign in with it on this device any time.'; });
   onc('#a-pks', async () => { await passkeySignIn(); location.reload(); return 'Signed in.'; });
   onc('#a-namego', () => { pickUsername(inner.querySelector('#a-name').value); return 'Asked for it...'; });
@@ -337,6 +392,30 @@ function renderPanel() {
   onc('#a-claimgo', async () => { const r = await claimOwner(inner.querySelector('#a-claim').value); return r.ok ? 'You are the owner.' : r.err; });
   for (const b of inner.querySelectorAll('[data-back]')) b.onclick = () => switchBack(Number(b.dataset.back));
   for (const b of inner.querySelectorAll('[data-page]')) b.onclick = tryIt(async () => { const r = await staffPage(b.dataset.page); return r.ok ? '' : r.err; });
+}
+
+// ---- Settings > Account: game news by email (the owner, 11-12: opt-in, off until asked; Google and Discord are asked
+// for no address - the player types one here). The server keeps the address on the news list only. ----
+let newsEl = null, newsAsk = false;
+export function newsBox(el) { newsEl = el; renderNews(); }
+function renderNews() {
+  const el = newsEl, s = state;
+  if (!el || !el.isConnected) return;
+  if (!s) { el.innerHTML = ''; return; }
+  if (s.guest) { el.innerHTML = '<p class="msub">Game news by email: sign in first, then turn it on here.</p>'; return; }
+  el.innerHTML = s.news
+    ? `<p class="msub">Game news by email: <b>on</b> (${esc(s.news)})</p><button class="sbtn" id="s-news-off">Turn game news off</button>`
+    : newsAsk
+      ? `<p class="msub">Game news by email - where to? (Only for news; unsubscribe any time.)</p><div class="m-opts devpw-row"><input id="s-news-in" type="email" placeholder="you@example.com" autocomplete="email" spellcheck="false"><button class="btn" id="s-news-go">Turn on</button></div>`
+      : '<p class="msub">Game news by email: <b>off</b></p><button class="sbtn" id="s-news-on">Turn game news on</button>';
+  const q = (id) => el.querySelector(id);
+  if (q('#s-news-off')) q('#s-news-off').onclick = () => C.send({ t: 'acct', a: 'news', on: false });
+  if (q('#s-news-on')) q('#s-news-on').onclick = () => { newsAsk = true; renderNews(); const i = q('#s-news-in'); if (i) i.focus(); };
+  if (q('#s-news-go')) q('#s-news-go').onclick = () => { newsAsk = false; C.send({ t: 'acct', a: 'news', on: true, email: q('#s-news-in').value }); };
+}
+// Settings > Legal: the drafts of the terms and the privacy policy, on the game server (server/legal.js)
+export function legal(el) {
+  for (const b of el.querySelectorAll('[data-legal]')) { b.disabled = false; b.onclick = () => window.open(`${httpBase()}/legal/${b.dataset.legal}`, '_blank', 'noopener'); }
 }
 export async function openPanel({ into = null } = {}) {
   await launchInfo();
@@ -352,6 +431,9 @@ export async function openPanel({ into = null } = {}) {
   C.send({ t: 'acct', a: 'state' });
   renderPanel();
   keyboardDialog(panel);
+  // (a mouse and keyboard: straight into the email; a phone keeps its keyboard down until a field is tapped)
+  const em = panel.querySelector('#a-ine');
+  if (em && window.matchMedia && matchMedia('(pointer: fine)').matches) em.focus();
   return panel;
 }
 export function closePanel() { if (panel) { closeModal(panel); panel = null; } }

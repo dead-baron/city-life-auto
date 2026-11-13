@@ -1831,6 +1831,11 @@ body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:n
 :is(#gate-body #g-all, #signin-body [data-in], #signin-body #a-pks, #signin-body #a-namego) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
 :is(#gate-body, #signin-body) input:not([type=checkbox]) { min-height: var(--tap); padding: 0 var(--s2) !important; border: 2px solid var(--steel); border-radius: var(--r1); background: var(--ink); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
 #signin-body .cla-account { padding: var(--s3) var(--s4); color: var(--cream); font: 500 var(--fs-3) var(--ui); }
+/* email + password (11-12): the two tabs, the primary buttons gold, Forgot password a plain link */
+#signin-body button[data-tab] { flex: 1; border: 0 !important; border-bottom: 3px solid transparent !important; border-radius: 0; background: none !important; color: var(--cream) !important; opacity: .62; }
+#signin-body button[data-tab][aria-selected=true] { border-bottom-color: var(--gold) !important; color: var(--gold) !important; opacity: 1; }
+#signin-body :is(#a-ingo, #a-upgo) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
+#signin-body button.a-link { min-height: 0 !important; padding: var(--s1) 0 !important; border: 0 !important; background: none !important; color: var(--cream) !important; font-weight: 500 !important; text-decoration: underline; }
 /* the title at a desktop's size (the 11-04 review: "all tiny at 1920"): its menu, card, tools and the plates over it
    zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */
 body:not(.touch) #title > :is(#t-status, #t-load, #t-off, #t-buttons, #t-row2, #t-gfx, #t-practice, #t-tools, #t-foot), body:not(.touch) :is(#signin, #gate) .panel { zoom: var(--zk, 1); }

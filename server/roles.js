@@ -8,7 +8,7 @@ export const RANK = { helper: 1, admin: 2, owner: 3 };
 export const POWERS = {
   dev: 'admin', kick: 'admin', ban: 'admin', unban: 'admin', mute: 'admin', unmute: 'admin', strike: 'admin', unstrike: 'admin', reviews: 'admin', resolve: 'admin', prison: 'admin',
   refund: 'helper', rescue: 'helper', restore: 'helper', plog: 'helper', players: 'helper',
-  role: 'owner', adminlog: 'owner', dashboard: 'owner', season: 'owner',
+  role: 'owner', adminlog: 'owner', dashboard: 'owner', season: 'owner', news: 'owner',
 };
 
 export const rankOf = (role) => RANK[role] || 0;

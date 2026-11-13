@@ -5,7 +5,10 @@
 import { join as pathJoin } from 'node:path';
 import { createAccounts } from './accounts.js';
 import { verifyToken, newPlayerId, keyedHash } from './auth.js';
-import { createAuthHttp, enabledProviders } from './authhttp.js';
+import { createAuthHttp, enabledProviders, resetsOn } from './authhttp.js';
+import { createNewsList } from './newslist.js';
+import { normEmail } from './passwords.js';
+import { legalHttp } from './legal.js';
 import { createAdminLog } from './adminlog.js';
 import { createAdminHttp } from './adminhttp.js';
 import { createAdmin, note, notePurchase } from './admin.js';
@@ -19,7 +22,7 @@ import { browserOf } from './perfreports.js';
 import { createGA } from './ga.js';
 import { watch, settle, release } from './moneywatch.js';
 import { createRateLimiter } from './httputil.js';
-import { cleanName } from '../shared/names.js';
+import { cleanName, lookKey } from '../shared/names.js';
 import { USERNAME_GAP_DAYS } from './accounts.js';
 import * as devmode from './devmode.js';
 import * as players from './systems/players.js';
@@ -38,23 +41,26 @@ export function createLaunch(opts) {
   const accounts = createAccounts({ store, secret, now });
   const adminLog = createAdminLog(dataDir ? pathJoin(dataDir, 'admin-log.jsonl') : null, now);
   const mod = createModeration({ store, now });
+  const news = createNewsList({ file: dataDir ? pathJoin(dataDir, 'news.json') : null, now, publicUrl: L.publicUrl, mailAddress: L.mailAddress || '', log });
   const ga = createGA({ measurementId: L.gaMeasurementId, apiSecret: L.gaApiSecret, fetch: opts.fetch, now, log, userHash: (pid) => keyedHash('ga-user', pid, secret), regionOf: (p) => (p.ped && world.map ? (world.map.districtAt(p.ped.x, p.ped.y) || {}).isl : '') });
   let ac = null;
   const analytics = createAnalytics({ file: dataDir ? pathJoin(dataDir, 'analytics.json') : null, now, ga, onEarned: (p, perHour, norm) => { if (ac) ac.earned(p, perHour, norm); } });
   const modWithStats = { ...mod, review: (kind, who, noteText, data, by) => { if (['teleport', 'speed', 'rate', 'input', 'econ'].includes(kind)) { analytics.event('flag', null, { kind }); const a = who && accounts.get(who.id); if (a) note(a, 'flag', `${kind}: ${noteText}`); } return mod.review(kind, who, noteText, data, by); } };
   ac = createAntiCheat({ mod: modWithStats, now, log });
   const chat = createChat({ accounts, filter: loadFilter(), mod, now, onLine: (p, ch) => analytics.event('chat', p, { ch }) });
-  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
+  const adminHttp = createAdminHttp({ accounts, log: adminLog, mod, analytics, news, mailAddress: L.mailAddress || '', publicUrl: L.publicUrl, ip: (req) => opts.ip(req), now, texts: opts.texts || null, world, store, act: (actor, msg) => admin.handle(world, actor, msg), said: (p) => chat.said(p), stats: () => ({ online: [...world.players.values()].filter((p) => p.conn).length, profiles: store.count, tickMsAvg: +world.stats.tickMs.toFixed(2), ga: ga.stats }) });
   const admin = createAdmin({ accounts, log: adminLog, mod, store, pageLink: adminHttp.pageLink, now });
   const onlineOf = (pid) => { const p = world.players.get(pid); return p && p.conn ? p : null; };
   const authHttp = createAuthHttp({
-    launch: L, accounts, secret, fetch: opts.fetch, now, log, ip: (req) => opts.ip(req), extraOrigins: opts.extraOrigins || [],
+    launch: L, accounts, secret, fetch: opts.fetch, now, log, ip: (req) => opts.ip(req), extraOrigins: opts.extraOrigins || [], news, mail: opts.mail,
     onSignIn(pid, method, created, linked) {
       const p = onlineOf(pid), a = accounts.get(pid);
       analytics.signIn(p || { pid }, a, method, created);
       note(a, 'signin', `${method}${created ? ' (new account)' : linked ? ' (linked)' : ''}`);
-      if (p) { p.meDirty = true; sendAcct(p); if (linked) world.notify(p, `Signed in with ${method} - your progress is saved to this account.`, 'good'); }
+      if (linked) becameMember(pid);
+      if (p) { p.meDirty = true; sendAcct(p); if (linked) world.notify(p, `Signed in with ${METHOD[method] || method} - your progress is saved to this account.`, 'good'); }
     },
+    onReset(pid) { note(accounts.get(pid), 'signin', 'password reset by email (signed out everywhere)'); },
     onTransfer(pid) { const p = onlineOf(pid); if (p) { try { p.conn.sendJSON({ t: 'kicked', reason: 'This character moved to another device.' }); p.conn.close(4012, 'moved'); } catch { /* gone */ } } },
     // signed out everywhere: its sessions closed (4015 - each page comes back with the token it holds: the one that asked
     // has the new one; the others are refused, 4014)
@@ -105,28 +111,77 @@ export function createLaunch(opts) {
   function acctState(p) {
     const a = accounts.get(p.pid);
     const gap = a.username && a.nameAt ? Math.max(0, a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) : 0;
-    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: a.kind === 'member' || guestsRename(), role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
+    const pwl = accounts.passwordOf(p.pid), nw = news.byPid(p.pid);
+    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: true, role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), resets: resetsOn(L), email: !!pwl, verified: !!(pwl && pwl.vf), news: nw ? news.masked(nw) : '', ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
   }
   const sendAcct = (p) => { if (p.conn) p.conn.sendJSON(acctState(p)); };
+  const METHOD = { google: 'Google', discord: 'Discord', password: 'your email and password', passkey: 'a passkey' };
 
-  // Guests keep their Guest number once a sign-in is on offer; until a provider is switched on (no keys set: nobody
-  // could become a member) everyone may still rename, as before the launch foundation
-  const guestsRename = () => !Object.values(enabledProviders(L)).some(Boolean);
-  // guests can't start or lead a crew, nor post a bounty - while a sign-in is on offer (the same switch as renaming)
-  const guestLimited = (p) => !!p && !guestsRename() && accounts.isGuest(p.pid);
+  // guests can't start or lead a crew, nor post a bounty - while a sign-in is on offer (with email + password on, it
+  // always is: CLA_PASSWORDS=0 and no provider keys bring back the open game of before)
+  const signInOffered = () => Object.values(enabledProviders(L)).some(Boolean);
+  const guestLimited = (p) => !!p && signInOffered() && accounts.isGuest(p.pid);
   crews.setPolicy({ limited: guestLimited });
   bounties.setPolicy({ limited: guestLimited });
+
+  // ---- names (the owner, 11-12): guests pick and change theirs, but never one a member owns - nor its lookalike
+  // (shared/names.js lookKey: case, separators and the usual digit swaps aside). A member's name is theirs: one they
+  // pick that only guests hold is taken from those guests (each back to a Guest number, told why). A guest who signs up
+  // or links keeps their name unless a member owns it - and from then on it's protected. ----
+  const isMember = (q) => !!(q && q.acct && q.acct.kind === 'member');
+  function memberOwns(name, except) { const k = lookKey(name); for (const q of store.all()) if (q.pid !== except && isMember(q) && lookKey(q.name) === k) return true; return false; }
+  const guestsHolding = (name, except) => { const k = lookKey(name), out = []; for (const q of store.all()) if (q.pid !== except && !isMember(q) && lookKey(q.name) === k) out.push(q); return out; };
+  function guestNumber() {
+    const taken = new Set(); for (const q of store.all()) taken.add(String(q.name).toLowerCase());
+    for (let i = 0; i < 50; i++) { const n = 'Guest' + String(1000 + Math.floor(Math.random() * 9000)); if (!taken.has(n.toLowerCase())) return n; }
+    return 'Guest' + String(Date.now()).slice(-6);
+  }
+  // a profile's name given back for a Guest number (online: over their head at once, and told why)
+  function toGuestNumber(prof, why) {
+    const was = prof.name, n = guestNumber();
+    prof.name = n;
+    const q = world.players.get(prof.pid);
+    if (q) { q.name = n; if (q.ped) { q.ped.name = n; q.ped.appVer = (q.ped.appVer || 0) + 1; } q.meDirty = true; world.notify(q, why(n), 'warn'); sendAcct(q); }
+    note(prof.acct, 'name', `${was} -> ${n} (${q ? 'online' : 'offline'}: a member's name)`);
+    store.touch();
+  }
+  // a guest became a member (linked a sign-in): over their head in white now; their name kept unless a member has it
+  function becameMember(pid) {
+    const prof = store.get(pid);
+    if (!prof) return;
+    const p = onlineOf(pid);
+    if (p) { p.guest = false; if (p.ped) p.ped.appVer = (p.ped.appVer || 0) + 1; }
+    if (/^Guest\d+$/.test(prof.name)) return;
+    if (memberOwns(prof.name, pid)) { toGuestNumber(prof, (n) => `Another member owns that name - you're ${n} for now. Pick a username in Settings, Account.`); return; }
+    for (const q of guestsHolding(prof.name, pid)) toGuestNumber(q, (n) => `A signed-in player owns that name now - you're ${n}. Pick another in Settings, Account (or sign in to keep a name of your own).`);
+  }
   function rename(p, raw) {
-    const a = accounts.get(p.pid);
-    if (a.kind !== 'member' && !guestsRename()) return 'Guests keep their Guest number - sign in to pick a username.';
+    const a = accounts.get(p.pid), member = a.kind === 'member';
     const r = cleanName(raw);
     if (r.err) return r.err;
     if (!loadFilter().nameOk(r.name)) return 'Pick another name.';
-    if (a.kind === 'member' && a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
+    if (member && a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
+    if (!member && lookKey(r.name) !== lookKey(p.name) && memberOwns(r.name, p.pid)) return `${r.name} belongs to a signed-in player - pick another, or sign in to keep a name of your own.`;
+    const yieldTo = member ? guestsHolding(r.name, p.pid) : [];
     const before = p.name;
-    if (!players.rename(world, p, r.name)) return 'That name didn\'t go through - try again in a moment, or pick another.';   // (players.rename noted why)
-    if (a.kind === 'member' && (p.name !== before || !a.username)) { a.username = true; a.nameAt = now(); store.touch(); }
+    if (!players.rename(world, p, r.name, { yields: (q) => yieldTo.includes(q) })) return 'That name didn\'t go through - try again in a moment, or pick another.';   // (players.rename noted why)
+    if (p.name !== before) for (const q of yieldTo) toGuestNumber(q, (n) => `A signed-in player took the name ${r.name} - you're ${n} now. Pick another in Settings, Account (or sign in to keep a name of your own).`);
+    if (member && (p.name !== before || !a.username)) { a.username = true; a.nameAt = now(); store.touch(); }
     if (p.name !== before) note(a, 'name', `${before} -> ${p.name}`);
+    return null;
+  }
+  // game news by email (Settings, Account; members): on with an address (theirs to give - Google and Discord are asked
+  // for nothing more), off at once
+  const newsRl = createRateLimiter(now);
+  function setNews(p, msg) {
+    const a = accounts.get(p.pid);
+    if (a.kind !== 'member') return 'Sign in first - news goes to accounts.';
+    if (!newsRl.hit(`news:${p.pid}`, 10, 3600e3)) return 'Too many changes - try again later.';
+    if (!msg.on) { if (news.optOutPid(p.pid)) note(a, 'news', 'off'); return null; }
+    const email = normEmail(msg.email);
+    if (!email) return 'That doesn\'t look like an email address.';
+    news.optIn(email, 'settings', p.pid);
+    note(a, 'news', 'on');
     return null;
   }
 
@@ -134,6 +189,7 @@ export function createLaunch(opts) {
     join(p, hello = {}, res = {}) {
       const a = accounts.ensure(p.profile);
       p.acct = a;
+      p.guest = a.kind !== 'member';   // (over their head in grey, "Guest" in the players list: net.js gu, devmode.js)
       accounts.noteDevice(p.pid, hello.dm);
       if (hello.age17 && !a.age17) { a.age17 = now(); store.touch(); }
       watch(world, p);
@@ -162,6 +218,7 @@ export function createLaunch(opts) {
         if (msg.a === 'transfer') { const x = accounts.makeTransfer(p.pid); note(a, 'transfer', 'made a transfer code'); return { t: 'acct', a: 'transfer', code: x.code, exp: x.exp, guest: a.kind !== 'member' }; }
         if (msg.a === 'name') { const err = rename(p, msg.name); return { t: 'acct', a: 'name', ok: !err, err: err || undefined, name: p.name }; }
         if (msg.a === 'age') { if (!a.age17) { a.age17 = now(); store.touch(); } return null; }
+        if (msg.a === 'news') { const err = setNews(p, msg); if (!err) sendAcct(p); return { t: 'acct', a: 'news', ok: !err, err: err || undefined }; }
         return null;
       }
       if (t === 'ftue') { if (typeof msg.s === 'string') analytics.ftue(p, p.acct, msg.s, true); return null; }
@@ -231,10 +288,12 @@ export function createLaunch(opts) {
     analytics.save();
   }
 
+  const legal = legalHttp({ launch: L, ga: () => !!L.gaMeasurementId });
   async function http(req, res, url) {
+    if (legal(req, res, url)) return true;
     if (await authHttp.handle(req, res, url)) return true;
     if (await adminHttp.handle(req, res, url)) return true;
     return false;
   }
-  return { login, hooks, http, start, stop, halfSecond, accounts, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
+  return { login, hooks, http, start, stop, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
 }

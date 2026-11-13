@@ -35,7 +35,8 @@ test('the sign-in panel and the first-launch gate: slots the launch work fills, 
   assert.match(MAIN, /window\.CLA = \{[^\n]*setAccountUi/, 'reachable for the launch code');
   assert.match(MAIN, /if \(accountUi && accountUi\.signIn\) \{ accountUi\.signIn\(body,/, 'its panel when it is there');
   assert.match(MAIN, /Sign-in is coming soon\./, 'else the stub');
-  for (const w of ['Guest', 'Google', 'Discord', 'Reddit', 'Email link', 'Passkey']) assert.ok(MAIN.includes(`'${w}'`), w);
+  for (const w of ['Guest', 'Email and password', 'Google', 'Discord', 'Passkey']) assert.ok(MAIN.includes(`'${w}'`), w);
+  assert.ok(!MAIN.includes("'Reddit'") && !MAIN.includes("'Email link'"), 'Reddit and the email links are gone (the owner, 11-12)');
   assert.match(MAIN, /return \(\) => withGate\(\(\) => \{/, 'the gate before the first PLAY');
   assert.match(MAIN, /if \(topOverlay\(\) === 'gate' && input\.menuBack\) return true;/, 'answered, not backed out of');
 });

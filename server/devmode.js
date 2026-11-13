@@ -117,7 +117,7 @@ export function playerList(world, viewer) {
     if (!q.conn) continue;
     const ped = q.ped;
     const role = q.badge ? 'police' : q.hunter ? 'hunter' : q.wanted > 0 ? 'criminal' : 'citizen';
-    const e = { n: q.name, r: role, w: q.wanted || 0, me: q === viewer ? 1 : 0, dm: q.devMode ? 1 : 0, god: q.invincible ? 1 : 0 };
+    const e = { n: q.name, r: role, w: q.wanted || 0, me: q === viewer ? 1 : 0, dm: q.devMode ? 1 : 0, god: q.invincible ? 1 : 0, ...(q.guest ? { gu: 1 } : null) };
     if (ped && !ped.hidden) e.d = world.map.districtAt(ped.x, ped.y).name;
     if (dev) { e.id = q.pid; if (ped) { e.x = Math.round(ped.x); e.y = Math.round(ped.y); } e.dead = ped && ped.dead ? 1 : 0; }
     out.push(e);

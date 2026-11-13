@@ -1,6 +1,7 @@
 // The launch foundation's accounts (server/accounts.js, auth.js, authhttp.js, webauthn.js): tokens old and new,
-// guests migrated without loss, linked sign-ins, transfer codes, OAuth (state, the CSRF cookie, PKCE), email magic
-// links, passkeys verified with generated keys (ES256, RS256), and the rate limits on all of it.
+// guests migrated without loss, linked sign-ins, transfer codes, OAuth (state, the CSRF cookie, PKCE), Reddit and the
+// email magic links gone (email + password: test/signin-password.test.js), passkeys verified with generated keys
+// (ES256, RS256), and the rate limits on all of it.
 import { clock, call, fakeConn } from './launchkit.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +15,7 @@ import { cborEncode, cborDecode, verifyRegistration, verifyAssertion, ALG, creat
 const SECRET = 'test-secret';
 const LAUNCH = {
   publicUrl: 'https://play.example', pageOrigins: ['https://game.example'], rpId: 'game.example', rpName: 'CLA', devOpen: true,
-  google: { id: 'gid', secret: 'gsecret' }, discord: { id: 'did', secret: 'dsecret' }, reddit: { id: '', secret: '' }, email: { key: 'rkey', from: 'CLA <a@b.c>' }, gaMeasurementId: '',
+  google: { id: 'gid', secret: 'gsecret' }, discord: { id: 'did', secret: 'dsecret' }, email: { key: 'rkey', from: 'CLA <a@b.c>' }, gaMeasurementId: '',
 };
 function setup(c = clock(), fetchImpl = null) {
   const store = new MemoryStore();
@@ -131,7 +132,9 @@ test('transfer codes: one-time, ten minutes, the old device signed out (a guest 
 test('/launch.json: what is switched on (providers without keys are off)', async () => {
   const { h } = setup();
   const j = (await h({ url: '/launch.json', headers: { origin: 'https://game.example' } })).json();
-  assert.deepEqual(j.providers, { google: true, discord: true, reddit: false, email: true });
+  assert.deepEqual(j.providers, { google: true, discord: true, password: true }, 'no Reddit, no email links (the owner, 11-12)');
+  assert.equal(j.resets, true, 'a Resend key: password resets by email');
+  assert.equal(j.password.min, 10);
   assert.equal(j.passkeys, true);
   assert.equal(j.age, 17);
 });
@@ -198,7 +201,8 @@ test('OAuth: state + PKCE out, the CSRF cookie checked, back to our page only; a
   back = await oauth(h, 'google');
   r = await h({ method: 'POST', url: '/auth/redeem', body: { code: back.get('cla_login'), pn: PN } });
   assert.equal(r.json().pid, j.pid);
-  assert.equal((await h({ url: '/auth/reddit/start?' + startQ() })).status, 404, 'a provider without keys isn\'t there');
+  assert.notEqual((await h({ url: '/auth/reddit/start?' + startQ() })).status, 302, 'Reddit is gone');
+  assert.equal((await h({ url: '/auth/reddit/start?' + startQ() })).headers.location, undefined);
 });
 
 test('a returning member signs in on another device (a guest page) - into their account; the guest is left as it was, nothing merged', async () => {
@@ -237,34 +241,23 @@ test('linking is explicit and bound to the page and its token: a link flow someo
   assert.equal((await S.h({ method: 'POST', url: '/auth/link-ticket', headers: { authorization: `Bearer ${S.A.token(guest)}` } })).status, 404, 'no more link tickets');
 });
 
-test('email magic link: sent through Resend, the same answer for any address, one POST confirms it once', async () => {
+test('the email magic links and Reddit are gone (the owner, 11-12): no routes; an old account keeps its sign-ins', async () => {
   const sent = [];
   const f = async (url, opt) => { sent.push({ url, opt }); return { ok: true, status: 200, json: async () => ({}) }; };
-  const { h, A } = setup(clock(), f);
-  let r = await h({ method: 'POST', url: '/auth/email/start', body: { email: 'Player@Example.com', ret: 'https://game.example/', pn: PN } });
-  assert.equal(r.status, 200);
+  const { h, A, store } = setup(clock(), f);
+  for (const path of ['/auth/email/start', '/auth/email/confirm']) assert.notEqual((await h({ method: 'POST', url: path, body: { email: 'a@b.cd', pn: PN } })).status, 200, path);
+  assert.notEqual((await h({ url: '/auth/email/callback?t=x' })).status, 200);
   await new Promise((z) => setImmediate(z));
-  assert.equal(sent[0].url, 'https://api.resend.com/emails');
-  assert.equal(sent[0].opt.headers.authorization, 'Bearer rkey');
-  const mail = JSON.parse(sent[0].opt.body);
-  assert.deepEqual(mail.to, ['player@example.com']);
-  const link = mail.text.match(/https:\/\/play\.example\/auth\/email\/callback\?t=([A-Za-z0-9_-]+)/);
-  assert.ok(link);
-  // the GET is a page with one button (a mail scanner opening the link doesn't spend it)
-  r = await h({ url: `/auth/email/callback?t=${link[1]}` });
-  assert.equal(r.status, 200);
-  assert.match(r.body, /<form method="post"/);
-  r = await h({ method: 'POST', url: '/auth/email/confirm', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `t=${link[1]}` });
-  const code = new URLSearchParams(new URL(r.headers.location).hash.slice(1)).get('cla_link');
-  const j = (await h({ method: 'POST', url: '/auth/link-confirm', body: { code, pn: PN, action: 'new' } })).json();
-  assert.ok(j.created);
-  const acct = A.get(j.pid);
-  assert.ok(!JSON.stringify(acct).includes('example.com'), 'the address is never kept, only a keyed hash');
-  r = await h({ method: 'POST', url: '/auth/email/confirm', body: `t=${link[1]}` });
-  assert.equal(r.status, 410, 'once');
-  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'not an email', pn: PN } })).status, 400);
-  for (let i = 0; i < 3; i++) await h({ method: 'POST', url: '/auth/email/start', body: { email: `x${i}@example.com`, pn: PN } });
-  assert.equal((await h({ method: 'POST', url: '/auth/email/start', body: { email: 'y@example.com', pn: PN } })).status, 429, 'five a ten minutes from one address');
+  assert.equal(sent.length, 0, 'nothing mailed');
+  const src = (await import('node:fs')).readFileSync(new URL('../server/authhttp.js', import.meta.url), 'utf8');
+  assert.ok(!/reddit/i.test(src.replace(/Reddit and the email magic links are gone[^\n]*/g, '')), 'no Reddit in the sign-ins');
+  // an account that signed in with Reddit before: kept, and it can link another way in
+  const pid = '5'.repeat(24); store.create(pid);
+  const a = A.ensure(store.get(pid)); a.logins.push({ p: 'reddit', sub: 'r-1', at: 1 }); a.kind = 'member';
+  assert.equal(A.findLogin('reddit', 'r-1'), pid);
+  assert.equal(A.signIn('reddit', 'r-2').err, 'Bad sign-in.', 'no new Reddit sign-ins');
+  assert.equal(A.signIn('google', 'g-9', { linkPid: pid }).pid, pid);
+  assert.equal(A.isGuest(pid), false);
 });
 
 // ---- WebAuthn with generated keys ----

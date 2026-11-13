@@ -58,7 +58,7 @@ config.launch = {
   // the open debug mode (Options -> Dev Debug Mode, anyone): on while testing; CLA_DEV_OPEN=0 at launch, then only
   // accounts with the admin (or owner) role get the debug powers (server/roles.js)
   devOpen: env('CLA_DEV_OPEN', '1') !== '0',
-  // the server's own public address (OAuth redirect URIs and magic links point here), and the pages that may sign in
+  // the server's own public address (OAuth redirect URIs and the emails' links point here), and the pages that may sign in
   publicUrl: env('CLA_PUBLIC_URL', 'https://play.deadbaron.com').replace(/\/+$/, ''),
   pageOrigins: list(env('CLA_PAGE_ORIGINS', 'https://deadbaron.com,https://www.deadbaron.com,https://dead-baron.github.io')),
   // passkeys (WebAuthn): the relying party id - the page's registrable domain - and its display name
@@ -66,8 +66,14 @@ config.launch = {
   rpName: env('CLA_RP_NAME', 'City Life Auto'),
   google: { id: env('GOOGLE_CLIENT_ID'), secret: env('GOOGLE_CLIENT_SECRET') },
   discord: { id: env('DISCORD_CLIENT_ID'), secret: env('DISCORD_CLIENT_SECRET') },
-  reddit: { id: env('REDDIT_CLIENT_ID'), secret: env('REDDIT_CLIENT_SECRET') },
+  // email + password sign-in (on unless CLA_PASSWORDS=0: it needs no keys); Resend sends its reset and verify emails -
+  // with no RESEND_API_KEY, passwords work and resets say they aren't available yet
+  passwords: env('CLA_PASSWORDS', '1') !== '0',
   email: { key: env('RESEND_API_KEY'), from: env('CLA_EMAIL_FROM', 'City Life Auto <login@deadbaron.com>') },
+  // the owner's postal address, at the foot of every news email (the opt-in list: server/newslist.js), and the contact
+  // the privacy policy and the terms give (server/legal.js)
+  mailAddress: env('CLA_MAIL_ADDRESS'),
+  contact: env('CLA_CONTACT'),
   // the owner's account: its id (Settings -> Account shows it), or none - then a one-time claim code is printed at start
   ownerId: env('CLA_OWNER_ID'),
   // the 17+ gate: when on, a page that hasn't confirmed the age floor isn't let into the city (the gate lives on the page)
