@@ -11,7 +11,7 @@ import { flee } from './npc.js';
 const STOP_BITS = IN.FIRE | IN.DIVE | IN.VEHICLE | IN.THROW | IN.ACTION | IN.BLOCK;
 
 function set(ped, dm) {
-  ped.gt = 'dance'; ped.dm = dm; ped.dancing = true;
+  ped.gt = 'dance'; ped.dm = dm; ped.dancing = true; ped.em = undefined;
   ped.vx = 0; ped.vy = 0;
   ped.appVer = (ped.appVer || 0) + 1;
 }
@@ -22,17 +22,20 @@ export function stop(ped) {
   ped.appVer = (ped.appVer || 0) + 1;
   return true;
 }
-// can this player dance right now? (on foot, up, free)
-function free(ped) {
+// can this player dance right now? (on foot, up, free - an emote's animation too: emote.js)
+export function free(ped) {
   return !!ped && !ped.dead && !ped.vehId && !ped.hidden && !ped.cuffed && !ped.carrying && !ped.board && !ped.fishing && !ped.onTrain && !ped.hoodOf && !ped.sit && !ped.sitBench && !(ped.rollT > 0) && !(ped.downUntil > 0 && ped.swimming);
 }
-// The dance button (or the phone's): start, the next move, or stop after the last. Returns the move's index or -1 (stopped).
-export function next(world, p) {
+// The dance button (or the phone's, or the Dance emote): start, the next move, or stop after the last. Returns the move's
+// index or -1 (stopped). Starting tells the people near in their chat log ("Ann started dancing": world.track 'danced',
+// server/launch.js -> chat.js announce) - quiet: the Dance emote, which says so itself (chat.js emote).
+export function next(world, p, quiet = false) {
   const ped = p.ped;
   if (!free(ped)) { stop(ped); return -1; }
   const i = ped.dancing ? DANCE_PLAYER.indexOf(ped.dm) + 1 : 0;
   if (i >= DANCE_PLAYER.length) { stop(ped); world.notify?.(p, 'You stop dancing.', 'info'); return -1; }
   set(ped, DANCE_PLAYER[i]);
+  if (i === 0 && !quiet) world.track?.('danced', p);
   world.notify?.(p, `Dancing: ${DANCE_NAMES[ped.dm]} - press again for the next move, move to stop`, 'info');
   return ped.dm;
 }

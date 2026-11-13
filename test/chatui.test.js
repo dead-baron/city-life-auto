@@ -1,6 +1,7 @@
 // Chat on the page (client/chat.js) in a real headless Chromium, with a stand-in for the game round it: lines arrive as
 // the server sends them (server/chat.js) and what the page sends back is checked. The bubbles over heads (two lines at
-// most, apart from each other), the feed under the notes, the sheet (the channels, the quick lines and the emotes, the
+// most, apart from each other), the emotes (their emoji over the head, the picker, the phone's Emote screen), the feed
+// under the notes, the sheet (the channels and the quick lines, the
 // line and SEND, Esc), a name's mute / block / report, the phone's Messages app (threads, unread, a reply, quick
 // replies, back), Settings > Chat (the channel switches, unmute), and the sheet riding on top of a phone's keyboard.
 import { test } from 'node:test';
@@ -47,17 +48,32 @@ out.bubApart = !(r[0].left < r[1].right && r[1].left < r[0].right && r[0].top < 
 out.bubAbove = r[0].bottom <= 300;
 out.bubFont = getComputedStyle(bubs[0]).fontFamily;
 out.feed = [...document.querySelectorAll('#cht-feed .cht-fl')].map((d) => d.textContent);
+// an emote: its emoji pops up over the head (no words there); Dance: none - the log says it
+out.pops = [...document.querySelectorAll('.emo-pop')].filter((d) => d.isConnected).map((d) => d.textContent);
+C.onMessage({ t: 'emote', eid: 12, e: 'dance', n: 'Lou', id: 'lou1' });
+out.popsAfterDance = document.querySelectorAll('#cht-bubs .emo-pop').length;
+// the emote picker (apart from chat): a grid, one tap sends and closes; a tap outside and the X close it
+C.emotes();
+await wait(30);
+out.pickOpen = !$('.emo-pick').hidden;
+out.pickTiles = [...document.querySelectorAll('.emo-pick [data-e]')].map((b) => b.dataset.e);
+out.pickTileText = document.querySelector('.emo-pick [data-e="wave"]').textContent;
+document.querySelector('.emo-pick [data-e="clap"]').click();
+out.pickClosedOnPick = $('.emo-pick').hidden && !C.emotesUp;
+C.emotes(); $('.emo-veil').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+out.pickClosedOutside = $('.emo-pick').hidden;
+C.emotes(); $('.emo-pick .x').click();
+out.pickClosedX = $('.emo-pick').hidden;
 // the sheet
 C.open();
 await wait(30);
 out.sheetOpen = !$('.cht-sheet').hidden && document.body.classList.contains('cht-open');
 out.tabs = [...document.querySelectorAll('.cht-tab')].map((b) => b.textContent + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('na') ? '-' : ''));
 out.chips = [...document.querySelectorAll('.q-row .cht-chip')].map((b) => b.textContent);
-out.emotes = document.querySelectorAll('.em-row .cht-chip').length;
+out.emotes = document.querySelectorAll('.cht-sheet [data-e]').length;
 out.logged = [...document.querySelectorAll('.cht-log .cht-l')].map((d) => d.textContent);
 out.focused = document.activeElement === $('.cht-in');
 $('.q-row .cht-chip').click();
-$('.em-row .cht-chip').click();
 $('.cht-in').value = 'typed line'; $('.cht-row').requestSubmit();
 out.closedOnSend = $('.cht-sheet').hidden;   // (a keyboard: Enter sends and gives the keys back)
 C.open(); $('.cht-in').value = '/c to the crew'; $('.cht-row').requestSubmit();
@@ -65,7 +81,6 @@ C.open(); $('.cht-in').value = '/wave'; $('.cht-row').requestSubmit();
 C.open();
 document.querySelectorAll('.cht-tab')[1].click();
 out.crewChips = [...document.querySelectorAll('.q-row .cht-chip')].map((b) => b.textContent);
-out.crewEmotes = document.querySelectorAll('.em-row .cht-chip').length;
 $('.q-row .cht-chip').click();
 document.querySelectorAll('.cht-tab')[2].click();
 out.factionHint = [...document.querySelectorAll('.cht-log .cht-l')].pop().textContent;
@@ -116,8 +131,12 @@ out.appReasons = ph.querySelectorAll('[data-cmw]').length;
 ph.querySelector('[data-cmw="spam"]').click();
 out.backThread = C.appBack(); out.atHome = !!ph.querySelector('.seg'); out.backHome = C.appBack();
 ph.querySelector('[data-cmt="near"]').click();
-out.nearChips = ph.querySelectorAll('[data-cmq]').length; out.nearEmotes = ph.querySelectorAll('[data-cme]').length;
-ph.querySelector('[data-cme]').click();
+out.nearChips = ph.querySelectorAll('[data-cmq]').length; out.nearEmotes = ph.querySelectorAll('[data-cme], [data-e]').length;
+// the phone's Emote screen (a pad's way to the emotes)
+const ph2 = document.createElement('div'); document.body.appendChild(ph2);
+C.emoteApp(ph2, { close: () => { out.emoAppClosed = true; } });
+out.emoApp = ph2.querySelectorAll('[data-emo]').length;
+ph2.querySelector('[data-emo="salute"]').click();
 out.kept = (() => { try { return Object.keys(JSON.parse(localStorage.getItem('cla.msgs.me0') || '{}')); } catch { return 'none'; } })();
 await wait(500);
 out.keptLater = (() => { try { return Object.keys(JSON.parse(localStorage.getItem('cla.msgs.me0') || '{}')); } catch { return 'none'; } })();
@@ -188,24 +207,33 @@ test('chat\'s data: the quick lines (the crew\'s are the Crew app\'s), the reaso
 test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, mute / block / report, the Messages app, Settings', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const o = await run('kbm', '1280,720');
   assert.ok(o.inboxAsked, 'what came while away is asked for on joining');
-  assert.equal(o.bubbles, 3);
+  assert.equal(o.bubbles, 2, 'speech only: an emote has no words over the head');
   assert.deepEqual(o.bubLines[0], ['nice car', 'want to race?'], 'two lines at most in a bubble, the newest last');
   assert.ok(o.bubApart, 'two speakers side by side: their bubbles kept apart');
   assert.ok(o.bubAbove, 'above the speaker');
   assert.match(o.bubFont, /CLA Pixel/, 'in the game\'s pixel face');
   assert.equal(o.feed.length, 2, 'two lines in the feed on a desktop');
-  assert.ok(o.feed[1].includes('Ann') && o.feed[1].includes(EMOTES.wave.text));
+  assert.ok(o.feed[1].includes('Ann') && o.feed[1].includes(EMOTES.wave.text), 'the log says it');
+  assert.deepEqual(o.pops, [EMOTES.wave.emoji], 'its emoji over the head');
+  assert.equal(o.popsAfterDance, 1, 'Dance: no emoji');
+  assert.ok(o.logged.some((l) => l.includes('Lou') && l.includes('started dancing')), '"Lou started dancing" in the log');
+  assert.ok(o.pickOpen, 'the picker');
+  assert.deepEqual(o.pickTiles, Object.keys(EMOTES), 'every emote a tile');
+  assert.ok(o.pickTileText.includes(EMOTES.wave.emoji) && o.pickTileText.includes(EMOTES.wave.n), 'its emoji and its name');
+  assert.ok(o.pickClosedOnPick && o.pickClosedOutside && o.pickClosedX, 'one tap and it closes; outside and the X close it');
+  assert.equal(o.emoApp, Object.keys(EMOTES).length, 'the phone\'s Emote screen');
+  assert.ok(o.emoAppClosed, '...one tap emotes and puts the phone away');
   assert.ok(o.sheetOpen && o.focused, 'T: the sheet, its line ready to type in');
   assert.ok(o.closedOnSend, 'Enter sends and closes it on a keyboard');
   assert.deepEqual(o.tabs, ['Near*', 'Crew', 'Faction-'], 'Near first; no faction greyed');
   assert.deepEqual(o.chips, QUICK.near);
-  assert.equal(o.emotes, Object.keys(EMOTES).length);
+  assert.equal(o.emotes, 0, 'emotes apart from chat: not in the sheet');
   assert.ok(o.logged.some((l) => l.includes('Marisol') && l.includes('want to race?')));
-  assert.deepEqual(o.crewChips, QUICK.crew); assert.equal(o.crewEmotes, 0);
+  assert.deepEqual(o.crewChips, QUICK.crew);
   assert.match(o.factionHint, /No faction/);
   const said = o.sent.filter((m) => m.t === 'chat').map((m) => `${m.ch}:${m.text}${m.to ? '>' + m.to : ''}`);
   assert.deepEqual(said, [`near:${QUICK.near[0]}`, 'near:typed line', 'crew:to the crew', `crew:${QUICK.crew[0]}`, `phone:${QUICK.phone[0]}>lou1`, 'phone:see you there>lou1']);
-  assert.deepEqual(o.sent.filter((m) => m.t === 'emote').map((m) => m.e), [Object.keys(EMOTES)[0], 'wave', Object.keys(EMOTES)[0]]);
+  assert.deepEqual(o.sent.filter((m) => m.t === 'emote').map((m) => m.e), ['clap', 'wave', 'salute'], 'the picker, /wave, the phone\'s screen');
   assert.equal(o.whoTitle, 'Marisol');
   assert.deepEqual(o.whoButtons, ['mute', 'block', 'report']);
   assert.deepEqual(o.reasons, REPORT_WHY);
@@ -225,7 +253,7 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.equal(o.appReasons, REPORT_WHY.length);
   assert.ok(mods.includes('report:lou1:spam'));
   assert.ok(o.backThread && o.atHome && !o.backHome, 'back: out of the thread, then the phone\'s own');
-  assert.equal(o.nearChips, QUICK.near.length); assert.equal(o.nearEmotes, Object.keys(EMOTES).length);
+  assert.equal(o.nearChips, QUICK.near.length); assert.equal(o.nearEmotes, 0, 'the Messages app: no emotes either');
   assert.deepEqual(o.keptLater, ['lou1'], 'the thread kept in this browser');
   assert.equal(o.setRows, 4);
   assert.deepEqual(o.muteList, ['unmute:mar1']);

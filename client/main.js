@@ -187,6 +187,7 @@ function launchCall(k, a) {
     else if (k === 'chatbtn') { if (!topOverlay()) L.chat.toggle(); }
     else if (k === 'emotes') { if (!topOverlay()) L.chat.emotes(); }
     else if (k === 'app') { if (topOverlay() === 'phone' && phone.screen === 'msgs') L.chat.renderApp(a.el, a.api); }
+    else if (k === 'emoteapp') { if (topOverlay() === 'phone' && phone.screen === 'emotes') L.chat.emoteApp(a.el, a.api); }
     else if (k === 'account') openSignIn();
   }).catch((e) => { launchP = null; console.warn('[launch]', e); });
 }
@@ -636,6 +637,7 @@ function fixedStep() {
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (input.menuBack && !inOverlay && S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (B: the chat sheet away, as Esc and its ✕)
+  if (input.menuBack && !inOverlay && S.launch && S.launch.chat.emotesUp) S.launch.chat.closeEmotes();   // (and the emote picker)
   if (input.menuBack && !inOverlay && wpick.open) wpick.close();   // (and the weapon picker)
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub('pause');
@@ -1664,6 +1666,8 @@ initInput(canvas, {
     if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
     if (k === 'Escape' && S.launch && S.launch.chat.isOpen && !topOverlay()) { S.launch.chat.close(); return; }   // (the chat sheet up, its line not in use: Esc closes it)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
+    if (k === 'Escape' && S.launch && S.launch.chat.emotesUp) { S.launch.chat.closeEmotes(); return; }   // (the emote picker up: Esc closes it)
+    if (k === 'KeyB' && S.playing && !topOverlay() && !S.practice && !(S.me && S.me.dead)) { launchCall('emotes'); return; }   // (B: the emotes - client/emotes.js)
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
     if (deathUp && !(S.hud && S.hud.deathRevealed)) { if (['KeyH', 'KeyJ', 'KeyC', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) return; }
@@ -1987,6 +1991,8 @@ const phoneCtx = {
   msgsDot: () => !!S.chatDot,
   chatApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No messages offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('app', { el, api: { refocus: (start) => { if (topOverlay() === 'phone') { if (start) ovFocus = startFocus(); focusOverlay(); } }, title: (t) => phoneCtx.title(t) } }); },
   chatBack: () => !!(S.launch && S.launch.chat.appBack()),
+  // the Emotes screen (client/emotes.js renderApp, with the launch code): one tap emotes and puts the phone away
+  emoteApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No emotes offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('emoteapp', { el, api: { refocus: () => { if (topOverlay() === 'phone') { ovFocus = startFocus(); focusOverlay(); } }, close: () => closeHub() } }); },
   nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
@@ -2050,6 +2056,7 @@ function openHub(tab = 'pause', app, fromPause = false) {
   if (wpick.open) wpick.close();
   if (top !== id) sfx('click', 0.5);
   if (S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (the chat sheet gives way to the hub)
+  if (S.launch && S.launch.chat.emotesUp) S.launch.chat.closeEmotes();   // (and the emote picker)
   if (tab === 'pause') hubFromPause = false;
   else if (fromPause || top === 'pause') hubFromPause = true;
   else if (!top || !HUB_IDS.includes(top)) hubFromPause = false;   // (straight in from the game: back goes back to it)
@@ -2277,11 +2284,10 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
-// the thumb's chat button (touch): a tap the sheet, held the emotes (client/touchslots.js LONG_MS's half second)
-{ const b = $('b-talk'); let t = 0, held = false;
-  b.addEventListener('pointerdown', (e) => { e.stopPropagation(); held = false; clearTimeout(t); t = setTimeout(() => { held = true; if (S.playing && !S.practice) launchCall('emotes'); }, 450); });
-  b.addEventListener('pointerup', () => clearTimeout(t)); b.addEventListener('pointercancel', () => clearTimeout(t));
-  b.onclick = () => { if (!held && S.playing && !S.practice) launchCall('chatbtn'); held = false; }; }
+// the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
+$('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
+$('b-emote').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };
+for (const id of ['b-talk', 'b-emote']) $(id).addEventListener('pointerdown', (e) => e.stopPropagation());   // (not the move stick's touch)
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();

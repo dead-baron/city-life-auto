@@ -27,7 +27,7 @@ import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
 import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the core alone: shared/look.js adds what only the creator and the server use)
 import { CLUBS } from '../../../shared/clubs.js';
 import { DANCE_MOVES, danceFrame, danceDir } from '../../../shared/dance.js';
-import '../dances.js';   // (the dance moves' poses: registered in people.js's POSES, out of the chunk bake's reach)
+import { EMOTE_FPS } from '../dances.js';   // (the dance moves' and the emotes' poses: registered in people.js's POSES, out of the chunk bake's reach)
 import { litterApp, litterAt, LITTER } from '../litter.js';   // (the pose of someone on a paramedic's stretcher, and how they lie there: host.js)
 export { litterApp, litterAt, LITTER };
 
@@ -37,6 +37,10 @@ export const DANCE_POSE = DANCE_MOVES.map((m) => 'd' + m);
 const DANCE_SET = new Set(DANCE_POSE);
 export const isDance = (pose) => DANCE_SET.has(pose);
 export { danceFrame, danceDir };
+// Emotes (the owner, 2026-11-13; server emote.js): the descriptor's em (shared/chatdefs.js EMOTES' id) -> its pose
+// ('em' + the id); the frame t s after it started - host.js
+export const isEmote = (pose) => !!EMOTE_FPS[pose];
+export const emoteFrame = (pose, t) => Math.floor(Math.max(0, t) * (EMOTE_FPS[pose] || 4)) & 3;
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
 export { SEATS };
@@ -345,6 +349,7 @@ export function personaPose(d, pose) {
   const g = d.gt;
   if (!g) return pose;
   if (g === 'dance' && d.dm !== undefined && pose === 'idle') return DANCE_POSE[d.dm] || g;   // (a move: dancing, task #394)
+  if (g === 'emote') return pose === 'idle' && EMOTE_FPS['em' + d.em] ? 'em' + d.em : pose;   // (an emote on the body: server emote.js)
   if (g === 'dance' || g === 'lean' || g === 'statue' || g === 'statuebow') return pose === 'idle' ? g : pose;   // (statue: a living statue on its crate - personas.js BUSKS)
   if (ACT_POSES[g]) return pose === 'idle' ? ACT_POSES[g] : pose;   // (at an activity, held while they stay: server activities.js)
   if (pose === 'walk0' || pose === 'walk1' || ((g === 'skate' || g === 'blade') && pose.startsWith('walk'))) return g;

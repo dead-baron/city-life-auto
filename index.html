@@ -75,9 +75,11 @@
   <div id="touch" class="hidden">
     <div id="zone-l"></div>
     <div id="stick-l" class="stick"><div class="knob"></div></div>
-    <!-- chat by the thumb (the owner, 11-12: the top row was a stretch): a tap the chat sheet, held the emotes - in the
-         bottom band beside the move stick on its side, over the move stick's zone upright (client/main.js) -->
-    <button id="b-talk" type="button" aria-label="Chat (hold: emotes)" title="Chat (hold: emotes)"><i class="ic" data-gl="message-circle-more"></i></button>
+    <!-- chat by the thumb (the owner, 11-12: the top row was a stretch): a tap the chat sheet - in the bottom band beside
+         the move stick on its side, over the move stick's zone upright (client/main.js); the emotes' button beside it
+         (the owner, 11-13: emotes apart from chat - a tap the emote picker: client/emotes.js) -->
+    <button id="b-talk" type="button" aria-label="Chat" title="Chat"><i class="ic" data-gl="message-circle-more"></i></button>
+    <button id="b-emote" type="button" aria-label="Emotes" title="Emotes"><i class="ic" data-gl="smile"></i></button>
     <!-- one button per action; client/touchslots.js puts the ones what you're doing needs in their slots (shared/controls.js TOUCH_STATES) -->
     <div id="tbtns">
       <div id="stick-r" class="stick" data-b="stick"><div class="ring"></div><div class="knob"><i class="ic" data-gl="crosshair"></i></div><span class="lbl">AIM</span></div>
