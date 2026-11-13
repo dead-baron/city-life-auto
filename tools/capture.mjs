@@ -164,7 +164,7 @@ async function take(id) {
     mkdirSync(outDir, { recursive: true });
     const enc = pages.map((P) => encoder(outDir, id, P));
     const keep = flag('sheet') ? pages.map(() => []) : null;
-    for (const P of pages) { await P.pg.clock.pauseAt(T0 + 3600e3); P.t = await P.pg.evaluate(() => performance.now()); P.t0 = P.t; }
+    for (const P of pages) { await P.pg.clock.pauseAt((await P.pg.evaluate(() => Date.now())) + 100); P.t = await P.pg.evaluate(() => performance.now()); P.t0 = P.t; }   // (the page's clock stopped where it is - from now it moves a frame at a time)
     const t0 = Date.now();
     let waits = 0, tick = go.tick;
     const tm = { step: 0, draw: 0, art: 0, shot: 0, enc: 0 }, lap = (k, t) => { const n = Date.now(); tm[k] += n - t; return n; };

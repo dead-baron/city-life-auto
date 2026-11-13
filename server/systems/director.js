@@ -171,7 +171,7 @@ export const PLACES = {
     const bar = { x: (u.x0 + 6) * TILE, y: (u.counterRow + 2.2) * TILE, a: -Math.PI / 2 };
     const lot = R.lot ? { x: (R.lot.x0 + R.lot.x1) / 2, y: (R.lot.y0 + R.lot.y1) / 2, a: Math.PI / 2 } : { x: out.x, y: out.y + 200, a: Math.PI / 2 };
     const road = R.lot ? { x: lot.x, y: R.lot.y1 + 70, a: Math.PI / 2 } : { x: out.x, y: out.y + 360, a: Math.PI / 2 };
-    const ap = standAt(m, out.x - 240, out.y + 170);
+    const ap = standAt(m, out.x - 170, out.y + 120);
     const towns = (m.pois || []).filter((p) => (p.kind === 'gasstation' || p.kind === 'convenience') && near(p, R.x, R.y) > 3800).sort((p, q) => near(p, R.x, R.y) - near(q, R.x, R.y));
     const tw = towns[0] ? { x: towns[0].outside ? towns[0].outside.x : towns[0].x, y: towns[0].outside ? towns[0].outside.y : towns[0].y } : { x: R.x - 6000, y: R.y };
     return { anchors: { door: out, doorIn: inn, bar, lot, road, approach: { ...ap, a: -Math.PI / 4 }, porch: { x: R.x, y: R.y, a: Math.PI / 2 }, town: { ...tw, a: 0 } }, at: { x: R.x, y: R.y + 100 } };
