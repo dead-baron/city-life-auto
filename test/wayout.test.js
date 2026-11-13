@@ -51,7 +51,7 @@ test('every screen a player can open has a close or back to tap, Esc and B', () 
 test('the Camera: its way out over the clean screen, and on touch a shutter', () => {
   const D = read('client/director.js');
   assert.match(D, /body\.cine-on #cine-x, body\.touch\.cine-on #cine-shut \{ display: block; \}/, 'the close on every device, the shutter on touch, while it\'s open');
-  assert.match(D, /#cine-x \{[^}]*width: var\(--tap\); height: var\(--tap\);[^}]*opacity: \.55;/, '44 px in the corner, faint till it\'s touched');
+  assert.match(D, /#cine-x \{[^}]*width: var\(--tap\); height: var\(--tap\);[^}]*opacity: \.55;/, '44 px, top centre, faint till it\'s touched');
   assert.match(D, /z-index: 72/, 'over the panel and the clean screen');
   assert.match(D, /mk\('cine-shut', 'Take a picture', \(\) => shot\(\)\)/);
   // the photo mode is everyone's; what runs the debug menu's commands or moves you is debug mode's

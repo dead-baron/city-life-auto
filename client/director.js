@@ -199,17 +199,18 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-panel button, #cine-ctl button { min-height: 32px; min-width: 32px; padding: 0 var(--s2); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-line); border-radius: 0; font: inherit; cursor: pointer; transition: background var(--t1) var(--ease); }
 #cine-panel button:hover, #cine-ctl button:hover { border-color: var(--pad-gold); }
 #cine-panel button.on, #cine-ctl button.on { background: var(--pad-gold); color: var(--pad-ink); border-color: var(--pad-ink); }
-/* the way out and the shutter (the owner, 11-12: every screen has a way out on every device): on touch a close button in
-   the corner, faint till it's touched, and a round shutter by the right thumb - over the clean screen too */
+/* the way out and the shutter (the owner, 11-12: every screen has a way out on every device): a close button top centre,
+   faint till it's touched (the corners are the HUD's), and on touch a round shutter by the right thumb - over the clean
+   screen too */
 #cine-x, #cine-shut { position: fixed; z-index: 72; display: none; padding: 0; cursor: pointer; touch-action: manipulation; }
-#cine-x { right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: var(--tap); height: var(--tap); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); font: 700 var(--fs-4) var(--pixel); opacity: .55; }
+#cine-x { left: 50%; margin-left: calc(-1 * var(--tap) / 2); top: max(12px, env(safe-area-inset-top)); width: var(--tap); height: var(--tap); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); font: 700 var(--fs-4) var(--pixel); opacity: .55; }
 #cine-x:active, #cine-x:focus-visible { opacity: 1; }
 #cine-shut { right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 68px; height: 68px; border-radius: var(--r3); background: var(--white); border: 4px solid var(--pad-ink); box-shadow: 0 0 0 4px var(--white), 0 4px 0 4px var(--pad-drop); }
 #cine-shut:active { transform: scale(.9); }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
 .touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
-body:not(.touch).cine-on #cine-panel { top: calc(max(12px, env(safe-area-inset-top)) + 52px); max-height: calc(100vh - 76px - env(safe-area-inset-top, 0px)); }   /* (under the close button) */
+body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centre is the close button's - the objective waits) */
 #cine-panel .sc { display: block; width: 100%; text-align: left; margin: 2px 0; }
 #cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
 #cine-panel .tip { margin: 6px 0 0; }

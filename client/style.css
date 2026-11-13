@@ -220,6 +220,7 @@ input[type=range]:disabled { opacity: .4; }
   display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; grid-template-areas: "tl tc tr"; align-items: start; align-content: start; column-gap: calc(2 * var(--gap)); row-gap: var(--gap); box-sizing: border-box; padding: var(--st) var(--sr) 0 var(--sl); }
 .touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(12px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 104px; --gap: 6px; --nav: 44px; --trw: 200px; }
 body.portrait #hud { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: "tl tr" "tc tc"; }
+@media (max-width: 560px) { body:not(.touch) #hud { --map: 104px; --trw: 200px; --sl: 12px; --sr: 12px; } body:not(.touch).portrait #hud-tr > #hud-stat { order: 0; } }   /* (a keyboard or a pad on a narrow window - a phone held upright with a pad: the phone's sizes) */
 @media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --gap: 6px; --nav: 40px; --trw: 200px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
@@ -484,7 +485,7 @@ body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: 
 /* the prompt: the key (its prompt tile: client/glyphs.js) then what it does; in while you're in range, out when you
    leave. On touch the button it names says it (ACT: ENTER, TALK, BUY...; its long press the whole prompt) - no chip,
    but for a prompt no button does (a ride's note: hud.js .btn) */
-#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; font: 700 var(--fs-4) var(--pixel); line-height: 1.2; color: var(--pad-cream); animation: prpop var(--t-pop) var(--ease);
+#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; font: 700 var(--fs-3) var(--pixel); line-height: 1.2; color: var(--pad-cream); animation: prpop var(--t-pop) var(--ease);
   transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
 #helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; animation: none; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
 .touch #helpbox.btn { display: none; }
