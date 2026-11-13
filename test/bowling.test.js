@@ -8,6 +8,7 @@ import { DT, T, TILE } from '../shared/constants.js';
 import { SWING_S } from '../shared/golf.js';
 import { BOWL, BIG, ALL_PINS, scoreCard, totalScore, nextBall, knockPins, rollBall, pinCount, alleyLanes, approachAt, lanePt } from '../shared/bowling.js';
 import * as bowling from '../server/systems/bowling.js';
+import { QUIT } from '../shared/rules.js';
 
 const left = (mask) => { const up = []; for (let i = 0; i < 10; i++) if (!(mask & (1 << i))) up.push(i + 1); return up; };
 
@@ -156,6 +157,8 @@ test('renting a lane: pay at the counter, pick up a ball, roll; the card fills, 
   assert.ok(/turn/.test(players.findInteraction(w, p).label), 'the first player waits');
   // walking out ends your game
   teleport(w, p.ped, A.counter.x + 3000, A.counter.y); run(w, 0.2);
+  assert.ok(p.bowl, 'a warning first (QUIT.awayS)');
+  run(w, QUIT.awayS + 0.5);
   assert.equal(p.bowl, null, 'shoes handed back');
   assert.equal(bowling.meInfo(w, q).card.length, 1, 'the friend bowls on');
 });

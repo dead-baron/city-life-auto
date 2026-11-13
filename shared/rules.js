@@ -545,6 +545,15 @@ export const SOCCER_MATCH_S = 180;
 export const VOLLEY_POINTS = 5;       // first to this many points
 export const MATCH_PRIZE = 100;       // each winner, paid to the bank
 
+// Quitting an activity (the owner, 11-12: golf's waypoint stayed on screen after walking away - server/systems/activityquit.js).
+// The phone's Jobs app (the tracker line tapped opens it) quits whatever is in the tracker. Walking off the course, the
+// alley, the court or the pitch: a warning line counting down awayS, then the activity ends; getting in a vehicle ends it
+// at once. Logged off (the connection gone) this long: ended quietly.
+export const QUIT = {
+  awayS: 8,           // out of the venue this long (s) and the activity's over - the warning counts it down
+  coursePadPx: 64,    // golf: the course's own area, this much past its edge, is still the course
+};
+
 // Store robberies
 export const ROB_WARMUP_S = 1.5;          // gun on the clerk this long before the money starts coming
 export const ROB_TOSS_S = 0.8;            // the clerk throws another wad of cash this often

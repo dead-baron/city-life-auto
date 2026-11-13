@@ -1,5 +1,6 @@
 // Soccer and beach volleyball mini-games.
 import { test } from 'node:test';
+import { QUIT } from '../shared/rules.js';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K } from '../shared/constants.js';
@@ -55,7 +56,7 @@ test('soccer: anyone can kick the ball; two players start a match; goals count; 
   assert.equal(st.score[0], SOCCER_GOALS - 1);
   // BLUE walks off the pitch: forfeit, RED is the last team standing
   teleport(w, b.p.ped, r.x + r.w + 900, r.y);
-  run(w, 4);
+  run(w, QUIT.awayS + 1);
   assert.equal(st.phase === 'results' || st.phase === 'idle', true);
   assert.equal(a.p.profile.bank, MATCH_PRIZE, 'winner paid');
   assert.equal(b.p.profile.bank, 0);

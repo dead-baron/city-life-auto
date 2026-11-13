@@ -22733,3 +22733,40 @@ first melody section, 22.368-63.792 s (41.43 s; bar lines measured from the reco
 and right 90% alike): Opus 352 KB, MP3 492 KB, -17.1 LUFS. It replaces the October title track (still in the history).
 `test/track.test.js` now expects this track's tempo. The engine rebuild of a recorded track stays parked: the
 recording is what plays.
+
+## 2026-11-12 - One Quit for every activity, and walking away ends it
+
+The owner: "When you start a game of golf but walk away the job waypoint still stays on screen, is there a way to
+cancel playing golf and similar activities or if you walk away for some reason it will have the job UI disappear?"
+Golf only gave a hole up after 25 s more than 1,400 px from the ball, and there was no way to stop it.
+
+- **Quit** (`server/systems/activityquit.js`): one list of every activity that fills the tracker or has a screen of
+  its own (pool, air hockey, chess, an arcade machine, the maze clock, a lido lap, hoops, bowling, the cinema, the
+  drive-in, golf, a soccer or volleyball match, a boat race, street race night, and last a job), in the tracker's
+  order. Each is ended through its own leave, so refunds and forfeits are what they always were: a hole given up (the
+  fee isn't returned), the shoes handed back, a game against a player forfeited, a race a forfeit, the movie left. The
+  tracker line and waypoint go with it, and a short toast says what happened. On the wire it's the phone's
+  `{ t: 'phone', a: 'quit', k }`, answered with the job board. `k` is the activity the page showed, so a Quit pressed
+  just as that activity ended never quits the next thing (a job). The board carries `act: { k, n }` for what's on now.
+- **Where to press it**: the phone's Jobs app shows a "NOW · GOLF" card at the top (the tracker's line, Show on map,
+  **Quit golf**, pressed twice like Quit job). Tapping or clicking the tracker line already opens the Jobs app, so on a
+  phone it's tap the line, tap Quit, tap again. The phone's home screen carries the same card, so keyboard and pad
+  reach it with the phone control (P, D-left). No new key and no new HUD element. Pool, air hockey, chess and the arcade machines keep their own close (Esc / B / the X); an arcade
+  machine can also be shut from the server now (`{ t: 'arcade', close: 1 }`, and the score so far comes in as Esc's).
+- **Walking away** (`server/systems/walkaway.js`, `QUIT` in `shared/rules.js`): off the golf course (its area plus
+  `QUIT.coursePadPx`), out of the bowling alley, off the hoops court or off the pitch / court mid-match, a toast
+  "Walk back to keep playing - 8s" and the tracker line counts it down. Come back in time and nothing is lost. After
+  `QUIT.awayS` (8 s) it ends with a toast saying why. Getting in a vehicle ends it at once ("You got in a vehicle -
+  hole given up."), except a golf cart on the course. Bowling used to end the instant you crossed the door, and a match
+  after 3 s; both now use the same 8 s. The cinema seat, the drive-in stall, the maze and the lido lanes still end when
+  you get up or leave, as before.
+- **Logged off**: a player whose connection has gone (a ghost body) is out of whatever they were in after
+  `QUIT.awayS`, quietly. Pool and chess already did this; golf, bowling, hoops, matches, races and the movies now do
+  too. A blip shorter than that is forgiven. A job keeps its own rules.
+- **Guide**: a new Golf entry, a "Quitting a game or an activity" entry (numbers from `QUIT`, the phone by
+  `[[phone]]`), and the bowling entry says walking out ends the game.
+- Tests: `test/activityquit.test.js` (golf: the Jobs app's card, Quit, ball and tracker gone, a stale Quit keeps the
+  job; walking off warns then ends, back in time keeps it; a car ends it at once, a golf cart doesn't; bowling Quit and
+  walk-out; pool Quit forfeits against a player and shuts the screen; an arcade machine's screen shut, its score in;
+  soccer Quit, walk-off and a car; a ghost after `QUIT.awayS`; the page's button). The golf, hoops, bowling and
+  minigames tests now wait out the warning.

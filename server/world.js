@@ -85,6 +85,7 @@ import * as activities from './systems/activities.js';
 import * as burning from './systems/burning.js';
 import * as tank from './systems/tank.js';
 import * as bowling from './systems/bowling.js';
+import * as activityquit from './systems/activityquit.js';
 import * as cinema from './systems/cinema.js';
 import * as drivein from './systems/drivein.js';
 import * as aircraft from './systems/aircraft.js';
@@ -228,6 +229,7 @@ const SYSTEMS = [
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups
   ['cinema', cinema.update],        // The Grand Theater: the films in the screens, the audience
   ['drivein', drivein.update],      // the Starlite Drive-In: who's watching (drivein.js)
+  ['activityquit', activityquit.update],   // logged off mid-activity: out of it after QUIT.awayS (activityquit.js)
   ['activities', activities.update], // people going about their lives: anglers, chess in the park, picnics, a painter (activities.js)
   ['aircraft', aircraft.update],    // helicopters and planes: the parked ones at their pads and stands, mid-air collisions (aircraft.js)
   ['skydive', skydive.update],      // people falling from aircraft: the fall, the parachute, the landing (skydive.js)

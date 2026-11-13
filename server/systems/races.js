@@ -100,6 +100,21 @@ export function update(world) {
 
 const ordinal = (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th'}`;
 
+// in a race (on the grid or under way, not done): its index, or -1
+export function raceOf(world, p) {
+  if (!world.raceState) return -1;
+  return world.raceState.findIndex((st) => (st.phase === 'countdown' || st.phase === 'running') && st.racers.has(p.pid) && !st.racers.get(p.pid).done);
+}
+// pull out (the phone's Quit: activityquit.js) - a forfeit, as driving off the course is; off the grid it stays out this round
+export function withdraw(world, p) {
+  const i = raceOf(world, p);
+  if (i < 0) return false;
+  const r = world.raceState[i].racers.get(p.pid);
+  r.done = true; r.forfeit = true;
+  p.meDirty = true;
+  return true;
+}
+
 // HUD tracker + waypoint for a racer (uses the job tracker slot).
 export function targetFor(world, p) {
   if (!world.raceState) return null;
@@ -107,6 +122,7 @@ export function targetFor(world, p) {
     const st = world.raceState[i], r = st.racers.get(p.pid);
     if (!r) continue;
     const race = world.map.races[i];
+    if (r.done) continue;   // (finished, or pulled out: activityquit.js)
     if (st.phase === 'countdown') return { text: `${race.name}: starts in ${Math.max(0, Math.ceil(st.t - world.time))}s - stay at ${where(race)}`, x: Math.round(race.start.x), y: Math.round(race.start.y), stage: 'race' };
     if (st.phase === 'running' && !r.done) { const cp = race.cps[r.cp]; return { text: `${race.name}: ${progress(race, r)}`, x: Math.round(cp.x), y: Math.round(cp.y), stage: 'race' }; }
   }

@@ -243,6 +243,18 @@ function finishMaze(world, p, t) {
   p.meDirty = true;
   store.touch();
 }
+// stop the clock (the phone's Quit: activityquit.js): no time, no tracker - the clock starts again once you've left the maze
+export function quitMaze(world, p) {
+  if (!p.maze || p.maze.done) return false;
+  p.maze = { done: true }; p.meDirty = true;
+  return true;
+}
+// the lap off (the phone's Quit): back at the wall, a new one starts
+export function quitLap(world, p) {
+  if (!p.lap || p.lap.phase === 'wall' || p.lap.phase === 'quit') return false;
+  p.lap = { phase: 'quit', pool: p.lap.pool || 0 }; p.meDirty = true;
+  return true;
+}
 // the HUD tracker while the clock runs (the job slot): the time so far, the gazebo marked
 export function mazeTarget(world, p) {
   const mz = maze(world.map);
@@ -268,13 +280,14 @@ function lapStep(world) {
     const pool = !ped ? null : L ? pools[L.pool || 0] : pools.find((q) => inPool(q, ped));
     const inLanes = !!pool && !ped.dead && !ped.vehId && !ped.hidden && inPool(pool, ped) && isSwimming(world.map, ped);
     if (!inLanes) {
-      if (L && L.phase !== 'wall' && ped && !ped.dead) world.notify(p, 'Out of the lanes - the lap is off.', 'info');
+      if (L && L.phase !== 'wall' && L.phase !== 'quit' && ped && !ped.dead) world.notify(p, 'Out of the lanes - the lap is off.', 'info');
       if (L) { p.lap = null; p.meDirty = true; }
       continue;
     }
     const x0 = pool.x, x1 = pool.deep.x;
     const atWall = ped.x < x0 + LAP_WALL, atRope = ped.x > x1 - LAP_ROPE;
     if (!L) { if (atWall) { p.lap = { phase: 'wall', pool: pools.indexOf(pool) }; world.notify(p, 'Push off the wall to start the clock: to the rope across the deep end and back.', 'info'); p.meDirty = true; } continue; }
+    if (L.phase === 'quit') { if (atWall) { L.phase = 'wall'; p.meDirty = true; } continue; }   // (quit: a new lap from the wall)
     if (L.phase === 'wall' && !atWall) { L.phase = 'out'; L.t0 = world.time; p.meDirty = true; }
     else if (L.phase === 'out' && atRope) { L.phase = 'back'; world.notify(p, 'Turn!', 'info'); p.meDirty = true; }
     else if (L.phase === 'back' && atWall) finishLap(world, p, world.time - L.t0);
@@ -300,7 +313,7 @@ function finishLap(world, p, t) {
 // the HUD tracker while you swim a lap: the time so far, the rope or the wall marked
 export function lapTarget(world, p) {
   const L = p.lap, pool = L ? lidos(world.map)[L.pool || 0] : null;
-  if (!pool || !L || L.phase === 'wall') return null;
+  if (!pool || !L || L.phase === 'wall' || L.phase === 'quit') return null;
   const back = L.phase === 'back';
   return { text: `Lido lap: ${clock(world.time - L.t0).replace(/\.\d$/, '')} - ${back ? 'back to the wall' : 'to the rope and back'}`, x: Math.round(back ? pool.x + 8 : pool.deep.x), y: Math.round(pool.y + pool.h / 2), stage: 'lap' };
 }

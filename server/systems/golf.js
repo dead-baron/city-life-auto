@@ -6,15 +6,18 @@
 // green, the sand wedge out of a bunker, the putter on the green. The ball flies, bounces and rolls by what it lands
 // on - quick on the green, steady on the fairway, slow in the rough, dead in the sand - and glances off trees, carts
 // and benches. Water or out of bounds costs a stroke, and the ball goes back where you hit it from. Hole out for
-// your score against par (your best on each hole is kept; a hole in one pays the club's prize). Walk away from your
-// ball a while, drive off or go down, and the hole is given up.
+// your score against par (your best on each hole is kept; a hole in one pays the club's prize). The phone's Quit
+// (activityquit.js) gives the hole up; so does walking off the course (QUIT.awayS after a warning: walkaway.js), getting
+// in anything but a golf cart, going down or logging off.
 import { K, DT, TILE } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { GOLF_FEE, HOLE_IN_ONE_PRIZE, MAX_STROKES, GOLF_REACH, CUP_R, CUP_SPEED, GOLF_GRAV, CLUBS, LIES, LIE_NAME, swingMeter, lieAt, clubFor, launchSpeed, scoreName } from '../../shared/golf.js';
 import { payFrom } from './economy.js';
 import { store } from '../store.js';
+import { QUIT } from '../../shared/rules.js';
+import { walkedOff, awayText } from './walkaway.js';
 
-const ABANDON_PX = 1400, ABANDON_S = 25, TEE_PAD = 10;
+const TEE_PAD = 10;
 const holeOf = (world, n) => (world.map.golf && world.map.golf.holes ? world.map.golf.holes[n - 1] : null) || null;
 const metres = (px) => Math.max(1, Math.round(px / 32));
 
@@ -54,7 +57,7 @@ export function teeOff(world, p, n) {
   if (!payFrom(p, GOLF_FEE)) { world.notify(p, `The green fee is $${GOLF_FEE} a hole.`, 'warn'); return 'money'; }
   if (p.golf) quit(world, p, null);
   const b = world.add({ id: world.newId(), kind: K.BALL, x: h.tee.x, y: h.tee.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'golf', golfer: p.pid, rest: true, cx: -1, cy: -1 });
-  p.golf = { n, par: h.par, ball: b.id, strokes: 0, from: { x: b.x, y: b.y }, club: clubFor('tee', Math.hypot(h.pin.x - b.x, h.pin.y - b.y)), lie: 'tee', charge: -1, aim: 0, away: 0 };
+  p.golf = { n, par: h.par, ball: b.id, strokes: 0, from: { x: b.x, y: b.y }, club: clubFor('tee', Math.hypot(h.pin.x - b.x, h.pin.y - b.y)), lie: 'tee', charge: -1, aim: 0, awayAt: 0 };
   world.notify(p, `Hole ${n}, par ${h.par}, ${metres(Math.hypot(h.pin.x - b.x, h.pin.y - b.y))} m. Stand by your ball, aim at the flag, hold the attack button and let go when the meter's at the top.`, 'info');
   p.meDirty = true;
   store.touch();
@@ -202,6 +205,12 @@ export function quit(world, p, msg) {
   p.meDirty = true;
 }
 
+// off the course: outside its area, more than QUIT.coursePadPx past the edge
+export function offCourse(g, at) {
+  const r = g.rect, pad = QUIT.coursePadPx;
+  return at.x < r.x0 - pad || at.x >= r.x1 + pad || at.y < r.y0 - pad || at.y >= r.y1 + pad;
+}
+
 export function update(world, dt) {
   if (!world.map.golf) return;
   for (const p of world.players.values()) {
@@ -209,10 +218,10 @@ export function update(world, dt) {
     if (!G) continue;
     const ped = p.ped, b = world.get(G.ball);
     if (!b || b.removed) { p.golf = null; p.meDirty = true; continue; }
-    if (!ped || ped.dead || ped.removed || ped.hidden) { quit(world, p, 'You left your ball on the course - hole given up.'); continue; }
-    const far = !!ped.vehId || Math.hypot(ped.x - b.x, ped.y - b.y) > ABANDON_PX;
-    G.away = far ? G.away + dt : 0;
-    if (G.away > ABANDON_S) { quit(world, p, 'You walked off the course - hole given up.'); continue; }
+    const v = ped && !ped.dead && ped.vehId ? world.get(ped.vehId) : null;
+    if (v && v.model !== 'golfcart') { quit(world, p, 'You got in a vehicle - hole given up.'); continue; }   // (a golf cart takes you round the course)
+    if (!ped || ped.dead || ped.removed || (ped.hidden && !v)) { quit(world, p, 'You left your ball on the course - hole given up.'); continue; }
+    if (walkedOff(world, p, G, offCourse(world.map.golf, v || ped))) { quit(world, p, 'You walked off the course - hole given up.'); continue; }
     if (!b.rest) stepBall(world, p, G, b, dt);
   }
   // balls whose golfer has gone (logged off)
@@ -237,5 +246,5 @@ export function targetFor(world, p) {
   const b = world.get(G.ball), h = holeOf(world, G.n);
   if (!b || !h) return null;
   const atBall = Math.hypot(b.x - ped.x, b.y - ped.y) < 90;
-  return { text: `Hole ${G.n} · par ${G.par} · stroke ${G.strokes + 1} · ${CLUBS[clubNow(world, G, b)].name}${atBall ? '' : ' - walk to your ball'}`, x: Math.round(atBall ? h.pin.x : b.x), y: Math.round(atBall ? h.pin.y : b.y), stage: 'golf' };
+  return { text: awayText(world, G) || `Hole ${G.n} · par ${G.par} · stroke ${G.strokes + 1} · ${CLUBS[clubNow(world, G, b)].name}${atBall ? '' : ' - walk to your ball'}`, x: Math.round(atBall ? h.pin.x : b.x), y: Math.round(atBall ? h.pin.y : b.y), stage: 'golf' };
 }

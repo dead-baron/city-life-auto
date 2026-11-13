@@ -1,15 +1,17 @@
 // Mini-games: soccer on the Greenfield Park pitch and beach volleyball. The ball is always out
 // there - anyone can kick it around. When two or more players are on the pitch / court a match
-// counts down and starts; teams are split by where you stand. Walk off and you forfeit (the
-// match goes on), anyone who arrives mid-match joins the next round. Weapons still work: if
+// counts down and starts; teams are split by where you stand. Walk off (QUIT.awayS after a
+// warning: walkaway.js), get in a vehicle or use the phone's Quit (activityquit.js) and you
+// forfeit (the match goes on); anyone who arrives mid-match joins the next round. Weapons still work: if
 // every player on one side is dead or gone, the last team standing wins.
 import { K } from '../../shared/constants.js';
 import { MATCH_COUNTDOWN_S, SOCCER_GOALS, SOCCER_MATCH_S, VOLLEY_POINTS, MATCH_PRIZE } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { store } from '../store.js';
+import { walkedOff, awayText } from './walkaway.js';
 
 const rng = mulberry32(5150);
-const RESULTS_S = 6, LEAVE_GRACE_S = 3, JOIN_MARGIN = 48;
+const RESULTS_S = 6, JOIN_MARGIN = 48;
 const GRAV = 620, NET_H = 46;
 export const TEAM_NAMES = ['RED', 'BLUE'];
 
@@ -202,10 +204,11 @@ export function update(world, dt) {
         st.teams[k] = st.teams[k].filter((pid) => {
           const p = world.players.get(pid);
           const ped = p && p.ped;
-          if (!p || !ped || ped.dead) { if (p) world.notify(p, 'You were knocked out of the match.', 'bad'); return false; }
-          if (inRect(venue.rect, ped.x, ped.y, JOIN_MARGIN * 2) && !ped.vehId) { st.out.delete(pid); return true; }
-          if (!st.out.has(pid)) st.out.set(pid, now);
-          if (now - st.out.get(pid) < LEAVE_GRACE_S) return true;
+          if (!p || !ped || ped.dead) { if (p) world.notify(p, 'You were knocked out of the match.', 'bad'); if (st.out) st.out.delete(pid); return false; }
+          if (ped.vehId) { st.out.delete(pid); world.notify(p, 'You got in a vehicle - forfeited. The match goes on without you.', 'warn'); p.meDirty = true; return false; }
+          let A = st.out.get(pid);
+          if (!A) st.out.set(pid, (A = { awayAt: 0 }));
+          if (!walkedOff(world, p, A, !inRect(venue.rect, ped.x, ped.y, JOIN_MARGIN * 2))) return true;
           st.out.delete(pid); world.notify(p, 'You walked off - forfeited. The match goes on without you.', 'warn'); p.meDirty = true;
           return false;
         });
@@ -241,6 +244,22 @@ function start(world, venue, st, players) {
   world.broadcast({ e: 'teams', v: venue.id, t: pedIds(world, st) });
 }
 
+// the match you're playing in (its venue's index), or -1
+export function matchOf(world, p) {
+  if (!world.matchState) return -1;
+  return world.matchState.findIndex((st) => st.phase === 'playing' && st.teams.some((t) => t.includes(p.pid)));
+}
+// walk off the pitch at once (the phone's Quit: activityquit.js) - a forfeit, the match goes on
+export function leaveMatch(world, p) {
+  const i = matchOf(world, p);
+  if (i < 0) return false;
+  const st = world.matchState[i];
+  st.teams = st.teams.map((t) => t.filter((pid) => pid !== p.pid));
+  if (st.out) st.out.delete(p.pid);
+  p.meDirty = true;
+  return true;
+}
+
 // HUD tracker line for players in a match.
 export function targetFor(world, p) {
   if (!world.matchState) return null;
@@ -250,7 +269,7 @@ export function targetFor(world, p) {
     if (k < 0 || st.phase !== 'playing') continue;
     const b = ballOf(world, i);
     const left = venue.kind === 'soccer' ? ` · ${Math.max(0, Math.ceil((SOCCER_MATCH_S - (world.time - st.t)) / 60 * 10) / 10)} min` : '';
-    return { text: `${venue.kind === 'soccer' ? 'Soccer' : 'Volleyball'}: ${TEAM_NAMES[0]} ${st.score[0]} - ${st.score[1]} ${TEAM_NAMES[1]} · you're ${TEAM_NAMES[k]}${left}`, x: Math.round(b ? b.x : venue.rect.x), y: Math.round(b ? b.y : venue.rect.y), stage: 'match' };
+    return { text: awayText(world, st.out && st.out.get(p.pid)) || `${venue.kind === 'soccer' ? 'Soccer' : 'Volleyball'}: ${TEAM_NAMES[0]} ${st.score[0]} - ${st.score[1]} ${TEAM_NAMES[1]} · you're ${TEAM_NAMES[k]}${left}`, x: Math.round(b ? b.x : venue.rect.x), y: Math.round(b ? b.y : venue.rect.y), stage: 'match' };
   }
   return null;
 }
