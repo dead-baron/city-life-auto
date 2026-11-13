@@ -259,7 +259,8 @@ function marina(K, m, ctx) {
   }
   // the hire dock's jet skis at the westmost pier's head
   { const px = piers[0], sy = shoreY(px + 1); if (sy !== null) for (let k = 0; k < 3; k++) m.marina.push({ x: (px + 4.2) * TILE, y: (sy + 2 + k * 2.4) * TILE, a: 0, kind: 'jetski' }); }
-  prop('textsign', 2916, (shoreY(2916) || 1996) - 2.6, 0, { text: 'HARBOR MARINA', bg: '#1e3a5e', fg: [240, 236, 220], z: 40, sx: 2 });
+  // (no HARBOR MARINA board on posts by the water: the shop's front says it, and the board stood over the boat hire's
+  // kiosk's Rentals sign - the owner, 2026-11-13, "two Harbor Marina signs")
   (ctx.out.places ||= []).push({ name: 'Harbor Marina', x0: 2880, y0: 1960, x1: 2965, y1: 2020 }, { name: 'Harbor Light', x0: 2864, y0: 1980, x1: 2884, y1: 2000 });
 }
 
@@ -562,7 +563,9 @@ function boatworks(K, m, ctx) {
     const slx = 3410, sly = shoreY(3412, 2000);
     if (sly !== null) {
       deck(slx, sly - 1, slx + 5, sly + 10);
-      for (let k2 = 0; k2 < 3; k2++) m.marina.push({ x: (slx + 7.5) * TILE, y: (sly + 2 + k2 * 3.2) * TILE, a: Math.PI / 2, kind: k2 === 1 ? 'dinghy' : 'speedboat' });
+      // (off the shore where they lie - it slants away east of the slip: the first boat's bow was up the beach)
+      const sb = Math.max(sly, shoreY(slx + 7, 2000) ?? sly, shoreY(slx + 8, 2000) ?? sly);
+      for (let k2 = 0; k2 < 3; k2++) m.marina.push({ x: (slx + 7.5) * TILE, y: (sb + 2.2 + k2 * 3.4) * TILE, a: Math.PI / 2, kind: k2 === 1 ? 'dinghy' : 'speedboat' });
       prop('textsign', slx + 2.5, sly - 2, 0, { text: 'SLIPWAY', bg: '#3a3e46', fg: [240, 236, 220], z: 26, sx: 1 });
       if ([...Array(5)].every((_, dy) => [...Array(6)].every((_, dx) => m.tiles[m.idx(slx + 8 + dx, sly - 9 + dy)] === T.LOT))) ctx.raw({ x: slx + 8, y: sly - 9, w: 6, h: 5, arch: 'hut', name: 'Slipway Hut', whole: true, roof: 'tar' });
       for (let k2 = 0; k2 < 3; k2++) prop('canoe', slx - 6 + k2 * 0.9, sly - 4, 0, { a: Math.PI / 2, c: k2 });

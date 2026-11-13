@@ -396,9 +396,10 @@ function waterfront(K, x0, x1, yS, out) {
     if (k === 1) m.marina.push({ x: (x + 4.2) * TILE, y: (y - len + 4) * TILE, a: -Math.PI / 2, kind: 'waterbus', party: true });
     prop('lamp', x + 0.5, y - len + 1.5, 0);
   });
-  prop('textsign', 3071, yS - 1.5, 0, { text: 'HARBOR MARINA', bg: '#16121e', fg: [90, 230, 255], z: 40, sx: 2, lit: true });
+  // (its own name: the Harbor's marina is Harbor Marina - two places of one name, two of its signs)
+  prop('textsign', 3071, yS - 1.5, 0, { text: 'NEON BAY MARINA', bg: '#16121e', fg: [90, 230, 255], z: 40, sx: 2, lit: true });
   void rnd; out.promenade = n;
-  (out.places ||= []).push({ name: 'Harbor Marina', x0: 3040, y0: yS - 30, x1: 3104, y1: yS });
+  (out.places ||= []).push({ name: 'Neon Bay Marina', x0: 3040, y0: yS - 30, x1: 3104, y1: yS });
 }
 
 // Blossom Plaza (NE2's central plaza): paving, a fountain in the middle under a ring of cherry trees, benches round

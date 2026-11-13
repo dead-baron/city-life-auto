@@ -447,8 +447,9 @@ function build(m, api, K) {
         const yx0 = mx0 + 17, yx1 = Math.min(byX1, yx0 + 26);
         K.fill(yx0, byY, yx1 - yx0, 14, T.LOT); K.take(yx0, byY, yx1 - yx0, 14);
         // (the boats up on the hard in two rows, their keels on stands; the timber, the drums, the crates)
-        prop('yacht', yx0 + 5, byY + 4.5, 26, { a: 0 }); prop('sailboat', yx0 + 6, byY + 10.5, 26, { a: 0, len: 124, sail: 0, c: 1 });
-        prop('sailboat', yx0 + 15, byY + 4.5, 26, { a: 0, len: 112, sail: 0, c: 2 }); prop('yacht', yx0 + 16, byY + 10.5, 26, { a: 0 });
+        // (up on their cradles - lift, as the Harbor's boatyard has them: not sitting flat on the asphalt as if afloat)
+        prop('yacht', yx0 + 5, byY + 4.5, 26, { a: 0, lift: 6 }); prop('sailboat', yx0 + 6, byY + 10.5, 26, { a: 0, len: 124, sail: 0, c: 1, lift: 6 });
+        prop('sailboat', yx0 + 15, byY + 4.5, 26, { a: 0, len: 112, sail: 0, c: 2, lift: 6 }); prop('yacht', yx0 + 16, byY + 10.5, 26, { a: 0, lift: 6 });
         for (const [t, dx, dy] of [['lumber', 2, 2], ['drum', 1.5, 9], ['drum', 2.5, 9.6], ['crates', yx1 - yx0 - 2, 3], ['pallet', yx1 - yx0 - 2, 11], ['lumber', yx1 - yx0 - 3, 7]]) prop(t, yx0 + dx, byY + dy, 10);
         prop('chainfence', yx0 + 0.2, byY + 13.8, 0, { tx: Math.round((yx1 - yx0 - 0.4) * TILE), ty: 0 });
       }

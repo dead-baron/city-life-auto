@@ -4541,7 +4541,7 @@ const tileIdx = (m, tx, ty) => (m.inside(tx, ty) ? ty * m.w + tx : -1);
 
 // A shore tile near (cx, cy) with a straight run of open water ahead: nothing over it (no road or
 // rail bridge, no highway deck) and wide enough for a pier with a slip on one side.
-function findLaunch(m, cx, cy, R, run, used, half = 3) {
+function findLaunch(m, cx, cy, R, run, used, half = 3, clear = 0) {   // (clear: no planks within that many tiles either side - a hire's berths)
   let best = null, bd = Infinity;
   for (let ty = cy - R; ty <= cy + R; ty++) for (let tx = cx - R; tx <= cx + R; tx++) {
     const i = tileIdx(m, tx, ty);
@@ -4559,6 +4559,9 @@ function findLaunch(m, cx, cy, R, run, used, half = 3) {
         const j = tileIdx(m, tx + dx * k + px * o, ty + dy * k + py * o);
         if (j < 0 || !isWater(m.tiles[j]) || m.reserve[j] & 2 || m.deck[j]) { ok = false; break; }
       }
+      // (a hire pier's berths clear of the piers already there: World v3's Harbor hire went in a tile off a finger pier,
+      // its boats on the planks)
+      for (let k = 0; k <= run && ok && clear; k++) for (let o = -clear; o <= clear; o++) { const j = tileIdx(m, tx + dx * k + px * o, ty + dy * k + py * o); if (j >= 0 && (m.tiles[j] === T.DOCK || m.tiles[j] === T.BRIDGE)) { ok = false; break; } }
       if (!ok) continue;
       best = { tx, ty, dx, dy };
       bd = d0;
@@ -4624,7 +4627,7 @@ function buildBoatDocks(m) {
   for (const lk of LAKES) if (lk[4] === 'Cedar Lake' || lk[4] === 'Lakeview Lake') anchors.push({ x: (pin(lk[0] + lk[2] / 2, lk[1] + lk[3] / 2), QX((lk[0] + lk[2] / 2) * TILE)), y: QY((lk[1] + lk[3] / 2) * TILE), name: `${lk[4]} Boat Rental`, lake: true });   // (QX / QY: World v3's gulf places)
   for (const an of anchors) {
     const cx = Math.floor(an.x / TILE), cy = Math.floor(an.y / TILE);
-    const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2);
+    const L = findLaunch(m, cx, cy, an.lake ? 22 : 34, an.lake ? 6 : 8, used, 2, 4);
     if (!L) continue;
     used.push(L);
     const len = an.lake ? 5 : 8;

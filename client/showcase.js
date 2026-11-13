@@ -10,7 +10,7 @@ import { TILE } from '../shared/constants.js';
 
 export const SHOWCASE = [
   // ---- the coasts and the islands ----
-  { g: 'Coasts and islands', n: 'Lighthouse Rock', q: ['Lighthouse Tidepools', 'Lighthouse Rock'], z: 0.85, t: 1125, note: 'the light on its rock at golden hour' },
+  { g: 'Coasts and islands', n: 'Egret Point Light', q: ['Egret Point Light', 'Egret Point'], z: 0.85, t: 1125, note: 'the light on its point at golden hour' },   // (World v3 has no Lighthouse Rock: its tidepools had been laid by the Harbor Light, among the marina's boats)
   { g: 'Coasts and islands', n: 'Gull Point Light', q: ['Gull Point Light', 'Gull Harbor'], z: 0.85, t: 390, note: 'dawn on the ferry island' },
   { g: 'Coasts and islands', n: 'Gull Harbor quay', q: ['Quay Street', 'Gull Harbor'], z: 1, t: 540, note: 'the harbour village, the fleet in' },
   { g: 'Coasts and islands', n: 'Sunset Beach Pier', q: ['Sunset Beach Pier', 'Sunset Beach'], z: 0.85, t: 1205, note: 'the boardwalk and the Ferris wheel at dusk' },

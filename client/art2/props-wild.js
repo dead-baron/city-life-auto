@@ -538,6 +538,45 @@ export function boathouse(open = 1) {
   m.fill((x, y, z) => { const top = H + 2 + (w / 2 + 4 - Math.abs(x - cx)) * 0.85; return z >= top - 2.5 && z < top ? roof : -1; }, x0 - 4, y0 - 2, H - 2, x1 + 4, y1 + 3, H + 30);
   return m;
 }
+// a kayak hire's shack at a river put-in (the owner, 2026-11-13: "a shack near it with some kayaks propped up against
+// it"): weathered board-and-batten walls, a rusty tin roof pitched along x, a plank door and a lantern by it, a life
+// vest on a peg; three kayaks stood up against the south wall, leaning in under the eaves, two paddles between them
+export const KSHACK = { w: 54, d: 32, H: 32 };
+export function kayakShack() {
+  const { w, d, H } = KSHACK, m = new Vox(w + 6, d + 14, H + 20), x0 = 3, y0 = 2, x1 = x0 + w, y1 = y0 + d, cy = (y0 + y1) / 2;
+  const board = m.mat({ ramp: R('#7a6a58'), k: 3, shade: (x, y, z) => ((Math.round(x) + Math.round(y)) % 5 === 0 ? -1 : 0) + (hash(Math.floor((x + y) / 5), Math.round(z / 3), 81) - 0.5) * 0.7 + (z < 3 ? -0.6 : 0) });
+  const post = m.mat({ ramp: R('#4e3e30'), k: 3 }), door = m.mat({ ramp: R('#5a4430'), k: 3, shade: (x) => (Math.round(x) % 3 === 0 ? -0.9 : 0) });
+  const tin = m.mat({ ramp: R('#6e5a4a'), k: 3, shade: (x, y, z) => (Math.round(y) % 3 === 0 ? -1 : 0.25) + (Math.round(y) % 3 !== 0 && (Math.floor(x / 4) + Math.floor(y / 3)) % 2 && hash(Math.floor(x / 4), Math.floor(y / 3), 83) > 0.55 ? -0.35 : 0) });   // (cedar shakes in courses)
+  const dark = m.mat({ ramp: R('#22201c'), k: 1 }), vest = m.mat({ ramp: R('#e8642a'), k: 3 }), lamp = m.mat({ ramp: R('#ffd890', 5, 3), k: 4, emi: [255, 200, 120, 200], flag: F_NOCAST });
+  // the walls (the gable ends rise to the ridge along x), corner posts
+  m.fill((x, y, z) => {
+    if (!(x < x0 + 2 || x >= x1 - 2 || y < y0 + 2 || y >= y1 - 2)) return -1;
+    const top = x < x0 + 2 || x >= x1 - 2 ? H + Math.max(0, (d / 2 - Math.abs(y - cy)) * 0.6) : H;
+    if (z >= top) return -1;
+    return (x < x0 + 3 || x >= x1 - 3) && (y < y0 + 3 || y >= y1 - 3) ? post : board;
+  }, x0, y0, 0, x1, y1, H + 12);
+  // the door at the south face's west end, its frame; the lantern by it, the life vest on its peg
+  m.box(x0 + 5, y1 - 1, 0, x0 + 15, y1, 22, door); m.box(x0 + 4, y1 - 1, 22, x0 + 16, y1, 24, post); m.box(x0 + 9, y1, 9, x0 + 10, y1 + 1, 11, dark);
+  m.box(x0 + 17, y1, 16, x0 + 19, y1 + 2, 19, lamp); m.box(x0 + 17, y1, 19, x0 + 19, y1 + 2, 20, dark);
+  m.box(x0 + 1, y1, 10, x0 + 4, y1 + 1, 17, vest);
+  // the roof: two pitches meeting on the ridge along x, the eaves out past the walls
+  m.fill((x, y, z) => { const top = H + 2 + (d / 2 + 4 - Math.abs(y - cy)) * 0.6; return z >= top - 2 && z < top ? tin : -1; }, x0 - 3, y0 - 2, H - 2, x1 + 3, y1 + 4, H + 20);
+  // the kayaks against the wall: hulls stood on end, foot out from the wall, the top in under the eaves
+  const cols = ['#d8442e', '#e8b830', '#2f8aa0'];
+  cols.forEach((c, k) => {
+    const hull = m.mat({ ramp: R(c, 6, 3, { light: 0.5 }), k: 3, shade: (x, y, z) => (Math.round(z) % 11 === 0 ? -0.5 : 0) }), cock = m.mat({ ramp: R('#1e1c1e'), k: 1 });
+    const cx = x0 + 26 + k * 9, L = 30;
+    m.fill((x, y, z) => {
+      const t = (z / L) * 2 - 1, q = 1 - t * t * t * t, half = 3.4 * Math.sqrt(Math.max(0, q)), lean = y1 + 6 - (z / L) * 5;
+      if (Math.abs(x - cx) > half || Math.abs(y - lean) > 2.1 * Math.sqrt(Math.max(0, q)) + 0.4) return -1;
+      return t > -0.2 && t < 0.25 && Math.abs(x - cx) < half - 1.3 && y > lean ? cock : hull;
+    }, cx - 4, y1, 0, cx + 5, y1 + 10, L + 1);
+  });
+  // two paddles between the boats, blades at both ends
+  const shaft = m.mat({ ramp: MAT.woodDark, k: 3 }), blade = m.mat({ ramp: R('#2a5a7a'), k: 3 });
+  for (const px of [x0 + 30, x0 + 39]) for (let z = 0; z < 31; z++) { const yy = y1 + 5 - (z / 31) * 4; m.box(px, yy, z, px + 1, yy + 1, z + 1, z < 6 || z > 24 ? blade : shaft); if (z < 6 || z > 24) m.box(px - 1, yy, z, px + 2, yy + 1, z + 1, blade); }
+  return m;
+}
 // an outdoor shower on a little plank deck: a metal pipe up to a head on an arm, a tap, a slatted base
 export function beachShower(run = 1) {
   const m = new Vox(40, 34, 64);

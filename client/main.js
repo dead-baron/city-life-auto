@@ -4096,29 +4096,14 @@ function tickInterior() {
 }
 $('int-open').onclick = () => send({ t: 'interior' });
 
-// Race buoys: a big start float with a chequered flag, numbered checkpoint buoys bobbing.
+// Race marks: the start float or flag, the numbered gate buoys - pixel art (client/render/racemarks.js, loaded the first
+// time one is in view)
 function drawBuoys(view, now) {
-  const inView = (p) => p.x > view.x0 - 60 && p.x < view.x1 + 60 && p.y > view.y0 - 60 && p.y < view.y1 + 60;
-  for (const race of S.map.races || []) {
-    const bob = (k) => Math.sin(now * 2 + k) * 1.5;
-    race.cps.forEach((c, k) => {
-      if (!inView(c)) return;
-      g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(c.x, c.y + 4, 14, 6, 0, 0, 6.28); g.fill();
-      g.fillStyle = k % 2 ? '#ffffff' : '#e8382b'; g.beginPath(); g.arc(c.x, c.y + bob(k), 9, 0, 6.28); g.fill();
-      g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
-    });
-    const s = race.start;
-    if (!inView(s)) continue;
-    g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(s.x, s.y + 6, 26, 9, 0, 0, 6.28); g.fill();
-    g.fillStyle = '#ff9a1a'; g.beginPath(); g.arc(s.x, s.y + bob(9), 14, 0, 6.28); g.fill();
-    g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-    g.fillStyle = '#1b2333'; g.fillRect(s.x - 1, s.y - 30, 2, 28);
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
-    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
-    g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
-    g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
-  }
+  const races = S.map.races;
+  if (!races || !races.length) return;
+  if (S.raceMarks) { S.raceMarks.drawRaceMarks(g, races, view, now); return; }
+  const near = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;
+  if (races.some((r) => near(r.start) || r.cps.some(near))) S.raceMarksP ||= import('./render/racemarks.js').then((m) => { S.raceMarks = m; }).catch(() => { S.raceMarksP = null; });
 }
 
 // Sliding gates (motor pools, the Syndicate compound): steel panels that roll aside.

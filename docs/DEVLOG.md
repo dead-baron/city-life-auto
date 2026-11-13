@@ -22979,3 +22979,40 @@ have an animation and maybe we use an emoji that pops up instead of text ... for
   Emote screen, none left in the sheet); `hudlayout.test.js` (the emote button 44 px or more, in the bottom band on the
   left half, beside the chat button, on nothing). The first-time strip on touch (on its side) starts after the emote
   button now. Budgets: the renderer's code 405 -> 407 KB of 410 (the poses); no budget raised.
+
+## 2026-11-13 - The placement lint; the Harbor marina and the Redwood River Run put right; the race marks drawn as pixel art
+
+The owner, 11-13: at the Harbor's marina "a moored boat sits inside a sea-stack rock" and the boat hire's Rentals sign
+was half under a second HARBOR MARINA board; at the Redwood River Run "it doesn't need a big glowing sign ... a more
+appropriate wooden sign", "a shack near it with some kayaks propped up against it", "the starting marker for the kayak
+run looks like placeholder", "I dont see a way to start the kayak run", and the kayak "spawning under that start
+symbol" with "Fish here" taking the button from it. And: "Is there a way to go through the game and catch some of these
+kinds of errors ... starting with these hand crafted scenes".
+
+- **The Harbor marina.** The sea stacks, the seal rock and the keeper's cottage were Lighthouse Rock's tidepools
+  (shared/naturesites.js `lighthouseTidepools`), laid by the first lighthouse on the map - on World v3 that is the
+  Harbor Light on the city's seawall: they now go only to the light in the Lighthouse Rock district (today's world),
+  and the Showcase's "Lighthouse Rock" (it flew to the Harbor) is Egret Point Light now. The HARBOR MARINA board on
+  posts went (the shop's front says it). The hire's pier went in a tile off a finger pier, its boats on the planks:
+  a hire pier's launch keeps clear of the piers already there (shared/map.js `findLaunch` `clear`). The Neon Strip's
+  marina is Neon Bay Marina - two places of one name.
+- **The Redwood River Run's put-in** (shared/world3-riverrun.js): a kayak shack back from the bank - board-and-batten,
+  cedar shakes, a lantern, three kayaks stood against it, paddles (client/art2/props-wild.js `kayakShack`) - its door
+  the hire's counter; a wooden trail sign with the whole name (the board used to be cut off at a chunk's edge: every
+  text sign is now filed under every chunk its board crosses - client/art2/game/statics.js); the race's start float
+  off the planks' end, clear of the kayaks' spots (and Egret Marsh's the same). On foot on the planks, at the float or
+  at the shack: "Rent a kayak for Redwood River Run" (server/systems/races.js `footInteraction`), before the places
+  and before "Fish here"; and your own ride beside you - the hire kayak, your car - beats "Fish here" too
+  (server/systems/players.js). The Guide has the river run.
+- **Wooden signs in the wilds.** A text sign with `wood` is a trail sign: planks with their seams and grain, a dark
+  frame, the words cut in cream, two square posts with caps, nothing lit. World v3's tidy pass (shared/world3-tidy.js)
+  makes every standing sign in a wild district one (a board chosen `lit` stays lit: Splash Canyon's).
+- **The race marks** (client/render/racemarks.js, loaded the first time a race is in view - out of main.js): the start
+  on the water a striped float on its ripples with a chequered flag on a mast, the gates red and white can buoys with a
+  numbered pennant, the start on land a chequered flag in a weighted block, the land gates cones - pixel art at the art
+  pixel, not flat circles.
+- **The placement lint** (tools/placementlint.mjs, test/placementlint.test.js - World v3, the heavy lock): boats and
+  floats on clear water (not on rocks, planks or the shore), standing boards over each other or over a building's
+  ground floor, two boards of one name in a screen or a board by the building whose front says it, a plant on a roof or
+  a plaza's furniture in a city block, a lit board in the wilds, a race's start over a craft. What it found is fixed in
+  the data - counts below.
