@@ -93,10 +93,10 @@ function showLine(ctl, text, sec, sig, app = null) {
   if (!el) return;
   lineSig = sig;
   // (a tip or the What's next line is a card - its head, what it says, OPEN or MORE and LATER, the close top right, 44 px;
-  // a step's line one line, the control's glyph in front)
+  // a tip's control's glyph in front, an app's none: OPEN says it; a step's line one line, the control's glyph in front)
   const hm = (sec || app) && /^([^:]{2,16}):\s+(.+)$/.exec(text), head = hm ? hm[1] : sec ? 'TIP' : '', words = hm ? hm[2] : text;
   el.innerHTML = sec || app
-    ? `${ctl ? ctlGlyph(ctl, words) : ''}<div class="fl-body">${head ? `<small>${esc(head)}</small>` : ''}<span>${esc(words)}</span><div class="fl-acts"><button class="fl-more">${sec ? 'MORE IN YOUR GUIDE' : 'OPEN'}</button><button class="fl-x fl-later">LATER</button></div></div><button class="fl-x" aria-label="Dismiss">&times;</button>`
+    ? `${ctl && !app ? ctlGlyph(ctl, words) : ''}<div class="fl-body">${head ? `<small>${esc(head)}</small>` : ''}<span>${esc(words)}</span><div class="fl-acts"><button class="fl-more">${sec ? 'MORE IN YOUR GUIDE' : 'OPEN'}</button><button class="fl-x fl-later">LATER</button></div></div><button class="fl-x" aria-label="Dismiss">&times;</button>`
     : `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>`;
   if (sec) el.dataset.guide = sec; else delete el.dataset.guide;
   if (app) el.dataset.app = app; else delete el.dataset.app;
