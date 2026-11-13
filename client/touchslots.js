@@ -25,10 +25,10 @@ export { iconOf } from './touchicons.js';
 // (you) and inside the safe areas (test/touchslots.test.js, acticons.test.js; the HUD: test/hudlayout.test.js). wp, the
 // weapon button (UI-6): the HUD's weapon plate as a card.
 export const GEO = {
-  land: { stick: [88, 88, 132], fire: [202, 88, 76], act: [167, 167, 76], roll: [268, 40, 68], car: [304, 98, 68], c1: [203, 228, 52], c2: [143, 241, 52],
-    wp: [70, 206, 76, 52], u4: [32, 300, 52], u3: [92, 300, 52], u2: [152, 300, 52], u1: [212, 300, 52] },
-  port: { stick: [70, 80, 116], u4: [163, 34, 52], fire: [156, 125, 76], act: [54, 180, 76], roll: [124, 196, 60], wp: [40, 251, 76, 52], c1: [110, 251, 52],
-    c2: [168, 251, 52], car: [88, 309, 60], u1: [30, 309, 52], u2: [30, 367, 52], u3: [88, 367, 52] },
+  land: { stick: [88, 88, 132], fire: [196, 92, 64], act: [166, 172, 64], roll: [252, 40, 52], car: [282, 98, 52], c1: [200, 236, 48], c2: [150, 238, 48],
+    wp: [70, 214, 76, 44], u4: [32, 300, 48], u3: [88, 300, 48], u2: [144, 300, 48], u1: [200, 300, 48] },
+  port: { stick: [70, 80, 116], fire: [158, 128, 64], u4: [158, 40, 48], act: [82, 176, 64], roll: [140, 194, 52], car: [34, 236, 52], wp: [96, 256, 68, 48],
+    u3: [164, 252, 48], c1: [98, 308, 48], c2: [40, 308, 48], u1: [40, 362, 48], u2: [98, 362, 48] },
 };
 export const MIN_TAP = 48;   // (the smallest a button gets: on a 360-px phone a 52 is 48 - the room the cluster has, the middle kept clear)
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)

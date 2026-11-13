@@ -81,10 +81,11 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     const nav = bs.filter((b) => b.name !== 'b-dev'), dbg = bs.find((b) => b.name === 'b-dev');
     // (on touch chat is by the thumb - the owner, 11-12: the top row was a stretch for something used often - the row
     // phone, map, menu; the thumb's chat button 44 px or more, in the bottom band, clear of the move stick's rest and of
-    // every other button - the overlap checks above take it in as 'talk')
+    // every other button - the overlap checks above take it in as 'talk'; upright and on its side alike it sits by the
+    // move stick along the bottom, on the left half: the owner, 2026-11-12)
     const touch = dev === 'touch', talk = r.keep.find((k) => k.name === 'talk');
     if (touch !== !!talk) row.push(`${tag}: the thumb's chat button ${talk ? 'shown' : 'missing'}`);
-    if (talk && (talk.x1 - talk.x0 < 44 || talk.y1 - talk.y0 < 44 || (h > w ? talk.y1 > h / 2 + 4 || talk.y0 < h * 0.3 || talk.x1 > w / 3 : talk.y1 < h - 60 || talk.x0 > w / 2))) row.push(`${tag}: the thumb's chat button isn't by the left thumb (${talk.x0},${talk.y0}-${talk.x1},${talk.y1})`);
+    if (talk && (talk.x1 - talk.x0 < 44 || talk.y1 - talk.y0 < 44 || talk.y1 < h - 60 || talk.x1 > w / 2)) row.push(`${tag}: the thumb's chat button isn't by the left thumb (${talk.x0},${talk.y0}-${talk.x1},${talk.y1})`);
     const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-menu';
     if (nav.map((b) => b.name).join() !== want) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);

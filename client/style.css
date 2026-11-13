@@ -37,7 +37,8 @@
   /* Direction A, the SNES pad (the owner, 2026-11-12): the in-play HUD's panels and buttons - navy, a near-black edge, a
      gold rim inside, a hard shadow; the four face buttons' colors; the bars'; the sticks' faint ring and knob */
   --pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945; --pad-cream: #f4ecd8; --pad-mute: #8b93a8; --pad-line: #4a5370; --pad-obj: #b794f4;
-  --pad-fire: #d8323c; --pad-act: #e8b21a; --pad-roll: #2f6fd6; --pad-car: #2f9e4f;
+  --pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;
+  --disc: rgba(20, 26, 51, .55); --disc-on: rgba(20, 26, 51, .8);
   --pad-hp: #e8434b; --pad-hp-d: #3a2030; --pad-ar: #4aa8ff; --pad-ar-d: #1d2a48; --pad-st: #e8b21a; --pad-st-d: #3a3220; --pad-cash: #3ccf6e;
   --pad-hi: rgba(255, 255, 255, .35); --pad-lo: rgba(0, 0, 0, .25); --pad-drop: rgba(0, 0, 0, .45); --pad-veil: rgba(11, 16, 32, .85);
   --stick-ring: rgba(244, 236, 216, .28); --stick-knob: rgba(244, 236, 216, .3); --stick-edge: rgba(11, 16, 32, .5);
@@ -364,7 +365,7 @@ body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-ta
 #b-talk { display: none; }
 body.touch #b-talk { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 134px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
 body.touch #b-talk:active { transform: scale(var(--press)); }
-body.portrait.touch #b-talk { left: max(16px, env(safe-area-inset-left)); bottom: calc(50% + 8px); }
+body.portrait.touch #b-talk { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: max(8px, env(safe-area-inset-bottom)); width: 44px; height: 44px; }   /* (upright: beside the move stick's ring along the bottom, as in landscape - clear of the prompt cards over it) */
 
 /* the plate: health, armor, stamina - the icon, the segmented bar, the number - then the cash and the stars */
 #hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 10px; box-sizing: border-box; min-width: var(--trw); padding: 8px 10px; }
@@ -468,6 +469,7 @@ body:not(.touch) #weapon.compact { display: none; }   /* (the owner's minimal HU
 .touch #w-icon { display: none; }   /* (the sprite: the desktop's card; on touch the glyph - the owner, 11-03) */
 .touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--pad-cream); --ic: 30px; }
 .touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 22px; }
+.touch #weapon { overflow: hidden; background: var(--disc); }
 .touch #weapon:active { transform: scale(.94); }
 .touch #w-quick { display: none; }
 .touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--pad-cream); white-space: nowrap; }
@@ -658,19 +660,20 @@ body.portrait #zone-l { top: 50%; }
    switch that's on lit gold; reloading, the ring round FIRE. */
 #tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; box-sizing: border-box; padding: 0; border-radius: var(--r3); border: 2px solid var(--pad-ink); background: var(--pad-navy); box-shadow: var(--pn-rim), 0 3px 0 var(--pad-drop); color: var(--white); font: 700 var(--fs-w2) var(--pixel); transition: transform var(--t-pop) var(--ease), background-color var(--t1), opacity var(--t2); }
 #tbtns button[data-slot] { display: flex; }
-#tbtns button.face { border: 0; box-shadow: inset 0 4px 0 var(--pad-hi), inset 0 -6px 0 var(--pad-lo), 0 4px 0 var(--pad-drop); }
-#tbtns [data-slot=fire] { background: var(--pad-fire); --cut: var(--pad-fire); }
-#tbtns [data-slot=act] { background: var(--pad-act); --cut: var(--pad-act); }
-#tbtns [data-slot=roll] { background: var(--pad-roll); --cut: var(--pad-roll); }
-#tbtns [data-slot=car] { background: var(--pad-car); --cut: var(--pad-car); }
-#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; color: var(--white); text-shadow: 2px 2px 0 var(--pad-ink); pointer-events: none; }
-#tbtns .w[data-fs="16"] { font-size: var(--fs-3); } #tbtns .w[data-fs="14"] { font-size: var(--fs-2); } #tbtns .w[data-fs="12"] { font-size: var(--fs-w2); } #tbtns .w[data-fs="10"] { font-size: var(--fs-w1); }
+#tbtns button.face { border: 3px solid var(--acc); background: var(--disc); box-shadow: 0 2px 0 var(--pad-drop); --cut: var(--disc); }
+#tbtns [data-slot=fire] { --acc: var(--pad-fire); }
+#tbtns [data-slot=act] { --acc: var(--pad-act); }
+#tbtns [data-slot=roll] { --acc: var(--pad-roll); }
+#tbtns [data-slot=car] { --acc: var(--pad-car); }
+#tbtns button.face:is(:active, .on) { background: var(--disc-on); }
+#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 12px var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
+#tbtns .w[data-fs="10"] { font-size: 10px; }
 #tbtns small.w { color: var(--pad-mute); }
-.sym { display: block; flex: none; width: 48px; height: 48px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
+.sym { display: block; flex: none; width: 32px; height: 32px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 .s-cross { background-image: url(../assets/ui/s-cross.png); } .s-chev { background-image: url(../assets/ui/s-chev.png); }
 .s-enter { background-image: url(../assets/ui/s-enter.png); } .s-exit { background-image: url(../assets/ui/s-exit.png); }
 #tbtns button:active, #tbtns button.on { transform: scale(.9); transition-duration: var(--t0); }
-#tbtns [data-slot=fire]:is(:active, .on) { background: var(--fire-hi); }
+
 #tbtns button.pulse { outline: 3px solid var(--pad-gold); outline-offset: 2px; animation: pulse 1.2s ease-in-out infinite; }   /* (the action that's there to take) */
 @keyframes pulse { 50% { outline-color: transparent; } }
 #tbtns button.pulse.crime { outline-color: var(--danger); animation-name: pulsebad; }   /* (a crime: red, with the "!") */
@@ -688,7 +691,7 @@ body.portrait #zone-l { top: 50%; }
 /* a long press: the button's name in a small tip over it - the whole prompt for the button it names (client/touchslots.js) */
 #tbtip { position: fixed; z-index: 8; max-width: calc(100vw - 16px); box-sizing: border-box; padding: var(--s1) var(--s3); background: var(--pad-navy); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); font: 700 var(--fs-2) var(--pixel); white-space: normal; pointer-events: none; animation: prpop var(--t-pop) var(--ease); }
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
-#touch.idle #tbtns button:not(.pulse):not(.face) { opacity: .7; }   /* (the colored discs stay as they are: faded they read as pink and mud) */
+#touch.idle #tbtns button:not(.pulse) { opacity: .7; }
 #touch.idle #stick-l:not(.active) { opacity: .35; }
 #touch.idle #stick-r:not(.aiming) { opacity: .6; }
 #dev-btn { display: none !important; }

@@ -517,9 +517,7 @@ const EM = (c) => ('!\'.:il|'.includes(c) ? 0.3 : ' "()1I[]j'.includes(c) ? 0.5 
 export const wordEm = (w) => [...String(w)].reduce((n, c) => n + EM(c), 0);
 // the biggest of the steps the word fits a w-px disc at (16 only on the big discs, for four letters or fewer)
 export function wordPx(word, w) {
-  const em = wordEm(word), room = w - 12;
-  for (const px of w >= 70 && String(word).length <= 4 ? [16, 14, 12, 10] : [14, 12, 10]) if (em * px <= room) return px;
-  return 10;
+  return w >= 60 && wordEm(word) * 12 <= w - 12 ? 12 : 10;   // (one size per kind of button: 12 on FIRE and ACT, 10 on the small ones)
 }
 // the button's inside for that face (w: its size in px)
 export function faceHtml(f, w) {

@@ -22902,3 +22902,24 @@ than under it (the switches' row of the action cluster is under them - its GEO k
 are 60 px upright; the switch words go below 14 px. Tests updated where the design changed on purpose (sizes, the row,
 the clock under the minimap, the objective top centre); the safety rules (overlap, safe areas, MIN_TAP, the middle) are
 unchanged.
+
+## 2026-11-12 - The touch buttons, one standard: smaller, see-through, centered, chat by the stick
+
+The owner, on a phone held upright: the icons weren't centered, the words were different sizes and off center, the
+buttons were big and crammed into the bottom right, and the chat button belonged by the left stick. The causes:
+each word picked its own size (16/14/12/10), a one-sided 2 px text shadow and the bevel's insets pushed the faces
+off center, 48 px symbols sat on 60-76 px discs, and the discs were big, solid and saturated. And a `display: grid`
+on the faces beat `display: none`, so the hidden FIRE and ACT showed, ringless, while driving.
+
+- **One look for every round button:** a see-through navy disc (`--disc`, darker while pressed) with a 3 px ring in
+  the palette's own colors - FIRE red, ACT gold, ROLL blue, the vehicle button green (`--pad-fire/act/roll/car`),
+  the switches cream. The idle fade still applies.
+- **Sizes by kind:** FIRE and ACT 64 px, ROLL and the vehicle button 52, the switches 48 (`client/touchslots.js`
+  GEO, both orientations repacked tighter around the stick; every layout rule in touchslots/acticons still holds).
+- **Words:** one size per kind of button, 12 px on the big two and 10 on the small ones (`wordPx`), with an even
+  1 px outline, so every word sits dead center.
+- **Symbols:** the four (cross, chevrons, enter, exit) redrawn as 16x16 pixel shapes with a 1 px outline, shown at
+  32 px, centered on the disc.
+- **Chat by the thumb:** upright it now sits along the bottom beside the move stick's ring, as it does on its side
+  (`hudlayout.test.js`'s rule updated to say so: by the stick, on the left half).
+- The weapon card upright is see-through too and wider, so the ammo count fits at its normal size.

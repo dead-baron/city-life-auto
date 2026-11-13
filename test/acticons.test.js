@@ -97,9 +97,9 @@ test('the face buttons: FIRE and ROLL symbols while they attack and roll, the ve
     if (f.word) assert.ok(wordEm(f.word) * wordPx(f.word, 48) <= 48 - 6, `${a} ${label}: ${f.word} fits a 48 px disc (inside its rims)`);
   }
   for (const w of Object.values(KIND_WORD)) assert.ok(wordEm(w) * wordPx(w, 70) <= 70 - 12, `${w} fits ACT`);
-  assert.equal(wordPx('ACT', 76), 16); assert.equal(wordPx('ENTER', 76), 14); assert.equal(wordPx('RELOAD', 52), 10);
+  assert.equal(wordPx('ACT', 64), 12); assert.equal(wordPx('ENTER', 64), 12); assert.equal(wordPx('LIGHT', 48), 10); assert.equal(wordPx('AUTO', 48), 10, 'one size per kind of button: 12 on the big two, 10 on the small ones');
   assert.match(faceHtml({ sym: 'cross' }, 76), /<i class="sym s-cross"/);
-  assert.match(faceHtml({ word: 'TALK' }, 76), /<b class="w" data-fs="16">TALK<\/b>/);
+  assert.match(faceHtml({ word: 'TALK' }, 64), /<b class="w" data-fs="12">TALK<\/b>/);
 });
 
 test('the bag: every thing has a line icon of the same family', () => {
