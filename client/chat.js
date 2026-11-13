@@ -3,7 +3,7 @@
 // - speech bubbles over the speaker's head for what's said near you (two lines at most, each gone after a few seconds,
 //   kept off each other and off the screen's edges; your own smaller and above your name);
 // - the feed: the newest line under the HUD's notes (#hud-tl), one on a phone, two on a desktop, each fading on its own;
-// - the chat sheet: T on a keyboard, the HUD's chat button on touch (top left: by the clock, upright under the minimap) - the channel
+// - the chat sheet: T on a keyboard, the HUD's chat button on touch (top left: by the clock, upright beside the minimap) - the channel
 //   (Near / Crew / Faction), the log, quick lines and emotes as chips, the line and SEND; on a phone it sits on top of
 //   the on-screen keyboard (visualViewport) and the touch controls hide while it's up; Esc / the X closes it;
 // - the phone's Messages app (renderApp): threads with the people you've met and your crew, a reply line and quick

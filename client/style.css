@@ -386,13 +386,14 @@ body.dead #job { display: none !important; }
 #b-dev.on { opacity: 1; color: var(--gold); }
 .touch #b-dev { width: var(--tap); height: var(--tap); top: calc(34px + var(--gap) + var(--map) - var(--tap)); }
 /* the chat button (client/chat.js), touch's only - a keyboard has T, a pad the phone's Messages app: a round button in the
-   top-left cluster, beside the clock on a phone on its side (the debug button after it), under the minimap upright */
+   top-left cluster, beside the clock on a phone on its side (the debug button after it), beside the minimap upright */
 #b-chat { display: none; pointer-events: auto; width: var(--nav); height: var(--nav); }
 body.touch #b-chat { display: grid; }
 .touch:not(.portrait) #hud-tl { grid-template-columns: var(--map) auto auto 1fr; }
 .touch:not(.portrait) #b-chat { grid-area: 1 / 3; }
 .touch:not(.portrait) #b-dev { grid-area: 1 / 4; }
 .touch:not(.portrait) #status { grid-area: 2 / 2 / 3 / 5; }
+body.touch.portrait #b-chat { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(34px + var(--gap)); }   /* (upright: beside the minimap's top, the debug button beside its foot - the column under it stays the notes') */
 
 /* what you have: the cash (a robbery's hot money under it), the bank, the vehicle chip, the stars, what you hold */
 #money { position: relative; font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--money); text-shadow: 0 2px 0 var(--ink); }

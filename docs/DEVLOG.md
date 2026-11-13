@@ -22457,7 +22457,8 @@ nothing on screen until someone talks.
 - Keyboard: T (unchanged). Enter sends, Esc closes; `/c` crew, `/f` faction, `/n` near, `/wave` or `/me wave`.
 - Touch: a round chat button (Lucide's message-circle-more, the HUD's line-icon family) in the top-left cluster: on a
   phone on its side beside the clock's plate, right of the minimap (the debug button moves one place along); upright
-  under the minimap. It's touch only: a keyboard has T, and a pad has the phone. The owner's top-right row (PHONE · MAP ·
+  beside the minimap's top (the debug button beside its foot; under it would push the notes and the job card into the
+  middle). It's touch only: a keyboard has T, and a pad has the phone. The owner's top-right row (PHONE · MAP ·
   MENU) is unchanged: a fourth button there pushed the cash too far from the right edge and, upright, into the
   top-centre band (test/hudlayout.test.js). A dot on it means unread phone messages. A tap opens the sheet; another
   tap closes it. The touch sticks keep their behavior: they hide while the sheet is up and come back as they were.
