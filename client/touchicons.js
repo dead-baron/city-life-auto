@@ -503,11 +503,12 @@ export function setActWord(w) { wordNow = w || 'ACT'; return wordNow; }
 export const actWordNow = () => wordNow;
 // the small switches' words (the slot's label is the button's name: its long press, its aria-label)
 const SWITCH_WORD = { firetog: 'AUTO', cruiser: 'CALL', use: 'ITEMS', light: 'LIGHT' };
-// what a slot's button shows: { sym } (cross, chev, enter, exit) or { word }
+// what a slot's button shows: { sym } (cross, chev, enter, exit, shield) or { word }
 export function faceOf(a, label) {
   if (a === 'fire' && (label === 'FIRE' || label === 'HIT')) return hoseNow ? { word: 'HOSE' } : { sym: 'cross' };
   if (a === 'dive' && label === 'ROLL') return { sym: 'chev' };
   if (a === 'vehicle') return { sym: /^(EXIT|OFF)$/.test(label) ? 'exit' : 'enter' };
+  if (a === 'block') return { sym: 'shield' };   // (the owner, 11-13: BLOCK a shield)
   if (a === 'action') return { word: wordNow };
   if (a === 'firetog') return { word: 'AUTO' };   // (on: lit gold - client/input.js showFireToggle; its long press says on or off)
   return { word: SWITCH_WORD[a] || String(label || a).toUpperCase() };
@@ -528,7 +529,7 @@ export function faceHtml(f, w) {
 // the button named in words elsewhere (the hint strips, the Guide, a first-goal line): as it looks - its color, its
 // symbol or its word (the face buttons' colors: FIRE red, ROLL blue, ACT yellow, the vehicle button green)
 const HUE = { fire: 'fire', drivefire: 'fire', dive: 'roll', action: 'act', vehicle: 'car' };
-const CHIP_SYM = { fire: 'cross', drivefire: 'cross', dive: 'chev', vehicle: 'enter' };
+const CHIP_SYM = { fire: 'cross', drivefire: 'cross', dive: 'chev', vehicle: 'enter', block: 'shield' };
 // (f: the face it has in a slot - faceOf; none: the action's own symbol, else word or its name)
 export function faceChip(a, name, f = null) {
   const hue = HUE[a] || 'sw';

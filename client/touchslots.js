@@ -28,7 +28,7 @@ export const GEO = {
   land: { stick: [88, 88, 132], fire: [196, 92, 64], act: [166, 172, 64], roll: [252, 40, 52], car: [282, 98, 52], c1: [200, 236, 48], c2: [150, 238, 48],
     wp: [70, 214, 76, 44], u4: [32, 300, 48], u3: [88, 300, 48], u2: [144, 300, 48], u1: [200, 300, 48] },
   port: { stick: [70, 80, 116], fire: [158, 128, 64], u4: [158, 40, 48], act: [82, 176, 64], roll: [140, 194, 52], car: [34, 236, 52], wp: [96, 256, 68, 48],
-    u3: [164, 252, 48], c1: [98, 308, 48], c2: [40, 308, 48], u1: [40, 362, 48], u2: [98, 362, 48] },
+    c1: [164, 252, 48], u3: [98, 308, 48], c2: [40, 308, 48], u1: [40, 362, 48], u2: [98, 362, 48] },
 };
 export const MIN_TAP = 48;   // (the smallest a button gets: on a 360-px phone a 52 is 48 - the room the cluster has, the middle kept clear)
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)
@@ -127,8 +127,8 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     if (!b) return;
     clearTimeout(tipT);
     tipT = setTimeout(() => {
-      const r = b.getBoundingClientRect(), n = b.dataset.tip || BUTTON_NAME[b.dataset.lbl] || b.dataset.lbl || '';   // (tip: the prompt it does - client/hud.js)
-      if (!n) return;
+      const r = b.getBoundingClientRect(), n = b.dataset.tip || '', w = b.textContent.trim();   // (tip: the prompt it does - client/hud.js)
+      if (!n || n.toUpperCase() === w.toUpperCase()) return;   // (the owner, 11-13: no tip that says the button's own word again - BLOCK held, AUTO; held buttons aren't asking)
       tip.textContent = n; tip.classList.remove('hidden');
       const tw = tip.offsetWidth;
       tip.style.left = `${Math.max(8, Math.min(win.innerWidth - tw - 8, r.left + r.width / 2 - tw / 2))}px`;
@@ -167,7 +167,7 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     const wq = btn.nextw ? btn.nextw.classList : b, cv = inVeh ? S.ents.get(S.ctrlId) : null, cd = cv && cv.d && VEHICLE_BY_INDEX[cv.d.m], pe = S.ents.get(S.myPedId), driver = S.ctrlKind === CTRL.DRIVER;
     const hose = setHose(!inVeh && !air && !board && hoseNear(S, me, VEHICLE_BY_INDEX));
     return set({ hose, custody: !me.dead && (!!me.fight || !!(me.custody && me.custody.s !== 'cell')), fight: !!me.fight, home: !!S.homeIn, fish: !!me.fishing, air, inVeh, driver, arena: !!(inVeh && S.soc && S.soc.st && S.soc.st.me), horse: !!(cd && cd.horse), boat: !!(cd && cd.kind === 'boat'), items: !!(me.inv && Object.values(me.inv).some((n) => n > 0)), surf: !!me.surf, swim: !!(pe && pe.swim && !inVeh), board, carrying: !!me.carrying,
-      armed: w.type !== 'melee' && w.type !== 'tool', guard: !!w.guard, shoot: w.type === 'gun' || !!(cd && driver && (cd.missiles || cd.turret)), prompt: !!me.prompt, siren: !!(cd && (cd.police || cd.siren)), light: b.contains('has-light'), call: b.contains('can-call'),
+      armed: w.type !== 'melee' && w.type !== 'tool', guard: !!w.guard, shoot: w.type === 'gun' || !!(cd && driver && (cd.missiles || cd.turret)), prompt: !!me.prompt, pact: !me.dead && b.contains('p-act'), siren: !!(cd && (cd.police || cd.siren)), light: b.contains('has-light'), call: b.contains('can-call'),
       wpn: !me.dead && !wq.contains('none') && (!inVeh || wq.contains('gun')), near: !inVeh && nearCar(S, pe, VEHICLE_BY_INDEX), on: inVeh ? mountOf(cd) === 'on' : nearOn });   // (client/hudinfo.js: the plate's none and gun)
   }
   // FIRE's auto-target (a tap: touchAim): the nearest person ahead in reach - at the wheel all round; none with a crate,

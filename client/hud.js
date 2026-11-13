@@ -175,6 +175,7 @@ export class HUD {
         this.unarm();
         document.querySelectorAll('#tbtns .pulse').forEach((b) => { b.classList.remove('pulse', 'crime', 'felony'); delete b.dataset.tip; });
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
+        document.body.classList.toggle('p-act', fp.action === 'action');   // (ACT shows only with something for it to do: client/touchslots.js pact)
         if (this.actBtn) { this.actBtn.classList.add('pulse'); this.actBtn.dataset.tip = fp.words; }   // (its long press says the whole of it: client/touchslots.js)
         // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip; a prompt no button does (a ride's
         // note) keeps its chip
@@ -194,7 +195,7 @@ export class HUD {
       if (this.promptDone(pr)) { clearTimeout(this.offT); this.offT = setTimeout(() => { if (pr.dataset.sig === '') pr.classList.add('off'); }, 600); } else pr.classList.add('off');
       pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
       document.querySelectorAll('#tbtns .pulse').forEach((b) => { b.classList.remove('pulse', 'crime', 'felony'); delete b.dataset.tip; });
-      this.actBtn = null;
+      this.actBtn = null; document.body.classList.remove('p-act');
       setActKind('interact'); setActWord('ACT'); actFace();
     }
     document.body.classList.toggle('carrying', !!me.carrying);

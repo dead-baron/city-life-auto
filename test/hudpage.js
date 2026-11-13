@@ -27,21 +27,21 @@ export const TOUCH_STATES = ['unarmed', 'horse', 'board', 'boat', 'swim', 'ride'
 // what the page tells the touch slots in each (client/touchslots.js tick), each with everything it can show (wpn: the
 // weapon button - the page has a gun and more to switch to)
 export const FLAGS = {
-  foot: { items: true, carrying: true, armed: true, light: true, prompt: true, wpn: true },
-  veh: { items: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true, wpn: true },
-  air: { items: true, air: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, wpn: true },
-  police: { items: true, armed: true, light: true, call: true, prompt: true, wpn: true },
-  rob: { items: true, armed: true, prompt: true, wpn: true },
+  foot: { items: true, carrying: true, armed: true, light: true, prompt: true, pact: true, wpn: true },
+  veh: { items: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, pact: true, siren: true, wpn: true },
+  air: { items: true, air: true, inVeh: true, driver: true, armed: true, shoot: true, prompt: true, pact: true, wpn: true },
+  police: { items: true, armed: true, light: true, call: true, prompt: true, pact: true, wpn: true },
+  rob: { items: true, armed: true, prompt: true, pact: true, wpn: true },
   custody: {},
-  unarmed: { items: true, guard: true, light: true, call: true, prompt: true, wpn: true },
-  horse: { items: true, inVeh: true, driver: true, horse: true, armed: true, shoot: true, prompt: true, wpn: true },
-  board: { items: true, board: true, prompt: true, wpn: true },
-  boat: { items: true, inVeh: true, driver: true, boat: true, armed: true, shoot: true, prompt: true, siren: true, wpn: true },
-  swim: { items: true, swim: true, prompt: true, wpn: true },
-  ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true, wpn: true },
-  surf: { items: true, surf: true, prompt: true, wpn: true },
+  unarmed: { items: true, guard: true, light: true, call: true, prompt: true, pact: true, wpn: true },
+  horse: { items: true, inVeh: true, driver: true, horse: true, armed: true, shoot: true, prompt: true, pact: true, wpn: true },
+  board: { items: true, board: true, prompt: true, pact: true, wpn: true },
+  boat: { items: true, inVeh: true, driver: true, boat: true, armed: true, shoot: true, prompt: true, pact: true, siren: true, wpn: true },
+  swim: { items: true, swim: true, prompt: true, pact: true, wpn: true },
+  ride: { items: true, inVeh: true, armed: true, shoot: true, prompt: true, pact: true, wpn: true },
+  surf: { items: true, surf: true, prompt: true, pact: true, wpn: true },
   home: { items: true, home: true, light: true, prompt: true },
-  fish: { items: true, fish: true, armed: true, light: true, prompt: true, wpn: true },
+  fish: { items: true, fish: true, armed: true, light: true, prompt: true, pact: true, wpn: true },
 };
 export function scenarios() {
   const out = [];

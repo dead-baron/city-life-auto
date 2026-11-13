@@ -22923,3 +22923,24 @@ on the faces beat `display: none`, so the hidden FIRE and ACT showed, ringless, 
 - **Chat by the thumb:** upright it now sits along the bottom beside the move stick's ring, as it does on its side
   (`hudlayout.test.js`'s rule updated to say so: by the stick, on the left half).
 - The weapon card upright is see-through too and wider, so the ammo count fits at its normal size.
+
+## 2026-11-13 - Touch buttons, round two: ACT only when it has something to do, a shield for BLOCK, a smaller AUTO
+
+The owner, after round one: ACT and the enter button looked like the same thing, the "!" on the vehicle button sat off
+center, AUTO was too big and didn't read as off, BLOCK floated away from the rest, and holding BLOCK popped up "Block".
+
+- **ACT shows only while a prompt names it** (`pact`: client/hud.js sets `p-act` from the prompt's key; foot, armed,
+  carrying and the vehicles in shared/touchcontrols.js). On foot ACT with nothing near did nothing on the server
+  anyway (players.js doAct). By a car with nothing else there you now see only the enter button; by a car *and* a shop
+  door both show, each with its own job - which is why the two stay separate buttons (hailing a cab, a shop, a person
+  to talk to all sit on ACT while the vehicle button only ever gets in or out). test/touchslots.test.js says so;
+  test/hudpage.js's scenes set `pact` so the layout test still places ACT.
+- **The crime "!"** is drawn (assets/ui/s-bang.png, a 10 px gold disc with a two-pixel "!") rather than set in the
+  pixel font, whose "!" sat to one side.
+- **BLOCK is a shield** (assets/ui/s-shield.png on the face symbols' 16 px grid; `faceOf` and the hint chips).
+- **BLOCK moved in:** upright C1 (BLOCK on foot, HORN at the wheel, DOWN in the air) swapped places with U3 (the cop
+  car call), so the slot you use every fight sits by ROLL and ACT.
+- **AUTO:** a smaller ring inside the same 48 px tap area - see-through while it's off, filled with a gold ring and
+  word while it's on.
+- **The long-press tip** only says what the button doesn't: the whole prompt behind a one-word ACT ("Enter Quick
+  Mart" behind ENTER). Holding BLOCK, FIRE or BRAKE no longer pops up their own name.

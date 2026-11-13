@@ -672,13 +672,21 @@ body.portrait #zone-l { top: 50%; }
 .sym { display: block; flex: none; width: 32px; height: 32px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 .s-cross { background-image: url(../assets/ui/s-cross.png); } .s-chev { background-image: url(../assets/ui/s-chev.png); }
 .s-enter { background-image: url(../assets/ui/s-enter.png); } .s-exit { background-image: url(../assets/ui/s-exit.png); }
+.s-shield { background-image: url(../assets/ui/s-shield.png); }
 #tbtns button:active, #tbtns button.on { transform: scale(.9); transition-duration: var(--t0); }
 
 #tbtns button.pulse { outline: 3px solid var(--pad-gold); outline-offset: 2px; animation: pulse 1.2s ease-in-out infinite; }   /* (the action that's there to take) */
 @keyframes pulse { 50% { outline-color: transparent; } }
 #tbtns button.pulse.crime { outline-color: var(--danger); animation-name: pulsebad; }   /* (a crime: red, with the "!") */
 @keyframes pulsebad { 50% { outline-color: var(--danger-t); } }
-#tbtns button.pulse.crime::after { top: -3px; right: -3px; width: 18px; height: 18px; line-height: 15px; }
+#tbtns button.pulse.crime::after { content: ''; top: -4px; right: -4px; width: 20px; height: 20px; border: 0; border-radius: 0; background: url(../assets/ui/s-bang.png) center / 100% 100% no-repeat; image-rendering: pixelated; }   /* (the "!" drawn, so it sits dead centre: the font's ! doesn't) */
+/* AUTO (FIRE ON): a small ring inside its tap area - see-through while it's off, filled and gold while it's on (the owner, 11-13) */
+#tbtns #firetog { isolation: isolate; background: transparent; border-color: transparent; box-shadow: none; }
+#tbtns #firetog::before { content: ''; position: absolute; inset: 6px; z-index: -1; border-radius: var(--r3); border: 2px solid rgba(244, 236, 216, .55); background: transparent; }
+#tbtns #firetog .w { color: rgba(255, 255, 255, .75); }
+#tbtns #firetog.lit { box-shadow: none; }
+#tbtns #firetog.lit::before { border-color: var(--pad-gold); background: var(--disc-on); }
+#tbtns #firetog.lit .w { color: var(--pad-gold); }
 #tbtns button.pulse.felony { outline-width: 5px; outline-style: double; }
 #tbtns button.pulse.armed { animation-duration: .4s; }
 #tbtns button[disabled], #tbtns button.dis { opacity: .5; }
