@@ -55,7 +55,7 @@ export class FX {
     this.pi = 0;
     this.d = new Array(MAX_D);
     for (let i = 0; i < MAX_D; i++) this.d[i] = { on: false, x: 0, y: 0, a: 0, type: 0, size: 1, alpha: 1, born: 0, color: '' };
-    this.c = []; this.ci = 0;
+    this.c = []; this.cri = 0;   // (cri: the crush ring's own index - ci is the flying chunks')
     for (let i = 0; i < MAX_C; i++) this.c[i] = { on: false, x: 0, y: 0, a: 0, small: 0, alpha: 1, born: 0 };
     this.di = 0;
     this.tracers = [];
@@ -77,8 +77,8 @@ export class FX {
   }
   // a crush mark in a field's crop (small: a person's or an animal's track, else a wheel's swath), along angle a
   crush(x, y, a, small, now, alpha = 0.8) {
-    const o = this.c[this.ci];
-    this.ci = (this.ci + 1) % MAX_C;
+    const o = this.c[this.cri];
+    this.cri = (this.cri + 1) % MAX_C;
     o.on = true; o.x = x; o.y = y; o.a = a; o.small = small ? 1 : 0; o.born = now; o.alpha = alpha;
   }
   decal(type, x, y, a, size, color, now, alpha = 1) {

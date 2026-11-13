@@ -138,6 +138,7 @@ export function seeThrough(f, x, y, C) {
 }
 export const seenBehind = (f, x, y, C) => (Math.abs(f) > 0.002 ? 1 - (1 - seeThrough(f, x, y, C)) * (1 - (1 - SEE) * Math.abs(f)) : 0);
 const CLR0 = new Float32Array(16);
+const PUSH0 = new Float32Array(32);   // (no one pushing: PUSH_N empty slots of 4)
 const FLUT = (k) => (2 * Math.PI * k / 256).toFixed(6);   // (whole turns over wind.js FLUT_P)
 const WN = 128;
 const hash2 = (x, y) => { let h = (Math.imul(x >>> 0, 374761393) + Math.imul(y >>> 0, 668265263)) >>> 0; h = Math.imul((h ^ (h >>> 13)) >>> 0, 1274126177) >>> 0; return ((h ^ (h >>> 16)) & 16777215) / 16777216; };
@@ -180,15 +181,25 @@ export function swayAt(x, y, W, G, ft) {
 // most R). STATIC_FS's ampOf and leanOf are these, in GLSL, from the same numbers.
 const LOW_SWAY = F_GROUND | F_WET;   // (foliage with either: ground cover, the plants on rock)
 const SW = { tipH: 7, tipAmp: 1.6, crown0: 10, crownH: 70, crownMax: 1.4, crownAmp: 2.2, lowIdle: 0.4 };
+export const PUSH_R = 2;   // (texels a push may lean ground cover by on every tier that sways: STATIC_FS)
+// A push bends a bush too - foliage no taller than BUSH_H px that isn't ground cover, by BUSH_AMP at its tips (BUSH_TIP
+// px up) - never a tree's crown (the owner, 11-13: a car through a bush, "have the bush get knocked down or ruffled")
+export const BUSH = { h: 46, tip: 14, amp: 1.5 }, PUSH_N = 8;   // (PUSH_N: uPush's slots - 4 who's there, 4 where a car went through)
 const glf = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 export function leanAmp(h, f) {
   if (!(f & F_LEAF)) return 0;
   return f & LOW_SWAY ? Math.min(1, Math.max(0, h / SW.tipH)) * SW.tipAmp : Math.min(SW.crownMax, Math.max(0, (h - SW.crown0) / SW.crownH)) * SW.crownAmp;
 }
-// pp: the push of someone in the grass (STATIC_FS uPush: ground cover only, away from them - the crop parts round you)
+// how far a leaf texel at height h leans for a push of 1 (world px): ground cover as in the wind, a bush by its tips,
+// a tree's crown never (STATIC_FS pushAmp)
+export function pushAmp(h, f) {
+  if (!(f & F_LEAF)) return 0;
+  return f & LOW_SWAY ? leanAmp(h, f) : h < BUSH.h ? Math.min(1, Math.max(0, h / BUSH.tip)) * BUSH.amp : 0;
+}
+// pp: the push of someone in the grass or the bushes (STATIC_FS uPush: away from them - the crop parts round you)
 export function leanOf(pw, pi, h, f, R, ap = ART_PX, pp = 0) {
   if (!(f & F_LEAF)) return 0;
-  const lo = f & LOW_SWAY, k = lo ? SW.lowIdle : 1, v = Math.round((pw + pi * k + (lo ? pp : 0)) * leanAmp(h, f) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
+  const lo = f & LOW_SWAY, k = lo ? SW.lowIdle : 1, v = Math.round(((pw + pi * k) * leanAmp(h, f) + pp * pushAmp(h, f)) / ap);   // (GLSL round: halves away from 0 - the same but at exact halves)
   return Math.max(-R, Math.min(R, v));
 }
 // a texel's fade (STATIC_FS, GHOST_FS): 0 if none, else how far to the under layer u; fa its building's, fc that x the
@@ -230,7 +241,7 @@ const STATIC_FS = (AP) => HDR + `
 #define AP ${AP}
 #define CTX ${CHUNK_PX / AP}
 uniform sampler2D t0, t1, t2, tN; uniform vec2 uOff; uniform float uFadeOn;
-uniform vec4 uWind, uGust, uPush[4]; uniform float uFlut; uniform int uSway;
+uniform vec4 uWind, uGust, uPush[${PUSH_N}]; uniform float uFlut; uniform int uSway;
 layout(location=0) out vec4 o0; layout(location=1) out vec4 o1; layout(location=2) out vec4 o2;
 ${GLSL_COMMON}
 ${FADE_GLSL}
@@ -242,9 +253,10 @@ float gustAt(vec2 w){
 // how far a leaf texel at height h leans for a push of 1 (world px): ground cover and the plants on rock at their
 // tips, foliage more the higher it stands (leanAmp, leanOf)
 float ampOf(float h, int f){ return (f & ${LOW_SWAY}) != 0 ? clamp(h / ${glf(SW.tipH)}, 0.0, 1.0) * ${glf(SW.tipAmp)} : clamp((h - ${glf(SW.crown0)}) / ${glf(SW.crownH)}, 0.0, ${glf(SW.crownMax)}) * ${glf(SW.crownAmp)}; }
+float pushAmp(float h, int f){ return (f & ${LOW_SWAY}) != 0 ? ampOf(h, f) : h < ${glf(BUSH.h)} ? clamp(h / ${glf(BUSH.tip)}, 0.0, 1.0) * ${glf(BUSH.amp)} : 0.0; }
 int leanOf(float pw, float pi, float pp, float h, int f, int R){
   bool lo = (f & ${LOW_SWAY}) != 0;
-  return clamp(int(round((pw + pi * (lo ? ${glf(SW.lowIdle)} : 1.0) + (lo ? pp : 0.0)) * ampOf(h, f) / float(AP))), -R, R);
+  return clamp(int(round(((pw + pi * (lo ? ${glf(SW.lowIdle)} : 1.0)) * ampOf(h, f) + pp * pushAmp(h, f)) / float(AP))), -R, R);
 }
 void main(){
   ivec2 q = ivec2(gl_FragCoord.xy - uOff), t = q / AP, src = t;   // the chunk's world px, its art texel
@@ -253,6 +265,9 @@ void main(){
   if (uSway > 0) {
     vec2 w = uChunk + vec2(t * AP) + 0.5 * float(AP);
     int fl0 = flOf(b), R = (uSway - 1 + AP - 1) / AP;
+    // (round someone pushing through it the cover leans as far as High's, whatever the tier - Medium's 2 px read as
+    // nothing: PUSH_R texels there, the tier's own everywhere else)
+    if (uSway > 1 && R < ${PUSH_R}) for (int i = 0; i < ${PUSH_N}; i++) { vec4 P = uPush[i]; if (P.z > 0.0 && length((w - P.xy) * vec2(1.0, 1.6)) < P.z) R = ${PUSH_R}; }
     bool any = (fl0 & ${F_LEAF}) != 0;
     for (int k = -3; k <= 3; k++) {
       if (any || k == 0 || abs(k) > R || t.x - k < 0 || t.x - k > CTX - 1) continue;
@@ -269,7 +284,7 @@ void main(){
         float pi = ((sin(uFlut * ${FLUT(37)} + tp * 12.6) * (1.0 - tq) + sin(uFlut * ${FLUT(59)} + tp * 8.4 + 1.7) * tq) * 0.3 * am + sin(uFlut * ${FLUT(29)} + tp * 6.3 + cp * 6.28) * 0.12 + sin(uFlut * ${FLUT(131)} + cp * 25.1) * 0.06) * (0.6 + s);
         // (pushed aside round the people in it: uPush x, y, radius, strength - an upright ellipse)
         float pp = 0.0;
-        for (int i = 0; i < 4; i++) { vec4 P = uPush[i]; if (P.z > 0.0) { vec2 d = (w - P.xy) * vec2(1.0, 1.6); float l = length(d); if (l < P.z) { pp += sign(d.x) * P.w * (1.0 - l / P.z); gp = max(gp, 1.0 - l / P.z); } } }
+        for (int i = 0; i < ${PUSH_N}; i++) { vec4 P = uPush[i]; if (P.z > 0.0) { vec2 d = (w - P.xy) * vec2(1.0, 1.6); float l = length(d); if (l < P.z) { pp += sign(d.x) * P.w * (1.0 - l / P.z); gp = max(gp, 1.0 - l / P.z); } } }
         float h0 = zOf(b);
         int own = (fl0 & ${F_LEAF}) != 0 ? leanOf(pw, pi, pp, h0, fl0, R) : 0;
         float bestH = own == 0 ? h0 : -1.0;
@@ -299,7 +314,7 @@ void main(){
   int fl = flOf(b);
   bool ground = (fl & ${F_GROUND}) != 0;
   if (gb > 0.0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 + gb * (ground ? 0.2 : 0.08);
-  if (gp > 0.0 && (fl & ${LOW_SWAY}) != 0 && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 - 0.35 * smoothstep(0.0, 0.6, gp);
+  if (gp > 0.0 && ((fl & ${LOW_SWAY}) != 0 || h < ${glf(BUSH.h)}) && (fl & ${F_LEAF}) != 0) a.rgb *= 1.0 - 0.35 * smoothstep(0.0, 0.6, gp);   // (bent over into a hollow: ground cover and bushes)
   if (uFadeOn > 0.5) {
     vec4 u; float fa, fc, f = fadeOf(src, u, fa, fc);
     if (f > 0.0) {
@@ -848,7 +863,7 @@ export class Art2Engine {
     if (f.fades !== undefined) this.fades = f.fades;
     this.clr = f.clear || null;                                    // the clear spaces round figures in a see-through building (uClr)
     this.wind = f.wind || null;                                    // [strength, gustiness, dir x, dir y]
-    this.push = f.push || null;                                    // who parts the grass (uPush: 4 x [x, y, radius, strength])
+    this.push = f.push || null;                                    // who parts the grass (uPush: PUSH_N x [x, y, radius, strength])
     this.gd = f.gd || null; this.ft = f.ft || 0;                   // the gust patches' travel, the flutter clock (wind.js)
     this.air = f.air || null;                                      // how far the air has carried things (wind.js air)
     this.bio = f.bio || null;                                      // the sea's sparkle tonight: [strength, seed] (atmos.js bioAt)
@@ -1021,7 +1036,7 @@ export class Art2Engine {
     const W = this.wind, sway = W && this.swayOn !== false ? QUALITY[this.q].sway : 0; // (swayOn: Settings' "Wind sway")
     gl.uniform1i(u.uSway, sway);
     gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, this.tWN);
-    if (sway) { const G = this.gd; gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform4f(u.uGust, G ? G[0] : 0, G ? G[1] : 0, G ? G[2] : 0, G ? G[3] : 0); gl.uniform1f(u.uFlut, this.ft); gl.uniform4fv(u.uPush, this.push || CLR0); }
+    if (sway) { const G = this.gd; gl.uniform4f(u.uWind, W[0], W[1], W[2], W[3]); gl.uniform4f(u.uGust, G ? G[0] : 0, G ? G[1] : 0, G ? G[2] : 0, G ? G[3] : 0); gl.uniform1f(u.uFlut, this.ft); gl.uniform4fv(u.uPush, this.push || PUSH0); }
     const fades = this.fades && this.fades.size ? this.fades : null, FA = this._fadeArr || (this._fadeArr = new Float32Array(64));
     const c0 = Math.floor(this.ox / CHUNK_PX), c1 = Math.floor((this.ox + this.SW - 1) / CHUNK_PX), r0 = Math.floor(this.oy / CHUNK_PX), r1 = Math.floor((this.oy + this.SH - 1) / CHUNK_PX);
     let n = 0;

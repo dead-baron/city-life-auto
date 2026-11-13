@@ -22944,3 +22944,57 @@ center, AUTO was too big and didn't read as off, BLOCK floated away from the res
   word while it's on.
 - **The long-press tip** only says what the button doesn't: the whole prompt behind a one-word ACT ("Enter Quick
   Mart" behind ENTER). Holding BLOCK, FIRE or BRAKE no longer pops up their own name.
+
+## 2026-11-13 - Vegetation that answers back: tracks through the crops, cover that parts on Medium, bushes knocked aside, crops picked a patch at a time
+
+The owner, 11-13: "grass and fields and wheat fields and crops etc all don't seem to interact ... I don't think driving
+through a wheat field makes the wheat flatten down behind you right now and when you pick a crop by hand it makes an
+entire row disappear at once not just a small portion around you." And, later the same day, of a car driven through
+a desert bush: "vehicles going through vegetation is a bit sloppy ... have the bush get knocked down or ruffled or just
+burst apart ... leaving out the white transparency".
+
+### What was there, preset by preset (art v2, World v3)
+World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the crush marks and the rows found them.
+Phones get **Medium** by default (**Low** only on an Android phone that reports 3 GB of memory or less; an iPhone
+reports none and gets Medium); desktops **High** (**Ultra** on a big GPU with 8 cores and 8 GB), laptops High (Medium
+with 4 GB or less) - client/gfx.js detectDevice.
+- **Low**: no grass tufts and no standing wheat at all (the bake's decor is off on Low: the field is its flat golden
+  ground) and no sway. The tracks (`render/fx.js` crush, drawn by `host.js` _decals) were laid and drawn here too.
+- **Medium**: the cover sways, but round you it could lean one art pixel at most (the tier's sway reach, R = 1): 2 px,
+  which read as nothing. Only the darker hollow showed.
+- **High / Ultra**: 4 px of lean round you, the hollow, the tracks.
+- **Everywhere**: other people's cars didn't part anything (only you, and up to three people on foot - a passenger's
+  body counted as one at the car's middle). The crush marks shared their ring's index with the flying chunks of
+  smashed street furniture (`fx.js` `ci`): after a walk through a field the next lamp post knocked over threw, every
+  time (the chunk's slot was past the end of its 40).
+
+### What changed
+- **Cover parts as far on Medium as on High** (`engine.js` STATIC_FS, `PUSH_R`): round someone pushing through it the
+  sway reach is two art pixels on every tier that sways; the tier's own everywhere else, so the wind costs Medium no
+  more than before. Low still has no leaning (and nothing standing to lean): its tracks are what show there.
+- **Cars part the crop too** (`host.js` _push): the cars, tractors and bikes on the ground near you fill the push slots
+  after the people on foot (a passenger no longer counts).
+- **The crush ring's own index** (`render/fx.js` `cri`).
+- **Bushes knocked aside, a burst of leaves** (`host.js` _bushes, _bushIdx; `engine.js` pushAmp, BUSH): a car, a truck
+  or a bike driven through a bush (the map's shrub and bush props, never a tree) throws a burst of its leaves (the
+  pooled particles: 9, 4 on Low) once every 3 s a bush, and the bush stays bent aside and shaded round where it went
+  through for 20 s, standing back up over that time: the push has eight slots now, four for who's there and four for the
+  nearest bushes knocked aside lately. A push bends a bush by its tips (foliage under 46 px that isn't ground cover); a
+  tree's crown never.
+- **No pale outline through a bush** (`host.js` _veh, `VEH_XRAY_LOW`): your own vehicle's see-through outline is drawn
+  only where something taller than 80 px over its ground hides it - a building, a trunk; a bush, a shrub, a fence or a
+  low wall no longer paints the pale blue silhouette over the car.
+- **Picking by hand takes a patch, not the row** (`server/systems/farming.js` handPick, `shared/rules.js` FARM handR,
+  handRegrowS, handMax): it took the whole stretch you stood in (a tenth of the row, often 100 px and more), and eight
+  stretches turned the whole row to stubble. Now a pick takes the plants within 18 px of you: the patch goes to stubble
+  on every page (sent with the fields as `h`, drawn by `render/farmart.js` patchPixels over the crop) and grows back
+  after the orchard's PICK_REGROW_S. The row stays ripe for the tractor and the combine. A crate still comes every
+  FARM.handPer picks; the same spot can't be picked again until you've moved on. The Guide's farm entry says so.
+
+Cost: the bushes' buckets are made once (and again if the map's props change in number); a frame looks at the buckets
+under the moving vehicles in view. The shader's push loop is eight slots instead of four. The renderer's code is within
+its budget.
+
+Tests: test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
+back on the timer), test/crush.test.js (the ring's index; a car through a bush - the leaves, the bush knocked aside and
+standing back up, a tree and a car standing still: nothing), test/wind.test.js (a push bends a bush, never a crown).

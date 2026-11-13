@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Wind, AIR_P, FLUT_P } from '../client/render/flora/wind.js';
 import { CAN_N } from '../client/art2/game/lightgame.js';
-import { swayAt, leanAmp, leanOf } from '../client/art2/game/engine.js';
+import { swayAt, leanAmp, leanOf, pushAmp, BUSH } from '../client/art2/game/engine.js';
 import { F_LEAF, F_GROUND, F_WET, F_NOCAST, F_ROCKLEAF } from '../client/art2/gbuf.js';
 import { DAY_LOOP_S } from '../shared/constants.js';
 
@@ -251,4 +251,11 @@ test('a push parts the ground cover, away from the one pushing, and leaves the t
   assert.equal(leanOf(0, 0, 1, crop, 2, 2, 3.5), 0, 'a stubble barely moves');
   assert.equal(leanOf(0, 0, 80, F_LEAF, 2, 2, 3.5), 0, 'a crown: not pushed');
   assert.equal(leanOf(0, 0, 12, F_GROUND, 2, 2, 3.5), 0, 'bare ground: never');
+  // (11-13: a bush too - a car driven through one knocks it aside - by its tips; still never a tree's crown)
+  assert.equal(leanOf(0, 0, 24, F_LEAF, 2, 2, 3.5), 2, 'a bush: pushed east, leans east');
+  assert.equal(leanOf(0, 0, 24, F_LEAF, 2, 2, -3.5), -2, 'and west');
+  assert.equal(leanOf(0, 0, BUSH.h + 4, F_LEAF, 2, 2, 3.5), 0, 'a tree\'s crown, over a bush\'s height: never');
+  assert.equal(leanOf(0, 0, 24, 0, 2, 2, 3.5), 0, 'a bush\'s stem (no leaf): never');
+  assert.equal(pushAmp(BUSH.h + 4, F_LEAF), 0);
+  assert.equal(pushAmp(12, crop), leanAmp(12, crop), 'ground cover: as before');
 });

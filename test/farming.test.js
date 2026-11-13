@@ -130,7 +130,7 @@ test('the farm-work contract: from the co-op\'s counter, a tractor issued, paid 
   assert.equal(p.job.type, 'fieldwork');
 });
 
-test('by hand at harvest time: walk a ripe row picking it, every few stretches a crate; the farm stand buys the crate', async () => {
+test('by hand at harvest time: each pick takes a small patch round you, never the row; every few a crate; the farm stand buys the crate', async () => {
   const w = makeWorld();
   const { p } = joinPlayer(w);
   const cargo = await import('../server/systems/cargo.js');
@@ -140,20 +140,45 @@ test('by hand at harvest time: walk a ripe row picking it, every few stretches a
   const r = F.rows.findIndex((row) => row.okN === FARM.segs);
   F.rows[r].s = ROW.RIPE; F.rows[r].m = 0;
   const [a, b] = farming.rowEnds(F, r);
-  const at = (k) => ({ x: a.x + (b.x - a.x) * ((k + 0.5) / FARM.segs), y: a.y + (b.y - a.y) * ((k + 0.5) / FARM.segs) });
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  // spots along the row FARM.handR * 2.5 apart, from a tenth of the way in
+  const at = (k) => { const t = 0.1 + (k * FARM.handR * 2.5) / len; return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; };
   let crate = null;
   for (let k = 0; k < FARM.handPer; k++) {
     teleport(w, p.ped, at(k).x, at(k).y);
-    for (const c of [...w.entities.values()]) if (c.kind === K.CRATE && c.hand && c !== crate) crate = c;
     const act = players.findInteraction(w, p);   // (the Act button's prompt: players.js)
     assert.match(act.label, /Pick the crop by hand/);
     act.run();
+    assert.equal(F.rows[r].m, 0, 'no stretch of the row taken');
   }
   crate = [...w.entities.values()].find((c) => c.kind === K.CRATE && c.hand);
   assert.ok(crate && crate.label === 'Produce Box' && crate.owner === p.pid, 'a crate of it');
-  assert.equal(F.rows[r].s, ROW.RIPE, 'the row not done yet');
-  for (let k = FARM.handPer; k < FARM.segs; k++) { teleport(w, p.ped, at(k).x, at(k).y); farming.handPick(w, p); }
-  assert.equal(F.rows[r].s, ROW.STUBBLE, 'picked clean by hand: harvested');
+  assert.equal(F.hand.length, FARM.handPer, 'a patch a pick');
+  for (const h of F.hand) assert.ok(h.until > w.time && h.until <= w.time + FARM.handRegrowS + 1e-6);
+  // the same spot (or a step off it) again: nothing more to pick there
+  teleport(w, p.ped, at(FARM.handPer - 1).x + 4, at(FARM.handPer - 1).y + 4);
+  assert.match(farming.handInteraction(w, p).label, /Picked here/);   // (the Act button's own pick: the crate beside you)
+  assert.equal(farming.handPick(w, p), null);
+  assert.equal(F.hand.length, FARM.handPer);
+  // the whole row picked along, a patch at a time: still ripe (the combine's to harvest), the patches only
+  const n = Math.floor((len * 0.85) / (FARM.handR * 2.5));
+  for (let k = FARM.handPer; k < n; k++) { teleport(w, p.ped, at(k).x, at(k).y); farming.handPick(w, p); }
+  assert.equal(F.rows[r].s, ROW.RIPE, 'the row stands');
+  assert.equal(F.hand.length, n);
+  // sent to the page with the field (its patches)
+  const sent = [];
+  p.conn = { sendJSON: (m) => sent.push(m) };
+  p.fieldsSig = null;
+  farming.update(w);
+  for (let i = 0; i < 40 && !sent.some((m) => m.t === 'fields'); i++) { w.tick++; farming.update(w); }
+  const fm = sent.find((m) => m.t === 'fields'), f = fm && fm.f.find((q) => q.i === F.i);
+  assert.ok(f && f.h.length === n * 2 && f.hr === FARM.handR, 'the patches sent');
+  // grown back on the timer
+  w.time += FARM.handRegrowS + 1;
+  for (let i = 0; i < 41; i++) { w.tick++; farming.update(w); }
+  assert.equal(F.hand.length, 0, 'grown back');
+  teleport(w, p.ped, at(0).x, at(0).y);
+  assert.match(farming.handInteraction(w, p).label, /Pick the crop by hand/);
   // carried to the farm stand
   teleport(w, p.ped, crate.x, crate.y);
   cargo.pickUp(w, p.ped, crate);

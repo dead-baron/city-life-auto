@@ -2,7 +2,7 @@
 // first time the server sends either. The server keeps them; this only draws what it's sent: S.garden, the plots near
 // you ([x, y, crop, stage, flags] - crop -1 an empty plot; stage 0 seed .. 4 ripe; flags 1 dry, 2 wilted, 4 dead,
 // 8 a prize one), and S.fields, the fields near you ({ x, y, w, h, v (rows run north-south), rw, segs, r: [state, growth
-// %, done bits, field bits] a row }). Drawn on the ground under everything that stands on it, in both renderers - the
+// %, done bits, field bits] a row, h: the patches picked by hand [x, y, ...], hr: their radius }). Drawn on the ground under everything that stands on it, in both renderers - the
 // classic view's world pass (drawV1) and art v2's ground decals (drawV2: art v2's ground is baked, the fields' crops
 // with it, so the rows' live state goes on top of it near you). Small and cheap: a plot is one sprite (its soil and its
 // three plants at their stage), a row a sprite per stretch of it (its look: stubble, ploughed, sown, growing, ripe);
@@ -143,6 +143,18 @@ export function balePixels(set) {
   }
 }
 const baleAt = (r, k) => hsh(r, k, 13) < 0.3;
+// a patch picked by hand (server farming.js handPick: the plants within hr px of the picker): a ragged round of the
+// stubble's look - the cut stalk ends in their lines, the soil between - its rim of the straw left lying where the
+// stalks were pulled (art px, a side 2R + 1; v: the rows run north-south, so the lines do too)
+export function patchPixels(R, v, set) {
+  const S = 2 * R + 1;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = x - R, dy = y - R, d = Math.sqrt(dx * dx + dy * dy), edge = R - 0.6 - hsh(x, y, 21) * 1.6;
+    if (d > edge) continue;
+    const a = v ? y : x, b = v ? x : y;
+    set(x, y, d > edge - 1.2 ? CUT.straw[hsh(x, y, 23) > 0.5 ? 1 : 0] : rowPixel(0, a, b & 7));
+  }
+}
 
 // The plough behind the tractor (the owner's FA4: a red frame across the back and its row of steel discs on the
 // drawbar): art px, facing +x (the drawbar toward the tractor) - art v2 draws it as a ground decal behind each tractor
@@ -252,6 +264,7 @@ export class FarmArt {
             if (look === 0 && baleAt(r, k)) g.drawImage(this._canvas('bale', BALE, BALE, balePixels), x + w / 2 - BALE, y + h / 2 - BALE, BALE * P, BALE * P);   // (a round bale on the stubble)
           }
         }
+        this._patches(f, (R, X, Y) => { const S = 2 * R + 1; g.drawImage(this._canvas(`h${R}${f.v}`, S, S, (set) => patchPixels(R, f.v, set)), X - R * P, Y - R * P, S * P, S * P); }, view.x0, view.y0, view.x1, view.y1);
       }
     }
     for (const q of S.garden || []) {
@@ -292,6 +305,17 @@ export class FarmArt {
         p.lift = 18 + r() * 14;
         if (r() < 0.6) { const q = S.fx.spawn(8, bx, by, -c * 50 + (r() - 0.5) * 50, -sn * 50 + (r() - 0.5) * 50, 1.2 + r() * 0.6, 3, STRAW, 0, 40 + r() * 30); q.ph = r() * 6.28; q.z = 30; }
       }
+    }
+  }
+  // the patches picked by hand in field f (its h: [x, y, ...]) on a row still ripe, in the view: draw(R art px, x, y)
+  _patches(f, draw, x0, y0, x1, y1) {
+    const H = f.h, R = Math.max(2, Math.round((f.hr || 18) / P));
+    if (!H || !H.length) return;
+    for (let i = 0; i + 1 < H.length; i += 2) {
+      const X = H[i], Y = H[i + 1];
+      if (X < x0 || X > x1 || Y < y0 || Y > y1) continue;
+      const at = this._rowAt(X, Y);
+      if (at && at.f === f && at.s === 3) draw(R, X, Y);
     }
   }
   // the row under (x, y) in the fields sent: { s: its state, k: the stretch, f, r } or null
@@ -340,6 +364,11 @@ export class FarmArt {
           }
         }
       }
+      // the patches picked by hand: stubble over the standing crop, just there
+      this._patches(f, (R, X, Y) => {
+        const key = host._conv(`farm|h${R}|${f.v}`, () => { const S2 = 2 * R + 1, G = gbuf(S2, S2, R, R); G.ap = P; patchPixels(R, f.v, (px, py, rgb) => put(G, px, py, rgb, 0, N, GROUND)); return G; }, true);
+        if (key) E.drawDecal(key, X, Y, 0, 1, 0, CROP_Z);
+      }, x0, y0, x1, y1);
     }
     // the swaths cut as you go (_working), over the crop still standing in the stretch being cut
     const cuts = this.cuts;
