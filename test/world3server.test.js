@@ -28,6 +28,7 @@ import { zebraCrossings, laneOffset, nearestEdge } from '../shared/roadcore.js';
 import { PED_BLOCK, isSwimming } from '../shared/mapcore.js';
 import * as economy from '../server/systems/economy.js';
 import * as biz from '../server/systems/biz.js';
+import { fenceGrid, waysOut } from './fenceaudit.js';
 
 const { map: M } = await buildWorld3(1337, { log: () => {} });
 
@@ -115,6 +116,52 @@ test('somewhere to wake up in every part of the world; no fence shuts a door', (
   }
   assert.deepEqual(far, []);
   assert.ok(M.world3.fenceGaps && M.world3.fenceGaps.stuck === 0, 'every door a fence shut opened');
+});
+
+// (the owner, 11-12: "some areas like soccer fields will be fenced off entirely except for one point to enter ... maybe
+// an exit near the corners" - shared/world3-fenceexits.js; the same on a small map: test/fenceexits.test.js) every
+// fenced place people go into - the courts, the pitches, the dog run, the community gardens, the piers - has its ways
+// out (walked, the fences as people collide with them now): two on different sides where its shape gives two, one
+// where it's all one side to land; what keeps people out (the prison's yard, the pools, the arena, the airport's and
+// the port's security fences, the homes' gardens) not one fence cut
+test('the fenced places people go into have two ways out; what keeps people out stays shut', () => {
+  const X = M.world3.fenceExits, F = fenceGrid(M);
+  for (const k of ['court', 'pitch', 'garden', 'dogrun']) assert.ok(X.byKind[k] || X.places.some((p) => p.kind === k), `the ${k}s found`);
+  assert.ok(X.places.length >= 20 && X.opened >= 15, `${X.places.length} places, ${X.opened} opened`);
+  const few = [];
+  for (const p of X.places) {
+    const n = waysOut(M, p.box, p.seed, F).ways.length;
+    if (n < Math.min(2, p.need)) few.push(`${p.kind} at ${p.box}: ${n} ways out`);
+  }
+  assert.deepEqual(few, []);
+  // (two where the shape allows: all the courts, the pitches, the gardens, the dog run)
+  assert.deepEqual(X.places.filter((p) => p.kind !== 'pier' && p.need < 2).map((p) => `${p.kind} at ${p.box}`), []);
+  const shut = X.shut.filter((p) => ['prison', 'pool', 'arena', 'security', 'private'].includes(p.kind));
+  assert.ok(shut.some((p) => p.kind === 'prison'), 'the prison yard found, and kept shut');
+  assert.ok(shut.filter((p) => p.kind === 'pool').length >= 3, 'the pools found, and kept shut');
+  assert.ok(X.stuck <= 2, `${X.stuck} with nowhere to cut a way out`);
+  for (const p of shut) {
+    const [x0, y0, x1, y1] = p.box;
+    const cut = X.cuts.find(([x, y]) => x >= (x0 - 2) * TILE && x <= (x1 + 3) * TILE && y >= (y0 - 2) * TILE && y <= (y1 + 3) * TILE);
+    assert.ok(!cut, `${p.kind} at ${p.box}: a fence cut at ${cut}`);
+  }
+  // (and nowhere near: the prison's walls, a pool, a home's door, the airport's barbed wire, a yard's or the arena's fence)
+  const c = M.prison.compound, near = [];
+  for (const [x, y] of X.cuts) {
+    const tx = x / TILE, ty = y / TILE;
+    if (tx >= c.tx - 3 && tx <= c.tx + c.tw + 3 && ty >= c.ty - 3 && ty <= c.ty + c.th + 3) near.push(`the prison at ${tx},${ty}`);
+    for (const q of M.pools || []) if (x >= q.x - 96 && x <= q.x + q.w + 96 && y >= q.y - 96 && y <= q.y + q.h + 96) near.push(`a pool at ${tx},${ty}`);
+    for (const h of M.homes || []) if (h && !h.gone && Math.abs(h.x - x) + Math.abs(h.y - y) < 4 * TILE) near.push(`a home's door at ${tx},${ty}`);
+    for (const g of F.segs) {
+      const pr = g.src >= 0 ? M.props[g.src] : null;
+      if (!pr || !(pr.barbed || pr.t === 'yfence' || (pr.t === 'fenceline' && pr.kind === 'wall'))) continue;
+      const dx = g.x1 - g.x0, dy = g.y1 - g.y0, l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((x - g.x0) * dx + (y - g.y0) * dy) / l2)) : 0;
+      if (Math.hypot(g.x0 + dx * t - x, g.y0 + dy * t - y) < 3 * TILE) near.push(`a ${pr.t} at ${tx},${ty}`);
+    }
+  }
+  assert.deepEqual(near, []);
+  const yard = shut.find((p) => p.kind === 'prison');
+  assert.equal(waysOut(M, yard.box, yard.seed, F).ways.length, 0, 'the prison yard: no way out but its gate');
 });
 
 test('nothing blocking on a street, a pavement, the track or a door (shared/world3-clutter.js)', () => {
