@@ -56,7 +56,7 @@ body.touch .cht-sheet { left: 0; right: 0; bottom: 0; width: min(680px, 100%); m
 body.touch.cht-open #touch, body.touch.cht-open #hud-low, body.touch.cht-open #hints { visibility: hidden; }
 .cht-head { display: flex; align-items: center; gap: var(--s1); margin: 2px 2px 0; padding: var(--s1) var(--s1) var(--s1) var(--s2); background: var(--pad-ink); border-bottom: 2px solid var(--pad-gold); border-radius: 0; }
 .cht-tabs { display: flex; gap: var(--s1); flex: 1; min-width: 0; }
-.cht-tab { min-height: 36px; padding: 0 var(--s3); border: 2px solid transparent; border-radius: 0; background: transparent; color: var(--dim); font: 700 var(--fs-3) var(--pixel); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
+.cht-tab { min-height: 36px; padding: 0 var(--s2); border: 2px solid transparent; border-radius: 0; background: transparent; color: var(--dim); font: 700 var(--fs-2) var(--pixel); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
 .cht-tab.on { background: var(--pad-gold); color: var(--pad-ink); border-color: var(--pad-ink); box-shadow: var(--pn-drop); }
 .cht-tab.na { opacity: .45; }
 .cht-tab:not(.on):hover, .cht-tab.pfocus { color: var(--cream); border-color: var(--gold-a); }
