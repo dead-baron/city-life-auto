@@ -19,7 +19,7 @@ import { K, DT, TILE, DAY_LOOP_S, DAY_PART_S, WEATHER, T } from '../../shared/co
 import { DIRECTOR } from '../../shared/rules.js';
 import { CHAT } from '../../shared/chatdefs.js';
 import { VEHICLES } from '../../shared/vehicles.js';
-import { PED_BLOCK } from '../../shared/mapcore.js';
+import { PED_BLOCK, DISTRICTS } from '../../shared/mapcore.js';
 import { blastSize } from '../../shared/explosions.js';
 import { randomLook, encodeLook, decodeLook, lookToApp } from '../../shared/look.js';
 import { pedStep } from '../../shared/physics.js';
@@ -82,7 +82,18 @@ export function named(map, name) {
   }
   for (const l of map.landmarks || []) if (l.name && l.name.toLowerCase() === n) return { x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2 };
   for (const q of map.pois || []) if (q.label && q.label.toLowerCase() === n) return { x: q.x, y: q.y };
-  return null;
+  const d = DISTRICTS.findIndex((q) => q && q.name && q.name.toLowerCase() === n);
+  return d >= 0 ? districtMid(map, d) : null;
+}
+// a district's middle (the mean of its tiles, every 8th - once a map), on open ground near it
+function districtMid(map, d) {
+  const C = (map._dirDist ||= new Map());
+  if (C.has(d)) return C.get(d);
+  let sx = 0, sy = 0, n = 0;
+  for (let ty = map.y0 || 0; ty < (map.y0 || 0) + map.h; ty += 8) for (let tx = map.x0 || 0; tx < (map.x0 || 0) + map.w; tx += 8) if (map.inside(tx, ty) && map.dist[map.idx(tx, ty)] === d) { sx += tx; sy += ty; n++; }
+  const out = n ? standAt(map, (sx / n + 0.5) * TILE, (sy / n + 0.5) * TILE, 20) : null;
+  C.set(d, out);
+  return out;
 }
 // the straight stretches of ground-level road (east-west and north-south, joined across their junctions): { h, c (the
 // fixed coordinate), lo, hi, hw, bridge } - worked out once a map

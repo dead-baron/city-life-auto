@@ -119,7 +119,7 @@ async function warm(pages, maxS = 900) {
     calm = all ? calm + 1 : 0;
     if (calm >= 6) return;
     if ((Date.now() - t0) / 1000 > maxS) { log('warm: giving up waiting for', pages.map((P) => `${P.o}: ${P.why}`).join(', ')); return; }
-    if (((Date.now() - t0) / 1000 | 0) % 15 === 0 && !all) log('warming', pages.map((P) => `${P.o}: ${P.why || 'ok'}`).join(', '));
+    if (!all && Date.now() - (warm.said || 0) > 15000) { warm.said = Date.now(); log('warming', pages.map((P) => `${P.o}: ${P.why || 'ok'}`).join(', ')); }
     await wait(120);
   }
 }
