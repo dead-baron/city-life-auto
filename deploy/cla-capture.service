@@ -1,0 +1,34 @@
+# systemd unit for the City Life Auto CAPTURE server (the scene director's trailers and clips: server/capture.js,
+# tools/capture.mjs). The same checkout as the live server - always the same build - on its own port, this machine only
+# (127.0.0.1: no public join), its own data directory, the world stepped by the capture driver (never ticking by itself,
+# so it costs nothing when idle beyond its memory). It doesn't restart with the updater: restart it after a pull
+# (sudo systemctl restart cla-capture) or start it only when capturing (tools/capture.mjs --server uses a running one).
+# Install: sudo cp deploy/cla-capture.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#          sudo systemctl start cla-capture        (enable it only if it should come up with the machine)
+# Capture (on the box, Playwright and ffmpeg installed): node tools/capture.mjs --server --port 8299 --scene bikerbrawl
+[Unit]
+Description=City Life Auto capture server (private, stepped)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/city-life-auto
+ExecStart=/usr/bin/node --max-old-space-size=3000 server/index.js
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=15
+Nice=10
+Environment=CLA_CAPTURE=1
+Environment=PORT=8299
+Environment=HOST=127.0.0.1
+Environment=CLA_WORLD=v3
+Environment=CLA_SEED=1337
+Environment=CLA_DATA_DIR=/home/ubuntu/cla-capture-data
+Environment=CLA_ART_THREADS=1
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

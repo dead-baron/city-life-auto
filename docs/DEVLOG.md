@@ -22944,3 +22944,58 @@ center, AUTO was too big and didn't read as off, BLOCK floated away from the res
   word while it's on.
 - **The long-press tip** only says what the button doesn't: the whole prompt behind a one-word ACT ("Enter Quick
   Mart" behind ENTER). Holding BLOCK, FIRE or BRAKE no longer pops up their own name.
+
+## 2026-11-13 - The scene director: scripted scenes in the live world, autoplay, and a capture server for trailers
+
+The owner: "the occasional gang warfare breaks out, a random police raid, an NPC gets into a bar fight and gets chased
+by a biker gang ..." - and the same scenes recorded for trailers and TikTok clips. Then (12:16): "every cinematic scene
+and location and feature and everything should already have camera movements in and run on its own in a predetermined
+way if possible" - autoplay beside play-it-yourself.
+
+- **The script format** (`shared/scenes/index.js`, one file a scene): the place (`roadhouse`, `hideout`, `road`, `farm`,
+  `named`, `here` - the server's resolvers turn it into named anchors), the time of day and weather (the capture's), the
+  cast (people, groups, vehicles - parked, crewed, already in the air - or someone picked from the world: a biker at the
+  bar, a club bike by the door), the beats (walk / run / drive / fly / enter / exit / bail / attack / knock / shoot / say /
+  emote / face / spawn / explode / ignite / damage / crash / club / police / heli / dance / wait / release; each at a time
+  or after another beat) and the camera's shots (follow with a lead and an offset, between two people, a move between two
+  points, a hold, an orbit; a glide or a cut; a shot can start on a beat). `validateScene` checks a script;
+  `camAt` is the camera at a moment - the page flies it, the server sends the page what's round it (view.js `p.dirCam`).
+- **The runner** (`server/systems/director.js`, in the tick after the clubs and before the vehicles move): actors are
+  real NPCs on their script (`npc.driven`); everything else goes through the city's own systems - the clubs' chase
+  (bikers.js `chaseWith`), the police's pursuit (a scene's cruisers given the pursuit; police.js `chaseCar`), the air
+  unit (policeair.js `launchFor`: a non-player suspect now), the explosions, the fights. A player who hurts an actor, aims
+  at one or stands in one's way for `DIRECTOR.blockS` takes them (and their vehicle) off the script: the city's AI from
+  then (`npc.onAttacked`: a club fights back; a driver drives on in traffic). `plot: true` - the lead never floored or
+  stunned by the city's people while on the script (they still take the blows). Scenes end when their beats are done (and
+  linger), or at `len`; live, when nobody's near for `goneS` (their people go once nobody sees them).
+- **Actors look like NPCs in the live world** (the owner, via the lead): only on the capture server (`CLA_CAPTURE=1`) does
+  a `look: 'player'` actor go out as a player - the name tag, a player's random outfit, chat lines as bubbles, emotes
+  (net.js `asPlayer`). Never in the players list, analytics, leaderboards or saves: they're NPC peds. Test:
+  `test/scenes.test.js` "live, actors are ordinary NPCs".
+- **Live events** (`shared/rules.js` `DIRECTOR`): OFF. `DIRECTOR.live` and each scene's `on`, or `CLA_SCENES=all` / a list
+  of ids in the server's environment. One tried every `everyS`, near a player (`nearPx`, not on top of them), never within
+  `ftuePx` of someone in their FTUE (or `ftueS` after their arrival), at most `maxScenes` scenes and `maxActors` actors.
+- **Debug and panel**: the debug menu's 🎬 Director scenes (the `scene` command: `id`, `k: 'stop'`); the cinematic panel
+  (F4): Director scenes, ▶ Autoplay beside "play it yourself" on the staged scenes and Showcase spots that have one, ⏺
+  record this screen (MediaRecorder, real time - the owner's own GPU computer). Esc gives the camera back.
+- **Autoplay, first batch**: the police chase (`autochase`), the street race (`autorace`), the gang shootout
+  (`autoshootout`), crop dusting (`autodust`: the duster flown low over a field, the mist on), and four Showcase spots
+  (`shared/scenes/showcase.js`: an orbit of Lighthouse Rock, a track along Sunset Beach Pier, a reveal of Piazza Vecchia,
+  a dolly into Redwood Creek Falls). More: a scene script is 15-30 lines and `auto: '<id>'` on the panel's entry; a
+  Showcase spot is one `show(...)` line. The rest of the ~60 staged scenes can go in batches of ten or so.
+- **The first three scenes**: biker bar brawl (the Rusty Spur: in, the line at the bar, two punches and a knockdown, out
+  to a club bike, three clubs after him), tanker into the gang hideout (down the straight at a 'gang' point of interest,
+  the driver bails, the tanker into the parked cars and the gang, one blast and the cars after it), helicopter pursuit
+  (through a roadblock's gap, the cruisers swing round, the air unit picks it up, the crash, out and into an alley).
+- **Capture** (`server/capture.js`, `tools/capture.mjs`, `deploy/cla-capture.service`): the same server with
+  `CLA_CAPTURE=1` on its own port, 127.0.0.1 only, dev on, no FTUE or creator for its camera pages (hidden, invincible,
+  out of the way). Math.random seeded before anything loads; the world's day fixed; the world never ticks by itself - the
+  driver steps it (`/capture/step`), holds the scene at its first moment while the pages get the art (`hold=1`,
+  `/capture/go`), then one tick every 3 frames. The page (`?capture`) draws a frame only when asked, at its own time on
+  Playwright's clock (main.js `__capFrame`), and says when the art for the screen is still coming (`__capBusy`); each
+  frame is a CDP screenshot piped to ffmpeg (H.264, CRF 16, yuv420p). Wide 16:9 and tall 9:16 pages in the same take.
+  `node tools/capture.mjs --scene bikerbrawl [--all] [--size 1080|1440] [--orient wide,tall] [--world v3|today]`.
+  Same seed, same take (test: two runs of a scene in separate processes, the same actor positions at the same ticks).
+- Small fixes on the way: a vehicle's `scripted` (the garage drive-out's) is no longer reused - a scene's hold is
+  `dirHold`; npc.js `onVehicleHit` leaves a driven NPC alone; bikers.js counts the cinematic and director cameras as
+  someone there; dusting.js leaves a scene's duster's mist on.

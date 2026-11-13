@@ -3,7 +3,8 @@
 // WebGL), wide 16:9 and tall 9:16 from the same take.
 //   node tools/capture.mjs --scene bikerbrawl [--scene ...|--all] [--out DIR] [--size 1080|1440] [--orient wide,tall]
 //        [--secs N] [--fps 60] [--seed 1337] [--world v3|today] [--port 8299] [--data DIR] [--jpeg] [--crf 16]
-//        [--frames N] (a short test) [--server] (one already running there) [--sheet] (a contact sheet of the frames)
+//        [--frames N] (a short test) [--server] (one already running there) [--sheet] (a dozen frames kept as pictures)
+//        [--pages] (a page for each shape, not one square page cut both ways)
 // What it does, for each scene:
 //   1. starts the server with CLA_CAPTURE=1 on its own port (server/capture.js: seeded, private, stepped from here)
 //   2. opens the page for each shape at once (Playwright, the Ultra preset, ?capture: the page draws a frame only when
@@ -30,7 +31,12 @@ const scenes = flag('all') ? SCENE_LIST.map((s) => s.id) : many('scene');
 if (!scenes.length || scenes.some((s) => !SCENES[s])) { console.log(`Which scene? --scene <${SCENE_LIST.map((s) => s.id).join('|')}> or --all`); process.exit(1); }
 const OUT = opt('out', join(ROOT, 'captures'));
 const SIZE = Number(opt('size', '1080')), LONG = Math.round(SIZE * 16 / 9);
-const SHAPES = opt('orient', 'wide,tall').split(',').map((o) => (o === 'tall' ? { o, w: SIZE, h: LONG } : { o: 'wide', w: LONG, h: SIZE }));
+const ORIENTS = opt('orient', 'wide,tall').split(',');
+// both shapes from one square page (--pages: a page each instead): the take drawn once, LONG x LONG, and cut to 16:9 and
+// 9:16 round its middle - half the drawing, and the two the very same frames
+const SQUARE = ORIENTS.length > 1 && !flag('pages');
+const SHAPES = SQUARE ? [{ o: 'square', w: LONG, h: LONG, cuts: ORIENTS.map((o) => (o === 'tall' ? { o, w: SIZE, h: LONG } : { o: 'wide', w: LONG, h: SIZE })) }]
+  : ORIENTS.map((o) => (o === 'tall' ? { o, w: SIZE, h: LONG } : { o: 'wide', w: LONG, h: SIZE }));
 const FPS = Number(opt('fps', '60')), SEED = Number(opt('seed', '1337')), PORT = Number(opt('port', '8299'));
 const WORLD = opt('world', 'v3'), CRF = opt('crf', '16'), JPEG = flag('jpeg'), LIMIT = Number(opt('frames', '0')) || 0;
 const DATA = opt('data', join(ROOT, 'data-capture'));
@@ -123,8 +129,12 @@ async function shot(P) {
   const r = await P.cdp.send('Page.captureScreenshot', JPEG ? { format: 'jpeg', quality: 95 } : { format: 'png' });
   return Buffer.from(r.data, 'base64');
 }
-function encoder(file, P) {
-  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', JPEG ? 'mjpeg' : 'png', '-i', '-', '-vf', `scale=${P.w}:${P.h}:flags=lanczos,format=yuv420p`, '-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-profile:v', 'high', '-movflags', '+faststart', file], { stdio: ['pipe', 'inherit', 'inherit'] });
+function encoder(dir, id, P) {
+  const x264 = ['-c:v', 'libx264', '-preset', 'slow', '-crf', CRF, '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-movflags', '+faststart'];
+  const outs = P.cuts
+    ? ['-filter_complex', `[0:v]split=${P.cuts.length}${P.cuts.map((c, i) => `[s${i}]`).join('')};${P.cuts.map((c, i) => `[s${i}]crop=${c.w}:${c.h}:${(P.w - c.w) / 2}:${(P.h - c.h) / 2}[o${i}]`).join(';')}`, ...P.cuts.flatMap((c, i) => ['-map', `[o${i}]`, ...x264, join(dir, `${id}-${c.o}-${c.w}x${c.h}.mp4`)])]
+    : ['-vf', `scale=${P.w}:${P.h}:flags=lanczos`, ...x264, join(dir, `${id}-${P.o}-${P.w}x${P.h}.mp4`)];
+  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', JPEG ? 'mjpeg' : 'png', '-i', '-', ...outs], { stdio: ['pipe', 'inherit', 'inherit'] });
   return { write: (b) => new Promise((r) => { if (!ff.stdin.write(b)) ff.stdin.once('drain', r); else r(); }), end: () => new Promise((r) => { ff.on('close', r); ff.stdin.end(); }) };
 }
 
@@ -152,7 +162,7 @@ async function take(id) {
     // the take
     const outDir = join(OUT, id);
     mkdirSync(outDir, { recursive: true });
-    const enc = pages.map((P) => encoder(join(outDir, `${id}-${P.o}-${P.w}x${P.h}.mp4`), P));
+    const enc = pages.map((P) => encoder(outDir, id, P));
     const keep = flag('sheet') ? pages.map(() => []) : null;
     for (const P of pages) { await P.pg.clock.pauseAt(T0 + 3600e3); P.t = await P.pg.evaluate(() => performance.now()); P.t0 = P.t; }
     const t0 = Date.now();

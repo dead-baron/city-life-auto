@@ -735,13 +735,13 @@ export function release(world, run, A, by, ended = false) {
   A.scripted = false; A.ctl = null;
   if (!e || e.removed) return;
   if (e.kind === K.PED) {
-    if (e.npc) { e.npc.driven = false; if (ended) e.npc.keep = false; if (e.gt === 'dance') { e.gt = null; e.appVer = (e.appVer || 0) + 1; } }
+    if (e.npc) { e.npc.driven = false; if (ended && A.own) e.npc.keep = false; if (e.gt === 'dance') { e.gt = null; e.appVer = (e.appVer || 0) + 1; } }
     const v = e.vehId ? world.get(e.vehId) : null;
     if (v && v.seats[0] === e.id && v.ai && v.ai.kind === 'actor' && !v.wreckAt && !v.dead && v.def.kind !== 'air') { v.dirHold = false; try { joinTraffic(world, v); } catch { v.ai = null; } }
     if (by && e.npc && !e.dead) onAttacked(world, e, by);
   } else {
     e.dirHold = false;
-    if (ended) e.despawnable = true;
+    if (ended && A.own) e.despawnable = true;   // (not one picked from the world: a club's bike stays the club's)
     const d = e.seats && e.seats[0] ? world.get(e.seats[0]) : null;
     if (e.ai && e.ai.kind === 'actor') { if (d && d.npc && !e.wreckAt && !e.dead && e.def.kind !== 'air') { try { joinTraffic(world, e); } catch { e.ai = null; } } else e.ai = null; }
   }
