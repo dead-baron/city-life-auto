@@ -245,7 +245,7 @@ body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 #clock { display: none; }
 /* the debug button (a playtest tool, open to everyone): quiet in the world's column, under the clock with the status
    beside it (upright beside the minimap's foot, left of the system buttons) - apart from the game's own, over nothing */
-#b-dev { position: relative; grid-column: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; opacity: .7; color: var(--pad-mute); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+#b-dev { position: relative; grid-column: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: var(--r3);   /* (round again: the owner, 11-13) */ opacity: .7; color: var(--pad-mute); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); cursor: pointer; pointer-events: auto; touch-action: manipulation; }
 #b-dev svg { display: block; width: 18px; height: 18px; }
 #b-dev.on { opacity: 1; color: var(--pad-gold); }
 #b-dev:active { transform: scale(var(--press)); }
