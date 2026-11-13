@@ -189,7 +189,8 @@ export function createChat(ctx) {
     b.el.appendChild(s);
     b.l.push({ el: s, until: performance.now() + (me ? OWN_MS : BUBBLE_MS) });
     while (b.l.length > BUBBLE_LINES) b.l.shift().el.remove();
-    if (!raf) raf = requestAnimationFrame(place);
+    if (raf) cancelAnimationFrame(raf);
+    place();   // (placed at once - a busy frame doesn't leave it in the corner - then kept over the speaker each frame)
   }
   function place() {
     raf = 0;
