@@ -204,9 +204,10 @@ test('autoplay: the panel\'s staged scenes and Showcase spots name scripts that 
     const r = director.start(world, id, { mode: 'dev', ref: { x: p.ped.x, y: p.ped.y }, viewer: p }).run;
     assert.ok(r, id);
     const e = ent(world, r, subject), x0 = e.x, y0 = e.y;
-    stepScene(world, r, 6);
-    assert.ok(Math.hypot(e.x - x0, e.y - y0) > (id === 'autoshootout' ? 0 : 300), `${id}: ${subject} on the move`);
+    stepScene(world, r, 1);
     assert.ok(p.dirCam, `${id}: the camera`);
+    stepScene(world, r, 5);
+    assert.ok(Math.hypot(e.x - x0, e.y - y0) > (id === 'autoshootout' ? 0 : 300), `${id}: ${subject} on the move`);
     director.end(world, r);
   }
   assert.equal(world.errorCounts ? world.errorCounts.size : 0, 0);
