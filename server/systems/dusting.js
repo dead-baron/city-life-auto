@@ -129,7 +129,7 @@ function textOf(j) {
 export function update(world, dt) {
   for (const p of world.players.values()) if (p.job && p.job.type === 'dusting') step(world, p, dt);
   // a duster nobody is dusting with stops spraying
-  if (world.tick % 20 === 9) for (const v of world.entities.values()) if (v.kind === K.VEH && v.def && v.def.spray && v.lightB && !sprayer(world, v)) v.lightB = 0;
+  if (world.tick % 20 === 9) for (const v of world.entities.values()) if (v.kind === K.VEH && v.def && v.def.spray && v.lightB && !v.dirSpray && !sprayer(world, v)) v.lightB = 0;   // (dirSpray: a scene's duster - director.js)
 }
 function sprayer(world, v) {
   const id = v.seats[0], ped = id && world.get(id);

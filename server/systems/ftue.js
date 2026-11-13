@@ -230,6 +230,7 @@ export function target(world, p) {
 // players.join (a new session), before starter.onJoin: one that left mid-way picks up where it was - the arrival or the question asked again, the goal's step as it was
 export function onJoin(world, p) {
   const prof = p.profile;
+  if (world.capture) { prof.ftue = { st: 'done', tips: 0, m: {}, how: 'capture' }; prof.lookPicked = true; return; }   // (and no character creator: the camera's own look is never seen)   // (the private capture server's camera pages: no arrival, no question - server/capture.js)
   if (!prof.ftue) { prof.ftue = fresh(); store.touch(); }   // (no record: a new character's - every profile from before the FTUE was reset to one: store.js PROGRESS_EPOCH)
   const f = prof.ftue;
   f.m ||= {};
