@@ -68,7 +68,7 @@ test('the page wires it: the prompt names the kind and the verb, the action butt
   const glyphs = read('client/glyphs.js'), hud = read('client/hud.js');
   assert.match(glyphs, /kind = setActKind\(action === 'action' \? actKind\(m\[2\]\) : 'interact'\)/, 'formatPrompt reads the kind before drawing the chip');
   assert.match(glyphs, /setActWord\(action === 'action' \? actWord\(m\[2\]\) : 'ACT'\);/, 'and the verb (Direction A, 11-12: ACT says what it will do)');
-  assert.match(hud, /pr\.classList\.toggle\('btn', !!this\.actBtn\);\n\s*actFace\(\);/, 'the action button redraws its word with the prompt - and on touch it replaces the chip');
+  assert.match(hud, /pr\.classList\.toggle\('btn', !!\(this\.actBtn && this\.actBtn\.dataset\.slot\)\);[^\n]*\n\s*actFace\(\);/, 'the action button redraws its word with the prompt - and on touch it replaces the chip');
   assert.match(hud, /setActKind\('interact'\); setActWord\('ACT'\); actFace\(\);/, 'and back to ACT with none');
   setActKind('door'); assert.equal(actKindNow(), 'door'); setActKind('interact');
 });

@@ -178,7 +178,7 @@ export class HUD {
         if (this.actBtn) { this.actBtn.classList.add('pulse'); this.actBtn.dataset.tip = fp.words; }   // (its long press says the whole of it: client/touchslots.js)
         // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip; a prompt no button does (a ride's
         // note) keeps its chip
-        pr.classList.toggle('btn', !!this.actBtn);
+        pr.classList.toggle('btn', !!(this.actBtn && this.actBtn.dataset.slot));   // (the button there to press: on touch its word says it)
         actFace();
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
