@@ -22695,3 +22695,32 @@ Tests: test/chatui.test.js, in headless Chromium: the bubbles, the feed, the she
 Messages app, Settings, and the keyboard on a 915x412 phone. Also test/ftue.test.js (the seventh moment),
 test/hudlayout.test.js and test/hudpage.js (the chat button measured with the HUD on every screen), and
 test/uitokens.test.js (chat.js's CSS).
+
+## 2026-11-12 - Fenced places have ways out on two sides
+The owner (11-12): "some areas like soccer fields will be fenced off entirely except for one point to enter ... there
+should be logical exit points so players don't walk in and get stuck and have to go back out the way they came. So maybe
+an exit near the corners (maybe not the corners itself)." World v3's courts and pitches were chain-link boxes with one
+gate in a corner (a few, like the Bluffs' tennis courts, had none at all).
+- A new pass at the end of the build, right after the door-and-path gaps (shared/world3-fenceexits.js `fenceExits3`,
+  on shared/world3-fencegaps.js's fence kit): it finds the enclosures - the ground people walk on, shut in by the fences
+  people collide with (shared/fences.js) and by buildings and water, with the gates builders left counted as closed so a
+  one-gate box is still one - filling each from what marks it: a court, a hoop or a net, a pitch (the venues), a dog
+  run's sign or agility gear, a skate park's ramps, a community garden's beds, a park's sign, a pier's railing.
+- The public ones are opened: every one gets at least two ways out on different sides where its shape allows (a pier,
+  all one end on land: one), each a gap 80 px wide (two people side by side; wider along a fence on the slant), its
+  middle `EXITS3.corner` (4) tiles in from the end of a side - near the corner, not in it. The first goes on the side
+  facing the nearest pavement, path or road unless a gate already does, the next on another side as far from the others
+  as it can be, and only where the ground both sides is clear (no bleachers, tree or wall in the way) and out there is
+  somewhere to go (never into a place kept shut). The fence prop is split in two, its bare posts in the gap go.
+- What keeps people out stays shut: the prison's yard (its gate is server/systems/gates.js), the pools and the water
+  park (their safety fences), the car soccer arena's walls, the airport's barbed wire and the port's yard fences, homes'
+  gardens and every backyard, the formal gardens' hedged beds, the farms' fields and pens - anything not on the list.
+- On the seed's world: 23 places opened with 24 gaps - 9 courts (the Bluffs' tennis courts had no way in at all), the
+  Greenfield Park pitch (Linden Park's already had two), 2 dog runs, 2 community gardens, 9 piers a promenade railing
+  ran across the root of (one tiny mooring stays cut off by water, not a fence). The pass takes about 0.2 s of the
+  ~130 s build (130-131 s measured, within this shared machine's noise). No new prop kinds or map fields: the fences
+  are just shorter; the pass's lists stay off what the pages download. Re-keys the world (world3).
+Tests: `test/fenceexits.test.js` (a small map of its own: a one-gate court gets a second way out on another side, near a
+corner; a shut one two, the first facing the pavement, each two tiles wide; a pool, barbed wire, the prison, a home kept
+shut), `test/world3server.test.js` (on its build: every opened place's ways out walked independently - test/fenceaudit.js
+- two where the shape allows; no fence cut near the prison, a pool, a home, a barbed, yard or arena fence).

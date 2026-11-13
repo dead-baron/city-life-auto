@@ -18,11 +18,11 @@ import { fenceSegments, fieldRuns } from './fences.js';
 export const GAP3 = { R: 60, gap: 48, minPiece: 24 };
 const PATHS = new Set([T.SIDEWALK, T.PLAZA, T.DIRT, T.DOCK, T.LOT]);
 
-export function fenceGaps3(m, log = false) {
-  const out = { at: log ? [] : null, segs: 0, doors: 0, sealed: 0, gaps: 0, paths: 0, unsealed: 0, stuck: 0, byKind: {} };
+// The fences as segments (shared/fences.js fenceSegments), by tile, and the tools to cut gates in them - shared with
+// shared/world3-fenceexits.js. `out` counts the gaps cut (gaps, byKind). cutAt(id, x, y, gap): a gap `gap` px wide in
+// segment id centred on (x, y) - false if it's too short to cut
+export function fenceKit(m, out) {
   const segs = fenceSegments(m);
-  out.segs = segs.length;
-  if (!segs.length) return out;
   // the segments by tile
   const grid = new Map();
   const reg = (id) => {
@@ -55,11 +55,11 @@ export function fenceGaps3(m, log = false) {
     return null;
   };
   // a gap in segment id at (x, y): split it, its source with it
-  const cutAt = (id, x, y) => {
+  const cutAt = (id, x, y, gap = GAP3.gap) => {
     const s = segs[id], L = Math.sqrt((s.x1 - s.x0) * (s.x1 - s.x0) + (s.y1 - s.y0) * (s.y1 - s.y0));
     if (L < 1) return false;
     const ux = (s.x1 - s.x0) / L, uy = (s.y1 - s.y0) / L, t = (x - s.x0) * ux + (y - s.y0) * uy;
-    const g0 = t - GAP3.gap / 2, g1 = t + GAP3.gap / 2;
+    const g0 = t - gap / 2, g1 = t + gap / 2;
     const pieces = [];
     if (g0 >= GAP3.minPiece) pieces.push([0, g0]);
     if (L - g1 >= GAP3.minPiece) pieces.push([g1, L]);
@@ -96,6 +96,14 @@ export function fenceGaps3(m, log = false) {
     out.gaps++;
     return true;
   };
+  return { segs, grid, reg, walk, cross, cutAt };
+}
+
+export function fenceGaps3(m, log = false) {
+  const out = { at: log ? [] : null, segs: 0, doors: 0, sealed: 0, gaps: 0, paths: 0, unsealed: 0, stuck: 0, byKind: {} };
+  const { segs, grid, walk, cross, cutAt } = fenceKit(m, out);
+  out.segs = segs.length;
+  if (!segs.length) return out;
 
   // ---- the doors -------------------------------------------------------------------------------------------------
   const R = GAP3.R, S = 2 * R + 1, N = S * S;

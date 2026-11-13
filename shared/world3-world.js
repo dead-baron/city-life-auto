@@ -63,6 +63,7 @@ import { moreMansions3 } from './world3-mansions.js';
 import { desertCompound3 } from './world3-compound.js';
 import { clinics3, precincts3, DROP_SPECIALS3 } from './world3-medics.js';
 import { fenceGaps3 } from './world3-fencegaps.js';
+import { fenceExits3 } from './world3-fenceexits.js';
 import { waterOutlets3 } from './world3-outlets.js';
 import { woodsLake3 } from './world3-woodslake.js';
 import { wildEdges3 } from './world3-edges.js';
@@ -328,6 +329,7 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
+      if (city) m.world3.fenceExits = fenceExits3(m);   // (and every fenced place people go into - a court, a pitch, a dog run, a garden, a pier - a way out on two sides, near the corners: world3-fenceexits.js)
       if (city) m.world3.sightlines = sightlines3(m);   // (no tree's crown over a door, a standing sign, a chess table, an ATM, a bus stop - the owner, 11-06: world3-greens.js)
       lotPoisLast(m);   // (last: Southside's lot shops' POIs at the end of the list, so no other place's number moves - world3-lots.js)
       if (H3 && city) m.world3.parkWest = parkWest3(m, H3);   // (then: the city's arrival by Greenfield Park - its used lot, its alley, its shops - all at the ends of the lists: world3-firstcars.js)
