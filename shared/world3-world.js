@@ -335,7 +335,8 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
       if (city) { m.world3.towers = towers3(m); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
       if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
-      m.world3.lowByPlatforms = lowByPlatforms(m);   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
+      m.world3.lowByPlatforms = lowByPlatforms(m);
+      m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)
     pavement: city ? PAVEMENT3 : null,   // (v3b: the pavements' inner ring, street furniture only - map.js buildStreetProps)
@@ -410,4 +411,21 @@ export function worldOpts(asked) {
     },
   };
   return o;
+}
+
+// Every pump (m.pumps: the forecourts' - map.js forecourts - and the plans' own) is a prop too ('fuelpump': BREAKABLE -
+// rammed, shot or caught in a blast it goes up, server props.js), its solid entry the prop's: the art draws it from the
+// prop (broken: its wreck), the canopy from m.pumps. Added at the end of the props, so no other prop's number moves.
+export function pumpProps3(m) {
+  let n = 0;
+  for (const pu of m.pumps || []) {
+    const arr = m.solidProps.get(m.idx(Math.floor(pu.x / TILE), Math.floor(pu.y / TILE))) || [];
+    const e = arr.find((q) => q.pi < 0 && q.x === pu.x && q.y === pu.y);
+    m.props.push({ t: 'fuelpump', x: pu.x, y: pu.y });
+    const pi = m.props.length - 1;
+    if (e) { e.pi = pi; e.brk = true; m.propSolid.set(pi, e); }
+    else { const s = m.addSolidProp(pu.x, pu.y, 9); s.pi = pi; s.brk = true; m.propSolid.set(pi, s); }
+    n++;
+  }
+  return n;
 }

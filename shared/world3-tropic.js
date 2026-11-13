@@ -85,6 +85,7 @@ export function tropic3(m, H3) {
   const nearT = (x, y, r, pred) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (pred(Math.floor(x) + dx, Math.floor(y) + dy)) return true; return false; };
   const hard = (x, y) => { const t = tileAt(x, y); return t === T.ROAD || t === T.SIDEWALK || t === T.BUILDING || t === T.DOCK || t === T.PLAZA || t === T.LOT || t === T.BRIDGE || (inF(x, y) && built(idx(x, y))); };
   const P = (t, x, y, r = 0, ex = null) => H3.addProp(m, t, Math.round(x * TILE), Math.round(y * TILE), r, ex);
+  const snorkel = (x, y, a) => (m.snorkelSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a });   // (where someone snorkels: server wildfolk.js)
   const solid = (x, y, r) => m.addSolidProp(Math.round(x * TILE), Math.round(y * TILE), r);
   const place = (name, type, x0, y0, x1, y1) => { (m.landmarks ||= []).push({ name, type, x: x0 * TILE, y: y0 * TILE, w: (x1 - x0) * TILE, h: (y1 - y0) * TILE }); out.places.push(name); };
   // a wobbly blob: inside test (tiles), its edge wandering by wob of its radius
@@ -331,7 +332,9 @@ export function tropic3(m, H3) {
     out.spine = ridge(S.box[0], S.box[1], S.box[2], S.box[3], (x, y) => { const [d, w] = near(x + 0.5, y + 0.5); return d <= w && !inPool(x, y) && !nearT(x, y, 1, (a, b) => inPool(a, b)); }, (x, y) => { const [d, w, t] = near(x, y); return S.h[0] + (S.h[1] - S.h[0]) * Math.sqrt(Math.max(0, 1 - d / w)) * (1 - 0.4 * t) * (t > 0.85 ? (1 - t) / 0.15 : 1); }, 63);
   }
   P('outcrop', F.pool[0] - 4, F.pool[1] + 1.4, 18, { w: 54, d: 36, h: 16, style: 'lava', s: 3, j: 1, rock: 1 });   // the mossy islet in the lagoon
-  for (const [dx, dy, k, a] of [[3, 1.5, 0, 0.6], [-1, -2, 2, 2.4]]) P('snorkeler', F.pool[0] + dx, F.pool[1] + dy, 0, { k, a }), out.critters++;
+  // (the snorkelers are people now, not painted into the pool: a live one now and then - server wildfolk.js 'snorkel'; the
+  // owner, 11-12: a static human drawn into the art)
+  for (const [dx, dy, a] of [[3, 1.5, 0.6]]) snorkel(F.pool[0] + dx, F.pool[1] + dy, a);
   P('ringfloat', F.pool[0] + 6, F.pool[1] - 1, 0, { v: 1 });
   (m.natureSites ||= []).push({ kind: 'jfalls', hand: true, name: F.name, x: Math.round(F.x * TILE), y: Math.round((F.y + 3) * TILE), falls: { x: Math.round(F.x * TILE), y: Math.round(F.y * TILE), w: F.w, drop: F.drop }, pool: { x: Math.round(F.pool[0] * TILE), y: Math.round(F.pool[1] * TILE) } });
   place(F.name, 'falls', F.x - 8, F.y - 10, F.x + 8, F.y + 2);
@@ -412,9 +415,9 @@ export function tropic3(m, H3) {
     const edge = beach.filter(([x, y]) => nearT(x, y, 2, sea));
     edge.forEach(([x, y], k) => { const u = hh(x, y, 93); if (u < 0.16) { P('crab', x + 0.5, y + 0.5, 0, { a: hh(y, x, 94) * 6.28 }); take(x, y, 0); out.critters++; } else if (u < 0.3) { P('starfish', x + 0.3 + hh(k, 1, 95) * 0.4, y + 0.5, 0, { v: k % 4 }); take(x, y, 0); } });
     for (const f of [0.35, 0.75]) { const lg = beach.filter(([x, y]) => !taken.has(idx(x, y)) && !nearT(x, y, 1, sea))[Math.floor(beach.length * f * 0.5)]; if (lg) { P('driftwood', lg[0] + 0.5, lg[1] + 0.5, 0, { len: 120, a: 0.3 + f }); take(lg[0], lg[1], 1); } }
-    P('snorkeler', ccx - 2, ccy + 4, 0, { k: 1, a: 2.1 }); out.critters++;
-    for (const [dx, dy, k, z] of [[-9, -7, 0, 104], [12, -5, 1, 96]]) P('macaw', fx + dx, fy + dy, 0, { k, z, a: 1.2 }), out.critters++;
-    P('macaw', ccx + 2, ccy - 6, 0, { k: 0, fly: 1, z: 70, a: 0.4 }); out.critters++;
+    snorkel(ccx - 2, ccy + 4, 2.1);
+    // (no macaws painted in mid-air round the falls or over the lagoon: frozen there with their shadows - the owner, 11-12;
+    // the jungle's own sit up in the palms: jungleFrame)
     (m.natureSites ||= []).push({ kind: 'jfalls', hand: true, name: CV.falls, x: Math.round(fx * TILE), y: Math.round((fy + 3) * TILE), falls: { x: Math.round(fx * TILE), y: Math.round(fy * TILE), w: 84, drop: 168 }, cove: true });
     place(CV.name, 'beach', ccx - crx, ccy - cry, ccx + crx + 4, ccy + cry);
   }
@@ -462,15 +465,12 @@ export function tropic3(m, H3) {
   reefBand(LX0, LY0 - 16, LX1 + 18, LY1 + 26, 6, 10, 113, (x, y) => (Math.abs(x - C.jetty.x - 3) < 12 && y > 3500) || Math.hypot(x - C.islet.c[0], y - C.islet.c[1]) < 16);
   surfLine(LX0, LY0 - 18, LX1 + 20, LY1 + 26, 11, 117, (x, y) => (Math.abs(x - C.jetty.x - 3) < 12 && y > 3500) || Math.hypot(x - C.islet.c[0], y - C.islet.c[1]) < 14 || (x > ccx && Math.abs(y - (CV.mouth[0] + CV.mouth[1]) / 2) < 16));
   for (const [x, y, a] of [[4392, 3549], [4402, 3556, 1.2], [4462, 3534, 2.6], [4481, 3352, 4]]) if (sea(x, y)) { P('turtle', x + 0.5, y + 0.5, 0, { a: a || 0.4 }); out.critters++; }
-  if (sea(4446, 3548)) P('snorkeler', 4446.5, 3548.5, 0, { k: 2, a: 5.2 }), out.critters++;
+  if (sea(4446, 3548)) snorkel(4446.5, 3548.5, 5.2);
   // the beach narrowed: the lobe's sand more than five tiles from the sea grows over (the jungle comes down to it)
   for (let y = LY0; y < LY1; y++) for (let x = LX0; x < LX1; x++) if (free(x, y) && tileAt(x, y) === T.SAND && !(m.reserve[idx(x, y)] & KEEP) && !nearT(x, y, 5, sea)) m.tiles[idx(x, y)] = T.GRASS;
   // the jungle: everything still open on the lobe, not the beaches
   const lobeJ = (x, y) => x > LX0 && x < LX1 && y > LY0 && y < LY1 && tileAt(x, y) === T.GRASS && !inPool(x, y);
   out.jungle = jungleFrame(LX0, LY0, LX1, LY1, lobeJ, 121, { birds: 0.035 });
-  // macaws round the falls
-  for (const [dx, dy, k, z] of [[-12, -2, 0, 100], [13, -1, 1, 108], [-16, 6, 1, 96]]) P('macaw', F.x + dx, F.y + dy, 0, { k, z, a: dx > 0 ? 3.6 : 0.3 }), out.critters++;
-  P('macaw', F.x + 4, F.y + 2, 0, { k: 0, fly: 1, z: 80, a: 2.6 }); out.critters++;
 
   // ---- the kit elsewhere: Wreck Beach on the west lobe's tip, Tiki Point's north beach ------------------------------
   {

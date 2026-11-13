@@ -696,6 +696,15 @@ export const BOUNCER_CHASE_PX = 560;       // ...but go no further than this fro
 export const HAPPEN_EVERY_S = 150;         // roughly how often one happens somewhere near someone in town
 // The calm streets (the owner, 10-22): server events.js roughAt, busyNear
 export const CALM_STREETS = { fightShare: 0.2, snatchShare: 0.5, incidents: 2, incidentPx: 900 };
+// No knots of walkers (the owner, 11-12: eight people on one stretch of Coral Cay's jungle trail): the passers-by round a
+// player at most this many within r px - on the pavements and plazas `town` x the place's crowd (downtown's busier),
+// out on trails, grass and sand `open`; the rest are sent off another way and drift no closer for a while (npc.js spread)
+export const CROWD_CAP = { r: 320, town: 9, open: 3, offS: 40 };
+// A filling station's pumps go up (server props.js; the owner, 11-12): rammed hard, shot `shots` times or caught in a
+// blast, a pump blows `delay` s later - a fuel blast of r px and dmg (big: its size class, shared/explosions.js) that sets
+// off the pumps round it in turn (at most `chain` in a station's go). The wreck stands till the tidy-up crew has a new
+// one in, `respawnS` s on and only with nobody within `seePx` (out of everyone's view).
+export const FUEL_PUMP = { shots: 6, delay: 0.45, r: 150, dmg: 85, big: 2, chain: 8, chainS: 6, respawnS: 420, seePx: 1400 };
 export const FIGHT_BREAKUP_SAMARITAN = 4;  // breaking up a street fight
 export const FAINT_HELP_REWARD = 40;       // helping someone who collapsed back on their feet (cash, from them)...
 export const FAINT_HELP_SAMARITAN = 6;     // ...and the Samaritan points

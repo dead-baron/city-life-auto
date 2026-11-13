@@ -472,6 +472,8 @@ function hitscan(world, ped, w, a, acc) {
   const hit = traceTarget(world, ped, x1, y1, x2, y2, true);
   const mt = music.shot(world, ped, x1, y1, x2, y2, hit.hitT, w.dmg);   // (a boombox or a radio in the way, nearer: hit - music.js)
   if (mt >= 0) { world.emit(x1, y1, { e: 'shot', x1, y1, x2: x1 + (x2 - x1) * mt, y2: y1 + (y2 - y1) * mt, w: w.i, h: 0, id: ped.id }); return false; }
+  const pu = ped.sub || ped.lz ? null : props.pumpOnLine(world, x1, y1, x2, y2, hit.hitT);   // (a filling station's pump in the way, nearer: hit - props.js)
+  if (pu) { const px = x1 + (x2 - x1) * pu.t, py = y1 + (y2 - y1) * pu.t; world.emit(x1, y1, { e: 'shot', x1, y1, x2: px, y2: py, w: w.i, h: 0, id: ped.id }); world.emit(px, py, { e: 'spark', x: px, y: py }); props.pumpShot(world, pu.i, ped); return false; }
   const t = hit.hitT;
   const hx = x1 + (x2 - x1) * t, hy = y1 + (y2 - y1) * t;
   world.emit(x1, y1, { e: 'shot', x1, y1, x2: hx, y2: hy, w: w.i, h: hit.kind || 0, id: ped.id });   // (id: the client puts the flash on the gun it draws)

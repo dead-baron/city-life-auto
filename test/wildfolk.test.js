@@ -24,8 +24,10 @@ const wears = (e) => { const L = decodeLook(e.app.lk); return Object.values(L.ou
 const water = (x, y, a) => [24, 40, 60, 80].some((r) => { const t = m.tileAtPx(x + Math.cos(a) * r, y + Math.sin(a) * r); return t === T.WATER || t === T.DEEP; });
 
 test('the people of the wilds have their places: found by rules, out in the wild country, on open ground', () => {
-  for (const k of Object.keys(WILD_KINDS)) assert.ok(of(k).length >= 1, `some ${k} spots (${of(k).length})`);
-  for (const k of Object.keys(WILD_KINDS)) for (const s of of(k)) {
+  // (the snorkellers swim, in World v3's reefs only - map.snorkelSpots: test/fixwave.test.js, world3tropic)
+  const LAND = Object.keys(WILD_KINDS).filter((k) => k !== 'snorkel');
+  for (const k of LAND) assert.ok(of(k).length >= 1, `some ${k} spots (${of(k).length})`);
+  for (const k of LAND) for (const s of of(k)) {
     assert.ok(wildStyle(m, s.x, s.y), `${k}: out in the wilds`);
     assert.ok(open(s.x, s.y), `${k}: on open ground`);
   }

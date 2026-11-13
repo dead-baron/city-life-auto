@@ -453,6 +453,7 @@ export function railAt(rail, s) {
 // Street furniture vehicles can smash through. Heavy items slow the car more; everything not
 // listed (fountains, dumpsters, ATMs, market stalls, flat beds) stays put.
 export const BREAKABLE = new Set([
+  'fuelpump',   // (a filling station's pump: it goes up - server props.js)
   'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c',
   'hydrant', 'hydrant_y', 'trashcan', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_sq', 'planter_g', 'planter_fl', 'potted',
   'news_a', 'news_b', 'news_c', 'mailbox', 'vend_a', 'vend_cola', 'vend_c', 'bikerack', 'cone', 'barrier', 'drum', 'pallet', 'pallet_b',
@@ -461,7 +462,7 @@ export const BREAKABLE = new Set([
   'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'bollard', 'crates', 'acunit', 'trashpile', 'atm', 'billboard',
   'tent', 'picnic', 'upole', 'dspeaker', 'scope',
 ]);
-export const HEAVY_PROPS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
+export const HEAVY_PROPS = new Set(['fuelpump', 'tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'lamp', 'vend_a', 'vend_cola', 'vend_c', 'spool', 'sandbags', 'hydrant', 'hydrant_y', 'sigpole', 'dump_g', 'dump_b', 'dump_o', 'dumpster_s', 'dumpster_m', 'busstop', 'phonebox', 'acunit', 'billboard', 'upole']);
 
 // The terrain class a wild district really grows: the little sea islands (Lighthouse Rock, the Islets) are never
 // desert (grassland where the terrain says dry), and Granite Peaks is mountain where it says dry.

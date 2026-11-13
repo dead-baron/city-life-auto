@@ -22499,3 +22499,124 @@ the touch BOOST button set the sprint bit only on a horse, never at a car's whee
 (shared/controls.js: Shift, B on a pad, the touch BOOST button): in a match (the page's `view.arena`, the driver with a
 car soccer slot) the pad's B boosts in place of interact, and the held BOOST button boosts. The boost ring's key and the
 Guide's car soccer entry name it by device ([[boost]]); the README row no longer claims RT or the full thumb boosts.
+
+## 2026-11-12 - One name on a front: no double sign over a walk-in (the Old Town Infirmary)
+The owner (11-12, a phone shot by the Old Town Infirmary while its inside loaded): "OLD TOWN INFIRMARY" twice, one under
+the other. It wasn't the loading: the front itself said it twice. A hospital's, a clinic's or a police station's section
+gets its trade's name plaque over the door (client/art2/game/statics.js, the `hospital` / `police` archetypes), and a hand
+plan whose front has its own shop sign (the infirmary's `art.shop.sign`, shared/world3-oldtown.js) put its signboard on top
+of that - the plaque on the fascia and the board above it, a few pixels apart. Now a front with a sign drops any plaque
+that says the same name or a word of it (`sameName`: OLD TOWN INFIRMARY, POLICE on GULL HARBOR POLICE); the EMERGENCY
+plaque and the clinic's cross stay. The same front is drawn in every state - the bake while the inside is on its way, the
+cut-away once it's in, the stand-ins draw no signs - so it's one name in each. All 1,776 shop signs in World v3 checked:
+no plaque repeats its sign. Test: `test/fixwave.test.js`. (Re-keys the art: statics.js.)
+
+## 2026-11-12 - A player's name tag on the aircraft they fly
+The owner (11-12): "BETA Claw16" on the grass well below a helicopter its player was flying. The tag was drawn at the
+player's ground point, and art v2 draws an aircraft up the screen by its height. A player in a vehicle now has the tag over
+the vehicle they're in (the nearest one under them): above its body, and for a helicopter or a plane lifted by the same
+amount the art and the camera lift it (render/aircraft.js `camLift`), so it rides with the aircraft at any height
+(client/main.js `tagY`). Cars, boats and bikes: over the vehicle instead of its middle.
+
+## 2026-11-12 - No knots of walkers: a cap on the passers-by round a player
+The owner (11-12, Coral Cay's jungle trail): about eight people on one short stretch of path at once. The passers-by meander
+back toward the nearest player (server npc.js `pickWaypoint`: 60% of the time when they're over 520 px off - it keeps the
+streets round you lively); out where there's one path to walk, they all end up on it, round you. Now (server npc.js
+`spread`, every half second with the density pass) past `CROWD_CAP` within 320 px of a player - on pavements and plazas 9 x
+the place's crowd (downtown's 1.5: 14, so busy streets and the stations at the rush stay busy), out on trails, grass and
+sand 3 - the nearest stay and the rest are sent off another way, not drifting back toward anyone for 40 s. Nobody at an
+activity, a post, a counter or their campground is moved. Numbers: shared/rules.js `CROWD_CAP`. Test: `test/fixwave.test.js`.
+
+## 2026-11-12 - Coral Cay: the snorkelers are people now, no birds frozen in mid-air
+The owner (11-12, the lagoon by the T-pier): a static snorkeler painted into the art, and a red bird stuck in mid-air with
+its shadow on the water. The four snorkelers baked into World v3's tropic coves (shared/world3-tropic.js: Coral Cay's lagoon,
+Macaw Cove, the jungle falls' pool) were the only people drawn into the art anywhere (the rest are statues); they're gone,
+and three places for them are `m.snorkelSpots` - a new kind of the people of the wilds (server wildfolk.js `snorkel`, by day, one
+round a player at most): someone in swimwear and goggles out in the shallows, swimming slowly from one end of a short
+reach to the other and back with a spell still at each end (activities.js's patrol; an NPC in the water swims). The two
+macaws painted in flight and the five painted hanging in the air round the falls are gone too (the jungle's own still sit
+up in the palms, and the live gulls - client/birds.js - come and go on the beaches). Tests: `test/world3tropic.test.js`,
+`test/fixwave.test.js`. (Re-keys the world.)
+
+## 2026-11-12 - The cinematic Showcase: the hand-crafted places, a press away
+The owner (11-12) is about to make cinematics of the best-looking hand-crafted areas: "add locations that have a great hand
+crafted touch to the cinematic lists so it's easy to find them". The Tour glided through the map's landmarks and paintings,
+nearest first. Now there's a Showcase (client/showcase.js, loaded with the director): 39 places from the handcrafted and
+"by hand" work in this log - the coasts and islands (Lighthouse Rock, Gull Point Light and the harbour village, Sunset Beach
+Pier, Coral Cay's lagoon, Macaw Cove, Pelican Point, North Point, the Bluffs, North Cape, Redwood Cove, Northshore), the
+wild (Lakeside Greens, Kestrel Beach, Granite Hot Springs, Summit Tarn, Eagle Crag, Silver Thread Falls, Redwood Creek Falls,
+Hidden Pool, the Redwood Caverns, Red Rock Canyon, Canyon Oasis, Mirage Lake, the balloon field) and the city and the towns
+(Greenfield Park, Piazza Vecchia, the night market, Lucky Mesa's casinos, the Pink Mile, the El over Trestle Street, the
+museum square, the Bayside Ritz, Lantern Lane, the Harbor waterfront, Waves Stadium, Westport Center Plaza, Falls Green,
+Westport International) - each with its zoom and a time of day to shoot it at (golden hour at the lighthouse, night on the
+Strip, dawn at the tarn). Each is looked up by name in the debug teleport's list of the world's places (client/devtp.js
+`teleportPlaces`, loaded the first time the panel shows the list), so it's where the world puts it.
+- The cinematic panel (F4) has a Showcase section: press a place and the drone camera is there, at its zoom and time of
+  day (WASD / the stick fly on from there; your character stays where it was).
+- The Tour: "All the sights" as before, or "Showcase only" - each place in turn at its own zoom and time of day.
+Test: `test/fixwave.test.js` (the list's shape, the look-up, the panel's wiring); the names checked against World v3's places.
+
+## 2026-11-12 - The water by a pier with boats moored: no more racing flashes
+The owner (11-12, a long wooden pier out from a beach, small boats moored either side): "Surface reflections were going
+really fast. Overall seemed improved but noticed that one spot." The light pass's water (client/art2/game/lightgame.js
+waterSurf) runs at one speed everywhere - its time is the frame's, its waves, glints and caustics anchored to the world, the
+only local term the bake's word for the water (the sea's, a lake's, a running river's: running water's ripples are about ten
+times the sea's speed). Every pier in World v3 with boats or a river's water by it was baked and its water's words counted:
+not one running-water word in the sea anywhere. What did race there was the life in the water (client/art2/game/
+waterlife.js): every vehicle in the water counted as someone moving through it - a moored boat at 0 px/s was 70 px of fright
+to the fish every frame - so a silver shoal or the mullet in the shallows under a marina's boats darted at 170-200 px/s
+without end, their flanks flashing as they turned: fast bright glints in exactly the spots with boats moored. Now a boat or
+a body lying still in the water (under 15 px/s: `STILL_SP`) only nudges a fish that swims right up to it (20 px), and not one
+already lying low after a fright; a boat under way still scatters them as before. Round a moored boat the fish of a shore
+patch dart 1.8% of the time (11.6% before). The same holds for the new snorkelers resting at the ends of their reach.
+Test: `test/waterlife.test.js`. (The in-game Playwright check against open sea couldn't be run on the shared 2-core box this
+evening - the World v3 dev server and the browser didn't fit beside the other branches' runs - so the measure is the
+simulation's own, the page's code run in node.)
+
+## 2026-11-12 - No tall plain blocks over the street (the art's street cap)
+The owner (11-12, a big flat grey roof over much of the screen): "there are still a lot of tall buildings that don't really
+add anything to the game, it just blocks views of the street behind it ... If there are large buildings that have a reason
+to be tall by design that might be different, but tall huge buildings that don't need to be there and just block views we
+should adjust." The 11-06 and 11-07 passes cut the huge footprints and split the hand plans' big towers; the heights of
+everything else are the art's (client/art2/game/statics.js `specOf`: an office in a towers district 5-9 storeys, glass
+7-11, a walk-up 3-5, with setback storeys on top), and the camera draws each one up over the ground north of it.
+- The survey (`node tools/tallblocks.mjs`; the measure `tools/plainmeasure.mjs` `surveyBlockers`): every building section
+  as the art draws it - its height with its setback on top - and the street, pavement, plaza and car park tiles north of
+  it that height covers. A blocker: no reason to stand tall (no walk-in, no trade but deliveries, no place of its own - a
+  station, a casino, a hospital, the police: the POIs - not a landmark tower, a split tower's own slim tower, a hand
+  plan's set piece with its own roof kit, neon or lights, a named hand-placed building with its name on its front, or the
+  hero corner) and its wall over more than 10 rows of street across its front (a street and its pavements: a mid-rise
+  of four or five storeys still stands) and 72 tiles in all. Before: 194 sections of 188 buildings, 32,190 street tiles
+  under them - Westport Center 156 (its office and glass blocks of 10-17 storeys round the Plaza), the Old Quarter 21,
+  Northgate 5, Southside 3 (the Riverway Houses), Falls Center 3, Sunset Beach 2, Pelican Key 2, Downtown 1, the Civic
+  Center 1. After: none.
+- The fix is the art's (`streetCap`): such a section comes down a storey at a time (to two at the least) until its wall
+  is back within the cap, its setback storeys left off when they'd take it past (`upBlocks`); the lit windows of the
+  storeys gone go too. Most land at five storeys (13 to 5, 9 to 5, 14 to 5...), about 130 sections in all. Nothing with a
+  reason is touched; the landmark towers (shared/world3-towers.js `TOWER_LANDMARKS`) now carry `landmark` so the art knows.
+  Still tall over a street, by design: the five landmark towers, St. Neon General, the Bayside Ritz, the Strip's casino
+  towers, Linden Court and Park West Annex - 25 sections, listed by the tool, for a later look.
+- The footprints, tiles, POIs and homes don't change - only how tall the art draws them. Re-keys the art (`art3`; the
+  landmark flag re-keys `world3`). test/plainblocks.test.js: the survey finds them, none left above the minimum, nothing
+  with a reason lowered, the landmarks flagged. World v3's build: 124-148 s on this shared 2-core machine with the tests of
+  other branches running (131 s alone on 11-08); the art's cap runs when the chunks bake, not at the server's start.
+
+## 2026-11-12 - Filling stations with pumps, and pumps that go up
+The owner (11-12): the "GAS-N-GO" by Pizza Express was an empty paved lot - no pumps, no canopy. The city generator's
+filling stations (the prefabs `gas` and `fuel`, a shop on its lot) had their pumps and canopy in the old painted lot; art
+v2 draws the lot bare and only pumps on the map (m.pumps) get drawn. Five of World v3's nine stations were bare lots (the
+two Gas-N-Gos, Fuel Stop, Highland Fuel, Route 9 Fuel); the four hand-placed ones have their plans' own (m.sitePumps).
+- The forecourts (shared/map.js `forecourts`, World v3 only): on each such lot, the open part in front of (or beside) the
+  shop, two tiles clear of its front - paved where the lot lay on grass or dirt out of town - two rows of two or three
+  pumps four tiles apart, clear of the parking and anything solid. The art puts its canopy and light over each group
+  (statics.js addSetPieces, as before).
+- Every pump is a prop now (`fuelpump`: shared/mapcore.js BREAKABLE and HEAVY_PROPS; shared/world3-world.js `pumpProps3`, the
+  build's last step, so no other prop's number moves), its solid its own,
+  drawn with the props and its wreck when broken - a scorch, the charred base, the housing torn open and bits about.
+- They go up (server props.js; numbers in shared/rules.js `FUEL_PUMP`): rammed hard enough (the street furniture's smash,
+  which the driver's page predicts), shot six times (combat.js hitscan: a pump in the shot's way, nearer than anyone, stops
+  the round), or caught in a blast. 0.45 s later it's a fuel blast (explosions.js `blastAt`, 150 px, 85 damage) - which
+  breaks the pumps round it, and they go in turn, at most eight in a station's go. The wreck stands until the tidy-up crew
+  puts a new one in: seven minutes on, and only with nobody within 1,400 px to see it happen.
+Tests: `test/fixwave.test.js` (shot, the blast, the chain, back out of view), `test/plainblocks.test.js` (pumps at every
+station, one prop each). (Re-keys the world: world3.)

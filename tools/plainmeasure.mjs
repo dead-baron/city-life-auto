@@ -99,3 +99,30 @@ export function surveyTowers(m) {
   }
   return list;
 }
+
+// ---- the tall blocks over the street (the owner, 2026-11-12: "tall buildings that don't really add anything to the game,
+// it just blocks views of the street behind it"): every section of every building as the art draws it (client/art2/game/
+// statics.js staticIndex - its height, its setback storeys on top), the street, pavement, plaza and car park tiles north of
+// it its height covers from the game camera (statics.js streetUnder), and whether the building has a reason of its own to
+// stand tall (statics.js purposeful: a walk-in, a trade, a place, a named hand-planned building). A blocker: no reason, and
+// more of the street hidden than the cap lets it (statics.js blocks: STREET_CAP's rows across its front and tiles in all). -> [{ b, name, tx, ty, tw, th, floors, H, hidden, purpose, d }]
+export async function surveyBlockers(m, { on = true } = {}) {
+  const S = await import('../client/art2/game/statics.js');
+  const { buildingH, roofDeckZ } = await import('../client/art2/buildings.js');
+  S.STREET_CAP.on = on;
+  S.dropIndex(m);
+  const I = S.staticIndex(m), c = I.c, P = S.purposeful(c), out = [];
+  for (const [bi, items] of I.byB) {
+    const b = m.buildings[bi];
+    for (const it of items) {
+      if (!it.recipe || it.recipe.t !== 'b' || it.recipe.frame || !it.fp) continue;
+      const sp = it.recipe.spec, up = it.recipe.up, H = buildingH(sp) + (up ? roofDeckZ(sp) + buildingH(up.spec) - buildingH(sp) : 0);
+      const tx = Math.round(it.fp[0] / 32), ty = Math.round(it.fp[1] / 32), tw = Math.round((it.fp[2] - it.fp[0]) / 32), th = Math.round((it.fp[3] - it.fp[1]) / 32);
+      const hidden = S.streetUnder(c, tx, ty, tw, H);
+      out.push({ b: bi, name: b.name, tx, ty, tw, th, floors: (sp.floors || 0) + (up ? up.spec.floors || 0 : 0), H, hidden, purpose: P.has(bi), d: m.dist[m.idx(Math.min(m.x0 + m.w - 1, tx), Math.min(m.y0 + m.h - 1, ty))] });
+    }
+  }
+  S.STREET_CAP.on = true;
+  return out;
+}
+export async function blockersOf(L) { const { blocks } = await import('../client/art2/game/statics.js'); return L.filter((q) => !q.purpose && blocks(q.hidden, q.tw)); }

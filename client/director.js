@@ -25,6 +25,7 @@
 import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
 import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
+import { SHOWCASE, showcaseSpot } from './showcase.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
@@ -157,6 +158,26 @@ export function makeDirector(S, api) {
   // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
   // n, z, tour; cam: the camera on them; hold: black until they're here and the art's in; near: near you or anywhere)
   const dr = { x: 0, y: 0, a: -Math.PI / 6, si: 2, vx: 0, vy: 0 };
+  // the Showcase (client/showcase.js): the hand-crafted places, for the cinematics - where they are on this map (looked up
+  // once, by name: client/devtp.js teleportPlaces), the one picked, the tour of them only
+  let shows = null, showAt = -1, tourSet = 'all';
+  const showList = () => shows || [];
+  async function loadShows() {
+    if (shows) return shows;
+    try { const { teleportPlaces } = await import('./devtp.js'); shows = SHOWCASE.map((q) => ({ ...q, at: S.map ? showcaseSpot(q, teleportPlaces(S.map)) : null })); } catch (e) { console.warn('[director] showcase', e); shows = SHOWCASE.map((q) => ({ ...q, at: null })); }
+    return shows;
+  }
+  function showcaseGo(i) {
+    const q = showList()[i];
+    if (!q || !q.at) { api.toast(q ? `${q.n}: not on this map.` : 'The Showcase is still loading.', 'warn'); return; }
+    showAt = i;
+    setMode('drone');
+    x = q.at.x; y = q.at.y; D.vx = 0; D.vy = 0;
+    setZoom(ZOOMS.reduce((b, z, k) => (Math.abs(z - (q.z || 1)) < Math.abs(ZOOMS[b] - (q.z || 1)) ? k : b), 0));
+    if (q.t !== undefined) { const k = TIMES.findIndex((w) => w[1] === q.t); if (k >= 0) setTime(k); else { D.ti = -1; D.lt = loopOf(q.t); } }
+    if (!D.clean) api.toast(`${q.n}${q.note ? ` - ${q.note}` : ''}`, 'info');
+    render();
+  }
   let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, bar = null, barKey = '';
   D.holds = () => D.mode === 'drone' || D.mode === 'tour' || D.mode === 'drift' || D.mode === 'scene';
   D.eye = () => (D.mode === 'follow' || D.mode === 'smooth' || !inited ? null : { x, y });
@@ -291,8 +312,9 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     }
     return route;
   }
+  function showSights() { return showList().filter((q) => q.at).map((q) => ({ name: q.n, x: q.at.x, y: q.at.y, z: q.z, t: q.t })); }
   function startTour() {
-    const list = sights();
+    const list = tourSet === 'showcase' ? showSights() : sights();
     if (!list.length) { api.toast('No sights on this map to tour.', 'warn'); D.mode = 'follow'; return; }
     tour = { list, i: -1, t: SHOT_S, shot: null };
     api.toast(`The tour: ${list.length} sights, ${SHOT_S}s each. Esc ends it.`, 'info');
@@ -303,8 +325,9 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     { const t = performance.now(); if (t - tourAt > 60e3) { tourAt = t; api.send({ t: 'cine', tour: 1 }); } }
     if (!T.shot || T.t >= SHOT_S + HOLD_S) {
       T.i = (T.i + 1) % T.list.length; T.t = 0;
-      const q = T.list[T.i], a = (T.i * 2.39) % 6.283, r = 260;
-      T.shot = { name: q.name, x0: q.x - Math.cos(a) * r, y0: q.y - Math.sin(a) * r, x1: q.x + Math.cos(a) * r, y1: q.y + Math.sin(a) * r, z0: 1.15, z1: 0.85 };
+      const q = T.list[T.i], a = (T.i * 2.39) % 6.283, r = 260, zk = q.z || 1;
+      T.shot = { name: q.name, x0: q.x - Math.cos(a) * r, y0: q.y - Math.sin(a) * r, x1: q.x + Math.cos(a) * r, y1: q.y + Math.sin(a) * r, z0: 1.15 * zk, z1: 0.85 * zk };
+      if (q.t !== undefined) { D.ti = -1; D.lt = loopOf(q.t); }   // (a Showcase place at its own time of day)
       fadeTo(1);
     }
     const s = T.shot, u = Math.max(0, T.t - HOLD_S) / SHOT_S, e = u * u * (3 - 2 * u);
@@ -428,6 +451,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       }
       if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'In dev mode, a scene nobody is doing right now is started for the camera (a race, a chase, a plane, a surfer...).'; panel.append(p); }
     }
+    if (D.mode === 'tour') panel.append(h('Tour: which sights'), row(btn('All the sights', tourSet === 'all', () => { tourSet = 'all'; startTour(); render(); }), btn('Showcase only', tourSet === 'showcase', () => { loadShows().then(() => { tourSet = 'showcase'; startTour(); render(); }); })));
     if (D.mode === 'smooth' || D.mode === 'target') {
       const r = document.createElement('input'); r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.05'; r.value = String(D.smooth);
       r.oninput = () => { D.smooth = +r.value; };
@@ -439,6 +463,19 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     panel.append(h('Zoom'), row(btn('－', false, () => setZoom(D.zi - 1)), btn(`${Math.round(100 / D.zoomK)}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(D.zi + 1))));
     panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
     panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => setWx(i)))));
+    // the Showcase: the hand-crafted places, a press to fly the camera there (the drone: WASD / the stick from there)
+    panel.append(h('Showcase'));
+    if (!shows) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'Finding the places...'; panel.append(p); loadShows().then(render); }
+    else {
+      let sg = '';
+      showList().forEach((q, i) => {
+        if (q.g !== sg) { sg = q.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = sg; panel.append(e); }
+        const b = btn('', showAt === i && D.mode === 'drone', () => showcaseGo(i), 'sc');
+        b.innerHTML = `${q.n}${q.at ? '' : ' <small>- not on this map</small>'}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
+        if (!q.at) b.disabled = true;
+        panel.append(b);
+      });
+    }
     panel.append(h('Staged scenes'));
     if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'These use the debug menu\'s commands - turn on dev mode first (pause menu, Debug menu).'; panel.append(p); }
     let g = '';

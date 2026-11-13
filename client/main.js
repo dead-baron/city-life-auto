@@ -5101,13 +5101,24 @@ function drawMyCar(c, view, now, z, vehs) {
   g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   g.restore();
 }
+// A player in a vehicle: the name tag over the vehicle they're in (the nearest one under them) - an aircraft drawn up
+// by its height carries it up there, over its nose (the owner, 11-12: "BETA Claw16" on the grass under a helicopter)
+function tagY(p, vehs, py, z) {
+  let v = null, bd = 90 * 90;
+  for (const e of vehs) { if (e.rx === undefined) continue; const d = (e.rx - p.rx) ** 2 + (e.ry - p.ry) ** 2; if (d < bd) { bd = d; v = e; } }
+  if (!v) return py;
+  const def = v.d ? VEHICLE_BY_INDEX[v.d.m] : null, air = airDefOf(v);
+  const up = air && S.airMod && S.airMod.camLift && S.art2 && S.art2.ready ? S.airMod.camLift(v.ralt ?? (v.extra | 0) * 4) : 0;
+  return v.ry - (v.rz ? liftOf(v.rz) : 0) - up - (def ? Math.max(def.L, def.W) / 2 : 0) + 26 / z - 14 / z;
+}
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';
   g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
-    const py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
+    let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
+    if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
     if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
     if (p.flags & PF.FLARE) {
