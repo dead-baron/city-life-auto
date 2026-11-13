@@ -23,10 +23,10 @@ test('the title\'s loop: an Opus file and an MP3, small, named by their contents
     assert.ok(bytes.length < 800 * 1024, `${k}: under 800 KB (${Math.round(bytes.length / 1024)} KB)`);
   }
   assert.ok(T.bytes.opus < T.bytes.mp3, 'the Opus, which nearly everyone gets, is the smaller');
-  assert.equal(T.channels, 1, 'mono: the owner\'s track is (left and right 99% alike), and mono halves the download and the memory');
+  assert.equal(T.channels, 1, 'mono: the owner\'s track is near-mono (left and right 90% alike), and mono halves the download and the memory');
   assert.equal(T.bars, 16);
   const bpm = (60 * 4 * T.bars) / T.loop;
-  assert.ok(bpm > 85 && bpm < 88, `16 bars at the track's tempo (${bpm.toFixed(2)} BPM)`);
+  assert.ok(bpm > 91 && bpm < 94, `16 bars at the track's tempo (${bpm.toFixed(2)} BPM)`);
   assert.ok(T.margin >= 0.2, 'a wrap-around margin each side');
   const mem = (T.loop + 2 * T.margin) * 48000 * T.channels * 4 / 1048576;
   assert.ok(mem < 10, `under 10 MB once decoded (${mem.toFixed(1)} MB)`);
