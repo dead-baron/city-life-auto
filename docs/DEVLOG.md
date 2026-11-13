@@ -22620,3 +22620,78 @@ two Gas-N-Gos, Fuel Stop, Highland Fuel, Route 9 Fuel); the four hand-placed one
   puts a new one in: seven minutes on, and only with nobody within 1,400 px to see it happen.
 Tests: `test/fixwave.test.js` (shot, the blast, the chain, back out of view), `test/plainblocks.test.js` (pumps at every
 station, one prop each). (Re-keys the world: world3.)
+
+## 2026-11-12 - Chat for every player: touch, the pad, the phone's Messages app, the kit's look
+
+The launch foundation's chat (2026-11-04) had its server side done and a bare page (client/chat.js, T only). UI stage 2
+never wired it in. Now every device has all of it, on the UI kit, and the owner's minimal HUD holds: one round button,
+nothing on screen until someone talks.
+
+**Where it opens**
+- Keyboard: T (unchanged). Enter sends, Esc closes; `/c` crew, `/f` faction, `/n` near, `/wave` or `/me wave`.
+- Touch: a round chat button (Lucide's message-circle-more, the HUD's line-icon family) in the top-left cluster: on a
+  phone on its side beside the clock's plate, right of the minimap (the debug button moves one place along); upright
+  beside the minimap's top (the debug button beside its foot; under it would push the notes and the job card into the
+  middle). It's touch only: a keyboard has T, and a pad has the phone. The owner's top-right row (PHONE · MAP ·
+  MENU) is unchanged: a fourth button there pushed the cash too far from the right edge and, upright, into the
+  top-centre band (test/hudlayout.test.js). A dot on it means unread phone messages. A tap opens the sheet; another
+  tap closes it. The touch sticks keep their behavior: they hide while the sheet is up and come back as they were.
+- Gamepad: the phone (D-pad left) → Messages. Its Near / Crew / Faction tabs have the quick lines and the emotes as
+  buttons the D-pad walks, so a pad needs no typing. `PAD.chat` reads
+  "📱 MESSAGES".
+- `chat` is an action in shared/controls.js (T / 📱 MESSAGES / CHAT), so the Guide, the first-time line and Settings ›
+  Controls show each device's glyph.
+
+**The sheet** (client/chat.js; it carries its own CSS on the kit's tokens: test/uitokens.test.js reads it)
+- Near / Crew / Faction tabs. Crew and Faction are greyed when they reach nobody. The server's `chatstate` now says
+  `crew` and `fac`; tapping a greyed tab says why ("No crew yet: walk up to another player and ask them in").
+- The log, a row of quick lines (`QUICK` in shared/chatdefs.js; the crew's are the Crew app's own: `CREW.says` now
+  reads `QUICK.crew`), and the emotes on Near. The line and SEND. A Messages button jumps to the phone app.
+- On a desktop it's a panel bottom left with the line focused. On a phone it docks at the foot and the keyboard waits
+  until you tap the line. With the keyboard up, the sheet rides on top of it: the visual viewport's lost height is the
+  sheet's `bottom`, for Android Chrome and iOS Safari alike. With little room left, the log and the emotes fold away,
+  then the tabs. The page scrolls back to the top when the line lets go (iOS).
+- While its line has the keys, the game's input rests (`S.chatUp` in main.js's `menuUp`). A key held when T was pressed
+  doesn't keep walking you. On touch the game's input rests while the sheet is up. The hub opening closes the sheet.
+
+**Bubbles and the feed**
+- Speech bubbles over the speaker in CLA Pixel: cream with an ink rim and a tail. Two lines at most, the newest last,
+  each gone after 6 s (your own 4.5 s). They sit above the head and its name tag; yours is smaller and higher, so your
+  character stays in view. A bubble that lands on another goes up over it, and none leaves the screen. They're drawn
+  under the HUD, inside #game after the canvas. Emotes are italic.
+- The feed: the newest line under the HUD's notes in #hud-tl, one on a phone and two on a desktop, each fading after
+  8 s on its own (the one-fading-line rule). A tap on it opens the sheet. Hidden while the sheet is up.
+
+**Mute, block, report**: a name in the log, or a bubble while the sheet is up, opens a small panel - Message (a contact),
+Mute, Block, Report… with the seven reasons (`REPORT_LABEL` beside `REPORT_WHY`). A phone thread has the same three
+buttons under it. A muted or blocked player's lines never show.
+
+**The phone's Messages app** (a new tile after Crew; client/phone.js hands its screen to chat.js renderApp)
+- Messages: your threads, newest first, each with its last line and an unread count. Then the people you've met with no
+  thread yet (contacts: met, crewed, traded). Online shows as a filled dot.
+- A thread: the messages (yours right, in gold), quick replies (`QUICK.phone`), a line and SEND, and Mute · Block ·
+  Report. The phone's back steps out of the reasons, then the thread, then the app.
+- Threads are kept in this browser (localStorage, by your chat id; 40 threads of 40 lines). The server keeps only what
+  came while you were away (its inbox), and the page asks for that on joining.
+- Near / Crew / Faction: the last lines on each, the quick lines, the emotes, a line to type.
+- A new message while you're elsewhere lights a dot on the chat button and on the Messages tile.
+
+**Settings › Chat** (the slot UI-10 left): the four channel switches, who you've muted or blocked with Unmute and
+Unblock, and how to report. The server keeps the names of the muted and blocked with them (`nm` in the account's chat
+data; an account from before shows "Someone"), and `chatstate.names` carries them.
+
+**Teaching it**: a first-time moment, `chat` - "Another player's near - say hi. Quick lines and emotes too, no typing
+needed." - with the chat glyph, once, the first time another player is within `CHAT.metM`. A Guide entry, Activities ›
+Chat, gives the reach, the channels and contacts from shared/chatdefs.js. Settings › Controls lists Chat under MENUS.
+The README's controls row is updated.
+
+**Budgets**: chat stays out of the page's first load (it comes with the launch code after the page is up). The page
+gains the button's markup and a few lines in main.js (516 KB of 540).
+
+Network: `chatstate` gains `names`, `crew` and `fac`. `{ t: 'chatset' }` with no `off` asks for the state again (the
+sheet does this at most every 15 s, for the tabs). Nothing else changes.
+
+Tests: test/chatui.test.js, in headless Chromium: the bubbles, the feed, the sheet, the chips, a name's panel, the
+Messages app, Settings, and the keyboard on a 915x412 phone. Also test/ftue.test.js (the seventh moment),
+test/hudlayout.test.js and test/hudpage.js (the chat button measured with the HUD on every screen), and
+test/uitokens.test.js (chat.js's CSS).

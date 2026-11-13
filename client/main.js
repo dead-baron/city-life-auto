@@ -151,7 +151,14 @@ function launchCall(k, a) {
   launchP ||= Promise.all([import('./account.js'), import('./analytics.js'), import('./chat.js'), import('./errors.js')]).then(([acc, an, ch, er]) => {
     const ga = an.createAnalytics({ win: window, doc: document, send });
     const toast = (t, tone) => { if (S.hud) S.hud.toast(t, tone); };
-    const chat = ch.createChat({ send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; } });
+    // (chat: the bubbles over heads, the feed under the notes, the sheet - T, the HUD's chat button - the phone's
+    // Messages app and Settings > Chat; while its line has the keys, the game's input rests: S.chatUp)
+    const chat = ch.createChat({
+      send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; },
+      device: () => input.device, playing: () => !!(S.playing && S.welcomed && !S.practice),
+      focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); },
+      openApp: () => openHub('phone', 'msgs'),
+    });
     er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
     // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
@@ -162,6 +169,7 @@ function launchCall(k, a) {
       signIn: (el, close) => { el.innerHTML = ''; acc.openPanel({ into: el }).then((p) => { if (p) p.onback = close; }).catch((e) => { console.warn('[account]', e); el.textContent = 'The account panel didn\'t load - try again.'; }); },
       gate: (el, done) => { el.innerHTML = ''; acc.showGate(done, { into: el }); },
       gateNeeded: () => acc.gateNeeded(),
+      chat: (el) => chat.settings(el),
     });
     return S.launch;
   });
@@ -174,7 +182,9 @@ function launchCall(k, a) {
     else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
     else if (k === 'perf') L.ga.perf(a);
     else if (k === 'error') L.er.report(a.where, a.e);
-    else if (k === 'chat') L.chat.open(a);
+    else if (k === 'chat') { if (!topOverlay()) L.chat.open(a); }
+    else if (k === 'chatbtn') { if (!topOverlay()) L.chat.toggle(); }
+    else if (k === 'app') { if (topOverlay() === 'phone' && phone.screen === 'msgs') L.chat.renderApp(a.el, a.api); }
     else if (k === 'account') openSignIn();
   }).catch((e) => { launchP = null; console.warn('[launch]', e); });
 }
@@ -637,7 +647,7 @@ function fixedStep() {
   // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
   if (!spec && !ch && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || S.chatUp || (S.launch && S.launch.chat.isOpen && input.device === 'touch') || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -1645,6 +1655,7 @@ initInput(canvas, {
     if (topOverlay() === 'creator' && S.creator && S.creator.key(k)) return;
     if (topOverlay() === 'dev' && S.devNav && S.devNav.key(k)) return;   // (the debug menu's own keys: client/devmenu.js)
     if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
+    if (k === 'Escape' && S.launch && S.launch.chat.isOpen && !topOverlay()) { S.launch.chat.close(); return; }   // (the chat sheet up, its line not in use: Esc closes it)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
@@ -1964,6 +1975,10 @@ const phoneCtx = {
   title: (t) => { $('ph-clock').textContent = t; if (topOverlay() === 'phone') $('hub-title').textContent = t.toUpperCase(); },
   guideSec: () => { const s = S.guideSec; S.guideSec = null; return s; },
   nextDot: () => S.nxSig !== undefined && S.nxSig !== S.nxSeen,
+  // the Messages app (client/chat.js renderApp, loaded with the launch code): unread messages, its own back step
+  msgsDot: () => !!S.chatDot,
+  chatApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No messages offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('app', { el, api: { refocus: (start) => { if (topOverlay() === 'phone') { if (start) ovFocus = startFocus(); focusOverlay(); } }, title: (t) => phoneCtx.title(t) } }); },
+  chatBack: () => !!(S.launch && S.launch.chat.appBack()),
   nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
@@ -2026,6 +2041,7 @@ function openHub(tab = 'pause', app, fromPause = false) {
   if (wheel.open) wheel.close();
   if (wpick.open) wpick.close();
   if (top !== id) sfx('click', 0.5);
+  if (S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (the chat sheet gives way to the hub)
   if (tab === 'pause') hubFromPause = false;
   else if (fromPause || top === 'pause') hubFromPause = true;
   else if (!top || !HUB_IDS.includes(top)) hubFromPause = false;   // (straight in from the game: back goes back to it)
@@ -2252,6 +2268,7 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 // the HUD's row: MENU (the hub on its last tab), PHONE, MAP - each closes the hub when it's on that tab
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
+$('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();

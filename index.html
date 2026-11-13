@@ -27,11 +27,13 @@
        wider screen), the minimap, the status, a bar while one is up (a robbery, a ride, custody), the job card, upright
        the notes. Top right, how you are and what you have: the icon buttons (phone, map, menu), then one plate - health
        and stamina with their numbers, the cash (the bank on a desktop) - the stars, the vehicle chip, what you hold. The
-       prompt and the hint strip low (client/hudinfo.js); the debug button quiet beside the minimap -->
+       prompt and the hint strip low (client/hudinfo.js); the debug button quiet beside the minimap; on touch the chat
+       button (client/chat.js) beside the clock on a phone on its side, beside the minimap's top upright -->
   <div id="hud" class="hidden">
     <div id="hud-tl">
       <div id="rclock"><i id="rc-tod" class="ic" data-ic="sun"></i><span id="rc-time"></span><i id="rc-wx" class="ic hidden" data-ic="rain"></i></div>
       <div id="radar-wrap"><canvas id="radar" width="168" height="168"></canvas></div>
+      <button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat"><i class="ic" data-gl="message-circle-more"></i></button>
       <button id="b-dev" type="button" aria-label="Debug menu" title="Debug menu (`)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5 7.5 4.5M15 6.5l1.5-2"/><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 10l4 2M21 10l-4 2M3 18l4-2M21 18l-4-2M2.5 14H7M17 14h4.5"/></svg></button>
       <div id="status"></div>
       <div id="hud-msg">
@@ -207,11 +209,7 @@
       </section>
       <section data-sec="chat" hidden><h2>CHAT</h2>
         <div id="s-chatbox" data-slot="chat">
-          <p class="set-note">Chat is coming soon. These are the channels it will have:</p>
-          <label class="srow"><span>Nearby (people around you)</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>Crew</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>City (everyone)</span><input type="checkbox" disabled checked></label>
-          <label class="srow"><span>Private messages</span><input type="checkbox" disabled checked></label>
+          <p class="msub">Chat's settings come up once you're online: the channels (near, crew, faction, phone messages), and who you've muted or blocked.</p>
         </div>
       </section>
       <section data-sec="sound" hidden><h2>SOUND</h2><div id="s-soundbox"></div></section>

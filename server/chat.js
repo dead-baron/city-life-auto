@@ -9,7 +9,8 @@
 //   { t: 'mod', a: 'mute'|'unmute'|'block'|'unblock'|'report', id, why?, note? }
 //   { t: 'contacts' } · { t: 'inbox' }
 // (server -> page): { t: 'chat', ch, n (sender's name), id (sender's public id), eid (their ped, for the bubble: near),
-//   text, at, own? } · { t: 'emote', eid, e, n, id } · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks }
+//   text, at, own? } · { t: 'emote', eid, e, n, id } · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks,
+//   names ({ id: name } of the mutes and blocks), me, crew (in a crew), fac ('police' | 'gang' | null) }
 //   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
 import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
@@ -186,7 +187,12 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
 
   function state(p) {
     const c = cd(p), a = acctOf(p);
-    return { t: 'chatstate', off: c.off, muted: mod.mutedUntil(a), strikes: mod.activeStrikes(a), guest: guest(p), max: guest(p) ? CHAT.guestMaxLen : CHAT.maxLen, mutes: c.mutes.map(hid), blocks: c.blocks.map(hid), me: hid(p.pid) };
+    // (crew, fac: whether those channels reach anyone - the page greys their tabs; names: who the mutes and blocks are,
+    // for Settings > Chat's list - kept with them, c.nm; an account from before has none: "Someone")
+    const nm = c.nm || {}, names = {};
+    for (const pid of [...c.mutes, ...c.blocks]) names[hid(pid)] = nm[pid] || (c.contacts[pid] || {}).n || 'Someone';
+    const fk = factionKey(p);
+    return { t: 'chatstate', off: c.off, muted: mod.mutedUntil(a), strikes: mod.activeStrikes(a), guest: guest(p), max: guest(p) ? CHAT.guestMaxLen : CHAT.maxLen, mutes: c.mutes.map(hid), blocks: c.blocks.map(hid), me: hid(p.pid), names, crew: !!crews.crewOf(p.pid), fac: fk ? fk.split(':')[0] : null };
   }
   function contacts(world, p) {
     const c = cd(p), out = [], crew = crews.crewOf(p.pid);
@@ -211,12 +217,13 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     const pid = target(world, p, msg.id);
     if (!pid) return { err: 'Can\'t find that player.' };
     const c = cd(p), a = msg.a;
-    const name = (world.players.get(pid) || {}).name || (c.contacts[pid] || {}).n || 'them';
-    const addTo = (arr) => { if (!arr.includes(pid)) { arr.push(pid); if (arr.length > 500) arr.shift(); } };
+    const name = (world.players.get(pid) || {}).name || (c.contacts[pid] || {}).n || (c.nm || {})[pid] || 'them';
+    const addTo = (arr) => { if (!arr.includes(pid)) { arr.push(pid); if (arr.length > 500) arr.shift(); } (c.nm ||= {})[pid] = String(name).slice(0, 32); };
+    const forget = () => { if (c.nm && !c.mutes.includes(pid) && !c.blocks.includes(pid)) delete c.nm[pid]; };
     if (a === 'mute') { addTo(c.mutes); accounts.touch(); return { ok: true, note: `Muted ${name}: you won't see their messages.` }; }
-    if (a === 'unmute') { c.mutes = c.mutes.filter((x) => x !== pid); accounts.touch(); return { ok: true, note: `Unmuted ${name}.` }; }
+    if (a === 'unmute') { c.mutes = c.mutes.filter((x) => x !== pid); forget(); accounts.touch(); return { ok: true, note: `Unmuted ${name}.` }; }
     if (a === 'block') { addTo(c.blocks); addTo(c.mutes); accounts.touch(); return { ok: true, note: `Blocked ${name}: no messages either way.` }; }
-    if (a === 'unblock') { c.blocks = c.blocks.filter((x) => x !== pid); c.mutes = c.mutes.filter((x) => x !== pid); accounts.touch(); return { ok: true, note: `Unblocked ${name}.` }; }
+    if (a === 'unblock') { c.blocks = c.blocks.filter((x) => x !== pid); c.mutes = c.mutes.filter((x) => x !== pid); forget(); accounts.touch(); return { ok: true, note: `Unblocked ${name}.` }; }
     if (a === 'report') {
       const why = REPORT_WHY.includes(msg.why) ? msg.why : 'other';
       const r = rec(p);
