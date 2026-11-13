@@ -2149,6 +2149,7 @@ const hubCtx = {
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
 $('hub-back').onclick = () => hubBack();
 $('hub-close').onclick = () => closeHub();
+$('pz-close').onclick = () => closeHub();   // (the pause list's own close: it hides the hub's bar)
 $('hub').addEventListener('pointerdown', (e) => { if (e.target === $('hub')) closeHub(); });   // (a desktop's big panel: a click round it closes it)
 // Surrender (the hub's Settings > Help): press twice - dying (or, wanted, turning yourself in) isn't done by accident
 function surrender(b) {
