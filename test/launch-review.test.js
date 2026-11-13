@@ -31,7 +31,7 @@ function launch(over = {}) {
   useStore(new MemoryStore());
   const world = fakeWorld(); world.stats = { tickMs: 0 };
   const c = clock();
-  const cfg = { ...config, launch: { ...config.launch, devOpen: true, google: { id: '', secret: '' }, discord: { id: '', secret: '' }, reddit: { id: '', secret: '' }, email: { key: '', from: '' }, ...over } };
+  const cfg = { ...config, launch: { ...config.launch, devOpen: true, google: { id: '', secret: '' }, discord: { id: '', secret: '' }, email: { key: '', from: '' }, ...over } };
   const L = createLaunch({ config: cfg, store, world, ip: () => '1.2.3.4', dataDir: null, now: c.now, log: quiet, signOutCloseMs: 0 });
   const join = (o = {}) => { const p = fakePlayer(world, store, o); L.hooks.join(p, {}, {}); return p; };
   return { L, world, c, join };
@@ -200,19 +200,15 @@ test('9. sign out everywhere closes the account\'s live sessions; the stale toke
   assert.ok(L.login(r.json().token, {}).profile, 'the new token works');
 });
 
-// ---- 8: guest names ----
-test('8. guests rename as before while no sign-in is offered; once a provider is on, names are for members', () => {
-  const a = launch();
-  const g = a.join();
-  assert.equal(a.L.acctState(g).canRename, true);
-  a.L.hooks.message(g, { t: 'name', name: 'Saltwater' });
-  assert.equal(g.name, 'Saltwater');
-  const b = launch({ google: { id: 'gid', secret: 'gs' } });
-  const h = b.join();
-  assert.equal(b.L.acctState(h).canRename, false);
-  const was = h.name;
-  b.L.hooks.message(h, { t: 'name', name: 'Saltwater' });
-  assert.equal(h.name, was);
+// ---- 8: guest names (the owner, 11-12: guests pick theirs too; test/guestnames.test.js) ----
+test('8. guests rename with a sign-in on offer or not; a name a member owns is theirs', () => {
+  for (const over of [{ passwords: false }, { google: { id: 'gid', secret: 'gs' } }]) {
+    const a = launch(over);
+    const g = a.join();
+    assert.equal(a.L.acctState(g).canRename, true);
+    a.L.hooks.message(g, { t: 'name', name: 'Saltwater' });
+    assert.equal(g.name, 'Saltwater');
+  }
 });
 
 // ---- 10: the smaller items ----

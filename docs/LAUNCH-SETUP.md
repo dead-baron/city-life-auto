@@ -6,31 +6,43 @@ the repository**: keys and secrets live only in the server's environment file.
 
 ## Signing in, linking, and guests
 
-- **Sign in** (a provider button, or a passkey) logs into the account that sign-in belongs to, on any device.
+- **The ways in** (the owner, 11-12): **Guest** (plays at once), **Email + password**, **Google**, **Discord**, and
+  passkeys. Reddit and the email magic links are gone: accounts that used them keep their progress (an old magic-link
+  account sets a password with Forgot password).
+- **Sign in** (email + password, a provider button, or a passkey) logs into the account that sign-in belongs to, on any
+  device.
 - **Link to this account** adds a sign-in to the character on this page, so a guest keeps its progress. It's a separate
   button. A sign-in that's already on another account is never moved.
 - A sign-in no account uses yet asks: link it to the character I'm playing, or start a new account. Nothing is merged
-  silently.
+  silently. **Create account** (email + password) asks the same question.
 - Starting a new account, or signing into another one, keeps the guest on this device as the previous character
   (Settings can go back to it).
 - Every flow is bound to the page that started it, so a sign-in someone else set off in your browser can't be finished
-  by your page. Open an email link in the browser you asked from.
-- **Guests rename** as before while no provider is switched on. Once one is:
-  - names are for signed-in members (filtered, unique, once a month);
-  - guests can't start or lead a crew or post a bounty, and are told to sign in.
-- An email link opened in another browser asks first: "Sign in as <name>? This replaces the character on this device".
+  by your page. The email + password calls are accepted only from the game's own pages (the Origin is checked).
+- **Names:** guests pick and change theirs (filtered, unique, ten minutes between changes), but never a name a signed-in
+  member owns, nor its lookalike (`B0b` for `Bob`). A member who picks a name only guests hold takes it: those guests
+  go back to a Guest number and are told why. A guest who signs up or links keeps their name; from then on it's
+  protected. Members' usernames change once a month.
+- Over the head, members' names are white and guests' a soft grey (the police blue and the title colors a dimmer shade
+  for guests); the players list says "Guest".
+- While any sign-in is on offer (email + password always is, unless `CLA_PASSWORDS=0`), guests can't start or lead a
+  crew or post a bounty, and are told to sign in.
 - The account panel keeps up to three previous characters on a device ("Switch back to <name>").
 - **Start fresh** resets the character and keeps the account: its sign-ins, passkeys, role, strikes and ban record.
 
 ## What works with no keys at all
 
-- **Guests**: play at once as GuestNNNN. Progress is saved on the server. A **transfer code** (Settings → Account →
-  Make a transfer code: 10 characters, one use, 10 minutes) moves a guest to another device. The old device is signed
-  out. Guests can't rename.
+- **Guests**: play at once as GuestNNNN (and can pick a name). Progress is saved on the server. A **transfer code**
+  (Settings → Account → Make a transfer code: 10 characters, one use, 10 minutes) moves a guest to another device. The
+  old device is signed out.
+- **Email + password**: sign up and sign in need no keys. Without `RESEND_API_KEY`, "Forgot password" says resets
+  aren't available yet, and no confirm-your-email mail is sent.
 - **Passkeys**: the device's own fingerprint, face or PIN sign-in. There's no third party to register with.
 - **Chat, moderation, roles, the admin log, anti-cheat and the self-hosted analytics dashboard.**
 
-Google, Discord, Reddit and email buttons stay hidden until their keys are set (the page reads `/launch.json`).
+- **The Privacy Policy and the Terms** (drafts): `/legal/privacy` and `/legal/terms` on the game server.
+
+The Google and Discord buttons stay hidden until their keys are set (the page reads `/launch.json`).
 
 ## Where the settings go
 
@@ -64,7 +76,7 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 
 | Variable | What it is | Default |
 |---|---|---|
-| `CLA_PUBLIC_URL` | The server's public address. The OAuth redirect URIs and magic links point here. | `https://play.deadbaron.com` |
+| `CLA_PUBLIC_URL` | The server's public address. The OAuth redirect URIs and the emails' links point here. | `https://play.deadbaron.com` |
 | `CLA_PAGE_ORIGINS` | The pages that may sign in (comma-separated origins). | `https://deadbaron.com,https://www.deadbaron.com,https://dead-baron.github.io` |
 | `CLA_DEV_OPEN` | `1`: anyone can open Dev Debug Mode (testing). `0`: **launch**, only admins and the owner. | `1` |
 | `CLA_OWNER_ID` | The owner's account id (Settings → Account shows it). If unset, see "The owner's account". | unset |
@@ -74,9 +86,11 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 | `CLA_RP_ID` / `CLA_RP_NAME` | The passkey domain (the page's registrable domain) and the name devices show. | `deadbaron.com` / `City Life Auto` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google sign-in. | unset (off) |
 | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | Discord sign-in. | unset (off) |
-| `REDDIT_CLIENT_ID` / `REDDIT_CLIENT_SECRET` | Reddit sign-in. | unset (off) |
-| `RESEND_API_KEY` | Email magic links (Resend). | unset (off) |
-| `CLA_EMAIL_FROM` | The sender of the magic links. | `City Life Auto <login@deadbaron.com>` |
+| `CLA_PASSWORDS` | `0` switches email + password sign-in off. | `1` (on) |
+| `RESEND_API_KEY` | Resend: the password-reset and confirm-your-email mails. | unset (resets off) |
+| `CLA_EMAIL_FROM` | The sender of those mails. | `City Life Auto <login@deadbaron.com>` |
+| `CLA_MAIL_ADDRESS` | Your postal address, at the foot of every news email (section 7). | unset (a placeholder) |
+| `CLA_CONTACT` | The contact the Privacy Policy and the Terms give (an email address). | unset (a placeholder) |
 | `GA_MEASUREMENT_ID` | Google Analytics 4 web stream id (`G-XXXXXXXXXX`). It's public and served to the page. | unset (off) |
 | `GA_API_SECRET` | GA4 Measurement Protocol secret, for server events. | unset (server events off) |
 
@@ -89,7 +103,8 @@ working.
 2. **APIs & Services → OAuth consent screen**:
    - user type **External**;
    - app name "City Life Auto", a support email and the logo;
-   - authorized domain `deadbaron.com`, plus links to the privacy policy and the terms;
+   - authorized domain `deadbaron.com`, plus links to the privacy policy
+     (`https://play.deadbaron.com/legal/privacy`) and the terms (`https://play.deadbaron.com/legal/terms`);
    - scopes: add only **openid**. The game asks for nothing else: no email, no profile.
 3. Choose **Publish app**. While it's in "Testing", only the test users you list can sign in.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID**:
@@ -104,35 +119,40 @@ working.
 3. Copy the **Client ID**. Choose **Reset Secret** and copy the secret.
 4. Set `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET`. Restart. (The game asks only for the `identify` scope.)
 
-## 3. Reddit sign-in
+## 3. Email + password, and its emails (Resend)
 
-1. Sign in to Reddit with the account that will own the app, then go to <https://www.reddit.com/prefs/apps>.
-2. Choose **create another app...**:
-   - name "City Life Auto";
-   - type **web app**;
-   - redirect uri `https://play.deadbaron.com/auth/reddit/callback`.
-3. The client ID is the string under the app's name. The secret is labeled **secret**.
-4. Set `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET`. Restart. (Scope `identity`, a temporary token.)
-5. Reddit's Data API terms apply to commercial use. Read them before you put money into the game.
-
-## 4. Email magic links (Resend)
+Email + password works with no keys. Resend sends its two emails: the password reset and the confirm-your-email link.
 
 1. Sign up at <https://resend.com>.
 2. **Domains → Add domain** `deadbaron.com`. Add the DNS records it shows (SPF and DKIM TXT records, and the MX record
    for bounces) at your DNS provider, then wait for **Verified**.
 3. **API Keys → Create API key**, with sending access only. Copy it into `RESEND_API_KEY`.
 4. Optionally, set `CLA_EMAIL_FROM` to an address on the verified domain. Restart.
-5. The link works once, for 15 minutes. Opening it shows one "Sign in" button, so a mail scanner that opens the link
-   doesn't use it up. Email addresses are never stored: only a keyed hash, used to recognize the account.
 
-## 5. Passkeys
+How it behaves:
+
+- **Passwords**: at least 10 characters, up to 200 (long passphrases welcome); the most common ones are refused. Kept
+  only as a scrypt hash with a random salt each. Never logged, never in a URL.
+- **The address**: only a keyed hash finds the account. The address itself is kept only if the player asks for news
+  (section 7).
+- **Wrong passwords**: 8 for one address inside 15 minutes lock that address's sign-in for 15 minutes. Every limit
+  counts by address too, whether or not an account uses it, and sign-in always says "Wrong email or password." Forgot
+  password always gives the same answer. (Create account can't help saying an address is taken: beta accounts play at
+  once. The rate limits keep it from being a lookup service.)
+- **Forgot password**: a link by email, working once for 30 minutes. It opens a page that asks for the new password, so
+  a mail scanner opening the link changes nothing. A new password signs the account out on its other devices.
+- **Confirm your email**: sent on sign-up when Resend is on. It's one button, it isn't needed to play, and the account
+  keeps a `verified` flag.
+- Accounts from the old magic links set a password with Forgot password (same address).
+
+## 4. Passkeys
 
 Nothing to register. Keep `CLA_RP_ID` set to the page's registrable domain (`deadbaron.com` while the page is
 served at deadbaron.com). A passkey belongs to its domain: one made on `deadbaron.com` doesn't work on
 `dead-baron.github.io`, so pick the page's domain before launch and keep it. Every page origin must be listed in
 `CLA_PAGE_ORIGINS`.
 
-## 6. Google Analytics 4
+## 5. Google Analytics 4
 
 1. Go to <https://analytics.google.com>. **Admin → Create → Property** ("City Life Auto"), with your time zone and
    currency.
@@ -178,7 +198,7 @@ How it behaves:
 - GA is the audience view. The owner's dashboard (below) is the source of truth for the economy, retention by account,
   concurrency and cheat flags.
 
-## 7. The owner's account, roles and the protected pages
+## 6. The owner's account, roles and the protected pages
 
 - **Bootstrap the owner** in one of two ways:
   - set `CLA_OWNER_ID` to your account ID;
@@ -201,13 +221,28 @@ How it behaves:
     prison ask again first. Helpers and up can see it; helpers only get Rescue;
   - `/admin/dashboard`: analytics, owner only;
   - `/admin/log`: the admin log, owner only;
+  - `/admin/news`: the news list, owner only (section 7);
   - `/admin/reviews`: reports, filter hits and cheat flags, admins and up;
   - `/admin/perf` and `/admin/clienterrors`: how devices load and run the game, and the pages' errors, admins and up.
     The old `/perf` and `/clienterrors` addresses redirect here.
+
+## 7. The news list (opt-in)
+
+- Create account has an **unticked** "Email me game news and updates" box. Google and Discord ask for no more than
+  before: members turn on **Game news by email** in Settings → Account and type an address there.
+- Kept apart from the sign-ins, in `<data>/news.json`: the address, when it opted in and where (sign-up or Settings),
+  and its own unsubscribe token. Unsubscribing, or turning it off in Settings, deletes the entry.
+- **Export**: Settings → Account → Staff tools → News list (owner only) shows the count and a CSV download: email, when,
+  where and the `unsubscribe_url`. Every download goes in the admin log.
+- **Sending** (no sending in the game yet): import the CSV as an audience in Resend's **Broadcasts**. Every news email
+  must carry its unsubscribe link (the `unsubscribe_url` column, or Resend's own) and your postal address
+  (`CLA_MAIL_ADDRESS`). Export again before each send, because players who unsubscribe in the game leave the list.
 
 ## 8. At launch
 
 1. Set `CLA_DEV_OPEN=0`, so only admins have the debug powers.
 2. Set `CLA_REQUIRE_AGE=1` once the page with the gate is live.
 3. Check that `/launch.json` shows the providers you expect.
-4. Have a lawyer review the terms, the privacy policy and the in-game notice before any money changes hands.
+4. Have a lawyer review the terms, the privacy policy and the in-game notice before any money changes hands. The
+   drafts (`server/legal.js`, at `/legal/privacy` and `/legal/terms`) are marked DRAFT at the top. Set `CLA_CONTACT`
+   and `CLA_MAIL_ADDRESS` so their placeholders are filled.

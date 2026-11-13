@@ -170,6 +170,7 @@ function launchCall(k, a) {
       gate: (el, done) => { el.innerHTML = ''; acc.showGate(done, { into: el }); },
       gateNeeded: () => acc.gateNeeded(),
       chat: (el) => chat.settings(el),
+      legal: (el) => acc.legal(el), news: (el) => acc.newsBox(el),
     });
     return S.launch;
   });
@@ -1564,7 +1565,7 @@ function renderPlayers() {
   el.innerHTML = '';
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'pl-row';
-    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
+    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
     if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
       const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
       b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeHub(); setTimeout(requestPlayers, 300); };
@@ -1617,10 +1618,11 @@ $('s-signin').onclick = () => openSignIn();
 
 // ---- the sign-in panel and the first-launch gate: slots for the launch work (client/account.js) ----------------------
 // The launch code hands its screens over with setAccountUi({ signIn(el, close), gate(el, done), gateNeeded() }):
-//   signIn(el, close)  fills the SIGN IN panel's body (#signin-body: Guest / Google / Discord / Reddit / email / passkey);
+//   signIn(el, close)  fills the SIGN IN panel's body (#signin-body: Guest / email and password / Google / Discord / passkey);
 //   gate(el, done)     fills the first-launch gate (#gate-body: the 17+ confirmation and the analytics choice) and calls
 //                      done() once it's answered; gateNeeded() says whether it's still to be answered in this browser;
-//   chat(el), legal(el) fill Settings > Chat (#s-chatbox: the channel toggles) and Settings > Legal (#s-legalbox).
+//   chat(el), legal(el), news(el) fill Settings > Chat (#s-chatbox: the channel toggles), Settings > Legal (#s-legalbox:
+//                      the terms and the privacy policy open) and Settings > Account's game news by email (#s-newsbox).
 // Opened from your card on the title (SIGN IN) and from Settings > Account; the gate comes before the first PLAY. Until
 // the launch code is there, the panel says sign-in is coming soon and there's no gate.
 let accountUi = null;
@@ -1628,8 +1630,9 @@ function setAccountUi(ui) {
   accountUi = ui || null;
   if (accountUi && accountUi.chat) accountUi.chat($('s-chatbox'));     // (Settings > Chat: the channel toggles)
   if (accountUi && accountUi.legal) accountUi.legal($('s-legalbox'));  // (Settings > Legal: the terms, the privacy policy, the notice)
+  if (accountUi && accountUi.news) accountUi.news($('s-newsbox'));     // (Settings > Account: game news by email)
 }
-const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], ['google', 'Google'], ['discord', 'Discord'], ['reddit', 'Reddit'], ['email', 'Email link'], ['passkey', 'Passkey']];
+const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], ['password', 'Email and password'], ['google', 'Google'], ['discord', 'Discord'], ['passkey', 'Passkey']];
 function openSignIn() {
   const body = $('signin-body');
   if (topOverlay() !== 'signin') openOverlay('signin');
@@ -5129,6 +5132,18 @@ function tagY(p, vehs, py, z) {
   const up = air && S.airMod && S.airMod.camLift && S.art2 && S.art2.ready ? S.airMod.camLift(v.ralt ?? (v.extra | 0) * 4) : 0;
   return v.ry - (v.rz ? liftOf(v.rz) : 0) - up - (def ? Math.max(def.L, def.W) / 2 : 0) + 26 / z - 14 / z;
 }
+// a guest's shade of a name color: three quarters of the way to the grey (#rgb or #rrggbb; anything else as it is)
+const dimMemo = new Map();
+function dimHex(c) {
+  let d = dimMemo.get(c);
+  if (d) return d;
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c || '');
+  if (!m) return c;
+  const h = m[1].length === 3 ? m[1].replace(/./g, '$&$&') : m[1];
+  d = '#' + [0, 2, 4].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.7 + 0x80 * 0.3 * 0.9).toString(16).padStart(2, '0')).join('');
+  dimMemo.set(c, d);
+  return d;
+}
 function drawWorldLabels(peds, vehs, now, z) {
   const fs = 12 / z;
   g.textAlign = 'center';
@@ -5156,9 +5171,10 @@ function drawWorldLabels(peds, vehs, now, z) {
     if (p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
+      const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade - no tag; members in white)
       g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z);
-      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? '#7dffa0' : p.flags & PF.BADGE ? '#7ab0ff' : (np && np.c) || '#fff'; g.fillText(nm, p.rx, y);   // (your crew's: green - crews.js)
-      if (np && np.t) { const t = np.t.toUpperCase(); g.font = `700 ${9 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, p.rx + 1 / z, y - 10 / z); g.fillStyle = np.g ? '#ffcc33' : '#d8dee9'; g.fillText(t, p.rx, y - 11 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
+      g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? (gu ? '#5fb879' : '#7dffa0') : p.flags & PF.BADGE ? (gu ? '#5c82b8' : '#7ab0ff') : np && np.c ? (gu ? dimHex(np.c) : np.c) : gu ? '#a3a8b0' : '#fff'; g.fillText(nm, p.rx, y);   // (your crew's: green - crews.js)
+      if (np && np.t) { const t = np.t.toUpperCase(); g.font = `700 ${9 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, p.rx + 1 / z, y - 10 / z); g.fillStyle = gu ? dimHex(np.g ? '#ffcc33' : '#d8dee9') : np.g ? '#ffcc33' : '#d8dee9'; g.fillText(t, p.rx, y - 11 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }

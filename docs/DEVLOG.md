@@ -22770,3 +22770,65 @@ Golf only gave a hole up after 25 s more than 1,400 px from the ball, and there 
   walk-out; pool Quit forfeits against a player and shuts the screen; an arcade machine's screen shut, its score in;
   soccer Quit, walk-off and a car; a ghost after `QUIT.awayS`; the page's button). The golf, hoops, bowling and
   minigames tests now wait out the warning.
+
+## 2026-11-12 - Sign-in for the beta: email + password, guest names, the news list, the legal drafts
+
+The owner's lineup for the beta: **Guest** (plays at once; "Link to this account" later keeps everything), **Email +
+password** (new), **Google**, **Discord**. Reddit and the email magic links are removed. Resend now sends only
+password resets and confirm-your-email links. Setup: `docs/LAUNCH-SETUP.md` sections 3 and 7.
+
+- **Email + password** (`server/passwords.js`, `/auth/password/*` in `server/authhttp.js`). It uses the same accounts,
+  tokens and flows as the providers. Signing in logs into that account; this page's character is kept as the previous
+  one. **Create account** asks the same question as an unknown provider sign-in: link it to the character I'm playing,
+  or start a new account. Nothing is merged silently.
+  - Passwords: scrypt (N 2^15, r 8, p 1) with a random salt each, `timingSafeEqual`, at least 10 characters, the most
+    common ones refused, long passphrases welcome (`ACCOUNT` in `shared/rules.js`). Never stored, logged or put in a
+    URL. Hashing is asynchronous, so a sign-in never stalls the tick.
+  - The address is normalized and found only by its keyed hash (the old magic links' hash, so their accounts are
+    found too).
+  - Rate limits per address and per IP. A lockout (8 wrong in 15 minutes locks that address for 15) counts addresses
+    with no account too. Sign-in always says "Wrong email or password."; Forgot password always gives the same answer.
+  - Only the game's pages may call these (the Origin is checked; JSON bodies, CORS as before).
+- **Forgot password**: a signed link (no server state, so it survives the restart every deploy makes). It works for 30
+  minutes, once: it carries the current password's fingerprint. It opens a page asking for the new password, so a mail
+  scanner opening it changes nothing. A reset confirms the address and signs the account out on its other devices.
+  With no `RESEND_API_KEY`, Forgot password says resets aren't available yet and the server refuses them (503).
+- **Confirm your email**: sent on sign-up when Resend is on. It's one button, isn't needed to play, and sets a
+  `verified` flag (`vf` on the login).
+- **The news list** (`server/newslist.js`, `<data>/news.json`): opt-in only. Create account has an unticked box;
+  Google and Discord members turn it on in Settings → Account (a new `#s-newsbox` slot filled by
+  `client/account.js`) by typing an address, so no new scopes are asked for. Each entry keeps the address, when, where
+  and its own unsubscribe token, apart from the sign-ins. `/auth/news/unsubscribe` is a one-button page; unsubscribing
+  deletes the entry. `newsFooter` is the unsubscribe link plus `CLA_MAIL_ADDRESS`. The owner's **News list** staff
+  page (`/admin/news`, a new `news` power, owner only) shows the count and a CSV (formula-safe cells). Each download
+  goes in the admin log. There's no sending UI yet: Resend's broadcasts take the CSV.
+- **Guest names** (`server/launch.js` rename, `shared/names.js` `lookKey`, `players.js` rename's `yields`):
+  - Guests pick and change their name: the filter and the ten-minute gap apply as before. They can't take a member's
+    name or its lookalike (digit swaps, `rn`/`m`).
+  - A member's pick takes a name only guests hold. Those guests go back to a Guest number, online or not, and are told
+    why. Members come first, so a name a guest left behind is never squatted.
+  - A guest who signs up or links keeps their name, unless a member already owns it (old duplicates); then they get
+    a Guest number and are told to pick a username.
+  - Guests still can't start or lead a crew or post a bounty while a sign-in is on offer. Email + password always
+    is, so this now holds on a server with no provider keys too. `CLA_PASSWORDS=0` with no keys brings back the open
+    game.
+- **Over the head**: a guest's descriptor carries `gu: 1` (`server/net.js`; members send nothing extra). The page
+  draws guests' names in a soft grey and dims the crew green, the police blue, the name colors and the title plates
+  for them (`client/main.js` drawWorldLabels, `dimHex`). There's no tag or symbol. The players list says "Guest".
+- **Removed**: Reddit's OAuth (routes, config, `launch.json`, the buttons, set-keys' questions), the magic links
+  (`/auth/email/*`) and their cross-browser "Sign in as ...?" question. Accounts with a Reddit or magic-link sign-in
+  keep it and all their progress. They have no button now: a Reddit-only member plays on the device they're signed in
+  on and can link Google, Discord, a password or a passkey from there. A magic-link account sets a password with
+  Forgot password (same address).
+- **Privacy Policy and Terms** (`server/legal.js`, `/legal/privacy`, `/legal/terms`): plain-English drafts of what the
+  game does, marked DRAFT for a lawyer's review at the top. They read the configuration (Google Analytics on or off,
+  the sign-ins on offer, Resend), and `CLA_CONTACT` / `CLA_MAIL_ADDRESS` fill their placeholders. They carry the
+  game-icons.net CC BY 3.0 and Kenney CC0 credits. Settings → Legal's two buttons open them, and Create account links
+  them.
+- `deploy/set-keys.sh`: Reddit is gone; Resend's key is asked for (resets) and `CLA_MAIL_ADDRESS` is new (spaces kept).
+  The Guide has no account entry to update; the FTUE is untouched.
+- Tests: `test/signin-password.test.js` (the hash and the rules; sign up, sign in, a wrong password, the same answer
+  for an unknown address, the Origin; the lockout, for addresses with no account too; the reset (once, 30 minutes,
+  other devices signed out); an old magic-link account; no Resend; link-to-guest keeps progress and name; the news
+  list, unsubscribe and the owner's CSV; the legal pages) and `test/guestnames.test.js`. The launch tests were updated
+  for Reddit and the magic links being gone and guests renaming.

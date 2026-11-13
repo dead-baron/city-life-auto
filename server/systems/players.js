@@ -460,8 +460,9 @@ function finalizeLogout(world, p, dropLoot) {
 }
 
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
-// nobody else's (any case, separators aside: names.js nameKey), and changed once every NAME.gapS; over your head at once (the descriptor sent again)
-export function rename(world, p, raw) {
+// nobody else's (any case, separators aside: names.js nameKey), and changed once every NAME.gapS; over your head at once (the descriptor sent again).
+// yields(profile): a holder of the name who gives way (a guest's, to a member - server/launch.js; it renames them after)
+export function rename(world, p, raw, { yields = null } = {}) {
   const prof = p.profile, r = cleanName(raw);
   if (r.err) { world.notify(p, r.err, 'warn'); return false; }
   if (r.name === p.name) return true;
@@ -470,7 +471,7 @@ export function rename(world, p, raw) {
   if (world.time < (p.renameTryAt || 0)) return false;   // (a moment between tries: each looks through every profile)
   p.renameTryAt = world.time + NAME.tryS;
   const key = nameKey(r.name);
-  for (const q of store.all()) if (q.pid !== prof.pid && nameKey(q.name) === key) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
+  for (const q of store.all()) if (q.pid !== prof.pid && nameKey(q.name) === key && !(yields && yields(q))) { world.notify(p, `${r.name} is taken - pick another.`, 'warn'); return false; }
   prof.name = r.name; p.name = r.name; prof.nameAt = Date.now();
   if (p.ped) { p.ped.name = r.name; p.ped.appVer = (p.ped.appVer || 0) + 1; }
   world.notify(p, `You're ${r.name} now.`, 'good');

@@ -149,6 +149,11 @@ export const FTUE = { cash: 450, hustleCash: 200, lot: { starter: 600, rustpicku
 // FTUE ended - the six come up in a new player's first hour or so; anyone still missing one after three hours or a
 // week has found their feet or the Guide. hurtMax: the hurt line, un-marked by going down right after it, twice at most)
 
+// Email + password accounts (the owner, 11-12; server/passwords.js, authhttp.js): a password is pwMin to pwMax
+// characters (a long passphrase is welcome); lockTries wrong ones for one address inside lockMin minutes lock its
+// password sign-in for lockMin minutes; a reset link lasts resetMin minutes, a verify link verifyDays days.
+export const ACCOUNT = { pwMin: 10, pwMax: 200, lockTries: 8, lockMin: 15, resetMin: 30, verifyDays: 7 };
+
 // Getting caught / hurt
 export const BUST_FINE_PER_STAR = 250;
 export const ARREST_REWARD_PER_STAR = 150;

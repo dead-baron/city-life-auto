@@ -97,8 +97,9 @@ const server = createServer(async (req, res) => {
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
   }
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
-  // sign-ins, transfer codes, passkeys, /launch.json; the owner's protected pages (server/authhttp.js, adminhttp.js)
-  if (path === '/launch.json' || path.startsWith('/auth/') || path.startsWith('/admin/')) { try { if (await launch.http(req, res, url)) return; } catch (e) { console.error('[launch] http', e && e.message); if (!res.headersSent) { res.writeHead(500); res.end(); } return; } }
+  // sign-ins, transfer codes, passkeys, /launch.json; the owner's protected pages; the privacy policy and the terms
+  // (server/authhttp.js, adminhttp.js, legal.js)
+  if (path === '/launch.json' || path.startsWith('/auth/') || path.startsWith('/admin/') || path.startsWith('/legal/')) { try { if (await launch.http(req, res, url)) return; } catch (e) { console.error('[launch] http', e && e.message); if (!res.headersSent) { res.writeHead(500); res.end(); } return; } }
   // how players' devices loaded and ran the game, what went wrong in their pages (server/perfreports.js): for admins and
   // the owner now (the owner's call, 11-04), at /admin/perf and /admin/clienterrors behind the staff login - the old
   // addresses point there. (The pages still send both over the game's socket: 'perf', 'cerr' - nothing changes for them.)

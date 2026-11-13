@@ -27,9 +27,9 @@ put() {
   install -m 600 -o root -g root "$tmp" "$ENV_FILE"; rm -f "$tmp"
 }
 changed=0
-# ask KEY "what it is" secret(1/0)
+# ask KEY "what it is" secret(1/0) [spaces(1): a value with spaces, kept in double quotes - the postal address]
 ask() {
-  local key=$1 what=$2 secret=$3 now val shown
+  local key=$1 what=$2 secret=$3 spaces=${4:-0} now val shown
   now=$(current "$key")
   if [ -z "$now" ]; then shown='not set'; elif [ "$secret" = 1 ]; then shown='set'; else shown="$now"; fi
   printf '\n%s\n  %s (now: %s)\n  > ' "$what" "$key" "$shown"
@@ -37,6 +37,10 @@ ask() {
   val=$(printf '%s' "$val" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/')
   if [ -z "$val" ]; then return; fi
   if [ "$val" = "-" ]; then put "$key" ''; echo "  cleared"; changed=1; return; fi
+  if [ "$spaces" = 1 ]; then
+    val=$(printf '%s' "$val" | tr -d '"\\')
+    put "$key" "\"$val\""; echo "  saved"; changed=1; return
+  fi
   case "$val" in *[[:space:]]*) echo "  That has a space in it - skipped. Paste just the value."; return;; esac
   put "$key" "$val"; echo "  saved"; changed=1
 }
@@ -51,15 +55,13 @@ ask GOOGLE_CLIENT_SECRET "Google client secret" 1
 echo; echo "== Discord sign-in (section 2)"
 ask DISCORD_CLIENT_ID "Discord application (client) ID" 0
 ask DISCORD_CLIENT_SECRET "Discord client secret" 1
-echo; echo "== Reddit sign-in (section 3)"
-ask REDDIT_CLIENT_ID "Reddit app client ID" 0
-ask REDDIT_CLIENT_SECRET "Reddit app secret" 1
-echo; echo "== Email sign-in links (section 4)"
-ask RESEND_API_KEY "Resend API key (starts with re_)" 1
-echo; echo "== Google Analytics 4 (section 6)"
+echo; echo "== Email: password resets and the news list (section 3)"
+ask RESEND_API_KEY "Resend API key (starts with re_) - sends the password-reset and confirm emails" 1
+ask CLA_MAIL_ADDRESS "Your postal address, at the foot of every news email (spaces are fine)" 0 1
+echo; echo "== Google Analytics 4 (section 5)"
 ask GA_MEASUREMENT_ID "GA4 measurement ID (starts with G-)" 0
 ask GA_API_SECRET "GA4 Measurement Protocol API secret" 1
-echo; echo "== The owner's account (section 7) - optional"
+echo; echo "== The owner's account (section 6) - optional"
 ask CLA_OWNER_ID "Your account id (in the game: Settings -> Account)" 0
 
 # the service reads the file (once: a small add-on to the service, kept apart from the repo's own unit file)
@@ -86,5 +88,6 @@ fi
 echo "The server is back up. Switched on now:"
 providers=$(printf '%s' "$out" | grep -o '"providers":{[^}]*}' | grep -o '"[a-z]*":true' | cut -d'"' -f2 | paste -sd, - | sed 's/,/, /g')
 echo "  Sign-ins: passkeys${providers:+, $providers}"
+if printf '%s' "$out" | grep -q '"resets":true'; then echo "  Password resets by email: on"; else echo "  Password resets by email: off (no Resend key)"; fi
 ga=$(printf '%s' "$out" | grep -o '"ga":"[^"]*"' | cut -d'"' -f4)
 echo "  Google Analytics: ${ga:-off}"

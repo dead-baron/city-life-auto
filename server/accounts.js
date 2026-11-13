@@ -3,16 +3,20 @@
 // with everything else (server/file-store.js), and a profile from before has one made on its next login - a guest, its
 // name and progress untouched, its old token still good (server/auth.js generation 0).
 //   acct: { v, kind: 'guest' | 'member', created, gen (token generation), logins: [{ p, sub, at }] (google, discord,
-//           reddit, email - sub is the provider's user id, an email only as a keyed hash), passkeys: [{ id, pub, alg,
+//           password - sub is the provider's user id; for password, the email address only as a keyed hash, with pw
+//           (its scrypt hash: server/passwords.js) and vf (when the address was confirmed, 0: not yet); reddit and the
+//           old email magic links' logins stay on the accounts that have them, nothing new signs in with them -
+//           the owner, 11-12), passkeys: [{ id, pub, alg,
 //           count, at, name }], role: null | 'helper' | 'admin' | 'owner', username: bool (picked one), nameAt,
 //           age17 (when the 17+ gate was confirmed), ban: { at, until (0: for good), why, by } | null, devices: [hashed
 //           markers], strikes, chatMuteUntil, blocks, mutes, contacts, inbox, chatOff (server/chat.js), ftue (analytics) }
-// Guests play as GuestNNNN and can't rename; signing in with any provider or a passkey makes the account a member.
+// Guests play as GuestNNNN or a name of their own (one a member doesn't own: server/launch.js); signing in with any
+// provider, an email and password or a passkey makes the account a member, and its name theirs.
 import { randomBytes, createHash } from 'node:crypto';
 import { issueToken, verifyToken, newPlayerId, keyedHash, safeEqual } from './auth.js';
 
 export const ROLES = ['helper', 'admin', 'owner'];
-export const PROVIDERS = ['google', 'discord', 'reddit', 'email', 'passkey'];
+export const PROVIDERS = ['google', 'discord', 'password', 'passkey'];
 export const USERNAME_GAP_DAYS = 30;          // a username changes at most once a month (the first pick is free)
 export const TRANSFER_TTL_MS = 10 * 60e3;     // a guest's transfer code lasts ten minutes, once
 export const LOGIN_CODE_TTL_MS = 2 * 60e3;    // the code a sign-in hands the page lasts two minutes, once
@@ -78,6 +82,29 @@ export function createAccounts({ store, secret, now = Date.now }) {
     a.logins.push({ p: provider, sub, at: now() });
     a.kind = 'member';
     dropIndex(); store.touch();
+    return null;
+  }
+  // ---- email + password (authhttp.js; the hash and the rules: passwords.js) ----
+  const passwordOf = (pid) => { const a = get(pid); return (a && a.logins.find((l) => l.p === 'password')) || null; };
+  // the account an address signs into: its password, or an old magic link's (found by the same keyed hash - a reset
+  // gives it a password)
+  const findEmail = (sub) => findLogin('password', sub) || findLogin('email', sub);
+  // a password on an account (the address's login added, or its hash changed) -> null | why not
+  function setPassword(pid, sub, hash, { verified = 0 } = {}) {
+    const a = get(pid);
+    if (!a) return 'No such account.';
+    const other = findLogin('password', sub);
+    if (other && other !== pid) return 'That email is on another account.';
+    let l = a.logins.find((x) => x.p === 'password');
+    if (l && l.sub !== sub) return 'This account already has an email and password.';
+    if (!l) {
+      if (a.logins.length >= MAX_LOGINS) return 'Too many sign-ins on this account.';
+      l = { p: 'password', sub, at: now(), pw: hash, vf: verified || 0 };
+      a.logins.push(l);
+      a.kind = 'member';
+      dropIndex();
+    } else { l.pw = hash; if (verified && !l.vf) l.vf = verified; else if (l.vf === undefined) l.vf = 0; }
+    store.touch();
     return null;
   }
   function unlink(pid, provider) {
@@ -259,7 +286,7 @@ export function createAccounts({ store, secret, now = Date.now }) {
 
   return {
     ensure, get, profileOf, findLogin, findPasskey, link, unlink, signIn, token, checkToken, staleToken, signOutEverywhere,
-    makeTransfer, redeemTransfer, makeLoginCode, redeemLoginCode, addPasskey, role, setRole, ownerExists,
+    passwordOf, findEmail, setPassword, makeTransfer, redeemTransfer, makeLoginCode, redeemLoginCode, addPasskey, role, setRole, ownerExists,
     banned, ban, unban, noteDevice, deviceBanned, deviceHash, bootstrapOwner, claimOwner, sweep, touch: () => store.touch(),
     isGuest: (pid) => { const a = get(pid); return !a || a.kind !== 'member'; },
     get claimOpen() { return !!claim; },

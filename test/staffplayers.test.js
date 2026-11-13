@@ -16,7 +16,7 @@ function launch() {
   useStore(new MemoryStore());
   const world = fakeWorld(); world.stats = { tickMs: 0 };
   const c = clock();
-  const cfg = { ...config, launch: { ...config.launch, devOpen: true, google: { id: '', secret: '' }, discord: { id: '', secret: '' }, reddit: { id: '', secret: '' }, email: { key: '', from: '' } } };
+  const cfg = { ...config, launch: { ...config.launch, devOpen: true, google: { id: '', secret: '' }, discord: { id: '', secret: '' }, email: { key: '', from: '' } } };
   const L = createLaunch({ config: cfg, store, world, ip: () => '1.2.3.4', dataDir: null, now: c.now, log: quiet, signOutCloseMs: 0 });
   const join = (o = {}, role = null) => {
     const p = fakePlayer(world, store, o);
