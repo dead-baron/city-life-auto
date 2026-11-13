@@ -209,6 +209,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
 .touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
+body:not(.touch).cine-on #cine-panel { top: calc(max(12px, env(safe-area-inset-top)) + 52px); max-height: calc(100vh - 76px - env(safe-area-inset-top, 0px)); }   /* (under the close button) */
 #cine-panel .sc { display: block; width: 100%; text-align: left; margin: 2px 0; }
 #cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
 #cine-panel .tip { margin: 6px 0 0; }
