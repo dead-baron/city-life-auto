@@ -82,7 +82,7 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
 // never changes a really simple symbol, one whose action depends on the moment its word; the context slots and the
 // switches small navy discs with a gold rim and a word. (The line icons stay for the hint strips' kin, the bag and the
 // weapon card.)
-test('the touch buttons: colored face discs, two plain symbols and words; the switches navy with a gold rim', () => {
+test('the touch buttons: see-through discs with a colored ring, plain symbols and words; the switches navy with a gold rim', () => {
   for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
   assert.ok(GLYPH_STROKE >= 2 && GLYPH_STROKE <= 3, 'between Lucide\'s 2 and 3');
   for (const n of GLYPH_NAMES) {
@@ -92,21 +92,23 @@ test('the touch buttons: colored face discs, two plain symbols and words; the sw
     assert.ok(d && d[1] === d[2], `${n}: the line over its halo`);
   }
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
-  // the four face buttons' colors, the 3D edge, no outline ring; the switches navy with the gold rim
-  assert.match(root, /--pad-fire: #d8323c; --pad-act: #e8b21a; --pad-roll: #2f6fd6; --pad-car: #2f9e4f;/);
-  for (const [slot, c] of [['fire', 'fire'], ['act', 'act'], ['roll', 'roll'], ['car', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ background: var\\(--pad-${c}\\);`), slot);
-  assert.match(CSS, /#tbtns button\.face \{ border: 0; box-shadow: inset 0 4px 0 var\(--pad-hi\), inset 0 -6px 0 var\(--pad-lo\), 0 4px 0 var\(--pad-drop\); \}/, 'a light top edge, a shaded bottom');
+  // the four face buttons (the owner, 11-12: smaller, see-through, the game's colors): a see-through navy disc, a 3 px
+  // ring in the palette's own color; the switches navy with the gold rim
+  assert.match(root, /--pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;/);
+  assert.match(root, /--disc: rgba\(20, 26, 51, \.55\); --disc-on: rgba\(20, 26, 51, \.8\);/, 'see-through, darker pressed');
+  for (const [slot, c] of [['fire', 'fire'], ['act', 'act'], ['roll', 'roll'], ['car', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ --acc: var\\(--pad-${c}\\); \\}`), slot);
+  assert.match(CSS, /#tbtns button\.face \{ border: 3px solid var\(--acc\); background: var\(--disc\);/, 'the ring in its color, the disc see-through');
   assert.match(CSS, /#tbtns button \{[^}]*border: 2px solid var\(--pad-ink\); background: var\(--pad-navy\); box-shadow: var\(--pn-rim\)[^}]*font: 700 var\(--fs-w2\) var\(--pixel\);/, 'the switches: navy, the gold rim, a word in CLA Pixel');
-  assert.match(CSS, /#tbtns \.w \{[^}]*color: var\(--white\); text-shadow: 2px 2px 0 var\(--pad-ink\);/, 'the words white with a 2 px dark shadow');
+  assert.match(CSS, /#tbtns \.w \{[^}]*font: 700 var\(--fs-w2\) var\(--pixel\); color: var\(--white\); text-shadow: 1px 0 0 var\(--pad-ink\), -1px 0 0 var\(--pad-ink\), 0 1px 0 var\(--pad-ink\), 0 -1px 0 var\(--pad-ink\)/, 'the words white with an even 1 px outline: centred');
   assert.match(CSS, /#tbtns button:active, #tbtns button\.on \{ transform: scale\(\.9\);/, 'pressed: 90%');
   assert.match(CSS, /#tbtns button\.pulse \{ outline: 3px solid var\(--pad-gold\);/, 'the action to take: a gold ring, the button keeps its color');
-  // the symbols: plain 24 x 24 pictures drawn at 2x (tools/build-hudsymbols.py) - no other art
-  for (const n of ['cross', 'chev', 'enter', 'exit']) {
+  // the symbols: plain 16 x 16 pictures, centred, drawn at 2x - no other art
+  for (const n of ['cross', 'chev', 'enter', 'exit', 'shield']) {
     assert.match(CSS, new RegExp(`\\.s-${n} \\{ background-image: url\\(\\.\\./assets/ui/s-${n}\\.png\\); \\}`), n);
     const png = readFileSync(new URL(`../assets/ui/s-${n}.png`, import.meta.url));
-    assert.equal(png.readUInt32BE(16), 24); assert.equal(png.readUInt32BE(20), 24, `${n}: 24 x 24`);
+    assert.equal(png.readUInt32BE(16), 16); assert.equal(png.readUInt32BE(20), 16, `${n}: 16 x 16`);
   }
-  assert.match(CSS, /\.sym \{[^}]*width: 48px; height: 48px;[^}]*image-rendering: pixelated;/, 'at 2x, crisp');
+  assert.match(CSS, /\.sym \{[^}]*width: 32px; height: 32px;[^}]*image-rendering: pixelated;/, 'at 2x, crisp');
   const tb = CSS.slice(CSS.indexOf('/* the face buttons (Direction A'), CSS.indexOf('/* left alone a while'));
   assert.ok(!/filter:/.test(tb), 'no filters');
   assert.match(HTML, /<div class="knob"><i class="ic" data-gl="crosshair"><\/i><\/div>/, 'the aim stick\'s crosshair');
@@ -115,14 +117,13 @@ test('the touch buttons: colored face discs, two plain symbols and words; the sw
   assert.match(ts, /export const LONG_MS = 450;/); assert.match(ts, /tip\.textContent = n;/, 'a long press names the button');
 });
 
-test('the sizes: FIRE and ACT 76 px, ROLL and the vehicle button 68 on its side (60 upright), the rest 52', () => {
+test('the sizes: FIRE and ACT 64 px, ROLL and the vehicle button 52, the rest 48', () => {   // (the owner, 11-12: smaller)
   for (const g of [GEO.land, GEO.port]) {
-    assert.equal(g.fire[2], 76); assert.equal(g.act[2], 76);
-    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 52, k);
+    assert.equal(g.fire[2], 64); assert.equal(g.act[2], 64);
+    assert.equal(g.roll[2], 52); assert.equal(g.car[2], 52);
+    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 48, k);
   }
-  assert.equal(GEO.land.roll[2], 68); assert.equal(GEO.land.car[2], 68);
-  assert.equal(GEO.port.roll[2], 60); assert.equal(GEO.port.car[2], 60);   // (upright the tight cluster has no room for 68: test/touchslots.test.js)
-  assert.match(CSS, /#tbtns \[data-slot=fire\]:is\(:active, \.on\) \{ background: var\(--fire-hi\); \}/, 'FIRE pressed: brighter');
+  assert.match(CSS, /#tbtns button\.face:is\(:active, \.on\) \{ background: var\(--disc-on\); \}/, 'pressed: the disc darker');
   assert.match(CSS, /:is\(\[data-slot=fire\]\.cooling, #b-cruiser\.cooling\)::before \{[^}]*conic-gradient\(var\(--cd-c, var\(--act-disc\)\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
   // the aim stick keeps its red ring where it was (the owner, 2026-11-03: the sticks' behaviour stays)
   assert.match(CSS, /#stick-r \.ring \{ position: absolute; inset: 6px; border-radius: var\(--r3\); border: 9px solid var\(--danger-t\); \}/);

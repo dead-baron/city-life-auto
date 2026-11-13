@@ -31,14 +31,15 @@
   --scrim-hi: rgba(4, 7, 16, .8);
   --scrim-lo: rgba(4, 7, 16, .4);
   /* the touch buttons' one container (the owner, 11-03): a dark disc with a hairline; the state the only accent */
-  --disc: rgba(12, 14, 20, .55); --gl-halo: rgba(7, 11, 22, .6); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
+  --gl-halo: rgba(7, 11, 22, .6); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
   --fire-disc: #c8463c; --fire-hi: #e0594d; --act-disc: #e2b33c; --act-hi: #f0c55a;
   --ink-a: rgba(7, 11, 22, .25);
   /* Direction A, the SNES pad (the owner, 2026-11-12): the in-play HUD's panels and buttons - navy, a near-black edge, a
      gold rim inside, a hard shadow; the four face buttons' colors; the bars'; the sticks' faint ring and knob */
   --pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945; --pad-cream: #f4ecd8; --pad-mute: #8b93a8; --pad-line: #4a5370; --pad-obj: #b794f4;
   --pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;
-  --disc: rgba(20, 26, 51, .55); --disc-on: rgba(20, 26, 51, .8);
+  --disc: rgba(20, 26, 51, .55); --disc-on: rgba(20, 26, 51, .8);   /* (a touch button's see-through navy, and pressed or on) */
+  --auto-ring: rgba(244, 236, 216, .55); --auto-word: rgba(255, 255, 255, .75);   /* (AUTO while it's off: see-through) */
   --pad-hp: #e8434b; --pad-hp-d: #3a2030; --pad-ar: #4aa8ff; --pad-ar-d: #1d2a48; --pad-st: #e8b21a; --pad-st-d: #3a3220; --pad-cash: #3ccf6e;
   --pad-hi: rgba(255, 255, 255, .35); --pad-lo: rgba(0, 0, 0, .25); --pad-drop: rgba(0, 0, 0, .45); --pad-veil: rgba(11, 16, 32, .85);
   --stick-ring: rgba(244, 236, 216, .28); --stick-knob: rgba(244, 236, 216, .3); --stick-edge: rgba(11, 16, 32, .5);
@@ -673,8 +674,8 @@ body.portrait #zone-l { top: 50%; }
 #tbtns [data-slot=roll] { --acc: var(--pad-roll); }
 #tbtns [data-slot=car] { --acc: var(--pad-car); }
 #tbtns button.face:is(:active, .on) { background: var(--disc-on); }
-#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 12px var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
-#tbtns .w[data-fs="10"] { font-size: 10px; }
+#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 var(--fs-w2) var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
+#tbtns .w[data-fs="10"] { font-size: var(--fs-w1); }
 #tbtns small.w { color: var(--pad-mute); }
 .sym { display: block; flex: none; width: 32px; height: 32px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 .s-cross { background-image: url(../assets/ui/s-cross.png); } .s-chev { background-image: url(../assets/ui/s-chev.png); }
@@ -689,8 +690,8 @@ body.portrait #zone-l { top: 50%; }
 #tbtns button.pulse.crime::after { content: ''; top: -4px; right: -4px; width: 20px; height: 20px; border: 0; border-radius: 0; background: url(../assets/ui/s-bang.png) center / 100% 100% no-repeat; image-rendering: pixelated; }   /* (the "!" drawn, so it sits dead centre: the font's ! doesn't) */
 /* AUTO (FIRE ON): a small ring inside its tap area - see-through while it's off, filled and gold while it's on (the owner, 11-13) */
 #tbtns #firetog { isolation: isolate; background: transparent; border-color: transparent; box-shadow: none; }
-#tbtns #firetog::before { content: ''; position: absolute; inset: 6px; z-index: -1; border-radius: var(--r3); border: 2px solid rgba(244, 236, 216, .55); background: transparent; }
-#tbtns #firetog .w { color: rgba(255, 255, 255, .75); }
+#tbtns #firetog::before { content: ''; position: absolute; inset: 6px; z-index: -1; border-radius: var(--r3); border: 2px solid var(--auto-ring); background: transparent; }
+#tbtns #firetog .w { color: var(--auto-word); }
 #tbtns #firetog.lit { box-shadow: none; }
 #tbtns #firetog.lit::before { border-color: var(--pad-gold); background: var(--disc-on); }
 #tbtns #firetog.lit .w { color: var(--pad-gold); }
