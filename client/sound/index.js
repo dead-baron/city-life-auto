@@ -26,10 +26,11 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
   const amb = new Ambience(E);
   const music = new Music(E);
   const titleTrack = new Track(E, 'title');   // (the owner's own title track, recorded; the old tune if it can't play)
+  const arrivalTrack = new Track(E, 'arrival');   // (the first title track, kept: it plays while a new character's train pulls in - ftue.js #arrival)
   const places = new Places(E, music);
   const people = new People(E);
   const stage = new StageSound(E);   // (boomboxes, radios, car radios, mats, instruments: client/sound/stage.js)
-  const titleEl = document.getElementById('title');
+  const titleEl = document.getElementById('title'), arrivalEl = document.getElementById('arrival');
   let S = null, quiet = false, scene = 'title', lastFrame = 0, inside = false, lastT = ctx.currentTime;
   const unquiet = () => { quiet = false; };
   const A = {
@@ -90,6 +91,8 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
       // the track can't play (it failed to load or to decode)
       const mp = mix.prefs, want = title && !document.hidden && mp.on && mp.music && mp.mus > 0 ? 0.7 : 0;
       music.set('title', titleTrack.set(want) ? 0 : want);
+      const arriving = !title && !!(arrivalEl && !arrivalEl.classList.contains('hidden'));
+      arrivalTrack.set(arriving && !document.hidden && mp.on && mp.music && mp.mus > 0 ? 0.7 : 0);
       if (scene !== was && scene === 'game') music.set('title', 0);
       if (document.hidden) music.silence();
       if (performance.now() - lastFrame > 2000) { veh.silence(); amb.silence(); places.music.set('club', 0); places.music.set('shop', 0); places.music.set('lobby', 0); stage.silence(); }

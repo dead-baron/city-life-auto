@@ -22770,3 +22770,10 @@ Golf only gave a hole up after 25 s more than 1,400 px from the ball, and there 
   walk-out; pool Quit forfeits against a player and shuts the screen; an arcade machine's screen shut, its score in;
   soccer Quit, walk-off and a car; a ghost after `QUIT.awayS`; the page's button). The golf, hoops, bowling and
   minigames tests now wait out the warning.
+
+## 2026-11-12 - The first title track kept: the train arrival's music
+
+The owner: keep the old menu music and use it somewhere. The first title track (10-10) is back as `arrival`
+(`assets/music/arrival-*.opus|mp3`, the same cut, named by contents) and plays while a new character's train pulls in
+(the FTUE's `#arrival` screen: the station picker and the arrival card), on the music bus with the same settings as the
+title, freed a few seconds after the screen closes. `client/sound/index.js` (pulse); `test/track.test.js` checks the files.

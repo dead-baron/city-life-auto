@@ -133,3 +133,15 @@ test('the MP3 where the browser can\'t play Opus, or where the Opus won\'t decod
     assert.deepEqual(log.fetched, []);
   }
 });
+
+test('the first title track is kept: it plays while a new character\'s train pulls in (the arrival)', () => {
+  const A = TRACKS.arrival;
+  assert.ok(A, 'an arrival track');
+  for (const k of ['opus', 'mp3']) {
+    const bytes = readFileSync(ROOT + A[k]);
+    assert.match(A[k], new RegExp(`^assets/music/arrival-[0-9a-f]{8}\\.${k}$`));
+    assert.equal(bytes.length, A.bytes[k], `${k}: the size recorded`);
+    assert.equal(A[k].slice(-8 - k.length - 1, -k.length - 1), createHash('sha1').update(bytes).digest('hex').slice(0, 8), `${k}: named by its contents`);
+  }
+  assert.notEqual(A.opus, TRACKS.title.opus, 'not the title\'s own file');
+});
