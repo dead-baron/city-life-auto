@@ -327,12 +327,12 @@ function renderPanel() {
   const legalUrl = (k) => `${httpBase()}/legal/${k}`;
   inner.innerHTML = `
     <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
-    ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" style="${tab(pwTab === 'up')}">Create account</button></div>
+    ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" aria-selected="${pwTab === 'in'}" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" aria-selected="${pwTab === 'up'}" style="${tab(pwTab === 'up')}">Create account</button></div>
     <form id="a-fin" ${pwTab === 'in' ? '' : 'hidden'} autocomplete="on">
       <label>Email<input id="a-ine" name="email" type="email" autocomplete="username" inputmode="email" required style="${inp}"></label>
       <label>Password<input id="a-inp" name="password" type="password" autocomplete="current-password" required style="${inp}"></label>
       <button id="a-ingo" style="${btn};width:100%;margin:2px 0 0">Sign in</button>
-      <button type="button" id="a-forgot" style="${linkBtn}">Forgot password?</button>
+      <button type="button" id="a-forgot" class="a-link" style="${linkBtn}">Forgot password?</button>
     </form>
     <form id="a-fup" ${pwTab === 'up' ? '' : 'hidden'} autocomplete="on">
       <label>Email<input id="a-upe" name="email" type="email" autocomplete="username" inputmode="email" required style="${inp}"></label>
@@ -431,6 +431,9 @@ export async function openPanel({ into = null } = {}) {
   C.send({ t: 'acct', a: 'state' });
   renderPanel();
   keyboardDialog(panel);
+  // (a mouse and keyboard: straight into the email; a phone keeps its keyboard down until a field is tapped)
+  const em = panel.querySelector('#a-ine');
+  if (em && window.matchMedia && matchMedia('(pointer: fine)').matches) em.focus();
   return panel;
 }
 export function closePanel() { if (panel) { closeModal(panel); panel = null; } }
