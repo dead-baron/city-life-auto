@@ -25,3 +25,8 @@ ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MER
 PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+The key and gamepad prompt glyphs (assets/ui/prompts/, drawn by client/glyphs.js for a keyboard and a gamepad) are
+tiles from Kenney's "Input Prompts Pixel 16" (www.kenney.nl), CC0 1.0 (public domain dedication) - see
+assets/ui/prompts/LICENSE.txt. The touch face buttons' symbols (assets/ui/s-*.png, tools/build-hudsymbols.py) are the
+game's own.

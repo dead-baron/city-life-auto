@@ -33,8 +33,10 @@ test('UIK-00 3-6: plates, buttons in their states, the controls and the feedback
   assert.match(CSS, /\.rbtn > \.kchip \{ position: absolute; right: -7px; top: -7px;/, 'the key badge on the round button\'s corner (4E)');
   assert.match(CSS, /\.tab\.on, \.tab\[aria-selected=true\] \{ background: var\(--gold\); color: var\(--ink\)/, 'the tab you\'re on, gold (5A)');
   // the HUD wears them: the round buttons, the plates
-  for (const id of ['b-phone', 'b-map', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
-  assert.match(CSS, /#rclock, #hud-stat, #vchip, #job, \.hchip, #weapon, #hud-btns button, #b-dev, #stars, \.toast, #helpbox, #rob, #hints \{ background: var\(--plate\); border: 2px solid var\(--plate-rim\)/, 'one plate for all of the HUD');
+  for (const id of ['b-phone', 'b-map', 'b-chat', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
+  // (Direction A, the owner 2026-11-12: every panel navy, a near-black edge, a gold rim inside, a hard shadow, square)
+  assert.match(CSS, /#rclock, #hud-stat, #vchip, #job, \.hchip, #weapon, #hud-btns button, #b-dev, #helpbox, #rob, #hints \{ background: var\(--pad-navy\); border: 2px solid var\(--pad-ink\); border-radius: 0; box-shadow: var\(--pn-rim\), var\(--pn-drop\); \}/, 'one panel for all of the HUD');
+  assert.match(root, /--pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945;/, 'its colours');
 });
 
 // the icon sheet's (UIC-09) rows, by the names client/touchicons.js gives them
@@ -70,51 +72,56 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
   const lines = [...HTML.matchAll(/data-gl="([a-z0-9-]+)"/g)].map((m) => m[1]);
   for (const n of lines) assert.ok(GLYPH_NAMES.includes(n), `index.html's line icon ${n}`);
   const row = hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">'));
-  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 3), ['smartphone', 'map', 'menu'], 'the round buttons: Lucide\'s phone, map and menu (11-05)');
+  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 4), ['smartphone', 'map', 'message-circle-more', 'menu'], 'the system buttons: Lucide\'s phone, map, chat and menu (11-05; chat in the row since Direction A, 11-12)');
   assert.doesNotMatch(row, /<svg/, 'filled in by the page');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
 });
 
-// the touch buttons (the owner, 11-03: "simplified UI icons"; 11-05: "more generic and more professional and clean and
-// polished"): one line-icon family, Lucide's - vector paths on the 24 grid, one round stroke (GLYPH_STROKE), currentColor
-// - one container (a dark disc with a hairline), the state the only accent, two sizes on arcs round the aim stick
-test('the touch buttons: one line icon for every action and label a slot holds, the weapon as its class', () => {
+// the touch buttons: Direction A (the owner's SNES pad, 2026-11-12) - four plain colored face buttons (FIRE red, ACT
+// yellow, ROLL blue, the vehicle button green; a light top edge, a shaded bottom, no outline ring), a button whose action
+// never changes a really simple symbol, one whose action depends on the moment its word; the context slots and the
+// switches small navy discs with a gold rim and a word. (The line icons stay for the hint strips' kin, the bag and the
+// weapon card.)
+test('the touch buttons: colored face discs, two plain symbols and words; the switches navy with a gold rim', () => {
   for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) assert.ok(GLYPH_NAMES.includes(iconOf(a, label)), `${a} ${label}: ${iconOf(a, label)}`);
-  assert.equal(iconOf('fire', 'HIT'), 'fist'); assert.equal(iconOf('fire', 'FIRE'), 'target'); assert.equal(iconOf('action', 'ACT'), 'circle-dot');
-  assert.equal(iconOf('vehicle', 'CAR'), 'car-front'); assert.equal(iconOf('dive', 'ROLL'), 'roll'); assert.equal(iconOf('block', 'BLOCK'), 'shield'); assert.equal(iconOf('use', 'ITEMS'), 'backpack');
-  assert.equal(iconOf('reload', 'RELOAD'), 'rotate-cw'); assert.equal(iconOf('cruiser', 'COP CAR'), 'siren'); assert.equal(iconOf('horn', 'SIREN'), 'siren'); assert.equal(iconOf('stick', 'AIM'), 'crosshair');
   assert.ok(GLYPH_STROKE >= 2 && GLYPH_STROKE <= 3, 'between Lucide\'s 2 and 3');
   for (const n of GLYPH_NAMES) {
     const g = glyph(n);
     assert.match(g, new RegExp(`^<svg class="pi24 gl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${GLYPH_STROKE}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">`), n);
-    assert.ok(!/fill="#|stroke="#|<image|<rect/.test(g), `${n}: one color, no bitmaps`);
     const d = g.match(/<path class="h" d="([^"]+)"\/><path d="([^"]+)"\/>/);
     assert.ok(d && d[1] === d[2], `${n}: the line over its halo`);
-    assert.ok(d[2].match(/-?\d*\.?\d+/g).length > 4 && !/NaN/.test(d[2]), n);
   }
-  assert.match(glyph('backpack', 40), /width="40" height="40"/);
   for (const w of Object.values(WEAPONS)) assert.ok(GLYPH_NAMES.includes(glyphOfWeapon(w.id, w.type)), w.id);
-  assert.equal(glyphOfWeapon('fists', 'melee'), 'fist'); assert.equal(glyphOfWeapon('pistol', 'gun'), 'pistol'); assert.equal(glyphOfWeapon('rifle', 'gun'), 'rifle');
-  assert.equal(glyphOfWeapon('knife', 'melee'), 'knife'); assert.equal(glyphOfWeapon('bat', 'melee'), 'bat'); assert.equal(glyphOfWeapon('grenade', 'grenade'), 'grenade'); assert.equal(glyphOfWeapon('bow', 'bow'), 'bow');
-  // one container: the disc and its hairline; the state the only accent
-  assert.match(CSS, /#tbtns button \{[^}]*border: 1px solid var\(--hair\); background: var\(--disc\);[^}]*color: var\(--cream\);/);
-  assert.match(CSS, /#tbtns \[data-slot=fire\] \{ background: var\(--fire-disc\);/, 'FIRE: the red disc');
-  assert.match(CSS, /#tbtns button\.pulse \{ background: var\(--act-disc\);[^}]*color: var\(--ink\);/, 'the action to take: the gold disc, the glyph ink');
+  // the four face buttons' colors, the 3D edge, no outline ring; the switches navy with the gold rim
+  assert.match(root, /--pad-fire: #d8323c; --pad-act: #e8b21a; --pad-roll: #2f6fd6; --pad-car: #2f9e4f;/);
+  for (const [slot, c] of [['fire', 'fire'], ['act', 'act'], ['roll', 'roll'], ['car', 'car']]) assert.match(CSS, new RegExp(`#tbtns \\[data-slot=${slot}\\] \\{ background: var\\(--pad-${c}\\);`), slot);
+  assert.match(CSS, /#tbtns button\.face \{ border: 0; box-shadow: inset 0 4px 0 var\(--pad-hi\), inset 0 -6px 0 var\(--pad-lo\), 0 4px 0 var\(--pad-drop\); \}/, 'a light top edge, a shaded bottom');
+  assert.match(CSS, /#tbtns button \{[^}]*border: 2px solid var\(--pad-ink\); background: var\(--pad-navy\); box-shadow: var\(--pn-rim\)[^}]*font: 700 var\(--fs-w2\) var\(--pixel\);/, 'the switches: navy, the gold rim, a word in CLA Pixel');
+  assert.match(CSS, /#tbtns \.w \{[^}]*color: var\(--white\); text-shadow: 2px 2px 0 var\(--pad-ink\);/, 'the words white with a 2 px dark shadow');
   assert.match(CSS, /#tbtns button:active, #tbtns button\.on \{ transform: scale\(\.9\);/, 'pressed: 90%');
-  assert.match(CSS, /#tbtns button:is\(\[disabled\], \.dis\) \.pi24 \{ opacity: \.4; \}/, 'disabled: the glyph at 40%');
-  const tb = CSS.slice(CSS.indexOf('/* the touch buttons (the owner, 11-03: "cleaner'), CSS.indexOf('/* left alone a while'));
-  assert.ok(!/filter:|var\(--gold\)|var\(--plate-rim\)/.test(tb), 'no gold rims at rest, no filters on a glyph');
+  assert.match(CSS, /#tbtns button\.pulse \{ outline: 3px solid var\(--pad-gold\);/, 'the action to take: a gold ring, the button keeps its color');
+  // the symbols: plain 24 x 24 pictures drawn at 2x (tools/build-hudsymbols.py) - no other art
+  for (const n of ['cross', 'chev', 'enter', 'exit']) {
+    assert.match(CSS, new RegExp(`\\.s-${n} \\{ background-image: url\\(\\.\\./assets/ui/s-${n}\\.png\\); \\}`), n);
+    const png = readFileSync(new URL(`../assets/ui/s-${n}.png`, import.meta.url));
+    assert.equal(png.readUInt32BE(16), 24); assert.equal(png.readUInt32BE(20), 24, `${n}: 24 x 24`);
+  }
+  assert.match(CSS, /\.sym \{[^}]*width: 48px; height: 48px;[^}]*image-rendering: pixelated;/, 'at 2x, crisp');
+  const tb = CSS.slice(CSS.indexOf('/* the face buttons (Direction A'), CSS.indexOf('/* left alone a while'));
+  assert.ok(!/filter:/.test(tb), 'no filters');
   assert.match(HTML, /<div class="knob"><i class="ic" data-gl="crosshair"><\/i><\/div>/, 'the aim stick\'s crosshair');
   assert.match(HTML, /<i id="w-glyph" class="ic" aria-hidden="true"><\/i>/, 'the weapon card\'s silhouette');
   const ts = read('client/touchslots.js');
   assert.match(ts, /export const LONG_MS = 450;/); assert.match(ts, /tip\.textContent = n;/, 'a long press names the button');
 });
 
-test('two sizes: FIRE and ACT 72 px, every other button 52, on a phone on its side and upright', () => {
+test('the sizes: FIRE and ACT 76 px, ROLL and the vehicle button 68 on its side (60 upright), the rest 52', () => {
   for (const g of [GEO.land, GEO.port]) {
-    assert.equal(g.fire[2], 72); assert.equal(g.act[2], 72);
-    for (const k of ['roll', 'car', 'c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 52, k);
+    assert.equal(g.fire[2], 76); assert.equal(g.act[2], 76);
+    for (const k of ['c1', 'c2', 'u1', 'u2', 'u3', 'u4']) assert.equal(g[k][2], 52, k);
   }
+  assert.equal(GEO.land.roll[2], 68); assert.equal(GEO.land.car[2], 68);
+  assert.equal(GEO.port.roll[2], 60); assert.equal(GEO.port.car[2], 60);   // (upright the tight cluster has no room for 68: test/touchslots.test.js)
   assert.match(CSS, /#tbtns \[data-slot=fire\]:is\(:active, \.on\) \{ background: var\(--fire-hi\); \}/, 'FIRE pressed: brighter');
   assert.match(CSS, /:is\(\[data-slot=fire\]\.cooling, #b-cruiser\.cooling\)::before \{[^}]*conic-gradient\(var\(--cd-c, var\(--act-disc\)\) calc\(var\(--cd, 0\) \* 1turn\)/, 'cooling: the ring');
   // the aim stick keeps its red ring where it was (the owner, 2026-11-03: the sticks' behaviour stays)

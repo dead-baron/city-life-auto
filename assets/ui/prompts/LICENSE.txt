@@ -1,0 +1,4 @@
+The key and gamepad prompt tiles in this folder (k-*.png, p-*.png) are from "Input Prompts Pixel 16" 1.0 by Kenney
+(www.kenney.nl), released under Creative Commons Zero (CC0 1.0, http://creativecommons.org/publicdomain/zero/1.0/):
+free to use in personal, educational and commercial projects. Credit is not required; we give it gladly.
+Only the tiles the game draws are copied here (client/glyphs.js); TAB and SHIFT join the pack's two halves into one.

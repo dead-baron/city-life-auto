@@ -8,10 +8,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { TOUCH_STATES, TOUCH_SLOTS, touchSlots, touchState, touchAim, pickTarget, AIM_KEEP_MS } from '../shared/touchcontrols.js';
+import { TOUCH_STATES, TOUCH_SLOTS, touchSlots, touchState, touchAim, pickTarget, AIM_KEEP_MS, mountOf } from '../shared/touchcontrols.js';
+import { VEHICLES } from '../shared/vehicles.js';
 import { IN, quantizeAngle, touchStick } from '../shared/input.js';
 import { encodeInput, decodeInput } from '../shared/protocol.js';
-import { slotGeometry, GEO, iconOf } from '../client/touchslots.js';
+import { slotGeometry, GEO, iconOf, BUTTON_NAME } from '../client/touchslots.js';
 import { findChrome, measureDrag } from './hudpage.js';
 
 const read = (f) => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
@@ -20,10 +21,11 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   assert.match(read('shared/controls.js'), /shared\/touchcontrols\.js/, 'controls.js names its touch half');
   const st = (f) => touchSlots(f), acts = (f) => Object.fromEntries(Object.entries(st(f).slots).filter(([k]) => k !== 'stick' && k !== 'u4').map(([k, v]) => [k, `${v.a}:${v.label}`]));   // (the stick and FIRE ON: below)
   assert.deepEqual(acts({}), { fire: 'fire:HIT', roll: 'dive:ROLL', act: 'action:ACT' }, 'on foot, fists: no BLOCK without a guard, nothing in the bag, no light, no cop car - and no CAR with no vehicle near');
-  assert.equal(acts({ near: true }).car, 'vehicle:CAR', 'a vehicle near enough to get in: CAR');
+  assert.equal(acts({ near: true }).car, 'vehicle:GET IN', 'a vehicle near enough to get in: GET IN (the owner, 11-12: never the word CAR)');
+  assert.equal(acts({ near: true, on: true }).car, 'vehicle:GET ON', 'a bike, a horse, an open boat: GET ON');
   assert.equal(acts({ items: true }).u1, 'use:ITEMS', 'ITEMS with something in the bag');
   assert.equal(acts({ guard: true, light: true, call: true }).c1, 'block:BLOCK');
-  assert.deepEqual(acts({ armed: true, light: true, items: true, near: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:CAR', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed, by a car');
+  assert.deepEqual(acts({ armed: true, light: true, items: true, near: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:GET IN', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed, by a car');
   assert.equal(acts({ carrying: true, armed: true }).fire, 'throw:THROW', 'a crate: THROW in FIRE\'s slot');
   assert.deepEqual(acts({ inVeh: true, driver: true, items: true }), { roll: 'dive:BRAKE', car: 'vehicle:EXIT', c1: 'horn:HORN', u1: 'use:ITEMS' }, 'at the wheel, unarmed: no FIRE, no ACT with nothing to do');
   assert.deepEqual(acts({ inVeh: true, driver: true, armed: true, shoot: true, prompt: true, siren: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:BRAKE', act: 'action:ACT', car: 'vehicle:EXIT', c1: 'horn:SIREN', c2: 'reload:RELOAD', u1: 'use:ITEMS' }, 'a police car, a gun');
@@ -31,7 +33,9 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   assert.equal(acts({ inVeh: true, driver: true, horse: true }).c1, 'sprint:GALLOP');
   assert.equal(acts({ inVeh: true, driver: true, horse: true }).car, 'vehicle:OFF');
   assert.deepEqual(acts({ board: true, items: true }), { fire: 'fire:TRICK', roll: 'dive:OLLIE', act: 'action:ACT', car: 'vehicle:OFF', u1: 'use:ITEMS' });
-  assert.deepEqual(acts({ swim: true, armed: true, items: true }), { act: 'action:ACT', car: 'vehicle:CAR', u1: 'use:ITEMS' }, 'swimming: no FIRE, no ROLL');
+  assert.deepEqual(acts({ swim: true, armed: true, items: true }), { act: 'action:ACT', car: 'vehicle:GET IN', u1: 'use:ITEMS' }, 'swimming: no FIRE, no ROLL');
+  assert.equal(acts({ inVeh: true, driver: true, boat: true, on: true }).car, 'vehicle:OFF', 'aboard a jet ski: OFF');
+  assert.equal(acts({ inVeh: true, on: true }).car, 'vehicle:OFF', 'riding pillion: OFF');
   assert.equal(touchState({ inVeh: true, driver: true, boat: true }), 'boat');
   assert.equal(touchState({ inVeh: true }), 'ride');
   // the weapon button (UI-6): in WP whenever the page has something to switch (wpn), in every state but at home
@@ -67,6 +71,17 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
     if (slotOf[role]) assert.equal(slotOf[role], slot, `${a} sits in ${slotOf[role]} (${state}: ${slot})`);
     slotOf[role] = slot;
   }
+});
+
+// the vehicle button's name by how you mount what's there (the owner, 11-12): every vehicle exactly one of the two
+test('mountOf: GET IN what you sit inside, GET ON what you sit on - every vehicle one or the other', () => {
+  const want = { sedan: 'in', bus: 'in', forklift: 'in', tractor: 'in', heli: 'in', plane: 'in', ferry: 'in', cabincruiser: 'in', trawler: 'in', policeboat: 'in',
+    bicycle: 'on', bike: 'on', scooter: 'on', horse: 'on', skateboard: 'on', surfboard: 'on', jetski: 'on', rowboat: 'on', kayak: 'on', rib: 'on', cart: 'on' };
+  for (const [id, m] of Object.entries(want)) assert.equal(mountOf(VEHICLES[id]), m, id);
+  for (const [id, v] of Object.entries(VEHICLES)) assert.ok(['in', 'on'].includes(mountOf(v)), id);
+  assert.equal(mountOf(null), 'in');
+  assert.match(read('client/touchslots.js'), /on: inVeh \? mountOf\(cd\) === 'on' : nearOn/, 'the page tells the slots, aboard and on foot by the nearest');
+  assert.deepEqual(['GET IN', 'GET ON', 'EXIT', 'OFF'].map((l) => BUTTON_NAME[l]), ['Get in', 'Get on', 'Get out', 'Get off'], 'the long press says it');
 });
 
 test('every action a slot can hold has its button, its binding, its icon and a README row', () => {

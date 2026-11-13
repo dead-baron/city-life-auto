@@ -22,43 +22,46 @@
   <canvas id="world" class="hidden"></canvas>
   <canvas id="view"></canvas>
 
-  <!-- the HUD (UI-8, after the owner's concepts U1-U4 and U17; the owner 2026-10-30: "polished and finalized"): two
-       corners and the low slot. Top left, where you are: the clock's plate (above the minimap upright, beside it on a
-       wider screen), the minimap, the status, a bar while one is up (a robbery, a ride, custody), the job card, upright
-       the notes. Top right, how you are and what you have: the icon buttons (phone, map, menu), then one plate - health
-       and stamina with their numbers, the cash (the bank on a desktop) - the stars, the vehicle chip, what you hold. The
-       prompt and the hint strip low (client/hudinfo.js); the debug button quiet beside the minimap; on touch the chat
-       button (client/chat.js) beside the clock on a phone on its side, beside the minimap's top upright -->
+  <!-- the HUD, Direction A (the owner's SNES pad, 2026-11-12; the zone map: the same rules on every screen). Top left the
+       world: the minimap, the clock under it, the status chips (the debug button quiet beside them). Top centre the
+       objective as one line (a tap opens the job / quit) and at most two notices under it, gone after a few seconds. Top
+       right you: one row of system buttons - phone, map, chat, menu - and one plate: health, the vest's armor when you
+       wear one, stamina while it matters, the cash and the stars. The middle clear; on touch the move stick bottom left
+       and the action cluster bottom right (client/touchslots.js), the cards and the prompt between the thumbs (above
+       them upright); with a keyboard or a pad the prompt bottom centre with the key's own glyph and what you hold bottom
+       right. Every panel navy with a gold rim, square, a hard shadow; CLA Pixel everywhere (client/style.css) -->
   <div id="hud" class="hidden">
     <div id="hud-tl">
-      <div id="rclock"><i id="rc-tod" class="ic" data-ic="sun"></i><span id="rc-time"></span><i id="rc-wx" class="ic hidden" data-ic="rain"></i></div>
       <div id="radar-wrap"><canvas id="radar" width="168" height="168"></canvas></div>
-      <button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat"><i class="ic" data-gl="message-circle-more"></i></button>
+      <div id="rclock"><i id="rc-tod" class="ic" data-ic="sun"></i><span id="rc-time"></span><i id="rc-wx" class="ic hidden" data-ic="rain"></i></div>
       <button id="b-dev" type="button" aria-label="Debug menu" title="Debug menu (`)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5 7.5 4.5M15 6.5l1.5-2"/><rect x="7" y="7" width="10" height="13" rx="5"/><path d="M12 11v9M3 10l4 2M21 10l-4 2M3 18l4-2M21 18l-4-2M2.5 14H7M17 14h4.5"/></svg></button>
       <div id="status"></div>
+    </div>
+    <div id="hud-tc">
+      <div id="job" class="hidden"></div>
       <div id="hud-msg">
         <div id="trainbar" class="hidden"><b id="tb-where"></b><div class="rob-bar hidden" id="tb-crack"><i id="tb-fill"></i></div><span id="tb-next"></span></div>
       </div>
-      <div id="job" class="hidden"></div>
       <div id="toasts"></div>
     </div>
     <div id="hud-tr">
-      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
+      <div id="hud-btns"><button id="b-phone" class="rbtn" type="button" aria-label="Phone" title="Phone (P)"><i class="ic" data-gl="smartphone"></i><span class="kchip kbm-only">P</span></button><button id="b-map" class="rbtn" type="button" aria-label="Map" title="Map (M)"><i class="ic" data-gl="map"></i><span class="kchip kbm-only">M</span></button><button id="b-chat" class="rbtn" type="button" aria-label="Chat" title="Chat (T)"><i class="ic" data-gl="message-circle-more"></i><span class="kchip kbm-only">T</span></button><button id="b-menu" class="rbtn" type="button" aria-label="Menu" title="Menu (Esc)"><i class="ic" data-gl="menu"></i><span class="kchip kbm-only">ESC</span></button></div>
       <div id="hud-stat">
         <div id="vitals">
           <div class="vrow hp"><i class="ic" data-ic="heart"></i><span class="vl">Health</span><div class="vbar"><div id="hp-lag" class="lag"></div><div id="hp-fill" class="fill hp"></div></div><b id="hp-n">100</b></div>
-          <div class="vrow st"><i class="ic" data-ic="shield"></i><span class="vl">Stamina</span><div class="vbar"><div id="st-fill" class="fill st"></div></div><b id="st-n">100</b></div>
+          <div class="vrow ar hidden" id="ar-row"><i class="ic" data-ic="shield"></i><span class="vl">Armor</span><div class="vbar"><div id="ar-fill" class="fill ar"></div></div><b id="ar-n">0</b></div>
+          <div class="vrow st"><i class="ic" data-ic="bolt"></i><span class="vl">Stamina</span><div class="vbar"><div id="st-fill" class="fill st"></div></div><b id="st-n">100</b></div>
         </div>
         <div id="purse">
           <div id="money"><span id="cash">$0</span><span id="cash-up" aria-hidden="true"></span><span id="hot" class="hidden"></span></div>
+          <div id="stars"></div>
           <div id="bank"><i class="ic" data-ic="bank"></i><span id="bank-n">$0</span></div>
         </div>
       </div>
-      <div id="stars"></div>
       <div id="vchip" class="hidden"></div>
-      <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
       <div id="clock"></div>
     </div>
+    <div id="weapon"><i id="w-swap" class="ic touch-only" data-gl="chevron-right"></i><div id="w-icon"></div><i id="w-glyph" class="ic" aria-hidden="true"></i><div id="w-info"><div id="w-name">Fists</div><div id="w-ammo"></div></div><div id="w-quick"></div></div>
     <div id="hud-low"><div id="cruiser-hint" class="hidden"></div><div id="ftue-line" class="off" aria-live="polite"></div><div id="helpbox" class="off" aria-live="polite"></div><div id="rob" class="hidden"><b>ROBBERY</b><div class="rob-bar"><i id="rob-fill"></i></div><span id="rob-take"></span></div></div>
     <div id="hints" class="off"></div>
     <div id="edgewarn" class="hidden"></div>
@@ -72,6 +75,9 @@
   <div id="touch" class="hidden">
     <div id="zone-l"></div>
     <div id="stick-l" class="stick"><div class="knob"></div></div>
+    <!-- chat by the thumb (the owner, 11-12: the top row was a stretch): a tap the chat sheet, held the emotes - in the
+         bottom band beside the move stick on its side, over the move stick's zone upright (client/main.js) -->
+    <button id="b-talk" type="button" aria-label="Chat (hold: emotes)" title="Chat (hold: emotes)"><i class="ic" data-gl="message-circle-more"></i></button>
     <!-- one button per action; client/touchslots.js puts the ones what you're doing needs in their slots (shared/controls.js TOUCH_STATES) -->
     <div id="tbtns">
       <div id="stick-r" class="stick" data-b="stick"><div class="ring"></div><div class="knob"><i class="ic" data-gl="crosshair"></i></div><span class="lbl">AIM</span></div>

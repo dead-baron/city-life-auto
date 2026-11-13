@@ -26,7 +26,7 @@ export const TOUCH = {
   move: 'LEFT THUMB', aim: 'DRAG FIRE', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
-  chat: 'CHAT',   // (the HUD's chat button, top left by the minimap: client/chat.js)
+  chat: 'CHAT',   // (the chat button by the left thumb - held, the emotes: client/chat.js, client/main.js)
   trick: 'TRICK',
   radio: '📱 RADIO', lanes: 'TAP THE LANES', pads: 'TAP THE PADS', chord: 'CHORD',
   climb: 'CLIMB', descend: 'DOWN',
@@ -35,6 +35,9 @@ export const TOUCH = {
 // (UI-3, the hub: the HUD's row is MENU · PHONE · MAP and a tap of ITEMS opens the bag, held the quick wheel - set here
 // rather than in the lines above, which the touch controls' own work keeps)
 Object.assign(TOUCH, { use: 'HOLD ITEMS', bag: 'ITEMS', phone: 'PHONE', pause: 'MENU', dance: 'PHONE · DANCE', aim: 'AIM STICK' });   // (the aim stick: back, by the owner's call)
+// (Direction A, 11-12: the vehicle button is a symbol - an arrow into a door, out of it aboard - named by how you mount
+// what's there: GET IN a car, GET ON a bike or a horse; EXIT / OFF aboard - shared/touchcontrols.js mountOf)
+TOUCH.vehicle = 'GET IN / ON';
 export const KB = {
   action: 'E', vehicle: 'F', throw: 'Q', dive: 'SPACE', reload: 'R', use: 'X', horn: 'H', nextw: 'TAB', prevw: 'WHEEL', wpnwheel: '1-9', map: 'M', fire: 'CLICK', drivefire: 'CLICK', sprint: 'SHIFT', boost: 'SHIFT', cruiser: 'V', phone: 'P', bag: 'I', light: 'L',
   move: 'WASD', aim: 'MOUSE', gas: 'W', brake: 'S', pause: 'ESC', back: 'ESC',

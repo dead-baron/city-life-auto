@@ -15,15 +15,15 @@
 //   a tip         a first-time moment: one fading line and "More in your Guide" (the phone's Guide, at its section)
 // ctx: { S, send, openOverlay, closeOverlay, topOverlay, sfx, hud(), openGuide(sec), setCam(fn|null) }
 import { glyph } from './glyphs.js';
-import { KIND_ICON, actKind, svg } from './touchicons.js';
+import { actWord, faceChip } from './touchicons.js';
 import { input } from './input.js';
 import { K } from '../shared/constants.js';
 import { TRAIN_CARS, CONSIST, CAR_GAP } from '../shared/mapcore.js';
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-// a step's control as the device in hand shows it; on touch the action button's icon is what the line offers (the
-// contextual action icons: client/touchicons.js actKind) - a briefcase for a job, the rod to cast, a speech bubble to talk
-const ctlGlyph = (ctl, text) => (ctl === 'action' && input.device === 'touch' ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[actKind(text)])}</span>` : glyph(ctl));
+// a step's control as the device in hand shows it; on touch the action button's word is what the line offers (its verb:
+// client/touchicons.js actWord) - TALK, CAST, SIGN...
+const ctlGlyph = (ctl, text) => (ctl === 'action' && input.device === 'touch' ? faceChip('action', 'ACT', actWord(text)) : glyph(ctl));   // (on touch ACT says what it does: ENTER, TALK... - client/touchicons.js)
 const LINE_S = 7;   // (shared/rules.js FTUE.lineS: kept here so the page doesn't load rules.js for one number)
 let C = null, A = null, P = null, TR = null, lineSig = '', lineT = 0;
 // the scene's clock: the page's, or a time pinned by a capture (S.arrClock: ?debug's tools hold a moment to photograph it)
@@ -92,7 +92,12 @@ function showLine(ctl, text, sec, sig, app = null) {
   const el = $('ftue-line');
   if (!el) return;
   lineSig = sig;
-  el.innerHTML = `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>${sec ? '<button class="fl-more">More in your Guide</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : app ? '<button class="fl-more">Open</button><button class="fl-x" aria-label="Dismiss">&times;</button>' : ''}`;
+  // (a tip or the What's next line is a card - its head, what it says, OPEN or MORE and LATER, the close top right, 44 px;
+  // a step's line one line, the control's glyph in front)
+  const hm = (sec || app) && /^([^:]{2,16}):\s+(.+)$/.exec(text), head = hm ? hm[1] : sec ? 'TIP' : '', words = hm ? hm[2] : text;
+  el.innerHTML = sec || app
+    ? `${ctl ? ctlGlyph(ctl, words) : ''}<div class="fl-body">${head ? `<small>${esc(head)}</small>` : ''}<span>${esc(words)}</span><div class="fl-acts"><button class="fl-more">${sec ? 'MORE IN YOUR GUIDE' : 'OPEN'}</button><button class="fl-x fl-later">LATER</button></div></div><button class="fl-x" aria-label="Dismiss">&times;</button>`
+    : `${ctl ? ctlGlyph(ctl, text) : ''}<span>${esc(text)}</span>`;
   if (sec) el.dataset.guide = sec; else delete el.dataset.guide;
   if (app) el.dataset.app = app; else delete el.dataset.app;
   el.classList.remove('off', 'faded');

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES, setMelee, setHose, glyph } from '../client/touchicons.js';
+import { ACT_KINDS, KIND_ICON, actKind, setActKind, actKindNow, iconOf, glyphOfWeapon, GLYPH_NAMES, setMelee, setHose, glyph, faceOf, faceHtml, actWord, KIND_WORD, WORD_MAX, wordEm, wordPx } from '../client/touchicons.js';
 import { slotGeometry } from '../client/touchslots.js';
 import { HOSE_LEN, FIRE } from '../shared/rules.js';
 import { TOUCH_STATES } from '../shared/touchcontrols.js';
@@ -64,12 +64,42 @@ test('no hand glyph is left on touch: the buttons in every state, every action k
   setMelee('fists', 'melee');
 });
 
-test('the page wires it: the prompt names the kind, the action button and its chip draw it', () => {
+test('the page wires it: the prompt names the kind and the verb, the action button says it', () => {
   const glyphs = read('client/glyphs.js'), hud = read('client/hud.js');
   assert.match(glyphs, /kind = setActKind\(action === 'action' \? actKind\(m\[2\]\) : 'interact'\)/, 'formatPrompt reads the kind before drawing the chip');
-  assert.match(hud, /actGlyph\(fp\.kind\);/, 'the action button swaps its icon with the prompt');
-  assert.match(hud, /actGlyph\(setActKind\('interact'\)\);/, 'and back to the neutral mark with none');
+  assert.match(glyphs, /setActWord\(action === 'action' \? actWord\(m\[2\]\) : 'ACT'\);/, 'and the verb (Direction A, 11-12: ACT says what it will do)');
+  assert.match(hud, /pr\.classList\.toggle\('btn', !!this\.actBtn\);\n\s*actFace\(\);/, 'the action button redraws its word with the prompt - and on touch it replaces the chip');
+  assert.match(hud, /setActKind\('interact'\); setActWord\('ACT'\); actFace\(\);/, 'and back to ACT with none');
   setActKind('door'); assert.equal(actKindNow(), 'door'); setActKind('interact');
+});
+
+// Direction A (the owner, 2026-11-12): a button whose action never changes a really simple symbol, one whose action
+// depends on the moment its word - ACT the verb of what it will do now, from the prompt's words
+test('the face buttons: FIRE and ROLL symbols while they attack and roll, the vehicle button in and out, ACT the verb', () => {
+  assert.deepEqual(faceOf('fire', 'FIRE'), { sym: 'cross' }); assert.deepEqual(faceOf('fire', 'HIT'), { sym: 'cross' }, 'fists alike');
+  assert.deepEqual(faceOf('dive', 'ROLL'), { sym: 'chev' });
+  for (const l of ['BRAKE', 'STOP', 'OLLIE', 'AIR']) assert.deepEqual(faceOf('dive', l), { word: l }, `ROLL's slot holding ${l}: its word`);
+  for (const l of ['THROW', 'TRICK']) assert.deepEqual(faceOf(l === 'THROW' ? 'throw' : 'fire', l), { word: l });
+  for (const l of ['GET IN', 'GET ON']) assert.deepEqual(faceOf('vehicle', l), { sym: 'enter' }, l);
+  for (const l of ['EXIT', 'OFF']) assert.deepEqual(faceOf('vehicle', l), { sym: 'exit' }, l);
+  assert.deepEqual(faceOf('firetog', 'FIRE OFF'), { word: 'AUTO' }, 'FIRE ON / OFF: AUTO, lit gold while on');
+  assert.deepEqual(faceOf('cruiser', 'COP CAR'), { word: 'CALL' });
+  setHose(true); assert.deepEqual(faceOf('fire', 'HIT'), { word: 'HOSE' }); setHose(false);
+  const cases = { 'Enter St. Neon General': 'ENTER', 'Go inside (hide)': 'ENTER', 'Talk to the bartender': 'TALK', 'Buy Coffee ($4)': 'BUY', 'Sell the catch': 'SELL',
+    'Pick up the crate': 'PICK', 'Take a shower': 'WASH', 'Empty the till': 'ROB', 'Make a break for it!': 'RUN', 'Hold to revive Sam': 'REVIVE', 'Sit on the bench': 'SIT',
+    'Get up': 'GET UP', 'Read the plaque': 'READ', 'Board the ferry': 'BOARD', 'Use ATM': 'USE', 'Going inside... (stand still)': 'WAIT', 'Waypoint set': 'ACT', '': 'ACT' };
+  for (const [w, v] of Object.entries(cases)) assert.equal(actWord(w), v, w);
+  for (const k of Object.keys(KIND_ICON)) assert.ok(KIND_WORD[k] && KIND_WORD[k].length <= WORD_MAX, `${k}: a word of ${WORD_MAX} letters or fewer`);
+  // every word a slot can show fits its disc in CLA Pixel at the smallest step or better
+  for (const st of Object.values(TOUCH_STATES)) for (const [a, label] of Object.values(st)) {
+    if (a === 'nextw' || a === 'stick') continue;   // (the weapon card and the aim stick draw their own)
+    const f = faceOf(a, label);
+    if (f.word) assert.ok(wordEm(f.word) * wordPx(f.word, 48) <= 48 - 6, `${a} ${label}: ${f.word} fits a 48 px disc (inside its rims)`);
+  }
+  for (const w of Object.values(KIND_WORD)) assert.ok(wordEm(w) * wordPx(w, 70) <= 70 - 12, `${w} fits ACT`);
+  assert.equal(wordPx('ACT', 76), 16); assert.equal(wordPx('ENTER', 76), 14); assert.equal(wordPx('RELOAD', 52), 10);
+  assert.match(faceHtml({ sym: 'cross' }, 76), /<i class="sym s-cross"/);
+  assert.match(faceHtml({ word: 'TALK' }, 76), /<b class="w" data-fs="16">TALK<\/b>/);
 });
 
 test('the bag: every thing has a line icon of the same family', () => {
@@ -152,5 +182,5 @@ test('the fire button shows the hose by your fire engine', () => {
   const ts = read('client/touchslots.js');
   assert.match(ts, /const hose = setHose\(!inVeh && !air && !board && hoseNear\(S, me, VEHICLE_BY_INDEX\)\);/, 'set on foot each frame');
   assert.match(ts, /j\.k === 'Firefighter' && j\.veh/); assert.match(ts, /\.id !== 'firetruck'/); assert.match(ts, /<= HOSE_LEN \* 2/);
-  assert.match(ts, /b\.dataset\.ic !== ic/, 'the button redrawn when its icon changes');
+  assert.match(ts, /b\.dataset\.face !== fk/, 'the button redrawn when its face changes');
 });

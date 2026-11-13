@@ -7,13 +7,13 @@
 //                     Guide" - once) }
 import { guideSections, searchGuide } from '../shared/guide.js';
 import { glyph } from './glyphs.js';
-import { icon as pix, KIND_ICON, svg } from './touchicons.js';
+import { icon as pix, KIND_WORD, faceChip } from './touchicons.js';
 import { input } from './input.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-// (on touch the action button wears what it does there - client/touchicons.js KIND_ICON: the entry's kind)
+// (on touch the action button says what it does there - client/touchicons.js KIND_WORD: the entry's kind)
 const ACT_OF = { fishing: 'fish', bus: 'transit', train: 'transit', ferry: 'boat', revive: 'revive', jobs: 'job', mail: 'job' };
-const body = (b, id) => esc(b).replace(/\[\[(\w+)\]\]/g, (s, a) => (a === 'action' && input.device === 'touch' && ACT_OF[id] ? `<span class="g-touch g-ico" role="img" aria-label="ACT">${svg(KIND_ICON[ACT_OF[id]])}</span>` : glyph(a)));
+const body = (b, id) => esc(b).replace(/\[\[(\w+)\]\]/g, (s, a) => (a === 'action' && input.device === 'touch' && ACT_OF[id] ? faceChip('action', 'ACT', KIND_WORD[ACT_OF[id]] || 'ACT') : glyph(a)));
 const mark = (h, q) => { if (!q) return h; let out = h; for (const w of q.toLowerCase().split(/\s+/).filter((x) => x.length > 1)) out = out.replace(new RegExp(`(?![^<]*>)(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'), '<mark>$1</mark>'); return out; };
 const SEC_PIX = { around: 'transit', earn: 'jobs', law: 'siren', places: 'places', activities: 'arcade', property: 'homes', items: 'bag' };
 let open = null, query = '', secs = null, secsMap = null;

@@ -156,7 +156,7 @@ function launchCall(k, a) {
     const chat = ch.createChat({
       send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; },
       device: () => input.device, playing: () => !!(S.playing && S.welcomed && !S.practice),
-      focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); },
+      focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); $('b-talk').classList.toggle('dot', on); },
       openApp: () => openHub('phone', 'msgs'),
     });
     er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
@@ -184,6 +184,7 @@ function launchCall(k, a) {
     else if (k === 'error') L.er.report(a.where, a.e);
     else if (k === 'chat') { if (!topOverlay()) L.chat.open(a); }
     else if (k === 'chatbtn') { if (!topOverlay()) L.chat.toggle(); }
+    else if (k === 'emotes') { if (!topOverlay()) L.chat.emotes(); }
     else if (k === 'app') { if (topOverlay() === 'phone' && phone.screen === 'msgs') L.chat.renderApp(a.el, a.api); }
     else if (k === 'account') openSignIn();
   }).catch((e) => { launchP = null; console.warn('[launch]', e); });
@@ -633,6 +634,7 @@ function fixedStep() {
   const inOverlay = overlayPad() || launchPad();
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
+  if (input.menuBack && !inOverlay && S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (B: the chat sheet away, as Esc and its ✕)
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub('pause');
   if (!inOverlay && !S.playing) titlePad();
@@ -2270,6 +2272,11 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
+// the thumb's chat button (touch): a tap the sheet, held the emotes (client/touchslots.js LONG_MS's half second)
+{ const b = $('b-talk'); let t = 0, held = false;
+  b.addEventListener('pointerdown', (e) => { e.stopPropagation(); held = false; clearTimeout(t); t = setTimeout(() => { held = true; if (S.playing && !S.practice) launchCall('emotes'); }, 450); });
+  b.addEventListener('pointerup', () => clearTimeout(t)); b.addEventListener('pointercancel', () => clearTimeout(t));
+  b.onclick = () => { if (!held && S.playing && !S.practice) launchCall('chatbtn'); held = false; }; }
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
