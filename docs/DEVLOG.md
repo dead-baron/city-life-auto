@@ -22729,7 +22729,7 @@ shut), `test/world3server.test.js` (on its build: every opened place's ways out 
 
 The owner made a new main menu track in ComfyUI (YuE2, `CLA_MENU_CHILL_close_melody_master_00001.flac`, 2:45, 92.7
 BPM, dark head-nod funk-hip-hop) and asked to try it on the title screen. `tools/music/make-loop.py` cut 16 bars of its
-first melody section, 22.368-63.792 s (41.43 s; bar lines measured from the recording, steady at 92.7 BPM), mono (left
+first melody section, 23.339-64.769 s (41.43 s; bar lines measured from the recording, steady at 92.7 BPM; first cut at 22.368 s, moved 1.5 beats on to start on the phrase's downbeat, which the engine test's drum and melody alignment found), mono (left
 and right 90% alike): Opus 352 KB, MP3 492 KB, -17.1 LUFS. It replaces the October title track (still in the history).
 `test/track.test.js` now expects this track's tempo. The engine rebuild of a recorded track stays parked: the
 recording is what plays.
