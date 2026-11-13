@@ -467,3 +467,74 @@ let hoseNow = false;
 export function setHose(on) { hoseNow = !!on; return hoseNow; }
 export const iconOf = (a, label) => a === 'action' ? KIND_ICON[actNow] : a === 'fire' && hoseNow ? 'hose' : label === 'HIT' ? meleeNow : ICON[label] || ACTION_ICON[a] || KIND_ICON.interact;
 export const svg = (k) => glyph(k);
+
+// ---- the touch face buttons, Direction A (the owner, 2026-11-12): a button whose action never changes shows a really
+// simple symbol, one whose action depends on the moment shows a WORD. FIRE the crosshair while it attacks (a gun or your
+// fists alike), ROLL the double chevron while it rolls, the vehicle button an arrow into a door to get in or on and out
+// of it to get off (assets/ui/s-*.png, tools/build-hudsymbols.py); ACT the verb of what it will do right now (ENTER,
+// TALK, BUY... from the prompt's words, else ACT); any other action in a slot its word (BRAKE, STOP, BOOST, GALLOP,
+// THROW, TRICK, HORN, RELOAD...), the small switches theirs (ITEMS, LIGHT, CALL, AUTO). The words in CLA Pixel bold,
+// stepped down a size till they fit the disc (wordPx).
+// ACT's word: the prompt's own first word when it's a plain verb that fits (VERBS), else the word for its kind
+const VERBS = new Set(('ENTER EXIT LEAVE TALK ASK CHAT GREET HAIL BOARD MOOR PADDLE DRIVE PARK STEER RIDE ROB SNATCH CRACK UNLOCK '
+  + 'REVIVE HELP TREAT HEAL REST SLEEP NAP SIT EAT COOK POUR DRINK WASH REPAIR FIX BUILD CRAFT PAINT FISH CAST REEL HOOK PLAY '
+  + 'SERVE CLIMB JUMP LOOK WATCH READ CHECK SIGN JOIN PLANT PICK DIG WATER CHOP FELL MINE LIGHT SWITCH WEAR DRESS ADOPT FEED PET '
+  + 'DANCE SPIN TAKE GRAB LOOT PUT LOAD UNLOAD STASH HAND GIVE DROP PLACE STACK BUY SELL PAY RENT SHOP ORDER TRADE BET CUFF '
+  + 'FRISK OPEN CLOSE CALL USE RING STEAL KNOCK PRAY VOTE TIP COUNT FILL PUMP CHARGE SEARCH SHOOT KICK THROW HIDE SPRAY PULL PUSH').split(' '));
+export const KIND_WORD = { interact: 'ACT', wait: 'WAIT', arrest: 'CUFF', run: 'RUN', job: 'JOB', door: 'ENTER', talk: 'TALK', hail: 'HAIL',
+  transit: 'BOARD', boat: 'BOARD', getin: 'GET IN', bank: 'BANK', rob: 'ROB', unlock: 'UNLOCK', home: 'LOOK', buy: 'BUY', revive: 'REVIVE',
+  rest: 'REST', sit: 'SIT', eat: 'EAT', wash: 'WASH', repair: 'FIX', build: 'BUILD', paint: 'PAINT', casino: 'PLAY', fish: 'FISH', play: 'PLAY',
+  climb: 'CLIMB', down: 'DOWN', look: 'LOOK', sign: 'SIGN', plant: 'PLANT', chop: 'CHOP', mine: 'MINE', fire: 'LIGHT', lights: 'SWITCH',
+  wear: 'WEAR', pet: 'PET', music: 'PLAY', pickup: 'TAKE', drop: 'DROP' };
+const KIND_FIRST = new Set(['wash', 'run', 'wait', 'rob', 'revive', 'home', 'casino', 'music']);   // (their word says it better than the first: "Take a shower" WASH)
+export const WORD_MAX = 6;   // (letters, a space counted: longer and the kind's word, else ACT)
+export function actWord(words) {
+  const t = String(words || '').trim();
+  if (!t) return 'ACT';
+  const g = /^get (in|on|up|off|out)\b/i.exec(t);
+  if (g) return `GET ${g[1].toUpperCase()}`;
+  const k = actKind(t), first = (/^[A-Za-z]+/.exec(t) || [''])[0].toUpperCase();
+  if (k === 'door' && /^(go(ing)? out|step outside|out (the|to)\b|back out)/i.test(t)) return 'EXIT';
+  const w = !KIND_FIRST.has(k) && first.length <= WORD_MAX && VERBS.has(first) ? first : KIND_WORD[k] || 'ACT';
+  return w.length <= WORD_MAX ? w : 'ACT';
+}
+let wordNow = 'ACT';
+export function setActWord(w) { wordNow = w || 'ACT'; return wordNow; }
+export const actWordNow = () => wordNow;
+// the small switches' words (the slot's label is the button's name: its long press, its aria-label)
+const SWITCH_WORD = { firetog: 'AUTO', cruiser: 'CALL', use: 'ITEMS', light: 'LIGHT' };
+// what a slot's button shows: { sym } (cross, chev, enter, exit) or { word }
+export function faceOf(a, label) {
+  if (a === 'fire' && (label === 'FIRE' || label === 'HIT')) return hoseNow ? { word: 'HOSE' } : { sym: 'cross' };
+  if (a === 'dive' && label === 'ROLL') return { sym: 'chev' };
+  if (a === 'vehicle') return { sym: /^(EXIT|OFF)$/.test(label) ? 'exit' : 'enter' };
+  if (a === 'action') return { word: wordNow };
+  if (a === 'firetog') return { word: 'AUTO' };   // (on: lit gold - client/input.js showFireToggle; its long press says on or off)
+  return { word: SWITCH_WORD[a] || String(label || a).toUpperCase() };
+}
+// the word's width in ems in CLA Pixel (tools/build-pixelfont.py: 0.7 most letters, 0.5 I and a space)
+const EM = (c) => ('!\'.:il|'.includes(c) ? 0.3 : ' "()1I[]j'.includes(c) ? 0.5 : '-<>fkrt'.includes(c) ? 0.6 : 0.7);
+export const wordEm = (w) => [...String(w)].reduce((n, c) => n + EM(c), 0);
+// the biggest of the steps the word fits a w-px disc at (16 only on the big discs, for four letters or fewer)
+export function wordPx(word, w) {
+  const em = wordEm(word), room = w - 12;
+  for (const px of w >= 70 && String(word).length <= 4 ? [16, 14, 12, 10] : [14, 12, 10]) if (em * px <= room) return px;
+  return 10;
+}
+// the button's inside for that face (w: its size in px)
+export function faceHtml(f, w) {
+  if (f.sym) return `<i class="sym s-${f.sym}" aria-hidden="true"></i>`;
+  const px = wordPx(f.word, w);
+  return `<b class="w" data-fs="${px}">${f.word}</b>${f.sub ? `<small class="w" data-fs="10">${f.sub}</small>` : ''}`;
+}
+// the button named in words elsewhere (the hint strips, the Guide, a first-goal line): as it looks - its color, its
+// symbol or its word (the face buttons' colors: FIRE red, ROLL blue, ACT yellow, the vehicle button green)
+const HUE = { fire: 'fire', drivefire: 'fire', dive: 'roll', action: 'act', vehicle: 'car' };
+const CHIP_SYM = { fire: 'cross', drivefire: 'cross', dive: 'chev', vehicle: 'enter' };
+// (f: the face it has in a slot - faceOf; none: the action's own symbol, else word or its name)
+export function faceChip(a, name, f = null) {
+  const hue = HUE[a] || 'sw';
+  if (typeof f === 'string') f = { word: f };
+  if (!f) f = CHIP_SYM[a] ? { sym: CHIP_SYM[a] } : { word: name };
+  return `<span class="g-touch g-face g-${hue}" role="img" aria-label="${name}">${f.sym ? `<i class="sym s-${f.sym}"></i>` : `<b>${f.word}</b>`}</span>`;
+}

@@ -1138,6 +1138,8 @@ export function pedFlags(world, ped) {
   return f;
 }
 
+// the vest you wear as the HUD's armor bar: [points left, its tier's full], or null without one
+function armorBar(prof) { const A = armor.worn(prof); return A ? [Math.round(A.pts), A.T.pts] : null; }
 export function buildMe(world, p) {
   const ped = p.ped;
   const prof = p.profile;
@@ -1148,7 +1150,7 @@ export function buildMe(world, p) {
   for (const [k, v] of Object.entries(prof.inventory)) if (v > 0 && ITEMS[k]) inv[k] = v;
   return {
     t: 'me',
-    name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100,
+    name: p.name, hp: ped ? Math.round(ped.hp) : 0, maxHp: ped ? ped.maxHp : 100, arm: armorBar(prof),   // (arm: the vest's [left, full] for the HUD's armor bar - armor.js; none: null)
     rob: robbery.hudFor(world, p), train: trains.meInfo(world, p), pedId: ped ? ped.id : 0, interior: ped && ped.interior ? ped.interior.kind : null, dead: ped ? ped.dead : true, respawnIn: p.respawnAt ? Math.max(0, p.respawnAt - world.time) : 0, deathCause: p.deathCause,
     cash: prof.cash, bank: prof.bank, hot: prof.hot || 0, cexp: prof.criminalExp, sam: prof.samaritan, skl: skills.levels(p), wo: workout.meInfo(p),   // (skl: the skills' levels - the page predicts stamina and swimming from them)
     wanted: p.wanted, heat: Math.round(p.heat), peak: prof.peakWanted, disguised: p.disguised,

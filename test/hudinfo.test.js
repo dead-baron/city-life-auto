@@ -82,10 +82,10 @@ test('a hint strip: the first few times for each thing you do, per character, th
   assert.deepEqual(kb.map((h) => h[0]), ['WASD', 'SPACE', 'H', 'F']);
   assert.ok(kb.every((h) => h[2] === 'key'));
   assert.deepEqual(pad.map((h) => h[0]), ['L-STICK', 'RT', 'LT', 'X']);
-  assert.deepEqual(touch.map((h) => h[0]), ['BRAKE', 'HORN', 'EXIT'], 'the slots as they read at the wheel');
-  assert.deepEqual(hintStrip('air', 'touch').map((h) => h[0]), ['CLIMB', 'DOWN', 'EXIT']);
+  assert.deepEqual(touch.map((h) => h[0]), ['BRAKE', 'EXIT'], 'the slots as they read at the wheel (Direction A: HORN says its own word - no "horn" beside it)');
+  assert.deepEqual(hintStrip('air', 'touch').map((h) => h[0]), ['DOWN', 'EXIT'], 'flying: CLIMB says its own word');
   assert.deepEqual(hintStrip('air', 'kbm').map((h) => h[0]), ['WASD', 'SPACE', 'SHIFT', 'F']);
-  assert.deepEqual(hintStrip('horse', 'touch').map((h) => h[0]), ['GALLOP', 'STOP', 'OFF']);
+  assert.deepEqual(hintStrip('horse', 'touch').map((h) => h[0]), ['STOP', 'OFF'], 'GALLOP says its own word');
   assert.deepEqual(hintStrip('cine', 'kbm').map((h) => h[0]), ['F2', 'F4', 'F8', 'ESC']);
   for (const s of HINT_STATES) for (const d of ['kbm', 'pad', 'touch']) assert.ok(hintStrip(s, d).length >= 2, `${s} on ${d}`);
 });

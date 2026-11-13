@@ -2,8 +2,9 @@
 // after the page is up (main.js launchCall), never in its first load. Every device gets all of it:
 // - speech bubbles over the speaker's head for what's said near you (two lines at most, each gone after a few seconds,
 //   kept off each other and off the screen's edges; your own smaller and above your name);
-// - the feed: the newest line under the HUD's notes (#hud-tl), one on a phone, two on a desktop, each fading on its own;
-// - the chat sheet: T on a keyboard, the HUD's chat button on touch (top left: by the clock, upright beside the minimap) - the channel
+// - the feed: the newest lines in the HUD's top-left column (#hud-tl; bottom left on a desktop), one on a phone, two on a
+//   desktop, each fading on its own;
+// - the chat sheet: T on a keyboard, the HUD's chat button (the top-right row: phone, map, chat, menu) - the channel
 //   (Near / Crew / Faction), the log, quick lines and emotes as chips, the line and SEND; on a phone it sits on top of
 //   the on-screen keyboard (visualViewport) and the touch controls hide while it's up; Esc / the X closes it;
 // - the phone's Messages app (renderApp): threads with the people you've met and your crew, a reply line and quick
@@ -38,52 +39,58 @@ const CSS = `
 body.touch .cht-bub { max-width: 180px; }
 body.cht-open .cht-bub:not(.me) { pointer-events: auto; cursor: pointer; }
 #cht-feed { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 360px); pointer-events: none; }
+body:not(.touch) #cht-feed { position: fixed; left: var(--sl); bottom: var(--sb); }
+body:not(.touch) #hud:has(#hints:not(.off)) #cht-feed { bottom: calc(var(--sb) + 56px); }
 .touch #cht-feed { width: min(100%, 380px); }
-.touch:not(.portrait) #cht-feed { width: min(260px, calc(33vw - var(--sl) - 6px)); }
+.touch:not(.portrait) #cht-feed { width: min(220px, calc(33vw - var(--sl) - 6px)); }
+body.touch.portrait #cht-feed { position: fixed; left: var(--sl); top: calc(var(--st) + 236px); width: calc(100vw - var(--sl) - var(--sr)); }
 #cht-feed:empty, body.cht-open #cht-feed { display: none; }
-.cht-fl { max-width: 100%; padding: 2px 10px 2px 8px; background: var(--plate); border: 2px solid var(--plate-line); border-left: 3px solid var(--cream); border-radius: var(--r2); box-shadow: 0 0 0 1px var(--ink); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; cursor: pointer; touch-action: manipulation; transition: opacity var(--t3) var(--ease); }
+.cht-fl { max-width: 100%; padding: 3px 8px 3px 6px; background: var(--pad-veil); border: 2px solid var(--pad-ink); border-left: 4px solid var(--pad-cream); border-radius: 0; box-shadow: none; font: 700 var(--fs-2) var(--pixel); line-height: 1.3; color: var(--pad-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; cursor: pointer; touch-action: manipulation; transition: opacity var(--t3) var(--ease); }
 .touch #cht-feed .cht-fl:not(:last-child) { display: none; }
 .cht-fl.out { opacity: 0; }
 .cht-fl.crew { border-left-color: var(--money); } .cht-fl.faction { border-left-color: var(--info); } .cht-fl.phone { border-left-color: var(--gold); } .cht-fl.em { border-left-color: var(--lotus); }
 .cht-fl b { color: var(--gold-hi); }
 
-.cht-sheet { position: absolute; z-index: 12; left: max(var(--s3), env(safe-area-inset-left)); bottom: var(--s3); display: flex; flex-direction: column; width: min(440px, 46vw); max-height: calc(100% - 2 * var(--s3)); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); color: var(--cream); font: 600 var(--fs-3) var(--ui); animation: enter var(--t2) var(--ease); }
-body.touch .cht-sheet { left: 0; right: 0; bottom: 0; width: min(680px, 100%); margin: 0 auto; border-bottom: 0; border-radius: var(--r2) var(--r2) 0 0; padding-bottom: env(safe-area-inset-bottom); }
+.cht-sheet { position: absolute; z-index: 12; left: max(var(--s3), env(safe-area-inset-left)); bottom: var(--s3); display: flex; flex-direction: column; width: min(440px, 46vw); max-height: calc(100% - 2 * var(--s3)); background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--cream); font: 700 var(--fs-3) var(--pixel); animation: enter var(--t2) var(--ease); }
+body.touch .cht-sheet { left: 0; right: 0; bottom: 0; width: min(680px, 100%); margin: 0 auto; border-bottom: 0; border-radius: 0; padding-bottom: env(safe-area-inset-bottom); }
 body.touch.cht-open #touch, body.touch.cht-open #hud-low, body.touch.cht-open #hints { visibility: hidden; }
-.cht-head { display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s1) var(--s1) var(--s2); background: var(--navy); border-bottom: 2px solid var(--gold); border-radius: var(--r2) var(--r2) 0 0; }
+.cht-head { display: flex; align-items: center; gap: var(--s1); margin: 2px 2px 0; padding: var(--s1) var(--s1) var(--s1) var(--s2); background: var(--pad-ink); border-bottom: 2px solid var(--pad-gold); border-radius: 0; }
 .cht-tabs { display: flex; gap: var(--s1); flex: 1; min-width: 0; }
-.cht-tab { min-height: 36px; padding: 0 var(--s3); border: 2px solid transparent; border-radius: var(--r1); background: transparent; color: var(--dim); font: 700 var(--fs-3) var(--ui); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
-.cht-tab.on { background: var(--gold); color: var(--ink); }
+.cht-tab { min-height: 36px; padding: 0 var(--s2); border: 2px solid transparent; border-radius: 0; background: transparent; color: var(--dim); font: 700 var(--fs-2) var(--pixel); letter-spacing: .5px; cursor: pointer; touch-action: manipulation; }
+.cht-tab.on { background: var(--pad-gold); color: var(--pad-ink); border-color: var(--pad-ink); box-shadow: var(--pn-drop); }
 .cht-tab.na { opacity: .45; }
 .cht-tab:not(.on):hover, .cht-tab.pfocus { color: var(--cream); border-color: var(--gold-a); }
-.cht-msgs { position: relative; display: inline-flex; align-items: center; gap: var(--s1); min-height: 36px; padding: 0 var(--s2); border: 2px solid var(--gold-a); border-radius: var(--r1); background: var(--navy2); color: var(--cream); font: 700 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; --ic: 18px; }
+.cht-msgs { position: relative; display: inline-flex; align-items: center; gap: var(--s1); min-height: 36px; padding: 0 var(--s2); border: 2px solid var(--gold-a); border-radius: 0; background: var(--navy2); color: var(--cream); font: 700 var(--fs-2) var(--pixel); cursor: pointer; touch-action: manipulation; --ic: 18px; }
 .cht-msgs svg { width: var(--ic); height: var(--ic); }
-.cht-msgs b { min-width: 18px; height: 18px; padding: 0 4px; border-radius: var(--r3); background: var(--heat); color: var(--ink); font: 700 var(--fs-1) var(--pixel); line-height: 18px; text-align: center; }
+.cht-msgs b { min-width: 18px; height: 18px; padding: 0 4px; border-radius: 0; background: var(--heat); color: var(--ink); font: 700 var(--fs-1) var(--pixel); line-height: 18px; text-align: center; }
 .cht-msgs b:empty { display: none; }
 .cht-sheet .x { width: 36px; height: 36px; }
 .cht-log { flex: 1 1 auto; min-height: 48px; max-height: 190px; overflow-y: auto; padding: var(--s1) var(--s2); touch-action: pan-y; -webkit-overflow-scrolling: touch; user-select: text; -webkit-user-select: text; }
 body.touch:not(.portrait) .cht-log { max-height: 110px; }
 body.touch.portrait .cht-log { max-height: 30vh; }
-.cht-l { padding: 2px 0; font: 600 var(--fs-3) var(--ui); line-height: 1.3; color: var(--cream); overflow-wrap: anywhere; }
+.cht-l { padding: 2px 0; font: 700 var(--fs-3) var(--pixel); line-height: 1.3; color: var(--cream); overflow-wrap: anywhere; }
 .cht-l.crew .cht-t { color: var(--money-hi); } .cht-l.faction .cht-t { color: var(--info-hi); } .cht-l.phone .cht-t { color: var(--gold-hi); }
 .cht-l.em { font-style: italic; color: var(--lotus); }
 .cht-l.sys { color: var(--danger-hi); }
 .cht-l.hint { color: var(--dim); }
-.cht-tag { display: inline-block; margin-right: var(--s1); padding: 0 var(--s1); border-radius: var(--r1); background: var(--navy3); font: 700 var(--fs-1) var(--pixel); letter-spacing: 0; vertical-align: 1px; }
+.cht-tag { display: inline-block; margin-right: var(--s1); padding: 0 var(--s1); border-radius: 0; background: var(--navy3); font: 700 var(--fs-1) var(--pixel); letter-spacing: 0; vertical-align: 1px; }
 .cht-tag.crew { color: var(--money); } .cht-tag.faction { color: var(--info); } .cht-tag.phone { color: var(--gold); }
-.cht-n { margin-right: var(--s1); padding: 0; border: 0; background: none; color: var(--gold); font: 700 var(--fs-3) var(--ui); cursor: pointer; touch-action: manipulation; }
+.cht-n { margin-right: var(--s1); padding: 0; border: 0; background: none; color: var(--gold); font: 700 var(--fs-3) var(--pixel); cursor: pointer; touch-action: manipulation; }
 .cht-n::after { content: ':'; }
 .cht-l.em .cht-n::after { content: ''; }
 span.cht-n { cursor: default; color: var(--dim); }
 .cht-chips { display: flex; gap: var(--s1); padding: var(--s1) var(--s2) 0; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; -webkit-overflow-scrolling: touch; -webkit-mask-image: linear-gradient(90deg, var(--ink) calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, var(--ink) calc(100% - 24px), transparent); padding-right: var(--s5); }
 .cht-chips::-webkit-scrollbar { display: none; }
-.cht-chip { flex: none; min-height: 34px; padding: 0 var(--s3); border: 1px solid var(--edge); border-radius: var(--r3); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
-.cht-chip:hover, .cht-chip.pfocus { border-color: var(--gold); }
+.cht-chip { flex: none; min-height: 34px; padding: 0 var(--s3); border: 2px solid var(--pad-line); border-radius: 0; background: var(--pad-navy); color: var(--cream); font: 700 var(--fs-2) var(--pixel); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
+.cht-chip:hover, .cht-chip.pfocus { border-color: var(--pad-gold); }
 .cht-chip.em { color: var(--lotus); border-style: dashed; }
 .cht-row { display: flex; gap: var(--s2); padding: var(--s2); }
 .cht-row .field { min-height: 40px; }
 .cht-row .btn { min-height: 40px; padding: 0 var(--s4); }
 .cht-sheet.kb .cht-log, .cht-sheet.kb .cht-chips.em-row { display: none; }
+.cht-sheet.em-only :is(.cht-log, .cht-chips.q-row, .cht-row) { display: none; }
+.cht-sheet.em-only .cht-chips.em-row { flex-wrap: wrap; padding-bottom: var(--s2); -webkit-mask-image: none; mask-image: none; }
+.cht-sheet.em-only .cht-chip { min-height: var(--tap); }
 .cht-sheet.kb.tight .cht-head { display: none; }
 
 .cht-who { position: absolute; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 2 * var(--s4))); max-height: calc(100% - 2 * var(--s4)); overflow-y: auto; animation: enter var(--t2) var(--ease); }
@@ -227,8 +234,8 @@ export function createChat(ctx) {
   const feed = doc.createElement('div');
   feed.id = 'cht-feed';
   feed.setAttribute('aria-live', 'polite');
-  const toasts = $('toasts');
-  if (toasts) toasts.after(feed); else ($('hud') || host).appendChild(feed);
+  const tl = $('hud-tl');   // (the zone map: chat's last lines top left under the world on a phone, bottom left on a desktop - its CSS)
+  if (tl) tl.appendChild(feed); else ($('hud') || host).appendChild(feed);
   feed.onclick = () => { if (ctx.playing()) open(); };
   function feedLine(l) {
     if (isOpen || l.own) return;
@@ -236,7 +243,7 @@ export function createChat(ctx) {
     d.className = `cht-fl ${l.k === 'emote' ? 'em' : l.ch || ''}`;
     d.innerHTML = l.k === 'emote' ? `<b>${esc(l.n)}</b> ${esc(EMOTES[l.e].text)}` : `${l.ch !== 'near' ? `${LABEL[l.ch]} · ` : ''}<b>${esc(l.n)}:</b> ${esc(l.text)}`;
     feed.appendChild(d);
-    while (feed.children.length > 2) feed.firstChild.remove();
+    while (feed.children.length > 2) feed.firstChild.remove();   // (two on a desktop, the newest on a phone: its CSS)
     setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 300); }, FEED_MS);
   }
 
@@ -333,6 +340,7 @@ export function createChat(ctx) {
   function open(ch) {
     if (!ctx.playing()) return;
     if (ch && SAY.includes(ch)) sayCh = ch;
+    sheet.classList.remove('em-only');
     if (!isOpen) {
       isOpen = true;
       sheet.hidden = false;
@@ -345,8 +353,11 @@ export function createChat(ctx) {
     fit();
     if (ctx.device() !== 'touch') { openedAt = performance.now(); inEl.focus({ preventScroll: true }); if (ctx.focus) ctx.focus(true); }   // (a phone: the keyboard only when the line's tapped)
   }
+  // the emotes straight away (the thumb's chat button held - client/main.js): the sheet with its emote row only
+  function emotes() { open(); sheet.classList.add('em-only'); }
   function close() {
     if (!isOpen) return;
+    sheet.classList.remove('em-only');
     isOpen = false;
     clearInterval(watch);
     inEl.blur();
@@ -582,7 +593,7 @@ export function createChat(ctx) {
   }
 
   return {
-    onMessage, open, close, say, emote, renderApp, appBack, settings,
+    onMessage, open, close, say, emote, emotes, renderApp, appBack, settings,
     toggle(ch) { if (isOpen) close(); else open(ch); },
     who, openThread,
     setOff(ch, off) { ctx.send({ t: 'chatset', off: { [ch]: !!off } }); },

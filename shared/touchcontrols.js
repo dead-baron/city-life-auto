@@ -17,24 +17,26 @@ const UT = { stick: ['stick', 'AIM'], u1: ['use', 'ITEMS', 'items'], u2: ['light
 const UV = { stick: UT.stick, u1: UT.u1, u4: UT.u4, wp: WP };   // (in a vehicle, on a board, in the water: the stick, ITEMS, FIRE ON, the weapon)
 const AT = { act: ['action', 'ACT', 'prompt'], ...UV };   // (in a vehicle ACT only with something to do)
 const VFIRE = ['fire', 'FIRE', 'shoot'], VRELOAD = ['reload', 'RELOAD', 'armed'], HORN = ['horn', 'HORN', 0, { siren: 'SIREN' }];
-// (on foot CAR shows only with a vehicle near enough to get in - the flag near: client/touchslots.js - the owner, 11-03:
-// "simplified buttons on the bottom right", a button only while it does something)
-const CAR = ['vehicle', 'CAR', 'near'];
+// (on foot the vehicle button shows only with a vehicle near enough to get in - the flag near: client/touchslots.js - the
+// owner, 11-03: "simplified buttons on the bottom right", a button only while it does something). Its word is how you
+// mount what's there (the owner, 11-12: "many vehicles aren't cars" - never the word CAR): GET IN something you sit
+// inside, GET ON something you sit on (the flag on: mountOf below), and aboard EXIT or OFF the same way
+const CAR = ['vehicle', 'GET IN', 'near', { on: 'GET ON' }], OUT = ['vehicle', 'EXIT', 0, { on: 'OFF' }];
 export const TOUCH_STATES = {
   foot: { fire: ['fire', 'HIT'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, c1: ['block', 'BLOCK', 'guard'], ...UT },
   armed: { fire: ['fire', 'FIRE'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, c2: ['reload', 'RELOAD'], ...UT },
   carry: { fire: ['throw', 'THROW'], roll: ['dive', 'ROLL'], act: ['action', 'ACT'], car: CAR, ...UT },
-  drive: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
-  ride: { fire: VFIRE, car: ['vehicle', 'EXIT'], c2: VRELOAD, ...AT },   // (a passenger)
-  air: { fire: VFIRE, car: ['vehicle', 'EXIT'], c1: ['descend', 'DOWN'], c2: ['climb', 'CLIMB'], ...AT },   // (C1 and C2: an arrow down and an arrow up)
-  boat: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: HORN, c2: VRELOAD, ...AT },
+  drive: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: OUT, c1: HORN, c2: VRELOAD, ...AT },
+  ride: { fire: VFIRE, car: OUT, c2: VRELOAD, ...AT },   // (a passenger)
+  air: { fire: VFIRE, car: OUT, c1: ['descend', 'DOWN'], c2: ['climb', 'CLIMB'], ...AT },   // (C1 and C2: down and up)
+  boat: { fire: VFIRE, roll: ['dive', 'BRAKE'], car: OUT, c1: HORN, c2: VRELOAD, ...AT },
   horse: { fire: VFIRE, roll: ['dive', 'STOP'], car: ['vehicle', 'OFF'], c1: ['sprint', 'GALLOP'], c2: VRELOAD, ...AT },
   // at the wheel in a car soccer match (the owner, 11-06: "How do you boost?"): BOOST held in C1 by the right thumb - no
   // shooting in there (server players.js)
-  arena: { roll: ['dive', 'BRAKE'], car: ['vehicle', 'EXIT'], c1: ['sprint', 'BOOST'], ...AT },
+  arena: { roll: ['dive', 'BRAKE'], car: OUT, c1: ['sprint', 'BOOST'], ...AT },
   board: { fire: ['fire', 'TRICK'], roll: ['dive', 'OLLIE'], act: ['action', 'ACT'], car: ['vehicle', 'OFF'], ...UV },
-  surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
-  swim: { act: ['action', 'ACT'], car: ['vehicle', 'CAR'], ...UV },
+  surf: { roll: ['dive', 'AIR'], act: ['action', 'ACT'], car: ['vehicle', 'GET IN', 0, { on: 'GET ON' }], ...UV },
+  swim: { act: ['action', 'ACT'], car: ['vehicle', 'GET IN', 0, { on: 'GET ON' }], ...UV },
   home: { act: ['action', 'ACT'], u1: UT.u1, u2: UT.u2 },   // (walking round your home: no stick)
   // a line out (UI-7, the owner 2026-10-26: "Fishing UI is hidden behind the weapons selection button"): ACT casts,
   // strikes and reels, and nothing else does anything - the right-hand side clear for the fight's meter (style.css
@@ -44,6 +46,14 @@ export const TOUCH_STATES = {
   // for the cuffs (it pulses: client/hud.js), ACT while there's a break for it to make (the prompt) - nothing else
   custody: { fire: ['fire', 'HIT', 'fight'], act: ['action', 'ACT', 'prompt'] },
 };
+// How you mount a vehicle (shared/vehicles.js's def): 'in' something you sit inside - a car, a truck, a van, a bus, a
+// forklift, a tractor, a helicopter, a plane, a boat with a cabin (no crew drawn on its deck); 'on' something you sit on -
+// a bicycle, a motorcycle, a scooter, a horse, a skateboard, a surfboard, a cart (kind 'bike'), an open boat (its crew
+// drawn on deck: a jet ski, a rowboat, a RIB). Every def gets exactly one (test/touchslots.test.js).
+export function mountOf(def) {
+  if (!def) return 'in';
+  return def.kind === 'bike' || (def.kind === 'boat' && Array.isArray(def.crew)) ? 'on' : 'in';
+}
 // what you're doing, from the page's flags: { custody, home, fish, air, inVeh, driver, arena, horse, boat, surf, swim, board, carrying, armed }
 export function touchState(f) {
   if (f.custody) return 'custody';
@@ -57,7 +67,7 @@ export function touchState(f) {
   if (f.carrying) return 'carry';
   return f.armed ? 'armed' : 'foot';
 }
-// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call, wpn, near): { state, slots: { slot: { a, label } } }
+// the slots filled for those flags (also guard, shoot, prompt, siren, items, light, call, wpn, near, on - mountOf): { state, slots: { slot: { a, label } } }
 export function touchSlots(f) {
   const state = touchState(f), slots = {};
   for (const [slot, [a, label, need, alt]] of Object.entries(TOUCH_STATES[state])) {

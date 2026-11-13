@@ -22839,3 +22839,66 @@ password resets and confirm-your-email links. Setup: `docs/LAUNCH-SETUP.md` sect
   other devices signed out); an old magic-link account; no Resend; link-to-guest keeps progress and name; the news
   list, unsubscribe and the owner's CSV; the legal pages) and `test/guestnames.test.js`. The launch tests were updated
   for Reddit and the magic links being gone and guests renaming.
+
+## 2026-11-12 - The HUD rebuilt: Direction A, the SNES pad
+
+The owner picked Direction A from the HUD kit's mockups (the zone map Main / ZonesPortrait / ZonesDesktop, the look
+PadLandscape / PadPortrait / PadDesktop) and, for the buttons, the rule "a button whose action never changes gets a
+really simple symbol, one whose action depends on the moment gets a word".
+- **Zones, the same on every screen** (`index.html`, `client/style.css` "the HUD, Direction A"): the top band is one grid
+  across the screen - top left the world (the minimap with a gold rim, the clock under it, the status chips, the debug
+  button), top centre the objective as one line (the job card, violet rim; a tap opens it as before) with at most two
+  notices under it (one on a phone upright, none while a bar or the big card is up on a phone or a short window), top
+  right you - one row of system buttons (phone, map, chat, menu; 44 px; on touch chat is by the thumb instead) and one
+  plate: health (red, in segments), armor (blue, the vest you wear - the server now sends `me.arm` [left, full]: players.js
+  armorBar), stamina (gold, folding away when full), the cash (green) and the wanted stars. Upright the objective runs
+  the width of the screen under the band; on a phone on its side the plate sits left of the row (the action cluster's
+  switches are under them); with a keyboard or a pad the prompt is bottom centre, what you hold bottom right, chat
+  bottom left. Nothing moves between on foot, driving and swimming: only the buttons swap.
+- **One panel look**: navy #141a33, a 2 px near-black edge, a 2 px gold rim inside, a hard 3 px shadow, square corners,
+  CLA Pixel for every word of the in-play HUD (Barlow Condensed is gone from it). The tokens: `--pad-*`, `--pn-rim`,
+  `--pn-drop`, `--fs-w1` / `--fs-w2` (a button's word stepped down to fit its disc).
+- **The touch face buttons** (`client/touchicons.js` faceOf / faceHtml / wordPx, `client/touchslots.js`): plain colored
+  discs with a light top edge and a shaded bottom - FIRE red #d8323c and ACT yellow #e8b21a at 76 px, ROLL blue and the
+  vehicle button green at 68 (60 upright: the tight cluster has no room for 68 between ACT, FIRE and the context row and
+  still keep test/touchslots.test.js's spacing - ROLL and the vehicle button moved a little round the arc on its side to
+  make room). FIRE shows a crosshair while it attacks (a gun or fists), ROLL a double chevron while it rolls, the vehicle
+  button an arrow into a door to board and out of it aboard (`assets/ui/s-*.png`, `tools/build-hudsymbols.py`; the exit
+  arrow is new, in the same plain style). ACT says what it will do right now - ENTER, TALK, BUY, SIT, RUN... (actWord:
+  the prompt's own first verb when it's a plain one of six letters or fewer, else its kind's word, else ACT), and on touch
+  it replaces the prompt chip (a prompt no button does, a ride's note, keeps its chip). Any other action in a slot is its
+  word (BRAKE, STOP, BOOST, GALLOP, THROW, TRICK, OLLIE, HOSE). The long press says the button's name - and, on the button
+  a prompt names, the whole prompt. The vehicle button is named by how you mount what's there (`shared/touchcontrols.js`
+  mountOf: GET IN what you sit inside, GET ON a bike, a horse, a board or an open boat; EXIT / OFF aboard) - the long press,
+  BUTTON_NAME and the Guide; never the word CAR.
+- **The switches and context slots** (ITEMS, LIGHT, CALL, AUTO, RELOAD, BLOCK, HORN, SIREN, CLIMB, DOWN): small navy discs
+  with the gold rim and a word; a switch that's on lit gold (AUTO, the old FIRE ON). Their words step down to fit the
+  52 px disc: 12 px for most, 10 px (the face's own pixel size) for RELOAD and GALLOP - below the HUD's 14 px floor on
+  purpose; test/hudlayout.test.js checks the button words apart (10 px at least).
+- **The sticks**: the same places, sizes and reach (client/input.js reads the same boxes); only the look - a faint ring and
+  a faint knob, drawn as a shadow inside the same box.
+- **Keyboard and pad prompts**: the key or the pad button as Kenney's "Input Prompts Pixel 16" tile (CC0; the 40 tiles
+  used copied to `assets/ui/prompts/`, credit in `client/icons-LICENSE.txt` and the folder's LICENSE.txt), drawn at 2x,
+  through the same glyph system (`client/glyphs.js` glyph / promptTile), so the prompt, the hint strips, the first-goal
+  lines and the Guide all show them. What has no tile (WASD, 1-9, L3) keeps its words on a key cap.
+- **Chat by the thumb** (the owner: the top row was a stretch for something used often): on touch a 48 px chat button in
+  the bottom band just right of the move stick's rest (upright over the move stick's zone); a tap the chat sheet, held
+  the emotes straight away (`chat.emotes()`); closing goes straight back to play. A keyboard keeps T and the top row.
+- **Every screen has a way out on every device**: the phone's Camera on a phone had none. The camera (client/director.js)
+  now has a close button in the corner (44 px, faint till touched) on every device, Esc and B close it when the camera
+  isn't flying, and on touch a round shutter takes the picture. The weapon picker got a close, Esc and B; B closes the
+  chat sheet. `test/wayout.test.js` lists every screen and checks each has its close to tap, Esc and B.
+- **The camera is a public photo mode**: the cameras (follow, smooth, drift, drone, on someone), the zoom, the clean
+  screen, letterbox, hiding your character, the time of day and weather on your screen and the picture for everyone; the
+  tour, the follow scenes, the Showcase and the staged scenes stay debug mode's. The panel in the HUD's look; a Guide
+  entry ("Camera (photo mode)").
+- **The What's next card and the first-time tips** (`client/ftue.js` #ftue-line): a card in the panel look - its head in
+  gold, what it says, OPEN (or MORE IN YOUR GUIDE) and LATER, the close top right at 44 px.
+- **The chat sheet**: the same panel look, square chips and tabs in CLA Pixel; its behavior as before.
+
+Deviations from the mockups, each for a standing rule: upright the system buttons sit right of the top-centre band and the
+plate under them (UI-5: a centred camera's band stays clear); on a phone on its side the plate sits beside the row rather
+than under it (the switches' row of the action cluster is under them - its GEO kept); the touch vehicle button and ROLL
+are 60 px upright; the switch words go below 14 px. Tests updated where the design changed on purpose (sizes, the row,
+the clock under the minimap, the objective top centre); the safety rules (overlap, safe areas, MIN_TAP, the middle) are
+unchanged.

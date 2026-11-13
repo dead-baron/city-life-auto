@@ -138,11 +138,13 @@ function measure() {
   if (sc.dev === 'touch') {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
+    if (shown($('b-talk'))) keep.push(box($('b-talk'), 'talk'));   // (chat by the thumb: Direction A, 11-12)
   }
   // the smallest words on the screen: every element with words of its own in the HUD and the touch controls
-  let minFont = 99, minAt = '';
-  for (const el of document.querySelectorAll('#hud *, #touch *')) { if (!shown(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue; const f = parseFloat(getComputedStyle(el).fontSize); if (f < minFont) { minFont = f; minAt = (el.id || el.className || el.tagName) + ' "' + el.textContent.trim().slice(0, 20) + '"'; } }
-  parent.postMessage({ sc, read, keep, state: slots && slots.state, minFont, minAt }, '*');
+  // (the words on the touch buttons apart: Direction A's, stepped down to fit their discs - minBtn)
+  let minFont = 99, minAt = '', minBtn = 99, minBtnAt = '';
+  for (const el of document.querySelectorAll('#hud *, #touch *')) { if (!shown(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue; const f = parseFloat(getComputedStyle(el).fontSize), at = (el.id || el.className || el.tagName) + ' "' + el.textContent.trim().slice(0, 20) + '"'; if (el.matches('#tbtns .w')) { if (f < minBtn) { minBtn = f; minBtnAt = at; } continue; } if (f < minFont) { minFont = f; minAt = at; } }
+  parent.postMessage({ sc, read, keep, state: slots && slots.state, minFont, minAt, minBtn, minBtnAt }, '*');
 }
 document.fonts.ready.then(() => setTimeout(measure, 100));
 `;

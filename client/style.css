@@ -34,6 +34,14 @@
   --disc: rgba(12, 14, 20, .55); --gl-halo: rgba(7, 11, 22, .6); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
   --fire-disc: #c8463c; --fire-hi: #e0594d; --act-disc: #e2b33c; --act-hi: #f0c55a;
   --ink-a: rgba(7, 11, 22, .25);
+  /* Direction A, the SNES pad (the owner, 2026-11-12): the in-play HUD's panels and buttons - navy, a near-black edge, a
+     gold rim inside, a hard shadow; the four face buttons' colors; the bars'; the sticks' faint ring and knob */
+  --pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945; --pad-cream: #f4ecd8; --pad-mute: #8b93a8; --pad-line: #4a5370; --pad-obj: #b794f4;
+  --pad-fire: #d8323c; --pad-act: #e8b21a; --pad-roll: #2f6fd6; --pad-car: #2f9e4f;
+  --pad-hp: #e8434b; --pad-hp-d: #3a2030; --pad-ar: #4aa8ff; --pad-ar-d: #1d2a48; --pad-st: #e8b21a; --pad-st-d: #3a3220; --pad-cash: #3ccf6e;
+  --pad-hi: rgba(255, 255, 255, .35); --pad-lo: rgba(0, 0, 0, .25); --pad-drop: rgba(0, 0, 0, .45); --pad-veil: rgba(11, 16, 32, .85);
+  --stick-ring: rgba(244, 236, 216, .28); --stick-knob: rgba(244, 236, 216, .3); --stick-edge: rgba(11, 16, 32, .5);
+  --pn-rim: inset 0 0 0 2px var(--pad-gold); --pn-drop: 0 3px 0 var(--pad-ink);
   --gold-a: rgba(226, 189, 87, .4);       /* a quiet rim */
   --gold-t: rgba(226, 189, 87, .18);      /* a gold wash: hover, picked */
   --cream-a: rgba(243, 234, 210, .45);
@@ -57,6 +65,7 @@
   --ui: "Barlow Condensed", "Arial Narrow", sans-serif;
   --fs-1: 12px; --fs-2: 14px; --fs-3: 16px; --fs-4: 20px; --fs-5: 28px; --fs-6: 40px;
   --fs-row: var(--fs-4);
+  --fs-w1: 10px; --fs-w2: 12px;           /* (a word on a small touch button, stepped down to fit its disc: client/touchicons.js wordPx) */
   /* shape, space, motion */
   --r1: 4px; --r2: 10px; --r3: 999px; --r4: 28px;   /* (r4: a phone's corners)  */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
@@ -191,362 +200,352 @@ input[type=range]:disabled { opacity: .4; }
 .foldable.open > .fold-body { grid-template-rows: 1fr; opacity: 1; }
 .foldable > .fold-head { cursor: pointer; }
 
-/* ==== the HUD (UI-8, the owner 2026-10-30: "review the UI and UX as a professional ... a cleaner and more intuitive
-   UI and UX design that makes the game look and feel polished and finalized") ====
-   Two corners, each one column (index.html), and the low slot:
-   - top left, what's around you and how you are: the minimap; health and stamina under it at its width; the status
-     chips; a bar while one's up (a robbery, a ride, custody); the job card; on a phone upright, the notes;
-   - top right: the icon buttons (phone, map, menu - no words: the name on hover and to a screen reader, the key's
-     badge on a keyboard), then what you have - the cash with the clock beside it, the bank, the vehicle chip, the
-     stars, what you hold;
-   - the prompt and the hint strip low; the notes bottom left on a desktop, top centre on a phone on its side.
-   One look for every plate: dark glass with a hairline and a soft shadow, no gold rims - gold marks the minimap, the
-   prompt and what you can press. Nothing over the middle of the screen but the prompt. The insets: --sl, --sr, --st
-   (the top: below a phone's camera), --sb; --map the minimap's size; --gap between things in a corner. */
-#hud { position: absolute; inset: 0; pointer-events: none; font: 600 var(--fs-2) var(--ui); color: var(--cream);
-  --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 24px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 156px; --gap: 8px; --nav: 48px; }
-.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(10px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 92px; --gap: 6px; --nav: 44px; }
-@media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --gap: 6px; --nav: 40px; } }
+/* ==== the HUD, Direction A (the owner's "SNES pad", picked 2026-11-12 from the HUD kit's mockups - Main / Zones* / Pad*)
+   The zone map, the same rules on every screen:
+   - top left the world: the minimap (north up, a tap the big map), the clock under it, the status chips under that;
+   - top centre the objective as one line (a tap opens the job / quit) and at most two notices under it, each gone after
+     a few seconds; a robbery's, a ride's or custody's bar between them;
+   - top right you: one row of system buttons - phone, map, chat, menu, 44 px - and one plate: health (segmented red),
+     the vest's armor (blue) while you wear one, stamina (gold) while it matters, the cash (green) and the stars;
+   - the middle stays clear; on touch the move stick bottom left and the action cluster bottom right (client/touchslots.js),
+     the cards and the prompt between the thumbs - above them upright - one at a time, never over a button; with a
+     keyboard or a pad the prompt bottom centre with the key's own glyph, what you hold bottom right, chat bottom left.
+   Nothing jumps between states (on foot, driving, swimming): only the buttons swap, in place. One look for every panel:
+   navy, a near-black edge, a gold rim inside it, a hard 3 px shadow, square corners, CLA Pixel. The insets: --sl, --sr,
+   --st (the top: below a phone's camera), --sb; --map the minimap's size; --gap between things in a zone; --nav the
+   system buttons'; --trw the top-right zone's width (the top centre keeps left of it). */
+#hud { position: absolute; inset: 0; pointer-events: none; font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream);
+  --sl: max(24px, env(safe-area-inset-left)); --sr: max(24px, env(safe-area-inset-right)); --st: 20px; --sb: max(24px, env(safe-area-inset-bottom)); --map: 160px; --gap: 8px; --nav: 46px; --trw: 272px;
+  /* (the top band: the world, the objective's column, you - a grid across the top; upright the objective under them) */
+  display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; grid-template-areas: "tl tc tr"; align-items: start; align-content: start; column-gap: calc(2 * var(--gap)); row-gap: var(--gap); box-sizing: border-box; padding: var(--st) var(--sr) 0 var(--sl); }
+.touch #hud { --sl: max(16px, env(safe-area-inset-left)); --sr: max(16px, env(safe-area-inset-right)); --st: max(12px, calc(var(--cam-top) + 4px)); --sb: max(8px, env(safe-area-inset-bottom)); --map: 104px; --gap: 6px; --nav: 44px; --trw: 200px; }
+body.portrait #hud { grid-template-columns: max-content minmax(0, 1fr); grid-template-areas: "tl tr" "tc tc"; }
+@media (max-width: 560px) { body:not(.touch) #hud { --map: 104px; --trw: 200px; --sl: 12px; --sr: 12px; } body:not(.touch).portrait #hud-tr > #hud-stat { order: 0; } }   /* (a keyboard or a pad on a narrow window - a phone held upright with a pad: the phone's sizes) */
+@media (max-height: 430px) { body:not(.touch) #hud { --st: 10px; --sl: max(12px, env(safe-area-inset-left)); --sr: max(12px, env(safe-area-inset-right)); --sb: 10px; --map: 104px; --gap: 6px; --nav: 40px; --trw: 200px; } }
 #hud, #touch, #helpbox { transition: opacity var(--t2); }
 #helpbox.calm { opacity: 0; transition: opacity 1.5s; }
 #helpbox.faded { opacity: 0; transition: opacity .4s; }   /* (a few seconds after it came up: client/hud.js, PROMPT_FADE_S) */
 body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
-.plate { background: var(--plate); border: 2px solid var(--plate-rim); border-radius: var(--r2); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }   /* (UIK-00 3: the HUD plate) */
+.plate { background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); }
 
-/* the corners */
-#hud-tl { position: absolute; left: var(--sl); top: var(--st); display: flex; flex-direction: column; align-items: flex-start; gap: var(--gap); width: calc(100vw - var(--sl) - var(--sr)); pointer-events: none; }
-/* (upright, as U4: the clock's plate above the minimap. Anything wider than tall - a desktop, a phone on its side, as U2
-   and U3: the clock's plate beside the minimap, the debug button after it, the status under them; the rest of the
-   column under the minimap, clear of the move stick) */
-body:not(.portrait) #hud-tl { display: grid; grid-template-columns: var(--map) auto 1fr; grid-template-rows: auto 1fr; gap: var(--gap); align-items: start; justify-items: start; }
-body:not(.portrait) #hud-tl > * { grid-column: 1 / -1; }
-body:not(.portrait) #radar-wrap { grid-area: 1 / 1 / 3 / 2; }
-body:not(.portrait) #rclock { grid-area: 1 / 2; margin-bottom: 0; }
-body:not(.portrait) #b-dev { grid-area: 1 / 3; position: relative; left: auto; top: auto; }
-body:not(.portrait) #status { grid-area: 2 / 2 / 3 / 4; max-width: 240px; }
-.touch:not(.portrait) #status { max-width: min(300px, 40vw); }
-#hud-tr { position: absolute; right: var(--sr); top: var(--st); display: flex; flex-direction: column; align-items: flex-end; gap: var(--s1); text-align: right; }
-#hud-tr > #hud-btns { margin-bottom: 2px; }
-/* (a short screen - a phone on its side, as U3; a low window: the buttons beside the plate, the vehicle's readouts under
-   them, the stars under the plate - the arc's small buttons are under the column) */
+/* the panels: navy, the near-black edge, the gold rim inside, the hard shadow, square (the objective's rim violet; the
+   notices a dark veil with no rim - they come and go) */
+#rclock, #hud-stat, #vchip, #job, .hchip, #weapon, #hud-btns button, #b-dev, #helpbox, #rob, #hints { background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); }
+
+/* ---- top left: the world ---- */
+#hud-tl { grid-area: tl; position: relative; display: grid; grid-template-columns: max-content max-content; align-items: start; justify-items: start; gap: var(--gap); width: var(--map); pointer-events: none; }
+#hud-tl > :is(#radar-wrap, #rclock, #cht-feed) { grid-column: 1 / -1; }
+#radar-wrap { position: relative; flex: none; width: var(--map); height: var(--map); pointer-events: auto; }
+#radar { display: block; box-sizing: border-box; width: var(--map); height: var(--map); border-radius: var(--r3); border: 4px solid var(--pad-gold); background: var(--pad-navy); box-shadow: 0 0 0 2px var(--pad-ink), 0 4px 0 2px var(--pad-drop); cursor: pointer; }
+#radar-wrap::before { content: 'N'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream); background: var(--pad-ink); border: 2px solid var(--pad-gold); z-index: 1; }
+/* the clock under the minimap (the zone map: "clock and weather under it"): the sun or the moon, the time, a rain cloud */
+#rclock { display: flex; flex: none; align-items: center; gap: 6px; height: 30px; margin-left: 4px; padding: 0 10px 0 6px; white-space: nowrap; pointer-events: none; font: 700 var(--fs-4) var(--pixel); color: var(--pad-cream); }
+.touch #rclock { height: 26px; gap: 4px; padding: 0 8px 0 4px; font-size: var(--fs-3); --ic: 16px; }
+#clock { display: none; }
+/* the debug button (a playtest tool, open to everyone): quiet in the world's column, under the clock with the status
+   beside it (upright beside the minimap's foot, left of the system buttons) - apart from the game's own, over nothing */
+#b-dev { position: relative; grid-column: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; opacity: .7; color: var(--pad-mute); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+#b-dev svg { display: block; width: 18px; height: 18px; }
+#b-dev.on { opacity: 1; color: var(--pad-gold); }
+#b-dev:active { transform: scale(var(--press)); }
+.touch #b-dev { width: var(--tap); height: var(--tap); }
+body.portrait #b-dev { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(var(--map) - var(--tap)); }
+body.portrait #status { grid-column: 1 / -1; max-width: calc(var(--map) + var(--gap) + var(--tap)); }   /* (upright under the minimap's column: the vehicle's readout under the system buttons beside it) */
+/* the status: chips in plain words - only what's happening to you now (bleeding, a bounty, a coffee wearing off, a light
+   on) and who you are when it isn't a citizen's; the standing numbers are in the phone's Skills */
+#status { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--s1); width: max-content; max-width: min(300px, 34vw); }
+#status:empty { display: none; }
+.hchip { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 5px; color: var(--pad-cream); font: 700 var(--fs-2) var(--pixel); white-space: nowrap; }
+.hchip:not(:has(.pi24)) { padding-left: 10px; }
+.touch .hchip { height: 28px; padding: 0 6px; --ic: 16px; }
+.hchip b { font: 700 var(--fs-2) var(--pixel); }
+.hchip.role { letter-spacing: .5px; text-transform: uppercase; }
+.hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
+.hchip.good b { color: var(--pad-cash); } .hchip.warn b { color: var(--heat); } .hchip.bad { box-shadow: inset 0 0 0 2px var(--danger), var(--pn-drop); } .hchip.info { box-shadow: inset 0 0 0 2px var(--info), var(--pn-drop); }
+.hchip.flag { box-shadow: inset 0 0 0 2px currentColor, var(--pn-drop); }
+body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
+.hchip.stat, .hchip.role.citizen { display: none; }   /* (the standing numbers are in the phone's Skills; the status is what's happening now) */
+/* (the owner's minimal HUD: a chip in words when it starts or changes, then its icon alone on a small square - hudinfo.js
+   statusOpen; a tap or a click on the row brings the words back a while) */
+.hchip.pip { width: 30px; height: 30px; padding: 0; justify-content: center; --ic: 16px; }
+.touch .hchip.pip { width: 28px; height: 28px; padding: 0; }
+#status.folded { pointer-events: auto; cursor: pointer; touch-action: manipulation; }
+.touch #status { flex-wrap: nowrap; overflow: hidden; max-width: min(56vw, 300px); }
+.touch:not(.portrait) #status { max-width: min(28vw, 210px); }   /* (one row: on a phone one chip at a time in words - hudinfo.js drawStatus) */
+.touch #status.all { flex-wrap: wrap; overflow: visible; }
+
+/* ---- top centre: the objective, a bar, the notices ---- */
+#hud-tc { grid-area: tc; position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: var(--s1); pointer-events: none; }
+/* (upright the top band is the minimap and the plate: the objective the width of the screen under them) */
+body.portrait #hud-tc { align-items: stretch; }
+body.portrait #hud-tc > * { align-self: center; }
+body.portrait #hud-tc > #job { align-self: stretch; }
+#hud-tc > * { max-width: 100%; box-sizing: border-box; }
+#hud-msg { display: flex; flex-direction: column; align-items: center; gap: var(--s1); pointer-events: none; }
+#hud-msg:not(:has(> :not(.hidden))) { display: none; }
+#bank { display: none; }   /* (the bank: the phone's; the plate is what you carry) */
+
+/* the objective (UI-4's job card, as one line): the job's mark, what to do, the clock and how far - a violet rim; big a
+   few seconds when the step changes or on a tap (the job's name over it), then the line (client/hudinfo.js) */
+#job { position: relative; flex: none; z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; color: var(--pad-cream); box-shadow: inset 0 0 0 2px var(--pad-obj), var(--pn-drop); animation: enter var(--t2) var(--ease); }
+#job.big { width: min(480px, 100%); padding: 6px 10px; }
+#job.chip { display: flex; align-items: center; gap: var(--s2); width: min(480px, 100%); min-height: 36px; padding: var(--s1) 10px; }
+#job .jc-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); white-space: nowrap; font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--pad-obj); }
+#job .jc-h .jc-s { font-size: var(--fs-2); color: var(--pad-gold); }
+#job .jc-t { flex: none; flex-direction: row; align-items: center; gap: 4px; color: var(--pad-gold); }   /* (row: the jobs app's .jc-t is a column) */
+#job.hot .jc-t { color: var(--danger); }
+#job.big .jc-o { margin-top: 2px; font: 700 var(--fs-3) var(--pixel); line-height: 1.25; color: var(--pad-cream); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+#job .jc-d { display: flex; justify-content: flex-start; align-items: center; gap: var(--s2); font: 700 var(--fs-2) var(--pixel); color: var(--pad-gold); }
+#job.big .jc-d { flex-wrap: wrap; row-gap: 2px; margin-top: 3px; }
+#job.big .jc-d > span { display: inline-flex; flex: none; align-items: center; gap: 4px; white-space: nowrap; }
+#job.big .jc-d :is(.jc-paid, .jc-s) { margin-left: auto; color: var(--pad-gold); }
+#job.big .jc-d .jc-paid { color: var(--pad-cash); }
+#job .pi24 { width: 24px; height: 24px; }
+.touch #job .pi24 { width: 16px; height: 16px; }
+#job.chip .jc-o { flex: 1; min-width: 0; overflow: hidden; text-overflow: clip; white-space: nowrap; font: 700 var(--fs-3) var(--pixel); }
+#job.chip .jc-d { flex: none; }
+#job .jc-s { flex: none; color: var(--pad-gold); }
+#job .jc-dot { flex: none; display: grid; place-items: center; }
+#job .jc-paid { color: var(--pad-cash); font: 700 var(--fs-3) var(--pixel); }
+#job.new { animation: jobnew .8s var(--ease) 2; }
+@keyframes jobnew { 50% { box-shadow: inset 0 0 0 2px var(--pad-cream), var(--pn-drop); } }
+#job.paid { box-shadow: inset 0 0 0 2px var(--pad-cash), var(--pn-drop); }
+#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: clip; }   /* (clip: the pixel face has no ellipsis glyph) */
+.touch #job.chip { min-height: var(--tap); }
+.touch #job.chip .jc-o, .touch #job.big .jc-o { font-size: var(--fs-2); }
+.touch #job.big { pointer-events: none; }   /* (big for a few seconds, then the line: a thumb isn't caught by it) */
+body.dead #job { display: none !important; }
+
+/* the notices: one line each, two at most, newest on top, in and out on their own (hud.js toast); a long one cut short,
+   the whole of it a tap away in the phone's Log */
+#toasts { position: static; z-index: 7; display: flex; flex-direction: column; align-items: center; gap: var(--s1); width: min(400px, 100%); pointer-events: none; }
+.toast { position: relative; display: flex; align-items: center; gap: 6px; max-width: 100%; box-sizing: border-box; padding: 3px 8px 3px 4px; background: var(--pad-veil); border: 2px solid var(--pad-ink); border-radius: 0; font: 700 var(--fs-2) var(--pixel); line-height: 1.3; color: var(--pad-cream); white-space: nowrap; animation: toastin var(--t1) var(--ease); transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease); }
+@keyframes toastin { from { opacity: 0; transform: translateX(-8px); } }
+.toast > .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.toast.good { border-left-color: var(--pad-cash); } .toast.bad { border-left-color: var(--danger); } .toast.warn { border-left-color: var(--heat); }
+.touch .toast { --ic: 16px; }
+.toast.more { pointer-events: auto; cursor: pointer; }
+.toast.more::after { content: 'LOG ›'; flex: none; font: 700 var(--fs-2) var(--pixel); color: var(--pad-gold); }
+.toast.out { transform: none; }
+#toasts .toast:nth-child(n+3) { display: none; }
+/* (a bar up - a robbery, a ride, custody - or the objective big: one note, so the top stays a band; on a phone and a short
+   window none - they wait in the Log, clear of the status and the middle) */
+#hud:has(#hud-msg > :not(.hidden)) #toasts .toast:nth-child(n+2), #hud:has(#job.big) #toasts .toast:nth-child(n+2) { display: none; }
+.touch #hud:has(#hud-msg > :not(.hidden)) #toasts, .touch #hud:has(#job.big) #toasts { display: none; }
+body.portrait.touch #toasts .toast:nth-child(n+2) { display: none; }   /* (upright one at a time: the column under the band stays short) */
+@media (max-height: 430px) { body:not(.touch) #hud:has(#hud-msg > :not(.hidden)) #toasts, body:not(.touch) #hud:has(#job.big) #toasts { display: none; } }
+
+/* ---- top right: you ---- */
+#hud-tr { grid-area: tr; position: relative; justify-self: end; display: flex; flex-direction: column; align-items: flex-end; gap: var(--gap); text-align: right; }
+/* (a desktop and upright: the plate on top, the row under it; a phone on its side: the row in the corner, the plate left
+   of it - the action cluster's switches sit under them) */
+body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order: -1; }
 .touch:not(.portrait) #hud-tr { display: grid; grid-template-columns: auto auto; column-gap: var(--gap); row-gap: var(--s1); align-items: start; justify-items: end; }
 .touch:not(.portrait) #hud-tr > * { grid-column: 1; }
 .touch:not(.portrait) #hud-tr > #hud-btns { grid-area: 1 / 2; margin: 0; }
-.touch:not(.portrait) #hud-tr > :is(#stars, #vchip) { grid-column: 1 / -1; justify-self: end; margin: 0 calc(var(--u-l, 0px) - var(--sr)) 0 -100vw; }   /* (under the plate the touch switches' row: the stars and the vehicle's readout left of it - client/touchslots.js --u-l; the -100vw: they don't widen the plate's column) */
+.touch:not(.portrait) #hud-tr > #vchip { justify-self: start; }   /* (under the plate's left end: clear of the touch switches' row under the system buttons) */
+@media (max-height: 500px) { .touch:not(.portrait) #hud-tr > #vchip { grid-column: 1 / -1; justify-self: end; grid-template-columns: auto; justify-items: end; margin-right: calc(var(--u-l, 0px) - var(--sr)); max-width: calc(100% - var(--u-l, 0px) + var(--sr)); } }   /* (a phone on its side: left of the switches' row - client/touchslots.js --u-l - its readouts one over the other) */
 @media (max-height: 430px) {
-  body:not(.touch) #hud-tr { display: grid; grid-template-columns: auto auto; column-gap: var(--gap); row-gap: var(--s1); align-items: start; justify-items: end; }
-  body:not(.touch) #hud-tr > * { grid-column: 1; }
-  body:not(.touch) #hud-tr > #hud-btns { grid-area: 1 / 2; margin: 0; }
-  body:not(.touch) #hud-tr > #vchip { grid-area: 2 / 2 / 4 / 3; }
-  body:not(.touch) #vchip { grid-template-columns: auto; justify-items: end; gap: 0; padding: var(--s1) var(--s2); } body:not(.touch) #vchip > b { display: none; } body:not(.touch) #vchip .vc-spd { font-size: var(--fs-4); }
+  body:not(.touch) #vchip { grid-template-columns: auto auto; gap: 0 var(--s2); padding: var(--s1) var(--s2); } body:not(.touch) #vchip > b { display: none; } body:not(.touch) #vchip .vc-spd { font-size: var(--fs-3); }
 }
-
-/* the plates (U1-U4): dark navy, a thin gold rim, an ink line round it, a soft shadow */
-#rclock, #hud-stat, #vchip, #job, .hchip, #weapon, #hud-btns button, #b-dev, #stars, .toast, #helpbox, #rob, #hints { background: var(--plate); border: 2px solid var(--plate-rim); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); }
-
-/* the minimap (U1-U4): a steel-blue ring, the north on it */
-#radar-wrap { position: relative; flex: none; width: var(--map); pointer-events: auto; }
-#radar { display: block; width: var(--map); height: var(--map); border-radius: var(--r3); border: 3px solid var(--ring); background: var(--navy); box-shadow: 0 0 0 2px var(--ink), var(--plate-sh); cursor: pointer; }
-#radar-wrap::before { content: 'N'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); width: 18px; height: 18px; display: grid; place-items: center; border-radius: var(--r3); font: 700 var(--fs-2) var(--pixel); color: var(--cream); background: var(--ink); border: 1px solid var(--ring); z-index: 1; }
-
-/* the clock's plate (U2, U4): the sun or the moon, the time, a rain cloud when it rains */
-#rclock { display: flex; flex: none; align-items: center; gap: var(--s2); height: 36px; margin-bottom: 4px; padding: 0 12px 0 8px; white-space: nowrap; pointer-events: none; border-radius: var(--r2); font: 700 var(--fs-4) var(--pixel); color: var(--cream); }
-.touch #rclock { height: 30px; gap: 6px; padding: 0 10px 0 6px; font-size: var(--fs-3); --ic: 16px; }
-#clock { display: none; }
-
-/* how you are and what you have, one plate top right (U1-U4): health and stamina - the icon, the bar, the number - then
-   the cash (the bank under it on a desktop) */
-#hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 12px; padding: 6px 12px 6px 8px; border-radius: var(--r2); }
-#vitals { display: flex; flex-direction: column; gap: 2px; }
-.vrow { display: flex; align-items: center; gap: 6px; }
-/* (UI-9, the owner's minimal HUD: stamina only when it matters - full a moment, its row folds away; spent, back at once) */
-.vrow.st { max-height: 24px; overflow: hidden; transition: max-height var(--t2) var(--ease), opacity var(--t2) var(--ease); }
-#vitals.st-rest .vrow.st { max-height: 0; opacity: 0; transition-duration: var(--t3); }
-.vrow .vl { display: none; }
-.vrow b { flex: none; min-width: 34px; font: 700 var(--fs-3) var(--pixel); line-height: 1; text-align: right; }
-#purse { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding-left: 12px; border-left: 1px solid var(--plate-line); align-self: stretch; justify-content: center; }
-.vrow.hp b { color: var(--danger-hi); } .vrow.st b { color: var(--info-hi); }
-.vbar { position: relative; flex: 1; min-width: 0; height: 12px; overflow: hidden; background: var(--track); border-radius: var(--r1); box-shadow: inset 0 0 0 1px var(--ink); }
-.vbar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: var(--r1); transition: width var(--t0); }
-/* a hit (UIC-20 03): what was lost stays white a moment, then drains in 400 ms (client/hud.js damage) */
-.vbar .lag { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--white); border-radius: var(--r1); transition: width var(--t-drain) var(--ease); }
-.vbar .lag.hit { transition: none; }
-.fill.hp { background: linear-gradient(var(--danger-hi), var(--danger) 60%); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
-@keyframes hplow { 50% { opacity: .55; } }
-.fill.st { background: linear-gradient(var(--info-hi), var(--info) 60%); }
-.touch #hud-stat { grid-template-columns: minmax(96px, 1fr) auto; column-gap: 8px; padding: 4px 8px 4px 5px; --ic: 16px; }
-.touch #purse { padding-left: 8px; }
-.touch .vbar { height: 8px; } .touch .vrow b { min-width: 26px; font-size: var(--fs-2); }
-/* (upright, UIC-14: the cash under the bars, big, no bank) */
-body.portrait.touch #hud-stat { grid-template-columns: minmax(124px, 1fr); row-gap: 2px; }
-body.portrait.touch #purse { align-items: flex-end; padding: 3px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); }
-body.portrait.touch #bank { display: none; }
-
-/* the status: chips in plain words - only what's happening to you now (bleeding, a bounty, a coffee wearing off, a light
-   on) and who you are when it isn't a citizen's; the standing numbers (Samaritan, Criminal XP, your record) are in the
-   phone's Skills */
-#status { display: flex; flex-wrap: wrap; gap: var(--s1); max-width: min(440px, 34vw); }
-#status:empty { display: none; }
-.hchip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px 0 5px; border-radius: var(--r2); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; }
-.hchip:not(:has(.pi24)) { padding-left: 10px; }
-.touch .hchip { height: 28px; font-size: var(--fs-2); --ic: 16px; }
-.touch .hchip b { font: 700 var(--fs-2) var(--ui); }   /* (a phone: the value in the narrow face, so a bounty's sum and time fit beside the minimap) */
-.hchip b { font: 700 var(--fs-2) var(--pixel); }
-.hchip.role { background: var(--navy3); letter-spacing: .5px; text-transform: uppercase; }
-.hchip.role.criminal { color: var(--danger); } .hchip.role.enforcer { color: var(--info); } .hchip.role.hunter { color: var(--heat); }
-.hchip.good b { color: var(--money); } .hchip.warn b { color: var(--heat); } .hchip.bad { border-color: var(--danger); } .hchip.info { border-color: var(--info); }
-.hchip.flag { border-color: currentColor; }
-body.practice .hchip.role::after { content: ' · PRACTICE'; color: var(--heat); }
-.hchip.stat, .hchip.role.citizen { display: none; }   /* (UI-8: on a desktop too - the standing numbers are in the phone's Skills; the status is what's happening now) */
-/* (UI-9, the owner's minimal HUD: a chip in words when it starts or changes, then its icon alone on a small round plate -
-   hudinfo.js statusOpen; a tap or a click on the row brings the words back a while) */
-.hchip.pip { width: 28px; height: 28px; padding: 0; justify-content: center; border-radius: var(--r3); --ic: 16px; }
-.touch .hchip.pip { width: 28px; height: 28px; padding: 0; }
-#status.folded { pointer-events: auto; cursor: pointer; touch-action: manipulation; }
-.touch #status { flex-wrap: nowrap; overflow: hidden; max-width: min(56vw, 300px); }   /* (one row: on a phone one chip at a time in words - hudinfo.js drawStatus) */
-.touch #status.all { flex-wrap: wrap; overflow: visible; }
-.touch .hchip { padding: 0 6px; }
-
-/* the robbery, train, bus, ferry, taxi and custody bars: top centre (upright, in the corner's column under the status) */
-#hud-msg { display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-#hud-msg:not(:has(> :not(.hidden))) { display: none; }
-body:not(.portrait) #hud-msg { position: fixed; left: calc(var(--sl) + var(--map) + 250px); right: calc(var(--sr) + 340px); top: var(--st); }
-@media (max-height: 430px) { body:not(.touch) #bank { display: none; } }
-#hud-msg > * { max-width: 100%; box-sizing: border-box; }
-body.portrait #hud-msg { align-items: flex-start; }
-body.touch #hud-msg { position: static; align-items: flex-start; width: min(100%, 380px); }
-@media (max-height: 430px) { body:not(.touch) #hud-msg { position: static; align-items: flex-start; width: min(100%, 380px); } body:not(.touch) #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; } body:not(.touch) #weapon { min-height: 0; padding: 2px var(--s2); } body:not(.touch) #w-icon canvas { width: 48px; height: 24px; } }   /* (on a phone in the corner's column, under the status: the top centre stays the view's) */
-
-/* the job (UI-4): one card under the vitals - the job, the call, step N of M, the objective, how far, the time left; a
-   one-line chip after a few seconds; big again when the step changes or on a tap (client/hudinfo.js) */
-#job { position: relative; flex: none; z-index: 6; box-sizing: border-box; pointer-events: auto; cursor: pointer; touch-action: manipulation; border-radius: var(--r2); color: var(--cream); animation: enter var(--t2) var(--ease); transition: border-color var(--t2) var(--ease), box-shadow var(--t2) var(--ease); }
-#job.big { width: min(330px, calc(33vw - var(--sl) - 6px)); padding: 9px 13px; }
-#job.chip { display: flex; height: auto; align-items: center; gap: var(--s2); max-width: min(340px, calc(100vw - var(--sl) - var(--sr))); min-height: 34px; padding: var(--s1) var(--s3); }
-#job .jc-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); white-space: nowrap; font: 700 var(--fs-3) var(--pixel); letter-spacing: 1px; color: var(--cream); }
-#job .jc-h .jc-s { font-size: var(--fs-1); color: var(--gold); }
-#job .jc-t { flex: none; color: var(--cream); }
-#job.hot .jc-t { color: var(--danger); }
-#job.big .jc-o { margin-top: 2px; font: 600 var(--fs-3) var(--ui); line-height: 1.2; color: var(--cream); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-#job .jc-d { display: flex; justify-content: flex-start; align-items: center; gap: var(--s2); font: 700 var(--fs-3) var(--pixel); color: var(--cream); }
-#job.big .jc-d { flex-wrap: wrap; row-gap: 2px; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--plate-line); }
-#job.big .jc-d > span { display: inline-flex; flex: none; flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; }
-#job.big .jc-d > :is(.jc-t, .jc-m) + :is(.jc-t, .jc-m) { padding-left: var(--s2); border-left: 1px solid var(--plate-line); }
-#job.big .jc-d :is(.jc-paid, .jc-s) { margin-left: auto; font-size: var(--fs-1); color: var(--gold); }
-#job.big .jc-d .jc-paid { font-size: var(--fs-3); color: var(--money); }
-#job .pi24 { width: 24px; height: 24px; }
-.touch #job .pi24 { width: 16px; height: 16px; }
-#job.chip .jc-o { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--fs-3) var(--ui); }
-#job.chip .jc-d { flex: none; }
-#job .jc-s { flex: none; color: var(--gold); }
-#job .jc-dot { flex: none; display: grid; place-items: center; }
-#job .jc-paid { color: var(--money); font: 700 var(--fs-3) var(--pixel); }
-#job.new { box-shadow: 0 0 0 1px var(--ink), 0 0 16px var(--gold-a); animation: jobnew .8s var(--ease) 2; }
-@keyframes jobnew { 50% { border-color: var(--cream); box-shadow: 0 0 0 1px var(--ink), 0 0 22px var(--gold-a); } }
-#job.paid { border-color: var(--money); }
-#job .jc-h > span:first-child { min-width: 0; overflow: hidden; text-overflow: clip; }   /* (clip: the pixel face has no ellipsis glyph) */
-.touch #job.chip { min-height: var(--tap); }
-.touch:not(.portrait) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
-.touch #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; pointer-events: none; }   /* (big for a few seconds, then a chip: a thumb on the move stick isn't caught by it) */
-.touch #job.big .jc-o { font-size: var(--fs-3); }
-.touch #job.big .jc-d { margin-top: var(--s1); }
-body.portrait.touch #job.big { width: calc(100% - var(--trw)); }
-/* (upright the top-right column runs down beside the column's top - the status, a bar, the job card keep left of it) */
-body.portrait.touch #hud { --trw: 168px; }
-body.portrait.touch :is(#status, #job.chip) { max-width: calc(100% - var(--trw)); }
-body.portrait.touch #hud-msg { width: calc(100% - var(--trw)); }
-body.portrait.touch #job.big .jc-o { -webkit-line-clamp: 1; }
-/* (UI-9, UIC-14: upright the card is two short lines - the job, then the clock and how far - in the small pixel size) */
-body.portrait.touch #job.big .jc-h { font-size: var(--fs-2); letter-spacing: 0; }
-body.portrait.touch #job.big .jc-d { flex-wrap: nowrap; gap: 6px; margin-top: 3px; padding-top: 3px; font-size: var(--fs-2); }
-body.portrait.touch #job.big .jc-d > :is(.jc-t, .jc-m) + :is(.jc-t, .jc-m) { padding-left: 6px; }
-body.portrait.touch #job.big .jc-d > span { gap: 3px; }
-body.portrait.touch #job.big .jc-d .jc-s { display: none; }
-body.portrait.touch #job.chip { padding: var(--s1) var(--s2); gap: 6px; }
-body.portrait.touch #job.chip .jc-o { font-size: var(--fs-2); }   /* (upright one line still - the middle third stays clear - in the small size, so more of the objective fits) */
-body.portrait.touch #job.chip .jc-d { font-size: var(--fs-2); color: var(--gold); }
-@media (max-height: 430px) { #job.big .jc-o { -webkit-line-clamp: 1; } }
-body.dead #job { display: none !important; }
-/* (upright with a bar up - a robbery, a ride, custody - the big card short: clear of the middle - UI-5) */
-.touch #hud:has(#hud-msg > :not(.hidden)) #job.big .jc-o, .touch #hud:has(#rob:not(.hidden)) #job.big .jc-o { display: none; }
-
-/* the icon buttons (the owner 2026-10-30: "the top menu bar doesn't need 'menu, phone, map' text, a simple icon should
-   work"; round, as U3): phone, map, the menu in the corner - the icon alone; on a keyboard the key's badge on the
-   corner (P, M, Esc); 44 px or more to tap */
-#hud-btns { display: flex; gap: var(--gap); pointer-events: auto; }
-#hud-btns button, #b-dev { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; border-radius: var(--r3); color: var(--cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: background var(--t1) var(--ease), transform var(--t-pop) var(--ease), border-color var(--t1) var(--ease), color var(--t1) var(--ease), box-shadow var(--t1) var(--ease); }
-#hud-btns button:hover, #b-dev:hover { background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
-#hud-btns button:active, #b-dev:active { transform: scale(var(--press)); background: var(--navy3); }
-#hud-btns button:focus-visible, #b-dev:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* the system buttons (the zone map: one row - phone, map, chat, menu - 44 px; icons alone, each named for a screen
+   reader and a tooltip; on a keyboard the key's badge on the corner: P, M, T, Esc) */
+#hud-btns { display: flex; gap: var(--s1); pointer-events: auto; }
+#hud-btns button { position: relative; display: grid; place-items: center; width: var(--nav); height: var(--nav); padding: 0; color: var(--pad-cream); cursor: pointer; touch-action: manipulation; pointer-events: auto; transition: transform var(--t-pop) var(--ease), background var(--t1) var(--ease); }
+#hud-btns button:hover { background: var(--navy3); }
+#hud-btns button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 2px; }
 #hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
 #hud-btns .kchip { position: absolute; right: -7px; top: -7px; bottom: auto; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
 .touch #hud-btns { --ic: 24px; }
-/* the debug button (a playtest tool, open to everyone): quiet, beside the minimap's foot - apart from the game's own */
-#b-dev { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(34px + var(--gap) + var(--map) - 36px); width: 36px; height: 36px; opacity: .7; color: var(--dim); border-color: var(--plate-line); }
-#b-dev svg { display: block; width: 18px; height: 18px; }
-#b-dev.on { opacity: 1; color: var(--gold); }
-.touch #b-dev { width: var(--tap); height: var(--tap); top: calc(34px + var(--gap) + var(--map) - var(--tap)); }
-/* the chat button (client/chat.js), touch's only - a keyboard has T, a pad the phone's Messages app: a round button in the
-   top-left cluster, beside the clock on a phone on its side (the debug button after it), beside the minimap upright */
-#b-chat { display: none; pointer-events: auto; width: var(--nav); height: var(--nav); }
-body.touch #b-chat { display: grid; }
-.touch:not(.portrait) #hud-tl { grid-template-columns: var(--map) auto auto 1fr; }
-.touch:not(.portrait) #b-chat { grid-area: 1 / 3; }
-.touch:not(.portrait) #b-dev { grid-area: 1 / 4; }
-.touch:not(.portrait) #status { grid-area: 2 / 2 / 3 / 5; }
-body.touch.portrait #b-chat { position: absolute; left: calc(var(--map) + var(--gap)); top: calc(34px + var(--gap)); }   /* (upright: beside the minimap's top, the debug button beside its foot - the column under it stays the notes') */
+#b-chat { pointer-events: auto; }
+body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-talk) */
+/* chat by the thumb (the owner, 11-12: the top row was a stretch for something used often): a tap the chat sheet, held the
+   emotes - in the bottom band just right of the move stick's rest on its side, over the move stick's zone upright */
+#b-talk { display: none; }
+body.touch #b-talk { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 134px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
+body.touch #b-talk:active { transform: scale(var(--press)); }
+body.portrait.touch #b-talk { left: max(16px, env(safe-area-inset-left)); bottom: calc(50% + 8px); }
 
-/* what you have: the cash (a robbery's hot money under it), the bank, the vehicle chip, the stars, what you hold */
-#money { position: relative; font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--money); text-shadow: 0 2px 0 var(--ink); }
-/* the money's float (UIC-20 02): +$250 rising off the cash as it counts, gone in 600 ms (above it: clear of the bars' numbers) */
+/* the plate: health, armor, stamina - the icon, the segmented bar, the number - then the cash and the stars */
+#hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 10px; box-sizing: border-box; min-width: var(--trw); padding: 8px 10px; }
+#hud-stat { pointer-events: none; }
+#vitals { display: flex; flex-direction: column; gap: 4px; }
+.vrow { display: flex; align-items: center; gap: 6px; }
+.vrow.hidden { display: none; }
+/* (the owner's minimal HUD: stamina only when it matters - full a moment, its row folds away; spent, back at once) */
+.vrow.st { max-height: 24px; overflow: hidden; transition: max-height var(--t2) var(--ease), opacity var(--t2) var(--ease); }
+#vitals.st-rest .vrow.st { max-height: 0; opacity: 0; transition-duration: var(--t3); }
+#vitals.st-rest { row-gap: 0; }
+.vrow .vl { display: none; }
+.vrow b { flex: none; min-width: 34px; font: 700 var(--fs-3) var(--pixel); line-height: 1; text-align: right; color: var(--pad-cream); }
+#purse { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; align-self: stretch; justify-content: center; }
+/* the bars: a near-black track, the fill in segments (a 2 px gap every tenth) - health red, armor blue, stamina gold */
+.vbar { position: relative; flex: 1; min-width: 0; height: 12px; overflow: hidden; background: var(--pad-ink); border-radius: 0; box-shadow: inset 0 0 0 2px var(--pad-ink); }
+.vbar::after { content: ''; position: absolute; inset: 2px; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 2px), var(--pad-ink) calc(10% - 2px) 10%); pointer-events: none; }
+.vbar .fill { position: absolute; left: 2px; top: 2px; bottom: 2px; width: 100%; max-width: calc(100% - 4px); border-radius: 0; transition: width var(--t0); }
+/* a hit (UIC-20 03): what was lost stays white a moment, then drains in 400 ms (client/hud.js damage) */
+.vbar .lag { position: absolute; left: 2px; top: 2px; bottom: 2px; width: 100%; max-width: calc(100% - 4px); background: var(--white); border-radius: 0; transition: width var(--t-drain) var(--ease); }
+.vbar .lag.hit { transition: none; }
+.vrow.hp .vbar { background: var(--pad-hp-d); } .vrow.ar .vbar { background: var(--pad-ar-d); } .vrow.st .vbar { background: var(--pad-st-d); }
+.fill.hp { background: var(--pad-hp); } .fill.hp.low { animation: hplow .6s steps(2) infinite; }
+@keyframes hplow { 50% { opacity: .55; } }
+.fill.ar { background: var(--pad-ar); }
+.fill.st { background: var(--pad-st); }
+.touch #hud-stat { padding: 6px 8px; column-gap: 8px; --ic: 16px; }
+.touch .vbar { height: 10px; } .touch .vrow b { min-width: 26px; font-size: var(--fs-2); }
+/* (a phone on its side and a short window: the plate beside the row, as short as the row - the bars left, the cash and
+   the stars right; upright the cash under the bars) */
+.touch:not(.portrait) #hud-stat { width: auto; grid-template-columns: 112px auto; min-height: var(--nav); padding: 4px 8px; }
+.touch:not(.portrait) #vitals { gap: 3px; }
+.touch:not(.portrait) #money { font-size: var(--fs-2); }
+@media (max-width: 800px) { .touch:not(.portrait) #hud-stat { grid-template-columns: 88px auto; } .touch:not(.portrait) .vrow b { display: none; } }   /* (a small phone on its side: the bars without their numbers - the objective keeps some room) */
+/* (on its side the notices reach under the plate, as far as the switches' row - client/touchslots.js --u-l) */
+.touch:not(.portrait) #toasts { align-self: flex-start; align-items: flex-start; width: calc(100vw - var(--sl) - var(--map) - 4 * var(--gap) - var(--u-l, 260px)); }
+.touch:not(.portrait) #hud:has(#vchip:not(.hidden)) #toasts { width: 100%; }   /* (the vehicle's readout is there) */
+@media (max-height: 430px) { body:not(.touch) #hud-stat { min-width: 0; grid-template-columns: 112px auto; padding: 4px 8px; } }
+body.portrait.touch #hud-stat { width: var(--trw); grid-template-columns: 1fr; row-gap: 4px; }
+/* (upright on touch the row first - three buttons, right of the top-centre band where a centred camera sits: UI-5 - and
+   the plate under it, below the band) */
+body.portrait.touch #hud-tr > #hud-stat { order: 0; }
+body.portrait.touch #purse { flex-direction: row; justify-content: space-between; align-items: center; }
+
+/* what you have: the cash (a robbery's hot money under it), the stars, the vehicle chip, what you hold */
+#money { position: relative; font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--pad-cash); text-shadow: 2px 2px 0 var(--pad-ink); }
+.touch #money { font-size: var(--fs-3); }
+/* the money's float (UIC-20 02): +$250 rising off the cash as it counts, gone in 600 ms */
 #cash-up { position: absolute; right: 0; bottom: 100%; margin-bottom: 6px; opacity: 0; pointer-events: none; white-space: nowrap; font: 700 var(--fs-3) var(--pixel); color: var(--money-hi); text-shadow: var(--halo-s); }
 #cash-up.neg { color: var(--danger-hi); }
 #cash-up.go { animation: cashup 1s var(--ease) both; }
 @keyframes cashup { 0% { opacity: 0; transform: translateY(6px); } 15% { opacity: 1; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-6px); } 100% { opacity: 0; transform: translateY(-14px); } }
 #hot { display: block; font: 700 var(--fs-2) var(--pixel); line-height: 1.15; letter-spacing: 1px; color: var(--heat); text-shadow: var(--halo-s); animation: hot-pulse 1.6s ease-in-out infinite; }   /* (a robbery's takings, not spendable till they're cleaned: server hotmoney.js) */
 @keyframes hot-pulse { 50% { color: var(--gold); } }
-#bank { display: flex; align-items: center; gap: 4px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); --ic: 16px; }
-#bank .pi24 { width: 16px; height: 16px; }
-#vchip { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 10px; row-gap: 0; padding: 4px 10px 5px; border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); white-space: nowrap; animation: enter var(--t2) var(--ease); }
-#vchip > b { grid-column: 1 / -1; font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--gold); }
-#vchip .vc-spd { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--cream); }
-#vchip .vc-spd small { font: 700 var(--fs-1) var(--pixel); color: var(--dim); }
-#vchip .vc-alt { font: 700 var(--fs-3) var(--pixel); color: var(--info); }
-#vchip .vc-hp { display: flex; align-items: center; gap: 4px; --ic: 16px; }
-#vchip .vc-hp > i { position: relative; display: block; width: 52px; height: 8px; border-radius: var(--r1); background: var(--track); box-shadow: inset 0 0 0 1px var(--ink); overflow: hidden; }
-#vchip .vc-hp > i::before { content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 100%); background: var(--danger); }
-#vchip .vc-hp.low > i::before { animation: hplow .6s steps(2) infinite; }
-#stars { display: none; gap: 2px; padding: 3px 8px; border-radius: var(--r2); line-height: 0; font-size: var(--fs-4); }
+/* the stars (the wanted level): pixel stars in the plate, the lit ones gold - shown while the police look for you */
+#stars { display: none; gap: 1px; line-height: 0; --ic: 18px; }
 #stars.wanted, #stars.recent { display: flex; animation: enter var(--t2) var(--ease); }
 #stars.recent { opacity: .55; transition: opacity var(--t3); }
 #stars span { display: block; }
 #stars .flash { animation: starblink .35s steps(2) infinite; }
 @keyframes starblink { 50% { opacity: .35; } }
-.touch #stars { padding: 2px 6px; --ic: 16px; }
+.touch #stars { --ic: 14px; }
 @keyframes starflash { 50% { color: var(--danger); } }
-#weapon { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s2); min-height: 52px; padding: 3px 12px 3px var(--s2); border-radius: var(--r2); pointer-events: auto; cursor: pointer; }
+#vchip { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 10px; row-gap: 0; padding: 4px 10px 5px; font: 700 var(--fs-3) var(--pixel); white-space: nowrap; animation: enter var(--t2) var(--ease); }
+#vchip > b { grid-column: 1 / -1; font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--pad-gold); }
+#vchip .vc-spd { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--pad-cream); }
+#vchip .vc-spd small { font: 700 var(--fs-1) var(--pixel); color: var(--pad-mute); }
+#vchip .vc-alt { font: 700 var(--fs-3) var(--pixel); color: var(--info); }
+#vchip .vc-hp { display: flex; align-items: center; gap: 4px; --ic: 16px; }
+#vchip .vc-hp > i { position: relative; display: block; width: 52px; height: 8px; border-radius: 0; background: var(--pad-hp-d); box-shadow: inset 0 0 0 1px var(--pad-ink); overflow: hidden; }
+#vchip .vc-hp > i::before { content: ''; position: absolute; inset: 0 auto 0 0; width: calc(var(--v) * 100%); background: var(--pad-hp); }
+#vchip .vc-hp.low > i::before { animation: hplow .6s steps(2) infinite; }
+.touch #vchip { padding: var(--s1) var(--s2); font-size: var(--fs-2); }
+.touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
+.touch #vchip .vc-hp > i { width: 36px; }
+.touch #vchip > b { display: none; }   /* (on a phone the readouts only) */
+/* what you hold: with a keyboard or a pad a card bottom right (the picture, its name, the rounds - the next ones a few
+   seconds after a switch: the number keys, a click); on touch the weapon button, a slot by the right thumb (UI-6:
+   client/touchslots.js sets --sx/y/w/h and data-slot while the slot holds it; a tap the next weapon, held the picker) */
+#weapon { position: absolute; right: var(--sr); bottom: var(--sb); display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: var(--s2); min-height: 52px; padding: 6px 12px 6px var(--s2); pointer-events: auto; cursor: pointer; }
 #w-icon canvas { width: 96px; height: 48px; image-rendering: pixelated; display: block; filter: drop-shadow(var(--lift)); }
 #w-info { text-align: right; }
-#w-name { font: 700 var(--fs-2) var(--ui); letter-spacing: .5px; text-transform: uppercase; color: var(--dim); }
-#w-ammo { font: 700 var(--fs-5) var(--pixel); line-height: 1; color: var(--cream); }
-#w-quick { grid-column: 1 / -1; display: flex; margin: 3px -12px -3px calc(-1 * var(--s2)); border-top: 1px solid var(--plate-line); }
+#w-name { font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; text-transform: uppercase; color: var(--pad-cream); }
+#w-ammo { font: 700 var(--fs-4) var(--pixel); line-height: 1.1; color: var(--pad-cream); }
+#w-quick { grid-column: 1 / -1; display: flex; margin: 3px -12px -6px calc(-1 * var(--s2)); border-top: 2px solid var(--pad-ink); }
 #w-quick:empty { display: none; }
 #weapon:not(.wq-on):not(:hover) #w-quick { display: none; }   /* (UI-9: a few seconds after a switch, or under the pointer) */
-#w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 1px solid var(--plate-line); background: transparent; cursor: pointer; }
+#w-quick .wq { position: relative; flex: 1; display: grid; place-items: center; min-width: 56px; height: 34px; padding: 0; border: 0; border-left: 2px solid var(--pad-ink); background: transparent; cursor: pointer; }
 #w-quick .wq:first-child { border-left: 0; }
 #w-quick .wq:hover { background: var(--gold-t); }
 #w-quick .wq :is(img, canvas) { width: 48px; height: 24px; image-rendering: pixelated; }
 #w-quick .kchip { position: absolute; left: 3px; top: 3px; min-width: 14px; height: 14px; padding: 0 2px; font-size: var(--fs-1); box-shadow: none; }
 #weapon.compact { min-height: 0; padding: 2px var(--s2); }
-body:not(.touch) #weapon.compact { display: none; }   /* (UI-9, the owner's minimal HUD: fists out and nothing going on, no weapon plate - it comes with a weapon, a fight or the police) */
+body:not(.touch) #weapon.compact { display: none; }   /* (the owner's minimal HUD: fists out and nothing going on, no card - it comes with a weapon, a fight or the police) */
 #weapon.compact #w-icon canvas { width: 48px; height: 24px; }
 #weapon.compact #w-name { font-size: var(--fs-2); }
-.touch #bank { display: none; }
-.touch #stars { font-size: var(--fs-3); }
-/* on touch the weapon plate is the weapon button, a slot above CAR / ACT (UI-6: client/touchslots.js sets --sx/y/w/h and
-   data-slot while the slot holds it): the icon and the rounds, drawn like the touch buttons round it; a tap the next
-   weapon, held the picker (client/main.js) */
-.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0 var(--s2); border: 1px solid var(--hair); background: var(--disc); box-shadow: none; border-radius: var(--r2); pointer-events: auto; cursor: pointer; touch-action: none; }
-.touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
-.touch #w-icon { display: none; }   /* (the sprite: the desktop's plate; on touch the glyph - the owner, 11-03) */
 #w-glyph { display: none; }
-.touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--cream); --ic: 30px; }
-.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 22px; }   /* (the silhouette over 12 | 48: side by side, the card squeezed the glyph to a speck) */
-.touch #weapon:active { transform: scale(.94); background: var(--disc-hi); }
-.touch #w-quick { display: none; }
-@media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #hud-stat { grid-template-columns: minmax(124px, 1fr); } body:not(.touch) #purse { align-items: flex-end; padding: 2px 0 0; border-left: 0; border-top: 1px solid var(--plate-line); } }
-/* (a phone: the vehicle's plate one line - the speed and its condition; on its side and upright the name stays off) */
-.touch #vchip { grid-template-columns: auto auto; } .touch #vchip .vc-spd { font-size: var(--fs-4); } .touch #vchip .vc-hp > i { width: 36px; }
-.touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--cream); white-space: nowrap; }   /* (12 | 48 in the HUD's number face) */
-.touch #w-info { text-align: center; white-space: nowrap; }
 #w-swap { display: none; }
-body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; right: 1px; transform: translateY(-50%); --ic: 12px; color: var(--cream); opacity: .7; }   /* (more than one to switch to: a small chevron - a tap on the card is the switch) */   /* (more than one to switch to: the swap mark, UIC-14's) */
-.touch #vchip { flex-direction: column; align-items: flex-end; gap: 0; padding: var(--s1) var(--s2); font-size: var(--fs-2); }
-.touch #vchip :is(.vc-spd, .vc-alt) { font-size: var(--fs-2); }
-.touch #vchip > b { display: none; }   /* (on a phone the readouts only: the vehicle is under your thumb - the arc's small buttons are under the column on its side) */
-body.portrait.touch #hud-tr { max-width: calc(48vw - var(--sr)); }
-body.portrait.touch #hud-btns { gap: 4px; }   /* (three keys clear of the top-centre band, where a centred camera sits) */
+.touch #weapon { position: fixed; left: var(--sx); top: var(--sy); right: auto; bottom: auto; width: var(--sw); height: var(--sh); min-height: 0; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; padding: 0 var(--s1); pointer-events: auto; cursor: pointer; touch-action: none; }
+.touch #weapon:not([data-slot]), .touch #w-name, .touch #weapon.compact #w-info { display: none; }
+.touch #w-icon { display: none; }   /* (the sprite: the desktop's card; on touch the glyph - the owner, 11-03) */
+.touch #w-glyph { display: grid; place-items: center; flex: none; color: var(--pad-cream); --ic: 30px; }
+.touch #weapon:has(#w-ammo:not(:empty)) #w-glyph { --ic: 22px; }
+.touch #weapon:active { transform: scale(.94); }
+.touch #w-quick { display: none; }
+.touch #w-ammo { font: 700 var(--fs-2) var(--pixel); letter-spacing: 0; color: var(--pad-cream); white-space: nowrap; }
+.touch #w-info { text-align: center; white-space: nowrap; }
+body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; right: 1px; transform: translateY(-50%); --ic: 12px; color: var(--pad-gold); }   /* (more than one to switch to: a small chevron) */
+@media (max-height: 430px) { body:not(.touch) #w-quick { display: none; } body:not(.touch) #weapon { min-height: 0; padding: 2px var(--s2); } body:not(.touch) #w-icon canvas { width: 48px; height: 24px; } body:not(.touch) #w-ammo { font-size: var(--fs-3); } }
 
-/* the notes: one line each, two at most, in and out on their own (hud.js toast); a long one cut short, the whole of it
-   a tap away in the phone's Log. Bottom left on a desktop; top centre on a phone on its side; upright in the corner's
-   column under the job card (not while it's big, nor with a bar up: they wait in the Log, clear of the middle) */
-#toasts { position: static; z-index: 7; display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 360px); pointer-events: none; }
-.toast { position: relative; display: flex; align-items: center; gap: var(--s2); max-width: 100%; box-sizing: border-box; padding: 2px 12px 2px 4px; border-color: var(--steel); border-radius: var(--r2); font: 600 var(--fs-3) var(--ui); line-height: 1.25; color: var(--cream); white-space: nowrap; animation: toastin var(--t1) var(--ease); transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease); }
-@keyframes toastin { from { opacity: 0; transform: translateX(-8px); } }
-.toast > .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.toast.good { border-color: var(--money); } .toast.bad { border-color: var(--danger); } .toast.warn { border-color: var(--heat); }
-.touch .toast { --ic: 16px; }
-.toast.more { pointer-events: auto; cursor: pointer; }
-.toast.more::after { content: 'LOG ›'; flex: none; font: 400 var(--fs-1) var(--pixel); color: var(--gold); }
-.toast.out { transform: none; }
-#toasts .toast:nth-child(n+3) { display: none; }
-.touch .toast { max-width: min(40vw, 380px); padding: 3px var(--s2) 3px 4px; font-size: var(--fs-2); }
-.touch #toasts { width: min(100%, 380px); }
-.touch:not(.portrait) #toasts { width: min(260px, calc(33vw - var(--sl) - 6px)); }
-.touch .toast { max-width: 100%; }
-.touch #toasts .toast:nth-child(n+2) { display: none; }   /* (on a phone one at a time, the newest: the column stays clear of the middle and the move stick) */
-.touch #hud:has(#job.big:not(.hidden)) #toasts, .touch #hud:has(#hud-msg > :not(.hidden)) #toasts { display: none; }
-@media (max-height: 380px) { .touch #hud:has(#cruiser-hint:not(.hidden)) #toasts { display: none; } }   /* (a small phone on its side: the cruiser's hint says it) */
-
-/* the low slot: the police cruiser's hint, the prompt, the hint strip - bottom centre (on touch between the move stick
-   and the arc on its side, above the arc upright); with a keyboard or a pad the prompt is by you (hudinfo.js frame) */
+/* ---- the low slot: the cards and the prompt - the police cruiser's hint, the first goal's line and a tip, the prompt,
+   a robbery's bar - bottom centre (on touch between the move stick and the cluster on its side, above the thumbs upright) */
 #hud-low { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); display: flex; flex-direction: column; align-items: center; gap: var(--s2); pointer-events: none; }
-.touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 134px); right: var(--lo-r, 338px); bottom: var(--lo-b, 76px); max-width: none; }   /* (client/touchslots.js sets the room) */
+.touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-r, 338px); bottom: var(--lo-b, 82px); max-width: none; }   /* (client/touchslots.js sets the room) */
 body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: calc(50% + 28px); bottom: auto; margin: 0; }
-#cruiser-hint { font: 700 var(--fs-3) var(--ui); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
+#cruiser-hint { font: 700 var(--fs-3) var(--pixel); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
 .touch #cruiser-hint { font-size: var(--fs-2); }
-/* the prompt: one at a time, the key chip then what it does (no colon); in while you're in range, out when you leave */
-#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 16px 6px 6px; border-radius: var(--r2); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream); animation: prpop var(--t-pop) var(--ease);
+/* the prompt: the key (its prompt tile: client/glyphs.js) then what it does; in while you're in range, out when you
+   leave. On touch the button it names says it (ACT: ENTER, TALK, BUY...; its long press the whole prompt) - no chip,
+   but for a prompt no button does (a ride's note: hud.js .btn) */
+#helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; font: 700 var(--fs-3) var(--pixel); line-height: 1.2; color: var(--pad-cream); animation: prpop var(--t-pop) var(--ease);
   transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
 #helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; animation: none; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
+.touch #helpbox.btn { display: none; }
 /* (UIC-20 06: in at 90%, up to 100% in 120 ms; the key's ring fills as you press it; a green tick when it's done) */
 @keyframes prpop { from { opacity: 0; transform: scale(.9); } }
-#helpbox.hit > :is(.g-key, .g-touch, .g-pad) { animation: keyhit var(--t-pop) var(--ease); box-shadow: 0 0 0 3px var(--gold), inset 0 -3px 0 var(--dim); }
+#helpbox.hit > :is(.g-key, .g-touch, .g-pad, .g-tile) { animation: keyhit var(--t-pop) var(--ease); }
 @keyframes keyhit { from { transform: scale(var(--press)); } }
 #helpbox .pr-tick { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); z-index: 1; --ic: 32px; animation: prpop var(--t-pop) var(--ease); }
-.touch #helpbox .pr-tick { left: 4px; }
-#helpbox.done { border-color: var(--money); }
+#helpbox.done { box-shadow: inset 0 0 0 2px var(--pad-cash), var(--pn-drop); }
 #helpbox > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
 #helpbox > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
 body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 .touch #helpbox { font-size: var(--fs-3); padding: 4px 12px 4px 4px; }
-.touch #helpbox > span:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }   /* (UI-9: two lines at most - the button says the rest) */
-.touch #helpbox > .g-touch { height: 34px; min-width: 44px; font-size: var(--fs-2); }
-/* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks): the key chip red with a "!" on its corner,
-   a felony ringed as well - the colour, a mark and a ring, so it reads without the colour */
-#helpbox.crime > :is(.g-key, .g-touch, .g-pad) { position: relative; }
+.touch #helpbox > span:last-child { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* what Act would do is a crime (server players.js: me.pcr; hud.js crimeMarks): the key red with a "!" on its corner, a
+   felony ringed as well - the colour, a mark and a ring, so it reads without the colour */
+#helpbox.crime { box-shadow: inset 0 0 0 2px var(--danger), var(--pn-drop); }
+#helpbox.crime > :is(.g-key, .g-touch, .g-pad, .g-tile) { position: relative; }
 #helpbox.crime > :is(.g-key, .g-touch) { background: var(--danger); color: var(--ink); box-shadow: inset 0 -3px 0 var(--blood); }
-#helpbox.crime > .g-pad { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--danger); }
-#helpbox.crime > :is(.g-key, .g-touch, .g-pad)::after, #tbtns button.pulse.crime::after { content: '!'; position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: var(--r3); background: var(--gold); color: var(--ink); border: 1.5px solid var(--ink); font: 700 var(--fs-2)/13px var(--ui); text-align: center; text-shadow: none; letter-spacing: 0; }
-#tbtns button.pulse.crime::after { top: -3px; right: -3px; width: 18px; height: 18px; line-height: 15px; }
-#helpbox.felony > :is(.g-key, .g-touch) { outline: 2px solid var(--danger); outline-offset: 1px; }
+#helpbox.crime > :is(.g-pad, .g-tile) { box-shadow: 0 0 0 2px var(--pad-ink), 0 0 0 4px var(--danger); }
+#helpbox.crime > :is(.g-key, .g-touch, .g-pad, .g-tile)::after, #tbtns button.pulse.crime::after { content: '!'; position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: var(--r3); background: var(--pad-gold); color: var(--pad-ink); border: 2px solid var(--pad-ink); font: 700 var(--fs-2)/13px var(--pixel); text-align: center; text-shadow: none; letter-spacing: 0; }
+#helpbox.felony > :is(.g-key, .g-touch, .g-tile) { outline: 2px solid var(--danger); outline-offset: 1px; }
 /* Safety mode held it back (server safety.js; hud.js safetyNudge): the key blinks, a tab on the plate's top edge */
 #helpbox { position: relative; }
-#helpbox.armed::before { content: 'PRESS AGAIN'; position: absolute; right: var(--s2); top: -12px; padding: 0 5px; border-radius: var(--r1); background: var(--danger); color: var(--ink); border: 1px solid var(--ink); font: 700 var(--fs-2)/18px var(--ui); letter-spacing: .5px; pointer-events: none; }
+#helpbox.armed::before { content: 'PRESS AGAIN'; position: absolute; right: var(--s2); top: -14px; padding: 0 5px; background: var(--danger); color: var(--pad-ink); border: 2px solid var(--pad-ink); font: 700 var(--fs-2)/18px var(--pixel); letter-spacing: .5px; pointer-events: none; }
 .touch #helpbox.armed::before { content: 'TAP AGAIN'; }
-#helpbox.armed > :is(.g-key, .g-touch, .g-pad) { animation: armblink .5s steps(2, jump-none) infinite; }
+#helpbox.armed > :is(.g-key, .g-touch, .g-pad, .g-tile) { animation: armblink .5s steps(2, jump-none) infinite; }
 @keyframes armblink { 50% { filter: brightness(1.6); } }
+
+/* the prompt tiles (Kenney's Input Prompts Pixel 16, CC0 - client/glyphs.js): 16 px drawn at 2x, never smoothed; TAB and
+   SHIFT twice as wide; in the prompt and the hint strips, at 1x in small words */
+.g-tile { display: inline-grid; place-items: center; flex: none; width: 32px; height: 32px; vertical-align: middle; }
+.g-tile.wide { width: 64px; }
+.g-tile img { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+#hints .g-tile, .cht-l .g-tile, .ph-hint .g-tile { width: 32px; height: 32px; } #hints .g-tile.wide { width: 64px; }
+
 /* the first-time hint strip: the device's own keys, buttons or slot names (hudinfo.js HINTS) */
-#hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s1) var(--s4); padding: 5px var(--s3); border-radius: var(--r2); font: 700 var(--fs-3) var(--ui); color: var(--cream); text-shadow: var(--halo-s); transition: opacity var(--t3) var(--ease), visibility 0s; }
+#hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s1) var(--s4); padding: 4px var(--s3); font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream); transition: opacity var(--t3) var(--ease), visibility 0s; }
 #hints.off { opacity: 0; visibility: hidden; transition: opacity var(--t3) var(--ease), visibility 0s var(--t3); }
 #hints .hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 134px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); font-size: var(--fs-2); gap: 2px 10px; }
+.touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); gap: 2px 10px; }
 .touch #hints .g-touch { height: 22px; padding: 0 var(--s1); }
-/* a touch button named in words elsewhere (the prompt, the hint strips, a cue): the button as it looks - its icon on a
-   round plate (UI-8) */
-.g-touch.g-ico, #hints .g-touch.g-ico, #helpbox > .g-touch.g-ico { display: inline-grid; place-items: center; width: 30px; height: 30px; min-width: 0; padding: 0; border-radius: var(--r3); background: var(--disc-solid); color: var(--cream); border: 1px solid var(--hair); box-shadow: none; }   /* (the button as it looks: the touch buttons' disc and glyph) */
-.g-ico .pi24 { width: 16px; height: 16px; }
-.touch:not(.portrait) #hints .g-touch.g-ico { width: 26px; height: 26px; }
-#helpbox > .g-touch.g-ico { width: 38px; height: 38px; background: var(--act-disc); border-color: transparent; color: var(--ink); }   /* (the prompt's button: the gold disc it lights up as) */
-#helpbox > .g-touch.g-ico .pi24 { width: 24px; height: 24px; }
-#helpbox.crime > .g-touch.g-ico { background: var(--fire-disc); border-color: transparent; color: var(--ink); }
-.bigkey .g-touch.g-ico { width: 1.6em; height: 1.6em; } .bigkey .g-ico .pi24 { width: 24px; height: 24px; }
+.touch #hints .hint { white-space: normal; }
+.touch:not(.portrait) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--lo-b, 82px) + 40px); }   /* (the first-time strip under the cards: the card over it) */
 body.portrait.touch #hints .hint { white-space: normal; }
 body.portrait.touch #hints { left: var(--sl); right: var(--lo-c, 196px); bottom: calc(var(--sb) + 150px); margin: 0; flex-direction: column; align-items: flex-start; gap: 2px; }
 /* (on a desktop the hint line bottom left - UIC-11/12 - the prompt over it only where the two would meet) */
 body:not(.touch) #hints { left: var(--sl); right: auto; margin: 0; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: nowrap; overflow: hidden; justify-content: flex-start; }
 body:not(.touch) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--sb) + 52px); }
+/* a touch button named in words elsewhere (the hint strips, the Guide, a first-goal line, a cue): the button as it looks
+   - its color, its plain symbol or its word (client/touchicons.js faceChip) */
+.g-touch.g-face, #hints .g-touch.g-face, #helpbox > .g-touch.g-face { display: inline-grid; place-items: center; flex: none; min-width: 30px; height: 30px; padding: 0 6px; box-sizing: border-box; border-radius: var(--r3); border: 0; background: var(--face, var(--pad-navy)); color: var(--white); box-shadow: inset 0 2px 0 var(--pad-hi), inset 0 -3px 0 var(--pad-lo); font: 700 var(--fs-2) var(--pixel); text-shadow: 2px 2px 0 var(--pad-ink); vertical-align: middle; }
+.g-face.g-sw { box-shadow: inset 0 0 0 2px var(--pad-gold); }
+.g-face.g-fire { --face: var(--pad-fire); } .g-face.g-act { --face: var(--pad-act); } .g-face.g-roll { --face: var(--pad-roll); } .g-face.g-car { --face: var(--pad-car); }
+.g-face:has(.sym) { width: 30px; padding: 0; }
+.g-face .sym { width: 24px; height: 24px; }
+#helpbox.crime > .g-touch.g-face { --face: var(--pad-fire); }
+.bigkey .g-touch.g-face { height: 1.6em; min-width: 1.6em; }
 
-#w-carry { position: absolute; right: var(--sr); bottom: var(--sb); font: 700 var(--fs-2) var(--ui); color: var(--gold); text-shadow: var(--halo-s); text-align: right; }
+#w-carry { position: absolute; right: var(--sr); bottom: calc(var(--sb) + 84px); font: 700 var(--fs-2) var(--pixel); color: var(--pad-gold); text-shadow: var(--halo-s); text-align: right; }
 .touch #w-carry { display: none; }
 /* fishing (client/fishing.js; UI-7, the owner 2026-10-26): the big timing cue (STRIKE!, LET GO!) - one line, the key a
    proper key cap at its size; what to do the rest of the time is the prompt's (#helpbox), once */
@@ -570,25 +569,22 @@ body.portrait.touch #fishspot { bottom: auto; top: 36%; height: min(276px, 34vh)
 body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame rate and the lag: Dev Debug Mode only) */
 
 /* a short window with a keyboard or a pad (a laptop's browser half height, a phone with a pad), last so it wins: the
-   prompt in the low slot (no room by you), the status in its short form */
+   prompt and the hint strip along the bottom's middle (what you hold bottom right, chat bottom left), the status short */
 @media (max-height: 430px) {
-  body:not(.touch) #job.big { width: min(260px, calc(33vw - var(--sl) - 6px)); padding: 6px 10px; } body:not(.touch) #job.big .jc-o { font-size: var(--fs-3); }
   body:not(.touch) #helpbox { position: static; transform: none; font-size: var(--fs-3); }
   body:not(.touch) #helpbox.off { transform: translateY(6px); }
-  body:not(.touch) #status { max-width: min(300px, 34vw); flex-wrap: nowrap; overflow: hidden; }
-  body:not(.touch) #job.chip { max-width: min(260px, calc(33vw - var(--sl) - 6px)); }
+  body:not(.touch) #status { max-width: calc(30vw - var(--sl) - 52px); flex-wrap: nowrap; overflow: hidden; }
+  body:not(.touch) #hud:has(#helpbox:not(.off)) #hints { display: none; }   /* (the prompt first: the strip comes back after) */
   body:not(.touch) #fishspot { top: 160px; } body:not(.touch) #rob .rob-bar { width: 80px; } body:not(.touch) #rob span { min-width: 0; font-size: var(--fs-2); }
-  body:not(.touch) #hud:has(#hints:not(.off)) > #hud-low { bottom: calc(var(--sb) + 64px); }
-  /* (the notes in the corner's column under the job, the hint strip and the low slot the bottom's whole width) */
-  body:not(.touch) #toasts { position: static; width: calc(33vw - var(--sl) - 8px); }
-  body:not(.touch) #hints { left: 33vw; right: var(--sr); margin: 0 auto; max-width: none; justify-content: center; }
-  body:not(.touch) #w-ammo { font-size: var(--fs-3); }
-  body:not(.touch) #stars { padding: 2px 6px; --ic: 16px; } body:not(.touch) #hud-stat { padding-top: 4px; padding-bottom: 4px; }
-  body:not(.touch) #hud-low { left: 33vw; right: var(--sr); max-width: none; }
+  body:not(.touch) #hud:has(#hints:not(.off)):not(:has(#helpbox:not(.off))) > #hud-low { bottom: calc(var(--sb) + 96px); }
+  body:not(.touch) #hints { left: 30vw; right: calc(var(--sr) + 232px); margin: 0 auto; max-width: none; justify-content: center; flex-wrap: wrap; }
+  body:not(.touch) #hud-low { left: 30vw; right: calc(var(--sr) + 232px); max-width: none; }
+  body:not(.touch) #rclock { height: 26px; gap: 4px; padding: 0 8px 0 4px; font-size: var(--fs-3); --ic: 16px; }
+  body:not(.touch) #toasts { width: 100%; }
+  body:not(.touch) #toasts .toast:nth-child(n+2) { display: none; }   /* (one note: the status chips are under the clock) */
 }
 @media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #rob > b { display: none; } }
-@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #money { font-size: var(--fs-4); } }
-
+@media (max-height: 430px) and (max-width: 800px) { body:not(.touch) #money { font-size: var(--fs-3); } }
 /* the district's card, and out past the map's edge the warning to turn back (red once the sea holds you back): one line,
    as wide as their words up to the screen less a margin, the big words smaller past it (UI-7: never two lines of them) */
 #district { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 6; opacity: 0; pointer-events: none; text-align: center; font: 700 var(--fs-6) var(--pixel); letter-spacing: 4px; color: var(--cream); text-transform: uppercase; text-shadow: 0 4px 0 var(--ink), var(--halo), 0 0 24px var(--ink); }
@@ -603,15 +599,15 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #district small, #edgewarn small { white-space: normal; text-wrap: balance; }   /* (the small line under them may wrap) */
 
 /* the robbery bar, a train ride's (or a bus', a ferry's, a taxi's), custody's */
-#rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: var(--r2); font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; pointer-events: none; }
-#rob .rob-bar, #trainbar .rob-bar { width: 160px; height: 12px; background: var(--navy3); border-radius: var(--r1); overflow: hidden; box-shadow: inset 0 0 0 1px var(--ink); }
+#rob { position: relative; z-index: 8; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 0; font: 700 var(--fs-2) var(--pixel); color: var(--pad-gold); letter-spacing: 1px; pointer-events: none; }
+#rob .rob-bar, #trainbar .rob-bar { width: 160px; height: 12px; background: var(--navy3); border-radius: 0; overflow: hidden; box-shadow: inset 0 0 0 1px var(--ink); }
 #rob-fill, #tb-fill { display: block; height: 100%; width: 0; background: var(--gold); transition: width var(--t2); }
-#rob span { min-width: 90px; font: 700 var(--fs-3) var(--ui); color: var(--cream); }
+#rob span { min-width: 90px; font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream); }
 #rob.till #rob-fill { background: var(--money); }
 #rob.alarm, #trainbar.alarm { border-color: var(--danger); color: var(--danger); animation: robflash .5s steps(2) infinite; } #rob.alarm span, #trainbar.alarm span { color: var(--danger); }
 @keyframes robflash { 50% { background: var(--blood); } }
-#trainbar { position: relative; z-index: 8; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: wrap; justify-content: center; display: flex; align-items: center; gap: 10px; padding: 6px var(--s3); background: var(--glass); border: 2px solid var(--info); border-radius: var(--r2); font: 700 var(--fs-2) var(--pixel); color: var(--info); letter-spacing: 1px; pointer-events: none; }
-#trainbar span { font: 700 var(--fs-3) var(--ui); color: var(--cream); }
+#trainbar { position: relative; z-index: 8; max-width: calc(100vw - 2 * var(--sl)); flex-wrap: wrap; justify-content: center; display: flex; align-items: center; gap: 10px; padding: 6px var(--s3); background: var(--pad-navy); border: 2px solid var(--info); border-radius: 0; box-shadow: var(--pn-drop); font: 700 var(--fs-2) var(--pixel); color: var(--info); letter-spacing: 1px; pointer-events: none; }
+#trainbar span { font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream); }
 #trainbar .rob-bar { width: 110px; height: 8px; }
 #trainbar.sub, #trainbar.taxi { border-color: var(--gold); color: var(--gold); }
 #trainbar.bus { border-color: var(--money); color: var(--money); }
@@ -629,67 +625,80 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 
 /* ==== the touch controls by slots (UI-2): client/touchslots.js places them, shared/controls.js says what each holds ====
    The left 40% is the move stick's (it comes up where the thumb lands); on the right the aim stick in the corner and round
-   it 1 FIRE (red, big), 2 ROLL, 3 ACT (gold), 4 CAR, the context slots C1 / C2 (an orange rim) and the small utility
-   slots U1-U4 (U4: FIRE ON). Each an icon and a label. */
+   it FIRE, ROLL, ACT and the vehicle button - the four colored face buttons - the context slots C1 / C2 and the small
+   switches U1-U4 (U4: FIRE ON), navy with a gold rim. */
 #touch { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 #zone-l { position: absolute; left: 0; top: 36%; bottom: 0; width: 40%; pointer-events: auto; touch-action: none; }
 body.portrait #zone-l { top: 50%; }
 .stick { position: absolute; border-radius: var(--r3); pointer-events: none; }
-#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 1px solid var(--hair); background: var(--disc); box-shadow: none; opacity: .55;   /* (the touch buttons' disc and hairline - the look only; where it sits and how it works as before) */ transition: opacity var(--t2); }
+/* the sticks (the owner's standing rule: where they sit, how big and how they work as before - the look only, Direction
+   A's: a faint ring and a faint knob) */
+#stick-l { left: calc(max(20px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(84px, calc(env(safe-area-inset-bottom) + 66px))); width: 124px; height: 124px; margin: -62px 0 0 -62px; border: 1px solid transparent; background: transparent; box-shadow: inset 0 0 0 4px var(--stick-ring); opacity: .7;   /* (the ring a shadow inside the same box: the geometry as it was) */ transition: opacity var(--t2); }
 #stick-l.active { opacity: 1; }
 .stick .knob { position: absolute; left: 50%; top: 50%; display: grid; place-items: center; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: var(--r3); }
-#stick-l .knob { border: 7px solid var(--cream); background: transparent; box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); }
-#stick-r .knob { background: var(--disc-hi); border: 1px solid var(--hair); box-shadow: none; color: var(--cream); --ic: 26px; }
+#stick-l .knob { box-sizing: border-box; width: 44px; height: 44px; margin: -22px 0 0 -22px; border: 2px solid var(--stick-edge); background: var(--stick-knob); box-shadow: none; }
+#stick-r .knob { box-sizing: border-box; background: var(--stick-knob); border: 2px solid var(--stick-edge); box-shadow: none; color: var(--pad-cream); --ic: 26px; }
+#stick-r .knob .pi24 { opacity: .8; }
 #tbtns { position: absolute; inset: 0; pointer-events: none; }
 /* the aim stick (the owner, 2026-10-24: kept): drag to aim; pushed into its red ring it fires, while FIRE ON is on */
-#stick-r { display: none; pointer-events: auto; touch-action: none; border: 1px solid var(--hair); background: var(--disc); box-shadow: none; transition: opacity var(--t2); }
+#stick-r { display: none; pointer-events: auto; touch-action: none; border: 1px solid transparent; background: transparent; box-shadow: inset 0 0 0 4px var(--stick-ring); transition: opacity var(--t2); }   /* (the ring a shadow: its size and reach - client/input.js fixedStick - as they were) */
 #stick-r[data-slot] { display: block; }
 #stick-r .ring { position: absolute; inset: 6px; border-radius: var(--r3); border: 9px solid var(--danger-t); }
-#stick-r.aiming { border-color: var(--cream-a); }
+#stick-r.aiming { box-shadow: inset 0 0 0 4px var(--cream-a); }
 #stick-r.firing .ring { border-color: var(--danger); }
-#stick-r.firing .knob { background: var(--fire-disc); border-color: transparent; color: var(--ink); }
-#stick-r .lbl { position: absolute; left: 0; right: 0; bottom: -17px; text-align: center; font: 700 var(--fs-1) var(--ui); letter-spacing: 2px; color: var(--cream); text-shadow: var(--halo-s); }
-body:not(.armed) #stick-r .lbl::after { content: ' · PUNCH'; }
-/* the touch buttons (the owner, 11-03: "cleaner, more consistent and better looking"): one container and one glyph.
-   Every button the same dark disc with a hairline; the glyph one vector line icon, off-white, about 55% across
-   (client/touchicons.js glyph). The state is the only accent: FIRE a solid red disc; the action that's there to take
-   (ACT with something to do, CAR by a vehicle - the button the prompt names) a solid gold disc; on an accent disc the
-   glyph is ink (off-white on gold doesn't read: 1.6:1; ink is 10:1 on gold and 3.9:1 on the red). Pressed 90% and a
-   brighter fill; a switch that's on a gold ring; disabled the glyph at 40%; the cooldown ring round the disc. Two sizes
-   (client/touchslots.js GEO): FIRE and ACT 72, the rest 52 - on arcs round the aim stick. */
-#tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; align-items: center; justify-content: center; padding: 0; border-radius: var(--r3); border: 1px solid var(--hair); background: var(--disc); box-shadow: none; color: var(--cream); transition: transform var(--t-pop) var(--ease), background-color var(--t1), opacity var(--t2); }
-#tbtns button[data-slot] { display: flex; }
-#tbtns [data-slot] .l { display: none; }   /* (the words: the button's aria-label, the long press's tip, the hint strips) */
-#tbtns .pi24 { width: 28px; height: 28px; }
-#tbtns :is([data-slot=fire], [data-slot=act]) .pi24 { width: 40px; height: 40px; }
-#tbtns button:active, #tbtns button.on { transform: scale(.9); transition-duration: var(--t0); background: var(--disc-hi); }
-#tbtns [data-slot=fire] { background: var(--fire-disc); border-color: transparent; color: var(--ink); --cut: var(--fire-disc); }
-#tbtns [data-slot=fire]:is(:active, .on) { background: var(--fire-hi); }
-#tbtns button.pulse { background: var(--act-disc); border-color: transparent; color: var(--ink); --cut: var(--act-disc); animation: pulse 1.2s ease-in-out infinite; }   /* (the action that's there to take) */
-#tbtns button.pulse:is(:active, .on) { background: var(--act-hi); }
-@keyframes pulse { 50% { box-shadow: 0 0 0 6px var(--gold-t); } }
-#tbtns button.pulse.crime { background: var(--fire-disc); --cut: var(--fire-disc); animation-name: pulsebad; }   /* (a crime: red, with the "!") */
-@keyframes pulsebad { 50% { box-shadow: 0 0 0 6px var(--danger-t); } }
-#tbtns button.pulse.felony { outline: 2px solid var(--fire-disc); outline-offset: 3px; }
-#tbtns button.pulse.armed { animation-duration: .4s; }
-#tbtns button[disabled], #tbtns button.dis { background: var(--disc); }
-#tbtns button:is([disabled], .dis) .pi24 { opacity: .4; }
-#tbtns :is(.lit, #b-light.lit, #firetog.lit) { box-shadow: inset 0 0 0 2px var(--act-disc); }   /* (a switch that's on: a gold ring) */
-.gl .h { display: none; }   /* (a line icon's halo, client/touchicons.js glyph: drawn only where the street shows through) */
-#tbtns button:not(.pulse):not([data-slot=fire]) .gl .h, #stick-r .gl .h { display: inline; stroke: var(--gl-halo); stroke-width: 4.7px; }
+#stick-r.firing .knob { background: var(--pad-fire); border-color: var(--pad-ink); color: var(--white); }
 #stick-r .lbl { display: none; }   /* (AIM: the hint strip says it) */
-#tbtns [data-slot=fire].cooling { background: var(--disc); color: var(--cream); --cd-c: var(--fire-disc); --cut: var(--disc-solid); }   /* (reloading: the ring fills round FIRE) */
+/* the face buttons (Direction A, the owner 11-12): plain colored discs with no outline ring - a light top edge, a shaded
+   bottom, a hard shadow under - FIRE red and ACT yellow 76, ROLL blue and the vehicle button green 68 (60 upright). A
+   button whose action never changes shows a really simple symbol (FIRE the crosshair, ROLL the double chevron, the
+   vehicle button an arrow into a door or out of it), one whose action depends on the moment its WORD in CLA Pixel bold,
+   white with a 2 px dark shadow (ACT: ENTER, TALK, BUY...; BRAKE, STOP, GALLOP, BOOST, TRICK...) - client/touchicons.js
+   faceOf. The context slots and the switches (BLOCK, RELOAD, HORN, ITEMS, LIGHT, CALL, AUTO): small navy discs with a
+   gold rim and a word. Pressed 90%; the action the prompt names rings gold and pulses (red with a "!" for a crime); a
+   switch that's on lit gold; reloading, the ring round FIRE. */
+#tbtns button { display: none; position: absolute; pointer-events: auto; touch-action: none; flex-direction: column; align-items: center; justify-content: center; gap: 1px; box-sizing: border-box; padding: 0; border-radius: var(--r3); border: 2px solid var(--pad-ink); background: var(--pad-navy); box-shadow: var(--pn-rim), 0 3px 0 var(--pad-drop); color: var(--white); font: 700 var(--fs-w2) var(--pixel); transition: transform var(--t-pop) var(--ease), background-color var(--t1), opacity var(--t2); }
+#tbtns button[data-slot] { display: flex; }
+#tbtns button.face { border: 0; box-shadow: inset 0 4px 0 var(--pad-hi), inset 0 -6px 0 var(--pad-lo), 0 4px 0 var(--pad-drop); }
+#tbtns [data-slot=fire] { background: var(--pad-fire); --cut: var(--pad-fire); }
+#tbtns [data-slot=act] { background: var(--pad-act); --cut: var(--pad-act); }
+#tbtns [data-slot=roll] { background: var(--pad-roll); --cut: var(--pad-roll); }
+#tbtns [data-slot=car] { background: var(--pad-car); --cut: var(--pad-car); }
+#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; color: var(--white); text-shadow: 2px 2px 0 var(--pad-ink); pointer-events: none; }
+#tbtns .w[data-fs="16"] { font-size: var(--fs-3); } #tbtns .w[data-fs="14"] { font-size: var(--fs-2); } #tbtns .w[data-fs="12"] { font-size: var(--fs-w2); } #tbtns .w[data-fs="10"] { font-size: var(--fs-w1); }
+#tbtns small.w { color: var(--pad-mute); }
+.sym { display: block; flex: none; width: 48px; height: 48px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
+.s-cross { background-image: url(../assets/ui/s-cross.png); } .s-chev { background-image: url(../assets/ui/s-chev.png); }
+.s-enter { background-image: url(../assets/ui/s-enter.png); } .s-exit { background-image: url(../assets/ui/s-exit.png); }
+#tbtns button:active, #tbtns button.on { transform: scale(.9); transition-duration: var(--t0); }
+#tbtns [data-slot=fire]:is(:active, .on) { background: var(--fire-hi); }
+#tbtns button.pulse { outline: 3px solid var(--pad-gold); outline-offset: 2px; animation: pulse 1.2s ease-in-out infinite; }   /* (the action that's there to take) */
+@keyframes pulse { 50% { outline-color: transparent; } }
+#tbtns button.pulse.crime { outline-color: var(--danger); animation-name: pulsebad; }   /* (a crime: red, with the "!") */
+@keyframes pulsebad { 50% { outline-color: var(--danger-t); } }
+#tbtns button.pulse.crime::after { top: -3px; right: -3px; width: 18px; height: 18px; line-height: 15px; }
+#tbtns button.pulse.felony { outline-width: 5px; outline-style: double; }
+#tbtns button.pulse.armed { animation-duration: .4s; }
+#tbtns button[disabled], #tbtns button.dis { opacity: .5; }
+#tbtns :is(.lit, #b-light.lit, #firetog.lit) { box-shadow: inset 0 0 0 4px var(--pad-gold), 0 3px 0 var(--pad-drop); }   /* (a switch that's on: lit gold) */
+#tbtns :is(.lit, #b-light.lit, #firetog.lit) small.w { color: var(--pad-gold); }
+#tbtns [data-slot=fire].cooling { background: var(--pad-navy); --cd-c: var(--pad-fire); --cut: var(--pad-navy); }   /* (reloading: the ring fills round FIRE) */
 #tbtns :is([data-slot=fire].cooling, #b-cruiser.cooling)::before { content: ''; position: absolute; inset: -5px; border-radius: var(--r3); pointer-events: none; background: conic-gradient(var(--cd-c, var(--act-disc)) calc(var(--cd, 0) * 1turn), transparent 0); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), var(--ink) calc(100% - 3px)); }   /* (the cooldown ring, UIK-00 6F) */
-/* a long press: the button's name in a small tip over it (client/touchslots.js) */
-#tbtip { position: fixed; z-index: 8; padding: var(--s1) var(--s3); border-radius: var(--r2); background: var(--disc-solid); border: 1px solid var(--hair); color: var(--cream); font: 700 var(--fs-3) var(--ui); white-space: nowrap; pointer-events: none; animation: prpop var(--t-pop) var(--ease); }
+.gl .h { display: none; }   /* (a line icon's halo, client/touchicons.js glyph: drawn only where the street shows through) */
+#stick-r .gl .h { display: inline; stroke: var(--gl-halo); stroke-width: 4.7px; }
+/* a long press: the button's name in a small tip over it - the whole prompt for the button it names (client/touchslots.js) */
+#tbtip { position: fixed; z-index: 8; max-width: calc(100vw - 16px); box-sizing: border-box; padding: var(--s1) var(--s3); background: var(--pad-navy); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); font: 700 var(--fs-2) var(--pixel); white-space: normal; pointer-events: none; animation: prpop var(--t-pop) var(--ease); }
 /* left alone a while, the controls dim (the view comes first); a touch brings them straight back */
-#touch.idle #tbtns button:not(.pulse):not([data-slot=fire]) { opacity: .7; }   /* (left alone a while: a little quieter, still a disc on a bright floor; FIRE stays its solid red - faded it read as pink) */
-#touch.idle #stick-l:not(.active) { opacity: .25; }
+#touch.idle #tbtns button:not(.pulse):not(.face) { opacity: .7; }   /* (the colored discs stay as they are: faded they read as pink and mud) */
+#touch.idle #stick-l:not(.active) { opacity: .35; }
 #touch.idle #stick-r:not(.aiming) { opacity: .6; }
 #dev-btn { display: none !important; }
+/* on touch the weapon card, the weapon button (WP), a navy plate like the switches */
+.touch #weapon { border-radius: 0; }
 /* the weapon picker (hold the weapon plate): a grid of what you carry */
 #wpick { position: fixed; inset: 0; z-index: 31; background: var(--ink-a); touch-action: none; display: flex; align-items: flex-end; justify-content: center; padding: max(8px, env(safe-area-inset-top)) 0 max(14px, env(safe-area-inset-bottom)); }
 #wpick .wp-box { width: min(780px, 96vw); max-height: min(86vh, 100%); overflow-y: auto; padding: 6px var(--s2) var(--s2); background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); touch-action: pan-y; animation: enter var(--t2) var(--ease); }
+#wpick .wp-box { position: relative; }
+#wpick .wp-x { position: absolute; top: 2px; right: 2px; width: var(--tap); height: var(--tap); }
 #wpick .wp-h { margin: 2px 0 6px 2px; font: 700 var(--fs-2) var(--pixel); letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
 #wpick .wp-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 5px; }
 #wpick .wp-w { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: var(--s1) 3px; background: var(--navy2); border: 2px solid var(--gold-a); color: var(--cream); border-radius: var(--r2); font: 600 var(--fs-1)/1.1 var(--ui); text-align: center; cursor: pointer; touch-action: manipulation; }
@@ -1153,19 +1162,23 @@ body.portrait .arr-card b { font-size: var(--fs-4); }
 body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
 /* the first goal's step line and a first-time moment's tip: the prompt's plate, the control's glyph in front; up a few
    seconds, then it fades (client/ftue.js) - a tip's "More in your Guide" opens the phone's Guide at its section */
-#ftue-line { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; padding: 6px 16px 6px 6px; border-radius: var(--r2); background: var(--plate); border: 2px solid var(--gold); box-shadow: 0 0 0 1px var(--ink), var(--plate-sh); font: 700 var(--fs-4) var(--ui); line-height: 1.2; color: var(--cream); pointer-events: auto; transition: opacity .6s var(--ease), transform var(--t2) var(--ease); }
+#ftue-line { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); font: 700 var(--fs-3) var(--pixel); line-height: 1.25; color: var(--pad-cream); pointer-events: auto; transition: opacity .6s var(--ease), transform var(--t2) var(--ease); }
 #ftue-line.in { animation: prpop var(--t-pop) var(--ease); }
 #ftue-line.off { display: none; }
 #ftue-line.faded { opacity: 0; transform: translateY(6px); pointer-events: none; }
-#ftue-line.tip { position: relative; z-index: 6; border-color: var(--info); padding-left: 14px; padding-right: 6px; cursor: pointer; touch-action: manipulation; }   /* (over the touch layer's move-stick zone while it's up, like #job: a tap opens the Guide - client/ftue.js) */
-#ftue-line .fl-x { flex: none; width: 32px; height: 32px; margin-left: -4px; padding: 0; border: 0; background: transparent; color: var(--cream); opacity: .7; font: 700 var(--fs-4) var(--ui); line-height: 1; cursor: pointer; }
-.touch #ftue-line .fl-x { width: 36px; height: var(--tap); }
+/* (a tip, the What's next line: a card - its head in gold, what it says, OPEN / MORE and LATER, the close top right) */
+#ftue-line.tip { position: relative; z-index: 6; align-items: flex-start; width: min(420px, 100%); padding: 10px 46px 10px 12px; cursor: pointer; touch-action: manipulation; }   /* (over the touch layer's move-stick zone while it's up, like #job: a tap opens the Guide - client/ftue.js) */
+#ftue-line .fl-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#ftue-line .fl-body small { font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; color: var(--pad-gold); text-transform: uppercase; }
+#ftue-line .fl-acts { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: 6px; }
+#ftue-line .fl-x { position: absolute; top: 0; right: 0; width: var(--tap); height: var(--tap); padding: 0; border: 0; background: transparent; color: var(--pad-cream); font: 700 var(--fs-4) var(--pixel); line-height: 1; cursor: pointer; }
+#ftue-line .fl-acts .fl-x { position: static; width: auto; height: 36px; padding: 0 12px; border: 2px solid var(--pad-line); font: 700 var(--fs-2) var(--pixel); }
 #ftue-line > :is(.g-key, .g-touch) { flex: none; min-width: 32px; height: 32px; padding: 0 var(--s2); font-size: var(--fs-3); }
 #ftue-line > .g-pad { flex: none; width: 32px; height: 32px; font-size: var(--fs-3); }
-#ftue-line .fl-more { flex: none; min-height: 32px; padding: 0 10px; border-radius: var(--r2); border: 2px solid var(--info); background: transparent; color: var(--info); font: 700 var(--fs-2) var(--ui); cursor: pointer; }
-.touch #ftue-line { font-size: var(--fs-3); }
-.touch #ftue-line .fl-more { min-height: var(--tap); }
-body.portrait #ftue-line { flex-wrap: wrap; }
+#ftue-line .fl-more { flex: none; min-height: 36px; padding: 0 16px; border-radius: 0; border: 2px solid var(--pad-ink); background: var(--pad-gold); color: var(--pad-ink); box-shadow: var(--pn-drop); font: 700 var(--fs-2) var(--pixel); cursor: pointer; }
+.touch #ftue-line { font-size: var(--fs-2); }
+.touch #ftue-line.tip { font-size: var(--fs-3); }
+.touch #ftue-line .fl-more, .touch #ftue-line .fl-acts .fl-x { min-height: var(--tap); }
 
 /* ==== the character creator (client/creator.js; concepts CC1, CC7-CC10) ==== */
 #creator { position: absolute; inset: 0; z-index: 70; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
@@ -1607,7 +1620,7 @@ body.portrait #hub #bm-mapwrap { min-height: 46%; }
 .jc-pop .jc-no-alt { display: flex; width: calc(100% - 2 * var(--s3)); margin: 0 var(--s3) var(--s3); }
 body.portrait #jobcard { justify-content: center; padding: var(--s3) var(--s3) max(var(--s3), env(safe-area-inset-bottom)); }
 body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.offer .jc-t b { font-size: var(--fs-4); }
-#job.chip .jc-t { margin-right: var(--s1); font: 800 var(--fs-3) var(--ui); color: var(--gold); }
+#job.chip .jc-t { margin-right: var(--s1); font: 700 var(--fs-3) var(--pixel); color: var(--pad-gold); }
 #job.hot .jc-t { color: var(--danger); }
 .jc-or { margin: 0 var(--s3); color: var(--dim); font: 700 var(--fs-2) var(--ui); text-transform: uppercase; text-align: center; }
 .rc-top { display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s3); }
@@ -1844,5 +1857,5 @@ body:not(.touch) #logo { width: min(520px, 84vw, 38vh); margin-bottom: 0; }
 body:not(.touch) #title > #t-tools { position: absolute; left: var(--s4); top: var(--s4); }
 body:not(.touch) #play { min-width: 240px; }
 /* the "What's next" cards changed (client/main.js nextDot): a dot on the phone's button and its app tile - nothing more */
-#b-phone.dot::after, #b-chat.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
+#b-phone.dot::after, #b-chat.dot::after, #b-talk.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
 .ph-app.dot .ph-tile { position: relative; }

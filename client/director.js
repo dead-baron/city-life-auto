@@ -193,12 +193,24 @@ export function makeDirector(S, api) {
 body.cine-clean #view, body.cine-clean #world { cursor: none; }
 .cine-bar { position: fixed; left: 0; right: 0; height: 0; background: var(--ink); z-index: 60; pointer-events: none; transition: height .5s ease; }
 #cine-fade { position: fixed; inset: 0; background: var(--ink); opacity: 0; z-index: 61; pointer-events: none; transition: opacity .6s ease; }
-#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; padding: 10px var(--s3); background: var(--panel-bg); color: var(--cream); font: 600 var(--fs-2)/1.35 var(--ui); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter var(--t2) var(--ease); }
+#cine-panel { position: fixed; right: max(12px, env(safe-area-inset-right)); top: max(12px, env(safe-area-inset-top)); width: 290px; max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); overflow: auto; z-index: 70; padding: 10px var(--s3); background: var(--pad-navy); color: var(--pad-cream); font: 700 var(--fs-2)/1.35 var(--pixel); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); }
 #cine-panel h3 { margin: var(--s3) 0 var(--s1); font: 700 var(--fs-1) var(--pixel); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
 #cine-panel .row { display: flex; flex-wrap: wrap; gap: var(--s1); }
-#cine-panel button, #cine-ctl button { min-height: 32px; min-width: 32px; padding: 0 var(--s2); background: var(--navy2); color: var(--cream); border: 1px solid var(--edge); border-radius: var(--r1); font: inherit; cursor: pointer; transition: background var(--t1) var(--ease); }
-#cine-panel button:hover, #cine-ctl button:hover { border-color: var(--gold); }
-#cine-panel button.on, #cine-ctl button.on { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+#cine-panel button, #cine-ctl button { min-height: 32px; min-width: 32px; padding: 0 var(--s2); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-line); border-radius: 0; font: inherit; cursor: pointer; transition: background var(--t1) var(--ease); }
+#cine-panel button:hover, #cine-ctl button:hover { border-color: var(--pad-gold); }
+#cine-panel button.on, #cine-ctl button.on { background: var(--pad-gold); color: var(--pad-ink); border-color: var(--pad-ink); }
+/* the way out and the shutter (the owner, 11-12: every screen has a way out on every device): a close button top centre,
+   faint till it's touched (the corners are the HUD's), and on touch a round shutter by the right thumb - over the clean
+   screen too */
+#cine-x, #cine-shut { position: fixed; z-index: 72; display: none; padding: 0; cursor: pointer; touch-action: manipulation; }
+#cine-x { left: 50%; margin-left: calc(-1 * var(--tap) / 2); top: max(12px, env(safe-area-inset-top)); width: var(--tap); height: var(--tap); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); font: 700 var(--fs-4) var(--pixel); opacity: .55; }
+#cine-x:active, #cine-x:focus-visible { opacity: 1; }
+#cine-shut { right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 68px; height: 68px; border-radius: var(--r3); background: var(--white); border: 4px solid var(--pad-ink); box-shadow: 0 0 0 4px var(--white), 0 4px 0 4px var(--pad-drop); }
+#cine-shut:active { transform: scale(.9); }
+body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
+body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
+.touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
+body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centre is the close button's - the objective waits) */
 #cine-panel .sc { display: block; width: 100%; text-align: left; margin: 2px 0; }
 #cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
 #cine-panel .tip { margin: 6px 0 0; }
@@ -225,6 +237,27 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   };
   addEventListener('resize', setBars);
   const fadeTo = (k) => { fadeEl.style.opacity = String(k); };
+  // the way out, and on touch the shutter (shown while the camera's open: body.cine-on)
+  const mk = (id, label, fn, txt = '') => { const b = document.createElement('button'); b.id = id; b.type = 'button'; b.setAttribute('aria-label', label); b.title = label; b.textContent = txt; b.addEventListener('pointerdown', (ev) => ev.stopPropagation()); b.onclick = (ev) => { ev.stopPropagation(); fn(); }; document.body.appendChild(b); return b; };
+  mk('cine-x', 'Close the camera (Esc, B)', () => close(), '✕');
+  mk('cine-shut', 'Take a picture', () => shot());
+  const dev = () => !!(S.dev || S.devMode);   // (the staged and follow scenes, the tour, the Showcase: debug mode's - they run its commands or move you)
+  // open: anything of the camera's on this screen - the panel, the clean screen, a camera off the game's own, the bars,
+  // your character hidden, a time of day or a weather of its own
+  D.isOpen = () => shown || D.clean || D.mode !== 'follow' || !!D.box || D.hideMe || D.lt !== null || D.wi !== 0;
+  let onSig = false;
+  const syncOn = () => { const on = D.isOpen(); if (on !== onSig) { onSig = on; document.body.classList.toggle('cine-on', on); } };
+  // close: all of it off, the game's own camera back (Esc, B, the corner's button)
+  function close() {
+    if (scene && scene.timer) clearTimeout(scene.timer);
+    scene = null;
+    if (D.mode !== 'follow') setMode('follow');
+    if (D.clean) setClean(false);
+    D.hideMe = false; setBox(0); setTime(0); setWx(0); setZoom(3);
+    toggle(false);
+    syncOn();
+  }
+  D.close = close;
 
   function setClean(on) {
     D.clean = !!on;
@@ -233,6 +266,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     render();
   }
   function setMode(m, k0 = 'tour') {
+    if ((m === 'tour' || m === 'scene') && !dev()) m = 'follow';
     const was = D.mode;
     D.mode = m;
     if (was !== 'scene' || m !== 'scene') { x = S.cam.x; y = S.cam.y; }
@@ -429,12 +463,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     const row = (...bs) => { const r = document.createElement('div'); r.className = 'row'; for (const b of bs) r.appendChild(b); return r; };
     const h = (t) => { const e = document.createElement('h3'); e.textContent = t; return e; };
     panel.textContent = '';
-    const title = document.createElement('div'); title.innerHTML = '<b>Cinematic mode</b> <span style="color:#9aa6c0">- your screen only</span>';
+    const title = document.createElement('div'); title.innerHTML = '<b>Camera</b> <small class="tip">- your screen only</small>';
     panel.append(title,
       h('Screen'), row(btn(D.clean ? 'Clean screen: on (F2)' : 'Clean screen (F2)', D.clean, () => setClean(!D.clean)), btn('Picture (F8)', false, shot), btn('Hide panel (F4)', false, () => toggle(false))),
       row(btn('Hide my character', D.hideMe, () => { D.hideMe = !D.hideMe; render(); }), btn('No shake', D.noShake, () => { D.noShake = !D.noShake; render(); })),
       h('Letterbox'), row(...BOXES.map(([n], i) => btn(n, D.bi === i, () => setBox(i)))),
-      h('Camera'), row(...[['Follow', 'follow'], ['Smooth', 'smooth'], ['Drift', 'drift'], ['Drone', 'drone'], ['On someone', 'target'], ['Tour', 'tour'], ['Follow scenes', 'scene']].map(([n, m]) => btn(n, D.mode === m, () => setMode(m)))));
+      h('Camera'), row(...[['Follow', 'follow'], ['Smooth', 'smooth'], ['Drift', 'drift'], ['Drone', 'drone'], ['On someone', 'target'], ...(dev() ? [['Tour', 'tour'], ['Follow scenes', 'scene']] : [])].map(([n, m]) => btn(n, D.mode === m, () => setMode(m)))));
     if (D.mode === 'drift') {
       const dirs = document.createElement('div'); dirs.className = 'dirs';
       for (const i of [7, 0, 1, 6, -1, 2, 5, 4, 3]) dirs.append(i < 0 ? dial() : btn(DIRS8[i][0], Math.abs(wrapA(dr.a - DIRS8[i][1])) < 0.05, () => setDriftWay(DIRS8[i][1])));
@@ -463,6 +497,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     panel.append(h('Zoom'), row(btn('－', false, () => setZoom(D.zi - 1)), btn(`${Math.round(100 / D.zoomK)}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(D.zi + 1))));
     panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
     panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => setWx(i)))));
+    if (!dev()) return;   // (the rest - the Showcase, the staged scenes - debug mode's: they move you and run its commands)
     // the Showcase: the hand-crafted places, a press to fly the camera there (the drone: WASD / the stick from there)
     panel.append(h('Showcase'));
     if (!shows) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'Finding the places...'; panel.append(p); loadShows().then(render); }
@@ -499,6 +534,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (down && k === 'F4') { toggle(); return true; }
     if (down && k === 'F8') { shot(); return true; }
     if (D.mode === 'target' && down && (k === 'BracketLeft' || k === 'BracketRight')) { nextTarget(k === 'BracketRight' ? 1 : -1); return true; }
+    if (down && k === 'Escape' && !D.holds() && D.isOpen()) { close(); return true; }   // (Esc: out of the camera)
     if (!D.holds()) return false;
     if (down) { here(); wake(); }
     if (down && k === 'Escape') { setMode('follow'); return true; }
@@ -522,8 +558,8 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // - B back to you, Y the panel, X a picture; LB / RB the drift's speed or the scene's kind; A the next scene
   D.pad = (a) => {
     axes = a;
-    if (!D.holds()) return;
     const I = api.input || {}, t = performance.now();
+    if (!D.holds()) { if (I.menuBack && D.isOpen()) close(); return; }   // (B: out of the camera)
     if (I.menuBack || I.padX || I.padY || I.menuTab || I.menuSelect || (a && (Math.hypot(a.lx || 0, a.ly || 0) > 0.3 || (a.lt || 0) > 0.3 || (a.rt || 0) > 0.3))) { wake(); here(); }
     if (I.menuBack) { setMode('follow'); return; }
     if (I.padY) toggle();
@@ -589,7 +625,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (S.me && S.me.dead) { if (shown) toggle(false); if (D.holds()) setMode('follow'); }
     if (D.noShake) cam.shake = 0;
     if (!inited) { x = cam.x; y = cam.y; inited = true; }
-    barShow();
+    barShow(); syncOn();
     const lag = (k) => 1 - Math.exp(-k * dt);
     if (D.mode === 'follow') { x = cam.x; y = cam.y; return; }
     // (the drift and the follow scenes going on by themselves, like the tour: the idle clock runs slow - players.js riding)

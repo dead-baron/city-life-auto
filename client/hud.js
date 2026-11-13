@@ -8,19 +8,19 @@ import { input } from './input.js';
 import { EVENT_KINDS } from '../shared/worldevents.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { weaponIcon } from './render/peds.js';
-import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon, setActKind, iconOf, setMelee } from './touchicons.js';
+import { icon, paintIcons, drawIcon, glyph as monoGlyph, glyphOfWeapon, setActKind, setActWord, iconOf, setMelee, faceOf, faceHtml } from './touchicons.js';
 import { CALM_PROMPT_S, CALM_HUD_S, SAFETY_CONFIRM_S, PROMPT_FADE_S } from '../shared/rules-page.js';
 
 const $ = (id) => document.getElementById(id);
 // what Act would do is a crime (1) or a felony (2), on the prompt's plate and on the touch button it pulses (style.css)
-// the action button's glyph for the kind of what it offers (client/touchicons.js actKind; touchslots.js draws the same
-// when it places the button): swapped only when the kind changes
-function actGlyph(kind) {
+// the action button's word for what it will do now (client/touchicons.js actWord, set by formatPrompt; touchslots.js
+// draws the same when it places the button): redrawn only when the word changes
+function actFace() {
   const b = document.querySelector('#tbtns [data-b="action"]');
-  if (!b || b.dataset.kind === kind) return;
-  b.dataset.kind = kind;
-  const g = b.querySelector('svg.gl');
-  if (g) g.outerHTML = monoGlyph(iconOf('action'));
+  if (!b || !b.dataset.slot) return;
+  const f = faceOf('action', b.dataset.lbl), fk = `${f.word}||${b.offsetWidth}`;
+  if (b.dataset.face === fk) return;
+  b.dataset.face = fk; b.innerHTML = faceHtml(f, b.offsetWidth);
 }
 export function crimeMarks(el, pcr) { el.classList.toggle('crime', pcr > 0); el.classList.toggle('felony', pcr === 2); }
 // what's faded by a campfire (#375), from when you sat down and last did anything (ms): { prompt, hud }
@@ -138,6 +138,9 @@ export class HUD {
     const hpPct = Math.max(0, me.hp / me.maxHp) * 100;
     $('hp-fill').style.width = hpPct + '%';
     $('hp-fill').classList.toggle('low', hpPct < 30);
+    // the vest you wear (server players.js arm: [left, full]): its blue bar under health; none, no row
+    const ar = me.arm, arSig = ar ? ar.join('/') : '';
+    if (this.arSig !== arSig) { this.arSig = arSig; $('ar-row').classList.toggle('hidden', !ar); if (ar) { $('ar-fill').style.width = Math.max(0, Math.min(100, (100 * ar[0]) / (ar[1] || 1))) + '%'; $('ar-n').textContent = String(ar[0]); } }
     this.damage(hpPct);
     this.countCash(me.cash, prev ? prev.cash : me.cash);
     $('bank-n').textContent = `$${me.bank.toLocaleString()}`;
@@ -170,10 +173,13 @@ export class HUD {
         const fp = formatPrompt(promptWords(me.prompt, me.pcr | 0));
         pr.innerHTML = fp.html;
         this.unarm();
-        document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
+        document.querySelectorAll('#tbtns .pulse').forEach((b) => { b.classList.remove('pulse', 'crime', 'felony'); delete b.dataset.tip; });
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
-        this.actBtn?.classList.add('pulse');
-        actGlyph(fp.kind);   // (the action button shows what it will do: a door, a speech bubble, coins...)
+        if (this.actBtn) { this.actBtn.classList.add('pulse'); this.actBtn.dataset.tip = fp.words; }   // (its long press says the whole of it: client/touchslots.js)
+        // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip; a prompt no button does (a ride's
+        // note) keeps its chip
+        pr.classList.toggle('btn', !!(this.actBtn && this.actBtn.dataset.slot));   // (the button there to press: on touch its word says it)
+        actFace();
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
         pr.classList.remove('faded'); clearTimeout(this.fadeT);
@@ -187,9 +193,9 @@ export class HUD {
     } else if (!pr.classList.contains('off')) {
       if (this.promptDone(pr)) { clearTimeout(this.offT); this.offT = setTimeout(() => { if (pr.dataset.sig === '') pr.classList.add('off'); }, 600); } else pr.classList.add('off');
       pr.dataset.sig = ''; crimeMarks(pr, 0); this.unarm(); clearTimeout(this.fadeT); pr.classList.remove('faded');
-      document.querySelectorAll('#tbtns .pulse').forEach((b) => b.classList.remove('pulse', 'crime', 'felony'));
+      document.querySelectorAll('#tbtns .pulse').forEach((b) => { b.classList.remove('pulse', 'crime', 'felony'); delete b.dataset.tip; });
       this.actBtn = null;
-      actGlyph(setActKind('interact'));
+      setActKind('interact'); setActWord('ACT'); actFace();
     }
     document.body.classList.toggle('carrying', !!me.carrying);
     this.info?.me(me, prev);   // (the vitals' numbers, the status line, the stars, the weapon plate, the job card: hudinfo.js)

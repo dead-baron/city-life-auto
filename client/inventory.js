@@ -90,6 +90,12 @@ export function createWeaponPicker({ el, send, me }) {
     el.innerHTML = '';
     const box = document.createElement('div'); box.className = 'wp-box';
     const h = document.createElement('div'); h.className = 'wp-h'; h.textContent = 'Take out a weapon'; box.appendChild(h);
+    // (its way out to tap: a close top right - Esc and B too, client/main.js; a tap off the tray as before)
+    const x = document.createElement('button'); x.className = 'x wp-x'; x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '✕';
+    x.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+    x.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); close(); }, { passive: false });
+    x.addEventListener('click', (e) => { e.stopPropagation(); close(); });
+    box.appendChild(x);
     const row = document.createElement('div'); row.className = 'wp-row';
     for (const w of ws) {
       const def = WEAPONS[w.id];
