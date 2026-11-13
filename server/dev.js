@@ -85,6 +85,7 @@ import * as fishboat from './systems/fishboat.js';
 import * as rangerjob from './systems/rangerjob.js';
 import * as phone from './systems/phone.js';
 import * as chess from './systems/chess.js';
+import * as golf from './systems/golf.js';
 import { parkPonds } from './systems/wildlife.js';
 const { clearSpot } = cruiser;
 
@@ -888,6 +889,16 @@ function run(world, p, c, msg) {
     case 'crazycab': case 'haul': case 'mailjob': {   // b8a: a Crazy Taxi run with you at the wheel; a haul, the rig by you; a mail round (msg.k 'walk')
       if (c === 'crazycab' && msg.k === 'end' && p.job && p.job.type === 'crazy') { p.job.clockAt = world.time; break; }   // (the run's clock out now: its summary)
       const err = c === 'crazycab' ? crazytaxi.devCrazy(world, p) : c === 'haul' ? truckjob.devHaul(world, p) : mailjob.devMail(world, p, msg.k);
+      if (err) world.notify(p, `[dev] ${err}`, 'warn');
+      break;
+    }
+    case 'golf': {   // to hole n's tee (default 1), the fee paid for you, the ball down: a hole under way (captures, tests)
+      const g = world.map.golf, n = Math.max(1, Math.min(g && g.holes ? g.holes.length : 1, (msg.n | 0) || 1)), t = g && g.tees && g.tees[n - 1];
+      if (!ped || ped.dead || !t) { world.notify(p, '[dev] no golf course here', 'warn'); break; }
+      if (ped.vehId) vehicles.exitVehicle(world, ped);
+      ped.x = t.x + t.w / 2; ped.y = t.y + t.h / 2 + 18; ped.sub = false; ped.ug = 0; ped.lz = 0; ped.vx = ped.vy = 0; p.teleportAt = world.time; world.place(ped);
+      p.profile.cash = (p.profile.cash || 0) + 100;   // (the green fee's covered)
+      const err = golf.teeOff(world, p, n);
       if (err) world.notify(p, `[dev] ${err}`, 'warn');
       break;
     }

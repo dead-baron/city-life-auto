@@ -1987,7 +1987,7 @@ const phone = {
   get screen() { return phoneMod ? phoneMod.screen : 'home'; },
   back() { return phoneMod ? phoneMod.back() : false; },
   open() { if (!phoneMod) $('ph-screen').innerHTML = '<p class="ph-empty">Loading…</p>'; loadPhone().then((m) => { if (topOverlay() === 'phone') m.open(); }).catch((e) => console.warn('[phone]', e)); },
-  openApp(s) { loadPhone().then((m) => { if (topOverlay() === 'phone') m.openApp(s); }).catch((e) => console.warn('[phone]', e)); },
+  openApp(s) { if (!phoneMod) $('ph-screen').innerHTML = '<p class="ph-empty">Loading…</p>'; loadPhone().then((m) => { if (topOverlay() === 'phone') m.openApp(s); }).catch((e) => console.warn('[phone]', e)); },
   on(k, m) { if (phoneMod) phoneMod['on' + k](m); else if (!m.ok && !m.err) phoneQ.set(k, m); },   // (a job's take or a refusal isn't news by the time it opens)
 };
 const mapwp = createMapWaypoints({
