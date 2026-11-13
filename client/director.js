@@ -220,6 +220,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-shut { right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 68px; height: 68px; border-radius: var(--r3); background: var(--white); border: 4px solid var(--pad-ink); box-shadow: 0 0 0 4px var(--white), 0 4px 0 4px var(--pad-drop); }
 #cine-shut:active { transform: scale(.9); }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
+body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }   /* (a capture's frames: nothing of the camera's own on them) */
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
 .touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
 body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centre is the close button's - the objective waits) */
@@ -694,7 +695,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (!sc) return;
     sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2 };
     sct.hadHide = D.hideMe; D.hideMe = true;   // (your own character out of it)
-    if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; }   // (the capture: the clean screen, the players' name tags)
+    if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
     if (D.mode !== 'script') setMode('script'); else { x = S.cam.x; y = S.cam.y; }
     if (!D.clean) api.toast(`Scene: ${sc.n}. Esc gives you the camera back.`, 'info');
   };

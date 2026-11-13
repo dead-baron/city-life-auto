@@ -167,19 +167,25 @@ async function take(id) {
     for (const P of pages) { await P.pg.clock.pauseAt(T0 + 3600e3); P.t = await P.pg.evaluate(() => performance.now()); P.t0 = P.t; }
     const t0 = Date.now();
     let waits = 0, tick = go.tick;
+    const tm = { step: 0, draw: 0, art: 0, shot: 0, enc: 0 }, lap = (k, t) => { const n = Date.now(); tm[k] += n - t; return n; };
     for (let f = 0; f < frames; f++) {
+      let t = Date.now();
       if (f % 3 === 0) { const r = await get('/capture/step?n=1'); tick = r.tick; }
+      t = lap('step', t);
       for (const [k, P] of pages.entries()) {
         for (let i = 0; i < 400 && (await latest(P)) < tick; i++) await wait(5);
         await P.pg.clock.runFor([17, 17, 16][f % 3]);
         const ms = P.t0 + (f + 1) * 1000 / FPS;
-        await frameAt(P, ms);
+        t = Date.now(); await frameAt(P, ms); t = lap('draw', t);
         for (let i = 0; i < 300; i++) { const b = await busy(P); if (!b) break; waits++; await wait(60); await frameAt(P, ms); }   // (a sprite still coming: the same moment drawn again)
+        t = lap('art', t);
         const img = await shot(P);
+        t = lap('shot', t);
         await enc[k].write(img);
+        lap('enc', t);
         if (keep && f % Math.max(1, Math.round(frames / 12)) === 0) keep[k].push(img);
       }
-      if (f % 120 === 119) log(`  frame ${f + 1}/${frames}: ${((Date.now() - t0) / 1000 / (f + 1)).toFixed(2)} s a frame (${pages.length} pages)`);
+      if (f % 120 === 119 || f === frames - 1) log(`  frame ${f + 1}/${frames}: ${((Date.now() - t0) / 1000 / (f + 1)).toFixed(2)} s a frame (${pages.length} pages) - ${Object.entries(tm).map(([k, v]) => `${k} ${(v / 1000 / (f + 1)).toFixed(2)}`).join(', ')}`);
     }
     await Promise.all(enc.map((e) => e.end()));
     const spf = (Date.now() - t0) / 1000 / frames;
