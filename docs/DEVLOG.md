@@ -23419,3 +23419,9 @@ scenes (server/systems/director.js, shared/scenes/) while the owner films them. 
   every director scene's cast on World v3 - road vehicles on the road, boats on water, aircraft up or on a pad, people
   on open ground, a getaway's far point on the road. test/director.test.js: the clean start from a home, a train, a
   job and three stars; a boat on the water.
+
+## 2026-11-14 - A shop's neon OPEN only where it fits
+The owner (the Harbor Marina's boat hire): "the open sign is partially cut off". Every mart-type front - the boat hires'
+three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
+was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
+(client/art2/buildings.js); the wider fronts keep theirs.
