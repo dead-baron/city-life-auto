@@ -22,8 +22,8 @@ export default {
     { at: 4, do: 'wait', s: 14 },   // (the fight goes on: the scene runs its length)
   ],
   cam: [
-    { at: 0, hold: { a: 'mid', f: 90, s: -60 }, z: 1.05 },
-    { at: 2.4, move: [{ a: 'mid', f: 60, s: -80 }, { a: 'mid', f: 150, s: 60 }], dur: 9, z: [1.0, 0.85], ease: 1 },
-    { at: 11.5, between: ['boss', 'cruiser1'], z: 0.85, ease: 2 },
+    { at: 0, hold: { a: 'mid', f: 90, s: -60 }, z: 1.26 },
+    { at: 2.4, move: [{ a: 'mid', f: 60, s: -80 }, { a: 'mid', f: 150, s: 60 }], dur: 9, z: [1.2, 1.02], ease: 1 },
+    { at: 11.5, between: ['boss', 'cruiser1'], z: 1.02, ease: 2 },
   ],
 };

@@ -15,9 +15,9 @@ export default {
     { id: 'pass2', who: 'duster', do: 'fly', to: 'p3', route: ['p2', 'p3'], alt: 70, spray: true, speed: 0.75, max: 12 },
   ],
   cam: [
-    { at: 0, follow: 'duster', z: 0.85, lead: 0.5, s: -80 },
-    { on: 'pass1', d: 2, follow: 'duster', z: 1.0, lead: 0.3, s: 120, ease: 2 },
-    { on: 'turn', hold: 'field', z: 0.6, ease: 2.5 },
-    { on: 'pass2', d: 1.5, follow: 'duster', z: 0.8, lead: 0.6, ease: 2 },
+    { at: 0, follow: 'duster', z: 1.02, lead: 0.5, s: -80 },
+    { on: 'pass1', d: 2, follow: 'duster', z: 1.2, lead: 0.3, s: 120, ease: 2 },
+    { on: 'turn', hold: 'field', z: 0.72, ease: 2.5 },
+    { on: 'pass2', d: 1.5, follow: 'duster', z: 0.96, lead: 0.6, ease: 2 },
   ],
 };

@@ -140,7 +140,7 @@ export function buildMarshBoardwalk3(m, removeProps) {
     P('pbench', (pcx - uy * (plat.n / 2 - 1)) * TILE, (pcy + ux * (plat.n / 2 - 1)) * TILE, { a: qa + Math.PI / 2, lift: 8 });
   }
   // 6. the canoe dock: off the first leg where it reaches the water, a short pier out to the side, two canoes by it
-  let hireSpots = null;
+  let hireSpots = null, hirePoi = -1, hireStart = null;
   const c0 = pts[1], c1 = pts[0], ca = Math.atan2(c0[1] - c1[1], c0[0] - c1[0]);
   let canoes = 0;
   for (const side of [1, -1]) {
@@ -154,12 +154,15 @@ export function buildMarshBoardwalk3(m, removeProps) {
     // the hire: its desk where the pier leaves the boardwalk, the kayaks waiting in the water beyond the canoes
     if (m.rentals && m.pois) {
       const spots = [];
-      for (const o of [-3.2, 3.2]) for (const s2 of [3.6, 1.2]) { const x = bx + ux * s2 + COS(ca) * o, y = by + uy * s2 + SIN(ca) * o; if (spots.length < 2 && marshWater(idx(Math.floor(x), Math.floor(y)), Math.floor(x), Math.floor(y))) { spots.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 }); break; } }
+      // (bow and stern on the water too: not up on the boardwalk)
+      for (const o of [-3.2, 3.2]) for (const s2 of [3.6, 1.2]) { const x = bx + ux * s2 + COS(ca) * o, y = by + uy * s2 + SIN(ca) * o, mw = (q) => marshWater(idx(Math.floor(x + ux * q), Math.floor(y + uy * q)), Math.floor(x + ux * q), Math.floor(y + uy * q)); if (spots.length < 2 && mw(0) && mw(0.8) && mw(-0.8)) { spots.push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a: Math.round(Math.atan2(uy, ux) * 1000) / 1000 }); break; } }
       if (spots.length) {
         const door = { x: Math.round(bx * TILE), y: Math.round(by * TILE) }, poi = { id: m.pois.length, kind: 'rental', label: MARSH.hire, x: door.x, y: door.y, r: 48 };
         m.pois.push(poi);
         m.rentals.push({ poi: poi.id, name: MARSH.hire, spots, models: MARSH.models, dock: door, note: MARSH.note });
-        out.hire = spots.length; hireSpots = spots;
+        out.hire = spots.length; hireSpots = spots; hirePoi = poi.id;
+        // (the race's start buoy off the pier's end, clear of the kayaks' spots: drawn over them it hid the boat)
+        for (const s3 of [5.8, 6.8, 4.8]) { const x = bx + ux * s3, y = by + uy * s3; if (marshWater(idx(Math.floor(x), Math.floor(y)), Math.floor(x), Math.floor(y))) { hireStart = { x: Math.round(x * TILE), y: Math.round(y * TILE) }; break; } }
       }
     }
     break;
@@ -265,7 +268,7 @@ export function buildMarshBoardwalk3(m, removeProps) {
       }
       const st = hireSpots[0], fin = cps[cps.length - 1];
       if (cps.length >= 5 && Math.hypot(fin.x - st.x, fin.y - st.y) < 8 * TILE) {
-        const race = { id: (m.races ||= []).length, name: R.name, kind: 'kayak', start: { x: st.x, y: st.y }, cps, prize: R.prize, where: 'the canoe dock on the Egret Marsh Boardwalk' };
+        const s1 = hireStart || st, race = { id: (m.races ||= []).length, name: R.name, kind: 'kayak', start: { x: s1.x, y: s1.y }, cps, prize: R.prize, where: 'the start buoy off the canoe dock on the Egret Marsh Boardwalk', rental: hirePoi };
         m.races.push(race);
         m.pois.push({ id: m.pois.length, kind: 'race', label: R.name, x: race.start.x, y: race.start.y, r: 60 });
         out.race = { id: race.id, gates: cps.length, loop, len: route.length };

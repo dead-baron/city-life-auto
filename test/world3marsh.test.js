@@ -47,7 +47,8 @@ test('World v3: the Egret Marsh Boardwalk - out over the marsh, the hide, the pl
   // the Egret Marsh Paddle: from the kayaks out through the channels and back to the dock, gates on the open water
   const race = m.races.find((r) => r.name === MARSH.race.name);
   assert.ok(race && race.kind === 'kayak' && B.race && race.cps.length >= 5, `the paddle race (${JSON.stringify(B.race)})`);
-  assert.ok(Math.hypot(race.start.x - R.spots[0].x, race.start.y - R.spots[0].y) < TILE && Math.hypot(race.cps[race.cps.length - 1].x - race.start.x, race.cps[race.cps.length - 1].y - race.start.y) < 8 * TILE, 'from the dock and back to it');
+  assert.ok(R.spots.every((q) => Math.hypot(race.start.x - q.x, race.start.y - q.y) > 2.5 * TILE), 'the start buoy clear of the kayaks\' spots (drawn over one it hid it)');
+  assert.ok(Math.hypot(race.start.x - R.spots[0].x, race.start.y - R.spots[0].y) < 7 * TILE && Math.hypot(race.cps[race.cps.length - 1].x - race.start.x, race.cps[race.cps.length - 1].y - race.start.y) < 8 * TILE, 'from the dock and back to it');
   for (const c of race.cps) assert.equal(m.tiles[m.idx(Math.floor(c.x / TILE), Math.floor(c.y / TILE))], T.WATER, `a gate on the water at ${c.x}, ${c.y}`);
   const farG = Math.max(...race.cps.map((c) => Math.hypot(c.x - race.start.x, c.y - race.start.y))) / TILE;
   assert.ok(farG > 30, `out across the marsh (${farG | 0} tiles at the furthest)`);

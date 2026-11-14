@@ -1,7 +1,8 @@
 // The Redwood River Run (the nature program, 2026-10-21: the GDD's "a raft or kayak run"; with the rivers' current,
 // shared/flow.js). The river that leaves Highland Woods to the north runs some 400 tiles to the bay at Northshore,
 // through two stretches of white water - one above the road's bridge, one below it down to the beach. Now there's a
-// kayak hire at a put-in in the woods where it starts - a plank landing, the kayaks waiting along it, a sign - and a
+// kayak hire at a put-in in the woods where it starts - a plank landing, the kayaks waiting along it, the hire's shack
+// with its kayaks stood against it, a wooden sign - and a
 // take-out at its last bend before the bay to hand the kayak back (any rental dock takes it: server/systems/rentals.js).
 // The current carries you down; the rapids sweep you through. And it's a race: in a kayak at the put-in's landing you're
 // entered, then gate to gate down the river to the take-out, first one home taking the prize (server/systems/races.js).
@@ -57,18 +58,32 @@ export function riverRun3(m, H3) {
       for (const i of tiles) { m.tiles[i] = T.DOCK; m.reserve[i] |= 32 | 4; }
       const shore = { x: (bx + 0.5 + best.ux * 0.5) * TILE, y: (by + 0.5 + best.uy * 0.5) * TILE };
       const end = { x: (bx - nx * sd * R.jetty + 0.5) * TILE, y: (by - ny * sd * R.jetty + 0.5) * TILE };
-      for (let a = -1; a <= 4; a++) for (let b = -4; b <= 4; b++) clear.add(idx(Math.round(bx + nx * sd * a + best.ux * b), Math.round(by + ny * sd * a + best.uy * b)));
-      // the hire's desk on the bank, the kayaks waiting downstream of the planks, a sign, a lamp at the end
+      for (let a = -1; a <= 5; a++) for (let b = -5; b <= 5; b++) clear.add(idx(Math.round(bx + nx * sd * a + best.ux * b), Math.round(by + ny * sd * a + best.uy * b)));
+      // the hire's shack back from the bank upstream of the planks (the kayaks stood against it - client/art2/props-wild.js
+      // kayakShack; the owner, 2026-11-13: "a shack near it with some kayaks propped up against it"), its door the hire's
+      // counter; a wooden trail sign by the way down to the planks (not a lit panel: the woods); a lamp at the planks' end.
+      // The hire's kayaks wait along the planks, the race's start buoy off their end - never on a kayak's spot
       const door = { x: shore.x + nx * sd * 1.4 * TILE, y: shore.y + ny * sd * 1.4 * TILE };
-      const poi = { id: m.pois.length, kind: 'rental', label: E.label, x: door.x, y: door.y, r: 48 };
+      let shack = null;
+      for (const side of [-1, 1]) {
+        const cx = bx + 0.5 + nx * sd * 3.6 + best.ux * 3.6 * side, cy = by + 0.5 + ny * sd * 3.6 + best.uy * 3.6 * side;
+        let ok = true;
+        for (let yy = Math.floor(cy - 0.7); yy <= Math.floor(cy + 1); yy++) for (let xx = Math.floor(cx - 1.1); xx <= Math.floor(cx + 1.1); xx++) if (!openLand(xx, yy)) ok = false;
+        if (ok) { shack = { x: cx * TILE, y: cy * TILE, side }; break; }
+      }
+      const counter = shack ? { x: shack.x - 16, y: shack.y + 26 } : door;
+      const poi = { id: m.pois.length, kind: 'rental', label: E.label, x: Math.round(counter.x), y: Math.round(counter.y), r: 48 };
       m.pois.push(poi);
       const spots = [];
       for (let k2 = 2; k2 <= R.jetty - 1; k2 += 2) spots.push({ x: (bx - nx * sd * k2 + 0.5 - best.ux * 1.6) * TILE, y: (by - ny * sd * k2 + 0.5 - best.uy * 1.6) * TILE, a: Math.atan2(best.uy, best.ux) });
+      const sk = R.jetty + 1.2, sxT = bx - nx * sd * sk + best.ux * 0.5, syT = by - ny * sd * sk + best.uy * 0.5;
+      const start = wet(Math.floor(sxT + 0.5), Math.floor(syT + 0.5)) ? { x: Math.round((sxT + 0.5) * TILE), y: Math.round((syT + 0.5) * TILE) } : null;
       m.rentals.push({ poi: poi.id, name: E.label, spots, models: R.models, dock: door, note: E.note });
-      P.push(['textsign', door.x + best.ux * 2.4 * TILE, door.y + best.uy * 2.4 * TILE, 0, { text: E.sign, bg: '#5a3a22', fg: [250, 230, 180], z: 30 }]);
+      const sg = shack ? -shack.side : 1;
+      P.push(['textsign', shore.x + (nx * sd * 2.4 + best.ux * 4.8 * sg) * TILE, shore.y + (ny * sd * 2.4 + best.uy * 4.8 * sg) * TILE, 0, { text: E.sign, wood: 1, z: 18 }]);   // (its board clear of the planks)
       P.push(['lamp', end.x, end.y, 0, null]);
-      for (let k2 = 0; k2 < 2; k2++) P.push(['canoe', door.x - best.ux * (1.6 + k2 * 0.9) * TILE + nx * sd * 0.8 * TILE, door.y - best.uy * (1.6 + k2 * 0.9) * TILE + ny * sd * 0.8 * TILE, 0, { a: Math.atan2(best.uy, best.ux), c: k2 + 1 }]);   // (two more kayaks pulled up on the bank)
-      return { [key]: [bx, by], poi: poi.id, spots: spots.length };
+      if (shack) P.push(['kayakshack', Math.round(shack.x), Math.round(shack.y), 22, null]);
+      return { [key]: [bx, by], poi: poi.id, spots: spots.length, start, shack: !!shack };
     }
     return null;
   };
@@ -119,8 +134,8 @@ export function riverRun3(m, H3) {
       }
     }
     if (cps.length >= 4 && m.races) {
-      const st = m.rentals.find((q) => q.poi === out.put.poi).spots[0];
-      const race = { id: m.races.length, name: R.name, kind: 'kayak', start: { x: Math.round(st.x), y: Math.round(st.y) }, cps, prize: R.prize, where: 'the put-in\'s landing in the woods' };
+      const st = out.put.start || m.rentals.find((q) => q.poi === out.put.poi).spots[0];
+      const race = { id: m.races.length, name: R.name, kind: 'kayak', start: { x: Math.round(st.x), y: Math.round(st.y) }, cps, prize: R.prize, where: 'the start buoy off the put-in\'s planks', rental: out.put.poi };
       m.races.push(race);
       m.pois.push({ id: m.pois.length, kind: 'race', label: R.name, x: race.start.x, y: race.start.y, r: 60 });
       out.race = { id: race.id, gates: cps.length };

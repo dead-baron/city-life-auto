@@ -580,7 +580,8 @@ export function handleMenu(world, p, poiId, optId) {
   const ped = p.ped;
   if (optId === 'cabcard' && poiId === -1 && ped && !ped.dead) { const it = taxijob.interaction(world, p); if (it && !phone.offerCard(world, p, it.card)) it.run(); return; }   // (a station's route board: its taxi rank - trains.js readRouteBoard)
   if (!poi || !ped || ped.dead || ped.vehId) return;
-  if (Math.hypot(ped.x - poi.x, ped.y - poi.y) > poi.r + 40) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
+  const away = (q) => Math.hypot(ped.x - q.x, ped.y - q.y);   // (p.menu.at: a counter's menu opened from somewhere else - a race's hire, from its planks: races.js footInteraction)
+  if (away(poi) > poi.r + 40 && !(p.menu && p.menu.poi === poiId && p.menu.at && away(p.menu.at) < 120)) { world.notify(p, 'You walked away from the counter.', 'warn'); return; }
   const shut = !!(buildMenu(world, p, poi).opts.find((o) => o.id === optId) || {}).shut;   // (an option that closes its menu: the page closes it too)
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');

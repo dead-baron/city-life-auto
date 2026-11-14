@@ -1125,7 +1125,7 @@ function onEvent(ev) {
     case 'cartcrash': for (let k = 0; k < 5 + (ev.n | 0) * 4; k++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 110; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.7 + Math.random() * 0.5, 3 + Math.random() * 2, GROCERY[k % 6], 0, 120 + Math.random() * 120); } fx.litter(ev.x, ev.y, 7, GROCERY, 34, S.loopClock); break;   // (a cart's crash: the shopping flies - CC01)
     case 'shw': fx.splash(ev.x, ev.y + 8, 12); break;   // (an outdoor shower turned on: server/systems/showers.js)
     case 'douse': fx.splash(ev.x, ev.y, 14); for (let k = 0; k < 9; k++) fx.spawn(2, ev.x + (Math.random() - 0.5) * 18, ev.y - 4, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 1.2 + Math.random(), 6 + Math.random() * 5, 'rgba(232,238,244,', 14); break;   // (into the water on fire: a burst of steam - burning.js)
-    case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
+    case 'say': if (DIR && DIR.noSay()) break; fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;   // (the camera's Speech bubbles off: none - client/director.js)
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
     case 'thanks': fx.floatText(ev.x, ev.y - 18, 'Thank you!', '#3ddc84'); break;
     case 'cast': case 'nibble': case 'bite': case 'hook': case 'flost': case 'catch': fishGo(ev); break;   // (fishing: client/fishing.js)
@@ -3392,7 +3392,8 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
-    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
+    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;
+    if (DIR && e !== meEnt && e !== myCar && DIR.hidden(e)) continue;   // (the camera's Show toggles: other players, people on foot, traffic - client/director.js)   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
     if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
@@ -3750,8 +3751,9 @@ function drawOverlays(F, v2) {
   if (S.fish) S.fish.drawWorld(g);   // (the lines out, your cast's meter)
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
-  if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
-  else if (DIR && DIR.tags) drawWorldLabels(F.peds, F.vehs, now, z, true);   // (a capture's clean screen: the players' name tags still over them - client/director.js)
+  { const lab = DIR ? DIR.labels() : null;   // (the camera's Show: name tags, the marks over heads - client/director.js)
+    if (!lab) { if (!clean) drawWorldLabels(F.peds, F.vehs, now, z); }
+    else if (!clean || lab.tags || lab.marks) drawWorldLabels(F.peds, F.vehs, now, z, { tags: lab.tags, marks: lab.marks, rest: !clean }); }
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
   else if (!clean && S.me && S.me.car && F.view && !(DIR && DIR.hideMe)) drawMyCar(S.me.car, F.view, now, z, F.vehs);   // (your starter car, parked: server starter.js marker)
   if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
@@ -4113,29 +4115,14 @@ function tickInterior() {
 }
 $('int-open').onclick = () => send({ t: 'interior' });
 
-// Race buoys: a big start float with a chequered flag, numbered checkpoint buoys bobbing.
+// Race marks: the start float or flag, the numbered gate buoys - pixel art (client/render/racemarks.js, loaded the first
+// time one is in view)
 function drawBuoys(view, now) {
-  const inView = (p) => p.x > view.x0 - 60 && p.x < view.x1 + 60 && p.y > view.y0 - 60 && p.y < view.y1 + 60;
-  for (const race of S.map.races || []) {
-    const bob = (k) => Math.sin(now * 2 + k) * 1.5;
-    race.cps.forEach((c, k) => {
-      if (!inView(c)) return;
-      g.fillStyle = 'rgba(255,255,255,.25)'; g.beginPath(); g.ellipse(c.x, c.y + 4, 14, 6, 0, 0, 6.28); g.fill();
-      g.fillStyle = k % 2 ? '#ffffff' : '#e8382b'; g.beginPath(); g.arc(c.x, c.y + bob(k), 9, 0, 6.28); g.fill();
-      g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-      g.fillStyle = k % 2 ? '#e8382b' : '#fff'; g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillText(String(k + 1), c.x, c.y + bob(k) + 4);
-    });
-    const s = race.start;
-    if (!inView(s)) continue;
-    g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(s.x, s.y + 6, 26, 9, 0, 0, 6.28); g.fill();
-    g.fillStyle = '#ff9a1a'; g.beginPath(); g.arc(s.x, s.y + bob(9), 14, 0, 6.28); g.fill();
-    g.strokeStyle = '#1b2333'; g.lineWidth = 2; g.stroke();
-    g.fillStyle = '#1b2333'; g.fillRect(s.x - 1, s.y - 30, 2, 28);
-    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { g.fillStyle = (r + c) % 2 ? '#fff' : '#111'; g.fillRect(s.x + 1 + c * 4, s.y - 30 + r * 4, 4, 4); }
-    g.font = '700 12px "CLA Pixel", "Barlow Condensed", sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(race.name, s.x + 1, s.y + 31);
-    g.fillStyle = '#fff'; g.fillText(race.name, s.x, s.y + 30);
-    g.font = '700 10px "CLA Pixel", "Barlow Condensed", sans-serif'; g.fillStyle = '#ffd36b'; g.fillText(`START - ${{ jetski: 'jet skis', kayak: 'kayaks', wheels: 'anything on wheels', dirt: 'motorcycles' }[race.kind] || 'boats'}`, s.x, s.y + 44);
-  }
+  const races = S.map.races;
+  if (!races || !races.length) return;
+  if (S.raceMarks) { S.raceMarks.drawRaceMarks(g, races, view, now); return; }
+  const near = (p) => p.x > view.x0 - 200 && p.x < view.x1 + 200 && p.y > view.y0 - 200 && p.y < view.y1 + 200;
+  if (races.some((r) => near(r.start) || r.cps.some(near))) S.raceMarksP ||= import('./render/racemarks.js').then((m) => { S.raceMarks = m; }).catch(() => { S.raceMarksP = null; });
 }
 
 // Sliding gates (motor pools, the Syndicate compound): steel panels that roll aside.
@@ -5175,32 +5162,31 @@ function dimHex(c) {
   dimMemo.set(c, d);
   return d;
 }
-function drawWorldLabels(peds, vehs, now, z, namesOnly = false) {
+function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the camera's { tags, marks, rest } - what of it's drawn)
   const fs = 12 / z;
   g.textAlign = 'center';
   g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
-    if (namesOnly && !(p.d.pl && p.d.n)) continue;
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
-    if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
-    if (p.flags & PF.FLARE) {
+    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
+    if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
       g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
       g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
       g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     }
-    if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
+    if ((!only || only.rest) && !p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
       const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
       if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
-    if (p.d.pl && p.d.n && p.id !== S.myPedId) {
+    if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
       const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade - no tag; members in white)
@@ -5210,7 +5196,7 @@ function drawWorldLabels(peds, vehs, now, z, namesOnly = false) {
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }
-  if (namesOnly) return;
+  if (only && !only.rest) return;
   const me = S.me;
   if (me && me.rumor) {
     const r = me.rumor;

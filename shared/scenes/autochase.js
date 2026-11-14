@@ -17,9 +17,9 @@ export default {
     { who: 'car', do: 'drive', to: 'far', speed: 0.85, max: 14, after: 'go' },
   ],
   cam: [
-    { at: 0, follow: 'car', z: 0.95, lead: 0.2, s: 60 },
-    { at: 3, follow: 'car', z: 0.8, lead: 0.65, ease: 2 },
-    { on: 'go', d: 6, follow: 'car', z: 0.7, lead: -0.35, ease: 2.5 },
-    { at: 15, follow: 'car', z: 0.85, lead: 0.6, ease: 2 },
+    { at: 0, follow: 'car', z: 1.14, lead: 0.2, s: 60 },
+    { at: 3, follow: 'car', z: 0.96, lead: 0.65, ease: 2 },
+    { on: 'go', d: 6, follow: 'car', z: 0.84, lead: -0.35, ease: 2.5 },
+    { at: 15, follow: 'car', z: 1.02, lead: 0.6, ease: 2 },
   ],
 };

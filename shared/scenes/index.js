@@ -63,6 +63,9 @@ export const BEATS = {
   wait: ['s'],                                        // a pause: s seconds at most - until: { stop: castId } / { hit: castId } over sooner when that vehicle's (nearly) stopped / has run into something
   release: ['who'],                                   // off the script: the city's own AI from now (who: a cast id or 'all')
 };
+// a line said in a scene: short and quick (the owner, 11-13: "too fast to read anyways" - the bubbles are off by default:
+// client/director.js's Speech bubbles)
+export const SAY_MAX = 40;
 const BEAT_KEYS = new Set(['id', 'who', 'do', 'at', 'after', 'wait', 'to', 'veh', 'target', 'text', 'emote', 'group', 'n', 'hits', 'until', 'max', 'speed', 'direct', 'straight', 'pass', 'alt', 'spray', 'size', 's', 'clubs', 'units', 'gun', 'route', 'note']);
 const CAM_KINDS = ['follow', 'move', 'hold', 'between', 'orbit'];
 
@@ -118,6 +121,7 @@ export function validateScene(sc) {
     if (b.at !== undefined && !(typeof b.at === 'number' && b.at >= 0 && b.at <= sc.len)) err.push(`${where}: at: seconds into the scene`);
     if (b.id) { if (beatIds.has(b.id)) err.push(`${where}: duplicate id ${b.id}`); beatIds.add(b.id); }
     if (b.do === 'emote' && !/^[a-z]+$/.test(b.emote || '')) err.push(`${where}: emote id`);
+    if (b.do === 'say' && String(b.text || '').length > SAY_MAX) err.push(`${where}: a line of at most ${SAY_MAX} characters (a quick one: the bubbles are off unless the camera panel turns them on)`);
     if (b.until && typeof b.until === 'object') for (const k of ['stop', 'hit']) if (b.until[k] !== undefined && !known(b.until[k])) err.push(`${where}: until: no cast ${b.until[k]}`);
   });
   let last = -1;

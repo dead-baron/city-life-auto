@@ -338,3 +338,20 @@ test('a koi out of a park\'s pond is a crime (the owner: "if you get caught catc
   assert.ok((prof.criminalExp || 0) > exp0, 'a koi from the park pond: a crime');
   players.leave(W, p);
 });
+
+// (the owner, 2026-11-13: at the river run's planks with a rod in the bag, "Fish here" won over the kayak just hired - "you
+// cant seem to be able to interact with it if you own a fishing pole since it automatically prompts you to fish")
+test('your own ride beside you beats "Fish here": your hire kayak at the bank; someone else\'s boat doesn\'t', () => {
+  const { p, prof } = joinPlayer(W, { cash: 0, bank: 0 });
+  prof.weapons.rod = 0; prof.inventory.worms = 5;
+  const bank = bankOf(W, (h) => h.water === 'river' || h.water === 'lake');
+  teleport(W, p.ped, bank[0], bank[1]); p.ped.a = bank[2];
+  assert.ok(/Fish here/.test((players.findInteraction(W, p) || {}).label || ''), 'a rod, the water: fish');
+  const v = W.spawnVehicle('kayak', bank[0] + Math.cos(bank[2]) * 34, bank[1] + Math.sin(bank[2]) * 34, bank[2] + Math.PI / 2, { npcOwned: false });
+  assert.ok(/Fish here/.test((players.findInteraction(W, p) || {}).label || ''), 'nobody\'s kayak: still fish');
+  v.rentedBy = p.pid;
+  const it = players.findInteraction(W, p);
+  assert.ok(it && /rental/i.test(it.label) && it.key === 'F', `your hire kayak: get in (${it && it.label})`);
+  W.remove(v);
+  players.leave(W, p);
+});

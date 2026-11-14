@@ -115,6 +115,25 @@ export function withdraw(world, p) {
   return true;
 }
 
+// On foot at a race that starts from a hire dock (the Redwood River Run's kayaks: shared/world3-riverrun.js race.rental) -
+// on its planks, at its start buoy or at the hire's counter, with no hire boat of your own out: rent one right there (the
+// owner, 2026-11-13: "I dont see a way to start the kayak run either"; players.js findInteraction asks this before the
+// places and before "Fish here", which used to win on the planks with a rod in the bag). -> { label, run } or null
+export function footInteraction(world, p, rentals, openMenu) {
+  const ped = p.ped;
+  if (!ped || ped.vehId || !world.map.races) return null;
+  for (const race of world.map.races) {
+    if (race.rental === undefined) continue;
+    const poi = world.map.pois[race.rental], r = poi && rentals.rentalFor(world, poi);
+    if (!r) continue;
+    const near = Math.hypot(ped.x - race.start.x, ped.y - race.start.y) < START_R * 1.2 || Math.hypot(ped.x - r.dock.x, ped.y - r.dock.y) < 120;
+    if (!near || rentals.current(world, p)) continue;
+    const model = rentals.modelsAt(r)[0];
+    return { label: `Rent a ${model} for ${race.name}`, run: () => { openMenu(world, p, poi); if (p.menu) p.menu.at = { x: ped.x, y: ped.y }; } };
+  }
+  return null;
+}
+
 // HUD tracker + waypoint for a racer (uses the job tracker slot).
 export function targetFor(world, p) {
   if (!world.raceState) return null;

@@ -23113,3 +23113,71 @@ Tests: test/crush.test.js (the tracks laid from the first sight, every step, bac
 jump), test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
 back on the timer), test/crush.test.js (the ring's index; a car through a bush - the leaves, the bush knocked aside and
 standing back up, a tree and a car standing still: nothing), test/wind.test.js (a push bends a bush, never a crown).
+
+## 2026-11-13 - The director, round two: the owner's notes - no bubbles, closer framing, the camera stays his
+
+The owner, on the brawl clip: "We don't need the text bubble and it is too fast to read anyways", "some zoomed out a
+little too far", and "I'd like to be able to control things like zoom level and then different layers or game objects
+and things on and off, and still be able to control time and weather". He records from the game himself now; the
+capture server and tool stay as they are.
+
+- **Speech bubbles off** while the camera's open, by default (client/director.js Show → Speech bubbles): an NPC's spoken
+  line (the 'say' event) and the chat bubbles both. Scenes keep their lines and emotes, but a line is short now -
+  `SAY_MAX` (40) characters at most, checked by `validateScene`.
+- **Closer framing**: every shot's zoom in the three scenes, the autoplay scenes and the Showcase moves a fifth closer.
+- **The camera stays the owner's during a scene**: the zoom is an offset on the script's own (Q / E, LT / RT, the
+  panel's - +; the % between them or 0 puts it back) and is kept; the time of day and the weather overrides work as
+  ever (they're this screen's).
+- **Show** (the panel; this screen only, kept in this browser under `cla.cine`, try/catch round every read and write):
+  name tags (over players - and a capture's actors - even on the clean screen), the marks over heads (a bounty's skull,
+  a reported suspect's flare), speech bubbles, emote balloons, other players, people on foot (not animals), traffic (the
+  vehicles that move - parked ones stay), the rain. A scene's own cast is never hidden. Not done: lights / bloom and
+  shadows (they're the graphics settings', not a per-frame switch) and roofs (no see-through to toggle).
+- **Every device**: the panel answers ↑ ↓ / Enter (keyboard), the D-pad / A (pad) and taps; B / Esc / Y close it, then
+  the camera; the ✕ in the corner as before. The Guide's Camera entry says what's new.
+
+## 2026-11-13 - The placement lint; the Harbor marina and the Redwood River Run put right; the race marks drawn as pixel art
+
+The owner, 11-13: at the Harbor's marina "a moored boat sits inside a sea-stack rock" and the boat hire's Rentals sign
+was half under a second HARBOR MARINA board; at the Redwood River Run "it doesn't need a big glowing sign ... a more
+appropriate wooden sign", "a shack near it with some kayaks propped up against it", "the starting marker for the kayak
+run looks like placeholder", "I dont see a way to start the kayak run", and the kayak "spawning under that start
+symbol" with "Fish here" taking the button from it. And: "Is there a way to go through the game and catch some of these
+kinds of errors ... starting with these hand crafted scenes".
+
+- **The Harbor marina.** The sea stacks, the seal rock and the keeper's cottage were Lighthouse Rock's tidepools
+  (shared/naturesites.js `lighthouseTidepools`), laid by the first lighthouse on the map - on World v3 that is the
+  Harbor Light on the city's seawall: they now go only to the light in the Lighthouse Rock district (today's world),
+  and the Showcase's "Lighthouse Rock" (it flew to the Harbor) is Egret Point Light now. The HARBOR MARINA board on
+  posts went (the shop's front says it). The hire's pier went in a tile off a finger pier, its boats on the planks:
+  a hire pier's launch keeps clear of the piers already there (shared/map.js `findLaunch` `clear`). The Neon Strip's
+  marina is Neon Bay Marina - two places of one name.
+- **The Redwood River Run's put-in** (shared/world3-riverrun.js): a kayak shack back from the bank - board-and-batten,
+  cedar shakes, a lantern, three kayaks stood against it, paddles (client/art2/props-wild.js `kayakShack`) - its door
+  the hire's counter; a wooden trail sign with the whole name (the board used to be cut off at a chunk's edge: every
+  text sign is now filed under every chunk its board crosses - client/art2/game/statics.js); the race's start float
+  off the planks' end, clear of the kayaks' spots (and Egret Marsh's the same). On foot on the planks, at the float or
+  at the shack: "Rent a kayak for Redwood River Run" (server/systems/races.js `footInteraction`), before the places
+  and before "Fish here"; and your own ride beside you - the hire kayak, your car - beats "Fish here" too
+  (server/systems/players.js). The Guide has the river run.
+- **Wooden signs in the wilds.** A text sign with `wood` is a trail sign: planks with their seams and grain, a dark
+  frame, the words cut in cream, two square posts with caps, nothing lit. World v3's tidy pass (shared/world3-tidy.js)
+  makes every standing sign in a wild district one (a board chosen `lit` stays lit: Splash Canyon's).
+- **The race marks** (client/render/racemarks.js, loaded the first time a race is in view - out of main.js): the start
+  on the water a striped float on its ripples with a chequered flag on a mast, the gates red and white can buoys with a
+  numbered pennant, the start on land a chequered flag in a weighted block, the land gates cones - pixel art at the art
+  pixel, not flat circles.
+- **The placement lint** (tools/placementlint.mjs, test/placementlint.test.js - World v3, the heavy lock): boats and
+  floats on clear water (not on rocks, planks or the shore), standing boards over each other or over a building's
+  ground floor, two boards of one name in a screen or a board by the building whose front says it, a plant on a roof or
+  a plaza's furniture in a city block, a lit board in the wilds, a race's start over a craft. What it found is fixed in
+  the data, every count now 0 (nothing allowed): 107 boats off clear water (the Harbor's sailboats in the sea stacks; the
+  old Pelican Key's jetty boats left under World v3's city - 7 dropped by the tidy pass; Bayside Boatworks' and the
+  Harbor slipway's boats up on the hard or on the beach - put on cradles and off the sand; the hire kayaks on Egret
+  Marsh's boardwalk; the many that only touched a finger pier's tip are left - alongside is moored), 8 boards beside the
+  building whose front says the same (HARBOR BOATWORKS, YARDS AUTO SALVAGE, WESTPORT GALLERIA, TIKI POINT and four more -
+  dropped), 2 pairs of street names checked and kept (the alleys' two ends, a screen apart), 11 boards over a front's
+  ground floor (stepped out till clear), 383 plants on roofs and pieces of plaza furniture in city blocks
+  (dropped), 31 lit boards in the wilds (made wooden). shared/world3-tidy.js does the general ones last in the build.
+- Hashes: the world (today's - the hire piers' launch), World v3's and both art hashes change; the chunks the server
+  bakes the same as before carry over (server/artcdn.js).

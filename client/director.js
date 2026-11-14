@@ -24,6 +24,13 @@
 //   the scene, its clock's first tick, the cast's entities, the place's anchors, when its beats began) and the camera here
 //   flies the script's shots (shared camAt) over what's drawn: the 'script' mode. A capture's ({ cap }) has the clean
 //   screen with the players' name tags (D.tags), your own character out of the picture. Esc gives the camera back.
+// What's drawn while the camera's open (the owner, 11-13: "control things like zoom level and then different layers or
+// game objects and things on and off"): the panel's Show section - name tags, the marks over heads (a bounty's skull, a
+// reported suspect's flare), speech bubbles (off by default: "too fast to read anyways"), emote balloons, other players,
+// people on foot, traffic (the vehicles that move), the rain - this screen only, kept in this browser (localStorage
+// 'cla.cine', with the zoom a scene is watched at and the letterbox). A scene's zoom is the script's times the panel's:
+// Q / E, LT / RT or the panel's - + move it, the % between them puts it back. The panel answers the arrows / D-pad and
+// Enter / A as well as a tap; B / Esc close it, then the camera.
 // main.js asks it each frame: holds() (the keys are the camera's), cam(cam, dt, tx, ty), zoomK, lt (the time of day's
 // loop time or null), wx (null | 'clear' | 'rain' | 'fog'), sky(sky), hideMe, clean, eye() (where the camera is, when
 // it's off you: the world's window follows it); key(k, down), pad(axes), follow(msg) (the server's { t: 'cinef' }).
@@ -163,6 +170,15 @@ export const SCENES = [
 export function makeDirector(S, api) {
   const D = { clean: false, mode: 'follow', zoomK: 1, zi: 3, lt: null, ti: 0, wx: null, wi: 0, box: 0, bi: 0, hideMe: false, noShake: true, smooth: 0.55, hideNames: true, tags: false, snapZoom: false };
   const keys = new Set();
+  // the Show toggles and what's kept in this browser (per device; a private window or blocked storage: the defaults)
+  const L = { tags: false, marks: false, bubbles: false, emotes: true, players: true, peds: true, traffic: true, rain: true, sz: 3 };
+  const LAYERS = [['tags', 'Name tags'], ['marks', 'Marks over heads'], ['bubbles', 'Speech bubbles'], ['emotes', 'Emote balloons'], ['players', 'Other players'], ['peds', 'People on foot'], ['traffic', 'Traffic'], ['rain', 'Rain']];
+  try { const o = JSON.parse(localStorage.getItem('cla.cine') || 'null'); if (o && typeof o === 'object') for (const k of Object.keys(L)) if (typeof o[k] === typeof L[k]) L[k] = o[k]; } catch { /* storage blocked: the defaults */ }
+  const keep = () => { try { localStorage.setItem('cla.cine', JSON.stringify(L)); } catch { /* storage blocked */ } };
+  const flip = (k) => { L[k] = !L[k]; keep(); syncLayers(); render(); };
+  // the page's own: the bubbles and emote balloons by a class on the body (client/chat.js #cht-bubs: .cht-bub, .emo-pop)
+  function syncLayers() { const on = D.isOpen(); document.body.classList.toggle('cine-nosay', on && !L.bubbles); document.body.classList.toggle('cine-noemo', on && !L.emotes); }
+  D.layers = L;
   let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, scene = null;
   // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
   // n, z, tour; cam: the camera on them; hold: black until they're here and the art's in; near: near you or anywhere)
@@ -220,7 +236,9 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-shut { right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 68px; height: 68px; border-radius: var(--r3); background: var(--white); border: 4px solid var(--pad-ink); box-shadow: 0 0 0 4px var(--white), 0 4px 0 4px var(--pad-drop); }
 #cine-shut:active { transform: scale(.9); }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
-body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }   /* (a capture's frames: nothing of the camera's own on them) */
+body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }
+body.cine-nosay #cht-bubs .cht-bub, body.cine-noemo #cht-bubs .emo-pop { display: none !important; }
+#cine-panel button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 1px; }   /* (a capture's frames: nothing of the camera's own on them) */
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
 .touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
 body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centre is the close button's - the objective waits) */
@@ -259,7 +277,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // your character hidden, a time of day or a weather of its own
   D.isOpen = () => shown || D.clean || D.mode !== 'follow' || !!D.box || D.hideMe || D.lt !== null || D.wi !== 0;
   let onSig = false;
-  const syncOn = () => { const on = D.isOpen(); if (on !== onSig) { onSig = on; document.body.classList.toggle('cine-on', on); } };
+  const syncOn = () => { const on = D.isOpen(); if (on !== onSig) { onSig = on; document.body.classList.toggle('cine-on', on); syncLayers(); } };
   // close: all of it off, the game's own camera back (Esc, B, the corner's button)
   function close() {
     if (scene && scene.timer) clearTimeout(scene.timer);
@@ -314,7 +332,11 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   const wake = () => { wokeAt = performance.now(); };
   addEventListener('pointerdown', () => { if (D.clean) wake(); }, true);
   addEventListener('pointermove', () => { if (D.clean && (D.mode === 'drift' || D.mode === 'scene')) wake(); }, true);
-  function setZoom(i) { D.zi = Math.max(0, Math.min(ZOOMS.length - 1, i)); D.zoomK = ZOOMS[D.zi]; render(); }
+  function setZoom(i) {
+    if (D.mode === 'script') { L.sz = Math.max(0, Math.min(ZOOMS.length - 1, i)); keep(); render(); return; }   // (a scene's: an offset on the script's own zoom, kept)
+    D.zi = Math.max(0, Math.min(ZOOMS.length - 1, i)); D.zoomK = ZOOMS[D.zi]; render();
+  }
+  const zoomAt = () => (D.mode === 'script' ? L.sz : D.zi);
   function setTime(i) { D.ti = i; const m = TIMES[i][1]; D.lt = m === null ? null : loopOf(m); render(); }
   function setWx(i) {
     D.wi = i; const w = WXS[i][1];
@@ -491,7 +513,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     return d;
   }
   const speedRow = () => [btn('◀', false, () => setDrift(dr.si - 1)), Object.assign(document.createElement('span'), { className: 'lbl', textContent: DRIFT_NAMES[dr.si] }), btn('▶', false, () => setDrift(dr.si + 1))];
-  const zoomRow = () => [btn('－', false, () => setZoom(D.zi - 1)), btn('＋', false, () => setZoom(D.zi + 1))];
+  const zoomRow = () => [btn('－', false, () => setZoom(zoomAt() - 1)), btn('＋', false, () => setZoom(zoomAt() + 1))];
   // the bar along the bottom (drift / follow scenes): made again when what it shows changes
   function barShow() {
     const want = D.mode === 'drift' || D.mode === 'scene';
@@ -547,7 +569,9 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (D.mode === 'target') panel.append(row(btn('◀ Previous ([)', false, () => nextTarget(-1)), btn('Next (]) ▶', false, () => nextTarget(1))));
     const tips = { drone: 'Drone: WASD / arrows / left stick fly it, Q / E zoom, Shift faster, Esc back to you.', tour: 'Tour: the camera glides through the world\'s sights on its own. Esc ends it.', drift: 'Drift: a pan across wherever you are. WASD / arrows / the left stick steer it, Z / X or LB / RB slower / faster, Space stops it, Q / E or LT / RT zoom.', scene: 'Follow scenes: the camera on someone doing something, near you or anywhere - it moves on when they\'re done. N / A the next one, [ ] / LB RB the kind, T the tour, Esc / B back to you.', target: 'On someone: the people and vehicles near you, nearest first.', smooth: 'Smooth: the camera trails you, like a camera operator.' };
     if (tips[D.mode]) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = tips[D.mode]; panel.append(p); }
-    panel.append(h('Zoom'), row(btn('－', false, () => setZoom(D.zi - 1)), btn(`${Math.round(100 / D.zoomK)}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(D.zi + 1))));
+    panel.append(h(D.mode === 'script' ? 'Zoom (on the scene\'s own)' : 'Zoom'), row(btn('－', false, () => setZoom(zoomAt() - 1)), btn(`${Math.round(100 / ZOOMS[zoomAt()])}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(zoomAt() + 1))));
+    // what's drawn (this screen only; kept in this browser)
+    panel.append(h('Show'), row(...LAYERS.map(([k, n]) => btn(`${L[k] ? '☑' : '☐'} ${n}`, L[k], () => flip(k)))));
     panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
     panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => setWx(i)))));
     if (!dev()) return;   // (the rest - the Showcase, the staged scenes - debug mode's: they move you and run its commands)
@@ -590,18 +614,38 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
 
   // ---- what main.js calls ----
+  // the panel by keys or the pad: a step through its buttons, a press of the one with the focus
+  function navPanel(dir) {
+    const bs = [...panel.querySelectorAll('button:not([disabled])')];
+    if (!bs.length) return;
+    const i = bs.indexOf(document.activeElement), j = i < 0 ? 0 : (i + dir + bs.length) % bs.length;
+    bs[j].focus(); bs[j].scrollIntoView({ block: 'nearest' });
+  }
+  function pressPanel() { const a = document.activeElement; if (panel && a && panel.contains(a) && a.tagName === 'BUTTON') { a.click(); return true; } return false; }
   D.key = (k, down) => {
     if (down && k === 'F2') { setClean(!D.clean); return true; }
-    if (down && k === 'F4') { toggle(); return true; }
+    if (down && k === 'F4') { toggle(); if (shown) navPanel(0); return true; }
+    if (shown && panel && (panel.contains(document.activeElement) || k === 'ArrowDown' || k === 'ArrowUp') && !D.holds()) {   // (the panel's keys while it has them)
+      if (down && (k === 'ArrowDown' || k === 'ArrowRight')) { navPanel(1); return true; }
+      if (down && (k === 'ArrowUp' || k === 'ArrowLeft')) { navPanel(-1); return true; }
+      if (down && (k === 'Enter' || k === 'Space') && pressPanel()) return true;
+      if (down && k === 'Escape') { toggle(false); return true; }
+    }
+    if (shown && panel && panel.contains(document.activeElement) && D.holds() && down) {
+      if (k === 'ArrowDown' || k === 'ArrowUp') { navPanel(k === 'ArrowDown' ? 1 : -1); return true; }
+      if (k === 'Enter' && pressPanel()) return true;
+      if (k === 'Escape') { toggle(false); return true; }
+    }
     if (down && k === 'F8') { shot(); return true; }
     if (D.mode === 'target' && down && (k === 'BracketLeft' || k === 'BracketRight')) { nextTarget(k === 'BracketRight' ? 1 : -1); return true; }
     if (down && k === 'Escape' && !D.holds() && D.isOpen()) { close(); return true; }   // (Esc: out of the camera)
     if (!D.holds()) return false;
     if (down) { here(); wake(); }
     if (down && k === 'Escape') { setMode('follow'); return true; }
-    const zoomKey = D.mode === 'drone' || D.mode === 'drift' || D.mode === 'scene';
-    if (zoomKey && down && (k === 'KeyQ' || k === 'Minus')) { setZoom(D.zi - 1); return true; }
-    if (zoomKey && down && (k === 'KeyE' || k === 'Equal')) { setZoom(D.zi + 1); return true; }
+    const zoomKey = D.mode === 'drone' || D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script';
+    if (zoomKey && down && (k === 'KeyQ' || k === 'Minus')) { setZoom(zoomAt() - 1); return true; }
+    if (zoomKey && down && (k === 'KeyE' || k === 'Equal')) { setZoom(zoomAt() + 1); return true; }
+    if (D.mode === 'script' && down && k === 'Digit0') { setZoom(3); return true; }   // (0: the scene's own zoom again)
     if (D.mode === 'drift' && down) {
       if (k === 'KeyZ') { setDrift(dr.si - 1); return true; }
       if (k === 'KeyX') { setDrift(dr.si + 1); return true; }
@@ -620,16 +664,22 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   D.pad = (a) => {
     axes = a;
     const I = api.input || {}, t = performance.now();
+    if (shown && panel) {   // (the panel up: the D-pad steps through it, A presses, B closes it - Y too)
+      if (I.menuNav) { navPanel(I.menuNav > 0 ? 1 : -1); here(); return; }
+      if (I.menuLR) { navPanel(I.menuLR > 0 ? 1 : -1); here(); return; }
+      if (I.menuSelect && pressPanel()) return;
+      if (I.menuBack || I.padY) { toggle(false); return; }
+    }
     if (!D.holds()) { if (I.menuBack && D.isOpen()) close(); return; }   // (B: out of the camera)
     if (I.menuBack || I.padX || I.padY || I.menuTab || I.menuSelect || (a && (Math.hypot(a.lx || 0, a.ly || 0) > 0.3 || (a.lt || 0) > 0.3 || (a.rt || 0) > 0.3))) { wake(); here(); }
     if (I.menuBack) { setMode('follow'); return; }
-    if (I.padY) toggle();
+    if (I.padY) { toggle(); if (shown) navPanel(0); }
     if (I.padX) shot();
     if (D.mode === 'drift' && I.menuTab) setDrift(dr.si + I.menuTab);
     if (D.mode === 'scene' && I.menuTab) stepKind(I.menuTab);
     if (D.mode === 'scene' && I.menuSelect) followKind('next');
-    if (a && D.mode !== 'drone' && t - padZoomAt > 260) {   // (the drone zooms with Q / E; held, a trigger steps the zoom)
-      if ((a.rt || 0) > 0.5) { setZoom(D.zi + 1); padZoomAt = t; } else if ((a.lt || 0) > 0.5) { setZoom(D.zi - 1); padZoomAt = t; }
+    if (a && D.mode !== 'drone' && t - padZoomAt > 260) {   // (the drone zooms with Q / E; held, a trigger steps the zoom - a scene's offset in a scene)
+      if ((a.rt || 0) > 0.5) { setZoom(zoomAt() + 1); padZoomAt = t; } else if ((a.lt || 0) > 0.5) { setZoom(zoomAt() - 1); padZoomAt = t; }
     }
   };
   // the server's word on the follow scenes: whom to follow ({ id, k, n, z, cut, tour, x, y }), nobody at it ({ none }),
@@ -695,7 +745,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (!sc) return;
     sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2 };
     sct.hadHide = D.hideMe; D.hideMe = true;   // (your own character out of it)
-    if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
+    if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; L.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
     if (D.mode !== 'script') setMode('script'); else { x = S.cam.x; y = S.cam.y; }
     if (!D.clean) api.toast(`Scene: ${sc.n}. Esc gives you the camera back.`, 'info');
   };
@@ -731,9 +781,27 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     else { const f = 1 - Math.exp(-6 * dt); x += (c.x - x) * f; y += (c.y - y) * f; }
     sct.shot = c.i;
     sct.cam = { x: c.x, y: c.y, z: c.z };
-    D.zoomK = c.z * (tall ? 0.85 : 1);
+    D.zoomK = c.z * ZOOMS[L.sz] * (tall ? 0.85 : 1);   // (the script's zoom, times the panel's offset on it)
   }
-  D.sky = (sky) => { if (D.wx === 'clear') { sky.rain = 0; } };
+  D.sky = (sky) => { if (D.wx === 'clear' || (D.isOpen() && !L.rain)) { sky.rain = 0; } };
+  // what main.js draws over people while the camera's open: { tags, marks } (null: as ever)
+  D.labels = () => (D.isOpen() ? { tags: L.tags || D.tags, marks: L.marks } : null);
+  // a 'say' (an NPC's spoken line) shown? Not while the camera's open with the bubbles off
+  D.noSay = () => D.isOpen() && !L.bubbles;
+  // an entity left out of the picture by the Show toggles (never the scene's own cast, never you or yours)
+  const castIds = () => (sct ? new Set(Object.values(sct.cast)) : null);
+  let castSet = null, castAt = -1, castN = -1;
+  D.hidden = (e) => {
+    if (!D.isOpen() || (L.players && L.peds && L.traffic)) return false;
+    const n = sct ? Object.keys(sct.cast).length : 0;
+    if (castAt !== sct || castN !== n) { castSet = castIds(); castAt = sct; castN = n; }
+    if (castSet && castSet.has(e.id)) return false;
+    if (e.kind === K.VEH) { if (Math.abs((e.rx || 0) - (e.mvX ?? e.rx)) > 0.5) e.moved = true; e.mvX = e.rx; return !L.traffic && !!e.moved && !(castSet && [...castSet].some((id) => { const q = S.ents.get(id); return q && q.parent === e.id; })); }
+    if (e.kind !== K.PED || !e.d) return false;
+    if (e.parent) { const v = S.ents.get(e.parent); if (v && v.kind === K.VEH) return D.hidden(v); }
+    if (e.d.pl) return !L.players;
+    return !L.peds && !String(e.d.ar || '').startsWith('pet:');
+  };
   D.cam = (cam, dt, tx, ty) => {
     // (down: the panel shuts and the camera comes back to you - the death screen's choices take the keys and the screen)
     if (S.me && S.me.dead) { if (shown) toggle(false); if (D.holds()) setMode('follow'); }

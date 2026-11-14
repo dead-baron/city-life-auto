@@ -954,6 +954,8 @@ export function findInteraction(world, p) {
   if (door) return door;
   const work = forklift.interaction(world, p) || fishboat.interaction(world, p) || rangerjob.interaction(world, p);   // a yard's forklifts, a fish market's quay, a ranger station: sign on (batch 8)
   if (work) return work;
+  const hire = races.footInteraction(world, p, rentals, economy.openMenu);   // at a race that starts from a hire dock: rent its craft (races.js)
+  if (hire) return hire;
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
@@ -1005,6 +1007,11 @@ export function findInteraction(world, p) {
   const drive = taxijob.interaction(world, p) || towjob.interaction(world, p) || busjob.interaction(world, p) || truckjob.interaction(world, p);   // a taxi rank, an impound lot, a bus stop: sign on to drive (H72)
   if (drive) return drive;
 
+  {   // your own ride beside you - your car, your hire kayak at the planks - before "Fish here" (the owner, 11-13: the rod's
+    // prompt won at the river run's landing, the kayak you'd just hired a step away)
+    const mine = vehicles.nearestVehicle(world, ped, 56, true);
+    if (mine) { const e = vehicles.entryInfo(world, p, mine); if (e.kind === 'own' || e.kind === 'rental' || e.kind === 'work') return { label: vehicles.enterLabel(world, p, mine), key: 'F', key2: `veh:${mine.id}`, run: () => vehicles.tryEnter(world, ped) }; }
+  }
   const fish = fishHere(world, p, ped);
   if (fish) return fish;
   const join = crews.joinPrompt(world, p) || crews.askPrompt(world, p);   // someone beside you who asked you into their crew: join; or ask them into yours (crews.js)

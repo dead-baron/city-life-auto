@@ -1461,7 +1461,7 @@ function splashBay(m, H) {
   }
   // a paved path from the parkway's pavement to the gate, a few palms either side of it
   for (let tx = X0 - 6; tx <= X0; tx++) for (let ty = gy - 1; ty <= gy + 1; ty++) if (open(m.tiles[at(tx, ty)])) { m.tiles[at(tx, ty)] = T.PLAZA; m.reserve[at(tx, ty)] |= RES; }
-  add('textsign', X0 - 2, gy - 1.3, 0, { text: 'SPLASH CANYON', z: 46, bg: '#1a5a9a', fg: [255, 226, 90] });
+  add('textsign', X0 - 2, gy - 1.3, 0, { text: 'SPLASH CANYON', z: 46, bg: '#1a5a9a', fg: [255, 226, 90], lit: true });   // (a water park's: lit, out in the desert or not - world3-tidy.js)
   add('bikerack', X0 - 2.4, gy + 2.6, 6); add('trashcan', X0 - 1.2, gy + 2.4, 5);
   for (const [tx, ty] of [[X0 - 4.5, gy - 2.2], [X0 - 4.5, gy + 3.2]]) add('tree_a', tx, ty, 8, { sp: 'royal', k: 1.2 });
   (m.landmarks ||= []).push({ name: 'Splash Canyon Water Park', type: 'waterpark', x: X0 * TILE, y: Y0 * TILE, w: (X1 - X0 + 1) * TILE, h: (Y1 - Y0 + 1) * TILE });
@@ -2240,7 +2240,10 @@ function desertCamp(m, H) {
 // cottage stands beside it. The island's east shore is a tidepool shelf: shallow pools among barnacled basalt
 // rocks with starfish, urchins, anemones and crabs; sea stacks and a seal rock offshore, gulls on the rocks.
 function lighthouseTidepools(m, H) {
-  const lh = m.buildings.find((b) => b && b.kind === 'lighthouse');
+  // (the light on Lighthouse Rock - the district's: World v3 has no such rock, and its first lighthouse is the Harbor
+  // Light on the city's seawall - the tidepools' sea stacks and seal rock landed among the marina's piers, a moored boat
+  // inside a stack: the owner, 2026-11-13)
+  const lh = m.buildings.find((b) => b && b.kind === 'lighthouse' && m.dist[(b.ty + 2) * m.w + b.tx + 2] === 19);
   if (!lh) return;
   const cx = lh.tx + 2, cy = lh.ty + 2, comp = m.compLab ? m.compLab[cy * m.w + cx] : -1;
   const onIsland = (tx, ty) => m.compLab ? m.compLab[ty * m.w + tx] === comp : true;
