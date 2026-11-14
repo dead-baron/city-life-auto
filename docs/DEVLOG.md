@@ -23232,3 +23232,39 @@ The owner, on a phone in the park by a beach: the round-two buttons were gone - 
 of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near (so the page can draw the waves), and
 the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
 (`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
+
+## 2026-11-14 - Poses round 3: easing in and out, idles that fidget, a faceplant that lands on the face, gesture balloons
+The owner, 11-14: "faceplant doesn't actually fall face first onto ground. Would be cool to see them animate into those
+poses instead of pop into them. And then have a subtle idle to it ... not a super repetitive loop just kind of subtle and
+random. Some emotes like wave could still have a [waving hand] with it."
+
+- **The bug behind "doesn't fall"**: game/peds.js `PED_POSES` is a copy of people.js `POSES` taken when the renderer
+  loads, and round 2's poses (art2/poses.js, loaded later) were never in it - so every round-2 pose was keyed as a
+  one-frame pose and whichever frame was drawn first stuck (a faceplant hung at its first, tipping frame). `loadPoses`
+  now copies them in once the module is in.
+- **All the emotes' frames live in art2/poses.js** (the eleven gestures moved out of dances.js, which only keeps the
+  `EMOTE_FPS` registry: the renderer lost 1.3 KB). Each pose has its frames and a timing (`SEQ`): the way in, then a loop
+  (a gesture), or a held frame with beats (a lasting pose), and the way out. host.js asks `emoteAt(p, pose, now)` for the
+  pose and frame - one call; the rest is in the lazily loaded module. At most eight frames a pose (host.js warms them all).
+- **The way in**: sitting down (a squat, then down onto the hands), lying back (sat, on the elbows, flat - lying down
+  now puts the head where the back was, not where the face was), sleep the same then over onto the side, kneeling,
+  crouching, the phone coming up, a gesture's arm on its way up (the in-between frames are blends of standing and the
+  pose: poses.js `blend`). **The way out**: the same frames backwards when you walk off or the time's up (a faceplant
+  pushes itself up off the ground); knocked down, a dive - no getting up first. Moving starts at once as before (the
+  server doesn't wait for it): you get up in the first steps.
+- **Idles that aren't a loop** (the lasting poses): small beats now and then - a breath, a glance, the thumb swiping and
+  tapping on the phone, the weight shifted onto one leg, a scratch of the head, the arms round the knees, the head turned
+  lying down, the ankles crossed, the foot tapping on the wall, a hand to the chin, a hand down to the ground crouched,
+  curling up asleep. Which beat and when is a hash of the ped's id and the time since the pose began (slots of 1.2-2.2 s,
+  a beat in about half of them): the same for everyone who saw it start, different for each person, never periodic.
+- **Faceplant**: stiff as a board, over from the feet with the arms flung back, then pinned at the sides (nothing breaks
+  the fall), a smack with the legs bouncing up, flat on the face; now and then a foot twitches or a weak hand comes up
+  ("I'm OK"). 3.5 s (was 3).
+- **Poses that read better at game size**: the crouch deeper, knees wide, forearms on the knees; the kneel with the front
+  knee out where it shows; air guitar wider with the neck hand further out; come here with the hand pulled right back to
+  the chest; the watch raised to the face; the shrug wider; the thumbs up held higher.
+- **Gesture balloons** (client/emotes.js, the round-2 balloons' style, 12x10 icons): a waving hand for Wave, a thumbs
+  up for Thumbs up, a beckoning hand for Come here, and the ? for Shrug - a symbol where it adds meaning at game size; the
+  rest stay body-only. Two skin tones joined the balloon palette for the hands.
+- The Guide's Emotes entry says you ease in and out and fidget. Tests: emotes (the frames keyed apart, the way in, the
+  faceplant, beats not periodic and the same for every viewer, the way out and what cuts it, the new balloons).

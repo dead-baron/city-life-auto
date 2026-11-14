@@ -1746,7 +1746,7 @@ export class World2 {
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined) || p.d.gt === 'emote') && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
-    if (Pd.isEmote && Pd.isEmote(ppose)) { if (p._emP !== ppose) { p._emP = ppose; p._emT = now; } pf = Pd.emoteFrame(ppose, now - p._emT); } else p._emP = null;   // (an emote on the body, from its start: server emote.js)
+    if (Pd.emoteAt && Pd.emoteAt(p, ppose, now)) { ppose = p._emQ; pf = p._emF; }   // (an emote on the body - its way in, its beats, its way out: art2/poses.js)
     const bo = bladeOpt(p, wpn);   // (a plasma blade in its owner's colour)
     this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
     if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
