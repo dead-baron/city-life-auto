@@ -23384,3 +23384,38 @@ random. Some emotes like wave could still have a [waving hand] with it."
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
 "Bounty $2,500 on you · 9 min" (client/hudinfo.js).
+
+## 2026-11-14 - The director's scenes start clean, and what they bring is where it belongs
+A visual QA sweep of the cinematic mode's staged scenes (F4 panel; client/director.js `SCENES`) and the director's
+scenes (server/systems/director.js, shared/scenes/) while the owner films them. What was wrong, and what changed:
+- **"Jet ski at the race start"** went to the nearest water race - the kayaks' Redwood River Run. It now goes to a jet
+  ski race (the debug menu's `near` kinds `jetskirace` and `boatrace`) and, with `ride`, puts you on the race's own
+  jet ski just behind its start buoy, its nose on the course. (The Pelican Key sprint's start is further out than any
+  shore the old "open ground by it" search reached: it said "Couldn't find open ground".)
+- **The speedboat on a park lawn**: the debug menu's `car` fell back to "beside you" when no water was within a few car
+  lengths. A boat is now always put on open water, its whole hull (out to 50 tiles), nose away from you - the
+  speedboat scene, and any boat from the debug menu.
+- **The police helicopter among the parked ambulances**: the nearest helipad was a hospital's. The scene goes to the
+  police headquarters' pad (`near` kind `policepad`), and `car` with `on: 'pad'` puts an aircraft on the nearest
+  ground helipad - not beside it, where the helicopter scene's had been. What the world parked on that pad (aircraft.js:
+  the headquarters' own police helicopter) makes way for yours; anyone's own vehicle keeps its pad.
+- **Every scene starts clean** from wherever the last left you: the debug menu's `afoot`, which every staged scene
+  sends first (and the debug menu's Director scenes now run too), takes you out of a home (and its lobby), off a train,
+  up out of the sewers or a cave, out of the vehicle, onto open ground; ends your job and your wanted level; and stops
+  a director scene playing on your camera. "At home" and "Riding the subway" had left you where the next teleport was
+  refused ("Step outside first"), or standing wherever the train was - over its tunnel, inside a building's walls. It's the server's `afoot`, so pages already loaded get it too.
+- **The scenes that hadn't been reviewed**, checked in code and on the World v3 map: "Police chase downtown", "A tank on
+  the boulevard", "Motorcycle through the peaks" and "On patrol" put their vehicle on the nearest street now (`on:
+  'road'`: the kerb lane on your side, facing the way its traffic goes, its whole width on the road) - before, clear
+  ground beside you: a plaza, a lawn. "A plane takes off" puts the plane at the foot of the runway, nose along it (it
+  was beside it, facing east). "Crop dusting" starts at a duster's strip (`near` kind `duststrip`), the duster on it,
+  not in a field. "Tow truck" starts in Midtown (it had taken the kerb nearest wherever the last scene ended). The
+  director's road scenes (the autoplay chase, race and helicopter pursuit) drive on to a point on the road (`far`: it
+  had been the nearest open ground - a shop's floor in the chase's case). Street race, armored truck, firefighting,
+  the mail train and the train rides set up right (the art not finishing in headless captures is the capture's speed).
+- Tests: test/world3scenes.test.js plays every staged scene one after another as the panel does (nothing tidied
+  between but the scene's own clean start) and checks what each brings you with the placement lint's new `spotWhy`
+  (tools/placementlint.mjs): a boat on open water, a road vehicle on the road, an aircraft on a pad or a runway; and
+  every director scene's cast on World v3 - road vehicles on the road, boats on water, aircraft up or on a pad, people
+  on open ground, a getaway's far point on the road. test/director.test.js: the clean start from a home, a train, a
+  job and three stars; a boat on the water.

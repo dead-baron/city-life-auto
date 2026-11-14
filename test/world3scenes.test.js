@@ -13,11 +13,12 @@ import { joinPlayer, teleport } from './helpers.js';
 import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { airfields } from '../shared/flight.js';
+import { VEHICLES } from '../shared/vehicles.js';
+import { spotWhy } from '../tools/placementlint.mjs';
 import { SCENES } from '../client/director.js';
 import * as dev from '../server/dev.js';
 import * as players from '../server/systems/players.js';
 import * as jobs from '../server/systems/jobs.js';
-import * as homeinside from '../server/systems/homeinside.js';
 import { poolTable } from '../server/systems/activities.js';
 import * as sar from '../server/systems/sar.js';
 import { SAR_HQS } from '../shared/world3-sarhq.js';
@@ -40,29 +41,78 @@ steps(10);
 // a debug command that didn't do its thing says so: "[dev] No ...", "Couldn't ...", "Get out of the vehicle first" ...
 const FAILED = /^\[dev\] (No |There's no|Couldn't|Can't|Not |Get out|Go inside|Step outside|One at a time|no room|Nobody|Nothing)/i;
 
-test('every staged scene of the cinematic mode plays on World v3: every place found, every command done', () => {
-  const bad = [];
+// what a staged scene brings you to ride, by where it belongs (tools/placementlint.mjs spotWhy): a boat on the water, a
+// road vehicle on the street (on: 'road' - a few go off-road on purpose: the desert pickup, the MX park's dirt bike, the
+// horse, the combine in its field), an aircraft on its pad or at the foot of its runway
+const OFF_ROAD = new Set(['pickup', 'dirtbike', 'horse', 'combine']);
+const wantOf = (def, on) => (def.kind === 'boat' ? 'water' : on === 'pad' ? 'pad' : on === 'runway' ? 'strip' : on === 'road' ? 'road' : 'ground');
+
+// (the owner, 11-14: "At home" and "Riding the subway" left you where the next scene's teleport was refused - played in a
+// row as the panel plays them, nothing tidied between but the scene's own clean start: the server's 'afoot')
+test('every staged scene of the cinematic mode plays on World v3, one after another: every place found, every command done, what it brings you where it belongs', () => {
+  const bad = [], af = airfields(M);
   for (const sc of SCENES) {
     said.length = 0;
     p.devSpawn = null;   // (each scene a while after the last, as you'd play them)
     let err = null;
     try {
       dev.command(w, p, 'afoot', {});
+      const q = p.ped;
+      if (q.home || q.hidden || q.onTrain || q.vehId || q.ug || q.sub || p.job || p.wanted) bad.push(`${sc.n}: not a clean start (${JSON.stringify({ home: !!q.home, hidden: !!q.hidden, train: !!q.onTrain, veh: q.vehId, ug: q.ug, job: p.job && p.job.type, wanted: p.wanted })})`);
       for (const [, c, x] of sc.s) {
         if (c[0] === '@') continue;
         dev.command(w, p, c, { t: 'dev', c, ...(x || {}) });
         steps(4);
         if (c === 'place' && !said.some(([, t]) => t.startsWith('[dev] At '))) bad.push(`${sc.n}: no "${x.n}" (${said.map((s) => s[1]).join(' | ')})`);
+        if (c === 'car') {
+          const v = p.ped.vehId && w.get(p.ped.vehId), def = VEHICLES[x.m];
+          if (!v || v.model !== x.m) { bad.push(`${sc.n}: not at the controls of the ${x.m}`); continue; }
+          if ((def.kind === 'car' || def.kind === 'bike') && !OFF_ROAD.has(x.m) && x.on !== 'road') bad.push(`${sc.n}: the ${x.m} wants on: 'road'`);
+          const why = spotWhy(M, v, def, wantOf(def, x.on), af);
+          if (why) bad.push(`${sc.n}: the ${x.m} ${why} at ${Math.round(v.x / TILE)}, ${Math.round(v.y / TILE)}`);
+        }
       }
+      // what you're riding when it's set up: where it belongs (a jet ski at its race start, the patrol's cruiser)
+      const v = p.ped.vehId && w.get(p.ped.vehId), last = sc.s[sc.s.length - 1];
+      if (v && last[1] !== 'car' && (v.def.kind === 'boat' || last[2].on)) { const why = spotWhy(M, v, v.def, wantOf(v.def, last[2].on), af); if (why) bad.push(`${sc.n}: the ${v.model} ${why}`); }
     } catch (e) { err = e; }
     if (err) bad.push(`${sc.n}: threw ${err && err.message}`);
     const f = said.filter(([tone, t]) => FAILED.test(t) || (tone === 'bad' && t.startsWith('[dev]')));
     if (f.length) bad.push(`${sc.n}: ${f.map((s) => s[1]).join(' | ')}`);
-    // tidied up for the next one
-    if (p.ped.dead) { p.ped.dead = false; p.ped.hp = p.ped.maxHp; }
-    if (p.job) jobs.failJob(w, p, 'scene over');
-    if (p.ped.home) homeinside.leave(w, p);
-    dev.command(w, p, 'afoot', {});
+    if (p.ped.dead) { p.ped.dead = false; p.ped.hp = p.ped.maxHp; }   // (the test's: a fall in one scene; a player would respawn)
+  }
+  assert.deepEqual(bad, [], bad.join('\n'));
+  // the jet ski's start is a jet ski race's, its craft under you at the line (it was the kayaks' River Run)
+  dev.command(w, p, 'afoot', {});
+  dev.command(w, p, 'near', { k: 'jetskirace', ride: 1 });
+  const js = w.get(p.ped.vehId), R = M.races.filter((r) => r.kind === 'jetski').sort((a, b) => Math.hypot(a.start.x - js.x, a.start.y - js.y) - Math.hypot(b.start.x - js.x, b.start.y - js.y))[0];
+  assert.ok(js && js.model === 'jetski' && R, 'on a jet ski, by a jet ski race');
+  assert.ok(Math.hypot(R.start.x - js.x, R.start.y - js.y) < 160, `at its start (${Math.round(Math.hypot(R.start.x - js.x, R.start.y - js.y))} px off)`);
+  dev.command(w, p, 'afoot', {});
+});
+
+// the scene director's scripts (shared/scenes/: the debug menu's Director scenes, the panel's Autoplay) on World v3: each
+// one's place found and its cast put where they belong - a road vehicle on the street, a boat on the water, an aircraft
+// up in the air or on its pad, a person on open ground, not inside a building's walls
+test('every director scene finds its place on World v3, its cast where they belong', async () => {
+  const director = await import('../server/systems/director.js');
+  const { SCENE_LIST } = await import('../shared/scenes/index.js');
+  const bad = [], af = airfields(M);
+  for (const sc of SCENE_LIST) {
+    const r = director.start(w, sc.id, { mode: 'dev', ref: null });
+    if (r.err) { bad.push(`${sc.id}: ${r.err}`); continue; }
+    for (const [cid, A] of r.run.cast) {
+      const e = w.get(A.id);
+      if (!e || e.removed || (e.kind === 1 && e.vehId)) continue;   // (seated: where its vehicle is)
+      const def = e.kind === 2 ? e.def : null, spec = A.spec || {};
+      const want = !def ? 'ground' : def.kind === 'boat' ? 'water' : def.kind === 'air' ? 'pad' : spec.offroad ? 'ground' : 'road';
+      const why = A.own ? spotWhy(M, e, def, want, af) : null;   // (someone picked from the world - a club's bike: where the club left it)
+      if (why) bad.push(`${sc.id}: ${cid}${def ? ` (${e.model})` : ''} ${why} at ${Math.round(e.x / TILE)}, ${Math.round(e.y / TILE)}`);
+    }
+    const far = r.run.anchors.far;   // (where a getaway drives on to: on the road, not a shop's floor)
+    if (far) { const why = spotWhy(M, far, null, 'road', af); if (why) bad.push(`${sc.id}: its far point ${why}`); }
+    director.end(w, r.run, 'stopped');
+    steps(2);
   }
   assert.deepEqual(bad, [], bad.join('\n'));
 });
