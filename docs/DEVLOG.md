@@ -23057,6 +23057,9 @@ none across it.
 - **And they'd have been painted over**: the fields' rows (`render/farmart.js` drawV2: the ripe crop's look, the
   stubble's, the plough's) were drawn after the decals, and a decal doesn't write depth - the last one drawn wins - so a
   row's look covered the tracks through it, and the blood and the skids on it. The rows go first now (`host.js` frame).
+- **Bolder** (`client/art2/fx.js` crushFrames): a tyre's swath 14 px wide (was 8), a foot's track 8 (was 6), laid at
+  full strength (the art's own see-through dark keeps the crop's colour showing): from the camera's height the old ones
+  read as hairlines.
 
 ### What was there, preset by preset (art v2, World v3)
 World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the rows found them (and now the tracks).

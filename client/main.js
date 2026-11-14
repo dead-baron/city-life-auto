@@ -4444,7 +4444,7 @@ function vehVisual(v, now, dt) {
   // laid along the way it came, so a slow frame (a phone at 20 fps, a car at speed) leaves no gaps in the track
   if (S.art2 && def.kind !== 'boat' && def.kind !== 'air' && !(f & VF.WRECK) && !(v.rz > 0.05)) {
     const P = trailSteps(v, v.rx, v.ry, 12, 400, TRAIL);
-    for (let i = 0; i < P.length; i += 2) for (const sgn of [-1, 1]) { const [x, y] = localToWorld(P[i], P[i + 1], v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
+    for (let i = 0; i < P.length; i += 2) for (const sgn of [-1, 1]) { const [x, y] = localToWorld(P[i], P[i + 1], v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 1); }
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
@@ -4700,7 +4700,7 @@ function pedVisual(p, now) {
   // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
   if (S.art2 && !(f & PF.DEAD)) {
     const lx = p._crx, ly = p._cry, P = trailSteps(p, p.rx, p.ry, 10, 200, TRAIL), a = Math.atan2(p.ry - ly, p.rx - lx);
-    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 0.85);
+    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 1);
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
