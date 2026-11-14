@@ -158,3 +158,12 @@ test('any other key or a touch hands the camera back where it is: the free camer
   D.key('Escape', true);
   assert.equal(D.mode, 'follow');
 });
+
+test('Stop while a shot is still being set up: when it comes, it\'s let go - the camera stays yours', () => {
+  const { D, sent } = page();
+  D.shot('shotgull');
+  D.stop(true);
+  D.script(begin('shotgull', 9, true));
+  assert.deepEqual(sent.at(-1), { t: 'dev', c: 'scene', k: 'stop', seq: 9 });
+  assert.equal(D.mode, 'follow');
+});

@@ -200,7 +200,7 @@ export function makeDirector(S, api) {
   let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, scene = null;
   // the shot list playing: reel { ids, i, sec (its section, '' all) } - one shot is a reel of one; want: the shot asked
   // for, its dscene not here yet ({ id, at }); before: the screen's time and weather before the reel, put back after
-  let reel = null, want = null, before = null, endAt = 0;
+  let reel = null, want = null, before = null, endAt = 0, dropId = '';   // (dropId: a shot stopped before it came - its scene is let go when it does)
   // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
   // n, z, tour; cam: the camera on them; hold: black until they're here and the art's in; near: near you or anywhere)
   const dr = { x: 0, y: 0, a: -Math.PI / 6, si: 2, vx: 0, vy: 0 };
@@ -440,6 +440,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // stop: the reel over and the shot ended; back: the camera to you (else it stays where it is: the free camera there)
   function stopReel(back) {
     const had = !!(reel || want || sct);
+    if (want) dropId = want.id;
     reel = null; want = null; endAt = 0;
     if (sct && D.mode === 'script') setMode(back ? 'follow' : 'drone', 'tour', !back);
     if (before) { const b = before; before = null; if (back) { D.ti = b.ti; D.lt = b.lt; setWx(b.wi); D.hideMe = b.hide; setClean(b.clean); } }
@@ -828,6 +829,8 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     }
     const sc = m.id && DSCENES[m.id];
     if (!sc) return;
+    if (!m.cap && dropId === m.id && !(want && want.id === m.id)) { dropId = ''; api.send({ t: 'dev', c: 'scene', k: 'stop', seq: m.seq }); return; }   // (stopped while it was being set up)
+    dropId = '';
     if (want && want.id === m.id) want = null;
     if (!before && !m.cap) before = { ti: D.ti, lt: D.lt, wi: D.wi, hide: D.hideMe, clean: D.clean };   // (the debug menu's too: put back after)
     const hadHide = sct ? sct.hadHide : D.hideMe;

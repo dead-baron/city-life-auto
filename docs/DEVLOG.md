@@ -23577,3 +23577,93 @@ centre is the rig's own head (people.js: a render cut to the 1 px at the head's 
 not the sprite's outline, so a hat, a bun or big hair no longer shifts the face; what falls outside is cropped. The
 idles stay as they were. test/portrait.test.js: every starter look's head within half an art px of the same spot.
 Before / after of eight looks: the session's scratchpad `logo2/owner/avatar3.png`.
+
+## 2026-11-14 - The camera's shot list: one tap a shot, the best places and subjects, the camera that follows; pixel-art explosions
+
+The owner (15:11): "Cinematics and Director mode still seem to be having issues. Im not really sure whats going on with
+the camera it doesnt seem to follow the scene and the auto play scenes dont seem to work. When doing a tour it wont let
+me switch scenes and the camera doesnt really move ... the explosion didnt look right in the tanker like the explosion was
+placeholder art ... The scenes are all kind of mixed together in the cinematics menu so im not sure how to use it ... when
+the NPC goes into the building you cant see whats going on ... I want to have a diverse range of subjects to get footage
+of. I want good camera movement and the best areas to show off."
+
+### What was wrong
+- **Switching scenes dropped the camera** (client/director.js D.script): when a scene ended - including the old one ended
+  by starting the next - the page answered the server's 'off' by sending `unwatch`. That reached the server after the next
+  scene had begun, so it took the page off the new scene: its camera came back to you, and the new scene played to nobody.
+  Now the server's own 'off' gets no answer; the page's own 'stop' (and the server's `unwatch`) carry the scene's `seq` and
+  touch that scene only (server/dev.js 'scene', server/systems/director.js unwatch).
+- **Autoplay "didn't work"**: a scene flew the camera to a far place and started at once; the art there (on a phone, many
+  seconds of bakes) came in after much of it had played - and the clean screen it turned on hid the toasts, so a scene
+  that found no place ("No place for ...") just left a clean screen. Now a shot is held at its first moment (the server's
+  hold, as the capture's) with this screen black until the art there is in (`warmth`), then the page says 'go'
+  (`DIRECTOR.holdS` at most on the server; 6.5 s on the page); a shot that never comes moves on to the next after 12 s.
+- **The time of day and the weather of a scene were never applied** outside the capture server: the "golden hour" Showcase
+  moves played at whatever time it was. A shot's time, weather (clear, rain, fog, mist, a storm), time-lapse and the sea's
+  sparkle are now this screen's while it plays, and put back after.
+- **The tour** (the old Tour camera) slid 520 px in 10 s at about the zoom you had - barely a move - over the map's
+  landmarks, with nothing alive there (the server only filled the world round you); and with it on, the panel's arrow keys
+  and Enter were the camera's, so a scene couldn't be picked from the keyboard. It's gone: the reel replaces it, and with
+  the panel up the arrows and Enter are always the panel's.
+- **Camera modes fighting**: picking "Follow scenes" or another mode during a director's scene ended it (the mode's
+  change sent `unwatch`). A shot now owns the camera; any other key, touch or pad button hands the camera back - the free
+  camera, where the shot was - and Esc / B brings it back to you.
+- **The biker brawl went inside the Rusty Spur**, under its roof. Rewritten: the stranger walks up the lot to bikers by
+  their bikes, the words, two punches and a knockdown out front, a club bike, the clubs out of the door after him. The
+  bikers are the city's civilians now (club 'gang' members piled in and beat him before he got to the bike). The
+  helicopter pursuit's driver runs on down the street, not off into an alley. test/scenes.test.js: nobody in the brawl is
+  ever under a roof.
+- **The explosions were canvas gradients**: render/boom.js drew a fireball of soft radial-gradient blobs and stroked
+  shockwave rings over the pixel world (and render/bigboom.js a tanker's extra fireballs and its pools' glow the same
+  way) - the game's pixel explosion (client/art2/fx.js `explosion`, FX1-B: the core swelling into a cauliflower
+  fireball cooling to a smoke column, debris, embers, the ground flash and the scorch, ten frames) was never played. Under
+  art v2 every fireball core is now that sprite (a particle of its own, type 11: art2/game/actors.js V1_PART, never
+  thinned on Low), its lobes the pixel flames, its smoke the pixel puffs, no drawn rings or gradient glow - the light is
+  the renderer's lights, the screen's flash stays. A tanker is a run of them: its own, then the bursts round it
+  (bigboom.js), the burning debris and pools as before. The classic renderer keeps its own.
+
+### The shot list (client/director.js, shared/scenes/)
+The panel (F4, debug mode) opens on the **Shot list**: ▶ Play all, then seven sections - each a row with its name, its
+count and its own ▶, tapping the name opens it (one open at a time, remembered on this device). Each shot is one tap:
+the server puts its cast in its place (shared/scenes/: the same script format as the director's scenes), the page holds
+it in black till the art is in, and the shot owns the camera - its own move, its time of day and weather - for 10-30 s,
+then fades out. Back to back (a section or all of them), a fade between; a tap on any shot jumps there and the reel goes on
+from it; the bar along the bottom has ⏮, the shot's name (3/12), Next ⏭, ⏹ Stop and the zoom (N, A / RB the next; LB
+the one before). Below it: **Free camera** (Follow me, Smooth, Free - drag it on a phone - Drift, On someone, Follow
+scenes), the zoom, the screen, Show, time, weather; then, folded, Fly to a place (the Showcase) and Play it yourself (the
+staged scenes). The debug menu's 🎬 Director scenes start the same shots (held the same way).
+- **The moves** (shared/scenes/shots.js `move`): a slow push-in, a pan along, an orbit, a crane up (in close, then a long
+  pull back and up), a locked wide shot; the subjects' shots track alongside a vehicle, or orbit a crowd.
+- **The places**: the QA sweep's best (11-13 / 11-14) - not Hidden Pool (not on World v3), Eagle Crag, North Point,
+  Pelican Point or Waves Stadium (they frame the wrong thing). The server finds a place by its name (now also the nature
+  sites - Summit Tarn, the meadows - and the district of a name that's on this map: Granite Peaks), a kind of place (the
+  debug menu's 'near' kinds: a runway), a long run of open water (a boat's course) or a farm's field; a shot's place is its
+  own, not the one nearest you (live events still play near the player they're for).
+- **Indoors in view**: a walk-in's roof is lifted from where the shot's camera is (main.js interiorTick: `DIR.roofAt`) -
+  the pool shot is the Rusty Spur's bar room with its roof off.
+
+The shots (46):
+- City & Neon at night: The Neon Strip night market; Lucky Mesa's casinos lit up; The Pink Mile motels; The El over Trestle
+  Street; Lantern Lane's lanterns; Ocean Drive after dark.
+- Nature & Countryside: Crop duster over the fields; Redwood Creek Falls; Silver Thread Falls; Summit Tarn and its falls at
+  dawn; Canyon Oasis at golden hour; Wildflowers in Lupine Meadow; Coral Cay's jungle falls; Lakeside Greens; Wheat field:
+  a pickup cuts a swath; Horseback across the valley.
+- Coast & Water: Sunset Beach Pier at dusk; Egret Point Light; The Harbor marina; Coral Cay lagoon; Macaw Cove; Gull Harbor
+  at dawn; Speedboat across the bay.
+- Action & Chases: Police chase through Midtown; Street race on the Neon Strip; Gang shootout at a hideout; Tanker into
+  the gang hideout; Helicopter pursuit; Biker brawl at the Rusty Spur.
+- People & Life: Dancing on Piazza Vecchia; The boardwalk crowd at sunset; Morning workout in Greenfield Park; Friends by
+  Kestrel Lake; Pool night at the Rusty Spur.
+- Vehicles & Flight: Helicopter over Downtown; A plane over Westport International; Motorcycle through Granite Peaks; A
+  pickup on the desert road; Sports car down the coast road; Balloons over Dry Creek at dawn.
+- Weather & Time-lapse: Rain on Midtown at night; A thunderstorm over Downtown; Fog over Redwood Cove; The Harbor, dusk
+  into night; Sunrise over Mirage Lake; The sea sparkling at night.
+
+Tests: test/directorcam.test.js (new: the page's director over a stand-in page - a shot held in black till the art is
+in, then 'go', its time and weather; switching shots mid-way never takes the camera off the new one; the reel's next,
+skip, jump and stop, the screen's own time put back; a shot that can't be set up moves on; a key or a touch hands the
+camera back where it is, the panel's own buttons don't; Stop while setting up lets it go; every section 4+ shots, 30+ in
+all, 10-30 s each, every place shot's camera moving), test/scenes.test.js (every shot's script whole - its section, its
+weather, at most 40 s; the brawl out front), test/world3scenes.test.js (every shot's place found on World v3, its cast
+where it belongs). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
+art's hashes unchanged.

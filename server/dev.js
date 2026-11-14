@@ -210,6 +210,7 @@ export function nearTargets(m, k) {
   if (lm.length) return lm;
   return (m.natureSites || []).filter((q) => q.kind === k).map((q) => ({ x: q.x, y: q.y, name: q.name || k }));
 }
+director.useNear(nearTargets);   // (the scene director's 'near' places: shared/scenes/shots.js)
 // The debug teleport's landing (client/devtp.js sends msg.snap: the page holds only its window of World v3's world, so
 // it can't look at the far place's tiles - the server, which has the whole map, picks the spot): the open pavement
 // nearest (x, y), else open ground, never on a deck, in a building or the water; within 160 tiles, else (x, y) itself.

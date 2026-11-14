@@ -40,7 +40,6 @@ import { patchesOf } from './dusting.js';
 import { DUST } from '../../shared/rules.js';
 import { floorAt, FLY } from '../../shared/flight.js';
 import * as env from './environment.js';
-import * as devm from '../dev.js';   // (nearTargets, at call time only: dev.js imports this module too)
 import { poolTable } from './pooltables.js';
 
 // the emotes' body poses (systems/emote.js, coming on its own branch): played on an actor too once it's there
@@ -60,6 +59,9 @@ export function liveOn(id) {
 }
 export const anyLive = () => envList().length > 0 || (DIRECTOR.live && Object.values(DIRECTOR.scenes).some((s) => s.on));
 export const runsOf = (world) => D(world).runs;
+// the debug menu's kinds of place (dev.js nearTargets: a marina, a runway, a surf break...) - dev.js hands it over as it loads
+let nearOf = null;
+export const useNear = (fn) => { nearOf = fn; };
 export const sceneList = () => SCENE_LIST.map((s) => ({ id: s.id, n: s.n, g: s.g || 'Scenes', len: s.len }));
 
 // ---- places: where a scene happens, as named anchors { x, y, a } --------------------------------------------------------
@@ -220,7 +222,7 @@ export const PLACES = {
   near(world, place, ref) {
     const m = world.map, R = (place.near && named(m, place.near)) || ref || { x: 0, y: 0 };
     let best = null, bd = Infinity;
-    for (const q of devm.nearTargets(m, place.kind) || []) { const d = Math.hypot(q.x - R.x, q.y - R.y); if (d < bd) { bd = d; best = q; } }
+    for (const q of (nearOf ? nearOf(m, place.kind) : null) || []) { const d = Math.hypot(q.x - R.x, q.y - R.y); if (d < bd) { bd = d; best = q; } }
     if (!best) return null;
     const h = { x: best.x + (place.dx || 0) * TILE, y: best.y + (place.dy || 0) * TILE, a: place.a || 0 };
     return { anchors: { here: h }, at: h };
