@@ -68,6 +68,7 @@ export function wrecked(world, v, why = 'wrecked', now = Date.now()) {
     (ov.cl ||= []).push(now);
     ov.cl = ov.cl.filter((t) => now - t < INSURANCE.recentDays * DAY_MS);
     const line = settle(prof, ov, fee);
+    ov.wr = 1;   // (wrecked since it was last out: the valet brings it from the body shop - mycar.js VALET.wreckFee)
     tell(world, p, grace ? `Your ${nm} was ${why} - it wasn't insured, but the dealer does you a favor this once: it's ${line}. Insure your vehicles (a dealership, or the Homes app): uninsured, next time it's gone.` : `Your ${nm} was ${why}. Insured: it's ${line}.`, grace ? 'warn' : 'info');
     store.touch();
     return grace ? 'grace' : 'claim';

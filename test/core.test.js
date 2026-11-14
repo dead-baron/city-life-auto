@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, run, teleport, players, straightRoad, playLine } from './helpers.js';
 import { generateCity, PED_BLOCK } from '../shared/map.js';
 import { gameClock, K, T, VF } from '../shared/constants.js';
-import { STAR_HEAT } from '../shared/rules.js';
+import { STAR_HEAT, GUN_PRICES } from '../shared/rules.js';
 import { encodeInput, decodeInput, SnapshotWriter, decodeSnapshot } from '../shared/protocol.js';
 import { vehStep, newVehState } from '../shared/physics.js';
 import { VEHICLES } from '../shared/vehicles.js';
@@ -73,10 +73,11 @@ test('ghost state: disconnect keeps body 30s, then drops your backpack and cash 
   assert.ok(!w.entities.has(ped.id), 'body despawned after 30s');
   assert.equal(prof.cash, 0);
   const bags = [...w.entities.values()].filter((e) => e.kind === K.BAG);
-  assert.equal(bags.length, 2, 'the backpack and the cash');
+  assert.equal(bags.length, 3, 'the backpack, the cash and the pistol on its own (arms.js)');
   assert.equal(bags.find((b) => b.cashOnly).cash, 750);
   const pack = bags.find((b) => b.pack);
-  assert.ok(pack.weapons.pistol && pack.cash === 0);
+  assert.ok(pack && pack.cash === 0);
+  assert.equal(bags.find((b) => b.gun === 'pistol').weapons.pistol, 12);
 });
 
 // A phone switching apps (the owner, 2026-10-15: "tabbing out of the game for a second on mobile boots you out"): with
@@ -267,12 +268,13 @@ test('economy: bank deposit protects money, purchases draw from wallet then bank
   assert.equal(prof.cash, 200); assert.equal(prof.bank, 1100);
   const gun = w.map.pois.find((q) => q.kind === 'gunshop');
   teleport(w, ped, gun.x, gun.y);
-  economy.handleMenu(w, p, gun.id, 'w:pistol:450');
+  economy.handleMenu(w, p, gun.id, `w:pistol:${GUN_PRICES.pistol}`);
   assert.ok(prof.weapons.pistol > 0);
-  assert.equal(prof.cash + prof.bank, 1300 - 450);
+  assert.equal(prof.cash + prof.bank, 1300 - GUN_PRICES.pistol);
+  const banked = prof.bank;
   combat.kill(w, ped, null, 'melee', 0);
   assert.equal(prof.cash, 0);
-  assert.equal(prof.bank, 850, 'bank balance survives death');
+  assert.equal(prof.bank, banked, 'bank balance survives death');
 });
 
 test('enforcer badge needs Samaritan points; misconduct gets you fired', () => {

@@ -130,10 +130,11 @@ test('going inside: blink in over a few seconds, hidden and untouchable, stash t
   assert.equal(prof.inventory.medkit, 0);
   assert.equal(prof.stash.items.medkit, 2);
   assert.equal(prof.weapons.pistol, undefined);
-  assert.equal(prof.stash.weapons.pistol, 32);
+  assert.equal(prof.stash.weapons.pistol, 20, 'every round with it (the 12 in the magazine are among the 20: combat.js counts them so - arms.js)');
   economy.handleMenu(w, p, poi.id, 'htw:pistol');
   economy.handleMenu(w, p, poi.id, 'htk:medkit');
-  assert.equal(p.ped.mag.pistol + prof.weapons.pistol, 32);
+  assert.equal(prof.weapons.pistol, 20);
+  assert.equal(p.ped.mag.pistol, 12, 'a full magazine out of them');
   assert.equal(prof.inventory.medkit, 2);
   // step out: ~2 s of protection, can't shoot
   economy.handleMenu(w, p, poi.id, 'hleave');

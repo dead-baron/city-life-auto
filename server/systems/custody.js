@@ -45,6 +45,7 @@ import * as events from './events.js';
 import * as police from './police.js';
 import * as players from './players.js';
 import * as homes from './homes.js';
+import * as arms from './arms.js';   // (booked: the legal guns to your stash - arms.js)
 import * as hotmoney from './hotmoney.js';
 import * as struggle from './struggle.js';
 import * as prison from './prison.js';
@@ -735,7 +736,8 @@ function endWalk(world, c) {
   }
   c.lead = 0; c.rear = 0;
 }
-// what the cells take: the fine out of your pocket, illegal guns (and the rocket launcher), contraband
+// what the cells take: the fine out of your pocket, illegal guns (and the rocket launcher) for good, contraband; your legal
+// guns go to your stash (arms.js onBooked: pick them up at home, a gun shop or a pawn shop)
 function confiscate(world, p, stars, k = 1) {
   const prof = p.profile, ped = p.ped;
   const fine = Math.min(prof.cash, Math.round(careers.fee(p, BUST_FINE_PER_STAR * stars) * k));   // (by rank: careers.fee)
@@ -747,10 +749,12 @@ function confiscate(world, p, stars, k = 1) {
     delete prof.weapons[id]; delete ped.mag[id]; guns.push(w.name);
   }
   if (!prof.weapons[ped.weapon] && ped.weapon !== 'fists' && WEAPONS[ped.weapon] && (WEAPONS[ped.weapon].illegal || ped.weapon === 'rocket')) ped.weapon = 'fists';
+  const kept = arms.onBooked(p);   // (the legal guns: to your stash, not back to your hands - arms.js)
   let n = 0;
   for (const id of Object.keys(prof.inventory || {})) if (ITEMS[id] && ITEMS[id].illegal) { n += prof.inventory[id]; delete prof.inventory[id]; }
   const bits = [`fined $${fine}`];
   if (guns.length) bits.push(`${guns.join(', ')} taken`);
+  if (kept.length) bits.push(`your ${kept.join(', ')} sent to your stash`);
   if (n) bits.push('contraband taken');
   const hot = hotmoney.confiscate(world, p);   // (the robbery bag)
   if (hot) bits.push(`the robbery bag ($${hot.toLocaleString('en-US')} hot money) confiscated`);

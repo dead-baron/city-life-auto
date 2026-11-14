@@ -33,6 +33,7 @@ import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
 import * as starter from './systems/starter.js';
+import * as mycar from './systems/mycar.js';
 import * as ftue from './systems/ftue.js';
 import * as careers from './systems/careers.js';
 import * as whatsnext from './systems/whatsnext.js';
@@ -228,6 +229,7 @@ const SYSTEMS = [
   ['contacts', contacts.update],    // the contacts' mission chains: their texts, missions checked, the repeatables (contacts.js)
   ['whatsnext', whatsnext.update],  // the "What's next" app's three cards, worked out again now and then; the session's one line (whatsnext.js)
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
+  ['mycar', mycar.update],          // the valets due: your car parked for you near you (mycar.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['calendar', calendar.update],    // the event calendar on the wall clock: the armored truck run, the dock shipment (calendar.js)
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups

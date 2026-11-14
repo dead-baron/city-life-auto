@@ -57,6 +57,7 @@ import * as unstuck from './unstuck.js';
 import * as station from './station.js';
 import * as dealer from './dealer.js';
 import * as starter from './starter.js';   // (the starter car of a player who has one: its cooldown carried over, put away at logoff)
+import * as mycar from './mycar.js';   // (your car: where you left it, on your map - mycar.js)
 import * as firstcar from './firstcar.js';   // (your first car's marker; the alley's car let go at logoff)
 import * as ftue from './ftue.js';   // (the first-time experience: the arrival, the question, the first goal, the first-time moments)
 import * as races from './races.js';
@@ -220,6 +221,7 @@ export function join(world, conn, profile, opts = {}) {
   if (!fresh) backInside(world, p);   // (logged off at home: back in it)
   ftue.onJoin(world, p);   // (the first-time experience: a profile from before it marked done; one left mid-way picks up - ftue.js)
   starter.onJoin(world, p);   // (a starter car's lost cooldown carried on, one put away back out; none for a new character - starter.js)
+  mycar.onJoin(world, p);   // (your car out where you left it: yours again, or put back there after a restart - mycar.js)
   return p;
 }
 
@@ -451,6 +453,7 @@ function finalizeLogout(world, p, dropLoot) {
     savePos(p, ped);
     world.remove(ped);
   }
+  mycar.save(world, p);   // (your car stays out where you left it: mycar.js)
   p.profile.lastSeen = Date.now();
   store.touch();
   world.players.delete(p.pid);
@@ -1108,14 +1111,14 @@ export function update(world, dt) {
       world.bodies.add(body);
       world.remove(ped);
       spawnPlayerPed(world, p, false, { x: ped.x, y: ped.y });
-      world.notify(p, `You woke up at ${p.lastSpawnName || 'the hospital'}. Everything you carried was left behind.`, 'bad');
+      world.notify(p, `You woke up at ${p.lastSpawnName || 'the hospital'}. What you carried was left behind.`, 'bad');
       continue;
     }
     if (!ped || ped.dead) continue;
     // flags
     ped.ghost = !!p.ghostUntil;
     // periodic persistence of position
-    if (now - p.lastPosSave > 5) { p.lastPosSave = now; savePos(p, ped); store.touch(); }
+    if (now - p.lastPosSave > 5) { p.lastPosSave = now; savePos(p, ped); mycar.save(world, p); store.touch(); }   // (and where your car stands: mycar.js)
     // prompt every 4 ticks
     if ((world.tick + (ped.id & 3)) % 4 === 0 && p.conn) {
       const act = findInteraction(world, p);
@@ -1175,7 +1178,7 @@ export function buildMe(world, p) {
     carrying: ped && ped.carrying ? (world.get(ped.carrying)?.tier || 0) : 0,
     prompt: p.prompt, pcr: p.promptCrime || 0, custody: custody.meInfo(world, p), fight: struggle.meInfo(world, p), job: custody.deliveryFor(world, p) || places.mazeTarget(world, p) || places.lapTarget(world, p) || hoops.targetFor(world, p) || bowling.targetFor(world, p) || cinema.targetFor(world, p) || drivein.targetFor(world, p) || golf.targetFor(world, p) || minigames.targetFor(world, p) || races.targetFor(world, p) || evhooks.first('target', world, p) || biz.targetFor(world, p) || phone.jobTarget(world, p) || ftue.target(world, p),   // (the first goal's way and its step: ftue.js)
     ftue: ftue.meInfo(world, p), tips: ftue.tipsOn(p) ? 1 : 0, nx: whatsnext.meSig(p),   // (nx: the "What's next" cards' signature - the phone's dot when it changes: whatsnext.js)   // (Settings' First-time tips: ftue.js)
-    car: starter.marker(world, p) || firstcar.marker(world, p),   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
+    car: starter.marker(world, p) || firstcar.marker(world, p) || mycar.marker(world, p),   // (else the car you last took out: mycar.js)   // (your car, parked and empty while you're on foot: a starter car's marker - starter.js - else your first car's, bought or stolen - firstcar.js)
     radar: packRadar(world, p, law.radarFor(world, p)), bounty: p.bounty, btime: bounties.meInfo(p), crew: crews.meInfo(world, p), surf: surf.meInfo(world, p), horse: horses.meInfo(world, p),
     dispatch: law.dispatchFor(world, p), rank: p.badge ? law.POLICE_RANKS[law.policeRank(prof)].name : null, felonies: prof.felonies || 0,
     rumor: world.dropRumor ? { x: Math.round(world.dropRumor.x), y: Math.round(world.dropRumor.y), r: 420, t: world.dropRumor.tier } : null, ghost: !!p.ghostUntil,

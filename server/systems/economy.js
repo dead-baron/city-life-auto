@@ -54,10 +54,11 @@ import * as insurance from './insurance.js';   // (vehicle policies and claims)
 import * as rep from './reputation.js';
 import * as bathhouse from './bathhouse.js';
 import * as contacts from './contacts.js';   // (the lock-up a contact gave you)
+import * as arms from './arms.js';   // (your weapons: the stash, the slots, buying to the stash - arms.js)
 import * as extract from './extract.js';   // (the valuable crates in your home's stash: taken out at the door)
 import { PIECES as DECOR_PIECES, SHOP_KINDS as DECOR_KINDS, priceOf as decorPrice } from '../../shared/homedecor.js';
 
-import { SURFBOARD_PRICE, ROLLERBLADES_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
+import { ARMS, SURFBOARD_PRICE, ROLLERBLADES_PRICE, REVIVE_KIT_PRICE, HOSPITAL_FEE, FELONY_FINE, HIDE_TIME_S, POLICE_ARMORY, GANG_JOIN_FEE, POACH_PAY, DEEPSEA_CATCH, DEEPSEA_PAY, TRAIN_JOB_PAY, FLASHLIGHT_PRICE, WINE_S, HEARTY_HP, HEARTY_S, SCENT_S } from '../../shared/rules.js';
 const rng = mulberry32(77);
 
 // A hand plan's walk-in shop's counter (World v3's Midtown: shared/world3-hand.js poi.walk, poi.store): what it has for
@@ -193,10 +194,21 @@ function weaponStats(id) {
   return { pow: bar(dps, 150), rng: bar(w.range || 0, 1050), acc: bar(0.22 - (w.spread || 0), 0.22) };
 }
 
-function weaponOffer(o, prof) {
+// a weapon's line (and, one that can be lost, its "to your stash" line: arms.js - straight into the stash, several at
+// once; with your hands full, the plain line puts the one in your hand in the stash to make room)
+function weaponOffer(o, prof, opts) {
   const w = WEAPONS[o.id];
-  const owned = prof.weapons[o.id] !== undefined;
-  return { id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : (w.illegal ? 'illegal' : ''), wpn: w.i };
+  const owned = prof.weapons[o.id] !== undefined, full = !owned && arms.atRisk(o.id) && arms.full(prof);
+  opts.push({ id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : full ? 'hands full: one goes to your stash' : (w.illegal ? 'illegal' : ''), wpn: w.i });
+  if (!arms.atRisk(o.id)) return;
+  const inStash = !!(prof.stash && prof.stash.weapons && prof.stash.weapons[o.id] !== undefined);
+  opts.push({ id: `w:${o.id}:${o.price}:s`, label: `${w.name} - to your stash`, price: o.price, dis: inStash, note: inStash ? 'one in your stash' : 'straight into your stash', wpn: w.i });
+}
+// Your stash at a gun shop's or a pawn shop's counter (arms.js: the same stash as your home's safe)
+function stashMenu(p, poi) {
+  const prof = p.profile, opts = arms.stashRows(p), n = arms.stashed(prof).length;
+  opts.push({ id: 'stback', label: 'Back to the counter' }, { id: 'close', label: 'Close' });
+  return { t: 'menu', poi: poi.id, title: 'Your stash', sub: `${n ? `${n} weapon${n === 1 ? '' : 's'} in your stash.` : 'Your stash is empty.'} The same stash as your home's safe. What you carry can be lost if you go down: you carry ${arms.carried(prof).length} of ${ARMS.slots}.`, opts, cash: prof.cash, bank: prof.bank };
 }
 
 // A counter's menu: the place's own (menuOf), then the district's word on you - a shop you robbed round here charges
@@ -213,6 +225,7 @@ function menuOf(world, p, poi) {
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
   if (kind === 'clothing' && p.cosShop === poi.id) return cosmetics.menu(world, p, poi);   // (the style counter: name colors, title plates - cosmetics.js)
   if (kind === 'garage' && p.paintShop === poi.id) return cosmetics.paintMenu(p, poi, myVehicleNear(world, p, poi));   // (custom paint - cosmetics.js)
+  if (p.stashShop === poi.id && ARMS.stashKinds.includes(kind)) return stashMenu(p, poi);   // (your stash: arms.js)
   if (casino.isCasino(poi)) return casino.menu(world, p, poi);   // (a casino's floor: casino.js)
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (bathhouse.isBath(world, poi)) return bathhouse.menu(world, p, poi);   // (a bathhouse's locker: bathhouse.js)
@@ -230,9 +243,13 @@ function menuOf(world, p, poi) {
   if (shop && kind !== 'dealer' && kind !== 'marina' && kind !== 'garage' && kind !== 'clothing') {
     title = kind === 'gunshop' || kind === 'coffee' || poi.own || poi.fixed ? poi.label : shop.title;   // (the gun shops and the cafes round the world, World v3's new shops and the hand plans' named ones: each its own name - shared/world3-shops.js, world3-hand.js)
     if (kind === 'coffee' && poi.food) opts.push({ id: 'i:hotdog:7:1', label: 'A plate of the day', price: 7, note: prof.inventory.hotdog ? `have ${prof.inventory.hotdog}` : '' }, { id: 'i:bread:4:1', label: ITEMS.bread.name, price: 4, note: '' });
+    if (ARMS.stashKinds.includes(kind)) { const n = arms.stashed(prof).length; opts.push({ id: 'stash', label: `Your stash (${n} weapon${n === 1 ? '' : 's'})`, note: 'put away or take out your guns' }); }   // (arms.js)
     for (const o of shop.buy) {
-      if (o.kind === 'weapon') opts.push(weaponOffer(o, prof));
-      else if (o.kind === 'ammo') { const an = WEAPONS[o.id].ammoName; opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: prof.weapons[o.id] === undefined, note: prof.weapons[o.id] === undefined ? `need the ${WEAPONS[o.id].name}` : `have ${prof.weapons[o.id]}` }); }
+      if (o.kind === 'weapon') weaponOffer(o, prof, opts);
+      else if (o.kind === 'ammo') {   // (for a gun you carry - or, one in your stash, into the stash with it)
+        const an = WEAPONS[o.id].ammoName, has = prof.weapons[o.id] !== undefined, st = prof.stash && prof.stash.weapons && prof.stash.weapons[o.id];
+        opts.push({ id: `a:${o.id}:${o.price}:${o.qty}`, label: an ? `${an[0].toUpperCase()}${an.slice(1)} x${o.qty}` : `${WEAPONS[o.id].name} ammo x${o.qty}`, price: o.price, dis: !has && st === undefined, note: has ? `have ${prof.weapons[o.id]}` : st !== undefined ? `to your stash (${st} there)` : `need the ${WEAPONS[o.id].name}` });
+      }
       else if (o.kind === 'item') {
         const have = ITEMS[o.id].ride && gear.owns(p, ITEMS[o.id].ride) ? 1 : prof.inventory[o.id] || 0, tool = !!ITEMS[o.id].tool; // a tool is never used up: one is enough (a ride: one you own anywhere - gear.js)
         opts.push({ id: `i:${o.id}:${o.price}:${o.qty}`, label: `${ITEMS[o.id].name}${o.qty > 1 ? ' x' + o.qty : ''}`, price: o.price, dis: tool && have > 0, note: tool && have > 0 ? 'have one' : have ? `have ${have}` : '' });
@@ -256,7 +273,7 @@ function menuOf(world, p, poi) {
     if (shop.crafts) craftOptions(p, opts);
     if (shop.sellsWeapons) {
       for (const id of Object.keys(prof.weapons)) {
-        if (id === 'fists' || id === 'taser' || id === 'baton') continue;
+        if (!arms.stashable(id)) continue;   // (your fists, police issue)
         opts.push({ id: `sw:${id}`, label: `Sell ${WEAPONS[id].name}`, price: -Math.round(weaponPrice(id) * 0.4), wpn: WEAPONS[id].i });
       }
     }
@@ -406,9 +423,8 @@ function menuOf(world, p, poi) {
           opts.push({ id: 'hlooks', label: 'Quick change', note: p.badge ? 'off duty only' : 'your saved looks', dis: p.badge });   // (server/systems/looks.js)
           opts.push({ id: 'hmirror', label: 'The mirror', note: p.badge ? 'off duty only' : 'change anything about your look', dis: p.badge });
           for (const [id, n] of Object.entries(prof.inventory)) if (n > 0 && ITEMS[id] && !ITEMS[id].ride) opts.push({ id: `hst:${id}`, label: `Stash ${ITEMS[id].name} x${n}` });   // (not a ride: yours goes home by itself - gear.js)
-          for (const id of Object.keys(prof.weapons)) if (!NO_STASH.has(id) && WEAPONS[id]) opts.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: WEAPONS[id].mag ? `${prof.weapons[id]} rds` : '', wpn: WEAPONS[id].i });
           for (const [id, n] of Object.entries(st.items || {})) if (n > 0 && ITEMS[id]) opts.push({ id: `htk:${id}`, label: `Take ${ITEMS[id].name} x${n}`, note: 'stash' });
-          for (const id of Object.keys(st.weapons || {})) if (WEAPONS[id]) opts.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: 'stash', wpn: WEAPONS[id].i });
+          opts.push(...arms.stashRows(p));   // (the guns in and out: arms.js - the same stash a gun shop's counter opens)
         }
         opts.push({ id: 'hspawn', label: prof.spawnHome === h.id ? 'Respawn point: HERE' : 'Make this my respawn point', dis: prof.spawnHome === h.id });
         skate.shopOptions(p, opts, true);   // (your skateboard, set down by the front door: skate.js)
@@ -524,7 +540,6 @@ function unitSaleOpts(u) {
   const one = u.lobby == null, nm = `Unit ${u.unit || 1}`;
   return [{ id: one ? 'htour' : `hu:tour:${u.id}`, label: `${nm} - take a look inside`, note: 'walk around it first' }, { id: one ? 'hbuy' : `hu:buy:${u.id}`, label: `Buy ${nm} (${u.what || 'apartment'})`, price: u.price }];
 }
-const NO_STASH = new Set(['fists', 'taser', 'baton', 'service']);
 
 function ownedVehicleOpts(prof, opts, boats) {
   prof.vehicles.forEach((ov, i) => {
@@ -563,7 +578,7 @@ function furnitureMenu(p, poi) {
 export function openMenu(world, p, poi) {
   if (!p.conn) return;
   p.menu = { poi: poi.id };
-  p.furnShop = null; p.cosShop = null; p.paintShop = null; p.paintTok = false; p.lobbyUnit = null; p.atmFull = null;
+  p.furnShop = null; p.cosShop = null; p.paintShop = null; p.paintTok = false; p.lobbyUnit = null; p.atmFull = null; p.stashShop = null;
   if (casino.isCasino(poi)) casino.open(world, p, poi);
   const m = buildMenu(world, p, poi);
   p.conn.sendJSON(m);
@@ -585,7 +600,7 @@ export function handleMenu(world, p, poiId, optId) {
   const shut = !!(buildMenu(world, p, poi).opts.find((o) => o.id === optId) || {}).shut;   // (an option that closes its menu: the page closes it too)
   const err = execute(world, p, poi, String(optId || ''));
   if (err) world.notify(p, err, 'bad');
-  if (optId === 'close' || shut) { p.furnShop = null; p.cosShop = null; p.paintShop = null; p.lobbyUnit = null; p.atmFull = null; }
+  if (optId === 'close' || shut) { p.furnShop = null; p.cosShop = null; p.paintShop = null; p.lobbyUnit = null; p.atmFull = null; p.stashShop = null; }
   p.meDirty = true;
   if (!shut && !['close', 'hhide', 'hleave', 'armexit', 'sleave', 'htour'].includes(optId) && !optId.startsWith('hcargo') && !/^hu:(in|tour):/.test(optId) && p.conn) p.conn.sendJSON(buildMenu(world, p, poi));
 }
@@ -639,23 +654,28 @@ function execute(world, p, poi, opt) {
     case 'sb': return gear.surfExecute(world, p);   // (your surfboard from home, into your bag: gear.js)
     case 'trainjob': return trains.startTrainJob(world, p);
     case 'armor': return armor.buy(world, p, Number(parts[1]), pay);   // (a vest from the black market: armor.js)
-    case 'w': {
-      const id = parts[1], price = Number(parts[2]);
+    case 'w': {   // (w:<id>:<price>, or :s - to your stash: arms.js)
+      const id = parts[1], price = Number(parts[2]), toStash = parts[3] === 's';
+      const w = WEAPONS[id], rounds = w.starter ?? (w.mag ? w.mag * 2 : 0);
+      if (toStash && prof.stash && prof.stash.weapons && prof.stash.weapons[id] !== undefined) return 'There\'s one in your stash already.';
       if (!pay(p, price)) return 'Not enough money.';
-      const w = WEAPONS[id];
-      prof.weapons[id] = w.starter ?? (w.mag ? w.mag * 2 : 0);
-      if (w.mag) ped.mag[id] = w.mag;
+      if (toStash) { arms.addToStash(p, id, rounds); world.notify(p, `Bought ${w.name}: it's in your stash - take it out at home, a gun shop or a pawn shop.`, 'good'); return null; }
+      const swapped = arms.bought(p, id, rounds);
       combat.selectWeapon(world, ped, id);
-      world.notify(p, `Bought ${w.name}.`, 'good');
+      world.notify(p, swapped ? `Bought ${w.name}. Your hands were full: the ${swapped} went to your stash.` : `Bought ${w.name}.`, 'good');
       return null;
     }
     case 'a': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
-      if (prof.weapons[id] === undefined) return 'You need the weapon first.';
+      const has = prof.weapons[id] !== undefined, st = prof.stash && prof.stash.weapons && prof.stash.weapons[id] !== undefined;
+      if (!has && !st) return 'You need the weapon first.';
       if (!pay(p, price)) return 'Not enough money.';
-      prof.weapons[id] += qty;
+      if (has) prof.weapons[id] += qty;
+      else { arms.addToStash(p, id, qty); world.notify(p, `${WEAPONS[id].name} ammo: into your stash with it.`, 'good'); }
       return null;
     }
+    case 'stash': p.stashShop = poi.id; return null;   // (your stash at the counter: arms.js)
+    case 'stback': p.stashShop = null; return null;
     case 'i': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
       const it = ITEMS[id];
@@ -859,30 +879,8 @@ function execute(world, p, poi, opt) {
       world.notify(p, parts[0] === 'hst' ? `Stashed ${n}x ${ITEMS[id].name}.` : `Took ${n}x ${ITEMS[id].name}.`, 'good');
       return null;
     }
-    case 'hsw': {
-      const id = parts[1];
-      if (prof.weapons[id] === undefined || NO_STASH.has(id)) return 'You do not have that.';
-      const st = (prof.stash ||= { items: {}, weapons: {} }); st.weapons ||= {};
-      st.weapons[id] = (st.weapons[id] || 0) + (prof.weapons[id] || 0) + (ped.mag[id] || 0);
-      delete prof.weapons[id]; delete ped.mag[id];
-      if (ped.weapon === id) ped.weapon = 'fists';
-      store.touch();
-      world.notify(p, `Stashed the ${WEAPONS[id].name}.`, 'good');
-      return null;
-    }
-    case 'htw': {
-      const id = parts[1];
-      const st = prof.stash || {};
-      if (!st.weapons || st.weapons[id] === undefined) return 'Not in your stash.';
-      const rounds = st.weapons[id];
-      delete st.weapons[id];
-      const w = WEAPONS[id];
-      if (w.mag) { const inMag = Math.min(w.mag, rounds); ped.mag[id] = Math.max(ped.mag[id] || 0, inMag); prof.weapons[id] = (prof.weapons[id] || 0) + rounds - inMag; }
-      else prof.weapons[id] = prof.weapons[id] || 0;
-      store.touch();
-      world.notify(p, `Took the ${w.name}.`, 'good');
-      return null;
-    }
+    case 'hsw': { const err = arms.toStash(p, parts[1]); if (!err) world.notify(p, `Stashed the ${WEAPONS[parts[1]].name}.`, 'good'); return err; }   // (your stash: arms.js)
+    case 'htw': { const err = arms.fromStash(p, parts[1]); if (!err) world.notify(p, `Took the ${WEAPONS[parts[1]].name}.`, 'good'); return err; }
     case 'hcarno': p.pendingCar = null; return null;
     case 'hcargo': {
       const h = homes.homeFor(world, p, poi);

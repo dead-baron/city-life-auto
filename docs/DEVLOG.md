@@ -23458,3 +23458,60 @@ The owner (the Harbor Marina's boat hire): "the open sign is partially cut off".
 three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
 was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
 (client/art2/buildings.js); the wider fronts keep theirs.
+
+## 2026-11-14 - Your weapons at risk, with one stash; your car on the map and the valet
+The owner's design (approved 2026-11-14): the guns you carry are what you can lose, kept safe in one stash; and your car
+where you left it, brought to you by a valet - no teleport. The numbers: shared/rules.js `ARMS`, `VALET`, `GUN_PRICES`.
+- **What's at risk** (server/systems/arms.js `atRisk`): every gun, bow, launcher and grenade, anything illegal, and the
+  dear blades (a melee weapon or tool selling for more than `ARMS.keepMax`, $300: the sword, the katana, the plasma
+  blade). Never your fists, police issue (the service pistol, the armory's long guns, the taser and baton), or a cheap
+  legal bat, knife, crowbar, sledgehammer, fishing pole, heavy flashlight or pepper spray - those stay with you.
+- **Down**: each gun falls on its own round where you lay (cargo.js dropEverything -> arms.dropOnDeath), a pickup anyone
+  can take for `ARMS.dropS` (60 s), blinking its last 15, then gone. The backpack keeps your things (and the cash its own
+  pile) as before; you wake with your fists and whatever wasn't at risk. The first-time moment for going down says so.
+- **Busted**: the illegal guns are taken for good (custody.js confiscate, as before); the legal ones now go to your stash
+  after the fine (arms.onBooked), not back into your hands.
+- **The stash**: one per character - `profile.stash.weapons` (id -> rounds), the home safe's own, so nothing to migrate:
+  what you carry stays carried, the stash starts as it was (empty for nearly everyone). It opens at your home's safe and
+  at every gun shop's and pawn shop's counter (a "Your stash" line - economy.js stashMenu). Rounds go with a gun both
+  ways; the old safe counted the magazine twice going in and left it short coming out (profile.weapons is every round,
+  the magazine's among them - combat.js counts them so): fixed.
+- **Slots**: `ARMS.slots` (5) at-risk weapons carried. Buy another with them full and the one in your hand (else the
+  first) goes to your stash. A pickup or a stash take with your hands full waits. Loadouts from before keep all they have.
+- **Buying to the stash**: every at-risk weapon at a counter (the gun shops, the pawn shops, the black market and the
+  Smuggler's Den, the lodges) has a "- to your stash" line: straight into the stash, one after another for several;
+  ammunition for a gun in your stash goes in with it.
+- **Dropped or handed over**: the bag's Drop puts a gun on the ground as a pickup (DROP_LIFE_S); its new "Hand to a
+  crewmate close by" (`ARMS.giveR`, about 4 m) is the same pickup, set at their feet and taken there and then
+  (`{ t: 'inv', a: 'give', id }`). Picking one up: "Pick up the Pistol" over it.
+- **The phone**: Find my weapons sets a waypoint to the nearest place to open your stash (a home of yours, a gun shop, a
+  pawn shop - worked out on the page from your homes and the map's places).
+- **Prices**: the basic pistol is cheaper now it can be lost - $250 at the gun shops (was $450), $180 at the pawn shops
+  (was $320) (`GUN_PRICES`, in shared/rules-base.js since shared/items.js reads it). Nothing else changed.
+- **Your car** (server/systems/mycar.js): the car you last took out stays where you left it - through a logoff (yours
+  again when you're back) and a restart (`profile.carAt`, saved every few seconds and at logoff, put back on its space
+  when you join if it's still free and proper ground; else it's in your garage as before) - and shows on your map and
+  radar while you're on foot (the self record's `car`, after the starter and first-car markers).
+- **Have my car delivered** (the phone's home screen; `{ t: 'phone', a: 'valet' }`): a valet parks it for you on the
+  nearest proper space `VALET.minD`-`maxD` px (about 7-40 m) from you (a kerb bay or a car park's bay - `map.parking`, not a home's
+  driveway - else a street's shoulder), never on a pavement, a promenade or a lawn, out of everyone's sight, about
+  `VALET.waitS` (12 s) later, for `VALET.fee` ($40); once every `VALET.cooldownS` (4 min). Wrecked (its insurance claim
+  brought it back: insurance.js marks the entry `wr`), `VALET.wreckFee` ($150): it comes from the body shop. Not while
+  you're wanted, not in a wild district, not with someone in it or cargo on it, and only on the piece of road network
+  the car is on (a garage's car: the mainland's) - an island no road reaches gets no valet (custody.js pieceAt, as the
+  police cars). If the space is gone when it's due, another is found or the fee comes back.
+- **Parked cars off the pavements** (the owner: a white van nosed into the Harbor Marina's boat hire kiosk on the
+  promenade). shared/parkcheck.js `parkWhy`: a vehicle's footprint off the pavements, plazas and promenades, lawns, sand,
+  piers and buildings. The parked cars leave a space that fails it empty (traffic.js badBay); a fire call's burning car,
+  the auto shop's customer and the job vehicles (jobs.js workTruck: the mail van, the ambulance, the fire truck - on
+  proper ground first, anywhere it fits only where there's none) are put on proper ground. No parking space lies within a dozen
+  tiles of the Harbor's kiosk (checked on the World v3 build), so the van wasn't a parked car: it was one of those put
+  down at run time, which took the first clear ground they found - a promenade too. Which one wasn't pinned down; all
+  of them now stand on proper ground. The placement lint's new `parked` row lists the spaces laid over a pavement or a
+  plaza in the data - 124 of about 8,300 (mostly on a pavement, then plazas, lawns, the sand, in a building, on a pier:
+  a few districts' kerb bays and car parks a tile off; a golf cart's stand on its cart path is its place and isn't
+  counted): LINT_ALLOW.parked holds that count, to bring down by fixing the data, never up.
+- Tests: test/arms.test.js (what's at risk, death's pickups and their minute, the slots, the stash at the counters,
+  buying to it, the arrest, dropping and handing over, the Guide from the data), test/mycar.test.js (where you left it
+  through a restart, on your map, the valet's space, wait, fee and cooldown, wanted, the wrecked fee), the death pack's
+  and the home stash's tests updated for the guns on their own and the rounds counted once.
