@@ -23567,3 +23567,13 @@ about five seconds (client/main.js, art2/game/host.js); a vehicle's swath still 
 The owner: out to the menu from the hospital lobby, its tune went on under the title's music. On the title the sound
 frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
 club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).
+
+## 2026-11-14 - The title card's avatar: a portrait, every face in the same spot
+The owner, on the whole-figure avatar: "not centered consistently ... the full body is too far out" - a portrait is
+fine. client/portrait.js frames the same game-size sprite (nearest-neighbour, a whole number of px an art px) as a
+portrait: the head and the body down to the waist, about 17 art px a side - 3 px an art px in the card's 56 px frame,
+2 in the small card's - with the head's centre across the middle and a third of the way down for every look. The
+centre is the rig's own head (people.js: a render cut to the 1 px at the head's centre puts it at the buffer's corner),
+not the sprite's outline, so a hat, a bun or big hair no longer shifts the face; what falls outside is cropped. The
+idles stay as they were. test/portrait.test.js: every starter look's head within half an art px of the same spot.
+Before / after of eight looks: the session's scratchpad `logo2/owner/avatar3.png`.

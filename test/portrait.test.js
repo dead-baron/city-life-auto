@@ -1,10 +1,10 @@
 // The title card's portrait (client/portrait.js): the game's own sprite of your look - the same pixels the city shows -
-// made bigger by a whole number only, framed whole and centred; still, with an idle from the game's own frames now and
+// made bigger by a whole number only, framed head to waist with every look's head at the same spot; still, with an idle from the game's own frames now and
 // then, never a loop.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { spriteFor, framing } from '../client/portrait.js';
+import { spriteFor, framing, HEAD_Y } from '../client/portrait.js';
 import '../client/art2/poses.js';   // (the emotes' frames: the scratch and the phone)
 import { person } from '../client/art2/people.js';
 import { packGBuf, downsample2 } from '../client/art2/gbuf.js';
@@ -22,20 +22,17 @@ test('the sprite is the game\'s own: the same pixels the city draws, no finer re
   }
 });
 
-test('framed whole and centred, at a whole number of px an art px (never under 2)', () => {
+test('a portrait: the head at the same spot in the frame for every look, at a whole number of px an art px', () => {
   for (let i = 0; i < STARTERS.length; i++) {
-    const code = encodeLook(STARTERS[i].look), b = spriteFor(code).box, F = framing(52, b);
+    const code = encodeLook(STARTERS[i].look), h = spriteFor(code).head, F = framing(52, h);
     assert.ok(Number.isInteger(F.s) && F.s >= 2 && F.n * F.s <= 52, `${STARTERS[i].name}: ${F.s} px an art px, ${F.n} art px`);
-    // centred across: the figure's middle within half an art px of the crop's
-    assert.ok(Math.abs((b[0] + b[2]) / 2 - (F.x0 + F.n / 2)) <= 0.5, 'centred across');
-    // the whole figure when it fits (centred down too), else from the head down
-    if (b[3] - b[1] <= F.n) assert.ok(Math.abs((b[1] + b[3]) / 2 - (F.y0 + F.n / 2)) <= 0.5 && b[1] >= F.y0 && b[3] <= F.y0 + F.n, 'whole and centred');
-    else assert.ok(b[1] >= F.y0, 'the head in');
+    // the head's centre (the rig's, not the outline's) across the middle and HEAD_Y down - within half an art px
+    assert.ok(Math.abs(h[0] - F.x0 - F.n / 2) <= 0.5, `${STARTERS[i].name}: centred across`);
+    assert.ok(Math.abs(h[1] - F.y0 - F.n * HEAD_Y) <= 0.5, `${STARTERS[i].name}: the head at the same height`);
   }
-  // the small card (40 px): still 2 px an art px, from the head down
-  const b = spriteFor(encodeLook(STARTERS[0].look)).box, F = framing(36, b);
-  assert.equal(F.s, 2);
-  assert.ok(b[1] >= F.y0);
+  // 52 px inside the card's frame: 17 art px at 3 (the head to the waist); the small card's 36: 18 at 2
+  assert.deepEqual([framing(52, [0, -17]).s, framing(52, [0, -17]).n], [3, 17]);
+  assert.deepEqual([framing(36, [0, -17]).s, framing(36, [0, -17]).n], [2, 18]);
 });
 
 test('the idles are the game sprite\'s own frames: a blink, the idle\'s glances, the emotes\' scratch and phone', () => {
