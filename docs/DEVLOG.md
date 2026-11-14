@@ -22996,6 +22996,10 @@ way if possible" - autoplay beside play-it-yourself.
   frame is a CDP screenshot piped to ffmpeg (H.264, CRF 16, yuv420p). Wide 16:9 and tall 9:16 pages in the same take.
   `node tools/capture.mjs --scene bikerbrawl [--all] [--size 1080|1440] [--orient wide,tall] [--world v3|today]`.
   Same seed, same take (test: two runs of a scene in separate processes, the same actor positions at the same ticks).
+  Measured here (2 CPUs, no GPU - SwiftShader, Ultra): 3.4-5.3 s a frame for the 1920x1920 square page that gives both
+  1080p clips (the biker bar brawl: 780 frames, 13 s, 5.27 s a frame on average with the machine shared at the end). On a
+  machine with a GPU the drawing is a small part of it. World v3 needs more memory than this box has beside Chromium
+  (its server alone ~3.5 GB): the captures here were of today's city; on the Oracle box (12 GB) v3 is the default.
 - Small fixes on the way: a vehicle's `scripted` (the garage drive-out's) is no longer reused - a scene's hold is
   `dirHold`; npc.js `onVehicleHit` leaves a driven NPC alone; bikers.js counts the cinematic and director cameras as
   someone there; dusting.js leaves a scene's duster's mist on.
