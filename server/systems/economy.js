@@ -213,7 +213,7 @@ function menuOf(world, p, poi) {
   if (kind === 'hardware' && p.furnShop === poi.id) return furnitureMenu(p, poi);   // (H67: the furniture counter)
   if (kind === 'clothing' && p.cosShop === poi.id) return cosmetics.menu(world, p, poi);   // (the style counter: name colors, title plates - cosmetics.js)
   if (kind === 'garage' && p.paintShop === poi.id) return cosmetics.paintMenu(p, poi, myVehicleNear(world, p, poi));   // (custom paint - cosmetics.js)
-  if (casino.isCasino(poi)) return casino.menu(world, p, poi);   // (a casino's floor: casino.js)
+  if (casino.isCasino(poi) || (p.menu && p.menu.poi === poi.id && p.menu.cards)) return casino.menu(world, p, poi);   // (a bar's card table too: opened at it - casinofloor.js)   // (a casino's floor: casino.js)
   if (arcade.isArcade(world, poi)) return arcade.menu(world, p, poi);   // (an arcade's counter: arcade.js)
   if (bathhouse.isBath(world, poi)) return bathhouse.menu(world, p, poi);   // (a bathhouse's locker: bathhouse.js)
   if (kind === 'delivery' && poi.walk) {   // (a walk-in shop's counter: walkCounter)
@@ -560,11 +560,13 @@ function furnitureMenu(p, poi) {
   return { t: 'menu', poi: poi.id, title: 'Furniture & decor', sub: none ? 'Style your life - once you have a home to put it in.' : 'Style your life. Delivered to your home: place it from the hall table (Decorate).', opts, cash: prof.cash, bank: prof.bank };
 }
 
-export function openMenu(world, p, poi) {
+// o: { at (opened from there, not the counter: a table on a casino's floor), cards (that game's view), table (a bar's
+// card table) } - casinofloor.js interaction
+export function openMenu(world, p, poi, o = null) {
   if (!p.conn) return;
-  p.menu = { poi: poi.id };
+  p.menu = { poi: poi.id, ...(o && o.at ? { at: o.at } : null), ...(o && o.cards ? { cards: o.cards } : null) };
   p.furnShop = null; p.cosShop = null; p.paintShop = null; p.paintTok = false; p.lobbyUnit = null; p.atmFull = null;
-  if (casino.isCasino(poi)) casino.open(world, p, poi);
+  if (casino.isCasino(poi) || p.menu.cards) casino.open(world, p, poi, p.menu.cards || null, !!(o && o.table));
   const m = buildMenu(world, p, poi);
   p.conn.sendJSON(m);
   ftue.menuOpened(world, p, poi, m);   // (the hustle's contact talked to; the first shop's tip: ftue.js)

@@ -10,6 +10,7 @@
 //   onWall [{ t, x0, x1, v0, v1, c, g, gk, text, face }] (v: up the back wall), pieces [{ t, x0, y0, x1, y1, h, c, c2, g, gk,
 //   flat }], ext [{ t, x0, y0, x1, y1 }] (a big roadhouse: the MC4 pieces statics.js roadhouseRoom draws, kept clear), people [{ x, y, a, gt }] (where customers stand; gt 'sit'),
 //   lamps [{ x, y, r, c, k }] (pools of lamplight on the floor), clear [[x0, y0, x1, y1]] }
+import { CARD_RECT, FELT_H } from './casinorooms.js';
 export const SHOP_PLAN = {
   convenience: 'corner', gasstation: 'fuel', grocery: 'grocery', gunshop: 'gunshop', hardware: 'hardware', pawn: 'pawn',
   fence: 'fence', bank: 'bank', courthouse: 'court', pharmacy: 'pharmacy', barber: 'barber', clothing: 'boutique',
@@ -34,6 +35,9 @@ export function barPlan(name, seed = 0) {
 }
 
 const STRIP = 36;
+// B (the owner, 2026-11-14): a card table in a bar - poker, or blackjack with its dealer - the cards dealt live over it
+// (server/systems/casinofloor.js, client/casinoview.js; its seats: shared/casinorooms.js gameTable, inset CARD_IN)
+const cardTable = (c, k) => { const [w, d] = CARD_RECT[k], p = placeAny(c, w, d, (x0, y0, x1, y1) => put(c, 'cards', x0, y0, x1, y1, FELT_H, { k }, 8)); if (p) lamp(c, (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2, 44, WARM, 0.9); return p; };
 const seedOf = (b, u) => (Math.imul((b.tx | 0) + 7, 73856093) ^ Math.imul((b.ty | 0) + 3, 19349663) ^ Math.imul((u.x0 | 0) + 1, 83492791)) >>> 0;
 function rnd(seed) {
   let a = seed >>> 0;
@@ -657,6 +661,7 @@ FIT.lounge = (c) => {
   const { R, r } = c;
   R.floor = pick(r, F.lounge); R.wall = pick(r, W.lounge);
   barBase(c);
+  cardTable(c, 'bj');
   wall(c, 'martini', c.X0 + 14, c.X0 + 40, 50, 74);
   sign(c, pick(r, ['COCKTAILS', 'LOUNGE', 'MARTINIS', 'JAZZ']), pick(r, ['#ff6ab0', '#ffd24a', '#9a7aff']), undefined, 'neon');
   for (const x of [c.X0 + 52, c.X1 - 22]) wall(c, 'sconce', x, x + 6, 40, 50);
@@ -684,6 +689,9 @@ FIT.tavern = (c) => {
   sign(c, pick(r, ['ALES', 'TAVERN', 'ON TAP', 'OPEN']), '#e8c870', undefined, 'serif');
   for (const x of [c.X0 + 50, c.X1 - 26]) wall(c, 'lantern', x, x + 8, 40, 52);
   const [a, b] = c.regs;
+  let pool = null;
+  if (a && a.x1 - a.x0 >= 110 && a.y1 - a.y0 >= 60) { const x = a.side < 0 ? a.x0 + 6 : a.x1 - 106; pool = put(c, 'pool', x, a.y0 + 4, x + 100, a.y0 + 56, 20, { c: '#5a3a24', c2: '#2f7a4a' }); if (pool) lamp(c, x + 50, a.y0 + 30, 56, [255, 220, 150], 1.1); }
+  cardTable(c, 'pk');
   for (const reg of [a, b]) if (reg) aisles(c, reg, 30, 22, (x0, y, x1, y1) => { const w = Math.min(x1 - x0, 80), x = reg.side > 0 ? x1 - w : x0; const p = put(c, 'longtable', x, y, x + w, y1, 18, { c: '#6a4630' }); if (p && r() < 0.6) shopper(c, x + 12, y + 3, Math.PI / 2, 'sit'); return p; });
   fill(c, [
     K([18, 16], (c, x0, y0, x1, y1, g) => put(c, 'barrel', x0, y0, x1, y1, 22, { c: '#7a5434' }, g)),
@@ -705,6 +713,7 @@ FIT.sportsbar = (c) => {
   const [a, b] = c.regs;
   let pool = null;
   if (a && a.x1 - a.x0 >= 110 && a.y1 - a.y0 >= 60) { const x = a.side < 0 ? a.x0 + 10 : a.x1 - 110; pool = put(c, 'pool', x, a.y0 + 6, x + 100, a.y0 + 58, 20, { c: '#5a3a24', c2: pick(r, ['#2f7a4a', '#2a4a8a']) }); if (pool) shopper(c, x + 50, a.y0 + 66, -Math.PI / 2); }
+  cardTable(c, 'pk');
   for (const reg of [a, b]) if (reg) { if (reg.x1 - reg.x0 < 120) { boothRows(c, reg, '#8a2a26'); continue; } const v = sideWall(c, reg, 'booth', 44, 22, { c: '#8a2a26', run: true, need: 0 }); if (v && r() < 0.6) shopper(c, v.side < 0 ? v.x0 + 8 : v.x1 - 8, (v.y0 + v.y1) / 2, v.side < 0 ? 0 : Math.PI, 'sit'); }
   if (b) { const q = corner(b, 22, 14, true); put(c, 'machine', ...q, 34, { k: 'jukebox' }); }
   fill(c, [
@@ -823,6 +832,7 @@ FIT.saloon = (c) => {
     let pool = null;
     for (const reg of c.regs) if (!pool && reg.x1 - reg.x0 >= 104 && reg.y1 - reg.y0 >= 60) { const x = reg.side < 0 ? reg.x0 + 2 : reg.x1 - 102; put(c, 'rug', x - 4, reg.y0 + 2, x + 104, reg.y0 + 62, 1, { c: '#8a2a24', c2: '#c8a050', flat: true }); pool = put(c, 'pool', x, reg.y0 + 6, x + 100, reg.y0 + 58, 20, { c: '#5a3a24', c2: '#2f7a4a' }); }
     if (pool) lamp(c, (pool.x0 + pool.x1) / 2, (pool.y0 + pool.y1) / 2, 56, [200, 255, 170], 1);
+    cardTable(c, 'pk');
     const aw = placeAny(c, 46, 24, (x0, y0, x1, y1) => put(c, 'armwrestle', x0, y0, x1, y1, 18, { c: '#5a3a24' }, 14));
     if (aw) { shopper(c, aw.x0 - 4, aw.y0 + 12, 0); shopper(c, aw.x1 + 4, aw.y0 + 12, Math.PI); }
     if (b) { const q = corner(b, 22, 14, true); put(c, 'machine', ...q, 34, { k: 'jukebox' }); }

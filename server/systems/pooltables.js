@@ -16,6 +16,7 @@
 // while the balls roll. Nobody near: nothing sent, nothing kept but the table's last balls.
 import { TILE } from '../../shared/constants.js';
 import { shopRoom } from '../../shared/shoprooms.js';
+import { foodLayout } from '../../shared/foodrooms.js';
 import { packBalls, idleBalls } from '../../shared/pool.js';
 import { viewRect } from '../view.js';
 
@@ -42,7 +43,8 @@ export function tablesOf(map) {
   (map.buildings || []).forEach((b, bi) => {
     if (!b || !b.walkIn) return;
     for (const u of b.walkIn.units) {
-      if (u.kind === 'roadhouse' || u.kind === 'coffee') continue;   // (the Spur's: above)
+      if (u.kind === 'coffee') { const F = foodLayout(b, u, TILE), q = F && F.pool; if (q) L.push({ key: `t${bi}:${q.x0},${q.y0}`, b: bi, ...q, cx: (q.x0 + q.x1) / 2, cy: (q.y0 + q.y1) / 2, f: [q.x0 + 5, q.y0 + 5, q.x1 - 5, q.y1 - 5, 21] }); continue; }   // (a diner with the room: shared/foodrooms.js)
+      if (u.kind === 'roadhouse') continue;   // (the Spur's: above)
       const R = shopRoom(b, u, TILE, map);
       if (!R) continue;
       for (const p of R.pieces) {
@@ -91,21 +93,28 @@ export function shot(world, T, balls, from, v, by) {
   (world.poolShots ||= { n: 0 }).n++;   // (tests, the profile)
 }
 // twice a second: the pages a table's in view of (and a little past) are told it as it stands when they come near
+// follow(world, list, get, msg): the same for any game out in the world a page can watch (the casinos' tables, the bars'
+// card tables: casinofloor.js) - list: things with { cx, cy }; get(world, T, make) its state ({ subs: Map }, made only
+// when someone's near), msg(s) what a page coming near is sent; tell(world, s, m) sends m to the pages it has told
 const tmp = {}, PAD = 220;
-export function update(world) {
-  if (world.tick % 10 !== 4) return;
-  const L = tablesOf(world.map);
-  if (!L.length) return;
+export function follow(world, L, get, msg) {
   for (const T of L) {
-    let s = world.poolTabs && world.poolTabs.get(T.key);
+    let s = get(world, T, false);
     for (const p of world.players.values()) {
       const on = !!(p.conn && p.ped && !p.ped.ug && !(p.ped.hidden && p.ped.home) && viewRect(world, p, tmp) && T.cx >= tmp.x0 - PAD && T.cx <= tmp.x1 + PAD && T.cy >= tmp.y0 - PAD && T.cy <= tmp.y1 + PAD);
       if (!on) { if (s && s.subs.has(p.pid)) s.subs.delete(p.pid); continue; }
-      s ||= stateOf(world, T);
+      s ||= get(world, T, true);
       if (s.subs.get(p.pid) === p.conn) continue;
       s.subs.set(p.pid, p.conn);
-      send(p, tabMsg(s));
+      send(p, msg(s));
     }
     if (s) for (const pid of [...s.subs.keys()]) if (!world.players.has(pid)) s.subs.delete(pid);
   }
+}
+export const tell = (world, s, m) => { for (const pid of s.subs.keys()) send(world.players.get(pid), m); };
+const poolGet = (world, T, make) => (make ? stateOf(world, T) : world.poolTabs && world.poolTabs.get(T.key));
+export function update(world) {
+  if (world.tick % 10 !== 4) return;
+  const L = tablesOf(world.map);
+  if (L.length) follow(world, L, poolGet, tabMsg);
 }

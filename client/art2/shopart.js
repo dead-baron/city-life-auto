@@ -7,6 +7,8 @@
 // lamplight on the floor.
 import { hash, vnoise, F_GROUND } from './gbuf.js';
 import { ramp } from './palette.js';
+import { drawGameTable } from './casinoart.js';
+import { cardTableOf } from '../../shared/casinorooms.js';
 import { layoutSign, paintBoard, paintLine, lineMask, palOf, legible, luminance, hotOf } from './signfont.js';
 
 const RGB = new Map(), RAMP = new Map();
@@ -373,6 +375,9 @@ const MACH = {
 
 // ---- the floor's pieces: (q: the painters; p: the piece; its box in the cut's px; w, d: its size; h: its height) ------
 const PIECE = {
+  // a bar's card table (shared/shoprooms.js cardTable): poker's oval, blackjack's half-moon, a stool at each seat - the
+  // cards dealt live over it (client/casinoview.js)
+  cards: (q, p, x0, y0) => drawGameTable(q, cardTableOf(p), (wx) => wx - p.x0 + x0, (wy) => wy - p.y0 + y0, 1),
   // a fitting of shelves: on top the packed goods seen from above, on its south face the shelf levels with the goods
   // standing on them as objects
   shelf: (q, p, x0, y0, x1, y1, w, d, h, g, c) => {

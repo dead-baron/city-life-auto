@@ -123,6 +123,7 @@ import * as fishboat from './fishboat.js';
 import * as rangerjob from './rangerjob.js';
 import * as skills from './skills.js';
 import * as streetdice from './streetdice.js';
+import * as casinofloor from './casinofloor.js';
 import * as workout from './workout.js';
 import * as casino from './casino.js';
 import * as arcade from './arcade.js';
@@ -958,6 +959,8 @@ export function findInteraction(world, p) {
   if (work) return work;
   const hire = races.footInteraction(world, p, rentals, economy.openMenu);   // at a race that starts from a hire dock: rent its craft (races.js)
   if (hire) return hire;
+  const table = casinofloor.interaction(world, p, economy.openMenu);   // a casino's table or slot machine, a bar's card table (casinofloor.js)
+  if (table) return table;
   const poi = world.map.poiNear(ped.x, ped.y);
   if (poi && poi.kind !== 'reception') {
     const label = economy.poiLabel(world, p, poi);
