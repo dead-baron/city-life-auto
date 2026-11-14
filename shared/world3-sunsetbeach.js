@@ -335,7 +335,7 @@ function build(m, api, K) {
     for (const [x, y] of [[HX0 + 0.6, HY1 - 2], [HX0 + 2.6, HY1 + 0.75], [HX1 + 0.75, HY0 + 2.2]]) prop('rods', x, y, 0, { a: y > HY1 ? Math.PI / 2 : x < PX ? Math.PI : 0 });
     for (const [x, y, a] of [[HX0 + 0.1, HY0 + 5.2, 2.4], [sx0 + 0.1, sy + 9, -0.6], [HX1 + 0.92, HY1 - 0.4, 0.9]]) prop('gull', x, y, 0, { a, z: 30 });
     // the float off the head's east side: dinghies tied up, cleats at its corners
-    prop('canoe', FX1 + 1.8, FY0 + 0.6, 0, { a: 0, c: 0 }); prop('canoe', FX1 + 1.6, FY1 + 0.6, 0, { a: 0, c: 2 });
+    prop('canoe', FX1 + 2.1, FY0 + 0.6, 0, { a: 0, c: 0 }); prop('canoe', FX1 + 2.1, FY1 + 0.6, 0, { a: 0, c: 2 });   // (alongside, not with a bow up on the float: test/placementlint.test.js)
     for (const [x, y] of [[FX1 + 0.7, FY0 + 0.3], [FX1 + 0.7, FY1 + 0.7]]) prop('bollard', x, y, 5);
     m.marina.push({ x: Math.round((FX1 + 4) * TILE), y: Math.round((FY0 + 1.5) * TILE), a: 0, kind: 'dinghy' });
     // ashore: bollards across the root (no cars on the pier), the lit sign over it

@@ -126,6 +126,7 @@ import * as streetdice from './streetdice.js';
 import * as workout from './workout.js';
 import * as casino from './casino.js';
 import * as arcade from './arcade.js';
+import * as poolmatch from './poolmatch.js';   // (round a table out in the world while your game's on: steer)
 import * as biz from './biz.js';
 import * as carsoccer from './carsoccer.js';
 import * as bathhouse from './bathhouse.js';
@@ -623,6 +624,7 @@ function inputsOf(world, p, dt) {
       else if (p.conn && (p.starve || 0) < HOLD_TICKS) { p.starve = (p.starve || 0) + 1; break; }
       else inp = p.conn ? p.lastInput : { seq: p.ack, bits: 0, mx: 0, my: 0, aim: p.lastInput.aim };
       if (!ped || ped.dead || ped.removed) { p.prevBits = inp.bits; continue; }
+      if (p.pool) inp = poolmatch.steer(world, p, ped) || inp;   // (at a table out in the world, his game on: walked round it - poolmatch.js)
       const pressed = inp.bits & ~p.prevBits;
       p.prevBits = inp.bits;
       applyInput(world, p, ped, inp, pressed, dt);

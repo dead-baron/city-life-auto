@@ -352,7 +352,7 @@ function fallsScene(C, s, cave) {
   const deck = [fx - 250, fy + 112];
   C.prop('viewdeck', deck[0], deck[1], 0, { len: 96, w: 96, a: 0 });
   C.prop('pbench', deck[0] - 20, deck[1] + 8, 0, { a: 0, lift: 8 });
-  C.prop('textsign', deck[0] - 70, deck[1] + 64, 0, { text: 'REDWOOD CREEK FALLS', bg: '#4a3a24', fg: [240, 228, 196], z: 30 });
+  C.prop('textsign', deck[0] - 22, deck[1] + 70, 0, { text: 'REDWOOD CREEK FALLS', bg: '#4a3a24', fg: [240, 228, 196], z: 30, wood: 1 });   // (out from under the giant's crown west of it: its R was hidden - the QA sweep, 11-13)
   // the picnic pull-off (shared/naturesites.js) packed dirt, not gravel, a dirt path from it down to the deck
   for (let ty = Math.floor((fy + 120) / TILE); ty <= Math.floor((fy + 340) / TILE); ty++) for (let tx = Math.floor((fx - 500) / TILE); tx <= Math.floor((fx - 200) / TILE); tx++) { const i = C.idx(tx, ty); if (m.tiles[i] === T.LOT) { m.tiles[i] = T.DIRT; m.reserve[i] |= RES; } }
   const down = spline([[fx - 400, fy + 250], [fx - 330, fy + 205], [deck[0] - 30, deck[1] + 58]], 5);

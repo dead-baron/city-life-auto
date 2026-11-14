@@ -500,13 +500,11 @@ const PIECE = {
     }
     const m = (y0 + y1) / 2; q.slab(x0, x0 + 3, y0, y1, h, p.c); q.slab(x0 + 3, x0 + 9, y0, y1, 9, p.c); q.slab(x0 + 11, x1 - 11, y0 + 2, y1 - 2, 15, '#8a6440'); q.slab(x1 - 9, x1 - 3, y0, y1, 9, p.c); q.slab(x1 - 3, x1, y0, y1, h, p.c); q.dot((x0 + x1) / 2 - 1, m - 1, 16, [236, 200, 90]);
   },
-  // a pool table: the rails, the pockets, the cloth, the balls, a cue across
+  // a pool table: the rails, the pockets, the cloth - its balls drawn live over it (client/poolview.js)
   pool: (q, p, x0, y0, x1, y1, w, d, h, g, c) => {
     q.slab(x0, x1, y0, y1, h, c);
     for (let Y = y0 + 5; Y < y1 - 5; Y++) for (let x = x0 + 5; x < x1 - 5; x++) q.px(x, Y, h + 1, rp(p.c2)[(x + Y) % 9 === 0 ? 1 : 2]);
     for (const [px, py] of [[x0 + 4, y0 + 4], [x1 - 6, y0 + 4], [x0 + 4, y1 - 6], [x1 - 6, y1 - 6], [(x0 + x1) / 2 - 1, y0 + 3], [(x0 + x1) / 2 - 1, y1 - 5]]) q.dot(px, py, h + 2, [16, 16, 18], 3);
-    for (const [bx, by, col] of [[0.7, 0.4, WHITE], [0.6, 0.55, [220, 60, 50]], [0.64, 0.66, [240, 200, 60]], [0.56, 0.5, DARK], [0.52, 0.62, [60, 90, 200]], [0.58, 0.38, [230, 120, 40]]]) q.dot(x0 + w * bx, y0 + d * by, h + 2, col, 3);
-    for (let k = 0; k < 50; k++) q.px(x0 + 16 + k, y0 + 14 + k * 0.2, h + 2, [200, 170, 110]);
   },
   // MC4's arm-wrestling table: a stout small table, an elbow pad either side, a stool each
   armwrestle: (q, p, x0, y0, x1, y1, w, d, h, g, c) => { const cx = (x0 + x1) / 2; for (const sx of [x0, x1 - 9]) q.slab(sx, sx + 9, y0 + 8, y0 + 17, 13, '#c8c8cc', '#5a3a24'); q.slab(cx - 12, cx + 12, y0 + 2, y1 - 2, h, c); q.dot(cx - 8, y0 + 10, h + 1, [200, 40, 44], 4); q.dot(cx + 4, y0 + 10, h + 1, [200, 40, 44], 4); q.dot(cx - 2, y0 + 6, h + 2, [90, 140, 70], 3); },
