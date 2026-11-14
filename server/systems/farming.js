@@ -275,7 +275,7 @@ function track(world, p) {
 }
 
 // ---- what the page draws -------------------------------------------------------------------------------------------
-// { t: 'fields', f: [{ i, x, y, w, h, v, rw, segs, r: [state, growth %, done bits, field bits, ...4 a row], h: [x, y,
+// { t: 'fields', f: [{ i, x, y, w, h, v, rw, segs, r: [state, growth %, done bits, field bits, ...4 a row], hp: [x, y,
 // ...] the patches picked by hand (world px, FARM.handR round), hr: FARM.handR }] } - the fields within FARM.near of
 // you, sent when one of them changed
 const handOf = (world, F) => { const o = []; for (const q of F.hand || []) if (q.until > world.time) o.push(q.x, q.y); return o; };
@@ -288,7 +288,7 @@ function sendNear(world, p) {
   const ver = near.map((F) => `${F.i}:${F.ver || 0}`).join(',');
   if (ver === (p.fieldsSig || '')) return;
   p.fieldsSig = ver;
-  p.conn.sendJSON({ t: 'fields', f: near.map((F) => ({ i: F.i, x: F.f.x, y: F.f.y, w: F.f.w, h: F.f.h, v: F.v ? 1 : 0, rw: FARM.rowW, segs: FARM.segs, r: F.rows.flatMap((row) => [row.s, Math.round(row.g * 100), row.m, row.ok]), h: handOf(world, F), hr: FARM.handR })) });
+  p.conn.sendJSON({ t: 'fields', f: near.map((F) => ({ i: F.i, x: F.f.x, y: F.f.y, w: F.f.w, h: F.f.h, v: F.v ? 1 : 0, rw: FARM.rowW, segs: FARM.segs, r: F.rows.flatMap((row) => [row.s, Math.round(row.g * 100), row.m, row.ok]), hp: handOf(world, F), hr: FARM.handR })) });
 }
 
 // ---- dev ('farm'): at the fields by the co-op in a tractor, the rows beside you in every state (stubble, ploughed,

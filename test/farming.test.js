@@ -172,7 +172,8 @@ test('by hand at harvest time: each pick takes a small patch round you, never th
   farming.update(w);
   for (let i = 0; i < 40 && !sent.some((m) => m.t === 'fields'); i++) { w.tick++; farming.update(w); }
   const fm = sent.find((m) => m.t === 'fields'), f = fm && fm.f.find((q) => q.i === F.i);
-  assert.ok(f && f.h.length === n * 2 && f.hr === FARM.handR, 'the patches sent');
+  assert.ok(f && f.hp.length === n * 2 && f.hr === FARM.handR, 'the patches sent');
+  assert.equal(f.h, F.f.h, 'the field\'s height still its own (the patches are hp)');
   // grown back on the timer
   w.time += FARM.handRegrowS + 1;
   for (let i = 0; i < 41; i++) { w.tick++; farming.update(w); }

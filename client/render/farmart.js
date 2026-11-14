@@ -2,7 +2,7 @@
 // first time the server sends either. The server keeps them; this only draws what it's sent: S.garden, the plots near
 // you ([x, y, crop, stage, flags] - crop -1 an empty plot; stage 0 seed .. 4 ripe; flags 1 dry, 2 wilted, 4 dead,
 // 8 a prize one), and S.fields, the fields near you ({ x, y, w, h, v (rows run north-south), rw, segs, r: [state, growth
-// %, done bits, field bits] a row, h: the patches picked by hand [x, y, ...], hr: their radius }). Drawn on the ground under everything that stands on it, in both renderers - the
+// %, done bits, field bits] a row, hp: the patches picked by hand [x, y, ...], hr: their radius }). Drawn on the ground under everything that stands on it, in both renderers - the
 // classic view's world pass (drawV1) and art v2's ground decals (drawV2: art v2's ground is baked, the fields' crops
 // with it, so the rows' live state goes on top of it near you). Small and cheap: a plot is one sprite (its soil and its
 // three plants at their stage), a row a sprite per stretch of it (its look: stubble, ploughed, sown, growing, ripe);
@@ -307,9 +307,9 @@ export class FarmArt {
       }
     }
   }
-  // the patches picked by hand in field f (its h: [x, y, ...]) on a row still ripe, in the view: draw(R art px, x, y)
+  // the patches picked by hand in field f (its hp: [x, y, ...] - not h: that's its height) on a row still ripe, in the view: draw(R art px, x, y)
   _patches(f, draw, x0, y0, x1, y1) {
-    const H = f.h, R = Math.max(2, Math.round((f.hr || 18) / P));
+    const H = f.hp, R = Math.max(2, Math.round((f.hr || 18) / P));
     if (!H || !H.length) return;
     for (let i = 0; i + 1 < H.length; i += 2) {
       const X = H[i], Y = H[i + 1];

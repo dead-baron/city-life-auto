@@ -23089,7 +23089,7 @@ with 4 GB or less) - client/gfx.js detectDevice.
 - **Picking by hand takes a patch, not the row** (`server/systems/farming.js` handPick, `shared/rules.js` FARM handR,
   handRegrowS, handMax): it took the whole stretch you stood in (a tenth of the row, often 100 px and more), and eight
   stretches turned the whole row to stubble. Now a pick takes the plants within 18 px of you: the patch goes to stubble
-  on every page (sent with the fields as `h`, drawn by `render/farmart.js` patchPixels over the crop) and grows back
+  on every page (sent with the fields as `hp`, drawn by `render/farmart.js` patchPixels over the crop) and grows back
   after the orchard's PICK_REGROW_S. The row stays ripe for the tractor and the combine. A crate still comes every
   FARM.handPer picks; the same spot can't be picked again until you've moved on. The Guide's farm entry says so.
 
