@@ -23531,3 +23531,8 @@ The owner (the Harbor Marina's boat hire): "the open sign is partially cut off".
 three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
 was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
 (client/art2/buildings.js); the wider fronts keep theirs.
+
+## 2026-11-14 - No see-through outline behind people
+The owner: "I dont think we need this invisible white outline on our player when we're behind an NPC or other player."
+The x-ray outline (what hides you is outlined over you, art2/game/engine.js) now ignores people (the scene's F_CHAR
+pixels): behind a building, a vehicle or a tree you're still outlined; behind someone standing in front of you, not.
