@@ -2,13 +2,18 @@
 //   - at risk (atRisk): every gun, bow, launcher and grenade, anything illegal, a melee weapon or tool that sells for more
 //     than ARMS.keepMax (the sword, the katana, the plasma blade). Fists, police issue, and the cheap legal melee weapons and
 //     tools (a bat, a knife, a crowbar, a fishing pole, pepper spray) are never at risk.
-//   - carried: ARMS.slots at-risk weapons at most (profile.weapons, as before - a loadout from before keeps what it has).
+//   - carried, by class (the owner's loadout, claude/launch-plan-2026-11-03.md; ARMS.carry): 2 guns (bows and launchers
+//     too), 1 melee (the at-risk blades), 1 throwable (grenades) - what isn't at risk doesn't count. A class full, a new
+//     one of it (bought, picked up, taken out of the stash, handed over) sends the one of that class in your hand - else
+//     the oldest of it - to your stash (makeRoom). Carry upgrades (later: a holster, a sling, a chest rig) raise a class
+//     up to ARMS.carryMax: carryOf reads them. A loadout from before over the limit keeps its extras until the next
+//     death, arrest or stash visit (fit: the stash's menus trim it).
 //   - the stash: one per character (profile.stash.weapons: id -> rounds - the home safe's, the same one), opened at your
 //     home's safe and at any gun shop or pawn shop (ARMS.stashKinds: economy.js stashMenu).
 //   - down (cargo.js dropEverything): each at-risk weapon falls round where you lay, a pickup anyone can take for
 //     ARMS.dropS; the rest stays with you.
 //   - booked (custody.js confiscate): the illegal ones taken for good, the legal at-risk ones into your stash.
-//   - bought with your slots full: the one in your hand (else the first) goes to the stash; bought "to stash", straight in.
+//   - bought "to stash": straight in.
 //   - dropped on the ground (the bag's Drop) or handed to a crewmate close by: both a pickup (dropAt / pickUp).
 // Rounds: profile.weapons[id] is every round you have for it, those in the magazine (ped.mag) among them - as combat.js
 // counts them; the stash keeps the same total.
@@ -39,16 +44,53 @@ export function atRisk(id) {
 // can it go in the stash (anything of your own: not your fists, not police issue)
 export const stashable = (id) => !!WEAPONS[id] && id !== 'fists' && !issued(WEAPONS[id]);
 export const carried = (prof) => Object.keys(prof.weapons || {}).filter(atRisk);
-export const full = (prof) => carried(prof).length >= ARMS.slots;
+// a weapon's carry class: 'gun' (guns, bows, launchers, the flamethrower), 'melee' (the blades and the dear tools),
+// 'throw' (grenades) - null for what doesn't count (not at risk)
+export function classOf(id) {
+  if (!atRisk(id)) return null;
+  const t = WEAPONS[id].type;
+  return t === 'grenade' ? 'throw' : t === 'melee' || t === 'tool' || t === 'spray' ? 'melee' : 'gun';
+}
+const CLASS_NAME = { gun: 'guns', melee: 'melee weapon', throw: 'throwable' };
+// how many of a class you can carry: ARMS.carry, plus the carry upgrades you have (profile.carryUp { gun, melee, throw }:
+// none yet - a holster, a sling, a chest rig to come), up to ARMS.carryMax
+export const carryOf = (prof, cls) => Math.min(ARMS.carryMax[cls], ARMS.carry[cls] + ((prof.carryUp && prof.carryUp[cls]) | 0));
+// what you carry of a class, oldest first (profile.weapons keeps the order they came)
+export const ofClass = (prof, cls) => Object.keys(prof.weapons || {}).filter((id) => classOf(id) === cls);
+export const full = (prof, cls) => ofClass(prof, cls).length >= carryOf(prof, cls);
 export function stashOf(prof) {
   const st = (prof.stash ||= { items: {}, weapons: {} });
   st.items ||= {}; st.weapons ||= {};
   return st;
 }
 export const stashed = (prof) => Object.keys((prof.stash && prof.stash.weapons) || {}).filter((id) => WEAPONS[id]);
-const fullWhy = (who = 'Your') => `${who} hands are full (${ARMS.slots} weapons) - put one in your stash first.`;
-// would taking id put p over the slots? (one you have already only adds its rounds)
-const noRoom = (prof, id) => atRisk(id) && prof.weapons[id] === undefined && full(prof);
+// would taking id need room made? (one you have already only adds its rounds)
+const noRoom = (prof, id) => { const c = classOf(id); return !!c && prof.weapons[id] === undefined && full(prof, c); };
+// Room for id: while its class is full, the one of it in your hand - else the oldest - goes to your stash. -> the names
+export function makeRoom(p, id) {
+  const prof = p.profile, ped = p.ped, cls = classOf(id), out = [];
+  if (!cls || prof.weapons[id] !== undefined) return out;
+  for (let L = ofClass(prof, cls); L.length >= carryOf(prof, cls); L = ofClass(prof, cls)) {
+    const o = ped && L.includes(ped.weapon) ? ped.weapon : L[0];
+    if (toStash(p, o)) break;
+    out.push(WEAPONS[o].name);
+  }
+  return out;
+}
+// A loadout over the limit (kept from before the limit, 2026-11-14): trimmed to it at a stash - the one in your hand and
+// the newest kept, the rest into the stash. -> the names sent
+export function fit(p) {
+  const prof = p.profile, ped = p.ped, out = [];
+  for (const cls of Object.keys(ARMS.carry)) {
+    const L = ofClass(prof, cls), cap = carryOf(prof, cls);
+    if (L.length <= cap) continue;
+    const keep = new Set(L.slice(-cap));
+    if (ped && L.includes(ped.weapon) && !keep.has(ped.weapon)) { keep.delete(L[L.length - cap]); keep.add(ped.weapon); }
+    for (const id of L) if (!keep.has(id) && !toStash(p, id)) out.push(WEAPONS[id].name);
+  }
+  return out;
+}
+const said = (names) => (names.length ? ` The ${names.join(' and the ')} went to your stash to make room.` : '');
 
 // into your hands: n rounds more (the magazine filled from them when it's new to you)
 function addCarried(p, id, n) {
@@ -77,23 +119,19 @@ export function toStash(p, id) {
 export function fromStash(p, id) {
   const prof = p.profile, st = stashOf(prof);
   if (st.weapons[id] === undefined || !WEAPONS[id]) return 'Not in your stash.';
-  if (noRoom(prof, id)) return fullWhy();
   const n = st.weapons[id];
   delete st.weapons[id];
+  const room = makeRoom(p, id);
   addCarried(p, id, n);
+  p.lastRoom = room;   // (the menu's line says it: economy.js htw)
   store.touch();
   return null;
 }
-// bought at a counter with rounds (economy.js 'w'): into your hands - with them full, the one in your hand (else the first
-// you carry) goes to your stash to make room. -> the name of what went to the stash, or null
+// bought at a counter with rounds (economy.js 'w'): into your hands - its class full, the one of it in your hand (else the
+// oldest) goes to your stash to make room. -> the names of what went to the stash
 export function bought(p, id, rounds) {
   const prof = p.profile, ped = p.ped, w = WEAPONS[id];
-  let swapped = null;
-  if (noRoom(prof, id)) {
-    const c = carried(prof), out = c.includes(ped.weapon) ? ped.weapon : weaponOrder(c)[0];
-    toStash(p, out);
-    swapped = WEAPONS[out].name;
-  }
+  const swapped = makeRoom(p, id);
   prof.weapons[id] = rounds;
   if (w.mag) ped.mag[id] = Math.min(w.mag, rounds);
   p.meDirty = true;
@@ -113,7 +151,7 @@ export function stashRows(p) {
   for (const id of weaponOrder(Object.keys(prof.weapons))) if (stashable(id)) out.push({ id: `hsw:${id}`, label: `Stash ${WEAPONS[id].name}`, note: rds(id, prof.weapons[id] || 0), wpn: WEAPONS[id].i });
   for (const id of weaponOrder(stashed(prof))) {
     const no = noRoom(prof, id);
-    out.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: no ? 'your hands are full' : `stash${WEAPONS[id].mag ? ` · ${st.weapons[id]} rds` : ''}`, wpn: WEAPONS[id].i, dis: no });
+    out.push({ id: `htw:${id}`, label: `Take ${WEAPONS[id].name}`, note: no ? `swaps one ${CLASS_NAME[classOf(id)] === 'guns' ? 'gun' : CLASS_NAME[classOf(id)]} back in` : `stash${WEAPONS[id].mag ? ` · ${st.weapons[id]} rds` : ''}`, wpn: WEAPONS[id].i });
   }
   return out;
 }
@@ -137,12 +175,13 @@ export function label(bag, p) {
 export function pickUp(world, p, bag) {
   const id = bag.gun, prof = p.profile;
   if (!WEAPONS[id]) { world.remove(bag); return false; }
-  if (noRoom(prof, id)) { world.notify(p, fullWhy(), 'warn'); return false; }
+  const room = makeRoom(p, id);
   addCarried(p, id, bag.weapons[id] || 0);
   world.remove(bag);
   world.emit(bag.x, bag.y, { e: 'loot', x: bag.x, y: bag.y, n: 0 });
   const mine = bag.dropBy === p.pid;
-  if (!bag.handed) world.notify(p, `Picked up ${mine ? 'your' : 'the'} ${WEAPONS[id].name}${WEAPONS[id].mag ? ` (${prof.weapons[id]} rounds)` : ''}.`, 'good');
+  if (!bag.handed) world.notify(p, `Picked up ${mine ? 'your' : 'the'} ${WEAPONS[id].name}${WEAPONS[id].mag ? ` (${prof.weapons[id]} rounds)` : ''}.${said(room)}`, 'good');
+  else if (room.length) world.notify(p, said(room).trim(), 'info');
   store.touch();
   return true;
 }
@@ -184,7 +223,6 @@ export function handTo(world, p, id) {
     if (d <= bd) { bd = d; q = m; }
   }
   if (!q) return `No crewmate close enough - stand within ${Math.round(ARMS.giveR / 32)} m of one.`;
-  if (noRoom(q.profile, id)) return fullWhy(`${q.name}'s`);
   const n = prof.weapons[id] || 0, name = WEAPONS[id].name;
   delete prof.weapons[id];
   if (ped.mag) delete ped.mag[id];

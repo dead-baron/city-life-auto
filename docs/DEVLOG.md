@@ -23549,8 +23549,16 @@ where you left it, brought to you by a valet - no teleport. The numbers: shared/
   at every gun shop's and pawn shop's counter (a "Your stash" line - economy.js stashMenu). Rounds go with a gun both
   ways; the old safe counted the magazine twice going in and left it short coming out (profile.weapons is every round,
   the magazine's among them - combat.js counts them so): fixed.
-- **Slots**: `ARMS.slots` (5) at-risk weapons carried. Buy another with them full and the one in your hand (else the
-  first) goes to your stash. A pickup or a stash take with your hands full waits. Loadouts from before keep all they have.
+- **The loadout** (the owner's, claude/launch-plan-2026-11-03.md; `ARMS.carry`): 2 guns (bows, launchers and the
+  flamethrower count as guns), 1 melee weapon (the at-risk blades) and 1 throwable (grenades) carried - arms.js classOf;
+  fists, police issue and the cheap legal melee and tools don't count. A new one of a full kind - bought, picked up,
+  taken out of the stash, handed over - sends the one of that kind in your hand, else the oldest you carry of it
+  (profile.weapons keeps the order they came), to your stash (arms.js makeRoom). Loadouts from before over the limit
+  keep their extras until the next death (every gun drops), arrest (every gun leaves your hands) or stash visit (the
+  counter's stash or the home safe: arms.js fit keeps the one in your hand and the newest, the rest go in); a buy or a
+  pickup of a full kind meanwhile brings that kind down to the limit there and then. Carry upgrades to come (a
+  shoulder holster +1 gun, a back sling +1 long gun, a chest rig +1 melee +1 throwable; visible extra guns) are not
+  built: `profile.carryUp` raises a kind in arms.js carryOf, up to `ARMS.carryMax` (4 / 2 / 2).
 - **Buying to the stash**: every at-risk weapon at a counter (the gun shops, the pawn shops, the black market and the
   Smuggler's Den, the lodges) has a "- to your stash" line: straight into the stash, one after another for several;
   ammunition for a gun in your stash goes in with it.

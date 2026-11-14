@@ -329,11 +329,14 @@ export const PACK_BLINK_S = 30;               // ...and blinks for its last seco
 // its last blinkS), then it's gone; you wake up with your fists - and with any legal melee weapon or tool that sells for
 // keepMax or less (a bat, a knife, a crowbar, a fishing pole, pepper spray: cheap, and never worth a fight). At risk: every
 // gun, bow, launcher and grenade, anything illegal, the dear blades (a sword, a katana, the plasma blade). Booked, the
-// illegal ones are taken for good and the legal ones go to your stash. slots: the at-risk weapons you can carry at once -
-// buy another with them full and the one in your hand (else the first) goes to your stash. Your stash (one per
+// illegal ones are taken for good and the legal ones go to your stash. carry: the at-risk weapons you carry, by class
+// (the owner's loadout, claude/launch-plan-2026-11-03.md: 2 guns - bows and launchers too - 1 melee, 1 throwable); a new
+// one with its class full sends the one of that class in your hand (else the oldest) to your stash. carryMax: the caps
+// the carry upgrades to come may raise them to (a shoulder holster +1 gun, a back sling +1 long gun, a chest rig +1 melee
+// +1 throwable - profile.carryUp; not built yet). Your stash (one per
 // character): opened at your home's safe, and at any gun shop or pawn shop; a gun bought "to stash" goes straight into
 // it. giveR: hand a weapon to a crewmate this close (px). Police issue is the department's: never at risk, never a slot.
-export const ARMS = { slots: 5, keepMax: 300, dropS: 60, blinkS: 15, giveR: 120, stashKinds: ['gunshop', 'pawn'] };
+export const ARMS = { carry: { gun: 2, melee: 1, throw: 1 }, carryMax: { gun: 4, melee: 2, throw: 2 }, keepMax: 300, dropS: 60, blinkS: 15, giveR: 120, stashKinds: ['gunshop', 'pawn'] };
 export { GUN_PRICES } from './rules-base.js';   // (the basic pistol's prices: kept low now a carried gun can be lost - shared/rules-base.js)
 // Your car (the owner, 2026-11-14: "map + valet delivery, no teleport"; server/systems/mycar.js): the car you last took
 // out stays where you left it (through a logout, and a restart: profile.carAt) and shows on your map. The phone's "Have it

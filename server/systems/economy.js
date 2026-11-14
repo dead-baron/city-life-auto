@@ -198,17 +198,19 @@ function weaponStats(id) {
 // once; with your hands full, the plain line puts the one in your hand in the stash to make room)
 function weaponOffer(o, prof, opts) {
   const w = WEAPONS[o.id];
-  const owned = prof.weapons[o.id] !== undefined, full = !owned && arms.atRisk(o.id) && arms.full(prof);
-  opts.push({ id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : full ? 'hands full: one goes to your stash' : (w.illegal ? 'illegal' : ''), wpn: w.i });
+  const owned = prof.weapons[o.id] !== undefined, cls = arms.classOf(o.id), full = !owned && !!cls && arms.full(prof, cls);
+  opts.push({ id: `w:${o.id}:${o.price}`, label: w.name, price: o.price, dis: owned, note: owned ? 'owned' : full ? 'swaps one to your stash' : (w.illegal ? 'illegal' : ''), wpn: w.i });
   if (!arms.atRisk(o.id)) return;
   const inStash = !!(prof.stash && prof.stash.weapons && prof.stash.weapons[o.id] !== undefined);
   opts.push({ id: `w:${o.id}:${o.price}:s`, label: `${w.name} - to your stash`, price: o.price, dis: inStash, note: inStash ? 'one in your stash' : 'straight into your stash', wpn: w.i });
 }
+// the carry limit in words: "2 guns, 1 melee weapon and 1 throwable" (arms.js carryOf)
+const carryLine = (prof = {}) => { const n = (c) => arms.carryOf(prof, c); return `${n('gun')} gun${n('gun') === 1 ? '' : 's'}, ${n('melee')} melee weapon${n('melee') === 1 ? '' : 's'} and ${n('throw')} throwable${n('throw') === 1 ? '' : 's'}`; };
 // Your stash at a gun shop's or a pawn shop's counter (arms.js: the same stash as your home's safe)
 function stashMenu(p, poi) {
   const prof = p.profile, opts = arms.stashRows(p), n = arms.stashed(prof).length;
   opts.push({ id: 'stback', label: 'Back to the counter' }, { id: 'close', label: 'Close' });
-  return { t: 'menu', poi: poi.id, title: 'Your stash', sub: `${n ? `${n} weapon${n === 1 ? '' : 's'} in your stash.` : 'Your stash is empty.'} The same stash as your home's safe. What you carry can be lost if you go down: you carry ${arms.carried(prof).length} of ${ARMS.slots}.`, opts, cash: prof.cash, bank: prof.bank };
+  return { t: 'menu', poi: poi.id, title: 'Your stash', sub: `${n ? `${n} weapon${n === 1 ? '' : 's'} in your stash.` : 'Your stash is empty.'} The same stash as your home's safe. What you carry can be lost if you go down - ${carryLine(prof)} at most.`, opts, cash: prof.cash, bank: prof.bank };
 }
 
 // A counter's menu: the place's own (menuOf), then the district's word on you - a shop you robbed round here charges
@@ -662,7 +664,7 @@ function execute(world, p, poi, opt) {
       if (toStash) { arms.addToStash(p, id, rounds); world.notify(p, `Bought ${w.name}: it's in your stash - take it out at home, a gun shop or a pawn shop.`, 'good'); return null; }
       const swapped = arms.bought(p, id, rounds);
       combat.selectWeapon(world, ped, id);
-      world.notify(p, swapped ? `Bought ${w.name}. Your hands were full: the ${swapped} went to your stash.` : `Bought ${w.name}.`, 'good');
+      world.notify(p, swapped.length ? `Bought ${w.name}. You carry ${carryLine()} at most: the ${swapped.join(' and the ')} went to your stash.` : `Bought ${w.name}.`, 'good');
       return null;
     }
     case 'a': {
@@ -674,7 +676,7 @@ function execute(world, p, poi, opt) {
       else { arms.addToStash(p, id, qty); world.notify(p, `${WEAPONS[id].name} ammo: into your stash with it.`, 'good'); }
       return null;
     }
-    case 'stash': p.stashShop = poi.id; return null;   // (your stash at the counter: arms.js)
+    case 'stash': { p.stashShop = poi.id; const over = arms.fit(p); if (over.length) world.notify(p, `You carry ${carryLine()} at most: the ${over.join(' and the ')} went into your stash.`, 'info'); return null; }   // (your stash at the counter; a loadout from before the limit trimmed to it - arms.js)
     case 'stback': p.stashShop = null; return null;
     case 'i': {
       const id = parts[1], price = Number(parts[2]), qty = Number(parts[3]);
@@ -880,7 +882,7 @@ function execute(world, p, poi, opt) {
       return null;
     }
     case 'hsw': { const err = arms.toStash(p, parts[1]); if (!err) world.notify(p, `Stashed the ${WEAPONS[parts[1]].name}.`, 'good'); return err; }   // (your stash: arms.js)
-    case 'htw': { const err = arms.fromStash(p, parts[1]); if (!err) world.notify(p, `Took the ${WEAPONS[parts[1]].name}.`, 'good'); return err; }
+    case 'htw': { const err = arms.fromStash(p, parts[1]), room = p.lastRoom || []; p.lastRoom = null; if (!err) world.notify(p, `Took the ${WEAPONS[parts[1]].name}.${room.length ? ` The ${room.join(' and the ')} went in to make room.` : ''}`, 'good'); return err; }
     case 'hcarno': p.pendingCar = null; return null;
     case 'hcargo': {
       const h = homes.homeFor(world, p, poi);

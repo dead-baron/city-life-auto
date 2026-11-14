@@ -1,5 +1,5 @@
 // Your weapons (the owner, 2026-11-14: "carried guns are at risk, with one stash"; server/systems/arms.js, the numbers:
-// shared/rules.js ARMS): what can be lost, the slots, the stash at home and at a gun shop's or a pawn shop's counter,
+// shared/rules.js ARMS): what can be lost, the loadout (2 guns, 1 melee, 1 throwable), the stash at home and at a gun shop's or a pawn shop's counter,
 // buying straight to the stash, death (each gun a pickup for ARMS.dropS), the arrest (the legal guns to the stash), a gun
 // dropped on the ground or handed to a crewmate.
 import { test } from 'node:test';
@@ -60,27 +60,53 @@ test('down: each gun falls where you lay, a pickup anyone can take for ARMS.drop
   assert.ok(!w.get(sg.id), 'gone after about a minute');
 });
 
-test('the slots: buying with them full puts the one in your hand in the stash; picking one up with them full waits', () => {
+test('the loadout (ARMS.carry): 2 guns, 1 melee, 1 throwable - a new one of a full kind sends the one in hand, else the oldest, to the stash', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w, { cash: 20000 });
   const gun = w.map.pois.find((q) => q.kind === 'gunshop');
   at(w, p, gun);
-  const carry = ['revolver', 'shotgun', 'rifle', 'smg', 'grenade', 'bow', 'huntrifle'].slice(0, ARMS.slots);
-  for (const id of carry) prof.weapons[id] = 10;
-  prof.weapons.bat = 0;   // (not at risk: no slot)
-  assert.ok(arms.full(prof));
-  combat.selectWeapon(w, p.ped, carry[1]);
+  assert.deepEqual(ARMS.carry, { gun: 2, melee: 1, throw: 1 });
+  assert.equal(arms.classOf('bow'), 'gun'); assert.equal(arms.classOf('rocket'), 'gun'); assert.equal(arms.classOf('sword'), 'melee');
+  assert.equal(arms.classOf('grenade'), 'throw'); assert.equal(arms.classOf('bat'), null); assert.equal(arms.classOf('service'), null);
+  prof.weapons = { fists: 0, bat: 0, rod: 0, revolver: 10, shotgun: 12, sword: 0, grenade: 3 };
+  assert.ok(arms.full(prof, 'gun') && arms.full(prof, 'melee') && arms.full(prof, 'throw'));
+  // bought with the guns full, the shotgun in hand: the shotgun to the stash
+  combat.selectWeapon(w, p.ped, 'shotgun');
   const row = optsAt(w, p, gun).find((o) => o.id === `w:pistol:${GUN_PRICES.pistol}`);
-  assert.match(row.note, /hands full/);
+  assert.match(row.note, /swaps one/);
   economy.handleMenu(w, p, gun.id, row.id);
-  assert.ok(prof.weapons.pistol > 0, 'bought');
-  assert.equal(prof.weapons[carry[1]], undefined, 'the one in hand went...');
-  assert.equal(prof.stash.weapons[carry[1]], 10, '...to the stash, rounds and all');
-  assert.equal(arms.carried(prof).length, ARMS.slots);
-  // a gun on the ground with your hands full: it stays there
-  const bag = arms.dropAt(w, p.ped.x + 10, p.ped.y, 'varmint', 20);
-  cargo.lootBag(w, p, bag);
-  assert.ok(w.get(bag.id) && prof.weapons.varmint === undefined, 'left on the ground');
+  assert.ok(prof.weapons.pistol > 0 && prof.weapons.shotgun === undefined && prof.stash.weapons.shotgun === 12, 'the one in hand went to the stash, rounds and all');
+  assert.equal(arms.ofClass(prof, 'gun').length, 2);
+  // picked up with your fists out: the oldest gun (the revolver) goes
+  combat.selectWeapon(w, p.ped, 'fists');
+  cargo.lootBag(w, p, arms.dropAt(w, p.ped.x + 10, p.ped.y, 'varmint', 20));
+  assert.ok(prof.weapons.varmint === 20 && prof.weapons.revolver === undefined && prof.stash.weapons.revolver === 10, 'the oldest to the stash');
+  assert.deepEqual(arms.ofClass(prof, 'gun').sort(), ['pistol', 'varmint']);
+  // the other kinds on their own: a katana swaps for the sword, the bat and the rod don't count
+  cargo.lootBag(w, p, arms.dropAt(w, p.ped.x + 10, p.ped.y, 'katana', 0));
+  assert.ok(prof.weapons.katana === 0 && prof.weapons.sword === undefined && prof.weapons.bat === 0 && prof.weapons.rod === 0);
+  // out of the stash with the guns full: a swap too
+  economy.handleMenu(w, p, gun.id, 'stash');
+  economy.handleMenu(w, p, gun.id, 'htw:shotgun');
+  assert.ok(prof.weapons.shotgun === 12 && arms.ofClass(prof, 'gun').length === 2);
+  // the upgrades to come raise a kind, up to its cap
+  prof.carryUp = { gun: 9 };
+  assert.equal(arms.carryOf(prof, 'gun'), ARMS.carryMax.gun);
+});
+
+test('a loadout from before the limit keeps its extras - until the stash: trimmed there, the one in hand and the newest kept', () => {
+  const w = makeWorld();
+  const { p, prof } = joinPlayer(w);
+  prof.weapons = { fists: 0, pistol: 12, revolver: 6, rifle: 20, smg: 30, grenade: 2, sword: 0, katana: 0 };
+  combat.selectWeapon(w, p.ped, 'pistol');
+  w.step();
+  assert.equal(arms.ofClass(prof, 'gun').length, 4, 'kept as it was');
+  const pawn = w.map.pois.find((q) => q.kind === 'pawn');
+  at(w, p, pawn);
+  economy.handleMenu(w, p, pawn.id, 'stash');
+  assert.deepEqual(arms.ofClass(prof, 'gun').sort(), ['pistol', 'smg'], 'the one in hand and the newest');
+  assert.deepEqual(arms.ofClass(prof, 'melee'), ['katana']);
+  assert.ok(prof.stash.weapons.revolver === 6 && prof.stash.weapons.rifle === 20 && prof.stash.weapons.sword === 0, 'the rest in the stash');
 });
 
 test('the stash at a gun shop and a pawn shop: put away, take out, buy straight to it (several), ammo for one in it', () => {
@@ -173,13 +199,13 @@ test('the Guide teaches it from the data: Your stash, Getting your car, Knocked 
   const { guideSections } = await import('../shared/guide.js');
   const { VALET } = await import('../shared/rules.js');
   const entry = (S, sec, id) => S.find((s) => s.id === sec).entries.find((e) => e.id === id);
-  const was = { slots: ARMS.slots, dropS: ARMS.dropS, fee: VALET.fee };
+  const was = { gun: ARMS.carry.gun, dropS: ARMS.dropS, fee: VALET.fee };
   try {
-    ARMS.slots = 7; ARMS.dropS = 45; VALET.fee = 77;
+    ARMS.carry.gun = 3; ARMS.dropS = 45; VALET.fee = 77;
     const S = guideSections();
-    assert.match(entry(S, 'items', 'stash').b, /up to 7 guns/);
+    assert.match(entry(S, 'items', 'stash').b, /You carry 3 guns/);
     assert.match(entry(S, 'law', 'down').b, /for 45 seconds/);
     assert.match(entry(S, 'law', 'busted').b, /legal guns sent to your stash/);
     assert.match(entry(S, 'around', 'mycar').b, /for \$77/);
-  } finally { ARMS.slots = was.slots; ARMS.dropS = was.dropS; VALET.fee = was.fee; }
+  } finally { ARMS.carry.gun = was.gun; ARMS.dropS = was.dropS; VALET.fee = was.fee; }
 });
