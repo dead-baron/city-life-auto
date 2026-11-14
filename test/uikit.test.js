@@ -33,7 +33,7 @@ test('UIK-00 3-6: plates, buttons in their states, the controls and the feedback
   assert.match(CSS, /\.rbtn > \.kchip \{ position: absolute; right: -7px; top: -7px;/, 'the key badge on the round button\'s corner (4E)');
   assert.match(CSS, /\.tab\.on, \.tab\[aria-selected=true\] \{ background: var\(--gold\); color: var\(--ink\)/, 'the tab you\'re on, gold (5A)');
   // the HUD wears them: the round buttons, the plates
-  for (const id of ['b-phone', 'b-map', 'b-chat', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
+  for (const id of ['b-phone', 'b-map', 'b-chat', 'b-emo', 'b-menu']) assert.match(HTML, new RegExp(`<button id="${id}" class="rbtn"`));
   // (Direction A, the owner 2026-11-12: every panel navy, a near-black edge, a gold rim inside, a hard shadow, square)
   assert.match(CSS, /#rclock, #hud-stat, #vchip, #job, \.hchip, #weapon, #hud-btns button, #b-dev, #helpbox, #rob, #hints \{ background: var\(--pad-navy\); border: 2px solid var\(--pad-ink\); border-radius: 0; box-shadow: var\(--pn-rim\), var\(--pn-drop\); \}/, 'one panel for all of the HUD');
   assert.match(root, /--pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945;/, 'its colours');
@@ -72,7 +72,7 @@ test('the HUD\'s plates use the pixel icons, its round buttons the line icons', 
   const lines = [...HTML.matchAll(/data-gl="([a-z0-9-]+)"/g)].map((m) => m[1]);
   for (const n of lines) assert.ok(GLYPH_NAMES.includes(n), `index.html's line icon ${n}`);
   const row = hud.slice(hud.indexOf('<div id="hud-btns">'), hud.indexOf('<div id="hud-stat">'));
-  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 4), ['smartphone', 'map', 'message-circle-more', 'menu'], 'the system buttons: Lucide\'s phone, map, chat and menu (11-05; chat in the row since Direction A, 11-12)');
+  assert.deepEqual([...row.matchAll(/data-(?:gl|ic)="([a-z0-9-]+)"/g)].map((m) => m[1]).slice(0, 5), ['smartphone', 'map', 'message-circle-more', 'smile', 'menu'], 'the system buttons: Lucide\'s phone, map, chat, the emotes and menu (11-05; chat in the row since Direction A, 11-12; the emotes on a desktop, 11-13)');
   assert.doesNotMatch(row, /<svg/, 'filled in by the page');
   assert.match(read('client/hud.js'), /paintIcons\(document\)/, 'the HUD fills them in');
 });

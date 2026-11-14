@@ -23039,6 +23039,81 @@ way if possible" - autoplay beside play-it-yourself.
   `dirHold`; npc.js `onVehicleHit` leaves a driven NPC alone; bikers.js counts the cinematic and director cameras as
   someone there; dusting.js leaves a scene's duster's mist on.
 
+## 2026-11-13 - Vegetation that answers back: tracks through the crops, cover that parts on Medium, bushes knocked aside, crops picked a patch at a time
+
+The owner, 11-13: "grass and fields and wheat fields and crops etc all don't seem to interact ... I don't think driving
+through a wheat field makes the wheat flatten down behind you right now and when you pick a crop by hand it makes an
+entire row disappear at once not just a small portion around you." And, later the same day, of a car driven through
+a desert bush: "vehicles going through vegetation is a bit sloppy ... have the bush get knocked down or ruffled or just
+burst apart ... leaving out the white transparency".
+
+### Why nothing flattened: no track was ever laid
+The tracks through the crops (10-21: `client/main.js` vehVisual / pedVisual -> `render/fx.js` crush) measured how far
+a car or a walker had gone since its last mark from `_crx` - and `_crx` was only set when a mark was laid, so the
+distance was always 0 and not one mark was ever laid, on any preset, by anyone. Now the place is set the first time
+they're seen (`render/fx.js` trailSteps), and the marks go every 12 px (a wheel) or 10 px (a foot) back along the way
+they came, so a slow frame - a phone at 20 fps, a hitch - leaves no gap; a jump of 400 px (200 on foot), a teleport,
+none across it.
+- **And they'd have been painted over**: the fields' rows (`render/farmart.js` drawV2: the ripe crop's look, the
+  stubble's, the plough's) were drawn after the decals, and a decal doesn't write depth - the last one drawn wins - so a
+  row's look covered the tracks through it, and the blood and the skids on it. The rows go first now (`host.js` frame).
+- **Bolder** (`client/art2/fx.js` crushFrames): a tyre's swath 14 px wide (was 8), a foot's track 8 (was 6), laid at
+  full strength (the art's own see-through dark keeps the crop's colour showing): from the camera's height the old ones
+  read as hairlines.
+
+### What was there, preset by preset (art v2, World v3)
+World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the rows found them (and now the tracks).
+Phones get **Medium** by default (**Low** only on an Android phone that reports 3 GB of memory or less; an iPhone
+reports none and gets Medium); desktops **High** (**Ultra** on a big GPU with 8 cores and 8 GB), laptops High (Medium
+with 4 GB or less) - client/gfx.js detectDevice.
+- **Low**: no grass tufts and no standing wheat at all (the bake's decor is off on Low: the field is its flat golden
+  ground) and no sway. The tracks (drawn by `host.js` _decals, whatever the preset) are what shows there now.
+- **Medium**: the cover sways, but round you it could lean one art pixel at most (the tier's sway reach, R = 1): 2 px,
+  which read as nothing. Only the darker hollow showed.
+- **High / Ultra**: 4 px of lean round you, the hollow, the tracks.
+- **Everywhere**: other people's cars didn't part anything (only you, and up to three people on foot - a passenger's
+  body counted as one at the car's middle). The crush marks shared their ring's index with the flying chunks of
+  smashed street furniture (`fx.js` `ci`): after a walk through a field the next lamp post knocked over threw, every
+  time (the chunk's slot was past the end of its 40).
+
+### What changed
+- **Cover parts as far on Medium as on High** (`engine.js` STATIC_FS, `PUSH_R`): round someone pushing through it the
+  sway reach is two art pixels on every tier that sways; the tier's own everywhere else, so the wind costs Medium no
+  more than before. Low still has no leaning (and nothing standing to lean): its tracks are what show there.
+- **Cars part the crop too** (`host.js` _push): the cars, tractors and bikes on the ground near you fill the push slots
+  after the people on foot (a passenger no longer counts).
+- **The crush ring's own index** (`render/fx.js` `cri`).
+- **Bushes knocked aside, a burst of leaves** (`host.js` _bushes, _bushIdx; `engine.js` pushAmp, BUSH): a car, a truck
+  or a bike driven through a bush (the map's shrub and bush props, never a tree) throws a burst of its leaves (the
+  pooled particles: 9, 4 on Low) once every 3 s a bush, and the bush stays bent aside and shaded round where it went
+  through for 20 s, standing back up over that time: the push has eight slots now, four for who's there and four for the
+  nearest bushes knocked aside lately. A push bends a bush by its tips (foliage under 46 px that isn't ground cover); a
+  tree's crown never.
+- **No pale outline through a bush** (`host.js` _veh, `VEH_XRAY_LOW`): your own vehicle's see-through outline is drawn
+  only where something taller than 80 px over its ground hides it - a building, a trunk; a bush, a shrub, a fence or a
+  low wall no longer paints the pale blue silhouette over the car.
+- **Picking by hand takes a patch, not the row** (`server/systems/farming.js` handPick, `shared/rules.js` FARM handR,
+  handRegrowS, handMax): it took the whole stretch you stood in (a tenth of the row, often 100 px and more), and eight
+  stretches turned the whole row to stubble. Now a pick takes the plants within 18 px of you: the patch goes to stubble
+  on every page (sent with the fields as `hp`, drawn by `render/farmart.js` patchPixels over the crop) and grows back
+  after the orchard's PICK_REGROW_S. The row stays ripe for the tractor and the combine. A crate still comes every
+  FARM.handPer picks; the same spot can't be picked again until you've moved on. The Guide's farm entry says so.
+
+Cost: the bushes' buckets are made once (and again if the map's props change in number); a frame looks at the buckets
+under the moving vehicles in view. The shader's push loop is eight slots instead of four. tools/perf.mjs: the renderer
+409 KB of its 410 (was 405), the page 523 of 540; the city and the bakes unchanged. The world's and the art's hashes
+are unchanged (the tracks' frames are the page's sprites, not baked into the chunks): no chunk is baked again.
+
+Checked in the browser (today's world on a dev server, the captures' harness): before, a car driven across a ripe
+wheat field and a walker through it left nothing; now both leave tracks - on High, Medium (a phone's) and Low. A pick
+by hand leaves three small stubble patches in the row where it took a whole stretch. World v3's wheat fields checked
+as field tiles (the tracks' and the rows' test).
+
+Tests: test/crush.test.js (the tracks laid from the first sight, every step, back along a slow frame, none across a
+jump), test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
+back on the timer), test/crush.test.js (the ring's index; a car through a bush - the leaves, the bush knocked aside and
+standing back up, a tree and a car standing still: nothing), test/wind.test.js (a push bends a bush, never a crown).
+
 ## 2026-11-13 - The director, round two: the owner's notes - no bubbles, closer framing, the camera stays his
 
 The owner, on the brawl clip: "We don't need the text bubble and it is too fast to read anyways", "some zoomed out a
@@ -23155,3 +23230,59 @@ table, just cool to have sometimes at some tables"; and a player's own match sho
   waiting player, a page near gets the shot with the shooter's id; afterwards the regulars play on).
 - Hashes: the art (the baked balls gone from the tables) changes; the chunks the server bakes the same as before carry
   over (server/artcdn.js).
+
+## 2026-11-13 - Chat & emotes round 2: pixel balloons, body-first emotes, Dances and Poses, typing dots, the pad's radial
+
+The owner, 11-13: the emoji over heads "don't match SNES style" - our own 16x16 emotion balloons in the game's palette,
+popping up and settling in place like a SNES RPG, the bounty skull giving way meanwhile; "emotes are body animations
+first", a balloon only where it adds meaning and no log spam; the dances and poses in the picker under tabs; speech
+bubbles clear of the head with bigger text and a pop, long lines to the log; three dots while someone types; an emote
+button on a desktop; on a pad, hold a bumper for a quick radial and still a way to type.
+
+- **Pixel balloons** (client/emotes.js `BALLOONS`): a heart, !, ?, the anger vein, a sweat drop, HAHA, Zzz, a light
+  bulb, and the typing dots - an inked outline, the cream face shaded at its foot, a tail down to the head, drawn pixel
+  by pixel after the Kenney Emotes Pack's pixel style (CC0; credited in client/emotes-LICENSE.txt - no file of the
+  pack copied; the Imanor sheets, licence unknown, were a timing reference only). Shown at 2x, crisp. Animation: a
+  stepped scale bounce in place (two px up at most), a hold, a blink out - `CHAT.balloonS` in all. While one is up the
+  bounty skull over that head isn't drawn (main.js `drawWorldLabels` asks chat's `balloonOn`). The director's
+  "Emote balloons" Show switch covers them and the dots.
+- **Body first** (shared/chatdefs.js `EMOTES`: `tab`, `b`, `log`, `hold`, `s`): every emote plays on the body; a balloon
+  only for laugh, angry, love, huh?, wow!, sorry, sleep and idea. The server decides who's told what
+  (`emoteWire`: the message's `b` and `lg`) and sends nothing for an emote with neither - the body says it. The log
+  says only dancing and the lasting poses ("Ann sat down"). New emotes: love, huh?, wow!, idea.
+- **Dances and Poses** (the picker's tabs Emotes / Dances / Poses; the phone's Emote screen the same): each dance
+  move (`DANCES`, shared/dance.js `DANCE_PLAYER`; `{ t: 'emote', e: 'dance', m }` -> server/systems/dance.js
+  `start`), and sit, lie down, sleep, scroll phone, lean, crouch, kneel (lasting: held until you move -
+  server/systems/emote.js), faceplant (down and staying down), push-ups, flex, cry, come here, check watch, air
+  guitar, stretch. Asleep, the Zzz comes back every `CHAT.zzzS` (chat.js `update`). The new frames
+  (client/art2/poses.js, four each, the people.js rig) load the first time someone near does one - on the page and
+  in the sprite workers that draw people (game/worker.js) - never with the renderer (budget: renderer 409.7/410 KB) and
+  out of the art hash (peds.js is in ART_SKIP; the world and art hashes are unchanged).
+- **Desktop picker** sits under the nav row's emote button (top right), clear of your character in the middle.
+- **Speech bubbles**: SNES-style - the cream face, an inked edge, a two-tone tail - clear above the head (over a
+  balloon if one's up), bigger text (fs-3; fs-2 on a phone), a small stepped pop as a line comes in, two lines at
+  most; stacked bubbles are pushed up until clear of every other. A near line bubbles only if it's a quick line or
+  `CHAT.bubbleMax` characters or fewer (the server's `bb`); a longer one goes to the log and the feed only.
+- **Typing dots**: typing on Near sends `{ t: 'typing', on }` (refreshed every few seconds, off when sent, emptied or
+  closed); the server tells the people near who'd hear you, and those who come near meanwhile, and ends them after
+  `CHAT.typingS` without a word. Over the head: a balloon of three dots that bounce in turn - no word.
+- **Desktop**: an emote button (smile, key badge B) in the nav row beside Chat, opening the same picker.
+- **Controller**: hold LB for the quick radial (shared/chatdefs.js `RADIAL`: Type, five quick lines, five emotes,
+  More) - point a stick, let go to send; a tap of LB still takes out the previous weapon, and the weapon wheel is on
+  RB alone now. Type opens the chat sheet with an on-screen keyboard (D-pad / stick, A types, X deletes, Y sends,
+  B closes; client/chat.js `padKeys`, main.js `launchPad`). More opens the phone's Emote screen.
+- Controls (`PAD.emote`, `PAD.chat`: HOLD LB; `PAD.wpnwheel`: HOLD RB), the Guide's Chat and Emotes entries, the
+  README rows. Tests: emotes (balloons and log by the server, lasting poses, the Zzz, Dances, typing, bubbles' `bb`,
+  the poses' frames), chatui (balloons, the skull's give-way, typing dots, tabs, the pad keyboard and radial), hub,
+  hudlayout and uikit (the nav row's fifth button).
+
+## 2026-11-14 - Touch buttons: a surf break nearby is not surfing
+The owner, on a phone in the park by a beach: the round-two buttons were gone - AIR, ACT and the vehicle button in place
+of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near (so the page can draw the waves), and
+the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
+(`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
+
+## 2026-11-14 - The bounty chip says it's on you
+The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
+Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
+"Bounty $2,500 on you · 9 min" (client/hudinfo.js).

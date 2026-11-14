@@ -1,7 +1,8 @@
 // Chat on the page (shared/chatdefs.js; the server decides who hears what: server/chat.js). Loaded with the launch code
 // after the page is up (main.js launchCall), never in its first load. Every device gets all of it:
-// - speech bubbles over the speaker's head for what's said near you (two lines at most, each gone after a few seconds,
-//   kept off each other and off the screen's edges; your own smaller and above your name);
+// - speech bubbles over the speaker's head for what's said near you - a quick line or a short one (the server says: bb;
+//   a long line goes to the log only): SNES-style, clear above the head, popping in; two lines at most, each gone after
+//   a few seconds, kept off each other and off the screen's edges; the typing dots while someone near types (emotes.js);
 // - the feed: the newest lines in the HUD's top-left column (#hud-tl; bottom left on a desktop), one on a phone, two on a
 //   desktop, each fading on its own;
 // - the chat sheet: T on a keyboard, the HUD's chat button (the top-right row: phone, map, chat, menu) - the channel
@@ -10,13 +11,17 @@
 // - the phone's Messages app (renderApp): threads with the people you've met and your crew, a reply line and quick
 //   replies, and the Near / Crew / Faction quick lines - a pad's way into chat (D-pad left, the phone);
 // - the emotes (client/emotes.js, made here): their picker - apart from chat since 2026-11-13, the emote button by the
-//   chat button, B on a keyboard - and the emoji over the head of whoever emoted; the log says it ("Ann waves")
+//   chat button (the nav row's on a desktop), B on a keyboard, the pad's radial (hold LB) - and the pixel balloon over
+//   the head for the emotes that have one; the log says only dancing and the lasting poses ("Ann sat down")
+// - a pad: the radial's Type opens the sheet with an on-screen keyboard (padActive / pad: client/main.js launchPad)
 // - Settings > Chat (settings): the channel switches, who's muted and blocked;
 // - a name in the log or a bubble (while the sheet is up): mute, block, report (shared/chatdefs.js REPORT_WHY).
 // createChat(ctx) -> { onMessage(m), open(ch?), close(), toggle(), say(ch, text, to?), emote(e), emotes() (the picker),
-//   emotesUp, closeEmotes(), emoteApp(el, api) (the phone's Emote screen), renderApp(el, api),
+//   emotesUp, closeEmotes(), emoteApp(el, api) (the phone's Emote screen), renderApp(el, api), balloonOn(eid) (the
+//   bounty skull gives way: main.js), radial (emotes.js), padKeys(), padActive(), pad(p),
 //   appBack(), settings(el), unread, isOpen, state, lines, contactList }
-// ctx: { send(obj), canvas, toast(text, tone), screenOf(eid) -> { x, y } | null (CSS px over the canvas), selfEid(),
+// ctx: { send(obj), canvas, toast(text, tone), screenOf(eid) -> { x, y } | null (CSS px over the canvas), headOf(eid)
+//   (the top of the head, the same - screenOf less a head's height when not given), moreEmotes() (the phone's Emote screen),
 //   device() ('keyboard' | 'gamepad' | 'touch'), playing() (in the city, online), focus(on) (typing: the game's keys
 //   off), dot(on) (unread phone messages: the HUD's chat button and the phone's Messages app), openApp() (the phone's
 //   Messages app) }
@@ -25,22 +30,26 @@ import { glyph } from './touchicons.js';
 import { createEmotes } from './emotes.js';
 
 const LABEL = { near: 'Near', crew: 'Crew', faction: 'Faction', phone: 'Phone' };
+// a pad's on-screen keyboard (the radial's Type: padKeys) - the D-pad or the stick moves, A presses
+const KEYS = [['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'], ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'], ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', "'"], ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?'], ['SHIFT', 'SPACE', 'DEL', 'SEND']];
 const SAY = ['near', 'crew', 'faction'];   // (the sheet's channels: phone messages live in the phone's Messages app)
 const OFF_LABEL = { near: 'Near - people around you, about ' + CHAT.nearM + ' m', crew: 'Crew - your crew, wherever they are', faction: 'Faction - the police on duty, or your gang', phone: 'Phone messages - kept for you while this is off' };
-const BUBBLE_MS = 6000, OWN_MS = 4500, BUBBLE_LINES = 2, FEED_MS = 8000, THREAD_MAX = 40, THREADS_MAX = 40;
+const BUBBLE_MS = 6000, OWN_MS = 4500, BUBBLE_LINES = 2, TYPING_EVERY = 3000, FEED_MS = 8000, THREAD_MAX = 40, THREADS_MAX = 40;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // (the kit's tokens only: test/uitokens.test.js reads this)
 const CSS = `
 #cht-bubs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 2px; max-width: 220px; padding: var(--s1) var(--s2); background: var(--cream); color: var(--ink); border: 2px solid var(--ink); border-radius: var(--r1); box-shadow: var(--lift); font: 700 var(--fs-2) var(--pixel); line-height: 1.25; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transition: opacity var(--t3) var(--ease); }
-.cht-bub::after { content: ''; position: absolute; left: 50%; bottom: -8px; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--ink); border-bottom: 0; }
-.cht-bub > span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.cht-bub > span.em { font-style: italic; color: var(--navy3); }
-.cht-bub > span + span { padding-top: 2px; border-top: 1px dashed var(--grey); }
-.cht-bub.me { max-width: 180px; opacity: .88; font-size: var(--fs-1); }
+.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 3px; max-width: 240px; padding: 5px var(--s2) 6px; background: var(--pad-cream); color: var(--pad-ink); border: 2px solid var(--pad-ink); border-radius: var(--r1); box-shadow: inset 0 -3px 0 var(--cream-a), 0 3px 0 var(--pad-drop); font: 700 var(--fs-3) var(--pixel); line-height: 1.2; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transform-origin: 50% 100%; animation: cht-pop 220ms steps(1, end); transition: opacity var(--t3) var(--ease); }
+.cht-bub::before, .cht-bub::after { content: ''; position: absolute; left: 50%; border-style: solid; border-color: transparent; border-bottom: 0; }
+.cht-bub::before { bottom: -10px; margin-left: -7px; border-width: 9px 7px 0; border-top-color: var(--pad-ink); }
+.cht-bub::after { bottom: -6px; margin-left: -4px; border-width: 6px 4px 0; border-top-color: var(--pad-cream); }
+@keyframes cht-pop { 0% { transform: scale(.4); } 25% { transform: translateY(-2px) scale(1.08); } 55% { transform: translateY(-1px) scale(.96); } 80% { transform: scale(1); } }
+.cht-bub > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cht-bub > span + span { padding-top: 3px; border-top: 2px dotted var(--pad-line); }
+.cht-bub.me { opacity: .9; }
 .cht-bub.out { opacity: 0; }
-body.touch .cht-bub { max-width: 180px; }
+body.touch .cht-bub { max-width: 190px; font-size: var(--fs-2); }
 body.cht-open .cht-bub:not(.me) { pointer-events: auto; cursor: pointer; }
 #cht-feed { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 360px); pointer-events: none; }
 body:not(.touch) #cht-feed { position: fixed; left: var(--sl); bottom: var(--sb); }
@@ -91,6 +100,15 @@ span.cht-n { cursor: default; color: var(--dim); }
 .cht-row .field { min-height: 40px; }
 .cht-row .btn { min-height: 40px; padding: 0 var(--s4); }
 .cht-sheet.kb .cht-log { display: none; }
+.cht-keys { display: none; padding: 0 var(--s2) var(--s2); }
+.cht-sheet.pad .cht-keys { display: block; }
+.cht-sheet.pad .cht-log { max-height: 72px; }
+.cht-kr { display: flex; gap: 3px; margin-top: 3px; }
+.cht-k { flex: 1; min-width: 0; min-height: 30px; padding: 0; border: 2px solid var(--pad-line); border-radius: 0; background: var(--pad-navy); color: var(--pad-cream); font: 700 var(--fs-2) var(--pixel); }
+.cht-k.w { flex: 2.5; font-size: var(--fs-1); }
+.cht-k.on { border-color: var(--pad-gold); background: var(--pad-gold); color: var(--pad-ink); }
+.cht-sheet.caps .cht-k:not(.w) { text-transform: uppercase; }
+.cht-kh { margin: var(--s1) 0 0; color: var(--dim); font: 700 var(--fs-1) var(--pixel); text-align: center; }
 .cht-sheet.kb.tight .cht-head { display: none; }
 
 .cht-who { position: absolute; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 2 * var(--s4))); max-height: calc(100% - 2 * var(--s4)); overflow-y: auto; animation: enter var(--t2) var(--ease); }
@@ -174,7 +192,9 @@ export function createChat(ctx) {
   const view = $('view');
   if (view) view.after(layer); else host.appendChild(layer);
   const bubbles = new Map();   // eid -> { el, l: [{ el, until }], me, id, n }
-  const EM = createEmotes({ send: (m) => ctx.send(m), canvas: ctx.canvas, layer, host, screenOf: ctx.screenOf, playing: ctx.playing, device: ctx.device });
+  // the top of a head (main.js: a standing figure's height over its feet); from screenOf when not given
+  const headOf = ctx.headOf || ((eid) => { const p = ctx.screenOf(eid); return p ? { x: p.x, y: p.y - 46 } : null; });
+  const EM = createEmotes({ send: (m) => ctx.send(m), say: (t) => say('near', t), canvas: ctx.canvas, layer, host, headOf, playing: ctx.playing, device: ctx.device, typeLine: () => padKeys(), moreEmotes: () => { if (ctx.moreEmotes) ctx.moreEmotes(); } });
   let raf = 0;
   function bubble(eid, text, em, me, id, n) {
     if (!eid) return;
@@ -194,6 +214,7 @@ export function createChat(ctx) {
     const s = doc.createElement('span');
     if (em) s.className = 'em';
     s.textContent = text;
+    b.el.style.animation = 'none'; void b.el.offsetWidth; b.el.style.animation = '';   // (a new line: the pop again)
     b.el.appendChild(s);
     b.l.push({ el: s, until: performance.now() + (me ? OWN_MS : BUBBLE_MS) });
     while (b.l.length > BUBBLE_LINES) b.l.shift().el.remove();
@@ -216,15 +237,17 @@ export function createChat(ctx) {
       if (!p) { b.el.style.visibility = 'hidden'; continue; }
       b.el.style.visibility = '';
       const w = b.el.offsetWidth, h = b.el.offsetHeight;
-      // above the head and its name tag (yours higher still: your character stays in view under it)
-      const x = Math.max(4, Math.min(W - w - 4, cr.left - lr.left + p.x - w / 2)), y = cr.top - lr.top + p.y - (b.me ? 62 : 50) - h;
+      // clear above the head and its name tag - over a balloon there too (the tail's tip 10 px under the box)
+      const hd = headOf(eid) || p;
+      const x = Math.max(4, Math.min(W - w - 4, cr.left - lr.left + p.x - w / 2)), y = cr.top - lr.top + hd.y - 18 - h - (EM.balloonOn(eid) ? 34 : 0);
       shown.push({ b, x, y, w, h });
     }
-    // nearest the top first; one that lands on another goes up over it
+    // nearest the bottom first; one that lands on another goes up over it (again till it's clear of them all)
     shown.sort((a, c) => c.y - a.y);
+    const hit = (a, o) => a.x < o.x + o.w + 4 && o.x < a.x + a.w + 4 && a.y < o.y + o.h + 6 && o.y < a.y + a.h + 6;
     for (let i = 0; i < shown.length; i++) {
       const a = shown[i];
-      for (let k = 0; k < i; k++) { const o = shown[k]; if (a.x < o.x + o.w && o.x < a.x + a.w && a.y < o.y + o.h + 4 && o.y < a.y + a.h) a.y = o.y - a.h - 6; }
+      for (let n = 0; n < i + 1; n++) { const o = shown.slice(0, i).find((q) => hit(a, q)); if (!o) break; a.y = o.y - a.h - 8; }
       a.y = Math.max(4, Math.min(H - a.h - 4, a.y));
       a.b.el.style.left = `${Math.round(a.x)}px`; a.b.el.style.top = `${Math.round(a.y)}px`;
     }
@@ -257,7 +280,8 @@ export function createChat(ctx) {
   sheet.innerHTML = `<div class="cht-head"><div class="cht-tabs" role="tablist">${SAY.map((c) => `<button class="cht-tab" role="tab" data-ch="${c}">${LABEL[c]}</button>`).join('')}</div>`
     + `<button class="cht-msgs" type="button" aria-label="Messages (the phone)">${glyph('smartphone')}<span>Messages</span><b></b></button><button class="x" type="button" aria-label="Close chat">&times;</button></div>`
     + '<div class="cht-log" aria-live="polite"></div><div class="cht-chips q-row"></div>'
-    + `<form class="cht-row" autocomplete="off"><input class="field cht-in" type="text" maxlength="${CHAT.maxLen}" enterkeyhint="send" autocapitalize="sentences" spellcheck="true" aria-label="Your message"><button class="btn btn-1" type="submit">SEND</button></form>`;
+    + `<form class="cht-row" autocomplete="off"><input class="field cht-in" type="text" maxlength="${CHAT.maxLen}" enterkeyhint="send" autocapitalize="sentences" spellcheck="true" aria-label="Your message"><button class="btn btn-1" type="submit">SEND</button></form>`
+    + `<div class="cht-keys" aria-hidden="true">${KEYS.map((r, y) => `<div class="cht-kr">${r.map((k, x) => `<button class="cht-k${k.length > 1 ? ' w' : ''}" type="button" tabindex="-1" data-kx="${x}" data-ky="${y}">${esc(k)}</button>`).join('')}</div>`).join('')}<p class="cht-kh">A types · X deletes · Y sends · B closes</p></div>`;
   host.appendChild(sheet);
   const logEl = sheet.querySelector('.cht-log'), inEl = sheet.querySelector('.cht-in'), qRow = sheet.querySelector('.q-row');
   const placeholder = () => (sayCh === 'near' ? `Say to people near you${ctx.device() === 'keyboard' ? ' (Enter sends, Esc closes)' : ''}` : `Say to your ${sayCh === 'crew' ? 'crew' : 'faction'}`);
@@ -297,6 +321,7 @@ export function createChat(ctx) {
     e.preventDefault();
     const text = inEl.value.trim();
     inEl.value = '';
+    typAt = null;   // (sent: the server ends the dots itself)
     if (!text) { if (ctx.device() !== 'touch') close(); return; }
     // /me <emote> (or /wave), /c crew, /f faction, /n near
     const cmd = text.match(/^\/(\w+)\s*(.*)$/);
@@ -314,6 +339,15 @@ export function createChat(ctx) {
     if (e.key === 'Escape') { e.preventDefault(); close(); }
   });
   inEl.addEventListener('keyup', (e) => e.stopPropagation());
+  // the typing dots over your head for the people near (owner, 11-13): on while there's something in the line on Near,
+  // refreshed now and then; off when it's sent, emptied or put away (the server ends them too, after CHAT.typingS)
+  let typAt = null;   // (when the dots were last asked for: null - they're off)
+  function typingNow() {
+    const on = isOpen && sayCh === 'near' && !!inEl.value.trim();
+    if (on && (typAt === null || performance.now() - typAt > TYPING_EVERY)) { typAt = performance.now(); ctx.send({ t: 'typing', on: 1 }); }
+    else if (!on && typAt !== null) { typAt = null; ctx.send({ t: 'typing', on: 0 }); }
+  }
+  inEl.addEventListener('input', typingNow);
   inEl.addEventListener('focus', () => { if (ctx.focus) ctx.focus(true); fit(); });
   inEl.addEventListener('blur', () => { setTimeout(() => { fit(); if (!isOpen || doc.activeElement !== inEl) { try { if (scrollY) scrollTo(0, 0); } catch { /* fine */ } } }, 60); });
 
@@ -358,7 +392,9 @@ export function createChat(ctx) {
     clearInterval(watch);
     inEl.blur();
     sheet.hidden = true;
-    sheet.classList.remove('kb', 'tight');
+    sheet.classList.remove('kb', 'tight', 'pad');
+    padOn = false;
+    typingNow();
     doc.body.classList.remove('cht-open');
     closeWho();
     if (ctx.focus) ctx.focus(false);
@@ -418,17 +454,19 @@ export function createChat(ctx) {
         const l = { k: 'chat', ch: m.ch, n: m.n, id: m.id, text: String(m.text || ''), own: !!m.own, tn: m.tn, at: m.at };
         if (m.ch === 'phone') threadAdd(m.own ? m.to : m.id, m.own ? m.tn : m.n, m.own, l.text, m.at || Date.now());
         push(l);
-        if (m.ch === 'near') bubble(m.eid, l.text, false, m.own, m.id, m.n);
+        if (m.ch === 'near') EM.typing(m.eid, false);
+        if (m.ch === 'near' && m.bb) bubble(m.eid, l.text, false, m.own, m.id, m.n);   // (a long line: the log only)
         return;
       }
       case 'emote': {
         const E = Object.hasOwn(EMOTES, m.e) ? EMOTES[m.e] : null;
         if (!E || (m.id !== state.me && muted(m.id))) return;
         const own = !!state.me && m.id === state.me;
-        push({ k: 'emote', e: m.e, n: m.n, id: m.id, own });
-        EM.pop(m.eid, m.e, own);   // (its emoji over the head - no words there; Dance: none, the log's line says it)
+        if (m.lg) push({ k: 'emote', e: m.e, n: m.n, id: m.id, own });   // (dancing, a lasting pose: "Ann sat down" - the server says)
+        if (m.b) EM.pop(m.eid, m.b, own);   // (its balloon over the head - the server says which, and only where it means something)
         return;
       }
+      case 'typing': EM.typing(m.eid, !!m.on); return;   // (the server only tells the people who'd hear them)   // (the dots over someone near who's typing)
       case 'chatstate': {
         const meWas = state.me, mutedWas = state.muted;
         state = { ...state, ...m };
@@ -587,8 +625,43 @@ export function createChat(ctx) {
     for (const b of setEl.querySelectorAll('[data-un]')) b.onclick = () => ctx.send({ t: 'mod', a: b.dataset.a, id: b.dataset.un });
   }
 
+  // ---- a pad's on-screen keyboard (the radial's Type) -------------------------------------------------------------
+  let padOn = false, kx = 0, ky = 1, caps = true;
+  function padKeys() {
+    if (!ctx.playing()) return;
+    open('near');
+    padOn = true; kx = 0; ky = 1; caps = !inEl.value;
+    sheet.classList.add('pad');
+    inEl.blur();   // (no system keyboard popping up over it: the keys below are the pad's)
+    if (ctx.focus) ctx.focus(true);
+    markKey();
+  }
+  function markKey() {
+    sheet.classList.toggle('caps', caps);
+    for (const b of sheet.querySelectorAll('.cht-k')) b.classList.toggle('on', +b.dataset.kx === kx && +b.dataset.ky === ky);
+  }
+  function press(k) {
+    if (k === 'SEND') { sheet.querySelector('form').requestSubmit(); close(); return; }
+    else if (k === 'DEL') inEl.value = inEl.value.slice(0, -1);
+    else if (k === 'SHIFT') caps = !caps;
+    else if (inEl.value.length < (state.max || CHAT.maxLen)) { inEl.value += k === 'SPACE' ? ' ' : caps ? k.toUpperCase() : k; if (k !== 'SPACE' && caps && /[a-z]/.test(k)) caps = false; }
+    typingNow(); markKey();
+  }
+  // p: { nav (-1 up, 1 down), lr (-1, 1), select (A), back (B), x, y } - true while the keyboard has the pad
+  function pad(p) {
+    if (!padOn || !isOpen) return false;
+    if (p.back) { close(); return true; }
+    if (p.nav) { ky = (ky + p.nav + KEYS.length) % KEYS.length; kx = Math.min(kx, KEYS[ky].length - 1); }
+    if (p.lr) kx = (kx + p.lr + KEYS[ky].length) % KEYS[ky].length;
+    if (p.select) press(KEYS[ky][kx]); else if (p.x) press('DEL'); else if (p.y) press('SEND');
+    markKey();
+    return true;
+  }
+  sheet.querySelector('.cht-keys').onclick = (e) => { const b = e.target.closest('.cht-k'); if (b) { kx = +b.dataset.kx; ky = +b.dataset.ky; press(KEYS[ky][kx]); } };
+
   return {
-    onMessage, open, close, say, emote, emotes, renderApp, appBack, settings,
+    onMessage, open, close, say, emote, emotes, renderApp, appBack, settings, padKeys, pad, padActive: () => padOn && isOpen,
+    balloonOn: (eid) => EM.balloonOn(eid), radial: EM.radial,
     closeEmotes: () => EM.close(), get emotesUp() { return EM.isOpen; }, emoteApp: (el, api) => EM.renderApp(el, api),
     toggle(ch) { if (isOpen) close(); else open(ch); },
     who, openThread,

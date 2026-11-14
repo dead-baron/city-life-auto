@@ -167,8 +167,8 @@ test('strikes: hate speech is a strike (one per gap), three strikes mute chat fo
 test('emotes: to the people near you, not too fast', () => {
   const S = setup();
   const a = S.P({ x: 0, y: 0 }), b = S.P({ x: 100, y: 0 }), far = S.P({ x: 5000, y: 0 });
-  S.chat.handle(S.w, a, { t: 'emote', e: 'wave' });
-  S.chat.handle(S.w, a, { t: 'emote', e: 'cheer' });
+  S.chat.handle(S.w, a, { t: 'emote', e: 'laugh' });   // (one with a balloon: a wave has nothing to send - the body says it)
+  S.chat.handle(S.w, a, { t: 'emote', e: 'love' });
   assert.equal(b.conn.sent.filter((m) => m.t === 'emote').length, 1);
   assert.equal(far.conn.sent.filter((m) => m.t === 'emote').length, 0);
   assert.equal(S.chat.emote(S.w, a, 'nope'), false);

@@ -23,6 +23,11 @@ import { CHUNK, DECK_Z, EL_Z, groundZ } from './chunkgeom.js';   // (not the bak
 // most (else half its length + 34 px), round another player
 export const FADE_IN = 0.35, FADE_OUT = 0.5, CLR_FOOT = 64, CLR_VEH_MAX = 130, CLR_OTHER = 48;
 const TURRET_TOP = 47;   // (_turret)
+// a bush a vehicle goes through (_bushes): knocked aside for KNOCK_S s, a burst of leaves once per BURST_GAP s; the
+// props that are bushes (never a tree), bucketed BUSH_CELL px; the leaves' colours (green, the desert's grey-green)
+const PUSH_N = 8;   // (engine.js PUSH_N: uPush's slots)
+const KNOCK_S = 20, BURST_GAP = 3, BUSH_CELL = 256, BUSH_PROPS = new Set(['shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c']), BUSH_LEAF = ['#5f8a3a', '#7a9a48', '#869a80', '#4e7a34'];
+const VEH_XRAY_LOW = 80;   // (px over a vehicle's ground: what's no taller than this never outlines it - _veh)
 import { WorkerPool, takeWarmPool, isPhone, SPRITE_LANE, laneBudget } from './pool.js';
 import { canopyGrid } from './canopy.js';
 import { FORAGE_KINDS } from '../../../shared/foraging.js';
@@ -662,7 +667,7 @@ export class World2 {
     const wet = Math.max(S.rainK || 0, (S.wx ? S.wx.wet : 0) * 0.8, this._slick(F, camX, camY));
     const flash = S.wx ? Math.min(1, S.wx.flash || 0) : 0, fog = F.sky.fog ? F.sky.fog.k : 0;
     // (viewW / viewH: the view in world px, what the scene covers)
-    if (!sub) { this._fades(F, sp); this._push(F, sp); }
+    if (!sub) { this._fades(F, sp); this._bushes(F); this._push(F, sp); }
     // the wind the vegetation sways in (render/flora/wind.js, from the shared world clock); Settings' "Wind sway"
     // switch turns the swaying off
     E.swayOn = this.gfx.wind !== false;
@@ -676,8 +681,10 @@ export class World2 {
     this._uploadSprites(); mk('upload');
     if (!sub) {   // (none of the city's own life down in the tunnel)
       this._waterLife(F); mk('waterlife');
-      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
+      // (the fields' rows first: drawn after, their looks - the ripe crop's, the stubble's - painted over the tracks
+      // through them and the blood and the skids on them; decals don't write depth, so the last drawn wins)
       if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
     }
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
@@ -1331,9 +1338,11 @@ export class World2 {
       }
     }
   }
-  // the grass and the crops part round you and the people near you (engine.js uPush): [x, y, radius, strength] each
+  // the grass, the crops and the bushes part round you and the people and the cars near you (engine.js uPush, PUSH_N
+  // slots of [x, y, radius, strength]): the first four who's there now, the last four where a car went through a bush a
+  // little while ago (_bushes: knocked aside, standing back up over KNOCK_S)
   _push(F, sp) {
-    const P = this.pushA || (this.pushA = new Float32Array(16)), S = this.S, v = S.pred && S.pred.kind === 'veh' ? S.pred.def : null;
+    const P = this.pushA || (this.pushA = new Float32Array(PUSH_N * 4)), S = this.S, v = S.pred && S.pred.kind === 'veh' ? S.pred.def : null;
     P.fill(0);
     // (flying: a helicopter bends the grass round its rotor only low down - rules-page.js washK; a plane on the ground only)
     const a = v && v.kind === 'air' ? S.pred.s.alt || 0 : -1, k = a < 0 ? 1 : v.rotor ? washK(a) : a > AIR_UP ? 0 : 1;
@@ -1341,9 +1350,91 @@ export class World2 {
     let n = 1;
     for (const p of F.peds || []) {
       if (n >= 4) break;
-      if (p.id === S.myPedId || (p.flags & PF.DEAD) || Math.abs(p.rx - sp.x) > 260 || Math.abs(p.ry - sp.y) > 200) continue;
+      if (p.id === S.myPedId || (p.flags & (PF.DEAD | PF.INVEH)) || Math.abs(p.rx - sp.x) > 260 || Math.abs(p.ry - sp.y) > 200) continue;
       P[n * 4] = p.rx; P[n * 4 + 1] = p.ry - 4; P[n * 4 + 2] = 20; P[n * 4 + 3] = 4; n++;
     }
+    // (and the cars, the tractors and the bikes on the ground near you - a car through the wheat parts it too)
+    const mine = v ? S.ctrlId : -1;
+    for (const q of F.vehs || []) {
+      if (n >= 4) break;
+      const def = q.d && VEHICLE_BY_INDEX[q.d.m];
+      if (!def || q.id === mine || def.kind === 'boat' || def.kind === 'air' || (q.flags & VF.WRECK) || q.rz > 0.05 || Math.abs(q.rx - sp.x) > 300 || Math.abs(q.ry - sp.y) > 220) continue;
+      P[n * 4] = q.rx; P[n * 4 + 1] = q.ry - 4; P[n * 4 + 2] = Math.min(64, (def.W || 40) * 0.5 + 16); P[n * 4 + 3] = 5; n++;
+    }
+    // the bushes knocked aside lately, the nearest four to you, standing back up (an ease over KNOCK_S)
+    const K = this.knocks;
+    if (K) {
+      const now = F.now, best = this._kBest || (this._kBest = []);
+      best.length = 0;
+      for (const q of K) { if (now - q.t >= KNOCK_S || now < q.t) continue; const d = Math.abs(q.x - sp.x) + Math.abs(q.y - sp.y); if (d < 900) best.push(d, q); }
+      for (let j = 0; j < 4 && best.length; j++) {
+        let bi = 0; for (let i = 2; i < best.length; i += 2) if (best[i] < best[bi]) bi = i;
+        const q = best[bi + 1], u = 1 - (now - q.t) / KNOCK_S;
+        best.splice(bi, 2);
+        const o = (4 + j) * 4; P[o] = q.x; P[o + 1] = q.y - 4; P[o + 2] = q.r; P[o + 3] = 5 * u * u * (3 - 2 * u);
+      }
+    }
+  }
+  // A car, a truck or a bike driven through a bush (the map's shrub and bush props; trees never): a burst of its leaves
+  // (render/fx.js particles - the pooled ring, art v2's pLeaf) and the bush knocked aside where it went through for
+  // KNOCK_S (_push). Once a bush per BURST_GAP s. The props are put in 256 px buckets once (_bushIdx).
+  _bushes(F) {
+    const S = this.S, fx = S.fx, now = F.now, dt = Math.min(0.1, F.dt || 0.016);
+    if (!fx || !(dt > 0)) return;
+    const idx = this._bushIdx();
+    if (!idx) return;
+    const hit = this.bushHit || (this.bushHit = new Map()), K = this.knocks || (this.knocks = []);
+    for (const v of F.vehs || []) {
+      const def = v.d && VEHICLE_BY_INDEX[v.d.m];
+      if (!def || def.kind === 'boat' || def.kind === 'air' || (v.flags & VF.WRECK) || v.rz > 0.05) continue;
+      if (v.rx < this.vx0 - 80 || v.rx > this.vx1 + 80 || v.ry < this.vy0 - 80 || v.ry > this.vy1 + 80) { v._bx = undefined; continue; }
+      const lx = v._bx, ly = v._by;
+      v._bx = v.rx; v._by = v.ry;
+      if (lx === undefined) continue;
+      const mv = Math.hypot(v.rx - lx, v.ry - ly), spd = mv / dt;
+      if (spd < 40 || mv > 120) continue;   // (standing, creeping, or a jump: a teleport)
+      const ca = Math.cos(v.ra || 0), sa = Math.sin(v.ra || 0), hl = (def.L || 80) * 0.5, hw = (def.W || 40) * 0.5 + 6;
+      const cx0 = Math.floor((v.rx - hl - 40) / BUSH_CELL), cx1 = Math.floor((v.rx + hl + 40) / BUSH_CELL), cy0 = Math.floor((v.ry - hl - 40) / BUSH_CELL), cy1 = Math.floor((v.ry + hl + 40) / BUSH_CELL);
+      for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+        const list = idx.get(cy * 65536 + cx);
+        if (!list) continue;
+        for (let i = 0; i < list.length; i += 4) {
+          const bx = list[i], by = list[i + 1], br = list[i + 2], dx = bx - v.rx, dy = by - v.ry;
+          const along = dx * ca + dy * sa, across = -dx * sa + dy * ca;   // (in the car's own frame: inside its box, grown by the bush)
+          if (Math.abs(along) > hl + br * 0.5 || Math.abs(across) > hw + br * 0.5) continue;
+          const pi = list[i + 3], last = hit.get(pi);
+          if (last !== undefined && now - last < BURST_GAP && now >= last) continue;
+          hit.set(pi, now);
+          if (hit.size > 400) hit.delete(hit.keys().next().value);
+          K.push({ x: bx, y: by, r: br + 14, t: now });
+          if (K.length > 24) K.shift();
+          const col = BUSH_LEAF[pi % BUSH_LEAF.length], n = this.q <= 0 ? 4 : 9, r = Math.random;
+          for (let k = 0; k < n; k++) {   // the leaves thrown up and off it, along the way the car went and to the sides
+            const a = Math.atan2(sa, ca) + (r() - 0.5) * 2.4, sp = 40 + r() * 90 + spd * 0.15;
+            const q = fx.spawn(8, bx + (r() - 0.5) * br, by + (r() - 0.5) * br * 0.6, Math.cos(a) * sp, Math.sin(a) * sp, 0.9 + r() * 0.7, 3, col, 0, 30 + r() * 50);
+            q.ph = r() * 6.28; q.z = 10 + r() * 12;
+          }
+        }
+      }
+    }
+  }
+  // the bushes of the map in 256 px buckets: key cy * 65536 + cx -> [x, y, radius, prop index, ...] (made again when the
+  // map's props change in number - World v3's page fills them in by region)
+  _bushIdx() {
+    const props = this.map && this.map.props;
+    if (!props || !props.length) return null;
+    if (this._bIdx && this._bIdxN === props.length && this._bIdxM === this.map) return this._bIdx;
+    const out = new Map();
+    for (let i = 0; i < props.length; i++) {
+      const p = props[i];
+      if (!p || !BUSH_PROPS.has(p.t) || p.broken) continue;
+      const k = Math.floor(p.y / BUSH_CELL) * 65536 + Math.floor(p.x / BUSH_CELL);
+      let l = out.get(k);
+      if (!l) out.set(k, (l = []));
+      l.push(p.x, p.y, 14 * (p.k || 1), i);
+    }
+    this._bIdx = out; this._bIdxN = props.length; this._bIdxM = this.map;
+    return out;
   }
   // does the redwood (its prop index) stand in front of you? Your figure on screen - 12 px either side of you
   // (30 in a car), from your feet to 46 px up (40) - against the tree's outline at those heights on it (RW_OUTLINE).
@@ -1842,7 +1933,10 @@ export class World2 {
       }
     }
     o.under = under ? UNDER_Z : 0;
-    o.xrayTop = def.turret ? TURRET_TOP : 0;   // (a tank: its turret over the hull is no reason to outline the hull)
+    // (a tank: its turret over the hull is no reason to outline the hull; and nothing lower than VEH_XRAY_LOW over the
+    // car's ground - a bush, a shrub, a fence, a low wall - outlines it: the owner, 11-13, of a car driven through a bush,
+    // "leaving out the white transparency that happens because it doesn't look good". A building or a tree's trunk still does)
+    o.xrayTop = def.turret ? Math.max(TURRET_TOP, VEH_XRAY_LOW) : VEH_XRAY_LOW;
     E.drawSprite(use, v.rx - Math.sin(v.ra) * lean, v.ry, Math.max(0, z0), o);
     o.air = false;
     o.under = 0; o.xrayTop = 0;

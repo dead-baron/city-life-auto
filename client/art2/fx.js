@@ -1077,8 +1077,10 @@ export function skidDabFrames() {
 const STRAW = [[226, 212, 150], [104, 92, 52], [70, 60, 34]];
 export function crushFrames() {
   const out = [];
-  for (const [L, Wd] of [[9, 4], [6, 3]]) for (let k = 0; k < 8; k++) {
-    const a = k / 8 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), S = 22, G = frame(S, S, S / 2, S / 2, 0, false);
+  // (a tyre's swath 14 px wide, a foot's track 8: the owner, 11-13, didn't see them - at 8 and 6 they read as hairlines
+  // from the camera's height)
+  for (const [L, Wd] of [[10, 7], [7, 4]]) for (let k = 0; k < 8; k++) {
+    const a = k / 8 * Math.PI, ca = Math.cos(a), sa = Math.sin(a), S = 26, G = frame(S, S, S / 2, S / 2, 0, false);
     for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
       const dx = x + 0.5 - S / 2, dy = y + 0.5 - S / 2, lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
       const end = L - (hashC(Math.round(ly * 2), k, L) * 2.5);   // (ragged ends)

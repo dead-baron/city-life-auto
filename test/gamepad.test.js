@@ -132,6 +132,6 @@ test('the controls tables say how: RT fires, R3 drive-bys, RB / LB tap or hold -
   assert.equal(PAD.drivefire[0], 'R3');
   for (const a of ['prevw', 'wpnwheel', 'drivefire']) assert.ok(ACTIONS.includes(a) && KB[a] && TOUCH[a] && PAD[a], `${a} on every device`);
   const readme = SRC('README.md');
-  assert.match(readme, /\| Weapons \|[^\n]*tap RB \/ LB[^\n]*hold either[^\n]*weapon wheel/i, 'the README controls table: the bumpers');
+  assert.match(readme, /\| Weapons \|[^\n]*tap RB \/ LB[^\n]*hold RB[^\n]*weapon wheel[^\n]*LB[^\n]*radial/i, 'the README controls table: the bumpers (hold LB: the chat & emote radial, 11-13)');
   assert.match(readme, /\| Drive-by \|[^\n]*R3/, 'the README controls table: the drive-by');
 });

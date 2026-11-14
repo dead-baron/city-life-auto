@@ -93,13 +93,13 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     }
     const talk = r.keep.find((k) => k.name === 'talk'), emo = r.keep.find((k) => k.name === 'emote');
     if (talk && emo && !(h > w ? Math.abs(emo.x0 - talk.x0) <= 2 && emo.y1 <= talk.y0 && talk.y0 - emo.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
-    const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-menu';
+    const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-emo,b-menu';   // (the emotes beside chat on a desktop: 11-13)
     if (nav.map((b) => b.name).join() !== want) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);
     if (nav.some((b) => b.label)) row.push(`${tag}: words on the buttons ${nav.map((b) => b.label)}`);
-    if (nav.map((b) => b.name2).join() !== (touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
+    if (nav.map((b) => b.name2).join() !== (touch ? 'Phone,Map,Menu' : 'Phone,Map,Chat,Emotes,Menu')) row.push(`${tag}: names ${nav.map((b) => b.name2)}`);
     const keys = nav.map((b) => b.key).join();
-    if (dev === 'kbm' ? keys !== 'P,M,T,ESC' : keys !== (touch ? ',,' : ',,,')) row.push(`${tag}: key badges ${keys}`);
+    if (dev === 'kbm' ? keys !== 'P,M,T,B,ESC' : keys !== (touch ? ',,' : ',,,,')) row.push(`${tag}: key badges ${keys}`);
     const m = nav[nav.length - 1];
     if (w - m.x1 > 30 || m.y1 > (h > w ? h * 0.2 : h * 0.4) + (r.sc.cam || 0)) row.push(`${tag}: the menu isn't in the top-right zone (${m.x0},${m.y0}-${m.x1},${m.y1})`);
     for (const [i, a] of nav.entries()) {

@@ -39,6 +39,17 @@ export function next(world, p, quiet = false) {
   world.notify?.(p, `Dancing: ${DANCE_NAMES[ped.dm]} - press again for the next move, move to stop`, 'info');
   return ped.dm;
 }
+// One move by its index in shared/dance.js DANCE_MOVES (the emote picker's Dances tab: emote.js) - started, or switched
+// to; the people near told only when you weren't dancing. Returns the move or -1 (can't dance here).
+export function start(world, p, dm, quiet = false) {
+  const ped = p.ped;
+  if (!free(ped) || !DANCE_PLAYER.includes(dm)) return -1;
+  const was = !!ped.dancing;
+  set(ped, dm);
+  if (!was && !quiet) world.track?.('danced', p);
+  world.notify?.(p, `Dancing: ${DANCE_NAMES[dm]} - move to stop`, 'info');
+  return dm;
+}
 // every input (players.js applyInput): the button, and whatever stops the dance
 export function input(world, p, ped, inp, pressed) {
   if (pressed & IN.DANCE) { next(world, p); return; }

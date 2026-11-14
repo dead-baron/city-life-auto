@@ -14,7 +14,7 @@ import { VEHICLES } from '../shared/vehicles.js';
 
 // messages a second, per kind (anything else: DEFAULT_RATE)
 export const RATES = {
-  menu: 10, inv: 10, phone: 12, look: 6, name: 1, chat: 4, emote: 2, chatset: 2, mod: 2, contacts: 2, inbox: 2, admin: 8, acct: 4,
+  menu: 10, inv: 10, phone: 12, look: 6, name: 1, chat: 4, emote: 2, typing: 2, chatset: 2, mod: 2, contacts: 2, inbox: 2, admin: 8, acct: 4,
   arcade: 6, chess: 10, mus: 60, weapon: 12, down: 6, respawn: 6, cine: 30, view: 10, perf: 2, cerr: 6, diag: 2, ftue: 6, ga: 2,
   dev: 25, racebook: 4, safety: 2, plist: 3, wipe: 1, interior: 4, bail: 3, unstuck: 2, surrender: 2, cruiser: 2, away: 6, ping: 4, devmode: 2,
 };

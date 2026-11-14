@@ -19,7 +19,7 @@ import { initInput, sample, input, takeNumberPick, settings, saveSettings, detec
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
-import { FX, windowMuzzle, drawLeans, afloatUnder } from './render/fx.js';
+import { FX, windowMuzzle, drawLeans, afloatUnder, trailSteps } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD, fitLine } from './hud.js';
@@ -155,6 +155,8 @@ function launchCall(k, a) {
     // Messages app and Settings > Chat; while its line has the keys, the game's input rests: S.chatUp)
     const chat = ch.createChat({
       send, canvas, toast, screenOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry }) : null; },
+      headOf: (eid) => { const e = S.ents.get(eid); return e && e.rx !== undefined ? worldToScreen({ x: e.rx, y: e.ry - (e.rz ? liftOf(e.rz) : 0) - ((e.d && e.d.gt === 'emote' && EM_HEAD[e.d.em]) || SKULL_HEAD) }) : null; },   // (the top of the head: the balloons, the bubbles)
+      moreEmotes: () => { if (S.playing && !topOverlay()) openHub('phone', 'emotes'); },
       device: () => input.device, playing: () => !!(S.playing && S.welcomed && !S.practice),
       focus: (on) => { S.chatUp = !!on; }, dot: (on) => { S.chatDot = on; $('b-chat').classList.toggle('dot', on); $('b-talk').classList.toggle('dot', on); },
       openApp: () => openHub('phone', 'msgs'),
@@ -195,6 +197,8 @@ if (document.readyState === 'complete') setTimeout(() => launchCall('boot'), 300
 // The gate, the account panel or a sign-in choice up (client/account.js): the pad drives it, and the title underneath is
 // left alone (A used to press PLAY under the gate). True while one is up.
 function launchPad() {
+  const Ch = S.launch && S.launch.chat;
+  if (Ch && Ch.padActive()) { Ch.pad({ nav: input.menuNav, lr: input.menuLR, select: input.menuSelect, back: input.menuBack, x: input.padX, y: input.padY }); return true; }   // (the radial's Type: chat's on-screen keyboard)
   const A = S.launch && S.launch.acc;
   if (A && A.padActive()) { A.pad({ nav: input.menuNav, lr: input.menuLR, select: input.menuSelect || input.padStart, back: input.menuBack }); return true; }
   return !!document.querySelector('[data-cla-modal]');   // (up before its module's ready: the title still waits)
@@ -652,10 +656,14 @@ function fixedStep() {
   if (wheel.open && S.padWheel && input.padAxes) wheel.point(input.padAxes.rx * 100, input.padAxes.ry * 100);
   if (!input.padView && S.padViewHeld && wheel.open && S.padWheel) { S.padWheel = false; wheel.release(performance.now() - (S.wheelAt || 0) < 250); }
   S.padViewHeld = input.padView;
-  // the weapon wheel (hold RB or LB; a tap just takes out the next / previous one: input.js): point a stick, let go
-  if (!spec && !ch && input.wheelHold && canWheel() && !wheel.open && !wpick.open) wwheel.show();
+  // the weapon wheel (hold RB; a tap of RB / LB just takes out the next / previous one: input.js): point a stick, let go.
+  // Hold LB: the quick radial - quick lines and emotes, Type, More (client/emotes.js; chat round 2, 11-13)
+  const rad = S.launch && !S.practice ? S.launch.chat.radial : null;
+  if (!spec && !ch && input.wheelHold < 0 && canWheel() && !wheel.open && !wpick.open && rad) rad.open();
+  else if (!spec && !ch && input.wheelHold > 0 && canWheel() && !wheel.open && !wpick.open) wwheel.show();
+  if (rad && rad.isOpen) { if (input.wheelRelease < 0) rad.release(); else if (input.wheelHeld >= 0 || !canWheel()) rad.close(); else if (input.padAxes) rad.point(input.padAxes.lx, input.padAxes.ly, input.padAxes.rx, input.padAxes.ry); }
   if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
-  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || S.chatUp || (S.launch && S.launch.chat.isOpen && input.device === 'touch') || inOverlay || wheel.open || wpick.open || wwheel.open || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
+  const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || S.chatUp || (S.launch && S.launch.chat.isOpen && input.device === 'touch') || inOverlay || wheel.open || wpick.open || wwheel.open || (S.launch && S.launch.chat.radial.isOpen) || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
   if (S.menuWasUp && !menuUp) S.suppressBits = IN.ACTION | IN.DIVE | IN.VEHICLE | IN.FIRE | IN.THROW | IN.USE;
@@ -1776,7 +1784,7 @@ const bag = {
 const wheel = createWheel({ el: $('wheel'), send: (o) => send(o), me: () => S.me });
 // the weapon picker (touch: hold the weapon plate): every weapon you carry, tap one to take it out
 const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () => S.me });
-// the weapon wheel (a pad: hold RB or LB, point a stick, let go): every weapon you carry round a circle
+// the weapon wheel (a pad: hold RB, point a stick, let go): every weapon you carry round a circle
 const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
 function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
@@ -2292,6 +2300,7 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
+$('b-emo').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };   // (the emotes beside it on a desktop: the picker, as B - client/emotes.js)
 // the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
 $('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
 $('b-emote').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };
@@ -4395,6 +4404,7 @@ const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x
 // (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
 // under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
 const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+const TRAIL = [];   // (trailSteps' points: reused every call)
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -4433,13 +4443,11 @@ function vehVisual(v, now, dt) {
     for (const o of [-0.39, 0.39]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
     if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
-  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field
+  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field -
+  // laid along the way it came, so a slow frame (a phone at 20 fps, a car at speed) leaves no gaps in the track
   if (S.art2 && def.kind !== 'boat' && def.kind !== 'air' && !(f & VF.WRECK) && !(v.rz > 0.05)) {
-    const lx = v._crx ?? v.rx, ly = v._cry ?? v.ry;
-    if (Math.abs(v.rx - lx) + Math.abs(v.ry - ly) > 12) {
-      v._crx = v.rx; v._cry = v.ry;
-      for (const sgn of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
-    }
+    const P = trailSteps(v, v.rx, v.ry, 12, 400, TRAIL);
+    for (let i = 0; i < P.length; i += 2) for (const sgn of [-1, 1]) { const [x, y] = localToWorld(P[i], P[i + 1], v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 1); }
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
@@ -4694,8 +4702,8 @@ function pedVisual(p, now) {
   if (p.blink === 3) return; // inside a home
   // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
   if (S.art2 && !(f & PF.DEAD)) {
-    const lx = p._crx ?? p.rx, ly = p._cry ?? p.ry, d = Math.abs(p.rx - lx) + Math.abs(p.ry - ly);
-    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.85); }
+    const lx = p._crx, ly = p._cry, P = trailSteps(p, p.rx, p.ry, 10, 200, TRAIL), a = Math.atan2(p.ry - ly, p.rx - lx);
+    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 1);
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
@@ -5066,6 +5074,7 @@ function drawSpanWire(sg, n) {
 const SKULL = ['...#####...', '.#########.', '###########', '###########', '##...#...##', '##...#...##', '###########', '.####.####.', '..#######..', '..#.#.#.#..', '..#######..'];
 let skullImg = null;
 const SKULL_HEAD = 46;   // world px from a standing person's feet to the top of their head (art v2 people)
+const EM_HEAD = { sit: 30, crouch: 30, kneel: 36, lie: 14, sleep: 16, faceplant: 12, pushups: 16 };   // (the same, sat, crouched, knelt or lying: an emote's pose - client/art2/poses.js)
 function skullSprite() {
   if (skullImg) return skullImg;
   const n = SKULL.length, c = document.createElement('canvas');
@@ -5179,7 +5188,7 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
-    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
+    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD) && !(S.launch && S.launch.chat.balloonOn(p.id))) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
     if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;

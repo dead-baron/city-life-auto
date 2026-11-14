@@ -1,0 +1,5 @@
+The emotion balloons in client/emotes.js (BALLOONS: the heart, !, ?, the anger vein, the sweat drop, HAHA, Zzz, the light
+bulb and the typing dots) are our own 16x16 pixel drawings in the game's palette, made after the pixel style of the
+"Emotes Pack" by Kenney (www.kenney.nl, https://opengameart.org/content/emotes-pack), released under Creative Commons
+Zero (CC0 1.0, http://creativecommons.org/publicdomain/zero/1.0/): free to use in personal, educational and commercial
+projects. Credit is not required; we give it gladly. No file of the pack is copied into the game.

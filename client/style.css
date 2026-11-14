@@ -359,8 +359,9 @@ body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order:
 #hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
 #hud-btns .kchip { position: absolute; right: -6px; top: auto; bottom: -8px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
 .touch #hud-btns { --ic: 24px; }
-#b-chat { pointer-events: auto; }
-body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-talk) */
+#b-chat, #b-emo { pointer-events: auto; }
+body.touch #b-chat, body.touch #b-emo { display: none; }   /* (on touch chat and the emotes are by the thumb: #b-talk, #b-emote) */
+body.emo-open #b-emo { box-shadow: inset 0 0 0 2px var(--pad-cream); }
 /* chat by the thumb (the owner, 11-12: the top row was a stretch for something used often): a tap the chat sheet - in the
    bottom band just right of the move stick's rest on its side, over the move stick's zone upright */
 #b-talk { display: none; }

@@ -11,7 +11,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { extname } from 'node:path';
 import { findChrome } from './hudpage.js';
-import { QUICK, EMOTES, REPORT_WHY, CHANNELS } from '../shared/chatdefs.js';
+import { QUICK, EMOTES, REPORT_WHY, CHANNELS, DANCES, RADIAL } from '../shared/chatdefs.js';
 import { CREW } from '../shared/rules.js';
 import { KB, PAD, TOUCH, ACTIONS, KEY_ACTION } from '../shared/controls.js';
 import { guideSections } from '../shared/guide.js';
@@ -34,11 +34,13 @@ const C = createChat({
 C.onMessage({ t: 'chatstate', off: {}, mutes: [], blocks: [], names: {}, max: 200, me: 'me0', crew: true, fac: null });
 out.inboxAsked = sent.some((m) => m.t === 'inbox');
 // someone near says two things, then a third: two lines at most in the bubble; a second speaker beside them is kept apart
-C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'hello there', at: 1 });
-C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'nice car', at: 2 });
-C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'want to race?', at: 3 });
-C.onMessage({ t: 'chat', ch: 'near', n: 'Lou', id: 'lou1', eid: 12, text: 'me too', at: 4 });
-C.onMessage({ t: 'emote', eid: 13, e: 'wave', n: 'Ann', id: 'ann1' });
+C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'hello there', at: 1, bb: 1 });
+C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'nice car', at: 2, bb: 1 });
+C.onMessage({ t: 'chat', ch: 'near', n: 'Marisol', id: 'mar1', eid: 11, text: 'want to race?', at: 3, bb: 1 });
+C.onMessage({ t: 'chat', ch: 'near', n: 'Lou', id: 'lou1', eid: 12, text: 'me too', at: 4, bb: 1 });
+C.onMessage({ t: 'chat', ch: 'near', n: 'Zed', id: 'zed9', eid: 13, text: 'a long line that the server sent to the log only', at: 5 });
+C.onMessage({ t: 'emote', eid: 13, e: 'laugh', n: 'Ann', id: 'ann1', b: 'haha' });
+C.onMessage({ t: 'typing', eid: 12, on: 1 });
 await wait(120);
 const bubs = [...document.querySelectorAll('.cht-bub')];
 out.bubbles = bubs.length;
@@ -48,16 +50,30 @@ out.bubApart = !(r[0].left < r[1].right && r[1].left < r[0].right && r[0].top < 
 out.bubAbove = r[0].bottom <= 300;
 out.bubFont = getComputedStyle(bubs[0]).fontFamily;
 out.feed = [...document.querySelectorAll('#cht-feed .cht-fl')].map((d) => d.textContent);
-// an emote: its emoji pops up over the head (no words there); Dance: none - the log says it
-out.pops = [...document.querySelectorAll('.emo-pop')].filter((d) => d.isConnected).map((d) => d.textContent);
-C.onMessage({ t: 'emote', eid: 12, e: 'dance', n: 'Lou', id: 'lou1' });
+// an emote: its pixel balloon pops up over the head (no words there); the bounty skull gives way; Dance: none - the log says it
+out.pops = [...document.querySelectorAll('.emo-pop:not(.typ)')].map((d) => getComputedStyle(d.firstChild).backgroundImage.slice(0, 26));
+out.balloonOn = [C.balloonOn(13), C.balloonOn(11)];
+out.typingDots = document.querySelectorAll('.emo-pop.typ').length;
+out.typingSprite = getComputedStyle(document.querySelector('.emo-pop.typ > i')).animationName;
+C.onMessage({ t: 'chat', ch: 'near', n: 'Lou', id: 'lou1', eid: 12, text: 'ok', at: 6 });
+out.typingAfterSay = document.querySelectorAll('.emo-pop.typ').length;
+C.onMessage({ t: 'emote', eid: 12, e: 'dance', n: 'Lou', id: 'lou1', lg: 1 });
 out.popsAfterDance = document.querySelectorAll('#cht-bubs .emo-pop').length;
 // the emote picker (apart from chat): a grid, one tap sends and closes; a tap outside and the X close it
 C.emotes();
 await wait(30);
 out.pickOpen = !$('.emo-pick').hidden;
+out.pickTabs = [...document.querySelectorAll('.emo-pick .emo-tab')].map((b) => b.textContent + (b.classList.contains('on') ? '*' : ''));
 out.pickTiles = [...document.querySelectorAll('.emo-pick [data-e]')].map((b) => b.dataset.e);
 out.pickTileText = document.querySelector('.emo-pick [data-e="wave"]').textContent;
+out.pickBalloon = !!document.querySelector('.emo-pick [data-e="love"] img');
+document.querySelector('.emo-pick [data-tab="pose"]').click();
+out.pickPoses = [...document.querySelectorAll('.emo-pick [data-e]')].map((b) => b.dataset.e);
+document.querySelector('.emo-pick [data-tab="dance"]').click();
+out.pickDances = document.querySelectorAll('.emo-pick [data-d]').length;
+document.querySelector('.emo-pick [data-d="6"]').click();
+out.pickClosedOnDance = $('.emo-pick').hidden;
+C.emotes(); document.querySelector('.emo-pick [data-tab="emote"]').click();
 document.querySelector('.emo-pick [data-e="clap"]').click();
 out.pickClosedOnPick = $('.emo-pick').hidden && !C.emotesUp;
 C.emotes(); $('.emo-veil').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
@@ -135,8 +151,9 @@ out.nearChips = ph.querySelectorAll('[data-cmq]').length; out.nearEmotes = ph.qu
 // the phone's Emote screen (a pad's way to the emotes)
 const ph2 = document.createElement('div'); document.body.appendChild(ph2);
 C.emoteApp(ph2, { close: () => { out.emoAppClosed = true; } });
-out.emoApp = ph2.querySelectorAll('[data-emo]').length;
-ph2.querySelector('[data-emo="salute"]').click();
+out.emoApp = ph2.querySelectorAll('[data-e]').length;
+out.emoAppTabs = ph2.querySelectorAll('[data-emt]').length;
+ph2.querySelector('[data-e="salute"]').click();
 out.kept = (() => { try { return Object.keys(JSON.parse(localStorage.getItem('cla.msgs.me0') || '{}')); } catch { return 'none'; } })();
 await wait(500);
 out.keptLater = (() => { try { return Object.keys(JSON.parse(localStorage.getItem('cla.msgs.me0') || '{}')); } catch { return 'none'; } })();
@@ -162,6 +179,17 @@ if (touch) {
   out.kbFits = sr.top >= 0;
   C.close();
 }
+// a pad: the radial's Type - the sheet with its on-screen keyboard; A types, the D-pad moves, Y sends
+C.padKeys();
+await wait(30);
+out.padKb = C.padActive() && getComputedStyle($('.cht-keys')).display !== 'none';
+C.pad({ select: true }); C.pad({ lr: 1 }); C.pad({ select: true });
+out.padLine = $('.cht-in').value;
+C.pad({ y: true });
+out.padClosed = !C.padActive() && $('.cht-sheet').hidden;
+// the radial (hold LB): a slot picked with the stick, sent on letting go
+C.radial.open(); C.radial.point(0, 0, 0, -1);
+out.radialPick = C.radial.release();
 out.sent = sent;
 document.getElementById('out').textContent = JSON.stringify(out);
 `;
@@ -207,21 +235,30 @@ test('chat\'s data: the quick lines (the crew\'s are the Crew app\'s), the reaso
 test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, mute / block / report, the Messages app, Settings', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const o = await run('kbm', '1280,720');
   assert.ok(o.inboxAsked, 'what came while away is asked for on joining');
-  assert.equal(o.bubbles, 2, 'speech only: an emote has no words over the head');
+  assert.equal(o.bubbles, 2, 'speech only: an emote has no words over the head; a long line none (the server says: bb)');
   assert.deepEqual(o.bubLines[0], ['nice car', 'want to race?'], 'two lines at most in a bubble, the newest last');
   assert.ok(o.bubApart, 'two speakers side by side: their bubbles kept apart');
   assert.ok(o.bubAbove, 'above the speaker');
   assert.match(o.bubFont, /CLA Pixel/, 'in the game\'s pixel face');
   assert.equal(o.feed.length, 2, 'two lines in the feed on a desktop');
-  assert.ok(o.feed[1].includes('Ann') && o.feed[1].includes(EMOTES.wave.text), 'the log says it');
-  assert.deepEqual(o.pops, [EMOTES.wave.emoji], 'its emoji over the head');
-  assert.equal(o.popsAfterDance, 1, 'Dance: no emoji');
+  assert.ok(o.feed.every((l) => !l.includes(EMOTES.laugh.text)), 'a laugh: no log spam');
+  assert.deepEqual(o.pops, ['url("data:image/png;base64'], 'its pixel balloon over the head');
+  assert.deepEqual(o.balloonOn, [true, false], 'the bounty skull gives way there only');
+  assert.equal(o.typingDots, 1, 'the typing dots over someone near who types');
+  assert.match(o.typingSprite, /emo-dots/, '...the dots in turn');
+  assert.equal(o.typingAfterSay, 0, 'said: the dots go');
+  assert.equal(o.popsAfterDance, 1, 'Dance: no balloon');
   assert.ok(o.logged.some((l) => l.includes('Lou') && l.includes('started dancing')), '"Lou started dancing" in the log');
   assert.ok(o.pickOpen, 'the picker');
-  assert.deepEqual(o.pickTiles, Object.keys(EMOTES), 'every emote a tile');
-  assert.ok(o.pickTileText.includes(EMOTES.wave.emoji) && o.pickTileText.includes(EMOTES.wave.n), 'its emoji and its name');
+  assert.deepEqual(o.pickTabs, ['Emotes*', 'Dances', 'Poses'], 'three tabs');
+  assert.deepEqual(o.pickTiles, Object.keys(EMOTES).filter((k) => EMOTES[k].tab === 'emote'), 'every emote a tile');
+  assert.deepEqual(o.pickPoses, Object.keys(EMOTES).filter((k) => EMOTES[k].tab === 'pose'), 'the poses');
+  assert.equal(o.pickDances, DANCES.length, 'the dances');
+  assert.ok(o.pickClosedOnDance);
+  assert.ok(o.pickTileText.includes(EMOTES.wave.n) && o.pickBalloon, 'its name, and its balloon where it has one');
   assert.ok(o.pickClosedOnPick && o.pickClosedOutside && o.pickClosedX, 'one tap and it closes; outside and the X close it');
-  assert.equal(o.emoApp, Object.keys(EMOTES).length, 'the phone\'s Emote screen');
+  assert.equal(o.emoApp, Object.keys(EMOTES).filter((k) => EMOTES[k].tab === 'emote').length, 'the phone\'s Emote screen');
+  assert.equal(o.emoAppTabs, 3, '...its three tabs');
   assert.ok(o.emoAppClosed, '...one tap emotes and puts the phone away');
   assert.ok(o.sheetOpen && o.focused, 'T: the sheet, its line ready to type in');
   assert.ok(o.closedOnSend, 'Enter sends and closes it on a keyboard');
@@ -232,8 +269,11 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.deepEqual(o.crewChips, QUICK.crew);
   assert.match(o.factionHint, /No faction/);
   const said = o.sent.filter((m) => m.t === 'chat').map((m) => `${m.ch}:${m.text}${m.to ? '>' + m.to : ''}`);
-  assert.deepEqual(said, [`near:${QUICK.near[0]}`, 'near:typed line', 'crew:to the crew', `crew:${QUICK.crew[0]}`, `phone:${QUICK.phone[0]}>lou1`, 'phone:see you there>lou1']);
-  assert.deepEqual(o.sent.filter((m) => m.t === 'emote').map((m) => m.e), ['clap', 'wave', 'salute'], 'the picker, /wave, the phone\'s screen');
+  assert.ok(o.padKb && o.padLine === 'Qw' && o.padClosed, 'a pad types on its on-screen keyboard, Y sends');
+  assert.equal(o.radialPick, RADIAL[0], 'the radial: the slot pointed at');
+  assert.deepEqual(said, [`near:${QUICK.near[0]}`, 'near:typed line', 'crew:to the crew', `crew:${QUICK.crew[0]}`, `phone:${QUICK.phone[0]}>lou1`, 'phone:see you there>lou1', 'near:Qw']);
+  assert.deepEqual(o.sent.filter((m) => m.t === 'emote').map((m) => m.e + (m.m !== undefined ? ':' + m.m : '')), ['dance:6', 'clap', 'wave', 'salute'], 'the picker\'s dance and emote, /wave, the phone\'s screen');
+  assert.ok(o.sent.some((m) => m.t === 'typing' && m.on === 1), 'typing on Near: the dots for the people near');
   assert.equal(o.whoTitle, 'Marisol');
   assert.deepEqual(o.whoButtons, ['mute', 'block', 'report']);
   assert.deepEqual(o.reasons, REPORT_WHY);

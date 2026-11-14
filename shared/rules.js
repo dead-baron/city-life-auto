@@ -1012,9 +1012,11 @@ export { GARDEN_CROPS } from './rules-base.js';   // (the numbers: shared/rules-
 // Driving a tractor down a row does the job it needs - plough, sow or harvest - once cover of its length is done
 // (its length in segs pieces). On the farm-work contract (the co-op's counter, the phone) each row pays pay[job], rows
 // rows finish it (+bonus); it runs contractS s; the tractor's issued like a work truck (jobs.js workTruck). By hand at
-// harvest time: each stretch of a ripe row picked on foot, and every handPer of them fill a crate (a Produce Box worth
-// handBox at the farm stand or the grocery).
-export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600, handPer: 3, handBox: 45 };
+// harvest time: on foot in a ripe row you pick the plants within handR px of you - a small patch, cut to stubble on
+// every page, growing back after handRegrowS s (the orchard's PICK_REGROW_S) - never the row: a picked patch blocks
+// another pick until you've moved handR px on. Every handPer patches fill a crate (a Produce Box worth handBox at the
+// farm stand or the grocery). handMax: the patches a field keeps at once (the oldest grows back first).
+export const FARM = { rowW: 64, segs: 10, cover: 0.8, growDays: 1, pay: { plough: 22, sow: 18, harvest: 30 }, rows: 8, bonus: 150, contractS: 1500, near: 1600, handPer: 3, handBox: 45, handR: 18, handRegrowS: PICK_REGROW_S, handMax: 160 };
 
 // ---- inside your home (H62; the owner, 2026-10-11: "going inside your own house would be great to get going") -
 // server/systems/homeinside.js, the plans in shared/homelayout.js. walk: your pace in there (px/s); reach: how near a thing

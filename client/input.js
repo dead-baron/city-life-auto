@@ -6,7 +6,7 @@
 //   fire  : left click    · RT (R3 at the wheel: RT is the gas) · FIRE (a tap: where the stick aims, else at the
 //           auto-target), or push the aim stick into its outer ring (with the FIRE ON toggle on)
 //           (on a pad the stick-ring fire is a Settings option, off by default: shared/input.js padFires)
-//   weapon: Tab / wheel   · tap RB / LB, hold either for the weapon wheel · the weapon plate (tap: next, hold: pick)
+//   weapon: Tab / wheel   · tap RB / LB, hold RB for the weapon wheel (hold LB: the chat & emote radial) · the weapon plate (tap: next, hold: pick)
 //
 // Driving: keyboard W gas, S brake / reverse, A/D steer (Settings' Controls 2: WASD points the way); touch points the way.
 import { IN, padFires, createTapHold, easeSteer, touchStick } from '../shared/input.js';
@@ -267,7 +267,7 @@ function radial(x, y, d) {
 }
 let padPrev = [];
 let padAimUntil = 0, padAim = 0, stickNavY = 0, stickNavX = 0;
-const bumpers = createTapHold(); // LB / RB: a tap steps through the weapons, a hold opens the weapon wheel
+const bumpers = createTapHold(); // LB / RB: a tap steps through the weapons; held, RB the weapon wheel, LB the chat & emote radial (main.js)
 
 function readPad() {
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
