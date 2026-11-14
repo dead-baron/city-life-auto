@@ -3965,7 +3965,7 @@ function buildGunShops(m) {
   const cands = m.pois.filter((p) => {
     if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
     const b = m.buildings[p.b], d = DISTRICTS[distOf(p)];
-    if (!b || b.gone || (b.prefab < 0 && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || !d || d.turf) return false;
+    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || !d || d.turf) return false;
     return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theat(?:re|er)|playhouse|station|club|bar|cannery|freight|salvage|pool|records/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar/.test(b.kind || '');
   });
   cands.sort((a, b) => hash2(LQX(a.x) | 0, LQY(a.y) | 0, 41) - hash2(LQX(b.x) | 0, LQY(b.y) | 0, 41));
@@ -4027,7 +4027,7 @@ function buildClothesShops(m) {
   const ok = (p) => {
     if (p.kind !== 'delivery' || p.b === undefined || p.fixed) return false;
     const b = m.buildings[p.b];
-    if (!b || b.gone || (b.prefab < 0 && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(b.id) || CLUB_LOTS.has(b.kind)) return false;
+    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(b.id) || CLUB_LOTS.has(b.kind)) return false;
     if (m.pois.some((q) => q.b === p.b && q !== p && !WALK_IN.has(q.kind) && !HELPER_POIS.has(q.kind) && q.kind !== 'delivery')) return false;   // (buildInteriors: every door in it a shop)
     return !/warehouse|factory|hotel|motel|lounge|ritz|school|high|academy|chapel|church|museum|theat(?:re|er)|playhouse|station|club|bar|cannery|freight|salvage|pool|records|gallery/i.test(p.label || '') && !/hotel|warehouse|school|church|fire|club|theatre|pool|junkyard|construction|beachbar|royale|diamond|monarch|vellori|arcade|diner|rest\d|bistro|cafe|bar|motors|dealer/.test(b.kind || '');
   };
