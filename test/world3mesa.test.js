@@ -106,7 +106,7 @@ test('World v3: Lucky Mesa - districts, the Strip and its streets on the network
   let paved = 0;
   for (let y = cy0; y < cy1; y++) for (let x = cx0; x < cx1; x++) if (m.tiles[y * W + x] === T.PLAZA) paved++;
   check(paved >= (cx1 - cx0) * (cy1 - cy0) * 0.85, `the covered street: ${paved} tiles of paving`);
-  for (const [name] of MESA.oldCasinos) check(m.pois.some((p) => p && p.casino && p.label === name && p.y > (cy0 - 2) * TILE && p.y < (cy1 + 2) * TILE), `${name} fronting the covered street`);
+  for (const [name] of MESA.oldCasinos) check(m.pois.some((p) => p && p.casino && p.label === name && (p.outside || p).y > (cy0 - 2) * TILE && (p.outside || p).y < (cy1 + 2) * TILE && m.buildings[p.b].walkIn), `${name} fronting the covered street, walked into from it`);   // (its place inside at the cashier's cage, its door on the street: shared/map.js walkInRoom)
 
   // 4. the places
   const pois = m.pois.filter((p) => p && inMesa(p.x, p.y));
