@@ -18,7 +18,7 @@ export default {
   ],
   beats: [
     { at: 0.4, who: 'crowd.0', do: 'say', text: 'Three... two... one...' },
-    { at: 0.8, who: 'crowd', do: 'emote', e: 'cheer' },
+    { at: 0.8, who: 'crowd', do: 'emote', emote: 'cheer' },
     { id: 'go', at: 2.2, who: 'r1', do: 'drive', to: { a: 'end', f: 400, s: 10 }, straight: true, pass: true, speed: 0.68, max: 14 },
     { at: 2.2, who: 'r2', do: 'drive', to: { a: 'end', f: 400, s: 46 }, straight: true, pass: true, speed: 0.67, max: 14 },
     { at: 2.3, who: 'r3', do: 'drive', to: { a: 'end', f: 400, s: 10 }, straight: true, pass: true, speed: 0.69, max: 14 },

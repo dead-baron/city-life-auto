@@ -26,7 +26,7 @@ export default {
     { do: 'ignite', target: 'van', s: 2.4 },
     { who: 'deke', do: 'run', to: { a: 'end', f: -560, s: 150 }, max: 6, after: 'bail', wait: 1.6 },
     { who: 'deke', do: 'face', to: 'end' },
-    { who: 'deke', do: 'emote', e: 'cheer', after: 'boom', wait: 1.8 },
+    { who: 'deke', do: 'emote', emote: 'cheer', after: 'boom', wait: 1.8 },
     { who: 'deke', do: 'say', text: 'Special delivery.' },
   ],
   cam: [

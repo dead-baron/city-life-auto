@@ -48,7 +48,7 @@ export const BEATS = {
   knock: ['who', 'target'],                           // one heavy blow: down on the ground for a few seconds (n: how hard)
   shoot: ['who'],                                     // shots at target (or at a point): n of them
   say: ['who', 'text'],                               // a line said out loud (a chat bubble from a player-actor in capture; an NPC's word in the live world)
-  emote: ['who', 'e'],                                // an emote (shared/chatdefs.js EMOTES)
+  emote: ['who', 'emote'],                            // an emote (shared/chatdefs.js EMOTES)
   face: ['who', 'to'],                                // turn to look at a point
   spawn: ['group'],                                   // more people now: group is a cast entry (a group)
   explode: [],                                        // target: a vehicle blown up; or to: a blast at that point (size: a shared/explosions.js blast size)
@@ -63,7 +63,7 @@ export const BEATS = {
   wait: ['s'],                                        // a pause: s seconds at most - until: { stop: castId } / { hit: castId } over sooner when that vehicle's (nearly) stopped / has run into something
   release: ['who'],                                   // off the script: the city's own AI from now (who: a cast id or 'all')
 };
-const BEAT_KEYS = new Set(['id', 'who', 'do', 'at', 'after', 'wait', 'to', 'veh', 'target', 'text', 'e', 'group', 'n', 'hits', 'until', 'max', 'speed', 'direct', 'straight', 'pass', 'alt', 'spray', 'size', 's', 'clubs', 'units', 'gun', 'route', 'note']);
+const BEAT_KEYS = new Set(['id', 'who', 'do', 'at', 'after', 'wait', 'to', 'veh', 'target', 'text', 'emote', 'group', 'n', 'hits', 'until', 'max', 'speed', 'direct', 'straight', 'pass', 'alt', 'spray', 'size', 's', 'clubs', 'units', 'gun', 'route', 'note']);
 const CAM_KINDS = ['follow', 'move', 'hold', 'between', 'orbit'];
 
 export const pointRefs = (p) => (p && typeof p === 'object' && !Array.isArray(p) ? { a: p.a, who: p.who } : typeof p === 'string' ? { a: p } : {});
@@ -117,7 +117,7 @@ export function validateScene(sc) {
     if (b.after !== undefined && !beatIds.has(b.after)) err.push(`${where}: after ${b.after}: no beat before it by that id`);
     if (b.at !== undefined && !(typeof b.at === 'number' && b.at >= 0 && b.at <= sc.len)) err.push(`${where}: at: seconds into the scene`);
     if (b.id) { if (beatIds.has(b.id)) err.push(`${where}: duplicate id ${b.id}`); beatIds.add(b.id); }
-    if (b.do === 'emote' && !/^[a-z]+$/.test(b.e || '')) err.push(`${where}: emote id`);
+    if (b.do === 'emote' && !/^[a-z]+$/.test(b.emote || '')) err.push(`${where}: emote id`);
     if (b.until && typeof b.until === 'object') for (const k of ['stop', 'hit']) if (b.until[k] !== undefined && !known(b.until[k])) err.push(`${where}: until: no cast ${b.until[k]}`);
   });
   let last = -1;

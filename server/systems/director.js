@@ -564,7 +564,7 @@ function begin(world, run, B) {
       return true;
     }
     case 'say': for (const cid of who) say(world, run, entOf(world, run, cid), b.text); return true;
-    case 'emote': for (const cid of who) emote(world, run, entOf(world, run, cid), b.e); return true;
+    case 'emote': for (const cid of who) emote(world, run, entOf(world, run, cid), b.emote); return true;
     case 'spawn': castOne(world, run, b.group); run.castVer++; for (const p of run.viewers) tell(world, run, p); return true;
     case 'explode': {
       const v = b.target !== undefined ? vehOf(world, run, b.target) : null;
