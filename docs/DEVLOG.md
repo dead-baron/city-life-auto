@@ -23532,27 +23532,23 @@ three-tile kiosks too - got a neon OPEN in the window beside the door; on a kios
 was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
 (client/art2/buildings.js); the wider fronts keep theirs.
 
-## 2026-11-14 - Your character on the title card: the whole figure, crisp and still
-The owner: the title card's avatar looked messed up (the game's tiny sprite of the head magnified - the face smeared),
-sat low and off-centre in its frame, and breathed and looked round on an endless loop; then: show the entire character,
-head to feet. client/portrait.js now:
-- **Draws the whole figure, crisp**: the game's own figure of your look at as many whole px a world px as fit it, head
-  to feet (a hat on it), in the frame's own device px - the canvas is shown one px a device px, nothing scaled by the
-  browser. A 56 px frame (52 inside its edge): most looks at 3 px a world px on a 3x phone, 2 at 2x, the game's own
-  pixels at 1x (a tall look or a tall hat a step smaller). From 2 up the face is the close face of
-  client/art2/peopleclose.js (eyes with their whites and irises, brows, a nose and lips; glasses, makeup and the rest),
-  which reads at that size; peopleclose.js (4 KB, the game never loads it) comes with portrait.js, which the title
-  loads only once the card has a look to show.
-- **Centred**: the still figure's box in the middle of the square, over a soft light in two steps of the card's navy.
-- **Holds still**, and now and then - after 3.5 to 9 s of stillness, at random, never a loop - plays one small idle and
-  goes still again: a blink (or two), a glance to one side and back (or both ways), a scratch of the head, a look at the
-  phone. Each is a few frames of the card's own pose (`ptcard`, registered beside the game's poses the way
-  client/art2/poses.js registers the emotes), shown in turn like the emotes' held beats. The frames are drawn once each:
-  the still one at once, the rest one at a time in idle moments after (10-40 ms each), so an idle never waits on them.
-  Nothing plays while the tab is hidden or the card isn't on screen; it's drawn as soon as the card shows, and again
-  when the frame changes size. Reduced motion: still, no idles.
-- **The phone**: people.js draws held things only at the game's size (its finer renders show none), so the phone is
-  taken from the game-size figure - the pixels that change with the phone in the hand - and laid over the finer one.
-- Tests: test/portrait.test.js (the resolution per frame size, head to feet within the frame, each idle its own frame,
-  the phone in the hand, no loop, reduced motion). Before / after of eight looks and a strip of the idles: the session's
-  scratchpad `logo2/owner/`.
+## 2026-11-14 - Your character on the title card: the game's own sprite, whole and still
+The owner: the title card's avatar sat low and off-centre in its frame, showed only the head and shoulders, and
+breathed and looked round on an endless loop. (A finer, close-up render was tried first and turned down - "it looks
+like old artwork, not the game's character".) client/portrait.js now:
+- **Draws the game's own sprite**: exactly the pixels the city shows of your look (person() at the game's size, put on
+  the art grid by downsample2), made bigger only by a whole number of CSS px an art px, nearest-neighbour.
+- **Frames the whole figure**, head to feet, at 2 px an art px in the card's 56 px frame (bigger where a frame has the
+  room), centred both ways over a soft light in two steps of the card's navy; a figure too tall for the frame (a tall
+  hat) and the small card's 40 px frame show it from the head down, centred across.
+- **Holds still**, and now and then - after 3.5 to 9 s of stillness, at random, never a loop - plays one small idle
+  from the game sprite's own frames and goes still again: a blink (the still figure with the rig's eyes shut, as a
+  sleeping figure has them), a glance aside (the idle's own glances, one way, the other or both), a scratch of the head
+  (the "huh?" emote's frames) or a look at the phone (the phone emote's). The emotes' frames come from
+  client/art2/poses.js, loaded once the card is drawn (the module the game loads when someone near emotes). Nothing
+  plays while the tab is hidden or the card isn't on screen; it's drawn as soon as the card shows and again when the
+  frame changes size. Reduced motion: still, no idles.
+- Tests: test/portrait.test.js (the game's own pixels, no finer render; whole, centred, whole-number scale for every
+  starter look; each idle its own frame; no loop; reduced motion). Before / after of eight looks: the session's
+  scratchpad `logo2/owner/avatar2-before-after.png`.
+
