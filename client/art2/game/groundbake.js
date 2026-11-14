@@ -1086,12 +1086,13 @@ function poolPx(pools, X, Y, d, seed) {
 // lighter water and rising bubbles that glint
 // (the owner, 11-14: warmer water - a milky jade going to a sulphur-gold tint over the vents; the rim a pale mineral
 // crust, then wet dark stone)
-const SPRW = ramp('#62c2a8', 6, 3), SPRV = ramp('#a8c88c', 5, 2), SPRE = ramp('#dcd8c0', 5, 2), SPRR = ramp('#5a5650', 5, 2), SPP = { c: null, nx: 0, ny: 0, e: 0 };
+const SPRW = ramp('#62c2a8', 6, 3), SPRV = ramp('#84c8a0', 5, 2), SPRE = ramp('#dcd8c0', 5, 2), SPRR = ramp('#5a5650', 5, 2), SPP = { c: null, nx: 0, ny: 0, e: 0 };
 function springPx(X, Y, d, seed) {
   SPP.e = 0;
   const big = vnc(X, Y, 19, seed + 41), fine = vnc(X, Y, 4, seed + 43), sw = vnc(X + big * 12, Y - big * 9, 9, seed + 45);
   let t = 0.5 + (big - 0.5) * 0.22 + (sw > 0.62 ? 0.16 : sw < 0.3 ? -0.08 : 0) + (fine - 0.5) * 0.05 - Math.min(1, d / 30) * 0.12;
-  let R = sw > 0.7 && d > 6 ? SPRV : SPRW;                                          // (over a vent: warmer, yellower)
+  let R = sw > 0.8 && d > 6 ? SPRV : SPRW;                                          // (over a vent: warmer, yellower)
+  if (d > 3.4) SPP.e = 20;                                                            // (lit low and warm from within after dark: the onsen's pools)
   if (d < 1.2) { R = SPRR; t = 0.5 + (fine - 0.5) * 0.5; }                           // wet dark stone at the very edge
   else if (d < 3.4) { R = SPRE; t = 0.55 + (fine - 0.5) * 0.4 - (d < 2 ? 0.1 : 0); }   // the mineral crust at the rim
   else if (hh(X >> 1, Y >> 1, seed + 47) > 0.996) { t = 0.9; SPP.e = 60; }         // bubbles
