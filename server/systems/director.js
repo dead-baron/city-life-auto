@@ -199,8 +199,9 @@ export const PLACES = {
   road(world, place, ref, opt = {}) {
     const m = world.map, P = ref || (place.near && named(m, place.near)) || named(m, 'Downtown') || named(m, 'Midtown');
     if (!P) return null;
-    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || 5000, opt.avoid || null);
+    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || place.maxD || 5000, opt.avoid || null);
     if (!r) return null;
+    if (!place.far) return { ...r, clear: true };   // (no getaway: a shot along the road)
     // where the getaway runs on to: a point well past the end, on the road net (it was the nearest open ground - a shop's
     // floor, a lawn: a car driven on into it)
     const a = r.anchors.end.a, fx = r.anchors.end.x + Math.cos(a) * (place.far || 2600), fy = r.anchors.end.y + Math.sin(a) * (place.far || 2600);
@@ -331,10 +332,11 @@ function castOne(world, run, c) {
   }
   if (c.group !== undefined) {
     const out = [];
+    const G = { ...standAt(m, P.x, P.y, 24), a: P.a };   // (a crowd gathers on dry ground: a park's middle can be its pond)
     for (let i = 0; i < c.group; i++) {
       const ang = (i / c.group) * Math.PI * 2 + 0.4, r = (c.spread || 50) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
-      const at = standAt(m, P.x + Math.cos(ang) * r, P.y + Math.sin(ang) * r, 4);
-      out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (P.a || 0) + c.ra : Math.atan2(at.y - P.y, at.x - P.x), c.id));
+      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, 4);
+      out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (G.a || 0) + c.ra : Math.atan2(at.y - G.y, at.x - G.x), c.id));
     }
     return out;
   }
