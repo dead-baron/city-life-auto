@@ -23562,3 +23562,8 @@ pixels): behind a building, a vehicle or a tree you're still outlined; behind so
 The owner: walking left a long trodden track through the wheat; he wanted it to part round you and rise back up shortly
 after. A person's or an animal's crush marks (fx.crush small) now go down at about half strength and stand back up within
 about five seconds (client/main.js, art2/game/host.js); a vehicle's swath still lies flat for a couple of minutes.
+
+## 2026-11-14 - Back on the title, the room's music stops
+The owner: out to the menu from the hospital lobby, its tune went on under the title's music. On the title the sound
+frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
+club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).
