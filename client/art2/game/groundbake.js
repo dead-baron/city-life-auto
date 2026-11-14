@@ -350,7 +350,7 @@ function tileFacts(C) {
       else if (b.tres[k] & 1) m = M_.GRAVLOT;
       else m = M_.LOT;
     } else if (t === T.ROAD) m = D.road === 'asphalt_worn' ? M_.ROADOLD : M_.ROAD;
-    else if (t === T.BUILDING) m = M_.FOUND;
+    else if (t === T.BUILDING) { const bi = b.tbld[k], bd = bi >= 0 ? M.buildings[bi] : null; m = bd && bd.kind === 'lighthouse' ? M_.PLAZAO : M_.FOUND; }   // (a lighthouse is its voxel tower alone: the rest of its footprint showed as the dark foundation - a flat gridded square round it. Cobbles, as round a light on its rock)
     else if (t === T.WALL && mazes.length && inRects(mazes, X, Y)) m = M_.LAWN;
     // rock: out in the wilds (and a designed place's: 32) bare rock, granite slabs (red rock in the desert) - not the
     // building's foundation the city's walls stand on. Most rock has its cliff face drawn over it (a sprite on its

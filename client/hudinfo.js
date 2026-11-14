@@ -49,7 +49,7 @@ export function statusChips(me) {
   if (me.bleeding) out.push({ k: 'flag', t: 'Bleeding', cls: 'bad' });
   // (no chip for the police's memory of your peak wanted level - the owner, 11-03: it still works, server law.js, and
   // shows itself when a disguise is blown)
-  if (me.bounty > 0) out.push({ k: 'flag', t: 'Bounty', v: money(me.bounty) + (me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))}m${me.btime.paused ? ' (paused)' : ''}` : ''), cls: 'bad', ck: money(me.bounty) });
+  if (me.bounty > 0) out.push({ k: 'flag', t: 'Bounty', v: money(me.bounty) + ' on you' + (me.btime ? ` · ${Math.max(1, Math.ceil(me.btime.left / 60))} min${me.btime.paused ? ' (paused)' : ''}` : ''), cls: 'bad', ck: money(me.bounty) });
   const B = me.buffs || {};
   for (const [k, n] of [['coffee', 'Coffee'], ['energy', 'Energy'], ['wine', 'Wine'], ['scent', 'Scent']]) if (B[k] > 0) out.push({ k: 'flag', t: n, v: `${Math.ceil(B[k])}s`, cls: 'good' });
   if (B.hearty > 0) out.push({ k: 'flag', t: 'Well fed', v: `${Math.ceil(B.hearty / 60)}m`, cls: 'good' });

@@ -408,7 +408,10 @@ export function tropic3(m, H3) {
     // the dock from the south beach, the rowboat moored by it
     let dy = ccy + cry; while (dy > ccy && !sea(ccx + 4, dy)) dy--;
     const J = tropicDock(ccx + 3, dy + 2, 1, 8, 6, 3);
-    P('rowboat', J.ex + 2, J.ey + 1.4, 0, { a: Math.PI / 2 - 0.2 }); P('ropecoil', ccx + 5, dy + 1.4, 0);
+    // (moored alongside the dock's stem, below its T-head - not up on the head's planks)
+    { const bx = J.ex + 2.9, by = J.ey + 5, ok = [-1, 0, 1].every((k) => sea(Math.floor(bx), Math.floor(by + k)) && sea(Math.floor(bx + 0.4), Math.floor(by + k)));
+      P('rowboat', ok ? bx : J.ex + 2, ok ? by : J.ey + 1.4, 0, { a: Math.PI / 2 - (ok ? 0.08 : 0.2) }); }
+    P('ropecoil', ccx + 5, dy + 1.4, 0);
     const beach = [];
     for (let y = ccy - 4; y <= ccy + cry + 5; y++) for (let x = ccx - crx - 4; x <= ccx + crx + 6; x++) if (free(x, y) && tileAt(x, y) === T.SAND) beach.push([x, y]);
     // the life of the beach by the water's edge: crabs scuttling, sea stars and shells washed up, two driftwood logs
