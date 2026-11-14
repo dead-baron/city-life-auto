@@ -8,6 +8,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { T } from '../shared/constants.js';
+import { IN } from '../shared/input.js';
 import { STAR_HEAT, COP_LEVEL, BREAK_CAR, BREAK_RETRY_S, CUSTODY_SKIP_S, CUSTODY_FADE_S, ESCAPE_STARS } from '../shared/rules.js';
 import * as players from '../server/systems/players.js';
 import * as law from '../server/systems/law.js';
@@ -68,6 +69,35 @@ test('a break for it from the back seat while the car is stopped: a head start -
     assert.ok(out > 0, 'then they come after you');
   }
   assert.ok(COP_LEVEL[1].exitS > COP_LEVEL[4].exitS && BREAK_CAR.chance[1] > BREAK_CAR.chance[4] * 5, 'a longer head start and better odds at low stars');
+});
+
+test('the back seat at 1-2 stars: the action button there the whole ride - too fast it says why (no try spent); a corner\'s slow enough; a 2-star escape keeps you on 2', () => {
+  const w = makeWorld();
+  const { p, v } = inTheBack(w, 2);
+  const crew = police.crewOf(w, v);
+  assert.ok(until(w, () => crew.every((c) => c.vehId === v.id), 12), 'the crew aboard');
+  w.time = Math.max(w.time, p.custody.tryAt || 0);
+  v.vx = Math.cos(v.a) * 400; v.vy = Math.sin(v.a) * 400;
+  assert.equal(custody.breakable(w, p), 'slow', 'flat out: not yet');
+  assert.match(players.findInteraction(w, p).label, /break for it.*slows/i, 'the action button stays (ACT on a phone), saying when');
+  const me = players.buildMe(w, p).custody;
+  assert.ok(me.brk === 2 && me.slow === 1, `the custody bar: in a moment (${JSON.stringify(me)})`);
+  const tries = p.custody.tries || 0;
+  p.inputQ.push({ seq: p.ack + 1, bits: IN.ACTION, mx: 0, my: 0, aim: 0 }); players.processInputs(w, 0.05);
+  assert.ok(p.custody && (p.custody.tries || 0) === tries && p.custody.armed, 'pressed while it\'s fast: no try spent - braced to kick it as it slows');
+  // round a corner (under BREAK_CAR.speed at 2 stars): a kick
+  const sp = BREAK_CAR.speed[2] - 20;
+  v.vx = Math.cos(v.a) * sp; v.vy = Math.sin(v.a) * sp;
+  assert.equal(custody.breakable(w, p), 'now', `${sp} px/s: slow enough`);
+  const r0 = w.rand; w.rand = () => 0;
+  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 0, aim: 0 }); players.processInputs(w, 0.05);
+  p.inputQ.push({ seq: p.ack + 1, bits: IN.ACTION, mx: 0, my: 0, aim: 0 }); players.processInputs(w, 0.05);
+  w.rand = r0;
+  assert.ok(!p.custody && !p.ped.vehId, 'kicked the door open');
+  assert.equal(p.wanted, law.escapeStars(2), 'away');
+  assert.equal(p.wanted, 2, 'a 2-star escape keeps you on 2 (the gentler police)');
+  assert.ok(p.heat >= STAR_HEAT[3] - 12 && p.heat < STAR_HEAT[3], `the heat up near 3 (${Math.round(p.heat)})`);
+  assert.deepEqual([1, 2, 3, 4, 5].map(law.escapeStars), [2, 2, 4, 5, 5], 'getting away: a star more, but from 1-2 never past 2');
 });
 
 test('the ride: to the nearest station on its roads, the siren on; stuck for good, a fade to black and the cells', () => {
