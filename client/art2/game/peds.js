@@ -336,6 +336,15 @@ export function actSitFrame(d, id, now) {
   return t < 1.3 ? 1 : 0;
 }
 
+// Bent over a pool table (gt 'cue': server activities.js, poolmatch.js): a slow practice stroke while the shot's lined up;
+// the shot (e.cueAt, the page's clock when it came: client/poolview.js) the cue drawn back (2) and through (3), held
+export function cueFrame(e, id) {
+  const now = performance.now() / 1000, t = now - (e.cueAt ?? -9);
+  if (t >= 0 && t < 0.15) return 2;
+  if (t >= 0 && t < 0.75) return 3;
+  return Math.floor(now * 1.6 + id * 0.37) % 3 === 1 ? 1 : 0;
+}
+
 // ---- the city's people (server personas.js): a persona's walk (the descriptor's gt) and prop (pp), a seat on a bench (sb)
 const STRIDES = new Set(['hunch', 'strut', 'skate', 'blade', 'push']);
 const PROP_CARRY = { cane: 'cane', trolley: 'trolley', cart: 'cart', leads: 'leads', guitar: 'guitar', call: 'call', phone: 'phone', board: 'board', surfboard: 'surfboard', map: 'map', stretcher: 'stretcher', stretcherPt: 'stretcherPt' , easel: 'easel', cooler: 'cooler', dice: 'dice', chess: 'chess', sponge: 'sponge', crate: 'crate', rifle: 'rifle', fence: 'fence', cueup: 'cueup', hail: 'hail', sax: 'sax', violin: 'violin', drums: 'drums', statue: 'statue' , binoculars: 'binoculars', poles: 'poles', radio: 'radio', basket: 'basket', kayak: 'kayak', tripod: 'tripod', tackle: 'tackle', campstove: 'campstove', climbkit: 'climbkit', rope: 'rope', broom: 'broom', letters: 'letters' };   // (easel, cooler, chess: people at their activities - server activities.js)   // (stretcher: the paramedics', ems.js)

@@ -1241,6 +1241,13 @@ export const ARCADE = {
   match: { win: 30, cpu: 15 },
   prizes: [{ item: 'glowstick', t: 25 }, { item: 'energy', t: 50 }, { item: 'flare', t: 60 }, { decor: 'art', t: 150 }, { item: 'headlamp', t: 200 }, { decor: 'turntable', t: 400 }, { board: 1, t: 500 }],
 };
+// NPCs playing pool at a table out in the world (server/systems/poolnpc.js; activities.js fills the table): the chance a
+// table has a game on when someone comes near, by day and after dark - the Rusty Spur's the likeliest, a bar's table
+// now and then (the owner, 2026-11-13: "Don't need NPCs at every table, just cool to have sometimes at some tables"),
+// retryS before an empty table's asked again; how well they play (skill: shared/pool.js cpuShot's, the aim off by
+// up to miss radians more for the worst of them), aimS the time bent over the cue before the strike, frameShots a
+// frame's length at most before they rack again
+export const POOL_NPC = { spur: { day: 0.5, night: 0.9 }, bar: { day: 0.12, night: 0.3 }, retryS: [300, 600], skill: [0.2, 0.65], miss: 0.08, aimS: [1.3, 3], frameShots: 70 };
 export const DICE = { bet: 20, pot: 300, sore: 0.25, gapS: 1.2 };
 // bank heists (the owner's #306, 10-07 / 10-08: "heists and bank robberies" - server/systems/heist.js, client/vault.js):
 // a thermal drill from the black market (drillPrice) set on a bank's vault door works drillS seconds through it - stopped
