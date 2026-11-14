@@ -1,16 +1,13 @@
 // Your own character on the title screen's card (the owner, 2026-11-13: the menu's player icon was the same picture for
-// everyone - "show YOUR character"): the game's own sprite of your look, head and shoulders, drawn into the card's
-// avatar (index.html #t-card .t-av) in place of the generic icon - a new hat, glasses or haircut shows there as soon as
-// the server has it. Loaded the first time the card has a look to show (client/titlescreen.js); it brings the people
+// everyone - "show YOUR character"): the game's own figure of your look, head to feet, drawn into the card's avatar
+// (index.html #t-card .t-av) in place of the generic icon - a new hat, glasses or haircut shows there as soon as the
+// server has it. Loaded the first time the card has a look to show (client/titlescreen.js); it brings the people
 // renderer (client/art2/people.js), the same module the game loads once the city is in, so the browser fetches it once.
 //
-// Close up and still (2026-11-14; it had been the game's tiny sprite blown up - the face smeared - breathing and looking
-// round on a loop): the game's own figure drawn finer (people.js res, the close face of client/art2/peopleclose.js), the
-// head and shoulders centred in a square crop that fills the frame one px a device px, over a soft stepped light behind
-// the head. Now and then -
-// every few seconds, never on a beat you could count - one small idle: a blink, a glance to one side and back, a scratch
-// of the head, a look at the phone. Like the emotes' held poses (client/art2/poses.js SEQ beats): each a few frames, each
-// shown for a while, then back to the still frame. Reduced motion: still, nothing more.
+// The whole figure, crisp and still (2026-11-14; it had been the game's tiny sprite of the head blown up - the face
+// smeared - low in its frame, breathing and looking round on a loop): the game's own figure drawn at as many px a world
+// px as fit it in the frame (people.js res; from 2 up, the close face of client/art2/peopleclose.js), one px a device px
+// - nothing scaled by the browser - centred, over a soft stepped light behind it. Now and then -
 import { decodeLook, lookArt } from '../shared/lookcore.js';
 import { person, POSES, MORE_POSES } from './art2/people.js';
 import { packGBuf } from './art2/gbuf.js';
@@ -65,49 +62,50 @@ const BEATS = [
 const W_SUM = BEATS.reduce((s, b) => s + b.w, 0);
 const pickBeat = () => { let r = Math.random() * W_SUM; for (const b of BEATS) { if ((r -= b.w) < 0) return b; } return BEATS[0]; };
 const GAP = [3500, 9000];   // ms of stillness between two idles (random in between)
-// what's drawn round the head's middle (world px: x0, y0, x1, y1): the head (a tall hat too), the shoulders and the
-// hands when they come up to it
-export const REGION = [-20, -20, 20, 22];
-// the crop: CROP world px a side (about the head and shoulders), at however many px a world px fill the frame's own
-// device px one for one - nothing scaled by the browser, nothing smeared (2-6 px a world px)
-const CROP = 30;
-export const resFor = (devPx) => Math.max(2, Math.min(6, Math.round(devPx / CROP)));
+// how many px a world px: as many whole ones as fit the figure (head to feet, a hat on it; figH: its height at the
+// game's size) in the frame's device px (a 56 px frame, 52 inside its edge: most looks 3 at 3x, 2 at 2x, 1 - the game's
+// own pixels - at 1x)
+export const resFor = (devPx, figH) => Math.max(1, Math.min(6, Math.floor((devPx - 2) / Math.max(20, figH - 1))));
 
 // ---- the frames, drawn close up once each (the still one at once, the rest in the quiet moments after) ---------------
 // (person() at res R with client/art2/peopleclose.js's face: the game's own figure R x R finer, the face drawn with
 // real eyes, brows, a nose and lips - the game's sprite blown up smears its few face pixels)
-const KEEP = new Map();   // look code + res -> { A, res, f: [{ w, h, ax, ay, px } per frame drawn], head: [cx, top] } (a few)
-function look(code, res) {
-  const key = `${code}@${res}`;
-  let R = KEEP.get(key);
-  if (R) return R;
-  const L = decodeLook(code);
-  if (!L) return null;
-  R = { A: lookArt(L, { code }), res, f: [] };
-  const d = frame(R, 0);
-  // the head: the figure's topmost rows (about a head's height), their middle - the crop is centred on it
-  let top = -1, sx = 0, n = 0;
-  for (let y = 0; y < d.h && (top < 0 || y < top + 9 * res); y++) {
-    for (let x = 0; x < d.w; x++) if (d.px[(y * d.w + x) * 4 + 3] > 0) { if (top < 0) top = y; sx += x; n++; }
+const KEEP = new Map();   // look code -> { A, h1, at: { res -> { A, res, f: [frames], box: [x0, y0, x1, y1] } } } (a few)
+function look(code, devPx) {
+  let K = KEEP.get(code);
+  if (!K) {
+    const L = decodeLook(code);
+    if (!L) return null;
+    K = { A: lookArt(L, { code }), at: {} };
+    const g = person(K.A, 0, PT, 0, { tight: true });   // (the game's size: how tall the figure stands)
+    K.h1 = g.h;
+    KEEP.set(code, K);
+    if (KEEP.size > 3) KEEP.delete(KEEP.keys().next().value);
   }
-  R.head = n ? [sx / n - d.ax, top - d.ay] : [0, -d.ay];
-  KEEP.set(key, R);
-  if (KEEP.size > 3) KEEP.delete(KEEP.keys().next().value);
+  const res = resFor(devPx, K.h1);
+  let R = K.at[res];
+  if (R) return R;
+  R = K.at[res] = { A: K.A, res, f: [] };
+  // the still frame's box round its anchor (the feet): the crop is centred on it
+  const d = frame(R, 0);
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) if (d.px[(y * d.w + x) * 4 + 3]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x + 1); y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1); }
+  R.box = x1 > x0 ? [x0 - d.ax, y0 - d.ay, x1 - d.ax, y1 - d.ay] : [-d.ax, -d.ay, d.w - d.ax, d.h - d.ay];
   return R;
 }
 function frame(R, i) {
   if (R.f[i]) return R.f[i];
-  const g = packGBuf(person(R.A, 0, PT, i, { tight: true, res: R.res, region: REGION, closeFace }));
+  const g = packGBuf(person(R.A, 0, PT, i, R.res > 1 ? { tight: true, res: R.res, closeFace } : { tight: true }));
   const F = { w: g.w, h: g.h, ax: g.ax, ay: g.ay, px: g.p0.slice(0, g.w * g.h * 4) };
-  if (BARE[i]) heldOver(R, F, i);
+  if (BARE[i] && R.res > 1) heldOver(R, F, i);
   return (R.f[i] = F);
 }
 // a frame of a look at res, as the card draws it: { w, h, ax, ay, px } (tests and tools)
-export function frameFor(code, res, i) { const R = look(code, res); return R ? frame(R, i) : null; }
+export function frameFor(code, devPx, i) { const R = look(code, devPx); return R ? frame(R, i) : null; }
 // the phone: people.js draws held things only at the game's size (its close renders show none), so it's taken from the
 // game-size figure - the pixels that change when the phone is in the hand - and laid over the close render, each px R x R
 function heldOver(R, F, i) {
-  const opt = { tight: true, region: REGION };
+  const opt = { tight: true };
   const a = packGBuf(person(R.A, 0, PT, i, opt)), b = packGBuf(person(R.A, 0, PT, BARE[i], opt)), r = R.res;
   for (let y = 0; y < a.h; y++) {
     for (let x = 0; x < a.w; x++) {
@@ -127,7 +125,7 @@ function heldOver(R, F, i) {
   }
 }
 
-// ---- the light behind the head: two soft steps of the card's navy, lighter toward the head ---------------------------
+// ---- the light behind the figure: two soft steps of the card's navy, lighter toward its middle --------------------------
 const BACK = [[34, 50, 94], [40, 57, 106], [47, 66, 118]];
 function backdrop(o, n, hx, hy) {
   for (let y = 0; y < n; y++) {
@@ -161,14 +159,14 @@ export function portrait(el, code) {
     if (!el.isConnected || !el.offsetParent) return false;
     // the frame inside its 2 px edge, in device px: the canvas that size, shown at its CSS size (one px a device px)
     const inner = Math.max(16, el.clientWidth - 4), dpr = Math.min(4, Math.max(1, window.devicePixelRatio || 1));
-    const n = Math.round(inner * dpr), R = look(code, resFor(n));
+    const n = Math.round(inner * dpr), R = look(code, n);
     if (!R) return false;
-    // the head's middle across, its top a little under the edge
-    const ox = Math.round(R.head[0] - n / 2), oy = Math.round(R.head[1] - n * 0.07);
+    // the figure's box (the still frame's) in the middle of the crop
+    const b = R.box, ox = Math.round((b[0] + b[2]) / 2 - n / 2), oy = Math.round((b[1] + b[3]) / 2 - n / 2);
     const key = `${n}`;
     if (sz !== key) { sz = key; cv.width = n; cv.height = n; cv.style.width = cv.style.height = n / dpr + 'px'; }
     const c2 = cv.getContext('2d'), d = frame(R, i), id = c2.createImageData(n, n), o = id.data;
-    backdrop(o, n, R.head[0] - ox, R.head[1] - oy + 7 * R.res);
+    backdrop(o, n, n / 2, n * 0.42);
     // the frame's pixels over it (lined up on the figure's anchor: every frame stands where the still one does)
     const x0 = -d.ax - ox, y0 = -d.ay - oy;
     for (let y = 0; y < d.h; y++) {

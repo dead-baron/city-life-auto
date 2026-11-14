@@ -23459,25 +23459,27 @@ three-tile kiosks too - got a neon OPEN in the window beside the door; on a kios
 was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
 (client/art2/buildings.js); the wider fronts keep theirs.
 
-## 2026-11-14 - Your character on the title card: close up and still
-The owner: the title card's avatar looked messed up (the game's tiny sprite magnified - the face smeared), sat low and
-off-centre in its frame, and breathed and looked round on an endless loop. client/portrait.js now:
-- **Draws you close up**: the game's own figure at 2-6 px a world px (people.js `res`) with the close face of
-  client/art2/peopleclose.js (real eyes, brows, a nose and lips; glasses, makeup and the rest), the resolution picked so
-  the canvas is the frame's own device px one for one - nothing scaled by the browser (a 56 px frame: 156 px at 3x, at 5
-  px a world px). peopleclose.js (4 KB, the game never loads it) comes with portrait.js, which the title loads only once
-  the card has a look to show.
-- **Frames it**: a square crop about 30 world px a side - the head (a tall hat too), the shoulders, the top of the chest
-  - centred across on the head, its top just under the frame's edge, over a soft light in two steps of the card's navy
-  behind the head.
+## 2026-11-14 - Your character on the title card: the whole figure, crisp and still
+The owner: the title card's avatar looked messed up (the game's tiny sprite of the head magnified - the face smeared),
+sat low and off-centre in its frame, and breathed and looked round on an endless loop; then: show the entire character,
+head to feet. client/portrait.js now:
+- **Draws the whole figure, crisp**: the game's own figure of your look at as many whole px a world px as fit it, head
+  to feet (a hat on it), in the frame's own device px - the canvas is shown one px a device px, nothing scaled by the
+  browser. A 56 px frame (52 inside its edge): most looks at 3 px a world px on a 3x phone, 2 at 2x, the game's own
+  pixels at 1x (a tall look or a tall hat a step smaller). From 2 up the face is the close face of
+  client/art2/peopleclose.js (eyes with their whites and irises, brows, a nose and lips; glasses, makeup and the rest),
+  which reads at that size; peopleclose.js (4 KB, the game never loads it) comes with portrait.js, which the title
+  loads only once the card has a look to show.
+- **Centred**: the still figure's box in the middle of the square, over a soft light in two steps of the card's navy.
 - **Holds still**, and now and then - after 3.5 to 9 s of stillness, at random, never a loop - plays one small idle and
   goes still again: a blink (or two), a glance to one side and back (or both ways), a scratch of the head, a look at the
   phone. Each is a few frames of the card's own pose (`ptcard`, registered beside the game's poses the way
   client/art2/poses.js registers the emotes), shown in turn like the emotes' held beats. The frames are drawn once each:
   the still one at once, the rest one at a time in idle moments after (10-40 ms each), so an idle never waits on them.
-  Nothing plays while the tab is hidden or the card isn't on screen. Reduced motion: still, no idles.
-- **The phone**: people.js draws held things only at the game's size (its close renders show none), so the phone is
-  taken from the game-size figure - the pixels that change with the phone in the hand - and laid over the close render.
-- Tests: test/portrait.test.js (the close render, the resolution per frame size, each idle its own frame, the phone in
-  the hand, no loop, reduced motion). Before / after of eight looks and a strip of the idles: the session's scratchpad
-  `logo2/owner/`.
+  Nothing plays while the tab is hidden or the card isn't on screen; it's drawn as soon as the card shows, and again
+  when the frame changes size. Reduced motion: still, no idles.
+- **The phone**: people.js draws held things only at the game's size (its finer renders show none), so the phone is
+  taken from the game-size figure - the pixels that change with the phone in the hand - and laid over the finer one.
+- Tests: test/portrait.test.js (the resolution per frame size, head to feet within the frame, each idle its own frame,
+  the phone in the hand, no loop, reduced motion). Before / after of eight looks and a strip of the idles: the session's
+  scratchpad `logo2/owner/`.
