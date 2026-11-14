@@ -196,3 +196,11 @@ test('the aim stick and FIRE in a real page: the stick aims without firing, its 
   assert.ok(!(r.tapAfter.bits & IN.FIRE), 'and stops');
   assert.equal(r.tapNone.bits & (IN.FIRE | IN.AIMING), IN.FIRE, 'nobody about: it fires where you face');
 });
+
+test('a surf break nearby is not surfing: the board buttons only once you are on it (me.surf.st)', () => {
+  // (the server sends me.surf whenever a break is near, to draw the waves: on the beach's park the owner got AIR and ACT
+  // in place of the foot buttons - 11-14)
+  const src = readFileSync(new URL('../client/touchslots.js', import.meta.url), 'utf8');
+  assert.match(src, /surf: !!\(me\.surf && me\.surf\.st\)/);
+  assert.equal(touchState({ surf: false }), 'foot');
+});

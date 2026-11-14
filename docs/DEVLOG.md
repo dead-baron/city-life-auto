@@ -23248,3 +23248,14 @@ button on a desktop; on a pad, hold a bumper for a quick radial and still a way 
   README rows. Tests: emotes (balloons and log by the server, lasting poses, the Zzz, Dances, typing, bubbles' `bb`,
   the poses' frames), chatui (balloons, the skull's give-way, typing dots, tabs, the pad keyboard and radial), hub,
   hudlayout and uikit (the nav row's fifth button).
+
+## 2026-11-14 - Touch buttons: a surf break nearby is not surfing
+The owner, on a phone in the park by a beach: the round-two buttons were gone - AIR, ACT and the vehicle button in place
+of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near (so the page can draw the waves), and
+the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
+(`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
+
+## 2026-11-14 - The bounty chip says it's on you
+The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
+Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
+"Bounty $2,500 on you · 9 min" (client/hudinfo.js).
