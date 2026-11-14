@@ -17,7 +17,7 @@
 //     ({ t: 'dscene' }) and their page flies the same camera (client/director.js).
 import { K, DT, TILE, DAY_LOOP_S, DAY_PART_S, WEATHER, T } from '../../shared/constants.js';
 import { DIRECTOR } from '../../shared/rules.js';
-import { CHAT } from '../../shared/chatdefs.js';
+import { CHAT, emoteWire } from '../../shared/chatdefs.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/mapcore.js';
 import { blastSize } from '../../shared/explosions.js';
@@ -722,7 +722,7 @@ function stepBeat(world, run, B) {
 function say(world, run, e, text) {
   if (!alive(e)) return;
   if (e.asPlayer) {
-    const out = { t: 'chat', ch: 'near', n: e.asPlayer.name, id: `actor${hash(e.asPlayer.name).toString(16)}`, eid: e.id, text: String(text).slice(0, CHAT.maxLen), at: Date.now() };
+    const out = { t: 'chat', ch: 'near', n: e.asPlayer.name, id: `actor${hash(e.asPlayer.name).toString(16)}`, eid: e.id, text: String(text).slice(0, CHAT.maxLen), at: Date.now(), bb: 1 };   // (bb: a speech bubble - a scene's line is short)
     for (const p of world.players.values()) if (p.conn && p.ped && Math.hypot(p.ped.x - e.x, p.ped.y - e.y) <= CHAT.nearM * TILE * 2 + (p.dirCam ? 2000 : 0)) p.conn.sendJSON(out);
     return;
   }
@@ -731,8 +731,9 @@ function say(world, run, e, text) {
 function emote(world, run, e, id) {
   if (!alive(e)) return;
   if (emoteSys && emoteSys.play) { try { emoteSys.play(world, { ped: e }, id); } catch (err) { world.reportError('director emote', err); } }
-  if (e.asPlayer) {
-    const out = { t: 'emote', eid: e.id, e: id, n: e.asPlayer.name, id: `actor${hash(e.asPlayer.name).toString(16)}` };
+  const w = emoteWire(id);   // (its balloon, its log line - none for the rest: the body says it)
+  if (e.asPlayer && w && (w.b || w.lg)) {
+    const out = { t: 'emote', eid: e.id, e: id, n: e.asPlayer.name, id: `actor${hash(e.asPlayer.name).toString(16)}`, ...w };
     for (const p of world.players.values()) if (p.conn && p.ped && Math.hypot(p.ped.x - e.x, p.ped.y - e.y) <= CHAT.nearM * TILE * 2 + (p.dirCam ? 2000 : 0)) p.conn.sendJSON(out);
   }
 }

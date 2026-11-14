@@ -418,6 +418,7 @@ async function handle(msg) {
     const { kind, key, a } = args;
     if (P.actors && P.actors.needsArt && P.actors.needsArt(kind, a)) await P.actors.loadArt();   // (the newer art, the first time it's wanted: actors.js artFrom)
     if ((kind === 'air' || kind === 'airRotor') && !AIR.m && AIR.url) AIR.m = await import(AIR.url);
+    if (kind === 'ped' && P.peds && P.peds.loadPoses && /^em/.test(a[1]) && !P.peds.isEmote(a[1])) await P.peds.loadPoses();   // (the round-2 emotes' poses, the first time one's wanted here: art2/poses.js)
     const fn = kind === 'ped' ? P.peds && P.peds.pedSprite : (P.actors && P.actors.SPRITES && P.actors.SPRITES[kind]) || (SPRITE_FN[kind] && SPRITE_FN[kind]());
     if (!fn) throw new Error(`no provider for ${kind} sprites`);
     const g = key ? sprCache.get(key, () => fn(...a)) : fn(...a);

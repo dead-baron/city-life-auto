@@ -154,6 +154,7 @@ Object.assign(GAITS2, {
 // - a wave, both arms up, a laugh shaking the body, a thumbs up, a point, a shrug, a clap, a facepalm, a salute, a bow,
 // a stomp with the fists down. (Dance plays the dance button's dance: no pose here.)
 Object.assign(POSES, { emwave: 4, emcheer: 4, emlaugh: 4, emthumbs: 4, empoint: 4, emshrug: 4, emclap: 4, emfacepalm: 4, emsalute: 4, emsorry: 4, emangry: 4 });
+export const EMOTE_ONCE = new Set();   // (played through once and held on the last frame - a faceplant: poses.js)
 export const EMOTE_FPS = { emwave: 5, emcheer: 4, emlaugh: 6, emthumbs: 3, empoint: 3, emshrug: 3, emclap: 6, emfacepalm: 2.5, emsalute: 2.5, emsorry: 2.5, emangry: 5 };
 const emBase = (P) => { P.acc = false; P.splay = 0.18; };
 const HEAD = (S, x, y, z) => vadd(S.head, mv(S.SP, [x, y, z]));                     // a hand by the head (x right, y forward)
