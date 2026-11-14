@@ -1,7 +1,7 @@
 // Emotes on the page (the owner, 2026-11-13; round 2 the same day: "emotes are body animations first" - our own pixel
 // balloons, not Unicode emoji). Loaded with chat (client/chat.js creates it), never in the page's first load.
 // - the balloons: 16x16 SNES-RPG emotion balloons in the game's palette (BALLOONS: a heart, !, ?, the anger vein, a
-//   sweat drop, HAHA, Zzz, a light bulb - drawn here pixel by pixel after the Kenney Emotes Pack's pixel style, CC0,
+//   sweat drop, HAHA, Zzz, a light bulb; 11-14 a waving hand, a thumbs up and a beckoning hand for the gestures - drawn here pixel by pixel after the Kenney Emotes Pack's pixel style, CC0,
 //   www.kenney.nl; credited in client/emotes-LICENSE.txt), shown 2x, crisp. Over the head of whoever emoted, for an emote
 //   that has one (the server says which: the message's b) - it pops up and settles in place (a scale bounce, two px up
 //   at most), holds, blinks out, CHAT.balloonS in all. Meanwhile the bounty skull there gives way (balloonOn: main.js).
@@ -26,7 +26,8 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // ---- the balloons' pixels ---------------------------------------------------------------------------------------------
 // The game's palette (client/style.css tokens: --pad-ink, --pad-cream, --pad-hp, --red-d, --pad-ar, --info-hi, --pad-x,
 // --navy3, --pad-gold, --gold-hi, --gold-d, --grey, --grey-d; the balloon's lower edge a shade of the cream)
-const C = { k: '#0b1020', w: '#f4ecd8', s: '#cdbf9e', r: '#e8434b', h: '#ff9585', d: '#8f2a22', b: '#4aa8ff', l: '#9ad2ff', x: '#2f6fd8', n: '#22325e', g: '#f6c945', y: '#f4d98a', o: '#a8862e', t: '#5d6478', u: '#2c3244' };
+const C = { k: '#0b1020', w: '#f4ecd8', s: '#cdbf9e', r: '#e8434b', h: '#ff9585', d: '#8f2a22', b: '#4aa8ff', l: '#9ad2ff', x: '#2f6fd8', n: '#22325e', g: '#f6c945', y: '#f4d98a', o: '#a8862e', t: '#5d6478', u: '#2c3244', p: '#f2b98a', q: '#c47e52' };
+// (p, q: a hand's skin and its shade - the gesture balloons: wave, thumbs up, come here)
 // the balloon: an inked outline, the cream face, its lower edge in shade, the tail down to the head (the icon goes in
 // rows 2-11, columns 2-13)
 const SHELL = [
@@ -41,6 +42,9 @@ const ICONS = {
   sweat: ['......b.....', '.....bb.....', '.....blb....', '....bllbb...', '....blbbb...', '...bbbbbbx..', '...bbbbbbx..', '....bbbbx...', '.....xxx....', '............'],
   haha: ['..k.k.kkk...', '..kkk.k.k...', '..k.k.kkk...', '..k.k.k.k...', '............', '....k.k.kkk.', '....kkk.k.k.', '....k.k.kkk.', '....k.k.k.k.', '............'],
   zzz: ['......nnnnn.', '.........n..', '........n...', '.......n....', '......nnnnn.', '.nnnn.......', '...n........', '..n.........', '.nnnn.......', '............'],
+  wave: ['....k.k.k...', '...kpkpkpk..', '.b.kpkpkpk.b', 'b..kpppppkkk', 'b..kpppppkpk', 'b..kppppppk.', '.b.kqpppppkb', '...kqqpppk..', '....kkkkk...', '............'],
+  thumbs: ['.....kk.....', '....kpk.....', '....kpk.....', '...kppkkkk..', '.kkkppppppk.', '.kpkpkkkkk..', '.kpkppppppk.', '.kpkpkkkkk..', '.kqkqqqqqk..', '..k.kkkkk...'],
+  beckon: ['.....kkk....', '....kpppk...', '....kpkkpk..', 'b....k..kpk.', '.b.kkkkkkpk.', 'b.kppppppk..', '..kpkkkkk...', '..kppppppk..', '..kqqqqqk...', '...kkkkk....'],
   idea: ['....gggg....', '...gyygggo..', '..gyyggggo..', '..gyggggggo.', '..gggggggo..', '...ggggggo..', '....gggo....', '....tttt....', '....uuuu....', '.....tt.....'],
 };
 function paint(g, rows, ox, oy) {

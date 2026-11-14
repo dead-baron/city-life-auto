@@ -23298,11 +23298,87 @@ button on a desktop; on a pad, hold a bumper for a quick radial and still a way 
   the poses' frames), chatui (balloons, the skull's give-way, typing dots, tabs, the pad keyboard and radial), hub,
   hudlayout and uikit (the nav row's fifth button).
 
+## 2026-11-14 - Your own character on the menu; every look option reads at street size
+
+The owner (2026-11-13): the menu's player icon was the same picture for everyone, and customization barely showed -
+glasses hard to tell apart, noses, eyes and face options making little difference. "The character system generally
+looks good": nothing restyled, each option made to show.
+
+- **Your character on the title card** (client/portrait.js, new, lazy): the card's avatar (index.html `#t-card .t-av`)
+  draws the game's own sprite of your look - head and shoulders, front on, breathing with the idle - in place of the
+  generic user icon, a whole number of CSS px an art pixel. client/titlescreen.js loads it the first time the card has
+  a look (`S.looks.cur`) and redraws when the look changes (the creator's Done, a shop, a barber). It brings
+  client/art2/people.js early, the module the game loads anyway once the city is in. The page's own code is unchanged
+  in files (83) and grew 0.15 KB.
+- **Glasses** (client/art2/people.js `face`, `GLS`): each kind is a stamp of art pixels round each eye instead of a
+  band across the eye row - two lenses with a glint on the left one and the lens hanging below (sunglasses), gold
+  teardrops (aviators: `f: 'avi'`), a wraparound blue band (sport shades: `'wrap'`), rings round the eye (round),
+  corners round it (square frames; big frames the full box), a thick top with gold wire (browline), glints only
+  (rimless), a lens line under the eye (reading glasses: `'half'`), coloured lenses in rings (round and tinted
+  shades), a 3-row band (ski goggles), the monocle's ring and chain, a 2 x 2 eye patch, the party mask round open
+  eyes. The arms run back to the ears when the head turns. Frames and lenses keep a step from the skin under them
+  (dark frames lighten on dark skin, gold darkens on tan). shared/lookcore.js `lookArt` passes the new `glassForm`.
+- **Eyes, brows, nose, lips, face shape** (`EYE_ST`, `BROW_ST`, `NOSE_ST`, `LIP_ST`, `SHAPE_ST`): narrow is a dark
+  squint, big the white and the lashes, hooded the lid's shadow, sleepy a heavy drooping lid; brows thick, thin,
+  arched, straight or bushy over them (natural unmarked, as before); the nose a shade under the eyes - straight a
+  pixel, small none, button lit and shaded, wide two, long two down, hooked a lit bridge over a dark tip; lips thin
+  (a dark line), full (two), wide (three), bow (a lit middle), small (a faint dot); a square jaw's corners and a
+  heart's or a diamond's cheekbones. The same stamps draw every NPC, so the city's people got the same faces and
+  glasses (their 'sun' and 'round' with them).
+- **Hats** (people.js `wardrobe` W.hat / W.band / W.brim, `hatPrims`): a cap's logo and button in its trim colour (the
+  baseball cap's white, the snapback's gold), the peak a step darker than the crown; felt hats (fedora, cowboy, sun
+  hat, bowler, top hat) with a sheen and, when light, a near-black band (the Panama's, the cowboy's); the beanie's cuff
+  folded deeper; earmuffs out past the hair; the bridal veil over the crown with the hair kept, not a ring in the air.
+- **Budgets**: the renderer at 409.9 of 410 KB (from 409.7) - the new stamps are tables of short strings; the
+  people.js catalogue comments (the skate, surf, cart, busker, wilds, activity and cell notes) were condensed to pay
+  for them. The art hash changes (people.js and lookcore.js are in the bake's code); the carry-over keeps every chunk that
+  bakes the same byte for byte, so only chunks with people drawn in them change.
+- Guide: Property > "Your look" (where you change it, that the title card shows it, that every option shows).
+- Before/after sheets (each glasses, hat, eye, brow, nose and lip option, man and woman, at the game's zoom and
+  magnified as the creator shows them), the creator's grids, the title card and a street of NPCs: the session's
+  scratchpad `chars/owner/`.
+
 ## 2026-11-14 - Touch buttons: a surf break nearby is not surfing
 The owner, on a phone in the park by a beach: the round-two buttons were gone - AIR, ACT and the vehicle button in place
 of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near (so the page can draw the waves), and
 the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
 (`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
+
+## 2026-11-14 - Poses round 3: easing in and out, idles that fidget, a faceplant that lands on the face, gesture balloons
+The owner, 11-14: "faceplant doesn't actually fall face first onto ground. Would be cool to see them animate into those
+poses instead of pop into them. And then have a subtle idle to it ... not a super repetitive loop just kind of subtle and
+random. Some emotes like wave could still have a [waving hand] with it."
+
+- **The bug behind "doesn't fall"**: game/peds.js `PED_POSES` is a copy of people.js `POSES` taken when the renderer
+  loads, and round 2's poses (art2/poses.js, loaded later) were never in it - so every round-2 pose was keyed as a
+  one-frame pose and whichever frame was drawn first stuck (a faceplant hung at its first, tipping frame). `loadPoses`
+  now copies them in once the module is in.
+- **All the emotes' frames live in art2/poses.js** (the eleven gestures moved out of dances.js, which only keeps the
+  `EMOTE_FPS` registry: the renderer lost 1.3 KB). Each pose has its frames and a timing (`SEQ`): the way in, then a loop
+  (a gesture), or a held frame with beats (a lasting pose), and the way out. host.js asks `emoteAt(p, pose, now)` for the
+  pose and frame - one call; the rest is in the lazily loaded module. At most eight frames a pose (host.js warms them all).
+- **The way in**: sitting down (a squat, then down onto the hands), lying back (sat, on the elbows, flat - lying down
+  now puts the head where the back was, not where the face was), sleep the same then over onto the side, kneeling,
+  crouching, the phone coming up, a gesture's arm on its way up (the in-between frames are blends of standing and the
+  pose: poses.js `blend`). **The way out**: the same frames backwards when you walk off or the time's up (a faceplant
+  pushes itself up off the ground); knocked down, a dive - no getting up first. Moving starts at once as before (the
+  server doesn't wait for it): you get up in the first steps.
+- **Idles that aren't a loop** (the lasting poses): small beats now and then - a breath, a glance, the thumb swiping and
+  tapping on the phone, the weight shifted onto one leg, a scratch of the head, the arms round the knees, the head turned
+  lying down, the ankles crossed, the foot tapping on the wall, a hand to the chin, a hand down to the ground crouched,
+  curling up asleep. Which beat and when is a hash of the ped's id and the time since the pose began (slots of 1.2-2.2 s,
+  a beat in about half of them): the same for everyone who saw it start, different for each person, never periodic.
+- **Faceplant**: stiff as a board, over from the feet with the arms flung back, then pinned at the sides (nothing breaks
+  the fall), a smack with the legs bouncing up, flat on the face; now and then a foot twitches or a weak hand comes up
+  ("I'm OK"). 3.5 s (was 3).
+- **Poses that read better at game size**: the crouch deeper, knees wide, forearms on the knees; the kneel with the front
+  knee out where it shows; air guitar wider with the neck hand further out; come here with the hand pulled right back to
+  the chest; the watch raised to the face; the shrug wider; the thumbs up held higher.
+- **Gesture balloons** (client/emotes.js, the round-2 balloons' style, 12x10 icons): a waving hand for Wave, a thumbs
+  up for Thumbs up, a beckoning hand for Come here, and the ? for Shrug - a symbol where it adds meaning at game size; the
+  rest stay body-only. Two skin tones joined the balloon palette for the hands.
+- The Guide's Emotes entry says you ease in and out and fidget. Tests: emotes (the frames keyed apart, the way in, the
+  faceplant, beats not periodic and the same for every viewer, the way out and what cuts it, the new balloons).
 
 ## 2026-11-14 - The bounty chip says it's on you
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
@@ -23381,3 +23457,77 @@ at 1 star 2 -> 10, at 2 stars 2 -> 9, at 3 stars 2 -> 2; every 1-2 star rider wh
 2 and 2 -> 3). Tests: struggle.test.js (as a phone sends it; the head start and resisting), custody.test.js (the
 button all the ride, braced, a 2-star escape stays on 2, escapeStars), arrests / law / guide updated where they pinned
 the old numbers (holding no longer worse than mashing at 1 star; the button "in a moment" between tries).
+
+## 2026-11-14 - The neon logo: the title's sign switches on
+The owner's new logo replaces the old one everywhere: a neon sign in four lit layers (the skyline, "City Life", the
+swoosh, "Auto") over the same sign switched off, and a one-line wordmark for small places.
+- **The title's entrance** (client/titlelogo.js, played by client/splash.js once per page load, after the studio sting
+  or straight away on a reload): the sign steps in switched off, then the skyline, "City Life", the swoosh and "Auto"
+  buzz on in turn, each with a short irregular flicker (a few blips, not always at full, then on for good) and a
+  quiet hum and starter click - its own few oscillators, since the game's sound loads only on the first tap; silent
+  until the page may play sound (skipping the sting counts as the tap) and with the sound off in Settings, scaled by
+  the master and effects sliders. About 2.4 s. Then it idles: the glow breathes softly and now and then one layer gives
+  a tiny flicker. Any tap, click, key or pad button skips to lit. Reduced motion: lit at once, no flicker, no idle.
+  Automated browsers and `?nosplash` get it lit; `?neon` plays it there, `?neon=<ms>` holds a moment (captures).
+- **Light on the page**: everything that moves is opacity (the compositor's work - nothing repainted while it
+  flickers or breathes); each tube's glow is a drop-shadow in its own colour on its layer, the old drop-shadow on the
+  whole logo moved to the switched-off sign so the group is never re-filtered.
+- **Small places**: the pause header uses the one-line wordmark (the stacked logo's script blurs under about 200 px),
+  sized to clear the close button. The title's logo is wider than the old one for its height, so on a desktop it's
+  sized 46vh (was 38vh) to keep its height.
+- **The assets** (tools/build_logo.py, from the owner's files): each layer cropped to its own content box (alpha
+  under 16, the source's matte haze, dropped), shrunk once with Lanczos to the largest size drawn (the logo 620 CSS px
+  wide at 2x = 1240 px; the wordmark 340 at 2x = 680) and put back on a 32-colour palette with no dither, so the edges
+  are hard steps again; lossless WebP won over PNG for every one. assets/logo/: unlit.webp 37 KB, city 36, auto 10,
+  swoosh 4, sky 4 (the lit layers 53 KB), oneline.webp 13 KB. The old assets/logo.png (56 KB) is gone (and
+  tools/build_art.py no longer makes it).
+- **Budgets**: the switched-off sign and the wordmark are in the page's HTML: the title's assets 264 -> 259 KB (budget
+  290). The lit layers are fetched by client/titlelogo.js as the page starts, after the first paint - the intro starts
+  on the switched-off sign and waits for them. The page's code is unchanged (splash.js and titlelogo.js load beside
+  boot.js, not from it).
+- **The share card**: assets/og-card.png (1200 x 630, 551 KB), the lit logo with its glow over in-game night streets,
+  blurred and darkened; index.html gets og:type, og:title, og:description, og:url, og:image (+ size and alt) and
+  twitter:card summary_large_image beside its existing description.
+- Screenshots (the intro's frame strip, the title lit on a phone upright, on its side and on a desktop, the pause
+  header on each, the share card): the session's scratchpad `titlelogo/owner/`.
+
+## 2026-11-14 - The director's scenes start clean, and what they bring is where it belongs
+A visual QA sweep of the cinematic mode's staged scenes (F4 panel; client/director.js `SCENES`) and the director's
+scenes (server/systems/director.js, shared/scenes/) while the owner films them. What was wrong, and what changed:
+- **"Jet ski at the race start"** went to the nearest water race - the kayaks' Redwood River Run. It now goes to a jet
+  ski race (the debug menu's `near` kinds `jetskirace` and `boatrace`) and, with `ride`, puts you on the race's own
+  jet ski just behind its start buoy, its nose on the course. (The Pelican Key sprint's start is further out than any
+  shore the old "open ground by it" search reached: it said "Couldn't find open ground".)
+- **The speedboat on a park lawn**: the debug menu's `car` fell back to "beside you" when no water was within a few car
+  lengths. A boat is now always put on open water, its whole hull (out to 50 tiles), nose away from you - the
+  speedboat scene, and any boat from the debug menu.
+- **The police helicopter among the parked ambulances**: the nearest helipad was a hospital's. The scene goes to the
+  police headquarters' pad (`near` kind `policepad`), and `car` with `on: 'pad'` puts an aircraft on the nearest
+  ground helipad - not beside it, where the helicopter scene's had been. What the world parked on that pad (aircraft.js:
+  the headquarters' own police helicopter) makes way for yours; anyone's own vehicle keeps its pad.
+- **Every scene starts clean** from wherever the last left you: the debug menu's `afoot`, which every staged scene
+  sends first (and the debug menu's Director scenes now run too), takes you out of a home (and its lobby), off a train,
+  up out of the sewers or a cave, out of the vehicle, onto open ground; ends your job and your wanted level; and stops
+  a director scene playing on your camera. "At home" and "Riding the subway" had left you where the next teleport was
+  refused ("Step outside first"), or standing wherever the train was - over its tunnel, inside a building's walls. It's the server's `afoot`, so pages already loaded get it too.
+- **The scenes that hadn't been reviewed**, checked in code and on the World v3 map: "Police chase downtown", "A tank on
+  the boulevard", "Motorcycle through the peaks" and "On patrol" put their vehicle on the nearest street now (`on:
+  'road'`: the kerb lane on your side, facing the way its traffic goes, its whole width on the road) - before, clear
+  ground beside you: a plaza, a lawn. "A plane takes off" puts the plane at the foot of the runway, nose along it (it
+  was beside it, facing east). "Crop dusting" starts at a duster's strip (`near` kind `duststrip`), the duster on it,
+  not in a field. "Tow truck" starts in Midtown (it had taken the kerb nearest wherever the last scene ended). The
+  director's road scenes (the autoplay chase, race and helicopter pursuit) drive on to a point on the road (`far`: it
+  had been the nearest open ground - a shop's floor in the chase's case). Street race, armored truck, firefighting,
+  the mail train and the train rides set up right (the art not finishing in headless captures is the capture's speed).
+- Tests: test/world3scenes.test.js plays every staged scene one after another as the panel does (nothing tidied
+  between but the scene's own clean start) and checks what each brings you with the placement lint's new `spotWhy`
+  (tools/placementlint.mjs): a boat on open water, a road vehicle on the road, an aircraft on a pad or a runway; and
+  every director scene's cast on World v3 - road vehicles on the road, boats on water, aircraft up or on a pad, people
+  on open ground, a getaway's far point on the road. test/director.test.js: the clean start from a home, a train, a
+  job and three stars; a boat on the water.
+
+## 2026-11-14 - A shop's neon OPEN only where it fits
+The owner (the Harbor Marina's boat hire): "the open sign is partially cut off". Every mart-type front - the boat hires'
+three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
+was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
+(client/art2/buildings.js); the wider fronts keep theirs.

@@ -51,6 +51,7 @@ import * as revive from './systems/revive.js';
 import * as devplay from './devplay.js';
 import * as director from './systems/director.js';
 import { kerbFor } from './systems/kerbdrive.js';
+import { nearestEdge } from '../shared/roadcore.js';
 import { Z } from '../shared/citylayout.js';
 
 // make a live animal the pure white legend of its kind (dev: see one up close)
@@ -96,6 +97,7 @@ export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die',
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
 // closest one to the player and puts them on open ground beside it (inside, at the desk, for walk-ins).
 const WATER_RACES = { jetski: 'jetski', boat: 'speedboat', kayak: 'kayak' };   // (a water race's kind: the craft waiting at its start)
+const waterRaces = (m, kind = null) => (m.races || []).filter((r) => r.start && WATER_RACES[r.kind] && (!kind || r.kind === kind)).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: WATER_RACES[r.kind], race: r }));
 export const NEAR_KINDS = {
   records: (m) => (m.walkIns || []).flatMap((id) => (m.buildings[id] && m.buildings[id].walkIn ? m.buildings[id].walkIn.units : []).filter((u) => u.trade === 'records' && m.pois[u.poi]).map((u) => ({ x: m.pois[u.poi].x, y: m.pois[u.poi].y, name: m.pois[u.poi].label }))),   // (the record shops you walk into: music.js)
   firestation: (m) => firefighter.sitesOf(m).stations.map((q) => ({ x: q.x, y: q.y, name: q.name })),   // (the job card at a job's place: UI-3)
@@ -107,7 +109,11 @@ export const NEAR_KINDS = {
   platform: (m) => railStops(m, (s) => !s.under).map((s) => ({ x: s.platform.x, y: s.platform.y, name: s.name })),
   // (the water races only - the jetski sprint, the boat classic, the kayak runs: the owner, 10-16, "Boat race teleport lands
   // at the land raceway, not a water start" - the raceway's and the MX park's starts are races too; theirs: 'raceway')
-  race: (m) => (m.races || []).filter((r) => r.start && WATER_RACES[r.kind]).map((r) => ({ x: r.start.x, y: r.start.y, name: r.name || 'Race start', craft: WATER_RACES[r.kind] })),
+  race: (m) => waterRaces(m),
+  // (one craft's races only: the cinematic mode's "Jet ski at the race start" - 'race' alone took it to the nearest, the
+  // kayaks' River Run)
+  jetskirace: (m) => waterRaces(m, 'jetski'),
+  boatrace: (m) => waterRaces(m, 'boat'),
   venue: (m) => (m.venues || []).filter((v) => v.rect).map((v) => ({ x: v.rect.x + v.rect.w / 2, y: v.rect.y + v.rect.h + 24, name: v.name || v.kind })),
   nature: (m) => (m.natureSites || []).map((q) => ({ x: q.x, y: q.y, name: q.name || q.kind })),
   beaver: (m) => (m.beaverPonds || []).map((b) => ({ x: b.x + 160, y: b.y + 140, name: `${b.name || 'Heron Marsh'} beaver pond` })),
@@ -121,6 +127,10 @@ export const NEAR_KINDS = {
   // flying (shared/flight.js): the foot of each runway (the far end ahead, the way to take off), the helipads
   runway: (m) => (m.airports || []).map((A) => ({ x: A.runway.x + A.runway.w / 2, y: A.runway.y + A.runway.h - 120, name: `${A.name}'s runway` })),
   helipad: (m) => airfields(m).pads.filter((p) => !p.roof).map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
+  // (the crop dusters' strips by the fields: the duster's stand on its apron - World v3's world3-airstrips.js)
+  duststrip: (m) => airfields(m).aprons.filter((q) => q.duster).map((q) => ({ x: q.x, y: q.y + 60, name: `${q.name}'s duster stand` })),
+  // (the police headquarters' own pad: the nearest pad was a hospital's, among its parked ambulances)
+  policepad: (m) => airfields(m).pads.filter((p) => !p.roof && p.kind === 'police').map((p) => ({ x: p.x + 90, y: p.y, name: p.name })),
   skatespot: (m) => (m.skateSpots || []).map((q) => ({ x: (q.x + q.w / 2) * TILE, y: (q.y + q.h / 2) * TILE, name: q.name })),
   // (the owner, 10-16: "an option for each sport"; and the games that came since: tennis, the arcades, pool, the casinos,
   // street dice, a bank's vault - exact: right on the spot, not the open ground beside it)
@@ -277,7 +287,7 @@ function standAt(world, x, y, reach = 320, water = false) {
   for (let r = 16; r <= reach; r += 16) for (let k = 0, n = Math.max(16, Math.round(r / 10)); k < n; k++) { const a = (k / n) * Math.PI * 2, px = x + Math.cos(a) * r, py = y + Math.sin(a) * r; if (ok(px, py)) return { x: px, y: py }; }
   return null;
 }
-export function near(world, p, k) {
+export function near(world, p, k, opts = {}) {
   const ped = p.ped;
   if (!ped || ped.dead) return '[dev] Not while you\'re down.';
   const list = nearTargets(world.map, String(k || '').slice(0, 24));
@@ -285,18 +295,120 @@ export function near(world, p, k) {
   let best = null, bd = Infinity;
   for (const q of list) { const d = Math.hypot(q.x - ped.x, q.y - ped.y); if (d > 120 && d < bd) { bd = d; best = q; } } // (the next one along if you're already at one)
   best ||= list[0];
-  const at = best.exact ? { x: best.x, y: best.y } : standAt(world, best.x, best.y, best.craft ? 1800 : 320);   // (a race out on the water: the nearest shore; exact: right there)
+  // (opts.ride, a race's craft: you on it at the start line, its nose on the course - just behind the start buoy, not drawn
+  // over it; the start can be well out on the water, further than any shore: "Jet ski at the race start")
+  const def = best.craft ? VEHICLES[best.craft] : null, R = best.race, c0 = R && R.cps && R.cps[0];
+  const a0 = c0 ? Math.atan2(c0.y - R.start.y, c0.x - R.start.x) : 0;
+  let line = def && opts.ride && R ? { x: R.start.x - Math.cos(a0) * (def.L / 2 + 50), y: R.start.y - Math.sin(a0) * (def.L / 2 + 50), a: a0 } : null;
+  if (line && !hullWet(world.map, line.x, line.y, line.a, def)) { const q = standAt(world, R.start.x, R.start.y, 400, true); line = q ? { ...q, a: a0 } : null; }
+  const at = line ? { x: line.x, y: line.y } : best.exact ? { x: best.x, y: best.y } : standAt(world, best.x, best.y, best.craft ? 1800 : 320);   // (a race out on the water: the nearest shore; exact: right there)
   if (!at) return `[dev] Couldn't find open ground by ${best.name}.`;
   if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
   if (ped.vehId) return '[dev] Get out of the vehicle first.';
   ped.sub = false; ped.ug = 0; ped.x = at.x; ped.y = at.y; ped.lz = 0; ped.vx = 0; ped.vy = 0; p.teleportAt = world.time;
   if (best.give) p.profile.inventory[best.give] = Math.max(1, p.profile.inventory[best.give] || 0);   // (what the place needs: a surf break's board)
-  if (best.craft) { // and the right craft in the water beside you
-    const wat = standAt(world, at.x + Math.sign(best.x - at.x) * 40, at.y + Math.sign(best.y - at.y) * 40, 400, true);
-    if (wat) { const v = world.spawnVehicle(best.craft, wat.x, wat.y, Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid; }
+  if (best.craft) { // and the right craft in the water beside you (or under you: opts.ride)
+    const wat = line || standAt(world, at.x + Math.sign(best.x - at.x) * 40, at.y + Math.sign(best.y - at.y) * 40, 400, true);
+    if (wat) {
+      const v = world.spawnVehicle(best.craft, wat.x, wat.y, wat.a ?? Math.atan2(best.y - wat.y, best.x - wat.x), { npcOwned: false }); v.issuedTo = p.pid;
+      if (line) seatIn(p, v);
+    }
   }
   world.notify(p, `[dev] At ${best.name}.`, 'info');
   return null;
+}
+
+// A clean start (the debug menu's 'afoot': each of the cinematic mode's staged scenes, client/director.js, and the scene
+// director's, 'scene', start this way): wherever the last one left you - inside a home (its lobby too), aboard a train,
+// down in the sewers or a cave, at the controls of something (up in the air, out on the water) - out of it and on your
+// feet on open ground; no job, no wanted level, no scene of the director's on your camera. The scene after "At home" or
+// "Riding the subway" was refused ("Step outside first"), or stood you wherever the train was, when only the vehicle was
+// let go of.
+export function afoot(world, p) {
+  const ped = p.ped;
+  if (!ped || ped.dead) return;
+  for (let i = 0; i < 3 && ped.home; i++) homeinside.leave(world, p);   // (a flat's door opens onto its landing: then out of the lobby)
+  if (ped.home) { ped.home = null; p.homeMenu = null; if (p.conn) p.conn.sendJSON({ t: 'home', off: 1 }); }
+  if (ped.hidden && ped.inside != null) homes.leaveHome(world, p);
+  if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
+  if (ped.vehId) { const v = world.get(ped.vehId), k = v ? v.seats.indexOf(ped.id) : -1; if (k >= 0) v.seats[k] = 0; ped.vehId = 0; ped.seat = -1; ped.lz = 0; p.meDirty = true; }
+  ped.sky = null;
+  if (ped.ug || ped.sub) { ped.ug = 0; ped.sub = false; p.caveFind = null; p.teleportAt = world.time; underground.sendLayer(world, p); }
+  const t = world.map.tileAtPx(ped.x, ped.y);
+  if (PED_BLOCK[t] || world.map.isWater(ped.x, ped.y)) { const at = tpSpot(world.map, ped.x, ped.y); ped.x = at.x; ped.y = at.y; ped.lz = 0; p.teleportAt = world.time; }   // (out of a tunnel, off the water, down from the sky: the nearest open ground)
+  ped.vx = 0; ped.vy = 0;
+  if (world.place) world.place(ped);
+  if (p.job) jobs.failJob(world, p, 'Off the job - a new scene.');
+  if (p.wanted) law.clearWanted(world, p);
+  for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p))) director.end(world, r, 'stopped');
+  if (p.dirRun || p.dirCam) director.unwatch(world, p);
+}
+// you at the controls of v (the debug menu's vehicles)
+function seatIn(p, v) { const ped = p.ped; v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; ped.x = v.x; ped.y = v.y; ped.lz = v.lz || 0; p.lastVehicle = v.id; p.meDirty = true; }
+// every point of a hull at (x, y, a) on open water (WATER / DEEP), a little in from its edge
+function hullWet(m, x, y, a, def, pad = 8) {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  for (let s = -def.L / 2 - pad; s <= def.L / 2 + pad; s += 8) for (const w of [-def.W / 2 - pad, 0, def.W / 2 + pad]) {
+    const t = m.tileAtPx(x + ca * s - sa * w, y + sa * s + ca * w);
+    if (t !== T.WATER && t !== T.DEEP) return false;
+  }
+  return true;
+}
+// Where a vehicle the debug menu brings you goes (the cinematic mode's staged scenes: client/director.js - msg.on):
+//   a boat     always on open water, its whole hull (out to 50 tiles off): it was put on the lawn beside you when the
+//              water was more than a few car lengths away (the speedboat at the marina)
+//   'pad'      an aircraft on the nearest helipad on the ground (it was beside it) - the aircraft parked there for the
+//              world (aircraft.js: the police headquarters' helicopter on its pad) moved off it for yours
+//   'runway'   a plane at the foot of the nearest runway or airstrip, its nose along it
+//   'road'     on the nearest road, in the kerb lane on your side, facing the way that lane's traffic goes
+// else (or none of those near): clear ground beside you (cruiser.js clearSpot). Returns { x, y, a }.
+export function spawnSpot(world, ped, def, on = null) {
+  const m = world.map, free = (x, y, r) => !world.query(x, y, r, K.VEH).some((v) => !v.removed);
+  if (def.kind === 'boat') {
+    for (let r = 0; r <= 1600; r += 24) for (let k = 0, n = Math.max(1, Math.round(r / 12)); k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + (ped.a || 0), x = ped.x + Math.cos(a) * r, y = ped.y + Math.sin(a) * r, h = r ? a : ped.a || 0;
+      if (hullWet(m, x, y, h, def) && free(x, y, def.L)) return { x, y, a: h };   // (its nose away from you: out to the open water)
+    }
+  }
+  if (on === 'pad') {
+    // (what's only parked on a pad is taken off it - the world's own parked helicopter; anyone's own vehicle, or one with
+    // someone in it, keeps the pad: the next one then)
+    const parked = (v) => v.parked && !v.seats.some((q) => q) && !v.owner && !v.issuedTo && !v.rentedBy;
+    let best = null, bd = 1200;
+    for (const q of airfields(m).pads) {
+      const d = Math.hypot(q.x - ped.x, q.y - ped.y);
+      if (q.roof || d >= bd || world.query(q.x, q.y, 70, K.VEH).some((v) => !v.removed && !parked(v))) continue;
+      bd = d; best = q;
+    }
+    if (best) {
+      for (const v of world.query(best.x, best.y, 70, K.VEH)) if (!v.removed && parked(v)) world.remove(v);
+      return { x: best.x, y: best.y, a: -Math.PI / 2 };
+    }
+  }
+  if (on === 'runway') {
+    let best = null, bd = 2400;
+    for (const s of airfields(m).strips) {
+      if (s.taxi) continue;
+      const along = s.h >= s.w, q = along ? { x: s.x + s.w / 2, y: s.y + s.h - Math.max(120, def.L), a: -Math.PI / 2 } : { x: s.x + Math.max(120, def.L), y: s.y + s.h / 2, a: 0 };
+      const d = Math.hypot(q.x - ped.x, q.y - ped.y);
+      if (d < bd) { bd = d; best = q; }
+    }
+    if (best) return best;
+  }
+  if (on === 'road') {
+    const k = kerbFor(world, ped.x, ped.y);
+    if (k.e && Math.hypot(k.x - ped.x, k.y - ped.y) < 900) {
+      const ux = Math.cos(k.a), uy = Math.sin(k.a), c = nearestEdge(m, k.x, k.y, (e) => e === k.e) || k;   // (c: the road's middle there)
+      const side = (ped.x - c.x) * -uy + (ped.y - c.y) * ux, off = Math.sign(side || 1) * Math.max(0, Math.min(Math.abs(side), (k.e.hw || 24) - def.W / 2 - 8));
+      const a = k.e.oneway || side >= 0 ? k.a : k.a + Math.PI;   // (traffic keeps right: the lane on your side runs your way)
+      const x0 = c.x - uy * off, y0 = c.y + ux * off;   // (its whole width on the road, by the kerb)
+      for (const j of [0, 1, -1, 2, -2, 3, -3]) {   // (along the kerb past a parked car)
+        const x = x0 + ux * j * (def.L + 24), y = y0 + uy * j * (def.L + 24), t = m.tileAtPx(x, y);
+        if ((t === T.ROAD || t === T.BRIDGE) && free(x, y, def.L * 0.8)) return { x, y, a };
+      }
+    }
+  }
+  return clearSpot(world, ped, def);
 }
 
 // Debug homes (the owner, 2026-10-10: "a debug option to go to more homes, maybe a 'nearest' home option but also a 'next
@@ -529,7 +641,7 @@ function run(world, p, c, msg) {
       if (!world.weatherHold && world.weather === WEATHER.RAIN) world.rainUntil = world.time + 120;
       world.notify(p, world.weatherHold ? '[dev] Weather held: no change until you let it go.' : '[dev] Weather back to normal.', 'info'); break;
     case 'clockhold': world.clockHold = !world.clockHold; world.notify(p, world.clockHold ? '[dev] Clock frozen at this time of day.' : '[dev] Clock running again.', 'info'); break;
-    case 'near': { const err = near(world, p, msg.k); if (err) world.notify(p, err, 'warn'); break; }
+    case 'near': { const err = near(world, p, msg.k, { ride: !!msg.ride }); if (err) world.notify(p, err, 'warn'); break; }
     case 'home': { const err = devHome(world, p, msg); if (err) world.notify(p, err, 'warn'); break; }   // the debug homes: nearest, next, previous, any
     case 'wardrobe': if (p.conn) p.conn.sendJSON(looks.devWardrobe(world, p, msg)); else looks.devWardrobe(world, p, msg); break;   // the debug wardrobe: wear (or, n: save) a look, its pieces yours
     case 'ug': {   // straight down: the nearest manhole into the sewers, or (k: 'cave') in through the mine's adit
@@ -582,7 +694,11 @@ function run(world, p, c, msg) {
       law.clearWanted(world, p); prof.peakWanted = 0; prof.felonies = 0; prof.firedUntil = 0;
       prof.samaritan = Math.max(prof.samaritan, law.ENFORCER_MIN_SAMARITAN + 10);
       const err = p.badge ? null : law.goOnDuty(world, p);
-      if (!err && !(ped && ped.vehId && world.get(ped.vehId)?.cruiserOf === p.pid)) cruiser.issueNow(world, p);
+      const sp = msg.on && ped && !ped.vehId ? spawnSpot(world, ped, VEHICLES.police, String(msg.on)) : null;   // (msg.on 'road': the cruiser on the street, not the plaza - the staged scenes')
+      if (!err && !(ped && ped.vehId && world.get(ped.vehId)?.cruiserOf === p.pid)) {
+        const v = cruiser.issueNow(world, p);
+        if (v && sp && ped.vehId === v.id) { v.x = sp.x; v.y = sp.y; v.a = sp.a ?? v.a; v.vx = 0; v.vy = 0; world.place(v); ped.x = v.x; ped.y = v.y; world.place(ped); }
+      }
       world.notify(p, err ? `[dev] ${err}` : `[dev] On duty as ${law.POLICE_RANKS[law.policeRank(prof)].name}. Dispatch map: M / Start → Map / tap the radar.`, err ? 'bad' : 'good');
       break;
     }
@@ -612,7 +728,7 @@ function run(world, p, c, msg) {
       if (!ped) break;
       if (msg.in && (ped.home || ped.hidden)) { world.notify(p, '[dev] Step outside first.', 'warn'); break; }   // (from inside a home it seated the body in there at the controls out here - H69)
       const model = VEHICLES[msg.m] ? msg.m : 'pickup';
-      let sp = clearSpot(world, ped, VEHICLES[model]);
+      let sp = spawnSpot(world, ped, VEHICLES[model], msg.on ? String(msg.on) : null);   // (msg.on: 'road' | 'pad' | 'runway' - the staged scenes'; a boat always on the water)
       if ((ped.lz || 0) > 0.5) { // up on the deck: somewhere on the deck beside you
         sp = { x: ped.x, y: ped.y, a: ped.a };
         for (let k = 0; k < 16; k++) { const a = (k * Math.PI) / 8, x = ped.x + Math.cos(a) * 110, y = ped.y + Math.sin(a) * 110; if (surfaceZ(world.map, x, y, 1) !== null) { sp = { x, y, a: 0 }; break; } }
@@ -624,7 +740,7 @@ function run(world, p, c, msg) {
       // an aircraft already up (msg.alt px, flying: testing - shared/flight.js), and (msg.in) you at its controls
       if (VEHICLES[model].kind === 'air' && Number(msg.alt) > 0) { v.alt = Math.min(VEHICLES[model].ceiling, Number(msg.alt)); v.spool = 1; const sp0 = VEHICLES[model].air === 'plane' ? VEHICLES[model].stall * 1.6 : 0; v.vx = Math.cos(sp.a) * sp0; v.vy = Math.sin(sp.a) * sp0; }
       if (msg.in && ped.vehId) { const ov = world.get(ped.vehId), k = ov ? ov.seats.indexOf(ped.id) : -1; if (k >= 0) ov.seats[k] = 0; ped.vehId = 0; ped.seat = -1; }   // (out of whatever you were in)
-      if (msg.in && !ped.dead) { v.seats[0] = ped.id; ped.vehId = v.id; ped.seat = 0; ped.x = v.x; ped.y = v.y; p.lastVehicle = v.id; p.meDirty = true; }
+      if (msg.in && !ped.dead) seatIn(p, v);
       break;
     }
     case 'boom': { // a vehicle (msg.m, a sedan) blown up a little way off: msg.k 'launch' | 'pieces' | 'plain' picks how (task #363); msg.wh: a burning wheel comes off (task #412)
@@ -815,12 +931,7 @@ function run(world, p, c, msg) {
       break;
     }
     case 'rescue': devRescue(world, p, ped, String(msg.at || 'water')); break;   // tasks #409, #420
-    case 'afoot': {   // out of whatever you're in, on your feet where it is (the cinematic mode's scenes start this way: client/director.js)
-      if (!ped || ped.dead) break;
-      if (ped.onTrain) trains.alight(world, ped, ped.x, ped.y);
-      if (ped.vehId) { const v = world.get(ped.vehId), k = v ? v.seats.indexOf(ped.id) : -1; if (k >= 0) v.seats[k] = 0; ped.vehId = 0; ped.seat = -1; ped.lz = 0; p.meDirty = true; if (world.place) world.place(ped); }
-      break;
-    }
+    case 'afoot': afoot(world, p); break;   // a clean start: on your feet, out in the open (the cinematic mode's scenes start this way: client/director.js)
     case 'place': {   // a place by its name: World v3's handcrafted districts' places and sights (map.world3hand), a landmark, a district
       if (!ped || ped.dead) break;
       if (ped.vehId) { world.notify(p, '[dev] Get out of the vehicle first.', 'warn'); break; }
@@ -923,6 +1034,7 @@ function run(world, p, c, msg) {
       if (msg.k === 'stop') { for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p))) director.end(world, r, 'stopped'); director.unwatch(world, p); break; }
       if (msg.k === 'unwatch') { director.unwatch(world, p); break; }
       if (msg.k === 'list' || !msg.id) { world.notify(p, `[dev] Scenes: ${director.sceneList().map((q) => q.id).join(', ')}`, 'info'); break; }
+      if (msg.watch !== 0) afoot(world, p);   // (from wherever the last scene left you: out of the home, off the train, out of the vehicle)
       director.unwatch(world, p);
       const r = director.start(world, String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p });
       world.notify(p, r.err ? `[dev] ${r.err}` : `[dev] Scene: ${r.run.sc.n}.`, r.err ? 'warn' : 'info');

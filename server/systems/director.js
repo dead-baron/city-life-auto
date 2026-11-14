@@ -28,6 +28,7 @@ import { SCENES, SCENE_LIST, pointOf, camAt } from '../../shared/scenes/index.js
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, seek, footWay, startFight, onAttacked, onCarjacked } from './npc.js';
 import { planRoute, driveToward, joinTraffic } from './traffic.js';
+import { kerbFor } from './kerbdrive.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
 import * as vehicles from './vehicles.js';
@@ -193,8 +194,10 @@ export const PLACES = {
     if (!P) return null;
     const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || 5000, opt.avoid || null);
     if (!r) return null;
-    // where the getaway runs on to: a point well past the end, along the road net
-    const a = r.anchors.end.a, far = standAt(m, r.anchors.end.x + Math.cos(a) * (place.far || 2600), r.anchors.end.y + Math.sin(a) * (place.far || 2600), 30);
+    // where the getaway runs on to: a point well past the end, on the road net (it was the nearest open ground - a shop's
+    // floor, a lawn: a car driven on into it)
+    const a = r.anchors.end.a, fx = r.anchors.end.x + Math.cos(a) * (place.far || 2600), fy = r.anchors.end.y + Math.sin(a) * (place.far || 2600);
+    const k = kerbFor(world, fx, fy), far = k.e && Math.hypot(k.x - fx, k.y - fy) < 900 ? { x: k.x, y: k.y } : standAt(m, fx, fy, 30);
     return { ...r, anchors: { ...r.anchors, far: { ...far, a } }, clear: true };
   },
   // a place by its names (the Showcase's: client/showcase.js q - the first found, exactly, then one starting with it)

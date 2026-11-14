@@ -21,7 +21,7 @@
 // The look system (shared/look.js lookArt) adds: skin 0-15, age 0-5 (posture), face {shape, eyes, eyeColor, brows, nose,
 //   lips, freckles, mole, dimples}, makeup {kind, color}, tattoo (bits: 1 arms 2 legs 4 neck 8 chest 16 face), piercings
 //   (bits: 1 ears 2 nose 4 brow 8 lip), scar 1-5, top {inner, trim, sleeve, len, pattern: stripes check camo floral tiedye},
-//   bottom {len, trim}, shoeTrim, bootTall, hiTop, hat.plain, glasses 'goggles'|'patch'|'domino' (+ lens, glassColor),
+//   bottom {len, trim}, shoeTrim, bootTall, hiTop, hat.plain, glasses 'goggles'|'patch'|'domino' (+ lens, glassColor, glassForm avi wrap half),
 //   mask (+ maskTrim: a ski mask; a mask hides the hair), medmask, jewel {chain, choker, ear, watch, bangles, color}, chain
 //   (colour), bagColor, bagSmall, beltBag; more hair (undercut fade mullet topknot pixie twinbuns pigtails braid curlylong
 //   shag cornrows curtains halfup) and beards (long goatee moustache handlebar chinstrap chops soul vandyke).
@@ -1091,6 +1091,7 @@ function wardrobe(A, D, TF, seed) {
   };
   // hats
   const hatR = cloth(A.hat?.color || 'navy'), hk = A.hat?.kind;
+  const hatTrim = A.hat?.trim && A.hat.trim !== A.hat.color ? cloth(A.hat.trim) : null;
   const hatPat = A.hat?.pattern ? patFn({ pattern: A.hat.pattern, color: A.hat.color, trim: A.hat.trim }) : null;
   W.hat = (Q) => {
     if (Q.part === 'flower') { const i = Math.abs(Math.round(Q.X * 3 + Q.Y * 5)) % 3; return i === 0 ? hatR : i === 1 ? white : cloth('#f2c21b'); }
@@ -1101,17 +1102,21 @@ function wardrobe(A, D, TF, seed) {
     if (hk === 'moto' || hk === 'skatehelmet') Q.gloss = 0.7;
     if (hatPat) { const c = hatPat(Q); if (c) return c; }
     if (hk === 'trucker' && Q.part === 'crown' && Q.l1 > 0.45 && Q.l2 > 0.05) return white;
+    // (2026-11-14: hats that read at the game's size - a cap's logo in its trim on the front panel and its button, a felt
+    // hat's sheen and a dark band round a light one)
+    if (hk === 'cap' && hatTrim && (Q.part === 'button' || (Q.part === 'crown' && Q.l1 * (A.hat.back ? -1 : 1) > 0.7 && Math.abs(Q.l0) < 0.32 && Q.l2 > 0.1 && Q.l2 < 0.6))) return hatTrim;
+    if (FELT.has(hk) && Q.part === 'crown') Q.gloss = 0.4;
     if (hk === 'police' && Q.part === 'crown' && Q.l1 > 0.85 && Math.abs(Q.l0) < 0.16 && Q.l2 > -0.4) { Q.gloss = 1; return gold; }
     if (hk === 'hard' && Math.abs(Q.l0) < 0.12 && Q.part === 'crown') Q.k += 0.18;
-    if (hk === 'beanie' && Q.part === 'crown') { if (Q.l2 < 0.42) Q.k -= 0.18; if ((Math.round(Math.atan2(Q.l0, Q.l1) * 6) & 1)) Q.k -= 0.08; }
-    if ((hk === 'fedora' || hk === 'cowboy' || hk === 'sunhat') && Q.part === 'crown' && Q.l2 < 0.12) return dark(hatR);
+    if (hk === 'beanie' && Q.part === 'crown') { if (Q.l2 < 0.42) Q.k -= Q.l2 > 0.3 ? 0.36 : 0.18; if ((Math.round(Math.atan2(Q.l0, Q.l1) * 6) & 1)) Q.k -= 0.08; }
+    if ((hk === 'fedora' || hk === 'cowboy' || hk === 'sunhat') && Q.part === 'crown' && Q.l2 < 0.12) return W.band();
     if ((hk === 'fedora' || hk === 'cowboy') && Q.part === 'crown' && Q.l2 > 0.5 && Math.abs(Q.l0) < 0.15) Q.k -= 0.4;   // (the dent along the top)
     if (hk === 'helmet' && Q.part === 'crown' && Math.abs(Q.l2 - 0.1) < 0.07) Q.k -= 0.25;
     if (hk === 'hard' || hk === 'helmet' || hk === 'police') Q.gloss = 0.7;
     return hatR;
   };
-  W.band = () => (hk === 'police' ? (A.hat?.braid ? gold : black) : hk === 'sailor' || hk === 'tiara' || hk === 'earmuffs' || A.hat?.pom ? cloth(A.hat?.trim || 'navy') : hk === 'tophat' ? cloth(A.hat?.trim && A.hat.trim !== A.hat.color ? A.hat.trim : '#2a1a1e') : dark(hatR));
-  W.brim = (Q) => { if (hk === 'police') { Q.gloss = 1; return black; } return hatR; };
+  W.band = () => (FELT.has(hk) && lum(hatR[3]) > 0.4 ? cloth('#2a1a1e') : hk === 'police' ? (A.hat?.braid ? gold : black) : hk === 'sailor' || hk === 'tiara' || hk === 'earmuffs' || A.hat?.pom ? cloth(A.hat?.trim || 'navy') : hk === 'tophat' ? cloth(A.hat?.trim && A.hat.trim !== A.hat.color ? A.hat.trim : '#2a1a1e') : dark(hatR));
+  W.brim = (Q) => { if (hk === 'police') { Q.gloss = 1; return black; } if (hk === 'cap' || hk === 'visor' || hk === 'flatcap') Q.k -= 0.16; return hatR; };
   W.glass = (Q) => { Q.gloss = 1; Q.k -= 0.1; return cloth('#2a3442'); };
   W.skirt = (Q) => { const R = T.dress ? top : T.long ? top : bot, pf = R === top ? topPat : botPat; if (Q.l0 > 0.92) Q.k -= 0.16; if (pf) { const pr = pf(Q); if (pr) return pr; }
     if ((T.towel || bk === 'towel') && Math.abs(Q.l1 - 0.6) < 0.12 && Q.l2 > 0.2) Q.k -= 0.22;                      // the tucked-in corner
@@ -1245,7 +1250,7 @@ function hairPrims(E, C, A, D, P, S, W, at, hat, seed) {
   const ex = A.hair?.style || 'short';
   let st = BASE_HAIR[ex] || ex;
   if (A.mask || (A.fmask && (A.fmask.k === 'pig' || A.fmask.k === 'alien'))) return;   // a balaclava, a ski mask or a costume head hides the hair completely
-  const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears'].includes(hat);   // (a crown of flowers, a tiara, earmuffs or cat ears sit on the hair as it is)
+  const hatOn = hat && !['bandana', 'headband', 'visor', 'flowers', 'tiara', 'earmuffs', 'catears', 'veil'].includes(hat);   // (a crown of flowers, a tiara, earmuffs, cat ears or a veil sit on the hair as it is)
   if (hatOn) { if (st === 'afro' || st === 'spiky' || st === 'curly' || st === 'mohawk' || st === 'topknot' || st === 'twinbuns' || st === 'curtains' || st === 'shag') st = 'short'; if (['hood', 'helmet', 'hijab', 'turban', 'durag', 'wrap', 'moto', 'skatehelmet'].includes(hat)) return; }   // (all the hair under a hood, a helmet, a hijab, a turban, a durag or a wrap)
   if (st === 'bald') return;
   const hr = D.head, HD = S.HD;
@@ -1489,7 +1494,7 @@ function hatPrims(E, C, A, D, S, W, at, k) {
   } else if (k === 'paper') {   // the diner's paper hat: a folded garrison cap, front to back on top
     E(at([0, 0, 0.8]), HD, [hr[0] * 0.5, hr[1] * 1.02, 1.7], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.3);
   } else if (k === 'veil') {   // a bride's veil: back from a comb on the crown, down over the shoulders behind
-    E(at([0, -0.45, 0.35]), HD, [hr[0] + 0.9, hr[1] + 0.5, hr[2] + 0.6], GR.HAT, 'crown', W.hat, (a, b, c) => b < -0.1);
+    E(at([0, -0.45, 0.3]), HD, [hr[0] + 1.1, hr[1] + 0.8, hr[2] + 0.7], GR.HAT, 'crown', W.hat, (a, b, c) => b < 0.3 - c * 0.3);
     E(vadd(S.neck, mv(S.SP, [0, -1.6, -1.8])), S.SP, [D.shX * 0.75, 0.9, 3.8], GR.HAT, 'drape', W.hat);
   } else if (k === 'sailor') {   // a round white cap, a stripe round it, the brim turned up all round
     E(at([0, -0.05, 0.62]), HD, [hr[0] + 0.8, hr[1] + 0.8, hr[2] * 0.62], GR.HAT, 'crown', W.hat, (a, b, c) => c > -0.2);
@@ -1511,7 +1516,7 @@ function hatPrims(E, C, A, D, S, W, at, k) {
     E(at([0, 0.58, 0.88]), mmul(HD, rx(0.5)), [hr[0] * 0.62, 0.5, 1.5], GR.HAT, 'crown', W.hat);
     E(at([0, 0.72, 0.98]), HD, [0.8, 0.6, 0.8], GR.HAT, 'gem', W.band);
   } else if (k === 'earmuffs') {   // fluffy pads over the ears on a band over the top
-    for (const s of [-1, 1]) E(at([s * 1.0, -0.05, 0.0]), HD, [1.6, 2.0, 2.1], GR.HAT, 'muff', W.hat);
+    for (const s of [-1, 1]) E(at([s * 1.22, -0.05, -0.05]), HD, [2.1, 2.3, 2.4], GR.HAT, 'muff', W.hat);
     E(at([0, -0.05, 0.98]), HD, [hr[0] + 0.5, 0.75, 0.6], GR.HAT, 'band', W.band);
   } else if (k === 'catears') {   // two pointed ears on a band
     E(at([0, 0.0, 0.96]), HD, [hr[0] * 0.95, 0.6, 0.55], GR.HAT, 'band', W.hat);
@@ -1544,7 +1549,14 @@ function occluded(prims, skip, ox, oy, oz) {
   }
   return false;
 }
+const FELT = new Set(['fedora', 'cowboy', 'sunhat', 'bowler', 'tophat']);
 const EYE = [34, 22, 30], WHITE = [236, 230, 222], LASH = [34, 22, 26];
+// the face's stamps at the game's size (face() stamp: an art pixel each - dx outward then dy down as digits from -1, a colour key)
+const EYE_ST = ['11i', '11i10l', '11i21d', '11i10s20s', '11i10l21w', '11i10d21d'], BROW_ST = ['', '10h20h', '20m', '1/m20m', '10m20m', '10h20h1/h00h'];
+const NOSE_ST = ['11s', '', '11d01l', '01d11d', '11d10s', '11k10l'], LIP_ST = ['11a', '11t', '11a21a', '01a11a21a', '01c11b21c', '11c'], SHAPE_ST = ['', '', '23j', '', '22c', '22c23j'];
+const GLS = { sun: '11G01F21F12D', 'sun+': '00F10F20F02D22D', avi: '10H11G01F21F12D22D', wrap: '11G01L21L31F', round: '10F01F21F12F11E', half: '11E01F21F12F',
+  frames: '00F20F01F21F02F22F11E', 'frames+': '10F12F', browline: '00F10F20F21T12T11E', rimless: '11E21W01W', roundsun: '10F01F21F12F11G',
+  goggles: '00F10F20F01L11G21L31F02F12F22F', swim: '01F11G21F', safety: '00F10F20F01C11E21C', monocle: '10F01F21F12F11G22F23F', patch: '10F11F21F12F', domino: '01F21F31F10F20F12F11K' };
 export const CLOSE = { SA, CA, NOSE, WHITE, LASH, hexRgb, lum };   // (for client/art2/peopleclose.js)
 function render(fig, P, S, X, D, A, opt) {
   const prims = fig.prims;
@@ -1808,52 +1820,54 @@ function face(fig, P, A, D, w, h, AX, AY) {
   if (iris) for (let k = 0.8; k > 0.25; k -= 0.1) { eyeC = iris.map((v, i) => Math.round(EYE[i] + (v - EYE[i]) * k)); if (far(eyeC)) break; }
   const lit = (cc, k) => cc.map((v) => Math.min(255, Math.round(v + (255 - v) * k)));
   const cx0 = at(0, 1, 0).x, outOf = (e) => (e.p.x < cx0 ? -1 : 1);   // (the side of the face an eye is on)
+  // (2026-11-14: every option reads at the game's size) stamps of art pixels round a point (the *_ST tables)
+  const e0 = eyes[0] && eyes[0].p, mixC = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  const stamp = (q, s, K, o = 1, dy = 0) => { for (let i = 0; i < s.length; i += 3) put(q, K[s[i + 2]], (s.charCodeAt(i) - 49) * o, s.charCodeAt(i + 1) - 49 + dy); };
+  // the nose under the eyes, its shadow to the right (the light's from the left): straight, small, button, wide, long, hooked
+  const covered0 = A.mask || A.bandana || A.medmask || fm;
+  if (e0 && !covered0) {
+    const an = near * turn * 0.3, n = at(Math.sin(an), Math.cos(an), -0.2);
+    stamp({ bx: n.bx, by: e0.by + 2 }, NOSE_ST[F.nose | 0], { s: skin[2], d: skin[1], k: skin[0], l: lit(skin[3], 0.3) });
+  }
   if (glasses && eyes.length) {
-    const xs = eyes.map((e) => e.p.bx), xa = Math.min(...xs), xb = Math.max(...xs), row = eyes[0].p;
-    const span = (col, ext = 0) => { for (let x = xa - ext * 2; x <= xb + ext * 2; x += 2) put({ bx: x, by: row.by }, col); };
-    const fcol = hexRgb(A.glassColor || '#1a1a1e'), tcol = hexRgb(A.glassTrim || '#d9a21b'), behind = eyeC.map((v) => Math.round(v * 0.5 + 60));   // (an eye behind clear glass)
-    const bridge = (col) => { if (eyes.length === 2 && xb - xa > 2) put({ bx: (xa + xb) / 2 - ((xa + xb) / 2 - AX) % 2, by: row.by }, col); else put(eyes[0].p, col, eyes[0].p.x > cx0 ? 1 : -1); };
-    const strap = (col) => { for (const s of [-1, 1]) for (let t = 0; t <= 1; t += 0.25) { const az = (50 + t * 100) * Math.PI / 180, q = at(s * Math.sin(az), Math.cos(az), 0.14); if (q.fc > 0) put(q, col); } };   // (round the head at the eyes)
-    if (glasses === 'sun' || glasses === 'domino') {
-      const lc = A.lens ? hexRgb(A.lens).map((v) => Math.round(v * 0.6)) : glasses === 'domino' ? fcol : [26, 28, 38];
-      span(lc, glasses === 'domino' || A.glassBig ? 1 : 0); if (glasses === 'sun') put({ bx: xa, by: row.by }, lit(lc, 0.35));
-      if (A.glassCat) for (const e of eyes) put(e.p, fcol, outOf(e), -1);   // (the cat-eye's wings)
+    // frames and lenses kept a step from the skin they sit on (dark frames on dark skin, gold on tan), a glint on the
+    // left lens, the arms back to the ears; GLS: each kind's stamp round an eye
+    const sk = lum(skin[3]), pop = (c) => (Math.hypot(c[0] - skin[3][0], c[1] - skin[3][1], c[2] - skin[3][2]) > 70 ? c : lum(c) < 0.3 && sk < 0.42 ? lit(c, 0.5) : c.map((v) => Math.round(v * 0.72)));
+    const fcol = pop(hexRgb(A.glassColor || '#1a1a1e')), tcol = pop(hexRgb(A.glassTrim || '#d9a21b')), gk = A.glassForm || glasses;
+    const lens = glasses === 'goggles' ? tcol : pop(A.lens ? hexRgb(A.lens).map((v) => Math.round(v * 0.8)) : glasses === 'swim' ? fcol : [26, 28, 38]);
+    const K = { F: fcol, H: lit(fcol, 0.45), L: lens, D: lens.map((v) => Math.round(v * 0.6)), G: lit(lens, 0.5), E: mixC(eyeC, [206, 224, 238], 0.5), T: tcol, C: [196, 210, 216], W: mixC(skin[3], [240, 244, 248], 0.6), K: eyeC };
+    const strap = (col, a0 = 50, a1 = 150) => { for (const s of [-1, 1]) for (let t = 0; t <= 1; t += 0.25) { const az = (a0 + t * (a1 - a0)) * Math.PI / 180, q = at(s * Math.sin(az), Math.cos(az), 0.14); if (q.fc > 0) put(q, col); } };   // (round the head at the eyes)
+    if (gk === 'goggles' || gk === 'swim' || gk === 'safety') strap(gk === 'safety' ? tcol : fcol);
+    else if (turn > 0.35 && gk !== 'patch' && gk !== 'domino' && gk !== 'monocle') strap(fcol, 66, 100);
+    const one = gk === 'monocle' || gk === 'patch' ? eyes.reduce((a, b) => (b.s > a.s ? b : a)) : null;
+    if (gk === 'visor') {   // (a shield, mirrored in a rainbow, its rim under it)
+      const xs = eyes.map((e) => e.p.bx), xa = Math.min(...xs), xb = Math.max(...xs), RB = [[214, 64, 58], [240, 168, 40], [60, 128, 222], [150, 72, 204]];
+      let i = 0; for (let x = xa - 2; x <= xb + 2; x += 2) { put({ bx: x, by: e0.by }, RB[i++ % 4]); if (x >= xa && x <= xb) put({ bx: x, by: e0.by + 2 }, fcol); }
+    } else for (const e of eyes) {
+      if (one && e !== one) { put(e.p, eyeC); continue; }
+      const o = outOf(e);
+      K.G = o < 0 ? lit(lens, 0.5) : lens;
+      stamp(e.p, (GLS[gk] || GLS.round) + (A.glassBig ? GLS[gk + '+'] || '' : '') + (A.glassCat ? '20F30F' : '') + (A.glassChain ? '22T23T' : ''), K, o);
     }
-    else if (glasses === 'goggles') { span(hexRgb(A.glassTrim || '#ef7a1a'), 0); span(fcol, 0); for (const e of eyes) put(e.p, hexRgb(A.glassTrim || '#ef7a1a')); }
-    else if (glasses === 'visor') { const RB = [[214, 64, 58], [240, 168, 40], [60, 128, 222], [150, 72, 204]]; let i = 0; for (let x = xa - 2; x <= xb + 2; x += 2) put({ bx: x, by: row.by }, RB[i++ % 4]); }   // (a shield, mirrored in a rainbow)
-    else if (glasses === 'roundsun' || glasses === 'swim') { const lc = A.lens ? hexRgb(A.lens) : fcol; for (const e of eyes) put(e.p, lc); put(eyes[0].p, lit(lc, 0.45)); if (glasses === 'swim') strap(fcol); else bridge(fcol); }
-    else if (glasses === 'safety') { span([196, 210, 216], 0); for (const e of eyes) put(e.p, lit(behind, 0.25)); strap(tcol); }
-    else if (glasses === 'monocle') { const e = eyes.reduce((a, b) => (b.s > a.s ? b : a)); put(e.p, lit(eyeC, 0.35)); put(e.p, fcol, outOf(e), 0); put(e.p, fcol, outOf(e), 1); for (const o of eyes) if (o !== e) put(o.p, eyeC); }
-    else if (glasses === 'patch') {
-      // one eye covered, ONE strap round the head (up over the other side)
-      const e = eyes.reduce((a, b) => (b.s > a.s ? b : a)), pc = hexRgb(A.glassColor || '#1a1a1e');
-      put(e.p, pc);
-      for (const o of eyes) if (o !== e) put(o.p, eyeC);
-      for (let t = 0.2; t <= 1; t += 0.2) { const q = at(e.s * (0.45 - t * 1.3), Math.cos(t * 1.4) * 0.9, 0.2 + t * 0.62); if (q.fc > 0) put(q, pc); }
-    }
-    else {   // clear glasses: round (a bridge), square frames (the rims beside the eyes; big ones over them too), a browline (a line over them), rimless
-      for (const e of eyes) put(e.p, glasses === 'rimless' ? lit(eyeC, 0.3) : behind);
-      if (glasses === 'frames') for (const e of eyes) { put(e.p, fcol, outOf(e), 0); if (A.glassBig) put(e.p, fcol, 0, -1); }
-      if (glasses === 'browline') for (const e of eyes) put(e.p, fcol, 0, -1);
-      bridge(glasses === 'browline' ? tcol : glasses === 'rimless' ? lit(fcol, 0.2) : fcol);
-      if (A.glassChain) for (const e of eyes) { put(e.p, tcol, outOf(e), 1); put(e.p, tcol, outOf(e), 2); }   // (the chain down from the temples)
+    if (gk === 'patch') {   // (ONE strap round the head, up over the other side)
+      const e = one;
+      for (let t = 0.2; t <= 1; t += 0.2) { const q = at(e.s * (0.45 - t * 1.3), Math.cos(t * 1.4) * 0.9, 0.2 + t * 0.62); if (q.fc > 0) put(q, fcol); }
     }
   } else {
-    // the look's eyes and brows at the game's size (CC8's options, a pixel each): narrow a squint, sleepy half-lidded,
-    // big with the white showing beside, round with lashes over it, hooded with the lid's shadow; thick and bushy brows
-    // in the hair's colour above (the others too fine to show)
-    const E5 = F.eyes | 0, B5 = F.brows | 0, hairC = W.hairR ? W.hairR[1] : EYE, cx = at(0, 1, 0).x;
-    const mixC = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+    // the eyes and brows (CC8's options): almond the iris alone; round and big tall with lashes over (big the white
+    // showing beside); narrow a dark squint; hooded the lid's shadow over; sleepy a heavy lid drooping out. Brows in the
+    // hair's colour over them: natural unmarked, thick, thin, arched, straight, bushy
+    const E5 = F.eyes | 0, hairC = W.hairR ? W.hairR[1] : EYE, lid = mixC(LASH, skin[1], 0.2);
+    const EK = { i: E5 === 2 ? mixC(eyeC, LASH, 0.55) : eyeC, l: LASH, w: WHITE, s: skin[1], d: lid, h: hairC, m: mixC(hairC, skin[3], 0.45) };
     for (const e of eyes) {
       if (!P.eyes) { put(e.p, skin[0]); continue; }
-      put(e.p, E5 === 2 ? mixC(eyeC, skin[0], 0.45) : E5 === 5 ? mixC(eyeC, skin[1], 0.35) : eyeC);
-      const out = eyes.length > 1 ? (e.p.x < cx ? -1 : 1) : (e.p.x < cx ? -1 : 1), up = E5 === 1 || E5 === 3 ? 1 : 0;
-      if (E5 === 4) put(e.p, WHITE, out, 0);
-      else if (E5 === 1) put(e.p, LASH, 0, -1);
-      else if (E5 === 3) put(e.p, skin[1], 0, -1);
-      if (B5 === 1 || B5 === 5) { put(e.p, hairC, 0, -1 - up); if (B5 === 5) put(e.p, hairC, out, -1 - up); }
+      const o = outOf(e);
+      stamp(e.p, EYE_ST[E5] || '11i', EK, o);
+      stamp(e.p, BROW_ST[F.brows | 0] || '', EK, o, E5 & 1 || E5 === 4 ? -1 : 0);
     }
   }
+  // the face's shape at the game's size: a square jaw's corners, a heart's cheekbones, a diamond's both
+  if (!covered0 && SHAPE_ST[F.shape | 0]) for (const e of eyes) stamp(e.p, SHAPE_ST[F.shape | 0], { j: skin[2], c: lit(skin[3], 0.25) }, outOf(e));
   // CP2's masks: an alien's big black eyes, a skull's sockets, a gas mask's round lenses, a clown's painted diamonds
   if (fm) for (const e of eyes) {
     if (fm === 'alien') { put(e.p, [14, 16, 14]); put(e.p, [14, 16, 14], outOf(e), 0); }
@@ -1877,13 +1891,9 @@ function face(fig, P, A, D, w, h, AX, AY) {
       const mc = fm === 'clown' ? hexRgb(A.fmask.t) : mk && mk.color && (mk.kind === 'lipstick' || mk.kind === 'glam') ? hexRgb(mk.color) : mk && mk.kind === 'goth' ? [34, 22, 34] : null;
       const lip = mc || (D.fem ? [Math.round(skin[1][0] * 0.9 + 26), Math.round(skin[1][1] * 0.72), Math.round(skin[1][2] * 0.78)] : skin[1]);
       // (on the eyes' row or right under it - a very short face - it moves down one)
-      const e0 = eyes[0] && eyes[0].p;
       const L5 = fm === 'clown' ? 3 : A.face?.lips | 0, my = e0 && m.by - e0.by < 4 ? 1 : 0;
       if (fm === 'skull') { put(m, [40, 34, 30], -1, my); put(m, [40, 34, 30], 1, my); }   // (the teeth between two gaps)
-      else {   // (the lips at the game's size: thin a dark line, full and wide two pixels, small too small to show)
-        if (L5 !== 5) put(m, L5 === 1 && !mc ? skin[0] : lip, 0, my);
-        if ((L5 === 2 || L5 === 3) && !(near * turn > 0.5)) put(m, lip, 1, my);
-      }
+      else stamp(m, LIP_ST[L5], { a: lip, t: mixC(lip, skin[0], 0.5), b: lit(lip, 0.3), c: mixC(lip, skin[3], 0.5) }, 1, my);   // (medium, thin a dark line, full two pixels, wide three, a bow's lit top, small a faint dot)
     }
   }
 }
@@ -1987,56 +1997,38 @@ function shift(p, dz) {
 }
 
 // ==== The city's people (task #365, server/systems/personas.js): personality walks and props ========================
-// walks (POSES): hunch (a senior's slow stoop on a cane), strut (hips swaying, the feet on one line), skate (riding a board,
-// pushing off), blade (rollerblades: the long side-pushed glide), dance (four frames of letting go), push (pushing a cart),
-// lean (back to a wall, a foot up on it)
-// props (app.carry): trolley (a senior's two-wheeled shopping trolley, pulled along), cart (a shopping cart with a blanket
-// in it, pushed), leads (three dog leads out in front, to where the dogs trot), guitar (a busker's), call (the phone at an ear)
+// walks (POSES): hunch (a senior's stoop on a cane), strut, skate, blade (rollerblades), dance, push (a cart), lean (on a
+// wall); props (app.carry): trolley, cart, leads (three dogs'), guitar, call (the phone at an ear)
 Object.assign(POSES, { hunch: 6, strut: 6, skate: 8, blade: 6, dance: 4, push: 6, lean: 2 });
 Object.assign(POSES, { pushup: 2, situp: 2 });   // (working out: server workout.js)
-// a player on a skateboard (server skate.js, 2026-10-17): skatec rolling with both feet on the deck, side-on, knees soft;
-// skateair the ollie - the crouch to pop, up in the air knees tucked and arms out, the landing (lifted by the renderer).
-// The tricks (shared/skate.js TRICKS, 2026-10-18): skflip a kickflip (frames 0-5, the deck turning over under the feet)
-// and a heelflip (6-11, the other way); skshove a pop shove-it (the deck spinning round under them); sktre a 360 flip (both
-// at once); skgrab the grabs (0 indy, 1 melon, 2 method, 3 nosegrab); skgrind on a rail (0 50-50, 1 5-0, 2 boardslide, 3
-// crooked); skmanual on the back wheels (2 frames: the balance)
+// skateboarding (server skate.js, shared/skate.js TRICKS): skatec rolling, skateair the ollie (lifted by the renderer),
+// skflip kick- (0-5) and heelflip (6-11), skshove, sktre, skgrab (indy melon method nosegrab), skgrind (50-50 5-0
+// boardslide crooked), skmanual
 Object.assign(POSES, { skatec: 1, skateair: 3, skflip: 12, skshove: 6, sktre: 6, skgrab: 4, skgrind: 4, skmanual: 2 });
-// surfing (server/systems/surf.js): surfpad lying on the board, paddling (2 frames: one arm forward, the other); surf up on
-// a wave, side-on, knees deep, arms out (2 frames: the carve one way, the other); surfair up off the lip, knees tucked
-// (the renderer lifts it). The board (P.surf) under the feet - or under the body, lying on it
+// surfing (server surf.js): surfpad lying on the board paddling, surf up on a wave (the carve each way), surfair off the
+// lip (lifted by the renderer); the board (P.surf) under the feet or the body
 Object.assign(POSES, { surfpad: 2, surf: 2, surfair: 1 });
-// a shopping cart (shared/vehicles.js cart, 2026-10-18): cartkick - holding the handle, a foot on the back rail, the other
-// kicking the ground (8 frames, as the skateboard's kick); cartride - both feet up on the back rail, leaning on the handle;
-// cartsit - in the basket (the sitting poses above)
+// a shopping cart (shared/vehicles.js cart): cartkick (8 frames, a foot kicking the ground), cartride (up on the back
+// rail), cartsit (in the basket)
 Object.assign(POSES, { cartkick: 8, cartride: 2, cartsit: 2 });
 CARRY.push('trolley', 'cart', 'leads', 'guitar', 'call', 'map');
 Object.assign(ACC_HANDS, { trolley: 1, cart: 2, leads: 1, guitar: 2, call: 1, map: 2 });
-// the buskers (Shared-9, 2026-10-20: server/systems/personas.js BUSKS): sax (a saxophone in both hands, its case open on the
-// ground), violin (under the chin, the bow drawn across it; the music stand in front), drums (sticks over upturned
-// buckets and a pot), statue (a living statue in bronze on its crate - statue: still, a hand at the hat's brim;
-// statuebow: the bow when a coin drops in the hat); the guitarist has his amp and the open case of coins
+// the buskers (server personas.js BUSKS): sax, violin (and its stand), drums (upturned buckets), statue (a living statue
+// in bronze on its crate; statuebow when a coin drops); the guitarist has his amp and the open case
 CARRY.push('sax', 'violin', 'drums', 'statue');
 Object.assign(ACC_HANDS, { sax: 2, violin: 2, drums: 2, statue: 2 });
 Object.assign(POSES, { statue: 1, statuebow: 1 });
-// people at their activities (server activities.js, task #423): easel (a street painter's, in front: the brush up to the
-// canvas), cooler (an angler's, on the deck at their side), chess (the board on the table in front of a seated player)
+// people at their activities (server activities.js): easel (a painter's), cooler (an angler's), chess (on the table)
 CARRY.push('easel', 'cooler', 'chess', 'sponge', 'crate', 'rifle', 'dice');
 Object.assign(ACC_HANDS, { easel: 1, sponge: 1 });   // (sponge: washing the car, the bucket at their feet; crate: a picker's)
-// part 2: fence (the garden fence the neighbours chat over, in front of him), cueup (waiting his turn at the pool table,
-// the cue stood up beside him); the pose cue (bent over the table, the bridge hand on the felt, the stroke: 4 frames)
+// part 2: fence (the neighbours' garden fence), cueup (the cue stood up beside him); the pose cue (the stroke: 4 frames)
 CARRY.push('fence', 'cueup');
 Object.assign(ACC_HANDS, { cueup: 1 });
 Object.assign(POSES, { cue: 4 });
-// the people of the wilds (Nature-C4, 2026-10-20: server/systems/wildfolk.js): binoculars (a birder's, up at the eyes),
-// poles (a backpacker's trekking poles, one in each hand, planted as they walk), radio (a ranger's, up at the mouth); and,
-// whatever the pose, basket (a forager's on the arm, mushrooms in it), kayak (carried up on the shoulder, the paddle in the
-// other hand), tripod (a spotting scope on its legs in front of a birder), tackle (an angler's tackle box and landing net
-// at their side), campstove (a folding camp chair under a sat camper, the little stove in front with a pot on it),
-// climbkit (a climber's rope in a coil, a helmet and the chalk bag laid out by them), rope (the rope coiled over a
-// climber's shoulder, its end run up the rock in front)
+// the people of the wilds (server wildfolk.js): binoculars, poles, radio in the hands; and whatever the pose basket, kayak
+// (on the shoulder), tripod (a spotting scope), tackle, campstove, climbkit, rope (over the shoulder, up the rock)
 CARRY.push('binoculars', 'poles', 'radio', 'basket', 'kayak', 'tripod', 'tackle', 'campstove', 'climbkit', 'rope');
-// people at their jobs (batch 8, server personas.js): broom (a street sweeper's push broom, swept along in front), letters (a
-// mail carrier's letters held out at a mailbox)
+// people at their jobs (server personas.js): broom (a sweeper's), letters (a mail carrier's, at a mailbox)
 CARRY.push('broom', 'letters');
 // a surfboard of your own carried under the arm (server gear.js: the descriptor's pp 'surfboard')
 CARRY.push('surfboard');
@@ -2095,9 +2087,8 @@ const GAITS2 = {
     wrapAcc(D, P, acc);
   },
   skate(D, P, f) {   // a kick (8 frames, shared/physics.js KICK: the page plays them on the push's own phase): 0 rolling with
-    // the back foot on the tail; 1 it comes off the deck; 2 reaches ahead; 3 plants beside the front wheels; 4 drives back;
-    // 5 the toe-off far behind; 6 swings forward again; 7 comes down onto the tail. The front (left) foot stays over the
-    // front bolts; the front knee gives as the body sinks into the push and leans into it
+    // the back foot on the tail, off the deck, ahead, planted, driving back, the toe-off, forward again, back on the tail;
+    // the front foot stays over the front bolts, its knee giving as the body sinks into the push
     const k = f & 7;
     const FR = [[-1.0, -2.4, 2.3], [1.8, 1.4, 4.8], [3.6, 8.2, 2.0], [3.9, 5.4, 0], [4.0, -4.2, 0], [3.6, -11.0, 0.8], [2.8, -6.4, 4.4], [0.6, -3.0, 3.6]][k];
     const sink = [0.9, 1.6, 2.6, 3.6, 3.4, 2.8, 1.9, 1.2][k], lean = [0.07, 0.1, 0.16, 0.22, 0.25, 0.26, 0.17, 0.1][k];
@@ -2509,10 +2500,8 @@ GAITS2.escortL = (D, P, f) => escortPose(D, P, f, -1);
 // ==== end of the arrest =================================================================================================
 
 // ==== The cells (task #379, server/systems/cells.js) ===================================================================
-// sitx: sitting on a cell's bench or its toilet (and any bench: the descriptor's sb), six ways of sitting a while -
-//   0 casually, hands on the thighs; 1 slouched back against the wall, hands in the lap; 2 hunched over, elbows on the
-//   knees, hands hanging between them; 3 the head in the hands; 4 leaning back on the hands, looking up; 5 bored, the chin
-//   on a fist - two frames each (a breath, a glance). The client holds each way a while (game/peds.js sitFrame).
+// sitx: sitting on a bench or a cell's toilet (the descriptor's sb), six ways two frames each - 0 casual, 1 slouched, 2
+//   hunched, 3 the head in the hands, 4 leaning back, 5 the chin on a fist (game/peds.js sitFrame holds each a while)
 // bars: both hands on the bars, straight out in front at the chest - 0 looking out, 1 leaning in with the head down,
 //   2 / 3 looking along the corridor one way and the other
 // bang: rattling the bars (0 thrown back, 1 slammed in); thump: a fist on the wall (0 raised, 1 on it), the other hand flat

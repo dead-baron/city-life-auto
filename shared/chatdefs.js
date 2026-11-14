@@ -31,20 +31,21 @@ export const CHAT = {
 // client/art2/dances.js and poses.js pose it) for s seconds (CHAT.emoteS when not given), or - hold - until you move.
 // tab: the picker's tab ('emote' | 'pose'; the Dances tab is DANCES below; none: not in the picker). b: the pixel
 // balloon over the head (client/emotes.js BALLOONS) - only where it adds meaning: a laugh, anger, love, ?, !, sorry,
-// sleep, an idea. log: a line in the log of the people near ("Ann sat down") - dancing and the lasting poses only, no
+// sleep, an idea; and a gesture a symbol says better at game size (11-14: a waving hand, a thumbs up, come here, a
+// shrug's ?). log: a line in the log of the people near ("Ann sat down") - dancing and the lasting poses only, no
 // log spam for the rest. text / me: that line for the people near and your own. The server decides who's sent what
 // (server/chat.js emote: emoteWire).
 export const EMOTES = {
-  wave: { n: 'Wave', tab: 'emote', text: 'waves', me: 'wave' },
+  wave: { n: 'Wave', tab: 'emote', b: 'wave', text: 'waves', me: 'wave' },
   cheer: { n: 'Cheer', tab: 'emote', text: 'cheers', me: 'cheer' },
   laugh: { n: 'Laugh', tab: 'emote', b: 'haha', text: 'laughs', me: 'laugh' },
-  thumbs: { n: 'Thumbs up', tab: 'emote', text: 'gives a thumbs up', me: 'give a thumbs up' },
+  thumbs: { n: 'Thumbs up', tab: 'emote', b: 'thumbs', text: 'gives a thumbs up', me: 'give a thumbs up' },
   love: { n: 'Love', tab: 'emote', b: 'heart', text: 'loves it', me: 'love it' },
   huh: { n: 'Huh?', tab: 'emote', b: 'question', text: 'is puzzled', me: 'are puzzled' },
   wow: { n: 'Wow!', tab: 'emote', b: 'exclaim', text: 'is surprised', me: 'are surprised' },
   idea: { n: 'Idea', tab: 'emote', b: 'idea', text: 'has an idea', me: 'have an idea' },
   point: { n: 'Point', tab: 'emote', text: 'points', me: 'point' },
-  shrug: { n: 'Shrug', tab: 'emote', text: 'shrugs', me: 'shrug' },
+  shrug: { n: 'Shrug', tab: 'emote', b: 'question', text: 'shrugs', me: 'shrug' },
   clap: { n: 'Clap', tab: 'emote', text: 'claps', me: 'clap' },
   facepalm: { n: 'Facepalm', tab: 'emote', text: 'facepalms', me: 'facepalm' },
   salute: { n: 'Salute', tab: 'emote', text: 'salutes', me: 'salute' },
@@ -58,11 +59,11 @@ export const EMOTES = {
   lean: { n: 'Lean', tab: 'pose', hold: 1, log: 1, text: 'leans back', me: 'lean back' },
   crouch: { n: 'Crouch', tab: 'pose', hold: 1, log: 1, text: 'crouches down', me: 'crouch down' },
   kneel: { n: 'Kneel', tab: 'pose', hold: 1, log: 1, text: 'kneels', me: 'kneel' },
-  faceplant: { n: 'Faceplant', tab: 'pose', s: 3, text: 'faceplants', me: 'faceplant' },
+  faceplant: { n: 'Faceplant', tab: 'pose', s: 3.5, text: 'faceplants', me: 'faceplant' },
   pushups: { n: 'Push-ups', tab: 'pose', s: 4, text: 'does push-ups', me: 'do push-ups' },
   flex: { n: 'Flex', tab: 'pose', s: 3, text: 'flexes', me: 'flex' },
   cry: { n: 'Cry', tab: 'pose', s: 3, text: 'cries', me: 'cry' },
-  beckon: { n: 'Come here', tab: 'pose', s: 2.5, text: 'beckons', me: 'beckon' },
+  beckon: { n: 'Come here', tab: 'pose', s: 2.5, b: 'beckon', text: 'beckons', me: 'beckon' },
   watch: { n: 'Check watch', tab: 'pose', s: 2.5, text: 'checks the time', me: 'check the time' },
   guitar: { n: 'Air guitar', tab: 'pose', s: 3, text: 'plays air guitar', me: 'play air guitar' },
   stretch: { n: 'Stretch', tab: 'pose', s: 3, text: 'stretches', me: 'stretch' },
