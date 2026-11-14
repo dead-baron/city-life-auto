@@ -30,7 +30,7 @@ import { IN } from '../../shared/input.js';
 import {
   HOLD_S, ESCORT_WALK_PX, ESCORT_PX, TRANSPORT_WAIT_S, RIDE_MAX_S, JAIL_S, BAIL_PER_STAR, GUARD_PX, BREAKOUT_IMPACT, DELIVER_BONUS,
   BUST_FINE_PER_STAR, ARREST_REWARD_PER_STAR, SPAWN_PROTECT_S, CUSTODY_STUCK_S, CUSTODY_WAIT_BREAK_S, CUSTODY_SKIP_S,
-  CELL_WALK_S, BREAK_CHANCE, BREAK_FAIL_K, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_TRIP_SHARE, STRUGGLE_KIND, STRUGGLE_GRACE_S,
+  CELL_WALK_S, BREAK_CHANCE, BREAK_FAIL_K, BREAK_RETRY_S, BREAK_KNOCK_S, BREAK_TRIP_SHARE, STRUGGLE_KIND,
   CUSTODY_FADE_S, CUSTODY_REPLAN_S, BREAK_CAR, copLevel,
 } from '../../shared/rules.js';
 import { inCellRect } from '../../shared/cells.js';
@@ -450,6 +450,7 @@ function rideStep(world, p) {
   const stuck = progress(c, d, now);
   if (stuck > CUSTODY_SKIP_S) { fadeIn(world, p, 'The police car is going nowhere - you\'re taken in.'); return; }
   if (stuck > CUSTODY_STUCK_S) offerBreak(world, p);
+  if (c.armed && canBreak(p, world)) { c.armed = false; breakOut(world, p); }   // (braced for it: the kick as it slows - notYet)
 }
 // how long the car has got no nearer (by 40 px) to where it's going
 function progress(c, d, now) {
@@ -468,10 +469,12 @@ function offerBreak(world, p) {
 // it's a try - no fighting needed: it works by the stars (rules.js BREAK_*), your strength (health, as in the struggle) and
 // who has you, less each time it fails, a try every BREAK_RETRY_S.
 const loose = (c) => c.stage === 'held' || c.stage === 'fetch' || c.stage === 'escort';
-// in the back of an NPC unit's car while it crawls or stands (at the lights, in a jam): a kick at the door (BREAK_CAR)
-function carTry(world, p) {
+const starsOf = (c) => Math.max(1, Math.min(5, c.stars | 0));
+// in the back of an NPC unit's car while it crawls or stands (at the lights, in a jam; round a corner at 1-2 stars): a
+// kick at the door (BREAK_CAR). slowOK false: the car's speed aside (breakable: the action button's there all the ride)
+function carTry(world, p, slowOK = true) {
   const c = p.custody, v = live(world, c.car);
-  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && Math.hypot(v.vx, v.vy) < BREAK_CAR.speed
+  return c.stage === 'ride' && !c.driver && !!v && p.ped.vehId === v.id && (!slowOK || Math.hypot(v.vx, v.vy) < BREAK_CAR.speed[starsOf(c)])
     && police.crewOf(world, v).every((q) => q.vehId === v.id);   // (the crew all aboard: off on the way, not still climbing in)
 }
 function canTry(world, p) {
@@ -481,6 +484,27 @@ function canTry(world, p) {
 }
 export const canBreak = (p, world = null) => !!(p.custody && p.custody.stage !== 'cell' && p.custody.stage !== 'walkin' && p.custody.stage !== 'fade'
   && (p.custody.brk || (world ? canTry(world, p) : loose(p.custody) || p.custody.stage === 'ride')));
+// A break for it to be had here at all, now or in a moment (the next try, the car slowing down): the action button stays
+// on screen the whole time (ACT on a phone - it used to come and go with each try and each slow-down, and a thumb never
+// found it: the owner, 11-14). 'now', 'wait' (the next try's not ready: breather), 'slow' (the car's too fast), or null.
+export function breakable(world, p) {
+  const c = p.custody;
+  if (!c || c.stage === 'cell' || c.stage === 'walkin' || c.stage === 'fade' || !p.ped || p.ped.dead) return null;
+  if (canBreak(p, world)) return 'now';
+  if (c.stage === 'ride') return carTry(world, p, false) ? (world.time < (c.tryAt || 0) ? 'wait' : 'slow') : null;
+  const h = live(world, c.holder);
+  return loose(c) && !!(h && h.npc) && !p.ped.vehId ? 'wait' : null;
+}
+// the action button pressed when it can't be done yet: why (no try spent). In the back of a car going too fast you brace
+// for it (c.armed): the kick comes the moment it slows (rideStep) - a thumb on a phone can't time a corner.
+export function notYet(world, p, why) {
+  const c = p.custody, now = world.time;
+  if (!c) return;
+  if (why === 'slow' && !c.armed) { c.armed = true; world.notify(p, 'You brace your feet against the door - you\'ll kick it the moment the car slows', 'info'); p.meDirty = true; return; }
+  if (now < (c.nagAt || 0)) return;
+  c.nagAt = now + 1.2;
+  world.notify(p, why === 'slow' ? 'Braced - you\'ll kick the door when the car slows' : 'Not yet - get your breath, then try again', 'info');
+}
 export function breakOut(world, p) {
   if (!canBreak(p, world)) return;
   const c = p.custody, ped = p.ped, now = world.time, st = Math.max(1, Math.min(5, c.stars | 0));
@@ -491,7 +515,7 @@ export function breakOut(world, p) {
     world.emit(ped.x, ped.y, { e: 'struggle', x: ped.x, y: ped.y, id: ped.id });   // (a heave: the grunts and the scuffle)
     p.meDirty = true;
     if (world.rand() >= chance) { world.notify(p, car ? 'The door holds - not this time.' : 'The officer holds on to you - not this time.', 'bad'); return; }
-    if (car) carBreak(world, p, live(world, c.car), st, 'You kicked the door open - run!');
+    if (car) carBreak(world, p, live(world, c.car), st, 'You kicked the door open - run and hide!');
     else breakAway(world, p, h, st);
     return;
   }
@@ -500,7 +524,8 @@ export function breakOut(world, p) {
   if (ped.vehId) vehicles.ejectPed(world, ped, true);
   const h = live(world, c.holder);
   if (h && h.npc && !h.vehId) knockBack(world, h, ped, st);
-  escape(world, p, 'You made a break for it - run!');
+  escape(world, p, 'You made a break for it - run and hide!');
+  struggle.headStart(world, ped, st, h ? [h] : []);
 }
 // Out of the back of the police car: a head start - the crew take COP_LEVEL's exitS to get out after them (police.js
 // runUnit waits for it: ai.holdUntil), no tackle lands on them meanwhile, and those who come after them may trip
@@ -510,7 +535,7 @@ function carBreak(world, p, v, st, msg) {
   if (v.ai) v.ai.holdUntil = now + L.exitS;
   for (const q of police.crewOf(world, v)) if (world.rand() < BREAK_TRIP_SHARE[st]) { q.npc.tripAt = now + L.exitS + 0.4 + world.rand() * 1.8; q.npc.tripBy = now + L.exitS + 5; }
   escape(world, p, msg);
-  ped.graceUntil = now + L.exitS + STRUGGLE_GRACE_S;
+  struggle.headStart(world, ped, st, police.crewOf(world, v), L.exitS);   // (no tackle till the crew's out and a grace more; the rest caught off guard)
   world.emit(ped.x, ped.y, { e: 'door', x: ped.x, y: ped.y });
 }
 // Away from the officer who had them: they stumble back, or go over backwards or roll; the prisoner's up and off (a grace
@@ -527,8 +552,8 @@ function breakAway(world, p, h, st) {
     }
   }
   const a = h ? Math.atan2(ped.y - h.y, ped.x - h.x) : ped.a;
-  escape(world, p, 'You broke away - run!');
-  ped.downUntil = now; ped.graceUntil = now + STRUGGLE_GRACE_S;
+  escape(world, p, 'You broke away - run and hide!');
+  ped.downUntil = now; struggle.headStart(world, ped, st, h ? [h] : []);
   ped.vx = Math.cos(a) * 110; ped.vy = Math.sin(a) * 110; ped.a = a;
   world.emit(ped.x, ped.y, { e: 'breakfree', x: ped.x, y: ped.y, id: ped.id });
 }
@@ -1042,7 +1067,9 @@ export function meInfo(world, p) {
   if (c.stage === 'fade') return { s: 'fade', at: st ? st.label : '', brk: 0 };
   const o = c.driver ? world.players.get(c.driver) : null;
   // brk: the action button makes a break for it now; stuck: the car isn't coming, or is going nowhere (offerBreak)
-  return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null, brk: canBreak(p, world) ? 1 : 0, stuck: c.brk ? 1 : 0 };
+  // (brk 2: there's a break to be had in a moment - the next try, the car slowing: breakable)
+  const b = breakable(world, p);
+  return { s: c.stage, at: st ? st.label : '', by: o ? o.name : null, brk: b === 'now' ? 1 : b ? 2 : 0, slow: b === 'slow' ? 1 : 0, stuck: c.brk ? 1 : 0 };
 }
 // The prisoners a player officer is taking in themselves: where they're going (a waypoint on their HUD)
 export function deliveryFor(world, p) {

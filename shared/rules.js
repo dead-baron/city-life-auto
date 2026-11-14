@@ -211,12 +211,29 @@ export const COP_LEVEL = [null,
   { drive: 1, react: 0, ram: true, foot: 1, drain: 0.35, cuffS: 4, lostS: 20, cool: 1, exitS: 0.6 },
 ];
 export const copLevel = (stars) => COP_LEVEL[Math.max(1, Math.min(5, stars | 0))];
-// Escaping custody puts you up a star (ESCAPE_STARS) - not two or three as its heat used to (CRIMES.escape's 25)
+// Escaping custody puts you up a star (ESCAPE_STARS) - not two or three as its heat used to (CRIMES.escape's 25) - and
+// throwing an officer off before the cuffs (struggle.js) is resisting arrest, which does too; but from 1-2 stars neither
+// takes you past ESCAPE_LOW_MAX (the owner, 11-14: "breaking free and running or fighting the police will raise your
+// wanted level but you still get a chance to escape and hide and wait it out"): a 1-star escape puts you on 2, a 2-star
+// one keeps you on 2 with the heat up near 3 (a fresh crime and it's 3); from 3 a star more, as before.
 export const ESCAPE_STARS = 1;
+export const ESCAPE_LOW_MAX = 2;
+// Got away - thrown an officer off, broken away from the one holding you, out of the back of the car: a real head start
+// at low stars (the owner, 11-14: "lower wanted level police interactions are less harsh"), by your stars. grace: no
+// tackle or grab lands on you for this long (s; STRUGGLE_GRACE_S was it at every level); startle: the other officers
+// within px of you stop short this long (s), caught off guard; wind: you're back on your feet with this share of a
+// full sprint in you (being held down gave you no breath back - you'd been sprinting before the tackle); copWind: the
+// officers you threw off, or broke away from, and those caught off guard keep this share of theirs (winded: a sprint
+// after you only once they've their breath back - they tire slower than you at 1-3 stars and used to run you down
+// just as the grace ran out).
+export const BREAK_HEADSTART = { grace: [0, 4.5, 4.5, 2.5, 2.5, 2.5], startle: [0, 1.6, 1.4, 0, 0, 0], px: 320, wind: [0, 1, 1, 0, 0, 0], copWind: [0, 0, 0.25, 1, 1, 1] };
 // Making a break for it from the back of the police car (custody.js): while the car is crawling or stopped (under
-// `speed` px/s - at the lights, in a jam) the action button kicks at the door, a try that works chance[stars] of the time
-// (x your strength; less each time it fails, as on the ground); the car stuck or going nowhere, it always works.
-export const BREAK_CAR = { speed: 60, chance: [0, 0.5, 0.35, 0.12, 0.03, 0.01] };
+// speed[stars] px/s - at the lights, in a jam, round a corner at 1-2 stars) the action button kicks at the door, a try
+// that works chance[stars] of the time (x your strength; less each time it fails, as on the ground); the car stuck or
+// going nowhere, it always works. Pressed while it's too fast, you brace for it: the kick comes the moment it slows
+// (custody.js arm). (11-14: at 1-2 stars it was 50% / 35% under 60 px/s, the button there only then - with the siren on
+// the traffic pulls over, the car was that slow about 3% of the ride, and the owner never got out.)
+export const BREAK_CAR = { speed: [0, 190, 180, 60, 60, 60], chance: [0, 0.85, 0.7, 0.12, 0.03, 0.01] };
 // How hard the police come at you, by stars (server/systems/police.js; design notes 2026-10-08): 1-2 they chase you
 // down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
 // fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.
@@ -251,14 +268,17 @@ export const STRUGGLE_WRIGGLE = 0.045; // ...each wriggle (the move stick swung 
 export const STRUGGLE_PUSH = 0.08;     // ...and pushing against them: this much a second while the move stick is held (2026-10-09 07:06)
 export const STRUGGLE_MOVE_K = [1, 1, 1, 0.5, 0.2, 0.1];   // the wriggling and pushing count this much by your stars (in full at 1-2, little at 4-5)
 export const STRUGGLE_HOLD = 0.22;     // an ordinary cop pushes it back down this much a second...
-export const STRUGGLE_STARS = [1, 0.9, 1, 1.3, 1.7, 2];   // ...times this by your stars (1-2 a good chance, 3 fair, 4 much harder, 5 very hard)
+export const STRUGGLE_STARS = [1, 0.8, 0.8, 1.3, 1.7, 2];   // ...times this by your stars (1-2 a good chance, 3 fair, 4 much harder, 5 very hard; 1-2 were 0.9 / 1 until 11-14)
 export const STRUGGLE_KIND = { cop: 1, agent: 1.2, swat: 1.45, soldier: 1.55 };   // ...and by who's on you
 export const STRUGGLE_BUILD = 0.35;    // ...and their build (a brute's grip: 1 + 0.35 x 0.6 stronger than an average officer's)
 export const STRUGGLE_GRIP_VAR = 0.4;  // ...and how well they got hold of you this time (rolled: +-40%)
 // a second officer on you adds this much of their own hold, by your stars (a patrol car brings two; 0.6 at every level
-// until 11-07, when two on you at 1 star was about a coin toss - the owner: "it's hard to fight the cop off")
-export const STRUGGLE_SECOND = [0, 0.35, 0.45, 0.6, 0.6, 0.6];
-export const STRUGGLE_HELD = 0.27;     // the attack button held down rather than mashed (a thumb on FIRE): this much a second
+// until 11-07, when two on you at 1 star was about a coin toss - the owner: "it's hard to fight the cop off"; 0.35 / 0.45
+// at 1-2 until 11-14; 0.4 now, with the lighter hold above)
+export const STRUGGLE_SECOND = [0, 0.4, 0.4, 0.6, 0.6, 0.6];
+// the attack button held down rather than mashed (a thumb on FIRE): this much a second, by your stars - at 1-2 about as
+// good as mashing (11-14: 0.27 at every level, and a phone's held thumb almost never won), at 3-5 as before
+export const STRUGGLE_HELD = [0, 0.6, 0.6, 0.27, 0.27, 0.27];
 export const STRUGGLE_RAMP = 0.3;      // the hold grows this much (x its start) for every second you've been held...
 export const STRUGGLE_CUFF_S = 4;      // ...and this long after they got you, the cuffs are on, whatever the meter says
 export const STRUGGLE_HP_FLOOR = 0.45; // your strength is your health (there's no strength stat): floor + (1 - floor) x health/100
@@ -275,7 +295,7 @@ export const STRUGGLE_NPC_FREE = 0.3;  // an NPC crook the police take down shak
 // backwards or rolls, down BREAK_KNOCK_S by your stars; those who come after you can trip, on the face or in a roll, dazed
 // a moment. Simulated (test/arrests.test.js: four tries, full health, a cop): away 85% of the time at 1 star, 78% at 2,
 // 45% at 3, 9% at 4, 5% at 5 (with the struggle before it, 4-5 stars stay nearly hopeless).
-export const BREAK_CHANCE = [0, 0.6, 0.45, 0.18, 0.04, 0.015];   // by stars: a try works this often...
+export const BREAK_CHANCE = [0, 0.75, 0.6, 0.18, 0.04, 0.015];   // by stars: a try works this often (1-2: 0.6 / 0.45 until 11-14)...
 export const BREAK_FAIL_K = 0.7;                                   // ...this much less for every try that failed
 export const BREAK_RETRY_S = 2.5;                                  // a try at most this often
 export const BREAK_KNOCK_S = [0, 1.8, 1.5, 1.1, 0.8, 0.6];        // the officer you broke away from: down (or staggered) this long

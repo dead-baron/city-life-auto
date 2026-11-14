@@ -182,7 +182,8 @@ test('the struggle at 1 star favours you - mashing, two officers on you, or hold
   const said = `1 star: one cop ${pc(one1)}, two ${pc(two1)}, holding ${pc(hold1)} (two: ${pc(hold2)}); 5 stars: one ${pc(one5)}, two ${pc(two5)}, holding ${pc(hold5)}`;
   if (process.env.DBG) console.log(said);
   assert.ok(one1 >= 0.9 && two1 >= 0.7, `mashing at 1 star: nearly always free, and still most of the time with two on you (${said})`);
-  assert.ok(hold1 >= 0.45 && hold1 < one1, `holding it down at 1 star: a fair chance, less than mashing (${said})`);
+  // (holding it at 1-2 stars about as good as mashing since 11-14: STRUGGLE_HELD by stars)
+  assert.ok(hold1 >= 0.8 && hold2 >= 0.5 && hold1 <= one1, `holding it down at 1 star: a good chance, no better than mashing (${said})`);
   assert.ok(one5 <= 0.08 && two5 <= 0.03 && hold5 <= 0.02, `5 stars: hardly ever (${said})`);
   // the HUD: the time to the cuffs is the star's, and whether you're winning it
   p.wanted = 1; p.heat = STAR_HEAT[1] + 2; p.ped.downUntil = w.time + 2.5;

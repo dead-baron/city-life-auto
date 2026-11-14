@@ -24,8 +24,10 @@ import { angleDiff } from '../../shared/math.js';
 import {
   STRUGGLE_START, STRUGGLE_PRESS, STRUGGLE_WRIGGLE, STRUGGLE_HOLD, STRUGGLE_STARS, STRUGGLE_KIND, STRUGGLE_BUILD, STRUGGLE_GRIP_VAR,
   STRUGGLE_RAMP, STRUGGLE_CUFF_S, STRUGGLE_HP_FLOOR, STRUGGLE_HP_CAP, STRUGGLE_ENERGY, STRUGGLE_STUNNED, STRUGGLE_GRACE_S,
-  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND, STRUGGLE_PUSH, STRUGGLE_MOVE_K, STRUGGLE_HELD, copLevel,
+  STRUGGLE_KNOCK_S, STRUGGLE_NPC_FREE, STRUGGLE_SECOND, STRUGGLE_PUSH, STRUGGLE_MOVE_K, STRUGGLE_HELD, BREAK_HEADSTART, copLevel,
 } from '../../shared/rules.js';
+import { K } from '../../shared/constants.js';
+import { PED } from '../../shared/physics.js';
 import * as law from './law.js';
 
 const REACH_PX = 40;      // an officer further off than this has lost hold of them
@@ -97,8 +99,9 @@ export function input(world, p, ped, inp, pressed, dt = 0.05) {
     if (now - s.heard >= SOUND_GAP) { s.heard = now; world.emit(ped.x, ped.y, { e: 'struggle', x: ped.x, y: ped.y, id: ped.id }); }
     p.meDirty = true;
   }
-  // the attack button held down (a thumb on a touch screen's FIRE): a steady heave, less than mashing it (STRUGGLE_HELD)
-  else if ((inp.bits & IN.FIRE) && !(pressed & IN.FIRE)) { s.m += STRUGGLE_HELD * k * dt; ped.attackAnimUntil = now + 0.1; }
+  // the attack button held down (a thumb on a touch screen's FIRE): a steady heave - at 1-2 stars about as good as mashing
+  // it, from 3 less (STRUGGLE_HELD by stars). (A phone's quick taps that run into each other between two inputs count so too.)
+  else if ((inp.bits & IN.FIRE) && !(pressed & IN.FIRE)) { s.m += STRUGGLE_HELD[stars(p)] * k * dt; ped.attackAnimUntil = now + 0.1; }
   // a wriggle: the move stick swung round to a new direction (left-right, round and round)
   if (Math.hypot(inp.mx || 0, inp.my || 0) > 0.5) {
     const mk = STRUGGLE_MOVE_K[stars(p)];
@@ -152,12 +155,13 @@ function kneel(world, c, ped) {
 // Broke free: the officers thrown off (down a moment - longer at low stars), up on their feet with a grace from the
 // next tackle. on: null when nobody was left holding them (knocked off by someone else).
 function free(world, p, on) {
-  const ped = p.ped, now = world.time;
+  const ped = p.ped, now = world.time, st = stars(p);
   end(world, p);
   ped.downUntil = now; ped.stunUntil = 0;
   ped.graceUntil = now + STRUGGLE_GRACE_S;
   if (on) {
-    const knock = STRUGGLE_KNOCK_S[stars(p)];
+    const knock = STRUGGLE_KNOCK_S[st];
+    headStart(world, ped, st, on);   // (the rest caught off guard, a longer grace and your wind back at 1-2 stars)
     on.forEach((c, i) => {
       const a = Math.atan2(c.y - ped.y, c.x - ped.x);
       c.vx = Math.cos(a) * 170; c.vy = Math.sin(a) * 170; c.rollT = 0; c.kneelUntil = 0;
@@ -166,9 +170,29 @@ function free(world, p, on) {
       if (!i) { ped.vx = -Math.cos(a) * 90; ped.vy = -Math.sin(a) * 90; }   // (rolling out from under them)
     });
     world.emit(ped.x, ped.y, { e: 'breakfree', x: ped.x, y: ped.y, id: ped.id });
-    world.notify(p, on.length > 1 ? 'You threw them off! Run - or fight.' : 'You threw the officer off! Run - or fight.', 'good');
+    const was = p.wanted;
+    law.resisted(world, ped);   // (resisting arrest: your wanted level up - at 1-2 stars never past 2, law.escapeStars)
+    world.notify(p, `${on.length > 1 ? 'You threw them off!' : 'You threw the officer off!'} Run and hide${p.wanted > was ? ` - resisting arrest: ${p.wanted} stars` : ''}.`, 'good');
   } else world.notify(p, 'Nobody\'s holding you down - get up and go!', 'good');
   p.meDirty = true;
+}
+
+// Got away (thrown them off here, broken away from the cuffs or out of the back of the car: custody.js) - a head start by
+// your stars (rules.js BREAK_HEADSTART): no tackle or grab for `grace` (at least extra s more: custody.js's car), the other
+// officers within `px` caught off guard a moment (they stop short: police.js staggerUntil; skip: those already sent
+// flying), and your wind back - being held down gave you no breath back after the sprint before the tackle.
+export function headStart(world, ped, st, skip = [], extra = 0) {
+  const H = BREAK_HEADSTART, now = world.time, s = Math.max(1, Math.min(5, st | 0));
+  ped.graceUntil = Math.max(ped.graceUntil || 0, now + extra + Math.max(STRUGGLE_GRACE_S, H.grace[s]));
+  if (H.wind[s] > 0) ped.stamina = Math.max(ped.stamina || 0, PED.staminaMax * H.wind[s]);
+  if (H.copWind[s] < 1) for (const c of skip) if (c && c.npc) c.stamina = Math.min(c.stamina ?? PED.staminaMax, PED.staminaMax * H.copWind[s]);
+  if (!(H.startle[s] > 0)) return;
+  for (const c of world.query(ped.x, ped.y, H.px, K.PED)) {
+    if (!c.npc || c.npc.role !== 'cop' || c.dead || c.vehId || skip.includes(c) || now < (c.downUntil || 0)) continue;
+    c.staggerUntil = Math.max(c.staggerUntil || 0, now + H.startle[s]); c.rollT = 0; c.vx *= 0.3; c.vy *= 0.3;
+    if (H.copWind[s] < 1) c.stamina = Math.min(c.stamina ?? PED.staminaMax, PED.staminaMax * Math.max(H.copWind[s], 0.5));   // (caught off guard: half their wind at most)
+    c.npc.nextDive = Math.max(c.npc.nextDive || 0, now + H.startle[s] + 0.6);
+  }
 }
 
 // Lost it: the cuffs go on (law.arrest: custody.js takes them from here).

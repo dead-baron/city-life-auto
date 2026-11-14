@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { guideSections, searchGuide } from '../shared/guide.js';
-import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE, LENIENCY, COP_LEVEL, JAIL_S, PRISON } from '../shared/rules.js';
+import { STARTER, MAILJOB, BOAT_RENTAL_PRICE, FTUE, MORTGAGE, LENIENCY, COP_LEVEL, JAIL_S, PRISON, BREAK_HEADSTART, ESCAPE_LOW_MAX } from '../shared/rules.js';
 import { SHOPS, ITEMS } from '../shared/items.js';
 import { ACTIONS } from '../shared/controls.js';
 import { closure } from '../tools/perf.mjs';
@@ -83,7 +83,8 @@ test('the law follows the rules: the warning before the first star, the police b
   assert.match(law('stars'), new RegExp(`first star \\(${LENIENCY.star} heat`), 'LENIENCY');
   assert.match(law('cops'), new RegExp(`${Math.round(COP_LEVEL[1].drive * 100)}% pace at one star`), 'COP_LEVEL drive');
   assert.match(law('busted'), new RegExp(`about ${COP_LEVEL[1].cuffS} seconds at one star, ${COP_LEVEL[5].cuffS} at five`), 'COP_LEVEL cuffS');
-  assert.match(law('busted'), /\[\[fire\]\].*\[\[move\]\].*\[\[action\]\] makes a break for it/, 'the controls by name');
+  assert.match(law('busted'), /\[\[fire\]\].*\[\[action\]\] makes a break for it/, 'the controls by name');
+  assert.match(law('busted'), new RegExp(`no tackle lands on you for ${BREAK_HEADSTART.grace[1]} seconds.*never past ${ESCAPE_LOW_MAX}`), 'BREAK_HEADSTART, ESCAPE_LOW_MAX');
   assert.match(law('busted'), new RegExp(`cell at the station for ${JAIL_S} seconds`), 'JAIL_S');
   assert.match(law('prison'), new RegExp(`booked at ${PRISON.stars} stars with a long record \\(${PRISON.record} bookings`), 'PRISON');
   const was = LENIENCY.star;
