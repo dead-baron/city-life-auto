@@ -23054,6 +23054,9 @@ distance was always 0 and not one mark was ever laid, on any preset, by anyone. 
 they're seen (`render/fx.js` trailSteps), and the marks go every 12 px (a wheel) or 10 px (a foot) back along the way
 they came, so a slow frame - a phone at 20 fps, a hitch - leaves no gap; a jump of 400 px (200 on foot), a teleport,
 none across it.
+- **And they'd have been painted over**: the fields' rows (`render/farmart.js` drawV2: the ripe crop's look, the
+  stubble's, the plough's) were drawn after the decals, and a decal doesn't write depth - the last one drawn wins - so a
+  row's look covered the tracks through it, and the blood and the skids on it. The rows go first now (`host.js` frame).
 
 ### What was there, preset by preset (art v2, World v3)
 World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the rows found them (and now the tracks).

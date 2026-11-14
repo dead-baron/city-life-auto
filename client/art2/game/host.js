@@ -681,8 +681,10 @@ export class World2 {
     this._uploadSprites(); mk('upload');
     if (!sub) {   // (none of the city's own life down in the tunnel)
       this._waterLife(F); mk('waterlife');
-      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
+      // (the fields' rows first: drawn after, their looks - the ripe crop's, the stubble's - painted over the tracks
+      // through them and the blood and the skids on them; decals don't write depth, so the last drawn wins)
       if (S.farmArt) S.farmArt.drawV2(this, F, gbuf, put);   // (the garden plots near you, the fields' rows: render/farmart.js)
+      this._decals(F); this._wakeTrail(F); this._surf(F); mk('decals');
     }
     this._entities(F); mk('entities');
     this._prefetch(F); mk('prefetch');
