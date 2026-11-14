@@ -285,7 +285,8 @@ test('making a break for it on the ground in cuffs (task #377): no fighting, a t
   custody.breakOut(w, p);
   w.rand = r0;
   assert.ok(p.custody && p.ped.cuffed, 'held fast');
-  assert.ok(!custody.canBreak(p, w) && players.buildMe(w, p).custody.brk === 0, 'no second try straight away');
+  assert.ok(!custody.canBreak(p, w) && players.buildMe(w, p).custody.brk === 2, 'no second try straight away (the bar: in a moment)');
+  assert.match(players.findInteraction(w, p).label, /break for it \(in a moment\)/i, 'the action button stays meanwhile (11-14)');
   w.time += BREAK_RETRY_S;
   assert.ok(custody.canBreak(p, w), 'another try in a moment');
 });

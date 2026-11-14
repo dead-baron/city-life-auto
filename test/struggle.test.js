@@ -13,6 +13,7 @@ import { K, PF } from '../shared/constants.js';
 import { STAR_HEAT } from '../shared/rules.js';
 import { IN } from '../shared/input.js';
 import { mulberry32 } from '../shared/rng.js';
+import { BREAK_HEADSTART, ESCAPE_LOW_MAX } from '../shared/rules.js';
 import { COP_LEVEL, STRUGGLE_CUFF_S, STRUGGLE_GRACE_S, STRUGGLE_KNOCK_S, TACKLE_TRIP_SHARE, TACKLE_TRIP_S, TACKLE_DOWN_BY_STARS, TACKLE_DOWN_S, TACKLE_RECOVER_S, TACKLE_APPROACH } from '../shared/rules.js';
 import { PED } from '../shared/physics.js';
 import * as players from '../server/systems/players.js';
@@ -167,7 +168,8 @@ test('the odds: by stars, by health, by who is on you - punching well (about 7 a
   // worn down: harder
   const half = odds(w, p, { stars: 1, hp: 50, seed: 21 }), low = odds(w, p, { stars: 1, hp: 30, seed: 22 });
   if (process.env.DBG) console.log(`1 star: half health ${pc(half)}, a third ${pc(low)}`);
-  assert.ok(half <= share[1] - 0.12 && low <= 0.6 && low < half, `half health ${pc(half)}, a third ${pc(low)} (full ${pc(share[1])})`);
+  // (at 1 star gentler since 11-14: with the stick worked this hard health tells less - test 'as a phone sends it' below)
+  assert.ok(half <= share[1] - 0.08 && low <= 0.75 && low < half, `half health ${pc(half)}, a third ${pc(low)} (full ${pc(share[1])})`);
   // a hearty meal's extra health: a little stronger
   assert.ok(odds(w, p, { stars: 3, hp: 130, seed: 23 }) > share[3], 'more health, stronger');
   // who's on you: SWAT and soldiers hold harder than a cop, an agent a little
@@ -178,6 +180,82 @@ test('the odds: by stars, by health, by who is on you - punching well (about 7 a
   assert.equal(odds(w, p, { stars: 1, gap: null, n: 20, seed: 41 }), 0, 'no punches, only the stick: always cuffed');
   // punching harder pays
   assert.ok(odds(w, p, { stars: 3, gap: [2, 3], seed: 42 }) > share[3], 'punching harder: better odds');
+});
+
+// ---- as a phone sends it (the owner, 11-14: "I can never seem to fight my way out of it") ----------------------------
+// The touch FIRE thumb, mashed (taps of 40-90 ms, about 7 a second) or held, read the way client/input.js does - once an
+// input (50 ms), a tap that came and went in between latched - and the other thumb on the move stick pushing one way (not
+// swung left and right: the odds above swing it 5 times a second, which no thumb on a phone does). A second officer joins
+// 0.6 s in, as a patrol car's partner does.
+function thumbOdds(w, p, { stars = 1, held = false, cops = 1, n = 120, seed = 1 }) {
+  const r = mulberry32(seed);
+  let free = 0;
+  for (let k = 0; k < n; k++) {
+    p.wanted = stars; p.heat = STAR_HEAT[stars] + 2;
+    p.ped.hp = 100; p.ped.downUntil = w.time + 2.5; p.ped.graceUntil = 0; p.ped.stunUntil = 0;
+    const cs = []; for (let i = 0; i < cops; i++) { const c = spawnNpc(w, 'cop', p.ped.x + 18, p.ped.y + i * 10, 'cop'); c.npc.unit = 1; cs.push(c); }
+    struggle.grab(w, cs[0], p.ped);
+    let down = false, next = 100 + r() * 200;
+    for (let i = 1; i < 200 && p.struggle; i++) {
+      if (i === 12 && cs[1]) struggle.grab(w, cs[1], p.ped);
+      const ms = i * 50;
+      let fire = held && ms > 150, tapped = false;
+      if (!held) {
+        while (next <= ms) { down = !down; if (down) tapped = true; next += down ? 40 + r() * 50 : Math.max(20, 1000 / 7 - 65 + (r() - 0.5) * 60); }
+        fire = down || tapped;
+      }
+      p.inputQ.push({ seq: p.ack + 1, bits: fire ? IN.FIRE : 0, mx: 1, my: 0, aim: 0 });
+      w.time += DT; w.tick++;
+      players.processInputs(w, DT);
+      struggle.update(w, DT);
+    }
+    if (!p.custody) free++;
+    p.custody = null; p.ped.cuffed = false; p.struggle = null; p.ped.downUntil = 0;
+    for (const c of cs) w.remove(c);
+  }
+  return free / n;
+}
+
+test('as a phone sends it: at 1-2 stars mashing or holding FIRE usually throws them off, two of them most of the time; 4-5 stay hard', () => {
+  const w = makeWorld({ rand: mulberry32(14) });
+  const { p } = joinPlayer(w);
+  teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+  const pc = (x) => `${Math.round(x * 100)}%`, said = [];
+  for (const stars of [1, 2]) {
+    const mash = thumbOdds(w, p, { stars, seed: stars }), hold = thumbOdds(w, p, { stars, held: true, seed: 10 + stars });
+    const mash2 = thumbOdds(w, p, { stars, cops: 2, seed: 20 + stars }), hold2 = thumbOdds(w, p, { stars, held: true, cops: 2, seed: 30 + stars });
+    said.push(`${stars}: mash ${pc(mash)}, hold ${pc(hold)}, two mash ${pc(mash2)}, two hold ${pc(hold2)}`);
+    assert.ok(mash >= 0.85 && hold >= 0.8, `${stars} star(s), one officer: ${said.at(-1)}`);
+    assert.ok(mash2 >= 0.55 && hold2 >= 0.5 && mash2 <= mash, `${stars} star(s), two officers: ${said.at(-1)}`);
+  }
+  if (process.env.DBG) console.log(said.join('\n'));
+  const four = thumbOdds(w, p, { stars: 4, seed: 41 }), five = thumbOdds(w, p, { stars: 5, held: true, seed: 51 });
+  assert.ok(four <= 0.15 && five <= 0.05, `4 stars mashing ${pc(four)}, 5 holding ${pc(five)}: still hard`);
+});
+
+test('thrown off at 1-2 stars: a real head start - the officers standing by caught off guard, a longer grace, your wind back; resisting puts 1 star on 2, never past it', () => {
+  for (const stars of [1, 2, 4]) {
+    const w = makeWorld({ rand: mulberry32(70 + stars) });
+    const { p } = joinPlayer(w);
+    teleport(w, p.ped, corner(w).x + 32, corner(w).y + 32);
+    wanted(w, p, stars);
+    const a = officer(w, p), by = officer(w, p, 'cop', -40, 30);   // (one on them; one of another car's standing by)
+    p.ped.downUntil = w.time + 2.5; p.ped.stamina = 5;   // (out of breath from the chase)
+    struggle.grab(w, a, p.ped);
+    p.struggle.m = 0.99;
+    pad(p, 0, 1); w.step();
+    assert.ok(!p.struggle && !p.custody, `${stars} star(s): thrown off`);
+    const H = BREAK_HEADSTART, t = w.time;
+    if (stars <= 2) {
+      assert.ok(p.ped.graceUntil - t > H.grace[stars] - 0.1 && H.grace[stars] > STRUGGLE_GRACE_S, `a longer grace (${(p.ped.graceUntil - t).toFixed(1)} s)`);
+      assert.ok(by.staggerUntil - t > H.startle[stars] - 0.1, 'the officer standing by caught off guard');
+      assert.ok(p.ped.stamina >= 100 * H.wind[stars] - 1, `your wind back (${Math.round(p.ped.stamina)})`);
+      assert.equal(p.wanted, Math.min(stars + 1, ESCAPE_LOW_MAX), `resisting arrest: ${stars} -> ${p.wanted} stars, never past ${ESCAPE_LOW_MAX}`);
+    } else {
+      assert.ok(p.ped.graceUntil - t < STRUGGLE_GRACE_S + 0.1 && !(by.staggerUntil > t), '4 stars: the short grace, nobody caught off guard');
+      assert.equal(p.wanted, stars, '4 stars: no star for it (an escape from the cuffs is a star)');
+    }
+  }
 });
 
 test('two officers on you are harder: a second one joins in and pushes too', () => {

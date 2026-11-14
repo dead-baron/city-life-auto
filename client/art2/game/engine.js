@@ -59,7 +59,7 @@
 // Cost: the lit pass is most of a frame (the sun march by day, the lights at night), final 15-35 % when wet or foggy.
 // Pass camX/camY as the player's position rounded to the art grid (+ the look-ahead), so the player holds still; decals
 //   on decks need z0; static lights from chunks are added each frame.
-import { F_GROUND, F_LEAF, F_WET, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
+import { F_GROUND, F_LEAF, F_CHAR, F_WET, packGBuf, octEncode, OCT_MID, downsample2, downsampleUnder, ART_PX, CHUNK_RUN } from '../gbuf.js';
 import { LightGame, LIGHT_TIERS, MAX_LIGHTS, LIGHT_FLOATS, PRESETS_GAME, PRESET_DEFAULTS, blendPresets, glProgram, glTex, glFbo, TRI_VS, GLSL_COMMON } from './lightgame.js';
 import { canopyReach } from './canopy.js';
 export { PRESETS_GAME, PRESET_DEFAULTS, blendPresets, LIGHT_TIERS, ART_PX };
@@ -463,7 +463,7 @@ void main(){
   if (cov(l, w, h, bits) < 0.5) discard;
   vec4 sb = texelFetch(tS, tq, 0);
   float hs = zOf(sb), h0 = zOf(texelFetch(tB, at(l, w, bits), 0)) + vPar.x;
-  if (hs <= h0 + 0.5 || (vTop > 0.0 && hs <= vPar.x + vTop) || veg(tq, flOf(sb), h0)) discard;   // (vTop: o.xrayTop)
+  if (hs <= h0 + 0.5 || (vTop > 0.0 && hs <= vPar.x + vTop) || (flOf(sb) & ${F_CHAR}) != 0 || veg(tq, flOf(sb), h0)) discard;   // (vTop: o.xrayTop; F_CHAR: nobody's outlined through a person - the owner, 11-14)
   float rim = (cov(l + ivec2(1, 0), w, h, bits) < 0.5 || cov(l - ivec2(1, 0), w, h, bits) < 0.5 || cov(l + ivec2(0, 1), w, h, bits) < 0.5 || cov(l - ivec2(0, 1), w, h, bits) < 0.5) ? 1.0 : 0.0;
   o = vec4(mix(uCol.rgb, vec3(1.0), rim * 0.45), min(1.0, uCol.a + rim * 0.35));
 }`;

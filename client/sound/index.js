@@ -74,7 +74,7 @@ export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {
       E.update(F.sp && F.spec ? F.sp : state.cam, inside);
       const me = state.ents && state.ents.get(state.myPedId);   // (where you are: your own sounds are never cut off)
       if (me && me.rx !== undefined) { E.me.x = me.rx; E.me.y = me.ry; E.me.live = true; } else E.me.live = false;
-      if (scene === 'title') { veh.silence(); amb.silence(); stage.silence(); return; }
+      if (scene === 'title') { veh.silence(); amb.silence(); stage.silence(); for (const k of ['shop', 'lobby', 'club', 'drivein']) places.music.set(k, 0); return; }   // (the room's music too: back on the title, the hospital lobby's tune went on under the title's - the owner, 11-14)
       inside = places.update(F, state, t, scene);
       veh.update(F, state, dt);
       amb.update(F, state, dt, inside);

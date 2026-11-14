@@ -2659,7 +2659,7 @@ export class World2 {
     if (fx.c && A) for (let i = 0; i < fx.c.length; i++) {
       const c = fx.c[i];
       if (!c.on || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
-      const age = now - c.born, a = c.alpha * (age > 150 ? 1 - (age - 150) / 40 : 1);
+      const age = now - c.born, hold = c.small ? 1.5 : 150, a = c.alpha * (age > hold ? 1 - (age - hold) / (c.small ? 3.5 : 40) : 1);   // (feet: pushed down a moment, back up within seconds - the owner, 11-14)
       if (a <= 0.02) { c.on = false; continue; }
       const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
       E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)

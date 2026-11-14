@@ -21,7 +21,7 @@ import { CONTACT } from '../../shared/rules-contacts.js';
 import { wildStyle } from './wildlife.js';
 import { edgeInfo } from '../../shared/border.js';
 import { undergroundOf, ugLos } from '../../shared/underground.js';
-import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST, HEAT_TOP, ESCAPE_STARS, LENIENCY, copLevel } from '../../shared/rules.js';
+import { ROB_CALLED_HEAT, VANDAL_HEAT, VEH_CRIME, HEIST, HEAT_TOP, ESCAPE_STARS, ESCAPE_LOW_MAX, LENIENCY, copLevel } from '../../shared/rules.js';
 const EDGE_I = { d: 0, nx: 0, ny: 0 };
 
 // sev: how much more (or less) likely a witness is to call it in than for an assault (WITNESS_REPORT); sight: how far
@@ -129,7 +129,7 @@ export function addPolicePts(world, p, n) {
 const DISPATCH_TTL = 300;
 export function logDispatch(world, type, x, y, p, stars, via) {
   world.dispatch ??= [];
-  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching', fight: 'Street fight', flee: 'Ran from an officer', recognized: 'Known offender sighted' })[type] || type, s: stars, via, who: p ? p.pid : null });
+  world.dispatch.push({ id: (world.dispatchSeq = (world.dispatchSeq || 0) + 1), t: world.time, x: Math.round(x), y: Math.round(y), l: CRIMES[type]?.label || ({ mugging: 'Purse snatching', fight: 'Street fight', flee: 'Ran from an officer', recognized: 'Known offender sighted', resist: 'Resisting arrest' })[type] || type, s: stars, via, who: p ? p.pid : null });
   if (world.dispatch.length > 60) world.dispatch.splice(0, world.dispatch.length - 60);
   for (const q of world.players.values()) if (q.badge) q.meDirty = true;
 }
@@ -469,16 +469,38 @@ export function addHeat(world, p, amount, x, y, damp = false) {
   store.touch();
 }
 
-// Escaping custody (custody.js): a felony on the record, and a star more than you had (rules.js ESCAPE_STARS) - its heat
-// used to be added like any crime's, and a 1-star prisoner who got away was on 3
+// Where getting away from the police leaves you (rules.js ESCAPE_STARS, ESCAPE_LOW_MAX): a star more - but from 1-2 stars
+// never past 2, so a low-star escape keeps the gentler police (the owner, 11-14)
+export function escapeStars(stars) {
+  const s = Math.max(1, Math.min(5, stars | 0));
+  return s <= ESCAPE_LOW_MAX ? Math.min(s + ESCAPE_STARS, ESCAPE_LOW_MAX) : Math.min(5, s + ESCAPE_STARS);
+}
+// up to those stars: on the next star's first rung (as escaping always did), or, kept where you were, the heat up near the
+// next star (a fresh crime and it's that) - a longer wait to cool off, but the same police
+function raiseFor(world, p, ped, want) {
+  const s = Math.max(1, p.wanted);
+  const to = want > s || s > ESCAPE_LOW_MAX ? STAR_HEAT[want] + 4 : STAR_HEAT[want + 1] - 10;
+  if (to > p.heat) addHeat(world, p, to - p.heat, ped.x, ped.y);
+  return want;
+}
+// Escaping custody (custody.js): a felony on the record, and a star more than you had (escapeStars) - its heat used to be
+// added like any crime's, and a 1-star prisoner who got away was on 3
 export function escaped(world, ped) {
   const p = ped && ped.player;
   if (!p) return;
-  const want = Math.min(5, Math.max(1, p.wanted) + ESCAPE_STARS);
   p.profile.felonies++;
   p.profile.criminalExp += Math.round(CRIMES.escape.heat / 2);
-  addHeat(world, p, Math.max(0, STAR_HEAT[want] + 4 - p.heat), ped.x, ped.y);
+  raiseFor(world, p, ped, escapeStars(p.wanted));
   logDispatch(world, 'escape', ped.x, ped.y, p, p.wanted, 'officer');
+}
+// Threw an officer off before the cuffs went on (struggle.js): resisting arrest - not a felony; at 1-2 stars your wanted
+// level up as for an escape (at 1 star you're on 2; at 2 you stay on 2, hotter). From 3 it adds nothing: the police are
+// rough enough there, and hitting one of them is assaulting an officer as ever.
+export function resisted(world, ped) {
+  const p = ped && ped.player;
+  if (!p || !(p.wanted > 0) || p.wanted > ESCAPE_LOW_MAX) return;
+  raiseFor(world, p, ped, escapeStars(p.wanted));
+  logDispatch(world, 'resist', ped.x, ped.y, p, p.wanted, 'officer');
 }
 
 export function clearWanted(world, p) {

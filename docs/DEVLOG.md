@@ -23385,6 +23385,79 @@ The owner (a phone, a test bounty from the director's "Bounty hunter on a contra
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
 "Bounty $2,500 on you · 9 min" (client/hudinfo.js).
 
+## 2026-11-14 - The police at 1-2 stars: fighting free that works on a phone, a door kick that comes, a real head start
+The owner (a phone): "I don't think escaping from custody or break free or breaking out of the cop car work correctly
+yet ... I can never seem to fight my way out of it. Can we make sure lower wanted level police interactions are less
+harsh ... breaking free and running or fighting the police will raise your wanted level but you still get a chance to
+escape and hide and wait it out."
+Why the 11-07 pass didn't help in practice (found by driving the real World with a bot through the real input path -
+the touch FIRE thumb sampled every 50 ms as client/input.js does, ACT tapped as the button shows, the police dispatched as
+in play; scratch sims, not checked in):
+- **Holding FIRE never won.** 11-07's tables came from simulated struggles that swung the move stick left and right five
+  times a second (each swing a wriggle), which no thumb on a phone does. With the stick pushed one way, holding FIRE freed
+  you 1% of the time at 1 star (0% at 2, 0% with two officers); mashing with a car's two officers on you 50% / 23%.
+- **The back-seat kick almost never came.** It needed the car under 60 px/s with its crew aboard - with the siren on the
+  traffic pulls over, and in 164 s of 1-star rides the car was that slow for 5 s; the ACT button showed only then. In 12
+  rides from 1 star the bot never once got a try (tries 0).
+- **Caught again as the grace ran out.** The officers standing by (the second car's, a partner not on you) weren't
+  touched by the break; they tire slower than you at 1-3 stars and ran you down just after the 2.5 s grace: in the
+  1-star runs every re-tackle after a win came within 5 s (median 2.6 s).
+- **The stars climbed you into the harsh tier.** Each escape was a star: 1 -> 2 -> 3 (tasers, 3-star odds) -> 4 (they
+  shoot) - starting from 1 or 2 stars, runs reached 4-5 stars.
+What changed (shared/rules.js; server/systems/struggle.js, custody.js, law.js, players.js; client/hud.js):
+- **The struggle at 1-2 stars** - the officer's hold `STRUGGLE_STARS` 0.9 / 1 -> 0.8 / 0.8; holding the button
+  `STRUGGLE_HELD` is now by stars, 0.6 a second at 1-2 (was 0.27 at every level: about as good as mashing now - a phone's
+  quick taps that run together between two inputs count as held too); a second officer `STRUGGLE_SECOND` 0.35 / 0.45 ->
+  0.4 / 0.4 (with the lighter hold). 3-5 stars unchanged.
+- **A head start** (`BREAK_HEADSTART`, struggle.js `headStart`, used by the struggle, the break from the cuffs and the
+  kick out of the car): at 1-2 stars no tackle for 4.5 s (was 2.5), every other officer within 320 px stops short 1.6 s
+  (1.4 at 2), you're up with a full sprint in you (held down, you got no breath back), and the officers you threw off or
+  broke away from are winded (no stamina at 1 star, a quarter at 2; those caught off guard half) - they come after you
+  at a run, not a sprint, till they've their breath back. 3-5 stars: the 2.5 s grace as before.
+- **The back seat** (`BREAK_CAR`): the kick works under 190 px/s at 1 star, 180 at 2 (round a corner, at the lights;
+  was 60) and lands 85% / 70% of the time (was 50% / 35%); 3-5 unchanged. ACT stays on screen the whole ride
+  ("Make a break for it (when the car slows)"); pressed while it's too fast you brace (`custody.js notYet`, `c.armed`)
+  and the kick comes the moment it slows - no try spent. On the ground and on the walk to the car the button stays
+  between tries too ("(in a moment)"; a press says "Not yet - get your breath"); the try there works 75% / 60% at 1-2
+  stars (`BREAK_CHANCE`, was 60% / 45%).
+- **Your stars** (law.js `escapeStars`, `resisted`): throwing an officer off is now resisting arrest - at 1 star it puts
+  you on 2 (the owner: fighting the police raises your wanted level); getting away from the cuffs is a star more as
+  before, but from 1-2 stars neither takes you past `ESCAPE_LOW_MAX` (2): a 2-star escape keeps you on 2 with the heat
+  up near 3 (a fresh crime and it's 3). From 3 an escape is a star, as before; resisting adds nothing there.
+- **What to press**: the fight bar reads "Mash or hold [FIRE] to throw them off" (the button by its glyph on every
+  device); the custody bar "[ACT] when the car slows" / "again in a moment" while a break is coming (me.custody brk 2).
+  On touch the custody state shows FIRE while an officer's on you and ACT the whole time a break can be had.
+- The Guide's Busted entry says it with the numbers from rules.js (the grace, never past 2 stars).
+Simulated, before -> after. The struggle alone, as a phone sends it (200 each; FIRE sampled every 50 ms; the stick pushed
+one way; full health; a second officer joining 0.6 s in):
+
+| stars | mash, 1 officer | mash, 2 | hold, 1 | hold, 2 | mash, stick idle, 1 |
+|---|---|---|---|---|---|
+| 1 | 89% -> 100% | 50% -> 81% | 1% -> 100% | 0% -> 79% | 63% -> 91% |
+| 2 | 73% -> 100% | 23% -> 75% | 0% -> 100% | 0% -> 80% | 48% -> 92% |
+| 3 | 26% -> 29% | 0% -> 0% | 0% -> 0% | 0% -> 0% | 19% -> 18% |
+| 4 | 3% -> 5% | 0% | 0% | 0% | 1% -> 1% |
+| 5 | 0% | 0% | 0% | 0% | 0% |
+
+(1 star, half health, mashing one officer: 33% -> 52%; a third: 8% -> 31%. Mashing half as fast, 1 star: 2% -> 16%.)
+In the world (15 runs each, 150 s: wanted, standing about till the police take them down, then running; the struggle,
+the cuffs, the car, the dispatch all real; "won" counts every struggle in the run):
+
+| start | thumb | struggles won | re-tackled within 5 s of a win | runs reaching 3+ stars | booked |
+|---|---|---|---|---|---|
+| 1 star | mash | 9 / 17 (53%) -> 13 / 21 (62%) | 0 / 4 -> 5 / 8 | 2 -> 0 | 1 -> 0 |
+| 1 star | hold | 0 / 19 (0%) -> 19 / 20 (95%) | 2 / 4 -> 1 / 5 | 3 -> 0 | 4 -> 0 |
+| 2 stars | mash | 7 / 28 (25%) -> 17 / 22 (77%) | 6 / 13 -> 0 / 7 | 10 -> 0 | 5 -> 0 |
+| 2 stars | hold | 0 / 23 (0%) -> 15 / 18 (83%) | 4 / 8 -> 2 / 5 | 9 -> 0 | 7 -> 0 |
+| 3 stars | mash | 0 / 14 -> 0 / 15 | - | - | 12 -> 8 (and 6 shot dead; the before didn't count deaths) |
+
+(The 1-star mash "after" includes one run cornered and beaten down to 1 health - four struggles lost there; strength is
+your health.) The back seat (12 rides each from the cuffs to the station, ACT tapped whenever it shows): out by the door
+at 1 star 2 -> 10, at 2 stars 2 -> 9, at 3 stars 2 -> 2; every 1-2 star rider who got out was on 2 stars after (was 2 ->
+2 and 2 -> 3). Tests: struggle.test.js (as a phone sends it; the head start and resisting), custody.test.js (the
+button all the ride, braced, a 2-star escape stays on 2, escapeStars), arrests / law / guide updated where they pinned
+the old numbers (holding no longer worse than mashing at 1 star; the button "in a moment" between tries).
+
 ## 2026-11-14 - The neon logo: the title's sign switches on
 The owner's new logo replaces the old one everywhere: a neon sign in four lit layers (the skyline, "City Life", the
 swoosh, "Auto") over the same sign switched off, and a one-line wordmark for small places.
@@ -23515,3 +23588,39 @@ where you left it, brought to you by a valet - no teleport. The numbers: shared/
   buying to it, the arrest, dropping and handing over, the Guide from the data), test/mycar.test.js (where you left it
   through a restart, on your map, the valet's space, wait, fee and cooldown, wanted, the wrecked fee), the death pack's
   and the home stash's tests updated for the guns on their own and the rounds counted once.
+
+## 2026-11-14 - Your character on the title card: the game's own sprite, whole and still
+The owner: the title card's avatar sat low and off-centre in its frame, showed only the head and shoulders, and
+breathed and looked round on an endless loop. (A finer, close-up render was tried first and turned down - "it looks
+like old artwork, not the game's character".) client/portrait.js now:
+- **Draws the game's own sprite**: exactly the pixels the city shows of your look (person() at the game's size, put on
+  the art grid by downsample2), made bigger only by a whole number of CSS px an art px, nearest-neighbour.
+- **Frames the whole figure**, head to feet, at 2 px an art px in the card's 56 px frame (bigger where a frame has the
+  room), centred both ways over a soft light in two steps of the card's navy; a figure too tall for the frame (a tall
+  hat) and the small card's 40 px frame show it from the head down, centred across.
+- **Holds still**, and now and then - after 3.5 to 9 s of stillness, at random, never a loop - plays one small idle
+  from the game sprite's own frames and goes still again: a blink (the still figure with the rig's eyes shut, as a
+  sleeping figure has them), a glance aside (the idle's own glances, one way, the other or both), a scratch of the head
+  (the "huh?" emote's frames) or a look at the phone (the phone emote's). The emotes' frames come from
+  client/art2/poses.js, loaded once the card is drawn (the module the game loads when someone near emotes). Nothing
+  plays while the tab is hidden or the card isn't on screen; it's drawn as soon as the card shows and again when the
+  frame changes size. Reduced motion: still, no idles.
+- Tests: test/portrait.test.js (the game's own pixels, no finer render; whole, centred, whole-number scale for every
+  starter look; each idle its own frame; no loop; reduced motion). Before / after of eight looks: the session's
+  scratchpad `logo2/owner/avatar2-before-after.png`.
+
+
+## 2026-11-14 - No see-through outline behind people
+The owner: "I dont think we need this invisible white outline on our player when we're behind an NPC or other player."
+The x-ray outline (what hides you is outlined over you, art2/game/engine.js) now ignores people (the scene's F_CHAR
+pixels): behind a building, a vehicle or a tree you're still outlined; behind someone standing in front of you, not.
+
+## 2026-11-14 - Walking through a field: pushed down a moment, not a track
+The owner: walking left a long trodden track through the wheat; he wanted it to part round you and rise back up shortly
+after. A person's or an animal's crush marks (fx.crush small) now go down at about half strength and stand back up within
+about five seconds (client/main.js, art2/game/host.js); a vehicle's swath still lies flat for a couple of minutes.
+
+## 2026-11-14 - Back on the title, the room's music stops
+The owner: out to the menu from the hospital lobby, its tune went on under the title's music. On the title the sound
+frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
+club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).

@@ -656,7 +656,11 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   // down from a tackle (police.js): moving gets you up sooner - if nobody pins you first
   if (ped.scrambleUntil > world.time && world.time < ped.downUntil && !ped.cuffed && Math.hypot(inp.mx || 0, inp.my || 0) > 0.3) ped.downUntil = Math.max(world.time, ped.downUntil - dt * TACKLE_SCRAMBLE);
   if (ped.cuffed || custody.inCell(p)) {   // (in custody: custody.js moves them; the jail panel has the bail)
-    if ((pressed & IN.ACTION) && custody.canBreak(p, world) && safety.confirm(world, p, 'escape', 'escape')) custody.breakOut(world, p);   // (make a break for it: on the ground, walked to the car, the car stuck; Safety mode asks first)
+    if (pressed & IN.ACTION) {   // (make a break for it: on the ground, walked to the car, the car slow or stuck; Safety mode asks first)
+      const b = custody.breakable(world, p);
+      if (b === 'now') { if (safety.confirm(world, p, 'escape', 'escape')) custody.breakOut(world, p); }
+      else if (b && (b !== 'slow' || safety.confirm(world, p, 'escape', 'escape'))) custody.notYet(world, p, b);   // (not yet: says why - no try spent; the car too fast, braced to kick the door as it slows)
+    }
     if (!ped.cuffed) {   // in a cell: walk round it; the action button sits, holds the bars (cells.js)
       cells.input(world, p, ped, inp, dt);
       if (pressed & IN.ACTION) doAct(world, p);
@@ -835,7 +839,9 @@ function fishHere(world, p, ped) {
 export function findInteraction(world, p) {
   const ped = p.ped;
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
-  if (ped && ped.cuffed && !ped.dead && custody.canBreak(p, world)) return { label: 'Make a break for it!', run: () => custody.breakOut(world, p) };
+  // (the action button there the whole time a break can be had - now, or once the car slows or you've your breath back)
+  const brk = ped && ped.cuffed && !ped.dead ? custody.breakable(world, p) : null;
+  if (brk) return { label: brk === 'now' ? 'Make a break for it!' : brk === 'slow' ? 'Make a break for it (when the car slows)' : 'Make a break for it (in a moment)', run: () => { if (custody.breakable(world, p) === 'now') custody.breakOut(world, p); } };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)
