@@ -23096,4 +23096,13 @@ kinds of errors ... starting with these hand crafted scenes".
   floats on clear water (not on rocks, planks or the shore), standing boards over each other or over a building's
   ground floor, two boards of one name in a screen or a board by the building whose front says it, a plant on a roof or
   a plaza's furniture in a city block, a lit board in the wilds, a race's start over a craft. What it found is fixed in
-  the data - counts below.
+  the data, every count now 0 (nothing allowed): 107 boats off clear water (the Harbor's sailboats in the sea stacks; the
+  old Pelican Key's jetty boats left under World v3's city - 7 dropped by the tidy pass; Bayside Boatworks' and the
+  Harbor slipway's boats up on the hard or on the beach - put on cradles and off the sand; the hire kayaks on Egret
+  Marsh's boardwalk; the many that only touched a finger pier's tip are left - alongside is moored), 8 boards beside the
+  building whose front says the same (HARBOR BOATWORKS, YARDS AUTO SALVAGE, WESTPORT GALLERIA, TIKI POINT and four more -
+  dropped), 2 pairs of street names checked and kept (the alleys' two ends, a screen apart), 11 boards over a front's
+  ground floor (stepped out till clear), 383 plants on roofs and pieces of plaza furniture in city blocks
+  (dropped), 31 lit boards in the wilds (made wooden). shared/world3-tidy.js does the general ones last in the build.
+- Hashes: the world (today's - the hire piers' launch), World v3's and both art hashes change; the chunks the server
+  bakes the same as before carry over (server/artcdn.js).
