@@ -43,6 +43,21 @@ function puff(col) {
   return c;
 }
 
+// Where to lay the crush marks of something that moved to (x, y) since its last mark (o._crx, o._cry - set the first
+// time it's seen: until 11-13 nothing set it, the distance was always 0 and no track was ever laid): every `step` px
+// back along the way it came, oldest first, into out [x, y, ...]; nothing until it has gone `step`, nothing across a
+// jump of `jump` px or more (a teleport, a respawn) - only the mark where it is. -> out
+export function trailSteps(o, x, y, step, jump, out) {
+  out.length = 0;
+  if (o._crx === undefined) { o._crx = x; o._cry = y; return out; }
+  const lx = o._crx, ly = o._cry, d = Math.hypot(x - lx, y - ly);
+  if (d < step) return out;
+  if (d >= jump) { o._crx = x; o._cry = y; out.push(x, y); return out; }
+  const n = Math.min(32, Math.floor(d / step)), ux = (x - lx) / d * step, uy = (y - ly) / d * step;
+  for (let k = 1; k <= n; k++) out.push(lx + ux * k, ly + uy * k);
+  o._crx = n === 32 ? x : lx + ux * n; o._cry = n === 32 ? y : ly + uy * n;   // (what's left over counts toward the next)
+  return out;
+}
 // anyone afloat (afloat(e)) under a deck near x, y (11-06)
 export function afloatUnder(ents, x, y, afloat, r = 48) {
   for (const e of ents) if (e.rx !== undefined && Math.abs(e.rx - x) < r && Math.abs(e.ry - y) < r && afloat(e)) return true;

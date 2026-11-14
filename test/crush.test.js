@@ -78,3 +78,22 @@ test('a car through a bush: a burst of leaves, the bush knocked aside a while; a
   for (let t = 0; t < 10; t++) h._bushes({ now: 40 + t / 60, dt: 1 / 60, vehs: [w] });
   assert.equal(parts(), before);
 });
+
+// (11-13) why no one ever left a track: the last mark's place was only ever set once a track was laid, and the
+// distance from it was measured from where they stood when it was unset - always 0 (main.js vehVisual / pedVisual)
+test('a track is laid along the way: from the first sight, every step, none across a jump', async () => {
+  const { trailSteps } = await import('../client/render/fx.js');
+  const o = {}, out = [];
+  assert.equal(trailSteps(o, 100, 100, 12, 400, out).length, 0, 'first seen: nothing yet');
+  assert.equal(trailSteps(o, 106, 100, 12, 400, out).length, 0, 'not a step on');
+  let n = 0;
+  for (let x = 106; x <= 400; x += 6) n += trailSteps(o, x, 100, 12, 400, out).length / 2;
+  assert.ok(n >= 23 && n <= 25, `a mark every 12 px of 300 (${n})`);
+  // a slow frame: 120 px at once - the marks laid back along it, oldest first, every 12 px
+  trailSteps(o, 520, 100, 12, 400, out);
+  assert.equal(out.length / 2, 10);
+  for (let i = 2; i < out.length; i += 2) assert.equal(out[i] - out[i - 2], 12);
+  assert.equal(out[out.length - 2], 520);
+  // a jump (a teleport): only where it landed
+  assert.equal(trailSteps(o, 5000, 100, 12, 400, out).length, 2);
+});

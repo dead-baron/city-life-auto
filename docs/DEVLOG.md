@@ -22953,13 +22953,21 @@ entire row disappear at once not just a small portion around you." And, later th
 a desert bush: "vehicles going through vegetation is a bit sloppy ... have the bush get knocked down or ruffled or just
 burst apart ... leaving out the white transparency".
 
+### Why nothing flattened: no track was ever laid
+The tracks through the crops (10-21: `client/main.js` vehVisual / pedVisual -> `render/fx.js` crush) measured how far
+a car or a walker had gone since its last mark from `_crx` - and `_crx` was only set when a mark was laid, so the
+distance was always 0 and not one mark was ever laid, on any preset, by anyone. Now the place is set the first time
+they're seen (`render/fx.js` trailSteps), and the marks go every 12 px (a wheel) or 10 px (a foot) back along the way
+they came, so a slow frame - a phone at 20 fps, a hitch - leaves no gap; a jump of 400 px (200 on foot), a teleport,
+none across it.
+
 ### What was there, preset by preset (art v2, World v3)
-World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the crush marks and the rows found them.
+World v3's fields are field tiles (`T.FIELD`), the same as today's world, so the rows found them (and now the tracks).
 Phones get **Medium** by default (**Low** only on an Android phone that reports 3 GB of memory or less; an iPhone
 reports none and gets Medium); desktops **High** (**Ultra** on a big GPU with 8 cores and 8 GB), laptops High (Medium
 with 4 GB or less) - client/gfx.js detectDevice.
 - **Low**: no grass tufts and no standing wheat at all (the bake's decor is off on Low: the field is its flat golden
-  ground) and no sway. The tracks (`render/fx.js` crush, drawn by `host.js` _decals) were laid and drawn here too.
+  ground) and no sway. The tracks (drawn by `host.js` _decals, whatever the preset) are what shows there now.
 - **Medium**: the cover sways, but round you it could lean one art pixel at most (the tier's sway reach, R = 1): 2 px,
   which read as nothing. Only the darker hollow showed.
 - **High / Ultra**: 4 px of lean round you, the hollow, the tracks.
@@ -22995,6 +23003,7 @@ Cost: the bushes' buckets are made once (and again if the map's props change in 
 under the moving vehicles in view. The shader's push loop is eight slots instead of four. The renderer's code is within
 its budget.
 
-Tests: test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
+Tests: test/crush.test.js (the tracks laid from the first sight, every step, back along a slow frame, none across a
+jump), test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
 back on the timer), test/crush.test.js (the ring's index; a car through a bush - the leaves, the bush knocked aside and
 standing back up, a tree and a car standing still: nothing), test/wind.test.js (a push bends a bush, never a crown).
