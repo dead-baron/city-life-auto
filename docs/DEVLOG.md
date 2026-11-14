@@ -23348,3 +23348,36 @@ the touch buttons took any `me.surf` for "on a board". They now take the board's
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
 "Bounty $2,500 on you · 9 min" (client/hudinfo.js).
+
+## 2026-11-14 - The neon logo: the title's sign switches on
+The owner's new logo replaces the old one everywhere: a neon sign in four lit layers (the skyline, "City Life", the
+swoosh, "Auto") over the same sign switched off, and a one-line wordmark for small places.
+- **The title's entrance** (client/titlelogo.js, played by client/splash.js once per page load, after the studio sting
+  or straight away on a reload): the sign steps in switched off, then the skyline, "City Life", the swoosh and "Auto"
+  buzz on in turn, each with a short irregular flicker (a few blips, not always at full, then on for good) and a
+  quiet hum and starter click - its own few oscillators, since the game's sound loads only on the first tap; silent
+  until the page may play sound (skipping the sting counts as the tap) and with the sound off in Settings, scaled by
+  the master and effects sliders. About 2.4 s. Then it idles: the glow breathes softly and now and then one layer gives
+  a tiny flicker. Any tap, click, key or pad button skips to lit. Reduced motion: lit at once, no flicker, no idle.
+  Automated browsers and `?nosplash` get it lit; `?neon` plays it there, `?neon=<ms>` holds a moment (captures).
+- **Light on the page**: everything that moves is opacity (the compositor's work - nothing repainted while it
+  flickers or breathes); each tube's glow is a drop-shadow in its own colour on its layer, the old drop-shadow on the
+  whole logo moved to the switched-off sign so the group is never re-filtered.
+- **Small places**: the pause header uses the one-line wordmark (the stacked logo's script blurs under about 200 px),
+  sized to clear the close button. The title's logo is wider than the old one for its height, so on a desktop it's
+  sized 46vh (was 38vh) to keep its height.
+- **The assets** (tools/build_logo.py, from the owner's files): each layer cropped to its own content box (alpha
+  under 16, the source's matte haze, dropped), shrunk once with Lanczos to the largest size drawn (the logo 620 CSS px
+  wide at 2x = 1240 px; the wordmark 340 at 2x = 680) and put back on a 32-colour palette with no dither, so the edges
+  are hard steps again; lossless WebP won over PNG for every one. assets/logo/: unlit.webp 37 KB, city 36, auto 10,
+  swoosh 4, sky 4 (the lit layers 53 KB), oneline.webp 13 KB. The old assets/logo.png (56 KB) is gone (and
+  tools/build_art.py no longer makes it).
+- **Budgets**: the switched-off sign and the wordmark are in the page's HTML: the title's assets 264 -> 259 KB (budget
+  290). The lit layers are fetched by client/titlelogo.js as the page starts, after the first paint - the intro starts
+  on the switched-off sign and waits for them. The page's code is unchanged (splash.js and titlelogo.js load beside
+  boot.js, not from it).
+- **The share card**: assets/og-card.png (1200 x 630, 551 KB), the lit logo with its glow over in-game night streets,
+  blurred and darkened; index.html gets og:type, og:title, og:description, og:url, og:image (+ size and alt) and
+  twitter:card summary_large_image beside its existing description.
+- Screenshots (the intro's frame strip, the title lit on a phone upright, on its side and on a desktop, the pause
+  header on each, the share card): the session's scratchpad `titlelogo/owner/`.

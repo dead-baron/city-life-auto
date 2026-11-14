@@ -14,12 +14,17 @@
 // Loaded as its own module beside boot.js, so the game loads underneath while it plays. Any tap, click or key skips
 // it. Played once per browser session (a reload or an update's reload goes straight to the title), never with
 // ?nosplash or under an automated browser (the tests' captures; ?splash plays it there, ?splash=<ms> holds one moment). Nothing else in the game depends on it.
+// Then the title's own entrance: the neon sign switching on (client/titlelogo.js) and the menu's rows stepping up -
+// once per page load; ?neon skips the sting and plays it (under an automated browser too), ?neon=<ms> holds one moment.
+import { mountLogo, neonIntro, showLit } from './titlelogo.js';
 (() => {
   const q = location.search;
+  mountLogo();
   let seen = false;
   try { seen = sessionStorage.getItem('cla.splash') === '1'; sessionStorage.setItem('cla.splash', '1'); } catch { seen = false; }
   const force = /[?&]splash\b/.test(q), still = +((q.match(/[?&]splash=(\d+)/) || [])[1] || -1);   // (?splash plays it anyway; ?splash=<ms> holds that moment - the captures)
-  if (!force && (/[?&](nosplash|fresh)\b/.test(q) || navigator.webdriver)) return;
+  const neonQ = q.match(/[?&]neon(?:=(\d+))?(?:&|$)/), neonAt = neonQ && neonQ[1] ? +neonQ[1] : -1;
+  if (!force && !neonQ && (/[?&](nosplash|fresh)\b/.test(q) || navigator.webdriver)) { showLit(); return; }
   // the title screen waits, hidden, for its entrance (below): straight away when the sting has played this session
   const title = document.getElementById('title');
   const css = document.createElement('style');
@@ -29,70 +34,22 @@
   if (title) title.classList.add('cla-in');
   let introStarted = false;
   // The title's entrance, SNES-style (the owner, 11-03: "the City Life Auto logo come in with a similar stylized
-  // animation ... goes smoothly into the main menu"): the logo resolves out of a mosaic, its blocks shrinking from big
-  // to single pixels while it scales in by steps and settles; a sheen sweeps it; then the menu's rows step up into
-  // place one after another. Drawn on a canvas over the logo, which then hands over to the real one.
+  // animation ... goes smoothly into the main menu"; 11-14, the neon logo: "start unlit, then ... buzz on in turn"):
+  // the sign steps in switched off and its layers buzz on one after another (client/titlelogo.js) while the menu's
+  // rows step up into place.
   function titleIntro() {
     if (introStarted || !title) return;
     introStarted = true;
     const logo = document.getElementById('logo'), rows = [...title.children].filter((c) => c !== logo);
     const done = () => { title.classList.remove('cla-in'); for (const r of [logo, ...rows]) if (r) r.classList.remove('cla-on', 'cla-up'); };
-    if (title.classList.contains('hidden') || !logo) { done(); return; }
+    if (title.classList.contains('hidden') || !logo) { done(); showLit(); return; }
+    if (neonAt >= 0) { done(); neonIntro({ at: neonAt }); return; }
+    logo.classList.add('cla-on');
     rows.forEach((r, i) => { r.classList.add('cla-up'); setTimeout(() => r.classList.add('cla-on'), 520 + i * 70); });
     setTimeout(done, 520 + rows.length * 70 + 400);
-    const run = () => {
-      const R0 = logo.getBoundingClientRect();
-      if (!R0.width || !logo.naturalWidth) { logo.classList.add('cla-on'); return; }
-      const dpr = Math.min(2, devicePixelRatio || 1), c = document.createElement('canvas');
-      c.style.cssText = 'position:fixed;z-index:31;pointer-events:none;image-rendering:pixelated';
-      // the canvas follows the logo every frame: the title's rows settle while it plays (the sign-in line, the
-      // graphics row, a phone's address bar), and a canvas left where the logo first was showed it twice (the owner, 11-03)
-      let at = '';
-      const follow = () => {
-        const R = logo.getBoundingClientRect(), key = `${R.left},${R.top},${R.width},${R.height}`;
-        if (key === at) return;
-        at = key;
-        const w = Math.round(R.width * dpr), h = Math.round(R.height * dpr);
-        if (c.width !== w || c.height !== h) { c.width = w; c.height = h; sh.width = w; sh.height = h; }
-        Object.assign(c.style, { left: `${R.left}px`, top: `${R.top}px`, width: `${R.width}px`, height: `${R.height}px` });
-      };
-      document.body.appendChild(c);
-      const x = c.getContext('2d'), m = document.createElement('canvas'), sh = document.createElement('canvas');
-      follow();
-      const T = 900, t1 = performance.now();
-      const step = (now) => {
-        follow();
-        const t = now - t1, W = c.width, H = c.height;
-        x.clearRect(0, 0, W, H); x.imageSmoothingEnabled = false;
-        // 0-480 ms: the mosaic resolving (blocks 24 -> 1, a new size every 40 ms) while the scale steps 1.15 -> 1
-        const k = Math.min(1, t / 480), blk = Math.max(1, Math.round(24 * (1 - Math.floor(k * 12) / 12) * dpr));
-        const sc = 1 + 0.15 * (1 - Math.floor(k * 6) / 6), dw = Math.round(W * sc), dh = Math.round(H * sc), dx = Math.round((W - dw) / 2), dy = Math.round((H - dh) / 2);
-        const s2 = sh.getContext('2d'); s2.clearRect(0, 0, W, H);
-        if (blk > 1) {
-          const mw = Math.max(1, Math.ceil(dw / blk)), mh = Math.max(1, Math.ceil(dh / blk));
-          m.width = mw; m.height = mh; const mx = m.getContext('2d'); mx.imageSmoothingEnabled = true; mx.drawImage(logo, 0, 0, mw, mh);
-          s2.imageSmoothingEnabled = false; s2.drawImage(m, 0, 0, mw, mh, dx, dy, mw * blk, mh * blk);
-        } else { s2.imageSmoothingEnabled = true; s2.drawImage(logo, dx, dy, dw, dh); }
-        // 520-900 ms: the sheen, a slanted white band across the letters
-        if (t > 520 && t < T) {
-          const p = (t - 520) / (T - 520), bw = W * 0.12, bx = -bw * 2 + p * (W + bw * 4);
-          s2.save(); s2.globalCompositeOperation = 'source-atop'; s2.fillStyle = 'rgba(255,255,255,0.55)';
-          s2.beginPath(); s2.moveTo(bx, H); s2.lineTo(bx + bw, H); s2.lineTo(bx + bw + H * 0.4, 0); s2.lineTo(bx + H * 0.4, 0); s2.fill();
-          s2.restore();
-        }
-        x.globalAlpha = Math.min(1, t / 160);
-        x.drawImage(sh, 0, 0);
-        if (t < T) requestAnimationFrame(step);
-        else {   // (the canvas goes once the logo's own fade in is over, so it never dims - still following it till then)
-          logo.classList.add('cla-on');
-          const t2 = now, hold = (n) => { if (n - t2 > 280) { c.remove(); return; } follow(); x.clearRect(0, 0, c.width, c.height); x.drawImage(logo, 0, 0, c.width, c.height); requestAnimationFrame(hold); };
-          requestAnimationFrame(hold);
-        }
-      };
-      requestAnimationFrame(step);
-    };
-    if (logo.complete) run(); else logo.addEventListener('load', run, { once: true });
+    neonIntro();
   }
+  if (neonQ) { titleIntro(); return; }
   if (seen && !force) { titleIntro(); return; }
 
   const NAVY = '#0F1830', T_END = 3300, OUT = 2500;   // (OUT: the mosaic transition starts; in the timeline's own ms)

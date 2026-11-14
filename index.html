@@ -8,6 +8,16 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>City Life Auto</title>
 <meta name="description" content="City Life Auto - a top-down multiplayer extraction life-sim sandbox in your browser. No download, play as a guest instantly.">
+<!-- the share card (social links, chat previews): the lit logo over the city at night - tools/build_logo.py -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="City Life Auto">
+<meta property="og:description" content="A free multiplayer top-down city sandbox in your browser - drive, work, hustle and explore with everyone online. No download.">
+<meta property="og:url" content="https://deadbaron.com/city-life-auto/">
+<meta property="og:image" content="https://deadbaron.com/city-life-auto/assets/og-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The City Life Auto neon sign lit over the city at night">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/icons/icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
@@ -123,7 +133,8 @@
        (client/titlescreen.js); then the menu - PLAY, CHARACTER and SETTINGS, the graphics you're on - with your card
        bottom left (the sign-in slot on it) and who's online bottom right -->
   <div id="title" class="loading">
-    <img id="logo" src="assets/logo.png" alt="City Life Auto">
+    <!-- the neon sign (the owner's logo): switched off here, its lit layers added and switched on by client/titlelogo.js -->
+    <div id="logo" role="img" aria-label="City Life Auto"><img class="lg-off" src="assets/logo/unlit.webp" width="1240" height="755" alt=""></div>
     <div id="t-status" role="status">Connecting...</div>
     <div id="t-off" class="hidden" role="status" aria-live="polite"></div>
     <div id="t-load"><div id="t-warm" class="pbar"><i></i></div><p id="t-tip"></p></div>
@@ -166,7 +177,7 @@
       </div>
       <div id="hub-body">
   <div id="pause" class="hidden overlay hubtab"><div class="pz">
-    <div class="pz-head"><img src="assets/logo.png" alt="City Life Auto"><b>PAUSED</b><button id="pz-close" class="x" type="button" aria-label="Close"><i class="ic" data-ic="close"></i></button></div>
+    <div class="pz-head"><img src="assets/logo/oneline.webp" width="680" height="199" alt="City Life Auto"><b>PAUSED</b><button id="pz-close" class="x" type="button" aria-label="Close"><i class="ic" data-ic="close"></i></button></div>
     <div class="pz-list" role="menu" aria-label="Paused">
       <button class="pz-row pz-go" role="menuitem" data-p="resume"><i class="ic" data-ic="play"></i><span>RESUME</span><span class="kchip kbm-only">ESC</span></button>
       <button class="pz-row" role="menuitem" data-p="map"><i class="ic" data-ic="map"></i><span>MAP</span><span class="kchip kbm-only">M</span></button>

@@ -867,7 +867,18 @@ body.portrait #m-wallet small { display: none; }
 #title { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: var(--s3); padding: max(var(--s4), env(safe-area-inset-top)) max(var(--s4), env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(var(--s4), env(safe-area-inset-left)); text-align: center; overflow: auto;
   background: var(--sky, none) repeat-x 50% 100% / auto 216px, linear-gradient(180deg, var(--ink) 0%, var(--navy) 38%, var(--dusk-a) 78%, var(--dusk-b) 100%); image-rendering: pixelated; }
 #title > * { image-rendering: auto; }
-#logo { width: min(620px, 84vw, 62vh); margin-bottom: var(--s2); filter: drop-shadow(0 10px 24px var(--ink)); image-rendering: auto; }
+#logo { width: min(620px, 84vw, 62vh); margin-bottom: var(--s2); image-rendering: auto; }
+/* the neon sign (client/titlelogo.js): the sign switched off sets the box, the lit layers over it in % of it, each with
+   its tubes' glow; idle, the glow breathes (opacity only: the compositor's work, nothing repainted) */
+#logo { position: relative; flex: none; container-type: inline-size; }
+#logo > .lg-off { display: block; width: 100%; height: auto; filter: drop-shadow(0 10px 24px var(--ink)); }
+#logo > .lg { position: absolute; display: block; will-change: opacity; }
+#logo > .lg > img { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 2px var(--g)) drop-shadow(0 0 9px var(--g)); filter: drop-shadow(0 0 .45cqw var(--g)) drop-shadow(0 0 2cqw var(--g)); }
+#logo.lg-idle > .lg > img { animation: lg-breathe 3.4s ease-in-out infinite alternate; }
+#logo.lg-idle > .lg:nth-of-type(2) > img { animation-duration: 4.1s; animation-delay: -1.3s; }
+#logo.lg-idle > .lg:nth-of-type(4) > img { animation-duration: 3.8s; animation-delay: -2.2s; }
+@keyframes lg-breathe { from { opacity: 1; } to { opacity: .84; } }
+@media (prefers-reduced-motion: reduce) { #logo.lg-idle > .lg > img { animation: none; } }
 #t-status { color: var(--cream); font: 700 var(--fs-5) var(--pixel); letter-spacing: 1px; line-height: 1.25; text-shadow: var(--lift); max-width: min(640px, 92vw); }
 #t-status:empty { display: none; }
 #title:not(.loading) #t-status { font: 600 var(--fs-3) var(--ui); color: var(--dim); letter-spacing: 0; text-shadow: none; }   /* (ready: a note only when there's something to say - idle, an update) */
@@ -1416,7 +1427,7 @@ body:not(.pad) #hub-foot { display: none; }
 #hub[data-tab=pause] #hub-body > .hubtab { position: static; }
 .pz { width: min(380px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter-l var(--t2) var(--ease); }
 .pz-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s3) var(--s3) var(--s2); border-bottom: 2px solid var(--gold); background: var(--sky, none) repeat-x 50% 100% / auto 120px, linear-gradient(180deg, var(--dusk-a) 0%, var(--dusk-b) 70%, var(--navy) 100%); image-rendering: pixelated; }
-.pz-head img { width: min(300px, 86%); image-rendering: auto; filter: drop-shadow(0 4px 0 var(--ink)); }
+.pz-head img { width: min(300px, calc(100% - 120px)); height: auto; image-rendering: auto; filter: drop-shadow(0 4px 0 var(--ink)); }   /* (the one-line wordmark: the stacked logo's script blurs this small) */
 .pz-head .x { position: absolute; top: var(--s2); right: var(--s2); z-index: 1; }   /* (a close in the corner, as every other screen has: the owner, 11-13) */
 .pz-head b { font: 700 var(--fs-5) var(--pixel); color: var(--info); letter-spacing: 3px; text-shadow: var(--lift); }
 .pz-list { display: flex; flex-direction: column; padding: var(--s2); overflow-y: auto; }
@@ -1441,7 +1452,7 @@ body.portrait .pz { width: 100%; max-width: 420px; }
   #hub[data-tab=pause] { padding: var(--s2) max(var(--s3), env(safe-area-inset-right)) var(--s2) max(var(--s5), env(safe-area-inset-left)); }
   .pz { width: min(520px, 100%); }
   .pz-head { flex-direction: row; justify-content: center; gap: var(--s3); padding: var(--s1) var(--s3); }
-  .pz-head img { width: 160px; }
+  .pz-head img { width: 170px; }
   .pz-head b { font-size: var(--fs-4); }
   .pz-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--s2); padding: var(--s1) var(--s2); }
   .pz-row { min-height: var(--tap); font-size: var(--fs-3); }
@@ -1853,7 +1864,7 @@ body:not(.touch) .bag-cell { height: 84px; }
 body:not(.touch) #hub[data-tab=people] .hub-frame { width: min(760px, 100%); }
 body:not(.touch) .jc-pop { width: min(480px, 100%); }
 body:not(.touch) #menu .panel { width: min(900px, 100%); max-height: 60%; }
-body:not(.touch) .pz-head img { width: 200px; }
+body:not(.touch) .pz-head img { width: min(240px, calc(100% - 104px)); }   /* (clear of the close in the corner) */
 body:not(.touch) .pz-row { min-height: var(--tap); }
 /* the map: the map itself full screen as it was, its head, legend and zoom buttons at the screens' scale */
 body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:not(.touch) .bm-zoom { zoom: var(--zk, 1); }
@@ -1874,7 +1885,7 @@ body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:n
    zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */
 body:not(.touch) #title > :is(#t-status, #t-load, #t-off, #t-buttons, #t-row2, #t-gfx, #t-practice, #t-tools, #t-foot), body:not(.touch) :is(#signin, #gate) .panel { zoom: var(--zk, 1); }
 body:not(.touch) #title { gap: var(--s2); padding-bottom: calc(var(--zk, 1) * 88px); }
-body:not(.touch) #logo { width: min(520px, 84vw, 38vh); margin-bottom: 0; }
+body:not(.touch) #logo { width: min(620px, 84vw, 46vh); margin-bottom: 0; }   /* (the neon sign is wider than it is tall: 46vh keeps the old logo's height) */
 body:not(.touch) #title > #t-tools { position: absolute; left: var(--s4); top: var(--s4); }
 body:not(.touch) #play { min-width: 240px; }
 /* the "What's next" cards changed (client/main.js nextDot): a dot on the phone's button and its app tile - nothing more */
