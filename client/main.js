@@ -19,7 +19,7 @@ import { initInput, sample, input, takeNumberPick, settings, saveSettings, detec
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
-import { FX, windowMuzzle, drawLeans, afloatUnder } from './render/fx.js';
+import { FX, windowMuzzle, drawLeans, afloatUnder, trailSteps } from './render/fx.js';
 import { Booms } from './render/boom.js';          // explosions, run over, onto the hood (tasks #363, #361)
 import { Campfires } from './render/campfx.js';     // the campfires' embers, flares and glow (task #360)
 import { HUD, fitLine } from './hud.js';
@@ -4388,6 +4388,7 @@ const vehSpeed = (v) => (v.buf.length > 1 ? Math.hypot(v.buf[v.buf.length - 1].x
 // (an aircraft only when it's down on the water - not every frame it flies over it at any height: the splashes and rings
 // under a helicopter at 31 m, the owner 11-06 - and a floatplane never; v._up: up in the air, no puddle splashes either)
 const vehSinking = (v, def) => def.kind !== 'boat' && !(v._up = def.kind === 'air' && (def.floats || (v.ralt ?? (v.extra | 0) * 4) > AIR_UP)) && WATER_T[S.map.tileAtPx(v.rx, v.ry)] === 1;
+const TRAIL = [];   // (trailSteps' points: reused every call)
 function vehVisual(v, now, dt) {
   const def = VEHICLE_BY_INDEX[v.d.m];
   if (!def) return;
@@ -4426,13 +4427,11 @@ function vehVisual(v, now, dt) {
     for (const o of [-0.39, 0.39]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
     if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
-  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field
+  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field -
+  // laid along the way it came, so a slow frame (a phone at 20 fps, a car at speed) leaves no gaps in the track
   if (S.art2 && def.kind !== 'boat' && def.kind !== 'air' && !(f & VF.WRECK) && !(v.rz > 0.05)) {
-    const lx = v._crx ?? v.rx, ly = v._cry ?? v.ry;
-    if (Math.abs(v.rx - lx) + Math.abs(v.ry - ly) > 12) {
-      v._crx = v.rx; v._cry = v.ry;
-      for (const sgn of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
-    }
+    const P = trailSteps(v, v.rx, v.ry, 12, 400, TRAIL);
+    for (let i = 0; i < P.length; i += 2) for (const sgn of [-1, 1]) { const [x, y] = localToWorld(P[i], P[i + 1], v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 1); }
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
     const b = v.buf; const sp = Math.hypot(b[b.length - 1].x - b[b.length - 2].x, b[b.length - 1].y - b[b.length - 2].y);
@@ -4687,8 +4686,8 @@ function pedVisual(p, now) {
   if (p.blink === 3) return; // inside a home
   // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
   if (S.art2 && !(f & PF.DEAD)) {
-    const lx = p._crx ?? p.rx, ly = p._cry ?? p.ry, d = Math.abs(p.rx - lx) + Math.abs(p.ry - ly);
-    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.85); }
+    const lx = p._crx, ly = p._cry, P = trailSteps(p, p.rx, p.ry, 10, 200, TRAIL), a = Math.atan2(p.ry - ly, p.rx - lx);
+    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 1);
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }

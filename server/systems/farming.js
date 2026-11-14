@@ -110,6 +110,7 @@ export function update(world) {
     const dt = world.time - (world.fieldsAt ?? world.time);
     world.fieldsAt = world.time;
     if (dt > 0) for (const fd of F) for (const row of fd.rows) if (row.s === ROW.SOWN) { row.g = Math.min(1, row.g + dt / (FARM.growDays * DAY)); if (row.g >= 1) { row.s = ROW.RIPE; row.g = 0; row.m = 0; fd.dirty = true; } }
+    regrowHand(world, F);
     if (world.tick % 1200 === 13) keep(world);   // (kept a minute at a time: the growing, the stretches worked)
   }
   for (const p of world.players.values()) {
@@ -184,21 +185,32 @@ function finishRow(world, p, F, r, job, v = null) {
   return job;
 }
 
-// ---- by hand at harvest time: on foot in a ripe row, pick the stretch you're on; every FARM.handPer stretches fill a
-// crate (a Produce Box: carry it to the farm stand or the grocery - jobs.js deliveryZoneFor)
+// ---- by hand at harvest time (the owner, 11-13: "when you pick a crop by hand it makes an entire row disappear at
+// once, not just a small portion around you"): on foot in a ripe row, pick the plants within FARM.handR of you - a
+// small patch, cut to stubble on every page (F.hand, sent with the fields), growing back after FARM.handRegrowS. The
+// row itself stays ripe for the tractor and the combine. Every FARM.handPer patches fill a crate (a Produce Box: carry
+// it to the farm stand or the grocery - jobs.js deliveryZoneFor).
+// a patch picked within FARM.handR of (x, y) on field F, not grown back yet
+const pickedNear = (world, F, x, y) => (F.hand || []).some((h) => h.until > world.time && Math.hypot(h.x - x, h.y - y) < FARM.handR);
+function handSpot(world, ped) {
+  const at = ped && rowAt(world, ped.x, ped.y);
+  if (!at || at.row.s !== ROW.RIPE || !(at.row.ok & (1 << at.k)) || (at.row.m & (1 << at.k))) return null;   // (m: a stretch the combine has cut)
+  return at;
+}
 export function handInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.dead || ped.vehId || ped.carrying || ped.hidden) return null;
-  const at = rowAt(world, ped.x, ped.y);
-  if (!at || at.row.s !== ROW.RIPE || !(at.row.ok & (1 << at.k))) return null;
-  if (at.row.m & (1 << at.k)) return { label: 'Picked here - move along the row', run: () => {} };
+  const at = handSpot(world, ped);
+  if (!at) return null;
+  if (pickedNear(world, at.F, ped.x, ped.y)) return { label: 'Picked here - move along the row', run: () => {} };
   return { label: `Pick the crop by hand (${(p.handPicked || 0)}/${FARM.handPer} for a crate)`, run: () => handPick(world, p) };
 }
 export function handPick(world, p) {
-  const ped = p.ped, at = ped && rowAt(world, ped.x, ped.y);
-  if (!at || at.row.s !== ROW.RIPE || at.row.m & (1 << at.k) || !(at.row.ok & (1 << at.k))) return null;
-  const { F, r, k, row } = at;
-  row.m |= 1 << k;
+  const ped = p.ped, at = ped && !ped.dead && !ped.vehId ? handSpot(world, ped) : null;
+  if (!at || pickedNear(world, at.F, ped.x, ped.y)) return null;
+  const F = at.F, H = F.hand || (F.hand = []);
+  H.push({ x: Math.round(ped.x), y: Math.round(ped.y), until: world.time + FARM.handRegrowS });
+  if (H.length > FARM.handMax) H.shift();
   F.dirty = true;
   p.handPicked = (p.handPicked || 0) + 1;
   let crate = null;
@@ -207,10 +219,16 @@ export function handPick(world, p) {
     crate = world.spawnCrate(1, ped.x + 14, ped.y + 10, { owner: p.pid, label: 'Produce Box', value: FARM.handBox, contraband: false });
     crate.hand = true;
     world.notify(p, `A crate of the crop, picked by hand. Carry it to the farm stand or the grocery for $${FARM.handBox}.`, 'good');
-  } else world.notify(p, `You pick along the row (${p.handPicked}/${FARM.handPer} for a crate).`, 'info');
-  if (bits(row.m & row.ok) >= Math.ceil(row.okN * FARM.cover)) finishRow(world, p, F, r, 'harvest');
+  } else world.notify(p, `You pick the plants round you (${p.handPicked}/${FARM.handPer} for a crate) - move along the row for more.`, 'info');
   p.meDirty = true;
   return crate;
+}
+// the patches grown back (every 2 s: update) - their fields sent again
+function regrowHand(world, F) {
+  for (const fd of F) if (fd.hand && fd.hand.length && fd.hand[0].until <= world.time) {
+    const left = fd.hand.filter((h) => h.until > world.time);
+    if (left.length !== fd.hand.length) { fd.hand = left; fd.dirty = true; }
+  }
 }
 
 // ---- the farm-work contract ---------------------------------------------------------------------------------------
@@ -257,8 +275,10 @@ function track(world, p) {
 }
 
 // ---- what the page draws -------------------------------------------------------------------------------------------
-// { t: 'fields', f: [{ i, x, y, w, h, v, rw, segs, r: [state, growth %, done bits, field bits, ...4 a row] }] } - the
-// fields within FARM.near of you, sent when one of them changed
+// { t: 'fields', f: [{ i, x, y, w, h, v, rw, segs, r: [state, growth %, done bits, field bits, ...4 a row], hp: [x, y,
+// ...] the patches picked by hand (world px, FARM.handR round), hr: FARM.handR }] } - the fields within FARM.near of
+// you, sent when one of them changed
+const handOf = (world, F) => { const o = []; for (const q of F.hand || []) if (q.until > world.time) o.push(q.x, q.y); return o; };
 function sendNear(world, p) {
   const ped = p.ped;
   if (!p.conn || !ped) return;
@@ -268,7 +288,7 @@ function sendNear(world, p) {
   const ver = near.map((F) => `${F.i}:${F.ver || 0}`).join(',');
   if (ver === (p.fieldsSig || '')) return;
   p.fieldsSig = ver;
-  p.conn.sendJSON({ t: 'fields', f: near.map((F) => ({ i: F.i, x: F.f.x, y: F.f.y, w: F.f.w, h: F.f.h, v: F.v ? 1 : 0, rw: FARM.rowW, segs: FARM.segs, r: F.rows.flatMap((row) => [row.s, Math.round(row.g * 100), row.m, row.ok]) })) });
+  p.conn.sendJSON({ t: 'fields', f: near.map((F) => ({ i: F.i, x: F.f.x, y: F.f.y, w: F.f.w, h: F.f.h, v: F.v ? 1 : 0, rw: FARM.rowW, segs: FARM.segs, r: F.rows.flatMap((row) => [row.s, Math.round(row.g * 100), row.m, row.ok]), hp: handOf(world, F), hr: FARM.handR })) });
 }
 
 // ---- dev ('farm'): at the fields by the co-op in a tractor, the rows beside you in every state (stubble, ploughed,

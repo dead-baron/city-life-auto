@@ -43,6 +43,21 @@ function puff(col) {
   return c;
 }
 
+// Where to lay the crush marks of something that moved to (x, y) since its last mark (o._crx, o._cry - set the first
+// time it's seen: until 11-13 nothing set it, the distance was always 0 and no track was ever laid): every `step` px
+// back along the way it came, oldest first, into out [x, y, ...]; nothing until it has gone `step`, nothing across a
+// jump of `jump` px or more (a teleport, a respawn) - only the mark where it is. -> out
+export function trailSteps(o, x, y, step, jump, out) {
+  out.length = 0;
+  if (o._crx === undefined) { o._crx = x; o._cry = y; return out; }
+  const lx = o._crx, ly = o._cry, d = Math.hypot(x - lx, y - ly);
+  if (d < step) return out;
+  if (d >= jump) { o._crx = x; o._cry = y; out.push(x, y); return out; }
+  const n = Math.min(32, Math.floor(d / step)), ux = (x - lx) / d * step, uy = (y - ly) / d * step;
+  for (let k = 1; k <= n; k++) out.push(lx + ux * k, ly + uy * k);
+  o._crx = n === 32 ? x : lx + ux * n; o._cry = n === 32 ? y : ly + uy * n;   // (what's left over counts toward the next)
+  return out;
+}
 // anyone afloat (afloat(e)) under a deck near x, y (11-06)
 export function afloatUnder(ents, x, y, afloat, r = 48) {
   for (const e of ents) if (e.rx !== undefined && Math.abs(e.rx - x) < r && Math.abs(e.ry - y) < r && afloat(e)) return true;
@@ -55,7 +70,7 @@ export class FX {
     this.pi = 0;
     this.d = new Array(MAX_D);
     for (let i = 0; i < MAX_D; i++) this.d[i] = { on: false, x: 0, y: 0, a: 0, type: 0, size: 1, alpha: 1, born: 0, color: '' };
-    this.c = []; this.ci = 0;
+    this.c = []; this.cri = 0;   // (cri: the crush ring's own index - ci is the flying chunks')
     for (let i = 0; i < MAX_C; i++) this.c[i] = { on: false, x: 0, y: 0, a: 0, small: 0, alpha: 1, born: 0 };
     this.di = 0;
     this.tracers = [];
@@ -77,8 +92,8 @@ export class FX {
   }
   // a crush mark in a field's crop (small: a person's or an animal's track, else a wheel's swath), along angle a
   crush(x, y, a, small, now, alpha = 0.8) {
-    const o = this.c[this.ci];
-    this.ci = (this.ci + 1) % MAX_C;
+    const o = this.c[this.cri];
+    this.cri = (this.cri + 1) % MAX_C;
     o.on = true; o.x = x; o.y = y; o.a = a; o.small = small ? 1 : 0; o.born = now; o.alpha = alpha;
   }
   decal(type, x, y, a, size, color, now, alpha = 1) {
