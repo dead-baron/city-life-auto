@@ -6,9 +6,10 @@ colours, each tube a white-hot core (signfont.js hotOf) inside its colour, and a
 light.js, the bright parts blurred at half and quarter size and added back). No black outline.
 
 Usage:
-  python3 tools/neon_logo.py <logo_dir> --variant A|B|C [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
+  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2 [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
                              [--root .]
-  python3 tools/neon_logo.py <logo_dir> --sheet --out DIR     the three variants and the current logo side by side
+  python3 tools/neon_logo.py <logo_dir> --sheet [D,D2] [--name F.png] --out DIR   variants (A-C by default) and the
+                                                                 current logo side by side
 
 <logo_dir>: the owner's layers (01-skyline.png, 02-city-life.png, 03-swoosh.png, 04-auto.png: 1536 x 1024, stacked at
 0,0). Only their shapes are used: each layer's lit body (everything but the black outline) is smoothed, snapped to the
@@ -463,7 +464,118 @@ def paint_sky_rich(S, letters):
     return L
 
 
+# ---- D: the owner's logo as he drew it, cleaned up on the art grid (2026-11-14, the owner on A-C: "very thin ... can
+# we not copy the concept art almost exactly but just have it cleaned up") --------------------------------------------
+# Each layer's source colours sorted into a few classes (nearest of the colours he used), each art px the class most of
+# its CELL x CELL source px are (a mode filter - the strokes keep their full weight), lone px voted out by their
+# neighbours, then each class painted in one clean colour from the game's neon. His heavy black outline goes: kept only as
+# a thin dark seam where it parts two lit shapes (letters overlapping, the u's groove, the y over the swoosh). D2: the
+# script's red rim a px thicker, out into where the outline was.
+CREAM, RED1, RED2, GOLD1, GOLD2 = (255, 238, 206), (255, 84, 96), (214, 30, 62), (255, 190, 60), (232, 138, 22)
+FILL, EDGE = (44, 24, 10), (24, 14, 30)
+OUTL = -2   # (the black outline's class)
+CLASSES = {   # layer -> [(the source colour it stands for, the colour drawn, its glow, its colour switched off)]; OUTL last
+    'city': [((240, 226, 196), CREAM, 0.95), ((242, 68, 58), RED1, 0.8), ((234, 10, 38), RED2, 0.55), ((6, 2, 16), None, 0)],
+    'swoosh': [((240, 226, 196), CREAM, 0.95), ((242, 68, 58), RED1, 0.8), ((234, 10, 38), RED2, 0.55), ((6, 2, 16), None, 0)],
+    'auto': [((240, 226, 196), CREAM, 0.95), ((242, 166, 4), GOLD1, 0.8), ((240, 140, 0), GOLD2, 0.6), ((40, 18, 0), FILL, 0.04), ((6, 2, 16), None, 0)],
+    'sky': [((10, 178, 240), CYAN, 0.8), ((240, 168, 0), WINDOW, 0.7), ((0, 4, 40), TOWER, 0.0)],
+}
+
+
+def modes(path, refs):
+    """the art grid's class per px (-1 clear, OUTL the outline, else the index into refs): a mode filter over each
+    cell's source px, then lone px (fewer than 2 of their 8 neighbours alike) given their neighbourhood's class"""
+    a = np.asarray(Image.open(path).convert('RGBA')).astype(np.int32)
+    solid = a[..., 3] >= 128
+    ref = np.array([r for r, *_ in refs], np.int32)
+    d = ((a[..., None, :3] - ref[None, None]) ** 2).sum(-1)
+    cls = np.where(solid, d.argmin(-1), -1)
+    K = len(refs)
+    votes = []
+    for k in range(-1, K):
+        m = np.zeros((GH * CELL, GW * CELL), np.float32)
+        m[TOP * CELL:TOP * CELL + SRC_H, :SRC_W] = (cls == k)
+        if k == -1:
+            m[:TOP * CELL] = 1
+            m[TOP * CELL + SRC_H:] = 1
+            m[:, SRC_W:] = 1
+        votes.append(m.reshape(GH, CELL, GW, CELL).mean(axis=(1, 3)))
+    g = np.argmax(np.stack(votes), 0) - 1
+    for _ in range(2):
+        same = np.zeros(g.shape, np.int32)
+        P = np.pad(g, 1, constant_values=-9)
+        cnt = np.zeros((K + 1,) + g.shape, np.int32)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx or dy:
+                    nb = P[1 + dy:1 + dy + GH, 1 + dx:1 + dx + GW]
+                    same += nb == g
+                    for k in range(-1, K):
+                        cnt[k + 1] += nb == k
+        lone = same < 2
+        g = np.where(lone, cnt.argmax(0) - 1, g)
+    return g
+
+
+def seams(g, lit, outl):
+    """his outline split: what the outside reaches goes (the heavy edge round the letters and their drop below); what's
+    shut inside the lit shapes stays as a thin dark seam where it's a line (letters overlapping, the u's groove, a
+    counter's ring) and is filled with the colour round it where it's only a speck. Returns (the seams, g filled)."""
+    outside = ~fill_holes(lit)
+    inner = outl & ~outside
+    lab = label(inner)
+    keep = np.zeros_like(inner)
+    g = g.copy()
+    K = int(g.max()) + 1
+    for i in range(1, lab.max() + 1):
+        m = lab == i
+        if m.sum() >= 6:
+            keep |= m
+            continue
+        # a speck: the class most of the lit px round it are
+        ring = dil(m) & lit
+        vals = g[ring]
+        if vals.size:
+            g[m] = np.bincount(vals[vals >= 0], minlength=K).argmax()
+    return keep, g
+
+
+def paint_faithful(src, thick=False):
+    Ls = {}
+    for k in ORDER:
+        refs = CLASSES[k]
+        g = modes(os.path.join(src, FILES[k]), refs)
+        L = Layer(k, COL[k])
+        if k == 'sky':
+            # the towers' dark only inside the skyline's outline (the rest of his dark round it goes)
+            lit = (g == 0) | (g == 1)
+            inside = fill_holes(lit | dil(lit)) & ~lit
+            for i, (_, c, e) in enumerate(refs):
+                m = g == i
+                if i == 2:
+                    m &= inside
+                L.put(m, c, e, COL[k] if i != 1 else WINDOW, glass(c) if e else mul(c, 0.9))
+            Ls[k] = L
+            continue
+        outl = g == len(refs) - 1
+        lit = (g >= 0) & ~outl
+        sm, g = seams(g, lit, outl)
+        lit = (g >= 0) & (g != len(refs) - 1)
+        if thick and k in ('city', 'swoosh'):
+            # the red rim a px out, into where the outline was (round the outside, not into the seams)
+            grow = dil(lit, sq=False) & outl & ~sm
+            g = np.where(grow, 2, g)
+            lit |= grow
+        for i, (_, c, e) in enumerate(refs[:-1]):
+            L.put(g == i, c, e, COL[k], glass(c) if c != FILL else mul(c, 0.8))
+        L.put(sm, EDGE, 0.0, None, EDGE)
+        Ls[k] = L
+    return [Ls[k] for k in ORDER]
+
+
 def build(src, variant):
+    if variant in ('D', 'D2'):
+        return paint_faithful(src, thick=variant == 'D2')
     S = shapes(src)
     Ls = {}
     for k in ('city', 'swoosh', 'auto'):
@@ -672,11 +784,11 @@ def font(size):
     return ImageFont.load_default(size)
 
 
-def sheet(src, root, out):
+def sheet(src, root, out, vs='ABC', name='contact-sheet.png'):
     """the current logo and the three variants side by side on the title's night, the same width, then a close-up of
     each ("Cit" at the page's 2x: the pixels)"""
     PW, PH, LW, CH = 720, 640, 600, 380
-    cols = [('Current (AI image)', None)] + [(f'{v}  {NAME[v]}', v) for v in 'ABC']
+    cols = [('Current (AI image)', None)] + [(f'{v}  {NAME[v]}', v) for v in vs]
     W = PW * len(cols)
     sh = Image.new('RGB', (W, PH + CH), (10, 12, 20))
     d = ImageDraw.Draw(sh)
@@ -704,12 +816,12 @@ def sheet(src, root, out):
         cb.alpha_composite(cl, ((PW - cl.width) // 2, (CH - cl.height) // 2))
         sh.paste(cb.convert('RGB'), (i * PW, PH))
         d.line((i * PW, 0, i * PW, PH + CH), fill=(10, 12, 20), width=4)
-    p = os.path.join(out, 'contact-sheet.png')
+    p = os.path.join(out, name)
     sh.save(p, optimize=True)
     return p
 
 
-NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline'}
+NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim'}
 
 
 def save_smallest(im, path_no_ext):
@@ -760,7 +872,9 @@ def main():
     out = opt('--out', '.')
     os.makedirs(out, exist_ok=True)
     if '--sheet' in args:
-        print(sheet(src, root, out))
+        vs = opt('--sheet')
+        vs = vs.upper().split(',') if vs and not vs.startswith('--') else list('ABC')
+        print(sheet(src, root, out, vs, opt('--name', 'contact-sheet.png')))
         return
     v = opt('--variant', 'A').upper()
     scale = int(opt('--scale', 5))
