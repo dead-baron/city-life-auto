@@ -6,7 +6,7 @@ colours, each tube a white-hot core (signfont.js hotOf) inside its colour, and a
 light.js, the bright parts blurred at half and quarter size and added back). No black outline.
 
 Usage:
-  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3 [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
+  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3|D4|D4N [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
                              [--root .]
   python3 tools/neon_logo.py <logo_dir> --sheet [D,D2] [--name F.png] --out DIR   variants (A-C by default) and the
                                                                  current logo side by side
@@ -616,7 +616,7 @@ def paint_faithful(src, thick=False, clean=False, sky=None):
 # ---- D3's skyline: rectangles on the art grid, his silhouette and size (2026-11-14, the owner: the traced blue city
 # outline was the most unclean part) - a gabled house each end, a tower, the stepped middle tower with its spire, a
 # gabled block; dark faces, a clean cyan tube round the silhouette (open along its foot), lit windows 2 x 2 art px ------
-def sky_grid(src, letters):
+def sky_grid(src, letters, faces=True, windows=True):
     a = np.asarray(Image.open(os.path.join(src, FILES['sky'])).convert('RGBA'))
     ys, xs = np.nonzero(a[..., 3] >= 128)
     x0, x1 = int(xs.min() / CELL), int(xs.max() / CELL)    # his skyline's span and foot, on the grid
@@ -653,17 +653,158 @@ def sky_grid(src, letters):
         clear |= m
     clear = dil(dil(clear))
     L = Layer('sky', CYAN)
-    L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
+    if faces:
+        L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
     tube(L, edge & ~clear, CYAN, 1)
-    L.put(win & ~dil(edge) & ~clear, WINDOW, 0.7, WINDOW, (60, 52, 40))
+    if windows:
+        L.put(win & ~dil(edge) & ~clear, WINDOW, 0.7, WINDOW, (60, 52, 40))
     L.a &= ~clear
     L.emi[clear] = 0
     return L
 
 
+# ---- D4: D3 cleaner still (2026-11-14, the owner: "the red swoosh could be cleaned up ... the city buildings don't
+# need the solid background ... just the line work"). Every rim rebuilt from the face it goes round, the same width
+# all the way: "City Life" his cream face, then RED1 two px and RED2 one round it; "Auto" letter by letter, each his
+# letter's own shape, a gold rim (GOLD2 one px, GOLD1 three), the cream inline (two) and the dark face, the letters
+# drawn left to right so each one's rim laps cleanly over the one before; the swoosh a clean tapered bezier on his path;
+# the skyline line work only (the tube, and the lit windows unless nowindows) ------------------------------------------
+def clean_face(m, speck=4, hole=6):
+    """a face snapped clean: a majority vote over each 3 x 3 (nicks and bumps), bits under `speck` px gone, holes
+    under `hole` px filled"""
+    m = tidy(m)
+    lab = label(m)
+    for i in range(1, lab.max() + 1):
+        if (lab == i).sum() < speck:
+            m &= lab != i
+    holes = fill_holes(m) & ~m
+    lab = label(holes)
+    for i in range(1, lab.max() + 1):
+        if (lab == i).sum() < hole:
+            m |= lab == i
+    return m
+
+
+def rings(face, widths):
+    """the rings round a face, out from it: [(mask, i) ...] for each width in turn (a round pen: square and cross
+    alternating)"""
+    out, acc, n = [], face, 0
+    for i, w in enumerate(widths):
+        ring = np.zeros_like(face)
+        for _ in range(w):
+            nxt = dil(acc, sq=(n % 2 == 0))
+            ring |= nxt & ~acc
+            acc = nxt
+            n += 1
+        out.append(ring)
+    return out, acc
+
+
+def insets(m, widths):
+    """the rings inside a shape, in from its edge (and its counters'): [ring ...] for each width, and what's left"""
+    out, acc, n = [], m, 0
+    for w in widths:
+        ring = np.zeros_like(m)
+        for _ in range(w):
+            nxt = ero(acc, sq=(n % 2 == 1))
+            ring |= acc & ~nxt
+            acc = nxt
+            n += 1
+        out.append(ring)
+    return out, acc
+
+
+def swoosh_d4(src, city):
+    """his swoosh redrawn: its centre line a quadratic fitted through the middle of his cream stroke, column by column,
+    over its span; its face as thick as his at the middle, tapering smoothly to a point at each end (drawn 4 x 4 finer
+    and brought onto the grid by a half vote - no ragged px); broken where the y comes down through it (the letters'
+    px that cross its centre line, and a px round them)"""
+    g = modes(os.path.join(src, FILES['swoosh']), CLASSES['swoosh'])
+    cream, lit = g == 0, (g >= 0) & (g < 3)
+    xs, ys, ws = [], [], []
+    for x in range(GW):
+        col = np.nonzero(cream[:, x])[0]
+        if len(col):
+            xs.append(x); ys.append(col.mean()); ws.append(len(col))
+    xs, ys, ws = np.array(xs, float), np.array(ys, float), np.array(ws, float)
+    lx = np.nonzero(lit.any(axis=0))[0]
+    xa, xb = lx.min() + 1, lx.max() - 1                      # his whole span, rim to rim (less the rim)
+    c = np.polyfit(xs, ys, 2)
+    half = max(1.0, np.percentile(ws, 90) / 2 + 0.9)         # his face's half-thickness at its fullest (a touch more)
+    S = 4
+    im = Image.new('L', (GW * S, GH * S), 0)
+    top, bot = [], []
+    N = 96
+    for i in range(N + 1):
+        t = i / N
+        x = xa + (xb - xa) * t
+        y = np.polyval(c, x)
+        dy = np.polyval(np.polyder(c), x)
+        ln = (1 + dy * dy) ** 0.5
+        nx, ny = -dy / ln, 1 / ln
+        w = half * (4 * t * (1 - t)) ** 0.55
+        top.append(((x + 0.5 + nx * w) * S, (y + 0.5 - ny * w) * S))
+        bot.append(((x + 0.5 - nx * w) * S, (y + 0.5 + ny * w) * S))
+    ImageDraw.Draw(im).polygon(top + bot[::-1], fill=255)
+    face = np.asarray(im, np.float32).reshape(GH, S, GW, S).mean(axis=(1, 3)) >= 128
+    yy = np.arange(GH)[:, None]
+    line = np.polyval(c, np.arange(GW))[None, :]
+    # the y: the columns where a letter comes down right through the band (past its foot), its px across the band
+    below = (city & (yy > line + half + 2)).any(axis=0)
+    cross = city & below[None, :] & (yy >= line - half - 3) & (np.arange(GW)[None, :] >= xa) & (np.arange(GW)[None, :] <= xb)
+    return face & ~dil(dil(dil(cross))), cross
+
+
+def paint_d4(src, windows=True):
+    Ls = {}
+    # "City Life": his cream face, cleaned; RED1 two px round it, RED2 one
+    gc = modes(os.path.join(src, FILES['city']), CLASSES['city'])
+    face = clean_face(gc == 0)
+    (r1, r2), city = rings(face, [2, 1])
+    L = Layer('city', COL['city'])
+    L.put(r2, RED2, 0.55, COL['city'], glass(RED2))
+    L.put(r1, RED1, 0.8, COL['city'], glass(RED1))
+    L.put(face, CREAM, 0.95, COL['city'], glass(CREAM))
+    Ls['city'] = L
+    # the swoosh: the same rims round its new face, a px clear of the letters where the y crosses it
+    sface, cross = swoosh_d4(src, city)
+    (s1, s2), sw = rings(sface, [1, 1])
+    sw &= ~dil(dil(cross)) & ~city   # (behind the letters where it passes under them)
+    L = Layer('swoosh', COL['swoosh'])
+    L.put(s2 & sw, RED2, 0.55, COL['swoosh'], glass(RED2))
+    L.put(s1 & sw, RED1, 0.8, COL['swoosh'], glass(RED1))
+    L.put(sface & sw, CREAM, 0.95, COL['swoosh'], glass(CREAM))
+    Ls['swoosh'] = L
+    # "Auto": each letter his shape (what its cream inline closes round, out to the edge of his body), cleaned; drawn
+    # left to right, each over the one before: GOLD2 one px, GOLD1 three, the cream inline two, the dark face
+    S = shapes(src)
+    ga = modes(os.path.join(src, FILES['auto']), CLASSES['auto'])
+    body = clean_face((ga >= 0) & (ga < 4))
+    see = snap(np.asarray(Image.open(os.path.join(src, FILES['auto'])).convert('RGBA'))[..., 3] < 128, 0.1, 0.3)
+    L = Layer('auto', COL['auto'])
+    letters = sorted(S['auto']['letters'], key=lambda m: np.nonzero(m.any(axis=0))[0].min())
+    for m in letters:
+        shape = m
+        for _ in range(3):
+            shape = dil(shape, sq=False) & body
+        counter = see & fill_holes(shape) & ~m
+        shape = clean_face(shape & ~dil(counter, sq=False))   # (the counters a px bigger: they read after the rims)
+        (o2, o1, inl), face2 = insets(shape, [1, 3, 2])
+        L.put(o2, GOLD2, 0.6, COL['auto'], glass(GOLD2))
+        L.put(o1, GOLD1, 0.8, COL['auto'], glass(GOLD1))
+        L.put(inl, CREAM, 0.95, COL['auto'], glass(CREAM))
+        L.put(face2, FILL, 0.04, COL['auto'], mul(FILL, 0.8))
+    Ls['auto'] = L
+    # the skyline: line work only
+    Ls['sky'] = sky_grid(src, [Ls[k].a for k in ('city', 'swoosh', 'auto')], faces=False, windows=windows)
+    return [Ls[k] for k in ORDER]
+
+
 def build(src, variant):
     if variant in ('D', 'D2'):
         return paint_faithful(src, thick=variant == 'D2')
+    if variant in ('D4', 'D4N'):
+        return paint_d4(src, windows=variant == 'D4')
     if variant == 'D3':
         letters = paint_faithful(src, thick=True, clean=True, sky=Layer('sky', CYAN))
         letters[0] = sky_grid(src, [L.a for L in letters[1:]])
@@ -907,12 +1048,13 @@ def font(size):
 
 
 def sheet(src, root, out, vs='ABC', name='contact-sheet.png', close_box=(0.02, 0.12, 0.36, 0.52)):
-    """the current logo and the three variants side by side on the title's night, the same width, then a close-up of
-    each ("Cit" at the page's 2x: the pixels)"""
-    PW, PH, LW, CH = 720, 640, 600, 380
+    """the current logo and the variants side by side on the title's night, the same width, then a close-up of each
+    (2x the page's size: the pixels) for each box in close_box (one box, or several: a row each)"""
+    boxes = [close_box] if isinstance(close_box[0], (int, float)) else list(close_box)
+    PW, PH, LW, CH = 720, 640, 600, 330
     cols = [('Current (live)', None)] + [(f'{v}  {NAME[v]}', v) for v in vs]
     W = PW * len(cols)
-    sh = Image.new('RGB', (W, PH + CH), (10, 12, 20))
+    sh = Image.new('RGB', (W, PH + CH * len(boxes)), (10, 12, 20))
     d = ImageDraw.Draw(sh)
     f = font(26)
     for i, (label, v) in enumerate(cols):
@@ -924,27 +1066,27 @@ def sheet(src, root, out, vs='ABC', name='contact-sheet.png', close_box=(0.02, 0
         else:
             layers = build(src, v)
             x0, y0, x1, y1 = logo_box(layers)
-            s = max(1, round(LW / (x1 - x0)))
-            logo, pad = compose(layers, s)
-            place(bg, logo, pad, s, LW, PH * 0.42)
+            s_ = max(1, round(LW / (x1 - x0)))
+            logo, pad = compose(layers, s_)
+            place(bg, logo, pad, s_, LW, PH * 0.42)
             big, bpad = compose(layers, max(1, round(1240 / (x1 - x0))))
         bw, bh = big.width - 2 * bpad, big.height - 2 * bpad
-        q = close_box
-        close = big.crop((bpad + round(bw * q[0]), bpad + round(bh * q[1]), bpad + round(bw * q[2]), bpad + round(bh * q[3])))
         sh.paste(bg.convert('RGB'), (i * PW, 0))
         d.text((i * PW + 20, 16), label, fill=(243, 234, 210), font=f)
-        cb = Image.new('RGBA', (PW, CH), NAVY + (255,))
-        k = min((PW - 20) / close.width, (CH - 20) / close.height)
-        cl = close.resize((round(close.width * k), round(close.height * k)), Image.NEAREST)
-        cb.alpha_composite(cl, ((PW - cl.width) // 2, (CH - cl.height) // 2))
-        sh.paste(cb.convert('RGB'), (i * PW, PH))
-        d.line((i * PW, 0, i * PW, PH + CH), fill=(10, 12, 20), width=4)
+        for j, q in enumerate(boxes):
+            close = big.crop((bpad + round(bw * q[0]), bpad + round(bh * q[1]), bpad + round(bw * q[2]), bpad + round(bh * q[3])))
+            cb = Image.new('RGBA', (PW, CH), NAVY + (255,))
+            k = min((PW - 20) / close.width, (CH - 20) / close.height)
+            cl = close.resize((round(close.width * k), round(close.height * k)), Image.NEAREST)
+            cb.alpha_composite(cl, ((PW - cl.width) // 2, (CH - cl.height) // 2))
+            sh.paste(cb.convert('RGB'), (i * PW, PH + j * CH))
+        d.line((i * PW, 0, i * PW, PH + CH * len(boxes)), fill=(10, 12, 20), width=4)
     p = os.path.join(out, name)
     sh.save(p, optimize=True)
     return p
 
 
-NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline'}
+NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline', 'D4': 'D3 cleaner, line-work skyline', 'D4N': 'D4, no windows'}
 
 
 def save_smallest(im, path_no_ext):
@@ -998,7 +1140,7 @@ def main():
         vs = opt('--sheet')
         vs = vs.upper().split(',') if vs and not vs.startswith('--') else list('ABC')
         cb = opt('--close')
-        cb = tuple(float(q) for q in cb.split(',')) if cb else (0.02, 0.12, 0.36, 0.52)
+        cb = [tuple(float(q) for q in c.split(',')) for c in cb.split(';')] if cb else [(0.02, 0.12, 0.36, 0.52)]
         print(sheet(src, root, out, vs, opt('--name', 'contact-sheet.png'), cb))
         return
     v = opt('--variant', 'A').upper()
