@@ -228,11 +228,11 @@ add('hat', 'Hood up', 'mf', 'street disguise winter', 0, 'clothing', { k: 'hood'
 add('hat', 'Visor', 'mf', 'athletic beach retro', 18, 'sports', { k: 'visor' }, 'white');
 // glasses and masks (CP2): a balaclava or ski mask hides the hair; the eye patch has one strap round the head
 add('glasses', 'Sunglasses', 'mf', 'casual beach nightclub hifashion', 40, 'boutique', { k: 'sun' }, 'black');
-add('glasses', 'Aviators', 'mf', 'retro western smart', 70, 'boutique', { k: 'sun', lens: 'gold' }, 'gold');
+add('glasses', 'Aviators', 'mf', 'retro western smart', 70, 'boutique', { k: 'sun', lens: 'gold', f: 'avi' }, 'gold');
 add('glasses', 'Cat-eye shades', 'f', 'hifashion retro nightclub', 65, 'boutique', { k: 'sun', cat: 1 }, 'black');
-add('glasses', 'Sport shades', 'mf', 'athletic outdoors', 50, 'sports', { k: 'sun', lens: 'sky' }, 'black');
+add('glasses', 'Sport shades', 'mf', 'athletic outdoors', 50, 'sports', { k: 'sun', lens: 'sky', f: 'wrap' }, 'black');
 add('glasses', 'Round glasses', 'mf', 'smart preppy alt retro', 45, 'boutique', { k: 'round' }, 'brown');
-add('glasses', 'Reading glasses', 'mf', 'business smart', 25, 'boutique', { k: 'round' }, 'black');
+add('glasses', 'Reading glasses', 'mf', 'business smart', 25, 'boutique', { k: 'round', f: 'half' }, 'black');
 add('glasses', 'Ski goggles', 'mf', 'winter outdoors', 60, 'outdoor', { k: 'goggles' }, 'black', 'orange');
 add('glasses', 'Eye patch', 'mf', 'punk disguise', 15, 'costume', { k: 'patch', nostreet: 1 }, 'black');
 add('glasses', 'Balaclava', 'mf', 'disguise winter', 25, 'costume', { k: 'balaclava', nostreet: 1 }, 'black');
@@ -571,6 +571,7 @@ export function lookArt(L, opt = {}) {
       if (gl.d.big) A.glassBig = 1;
       if (gl.d.cat) A.glassCat = 1;
       if (gl.d.chain) A.glassChain = 1;
+      if (gl.d.f) A.glassForm = gl.d.f;   // (aviators, wraparounds, half-moons: client/art2/people.js GLS)
       if (k === 'masq') A.masq = HEX(O.glasses.t);   // (its feathers)
     }
   }

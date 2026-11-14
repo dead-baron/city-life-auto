@@ -23226,3 +23226,43 @@ button on a desktop; on a pad, hold a bumper for a quick radial and still a way 
   README rows. Tests: emotes (balloons and log by the server, lasting poses, the Zzz, Dances, typing, bubbles' `bb`,
   the poses' frames), chatui (balloons, the skull's give-way, typing dots, tabs, the pad keyboard and radial), hub,
   hudlayout and uikit (the nav row's fifth button).
+
+## 2026-11-14 - Your own character on the menu; every look option reads at street size
+
+The owner (2026-11-13): the menu's player icon was the same picture for everyone, and customization barely showed -
+glasses hard to tell apart, noses, eyes and face options making little difference. "The character system generally
+looks good": nothing restyled, each option made to show.
+
+- **Your character on the title card** (client/portrait.js, new, lazy): the card's avatar (index.html `#t-card .t-av`)
+  draws the game's own sprite of your look - head and shoulders, front on, breathing with the idle - in place of the
+  generic user icon, a whole number of CSS px an art pixel. client/titlescreen.js loads it the first time the card has
+  a look (`S.looks.cur`) and redraws when the look changes (the creator's Done, a shop, a barber). It brings
+  client/art2/people.js early, the module the game loads anyway once the city is in. The page's own code is unchanged
+  in files (83) and grew 0.15 KB.
+- **Glasses** (client/art2/people.js `face`, `GLS`): each kind is a stamp of art pixels round each eye instead of a
+  band across the eye row - two lenses with a glint on the left one and the lens hanging below (sunglasses), gold
+  teardrops (aviators: `f: 'avi'`), a wraparound blue band (sport shades: `'wrap'`), rings round the eye (round),
+  corners round it (square frames; big frames the full box), a thick top with gold wire (browline), glints only
+  (rimless), a lens line under the eye (reading glasses: `'half'`), coloured lenses in rings (round and tinted
+  shades), a 3-row band (ski goggles), the monocle's ring and chain, a 2 x 2 eye patch, the party mask round open
+  eyes. The arms run back to the ears when the head turns. Frames and lenses keep a step from the skin under them
+  (dark frames lighten on dark skin, gold darkens on tan). shared/lookcore.js `lookArt` passes the new `glassForm`.
+- **Eyes, brows, nose, lips, face shape** (`EYE_ST`, `BROW_ST`, `NOSE_ST`, `LIP_ST`, `SHAPE_ST`): narrow is a dark
+  squint, big the white and the lashes, hooded the lid's shadow, sleepy a heavy drooping lid; brows thick, thin,
+  arched, straight or bushy over them (natural unmarked, as before); the nose a shade under the eyes - straight a
+  pixel, small none, button lit and shaded, wide two, long two down, hooked a lit bridge over a dark tip; lips thin
+  (a dark line), full (two), wide (three), bow (a lit middle), small (a faint dot); a square jaw's corners and a
+  heart's or a diamond's cheekbones. The same stamps draw every NPC, so the city's people got the same faces and
+  glasses (their 'sun' and 'round' with them).
+- **Hats** (people.js `wardrobe` W.hat / W.band / W.brim, `hatPrims`): a cap's logo and button in its trim colour (the
+  baseball cap's white, the snapback's gold), the peak a step darker than the crown; felt hats (fedora, cowboy, sun
+  hat, bowler, top hat) with a sheen and, when light, a near-black band (the Panama's, the cowboy's); the beanie's cuff
+  folded deeper; earmuffs out past the hair; the bridal veil over the crown with the hair kept, not a ring in the air.
+- **Budgets**: the renderer at 409.9 of 410 KB (from 409.7) - the new stamps are tables of short strings; the
+  people.js catalogue comments (the skate, surf, cart, busker, wilds, activity and cell notes) were condensed to pay
+  for them. The art hash changes (people.js and lookcore.js are in the bake's code); the carry-over keeps every chunk that
+  bakes the same byte for byte, so only chunks with people drawn in them change.
+- Guide: Property > "Your look" (where you change it, that the title card shows it, that every option shows).
+- Before/after sheets (each glasses, hat, eye, brow, nose and lip option, man and woman, at the game's zoom and
+  magnified as the creator shows them), the creator's grids, the title card and a street of NPCs: the session's
+  scratchpad `chars/owner/`.
