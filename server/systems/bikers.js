@@ -20,7 +20,7 @@ import {
 } from '../../shared/rules.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { ARCHETYPES } from '../entities.js';
-import { inAnyView } from '../view.js';
+import { inAnyView, cineEyes } from '../view.js';
 import { store } from '../store.js';
 import { spawnNpc, despawnNpc, startFight, heldByPolice } from './npc.js';
 import { planRoute, driveToward } from './traffic.js';
@@ -46,7 +46,8 @@ const CRUISE = 300;                           // a club ride's pace on the open 
 const spur = (world) => world.map.roadhouse || null;
 const alive = (e) => !!(e && !e.removed && !e.dead);
 const players = (world) => [...world.players.values()].filter((p) => p.ped && !p.ped.dead);
-const nearestPlayer = (world, x, y) => { let d = Infinity; for (const p of players(world)) d = Math.min(d, Math.hypot(p.ped.x - x, p.ped.y - y)); return d; };
+// (and the cameras of the cinematic mode and the scene director: view.js cineEyes - a scene at the Spur with nobody there)
+const nearestPlayer = (world, x, y) => { let d = Infinity; for (const p of players(world)) d = Math.min(d, Math.hypot(p.ped.x - x, p.ped.y - y)); for (const e of cineEyes(world)) d = Math.min(d, Math.hypot(e.x - x, e.y - y)); return d; };
 const S = (world) => (world.bikers ??= { up: false, clubs: [], nextRide: 0, nextThief: 0, thief: null, grudges: new Map() });
 
 export function update(world, dt) {
@@ -348,7 +349,7 @@ function chase(world, st, R, c, riders) {
   if (over) { rideHome(world, R, c); return; }
   const tv = t.vehId ? world.get(t.vehId) : null, tsp = tv ? Math.hypot(tv.vx, tv.vy) : 0;
   // on foot beside him while he sits there: dragged off it (the gang fight itself never pulls a driver out: npc.js)
-  if (tv && tsp < 50) for (const id of c.members) {
+  if (tv && tsp < 50 && !(t.npc && t.npc.driven)) for (const id of c.members) {   // (not a scene's actor on its script: director.js)
     const m = world.get(id);
     if (!alive(m) || m.vehId || Math.hypot(m.x - t.x, m.y - t.y) > tv.def.L / 2 + 26 || now - (c.draggedAt || -9) < 4) continue;
     c.draggedAt = now;
@@ -359,7 +360,7 @@ function chase(world, st, R, c, riders) {
   for (const r of riders) {
     const d = Math.hypot(r.v.x - t.x, r.v.y - t.y);
     // caught up: knock a thief off his bike; off and at them once they're on foot or stopped
-    if (tv && tv.def.kind === 'bike' && d < 75 && t.npc) { vehicles.bikeCrash(world, tv, 330); continue; }
+    if (tv && tv.def.kind === 'bike' && d < 75 && t.npc && !t.npc.driven) { vehicles.bikeCrash(world, tv, 330); continue; }   // (not a scene's actor on its script: director.js)
     if (d < 130 && (!tv || tsp < 70)) { dismount(world, r.m, null); startFight(world, r.m, t, 45); continue; }
     driveToward(world, r.v, t.x, t.y, Math.min(r.v.def.max * 0.95, d < 300 ? Math.max(120, tsp + 60) : r.v.def.max), { ignore: c.ignore || (c.ignore = new Set(c.bikes)) });
   }
@@ -455,5 +456,18 @@ function endThief(world, st, R, t, rode) {
 
 // for the dev menu and the tests: who's who, and a ride out now
 export function clubsOf(world) { return S(world).clubs; }
+// the scene director (director.js): the clubs out at the Spur now (as when a player rides up), and n clubs after someone
+export function ensureUp(world) { const st = S(world), R = spur(world); if (R && !st.up) spawnAll(world, st, R); return st.up; }
+export function chaseWith(world, target, n = 1) {
+  const st = S(world);
+  let k = st.clubs.filter((c) => c.mode === 'chase' && c.target === target.id).length;
+  for (const c of st.clubs) {
+    if (k >= n) break;
+    if (c.mode === 'chase' && c.target === target.id) continue;
+    st.grudges.set(target.id, { club: c.id, until: world.time + CLUB_GRUDGE_S });
+    startChase(world, st, c, target); k++;
+  }
+  return k;
+}
 export function rideOut(world, ci = 0, dest = null) { const st = S(world), R = spur(world), c = st.clubs[ci]; return R && c && c.mode === 'hang' ? startRide(world, st, R, c, dest) : null; }
 void K;

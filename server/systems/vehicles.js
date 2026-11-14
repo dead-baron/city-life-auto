@@ -403,7 +403,7 @@ export function killEngine(world, v, attackerPed) {
     const ped = sid && world.get(sid);
     if (!ped) continue;
     if (ped.player) world.notify(ped.player, "The engine's dead and it's smoking - get out before it goes up!", 'bad');
-    else if (ped.npc && !v.scripted) exitVehicle(world, ped);
+    else if (ped.npc && !v.scripted && !v.dirHold) exitVehicle(world, ped);   // (dirHold: a scene's vehicle - its people get out on their beat: director.js)
   }
 }
 
@@ -471,6 +471,7 @@ export const openRide = (def) => def.kind === 'bike' || !!def.crew;
 const NO_KNOCK = new Set(['crash', 'bail', 'fall', 'bleed', 'fire', 'tree', 'train']);
 export function riderHit(world, ped, amount, cause, dir, attacker) {
   if (NO_KNOCK.has(cause) || ped.dead || !(amount >= ped.maxHp * RIDER_KNOCK.big || ped.hp < ped.maxHp * RIDER_KNOCK.hp)) return false;
+  if (ped.actor && ped.npc && ped.npc.driven) return false;   // (a scene's actor on its script stays on: director.js - off it, they're anyone's)
   if (ped.board && !ped.vehId) { skate.bail(world, ped); return true; }
   const v = ped.vehId ? world.get(ped.vehId) : null;
   if (!v || !openRide(v.def) || v.fly || aircraft.airborne(v)) return false;

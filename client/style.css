@@ -132,7 +132,7 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 .rbtn:hover, .rbtn:focus-visible { outline: none; background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
 .rbtn:active { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
 .rbtn[disabled] { border-color: var(--grey); opacity: .7; cursor: default; }
-.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }   /* (on the foot corner: over the top one the plate above cut them off - the owner, 11-13) */
 /* a pixel icon (client/touchicons.js): 24 px, or a whole multiple, never smoothed */
 .pi24 { display: block; width: var(--ic); height: var(--ic); flex: none; image-rendering: pixelated; }
 i.ic { display: inline-grid; place-items: center; flex: none; font-style: normal; line-height: 0; }
@@ -357,7 +357,7 @@ body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order:
 #hud-btns button:hover { background: var(--navy3); }
 #hud-btns button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 2px; }
 #hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
-#hud-btns .kchip { position: absolute; right: -7px; top: -7px; bottom: auto; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+#hud-btns .kchip { position: absolute; right: -6px; top: auto; bottom: -8px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
 .touch #hud-btns { --ic: 24px; }
 #b-chat { pointer-events: auto; }
 body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-talk) */
@@ -1416,6 +1416,7 @@ body:not(.pad) #hub-foot { display: none; }
 .pz { width: min(380px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter-l var(--t2) var(--ease); }
 .pz-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s3) var(--s3) var(--s2); border-bottom: 2px solid var(--gold); background: var(--sky, none) repeat-x 50% 100% / auto 120px, linear-gradient(180deg, var(--dusk-a) 0%, var(--dusk-b) 70%, var(--navy) 100%); image-rendering: pixelated; }
 .pz-head img { width: min(300px, 86%); image-rendering: auto; filter: drop-shadow(0 4px 0 var(--ink)); }
+.pz-head .x { position: absolute; top: var(--s2); right: var(--s2); z-index: 1; }   /* (a close in the corner, as every other screen has: the owner, 11-13) */
 .pz-head b { font: 700 var(--fs-5) var(--pixel); color: var(--info); letter-spacing: 3px; text-shadow: var(--lift); }
 .pz-list { display: flex; flex-direction: column; padding: var(--s2); overflow-y: auto; }
 .pz-row { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s3); border: 2px solid transparent; border-bottom-color: var(--line); border-radius: var(--r1); background: transparent; color: var(--cream); font: 700 var(--fs-4) var(--pixel); letter-spacing: 1px; text-align: left; cursor: pointer; touch-action: manipulation; transition: background var(--t1) var(--ease); }

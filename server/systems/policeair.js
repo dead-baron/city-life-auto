@@ -113,8 +113,29 @@ export function steer(world, v, tx, ty, speed, ax, ay, want) {
   return d;
 }
 
+// A unit after someone who isn't a player (the scene director's getaway driver: director.js): up already, coming in from
+// `from` (out of sight), keyed by their entity; it follows them as it would a wanted player, lost as one is (unseen
+// POLICE_AIR.lostS, cuffed, dead) or called off (until: game seconds).
+export function launchFor(world, t, { from = null, until = 0 } = {}) {
+  const U = (world.policeAir ||= new Map()), key = `npc${t.id}`;
+  if (U.has(key)) return world.get(U.get(key).vid);
+  const pad = hqPad(world.map), at = from || { x: t.x - 900, y: t.y - 700 };
+  const v = world.spawnVehicle('policeheli', at.x, at.y, Math.atan2(t.y - at.y, t.x - at.x), {});
+  v.alt = POLICE_AIR.alt; v.spool = 1;
+  v.parked = false; v.despawnable = false; v.autopilot = true; v.lights = true;
+  for (let i = 0; i < 2; i++) {
+    const cop = spawnNpc(world, 'cop', v.x, v.y, 'cop');
+    cop.npc.unit = v.id; cop.npc.air = true;
+    cop.vehId = v.id; cop.seat = i; v.seats[i] = cop.id;
+    cop.weapon = i ? 'rifle' : 'pistol';
+  }
+  U.set(key, { vid: v.id, pid: key, npc: t.id, mode: 'chase', since: world.time, seenAt: world.time, th: Math.atan2(v.y - t.y, v.x - t.x), padX: pad ? pad.x : at.x, padY: pad ? pad.y : at.y, told: 0, until, lx: t.x, ly: t.y });
+  return v;
+}
+
 function run(world, u, dt) {
-  const v = world.get(u.vid), p = world.players.get(u.pid), now = world.time;
+  const v = world.get(u.vid), p = u.npc ? null : world.players.get(u.pid), now = world.time;
+  if (u.npc) return runNpc(world, u, v, dt);
   // brought down (shot down, crashed) or gone: the unit's over; another isn't sent for a while
   if (!v || v.removed || v.wreckAt || v.dead) {
     world.policeAir.delete(u.pid);
@@ -172,6 +193,32 @@ function run(world, u, dt) {
   }
   // the searchlight on the wire: the vehicle record's damage word's top byte (net.js) - bit 7 on, bits 0-4 the way it
   // points (32 steps), bits 5-6 how far from under the helicopter (0, 170, 340, 510 px)
+  v.searchX = lit ? lx : null; v.searchY = lit ? ly : null;
+  v.lightB = lit ? lightByte(lx - v.x, ly - v.y) : 0;
+}
+
+function runNpc(world, u, v, dt) {
+  const now = world.time;
+  if (!v || v.removed || v.wreckAt || v.dead) { world.policeAir.delete(u.pid); if (v) v.lightB = 0; return; }
+  const pilot = world.get(v.seats[0]);
+  if (!pilot || pilot.dead) { v.lightB = 0; return; }
+  const t = world.get(u.npc), ok = !!t && !t.removed && !t.dead && !t.cuffed;
+  const tv = ok && t.vehId ? world.get(t.vehId) : null, tx = ok ? t.x : u.lx, ty = ok ? t.y : u.ly;
+  const see = ok && !t.hidden && Math.hypot(tx - v.x, ty - v.y) < POLICE_AIR.sightPx && (v.alt || 0) > FLY.HIGH;
+  if (see) { u.seenAt = now; u.lx = tx; u.ly = ty; }
+  if (u.mode !== 'home' && (!ok || now - u.seenAt > POLICE_AIR.lostS || (u.until && now > u.until))) { u.mode = 'home'; u.since = now; }
+  const night = !!(world.clock && world.clock.isNight);
+  let lx = 0, ly = 0, lit = false;
+  if (u.mode === 'home') {
+    const d = steer(world, v, u.padX, u.padY, v.def.max * 0.8, u.padX, u.padY, Math.hypot(v.x - u.padX, v.y - u.padY) < 50 && Math.hypot(v.vx, v.vy) < 70 ? null : POLICE_AIR.alt);
+    if ((d < 60 && (v.alt || 0) <= 0.5) || (now - u.since > 20 && !inAnyView(world, v.x, v.y, 300))) { putAway(world, u, v); return; }
+  } else {
+    u.th += dt * (see ? 0.35 : 0.6);
+    const lead = tv ? 0.8 : 0.5, svx = see ? (tv ? tv.vx : t.vx) || 0 : 0, svy = see ? (tv ? tv.vy : t.vy) || 0 : 0;
+    const r = see ? POLICE_AIR.orbitR : POLICE_AIR.orbitR * 2, sy = (v.alt || 0) * FLY.LIFT * 0.8;
+    steer(world, v, tx + Math.cos(u.th) * r + svx * lead, ty + sy + Math.sin(u.th) * r + svy * lead, v.def.max * 0.95, tx, ty, POLICE_AIR.alt);
+    if (night) { lit = true; if (see) { lx = tx; ly = ty; } else { lx = tx + Math.cos(now * 0.9) * 160; ly = ty + Math.sin(now * 1.3) * 160; } }
+  }
   v.searchX = lit ? lx : null; v.searchY = lit ? ly : null;
   v.lightB = lit ? lightByte(lx - v.x, ly - v.y) : 0;
 }

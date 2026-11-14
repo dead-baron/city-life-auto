@@ -471,6 +471,7 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
+    case 'dscene': dirScene(m); break;   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
     case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
@@ -1124,7 +1125,7 @@ function onEvent(ev) {
     case 'cartcrash': for (let k = 0; k < 5 + (ev.n | 0) * 4; k++) { const a = Math.random() * 6.283, sp = 50 + Math.random() * 110; fx.spawn(4, ev.x, ev.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.7 + Math.random() * 0.5, 3 + Math.random() * 2, GROCERY[k % 6], 0, 120 + Math.random() * 120); } fx.litter(ev.x, ev.y, 7, GROCERY, 34, S.loopClock); break;   // (a cart's crash: the shopping flies - CC01)
     case 'shw': fx.splash(ev.x, ev.y + 8, 12); break;   // (an outdoor shower turned on: server/systems/showers.js)
     case 'douse': fx.splash(ev.x, ev.y, 14); for (let k = 0; k < 9; k++) fx.spawn(2, ev.x + (Math.random() - 0.5) * 18, ev.y - 4, (Math.random() - 0.5) * 30, -20 - Math.random() * 20, 1.2 + Math.random(), 6 + Math.random() * 5, 'rgba(232,238,244,', 14); break;   // (into the water on fire: a burst of steam - burning.js)
-    case 'say': fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;
+    case 'say': if (DIR && DIR.noSay()) break; fx.say(ev.id, ev.x, ev.y, ev.text); sfx('alert', distVol(ev.x, ev.y) * 0.5); break;   // (the camera's Speech bubbles off: none - client/director.js)
     case 'yelp': fx.floatText(ev.x, ev.y - 18, 'WHOA!', '#ffd36b'); break;
     case 'thanks': fx.floatText(ev.x, ev.y - 18, 'Thank you!', '#3ddc84'); break;
     case 'cast': case 'nibble': case 'bite': case 'hook': case 'flost': case 'catch': fishGo(ev); break;   // (fishing: client/fishing.js)
@@ -1794,9 +1795,14 @@ for (const ov of document.querySelectorAll('.overlay')) {
 // ---- the cinematic mode (client/director.js, loaded the first time: F2 a clean screen, F4 its panel, F8 a picture) -
 let DIR = null, dirP = null;
 const dtFix = 1 / 60;
+function dirScene(m) {
+  if (DIR) { DIR.script(m); return; }
+  if (m.off) return;
+  cine(null).then(() => { if (DIR) DIR.script(m); });
+}
 function cine(k) {
-  (dirP ||= import('./director.js').then((m) => { DIR = m.makeDirector(S, { input, $, send, selfPos, size: () => [W, H], toast: (t, c) => S.hud.toast(t, c), grab: (fn) => { S.cineGrab = fn; } }); }).catch((e) => { dirP = null; console.warn('[director]', e); }))
-    .then(() => { if (DIR) DIR.key(k, true); });
+  return (dirP ||= import('./director.js').then((m) => { DIR = m.makeDirector(S, { input, $, send, selfPos, size: () => [W, H], toast: (t, c) => S.hud.toast(t, c), grab: (fn) => { S.cineGrab = fn; } }); }).catch((e) => { dirP = null; console.warn('[director]', e); }))
+    .then(() => { if (DIR && k) DIR.key(k, true); });
 }
 // ---- spectator (debug menu): a free camera over the whole city ----------------------------------
 // Your character stays where it is (made invincible on the server); the camera flies anywhere. The
@@ -2149,6 +2155,7 @@ const hubCtx = {
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
 $('hub-back').onclick = () => hubBack();
 $('hub-close').onclick = () => closeHub();
+$('pz-close').onclick = () => closeHub();   // (the pause list's own close: it hides the hub's bar)
 $('hub').addEventListener('pointerdown', (e) => { if (e.target === $('hub')) closeHub(); });   // (a desktop's big panel: a click round it closes it)
 // Surrender (the hub's Settings > Help): press twice - dying (or, wanted, turning yourself in) isn't done by accident
 function surrender(b) {
@@ -3056,7 +3063,15 @@ let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
 // the error goes to the server once (reportError: /clienterrors).
 function frame(nowMs) {
   try { frameBody(nowMs); } catch (e) { reportError('frame', e); }
-  requestAnimationFrame(frame);
+  if (!CAP) requestAnimationFrame(frame);
+}
+// The capture (tools/capture.mjs; ?capture in the address): no frames of its own - the driver steps them, each at its
+// own time (window.__capFrame(ms): 60 a second of the page's clock, Playwright's), and waits while the art is still
+// coming in for what's on screen (__capBusy) before it takes the picture
+const CAP = /[?&]capture\b/.test(location.search);
+if (CAP) {
+  window.__capFrame = (ms) => { try { frameBody(ms); } catch (e) { reportError('frame', e); } };
+  window.__capBusy = () => { const w = S.art2; if (!w) return 'noart'; const o = w.warmth(); if (!o) return 'warmth'; if (!o.ok) return 'notok'; if (o.scrHave < o.scr) return `chunks ${o.scrHave}/${o.scr}`; if (o.spr > 0) return `sprites ${o.spr}`; return ''; };
 }
 function frameBody(nowMs) {
   diagFrame(nowMs - last);
@@ -3293,6 +3308,7 @@ function prepFrame(dt) {
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
   const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1, S.camPull || 1) * (DIR ? DIR.zoomK : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
+  if (DIR && DIR.snapZoom) { S.cam.zoom = targetZoom; DIR.snapZoom = false; }   // (a scene's cut: the new shot's zoom at once - client/director.js)
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
   // and server corrections don't shake the camera
@@ -3376,7 +3392,8 @@ function prepFrame(dt) {
   const peds = [], vehs = [], crates = [], bags = [], projs = [], balls = [], cars = [], riders = [];
   for (const e of S.ents.values()) {
     if (!vis(e) || !e.d) continue;
-    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
+    if (((DIR && DIR.hideMe) || S.hideMe) && e === meEnt) continue;
+    if (DIR && e !== meEnt && e !== myCar && DIR.hidden(e)) continue;   // (the camera's Show toggles: other players, people on foot, traffic - client/director.js)   // (the cinematic mode: your own character out of the picture; the arrival's, still on its train - client/ftue.js)
     if (S.map.cover && e !== meEnt && e !== myCar && coverHides(S.map, sp.x, sp.y, e.rx, e.ry)) continue;   // under a tunnel's hill you aren't under (shared/tunnels.js)
     if (e.kind === K.PED && e.parent) { const c = S.ents.get(e.parent); if (c && c.kind === K.TRAIN) { if (c.d && c.d.tr === myTrain) riders.push(e); continue; } } // riders of other trains are under the roof
     if (e.kind === K.TRAIN) cars.push(e);
@@ -3734,7 +3751,9 @@ function drawOverlays(F, v2) {
   if (S.fish) S.fish.drawWorld(g);   // (the lines out, your cast's meter)
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
-  if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
+  { const lab = DIR ? DIR.labels() : null;   // (the camera's Show: name tags, the marks over heads - client/director.js)
+    if (!lab) { if (!clean) drawWorldLabels(F.peds, F.vehs, now, z); }
+    else if (!clean || lab.tags || lab.marks) drawWorldLabels(F.peds, F.vehs, now, z, { tags: lab.tags, marks: lab.marks, rest: !clean }); }
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
   else if (!clean && S.me && S.me.car && F.view && !(DIR && DIR.hideMe)) drawMyCar(S.me.car, F.view, now, z, F.vehs);   // (your starter car, parked: server starter.js marker)
   if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
@@ -5144,7 +5163,7 @@ function dimHex(c) {
   dimMemo.set(c, d);
   return d;
 }
-function drawWorldLabels(peds, vehs, now, z) {
+function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the camera's { tags, marks, rest } - what of it's drawn)
   const fs = 12 / z;
   g.textAlign = 'center';
   g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
@@ -5153,22 +5172,22 @@ function drawWorldLabels(peds, vehs, now, z) {
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
-    if (p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
-    if (p.flags & PF.FLARE) {
+    if ((!only || only.marks) && p.d.bt && p.blink !== 3 && !(p.flags & PF.DEAD)) drawSkull(p.rx, py - SKULL_HEAD - ((p.flags & PF.FLARE) ? 46 : 21) / z, z, now);
+    if ((!only || only.marks) && p.flags & PF.FLARE) {
       // GDD §6: 3-second public red exclamation flare above a reported suspect
       const bob = Math.sin(now * 10) * 3 / z;
       g.fillStyle = '#000'; g.font = `700 ${30 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText('!', p.rx + 1.5 / z, py - 30 / z + bob + 1.5 / z);
       g.fillStyle = Math.floor(now * 8) % 2 ? '#ff2020' : '#ff7070'; g.fillText('!', p.rx, py - 30 / z + bob);
       g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
     }
-    if (!p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
+    if ((!only || only.rest) && !p.d.pl && p.barUntil && S.loopClock < p.barUntil && p.hp < 0.999 && !(p.flags & PF.DEAD)) {
       // health bar over whoever you're brawling with; tough/brute builds get a tag so you can size them up
       const y = py - 24 / z, bd = p.d.app ? p.d.app.bd : 1;
       g.fillStyle = 'rgba(0,0,0,.75)'; g.fillRect(p.rx - 16 / z, y, 32 / z, 5 / z);
       g.fillStyle = p.hp < 0.3 ? '#ff4d5e' : '#7fe07f'; g.fillRect(p.rx - 15 / z, y + 1 / z, 30 / z * p.hp, 3 / z);
       if (bd >= 2) { g.fillStyle = bd === 3 ? '#ff9a3a' : '#ffd36b'; g.font = `700 ${11 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillText(bd === 3 ? 'BRUTE' : 'TOUGH', p.rx, y - 6 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
     }
-    if (p.d.pl && p.d.n && p.id !== S.myPedId) {
+    if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
       const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade - no tag; members in white)
@@ -5178,6 +5197,7 @@ function drawWorldLabels(peds, vehs, now, z) {
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }
+  if (only && !only.rest) return;
   const me = S.me;
   if (me && me.rumor) {
     const r = me.rumor;
@@ -5609,8 +5629,8 @@ function drawRain(dt, sky) {
 // renderer waits for its art first.
 // (the bake workers are made now, so their code loads while the city is built: art2/game/pool.js warmPool)
 if (ART2_WANTED && worldCv) import('./art2/game/pool.js').then((P) => P.warmPool({ lowMem: LOW_MEM, artPx: /[?&]artpx=1\b/.test(location.search) ? 1 : 2 })).catch(() => {});
-if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
-else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
+if (ART2_WANTED) { connect(); if (!CAP) requestAnimationFrame(frame); }
+else ensureV1Art().finally(() => { connect(); if (!CAP) requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
 window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

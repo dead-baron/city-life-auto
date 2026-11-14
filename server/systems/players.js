@@ -1064,6 +1064,7 @@ export function onPedDeath(world, ped, killer, cause) {
 }
 
 function idleCheck(world) {
+  if (world.capture) return;   // (the capture server's camera pages: a take runs for hours of wall clock - server/capture.js)
   const t = Date.now();
   for (const p of world.players.values()) {
     if (!p.conn || !p.conn.open) continue;
