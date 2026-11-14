@@ -68,7 +68,7 @@ export const EMOTES = {
   guitar: { n: 'Air guitar', tab: 'pose', s: 3, text: 'plays air guitar', me: 'play air guitar' },
   stretch: { n: 'Stretch', tab: 'pose', s: 3, text: 'stretches', me: 'stretch' },
 };
-// the picker's Dances tab: the dance button's moves (shared/dance.js DANCE_PLAYER), one each - { t: 'emote', e: 'dance',
+// the picker's Dances tab: the dance button's moves (shared/dance.js DANCE_PLAYER), one each - { t: 'emote', e = 'dance',
 // m: its index here } starts that very move (server/systems/dance.js start)
 export const DANCES = ['Two-step', 'Bounce', 'Fist pump', 'Disco point', 'Spin', 'Toprock', 'Robot', 'Freeze', 'Sway', 'Jump'];
 // what the people near are sent for an emote, beyond who and which (server/chat.js, systems/director.js): its balloon,
