@@ -4700,10 +4700,10 @@ function pedVisual(p, now) {
   if (p.smokeUntil && now < p.smokeUntil && Math.random() < 0.05) S.fx.smoke(p.rx + (Math.random() - 0.5) * 12, p.ry + (Math.random() - 0.5) * 6, false);   // (cut in two by the plasma blade: the seared halves smoke a while)
   if (p.d && p.d.ar && p.d.ar.startsWith('pet:')) { if ((p.as || 0) > 12 || p.stillSince === undefined || (p.extra & 31) === APOSE.happy) p.stillSince = now; return; }   // (happy: it doesn't sit)
   if (p.blink === 3) return; // inside a home
-  // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
+  // (art v2) the crop parts round someone walking through a field, pushed down a moment behind them (host.js: back up in seconds)
   if (S.art2 && !(f & PF.DEAD)) {
     const lx = p._crx, ly = p._cry, P = trailSteps(p, p.rx, p.ry, 10, 200, TRAIL), a = Math.atan2(p.ry - ly, p.rx - lx);
-    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 1);
+    for (let i = 0; i < P.length; i += 2) if (S.map.tileAtPx(P[i], P[i + 1]) === T.FIELD) S.fx.crush(P[i], P[i + 1] + 2, a, 1, S.loopClock, 0.55);
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }

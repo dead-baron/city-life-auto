@@ -23536,3 +23536,8 @@ was clamped onto the door and the door, drawn after, cut it in half. Now it's dr
 The owner: "I dont think we need this invisible white outline on our player when we're behind an NPC or other player."
 The x-ray outline (what hides you is outlined over you, art2/game/engine.js) now ignores people (the scene's F_CHAR
 pixels): behind a building, a vehicle or a tree you're still outlined; behind someone standing in front of you, not.
+
+## 2026-11-14 - Walking through a field: pushed down a moment, not a track
+The owner: walking left a long trodden track through the wheat; he wanted it to part round you and rise back up shortly
+after. A person's or an animal's crush marks (fx.crush small) now go down at about half strength and stand back up within
+about five seconds (client/main.js, art2/game/host.js); a vehicle's swath still lies flat for a couple of minutes.
