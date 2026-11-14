@@ -22945,6 +22945,41 @@ center, AUTO was too big and didn't read as off, BLOCK floated away from the res
 - **The long-press tip** only says what the button doesn't: the whole prompt behind a one-word ACT ("Enter Quick
   Mart" behind ENTER). Holding BLOCK, FIRE or BRAKE no longer pops up their own name.
 
+## 2026-11-13 - Emotes apart from chat: a button of their own, an emoji over the head, an animation on the body
+
+The owner: "Let's separate the emotes from the chat ... Instead of emotes having a text that pops up let's make sure they
+have an animation and maybe we use an emoji that pops up instead of text ... for things like dancing ... it could say
+*PlayerName started dancing* in the chat text to nearby players."
+
+- **Their own button:** on touch an EMOTE button (a smiley, the same see-through square as the chat button) sits next to
+  the chat button along the bottom on its side, and over it upright - the right thumb's cluster starts at the middle
+  along the bottom there, and FIRE ON's slot (u4) is right of the chat button. A tap opens a small picker: a 4 x 3 grid
+  of emoji tiles with their names; one tap emotes and closes it; the X, a tap anywhere outside, Esc and a pad's B close
+  it. B opens it on a keyboard (`shared/controls.js` `emote`); a pad picks from the phone's new Emote screen (the home
+  screen's quick row: Nearest ATM, Dance, Emote - the D-pad moves between its buttons like any phone screen). The chat
+  sheet and the Messages app no longer carry emotes, and holding the chat button no longer opens them (`/wave` typed in
+  chat still works). Page side: `client/emotes.js`, loaded with chat, never in the page's first load.
+- **An emoji, no words:** each emote has an `emoji` in `shared/chatdefs.js` EMOTES (wave 👋, cheer 🙌, laugh 😂, thumbs
+  up 👍, point 👉, shrug 🤷, clap 👏, facepalm 🤦, salute 🫡, sorry 🙇, angry 😠). It pops up over the emoter's head -
+  scales in, floats up and fades in about two seconds, a few pooled elements kept over the figure each frame - and the
+  log keeps its short line ("Ann waves", your own "You wave"). The speech bubble no longer shows emotes.
+- **An animation:** the server plays the emote on the body for `CHAT.emoteS` (2 s) - the ped's gt 'emote' and em (the
+  emote's id) on the descriptor (`server/systems/emote.js`); every page near draws a four-frame loop from when it
+  started: the wave side to side, both arms up and bouncing, the laugh shaking, the thumbs up nodding, the point jabbing,
+  the shrug, the clap, the facepalm with the head shaking in the hand, the salute at the brow, the bow, the angry stomp
+  with clenched fists (`client/art2/dances.js`, out of the chunk bake's reach as the dances are: the art hash is
+  unchanged). Walking off, a button that does something, a vehicle or going down cuts it short; in a car or on a board
+  the emoji alone. The `emoteGapS` limit stays.
+- **Dance:** the Dance emote starts the dance button's own dance (no pose, no emoji) and the people near read "Ann
+  started dancing" in their chat log; starting a dance with G / L3 or the phone's Dance button tells them the same
+  (`world.track('danced')` -> `chat.announce`, no more often than an emote).
+- The Guide has an Emotes entry; the chat entry lost "hold it for the emotes". The README's controls table has the row.
+- Tests: `test/emotes.test.js` (the messages, the body's state and its end, Dance, the dance button's line, the poses,
+  the control on every device, the Guide); `chatui.test.js` (the emoji pop, no emote bubble, the picker, the phone's
+  Emote screen, none left in the sheet); `hudlayout.test.js` (the emote button 44 px or more, in the bottom band on the
+  left half, beside the chat button, on nothing). The first-time strip on touch (on its side) starts after the emote
+  button now. Budgets: the renderer's code 405 -> 407 KB of 410 (the poses); no budget raised.
+
 ## 2026-11-13 - The scene director: scripted scenes in the live world, autoplay, and a capture server for trailers
 
 The owner: "the occasional gang warfare breaks out, a random police raid, an NPC gets into a bar fight and gets chased

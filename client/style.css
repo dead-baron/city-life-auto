@@ -31,14 +31,15 @@
   --scrim-hi: rgba(4, 7, 16, .8);
   --scrim-lo: rgba(4, 7, 16, .4);
   /* the touch buttons' one container (the owner, 11-03): a dark disc with a hairline; the state the only accent */
-  --disc: rgba(12, 14, 20, .55); --gl-halo: rgba(7, 11, 22, .6); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
+  --gl-halo: rgba(7, 11, 22, .6); --disc-hi: rgba(46, 52, 66, .78); --disc-solid: #1a1d26; --hair: rgba(255, 255, 255, .18);
   --fire-disc: #c8463c; --fire-hi: #e0594d; --act-disc: #e2b33c; --act-hi: #f0c55a;
   --ink-a: rgba(7, 11, 22, .25);
   /* Direction A, the SNES pad (the owner, 2026-11-12): the in-play HUD's panels and buttons - navy, a near-black edge, a
      gold rim inside, a hard shadow; the four face buttons' colors; the bars'; the sticks' faint ring and knob */
   --pad-navy: #141a33; --pad-ink: #0b1020; --pad-gold: #f6c945; --pad-cream: #f4ecd8; --pad-mute: #8b93a8; --pad-line: #4a5370; --pad-obj: #b794f4;
   --pad-fire: #e8434b; --pad-act: #f6c945; --pad-roll: #4aa8ff; --pad-car: #3ccf6e;
-  --disc: rgba(20, 26, 51, .55); --disc-on: rgba(20, 26, 51, .8);
+  --disc: rgba(20, 26, 51, .55); --disc-on: rgba(20, 26, 51, .8);   /* (a touch button's see-through navy, and pressed or on) */
+  --auto-ring: rgba(244, 236, 216, .55); --auto-word: rgba(255, 255, 255, .75);   /* (AUTO while it's off: see-through) */
   --pad-hp: #e8434b; --pad-hp-d: #3a2030; --pad-ar: #4aa8ff; --pad-ar-d: #1d2a48; --pad-st: #e8b21a; --pad-st-d: #3a3220; --pad-cash: #3ccf6e;
   --pad-hi: rgba(255, 255, 255, .35); --pad-lo: rgba(0, 0, 0, .25); --pad-drop: rgba(0, 0, 0, .45); --pad-veil: rgba(11, 16, 32, .85);
   --stick-ring: rgba(244, 236, 216, .28); --stick-knob: rgba(244, 236, 216, .3); --stick-edge: rgba(11, 16, 32, .5);
@@ -131,7 +132,7 @@ body:not(.kbm) .kbm-only, body:not(.pad) .pad-only, body:not(.touch) .touch-only
 .rbtn:hover, .rbtn:focus-visible { outline: none; background: var(--navy2); box-shadow: 0 0 0 1px var(--ink), 0 0 0 4px var(--gold-a), var(--plate-sh); }
 .rbtn:active { transform: scale(var(--press)); transition-duration: var(--t0); background: var(--navy3); }
 .rbtn[disabled] { border-color: var(--grey); opacity: .7; cursor: default; }
-.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+.rbtn > .kchip { position: absolute; right: -7px; top: -7px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }   /* (on the foot corner: over the top one the plate above cut them off - the owner, 11-13) */
 /* a pixel icon (client/touchicons.js): 24 px, or a whole multiple, never smoothed */
 .pi24 { display: block; width: var(--ic); height: var(--ic); flex: none; image-rendering: pixelated; }
 i.ic { display: inline-grid; place-items: center; flex: none; font-style: normal; line-height: 0; }
@@ -245,7 +246,7 @@ body.calm #hud, body.calm #touch { opacity: 0; transition: opacity 3s; }
 #clock { display: none; }
 /* the debug button (a playtest tool, open to everyone): quiet in the world's column, under the clock with the status
    beside it (upright beside the minimap's foot, left of the system buttons) - apart from the game's own, over nothing */
-#b-dev { position: relative; grid-column: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; opacity: .7; color: var(--pad-mute); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); cursor: pointer; pointer-events: auto; touch-action: manipulation; }
+#b-dev { position: relative; grid-column: 1; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: var(--r3);   /* (round again: the owner, 11-13) */ opacity: .7; color: var(--pad-mute); box-shadow: inset 0 0 0 2px var(--pad-line), var(--pn-drop); cursor: pointer; pointer-events: auto; touch-action: manipulation; }
 #b-dev svg { display: block; width: 18px; height: 18px; }
 #b-dev.on { opacity: 1; color: var(--pad-gold); }
 #b-dev:active { transform: scale(var(--press)); }
@@ -356,16 +357,23 @@ body:not(.touch) #hud-tr > #hud-stat, body.portrait #hud-tr > #hud-stat { order:
 #hud-btns button:hover { background: var(--navy3); }
 #hud-btns button:focus-visible { outline: 2px solid var(--pad-gold); outline-offset: 2px; }
 #hud-btns button:active { transform: scale(var(--press)); transition-duration: var(--t0); }   /* (UIC-20 04: 92% pressed, back in 120 ms) */
-#hud-btns .kchip { position: absolute; right: -7px; top: -7px; bottom: auto; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
+#hud-btns .kchip { position: absolute; right: -6px; top: auto; bottom: -8px; min-width: 18px; height: 18px; padding: 0 4px; font-size: var(--fs-1); box-shadow: inset 0 -2px 0 var(--dim), 0 0 0 1.5px var(--ink); }
 .touch #hud-btns { --ic: 24px; }
 #b-chat { pointer-events: auto; }
 body.touch #b-chat { display: none; }   /* (on touch chat is by the thumb: #b-talk) */
-/* chat by the thumb (the owner, 11-12: the top row was a stretch for something used often): a tap the chat sheet, held the
-   emotes - in the bottom band just right of the move stick's rest on its side, over the move stick's zone upright */
+/* chat by the thumb (the owner, 11-12: the top row was a stretch for something used often): a tap the chat sheet - in the
+   bottom band just right of the move stick's rest on its side, over the move stick's zone upright */
 #b-talk { display: none; }
 body.touch #b-talk { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 134px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
 body.touch #b-talk:active { transform: scale(var(--press)); }
 body.portrait.touch #b-talk { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: max(8px, env(safe-area-inset-bottom)); width: 44px; height: 44px; }   /* (upright: beside the move stick's ring along the bottom, as in landscape - clear of the prompt cards over it) */
+/* the emotes beside it (the owner, 11-13: emotes apart from chat): the same button, a tap the picker (client/emotes.js) -
+   on its side next along the bottom (the first-time strip starts after it), upright over it */
+#b-emote { display: none; }
+body.touch #b-emote { position: absolute; display: grid; place-items: center; left: calc(max(20px, env(safe-area-inset-left)) + 190px); bottom: max(8px, env(safe-area-inset-bottom)); width: var(--tap-l); height: var(--tap-l); padding: 0; pointer-events: auto; touch-action: none; background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--pad-cream); --ic: 24px; }
+body.touch #b-emote:active { transform: scale(var(--press)); }
+body.portrait.touch #b-emote { left: calc(max(20px, env(safe-area-inset-left)) + 128px); bottom: calc(max(8px, env(safe-area-inset-bottom)) + 52px); width: 44px; height: 44px; }   /* (upright: over it - the right thumb's cluster starts at the middle along the bottom) */
+body.touch.emo-open #b-emote { box-shadow: inset 0 0 0 2px var(--pad-cream), var(--pn-drop); }
 
 /* the plate: health, armor, stamina - the icon, the segmented bar, the number - then the cash and the stars */
 #hud-stat { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; column-gap: 10px; box-sizing: border-box; min-width: var(--trw); padding: 8px 10px; }
@@ -528,7 +536,7 @@ body:not(.touch) #helpbox { max-width: min(560px, 60vw); }
 #hints { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); box-sizing: border-box; pointer-events: none; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s1) var(--s4); padding: 4px var(--s3); font: 700 var(--fs-2) var(--pixel); color: var(--pad-cream); transition: opacity var(--t3) var(--ease), visibility 0s; }
 #hints.off { opacity: 0; visibility: hidden; transition: opacity var(--t3) var(--ease), visibility 0s var(--t3); }
 #hints .hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); gap: 2px 10px; }
+.touch #hints { left: calc(max(20px, env(safe-area-inset-left)) + 246px); right: var(--lo-c, 344px); max-width: none; padding: var(--s1) var(--s2); gap: 2px 10px; }
 .touch #hints .g-touch { height: 22px; padding: 0 var(--s1); }
 .touch #hints .hint { white-space: normal; }
 .touch:not(.portrait) #hud:has(#hints:not(.off)) #hud-low { bottom: calc(var(--lo-b, 82px) + 40px); }   /* (the first-time strip under the cards: the card over it) */
@@ -666,8 +674,8 @@ body.portrait #zone-l { top: 50%; }
 #tbtns [data-slot=roll] { --acc: var(--pad-roll); }
 #tbtns [data-slot=car] { --acc: var(--pad-car); }
 #tbtns button.face:is(:active, .on) { background: var(--disc-on); }
-#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 12px var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
-#tbtns .w[data-fs="10"] { font-size: 10px; }
+#tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 var(--fs-w2) var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
+#tbtns .w[data-fs="10"] { font-size: var(--fs-w1); }
 #tbtns small.w { color: var(--pad-mute); }
 .sym { display: block; flex: none; width: 32px; height: 32px; background: center / 100% 100% no-repeat; image-rendering: pixelated; pointer-events: none; }
 .s-cross { background-image: url(../assets/ui/s-cross.png); } .s-chev { background-image: url(../assets/ui/s-chev.png); }
@@ -682,8 +690,8 @@ body.portrait #zone-l { top: 50%; }
 #tbtns button.pulse.crime::after { content: ''; top: -4px; right: -4px; width: 20px; height: 20px; border: 0; border-radius: 0; background: url(../assets/ui/s-bang.png) center / 100% 100% no-repeat; image-rendering: pixelated; }   /* (the "!" drawn, so it sits dead centre: the font's ! doesn't) */
 /* AUTO (FIRE ON): a small ring inside its tap area - see-through while it's off, filled and gold while it's on (the owner, 11-13) */
 #tbtns #firetog { isolation: isolate; background: transparent; border-color: transparent; box-shadow: none; }
-#tbtns #firetog::before { content: ''; position: absolute; inset: 6px; z-index: -1; border-radius: var(--r3); border: 2px solid rgba(244, 236, 216, .55); background: transparent; }
-#tbtns #firetog .w { color: rgba(255, 255, 255, .75); }
+#tbtns #firetog::before { content: ''; position: absolute; inset: 6px; z-index: -1; border-radius: var(--r3); border: 2px solid var(--auto-ring); background: transparent; }
+#tbtns #firetog .w { color: var(--auto-word); }
 #tbtns #firetog.lit { box-shadow: none; }
 #tbtns #firetog.lit::before { border-color: var(--pad-gold); background: var(--disc-on); }
 #tbtns #firetog.lit .w { color: var(--pad-gold); }
@@ -1408,6 +1416,7 @@ body:not(.pad) #hub-foot { display: none; }
 .pz { width: min(380px, 100%); max-height: 100%; display: flex; flex-direction: column; overflow: hidden; background: var(--panel-bg); border: 2px solid var(--gold); border-radius: var(--r2); box-shadow: var(--shadow); animation: enter-l var(--t2) var(--ease); }
 .pz-head { position: relative; display: flex; flex-direction: column; align-items: center; gap: var(--s1); padding: var(--s3) var(--s3) var(--s2); border-bottom: 2px solid var(--gold); background: var(--sky, none) repeat-x 50% 100% / auto 120px, linear-gradient(180deg, var(--dusk-a) 0%, var(--dusk-b) 70%, var(--navy) 100%); image-rendering: pixelated; }
 .pz-head img { width: min(300px, 86%); image-rendering: auto; filter: drop-shadow(0 4px 0 var(--ink)); }
+.pz-head .x { position: absolute; top: var(--s2); right: var(--s2); z-index: 1; }   /* (a close in the corner, as every other screen has: the owner, 11-13) */
 .pz-head b { font: 700 var(--fs-5) var(--pixel); color: var(--info); letter-spacing: 3px; text-shadow: var(--lift); }
 .pz-list { display: flex; flex-direction: column; padding: var(--s2); overflow-y: auto; }
 .pz-row { position: relative; display: flex; align-items: center; gap: var(--s3); min-height: 52px; padding: 0 var(--s3); border: 2px solid transparent; border-bottom-color: var(--line); border-radius: var(--r1); background: transparent; color: var(--cream); font: 700 var(--fs-4) var(--pixel); letter-spacing: 1px; text-align: left; cursor: pointer; touch-action: manipulation; transition: background var(--t1) var(--ease); }

@@ -103,6 +103,7 @@ import * as cells from './cells.js';
 import * as devmode from '../devmode.js';
 import * as underground from './underground.js';
 import * as dance from './dance.js';
+import * as emote from './emote.js';
 import * as music from './music.js';
 import * as safety from './safety.js';
 import * as sar from './sar.js';
@@ -613,6 +614,7 @@ function inputsOf(world, p, dt) {
     const ped = p.ped;
     if (ped && ped.board) skate.guard(world, p, ped);   // (off the board when you can't ride: knocked down, in a car, inside...)
     if (p.skSession) skate.sessionTick(world, p);   // (a session at a skate spot runs out on or off the board)
+    if (ped && ped.gt === 'emote') emote.tick(world, ped);   // (an emote's animation runs out: emote.js)
     const drivingV = ped && ped.vehId && ped.seat === 0 ? world.get(ped.vehId) : null;
     if (drivingV && !drivingV.wreckAt && !drivingV.scripted && !drivingV.onDeck) drivingV.ownStepTick = world.tick;
     for (let k = 0; k < n; k++) {
@@ -665,6 +667,7 @@ function applyInput(world, p, ped, inp, pressed, dt) {
   }
   if (ped.fishing && ped.fishing.F && fishing.input(world, p, ped, inp, pressed, dt)) pressed &= ~IN.ACTION;   // (fishing: the action button charges the cast, strikes and reels - fishing.js)
   if (ped.vehId && (pressed & IN.DANCE)) music.carRadio(world, p);   // (in a car the dance button is the radio: music.js)
+  emote.input(world, p, ped, inp);   // (an emote's animation: walking off, a button, a car - it stops: emote.js)
   dance.input(world, p, ped, inp, pressed);   // the dance button; walking off, a punch, a car: the dance stops (task #394)
   ped.aimAngle = inp.aim;
   if (inp.bits & IN.AIMING) ped.aimUntil = world.time + 0.3;

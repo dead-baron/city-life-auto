@@ -4,7 +4,7 @@
 // (server/moderation.js), contacts (met, crewed or traded with) and the phone's inbox for whoever's offline.
 // Messages (page -> server):
 //   { t: 'chat', ch: 'near'|'crew'|'faction'|'phone', text, to? (phone: a contact's id) }
-//   { t: 'emote', e }                              (shared/chatdefs.js EMOTES)
+//   { t: 'emote', e }                              (shared/chatdefs.js EMOTES: its animation on the body - systems/emote.js)
 //   { t: 'chatset', off: { near?, crew?, faction?, phone? } }   channels switched off for you
 //   { t: 'mod', a: 'mute'|'unmute'|'block'|'unblock'|'report', id, why?, note? }
 //   { t: 'contacts' } · { t: 'inbox' }
@@ -16,6 +16,7 @@ import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS } from '../shared/chatdefs
 import { keyedHash } from './auth.js';
 import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
+import * as emotes from './systems/emote.js';
 
 const PX = 32;
 
@@ -169,11 +170,19 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     return { ok: true, n: to.length };
   }
 
+  // an emote: played on the body (systems/emote.js), and to everyone near who can hear you - the page pops its emoji
+  // over your head and puts a line in the log (Dance: "Ann started dancing", no emoji)
   function emote(world, p, e) {
     if (!Object.hasOwn(EMOTES, e) || !p.ped || p.ped.dead) return false;
     const r = rec(p);
     if (now() - r.emoteAt < CHAT.emoteGapS * 1000) return false;
+    if (!emotes.play(world, p, e)) return false;
     r.emoteAt = now();
+    tell(world, p, e);
+    if (onLine) onLine(p, 'emote');
+    return true;
+  }
+  function tell(world, p, e) {
     const out = { t: 'emote', eid: p.ped.id, e, n: p.name, id: hid(p.pid) };
     const r2 = (CHAT.nearM * PX) ** 2;
     for (const q of world.players.values()) {
@@ -181,7 +190,15 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       const dx = q.ped.x - p.ped.x, dy = q.ped.y - p.ped.y;
       if (dx * dx + dy * dy <= r2) say(q, out);
     }
-    if (onLine) onLine(p, 'emote');
+  }
+  // someone started dancing another way (the dance button, the phone's: systems/dance.js -> world.track 'danced'): the
+  // same line to the people near, as often as an emote at most
+  function announce(world, p, e) {
+    if (!Object.hasOwn(EMOTES, e) || !p.ped || p.ped.dead) return false;
+    const r = rec(p);
+    if (now() - r.emoteAt < CHAT.emoteGapS * 1000) return false;
+    r.emoteAt = now();
+    tell(world, p, e);
     return true;
   }
 
@@ -258,5 +275,5 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     const c = cd(p);
     if (c.inbox.length) world.notify(p, `${c.inbox.length} new message${c.inbox.length === 1 ? '' : 's'} on your phone.`, 'info');
   }
-  return { handle, update, onJoin, addContact, send, emote, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
+  return { handle, update, onJoin, addContact, send, emote, announce, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
 }

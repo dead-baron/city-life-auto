@@ -149,6 +149,88 @@ Object.assign(GAITS2, {
 });
 // ==== end of dancing ====================================================================================================
 
+// ==== Emotes (the owner, 2026-11-13; shared/chatdefs.js EMOTES, server emote.js) ========================================
+// An emote on the body: a four-frame loop for its couple of seconds (game/peds.js emoteFrame, EMOTE_FPS frames a second)
+// - a wave, both arms up, a laugh shaking the body, a thumbs up, a point, a shrug, a clap, a facepalm, a salute, a bow,
+// a stomp with the fists down. (Dance plays the dance button's dance: no pose here.)
+Object.assign(POSES, { emwave: 4, emcheer: 4, emlaugh: 4, emthumbs: 4, empoint: 4, emshrug: 4, emclap: 4, emfacepalm: 4, emsalute: 4, emsorry: 4, emangry: 4 });
+export const EMOTE_FPS = { emwave: 5, emcheer: 4, emlaugh: 6, emthumbs: 3, empoint: 3, emshrug: 3, emclap: 6, emfacepalm: 2.5, emsalute: 2.5, emsorry: 2.5, emangry: 5 };
+const emBase = (P) => { P.acc = false; P.splay = 0.18; };
+const HEAD = (S, x, y, z) => vadd(S.head, mv(S.SP, [x, y, z]));                     // a hand by the head (x right, y forward)
+Object.assign(GAITS2, {
+  emwave(D, P, f) {   // the right hand up by the head, open, waving side to side; the head tipped toward it
+    emBase(P);
+    P.headYaw = 0.1; P.headPitch = -0.08; P.tilt = -0.04;
+    P.hands = (S) => { P.hR = vadd(S.shR, [[6.4, 3.8, 1.6, 4.4][f], 2.6, [11.0, 12.0, 11.2, 12.2][f]]); P.openR = 1; P.elR = [1, -0.2, -0.5]; };
+  },
+  emcheer(D, P, f) {   // both arms up, fists high; up on the toes and down, the head back
+    emBase(P);
+    const up = !(f & 1), w = [0.6, 0, -0.6, 0][f];
+    P.pel = [w * 0.6, 0, D.pelZ - (up ? 0 : 1.4) + (up ? 0.8 : 0)]; P.headPitch = up ? -0.4 : -0.15; P.lean = -0.06;
+    P.fL = [-D.hipX - 1.6, 0.3, D.ank + (up ? 0.8 : 0)]; P.fR = [D.hipX + 1.6, 0.3, D.ank + (up ? 0.8 : 0)]; P.toeL = P.toeR = up ? 0.5 : 0;
+    P.kneeL = [-0.3, 1, 0]; P.kneeR = [0.3, 1, 0];
+    P.hands = (S) => { P.hL = DUP(S, -1, up ? 6.0 : 4.2, up ? 14.6 : 13.4); P.hR = DUP(S, 1, up ? 6.0 : 4.2, up ? 14.6 : 13.4); P.openL = P.openR = up ? 1 : 0; P.elL = [-1, -0.2, -0.3]; P.elR = [1, -0.2, -0.3]; };
+  },
+  emlaugh(D, P, f) {   // the head thrown back, the body shaking, the hands on the belly
+    emBase(P);
+    const k = [0, 1, 0, 1][f], s = f < 2 ? 1 : -1;
+    P.lean = k ? -0.16 : 0.04; P.headPitch = k ? -0.42 : -0.18; P.headYaw = s * 0.08; P.pel = [s * 0.4, 0, D.pelZ - (k ? 0.2 : 0.9)]; P.tilt = s * 0.04;
+    P.hands = (S) => { P.hL = DCH(S, -3.0, 5.4, -6.6 + k * 0.6); P.hR = DCH(S, 3.0, 5.4, -6.0 + k * 0.6); P.openL = P.openR = 1; P.elL = [-1, -0.3, -0.5]; P.elR = [1, -0.3, -0.5]; };
+  },
+  emthumbs(D, P, f) {   // the right fist held out in front at the chest, nodding along
+    emBase(P);
+    P.headPitch = [0, 0.14, 0, 0.1][f]; P.headYaw = 0.06;
+    P.hands = (S) => { P.hR = vadd(S.shR, [1.6, 8.6, [1.2, 2.0, 2.4, 1.6][f]]); P.elR = [1, -0.4, -0.5]; };
+  },
+  empoint(D, P, f) {   // the right arm out straight in front, jabbing; the left hand on the hip
+    emBase(P);
+    P.twist = -0.12; P.headPitch = -0.04; P.lean = 0.06;
+    P.fL = [-D.hipX - 1.4, -0.6, D.ank]; P.fR = [D.hipX + 1.4, 1.6, D.ank];
+    P.hands = (S) => { P.hR = vadd(S.shR, [0.4, D.reach * [0.8, 0.94, 0.92, 0.86][f], 2.4]); P.elR = [1, 0, -0.2]; P.hL = DHIP(D, S, -1); P.elL = [-1, -0.2, -0.3]; };
+  },
+  emshrug(D, P, f) {   // the hands turned out at the sides, the elbows in, the head on one side
+    emBase(P);
+    const k = [0, 1, 1, 0.5][f];
+    P.headYaw = k * 0.12; P.headPitch = -0.06 + k * 0.04; P.tilt = k * 0.05; P.pel = [0, 0, D.pelZ - 0.1 + k * 0.4];
+    P.hands = (S) => { P.hL = vadd(S.shL, [-3.6 - k * 3.0, 4.0, -6.8 + k * 1.8]); P.hR = vadd(S.shR, [3.6 + k * 3.0, 4.0, -6.8 + k * 1.8]); P.openL = P.openR = 1; P.elL = [-0.4, -0.6, -1]; P.elR = [0.4, -0.6, -1]; };
+  },
+  emclap(D, P, f) {   // the hands meeting in front of the chest and apart again
+    emBase(P);
+    const hit = f & 1;
+    P.headPitch = hit ? 0.02 : -0.06; P.pel = [0, 0, D.pelZ - 0.1 - hit * 0.3];
+    P.hands = (S) => { const x = hit ? 0.9 : [3.8, 0, 4.4, 0][f]; P.hL = DCH(S, -x, 7.2, -1.2); P.hR = DCH(S, x, 7.2, -1.2); P.openL = P.openR = 1; P.elL = [-1, -0.3, -0.5]; P.elR = [1, -0.3, -0.5]; };
+  },
+  emfacepalm(D, P, f) {   // the head down into the right hand, shaking slowly
+    emBase(P);
+    const on = f > 0;
+    P.lean = on ? 0.12 : 0.06; P.headPitch = on ? 0.34 : 0.18; P.headYaw = [0, -0.14, 0.14, -0.06][f];
+    P.hands = (S) => { P.hR = on ? HEAD(S, 0.6, 6.2, -1.0) : vadd(S.shR, [1.2, 6.2, -2.0]); P.openR = 1; P.elR = [0.6, -0.2, -1]; P.hL = DCH(S, -2.8, 5.0, -5.6); P.elL = [-1, -0.3, -0.5]; };
+  },
+  emsalute(D, P, f) {   // stood straight, the heels together, the right hand to the brow
+    emBase(P); P.splay = 0.08; P.lean = 0;
+    const on = f > 0;
+    P.headPitch = [-0.04, -0.1, -0.1, -0.06][f]; P.pel = [0, 0, D.pelZ + 0.2];
+    P.fL = [-D.hipX - 0.4, 0.3, D.ank]; P.fR = [D.hipX + 0.4, 0.3, D.ank];
+    P.hands = (S) => { P.hR = HEAD(S, 3.0, 4.8, on ? 1.4 : -1.2); P.openR = 1; P.elR = [1, 0.1, 0.1]; P.hL = vadd(S.shL, [-1.4, 0.4, -D.reach * 0.95]); P.elL = [-0.3, -1, -0.2]; };
+  },
+  emsorry(D, P, f) {   // a bow from the waist, the head down, the hands together in front
+    emBase(P);
+    const b = [0.12, 0.34, 0.42, 0.3][f];
+    P.lean = b; P.headPitch = 0.2 + b * 0.5; P.pel = [0, -b * 2.4, D.pelZ - b * 1.2]; P.splay = 0.1;
+    P.fL = [-D.hipX - 0.8, 0.3, D.ank]; P.fR = [D.hipX + 0.8, 0.3, D.ank];
+    P.hands = (S) => { P.hL = vadd(S.pel, mv(S.SP, [-1.0, 4.8, 1.6])); P.hR = vadd(S.pel, mv(S.SP, [1.0, 5.0, 2.0])); P.openL = P.openR = 1; P.elL = [-1, -0.4, -0.4]; P.elR = [1, -0.4, -0.4]; };
+  },
+  emangry(D, P, f) {   // a stomp, one foot then the other, the fists clenched down at the sides shaking
+    emBase(P);
+    const s = f < 2 ? 1 : -1, lift = !(f & 1);
+    P.lean = 0.14; P.headPitch = 0.16; P.twist = s * 0.06; P.pel = [s * 0.5, 0, D.pelZ - (lift ? 0.6 : 1.4)];
+    P.fL = [-D.hipX - 1.8, 0.4, D.ank + (lift && s < 0 ? 3.4 : 0)]; P.fR = [D.hipX + 1.8, 0.4, D.ank + (lift && s > 0 ? 3.4 : 0)];
+    P.kneeL = [-0.3, 1, 0]; P.kneeR = [0.3, 1, 0];
+    P.hands = (S) => { const z = -D.reach * (lift ? 0.7 : 0.78); P.hL = vadd(S.shL, [-4.0, 1.6, z]); P.hR = vadd(S.shR, [4.0, 1.6, z]); P.elL = [-1, -0.6, 0]; P.elR = [1, -0.6, 0]; };
+  },
+});
+// ==== end of emotes =====================================================================================================
+
 // ==== The guard (blocking: server combat.js - a player's held guard, an NPC's raised now and then; main.js pedPose) ====
 // Knees bent, the head down; fists up before the face, or a bat or a blade held across it in both hands.
 const vn = (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };

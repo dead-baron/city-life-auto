@@ -139,6 +139,7 @@ function measure() {
     document.querySelectorAll('#tbtns [data-b]').forEach((el) => { if (shown(el)) keep.push({ ...box(el, 'tb.' + el.dataset.b), slot: el.dataset.slot, label: el.dataset.lbl }); });
     if (shown($('stick-l'))) keep.push(box($('stick-l'), 'stick-l'));
     if (shown($('b-talk'))) keep.push(box($('b-talk'), 'talk'));   // (chat by the thumb: Direction A, 11-12)
+    if (shown($('b-emote'))) keep.push(box($('b-emote'), 'emote'));   // (the emotes beside it: 11-13)
   }
   // the smallest words on the screen: every element with words of its own in the HUD and the touch controls
   // (the words on the touch buttons apart: Direction A's, stepped down to fit their discs - minBtn)
