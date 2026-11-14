@@ -111,6 +111,9 @@ function step(dt) {
   G.msgT -= dt;
   if (G.mp) {   // (a game against someone: aim on your turn; a shot animated, then the table as the server has it)
     if (G.moving) { G.moving = physics(G.balls, dt, (b) => G.o.sfx(b.n ? 'coin' : 'bad', 0.45)); if (!G.moving && G.snap) setBalls(G.snap); return; }
+    // (lining it up: the aim to the server now and then - your character walks round the bar's table to it, for anyone
+    // near to see: server poolmatch.js steer)
+    if (myTurn() && Math.abs((G.aimSent ?? 99) - G.aim) > 0.05 && performance.now() - (G.aimAt || 0) > 300) { G.aimSent = G.aim; G.aimAt = performance.now(); G.o.send({ t: 'pool', a: 'aim', aim: +G.aim.toFixed(3) }); }
     if (!myTurn()) { G.charging = false; let a = false; for (const p of navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) if (p.buttons[0] && p.buttons[0].pressed) a = true; if (a && !G.padHeld && G.btns.length) press(G.btns[G.sel]); G.padHeld = a; return; }
   }
   if (!G.moving && !G.done) {

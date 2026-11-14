@@ -23204,6 +23204,55 @@ helicopter among the ambulances, the helicopter beside its pad); "At home" and "
 the next scene's teleport is refused. The capture tooling: QA scratch (cap.sh, sweep.mjs, batches.sh) - the server run
 without bake threads (CLA_ART_THREADS=0) so a server and a browser fit together.
 
+## 2026-11-13 - Real pool in the bar: the NPCs' games roll real balls, and every game at the table shows in the world
+
+The owner: NPCs playing pool should look real - "Balls should move on the table if possible" - and a game should be
+watchable from outside the minigame, like walking into a bar and seeing a game going; then "Don't need NPCs at every
+table, just cool to have sometimes at some tables"; and a player's own match should show the same way.
+
+- **The tables out in the world** (server/systems/pooltables.js `tablesOf`): the Rusty Spur's (the bar room's, as
+  client/art2/game/statics.js `roadhouseRoom` draws it - `poolTable` moved here, activities.js re-exports it) and any bar
+  fitted out with one (shared/shoprooms.js: a sports bar's, a small saloon's `pool` piece). Today's World v3 has one: the
+  Spur's - its bars are clubs and its billiards hall has no inside. An arcade's floor and a home's games room are levels
+  of their own and keep their tables to the minigame (no NPCs there).
+- **The NPCs play eight-ball for real** (server/systems/poolnpc.js): the minigame's physics and rules (shared/pool.js),
+  the computer's shot choice (`cpuShot`) with an NPC's miss on it, the break straight at the rack. Each shot timed to
+  them: the shot thought out; round the table to stand behind the cue ball, back along the line (`standAt`), just off
+  the rail; bent over the cue a moment (`POOL_NPC.aimS`); the stroke; up off the cue watching the balls roll; again if he
+  potted one of his, else the other's turn. The other waits off the far end, cue up (`waitAt`). The frame won (or
+  `frameShots` long): both stand back, the balls racked, the loser breaks. activities.js fills and empties the table's
+  group as before (only while someone's near: no cost for an empty bar) - the rate per table now in shared/rules.js
+  `POOL_NPC`: the Spur keeps its 50% by day and 90% after dark, a bar's table 12% / 30%, asked again only after 5-10
+  minutes - a bar's table is empty more often than not.
+- **On the wire, tiny** (pooltables.js): a table tells the pages it's in view of (and a little past), twice a second,
+  when they come near - `{ e: 'ptab', k, f (the felt), bi (the building), b ([n, x, y, ...]), r }` - and then each shot as
+  it's played: `{ e: 'pshot', k, b (the balls as they lay), v (the cue ball's velocity), by (who struck), r, x, y }`, a
+  few hundred bytes, nothing while they roll. The page plays the shot out itself with the same physics from the same
+  numbers: the balls settled to 0.01 px before every shot, the velocity sent (not the aim: `Math.cos` differs in the
+  last bit between engines - the physics is arithmetic and `sqrt`), the same fixed steps (shared/pool.js `playOut`,
+  `cueVel`) - so the page's balls stop exactly where the server's did (test/poolnpc.test.js checks it bit for bit).
+- **The page** (client/poolview.js, loaded with the first table the server tells it about - main.js `poolEv`): the balls
+  drawn over the bar's felt while you're inside (the roof's over them otherwise), at the art's own scale - a dot of 3-4
+  px, the stripes banded, a shadow and a shine, dimmed after dark. The stroke: the shooter's cue drawn back and through
+  when the shot comes (art2/game/peds.js `cueFrame`, host.js), a slow practice stroke while he lines it up; the cue ball
+  off 0.15 s after. A clack at the table (client/sound/events.js `pshot`). The baked balls and the cue across the felt
+  are gone from the Spur's table and the shop rooms' (statics.js, shopart.js) - the live ones are drawn instead.
+- **A player wants the table** (poolmatch.js): Act at it while the regulars are playing - "the regulars let you have it"
+  - and it's the usual choice (wait for a player, the computer, a frame alone); the NPCs let the shot rolling finish,
+  stand back off the ends with their cues up and watch; once your game's over and you're gone they rack up and play on.
+- **A player's match shows in the world too** (poolmatch.js `steer`, called by players.js in place of the player's own
+  input while his game at a table out in the world is on): whoever's up is walked round to stand behind the cue ball,
+  back along the line he's aiming (the pool screen sends the aim as it's lined up, `{ a: 'aim' }`, at most ~3 a
+  second), bent over the cue; at the shot he's put there if he isn't yet, the stroke, the balls roll on the bar's table
+  for everyone near; the one waiting stands back off the far end, cue up. The minigame screen is as it was (its shot
+  is settled to the same numbers first). The Guide's Pool entry says so.
+- Tests: test/poolnpc.test.js - the NPCs' game (shots from behind the cue ball, balls potted, a frame ends and is racked,
+  both shoot; deterministic with a seed; the page's replay identical), only while someone's near (a page far away gets
+  nothing; nobody near, no shots), the hand-over (the NPCs stand back, no NPC shots, the match moves the shooter and the
+  waiting player, a page near gets the shot with the shooter's id; afterwards the regulars play on).
+- Hashes: the art (the baked balls gone from the tables) changes; the chunks the server bakes the same as before carry
+  over (server/artcdn.js).
+
 ## 2026-11-13 - Chat & emotes round 2: pixel balloons, body-first emotes, Dances and Poses, typing dots, the pad's radial
 
 The owner, 11-13: the emoji over heads "don't match SNES style" - our own 16x16 emotion balloons in the game's palette,

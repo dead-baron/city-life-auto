@@ -25,7 +25,7 @@ import { ITEMS } from '../../shared/items.js';
 import { PIECES as DECOR } from '../../shared/homedecor.js';
 import { layout, useAt } from '../../shared/homelayout.js';
 import { store } from '../store.js';
-import { poolTable } from './activities.js';
+import { tableAt } from './pooltables.js';
 import { payFrom as pay } from './economy.js';
 import * as homes from './homes.js';
 import * as homeinside from './homeinside.js';
@@ -199,16 +199,18 @@ export function play(world, p, free, poi = null, game = 'starfall', more = null)
   const best = { pool: p.profile.poolBest, skee: p.profile.skeeBest, hockey: p.profile.hockeyWins, pinball: p.profile.pinballBest }[game] ?? p.profile.arcadeBest;
   p.conn.sendJSON({ t: 'arcade', game, id: p.arcade.id, free: !!free, best: best || 0, ...more });
 }
-// the Rusty Spur's pool table (activities.js poolTable): a frame for ARCADE.pool dollars - from anywhere round it, within
-// POOL_REACH px of its rim (the owner, 10-23: "Tried playing pool and it said you can't do it indoors": at the table's
-// ends - over 70 px from its middle - there was nothing to Act on, and the vehicle button there tried the skateboard)
+// a pool table out in the world (pooltables.js: the Rusty Spur's, a bar's): a frame for ARCADE.pool dollars - from
+// anywhere round it, within POOL_REACH px of its rim (the owner, 10-23: "Tried playing pool and it said you can't do it
+// indoors": at the table's ends - over 70 px from its middle - there was nothing to Act on, and the vehicle button there
+// tried the skateboard)
 export const POOL_REACH = 40;
 export function poolInteraction(world, p) {
-  const ped = p.ped, T = world.map.roadhouse ? poolTable(world.map) : null;
-  if (!T || !ped || ped.dead || ped.vehId) return null;
-  if (Math.hypot(Math.max(T.x0 - ped.x, 0, ped.x - T.x1), Math.max(T.y0 - ped.y, 0, ped.y - T.y1)) > POOL_REACH) return null;
+  const ped = p.ped;
+  if (!ped || ped.dead || ped.vehId) return null;
+  const T = tableAt(world.map, ped.x, ped.y, POOL_REACH);
+  if (!T) return null;
   const near = (o) => !!(o.ped && !o.ped.dead && !o.ped.vehId && Math.hypot(Math.max(T.x0 - o.ped.x, 0, o.ped.x - T.x1), Math.max(T.y0 - o.ped.y, 0, o.ped.y - T.y1)) <= POOL_REACH + 40);
-  return poolmatch.interaction(world, p, 'spur', { fee: ARCADE.pool, tickets: false, cpu: 'Hank (a regular)', free: true, at: near });   // (11-07: against a player, a regular, or a frame alone - poolmatch.js)
+  return poolmatch.interaction(world, p, T.key, { fee: ARCADE.pool, tickets: false, cpu: T.spur ? 'Hank (a regular)' : 'a regular', free: true, at: near, T });   // (11-07: against a player, a regular, or a frame alone - poolmatch.js)
 }
 
 // skee-ball's points or air hockey's goals: tickets, if it could be true (no more than the game allows, and no quicker)

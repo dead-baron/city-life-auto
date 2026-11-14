@@ -1066,7 +1066,8 @@ function onEvent(ev) {
     case 'golfcup': sfx('golfcup', distVol(ev.x, ev.y)); break;
     case 'golfsplash': sfx('splash', distVol(ev.x, ev.y)); break;
     case 'hoop': sfx(ev.in ? (ev.sw ? 'swish' : 'hoopin') : 'clank', distVol(ev.x, ev.y)); break;   // (shooting hoops: server/systems/hoops.js)
-    case 'bowl': case 'bowlset': case 'bowlx': case 'bowlroll': if (S.bowlView) S.bowlView.event(ev); break;   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
+    case 'bowl': case 'bowlset': case 'bowlx': case 'bowlroll': if (S.bowlView) S.bowlView.event(ev); break;
+    case 'ptab': case 'pshot': poolEv(ev); break;   // (a pool table near: its balls, a shot - server/systems/pooltables.js; drawn by client/poolview.js)   // (Pinwheel Lanes: server/systems/bowling.js; drawn by client/bowling.js)
     case 'ride': rideOn(ev); if (ev.k === 'balloon') { const L = balloonSite(S.map); if (L) sfx('burner', distVol(L.launch.x, L.launch.y)); } break;   // a ride under way: the wheel's cab you're in, a balloon going up
     case 'rideend': if (S.rides) S.rides.delete(ev.id); break;
     case 'bells': { const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), v = Math.max(0, 1 - d / 2600); for (let k = 0; k < (ev.n || 3); k++) setTimeout(() => sfx('churchbell', v * (k % 2 ? 0.85 : 1)), k * 1150); break; }   // (the mission's bells carry a long way)
@@ -3736,6 +3737,7 @@ function drawOverlays(F, v2) {
   else if (S.me && S.me.job && (S.me.job.flare || S.me.job.area)) loadAir();   // (a rescue's smoke flare: drawn there too - loaded once a call's out)
   if (S.fireMod && !F.sub) S.fireMod.draw(g, F, S);   // (the fires on the ground, the hoses: render/firejob.js)
   drawBowling(F);
+  if (S.poolView && !F.sub) S.poolView.draw(g, F, { walkInAt });   // (the balls on the pool tables: client/poolview.js)
   drawCinema(F);
   drawDriveIn(F, v2);
   drawVault(F);
@@ -4297,6 +4299,11 @@ function drawBowling(F) {
   if (!A || !F.sp) return;
   if (S.bowlView) { S.bowlView.draw(g, F, { walkInAt, DPR, W, H }); g.setTransform(...S.worldTf); }
   else if (!S.bowlAsk && Math.hypot(F.sp.x - A.counter.x, F.sp.y - A.counter.y) < 1600) { S.bowlAsk = 1; import('./bowling.js').then((m) => { S.bowlView = new m.BowlingView(S); }).catch((e) => console.warn('[bowling]', e)); }
+}
+function poolEv(ev) {
+  if (S.poolView) { S.poolView.event(ev); return; }
+  (S.poolQ ||= []).push(ev);
+  if (!S.poolAsk) { S.poolAsk = 1; import('./poolview.js').then((m) => { S.poolView = new m.PoolView(S); for (const e of S.poolQ) S.poolView.event(e); S.poolQ = null; }).catch((e) => { S.poolAsk = 0; console.warn('[pool]', e); }); }
 }
 // a bank's vault door (client/vault.js, loaded the first time you walk into a bank): shut, the drill on it, or open
 function drawVault(F) {
