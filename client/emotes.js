@@ -93,7 +93,6 @@ body.touch:not(.portrait) .emo-grid { max-height: calc(100vh - 170px); }
 .emo-t:active { transform: scale(var(--press)); }
 .emo-t img, .ph-quick img.emo-ic { width: 32px; height: 32px; flex: none; image-rendering: pixelated; }
 .emo-t span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.emo-t.hold span::after { content: ' \\2026'; color: var(--pad-mute); }
 .emo-rad { position: fixed; inset: 0; z-index: 30; pointer-events: none; background: radial-gradient(circle at 50% 50%, var(--scrim) 0, var(--ink-a) 220px, transparent 380px); }
 .emo-rs { position: absolute; left: 50%; top: 50%; width: 96px; min-height: 40px; margin: -20px 0 0 -48px; display: flex; align-items: center; justify-content: center; gap: 2px; padding: 2px var(--s1); box-sizing: border-box; background: var(--pad-navy); border: 2px solid var(--pad-line); border-radius: 0; color: var(--pad-cream); font: 700 var(--fs-1) var(--pixel); text-align: center; line-height: 1.15; }
 .emo-rs img { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
@@ -213,7 +212,7 @@ export function createEmotes(ctx) {
   let appTab = 'emote';
   function renderApp(el, api = {}) {
     el.innerHTML = `<div class="seg" role="tablist">${TABS.map(([k, n]) => `<button type="button" role="tab" data-emt="${k}" class="${k === appTab ? 'on' : ''}" aria-checked="${k === appTab}">${n}</button>`).join('')}</div>`
-      + `<p class="ph-hint">${appTab === 'pose' ? 'The lasting ones (…) hold until you move.' : 'Pick one: you act it out where you stand.'}</p><div class="ph-quick">${tilesOf(appTab, 'btn').replace(/<img /g, '<img class="emo-ic" ')}</div>`;
+      + `<p class="ph-hint">${appTab === 'pose' ? 'Sit, lie, sleep and the like hold until you move.' : 'Pick one: you act it out where you stand.'}</p><div class="ph-quick">${tilesOf(appTab, 'btn').replace(/<img /g, '<img class="emo-ic" ')}</div>`;
     for (const b of el.querySelectorAll('[data-emt]')) b.onclick = () => { appTab = b.dataset.emt; renderApp(el, api); };
     for (const b of el.querySelectorAll('.ph-quick [data-e], .ph-quick [data-d]')) b.onclick = () => { sendTile(b); if (api.close) api.close(); };
     if (api.refocus) api.refocus();
