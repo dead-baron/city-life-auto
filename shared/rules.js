@@ -1438,6 +1438,7 @@ export const DIRECTOR = {
   nearPx: [700, 2600], ftuePx: 1600, ftueS: 600,
   goneS: 25, farPx: 3400,
   handPx: 420, blockS: 2.5,
+  holdS: 7,   // a scene started from the camera's shot list waits at its first moment (black) till the page's art is in, this at most
   scenes: {
     bikerbrawl: { on: false, weight: 1, cooldownS: 2400 },
     tankerhideout: { on: false, weight: 1, cooldownS: 3600 },

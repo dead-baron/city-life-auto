@@ -1031,12 +1031,13 @@ function run(world, p, c, msg) {
     case 'firejob': { const err = firefighter.devFire(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the firefighter (H68): on the crew, a call of kind msg.k beside you
     case 'scene': {   // the scene director (director.js, shared/scenes/): msg.id started now - its place nearest you (the Rusty Spur's
       // is the Spur) - your camera on it (client/director.js); msg.k 'stop' ends the ones you're watching, 'list' names them
-      if (msg.k === 'stop') { for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p))) director.end(world, r, 'stopped'); director.unwatch(world, p); break; }
-      if (msg.k === 'unwatch') { director.unwatch(world, p); break; }
+      if (msg.k === 'stop') { for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p) && (!msg.seq || q.seq === msg.seq))) director.end(world, r, 'stopped'); director.unwatch(world, p, msg.seq | 0); break; }   // (msg.seq: that scene only - the page's word can come after the next began)
+      if (msg.k === 'unwatch') { director.unwatch(world, p, msg.seq | 0); break; }
+      if (msg.k === 'go') { for (const r of director.runsOf(world)) if (r.viewers.includes(p) && (!msg.seq || r.seq === msg.seq)) director.goRun(world, r); break; }   // (the page's art is in: the held scene on)
       if (msg.k === 'list' || !msg.id) { world.notify(p, `[dev] Scenes: ${director.sceneList().map((q) => q.id).join(', ')}`, 'info'); break; }
       if (msg.watch !== 0) afoot(world, p);   // (from wherever the last scene left you: out of the home, off the train, out of the vehicle)
       director.unwatch(world, p);
-      const r = director.start(world, String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p });
+      const r = director.start(world, String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p, hold: !!msg.hold && msg.watch !== 0 });
       world.notify(p, r.err ? `[dev] ${r.err}` : `[dev] Scene: ${r.run.sc.n}.`, r.err ? 'warn' : 'info');
       break;
     }

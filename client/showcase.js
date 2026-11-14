@@ -6,7 +6,7 @@
 // Each: g its group, n its name on the list, q the names to look it up by in the teleport list (client/devtp.js
 // teleportPlaces: the plans' places and sights, the landmarks, the districts - the first found), dx / dy where the camera
 // stands from it (tiles), z the zoom (director.js ZOOMS), t the time of day (minutes after midnight), note what to look at,
-// auto its autoplay (shared/scenes/showcase.js: the camera's planned move over it - the panel's "Autoplay" beside it).
+// auto: its shot in the camera panel's shot list (shared/scenes/shots.js: the camera's planned move over it).
 import { TILE } from '../shared/constants.js';
 
 export const SHOWCASE = [
@@ -39,7 +39,7 @@ export const SHOWCASE = [
   { g: 'The wild', n: 'Dry Creek Balloon Field', q: ['Dry Creek Balloon Field', 'Dry Creek'], z: 0.85, t: 450 },
   // ---- the city and the towns ----
   { g: 'The city and the towns', n: 'Greenfield Park', q: ['Greenfield Park'], z: 0.85, t: 540, note: 'the park on Downtown\'s axis' },
-  { g: 'The city and the towns', n: 'Piazza Vecchia', auto: 'showpiazza', q: ['Piazza Vecchia', 'Old Town'], z: 1, t: 1125, note: 'Old Town\'s square' },
+  { g: 'The city and the towns', n: 'Piazza Vecchia', q: ['Piazza Vecchia', 'Old Town'], z: 1, t: 1125, note: 'Old Town\'s square' },
   { g: 'The city and the towns', n: 'The Neon Strip', q: ['Lantern Lane Night Market', 'Neon Strip'], z: 0.85, t: 1380, note: 'the night market and the neon' },
   { g: 'The city and the towns', n: 'Lucky Mesa Strip', q: ['The Golden Lotus', 'Lucky Mesa'], z: 0.7, t: 1380, note: 'the casinos lit' },
   { g: 'The city and the towns', n: 'The Pink Mile', q: ['Siren Square', 'The Pink Mile'], z: 0.85, t: 1380, note: 'the motels round their pools' },

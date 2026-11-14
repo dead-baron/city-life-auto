@@ -3432,7 +3432,7 @@ function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
   S.boom.tick(F); if (!sub) S.camp.tick(F);   // (explosions' layers, wrecks in the air, hood riders; campfire embers)
   // walk-in shops: inside one, its roof fades away and the floor plan shows
-  if (!sub && !F.spec) F.insideB = interiorTick(F.sp, F.roofArt);
+  if (!sub && !F.spec) F.insideB = interiorTick((DIR && DIR.roofAt()) || F.sp, F.roofArt);   // (a shot's camera inside a bar: its roof off - client/director.js)
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
   if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
   // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land

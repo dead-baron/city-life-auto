@@ -1,8 +1,8 @@
 // Helicopter pursuit: a getaway car runs a police roadblock, the cruisers swing round after it (police.js's pursuit), the
-// police air unit picks it up from above (policeair.js), the driver loses it at speed and runs for it into an alley - the
-// officers after him on foot.
+// police air unit picks it up from above (policeair.js), the driver loses it at speed and runs for it down the street - the
+// officers after him on foot (on along the street, in the shot: never off out of view - the owner, 11-14).
 export default {
-  id: 'helipursuit', n: 'Helicopter pursuit', g: 'Action', len: 20, linger: 4,
+  id: 'helipursuit', n: 'Helicopter pursuit', g: 'action', note: 'the roadblock, the chopper, the crash · night', len: 20, linger: 4,
   place: { k: 'road', len: 2600, near: 'Downtown', far: 1600 },
   anchors: ['start', 'end', 'mid', 'far'],
   time: 1320, weather: 'clear',
@@ -23,7 +23,7 @@ export default {
     { id: 'crashed', who: 'getaway', do: 'crash', after: 'ram', wait: 2.4 },
     { who: 'vince', do: 'exit', after: 'crashed', wait: 1.1 },
     { who: 'vince', do: 'say', text: 'Not today!' },
-    { id: 'alley', who: 'vince', do: 'run', to: { alley: 'vince' }, max: 7 },
+    { id: 'alley', who: 'vince', do: 'run', to: { a: 'end', f: 900, s: 34 }, max: 7 },   // (on along the street, in view - not off into an alley: the owner, 11-14)
   ],
   cam: [
     { at: 0, hold: { a: 'start', f: 900 }, z: 0.94 },

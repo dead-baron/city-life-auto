@@ -9,6 +9,12 @@
 //   debris - rubble and, when it blows apart, its doors, hood, wheels and panels in its own paint, scorched, that
 //   tumble, bounce and burn out; a scorch on the ground; and a shake that falls off with distance.
 //   Now and then a burning wheel rolls away (task #412: render/wheels.js, loaded with the first explosion).
+// Under art v2 every layer is the game's own pixel art (the owner, 11-14: the tanker's blast "looked like placeholder art
+// not that authentic SNES style"): the soft glow blobs and the drawn shockwave rings were canvas gradients over the pixel
+// world. There, each fireball's hot core is the explosion sprite (client/art2/fx.js FX1-B: the white-yellow core swelling
+// into a cauliflower fireball, cooling into a smoke column, debris and embers, the ground flash and the scorch - ten
+// frames), its lobes the pixel flames, its smoke the pixel smoke puffs (_blob, px); the light is the renderer's lights;
+// the flash over the screen stays. A tanker's (render/bigboom.js) is a run of them - fireball after fireball.
 // Everything is pooled (the particles in render/fx.js, the glow blobs, rings, columns and flights here: fixed
 // arrays, nothing made per frame) and thinned on Low ('Fewer particles': fx.thin).
 import { boomPlan } from '../../shared/explosions.js';
@@ -77,7 +83,16 @@ export class Booms {
     this.flash = { t: 0, k: 0 };
     this.bi = 0; this.bu = 0; this.bp = 0;
   }
+  // the game's pixel art draws it (art v2): no gradients over it
+  px() { return !!(this.S.art2 && this.S.art2.ready); }
   _blob(x, y, vx, vy, s, s1, life, spr, a, rise) {
+    if (this.px()) {   // (art v2: the pixel layers - a core the explosion sprite, a lobe flames, smoke the pixel puffs)
+      const fx = this.S.fx;
+      if (spr === 0) fx.spawn(11, x, y, 0, 0, s1 > 60 ? 1.1 : 0.85, s1, '#fff');
+      else if (spr === 1) for (let i = 0; i < 2; i++) fx.spawn(3, x + (Math.random() - 0.5) * s1 * 0.5, y + (Math.random() - 0.5) * s1 * 0.4, vx * 0.6, vy * 0.6 - rise, life * 0.6, 8 + s1 * 0.06, i ? '#ff7a1a' : '#ffd23a', 6);
+      else fx.spawn(2, x + (Math.random() - 0.5) * s1 * 0.4, y, vx, vy - rise, life, 10 + s1 * 0.08, 'rgba(34,32,30,', 8);
+      return this.dummy || (this.dummy = { on: false });
+    }
     const b = this.blobs[this.bi]; this.bi = (this.bi + 1) % this.blobs.length;
     b.on = true; b.x = x; b.y = y; b.vx = vx; b.vy = vy; b.s = s; b.s1 = s1; b.t = 0; b.life = life; b.spr = spr; b.a = a; b.rise = rise;
     return b;
@@ -106,8 +121,8 @@ export class Booms {
       const a = R() * TAU, sp = 40 + R() * r * 2.4;
       fx.spawn(3, x, y, Math.cos(a) * sp, Math.sin(a) * sp, 0.45 + R() * 0.6, 6 + R() * 9, R() < 0.5 ? '#ff7a1a' : '#ffd23a', 10);
     }
-    // 3. the shockwave on the ground, and a skirt of dust thrown out with it
-    const ring = this._on(this.rings);
+    // 3. the shockwave on the ground (art v2: its dust alone - no drawn ring), and a skirt of dust thrown out with it
+    const ring = this.px() ? {} : this._on(this.rings);
     ring.on = true; ring.x = x; ring.y = y; ring.r = r * (2 + big * 0.4); ring.t = 0; ring.life = 0.5 + big * 0.08;
     for (let i = 0; i < 18 * scale; i++) {
       const a = R() * TAU, d = r * 0.3;
@@ -175,7 +190,7 @@ export class Booms {
     for (let i = 0; i < 14; i++) { const a = Math.random() * TAU; fx.spawn(2, ev.x + Math.cos(a) * 30, ev.y + Math.sin(a) * 20, Math.cos(a) * 150, Math.sin(a) * 110, 0.9, 7, 'rgba(160,150,136,', 12); }
     fx.sparks(ev.x, ev.y, 14);
     for (let i = 0; i < 10; i++) fx.fire(ev.x, ev.y);
-    const ring = this._on(this.rings);
+    const ring = this.px() ? {} : this._on(this.rings);
     ring.on = true; ring.x = ev.x; ring.y = ev.y; ring.r = 90 + big * 20; ring.t = 0; ring.life = 0.35;
     S.flashes.push({ x: ev.x, y: ev.y, t: 0.4, r: 260, kind: 'boom' });
     const d = Math.hypot(ev.x - S.cam.x, ev.y - S.cam.y), k = Math.max(0, 1 - d / 1000);

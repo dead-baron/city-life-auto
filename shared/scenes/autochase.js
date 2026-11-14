@@ -2,7 +2,7 @@
 // out down a long road, a squad car coming in behind it from out of sight (police.js chaseCar - the police's own pursuit
 // from then), the camera on the getaway car, never on you.
 export default {
-  id: 'autochase', n: 'Police chase (autoplay)', g: 'Autoplay', len: 22, linger: 2,
+  id: 'autochase', n: 'Police chase through Midtown', g: 'action', note: 'tracking the getaway · dusk', len: 22, linger: 2,
   place: { k: 'road', len: 2400, near: 'Midtown', far: 2400 },
   anchors: ['start', 'end', 'mid', 'far'],
   time: 1230, weather: 'clear',

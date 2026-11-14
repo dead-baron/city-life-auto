@@ -3,13 +3,20 @@
 // F2, F4, F8, or the pause menu's "Cinematic mode"). Everything here is this screen's only - nobody else's game changes,
 // except the staged scenes, which run the debug menu's commands (dev mode).
 //   F2  the clean screen: no HUD, no prompts or notes, no marks, labels, sights or touch buttons - just the world
-//   F4  the panel: the camera, the zoom, the time of day and the weather (on your screen), letterbox bars, hiding your
-//       own character, the shake, the cinematic tour, the staged scenes, a picture
+//   F4  the panel: the shot list (one tap a shot, or the lot back to back), the free camera, the zoom, the time of day
+//       and the weather (on your screen), letterbox bars, hiding your own character, the shake, a picture
 //   F8  a picture of the screen as it is, clean (a PNG download)
 // The cameras: Follow (the game's own), Smooth (it lags behind you like a camera operator's, the amount on a slider),
 // Drone (free: WASD / arrows / the left stick to fly it, Q / E or - / = to zoom, Shift faster, Esc back to you), On
-// someone (the camera on a person or a vehicle near you - [ and ] for the next and the one before), the Tour (it glides
-// through the world's sights on its own, cutting from one to the next through black).
+// someone (the camera on a person or a vehicle near you - [ and ] for the next and the one before).
+// The shot list (the owner, 11-14: "a diverse range of subjects ... good camera movement and the best areas to show off"):
+//   the director's scenes (shared/scenes/: shots.js and the action scenes) in sections - City & Neon at night, Nature &
+//   Countryside, Coast & Water, Action & Chases, People & Life, Vehicles & Flight, Weather & Time-lapse. One tap plays one:
+//   the server puts its cast in its place and holds it at its first moment till this page's art is in (black meanwhile),
+//   then the shot owns the camera - its own move, its time of day and weather on this screen - for its 10-30 s, and ends
+//   with a fade. "Play all" / a section's ▶ plays them back to back (the reel): Next skips, Stop ends it, a tap on any shot
+//   switches to it. Any other key, touch or pad button hands the camera back - the free camera, where the shot was (drag
+//   it on a phone); Esc / B back to you.
 // The owner, 10-24: "more controls for the camera like choosing which direction the camera drifts at and the speed it
 // drifts at" and "automatic scenes that has the camera follow NPCs ... so I can take some cinematic shots of everything":
 //   Drift: its direction (8 ways, or any angle on the dial - drag it; WASD / arrows / the left stick steer it), its speed
@@ -38,13 +45,21 @@ import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
 import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { SHOWCASE, showcaseSpot } from './showcase.js';
-import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, camAt } from '../shared/scenes/index.js';
+import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, SECTIONS, camAt } from '../shared/scenes/index.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
+const nearZoom = (z) => ZOOMS.reduce((b, q, k) => (Math.abs(q - z) < Math.abs(ZOOMS[b] - z) ? k : b), 0);
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
 const WXS = [['Live', null], ['Clear', 'clear'], ['Rain', 'rain'], ['Fog', 'fog'], ['Mist', 'mist']];
 const BOXES = [['Off', 0], ['2.39:1', 2.39], ['1.85:1', 1.85]];
-const SHOT_S = 10, FADE_S = 0.7, HOLD_S = 1.6;   // the tour: each shot, the fade either side, the black while the art comes in
+const HOLD_MAX = 6500, HOLD_MIN = 500, END_FADE = 600;   // ms: a shot's hold for the art at most / at least, the fade out at its end
+// the shot list's sections and their shots, in order (shared/scenes/: each scene's g)
+export const shotsOf = (sec) => DSCENE_LIST.filter((q) => (sec ? q.g === sec : SECTIONS.some((g) => g[0] === q.g))).map((q) => q.id);
+// does this key hand the camera back from a shot? (not the screen's own keys, the zoom, Next or the panel's)
+const KEEP_KEYS = new Set(['F2', 'F4', 'F8', 'KeyQ', 'KeyE', 'Minus', 'Equal', 'Digit0', 'KeyN', 'Tab', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
+export const handsBack = (k) => !KEEP_KEYS.has(k) && k !== 'Escape';
+// the camera's time of day on a shot at t of len s: its own, or a time-lapse from tl[0] to tl[1] (minutes)
+export function shotMinutes(sc, t) { if (sc.tl) { const u = Math.max(0, Math.min(1, t / Math.max(1, sc.len - (sc.linger || 0)))); return sc.tl[0] + (sc.tl[1] - sc.tl[0]) * u; } return sc.time; }
 
 // ---- the drift: which way and how fast (world px a second at the zoom of 1: further in, slower across the world) ----
 export const DRIFT_SPEEDS = [0, 10, 22, 45, 90, 170];
@@ -174,7 +189,7 @@ export function makeDirector(S, api) {
   const D = { clean: false, mode: 'follow', zoomK: 1, zi: 3, lt: null, ti: 0, wx: null, wi: 0, box: 0, bi: 0, hideMe: false, noShake: true, smooth: 0.55, hideNames: true, tags: false, snapZoom: false };
   const keys = new Set();
   // the Show toggles and what's kept in this browser (per device; a private window or blocked storage: the defaults)
-  const L = { tags: false, marks: false, bubbles: false, emotes: true, players: true, peds: true, traffic: true, rain: true, sz: 3 };
+  const L = { tags: false, marks: false, bubbles: false, emotes: true, players: true, peds: true, traffic: true, rain: true, sz: 3, open: '' };
   const LAYERS = [['tags', 'Name tags'], ['marks', 'Marks over heads'], ['bubbles', 'Speech bubbles'], ['emotes', 'Emote balloons'], ['players', 'Other players'], ['peds', 'People on foot'], ['traffic', 'Traffic'], ['rain', 'Rain']];
   try { const o = JSON.parse(localStorage.getItem('cla.cine') || 'null'); if (o && typeof o === 'object') for (const k of Object.keys(L)) if (typeof o[k] === typeof L[k]) L[k] = o[k]; } catch { /* storage blocked: the defaults */ }
   const keep = () => { try { localStorage.setItem('cla.cine', JSON.stringify(L)); } catch { /* storage blocked */ } };
@@ -182,13 +197,16 @@ export function makeDirector(S, api) {
   // the page's own: the bubbles and emote balloons by a class on the body (client/chat.js #cht-bubs: .cht-bub, .emo-pop)
   function syncLayers() { const on = D.isOpen(); document.body.classList.toggle('cine-nosay', on && !L.bubbles); document.body.classList.toggle('cine-noemo', on && !L.emotes); }
   D.layers = L;
-  let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, scene = null;
+  let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, scene = null;
+  // the shot list playing: reel { ids, i, sec (its section, '' all) } - one shot is a reel of one; want: the shot asked
+  // for, its dscene not here yet ({ id, at }); before: the screen's time and weather before the reel, put back after
+  let reel = null, want = null, before = null, endAt = 0;
   // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
   // n, z, tour; cam: the camera on them; hold: black until they're here and the art's in; near: near you or anywhere)
   const dr = { x: 0, y: 0, a: -Math.PI / 6, si: 2, vx: 0, vy: 0 };
   // the Showcase (client/showcase.js): the hand-crafted places, for the cinematics - where they are on this map (looked up
-  // once, by name: client/devtp.js teleportPlaces), the one picked, the tour of them only
-  let shows = null, showAt = -1, tourSet = 'all';
+  // once, by name: client/devtp.js teleportPlaces), the one picked
+  let shows = null, showAt = -1;
   const showList = () => shows || [];
   async function loadShows() {
     if (shows) return shows;
@@ -201,13 +219,13 @@ export function makeDirector(S, api) {
     showAt = i;
     setMode('drone');
     x = q.at.x; y = q.at.y; D.vx = 0; D.vy = 0;
-    setZoom(ZOOMS.reduce((b, z, k) => (Math.abs(z - (q.z || 1)) < Math.abs(ZOOMS[b] - (q.z || 1)) ? k : b), 0));
+    setZoom(nearZoom(q.z || 1));
     if (q.t !== undefined) { const k = TIMES.findIndex((w) => w[1] === q.t); if (k >= 0) setTime(k); else { D.ti = -1; D.lt = loopOf(q.t); } }
     if (!D.clean) api.toast(`${q.n}${q.note ? ` - ${q.note}` : ''}`, 'info');
     render();
   }
   let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, bar = null, barKey = '';
-  D.holds = () => D.mode === 'drone' || D.mode === 'tour' || D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script';
+  D.holds = () => D.mode === 'drone' || D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script' || !!want;
   // the scene director's scene on this screen (sct): { sc, seq, tick0, cast { castId: entity id }, anchors, bt (when its
   // beats began), cap, vel (the cast's smoothed velocities, for the shots' lead), cam (where the camera was), shot }
   let sct = null;
@@ -275,7 +293,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   const mk = (id, label, fn, txt = '') => { const b = document.createElement('button'); b.id = id; b.type = 'button'; b.setAttribute('aria-label', label); b.title = label; b.textContent = txt; b.addEventListener('pointerdown', (ev) => ev.stopPropagation()); b.onclick = (ev) => { ev.stopPropagation(); fn(); }; document.body.appendChild(b); return b; };
   mk('cine-x', 'Close the camera (Esc, B)', () => close(), '✕');
   mk('cine-shut', 'Take a picture', () => shot());
-  const dev = () => !!(S.dev || S.devMode);   // (the staged and follow scenes, the tour, the Showcase: debug mode's - they run its commands or move you)
+  const dev = () => !!(S.dev || S.devMode);   // (the shot list, the staged and follow scenes, the Showcase: debug mode's - they run its commands or move you)
   // open: anything of the camera's on this screen - the panel, the clean screen, a camera off the game's own, the bars,
   // your character hidden, a time of day or a weather of its own
   D.isOpen = () => shown || D.clean || D.mode !== 'follow' || !!D.box || D.hideMe || D.lt !== null || D.wi !== 0;
@@ -285,6 +303,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   function close() {
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = null;
+    stopReel(false);
     if (D.mode !== 'follow') setMode('follow');
     if (D.clean) setClean(false);
     D.hideMe = false; setBox(0); setTime(0); setWx(0); setZoom(3);
@@ -299,17 +318,20 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     // (what the keys do: the cinematic hint strip, the first few times - client/hudinfo.js, which sees D.clean)
     render();
   }
-  function setMode(m, k0 = 'tour') {
-    if ((m === 'tour' || m === 'scene') && !dev()) m = 'follow';
+  // mode: the camera's (follow, smooth, drift, drone, target, scene - the follow scenes; script - a director's scene, the
+  // shot list's). keep: from a shot, the camera stays where it is (the hand-back: the free camera there)
+  function setMode(m, k0 = 'tour', keep = false) {
+    if (m === 'scene' && !dev()) m = 'follow';
     if (m === 'script' && !sct) m = 'follow';
     const was = D.mode;
     D.mode = m;
-    if (was !== 'scene' || m !== 'scene') { x = S.cam.x; y = S.cam.y; }
+    if ((was !== 'scene' || m !== 'scene') && !(keep && was === 'script')) { x = S.cam.x; y = S.cam.y; }
     inited = true;
-    if (m !== 'tour') { if (tour) D.zoomK = ZOOMS[D.zi]; tour = null; fadeTo(0); }
-    if (was === 'scene' && m !== 'scene') { api.send({ t: 'cine', f: 'stop' }); fs = null; fcam = null; D.zoomK = ZOOMS[D.zi]; fadeTo(0); }
-    if (was === 'script' && m !== 'script') { if (sct && !sct.cap) api.send({ t: 'dev', c: 'scene', k: 'unwatch' }); if (sct) D.hideMe = !!sct.hadHide; sct = null; D.zoomK = ZOOMS[D.zi]; D.tags = false; }
-    if (m === 'tour') startTour();
+    fadeTo(0);
+    if (was === 'scene' && m !== 'scene') { api.send({ t: 'cine', f: 'stop' }); fs = null; fcam = null; D.zoomK = ZOOMS[D.zi]; }
+    // out of a director's scene: the server's word on it ended it already (an 'off'), or this screen lets go of it - that
+    // scene only (its seq: a word that arrives after the next scene began must not take the camera off the new one)
+    if (was === 'script' && m !== 'script') { if (sct && !sct.cap && !sct.over) api.send({ t: 'dev', c: 'scene', k: 'stop', seq: sct.seq }); if (sct) D.hideMe = !!sct.hadHide; sct = null; if (keep) D.zi = nearZoom(D.zoomK); D.zoomK = ZOOMS[D.zi]; D.tags = false; }
     if (m === 'target') nextTarget(1);
     if (m === 'drift') { dr.x = x; dr.y = y; dr.vx = Math.cos(dr.a) * DRIFT_SPEEDS[dr.si]; dr.vy = Math.sin(dr.a) * DRIFT_SPEEDS[dr.si]; }
     if (m === 'scene' && was !== 'scene') followKind(k0);
@@ -333,8 +355,24 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // the controls along the bottom: shown with the HUD; hidden with it for a clean shot - back for a few seconds when
   // you press something, move the mouse or touch the screen
   const wake = () => { wokeAt = performance.now(); };
-  addEventListener('pointerdown', () => { if (D.clean) wake(); }, true);
-  addEventListener('pointermove', () => { if (D.clean && (D.mode === 'drift' || D.mode === 'scene')) wake(); }, true);
+  // a touch or click on the world: during a shot it hands you the camera (on the clean screen the first one only brings the
+  // controls back); in the free camera a drag flies it (a phone has no WASD)
+  const ours = (t) => !!(t && t.closest && t.closest('#cine-panel, #cine-ctl, #cine-x, #cine-shut, #menu, .overlay, #hud button'));
+  let drag = null;
+  addEventListener('pointerdown', (ev) => {
+    if (ours(ev.target)) return;
+    const shotOn = D.mode === 'script' || !!want;
+    if (shotOn && D.clean && performance.now() - wokeAt > 3500) { wake(); return; }
+    if (shotOn) handBack();
+    else if (D.clean) wake();
+    if (D.mode === 'drone') drag = { id: ev.pointerId, x: ev.clientX, y: ev.clientY };
+  }, true);
+  addEventListener('pointermove', (ev) => {
+    if (D.clean && (D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script')) wake();
+    if (drag && ev.pointerId === drag.id && D.mode === 'drone') { const z = S.cam.zoom || 1; x -= (ev.clientX - drag.x) / z; y -= (ev.clientY - drag.y) / z; drag.x = ev.clientX; drag.y = ev.clientY; here(); }
+  }, true);
+  const undrag = (ev) => { if (drag && ev.pointerId === drag.id) drag = null; };
+  addEventListener('pointerup', undrag, true); addEventListener('pointercancel', undrag, true);
   function setZoom(i) {
     if (D.mode === 'script') { L.sz = Math.max(0, Math.min(ZOOMS.length - 1, i)); keep(); render(); return; }   // (a scene's: an offset on the script's own zoom, kept)
     D.zi = Math.max(0, Math.min(ZOOMS.length - 1, i)); D.zoomK = ZOOMS[D.zi]; render();
@@ -369,57 +407,57 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     render();
   }
 
-  // ---- the tour: the world's sights, one after another ----
-  function sights() {
-    const m = S.map, out = [];
-    if (!m) return out;
-    for (const L of m.landmarks || []) if (L && L.name && Number.isFinite(L.x)) out.push({ name: L.name, x: L.x + (L.w || 0) / 2, y: L.y + (L.h || 0) / 2 });
-    for (const P of m.paintings || []) if (P && P.name && Number.isFinite(P.x)) out.push({ name: P.name, x: P.x + (P.w || 0) / 2, y: P.y + (P.h || 0) / 2 });
-    // (nearest first from where you are, then each the nearest left: a route, not a scatter)
-    const me = api.selfPos(), route = [];
-    let at = me;
-    const left = out.filter((q, i) => out.findIndex((o) => Math.hypot(o.x - q.x, o.y - q.y) < 600) === i);
-    while (left.length && route.length < 40) {
-      let bi = 0, bd = Infinity;
-      left.forEach((q, i) => { const d = Math.hypot(q.x - at.x, q.y - at.y); if (d < bd) { bd = d; bi = i; } });
-      at = left.splice(bi, 1)[0]; route.push(at);
-    }
-    return route;
-  }
-  function showSights() { return showList().filter((q) => q.at).map((q) => ({ name: q.n, x: q.at.x, y: q.at.y, z: q.z, t: q.t })); }
-  function startTour() {
-    const list = tourSet === 'showcase' ? showSights() : sights();
-    if (!list.length) { api.toast('No sights on this map to tour.', 'warn'); D.mode = 'follow'; return; }
-    tour = { list, i: -1, t: SHOT_S, shot: null };
-    api.toast(`The tour: ${list.length} sights, ${SHOT_S}s each. Esc ends it.`, 'info');
-  }
-  function tourStep(cam, dt) {
-    const T = tour;
-    T.t += dt;
-    { const t = performance.now(); if (t - tourAt > 60e3) { tourAt = t; api.send({ t: 'cine', tour: 1 }); } }
-    if (!T.shot || T.t >= SHOT_S + HOLD_S) {
-      T.i = (T.i + 1) % T.list.length; T.t = 0;
-      const q = T.list[T.i], a = (T.i * 2.39) % 6.283, r = 260, zk = q.z || 1;
-      T.shot = { name: q.name, x0: q.x - Math.cos(a) * r, y0: q.y - Math.sin(a) * r, x1: q.x + Math.cos(a) * r, y1: q.y + Math.sin(a) * r, z0: 1.15 * zk, z1: 0.85 * zk };
-      if (q.t !== undefined) { D.ti = -1; D.lt = loopOf(q.t); }   // (a Showcase place at its own time of day)
-      fadeTo(1);
-    }
-    const s = T.shot, u = Math.max(0, T.t - HOLD_S) / SHOT_S, e = u * u * (3 - 2 * u);
-    x = s.x0 + (s.x1 - s.x0) * e; y = s.y0 + (s.y1 - s.y0) * e;
-    D.zoomK = s.z0 + (s.z1 - s.z0) * e;
-    // (black while the art comes in, the fade up, the fade out before the cut)
-    fadeTo(T.t < HOLD_S ? 1 : T.t < HOLD_S + FADE_S ? 1 - (T.t - HOLD_S) / FADE_S : T.t > HOLD_S + SHOT_S - FADE_S ? (T.t - (HOLD_S + SHOT_S - FADE_S)) / FADE_S : 0);
-    if (T.t > HOLD_S && T.t - dt <= HOLD_S && !D.clean) api.toast(s.name, 'info');
-  }
-
-  // a scene's autoplay (the scene director: server/systems/director.js) - the server starts it at the place nearest you and
-  // tells this screen ({ t: 'dscene' }: D.script); the clean screen
-  function autoplay(id) {
-    if (!dev()) { api.toast('Autoplay runs the debug menu\'s scenes: turn on dev mode first (pause menu - Debug menu).', 'warn'); return; }
+  // ---- the shot list: one shot, or the reel (a section or all of them, back to back) ----
+  // A shot is a director's scene (server/systems/director.js): asked for with hold - the server puts the cast in place and
+  // holds it at its first moment, this screen in black till its art is in (scriptStep), then 'go'. Its end ('off') plays
+  // the next, or ends the reel: the camera back to you, the screen's own time and weather back.
+  function playShot(id) {
+    if (!dev()) { api.toast('The shot list runs the debug menu\'s scenes: turn on dev mode first (pause menu - Debug menu).', 'warn'); return; }
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = null;
-    setClean(true);
-    api.send({ t: 'dev', c: 'scene', id });
+    if (!before) before = { ti: D.ti, lt: D.lt, wi: D.wi, hide: D.hideMe, clean: D.clean };
+    want = { id, at: performance.now() };
+    fadeTo(1);
+    if (sct) sct.over = true;   // (the server ends it as the next starts: no word of ours needed)
+    api.send({ t: 'dev', c: 'scene', id, hold: 1 });
+    wake(); render();
+  }
+  D.play = (sec = '', from = '') => {   // the reel: a section ('' all of them), from one of its shots
+    const ids = shotsOf(sec);
+    if (!ids.length) return;
+    reel = { ids, i: Math.max(0, ids.indexOf(from)), sec };
+    playShot(reel.ids[reel.i]);
+  };
+  // one shot on its own (a tap on it): a reel of one - or, while a reel plays, a jump to it, the reel going on from there
+  D.shot = (id) => { if (reel && reel.ids.length > 1 && reel.ids.includes(id)) { reel.i = reel.ids.indexOf(id); } else reel = { ids: [id], i: 0, sec: null }; playShot(id); };
+  D.next = (dir = 1) => {
+    if (!reel) return;
+    reel.i += dir;
+    if (reel.i < 0) reel.i = 0;
+    if (reel.i >= reel.ids.length) { stopReel(true); return; }
+    playShot(reel.ids[reel.i]);
+  };
+  // stop: the reel over and the shot ended; back: the camera to you (else it stays where it is: the free camera there)
+  function stopReel(back) {
+    const had = !!(reel || want || sct);
+    reel = null; want = null; endAt = 0;
+    if (sct && D.mode === 'script') setMode(back ? 'follow' : 'drone', 'tour', !back);
+    if (before) { const b = before; before = null; if (back) { D.ti = b.ti; D.lt = b.lt; setWx(b.wi); D.hideMe = b.hide; setClean(b.clean); } }
+    if (S.wx) S.wx.stormForce = null;
+    S.bioForce = null;
+    fadeTo(0);
+    if (had) render();
+  }
+  D.stop = stopReel;
+  // the hand-back (any key, touch or button but the camera's own): the shot stops, the camera's yours where it is
+  function handBack() { if (!(reel || want || D.mode === 'script')) return false; stopReel(false); if (!D.clean) api.toast('Your camera - drag or WASD / the stick to fly it, Esc for your character.', 'info'); return true; }
+  // a shot's own time of day and weather on this screen (its storm, the sea's sparkle)
+  function shotLook(sc, t) {
+    const m = shotMinutes(sc, t);
+    if (m !== undefined) { D.ti = -1; D.lt = loopOf(m); }
+    const w = sc.weather || 'clear';
+    if (t === 0) { setWx(Math.max(0, WXS.findIndex((q) => q[1] === (w === 'storm' ? 'rain' : w)))); if (S.wx) S.wx.stormForce = w === 'storm' ? 3 : null; }
+    if (t === 0) S.bioForce = sc.bio ? [1, 0.5] : null;
   }
 
   // ---- the staged scenes ----
@@ -430,7 +468,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = { sc, i: 0 };
     api.send({ t: 'dev', c: 'afoot' });   // (a clean start first: out of the home, off the train, out of the vehicle - the teleports want you on your feet)
-    if (D.mode === 'tour' || D.mode === 'drone') setMode('follow');
+    if (D.mode === 'drone' || D.mode === 'script') setMode('follow');
     const go = () => {
       const st = scene && scene.sc === sc ? sc.s[scene.i++] : null;
       if (!st) { done(); return; }
@@ -439,7 +477,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     const done = () => {
       if (sc.t !== undefined) { const k = TIMES.findIndex((q) => q[1] === sc.t); if (k >= 0) setTime(k); else D.lt = loopOf(sc.t); } else if (!sc.st) setTime(0);
       if (sc.wx) setWx(WXS.findIndex((q) => q[1] === sc.wx));
-      setZoom(ZOOMS.reduce((b, z, k) => (Math.abs(z - (sc.z || 1)) < Math.abs(ZOOMS[b] - (sc.z || 1)) ? k : b), 0));
+      setZoom(nearZoom(sc.z || 1));
       setMode(sc.cam || 'follow');
       if (!D.clean) api.toast(`Scene: ${sc.n}${sc.note ? ` - ${sc.note}` : ''}. F2 for the clean screen.`, 'good');
     };
@@ -517,36 +555,56 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
   const speedRow = () => [btn('◀', false, () => setDrift(dr.si - 1)), Object.assign(document.createElement('span'), { className: 'lbl', textContent: DRIFT_NAMES[dr.si] }), btn('▶', false, () => setDrift(dr.si + 1))];
   const zoomRow = () => [btn('－', false, () => setZoom(zoomAt() - 1)), btn('＋', false, () => setZoom(zoomAt() + 1))];
-  // the bar along the bottom (drift / follow scenes): made again when what it shows changes
+  // the bar along the bottom (drift / follow scenes / the shot playing): made again when what it shows changes
+  const shotName = () => { const id = want ? want.id : sct ? sct.sc.id : ''; const q = DSCENES[id]; return q ? `${q.n}${reel && reel.ids.length > 1 ? ` (${reel.i + 1}/${reel.ids.length})` : ''}` : ''; };
   function barShow() {
-    const want = D.mode === 'drift' || D.mode === 'scene';
-    document.body.classList.toggle('cine-bar', want);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
-    if (!want) { if (bar) bar.style.display = 'none'; return; }
+    const shotOn = D.mode === 'script' || !!want, on0 = D.mode === 'drift' || D.mode === 'scene' || (shotOn && !(sct && sct.cap));
+    document.body.classList.toggle('cine-bar', on0);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
+    if (!on0) { if (bar) bar.style.display = 'none'; return; }
     if (!bar) { bar = document.createElement('div'); bar.id = 'cine-ctl'; bar.addEventListener('pointerdown', (ev) => { ev.stopPropagation(); wake(); }); document.body.appendChild(bar); }
-    const key = D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
+    const key = shotOn ? `p${shotName()}|${!!reel}` : D.mode === 'drift' ? `d${dr.si}` : `s${fs ? `${fs.k}|${fs.n}|${fs.tour}|${fs.none || 0}` : '-'}|${near}`;
     if (key !== barKey) {
-      barKey = key; bar.textContent = '';
-      if (D.mode === 'drift') { const dl = dial(); bar.dial = dl; bar.append(dl, ...speedRow(), ...zoomRow(), btn('✕', false, () => setMode('follow'))); }
-      else {
-        const who = Object.assign(document.createElement('span'), { className: 'who', textContent: fs ? (fs.none ? `Looking for: ${fs.n}` : fs.n) : 'Finding a scene...' });
-        bar.append(btn('◀', false, () => stepKind(-1)), who, btn('▶', false, () => stepKind(1)), btn('Next', false, () => followKind('next')), btn('Tour', !!(fs && fs.tour), () => followKind('tour')), ...zoomRow(), btn('✕', false, () => setMode('follow')));
-      }
+      barKey = key; bar.textContent = ''; bar.dial = null;
+      const who = (t) => Object.assign(document.createElement('span'), { className: 'who', textContent: t });
+      if (shotOn) bar.append(...(reel && reel.ids.length > 1 ? [btn('⏮', false, () => D.next(-1))] : []), who(shotName() || 'Setting up the shot...'), ...(reel && reel.ids.length > 1 ? [btn('Next ⏭', false, () => D.next(1))] : []), btn('⏹ Stop', false, () => stopReel(true)), ...zoomRow());
+      else if (D.mode === 'drift') { const dl = dial(); bar.dial = dl; bar.append(dl, ...speedRow(), ...zoomRow(), btn('✕', false, () => setMode('follow'))); }
+      else bar.append(btn('◀', false, () => stepKind(-1)), who(fs ? (fs.none ? `Looking for: ${fs.n}` : fs.n) : 'Finding a scene...'), btn('▶', false, () => stepKind(1)), btn('Next', false, () => followKind('next')), btn('Tour', !!(fs && fs.tour), () => followKind('tour')), ...zoomRow(), btn('✕', false, () => setMode('follow')));
     } else if (bar.dial) bar.dial.show();
     const on = !D.clean || performance.now() - wokeAt < 3500;
     bar.style.display = 'flex'; bar.style.opacity = on ? '1' : '0'; bar.style.pointerEvents = on ? '' : 'none';
   }
+  let openFly = false, openSelf = false;
   function render() {
     barKey = '';
     if (!panel || !shown) return;
     const row = (...bs) => { const r = document.createElement('div'); r.className = 'row'; for (const b of bs) r.appendChild(b); return r; };
     const h = (t) => { const e = document.createElement('h3'); e.textContent = t; return e; };
+    const tip = (t, gold) => { const p = document.createElement('div'); p.className = 'tip'; if (gold) p.style.color = '#ffd23a'; p.textContent = t; return p; };
     panel.textContent = '';
     const title = document.createElement('div'); title.innerHTML = '<b>Camera</b> <small class="tip">- your screen only</small>';
-    panel.append(title,
-      h('Screen'), row(btn(D.clean ? 'Clean screen: on (F2)' : 'Clean screen (F2)', D.clean, () => setClean(!D.clean)), btn('Picture (F8)', false, shot), btn('Hide panel (F4)', false, () => toggle(false))),
-      row(btn('Hide my character', D.hideMe, () => { D.hideMe = !D.hideMe; render(); }), btn('No shake', D.noShake, () => { D.noShake = !D.noShake; render(); })),
-      h('Letterbox'), row(...BOXES.map(([n], i) => btn(n, D.bi === i, () => setBox(i)))),
-      h('Camera'), row(...[['Follow', 'follow'], ['Smooth', 'smooth'], ['Drift', 'drift'], ['Drone', 'drone'], ['On someone', 'target'], ...(dev() ? [['Tour', 'tour'], ['Follow scenes', 'scene']] : [])].map(([n, m]) => btn(n, D.mode === m, () => setMode(m)))));
+    panel.append(title);
+    // the shot list (debug mode's: it runs the debug menu's scenes) - each a tap; a section's ▶ or Play all back to back
+    if (dev()) {
+      const playing = reel || want || D.mode === 'script';
+      panel.append(h('Shot list'), row(btn(`▶ Play all (${shotsOf('').length})`, !!(reel && reel.sec === ''), () => D.play('')), ...(playing ? [btn('⏭ Next', false, () => D.next(1)), btn('⏹ Stop', false, () => stopReel(true))] : [])));
+      if (playing) panel.append(tip(`Playing: ${shotName() || '...'}`, true));
+      for (const [sec, name] of SECTIONS) {
+        const ids = shotsOf(sec), open = L.open === sec;
+        const hb = btn(`${open ? '▾' : '▸'} ${name} · ${ids.length}`, false, () => { L.open = open ? '' : sec; keep(); render(); }, 'sc');
+        hb.style.flex = '1';
+        const r = row(hb, btn('▶', !!(reel && reel.sec === sec), () => D.play(sec)));
+        r.style.flexWrap = 'nowrap';
+        panel.append(r);
+        if (open) for (const id of ids) {
+          const q = DSCENES[id], b = btn('', !!((want && want.id === id) || (sct && sct.sc.id === id)), () => D.shot(id), 'sc');
+          b.innerHTML = `${q.n}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
+          b.style.paddingLeft = '14px';
+          panel.append(b);
+        }
+      }
+      panel.append(tip('One tap plays a shot: its place, time, weather, cast and camera move. Any key, touch or button hands you the camera where it is; Esc / B back to you.'));
+    }
+    panel.append(h('Free camera'), row(...[['Follow me', 'follow'], ['Smooth', 'smooth'], ['Free', 'drone'], ['Drift', 'drift'], ['On someone', 'target'], ...(dev() ? [['Follow scenes', 'scene']] : [])].map(([n, m]) => btn(n, D.mode === m, () => { stopReel(false); setMode(m); }))));
     if (D.mode === 'drift') {
       const dirs = document.createElement('div'); dirs.className = 'dirs';
       for (const i of [7, 0, 1, 6, -1, 2, 5, 4, 3]) dirs.append(i < 0 ? dial() : btn(DIRS8[i][0], Math.abs(wrapA(dr.a - DIRS8[i][1])) < 0.05, () => setDriftWay(DIRS8[i][1])));
@@ -555,59 +613,55 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     }
     if (D.mode === 'scene') {
       panel.append(h('Follow scenes'), row(btn('Near me', near, () => { near = true; if (fs) followKind(fs.tour ? 'tour' : fs.k); render(); }), btn('Anywhere', !near, () => { near = false; if (fs) followKind(fs.tour ? 'tour' : fs.k); render(); }), btn('▶ The tour', !!(fs && fs.tour), () => followKind('tour')), btn('Next (N)', false, () => followKind('next'))));
-      if (fs) { const p = document.createElement('div'); p.className = 'tip'; p.style.color = '#ffd23a'; p.textContent = fs.none ? `Nobody's at it right now: ${fs.n} - still looking` : `On: ${fs.n}`; panel.append(p); }
+      if (fs) panel.append(tip(fs.none ? `Nobody's at it right now: ${fs.n} - still looking` : `On: ${fs.n}`, true));
       let g = '';
       for (const q of CINE_KINDS) {
-        if (q.g !== g) { g = q.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = g; panel.append(e); }
+        if (q.g !== g) { g = q.g; panel.append(tip(g, true)); }
         panel.append(btn(q.n, !!(fs && !fs.tour && fs.k === q.id), () => followKind(q.id), 'sc'));
       }
-      if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'In dev mode, a scene nobody is doing right now is started for the camera (a race, a chase, a plane, a surfer...).'; panel.append(p); }
     }
-    if (D.mode === 'tour') panel.append(h('Tour: which sights'), row(btn('All the sights', tourSet === 'all', () => { tourSet = 'all'; startTour(); render(); }), btn('Showcase only', tourSet === 'showcase', () => { loadShows().then(() => { tourSet = 'showcase'; startTour(); render(); }); })));
     if (D.mode === 'smooth' || D.mode === 'target') {
       const r = document.createElement('input'); r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.05'; r.value = String(D.smooth);
       r.oninput = () => { D.smooth = +r.value; };
       panel.append(h('Smoothing (loose - tight)'), r);
     }
     if (D.mode === 'target') panel.append(row(btn('◀ Previous ([)', false, () => nextTarget(-1)), btn('Next (]) ▶', false, () => nextTarget(1))));
-    const tips = { drone: 'Drone: WASD / arrows / left stick fly it, Q / E zoom, Shift faster, Esc back to you.', tour: 'Tour: the camera glides through the world\'s sights on its own. Esc ends it.', drift: 'Drift: a pan across wherever you are. WASD / arrows / the left stick steer it, Z / X or LB / RB slower / faster, Space stops it, Q / E or LT / RT zoom.', scene: 'Follow scenes: the camera on someone doing something, near you or anywhere - it moves on when they\'re done. N / A the next one, [ ] / LB RB the kind, T the tour, Esc / B back to you.', target: 'On someone: the people and vehicles near you, nearest first.', smooth: 'Smooth: the camera trails you, like a camera operator.' };
-    if (tips[D.mode]) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = tips[D.mode]; panel.append(p); }
-    panel.append(h(D.mode === 'script' ? 'Zoom (on the scene\'s own)' : 'Zoom'), row(btn('－', false, () => setZoom(zoomAt() - 1)), btn(`${Math.round(100 / ZOOMS[zoomAt()])}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(zoomAt() + 1))));
+    const tips = { drone: 'Free: WASD / arrows / left stick (or drag on a phone) fly it, Q / E zoom, Shift faster, Esc back to you.', drift: 'Drift: a pan across wherever you are. WASD / arrows / the left stick steer it, Z / X or LB / RB slower / faster, Space stops it, Q / E or LT / RT zoom.', scene: 'Follow scenes: the camera on someone doing something, near you or anywhere - it moves on when they\'re done. N / A the next one, [ ] / LB RB the kind, T the tour, Esc / B back to you.', target: 'On someone: the people and vehicles near you, nearest first.', smooth: 'Smooth: the camera trails you, like a camera operator.' };
+    if (tips[D.mode]) panel.append(tip(tips[D.mode]));
+    panel.append(h(D.mode === 'script' ? 'Zoom (on the shot\'s own)' : 'Zoom'), row(btn('－', false, () => setZoom(zoomAt() - 1)), btn(`${Math.round(100 / ZOOMS[zoomAt()])}%`, false, () => setZoom(3)), btn('＋', false, () => setZoom(zoomAt() + 1))));
+    panel.append(h('Screen'), row(btn(D.clean ? 'Clean screen: on (F2)' : 'Clean screen (F2)', D.clean, () => setClean(!D.clean)), btn('Picture (F8)', false, shot), btn('Hide panel (F4)', false, () => toggle(false))),
+      row(btn('Hide my character', D.hideMe, () => { D.hideMe = !D.hideMe; render(); }), btn('No shake', D.noShake, () => { D.noShake = !D.noShake; render(); })),
+      h('Letterbox'), row(...BOXES.map(([n], i) => btn(n, D.bi === i, () => setBox(i)))));
     // what's drawn (this screen only; kept in this browser)
     panel.append(h('Show'), row(...LAYERS.map(([k, n]) => btn(`${L[k] ? '☑' : '☐'} ${n}`, L[k], () => flip(k)))));
     panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
     panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => setWx(i)))));
     if (!dev()) return;   // (the rest - the Showcase, the staged scenes - debug mode's: they move you and run its commands)
-    // the Showcase: the hand-crafted places, a press to fly the camera there (the drone: WASD / the stick from there)
-    panel.append(h('Showcase'));
-    if (!shows) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'Finding the places...'; panel.append(p); loadShows().then(render); }
-    else {
+    panel.append(h('More'), row(btn(rec ? '⏺ Recording... (stop)' : '⏺ Record this screen', !!rec, () => toggleRec())));
+    // the Showcase: the hand-crafted places, a press to fly the free camera there
+    panel.append(btn(`${openFly ? '▾' : '▸'} Fly to a place (the Showcase)`, false, () => { openFly = !openFly; render(); }, 'sc'));
+    if (openFly && !shows) { panel.append(tip('Finding the places...')); loadShows().then(render); }
+    else if (openFly) {
       let sg = '';
       showList().forEach((q, i) => {
-        if (q.g !== sg) { sg = q.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = sg; panel.append(e); }
-        const b = btn('', showAt === i && D.mode === 'drone', () => showcaseGo(i), 'sc');
+        if (q.g !== sg) { sg = q.g; panel.append(tip(sg, true)); }
+        const b = btn('', showAt === i && D.mode === 'drone', () => { stopReel(false); showcaseGo(i); }, 'sc');
         b.innerHTML = `${q.n}${q.at ? '' : ' <small>- not on this map</small>'}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
         if (!q.at) b.disabled = true;
         panel.append(b);
-        if (q.auto && q.at) panel.append(btn(`▶ Autoplay: ${q.n}`, !!(sct && sct.sc.id === q.auto), () => autoplay(q.auto), 'sc'));
       });
     }
-    // the scene director's scripted scenes (server/systems/director.js): started now, at the place nearest you, the camera
-    // on the script's shots; and a recording of this screen while one plays (client/recorder.js, this screen's own frames)
-    panel.append(h('Director scenes'));
-    for (const q of DSCENE_LIST) if (q.g === 'Action') panel.append(btn(`🎬 ${q.n}`, !!(sct && sct.sc.id === q.id), () => autoplay(q.id), 'sc'));
-    if (sct) panel.append(row(btn('⏹ End the scene', false, () => api.send({ t: 'dev', c: 'scene', k: 'stop' }))));
-    panel.append(row(btn(rec ? '⏺ Recording... (stop)' : '⏺ Record this screen', !!rec, () => toggleRec())));
-    panel.append(h('Staged scenes'));
-    if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'These use the debug menu\'s commands - turn on dev mode first (pause menu, Debug menu).'; panel.append(p); }
-    let g = '';
-    SCENES.forEach((sc, i) => {
-      if (sc.g !== g) { g = sc.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = g; panel.append(e); }
-      const b = btn('', false, () => runScene(i), 'sc');
-      b.innerHTML = `${sc.n}${sc.note ? ` <small>- ${sc.note}</small>` : ''}${sc.auto ? ' <small>- play it yourself</small>' : ''}`;
-      panel.append(b);
-      if (sc.auto) panel.append(btn(`▶ Autoplay: ${sc.n}`, !!(sct && sct.sc.id === sc.auto), () => autoplay(sc.auto), 'sc'));
-    });
+    // the staged scenes you play yourself (the debug menu's commands: you at the wheel, on the job...)
+    panel.append(btn(`${openSelf ? '▾' : '▸'} Play it yourself (staged scenes)`, false, () => { openSelf = !openSelf; render(); }, 'sc'));
+    if (openSelf) {
+      let g = '';
+      SCENES.forEach((sc, i) => {
+        if (sc.g !== g) { g = sc.g; panel.append(tip(g, true)); }
+        const b = btn('', false, () => { stopReel(false); runScene(i); }, 'sc');
+        b.innerHTML = `${sc.n}${sc.note ? ` <small>- ${sc.note}</small>` : ''}`;
+        panel.append(b);
+      });
+    }
   }
   function toggle(on = !shown) {
     shown = on;
@@ -628,18 +682,20 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   D.key = (k, down) => {
     if (down && k === 'F2') { setClean(!D.clean); return true; }
     if (down && k === 'F4') { toggle(); if (shown) navPanel(0); return true; }
-    if (shown && panel && (panel.contains(document.activeElement) || k === 'ArrowDown' || k === 'ArrowUp') && !D.holds()) {   // (the panel's keys while it has them)
-      if (down && (k === 'ArrowDown' || k === 'ArrowRight')) { navPanel(1); return true; }
-      if (down && (k === 'ArrowUp' || k === 'ArrowLeft')) { navPanel(-1); return true; }
-      if (down && (k === 'Enter' || k === 'Space') && pressPanel()) return true;
-      if (down && k === 'Escape') { toggle(false); return true; }
+    // the panel up: the arrows and Enter are its, whatever the camera's doing (the camera flies on WASD / the stick) - with
+    // the tour on they had been the tour's, and a scene couldn't be picked from the keyboard (the owner, 11-14)
+    if (shown && panel && down && (k === 'ArrowDown' || k === 'ArrowUp' || k === 'ArrowLeft' || k === 'ArrowRight' || ((k === 'Enter' || k === 'Space') && panel.contains(document.activeElement)))) {
+      if (k === 'ArrowDown' || k === 'ArrowRight') navPanel(1); else if (k === 'ArrowUp' || k === 'ArrowLeft') navPanel(-1); else pressPanel();
+      return true;
     }
-    if (shown && panel && panel.contains(document.activeElement) && D.holds() && down) {
-      if (k === 'ArrowDown' || k === 'ArrowUp') { navPanel(k === 'ArrowDown' ? 1 : -1); return true; }
-      if (k === 'Enter' && pressPanel()) return true;
-      if (k === 'Escape') { toggle(false); return true; }
-    }
+    if (shown && panel && down && k === 'Escape' && panel.contains(document.activeElement)) { toggle(false); return true; }
     if (down && k === 'F8') { shot(); return true; }
+    // a shot playing: N the next, Q / E the zoom, Esc back to you; any other key hands you the camera (and does its thing)
+    if ((D.mode === 'script' || want) && down) {
+      if (k === 'Escape') { stopReel(true); return true; }
+      if (k === 'KeyN') { D.next(1); return true; }
+      if (handsBack(k)) handBack();
+    }
     if (D.mode === 'target' && down && (k === 'BracketLeft' || k === 'BracketRight')) { nextTarget(k === 'BracketRight' ? 1 : -1); return true; }
     if (down && k === 'Escape' && !D.holds() && D.isOpen()) { close(); return true; }   // (Esc: out of the camera)
     if (!D.holds()) return false;
@@ -674,6 +730,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       if (I.menuBack || I.padY) { toggle(false); return; }
     }
     if (!D.holds()) { if (I.menuBack && D.isOpen()) close(); return; }   // (B: out of the camera)
+    if (D.mode === 'script' || want) {   // a shot playing: B back to you, A / RB the next, LB the one before; the stick or any other button hands you the camera
+      if (I.menuBack) { stopReel(true); return; }
+      if (I.menuSelect || I.menuTab > 0) { D.next(1); return; }
+      if (I.menuTab < 0) { D.next(-1); return; }
+      if ((a && Math.hypot(a.lx || 0, a.ly || 0) > 0.5) || I.menuNav || I.menuLR) handBack();
+    }
     if (I.menuBack || I.padX || I.padY || I.menuTab || I.menuSelect || (a && (Math.hypot(a.lx || 0, a.ly || 0) > 0.3 || (a.lt || 0) > 0.3 || (a.rt || 0) > 0.3))) { wake(); here(); }
     if (I.menuBack) { setMode('follow'); return; }
     if (I.padY) { toggle(); if (shown) navPanel(0); }
@@ -735,24 +797,54 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
   // ---- the scene director's scenes ----
   const anchorsOf = (a) => { const out = {}; for (const [k, q] of Object.entries(a || {})) out[k] = { x: q[0], y: q[1], a: q[2] || 0 }; return out; };
+  // The server's word on a director's scene: { id, seq, tick0, cast, anchors, bt, cap, held } - a new one (the camera on
+  // its script), more of the same one (someone new in the cast, a beat begun, let go after its hold), or { off, seq } over.
+  // An 'off' is the server's: nothing goes back (it used to send 'unwatch', which reached the server after the next scene
+  // had begun and took the camera off that one - the owner's "won't let me switch scenes", 11-14).
   D.script = (m) => {
-    if (m.off) { if (sct && (!m.seq || m.seq === sct.seq)) { const cap = sct.cap; if (D.mode === 'script') setMode('follow'); sct = null; if (!cap && !D.clean) api.toast('The scene is over.', 'info'); } return; }
+    if (m.off) {
+      if (!sct || (m.seq && m.seq !== sct.seq)) return;   // (an old one's: the one playing now stays)
+      const cap = sct.cap, sc = sct.sc;
+      sct.over = true;
+      if (reel && !want) {   // (the shot list: a fade, then the next - or the end of it)
+        fadeTo(1);
+        endAt = performance.now();
+        setTimeout(() => { if (!reel || want || (sct && !sct.over)) return; reel.i + 1 < reel.ids.length ? D.next(1) : stopReel(true); }, END_FADE);
+        return;
+      }
+      if (want) return;   // (the next is on its way: its own 'dscene' takes over)
+      stopReel(true);
+      sct = null;
+      if (!cap && !D.clean) api.toast(`${sc.n}: over.`, 'info');
+      return;
+    }
     if (sct && m.seq === sct.seq) {   // (more of the same scene: someone new in the cast, a beat begun)
       if (m.bt) Object.assign(sct.bt, m.bt);
-      if (m.tick0 !== undefined) sct.tick0 = m.tick0;   // (a capture's scene held at its first moment, then let go)
+      if (m.tick0 !== undefined) sct.tick0 = m.tick0;   // (held at its first moment, then let go)
       if (m.cast) sct.cast = m.cast;
       if (m.anchors) sct.anchors = anchorsOf(m.anchors);
+      if (m.held === 0 && sct.held) { sct.held = false; fadeTo(0); }
       return;
     }
     const sc = m.id && DSCENES[m.id];
     if (!sc) return;
-    sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2 };
-    sct.hadHide = D.hideMe; D.hideMe = true;   // (your own character out of it)
+    if (want && want.id === m.id) want = null;
+    if (!before && !m.cap) before = { ti: D.ti, lt: D.lt, wi: D.wi, hide: D.hideMe, clean: D.clean };   // (the debug menu's too: put back after)
+    const hadHide = sct ? sct.hadHide : D.hideMe;
+    if (sct) sct.over = true;
+    sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2, held: !!m.held, heldAt: performance.now(), told: false };
+    sct.hadHide = hadHide; D.hideMe = true;   // (your own character out of it)
     if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; L.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
-    if (D.mode !== 'script') setMode('script'); else { x = S.cam.x; y = S.cam.y; }
-    if (!D.clean) api.toast(`Scene: ${sc.n}. Esc gives you the camera back.`, 'info');
+    if (!sct.cap) shotLook(sc, 0);
+    if (D.mode !== 'script') setMode('script');
+    else { x = S.cam.x; y = S.cam.y; }
+    fadeTo(sct.held && !sct.cap ? 1 : 0);   // (setMode clears it: black while held - a capture's frames never)
+    render();
   };
   D.scriptOn = () => !!sct;
+  // where a walk-in's roof is lifted from (main.js interiorTick): the shot's camera - someone it follows inside a bar is
+  // seen at the table, not under the roof (null: your own place, as ever)
+  D.roofAt = () => (D.mode === 'script' && sct ? { x, y } : null);
   function castEnt(cid) {
     const id = sct.cast[cid];
     let e = id ? S.ents.get(id) : null;
@@ -762,7 +854,8 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
   function scriptStep(dt) {
     if (!sct) return;
-    const t = (S.renderTick - sct.tick0) / 20;
+    const t = sct.held ? 0 : (S.renderTick - sct.tick0) / 20;
+    if (!sct.cap && sct.sc.tl) shotLook(sct.sc, Math.max(0.01, t));   // (a time-lapse: the clock on through the shot)
     // the cast's velocities, smoothed (a shot's lead: where they're going)
     const k = 1 - Math.exp(-3 * dt);
     for (const cid of Object.keys(sct.cast)) {
@@ -776,6 +869,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     }
     const ctx = { anchors: sct.anchors, beatAt: (id) => sct.bt[id], ent: (cid) => { const e = castEnt(cid); if (!e) return null; const q = sct.vel.get(e.id); return { x: e.rx, y: e.ry, a: e.ra || 0, vx: q ? q.vx : 0, vy: q ? q.vy : 0 }; } };
     const c = camAt(sct.sc, Math.max(0, t), ctx, sct.cam);
+    // held at its first moment (black): once the camera's on its first shot and the art there is in - or HOLD_MAX - the
+    // server's told to go on (the shot list's scenes; a capture's are the capture's to let go)
+    if (sct.held && !sct.told && !sct.cap) {
+      const el = performance.now() - sct.heldAt, w = c && S.art2 && S.art2.warmth ? S.art2.warmth() : null;
+      if (el > HOLD_MAX || (el > HOLD_MIN && c && (!S.art2 || (w && w.ok && w.scrHave >= w.scr)))) { sct.told = true; api.send({ t: 'dev', c: 'scene', k: 'go', seq: sct.seq }); }
+    }
     if (!c) return;
     const tall = (api.size()[1] || 1) > (api.size()[0] || 1);
     // a cut (or the first shot): there at once; otherwise a light follow over the shot's own path (no jitter from the
@@ -812,6 +911,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (!inited) { x = cam.x; y = cam.y; inited = true; }
     barShow(); syncOn();
     const lag = (k) => 1 - Math.exp(-k * dt);
+    // a shot asked for that never came (no place for it on this map: the server said why): the next, or the end
+    if (want && performance.now() - want.at > 12e3) {
+      const q = DSCENES[want.id];
+      want = null;
+      if (reel && reel.i + 1 < reel.ids.length) D.next(1); else { stopReel(true); api.toast(`${q ? q.n : 'That shot'}: couldn't be set up here.`, 'warn'); }
+    }
     if (D.mode === 'follow') { x = cam.x; y = cam.y; return; }
     // (the drift and the follow scenes going on by themselves, like the tour: the idle clock runs slow - players.js riding)
     if (D.mode === 'drift' || D.mode === 'scene') { const t = performance.now(); if (t - tourAt > 60e3) { tourAt = t; api.send({ t: 'cine', tour: 1 }); } }
@@ -835,7 +940,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       const sp = (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 1500 : 480) / (cam.zoom || 1);
       D.vx = (D.vx || 0) + (mx * sp - (D.vx || 0)) * lag(4); D.vy = (D.vy || 0) + (my * sp - (D.vy || 0)) * lag(4);
       x += D.vx * dt; y += D.vy * dt;
-    } else if (D.mode === 'tour' && tour) tourStep(cam, dt);
+    }
     cam.x = x; cam.y = y;
   };
   toggle(false);

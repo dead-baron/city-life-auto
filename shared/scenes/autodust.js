@@ -1,7 +1,7 @@
 // Autoplay: crop dusting (the panel's "Crop dusting", on its own): the co-op's duster low over a field, pass after pass,
 // the mist going down under the wing; the camera tracking alongside, then high and wide over the valley.
 export default {
-  id: 'autodust', n: 'Crop dusting (autoplay)', g: 'Autoplay', len: 22, linger: 0,
+  id: 'autodust', n: 'Crop duster over the fields', g: 'nature', note: 'tracking alongside · morning', len: 22, linger: 0,
   place: { k: 'farm', near: 'Willow Valley' },
   anchors: ['p0', 'p1', 'p2', 'p3', 'in', 'field'],
   time: 560, weather: 'clear',
