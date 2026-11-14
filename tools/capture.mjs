@@ -4,7 +4,7 @@
 //   node tools/capture.mjs --scene bikerbrawl [--scene ...|--all] [--out DIR] [--size 1080|1440] [--orient wide,tall]
 //        [--secs N] [--fps 60] [--seed 1337] [--world v3|today] [--port 8299] [--data DIR] [--jpeg] [--crf 16]
 //        [--frames N] (a short test) [--server] (one already running there) [--sheet] (a dozen frames kept as pictures)
-//        [--pages] (a page for each shape, not one square page cut both ways)
+//        [--pages] (a page for each shape, not one square page cut both ways) [--heap MB] (the server's, 2048 by default)
 // What it does, for each scene:
 //   1. starts the server with CLA_CAPTURE=1 on its own port (server/capture.js: seeded, private, stepped from here)
 //   2. opens the page for each shape at once (Playwright, the Ultra preset, ?capture: the page draws a frame only when
@@ -59,7 +59,7 @@ async function startServer() {
   if (flag('server')) return null;
   mkdirSync(DATA, { recursive: true });
   const env = { ...process.env, CLA_CAPTURE: '1', PORT: String(PORT), HOST: '127.0.0.1', CLA_DATA_DIR: DATA, CLA_SEED: String(SEED), CLA_WORLD: WORLD === 'v3' ? 'v3' : 'today', NODE_ENV: 'development' };
-  const srv = spawn(process.execPath, ['--max-old-space-size=3000', join(ROOT, 'server/index.js')], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const srv = spawn(process.execPath, [`--max-old-space-size=${opt('heap', '2048')}`, join(ROOT, 'server/index.js')], { env, stdio: ['ignore', 'pipe', 'pipe'] });
   srv.stdout.on('data', (d) => { const s = String(d); if (/error|World v3 up|listening/i.test(s)) process.stdout.write(`  [server] ${s}`); });
   srv.stderr.on('data', (d) => process.stdout.write(`  [server!] ${d}`));
   for (let i = 0; i < 1200; i++) { try { const r = await fetch(`${base}/health`); if (r.ok) return srv; } catch { /* not yet */ } await wait(500); }

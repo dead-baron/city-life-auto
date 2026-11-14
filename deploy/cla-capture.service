@@ -15,7 +15,7 @@ Wants=network-online.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/city-life-auto
-ExecStart=/usr/bin/node --max-old-space-size=3000 server/index.js
+ExecStart=/usr/bin/node --max-old-space-size=2048 server/index.js
 Restart=on-failure
 RestartSec=5
 KillSignal=SIGTERM
