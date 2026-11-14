@@ -15,6 +15,7 @@
 //   wildNeon     a lit text sign in the wilds (a 'wild' district - on the water, the land's beside it: shared/world3-tidy.js
 //                wildAt): there it's a trail sign (wood)
 //   startOnCraft a race's start buoy within reach of a craft's spot: drawn over the boat, it hid it
+// spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
 import { TILE, T } from '../shared/constants.js';
@@ -135,6 +136,41 @@ export function lint(M) {
   const crafts = [...(M.marina || []), ...(M.rentals || []).flatMap((r) => r.spots || [])];
   for (const race of M.races || []) for (const c of crafts) if (Math.hypot(c.x - race.start.x, c.y - race.start.y) < START_R) { rows.startOnCraft.push({ what: `${race.name}'s start`, x: race.start.x, y: race.start.y }); break; }
   return { rows, seen };
+}
+
+// Where something a scene puts down stands (test/world3scenes.test.js: the cinematic mode's staged scenes and the scene
+// director's casts on World v3): null when it's on the right ground, else why not.
+//   want 'water'  a boat: every point of its hull on open water
+//   want 'road'   a road vehicle on the street: on a road tile, within its road's width
+//   want 'pad'    an aircraft: on a helipad on the ground (within its round), or up in the air
+//   want 'strip'  a plane: on a runway or an airstrip, or up in the air
+//   want 'ground' anything else on land: open ground - not in a building's walls, not in the water
+// spotWhy(M, { x, y, a, alt }, def, want, airfields?) - airfields: shared/flight.js airfields(M), for 'pad' and 'strip'
+export function spotWhy(M, e, def, want, af = null) {
+  const TN = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
+  const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
+  const t = tileAt(e.x, e.y), name = TN[t] || 'nothing';
+  if ((e.alt || 0) > 8 && def && def.kind === 'air') return null;   // (already up, flying: an autoplay's aircraft)
+  if (want === 'water') {
+    const ca = Math.cos(e.a || 0), sa = Math.sin(e.a || 0);
+    for (let s = -def.L / 2 + 6; s <= def.L / 2 - 6; s += 8) for (const w of [-def.W / 2 + 4, 0, def.W / 2 - 4]) { const q = tileAt(e.x + ca * s - sa * w, e.y + sa * s + ca * w); if (q !== T.WATER && q !== T.DEEP) return `its hull on ${TN[q] || 'nothing'}`; }
+    return null;
+  }
+  if (want === 'road') {
+    if (t !== T.ROAD && t !== T.BRIDGE) return `on ${name}, not the road`;
+    return null;
+  }
+  if (want === 'pad') {
+    const pads = (af && af.pads) || [];
+    return pads.some((q) => !q.roof && Math.hypot(q.x - e.x, q.y - e.y) <= 72) ? null : `not on a helipad (on ${name})`;
+  }
+  if (want === 'strip') {
+    const S = (af && af.strips) || [];
+    return S.some((s) => e.x >= s.x && e.x <= s.x + s.w && e.y >= s.y && e.y <= s.y + s.h) ? null : `not on a runway (on ${name})`;
+  }
+  if (t === T.WATER || t === T.DEEP) return 'in the water';
+  if (t === T.WALL || t === T.BUILDING || t === T.COUNTER || t < 0) return `in ${name}`;
+  return null;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

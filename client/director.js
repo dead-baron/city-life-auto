@@ -104,33 +104,36 @@ export function loopOf(mins) {
 // debug menu's commands (server/dev.js; '@' ones are this screen's), a pause before each (ms: a teleport lands, the art
 // comes in), then the camera the scene wants. t: the time of day on your screen (minutes), or a server time (st: everyone's
 // clock - the drive-in's shows and the clubs only open after dark there).
+// Each starts clean (the server's 'afoot': out of the home, off the train, out of the vehicle - whatever the last one left
+// you in), and what it brings you is put where it belongs (the car command's on: 'road' the street, 'pad' a helipad,
+// 'runway' the foot of a runway; a boat always on the water) - test/world3scenes.test.js plays them all in a row.
 export const SCENES = [
-  { g: 'Action', n: 'Police chase downtown', s: [[0, 'place', { n: 'Downtown' }], [2500, 'car', { m: 'sports', in: 1 }], [1500, 'wanted', { n: 3 }]], cam: 'smooth', z: 0.85, note: 'you at the wheel, three stars: drive' },
+  { g: 'Action', n: 'Police chase downtown', s: [[0, 'place', { n: 'Downtown' }], [2500, 'car', { m: 'sports', in: 1, on: 'road' }], [1500, 'wanted', { n: 3 }]], cam: 'smooth', z: 0.85, note: 'you at the wheel, three stars: drive' },
   { g: 'Action', n: 'Cops chasing a getaway car', auto: 'autochase', s: [[0, 'place', { n: 'Midtown' }], [2500, 'street', { k: 'chase' }]], cam: 'smooth', z: 0.8 },
   { g: 'Action', n: 'Street race on the Neon Strip at night', auto: 'autorace', s: [[0, 'place', { n: 'Neon Strip' }], [2500, 'street', { k: 'race' }]], t: 1380, cam: 'smooth', z: 0.8 },
   { g: 'Action', n: 'Armored truck run', s: [[0, 'place', { n: 'Downtown' }], [2500, 'street', { k: 'armored' }]], cam: 'smooth', z: 0.85 },
   { g: 'Action', n: 'Gang shootout in The Yards', auto: 'autoshootout', s: [[0, 'place', { n: 'The Yards' }], [2500, 'guns', {}], [600, 'godp', {}], [600, 'shootout', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Action', n: 'A tanker goes up by a row of cars', s: [[0, 'place', { n: 'Westport Center' }], [2500, 'blast', { k: 'row' }]], cam: 'follow', z: 0.85 },   // (Port Westport's middle is the container stacks: no room for the row)
   { g: 'Action', n: 'A street fight the police break up', s: [[0, 'place', { n: 'Old Town' }], [2500, 'happen', { k: 'fight', cops: 1 }]], cam: 'smooth', z: 1.2 },
-  { g: 'Action', n: 'A tank on the boulevard', s: [[0, 'place', { n: 'Midtown' }], [2500, 'car', { m: 'tank', in: 1 }]], cam: 'smooth', z: 0.85 },
-  { g: 'Vehicles', n: 'Helicopter over the city at golden hour', s: [[0, 'near', { k: 'helipad' }], [2500, 'car', { m: 'heli', in: 1 }]], t: 1125, cam: 'smooth', z: 0.8, note: 'take off and fly over downtown' },
-  { g: 'Vehicles', n: 'A plane takes off', s: [[0, 'near', { k: 'runway' }], [2500, 'car', { m: 'plane', in: 1 }]], t: 540, cam: 'smooth', z: 0.75 },
+  { g: 'Action', n: 'A tank on the boulevard', s: [[0, 'place', { n: 'Midtown' }], [2500, 'car', { m: 'tank', in: 1, on: 'road' }]], cam: 'smooth', z: 0.85 },
+  { g: 'Vehicles', n: 'Helicopter over the city at golden hour', s: [[0, 'near', { k: 'helipad' }], [2500, 'car', { m: 'heli', in: 1, on: 'pad' }]], t: 1125, cam: 'smooth', z: 0.8, note: 'take off and fly over downtown' },
+  { g: 'Vehicles', n: 'A plane takes off', s: [[0, 'near', { k: 'runway' }], [2500, 'car', { m: 'plane', in: 1, on: 'runway' }]], t: 540, cam: 'smooth', z: 0.75 },
   { g: 'Vehicles', n: 'Speedboat across the bay', s: [[0, 'near', { k: 'marina' }], [2500, 'car', { m: 'speedboat', in: 1 }]], t: 930, cam: 'smooth', z: 0.85 },
-  { g: 'Vehicles', n: 'Jet ski at the race start', s: [[0, 'near', { k: 'race' }], [2500, 'car', { m: 'jetski', in: 1 }]], cam: 'smooth', z: 1 },
+  { g: 'Vehicles', n: 'Jet ski at the race start', s: [[0, 'near', { k: 'jetskirace', ride: 1 }]], cam: 'smooth', z: 1 },
   { g: 'Vehicles', n: 'Off-road in the red rock desert', s: [[0, 'place', { n: 'Red Rock Desert' }], [2500, 'car', { m: 'pickup', in: 1 }]], t: 1125, cam: 'smooth', z: 0.85 },
   { g: 'Vehicles', n: 'Dirt bike at the MX park', s: [[0, 'near', { k: 'raceway' }], [2500, 'car', { m: 'dirtbike', in: 1 }]], cam: 'smooth', z: 1 },
-  { g: 'Vehicles', n: 'Motorcycle through the peaks', s: [[0, 'place', { n: 'Granite Peaks' }], [2500, 'car', { m: 'tourer', in: 1 }]], t: 1125, cam: 'smooth', z: 0.9 },
+  { g: 'Vehicles', n: 'Motorcycle through the peaks', s: [[0, 'place', { n: 'Granite Peaks' }], [2500, 'car', { m: 'tourer', in: 1, on: 'road' }]], t: 1125, cam: 'smooth', z: 0.9 },
   { g: 'Vehicles', n: 'Horseback across the farm valley', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'horse', in: 1 }]], t: 1125, cam: 'smooth', z: 1.1, note: 'Shift to gallop' },
-  { g: 'Police', n: 'On patrol in a cruiser', s: [[0, 'place', { n: 'Civic Center' }], [2500, 'cop', {}]], cam: 'smooth', z: 0.9, note: 'on duty, at the wheel of your cruiser' },
-  { g: 'Police', n: 'Police helicopter', s: [[0, 'near', { k: 'helipad' }], [2500, 'cop', {}], [600, 'car', { m: 'policeheli', in: 1 }]], t: 1380, cam: 'smooth', z: 0.8 },
+  { g: 'Police', n: 'On patrol in a cruiser', s: [[0, 'place', { n: 'Civic Center' }], [2500, 'cop', { on: 'road' }]], cam: 'smooth', z: 0.9, note: 'on duty, at the wheel of your cruiser' },
+  { g: 'Police', n: 'Police helicopter', s: [[0, 'near', { k: 'policepad' }], [2500, 'cop', { on: 'road' }], [600, 'car', { m: 'policeheli', in: 1, on: 'pad' }]], t: 1380, cam: 'smooth', z: 0.8 },
   { g: 'Police', n: 'Bounty hunter on a contract', s: [[0, 'hunter', {}], [600, 'bounty', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Taxi fare', s: [[0, 'place', { n: 'Midtown' }], [2500, 'cabjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Ambulance call', s: [[0, 'near', { k: 'hospital' }], [2500, 'medicjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Firefighting', s: [[0, 'firejob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Search and rescue', s: [[0, 'sar', {}]], cam: 'smooth', z: 0.85 },
   { g: 'Jobs', n: 'Coast guard', s: [[0, 'coast', {}]], cam: 'smooth', z: 0.85 },
-  { g: 'Jobs', n: 'Crop dusting', auto: 'autodust', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'duster', in: 1 }]], t: 540, cam: 'smooth', z: 0.8 },
-  { g: 'Jobs', n: 'Tow truck', s: [[0, 'towjob', {}]], cam: 'smooth', z: 0.9 },
+  { g: 'Jobs', n: 'Crop dusting', auto: 'autodust', s: [[0, 'near', { k: 'duststrip' }], [2500, 'car', { m: 'duster', in: 1, on: 'runway' }]], t: 540, cam: 'smooth', z: 0.8 },
+  { g: 'Jobs', n: 'Tow truck', s: [[0, 'place', { n: 'Midtown' }], [2500, 'towjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Bus route', s: [[0, 'busjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Harvest with the combine', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'combine', in: 1 }]], t: 1125, cam: 'smooth', z: 0.9 },
   { g: 'Crime', n: 'The mail train (rob it)', s: [[0, 'train', { mail: 1 }]], cam: 'smooth', z: 0.85 },
@@ -426,7 +429,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (!(S.dev || S.devMode)) { api.toast('The staged scenes use the debug menu\'s commands: turn on dev mode first (pause menu - Debug menu).', 'warn'); return; }
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = { sc, i: 0 };
-    api.send({ t: 'dev', c: 'afoot' });   // (on your feet first: the teleports want you out of any vehicle)
+    api.send({ t: 'dev', c: 'afoot' });   // (a clean start first: out of the home, off the train, out of the vehicle - the teleports want you on your feet)
     if (D.mode === 'tour' || D.mode === 'drone') setMode('follow');
     const go = () => {
       const st = scene && scene.sc === sc ? sc.s[scene.i++] : null;

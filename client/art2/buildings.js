@@ -930,8 +930,9 @@ function storefront(G, w, d, H, gH, spec, seed, night, fy) {
   const people = shop.people ?? (shop.kind === 'diner' ? 4 : 0);
   for (let i = 0; i < people; i++) { const px = 16 + ((i * 37 + seed * 11) % Math.max(20, w - 40)); if (px > doorX - 12 && px < doorX + doorW + 12) continue; bust(G, px, winTop + 10, [ [180, 60, 60], [60, 110, 180], [230, 200, 80], [90, 150, 90] ][i % 4], seed + i * 3, 0.8); }
   if (shop.clerk !== false && shop.kind !== 'diner') bust(G, shop.door === 'right' ? doorX - 30 : doorX + doorW + 30, winTop + 9, shop.clerkShirt || [40, 130, 110], seed + 99, 1);
-  if (shop.openSign) {   // a neon OPEN in the window: the small face at one art px, its blue tube round it
-    const col = shop.openSign.col || [255, 60, 70], L = OPEN_L(), bw = L.w * 2;
+  const L = shop.openSign && OPEN_L(), bw = L ? L.w * 2 : 0;   // (only where it fits beside the door: a kiosk's cut it in half - 11-14)
+  if (L && (shop.openSign.x !== undefined || (shop.door === 'right' ? doorX - 6 - bw >= 4 : doorX + doorW + 6 + bw <= w - 4))) {   // a neon OPEN in the window
+    const col = shop.openSign.col || [255, 60, 70];
     const ox = clampI(shop.openSign.x ?? (shop.door === 'right' ? doorX - 6 - bw : doorX + doorW + 6), 4, w - 4 - bw), oy = winTop + 4;
     const P = { p: [20, 14, 26], i: col.map((v) => Math.min(255, Math.round(v * 0.5 + 128))), h: [70, 140, 255], f: [70, 140, 255], neon: true };
     paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, ox, oy, { lit: 'neon', night });

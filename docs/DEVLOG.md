@@ -23344,6 +23344,42 @@ of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near
 the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
 (`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
 
+## 2026-11-14 - Poses round 3: easing in and out, idles that fidget, a faceplant that lands on the face, gesture balloons
+The owner, 11-14: "faceplant doesn't actually fall face first onto ground. Would be cool to see them animate into those
+poses instead of pop into them. And then have a subtle idle to it ... not a super repetitive loop just kind of subtle and
+random. Some emotes like wave could still have a [waving hand] with it."
+
+- **The bug behind "doesn't fall"**: game/peds.js `PED_POSES` is a copy of people.js `POSES` taken when the renderer
+  loads, and round 2's poses (art2/poses.js, loaded later) were never in it - so every round-2 pose was keyed as a
+  one-frame pose and whichever frame was drawn first stuck (a faceplant hung at its first, tipping frame). `loadPoses`
+  now copies them in once the module is in.
+- **All the emotes' frames live in art2/poses.js** (the eleven gestures moved out of dances.js, which only keeps the
+  `EMOTE_FPS` registry: the renderer lost 1.3 KB). Each pose has its frames and a timing (`SEQ`): the way in, then a loop
+  (a gesture), or a held frame with beats (a lasting pose), and the way out. host.js asks `emoteAt(p, pose, now)` for the
+  pose and frame - one call; the rest is in the lazily loaded module. At most eight frames a pose (host.js warms them all).
+- **The way in**: sitting down (a squat, then down onto the hands), lying back (sat, on the elbows, flat - lying down
+  now puts the head where the back was, not where the face was), sleep the same then over onto the side, kneeling,
+  crouching, the phone coming up, a gesture's arm on its way up (the in-between frames are blends of standing and the
+  pose: poses.js `blend`). **The way out**: the same frames backwards when you walk off or the time's up (a faceplant
+  pushes itself up off the ground); knocked down, a dive - no getting up first. Moving starts at once as before (the
+  server doesn't wait for it): you get up in the first steps.
+- **Idles that aren't a loop** (the lasting poses): small beats now and then - a breath, a glance, the thumb swiping and
+  tapping on the phone, the weight shifted onto one leg, a scratch of the head, the arms round the knees, the head turned
+  lying down, the ankles crossed, the foot tapping on the wall, a hand to the chin, a hand down to the ground crouched,
+  curling up asleep. Which beat and when is a hash of the ped's id and the time since the pose began (slots of 1.2-2.2 s,
+  a beat in about half of them): the same for everyone who saw it start, different for each person, never periodic.
+- **Faceplant**: stiff as a board, over from the feet with the arms flung back, then pinned at the sides (nothing breaks
+  the fall), a smack with the legs bouncing up, flat on the face; now and then a foot twitches or a weak hand comes up
+  ("I'm OK"). 3.5 s (was 3).
+- **Poses that read better at game size**: the crouch deeper, knees wide, forearms on the knees; the kneel with the front
+  knee out where it shows; air guitar wider with the neck hand further out; come here with the hand pulled right back to
+  the chest; the watch raised to the face; the shrug wider; the thumbs up held higher.
+- **Gesture balloons** (client/emotes.js, the round-2 balloons' style, 12x10 icons): a waving hand for Wave, a thumbs
+  up for Thumbs up, a beckoning hand for Come here, and the ? for Shrug - a symbol where it adds meaning at game size; the
+  rest stay body-only. Two skin tones joined the balloon palette for the hands.
+- The Guide's Emotes entry says you ease in and out and fidget. Tests: emotes (the frames keyed apart, the way in, the
+  faceplant, beats not periodic and the same for every viewer, the way out and what cuts it, the new balloons).
+
 ## 2026-11-14 - The bounty chip says it's on you
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
@@ -23381,3 +23417,44 @@ swoosh, "Auto") over the same sign switched off, and a one-line wordmark for sma
   twitter:card summary_large_image beside its existing description.
 - Screenshots (the intro's frame strip, the title lit on a phone upright, on its side and on a desktop, the pause
   header on each, the share card): the session's scratchpad `titlelogo/owner/`.
+
+## 2026-11-14 - The director's scenes start clean, and what they bring is where it belongs
+A visual QA sweep of the cinematic mode's staged scenes (F4 panel; client/director.js `SCENES`) and the director's
+scenes (server/systems/director.js, shared/scenes/) while the owner films them. What was wrong, and what changed:
+- **"Jet ski at the race start"** went to the nearest water race - the kayaks' Redwood River Run. It now goes to a jet
+  ski race (the debug menu's `near` kinds `jetskirace` and `boatrace`) and, with `ride`, puts you on the race's own
+  jet ski just behind its start buoy, its nose on the course. (The Pelican Key sprint's start is further out than any
+  shore the old "open ground by it" search reached: it said "Couldn't find open ground".)
+- **The speedboat on a park lawn**: the debug menu's `car` fell back to "beside you" when no water was within a few car
+  lengths. A boat is now always put on open water, its whole hull (out to 50 tiles), nose away from you - the
+  speedboat scene, and any boat from the debug menu.
+- **The police helicopter among the parked ambulances**: the nearest helipad was a hospital's. The scene goes to the
+  police headquarters' pad (`near` kind `policepad`), and `car` with `on: 'pad'` puts an aircraft on the nearest
+  ground helipad - not beside it, where the helicopter scene's had been. What the world parked on that pad (aircraft.js:
+  the headquarters' own police helicopter) makes way for yours; anyone's own vehicle keeps its pad.
+- **Every scene starts clean** from wherever the last left you: the debug menu's `afoot`, which every staged scene
+  sends first (and the debug menu's Director scenes now run too), takes you out of a home (and its lobby), off a train,
+  up out of the sewers or a cave, out of the vehicle, onto open ground; ends your job and your wanted level; and stops
+  a director scene playing on your camera. "At home" and "Riding the subway" had left you where the next teleport was
+  refused ("Step outside first"), or standing wherever the train was - over its tunnel, inside a building's walls. It's the server's `afoot`, so pages already loaded get it too.
+- **The scenes that hadn't been reviewed**, checked in code and on the World v3 map: "Police chase downtown", "A tank on
+  the boulevard", "Motorcycle through the peaks" and "On patrol" put their vehicle on the nearest street now (`on:
+  'road'`: the kerb lane on your side, facing the way its traffic goes, its whole width on the road) - before, clear
+  ground beside you: a plaza, a lawn. "A plane takes off" puts the plane at the foot of the runway, nose along it (it
+  was beside it, facing east). "Crop dusting" starts at a duster's strip (`near` kind `duststrip`), the duster on it,
+  not in a field. "Tow truck" starts in Midtown (it had taken the kerb nearest wherever the last scene ended). The
+  director's road scenes (the autoplay chase, race and helicopter pursuit) drive on to a point on the road (`far`: it
+  had been the nearest open ground - a shop's floor in the chase's case). Street race, armored truck, firefighting,
+  the mail train and the train rides set up right (the art not finishing in headless captures is the capture's speed).
+- Tests: test/world3scenes.test.js plays every staged scene one after another as the panel does (nothing tidied
+  between but the scene's own clean start) and checks what each brings you with the placement lint's new `spotWhy`
+  (tools/placementlint.mjs): a boat on open water, a road vehicle on the road, an aircraft on a pad or a runway; and
+  every director scene's cast on World v3 - road vehicles on the road, boats on water, aircraft up or on a pad, people
+  on open ground, a getaway's far point on the road. test/director.test.js: the clean start from a home, a train, a
+  job and three stars; a boat on the water.
+
+## 2026-11-14 - A shop's neon OPEN only where it fits
+The owner (the Harbor Marina's boat hire): "the open sign is partially cut off". Every mart-type front - the boat hires'
+three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
+was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
+(client/art2/buildings.js); the wider fronts keep theirs.
