@@ -30,9 +30,9 @@ export default {
     { who: 'deke', do: 'say', text: 'Special delivery.' },
   ],
   cam: [
-    { at: 0, follow: 'tanker', z: 0.85, lead: 0.55, s: -30 },
-    { on: 'bail', follow: 'deke', z: 1.0, lead: 0.2, ease: 0.6 },
-    { on: 'bail', d: 0.9, hold: { a: 'end', f: -60 }, z: 0.72, ease: 0.9 },
-    { on: 'boom', d: 3.5, between: ['deke', 'car2'], z: 0.8, ease: 2.5 },
+    { at: 0, follow: 'tanker', z: 1.02, lead: 0.55, s: -30 },
+    { on: 'bail', follow: 'deke', z: 1.2, lead: 0.2, ease: 0.6 },
+    { on: 'bail', d: 0.9, hold: { a: 'end', f: -60 }, z: 0.86, ease: 0.9 },
+    { on: 'boom', d: 3.5, between: ['deke', 'car2'], z: 0.96, ease: 2.5 },
   ],
 };

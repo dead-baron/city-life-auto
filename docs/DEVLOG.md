@@ -23038,3 +23038,25 @@ way if possible" - autoplay beside play-it-yourself.
 - Small fixes on the way: a vehicle's `scripted` (the garage drive-out's) is no longer reused - a scene's hold is
   `dirHold`; npc.js `onVehicleHit` leaves a driven NPC alone; bikers.js counts the cinematic and director cameras as
   someone there; dusting.js leaves a scene's duster's mist on.
+
+## 2026-11-13 - The director, round two: the owner's notes - no bubbles, closer framing, the camera stays his
+
+The owner, on the brawl clip: "We don't need the text bubble and it is too fast to read anyways", "some zoomed out a
+little too far", and "I'd like to be able to control things like zoom level and then different layers or game objects
+and things on and off, and still be able to control time and weather". He records from the game himself now; the
+capture server and tool stay as they are.
+
+- **Speech bubbles off** while the camera's open, by default (client/director.js Show → Speech bubbles): an NPC's spoken
+  line (the 'say' event) and the chat bubbles both. Scenes keep their lines and emotes, but a line is short now -
+  `SAY_MAX` (40) characters at most, checked by `validateScene`.
+- **Closer framing**: every shot's zoom in the three scenes, the autoplay scenes and the Showcase moves a fifth closer.
+- **The camera stays the owner's during a scene**: the zoom is an offset on the script's own (Q / E, LT / RT, the
+  panel's - +; the % between them or 0 puts it back) and is kept; the time of day and the weather overrides work as
+  ever (they're this screen's).
+- **Show** (the panel; this screen only, kept in this browser under `cla.cine`, try/catch round every read and write):
+  name tags (over players - and a capture's actors - even on the clean screen), the marks over heads (a bounty's skull,
+  a reported suspect's flare), speech bubbles, emote balloons, other players, people on foot (not animals), traffic (the
+  vehicles that move - parked ones stay), the rain. A scene's own cast is never hidden. Not done: lights / bloom and
+  shadows (they're the graphics settings', not a per-frame switch) and roofs (no see-through to toggle).
+- **Every device**: the panel answers ↑ ↓ / Enter (keyboard), the D-pad / A (pad) and taps; B / Esc / Y close it, then
+  the camera; the ✕ in the corner as before. The Guide's Camera entry says what's new.

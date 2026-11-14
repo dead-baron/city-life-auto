@@ -25,9 +25,9 @@ export default {
     { at: 2.3, who: 'r4', do: 'drive', to: { a: 'end', f: 400, s: 46 }, straight: true, pass: true, speed: 0.66, max: 14 },
   ],
   cam: [
-    { at: 0, hold: { a: 'start', f: 300, s: 30 }, z: 1.1 },
-    { at: 1.8, between: ['r1', 'r4'], z: 1.0, ease: 1.2 },
-    { on: 'go', d: 1.2, follow: 'r1', z: 0.8, lead: 0.5, s: 70, ease: 1.5 },
-    { on: 'go', d: 5, follow: 'r3', z: 0.75, lead: 0.9, ease: 2 },
+    { at: 0, hold: { a: 'start', f: 300, s: 30 }, z: 1.32 },
+    { at: 1.8, between: ['r1', 'r4'], z: 1.2, ease: 1.2 },
+    { on: 'go', d: 1.2, follow: 'r1', z: 0.96, lead: 0.5, s: 70, ease: 1.5 },
+    { on: 'go', d: 5, follow: 'r3', z: 0.9, lead: 0.9, ease: 2 },
   ],
 };

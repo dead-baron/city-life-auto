@@ -26,10 +26,10 @@ export default {
     { id: 'ride', who: 'jax', do: 'drive', to: 'town', speed: 0.8, max: 40 },
   ],
   cam: [
-    { at: 0, follow: 'jax', z: 1.2, lead: 0.3, dy: -20 },
-    { on: 'up', between: ['jax', 'mark'], z: 1.45, ease: 1.6 },
-    { on: 'out', follow: 'jax', z: 1.2, lead: 0.35, ease: 0.6 },
-    { on: 'get', d: 0.8, hold: { a: 'door', dy: 90 }, z: 0.82, ease: 1.2 },
-    { on: 'ride', d: 2.2, follow: 'jax', z: 0.72, lead: 0.75, ease: 1.8 },
+    { at: 0, follow: 'jax', z: 1.44, lead: 0.3, dy: -20 },
+    { on: 'up', between: ['jax', 'mark'], z: 1.74, ease: 1.6 },
+    { on: 'out', follow: 'jax', z: 1.44, lead: 0.35, ease: 0.6 },
+    { on: 'get', d: 0.8, hold: { a: 'door', dy: 90 }, z: 0.98, ease: 1.2 },
+    { on: 'ride', d: 2.2, follow: 'jax', z: 0.86, lead: 0.75, ease: 1.8 },
   ],
 };

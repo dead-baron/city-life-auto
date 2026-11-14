@@ -26,10 +26,10 @@ export default {
     { id: 'alley', who: 'vince', do: 'run', to: { alley: 'vince' }, max: 7 },
   ],
   cam: [
-    { at: 0, hold: { a: 'start', f: 900 }, z: 0.78 },
-    { at: 2.6, follow: 'getaway', z: 0.85, lead: 0.55, ease: 1.4 },
-    { on: 'flee', d: 0.6, follow: 'getaway', z: 0.62, lead: 0.6, ease: 1.6 },
-    { on: 'crashed', follow: 'getaway', z: 0.95, lead: 0.15, ease: 0.7 },
-    { on: 'alley', follow: 'vince', z: 1.1, lead: 0.45, ease: 1.0 },
+    { at: 0, hold: { a: 'start', f: 900 }, z: 0.94 },
+    { at: 2.6, follow: 'getaway', z: 1.02, lead: 0.55, ease: 1.4 },
+    { on: 'flee', d: 0.6, follow: 'getaway', z: 0.74, lead: 0.6, ease: 1.6 },
+    { on: 'crashed', follow: 'getaway', z: 1.14, lead: 0.15, ease: 0.7 },
+    { on: 'alley', follow: 'vince', z: 1.32, lead: 0.45, ease: 1.0 },
   ],
 };

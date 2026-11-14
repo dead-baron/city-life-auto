@@ -17,8 +17,8 @@ const show = (id, n, q, move, { z = 0.85, t = 1125, s = 16, dir = [1, 0], r = 42
   return { id, n, g: 'Showcase (autoplay)', len: s + 1, linger: 0, place: { k: 'named', q }, anchors: ['here'], time: t, weather: 'clear', cast: [], beats: [{ do: 'wait', s }], cam };
 };
 export const SHOWCASE_SCENES = [
-  show('showlighthouse', 'Lighthouse Rock', ['Lighthouse Tidepools', 'Lighthouse Rock'], 'orbit', { z: 0.85, t: 1125, r: 360 }),
-  show('showpier', 'Sunset Beach Pier', ['Sunset Beach Pier', 'Sunset Beach'], 'track', { z: 0.85, t: 1205, r: 520 }),
-  show('showpiazza', 'Piazza Vecchia', ['Piazza Vecchia', 'Old Town'], 'reveal', { z: 0.9, t: 1125 }),
-  show('showfalls', 'Redwood Creek Falls', ['Redwood Creek Falls'], 'dolly', { z: 0.95, t: 450, r: 600 }),
+  show('showlighthouse', 'Lighthouse Rock', ['Lighthouse Tidepools', 'Lighthouse Rock'], 'orbit', { z: 1.02, t: 1125, r: 360 }),
+  show('showpier', 'Sunset Beach Pier', ['Sunset Beach Pier', 'Sunset Beach'], 'track', { z: 1.02, t: 1205, r: 520 }),
+  show('showpiazza', 'Piazza Vecchia', ['Piazza Vecchia', 'Old Town'], 'reveal', { z: 1.08, t: 1125 }),
+  show('showfalls', 'Redwood Creek Falls', ['Redwood Creek Falls'], 'dolly', { z: 1.14, t: 450, r: 600 }),
 ];
