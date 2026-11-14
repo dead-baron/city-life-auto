@@ -23100,8 +23100,14 @@ with 4 GB or less) - client/gfx.js detectDevice.
   FARM.handPer picks; the same spot can't be picked again until you've moved on. The Guide's farm entry says so.
 
 Cost: the bushes' buckets are made once (and again if the map's props change in number); a frame looks at the buckets
-under the moving vehicles in view. The shader's push loop is eight slots instead of four. The renderer's code is within
-its budget.
+under the moving vehicles in view. The shader's push loop is eight slots instead of four. tools/perf.mjs: the renderer
+409 KB of its 410 (was 405), the page 523 of 540; the city and the bakes unchanged. The world's and the art's hashes
+are unchanged (the tracks' frames are the page's sprites, not baked into the chunks): no chunk is baked again.
+
+Checked in the browser (today's world on a dev server, the captures' harness): before, a car driven across a ripe
+wheat field and a walker through it left nothing; now both leave tracks - on High, Medium (a phone's) and Low. A pick
+by hand leaves three small stubble patches in the row where it took a whole stretch. World v3's wheat fields checked
+as field tiles (the tracks' and the rows' test).
 
 Tests: test/crush.test.js (the tracks laid from the first sight, every step, back along a slow frame, none across a
 jump), test/farming.test.js (a pick a patch, never the row; the crate; the same spot refused; the patches sent; grown
