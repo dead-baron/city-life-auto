@@ -3,7 +3,7 @@
 // map (World v3 as the server builds it), what's placed against what's round it - on the map's own data, no bake:
 //   boats        a moored boat (m.marina), a hire craft's spot (m.rentals), a moored yacht or sailboat (props): its hull on
 //                clear water - every point of it on WATER / DEEP, none on a rock's round (a sea stack, a seal rock, a
-//                boulder, an outcrop)
+//                boulder, an outcrop); a rowboat or a canoe prop not up on a dock's planks or in a building
 //   floats       a floating prop (a swim buoy, a ring float, a swim raft, a mooring) on the water and off the rocks
 //   signOverSign two standing boards (the text signs, the picture boards, the billboards, the motels' signs) over each
 //                other on screen
@@ -71,6 +71,12 @@ export function lint(M) {
   M.props.forEach((p) => {
     if (!p) return;
     if (p.lift) return;   // (up on its stands in a boatyard: world3-harbor.js's dry stack)
+    if (p.t === 'rowboat' || p.t === 'canoe') {   // (drawn up on a beach or a bank is fine - not up on the planks or in a building)
+      seen.boats++;
+      const L = 64, ca = Math.cos(p.a || 0), sa = Math.sin(p.a || 0);
+      for (let s2 = -L / 2 + 10; s2 <= L / 2 - 10; s2 += 8) { const t = tileAt(p.x + ca * s2, p.y + sa * s2); if (t === T.DOCK || t === T.BRIDGE || t === T.BUILDING) { rows.boats.push({ what: `a ${p.t} on the ${TN[t]}`, x: p.x, y: p.y }); break; } }
+      return;
+    }
     if (p.t === 'sailboat') hull('a moored sailboat', p.x, p.y, p.a || 0, p.len || 118, 40);
     else if (p.t === 'yacht') hull('a moored yacht', p.x, p.y, p.a || 0, 110, 40);
     else if (FLOATS.has(p.t)) { const r = rockAt(p.x, p.y, 4); if (!wet(p.x, p.y) || r) rows.floats.push({ what: `a ${p.t}`, x: p.x, y: p.y, why: r ? `in a ${r.t}` : `on ${TN[tileAt(p.x, p.y)]}` }); }

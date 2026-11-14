@@ -80,7 +80,7 @@ export function riverRun3(m, H3) {
       const start = wet(Math.floor(sxT + 0.5), Math.floor(syT + 0.5)) ? { x: Math.round((sxT + 0.5) * TILE), y: Math.round((syT + 0.5) * TILE) } : null;
       m.rentals.push({ poi: poi.id, name: E.label, spots, models: R.models, dock: door, note: E.note });
       const sg = shack ? -shack.side : 1;
-      P.push(['textsign', shore.x + (nx * sd * 2.4 + best.ux * 4.8 * sg) * TILE, shore.y + (ny * sd * 2.4 + best.uy * 4.8 * sg) * TILE, 0, { text: E.sign, wood: 1, z: 18 }]);   // (its board clear of the planks)
+      P.push(['textsign', shore.x + (nx * sd * 3.4 + best.ux * 4.8 * sg) * TILE, shore.y + (ny * sd * 3.4 + best.uy * 4.8 * sg) * TILE, 0, { text: E.sign, wood: 1, z: 30 }]);   // (its board clear of the planks)
       P.push(['lamp', end.x, end.y, 0, null]);
       if (shack) P.push(['kayakshack', Math.round(shack.x), Math.round(shack.y), 22, null]);
       return { [key]: [bx, by], poi: poi.id, spots: spots.length, start, shack: !!shack };

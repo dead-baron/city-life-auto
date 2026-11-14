@@ -23106,3 +23106,25 @@ kinds of errors ... starting with these hand crafted scenes".
   (dropped), 31 lit boards in the wilds (made wooden). shared/world3-tidy.js does the general ones last in the build.
 - Hashes: the world (today's - the hire piers' launch), World v3's and both art hashes change; the chunks the server
   bakes the same as before carry over (server/artcdn.js).
+
+## 2026-11-14 - The QA sweep: every Showcase spot and staged scene looked at; what it found put right
+
+Every Showcase spot (39) and the start of every staged scene (60) on World v3, captured at 1280x720 on a clean
+screen in batches of eight, the shots reviewed as contact sheets. Put right:
+- **Lighthouses on a flat, dark, gridded square** (Gull Point, Egret Point, North Cape): a lighthouse is its voxel tower
+  alone and the rest of its footprint baked as the foundation - cobbles now (client/art2/game/groundbake.js).
+- **Macaw Cove's rowboat up on the dock's T-head**: moored beside the stem (shared/world3-tropic.js); the placement
+  lint now checks rowboat and canoe props against planks and buildings too.
+- **REDWOOD CREEK FALLS half under the giant redwood's crown**: out from under it, a wooden trail sign.
+- **A facade name cut mid-word** (FIRST PIXEL BANK - OLD): a name too long for its board is cut at its " - "
+  (client/art2/game/statics.js `clean`).
+- **AMBULANCES ONLY** stepped out from the hospital's front only to stand behind the parked ambulances: a low board at
+  the bay's mouth now (shared/world3-civic.js).
+- **The River Run's put-in sign** stood low enough for the bank's lupines to cover its first letters, its end over the
+  water: higher (z 30) and a tile further back from the bank.
+Left for the Showcase's list and the director (the lead has the list with a shot of each): Hidden Pool isn't on World
+v3's map; Eagle Crag, North Point harbour, Pelican Point and Waves Stadium frame the wrong thing; four staged scenes
+put their vehicle somewhere odd (the jet ski on the kayak river run, the speedboat on a park's lawn, the police
+helicopter among the ambulances, the helicopter beside its pad); "At home" and "Riding the subway" leave you where
+the next scene's teleport is refused. The capture tooling: QA scratch (cap.sh, sweep.mjs, batches.sh) - the server run
+without bake threads (CLA_ART_THREADS=0) so a server and a browser fit together.

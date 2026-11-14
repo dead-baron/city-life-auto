@@ -450,6 +450,8 @@ const NOSIGN = new Set(['BUILDING', 'RESIDENCE', 'APARTMENTS', 'VILLA', 'SHACK',
 const clean = (t, n = 22) => {
   t = String(t || '').toUpperCase().replace(/[/:]/g, '-').replace(/[^A-Z0-9 &'!$+.-]/g, ' ').replace(/\s+/g, ' ').trim();
   if (t.length <= n) return t;
+  const dash = t.indexOf(' - ');   // (a name too long with a branch after a dash: the name alone - FIRST PIXEL BANK, not FIRST PIXEL BANK - OLD)
+  if (dash >= 4 && dash <= n) return t.slice(0, dash);
   const cut = t.slice(0, n + 1), sp = Math.max(cut.lastIndexOf(' '), cut.lastIndexOf('-'));
   return (sp >= n * 0.5 ? cut.slice(0, sp) : t.slice(0, n)).replace(/[ &.-]+$/, '');
 };
