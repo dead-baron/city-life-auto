@@ -414,7 +414,13 @@ export function townModels(m) {
         const ys = Math.max(...pc.map((c) => c[2]));
         let ye = ys; while (ye < m.h && dock(P.x, ye)) ye++;
         if (ye - ys > 6) {
-          for (const x of [P.x * TILE + 3, (P.x + P.w) * TILE - 3]) add('rail', x, (ys + ye) / 2 * TILE, { len: (ye - ys) * TILE, a: Math.PI / 2 });
+          // (its sides railed from where the water starts beside them: over the sand you step on and off it - the
+          // owner, 11-14)
+          const wetAt = (x, y) => { const t = m.tiles[y * W + x]; return t === T.WATER || t === T.DEEP; };
+          for (const [x, cx] of [[P.x * TILE + 3, P.x - 1], [(P.x + P.w) * TILE - 3, P.x + P.w]]) {
+            let yw = ys; while (yw < ye && !wetAt(cx, yw)) yw++;
+            if (ye - yw > 1) add('rail', x, (yw + ye) / 2 * TILE, { len: (ye - yw) * TILE, a: Math.PI / 2 });
+          }
           add('rail', (P.x + P.w / 2) * TILE, ye * TILE - 3, { len: P.w * TILE, a: 0 });
           add('shelter', (P.x + P.w / 2) * TILE, (ye - 2) * TILE, { a: 0 });
           add('lamp', (P.x + 0.5) * TILE, (ys + 12) * TILE);

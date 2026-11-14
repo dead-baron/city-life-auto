@@ -110,6 +110,21 @@ export function fencesNear(m, x, y, r) {
   return out;
 }
 
+// Does the straight way from (ax, ay) to (bx, by) cross a fence that would stop someone on foot - a tall one (chain-link,
+// a compound's wall, a tall hedge), or with low too any fence at all? (the people the server walks pick where to go by
+// it: server/systems/npc.js pickWaypoint - a passer-by heading for a spot behind a court's chain-link fence walked into
+// it and stayed there, a line of them along it)
+export function fenceCrossed(m, ax, ay, bx, by, low = false) {
+  const F = fencesOf(m);
+  if (!F.segs.length) return false;
+  const L = Math.hypot(bx - ax, by - ay);
+  for (const id of fencesNear(m, (ax + bx) / 2, (ay + by) / 2, L / 2 + TILE)) {
+    const s = F.segs[id];
+    if ((s.k === TALL || low) && crosses(s, ax, ay, bx, by)) return true;
+  }
+  return false;
+}
+
 // the nearest point of a segment to (x, y): [qx, qy, t]
 function nearest(s, x, y) {
   const dx = s.x1 - s.x0, dy = s.y1 - s.y0, l2 = dx * dx + dy * dy;

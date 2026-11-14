@@ -47,7 +47,7 @@ import { GSHADE, GS, gsReset, coverSprite, turfGround, turfFlat, cloverAt, hh, v
 import { edgeCovers } from '../../../shared/covers.js';
 import { WATER, waterTiles, waterPx, waterAt, waterOff, WK } from '../water.js';
 import { T, TILE } from '../../../shared/constants.js';
-import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome } from '../../../shared/mapcore.js';
+import { DISTRICTS, WILD_STYLES, terrainAt, railAt, wildBiome, deckOnDry } from '../../../shared/mapcore.js';
 import { Z } from '../../../shared/layoutcore.js';
 import { laneOffset, zebraCrossings, edgeZ } from '../../../shared/roadcore.js';
 import { drawText } from '../font.js';
@@ -101,6 +101,7 @@ mat('SEA', '', 2); mat('RIVER', '', 2); mat('LAKE', '', 2); mat('POND', '', 2); 
 mat('SNOW', 'snowfield', 0);   // (World v3's summits: terrain class 9, shared/world3-biomes.js)
 mat('ORCHARD', 'orchardGrass', 0);   // (World v3's orchards: m.orchards - mown between the rows)
 mat('STUB', 'cropStubble', 1); mat('STUBV', 'cropStubbleV', 1);   // (a wheat field's harvested part: m.fields[f].cut - world3-countyroad.js)
+mat('FLAGS', 'flagstone', 4);   // (the hot springs' paths: granite flagstones - Granite Hot Springs, the owner 11-14)
 const NM = MATS.length;
 const KIND = new Uint8Array(NM), SHADER = [];
 for (let i = 0; i < NM; i++) { KIND[i] = MATS[i][1]; SHADER[i] = GSHADE[MATS[i][0]] || null; }
@@ -280,7 +281,7 @@ function tileFacts(C) {
     b.tt[k] = t; b.td[k] = M.dist[g]; b.tz[k] = M.zone[g]; b.tdeck[k] = M.deck[g]; b.tres[k] = M.reserve[g]; b.tbld[k] = M.bld[g];
     b.tb[k] = M.land[g] ? wildBiome(M.dist[g], terrainAt(cls, cw, tx, ty)) : 0;
     const lip = t === T.WALL && (b.tres[k] & 96) === 96;   // (a ledge fall's lip: the river over it - shared/world3-ledgefalls.js)
-    b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || t === T.DOCK || lip ? 1 : 0;
+    b.tw[k] = t === T.WATER || t === T.DEEP || t === T.BRIDGE || (t === T.DOCK && !deckOnDry(M, tx, ty)) || lip ? 1 : 0;   // (a pier's planks over the sand: dry - no sliver of sea along them, mapcore.js deckOnDry)
     // water kind / land material
     const X = tx * TILE + 16, Y = ty * TILE + 16, D = DISTRICTS[b.td[k]] || DISTRICTS[13], st = D.style, wild = WSTYLE.has(st), bio = b.tb[k];
     let m;
@@ -335,6 +336,7 @@ function tileFacts(C) {
     } else if (t === T.SIDEWALK) m = walkOf(D);
     else if (t === T.PLAZA) {
       if (pools.length && pools.some((r) => r.deck && inRect(r.deck, X, Y))) m = M_.PLAZAC;
+      else if (springs.length && springs.some((e) => Math.abs(X - e.x) < 26 * TILE && Math.abs(Y - e.y) < 18 * TILE)) m = M_.FLAGS;   // (the hot springs' stone steps and paths, the onsen's: flagstones)
       else if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
       else if (inRects(parks, X, Y) && !parks.some((r) => inRect(r.plaza, X, Y))) m = M_.PATH;
       else if (st === 'oldtown') m = M_.PLAZAO;
@@ -1082,13 +1084,16 @@ function poolPx(pools, X, Y, d, seed) {
 }
 // hot spring water: milky blue-green over pale mineral rock, a crust of white mineral at the edge, slow swirls of
 // lighter water and rising bubbles that glint
-const SPRW = ramp('#80c4bc', 6, 3), SPRE = ramp('#d8dccc', 5, 2), SPP = { c: null, nx: 0, ny: 0, e: 0 };
+// (the owner, 11-14: warmer water - a milky jade going to a sulphur-gold tint over the vents; the rim a pale mineral
+// crust, then wet dark stone)
+const SPRW = ramp('#62c2a8', 6, 3), SPRV = ramp('#a8c88c', 5, 2), SPRE = ramp('#dcd8c0', 5, 2), SPRR = ramp('#5a5650', 5, 2), SPP = { c: null, nx: 0, ny: 0, e: 0 };
 function springPx(X, Y, d, seed) {
   SPP.e = 0;
   const big = vnc(X, Y, 19, seed + 41), fine = vnc(X, Y, 4, seed + 43), sw = vnc(X + big * 12, Y - big * 9, 9, seed + 45);
   let t = 0.5 + (big - 0.5) * 0.22 + (sw > 0.62 ? 0.16 : sw < 0.3 ? -0.08 : 0) + (fine - 0.5) * 0.05 - Math.min(1, d / 30) * 0.12;
-  let R = SPRW;
-  if (d < 2.6) { R = SPRE; t = 0.55 + (fine - 0.5) * 0.4; }                         // the mineral crust at the rim
+  let R = sw > 0.7 && d > 6 ? SPRV : SPRW;                                          // (over a vent: warmer, yellower)
+  if (d < 1.2) { R = SPRR; t = 0.5 + (fine - 0.5) * 0.5; }                           // wet dark stone at the very edge
+  else if (d < 3.4) { R = SPRE; t = 0.55 + (fine - 0.5) * 0.4 - (d < 2 ? 0.1 : 0); }   // the mineral crust at the rim
   else if (hh(X >> 1, Y >> 1, seed + 47) > 0.996) { t = 0.9; SPP.e = 60; }         // bubbles
   SPP.c = sd(R, t, X, Y, 0.6);
   SPP.nx = (fine - 0.5) * 0.05; SPP.ny = (big - 0.5) * 0.06;

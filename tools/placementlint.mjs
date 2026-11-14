@@ -15,6 +15,12 @@
 //   wildNeon     a lit text sign in the wilds (a 'wild' district - on the water, the land's beside it: shared/world3-tidy.js
 //                wildAt): there it's a trail sign (wood)
 //   startOnCraft a race's start buoy within reach of a craft's spot: drawn over the boat, it hid it
+//   beachWater   dry ground (sand, grass, dirt) with no water by it beside planks or a deck the art takes for standing
+//                in water (a DOCK that isn't shared/mapcore.js deckOnDry, a BRIDGE): the coastline's smoothing drew a
+//                thin band of sea with waves along the pier or the boardwalk over the beach (the owner, 11-14: Sunset
+//                Beach Pier, Sandpiper Bay's boardwalk)
+//   skateWalk    a skate park's ledge, grind box, flat bar, rail or bench with nothing solid along it: walked straight
+//                through on foot (the owner, 11-14 - shared/world3-skatesolids.js)
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
@@ -22,6 +28,7 @@ import { TILE, T } from '../shared/constants.js';
 import { wildAt, TIDY3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
+import { deckOnDry } from '../shared/mapcore.js';
 
 // what the test lets by, each explained (none yet: what the lint found is fixed in the data)
 export const LINT_ALLOW = {};
@@ -46,7 +53,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -135,6 +142,42 @@ export function lint(M) {
   // a race's start over a craft
   const crafts = [...(M.marina || []), ...(M.rentals || []).flatMap((r) => r.spots || [])];
   for (const race of M.races || []) for (const c of crafts) if (Math.hypot(c.x - race.start.x, c.y - race.start.y) < START_R) { rows.startOnCraft.push({ what: `${race.name}'s start`, x: race.start.x, y: race.start.y }); break; }
+  // planks the art takes for standing in water, beside dry ground with no water by it (a sliver of sea along them)
+  {
+    const DRY = new Set([T.SAND, T.GRASS, T.DIRT]), wetT = (t) => t === T.WATER || t === T.DEEP;
+    const deckWet = (tx, ty) => { const t = M.tiles[M.idx(tx, ty)]; return t === T.BRIDGE || (t === T.DOCK && !deckOnDry(M, tx, ty)); };
+    const seenAt = new Set();
+    for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+      const t = M.tiles[M.idx(tx, ty)];
+      if (t !== T.DOCK && t !== T.BRIDGE) continue;
+      seen.decks = (seen.decks || 0) + 1;
+      if (!deckWet(tx, ty)) continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const x = tx + dx, y = ty + dy;
+        if (!M.inside(x, y) || !DRY.has(M.tiles[M.idx(x, y)])) continue;
+        let water = false;
+        for (let j = -1; j <= 1 && !water; j++) for (let i = -1; i <= 1; i++) if (M.inside(x + i, y + j) && wetT(M.tiles[M.idx(x + i, y + j)])) { water = true; break; }
+        if (water) continue;
+        const key = `${tx >> 3},${ty >> 3}`;   // (one row a stretch of 8 tiles)
+        if (seenAt.has(key)) continue;
+        seenAt.add(key);
+        rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
+      }
+    }
+  }
+  // a skate park's grind kit solid on foot
+  {
+    const KIT = new Set(['ledge', 'flatbar', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_fl', 'planter_g']);
+    const solidBy = (x, y, r) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const arr = M.inside(tx + i, ty + j) && M.solidProps.get(M.idx(tx + i, ty + j)); if (arr) for (const e of arr) if (!e.off && Math.hypot(e.x - x, e.y - y) <= r + e.r) return true; } return false; };
+    for (const q of M.skateSpots || []) {
+      const X0 = q.x * TILE, Y0 = q.y * TILE, X1 = (q.x + q.w) * TILE, Y1 = (q.y + q.h) * TILE;
+      for (const p of M.props) {
+        if (!p || !KIT.has(p.t) || p.x < X0 || p.x > X1 || p.y < Y0 || p.y > Y1) continue;
+        seen.skateKit = (seen.skateKit || 0) + 1;
+        if (!solidBy(p.x, p.y, 4)) rows.skateWalk.push({ what: `${q.name}'s ${p.t}`, x: p.x, y: p.y, why: 'nothing solid along it' });
+      }
+    }
+  }
   return { rows, seen };
 }
 

@@ -280,13 +280,17 @@ function build(m, api, K) {
     const BY0 = sy + 7, BY1 = BY0 + 5;   // the bait shack's bump-out (east of the shaft)
     for (let y = HY0 - 3; y <= HY1 + 6; y++) for (let x = HX0 - 3; x <= FX1 + 3; x++) if (!isW(x, y)) return;   // (open water round the head)
     for (let y = sy; y < HY0; y++) for (let x = sx0; x <= BX1; x++) if (!isW(x, y) && (x <= sx1 || (y >= BY0 && y <= BY1))) return;
+    // (where each side of the shaft first has water beside it: over the sand before that it has no rail - you step on and
+    // off the pier's sides from the beach, the owner 11-14)
+    const wetFrom = (x) => { let y = yR; while (y < sy && !isW(x, y)) y++; return y; };
+    const yWw = wetFrom(sx0 - 1), yWe = wetFrom(sx1 + 1);
     const deck = (x, y) => { m.set(x, y, T.DOCK); m.reserve[y * W + x] |= 16; K.take(x, y, 1, 1); };
     for (let y = yR; y < HY0; y++) for (let x = sx0; x <= sx1; x++) { const t = tile(x, y); if (isW(x, y) || t === T.GRASS || t === T.SAND) deck(x, y); }
     for (let y = BY0; y <= BY1; y++) for (let x = sx1 + 1; x <= BX1; x++) deck(x, y);
     for (let y = HY0; y <= HY1; y++) for (let x = HX0; x <= HX1; x++) deck(x, y);
     for (let y = FY0; y <= FY1; y++) for (let x = FX0; x <= FX1; x++) deck(x, y);
     busy.push([sx0, yR, sx1 + 1, sy]);
-    // the rails (pieces of up to 6 tiles, solid: the ways off are the boardwalk and the float)
+    // the rails (pieces of up to 6 tiles, solid: the ways off are the boardwalk, the beach beside the shaft and the float)
     const solidLine = (x0, y0, x1, y1) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 16)); for (let k = 0; k <= n; k++) m.addSolidProp(x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n, 6); };
     const rail = (x0, y0, x1, y1) => {
       const len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0), n = Math.max(1, Math.ceil(len / 192)), seg = len / n;
@@ -294,8 +298,8 @@ function build(m, api, K) {
       solidLine(x0, y0, x1, y1);
     };
     const T0 = TILE, xW = sx0 * T0 + 3, xE = (sx1 + 1) * T0 - 3, yTop = yR * T0, yH = HY0 * T0 + 3;
-    rail(xW, yTop, xW, yH);                                                   // the shaft's west side
-    rail(xE, yTop, xE, BY0 * T0 + 3);                                         // its east side, to the bump-out
+    rail(xW, Math.max(yTop, yWw * T0), xW, yH);                               // the shaft's west side (from where the water starts beside it)
+    if (yWe < BY0) rail(xE, Math.max(yTop, yWe * T0), xE, BY0 * T0 + 3);      // its east side, to the bump-out
     rail(xE, (BY1 + 1) * T0 - 3, xE, yH);                                     // ...on from it to the head
     rail(xE, BY0 * T0 + 3, (BX1 + 1) * T0 - 3, BY0 * T0 + 3);                 // the bump-out: north,
     rail((BX1 + 1) * T0 - 3, BY0 * T0 + 3, (BX1 + 1) * T0 - 3, (BY1 + 1) * T0 - 3);   // east,

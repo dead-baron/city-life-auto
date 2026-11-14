@@ -8,7 +8,8 @@ import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { TILE, T, DT } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
 import { pedStep, newPedState } from '../shared/physics.js';
-import { fencesOf, fenceSegments, FENCE_HOP, hopLift } from '../shared/fences.js';
+import { fencesOf, fenceSegments, FENCE_HOP, hopLift, fenceCrossed } from '../shared/fences.js';
+import { spawnNpc } from '../server/systems/npc.js';
 import * as players from '../server/systems/players.js';
 
 const w = makeWorld();
@@ -119,4 +120,37 @@ test('fences: the page predicts the same hop (the same steps from the same state
     assert.deepEqual([b.x, b.y, b.hop], path[i], `step ${i}`);
   }
   assert.ok(path.some((q) => q[2] > 0), 'a hop in it');
+});
+
+// the owner, 11-14: a line of NPCs pinned along a park court's chain-link fence - their next spot was behind it, and on
+// foot there's no path finding: they walked into it and stayed. A passer-by never picks a spot across a tall fence (a low
+// one they hop), and one held fast steps aside both ways, then gives up on that spot.
+test('fences: the people walking about never head into a chain-link fence and stay pinned there', () => {
+  const cx = (B[0] + 6) * TILE;
+  assert.ok(fenceCrossed(m, cx, gy - 60, cx, gy + 60), 'across the chain-link');
+  assert.ok(!fenceCrossed(m, cx, gy - 60, cx, gy - 10), 'up to it, not across');
+  const fx = (A[0] + 6) * TILE;
+  assert.ok(!fenceCrossed(m, fx, fy - 60, fx, fy + 60) && fenceCrossed(m, fx, fy - 60, fx, fy + 60, true), 'a low one: hopped (unless asked about any fence)');
+  teleport(w, ped, cx, gy - 2000);
+  const ns = [];
+  for (let i = 0; i < 6; i++) { const e = spawnNpc(w, 'casual', (B[0] + 1 + i * 2) * TILE, gy - 20, 'civ'); if (e) ns.push(e); }
+  assert.ok(ns.length >= 4, 'some passers-by by the fence');
+  const pressed = new Map(), last = new Map();
+  let picks = 0, across = 0;
+  for (let k = 0; k < 30 / DT; k++) {
+    const at = new Map(ns.map((e) => [e, [e.x, e.y]]));
+    w.step();
+    for (const e of ns) {
+      if (e.removed) continue;
+      if (Math.abs(e.y - gy) < 14 && e.x > B[0] * TILE && e.x < (B[0] + 12) * TILE) pressed.set(e, (pressed.get(e) || 0) + DT);
+      const n = e.npc, key = `${n.wx},${n.wy}`;
+      if (n.state === 'wander' && last.get(e) !== key) { last.set(e, key); picks++; const [x0, y0] = at.get(e); if (fenceCrossed(m, x0, y0, n.wx, n.wy)) across++; }
+    }
+  }
+  assert.ok(picks >= 4, `they went places (${picks})`);
+  assert.equal(across, 0, 'never a spot behind the chain-link');
+  for (const e of ns) {
+    assert.ok(e.removed || e.y < gy, 'still on their side');
+    assert.ok((pressed.get(e) || 0) < 8, `not pinned against it (${(pressed.get(e) || 0).toFixed(1)} s of 30)`);
+  }
 });

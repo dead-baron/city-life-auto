@@ -350,6 +350,24 @@ export function isTurf(map, x, y) {
   return !!DISTRICTS[map.dist[map.idx(tx, ty)]].turf;
 }
 
+// A pier's or a boardwalk's planks laid over dry ground (the beach's sand, a lawn) - not standing in water: a DOCK tile
+// on land (not a lake's, not a river's) with no water beside it. The art takes a deck for water underneath (the
+// coastline's smoothing, the waves' distance to land) only where it stands in water; over the sand it's ground - else
+// a thin band of sea with waves came out along both sides of every pier and boardwalk laid over a beach (the owner,
+// 11-14: Sunset Beach Pier, Sandpiper Bay's boardwalk). client/art2/game/groundbake.js, water.js; the placement lint's
+// beachWater row (tools/placementlint.mjs).
+export function deckOnDry(M, tx, ty) {
+  if (!M.inside(tx, ty)) return false;
+  const g = M.idx(tx, ty);
+  if (M.tiles[g] !== T.DOCK || !M.land || !M.land[g] || (M.lake && M.lake[g]) || (M.river && M.river[g])) return false;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    if (!M.inside(tx + dx, ty + dy)) return false;
+    const t = M.tiles[M.idx(tx + dx, ty + dy)];
+    if (t === T.WATER || t === T.DEEP) return false;
+  }
+  return true;
+}
+
 // Fishing water: 'river', 'deep' sea or 'shore' shallows.
 export function waterKind(map, tx, ty) {
   if (!map.inside(tx, ty)) return 'deep';   // (out past the map's edge)
