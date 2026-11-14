@@ -6,7 +6,7 @@ colours, each tube a white-hot core (signfont.js hotOf) inside its colour, and a
 light.js, the bright parts blurred at half and quarter size and added back). No black outline.
 
 Usage:
-  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2 [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
+  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3 [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
                              [--root .]
   python3 tools/neon_logo.py <logo_dir> --sheet [D,D2] [--name F.png] --out DIR   variants (A-C by default) and the
                                                                  current logo side by side
@@ -540,10 +540,39 @@ def seams(g, lit, outl):
     return keep, g
 
 
-def paint_faithful(src, thick=False):
+def fill_in(g, m, ok):
+    """the px of m given, a ring at a time from their edge in, the class most of their neighbours already have (only
+    classes ok(g) allows)"""
+    g = g.copy()
+    todo = m.copy()
+    K = int(g.max()) + 2
+    for _ in range(40):
+        if not todo.any():
+            break
+        P = np.pad(np.where(todo | ~ok(g), -1, g), 1, constant_values=-1)
+        cnt = np.zeros((K,) + g.shape, np.int32)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dx or dy:
+                    nb = P[1 + dy:1 + dy + GH, 1 + dx:1 + dx + GW]
+                    for k in range(K):
+                        cnt[k] += nb == k
+        best, n = cnt.argmax(0), cnt.max(0)
+        now = todo & (n > 0)
+        g = np.where(now, best, g)
+        todo &= ~now
+    return g
+
+
+def paint_faithful(src, thick=False, clean=False, sky=None):
+    """D, D2 (thick: the script's red rim a px out) and D3 (clean: no dark seams left - each is filled with the colours
+    round it, and so are counters too small to read; sky: the skyline layer to use instead of his)"""
     Ls = {}
     for k in ORDER:
         refs = CLASSES[k]
+        if k == 'sky' and sky is not None:
+            Ls[k] = sky
+            continue
         g = modes(os.path.join(src, FILES[k]), refs)
         L = Layer(k, COL[k])
         if k == 'sky':
@@ -566,6 +595,17 @@ def paint_faithful(src, thick=False):
             grow = dil(lit, sq=False) & outl & ~sm
             g = np.where(grow, 2, g)
             lit |= grow
+        if clean:
+            # the seams go too, and the counters too small to read (under 8 px: they read as dark specks); the "Auto"
+            # face (its own class) and the real counters stay
+            holes = fill_holes(lit | sm) & ~(lit | sm)
+            lab = label(holes)
+            small = np.zeros_like(holes)
+            for i in range(1, lab.max() + 1):
+                if (lab == i).sum() < 8:
+                    small |= lab == i
+            g = fill_in(g, sm | small, lambda q: (q >= 0) & (q != len(refs) - 1))
+            sm = np.zeros_like(sm)
         for i, (_, c, e) in enumerate(refs[:-1]):
             L.put(g == i, c, e, COL[k], glass(c) if c != FILL else mul(c, 0.8))
         L.put(sm, EDGE, 0.0, None, EDGE)
@@ -573,9 +613,61 @@ def paint_faithful(src, thick=False):
     return [Ls[k] for k in ORDER]
 
 
+# ---- D3's skyline: rectangles on the art grid, his silhouette and size (2026-11-14, the owner: the traced blue city
+# outline was the most unclean part) - a gabled house each end, a tower, the stepped middle tower with its spire, a
+# gabled block; dark faces, a clean cyan tube round the silhouette (open along its foot), lit windows 2 x 2 art px ------
+def sky_grid(src, letters):
+    a = np.asarray(Image.open(os.path.join(src, FILES['sky'])).convert('RGBA'))
+    ys, xs = np.nonzero(a[..., 3] >= 128)
+    x0, x1 = int(xs.min() / CELL), int(xs.max() / CELL)    # his skyline's span and foot, on the grid
+    foot = int(ys.max() / CELL) + TOP - 1
+    cx = (x0 + x1) // 2
+    fill = np.zeros((GH, GW), bool)
+    win = np.zeros((GH, GW), bool)
+
+    def block(xa, xb, top, peak=0, wins=()):
+        fill[top:foot + 1, xa:xb + 1] = True
+        for i in range(peak):   # a gable: 45-degree steps up to its ridge
+            fill[top - 1 - i, xa + 1 + i:xb - i] = True
+        for wx, wy in wins:
+            win[wy:wy + 2, wx:wx + 2] = True
+    w = x1 - x0
+    hl = (x0, x0 + w * 16 // 100)                               # the house on the left
+    tw = (hl[1] - 1, x0 + w * 33 // 100)                         # a tower
+    md = (cx - w * 12 // 100, cx + w * 12 // 100)                # the middle tower
+    gb = (md[1] - 1, x0 + w * 78 // 100)                         # the gabled block
+    hr = (gb[1] - 1, x1)                                         # the house on the right
+    block(hl[0], hl[1], foot - 9, (hl[1] - hl[0]) // 2 - 1, [(hl[0] + 4, foot - 5), (hl[1] - 5, foot - 5)])
+    block(tw[0], tw[1], foot - 19, 0, [(tw[0] + 4, foot - 14), (tw[0] + 4, foot - 9), (tw[1] - 5, foot - 14)])
+    block(md[0], md[1], foot - 25, 0, [(cx - 4, foot - 20), (cx + 2, foot - 20), (cx - 4, foot - 15), (cx + 2, foot - 15)])
+    fill[foot - 29:foot - 25, md[0] + 3:md[1] - 2] = True        # its steps
+    fill[foot - 33:foot - 29, md[0] + 6:md[1] - 5] = True
+    fill[foot - 41:foot - 33, cx:cx + 1] = True                  # the spire
+    block(gb[0], gb[1], foot - 14, (gb[1] - gb[0]) // 2 - 1, [(gb[0] + 4, foot - 9), (gb[1] - 5, foot - 9)])
+    block(hr[0], hr[1], foot - 8, (hr[1] - hr[0]) // 2 - 1, [(hr[0] + 4, foot - 4), (hr[1] - 5, foot - 4)])
+    # the tube round the silhouette, not along the foot; taken before the letters' room is cleared (no tube on a cut)
+    below = shift(fill, 0, 1) | (np.arange(GH)[:, None] >= foot)
+    edge = fill & ~(shift(fill, 0, -1) & shift(fill, -1, 0) & shift(fill, 1, 0) & below)
+    clear = np.zeros((GH, GW), bool)
+    for m in letters:
+        clear |= m
+    clear = dil(dil(clear))
+    L = Layer('sky', CYAN)
+    L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
+    tube(L, edge & ~clear, CYAN, 1)
+    L.put(win & ~dil(edge) & ~clear, WINDOW, 0.7, WINDOW, (60, 52, 40))
+    L.a &= ~clear
+    L.emi[clear] = 0
+    return L
+
+
 def build(src, variant):
     if variant in ('D', 'D2'):
         return paint_faithful(src, thick=variant == 'D2')
+    if variant == 'D3':
+        letters = paint_faithful(src, thick=True, clean=True, sky=Layer('sky', CYAN))
+        letters[0] = sky_grid(src, [L.a for L in letters[1:]])
+        return letters
     S = shapes(src)
     Ls = {}
     for k in ('city', 'swoosh', 'auto'):
@@ -716,6 +808,36 @@ def night(W, H, dpr):
     return bg
 
 
+def dark_night(W, H, dpr):
+    """the darker night proposed for the new logo: deep navy most of the way down, a violet low over the city, only a
+    trace of the dusk at the foot, and the title's skyline along it (dimmed a touch)"""
+    y = np.linspace(0, 1, H, dtype=np.float32)
+    stops = [(0, (5, 8, 18)), (0.55, (12, 18, 40)), (0.86, (34, 26, 66)), (1, (78, 44, 66))]
+    a = np.zeros((H, 3), np.float32)
+    for (t0, c0), (t1, c1) in zip(stops, stops[1:]):
+        m = (y >= t0) & (y <= t1)
+        a[m] = np.array(c0) + (np.array(c1) - np.array(c0)) * ((y[m] - t0) / (t1 - t0))[:, None]
+    bg = Image.fromarray(np.broadcast_to(a[:, None, :], (H, W, 3)).astype(np.uint8)).convert('RGBA')
+    sky = title_skyline()
+    sh = round(216 * dpr)
+    s = sky.resize((round(sky.width * sh / sky.height), sh), Image.NEAREST)
+    sa = np.asarray(s).astype(np.float32)
+    sa[..., :3] *= 0.85
+    s = Image.fromarray(sa.astype(np.uint8), 'RGBA')
+    for x in range(-((s.width - W % s.width) // 2), W, s.width):
+        bg.alpha_composite(s, (x, H - sh)) if x >= 0 else bg.alpha_composite(s.crop((-x, 0, s.width, sh)), (0, H - sh))
+    return bg
+
+
+def title_mock(layers, root, path):
+    """the whole title screen on a desktop round the lit sign, as proposed: the logo sized by height with a fixed gap
+    under it, wider 2 x 2 buttons, the graphics row under them, the darker night with a halo, the skyline at the foot"""
+    from font_logo import desktop_mock
+    logo, pad = compose(layers, 5)
+    desktop_mock(logo, pad, root, bg=dark_night(1920, 1080, 1), halo=(150, 60, 120)).convert('RGB').save(path, optimize=True)
+    return path
+
+
 def place(bg, logo, pad, scale, width, cy):
     """the logo onto the night, its tubes' box `width` px wide (whole art px only: scaled by a whole number when it
     can be, else smoothly), centred at height cy"""
@@ -784,11 +906,11 @@ def font(size):
     return ImageFont.load_default(size)
 
 
-def sheet(src, root, out, vs='ABC', name='contact-sheet.png'):
+def sheet(src, root, out, vs='ABC', name='contact-sheet.png', close_box=(0.02, 0.12, 0.36, 0.52)):
     """the current logo and the three variants side by side on the title's night, the same width, then a close-up of
     each ("Cit" at the page's 2x: the pixels)"""
     PW, PH, LW, CH = 720, 640, 600, 380
-    cols = [('Current (AI image)', None)] + [(f'{v}  {NAME[v]}', v) for v in vs]
+    cols = [('Current (live)', None)] + [(f'{v}  {NAME[v]}', v) for v in vs]
     W = PW * len(cols)
     sh = Image.new('RGB', (W, PH + CH), (10, 12, 20))
     d = ImageDraw.Draw(sh)
@@ -807,7 +929,8 @@ def sheet(src, root, out, vs='ABC', name='contact-sheet.png'):
             place(bg, logo, pad, s, LW, PH * 0.42)
             big, bpad = compose(layers, max(1, round(1240 / (x1 - x0))))
         bw, bh = big.width - 2 * bpad, big.height - 2 * bpad
-        close = big.crop((bpad + round(bw * 0.02), bpad + round(bh * 0.12), bpad + round(bw * 0.36), bpad + round(bh * 0.52)))
+        q = close_box
+        close = big.crop((bpad + round(bw * q[0]), bpad + round(bh * q[1]), bpad + round(bw * q[2]), bpad + round(bh * q[3])))
         sh.paste(bg.convert('RGB'), (i * PW, 0))
         d.text((i * PW + 20, 16), label, fill=(243, 234, 210), font=f)
         cb = Image.new('RGBA', (PW, CH), NAVY + (255,))
@@ -821,7 +944,7 @@ def sheet(src, root, out, vs='ABC', name='contact-sheet.png'):
     return p
 
 
-NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim'}
+NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline'}
 
 
 def save_smallest(im, path_no_ext):
@@ -874,7 +997,9 @@ def main():
     if '--sheet' in args:
         vs = opt('--sheet')
         vs = vs.upper().split(',') if vs and not vs.startswith('--') else list('ABC')
-        print(sheet(src, root, out, vs, opt('--name', 'contact-sheet.png')))
+        cb = opt('--close')
+        cb = tuple(float(q) for q in cb.split(',')) if cb else (0.02, 0.12, 0.36, 0.52)
+        print(sheet(src, root, out, vs, opt('--name', 'contact-sheet.png'), cb))
         return
     v = opt('--variant', 'A').upper()
     scale = int(opt('--scale', 5))
@@ -887,6 +1012,8 @@ def main():
     res['art'] = [int(x1 - x0), int(y1 - y0)]
     if '--preview' in args:
         res['previews'] = previews(layers, out, v)
+    if '--mock' in args:
+        res['mock'] = title_mock(layers, root, os.path.join(out, f'{v}-title-desktop.png'))
     print(json.dumps(res, indent=1))
 
 
