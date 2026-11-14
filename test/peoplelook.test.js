@@ -130,3 +130,24 @@ test('the eye colour shows at the game\'s size: the eye\'s pixel takes the colou
   const eyeOf = (eye) => { const want = LK.EYE_COLORS[eye][0], w = [1, 3, 5].map((i) => parseInt(want.slice(i, i + 2), 16)); return head(eye).reduce((a, c) => (Math.hypot(c[0] - w[0], c[1] - w[1], c[2] - w[2]) < Math.hypot(a[0] - w[0], a[1] - w[1], a[2] - w[2]) ? c : a)).join(); };
   assert.equal(new Set(LK.EYE_COLORS.map((_, i) => eyeOf(i))).size, LK.EYE_COLORS.length);
 });
+
+// (the owner, 2026-11-13: glasses were hard to tell apart, the face options made little difference) at the game's own
+// size - the art pixels the bake draws - every pair of street glasses puts a dozen-odd strong pixels of frame and lens
+// on the face, on both bodies; and each face option's own stamp shows (people.js face: EYE_ST, NOSE_ST, GLS ...)
+test('at the game\'s size every pair of glasses and every face option shows', async () => {
+  const { packGBuf, downsample2 } = await import('../client/art2/gbuf.js');
+  const img = (L) => downsample2(packGBuf(person(LK.lookArt(L), 0, 'idle', 0, { tight: true, region: 'head' })));
+  const strong = (a, b) => { assert.equal(a.w * a.h, b.w * b.h); let n = 0; for (let o = 0; o < a.w * a.h * 4; o += 4) if (Math.hypot(a.p0[o] - b.p0[o], a.p0[o + 1] - b.p0[o + 1], a.p0[o + 2] - b.p0[o + 2]) > 40) n++; return n; };
+  for (const b of ['m', 'f']) {
+    const base = LK.emptyLook(b); base.hair.style = b === 'm' ? 2 : 21; base.outfit.top = LK.item('Plain tee');
+    const none = img(base);
+    for (const P of LK.PIECES.filter((p) => p && p.slot === 'glasses' && !p.d.issued && !p.d.nostreet && !['balaclava', 'skimask', 'bandana', 'gaiter'].includes(p.d.k))) {
+      const n = strong(img(variant(base, (V) => { V.outfit.glasses = LK.item(P.name); })), none);
+      assert.ok(n >= 10, `${P.name} (${b}): ${n} art pixels of it at the game's size`);
+    }
+    for (const k of ['eyes', 'nose', 'lips']) {
+      const I = LK.FACE_OPTS[k].map((_, i) => img(variant(base, (V) => { V.face[k] = i; })));
+      for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) assert.ok(strong(I[i], I[j]) >= 1, `${k}: ${LK.FACE_OPTS[k][i]} and ${LK.FACE_OPTS[k][j]} (${b}) drawn alike`);
+    }
+  }
+});

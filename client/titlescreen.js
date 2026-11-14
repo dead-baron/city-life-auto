@@ -89,7 +89,7 @@ export function createTitle(ctx) {
   // where the load has got to: the socket, then the city (the welcome in, the city still being built - a creep through
   // it, there's no news of its own), then ready for PLAY - one record with the art's wait after PLAY (client/warmup.js
   // LOAD_PHASES: its phase and its bar only go forward)
-  let phAt = 0, phWas = -1;
+  let phAt = 0, phWas = -1, ptCode = null;
   function sync() {
     if (title.classList.contains('hidden')) return;
     const warm = ctx.warming(), now = performance.now();
@@ -118,6 +118,9 @@ export function createTitle(ctx) {
       $('t-xp').textContent = `Criminal XP ${(me.cexp | 0).toLocaleString('en-US')}`;
       $('t-sam').textContent = `Samaritan ${(me.sam | 0).toLocaleString('en-US')}`;
     }
+    // (the avatar: your own character, drawn by client/portrait.js - loaded the first time there's a look to show)
+    const lk = me && S.looks && S.looks.cur;
+    if (lk && lk !== ptCode) { ptCode = lk; import('./portrait.js').then((m) => m.portrait(card.querySelector('.t-av'), lk)).catch(() => { ptCode = null; }); }
     const n = ctx.players(), on = $('t-online');
     on.classList.toggle('hidden', n === null);
     if (n !== null) on.lastElementChild.textContent = `Online - ${n} player${n === 1 ? '' : 's'}`;
