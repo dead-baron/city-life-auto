@@ -7,7 +7,8 @@ import { makeWorld, joinPlayer, run, teleport } from './helpers.js';
 import { K, T, TILE, MAP_W, MAP_H } from '../shared/constants.js';
 import { validLook, encodeLook, decodeLook, LOOK_CODE_LEN, PIECES } from '../shared/look.js';
 import { RECIPES, recipeLook, poolFor, POOL_N, styleMix } from '../server/systems/npclooks.js';
-import { PERSONAS, LOOKS, BUSKS, spawnPersona, spawnHere, interaction as busk } from '../server/systems/personas.js';
+import { PERSONAS, LOOKS, BUSKS, spawnPersona, spawnHere, interaction as busk, ANGLER_GAP, isAngler } from '../server/systems/personas.js';
+import * as activities from '../server/systems/activities.js';
 import { BUSKER_TIP, BUSKER_SAMARITAN } from '../shared/rules.js';
 import { spawnNpc, onGunfire, onDeath } from '../server/systems/npc.js';
 import { _descriptor } from '../server/net.js';
@@ -280,4 +281,26 @@ test('the buskers (Shared-9): five acts with their kit, a pitch by the fountain 
   assert.equal(prof.cash, 50 - BUSKER_TIP);
   // never a statue after dark
   for (let k = 0; k < 30; k++) { clear(); const q = spawnPersona(w, spawnNpc, 'busker', f.x, f.y + 60, true); assert.ok(!q || q.npc.busk !== 'statue', 'no statue at night'); }
+});
+
+// the owner, 11-14: "NPC fishers often stand right on top of each other" - a group of them near each other, yes, but each
+// on their own spot, a body or two apart, facing the water
+test('fishers along one shore each have their own spot: ANGLER_GAP apart, facing the water', () => {
+  clear(); w.acts && w.acts.clear();
+  const rails = m.props.filter((q) => q.t === 'pierrail');
+  const q0 = rails.find((q) => spawnPersona(w, spawnNpc, 'fisher', q.x, q.y));
+  assert.ok(q0, 'a fisher at a pier');
+  for (let k = 0; k < 40; k++) spawnPersona(w, spawnNpc, 'fisher', q0.x + (k % 5) * 8, q0.y);
+  // and the anglers' groups round there (activities.js), filled in sight - each only where there's room
+  for (const s of activities.spotsNear(m, q0.x, q0.y, 600).filter((s) => s.k === 'anglers')) activities.fill(w, s, { seen: true });
+  const A = [...w.entities.values()].filter(isAngler);
+  assert.ok(A.length >= 3, `a few of them along there (${A.length})`);
+  for (let i = 0; i < A.length; i++) for (let j = i + 1; j < A.length; j++) {
+    const d = Math.hypot(A[i].x - A[j].x, A[i].y - A[j].y);
+    assert.ok(d >= ANGLER_GAP - 0.5, `two anglers ${d.toFixed(1)} px apart at ${Math.round(A[i].x)}, ${Math.round(A[i].y)}`);
+  }
+  for (const e of A) {   // facing the water: a few px ahead of each is water (or the pier's planks over it, then water)
+    const wet = [20, 40, 60, 80].some((r) => { const t = m.tileAtPx(e.x + Math.cos(e.a) * r, e.y + Math.sin(e.a) * r); return t === T.WATER || t === T.DEEP; });
+    assert.ok(wet, `an angler at ${Math.round(e.x)}, ${Math.round(e.y)} facing the water`);
+  }
 });

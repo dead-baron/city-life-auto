@@ -163,16 +163,19 @@ test('salmon at a falls: some make it up the face into the water above it, and s
   const fa = waterView('falls', 2);
   const wl = new WaterLife(2), V = view(fa.x, fa.y);
   let climbing = 0, moved = 0;
-  const track = new Map();
+  const track = new Map(), ph = new Set();
   for (let now = 0, i = 0; i < 150 * 30; i++, now += 1 / 30) {
     wl.update(M, V, now, 1 / 30, [], [], ENV);
     for (const f of wl.fish) {
       if (f.s !== 'salmon') continue;
-      if (f.air >= 0 && f.climb) { climbing++; assert.ok(f.az >= 0, 'up the face in front of the falls'); }
+      if (f.air >= 0 && f.climb) { climbing++; ph.add(f.climb.ph); assert.ok(f.az >= 0, 'up the face in front of the falls'); }
       if (f.mig) { const t = track.get(f); if (!t) track.set(f, { y: f.y }); else if (t.y - f.y > 20 && !t.done) { t.done = true; moved++; } } else track.delete(f);
     }
   }
   assert.ok(wl.n.up >= 1 && climbing > 0, `some made it over (${wl.n.up})`);
+  // (the owner, 11-14: in stages, not straight up the fall - a leap, a splash into the falling water, a rest, the next;
+  // some slip and drop back)
+  assert.ok(ph.has('leap') && ph.has('rest') && ph.has('drop'), `leaps, rests between them and drops back (${[...ph]})`);
   for (const u of wl.ups) {
     const q = wl.falls.reduce((b, o) => (!b || Math.abs(o.x - u.x) + Math.abs(o.y - u.y) < Math.abs(b.x - u.x) + Math.abs(b.y - u.y) ? o : b), null);
     assert.ok(u.y < q.y - q.h, 'landing above the falls');

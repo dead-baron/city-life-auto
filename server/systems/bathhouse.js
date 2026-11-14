@@ -323,7 +323,8 @@ export function execute(world, p, poi, opt) {
   }
   if (parts[1] === 'put') {
     const lk = (prof.bathLocker ||= {});
-    for (const id of guns(prof)) { lk[id] = (lk[id] || 0) + (prof.weapons[id] || 0) + (ped.mag[id] || 0); delete prof.weapons[id]; delete ped.mag[id]; if (ped.weapon === id) ped.weapon = 'fists'; }
+    // (profile.weapons[id] is every round you have, the magazine's among them - combat.js: so the rounds alone go in)
+    for (const id of guns(prof)) { lk[id] = (lk[id] || 0) + (prof.weapons[id] || 0); delete prof.weapons[id]; delete ped.mag[id]; if (ped.weapon === id) ped.weapon = 'fists'; }
     store.touch(); p.meDirty = true;
     world.notify(p, 'Your weapons are in the locker.', 'good');
     return null;
@@ -338,8 +339,9 @@ function giveBack(world, p, say) {
   for (const [id, rounds] of Object.entries(lk)) {
     const w = WEAPONS[id];
     if (!w) continue;
-    if (w.mag) { const inMag = Math.min(w.mag, rounds); if (ped) ped.mag[id] = Math.max(ped.mag[id] || 0, inMag); prof.weapons[id] = (prof.weapons[id] || 0) + rounds - inMag; }
-    else prof.weapons[id] = prof.weapons[id] || 0;
+    const had = prof.weapons[id] !== undefined;
+    prof.weapons[id] = (prof.weapons[id] || 0) + (rounds || 0);   // (every round back, the magazine filled from them)
+    if (w.mag && ped && (!had || ped.mag[id] === undefined)) ped.mag[id] = Math.min(w.mag, prof.weapons[id]);
   }
   delete prof.bathLocker;
   store.touch(); p.meDirty = true;

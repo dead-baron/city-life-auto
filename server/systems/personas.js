@@ -273,6 +273,14 @@ export function spawnHere(world, spawnNpc, x, y, night) {
   for (const [k, w] of list) { r -= w; if (r <= 0) { key = k; break; } }
   return spawnPersona(world, spawnNpc, key, x, y, night, true);
 }
+// Anglers each get their own spot (the owner, 11-14: "NPC fishers often stand right on top of each other" - groups near
+// each other are wanted, but a body or two apart): no one fishing - a persona fisher, an activity's angler, a player with
+// a rod out - within ANGLER_GAP px of where another is put (activities.js anglers, wildfolk.js holds use it too)
+export const ANGLER_GAP = 40;
+export const isAngler = (e) => !!e && !e.dead && e.kind === K.PED && (!!e.fishing || !!(e.npc && e.npc.act && e.npc.act.fish));
+export function anglerRoom(world, x, y, gap = ANGLER_GAP) {
+  return !world.query(x, y, gap + 4, K.PED).some((e) => isAngler(e) && Math.hypot(e.x - x, e.y - y) < gap);
+}
 // offView: a passer-by from the density manager (spawnHere), whose spot (x, y) was picked off everyone's screen - one
 // who'd sit on a bench, lean on a wall, push a cart or fish from a rail near it isn't put there if that's in someone's
 // view (they'd pop up on screen: test/view.test.js)
@@ -299,7 +307,7 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
   if (P.fish) {   // at a pier's rail, facing the water
     const rails = propsNear(world.map, x, y, 800, PIER);
     let spot = null;
-    for (let k = 0; k < rails.length && !spot; k++) { const q = rails[(k + Math.floor(rng() * rails.length)) % rails.length], s2 = spotNear(world, q.x, q.y, 6, 26); if (s2 && !world.query(s2.x, s2.y, 30, K.PED).some((e) => e.npc && e.npc.persona === key)) spot = s2; }
+    for (let k = 0; k < rails.length && !spot; k++) { const q = rails[(k + Math.floor(rng() * rails.length)) % rails.length], s2 = spotNear(world, q.x, q.y, 6, 26); if (s2 && anglerRoom(world, s2.x, s2.y)) spot = s2; }
     if (!spot) return null;
     at = spot; at.water = waterward(world.map, spot.x, spot.y);
     if (at.water === null) return null;

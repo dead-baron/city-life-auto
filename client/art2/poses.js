@@ -10,7 +10,7 @@
 //   now and then - a breath, a glance, the thumb on the phone, the weight shifted, a scratch - picked by the ped's id and
 //   the time since it began: never a fixed loop, and roughly the same for everyone watching (they saw it start together);
 // - a gesture (wave, cheer, a laugh...) loops its four frames after a frame on the way up;
-// - a faceplant: stiff as a board, over onto the face, a bounce, and lying there (a twitch, a weak hand up now and then).
+// - a faceplant: stiff as a board, over onto the face, and lying there - it stays down: only a small twitch now and then.
 import { POSES, MORE_POSES as GAITS2, SEATS, PERSON_CAM } from './people.js';
 import { EMOTE_FPS } from './dances.js';
 
@@ -322,18 +322,19 @@ def('emsleep', [toward(sitB(), 0.5), sitB(), elbowsB, sleepB(), sleepB('breath')
   in: [0, 1, 2], inS: 0.14, base: 3, p: 0.5, slot: 2.2,
   beats: [[[4, 1.6]], [[4, 1.4], [3, 0.6], [4, 1.4]], [[5, 4.5]], [[6, 1.4]]],
 });
-// the head down over the phone in both hands; v: swipe (the thumb up the screen: the hand up a touch), tap (the phone
+// the head down over the phone in both hands, held well out in front of the chest (the owner, 11-14: "hold the phone
+// further out from the body so it clearly reads as scrolling"); v: swipe (the thumb up the screen: the hand up a touch), tap (the phone
 // dips), shift (the weight onto the right leg, the left knee loose), shift2 (that, swiping), up (a look up and round)
 const phoneB = (v) => (D, P) => {
   b0(P);
   const sh = v === 'shift' || v === 'shift2', sw = v === 'swipe' || v === 'shift2';
-  P.headPitch = 0.44; P.lean = 0.06; P.pel = [0.3, 0, D.pelZ - 0.2];
+  P.headPitch = 0.36; P.lean = 0.06; P.pel = [0.3, 0, D.pelZ - 0.2];
   if (sh) { P.pel = [1.5, 0, D.pelZ - 0.5]; P.tilt = -0.06; P.fL = [-D.hipX - 1.0, 1.4, D.ank + 0.5]; P.toeL = 0.45; P.kneeL = [0.2, 1, 0]; P.fR = [D.hipX + 1.2, 0.2, D.ank]; P.headYaw = 0.08; }
   if (v === 'tap') P.headPitch = 0.5;
   if (v === 'up') { P.headPitch = -0.06; P.headYaw = 0.45; }
   P.hands = (S) => {
     const t = sw ? 0.8 : v === 'tap' ? -0.5 : v === 'up' ? -1.2 : 0;
-    P.hR = DCH(S, 1.2, 6.6 + (sw ? 0.4 : 0), -2.2 + t); P.hL = DCH(S, -0.6, 6.4, -2.8 + (v === 'up' ? -1.0 : 0)); P.elR = [1, -0.5, -0.6]; P.elL = [-1, -0.5, -0.6]; phone(P);
+    P.hR = DCH(S, 1.0, 10.2 + (sw ? 0.6 : 0), -0.6 + t); P.hL = DCH(S, -0.8, 10.0, -1.2 + (v === 'up' ? -1.0 : 0)); P.elR = [1, -0.3, -0.7]; P.elL = [-1, -0.3, -0.7]; phone(P);
   };
 };
 def('emphone', [toward(phoneB(), 0.5), phoneB(), phoneB('swipe'), phoneB('tap'), phoneB('shift'), phoneB('shift2'), phoneB('up')], {
@@ -397,8 +398,9 @@ def('emkneel', [toward(kneelB(), 0.5), kneelB(), kneelB('breath'), kneelB('bow')
 
 // ==== a faceplant: stiff as a board, over onto the face ==================================================================
 // 0-2 toppling forward from the feet (the arms flung back, then stiff at the sides - nothing breaks the fall); 3 the
-// smack (the legs bounce up); 4 flat on the face; 5 a foot twitches; 6 a weak hand up off the ground ("I'm OK"); 7 the
-// way up: pushed up on the hands, the knees down
+// smack (the arms jolt out a touch, nothing leaves the ground); 4 flat on the face; 5 a foot twitches; 6 the fingers
+// of a hand curl on the ground; 7 the way up: pushed up on the hands, the knees down. The owner (11-14): it must STAY
+// down - subtle, occasional movement only, no visible loop or bounce.
 const fpB = (v) => (D, P) => {
   b0(P); P.lean = 0; P.splay = 0.06;
   P.fL = [-D.hipX - 0.2, 0.4, D.ank]; P.fR = [D.hipX + 0.2, 0.4, D.ank];
@@ -409,13 +411,12 @@ const fpB = (v) => (D, P) => {
     return;
   }
   P.ground = true; P.rise = 0; P.headPitch = 0.12;
-  P.root = rx(Math.PI / 2 + (v === 3 ? 0.08 : 0.02)); P.pivot = [0, 1.6, 0];   // (over from the feet: they stay where they stood)
-  if (v === 3) { P.fL = [-D.hipX - 0.4, -5.6, D.ank + 6.0]; P.fR = [D.hipX + 0.4, -4.8, D.ank + 6.8]; P.kneeL = P.kneeR = [0, 1, -0.2]; P.headPitch = 0.02; }
-  if (v === 5) { P.fR = [D.hipX + 0.6, -3.8, D.ank + 3.6]; P.kneeR = [0, 1, -0.2]; }
+  P.root = rx(Math.PI / 2 + 0.02); P.pivot = [0, 1.6, 0];   // (over from the feet: they stay where they stood)
+  if (v === 5) { P.fR = [D.hipX + 0.4, -1.4, D.ank + 1.2]; P.kneeR = [0, 1, -0.2]; }
   P.hands = (S) => {
     side(S, 1.4, -0.6);
-    if (v === 3) side(S, 2.6, -3.0);
-    if (v === 6) { P.hR = vadd(S.shR, [2.6, -6.2, -3.0]); P.elR = [1, -0.4, 0.4]; }
+    if (v === 3) side(S, 2.0, -1.4);
+    if (v === 6) { P.hR = vadd(S.shR, [1.8, -1.4, -D.reach * 0.86]); P.openR = 0; }
   };
   if (v === 7) {
     P.root = rx(Math.PI / 2 - 0.62); P.pivot = null; P.headPitch = -0.3; P.lean = -0.25;
@@ -424,8 +425,8 @@ const fpB = (v) => (D, P) => {
   }
 };
 def('emfaceplant', [0, 1, 2, 3, 4, 5, 6, 7].map(fpB), {
-  in: [0, 1, 2], inS: 0.1, once: [[3, 0.14]], base: 4, p: 0.4, slot: 1.2,
-  beats: [[[5, 0.22], [4, 0.2], [5, 0.22]], [[6, 1.1]]],
+  in: [0, 1, 2], inS: 0.1, once: [[3, 0.12]], base: 4, p: 0.16, slot: 2.6,
+  beats: [[[5, 0.3]], [[6, 1.4]]],
   out: [7], outS: 0.2,
 });
 // push-ups: down on the knees, the hands to the ground (the way in and out); then up, halfway, down, halfway

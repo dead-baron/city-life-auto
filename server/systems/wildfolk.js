@@ -30,6 +30,7 @@ import { wildStyle, habitatAt } from './wildlife.js';
 import { isBare } from './foraging.js';
 import { dress } from './npclooks.js';
 import { BUILDS } from '../entities.js';
+import { ANGLER_GAP } from './personas.js';
 
 // day / night: the chance a spot is on when someone comes near (activities.js KINDS)
 export const WILD_KINDS = {
@@ -322,7 +323,7 @@ export function wildMembers(s, rng) {
     if (rng() < 0.45) out.push({ x: s.x - sn * 22, y: s.y + c * 22, a: s.a, arche: 'hiker', look: 'birder', pp: 'tripod' });
   } else if (s.k === 'holds') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'fisher', fish: true, pp: 'tackle' });
-    if (rng() < 0.3) out.push({ x: s.x - sn * 22, y: s.y + c * 22, a: s.a, arche: 'casual', look: 'fisher', fish: true });
+    if (rng() < 0.3) out.push({ x: s.x - sn * (ANGLER_GAP + 2), y: s.y + c * (ANGLER_GAP + 2), a: s.a, arche: 'casual', look: 'fisher', fish: true });   // (their own spot: personas.js)
   } else if (s.k === 'kayakers') out.push({ x: s.x, y: s.y, a: s.a, arche: 'hiker', look: 'kayaker', pp: 'kayak', patrol: [{ x: s.x, y: s.y }, { x: s.x2, y: s.y2 }] });
   else if (s.k === 'climbers') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'hiker', look: 'climber', pp: 'rope' });
