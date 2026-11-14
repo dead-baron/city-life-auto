@@ -4416,12 +4416,17 @@ function vehVisual(v, now, dt) {
     for (const o of [-0.39, 0.39]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.4, o * def.W); S.fx.decal(4, x, y, v.ra + 1.571, 1, '#2b251d', S.loopClock, 0.4); }
     if (Math.random() < 0.3) S.fx.smoke(v.rx - fwdX * def.L * 0.5, v.ry - fwdY * def.L * 0.5, true);
   }
-  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field
+  // (art v2) the crop flattened under the wheels: a swath under each rear wheel every 12 px it rolls through a field -
+  // laid along the way it came, so a slow frame (a phone at 20 fps, a car at speed) leaves no gaps in the track
   if (S.art2 && def.kind !== 'boat' && def.kind !== 'air' && !(f & VF.WRECK) && !(v.rz > 0.05)) {
-    const lx = v._crx ?? v.rx, ly = v._cry ?? v.ry;
-    if (Math.abs(v.rx - lx) + Math.abs(v.ry - ly) > 12) {
+    const lx = v._crx ?? v.rx, ly = v._cry ?? v.ry, d = Math.hypot(v.rx - lx, v.ry - ly);
+    if (d > 12) {
       v._crx = v.rx; v._cry = v.ry;
-      for (const sgn of [-1, 1]) { const [x, y] = localToWorld(v.rx, v.ry, v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
+      const n = d > 400 ? 1 : Math.min(32, Math.round(d / 12));   // (a jump - a teleport, a respawn: no track across)
+      for (let k = n - 1; k >= 0; k--) {
+        const t = k / n, cx = v.rx + (lx - v.rx) * t, cy = v.ry + (ly - v.ry) * t;
+        for (const sgn of [-1, 1]) { const [x, y] = localToWorld(cx, cy, v.ra, -def.L * 0.3, sgn * def.W * 0.36); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y, v.ra, 0, S.loopClock, 0.8); }
+      }
     }
   }
   if (def.kind === 'boat' && v.buf.length > 1) {
@@ -4678,7 +4683,11 @@ function pedVisual(p, now) {
   // (art v2) the crop parts round someone walking through a field and stays trodden: a track every 10 px
   if (S.art2 && !(f & PF.DEAD)) {
     const lx = p._crx ?? p.rx, ly = p._cry ?? p.ry, d = Math.abs(p.rx - lx) + Math.abs(p.ry - ly);
-    if (d > 10) { p._crx = p.rx; p._cry = p.ry; if (d < 60 && S.map.tileAtPx(p.rx, p.ry) === T.FIELD) S.fx.crush(p.rx, p.ry + 2, Math.atan2(p.ry - ly, p.rx - lx), 1, S.loopClock, 0.85); }
+    if (d > 10) {
+      p._crx = p.rx; p._cry = p.ry;
+      const n = d < 200 ? Math.min(20, Math.round(d / 10)) : 0, a = Math.atan2(p.ry - ly, p.rx - lx);   // (along the way, a slow frame or not; a jump: none)
+      for (let k = n - 1; k >= 0; k--) { const x = p.rx + (lx - p.rx) * (k / n), y = p.ry + (ly - p.ry) * (k / n); if (S.map.tileAtPx(x, y) === T.FIELD) S.fx.crush(x, y + 2, a, 1, S.loopClock, 0.85); }
+    }
   }
   const L = pedLook(p, now);
   if (!L.flying && L.flRecent && !p.flingLanded && p.flingAt !== undefined) { p.flingLanded = true; S.fx.smoke(p.rx, p.ry, false); S.fx.smoke(p.rx + 6, p.ry + 4, false); sfx('thud', distVol(p.rx, p.ry)); }
