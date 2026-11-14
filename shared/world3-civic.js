@@ -261,7 +261,7 @@ function hospital(K, m, ctx) {
   const bx0 = x0 + 24;
   K.fill(bx0, fy0, x1 - bx0, fy1 - fy0, T.LOT); K.take(bx0, fy0, x1 - bx0, fy1 - fy0);
   for (let k = 0; k < 3; k++) m.parking.push({ x: (bx0 + 3 + k * 5) * TILE, y: (fy0 + 3) * TILE, a: Math.PI / 2, model: 'ambulance' });
-  prop('textsign', bx0 + 8, fy0 + 0.4, 0, { text: 'AMBULANCES ONLY', bg: '#a8282c', fg: [250, 240, 230], z: 26, sx: 1 });
+  prop('textsign', bx0 + 8, fy0 + 5.7, 0, { text: 'AMBULANCES ONLY', bg: '#a8282c', fg: [250, 240, 230], z: 10, sx: 1 });   // (a low board at the bay's mouth, behind the ambulances' tails: at the hospital's foot it stood over its front and the parked ambulances hid it - the QA sweep, 11-13)
   // the drop-off loop off Harborview Avenue round its island: the bus shelter, a big oak, beds and lamps
   const ly0 = fy1, ly1 = ly0 + 24, lx = x0 + 3;
   K.fill(x0, ly0, w, ly1 - ly0, T.GRASS); K.take(x0, ly0, w, ly1 - ly0);

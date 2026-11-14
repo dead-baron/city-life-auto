@@ -22,8 +22,10 @@
 //             boombox, a couple watching
 //   roadcrew  a utility crew at work in a hole in the pavement inside its cones (map.crewSpots: World v3's Midtown):
 //             one breaking it up with a pick, one down on a knee at it, the foreman stood watching - by day
-//   pool      two at the Rusty Spur's pool table taking turns (round the table to the next shot, bent over the cue),
-//             the other waiting at the end of the table with his cue up; a watcher or two
+//   pool      two at a pool table out in the world (the Rusty Spur's, a bar's: pooltables.js) playing a real game -
+//             the balls rolling on the table for everyone near (poolnpc.js): round the table to stand behind the cue
+//             ball, bent over the cue, the strike; the other waiting off the end of the table with his cue up; a watcher
+//             or two. Now and then at a bar's table, most nights at the Spur (rules.js POOL_NPC)
 //   shoppers  a customer or two in a shop fitted out by its trade (shared/shoprooms.js): browsing an aisle, waiting at the
 //             counter, sat in the barber's chair, at the bar
 //   dice      three shooting dice down an alley in a rough part of town, crouched against the wall over the dice and
@@ -50,6 +52,10 @@ import { DISTRICTS } from '../../shared/mapcore.js';
 import { foodLayout, foodSeats } from '../../shared/foodrooms.js';
 import { shopRoom } from '../../shared/shoprooms.js';
 import { WILD_KINDS, WILD_LOOKS, wildSpots, wildMembers, wildSteer } from './wildfolk.js';   // (the people of the wilds: Nature-C4)
+import { POOL_NPC } from '../../shared/rules.js';
+import { tablesOf, poolTable } from './pooltables.js';
+import * as poolnpc from './poolnpc.js';
+export { poolTable };   // (the Rusty Spur's table: pooltables.js)
 
 let rng = mulberry32(42300);
 export function setRng(r) { rng = r; }
@@ -70,7 +76,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   miners: { day: 0.8, night: 0.2 },
   hunter: { day: 0.7, night: 0 },
   hoops: { day: 0.75, night: 0.2, cap: 1 },
-  pool: { day: 0.5, night: 0.9, cap: 1 },
+  pool: { day: 0, night: 0, cap: 1 },   // (the chance: by the table - rules.js POOL_NPC)
   diners: { day: 0.85, night: 0.6, cap: 2 },
   shoppers: { day: 0.8, night: 0.45, cap: 3 },
   skaters: { day: 0.85, night: 0.4, cap: 1 },
@@ -260,9 +266,9 @@ export function spotsOf(map) {
   }
   // (and down Southside's passages between the sheds, against a back wall - shared/world3-lots.js diceSpots, GM8)
   for (const q of map.diceSpots || []) if (walkable(map, q.x, q.y) && clear(q.x, q.y, 400)) { list.push({ k: 'dice', x: q.x, y: q.y, a: q.a, ix: q.ix, iy: q.iy, wild: false }); taken.push({ x: q.x, y: q.y }); }
-  // pool at the Rusty Spur (its bar room's table: where client/art2/game/statics.js roadhouseRoom draws it)
-  const pt = poolTable(map);
-  if (pt) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
+  // pool at the tables out in the world: the Rusty Spur's (its bar room's, where client/art2/game/statics.js roadhouseRoom
+  // draws it), a bar's (pooltables.js)
+  for (const pt of tablesOf(map)) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
   // eating at the food places' tables (booths), the cook at the kitchen line (IN8: shared/foodrooms.js lays them out, as the art draws them)
   for (const b of map.buildings || []) if (b && b.walkIn) for (const u of b.walkIn.units) {
     const L = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null;
@@ -289,17 +295,6 @@ export function spotsOf(map) {
   S = { list, cells };
   SPOTS.set(map, S);
   return S;
-}
-// the Rusty Spur's pool table { x0, y0, x1, y1, cx, cy } in world px, or null: the bar room's layout as roadhouseRoom
-// (client/art2/game/statics.js) draws it - one section, the floor in front of the bar, the table 30% along it
-export function poolTable(map) {
-  const R = map.roadhouse, b = R && map.buildings[R.b], wi = b && b.walkIn, u = wi && wi.units.find((q) => q.kind === 'roadhouse');
-  if (!u) return null;
-  const ox = b.tx * TILE, oy = b.ty * TILE, ux0 = (Math.max(u.x0, b.tx) - b.tx) * TILE, ux1 = (Math.min(u.x1, b.tx + b.tw - 1) - b.tx + 1) * TILE;
-  const Ya = (u.counterRow - b.ty) * TILE + 44, Yb = (wi.y1 - b.ty + 1) * TILE - 6, mid = (Ya + Yb) / 2, x0 = ux0 + 36, W = ux1 - ux0 - 72;
-  if (Yb - Ya < 60 || W < 300) return null;
-  const tx = ox + Math.round(x0 + W * 0.3), ty = oy + Math.round(mid - 22);
-  return { x0: tx, y0: ty, x1: tx + 100, y1: ty + 52, cx: tx + 50, cy: ty + 26 };
 }
 export function spotsNear(map, x, y, r) {
   const S = spotsOf(map), out = [];
@@ -397,10 +392,10 @@ function members(s) {
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.35) out.push({ x: s.x + 2, y: s.y + 22, a: -Math.PI / 2, arche: 'casual', chat: true });
-  } else if (s.k === 'pool') {      // the one shooting bent over the table, the other waiting at its end, cue up; watchers
-    const T = s.table;
-    out.push({ ...poolSpot(T, 0), arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
-    out.push({ x: T.x1 + 16, y: T.cy + 8, a: Math.PI, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 1, pp: 'cueup' });
+  } else if (s.k === 'pool') {      // the breaker bent over the cue at the head of the table, the other off its far end, cue up; watchers
+    const T = s.table, b = poolnpc.breakSpot(T), w0 = { x: T.x1 + 18, y: T.cy + 8, a: Math.PI };
+    out.push({ x: b.x, y: b.y, a: b.a, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
+    out.push({ ...w0, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 1, pp: 'cueup' });
     const w = 1 + (rng() < 0.4 ? 1 : 0);
     for (let i = 0; i < w; i++) { const x = T.x0 - 14 - i * 12, y = T.y1 + 10 + i * 8; out.push({ x, y, a: Math.atan2(T.cy - y, T.cx - x), arche: rng() < 0.5 ? 'hustler' : 'casual', watch: true }); }
   }
@@ -413,14 +408,6 @@ function hoopSpot(s, i, n, turn = 0) {
   let x = s.rim.x + Math.cos(a) * d, y = s.rim.y + Math.sin(a) * d;
   const C = s.court; x = Math.max(C.x0 + 8, Math.min(C.x1 - 8, x)); y = Math.max(C.y0 + 8, Math.min(C.y1 - 8, y));
   return { x, y, a: Math.atan2(s.rim.y - y, s.rim.x - x) };
-}
-// a shooter's place at the pool table (k: which shot), facing across it: the long sides and the ends
-function poolSpot(T, k) {
-  const j = k % 6, f = [0.3, 0.7, 0.5, 0.25, 0.75, 0.5][j];
-  if (j < 2) return { x: T.x0 + 100 * f, y: T.y1 + 9, a: -Math.PI / 2 };
-  if (j === 2) return { x: T.x0 - 9, y: T.cy, a: 0 };
-  if (j < 5) return { x: T.x0 + 100 * f, y: T.y0 - 9, a: Math.PI / 2 };
-  return { x: T.x1 + 9, y: T.cy - 6, a: Math.PI };
 }
 // the car parked in the driveway (no one in it), or null
 function carAt(world, s) {
@@ -477,7 +464,7 @@ export function fill(world, s, opts = {}) {
     const b = world.add({ id: world.newId(), kind: K.BALL, x: h.x, y: h.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'pickup', cx: -1, cy: -1 });
     Object.assign(g, { ball: b.id, hold: 0, phase: 'dribble', t0: world.time, until: world.time + 1 + rng() * 2, turn: 0, spot: s });
   }
-  if (s.k === 'pool') Object.assign(g, { turn: 0, shot: 0, until: world.time + 6 + rng() * 5, table: s.table });
+  if (s.k === 'pool') { g.table = s.table; poolnpc.begin(world, g, rng); }   // (a real game on the table: poolnpc.js)
   A.set(s.id, g);
   return g;
 }
@@ -526,18 +513,6 @@ function stepPickup(world, g) {
   b.z = Math.max(0, u < 0.5 ? 22 * Math.sin(u * 2 * Math.PI) : 26 * Math.sin((u - 0.5) * Math.PI) * (1 - (u - 0.5)));
   b.a += 0.2;
   if (u >= 1) { g.phase = 'dribble'; g.t0 = now; g.until = now + 1.2 + rng() * 2.4; }
-}
-// ---- pool: the turn passes; the next one goes round the table to the shot, the other stands back with his cue up -----------
-function stepPool(world, g) {
-  if (world.time < g.until) return;
-  const T = g.table, ps = g.ids.map((i) => world.get(i)).filter((e) => e && !e.removed && !e.dead && e.npc && e.npc.act && e.npc.act.pool >= 0);
-  if (ps.length < 2) return;
-  g.until = world.time + 6 + rng() * 6; g.turn ^= rng() < 0.7 ? 1 : 0; g.shot++;   // (a miss: the turn passes; potted one: again)
-  for (const e of ps) {
-    const a = e.npc.act, mine = a.pool === g.turn;
-    const q = mine ? poolSpot(T, g.shot + Math.floor(rng() * 3)) : { x: T.x1 + 16, y: T.cy + 8, a: Math.PI };
-    Object.assign(a, { x: q.x, y: q.y, a: q.a, gt: mine ? 'cue' : null, pp: mine ? null : 'cueup' });
-  }
 }
 // hold the activity's pose and prop (on: at the spot; off: away from it - walking back, gone off)
 // someone off an activity for good (a street dice game broken up: streetdice.js): the pose and the prop put down
@@ -603,7 +578,7 @@ export function update(world) {
   // every tick: away from their spot (running from trouble, stopped to watch it), the pose and the prop are put down -
   // nobody sits in mid air
   for (const g of A.values()) {
-    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') stepPool(world, g);
+    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng);
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
@@ -637,9 +612,9 @@ function fillRound(world) {
     for (const s of spotsNear(world.map, a.x, a.y, ACT_NEAR)) {
       if (A.has(s.id) || now < (rest.get(s.id) || 0) || (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2)) continue;   // (not the whole street washing its cars at once)
       if (anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;
-      const P = KINDS[s.k];
+      const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
       if (rain && RAIN_OFF.has(s.k)) continue;
-      if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + 120 + rng() * 180); continue; }   // (not today: try again later)
+      if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
       kinds[s.k] = (kinds[s.k] || 0) + 1;
       if (++have >= ACT_MAX) break;

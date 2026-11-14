@@ -450,6 +450,8 @@ const NOSIGN = new Set(['BUILDING', 'RESIDENCE', 'APARTMENTS', 'VILLA', 'SHACK',
 const clean = (t, n = 22) => {
   t = String(t || '').toUpperCase().replace(/[/:]/g, '-').replace(/[^A-Z0-9 &'!$+.-]/g, ' ').replace(/\s+/g, ' ').trim();
   if (t.length <= n) return t;
+  const dash = t.indexOf(' - ');   // (a name too long with a branch after a dash: the name alone - FIRST PIXEL BANK, not FIRST PIXEL BANK - OLD)
+  if (dash >= 4 && dash <= n) return t.slice(0, dash);
   const cut = t.slice(0, n + 1), sp = Math.max(cut.lastIndexOf(' '), cut.lastIndexOf('-'));
   return (sp >= n * 0.5 ? cut.slice(0, sp) : t.slice(0, n)).replace(/[ &.-]+$/, '');
 };
@@ -4737,12 +4739,11 @@ function roadhouseRoom(u, r, px0_) {
   const jx = x0 + 52;
   slab(jx, jx + 22, Ya, Ya + 14, 34, wood, wood);
   for (let x = jx + 3; x < jx + 19; x++) for (let v = 10; v < 30; v++) px(x, Ya + 14, v, [[255, 120, 60], [255, 210, 80], [90, 200, 255], [255, 90, 200]][((v >> 2) + (x >> 3)) & 3], [0, 1, 0]);
-  // the pool table: green felt in a wooden rim on legs, a cue across it
+  // the pool table: green felt in a wooden rim on legs - its balls drawn live over it, where they lie and rolling
+  // (client/poolview.js: the game on it, the NPCs' or a player's - server/systems/pooltables.js)
   const px0 = x0 + W * 0.3, py0 = mid - 22;
   slab(px0, px0 + 100, py0, py0 + 52, 20, wood, wood);
   for (let Y = py0 + 5; Y < py0 + 47; Y++) for (let x = px0 + 5; x < px0 + 95; x++) px(x, Y, 21, felt[(x + Y) % 9 === 0 ? 1 : 2], [0, 0, 1]);
-  for (let k = 0; k < 60; k++) px(px0 + 20 + k, py0 + 16 + k * 0.25, 22, wood[4], [0, 0, 1]);
-  for (const [bx, by, c] of [[px0 + 70, py0 + 20, [236, 230, 220]], [px0 + 60, py0 + 30, [220, 60, 50]], [px0 + 64, py0 + 34, [240, 200, 60]], [px0 + 56, py0 + 26, [40, 40, 50]]]) for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) px(bx + dx, by + dy, 22, c, [0, 0, 1]);
   // the arm-wrestling table: a small stout table, a stool either side
   const ax = x0 + W * 0.62;
   slab(ax, ax + 26, mid - 12, mid + 12, 22, wood, wood);

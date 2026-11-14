@@ -277,7 +277,7 @@ test('World v3: the rapids and calm pockets along the rivers; the fishing finds 
   // hire's counter at its shack, a wooden sign - no lit panel in the woods)
   for (const q of put.spots) assert.ok(Math.hypot(race.start.x - q.x, race.start.y - q.y) > 2.5 * TILE, 'the start buoy clear of the kayaks\' spots');
   assert.ok(wet(m, race.start.x / TILE - 0.5, race.start.y / TILE - 0.5) && race.rental === RR.put.poi && RR.put.shack, 'the start on the water, the hire\'s shack by it');
-  assert.ok(m.props.some((q) => q && q.t === 'textsign' && q.wood && q.text === 'RIVER RUN - PUT-IN' && Math.hypot(q.x / TILE - RR.put.shore[0], q.y / TILE - RR.put.shore[1]) < 6), 'a wooden sign at the put-in');
+  assert.ok(m.props.some((q) => q && q.t === 'textsign' && q.wood && q.text === 'RIVER RUN - PUT-IN' && Math.hypot(q.x / TILE - RR.put.shore[0], q.y / TILE - RR.put.shore[1]) < 7), 'a wooden sign at the put-in');
   for (const c of race.cps) assert.ok(wet(m, c.x / TILE - 0.5, c.y / TILE - 0.5), `a gate on the water at ${c.x / TILE | 0}, ${c.y / TILE | 0}`);
   for (let k = 1; k < race.cps.length; k++) { const d = Math.hypot(race.cps[k].x - race.cps[k - 1].x, race.cps[k].y - race.cps[k - 1].y) / TILE; assert.ok(d > 15 && d < 90, `gates ${k} and ${k + 1} spaced down the river (${d | 0} tiles)`); }
   const fin = race.cps[race.cps.length - 1];

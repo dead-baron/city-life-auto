@@ -61,9 +61,16 @@ export function strikeCue(balls, aim, power) {
 }
 // a shot played out to the end: which balls went down (in order), the first ball the cue ball touched, how long it took
 export function playShot(balls, aim, power) {
+  strikeCue(balls, aim, power);
+  return playOut(balls);
+}
+// the cue ball's velocity off the cue, settled for the wire ([vx, vy] in px/s to 0.001): what a shot out in the world
+// sends (no Math.cos on the page - engines differ in its last bit; the rest is plain arithmetic and sqrt)
+export function cueVel(aim, power) { const sp = MIN_SP + Math.max(0, Math.min(1, power)) * (MAX_SP - MIN_SP); return [qz(Math.cos(aim) * sp, 1000), qz(Math.sin(aim) * sp, 1000)]; }
+// the table played out to rest from the balls as they are (the cue ball already moving)
+export function playOut(balls) {
   const potted = [];
   let first = -1, t = 0;
-  strikeCue(balls, aim, power);
   while (t < 30 && physics(balls, STEP, (b) => potted.push(b.n), (a, b) => { if (first < 0 && (a.n === 0 || b.n === 0)) first = a.n === 0 ? b.n : a.n; })) t += STEP;
   for (const b of balls) { b.vx = 0; b.vy = 0; }
   return { potted, first, secs: t };
@@ -129,4 +136,46 @@ export function cpuShot(balls, gp, rng, skill = 0.6) {
   }
   const off = (rng() - 0.5) * 0.09 * (1.1 - skill);
   return { aim: best.aim + off, power: Math.max(0.28, Math.min(0.92, 0.2 + best.d / 330 + (rng() - 0.5) * 0.1)) };
+}
+
+// ---- a table out in the world (the Rusty Spur's, a bar's: server/systems/pooltables.js; drawn by client/poolview.js) ----
+// The same game on the bar's own table, for everyone near to see: the felt as the art draws it, f = [x0, y0, x1, y1, z]
+// in world px (z its height: drawn z px up the screen), this screen's table (T) laid over it. A shot goes out as the
+// balls where they lie, the aim and the power - the page plays it out with the same physics (sqrt and arithmetic only:
+// the same in every engine) from the same numbers: the balls settled to 0.01 px and the aim to 1e-4 before every shot.
+export const qz = (v, k = 100) => Math.round(v * k) / k;
+export function settle(balls) { for (const b of balls) { b.x = qz(b.x); b.y = qz(b.y); b.vx = 0; b.vy = 0; } return balls; }
+// on the wire: [n, x, y, ...] the balls still on the table, in the table's order (the physics' order: what it plays)
+export function packBalls(balls) { const o = []; for (const b of balls) if (!b.in) o.push(b.n, qz(b.x), qz(b.y)); return o; }
+export function unpackBalls(a) {
+  const out = [];
+  for (let i = 0; i + 2 < a.length; i += 3) out.push({ n: a[i], x: a[i + 1], y: a[i + 2], vx: 0, vy: 0, in: false });
+  if (!out.length || out[0].n !== 0) out.unshift({ n: 0, x: HEAD.x, y: HEAD.y, vx: 0, vy: 0, in: true });   // (the cue ball first, always: strikeCue)
+  return out;
+}
+// a table nobody's playing: a few balls left where the last game left them (by the table's key)
+export function idleBalls(seed = 0) {
+  let h = (seed | 0) * 2654435761 >>> 0;
+  const r = () => { h = (h + 0x6d2b79f5) >>> 0; let t = Math.imul(h ^ (h >>> 15), 1 | h); t ^= t + Math.imul(t ^ (t >>> 7), 61 | t); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const out = [{ n: 0, x: T.x0 + 40 + r() * 60, y: T.y0 + 20 + r() * 70, vx: 0, vy: 0, in: false }];
+  for (const n of [3, 8, 11, 6, 14]) { if (r() < 0.25) continue; out.push({ n, x: T.x0 + 90 + r() * 110, y: T.y0 + 12 + r() * 88, vx: 0, vy: 0, in: false }); }
+  return out;
+}
+// the table's point (x, y) on the felt in world px, and a heading on the table as a heading in the world
+export function feltPt(f, x, y) { return { x: f[0] + (x - T.x0) / (T.x1 - T.x0) * (f[2] - f[0]), y: f[1] + (y - T.y0) / (T.y1 - T.y0) * (f[3] - f[1]) }; }
+export function feltDir(f, aim) { const ux = Math.cos(aim) * (f[2] - f[0]) / (T.x1 - T.x0), uy = Math.sin(aim) * (f[3] - f[1]) / (T.y1 - T.y0), l = hyp(ux, uy) || 1; return { x: ux / l, y: uy / l }; }
+// where the shooter stands for a shot along aim: behind the cue ball, back along the line, just off the rail (rim: the
+// table's rim { x0, y0, x1, y1 } in world px, off px out from it), facing down the line
+export function standAt(f, rim, cue, aim, off = 13) {
+  const c = feltPt(f, cue.x, cue.y), u = feltDir(f, aim);
+  const tx = u.x > 1e-6 ? (c.x - (rim.x0 - off)) / u.x : u.x < -1e-6 ? ((rim.x1 + off) - c.x) / -u.x : 1e9;
+  const ty = u.y > 1e-6 ? (c.y - (rim.y0 - off)) / u.y : u.y < -1e-6 ? ((rim.y1 + off) - c.y) / -u.y : 1e9;
+  const t = Math.min(tx, ty);
+  return { x: c.x - u.x * t, y: c.y - u.y * t, a: Math.atan2(u.y, u.x) };
+}
+// the one waiting his turn: back off the far end from the shooter, his cue up
+export function waitAt(rim, shooter) {
+  const right = !shooter || shooter.x < (rim.x0 + rim.x1) / 2;
+  const x = right ? rim.x1 + 18 : rim.x0 - 18, y = (rim.y0 + rim.y1) / 2 + 8;
+  return { x, y, a: right ? Math.PI : 0 };
 }
