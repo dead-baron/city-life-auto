@@ -187,6 +187,7 @@ function launchCall(k, a) {
     else if (k === 'chatbtn') { if (!topOverlay()) L.chat.toggle(); }
     else if (k === 'emotes') { if (!topOverlay()) L.chat.emotes(); }
     else if (k === 'app') { if (topOverlay() === 'phone' && phone.screen === 'msgs') L.chat.renderApp(a.el, a.api); }
+    else if (k === 'emoteapp') { if (topOverlay() === 'phone' && phone.screen === 'emotes') L.chat.emoteApp(a.el, a.api); }
     else if (k === 'account') openSignIn();
   }).catch((e) => { launchP = null; console.warn('[launch]', e); });
 }
@@ -470,6 +471,7 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
+    case 'dscene': dirScene(m); break;   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
     case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
@@ -636,6 +638,7 @@ function fixedStep() {
   const spec = !!(S.spec && S.spec.on);
   if (DIR && !inOverlay) DIR.pad(input.padAxes, dtFix);
   if (input.menuBack && !inOverlay && S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (B: the chat sheet away, as Esc and its ✕)
+  if (input.menuBack && !inOverlay && S.launch && S.launch.chat.emotesUp) S.launch.chat.closeEmotes();   // (and the emote picker)
   if (input.menuBack && !inOverlay && wpick.open) wpick.close();   // (and the weapon picker)
   if (spec && !inOverlay) { S.spec.pad(input.padAxes); if (input.menuBack) exitSpectate(); if (input.padX) specSave(); if (input.padY) specPanel(); }
   if (spec) { /* the free camera has the pad */ } else if (!inOverlay && input.padStart && S.playing) openHub('pause');
@@ -1664,6 +1667,8 @@ initInput(canvas, {
     if (k === 'KeyT' && S.playing && !topOverlay() && !S.practice) { launchCall('chat'); return; }   // (T: talk - client/chat.js)
     if (k === 'Escape' && S.launch && S.launch.chat.isOpen && !topOverlay()) { S.launch.chat.close(); return; }   // (the chat sheet up, its line not in use: Esc closes it)
     if (inCell() && !topOverlay() && (k === 'KeyB' || k === 'Enter')) { payBail(); return; }
+    if (k === 'Escape' && S.launch && S.launch.chat.emotesUp) { S.launch.chat.closeEmotes(); return; }   // (the emote picker up: Esc closes it)
+    if (k === 'KeyB' && S.playing && !topOverlay() && !S.practice && !(S.me && S.me.dead)) { launchCall('emotes'); return; }   // (B: the emotes - client/emotes.js)
     const deathUp = S.playing && S.me && S.me.dead && !topOverlay();   // (the choices only take keys once they're showing)
     if (deathUp && k === 'Escape' && !S.hud.menuOpen && S.hud.deathBack()) return;   // (folds them away to watch, and back)
     if (deathUp && !(S.hud && S.hud.deathRevealed)) { if (['KeyH', 'KeyJ', 'KeyC', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].includes(k)) return; }
@@ -1790,9 +1795,14 @@ for (const ov of document.querySelectorAll('.overlay')) {
 // ---- the cinematic mode (client/director.js, loaded the first time: F2 a clean screen, F4 its panel, F8 a picture) -
 let DIR = null, dirP = null;
 const dtFix = 1 / 60;
+function dirScene(m) {
+  if (DIR) { DIR.script(m); return; }
+  if (m.off) return;
+  cine(null).then(() => { if (DIR) DIR.script(m); });
+}
 function cine(k) {
-  (dirP ||= import('./director.js').then((m) => { DIR = m.makeDirector(S, { input, $, send, selfPos, size: () => [W, H], toast: (t, c) => S.hud.toast(t, c), grab: (fn) => { S.cineGrab = fn; } }); }).catch((e) => { dirP = null; console.warn('[director]', e); }))
-    .then(() => { if (DIR) DIR.key(k, true); });
+  return (dirP ||= import('./director.js').then((m) => { DIR = m.makeDirector(S, { input, $, send, selfPos, size: () => [W, H], toast: (t, c) => S.hud.toast(t, c), grab: (fn) => { S.cineGrab = fn; } }); }).catch((e) => { dirP = null; console.warn('[director]', e); }))
+    .then(() => { if (DIR && k) DIR.key(k, true); });
 }
 // ---- spectator (debug menu): a free camera over the whole city ----------------------------------
 // Your character stays where it is (made invincible on the server); the camera flies anywhere. The
@@ -1987,6 +1997,8 @@ const phoneCtx = {
   msgsDot: () => !!S.chatDot,
   chatApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No messages offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('app', { el, api: { refocus: (start) => { if (topOverlay() === 'phone') { if (start) ovFocus = startFocus(); focusOverlay(); } }, title: (t) => phoneCtx.title(t) } }); },
   chatBack: () => !!(S.launch && S.launch.chat.appBack()),
+  // the Emotes screen (client/emotes.js renderApp, with the launch code): one tap emotes and puts the phone away
+  emoteApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No emotes offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('emoteapp', { el, api: { refocus: () => { if (topOverlay() === 'phone') { ovFocus = startFocus(); focusOverlay(); } }, close: () => closeHub() } }); },
   nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
@@ -2050,6 +2062,7 @@ function openHub(tab = 'pause', app, fromPause = false) {
   if (wpick.open) wpick.close();
   if (top !== id) sfx('click', 0.5);
   if (S.launch && S.launch.chat.isOpen) S.launch.chat.close();   // (the chat sheet gives way to the hub)
+  if (S.launch && S.launch.chat.emotesUp) S.launch.chat.closeEmotes();   // (and the emote picker)
   if (tab === 'pause') hubFromPause = false;
   else if (fromPause || top === 'pause') hubFromPause = true;
   else if (!top || !HUB_IDS.includes(top)) hubFromPause = false;   // (straight in from the game: back goes back to it)
@@ -2142,6 +2155,7 @@ const hubCtx = {
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
 $('hub-back').onclick = () => hubBack();
 $('hub-close').onclick = () => closeHub();
+$('pz-close').onclick = () => closeHub();   // (the pause list's own close: it hides the hub's bar)
 $('hub').addEventListener('pointerdown', (e) => { if (e.target === $('hub')) closeHub(); });   // (a desktop's big panel: a click round it closes it)
 // Surrender (the hub's Settings > Help): press twice - dying (or, wanted, turning yourself in) isn't done by accident
 function surrender(b) {
@@ -2277,11 +2291,10 @@ for (const id of ['t-fs', 's-fs']) $(id).onclick = () => toggleFullscreen();
 $('b-map').onclick = () => { if (S.playing) hubToggle('map'); };
 $('b-phone').onclick = () => { if (S.playing) hubToggle('phone'); };
 $('b-chat').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };   // (chat: client/chat.js - the sheet, or away again)
-// the thumb's chat button (touch): a tap the sheet, held the emotes (client/touchslots.js LONG_MS's half second)
-{ const b = $('b-talk'); let t = 0, held = false;
-  b.addEventListener('pointerdown', (e) => { e.stopPropagation(); held = false; clearTimeout(t); t = setTimeout(() => { held = true; if (S.playing && !S.practice) launchCall('emotes'); }, 450); });
-  b.addEventListener('pointerup', () => clearTimeout(t)); b.addEventListener('pointercancel', () => clearTimeout(t));
-  b.onclick = () => { if (!held && S.playing && !S.practice) launchCall('chatbtn'); held = false; }; }
+// the thumb's chat button (touch): a tap the sheet; the emote button beside it: a tap the emote picker (client/emotes.js)
+$('b-talk').onclick = () => { if (S.playing && !S.practice) launchCall('chatbtn'); };
+$('b-emote').onclick = () => { if (S.playing && !S.practice) launchCall('emotes'); };
+for (const id of ['b-talk', 'b-emote']) $(id).addEventListener('pointerdown', (e) => e.stopPropagation());   // (not the move stick's touch)
 $('b-dev').onclick = () => { if (!S.playing) return; sfx('click', 0.6); if (topOverlay() === 'dev') closeOverlay('dev'); else openDebug(); };
 $('b-menu').onclick = () => { if (!S.playing) return; if (inHub()) closeHub(); else openHub('pause'); };
 $('ph-back').onclick = () => phone.back();
@@ -3050,7 +3063,15 @@ let last = performance.now(), fpsAcc = 0, fpsN = 0, pingAt = 0;
 // the error goes to the server once (reportError: /clienterrors).
 function frame(nowMs) {
   try { frameBody(nowMs); } catch (e) { reportError('frame', e); }
-  requestAnimationFrame(frame);
+  if (!CAP) requestAnimationFrame(frame);
+}
+// The capture (tools/capture.mjs; ?capture in the address): no frames of its own - the driver steps them, each at its
+// own time (window.__capFrame(ms): 60 a second of the page's clock, Playwright's), and waits while the art is still
+// coming in for what's on screen (__capBusy) before it takes the picture
+const CAP = /[?&]capture\b/.test(location.search);
+if (CAP) {
+  window.__capFrame = (ms) => { try { frameBody(ms); } catch (e) { reportError('frame', e); } };
+  window.__capBusy = () => { const w = S.art2; if (!w) return 'noart'; const o = w.warmth(); if (!o) return 'warmth'; if (!o.ok) return 'notok'; if (o.scrHave < o.scr) return `chunks ${o.scrHave}/${o.scr}`; if (o.spr > 0) return `sprites ${o.spr}`; return ''; };
 }
 function frameBody(nowMs) {
   diagFrame(nowMs - last);
@@ -3287,6 +3308,7 @@ function prepFrame(dt) {
   const spdPull = 1 + Math.min(S.zoMax ?? 0.5, speed / 1300);   // (flying, the speed's pull-back is held to the same cap: a helicopter flat out is 1.5x of it)
   const targetZoom = baseZoom() / Math.max(pull, S.me && S.me.ride ? (S.me.ride.k === 'slide' ? SLIDE_PULL : RIDE_PULL) : 1, flying ? Math.min(S.airMax, spdPull) : spdPull, airPull, S.dinView ? S.dinView.pull : 1, S.camPull || 1) * (DIR ? DIR.zoomK : 1);
   S.cam.zoom += (targetZoom - S.cam.zoom) * (1 - Math.exp(-(downFor ? 0.8 : 2.5) * dt));
+  if (DIR && DIR.snapZoom) { S.cam.zoom = targetZoom; DIR.snapZoom = false; }   // (a scene's cut: the new shot's zoom at once - client/director.js)
   S.cam.tz = targetZoom; // (the new renderer bakes ahead for the wider view it is zooming out to)
   // look-ahead follows the (smoothed) velocity, not the raw heading, so small steering wobbles
   // and server corrections don't shake the camera
@@ -3729,6 +3751,7 @@ function drawOverlays(F, v2) {
   tunnelsTop(F);   // the hills over the tunnels, their portals, the inside of the one you're in (client/tunnels.js)
   // name tags + public flares + rumor marker
   if (!clean) drawWorldLabels(F.peds, F.vehs, now, z);
+  else if (DIR && DIR.tags) drawWorldLabels(F.peds, F.vehs, now, z, true);   // (a capture's clean screen: the players' name tags still over them - client/director.js)
   if (!clean && S.me && S.me.job && S.me.job.veh && F.view) drawJobTruck(S.me.job.veh, F.view, now, z, F.vehs);
   else if (!clean && S.me && S.me.car && F.view && !(DIR && DIR.hideMe)) drawMyCar(S.me.car, F.view, now, z, F.vehs);   // (your starter car, parked: server starter.js marker)
   if (!clean && S.me && S.me.job && F.view) { if (S.jobWay) S.jobWay.drawJobWay(g, S, F.view, sp, now, z); else if (!S.jobWayAsk) { S.jobWayAsk = 1; import('./jobway.js').then((m) => { S.jobWay = m; }).catch(() => { S.jobWayAsk = 0; }); } }   // (the job's arrow at the screen's edge, its search circle: client/jobway.js)
@@ -5152,12 +5175,13 @@ function dimHex(c) {
   dimMemo.set(c, d);
   return d;
 }
-function drawWorldLabels(peds, vehs, now, z) {
+function drawWorldLabels(peds, vehs, now, z, namesOnly = false) {
   const fs = 12 / z;
   g.textAlign = 'center';
   g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`;
   for (const p of peds) {
     if (p.flags & PF.INVEH && !p.d.pl) continue;
+    if (namesOnly && !(p.d.pl && p.d.n)) continue;
     let py = p.ry - (p.rz ? liftOf(p.rz) : 0); // drawn up on the deck when on the highway
     if (p.flags & PF.INVEH) py = tagY(p, vehs, py, z);
     // (clear above the head at any zoom: the head's top is ~46 world px up; then a gap and half the skull, in screen px)
@@ -5186,6 +5210,7 @@ function drawWorldLabels(peds, vehs, now, z) {
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }
     }
   }
+  if (namesOnly) return;
   const me = S.me;
   if (me && me.rumor) {
     const r = me.rumor;
@@ -5617,8 +5642,8 @@ function drawRain(dt, sky) {
 // renderer waits for its art first.
 // (the bake workers are made now, so their code loads while the city is built: art2/game/pool.js warmPool)
 if (ART2_WANTED && worldCv) import('./art2/game/pool.js').then((P) => P.warmPool({ lowMem: LOW_MEM, artPx: /[?&]artpx=1\b/.test(location.search) ? 1 : 2 })).catch(() => {});
-if (ART2_WANTED) { connect(); requestAnimationFrame(frame); }
-else ensureV1Art().finally(() => { connect(); requestAnimationFrame(frame); });
+if (ART2_WANTED) { connect(); if (!CAP) requestAnimationFrame(frame); }
+else ensureV1Art().finally(() => { connect(); if (!CAP) requestAnimationFrame(frame); });
 
 // expose for automated playtests / debugging in the console
 window.CLA = { S, send, WEAPONS, load: LOAD, setAccountUi, spectate: (on = true) => (on ? enterSpectate() : exitSpectate()), smash: (i, a = 0) => setPropBroken(i, a, true), wind: (v) => { wind.force = v === undefined || v === null ? null : v; return wind.name; } };

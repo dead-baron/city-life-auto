@@ -38,6 +38,7 @@ export function focusOf(world, p) {
 export const DOWN_ZOOM_OUT = 1.45; // how far the camera has pulled back once you've been down a while (client: main.js)
 export const RIDE_ZOOM_OUT = 1.45; // ...and on the Ferris wheel or up in a balloon (server/systems/rides.js)
 export function viewRect(world, p, out = {}) {
+  if (p.dirCam) return dirRect(p.dirCam, p.view || DEFAULT_VIEW, out);   // (the scene director's camera: director.js)
   const f = focusOf(world, p);
   if (!f) return null;
   if (p.cineF && p.cineF.fid === f.id) return cineRect(f, p.view || DEFAULT_VIEW, out);
@@ -63,12 +64,24 @@ function cineRect(f, v, out) {
   out.vx = vx; out.vy = vy;
   return out;
 }
+// a scene's camera (server/systems/director.js p.dirCam: { x, y, z, vx, vy } - its zoom: below 1 further out): round it,
+// as far out as the page's widest shot of it (tall pages too: the view is the page's own, sent by it)
+const DIR_PAD = 1.25;
+function dirRect(c, v, out) {
+  const k = DIR_PAD / Math.max(0.35, c.z || 1);
+  out.x0 = c.x - v.hw * k; out.x1 = c.x + v.hw * k; out.y0 = c.y - v.hh * k; out.y1 = c.y + v.hh * k;
+  out.vx = c.vx || 0; out.vy = c.vy || 0;
+  return out;
+}
 // Where the cinematic mode's follow scenes have the camera (cinefollow.js p.cineF.eye: { x, y, player }): the world comes
 // alive round them as round a player - the systems that fill the world round the players (traffic.js, npc.js,
 // activities.js, boats.js, wildlife.js) take these with the players' characters.
 export function cineEyes(world) {
   let out = null;
-  for (const p of world.players.values()) if (p.cineF && p.cineF.fid && p.conn) (out ||= []).push(p.cineF.eye);
+  for (const p of world.players.values()) {
+    if (p.cineF && p.cineF.fid && p.conn) (out ||= []).push(p.cineF.eye);
+    if (p.dirCam && p.conn) (out ||= []).push(p.dirCam);   // (a scene's camera: director.js - x, y, player, cine)
+  }
   return out || NONE;
 }
 const NONE = [];

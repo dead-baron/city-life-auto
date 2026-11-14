@@ -19,6 +19,11 @@
 //     harvesting, a train, a plane landing (shared/cinekinds.js), or the tour of them all. The server picks who
 //     (server/systems/cinefollow.js) and moves on when it's over; the camera here follows them, leading the way they go,
 //     the framing changing now and then. N / A the next one, [ ] / LB RB the kind, T the tour.
+// The scene director's scenes (server/systems/director.js, shared/scenes/; the owner, 11-13): started from the panel's
+//   "Director scenes" (dev mode) or the debug menu, or by the capture server - the server says which ({ t: 'dscene' }:
+//   the scene, its clock's first tick, the cast's entities, the place's anchors, when its beats began) and the camera here
+//   flies the script's shots (shared camAt) over what's drawn: the 'script' mode. A capture's ({ cap }) has the clean
+//   screen with the players' name tags (D.tags), your own character out of the picture. Esc gives the camera back.
 // main.js asks it each frame: holds() (the keys are the camera's), cam(cam, dt, tx, ty), zoomK, lt (the time of day's
 // loop time or null), wx (null | 'clear' | 'rain' | 'fog'), sky(sky), hideMe, clean, eye() (where the camera is, when
 // it's off you: the world's window follows it); key(k, down), pad(axes), follow(msg) (the server's { t: 'cinef' }).
@@ -26,6 +31,7 @@ import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
 import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { SHOWCASE, showcaseSpot } from './showcase.js';
+import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, camAt } from '../shared/scenes/index.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
@@ -84,16 +90,19 @@ export function loopOf(mins) {
   return m >= 360 && m < 1200 ? (m - 360) / 840 * DAY_PART_S : DAY_PART_S + (((m - 1200 + 1440) % 1440) / 600) * (DAY_LOOP_S - DAY_PART_S);
 }
 
+// auto: the scene's autoplay script (shared/scenes/: the owner, 11-13 - it plays on its own, an NPC the subject, the camera's
+// moves planned, your character out of it); the panel offers Autoplay beside Play it yourself. More get one by writing the
+// script (a few lines: shared/scenes/autochase.js) and naming it here.
 // The staged scenes (the owner, 10-22: "setup staged scenarios on all the [things] I talked about"): each a run of the
 // debug menu's commands (server/dev.js; '@' ones are this screen's), a pause before each (ms: a teleport lands, the art
 // comes in), then the camera the scene wants. t: the time of day on your screen (minutes), or a server time (st: everyone's
 // clock - the drive-in's shows and the clubs only open after dark there).
 export const SCENES = [
   { g: 'Action', n: 'Police chase downtown', s: [[0, 'place', { n: 'Downtown' }], [2500, 'car', { m: 'sports', in: 1 }], [1500, 'wanted', { n: 3 }]], cam: 'smooth', z: 0.85, note: 'you at the wheel, three stars: drive' },
-  { g: 'Action', n: 'Cops chasing a getaway car', s: [[0, 'place', { n: 'Midtown' }], [2500, 'street', { k: 'chase' }]], cam: 'smooth', z: 0.8 },
-  { g: 'Action', n: 'Street race on the Neon Strip at night', s: [[0, 'place', { n: 'Neon Strip' }], [2500, 'street', { k: 'race' }]], t: 1380, cam: 'smooth', z: 0.8 },
+  { g: 'Action', n: 'Cops chasing a getaway car', auto: 'autochase', s: [[0, 'place', { n: 'Midtown' }], [2500, 'street', { k: 'chase' }]], cam: 'smooth', z: 0.8 },
+  { g: 'Action', n: 'Street race on the Neon Strip at night', auto: 'autorace', s: [[0, 'place', { n: 'Neon Strip' }], [2500, 'street', { k: 'race' }]], t: 1380, cam: 'smooth', z: 0.8 },
   { g: 'Action', n: 'Armored truck run', s: [[0, 'place', { n: 'Downtown' }], [2500, 'street', { k: 'armored' }]], cam: 'smooth', z: 0.85 },
-  { g: 'Action', n: 'Gang shootout in The Yards', s: [[0, 'place', { n: 'The Yards' }], [2500, 'guns', {}], [600, 'godp', {}], [600, 'shootout', {}]], cam: 'smooth', z: 0.9 },
+  { g: 'Action', n: 'Gang shootout in The Yards', auto: 'autoshootout', s: [[0, 'place', { n: 'The Yards' }], [2500, 'guns', {}], [600, 'godp', {}], [600, 'shootout', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Action', n: 'A tanker goes up by a row of cars', s: [[0, 'place', { n: 'Westport Center' }], [2500, 'blast', { k: 'row' }]], cam: 'follow', z: 0.85 },   // (Port Westport's middle is the container stacks: no room for the row)
   { g: 'Action', n: 'A street fight the police break up', s: [[0, 'place', { n: 'Old Town' }], [2500, 'happen', { k: 'fight', cops: 1 }]], cam: 'smooth', z: 1.2 },
   { g: 'Action', n: 'A tank on the boulevard', s: [[0, 'place', { n: 'Midtown' }], [2500, 'car', { m: 'tank', in: 1 }]], cam: 'smooth', z: 0.85 },
@@ -113,7 +122,7 @@ export const SCENES = [
   { g: 'Jobs', n: 'Firefighting', s: [[0, 'firejob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Search and rescue', s: [[0, 'sar', {}]], cam: 'smooth', z: 0.85 },
   { g: 'Jobs', n: 'Coast guard', s: [[0, 'coast', {}]], cam: 'smooth', z: 0.85 },
-  { g: 'Jobs', n: 'Crop dusting', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'duster', in: 1 }]], t: 540, cam: 'smooth', z: 0.8 },
+  { g: 'Jobs', n: 'Crop dusting', auto: 'autodust', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'duster', in: 1 }]], t: 540, cam: 'smooth', z: 0.8 },
   { g: 'Jobs', n: 'Tow truck', s: [[0, 'towjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Bus route', s: [[0, 'busjob', {}]], cam: 'smooth', z: 0.9 },
   { g: 'Jobs', n: 'Harvest with the combine', s: [[0, 'near', { k: 'farm' }], [2500, 'car', { m: 'combine', in: 1 }]], t: 1125, cam: 'smooth', z: 0.9 },
@@ -152,7 +161,7 @@ export const SCENES = [
 ];
 
 export function makeDirector(S, api) {
-  const D = { clean: false, mode: 'follow', zoomK: 1, zi: 3, lt: null, ti: 0, wx: null, wi: 0, box: 0, bi: 0, hideMe: false, noShake: true, smooth: 0.55, hideNames: true };
+  const D = { clean: false, mode: 'follow', zoomK: 1, zi: 3, lt: null, ti: 0, wx: null, wi: 0, box: 0, bi: 0, hideMe: false, noShake: true, smooth: 0.55, hideNames: true, tags: false, snapZoom: false };
   const keys = new Set();
   let axes = null, panel = null, shown = false, x = 0, y = 0, inited = false, target = 0, tour = null, scene = null;
   // the drift (its way and speed kept from one drift to the next), the follow scenes (fs: the server's subject - id, k,
@@ -179,7 +188,10 @@ export function makeDirector(S, api) {
     render();
   }
   let fs = null, fcam = null, near = true, frameAt = 0, missing = 0, padZoomAt = 0, wokeAt = -1e9, bar = null, barKey = '';
-  D.holds = () => D.mode === 'drone' || D.mode === 'tour' || D.mode === 'drift' || D.mode === 'scene';
+  D.holds = () => D.mode === 'drone' || D.mode === 'tour' || D.mode === 'drift' || D.mode === 'scene' || D.mode === 'script';
+  // the scene director's scene on this screen (sct): { sc, seq, tick0, cast { castId: entity id }, anchors, bt (when its
+  // beats began), cap, vel (the cast's smoothed velocities, for the shots' lead), cam (where the camera was), shot }
+  let sct = null;
   D.eye = () => (D.mode === 'follow' || D.mode === 'smooth' || !inited ? null : { x, y });
   // the server's idle clock (players.js idleCheck): the camera flown or the panel used is someone there ({ t: 'cine' }, at
   // most every 20 s); the tour running on by itself is like riding a train ({ t: 'cine', tour: 1 } a minute: the clock
@@ -208,6 +220,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 #cine-shut { right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 68px; height: 68px; border-radius: var(--r3); background: var(--white); border: 4px solid var(--pad-ink); box-shadow: 0 0 0 4px var(--white), 0 4px 0 4px var(--pad-drop); }
 #cine-shut:active { transform: scale(.9); }
 body.cine-on #cine-x, body.touch.cine-on #cine-shut { display: block; }
+body.cine-cap #cine-x, body.cine-cap #cine-shut, body.cine-cap #cine-ctl { display: none !important; }   /* (a capture's frames: nothing of the camera's own on them) */
 body.touch.cine-on #cine-ctl { bottom: max(108px, env(safe-area-inset-bottom)); }
 .touch #cine-panel { right: auto; left: max(12px, env(safe-area-inset-left)); width: min(290px, calc(100vw - 92px)); max-height: calc(100vh - 24px); }
 body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centre is the close button's - the objective waits) */
@@ -267,12 +280,14 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
   function setMode(m, k0 = 'tour') {
     if ((m === 'tour' || m === 'scene') && !dev()) m = 'follow';
+    if (m === 'script' && !sct) m = 'follow';
     const was = D.mode;
     D.mode = m;
     if (was !== 'scene' || m !== 'scene') { x = S.cam.x; y = S.cam.y; }
     inited = true;
     if (m !== 'tour') { if (tour) D.zoomK = ZOOMS[D.zi]; tour = null; fadeTo(0); }
     if (was === 'scene' && m !== 'scene') { api.send({ t: 'cine', f: 'stop' }); fs = null; fcam = null; D.zoomK = ZOOMS[D.zi]; fadeTo(0); }
+    if (was === 'script' && m !== 'script') { if (sct && !sct.cap) api.send({ t: 'dev', c: 'scene', k: 'unwatch' }); if (sct) D.hideMe = !!sct.hadHide; sct = null; D.zoomK = ZOOMS[D.zi]; D.tags = false; }
     if (m === 'tour') startTour();
     if (m === 'target') nextTarget(1);
     if (m === 'drift') { dr.x = x; dr.y = y; dr.vx = Math.cos(dr.a) * DRIFT_SPEEDS[dr.si]; dr.vy = Math.sin(dr.a) * DRIFT_SPEEDS[dr.si]; }
@@ -372,6 +387,16 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (T.t > HOLD_S && T.t - dt <= HOLD_S && !D.clean) api.toast(s.name, 'info');
   }
 
+  // a scene's autoplay (the scene director: server/systems/director.js) - the server starts it at the place nearest you and
+  // tells this screen ({ t: 'dscene' }: D.script); the clean screen
+  function autoplay(id) {
+    if (!dev()) { api.toast('Autoplay runs the debug menu\'s scenes: turn on dev mode first (pause menu - Debug menu).', 'warn'); return; }
+    if (scene && scene.timer) clearTimeout(scene.timer);
+    scene = null;
+    setClean(true);
+    api.send({ t: 'dev', c: 'scene', id });
+  }
+
   // ---- the staged scenes ----
   function runScene(i) {
     const sc = SCENES[i];
@@ -400,6 +425,34 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (c === '@bio') { S.bioForce = extra ? [extra.k, 0.5] : null; return; }
     if (c === '@bolt') { if (S.wx) S.wx.strike((extra && extra.kind) || 'strike'); return; }
     api.send({ t: 'dev', c, ...(extra || {}) });
+  }
+
+  // ---- a recording of this screen (the owner's own computer, its GPU: the scenes at full speed) ----
+  // the world's canvas and the overlay composited each frame into one, captured by the browser's MediaRecorder (VP9 or
+  // H.264 as it offers, a high bit rate) and downloaded as a file when it stops. tools/capture.mjs is the steady,
+  // frame-by-frame way (any machine, any speed); this is the quick one.
+  let rec = null;
+  function toggleRec() {
+    if (rec) { rec.stop(); return; }
+    const [W, H] = api.size(), out = document.createElement('canvas'), dpr = Math.min(2, devicePixelRatio || 1);
+    out.width = Math.round(W * dpr); out.height = Math.round(H * dpr);
+    const c2 = out.getContext('2d');
+    let on = true;
+    const draw = () => { if (!on) return; api.grab((cv, world) => { c2.clearRect(0, 0, out.width, out.height); if (world && !world.classList.contains('hidden')) c2.drawImage(world, 0, 0, out.width, out.height); c2.drawImage(cv, 0, 0, out.width, out.height); }); requestAnimationFrame(draw); };
+    const type = ['video/mp4;codecs=avc1.640033', 'video/webm;codecs=vp9', 'video/webm'].find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+    if (!type || !out.captureStream) { api.toast('This browser can\'t record the screen here.', 'warn'); return; }
+    const chunks = [], mr = new MediaRecorder(out.captureStream(60), { mimeType: type, videoBitsPerSecond: 40e6 });
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = () => {
+      on = false; rec = null; render();
+      const blob = new Blob(chunks, { type }), a = document.createElement('a'), d = new Date();
+      a.href = URL.createObjectURL(blob); a.download = `city-life-auto_${d.toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${type.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 8000);
+    };
+    if (!D.clean) setClean(true);
+    rec = mr; mr.start(1000); draw(); render();
+    if (!D.clean) api.toast('Recording - F4 and stop it in the panel.', 'info');
   }
 
   // ---- the picture ----
@@ -509,16 +562,24 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
         b.innerHTML = `${q.n}${q.at ? '' : ' <small>- not on this map</small>'}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
         if (!q.at) b.disabled = true;
         panel.append(b);
+        if (q.auto && q.at) panel.append(btn(`▶ Autoplay: ${q.n}`, !!(sct && sct.sc.id === q.auto), () => autoplay(q.auto), 'sc'));
       });
     }
+    // the scene director's scripted scenes (server/systems/director.js): started now, at the place nearest you, the camera
+    // on the script's shots; and a recording of this screen while one plays (client/recorder.js, this screen's own frames)
+    panel.append(h('Director scenes'));
+    for (const q of DSCENE_LIST) if (q.g === 'Action') panel.append(btn(`🎬 ${q.n}`, !!(sct && sct.sc.id === q.id), () => autoplay(q.id), 'sc'));
+    if (sct) panel.append(row(btn('⏹ End the scene', false, () => api.send({ t: 'dev', c: 'scene', k: 'stop' }))));
+    panel.append(row(btn(rec ? '⏺ Recording... (stop)' : '⏺ Record this screen', !!rec, () => toggleRec())));
     panel.append(h('Staged scenes'));
     if (!(S.dev || S.devMode)) { const p = document.createElement('div'); p.className = 'tip'; p.textContent = 'These use the debug menu\'s commands - turn on dev mode first (pause menu, Debug menu).'; panel.append(p); }
     let g = '';
     SCENES.forEach((sc, i) => {
       if (sc.g !== g) { g = sc.g; const e = document.createElement('div'); e.className = 'tip'; e.style.color = '#ffd23a'; e.textContent = g; panel.append(e); }
       const b = btn('', false, () => runScene(i), 'sc');
-      b.innerHTML = `${sc.n}${sc.note ? ` <small>- ${sc.note}</small>` : ''}`;
+      b.innerHTML = `${sc.n}${sc.note ? ` <small>- ${sc.note}</small>` : ''}${sc.auto ? ' <small>- play it yourself</small>' : ''}`;
       panel.append(b);
+      if (sc.auto) panel.append(btn(`▶ Autoplay: ${sc.n}`, !!(sct && sct.sc.id === sc.auto), () => autoplay(sc.auto), 'sc'));
     });
   }
   function toggle(on = !shown) {
@@ -619,6 +680,59 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     x = fcam.x; y = fcam.y;
     D.zoomK = ZOOMS[D.zi] * fs.z * fcam.zk;
   }
+  // ---- the scene director's scenes ----
+  const anchorsOf = (a) => { const out = {}; for (const [k, q] of Object.entries(a || {})) out[k] = { x: q[0], y: q[1], a: q[2] || 0 }; return out; };
+  D.script = (m) => {
+    if (m.off) { if (sct && (!m.seq || m.seq === sct.seq)) { const cap = sct.cap; if (D.mode === 'script') setMode('follow'); sct = null; if (!cap && !D.clean) api.toast('The scene is over.', 'info'); } return; }
+    if (sct && m.seq === sct.seq) {   // (more of the same scene: someone new in the cast, a beat begun)
+      if (m.bt) Object.assign(sct.bt, m.bt);
+      if (m.tick0 !== undefined) sct.tick0 = m.tick0;   // (a capture's scene held at its first moment, then let go)
+      if (m.cast) sct.cast = m.cast;
+      if (m.anchors) sct.anchors = anchorsOf(m.anchors);
+      return;
+    }
+    const sc = m.id && DSCENES[m.id];
+    if (!sc) return;
+    sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2 };
+    sct.hadHide = D.hideMe; D.hideMe = true;   // (your own character out of it)
+    if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
+    if (D.mode !== 'script') setMode('script'); else { x = S.cam.x; y = S.cam.y; }
+    if (!D.clean) api.toast(`Scene: ${sc.n}. Esc gives you the camera back.`, 'info');
+  };
+  D.scriptOn = () => !!sct;
+  function castEnt(cid) {
+    const id = sct.cast[cid];
+    let e = id ? S.ents.get(id) : null;
+    if (!e || e.rx === undefined) return null;
+    if (e.kind === K.PED && e.parent) { const v = S.ents.get(e.parent); if (v && v.rx !== undefined && v.kind === K.VEH) e = v; }   // (in a vehicle: the vehicle)
+    return e;
+  }
+  function scriptStep(dt) {
+    if (!sct) return;
+    const t = (S.renderTick - sct.tick0) / 20;
+    // the cast's velocities, smoothed (a shot's lead: where they're going)
+    const k = 1 - Math.exp(-3 * dt);
+    for (const cid of Object.keys(sct.cast)) {
+      const e = castEnt(cid);
+      if (!e) continue;
+      let q = sct.vel.get(e.id);
+      if (!q) { q = { px: e.rx, py: e.ry, vx: 0, vy: 0 }; sct.vel.set(e.id, q); continue; }
+      const ivx = dt > 0 ? (e.rx - q.px) / dt : 0, ivy = dt > 0 ? (e.ry - q.py) / dt : 0;
+      if (Math.hypot(ivx, ivy) < 3000) { q.vx += (ivx - q.vx) * k; q.vy += (ivy - q.vy) * k; }
+      q.px = e.rx; q.py = e.ry;
+    }
+    const ctx = { anchors: sct.anchors, beatAt: (id) => sct.bt[id], ent: (cid) => { const e = castEnt(cid); if (!e) return null; const q = sct.vel.get(e.id); return { x: e.rx, y: e.ry, a: e.ra || 0, vx: q ? q.vx : 0, vy: q ? q.vy : 0 }; } };
+    const c = camAt(sct.sc, Math.max(0, t), ctx, sct.cam);
+    if (!c) return;
+    const tall = (api.size()[1] || 1) > (api.size()[0] || 1);
+    // a cut (or the first shot): there at once; otherwise a light follow over the shot's own path (no jitter from the
+    // interpolation)
+    if (c.i !== sct.shot && c.cut) { x = c.x; y = c.y; D.snapZoom = true; }
+    else { const f = 1 - Math.exp(-6 * dt); x += (c.x - x) * f; y += (c.y - y) * f; }
+    sct.shot = c.i;
+    sct.cam = { x: c.x, y: c.y, z: c.z };
+    D.zoomK = c.z * (tall ? 0.85 : 1);
+  }
   D.sky = (sky) => { if (D.wx === 'clear') { sky.rain = 0; } };
   D.cam = (cam, dt, tx, ty) => {
     // (down: the panel shuts and the camera comes back to you - the death screen's choices take the keys and the screen)
@@ -638,6 +752,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       x = dr.x; y = dr.y;
       if (want !== null && bar && bar.dial) bar.dial.show();
     } else if (D.mode === 'scene') sceneStep(dt);
+    else if (D.mode === 'script') scriptStep(dt);
     else if (D.mode === 'target') {
       const e = S.ents.get(target);
       if (!e || e.rx === undefined) { nextTarget(1); return; }

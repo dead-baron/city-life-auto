@@ -1393,3 +1393,27 @@ export const REPUTATION = {
   vouch: { days: 7 },
   react: { fearExp: 100, keepPx: 120, nodPx: 220, nodS: 60, respectP: 0.04, respectS: 300, respect: [20, 60], wavePx: 150, waveP: 0.12, waveS: 20, ownPx: 700, greetS: 45 },
 };
+
+// The scene director (server/systems/director.js, shared/scenes/; the owner, 2026-11-13): short scripted scenes played
+// in the shared city now and then (live events), and on a private capture server for trailers (CLA_CAPTURE=1, tools/capture.mjs).
+//   live: the switch for all live events - OFF until the lead turns it on (CLA_SCENES=all or a list of scene ids on the
+//     server's environment turns them on there without a code change); each scene's own `on` below as well
+//   everyS: one scene is tried this often (game seconds: [min, max]); maxScenes / maxActors: at once, in the whole world
+//     (the server's budget: every actor a ped or a vehicle stepped each tick)
+//   nearPx: a scene's place this close to a player [min, max] (seen from the street - not in their lap); ftuePx: never
+//     this close to a player still in their first-time experience (or within ftueS seconds of their arrival)
+//   goneS: a live scene nobody is within farPx of for this long is over, its people back to the city's own
+//   handPx: a player this close aiming at an actor, or standing in an actor's way blockS seconds, takes them off the script
+//   scenes: each scene's switch, how likely it is picked (weight) and how soon it may play again anywhere (cooldownS)
+export const DIRECTOR = {
+  live: false,
+  everyS: [480, 1080], maxScenes: 1, maxActors: 30,
+  nearPx: [700, 2600], ftuePx: 1600, ftueS: 600,
+  goneS: 25, farPx: 3400,
+  handPx: 420, blockS: 2.5,
+  scenes: {
+    bikerbrawl: { on: false, weight: 1, cooldownS: 2400 },
+    tankerhideout: { on: false, weight: 1, cooldownS: 3600 },
+    helipursuit: { on: false, weight: 1, cooldownS: 2400 },
+  },
+};

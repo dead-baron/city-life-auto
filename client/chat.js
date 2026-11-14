@@ -5,13 +5,16 @@
 // - the feed: the newest lines in the HUD's top-left column (#hud-tl; bottom left on a desktop), one on a phone, two on a
 //   desktop, each fading on its own;
 // - the chat sheet: T on a keyboard, the HUD's chat button (the top-right row: phone, map, chat, menu) - the channel
-//   (Near / Crew / Faction), the log, quick lines and emotes as chips, the line and SEND; on a phone it sits on top of
+//   (Near / Crew / Faction), the log, quick lines as chips, the line and SEND; on a phone it sits on top of
 //   the on-screen keyboard (visualViewport) and the touch controls hide while it's up; Esc / the X closes it;
 // - the phone's Messages app (renderApp): threads with the people you've met and your crew, a reply line and quick
-//   replies, and the Near / Crew / Faction quick lines and emotes - a pad's way into chat (D-pad left, the phone);
+//   replies, and the Near / Crew / Faction quick lines - a pad's way into chat (D-pad left, the phone);
+// - the emotes (client/emotes.js, made here): their picker - apart from chat since 2026-11-13, the emote button by the
+//   chat button, B on a keyboard - and the emoji over the head of whoever emoted; the log says it ("Ann waves")
 // - Settings > Chat (settings): the channel switches, who's muted and blocked;
 // - a name in the log or a bubble (while the sheet is up): mute, block, report (shared/chatdefs.js REPORT_WHY).
-// createChat(ctx) -> { onMessage(m), open(ch?), close(), toggle(), say(ch, text, to?), emote(e), renderApp(el, api),
+// createChat(ctx) -> { onMessage(m), open(ch?), close(), toggle(), say(ch, text, to?), emote(e), emotes() (the picker),
+//   emotesUp, closeEmotes(), emoteApp(el, api) (the phone's Emote screen), renderApp(el, api),
 //   appBack(), settings(el), unread, isOpen, state, lines, contactList }
 // ctx: { send(obj), canvas, toast(text, tone), screenOf(eid) -> { x, y } | null (CSS px over the canvas), selfEid(),
 //   device() ('keyboard' | 'gamepad' | 'touch'), playing() (in the city, online), focus(on) (typing: the game's keys
@@ -19,6 +22,7 @@
 //   Messages app) }
 import { CHANNELS, CHAT, EMOTES, REPORT_WHY, REPORT_LABEL, QUICK } from '../shared/chatdefs.js';
 import { glyph } from './touchicons.js';
+import { createEmotes } from './emotes.js';
 
 const LABEL = { near: 'Near', crew: 'Crew', faction: 'Faction', phone: 'Phone' };
 const SAY = ['near', 'crew', 'faction'];   // (the sheet's channels: phone messages live in the phone's Messages app)
@@ -83,14 +87,10 @@ span.cht-n { cursor: default; color: var(--dim); }
 .cht-chips::-webkit-scrollbar { display: none; }
 .cht-chip { flex: none; min-height: 34px; padding: 0 var(--s3); border: 2px solid var(--pad-line); border-radius: 0; background: var(--pad-navy); color: var(--cream); font: 700 var(--fs-2) var(--pixel); white-space: nowrap; cursor: pointer; touch-action: manipulation; }
 .cht-chip:hover, .cht-chip.pfocus { border-color: var(--pad-gold); }
-.cht-chip.em { color: var(--lotus); border-style: dashed; }
 .cht-row { display: flex; gap: var(--s2); padding: var(--s2); }
 .cht-row .field { min-height: 40px; }
 .cht-row .btn { min-height: 40px; padding: 0 var(--s4); }
-.cht-sheet.kb .cht-log, .cht-sheet.kb .cht-chips.em-row { display: none; }
-.cht-sheet.em-only :is(.cht-log, .cht-chips.q-row, .cht-row) { display: none; }
-.cht-sheet.em-only .cht-chips.em-row { flex-wrap: wrap; padding-bottom: var(--s2); -webkit-mask-image: none; mask-image: none; }
-.cht-sheet.em-only .cht-chip { min-height: var(--tap); }
+.cht-sheet.kb .cht-log { display: none; }
 .cht-sheet.kb.tight .cht-head { display: none; }
 
 .cht-who { position: absolute; z-index: 47; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(340px, calc(100% - 2 * var(--s4))); max-height: calc(100% - 2 * var(--s4)); overflow-y: auto; animation: enter var(--t2) var(--ease); }
@@ -174,6 +174,7 @@ export function createChat(ctx) {
   const view = $('view');
   if (view) view.after(layer); else host.appendChild(layer);
   const bubbles = new Map();   // eid -> { el, l: [{ el, until }], me, id, n }
+  const EM = createEmotes({ send: (m) => ctx.send(m), canvas: ctx.canvas, layer, host, screenOf: ctx.screenOf, playing: ctx.playing, device: ctx.device });
   let raf = 0;
   function bubble(eid, text, em, me, id, n) {
     if (!eid) return;
@@ -255,28 +256,25 @@ export function createChat(ctx) {
   sheet.setAttribute('aria-label', 'Chat');
   sheet.innerHTML = `<div class="cht-head"><div class="cht-tabs" role="tablist">${SAY.map((c) => `<button class="cht-tab" role="tab" data-ch="${c}">${LABEL[c]}</button>`).join('')}</div>`
     + `<button class="cht-msgs" type="button" aria-label="Messages (the phone)">${glyph('smartphone')}<span>Messages</span><b></b></button><button class="x" type="button" aria-label="Close chat">&times;</button></div>`
-    + '<div class="cht-log" aria-live="polite"></div><div class="cht-chips q-row"></div><div class="cht-chips em-row"></div>'
+    + '<div class="cht-log" aria-live="polite"></div><div class="cht-chips q-row"></div>'
     + `<form class="cht-row" autocomplete="off"><input class="field cht-in" type="text" maxlength="${CHAT.maxLen}" enterkeyhint="send" autocapitalize="sentences" spellcheck="true" aria-label="Your message"><button class="btn btn-1" type="submit">SEND</button></form>`;
   host.appendChild(sheet);
-  const logEl = sheet.querySelector('.cht-log'), inEl = sheet.querySelector('.cht-in'), qRow = sheet.querySelector('.q-row'), eRow = sheet.querySelector('.em-row');
+  const logEl = sheet.querySelector('.cht-log'), inEl = sheet.querySelector('.cht-in'), qRow = sheet.querySelector('.q-row');
   const placeholder = () => (sayCh === 'near' ? `Say to people near you${ctx.device() === 'keyboard' ? ' (Enter sends, Esc closes)' : ''}` : `Say to your ${sayCh === 'crew' ? 'crew' : 'faction'}`);
 
   function lineHtml(l) {
     if (l.k === 'sys') return `<div class="cht-l ${l.hint ? 'hint' : 'sys'}">${esc(l.text)}</div>`;
     const nm = l.own ? `<span class="cht-n">${l.ch === 'phone' ? `To ${esc(l.tn || 'them')}` : 'You'}</span>` : `<button class="cht-n" type="button" data-who="${esc(l.id)}">${esc(l.n)}</button>`;
-    if (l.k === 'emote') return `<div class="cht-l em">${nm}${esc(EMOTES[l.e].text)}</div>`;
+    if (l.k === 'emote') return `<div class="cht-l em">${nm}${esc(EMOTES[l.e][l.own ? 'me' : 'text'])}</div>`;   // ("Ann waves", "You wave", "Ann started dancing")
     return `<div class="cht-l ${l.ch}">${l.ch !== 'near' ? `<span class="cht-tag ${l.ch}">${LABEL[l.ch].toUpperCase()}</span>` : ''}${nm}<span class="cht-t">${esc(l.text)}</span></div>`;
   }
   function renderLog() { logEl.innerHTML = lines.slice(-40).map(lineHtml).join('') || '<div class="cht-l hint">Nobody\'s said anything yet. Say hi - or pick a quick line.</div>'; logEl.scrollTop = logEl.scrollHeight; }
   const chipsHtml = (ch) => (QUICK[ch] || []).map((t, i) => `<button class="cht-chip" type="button" data-q="${i}">${esc(t)}</button>`).join('');
-  const emotesHtml = () => Object.entries(EMOTES).map(([k, v]) => `<button class="cht-chip em" type="button" data-e="${k}">${esc(v.n)}</button>`).join('');
   const reach = (ch) => ch === 'near' || (ch === 'crew' ? state.crew : ch === 'faction' ? !!state.fac : true);
   const whyNot = (ch) => (ch === 'crew' ? 'No crew yet: walk up to another player and ask them in.' : 'No faction: go on duty with the police, or join a gang.');
   function renderSheet() {
     for (const b of sheet.querySelectorAll('.cht-tab')) { const c = b.dataset.ch; b.classList.toggle('on', c === sayCh); b.classList.toggle('na', !reach(c) || !!state.off[c]); b.setAttribute('aria-selected', String(c === sayCh)); }
     qRow.innerHTML = chipsHtml(sayCh);
-    eRow.innerHTML = sayCh === 'near' ? emotesHtml() : '';
-    eRow.hidden = sayCh !== 'near';
     inEl.placeholder = placeholder();
     inEl.maxLength = state.max || CHAT.maxLen;
     renderLog();
@@ -292,10 +290,9 @@ export function createChat(ctx) {
   sheet.querySelector('.x').onclick = () => close();
   sheet.querySelector('.cht-msgs').onclick = () => { close(); app.view = 'home'; app.tab = 'msgs'; if (ctx.openApp) ctx.openApp(); };
   qRow.onclick = (e) => { const b = e.target.closest('[data-q]'); if (b) say(sayCh, QUICK[sayCh][+b.dataset.q]); };
-  eRow.onclick = (e) => { const b = e.target.closest('[data-e]'); if (b) emote(b.dataset.e); };
   logEl.onclick = (e) => { const b = e.target.closest('[data-who]'); if (b) who(b.dataset.who, b.textContent); };
   // (a mouse wheel moves a row of chips sideways)
-  for (const r of [qRow, eRow]) r.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { r.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+  qRow.addEventListener('wheel', (e) => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { qRow.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
   sheet.querySelector('form').onsubmit = (e) => {
     e.preventDefault();
     const text = inEl.value.trim();
@@ -321,7 +318,7 @@ export function createChat(ctx) {
   inEl.addEventListener('blur', () => { setTimeout(() => { fit(); if (!isOpen || doc.activeElement !== inEl) { try { if (scrollY) scrollTo(0, 0); } catch { /* fine */ } } }, 60); });
 
   // the on-screen keyboard: the sheet rides on top of it (Android Chrome and iOS Safari both shrink only the visual
-  // viewport); with little room left, the log and the emotes fold away, then the channel row
+  // viewport); with little room left, the log folds away, then the channel row
   const vv = window.visualViewport;
   function fit() {
     if (!isOpen) return;
@@ -340,7 +337,7 @@ export function createChat(ctx) {
   function open(ch) {
     if (!ctx.playing()) return;
     if (ch && SAY.includes(ch)) sayCh = ch;
-    sheet.classList.remove('em-only');
+    EM.close();
     if (!isOpen) {
       isOpen = true;
       sheet.hidden = false;
@@ -353,11 +350,10 @@ export function createChat(ctx) {
     fit();
     if (ctx.device() !== 'touch') { openedAt = performance.now(); inEl.focus({ preventScroll: true }); if (ctx.focus) ctx.focus(true); }   // (a phone: the keyboard only when the line's tapped)
   }
-  // the emotes straight away (the thumb's chat button held - client/main.js): the sheet with its emote row only
-  function emotes() { open(); sheet.classList.add('em-only'); }
+  // the emotes' picker (the emote button by the chat button, B: client/main.js) - the chat sheet gives way to it
+  function emotes() { if (!ctx.playing()) return; close(); EM.toggle(); }
   function close() {
     if (!isOpen) return;
-    sheet.classList.remove('em-only');
     isOpen = false;
     clearInterval(watch);
     inEl.blur();
@@ -430,7 +426,7 @@ export function createChat(ctx) {
         if (!E || (m.id !== state.me && muted(m.id))) return;
         const own = !!state.me && m.id === state.me;
         push({ k: 'emote', e: m.e, n: m.n, id: m.id, own });
-        bubble(m.eid, `${E.text}`, true, own, m.id, m.n);
+        EM.pop(m.eid, m.e, own);   // (its emoji over the head - no words there; Dance: none, the log's line says it)
         return;
       }
       case 'chatstate': {
@@ -459,7 +455,7 @@ export function createChat(ctx) {
   function emote(e) { if (Object.hasOwn(EMOTES, e)) ctx.send({ t: 'emote', e }); }
 
   // ---- the phone's Messages app ----------------------------------------------------------------------------------
-  // app.tab: 'msgs' (the threads) | 'near' | 'crew' | 'faction' (quick lines, emotes, a line to type); app.view 'home'
+  // app.tab: 'msgs' (the threads) | 'near' | 'crew' | 'faction' (quick lines, a line to type); app.view 'home'
   // or 'thread' (app.id: whose); app.step: 'report' while picking a reason
   const app = { tab: 'msgs', view: 'home', id: null, n: '', step: null, el: null, root: null, api: null };
   const appShowing = () => !!(app.root && app.root.isConnected);
@@ -512,7 +508,7 @@ export function createChat(ctx) {
       if (app.tab === 'msgs') h += `<div class="cm-list">${appListHtml()}</div>`;
       else if (!reach(app.tab)) h += `<p class="ph-hint">${whyNot(app.tab)}</p>`;
       else {
-        h += `<div class="cm-list">${appListHtml()}</div><div class="cm-chips">${chipsHtml(app.tab).replace(/data-q=/g, 'data-cmq=')}${app.tab === 'near' ? emotesHtml().replace(/data-e=/g, 'data-cme=') : ''}</div>`
+        h += `<div class="cm-list">${appListHtml()}</div><div class="cm-chips">${chipsHtml(app.tab).replace(/data-q=/g, 'data-cmq=')}</div>`
           + `<form class="cm-send" autocomplete="off"><input class="field" type="text" maxlength="${state.max || CHAT.maxLen}" enterkeyhint="send" placeholder="Say to ${app.tab === 'near' ? 'people near you' : `your ${app.tab}`}" aria-label="Your line"><button class="btn btn-1" type="submit">SEND</button></form>`;
         if (state.off[app.tab]) h += `<p class="ph-hint">${LABEL[app.tab]} is switched off in Settings › Chat.</p>`;
       }
@@ -530,7 +526,6 @@ export function createChat(ctx) {
       if (d.cmt) { app.tab = d.cmt; if (d.cmt === 'msgs') ctx.send({ t: 'contacts' }); renderAppNow(); refocus(true); return; }
       if (d.cmh) { openThread(d.cmh, d.cmn); refocus(true); return; }
       if (d.cmq !== undefined) { const ch = app.view === 'thread' ? 'phone' : app.tab, t = QUICK[ch][+d.cmq]; say(ch, t, app.view === 'thread' ? app.id : undefined); return; }
-      if (d.cme) { emote(d.cme); return; }
       if (d.cmw) { report(app.id, d.cmw); app.step = null; renderAppNow(); refocus(true); return; }
       if (d.cmx === 'report') { app.step = 'report'; renderAppNow(); refocus(true); return; }
       if (d.cmx === 'back') { app.step = null; renderAppNow(); refocus(true); return; }
@@ -594,6 +589,7 @@ export function createChat(ctx) {
 
   return {
     onMessage, open, close, say, emote, emotes, renderApp, appBack, settings,
+    closeEmotes: () => EM.close(), get emotesUp() { return EM.isOpen; }, emoteApp: (el, api) => EM.renderApp(el, api),
     toggle(ch) { if (isOpen) close(); else open(ch); },
     who, openThread,
     setOff(ch, off) { ctx.send({ t: 'chatset', off: { [ch]: !!off } }); },

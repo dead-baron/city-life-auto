@@ -1,6 +1,8 @@
 // City Life Auto authoritative server entry point.
 // Serves the static client, accepts WebSocket players, runs the 20 Hz world tick and
 // persists profiles. Zero third-party dependencies: `node server/index.js`.
+// (first: the capture server's seeded Math.random from before anything else loads - server/capture.js)
+import { CAPTURE, captureHttp } from './capture.js';
 import { createServer } from 'node:http';
 import { reportsText, errorsText } from './perfreports.js';
 import { readFile, stat } from 'node:fs/promises';
@@ -38,6 +40,9 @@ const MIME = {
 const STATIC_ROOTS = ['client/', 'shared/', 'assets/', 'server/'];
 
 useStore(new FileStore());
+// the private capture server (CLA_CAPTURE=1: server/capture.js): dev mode, this machine only unless HOST says otherwise, a
+// handful of camera pages at most, the world stepped by the capture driver (tools/capture.mjs) - never ticking by itself
+if (CAPTURE) { config.dev = true; if (!process.env.HOST) config.host = '127.0.0.1'; config.maxPlayers = Math.min(config.maxPlayers, 4); console.log('[server] CAPTURE mode: a private instance, the world stepped by the capture driver'); }
 const WORLD3 = config.world === 'v3';   // (CLA_WORLD=v3: World v3's whole world in place of today's - never live: server/world3.js)
 const bootT0 = performance.now();
 const map = WORLD3 ? (await (await import('./world3.js')).buildWorld3(config.seed)).map : generateCity(config.seed);
@@ -57,7 +62,7 @@ if (worldKept) console.log(`[world] World v3: its ${worldKept.files.size} region
 // the build we run (version.json): players coming back from an older one start fresh (CLA_FRESH_ON_UPDATE)
 const BUILD_FILE = join(config.root, 'version.json');
 const bootBuild = readBuild(BUILD_FILE);
-const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget, build: bootBuild && bootBuild.v, buildAt: bootBuild && bootBuild.at, freshOnUpdate: config.freshOnUpdate });
+const world = new World(map, { dev: config.dev, npcBudget: config.npcBudget, build: bootBuild && bootBuild.v, buildAt: bootBuild && bootBuild.at, freshOnUpdate: config.freshOnUpdate, ...(CAPTURE ? { capture: true, day: 0, freshOnUpdate: 'off' } : null) });
 console.log(`[server] build ${bootBuild ? bootBuild.v : '(no version.json)'} · fresh start on update: ${config.freshOnUpdate}`);
 // the ferries' routes, worked out now rather than on the first tick (a few hundred ms: server/systems/ferries.js)
 { const t0 = Date.now(), fr = ferryRoutes(world); console.log(`[server] ferries: ${fr.map((r) => `${r.name} (${r.mainland} - ${r.island}, ${Math.round(r.len / 32)} m)`).join(', ') || 'none'} in ${Date.now() - t0} ms`); }
@@ -97,6 +102,7 @@ const server = createServer(async (req, res) => {
     if (why) { res.writeHead(why === 'quota' ? 503 : 429, { 'content-type': 'text/plain', 'retry-after': '60' }); res.end(why === 'quota' ? QUOTA_MSG : 'Too many requests'); return; }
   }
   if (path === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
+  if (path.startsWith('/capture/')) { await captureHttp(world, req, res, url); return; }   // (the capture driver's: server/capture.js)
   // sign-ins, transfer codes, passkeys, /launch.json; the owner's protected pages; the privacy policy and the terms
   // (server/authhttp.js, adminhttp.js, legal.js)
   if (path === '/launch.json' || path.startsWith('/auth/') || path.startsWith('/admin/') || path.startsWith('/legal/')) { try { if (await launch.http(req, res, url)) return; } catch (e) { console.error('[launch] http', e && e.message); if (!res.headersSent) { res.writeHead(500); res.end(); } return; } }
@@ -269,7 +275,7 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 server.listen(config.port, config.host, () => {
   console.log(`[server] City Life Auto listening on http://${config.host}:${config.port}  (dev=${config.dev}, seed=${config.seed})`);
   if (WORLD3) console.log(`[server] World v3 up in ${((performance.now() - bootT0) / 1000).toFixed(1)} s; memory ${Math.round(process.memoryUsage().rss / 1048576)} MB (peak ${Math.round(process.resourceUsage().maxRSS / 1024)} MB)`);
-  loop();
+  if (!CAPTURE) loop();   // (the capture server's world is stepped by its driver: /capture/step)
 });
 
 export { world, server };

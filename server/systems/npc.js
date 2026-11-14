@@ -636,7 +636,7 @@ export function onVehicleHit(world, v, attacker) {
   // someone damaging the car with a weapon (combat.js: law.vehicleDamaged has made it a crime): its driver, by temperament,
   // stops and gets out to fight them - or drives off in a panic (and, the victim, most likely calls it in: law.witnesses)
   const drv = v.seats[0] ? world.get(v.seats[0]) : null, n = drv && drv.npc;
-  if (!n || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) return;
+  if (!n || n.driven || drv.dead || !attacker || attacker === drv || attacker.kind !== K.PED || attacker.vehId === v.id) return;   // (n.driven: another system steers them - a scene's actor on its script, director.js)
   if (n.role === 'cop' || n.role === 'medic' || n.role === 'railguard' || world.time - (n.vandalAt ?? -99) < 8) return;
   n.vandalAt = world.time;
   if (Math.hypot(v.vx, v.vy) < VEH_CRIME.stopPx && rng() < (n.fight || 0) * VEH_CRIME.fight) {

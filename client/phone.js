@@ -57,6 +57,7 @@ export const ICON = {
   camera: P('<path d="M4 8h4l2-3h4l2 3h4v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   atm: P('<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/>'),
   dance: P('<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>'),
+  emote: P('<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>'),
   radio: P('<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="8" cy="14" r="3"/><path d="M14 12h4M14 16h4M6 8l12-5"/>'),
   clear: P('<path d="M6 6l12 12M18 6L6 18"/>'),
   cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
@@ -68,7 +69,7 @@ const APP_PIX = { next: 'star', jobs: 'jobs', places: 'places', transit: 'transi
 const GROUP_PIX = { emergency: 'hospital', money: 'bank', shops: 'shop', out: 'food', baths: 'bathhouse', sell: 'sell', cars: 'car', work: 'legal', gang: 'gang' };
 const SKILL_PIX = { strength: 'hit', stamina: 'sprint', swimming: 'swim', driving: 'car', shooting: 'aim', constitution: 'heart' };
 const JOB_FILTERS = [['all', 'All'], ['driving', 'Driving'], ['delivery', 'Delivery'], ['service', 'Service']];
-const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Home']]);
+const NAME = Object.fromEntries([...APPS, ['group', 'Places'], ['home', 'Home'], ['emotes', 'Emotes']]);
 // what a job is, by its type (the board's job: server phone.js boardFor)
 const JOB_NAME = { courier: 'DELIVERY', farm: 'FARM', fieldwork: 'FARM WORK', patrol: 'PATROL', sar: 'SEARCH & RESCUE', dusting: 'CROP DUSTER', charter: 'CHARTER PILOT', coast: 'COAST GUARD', fire: 'FIREFIGHTER', medic: 'PARAMEDIC', cab: 'TAXI', bus: 'BUS DRIVER', towjob: 'TOW TRUCK', trainjob: 'TRAIN JOB', forklift: 'FORKLIFT', fishboat: 'FISHING BOAT', ranger: 'PARK RANGER' };
 // the Skills app's district standing (server reputation.js panel): a word a district - those that aren't Neutral, where
@@ -114,7 +115,7 @@ export function createPhone(ctx) {
       const wp = ctx.waypoint();
       // crimes you saw (server law.js sawCrime): a minute to call each one in
       const saw = (board && board.saw) || [];
-      const quick = [['atm', 'Nearest ATM'], ['dance', 'Dance']];
+      const quick = [['atm', 'Nearest ATM'], ['dance', 'Dance'], ['emote', 'Emote']];
       if (ctx.canCruiser && ctx.canCruiser()) quick.push(['cruiser', 'Call a cruiser']);
       if (wp) quick.push(['clearwp', 'Clear waypoint']);
       el.innerHTML = saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')
@@ -162,8 +163,10 @@ export function createPhone(ctx) {
       el.innerHTML = '<p class="ph-hint">In a car: its radio (G flicks through them too). On foot: your pocket radio or boombox, if it\'s out. The record stores sell tapes, radios and boomboxes.</p>'
         + STATIONS.map((S, i) => `<button class="ph-row" data-st="${i}"><span class="ic">📻</span><span class="nm">${esc(S.freq)} ${esc(S.name)}<small>now: ${esc(TRACK[stationAt(i, now).track].title)}</small></span></button>`).join('')
         + '<button class="ph-row" data-st="-1"><span class="ic">⏻</span><span class="nm">Off</span></button>';
-    } else if (screen === 'msgs') {   // (the Messages app: threads, quick lines and emotes - client/chat.js renderApp, with the launch code)
+    } else if (screen === 'msgs') {   // (the Messages app: threads and quick lines - client/chat.js renderApp, with the launch code)
       if (ctx.chatApp) ctx.chatApp(el); else el.innerHTML = '<p class="ph-empty">No messages here.</p>';
+    } else if (screen === 'emotes') {   // (the emotes, one tap each - a pad's way to them: client/emotes.js renderApp, with the launch code)
+      if (ctx.emoteApp) ctx.emoteApp(el); else el.innerHTML = '<p class="ph-empty">No emotes here.</p>';
     } else if (screen === 'crew') {
       el.innerHTML = crewHtml(crew, m);
     } else if (screen === 'bounties') {
@@ -240,6 +243,7 @@ export function createPhone(ctx) {
     for (const b of el.querySelectorAll('[data-act="workout"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'workout', k: b.dataset.k }); ctx.close(); };   // (a set where you stand: server workout.js)
     for (const b of el.querySelectorAll('[data-st]')) b.onclick = () => { ctx.send({ t: 'mus', a: 'tune', st: Number(b.dataset.st) }); ctx.close(); };
     for (const b of el.querySelectorAll('[data-act="dance"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'dance' }); ctx.close(); };   // (dance where you stand: the next move each time - server dance.js; G / L3 too)
+    for (const b of el.querySelectorAll('[data-act="emote"]')) b.onclick = () => { screen = 'emotes'; render(); };   // (the emotes: client/emotes.js)
     for (const b of el.querySelectorAll('[data-act="taxicall"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'call', tier: b.dataset.tier }); };
     for (const b of el.querySelectorAll('[data-act="taxicancel"]')) b.onclick = () => { b.disabled = true; ctx.send({ t: 'phone', a: 'taxi', op: 'cancel' }); };
     for (const b of el.querySelectorAll('[data-rail]')) b.onclick = () => {

@@ -49,6 +49,7 @@ import * as underground from './systems/underground.js';
 import * as rescue from './systems/rescue.js';
 import * as revive from './systems/revive.js';
 import * as devplay from './devplay.js';
+import * as director from './systems/director.js';
 import { kerbFor } from './systems/kerbdrive.js';
 import { Z } from '../shared/citylayout.js';
 
@@ -89,7 +90,7 @@ import * as golf from './systems/golf.js';
 import { parkPonds } from './systems/wildlife.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup', 'contact'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup', 'contact', 'scene'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -917,6 +918,16 @@ function run(world, p, c, msg) {
     }
     case 'medicjob': { const err = paramedic.devMedic(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the paramedic (H68): on the rota, a patient (msg.k 'minor' | 'serious') beside you
     case 'firejob': { const err = firefighter.devFire(world, p, msg); if (err) world.notify(p, `[dev] ${err}`, 'warn'); break; }   // the firefighter (H68): on the crew, a call of kind msg.k beside you
+    case 'scene': {   // the scene director (director.js, shared/scenes/): msg.id started now - its place nearest you (the Rusty Spur's
+      // is the Spur) - your camera on it (client/director.js); msg.k 'stop' ends the ones you're watching, 'list' names them
+      if (msg.k === 'stop') { for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p))) director.end(world, r, 'stopped'); director.unwatch(world, p); break; }
+      if (msg.k === 'unwatch') { director.unwatch(world, p); break; }
+      if (msg.k === 'list' || !msg.id) { world.notify(p, `[dev] Scenes: ${director.sceneList().map((q) => q.id).join(', ')}`, 'info'); break; }
+      director.unwatch(world, p);
+      const r = director.start(world, String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p });
+      world.notify(p, r.err ? `[dev] ${r.err}` : `[dev] Scene: ${r.run.sc.n}.`, r.err ? 'warn' : 'info');
+      break;
+    }
     case 'policeair': {   // the police air unit (H66): up after you now - its stars at least (POLICE_AIR.stars); msg.near: already in the air close by
       if (!ped) break;
       if ((p.wanted | 0) < POLICE_AIR.stars) law.addHeat(world, p, STAR_HEAT[POLICE_AIR.stars] - p.heat + 1, ped.x, ped.y);

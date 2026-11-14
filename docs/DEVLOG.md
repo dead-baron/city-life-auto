@@ -22945,6 +22945,100 @@ center, AUTO was too big and didn't read as off, BLOCK floated away from the res
 - **The long-press tip** only says what the button doesn't: the whole prompt behind a one-word ACT ("Enter Quick
   Mart" behind ENTER). Holding BLOCK, FIRE or BRAKE no longer pops up their own name.
 
+## 2026-11-13 - Emotes apart from chat: a button of their own, an emoji over the head, an animation on the body
+
+The owner: "Let's separate the emotes from the chat ... Instead of emotes having a text that pops up let's make sure they
+have an animation and maybe we use an emoji that pops up instead of text ... for things like dancing ... it could say
+*PlayerName started dancing* in the chat text to nearby players."
+
+- **Their own button:** on touch an EMOTE button (a smiley, the same see-through square as the chat button) sits next to
+  the chat button along the bottom on its side, and over it upright - the right thumb's cluster starts at the middle
+  along the bottom there, and FIRE ON's slot (u4) is right of the chat button. A tap opens a small picker: a 4 x 3 grid
+  of emoji tiles with their names; one tap emotes and closes it; the X, a tap anywhere outside, Esc and a pad's B close
+  it. B opens it on a keyboard (`shared/controls.js` `emote`); a pad picks from the phone's new Emote screen (the home
+  screen's quick row: Nearest ATM, Dance, Emote - the D-pad moves between its buttons like any phone screen). The chat
+  sheet and the Messages app no longer carry emotes, and holding the chat button no longer opens them (`/wave` typed in
+  chat still works). Page side: `client/emotes.js`, loaded with chat, never in the page's first load.
+- **An emoji, no words:** each emote has an `emoji` in `shared/chatdefs.js` EMOTES (wave 👋, cheer 🙌, laugh 😂, thumbs
+  up 👍, point 👉, shrug 🤷, clap 👏, facepalm 🤦, salute 🫡, sorry 🙇, angry 😠). It pops up over the emoter's head -
+  scales in, floats up and fades in about two seconds, a few pooled elements kept over the figure each frame - and the
+  log keeps its short line ("Ann waves", your own "You wave"). The speech bubble no longer shows emotes.
+- **An animation:** the server plays the emote on the body for `CHAT.emoteS` (2 s) - the ped's gt 'emote' and em (the
+  emote's id) on the descriptor (`server/systems/emote.js`); every page near draws a four-frame loop from when it
+  started: the wave side to side, both arms up and bouncing, the laugh shaking, the thumbs up nodding, the point jabbing,
+  the shrug, the clap, the facepalm with the head shaking in the hand, the salute at the brow, the bow, the angry stomp
+  with clenched fists (`client/art2/dances.js`, out of the chunk bake's reach as the dances are: the art hash is
+  unchanged). Walking off, a button that does something, a vehicle or going down cuts it short; in a car or on a board
+  the emoji alone. The `emoteGapS` limit stays.
+- **Dance:** the Dance emote starts the dance button's own dance (no pose, no emoji) and the people near read "Ann
+  started dancing" in their chat log; starting a dance with G / L3 or the phone's Dance button tells them the same
+  (`world.track('danced')` -> `chat.announce`, no more often than an emote).
+- The Guide has an Emotes entry; the chat entry lost "hold it for the emotes". The README's controls table has the row.
+- Tests: `test/emotes.test.js` (the messages, the body's state and its end, Dance, the dance button's line, the poses,
+  the control on every device, the Guide); `chatui.test.js` (the emoji pop, no emote bubble, the picker, the phone's
+  Emote screen, none left in the sheet); `hudlayout.test.js` (the emote button 44 px or more, in the bottom band on the
+  left half, beside the chat button, on nothing). The first-time strip on touch (on its side) starts after the emote
+  button now. Budgets: the renderer's code 405 -> 407 KB of 410 (the poses); no budget raised.
+
+## 2026-11-13 - The scene director: scripted scenes in the live world, autoplay, and a capture server for trailers
+
+The owner: "the occasional gang warfare breaks out, a random police raid, an NPC gets into a bar fight and gets chased
+by a biker gang ..." - and the same scenes recorded for trailers and TikTok clips. Then (12:16): "every cinematic scene
+and location and feature and everything should already have camera movements in and run on its own in a predetermined
+way if possible" - autoplay beside play-it-yourself.
+
+- **The script format** (`shared/scenes/index.js`, one file a scene): the place (`roadhouse`, `hideout`, `road`, `farm`,
+  `named`, `here` - the server's resolvers turn it into named anchors), the time of day and weather (the capture's), the
+  cast (people, groups, vehicles - parked, crewed, already in the air - or someone picked from the world: a biker at the
+  bar, a club bike by the door), the beats (walk / run / drive / fly / enter / exit / bail / attack / knock / shoot / say /
+  emote / face / spawn / explode / ignite / damage / crash / club / police / heli / dance / wait / release; each at a time
+  or after another beat) and the camera's shots (follow with a lead and an offset, between two people, a move between two
+  points, a hold, an orbit; a glide or a cut; a shot can start on a beat). `validateScene` checks a script;
+  `camAt` is the camera at a moment - the page flies it, the server sends the page what's round it (view.js `p.dirCam`).
+- **The runner** (`server/systems/director.js`, in the tick after the clubs and before the vehicles move): actors are
+  real NPCs on their script (`npc.driven`); everything else goes through the city's own systems - the clubs' chase
+  (bikers.js `chaseWith`), the police's pursuit (a scene's cruisers given the pursuit; police.js `chaseCar`), the air
+  unit (policeair.js `launchFor`: a non-player suspect now), the explosions, the fights. A player who hurts an actor, aims
+  at one or stands in one's way for `DIRECTOR.blockS` takes them (and their vehicle) off the script: the city's AI from
+  then (`npc.onAttacked`: a club fights back; a driver drives on in traffic). `plot: true` - the lead never floored or
+  stunned by the city's people while on the script (they still take the blows). Scenes end when their beats are done (and
+  linger), or at `len`; live, when nobody's near for `goneS` (their people go once nobody sees them).
+- **Actors look like NPCs in the live world** (the owner, via the lead): only on the capture server (`CLA_CAPTURE=1`) does
+  a `look: 'player'` actor go out as a player - the name tag, a player's random outfit, chat lines as bubbles, emotes
+  (net.js `asPlayer`). Never in the players list, analytics, leaderboards or saves: they're NPC peds. Test:
+  `test/scenes.test.js` "live, actors are ordinary NPCs".
+- **Live events** (`shared/rules.js` `DIRECTOR`): OFF. `DIRECTOR.live` and each scene's `on`, or `CLA_SCENES=all` / a list
+  of ids in the server's environment. One tried every `everyS`, near a player (`nearPx`, not on top of them), never within
+  `ftuePx` of someone in their FTUE (or `ftueS` after their arrival), at most `maxScenes` scenes and `maxActors` actors.
+- **Debug and panel**: the debug menu's 🎬 Director scenes (the `scene` command: `id`, `k: 'stop'`); the cinematic panel
+  (F4): Director scenes, ▶ Autoplay beside "play it yourself" on the staged scenes and Showcase spots that have one, ⏺
+  record this screen (MediaRecorder, real time - the owner's own GPU computer). Esc gives the camera back.
+- **Autoplay, first batch**: the police chase (`autochase`), the street race (`autorace`), the gang shootout
+  (`autoshootout`), crop dusting (`autodust`: the duster flown low over a field, the mist on), and four Showcase spots
+  (`shared/scenes/showcase.js`: an orbit of Lighthouse Rock, a track along Sunset Beach Pier, a reveal of Piazza Vecchia,
+  a dolly into Redwood Creek Falls). More: a scene script is 15-30 lines and `auto: '<id>'` on the panel's entry; a
+  Showcase spot is one `show(...)` line. The rest of the ~60 staged scenes can go in batches of ten or so.
+- **The first three scenes**: biker bar brawl (the Rusty Spur: in, the line at the bar, two punches and a knockdown, out
+  to a club bike, three clubs after him), tanker into the gang hideout (down the straight at a 'gang' point of interest,
+  the driver bails, the tanker into the parked cars and the gang, one blast and the cars after it), helicopter pursuit
+  (through a roadblock's gap, the cruisers swing round, the air unit picks it up, the crash, out and into an alley).
+- **Capture** (`server/capture.js`, `tools/capture.mjs`, `deploy/cla-capture.service`): the same server with
+  `CLA_CAPTURE=1` on its own port, 127.0.0.1 only, dev on, no FTUE or creator for its camera pages (hidden, invincible,
+  out of the way). Math.random seeded before anything loads; the world's day fixed; the world never ticks by itself - the
+  driver steps it (`/capture/step`), holds the scene at its first moment while the pages get the art (`hold=1`,
+  `/capture/go`), then one tick every 3 frames. The page (`?capture`) draws a frame only when asked, at its own time on
+  Playwright's clock (main.js `__capFrame`), and says when the art for the screen is still coming (`__capBusy`); each
+  frame is a CDP screenshot piped to ffmpeg (H.264, CRF 16, yuv420p). Wide 16:9 and tall 9:16 pages in the same take.
+  `node tools/capture.mjs --scene bikerbrawl [--all] [--size 1080|1440] [--orient wide,tall] [--world v3|today]`.
+  Same seed, same take (test: two runs of a scene in separate processes, the same actor positions at the same ticks).
+  Measured here (2 CPUs, no GPU - SwiftShader, Ultra): 3.4-5.3 s a frame for the 1920x1920 square page that gives both
+  1080p clips (the biker bar brawl: 780 frames, 13 s, 5.27 s a frame on average with the machine shared at the end). On a
+  machine with a GPU the drawing is a small part of it. World v3 needs more memory than this box has beside Chromium
+  (its server alone ~3.5 GB): the captures here were of today's city; on the Oracle box (12 GB) v3 is the default.
+- Small fixes on the way: a vehicle's `scripted` (the garage drive-out's) is no longer reused - a scene's hold is
+  `dirHold`; npc.js `onVehicleHit` leaves a driven NPC alone; bikers.js counts the cinematic and director cameras as
+  someone there; dusting.js leaves a scene's duster's mist on.
+
 ## 2026-11-13 - Vegetation that answers back: tracks through the crops, cover that parts on Medium, bushes knocked aside, crops picked a patch at a time
 
 The owner, 11-13: "grass and fields and wheat fields and crops etc all don't seem to interact ... I don't think driving

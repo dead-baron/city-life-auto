@@ -16,16 +16,24 @@ export const CHAT = {
   rate: { n: 6, s: 10 }, guestRate: { n: 3, s: 10 },
   phoneRate: { n: 20, s: 60 }, guestPhoneRate: { n: 5, s: 60 },
   dupS: 20,               // the same line again this soon is dropped
-  emoteGapS: 2,
+  emoteGapS: 2,           // one emote this often at most
+  emoteS: 2,              // an emote's animation on the body (moving cuts it short)
   inboxMax: 30, contactsMax: 100, logMax: 60,
   strikesToMute: 3, muteH: 24, filterStrikeGapS: 600,
   reportsToStrike: 3, reportWindowH: 24, reportGapS: 30,
 };
+// The emotes (the owner, 2026-11-13: apart from chat, a button of their own; "an emoji that pops up instead of text"):
+// emoji - what pops up over the head (no words there); text / me - the line in the chat log of the people near ("Ann
+// waves") and your own ("You wave"); every one but dance plays a short animation on the body (server/systems/emote.js,
+// emoteS seconds: the descriptor's gt 'emote' and em, its id - client/art2/dances.js poses it). Dance
+// starts the dance button's own dance (server/systems/dance.js) and puts "Ann started dancing" in the log: no emoji.
 export const EMOTES = {
-  wave: { n: 'Wave', text: 'waves' }, cheer: { n: 'Cheer', text: 'cheers' }, laugh: { n: 'Laugh', text: 'laughs' },
-  thumbs: { n: 'Thumbs up', text: 'gives a thumbs up' }, point: { n: 'Point', text: 'points' }, shrug: { n: 'Shrug', text: 'shrugs' },
-  dance: { n: 'Dance', text: 'dances' }, clap: { n: 'Clap', text: 'claps' }, facepalm: { n: 'Facepalm', text: 'facepalms' },
-  salute: { n: 'Salute', text: 'salutes' }, sorry: { n: 'Sorry', text: 'apologizes' }, angry: { n: 'Angry', text: 'is angry' },
+  wave: { n: 'Wave', emoji: '\u{1F44B}', text: 'waves', me: 'wave' }, cheer: { n: 'Cheer', emoji: '\u{1F64C}', text: 'cheers', me: 'cheer' },
+  laugh: { n: 'Laugh', emoji: '\u{1F602}', text: 'laughs', me: 'laugh' }, thumbs: { n: 'Thumbs up', emoji: '\u{1F44D}', text: 'gives a thumbs up', me: 'give a thumbs up' },
+  point: { n: 'Point', emoji: '\u{1F449}', text: 'points', me: 'point' }, shrug: { n: 'Shrug', emoji: '\u{1F937}', text: 'shrugs', me: 'shrug' },
+  dance: { n: 'Dance', emoji: '', text: 'started dancing', me: 'started dancing' }, clap: { n: 'Clap', emoji: '\u{1F44F}', text: 'claps', me: 'clap' },
+  facepalm: { n: 'Facepalm', emoji: '\u{1F926}', text: 'facepalms', me: 'facepalm' }, salute: { n: 'Salute', emoji: '\u{1FAE1}', text: 'salutes', me: 'salute' },
+  sorry: { n: 'Sorry', emoji: '\u{1F647}', text: 'apologizes', me: 'apologize' }, angry: { n: 'Angry', emoji: '\u{1F620}', text: 'is angry', me: 'are angry' },
 };
 // the factions that have a chat: biker groups don't exist yet (the owner, 11-04) - their channel waits behind this flag
 export const FACTIONS = { police: true, gang: true, biker: false };

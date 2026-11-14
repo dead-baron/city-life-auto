@@ -96,6 +96,7 @@ import * as gear from './systems/gear.js';   // (the rides you own and carry: a 
 import * as grenades from './systems/grenades.js';
 import * as tennis from './systems/tennis.js';
 import * as cinefollow from './systems/cinefollow.js';
+import * as director from './systems/director.js';   // (the scene director: shared/scenes/ played in the city - live events, the debug menu's, the capture's)
 import * as k9 from './systems/k9.js';
 import * as prison from './systems/prison.js';
 import * as sar from './systems/sar.js';
@@ -176,6 +177,7 @@ const SYSTEMS = [
   ['gang', gang.update],            // Syndicate membership: Smuggler's Rock guards
   ['gangwar', gangwar.update],      // gangs vs police: provocation + shootouts near turf
   ['bikers', bikers.update],        // the biker clubs at the Rusty Spur: hanging out, riding two by two, chasing (task #366)
+  ['director', director.update],    // the scene director's scenes: their beats, actors on their scripts (handed to the AI above when a player steps in), the cameras
   ['paint', paint.update],          // Spray & Go paint shop bays
   ['races', races.update],
   ['minigames', minigames.update],  // soccer pitch, beach volleyball          // jetski / boat races
@@ -305,6 +307,7 @@ export class World {
     this.stats = { tickMs: 0, tickMax: 0, bytesOut: 0, msgsOut: 0, entities: 0 };
     this.rand = opts.rand || Math.random;
     this.dev = !!opts.dev;
+    this.capture = !!opts.capture;   // (the private capture server: server/capture.js - a scene's actors drawn as players there only)
     this.npcBudget = opts.npcBudget ?? 700;
     // the build this server runs (version.json; server/build.js) and when it was stamped - null when not
     // tracked (offline practice); players coming back from an older build start fresh (players.join)

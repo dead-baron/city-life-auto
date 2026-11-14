@@ -1,6 +1,6 @@
 // Logical actions and how each device triggers them. The HUD prompts, the first goal's lines and the Guide all read
 // these tables, so a rebind here updates every hint in the game.
-export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance', T: 'chat' };
+export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', X: 'use', H: 'horn', SPACE: 'dive', TAB: 'nextw', M: 'map', CLICK: 'fire', SHIFT: 'sprint', V: 'cruiser', P: 'phone', I: 'bag', L: 'light', G: 'dance', T: 'chat', B: 'emote' };
 // (on a skateboard the fire button is the trick button: shared/skate.js)
 // (light shares D-pad up with the horn: the horn is only in a vehicle, the flashlight only on foot)
 // On a pad (tasks #301, #411): RT fires and the right stick only aims (Settings: "right stick full push fires" puts the
@@ -14,7 +14,8 @@ export const PAD = {
   move: ['L-STICK', 'stick'], aim: ['R-STICK', 'stick'], gas: ['RT', 'bumper'], brake: ['LT', 'bumper'], pause: ['MENU', 'sys'], back: ['B', 'b'],
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
-  chat: ['📱 MESSAGES', 'sys'],   // (chat on a pad: the phone's Messages app - its quick lines, emotes and threads, picked with the D-pad)
+  chat: ['📱 MESSAGES', 'sys'],   // (chat on a pad: the phone's Messages app - its quick lines and threads, picked with the D-pad)
+  emote: ['📱 EMOTE', 'sys'],   // (the emotes on a pad: the phone's Emote screen - client/phone.js)
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
   radio: ['📱 RADIO', 'sys'], lanes: ['D-PAD / X A Y RB', 'sys'], pads: ['D-PAD + X A Y RB', 'sys'], chord: ['LT', 'bumper'],
   climb: ['RT', 'bumper'], descend: ['LT', 'bumper'],   // (flying: shared/flight.js)
@@ -26,7 +27,8 @@ export const TOUCH = {
   move: 'LEFT THUMB', aim: 'DRAG FIRE', gas: 'LEFT THUMB', brake: 'BRAKE', pause: '⚙', back: '▾ HIDE',
   steer: 'LEFT THUMB', block: 'HOLD BLOCK',
   dance: '📱 DANCE',
-  chat: 'CHAT',   // (the chat button by the left thumb - held, the emotes: client/chat.js, client/main.js)
+  chat: 'CHAT',   // (the chat button by the left thumb: client/chat.js, client/main.js)
+  emote: 'EMOTE',   // (the emote button beside it: client/emotes.js)
   trick: 'TRICK',
   radio: '📱 RADIO', lanes: 'TAP THE LANES', pads: 'TAP THE PADS', chord: 'CHORD',
   climb: 'CLIMB', descend: 'DOWN',
@@ -44,6 +46,7 @@ export const KB = {
   steer: 'A/D', block: 'RMB',
   dance: 'G',
   chat: 'T',
+  emote: 'B',
   trick: 'CLICK',
   radio: 'G', lanes: '← ↓ ↑ → / DFJK', pads: 'A-K', chord: 'SHIFT',
   climb: 'SPACE', descend: 'SHIFT',

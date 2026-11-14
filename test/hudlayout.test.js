@@ -29,7 +29,7 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   const ctl = [], HUDK = ['minimap', 'vitals', 'status', 'rclock', 'weapon', 'money', 'bank', 'vchip', 'stars', 'clock'];
   const on = (a, b) => a.x0 < b.x1 - 2 && b.x0 < a.x1 - 2 && a.y0 < b.y1 - 2 && b.y0 < a.y1 - 2;
   for (const r of all.filter((q) => q.sc.dev === 'touch')) {
-    const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, ks = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'stick-l' || k.name === 'talk'), tb = ks.filter((k) => k.name.startsWith('tb.'));
+    const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, ks = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'stick-l' || k.name === 'talk' || k.name === 'emote'), tb = ks.filter((k) => k.name.startsWith('tb.'));
     const mid = { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 };
     // (the buttons are discs since 11-03, as test/touchslots.test.js has them: two apart when their circles are - the weapon
     // card and the move stick's zone boxes)
@@ -82,10 +82,17 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
     // (on touch chat is by the thumb - the owner, 11-12: the top row was a stretch for something used often - the row
     // phone, map, menu; the thumb's chat button 44 px or more, in the bottom band, clear of the move stick's rest and of
     // every other button - the overlap checks above take it in as 'talk'; upright and on its side alike it sits by the
-    // move stick along the bottom, on the left half: the owner, 2026-11-12)
-    const touch = dev === 'touch', talk = r.keep.find((k) => k.name === 'talk');
-    if (touch !== !!talk) row.push(`${tag}: the thumb's chat button ${talk ? 'shown' : 'missing'}`);
-    if (talk && (talk.x1 - talk.x0 < 44 || talk.y1 - talk.y0 < 44 || talk.y1 < h - 60 || talk.x1 > w / 2)) row.push(`${tag}: the thumb's chat button isn't by the left thumb (${talk.x0},${talk.y0}-${talk.x1},${talk.y1})`);
+    // move stick along the bottom, on the left half: the owner, 2026-11-12). The emote button beside it (the owner,
+    // 2026-11-13: emotes apart from chat) the same way - in the bottom band, on the left half, on nothing else: next to it
+    // along the bottom on its side, over it upright (the right thumb's cluster starts at the middle there)
+    const touch = dev === 'touch';
+    for (const [nm, what] of [['talk', 'chat'], ['emote', 'emote']]) {
+      const b = r.keep.find((k) => k.name === nm);
+      if (touch !== !!b) row.push(`${tag}: the thumb's ${what} button ${b ? 'shown' : 'missing'}`);
+      if (b && (b.x1 - b.x0 < 44 || b.y1 - b.y0 < 44 || b.y1 < h - 60 || b.x1 > w / 2)) row.push(`${tag}: the thumb's ${what} button isn't by the left thumb (${b.x0},${b.y0}-${b.x1},${b.y1})`);
+    }
+    const talk = r.keep.find((k) => k.name === 'talk'), emo = r.keep.find((k) => k.name === 'emote');
+    if (talk && emo && !(h > w ? Math.abs(emo.x0 - talk.x0) <= 2 && emo.y1 <= talk.y0 && talk.y0 - emo.y1 <= 12 : Math.abs(emo.y1 - talk.y1) <= 2 && emo.x0 >= talk.x1 && emo.x0 - talk.x1 <= 12)) row.push(`${tag}: the emote button isn't beside the chat button (${emo.x0},${emo.y0} by ${talk.x0},${talk.y0})`);
     const want = touch ? 'b-phone,b-map,b-menu' : 'b-phone,b-map,b-chat,b-menu';
     if (nav.map((b) => b.name).join() !== want) { row.push(`${tag}: the row is ${nav.map((b) => b.name)}`); continue; }
     if (!dbg) row.push(`${tag}: no debug button`);
