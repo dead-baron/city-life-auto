@@ -1,0 +1,281 @@
+# City Life Auto - decisions register
+
+The owner's standing decisions, one line each: the decision, its date, its source.
+
+## How this is used
+- **Every job reads this file before starting** and follows it. A brief that contradicts a line here is checked with
+  the owner first.
+- **A new owner decision goes in here in the same change** (in chat, or settled with him during a job): one line under
+  its topic, with its date and source. The lead also adds the decisions made in chat.
+- **Nothing is deleted.** A reversed decision stays, marked `SUPERSEDED by ...`. An undecided question is marked `OPEN`.
+  When sources disagree, the latest wins and the line says so.
+- Sources: `DEVLOG mm-dd` = docs/DEVLOG.md entry of that date; `launch-plan 11-03`, `ftue-design 11-04`,
+  `decisions-11-14`, `beta-checklist 11-14`, `monetization-plan 11-13` = the claude.ai project docs
+  (`claude/...`); `queue` = the lead's job queue (owner lines from chat); `chat` = told to Claude in chat;
+  PROGRESSION.md, WORLD-V3.md, DESIGN-NOTES.md, ARCHITECTURE.md = docs/.
+- First built 2026-11-14 from the repo docs, the DEVLOG, the queue and the lead's notes. The project docs marked
+  (*) were not readable from the building job; check them on the next pass.
+
+## Product and launch
+- Path: public beta (= Season 0), then the official launch (= Season 1); everything wiped before the official launch. (11-07; PROGRESSION.md, chat)
+- The beta is a testing phase: progress-safety measures can wait for the official launch. (11-08; chat)
+- A season ends only when the owner ends it (admin `season` command), never by itself. (11-08; DEVLOG 11-08)
+- Season length about 10 weeks. (11-07; PROGRESSION.md)
+- Beta gift: "Founding Citizen" jacket + gold "Beta" plate, tied to the account, survives the wipe. (11-07; PROGRESSION.md)
+- The game is rated 17+: a 17+ gate at first launch (`CLA_REQUIRE_AGE`). (11-04; DEVLOG 11-04, chat) - settles launch-plan's 13+/17+ question.
+- No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
+- Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
+- Bug reporter: "Report a bug" in pause menu + phone (text, optional screenshot, location, device, build, fps, errors); stored on server, listed at /admin; optional Discord webhook. (11-14; queue)
+- Beta hardening: `CLA_DEV_OPEN=0`, full test run, worldmap picture rebuilt, a bot load test of the server, Discord/community links in Settings/title. (11-14; queue)
+- Open debug mode stays while testing; at launch it closes (`CLA_DEV_OPEN=0`) and admin mode takes over. (11-03; launch-plan 11-03)
+- Claim the owner account, then `CLA_DEV_OPEN=0` (strangers are already in the game). (11-12; queue)
+- Hosting stays free for now (Oracle Always Free, 2 OCPU / 12 GB; may go to 4 / 24); scale later. (10-15; chat, DEVLOG 11-07)
+- Later platforms: Android, iOS, Xbox, Steam, Epic, with cross-play, once the web version is locked down. (11-03; chat)
+- Marketing: trailers and devlog videos on TikTok, YouTube, LinkedIn; posts on Reddit and Discord, pointing to the web beta; traditional campaigns at platform launch. (11-13; chat)
+- Priority order (11-14): police low stars -> Sandpiper water -> casinos + watchable games -> weapons stash + valet -> director scripts + arena art -> beta readiness. (11-14; decisions-11-14*, queue)
+- Treasure hunting is the first new feature after launch prep. (11-03; launch-plan 11-03)
+
+## Accounts, sign-in and privacy
+- One account, many sign-ins; our own account record with providers linked. (11-03; launch-plan 11-03)
+- Sign-ins: Guest, Email + password, Google, Discord. Reddit and email magic links OUT. (11-12; DEVLOG 11-12) - SUPERSEDES the 11-03 lineup (Google, Discord, magic link).
+- Guests play at once; "Link to this account" later keeps all progress. (11-12; DEVLOG 11-12)
+- Guests may pick/rename (filtered) but can't take a name a member owns; on sign-up the name is kept if free, then protected. (11-12; queue) - SUPERSEDES "guests stay GuestNNNN, can't rename" (11-03).
+- Guest names: soft grey over the head (members bright white), role colors a dimmer shade; "Guest" only on the player card; no tag, no symbol. (11-12 12:30; queue) - SUPERSEDES the "guest" tag (11-12 12:11).
+- Guests can't start or lead a crew or post bounties; tighter chat limits. (11-03; launch-plan 11-03, DEVLOG 11-04)
+- Usernames: filtered, unique, 3-16 characters, changeable once a month. (11-03; launch-plan 11-03)
+- A guest transfer code moves a guest to another device. (11-03; launch-plan 11-03)
+- Email: "game news" opt-in checkbox, unchecked; email stored only when ticked; unsubscribe link + Settings toggle. Provider email scope only for the opt-in. (11-12; queue)
+- The owner wants to be able to email (opted-in) players. (11-12; queue)
+- Roles: owner (grants admin/helper), admin (debug powers, kick, ban, mute), helper (refund, rescue, restore); every privileged action in an append-only, hash-chained admin log. (11-03; launch-plan 11-03)
+- Admin angel: opt-in arrival (beam, wings), can't hurt or be hurt while in it; incognito admins are normal players with logged powers. (11-03; launch-plan 11-03) - not built.
+- Analytics: self-hosted, server events, a private owner dashboard; consent asked at first launch. (11-03; launch-plan 11-03, DEVLOG 11-04)
+- Anti-cheat: server authority plus movement audits, rate limits, economy anomaly flags, bans; no client obfuscation. (11-03; launch-plan 11-03)
+- Legal: ToS / privacy / in-game notice drafts (mature themes, online interactions not rated, never share personal info); a lawyer reviews before money changes hands. (11-03; launch-plan 11-03)
+- Safe exit: LOG OFF = 10 s still countdown; instant in your own property or a hotel room; not while wanted or within 60 s of combat. (11-03; launch-plan 11-03, DEVLOG 11-04)
+- Prison: an admin can send a misbehaving player there. (11-07; DEVLOG 11-07)
+
+## Chat and emotes
+- No global chat and no district chat; phone messages to contacts you've met instead. (11-03; launch-plan 11-03, DEVLOG 11-04)
+- Channels: proximity (~40 m, bubbles + log), crew, faction (police on duty, your gang), phone; each toggles. (11-03; launch-plan 11-03)
+- The biker faction channel waits until biker groups exist. (11-04; DEVLOG 11-04)
+- Moderation: word filter (hate/sexual masked, variants caught), rate limits, mute/block/report, strikes (3 = 24 h chat mute). (11-03; launch-plan 11-03)
+- Chat on every device; on touch the chat button sits by the left thumb. (11-12; DEVLOG 11-12, queue)
+- Emotes are separate from chat, with their own button. (11-13; DEVLOG 11-13)
+- Speech bubbles clear above the head, bigger text, a small pop; quick phrases as bubbles, long typed lines to the log (or a capped bubble). (11-13; queue)
+- Typing indicator: three dots pulsing in a small bubble, no word "typing". (11-13; queue)
+- No Unicode emoji over heads: our own 16x16 pixel emotion balloons in the game palette (Kenney CC0 as base, credited). (11-13; queue)
+- Imanor balloon sheets: animation timing reference only until the license is known. (11-13; queue) - OPEN: license.
+- Balloon animation: SNES pop and settle in place, ~1.5 s hold, blink out - not floating high. (11-13; queue)
+- The bounty skull hides while a balloon shows, then comes back. (11-13; queue)
+- Emotes are body animations first; a balloon only where it adds meaning (laugh, angry, love, ?, !, sweat, sleep). (11-13; queue)
+- Picker tabs: Emotes / Dances / Poses; lasting poses hold until you move; only lasting poses log to nearby chat. (11-13; queue)
+- Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
+- Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
+
+## Monetization
+- Never sell power: ads and cosmetics only. (11-03; launch-plan 11-03, monetization-plan 11-13*)
+- Keep an ongoing monetization plan doc plus a one-page summary. (11-13; chat)
+- Plan of 11-13: Job Center computer (watch ads for in-game cash, capped a day); pause ads at death screen / safe exit, none in a first session; Supporter pack; cosmetics + season pass; ad-free upgrade; donations. (11-13; monetization-plan 11-13*) - OPEN: owner still weighing the model per platform.
+- 11-03's "one death-screen interstitial per 15-20 min" is folded into the 11-13 pause-ad plan. (11-13; monetization-plan 11-13*)
+- Free on every platform; order web beta -> web game portals -> Android/iOS -> Steam/Epic -> Xbox, each only once the last retains players. (11-13; monetization-plan 11-13*) - plan.
+- Donate / tip button "Support Dead Baron" on title and Settings. (11-03; launch-plan 11-03) - OPEN: which platform.
+- Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
+
+## HUD and controls
+- Minimal HUD: a dot or one fading line, never a new on-screen panel; new UI lives in the phone. (10-24; agent-rules, chat)
+- Nothing lingers: prompts fade after a few s, big moments go by themselves (2.6 s), sit long and the UI fades. (10-10; DEVLOG 10-10, 11-03, 11-04)
+- The touch sticks' behavior is untouchable (layout may move, behavior may not). (10-24; agent-rules, queue 11-06)
+- The aim stick stays (drag-to-aim on FIRE was rejected). (10-24; DEVLOG 10-24)
+- Every screen and mode has a way to back out on every device and control scheme. (11-12; chat, queue)
+- Back and close in the same place on every screen. (11-03; DEVLOG 11-03 UI-10)
+- Portrait stays fully playable (no landscape-only). (11-12; queue)
+- HUD look: Direction A, the SNES pad - navy panels, gold rim, CLA Pixel everywhere in the HUD. (11-12; DEVLOG 11-12)
+- Button rule: a fixed action gets a simple symbol (FIRE crosshair, ROLL chevrons), a situational one gets a word (ACT shows its verb, BRAKE...). (11-12 19:28; queue) - SUPERSEDES words-only (19:26), symbols + chips (19:22), game-icons silhouettes (17:29).
+- The vehicle button: simple enter/exit door symbols; GET IN / ON / EXIT / OFF words only in tips and the Guide. (11-12 19:37; queue)
+- Button sizes 60 / 52 / 40 px, translucent navy with an accent rim, one word size, measured centering. (11-12; queue)
+- ACT shows only while a prompt names it. (11-13; DEVLOG 11-13)
+- Right aim stick stays in the corner, action buttons on arcs round it; in portrait a tight thumb cluster. (11-12; queue, DEVLOG 11-06)
+- The Clean (Lucide) icon line kept; the pixel icon set does NOT ship (branch pixelicons unmerged). (11-06; queue)
+- HIT shows what you hit with (fist bare-handed, else the weapon). (11-05; DEVLOG 11-05)
+- Buy/sell/pay button shows "$", not coins; FIRE ON shows an auto-fire symbol, not infinity. (11-06; queue)
+- Gamepad: RT fires, right stick only aims (stick-full-fire is an option, off by default); RB/LB tap cycles, hold opens the wheel. (10-09; DEVLOG 10-09)
+- Controller menus: left/right move left/right. (10-08; DESIGN-NOTES.md)
+- Boost is its own action: keyboard Shift, pad B, a touch BOOST button. (11-12; DEVLOG 11-12)
+- Camera: a public photo mode; staged / follow / tour / showcase stay debug. (11-12; queue)
+- The debug button stays on the HUD while testing. (10-26; DEVLOG 10-26)
+- One Quit for every activity (tracker or phone); walking away ends it after a few s with a toast. (11-12; queue)
+- The death / knocked-out screen never covers the scene; its buttons can be backed out of. (10-10; DEVLOG 10-10)
+- No "Police remember you" chip. (11-03; DEVLOG 11-03)
+- No see-through outline behind plants (10-09), on riders in the open (10-23), or behind people (11-14). (DEVLOG)
+- Shop symbols over doors when close: subtle, can be turned off. (10-08; DEVLOG 10-22)
+- The graphics row stays on the title screen. (10-11; DEVLOG 11-03)
+- Shop signs in a readable face. (11-03; DEVLOG 11-03)
+- Controls in text are `[[action]]` names from shared/controls.js (each device draws its glyph). (11-04; CLAUDE.md)
+
+## Art direction
+- 16-bit SNES pixel art with modern lighting and atmosphere (Octopath Traveler, Eastward for environment and light), a GTA vibe. (10-05; chat)
+- Not true top-down: vehicles 3/4 angled, people and building fronts slightly angled, like the concepts. (10-05; chat)
+- Claude's code generators are the backbone; the owner's concepts are the targets ("treat concepts as real places"). (10-31; chat, DEVLOG 10-31)
+- No old art anywhere, not even as a fallback. (10-06; DESIGN-NOTES.md)
+- Trees much taller than people; taller buildings that never block the player's view. (10-05; chat)
+- No huge plain buildings or towers: break them up and vary them; keep a few real landmark towers downtown. (11-06; queue, DEVLOG 11-07)
+- No district all one color. (10-17; DEVLOG 10-17)
+- No red cross on anything (protected emblem): clinics and pharmacies a white cross on green. (10-18; DEVLOG 10-18)
+- No snow: summits drawn as scree and rock. (10-17; DEVLOG 10-17)
+- Placeholder art, markers and waypoints get replaced with real SNES-style art game-wide. (11-13; queue)
+- Characters: keep the system (it generally looks good); make every look option read clearly - premium hats and glasses; same bar for NPCs. (11-13; queue)
+- Character art from the 11-13/14 pass stays (not reverted). (11-14; chat, per the lead) - confirm.
+- Character polish pass on Fable: staged, review sheets per pass (faces, then hands/arms, then clothing), the owner approves each before live. (11-14; beta-checklist 11-14*, queue)
+- Title card avatar: a portrait (head to waist), centered, every face in the same spot; non-looping idles (blink, glance...). (11-14; DEVLOG 11-14) - SUPERSEDES the whole-figure avatar (11-14).
+- Logo: the owner's neon design, rebuilt in-engine - no black outlines; D3 = his letters cleaned + a fresh crisp skyline on an even grid; fonts only if he asks. (11-14 15:04; queue) - OPEN: owner picks the variant.
+- The logo's neon flicker sound: softer, a real tick/buzz and low hum, quieter. (11-14; queue)
+- Dead Baron studio intro: short, SNES-style. (11-03; DEVLOG 11-03)
+- Mini-game and arcade art in the SNES style; each game its real machine. (11-06; queue)
+- Fancy casinos look fancy, tiered by how upscale (chandeliers, carpet, marble, gold). (11-14; queue)
+- Interactive vegetation is very important: grass and crops part round people and rise back within seconds (no track); vehicles flatten a lasting swath. (11-14; chat, DEVLOG 11-14)
+- Explosions epic and beautiful. (10-09; DEVLOG 10-09)
+- Burning NPCs: fewer deaths, less disturbing; they flee, find water, stop-drop-roll. (10-15; DEVLOG 10-21)
+- Bathhouses: nudity pixelated (Sims-style); no swimsuit required. (11-01; DEVLOG 11-01)
+
+## Music and sound
+- No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)
+- The owner makes the music (ComfyUI, his own workflow, one prefilled JSON per piece); played as recordings, not rebuilt in the engine. (11-12; queue, chat)
+- The engine plays only instruments the player plays. (11-12; queue)
+- Claude's in-game music studio: PAUSED (10-10) - SUPERSEDED by the owner's own pipeline (11-12).
+- Title track: the owner's "Chill closer"; the first title track kept as the train arrival's music. (11-12; DEVLOG 11-12)
+- Sound effects synthesized, SNES-flavored. (10-08; DEVLOG 10-08)
+
+## World and places
+- World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)
+- Each district goes live when done; no test server. (10-17; chat) - SUPERSEDES "World v3 on a test server" (10-11).
+- Highways loop logically with long stretches; the main line loops the whole world, double track, scenic. (10-10; WORLD-V3.md part 5)
+- Metro City is the largest, densest heart; islands closer together; plenty of bridges so exits can't be camped. (10-10; WORLD-V3.md part 7)
+- Gangs only in isolated rough corners; none in the north-west forest; Lucky Mesa's syndicate is Vegas-mafia, not touchy. (10-16; DEVLOG 10-21, 10-22)
+- The city arrival is beside Greenfield Park west (hand-built block: park, shops, cheap dealer, steal alley); the other three arrival stations get the same. (11-06; queue)
+- Station forecourt loops carry no through-traffic (taxi rank / parked cars at most); the Metro lot enlargement dropped. (11-06; queue)
+- What's meant to be seen is seen: signs, doors, activities, interactables never hidden by roofs, trees, decks (visibility audit + test). (11-06; queue)
+- Placement lint: boats on clear water, signs not overlapping, no duplicate place signs, parked cars on road or lot only. (11-13; queue, DEVLOG 11-14)
+- Fenced places have openings on at least two sides. (11-12; DEVLOG 11-12)
+- No fences across driveways; garden plots in sight, not behind the house. (10-17; DEVLOG 10-17, 10-24)
+- Walk-in interiors compact, near the entrance. (10-17; DEVLOG 10-17)
+- Interior renumbering: owned homes bought back at their deed (`WORLD_VERSION` bump) rather than kept. (11-06; DEVLOG 11-06)
+- Black bin bags only a few, near cans or in rough alleys. (10-10; DEVLOG 10-10)
+- Pool tables in suitable bars and food places; a home pool table only if cheap. Blackjack and poker in saloons and biker bars. (11-14; queue)
+- Coral Cay gets a police station (Island Threads converted). (11-07; DEVLOG 11-07)
+- Beaches: no water slivers along piers / boardwalks over sand (fix the class); pier sides over sand step on/off freely. (11-14; queue)
+- Skatepark ledges and boxes block people on foot (skaters still grind). (11-14; queue)
+- A cinematic Showcase list of the best hand-crafted places, for the owner's videos. (11-12; DEVLOG 11-12)
+- Property on public servers: plenty of properties, shared with claims; the outside stays risky and social. (10-06; DESIGN-NOTES.md)
+
+## Police and crime
+- Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)
+- Cops at 1-3 stars: worse drivers, slower to cuff, easier to shake; only 4-5 stars bring sharp drivers and tactics. (11-07; DEVLOG 11-07)
+- The police helicopter comes at 4 stars (was 3). (11-07; DEVLOG 11-07)
+- Five stars take longer to reach. (10-22; DEVLOG 10-23)
+- Custody must be escapable: fighting free at 1-2 stars usually works with honest mashing; breaking out gets a real head start. (11-14; DEVLOG 11-14)
+- Fighting the police raises your wanted level, but you still get a chance to run, hide and wait it out. (11-14; DEVLOG 11-14)
+- The cruiser taking you in must reach a station (fallback after N s stuck); never drives into the sea. (11-07; DEVLOG 11-07)
+- A police station's cell by default; prison only for 5 stars + a long arrest record, or an admin. (11-07; DEVLOG 11-07)
+- Prison: about 5 min max; breakouts and prison-break quests. (10-05; DEVLOG 10-22)
+- Nobody beats you up while the police hold you. (10-09; DEVLOG 10-09)
+- NPC street fights: whoever started it is fair game; police break it up by tackling, not shooting. (10-10; DEVLOG 10-10)
+- Poaching the park's koi is a crime. (10-18; DEVLOG 10-18)
+- Tri-faction rules (heat, peak-wanted memory, disguise, Enforcer badge, bounties, carjack temperaments) as in ARCHITECTURE.md's table. (10-03; ARCHITECTURE.md)
+
+## Weapons and loadout
+- Loadout: 2 guns, 1 melee, 1 throwable carried; the rest in your stash. (11-03; launch-plan 11-03) - built 11-14 (branch weaponstash, not live yet).
+- Carry upgrades later: shoulder holster +1 gun, back sling +1 long gun, chest rig +1 melee +1 throwable (caps 4 / 2 / 2). (11-03; DEVLOG 11-03 UI-10)
+- Weapons at risk: guns, bows, launchers, grenades, illegal items and dear blades drop on death as pickups anyone can take (a minute); fists, police issue and cheap legal tools stay. (11-14; decisions-11-14*, DEVLOG 11-14) - SUPERSEDES "a weapon you buy is yours forever; death drops cargo, never weapons" (11-03).
+- Arrest: illegal guns confiscated for good; legal guns go to your stash. (11-14; DEVLOG 11-14) - conflicts with launch-plan's impound lot (fee to get a seized gun back): OPEN if the impound idea is still wanted.
+- One stash per character: your home's safe and every gun / pawn shop counter. (11-14; decisions-11-14*)
+- Buy straight to the stash (bulk), drop weapons, hand one to a crewmate nearby. (11-14; queue)
+- Phone "Find my weapons": a waypoint to the nearest stash. (11-14; DEVLOG 11-14)
+- No weapon blueprints or crafting. (11-03; launch-plan 11-03)
+- Ammo is the money sink. (11-03; launch-plan 11-03)
+- Only the plasma blade deflects; other guards stop blows, not arrows. (10-10; DEVLOG 10-10)
+- The plasma blade comes in colors you choose. (10-09; DEVLOG 10-09)
+- A SAM launcher to fight helicopters, without making them weak. (10-16; DEVLOG 10-22)
+
+## Vehicles and the car
+- The first car is earned by your FTUE path: Honest = cash to buy a beater at the station's used lot; Hustle = steal one in the alley; Outdoors = a cheap pickup; Roam = cash + the dealer marked. (11-06; queue, DEVLOG 11-06) - SUPERSEDES the free starter car (11-03).
+- The free starter car stays only with players who already had one. (11-06; CLAUDE.md)
+- Hustle path gets pocket money ($200: food, ammo, bail - not enough for a lot car). (11-07; DEVLOG 11-07)
+- First-car stock is per player or plentiful; never spawned on top of each other. (11-06; queue)
+- Your car is marked as yours. (11-06; DEVLOG 11-06)
+- Your car stays where you left it (logoff, restart) and shows on your map; "Have my car delivered" by a valet for a fee - no teleport. (11-14; decisions-11-14*, DEVLOG 11-14) - settles "Find My Car".
+- Cancelling a job gives its vehicle back; players can't spawn unlimited aircraft. (10-23; DEVLOG 10-23)
+- Fire engines: you get out and use the hose (no deck cannon, no any-engine hose); a hose icon on FIRE by your engine at most. (11-06; queue)
+- Skateboards are world vehicles you own, carry and lose; park boards borrowed; a board breaks (respawns in a skate session). (11-03; launch-plan 11-03, DEVLOG 11-04)
+- Skateboards about bicycle speed. (10-18; DEVLOG 10-18)
+- Surfboard: not forced on in the sea; paddling faster than swimming. Rollerblades: wearable gear. (11-03; launch-plan 11-03)
+- Vehicles tough: explode only in a serious crash; at 0 health slow, smoke, burn, then explode. (10-06; DESIGN-NOTES.md)
+- Aircraft drawn at their height. (10-11; DEVLOG 10-11)
+- No skipping a taxi or rideshare ride. (10-06; DESIGN-NOTES.md)
+
+## Economy, jobs and progression
+- The progression plan approved as written, every default included: 3 careers x 8 ranks, "What's next", daily/weekly goals, contacts, extraction payouts, the event calendar, district reputation, sinks, seasons. (11-07; PROGRESSION.md)
+- Big money from visible crate runs, paid only on delivery; a gold carrier shows on every minimap, iron/steel only nearby. (11-07; PROGRESSION.md)
+- A money sink should feel like care, never a tax; cosmetics never add combat power. (11-07; PROGRESSION.md)
+- Property upkeep: skipped a week -> repossessed, furniture kept in storage. (11-07; PROGRESSION.md)
+- Repossession refund 50%. (11-08; queue) - OPEN: owner to confirm.
+- `SEASON.beta` switched off at Season 1. (11-08; queue) - OPEN: owner to confirm.
+- Vest (armor) prices and 3% rent: OK'd. (11-12; queue)
+- Leaderboards per career; top 10 get a unique cosmetic. (11-07; PROGRESSION.md)
+- Tune the economy from real telemetry after the first test weekend. (11-03; launch-plan 11-03)
+- More honest jobs (flying, coast guard, firefighter, taxi, bus, forklift...). (10-11; DEVLOG 10-11)
+- Search and rescue missions in the wilderness, from their own HQs. (10-24; DEVLOG 10-24)
+- ATMs: a pop-up (Deposit all / Use ATM), on foot only. (10-06; DEVLOG 10-22)
+- Air hockey is two-player (or vs the machine); a game in progress can only be watched. (11-07; DEVLOG 11-07)
+- Games watchable from outside, for ALL games (pool, hockey, skee-ball, cabinets, bowling, chess, cards, dice, roulette, darts): light server sims only while someone is near. (11-13; queue)
+
+## Director and content
+- Scripted scenes for trailers, with player-like NPC actors and set camera moves; also as occasional live-world events. (11-13; chat, DEVLOG 11-13)
+- Features a scene needs but the game lacks are built for the game first. (11-13; chat)
+- Actors look like ordinary NPCs in the live world. (11-13; DEVLOG 11-13)
+- No text bubbles in scenes; closer framing; the camera stays the player's (zoom is an offset). (11-13; DEVLOG 11-13)
+- Next: autoplay scripts for the remaining scenes. (11-14; queue)
+- Car soccer arena art: PAUSED (branch arenaart), resumes with the director work. (11-12; queue)
+
+## FTUE and Guide
+- The tutorial IS the first goal: train arrival, one question ("What brings you to town?"), at most 3 steps, then first-time moments. "Short and sweet, general direction." (11-04; ftue-design 11-04, CLAUDE.md)
+- The old city tour is retired. (11-04; CLAUDE.md)
+- Skippable everywhere, never blocks play, one fading line each; only new characters, every character once. (11-04; CLAUDE.md)
+- Full progress reset shipped with the FTUE (`PROGRESS_EPOCH`); a future full reset = bump it. (11-04; DEVLOG 11-06)
+- Arrival stations: pick city / coast / desert / country; a staged train on its own track, tunnel to tunnel. (11-06; DEVLOG 11-06)
+- First-time moments wait until you're back up. (11-06; DEVLOG 11-06)
+- The Guide (phone) is the in-game wiki; its numbers come from the data files, its controls from shared/controls.js. (11-04; CLAUDE.md)
+- Teach the new thing: a changed system updates its Guide entry and first-time moment in the same change; a new job, place, activity or control gets an entry. (11-04; CLAUDE.md)
+- Player-facing numbers live in shared/rules.js (`FTUE` for the FTUE's own). (11-04; CLAUDE.md)
+- Everything is decided on the server. (11-04; CLAUDE.md)
+
+## Process
+- Read this file before any task; a new owner decision goes into it in the same commit. (11-14; chat)
+- Nothing gets lost: every owner note goes into a doc and the task list. (10-08; DESIGN-NOTES.md)
+- The owner trusts Claude with production and build-order calls; tune together afterwards. (10-05; chat)
+- Pushing to main deploys live: push only when tests pass; batch server changes; agents never push (the lead merges). (CLAUDE.md, agent-rules)
+- Go live after Claude's own screenshot review - no wait for the owner (one capture round), to save usage. (11-12; queue)
+- Visual direction: show 2-3 variants side by side for the owner to pick before wiring in (HUD, icons, logo). (11-12; queue)
+- At most 3 agents at once; keep agent runs lean (usage). (11-14; chat, queue)
+- Heavy commands (server, browser, capture, bake, full tests) under `flock /tmp/cla-heavy.lock`, one at a time; small Node heaps; WIP commits often. (11-13; agent-rules)
+- Delete capture frames and temporary builds once looked at (fixed disk). (11-13; agent-rules)
+- Reports short (under 200 words); 2-3 small screenshots at most. (11-12; agent-rules)
+- Raising a performance budget is a decision: say why in the DEVLOG. Page budget now 540 KB (11-07, "a modest raise is fine"). (CLAUDE.md; DEVLOG 10-21, 10-26, 11-07)
+- Each art change costs ~5 h of server rebake: batch art changes; avoid re-keying world/art unless the task needs it. (11-07; queue, agent-rules)
+- Don't slow the server's start (health window). (agent-rules)
+- Stamp before every commit; a DEVLOG entry per feature (American English); README controls table current. (CLAUDE.md)
+- American English everywhere, spelling and terms. (11-03; launch-plan 11-03)
+- New features reachable from the debug menu while testing. (10-18; DEVLOG 10-18)
+- Concept art Claude needs goes in the general Concept Art Prompt Pack; the World Building pack is the owner's. (10-17; chat)
+- Offline practice: PAUSED - don't build on it until a plan is agreed. (10-20; CLAUDE.md)
+
+## Future features (noted, not scheduled)
+- Treasure hunting (map scraps, riddles, shovel, tiered chests as visible cargo). (11-03; launch-plan 11-03)
+- VR in-game: arcade machine duel, home rigs, then lobby modes (battle royale, wargames) - needs instanced lobbies. (11-03; launch-plan 11-03, chat)
+- Deferred 11-14: emotes round 3, buskers overhaul (+ bucket drummers, playable instruments), benches for players, dog walker variety, pets (phase 1 ambient, phase 2 adoption), the West (horses, ranching, train heists). (11-14; decisions-11-14*)
+- Taller grass, overgrown patches you wade through, tall cornfields: after the beta opens (or with the art session). (11-14; queue)
+- Animals overhaul (horses, coyotes, wolves, bears); sharks swim under and breach to attack. (11-13; queue)
+- Salmon leap up falls in hops. Granite Hot Springs steam and stone. (11-14; queue)
+- Arcade leftovers: more cabinet games, realtime air hockey, NPC pool opponent walks over, pool stakes. (11-07; queue)
+- Life-sim ideas: photo commissions, bartending/barista, market stalls, fishing/skate tournaments, hosting buffs. (11-03; launch-plan 11-03)
+- Player stats with a modest daily gym mini-game. (10-04; chat)
+- Ride of the Valkyries on the helicopter radio (owner's MIDI kept). (10-10; DEVLOG 10-10)
