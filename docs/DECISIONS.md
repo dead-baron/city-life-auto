@@ -13,8 +13,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
   `decisions-11-14`, `beta-checklist 11-14`, `monetization-plan 11-13` = the claude.ai project docs
   (`claude/...`); `queue` = the lead's job queue (owner lines from chat); `chat` = told to Claude in chat;
   PROGRESSION.md, WORLD-V3.md, DESIGN-NOTES.md, ARCHITECTURE.md = docs/.
-- First built 2026-11-14 from the repo docs, the DEVLOG, the queue and the lead's notes. The project docs marked
-  (*) were not readable from the building job; check them on the next pass.
+- First built 2026-11-14 from the repo docs, the DEVLOG, the queue and the lead's notes. The decision docs
+  decisions-10-11, 11-04 and 11-06 were added by the lead the same day.
 
 ## Product and launch
 - Path: public beta (= Season 0), then the official launch (= Season 1); everything wiped before the official launch. (11-07; PROGRESSION.md, chat)
@@ -34,6 +34,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Marketing: trailers and devlog videos on TikTok, YouTube, LinkedIn; posts on Reddit and Discord, pointing to the web beta; traditional campaigns at platform launch. (11-13; chat)
 - Priority order (11-14): police low stars -> Sandpiper water -> casinos + watchable games -> weapons stash + valet -> director scripts + arena art -> beta readiness. (11-14; decisions-11-14*, queue)
 - Treasure hunting is the first new feature after launch prep. (11-03; launch-plan 11-03)
+- Full progress reset when the FTUE shipped, as a progress-epoch bump; a future full reset (e.g. at launch) is one more bump; account records (sign-ins, roles, bans, mutes) kept. (11-04; decisions-11-04)
+- Start fresh on a signed-in account resets progress and keeps the account; kicked or banned pages stop reconnecting. (11-04; decisions-11-04)
+- /perf and /clienterrors behind the owner/admin login (clients can still post errors). (11-04; decisions-11-04)
 
 ## Accounts, sign-in and privacy
 - One account, many sign-ins; our own account record with providers linked. (11-03; launch-plan 11-03)
@@ -53,6 +56,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Legal: ToS / privacy / in-game notice drafts (mature themes, online interactions not rated, never share personal info); a lawyer reviews before money changes hands. (11-03; launch-plan 11-03)
 - Safe exit: LOG OFF = 10 s still countdown; instant in your own property or a hotel room; not while wanted or within 60 s of combat. (11-03; launch-plan 11-03, DEVLOG 11-04)
 - Prison: an admin can send a misbehaving player there. (11-07; DEVLOG 11-07)
+- Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
+- An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).
 
 ## Chat and emotes
 - No global chat and no district chat; phone messages to contacts you've met instead. (11-03; launch-plan 11-03, DEVLOG 11-04)
@@ -71,6 +76,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Picker tabs: Emotes / Dances / Poses; lasting poses hold until you move; only lasting poses log to nearby chat. (11-13; queue)
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
+- Biker faction chat hidden behind a flag until biker groups exist. (11-04; decisions-11-04)
 
 ## Monetization
 - Never sell power: ads and cosmetics only. (11-03; launch-plan 11-03, monetization-plan 11-13*)
@@ -111,6 +117,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The graphics row stays on the title screen. (10-11; DEVLOG 11-03)
 - Shop signs in a readable face. (11-03; DEVLOG 11-03)
 - Controls in text are `[[action]]` names from shared/controls.js (each device draws its glyph). (11-04; CLAUDE.md)
+- Title screen keeps the graphics row (Low / Medium / High / Ultra / Custom). (11-04; decisions-11-04)
+- Small phones: touch buttons scale down so all slots fit on a 360-px phone. (11-04; decisions-11-04)
+- Icons: the clean line set; the 16-bit pixel icon set parked (11-06; decisions-11-06) - SUPERSEDED for touch faces by the 11-12 button rule (symbols for fixed actions, words for situational).
+- Safety mode (press twice to commit a crime) OFF by default, switchable in Settings. (11-06; decisions-11-06) - supersedes 'on for new characters' (10-11).
+- Mini-games: a close button on touch; each arcade game shown as its real machine; SNES art for pool, air hockey, skee-ball, pinball; multiplayer where a game works with two; bigger bowling lanes, multiplayer bowling. (11-06; decisions-11-06)
 
 ## Art direction
 - 16-bit SNES pixel art with modern lighting and atmosphere (Octopath Traveler, Eastward for environment and light), a GTA vibe. (10-05; chat)
@@ -124,7 +135,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No snow: summits drawn as scree and rock. (10-17; DEVLOG 10-17)
 - Placeholder art, markers and waypoints get replaced with real SNES-style art game-wide. (11-13; queue)
 - Characters: keep the system (it generally looks good); make every look option read clearly - premium hats and glasses; same bar for NPCs. (11-13; queue)
-- Character art from the 11-13/14 pass stays (not reverted). (11-14; chat, per the lead) - confirm.
+- The player characters keep the game's current sprite art; never swap in the high-detail close-up renderer (the menu avatar uses the game sprite, scaled up). Character polish later is staged and switchable, approved sheet by sheet. (11-14; chat: "Lets not revert the player character art back to what is showing in the avatar")
 - Character polish pass on Fable: staged, review sheets per pass (faces, then hands/arms, then clothing), the owner approves each before live. (11-14; beta-checklist 11-14*, queue)
 - Title card avatar: a portrait (head to waist), centered, every face in the same spot; non-looping idles (blink, glance...). (11-14; DEVLOG 11-14) - SUPERSEDES the whole-figure avatar (11-14).
 - Logo: the owner's neon design, rebuilt in-engine - no black outlines; D3 = his letters cleaned + a fresh crisp skyline on an even grid; fonts only if he asks. (11-14 15:04; queue) - OPEN: owner picks the variant.
@@ -166,6 +177,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Skatepark ledges and boxes block people on foot (skaters still grind). (11-14; queue)
 - A cinematic Showcase list of the best hand-crafted places, for the owner's videos. (11-12; DEVLOG 11-12)
 - Property on public servers: plenty of properties, shared with claims; the outside stays risky and social. (10-06; DESIGN-NOTES.md)
+- World v3 frame 14 x 9 squares of 504 m: a vast forest west, a large desert east, a broken north coast with surf facing north; ocean on every side (an island continent). (10-12; decisions-10-11 G)
+- Big plain towers split into several buildings of different heights with setbacks, rooftop detail and street-level shops; a few real landmark towers stay downtown. (11-06; decisions-11-06)
+- Caves: no lost-in-the-dark arrow; the cave art is OK; the character must be the real sprite. (11-06; decisions-11-06)
+- Chess tables out from behind trees, and more of them. (11-06; decisions-11-06)
+- Homes: going inside your own home is a separate space (its own little level). (10-11; decisions-10-11)
 
 ## Police and crime
 - Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)
@@ -211,6 +227,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Vehicles tough: explode only in a serious crash; at 0 health slow, smoke, burn, then explode. (10-06; DESIGN-NOTES.md)
 - Aircraft drawn at their height. (10-11; DEVLOG 10-11)
 - No skipping a taxi or rideshare ride. (10-06; DESIGN-NOTES.md)
+- Traffic: pedestrian hits stay rare (about once per 110 h of driving); cars on minor roads wait at the line; a working ambulance is a blocker cars go around. (11-04; decisions-11-04)
+- No traffic jam at arrival: NPC traffic never drives into station forecourt loops. (11-06; decisions-11-06)
 
 ## Economy, jobs and progression
 - The progression plan approved as written, every default included: 3 careers x 8 ranks, "What's next", daily/weekly goals, contacts, extraction payouts, the event calendar, district reputation, sinks, seasons. (11-07; PROGRESSION.md)
@@ -247,6 +265,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Teach the new thing: a changed system updates its Guide entry and first-time moment in the same change; a new job, place, activity or control gets an entry. (11-04; CLAUDE.md)
 - Player-facing numbers live in shared/rules.js (`FTUE` for the FTUE's own). (11-04; CLAUDE.md)
 - Everything is decided on the server. (11-04; CLAUDE.md)
+- The first car is earned by the path picked at "What brings you to town?" (honest: a cheap dealer/junkyard beater; hustle: the steal alley, the crime tutorial; outdoors: a cheap pickup; roam: cash + the dealer marked), within the FTUE's three steps; every arrival station has a lot and a steal alley close by. Replaces the free starter car. (11-06; decisions-11-06)
 
 ## Process
 - Read this file before any task; a new owner decision goes into it in the same commit. (11-14; chat)
