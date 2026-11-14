@@ -5,17 +5,18 @@ export const KEY_ACTION = { E: 'action', F: 'vehicle', Q: 'throw', R: 'reload', 
 // (light shares D-pad up with the horn: the horn is only in a vehicle, the flashlight only on foot)
 // On a pad (tasks #301, #411): RT fires and the right stick only aims (Settings: "right stick full push fires" puts the
 // stick-ring fire back); at the wheel RT is the gas, so a drive-by is R3 - click the stick you aim with. A tap of RB / LB
-// takes out the next / previous weapon (LB from your fists: the plasma blade, if you have it); holding either opens the
-// weapon wheel - point a stick at one and let go (shared/input.js createTapHold, wheelPicker).
+// takes out the next / previous weapon (LB from your fists: the plasma blade, if you have it); holding RB opens the
+// weapon wheel - point a stick at one and let go (shared/input.js createTapHold, wheelPicker). Holding LB opens the quick
+// radial (chat round 2, 11-13: client/emotes.js) - quick lines, emotes, Type (an on-screen keyboard), More - the same way.
 export const PAD = {
   action: ['B', 'b'], vehicle: ['X', 'x'], throw: ['Y', 'y'], dive: ['A', 'a'], reload: ['R3', 'stick'], use: ['VIEW', 'sys'],
-  horn: ['D↑', 'sys'], nextw: ['RB', 'bumper'], prevw: ['LB', 'bumper'], wpnwheel: ['HOLD RB / LB', 'bumper'], map: ['MENU', 'sys'], fire: ['RT', 'bumper'], drivefire: ['R3', 'stick'],
+  horn: ['D↑', 'sys'], nextw: ['RB', 'bumper'], prevw: ['LB', 'bumper'], wpnwheel: ['HOLD RB', 'bumper'], map: ['MENU', 'sys'], fire: ['RT', 'bumper'], drivefire: ['R3', 'stick'],
   sprint: ['FULL STICK', 'stick'], boost: ['B', 'b'], cruiser: ['D↓', 'sys'], phone: ['D←', 'sys'], bag: ['D→', 'sys'], light: ['D↑', 'sys'],
   move: ['L-STICK', 'stick'], aim: ['R-STICK', 'stick'], gas: ['RT', 'bumper'], brake: ['LT', 'bumper'], pause: ['MENU', 'sys'], back: ['B', 'b'],
   steer: ['L-STICK', 'stick'], block: ['LT', 'bumper'],
   dance: ['L3', 'stick'],
-  chat: ['📱 MESSAGES', 'sys'],   // (chat on a pad: the phone's Messages app - its quick lines and threads, picked with the D-pad)
-  emote: ['📱 EMOTE', 'sys'],   // (the emotes on a pad: the phone's Emote screen - client/phone.js)
+  chat: ['HOLD LB', 'bumper'],   // (chat on a pad: the quick radial's lines, or its Type - an on-screen keyboard; the phone's Messages app for texts)
+  emote: ['HOLD LB', 'bumper'],   // (the emotes on a pad: the quick radial; its More, the phone's Emote screen - every emote, dance and pose)
   trick: ['RT', 'bumper'],   // (on a skateboard: shared/skate.js)
   radio: ['📱 RADIO', 'sys'], lanes: ['D-PAD / X A Y RB', 'sys'], pads: ['D-PAD + X A Y RB', 'sys'], chord: ['LT', 'bumper'],
   climb: ['RT', 'bumper'], descend: ['LT', 'bumper'],   // (flying: shared/flight.js)

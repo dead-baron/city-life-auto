@@ -209,7 +209,7 @@ export function createLaunch(opts) {
     // a message for the launch foundation: undefined when it isn't one (session.js goes on routing it)
     message(p, msg) {
       const t = msg.t;
-      if (t === 'chat' || t === 'emote' || t === 'chatset' || t === 'mod' || t === 'contacts' || t === 'inbox') return chat.handle(world, p, msg);
+      if (t === 'chat' || t === 'emote' || t === 'typing' || t === 'chatset' || t === 'mod' || t === 'contacts' || t === 'inbox') return chat.handle(world, p, msg);
       if (t === 'admin') return admin.handle(world, p, msg);
       if (t === 'name') { const err = rename(p, msg.name); if (err) world.notify(p, err, 'warn'); else sendAcct(p); return null; }
       if (t === 'acct') {

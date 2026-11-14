@@ -4,7 +4,7 @@
 // point at one (mouse, right stick, or your finger) and let go to use it. A quick tap uses the slot
 // you used last. On touch, tapping ITEMS opens the wheel and a tap on a slot uses it.
 // The client only asks; the server checks you have the item and applies it.
-// Weapon wheel (a pad: hold RB or LB): everything you carry round a circle in the order the bumpers step through it;
+// Weapon wheel (a pad: hold RB): everything you carry round a circle in the order the bumpers step through it;
 // point a stick at one and let go of the bumper to take it out.
 import { WEAPONS, ITEMS, weaponOrder } from '../shared/items.js';
 import { wheelPicker } from '../shared/input.js';
@@ -157,7 +157,7 @@ export function fittedIcon(wi, bc, w, h) {
   return c;
 }
 
-// ---- the weapon wheel (a pad: hold RB or LB) --------------------------------------------------------------------------
+// ---- the weapon wheel (a pad: hold RB) --------------------------------------------------------------------------------
 // Every weapon you carry round a circle, in the order the bumpers step through them (the first at the top, clockwise:
 // the plasma blade, last, just left of your fists); the one in your hands is picked to start with. point(sticks) moves
 // the pick (shared/input.js wheelPicker), pick() takes it out and closes.

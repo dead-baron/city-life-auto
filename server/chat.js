@@ -4,15 +4,19 @@
 // (server/moderation.js), contacts (met, crewed or traded with) and the phone's inbox for whoever's offline.
 // Messages (page -> server):
 //   { t: 'chat', ch: 'near'|'crew'|'faction'|'phone', text, to? (phone: a contact's id) }
-//   { t: 'emote', e }                              (shared/chatdefs.js EMOTES: its animation on the body - systems/emote.js)
+//   { t: 'emote', e, m? }                          (shared/chatdefs.js EMOTES: its animation on the body - systems/emote.js;
+//                                                   Dance with m: that move, the picker's Dances tab)
+//   { t: 'typing', on }                            the chat line being typed in (on), or not any more - the dots over the head
 //   { t: 'chatset', off: { near?, crew?, faction?, phone? } }   channels switched off for you
 //   { t: 'mod', a: 'mute'|'unmute'|'block'|'unblock'|'report', id, why?, note? }
 //   { t: 'contacts' } · { t: 'inbox' }
 // (server -> page): { t: 'chat', ch, n (sender's name), id (sender's public id), eid (their ped, for the bubble: near),
-//   text, at, own? } · { t: 'emote', eid, e, n, id } · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks,
+//   text, at, own?, bb? (near: a speech bubble too - a quick line or a short one; a long line goes to the log only) }
+//   · { t: 'emote', eid, e, n, id, b? (its balloon over the head), lg? (a line in the log) } - only for an emote with a
+//   balloon or a log line (the rest the body says) · { t: 'typing', eid, on } (the people near, while someone types) · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks,
 //   names ({ id: name } of the mutes and blocks), me, crew (in a crew), fac ('police' | 'gang' | null) }
 //   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
-import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS } from '../shared/chatdefs.js';
+import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS, QUICK, emoteWire } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
 import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
@@ -32,8 +36,8 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
   const cd = (p) => chatData(acctOf(p));
   const guest = (p) => accounts.isGuest(p.pid);
   const say = (p, o) => { if (p.conn && p.conn.open !== false) p.conn.sendJSON(o); };
-  const recent = new WeakMap();   // p -> { lines: [at...], phone: [at...], last: { text, at }, emoteAt, said: [] }
-  const rec = (p) => { let r = recent.get(p); if (!r) { r = { lines: [], phone: [], last: null, emoteAt: -1e9, said: [] }; recent.set(p, r); } return r; };
+  const recent = new WeakMap();   // p -> { lines: [at...], phone: [at...], last: { text, at }, emoteAt, said: [], typ: typing since (0: not), told: who saw the dots, zzzAt }
+  const rec = (p) => { let r = recent.get(p); if (!r) { r = { lines: [], phone: [], last: null, emoteAt: -1e9, said: [], typ: 0, told: null, zzzAt: 0 }; recent.set(p, r); } return r; };
 
   // the faction you talk to: police on duty, or your gang (a biker group's channel waits for FACTIONS.biker)
   function factionKey(p) {
@@ -80,6 +84,13 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       if (t >= CHAT.metS && t - dt < CHAT.metS) { const ca = cd(a).contacts[b.pid]; if (!ca) addContact(a, b, 'met'); }
     }
     for (const k of nearFor.keys()) if (!seen.has(k)) nearFor.delete(k);
+    // the typing dots no word has kept up (the page refreshes them while its line is in use), the dead's, the gone's;
+    // asleep (the Sleep pose): the Zzz balloon again now and then
+    for (const p of world.players.values()) {
+      const r = recent.get(p);
+      if (r && r.typ && (now() - r.typ > CHAT.typingS * 1000 || !p.conn || !p.ped || p.ped.dead)) typing(world, p, false);
+      if (p.ped && emotes.holding(p.ped, 'sleep') && r && now() - r.zzzAt >= CHAT.zzzS * 1000) { r.zzzAt = now(); tell(world, p, 'sleep', true); }
+    }
   }
 
   function rateOk(p, kind) {
@@ -164,26 +175,32 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
       else { qc.inbox.push(out); if (qc.inbox.length > CHAT.inboxMax) qc.inbox.splice(0, qc.inbox.length - CHAT.inboxMax); accounts.touch(); }
       return { ok: true };
     }
-    const out = line(p, ch, text);
+    const out = line(p, ch, text, ch === 'near' && (text.length <= CHAT.bubbleMax || QUICK.near.includes(text)) ? { bb: 1 } : {});
+    if (ch === 'near') typing(world, p, false);
     say(p, { ...out, own: 1 });
     for (const q of to) say(q, out);
     return { ok: true, n: to.length };
   }
 
-  // an emote: played on the body (systems/emote.js), and to everyone near who can hear you - the page pops its emoji
-  // over your head and puts a line in the log (Dance: "Ann started dancing", no emoji)
-  function emote(world, p, e) {
+  // an emote: played on the body (systems/emote.js); to everyone near who can hear you only if it has something for
+  // them beyond the body - a balloon over your head, a line in their log (dancing, the lasting poses: "Ann sat down")
+  function emote(world, p, e, m) {
     if (!Object.hasOwn(EMOTES, e) || !p.ped || p.ped.dead) return false;
     const r = rec(p);
     if (now() - r.emoteAt < CHAT.emoteGapS * 1000) return false;
-    if (!emotes.play(world, p, e)) return false;
-    r.emoteAt = now();
-    tell(world, p, e);
+    const was = !!p.ped.dancing;
+    if (!emotes.play(world, p, e, m)) return false;
+    r.emoteAt = now(); r.zzzAt = now();
+    if (!(e === 'dance' && was)) tell(world, p, e);   // (another move while dancing: nothing to say)
     if (onLine) onLine(p, 'emote');
     return true;
   }
-  function tell(world, p, e) {
-    const out = { t: 'emote', eid: p.ped.id, e, n: p.name, id: hid(p.pid) };
+  // balloon: its balloon alone, no line (the Zzz again while asleep)
+  function tell(world, p, e, balloon = false) {
+    const w = emoteWire(e);
+    if (w && balloon) delete w.lg;
+    if (!w || (!w.b && !w.lg)) return;
+    const out = { t: 'emote', eid: p.ped.id, e, n: p.name, id: hid(p.pid), ...w };
     const r2 = (CHAT.nearM * PX) ** 2;
     for (const q of world.players.values()) {
       if (!q.ped || !q.conn || (q !== p && !hears(q, p, 'near'))) continue;
@@ -201,6 +218,27 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     tell(world, p, e);
     return true;
   }
+  // the typing dots (owner, 11-13: "like a phone text message"): on to the people near who'd hear a line from you; off
+  // to whoever was shown them (and anyone near now). A line said near you, or no word for CHAT.typingS: off.
+  function typing(world, p, on) {
+    const r = rec(p);
+    if (on && (!p.ped || p.ped.dead || p.ped.hidden || !acctOf(p) || mod.mutedUntil(acctOf(p)) || cd(p).off.near)) on = false;
+    if (!on && !r.typ) return;
+    r.typ = on ? now() : 0;
+    const out = { t: 'typing', eid: p.ped ? p.ped.id : 0, on: on ? 1 : 0 }, told = new Set(r.told || []), to = [];
+    if (p.ped) {
+      const r2 = (CHAT.nearM * PX) ** 2;
+      for (const q of world.players.values()) {
+        if (q === p || !q.ped || !hears(q, p, 'near') || (q.ped.ug || 0) !== (p.ped.ug || 0)) continue;
+        const dx = q.ped.x - p.ped.x, dy = q.ped.y - p.ped.y;
+        if (dx * dx + dy * dy <= r2 && !(on && told.has(q))) to.push(q);   // (still typing: only the people who've come near since)
+      }
+    }
+    if (!on) for (const q of told) if (!to.includes(q)) to.push(q);
+    r.told = on ? [...told, ...to] : null;
+    for (const q of to) say(q, out);
+  }
+
 
   function state(p) {
     const c = cd(p), a = acctOf(p);
@@ -257,7 +295,8 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
   function handle(world, p, msg) {
     switch (msg.t) {
       case 'chat': { const r = send(world, p, msg); return r.err ? { t: 'chatsay', ok: false, err: r.err } : null; }
-      case 'emote': emote(world, p, String(msg.e || '')); return null;
+      case 'emote': emote(world, p, String(msg.e || ''), Number.isInteger(msg.m) ? msg.m : undefined); return null;
+      case 'typing': typing(world, p, !!msg.on); return null;
       case 'chatset': {
         const c = cd(p);
         if (msg.off && typeof msg.off === 'object') for (const ch of CHANNELS) if (ch in msg.off) { if (msg.off[ch]) c.off[ch] = 1; else delete c.off[ch]; }
@@ -275,5 +314,5 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
     const c = cd(p);
     if (c.inbox.length) world.notify(p, `${c.inbox.length} new message${c.inbox.length === 1 ? '' : 's'} on your phone.`, 'info');
   }
-  return { handle, update, onJoin, addContact, send, emote, announce, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
+  return { handle, update, onJoin, addContact, send, emote, announce, typing, state, contacts, hid, factionKey, target, moderate, said: (p) => rec(p).said };
 }
