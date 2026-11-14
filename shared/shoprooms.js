@@ -35,8 +35,7 @@ export function barPlan(name, seed = 0) {
 }
 
 const STRIP = 36;
-// B (the owner, 2026-11-14): a card table in a bar - poker, or blackjack with its dealer - the cards dealt live over it
-// (server/systems/casinofloor.js, client/casinoview.js; its seats: shared/casinorooms.js gameTable, inset CARD_IN)
+// a bar's card table (its seats: casinorooms.js; its game: server/systems/casinofloor.js)
 const cardTable = (c, k) => { const [w, d] = CARD_RECT[k], p = placeAny(c, w, d, (x0, y0, x1, y1) => put(c, 'cards', x0, y0, x1, y1, FELT_H, { k }, 8)); if (p) lamp(c, (p.x0 + p.x1) / 2, (p.y0 + p.y1) / 2, 44, WARM, 0.9); return p; };
 const seedOf = (b, u) => (Math.imul((b.tx | 0) + 7, 73856093) ^ Math.imul((b.ty | 0) + 3, 19349663) ^ Math.imul((u.x0 | 0) + 1, 83492791)) >>> 0;
 function rnd(seed) {
@@ -661,7 +660,7 @@ FIT.lounge = (c) => {
   const { R, r } = c;
   R.floor = pick(r, F.lounge); R.wall = pick(r, W.lounge);
   barBase(c);
-  cardTable(c, 'bj');
+  if (c.W >= 9 * c.TILE) cardTable(c, 'bj');
   wall(c, 'martini', c.X0 + 14, c.X0 + 40, 50, 74);
   sign(c, pick(r, ['COCKTAILS', 'LOUNGE', 'MARTINIS', 'JAZZ']), pick(r, ['#ff6ab0', '#ffd24a', '#9a7aff']), undefined, 'neon');
   for (const x of [c.X0 + 52, c.X1 - 22]) wall(c, 'sconce', x, x + 6, 40, 50);

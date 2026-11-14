@@ -4081,7 +4081,7 @@ function cutRecipe(c, b, s, spec, base) {
     const cm = u.kind === 'cinema' && c.M.cinema ? c.M.cinema : null;   // (The Grand Theater: shared/cinema.js lays the screens out)
     const cine = cm ? { rooms: cm.rooms.map((R) => ({ x0: R.x0 - ox, x1: R.x1 - ox, y0: R.y0 - oy, y1: R.y1 - oy, back: R.backEdge - oy, dir: R.dir, seats: R.seats.map((q) => [q.x - ox, q.y - oy, q.row]), sx0: R.screen.x0 - ox, sx1: R.screen.x1 - ox, sh: R.screen.h, lift: R.screen.lift })), cc: (cm.cc - s.tx) * TILE, wall: (cm.wallRow - s.ty) * TILE, ca: (cm.ca - s.tx) * TILE, cb: (cm.cb + 1 - s.tx) * TILE, dir: cm.south ? 1 : -1 } : null;
     const fl = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null, food = fl ? { L: fl, ox, oy } : null;   // (IN8: a food place's fit-out, shared/foodrooms.js)
-    const cr = u.casino ? casinoRoom(b, u, TILE) : null, cs = cr ? { R: cr, ox, oy } : null;   // (a casino's gaming floor: shared/casinorooms.js, client/art2/casinoart.js)
+    const cr = u.casino ? casinoRoom(b, u, TILE) : null, cs = cr ? { R: cr, ox, oy } : null;
     const sr = !fl && !blk && !cr && !LOBBY[u.kind] ? shopRoom(b, u, TILE, c.M) : null, shop = sr ? { R: sr, ox, oy } : null;   // (a shop by its trade: shared/shoprooms.js)
     units.push({ x0: (ux0 - s.tx) * TILE, x1: (ux1 - s.tx + 1) * TILE, fx0: (u.x0 - s.tx) * TILE, fx1: (u.x1 - s.tx + 1) * TILE, cy: (u.counterRow - s.ty) * TILE, kind: u.kind, dx: (u.door.tx - s.tx) * TILE, dw: (u.door.w || 2) * TILE, cells, bowl, cine, food, shop, cs, trade: u.trade || null });
   }
@@ -4699,7 +4699,7 @@ function foodRoom(u, r, px0_) {
     slab(x0, x1, y1 - 10, y1 - 4, 11, RED, RED); slab(x0, x1, y1 - 4, y1, 22, RED, RED);
   }
   for (const S of L.stools) { const x = X(S.x), Y = Yl(S.y); for (let v = 0; v < 12; v++) px(x, Y + 2, v, CHROME[2], [1, 0, 0]); for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (dx * dx + dy * dy <= 10) px(x + dx, Y + dy, 13, dx + dy < -2 ? [230, 90, 90] : RED[2], [0, 0, 1]); }
-  if (L.pool) { const P = L.pool, x0 = X(P.x0), Y0 = Yl(P.y0), FE = ramp('#2f7a4a', 5, 2); slab(x0, x0 + 100, Y0, Y0 + 52, 20, WOOD, WOOD); for (let Y = Y0 + 5; Y < Y0 + 47; Y++) for (let x = x0 + 5; x < x0 + 95; x++) px(x, Y, 21, FE[(x + Y) % 9 === 0 ? 1 : 2], [0, 0, 1]); for (const [qx, qy] of [[4, 4], [94, 4], [4, 46], [94, 46], [49, 3], [49, 47]]) dot(x0 + qx, Y0 + qy, 22, [16, 16, 18], 2); }   // (a pool table: its balls live - client/poolview.js)
+  if (L.pool) { const P = L.pool, x0 = X(P.x0), Y0 = Yl(P.y0), FE = ramp('#2f7a4a', 5, 2); slab(x0, x0 + 100, Y0, Y0 + 52, 20, WOOD, WOOD); for (let Y = Y0 + 5; Y < Y0 + 47; Y++) for (let x = x0 + 5; x < x0 + 95; x++) px(x, Y, 21, FE[(x + Y) % 9 === 0 ? 1 : 2], [0, 0, 1]); for (const [qx, qy] of [[4, 4], [94, 4], [4, 46], [94, 46], [49, 3], [49, 47]]) dot(x0 + qx, Y0 + qy, 22, [16, 16, 18], 2); }
   if (L.jukebox) { const J = L.jukebox, x0 = X(J.x0), x1 = X(J.x1); slab(x0, x1, Yl(J.y0), Yl(J.y1), 30, WOOD, WOOD); for (let x = x0 + 3; x < x1 - 3; x++) for (let v = 8; v < 26; v++) px(x, Yl(J.y1), v, [[255, 120, 60], [255, 210, 80], [90, 200, 255], [255, 90, 200]][((v >> 2) + (x >> 3)) & 3], [0, 1, 0]); }
   if (L.queue) {
     const Q = L.queue;
@@ -4759,6 +4759,5 @@ function roadhouseRoom(u, r, px0_) {
   for (let Y = Ya - 8; Y < Yb; Y++) px(cx0 - 6, Y, 30, wood[3], [0, 0, 1]);
   for (let v = 0; v < 30; v++) px(cx0 - 6, Yb, v, wood[1], [0, 1, 0]);
   slab(cx0 + 10, cx0 + 62, mid - 18, mid + 18, 18, baize, wood);
-  // (the cards: dealt live over it - server/systems/casinofloor.js spurTable, client/casinoview.js)
   for (const [sx, sy] of [[cx0 + 2, mid - 6], [cx0 + 66, mid - 6], [cx0 + 30, mid - 32], [cx0 + 30, mid + 22]]) slab(sx, sx + 10, sy, sy + 10, 12, wood, wood);
 }

@@ -3260,7 +3260,7 @@ function walkInRoom(m, b, list, main, south) {
 // would open onto another building, or into a yard no street can be walked to from, gives way to the other side when
 // that one can (walkReach) - the walk-in, its POI and b.door all on that side.
 function walkInSouth(m, b, x0, x1) {
-  const rot0 = m.prefabs[b.prefab].rot === 0;
+  const rot0 = b.prefab >= 0 ? m.prefabs[b.prefab].rot === 0 : true;   // (no prefab - Old Downtown's casinos: drawn facing south)
   if (!WD) return rot0;
   const want = b.door ? b.door.ty >= b.ty + b.th : rot0;
   if (walkReach(m, x0, x1, want ? b.ty + b.th : b.ty - 1) >= 0) return want;

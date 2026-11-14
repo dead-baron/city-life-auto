@@ -375,8 +375,6 @@ const MACH = {
 
 // ---- the floor's pieces: (q: the painters; p: the piece; its box in the cut's px; w, d: its size; h: its height) ------
 const PIECE = {
-  // a bar's card table (shared/shoprooms.js cardTable): poker's oval, blackjack's half-moon, a stool at each seat - the
-  // cards dealt live over it (client/casinoview.js)
   cards: (q, p, x0, y0) => drawGameTable(q, cardTableOf(p), (wx) => wx - p.x0 + x0, (wy) => wy - p.y0 + y0, 1),
   // a fitting of shelves: on top the packed goods seen from above, on its south face the shelf levels with the goods
   // standing on them as objects

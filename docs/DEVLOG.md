@@ -23348,3 +23348,69 @@ the touch buttons took any `me.surf` for "on a board". They now take the board's
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
 "Bounty $2,500 on you · 9 min" (client/hudinfo.js).
+
+## 2026-11-14 - Casinos you walk into; card tables in the bars; pool in more bars and diners
+
+The owner: casinos you walk into - a gaming floor with roulette, blackjack, poker and the slots, NPC patrons playing,
+the wheel spinning and the ball landing, the cards dealt, the reels turning; players can play and anyone near sees it;
+"If possible for casinos let's make sure the really fancy ones look that way". Then card tables in the saloons and bars,
+and pool tables in more bars and food places. The pool tables' plumbing is the model and is shared, not copied.
+
+- **The casinos are walk-ins** (shared/map.js buildInteriors): Lucky Mesa's thirteen - the Strip's seven resorts and Old
+  Downtown's six old casinos (their buildings have no prefab: walkInSouth now takes that as facing south) - each a room
+  as deep as a casino wants (`roomDepth` 'casino': 10-14 rows), the counter only the cashier's cage at its east end (the
+  rest of that row is floor), its place moved to the cage as any walk-in's. The tier rides on the place and its unit
+  (`u.casino`): 3 The Golden Lotus, Mesa Grande, Starfall Tower, The Silver Lagoon (shared/world3-strip.js `GRAND`); 2 the
+  other resorts; 1 Old Downtown's (world3-mesa.js).
+- **The floor** (shared/casinorooms.js `casinoRoom`, pure layout): a row of slots in banks of six along the back wall by
+  the cage; the floor between the counter's row and the front wall a grid of cells either side of the door's lane - a
+  roulette table (the wheel at its end), a blackjack half-moon, a poker oval, or two rows of slots - by a sequence per
+  tier (a narrow room - The Neon Saguaro - one column down the middle). Every seat, the dealer's spot and where each seat's
+  cards go come from `gameTable`, so the server seats people where the page draws the cards.
+- **The art** (client/art2/casinoart.js, from game/statics.js makeCut like the shops' and food places'): tier 3 a crimson
+  carpet with a gold lattice and rosettes, marble round the edge, a red runner with gold edges from the door, gilt
+  columns down the side walls, chandeliers (a gilt ring, crystals, drops - lit after dark) over the tables, gilt frames
+  on a damask wall above walnut panelling, gold trim on every table and machine; tier 2 a plum carpet with teal and
+  magenta rings, brass trim, a neon strip on the wall; tier 1 boards, a worn red runner, plain felt and wood, a marquee
+  of bulbs. The cage: its counter, brass bars, a lit plate over the window. Each table a top (the roulette layout's
+  numbers in red and black, the betting circles, the dealer's chip tray), an apron and its legs or pedestal; a stool at
+  every seat; the slots' cabinets with a lit topper, the reels' window, the buttons.
+- **The games** (server/systems/casinofloor.js): while the floor's regulars are there (activities.js 'cards': a dealer at
+  every table, one to three players at each, a few at the slots - `CASINO_FLOOR.most` at most; filled before you're in the
+  room, under its roof, gone when nobody's near) the wheel spins every 22-32 s, a blackjack hand goes round (the players
+  hit to their number, the dealer draws to 17) and a poker hand is played (hold'em: the best five of seven wins - a real
+  evaluator, `best7`), each slot player spins now and then. Every deal goes to the pages near the floor and nowhere else
+  (pooltables.js `follow` / `tell`, now shared by both): `{ e: 'cfl' }` the floor as it stands to a page coming near, then
+  `{ e: 'cdl', g, ... }` per deal - the pocket, the hands as card numbers, the board and the winner, the reels - a few
+  dozen bytes each. The numbers are in shared/rules-games.js `CASINO_FLOOR`.
+- **The page** (client/casinoview.js, loaded with the first floor the server tells it about - main.js `casinoEv`): the
+  wheel turning and slowing with its 37 pockets in the real order, the ball run the other way round the rim, dropping in
+  and bouncing into its pocket; chips on the layout while it spins, the dolly on the number after. The cards flown from
+  the dealer one at a time round the table, the hole card turned over, the dealer's draws; poker's holes face down, the
+  flop, turn and river, the hands shown, the winner's cards edged gold and the pot pushed to him. The reels a blur, then
+  stopping left to right, the topper flashing on a win.
+- **Playing** ([[action]] at a table or a machine: casinofloor.js `interaction`, before the counters in players.js): the
+  casino's own menu (casino.js) opens on that game - roulette, blackjack, video poker at a poker table, the slots - and
+  stays open at the table (economy.js `openMenu` `o.at`, as a race's hire). Each result is shown at the table you're at
+  for everyone near (casino.js calls `show`): your wheel, your hand dealt and hit card by card (the page keeps the cards
+  already down and adds the new ones), your five video poker cards, your reels; the regulars at that table wait for you
+  (`holdS`). The cage still opens the whole floor and the race book.
+- **Card tables in the bars** (shared/shoprooms.js `cardTable`: a 'cards' piece, drawn by shopart.js with the casino's
+  painter): a poker table in the taverns, saloons, pubs and sports bars that have room, a blackjack table in a lounge
+  wide enough; the Rusty Spur's card room's round table is one too (shared/cardfloors.js `spurTable` - its baked cards
+  are gone, the live ones dealt over it). The regulars play poker among themselves (a bar's chance: `CASINO_FLOOR.bar`);
+  [[action]] at it plays a hand of the house's games at the casinos' stakes - that game only, no floor to go back to
+  (casino.js `C.only`). World v3 has fifteen.
+- **Pool in more places** (C): a tavern with the room has a pool table in its first region (shoprooms.js FIT.tavern),
+  and a diner with an open middle one down it (shared/foodrooms.js `L.pool`, drawn by statics.js foodRoom) - both pick up
+  the pool tables' NPC games and broadcasts as they were (pooltables.js `tablesOf` reads the diners' too). World v3 went
+  from 4 tables out in the world to 15. (A home already has one: the games room upgrade, shared/homeups.js - a level of its own, its table the minigame's.)
+- The Guide: Casinos and Card tables entries (the stakes from rules-games.js `CASINO`, controls as [[action]]); Pool
+  says a bar's or a diner's.
+- Budgets: the bake worker stays inside its 1000 KB (999.8): the new painters' comments trimmed to their headers.
+- Tests: test/casinofloor.test.js - the floors by tier and orientation (every game on a grand floor, nothing overlapping,
+  inside the room, clear of the cage; chandeliers and columns only on tier 3; a bar's card piece holds its seats), the
+  hands (`score5` / `best7` order, the dealer to 17), the regulars' games dealt to a page near and nothing once they're
+  gone, a player's hand shown at his table with the regulars waiting, and the page's replay keeping the cards already
+  dealt. shoprooms.test.js: a small lounge keeps its booths (no card table under 9 tiles).
+- Hashes: the world (World v3: the casinos' rooms, the counters) and the art change; World v1's world doesn't.
