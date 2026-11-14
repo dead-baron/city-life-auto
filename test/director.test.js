@@ -1,11 +1,12 @@
 // The cinematic mode (client/director.js - the owner, 10-22: "an option to disable UI, and any other cinematic options";
 // "setup staged scenarios on all the [things] I talked about"): its time of day is the server's clock's, its staged
 // scenes run commands the debug menu has (each one there, every vehicle real, every place found), the page loads it
-// only when asked; and the debug menu's 'place' finds a district by its name, 'afoot' takes you out of a vehicle.
+// only when asked; and the debug menu's 'place' finds a district by its name, 'afoot' takes you out of a vehicle - out of
+// whatever the last scene left you in (a home, a train), for a clean start.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { gameClock } from '../shared/constants.js';
+import { gameClock, T } from '../shared/constants.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { loopOf, SCENES, DRIFT_SPEEDS, DIRS8, driftStep, keyDir, stickDir, followStep, FRAMES } from '../client/director.js';
@@ -44,7 +45,7 @@ test('every staged scene runs commands the debug menu has, on real vehicles and 
   // (the old city has the places the 'near' ones look for, as World v3 does - but Lucky Mesa's casinos, World v3's only)
   const w = makeWorld();
   for (const k of new Set(SCENES.flatMap((sc) => sc.s.filter((st) => st[1] === 'near').map((st) => st[2].k)))) {
-    if (k === 'casino') continue;
+    if (k === 'casino' || k === 'duststrip') continue;   // (World v3's only: its casinos, its crop dusters' strips)
     const has = nearTargets(w.map, k).length > 0 || w.map.pois.some((q) => q && q.kind === k) || (w.map.landmarks || []).some((l) => l.type === k);
     assert.ok(has, `somewhere for 'near ${k}'`);
   }
@@ -66,6 +67,39 @@ test('the debug menu takes you to a district by its name, and out of a vehicle',
   dev.command(w, p, 'afoot', {});
   assert.equal(ped.vehId, 0, 'on foot');
   assert.ok(!v.seats.includes(ped.id), 'the seat empty');
+});
+
+// (the owner, 11-14: "At home" and "Riding the subway" left you where the next scene's teleport was refused)
+test('a staged scene starts clean wherever the last left you: out of a home, off a train, out of a vehicle, no job or stars', () => {
+  const w = makeWorld(), { p } = joinPlayer(w);
+  p.devMode = true;
+  const ped = p.ped, said = [];
+  { const n0 = w.notify.bind(w); w.notify = (q, text, tone) => { if (q === p) said.push(text); return n0(q, text, tone); }; }
+  const clean = (where) => {
+    dev.command(w, p, 'afoot', {});
+    assert.ok(!ped.home && !ped.hidden && !ped.onTrain && !ped.vehId && !ped.ug && !ped.sub && !p.job && !p.wanted, `${where}: clean (${JSON.stringify({ home: !!ped.home, hidden: !!ped.hidden, train: !!ped.onTrain, veh: ped.vehId, job: p.job && p.job.type, wanted: p.wanted })})`);
+    said.length = 0;
+    dev.command(w, p, 'place', { n: 'Downtown' });
+    dev.command(w, p, 'car', { m: 'sedan', in: 1, on: 'road' });
+    assert.ok(said.some((t) => t.startsWith('[dev] At ')) && ped.vehId, `${where}: the next scene's teleport and car (${said.join(' | ')})`);
+    const v = w.get(ped.vehId), t = w.map.tileAtPx(v.x, v.y);
+    assert.ok(t === T.ROAD || t === T.BRIDGE, `${where}: the car on the road`);
+  };
+  dev.command(w, p, 'homein', { kind: 'house' });
+  assert.ok(ped.home, 'inside a home');
+  clean('after "At home"');
+  dev.command(w, p, 'train', {});
+  assert.ok(ped.onTrain, 'aboard a train');
+  clean('after a train ride');
+  dev.command(w, p, 'wanted', { n: 3 });
+  dev.command(w, p, 'cabjob', {});
+  clean('after a chase and a job');
+  // a boat goes on the water, never on the lawn beside you
+  dev.command(w, p, 'afoot', {});
+  dev.command(w, p, 'near', { k: 'marina' });
+  dev.command(w, p, 'car', { m: 'speedboat', in: 1 });
+  const b = w.get(ped.vehId), bt = w.map.tileAtPx(b.x, b.y);
+  assert.ok(bt === T.WATER || bt === T.DEEP, 'the speedboat on the water');
 });
 
 test('the page loads the cinematic mode only when asked for it', () => {
