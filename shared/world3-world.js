@@ -56,7 +56,7 @@ import { beachCamps3 } from './world3-camps.js';
 import { driveTree3 } from './world3-drivetree.js';
 import { desertRoadside3 } from './world3-roadside.js';
 import { stockTanks3 } from './world3-stocktanks.js';
-import { tidyProps3 } from './world3-tidy.js';
+import { tidyProps3, clearHomePaths3 } from './world3-tidy.js';
 import { sunkenWrecks3 } from './world3-wrecks.js';
 import { desertWaters3 } from './world3-tinajas.js';
 import { desertKit3 } from './redrock.js';
@@ -81,7 +81,7 @@ import { arrivalLines3 } from './world3-arrivals.js';
 import { parkWest3, firstCars3 } from './world3-firstcars.js';   // (the first cars: the used lots and steal alleys by the arrival stations; the city's arrival by Greenfield Park)   // (the arrival lines: a short line of its own beside each station new players choose from)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
 import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
-import { shops3, stationAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
+import { shops3, stationAtms3, seatAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
 import { lots3, lotPoisLast } from './world3-lots.js';
 import { towers3 } from './world3-towers.js';   // (the big plain towers split into towers, wings, podiums of shops - the owner, 11-06)   // (Southside's lots on a street: rough small shops; dice down a passage)
 import { clearClutter3, handLaid, PAVEMENT3 } from './world3-clutter.js';   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors)
@@ -329,7 +329,8 @@ export function worldOpts(asked) {
       if (city) m.world3.kerbBays = kerbBays3(m, (tx, ty) => !!handPlanAt(tx, ty));   // (notes 2: the parked cars' bays along those streets' kerbs - world3-kerbs.js)
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
       m.world3.skateSolids = skateSolids3(m);   // (the skate parks' ledges, boxes, rails and benches solid on foot - the owner, 11-14: world3-skatesolids.js)
-      m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
+      m.world3.tidy = tidyProps3(m);
+      if (H3 && city) m.world3.homePaths = clearHomePaths3(m, H3.removeProps);   // (no plant over a house's path, drive or door step - the owner, 11-14: world3-tidy.js)   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
       if (city) m.world3.fenceExits = fenceExits3(m);   // (and every fenced place people go into - a court, a pitch, a dog run, a garden, a pier - a way out on two sides, near the corners: world3-fenceexits.js)
       if (city) m.world3.sightlines = sightlines3(m);   // (no tree's crown over a door, a standing sign, a chess table, an ATM, a bus stop - the owner, 11-06: world3-greens.js)
@@ -340,6 +341,7 @@ export function worldOpts(asked) {
       if (city) { m.world3.towers = towers3(m); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
       if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
       m.world3.lowByPlatforms = lowByPlatforms(m);
+      if (city) m.world3.atmsSeated = seatAtms3(m, H3);   // (last: every ATM set into a front wall or inside, none left standing on its own - the owner, 11-14: world3-shops.js)
       m.world3.pumps = pumpProps3(m);   // (last: every filling station's pump a prop - its solid its own - at the end of the list: they go up, server props.js)   // (then: the buildings just south of a platform drawn low, its roof off the platform - the owner, 11-06: world3-rail.js)
     },
     // (v3b: shops, the stores and ATMs where you need them - world3-shops.js; map.js calls it after the street ATMs)

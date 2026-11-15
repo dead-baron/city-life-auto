@@ -34,7 +34,7 @@
 // once per M (a WeakMap); the worker caches sprites by key (identical keys = identical sprites).
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
-import { makeBuilding, buildingH, roofDeckZ, signLift } from '../buildings.js';
+import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox } from '../buildings.js';
 import { signStyle, tradeOf, palOf, contrast, legible, layoutSign, paintBoard, paintLine, lineMask, rgbOf, TRADES } from '../signfont.js';   // (wave A1: the sign faces, by trade)
 import { dressPlan } from '../facadedress.js';
 import { Vox } from '../voxel.js';
@@ -277,6 +277,7 @@ export function staticIndex(M) {
     addYards(c, I);
     addFrontage(c, I);
     addGreenery(c, I);
+    coverFronts(c, I);
     I.fronts = null; I.garages = null;
     INDEX.set(M, I);
   }
@@ -475,6 +476,9 @@ const SHUT = ['#3a4a5c', '#2e5a4a', '#56606a', '#6a3a34', '#2e4a6a', '#4a5a3a'];
 // (the shop signs' colours: by trade - signfont.js TRADES, styleSign below - not a random deal of ten pairs any more)
 const AWN = [['#2f7a5c', '#f0ece4'], ['#a8343a', '#f0ece4'], ['#2a3e7a', '#e8e4dc'], ['#c8503a', '#f0ece4'], ['#e0b040', '#f0ece4'], ['#2f6a4e', '#2f6a4e'],
   ['#a8343a', '#a8343a'], ['#3a3a44', '#e8e4dc'], ['#6a3a8a', '#f0ece4'], ['#2e6a8a', '#f0ece4'], ['#1e2a3a', '#1e2a3a']];
+// a night row's words by what its street floor is (its upper-floor neon, its blade): a bar's, the arcade's, the liquor store's
+const NIGHT_NEON = { bar: ['BAR', 'OPEN', 'LIVE', 'CLUB', 'DANCE', 'COCKTAILS', 'KARAOKE', 'POOL'], arcade: ['ARCADE', 'GAMES', 'PLAY', 'OPEN', 'HI-SCORE', 'PINBALL', 'OPEN', 'GAMES'], mart: ['LIQUOR', 'OPEN', 'BEER', 'WINE', 'OPEN', 'ICE', 'LOTTO', '24 HRS'] };
+const NIGHT_BLADE = { bar: ['BAR', 'LIVE', 'JAZZ', 'LOUNGE', 'GIRLS', 'CLUB', 'BAR', 'JAZZ', 'LOUNGE'], arcade: ['ARCADE', 'GAMES', 'PLAY', 'ARCADE', 'GAMES', 'PLAY', 'OPEN', 'ARCADE', 'GAMES'], mart: ['LIQUOR', 'BEER', 'OPEN', 'LIQUOR', 'WINE', 'BEER', 'OPEN', 'LIQUOR', 'DELI'] };
 const NEONC = [[255, 70, 220], [90, 230, 255], [255, 90, 190], [180, 110, 255], [255, 200, 80], [120, 255, 150], [255, 120, 60]];
 // invented names for the shops that have none (generic words only, never brands)
 const SHOPNAMES = {
@@ -979,7 +983,8 @@ function townLook(spec, b, s, TL, rnd, w, pitched) {
 }
 // (H40) what stands round the towns' buildings and along Sandpiper Bay's boardwalk and pier (m.townKit)
 const TKIT = { porch: 'tPorch', antlers: 'tAntlers', logs: 'tLogs', loader: 'tLoader', saw: 'tSaw', silos: 'tSilos', steeple: 'tSteeple', dock: 'tDock', sacks: 'tSacks', boards: 'tBoards', shelter: 'tShelter', rail: 'pierRail', bench: 'bench', lamp: 'lampPost' };
-function townKit(I, list) {
+function townKit(c, I, list) {
+  const M = c.M;
   for (const k of list) {
     const m = TKIT[k.k];
     if (!m) continue;
@@ -987,6 +992,59 @@ function townKit(I, list) {
     const a = K === 'porch' ? [k.len || 160, k.z || 0, k.ff || 0, k.c || '#7a5436', k.open ? 1 : 0] : K === 'logs' || K === 'saw' || K === 'dock' || K === 'rail' ? [k.len || 160] : K === 'silos' ? [k.n || 4, k.len || 360] : K === 'boards' ? [k.n || 5] : K === 'lamp' ? ['cast', 1] : [];
     put(I, vitem(`tk:${m}:${a.join(',')}:${hd.toFixed(3)}`, m, a, k.x, k.y, hd, null, K === 'antlers' ? { z0: k.z || 50 } : null));
     if (K === 'lamp') lightAt(I, k.x, k.y, 80, 130, [1, 0.85, 0.6], 1.2, 'lamp');
+    if (K === 'porch' && k.ff) falseFrontSigns(M, I, k);
+  }
+}
+// What stands in front of a front over its names (the placement lint's nameCovered; the owner, 11-14: "a building's own
+// name band or blade sign vs a canopy ... in front of it - fix the class"): a canopy or a porte-cochere on the map, out
+// over the pavement before a building. A plaque on the wall under its roof's line is lifted clear above it (unstackSigns
+// after, so it stays clear of the others); the shop's sign, which sits on the shopfront, goes up onto the cover itself -
+// a porte-cochere's name standing on its roof's front edge, as the casinos' have it - and the one behind is marked moved.
+const COVERS = new Set(['porte', 'canopy']);
+function coverFronts(c, I) {
+  const M = c.M;
+  for (const p of M.props) {
+    if (!p || !COVERS.has(p.t)) continue;
+    const w = p.w || (p.t === 'porte' ? 300 : 150), d = p.d || (p.t === 'porte' ? 96 : 80), h = (p.h || (p.t === 'porte' ? 58 : 52)) + (p.t === 'porte' ? 12 : 10);
+    const tx = Math.floor(p.x / TILE);
+    let items = null;
+    for (let ty = Math.floor((p.y - d / 2 - 8) / TILE), k = 0; k < 5 && !items; k++, ty--) if (M.inside(tx, ty) && (M.tiles[M.idx(tx, ty)] === T.BUILDING || M.tiles[M.idx(tx, ty)] === T.FLOOR)) items = I.byB.get(M.bld[M.idx(tx, ty)]);   // (a walk-in's room is FLOOR)   // (the building it stands before: up to a few tiles back)
+    if (!items) continue;
+    for (const it of items) {
+      const sp = it.recipe && it.recipe.spec;
+      if (!sp || !sp.w || it.x > p.x + w / 2 || it.x + sp.w < p.x - w / 2) continue;
+      const back = p.y - d / 2 - it.y;   // (its back edge in front of the wall's foot)
+      if (back < -4 || back > 120) continue;
+      const vTop = h - back + 2, x0 = p.x - w / 2 - it.x, x1 = p.x + w / 2 - it.x;   // (how far up the wall its roof reaches, on screen)
+      let moved = false;
+      for (const q of sp.plaques || []) { if (!q || !q.text || q.v === undefined || q.v >= vTop) continue; const r = plaqueBox(q, sp.w); if (r[2] > x0 && r[0] < x1) { q.v = vTop + 2; moved = true; } }
+      if (moved) unstackSigns(sp);
+      const sg = sp.shop && sp.shop.sign;
+      if (sg && sg.text && !sg.moved && vTop > 34 && p.x > it.x + 8 && p.x < it.x + sp.w - 8) {   // (its roof up over the sign's foot: the name onto its front edge)
+        sg.moved = 'cover';
+        const mw = Math.round(Math.min(w - 24, 300)), z = h + 2, key = `cvs:${sg.text}:${sg.face || 'civic'}:${sg.pal ? [sg.pal.p, sg.pal.i].join('/') : ''}:${mw}:${z}`;
+        put(I, { key, recipe: { t: 'sign', text: sg.text, face: sg.face || 'civic', pal: sg.pal || null, lit: sg.lit !== false, z, maxW: mw }, x: Math.round(p.x), y: Math.round(p.y + d / 2) + 1, ext: [Math.ceil(mw / 2) + 4, z + 60, Math.ceil(mw / 2) + 4, 6] });
+      }
+    }
+  }
+}
+// A shopfront's false front stands over its porch, up in front of the wall where its sign is (the placement lint's
+// nameCovered: every town shop's name hidden behind its own boards - the owner, 11-14, "fix the class"): each shop's sign
+// goes up on the boards instead, over its own stretch of them, in its own face and colours; the one on the wall behind is
+// marked moved. (The porch's boards rise 40..ff px up its back edge, 14 px in front of its ground point's 17 behind.)
+function falseFrontSigns(M, I, k) {
+  const len = k.len || 160, tx = Math.floor(k.x / TILE), ty = Math.floor((k.y - 34) / TILE);
+  if (!M.inside(tx, ty)) return;
+  const bi = M.bld[M.idx(tx, ty)], items = bi >= 0 ? I.byB.get(bi) : null;
+  if (!items) return;
+  for (const it of items) {
+    const sp = it.recipe && it.recipe.spec, sg = sp && sp.shop && sp.shop.sign;
+    if (!sg || !sg.text || sg.moved) continue;
+    const a = Math.max(it.x, k.x - len / 2 + 4), b = Math.min(it.x + sp.w, k.x + len / 2 - 4);
+    if (b - a < 48) continue;
+    sg.moved = 'ff';
+    const z = Math.round((k.ff || 104) * 0.62) + 12, mw = Math.round(b - a - 10), key = `ffs:${sg.text}:${sg.face || 'civic'}:${sg.pal ? [sg.pal.p, sg.pal.i].join('/') : ''}:${mw}:${z}`;
+    put(I, { key, recipe: { t: 'sign', text: sg.text, face: sg.face || 'civic', pal: sg.pal || null, lit: sg.lit !== false, z, maxW: mw }, x: Math.round((a + b) / 2), y: Math.round(k.y) + 1, ext: [Math.ceil(mw / 2) + 4, z + 60, Math.ceil(mw / 2) + 4, 6] });
   }
 }
 
@@ -1175,6 +1233,7 @@ function specOf(c, b, A, s, D) {
       Object.assign(spec, { floors: fl, style: rnd() < 0.5 ? 'stone' : 'stucco', wallColor: wall('luxury'), balconies: rnd() < 0.5, parapet: 8 });
       shop('lobby', s.mid ? named || 'HOTEL' : null, { awning: null, people: 3, sc: ['#232838', [236, 214, 150]] });
       spec.signText = /HOTEL|INN|MOTEL/.test(named || '') ? (named.match(/HOTEL|INN|MOTEL/) || ['HOTEL'])[0] : 'HOTEL';
+      if (/CASINO/i.test(named || b.name || '') || poisOf(c.M, b).some((p) => p.casino || p.kind === 'casino')) spec.signText = 'CASINO';   // (Lucky Mesa's old casinos: their blade says so)
       if (s.mid && (st === 'nightlife' || st === 'redlight' || st === 'beach' || rnd() < 0.3)) blade(spec.signText, st === 'nightlife' || st === 'redlight' ? pick(NEONC, rnd()) : [255, 210, 120], 90);
       upperLights(fl, 0.1);
       break;
@@ -1190,8 +1249,10 @@ function specOf(c, b, A, s, D) {
       if (front && A !== 'civicblock') {
         if (A === 'nightrow') {
           const k = pick(['bar', 'bar', 'arcade', 'mart'], rnd()); shop(k, shopName(k === 'arcade' ? 'bar' : k === 'mart' ? 'liquor' : 'bar'), { awning: rnd() < 0.4 ? ['#2a1e3a', '#2a1e3a'] : null, people: 3 });
-          if (rnd() < 0.7) neon(pick(['BAR', 'OPEN', 'LIVE', 'CLUB', 'DANCE', 'COCKTAILS', 'KARAOKE', 'POOL'], rnd()), pick(NEONC, rnd()), (fl - 1) * 56 + 30);
-          if (fl >= 2 && rnd() < 0.65) blade(pick(['MOTEL', 'BAR', 'HOTEL', 'LIVE', 'GIRLS', 'DINER', 'CLUB', 'JAZZ', 'LOUNGE'], rnd()), pick(NEONC, rnd()), 74);
+          if (rnd() < 0.7) neon(pick(NIGHT_NEON[k], rnd()), pick(NEONC, rnd()), (fl - 1) * 56 + 30);
+          // (the blade says what's on the street floor - the owner, 11-14: a HOTEL blade over a paint shop - a bar's, the
+          // arcade's, the liquor store's own words; one draw as before)
+          if (fl >= 2 && rnd() < 0.65) blade(pick(NIGHT_BLADE[k], rnd()), pick(NEONC, rnd()), 74);
         }
         else { const k = A === 'handshop' ? shopKindOf(b.name) : town ? pick(['cafe', 'cafe', 'mart', 'diner', 'lobby'], rnd()) : pick(['mart', 'cafe', 'lobby', 'diner', 'mart', 'pawn'], rnd()); shop(k, A === 'handshop' ? (named || shopName('shop')) : shopName(k === 'lobby' ? 'shop' : k === 'diner' ? 'rest' : k)); }
       } else if (front) plainDoors({ dw: A === 'civicblock' ? 30 : 22 });
@@ -1244,7 +1305,7 @@ function specOf(c, b, A, s, D) {
       Object.assign(spec, { floors: 3, style: 'stone', wallColor: '#b89a7a', parapet: 10 });
       shop('lobby', null, { awning: null, people: 3 });
       neon(named || 'THEATER', [255, 210, 120], 96); (spec.plaques ||= []).push({ text: 'TONIGHT', cx: w / 2, v: 128, bg: '#2a1e1a', fg: [255, 236, 190], lit: true, face: 'marquee', bulbs: true });
-      blade('CINEMA', [255, 200, 90], 70);
+      blade(/CLUB/i.test(named || b.name || '') || poisOf(c.M, b).some((p) => p.kind === 'club') ? 'LIVE' : 'CINEMA', [255, 200, 90], 70);   // (a supper club in a theatre's building: no CINEMA over it)
       break;
     }
     case 'bank': case 'court': case 'cityhall': {
@@ -1285,7 +1346,9 @@ function specOf(c, b, A, s, D) {
         const med = A === 'hospital' && named && /CLINIC|INFIRMARY|MEDICAL|HEALTH|HOSPITAL/.test(named) ? named : null;
         const txt = A === 'hospital' ? med || 'HOSPITAL' : A === 'police' ? 'POLICE' : clean(named || 'SCHOOL', 26);
         spec.plaques = blind ? [] : [{ text: txt, cx: w / 2, v: 66, lit: true, trade: A === 'hospital' ? tradeOf({ name: txt, kind: 'hospital' }) : A }];   // (one name plaque: on the section with the doors, not on each)
-        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 52, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
+        // (EMERGENCY over the doors, clear of the ambulance bay's canopy - its roof reaches 54 px up the wall; the name
+        // above it, unstackSigns lifting it clear: the owner, 11-14, Westside Clinic's name half behind it)
+        if (A === 'hospital' && !blind) { spec.plaques.push({ text: 'EMERGENCY', cx: dx0 + dw0 / 2, v: 58, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }); spec.cross = { x: 14, v: 80, s: 22, k: /CLINIC|INFIRMARY/i.test(b.name || named || '') ? 'clinic' : 'hospital' }; lights.push([w / 2, 14, 40, 140, [1, 0.5, 0.5], 1.2, 'sign']); }   // (the sign: a clinic's white cross on green, a hospital's red H)
         if (A === 'police') lights.push([w / 2, 14, 60, 120, [0.4, 0.6, 1], 1, 'sign']);
       }
       lights.push([w / 2, 12, 34, 110, [1, 0.9, 0.75], 1, 'window']); upperLights(fl, 0.4);
@@ -1341,7 +1404,8 @@ function specOf(c, b, A, s, D) {
   } else if (TL && (A === 'hotel' || A === 'hospital' || A === 'police' || A === 'civicblock' || A === 'office')) spec.floors = Math.min(spec.floors || 2, 2);   // (the motel, the clinic, the sheriff: two storeys at most)
   if (b.look && !b.art && !s.frame && !s.vox) pitched = townLook(spec, b, s, TL || TOWN_LOOK.log, rnd, w, pitched);   // (H40: the towns' own buildings)
   if (s.bay) {
-    delete spec.shop; delete spec.portico; delete spec.arches;
+    delete spec.shop; delete spec.portico; delete spec.arches; delete spec.blades; delete spec.signText;   // (a paint shop's bay: no HOTEL blade over it from the building's archetype - the owner, 11-14)
+    for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'neon') lights.splice(j, 1);
     Object.assign(spec, { blank: false, windows: [], doors: [{ x: 6, w: w - 12, kind: 'roller', open: true, h: 62 }], plaques: [{ text: 'PAINT', cx: w / 2, v: 66, bg: '#2a3a6a', fg: [250, 236, 200], lit: true, face: 'block' }] });
     lights.push([w / 2, 6, 40, 110, [1, 0.88, 0.7], 1.1, 'window']);
   }
@@ -1388,6 +1452,7 @@ function specOf(c, b, A, s, D) {
   // a police station's, painted over the door - goes; the owner, 11-12: "OLD TOWN INFIRMARY" twice, one under the other)
   if (spec.plaques && spec.plaques.length && spec.shop && spec.shop.sign && spec.shop.sign.text) spec.plaques = spec.plaques.filter((pq) => !sameName(pq.text, spec.shop.sign.text));
   if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
+  unstackSigns(spec);   // (no board over another on the front: buildings.js)
   const capped = streetCap(c, b, s, spec, pitched, lights);
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
@@ -2849,9 +2914,9 @@ function makeSignBoard(r) {
   if (r.wood) return makeWoodSign(r);
   // (wave A1: a board in a sign face at the art pixel - Civic Sans on its panel, or Neon Tube - as wide as its words)
   const t = clean(r.text, 24), fk = r.face || 'civic', neonF = fk === 'neon', fg = rgbOf(r.fg || [236, 240, 248]);
-  const P = neonF ? palOf({ p: '#16141e', i: fg, neon: true }) : palOf([r.bg || '#1c2a44', fg]);
-  if (!neonF) legible(P);
-  const L0 = layoutSign(t, 200, { face: fk, lines: 1 }), L = layoutSign(t, Math.max(L0.cw + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });
+  const P = r.pal ? { ...r.pal } : neonF ? palOf({ p: '#16141e', i: fg, neon: true }) : palOf([r.bg || '#1c2a44', fg]);   // (r.pal: a shop sign's own palette - the towns' false fronts)
+  if (!neonF && !r.pal) legible(P);
+  const L0 = layoutSign(t, 200, { face: fk, lines: 1 }), L = r.maxW && L0.cw + 4 > r.maxW / 2 ? layoutSign(t, Math.floor(r.maxW / 2), { face: fk, lines: 2 }) : layoutSign(t, Math.max(L0.cw + 4, r.w ? Math.floor(r.w / 2) : 0), { face: fk, lines: 1 });   // (r.maxW: as wide as that at most, on two lines if it must)
   const w = L.w * 2, h = L.h * 2, F = new GBuf(w, h);
   paintBoard((x, y, c, e) => F.put(x, y, c, [0, 1, 0.1], 0, e, 0), L, P, 0, 0, { lit: r.lit ? (neonF ? 'neon' : 'panel') : false, night: 0.7 });
   const S = upright(F, r.z || 0);
@@ -3095,7 +3160,7 @@ function addRail(c, I) {
   if (c.M.railXings) crossingSignals(I, c.M.railXings);   // (every loop's crossings, once each)
   if (c.M.railHubs) railHubs(I, c.M.railHubs);
   for (const t of c.M.lifeguards || []) put(I, vitem('lgt', 'lifeguardTower', [], t.x, t.y, 0));   // (H35: World v3's beach towns, shared/world3-beach.js)
-  if (c.M.townKit) townKit(I, c.M.townKit);
+  if (c.M.townKit) townKit(c, I, c.M.townKit);
 }
 // (H33) World v3's stations, one per name: the station building on its forecourt (the map point), lit, with the station's
 // name over its door, and a footbridge over the tracks between each pair of platforms that face each other.
@@ -3766,10 +3831,16 @@ function addYards(c, I) {
   c.M.buildings.forEach((b, bi) => {
     if (!b || b.gone || !HOUSEY.has(archOf(c, b))) return;
     const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE), pool = YARD[D.style] || YARD[WILDS.has(D.style) ? 'rural' : 'houses'], rnd = rndOf(bi, 515);
-    const y1 = (b.ty + b.th) * TILE, doorX = b.door ? (b.door.tx + (b.door.w || 1) / 2) * TILE : -1e9, gar = I.garages.get(bi) || [];
-    const yardAt = (x, y) => { const t = c.at(x, y); return t === T.LOT || t === T.GRASS || t === T.DIRT; };
+    const y1 = (b.ty + b.th) * TILE, doorX = b.door ? (b.door.tx + (b.door.w || 1) / 2) * TILE : -1e9, gar = (I.garages.get(bi) || []).slice();
+    // (the lawn only, the plant's spread and all: never the drive's or the path's paving, nor where the car stands - the
+    // owner, 11-14: shrubs and tall grass growing over a house's front path)
+    const hm = b.home !== undefined ? c.M.homes[b.home] : null;
+    if (hm && hm.garage && hm.garage.y > y1 - 8 && hm.garage.y < y1 + 8 * TILE) gar.push([hm.garage.x - 44, hm.garage.x + 44]);
+    for (const sp of c.M.parking || []) if (sp && sp.drive && sp.x > b.tx * TILE - 40 && sp.x < (b.tx + b.tw) * TILE + 40 && sp.y > y1 - 8 && sp.y < y1 + 8 * TILE) gar.push([sp.x - 44, sp.x + 44]);
+    const soft = (x, y) => { const t = c.at(x, y); return t === T.GRASS || t === T.DIRT; };
+    const yardAt = (x, y, hw = 14) => soft(x, y) && soft(x - hw, y) && soft(x + hw, y) && soft(x, y + 8);
     for (let x = b.tx * TILE + 18; x < (b.tx + b.tw) * TILE - 14; x += 24 + rnd() * 18) {
-      if (!yardAt(x, y1 + 10) || Math.abs(x - doorX) < 30 || gar.some(([a, q]) => x > a && x < q) || rnd() < 0.2) continue;
+      if (!yardAt(x, y1 + 10) || Math.abs(x - doorX) < 46 || gar.some(([a, q]) => x > a - 16 && x < q + 16) || rnd() < 0.2) continue;   // (46: a bed's spread clear of the door step)
       flora1(I, pick(pool, rnd()), 1, Math.round(x), y1 + 11);
     }
     // a tree in a deep front yard (not on the path or the drive)
@@ -3778,7 +3849,7 @@ function addYards(c, I) {
     if (deep >= 4 && rnd() < 0.75) {
       for (let t = 0; t < 4; t++) {
         const x = (b.tx + 1 + rnd() * (b.tw - 2)) * TILE, y = y1 + (2 + rnd() * (deep - 3)) * TILE;
-        if (Math.abs(x - doorX) < 70 || gar.some(([a, q]) => x > a - 40 && x < q + 40) || !yardAt(x, y)) continue;
+        if (Math.abs(x - doorX) < 70 || gar.some(([a, q]) => x > a - 40 && x < q + 40) || !yardAt(x, y, 40)) continue;
         const pr = plantFor(c, { t: 'tree_a', x, y }); if (pr) flora1(I, pr[0], Math.round(pr[1] * 5) / 5, Math.round(x), Math.round(y));
         break;
       }
@@ -4025,8 +4096,18 @@ function sightTiles(M) {
   SIGHT.set(M, s);
   return s;
 }
+// (the owner, 11-14: nothing growing on a home's door step) the tiles at the foot of each home's door, and either side
+const STEPS = new WeakMap();
+function stepTiles(M) {
+  let s = STEPS.get(M);
+  if (s) return s;
+  s = new Set();
+  for (const h of M.homes || []) { const b = h ? M.buildings[h.b] : null; if (!b || !b.door) continue; for (let k = -1; k <= (b.door.w || 1); k++) for (const dy of [0, 1]) if (M.inside(b.door.tx + k, b.door.ty + dy)) s.add(M.idx(b.door.tx + k, b.door.ty + dy)); }
+  STEPS.set(M, s);
+  return s;
+}
 function coverItems(c, I, cx, cy) {
-  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M);
+  const out = [], W = c.W, H = c.H, taken = I.taken, rails = railClear(c.M), trk = trackClear(c.M), sight = sightTiles(c.M), steps = stepTiles(c.M);
   // (World v3's orchards and the lavender and sunflower rows, the nature sites' orchard and vineyard: farmed - no wild
   // flowers or scrub among the rows, a tuft of grass now and then just outside them: shared/world3-biomes.js m.orchards)
   const X0 = cx * CH - 120, Y0 = cy * CH - 80, X1 = (cx + 1) * CH + 120, Y1 = (cy + 1) * CH + 140;
@@ -4036,7 +4117,7 @@ function coverItems(c, I, cx, cy) {
   for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
     const i = c.M.idx(tx, ty);
     const res = c.M.reserve ? c.M.reserve[i] : 0, lush = res & 128;   // (128: a river's lush banks - reeds right to the water)
-    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i)) continue;
+    if ((taken && taken[i]) || (res & ~64 && !lush) || (res & 16) || rails.has(i) || steps.has(i)) continue;
     const tk = trk.get(i) || 0;
     if (tk === 2) continue;
     const x = Math.round((tx + hash(tx, ty, 7005)) * TILE), y = Math.round((ty + hash(tx, ty, 7007)) * TILE); // (anywhere in its tile: no rows)
@@ -4053,6 +4134,7 @@ function coverItems(c, I, cx, cy) {
     }
     const [sp, k] = r, v = Math.floor(hash(tx, ty, 13) * NV(sp));
     if (sight.has(i) && (SPECIES[sp] ? SPECIES[sp][2] : 0) * k > 80) continue;
+    if ((SPECIES[sp] ? SPECIES[sp][1] : 0) * k > 50 && TOWN_COVER[(DISTRICTS[c.M.dist[i]] || {}).style] && !coverClear(c, tx, ty, 2)) continue;   // (a wide drift in town: two tiles clear of a path or a drive, not one - its spread reaches over - the owner, 11-14)
     out.push(fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k));
   }
   return out;

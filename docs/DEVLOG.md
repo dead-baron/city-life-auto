@@ -23960,3 +23960,59 @@ The owner (18:56, 18:59), three things:
 The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner looking one in general". assets/ui/s-shield.png
 is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
 right a pale steel, the ink outline round it - no blue hollow and stripe.
+
+## 2026-11-14 - Polish from the owner's phone: names never half hidden, no plants on the drive, blades that agree, bigger map icons, ATMs in the walls, the casino floors and their sounds, a clear "come here"
+The owner's notes from his phone (three screenshots) and two from the lead. Each fixed as a class, with a placement lint
+row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
+- **A building's name half hidden** (Westside Clinic's WESTSIDE CLINIC half behind its EMERGENCY sign). Every clinic and
+  hospital stacked its EMERGENCY plaque (v 52) under its name (v 66) and the boards are 22 px tall. Now the EMERGENCY board
+  sits just over the doors, clear of the ambulance bay's canopy (v 58), and a new pass, client/art2/buildings.js
+  `unstackSigns`, lifts any plaque that overlaps one lower down clear above it on every front (a blade sign over a plaque
+  goes to the wall's other end, or goes). What stands in front was the bigger class: in the small towns every shop with a
+  false front over its porch had its name behind the boards (the lint found 25: Quick Mart, the Timber Bend lodge's four
+  shops, Sandpiper Bay's row...) - each shop's sign now goes up onto its stretch of the false front (statics.js
+  `falseFrontSigns`); a porte-cochere carries the casino's name on its roof's front edge (The Golden Lotus, Mesa Grande:
+  `coverFronts`), and a plaque under a canopy's roof line is lifted over it. Lint row `nameCovered`: boards over each other
+  on one front, and the drawn pixels of anything standing in front over a name (the sign found by drawing the front).
+- **Plants on the drive** (a house's front path with shrubs and tall grass over it). The yards' beds (statics.js
+  addYards) took a driveway's paving (LOT) for lawn and kept clear of a door and a garage door only - not of the drive,
+  the path or where the car stands; and the map's own yard plants were scattered without a look at the path. Now a bed
+  only goes on lawn, its spread and all, clear of the car's spot and the drive's parking; and the build takes the map's
+  plants off every house's path, drive and door step (shared/world3-tidy.js `homePaths3`, `clearHomePaths3`, in the done
+  hook after tidyProps3). Lint row `plantOnPath` (the same strips: from the door and from the car's spot across the lawn
+  to the street).
+- **A HOTEL blade over a paint shop.** The Spray & Go bays (map.js buildPaintShops) are carved into a building's front,
+  and its section kept the building archetype's blade (a hotel's HOTEL); the night rows picked their blade from a list
+  that had MOTEL, HOTEL and DINER over arcades and liquor stores. A bay now drops the blade and its neon; a night row's
+  blade and upper neon are its street floor's words (NIGHT_BLADE, NIGHT_NEON: a bar's, the arcade's, the liquor
+  store's); Lucky Mesa's old casinos say CASINO; a supper club in a theatre's building LIVE, not CINEMA. Lint row
+  `bladeBiz`: a blade's words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS).
+- **The places' icons had shrunk**: the touch minimap draws its 168 px canvas into 104 CSS px, so its 10 px icons were a
+  6 px speck. They are sized on screen now - a dark disc, the glyph in its colour, a thin ring of it, 13 CSS px across
+  (18 on the big map's radar); the big map's plates 2 px bigger (20 / 24 / 26 by zoom); the badges over doors 16 -> 19 px
+  (still under the lintel: test/storeicons.test.js). Nothing new on the HUD.
+- **ATMs on their own on the pavement.** The kiosks (an ATM put at the back edge of a pavement where no building front
+  was found when the shops were laid out, and by stations and gas stations) are moved, last thing in the build, into the
+  nearest front wall in the same district within 40 tiles that a wall ATM may use (shared/world3-shops.js `seatAtms3`:
+  map.js's rules - the wall behind it whole, pavement under it, room to stand, clear of a door, another ATM, a prop, a
+  pump), in place, so no prop's or place's number moves. Lint row `atmStray`: an ATM neither set in a wall nor inside.
+- **The casino floor that emptied** (the Golden Lotus in a live capture). Three holes, each closed: a round fills at
+  most ACT_MAX groups round a player and the spots came in no order, so on the Strip the casinos either side, a pool
+  table, a busker took the places before the one you were walking into, and a floor never fills once you're in the room;
+  the regulars are now filled first for a floor within 640 px of you, past ACT_MAX, its kind's cap and the day's chance
+  (server/systems/activities.js FLOOR_FIRST). The NPC density pass despawned anyone over 1500 px from a player while the
+  floor's group lives to 1600 - the far tables' dealers went one by one and those tables never dealt again; an NPC whose
+  activity group is still on is left to it now (npc.js). And a page was told of the deals only while the floor's middle
+  was in its view (pooltables.js follow): a phone's view at one end of a grand floor missed them all - now any of the
+  room in view will do.
+- **The casino games' sounds** (client/sound/events.js `cdl` was data only): the page plays them on the deal's own
+  timeline as client/casinoview.js lays it out, heard while you're in the room - a card flicked onto the felt for each
+  card dealt and the hole card turned, the roulette ball's rattle as it drops in and its click into the pocket, a slot's
+  reels ticking round and each one stopping, a small chime on a win. New one-shot recipes (cardflick, ballrattle,
+  ballclick, reeltick, reelstop, slotwin) in the ambience category, measured and trimmed (tools/sound/bench.py --levels,
+  the others' trims kept as they were).
+- **"Come here"** (the owner, 19:27: "a rope? Or a finger?"): the balloon redrawn - a fist with its index finger up and
+  crooked toward you, two motion ticks, the icon tilting in twice as it holds; the pose an arm out toward the camera,
+  palm up, the fingers curling in and opening twice a loop (client/art2/poses.js embeckon), not a pull back to the chest.
+- The Camera's way-out test (test/wayout.test.js) follows the shot list's rework: the tour is a follow kind, gated with
+  the follow scenes.
