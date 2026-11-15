@@ -977,7 +977,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     // server's told to go on (the shot list's scenes; a capture's are the capture's to let go)
     if (sct.held && !sct.told && !sct.cap) {
       const el = performance.now() - sct.heldAt, w = c && S.art2 && S.art2.warmth ? S.art2.warmth() : null;
-      if (el > HOLD_MAX || (el > HOLD_MIN && c && (!S.art2 || (w && w.ok && w.scrHave >= w.scr)))) { sct.told = true; api.send({ t: 'dev', c: 'scene', k: 'go', seq: sct.seq }); }
+      if (el > HOLD_MAX || (el > HOLD_MIN && c && (!S.art2 || (w && w.ok && w.scrHave >= w.scr && !S.art2.warming)))) { sct.told = true; api.send({ t: 'dev', c: 'scene', k: 'go', seq: sct.seq }); }   // (warming: the page's 'Loading the area' veil up after the camera's jump - client/warmup.js)
     }
     if (!c) return;
     const tall = (api.size()[1] || 1) > (api.size()[0] || 1);
