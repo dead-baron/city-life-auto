@@ -441,6 +441,17 @@ function blossomPlaza(K, x, y, w, h, out) {
   for (const [dx, dy, q] of [[-6, -1.8, 2], [6, -1.8, 2], [-6, 5.4, 2], [6, 5.4, 2], [-13, 0.4, 4], [13, 0.4, 3], [0, -8, 4]]) hang(K, cx + dx, cy + dy, q);
   // tables under the ring of lights, between the benches and the basin: people at them
   for (const [dx, dy] of [[-3, -3.3], [3, -3.3], [-3, 3.7], [3, 3.7]]) { prop('cafetable', cx + dx, cy + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((cx + dx) * TILE), y: Math.round((cy + dy) * TILE) }); }
+  // (the craft pass, round two - "the big open spaces could really use love"): the paved ring broken up - potted palms
+  // in planters between the ring's cherry trees; on each arm of the cross walk a food cart and its tables under a short
+  // canopy of lights; friends standing about the ring
+  for (let k = 0; k < 10; k++) { const mx = (pseudoCos(k) + pseudoCos(k + 1)) / 2, my = (pseudoSin(k) + pseudoSin(k + 1)) / 2; if (Math.abs(my) > 0.3) prop('potted', cx + 13.4 * mx, cy + 8.6 * my, 0); }   // (between the trees, off the cross walk)
+  for (const s of [-1, 1]) {
+    const ax = s < 0 ? x + 4 : x + w - 4;
+    prop('foodcart', ax, cy - 1.6, 14);
+    terrace(K, ax - 1.5, cy + 1.2, 2, { step: 3, planters: false });
+    canopy(K, ax - 3, cy + 0.2, ax + 3, cy + 1.6, { gap: 1.4, span: 7, h: 48 });
+  }
+  for (const [dx, dy, q] of [[-9, -5.5, 4], [9, -5.5, 3], [-9, 6, 3], [9, 6, 4], [0, 7.6, 5]]) hang(K, cx + dx, cy + dy, q);
   // the billboard: the eye-patch woman at the plaza's north edge, facing the plaza and the boulevard
   prop('picboard', cx, y + 1.5, 0, { pic: 'lucy', z: 60, col: [255, 80, 200] });
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(cx) - 7, y: Math.round(cy) - 6, w: 14, h: 12, name: 'Blossom Plaza' });
@@ -672,6 +683,16 @@ function harborLights(K, x0, out) {
   // the seats at the back of the crowd: rows of benches facing the stage, an aisle down the middle; a cart either side
   for (const y of [2238.6, 2241.4]) for (const x of [3489, 3494, 3508, 3513]) prop('bench_m', x, y, 0, { a: Math.PI });
   prop('foodcart', 3485.5, 2236, 14); prop('foodcart', 3516.5, 2236, 14);
+  // (round two: the forecourt read as an empty paved lot) - the stage's wings: banner poles and potted palms either side
+  // of the screen, tiki torches at its front corners; a pergola bar at each side of the seats with its tables under it;
+  // the crowd thick in front of the stage
+  for (const x of [3484.5, 3517.5]) { prop('bannerpole', x, 2229.2, 0, { v: x < 3500 ? 0 : 1 }); prop('potted', x, 2231.4, 0); prop('potted', x, 2233.2, 0); }
+  for (const x of [3489.5, 3512.5]) prop('torch', x, 2231.6, 6);
+  for (const [px, s] of [[3485.6, 1], [3516.4, -1]]) {
+    prop('pergola', px + s * 1.8, 2242.6, 0, { w: 4 * TILE, d: 3 * TILE, h: 58 });
+    for (const dy of [0, 1.6]) { prop('cafetable', px + s * 1.8, 2241.8 + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((px + s * 1.8) * TILE), y: Math.round((2241.8 + dy) * TILE) }); }
+  }
+  for (const [x, y, q] of [[3496, 2233.2, 5], [3506, 2233.2, 5], [3501, 2231.6, 4], [3492, 2236.8, 3], [3510, 2236.8, 4]]) hang(K, x, y, q);
   // the night market: the stalls facing each other across the aisle, the lanterns across it, the gates and the sign
   {
     const yN = 2249.2, yS2 = 2256.8;

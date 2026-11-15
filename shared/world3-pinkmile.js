@@ -27,7 +27,7 @@
 // handNeon); the motels' galleries: client/art2/buildings.js (spec.motel); their signs: the 'motelsign' prop.
 import { TILE, T } from './constants.js';
 import { towerKit } from './world3-downtown.js';
-import { canopy, terrace, hang, fest, frontLife } from './world3-craft.js';
+import { canopy, terrace, hang, vendor, fest, frontLife } from './world3-craft.js';
 
 const D = 17;   // the Pink Mile's district id (shared/mapcore.js DISTRICTS)
 // the street lines (tiles): the city's avenues round it - Gallery Avenue, Westside Avenue, Greenfield Avenue - and its own
@@ -467,6 +467,13 @@ function build(m, api, K) {
     for (let r = 0; r < 2; r++) terrace(K, x0 + 2.5, yS - 3.5 - r * 3.4, 3, { step: 3.4, planters: false, menu: r === 0 });
     canopy(K, x0 + 1, yS - 8.2, x0 + 11.4, yS - 2.4, { gap: 3, span: 6, h: 52 });
     for (const [dx, dy] of [[-10.5, 0.5], [10.5, 0.5], [0, -7.4], [0, 8.2]]) prop('lamp', cx + dx, cy + dy, 0);   // (the basin's walks lit where they meet its ring)
+    // (round two - the plaza still read open by day): a second terrace on the east side under its canopy, a flower market of four stalls between the basin and the promenade with their sellers, potted
+    // palms in pairs along the walks
+    terrace(K, x1 - 13.5, yS - 7, 3, { step: 3.4, planters: false });
+    canopy(K, x1 - 15.2, yS - 8.2, x1 - 5.6, yS - 6.4, { gap: 1.8, span: 5, h: 52 });
+    for (let k = 0; k < 4; k++) { const sx = cx - 7.5 + k * 5; prop('mstall', sx, cy - 10.5, 0, { v: (k + 1) % 4, c: (k + 2) % 4, a: 0 }); vendor(K, sx, cy - 11.25, Math.PI / 2); }
+    hang(K, cx - 5, cy - 8.6, 3); hang(K, cx + 5, cy - 8.6, 2);
+    for (const [dx, dy] of [[-4.2, -3.4], [4.2, -3.4], [-4.2, 4.6], [4.2, 4.6], [-13.5, 2], [13.5, 2]]) prop('potted', cx + dx, cy + dy, 0);
     // the people: friends round the basin's rim, couples on the benches, a knot by the flower seller
     for (const [dx, dy, q] of [[0, -6.4, 4], [-9, -5, 2], [9, -5, 2], [-9, 8, 2], [9, 8, 2], [5.5, 6.5, 3]]) hang(K, cx + dx, cy + dy, q);
     prop('foodcart', x0 + 3, cy - 4, 14);
