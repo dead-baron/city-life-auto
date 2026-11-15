@@ -47,7 +47,7 @@ import { TILE } from './constants.js';
 // Optional fields: an index without them is read as before (nothing checked, no places, no picture).
 
 export const PACK_VERSION = 2;   // (2: an item that is another list's item is said in its region, not the index)
-export const OMIT = ['compLab', 'ringD', 'leftover'];   // (leftover: the lots' scraps' tiles, read by the generator's later passes alone)
+export const OMIT = ['compLab', 'ringD', 'leftover', 'tableaus'];   // (leftover: the lots' scraps' tiles, read by the generator's later passes alone; tableaus: the handcrafted places' people - server/systems/activities.js alone)
 // the lists cut into regions, and how an item says where it is ('px': x, y in world px; 'tile': tx, ty - or x, y - in
 // tiles; 'key': a Map keyed by tile index)
 export const REGIONAL = {

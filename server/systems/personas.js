@@ -303,7 +303,8 @@ export function spawnPersona(world, spawnNpc, key, x, y, night = !!(world.clock 
     if (!at) return null; at.mark = m;
   }
   if (P.lean) { at = wallSpot(world, x, y); if (!at) return null; }
-  if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
+  // (not a cart a handcrafted place keeps its own vendor at - p.staffed: activities.js 'tableau')
+  if (P.cart) { const c = propsNear(world.map, x, y, 700, CART).find((q) => !q.staffed && !world.query(q.x, q.y + 18, 24, K.PED).some((e) => e.npc && e.npc.persona === key)); if (!c || !walkable(world.map, c.x, c.y + 18)) return null; at = { x: c.x, y: c.y + 18 }; }
   if (P.fish) {   // at a pier's rail, facing the water
     const rails = propsNear(world.map, x, y, 800, PIER);
     let spot = null;
