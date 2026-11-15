@@ -286,6 +286,8 @@ function makeKit(m, api, P) {
       nb++;
       return handBuilding(m, { d: P.d, ...o });
     },
+    // (lawn the plan may dress: free, or the shore band's grass landscape() keeps as lawn - not taken yet)
+    lawn(x, y) { const k = at(x, y), i = y * W + x; return free(x, y) || (k >= 0 && !used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i] && m.bld[i] < 0); },
     // (a building on ground the plan has laid out itself - taken already, lawn or paving, no building on it: a beer
     // garden's bar - shared/world3-neon.js)
     buildingOn(o) {

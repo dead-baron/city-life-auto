@@ -437,7 +437,7 @@ function blossomPlaza(K, x, y, w, h, out) {
   // (the craft pass, 11-14: the strings out to the plaza's corner lamps ran on the slant over the lawns to nothing in
   // particular - gone; the ring round the fountain stays, its posts at the corners of the seating)
   const posts = [[cx - 7, cy - 4.6], [cx + 7, cy - 4.6], [cx + 7, cy + 4.6], [cx - 7, cy + 4.6]];
-  for (let k = 0; k < 4; k++) { const [ax, ay] = posts[k], [bx, by] = posts[(k + 1) % 4]; fest(K, ax, ay, bx - ax, by - ay, 62, 'pole', 'pole'); }
+  for (let k = 0; k < 4; k++) { const [ax, ay] = posts[k], [bx, by] = posts[(k + 1) % 4], n = Math.hypot(bx - ax, by - ay) > 8 ? 2 : 1; for (let i = 0; i < n; i++) fest(K, ax + (bx - ax) * i / n, ay + (by - ay) * i / n, (bx - ax) / n, (by - ay) / n, 62, 'pole', 'pole'); }   // (a post halfway along a long side)
   // people: a couple on each bench by the fountain, friends at the cross walk's ends
   for (const [dx, dy, q] of [[-6, -1.8, 2], [6, -1.8, 2], [-6, 5.4, 2], [6, 5.4, 2], [-13, 0.4, 4], [13, 0.4, 3], [0, -8, 4]]) hang(K, cx + dx, cy + dy, q);
   // tables under the ring of lights, between the benches and the basin: people at them

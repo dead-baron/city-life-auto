@@ -684,18 +684,18 @@ function build(m, api, K) {
 
   out.frontLife = frontLife(K, b0);
   // Mile Beach's lawns behind the motels (the craft pass, 11-14: a big open lawn with trees dropped on it anyhow): a
-  // palm grove in rows - two rows of coconut palms behind the promenade, picnic tables between them with people at
+  // palm grove in rows - two rows of coconut palms behind the promenade, picnic tables behind them with people at
   // them by day and by night, blankets out on the lawn; a bonfire on the sand with friends round it after dark
   {
     let g = 0;
     for (let x = wx0 + 2; x < RP0 - 2; x++) {
       const s0 = shoreAt(x) + SAND + PROM;
       let deep = 0;
-      while (deep < 30 && K.free(x, s0 + deep)) deep++;
+      while (deep < 30 && K.lawn(x, s0 + deep)) deep++;
       if (deep < 12) continue;
-      // (the grove's band, twelve rows behind the promenade: a palm row, a walk under the palms, a second row offset,
-      // the tables; taken, so the lawn's own planting keeps to the rest)
-      K.fill(x, s0 + 3, 1, 2, T.PLAZA); K.take(x, s0, 1, 12);
+      // (the grove's band, twelve rows behind the promenade: a palm row, a second row offset, the tables between; taken,
+      // so the lawn's own planting keeps to the rest)
+      K.take(x, s0, 1, 12);
       if (x % 8 === 0) prop('palm_a', x + 0.5, s0 + 1.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0, 98) * 0.15 });
       if (x % 8 === 4) prop('palm_a', x + 0.5, s0 + 6.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0 + 6, 98) * 0.15 });
       if (x % 16 === 10) prop('lamp', x + 0.5, s0 + 2.8, 0);
