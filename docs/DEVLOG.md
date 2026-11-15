@@ -23899,3 +23899,11 @@ short speed lines trailing off the A - joined right into its left leg, one shape
 - On a phone on its side the SETTINGS button had lost its gear (the rule that hid the old person icon on CHARACTER hid
   it too): both keep their icons now, smaller.
 - docs/DECISIONS.md: the logo's Auto is A3. Screenshots: the session's scratchpad `logo2/owner/a3/`.
+
+## 2026-11-14 - The logo's skyline: its lit windows on one even grid
+The owner (18:35): the windows "are grouped up with different spacing and consistency, not always centered on the
+buildings they're on". tools/neon_logo.py sky_grid lays every building's windows on the same grid - 2 x 2 art px, three
+px apart both ways - its columns centred on the building's width, three px in from its walls (clear of the tube and of a
+neighbour), its rows from the same margin under the roof line down to the same margin over the foot; a narrow building
+gets one centred column; every window lit. Re-installed (assets/logo/sky.webp, unlit.webp) and the share card rebuilt;
+the one-line wordmark has no skyline. Before / after: the session's scratchpad `logo2/owner/windows/`.
