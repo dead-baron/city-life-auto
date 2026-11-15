@@ -155,7 +155,7 @@ export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, ne
       ])
       + `<form method="post" action="/admin/bugs"><input type="hidden" name="csrf" value="${esc(w.s.csrf)}"><input type="hidden" name="id" value="${esc(r.id)}"><input type="hidden" name="a" value="${r.done ? 'open' : 'done'}">`
       + `${r.done ? `<small class="ok">done ${esc(when(r.done.at))} by ${esc(r.done.by)}</small> ` : ''}<button type="submit">${r.done ? 'Open again' : 'Mark done'}</button></form></div></div>`;
-    return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>${bugs.count} reports, <b>${bugs.open}</b> open${bugs.webhookOn ? ' · each one is posted to the Discord too' : ' · no Discord webhook set (BUG_WEBHOOK_URL): kept here only'}. Newest first${openOnly ? ', open ones only - <a href="/admin/bugs">all</a>' : ' - <a href="/admin/bugs?open=1">open ones only</a>'}${shown.length < (openOnly ? bugs.open : bugs.count) ? `, the newest ${shown.length}` : ''}.</p>`
+    return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>${bugs.count} report${bugs.count === 1 ? '' : 's'}, <b>${bugs.open}</b> open${bugs.webhookOn ? ' · each one is posted to the Discord too' : ' · no Discord webhook set (BUG_WEBHOOK_URL): kept here only'}. Newest first${openOnly ? ', open ones only - <a href="/admin/bugs">all</a>' : ' - <a href="/admin/bugs?open=1">open ones only</a>'}${shown.length < (openOnly ? bugs.open : bugs.count) ? `, the newest ${shown.length}` : ''}.</p>`
       + (shown.map(card).join('') || '<p>No reports yet.</p>');
   }
   async function bugsPost(req, res, w) {
