@@ -76,7 +76,7 @@ config.launch = {
   contact: env('CLA_CONTACT'),
   // the owner's account: its id (Settings -> Account shows it), or none - then a one-time claim code is printed at start
   ownerId: env('CLA_OWNER_ID'),
-  // the 17+ gate: when on, a page that hasn't confirmed the age floor isn't let into the city (the gate lives on the page)
+  // the 13+ gate (was 17+ - the owner, 11-15): when on, a page that hasn't confirmed the age floor isn't let into the city (the gate lives on the page)
   requireAge: env('CLA_REQUIRE_AGE', '0') === '1',
   // new guest characters an hour from one address (0 = no limit - the default: a school or a phone network's shared
   // address would hit a low one at launch), and whether a banned device marker stops new guests

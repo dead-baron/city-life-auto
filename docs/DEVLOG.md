@@ -24486,3 +24486,13 @@ both). The renderer only: the server's heading is unchanged. Test: emotes.
 The owner, during Google's brand review: take the "DRAFT - not yet reviewed by a lawyer" line off the privacy policy for
 now. It was one banner shared by both pages (server/legal.js), so it's gone from the Privacy Policy and the Terms; the
 wording is unchanged and a lawyer still reviews it before full launch. Test: signin-password.
+
+## 2026-11-15 - 13 and older, under 18 with a parent's permission
+The owner (11-15): an open, easy beta - 13+, under 18 with a parent or guardian's permission, the content described
+plainly, the game itself unchanged. The first-launch gate now reads "I'm 13 or older (under 18: with a parent or
+guardian's permission)" and describes what's in the game (client/account.js; the stored field is still age17, which
+browsers and accounts already hold - it means the age floor was confirmed). The Terms say 13+ and get a "What's in the
+game" paragraph (crime, shooting, cartoon pixel blood, police chases, chat with strangers that has a filter, report,
+block and moderators) and a line for parents on deleting a child's account; the Privacy Policy says it isn't for
+children under 13 and how to tell us; the About page says 13 and older; launch.json and the gate's refusal say 13.
+Tests: signin-password, uiscreens, launch-*.

@@ -22,7 +22,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - A season ends only when the owner ends it (admin `season` command), never by itself. (11-08; DEVLOG 11-08)
 - Season length about 10 weeks. (11-07; PROGRESSION.md)
 - Beta gift: "Founding Citizen" jacket + gold "Beta" plate, tied to the account, survives the wipe. (11-07; PROGRESSION.md)
-- The game is rated 17+: a 17+ gate at first launch (`CLA_REQUIRE_AGE`). (11-04; DEVLOG 11-04, chat) - settles launch-plan's 13+/17+ question.
+- The game is for players 13+ (under 18 with a parent or guardian's permission): the age gate at first launch says so (`CLA_REQUIRE_AGE`; the stored field keeps its name age17), the Terms describe the content plainly (crime, shooting, cartoon blood, chases, chat with strangers) with a parents' contact line, the Privacy Policy says not for under-13s. An open, easy beta: no new gates, game content unchanged; age checks and platform rules revisited before full launch. The Discord is 13+ too, no age-restricted channels for now. (11-15; chat, DEVLOG 11-15) - SUPERSEDES "rated 17+" (11-04).
 - No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
 - Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
 - Bug reporter: "Report a bug" in pause menu + phone (text, optional screenshot, location, device, build, fps, errors); stored on server, listed at /admin; optional Discord webhook. (11-14; queue)

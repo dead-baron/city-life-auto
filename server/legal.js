@@ -16,7 +16,7 @@ export function privacyPage(L, { ga = false } = {}) {
   return shell('Privacy Policy', `
 <p>City Life Auto is an online game. This page says what we keep about you, why, and how to have it deleted. We keep as little as we can.</p>
 <h2>Who can play</h2>
-<p>The game is for people <b>17 and older</b>. The first time you open it, it asks you to confirm your age. We don't knowingly keep anything about anyone younger; if you think a child has an account, tell us (below) and we'll delete it.</p>
+<p>The game is for people <b>13 and older</b>; if you're under 18, you need a parent or guardian's permission to play. The first time you open it, it asks you to confirm your age. It isn't for children under 13 and we don't knowingly keep anything about them; if you think a child under 13 has an account, tell us (below) and we'll delete it.</p>
 <h2>Your account</h2>
 <ul>
 <li>You can play ${esc(signins)}.</li>
@@ -58,7 +58,10 @@ export function termsPage(L) {
   return shell('Terms of Service', `
 <p>These terms are the rules for playing City Life Auto, a free online game in public beta.</p>
 <h2>Who can play</h2>
-<p>You must be <b>17 or older</b>. The game has mature themes: crime, violence and online play with other people that isn't rated.</p>
+<p>You must be <b>13 or older</b>. If you're under 18, you need a parent or guardian's permission to play.</p>
+<h2>What's in the game</h2>
+<p>City Life Auto is a crime-and-city sandbox: stealing cars, shooting and fighting, cartoon pixel blood, and police chases. You play online with other players, who are strangers. Chat isn't watched by a person in real time: it has a word filter, report and block buttons, and moderators. Never share personal information in chat.</p>
+<p>Parents: to have your child's account deleted, write to us at ${contact}.</p>
 <h2>Your account</h2>
 <ul><li>You can play as a guest, or sign in to keep your character on any device. Keep your password to yourself; you're responsible for what's done with your account.</li><li>A guest character lives in one browser: clearing it can lose the character unless you've signed in or made a transfer code.</li><li>Your name must not be hateful, sexual, or pretend to be staff or someone else. Names held by signed-in players are theirs; a guest's name can be given to a member who picks it.</li></ul>
 <h2>Playing fair</h2>

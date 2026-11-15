@@ -8,7 +8,7 @@
 //           old email magic links' logins stay on the accounts that have them, nothing new signs in with them -
 //           the owner, 11-12), passkeys: [{ id, pub, alg,
 //           count, at, name }], role: null | 'helper' | 'admin' | 'owner', username: bool (picked one), nameAt,
-//           age17 (when the 17+ gate was confirmed), ban: { at, until (0: for good), why, by } | null, devices: [hashed
+//           age17 (when the age gate was confirmed), ban: { at, until (0: for good), why, by } | null, devices: [hashed
 //           markers], strikes, chatMuteUntil, blocks, mutes, contacts, inbox, chatOff (server/chat.js), ftue (analytics) }
 // Guests play as GuestNNNN or a name of their own (one a member doesn't own: server/launch.js); signing in with any
 // provider, an email and password or a passkey makes the account a member, and its name theirs.

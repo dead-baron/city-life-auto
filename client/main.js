@@ -139,7 +139,7 @@ try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 // (client/account.js, chat.js, analytics.js, errors.js) - loaded once the page is up, never in its first load. launchCall
 // hands it what happens: the server's messages for it, play pressed, in the city, a perf report, an error, the chat key.
 let launchP = null;
-function launchHello() {   // (in the hello: this browser's device marker, and whether the 17+ gate was confirmed here)
+function launchHello() {   // (in the hello: this browser's device marker, and whether the age gate was confirmed here)
   let dm = null, age17 = false;
   try {
     dm = localStorage.getItem('cla.dm');
@@ -164,7 +164,7 @@ function launchCall(k, a) {
       openApp: () => openHub('phone', 'msgs'),
     });
     er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
-    // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
+    // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
     acc.launchInfo().then((i) => discordLinks(i && i.discord)).catch(() => {});
@@ -219,7 +219,7 @@ function refusedAtDoor(code) {
   $('hud').classList.add('hidden');
   $('t-resume').classList.add('hidden');
   $('play').disabled = false;
-  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 17 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
+  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 13 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
   $('t-status').textContent = `${why} ${code === 4010 ? '' : 'Press PLAY to try again.'}`.trim();
   S.playing = false;
 }
@@ -1639,7 +1639,7 @@ $('s-signin').onclick = () => openSignIn();
 // ---- the sign-in panel and the first-launch gate: slots for the launch work (client/account.js) ----------------------
 // The launch code hands its screens over with setAccountUi({ signIn(el, close), gate(el, done), gateNeeded() }):
 //   signIn(el, close)  fills the SIGN IN panel's body (#signin-body: Guest / email and password / Google / Discord / passkey);
-//   gate(el, done)     fills the first-launch gate (#gate-body: the 17+ confirmation and the analytics choice) and calls
+//   gate(el, done)     fills the first-launch gate (#gate-body: the 13+ confirmation and the analytics choice) and calls
 //                      done() once it's answered; gateNeeded() says whether it's still to be answered in this browser;
 //   chat(el), legal(el), news(el) fill Settings > Chat (#s-chatbox: the channel toggles), Settings > Legal (#s-legalbox:
 //                      the terms and the privacy policy open) and Settings > Account's game news by email (#s-newsbox).
@@ -1674,7 +1674,7 @@ for (const b of document.querySelectorAll('.overlay [data-back]')) b.onclick = (
 
 initInput(canvas, {
   onKey(k) {
-    if (document.querySelector('[data-cla-modal]')) return;   // (the 17+ gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
+    if (document.querySelector('[data-cla-modal]')) return;   // (the age gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
     if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;

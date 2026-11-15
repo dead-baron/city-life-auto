@@ -248,8 +248,8 @@ test('the legal pages: served by the game, no DRAFT banner (the owner, 11-15), s
   const p = await S.h({ url: '/legal/privacy' }), t = await S.h({ url: '/legal/terms' });
   assert.equal(p.status, 200); assert.equal(t.status, 200);
   for (const r of [p, t]) assert.doesNotMatch(r.body, /DRAFT|not yet reviewed by a lawyer/);
-  for (const w of [/17 and older/, /keyed one-way hash/, /scrypt/, /Resend/, /Google Analytics 4/, /don't keep IP addresses/, /game-icons\.net/, /CC BY 3\.0/, /Kenney/, /CC0/, /unsubscribe/i, /delete your whole account/]) assert.match(p.body, w);
-  assert.match(t.body, /17 or older/);
+  for (const w of [/13 and older/, /under 13/, /parent or guardian/, /keyed one-way hash/, /scrypt/, /Resend/, /Google Analytics 4/, /don't keep IP addresses/, /game-icons\.net/, /CC BY 3\.0/, /Kenney/, /CC0/, /unsubscribe/i, /delete your whole account/]) assert.match(p.body, w);
+  assert.match(t.body, /13 or older/); assert.match(t.body, /What.s in the game/); assert.match(t.body, /Parents:/);
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /data-legal="terms"/); assert.match(html, /data-legal="privacy"/);
   assert.ok(!/coming with the launch/.test(html));

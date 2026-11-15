@@ -122,7 +122,7 @@ test('D. the update wipe (CLA_FRESH_ON_UPDATE=all) keeps the account, as Start f
   assert.match(reset, /if \(prof\.acct\) \{ keep\.acct = prof\.acct;/);
 });
 
-test('E. the keyboard on the 17+ gate: Enter doesn\'t start the game under it; Tab, Enter and Space work inside it', () => {
+test('E. the keyboard on the age gate: Enter doesn\'t start the game under it; Tab, Enter and Space work inside it', () => {
   const main = read('client/main.js'), input = read('client/input.js'), acc = read('client/account.js');
   const i = main.indexOf('initInput(canvas, {'), onKey = main.slice(i, i + 600);
   assert.match(onKey, /if \(document\.querySelector\('\[data-cla-modal\]'\)\) return;/, 'no game keys while it\'s up');

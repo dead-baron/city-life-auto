@@ -1,7 +1,7 @@
 // Accounts on the page (the launch foundation; the server does the deciding: server/launch.js, authhttp.js). Loaded
 // after the page is up (main.js launchCall), never at startup. What the UI's next stage wires into the title screen,
 // settings and the phone:
-//   boot(ctx)               the first-launch gate (17+ and the analytics choice), a sign-in coming back (#cla_login),
+//   boot(ctx)               the first-launch gate (13+ and the analytics choice), a sign-in coming back (#cla_login),
 //                           then Google Analytics if it was accepted (client/analytics.js)
 //   gateNeeded() / showGate(onDone) / gate() / setConsent('all' | 'essential')
 //   launchInfo()            what the server has switched on (/launch.json: providers, passkeys, the GA id)
@@ -51,7 +51,8 @@ export function deviceMarker() {
   return d;
 }
 
-// ---- the first-launch gate: 17+ and the analytics choice, kept in this browser ----
+// ---- the first-launch gate: 13+ (under 18 with a parent's permission - the owner, 11-15; was 17+) and the analytics
+// choice, kept in this browser. The field is still called age17 (stored in browsers and accounts): it means the age floor was confirmed ----
 export function gate() { try { return JSON.parse(ls.get(GATE_KEY) || 'null'); } catch { return null; } }
 export const gateNeeded = () => { const g = gate(); return !g || !g.age17 || !g.consent; };
 export function setConsent(v) {
@@ -127,8 +128,8 @@ export function showGate(onDone, { into = null } = {}) {
   const g = gate() || {};
   const ov = el(`<div style="${into ? '' : css}" role="dialog" aria-modal="${into ? 'false' : 'true'}" data-cla-modal="1"><div style="${box}">
     <h2 style="margin:0 0 8px">Before you play</h2>
-    <p>City Life Auto has mature themes: crime, violence, and online play with other people that isn't rated. Never share personal information in chat.</p>
-    <label style="display:block;margin:10px 0"><input type="checkbox" id="g-age" ${g.age17 ? 'checked' : ''}> I'm 17 or older</label>
+    <p>City Life Auto has crime, shooting, cartoon blood and police chases, and online play and chat with other players who are strangers. Never share personal information in chat.</p>
+    <label style="display:block;margin:10px 0"><input type="checkbox" id="g-age" ${g.age17 ? 'checked' : ''}> I'm 13 or older (under 18: with a parent or guardian's permission)</label>
     <p style="margin:12px 0 4px">We'd like to use Google Analytics to see how people find and play the game. Essential only keeps it off.</p>
     <div><button id="g-all" style="${btn}">Accept</button><button id="g-ess" style="${btn2}">Essential only</button></div>
     <p id="g-msg" style="color:#ff8a80;min-height:1.2em;margin:8px 0 0"></p></div></div>`);
@@ -136,7 +137,7 @@ export function showGate(onDone, { into = null } = {}) {
   modals.push(ov); padIdx = 0;
   keyboardDialog(ov);
   const go = (consent) => {
-    if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 17 or older to play.'; return; }
+    if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 13 or older to play.'; return; }
     const v = { age17: g.age17 || Date.now(), consent, at: Date.now(), v: 1 };
     ls.set(GATE_KEY, JSON.stringify(v));
     closeModal(ov);

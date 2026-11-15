@@ -78,7 +78,7 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const res = opts.login(msg.token, msg);
-        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 17 } : { t: 'kicked', reason: res.refused, code: res.code }); conn.close(res.code || 4003, 'refused'); return; }
+        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 13 } : { t: 'kicked', reason: res.refused, code: res.code }); conn.close(res.code || 4003, 'refused'); return; }
         const { profile, token } = res;
         myToken = token;
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
