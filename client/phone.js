@@ -64,9 +64,9 @@ export const ICON = {
   stash: P('<rect x="4" y="5" width="16" height="15" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M12 9.5v1M16 8h1M4 20v1M20 20v1"/>'),
   valet: P('<path d="M4 15l2-5h12l2 5v3H4z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/><path d="M12 3v4M10 5l2 2 2-2"/>'),
 };
-// the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide - the in-game wiki: client/guide.js - then Report
-// bug, the form to the team: client/bugreport.js)
-const APPS = [['next', "What's next"], ['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['msgs', 'Messages'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['guide', 'Guide'], ['bug', 'Report bug']];
+// the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide last - the in-game wiki: client/guide.js; Report
+// bug before it, the form to the team: client/bugreport.js)
+const APPS = [['next', "What's next"], ['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['msgs', 'Messages'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['bug', 'Report bug'], ['guide', 'Guide']];
 // their pixel icons (client/touchicons.js, the icon sheet's phone apps), a place group's, a skill's
 const APP_PIX = { next: 'star', jobs: 'jobs', places: 'places', transit: 'transit', feed: 'feed', bounties: 'bounties', homes: 'homes', skills: 'skills', crew: 'crew', msgs: 'chat', radio: 'radioapp', log: 'log', camera: 'camera', guide: 'guide', bug: 'bug' };
 const GROUP_PIX = { emergency: 'hospital', money: 'bank', shops: 'shop', out: 'food', baths: 'bathhouse', sell: 'sell', cars: 'car', work: 'legal', gang: 'gang' };
