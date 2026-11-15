@@ -23994,3 +23994,8 @@ The owner: the debug button asked for a password, and pressing it again just wor
 testing (CLA_DEV_OPEN), but the page opened the old password prompt if the server's yes took over 2 s (a phone on a
 slow link). The prompt is no longer opened (client/main.js openDebug); a refusal is the server's own notice. At the beta
 the owner resets progress and turns the open mode off (CLA_DEV_OPEN=0): the debug menu for admins only.
+
+## 2026-11-14 - The Camera panel has a close X
+The owner: "Camera mode doesn't have an X button to close it." The shot-list panel's header gets the kit's close (.x,
+`cine-close`) on every device: it closes the panel and hands the camera back; Esc and the pad's B still close it.
+test/wayout.test.js checks it (and its stale tour expectation is updated to the shot-list rework).
