@@ -713,7 +713,7 @@ function build(m, api, K) {
     }
     const fx = 2612, fy = shoreAt(fx) + 5;
     prop('campfire', fx, fy, 10, { lit: 1 });
-    for (const [dx, dy] of [[-1.6, 0.4], [1.6, 0.4], [0, -1.4]]) prop('log', fx + dx, fy + dy, 0);
+    for (const dx of [-2.4, 2.4]) prop('log', fx + dx, fy + 0.6, 0);   // (logs to sit on either side, clear of the fire on screen: test/visaudit)
     hang(K, fx, fy + 0.2, 5);
     out.grove = g;
   }
