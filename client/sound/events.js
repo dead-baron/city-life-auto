@@ -165,7 +165,12 @@ export const EVENT_SOUNDS = {
   pshot: (ev, A) => { if (ev.x !== undefined) A.at('clack', ev.x, ev.y, 0.45); },   // (the cue on the ball at a pool table near: server pooltables.js)
   ptab: null,   // (a pool table near, as it stands: client/poolview.js draws it)
   cfl: null,   // (a casino floor near, as it stands: client/casinoview.js draws it)
-  cdl: null,   // (a deal at a casino or card table: client/casinoview.js plays it out)
+  cdl: null,   // (a deal at a casino or card table: client/casinoview.js plays it out - and its sounds, as it deals: below)
+  // the deals' sounds, the page's own (client/casinoview.js, as each card lands, the ball drops, the reels stop - the
+  // fireworks' fwup way): soft, heard in the room
+  cflick: (ev, A) => A.at('cardflick', ev.x, ev.y, 0.5),
+  crou: (ev, A) => A.at(ev.k ? 'ballclick' : 'ballrattle', ev.x, ev.y, 0.5, { s: ev.s }),
+  creel: (ev, A) => A.at(ev.k === 'stop' ? 'reelstop' : ev.k === 'win' ? 'slotwin' : 'reeltick', ev.x, ev.y, ev.k === 'win' ? 0.55 : 0.4, { s: ev.s }),
   geyser: (ev, A) => A.at('gush', ev.x, ev.y),
   trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),
   xing: (ev, A) => { const c = A.S.map && A.S.map.rail && A.S.map.rail.crossings && A.S.map.rail.crossings[ev.i]; if (c) A.at('gatearm', c.x, c.y, 0.6); },

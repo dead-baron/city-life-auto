@@ -73,6 +73,20 @@
    "trim": 4.2,
    "after": -35.0
   },
+  "ballclick": {
+   "cat": "amb",
+   "loud": -45.4,
+   "peak": -24.6,
+   "trim": 5.4,
+   "after": -40.0
+  },
+  "ballrattle": {
+   "cat": "amb",
+   "loud": -45.4,
+   "peak": -20,
+   "trim": 5.4,
+   "after": -40.0
+  },
   "baton": {
    "cat": "fx",
    "loud": -38.7,
@@ -156,6 +170,13 @@
    "peak": -22.2,
    "trim": 3.4,
    "after": -32.0
+  },
+  "cardflick": {
+   "cat": "amb",
+   "loud": -54.2,
+   "peak": -31,
+   "trim": 14.2,
+   "after": -40.0
   },
   "cardoor": {
    "cat": "fx",
@@ -738,6 +759,20 @@
    "trim": -6.5,
    "after": -35.0
   },
+  "reelstop": {
+   "cat": "amb",
+   "loud": -51.5,
+   "peak": -26.4,
+   "trim": 11.5,
+   "after": -40.0
+  },
+  "reeltick": {
+   "cat": "amb",
+   "loud": -53.6,
+   "peak": -27.8,
+   "trim": 13.6,
+   "after": -40.0
+  },
   "reloadin": {
    "cat": "ui",
    "loud": -35.9,
@@ -848,6 +883,13 @@
    "loud": -46.2,
    "peak": -29.2,
    "trim": 6.2,
+   "after": -40.0
+  },
+  "slotwin": {
+   "cat": "amb",
+   "loud": -31.4,
+   "peak": -22,
+   "trim": -8.6,
    "after": -40.0
   },
   "spikes": {

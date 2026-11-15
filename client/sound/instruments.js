@@ -211,6 +211,15 @@ export const INSTR = {
   trainhorn: { pri: MAJOR, range: 2800, gap: 0.6, send: 0.3, play(E, o, t, v) { return horn(E, o, t, v, 1.1); } },
   trainhornshort: { pri: MAJOR, range: 2800, gap: 0.6, send: 0.3, play(E, o, t, v) { return horn(E, o, t, v, 0.5); } },
   // ---- lights to carry and felling trees (#358, #359) ----
+  // the casinos' floors (client/casinoview.js plays them as it deals them out - the owner, 11-14: subtle): a card flicked
+  // onto the felt, the roulette ball's rattle as it drops in and its click into the pocket, a slot's reels ticking round
+  // and each one stopping, a small win chime
+  cardflick: { pri: AMBIENT, range: 420, gap: 0.05, play(E, o, t, v) { E.noise(o, t, 0.035, v * 0.22, { ft: 'bandpass', f: vary(2600, 0.12), f2: 1700, q: 1.4, a: 0.002 }); E.noise(o, t + 0.03, 0.02, v * 0.08, { ft: 'lowpass', f: 900 }); return 0.07; } },
+  ballrattle: { pri: AMBIENT, range: 420, gap: 0.5, play(E, o, t, v, p) { const s = (p && p.s) || 1.2; clicks(E, o, t, Math.round(s * 14), s, v * 0.24, 2400, 5200, 0.01); return s + 0.05; } },
+  ballclick: { pri: AMBIENT, range: 420, gap: 0.2, play(E, o, t, v) { E.noise(o, t, 0.015, v * 0.3, { ft: 'bandpass', f: vary(4200), q: 3 }); E.noise(o, t + 0.07, 0.012, v * 0.16, { ft: 'bandpass', f: vary(3900), q: 3 }); E.tone(o, t, vary(2600, 0.04), 0.025, v * 0.05, { type: 'sine' }); return 0.12; } },
+  reeltick: { pri: AMBIENT, range: 360, gap: 0.4, play(E, o, t, v, p) { const s = (p && p.s) || 0.9; clicks(E, o, t, Math.round(s * 22), s, v * 0.14, 1500, 3200, 0.008); return s + 0.03; } },
+  reelstop: { pri: AMBIENT, range: 360, gap: 0.06, play(E, o, t, v) { E.noise(o, t, 0.02, v * 0.2, { ft: 'bandpass', f: vary(1300), q: 2 }); E.tone(o, t, vary(520, 0.04), 0.03, v * 0.06, { wave: 'pulse25', f2: 380 }); return 0.05; } },
+  slotwin: { pri: MINOR, range: 480, gap: 0.8, play(E, o, t, v) { [1568, 1976, 2349].forEach((f, k) => bell(E, o, t + k * 0.09, f, 0.3, v * 0.06, 3.01, 0.8)); return 0.6; } },
   lightclick: { pri: MINOR, range: 420, gap: 0.08, play(E, o, t, v) { E.noise(o, t, 0.012, v * 0.35, { ft: 'bandpass', f: vary(3200), q: 2.5 }); E.tone(o, t, vary(1900, 0.05), 0.02, v * 0.08, { wave: 'pulse25' }); return 0.05; } },
   flarestrike: { pri: NORMAL, range: 700, gap: 0.3, play(E, o, t, v) { E.noise(o, t, 0.09, v * 0.45, { ft: 'bandpass', f: vary(2600), q: 1.1 }); E.noise(o, t + 0.08, 1.1, v * 0.3, { ft: 'highpass', f: 2800, a: 0.05 }); clicks(E, o, t + 0.1, 10, 1, v * 0.25, 2500, 5500, 0.008); return 1.2; } },
   chop: { pri: NORMAL, range: 1100, gap: 0.12, play(E, o, t, v) { E.tone(o, t, vary(150, 0.1), 0.09, v * 0.5, { type: 'triangle', f2: 85 }); E.noise(o, t, 0.06, v * 0.55, { ft: 'bandpass', f: vary(1150), q: 1.5 }); clicks(E, o, t + 0.01, 3, 0.06, v * 0.25, 1500, 3500, 0.01); return 0.14; } },
