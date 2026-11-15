@@ -59,6 +59,7 @@ export function wideRoute(world, fx, fy, tx, ty, heading = null) {
   if (end < 0) return null;
   const chain = [];
   for (let cur = end; prev.get(cur); cur = prev.get(cur).id) chain.unshift({ from: prev.get(cur).id, e: prev.get(cur).e });
+  chain.unshift({ from: starts[0] === e0.a ? e0.b : e0.a, e: e0.id });   // (along the street it's on to that junction first)
   return chainPts(net, chain, fx, fy, tx, ty);
 }
 // Straight on along the road it's on, through every junction, as far as `len` (or the road's end): at each junction the way
@@ -187,7 +188,7 @@ export function raceStep(world, v, R) {
   // how far along: the route near where it was (never back to an earlier bend of it)
   const win = []; let i0 = 0;
   while (i0 < route.length - 1 && route[i0 + 1].s < R.s - 200) i0++;
-  for (let i = i0; i < route.length && route[i].s < R.s + 700; i++) win.push(route[i]);
+  for (let i = i0; i < route.length && (route[i].s < R.s + 700 || win.length < 3); i++) win.push(route[i]);   // (the next points on at least: a long way to the first one)
   if (win.length >= 2) { const pr = project(win, v); if (pr && pr.s >= R.s - 50) R.s = Math.max(R.s, Math.min(pr.s, R.s + fwd * DT * 1.6 + 24)); }   // (never on by more than it's driven: a way that doubles back near itself)
   // nearing the end of its way: on straight ahead from there (the race runs on to the shot's end - never into the end of
   // a road at speed); no way on, it brakes to a stop at the end
