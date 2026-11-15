@@ -24,49 +24,78 @@ export const TIPS = [
   'Fishing rods are sold at tackle shops, the fish market and sports stores.',
 ];
 
-// the skyline: dark towers with lit windows and a few palms, on a transparent sky (CSS paints the dusk behind it).
-// skyLayout(): where its windows are - every slot still in sight once it's drawn, lit or dark, and its tower's colour
-// (client/titlelife.js twinkles them)
-let skyUrl = null, skyWins = null;
-const SKY_COLS = ['#1d2a52', '#0e1631'];
-export function skyLayout() { skyline(); return { w: 320, h: 72, wins: skyWins || [], cols: SKY_COLS }; }
+// the skyline: a big city far off, on a transparent sky (CSS paints the night behind it; the owner, 11-14: "more
+// detailed and interesting but still in the right style", no palms) - a hazier back row and a darker front row of
+// towers: setbacks, stepped towers with spires, a water tower, rooftop antennas (their red lights blink: titlelife),
+// a lit billboard or two, little neon strips by the street, windows lit in irregular floors.
+// skyLayout(): where its windows are - every slot still in sight once it's drawn, lit or dark, its row (0 back,
+// 1 front) - the antennas' tips (beacons) and the tall roofs (where a searchlight can stand); client/titlelife.js
+let skyUrl = null, skyWins = null, skyMarks = { beacons: [], roofs: [] };
+const SKY_COLS = ['#1d2a52', '#0e1631'], SKY_LIT = ['#a08a52', '#e2bd57'];
+export function skyLayout() { skyline(); return { w: 320, h: 72, wins: skyWins || [], cols: SKY_COLS, lit: SKY_LIT, ...skyMarks }; }
 export function skyline() {
   if (skyUrl) return skyUrl;
   try {
-    const W = 320, H = 72, c = document.createElement('canvas'), slots = [];
+    const W = 320, H = 72, c = document.createElement('canvas'), slots = [], beacons = [], roofs = [];
     c.width = W; c.height = H;
     const g = c.getContext('2d');
     let seed = 7;
-    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
-    // two rows of towers: the far ones lighter, the near ones darker, windows lit warm
-    for (const [col, lo, hi, win] of [[SKY_COLS[0], 20, 56, 0.18], [SKY_COLS[1], 10, 40, 0.3]]) {
-      let x = -4;
-      while (x < W) {
-        const w = 10 + Math.floor(rnd() * 18), h = lo + Math.floor(rnd() * (hi - lo));
-        g.fillStyle = col; g.fillRect(x, H - h, w, h);
-        if (rnd() < 0.3) g.fillRect(x + (w >> 1) - 1, H - h - 5, 2, 5);   // (an antenna)
-        g.fillStyle = '#e2bd57';
-        for (let wy = H - h + 3; wy < H - 2; wy += 4) for (let wx = x + 2; wx < x + w - 2; wx += 3) { const lit = rnd() < win; if (lit) g.fillRect(wx, wy, 1, 2); slots.push(wx, wy, lit ? 1 : 0, col === SKY_COLS[0] ? 0 : 1); }
-        x += w + (rnd() < 0.4 ? 2 : 0);
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff), ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+    const box = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+    // the windows of a face: 1 x 2 px on a 3 x 4 grid, a floor at a time lit more or less (irregular, still windows)
+    const wins = (x, top, w, foot, row, base) => {
+      for (let wy = top + 3; wy < foot - 3; wy += 4) {
+        const p = rnd() < 0.25 ? 0 : base * (0.4 + rnd() * 1.4);
+        for (let wx = x + 2; wx < x + w - 2; wx += 3) { const lit = rnd() < p; if (lit) box(wx, wy, 1, 2, SKY_LIT[row]); slots.push(wx, wy, lit ? 1 : 0, row); }
       }
+    };
+    // a tower: its body, maybe a setback (a narrower top) or steps and a spire, its windows; returns its roof
+    const tower = (x, w, h, row, kind) => {
+      const col = SKY_COLS[row], foot = H;
+      let top = H - h;
+      box(x, top, w, h, col);
+      wins(x, top, w, foot, row, row ? 0.32 : 0.16);
+      if (kind === 'setback' && w >= 12) { const sw = w - 2 * ri(3, 4), sh = ri(6, 12); box(x + (w - sw >> 1), top - sh, sw, sh, col); wins(x + (w - sw >> 1), top - sh, sw, top, row, 0.3); top -= sh; }
+      if (kind === 'stepped' && w >= 12) {
+        for (let k = 1; k <= 2; k++) { const sw = w - 6 * k, sh = 4; if (sw < 4) break; top -= sh; box(x + (w - sw >> 1), top, sw, sh, col); }
+        box(x + (w >> 1), top - 8, 1, 8, col); top -= 8;   // (the spire)
+      }
+      if (kind === 'antenna') { const ax = x + ri(2, w - 3), ah = ri(5, 8); box(ax, top - ah, 1, ah, col); beacons.push(ax, top - ah - 1); }
+      if (kind === 'water' && row) {   // a water tower on its roof: the tank on its legs, a cone over it
+        const tx = x + ri(2, Math.max(2, w - 8)), ty = H - h;
+        box(tx + 1, ty - 3, 1, 3, col); box(tx + 4, ty - 3, 1, 3, col); box(tx, ty - 8, 6, 5, col); box(tx + 1, ty - 9, 4, 1, col); box(tx + 2, ty - 10, 2, 1, col);
+        box(tx, ty - 6, 6, 1, '#1d2a52');   // (its hoop, catching the sky)
+      }
+      if (kind === 'billboard' && row) {   // a lit billboard on its roof: a pale face, a coloured band, its frame
+        const bw = Math.min(w + 2, 12), bx = x + (w - bw >> 1), by = H - h - 7;
+        box(bx + 2, by + 5, 1, 2, col); box(bx + bw - 3, by + 5, 1, 2, col); box(bx, by, bw, 5, '#26304f');
+        box(bx + 1, by + 1, bw - 2, 3, '#e8dcc0'); box(bx + 1, by + 2, bw - 2, 1, rnd() < 0.5 ? '#ff5ab4' : '#46e6ff');
+      }
+      if (row) roofs.push(x + (w >> 1), top);
+    };
+    // the back row, hazier: taller, plainer, fewer lights
+    for (let x = -6; x < W;) { const w = ri(12, 28); tower(x, w, ri(26, 58), 0, rnd() < 0.35 ? 'setback' : rnd() < 0.3 ? 'antenna' : ''); x += w + (rnd() < 0.3 ? ri(1, 3) : 0); }
+    // the front row: every few towers something on top - a stepped tower and its spire, a water tower, a billboard,
+    // an antenna, a setback - and now and then a little neon sign by the street
+    const KINDS = ['', 'antenna', '', 'water', 'setback', '', 'stepped', '', 'billboard', 'antenna', '', 'setback'];
+    let n = 0;
+    for (let x = -4; x < W; n++) {
+      const kind = KINDS[n % KINDS.length], w = kind === 'stepped' ? ri(16, 20) : ri(10, 22), h = kind === 'stepped' ? ri(34, 42) : ri(12, 36);
+      tower(x, w, h, 1, kind);
+      if (rnd() < 0.3 && w >= 8) { const nc = ['#ff5ab4', '#46e6ff', '#ffbe3c'][ri(0, 2)]; if (rnd() < 0.5) box(x + ri(1, w - 5), H - ri(5, 9), 4, 1, nc); else box(x + ri(1, w - 2), H - ri(7, 11), 1, 3, nc); }
+      x += w + (rnd() < 0.35 ? ri(1, 2) : 0);
     }
-    // palms
-    g.fillStyle = '#0a1022';
-    for (const px of [34, 118, 251, 300]) {
-      const ph = 26 + Math.floor(rnd() * 10);
-      for (let y = 0; y < ph; y++) g.fillRect(px + Math.round(Math.sin(y / 9) * 1.5), H - y, 2, 1);
-      const tx = px + 1, ty = H - ph;
-      for (let a = 0; a < 6; a++) { const dx = Math.cos(a * 1.05), dy = Math.sin(a * 1.05) * 0.5; for (let r = 0; r < 9; r++) g.fillRect(Math.round(tx + dx * r), Math.round(ty + dy * r + (r * r) / 22), 2, 1); }
-    }
-    // (the slots a nearer tower or a palm covers are left out: a twinkle there would show through)
+    // (the slots a nearer tower covers are left out: a twinkle there would show through)
     const px = g.getImageData(0, 0, W, H).data, hex = (i) => '#' + [px[i], px[i + 1], px[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
     skyWins = [];
     for (let k = 0; k < slots.length; k += 4) {
       const [wx, wy, lit, ci] = slots.slice(k, k + 4), i = (wy * W + wx) * 4, j = i + W * 4;
       if (wx < 0 || wx >= W) continue;
-      const want = lit ? '#e2bd57' : SKY_COLS[ci];
+      const want = lit ? SKY_LIT[ci] : SKY_COLS[ci];
       if (hex(i) === want && hex(j) === want) skyWins.push(wx, wy, lit, ci);
     }
+    const inside = (a) => { const o = []; for (let i = 0; i < a.length; i += 2) if (a[i] >= 0 && a[i] < W) o.push(a[i], a[i + 1]); return o; };
+    skyMarks = { beacons: inside(beacons), roofs: inside(roofs) };
     skyUrl = c.toDataURL();
   } catch { skyUrl = ''; }
   return skyUrl;

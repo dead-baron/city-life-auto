@@ -23982,3 +23982,19 @@ windows has 3 windows instead of 4 (still in the same grid)". SKY_WINDOWS: the t
 exactly (the left house's wall a px in - its span now even; the right house's span to where "Life" covers it), and the
 tall tower's 2 x 2 keeps its places with its lower right window's lights out - an unlit pane, not a gap. Re-installed
 and the share card rebuilt. Close-up and the title upright: the session's scratchpad `logo2/owner/windows4/`.
+
+## 2026-11-14 - The title's backdrop: a bigger city far off, real clouds, a searchlight that fades
+The owner (19:45) on the title backdrop. client/titlescreen.js skyline() and client/titlelife.js:
+- **The city** (the skyline art, the same 320 x 72 at the same far-away scale): a hazier back row and a darker front
+  row; setbacks, stepped towers with a spire, a water tower on a roof, rooftop antennas whose red lights blink
+  (titlelife, each copy of the skyline a little out of step), a lit billboard or two, tiny neon strips by the street,
+  windows lit a floor at a time, more or less (irregular, still windows; they keep twinkling). No palm trees.
+  skyLayout() now also gives the antennas' tips and the tall roofs, and each row's lit colour.
+- **The clouds**: full pixel clouds - a dome of overlapping puffs on a soft base, three tones (a lighter top, the body,
+  an underside warm with the city's glow) - at two depths: the far ones smaller, fainter and about half as fast; they
+  drift across, a pixel at a time, and come round again.
+- **The searchlight**: a cone from a lamp on one of the tallest roofs in sight, brightest at its foot, its light falling
+  off along it to nothing well below the top of the screen and across it to soft edges, a brighter line down its
+  middle - in the art's own pixels, four steps through an ordered dither; it sweeps slowly (16-24 s).
+- Still paused with the title hidden or the tab asleep; reduced motion: the stars alone. docs/DECISIONS.md: the
+  backdrop's look. Before / after: the session's scratchpad `logo2/owner/backdrop/`.
