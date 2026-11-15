@@ -65,7 +65,7 @@ function build(m, api, K) {
       const dy0 = y0 + hh, dy1 = y1;
       K.fill(hx - 6, dy0, hw + 12, dy1 - dy0, T.PLAZA);
       for (let y = dy0 + 1; y < dy1 - 1; y++) for (let x = hx - 2; x < hx + hw + 2; x++) m.set(x, y, T.LOT);
-      prop('canopy', PX.axis, dy0 + 2.2, 0, { w: 220, d: 70, h: 48 });
+      for (const dx of [-3.5, 3.5]) prop('plamp', PX.axis + dx, dy0 + 0.05, 0, { wall: true, a: Math.PI / 2 });   // (the door lit from its wall, no canopy over it: the owner, 11-14)
       m.parking.push({ x: (PX.axis - 12) * TILE, y: (dy0 + 3) * TILE, a: 0, model: 'taxi' }, { x: (PX.axis + 12) * TILE, y: (dy0 + 3) * TILE, a: 0, model: 'taxi' });
       for (const dx of [-hw / 2 - 3, hw / 2 + 3]) prop('palm_a', PX.axis + dx, dy0 + 2, 10, { sp: 'royal', k: 1.2 });
       for (const dx of [-18, -6, 6, 18]) prop('plamp', PX.axis + dx, dy1 - 0.6, 6);

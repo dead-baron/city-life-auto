@@ -108,23 +108,66 @@ function helpers(m) {
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const e of (m.solidProps && m.solidProps.get(m.idx(tx + dx, ty + dy))) || []) if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) < (r + e.r) * (r + e.r)) return true;
     return false;
   };
-  return { W, H, tile, isAlley, distAt, nearDoor, nearSolid };
+  // the opened-up blocks' alleys, lanes and yards (shared/world3-openblocks.js: m.openAlleys, m.openYards - paving)
+  const open = new Set();
+  for (const a of [...(m.openAlleys || []), ...(m.openYards || [])]) for (let ty = a.y; ty < a.y + a.h; ty++) for (let tx = a.x; tx < a.x + a.w; tx++) if (m.inside(tx, ty)) open.add(m.idx(tx, ty));
+  const isOpen = (tx, ty) => m.inside(tx, ty) && open.has(m.idx(tx, ty));
+  return { W, H, tile, isAlley, isOpen, distAt, nearDoor, nearSolid };
 }
 
 function build(m) {
   const X = helpers(m), { tile, isAlley, distAt, nearDoor, nearSolid } = X;
   const backs = alleyBacks(m);
-  return dressEdges(m, X, backs, tile, isAlley, distAt, nearDoor, nearSolid);
+  const D = dressEdges(m, X, backs, tile, isAlley, distAt, nearDoor, nearSolid);
+  dressOpen(m, X, D.items);
+  return D;
+}
+
+// ---- 3. the opened-up blocks' alleys and lanes (shared/world3-openblocks.js m.openAlleys: paving between the new
+// buildings): the same things along their walls - an N-S alley's both walls, a lane's north wall (its south one is
+// behind the roofs south of it) - and on their paving, by the district's grit; a stray cat in some
+function dressOpen(m, X, items) {
+  const { tile, isOpen, distAt, nearDoor, nearSolid } = X;
+  (m.openAlleys || []).forEach((a, ai) => {
+    const ns = !!a.ns, len = (ns ? a.h : a.w) * TILE, hw = (ns ? a.w : a.h) * TILE / 2, e = -1 - ai;
+    if (len < MOUTH * 2 + 20) return;
+    const cx = (a.x + a.w / 2) * TILE, cy = (a.y + a.h / 2) * TILE, g = gritOf(distAt(cx, cy));
+    const H0 = (s, k) => hash2(a.x * 3 + ai, Math.round(s), 7400 + k);
+    let cat = H0(0, 1) < 0.35 ? MOUTH + H0(0, 2) * (len - 2 * MOUTH) : -1;
+    const at = (s) => (ns ? { x: cx, y: a.y * TILE + s } : { x: a.x * TILE + s, y: cy });
+    const push = (k, x, y, side, nx, ny, v) => items.push({ k, x: Math.round(x), y: Math.round(y), v, side, nx, ny, e, g });
+    let lastAt = -99;
+    for (let s = MOUTH; s <= len - MOUTH; s += STEP) {
+      const q = at(s), u = H0(s, 10);
+      if (u < 0.06 + 0.1 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2; push('puddle', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
+      else if (u < 0.1 + 0.16 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2, k = H0(s, 13); push(k < 0.3 * g ? 'oil' : k < 0.3 * g + 0.25 ? 'crack' : k < 0.5 + 0.25 * g ? 'litter' : 'leaves', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
+      for (const side of ns ? [-1, 1] : [-1]) {
+        const nx = ns ? side : 0, ny = ns ? 0 : side;
+        const wt = tile(Math.floor((q.x + nx * (hw + 10)) / TILE), Math.floor((q.y + ny * (hw + 10)) / TILE));
+        if (wt !== T.BUILDING) continue;
+        const fi = side < 0 ? 0 : 1, r = H0(s, 20 + fi);
+        if (r > 1 - 0.05 - 0.1 * g) { push('weeds', q.x + nx * (hw - 4), q.y + ny * (hw - 4), side, nx, ny, Math.floor(H0(s, 22 + fi) * 6)); continue; }
+        let k = null;
+        if (cat >= 0 && Math.abs(s - cat) < STEP / 2) { k = 'cat'; cat = -1; }
+        else if (r < 0.14 + 0.36 * g) k = pickKind(g, H0(s, 30 + fi));
+        if (!k || s - lastAt < 26) continue;
+        const [, dep] = DRESS[k], off = hw - dep / 2 - 3, x = Math.round(q.x + nx * off), y = Math.round(q.y + ny * off);
+        if (!isOpen(Math.floor(x / TILE), Math.floor(y / TILE)) || nearDoor(x, y, DOOR_CLEAR) || nearSolid(x, y, DRESS[k][0] + 6)) continue;
+        push(k, x, y, side, nx, ny, Math.floor(H0(s, 40 + fi) * 6));
+        lastAt = s;
+      }
+    }
+  });
 }
 
 // ---- 1. the back walls: buildings whose south face fronts an alley (most of the tiles just south of it are an
 // alley's asphalt). Only plain backs (a World v2 back row, a plain roof block), never a shop or a walk-in.
 function buildBacks(m, X) {
-  const { isAlley, distAt, nearDoor, nearSolid } = X;
+  const { isAlley: road, isOpen, distAt, nearDoor, nearSolid } = X;
   const backs = new Map();
   (m.buildings || []).forEach((b, bi) => {
     if (!b || b.gone || b.walkIn || b.art || b.business || !(b.back || b.kind === 'roof') || b.tw < 3) return;
-    const ty = b.ty + b.th;
+    const ty = b.ty + b.th, isAlley = b.back ? (tx, y) => road(tx, y) || isOpen(tx, y) : road;   // (a back on an opened-up block's lane too)
     let n = 0;
     for (let tx = b.tx; tx < b.tx + b.tw; tx++) if (isAlley(tx, ty)) n++;
     if (n < b.tw * 0.6) return;

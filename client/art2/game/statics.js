@@ -624,6 +624,7 @@ function layout(w, d, rnd, m, avoid = []) {
       return L;
     },
     row(k, n, rot = false, gap = 6) {                      // a block of units in one or two rows, a walkway in front
+      if (k === 'ac' && n > 3) n = 3; else if (k === 'acs' && n > 4) n = 4;   // (no long rows of identical units - the owner, 11-14)
       if (n <= 0) return L;
       const [kw, kd] = dims(k, rot), rows = n > 3 && rnd() < 0.5 ? 2 : 1, per = Math.ceil(n / rows), bw = per * kw + (per - 1) * gap, bd = rows * kd + (rows - 1) * gap;
       if (w - 2 * m - bw < 0 || d - 2 * m - bd - 16 < 0) return n > 1 ? L.row(k, n - 1, rot, gap) : L;
@@ -739,6 +740,23 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
   if (plain && area > 100000) {
     if (A === 'warehouse' || A === 'factory' || A === 'shed' || A === 'hangar') { L.grid('solar', 2 + (r() * 3 | 0), 2); L.row('hvac', 1, true); if (r() < 0.5) L.free('duct', 1, false, 0.5); }
     else { if (r() < 0.6) L.corner('tank'); L.grid('skyL', 2 + (r() < 0.5 ? 1 : 0), 1, 8); L.row('acs', 2); if (r() < 0.4) L.free('dish', 1); }
+  }
+  // (the owner, 11-14: a big roof that stays "one huge flat grey roof with a row of AC units" gets what else stands on a
+  // city's roofs - two of a water tank, a stairwell hut, skylights, solar panels, a billboard, a terrace, a dish; the
+  // works' and sheds' their solar arrays, skylights and ducts)
+  if (area > 150000 && !spec.garden && spec.roofMat !== 'green') {
+    const works = A === 'warehouse' || A === 'factory' || A === 'shed' || A === 'hangar' || A === 'pits';
+    const V = works ? ['solar', 'skyL', 'duct', 'solar'] : ['tank', 'hut', 'skyL', 'solar', 'bill', 'terrace', 'dish', 'tank'];
+    const a = Math.floor(r() * V.length), b = (a + 1 + Math.floor(r() * (V.length - 1))) % V.length;
+    for (const v of V[a] === V[b] ? [V[a]] : [V[a], V[b]]) {
+      if (v === 'tank' || v === 'hut') L.corner(v);
+      else if (v === 'skyL') L.grid('skyL', 2 + (r() < 0.5 ? 1 : 0), 1 + (d > 260 ? 1 : 0), 8);
+      else if (v === 'solar') L.grid('solar', 2 + (r() * 3 | 0), 2);
+      else if (v === 'duct') L.free('duct', 1, false, 0.5);
+      else if (v === 'bill' && w >= 150) L.free('bill', 1, true);
+      else if (v === 'terrace') { L.free('umb', 2); L.free('table', 2); L.free('string', 1, false, 0.5); }
+      else if (v === 'dish') L.free('dish', 1);
+    }
   }
   if (spec.garden || spec.roofMat === 'green') gardenKit(L, A, w, d, spec);
   return { kit: L.out, pads: L.pads };
@@ -885,6 +903,7 @@ function gardenKit(L, A, w, d, spec) {
   else if (nBeds > 2 && r() < 0.5) for (let i = 0, n = 2 + Math.floor(r() * 2); i < n; i++) put('lant', 6, 6, false, 2);
 }
 // the roof deck's material, parapet height and thickness by archetype (spec.roofMat, lip, rimW)
+const GARDENS = new Set(['mixed', 'walkup', 'oldrow', 'office', 'glass', 'condo', 'civicblock', 'nightrow', 'block', 'hotel']);
 function roofOf(A, D, rnd, spec) {
   if (spec.roofMat) return;
   const r = rnd(), rough = D.tier === 'rough';
@@ -1324,6 +1343,8 @@ function specOf(c, b, A, s, D) {
     case 'lighthouse': s.vox = true; break;
     default: { Object.assign(spec, { floors: 2, style: 'stucco', wallColor: wall('commercial') }); if (front) plainDoors(); else spec.blank = true; }
   }
+  // (a building the map sets the storeys of - an opened-up block's: shared/world3-openblocks.js, each its own height)
+  if (b.fl && spec.floors && !b.art && !pitched) { spec.floors = clamp(spec.floors, b.fl[0], b.fl[1]); const H = buildingH(spec); for (let j = lights.length - 1; j >= 0; j--) if (lights[j][2] > H) lights.splice(j, 1); }
   // a bank branch moved into a shop unit: stone front, a marble lobby behind the glass, a green and gold sign
   if (spec.shop && spec.shop.sign && /\bBANK\b/.test(spec.shop.sign.text)) {
     Object.assign(spec, { style: 'stone', wallColor: pick(['#d4c8b0', '#c8bca4', '#dcd2bc'], rnd()), grime: 0, graffiti: 0, tagText: null, boarded: 0 });
@@ -1392,8 +1413,11 @@ function specOf(c, b, A, s, D) {
   let up = null;
   if (!pitched && !s.frame && !s.vox) {
     roofOf(A, D, rnd, spec);
+    // (a big roof is a roof garden now and then - the owner, 11-14: roofs that stay big get variety; by the building, not
+    // the random stream, so nothing else on it moves)
+    if (!spec.garden && !(ART && ART.kit) && !b.lookW && !rough && w * d > 150000 && GARDENS.has(A) && hh(b.id, s.k, 9781) < 0.22) spec.garden = true;
     gardenRoof(spec, w, d, !!(ART && ART.kit) || !!b.lookW);
-    up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look ? null : upperOf(A, D, rnd, spec, w, d);
+    up = ART ? (ART.up ? upperArt(ART.up, A, D, rnd, spec, w, d) : null) : b.look || b.fl ? null : upperOf(A, D, rnd, spec, w, d);
     if (up && (capped || upBlocks(c, b, s, roofDeckZ(spec) + buildingH(up.spec)))) up = null;   // (lowered over the street, or its setback storeys would cover it: none on top - streetCap)
     const K = ART && ART.kit ? { kit: ART.kit.map(([k, x, y]) => [k, x, y < 0 ? d + y : y]).filter(([k, x, y]) => KITS[kitBase(k)] && x < w && y < d), pads: [] } : b.lookW ? { kit: [], pads: [] } : kitFor(A, w, d, rnd, tier, spec, up ? [up.x, up.y, up.spec.w, up.spec.d] : null, b.kind === 'roof' && !b.art && !b.hero && !(b.signs && b.signs.length));   // (H40: no city rooftop kit on the mill's shed or the elevator's head house)
     kit = K.kit; if (K.pads.length) spec.pads = K.pads;

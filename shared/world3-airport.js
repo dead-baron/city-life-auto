@@ -176,7 +176,7 @@ function build(m, api, K) {
     const mid = (TERM.wx + TERM.ex) / 2;
     for (let x = TERM.x0 + 4; x < TERM.x1 - 4; x += 14) {
       if ((x + 5 > kx - 1 && x - 5 < kx + 9) || Math.abs(x - mid) < 12) continue;   // (the kiosk; the main doors under the hall's name)
-      prop('canopy', x, fy0 + 1.6, 0, { w: 280, d: 84, h: 62 });
+      // (no canopy over the doors: the owner, 11-14 - the overhangs over entrances hid them)
       prop('bench_m', x - 2.5, fy0 + 0.9, 0); prop('planter_g', x + 3, fy0 + 0.9, 8);
     }
     for (let x = TERM.x0 - 2; x < TERM.x1 + 2; x += 3) if ((x < kx - 1 || x > kx + 9)) prop('bollard', x + 0.5, fy1 - 0.4, 4);
@@ -312,7 +312,7 @@ function build(m, api, K) {
     prop('ygate', lx1 - 2, y1 - 1, 0, { a: 0 });
     prop('textsign', lx0 + 4, y1 - 1, 0, { text: 'SHORT-TERM PARKING', bg: '#1e3a5e', fg: [250, 250, 240], z: 36, sx: 1 });
     placeName('Short-Term Parking', lx0, y0, lx1, y1);
-    // the Skyview Hotel at the west end, its front on Hangar Road: the glass tower, the porte-cochere, its car park
+    // the Skyview Hotel at the west end, its front on Hangar Road: the glass tower, its door lit from the wall, its car park
     // behind on Terminal Drive, the pool beside it
     const hx0 = AX.west - 8, hx1 = gx0 - 3;
     const hw = Math.min(30, hx1 - hx0 - 2), hy = y1 - 22;
@@ -321,7 +321,7 @@ function build(m, api, K) {
     if (hotel) {
       out.shops++;
       K.fill(hx0, hy + 18, hx1 - hx0, y1 - hy - 18, T.PLAZA);
-      prop('canopy', hx0 + 1 + hw / 2, hy + 19.6, 0, { w: 220, d: 70, h: 58 });
+      for (const dx of [-3.5, 3.5]) prop('plamp', hx0 + 1 + hw / 2 + dx, hy + 18.05, 0, { wall: true, a: Math.PI / 2 });   // (the door lit from its wall, no canopy over it: the owner, 11-14)
       for (const dx of [-6, 6]) prop('palm_a', hx0 + 1 + hw / 2 + dx, y1 - 1, 10, { sp: 'royal', k: 1.3 });
       K.fill(hx0, y0, hx1 - hx0, hy - y0 - 1, T.LOT); K.take(hx0, y0, hx1 - hx0, hy - y0 - 1);
       bays(hx0 + 2, y0 + 1, hx1 - 2, hy - 2, {});

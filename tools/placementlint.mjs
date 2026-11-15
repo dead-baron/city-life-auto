@@ -25,6 +25,12 @@
 //                stand on a pavement, a promenade or a plaza, a lawn, the sand, a pier or a building (shared/parkcheck.js;
 //                the owner, 2026-11-14: "parked vehicles must never sit on a promenade or a sidewalk"). The parked cars
 //                leave such a space empty (server traffic.js badBay); the lint keeps the list so the data gets fixed
+//   bigCanopy   a canopy over a building's door wider than CANOPY_MAX[0] or deeper than CANOPY_MAX[1] (a porte-cochere, a
+//                hotel's or a hospital's canopy: the owner, 2026-11-14 - "these overhangs over building entrances ... just
+//                block the entrance and take away too much from the front of buildings"); a filling station's over its
+//                pumps is the station's own
+//   alleyBlocked an opened-up block's alley, lane or passage (shared/world3-openblocks.js m.openAlleys) with no way
+//                through on foot: somewhere along it, less than ALLEY_GAP px left clear between the solid props and walls
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
@@ -45,6 +51,8 @@ export const LINT_ALLOW = {
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
   parked: 124,
 };
+export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
+const CANOPIES = new Set(['porte', 'canopy', 'pergola']);
 const DUP_R = 20 * TILE, DUP_B = 4.5 * TILE, FRONT_H = 64, START_R = 2.5 * TILE;   // (DUP_R: about a screen - two of one name in one glance)
 const ROCKS = { seastack: (p) => p.r || 24, sealrock: () => 22, boulder: (p) => (p.s || 52) * 0.5, outcrop: (p) => Math.max(24, p.r || 0), redstack: (p) => p.r || 24, rstack: (p) => p.r || 24 };
 const FLOATS = new Set(['swimbuoy', 'ringfloat', 'swimraft']);
@@ -66,7 +74,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], bigCanopy: [], alleyBlocked: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -203,6 +211,48 @@ export function lint(M) {
   const space = (what, sp, model) => { const V = VEHICLES[model] || VEHICLES.sedan, why = parkWhy(M, sp.x, sp.y, sp.a || 0, V.L, V.W); seen.spaces = (seen.spaces || 0) + 1; if (why) rows.parked.push({ what, x: sp.x, y: sp.y, why }); };
   for (const sp of M.parking || []) if (!sp.drive && sp.model !== 'golfcart') space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
   for (const L of M.dealerLots || []) for (const sp of L.slots || []) space('a car on a lot', sp, 'sedan');
+  // the canopies over the doors: none over CANOPY_MAX (a filling station's over its pumps is its own)
+  {
+    const doors = [];
+    for (const b of M.buildings) if (b && !b.gone && b.door) doors.push([(b.door.tx + 0.5) * TILE, (b.door.ty + 0.5) * TILE]);
+    for (const p of M.pois) if (p && p.b !== undefined && Number.isFinite(p.x)) doors.push([p.x, p.y]);
+    const pumps = [...(M.sitePumps || []), ...(M.pumps || [])];
+    for (const p of M.props) {
+      if (!p || !CANOPIES.has(p.t)) continue;
+      seen.canopies = (seen.canopies || 0) + 1;
+      const w = p.w || (p.t === 'porte' ? 300 : 150), d = p.d || (p.t === 'porte' ? 96 : 80);
+      if (w <= CANOPY_MAX[0] + 8 && d <= CANOPY_MAX[1] + 8) continue;
+      const x0 = p.x - w / 2, x1 = p.x + w / 2, y0 = p.y - d / 2, y1 = p.y + d / 2;
+      if (pumps.some((q) => q.x >= x0 && q.x <= x1 && q.y >= y0 && q.y <= y1)) continue;
+      const door = doors.find(([x, y]) => x >= x0 - TILE && x <= x1 + TILE && y >= y0 - 1.5 * TILE && y <= y1 + 1.5 * TILE);
+      if (door) rows.bigCanopy.push({ what: `a ${p.t} ${Math.round(w / TILE)} x ${Math.round(d / TILE)} tiles`, x: p.x, y: p.y, why: 'over a door' });
+    }
+  }
+  // the opened-up blocks' alleys: a way through on foot all along each (ALLEY_GAP px clear across it everywhere)
+  for (const a of M.openAlleys || []) {
+    seen.alleys = (seen.alleys || 0) + 1;
+    const ns = !!a.ns, len = (ns ? a.h : a.w) * TILE, A0 = (ns ? a.x : a.y) * TILE, A1 = A0 + (ns ? a.w : a.h) * TILE;
+    let bad = null;
+    for (let s = 4; s < len - 4 && !bad; s += 8) {
+      const along = (ns ? a.y : a.x) * TILE + s, cuts = [];
+      for (let c = Math.floor(A0 / TILE) - 1; c <= Math.floor(A1 / TILE); c++) {
+        const tx = ns ? c : Math.floor(along / TILE), ty = ns ? Math.floor(along / TILE) : c;
+        if (!M.inside(tx, ty)) continue;
+        for (const e of M.solidProps.get(M.idx(tx, ty)) || []) {
+          const da = Math.abs((ns ? e.y : e.x) - along);
+          if (da >= e.r) continue;
+          const half = Math.sqrt(e.r * e.r - da * da), cx = ns ? e.x : e.y;
+          cuts.push([cx - half, cx + half]);
+        }
+      }
+      cuts.sort((p, q) => p[0] - q[0]);
+      let at = A0, best = 0;
+      for (const [c0, c1] of cuts) { if (c0 > at) best = Math.max(best, Math.min(c0, A1) - at); at = Math.max(at, c1); }
+      best = Math.max(best, A1 - at);
+      if (best < ALLEY_GAP) bad = { x: ns ? (A0 + A1) / 2 : along, y: ns ? along : (A0 + A1) / 2, gap: Math.round(best) };
+    }
+    if (bad) rows.alleyBlocked.push({ what: `an opened-up block's ${ns ? 'alley' : 'lane'} (${a.w} x ${a.h})`, x: bad.x, y: bad.y, why: `${bad.gap} px clear` });
+  }
   return { rows, seen };
 }
 
