@@ -24032,3 +24032,8 @@ test/wayout.test.js checks it (and its stale tour expectation is updated to the 
 ## 2026-11-14 - No clouds on the title
 The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
 starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
+
+## 2026-11-14 - The title's saves note clear of the Online frame
+The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
+held upright the card and the Online frame now stand a line higher, the note under them in its own room
+(client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
