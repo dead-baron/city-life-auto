@@ -24465,3 +24465,8 @@ the panel (titled ACCOUNT) says who you're signed in with, has **Sign out** (two
 device starts again as a new guest, the account stays safe and sits in "Switch back to") and puts the sign-in buttons
 under **Switch account**. Guests see what they saw before.
 
+**Name changes: a week, not a month.** The owner's son couldn't change his name for 26 more days. A signed-in player's
+username wait is now 7 days (`USERNAME_GAP_DAYS`, server/accounts.js; the first pick is still free, guests still wait 10
+minutes between changes). Admins and the owner get **Let them change their name now** on the Players page (staff command
+`namefree`, power admin, in the admin log): it lifts the wait at once and tells the player if they're online.
+

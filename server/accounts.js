@@ -17,7 +17,7 @@ import { issueToken, verifyToken, newPlayerId, keyedHash, safeEqual } from './au
 
 export const ROLES = ['helper', 'admin', 'owner'];
 export const PROVIDERS = ['google', 'discord', 'password', 'passkey'];
-export const USERNAME_GAP_DAYS = 30;          // a username changes at most once a month (the first pick is free)
+export const USERNAME_GAP_DAYS = 7;           // a username changes at most once a week (the first pick is free; the owner, 11-15: was 30)
 export const TRANSFER_TTL_MS = 10 * 60e3;     // a guest's transfer code lasts ten minutes, once
 export const LOGIN_CODE_TTL_MS = 2 * 60e3;    // the code a sign-in hands the page lasts two minutes, once
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';   // (no 0/O, 1/I/L: read off one screen, typed on another)
