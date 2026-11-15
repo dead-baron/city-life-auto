@@ -16,9 +16,9 @@ import * as emote from '../server/systems/emote.js';
 import * as dance from '../server/systems/dance.js';
 import { _descriptor } from '../server/net.js';
 import { K } from '../shared/constants.js';
-import { CHAT, EMOTES, DANCES, QUICK, RADIAL } from '../shared/chatdefs.js';
+import { CHAT, EMOTES, DANCES, QUICK, RADIAL, emoteId } from '../shared/chatdefs.js';
 import { DANCE_PLAYER } from '../shared/dance.js';
-import { BALLOONS } from '../client/emotes.js';
+import { BALLOONS, MOTION } from '../client/emotes.js';
 import '../client/art2/poses.js';
 import { IN } from '../shared/input.js';
 import { KB, PAD, TOUCH, ACTIONS, KEY_ACTION } from '../shared/controls.js';
@@ -43,8 +43,8 @@ test('an emote: the body first; a balloon only where it means something, a log l
     if (E.b) assert.ok(BALLOONS.includes(E.b), `${k}: its balloon is drawn (client/emotes.js)`);
     if (E.hold) assert.ok(E.log, `${k}: a lasting pose goes in the log`);
   }
-  for (const k of ['laugh', 'angry', 'love', 'huh', 'wow', 'sorry', 'sleep', 'wave', 'thumbs', 'beckon', 'shrug']) assert.ok(EMOTES[k].b, `${k}: a balloon`);
-  assert.deepEqual([EMOTES.wave.b, EMOTES.thumbs.b, EMOTES.beckon.b], ['wave', 'thumbs', 'beckon'], 'the gestures: a waving hand, a thumbs up, come here (the owner, 11-14)');
+  for (const k of ['laugh', 'angry', 'love', 'huh', 'wow', 'sorry', 'sleep', 'wave', 'thumbs', 'overhere', 'shrug']) assert.ok(EMOTES[k].b, `${k}: a balloon`);
+  assert.deepEqual([EMOTES.wave.b, EMOTES.thumbs.b, EMOTES.overhere.b], ['wave', 'thumbs', 'here'], 'the gestures: a waving hand, a thumbs up, over here\'s down arrow (the owner, 11-14)');
   for (const k of ['dance', 'sit', 'lie', 'faceplant', 'phone', 'clap', 'cheer']) assert.ok(!EMOTES[k].b, `${k}: no balloon`);
   assert.deepEqual(Object.keys(EMOTES).filter((k) => EMOTES[k].hold).sort(), ['crouch', 'faceplant', 'kneel', 'lean', 'lie', 'phone', 'sit', 'sleep']);
   assert.equal(DANCES.length, DANCE_PLAYER.length, 'a Dances tab tile each move');
@@ -219,6 +219,23 @@ test('the emotes in time: the way in, a faceplant over onto the face, a lasting 
   assert.ok(emoteAt(p, 'idle', 23.05) && p._emF === 7, 'a faceplant: pushed up off the ground');
   emoteAt(p, 'emlie', 30); emoteAt(p, 'emlie', 31);
   assert.ok(!emoteAt(p, 'down', 31.05), 'knocked down: no getting up first');
+});
+
+// the owner, 11-14 20:46, on the beckon: "doesn't read clearly ... Maybe a point down motion" - Over here replaces Come here
+test('Over here: two jabs at the spot beside you, then held; a down arrow bouncing twice; the old id still taken', async () => {
+  await loadPoses();
+  assert.equal(EMOTES.overhere.n, 'Over here'); assert.ok(!Object.hasOwn(EMOTES, 'beckon'), 'Come here is gone');
+  assert.ok(!Object.values(EMOTES).some((E) => /come here|beckon/i.test(E.n + E.text + E.me)));
+  assert.deepEqual([EMOTES.overhere.b, MOTION.here], ['here', ['here', 'shrink']], 'its balloon: the arrow, a bounce, then the shrink out');
+  const seq = []; for (let t = 0; t < EMOTES.overhere.s; t += 0.02) { const f = emoteFrame('emoverhere', t, 3); if (seq.at(-1) !== f) seq.push(f); }
+  assert.deepEqual(seq, [4, 0, 1, 0, 1, 2], 'the arm on its way, two jabs (set, jab, set, jab), then held - not a loop');
+  // a page from before (or a typed /beckon) asks for the old id: it plays Over here
+  assert.equal(emoteId('beckon'), 'overhere'); assert.equal(emoteId('wave'), 'wave');
+  const S = setup();
+  const a = S.P({ x: 0, y: 0, name: 'Ann' }), b = S.P({ x: 100, y: 0 });
+  S.chat.handle(S.w, a, { t: 'emote', e: 'beckon' });
+  assert.equal(a.ped.em, 'overhere');
+  assert.deepEqual(S.got(b).map((m) => [m.e, m.b]), [['overhere', 'here']]);
 });
 
 test('the emotes on every device, and the Guide', () => {

@@ -24189,3 +24189,13 @@ client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound m
 (client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
 tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
 silent.
+## 2026-11-14 - "Over here" replaces "Come here"
+The owner (20:46), on the beckon: "that doesn't read clearly ... Not sure we really need that emote. Maybe a point down
+motion or something?" The Poses tab's Come here is now Over here (shared/chatdefs.js `overhere`; "Ann points here" /
+"You point here"). The body (client/art2/poses.js emoverhere): the right arm out and down to the ground beside you, the
+hand flat to a point along it, the body leaning in and the eyes on the spot - two jabs (set, jab, set, jab), not a loop,
+then the point held with a look up at whoever it's for, and back to standing when its 1.6 s are up. The balloon
+(client/emotes.js `here`): a bold red down arrow in the balloons' pixel style that bounces down twice, landing with a
+little squash, then shrinks into its tail like the rest. The old id still works: EMOTE_ALIAS turns `beckon` (a page from
+before, a typed /beckon) into Over here (the server's emote message, the chat's / commands). The Guide's Emotes entry
+names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon and the alias.
