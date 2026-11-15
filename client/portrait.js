@@ -6,9 +6,10 @@
 //
 // The sprite is exactly the one the city shows (person() at the game's size, put on the art grid by downsample2), made
 // bigger only by a whole number of CSS px an art px, nearest-neighbour (2026-11-14, the owner: no finer render - it
-// looked like old artwork, not the game's character): the whole figure where it fits (the card's 56 px frame: 2 px an
-// art px), from the head down as far as it goes where it doesn't (the small card), centred in the frame over a soft
-// stepped light. It stands still; now and then - after a few seconds, at random, never a loop - one small idle from the
+// looked like old artwork, not the game's character). A portrait (the owner: the whole body was "too far out", and the
+// figures' boxes - a hat, a bun - centred them each a little differently): the head and the body down to the waist, 3
+// px an art px in the card's 56 px frame, every look's head at the same spot - the head's own centre from the rig, not
+// the sprite's outline - and what falls outside cropped; over a soft stepped light. It stands still; now and then - after a few seconds, at random, never a loop - one small idle from the
 // game's own frames: a blink (the eyes closed, as a sleeping figure's), a glance aside (the idle's own glances), a scratch
 // of the head (the "huh?" emote) or a look at the phone (the phone emote), then still again. Those two are the emotes'
 // frames (client/art2/poses.js), loaded once the card is drawn. Reduced motion: still, nothing more.
@@ -44,18 +45,18 @@ function pickBeat() {
 }
 
 // ---- the sprites, the game's own: drawn once each (a few looks kept) ---------------------------------------------------
-const KEEP = new Map();   // look code -> { A, f: Map('pose:frame' -> { w, h, ax, ay, px }), box: [x0, y0, x1, y1] }
+const KEEP = new Map();   // look code -> { A, f: Map('pose:frame' -> { w, h, ax, ay, px }), head: [x, y] }
 function look(code) {
   let R = KEEP.get(code);
   if (R) return R;
   const L = decodeLook(code);
   if (!L) return null;
   R = { A: lookArt(L, { code }), f: new Map() };
-  // the still figure's box round its anchor (the feet), in art px: the framing's
-  const d = sprite(R, ...STILL);
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) if (d.px[(y * d.w + x) * 4 + 3]) { x0 = Math.min(x0, x); x1 = Math.max(x1, x + 1); y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1); }
-  R.box = x1 > x0 ? [x0 - d.ax, y0 - d.ay, x1 - d.ax, y1 - d.ay] : [-d.ax, -d.ay, d.w - d.ax, d.h - d.ay];
+  // the head's centre round the anchor (the feet), in art px: the framing's. It's the rig's - the head's own middle
+  // (people.js: a render cut to the 1 px at the head's centre puts that px at its corner), not the outline's, so a
+  // hat, a bun or big hair never moves the face
+  const h = person(R.A, 0, ...STILL, { region: [0, 0, 1, 1] });
+  R.head = [-h.ax / 2, -h.ay / 2];
   KEEP.set(code, R);
   if (KEEP.size > 4) KEEP.delete(KEEP.keys().next().value);
   return R;
@@ -70,19 +71,16 @@ function sprite(R, pose, f) {
   }
   return d;
 }
-// a look's sprite as the card draws it (tests): { w, h, ax, ay, px } and the still figure's box
-export function spriteFor(code, pose = 'idle', f = 0) { const R = look(code); return R ? { ...sprite(R, pose, f), box: R.box } : null; }
+// a look's sprite as the card draws it (tests): { w, h, ax, ay, px } and its head's centre
+export function spriteFor(code, pose = 'idle', f = 0) { const R = look(code); return R ? { ...sprite(R, pose, f), head: R.head } : null; }
 
-// the framing: s CSS px an art px (whole) and the crop (n x m art px, x0, y0 round the anchor) for a frame `inner` CSS
-// px square and the still figure's box - the whole figure at the biggest whole scale it fits, but never under 2 (the
-// game's own look): where the whole figure doesn't fit at 2, from the head down as far as it goes. Centred both ways.
-export function framing(inner, box) {
-  const bw = box[2] - box[0], bh = box[3] - box[1];
-  const s = Math.max(2, Math.floor(Math.min(inner / bw, inner / bh)));
-  const n = Math.floor(inner / s);
-  const x0 = Math.round((box[0] + box[2]) / 2 - n / 2);
-  const y0 = bh <= n ? Math.round((box[1] + box[3]) / 2 - n / 2) : box[1] - 1;
-  return { s, n, x0, y0 };
+// the framing: s CSS px an art px (whole, at least 2) and the crop (n x n art px from x0, y0 round the anchor) for a
+// frame `inner` CSS px square: about 17 art px a side (the head and the body to the waist), the head's centre across
+// the middle and HEAD_Y of the way down - the same spot for every look
+export const HEAD_Y = 0.34;
+export function framing(inner, head) {
+  const s = Math.max(2, Math.round(inner / 17)), n = Math.floor(inner / s);
+  return { s, n, x0: Math.round(head[0] - n / 2), y0: Math.round(head[1] - n * HEAD_Y) };
 }
 
 // ---- the light behind the figure: two soft steps of the card's navy, lighter toward the middle (art px) -------------
@@ -90,14 +88,13 @@ const BACK = [[34, 50, 94], [40, 57, 106], [47, 66, 118]];
 function backdrop(o, n) {
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
-      const d = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n * 0.45) / n, c = BACK[d < 0.3 ? 2 : d < 0.46 ? 1 : 0], j = (y * n + x) * 4;
+      const d = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n * 0.42) / n, c = BACK[d < 0.34 ? 2 : d < 0.52 ? 1 : 0], j = (y * n + x) * 4;
       o[j] = c[0]; o[j + 1] = c[1]; o[j + 2] = c[2]; o[j + 3] = 255;
     }
   }
 }
 
 const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-let run = 0;   // (a new portrait() stops the last one's idles)
 
 // draw the look (its code: shared/lookcore.js encodeLook) into el, still, with an idle now and then while el is shown
 export function portrait(el, code) {
@@ -114,11 +111,12 @@ export function portrait(el, code) {
     el.style.overflow = 'hidden'; el.style.placeItems = 'center';
     el.setAttribute('role', 'img'); el.setAttribute('aria-label', 'Your character');
   }
-  const me = ++run;
+  const me = (el._ptRun = (el._ptRun || 0) + 1);   // (a new portrait() into the same element stops its last one's idles)
+  const live = () => me === el._ptRun;
   let shown = STILL, sz = '';
   const draw = (pose, f) => {
     if (!el.isConnected || !el.offsetParent) return false;
-    const F = framing(Math.max(16, el.clientWidth - 4), R.box), n = F.n;
+    const F = framing(Math.max(16, el.clientWidth - 4), R.head), n = F.n;
     if (sz !== `${n}x${F.s}`) { sz = `${n}x${F.s}`; cv.width = n; cv.height = n; cv.style.width = cv.style.height = n * F.s + 'px'; }
     const c2 = cv.getContext('2d'), d = sprite(R, pose, f), id = c2.createImageData(n, n), o = id.data;
     backdrop(o, n);
@@ -138,11 +136,11 @@ export function portrait(el, code) {
     shown = [pose, f];
     return true;
   };
-  const later = (fn, ms) => setTimeout(() => { if (me === run && el.isConnected) fn(); }, ms);
+  const later = (fn, ms) => setTimeout(() => { if (live() && el.isConnected) fn(); }, ms);
   // (the card not on screen yet - still loading: drawn as soon as it shows, and again when its size changes)
   const first = () => { if (!draw(...STILL)) later(first, 400); };
   first();
-  el._ptDraw = () => { if (me === run) draw(...shown); };
+  el._ptDraw = () => { if (live()) draw(...shown); };
   if (typeof ResizeObserver === 'function' && !el._ptRO) { el._ptRO = new ResizeObserver(() => { if (el.offsetParent && el._ptDraw) el._ptDraw(); }); el._ptRO.observe(el); }
   if (reduced()) return true;
   // the emotes' frames (the scratch, the phone), once the card is up

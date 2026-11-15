@@ -324,6 +324,26 @@ export const LOGOFF = { countS: 10, calmS: 60 };
 export const DROP_LIFE_S = 300;               // something you drop from the bag (client/bag.js Drop) waits in a bag at your feet this long
 export const PACK_LIFE_S = 600;               // the backpack (and the cash) you drop when you die stays this long
 export const PACK_BLINK_S = 30;               // ...and blinks for its last seconds
+// Your weapons (the owner, 2026-11-14: "carried guns are at risk, with one stash"; server/systems/arms.js). The guns you
+// carry are what you can lose: die and each one falls where you lay, a pickup anyone can take for dropS seconds (blinking
+// its last blinkS), then it's gone; you wake up with your fists - and with any legal melee weapon or tool that sells for
+// keepMax or less (a bat, a knife, a crowbar, a fishing pole, pepper spray: cheap, and never worth a fight). At risk: every
+// gun, bow, launcher and grenade, anything illegal, the dear blades (a sword, a katana, the plasma blade). Booked, the
+// illegal ones are taken for good and the legal ones go to your stash. carry: the at-risk weapons you carry, by class
+// (the owner's loadout, claude/launch-plan-2026-11-03.md: 2 guns - bows and launchers too - 1 melee, 1 throwable); a new
+// one with its class full sends the one of that class in your hand (else the oldest) to your stash. carryMax: the caps
+// the carry upgrades to come may raise them to (a shoulder holster +1 gun, a back sling +1 long gun, a chest rig +1 melee
+// +1 throwable - profile.carryUp; not built yet). Your stash (one per
+// character): opened at your home's safe, and at any gun shop or pawn shop; a gun bought "to stash" goes straight into
+// it. giveR: hand a weapon to a crewmate this close (px). Police issue is the department's: never at risk, never a slot.
+export const ARMS = { carry: { gun: 2, melee: 1, throw: 1 }, carryMax: { gun: 4, melee: 2, throw: 2 }, keepMax: 300, dropS: 60, blinkS: 15, giveR: 120, stashKinds: ['gunshop', 'pawn'] };
+export { GUN_PRICES } from './rules-base.js';   // (the basic pistol's prices: kept low now a carried gun can be lost - shared/rules-base.js)
+// Your car (the owner, 2026-11-14: "map + valet delivery, no teleport"; server/systems/mycar.js): the car you last took
+// out stays where you left it (through a logout, and a restart: profile.carAt) and shows on your map. The phone's "Have it
+// delivered": a valet parks it for you at the nearest proper space - a kerb bay on a street, a car park's bay - out of
+// your sight, minD to maxD px away, waitS seconds after you call, for fee (wreckFee if it was wrecked: it comes from the
+// insurer's body shop), once every cooldownS. Not while you're wanted, not in the wilds, not where no road reaches.
+export const VALET = { fee: 40, wreckFee: 150, cooldownS: 240, waitS: 12, minD: 220, maxD: 1300, clearPx: 60 };
 export const HOSPITAL_FEE = 150;
 export const BAIL_SPEED = 140;                // bailing out faster than this means a tumble (slower: you just step out)
 export const BAIL_HURT_SPEED = 330;           // ...but below this you only tuck and roll - no injury at all

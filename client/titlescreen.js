@@ -118,9 +118,10 @@ export function createTitle(ctx) {
       $('t-xp').textContent = `Criminal XP ${(me.cexp | 0).toLocaleString('en-US')}`;
       $('t-sam').textContent = `Samaritan ${(me.sam | 0).toLocaleString('en-US')}`;
     }
-    // (the avatar: your own character, drawn by client/portrait.js - loaded the first time there's a look to show)
+    // (the avatar: your own character, drawn by client/portrait.js - loaded the first time there's a look to show - on
+    // the card and on CHARACTER, in place of the person icon)
     const lk = me && S.looks && S.looks.cur;
-    if (lk && lk !== ptCode) { ptCode = lk; import('./portrait.js').then((m) => m.portrait(card.querySelector('.t-av'), lk)).catch(() => { ptCode = null; }); }
+    if (lk && lk !== ptCode) { ptCode = lk; import('./portrait.js').then((m) => { m.portrait(card.querySelector('.t-av'), lk); m.portrait($('t-char').querySelector('.t-cav'), lk); }).catch(() => { ptCode = null; }); }
     const n = ctx.players(), on = $('t-online');
     on.classList.toggle('hidden', n === null);
     if (n !== null) on.lastElementChild.textContent = `Online - ${n} player${n === 1 ? '' : 's'}`;

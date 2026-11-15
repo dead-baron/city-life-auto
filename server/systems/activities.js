@@ -55,6 +55,8 @@ import { WILD_KINDS, WILD_LOOKS, wildSpots, wildMembers, wildSteer } from './wil
 import { POOL_NPC } from '../../shared/rules.js';
 import { tablesOf, poolTable } from './pooltables.js';
 import * as poolnpc from './poolnpc.js';
+import * as casinofloor from './casinofloor.js';
+import { CASINO_FLOOR } from '../../shared/rules-games.js';
 export { poolTable };   // (the Rusty Spur's table: pooltables.js)
 
 let rng = mulberry32(42300);
@@ -77,6 +79,7 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   hunter: { day: 0.7, night: 0 },
   hoops: { day: 0.75, night: 0.2, cap: 1 },
   pool: { day: 0, night: 0, cap: 1 },   // (the chance: by the table - rules.js POOL_NPC)
+  cards: { day: 0, night: 0, cap: 3 },   // (a casino's floor, a bar's card table: rules-games.js CASINO_FLOOR - casinofloor.js)
   diners: { day: 0.85, night: 0.6, cap: 2 },
   shoppers: { day: 0.8, night: 0.45, cap: 3 },
   skaters: { day: 0.85, night: 0.4, cap: 1 },
@@ -269,6 +272,8 @@ export function spotsOf(map) {
   // pool at the tables out in the world: the Rusty Spur's (its bar room's, where client/art2/game/statics.js roadhouseRoom
   // draws it), a bar's (pooltables.js)
   for (const pt of tablesOf(map)) { list.push({ k: 'pool', x: pt.cx, y: pt.cy, a: 0, table: pt, wild: false }); taken.push({ x: pt.cx, y: pt.cy }); }
+  // the regulars on a casino's floor (the dealers, the players, the slots) and round a bar's card table (casinofloor.js)
+  for (const F of casinofloor.floors(map)) { list.push({ k: 'cards', x: F.cx, y: F.cy, a: 0, floor: F, wild: false }); taken.push({ x: F.cx, y: F.cy }); }
   // eating at the food places' tables (booths), the cook at the kitchen line (IN8: shared/foodrooms.js lays them out, as the art draws them)
   for (const b of map.buildings || []) if (b && b.walkIn) for (const u of b.walkIn.units) {
     const L = u.kind === 'coffee' ? foodLayout(b, u, TILE) : null;
@@ -392,6 +397,8 @@ function members(s) {
     out.push({ x: s.x - 5, y: s.y, a: Math.PI / 2, arche: rng() < 0.35 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.6) out.push({ x: s.x + 9, y: s.y + 1, a: Math.PI / 2, arche: rng() < 0.3 ? 'senior' : 'casual', gt: 'sitlow' });
     if (rng() < 0.35) out.push({ x: s.x + 2, y: s.y + 22, a: -Math.PI / 2, arche: 'casual', chat: true });
+  } else if (s.k === 'cards') {     // the dealers at their tables, players in some of the seats, some at the slots
+    out.push(...casinofloor.members(s.floor, rng));
   } else if (s.k === 'pool') {      // the breaker bent over the cue at the head of the table, the other off its far end, cue up; watchers
     const T = s.table, b = poolnpc.breakSpot(T), w0 = { x: T.x1 + 18, y: T.cy + 8, a: Math.PI };
     out.push({ x: b.x, y: b.y, a: b.a, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
@@ -440,7 +447,7 @@ export function fill(world, s, opts = {}) {
   const ms = members(s).filter((m, i) => !(i > 0 && m.fish && !walkable(world.map, m.x, m.y)));   // (a second angler only where there's bank to stand on)
   s.car = null;
   for (const m of ms) {
-    if (!opts.seen && inAnyView(world, m.x, m.y, 64)) return null;
+    if (!opts.seen && !(s.floor && !inside(world, s.floor)) && inAnyView(world, m.x, m.y, 64)) return null;   // (a floor's regulars: under the roof till someone's inside)
     if (world.query(m.x, m.y, 10, K.PED).some((e) => !e.dead)) return null;
     if (m.fish && !anglerRoom(world, m.x, m.y)) return null;   // (an angler's own spot, a body or two from anyone else fishing)
   }
@@ -450,7 +457,7 @@ export function fill(world, s, opts = {}) {
     dressAs(world, ped, m.look);
     ped.a = m.a; ped.vx = ped.vy = 0;
     const n = ped.npc;
-    n.act = { g: s.id, k: s.k, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: m.leg ?? 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null, route: m.route || null, pace: m.pace || 0, kneel: !!m.kneel, ranger: !!m.ranger };
+    n.act = { g: s.id, k: s.k, cf: m.cf || null, x: m.ride ? s.x : m.x, y: m.ride ? s.y : m.y, a: m.a, ride: m.ride || null, gt: m.gt || null, pp: m.pp || null, fish: !!m.fish, watch: m.watch ? { x: s.x, y: s.y } : null, chat: !!m.chat, chop: !!m.chop, patrol: m.patrol || null, leg: m.leg ?? 1, hoop: m.hoop ?? -1, pool: m.pool ?? -1, cv: m.cv ?? null, route: m.route || null, pace: m.pace || 0, kneel: !!m.kneel, ranger: !!m.ranger };
     n.state = 'idle'; n.until = world.time + 9999; n.sway = false; n.umbrellaType = false;
     pose(ped, true);
     g.ids.push(ped.id);
@@ -465,7 +472,8 @@ export function fill(world, s, opts = {}) {
     const b = world.add({ id: world.newId(), kind: K.BALL, x: h.x, y: h.y, a: 0, z: 0, vx: 0, vy: 0, vz: 0, ballKind: 'pickup', cx: -1, cy: -1 });
     Object.assign(g, { ball: b.id, hold: 0, phase: 'dribble', t0: world.time, until: world.time + 1 + rng() * 2, turn: 0, spot: s });
   }
-  if (s.k === 'pool') { g.table = s.table; poolnpc.begin(world, g, rng); }   // (a real game on the table: poolnpc.js)
+  if (s.k === 'pool') { g.table = s.table; poolnpc.begin(world, g, rng); }
+  if (s.k === 'cards') { g.floor = s.floor; casinofloor.begin(world, g, rng); }   // (the games at its tables: casinofloor.js)   // (a real game on the table: poolnpc.js)
   A.set(s.id, g);
   return g;
 }
@@ -517,6 +525,7 @@ function stepPickup(world, g) {
 }
 // hold the activity's pose and prop (on: at the spot; off: away from it - walking back, gone off)
 // someone off an activity for good (a street dice game broken up: streetdice.js): the pose and the prop put down
+const inside = (world, F) => { for (const p of world.players.values()) { const e = p.ped; if (e && !e.dead && e.x > F.x0 - 8 && e.x < F.x1 + 8 && e.y > F.y0 - 8 && e.y < F.y1 + 8) return true; } return false; };
 export function leave(ped) {
   if (!ped.npc || !ped.npc.act) return;
   pose(ped, false);
@@ -579,7 +588,7 @@ export function update(world) {
   // every tick: away from their spot (running from trouble, stopped to watch it), the pose and the prop are put down -
   // nobody sits in mid air
   for (const g of A.values()) {
-    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng);
+    if (g.k === 'hoops') stepPickup(world, g); else if (g.k === 'pool') poolnpc.step(world, g, rng); else if (g.k === 'cards') casinofloor.step(world, g, rng);
   }
   for (const g of A.values()) for (const i of g.ids) {
     const e = world.get(i);
@@ -612,8 +621,8 @@ function fillRound(world) {
     if (have >= ACT_MAX) continue;
     for (const s of spotsNear(world.map, a.x, a.y, ACT_NEAR)) {
       if (A.has(s.id) || now < (rest.get(s.id) || 0) || (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2)) continue;   // (not the whole street washing its cars at once)
-      if (anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;
-      const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
+      if (s.floor ? inside(world, s.floor) : anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;   // (a floor's: not with someone in the room)
+      const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : s.k === 'cards' ? CASINO_FLOOR[s.floor.casino ? 'casino' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
       if (rain && RAIN_OFF.has(s.k)) continue;
       if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)

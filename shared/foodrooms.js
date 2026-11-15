@@ -20,7 +20,7 @@ export function foodLayout(b, u, TILE) {
   const Ya = cy + TILE, Yb = (wi.y1 + 1) * TILE, dx = u.door.tx * TILE, dw = (u.door.w || 2) * TILE, dc = dx + dw / 2;
   const tillX = Math.round((X0 + X1) / 2), side = dc > (X0 + X1) / 2 ? -1 : 1;   // (side: -1 the booths / the machine on the west wall, away from the door)
   // (v: the place's own colours, by its building - the diner's booths and checkers, the fast food's chairs: statics.js FOOD_V)
-  const L = { style, v: ((b.tx | 0) * 7 + (b.ty | 0) * 13 + u.x0 * 3) % 3, X0, X1, back, cy, Ya, Yb, dc, dx, dw, tillX, side, booths: [], stools: [], tables: [], queue: null, drinks: null, host: null, jukebox: null, cook: null };
+  const L = { style, v: ((b.tx | 0) * 7 + (b.ty | 0) * 13 + u.x0 * 3) % 3, X0, X1, back, cy, Ya, Yb, dc, dx, dw, tillX, side, booths: [], stools: [], tables: [], queue: null, drinks: null, host: null, jukebox: null, cook: null, pool: null };
   const inDoorway = (x0, x1, y1) => y1 > Yb - 44 && x1 > dx - 8 && x0 < dx + dw + 8;   // (the way in from the door kept clear)
   const free = (x0, y0, x1, y1) => !inDoorway(x0, x1, y1) && x0 >= X0 + 2 && x1 <= X1 - 2 && y0 >= Ya + 2 && y1 <= Yb - 2;
   // the cook at the kitchen line along the back wall, west of the till (the clerk's at the till: shared/map.js)
@@ -34,6 +34,10 @@ export function foodLayout(b, u, TILE) {
     col(bx0);
     const ox0 = side < 0 ? X1 - 40 : X0 + 4, wide = W >= 9 * TILE && (side < 0 ? dx + dw + 52 < ox0 : dx - 52 > ox0 + 36);
     if (wide) col(ox0);
+    // (C, the owner 2026-11-14: a pool table where the diner has the room - down the open middle, clear of the stools and
+    // the way in; its balls drawn live: server/systems/pooltables.js, client/poolview.js)
+    const mid0 = side < 0 ? bx1 + 16 : (wide ? ox0 + 52 : X0 + 16), mid1 = side < 0 ? (wide ? ox0 - 16 : X1 - 16) : bx0 - 16, py = Ya + 34;
+    if (!wide && mid1 - mid0 >= 112 && free(mid0, py, mid1, py + 60)) { const x = Math.round((mid0 + mid1) / 2 - 50); L.pool = { x0: x, y0: py, x1: x + 100, y1: py + 52 }; }
     const sx0 = side < 0 ? bx1 + 14 : (wide ? ox0 + 50 : X0 + 14), sx1 = side < 0 ? (wide ? ox0 - 14 : X1 - TILE - 4) : bx0 - 14;
     for (let x = sx0; x + 10 <= sx1; x += 18) L.stools.push({ x: x + 5, y: Ya + 7, a: -Math.PI / 2 });
     const jx = side < 0 ? bx1 + 6 : bx0 - 26, jy = Ya + 22;

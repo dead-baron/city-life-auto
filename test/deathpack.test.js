@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { makeWorld, joinPlayer, teleport, run } from './helpers.js';
 import { K } from '../shared/constants.js';
 import { PACK_TIERS, PACK_WIRE, packTier } from '../shared/items.js';
-import { PACK_LIFE_S, PACK_BLINK_S } from '../shared/rules.js';
+import { PACK_LIFE_S, PACK_BLINK_S, ARMS } from '../shared/rules.js';
 import * as combat from '../server/systems/combat.js';
 import * as players from '../server/systems/players.js';
 import * as cargo from '../server/systems/cargo.js';
@@ -25,31 +25,34 @@ test('death pack: the rarity goes by what the gear is worth', () => {
   assert.deepEqual(PACK_TIERS.slice(1).map((t) => t.rarity), ['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary']);
 });
 
-test('death pack: one backpack with everything you carried, the cash in its own pile beside it', () => {
+test('death pack: one backpack with what you carried, the cash in its own pile beside it, each gun on its own (arms.js)', () => {
   const w = makeWorld();
   const { p, prof } = joinPlayer(w, { cash: 640 });
   prof.inventory = { bandage: 2, bass: 3 };
-  prof.weapons = { fists: 0, pistol: 24, rocket: 3 };
+  prof.weapons = { fists: 0, pistol: 24, rocket: 3, bat: 0 };
   const at = kill(w, p);
   assert.equal(prof.cash, 0, 'the cash is gone from you');
   assert.deepEqual(prof.inventory, {}, 'so are your things');
+  assert.deepEqual(Object.keys(prof.weapons).sort(), ['bat', 'fists'], 'the guns are gone; a cheap legal bat stays with you');
   const near = bagsNear(w, at.x, at.y);
-  const pack = near.find((b) => b.pack), pile = near.find((b) => b.cashOnly);
-  assert.ok(pack && pile && near.length === 2, 'a backpack and a pile of notes');
+  const pack = near.find((b) => b.pack), pile = near.find((b) => b.cashOnly), guns = near.filter((b) => b.gun);
+  assert.ok(pack && pile && near.length === 4, 'a backpack, a pile of notes and the two guns');
   assert.equal(pack.cash, 0, 'no cash in the pack');
   assert.deepEqual(pack.items, { bandage: 2, bass: 3 });
-  assert.deepEqual(Object.keys(pack.weapons).sort(), ['pistol', 'rocket']);
+  assert.deepEqual(pack.weapons, {}, 'no guns in the pack');
+  assert.deepEqual(guns.map((g) => g.gun).sort(), ['pistol', 'rocket']);
+  assert.equal(guns.find((g) => g.gun === 'pistol').weapons.pistol, 24, 'a gun keeps its rounds');
+  assert.ok(guns.every((g) => Math.abs(g.expires - w.time - ARMS.dropS) < 0.2), `the guns lie there ${ARMS.dropS} s`);
   assert.equal(pile.cash, 640);
   assert.equal(pack.tier, packTier(pack.value));
-  assert.equal(pack.tier, 4, `a rocket launcher and a pistol make an Epic pack ($${Math.round(pack.value)})`);
   assert.ok(Math.hypot(pile.x - pack.x, pile.y - pack.y) > 10, 'the notes land a step away');
   // on the wire: a pack is PACK_WIRE + its rarity, the notes 0
-  assert.equal(cargo.bagWireTier(pack), PACK_WIRE + 4);
+  assert.equal(cargo.bagWireTier(pack), PACK_WIRE + pack.tier);
   assert.equal(cargo.bagWireTier(pile), 0);
   // the owner sees it on the radar with the time left
   const me = players.buildMe(w, p);
   const ping = me.radar.find((r) => r.k === 'pack');
-  assert.ok(ping && ping.t === 4 && Math.abs(ping.s - PACK_LIFE_S) <= 1, 'your pack on your radar');
+  assert.ok(ping && ping.t === pack.tier && Math.abs(ping.s - PACK_LIFE_S) <= 1, 'your pack on your radar');
 });
 
 test('death pack: anyone can open it; the notes are scooped up by walking over them; the radar ping goes', () => {

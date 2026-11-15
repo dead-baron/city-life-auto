@@ -34,6 +34,8 @@ export const STRIP_ROAD = { w: 13, median: 96 };
 // side streets'; north of the Strip they front south, south of it north. (The camera looks north: a resort's towers
 // stand at the back of its lot - behind its podium on the north side, at the far end of its grounds on the south, so
 // they hide only their own gardens - and the lake resort is on the north side, its lake between the Strip and its hotel)
+// the grandest floors (chandeliers, marble, gold: shared/casinorooms.js tier 3); the others a resort's (tier 2)
+const GRAND = new Set(['The Golden Lotus', 'Mesa Grande', 'Starfall Tower', 'The Silver Lagoon']);
 export const RESORTS = [
   { name: 'The Golden Lotus', look: 'lotus', lot: [5337, 554, 5389, 603], face: 'S' },
   { name: 'The Neon Saguaro', look: 'saguaro', lot: [5390, 554, 5438, 603], face: 'S' },
@@ -102,7 +104,7 @@ function build(m, api, K) {
       if (o.main) {
         R.main = b;
         const p = m.pois[m.pois.length - 1];
-        if (p && p.b === b.id && p.label === R.name) { p.casino = true; out.casinos++; }
+        if (p && p.b === b.id && p.label === R.name) { p.casino = true; p.tier = GRAND.has(R.name) ? 3 : 2; out.casinos++; }   // (its floor's tier: shared/casinorooms.js)
       }
       return b;
     };

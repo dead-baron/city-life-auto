@@ -443,6 +443,7 @@ export function spawnOwnedAt(world, p, idx, spot, opts = {}) {
   const v = world.spawnVehicle(ov.model, spot.x, spot.y, spot.a ?? 0, { paint: ov.paint, variant: ov.variant, owner: p.pid, ownerName: p.name, npcOwned: false });
   if (ov.tint !== undefined) v.tint = ov.tint;
   v.ownVid = insurance.vidOf(ov);   // (which of your vehicles it is: a wreck's claim - insurance.js)
+  delete ov.wr;   // (out again: no longer the wreck the valet fetches from the body shop - mycar.js)
   v.despawnable = false;
   if (spot.home != null) world.emit(spot.x, spot.y, { e: 'garagedoor', home: spot.home });
   p.activeVehicle = v.id;
