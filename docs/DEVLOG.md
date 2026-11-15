@@ -24148,3 +24148,16 @@ gate and sign-in on the title), no words saying what the app is, and no app name
 (assets/logo/full.webp, tools/neon_logo.py A3 at scale 3), what the game is, that guests never have to sign in, what
 Google and Discord sign-in ask for (an id only), the privacy policy and the terms, and PLAY NOW. It is the home page the
 OAuth consent screen names. Nothing in the game loads it.
+
+## 2026-11-14 - Sign-in: Google's own button, a sheet that scrolls, the owner's name
+The owner's first real Google sign-in. The sign-in sheet now leads with the standard provider buttons - "Continue with
+Google" in Google's own dark button with its G, "Continue with Discord" in blurple, "Sign in with a passkey" - and "or
+use your email" over the email and password tabs; the link row reads "Link Google" / "Google linked ✓" with the G
+(client/account.js PROV; client/style.css). The sheet now scrolls to its end: account.js pad() ran every frame the
+panel was up and scrolled its focused control back into view each time - the ring and the scroll now follow a pad press
+only (and a desktop's zoomed sheet is cut to the screen's height before the zoom). A rename answers in the panel, not
+only in a toast the sheet could cover, and the account state comes back after it. "Switch back to" shows each character
+once and never the one you're playing (a sign-in gives the same account a new token: the rows carry the account id now).
+The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
+The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
+role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.

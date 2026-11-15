@@ -990,6 +990,9 @@ body.kbm #t-fs { display: none; }
 /* the sign-in panel and the first-launch gate (slots for the launch work: main.js setAccountUi) */
 #signin, #gate { position: absolute; inset: 0; z-index: 46; display: flex; align-items: center; justify-content: center; padding: var(--s3); background: var(--scrim-hi); }
 #signin .panel, #gate .panel { width: min(460px, 100%); max-height: 100%; overflow: auto; }
+/* (a desktop zooms the sheet by --zk: its height cut to the screen's before the zoom, so the end of it - Claim, the
+   account id - scrolls into view; the owner, 11-14: "i cant scroll to the bottom of this sign in page") */
+body:not(.touch) :is(#signin, #gate) .panel { max-height: calc((100dvh - 2 * var(--s3)) / var(--zk, 1)); }
 #signin .mhead { justify-content: flex-start; }
 #signin .opt[disabled] { opacity: .55; }
 
@@ -1902,6 +1905,11 @@ body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:n
 #signin-body button[data-tab] { flex: 1; border: 0 !important; border-bottom: 3px solid transparent !important; border-radius: 0; background: none !important; color: var(--cream) !important; opacity: .62; }
 #signin-body button[data-tab][aria-selected=true] { border-bottom-color: var(--gold) !important; color: var(--gold) !important; opacity: 1; }
 #signin-body :is(#a-ingo, #a-upgo) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
+/* Google's own button (its branding guidelines' dark theme) and Discord's blurple - not the sheet's gold (client/account.js PROV) */
+#signin-body #a-body button.a-prov { display: flex !important; align-items: center; justify-content: center; gap: var(--s2); width: 100%; margin: var(--s1) 0 0 !important; }
+#signin-body #a-body button.a-pg { background: #131314 !important; border: 1px solid #8e918f !important; color: #e3e3e3 !important; font-family: Roboto, Arial, sans-serif !important; font-weight: 500 !important; }
+#signin-body #a-body button.a-pd { background: #5865f2 !important; border-color: #5865f2 !important; color: #fff !important; }
+#signin-body #a-body button.a-linkb { display: inline-flex !important; align-items: center; gap: var(--s2); }
 #signin-body button.a-link { min-height: 0 !important; padding: var(--s1) 0 !important; border: 0 !important; background: none !important; color: var(--cream) !important; font-weight: 500 !important; text-decoration: underline; }
 /* the title at a desktop's size (the 11-04 review: "all tiny at 1920"): its menu, card, tools and the plates over it
    zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */

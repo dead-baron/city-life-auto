@@ -2606,7 +2606,8 @@ $('s-code-use').onclick = () => {
 };
 // your name (the server checks it again, keeps it unique and says how it went: players.js rename)
 $('s-name-use').onclick = () => {
-  const r = cleanName($('s-name-in').value);
+  const st = S.launch && S.launch.acc && S.launch.acc.accountState ? S.launch.acc.accountState() : null;
+  const r = cleanName($('s-name-in').value, { owner: !!(st && st.role === 'owner') });
   if (r.err) { $('s-name-msg').textContent = r.err; return; }
   if (!S.playing) { $('s-name-msg').textContent = 'Play online first - then you can change it here.'; return; }
   send({ t: 'name', name: r.name });

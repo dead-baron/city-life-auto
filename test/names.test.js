@@ -11,6 +11,10 @@ test('what a name may be', () => {
   assert.equal(cleanName('  Big   Al ').name, 'Big Al', 'spaces tidied');
   for (const ok of ['Steve', 'Mr.Pink', 'Rosa_M', 'Essex', 'Draper', 'Peacock', 'Saltwater', 'Swanky', 'Claudette', 'Supporter']) assert.ok(cleanName(ok).name, ok);
   for (const no of ['Al', 'x'.repeat(NAME.max + 1), '9lives', 'Guest1234', 'Guest 1234', 'Admin', 'Admin_2', 'ModeratorBob', 'Official.Support', 'sh1thead', 'Bad<b>']) assert.ok(cleanName(no).err, no);
+  // the game's words are the owner's to take (the owner, 11-14: "DeadBaron"), abuse still isn't
+  assert.ok(cleanName('DeadBaron').err, 'not for a player');
+  assert.equal(cleanName('DeadBaron', { owner: true }).name, 'DeadBaron');
+  assert.ok(cleanName('sh1thead', { owner: true }).err, 'abuse is abuse for the owner too');
 });
 
 test('a name of your own: unique, not too often, over your head at once', () => {
