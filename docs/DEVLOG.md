@@ -24271,3 +24271,8 @@ then the point held with a look up at whoever it's for, and back to standing whe
 little squash, then shrinks into its tail like the rest. The old id still works: EMOTE_ALIAS turns `beckon` (a page from
 before, a typed /beckon) into Over here (the server's emote message, the chat's / commands). The Guide's Emotes entry
 names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon and the alias.
+
+## 2026-11-15 - The character creator: Done wears it, "Add to Saved" keeps a copy
+The owner: a player might press Done before "Save look" and think the look was lost. Done (and the X, and Esc) always
+put the look on; "Save look" only kept a named copy in the Saved tab. It's "Add to Saved" now, and Done says so when the
+look changed: "New look on. (Add to Saved keeps a copy to switch back to.)" (client/creator.js; the Guide's Your look).

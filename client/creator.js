@@ -5,7 +5,7 @@
 //   'edit'  - the creator (CC1 / CC8 / CC7): Body, Face, Hair (and facial hair), Outfit (style chips, slot tabs, the
 //             piece grid, main and trim colours, patterns, complete looks for the style), Extras (makeup, tattoos,
 //             piercings, scars) and Saved looks (CC10: save under a name, apply, rename, delete); Randomise, Undo,
-//             Save look, Done. A large preview turns through the eight directions with the idle animation.
+//             Add to Saved (a copy in the Saved tab), Done (wears it - every way out does). A large preview turns through the eight directions with the idle animation.
 //   'shop'  - a store's fitting room (ST4, task #364): the store's stock by slot and its complete outfits, tried on the
 //             big preview; colours and patterns; Try on, Buy, Buy and wear (shared/wardrobe.js: stock and prices)
 //   'barber'- the barbershop's or the salon's chair (ST3): Cut, Colour, Beard, Moustache, priced, then Confirm
@@ -170,7 +170,11 @@ function close(apply) {
   if (apply && look && devWear) devSend({});
   else if (apply && look) {
     const why = problem(look);
-    if (!why) C.send({ t: 'look', a: 'set', c: code() });
+    if (!why) {
+      C.send({ t: 'look', a: 'set', c: code() });
+      // (Done wears it - nothing else to save; the owner, 11-15: a player could think "Add to Saved" was needed first)
+      if (state.cur && code() !== state.cur && C.toast) C.toast('New look on. (Add to Saved keeps a copy to switch back to.)', 'good');
+    }
     else if (performance.now() - doneWarnAt > 4000) { doneWarnAt = performance.now(); if (C.toast) C.toast(`${why} (Done again: leave as you were.)`, 'warn'); return; }
   }
   cancelAnimationFrame(raf); raf = 0;
@@ -424,7 +428,7 @@ function renderFoot() {
   } else if (mode === 'barber') {
     const cost = hairBill();
     h = `${money()}${cost && cost.total ? ` · <b>Total $${cost.total}</b>` : ''}</span><button class="cc-btn" data-act="close">Back</button><button class="cc-btn gold" data-act="hb-ok" ${cost && cost.total ? '' : 'disabled'}>Confirm</button>`;
-  } else h = `<button class="cc-btn" data-act="random">🎲 ${RANDOM_LABEL[tab] || 'Random'}</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Save look</button><button class="cc-btn gold" data-act="done">Done</button>`;
+  } else h = `<button class="cc-btn" data-act="random">🎲 ${RANDOM_LABEL[tab] || 'Random'}</button><button class="cc-btn" data-act="undo" ${hist.length ? '' : 'disabled'}>Undo</button><button class="cc-btn" data-act="save">Add to Saved</button><button class="cc-btn gold" data-act="done">Done</button>`;
   root.querySelector('.cc-foot').innerHTML = h;
 }
 
