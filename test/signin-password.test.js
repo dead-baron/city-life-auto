@@ -243,11 +243,11 @@ test('the news list: opt-in only, kept apart, an unsubscribe link with one butto
   assert.match(S.L.news.csv(), /\n'=cmd@example\.com,/);
 });
 
-test('the legal drafts: served by the game, marked DRAFT, saying what is kept; Settings opens them', async () => {
+test('the legal pages: served by the game, no DRAFT banner (the owner, 11-15), saying what is kept; Settings opens them', async () => {
   const S = setup();
   const p = await S.h({ url: '/legal/privacy' }), t = await S.h({ url: '/legal/terms' });
   assert.equal(p.status, 200); assert.equal(t.status, 200);
-  for (const r of [p, t]) assert.match(r.body, /DRAFT - not yet reviewed by a lawyer/);
+  for (const r of [p, t]) assert.doesNotMatch(r.body, /DRAFT|not yet reviewed by a lawyer/);
   for (const w of [/17 and older/, /keyed one-way hash/, /scrypt/, /Resend/, /Google Analytics 4/, /don't keep IP addresses/, /game-icons\.net/, /CC BY 3\.0/, /Kenney/, /CC0/, /unsubscribe/i, /delete your whole account/]) assert.match(p.body, w);
   assert.match(t.body, /17 or older/);
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');

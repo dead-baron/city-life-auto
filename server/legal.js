@@ -1,13 +1,14 @@
 // The Privacy Policy and the Terms (the owner, 11-12): DRAFTS for a lawyer's review, plain English, describing what the
 // game does - served by the game server at /legal/privacy and /legal/terms (Settings > Legal opens them; Google's
 // consent screen links them). What's switched on (Google Analytics, the sign-ins, resets by email) is read from the
-// configuration, so the pages say what this server does. Not legal advice.
+// configuration, so the pages say what this server does. Not legal advice. No DRAFT banner on the pages (the owner,
+// 11-15: off for now, during Google's brand review; a lawyer still looks them over before full launch).
 import { sendHTML, esc } from './httputil.js';
 import { enabledProviders, resetsOn, PAGE_CSS } from './authhttp.js';
 
-const CSS = PAGE_CSS + 'body{display:block;padding:24px 0}main{width:min(46em,calc(100% - 32px));margin:0 auto}h1{font-size:26px}h2{font-size:18px;margin:26px 0 6px;color:#ffd27f}li{margin:4px 0}.draft{padding:10px 12px;border:1px solid #8a6d2b;background:#2b2412;border-radius:6px;color:#ffe2a8}nav{font-size:14px;margin-bottom:14px}nav a{margin-right:14px}';
+const CSS = PAGE_CSS + 'body{display:block;padding:24px 0}main{width:min(46em,calc(100% - 32px));margin:0 auto}h1{font-size:26px}h2{font-size:18px;margin:26px 0 6px;color:#ffd27f}li{margin:4px 0}nav{font-size:14px;margin-bottom:14px}nav a{margin-right:14px}';
 const shell = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} - City Life Auto</title><style>${CSS}</style><body><main><p class="logo">CITY LIFE AUTO</p><nav><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms</a></nav><h1>${esc(title)}</h1>
-<p class="draft"><b>DRAFT - not yet reviewed by a lawyer.</b> This is a plain-English draft of what the game does, for legal review before launch. It isn't legal advice and may change.</p>${body}</main>`;
+${body}</main>`;
 
 export function privacyPage(L, { ga = false } = {}) {
   const pr = enabledProviders(L), contact = esc(L.contact || '[contact email - to be added before launch]'), post = L.mailAddress ? esc(L.mailAddress) : '';   // (no postal address yet: the owner sends no news mail till he has one - 11-14)

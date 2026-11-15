@@ -24481,3 +24481,8 @@ head over the feet) or as a short stub - and up and down are the headings you fa
 (faceplant, lie down, sleep, push-ups, knocked down on the face or the back, dead) facing straight up or down are now
 drawn turned an eighth, on the diagonal (client/art2/game/peds.js flatDir; the sprite key the same, so one sprite for
 both). The renderer only: the server's heading is unchanged. Test: emotes.
+
+## 2026-11-15 - No DRAFT banner on the legal pages
+The owner, during Google's brand review: take the "DRAFT - not yet reviewed by a lawyer" line off the privacy policy for
+now. It was one banner shared by both pages (server/legal.js), so it's gone from the Privacy Policy and the Terms; the
+wording is unchanged and a lawyer still reviews it before full launch. Test: signin-password.
