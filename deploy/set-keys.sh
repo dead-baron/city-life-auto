@@ -58,6 +58,8 @@ ask DISCORD_CLIENT_SECRET "Discord client secret" 1
 echo; echo "== Email: password resets and the news list (section 3)"
 ask RESEND_API_KEY "Resend API key (starts with re_) - sends the password-reset and confirm emails" 1
 ask CLA_MAIL_ADDRESS "Your postal address, at the foot of every news email (spaces are fine)" 0 1
+echo; echo "== Contact (the privacy policy and the terms show it)"
+ask CLA_CONTACT "The contact email players can write to (account deletion, questions)" 0
 echo; echo "== Google Analytics 4 (section 5)"
 ask GA_MEASUREMENT_ID "GA4 measurement ID (starts with G-)" 0
 ask GA_API_SECRET "GA4 Measurement Protocol API secret" 1
