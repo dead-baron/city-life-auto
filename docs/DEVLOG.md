@@ -23577,3 +23577,33 @@ centre is the rig's own head (people.js: a render cut to the 1 px at the head's 
 not the sprite's outline, so a hat, a bun or big hair no longer shifts the face; what falls outside is cropped. The
 idles stay as they were. test/portrait.test.js: every starter look's head within half an art px of the same spot.
 Before / after of eight looks: the session's scratchpad `logo2/owner/avatar3.png`.
+
+## 2026-11-14 - The final logo, in-engine, and the title screen rebuilt round it
+The owner picked the logo (11-14 15:21; docs/DECISIONS.md "Logo (final)"): his neon design rebuilt in the game's own
+art - no black outlines, no traced AI pixels - and the title screen reworked around it.
+- **The logo** (tools/neon_logo.py `--variant D5`, installed with `--install --no-glow --scale 5`): "City Life" his cream
+  letters on the art grid, cleaned of specks and nicks, with an even red rim all the way round (two px, a darker px
+  outside it); the swoosh a tapered bezier fitted to his path, the y's descender in front of it; the skyline line work
+  only - a clean cyan tube round a silhouette of rectangles on the grid (his houses, tower and stepped middle tower
+  with its spire) and lit windows; "Auto" at his weight - each letter his shape with one even gold rim, a cream
+  inline and the big dark face, drawn left to right so each laps cleanly over the one before, the A's counter a clear
+  triangle. The layers are the tubes alone (the page's drop-shadows glow them): unlit 3.9 KB, sky 0.4, city 2.4, swoosh
+  0.3, auto 1.0 (was 37 + 53 KB); client/titlelogo.js LAYERS from the tool's table. The intro is as it was: the sign
+  switched off, then the skyline, "City Life", the swoosh and "Auto" buzz on.
+- **The pause header's wordmark** (assets/logo/oneline.webp) is the same pieces: "City Life" and "Auto" on one line
+  (2.3 KB).
+- **The neon's sound** (the owner liked the idea, not the sound): each strike a short tick of filtered noise (the
+  starter) over a low hum near 120 Hz that swells in and settles (a soft sine and a little of its second harmonic,
+  muffled; each piece its own pitch; the last strike holds a moment longer) - in place of the sawtooth buzz; about
+  half as loud, still silent with the sound off and scaled by the master and effects sliders.
+- **The title screen** (client/style.css, index.html, client/titlescreen.js): a darker night (deep navy down to a
+  violet low over the city, only a trace of the dusk) with a soft halo behind the sign and the skyline at the foot;
+  the sign sized by its height (at most 40% of the screen) with a fixed gap under it, so its glow never meets the
+  buttons; RESUME / PLAY and CHARACTER / SETTINGS two by two at one width with even gaps (PLAY the whole row when
+  there's nothing to resume); the graphics a quiet line under them (no plate); CHARACTER shows your own portrait
+  (client/portrait.js - each portrait now keeps its own idles, so the card's and the button's play on their own) in
+  place of the person icon. Phone upright: the sign by its height too, the menu full width; on its side: the sign on
+  the left with the halo behind it, the menu on the right.
+- Tests: uitokens (the night's colours are tokens: --night-0/-a/-b, --halo-a/-b, --navy-q). Screenshots (the title at
+  phone portrait, landscape and desktop, the intro's frames, the pause header, the polished "Auto" against D3's): the
+  session's scratchpad `logo2/owner/final/`.

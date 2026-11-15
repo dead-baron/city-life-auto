@@ -6,7 +6,7 @@ colours, each tube a white-hot core (signfont.js hotOf) inside its colour, and a
 light.js, the bright parts blurred at half and quarter size and added back). No black outline.
 
 Usage:
-  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3|D4|D4N [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
+  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3|D4|D4N|D5 [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
                              [--root .]
   python3 tools/neon_logo.py <logo_dir> --sheet [D,D2] [--name F.png] --out DIR   variants (A-C by default) and the
                                                                  current logo side by side
@@ -29,7 +29,9 @@ Outputs (in --out, default the current dir; --install: assets/logo/ under --root
                                            (art px -> px; default 5: the logo about 1270 px wide, the page's 620 CSS
                                            px at 2x)
                                            --no-glow: the tubes alone (the page's drop-shadows glow them: a
-                                           fraction of the bytes - the baked glow is most of a layer's size)
+                                           fraction of the bytes - the baked glow is most of a layer's size); the
+                                           box is then the tubes' own, tight
+  oneline (--install)                      the pause header's one-line wordmark: "City Life" and "Auto" side by side
   <v>-unlit.png                            the whole sign switched off (the tubes' dark glass, no glow)
   <v>-phone.png, <v>-desktop.png           (--preview) the lit sign on the title's night (its dusk and skyline) at
                                            a phone upright (390 x 844 at 3x) and a desktop (1920 x 1080)
@@ -755,7 +757,9 @@ def swoosh_d4(src, city):
     return face & ~dil(dil(dil(cross))), cross
 
 
-def paint_d4(src, windows=True):
+def paint_d4(src, windows=True, bold=False):
+    """bold (D5): \"Auto\" at D3's weight - each letter out to his body's full edge, a gold rim three px (GOLD2 one,
+    GOLD1 two), the cream inline two, the big dark face; the A's counter a clear triangle where his was"""
     Ls = {}
     # "City Life": his cream face, cleaned; RED1 two px round it, RED2 one
     gc = modes(os.path.join(src, FILES['city']), CLASSES['city'])
@@ -783,13 +787,26 @@ def paint_d4(src, windows=True):
     see = snap(np.asarray(Image.open(os.path.join(src, FILES['auto'])).convert('RGBA'))[..., 3] < 128, 0.1, 0.3)
     L = Layer('auto', COL['auto'])
     letters = sorted(S['auto']['letters'], key=lambda m: np.nonzero(m.any(axis=0))[0].min())
-    for m in letters:
+    for li, m in enumerate(letters):
         shape = m
-        for _ in range(3):
+        for _ in range(6 if bold else 3):
             shape = dil(shape, sq=False) & body
         counter = see & fill_holes(shape) & ~m
-        shape = clean_face(shape & ~dil(counter, sq=False))   # (the counters a px bigger: they read after the rims)
-        (o2, o1, inl), face2 = insets(shape, [1, 3, 2])
+        if bold and li == 0 and counter.any():
+            # the A: a clear triangle (apex up) where his little counter was, the rims to go round it
+            cy, cx = np.nonzero(counter)
+            ay, ax = cy.mean(), cx.mean()
+            tri = np.zeros_like(counter)
+            for y in range(GH):
+                t = (y - (ay - 5.5)) / 10.0         # 0 at the apex, 1 at the base (10 px tall)
+                if 0 <= t <= 1:
+                    hw = 0.5 + 4.0 * t                # (9 px across the base)
+                    tri[y, int(np.ceil(ax - hw)):int(np.floor(ax + hw)) + 1] = True
+            counter = tri
+            shape = clean_face(shape & ~counter, hole=0)
+        else:
+            shape = clean_face(shape & ~dil(counter, sq=False))   # (the counters a px bigger: they read after the rims)
+        (o2, o1, inl), face2 = insets(shape, [1, 2, 2] if bold else [1, 3, 2])
         L.put(o2, GOLD2, 0.6, COL['auto'], glass(GOLD2))
         L.put(o1, GOLD1, 0.8, COL['auto'], glass(GOLD1))
         L.put(inl, CREAM, 0.95, COL['auto'], glass(CREAM))
@@ -803,8 +820,8 @@ def paint_d4(src, windows=True):
 def build(src, variant):
     if variant in ('D', 'D2'):
         return paint_faithful(src, thick=variant == 'D2')
-    if variant in ('D4', 'D4N'):
-        return paint_d4(src, windows=variant == 'D4')
+    if variant in ('D4', 'D4N', 'D5'):
+        return paint_d4(src, windows=variant != 'D4N', bold=variant == 'D5')
     if variant == 'D3':
         letters = paint_faithful(src, thick=True, clean=True, sky=Layer('sky', CYAN))
         letters[0] = sky_grid(src, [L.a for L in letters[1:]])
@@ -1086,7 +1103,7 @@ def sheet(src, root, out, vs='ABC', name='contact-sheet.png', close_box=(0.02, 0
     return p
 
 
-NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline', 'D4': 'D3 cleaner, line-work skyline', 'D4N': 'D4, no windows'}
+NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline', 'D4': 'D3 cleaner, line-work skyline', 'D4N': 'D4, no windows', 'D5': 'the final: D4 + a bold Auto'}
 
 
 def save_smallest(im, path_no_ext):
@@ -1105,28 +1122,48 @@ def save_smallest(im, path_no_ext):
 
 
 def write_layers(layers, scale, out, prefix, install, glow=True):
-    """each lit layer cropped to its own box (its glow included), the unlit sign, and the table for titlelogo.js"""
+    """each lit layer cropped to its own box, the unlit sign, and the table for titlelogo.js (% of the sign's box).
+    With its glow (glow): the box holds the glow too. Without (the page glows them itself: titlelogo.js's
+    drop-shadows): the box is the tubes' own, tight"""
     pad = int(GLOWS[-1][0] * scale * 2)
-    unlit, _ = compose(layers, scale, lit=False)
-    full, _ = compose(layers, scale, lit=True)
-    x0, y0, _, _ = logo_box(layers)
-    BW, BH = full.size
+    lit = [render_layer(L, scale, pad, glow=glow) for L in layers]
+    off = Image.new('RGBA', lit[0].size, (0, 0, 0, 0))
+    full = Image.new('RGBA', lit[0].size, (0, 0, 0, 0))
+    for L, im in zip(layers, lit):
+        off.alpha_composite(render_layer(L, scale, pad, lit=False))
+        full.alpha_composite(im)
+    box = (full if glow else off).getchannel('A').point(lambda q: 255 if q >= 4 else 0).getbbox()
+    BW, BH = box[2] - box[0], box[3] - box[1]
     name = (lambda k: os.path.join(out, k)) if install else (lambda k: os.path.join(out, f'{prefix}-{k}'))
-    table = []
-    uname, usize = save_smallest(unlit, name('unlit')) if install else (os.path.basename(name('unlit')) + '.png', unlit.save(name('unlit') + '.png', optimize=True) or os.path.getsize(name('unlit') + '.png'))
-    for L in layers:
-        im = render_layer(L, scale, pad, glow=glow)
-        # into the logo's box (the same crop as compose: the tubes' box plus the glow's room), then to its own box
-        im = im.crop((x0 * scale, y0 * scale, x0 * scale + BW, y0 * scale + BH))
-        bb = im.getchannel('A').point(lambda q: 255 if q >= 4 else 0).getbbox()
-        im = im.crop(bb)
+
+    def save(im, k):
         if install:
-            fname, size = save_smallest(im, name(L.k))
-        else:
-            im.save(name(L.k) + '.png', optimize=True)
-            fname, size = os.path.basename(name(L.k)) + '.png', os.path.getsize(name(L.k) + '.png')
+            return save_smallest(im, name(k))
+        im.save(name(k) + '.png', optimize=True)
+        return os.path.basename(name(k)) + '.png', os.path.getsize(name(k) + '.png')
+    uname, usize = save(off.crop(box), 'unlit')
+    table = []
+    for L, im in zip(layers, lit):
+        im = im.crop(box)
+        bb = im.getchannel('A').point(lambda q: 255 if q >= 4 else 0).getbbox()
+        fname, size = save(im.crop(bb), L.k)
         table.append({'k': L.k, 'f': fname, 'x': round(bb[0] / BW * 100, 3), 'y': round(bb[1] / BH * 100, 3), 'w': round((bb[2] - bb[0]) / BW * 100, 3), 'px': [bb[2] - bb[0], bb[3] - bb[1]], 'c': '#%02x%02x%02x' % L.col, 'bytes': size})
     return {'box': [BW, BH], 'unlit': [uname, usize], 'layers': table}
+
+
+def oneline(layers, scale, path_no_ext):
+    """the one-line wordmark for small places (the pause header): "City Life" and "Auto" side by side, the same
+    pixels as the sign's, their middles level, a little room between; no glow (the page's drop-shadow lifts it)"""
+    pad = 0
+    parts = {L.k: render_layer(L, scale, pad, glow=False) for L in layers if L.k in ('city', 'auto')}
+    ims = [parts['city'].crop(parts['city'].getbbox()), parts['auto'].crop(parts['auto'].getbbox())]
+    gap = 8 * scale
+    W = ims[0].width + gap + ims[1].width
+    H = max(i.height for i in ims)
+    o = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    o.alpha_composite(ims[0], (0, (H - ims[0].height) // 2))
+    o.alpha_composite(ims[1], (ims[0].width + gap, (H - ims[1].height) // 2))
+    return save_smallest(o, path_no_ext), o.size
 
 
 def main():
@@ -1150,6 +1187,8 @@ def main():
         out = os.path.join(root, 'assets', 'logo')
         os.makedirs(out, exist_ok=True)
     res = write_layers(layers, scale, out, v, '--install' in args, glow='--no-glow' not in args)
+    if '--install' in args:
+        res['oneline'] = oneline(layers, 2, os.path.join(out, 'oneline'))
     x0, y0, x1, y1 = logo_box(layers)
     res['art'] = [int(x1 - x0), int(y1 - y0)]
     if '--preview' in args:

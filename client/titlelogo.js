@@ -1,22 +1,24 @@
-// The title's neon logo (the owner's logo, 2026-11-14): the sign switched off (assets/logo/unlit.webp, in the page's
-// own HTML so the first paint has it), and over it the four lit layers - the skyline, "City Life", the swoosh, "Auto" -
-// each cropped to its own box (tools/build_logo.py makes them and prints LAYERS). Loaded with client/splash.js, which
-// plays the entrance; nothing in the game depends on it.
-//   mountLogo()          the lit layers, added to #logo switched off (fetched now: 53 KB, after the first paint)
+// The title's neon logo (the owner's logo, rebuilt in-engine 2026-11-14: tools/neon_logo.py D5 - his letters on the
+// art grid with even rims, a bezier swoosh, a line-work skyline, no black outline): the sign switched off
+// (assets/logo/unlit.webp, in the page's own HTML so the first paint has it), and over it the four lit layers - the
+// skyline, "City Life", the swoosh, "Auto" - each cropped to its own box (the tool makes them and prints LAYERS).
+// Loaded with client/splash.js, which plays the entrance; nothing in the game depends on it.
+//   mountLogo()          the lit layers, added to #logo switched off (fetched now: 4 KB, after the first paint)
 //   neonIntro({ at })    the SNES-style switch-on: each layer buzzes on in turn with a short irregular flicker and a
-//                        quiet hum and click, then the sign idles - a soft glow breathing, now and then a tiny flicker.
+//                        soft tick and a low hum, then the sign idles - a soft glow breathing, now and then a tiny flicker.
 //                        Any tap, click, key or pad button skips to lit. Reduced motion: just lit, no flicker, no idle.
 //                        at: hold that moment (ms into the switch-on) - the captures (?neon=<ms>)
 //   showLit()            lit at once, then idle (the tests' captures, ?nosplash)
 // The sound is its own few oscillators (the game's sound loads on the first tap, after this has played): silent until
 // the page may play sound (a tap - skipping the studio sting counts), and never with the sound off in Settings.
 
-// the layers' boxes in % of the logo's box (1240 x 756 at 2x; tools/build_logo.py)
+// the layers' boxes in % of the logo's box (1120 x 730: the sign's tubes, 5 px an art px; tools/neon_logo.py --variant
+// D5 --install --no-glow prints them) and each one's glow
 const LAYERS = [
-  { k: 'sky', f: 'sky.webp', x: 31.21, y: 0.132, w: 37.903, px: [470, 189], c: '#2aa8ff' },
-  { k: 'city', f: 'city.webp', x: 0, y: 17.063, w: 100, px: [1240, 397], c: '#ff3c50' },
-  { k: 'swoosh', f: 'swoosh.webp', x: 14.677, y: 59.259, w: 71.29, px: [884, 96], c: '#ff3c50' },
-  { k: 'auto', f: 'auto.webp', x: 14.113, y: 66.005, w: 70.484, px: [874, 257], c: '#ffaa1e' },
+  { k: 'sky', f: 'sky.webp', x: 29.464, y: 0, w: 39.286, px: [440, 220], c: '#46e6ff' },
+  { k: 'city', f: 'city.webp', x: 0, y: 23.288, w: 100, px: [1120, 345], c: '#ff465a' },
+  { k: 'swoosh', f: 'swoosh.webp', x: 14.286, y: 61.644, w: 70.982, px: [795, 85], c: '#ff465a' },
+  { k: 'auto', f: 'auto.webp', x: 13.393, y: 69.863, w: 70.089, px: [785, 220], c: '#ffbe3c' },
 ];
 // when each layer starts to buzz on (ms after the lit layers are in hand), and the hum's pitch for each
 const START = { sky: 450, city: 1000, swoosh: 1580, auto: 1960 }, HUM = { sky: 180, city: 120, swoosh: 150, auto: 100 };
@@ -142,8 +144,10 @@ export function neonIntro({ at = -1 } = {}) {
   ready.then(() => { if (over) return; if (document.hidden) { finish(); return; } raf = requestAnimationFrame(frame); });
 }
 
-// the neon's sound: a tiny click of the starter and a short hum (a buzzy saw low in the mains' harmonics, muffled),
-// the last one of each layer a little longer as it settles. Quiet: well under the game's own sounds.
+// the neon's sound (the owner liked the idea, not the first sound: "softer, a real tick and a low hum"): as each
+// piece strikes, a short tick of filtered noise (the starter), and under it a low hum near 120 Hz (the mains' doubled
+// buzz: a soft sine and a little of its second harmonic, muffled) that swells in and settles; the last strike of each
+// piece holds its hum a moment longer. Quiet: well under the game's own sounds.
 function hum() {
   let vol = 1;
   try {
@@ -158,24 +162,27 @@ function hum() {
   let ac;
   try { ac = new AC(); } catch { return null; }
   if (ac.state !== 'running') { try { ac.close(); } catch { /* gone */ } return null; }   // (no tap yet: the browser keeps it silent anyway)
-  const out = ac.createGain(); out.gain.value = 0.05 * vol; out.connect(ac.destination);
-  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(out);
-  const noise = ac.createBuffer(1, Math.round(ac.sampleRate * 0.03), ac.sampleRate), nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length);
+  const out = ac.createGain(); out.gain.value = 0.03 * vol; out.connect(ac.destination);
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.5; lp.connect(out);
+  // the tick: a 25 ms burst of noise, falling away, through a band round 3.4 kHz
+  const noise = ac.createBuffer(1, Math.round(ac.sampleRate * 0.025), ac.sampleRate), nd = noise.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length) ** 2;
   let closeT = 0;
   return {
     blip(hz, last) {
       try {
-        const t = ac.currentTime, len = last ? 0.42 : 0.07;
-        const o = ac.createOscillator(), v = ac.createGain();
-        o.type = 'sawtooth'; o.frequency.value = hz; o.detune.value = (Math.random() - 0.5) * 30;
-        v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(last ? 0.9 : 0.6, t + 0.008);
-        v.gain.setValueAtTime(last ? 0.9 : 0.6, t + len * 0.4); v.gain.exponentialRampToValueAtTime(0.001, t + len);
-        o.connect(v); v.connect(lp); o.start(t); o.stop(t + len + 0.02);
+        const t = ac.currentTime, len = last ? 0.9 : 0.16, peak = last ? 0.8 : 0.45, f = 108 + (hz % 7) * 3;   // (each piece its own hum, near 120 Hz)
         const n = ac.createBufferSource(), nb = ac.createBiquadFilter(), ng = ac.createGain();
-        n.buffer = noise; nb.type = 'bandpass'; nb.frequency.value = 2600; nb.Q.value = 1.2; ng.gain.value = 0.5;
+        n.buffer = noise; nb.type = 'bandpass'; nb.frequency.value = 3400; nb.Q.value = 2.2; ng.gain.value = last ? 0.9 : 0.6;
         n.connect(nb); nb.connect(ng); ng.connect(out); n.start(t);
-        clearTimeout(closeT); closeT = setTimeout(() => { try { ac.close(); } catch { /* gone */ } }, 1500);
+        for (const [mul, k] of [[1, 1], [2, 0.25]]) {
+          const o = ac.createOscillator(), v = ac.createGain();
+          o.type = 'sine'; o.frequency.value = f * mul; o.detune.value = (Math.random() - 0.5) * 12;
+          v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(peak * k, t + 0.06);
+          v.gain.setValueAtTime(peak * k, t + len * 0.5); v.gain.exponentialRampToValueAtTime(0.001, t + len);
+          o.connect(v); v.connect(lp); o.start(t); o.stop(t + len + 0.02);
+        }
+        clearTimeout(closeT); closeT = setTimeout(() => { try { ac.close(); } catch { /* gone */ } }, 2000);
       } catch { /* silent */ }
     },
     stop() { try { out.gain.setTargetAtTime(0, ac.currentTime, 0.03); } catch { /* gone */ } clearTimeout(closeT); closeT = setTimeout(() => { try { ac.close(); } catch { /* gone */ } }, 400); },
