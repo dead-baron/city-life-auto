@@ -24496,3 +24496,25 @@ game" paragraph (crime, shooting, cartoon pixel blood, police chases, chat with 
 block and moderators) and a line for parents on deleting a child's account; the Privacy Policy says it isn't for
 children under 13 and how to tell us; the About page says 13 and older; launch.json and the gate's refusal say 13.
 Tests: signin-password, uiscreens, launch-*.
+
+## 2026-11-15 - Delete account (the player's own), analytics kept longer, no credits on the privacy page
+The owner: "I dont want to make a manual process to delete accounts ... like they hit delete but it is stored on our
+server for a while and we can undelete it for them manually but otherwise it will eventually fully delete on its own".
+- **Delete account** (Settings > Account, at the bottom; two taps, the first says what happens): the session closes
+  (4017) and the character leaves the world at once, as with Start fresh (no ghost, nothing dropped, bounties on their
+  head off, out of their crew - players.js leaveForGood), and the account is marked deleted (accounts.js markDeleted:
+  `acct.deleted = { at, until }`, ACCOUNT.deleteDays = 30 in shared/rules.js) and taken off the news list; nothing else
+  changes yet. Coming back (the same token, or signing in) the title says when it will be erased and offers
+  **RESTORE** (the hello's restore: launch.js login brings it back with everything). Staff can restore it too (the
+  Players page: "deleted" row and "Restore their deleted account" - admin.js undelete, roles.js). Every five minutes
+  (launch.js purgeDeleted) accounts whose days are up are erased (players.js purgeAccount): homes back on the market,
+  cars gone, their name out of other players' contacts, the profile deleted; the admin log notes the delete and the
+  erase. The owner's account can't be deleted this way. Test: acctdelete.
+- **The privacy page** says how Delete account works (and that reports in the review list and the staff audit log keep
+  their lines); the Terms' parents' line points at Delete account first, the contact address only if they can't get in.
+- **Analytics**: the server's daily totals are kept two years (analytics.js DAYS_KEPT, was 90 days); the privacy page
+  says so and that Google Analytics keeps its data 14 months (its retention setting).
+- **Credits** gone from the privacy page: game-icons.net isn't used, and Kenney's input prompt tiles (still the key and
+  pad glyphs) are CC0 - no credit needed; the LICENSE files in the code stay. The Create account note no longer says
+  "(drafts)".
+- Also: launch-auth and launch-review pinned the old age (17) and the refusal codes - updated.

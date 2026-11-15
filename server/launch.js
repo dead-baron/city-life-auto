@@ -24,6 +24,7 @@ import { createGA } from './ga.js';
 import { watch, settle, release } from './moneywatch.js';
 import { createRateLimiter } from './httputil.js';
 import { cleanName, lookKey, NAME } from '../shared/names.js';
+import { ACCOUNT } from '../shared/rules.js';
 import { USERNAME_GAP_DAYS } from './accounts.js';
 import * as devmode from './devmode.js';
 import * as players from './systems/players.js';
@@ -82,13 +83,19 @@ export function createLaunch(opts) {
   // ---- the hello: who this page is ----
   // -> { profile, token, note? } | { refused, code }
   // the close codes a refusal goes with (the page stops reconnecting on them and says why: client/main.js)
-  // 4009 kicked, 4010 banned, 4011 the age gate, 4013 too many new guests, 4014 signed out (a stale member token)
+  // 4009 kicked, 4010 banned, 4011 the age gate, 4013 too many new guests, 4014 signed out (a stale member token),
+  // 4017 a deleted account (RESTORE)
   function login(token, hello = {}, ip = '?') {
     const c = accounts.checkToken(token);
     if (c && c.acct) {
       const ban = accounts.banned(c.pid);
       if (ban) return { refused: `This account is banned${ban.until ? ` until ${new Date(ban.until).toISOString().slice(0, 16).replace('T', ' ')} UTC` : ''}${ban.why ? ': ' + ban.why : ''}.`, code: 4010 };
       if ((c.acct.kickUntil || 0) > now()) return { refused: 'You were kicked - wait a minute before coming back.', code: 4009 };
+      // a deleted account (Delete account: accounts.js markDeleted): RESTORE on the title (hello.restore) brings it back
+      if (c.acct.deleted) {
+        if (!hello.restore) return { refused: `This account is set to be deleted for good on ${new Date(c.acct.deleted.until).toISOString().slice(0, 10)}. Press RESTORE to keep it - or sign out (ACCOUNT) to play as a new guest.`, code: 4017, until: c.acct.deleted.until };
+        accounts.restoreDeleted(c.pid); note(c.acct, 'restore', 'restored their deleted account');
+      }
       if (L.requireAge && !c.acct.age17 && !hello.age17) return { refused: 'agegate', code: 4011 };
       return { profile: store.get(c.pid), token };
     }
@@ -115,7 +122,7 @@ export function createLaunch(opts) {
     const a = accounts.get(p.pid);
     const gap = USERNAME_GAP_DAYS > 0 && a.username && a.nameAt ? Math.max(0, a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) : 0;
     const pwl = accounts.passwordOf(p.pid), nw = news.byPid(p.pid);
-    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: true, role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), resets: resetsOn(L), email: !!pwl, verified: !!(pwl && pwl.vf), news: nw ? news.masked(nw) : '', ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
+    return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: true, role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), resets: resetsOn(L), email: !!pwl, verified: !!(pwl && pwl.vf), news: nw ? news.masked(nw) : '', ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists(), deleteDays: a.role === 'owner' ? 0 : ACCOUNT.deleteDays };
   }
   const sendAcct = (p) => { if (p.conn) p.conn.sendJSON(acctState(p)); };
   const METHOD = { google: 'Google', discord: 'Discord', password: 'your email and password', passkey: 'a passkey' };
@@ -214,6 +221,9 @@ export function createLaunch(opts) {
       if (res.note === 'moved') world.notify(p, 'Your old character moved to another device (a transfer code), so this is a new guest.', 'warn');
     },
     leave(p) { settle(world, onMoney); release(p); analytics.sessionEnd(p); ga.clear(p); },
+    // Delete account (session.js delacct): marked, off the news list, noted for the staff -> null | why not
+    deleteAccount(p) { const err = accounts.markDeleted(p.pid); if (err) return err; news.optOutPid(p.pid); note(accounts.get(p.pid), 'delete', 'deleted their account (restorable until it is erased)'); adminLog.append({ who: { id: p.pid, n: p.name }, what: 'delete-account', target: { id: p.pid, n: p.name } }); return null; },
+    deletedUntil: (pid) => accounts.deletedUntil(pid),
     allow(p, t) { return ac.allow(p, t); },
     input(p) { return ac.input(p); },
     // (and the device's class and browser on the player, in memory only: the staff's Players page - server/staffplayers.js)
@@ -286,10 +296,18 @@ export function createLaunch(opts) {
     ac.audit(world);
     if (++ticks % 2 === 0) { jobsTick(); chat.update(world, 1); }
     if (ticks % 120 === 0) analytics.minute(world);
-    if (ticks % 600 === 0) { analytics.concurrency([...world.players.values()].filter((p) => p.conn).length); accounts.sweep(); }
+    if (ticks % 600 === 0) { analytics.concurrency([...world.players.values()].filter((p) => p.conn).length); accounts.sweep(); purgeDeleted(); }
     if (ticks % 120 === 60) analytics.save();
   }
+  // deleted accounts whose ACCOUNT.deleteDays are up: erased for good (players.js purgeAccount), every five minutes
+  function purgeDeleted() {
+    const due = accounts.purgeDue();
+    for (const prof of due) { adminLog.append({ who: null, what: 'erase-account', target: { id: prof.pid, n: prof.name }, note: 'deleted by the player, the grace days over' }); players.purgeAccount(world, prof); }
+    if (due.length) accounts.dropIndex();
+    return due.length;
+  }
   function start() {
+    purgeDeleted();
     timers.push(setInterval(halfSecond, 500));
     timers.push(setInterval(() => { ga.flush().catch(() => {}); }, 10e3));
     for (const t of timers) t.unref();
@@ -312,5 +330,5 @@ export function createLaunch(opts) {
     if (await bugs.handle(req, res, url)) return true;
     return false;
   }
-  return { login, hooks, http, start, stop, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
+  return { login, hooks, http, start, stop, purgeDeleted, bugs, halfSecond, accounts, news, rename, memberOwns, onLinked: becameMember, adminLog, mod, chat, ac, analytics, ga, admin, authHttp, adminHttp, acctState, onMoney, jobsTick, save: () => analytics.save() };
 }

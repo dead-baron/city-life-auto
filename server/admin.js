@@ -196,6 +196,12 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         done({ what: a, before: { strikes: before }, after: { strikes: mod.activeStrikes(t.acct), muteUntil: chatData(t.acct).muteUntil || 0 } });
         return reply(a, true);
       }
+      case 'undelete': {   // (a deleted account brought back before it's erased: Delete account - the owner, 11-15)
+        const before = t.acct && t.acct.deleted;
+        if (!accounts.restoreDeleted(t.pid)) return reply(a, false, { err: 'Not deleted.' });
+        done({ what: 'undelete', before, after: null });
+        return reply(a, true);
+      }
       case 'namefree': {   // (a signed-in player's username wait lifted: they can change it now - the owner, 11-15)
         const before = (t.acct && t.acct.nameAt) || 0;
         if (t.acct) t.acct.nameAt = 0;

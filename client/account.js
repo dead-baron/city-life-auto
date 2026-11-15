@@ -361,7 +361,7 @@ const PROV = {
 };
 const provBase = 'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:6px 0 0;padding:10px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer';
 const provBtn = (p, attr, label) => `<button ${attr} class="a-prov ${(PROV[p] || {}).cls || ''}" style="${provBase};${(PROV[p] || {}).style || ''}">${(PROV[p] || {}).icon || ''}<span>${label}</span></button>`;
-let outAsk = false;
+let outAsk = false, delAsk = false;
 function renderPanel() {
   const s = state || {}, pr = (info && info.providers) || s.providers || {};
   const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && p !== 'password' && pr[p]);
@@ -388,7 +388,7 @@ function renderPanel() {
       <label>The same again<input id="a-upc" type="password" autocomplete="new-password" minlength="${min}" required style="${inp}"></label>
       <label style="display:flex;gap:8px;align-items:center;margin:2px 0 8px"><input id="a-news" type="checkbox"> Email me game news and updates</label>
       <button id="a-upgo" style="${btn};width:100%;margin:2px 0 0">Create account</button>
-      <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept (drafts).</p>
+      <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept.</p>
     </form>` : ''}
     ${on.length || passkeysWork() ? `<p style="margin:14px 0 2px">Link to this account (${s.guest ? 'keeps this character’s progress on every device' : 'another way in'}):</p>
     <div class="a-links">${on.map((p) => `<button data-link="${p}" class="a-linkb" style="${btn2};display:inline-flex;align-items:center;gap:8px">${(PROV[p] || {}).icon || ''}${linked.has(p) ? `${NAMES[p]} linked ✓` : `Link ${NAMES[p]}`}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>` : ''}
@@ -400,6 +400,8 @@ function renderPanel() {
     ${s.claim ? `<p style="margin:12px 0 2px">Claim ownership (the code in the server log):</p><input id="a-claim" style="padding:7px"> <button id="a-claimgo" style="${btn2}">Claim</button>` : ''}
     ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button><button data-page="news" style="${btn2}">News list</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button><button data-page="bugs" style="${btn2}">Bug reports</button>` : ''}` : ''}
     ${s.id ? `<p style="margin:12px 0 0;font-size:14px;color:#9aa0aa">Account id: <code id="a-id" style="user-select:all">${esc(s.id)}</code> <button type="button" id="a-idcopy" class="a-link" style="${linkBtn}">Copy</button></p>` : ''}
+    ${s.deleteDays ? `<p style="margin:14px 0 2px">Delete account:</p><button type="button" id="a-del" style="${btn2}${delAsk ? ';color:#ff8a80;border-color:#ff8a80' : ''}">${delAsk ? 'Sure? Delete my account' : 'Delete account'}</button>
+    ${delAsk ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0 0">Your account and character leave the game now. For ${s.deleteDays} days you can change your mind: open the game and press RESTORE. After that they're erased for good.</p>` : ''}` : ''}
     <p id="a-msg" style="min-height:1.2em;margin:10px 0 0;color:#ffd27f"></p>`;
   const msg = (t) => { inner.querySelector('#a-msg').textContent = t; };
   const tryIt = (f) => async () => { try { const r = await f(); if (typeof r === 'string') msg(r); } catch (e) { msg(e.message || String(e)); } };
@@ -441,6 +443,9 @@ function renderPanel() {
   for (const b of inner.querySelectorAll('[data-back]')) b.onclick = () => switchBack(Number(b.dataset.back));
   const out = inner.querySelector('#a-out');
   if (out) out.onclick = () => { if (outAsk) { outAsk = false; signOutHere(); } else { outAsk = true; renderPanel(); } };   // (two taps: the first says what happens)
+  // Delete account (the owner, 11-15: players delete their own; kept deleteDays for RESTORE - server/accounts.js): two taps
+  const del = inner.querySelector('#a-del');
+  if (del) del.onclick = () => { if (!delAsk) { delAsk = true; renderPanel(); return; } delAsk = false; if (C) C.send({ t: 'delacct' }); msg('Deleting...'); };
   for (const b of inner.querySelectorAll('[data-page]')) b.onclick = tryIt(async () => { const r = await staffPage(b.dataset.page); return r.ok ? '' : r.err; });
 }
 

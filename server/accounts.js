@@ -9,11 +9,14 @@
 //           the owner, 11-12), passkeys: [{ id, pub, alg,
 //           count, at, name }], role: null | 'helper' | 'admin' | 'owner', username: bool (picked one), nameAt,
 //           age17 (when the age gate was confirmed), ban: { at, until (0: for good), why, by } | null, devices: [hashed
-//           markers], strikes, chatMuteUntil, blocks, mutes, contacts, inbox, chatOff (server/chat.js), ftue (analytics) }
+//           markers], strikes, chatMuteUntil, blocks, mutes, contacts, inbox, chatOff (server/chat.js), ftue (analytics),
+//           deleted: { at, until } | absent (Delete account: out of the game at once, kept ACCOUNT.deleteDays so it can be
+//           restored - the player's own RESTORE, or staff - then erased for good: launch.js purge) }
 // Guests play as GuestNNNN or a name of their own (one a member doesn't own: server/launch.js); signing in with any
 // provider, an email and password or a passkey makes the account a member, and its name theirs.
 import { randomBytes, createHash } from 'node:crypto';
 import { issueToken, verifyToken, newPlayerId, keyedHash, safeEqual } from './auth.js';
+import { ACCOUNT } from '../shared/rules.js';
 
 export const ROLES = ['helper', 'admin', 'owner'];
 export const PROVIDERS = ['google', 'discord', 'password', 'passkey'];
@@ -284,7 +287,24 @@ export function createAccounts({ store, secret, now = Date.now }) {
     return null;
   }
 
+  // ---- Delete account (the owner, 11-15: the player deletes it themselves; no emailing us) ----
+  // The account and its character are out of the game at once and kept ACCOUNT.deleteDays: signing in again in that
+  // time offers RESTORE (launch.js login), staff can restore it too; after that it's erased for good (purgeDue ->
+  // launch.js). The owner's own account can't be deleted this way.
+  function markDeleted(pid) {
+    const a = get(pid);
+    if (!a) return 'No such account.';
+    if (a.role === 'owner') return 'The owner\'s account can\'t be deleted.';
+    if (!a.deleted) { a.deleted = { at: now(), until: now() + ACCOUNT.deleteDays * 86400e3 }; store.touch(); }
+    return null;
+  }
+  function restoreDeleted(pid) { const a = get(pid); if (!a || !a.deleted) return false; delete a.deleted; store.touch(); return true; }
+  const deletedUntil = (pid) => { const a = get(pid); return (a && a.deleted && a.deleted.until) || 0; };
+  // the profiles whose time is up (erased by the caller, who also lets go of what's theirs in the world)
+  function purgeDue() { const t = now(), out = []; for (const p of store.all()) if (p.acct && p.acct.deleted && p.acct.deleted.until <= t) out.push(p); return out; }
+
   return {
+    markDeleted, restoreDeleted, deletedUntil, purgeDue, dropIndex,
     ensure, get, profileOf, findLogin, findPasskey, link, unlink, signIn, token, checkToken, staleToken, signOutEverywhere,
     passwordOf, findEmail, setPassword, makeTransfer, redeemTransfer, makeLoginCode, redeemLoginCode, addPasskey, role, setRole, ownerExists,
     banned, ban, unban, noteDevice, deviceBanned, deviceHash, bootstrapOwner, claimOwner, sweep, touch: () => store.touch(),

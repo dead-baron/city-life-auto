@@ -152,7 +152,7 @@ export const FTUE = { cash: 450, hustleCash: 200, lot: { starter: 600, rustpicku
 // Email + password accounts (the owner, 11-12; server/passwords.js, authhttp.js): a password is pwMin to pwMax
 // characters (a long passphrase is welcome); lockTries wrong ones for one address inside lockMin minutes lock its
 // password sign-in for lockMin minutes; a reset link lasts resetMin minutes, a verify link verifyDays days.
-export const ACCOUNT = { pwMin: 10, pwMax: 200, lockTries: 8, lockMin: 15, resetMin: 30, verifyDays: 7 };
+export const ACCOUNT = { pwMin: 10, pwMax: 200, lockTries: 8, lockMin: 15, resetMin: 30, verifyDays: 7, deleteDays: 30 };   // (deleteDays: Delete account's grace - restorable that long, then erased: server/accounts.js)
 export { BUG_REPORT } from './rules-page.js';   // Report a bug: the text, the screenshot, the rate limits, what's kept
 
 // Getting caught / hurt

@@ -146,7 +146,7 @@ function launchHello() {   // (in the hello: this browser's device marker, and w
     if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
     age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
   } catch { /* storage blocked */ }
-  return { dm, age17 };
+  return { dm, age17, restore: !!S.restore };
 }
 function launchCall(k, a) {
   if (S.practice) return;
@@ -208,8 +208,9 @@ function launchPad() {
 }
 // Refused at the door (server/launch.js login, admin.js kick): no reconnecting on these - the reason stays on the title,
 // and PLAY tries again. 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved to another device, 4013 too many new
-// guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest).
-const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014]);
+// guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest), 4017 a deleted
+// account (RESTORE brings it back: the hello's restore - server/launch.js login).
+const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017]);
 function refusedAtDoor(code) {
   clearTimeout(S.reconnectT);
   S.ws = null; S.welcomed = false; S.refused = code;
@@ -220,7 +221,13 @@ function refusedAtDoor(code) {
   $('t-resume').classList.add('hidden');
   $('play').disabled = false;
   const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 13 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
-  $('t-status').textContent = `${why} ${code === 4010 ? '' : 'Press PLAY to try again.'}`.trim();
+  $('t-status').textContent = `${why} ${code === 4010 || code === 4017 ? '' : 'Press PLAY to try again.'}`.trim();
+  if (code === 4017) {   // (Delete account's grace days: RESTORE - the same connection, asking for the account back)
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = 'RESTORE'; b.className = 't-restore';
+    b.onclick = () => { S.restore = true; playGo(); };
+    $('t-status').append(' ', b);
+  }
   S.playing = false;
 }
 
@@ -398,7 +405,7 @@ function onText(m) {
       else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
-      S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
+      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev;
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
@@ -504,6 +511,7 @@ function onText(m) {
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(m.keep); break;   // Start fresh: the character is gone (server players.js wipeAccount)
+    case 'acctdeleted': S.ws = null; location.replace(location.pathname + location.search); break;   // (Delete account: back to the title, which says it's deleted and offers RESTORE - refusedAtDoor 4017)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
     case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
     case 'fires': S.fires = m; fireJob(); break;

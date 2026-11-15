@@ -5,6 +5,8 @@
 // 11-15: off for now, during Google's brand review; a lawyer still looks them over before full launch).
 import { sendHTML, esc } from './httputil.js';
 import { enabledProviders, resetsOn, PAGE_CSS } from './authhttp.js';
+import { ACCOUNT } from '../shared/rules.js';
+import { DAYS_KEPT } from './analytics.js';
 
 const CSS = PAGE_CSS + 'body{display:block;padding:24px 0}main{width:min(46em,calc(100% - 32px));margin:0 auto}h1{font-size:26px}h2{font-size:18px;margin:26px 0 6px;color:#ffd27f}li{margin:4px 0}nav{font-size:14px;margin-bottom:14px}nav a{margin-right:14px}';
 const shell = (title, body) => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)} - City Life Auto</title><style>${CSS}</style><body><main><p class="logo">CITY LIFE AUTO</p><nav><a href="/legal/privacy">Privacy Policy</a><a href="/legal/terms">Terms</a></nav><h1>${esc(title)}</h1>
@@ -44,13 +46,11 @@ export function privacyPage(L, { ga = false } = {}) {
 <h2>What we don't keep</h2>
 <ul><li>We don't keep IP addresses. The server sees your address while you're connected and uses it in memory to limit abuse (too many tries); it isn't written down.</li><li>We don't sell anything about you, and there are no ads.</li></ul>
 <h2>How long</h2>
-<p>Your account and character are kept while the game runs, so you can come back. Season resets wipe progress but keep the account. Analytics totals are kept for 90 days.</p>
+<p>Your account and character are kept while the game runs, so you can come back. Season resets wipe progress but keep the account. The server's analytics totals are kept for ${Math.round(DAYS_KEPT / 365)} years; Google Analytics keeps its data for 14 months.</p>
 <h2>Deleting your account, unsubscribing</h2>
-<ul><li><b>Start fresh</b> (Settings) erases your character's progress at once.</li><li>To delete your whole account, write to us at ${contact} from the game's Settings, Account (it shows your account id) - we delete it and everything tied to it.</li><li>Unsubscribe from news with the link in any news email, or in Settings, Account.</li></ul>
+<ul><li><b>Delete account</b> (in the game: Settings, Account): your account and character leave the game at once. For ${ACCOUNT.deleteDays} days you can change your mind (open the game and press RESTORE); then they're erased for good - your sign-ins, progress, homes and cars, and your name from other players' contacts. Player reports in the staff's review list and the staff audit log keep their lines, to keep the game safe.</li><li><b>Start fresh</b> (Settings) erases your character's progress at once and keeps the account.</li><li>Unsubscribe from news with the link in any news email, or in Settings, Account (deleting your account takes you off the list too).</li></ul>
 <h2>Contact</h2>
-<p>${contact}${post ? `<br>${post}` : ''}</p>
-<h2>Credits</h2>
-<p>Some icons are from <a href="https://game-icons.net">game-icons.net</a>, licensed under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Some UI icons are by <a href="https://kenney.nl">Kenney</a> (CC0).</p>`);
+<p>${contact}${post ? `<br>${post}` : ''}</p>`);
 }
 
 export function termsPage(L) {
@@ -61,7 +61,7 @@ export function termsPage(L) {
 <p>You must be <b>13 or older</b>. If you're under 18, you need a parent or guardian's permission to play.</p>
 <h2>What's in the game</h2>
 <p>City Life Auto is a crime-and-city sandbox: stealing cars, shooting and fighting, cartoon pixel blood, and police chases. You play online with other players, who are strangers. Chat isn't watched by a person in real time: it has a word filter, report and block buttons, and moderators. Never share personal information in chat.</p>
-<p>Parents: to have your child's account deleted, write to us at ${contact}.</p>
+<p>Parents: anyone can delete their account in the game (Settings, Account, Delete account). If you can't get to it, write to us at ${contact}.</p>
 <h2>Your account</h2>
 <ul><li>You can play as a guest, or sign in to keep your character on any device. Keep your password to yourself; you're responsible for what's done with your account.</li><li>A guest character lives in one browser: clearing it can lose the character unless you've signed in or made a transfer code.</li><li>Your name must not be hateful, sexual, or pretend to be staff or someone else. Names held by signed-in players are theirs; a guest's name can be given to a member who picks it.</li></ul>
 <h2>Playing fair</h2>

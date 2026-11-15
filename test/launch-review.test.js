@@ -156,7 +156,7 @@ test('7. no guest limit unless set, its refusal has its own code; the page stops
   const r = L.login(null, {}, '5.5.5.5');
   assert.equal(r.code, 4013);
   const main = read('client/main.js');
-  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014\]\)/);
+  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014, 4017\]\)/);
   assert.match(main, /if \(ev && REFUSED\.has\(ev\.code\)\) \{ refusedAtDoor\(ev\.code\); return; \}/);
   assert.match(main, /if \(S\.refused\) \{/, 'PLAY tries again');
 });

@@ -17,7 +17,7 @@ export const FTUE_STEPS = ['first_join', 'look_picked', 'moved', 'title_play', '
   'ftue_pick', 'ftue_pick_default', 'ftue_arrive', 'ftue_answer_work', 'ftue_answer_hustle', 'ftue_answer_outdoors', 'ftue_answer_roam', 'ftue_step1', 'ftue_step2', 'ftue_step3', 'ftue_done', 'ftue_skip',
   'moment_wanted', 'moment_down', 'moment_shop', 'moment_transit', 'moment_night', 'moment_hurt', 'guide_open'];
 const CLIENT_FTUE = new Set(['title_play', 'in_world', 'tutorial_begin', 'tutorial_complete', 'look_picked']);
-const DAYS_KEPT = 90, CONC_KEPT = 14 * 24 * 12;
+export const DAYS_KEPT = 730, CONC_KEPT = 14 * 24 * 12;   // (the daily totals: two years - the owner, 11-15: "we'd keep analytics for longer"; was 90 days)
 const dayKey = (ms) => new Date(ms).toISOString().slice(0, 10);
 const dayNum = (ms) => Math.floor(ms / 86400e3);
 const key = (s) => String(s || 'other').replace(/[^a-z0-9_:.-]/gi, '_').slice(0, 40).toLowerCase();
