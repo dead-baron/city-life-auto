@@ -400,7 +400,7 @@ function clearRoad(world, run, pl) {
   for (const v of [...world.entities.values()]) {
     if (v.kind !== K.VEH || !v.ai || v.ai.kind !== 'traffic' || v.x < x0 || v.x > x1 || v.y < y0 || v.y > y1) continue;
     if (v.seats.some((s) => s && world.get(s)?.player)) continue;
-    if (!run.capture && inAnyView(world, v.x, v.y, 80)) continue;
+    if (!run.capture && !run.held && inAnyView(world, v.x, v.y, 80)) continue;   // (held: the page is black - nobody sees them go)
     for (const s of v.seats) { const q = s && world.get(s); if (q) despawnNpc(world, q); }
     world.remove(v);
   }

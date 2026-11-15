@@ -88,7 +88,7 @@ export class Booms {
   _blob(x, y, vx, vy, s, s1, life, spr, a, rise) {
     if (this.px()) {   // (art v2: the pixel layers - a core the explosion sprite, a lobe flames, smoke the pixel puffs)
       const fx = this.S.fx;
-      if (spr === 0) fx.spawn(11, x, y, 0, 0, s1 > 60 ? 1.1 : 0.85, s1, '#fff');
+      if (spr === 0) (this.pend ||= []).push(x, y, s1);   // (the fireball sprite: spawned last - _flush - so the flames thrown with it don't cycle it out of the pool)
       else if (spr === 1) for (let i = 0; i < 2; i++) fx.spawn(3, x + (Math.random() - 0.5) * s1 * 0.5, y + (Math.random() - 0.5) * s1 * 0.4, vx * 0.6, vy * 0.6 - rise, life * 0.6, 8 + s1 * 0.06, i ? '#ff7a1a' : '#ffd23a', 6);
       else fx.spawn(2, x + (Math.random() - 0.5) * s1 * 0.4, y, vx, vy - rise, life, 10 + s1 * 0.08, 'rgba(34,32,30,', 8);
       return this.dummy || (this.dummy = { on: false });
@@ -98,6 +98,7 @@ export class Booms {
     return b;
   }
   _on(arr) { for (const o of arr) if (!o.on) return o; return arr[0]; }
+  _flush() { const P = this.pend; if (!P || !P.length) return; for (let i = 0; i < P.length; i += 3) this.S.fx.spawn(11, P[i], P[i + 1], 0, 0, P[i + 2] > 60 ? 1.1 : 0.85, P[i + 2], '#fff'); P.length = 0; }
 
   // The 'explode' event (a vehicle: ev.id/m/k/pc, its seed ev.s; a rocket: just x, y, r and the seed).
   explode(ev, now, near) {
@@ -153,6 +154,7 @@ export class Booms {
     S.cam.shake = Math.max(S.cam.shake, (12 + big * 8) * k * k);
     // a huge one: more on top (render/bigboom.js)
     if (big > 2) this._wheels().then((w) => w && w.huge.add(ev, big, now));
+    this._flush();
   }
 
   _pieces(ev, plan, def, now) {
@@ -277,6 +279,7 @@ export class Booms {
     }
     for (const r of this.rings) if (r.on && (r.t += dt) > r.life) r.on = false;
     if (this.flash.t > 0) this.flash.t -= dt;
+    this._flush();
   }
 
   // drawn over the world (world transform set): the glowing fireball (additive), the smoke plume, the shockwave;

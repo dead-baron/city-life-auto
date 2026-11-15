@@ -293,6 +293,8 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   const mk = (id, label, fn, txt = '') => { const b = document.createElement('button'); b.id = id; b.type = 'button'; b.setAttribute('aria-label', label); b.title = label; b.textContent = txt; b.addEventListener('pointerdown', (ev) => ev.stopPropagation()); b.onclick = (ev) => { ev.stopPropagation(); fn(); }; document.body.appendChild(b); return b; };
   mk('cine-x', 'Close the camera (Esc, B)', () => close(), '✕');
   mk('cine-shut', 'Take a picture', () => shot());
+  // (debug mode: what the camera did and why, newest last - window.__dirLog, for the captures)
+  const trace = (what) => { if (!dev() || typeof window === 'undefined') return; const L = (window.__dirLog ||= []); L.push(`${Math.round(performance.now())} ${what} | ${String(new Error().stack).split('\n').slice(2, 5).map((q) => q.trim().replace(/^at /, '').replace(/\(.*\//, '(')).join(' < ')}`); if (L.length > 60) L.shift(); };
   const dev = () => !!(S.dev || S.devMode);   // (the shot list, the staged and follow scenes, the Showcase: debug mode's - they run its commands or move you)
   // open: anything of the camera's on this screen - the panel, the clean screen, a camera off the game's own, the bars,
   // your character hidden, a time of day or a weather of its own
@@ -301,6 +303,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   const syncOn = () => { const on = D.isOpen(); if (on !== onSig) { onSig = on; document.body.classList.toggle('cine-on', on); syncLayers(); } };
   // close: all of it off, the game's own camera back (Esc, B, the corner's button)
   function close() {
+    trace('close');
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = null;
     stopReel(false);
@@ -321,6 +324,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // mode: the camera's (follow, smooth, drift, drone, target, scene - the follow scenes; script - a director's scene, the
   // shot list's). keep: from a shot, the camera stays where it is (the hand-back: the free camera there)
   function setMode(m, k0 = 'tour', keep = false) {
+    if (m !== D.mode) trace(`mode ${D.mode} -> ${m}`);
     if (m === 'scene' && !dev()) m = 'follow';
     if (m === 'script' && !sct) m = 'follow';
     const was = D.mode;
@@ -439,6 +443,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   };
   // stop: the reel over and the shot ended; back: the camera to you (else it stays where it is: the free camera there)
   function stopReel(back) {
+    if (reel || want || sct) trace(`stop ${back ? 'back' : 'keep'}`);
     const had = !!(reel || want || sct);
     if (want) dropId = want.id;
     reel = null; want = null; endAt = 0;

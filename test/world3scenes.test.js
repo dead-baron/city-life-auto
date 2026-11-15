@@ -124,8 +124,9 @@ test('every shot that follows a vehicle on World v3: it gets going and keeps goi
   const { SCENE_LIST } = await import('../shared/scenes/index.js');
   const bad = [];
   for (const sc of SCENE_LIST.filter((q) => q.id.startsWith('shot') && (q.beats || []).some((b) => b.do === 'drive' || b.do === 'fly'))) {
-    const r = director.start(w, sc.id, { mode: 'dev', ref: null });
+    const r = director.start(w, sc.id, { mode: 'dev', ref: null, hold: true });   // (as the shot list starts them: held, the road cleared while it's black)
     if (r.err) { bad.push(`${sc.id}: ${r.err}`); continue; }
+    director.goRun(w, r.run);
     const who = sc.beats.find((b) => b.do === 'drive' || b.do === 'fly').who, e = w.get(r.run.cast.get(who).id), at = [];
     for (let i = 0; i < 6 * 20 && !r.run.over; i++) { w.step(); if (i % 40 === 39) at.push([e.x, e.y]); }
     const leg = at.slice(1).map((q, i) => Math.hypot(q[0] - at[i][0], q[1] - at[i][1]));

@@ -23613,6 +23613,13 @@ of. I want good camera movement and the best areas to show off."
   bikers are the city's civilians now (club 'gang' members piled in and beat him before he got to the bike). The
   helicopter pursuit's driver runs on down the street, not off into an alley. test/scenes.test.js: nobody in the brawl is
   ever under a roof.
+- **What the shots found in the director while they were made**: a helicopter flown by a scene's `fly` beat hovered where
+  it was (helicopters take the stick on their 'tank' controls - stepFly now sets them; flown at 700 px it clears the
+  towers - at 240 it flew into one); a scene's car stopped at a red light halfway down its road and then wandered (a
+  scene's drive no longer waits at the lights); a crowd put in a park's middle stood in its pond (a group gathers on the
+  nearest dry ground); a scene's camera on an aircraft looked at its shadow (it's on the aircraft where it's drawn, up
+  by its height, as the follow scenes' already were); a vehicle shot that reached the end of its straight ended the shot
+  (each runs its length now: the road's own route on past the straight, a wait beside it).
 - **The explosions were canvas gradients**: render/boom.js drew a fireball of soft radial-gradient blobs and stroked
   shockwave rings over the pixel world (and render/bigboom.js a tanker's extra fireballs and its pools' glow the same
   way) - the game's pixel explosion (client/art2/fx.js `explosion`, FX1-B: the core swelling into a cauliflower
@@ -23655,7 +23662,7 @@ The shots (46):
 - People & Life: Dancing on Piazza Vecchia; The boardwalk crowd at sunset; Morning workout in Greenfield Park; Friends by
   Kestrel Lake; Pool night at the Rusty Spur.
 - Vehicles & Flight: Helicopter over Downtown; A plane over Westport International; Motorcycle through Granite Peaks; A
-  pickup on the desert road; Sports car down the coast road; Balloons over Dry Creek at dawn.
+  big rig through Midtown; A convertible down the coast road; Balloons over Dry Creek at dawn.
 - Weather & Time-lapse: Rain on Midtown at night; A thunderstorm over Downtown; Fog over Redwood Cove; The Harbor, dusk
   into night; Sunrise over Mirage Lake; The sea sparkling at night.
 
@@ -23665,5 +23672,5 @@ skip, jump and stop, the screen's own time put back; a shot that can't be set up
 camera back where it is, the panel's own buttons don't; Stop while setting up lets it go; every section 4+ shots, 30+ in
 all, 10-30 s each, every place shot's camera moving), test/scenes.test.js (every shot's script whole - its section, its
 weather, at most 40 s; the brawl out front), test/world3scenes.test.js (every shot's place found on World v3, its cast
-where it belongs). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
+where it belongs; every vehicle, boat and aircraft a shot follows gets going and keeps going). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
 art's hashes unchanged.
