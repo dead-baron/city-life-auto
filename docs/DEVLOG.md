@@ -23996,3 +23996,75 @@ act button. Also the act or look button overlaps the other button so it's a litt
   room between the ring and the middle; not changed here.
 - Proof (before / after at a door, upright 412x892, on its side 844x390, a 360x740 phone): the session's scratchpad
   `hudprompt/owner/`.
+
+## 2026-11-14 - The logo's windows placed by hand; the phone's skyline back to its scale
+- **The logo's lit windows** (the owner, 19:30: "not centered and consistent ... polish that with more intention"):
+  placed by hand now, not computed - tools/neon_logo.py SKY_WINDOWS lists each building of the skyline with its walls
+  (art px) and the inner span its windows centre in (two px in from the walls it shows: the tube's inner px, then a px
+  of dark), and its block: the tall middle tower a 2 x 2, every other building two side by side, all 2 x 2 art px and
+  three px apart, each block centred exactly (sky_grid refuses one that can't be, and a building whose walls moved),
+  its top row four px under its own roof line (the eaves for the gabled ones). The right house's span stops where
+  "Life" covers it. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
+- **The title's city on a phone upright** (the owner: the menu polish's raise "scaled the buildings up ... it was cool
+  to see it so far away as a big city skyline"): back to its 2 px an art px (144 px tall) and only lifted - its foot
+  120 px over the screen's (was 288 px tall, 150 px up); client/titlelife.js reads the scale from the CSS, so its
+  windows, cars, aircraft, stars and clouds follow. test/menupolish.test.js.
+- Screenshots (a 6x close-up of the windows with each building's margins measured, the title upright): the session's
+  scratchpad `logo2/owner/windows3/`.
+
+## 2026-11-14 - The logo's windows: one on each end house, a light out on the tall tower
+The owner (19:40): "one window on the far left building and one on the far right building, and maybe one set of
+windows has 3 windows instead of 4 (still in the same grid)". SKY_WINDOWS: the two end houses one window each, centred
+exactly (the left house's wall a px in - its span now even; the right house's span to where "Life" covers it), and the
+tall tower's 2 x 2 keeps its places with its lower right window's lights out - an unlit pane, not a gap. Re-installed
+and the share card rebuilt. Close-up and the title upright: the session's scratchpad `logo2/owner/windows4/`.
+
+## 2026-11-14 - The title's backdrop: a bigger city far off, real clouds, a searchlight that fades
+The owner (19:45) on the title backdrop. client/titlescreen.js skyline() and client/titlelife.js:
+- **The city** (the skyline art, the same 320 x 72 at the same far-away scale): a hazier back row and a darker front
+  row; setbacks, stepped towers with a spire, a water tower on a roof, rooftop antennas whose red lights blink
+  (titlelife, each copy of the skyline a little out of step), a lit billboard or two, tiny neon strips by the street,
+  windows lit a floor at a time, more or less (irregular, still windows; they keep twinkling). No palm trees.
+  skyLayout() now also gives the antennas' tips and the tall roofs, and each row's lit colour.
+- **The clouds**: full pixel clouds - a dome of overlapping puffs on a soft base, three tones (a lighter top, the body,
+  an underside warm with the city's glow) - at two depths: the far ones smaller, fainter and about half as fast; they
+  drift across, a pixel at a time, and come round again.
+- **The searchlight**: a cone from a lamp on one of the tallest roofs in sight, brightest at its foot, its light falling
+  off along it to nothing well below the top of the screen and across it to soft edges, a brighter line down its
+  middle - in the art's own pixels, four steps through an ordered dither; it sweeps slowly (16-24 s).
+- Still paused with the title hidden or the tab asleep; reduced motion: the stars alone. docs/DECISIONS.md: the
+  backdrop's look. Before / after: the session's scratchpad `logo2/owner/backdrop/`.
+
+## 2026-11-14 - The title's clouds and searchlight, again; four lit windows on the tall tower
+- **The clouds** (the coordinator's review: they read as flat dark slabs): lighter, partly see-through, puffy tops with a
+  two-px rim catching the light, a slightly lighter body, the underside soft and bumpy (a row of small lobes, no
+  straight base) and warm with the city's glow; fewer - two on a phone, three on a wider screen - high in the sky, the
+  first ones starting out to either side of the sign rather than behind it.
+- **The searchlight** reads now: a wider cone (its half-angle 0.15), brighter at its rooftop lamp with a clear core line,
+  soft dithered edges, fading out about 60% of the way up.
+- **The logo's tall tower** has its four windows lit again (the owner, 20:05: the dark pane read as a black void); the
+  end houses keep their one centred window each. Re-installed, the share card rebuilt.
+- RESUME | PLAY over CHARACTER | SETTINGS was never broken: the captures had shown RESUME by style while it still had
+  its `hidden` class, so the page laid PLAY across the row. test/titlebuttons.test.js now measures the real layout in
+  headless Chromium - with and without RESUME, on a desktop, a phone upright and on its side.
+
+## 2026-11-14 - Dancing: one line when you start, not one per move
+The owner (the log full of "Dancing: the fist pump - move to stop", "Dancing: the sway - ..."): "We don't need all the
+emotes in the log like this". server/systems/dance.js now says so once, when you start dancing ("Dancing - press again
+for the next move, move to stop"); switching moves from the button or the picker's Dances tab says nothing, and running
+out of moves stops quietly.
+
+## 2026-11-14 - The debug menu doesn't ask for a password
+The owner: the debug button asked for a password, and pressing it again just worked. The server lets anyone in while
+testing (CLA_DEV_OPEN), but the page opened the old password prompt if the server's yes took over 2 s (a phone on a
+slow link). The prompt is no longer opened (client/main.js openDebug); a refusal is the server's own notice. At the beta
+the owner resets progress and turns the open mode off (CLA_DEV_OPEN=0): the debug menu for admins only.
+
+## 2026-11-14 - The Camera panel has a close X
+The owner: "Camera mode doesn't have an X button to close it." The shot-list panel's header gets the kit's close (.x,
+`cine-close`) on every device: it closes the panel and hands the camera back; Esc and the pad's B still close it.
+test/wayout.test.js checks it (and its stale tour expectation is updated to the shot-list rework).
+
+## 2026-11-14 - No clouds on the title
+The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
+starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.

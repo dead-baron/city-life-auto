@@ -78,6 +78,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
 - Biker faction chat hidden behind a flag until biker groups exist. (11-04; decisions-11-04)
+- Your own log stays quiet for emotes and dances: one line when you start dancing, none per move or per emote. (11-14; chat)
 
 ## Monetization
 - Never sell power: ads and cosmetics only. (11-03; launch-plan 11-03, monetization-plan 11-13*)
@@ -152,9 +153,12 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Bathhouses: nudity pixelated (Sims-style); no swimsuit required. (11-01; DEVLOG 11-01)
 - Logo (final, 11-14): the owner's concept rebuilt in-engine - D4's "City Life" (even rims), D4's smooth tapered swoosh and line-work-only neon skyline with lit windows, plus D3's bold "Auto" polished (even gold rim, clean joins, a proper A counter); no black outlines. The title screen rebuilt around it (logo by height with a fixed gap, 2x2 buttons, darker night with a halo, the player's portrait on CHARACTER), and a softer neon flicker sound. (11-14; chat)
 - The logo's "Auto" is A3: rebuilt cream letters with a gold rim (drawn new on the grid, not traced; no dark fill), a forward slant, two speed lines joined into the A. (11-14 18:10; chat) - SUPERSEDES D3's polished Auto in the final logo.
+- Title backdrop (11-14 19:45): a big city far off - two rows of towers (a hazier back row), setbacks, stepped towers with spires, a water tower, antennas with blinking red lights, a lit billboard, tiny neon strips, irregular lit floors; no palm trees; full pixel clouds at two depths drifting slowly (far ones slower); the searchlight a cone brightest at its rooftop lamp, fading to nothing well before the top, soft dithered edges. (11-14; chat)
+- Title backdrop on a phone upright: the skyline at its far-away scale (2 px an art px), only lifted a little. (11-14 19:30; chat)
 - The logo misbehaves now and then: mostly "Auto" (sometimes another piece), a subtle blink / dim / one-letter stutter with a faint tick, at random 8-25 s gaps - never a repeating loop; reduced motion none. (11-14 18:56; chat)
 - The title's backdrop alive but very subtle, in the game's pixel style: faint twinkling stars, thin drifting clouds, windows going on and off, car lights along the skyline's foot, an occasional searchlight sweep, now and then a helicopter or a plane; paused when hidden; reduced motion = still stars. On a phone upright the city is raised behind the lower menu. (11-14 18:56-18:59; chat)
 - Character creator: the stage never moves or resizes between views, poses or zoom; the character stands centred on it by the rig's feet, not its sprite's box. (11-14 18:56; chat)
+- Title backdrop: no clouds for now (they didn't look good); stars, twinkling windows, car lights, the searchlight and the odd aircraft stay. (11-14; chat)
 
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)
@@ -190,6 +194,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Caves: no lost-in-the-dark arrow; the cave art is OK; the character must be the real sprite. (11-06; decisions-11-06)
 - Chess tables out from behind trees, and more of them. (11-06; decisions-11-06)
 - Homes: going inside your own home is a separate space (its own little level). (10-11; decisions-10-11)
+- Open up the blocks (priority, before the beta and filming): big plain building footprints broken into smaller buildings with walkable, lived-in alleys and courtyards; varied roofs; landmarks and buildings with a reason kept whole. (11-14; chat)
+- Cinematics: fix the fundamentals (time of day, no roof flicker, real street racing, chases in view), add "Save this view" so the owner scouts the shots, then ~10 hero shots refined with him before adding more. (11-14; chat)
 
 ## Police and crime
 - Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)
@@ -297,6 +303,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - New features reachable from the debug menu while testing. (10-18; DEVLOG 10-18)
 - Concept art Claude needs goes in the general Concept Art Prompt Pack; the World Building pack is the owner's. (10-17; chat)
 - Offline practice: PAUSED - don't build on it until a plan is agreed. (10-20; CLAUDE.md)
+- Debug menu: open to all testers with no password until the beta; at the beta, progress is reset and the debug menu is admin-only (the owner and whoever he grants). (11-14; chat)
 
 ## Future features (noted, not scheduled)
 - Treasure hunting (map scraps, riddles, shovel, tiered chests as visible cargo). (11-03; launch-plan 11-03)

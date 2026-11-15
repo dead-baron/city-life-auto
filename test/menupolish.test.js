@@ -70,7 +70,7 @@ test('the title\'s backdrop: alive behind the menu, loaded after the sign, still
   for (const piece of ['function stars', 'function windows', 'function street', 'function beamSweep', 'function cloud', 'function aircraft']) assert.ok(src.includes(piece), piece);
   assert.ok(!/setInterval\([^)]*requestAnimationFrame/.test(src), 'no endless frame loop');
   // phones upright: the city risen behind the lower menu
-  assert.match(read('client/style.css'), /#title \{ --sky-up: 150px;[^}]*calc\(100% - var\(--sky-up\)\) \/ auto 288px/);
+  assert.match(read('client/style.css'), /#title \{ --sky-up: 120px;[^}]*calc\(100% - var\(--sky-up\)\) \/ auto 144px/);
   assert.match(read('client/titlescreen.js'), /export function skyLayout\(\)/, 'the skyline says where its windows are');
 });
 
