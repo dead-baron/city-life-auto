@@ -156,6 +156,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The logo misbehaves now and then: mostly "Auto" (sometimes another piece), a subtle blink / dim / one-letter stutter with a faint tick, at random 8-25 s gaps - never a repeating loop; reduced motion none. (11-14 18:56; chat)
 - The title's backdrop alive but very subtle, in the game's pixel style: faint twinkling stars, thin drifting clouds, windows going on and off, car lights along the skyline's foot, an occasional searchlight sweep, now and then a helicopter or a plane; paused when hidden; reduced motion = still stars. On a phone upright the city is raised behind the lower menu. (11-14 18:56-18:59; chat)
 - Character creator: the stage never moves or resizes between views, poses or zoom; the character stands centred on it by the rig's feet, not its sprite's box. (11-14 18:56; chat)
+- Title backdrop: no clouds for now (they didn't look good); stars, twinkling windows, car lights, the searchlight and the odd aircraft stay. (11-14; chat)
 
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)

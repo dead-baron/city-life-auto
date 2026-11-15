@@ -78,7 +78,7 @@ function build() {
   if (reduced()) return;
   windows();
   beam();
-  cloud(0); cloud(1); if (G.aw > 260) cloud(1);   // (two on a phone, three on a wider screen)
+  // (no clouds: the owner, 11-14 - "Clouds on the menu don't look good, let's just leave out clouds for now"; cloud() kept for later)
   after(between(6000, 20000), function air(on) { if (on) aircraft(); after(between(40000, 110000), air); });
   after(between(4000, 14000), function car(on) { if (on) street(); after(between(9000, 30000), car); });
   after(between(12000, 30000), function sweep(on) { if (on) beamSweep(); after(between(25000, 70000), sweep); });

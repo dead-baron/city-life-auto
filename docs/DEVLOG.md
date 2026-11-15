@@ -24028,3 +24028,7 @@ the owner resets progress and turns the open mode off (CLA_DEV_OPEN=0): the debu
 The owner: "Camera mode doesn't have an X button to close it." The shot-list panel's header gets the kit's close (.x,
 `cine-close`) on every device: it closes the panel and hands the camera back; Esc and the pad's B still close it.
 test/wayout.test.js checks it (and its stale tour expectation is updated to the shot-list rework).
+
+## 2026-11-14 - No clouds on the title
+The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
+starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
