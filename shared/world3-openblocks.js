@@ -40,7 +40,7 @@ import { gritOf } from './alleys.js';
 
 // area: roof tiles; front / deep: a street front or a depth this long with more than `min` tiles of roof; rows: deeper
 // than this, rows with a lane behind the front one; cell: a column's width; alley: an alley's
-export const OPEN3 = { area: 360, front: 26, deep: 22, min: 220, rows: 24, cell: [8, 15], alley: [3, 4], lane: [5, 7] };
+export const OPEN3 = { area: 360, front: 26, deep: 22, min: 220, rows: 22, cell: [8, 15], alley: [3, 4], lane: [5, 7] };
 export const bigRoof = (b) => { const a = b.tw * b.th; return a > OPEN3.area || (a > OPEN3.min && (b.tw > OPEN3.front || b.th > OPEN3.deep)); };
 // the kinds that are one building by design (KEEP_ARCH) and the districts built of big ones (KEEP_STYLE)
 const SPLIT_ARCH = new Set(['mixed', 'walkup', 'oldrow', 'rough', 'nightrow', 'office', 'glass', 'condo', 'block', 'townhouse', 'beachblock']);
@@ -69,7 +69,9 @@ export function keepWhole(m, b, roles) {
   if (b.walkIn) return 'walk-in';
   if (b.hero) return 'hero corner';
   if (b.landmark) return 'landmark';
-  if (b.towerPart) return 'split tower';
+  if (b.towerPart && b.towerPart.role !== 'back') return 'split tower';   // (a split tower's back block is opened up: world3-towers.js)
+  if (b.openKept) return 'opened (its own front)';
+  if ((b.signs || []).some((q) => /\bPD\b|POLICE/.test(q.text || ''))) return 'police';
   if (b.business && b.business !== 'delivery') return 'trade';
   const R = (roles.get(b.id) || []).filter((k) => k !== 'delivery' && k !== 'home' && k !== 'atm');
   if (R.length) return 'place';
@@ -134,10 +136,12 @@ const prop = (m, H3, t, x, y, r = 0, extra = null) => { const px = Math.round(x 
 function openBlock(m, b, H3, roles, attach, opened) {
   const x = b.tx, y = b.ty, w = b.tw, h = b.th, d0 = districtOf(m, b), D = DISTRICTS[d0], st = D.style;
   const r = (k) => hash2(x * 7 + k, y * 13 - k, 2711);
-  const frontN = b.door ? b.door.ty < y : !!b.back;
   const tileAt = (tx, ty) => (m.inside(tx, ty) ? m.tiles[m.idx(tx, ty)] : T.WALL);
   const openT = (t) => t !== T.BUILDING && t !== T.WALL && t !== T.WATER && t !== T.DEEP;
   const rowOpen = (ty) => { let n = 0; for (let tx = x; tx < x + w; tx++) if (openT(tileAt(tx, ty))) n++; return n >= w * 0.5; };
+  // its front: its door's side; with no door, a back's north side, or the side on a street (a split tower's back block
+  // stands behind the tower's front on the street north of it)
+  const frontN = b.door ? b.door.ty < y : !!b.back || (!rowOpen(y + h) && rowOpen(y - 1));
   const backOpen = frontN ? rowOpen(y + h) : rowOpen(y - 1);
   // what must stay on the building's own front: its door, its POIs, its signs, its home's door; the props on the wall
   const pins = [];
@@ -155,10 +159,11 @@ function openBlock(m, b, H3, roles, attach, opened) {
   if (w >= 19) {
     let at = x, k = 0;
     for (;;) {
-      const g = r(40 + k) < 0.3 ? 4 : 3;
-      let a = at + OPEN3.cell[0] + Math.floor(r(50 + k) * (OPEN3.cell[1] - OPEN3.cell[0] + 1));
-      while (a + g + 7 <= x + w && blocked(a, g)) a++;
-      if (a + g + 7 > x + w) break;
+      const g = r(40 + k) < 0.3 ? 4 : 3, rem = x + w - at;
+      if (rem <= 16) break;
+      let a = at + Math.min(OPEN3.cell[0] + Math.floor(r(50 + k) * (OPEN3.cell[1] - OPEN3.cell[0] + 1)), rem - g - 7);
+      while (a + g + 6 <= x + w && blocked(a, g)) a++;
+      if (a + g + 6 > x + w) break;
       cols.push([at, a - at]); alleys.push([a, g]); at = a + g; k++;
     }
     cols.push([at, x + w - at]);
@@ -231,6 +236,7 @@ function openBlock(m, b, H3, roles, attach, opened) {
     const face = frontN ? (j < last ? 'lane' : backOpen ? 'street' : 'closed') : j === 0 ? 'street' : 'lane';
     const gapN = frontN ? (j > 0 ? rows[j - 1][2] : 0) : rows[j][2];
     let lo = 2, hi = gapN ? (gapN >= 7 ? 3 : 2) : st === 'towers' || st === 'civic' ? 5 : 4;
+    if (frontN && j === 0) hi = Math.min(hi, st === 'towers' || st === 'civic' ? 4 : 3);   // (its wall drawn up over the street north of it)
     if (arch === 'townhouse' || arch === 'beachblock') hi = Math.min(hi, 3);
     let fl = lo + Math.floor(r(400 + j * 31 + i) * (hi - lo + 1));
     if (fl === lastFl && hi > lo) fl = fl === hi ? fl - 1 : fl + 1;
@@ -290,24 +296,25 @@ function openYard(m, H3, x, y, w, h, front, grit, u, pave, frontN) {
     else if (hz(13) < 0.5) prop(m, H3, 'acunit', x + w / 2, y + 0.8, 8);
   }
 }
-// street dice down a few of the rough districts' new lanes and back lots (GM8; m.diceSpots: activities.js plays the
+// street dice down a few of the grittier districts' new lanes and back lots (GM8; m.diceSpots: activities.js plays the
 // crew's game there), at most one a district and FOUR in all, far apart, dressed like Southside's: crates to sit on, a
 // lamp on the wall, trash by it
 function diceDown(m, H3) {
   const spots = (m.diceSpots ||= []), byD = new Set();
   let n = 0;
-  const L = m.openAlleys.filter((a) => !a.ns && a.w >= 16 && a.h >= 5).map((a) => ({ a, k: hash2(a.x, a.y, 2811) })).sort((p, q) => p.k - q.k);
+  const dOf = (a) => (a.d !== undefined ? a.d : m.dist[m.idx(a.x + (a.w >> 1), a.y + (a.h >> 1))]);
+  const L = [...m.openAlleys.filter((a) => !a.ns && a.w >= 16 && a.h >= 5), ...m.openYards.filter((a) => a.k === 'lot' && a.w >= 8 && a.h >= 8)].map((a) => ({ a, k: hash2(a.x, a.y, 2811) })).sort((p, q) => p.k - q.k);
   for (const { a } of L) {
     if (n >= 4) break;
-    const D = DISTRICTS[a.d];
-    if (!D || gritOf(D) < 0.6 || byD.has(a.d)) continue;
+    const d = dOf(a), D = DISTRICTS[d];
+    if (!D || gritOf(D) < 0.45 || byD.has(d)) continue;
     const x = (a.x + a.w / 2) * TILE, y = (a.y + a.h) * TILE - 14;
     if (spots.some((s) => Math.abs(s.x - x) < 60 * TILE && Math.abs(s.y - y) < 60 * TILE)) continue;
     spots.push({ x: Math.round(x), y: Math.round(y), a: 0, ix: 0, iy: -1, name: D.name });
     prop(m, H3, 'crates', x / TILE + 2.2, a.y + a.h - 0.5, 0); prop(m, H3, 'crates', x / TILE - 2.4, a.y + a.h - 0.5, 0);
     prop(m, H3, 'bags', x / TILE + 4.2, a.y + a.h - 0.45, 0);
     prop(m, H3, 'plamp', x / TILE, a.y + 0.15, 0, { wall: true, a: Math.PI / 2 });
-    byD.add(a.d); n++;
+    byD.add(d); n++;
   }
   return n;
 }
