@@ -167,6 +167,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
+    acc.launchInfo().then((i) => discordLinks(i && i.discord)).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -2011,8 +2012,25 @@ const phoneCtx = {
   chatBack: () => !!(S.launch && S.launch.chat.appBack()),
   // the Emotes screen (client/emotes.js renderApp, with the launch code): one tap emotes and puts the phone away
   emoteApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No emotes offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('emoteapp', { el, api: { refocus: () => { if (topOverlay() === 'phone') { ovFocus = startFocus(); focusOverlay(); } }, close: () => closeHub() } }); },
+  bug: () => bugApi(),   // (Report a bug: client/bugreport.js)
   nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
+// Report a bug (the phone's app, the pause list's and Settings' rows: client/bugreport.js) - what the page knows that goes
+// with it; the server adds who and where. Cancel steps back to where it came from; Done puts the menu away.
+function bugApi() {
+  return {
+    grab: (fn) => { S.bugGrab = fn; }, token: () => S.token, base: () => (S.launch ? S.launch.acc.httpBase() : null), discord: () => S.discord || '',
+    page: () => ({ build: myBuild().v, fps: S.fps, preset: gfx.preset, input: input.device, w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, area: ($('district') || {}).textContent || '', online: !!(S.ws && S.ws.readyState === 1), errors: S.launch ? S.launch.er.recent() : [] }),
+    back: () => { if (hubFromPause && S.playing) openHub('pause'); else phone.back(); }, close: () => closeHub(), refocus: phoneCtx.refocus,
+  };
+}
+// The player Discord (/launch.json discord - server/config.js CLA_DISCORD_INVITE): the title's DISCORD and Settings' Join
+// our Discord, only when it's set; a new tab
+function discordLinks(url) {
+  if (!/^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\//.test(url || '')) return;
+  S.discord = url;
+  for (const id of ['t-discord', 's-discord']) { const b = $(id); if (b) { b.classList.remove('hidden'); b.onclick = () => window.open(url, '_blank', 'noopener'); } }
+}
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
 // on the phone's button (the owner's minimal HUD: a dot, nothing more). What you last saw is kept across a reload.
 function nextDot(sig) {
@@ -2122,6 +2140,7 @@ const PAUSE_GO = {
   resume: () => closeHub(),
   map: () => openHub('map', null, true), phone: () => openHub('phone', null, true), bag: () => openHub('bag', null, true),
   people: () => openHub('people', null, true), settings: () => openHub('settings', null, true),
+  bug: () => openHub('phone', 'bug', true),   // (REPORT A BUG: the phone's form - client/bugreport.js)
   logoff: () => logOff(),
   leave: () => { sfx('click', 0.8); exitToTitle(); },
 };
@@ -2163,6 +2182,7 @@ const hubCtx = {
   closeOverlay: () => closeHub(), topOverlay, refocus: () => { if (inHub()) { ovFocus = startFocus(); focusOverlay(); } },
   unstuck: () => send({ t: 'unstuck' }), surrender, cine: () => cine('F4'), fullscreen: () => toggleFullscreen(), exitToTitle, openDebug: () => { sfx('click', 0.8); openDebug(); },
   leaveDev: () => { sfx('click', 0.8); send({ t: 'devmode', leave: true }); }, openInstall: () => openInstall(), openCreator: () => openCreator('edit'), crew: () => S.crewMsg,
+  bugReport: () => openHub('phone', 'bug', hubFromPause),
 };
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
 $('hub-back').onclick = () => hubBack();
@@ -3175,6 +3195,7 @@ function render(dt) {
   F.mark('overlays');   // (the HUD, the radar, the name tags: in the perf readout's page ms too)
   const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
   if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
+  if (S.bugGrab) { const f = S.bugGrab; S.bugGrab = null; f(world2Shown ? [worldCv, canvas] : [canvas]); }   // (a bug report's screenshot: the frame as drawn, before the browser clears it - client/bugreport.js)
 }
 
 // ---- under the ground: the sewers and the cave (client/underground/view.js, loaded the first time you go down) ------------

@@ -26,6 +26,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
 - Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
 - Bug reporter: "Report a bug" in pause menu + phone (text, optional screenshot, location, device, build, fps, errors); stored on server, listed at /admin; optional Discord webhook. (11-14; queue)
+- Nightly backup of the server's data dir (~/cla-backups, the newest 14, owner-readable only); bug reports in /admin/bugs and the Discord's #bug-reports (webhook); the Discord invite a config value (`CLA_DISCORD_INVITE`). (11-14 23:54; queue)
 - Beta hardening: `CLA_DEV_OPEN=0`, full test run, worldmap picture rebuilt, a bot load test of the server, Discord/community links in Settings/title. (11-14; queue)
 - Open debug mode stays while testing; at launch it closes (`CLA_DEV_OPEN=0`) and admin mode takes over. (11-03; launch-plan 11-03)
 - Claim the owner account, then `CLA_DEV_OPEN=0` (strangers are already in the game). (11-12; queue)

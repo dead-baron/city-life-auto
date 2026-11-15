@@ -1921,3 +1921,21 @@ body:not(.touch) :is(#t-buttons, #t-row2) { width: min(560px, 90vw); }
 /* the "What's next" cards changed (client/main.js nextDot): a dot on the phone's button and its app tile - nothing more */
 #b-phone.dot::after, #b-chat.dot::after, #b-talk.dot::after, .ph-app.dot .ph-tile::after { content: ''; position: absolute; right: 3px; top: 3px; width: 9px; height: 9px; border-radius: var(--r3); background: var(--heat); box-shadow: 0 0 0 2px var(--ink); }
 .ph-app.dot .ph-tile { position: relative; }
+/* Report a bug (client/bugreport.js): the form in the phone - the box, the kinds, the screenshot and its preview */
+.br { display: flex; flex-direction: column; gap: var(--s2); }
+.br-l { margin: var(--s1) 0 0; font: 700 var(--fs-3) var(--ui); color: var(--cream); }
+.br textarea { width: 100%; box-sizing: border-box; min-height: 112px; resize: vertical; padding: var(--s2); font: 500 var(--fs-3) var(--ui); line-height: 1.35; color: var(--cream); background: var(--navy); border: 2px solid var(--gold-a); border-radius: var(--r1); }
+.br textarea:focus { outline: none; border-color: var(--gold); }
+.br-count { align-self: flex-end; margin-top: calc(-1 * var(--s1)); font: 600 var(--fs-1) var(--ui); color: var(--dim); }
+.br-kinds { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.br-kinds .btn { padding: 0 var(--s3); font-size: var(--fs-2); }
+.br-kinds .btn[aria-pressed=true] { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.br .srow { padding: var(--s1) 0; }
+.br-shotrow small { font: 500 var(--fs-1) var(--ui); color: var(--dim); }
+.br-prev { display: block; width: 100%; max-height: 170px; object-fit: contain; border: 2px solid var(--line); border-radius: var(--r1); background: var(--ink); }
+.br-msg { margin: 0; min-height: 1.2em; font: 600 var(--fs-2) var(--ui); color: var(--heat); }
+.br-msg:empty { min-height: 0; }
+.br-go { display: flex; gap: var(--s2); }
+.br-go .btn { flex: 1; }
+.br-go .br-send { background: var(--gold); border-color: var(--gold); color: var(--ink); }
+.br-done h3 { margin: var(--s2) 0 0; font: 700 var(--fs-4) var(--pixel); color: var(--money); }

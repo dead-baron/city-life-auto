@@ -4,7 +4,8 @@
 // short-lived single-use codes and challenges, rate limits per address, constant-time compares, secrets only from the
 // environment and never logged, nothing personal kept (an email address only as a keyed hash - unless its player asked
 // for news: server/newslist.js).
-//   GET  /launch.json                         what's switched on: providers, passkeys, password resets, the GA id
+//   GET  /launch.json                         what's switched on: providers, passkeys, password resets, the GA id, the
+//                                             player Discord's invite
 // Signing in and linking are two things (the review, 11-04): a provider button signs in - an identity already linked
 // to an account signs into it, wherever - and linking a new sign-in to the character on this page is its own explicit
 // step. Both are bound to the page that started them: the page makes a nonce (pn) it keeps to itself, sends it with
@@ -394,7 +395,7 @@ export function createAuthHttp(opts) {
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return true; }
     try {
       if (path === '/launch.json') {
-        sendJSON(res, 200, { providers: providers(), passkeys: true, guests: true, resets: resetsOn(L), password: { min: ACCOUNT.pwMin, max: ACCOUNT.pwMax }, ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, requireAge: !!L.requireAge, age: 17 }, { 'cache-control': 'max-age=60' });
+        sendJSON(res, 200, { providers: providers(), passkeys: true, guests: true, resets: resetsOn(L), password: { min: ACCOUNT.pwMin, max: ACCOUNT.pwMax }, ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, requireAge: !!L.requireAge, age: 17, discord: L.discordInvite || '' }, { 'cache-control': 'max-age=60' });
         return true;
       }
       const m = path.match(/^\/auth\/(google|discord)\/(start|callback)$/);
