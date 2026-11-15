@@ -24171,3 +24171,8 @@ move.
 The privacy policy's Contact line showed "[postal address - to be added before launch]" while CLA_MAIL_ADDRESS is unset.
 The owner has no address to publish yet and sends no news email until he does (the news footer, which US law wants an
 address in, still asks for it), so the page leaves the line out until it's set (server/legal.js).
+
+## 2026-11-14 - GA: Player type
+The owner asked for it while setting up GA: a user property player_type, guest or account, set from the account state
+(client/account.js) and kept until GA is granted (client/analytics.js uprops) - so GA can compare signed-in players
+with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.md section 5).

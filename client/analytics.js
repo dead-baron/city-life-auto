@@ -19,7 +19,7 @@ const ERR_MAX = 10;
 export function createAnalytics(env) {
   const win = env.win, doc = env.doc;
   let id = '', consent = null, loaded = false, granted = false, errs = 0;
-  const pending = [];
+  const pending = [], uprops = {};   // (uprops: the user properties so far - set again once GA is granted)
   const gtag = function () { (win.dataLayer ||= []).push(arguments); };
   function load() {
     if (loaded || !id || consent !== 'all') return false;
@@ -31,6 +31,7 @@ export function createAnalytics(env) {
     granted = true;
     gtag('js', new Date());
     gtag('config', id, { send_page_view: true, allow_google_signals: false, cookie_flags: 'SameSite=None;Secure' });
+    if (Object.keys(uprops).length) gtag('set', 'user_properties', { ...uprops });
     const s = doc.createElement('script');
     s.async = true;
     s.src = SRC + encodeURIComponent(id);
@@ -59,7 +60,8 @@ export function createAnalytics(env) {
     // a new connection (a reconnect, a new server session): the server forgets the GA ids with the session - sent again
     resend() { if (loaded && granted && win.gtag) ids(); },
     // the player's device and settings, as user properties (register them as custom dimensions: docs/LAUNCH-SETUP.md)
-    props(p) { if (granted) gtag('set', 'user_properties', p); },
+    // (kept until GA is granted: the account state comes before the gate's Accept on a first visit)
+    props(p) { Object.assign(uprops, p); if (granted) gtag('set', 'user_properties', p); },
     event(name, params = {}) {
       if (consent !== 'all') return false;
       if (!loaded) { if (pending.length >= 30) return false; pending.push([name, params]); return true; }   // (held till the id comes)

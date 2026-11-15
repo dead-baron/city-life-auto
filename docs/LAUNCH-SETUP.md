@@ -165,6 +165,7 @@ served at deadbaron.com). A passkey belongs to its domain: one made on `deadbaro
    | Dimension name | Scope | Event parameter / user property |
    |---|---|---|
    | Device class | User | `device_class` |
+   | Player type | User | `player_type` (guest / account) |
    | Graphics preset | User | `graphics_preset` |
    | Faction | Event | `faction` |
    | Region | Event | `region` |
