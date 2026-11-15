@@ -46,7 +46,7 @@ test('an emote: the body first; a balloon only where it means something, a log l
   for (const k of ['laugh', 'angry', 'love', 'huh', 'wow', 'sorry', 'sleep', 'wave', 'thumbs', 'beckon', 'shrug']) assert.ok(EMOTES[k].b, `${k}: a balloon`);
   assert.deepEqual([EMOTES.wave.b, EMOTES.thumbs.b, EMOTES.beckon.b], ['wave', 'thumbs', 'beckon'], 'the gestures: a waving hand, a thumbs up, come here (the owner, 11-14)');
   for (const k of ['dance', 'sit', 'lie', 'faceplant', 'phone', 'clap', 'cheer']) assert.ok(!EMOTES[k].b, `${k}: no balloon`);
-  assert.deepEqual(Object.keys(EMOTES).filter((k) => EMOTES[k].hold).sort(), ['crouch', 'kneel', 'lean', 'lie', 'phone', 'sit', 'sleep']);
+  assert.deepEqual(Object.keys(EMOTES).filter((k) => EMOTES[k].hold).sort(), ['crouch', 'faceplant', 'kneel', 'lean', 'lie', 'phone', 'sit', 'sleep']);
   assert.equal(DANCES.length, DANCE_PLAYER.length, 'a Dances tab tile each move');
   const S = setup();
   const a = S.P({ x: 0, y: 0, name: 'Ann' }), b = S.P({ x: 100, y: 0 }), far = S.P({ x: 5000, y: 0 });

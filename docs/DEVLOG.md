@@ -24161,3 +24161,8 @@ once and never the one you're playing (a sign-in gives the same account a new to
 The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
 The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
 role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.
+
+## 2026-11-14 - The faceplant stays down
+The owner: the faceplant went back to a half pose. It was a timed pose (3.5 s), so it got up on its own; it's a lasting
+pose now (shared/chatdefs.js hold, like Lie down): over onto the face and lying there, a twitch now and then, until you
+move.

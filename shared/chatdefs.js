@@ -59,7 +59,7 @@ export const EMOTES = {
   lean: { n: 'Lean', tab: 'pose', hold: 1, log: 1, text: 'leans back', me: 'lean back' },
   crouch: { n: 'Crouch', tab: 'pose', hold: 1, log: 1, text: 'crouches down', me: 'crouch down' },
   kneel: { n: 'Kneel', tab: 'pose', hold: 1, log: 1, text: 'kneels', me: 'kneel' },
-  faceplant: { n: 'Faceplant', tab: 'pose', s: 3.5, text: 'faceplants', me: 'faceplant' },
+  faceplant: { n: 'Faceplant', tab: 'pose', hold: 1, log: 1, text: 'faceplants', me: 'faceplant' },   // (stays down till you move - the owner, 11-14)
   pushups: { n: 'Push-ups', tab: 'pose', s: 4, text: 'does push-ups', me: 'do push-ups' },
   flex: { n: 'Flex', tab: 'pose', s: 3, text: 'flexes', me: 'flex' },
   cry: { n: 'Cry', tab: 'pose', s: 3, text: 'cries', me: 'cry' },
