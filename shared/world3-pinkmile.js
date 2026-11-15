@@ -145,7 +145,10 @@ function build(m, api, K) {
     if (w >= 6 && rnd(x, y, 52) < 0.7) kit.push([`neon|${pick(words, rnd(x, y, 53))}|${Math.floor(rnd(x, y, 54) * 7)}`, Math.round(w * TILE / 2), 12]);
     kit.push(['ac', Math.round(w * TILE * 0.3), 80], ['vent', Math.round(w * TILE * 0.7), 120], ['acs', Math.round(w * TILE * 0.5), 160]);
     if (rnd(x, y, 55) < 0.4) kit.push(['dish', Math.round(w * TILE * 0.8), 60]);
-    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: o.look === 'rough' ? 0.5 : 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [], ...(o.look === 'rough' ? { graffiti: 1 } : {}) }, noShop: true, kit }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
+    // (a two-storey back now and then painted edge to edge - MU1's murals: the craft pass, blank walls; not the rough
+    // street's, tagged instead)
+    const mural = o.look !== 'rough' && floors >= 2 && w >= 7 && rnd(x, y, 47) < 0.3 ? { mural: { x: 8, w: w * TILE - 16, h: 82, kind: pick(['flowers', 'koi', 'sunset', 'waves', 'tiger', 'geo'], rnd(x, y, 46)) } } : {};
+    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: o.look === 'rough' ? 0.5 : 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [], ...(o.look === 'rough' ? { graffiti: 1 } : {}), ...mural }, noShop: true, kit }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
   };
   // a row of lit fronts facing south along [x0, x1) in the band [y0, y1]: `list` first, then the mix of `cats`
   const litRow = (x0, x1, y0, y1, list = [], o = {}) => {
@@ -672,6 +675,12 @@ function build(m, api, K) {
   for (let x = PX.bridge + 14; x < PX.westside - 10; x += 9) {
     if (Math.abs(x - 2781) < 14) continue;
     prop('palm_a', x + 0.5, neonY(x + 0.5) + 0.5, 10, { sp: 'royal', k: 1.2, lit: 1 });
+  }
+  // twin lamps at a steady rhythm along the Mile's pavements, where there's none within five tiles (the craft pass)
+  const walkAt = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.SIDEWALK;
+  for (let x = PX.gallery + 10; x < PX.westside - 8; x += 8) {
+    if (junctions.some((c) => Math.abs(x - c) < 10)) continue;
+    for (const y of [mileY(x + 0.5) - EXT.blvd + 1.2, mileY(x + 0.5) + EXT.blvd - 1.2]) if (walkAt(x + 0.5, y) && !m.lamps.some((l) => Math.abs(l.x - (x + 0.5) * TILE) < 5 * TILE && Math.abs(l.y - y * TILE) < 2 * TILE)) prop('lamp', x + 0.5, y, 0);
   }
   const onWalk = (x, y) => m.tiles[Math.floor(y) * m.w + Math.floor(x)] === T.SIDEWALK;
   for (let i = poi0; i < m.pois.length; i++) {

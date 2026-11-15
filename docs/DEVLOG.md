@@ -24435,6 +24435,8 @@ WC237, AL1 and the handcraft research's signature places.
     sides, a lamp every eight tiles, benches facing the walks with couples; the lawns' middles open with picnic blankets
     (activities.js picnic by day) or a flowering tree; **Bayside Court**, a public court for a pick-up game.
   - The Box Bar's deck: its tables a terrace under two rows of short spans, its regulars.
+  - Murals (MU1): about a third of the two-storey backs along Glow Alley and Neon Back Alley painted edge to edge (a
+    tiger, koi, a skyline, waves, the geometric, flowers, a sunset) - the blank walls the alleys looked at.
   - Fixed: the lit row by Afterdark named every front after the first "Sushi Sora" (four of them), and the Bayview row
     every front after the first "Seaglass Grill" - each its own name now (Bay Bento, Tidewater Tiki, Harbor Noodle Co,
     Lucky Moon Bar; Pier 3 Oyster Bar).
@@ -24444,7 +24446,8 @@ WC237, AL1 and the handcraft research's signature places.
   the Loop's food court (two rows of tables under a canopy, people at them and round the carts); **Mile Beach's grove**
   (the lawn behind the motels: two rows of coconut palms, lamps, picnic tables with people at
   them, blankets) and a **bonfire on the sand** with friends round it after dark; knots by the lounges' and bars' doors
-  along the Mile (frontLife).
+  along the Mile (frontLife); murals on about a third of the two-storey backs along Rose Alley (not Sideshow Street's
+  rough ones: tagged).
 - Tests: test/neonstrip.test.js - every string made fast at both ends and none over twelve tiles, no string palm to palm,
   the palms lit; the craft pass (Lantern Lane in four rows, Harbor Lights' pieces, the stage's crowd on its forecourt,
   the terraces, knots and stallholders in both districts, each kind filling with its people: sat, talking, behind the

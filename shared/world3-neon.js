@@ -186,7 +186,9 @@ function build(m, api, K) {
     if (rnd(x, y, 55) < 0.4) kit.push(['dish', Math.round(w * TILE * 0.8), 60]);
     // (the back wall on the alley, the camera's side: its roll shutter, a lantern or a small sign beside it, the AC)
     const neon = { name: null, trim: false, col: Math.floor(rnd(x, y, 55) * 7), dress: { back: 1 }, top: 8, ...(rnd(x, y, 49) < 0.7 ? { pics: deck.deal(null, null, 0, rnd(x, y, 48), null, PIC_BACK) } : {}) };
-    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [] }, noShop: true, kit, neon }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
+    // (a two-storey back on the alley now and then painted edge to edge - MU1's murals: the craft pass, blank walls)
+    const mural = floors >= 2 && w >= 7 && rnd(x, y, 47) < 0.3 ? { mural: { x: 8, w: w * TILE - 16, h: 82, kind: pick(['tiger', 'koi', 'skyline', 'waves', 'geo', 'flowers', 'sunset'], rnd(x, y, 46)) } } : {};
+    return { arch: 'nightrow', art: { spec: { floors, ...f, win: pick(WINS, rnd(x, y, 56)), parapet: 8, grime: 0.3, roofMat: 'tar', lip: 10, rimW: 4, blades: [], ...mural }, noShop: true, kit, neon }, name: o.name || null, home: rnd(x, y, 57) < 0.5 ? { kind: 'apartment' } : null, whole: true };
   };
   const place = (L) => { const b = K.building(L); if (b) { if (L.home) out.homes++; if (L.poi) out.shops++; } return b; };
 
