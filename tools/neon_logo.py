@@ -623,14 +623,16 @@ def paint_faithful(src, thick=False, clean=False, sky=None):
 # them), the inner span its windows are centred in - between the inner sides of the walls it shows, two px in from each
 # wall column (the tube is a px wide inside it, then a px of dark); where a neighbour's wall is the one you see, that
 # one - and its block: cols x rows of 2 x 2 windows, gap px apart both ways. Every block centres exactly (its inner
-# width less the block's width is even) and sits WIN_TOP under its own roof line (the eaves, for the gabled ones).
+# width less the block's width is even) and sits WIN_TOP under its own roof line (the eaves, for the gabled ones);
+# dark: (row, col) of a window with its lights out - drawn as an unlit pane, its place in the grid kept.
+WIN_DARK = (44, 56, 92)
 WIN, WIN_TOP = 2, 4
 SKY_WINDOWS = {
-    'hl': {'walls': (85, 98), 'inner': (87, 95), 'cols': 2, 'rows': 1, 'gap': 3},     # the left house: its wall, the tower's (97)
+    'hl': {'walls': (86, 98), 'inner': (88, 95), 'cols': 1, 'rows': 1, 'gap': 3},     # the left house: its wall, the tower's (97)
     'tw': {'walls': (97, 113), 'inner': (99, 111), 'cols': 2, 'rows': 1, 'gap': 3},   # the tower
-    'md': {'walls': (118, 138), 'inner': (120, 136), 'cols': 2, 'rows': 2, 'gap': 3}, # the tall middle tower: its 2 x 2
+    'md': {'walls': (118, 138), 'inner': (120, 136), 'cols': 2, 'rows': 2, 'gap': 3, 'dark': [(1, 1)]},   # the tall middle tower: its 2 x 2, the lower right one's lights out
     'gb': {'walls': (137, 152), 'inner': (140, 150), 'cols': 2, 'rows': 1, 'gap': 3}, # the gabled block: the tall tower's wall (138), its own
-    'hr': {'walls': (151, 171), 'inner': (154, 164), 'cols': 2, 'rows': 1, 'gap': 3}, # the right house: the block's wall (152); "Life" covers it from 165
+    'hr': {'walls': (151, 171), 'inner': (154, 163), 'cols': 1, 'rows': 1, 'gap': 3}, # the right house: the block's wall (152); "Life" covers it from 164
 }
 
 
@@ -651,7 +653,7 @@ def sky_grid(src, letters, faces=True, windows=True):
             fill[top - 1 - i, xa + 1 + i:xb - i] = True
         blocks.append((xa, xb, top, cols, rows))
     w = x1 - x0
-    hl = (x0, x0 + w * 16 // 100)                               # the house on the left
+    hl = (x0 + 1, x0 + w * 16 // 100)                           # the house on the left (its wall a px in: its one window centres exactly)
     tw = (hl[1] - 1, x0 + w * 33 // 100)                         # a tower
     md = (cx - w * 12 // 100, cx + w * 12 // 100)                # the middle tower
     gb = (md[1] - 1, x0 + w * 78 // 100)                         # the gabled block
@@ -674,6 +676,7 @@ def sky_grid(src, letters, faces=True, windows=True):
     # the lit windows, placed by hand (the owner, 19:30: "polish that with more intention"): SKY_WINDOWS, each
     # building's windows centred exactly between the walls it shows, its top row WIN_TOP under its own roof line
     names = ['hl', 'tw', 'md', 'gb', 'hr']
+    unlit = np.zeros((GH, GW), bool)
     for name, (xa, xb, top, _, _) in zip(names, blocks):
         W_ = SKY_WINDOWS[name]
         assert W_['walls'] == (xa, xb), f'{name}: its walls moved ({xa}, {xb}): place its windows again'
@@ -684,13 +687,14 @@ def sky_grid(src, letters, faces=True, windows=True):
         for r in range(W_['rows']):
             for c in range(W_['cols']):
                 wy, wx = wy0 + r * (WIN + W_['gap']), wx0 + c * (WIN + W_['gap'])
-                win[wy:wy + WIN, wx:wx + WIN] = True
+                (unlit if (r, c) in W_.get('dark', ()) else win)[wy:wy + WIN, wx:wx + WIN] = True
     L = Layer('sky', CYAN)
     if faces:
         L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
     tube(L, edge & ~clear, CYAN, 1)
     if windows:
         L.put(win & ~dil(edge) & ~clear, WINDOW, 0.7, WINDOW, (60, 52, 40))
+        L.put(unlit & ~dil(edge) & ~clear, WIN_DARK, 0.0, None, mul(WIN_DARK, 0.8))
     L.a &= ~clear
     L.emi[clear] = 0
     return L

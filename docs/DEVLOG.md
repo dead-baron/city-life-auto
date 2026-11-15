@@ -23975,3 +23975,10 @@ right a pale steel, the ink outline round it - no blue hollow and stripe.
   windows, cars, aircraft, stars and clouds follow. test/menupolish.test.js.
 - Screenshots (a 6x close-up of the windows with each building's margins measured, the title upright): the session's
   scratchpad `logo2/owner/windows3/`.
+
+## 2026-11-14 - The logo's windows: one on each end house, a light out on the tall tower
+The owner (19:40): "one window on the far left building and one on the far right building, and maybe one set of
+windows has 3 windows instead of 4 (still in the same grid)". SKY_WINDOWS: the two end houses one window each, centred
+exactly (the left house's wall a px in - its span now even; the right house's span to where "Life" covers it), and the
+tall tower's 2 x 2 keeps its places with its lower right window's lights out - an unlit pane, not a gap. Re-installed
+and the share card rebuilt. Close-up and the title upright: the session's scratchpad `logo2/owner/windows4/`.
