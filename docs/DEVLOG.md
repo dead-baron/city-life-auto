@@ -24333,6 +24333,32 @@ client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound m
 (client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
 tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
 silent.
+
+## 2026-11-15 - Report a bug; the Discord button; nightly backups
+The owner approved it for the beta (11-14). **Report a bug**: a REPORT A BUG row in the pause list, a Report bug app
+on the phone and a row in Settings → Help all open one form, in the phone (client/bugreport.js, loaded the first time):
+"What happened?" (up to BUG_REPORT.text characters), what kind of problem it was (Stuck, Graphics, Crash or freeze,
+Controls, Something else - a pad has no keys to type with, so a pick is enough), "Include a screenshot" (on, with a
+preview), Send / Cancel, then a thank-you with the Discord. The screenshot is the game's canvases as drawn the frame
+the form opened (main.js S.bugGrab at the end of the frame - a WebGL canvas is cleared after it's shown), no menus over
+it, at most 960 px wide, WebP (JPEG on Safari), stepped down until it's under 250 KB. With it: the build, the frame
+rate, the graphics preset, the input device, the screen, the HUD's area name and the page's last ten errors
+(client/errors.js recent). The server (server/bugreports.js, POST /report with the page's own token, guests too) adds
+the name, guest or account, the position and district, the device class and a coarse browser and system ("Android 14
+· Chrome 131") - never an email, the IP or a token; 3 a player in 10 minutes, 6 a network, 30 an hour from everyone;
+kept in <data>/reports/ (the newest 500, 200 MB of screenshots, the oldest dropped with their files). Staff read them
+at /admin/bugs (admins and up: the screenshot, where, the device, the errors; Mark done / Open again, in the admin log;
+Settings → Account → Staff tools → Bug reports). With BUG_WEBHOOK_URL set each one is posted to the Discord's
+#bug-reports as an embed with the screenshot attached (fire and forget, an 8 s timeout, no mentions can ping). The
+Guide's Activities has "Reporting a bug". test/bugreports.test.js.
+**The Discord**: CLA_DISCORD_INVITE (default the owner's never-expiring https://discord.gg/zuVSkbfjg; `off` hides it)
+goes to the page in /launch.json: a small DISCORD button with the title's INSTALL APP / FULLSCREEN (top left on a
+desktop and a phone on its side, under the menu upright) and Join our Discord in Settings → Help; test/titlebuttons
+now checks the button is on screen and clear of everything else, your card and who's online showing.
+**Backups**: deploy/backup.sh, nightly at 03:30 (cla-backup.service / .timer): the data dir as one tar.gz in
+~/cla-backups, owner-only, the newest 14 - without the baked art, the region files and the screenshots, which the
+server rebuilds or doesn't need. setup-oracle.sh installs the timer (the old profiles-only cron line goes); a server
+set up before gets it from auto-update.sh's next run. Restore steps in docs/DEPLOY.md. Both keys are in set-keys.sh.
 ## 2026-11-14 - "Over here" replaces "Come here"
 The owner (20:46), on the beckon: "that doesn't read clearly ... Not sure we really need that emote. Maybe a point down
 motion or something?" The Poses tab's Come here is now Over here (shared/chatdefs.js `overhere`; "Ann points here" /

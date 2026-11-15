@@ -7,6 +7,18 @@
 set -euo pipefail
 cd "${CLA_APP_DIR:-/home/ubuntu/city-life-auto}"
 
+# The nightly backup's units (deploy/cla-backup.*, 2026-11-15): installed, or brought up to date, by the first run after
+# the pull that brought them (each run checks; nothing to do costs two file compares) - a server set up before them
+# needs no setup run. The old profiles-only cron line goes with it.
+if [ -f deploy/cla-backup.timer ] && ! { cmp -s deploy/cla-backup.service /etc/systemd/system/cla-backup.service && cmp -s deploy/cla-backup.timer /etc/systemd/system/cla-backup.timer; }; then
+  if sudo cp deploy/cla-backup.service deploy/cla-backup.timer /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now cla-backup.timer; then
+    echo "auto-update: the nightly backup timer is installed (cla-backup.timer, 03:30)"
+    if crontab -l 2>/dev/null | grep -q '# cla-backup'; then crontab -l 2>/dev/null | grep -v '# cla-backup' | crontab - || true; fi
+  else
+    echo "auto-update: couldn't install the backup timer - run: bash deploy/setup-oracle.sh"
+  fi
+fi
+
 git fetch -q origin main
 OLD=$(git rev-parse HEAD)
 NEW=$(git rev-parse origin/main)
@@ -41,6 +53,7 @@ if ! git merge -q --ff-only origin/main; then
   exit 1
 fi
 CHANGED=$(git diff --name-only "$OLD" "$NEW")
+
 
 if ! echo "$CHANGED" | grep -qE '^(server/|shared/|package\.json)'; then
   echo "auto-update: ${OLD:0:7} -> ${NEW:0:7} (no server code changed, no restart)"

@@ -1,0 +1,11 @@
+# Back up the game server's data every night at about 03:30 server time (a missed run - the server was off - runs at boot).
+[Unit]
+Description=City Life Auto nightly data backup at 03:30
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

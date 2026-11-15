@@ -47,3 +47,11 @@ export const SKILL = {
   },
 };
 export const HOSE_LEN = 420;          // a firefighter's hose reaches this far from the engine (FIRE.hose.len; the touch fire button shows the hose near it)
+// Report a bug (the owner, 11-14: the pause list and the phone - client/bugreport.js, server/bugreports.js): what happened
+// in up to text characters; the screenshot at most shotW px wide and shotKb KB (WebP, else JPEG); perPlayer reports in
+// perMin minutes a player and perHour an hour from everyone; the server keeps the newest keep reports and keepMb MB of
+// their pictures. kinds: the quick picks (a pad has no keys to type with - one of these is enough to send).
+export const BUG_REPORT = {
+  text: 1000, shotW: 960, shotKb: 250, perPlayer: 3, perMin: 10, perHour: 30, keep: 500, keepMb: 200,
+  kinds: [['stuck', 'Stuck'], ['graphics', 'Graphics'], ['crash', 'Crash or freeze'], ['controls', 'Controls'], ['other', 'Something else']],
+};

@@ -85,6 +85,12 @@ config.launch = {
   // Google Analytics 4: the measurement id is public (served to the page); the Measurement Protocol secret is not
   gaMeasurementId: /^G-[A-Z0-9]{4,16}$/.test(env('GA_MEASUREMENT_ID')) ? env('GA_MEASUREMENT_ID') : '',
   gaApiSecret: env('GA_API_SECRET'),
+  // the player Discord (the owner, 11-15): its invite on the title screen and in Settings (/launch.json discord) - a
+  // discord.gg or discord.com/invite link, or "off" to hide the buttons
+  discordInvite: inviteOf(env('CLA_DISCORD_INVITE', 'https://discord.gg/zuVSkbfjg')),
+  // bug reports (server/bugreports.js) posted to the Discord's #bug-reports through this webhook; none: only kept here
+  bugWebhook: env('BUG_WEBHOOK_URL'),
 };
+function inviteOf(v) { return /^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\/[A-Za-z0-9-]{2,32}$/.test(v) ? v : ''; }
 // Only trust X-Forwarded-For when a local proxy (Caddy) is the only thing that can reach us.
 config.trustProxy = process.env.CLA_TRUST_PROXY ? process.env.CLA_TRUST_PROXY === '1' : (config.host === '127.0.0.1' || config.host === 'localhost');

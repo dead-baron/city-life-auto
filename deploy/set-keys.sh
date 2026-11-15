@@ -58,6 +58,9 @@ ask DISCORD_CLIENT_SECRET "Discord client secret" 1
 echo; echo "== Email: password resets and the news list (section 3)"
 ask RESEND_API_KEY "Resend API key (starts with re_) - sends the password-reset and confirm emails" 1
 ask CLA_MAIL_ADDRESS "Your postal address, at the foot of every news email (spaces are fine)" 0 1
+echo; echo "== The player Discord (section 9)"
+ask CLA_DISCORD_INVITE "The Discord invite on the title screen and in Settings (default https://discord.gg/zuVSkbfjg; off hides it)" 0
+ask BUG_WEBHOOK_URL "The #bug-reports channel's webhook URL - every bug report is posted there (Server Settings -> Integrations -> Webhooks)" 1
 echo; echo "== Contact (the privacy policy and the terms show it)"
 ask CLA_CONTACT "The contact email players can write to (account deletion, questions)" 0
 echo; echo "== Google Analytics 4 (section 5)"
@@ -93,3 +96,6 @@ echo "  Sign-ins: passkeys${providers:+, $providers}"
 if printf '%s' "$out" | grep -q '"resets":true'; then echo "  Password resets by email: on"; else echo "  Password resets by email: off (no Resend key)"; fi
 ga=$(printf '%s' "$out" | grep -o '"ga":"[^"]*"' | cut -d'"' -f4)
 echo "  Google Analytics: ${ga:-off}"
+dc=$(printf '%s' "$out" | grep -o '"discord":"[^"]*"' | cut -d'"' -f4)
+echo "  The Discord button: ${dc:-off}"
+if [ -n "$(current BUG_WEBHOOK_URL)" ]; then echo "  Bug reports to Discord: on"; else echo "  Bug reports to Discord: off (kept on the server, at /admin/bugs)"; fi

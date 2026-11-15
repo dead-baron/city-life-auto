@@ -146,7 +146,7 @@
     <div id="t-row2"><button id="t-char" class="btn" disabled><i class="t-cav ic" data-ic="user"></i>CHARACTER</button><button id="t-settings" class="btn"><i class="ic" data-ic="settings"></i>SETTINGS</button></div>
     <div id="t-gfx"><span class="t-gl">Graphics</span><div id="t-gfxseg" role="radiogroup" aria-label="Graphics"></div><small id="t-gfxwhy"></small></div>
     <div id="t-practice">Practice runs a private city on this device. Nothing is saved and your online account is untouched. Cheats panel: <span class="kbm-only">press `</span><span class="pad-only">Start → Debug / cheats</span><span class="touch-only">the DEV button</span>.</div>
-    <div id="t-tools"><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button></div>
+    <div id="t-tools"><button id="t-install" class="btn hidden">INSTALL APP</button><button id="t-fs" class="btn">FULLSCREEN</button><button id="t-discord" class="btn hidden" title="The player Discord: news, help and bug reports">DISCORD</button></div>
     <div id="t-foot">
       <div id="t-card" class="hidden"><i class="t-av ic" data-ic="user"></i><div class="t-who"><b id="t-name"></b><small id="t-xp"></small><small id="t-sam"></small></div><button id="t-signin" class="t-sign" type="button">SIGN IN</button></div>
       <div id="t-online" class="hidden"><i></i><span></span></div>
@@ -185,6 +185,7 @@
       <button class="pz-row" role="menuitem" data-p="bag"><i class="ic" data-ic="bag"></i><span>BAG</span><span class="kchip kbm-only">I</span></button>
       <button class="pz-row" role="menuitem" data-p="people"><i class="ic" data-ic="people"></i><span>PEOPLE</span></button>
       <button class="pz-row" role="menuitem" data-p="settings"><i class="ic" data-ic="settings"></i><span>SETTINGS</span></button>
+      <button class="pz-row" role="menuitem" data-p="bug"><i class="ic" data-ic="bug"></i><span>REPORT A BUG</span></button>
       <button class="pz-row" role="menuitem" data-p="logoff" id="pz-logoff"><i class="ic" data-ic="logoff"></i><span>LOG OFF<small id="pz-off-note">safe: stand still 10 s</small></span></button>
       <button class="pz-row pz-leave" role="menuitem" data-p="leave"><i class="ic" data-ic="door"></i><span>LEAVE GAME</span></button>
     </div>
@@ -266,6 +267,8 @@
           <button class="opt play-only" data-h="surrender"><span class="t">Surrender</span><span class="note">respawn, or turn yourself in</span></button>
           <button class="opt play-only" data-h="cine"><span class="t">Cinematic mode</span><span class="note">clean screen, cameras, time of day</span></button>
           <button class="opt" data-h="fullscreen"><span class="t">Fullscreen</span></button>
+          <button class="opt play-only" data-h="bug"><span class="t">Report a bug</span><span class="note">what happened, with a screenshot</span></button>
+          <button class="opt hidden" id="s-discord"><span class="t">Join our Discord</span><span class="note">news, help and bug reports</span></button>
         </div>
         <button id="s-install" class="sbtn">⬇ Install the app / install help</button>
         <button id="s-repair" class="sbtn">↻ Repair install (clear offline data)</button>

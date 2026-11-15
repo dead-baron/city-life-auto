@@ -43,8 +43,12 @@ sudo cp deploy/cla-update.service deploy/cla-update.timer /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now cla-update.timer
 
-echo "== nightly backup of player profiles (keeps 14 days) =="
-# (a brand-new server has no crontab yet: `crontab -l` / `grep` fail, which must not stop the script)
-{ crontab -l 2>/dev/null | grep -v cla-backup || true ; echo "15 4 * * * mkdir -p /home/ubuntu/cla-backups && cp /home/ubuntu/cla-data/profiles.json /home/ubuntu/cla-backups/profiles-\$(date +\%F).json && find /home/ubuntu/cla-backups -mtime +14 -delete # cla-backup" ; } | crontab -
+echo "== nightly backup of the data dir at 03:30 (~/cla-backups/cla-YYYY-MM-DD.tar.gz, the newest 14) =="
+chmod +x deploy/backup.sh
+sudo cp deploy/cla-backup.service deploy/cla-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now cla-backup.timer
+# (the old profiles-only cron line, if this server had it; a brand-new server has no crontab: that must not stop the script)
+{ crontab -l 2>/dev/null | grep -v '# cla-backup' || true ; } | crontab -
 
 echo "Done. Check: curl -s http://127.0.0.1:8080/stats"

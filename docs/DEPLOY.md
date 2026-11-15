@@ -34,7 +34,7 @@ Your main site repo `dead-baron.github.io` already serves `deadbaron.com` (it ha
    cd city-life-auto
    bash deploy/setup-oracle.sh
    ```
-   This installs Node 22 and Caddy (automatic HTTPS certificate for play.deadbaron.com), opens 80/443 in the instance firewall (Oracle images block them even when the VCN allows them), registers the systemd service (auto-restart, starts on boot, saves on shutdown), and adds a nightly profile backup.
+   This installs Node 22 and Caddy (automatic HTTPS certificate for play.deadbaron.com), opens 80/443 in the instance firewall (Oracle images block them even when the VCN allows them), registers the systemd service (auto-restart, starts on boot, saves on shutdown), and installs the nightly backup (below).
 7. Check: `curl https://play.deadbaron.com/health` → `ok`. Then open `https://deadbaron.com/city-life-auto/`.
 
 ## Operating it
@@ -45,7 +45,9 @@ Your main site repo `dead-baron.github.io` already serves `deadbaron.com` (it ha
 | Stats (players, tick ms, bandwidth) | `curl -s http://127.0.0.1:8080/stats` |
 | Update to latest code | `cd ~/city-life-auto && git pull && sudo systemctl restart city-life-auto` |
 | Restart (players see "Server restarting", progress saved) | `sudo systemctl restart city-life-auto` |
-| Backups | `~/cla-backups/profiles-YYYY-MM-DD.json` (14 days) |
+| Backups | `~/cla-backups/cla-YYYY-MM-DD.tar.gz`, nightly at 03:30, the newest 14 (below) |
+| Back up now | `bash ~/city-life-auto/deploy/backup.sh` |
+| Backup log / next run | `journalctl -u cla-backup` · `systemctl list-timers cla-backup.timer` |
 
 Environment variables (in `deploy/city-life-auto.service`): `PORT`, `HOST`, `CLA_DATA_DIR`, `CLA_ORIGINS` (allowed page origins for WebSockets), `CLA_MAX_PLAYERS`, `CLA_NPC_BUDGET`, `CLA_SECRET`, `CLA_SEED`, `CLA_DEV` (never `1` in production), `CLA_FRESH_ON_UPDATE` (below).
 
@@ -66,6 +68,38 @@ To change it, uncomment the `#Environment=CLA_FRESH_ON_UPDATE=all` line (or set 
 - Oracle's free egress is 10 TB/month, roughly 75 players online 24/7 at that rate. Real usage is far lower.
 - There is no DDoS protection on the free tier. Before a public launch, put Cloudflare (free) in front of `play.deadbaron.com` (WebSockets are supported) or move to a VPS that includes it.
 - Moving servers: copy `~/cla-data/` (profiles + `secret.key`, which keeps everyone's guest tokens valid) to the new machine, run the same setup script, and point the `play` DNS record at it.
+
+## Backups
+
+Every night at about 03:30 server time `cla-backup.timer` runs `deploy/backup.sh`: one `tar.gz` of the data dir
+(`CLA_DATA_DIR`, `/home/ubuntu/cla-data` on the server) into `~/cla-backups/cla-YYYY-MM-DD.tar.gz`, owner-readable only
+(`chmod 600`, the folder `700`), the newest 14 kept. A night the server was off runs at the next boot.
+
+- **In it:** `profiles.json` (every player's progress and the accounts), `secret.key` (keeps every login token valid -
+  guard it like a password), `admin-log.jsonl`, `news.json`, `analytics.json`, `traffic.json`, `reports/reports.json`
+  (the bug reports), and anything else the server keeps there.
+- **Left out:** what the server rebuilds by itself - `art/` (the baked chunks), `artlow/`, `world/` (the region files) -
+  and the bug reports' screenshots (`reports/img/`, up to 200 MB; `CLA_BACKUP_SHOTS=1` in `deploy/cla-backup.service`
+  takes them too).
+- **Installed by** `deploy/setup-oracle.sh`; on a server set up before it, `deploy/auto-update.sh` installs and starts the
+  timer by itself on its first run after the pull that brings it (and drops the old profiles-only cron line). If the
+  log (`journalctl -u cla-update`) says it couldn't, run `bash ~/city-life-auto/deploy/setup-oracle.sh` once.
+- **Off the server too:** the backups live on the same disk. Now and then copy the newest one off it:
+  `scp -i key.pem ubuntu@<public-ip>:cla-backups/cla-<date>.tar.gz .`
+
+**Restoring** (the whole data dir as it was that night - everything since is lost):
+```bash
+sudo systemctl stop city-life-auto                 # (it saves on the way down; the restore replaces that)
+mv ~/cla-data ~/cla-data-before-restore            # keep what was there, in case
+mkdir ~/cla-data && chmod 700 ~/cla-data
+tar -xzf ~/cla-backups/cla-2026-11-15.tar.gz -C ~/cla-data
+sudo systemctl start city-life-auto                # it rebakes the art and recuts the region files as it needs
+curl -s http://127.0.0.1:8080/stats                # profiles: the count you expect
+```
+To look inside without restoring: `tar -tzvf ~/cla-backups/cla-<date>.tar.gz`; one file only (e.g. the profiles):
+`tar -xzf ~/cla-backups/cla-<date>.tar.gz -C /tmp ./profiles.json`. Delete `~/cla-data-before-restore` once all is well.
+Older backups from before 11-15 are `profiles-YYYY-MM-DD.json` (the profiles alone): stop the server, copy one over
+`~/cla-data/profiles.json`, start it.
 
 ## Releasing a client update
 
