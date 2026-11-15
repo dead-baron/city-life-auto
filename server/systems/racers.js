@@ -23,7 +23,7 @@ import { diveFrom, spawnNpc } from './npc.js';
 const ROADISH = (t) => t === T.ROAD || t === T.BRIDGE || t === T.LOT;
 // a wide street at ground level (two lanes or more each way, or a boulevard) - not an alley, a ramp, a tunnel, a deck
 // (World v3's kinds: 'ave', 'blvd', 'art' and the wider streets; never 'alley', 'dirt' or a 'ramp' / deck - lvl)
-const POOR = new Set(['alley', 'dirt', 'rural', 'ramp']);
+const POOR = new Set(['alley', 'dirt', 'rural', 'ramp', 'drive']);
 export const wideEdge = (e) => !!e && !e.lvl && !e.tunnel && !POOR.has(e.kind) && (e.w || 0) >= RACERS.wideW;
 const groundEdge = (e) => !!e && !e.lvl && !e.tunnel;
 
@@ -32,16 +32,20 @@ const groundEdge = (e) => !!e && !e.lvl && !e.tunnel;
 // waypoints along the outer lane's line, the turns through the junctions, ending at (tx, ty). null: no way by road.
 function heapPush(h, item) { h.push(item); let i = h.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } }
 function heapPop(h) { const top = h[0], last = h.pop(); if (h.length) { h[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < h.length && h[l][0] < h[m][0]) m = l; if (r < h.length && h[r][0] < h[m][0]) m = r; if (m === i) break; [h[m], h[i]] = [h[i], h[m]]; i = m; } } return top; }
-export function wideRoute(world, fx, fy, tx, ty) {
+export function wideRoute(world, fx, fy, tx, ty, heading = null) {
   const net = world.map.net;
   if (!net) return null;
-  const s0 = nearestEdge(net, fx, fy, groundEdge), g0 = nearestEdge(net, tx, ty, groundEdge);
+  const okEdge = (e) => groundEdge(e) && !POOR.has(e.kind);
+  const s0 = nearestEdge(net, fx, fy, okEdge) || nearestEdge(net, fx, fy, groundEdge), g0 = nearestEdge(net, tx, ty, okEdge) || nearestEdge(net, tx, ty, groundEdge);
   if (!s0 || !g0) return null;
-  // (from the end of the start's edge it faces - the way to the goal - and to whichever end of the goal's edge is nearer)
-  const e0 = s0.e, starts = [e0.a, e0.b], goal = new Set([g0.e.a, g0.e.b]);
-  const cost = (e) => e.len * (wideEdge(e) ? 1 : groundEdge(e) && !POOR.has(e.kind) ? RACERS.narrowK : 40);
+  // (on from the end of the start's edge it's facing - heading, or else the way to the goal: never round the block behind
+  // it - and to whichever end of the goal's edge comes first)
+  const e0 = s0.e, hx = heading !== null ? Math.cos(heading) : tx - fx, hy = heading !== null ? Math.sin(heading) : ty - fy;
+  const ahead = (n) => (net.nodes[n].x - fx) * hx + (net.nodes[n].y - fy) * hy;
+  const starts = ahead(e0.a) >= ahead(e0.b) ? [e0.a] : [e0.b], goal = new Set([g0.e.a, g0.e.b]);
+  const cost = (e) => e.len * (wideEdge(e) ? 1 : okEdge(e) ? RACERS.narrowK : 40);
   const dist = new Map(), prev = new Map(), h = [];
-  for (const n of starts) { const d = Math.hypot(net.nodes[n].x - fx, net.nodes[n].y - fy) + Math.max(0, -((net.nodes[n].x - fx) * (tx - fx) + (net.nodes[n].y - fy) * (ty - fy)) / Math.max(1, Math.hypot(tx - fx, ty - fy))) * 4; dist.set(n, d); prev.set(n, null); heapPush(h, [d, n]); }
+  for (const n of starts) { const d = Math.hypot(net.nodes[n].x - fx, net.nodes[n].y - fy); dist.set(n, d); prev.set(n, null); heapPush(h, [d, n]); }
   let end = -1;
   while (h.length) {
     const [d, n] = heapPop(h);
@@ -55,18 +59,67 @@ export function wideRoute(world, fx, fy, tx, ty) {
   if (end < 0) return null;
   const chain = [];
   for (let cur = end; prev.get(cur); cur = prev.get(cur).id) chain.unshift({ from: prev.get(cur).id, e: prev.get(cur).e });
+  return chainPts(net, chain, fx, fy, tx, ty);
+}
+// Straight on along the road it's on, through every junction, as far as `len` (or the road's end): at each junction the way
+// on nearest straight ahead (within ~35 degrees; a wide street first) - a boulevard run, the race's
+export function straightOn(world, fx, fy, heading, len) {
+  const net = world.map.net;
+  if (!net) return null;
+  const okEdge = (e) => groundEdge(e) && !POOR.has(e.kind);
+  const s0 = nearestEdge(net, fx, fy, okEdge);
+  if (!s0) return null;
+  let hx = Math.cos(heading), hy = Math.sin(heading);
+  const e0 = s0.e, ahead = (n) => (net.nodes[n].x - fx) * hx + (net.nodes[n].y - fy) * hy;
+  let cur = ahead(e0.a) >= ahead(e0.b) ? e0.a : e0.b, from = cur === e0.a ? e0.b : e0.a, got = 0;
+  const chain = [{ from, e: e0.id }];
+  let turns = 1;
+  got += e0.len;
+  const seen = new Set([e0.id]);
+  while (got < len && chain.length < 60) {
+    const n = net.nodes[cur];
+    let best = null;
+    for (const [eid, nid] of Object.entries(n.links)) {
+      const e = net.edges[+eid];
+      if (seen.has(e.id) || !okEdge(e)) continue;
+      const m = net.nodes[nid], dx = m.x - n.x, dy = m.y - n.y, L = Math.hypot(dx, dy) || 1, dot = (dx * hx + dy * hy) / L;
+      const sc = dot + (wideEdge(e) ? 0.05 : 0);
+      if (dot > (turns > 0 ? 0.82 : -0.1) && (!best || sc > best.sc)) best = { sc, e, nid, ux: dx / L, uy: dy / L };
+    }
+    if (!best) break;
+    if (best.sc - (wideEdge(best.e) ? 0.05 : 0) <= 0.82) turns--;   // (the road ends ahead: a turn, the way on most nearly ahead - once)
+    chain.push({ from: cur, e: best.e.id }); seen.add(best.e.id);
+    got += best.e.len; cur = best.nid; hx = best.ux; hy = best.uy;
+  }
+  const last = net.nodes[cur];
+  return chainPts(net, chain, fx, fy, last.x + hx * 40, last.y + hy * 40);
+}
+// the way to race: straight on when that gets there (to within 900 px), else the wide streets' way (wideRoute) - unless
+// that's a long way round (over twice as far as the crow flies): then straight on all the same
+export function raceRoute(world, v, to) {
+  const d = Math.hypot(to.x - v.x, to.y - v.y);
+  const st = straightOn(world, v.x, v.y, v.a, d + 300);
+  if (st) { const e = st[st.length - 1]; if (Math.hypot(e.x - to.x, e.y - to.y) < 900) return st; }
+  const w = wideRoute(world, v.x, v.y, to.x, to.y, v.a);
+  if (w && (!st || w[w.length - 1].s < d * 2 + 1000)) return w;
+  return st || w;
+}
+function chainPts(net, chain, fx, fy, tx, ty) {
   const pts = [{ x: fx, y: fy }];
   let last = null;
-  for (const step of chain) {
+  chain.forEach((step, k) => {
     const e = net.edges[step.e], lp = lanePath(net, e, step.from, 0);
     if (last) for (const p of turnPath(last.p, last.d, lp[0], dirAt(lp, 0), 4)) pts.push({ x: p.x, y: p.y });
-    for (let s = 0; s < lp[lp.length - 1].s; s += 96) { const q = pointAt(lp, s); pts.push({ x: q.x, y: q.y }); }
+    // (the first: from level with where it starts, never back along the road behind it)
+    const s0 = k === 0 ? Math.min(lp[lp.length - 1].s, ((project(lp, { x: fx, y: fy }) || { s: 0 }).s) + 60) : 0;
+    for (let s = s0; s < lp[lp.length - 1].s; s += 96) { const q = pointAt(lp, s); pts.push({ x: q.x, y: q.y }); }
     const q = lp[lp.length - 1];
     pts.push({ x: q.x, y: q.y });
     last = { p: q, d: dirAt(lp, lp[lp.length - 1].s) };
-  }
+  });
   pts.push({ x: tx, y: ty });
   measure(pts);
+  pts.edges = chain.map((c) => c.e);   // (the streets it takes, in order)
   return pts;
 }
 const dirAt = (lp, s) => { const q = pointAt(lp, Math.max(0, Math.min(lp[lp.length - 1].s, s))); return { x: q.tx, y: q.ty }; };
@@ -76,7 +129,22 @@ const dirAt = (lp, s) => { const q = pointAt(lp, Math.max(0, Math.min(lp[lp.leng
 // top (its pace, px/s), stuck (s), done
 export function racer(world, v, route, { skill = 1, goal = null } = {}) {
   const pr = project(route, v);
-  return { route, s: pr ? pr.s : 0, off: pr ? sideOf(route, pr.s, v) : 0, top: v.def.max * RACERS.pace * skill, skill, stuck: 0, backUntil: 0, side: 0, done: false, goal: goal || route[route.length - 1], replans: 0, near: new Set() };
+  return { route, s: pr ? pr.s : 0, off: pr ? sideOf(route, pr.s, v) : 0, top: v.def.max * RACERS.pace * skill, skill, stuck: 0, backUntil: 0, side: 0, done: false, goal: goal || route[route.length - 1], replans: 0, near: new Set(), extended: 0, noMore: false };
+}
+// its way on from the end of its route, straight ahead (a turn where the road ends): appended, measured on
+function extend(world, R) {
+  const r = R.route, a = r[r.length - 2] || r[0], b = r[r.length - 1];
+  const h = Math.atan2(b.y - a.y, b.x - a.x);
+  let more = straightOn(world, b.x, b.y, h, 2400);
+  // (the road ends ahead: the wide streets' way to somewhere on past it)
+  if (!more || more[more.length - 1].s < 600) { const w = wideRoute(world, b.x, b.y, b.x + Math.cos(h) * 3000, b.y + Math.sin(h) * 3000, h); if (w && w[w.length - 1].s > 600 && w[w.length - 1].s < 9000) more = w; }
+  R.extended++;
+  if (!more || more[more.length - 1].s < 300) { R.noMore = true; return; }
+  const out = r.map((p) => ({ x: p.x, y: p.y }));
+  for (const p of more.slice(1)) out.push({ x: p.x, y: p.y });
+  measure(out);
+  out.edges = [...(r.edges || []), ...(more.edges || [])];
+  R.route = out;
 }
 const sideOf = (route, s, v) => { const q = pointAt(route, s); return -(v.x - q.x) * q.ty + (v.y - q.y) * q.tx; };
 // the obstacles: everyone and everything on the road near the racer (not itself; on its level)
@@ -120,15 +188,19 @@ export function raceStep(world, v, R) {
   const win = []; let i0 = 0;
   while (i0 < route.length - 1 && route[i0 + 1].s < R.s - 200) i0++;
   for (let i = i0; i < route.length && route[i].s < R.s + 700; i++) win.push(route[i]);
-  if (win.length >= 2) { const pr = project(win, v); if (pr && pr.s >= R.s - 50) R.s = Math.max(R.s, pr.s); }
-  if (Ls - R.s < 140) { R.done = true; return; }
+  if (win.length >= 2) { const pr = project(win, v); if (pr && pr.s >= R.s - 50) R.s = Math.max(R.s, Math.min(pr.s, R.s + fwd * DT * 1.6 + 24)); }   // (never on by more than it's driven: a way that doubles back near itself)
+  // nearing the end of its way: on straight ahead from there (the race runs on to the shot's end - never into the end of
+  // a road at speed); no way on, it brakes to a stop at the end
+  if (Ls - R.s < 900 && !R.noMore && R.extended < 6) extend(world, R);
+  if (R.route !== route) return raceStep(world, v, R);   // (its way longer now: on with it)
+  if (Ls - R.s < 140) { R.done = true; driveToward(world, v, v.x + Math.cos(v.a) * 120, v.y + Math.sin(v.a) * 120, 0, { ignoreCrossings: true }); return; }
   // backing off something it's wedged against
   if (R.backUntil > now) { v.ai.ctl = null; v.input = { throttle: -0.9, steer: R.side ? -R.side : 0.6, hb: false }; return; }
   const look = Math.min(RACERS.lookMax, RACERS.look + fwd * 0.42);   // (a long look: the corners cut, the gaps seen early)
   const obs = around(world, v, look + 160);
   // its line across the road: kept while clear, else the clearest - one to the side swung out to early
   const lanes = [];
-  for (let o = -RACERS.width; o <= RACERS.width; o += RACERS.step) lanes.push(o);
+  for (let o = -RACERS.width; o <= RACERS.widthR; o += RACERS.step) lanes.push(o);   // (its route is the kerb lane's line: across the road is to its left - the oncoming lanes too)
   let best = null;
   for (const o of lanes) {
     const r = roomOn(world, v, R, o, look, obs, fwd);
@@ -145,9 +217,11 @@ export function raceStep(world, v, R) {
   const far = pointAt(route, Math.min(Ls, R.s + look + 220)), bend = Math.abs(Math.atan2(Math.sin(Math.atan2(far.y - v.y, far.x - v.x) - v.a), Math.cos(Math.atan2(far.y - v.y, far.x - v.x) - v.a)));
   if (bend > 0.45) speed = Math.min(speed, Math.max(RACERS.cornerMin, R.top * (1.25 - bend * 0.55)));
   const stopD = (fwd * fwd) / (2 * RACERS.brake) + 20;
+  speed = Math.min(speed, Math.sqrt(2 * RACERS.brake * Math.max(0, Ls - R.s - 80)));   // (its way's end: stopped by it)
   if (best.free < stopD) speed = Math.min(speed, Math.max(0, best.free * 2.2));
   driveToward(world, v, tx, ty, speed, { ignoreObstacles: true, ignoreCrossings: true });
   v.dirDrive = world.tick;
+  R.dbg = { free: Math.round(best.free), o: best.o, speed: Math.round(speed), bend: +bend.toFixed(2), wall: v.ai.ctl ? Math.round(v.ai.ctl.speed) : -1, rev: v.ai.reverseUntil > now, esc: !!v.ai.wallEsc };
   // anyone on foot about to be hit: the dive; a car it shaves past: a brake and a honk
   for (const e of obs) {
     const ex = e.x - v.x, ey = e.y - v.y, c = Math.cos(v.a), s = Math.sin(v.a), lx = ex * c + ey * s, ly = -ex * s + ey * c;
@@ -164,7 +238,7 @@ export function raceStep(world, v, R) {
   if (speed > 120 && fwd < 40) R.stuck += DT; else R.stuck = Math.max(0, R.stuck - DT * 2);
   if (R.stuck > RACERS.stuckS) {
     R.stuck = 0; R.backUntil = now + 0.8; R.side = R.off >= 0 ? -1 : 1; R.replans++;
-    if (R.replans % 3 === 0) { const r = wideRoute(world, v.x, v.y, R.goal.x, R.goal.y); if (r) { R.route = r; R.s = 0; R.off = 0; } }
+    if (R.replans % 3 === 0) { const r = raceRoute(world, v, R.goal); if (r) { R.route = r; R.s = 0; R.off = 0; } }
   }
 }
 
@@ -175,11 +249,11 @@ export function trafficAlong(world, route, n, from = 300) {
   const net = world.map.net, out = [];
   if (!net || !route || !n) return out;
   const Ls = route[route.length - 1].s, span = Math.max(200, (Ls - from) / n);
-  const MODELS = ['sedan', 'compact', 'pickup', 'van', 'taxi', 'sedan', 'suv'];
+  const MODELS = ['sedan', 'compact', 'pickup', 'van', 'taxi', 'sedan', 'boxtruck'];
   for (let k = 0; k < n; k++) {
     const s = from + span * (k + 0.5), q = pointAt(route, Math.min(Ls - 60, s));
     const ne = nearestEdge(net, q.x, q.y, groundEdge);
-    if (!ne || ne.d > 80) continue;
+    if (!ne || ne.d > 170) continue;
     const e = ne.e, fwdWay = k % 3 !== 1, from0 = fwdWay ? e.a : e.b;   // (most the racers' way, some coming toward them)
     const lane = Math.min(e.nl - 1, k % 2), lp = lanePath(net, e, from0, lane), pr = project(lp, q);
     if (!pr || pr.s < 20 || pr.s > lp[lp.length - 1].s - 40) continue;

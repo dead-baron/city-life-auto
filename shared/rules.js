@@ -1470,10 +1470,10 @@ export const DIRECTOR = {
 // in and out of traffic and pedestrians should be jumping out of the way"). px and px/s.
 export const RACERS = {
   wideW: 224,          // a street this wide or wider (its corridor, kerb to kerb and the pavements: World v3's avenues, boulevards, arterials) is a wide one: the race's and the chase's way
-  narrowK: 6,          // a narrower street costs this many times its length on the way (an alley is a last resort)
+  narrowK: 2.5,        // a narrower street costs this many times its length on the way (an alley, a driveway, a dirt track: a last resort)
   pace: 0.9,           // of the car's top speed, times its driver's skill (0.9 - 1.08 across the grid)
   look: 150, lookMax: 380,   // how far down the road it steers for (and more the faster it goes: the corners cut)
-  width: 112, step: 16,      // the lines it may take across the road (either side of its route's) and their spacing
+  width: 240, widthR: 64, step: 16,   // the lines it may take across the road (left of its route's - the kerb lane's - over the oncoming lanes, and right to the kerb) and their spacing
   stick: 0.55,         // how much it keeps to the line it's on (per px across)
   swing: 260,          // px/s it moves across to a new line
   margin: 9,           // px it leaves past what it passes

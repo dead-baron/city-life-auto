@@ -629,7 +629,7 @@ function begin(world, run, B) {
       const to = pointOf(b.to, ctxOf(world, run));
       const vs = [b.who, ...(b.units || [])].map((cid) => [cid, vehOf(world, run, cid)]).filter(([, v]) => v && !v.wreckAt && !v.dead);
       if (!to || !vs.length) return true;
-      const lead = vs[0][1], route = racers.wideRoute(world, lead.x, lead.y, to.x, to.y);
+      const lead = vs[0][1], route = racers.raceRoute(world, lead, to);
       if (!route) return true;
       // the traffic it weaves through (b.traffic cars along the way, both directions): the city's own from then - the scene's to
       // put away at its end
@@ -638,7 +638,7 @@ function begin(world, run, B) {
       vs.forEach(([cid, v], k) => {
         const A = run.cast.get(cid);
         if (!A) return;
-        const own = racers.wideRoute(world, v.x, v.y, to.x, to.y) || route;   // (each from where it is: side by side on the grid)
+        const own = racers.raceRoute(world, v, to) || route;   // (each from where it is: side by side on the grid)
         v.ai = { kind: 'actor' }; v.parked = false; v.dirHold = true;
         // each its own pace: the grid's back row the quicker (overtakes), within a few per cent (a strung-out pack)
         const skill = b.skill ? b.skill[k % b.skill.length] : 1 + ((k * 37 + run.seq * 11) % 9 - 4) * 0.012 + (k >= vs.length / 2 ? 0.05 : 0);
