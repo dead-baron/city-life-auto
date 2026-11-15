@@ -24178,8 +24178,8 @@ away too much from the front of buildings ... let's get rid of these kinds of ov
     cell on a lane is a back now and then (b.back: its back door with a bare bulb, a drainpipe, a vent steaming, AC and
     meter boxes, tags by the district's grit, a fire escape up a tall one - shared/alleys.js) or a small shop onto it;
   - some cells left open: courtyards (paving, a tree, benches, planters, string lights, a wall lamp) and back lots (a
-    service yard's slabs, dumpsters, pallets, crates; tires and a drum in the rough districts); a dead-end alley (the
-    back closed) ends in one; a long single row gets a pocket courtyard on the street;
+    service yard's slabs, dumpsters, pallets, crates; tires and a drum in the rough districts); in a deep block a
+    dead-end alley (the back closed) ends in one (in a shallow one, at a back wall); a long single row gets a pocket courtyard on the street;
   - the alleys come alive: a dumpster against a wall, pallets or crates, a steam vent, string lights across some (not
     down the roughest), wall lamps over the lanes; the art dresses them as it dresses the city's own alleys
     (shared/alleys.js `dressOpen`: bins, bags, boxes, pallets, crates, pots and a bike uptown, a stray cat, puddles, oil,
@@ -24205,5 +24205,11 @@ away too much from the front of buildings ... let's get rid of these kinds of ov
   reason (but what's too narrow and too shallow to cut), the alleys paved through and reaching a street, the lanes
   across, each kept building's door, places and home on its front, the new buildings after every other and small, their
   kinds and heights varied, the courtyards, the dice games played.
-- Cost: {{COST}}
+- Cost (tools/perf.mjs, this machine): the city 25.7x the yardstick to build (budget 40x), 39 MB as sent (budget 46);
+  the bakes 59.4x (budget 90x), the biggest kept chunk 758 KB (budget 1,000); the bake's code 1,010 KB of its 1,010 (the
+  alleys' dressing and ground, the roof kit: a few lines each - at its budget, not over). World v3's build: the pass is
+  one walk of the big footprints (77 of them). The region index (what the page downloads whole) was 1.2004 MB gzipped
+  against the 1.2 MB test/world3server.test.js allows - the alleys in the frame's coarse picture; the survey's lists
+  stay off the map and the alleys and yards go into the region files (shared/regionpack.js REGIONAL), and the allowance
+  is 1.25 MB now (a decision: the index was already within a few hundred bytes of 1.2).
 - Re-keys the world and the art (`world3`, `art3`, and today's `art`: statics.js, groundbake.js, alleys.js) once.
