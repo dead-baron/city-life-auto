@@ -23960,3 +23960,18 @@ The owner (18:56, 18:59), three things:
 The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner looking one in general". assets/ui/s-shield.png
 is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
 right a pale steel, the ink outline round it - no blue hollow and stripe.
+
+## 2026-11-14 - The logo's windows placed by hand; the phone's skyline back to its scale
+- **The logo's lit windows** (the owner, 19:30: "not centered and consistent ... polish that with more intention"):
+  placed by hand now, not computed - tools/neon_logo.py SKY_WINDOWS lists each building of the skyline with its walls
+  (art px) and the inner span its windows centre in (two px in from the walls it shows: the tube's inner px, then a px
+  of dark), and its block: the tall middle tower a 2 x 2, every other building two side by side, all 2 x 2 art px and
+  three px apart, each block centred exactly (sky_grid refuses one that can't be, and a building whose walls moved),
+  its top row four px under its own roof line (the eaves for the gabled ones). The right house's span stops where
+  "Life" covers it. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
+- **The title's city on a phone upright** (the owner: the menu polish's raise "scaled the buildings up ... it was cool
+  to see it so far away as a big city skyline"): back to its 2 px an art px (144 px tall) and only lifted - its foot
+  120 px over the screen's (was 288 px tall, 150 px up); client/titlelife.js reads the scale from the CSS, so its
+  windows, cars, aircraft, stars and clouds follow. test/menupolish.test.js.
+- Screenshots (a 6x close-up of the windows with each building's margins measured, the title upright): the session's
+  scratchpad `logo2/owner/windows3/`.

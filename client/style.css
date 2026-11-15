@@ -1391,9 +1391,10 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-gfxseg button.on i { display: none; }
   #t-tools button { padding: 0 var(--s3); }
   /* (upright, UIC-08: PLAY and the pair the width of the screen, your card then who's online along the foot) */
-  /* (the city risen behind the lower menu - the owner, 11-14: "raise them higher up ... for mobile portrait": at 4 px a
-     pixel, its foot --sky-up over the screen's, the near towers' colour carried down under it behind your card) */
-  #title { --sky-up: 150px; padding-bottom: calc(148px + env(safe-area-inset-bottom)); background: var(--sky, none) repeat-x 50% calc(100% - var(--sky-up)) / auto 288px, linear-gradient(var(--sky-base), var(--sky-base)) 0 100% / 100% calc(var(--sky-up) + 1px) no-repeat, radial-gradient(ellipse min(46vw, 560px) min(30vh, 300px) at var(--halo-at), var(--halo-a), var(--halo-b) 55%, transparent 75%), linear-gradient(180deg, var(--night-0) 0%, var(--ink) 28%, var(--navy) 58%, var(--night-a) 86%, var(--night-b) 100%); }
+  /* (the city risen behind the lower menu - the owner, 11-14: "raise them higher up ... for mobile portrait" - at the
+     scale it had, 2 px a pixel: "it was cool to see it so far away as a big city skyline"; its foot --sky-up over the
+     screen's, the near towers' colour carried down under it behind your card) */
+  #title { --sky-up: 120px; padding-bottom: calc(148px + env(safe-area-inset-bottom)); background: var(--sky, none) repeat-x 50% calc(100% - var(--sky-up)) / auto 144px, linear-gradient(var(--sky-base), var(--sky-base)) 0 100% / 100% calc(var(--sky-up) + 1px) no-repeat, radial-gradient(ellipse min(46vw, 560px) min(30vh, 300px) at var(--halo-at), var(--halo-a), var(--halo-b) 55%, transparent 75%), linear-gradient(180deg, var(--night-0) 0%, var(--ink) 28%, var(--navy) 58%, var(--night-a) 86%, var(--night-b) 100%); }
   #title { --halo-at: 50% 18%; }
   #logo { width: min(320px, 86vw, 46vh); }   /* (by its height too: a short phone keeps room for the menu) */
   #play, #t-buttons, #t-row2, #t-load { width: 100%; min-width: 0; }
