@@ -55,7 +55,8 @@ test('the Camera: its way out over the clean screen, and on touch a shutter', ()
   assert.match(D, /z-index: 72/, 'over the panel and the clean screen');
   assert.match(D, /mk\('cine-shut', 'Take a picture', \(\) => shot\(\)\)/);
   // the photo mode is everyone's; what runs the debug menu's commands or moves you is debug mode's
-  assert.match(D, /if \(\(m === 'tour' \|\| m === 'scene'\) && !dev\(\)\) m = 'follow';/, 'the tour and the follow scenes: debug mode');
+  assert.match(D, /if \(m === 'scene' && !dev\(\)\) m = 'follow';/, 'the follow scenes (their tour among them): debug mode');   // (the tour a follow kind since the shot-list rework, 11-14)
+  assert.match(D, /if \(!dev\(\)\) \{ api\.toast\('The shot list runs the debug menu/, 'and the shot list');
   assert.match(D, /if \(!dev\(\)\) return;   \/\/ \(the rest - the Showcase, the staged scenes - debug mode's/);
   assert.match(D, /if \(!\(S\.dev \|\| S\.devMode\)\) \{ api\.toast\('The staged scenes use the debug menu/, 'and the scenes refuse without it');
   assert.match(read('client/phone.js'), /\['camera', 'Camera'\]/, 'the phone calls it Camera');
