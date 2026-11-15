@@ -222,7 +222,6 @@ export function raceStep(world, v, R) {
   if (best.free < stopD) speed = Math.min(speed, Math.max(0, best.free * 2.2));
   driveToward(world, v, tx, ty, speed, { ignoreObstacles: true, ignoreCrossings: true });
   v.dirDrive = world.tick;
-  R.dbg = { free: Math.round(best.free), o: best.o, speed: Math.round(speed), bend: +bend.toFixed(2), wall: v.ai.ctl ? Math.round(v.ai.ctl.speed) : -1, rev: v.ai.reverseUntil > now, esc: !!v.ai.wallEsc };
   // anyone on foot about to be hit: the dive; a car it shaves past: a brake and a honk
   for (const e of obs) {
     const ex = e.x - v.x, ey = e.y - v.y, c = Math.cos(v.a), s = Math.sin(v.a), lx = ex * c + ey * s, ly = -ex * s + ey * c;

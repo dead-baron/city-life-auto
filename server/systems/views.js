@@ -16,12 +16,13 @@ const num = (v, lo, hi, d) => { const x = +v; return Number.isFinite(x) ? Math.m
 export const all = () => (Array.isArray(store.kept.views) ? store.kept.views : (store.kept.views = []));
 export const get = (id) => all().find((v) => v.id === String(id)) || null;
 export const mayEdit = (world, p) => !!(world.dev || devmode.mayStaff(p));
-// a view as it's kept: cleaned up, its numbers in range (x, y: px; z: the camera's zoom; t: minutes after midnight)
+// a view as it's kept: cleaned up, its numbers in range (x, y: px; z: the camera's zoom; t: minutes after midnight - m in
+// the message)
 export function make(msg, by = '', n0 = 0) {
   return {
     id: `v${Date.now().toString(36)}${(n0 % 1296).toString(36)}`, n: clean(msg.n, 48) || `View ${n0 + 1}`, note: clean(msg.note, 160),
     x: Math.round(num(msg.x, -1e6, 1e6, 0)), y: Math.round(num(msg.y, -1e6, 1e6, 0)), z: +num(msg.z, 0.3, 3, 1).toFixed(3),
-    t: Math.round(num(msg.t, 0, 1439, 720)), w: WX.includes(msg.w) ? msg.w : 'clear', at: Date.now(), by: clean(by, 32),
+    t: Math.round(num(msg.m, 0, 1439, 720)), w: WX.includes(msg.w) ? msg.w : 'clear', at: Date.now(), by: clean(by, 32),   // (msg.m: its minutes - the message's t is its kind)
   };
 }
 function send(world, p, extra = null) { if (p.conn) p.conn.sendJSON({ t: 'views', list: all(), can: mayEdit(world, p), ...extra }); }

@@ -573,7 +573,9 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     return { x: Math.round(S.cam.x), y: Math.round(S.cam.y), z: +z.toFixed(3), t: Math.round(gameClock(D.lt !== null ? D.lt : S.loopTime || 0).minutes) % 1440, w };
   }
   D.curView = curView;
-  function saveView() { api.send({ t: 'dev', c: 'views', k: 'save', n: views.draft.n, note: views.draft.note, ...curView() }); }
+  // (its time of day goes as m: t is the message's own kind - spread in as t, it had made the save no message at all)
+  function saveView() { const v = curView(); api.send({ t: 'dev', c: 'views', k: 'save', n: views.draft.n, note: views.draft.note, x: v.x, y: v.y, z: v.z, m: v.t, w: v.w }); }
+  D.saveView = saveView;
   // go to one: the free camera there, at its zoom, its time and weather on this screen
   function goView(v) {
     stopReel(false);

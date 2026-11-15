@@ -244,6 +244,10 @@ test('saved views: where the camera is, the time and the weather saved to the se
   const v = D.curView();
   assert.equal(v.t, SCENES.shotboardwalk.time, 'the shot\'s time');
   assert.ok(Math.abs(v.x - S.cam.x) <= 1 && Math.abs(v.y - S.cam.y) <= 1);
+  D.saveView();
+  const sm = sent.at(-1);
+  assert.equal(sm.t, 'dev', 'a debug command (its time of day is m, never the message\'s t)');
+  assert.deepEqual([sm.c, sm.k, sm.m, sm.w], ['views', 'save', SCENES.shotboardwalk.time, 'clear']);
   D.stop(true);
   const saved = { id: 'vabc', n: 'Pier at golden hour', note: 'push in on the wheel', x: 4100, y: 2600, z: 1.2, t: 1110, w: 'rain' };
   D.views({ t: 'views', list: [saved], can: true });

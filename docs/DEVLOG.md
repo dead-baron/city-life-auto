@@ -24095,5 +24095,6 @@ Tests: test/directorcam.test.js (a shot's own time every frame - held, after 'go
 next shot, a time-lapse running on; roofs kept on in a shot, lifted in the interior one; saved views: what's saved, go to,
 play), test/racers.test.js (new: the race through a junction red for them, with traffic - every racer through at speed,
 none stopped, overtakes, lines changed, someone diving clear, a honk; the chase's getaway on wide streets only and never
-stopped or wrecked; the way straight on, never back round the block), test/scenes.test.js, test/world3scenes.test.js (the
+stopped or wrecked; the way straight on, never back round the block), test/views.test.js (new: saved, cleaned, renamed,
+deleted, at most DIRECTOR.views, only the owner's and admins'; played as a shot at its time and weather), test/scenes.test.js, test/world3scenes.test.js (the
 kept shots' sanity check on World v3).
