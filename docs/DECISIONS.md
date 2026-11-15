@@ -243,6 +243,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No skipping a taxi or rideshare ride. (10-06; DESIGN-NOTES.md)
 - Traffic: pedestrian hits stay rare (about once per 110 h of driving); cars on minor roads wait at the line; a working ambulance is a blocker cars go around. (11-04; decisions-11-04)
 - No traffic jam at arrival: NPC traffic never drives into station forecourt loops. (11-06; decisions-11-06)
+- No blocking the box: NPC traffic goes into a junction only when nothing in it crosses its way and its road out has room for it; whoever waited first goes first; a long vehicle turning has the box to itself; a knot in a box is untied on screen (one goes, the ones in its way back off) - no more "go anyway" after a wait. (11-14; DEVLOG 11-14)
 
 ## Economy, jobs and progression
 - The progression plan approved as written, every default included: 3 careers x 8 ranks, "What's next", daily/weekly goals, contacts, extraction payouts, the event calendar, district reputation, sinks, seasons. (11-07; PROGRESSION.md)

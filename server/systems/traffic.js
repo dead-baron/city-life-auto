@@ -31,6 +31,7 @@ import { parkWhy } from '../../shared/parkcheck.js';   // (never on a pavement, 
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 import { dressWild, riderLook } from './wildfolk.js';   // (the country riders' looks: the people of the wilds)
 import { missPed, lateFor, noteBraking, held as slipHeld } from './slips.js';   // (fallible drivers, rarely: the owner's notes, 11-03)
+import { boxed, boxFree, enterBox, occupants, untie, givingWay, pathClear, PATH_WAIT_S, LONG_L } from './junctionbox.js';   // (who's in a junction's box, who goes next, knots: the owner, 11-14)
 
 const rng = mulberry32(4242);
 // a flatbed out of the yards, the docks, off the highway or on the country roads (to the quarry, the mine) carries a
@@ -240,6 +241,7 @@ function crossJunction(world, v) {
   // at a road's end it turns round by a manoeuvre, into the lane back (roadends.js); anywhere else, a smooth path
   // through the junction onto its next road
   if (uturn) { startTurn(world, v, nx.edge, to, isRoadEnd(net, to) ? to : -1); return; }
+  enterBox(world, v, net.nodes[to], e.id, nx);   // (in the box now, on its way: junctionbox.js)
   const turn = turnPath(a[a.length - 1], endDir(a), b[0], startDir(b), Math.abs(nx.turn) > 0.5 ? 6 : 3);
   ai.pts.unshift(...turn.map((p) => ({ x: p.x, y: p.y })));
 }
@@ -328,7 +330,7 @@ function pedals(v, wx, wy, speed, reversing) {
   let throttle = err > 0 ? clamp(err / 90, 0, 1) : clamp(err / (fwd > 300 ? 70 : 90), -1, 0);
   let hb = false;
   if (speed < 6 && fwd < 40) { throttle = 0; hb = Math.abs(fwd) > 0.5; } // stopped: hold it on the brake, no creeping over the line
-  if (reversing) { throttle = -0.8; steer = -clamp(diff * 2.4, -1, 1); hb = false; }
+  if (reversing) { throttle = -0.8; steer = v.ai && v.ai.backStraight === v.ai.reverseUntil ? 0 : -clamp(diff * 2.4, -1, 1); hb = false; }   // (backing out of a knot's leader's way: straight back - junctionbox.js)
   v.input.throttle = throttle; v.input.steer = steer; v.input.hb = hb;
 }
 
@@ -650,6 +652,7 @@ const townDriver = (model) => (model === 'roadbike' ? 'athlete' : VEHICLES[model
 
 export function update(world, dt) {
   if (world.tick % 15 === 3) manage(world);
+  if (world.tick % 10 === 7) untie(world);   // (knots in the junctions' boxes: junctionbox.js)
   const loopT = world.loopTime;
   for (const v of world.entities.values()) {
     if (v.kind !== K.VEH || !v.ai || v.ai.kind !== 'traffic') continue;
@@ -747,6 +750,7 @@ function steerTraffic(world, v, t) {
     }
   }
   if (!panic && !reckless) { const bh = bendHold(world, v); if (bh < desired) { desired = bh; holding ||= bh < 20; } }
+  if (!panic && givingWay(world, v)) { desired = 0; holding = true; }   // (backed off out of a knot in a junction: the others by first - junctionbox.js)
   if (!panic && !reckless && (world.tick + v.id) % 4 === 0) ai.yieldUntil = sirenBehind(world, v) ? now + 1.5 : ai.yieldUntil;
   if (!panic && ai.yieldUntil && now < ai.yieldUntil) {
     // an emergency vehicle with its siren on is coming: ease over toward the curb and slow
@@ -793,7 +797,7 @@ function steerTraffic(world, v, t) {
   // gives the end up, turns round where it is and drives back out (roadends.js giveUpEnd)
   if (!panic && !reckless && giveUpEnd(world, v, holding)) { stepTurn(world, v); return; }
   // a ring of cars each stopped for the next: one of them backs up to make room (breakRing)
-  if (!panic && (world.tick + v.id) % 10 === 0) { breakRing(world, v); straighten(world, v); }
+  if (!panic && (world.tick + v.id) % 10 === 0) { breakRing(world, v); straighten(world, v); backToLane(world, v); }
   // stopped behind a backup: another lane, or another way (reroute.js)
   if (!panic && unjam(world, v, holding)) { if (!v.ai || !ai.pts || !ai.pts.length) return; }
   if (ai.sideUntil > now && !panic) {   // (edging back over into its lane past a car nose to nose with it: sidestep)
@@ -803,6 +807,7 @@ function steerTraffic(world, v, t) {
   }
   const la = lookAhead(v, ai.pts, clamp(46 + Math.max(0, vehForwardSpeed(v)) * 0.3, 50, 190), ai.lastWp);
   let ignore = ai.passUntil > now && ai.passBlk ? new Set([ai.passBlk]) : null;
+  if (ai.knotIgnoreUntil > now) { ignore = new Set(ai.knotIgnore); if (ai.passUntil > now && ai.passBlk) ignore.add(ai.passBlk); }   // (leading the way out of a knot: junctionbox.js)
   // held up by someone on foot in the road (nothing else in its way, not at a light or a junction): after PED_HONK_S a
   // honk, and someone at a loose end steps out of the road (npc.js shoo); after PED_CREEP_S it edges on at a crawl,
   // nudging past them - a crawl only shoves, never hurts (vehicles.js). The owner's notes, 10-22: "a lot of cars start
@@ -889,6 +894,23 @@ function straighten(world, v) {
   if (room < 12) return;
   ai.reverseUntil = now + Math.min(1.1, 0.3 + room / 90); ai.stuck = 0;
   world.straightened = (world.straightened || 0) + 1;
+}
+
+// Squeezed out of its lane (a scooter shoved over in a queue, a car round something) and stopped nose to nose with one
+// coming the other way in that lane - one queued there, stopped for something else, so it's no ring (breakRing): it
+// edges back over into its own lane past it (sidestep's crawl), rather than waiting for it for ever. (The four-way
+// harness, 11-14: a scooter on the wrong side of the line, nose to the front of the queue coming the other way.)
+const HEAD_ON_S = 2;
+function backToLane(world, v) {
+  const ai = v.ai, now = world.time, b = v._blk ? world.get(v._blk) : null;
+  if (!b || ai.turn || ai.sideUntil > now || ai.reverseUntil > now || Math.abs(vehForwardSpeed(v)) > 8 || b._blk === v.id || Math.abs(angleDiff(b.a, v.a)) < 2.4 || (v.lz || 0) > 0.3) { ai.headOnAt = undefined; return; }
+  const off = laneOff(world, v);
+  if (off < 12 || off > 120) { ai.headOnAt = undefined; return; }
+  ai.headOnAt ??= now;
+  if (now - ai.headOnAt < HEAD_ON_S) return;
+  ai.headOnAt = undefined; ai.stuck = 0;
+  ai.sideUntil = now + SIDE_S; ai.sideBlk = b.id;
+  world.backToLane = (world.backToLane || 0) + 1;
 }
 
 // Two cars nose to nose, one of them out of its lane and the other in its own (swung wide out of a bend, come round in a turn, shoved in a jam -
@@ -1001,47 +1023,60 @@ const STOP_LINE = 52;
 // how hard a driver brakes for a yellow without making a meal of it (px/s per s)
 const BRAKE_EASY = 480;
 // May a car waiting to go into junction n (on green, or where there are no lights) go now? Not while:
-// - the road it's taking is backed up just past the junction (it would stop in the box and lock the cross traffic);
-// - something is crossing the box on another heading (across its way: not the same way, nor straight the other way);
-// - it's turning left and traffic is coming the other way.
-// A car kept waiting goes anyway after a while (heavy traffic never shuts a turn out for good), and nothing keeps it
-// out of a road that's backed up for ever: after 20 s it creeps in regardless.
+// - the road it's taking is backed up just past the junction: there must be room there for the whole of it, and for each
+//   one in the box already bound that way (it would stop in the box and lock the cross traffic - "don't block the box").
+//   Kept waiting EXIT_SWAP_S for that, it takes another road out that has room (not a bus or a taxi on its way);
+// - anything in the box crosses its way, or someone who came up to their line first and is ready to go would
+//   (junctionbox.js: the box's order - a long vehicle turning waits for the box to clear, and keeps it while it turns);
+// - something else is crossing the box on another heading (a player's car, a police car: not in the box's books);
+// - it's turning left and traffic is coming the other way (heavy oncoming traffic never shuts a turn out for good: after
+//   LEFT_WAIT_S the ones coming wait at their line for it, by the box's order).
+// (It used to go anyway after 6 s whatever was crossing the box, and into a backed-up road after 20 s: the owner's
+// knotted four-way, 11-14.)
+const EXIT_SWAP_S = 8, LEFT_WAIT_S = 8;
 function junctionClear(world, v, n, stop) {
   const ai = v.ai, now = world.time;
-  if (n.lvl !== 0 || n.merge || n.edges.length < 3) return true;   // (the highway's own junctions, a bend, a dead end)
-  if (ai.waitNode !== n.id) { ai.waitNode = n.id; ai.waitAt = now; }
-  const waited = now - ai.waitAt, nx = ai.next;
+  if (!boxed(n)) return true;   // (the highway's own junctions, a bend, a dead end)
+  if (ai.waitNode !== n.id) { ai.waitNode = n.id; ai.waitAt = now; ai.exitWaitAt = undefined; }
+  const waited = now - ai.waitAt;
+  let nx = ai.next;
   // 1. room on the way out, on its side of the road
-  // (the whole of it must fit past the junction's mouth: from there to a car's length and a gap on, nothing standing in
-  // its lane - a probe a car's length on from the mouth missed a van stopped just past it, and the car drove in and
-  // stopped with its tail across the junction)
-  if (nx && waited < 20 && n.dirs[nx.edge] !== undefined) {
-    const out = n.dirs[nx.edge], ox = Math.cos(out), oy = Math.sin(out), t0 = n.trim[nx.edge] || 0, need = v.def.L + 30, mid = t0 + need / 2;
-    for (const e of world.query(n.x + ox * mid, n.y + oy * mid, need / 2 + 70, K.VEH)) {
-      if (e === v || !sameLevel(e.lz, v.lz) || Math.hypot(e.vx, e.vy) > 15 || (e.alt || 0) > FLY.HIGH) continue;   // (just pulling away is no queue; an aircraft overhead none either)
-      if (Math.abs(angleDiff(e.a, out)) > 0.8) continue;   // (the other way on that road, or across it)
-      const along = (e.x - n.x) * ox + (e.y - n.y) * oy;
-      if (-(e.x - n.x) * oy + (e.y - n.y) * ox < -10 || along - e.def.L / 2 > t0 + need || along < t0 - 20) continue;   // (on the far side of the road; further on; still in the box itself)
-      world.boxHolds = (world.boxHolds || 0) + (ai.boxAt === n.id ? 0 : 1); ai.boxAt = n.id;
-      return false;
+  let ready = !nx || n.dirs[nx.edge] === undefined || exitRoom(world, v, n, nx);
+  if (!ready) {
+    ai.exitWaitAt ??= now;
+    world.boxHolds = (world.boxHolds || 0) + (ai.boxAt === n.id ? 0 : 1); ai.boxAt = n.id;
+    if (now - ai.exitWaitAt > EXIT_SWAP_S && !ai.route) {
+      const alt = exitsFrom(world.map.net, n, stop.edge).filter((o) => o.edge !== nx.edge && o.edge !== stop.edge && !deadWay(world.map.net, o.edge, n.id) && !world.map.net.edges[o.edge].notraffic && exitRoom(world, v, n, o));
+      if (alt.length) {
+        nx = ai.next = alt.reduce((p, q) => (Math.abs(q.turn) < Math.abs(p.turn) ? q : p));
+        ai.turning = Math.abs(nx.turn) > 0.5; ai.exitWaitAt = undefined; ready = true;
+        world.exitSwaps = (world.exitSwaps || 0) + 1;
+      }
     }
-  }
-  if (waited > 6) return true;
-  // 2. something crossing the junction on another heading (not one ahead of it from the same road, turning)
-  const R = (n.half || 40) + 24;
+  } else ai.exitWaitAt = undefined;
+  // (only the first in its lane is ready: one queued behind it waiting too holds nobody else up)
+  if (ready && v._blk) { const f = world.get(v._blk); if (f && f.ai && f.ai.waitNode === n.id && f.ai.boxNode !== n.id && Math.hypot(f.x - n.x, f.y - n.y) < Math.hypot(v.x - n.x, v.y - n.y)) ready = false; }
+  // (the safety valve: waited a long while, ready, and its whole way across is clear of everything right now - it goes)
+  if (ai.valveNode === n.id && ai.valveUntil > now) return true;
+  if (ready && nx && waited > PATH_WAIT_S && (world.tick + v.id) % 5 === 0 && pathClear(world, v, n, stop.edge, nx)) { ai.valveNode = n.id; ai.valveUntil = now + 2; world.pathGoes = (world.pathGoes || 0) + 1; return true; }
+  // 2. the box's own order: what's in it, and who was waiting first
+  if (nx && !boxFree(world, v, n, stop.edge, nx, ready)) { if (ready && v.def.L >= LONG_L) world.bigWaits = (world.bigWaits || 0) + (ai.bigAt === n.id ? 0 : 1), ai.bigAt = n.id; return false; }
+  if (!ready) return false;
+  // 3. something not in the box's books crossing it on another heading (moving through it; standing still only right in
+  // the middle of it - one waiting at its own line on a narrower road can be well inside the circle - and a while)
+  const R = (n.half || 40) + 24, occ = occupants(world, n);
   for (const e of world.query(n.x, n.y, R, K.VEH)) {
-    if (e === v || !sameLevel(e.lz, v.lz) || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft over the junction: not crossing it)
+    if (e === v || (occ && occ.has(e.id)) || !sameLevel(e.lz, v.lz) || (e.alt || 0) > FLY.HIGH) continue;   // (an aircraft over the junction: not crossing it)
     if (e.ai && e.ai.from === n.id && e.ai.cameBy === stop.edge) continue;
-    // (moving through it; standing still only right in the middle of it - one waiting at its own line on a narrower
-    // road can be well inside the circle)
-    if (Math.hypot(e.vx, e.vy) < 20 && Math.hypot(e.x - n.x, e.y - n.y) > R * 0.55) continue;
+    const moving = Math.hypot(e.vx, e.vy) >= 20;
+    if (!moving && (Math.hypot(e.x - n.x, e.y - n.y) > R * 0.55 || waited > 6)) continue;
     const da = Math.abs(angleDiff(e.a, v.a));
     if (da < 0.6 || da > 2.55) continue;
-    if (!e.ai && Math.hypot(e.vx, e.vy) < 5 && !e.seats.some((s) => s)) continue;   // (an empty car left there: drive round it)
+    if (!e.ai && !moving && !e.seats.some((s) => s)) continue;   // (an empty car left there: drive round it)
     return false;
   }
-  // 3. turning left across the other way: what's coming through goes first
-  if (nx && nx.turn < -0.5) {
+  // 4. turning left across the other way: what's coming through goes first
+  if (nx && nx.turn < -0.5 && waited < LEFT_WAIT_S) {
     for (const e of world.query(n.x, n.y, (n.half || 40) + 220, K.VEH)) {
       if (e === v || !sameLevel(e.lz, v.lz) || Math.abs(angleDiff(e.a, v.a)) < 2.5 || (e.alt || 0) > FLY.HIGH) continue;
       const sp = Math.hypot(e.vx, e.vy);
@@ -1049,6 +1084,23 @@ function junctionClear(world, v, n, stop) {
       if ((e.x - n.x) * e.vx + (e.y - n.y) * e.vy > 0 && Math.hypot(e.x - n.x, e.y - n.y) > (n.half || 40)) continue;   // (gone past)
       return false;
     }
+  }
+  return true;
+}
+// Is there room for v on road nx out of n, past the junction's mouth on its side of the road: its own length and a gap,
+// and as much again for each one in the box already bound that way - nothing standing (or crawling) in that stretch?
+function exitRoom(world, v, n, nx) {
+  const out = n.dirs[nx.edge], ox = Math.cos(out), oy = Math.sin(out), t0 = n.trim[nx.edge] || 0;
+  let need = v.def.L + 30;
+  const occ = occupants(world, n);
+  if (occ) for (const [id, o] of occ) if (id !== v.id && o.out === nx.edge) { const q = world.get(id); if (q) need += q.def.L + 24; }
+  const mid = t0 + need / 2;
+  for (const e of world.query(n.x + ox * mid, n.y + oy * mid, need / 2 + 70, K.VEH)) {
+    if (e === v || (occ && occ.has(e.id)) || !sameLevel(e.lz, v.lz) || Math.hypot(e.vx, e.vy) > 60 || (e.alt || 0) > FLY.HIGH) continue;   // (driving off down it is no queue; an aircraft overhead none either)
+    if (Math.abs(angleDiff(e.a, out)) > 0.8 && !(Math.abs(angleDiff(e.a, out)) < 2.3 && e.ai)) continue;   // (the other way on that road; one askew across it is in the way)
+    const along = (e.x - n.x) * ox + (e.y - n.y) * oy;
+    if (-(e.x - n.x) * oy + (e.y - n.y) * ox < -10 || along - e.def.L / 2 > t0 + need || along < t0 - 20) continue;   // (on the far side of the road; further on; still in the box itself)
+    return false;
   }
   return true;
 }
@@ -1125,7 +1177,7 @@ function parkIt(v) { v.ai.parkIt = true; v.ai.hopeless = true; v.ai.ctl = null; 
 
 // Put a vehicle (already driven by an NPC) into traffic on the nearest lane, going the way it
 // faces.
-export { chooseExit as _chooseExit, breakRing as _breakRing, junctionClear as _junctionClear };   // (tests: test/roadends.test.js)
+export { chooseExit as _chooseExit, breakRing as _breakRing, junctionClear as _junctionClear, crossJunction as _crossJunction };   // (tests: test/roadends.test.js)
 
 export function joinTraffic(world, v) {
   v.ai = { kind: 'traffic', lane: 0 };

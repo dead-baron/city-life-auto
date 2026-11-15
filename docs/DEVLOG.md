@@ -24073,3 +24073,79 @@ starts them (the drawing is kept for a later try); the stars, windows, car light
 The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
 (client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
+
+## 2026-11-14 - No knotted junctions: the box's order, room to get out, knots untied
+The owner (20:31, a screenshot): "Looks like traffic jams are still happening" - a city four-way knotted solid, a box
+truck, a delivery van, a dump truck, a long bus and cars wedged across it at all angles, nobody able to move. The
+earlier passes (10-15/17, 11-03, 11-06) fixed ramming and the station jams, not this.
+
+### The harness (test/gridlocksim.js, tools/gridlocksim.mjs)
+World v3, headless. The busy four-way nearest Midtown station, with lights and without (a lane each way, like the
+owner's), a player standing just off its corner (so nothing is cleared away out of sight), and traffic fed into all four roads with a
+heavy mix (the trucks three times as often, buses among them) for ten in-game minutes. It reports how many got across a
+minute, the longest anything stood still in the box, and the longest anything stood stuck in the box or at the head of
+a queue with nothing to wait for (not held for room out, not behind a police car or an ambulance at work, not at a red).
+`--knot` builds the owner's knot in the box (four vehicles off the four roads turning across each other, a queue behind
+each); `--amb` an ambulance at work in a junction's mouth with a flatbed stuck behind it. `--save` / `--load` keep the
+built world in a file between runs for working on traffic (the final numbers below are from the same harness).
+`flock /tmp/cla-heavy.lock node --max-old-space-size=2048 --expose-gc tools/gridlocksim.mjs [--seed 7] [--knot]`.
+
+### What knotted it
+1. **"Go anyway."** junctionClear let a driver waiting at its line into the box after 6 s whatever was crossing it, and
+   into a road backed up past the junction after 20 s. Under heavy traffic everyone at all four lines had waited 6 s:
+   they all went in together and met in the middle.
+2. **A long vehicle turning** sweeps the lanes either side of its way, and nothing kept the others out while it did.
+3. **Nobody to break it.** breakRing only looked for a ring of cars each stopped for the next. In a box, each one is
+   stopped for a different one, and nobody has room behind (their queues are right up to their bumpers). Nothing
+   cleared it while anyone watched, so the knot stood for minutes.
+4. **Two left turns from facing roads at once** meet nose to nose in a box a lane wide each way.
+5. **An ambulance at work** could pull up inside a junction's box.
+
+### What changed (server/systems/junctionbox.js, traffic.js)
+- **The box's books.** Each vehicle that crosses its line is entered in its junction's box: where from, where to, how it
+  turns, whether it's long (`LONG_L` 120 px: the trucks, a bus). One waiting at its line goes in only when nothing in
+  there crosses its way (`conflict`). There's no "go anyway" any more. One already through the crossing, lined up with its
+  road out, holds up only what's going its way.
+- **Who goes first** is whoever came up to their line first and is ready, like an all-way stop. Nobody is shut out for
+  good, and nobody pushes in. Only the first car in each lane counts as waiting.
+- **Room to get out.** It goes in only when its road out has room past the mouth for the whole of it, and for each one
+  in the box already bound that way. Kept waiting 8 s (`EXIT_SWAP_S`), it takes another road out that has room (not a bus or a
+  taxi on its route).
+- **Long vehicles turning** wait for the box to be clear of anything they could catch, and keep it to themselves while
+  they turn.
+- **Knots (`untie`).** When anything in a box has stood still 4 s with something in its way, one vehicle goes first:
+  the leader, the one with the fewest vehicles in its way, all of which can back off. It goes along its own way or,
+  realigned, out by whichever road it can reach from the way it faces. Whatever stands in its way backs straight off
+  out of it, and if that one has no room behind, the car queued behind it backs off first. The rest in the box hold
+  still until the leader is out, then the next goes. A leader stopped by something after all has that vehicle back off
+  out of its way, and one getting nowhere is replaced.
+- **The safety valve.** A driver ready at its line for 12 s whose whole way across the box is clear of everything right
+  now goes (`pathClear`), whatever the box's books say. This covers a car in the box stuck behind a police car, for
+  example.
+- **Back into its lane (e).** A car squeezed out of its lane, nose to nose with the queue coming the other way, edges
+  back over into its own lane (`backToLane`, the sidestep's crawl). Backing off for a knot's leader is straight back.
+- **An ambulance at work** pulls up clear of junction boxes (ems.js parkSpot).
+- **The last resort (d)** is unchanged: a traffic car stood still 50 s and off every player's screen is cleared away
+  (traffic.js manage). The knots above are untied on screen.
+
+### The numbers (the harness, ten in-game minutes, seeds 7 / 3 / 11; before = live main e37858d3)
+| | before | after |
+|---|---|---|
+| with lights, across a minute | 12.3 / 23.1 / 15.4 | 26.8 / 26.5 / 26.6 |
+| with lights, longest stood still in the box | 234 / 65 / 256 s | 4.5 / 7 / 4 s |
+| without lights, across a minute | 6.8 / 9.7 / 10.6 | 25.2 / 33.0 / 31.7 |
+| without lights, longest stood still in the box | 367 / 215 / 230 s | 8 / 5.5 / 11 s |
+| the owner's knot built in the box (no lights / lights) | - | clear in 10.6 / 11.8 s |
+| an ambulance in the mouth, a flatbed stuck behind it (no lights / lights) | - | all through in 20.4 / 30.4 s |
+| tick, mean (traffic's share) | 5.2-6.1 ms (0.70-0.98 ms) | 5.2-5.9 ms (0.71-0.81 ms) |
+
+The waits that are left are further up a road: behind an ambulance or a police car at work, or held for room out of a
+junction whose road out is backed up from the next junction, which is "don't block the box" doing its job.
+
+In the test's own runs (a fresh build: the runs vary a little from one to the next) the longest anything stood in the
+box was 24 s with lights and 24 s without, and the longest stuck at the head of a queue with nothing to wait for was
+18.5 s and 22.5 s, with 24.6 and 19.6 across a minute.
+
+Tests: test/gridlock.test.js (World v3, heavy: the two four-ways ten minutes each, nothing standing in the box or stuck
+at the head of a queue 30 s, 18 a minute and more across; the owner's knot clear in 22 s), test/trafficbox.test.js (the
+knot on today's city). docs/DECISIONS.md: no blocking the box.

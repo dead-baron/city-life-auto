@@ -188,3 +188,26 @@ test('wedged nose to something it doesn\'t brake for, a car queued right behind:
   assert.ok(Math.abs(van.x - vx) < 4, `the van unmoved (${Math.round(van.x - vx)} px)`);
   assert.ok(v.ai && v.ai.parkIt && (w.wedgedGaveUp || 0) >= 1, 'wedged in one spot again and again, it gives up (the queue goes round it)');
 });
+
+// (the owner, 11-14: "Looks like traffic jams are still happening" - a four-way knotted solid by a box truck, a delivery
+// van, a dump truck, a bus and cars wedged across it at all angles, queues behind each: junctionbox.js unties it)
+test('a junction knotted solid - four long vehicles in the box turning across each other, queues behind: it clears in about 20 s', async () => {
+  const { buildKnot, findFourWay } = await import('./gridlocksim.js');
+  const { boxR } = await import('../server/systems/junctionbox.js');
+  for (const lights of [true]) {   // (today's city: its one-lane crossroads is too small a box for four; World v3's: test/gridlock.test.js)
+    const w = makeWorld(), m = w.map;
+    const n = findFourWay(m, { lights });
+    assert.ok(n, `a four-way${lights ? ' with lights' : ''}`);
+    const a = joinPlayer(w);
+    teleport(w, a.p.ped, n.x + boxR(n) + 140, n.y + boxR(n) + 140);   // (watching: nothing's cleared away out of sight)
+    a.p.ped.protectUntil = 1e9;
+    const { knot, queue } = buildKnot(w, n);
+    assert.ok(knot.length >= 3 && queue.length >= 3, `the knot (${knot.length} in the box, ${queue.length} queued)`);
+    const out = (v) => !w.get(v.id) || Math.hypot(v.x - n.x, v.y - n.y) > boxR(n) + v.def.L / 2;
+    let t = 0;
+    for (; t < 40 * 20 && !knot.every(out); t++) w.step();
+    assert.ok(knot.every(out), `the box clear (still in it after ${t / 20} s: ${knot.filter((v) => !out(v)).map((v) => v.model).join(', ')}; untied ${w.knotsUntied || 0})`);
+    assert.ok(t / 20 <= 22, `within about 20 s (${(t / 20).toFixed(1)} s; untied ${w.knotsUntied || 0})`);
+    assert.ok(knot.every((v) => w.get(v.id)), 'nobody cleared away: they drove out');
+  }
+});
