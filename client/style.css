@@ -1395,6 +1395,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #title { --halo-at: 50% 18%; }
   #logo { width: min(320px, 86vw, 46vh); }   /* (by its height too: a short phone keeps room for the menu) */
   #play, #t-buttons, #t-row2, #t-load { width: 100%; min-width: 0; }
+  #t-resume:not(.hidden), #t-resume:not(.hidden) + #play { min-height: 60px; gap: var(--s2); padding: 0 var(--s2); font-size: var(--fs-4); letter-spacing: 2px; }   /* (two side by side: each half the width) */
+  #t-resume:not(.hidden) + #play .t-tri { border-left-width: 16px; border-top-width: 11px; border-bottom-width: 11px; }
   #play { min-height: 64px; font-size: var(--fs-5); gap: var(--s4); padding: 0 var(--s4); }
   #t-row2 .btn { font-size: var(--fs-3); padding: 0 var(--s2); }
   #t-status { font-size: var(--fs-4); } #t-tip { font-size: var(--fs-3); }
