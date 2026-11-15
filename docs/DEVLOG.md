@@ -24156,11 +24156,11 @@ away too much from the front of buildings ... let's get rid of these kinds of ov
   walk-in, a trade, a place of its own (a station, a casino, a hospital, the police, a school: the POIs), a landmark, a
   split tower's own tower and wings, a set piece with its own roof kit, neon or lights, a town's own look, a generator's
   designed lot (the shop rows, the works), a warehouse, a factory, a church, a civic hall, a hotel, a mall, a district
-  built of big ones (the yards, the harbor, the airport, the prison). Before: {{BIG}} big footprints ({{BIGT}} tiles of
-  roof), {{OPEN}} of them with no reason to be one building ({{OPENT}} tiles): {{BYD}}. The worst: Civic Parking 65 x 61,
+  built of big ones (the yards, the harbor, the airport, the prison). Before: 340 big footprints (211,231 tiles of
+  roof), 77 of them with no reason to be one building (63,949 tiles): Downtown 37 (43,285 tiles), Westport Center 7 (6,508), Midtown 9 (4,289), the Arts District 11 (3,714), the Old Quarter 7 (2,735), Southside 3 (2,430), the Civic Center 2 (598), Copper Gulch 1 (390). The worst: Civic Parking 65 x 61,
   Westside Parking 50 x 55 (Downtown's car parks, one gravel roof each - the owner's grey roof with its row of six AC
   units), the split towers' back blocks (Harborview Tower Court 65 x 37, Ellison Building Court 48 x 47...), Greenfield
-  Medical Building 48 x 36, Maple Hall 50 x 34, Bayview House 38 x 44, Midtown's 12 x 55 slivers. After: {{LEFT}}.
+  Medical Building 48 x 36, Maple Hall 50 x 34, Bayview House 38 x 44, Midtown's 12 x 55 slivers. After: 264 big footprints (147,552 tiles of roof), every one with its reason; none without.
 - The pass (shared/world3-openblocks.js `openBlocks3`, World v3's last building pass, after the towers): each one in its
   own footprint -
   - columns 8-15 tiles along its street front with ALLEYS of 3-4 tiles between them, paved through from the front street
@@ -24184,15 +24184,16 @@ away too much from the front of buildings ... let's get rid of these kinds of ov
     down the roughest), wall lamps over the lanes; the art dresses them as it dresses the city's own alleys
     (shared/alleys.js `dressOpen`: bins, bags, boxes, pallets, crates, pots and a bike uptown, a stray cat, puddles, oil,
     litter, cracks and weeds - decoration, nothing in map.props), and draws their ground as cracked concrete
-    (client/art2/game/groundbake.js), not a square's paving; street dice down {{DICE}} of the grittier districts' new
+    (client/art2/game/groundbake.js), not a square's paving; street dice down three of the grittier districts' new
     lanes and back lots (m.diceSpots; the crew's game: server/systems/activities.js). People walk them (paving): the
     leaners find the alley walls (server/systems/personas.js wallSpot).
-  {{MADE}}
+  77 footprints opened up: +192 buildings, 175 alleys and lanes, 60 courtyards and back lots.
 - Roofs that stay big (client/art2/game/statics.js kitFor): a row of AC units is three at most (four of the small ones;
   it was up to seven in one row), and a roof over about 150 tiles of section gets two of a water tank, a stairwell hut,
   skylights, solar panels, a billboard, a terrace with umbrellas and string lights, a dish (the works: solar arrays,
   skylights, ducts); about a fifth of the big flat roofs of offices, walk-ups, mixed blocks, condos and hotels are roof
-  gardens (by the building's hash, so nothing else on them moves).
+  gardens (by the building's hash, so nothing else on them moves); a helipad only on an office roof over about 195
+  tiles (it was on any over 70: the opened-up mid-rises had them).
 - No big canopies over the doors: the Strip's porte-cocheres and the adobe resort's pergola over the drives (10 x 3
   tiles), the Golden Lotus's east block's, the Skyview Hotel's, the Bayside drop-off's, St. Neon General's forecourt
   canopy (15 x 4), the Harborlight's and the airport terminal's row of curb canopies are gone; each door is lit by a wall
