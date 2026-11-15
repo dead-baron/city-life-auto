@@ -1,8 +1,9 @@
 // Open-cargo system (GDD §8): physical crates that can be carried, thrown, loaded into
 // visible vehicle slots, knocked off in crashes — plus loot bags from the drop rule (§9).
 import { K, T } from '../../shared/constants.js';
-import { WEAPONS, ITEMS, SHOPS, PACK_TIERS, PACK_WIRE, packTier } from '../../shared/items.js';
-import { PACK_LIFE_S, PACK_BLINK_S, DROP_LIFE_S } from '../../shared/rules.js';
+import { WEAPONS, ITEMS, PACK_TIERS, PACK_WIRE, packTier } from '../../shared/items.js';
+import { PACK_LIFE_S, PACK_BLINK_S, DROP_LIFE_S, ARMS } from '../../shared/rules.js';
+const andList = (l) => (l.length <= 1 ? l.join('') : `${l.slice(0, -1).join(', ')} and ${l[l.length - 1]}`);
 import { localToWorld, circleVsObb } from '../../shared/math.js';
 import { collideCircle } from '../../shared/physics.js';
 import { PED_BLOCK } from '../../shared/map.js';
@@ -11,6 +12,7 @@ import * as hotmoney from './hotmoney.js';
 import * as explosions from './explosions.js';
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 import * as skills from './skills.js';
+import * as arms from './arms.js';   // (a weapon on the ground, the guns dropped when you die: arms.js)
 
 const GRAV = 620;
 // the crates cleared away when left lying a while: a job's, contraband, explosives (off a traffic truck, task #398)
@@ -246,6 +248,7 @@ export function nearestBag(world, ped, skipCash = false) {
 
 export function lootBag(world, p, bag) {
   if (bag.hot) { hotmoney.pickUp(world, p, bag); return; }   // a robbery bag: still hot money
+  if (arms.isGun(bag)) { arms.pickUp(world, p, bag); return; }   // a weapon on the ground (arms.js)
   const prof = p.profile;
   prof.cash += bag.cash;
   for (const [k, n] of Object.entries(bag.items)) prof.inventory[k] = (prof.inventory[k] || 0) + n;
@@ -270,6 +273,7 @@ export function lootBag(world, p, bag) {
 // What the interact prompt says over a bag (players.findInteraction)
 export function bagLabel(bag, p) {
   if (bag.hot) return hotmoney.bagLabel(bag, p);
+  if (arms.isGun(bag)) return arms.label(bag, p);
   if (bag.pack) {
     const T = PACK_TIERS[bag.tier];
     if (bag.ownerPid && p && bag.ownerPid === p.pid) return `Pick up your ${T.name}`;
@@ -280,7 +284,7 @@ export function bagLabel(bag, p) {
 
 // The wire tier (net.js): 0 a pile of notes, 1-4 the old bags (an NPC's drop), 5-9 a dropped backpack by rarity
 export const bagWireTier = (bag) => (bag.cashOnly ? 0 : bag.pack ? PACK_WIRE + bag.tier : bag.tier);
-export const bagBlinks = (world, bag) => !!(bag.pack || bag.ownerPid) && bag.expires - world.time < PACK_BLINK_S;
+export const bagBlinks = (world, bag) => (arms.isGun(bag) ? arms.blinks(world, bag) : !!(bag.pack || bag.ownerPid) && bag.expires - world.time < PACK_BLINK_S);
 
 // Your dropped backpack on your radar and map until someone takes it or it's gone (players.buildMe)
 export function packRadar(world, p, out) {
@@ -291,15 +295,11 @@ export function packRadar(world, p, out) {
   out.push({ k: 'pack', x: Math.round(bag.x), y: Math.round(bag.y), t: bag.tier, s: Math.max(0, Math.round(bag.expires - world.time)) });
 }
 
-function weaponValue(id) {
-  for (const s of Object.values(SHOPS)) for (const o of s.buy || []) if (o.kind === 'weapon' && o.id === id && o.price) return o.price * 0.4;
-  return 50;
-}
-
 // GDD §9 drop rule, reworked (2026-10-08): everything you carried goes into one backpack whose look goes by what the gear
 // in it is worth (shared/items.js PACK_TIERS, Common to Legendary). The cash falls out on its own beside it as a pile
 // of notes anyone can scoop up by walking over it. Both stay PACK_LIFE_S, blinking at the end, then they're gone; the
-// owner sees their pack on the radar until then.
+// owner sees their pack on the radar until then. The guns (2026-11-14, arms.js): each falls on its own, a pickup for
+// ARMS.dropS; the weapons that aren't at risk (a bat, a knife, a fishing pole...) stay with you.
 export function dropEverything(world, ped, ownerName) {
   if (ped.carrying) dropCrate(world, ped);
   const p = ped.player;
@@ -309,9 +309,10 @@ export function dropEverything(world, ped, ownerName) {
   const items = {}, weapons = {};
   let itemValue = 0, n = 0;
   for (const [k, c] of Object.entries(prof.inventory)) if (c > 0) { items[k] = c; itemValue += (ITEMS[k]?.sell || 5) * c; n++; }
-  for (const [k, c] of Object.entries(prof.weapons)) if (k !== 'fists') { weapons[k] = c; itemValue += weaponValue(k); n++; }
+  const guns = arms.dropOnDeath(world, ped, ownerName);   // (each gun its own pickup round where you fell; the rest kept)
   const cash = prof.cash;
-  prof.cash = 0; prof.inventory = {}; prof.weapons = { fists: 0 };
+  prof.cash = 0; prof.inventory = {};
+  prof.weapons.fists ??= 0;
   ped.weapon = 'fists'; ped.mag = {};
   p.meDirty = true;
   const until = world.time + PACK_LIFE_S;
@@ -331,6 +332,7 @@ export function dropEverything(world, ped, ownerName) {
     const T = PACK_TIERS[pack.tier];
     world.notify(p, `You dropped your ${T.name} (${T.rarity}, ~$${Math.round(itemValue).toLocaleString('en-US')} of gear)${cash > 0 ? ` and $${cash.toLocaleString('en-US')} in cash` : ''} where you fell. Get back to it within ${Math.round(PACK_LIFE_S / 60)} minutes - anyone can take it.`, 'warn');
   } else if (cash > 0) world.notify(p, `You dropped $${cash.toLocaleString('en-US')} where you fell.`, 'warn');
+  if (guns.length) world.notify(p, `Your ${andList(guns)} ${guns.length > 1 ? 'lie' : 'lies'} where you fell for ${Math.round(ARMS.dropS)} seconds - anyone can pick ${guns.length > 1 ? 'them' : 'it'} up. Keep spares in your stash (your home's safe, a gun shop, a pawn shop).`, 'warn');
   return pack;
 }
 
@@ -343,13 +345,16 @@ export function dropItem(world, p, id, n, weapon) {
   if (p.custody) return 'Not while you\'re held.';
   const items = {}, weapons = {};
   let what = '';
-  if (weapon) {
-    if (id === 'fists' || !WEAPONS[id] || prof.weapons[id] === undefined) return 'You don\'t have that.';
+  if (weapon) {   // (a weapon: a pickup of its own - arms.js, the same as a gun dropped when you die or handed over)
+    if (!arms.stashable(id) || prof.weapons[id] === undefined) return 'You don\'t have that.';
     const left = WEAPONS[id].mag ? (prof.weapons[id] || 0) : 0;
-    weapons[id] = left;
     delete prof.weapons[id]; if (ped.mag) delete ped.mag[id];
     if (ped.weapon === id) ped.weapon = 'fists';
-    what = WEAPONS[id].name;
+    const a = ped.a || 0;
+    arms.dropAt(world, ped.x + Math.cos(a) * 20, ped.y + Math.sin(a) * 20, id, left, { by: p.pid, ownerName: p.name });
+    p.meDirty = true;
+    world.notify(p, `Dropped: ${WEAPONS[id].name}. It's on the ground at your feet for ${Math.round(DROP_LIFE_S / 60)} minutes - anyone can pick it up.`, 'info');
+    return null;
   } else {
     const have = prof.inventory[id] || 0, k = Math.max(1, Math.min(have, Math.floor(Number(n) || 1)));
     if (!ITEMS[id] || have <= 0) return 'You don\'t have that.';

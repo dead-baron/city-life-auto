@@ -40,6 +40,7 @@
 //     dealership it came from)
 //   world.biz: { sites, byId, owner (site id -> pid), guards (site id -> ids), trucks (pid -> vehicle id), dj, runs }
 //   the menus: the page's ordinary menus, a negative poi (-100 - the site's index; TRUCK_POI: your truck)
+import { parkWhy } from '../../shared/parkcheck.js';
 import { K, T, TILE } from '../../shared/constants.js';
 import { DISTRICTS, PED_BLOCK } from '../../shared/mapcore.js';
 import { BIZ } from '../../shared/rules-games.js';
@@ -778,7 +779,7 @@ function startFix(world, p, s, e) {
   if ((e.stock | 0) <= 0) return 'No parts to fit - buy some first.';
   const m = world.map;
   let spot = null, bd = 420;
-  for (const q of m.parking || []) { const d = Math.hypot(q.x - s.x, q.y - s.y); if (d < bd && !world.query(q.x, q.y, 50, K.VEH).length) { bd = d; spot = q; } }
+  for (const q of m.parking || []) { const d = Math.hypot(q.x - s.x, q.y - s.y); if (d < bd && !parkWhy(m, q.x, q.y, q.a, 50, 24) && !world.query(q.x, q.y, 50, K.VEH).length) { bd = d; spot = q; } }   // (a proper space: shared/parkcheck.js)
   if (!spot) { const at = standNear(m, s.x + 90, s.y + 60, 240); if (at) spot = { x: at.x, y: at.y, a: 0 }; }
   if (!spot) return 'Nowhere to put the car - clear the lot.';
   const models = ['sedan', 'compact', 'pickup', 'van'], model = models[Math.floor(rng() * models.length)];

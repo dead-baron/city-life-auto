@@ -1746,7 +1746,7 @@ export class World2 {
     // a street personality's own walk (the descriptor's gt: a hunch, a strut, a board, blades, dancing) or a seat on a bench (sb)
     if ((p.d.gt || p.d.sb) && (!wpn || (p.d.gt === 'dance' && p.d.dm !== undefined) || p.d.gt === 'emote') && Pd.personaPose) { const q = Pd.personaPose(p.d, ppose); if (q !== ppose) { ppose = q; pf = q === 'dance' ? Math.floor(now * 3.4 + p.id * 0.37) % 4 : q === 'sitx' && Pd.sitFrame ? Pd.sitFrame(p.d, p.id, now) : q === 'sit' && Pd.actSitFrame ? Pd.actSitFrame(p.d, p.id, now) : q === 'pushup' || q === 'situp' ? repFrame(p, now) : q === 'cue' && Pd.cueFrame ? Pd.cueFrame(p, p.id) : Pd.pedFrame(q, L.fr); } }   // (a dance move: danced whatever's in hand - task #394)
     if (Pd.isDance && Pd.isDance(ppose)) { pf = Pd.danceFrame(p.d.dm, p.id, now); d8 = Pd.danceDir(p.d.dm, d8, pf); }   // (a dance move, task #394: on the beat; the spin goes round)
-    if (Pd.isEmote && Pd.isEmote(ppose)) { if (p._emP !== ppose) { p._emP = ppose; p._emT = now; } pf = Pd.emoteFrame(ppose, now - p._emT); } else p._emP = null;   // (an emote on the body, from its start: server emote.js)
+    if (Pd.emoteAt && Pd.emoteAt(p, ppose, now)) { ppose = p._emQ; pf = p._emF; }   // (an emote on the body - its way in, its beats, its way out: art2/poses.js)
     const bo = bladeOpt(p, wpn);   // (a plasma blade in its owner's colour)
     this.meNone = me && !(p._v2k && E.hasSprite(p._v2k));
     if (me && this.warming && World2.X) World2.X.warmMe(this, A2, wpn, bo);
@@ -2659,7 +2659,7 @@ export class World2 {
     if (fx.c && A) for (let i = 0; i < fx.c.length; i++) {
       const c = fx.c[i];
       if (!c.on || c.x < x0 || c.x > x1 || c.y < y0 || c.y > y1) continue;
-      const age = now - c.born, a = c.alpha * (age > 150 ? 1 - (age - 150) / 40 : 1);
+      const age = now - c.born, hold = c.small ? 1.5 : 150, a = c.alpha * (age > hold ? 1 - (age - hold) / (c.small ? 3.5 : 40) : 1);   // (feet: pushed down a moment, back up within seconds - the owner, 11-14)
       if (a <= 0.02) { c.on = false; continue; }
       const frm = c.small * 8 + (Math.round(((((c.a || 0) % Math.PI) + Math.PI) % Math.PI) / Math.PI * 8) & 7);
       E.drawDecal(this._spr('actors', 'fx', A.fxKey('dCrush', frm), ['dCrush', frm]), c.x, c.y, 0, a, 0, 18);   // (zt: over the standing crop, as farmart.js CROP_Z - it lies flat where it was)

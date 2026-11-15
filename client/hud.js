@@ -221,7 +221,7 @@ export class HUD {
       $('tb-crack').classList.remove('hidden');
       $('tb-fill').style.width = Math.round(Math.max(0, Math.min(1, fg.m)) * 100) + '%';
       // (mash it - or hold it down, a thumb on FIRE on a phone: server struggle.js STRUGGLE_HELD; up: the meter's rising)
-      $('tb-next').innerHTML = `Mash or hold ${glyph('fire')} · wriggle ${glyph('move')}${fg.up ? ' · you\'re winning - keep going!' : fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ' · harder!'}`;
+      $('tb-next').innerHTML = `Mash or hold ${glyph('fire')} to throw them off${fg.up ? ' · you\'re winning - keep going!' : fg.n > 1 ? ' · two of them on you!' : fg.left < 1.5 ? ' · the cuffs are coming out!' : ' · harder!'}`;
     } else if (cu && cu.s !== 'cell' && !me.dead) {
       // arrested (server custody.js): held on the ground, a car coming, walked to it, the ride to the station
       tb.classList.remove('hidden', 'sub', 'warn', 'alarm', 'bus', 'taxi', 'ferry'); tb.style.borderColor = '';
@@ -229,7 +229,8 @@ export class HUD {
       // (the action button makes a break for it: on the ground or walked to the car, a try - custody.js breakOut; the car
       // stuck or not coming, it always works - offerBreak, and the bar pulses)
       // (the hint names the button by its glyph on every device: the touch buttons carry no words since UI-8)
-      const brk = cu.brk ? ` · make a break for it ${glyph('action')}` : '';
+      // (brk 2: in a moment - the car too fast, or a breather before the next try)
+      const brk = cu.brk === 1 ? ` · make a break for it ${glyph('action')}` : cu.brk ? ` · ${glyph('action')} ${cu.slow ? 'when the car slows' : 'again in a moment'}` : '';
       const esc = (t) => String(t).replace(/[&<>]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
       $('tb-next').innerHTML = esc(cu.s === 'held' ? 'Cuffed and held on the ground' : cu.s === 'fetch' ? (cu.stuck ? 'Cuffed · the police car isn\'t coming' : 'Cuffed · a police car is coming to take you in')
         : cu.s === 'escort' ? 'Being walked to the police car' : cu.s === 'walkin' ? `Walked into ${cu.at || 'the station'} - to the cells` : cu.s === 'fade' ? `Taken in to ${cu.at || 'the station'}`

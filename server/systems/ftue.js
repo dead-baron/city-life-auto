@@ -68,7 +68,7 @@ const stepCtl = (f) => (f.step === 1 && f.car && f.car.k === 'steal' ? 'vehicle'
 // The first-time moments: what each says (one line), the control it names, the Guide's section it opens on
 export const MOMENTS = {
   wanted: { text: 'You\'re wanted. Get out of sight and lie low until the stars fade.', sec: 'law' },
-  down: { text: 'Knocked down. Pick where to wake up - or call for help and wait for a revive.', sec: 'law' },
+  down: { text: 'Knocked down - your guns fall where you lie. Pick where to wake up, or call for help and wait for a revive.', sec: 'law' },   // (the guns at risk: arms.js - the Guide's Knocked down and Your stash)
   shop: { text: 'Shopping: pick a line to buy it. Cash goes first, then your bank.', sec: 'items' },
   transit: { text: 'Buses, trains and ferries are free - wait at the stop and board.', ctl: 'action', sec: 'around' },
   night: { text: 'Night falls. A flashlight lights your way.', ctl: 'light', sec: 'items' },

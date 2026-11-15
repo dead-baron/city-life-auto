@@ -1,4 +1,4 @@
-import { STONE_PRICE, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, ROLLERBLADES_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
+import { GUN_PRICES, STONE_PRICE, REVIVE_KIT_PRICE, FLASHLIGHT_PRICE, SURFBOARD_PRICE, ROLLERBLADES_PRICE, PARACHUTE_PRICE, DRILL_PRICE, FORAGE_FENCE_GHOSTGLASS, LIGHT_PRICES, FELL_TOOL_PRICES, PICK_PRICES, ASSAY_PAYS, GARDEN, GARDEN_CROPS } from './rules-base.js';   // (the slice of shared/rules.js it needs: the bake workers load this)
 import { SPECIES } from './fauna.js';
 // Weapons, items, crates, loot bags and shop catalogs (GDD §8, §9, §11, §14A).
 
@@ -388,7 +388,7 @@ function payFor(ids, k) { const o = {}; for (const id of ids) o[id] = Math.round
 // Shop catalogs: buy = [{kind:'weapon'|'ammo'|'item'|'vehicle'|'service', id, price, qty}], sells = item ids accepted.
 export const SHOPS = {
   gunshop: { title: 'Iron Sights Arms', buy: [
-    { kind: 'weapon', id: 'pistol', price: 450 }, { kind: 'weapon', id: 'revolver', price: 700 },
+    { kind: 'weapon', id: 'pistol', price: GUN_PRICES.pistol }, { kind: 'weapon', id: 'revolver', price: 700 },
     { kind: 'weapon', id: 'shotgun', price: 950 }, { kind: 'weapon', id: 'rifle', price: 1600 },
     { kind: 'ammo', id: 'pistol', price: 30, qty: 12 }, { kind: 'ammo', id: 'revolver', price: 30, qty: 6 },
     { kind: 'ammo', id: 'shotgun', price: 40, qty: 6 }, { kind: 'ammo', id: 'rifle', price: 60, qty: 20 },
@@ -414,7 +414,7 @@ export const SHOPS = {
   club: { title: 'The Club', buy: [{ kind: 'item', id: 'cocktail', price: 18, qty: 1 }, { kind: 'item', id: 'energy', price: 12, qty: 1 }] },
   vending: { title: 'Vending Machine', buy: [{ kind: 'item', id: 'energy', price: 8, qty: 1 }] },
   pawn: { title: 'Second Chance Pawn', buy: [
-    { kind: 'weapon', id: 'pistol', price: 320 }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },
+    { kind: 'weapon', id: 'pistol', price: GUN_PRICES.pawnPistol }, { kind: 'weapon', id: 'bat', price: 80 }, { kind: 'weapon', id: 'knife', price: 60 },
     { kind: 'weapon', id: 'sword', price: 650 },
   ], sells: ['purse', 'bonds', 'jewelry', 'scrap', 'wallet', 'medkit', 'nugget', 'quartz', 'doubloon', 'goldStar', 'redcap'], sellsWeapons: true },
   fence: { title: 'Back-Alley Exchange (Black Market)', buy: [

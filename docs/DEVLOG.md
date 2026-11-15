@@ -23344,10 +23344,304 @@ of HIT, ROLL and BLOCK. The server sends `me.surf` whenever a surf break is near
 the touch buttons took any `me.surf` for "on a board". They now take the board's buttons only while you're on it
 (`me.surf.st`: paddling, riding, an air, a wipe); the surf HUD already checked that. test/touchslots.test.js.
 
+## 2026-11-14 - Poses round 3: easing in and out, idles that fidget, a faceplant that lands on the face, gesture balloons
+The owner, 11-14: "faceplant doesn't actually fall face first onto ground. Would be cool to see them animate into those
+poses instead of pop into them. And then have a subtle idle to it ... not a super repetitive loop just kind of subtle and
+random. Some emotes like wave could still have a [waving hand] with it."
+
+- **The bug behind "doesn't fall"**: game/peds.js `PED_POSES` is a copy of people.js `POSES` taken when the renderer
+  loads, and round 2's poses (art2/poses.js, loaded later) were never in it - so every round-2 pose was keyed as a
+  one-frame pose and whichever frame was drawn first stuck (a faceplant hung at its first, tipping frame). `loadPoses`
+  now copies them in once the module is in.
+- **All the emotes' frames live in art2/poses.js** (the eleven gestures moved out of dances.js, which only keeps the
+  `EMOTE_FPS` registry: the renderer lost 1.3 KB). Each pose has its frames and a timing (`SEQ`): the way in, then a loop
+  (a gesture), or a held frame with beats (a lasting pose), and the way out. host.js asks `emoteAt(p, pose, now)` for the
+  pose and frame - one call; the rest is in the lazily loaded module. At most eight frames a pose (host.js warms them all).
+- **The way in**: sitting down (a squat, then down onto the hands), lying back (sat, on the elbows, flat - lying down
+  now puts the head where the back was, not where the face was), sleep the same then over onto the side, kneeling,
+  crouching, the phone coming up, a gesture's arm on its way up (the in-between frames are blends of standing and the
+  pose: poses.js `blend`). **The way out**: the same frames backwards when you walk off or the time's up (a faceplant
+  pushes itself up off the ground); knocked down, a dive - no getting up first. Moving starts at once as before (the
+  server doesn't wait for it): you get up in the first steps.
+- **Idles that aren't a loop** (the lasting poses): small beats now and then - a breath, a glance, the thumb swiping and
+  tapping on the phone, the weight shifted onto one leg, a scratch of the head, the arms round the knees, the head turned
+  lying down, the ankles crossed, the foot tapping on the wall, a hand to the chin, a hand down to the ground crouched,
+  curling up asleep. Which beat and when is a hash of the ped's id and the time since the pose began (slots of 1.2-2.2 s,
+  a beat in about half of them): the same for everyone who saw it start, different for each person, never periodic.
+- **Faceplant**: stiff as a board, over from the feet with the arms flung back, then pinned at the sides (nothing breaks
+  the fall), a smack with the legs bouncing up, flat on the face; now and then a foot twitches or a weak hand comes up
+  ("I'm OK"). 3.5 s (was 3).
+- **Poses that read better at game size**: the crouch deeper, knees wide, forearms on the knees; the kneel with the front
+  knee out where it shows; air guitar wider with the neck hand further out; come here with the hand pulled right back to
+  the chest; the watch raised to the face; the shrug wider; the thumbs up held higher.
+- **Gesture balloons** (client/emotes.js, the round-2 balloons' style, 12x10 icons): a waving hand for Wave, a thumbs
+  up for Thumbs up, a beckoning hand for Come here, and the ? for Shrug - a symbol where it adds meaning at game size; the
+  rest stay body-only. Two skin tones joined the balloon palette for the hands.
+- The Guide's Emotes entry says you ease in and out and fidget. Tests: emotes (the frames keyed apart, the way in, the
+  faceplant, beats not periodic and the same for every viewer, the way out and what cuts it, the new balloons).
+
 ## 2026-11-14 - The bounty chip says it's on you
 The owner (a phone, a test bounty from the director's "Bounty hunter on a contract"): "Bounty $2,500 · 9m - is that me?
 Or a bounty for someone else?" It's the price on your own head and the minutes it has left; the chip now reads
 "Bounty $2,500 on you · 9 min" (client/hudinfo.js).
+
+## 2026-11-14 - The police at 1-2 stars: fighting free that works on a phone, a door kick that comes, a real head start
+The owner (a phone): "I don't think escaping from custody or break free or breaking out of the cop car work correctly
+yet ... I can never seem to fight my way out of it. Can we make sure lower wanted level police interactions are less
+harsh ... breaking free and running or fighting the police will raise your wanted level but you still get a chance to
+escape and hide and wait it out."
+Why the 11-07 pass didn't help in practice (found by driving the real World with a bot through the real input path -
+the touch FIRE thumb sampled every 50 ms as client/input.js does, ACT tapped as the button shows, the police dispatched as
+in play; scratch sims, not checked in):
+- **Holding FIRE never won.** 11-07's tables came from simulated struggles that swung the move stick left and right five
+  times a second (each swing a wriggle), which no thumb on a phone does. With the stick pushed one way, holding FIRE freed
+  you 1% of the time at 1 star (0% at 2, 0% with two officers); mashing with a car's two officers on you 50% / 23%.
+- **The back-seat kick almost never came.** It needed the car under 60 px/s with its crew aboard - with the siren on the
+  traffic pulls over, and in 164 s of 1-star rides the car was that slow for 5 s; the ACT button showed only then. In 12
+  rides from 1 star the bot never once got a try (tries 0).
+- **Caught again as the grace ran out.** The officers standing by (the second car's, a partner not on you) weren't
+  touched by the break; they tire slower than you at 1-3 stars and ran you down just after the 2.5 s grace: in the
+  1-star runs every re-tackle after a win came within 5 s (median 2.6 s).
+- **The stars climbed you into the harsh tier.** Each escape was a star: 1 -> 2 -> 3 (tasers, 3-star odds) -> 4 (they
+  shoot) - starting from 1 or 2 stars, runs reached 4-5 stars.
+What changed (shared/rules.js; server/systems/struggle.js, custody.js, law.js, players.js; client/hud.js):
+- **The struggle at 1-2 stars** - the officer's hold `STRUGGLE_STARS` 0.9 / 1 -> 0.8 / 0.8; holding the button
+  `STRUGGLE_HELD` is now by stars, 0.6 a second at 1-2 (was 0.27 at every level: about as good as mashing now - a phone's
+  quick taps that run together between two inputs count as held too); a second officer `STRUGGLE_SECOND` 0.35 / 0.45 ->
+  0.4 / 0.4 (with the lighter hold). 3-5 stars unchanged.
+- **A head start** (`BREAK_HEADSTART`, struggle.js `headStart`, used by the struggle, the break from the cuffs and the
+  kick out of the car): at 1-2 stars no tackle for 4.5 s (was 2.5), every other officer within 320 px stops short 1.6 s
+  (1.4 at 2), you're up with a full sprint in you (held down, you got no breath back), and the officers you threw off or
+  broke away from are winded (no stamina at 1 star, a quarter at 2; those caught off guard half) - they come after you
+  at a run, not a sprint, till they've their breath back. 3-5 stars: the 2.5 s grace as before.
+- **The back seat** (`BREAK_CAR`): the kick works under 190 px/s at 1 star, 180 at 2 (round a corner, at the lights;
+  was 60) and lands 85% / 70% of the time (was 50% / 35%); 3-5 unchanged. ACT stays on screen the whole ride
+  ("Make a break for it (when the car slows)"); pressed while it's too fast you brace (`custody.js notYet`, `c.armed`)
+  and the kick comes the moment it slows - no try spent. On the ground and on the walk to the car the button stays
+  between tries too ("(in a moment)"; a press says "Not yet - get your breath"); the try there works 75% / 60% at 1-2
+  stars (`BREAK_CHANCE`, was 60% / 45%).
+- **Your stars** (law.js `escapeStars`, `resisted`): throwing an officer off is now resisting arrest - at 1 star it puts
+  you on 2 (the owner: fighting the police raises your wanted level); getting away from the cuffs is a star more as
+  before, but from 1-2 stars neither takes you past `ESCAPE_LOW_MAX` (2): a 2-star escape keeps you on 2 with the heat
+  up near 3 (a fresh crime and it's 3). From 3 an escape is a star, as before; resisting adds nothing there.
+- **What to press**: the fight bar reads "Mash or hold [FIRE] to throw them off" (the button by its glyph on every
+  device); the custody bar "[ACT] when the car slows" / "again in a moment" while a break is coming (me.custody brk 2).
+  On touch the custody state shows FIRE while an officer's on you and ACT the whole time a break can be had.
+- The Guide's Busted entry says it with the numbers from rules.js (the grace, never past 2 stars).
+Simulated, before -> after. The struggle alone, as a phone sends it (200 each; FIRE sampled every 50 ms; the stick pushed
+one way; full health; a second officer joining 0.6 s in):
+
+| stars | mash, 1 officer | mash, 2 | hold, 1 | hold, 2 | mash, stick idle, 1 |
+|---|---|---|---|---|---|
+| 1 | 89% -> 100% | 50% -> 81% | 1% -> 100% | 0% -> 79% | 63% -> 91% |
+| 2 | 73% -> 100% | 23% -> 75% | 0% -> 100% | 0% -> 80% | 48% -> 92% |
+| 3 | 26% -> 29% | 0% -> 0% | 0% -> 0% | 0% -> 0% | 19% -> 18% |
+| 4 | 3% -> 5% | 0% | 0% | 0% | 1% -> 1% |
+| 5 | 0% | 0% | 0% | 0% | 0% |
+
+(1 star, half health, mashing one officer: 33% -> 52%; a third: 8% -> 31%. Mashing half as fast, 1 star: 2% -> 16%.)
+In the world (15 runs each, 150 s: wanted, standing about till the police take them down, then running; the struggle,
+the cuffs, the car, the dispatch all real; "won" counts every struggle in the run):
+
+| start | thumb | struggles won | re-tackled within 5 s of a win | runs reaching 3+ stars | booked |
+|---|---|---|---|---|---|
+| 1 star | mash | 9 / 17 (53%) -> 13 / 21 (62%) | 0 / 4 -> 5 / 8 | 2 -> 0 | 1 -> 0 |
+| 1 star | hold | 0 / 19 (0%) -> 19 / 20 (95%) | 2 / 4 -> 1 / 5 | 3 -> 0 | 4 -> 0 |
+| 2 stars | mash | 7 / 28 (25%) -> 17 / 22 (77%) | 6 / 13 -> 0 / 7 | 10 -> 0 | 5 -> 0 |
+| 2 stars | hold | 0 / 23 (0%) -> 15 / 18 (83%) | 4 / 8 -> 2 / 5 | 9 -> 0 | 7 -> 0 |
+| 3 stars | mash | 0 / 14 -> 0 / 15 | - | - | 12 -> 8 (and 6 shot dead; the before didn't count deaths) |
+
+(The 1-star mash "after" includes one run cornered and beaten down to 1 health - four struggles lost there; strength is
+your health.) The back seat (12 rides each from the cuffs to the station, ACT tapped whenever it shows): out by the door
+at 1 star 2 -> 10, at 2 stars 2 -> 9, at 3 stars 2 -> 2; every 1-2 star rider who got out was on 2 stars after (was 2 ->
+2 and 2 -> 3). Tests: struggle.test.js (as a phone sends it; the head start and resisting), custody.test.js (the
+button all the ride, braced, a 2-star escape stays on 2, escapeStars), arrests / law / guide updated where they pinned
+the old numbers (holding no longer worse than mashing at 1 star; the button "in a moment" between tries).
+
+## 2026-11-14 - The neon logo: the title's sign switches on
+The owner's new logo replaces the old one everywhere: a neon sign in four lit layers (the skyline, "City Life", the
+swoosh, "Auto") over the same sign switched off, and a one-line wordmark for small places.
+- **The title's entrance** (client/titlelogo.js, played by client/splash.js once per page load, after the studio sting
+  or straight away on a reload): the sign steps in switched off, then the skyline, "City Life", the swoosh and "Auto"
+  buzz on in turn, each with a short irregular flicker (a few blips, not always at full, then on for good) and a
+  quiet hum and starter click - its own few oscillators, since the game's sound loads only on the first tap; silent
+  until the page may play sound (skipping the sting counts as the tap) and with the sound off in Settings, scaled by
+  the master and effects sliders. About 2.4 s. Then it idles: the glow breathes softly and now and then one layer gives
+  a tiny flicker. Any tap, click, key or pad button skips to lit. Reduced motion: lit at once, no flicker, no idle.
+  Automated browsers and `?nosplash` get it lit; `?neon` plays it there, `?neon=<ms>` holds a moment (captures).
+- **Light on the page**: everything that moves is opacity (the compositor's work - nothing repainted while it
+  flickers or breathes); each tube's glow is a drop-shadow in its own colour on its layer, the old drop-shadow on the
+  whole logo moved to the switched-off sign so the group is never re-filtered.
+- **Small places**: the pause header uses the one-line wordmark (the stacked logo's script blurs under about 200 px),
+  sized to clear the close button. The title's logo is wider than the old one for its height, so on a desktop it's
+  sized 46vh (was 38vh) to keep its height.
+- **The assets** (tools/build_logo.py, from the owner's files): each layer cropped to its own content box (alpha
+  under 16, the source's matte haze, dropped), shrunk once with Lanczos to the largest size drawn (the logo 620 CSS px
+  wide at 2x = 1240 px; the wordmark 340 at 2x = 680) and put back on a 32-colour palette with no dither, so the edges
+  are hard steps again; lossless WebP won over PNG for every one. assets/logo/: unlit.webp 37 KB, city 36, auto 10,
+  swoosh 4, sky 4 (the lit layers 53 KB), oneline.webp 13 KB. The old assets/logo.png (56 KB) is gone (and
+  tools/build_art.py no longer makes it).
+- **Budgets**: the switched-off sign and the wordmark are in the page's HTML: the title's assets 264 -> 259 KB (budget
+  290). The lit layers are fetched by client/titlelogo.js as the page starts, after the first paint - the intro starts
+  on the switched-off sign and waits for them. The page's code is unchanged (splash.js and titlelogo.js load beside
+  boot.js, not from it).
+- **The share card**: assets/og-card.png (1200 x 630, 551 KB), the lit logo with its glow over in-game night streets,
+  blurred and darkened; index.html gets og:type, og:title, og:description, og:url, og:image (+ size and alt) and
+  twitter:card summary_large_image beside its existing description.
+- Screenshots (the intro's frame strip, the title lit on a phone upright, on its side and on a desktop, the pause
+  header on each, the share card): the session's scratchpad `titlelogo/owner/`.
+
+## 2026-11-14 - The director's scenes start clean, and what they bring is where it belongs
+A visual QA sweep of the cinematic mode's staged scenes (F4 panel; client/director.js `SCENES`) and the director's
+scenes (server/systems/director.js, shared/scenes/) while the owner films them. What was wrong, and what changed:
+- **"Jet ski at the race start"** went to the nearest water race - the kayaks' Redwood River Run. It now goes to a jet
+  ski race (the debug menu's `near` kinds `jetskirace` and `boatrace`) and, with `ride`, puts you on the race's own
+  jet ski just behind its start buoy, its nose on the course. (The Pelican Key sprint's start is further out than any
+  shore the old "open ground by it" search reached: it said "Couldn't find open ground".)
+- **The speedboat on a park lawn**: the debug menu's `car` fell back to "beside you" when no water was within a few car
+  lengths. A boat is now always put on open water, its whole hull (out to 50 tiles), nose away from you - the
+  speedboat scene, and any boat from the debug menu.
+- **The police helicopter among the parked ambulances**: the nearest helipad was a hospital's. The scene goes to the
+  police headquarters' pad (`near` kind `policepad`), and `car` with `on: 'pad'` puts an aircraft on the nearest
+  ground helipad - not beside it, where the helicopter scene's had been. What the world parked on that pad (aircraft.js:
+  the headquarters' own police helicopter) makes way for yours; anyone's own vehicle keeps its pad.
+- **Every scene starts clean** from wherever the last left you: the debug menu's `afoot`, which every staged scene
+  sends first (and the debug menu's Director scenes now run too), takes you out of a home (and its lobby), off a train,
+  up out of the sewers or a cave, out of the vehicle, onto open ground; ends your job and your wanted level; and stops
+  a director scene playing on your camera. "At home" and "Riding the subway" had left you where the next teleport was
+  refused ("Step outside first"), or standing wherever the train was - over its tunnel, inside a building's walls. It's the server's `afoot`, so pages already loaded get it too.
+- **The scenes that hadn't been reviewed**, checked in code and on the World v3 map: "Police chase downtown", "A tank on
+  the boulevard", "Motorcycle through the peaks" and "On patrol" put their vehicle on the nearest street now (`on:
+  'road'`: the kerb lane on your side, facing the way its traffic goes, its whole width on the road) - before, clear
+  ground beside you: a plaza, a lawn. "A plane takes off" puts the plane at the foot of the runway, nose along it (it
+  was beside it, facing east). "Crop dusting" starts at a duster's strip (`near` kind `duststrip`), the duster on it,
+  not in a field. "Tow truck" starts in Midtown (it had taken the kerb nearest wherever the last scene ended). The
+  director's road scenes (the autoplay chase, race and helicopter pursuit) drive on to a point on the road (`far`: it
+  had been the nearest open ground - a shop's floor in the chase's case). Street race, armored truck, firefighting,
+  the mail train and the train rides set up right (the art not finishing in headless captures is the capture's speed).
+- Tests: test/world3scenes.test.js plays every staged scene one after another as the panel does (nothing tidied
+  between but the scene's own clean start) and checks what each brings you with the placement lint's new `spotWhy`
+  (tools/placementlint.mjs): a boat on open water, a road vehicle on the road, an aircraft on a pad or a runway; and
+  every director scene's cast on World v3 - road vehicles on the road, boats on water, aircraft up or on a pad, people
+  on open ground, a getaway's far point on the road. test/director.test.js: the clean start from a home, a train, a
+  job and three stars; a boat on the water.
+
+## 2026-11-14 - A shop's neon OPEN only where it fits
+The owner (the Harbor Marina's boat hire): "the open sign is partially cut off". Every mart-type front - the boat hires'
+three-tile kiosks too - got a neon OPEN in the window beside the door; on a kiosk there's no room beside it, the sign
+was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
+(client/art2/buildings.js); the wider fronts keep theirs.
+
+## 2026-11-14 - Your weapons at risk, with one stash; your car on the map and the valet
+The owner's design (approved 2026-11-14): the guns you carry are what you can lose, kept safe in one stash; and your car
+where you left it, brought to you by a valet - no teleport. The numbers: shared/rules.js `ARMS`, `VALET`, `GUN_PRICES`.
+- **What's at risk** (server/systems/arms.js `atRisk`): every gun, bow, launcher and grenade, anything illegal, and the
+  dear blades (a melee weapon or tool selling for more than `ARMS.keepMax`, $300: the sword, the katana, the plasma
+  blade). Never your fists, police issue (the service pistol, the armory's long guns, the taser and baton), or a cheap
+  legal bat, knife, crowbar, sledgehammer, fishing pole, heavy flashlight or pepper spray - those stay with you.
+- **Down**: each gun falls on its own round where you lay (cargo.js dropEverything -> arms.dropOnDeath), a pickup anyone
+  can take for `ARMS.dropS` (60 s), blinking its last 15, then gone. The backpack keeps your things (and the cash its own
+  pile) as before; you wake with your fists and whatever wasn't at risk. The first-time moment for going down says so.
+- **Busted**: the illegal guns are taken for good (custody.js confiscate, as before); the legal ones now go to your stash
+  after the fine (arms.onBooked), not back into your hands.
+- **The stash**: one per character - `profile.stash.weapons` (id -> rounds), the home safe's own, so nothing to migrate:
+  what you carry stays carried, the stash starts as it was (empty for nearly everyone). It opens at your home's safe and
+  at every gun shop's and pawn shop's counter (a "Your stash" line - economy.js stashMenu). Rounds go with a gun both
+  ways; the old safe counted the magazine twice going in and left it short coming out (profile.weapons is every round,
+  the magazine's among them - combat.js counts them so): fixed.
+- **The loadout** (the owner's, claude/launch-plan-2026-11-03.md; `ARMS.carry`): 2 guns (bows, launchers and the
+  flamethrower count as guns), 1 melee weapon (the at-risk blades) and 1 throwable (grenades) carried - arms.js classOf;
+  fists, police issue and the cheap legal melee and tools don't count. A new one of a full kind - bought, picked up,
+  taken out of the stash, handed over - sends the one of that kind in your hand, else the oldest you carry of it
+  (profile.weapons keeps the order they came), to your stash (arms.js makeRoom). Loadouts from before over the limit
+  keep their extras until the next death (every gun drops), arrest (every gun leaves your hands) or stash visit (the
+  counter's stash or the home safe: arms.js fit keeps the one in your hand and the newest, the rest go in); a buy or a
+  pickup of a full kind meanwhile brings that kind down to the limit there and then. Carry upgrades to come (a
+  shoulder holster +1 gun, a back sling +1 long gun, a chest rig +1 melee +1 throwable; visible extra guns) are not
+  built: `profile.carryUp` raises a kind in arms.js carryOf, up to `ARMS.carryMax` (4 / 2 / 2).
+- **Buying to the stash**: every at-risk weapon at a counter (the gun shops, the pawn shops, the black market and the
+  Smuggler's Den, the lodges) has a "- to your stash" line: straight into the stash, one after another for several;
+  ammunition for a gun in your stash goes in with it.
+- **Dropped or handed over**: the bag's Drop puts a gun on the ground as a pickup (DROP_LIFE_S); its new "Hand to a
+  crewmate close by" (`ARMS.giveR`, about 4 m) is the same pickup, set at their feet and taken there and then
+  (`{ t: 'inv', a: 'give', id }`). Picking one up: "Pick up the Pistol" over it.
+- **The phone**: Find my weapons sets a waypoint to the nearest place to open your stash (a home of yours, a gun shop, a
+  pawn shop - worked out on the page from your homes and the map's places).
+- **Prices**: the basic pistol is cheaper now it can be lost - $250 at the gun shops (was $450), $180 at the pawn shops
+  (was $320) (`GUN_PRICES`, in shared/rules-base.js since shared/items.js reads it). Nothing else changed.
+- **Your car** (server/systems/mycar.js): the car you last took out stays where you left it - through a logoff (yours
+  again when you're back) and a restart (`profile.carAt`, saved every few seconds and at logoff, put back on its space
+  when you join if it's still free and proper ground; else it's in your garage as before) - and shows on your map and
+  radar while you're on foot (the self record's `car`, after the starter and first-car markers).
+- **Have my car delivered** (the phone's home screen; `{ t: 'phone', a: 'valet' }`): a valet parks it for you on the
+  nearest proper space `VALET.minD`-`maxD` px (about 7-40 m) from you (a kerb bay or a car park's bay - `map.parking`, not a home's
+  driveway - else a street's shoulder), never on a pavement, a promenade or a lawn, out of everyone's sight, about
+  `VALET.waitS` (12 s) later, for `VALET.fee` ($40); once every `VALET.cooldownS` (4 min). Wrecked (its insurance claim
+  brought it back: insurance.js marks the entry `wr`), `VALET.wreckFee` ($150): it comes from the body shop. Not while
+  you're wanted, not in a wild district, not with someone in it or cargo on it, and only on the piece of road network
+  the car is on (a garage's car: the mainland's) - an island no road reaches gets no valet (custody.js pieceAt, as the
+  police cars). If the space is gone when it's due, another is found or the fee comes back.
+- **Parked cars off the pavements** (the owner: a white van nosed into the Harbor Marina's boat hire kiosk on the
+  promenade). shared/parkcheck.js `parkWhy`: a vehicle's footprint off the pavements, plazas and promenades, lawns, sand,
+  piers and buildings. The parked cars leave a space that fails it empty (traffic.js badBay); a fire call's burning car,
+  the auto shop's customer and the job vehicles (jobs.js workTruck: the mail van, the ambulance, the fire truck - on
+  proper ground first, anywhere it fits only where there's none) are put on proper ground. No parking space lies within a dozen
+  tiles of the Harbor's kiosk (checked on the World v3 build), so the van wasn't a parked car: it was one of those put
+  down at run time, which took the first clear ground they found - a promenade too. Which one wasn't pinned down; all
+  of them now stand on proper ground. The placement lint's new `parked` row lists the spaces laid over a pavement or a
+  plaza in the data - 124 of about 8,300 (mostly on a pavement, then plazas, lawns, the sand, in a building, on a pier:
+  a few districts' kerb bays and car parks a tile off; a golf cart's stand on its cart path is its place and isn't
+  counted): LINT_ALLOW.parked holds that count, to bring down by fixing the data, never up.
+- Tests: test/arms.test.js (what's at risk, death's pickups and their minute, the slots, the stash at the counters,
+  buying to it, the arrest, dropping and handing over, the Guide from the data), test/mycar.test.js (where you left it
+  through a restart, on your map, the valet's space, wait, fee and cooldown, wanted, the wrecked fee), the death pack's
+  and the home stash's tests updated for the guns on their own and the rounds counted once.
+
+## 2026-11-14 - Your character on the title card: the game's own sprite, whole and still
+The owner: the title card's avatar sat low and off-centre in its frame, showed only the head and shoulders, and
+breathed and looked round on an endless loop. (A finer, close-up render was tried first and turned down - "it looks
+like old artwork, not the game's character".) client/portrait.js now:
+- **Draws the game's own sprite**: exactly the pixels the city shows of your look (person() at the game's size, put on
+  the art grid by downsample2), made bigger only by a whole number of CSS px an art px, nearest-neighbour.
+- **Frames the whole figure**, head to feet, at 2 px an art px in the card's 56 px frame (bigger where a frame has the
+  room), centred both ways over a soft light in two steps of the card's navy; a figure too tall for the frame (a tall
+  hat) and the small card's 40 px frame show it from the head down, centred across.
+- **Holds still**, and now and then - after 3.5 to 9 s of stillness, at random, never a loop - plays one small idle
+  from the game sprite's own frames and goes still again: a blink (the still figure with the rig's eyes shut, as a
+  sleeping figure has them), a glance aside (the idle's own glances, one way, the other or both), a scratch of the head
+  (the "huh?" emote's frames) or a look at the phone (the phone emote's). The emotes' frames come from
+  client/art2/poses.js, loaded once the card is drawn (the module the game loads when someone near emotes). Nothing
+  plays while the tab is hidden or the card isn't on screen; it's drawn as soon as the card shows and again when the
+  frame changes size. Reduced motion: still, no idles.
+- Tests: test/portrait.test.js (the game's own pixels, no finer render; whole, centred, whole-number scale for every
+  starter look; each idle its own frame; no loop; reduced motion). Before / after of eight looks: the session's
+  scratchpad `logo2/owner/avatar2-before-after.png`.
+
+
+## 2026-11-14 - No see-through outline behind people
+The owner: "I dont think we need this invisible white outline on our player when we're behind an NPC or other player."
+The x-ray outline (what hides you is outlined over you, art2/game/engine.js) now ignores people (the scene's F_CHAR
+pixels): behind a building, a vehicle or a tree you're still outlined; behind someone standing in front of you, not.
+
+## 2026-11-14 - Walking through a field: pushed down a moment, not a track
+The owner: walking left a long trodden track through the wheat; he wanted it to part round you and rise back up shortly
+after. A person's or an animal's crush marks (fx.crush small) now go down at about half strength and stand back up within
+about five seconds (client/main.js, art2/game/host.js); a vehicle's swath still lies flat for a couple of minutes.
+
+## 2026-11-14 - Back on the title, the room's music stops
+The owner: out to the menu from the hospital lobby, its tune went on under the title's music. On the title the sound
+frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
+club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).
+
+## 2026-11-14 - The title card's avatar: a portrait, every face in the same spot
+The owner, on the whole-figure avatar: "not centered consistently ... the full body is too far out" - a portrait is
+fine. client/portrait.js frames the same game-size sprite (nearest-neighbour, a whole number of px an art px) as a
+portrait: the head and the body down to the waist, about 17 art px a side - 3 px an art px in the card's 56 px frame,
+2 in the small card's - with the head's centre across the middle and a third of the way down for every look. The
+centre is the rig's own head (people.js: a render cut to the 1 px at the head's centre puts it at the buffer's corner),
+not the sprite's outline, so a hat, a bun or big hair no longer shifts the face; what falls outside is cropped. The
+idles stay as they were. test/portrait.test.js: every starter look's head within half an art px of the same spot.
+Before / after of eight looks: the session's scratchpad `logo2/owner/avatar3.png`.
 
 ## 2026-11-14 - Casinos you walk into; card tables in the bars; pool in more bars and diners
 

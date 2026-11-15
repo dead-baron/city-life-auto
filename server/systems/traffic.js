@@ -27,6 +27,7 @@ import { isBlocked, unjam, goRound, standing } from './reroute.js';   // (driver
 import { deadWay, isRoadEnd, startTurn, stepTurn, holdShort, roadGivesOut, roomBehind, giveUpEnd, clearance, OPEN_ANY as OPEN_ANY_GROUND } from './roadends.js';   // (keeping out of road ends, turning round at them: task #384; giving one up: giveUpEnd)
 import { loadExplosives } from './cargo.js';
 import { homeLotSpots } from './homes.js';
+import { parkWhy } from '../../shared/parkcheck.js';   // (never on a pavement, a promenade, a lawn: the owner, 11-14)
 import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
 import { dressWild, riderLook } from './wildfolk.js';   // (the country riders' looks: the people of the wilds)
 import { missPed, lateFor, noteBraking, held as slipHeld } from './slips.js';   // (fallible drivers, rarely: the owner's notes, 11-03)
@@ -1187,6 +1188,7 @@ function manage(world) {
       if (pm === 'bike') pm = weighted(motoMix('', world.map.districtAt(sp.x, sp.y).style));   // (which motorcycle: by district - task #366)
       const fit = bayRoom(world.map, sp, i);   // (a bay at the street's end: nothing so long it sticks out into the junction)
       if (VEHICLES[pm].L > fit) { pm = FITS.find((k) => VEHICLES[k].L <= fit); if (!pm) continue; }
+      if (!sp.drive && pm !== 'golfcart' && badBay(world.map, sp, i, pm)) continue;   // (a space laid over a pavement, a promenade or a lawn: left empty - the lint lists them, tools/placementlint.mjs parked)
       const v = world.spawnVehicle(pm, sp.x, sp.y, sp.a + (sp.a === -Math.PI / 2 && hash2(i, 3, 1) < 0.5 ? Math.PI : 0), { parked: true });
       world.parked.set(i, v.id);
     }
@@ -1334,6 +1336,14 @@ function rackSpots(m) {
 // coming round the corner turned round in the junction to get past, and the junction locked. A spot off the road (a
 // car park, a driveway) or with no kerb beside it: any. Worked out once per spot.
 const FITS = ['sedan', 'compact'];
+// (a golf cart's stand on its cart path is its place) a parking space whose car would stand on a pavement, a promenade, a plaza, a lawn, the sand or a pier (shared/parkcheck.js;
+// the owner, 2026-11-14: a white van nosed into the Harbor Marina's boat hire on the promenade) - worked out once per space
+// and model
+export function badBay(m, sp, i, model) {   // (exported for the tests)
+  const memo = (m._badBay ??= new Map()), k = `${i}:${model}`;
+  if (!memo.has(k)) { const V = VEHICLES[model] || VEHICLES.sedan; memo.set(k, !!parkWhy(m, sp.x, sp.y, sp.a, V.L, V.W)); }
+  return memo.get(k);
+}
 export function bayRoom(m, sp, i) {   // (exported for the tests)
   const memo = (m._bayRoom ??= new Map());
   if (memo.has(i)) return memo.get(i);

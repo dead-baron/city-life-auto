@@ -24,7 +24,7 @@ import { IN } from '../shared/input.js';
 import { KB, PAD, TOUCH, ACTIONS, KEY_ACTION } from '../shared/controls.js';
 import { guideSections } from '../shared/guide.js';
 import { POSES } from '../client/art2/people.js';
-import { pedSprite, personaPose, isEmote, emoteFrame } from '../client/art2/game/peds.js';
+import { pedSprite, pedKey, personaPose, isEmote, emoteFrame, emoteAt, loadPoses } from '../client/art2/game/peds.js';
 
 function setup(c = clock()) {
   for (const k of Object.keys(store.kept)) delete store.kept[k];
@@ -43,16 +43,17 @@ test('an emote: the body first; a balloon only where it means something, a log l
     if (E.b) assert.ok(BALLOONS.includes(E.b), `${k}: its balloon is drawn (client/emotes.js)`);
     if (E.hold) assert.ok(E.log, `${k}: a lasting pose goes in the log`);
   }
-  for (const k of ['laugh', 'angry', 'love', 'huh', 'wow', 'sorry', 'sleep']) assert.ok(EMOTES[k].b, `${k}: a balloon`);
-  for (const k of ['dance', 'sit', 'lie', 'faceplant', 'phone', 'wave']) assert.ok(!EMOTES[k].b, `${k}: no balloon`);
+  for (const k of ['laugh', 'angry', 'love', 'huh', 'wow', 'sorry', 'sleep', 'wave', 'thumbs', 'beckon', 'shrug']) assert.ok(EMOTES[k].b, `${k}: a balloon`);
+  assert.deepEqual([EMOTES.wave.b, EMOTES.thumbs.b, EMOTES.beckon.b], ['wave', 'thumbs', 'beckon'], 'the gestures: a waving hand, a thumbs up, come here (the owner, 11-14)');
+  for (const k of ['dance', 'sit', 'lie', 'faceplant', 'phone', 'clap', 'cheer']) assert.ok(!EMOTES[k].b, `${k}: no balloon`);
   assert.deepEqual(Object.keys(EMOTES).filter((k) => EMOTES[k].hold).sort(), ['crouch', 'kneel', 'lean', 'lie', 'phone', 'sit', 'sleep']);
   assert.equal(DANCES.length, DANCE_PLAYER.length, 'a Dances tab tile each move');
   const S = setup();
   const a = S.P({ x: 0, y: 0, name: 'Ann' }), b = S.P({ x: 100, y: 0 }), far = S.P({ x: 5000, y: 0 });
-  assert.equal(S.chat.handle(S.w, a, { t: 'emote', e: 'wave' }), null);
-  assert.equal(a.ped.gt, 'emote'); assert.equal(a.ped.em, 'wave');
-  assert.equal(S.got(b).length, 0, 'a wave: the body says it - no message, no log spam');
-  assert.deepEqual([_descriptor({ ...a.ped, kind: K.PED }).gt, _descriptor({ ...a.ped, kind: K.PED }).em], ['emote', 'wave'], 'everyone sees it on the body');
+  assert.equal(S.chat.handle(S.w, a, { t: 'emote', e: 'clap' }), null);
+  assert.equal(a.ped.gt, 'emote'); assert.equal(a.ped.em, 'clap');
+  assert.equal(S.got(b).length, 0, 'a clap: the body says it - no message, no log spam');
+  assert.deepEqual([_descriptor({ ...a.ped, kind: K.PED }).gt, _descriptor({ ...a.ped, kind: K.PED }).em], ['emote', 'clap'], 'everyone sees it on the body');
   // a laugh: its balloon to the people near (you too), no log line
   S.c.add(CHAT.emoteGapS * 1000);
   assert.ok(S.chat.emote(S.w, a, 'laugh'));
@@ -168,22 +169,56 @@ test('an emote over the wire: the body stops it when you walk off', () => {
 });
 
 const sum = (G) => { let h = 0; for (let i = 0; i < G.col.length; i += 3) h = (Math.imul(h, 31) + G.col[i]) | 0; return h + ':' + G.w + 'x' + G.h; };
-test('the emotes are poses: four frames each, moving; the descriptor picks them', () => {
+test('the emotes are poses: moving; the descriptor picks them', async () => {
+  await loadPoses();
   const man = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#a02a2a', tc2: '#eee', l: '#2a3a5a', sh: '#eee', bd: 1 };
   const idle = sum(pedSprite(man, 'idle', 0, 0, 0, { ar: 'casual' }));
   for (const k of Object.keys(EMOTES)) {
     const pose = personaPose({ gt: 'emote', em: k }, 'idle');
     if (k === 'dance') { assert.equal(pose, 'idle', 'Dance: no pose of its own'); continue; }
-    assert.equal(pose, 'em' + k); assert.ok(isEmote(pose)); assert.equal(POSES[pose], 4, `${pose}: four frames`);
-    const frames = [0, 1, 2, 3].map((f) => sum(pedSprite(man, pose, 0, f, 0, { ar: 'casual' })));
-    if (!EMOTES[k].hold) assert.ok(new Set(frames).size >= 2, `${pose}: it moves`);
+    assert.equal(pose, 'em' + k); assert.ok(isEmote(pose)); assert.ok(POSES[pose] >= 4 && POSES[pose] <= 8, `${pose}: 4-8 frames (host.js warms them all)`);
+    const frames = [...Array(POSES[pose]).keys()].map((f) => sum(pedSprite(man, pose, 0, f, 0, { ar: 'casual' })));
+    assert.ok(new Set(frames).size >= 3, `${pose}: it moves`);
     assert.ok(frames.every((f) => f !== idle), `${pose}: not standing still`);
+    assert.ok(pedKey(man, pose, 0, POSES[pose] - 1, 0).includes(`|${POSES[pose] - 1}|`), `${pose}: every frame keyed apart (peds.js PED_POSES knows it)`);
   }
   assert.equal(personaPose({ gt: 'emote', em: 'wave' }, 'walk0'), 'walk0', 'walking: the walk');
+});
+
+// the owner, 11-14: "animate into those poses instead of pop into them ... a subtle idle ... not a super repetitive loop"
+test('the emotes in time: the way in, a faceplant over onto the face, a lasting pose\'s beats, the way back out', async () => {
+  await loadPoses();
   const seen = new Set();
-  for (let t = 0; t < 2; t += 0.05) seen.add(emoteFrame('emwave', t));
-  assert.deepEqual([...seen].sort(), [0, 1, 2, 3]);
-  assert.equal(emoteFrame('emfaceplant', 5), 3, 'a faceplant: down, and staying down');
+  for (let t = 0; t < 2; t += 0.05) seen.add(emoteFrame('emwave', t, 3));
+  assert.equal(emoteFrame('emwave', 0, 3), 4, 'a wave: the arm on its way up first');
+  assert.deepEqual([...seen].sort(), [0, 1, 2, 3, 4]);
+  assert.deepEqual([0, 0.12, 0.22].map((t) => emoteFrame('emfaceplant', t, 3)), [0, 1, 2], 'a faceplant: toppling over');
+  assert.equal(emoteFrame('emfaceplant', 0.35, 3), 3, '...the smack');
+  for (let t = 1; t < 30; t += 0.1) assert.ok([4, 5, 6].includes(emoteFrame('emfaceplant', t, 3)), 'and down on the face (a twitch now and then)');
+  assert.deepEqual([0, 0.12].map((t) => emoteFrame('emsit', t, 3)), [0, 1], 'sitting down: on the way');
+  for (const pose of ['emsit', 'emlie', 'emsleep', 'emphone', 'emlean', 'emcrouch', 'emkneel']) {
+    const at = (id, t) => emoteFrame(pose, t, id), runs = [], n = new Map();
+    for (let t = 1; t < 240; t += 0.05) n.set(at(5, t), (n.get(at(5, t)) || 0) + 1);
+    const got = new Set(n.keys()), [base, held] = [...n].sort((a, b) => b[1] - a[1])[0];
+    let prev = -1, start = 0;
+    for (let t = 1; t < 240; t += 0.05) { const f = at(5, t); if (f !== base && prev === base) { runs.push(Math.round((t - start) * 10)); start = t; } prev = f; }
+    assert.ok(got.size >= 4, `${pose}: beats (${[...got]})`);
+    assert.ok(held / 4780 > 0.35, `${pose}: held mostly, the beats small and now and then`);
+    assert.ok(new Set(runs).size >= 4, `${pose}: never a fixed loop`);
+    assert.equal(at(5, 77.7), at(5, 77.7), 'the same for everyone watching');
+    assert.ok([...Array(40).keys()].some((i) => at(5, 20 + i * 0.7) !== at(9, 20 + i * 0.7)), `${pose}: each on their own time`);
+  }
+  // drawn: the way in from the start, the way out when they get up (standing or walking off) - cut short by anything else
+  const p = { id: 7 };
+  assert.ok(emoteAt(p, 'emsit', 10) && p._emQ === 'emsit' && p._emF === 0);
+  assert.ok(emoteAt(p, 'emsit', 12) && p._emF >= 2);
+  assert.ok(emoteAt(p, 'walk1', 12.05) && p._emQ === 'emsit' && p._emF === 1, 'walking off: getting up first');
+  assert.ok(emoteAt(p, 'walk1', 12.17) && p._emF === 0);
+  assert.ok(!emoteAt(p, 'walk1', 12.3), '...then the walk');
+  emoteAt(p, 'emfaceplant', 20); emoteAt(p, 'emfaceplant', 23);
+  assert.ok(emoteAt(p, 'idle', 23.05) && p._emF === 7, 'a faceplant: pushed up off the ground');
+  emoteAt(p, 'emlie', 30); emoteAt(p, 'emlie', 31);
+  assert.ok(!emoteAt(p, 'down', 31.05), 'knocked down: no getting up first');
 });
 
 test('the emotes on every device, and the Guide', () => {

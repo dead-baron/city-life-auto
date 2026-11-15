@@ -27,7 +27,7 @@ import { WEAPON_BY_INDEX, bladeColor, hexRgb } from '../../../shared/items.js';
 import { decodeLook, lookArt } from '../../../shared/lookcore.js';   // (the core alone: shared/look.js adds what only the creator and the server use)
 import { CLUBS } from '../../../shared/clubs.js';
 import { DANCE_MOVES, danceFrame, danceDir } from '../../../shared/dance.js';
-import { EMOTE_FPS, EMOTE_ONCE } from '../dances.js';   // (the dance moves' and the emotes' poses: registered in people.js's POSES, out of the chunk bake's reach)
+import { EMOTE_FPS } from '../dances.js';   // (the dance moves' poses: registered in people.js's POSES, out of the chunk bake's reach; the emotes': art2/poses.js)
 import { litterApp, litterAt, LITTER } from '../litter.js';   // (the pose of someone on a paramedic's stretcher, and how they lie there: host.js)
 export { litterApp, litterAt, LITTER };
 
@@ -38,12 +38,14 @@ const DANCE_SET = new Set(DANCE_POSE);
 export const isDance = (pose) => DANCE_SET.has(pose);
 export { danceFrame, danceDir };
 // Emotes (the owner, 2026-11-13; server emote.js): the descriptor's em (shared/chatdefs.js EMOTES' id) -> its pose
-// ('em' + the id); the frame t s after it started - host.js
+// ('em' + the id). Their poses, the way in and out and the beats of a lasting pose are art2/poses.js's, loaded the first
+// time someone near does one - they stand as they are till then. emoteAt(p, pose, now): true while p is drawn in an emote's
+// pose (p._emQ, frame p._emF) - host.js
 export const isEmote = (pose) => !!EMOTE_FPS[pose];
-export const emoteFrame = (pose, t) => { const n = Math.floor(Math.max(0, t) * (EMOTE_FPS[pose] || 4)); return EMOTE_ONCE.has(pose) ? Math.min(3, n) : n & 3; };
-// the round-2 emotes and poses (art2/poses.js): loaded the first time someone near does one - they stand as they are till then
-let morePoses = null;
-export const loadPoses = () => morePoses || (morePoses = import('../poses.js').catch((e) => { console.warn('[art2] poses', e); morePoses = null; }));
+let morePoses = null, EM = null;
+export const loadPoses = () => morePoses || (morePoses = import('../poses.js').then((m) => { Object.assign(PED_POSES, POSES); EM = m; }, (e) => { console.warn('[art2] poses', e); morePoses = null; }));
+export const emoteAt = (p, pose, now) => !!EM && EM.emoteAt(p, pose, now);
+export const emoteFrame = (pose, t, id) => (EM ? EM.emoteFrame(pose, t, id) : 0);
 
 export const PED_POSES = { ...POSES, move0: 6, move1: 6, move2: 6, move3: 6 };
 export { SEATS };

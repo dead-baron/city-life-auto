@@ -235,6 +235,7 @@ export function createBag({ el, send, me, refocus }) {
       + `<button class="btn btn-1" data-a="use"${canUse ? '' : ' disabled'}>${!canUse ? 'USE' : it.light ? (m.light ? 'TURN OFF' : 'TURN ON') : it.ride === 'blades' ? 'PUT ON' : it.ride ? 'TAKE IN HAND' : 'USE'}</button>`
       + `<button class="btn btn-d" data-a="drop"${t.id === 'fists' ? ' disabled' : ''}>${armDrop === t.k ? 'AGAIN TO DROP' : t.n > 1 ? 'DROP ONE' : 'DROP'}</button>`
       + (held ? `<button class="btn" data-a="holster"${t.id === 'fists' ? ' disabled' : ''}>PUT AWAY</button>` : `<button class="btn" data-a="equip"${t.kind === 'w' ? '' : ' disabled'}>EQUIP</button>`) + '</div>';
+    if (t.kind === 'w' && t.id !== 'fists' && m.crew && m.crew.ids && m.crew.ids.length) acts += '<button class="btn btn-x bd-all" data-a="give">Hand to a crewmate close by</button>';   // (server arms.js handTo)
     if (t.n > 1 && t.id !== 'fists') acts += `<button class="btn btn-x bd-all" data-a="dropall">${armDrop === t.k + '*' ? `Press again: drop all ${t.n}` : `Drop all ${t.n}`}</button>`;
     if (t.id === 'plasma') acts += `<div class="bag-blade"><small>Blade color</small>${BLADE_COLORS.map((bc, i) => `<button class="sw${i === (m.blade | 0) ? ' on' : ''}" data-blade="${i}" aria-label="${esc(bc.name)}" style="--sw:${esc(bc.c)};--swc:${esc(bc.core)}"></button>`).join('')}</div>`;
     if (canUse) acts += `<div class="bag-pins"><small>Quick bar slot</small>${Array.from({ length: SLOTS }, (_, i) => `<button class="btn bag-pin${quick[i] === t.id ? ' on' : ''}" data-pin="${i}" aria-pressed="${quick[i] === t.id}">${i + 1}</button>`).join('')}</div>`;
@@ -252,6 +253,7 @@ export function createBag({ el, send, me, refocus }) {
     if (a === 'equip') send({ t: 'weapon', id: t.id });
     else if (a === 'holster') send({ t: 'weapon', id: 'fists' });
     else if (a === 'use') send({ t: 'inv', a: 'use', id: t.id });
+    else if (a === 'give') send({ t: 'inv', a: 'give', id: t.id });
     else if (a === 'drop' || a === 'dropall') {
       // two presses: dropping isn't something to do by accident (it lands in a bag at your feet: anyone can take it)
       const key = t.k + (a === 'dropall' ? '*' : '');
