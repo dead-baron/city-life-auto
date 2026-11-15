@@ -78,7 +78,7 @@ function build() {
   if (reduced()) return;
   windows();
   beam();
-  cloud(0); cloud(1); if (G.aw > 260) { cloud(0); cloud(1); }
+  cloud(0); cloud(1); if (G.aw > 260) cloud(1);   // (two on a phone, three on a wider screen)
   after(between(6000, 20000), function air(on) { if (on) aircraft(); after(between(40000, 110000), air); });
   after(between(4000, 14000), function car(on) { if (on) street(); after(between(9000, 30000), car); });
   after(between(12000, 30000), function sweep(on) { if (on) beamSweep(); after(between(25000, 70000), sweep); });
@@ -180,9 +180,9 @@ function beamSweep() {
   }
   rs.sort((p, q) => p[1] - q[1]);
   const pick = rs.length ? rs[(R() * Math.min(4, rs.length)) | 0] : [Math.round(G.aw * between(0.15, 0.85)), G.skyTop + 2];
-  const g = beamC.getContext('2d'), bx = pick[0], by = pick[1] - 1, len = Math.max(30, by * 0.62), half = 0.12;
+  const g = beamC.getContext('2d'), bx = pick[0], by = pick[1] - 1, len = Math.max(30, by * 0.62), half = 0.15;
   const a0 = between(0.25, 0.55) * (R() < 0.5 ? 1 : -1), a1 = -a0 * between(0.5, 1), dur = between(16000, 24000);
-  const C = P.beam, steps = [0, 0.06, 0.12, 0.2, 0.3];
+  const C = P.beam, steps = [0, 0.08, 0.16, 0.27, 0.4];
   let t0 = 0, last = -1, box = null;
   const step = (now) => {
     if (!t0) t0 = now;
@@ -202,11 +202,11 @@ function beamSweep() {
           if (along < 0 || along > len) continue;
           const t = along / len, across = Math.abs(rx * dy - ry * dx), w = t * len * Math.tan(half) + 0.8, u = across / w;
           if (u >= 1) continue;
-          let v = 0.24 * (1 - t) ** 1.5 * (1 - u * u) * (0.55 + 0.45 * (1 - u));
-          if (across < 0.8) v += 0.08 * (1 - t) ** 1.5;   // (the brighter line down its middle)
+          let v = 0.3 * (1 - t) ** 1.4 * (1 - u * u) * (0.55 + 0.45 * (1 - u));
+          if (across < 0.9) v += 0.14 * (1 - t) ** 1.3;   // (the brighter line down its middle)
           v *= fade;
           // four steps of it, the dither between them (the art's own pixels)
-          const lv = Math.min(4, Math.floor(v / 0.065 + BAYER[(y & 3) * 4 + (x & 3)] / 16));
+          const lv = Math.min(4, Math.floor(v / 0.075 + BAYER[(y & 3) * 4 + (x & 3)] / 16));
           if (!lv) continue;
           const j = ((y - y0) * box[2] + (x - x0)) * 4;
           o[j] = C[0]; o[j + 1] = C[1]; o[j + 2] = C[2]; o[j + 3] = Math.round(steps[lv] * 255);
@@ -226,30 +226,34 @@ function beamSweep() {
 // (the owner, 11-14: "make them look better and less thin and have them moving") - a flat-bottomed body under a few
 // round puffs, three tones: its top a touch lighter (the moon), the body, the underside warm with the city's glow; the
 // far ones (depth 0) smaller, fainter and slower, the near ones (1) bigger and quicker; off one side and round again.
-const CLOUD = [{ body: [48, 62, 106], top: [70, 86, 136], glow: [104, 74, 116], a: 0.5, w: [34, 54], h: [9, 13], ms: [650, 900] },
-  { body: [56, 72, 120], top: [84, 102, 152], glow: [122, 84, 126], a: 0.72, w: [60, 104], h: [14, 20], ms: [300, 420] }];
+const CLOUD = [{ body: [58, 72, 116], top: [96, 112, 160], glow: [118, 84, 124], a: 0.5, w: [36, 56], h: [10, 14], ms: [650, 900] },
+  { body: [66, 82, 130], top: [112, 128, 176], glow: [138, 96, 132], a: 0.66, w: [64, 104], h: [15, 21], ms: [300, 420] }];
 function cloud(k, enter = false) {
   if (!G) return;
   const D = CLOUD[k], w = Math.round(between(D.w[0], D.w[1])), h = Math.round(between(D.h[0], D.h[1])), c = canvas(w, h, ''), g = c.getContext('2d');
   const puffs = [];
-  // (the puffs a dome along a soft base: each overlapping the next, the middle ones biggest, reaching nearly to the top)
+  // (the puffs a dome, each overlapping the next, the middle ones biggest, reaching nearly to the top; under them a row
+  // of small lobes, so the underside is soft and bumpy - no straight base)
   const n = Math.max(3, Math.round((w * 0.74) / (h * 0.55 * 1.25))), d = (w * 0.74) / n;
-  for (let i = 0; i < n; i++) { const r = Math.min(h * 0.62, Math.max(d * 0.62, h * (0.3 + 0.3 * Math.sin(Math.PI * (i + 0.5) / n)) * between(0.88, 1.1))); puffs.push([w * 0.13 + d * (i + 0.5), h - 2.2 - r * 0.8, r]); }
+  for (let i = 0; i < n; i++) { const r = Math.min(h * 0.62, Math.max(d * 0.62, h * (0.3 + 0.3 * Math.sin(Math.PI * (i + 0.5) / n)) * between(0.88, 1.1))); puffs.push([w * 0.13 + d * (i + 0.5), h - 2.6 - r * 0.75, r]); }
+  const m = n + 1, rb = Math.max(2, h * 0.26), db = (w * 0.66) / m;
+  for (let i = 0; i < m; i++) puffs.push([w * 0.17 + db * (i + 0.5), h - 1 - rb * between(0.9, 1.05), rb * between(0.9, 1.15)]);
   const inside = (x, y) => {
     if (y < 0 || y >= h || x < 0 || x >= w) return false;
     const fx = x + 0.5, fy = y + 0.5;
-    if (((fx - w / 2) / (w * 0.47)) ** 2 + ((fy - (h - 3)) / Math.max(2.2, h * 0.24)) ** 2 < 1) return true;   // (the base)
     for (const [px, py, r] of puffs) if ((fx - px) ** 2 + ((fy - py) * 1.1) ** 2 < r * r) return true;
     return false;
   };
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     if (!inside(x, y)) continue;
-    const under = !inside(x, y + 1), under2 = !inside(x, y + 2), over = !inside(x, y - 1);
-    const col = under || (under2 && (x + y) % 2) ? D.glow : over ? D.top : D.body;
+    // (its top rim catching the light, two px, dithered on the second; the underside warm with the city's glow)
+    const under = !inside(x, y + 1), under2 = !inside(x, y + 2), over = !inside(x, y - 1), over2 = !inside(x, y - 2);
+    const col = under || (under2 && (x + y) % 2) ? D.glow : over || (over2 && (x + y) % 2) ? D.top : D.body;
     g.fillStyle = rgba(col, D.a); g.fillRect(x, y, 1, 1);
   }
-  const y = Math.round(k ? between(G.skyTop * 0.3, G.skyTop * 0.62) : between(G.skyTop * 0.1, G.skyTop * 0.4));
-  const from = enter ? -w : Math.round(between(-w * 0.5, G.aw - w * 0.5)), to = G.aw, dist = Math.abs(to - from);
+  // (high in the sky, over the menu; the first ones start out to either side of the sign, not behind it)
+  const y = Math.round(k ? between(G.skyTop * 0.15, G.skyTop * 0.4) : between(G.skyTop * 0.05, G.skyTop * 0.25));
+  const from = enter ? -w : Math.round((R() < 0.5 ? between(0.02, 0.22) : between(0.66, 0.86)) * G.aw - w / 2), to = G.aw, dist = Math.abs(to - from);
   c.style.cssText = `top:${y * G.s}px;left:0;width:${w * G.s}px;height:${h * G.s}px;z-index:${k}`;
   const a = c.animate([{ transform: `translateX(${from * G.s}px)` }, { transform: `translateX(${to * G.s}px)` }], { duration: dist * between(D.ms[0], D.ms[1]), easing: `steps(${Math.max(1, dist)}, end)`, fill: 'forwards' });
   anims.push(a);

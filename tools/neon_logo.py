@@ -630,7 +630,7 @@ WIN, WIN_TOP = 2, 4
 SKY_WINDOWS = {
     'hl': {'walls': (86, 98), 'inner': (88, 95), 'cols': 1, 'rows': 1, 'gap': 3},     # the left house: its wall, the tower's (97)
     'tw': {'walls': (97, 113), 'inner': (99, 111), 'cols': 2, 'rows': 1, 'gap': 3},   # the tower
-    'md': {'walls': (118, 138), 'inner': (120, 136), 'cols': 2, 'rows': 2, 'gap': 3, 'dark': [(1, 1)]},   # the tall middle tower: its 2 x 2, the lower right one's lights out
+    'md': {'walls': (118, 138), 'inner': (120, 136), 'cols': 2, 'rows': 2, 'gap': 3}, # the tall middle tower: its 2 x 2, all lit
     'gb': {'walls': (137, 152), 'inner': (140, 150), 'cols': 2, 'rows': 1, 'gap': 3}, # the gabled block: the tall tower's wall (138), its own
     'hr': {'walls': (151, 171), 'inner': (154, 163), 'cols': 1, 'rows': 1, 'gap': 3}, # the right house: the block's wall (152); "Life" covers it from 164
 }

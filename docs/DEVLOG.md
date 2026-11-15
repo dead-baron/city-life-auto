@@ -23998,3 +23998,16 @@ The owner (19:45) on the title backdrop. client/titlescreen.js skyline() and cli
   middle - in the art's own pixels, four steps through an ordered dither; it sweeps slowly (16-24 s).
 - Still paused with the title hidden or the tab asleep; reduced motion: the stars alone. docs/DECISIONS.md: the
   backdrop's look. Before / after: the session's scratchpad `logo2/owner/backdrop/`.
+
+## 2026-11-14 - The title's clouds and searchlight, again; four lit windows on the tall tower
+- **The clouds** (the coordinator's review: they read as flat dark slabs): lighter, partly see-through, puffy tops with a
+  two-px rim catching the light, a slightly lighter body, the underside soft and bumpy (a row of small lobes, no
+  straight base) and warm with the city's glow; fewer - two on a phone, three on a wider screen - high in the sky, the
+  first ones starting out to either side of the sign rather than behind it.
+- **The searchlight** reads now: a wider cone (its half-angle 0.15), brighter at its rooftop lamp with a clear core line,
+  soft dithered edges, fading out about 60% of the way up.
+- **The logo's tall tower** has its four windows lit again (the owner, 20:05: the dark pane read as a black void); the
+  end houses keep their one centred window each. Re-installed, the share card rebuilt.
+- RESUME | PLAY over CHARACTER | SETTINGS was never broken: the captures had shown RESUME by style while it still had
+  its `hidden` class, so the page laid PLAY across the row. test/titlebuttons.test.js now measures the real layout in
+  headless Chromium - with and without RESUME, on a desktop, a phone upright and on its side.
