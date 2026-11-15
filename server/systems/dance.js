@@ -33,10 +33,10 @@ export function next(world, p, quiet = false) {
   const ped = p.ped;
   if (!free(ped)) { stop(ped); return -1; }
   const i = ped.dancing ? DANCE_PLAYER.indexOf(ped.dm) + 1 : 0;
-  if (i >= DANCE_PLAYER.length) { stop(ped); world.notify?.(p, 'You stop dancing.', 'info'); return -1; }
+  if (i >= DANCE_PLAYER.length) { stop(ped); return -1; }
   set(ped, DANCE_PLAYER[i]);
   if (i === 0 && !quiet) world.track?.('danced', p);
-  world.notify?.(p, `Dancing: ${DANCE_NAMES[ped.dm]} - press again for the next move, move to stop`, 'info');
+  if (i === 0) world.notify?.(p, 'Dancing - press again for the next move, move to stop', 'info');   // (once, not a log line per move: the owner, 11-14)
   return ped.dm;
 }
 // One move by its index in shared/dance.js DANCE_MOVES (the emote picker's Dances tab: emote.js) - started, or switched
@@ -47,7 +47,7 @@ export function start(world, p, dm, quiet = false) {
   const was = !!ped.dancing;
   set(ped, dm);
   if (!was && !quiet) world.track?.('danced', p);
-  world.notify?.(p, `Dancing: ${DANCE_NAMES[dm]} - move to stop`, 'info');
+  if (!was) world.notify?.(p, 'Dancing - move to stop', 'info');   // (only when you start: the moves aren't logged one by one)
   return dm;
 }
 // every input (players.js applyInput): the button, and whatever stops the dance

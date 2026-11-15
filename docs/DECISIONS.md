@@ -78,6 +78,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
 - Biker faction chat hidden behind a flag until biker groups exist. (11-04; decisions-11-04)
+- Your own log stays quiet for emotes and dances: one line when you start dancing, none per move or per emote. (11-14; chat)
 
 ## Monetization
 - Never sell power: ads and cosmetics only. (11-03; launch-plan 11-03, monetization-plan 11-13*)

@@ -23982,3 +23982,9 @@ windows has 3 windows instead of 4 (still in the same grid)". SKY_WINDOWS: the t
 exactly (the left house's wall a px in - its span now even; the right house's span to where "Life" covers it), and the
 tall tower's 2 x 2 keeps its places with its lower right window's lights out - an unlit pane, not a gap. Re-installed
 and the share card rebuilt. Close-up and the title upright: the session's scratchpad `logo2/owner/windows4/`.
+
+## 2026-11-14 - Dancing: one line when you start, not one per move
+The owner (the log full of "Dancing: the fist pump - move to stop", "Dancing: the sway - ..."): "We don't need all the
+emotes in the log like this". server/systems/dance.js now says so once, when you start dancing ("Dancing - press again
+for the next move, move to stop"); switching moves from the button or the picker's Dances tab says nothing, and running
+out of moves stops quietly.
