@@ -156,7 +156,7 @@ test('the shower and the bathing suit up to you; your weapons wait in the locker
   economy.handleMenu(w, p, menu.poi, 'ba:put');
   assert.equal(prof.weapons.pistol, undefined, 'the pistol in the locker');
   assert.equal(p.ped.weapon, 'fists');
-  assert.ok(prof.bathLocker && prof.bathLocker.pistol === 36, 'kept on your profile (a restart can\'t lose it)');
+  assert.ok(prof.bathLocker && prof.bathLocker.pistol === 24, 'kept on your profile (a restart can\'t lose it), each round once (the magazine\'s are among the 24)');
   const Sh = S.showers[0];
   await walkPath(w, p, [[S.lx, S.row], Sh.stand]);
   assert.match(players.findInteraction(w, p).label, /shower/, 'a shower in your clothes if you like');
@@ -168,7 +168,8 @@ test('the shower and the bathing suit up to you; your weapons wait in the locker
   assert.match(players.findInteraction(w, p).label, /walk in/, 'no house rule: in when you like');
   homeinside.leave(w, p);
   run(w, 1);
-  assert.equal(prof.weapons.pistol + p.ped.mag.pistol, 36, 'your pistol back as you leave, every round');
+  assert.equal(prof.weapons.pistol, 24, 'your pistol back as you leave, every round - and no more');
+  assert.equal(p.ped.mag.pistol, 12, 'the magazine filled from them');
   assert.equal(prof.bathLocker, undefined);
 });
 

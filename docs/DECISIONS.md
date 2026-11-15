@@ -255,6 +255,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No text bubbles in scenes; closer framing; the camera stays the player's (zoom is an offset). (11-13; DEVLOG 11-13)
 - Next: autoplay scripts for the remaining scenes. (11-14; queue)
 - Car soccer arena art: PAUSED (branch arenaart), resumes with the director work. (11-12; queue)
+- The cinematics menu is a curated shot list in sections (city at night, nature, coast, action, people, vehicles, weather): one tap a shot - its place, time, weather, cast and its own camera move, 10-30 s - or a section / all back to back; the best-looking places and a diverse range of subjects. (11-14 15:11; chat, DEVLOG 11-14)
+- A shot owns the camera while it runs; any touch, key or button hands it back (the free camera stays for his own shots). Action stays outdoors and in view - nobody disappears into a building. (11-14 15:11; chat)
+- Explosions are the game's SNES-style pixel art (the explosion sprite, pixel flames and smoke), never gradient placeholders. (11-14 15:11; chat)
 
 ## FTUE and Guide
 - The tutorial IS the first goal: train arrival, one question ("What brings you to town?"), at most 3 steps, then first-time moments. "Short and sweet, general direction." (11-04; ftue-design 11-04, CLAUDE.md)

@@ -23633,6 +23633,51 @@ The owner: out to the menu from the hospital lobby, its tune went on under the t
 frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
 club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).
 
+## 2026-11-14 - The owner's polish list: beaches, the pier, skate parks, people by fences, poses, the arcade scene, the hot springs, salmon, lockers, anglers
+- **No sliver of sea along a pier or a boardwalk over the beach** (the class): the ground bake took every DOCK tile for
+  water underneath, so where planks cross dry sand the coastline's smoothing drew a thin band of sea with waves along
+  both sides (Sunset Beach Pier's shaft, Sandpiper Bay's stepped boardwalk). shared/mapcore.js `deckOnDry` - planks with
+  no water beside them and the ground beside them (a pier head's middle stays over its water) - is ground now in
+  client/art2/game/groundbake.js (the
+  wetness the coast is smoothed from) and art2/water.js (the waves' distance to land). The placement lint's new
+  `beachWater` row finds any dry sand, grass or dirt with no water by it, side by side with planks still taken for
+  water - on every beach, the lakes' and the rivers' too.
+- **Sunset Beach Pier's sides open over the sand**: its rails (and their solid posts) start where the water does on each
+  side - you step on and off the shaft from the beach; over the water the rails stay. Sandpiper Bay's pier the same.
+- **Skate parks' ledges, grind boxes, flat bars, rails and benches are solid on foot** (shared/world3-skatesolids.js, at
+  the end of World v3's build): a row of posts along each, flagged `sk`. A rider in the air or grinding passes over them
+  (shared/physics.js `over`), so grinds work as before; rolling into one on the ground bumps you like a bench; the skate
+  crew's friend sitting on a ledge is let sit (mods.skateSeat: noProps 'sk'). Every skate spot checked (The Trestle
+  Spot, Overpass Skate Park, The Underpass, Sunset Skate Park: ledges and flat bars); the lint's `skateWalk` row.
+- **Nobody pinned against a court's chain-link fence**: a passer-by's next spot was picked with the walls, props and
+  cars in mind but not the fences, so the ones heading for a spot behind a park court's tall fence walked into it and
+  stayed there in a line. shared/fences.js `fenceCrossed`; server/systems/npc.js pickWaypoint never picks across a tall
+  fence (a low one they hop), and someone held fast who has stepped aside both ways three times gives up on that spot.
+- **Poses** (client/art2/poses.js): the faceplant stays down - no bounce on landing (the legs no longer kick up), and
+  only now and then a small twitch of a foot or the fingers of a hand curling, rarer and briefer; the phone is held well
+  out in front of the chest, the head bent to it, so it reads as scrolling.
+- **The director's "The arcade"** goes in through the nearest arcade's door onto its floor among the games (the
+  'arcade' command, devplay.js devArcade) - 'near' left you on the street outside Koi Arcade. Every arcade in World v3
+  checked: each door's action is "Into ... - the arcade".
+- **Granite Hot Springs**: the bake was real (not placeholder art), so: the paths and steps are granite flagstones with
+  moss in the joints (groundbake FLAGS, ground.js flagstone) rather than concrete pavers; the water warmer - a milky jade
+  with a sulphur-gold tint over the vents, lit low and warm from within after dark - a pale mineral crust at the rim and
+  wet dark stone at the very edge; more and bigger boulders round every rim, two more wisps of steam off each pool and
+  fuller steam (props-garden.js steam: every steam prop).
+- **Salmon climb a falls in stages** (client/art2/game/waterlife.js CLIMB): a leap in an arc, a splash into the falling
+  water, a rest there nosing into it, the next leap - 2 to 6 of them by the drop; some slip after a rest and tumble back
+  into the pool; the last carries them into the water above and on upstream.
+- **The bathhouse lockers count each round once**: a gun's rounds (profile.weapons, the magazine's among them) went in
+  with the magazine's added again; now as the home safe fixed it - the rounds alone, back with the magazine filled from
+  them (server/systems/bathhouse.js).
+- **Anglers each on their own spot** (the owner: NPC fishers stood right on top of each other): anyone fishing - a
+  persona fisher, an activity's anglers, the wilds' bank anglers, a player with a rod out - is at least ANGLER_GAP (40
+  px) from the next (server/systems/personas.js anglerRoom); the second of a pair is put that far along the rail or the
+  bank, where there's ground to stand on.
+- The world and art hashes change (the pier's rails, the skate posts; the bake's planks and springs).
+- Tests: placementlint (beachWater, skateWalk), fences (no spot across a chain-link fence), npcpeople (anglers spaced,
+  facing the water), waterlife (leaps, rests and drops), bathhouse (the locker's rounds), emotes.
+
 ## 2026-11-14 - The title card's avatar: a portrait, every face in the same spot
 The owner, on the whole-figure avatar: "not centered consistently ... the full body is too far out" - a portrait is
 fine. client/portrait.js frames the same game-size sprite (nearest-neighbour, a whole number of px an art px) as a
@@ -23643,6 +23688,105 @@ not the sprite's outline, so a hat, a bun or big hair no longer shifts the face;
 idles stay as they were. test/portrait.test.js: every starter look's head within half an art px of the same spot.
 Before / after of eight looks: the session's scratchpad `logo2/owner/avatar3.png`.
 
+## 2026-11-14 - The camera's shot list: one tap a shot, the best places and subjects, the camera that follows; pixel-art explosions
+
+The owner (15:11): "Cinematics and Director mode still seem to be having issues. Im not really sure whats going on with
+the camera it doesnt seem to follow the scene and the auto play scenes dont seem to work. When doing a tour it wont let
+me switch scenes and the camera doesnt really move ... the explosion didnt look right in the tanker like the explosion was
+placeholder art ... The scenes are all kind of mixed together in the cinematics menu so im not sure how to use it ... when
+the NPC goes into the building you cant see whats going on ... I want to have a diverse range of subjects to get footage
+of. I want good camera movement and the best areas to show off."
+
+### What was wrong
+- **Switching scenes dropped the camera** (client/director.js D.script): when a scene ended - including the old one ended
+  by starting the next - the page answered the server's 'off' by sending `unwatch`. That reached the server after the next
+  scene had begun, so it took the page off the new scene: its camera came back to you, and the new scene played to nobody.
+  Now the server's own 'off' gets no answer; the page's own 'stop' (and the server's `unwatch`) carry the scene's `seq` and
+  touch that scene only (server/dev.js 'scene', server/systems/director.js unwatch).
+- **Autoplay "didn't work"**: a scene flew the camera to a far place and started at once; the art there (on a phone, many
+  seconds of bakes) came in after much of it had played - and the clean screen it turned on hid the toasts, so a scene
+  that found no place ("No place for ...") just left a clean screen. Now a shot is held at its first moment (the server's
+  hold, as the capture's) with this screen black until the art there is in (`warmth`), then the page says 'go'
+  (`DIRECTOR.holdS`, 10 s, at most on the server; 9.5 s on the page); a shot that never comes moves on to the next after 12 s.
+- **The time of day and the weather of a scene were never applied** outside the capture server: the "golden hour" Showcase
+  moves played at whatever time it was. A shot's time, weather (clear, rain, fog, mist, a storm), time-lapse and the sea's
+  sparkle are now this screen's while it plays, and put back after.
+- **The tour** (the old Tour camera) slid 520 px in 10 s at about the zoom you had - barely a move - over the map's
+  landmarks, with nothing alive there (the server only filled the world round you); and with it on, the panel's arrow keys
+  and Enter were the camera's, so a scene couldn't be picked from the keyboard. It's gone: the reel replaces it, and with
+  the panel up the arrows and Enter are always the panel's.
+- **Camera modes fighting**: picking "Follow scenes" or another mode during a director's scene ended it (the mode's
+  change sent `unwatch`). A shot now owns the camera; any other key, touch or pad button hands the camera back - the free
+  camera, where the shot was - and Esc / B brings it back to you.
+- **The biker brawl went inside the Rusty Spur**, under its roof. Rewritten: the stranger walks up the lot to bikers by
+  their bikes, the words, two punches and a knockdown out front, a club bike, the clubs out of the door after him. The
+  bikers are the city's civilians now (club 'gang' members piled in and beat him before he got to the bike). The
+  helicopter pursuit's driver runs on down the street, not off into an alley. test/scenes.test.js: nobody in the brawl is
+  ever under a roof.
+- **What the shots found in the director while they were made**: a helicopter flown by a scene's `fly` beat hovered where
+  it was (helicopters take the stick on their 'tank' controls - stepFly now sets them; flown at 700 px it clears the
+  towers - at 240 it flew into one); a scene's car stopped at a red light halfway down its road and then wandered (a
+  scene's drive no longer waits at the lights); a crowd put in a park's middle stood in its pond (a group gathers on the
+  nearest dry ground); a scene's camera on an aircraft looked at its shadow (it's on the aircraft where it's drawn, up
+  by its height, as the follow scenes' already were); a vehicle shot that reached the end of its straight ended the shot
+  (each runs its length now: the road's own route on past the straight, a wait beside it).
+- **The explosions were canvas gradients**: render/boom.js drew a fireball of soft radial-gradient blobs and stroked
+  shockwave rings over the pixel world (and render/bigboom.js a tanker's extra fireballs and its pools' glow the same
+  way) - the game's pixel explosion (client/art2/fx.js `explosion`, FX1-B: the core swelling into a cauliflower
+  fireball cooling to a smoke column, debris, embers, the ground flash and the scorch, ten frames) was never played. Under
+  art v2 every fireball core is now that sprite (a particle of its own, type 11: art2/game/actors.js V1_PART, never
+  thinned on Low), its lobes the pixel flames, its smoke the pixel puffs, no drawn rings or gradient glow - the light is
+  the renderer's lights, the screen's flash stays. A tanker is a run of them: its own, then the bursts round it
+  (bigboom.js), the burning debris and pools as before. The classic renderer keeps its own.
+
+### The shot list (client/director.js, shared/scenes/)
+The panel (F4, debug mode) opens on the **Shot list**: ▶ Play all, then seven sections - each a row with its name, its
+count and its own ▶, tapping the name opens it (one open at a time, remembered on this device). Each shot is one tap:
+the server puts its cast in its place (shared/scenes/: the same script format as the director's scenes), the page holds
+it in black till the art is in, and the shot owns the camera - its own move, its time of day and weather - for 10-30 s,
+then fades out. Back to back (a section or all of them), a fade between; a tap on any shot jumps there and the reel goes on
+from it; the bar along the bottom has ⏮, the shot's name (3/12), Next ⏭, ⏹ Stop and the zoom (N, A / RB the next; LB
+the one before). Below it: **Free camera** (Follow me, Smooth, Free - drag it on a phone - Drift, On someone, Follow
+scenes), the zoom, the screen, Show, time, weather; then, folded, Fly to a place (the Showcase) and Play it yourself (the
+staged scenes). The debug menu's 🎬 Director scenes start the same shots (held the same way).
+- **The moves** (shared/scenes/shots.js `move`): a slow push-in, a pan along, an orbit, a crane up (in close, then a long
+  pull back and up), a locked wide shot; the subjects' shots track alongside a vehicle, or orbit a crowd.
+- **The places**: the QA sweep's best (11-13 / 11-14) - not Hidden Pool (not on World v3), Eagle Crag, North Point,
+  Pelican Point or Waves Stadium (they frame the wrong thing). The server finds a place by its name (now also the nature
+  sites - Summit Tarn, the meadows - and the district of a name that's on this map: Granite Peaks), a kind of place (the
+  debug menu's 'near' kinds: a runway), a long run of open water (a boat's course) or a farm's field; a shot's place is its
+  own, not the one nearest you (live events still play near the player they're for).
+- **Indoors in view**: a walk-in's roof is lifted from where the shot's camera is (main.js interiorTick: `DIR.roofAt`) -
+  the pool shot is the Rusty Spur's bar room with its roof off.
+
+The shots (46):
+- City & Neon at night: The Neon Strip night market; Lucky Mesa's casinos lit up; The Pink Mile motels; The El over Trestle
+  Street; Lantern Lane's lanterns; Ocean Drive after dark.
+- Nature & Countryside: Crop duster over the fields; Redwood Creek Falls; Silver Thread Falls; Summit Tarn and its falls at
+  dawn; Canyon Oasis at golden hour; Wildflowers in Lupine Meadow; Coral Cay's jungle falls; Lakeside Greens; Wheat field:
+  a pickup cuts a swath; Horseback across the valley.
+- Coast & Water: Sunset Beach Pier at dusk; Egret Point Light; The Harbor marina; Coral Cay lagoon; Macaw Cove; Gull Harbor
+  at dawn; Speedboat across the bay.
+- Action & Chases: Police chase through Midtown; Street race on the Neon Strip; Gang shootout at a hideout; Tanker into
+  the gang hideout; Helicopter pursuit; Biker brawl at the Rusty Spur.
+- People & Life: Dancing on Piazza Vecchia; The boardwalk crowd at sunset; Morning workout in Greenfield Park; Friends by
+  Kestrel Lake; Pool night at the Rusty Spur.
+- Vehicles & Flight: Helicopter over Downtown; A plane over Westport International; Motorcycle through Granite Peaks; A
+  big rig through Midtown; A convertible down the coast road; Balloons over Dry Creek at dawn.
+- Weather & Time-lapse: Rain on Midtown at night; A thunderstorm over Downtown; Fog over Redwood Cove; The Harbor, dusk
+  into night; Sunrise over Mirage Lake; The sea sparkling at night.
+
+Tests: test/directorcam.test.js (new: the page's director over a stand-in page - a shot held in black till the art is
+in, then 'go', its time and weather; switching shots mid-way never takes the camera off the new one; the reel's next,
+skip, jump and stop, the screen's own time put back; a shot that can't be set up moves on; a key or a touch hands the
+camera back where it is, the panel's own buttons don't; Stop while setting up lets it go; every section 4+ shots, 30+ in
+all, 10-30 s each, every place shot's camera moving), test/scenes.test.js (every shot's script whole - its section, its
+weather, at most 40 s; the brawl out front), test/world3scenes.test.js (every shot's place found on World v3, its cast
+where it belongs; every vehicle, boat and aircraft a shot follows gets going and keeps going).
+Proof (World v3 on a dev server, headless Chromium - SwiftShader, so the art comes in late; the session's scratchpad
+`director3/owner/`): a strip of six shots across the sections (first, middle and last frame), the new panel on a desktop
+and a phone, and the tanker's blast before / after (the same 'explode' event, b 3, frame by frame). Budgets: the renderer 409 of 410 KB, the page 525 of 540 (with main merged in); the world's and the
+art's hashes unchanged.
 ## 2026-11-14 - The final logo, in-engine, and the title screen rebuilt round it
 The owner picked the logo (11-14 15:21; docs/DECISIONS.md "Logo (final)"): his neon design rebuilt in the game's own
 art - no black outlines, no traced AI pixels - and the title screen reworked around it.
@@ -23738,6 +23882,7 @@ and pool tables in more bars and food places. The pool tables' plumbing is the m
   gone, a player's hand shown at his table with the regulars waiting, and the page's replay keeping the cards already
   dealt. shoprooms.test.js: a small lounge keeps its booths (no card table under 9 tiles).
 - Hashes: the world (World v3: the casinos' rooms, the counters) and the art change; World v1's world doesn't.
+
 
 ## 2026-11-14 - The logo's "Auto" drawn new: A3
 The owner on the installed logo: "the auto in the logo still looks really bad ... the black in the middle of the neon

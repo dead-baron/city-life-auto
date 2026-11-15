@@ -547,7 +547,7 @@ export function steam(w = 80, h = 50, seed = 1) {
     const u = (x - G.ax) / (w / 2), v = (G.ay - y) / h; if (v < 0 || v > 1.1) continue;
     const env = Math.max(0, 1 - u * u * (0.7 + v)) * Math.sin(Math.PI * Math.min(1, v * 1.1)) * (1 - v * 0.55);
     const wisp = vnoise(x + v * 18 * Math.sin(seed), y * 0.7, 9, seed + 11) * 0.65 + vnoise(x * 0.6, y, 4, seed + 13) * 0.35;
-    const a = env * (wisp - 0.3) * 3.2; if (a <= 0.08) continue;
+    const a = env * (wisp - 0.24) * 3.6; if (a <= 0.08) continue;   // (fuller: the owner, 11-14 - the hot springs' steam to show)
     const j = (y * G.w + x) * 4; G.col[j] = 240; G.col[j + 1] = 244; G.col[j + 2] = 246; G.col[j + 3] = Math.round(Math.min(0.78, a) * 255);
     G.nrm[j] = 128; G.nrm[j + 1] = 128; G.nrm[j + 2] = 255; G.nrm[j + 3] = 255;
     G.z[y * G.w + x] = Math.round(v * h); G.flag[y * G.w + x] = F_NOCAST;

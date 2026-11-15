@@ -38,8 +38,9 @@ import * as policeair from './policeair.js';
 import * as police from './police.js';
 import { patchesOf } from './dusting.js';
 import { DUST } from '../../shared/rules.js';
-import { floorAt, FLY } from '../../shared/flight.js';
+import { floorAt, FLY, isHeli } from '../../shared/flight.js';
 import * as env from './environment.js';
+import { poolTable } from './pooltables.js';
 
 // the emotes' body poses (systems/emote.js, coming on its own branch): played on an actor too once it's there
 let emoteSys = null;
@@ -58,6 +59,9 @@ export function liveOn(id) {
 }
 export const anyLive = () => envList().length > 0 || (DIRECTOR.live && Object.values(DIRECTOR.scenes).some((s) => s.on));
 export const runsOf = (world) => D(world).runs;
+// the debug menu's kinds of place (dev.js nearTargets: a marina, a runway, a surf break...) - dev.js hands it over as it loads
+let nearOf = null;
+export const useNear = (fn) => { nearOf = fn; };
 export const sceneList = () => SCENE_LIST.map((s) => ({ id: s.id, n: s.n, g: s.g || 'Scenes', len: s.len }));
 
 // ---- places: where a scene happens, as named anchors { x, y, a } --------------------------------------------------------
@@ -83,8 +87,10 @@ export function named(map, name) {
   }
   for (const l of map.landmarks || []) if (l.name && l.name.toLowerCase() === n) return { x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2 };
   for (const q of map.pois || []) if (q.label && q.label.toLowerCase() === n) return { x: q.x, y: q.y };
-  const d = DISTRICTS.findIndex((q) => q && q.name && q.name.toLowerCase() === n);
-  return d >= 0 ? districtMid(map, d) : null;
+  for (const q of map.natureSites || []) if (q.name && q.name.toLowerCase() === n) return { x: q.x, y: q.y };   // (Summit Tarn, a meadow)
+  // a district (two of one name: the one on this map - Granite Peaks)
+  for (let d = 0; d < DISTRICTS.length; d++) if (DISTRICTS[d] && DISTRICTS[d].name && DISTRICTS[d].name.toLowerCase() === n) { const c = districtMid(map, d); if (c) return c; }
+  return null;
 }
 // a district's middle (the mean of its tiles, every 8th - once a map), on open ground near it
 function districtMid(map, d) {
@@ -175,7 +181,8 @@ export const PLACES = {
     const ap = standAt(m, out.x - 170, out.y + 120);
     const towns = (m.pois || []).filter((p) => (p.kind === 'gasstation' || p.kind === 'convenience') && near(p, R.x, R.y) > 3800).sort((p, q) => near(p, R.x, R.y) - near(q, R.x, R.y));
     const tw = towns[0] ? { x: towns[0].outside ? towns[0].outside.x : towns[0].x, y: towns[0].outside ? towns[0].outside.y : towns[0].y } : { x: R.x - 6000, y: R.y };
-    return { anchors: { door: out, doorIn: inn, bar, lot, road, approach: { ...ap, a: -Math.PI / 4 }, porch: { x: R.x, y: R.y, a: Math.PI / 2 }, town: { ...tw, a: 0 } }, at: { x: R.x, y: R.y + 100 } };
+    const pt = poolTable(m), table = pt ? { x: pt.cx, y: pt.cy, a: 0 } : bar;   // (the bar room's pool table: the pool shot)
+    return { anchors: { door: out, doorIn: inn, bar, lot, road, approach: { ...ap, a: -Math.PI / 4 }, porch: { x: R.x, y: R.y, a: Math.PI / 2 }, town: { ...tw, a: 0 }, table }, at: { x: R.x, y: R.y + 100 } };
   },
   // a gang's hideout (the 'gang' points of interest: the Syndicate's HQs, Dusty Hollow's) and a straight road up to it
   hideout(world, place, ref) {
@@ -192,8 +199,9 @@ export const PLACES = {
   road(world, place, ref, opt = {}) {
     const m = world.map, P = ref || (place.near && named(m, place.near)) || named(m, 'Downtown') || named(m, 'Midtown');
     if (!P) return null;
-    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || 5000, opt.avoid || null);
+    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || place.maxD || 5000, opt.avoid || null);
     if (!r) return null;
+    if (!place.far) return { ...r, clear: true };   // (no getaway: a shot along the road)
     // where the getaway runs on to: a point well past the end, on the road net (it was the nearest open ground - a shop's
     // floor, a lawn: a car driven on into it)
     const a = r.anchors.end.a, fx = r.anchors.end.x + Math.cos(a) * (place.far || 2600), fy = r.anchors.end.y + Math.sin(a) * (place.far || 2600);
@@ -202,13 +210,47 @@ export const PLACES = {
   },
   // a place by its names (the Showcase's: client/showcase.js q - the first found, exactly, then one starting with it)
   named(world, place) {
-    const m = world.map;
-    for (const n of place.q || [place.name]) { const p = named(m, n); if (p) return { anchors: { here: { ...p, a: 0 } }, at: p }; }
+    const m = world.map, off = (p) => { const q = { x: p.x + (place.dx || 0) * TILE, y: p.y + (place.dy || 0) * TILE, a: place.a || 0 }; return { anchors: { here: q }, at: q }; };
+    for (const n of place.q || [place.name]) { const p = named(m, n); if (p) return off(p); }
     const all = [];
     for (const H of Object.values(m.world3hand || {})) for (const pl of (H && H.places) || []) if (pl.name) all.push({ x: ((pl.x0 + pl.x1) / 2) * TILE, y: ((pl.y0 + pl.y1) / 2) * TILE, name: pl.name });
     for (const l of m.landmarks || []) if (l.name) all.push({ x: l.x + (l.w || 0) / 2, y: l.y + (l.h || 0) / 2, name: l.name });
-    for (const n of place.q || []) { const p = all.find((o) => o.name.toLowerCase().startsWith(String(n).toLowerCase())); if (p) return { anchors: { here: { x: p.x, y: p.y, a: 0 } }, at: p }; }
+    for (const n of place.q || []) { const p = all.find((o) => o.name.toLowerCase().startsWith(String(n).toLowerCase())); if (p) return off(p); }
     return null;
+  },
+  // the nearest of a kind of place (the debug menu's 'near' kinds: a marina, a surf break, a casino, a helipad...) to a named
+  // place (place.near) or the reference - its spot the anchor 'here' (moved dx / dy tiles)
+  near(world, place, ref) {
+    const m = world.map, R = (place.near && named(m, place.near)) || ref || { x: 0, y: 0 };
+    let best = null, bd = Infinity;
+    for (const q of (nearOf ? nearOf(m, place.kind) : null) || []) { const d = Math.hypot(q.x - R.x, q.y - R.y); if (d < bd) { bd = d; best = q; } }
+    if (!best) return null;
+    const h = { x: best.x + (place.dx || 0) * TILE, y: best.y + (place.dy || 0) * TILE, a: place.a || 0 };
+    return { anchors: { here: h }, at: h };
+  },
+  // a long run of open water (a boat's course) near a named place or kind: anchors start, end (a: the way along), mid,
+  // shore (the nearest dry ground to its middle)
+  water(world, place, ref) {
+    const m = world.map, base = place.kind ? PLACES.near(world, place, ref) : (place.near && named(m, place.near)) ? { at: named(m, place.near) } : ref ? { at: ref } : null;
+    if (!base) return null;
+    const P = base.at, len = place.len || 1400, wet = (x, y) => { const t = m.tileAtPx(x, y); return t === T.WATER || t === T.DEEP; };
+    let best = null, bd = Infinity;
+    for (let r = 0; r <= 2400 && !best; r += 160) for (let k = 0; k < 16; k++) {
+      const ox = P.x + Math.cos(k * Math.PI / 8) * r, oy = P.y + Math.sin(k * Math.PI / 8) * r;
+      if (!wet(ox, oy)) continue;
+      for (let j = 0; j < 8; j++) {
+        const a = j * Math.PI / 4, c = Math.cos(a), sn = Math.sin(a);
+        let ok = true;
+        for (let u = -len / 2; u <= len / 2 && ok; u += 48) for (const w of [-90, 0, 90]) if (!wet(ox + c * u - sn * w, oy + sn * u + c * w)) { ok = false; break; }
+        if (!ok) continue;
+        const d = Math.hypot(ox - P.x, oy - P.y);
+        if (d < bd) { bd = d; best = { x: ox, y: oy, a }; }
+      }
+      if (best) break;
+    }
+    if (!best) return null;
+    const c = Math.cos(best.a), sn = Math.sin(best.a), at = (u) => ({ x: best.x + c * u, y: best.y + sn * u, a: best.a });
+    return { anchors: { start: at(-len / 2), end: at(len / 2), mid: at(0), shore: { ...standAt(m, P.x, P.y, 30), a: best.a } }, at: at(0) };
   },
   // a crop field (dusting.js's patches): two passes along it (p0 -> p1, p2 -> p3), the way in (in), its middle (field)
   farm(world, place, ref) {
@@ -290,10 +332,11 @@ function castOne(world, run, c) {
   }
   if (c.group !== undefined) {
     const out = [];
+    const G = { ...standAt(m, P.x, P.y, 24), a: P.a };   // (a crowd gathers on dry ground: a park's middle can be its pond)
     for (let i = 0; i < c.group; i++) {
       const ang = (i / c.group) * Math.PI * 2 + 0.4, r = (c.spread || 50) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
-      const at = standAt(m, P.x + Math.cos(ang) * r, P.y + Math.sin(ang) * r, 4);
-      out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (P.a || 0) + c.ra : Math.atan2(at.y - P.y, at.x - P.x), c.id));
+      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, 4);
+      out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (G.a || 0) + c.ra : Math.atan2(at.y - G.y, at.x - G.x), c.id));
     }
     return out;
   }
@@ -328,9 +371,10 @@ export function start(world, id, opts = {}) {
   if (!sc) return { err: `No scene "${id}".` };
   const st = D(world), mode = opts.mode || 'dev';
   const resolve = PLACES[sc.place.k];
-  const pl = opts.place || (resolve ? resolve(world, sc.place, opts.ref || null) : null);   // (opts.place: resolved already - the live scheduler's)
+  // (where: live, near the player it's for; asked for - the shot list - at the scene's own place when it names one)
+  const pl = opts.place || (resolve ? resolve(world, sc.place, mode === 'live' || !sc.place.near ? opts.ref || null : null) : null);   // (opts.place: resolved already - the live scheduler's)
   if (!pl) return { err: `No place for "${sc.n}" here (${sc.place.k}).` };
-  const run = { held: !!opts.hold, seq: ++st.seq, id, sc, mode, capture: mode === 'capture' || !!world.capture, tick0: world.tick, anchors: pl.anchors, at: pl.at || Object.values(pl.anchors)[0], cast: new Map(), groups: new Map(), beatAt: {}, beats: (sc.beats || []).map((b, i) => ({ b, i, st: 'wait', t0: 0, tEnd: 0, d: null })), viewers: [], over: false, endAt: 0, lastNear: world.time, camPrev: null, castVer: 0 };
+  const run = { held: !!opts.hold, holdUntil: opts.hold && mode !== 'capture' ? world.time + DIRECTOR.holdS : 0, seq: ++st.seq, id, sc, mode, capture: mode === 'capture' || !!world.capture, tick0: world.tick, anchors: pl.anchors, at: pl.at || Object.values(pl.anchors)[0], cast: new Map(), groups: new Map(), beatAt: {}, beats: (sc.beats || []).map((b, i) => ({ b, i, st: 'wait', t0: 0, tEnd: 0, d: null })), viewers: [], over: false, endAt: 0, lastNear: world.time, camPrev: null, castVer: 0 };
   if (pl.clear && pl.run) clearRoad(world, run, pl);
   if (run.capture) setScene(world, sc);
   for (const c of sc.cast || []) castOne(world, run, c);
@@ -356,7 +400,7 @@ function clearRoad(world, run, pl) {
   for (const v of [...world.entities.values()]) {
     if (v.kind !== K.VEH || !v.ai || v.ai.kind !== 'traffic' || v.x < x0 || v.x > x1 || v.y < y0 || v.y > y1) continue;
     if (v.seats.some((s) => s && world.get(s)?.player)) continue;
-    if (!run.capture && inAnyView(world, v.x, v.y, 80)) continue;
+    if (!run.capture && !run.held && inAnyView(world, v.x, v.y, 80)) continue;   // (held: the page is black - nobody sees them go)
     for (const s of v.seats) { const q = s && world.get(s); if (q) despawnNpc(world, q); }
     world.remove(v);
   }
@@ -374,12 +418,14 @@ function tell(world, run, p) {
   if (!p.conn) return;
   const anchors = {};
   for (const [k, q] of Object.entries(run.anchors)) anchors[k] = [Math.round(q.x), Math.round(q.y), +(q.a || 0).toFixed(3)];
-  p.conn.sendJSON({ t: 'dscene', id: run.id, seq: run.seq, tick0: run.tick0, cast: castMsg(run), anchors, bt: run.beatAt, cap: run.capture ? 1 : 0, len: run.sc.len });
+  p.conn.sendJSON({ t: 'dscene', id: run.id, seq: run.seq, tick0: run.tick0, cast: castMsg(run), anchors, bt: run.beatAt, cap: run.capture ? 1 : 0, len: run.sc.len, held: run.held ? 1 : 0 });
 }
-export function unwatch(world, p) {
+export function unwatch(world, p, seq = 0) {
+  if (seq && p.dirRun && p.dirRun !== seq) return;   // (the page let go of a scene that's over: the one since stays on its camera)
   for (const run of D(world).runs) run.viewers = run.viewers.filter((q) => q !== p);
+  const was = p.dirRun;
   p.dirCam = null; p.dirRun = 0;
-  if (p.conn) p.conn.sendJSON({ t: 'dscene', off: 1 });
+  if (p.conn) p.conn.sendJSON({ t: 'dscene', off: 1, ...(was ? { seq: was } : null) });
 }
 
 // ---- the actors' own steps ------------------------------------------------------------------------------------------------
@@ -427,7 +473,7 @@ function stepDrive(world, run, A, v) {
   while (r.length > 1 && Math.hypot(r[0].x - v.x, r[0].y - v.y) < 70) r.shift();
   const wp = r[0], left = Math.hypot(wp.x - v.x, wp.y - v.y);
   const sp = r.length <= 1 && left < 260 && !c.through && !c.pass ? Math.max(70, left * 1.4) : c.speed;   // (pass: on through it at speed - the next leg follows)
-  driveToward(world, v, wp.x, wp.y, sp, { ignoreObstacles: !!c.through, ignoreCrossings: !!c.through, ignore: run.vehIds || (run.vehIds = new Set([...run.cast.values()].filter((q) => q.kind === 'veh').map((q) => q.id))) });   // (not braking for the scene's own: racers side by side)
+  driveToward(world, v, wp.x, wp.y, sp, { ignoreObstacles: !!c.through, ignoreCrossings: true, ignore: run.vehIds || (run.vehIds = new Set([...run.cast.values()].filter((q) => q.kind === 'veh').map((q) => q.id))) });   // (not braking for the scene's own: racers side by side; never waiting at the lights - a shot's car stopped at a red one halfway)
   v.dirDrive = world.tick;   // (driveToward left its v.ai.ctl: vehicles.js re-trims to it between the sub-steps)
 }
 // an aircraft along its route (the light planes' own stick: airtraffic.js - v.fin, v.autopilot): the nose on the next
@@ -445,7 +491,7 @@ function stepFly(world, run, A, v) {
   if (r.length) fi.turn = clampN(wrapA(Math.atan2(r[0].y - v.y, r[0].x - v.x) - v.a) * 2, -1, 1);
   else fi.turn = 0;
   fi.fwd = fwd < c.speed - 30 ? 1 : fwd > c.speed + 40 ? -0.3 : 0.3;
-  fi.climb = clampN((c.alt - alt) / 60, -0.5, 0.6); fi.m = 1; fi.tank = false; fi.hb = false;
+  fi.climb = clampN((c.alt - alt) / 60, -0.5, 0.6); fi.m = 1; fi.tank = isHeli(v.def); fi.hb = false;   // (a helicopter flies along its nose on the 'tank' controls: it had hovered where it was)
   // the mist (the damage word's bit dusting.js sets for a player's contract): low and quick enough over the ground
   const over = alt - floorAt(world.map, v.x, v.y);
   v.dirSpray = c.spray;
@@ -803,7 +849,8 @@ function handOver(world, run, A) {
 
 // ---- the run, each tick -------------------------------------------------------------------------------------------------------
 function stepRun(world, run, dt) {
-  if (run.held) run.tick0 = world.tick;   // (the capture's: held at its first moment - its clock not running - till /capture/go)
+  if (run.held && run.holdUntil && world.time >= run.holdUntil) goRun(world, run);   // (the page never said: on anyway)
+  if (run.held) run.tick0 = world.tick;   // (held at its first moment - its clock not running - till the capture's /capture/go, or the page's art is in)
   const t = (world.tick - run.tick0) * DT;
   if (run.held) { viewCam(world, run, 0, dt); for (const p of run.viewers) if (world.tick % 20 === 0) tell(world, run, p); return; }
   // the beats: started when their time comes, stepped until done
@@ -891,7 +938,9 @@ export function end(world, run, why = 'done') {
   for (const p of run.viewers) { if (p.capView) continue; p.dirCam = null; p.dirRun = 0; if (p.conn) p.conn.sendJSON({ t: 'dscene', off: 1, seq: run.seq, why }); }
 }
 // the capture's held scene: its clock from now (server/capture.js /capture/go)
-export function go(world) { for (const r of D(world).runs) if (r.held) { r.held = false; r.tick0 = world.tick; for (const p of r.viewers) tell(world, r, p); } }
+export function go(world) { for (const r of D(world).runs) goRun(world, r); }
+// one held scene on from now (the page's word that its art is in: dev.js 'scene' k 'go' with its seq)
+export function goRun(world, r) { if (!r.held) return; r.held = false; r.holdUntil = 0; r.tick0 = world.tick; for (const p of r.viewers) tell(world, r, p); }
 export function stopAll(world) { for (const run of [...D(world).runs]) end(world, run, 'stopped'); }
 
 // ---- live events: now and then, near someone --------------------------------------------------------------------------------

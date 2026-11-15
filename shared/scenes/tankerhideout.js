@@ -2,7 +2,7 @@
 // second, and the tanker ploughs into their parked cars and the gang standing round them - one blast, then the cars
 // going up one after another.
 export default {
-  id: 'tankerhideout', n: 'Tanker into the gang hideout', g: 'Action', len: 22, linger: 4,
+  id: 'tankerhideout', n: 'Tanker into the gang hideout', g: 'action', note: 'the bail, the blast, the cars going up · night', len: 22, linger: 4,
   place: { k: 'hideout', len: 1150 },
   anchors: ['start', 'end', 'mid', 'hideout'],
   time: 1290, weather: 'clear',

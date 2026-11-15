@@ -2,7 +2,7 @@
 // its hideout and it all goes off - the gang's and the police's own fighting once it starts (npc.js startFight); the
 // camera across the street between them.
 export default {
-  id: 'autoshootout', n: 'Gang shootout (autoplay)', g: 'Autoplay', len: 20, linger: 2,
+  id: 'autoshootout', n: 'Gang shootout at a hideout', g: 'action', note: 'dolly across the street · night', len: 20, linger: 2,
   place: { k: 'hideout', len: 900 },
   anchors: ['start', 'end', 'mid', 'hideout'],
   time: 1290, weather: 'clear',

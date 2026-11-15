@@ -41,7 +41,7 @@ import { PED_BLOCK } from '../../shared/map.js';
 import { mulberry32 } from '../../shared/rng.js';
 import { inAnyView, cineEyes } from '../view.js';
 import { dress } from './npclooks.js';
-import { LOOKS } from './personas.js';
+import { LOOKS, ANGLER_GAP, anglerRoom } from './personas.js';
 import { item } from '../../shared/look.js';
 import { wildStyle } from './wildlife.js';
 import { spawnNpc, despawnNpc } from './npc.js';
@@ -156,7 +156,7 @@ export function spotsOf(map) {
         if (!walkable(map, x, y)) continue;
         const wa = waterward(map, x, y);
         if (wa === null) continue;
-        const sx = x - Math.sin(wa) * 18, sy = y + Math.cos(wa) * 18;   // (the second angler, along the rail)
+        const sx = x - Math.sin(wa) * (ANGLER_GAP + 2), sy = y + Math.cos(wa) * (ANGLER_GAP + 2);   // (the second angler, along the rail - their own spot: personas.js ANGLER_GAP)
         if (walkable(map, sx, sy)) s = { x, y, a: wa };
       }
       if (s && !clear(s.x, s.y, 120)) s = null;
@@ -316,7 +316,7 @@ function members(s) {
   const c = Math.cos(s.a), sn = Math.sin(s.a), out = [];
   if (s.k === 'anglers') {
     out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'fisher', fish: true, pp: 'cooler' });
-    out.push({ x: s.x - sn * 18, y: s.y + c * 18, a: s.a, arche: 'casual', look: 'fisher', fish: true });
+    out.push({ x: s.x - sn * (ANGLER_GAP + 2), y: s.y + c * (ANGLER_GAP + 2), a: s.a, arche: 'casual', look: 'fisher', fish: true });
   } else if (s.k === 'chess') {   // across the table (west and east of it), the board between them; one or two watching
     // (cv: whose move - the two in turn, a long think, a lean in to move a piece, back - and this game's own clock, so
     // the games round the park don't all move at once: client/art2/game/peds.js actSitFrame)
@@ -444,11 +444,12 @@ export function fill(world, s, opts = {}) {
     s.car = v; s.side = ok(1) ? 1 : ok(-1) ? -1 : 0;
     if (!s.side) { s.car = null; return null; }
   }
-  const ms = members(s);
+  const ms = members(s).filter((m, i) => !(i > 0 && m.fish && !walkable(world.map, m.x, m.y)));   // (a second angler only where there's bank to stand on)
   s.car = null;
   for (const m of ms) {
     if (!opts.seen && !(s.floor && !inside(world, s.floor)) && inAnyView(world, m.x, m.y, 64)) return null;   // (a floor's regulars: under the roof till someone's inside)
     if (world.query(m.x, m.y, 10, K.PED).some((e) => !e.dead)) return null;
+    if (m.fish && !anglerRoom(world, m.x, m.y)) return null;   // (an angler's own spot, a body or two from anyone else fishing)
   }
   const g = { id: s.id, k: s.k, x: s.x, y: s.y, ids: [], at: world.time };
   for (const m of ms) {

@@ -6,7 +6,9 @@
 //   chub and bass in the rivers, the reef's bright fish round the southern keys (tangs, clownfish, parrotfish), silver
 //   shoals and mullet in the sea's shallows, moon jellies drifting off the beaches and in the harbours. Nature-A1
 //   (2026-10-20): sockeye salmon holding in the white water at a falls' foot, leaping at the falls - most fall back, and
-//   (notes 2) some make it: up the face in an arc and into the water above, then on upstream (CLIMB);
+//   (notes 2) some make it: up the face in stages - a leap, a splash into the falling water, a rest, the next leap (the
+//   owner, 11-14: not straight up the fall) - some dropping back on the way, and into the water above, then on upstream
+//   (CLIMB);
 //   bluegill and bass shoaling under a lake's dock; now and then a golden koi gone wild among a pond's carp; in the
 //   tidepools a sculpin or two and a shore crab scuttling sideways over the bed; (rivers part 2) trout and a bass holding
 //   in each river's calm pockets. Each is a flat
@@ -36,10 +38,13 @@ export const STILL_SP = 15;         // (px/s) a boat or a body in the water slow
 const CELL = 6 * TILE;              // the patches of water fish are placed by (px)
 const MAXF = [30, 64, 72, 80];      // fish at once, by the renderer's quality tier
 const MAXR = 96, MAXP = 260, MAXW = 240;   // rings on the water, puffs of mist and foam, swimmers' wake points
-// a salmon's leap at a falls that makes it (the owner, notes 2: "I'd like to see them eventually make it up the waterfall
-// and make it to the next pool"): ok the share of leaps that do, s how long the arc takes (and per px of drop), up how
-// far (px past the falls' drop) it looks for the water above, swim how long it swims on upstream before it's gone
-export const CLIMB = { ok: 0.4, s: 0.9, perPx: 0.006, up: [24, 150], swim: [6, 11] };
+// a salmon's climb at a falls (the owner, notes 2: "I'd like to see them eventually make it up the waterfall and make it
+// to the next pool"; 11-14: in stages, not flying straight up): ok the share of leaps that start a climb, step about how
+// much of the drop (px) each leap gains (stages [min, max] of them), leap how long each arc takes (s), arc how far
+// above its line it bows (px), rest how long it hangs on in the white water between leaps ([min, max] s), fail the odds
+// each leap after the first slips and it drops back to the pool, up how far (px past the falls' drop) it looks for the
+// water above, swim how long it swims on upstream before it's gone
+export const CLIMB = { ok: 0.55, step: 22, stages: [2, 6], leap: 0.5, arc: 9, rest: [0.5, 1.3], fail: 0.3, up: [24, 150], swim: [6, 11] };
 const ART = 2;                      // world px per art pixel of these sprites
 // the height the fish and the rings are drawn at: a decal is tested at 3.5 px over its z0 (engine.js DECAL_H), the water
 // at 0 and a lily pad at 1 (groundbake.js LILY_Z less the ground's sink) - so the pads cover what swims under them
@@ -720,7 +725,9 @@ export class WaterLife {
     if (S.climb && f.g && f.g.c.k === 'falls') {   // (a salmon at the falls: up at the white water - and back down into the pool, or over)
       const up = this.rnd() < CLIMB.ok && this._above(m, f);
       if (up) {
-        f.air = now; f.airT = CLIMB.s + up.h * CLIMB.perPx; f.airV = 0; f.climb = up; f.az = 0;
+        up.n = Math.max(CLIMB.stages[0], Math.min(CLIMB.stages[1], Math.round(up.h / CLIMB.step))); up.i = 0;
+        up.ph = 'leap'; up.t0 = now; up.dur = CLIMB.leap; up.z0 = 0;
+        f.air = now; f.airT = 1e9; f.airV = 0; f.climb = up; f.az = 0;
         this._ring(f.x, f.y, 6, 1);
         if (this.onSplash) this.onSplash(f.x, f.y, 5);
         return true;
@@ -749,11 +756,38 @@ export class WaterLife {
   _airStep(m, f, now, dt) {
     const k = (now - f.air) / f.airT, B = f.airBack, U = f.climb;
     if (U) {
-      // up the face: kept at the foot in front of the falls, raised by its height on the way (so it's drawn over the
-      // curtain), the arc easing in at the top - then into the water above, and on upstream
-      const e = 1 - (1 - Math.min(1, k)) * (1 - Math.min(1, k)), sy = U.y0 + (U.y1 - U.y0) * e - Math.sin(Math.min(1, k) * Math.PI) * 14;
-      f.x = U.x0 + (U.x1 - U.x0) * e; f.y = U.y0; f.az = Math.max(0, U.y0 - sy); f.a = -Math.PI / 2 + Math.sin(k * 9) * 0.25;
-      if (k >= 1) {
+      // up the face in stages: kept at the foot in front of the falls, raised by its height on the face (so it's drawn
+      // over the curtain) - a leap in an arc, a splash into the falling water, a rest there nosing into it, the next leap;
+      // or a slip and a drop back to the pool. The last leap carries it into the water above, and on upstream
+      const zAt = (i) => (U.h * i) / U.n, xAt = (z) => U.x0 + (U.x1 - U.x0) * (z / U.h);
+      const q = Math.min(1, (now - U.t0) / U.dur);
+      if (U.ph === 'rest') {
+        f.az = U.z0 + Math.sin(now * 7 + f.ph) * 0.5; f.a = -Math.PI / 2 + Math.sin(now * 16 + f.ph) * 0.12;
+        if (q < 1) return;
+        if (this.rnd() < CLIMB.fail) { U.ph = 'drop'; U.t0 = now; U.dur = 0.3 + U.z0 * 0.006; return; }
+        U.ph = 'leap'; U.t0 = now; U.dur = CLIMB.leap;
+        return;
+      }
+      if (U.ph === 'drop') {   // (it slipped: tumbling back down the face into the pool)
+        f.az = U.z0 * (1 - q * q); f.a = -Math.PI / 2 + q * Math.PI * 1.3;
+        if (q < 1) return;
+        f.air = -1; f.climb = null; f.az = 0; f.y = U.y0; f.hide = now + 2.5; f.v = f.S.cruise;
+        this._ring(f.x, f.y, 7, 1); this._ring(f.x, f.y, 4, 0.7);
+        if (this.onSplash) this.onSplash(f.x, f.y, 5);
+        return;
+      }
+      // a leap: from this stage's height to the next, bowed out over the white water
+      const z1 = zAt(U.i + 1);
+      f.az = U.z0 + (z1 - U.z0) * q + Math.sin(q * Math.PI) * CLIMB.arc; f.x = xAt(U.z0 + (z1 - U.z0) * q); f.y = U.y0;
+      f.a = -Math.PI / 2 + Math.sin(q * 9) * 0.25;
+      if (q < 1) return;
+      U.i++; U.z0 = z1;
+      if (U.i < U.n) {   // (into the falling water: a splash where it hit, then a rest)
+        if (this.onSplash) this.onSplash(f.x, U.y0 - z1, 3);
+        U.ph = 'rest'; U.t0 = now; U.dur = CLIMB.rest[0] + this.rnd() * (CLIMB.rest[1] - CLIMB.rest[0]);
+        return;
+      }
+      {
         f.air = -1; f.climb = null; f.x = U.x1; f.y = U.y1; f.c = U.c1; f.az = 0;
         f.mig = now + CLIMB.swim[0] + this.rnd() * (CLIMB.swim[1] - CLIMB.swim[0]); f.v = f.S.cruise * 2;
         this._ring(f.x, f.y, 7, 1);

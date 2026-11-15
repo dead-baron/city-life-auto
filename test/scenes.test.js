@@ -46,15 +46,16 @@ test('the camera: follows with its lead, glides between shots, cuts, moves, star
   assert.deepEqual(pointOf({ a: 'p', f: 10, s: 5 }, { anchors: { p: { x: 100, y: 100, a: 0 } } }), { x: 110, y: 105, a: 0 });
 });
 
-test('biker bar brawl: in the bar, the fight, out on a club bike, the clubs after him', () => {
+test('biker brawl: out front in the lot (never inside, out of view), the fight, off on a club bike, the clubs after him', () => {
   const world = makeWorld({ npcBudget: 120 });
   const { p } = joinPlayer(world);
   const r = director.start(world, 'bikerbrawl', { mode: 'dev', viewer: p }).run;
   assert.ok(r, 'started');
   assert.ok(r.anchors.door && r.anchors.bar && r.anchors.town);
+  const inside = (e) => world.map.buildings.some((b) => b && b.walkIn && e.x >= b.tx * 32 && e.x < (b.tx + b.tw) * 32 && e.y >= b.ty * 32 && e.y < (b.ty + b.th) * 32);   // (under a roof: out of the shot)
   assert.ok(p.conn.sent.some((m) => m.t === 'dscene' && m.id === 'bikerbrawl' && m.cast.jax), 'the page is told');
   const jax = ent(world, r, 'jax'), mark = ent(world, r, 'mark');
-  for (let i = 0; i < 24 * 20 && !jax.vehId; i++) world.step();
+  for (let i = 0; i < 24 * 20 && !jax.vehId; i++) { world.step(); assert.ok(!inside(jax) && !inside(mark), `in view, never inside the bar (${(i / 20).toFixed(1)} s)`); }
   stepScene(world, r, 1);
   assert.ok(mark.hp < mark.maxHp, 'he hit the biker');
   assert.ok(jax.vehId, 'on a bike');

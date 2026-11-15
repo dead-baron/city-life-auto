@@ -15,6 +15,12 @@
 //   wildNeon     a lit text sign in the wilds (a 'wild' district - on the water, the land's beside it: shared/world3-tidy.js
 //                wildAt): there it's a trail sign (wood)
 //   startOnCraft a race's start buoy within reach of a craft's spot: drawn over the boat, it hid it
+//   beachWater   dry ground (sand, grass, dirt) with no water by it beside planks the art takes for standing in water
+//                (a DOCK that isn't shared/mapcore.js deckOnDry): the coastline's smoothing drew a
+//                thin band of sea with waves along the pier or the boardwalk over the beach (the owner, 11-14: Sunset
+//                Beach Pier, Sandpiper Bay's boardwalk)
+//   skateWalk    a skate park's ledge, grind box, flat bar, rail or bench with nothing solid along it: walked straight
+//                through on foot (the owner, 11-14 - shared/world3-skatesolids.js)
 //   parked      a parking space (m.parking - not a home's driveway - and the car lots' spaces, m.dealerLots) whose car would
 //                stand on a pavement, a promenade or a plaza, a lawn, the sand, a pier or a building (shared/parkcheck.js;
 //                the owner, 2026-11-14: "parked vehicles must never sit on a promenade or a sidewalk"). The parked cars
@@ -26,10 +32,14 @@ import { TILE, T } from '../shared/constants.js';
 import { wildAt, TIDY3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
+import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
 
-// what the test lets by, each explained (none yet: what the lint found is fixed in the data)
+// what the test lets by, each explained (else what the lint found is fixed in the data)
 export const LINT_ALLOW = {
+  // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
+  // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
+  beachWater: 4,
   // the spaces laid over a pavement or a plaza when this check came in (2026-11-14): a few districts' kerb bays and car
   // parks drawn a tile off (Pine Hills' street, the airport motel's, the trades row's). (A golf cart's stand on its cart
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
@@ -56,7 +66,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], parked: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -145,6 +155,50 @@ export function lint(M) {
   // a race's start over a craft
   const crafts = [...(M.marina || []), ...(M.rentals || []).flatMap((r) => r.spots || [])];
   for (const race of M.races || []) for (const c of crafts) if (Math.hypot(c.x - race.start.x, c.y - race.start.y) < START_R) { rows.startOnCraft.push({ what: `${race.name}'s start`, x: race.start.x, y: race.start.y }); break; }
+  // planks the art takes for standing in water, beside dry ground with no water by it (a sliver of sea along them)
+  {
+    const DRY = new Set([T.SAND, T.GRASS, T.DIRT]), wetT = (t) => t === T.WATER || t === T.DEEP;
+    const deckWet = (tx, ty) => M.tiles[M.idx(tx, ty)] === T.DOCK && !deckOnDry(M, tx, ty);   // (a bridge's ends over its banks are drawn over its water by design)
+    let old = false;   // (old: every plank taken for water, as before deckOnDry - seen.beachWaterOld, the lint's own check that it sees the class)
+    const twAt = (x, y) => { if (!M.inside(x, y)) return 1; const t = M.tiles[M.idx(x, y)]; return wetT(t) || t === T.BRIDGE || (t === T.DOCK && (old || !deckOnDry(M, x, y))) ? 1 : 0; };
+    const tfAt = (x, y) => twAt(x, y) * 0.5 + (twAt(x - 1, y) + twAt(x + 1, y) + twAt(x, y - 1) + twAt(x, y + 1)) * 0.1 + (twAt(x - 1, y - 1) + twAt(x + 1, y - 1) + twAt(x - 1, y + 1) + twAt(x + 1, y + 1)) * 0.025;
+    const seenAt = new Set();
+    for (const pass of [true, false]) for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+      if (old !== pass) { old = pass; seenAt.clear(); }
+      const t = M.tiles[M.idx(tx, ty)];
+      if (t !== T.DOCK) continue;
+      if (!old) seen.decks = (seen.decks || 0) + 1;
+      if (!old && !deckWet(tx, ty)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {   // (side by side: a corner's touch is too little wet for the sea to show)
+        const x = tx + dx, y = ty + dy;
+        if (!M.inside(x, y) || !DRY.has(M.tiles[M.idx(x, y)])) continue;
+        let water = false;
+        for (let j = -1; j <= 1 && !water; j++) for (let i = -1; i <= 1; i++) if (M.inside(x + i, y + j) && wetT(M.tiles[M.idx(x + i, y + j)])) { water = true; break; }
+        if (water) continue;
+        // (the bake's own sum: the two tiles' blurred wetness, met halfway - groundbake.js tf; a jetty's root by the shore
+        // gives a speck or two at most, a run of planks over the sand a band of sea)
+        if ((tfAt(x, y) + tfAt(tx, ty)) / 2 < 0.47) continue;
+        const key = `${tx >> 3},${ty >> 3}`;   // (one row a stretch of 8 tiles)
+        if (seenAt.has(key)) continue;
+        seenAt.add(key);
+        if (old) seen.beachWaterOld = (seen.beachWaterOld || 0) + 1;
+        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
+      }
+    }
+  }
+  // a skate park's grind kit solid on foot
+  {
+    const KIT = new Set(['ledge', 'flatbar', 'bench_a', 'bench_b', 'bench_m', 'pbench', 'planter_fl', 'planter_g']);
+    const solidBy = (x, y, r) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const arr = M.inside(tx + i, ty + j) && M.solidProps.get(M.idx(tx + i, ty + j)); if (arr) for (const e of arr) if (!e.off && Math.hypot(e.x - x, e.y - y) <= r + e.r) return true; } return false; };
+    for (const q of M.skateSpots || []) {
+      const X0 = q.x * TILE, Y0 = q.y * TILE, X1 = (q.x + q.w) * TILE, Y1 = (q.y + q.h) * TILE;
+      for (const p of M.props) {
+        if (!p || !KIT.has(p.t) || p.x < X0 || p.x > X1 || p.y < Y0 || p.y > Y1) continue;
+        seen.skateKit = (seen.skateKit || 0) + 1;
+        if (!solidBy(p.x, p.y, 4)) rows.skateWalk.push({ what: `${q.name}'s ${p.t}`, x: p.x, y: p.y, why: 'nothing solid along it' });
+      }
+    }
+  }
   // the parking spaces: their car off the pavements, the promenades, the lawns
   const space = (what, sp, model) => { const V = VEHICLES[model] || VEHICLES.sedan, why = parkWhy(M, sp.x, sp.y, sp.a || 0, V.L, V.W); seen.spaces = (seen.spaces || 0) + 1; if (why) rows.parked.push({ what, x: sp.x, y: sp.y, why }); };
   for (const sp of M.parking || []) if (!sp.drive && sp.model !== 'golfcart') space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);

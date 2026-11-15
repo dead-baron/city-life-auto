@@ -30,11 +30,13 @@ import autochase from './autochase.js';
 import autorace from './autorace.js';
 import autoshootout from './autoshootout.js';
 import autodust from './autodust.js';
-import { SHOWCASE_SCENES } from './showcase.js';
+import { SHOTS } from './shots.js';
 
-// the new scenes, then the autoplay versions of the cinematic panel's staged scenes and Showcase spots (client/director.js
-// SCENES' and client/showcase.js's `auto`: the panel offers Autoplay beside Play it yourself)
-export const SCENE_LIST = [bikerbrawl, tankerhideout, helipursuit, autochase, autorace, autoshootout, autodust, ...SHOWCASE_SCENES];
+// The camera panel's shot list (client/director.js): its sections, in order - every scene is a shot in one of them (g),
+// played one tap at a time or back to back. The list is the sections' shots in this order.
+export const SECTIONS = [['city', 'City & Neon at night'], ['nature', 'Nature & Countryside'], ['coast', 'Coast & Water'], ['action', 'Action & Chases'], ['people', 'People & Life'], ['vehicles', 'Vehicles & Flight'], ['weather', 'Weather & Time-lapse']];
+const ALL = [autochase, autorace, autoshootout, tankerhideout, helipursuit, bikerbrawl, autodust, ...SHOTS];
+export const SCENE_LIST = SECTIONS.flatMap(([g]) => ALL.filter((q) => q.g === g));
 export const SCENES = Object.fromEntries(SCENE_LIST.map((s) => [s.id, s]));
 
 // each kind of beat: the fields it needs (who: a cast id; target / veh: a cast id; to / at: a point)
@@ -77,7 +79,10 @@ export function validateScene(sc) {
   if (!sc || typeof sc !== 'object') return ['not a scene'];
   if (!/^[a-z][a-z0-9]*$/.test(sc.id || '')) err.push('id: lowercase letters and digits');
   if (!sc.n) err.push('n: a name');
-  if (!(sc.len > 0 && sc.len <= 120)) err.push('len: 1-120 seconds');
+  if (!(sc.len > 0 && sc.len <= 40)) err.push('len: 1-40 seconds (a shot: 10-30 s and its end)');
+  if (!SECTIONS.some((q) => q[0] === sc.g)) err.push(`g: one of the sections (${SECTIONS.map((q) => q[0]).join(', ')})`);
+  if (sc.weather && !['clear', 'rain', 'fog', 'mist', 'storm'].includes(sc.weather)) err.push('weather: clear, rain, fog, mist or storm');
+  if (sc.tl && !(Array.isArray(sc.tl) && sc.tl.length === 2 && sc.tl.every(Number.isFinite))) err.push('tl: [from, to] minutes');
   if (!sc.place || !sc.place.k) err.push('place: { k }');
   const ids = new Set(), anchors = new Set(sc.anchors || []);
   for (const c of sc.cast || []) {

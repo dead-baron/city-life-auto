@@ -73,7 +73,7 @@ export class Huge {
       if (!(lo && i % 2)) B._blob(x + ox, y - r * 0.1, vx, 0, r * 0.15, s1, life, 2, 0.45, rise);
     }
     // 3. a second, wider shockwave, and a wall of dust rolling out with it
-    const ring = B._on(B.rings);
+    const ring = B.px() ? {} : B._on(B.rings);   // (art v2: no drawn ring - the dust and the light)
     ring.on = true; ring.x = x; ring.y = y; ring.r = r * 2.7; ring.t = 0; ring.life = 0.8 + 0.1 * k;
     for (let i = 0; i < 36; i++) { const a = R() * TAU, sp = 240 + R() * 220; fx.spawn(2, x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.36, Math.cos(a) * sp, Math.sin(a) * sp * 0.8, 1.6 + R() * 1.2, 10 + R() * 6, 'rgba(160,148,132,', 16); }
     // 4. burning debris flung far: charred metal trailing fire and smoke (boom.js's burners), burning on where it lands
@@ -115,7 +115,7 @@ export class Huge {
       for (let i = 0; i < 4; i++) { const a = Math.random() * TAU; B._blob(b.x, b.y, Math.cos(a) * b.s * 1.4, Math.sin(a) * b.s * 1.1, b.s * 0.2, b.s * 0.6, 0.7 + Math.random() * 0.4, 1, 0.9, 30); }
       for (let i = 0; i < 22; i++) { const a = Math.random() * TAU, sp = 60 + Math.random() * b.s * 3; fx.spawn(3, b.x, b.y, Math.cos(a) * sp, Math.sin(a) * sp, 0.4 + Math.random() * 0.4, 6 + Math.random() * 7, Math.random() < 0.5 ? '#ff7a1a' : '#ffd23a', 8); }
       fx.sparks(b.x, b.y, 10);
-      const ring = B._on(B.rings);
+      const ring = B.px() ? {} : B._on(B.rings);
       ring.on = true; ring.x = b.x; ring.y = b.y; ring.r = b.s * 2.2; ring.t = 0; ring.life = 0.4;
       S.flashes.push({ x: b.x, y: b.y, t: 0.5, r: b.s * 4, kind: 'boom' });
       soundEvent({ e: 'explode', x: b.x, y: b.y, r: b.s }, S);
@@ -146,7 +146,7 @@ export class Huge {
     const now = F.now, night = F.sky ? F.sky.night || 0 : 0;
     let any = false;
     for (const p of this.pools) if (p.on && p.end > now) { any = true; break; }
-    if (!any) return;
+    if (!any || this.B.px()) return;   // (art v2: the pools' glow is the renderer's lights - their flames' - not a gradient)
     const h = hazeSprite();
     g.save();
     g.globalCompositeOperation = 'lighter';

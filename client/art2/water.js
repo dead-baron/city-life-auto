@@ -32,7 +32,7 @@ import { distSq } from './scene.js';
 import { prepPoints, detectFeatures } from './rivergen.js';
 import { worley, vnc, hh, shadeStep as sd } from './ground.js';
 import { T, TILE } from '../../shared/constants.js';
-import { DISTRICTS } from '../../shared/mapcore.js';
+import { DISTRICTS, deckOnDry } from '../../shared/mapcore.js';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -1095,7 +1095,7 @@ function landField(M, TX0, TY0, TN) {
   for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
     const k = j * G + i, x = X0 + i, y = Y0 + j;
     let land = false, g = -1;
-    if (M.inside(x, y)) { g = M.idx(x, y); const t = M.tiles[g]; land = t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE && t !== T.DOCK; }
+    if (M.inside(x, y)) { g = M.idx(x, y); const t = M.tiles[g]; land = t !== T.WATER && t !== T.DEEP && t !== T.BRIDGE && (t !== T.DOCK || deckOnDry(M, x, y)); }   // (planks over the sand: land - mapcore.js deckOnDry)
     D[k] = land ? 0 : 1e6; Hh[k] = land ? g : -1;
   }
   const S2 = 1.4142;

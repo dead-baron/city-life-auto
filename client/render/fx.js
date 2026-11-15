@@ -84,7 +84,7 @@ export class FX {
   }
   spawn(type, x, y, vx, vy, life, size, color, grow = 0, vz = 0) {
     // "fewer particles": every other burst particle is skipped (the scratch object soaks up callers' edits)
-    if (this.thin && type !== 6 && (this.skip = !this.skip)) return this.scratch || (this.scratch = {});
+    if (this.thin && type !== 6 && type !== 11 && (this.skip = !this.skip)) return this.scratch || (this.scratch = {});   // (11: an explosion's fireball - art v2's sprite, never thinned)
     const o = this.p[this.pi];
     this.pi = (this.pi + 1) % MAX_P;
     o.on = true; o.type = type; o.x = x; o.y = y; o.vx = vx; o.vy = vy; o.life = life; o.max = life; o.size = size; o.color = color; o.grow = grow; o.z = 0; o.vz = vz; o.veil = 1; o.lift = 0;   // (veil: drawn this much less solid - a manhole's thin steam; lift: art v2 draws it that high up - a combine's chaff over the crop)

@@ -1,7 +1,7 @@
 // Autoplay: a street race at night (the panel's "Street race on the Neon Strip at night", on its own): four cars lined up
 // two by two on a long straight, off together flat out; the camera low at the line, then racing alongside the leaders.
 export default {
-  id: 'autorace', n: 'Street race (autoplay)', g: 'Autoplay', len: 14, linger: 3,
+  id: 'autorace', n: 'Street race on the Neon Strip', g: 'action', note: 'off the line, then alongside · night', len: 14, linger: 3,
   place: { k: 'road', len: 3000, near: 'Neon Strip', far: 2000 },
   anchors: ['start', 'end', 'mid', 'far'],
   time: 1380, weather: 'clear',

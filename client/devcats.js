@@ -31,7 +31,7 @@ export const DEV_SECTIONS = [
   { id: 'perf', title: '📈 Performance', items: [['📈 Performance readout on / off (your screen)', '@perf']] },
   // the scene director's scenes (server/systems/director.js, shared/scenes/): started now, at the place nearest you - your
   // camera follows the script's (client/director.js; Esc gives it back)
-  { id: 'scenes', title: '🎬 Director scenes', items: [...SCENE_LIST.map((q) => [`🎬 ${q.n}`, 'scene', { id: q.id }]), ['⏹ End the scene you\'re watching', 'scene', { k: 'stop' }]] },
+  { id: 'scenes', title: '🎬 Director scenes', items: [...SCENE_LIST.map((q) => [`🎬 ${q.n}`, 'scene', { id: q.id, hold: 1 }]), ['⏹ End the scene you\'re watching', 'scene', { k: 'stop' }]] },
   { id: 'me', title: '🧍 Me', items: [
     ['🛡 Invincible (toggle)', 'god'], ['❤ Heal', 'heal'], ['💵 +$25k', 'money'], ['😇 +50 Samaritan', 'samaritan'],
     ['📜 Wipe criminal record', 'record'], ['☠ Die (respawn test)', 'die'], ['🎒 Dropped backpacks, Common to Legendary', 'packs'],
