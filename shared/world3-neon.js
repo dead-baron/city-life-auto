@@ -18,7 +18,7 @@
 // reworking one block moves nothing else. The plan's frame: shared/world3-hand.js; its neon art: client/art2/neonsigns.js
 // (b.art.neon: handNeon).
 import { TILE, T } from './constants.js';
-import { canopy, terrace, hang, frontLife } from './world3-craft.js';
+import { fest, canopy, terrace, hang, vendor, frontLife } from './world3-craft.js';
 
 const D = 7;   // the Neon Strip's district id (shared/mapcore.js DISTRICTS)
 // the street centre lines (tiles); the two bridges' arterials come down to the boulevard at bridgeW and bridgeE (the
@@ -128,11 +128,8 @@ function neonDeck() {
     counts: n,
   };
 }
-// lights strung from (x, y) to (x + dx, y + dy) (tiles) h px up, each end made fast to something (the owner, 10-25:
-// "lantern (or hanging lights) don't connect to anything"): 'pole' (a post of its own, drawn with it), 'wall' (a bracket
-// on the building there), 'palm' / 'tree' / 'lamp' / 'stall' (the one standing there); k 'lantern': red paper lanterns,
-// 'cable': a bare cable (test/neonstrip.test.js holds every end to it)
-function fest(K, x, y, dx, dy, h, a0, a1, k = null) { K.prop('festoon', x, y, 0, { tx: Math.round(dx * TILE), ty: Math.round(dy * TILE), h, ends: [a0, a1], ...(k ? { k } : {}) }); }
+// (fest: lights strung between two anchors - shared/world3-craft.js, the owner's 10-25 "lantern (or hanging lights)
+// don't connect to anything"; test/neonstrip.test.js holds every end to it)
 
 const band = (yN, kN, yS, kS) => [yN + EXT[kN] + 1, yS - EXT[kS] - 1];
 const span = (xW, kW, xE, kE) => [xW + EXT[kW] + 1, xE - EXT[kE]];
@@ -471,8 +468,7 @@ function lanternLane(K, x0, x1, out) {
     rows.forEach(([y, a, dv], r) => {
       if ((r === 1 || r === 2) && k % 6 === 0) return;   // (the spine starts a stall in from each cross aisle)
       prop('mstall', x + 1, y, 0, { v: Math.floor(rnd(x, y, 1) * 4), c: Math.floor(rnd(x, y, 2) * 4), a });
-      K.m.vendorSpots ||= [];
-      if (rnd(x, y, 8) < 0.7) K.m.vendorSpots.push({ x: Math.round((x + 1) * TILE), y: Math.round((y + dv) * TILE), a: a === 0 ? Math.PI / 2 : -Math.PI / 2 });
+      if (rnd(x, y, 8) < 0.7) vendor(K, x + 1, y + dv, a === 0 ? Math.PI / 2 : -Math.PI / 2);
       n++;
     });
     // what's stacked by the outer rows: crates, a cooler (against the lane's sides, behind the stalls)
@@ -678,8 +674,8 @@ function harborLights(K, x0, out) {
     let k = 0;
     for (let x = 3527; x + 2 < 3575; x += 3.5, k++) {
       prop('mstall', x + 1, yN, 0, { v: k % 4, c: (k + 1) % 4, a: 0 }); prop('mstall', x + 1, yS2, 0, { v: (k + 2) % 4, c: k % 4, a: Math.PI });
-      if (rnd(x, yN, 4) < 0.7) vendorAt(K, x + 1, yN - 0.75, Math.PI / 2);
-      if (rnd(x, yS2, 4) < 0.7) vendorAt(K, x + 1, yS2 + 0.75, -Math.PI / 2);
+      if (rnd(x, yN, 4) < 0.7) vendor(K, x + 1, yN - 0.75, Math.PI / 2);
+      if (rnd(x, yS2, 4) < 0.7) vendor(K, x + 1, yS2 + 0.75, -Math.PI / 2);
       if (k % 2 === 0) fest(K, x + 1.5, yN + 0.7, 0, yS2 - yN - 1.4, 50, 'pole', 'pole', 'lantern');
     }
     for (const gx of [3525, 3576]) prop('gatearch', gx, 2253, 0, { w: Math.round(9 * TILE), a: Math.PI / 2 });
@@ -730,7 +726,6 @@ function harborLights(K, x0, out) {
   m.marina.push({ x: (px + 4) * TILE, y: (py - 12) * TILE, a: -Math.PI / 2, kind: 'speedboat' });
   (out.places ||= []).push({ name: 'Harbor Lights', x0, y0, x1: 3640, y1 });
 }
-const vendorAt = (K, x, y, a) => (K.m.vendorSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a });
 
 // ---- the lantern alleys ------------------------------------------------------------------------------------------
 // A walkway 5 tiles wide through a block from street to street (carved before the block's rows, so they stop either

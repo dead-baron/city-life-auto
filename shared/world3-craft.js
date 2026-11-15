@@ -12,9 +12,9 @@
 //   - vendor:   the stallholder behind a market stall (map.vendorSpots: activities.js 'vendor')
 //   - hang:     a knot of people on a corner, by a club's door, under the lanterns - or a queue at a box office
 //               (map.hangSpots: activities.js 'hang')
-//   - taxiRank: taxis waiting at the kerb (a parked taxi in each bay: map.parking model 'taxi'), the TAXI sign
-//   - litPalms: the palms down a boulevard with fairy lights wound up their trunks (the art: client/art2/game/
-//               statics.js 'palmlights') instead of strings looped palm to palm
+//   - frontLife: a knot by about half the bars' and food places' doors, a queue along a picture house's front
+// (and the palms down a boulevard with fairy lights wound up their trunks - a palm prop's `lit`, the art's
+// client/art2/game/statics.js 'palmlights' - instead of strings looped palm to palm)
 // Positions in tiles; the map's lists in px. No trigonometry (shared code: the world comes out the same everywhere).
 import { TILE, T } from './constants.js';
 
@@ -70,25 +70,6 @@ export function hang(K, x, y, n = 4, line = null) {
 
 // a stallholder behind the stall at (x, y) (tiles), facing a (radians: the aisle) - activities.js 'vendor'
 export function vendor(K, x, y, a) { (K.m.vendorSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), a }); }
-
-// taxis waiting at the kerb: n bays from (x, y) (tiles, the first bay's middle) along +x, facing a (radians), the TAXI
-// sign on its pole at the head of the rank (sx, sy: on the pavement)
-export function taxiRank(K, x, y, n, a, sx, sy) {
-  for (let i = 0; i < n; i++) K.m.parking.push({ x: Math.round((x + i * 4.2) * TILE), y: Math.round(y * TILE), a, model: 'taxi', kerb: true });
-  K.prop('textsign', sx, sy, 0, { text: 'TAXI', bg: '#e0b030', fg: [30, 30, 30], z: 34, sx: 2, lit: true });
-}
-
-// the palms of a planted run (a median, a pavement's grates) with lights wound up their trunks: every 'royal' palm prop
-// of this plan inside [x0, x1] x [y0, y1] (tiles) - the props already placed, so the plan places its palms as before
-export function litPalms(K, x0, y0, x1, y1) {
-  let n = 0;
-  for (let i = K.p0 || 0; i < K.m.props.length; i++) {
-    const p = K.m.props[i];
-    if (p.t !== 'palm_a' || p.sp !== 'royal' || p.x < x0 * TILE || p.x > x1 * TILE || p.y < y0 * TILE || p.y > y1 * TILE) continue;
-    p.lit = 1; n++;
-  }
-  return n;
-}
 
 // the life out front of a plan's fronts (its buildings from index b0 on): a knot of friends on the pavement beside a
 // bar's or a food place's door (about half of them: o.p), a queue along the front of a picture house from its door;
