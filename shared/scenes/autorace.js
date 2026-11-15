@@ -1,4 +1,4 @@
-// Autoplay: a street race at night (the panel's "Street race on the Neon Strip"): four cars on a wide street, two by two,
+// Autoplay: a street race at dusk (the panel's "Street race on the Neon Strip"): four cars on a wide street, two by two,
 // off together and racing - the owner, 11-14 20:21: "the cars just drive in a cluster then stop at stop lights, they don't
 // act like they're racing - they should be swerving in and out of traffic and pedestrians should be jumping out of the
 // way". So: the race beat (server/systems/racers.js) - through the lights, each at its own pace (the back row quicker:
@@ -6,10 +6,10 @@
 // as they're shaved past), and at the first junction people crossing who dive clear. The camera low at the line, wide at
 // the junction as the pack comes through it, then racing alongside.
 export default {
-  id: 'autorace', n: 'Street race on the Neon Strip', g: 'action', note: 'through the traffic and the lights · night', len: 22, linger: 2,
+  id: 'autorace', n: 'Street race on the Neon Strip', g: 'action', note: 'through the traffic and the lights · dusk', len: 22, linger: 2,
   place: { k: 'road', len: 700, near: 'Neon Strip', far: 3600, wide: 1, junction: 650, traffic: 1 },
   anchors: ['start', 'end', 'mid', 'far', 'cross'],
-  time: 1350, weather: 'clear',
+  time: 1172, weather: 'clear',   // (dusk - shots.js TIME: the lamps and the neon on, the sky still red, the cars seen)
   cast: [
     { id: 'r1', veh: 'sports', at: { a: 'start', f: 120, s: 10 }, paint: 2 },
     { id: 'r2', veh: 'muscle', at: { a: 'start', f: 120, s: 46 }, paint: 7 },
@@ -33,7 +33,7 @@ export default {
     { at: 0, hold: { a: 'start', f: 300, s: 30 }, z: 1.3 },
     { at: 1.8, between: ['r1', 'r4'], z: 1.15, ease: 1.2 },
     { on: 'go', d: 0.8, hold: { a: 'cross', f: -120 }, z: 0.82, ease: 1.6 },
-    { on: 'go', d: 5, follow: 'r3', z: 0.88, lead: 0.25, s: 50, ease: 2 },   // (a short lead: at 700 px/s up a street the screen's short way, a long one runs the car off the frame)
+    { on: 'go', d: 5, follow: 'r3', z: 0.88, lead: 0.25, ease: 2 },   // (a short lead: at 700 px/s up a street the screen's short way, a long one runs the car off the frame)
     { on: 'go', d: 12, follow: 'r1', z: 0.84, lead: 0.3, ease: 2.5 },
   ],
 };

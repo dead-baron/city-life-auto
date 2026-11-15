@@ -24076,7 +24076,13 @@ refined with him.
 - **Kept** (shared/scenes/index.js KEPT): the shots that pass the sanity check on World v3 (tools/shotcheck.mjs,
   test/world3scenes.test.js) - over open ground at street level with nothing roofed in the middle of the frame, the subject
   in frame, people about, the time its note says. The panel's sections and Play all are these; the rest are folded under
-  **More (unreviewed)** (each still one tap, or ▶ for all of them).
+  **More (unreviewed)** (each still one tap, or ▶ for all of them). Kept (14): the Harbor marina at noon, dancing on Piazza
+  Vecchia (noon), a morning workout in Greenfield Park, Lakeside Greens in the afternoon, the police chase (afternoon), rain
+  on Midtown, Canyon Oasis, the boardwalk crowd and the motorcycle through Granite Peaks (golden hour), Sunset Beach Pier and
+  the convertible down the coast road and the street race (dusk), the Neon Strip night market and Lucky Mesa's casinos
+  (night). The check's word on the rest (`node tools/shotcheck.mjs`): most nature and coast shots have nobody about (no
+  extras yet - the owner's call which want them), the shootout and the tanker frame mostly roofs, the crop duster and the
+  wheat field lose their subject from the frame, the plane finds no runway on World v3.
 - **Save this view** (the Camera panel; the owner's and admins' - anyone on a private dev server): where the camera is, its
   zoom, the time of day and weather on the screen, a name and a note (optional) - kept on the server with the world's own
   state (server/systems/views.js: store.kept.views, saved with the profiles). ★ Save this view sits on the shot list's
