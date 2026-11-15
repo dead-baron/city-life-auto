@@ -174,7 +174,7 @@ function openBlock(m, b, H3, roles, attach, opened) {
   if (h <= OPEN3.rows) rows.push([0, h, 0]);
   else {
     let fd = 10 + Math.floor(rr(1) * 5), gl = OPEN3.lane[0] + Math.floor(rr(2) * (OPEN3.lane[1] - OPEN3.lane[0] + 1));
-    if (h - fd - gl < 8) fd = h - gl - 8;
+    if (h - fd - gl < 8) { gl = Math.max(4, Math.min(gl, h - 17)); fd = h - gl - 8; }
     if (fd < 9) rows.push([0, h, 0]);
     else {
       rows.push([0, fd, gl]);
