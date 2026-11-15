@@ -381,6 +381,7 @@ export function makeStatic(r) {
     case 'sbridge': return makeStoneBridge(r);
     case 'curtain': return WL.waterfall(r.w || 18, r.h || 90, r.seed || 4);
     case 'festoon': return makeFestoon(r);
+    case 'palmlights': return makePalmLights(r);
     case 'koi': { const G = new GBuf(24, 24); G.ax = 12; G.ay = 12; GD.koi(G, 12, 12, r.a || 0, r.v || 0, 9); return G; }
     case 'zen': return makeZen();
     case 'cliff': {
@@ -2016,6 +2017,24 @@ function makeFestoon(r) {
   }
   return G;
 }
+// Fairy lights wound up a palm's trunk (SC4-B, the owner 11-14: "the lights don't act like lanterns, they just look like
+// random lights strung around" - a light belongs to something): a fine wire spiralling from a hand's height up to the
+// crownshaft, warm bulbs along it every few px, only the turns on the camera's side (the trunk hides the rest). Drawn
+// over the palm (the item sits 1 px south of it); h: the trunk's height, w: the spiral's half width (px)
+function makePalmLights(r) {
+  const h = r.h, w = r.w, G = new GBuf(w * 2 + 8, h + 14); G.ax = w + 4; G.ay = h + 8;
+  const P = (x, y, z, c, em) => { const px = Math.round(G.ax + x), py = Math.round(G.ay - 1 + y - z); if (G.inside(px, py)) G.put(px, py, c, [0, 0.3, 0.95], z, em, F_NOCAST); };
+  const pitch = 9, cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  let n = 0;
+  for (let z = 10; z < h; z += 0.5) {
+    const ph = (z / pitch) * TAU, cx = Math.cos(ph), sy = Math.sin(ph), wz = w * (1 - (z / h) * 0.25);
+    if (sy < -0.15) continue;   // (behind the trunk)
+    const X = cx * wz, Y = sy * wz * 0.4 + 0.5;
+    P(X, Y, z, [44, 40, 36], null);
+    if (Math.round(z * 2) % 9 === 0) { const c = cols[n++ % 3]; P(X, Y, z + 0.5, c, [c[0], c[1], c[2], 255]); P(X + (cx > 0 ? -1 : 1), Y, z + 0.5, c, [c[0], c[1], c[2], 200]); }
+  }
+  return G;
+}
 // a beach towel laid on the sand
 function makeTowel(r) {
   const w = 18, h = 34, G = new GBuf(w, h); G.ax = w / 2; G.ay = h / 2;
@@ -2322,6 +2341,7 @@ function plantFor0(c, p) {
   }
   return null;
 }
+const LIT_PALMS = { royal: 86 };   // (an upright palm's trunk up to its crownshaft, px at k 1: makePalmLights)
 const PLANTS = new Set(['tree_a', 'tree_b', 'palm_a', 'palm_b', 'palm_c', 'palm_d', 'palm_s', 'shrub_a', 'shrub_b', 'bush_a', 'bush_b', 'bush_c', 'flowers_a', 'flowers_big', 'cactus', 'redwood']);
 // The giant redwoods fade like buildings when you're behind or under them (chunkbake.js composites them with the
 // buildings, each with a fade id, TREE_FADE + its prop index; the host eases the ones round you out and back): only
@@ -2367,6 +2387,9 @@ function propItems(c, p, pi, I) {
     if (!r) return;
     const [sp, k0] = r, k = Math.round(k0 * 5) / 5, v = Math.floor(hh(x, y, 13) * NV(sp)), tl = c.at(x, y);
     put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, { pi }, tl !== T.SIDEWALK && tl !== T.PLAZA));
+    // (p.lit: fairy lights wound up an upright palm's trunk - the nightlife districts' boulevards, SC4-B)
+    const LH = p.lit && LIT_PALMS[sp];
+    if (LH) { const h = Math.round(LH * k), w = Math.max(3, Math.round(3 * Math.pow(k, 0.8))); put(I, { key: `plit:${h}:${w}`, recipe: { t: 'palmlights', h, w }, x, y: y + 1, ext: [w + 4, h + 10, w + 4, 6], pi }); lightAt(I, x, y + 4, Math.round(h * 0.45), 120, [1, 0.8, 0.5], 1.1, 'window'); }
     return;
   }
   switch (t) {
@@ -2538,6 +2561,7 @@ function propItems(c, p, pi, I) {
     case 'pyramid': V('pyr', 'skatePyramid', []); return;
     case 'gwall': V(`gw:${p.len || 256}:${p.v || 1}`, 'graffitiWall', [p.len || 256, p.v || 1]); return;
     case 'boombox': V('bbox', 'boombox', []); return;
+    case 'aboard': V('chalk', 'chalkboard', []); return;   // (a terrace's menu board: shared/world3-craft.js)
     case 'bleachers': { const len = Math.round((p.len || 120) / 8) * 8, rows = p.rows || 4; V(`blch:${len}:${rows}`, 'bleachers', [len, rows]); return; }
     case 'cliffwall': { const len = Math.round((p.len || 160) / 8) * 8, h = p.h || 70, dp = p.d || 60, sd = p.s || 1; put(I, vitem(`cliffw:${len}:${h}:${sd}:${dp}`, 'cliffWall', [len, h, dp, sd], x, y, 0, null, { pi })); return; }
     case 'coastfall': { const w = p.w || 28, drop = p.drop || 66, sd = p.s || 11; put(I, { key: `fall:c:${w}:${drop}:${sd}${p.kind && p.kind !== 'cliff' ? ':' + p.kind : ''}${p.stone ? ':' + p.stone : ''}`, recipe: { t: 'fall', kind: p.kind || 'cliff', w, drop, seed: sd, mist: p.mist ?? 0.7, ...(p.stone ? { stone: p.stone } : {}) }, x, y, ext: [w / 2 + 80, drop + 130, w / 2 + 80, 50], pi }); lightAt(I, x, y + 10, 12, 130, [0.75, 0.9, 1], 0.5, 'sign', 0); return; }

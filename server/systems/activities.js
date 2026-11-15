@@ -30,6 +30,12 @@
 //             counter, sat in the barber's chair, at the bar
 //   dice      three shooting dice down an alley in a rough part of town, crouched against the wall over the dice and
 //             the money - mostly after dark; a player can get in on it (streetdice.js)
+//   terrace   one or two sat at a terrace's table out front of a bar or a food place (map.terraceSpots: a hand plan's
+//             terraces under their string lights), over their drinks - day and night, busiest after dark
+//   hang      a knot of three to five stood talking on a corner, under the lanterns, by a club's door or a busker
+//             (map.hangSpots: the nightlife districts' corners), dressed for a night out; with s.line, a queue at a box
+//             office facing its door - mostly after dark
+//   vendor    the stallholder behind a market stall, facing the aisle (map.vendorSpots: the night markets' stalls)
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
@@ -89,6 +95,11 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   roadcrew: { day: 0.9, night: 0, cap: 1 },
   site: { day: 0.9, night: 0, cap: 1 },   // (a building site's crew out front - batch 8)
   dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
+  // (the district craft pass, 11-14: the hand plans' own life - map.terraceSpots, map.hangSpots. street: not counted
+  // against ACT_MAX, their own cap round a player - a nightlife street wants its terraces and its corners full)
+  terrace: { day: 0.55, night: 0.8, cap: 5, street: 1 },
+  hang: { day: 0.2, night: 0.9, cap: 6, street: 1 },
+  vendor: { day: 0.75, night: 0.85, cap: 8, street: 1 },
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
@@ -107,6 +118,7 @@ const MY_LOOKS = {
       L.outfit.hat = null; L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
     } },
 };
+const NIGHT_LOOKS = ['glam', 'streetw', 'glam', 'punk', 'dancer', 'streetw', null];   // (a night out: personas.js LOOKS; null their own clothes)
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
 
 const walkable = (map, x, y) => { const t = map.tileAtPx(x, y); return !PED_BLOCK[t] && t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP; };
@@ -241,6 +253,9 @@ export function spotsOf(map) {
     list.push({ k: 'skaters', x, y, a: 0, box, seats: q.seats || [], qps, wild: false }); taken.push({ x, y });
   }
   for (const q of map.partySpots || []) { list.push({ k: 'party', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  for (const q of map.terraceSpots || []) if (walkable(map, q.x - (q.seat || 15), q.y) && walkable(map, q.x + (q.seat || 15), q.y)) list.push({ k: 'terrace', x: q.x, y: q.y, a: 0, seat: q.seat || 15, wild: false });
+  for (const q of map.vendorSpots || []) if (walkable(map, q.x, q.y)) list.push({ k: 'vendor', x: q.x, y: q.y, a: q.a || 0, wild: false });
+  for (const q of map.hangSpots || []) if (walkable(map, q.x, q.y)) list.push({ k: 'hang', x: q.x, y: q.y, a: q.a || 0, n: q.n || 4, line: q.line || null, wild: false });
   for (const q of map.crewSpots || []) { list.push({ k: 'roadcrew', x: q.x, y: q.y, a: q.a || 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   // the building sites (a building of kind 'construction': the frame going up) - a crew at work out front (batch 8)
   for (const b of map.buildings || []) {
@@ -384,6 +399,20 @@ function members(s) {
     const n = 4 + Math.floor(rng() * 4);
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + rng() * 0.4, r = 22 + rng() * 18, x = s.x + Math.cos(a) * r, y = s.y + Math.sin(a) * r * 0.8; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: rng() < 0.2 ? 'hustler' : 'casual', look: rng() < 0.4 ? 'skater' : null, gt: 'dance' }); }
     for (let i = 0; i < 1 + (rng() < 0.5 ? 1 : 0); i++) { const x = s.x + (i ? 60 : -62), y = s.y + 30; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: 'casual', watch: true }); }
+  } else if (s.k === 'terrace') {  // across the table from each other over their drinks (now and then one on their own)
+    const sd = s.seat || 15, look = rng() < 0.5 ? NIGHT_LOOKS[Math.floor(rng() * NIGHT_LOOKS.length)] : null;
+    out.push({ x: s.x - sd, y: s.y, a: 0, arche: rng() < 0.25 ? 'socialite' : 'casual', look, gt: 'sit' });
+    if (rng() < 0.8) out.push({ x: s.x + sd, y: s.y, a: Math.PI, arche: rng() < 0.25 ? 'socialite' : 'casual', look: rng() < 0.5 ? look : null, gt: 'sit' });
+  } else if (s.k === 'vendor') {   // behind the counter, facing the aisle
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: rng() < 0.6 ? 'vendor' : null });
+  } else if (s.k === 'hang') {     // a loose ring facing in, talking (a line: one behind another toward the door, facing it)
+    const n = Math.max(2, s.n - (rng() < 0.4 ? 1 : 0)), L = s.line;
+    for (let i = 0; i < n; i++) {
+      let x, y, a;
+      if (L) { x = s.x + L[0] * i + (rng() - 0.5) * 3; y = s.y + L[1] * i; a = Math.atan2(-L[1], -L[0]); }
+      else { const t = (i / n) * Math.PI * 2 + hsh(s.x, s.y, 9) * 6, r = 11 + n * 2 + rng() * 3; x = s.x + Math.cos(t) * r; y = s.y + Math.sin(t) * r * 0.7; a = Math.atan2(s.y - y, s.x - x); }
+      out.push({ x, y, a, arche: rng() < 0.3 ? 'socialite' : rng() < 0.25 ? 'hustler' : 'casual', look: NIGHT_LOOKS[Math.floor(rng() * NIGHT_LOOKS.length)], chat: !L, watch: null });
+    }
   } else if (s.k === 'roadcrew') {  // at the hole: the pick swung, one down on a knee, the foreman watching with his clipboard
     out.push({ x: s.x - 14, y: s.y, a: 0, arche: 'construction', chop: true });
     out.push({ x: s.x + 14, y: s.y + 4, a: Math.PI, arche: 'construction', gt: 'kneel' });
@@ -542,7 +571,7 @@ function pose(ped, on) {
 // npc.js update: for someone at an activity, wandering or standing about -> { inp, factor } or null (walk about like anyone)
 const NO_INPUT = { bits: 0, mx: 0, my: 0, aim: 0 };
 const seekTo = (ped, tx, ty, s = 1) => { const dx = tx - ped.x, dy = ty - ped.y, d = Math.hypot(dx, dy) || 1, m = Math.min(1, d / 24) * s; return { bits: 0, mx: dx / d * m, my: dy / d * m, aim: Math.atan2(dy, dx) }; };
-export const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'birders', 'climbers', 'kayakers']);
+export const RAIN_OFF = new Set(['dice', 'chess', 'picnic', 'painter', 'carwash', 'hoops', 'skaters', 'stoop', 'party', 'terrace', 'birders', 'climbers', 'kayakers']);
 export function steer(world, ped, now) {
   const n = ped.npc, a = n.act;
   if (!a) return null;
@@ -618,14 +647,15 @@ function fillRound(world) {
     if (a.ug || a.hidden) continue;
     let have = 0;
     const kinds = {};
-    for (const g of A.values()) if (Math.hypot(g.x - a.x, g.y - a.y) < ACT_DROP) { have++; kinds[g.k] = (kinds[g.k] || 0) + 1; }
+    for (const g of A.values()) if (Math.hypot(g.x - a.x, g.y - a.y) < ACT_DROP) { if (!KINDS[g.k] || !KINDS[g.k].street) have++; kinds[g.k] = (kinds[g.k] || 0) + 1; }
     // (the floor you're walking up to comes first, whatever's on round you: on the Strip the other casinos' floors, a pool
     // table, a busker took the round's places before it - spotsNear isn't in order - and the casino you walked into had
     // nobody in it, never filled once you were inside: the owner's Golden Lotus capture, 11-14)
     const all = spotsNear(world.map, a.x, a.y, ACT_NEAR), first = (s) => !!s.floor && a.x > s.floor.x0 - FLOOR_FIRST && a.x < s.floor.x1 + FLOOR_FIRST && a.y > s.floor.y0 - FLOOR_FIRST && a.y < s.floor.y1 + FLOOR_FIRST;
     for (const s of all.filter(first).concat(all.filter((q) => !first(q)))) {
       const pri = first(s);
-      if (!pri && (have >= ACT_MAX || world.npcCount >= world.npcBudget * 0.85)) break;
+      if (!pri && world.npcCount >= world.npcBudget * 0.85) break;
+      if (!pri && !KINDS[s.k].street && have >= ACT_MAX) continue;   // (the terraces and the corners: their own caps)
       if (A.has(s.id) || now < (rest.get(s.id) || 0) || (!pri && (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2))) continue;   // (not the whole street washing its cars at once)
       if (s.floor ? inside(world, s.floor) : anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;   // (a floor's: not with someone in the room)
       const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : s.k === 'cards' ? CASINO_FLOOR[s.floor.casino ? 'casino' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
@@ -633,7 +663,7 @@ function fillRound(world) {
       if (!(pri && s.floor.casino) && rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later - a casino you're at the door of is always open)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
       kinds[s.k] = (kinds[s.k] || 0) + 1;
-      have++;
+      if (!KINDS[s.k].street) have++;
     }
   }
 }
