@@ -23701,7 +23701,7 @@ and pool tables in more bars and food places. The pool tables' plumbing is the m
   from 4 tables out in the world to 15. (A home already has one: the games room upgrade, shared/homeups.js - a level of its own, its table the minigame's.)
 - The Guide: Casinos and Card tables entries (the stakes from rules-games.js `CASINO`, controls as [[action]]); Pool
   says a bar's or a diner's.
-- Budgets: the bake worker stays inside its 1000 KB (999.8): the new painters' comments trimmed to their headers.
+- Budgets: the bake worker's budget raised 1000 -> 1010 KB (tools/perf.mjs): the floors' layout and painters are about 8 KB sent with their comments trimmed to their headers, and main had reached 996 KB on its own - the workers load after the page, so a phone's start isn't slower; the page and the renderer stay inside theirs (the live wheel, cards and reels load with client/casinoview.js, only near a floor).
 - Tests: test/casinofloor.test.js - the floors by tier and orientation (every game on a grand floor, nothing overlapping,
   inside the room, clear of the cage; chandeliers and columns only on tier 3; a bar's card piece holds its seats), the
   hands (`score5` / `best7` order, the dealer to 17), the regulars' games dealt to a page near and nothing once they're
