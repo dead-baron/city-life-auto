@@ -23571,10 +23571,12 @@ club, the drive-in) - so whatever was playing kept playing. Now the title silenc
 ## 2026-11-14 - The owner's polish list: beaches, the pier, skate parks, people by fences, poses, the arcade scene, the hot springs, salmon, lockers, anglers
 - **No sliver of sea along a pier or a boardwalk over the beach** (the class): the ground bake took every DOCK tile for
   water underneath, so where planks cross dry sand the coastline's smoothing drew a thin band of sea with waves along
-  both sides (Sunset Beach Pier's shaft, Sandpiper Bay's stepped boardwalk). shared/mapcore.js `deckOnDry` - planks on
-  land, not a lake's or a river's, with no water beside them - is ground now in client/art2/game/groundbake.js (the
+  both sides (Sunset Beach Pier's shaft, Sandpiper Bay's stepped boardwalk). shared/mapcore.js `deckOnDry` - planks with
+  no water beside them and the ground beside them (a pier head's middle stays over its water) - is ground now in
+  client/art2/game/groundbake.js (the
   wetness the coast is smoothed from) and art2/water.js (the waves' distance to land). The placement lint's new
-  `beachWater` row finds any dry sand, grass or dirt beside planks or a deck still taken for water.
+  `beachWater` row finds any dry sand, grass or dirt with no water by it, side by side with planks still taken for
+  water - on every beach, the lakes' and the rivers' too.
 - **Sunset Beach Pier's sides open over the sand**: its rails (and their solid posts) start where the water does on each
   side - you step on and off the shaft from the beach; over the water the rails stay. Sandpiper Bay's pier the same.
 - **Skate parks' ledges, grind boxes, flat bars, rails and benches are solid on foot** (shared/world3-skatesolids.js, at
@@ -23594,7 +23596,9 @@ club, the drive-in) - so whatever was playing kept playing. Now the title silenc
   checked: each door's action is "Into ... - the arcade".
 - **Granite Hot Springs**: the bake was real (not placeholder art), so: the paths and steps are granite flagstones with
   moss in the joints (groundbake FLAGS, ground.js flagstone) rather than concrete pavers; the water warmer - a milky jade
-  with a sulphur-gold tint over the vents - a pale mineral crust at the rim and wet dark stone at the very edge.
+  with a sulphur-gold tint over the vents, lit low and warm from within after dark - a pale mineral crust at the rim and
+  wet dark stone at the very edge; more and bigger boulders round every rim, two more wisps of steam off each pool and
+  fuller steam (props-garden.js steam: every steam prop).
 - **Salmon climb a falls in stages** (client/art2/game/waterlife.js CLIMB): a leap in an arc, a splash into the falling
   water, a rest there nosing into it, the next leap - 2 to 6 of them by the drop; some slip after a rest and tumble back
   into the pool; the last carries them into the water above and on upstream.

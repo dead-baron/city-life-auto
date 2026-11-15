@@ -15,8 +15,8 @@
 //   wildNeon     a lit text sign in the wilds (a 'wild' district - on the water, the land's beside it: shared/world3-tidy.js
 //                wildAt): there it's a trail sign (wood)
 //   startOnCraft a race's start buoy within reach of a craft's spot: drawn over the boat, it hid it
-//   beachWater   dry ground (sand, grass, dirt) with no water by it beside planks or a deck the art takes for standing
-//                in water (a DOCK that isn't shared/mapcore.js deckOnDry, a BRIDGE): the coastline's smoothing drew a
+//   beachWater   dry ground (sand, grass, dirt) with no water by it beside planks the art takes for standing in water
+//                (a DOCK that isn't shared/mapcore.js deckOnDry): the coastline's smoothing drew a
 //                thin band of sea with waves along the pier or the boardwalk over the beach (the owner, 11-14: Sunset
 //                Beach Pier, Sandpiper Bay's boardwalk)
 //   skateWalk    a skate park's ledge, grind box, flat bar, rail or bench with nothing solid along it: walked straight
@@ -30,8 +30,12 @@ import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 
-// what the test lets by, each explained (none yet: what the lint found is fixed in the data)
-export const LINT_ALLOW = {};
+// what the test lets by, each explained (else what the lint found is fixed in the data)
+export const LINT_ALLOW = {
+  // four lake jetties whose roots sit on the bank a tile back from the water (a kink in the planks at the shoreline):
+  // what shows there is the lake's own shore rounding off by the jetty, not a band along planks over a beach
+  beachWater: 4,
+};
 const DUP_R = 20 * TILE, DUP_B = 4.5 * TILE, FRONT_H = 64, START_R = 2.5 * TILE;   // (DUP_R: about a screen - two of one name in one glance)
 const ROCKS = { seastack: (p) => p.r || 24, sealrock: () => 22, boulder: (p) => (p.s || 52) * 0.5, outcrop: (p) => Math.max(24, p.r || 0), redstack: (p) => p.r || 24, rstack: (p) => p.r || 24 };
 const FLOATS = new Set(['swimbuoy', 'ringfloat', 'swimraft']);
@@ -145,23 +149,31 @@ export function lint(M) {
   // planks the art takes for standing in water, beside dry ground with no water by it (a sliver of sea along them)
   {
     const DRY = new Set([T.SAND, T.GRASS, T.DIRT]), wetT = (t) => t === T.WATER || t === T.DEEP;
-    const deckWet = (tx, ty) => { const t = M.tiles[M.idx(tx, ty)]; return t === T.BRIDGE || (t === T.DOCK && !deckOnDry(M, tx, ty)); };
+    const deckWet = (tx, ty) => M.tiles[M.idx(tx, ty)] === T.DOCK && !deckOnDry(M, tx, ty);   // (a bridge's ends over its banks are drawn over its water by design)
+    let old = false;   // (old: every plank taken for water, as before deckOnDry - seen.beachWaterOld, the lint's own check that it sees the class)
+    const twAt = (x, y) => { if (!M.inside(x, y)) return 1; const t = M.tiles[M.idx(x, y)]; return wetT(t) || t === T.BRIDGE || (t === T.DOCK && (old || !deckOnDry(M, x, y))) ? 1 : 0; };
+    const tfAt = (x, y) => twAt(x, y) * 0.5 + (twAt(x - 1, y) + twAt(x + 1, y) + twAt(x, y - 1) + twAt(x, y + 1)) * 0.1 + (twAt(x - 1, y - 1) + twAt(x + 1, y - 1) + twAt(x - 1, y + 1) + twAt(x + 1, y + 1)) * 0.025;
     const seenAt = new Set();
-    for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+    for (const pass of [true, false]) for (let ty = M.y0 + 1; ty < M.y0 + M.h - 1; ty++) for (let tx = M.x0 + 1; tx < M.x0 + M.w - 1; tx++) {
+      if (old !== pass) { old = pass; seenAt.clear(); }
       const t = M.tiles[M.idx(tx, ty)];
-      if (t !== T.DOCK && t !== T.BRIDGE) continue;
-      seen.decks = (seen.decks || 0) + 1;
-      if (!deckWet(tx, ty)) continue;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (t !== T.DOCK) continue;
+      if (!old) seen.decks = (seen.decks || 0) + 1;
+      if (!old && !deckWet(tx, ty)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {   // (side by side: a corner's touch is too little wet for the sea to show)
         const x = tx + dx, y = ty + dy;
         if (!M.inside(x, y) || !DRY.has(M.tiles[M.idx(x, y)])) continue;
         let water = false;
         for (let j = -1; j <= 1 && !water; j++) for (let i = -1; i <= 1; i++) if (M.inside(x + i, y + j) && wetT(M.tiles[M.idx(x + i, y + j)])) { water = true; break; }
         if (water) continue;
+        // (the bake's own sum: the two tiles' blurred wetness, met halfway - groundbake.js tf; a jetty's root by the shore
+        // gives a speck or two at most, a run of planks over the sand a band of sea)
+        if ((tfAt(x, y) + tfAt(tx, ty)) / 2 < 0.47) continue;
         const key = `${tx >> 3},${ty >> 3}`;   // (one row a stretch of 8 tiles)
         if (seenAt.has(key)) continue;
         seenAt.add(key);
-        rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
+        if (old) seen.beachWaterOld = (seen.beachWaterOld || 0) + 1;
+        else rows.beachWater.push({ what: `a ${TN[t]} tile taken for water beside dry ${TN[M.tiles[M.idx(x, y)]]}`, x: tx * TILE + 16, y: ty * TILE + 16 });
       }
     }
   }
