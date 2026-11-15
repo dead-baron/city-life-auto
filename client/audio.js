@@ -14,7 +14,7 @@
 // they failed to load (a flaky connection on the first tap), are fetched again on a later one.
 import { settings, saveSettings } from './input.js';
 
-let ctx = null, sys = null, loading = null, off = false, failed = 0, nextTry = 0, lastErr = '', noAudio = false;
+let ctx = null, sys = null, loading = null, off = false, failed = 0, nextTry = 0, lastErr = '', noAudio = false, ahead = null;
 const GESTURES = ['touchstart', 'touchend', 'pointerdown', 'keydown', 'click'];
 
 // a one-sample silent sound, played in a tap: older iPhones only unlock the audio for a sound started in a gesture
@@ -35,7 +35,7 @@ function load() {
   if (sys || loading || !ctx || performance.now() < nextTry) return;
   const mobile = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   // (a failed module stays failed for the page's life under its own address: a retry asks under a new one)
-  loading = import(failed ? `./sound/index.js?retry=${failed}` : './sound/index.js')
+  loading = (failed ? import(`./sound/index.js?retry=${failed}`) : ahead || import('./sound/index.js'))
     .then((m) => {
       sys = m.createSound(ctx, settings.sound, { mobile }); loading = null;
       applyOff(sys.mix.prefs);
@@ -46,6 +46,18 @@ function load() {
       nextTry = performance.now() + Math.min(30000, 1500 * failed);   // (again on a tap after this)
       console.warn('[sound] could not load - will try again on a tap', e);
     });
+}
+// Ahead of the first tap (the owner, 11-15: the title's music should start at once, every time): the browser lets
+// sound start only on a tap, a click or a key, so the sound's code and the title's music come down while the title
+// screen shows - main.js calls this once the page has settled - and that first tap only wakes the audio and plays.
+// Nothing with the sound or the music switched off.
+export function preloadAudio() {
+  if (ahead || noAudio || typeof window === 'undefined') return;
+  const p = settings.sound || {};
+  if (p.on === false) return;
+  ahead = import('./sound/index.js');
+  ahead.then((m) => { if (p.music !== false && !(typeof p.mus === 'number' && p.mus <= 0) && m.prefetchTrack) m.prefetchTrack('title'); })
+    .catch(() => { ahead = null; });
 }
 export function initAudio() {
   if (ctx) { wake(); return; }

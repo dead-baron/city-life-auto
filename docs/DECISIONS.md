@@ -57,6 +57,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Safe exit: LOG OFF = 10 s still countdown; instant in your own property or a hotel room; not while wanted or within 60 s of combat. (11-03; launch-plan 11-03, DEVLOG 11-04)
 - Prison: an admin can send a misbehaving player there. (11-07; DEVLOG 11-07)
 - Google and Discord appear as the standard provider buttons ("Continue with Google" with Google's G, Discord's blurple), above email and password; Google is set up openid-only and in production, no branding verification for now (the consent screen shows the domain); deadbaron.com/city-life-auto/about/ is the public home page for when it's verified. (11-14; chat)
+- No postal address yet: no news emails until there is one (a PO box or a virtual mailbox, not his home); password resets and confirm emails don't need one. (11-14; chat)
+- The player Discord: https://discord.gg/zuVSkbfjg (never expires), linked from the title screen (a small button), Settings and the About page; bug reports post to its #bug-reports. Server plan: Claude Doc "City Life Auto Discord server plan". (11-15; chat)
+- The title screen has no neon sign sound; its music is fetched ahead so it starts on the first tap, click or key (browsers allow no sound before one). (11-15; chat)
 - The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).
@@ -76,7 +79,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Balloons go out with expression, not a blink: a small expression while they hold (heart beats, ! jolts, ? tilts...), then a squash up and a pop (heart, laugh, idea: pixel sparkles) or a shrink into the tail; the typing dots and speech bubbles shrink away too. (11-14 18:56; chat)
 - The bounty skull hides while a balloon shows, then comes back. (11-13; queue)
 - Emotes are body animations first; a balloon only where it adds meaning (laugh, angry, love, ?, !, sweat, sleep). (11-13; queue)
-- "Come here" reads as a beckon: the balloon a hand with its finger crooked toward you (motion ticks), the pose an arm out toward the camera, palm up, the fingers curling in twice - not a point or a pull. (11-14 19:27; queue)
+- "Come here" reads as a beckon: the balloon a hand with its finger crooked toward you (motion ticks), the pose an arm out toward the camera, palm up, the fingers curling in twice - not a point or a pull. (11-14 19:27; queue) - SUPERSEDED 11-14 20:46 (below).
+- "Over here" replaces "Come here": the character points down at the spot beside them twice; the balloon a bold down arrow bouncing twice. (11-14 20:46; chat)
 - Picker tabs: Emotes / Dances / Poses; lasting poses hold until you move; only lasting poses log to nearby chat. (11-13; queue)
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)

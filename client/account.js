@@ -323,7 +323,7 @@ export function onMessage(m) {
     if (m.a === 'transfer') { C.toast(`Your transfer code: ${m.code} - enter it on your other device within 10 minutes. It works once.`, 'info'); if (panel) panel.querySelector('#a-code').textContent = m.code; return; }
     if (m.a === 'name') { const t = m.ok ? `You're ${m.name} now.` : m.err; C.toast(t, m.ok ? 'good' : 'warn'); const e = panel && panel.querySelector('#a-msg'); if (e) e.textContent = t; return; }
     if (m.a === 'news') { if (!m.ok) C.toast(m.err, 'warn'); return; }
-    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); }
+    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); if (C && C.analytics && C.analytics.props) C.analytics.props({ player_type: m.guest ? 'guest' : 'account' }); }   // (GA's Player type: guest or signed in)
     return;
   }
   if (m.t === 'admin') { const r = pendingAdmin.get(m.a); if (r) { pendingAdmin.delete(m.a); r(m); } else if (!m.ok && m.err) C.toast(m.err, 'warn'); return; }

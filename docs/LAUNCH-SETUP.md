@@ -165,12 +165,21 @@ served at deadbaron.com). A passkey belongs to its domain: one made on `deadbaro
    | Dimension name | Scope | Event parameter / user property |
    |---|---|---|
    | Device class | User | `device_class` |
+   | Player type | User | `player_type` (guest / account) |
    | Graphics preset | User | `graphics_preset` |
    | Faction | Event | `faction` |
    | Region | Event | `region` |
-   | Source (money) | Event | `source` |
-   | Cause (death) | Event | `cause` |
+   | Money source | Event | `source` |
+   | Death cause | Event | `cause` |
    | Job | Event | `job` |
+   | Crime | Event | `crime` |
+   | FPS bucket | Event | `fps_bucket` |
+   | Load time bucket | Event | `load_bucket` |
+   | Perf stage | Event | `stage` |
+   | Error location | Event | `where` |
+
+   (GA's names take letters, numbers, spaces and underscores only - no brackets. Sign-in method, currency name, the
+   leisure activity (content_id) and money amounts (value) are GA's own dimensions and metrics: nothing to register.)
 
 6. **Admin → Events** (they appear after the first day): mark **sign_up** and **tutorial_complete** as key events.
 7. **Admin → Data settings → Data collection**: leave Google signals **off** (the game turns it off too).

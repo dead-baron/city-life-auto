@@ -24233,3 +24233,41 @@ once and never the one you're playing (a sign-in gives the same account a new to
 The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
 The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
 role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.
+
+## 2026-11-14 - The faceplant stays down
+The owner: the faceplant went back to a half pose. It was a timed pose (3.5 s), so it got up on its own; it's a lasting
+pose now (shared/chatdefs.js hold, like Lie down): over onto the face and lying there, a twitch now and then, until you
+move.
+
+## 2026-11-14 - No postal-address placeholder on the privacy page
+The privacy policy's Contact line showed "[postal address - to be added before launch]" while CLA_MAIL_ADDRESS is unset.
+The owner has no address to publish yet and sends no news email until he does (the news footer, which US law wants an
+address in, still asks for it), so the page leaves the line out until it's set (server/legal.js).
+
+## 2026-11-14 - GA: Player type
+The owner asked for it while setting up GA: a user property player_type, guest or account, set from the account state
+(client/account.js) and kept until GA is granted (client/analytics.js uprops) - so GA can compare signed-in players
+with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.md section 5).
+
+## 2026-11-15 - The Discord on the About page
+The owner made the player Discord (invite https://discord.gg/zuVSkbfjg, never expires). about/index.html links it under
+PLAY NOW and in its footer; the game's own button comes with the bug reporter.
+
+## 2026-11-15 - The title's music starts on the first tap; no neon sound
+The owner: the neon sign's sounds weren't good, and the music didn't start right away or every time. A browser lets a
+page make sound only after a tap, a click or a key - but the game also waited for that tap to start downloading its
+sound code and the title track (360 KB), so the music came seconds late or not before the player had moved on.
+client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound modules and fetches the title track
+(client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
+tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
+silent.
+## 2026-11-14 - "Over here" replaces "Come here"
+The owner (20:46), on the beckon: "that doesn't read clearly ... Not sure we really need that emote. Maybe a point down
+motion or something?" The Poses tab's Come here is now Over here (shared/chatdefs.js `overhere`; "Ann points here" /
+"You point here"). The body (client/art2/poses.js emoverhere): the right arm out and down to the ground beside you, the
+hand flat to a point along it, the body leaning in and the eyes on the spot - two jabs (set, jab, set, jab), not a loop,
+then the point held with a look up at whoever it's for, and back to standing when its 1.6 s are up. The balloon
+(client/emotes.js `here`): a bold red down arrow in the balloons' pixel style that bounces down twice, landing with a
+little squash, then shrinks into its tail like the rest. The old id still works: EMOTE_ALIAS turns `beckon` (a page from
+before, a typed /beckon) into Over here (the server's emote message, the chat's / commands). The Guide's Emotes entry
+names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon and the alias.
