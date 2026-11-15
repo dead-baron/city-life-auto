@@ -117,6 +117,25 @@ test('every director scene finds its place on World v3, its cast where they belo
   assert.deepEqual(bad, [], bad.join('\n'));
 });
 
+// the shot list's moving subjects (shared/scenes/shots.js; the owner, 11-14: "good camera movement"): each vehicle, boat or
+// aircraft a shot follows gets going on World v3 and keeps going - not stopped at a light, a kerb or a tower
+test('every shot that follows a vehicle on World v3: it gets going and keeps going', async () => {
+  const director = await import('../server/systems/director.js');
+  const { SCENE_LIST } = await import('../shared/scenes/index.js');
+  const bad = [];
+  for (const sc of SCENE_LIST.filter((q) => q.id.startsWith('shot') && (q.beats || []).some((b) => b.do === 'drive' || b.do === 'fly'))) {
+    const r = director.start(w, sc.id, { mode: 'dev', ref: null });
+    if (r.err) { bad.push(`${sc.id}: ${r.err}`); continue; }
+    const who = sc.beats.find((b) => b.do === 'drive' || b.do === 'fly').who, e = w.get(r.run.cast.get(who).id), at = [];
+    for (let i = 0; i < 6 * 20 && !r.run.over; i++) { w.step(); if (i % 40 === 39) at.push([e.x, e.y]); }
+    const leg = at.slice(1).map((q, i) => Math.hypot(q[0] - at[i][0], q[1] - at[i][1]));
+    if (e.wreckAt || leg.some((d) => d < 120)) bad.push(`${sc.id}: ${who} ${e.wreckAt ? 'wrecked' : `stalled (px each 2 s: ${leg.map(Math.round).join(', ')})`}`);
+    director.end(w, r.run, 'stopped');
+    steps(2);
+  }
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
 test('World v3: search & rescue signs on at the Search & Rescue HQ\'s pad, never at a hospital', () => {
   const { p: q } = joinPlayer(w);
   steps(2);
