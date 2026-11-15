@@ -53,6 +53,7 @@ test('the Camera: its way out over the clean screen, and on touch a shutter', ()
   assert.match(D, /body\.cine-on #cine-x, body\.touch\.cine-on #cine-shut \{ display: block; \}/, 'the close on every device, the shutter on touch, while it\'s open');
   assert.match(D, /#cine-x \{[^}]*width: var\(--tap\); height: var\(--tap\);[^}]*opacity: \.55;/, '44 px, top centre, faint till it\'s touched');
   assert.match(D, /z-index: 72/, 'over the panel and the clean screen');
+  assert.match(D, /cx\.id = 'cine-close'; cx\.className = 'x';[^\n]*cx\.innerHTML = icon\('close'\); cx\.onclick = \(\) => close\(\);/, 'and the panel\'s own X in its header, the kit\'s close (the owner, 11-14 20:24)');
   assert.match(D, /mk\('cine-shut', 'Take a picture', \(\) => shot\(\)\)/);
   // the photo mode is everyone's; what runs the debug menu's commands or moves you is debug mode's
   assert.match(D, /if \(m === 'scene' && !dev\(\)\) m = 'follow';/, 'the follow scenes (their tour among them): debug mode');   // (the tour a follow kind since the shot-list rework, 11-14)
