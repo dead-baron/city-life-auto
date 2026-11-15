@@ -45,6 +45,7 @@ import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
 import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { SHOWCASE, showcaseSpot } from './showcase.js';
+import { icon } from './touchicons.js';   // (the kit's close X)
 import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, SECTIONS, camAt } from '../shared/scenes/index.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
@@ -251,6 +252,7 @@ body.cine-clean #view, body.cine-clean #world { cursor: none; }
 /* the way out and the shutter (the owner, 11-12: every screen has a way out on every device): a close button top centre,
    faint till it's touched (the corners are the HUD's), and on touch a round shutter by the right thumb - over the clean
    screen too */
+.cine-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; } .cine-head .x { margin-left: auto; width: 36px; height: 36px; }
 #cine-x, #cine-shut { position: fixed; z-index: 72; display: none; padding: 0; cursor: pointer; touch-action: manipulation; }
 #cine-x { left: 50%; margin-left: calc(-1 * var(--tap) / 2); top: max(12px, env(safe-area-inset-top)); width: var(--tap); height: var(--tap); background: var(--pad-navy); color: var(--pad-cream); border: 2px solid var(--pad-ink); box-shadow: var(--pn-rim), var(--pn-drop); font: 700 var(--fs-4) var(--pixel); opacity: .55; }
 #cine-x:active, #cine-x:focus-visible { opacity: 1; }
@@ -587,7 +589,11 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     const h = (t) => { const e = document.createElement('h3'); e.textContent = t; return e; };
     const tip = (t, gold) => { const p = document.createElement('div'); p.className = 'tip'; if (gold) p.style.color = '#ffd23a'; p.textContent = t; return p; };
     panel.textContent = '';
-    const title = document.createElement('div'); title.innerHTML = '<b>Camera</b> <small class="tip">- your screen only</small>';
+    const title = document.createElement('div'); title.className = 'cine-head'; title.innerHTML = '<b>Camera</b> <small class="tip">- your screen only</small>';
+    // (its close in the corner, the kit's X as every screen has it - the owner, 11-14 20:24: "Camera mode doesn't have an
+    // X button to close it"; Esc and a pad's B close it too)
+    const cx = document.createElement('button'); cx.type = 'button'; cx.id = 'cine-close'; cx.className = 'x'; cx.title = 'Close the camera (Esc, B)'; cx.setAttribute('aria-label', 'Close the camera'); cx.innerHTML = icon('close'); cx.onclick = () => close();
+    title.append(cx);
     panel.append(title);
     // the shot list (debug mode's: it runs the debug menu's scenes) - each a tap; a section's ▶ or Play all back to back
     if (dev()) {

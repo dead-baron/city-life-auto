@@ -78,6 +78,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
 - Biker faction chat hidden behind a flag until biker groups exist. (11-04; decisions-11-04)
+- Your own log stays quiet for emotes and dances: one line when you start dancing, none per move or per emote. (11-14; chat)
 
 ## Monetization
 - Never sell power: ads and cosmetics only. (11-03; launch-plan 11-03, monetization-plan 11-13*)
@@ -190,6 +191,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Caves: no lost-in-the-dark arrow; the cave art is OK; the character must be the real sprite. (11-06; decisions-11-06)
 - Chess tables out from behind trees, and more of them. (11-06; decisions-11-06)
 - Homes: going inside your own home is a separate space (its own little level). (10-11; decisions-10-11)
+- Open up the blocks (priority, before the beta and filming): big plain building footprints broken into smaller buildings with walkable, lived-in alleys and courtyards; varied roofs; landmarks and buildings with a reason kept whole. (11-14; chat)
+- Cinematics: fix the fundamentals (time of day, no roof flicker, real street racing, chases in view), add "Save this view" so the owner scouts the shots, then ~10 hero shots refined with him before adding more. (11-14; chat)
 
 ## Police and crime
 - Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)
@@ -297,6 +300,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - New features reachable from the debug menu while testing. (10-18; DEVLOG 10-18)
 - Concept art Claude needs goes in the general Concept Art Prompt Pack; the World Building pack is the owner's. (10-17; chat)
 - Offline practice: PAUSED - don't build on it until a plan is agreed. (10-20; CLAUDE.md)
+- Debug menu: open to all testers with no password until the beta; at the beta, progress is reset and the debug menu is admin-only (the owner and whoever he grants). (11-14; chat)
 
 ## Future features (noted, not scheduled)
 - Treasure hunting (map scraps, riddles, shovel, tiered chests as visible cargo). (11-03; launch-plan 11-03)
