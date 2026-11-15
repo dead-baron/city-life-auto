@@ -1409,7 +1409,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #play { min-height: 64px; font-size: var(--fs-5); gap: var(--s4); padding: 0 var(--s4); }
   #t-row2 .btn { font-size: var(--fs-3); padding: 0 var(--s2); }
   #t-status { font-size: var(--fs-4); } #t-tip { font-size: var(--fs-3); }
-  #t-foot { flex-direction: column; align-items: stretch; gap: var(--s2); left: max(var(--s4), env(safe-area-inset-left)); right: max(var(--s4), env(safe-area-inset-right)); bottom: max(var(--s4), env(safe-area-inset-bottom)); }
+  #t-foot { flex-direction: column; align-items: stretch; gap: var(--s2); left: max(var(--s4), env(safe-area-inset-left)); right: max(var(--s4), env(safe-area-inset-right)); bottom: calc(max(var(--s2), env(safe-area-inset-bottom)) + var(--fs-1) + var(--s3)); }   /* (room under it for the saves note: it ran under the Online frame - the owner, 11-14) */
+  #t-note { bottom: max(var(--s2), env(safe-area-inset-bottom)); }
   #t-card { min-width: 0; } #t-online { justify-content: center; }
 }
 
