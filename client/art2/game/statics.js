@@ -685,7 +685,7 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
   // the roof's own kit, laid after it: gardenKit)
   switch (A) {
     case 'glass': case 'office': case 'hotel': case 'terminal':
-      if (area > 70000 && A !== 'hotel' && r() < 0.3) L.free('heli', 1);
+      if (area > 200000 && A !== 'hotel' && r() < 0.3) L.free('heli', 1);   // (a helipad on a big roof only - not on every mid-rise office: the owner's 11-14 pass)
       L.corner('hut'); if (big && r() < 0.5) L.free('cool', 1 + (r() < 0.4 ? 1 : 0), true);
       L.row('ac', n + 1, r() < 0.3); if (big) L.row('hvac', 1 + (r() < 0.5 ? 1 : 0), true);
       if (r() < 0.35) L.free('ant', 1, true); if (r() < 0.4) L.free('dish', 1);
