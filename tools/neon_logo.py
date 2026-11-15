@@ -32,6 +32,7 @@ Outputs (in --out, default the current dir; --install: assets/logo/ under --root
                                            fraction of the bytes - the baked glow is most of a layer's size); the
                                            box is then the tubes' own, tight
   oneline (--install)                      the pause header's one-line wordmark: "City Life" and "Auto" side by side
+  assets/og-card.png (--og shot.png ...)    the share card, 1200 x 630: the lit sign over in-game night shots, blurred
   <v>-unlit.png                            the whole sign switched off (the tubes' dark glass, no glow)
   <v>-phone.png, <v>-desktop.png           (--preview) the lit sign on the title's night (its dusk and skyline) at
                                            a phone upright (390 x 844 at 3x) and a desktop (1920 x 1080)
@@ -822,7 +823,7 @@ def paint_d4(src, windows=True, bold=False):
 # not traced - in the same box under the swoosh, one stroke width, square corners, clean counters, no dark face.
 #   A1 matching: solid cream letters with a gold rim (as "City Life" is cream with its red rim)
 #   A2 tube: gold neon tube letters, hollow - a hot white-gold core round each letter's outline, gold either side
-#   A3 italic: A1 leaning forward a touch, with two short speed lines trailing off the A
+#   A3 italic: A1 leaning forward a touch, with two short speed lines trailing off the A, joined into its leg
 def auto_face(box, slant=0.0, speed=False, S4=4):
     """the letters' faces (a mask on the grid) filling box (x0, y0, x1, y1: the face's own box, rims outside it)"""
     x0, y0, x1, y1 = box
@@ -842,6 +843,7 @@ def auto_face(box, slant=0.0, speed=False, S4=4):
     q = lambda v: v * S4
     R = lambda a, b, c, e, r=0, fill=255: d.rounded_rectangle((q(a), q(b), q(c) - 1, q(e) - 1), radius=q(r), fill=fill)
     x = x0 + lead
+    ax0 = x
     # A: a flat-topped trapezoid, a triangle counter over its bar, the gap between its legs under it
     cx = x + wA / 2
     leg = 1.0 * S
@@ -876,10 +878,11 @@ def auto_face(box, slant=0.0, speed=False, S4=4):
     R(x, base - Hx, x + wO, base, min(wO, Hx) * 0.45)
     R(x + S, base - Hx + 0.85 * S, x + wO - S, base - 0.85 * S, S * 0.45, fill=0)
     if speed:
-        # two short speed lines trailing off the A's left leg, about a third and half way up
-        for frac, ln in ((0.55, lead - 3), (0.3, lead * 0.6)):
+        # two short speed lines trailing off the A's left leg, about a third and half way up, running right into the
+        # leg (one shape with the A: its rim goes round them both, no notch at the join)
+        for frac, ln in ((0.62, lead - 3), (0.3, lead * 0.6)):   # (far enough apart for the night to show between their rims)
             yy = base - frac * Hc
-            R(x0 + lead - 3 - ln, yy - 1.5, x0 + lead + 4, yy + 1.5)
+            R(ax0 - 3 - ln, yy - 1.5, ax0 + frac * Hc * slope + leg * 0.6, yy + 1.5)
     if slant:
         # leaning forward: each row moved right by slant per px above the foot (sheared about the foot)
         sh = slant
@@ -1267,6 +1270,37 @@ def oneline(layers, scale, path_no_ext):
     return save_smallest(o, path_no_ext), o.size
 
 
+def og_card(layers, bgs, path):
+    """the social share card, 1200 x 630: the lit sign (its glow baked) over in-game night streets, side by side, cut to
+    the card's height, blurred, darkened and pulled to navy, a vignette so the sign's middle is the brightest place
+    (as tools/build_logo.py made it for the first logo)"""
+    W, H = 1200, 630
+    strip = []
+    for p in bgs:
+        im = Image.open(p).convert('RGB')
+        strip.append(im.resize((round(im.width * H / im.height), H), Image.LANCZOS))
+    total = sum(i.width for i in strip)
+    row = Image.new('RGB', (max(W, total), H))
+    x = 0
+    for i in strip:
+        row.paste(i, (x, 0)); x += i.width
+    bg = row.crop(((row.width - W) // 2, 0, (row.width - W) // 2 + W, H)).filter(ImageFilter.GaussianBlur(6))
+    a = np.asarray(bg).astype(np.float32) / 255
+    a = a * 0.62 + np.array([0.04, 0.06, 0.14], np.float32) * 0.5
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+    d = np.sqrt(((xx - W / 2) / (W * 0.62)) ** 2 + ((yy - H * 0.48) / (H * 0.7)) ** 2)
+    a *= np.clip(1.15 - d * 0.75, 0.35, 1.1)[..., None]
+    card = Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)).convert('RGBA')
+    x0, y0, x1, y1 = logo_box(layers)
+    k = max(1, round(470 / (y1 - y0)))
+    logo, pad = compose(layers, k)
+    s = 470 / (logo.height - 2 * pad)
+    logo = logo.resize((round(logo.width * s), round(logo.height * s)), Image.LANCZOS)
+    card.alpha_composite(logo, ((W - logo.width) // 2, (H - logo.height) // 2))
+    card.convert('RGB').save(path, optimize=True)
+    return os.path.getsize(path)
+
+
 def main():
     args = sys.argv[1:]
     src = args[0]
@@ -1290,6 +1324,13 @@ def main():
     res = write_layers(layers, scale, out, v, '--install' in args, glow='--no-glow' not in args)
     if '--install' in args:
         res['oneline'] = oneline(layers, 2, os.path.join(out, 'oneline'))
+    if '--og' in args:
+        bgs = []
+        for a in args[args.index('--og') + 1:]:
+            if a.startswith('--'):
+                break
+            bgs.append(a)
+        res['og'] = og_card(layers, bgs, os.path.join(root, 'assets', 'og-card.png'))
     x0, y0, x1, y1 = logo_box(layers)
     res['art'] = [int(x1 - x0), int(y1 - y0)]
     if '--preview' in args:

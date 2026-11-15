@@ -1,5 +1,5 @@
-// The title's neon logo (the owner's logo, rebuilt in-engine 2026-11-14: tools/neon_logo.py D5 - his letters on the
-// art grid with even rims, a bezier swoosh, a line-work skyline, no black outline): the sign switched off
+// The title's neon logo (the owner's logo, rebuilt in-engine 2026-11-14: tools/neon_logo.py A3 - his letters on the
+// art grid with even rims, a bezier swoosh, a line-work skyline, "Auto" drawn new; no black outline): the sign switched off
 // (assets/logo/unlit.webp, in the page's own HTML so the first paint has it), and over it the four lit layers - the
 // skyline, "City Life", the swoosh, "Auto" - each cropped to its own box (the tool makes them and prints LAYERS).
 // Loaded with client/splash.js, which plays the entrance; nothing in the game depends on it.
@@ -13,12 +13,12 @@
 // the page may play sound (a tap - skipping the studio sting counts), and never with the sound off in Settings.
 
 // the layers' boxes in % of the logo's box (1120 x 730: the sign's tubes, 5 px an art px; tools/neon_logo.py --variant
-// D5 --install --no-glow prints them) and each one's glow
+// A3 --install --no-glow prints them) and each one's glow
 const LAYERS = [
   { k: 'sky', f: 'sky.webp', x: 29.464, y: 0, w: 39.286, px: [440, 220], c: '#46e6ff' },
   { k: 'city', f: 'city.webp', x: 0, y: 23.288, w: 100, px: [1120, 345], c: '#ff465a' },
   { k: 'swoosh', f: 'swoosh.webp', x: 14.286, y: 61.644, w: 70.982, px: [795, 85], c: '#ff465a' },
-  { k: 'auto', f: 'auto.webp', x: 13.393, y: 69.863, w: 70.089, px: [785, 220], c: '#ffbe3c' },
+  { k: 'auto', f: 'auto.webp', x: 14.286, y: 69.863, w: 69.196, px: [775, 220], c: '#ffbe3c' },
 ];
 // when each layer starts to buzz on (ms after the lit layers are in hand), and the hum's pitch for each
 const START = { sky: 450, city: 1000, swoosh: 1580, auto: 1960 }, HUM = { sky: 180, city: 120, swoosh: 150, auto: 100 };

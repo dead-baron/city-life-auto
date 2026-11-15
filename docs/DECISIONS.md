@@ -148,6 +148,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Burning NPCs: fewer deaths, less disturbing; they flee, find water, stop-drop-roll. (10-15; DEVLOG 10-21)
 - Bathhouses: nudity pixelated (Sims-style); no swimsuit required. (11-01; DEVLOG 11-01)
 - Logo (final, 11-14): the owner's concept rebuilt in-engine - D4's "City Life" (even rims), D4's smooth tapered swoosh and line-work-only neon skyline with lit windows, plus D3's bold "Auto" polished (even gold rim, clean joins, a proper A counter); no black outlines. The title screen rebuilt around it (logo by height with a fixed gap, 2x2 buttons, darker night with a halo, the player's portrait on CHARACTER), and a softer neon flicker sound. (11-14; chat)
+- The logo's "Auto" is A3: rebuilt cream letters with a gold rim (drawn new on the grid, not traced; no dark fill), a forward slant, two speed lines joined into the A. (11-14 18:10; chat) - SUPERSEDES D3's polished Auto in the final logo.
 
 ## Music and sound
 - No soundtrack over play: music lives in the world (venues, shops, radios); only the main menu (maybe the tutorial) has soundtrack. (10-08; DEVLOG 10-08, chat)

@@ -1359,7 +1359,7 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-status { font-size: var(--fs-4); } #t-tip { font-size: var(--fs-3); min-height: 0; } #t-load { gap: var(--s2); width: min(440px, 60vw); } #t-warm { height: 18px; }
   #play, #practice, #t-resume { font-size: var(--fs-3); min-height: var(--tap); padding: 0 14px; }
   #play, #t-resume { min-width: 0; min-height: 52px; padding: 0 20px; gap: 14px; font-size: var(--fs-5); } #play .t-tri { border-left-width: 18px; border-top-width: 12px; border-bottom-width: 12px; }
-  #t-buttons, #t-row2 { width: min(380px, 44vw); gap: var(--s2); } #t-row2 .btn { min-height: var(--tap); font-size: var(--fs-3); padding: 0 var(--s2); } #t-row2 .btn .pi24 { display: none; }
+  #t-buttons, #t-row2 { width: min(380px, 44vw); gap: var(--s2); } #t-row2 .btn { min-height: var(--tap); font-size: var(--fs-3); padding: 0 var(--s2); } #t-row2 .btn .pi24 { width: 20px; height: 20px; } #t-row2 .t-cav { width: 26px; height: 26px; }   /* (both keep their icons: SETTINGS its gear, CHARACTER you) */
   #t-gfx { padding: 2px var(--s1); } #t-gfx > small, #t-gfx .t-gl { display: none; }
   #t-gfxseg button { min-width: 0; padding: 2px var(--s2); font-size: var(--fs-2); }
   #t-gfxseg button small { display: none; }

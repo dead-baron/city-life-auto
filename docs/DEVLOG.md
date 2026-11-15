@@ -23738,3 +23738,19 @@ and pool tables in more bars and food places. The pool tables' plumbing is the m
   gone, a player's hand shown at his table with the regulars waiting, and the page's replay keeping the cards already
   dealt. shoprooms.test.js: a small lounge keeps its booths (no card table under 9 tiles).
 - Hashes: the world (World v3: the casinos' rooms, the counters) and the art change; World v1's world doesn't.
+
+## 2026-11-14 - The logo's "Auto" drawn new: A3
+The owner on the installed logo: "the auto in the logo still looks really bad ... the black in the middle of the neon
+seems to really throw it off". "Auto" is drawn new (tools/neon_logo.py auto_face: shapes on the art grid, not traced),
+in the same box under the swoosh: bold letters at one stroke width with square corners - an A with a low bar and a
+tall triangle counter, a u with its stem, a t with its foot, a rounded o - cream with a gold rim (two px, a darker px
+outside it), as "City Life" is cream with its red rim; the counters keep only a px of gold so they stay open; no dark
+face. Of three ways shown (matching, a hollow gold tube, italic) he picked A3 (18:10): leaning forward a touch, with two
+short speed lines trailing off the A - joined right into its left leg, one shape with it, its rim round them both.
+- Installed as before (`--variant A3 --install --no-glow --scale 5`): auto.webp 1.1 KB, LAYERS updated; the pause
+  header's one-line wordmark rebuilt with it; the share card (assets/og-card.png, 1200 x 630) rebuilt from the final
+  sign (its glow baked) over in-game night shots (docs/screenshots: the neon strip, a rainy night drive), blurred and
+  darkened (`--og`).
+- On a phone on its side the SETTINGS button had lost its gear (the rule that hid the old person icon on CHARACTER hid
+  it too): both keep their icons now, smaller.
+- docs/DECISIONS.md: the logo's Auto is A3. Screenshots: the session's scratchpad `logo2/owner/a3/`.
