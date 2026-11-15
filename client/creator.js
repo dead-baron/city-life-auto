@@ -267,6 +267,20 @@ function fitCanvas(cv, cssW, cssH) {
   if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   return r;
 }
+// the preview's stage, from the canvas alone (W x H device px; game: the game's screen px per art px; r: the device
+// pixel ratio; z: the magnifier): s, the art pixel's size - the game's x 2.5 in whole device px, as big as lets a tall
+// figure (STAGE.figH art px, a hat included) and the stone fit - the stone's centre (cx, feet), and where the figure's
+// anchor goes at its own scale fs (the magnifier: twice s, the face near the top, the stone where it was)
+export const STAGE = { art: 26, figH: 28, feet: 0.8, head: 25 };   // the stone's width and the tall figure, in art px; the stone's centre down the canvas; the anchor to the top of the head
+export function stageLayout(W, H, game, r, z) {
+  let s = Math.max(1, Math.round(game * 2.5 * r));
+  while (s > 1 && (STAGE.figH * s > H * 0.66 || STAGE.art * s > W * 0.92)) s--;
+  const cx = Math.round(W / 2), feet = Math.round(H * STAGE.feet);
+  if (!z) return { s, cx, feet, fs: s, fy: feet };
+  let fs = s * 2;
+  while (fs > s && STAGE.head * fs > H * 0.95) fs--;
+  return { s, cx, feet, fs, fy: Math.round(H * 0.08) + STAGE.head * fs };
+}
 // the magnifier (CC1's button between the arrows): the figure as in the game, a little closer (0), or twice that on the
 // head and shoulders (1). The Face and Hair tabs and the barber's chair open on it.
 let zoomSet = null;
@@ -283,18 +297,14 @@ function drawPreview() {
   const g = c2.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, 'rgba(255,236,180,0)'); g.addColorStop(0.55, 'rgba(255,236,180,.07)'); g.addColorStop(1, 'rgba(255,236,180,.13)');
   c2.fillStyle = g; c2.beginPath(); c2.moveTo(W * 0.42, 0); c2.lineTo(W * 0.58, 0); c2.lineTo(W * 0.88, H * 0.86); c2.lineTo(W * 0.12, H * 0.86); c2.closePath(); c2.fill();
-  // the size of an art pixel: the game's (2 world px at its zoom) x 2.5, x 2 under the magnifier, in whole device px,
-  // and never so big that the figure doesn't fit
-  const game = Math.max(0.4, C && C.zoom ? C.zoom() : 1) * 2;
-  let s = Math.max(1, Math.round(game * 2.5 * r * (z ? 2 : 1)));
-  const room = z ? H * 1.25 : H * 0.66;
-  while (s > 1 && (S.h * s > room || S.w * s > W * 0.92)) s--;
-  const cx = Math.round(W / 2);
-  if (!z) {
-    const feet = Math.round(H * 0.8);
-    plinth(c2, cx, feet, s, Math.max(16, Math.round(S.w * 1.45)));
-    c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, feet - S.ay * s, S.w * s, S.h * s);
-  } else c2.drawImage(S.cv, 0, 0, S.w, S.h, cx - S.ax * s, Math.round(H * 0.1), S.w * s, S.h * s);   // (the head near the top; the legs run off below)
+  // the stage stands still (the owner, 11-14 18:56: "the stage should be stationary and the character centered on the
+  // stage"): its place, its size and the art pixel's size come from the canvas alone (stageLayout), never from the
+  // figure - a turn, a pose, a hat, a bag or the fishing rod doesn't move or resize it - and the figure stands on its
+  // centre by the rig's own anchor (the point between the feet; seated, the ground under the hips: people.js), not by
+  // its picture's box. The magnifier is the camera closing in on the face, which keeps its spot whatever the hat.
+  const game = Math.max(0.4, C && C.zoom ? C.zoom() : 1) * 2, G = stageLayout(W, H, game, r, z);
+  plinth(c2, G.cx, G.feet, G.s, STAGE.art);
+  c2.drawImage(S.cv, 0, 0, S.w, S.h, G.cx - S.ax * G.fs, G.fy - S.ay * G.fs, S.w * G.fs, S.h * G.fs);
   cv.classList.toggle('close', z);
   const zb = root.querySelector('[data-act="zoom"]'); if (zb) zb.classList.toggle('on', z);
   const pn = root.querySelector('.cc-pname');
@@ -344,7 +354,7 @@ function thumbFor(L, crop) {
     const fy = H - foot, sx = Math.max(3, Math.round(S.w * 0.38)), cx = Math.round(W / 2);
     c2.fillStyle = 'rgba(0,0,0,.34)';
     if (stg) {
-      const wa = Math.max(16, Math.round(S.w * 1.45)), rx = wa / 2, ry = Math.max(3, Math.round(wa * 0.24));
+      const wa = STAGE.art, rx = wa / 2, ry = Math.max(3, Math.round(wa * 0.24));
       plinth(c2, cx, fy, s, wa);
       if (crop === 'stageon') {   // (a gold ring round its top, in art pixels)
         c2.fillStyle = '#ffd34a';

@@ -4,8 +4,13 @@
 //   sweat drop, HAHA, Zzz, a light bulb; 11-14 a waving hand, a thumbs up and a beckoning hand for the gestures - drawn here pixel by pixel after the Kenney Emotes Pack's pixel style, CC0,
 //   www.kenney.nl; credited in client/emotes-LICENSE.txt), shown 2x, crisp. Over the head of whoever emoted, for an emote
 //   that has one (the server says which: the message's b) - it pops up and settles in place (a scale bounce, two px up
-//   at most), holds, blinks out, CHAT.balloonS in all. Meanwhile the bounty skull there gives way (balloonOn: main.js).
-// - the typing dots: a balloon of three dots bouncing in turn while someone near is typing (the server's 'typing').
+//   at most), holds with a small expression of its own once (MOTION: the heart beats, the ! jolts, the ? tilts, the Zzz
+//   drifts, the drop slides...), then goes (the owner, 11-14 18:56: "animated out a bit better ... popped or shrank back
+//   ... subtle and polished", not the blink): a little squash up, then the happy ones (heart, laugh, idea) pop - a puff of
+//   pixel sparkles - and the rest shrink to nothing into the tail's point; CHAT.balloonS in all. Meanwhile the bounty
+//   skull there gives way (balloonOn: main.js).
+// - the typing dots: a balloon of three dots bouncing in turn while someone near is typing (the server's 'typing'); it
+//   shrinks away into its tail when they stop.
 // - the picker: tabs Emotes / Dances / Poses (shared/chatdefs.js EMOTES' tab, DANCES) - a tap (or click) sends one and
 //   closes; the X, Back (Esc, a pad's B: client/main.js) and a tap outside close it. On touch it sits over the emote
 //   button and the chat button (index.html #b-emote); on a desktop the nav row's emote button or B opens it, under it.
@@ -51,34 +56,65 @@ function paint(g, rows, ox, oy) {
   rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) { const c = C[r[x]]; if (c) { g.fillStyle = c; g.fillRect(ox + x, oy + y, 1, 1); } } });
 }
 const urls = new Map();
-// a balloon's picture as a data URL (made once): an icon's, or the typing dots' strip of three frames
-export function balloonUrl(id) {
-  if (urls.has(id)) return urls.get(id);
+// a balloon's picture as a data URL (made once): an icon's, or the typing dots' strip of three frames; part 'shell' the
+// empty balloon, 'icon' the icon alone (12 x 10) - over a head the two are drawn apart, so the icon can move in its balloon
+export function balloonUrl(id, part = '') {
+  const key = id + '|' + part;
+  if (urls.has(key)) return urls.get(key);
   if (typeof document === 'undefined') return '';
-  const typ = id === 'dots', c = document.createElement('canvas');
-  c.width = typ ? 48 : 16; c.height = 16;
+  const typ = id === 'dots', icon = part === 'icon', c = document.createElement('canvas');
+  c.width = icon ? 12 : typ ? 48 : 16; c.height = icon ? 10 : 16;
   const g = c.getContext('2d');
-  for (let f = 0; f < (typ ? 3 : 1); f++) {
+  if (icon) { if (ICONS[id]) paint(g, ICONS[id], 0, 0); }
+  else for (let f = 0; f < (typ ? 3 : 1); f++) {
     paint(g, SHELL, f * 16, 0);
     if (typ) for (let i = 0; i < 3; i++) { g.fillStyle = C.k; g.fillRect(f * 16 + 4 + i * 3, 6 + (i === f ? -1 : 0), 2, 2); }
-    else if (ICONS[id]) paint(g, ICONS[id], 2, 2);
+    else if (ICONS[id] && part !== 'shell') paint(g, ICONS[id], 2, 2);
   }
   const u = c.toDataURL();
-  urls.set(id, u);
+  urls.set(key, u);
   return u;
 }
+// how each balloon behaves over a head: its one small expression while it holds (an animation of the icon, played once,
+// SNES-stepped) and how it goes - 'pop' (a puff of sparkles: the happy ones) or 'shrink' (into the tail's point)
+export const MOTION = {
+  heart: ['beat', 'pop'], haha: ['laugh', 'pop'], idea: ['light', 'pop'],
+  exclaim: ['jolt', 'shrink'], question: ['tilt', 'shrink'], anger: ['throb', 'shrink'], sweat: ['slide', 'shrink'],
+  zzz: ['drift', 'shrink'], wave: ['wave', 'shrink'], thumbs: ['pump', 'shrink'], beckon: ['beckon', 'shrink'],
+};
+export const BALLOON_MS = { in: 260, out: 190, tail: 150 };   // the pop-in, the exit (ending at CHAT.balloonS), the sparkles after it
 export const BALLOONS = Object.keys(ICONS);
 
 // (the kit's tokens only: test/uitokens.test.js)
 const CSS = `
 .emo-pop { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
-.emo-pop > i { position: absolute; left: 0; bottom: 0; width: var(--bal); height: var(--bal); background: center / 100% 100% no-repeat; image-rendering: pixelated; transform-origin: 50% 100%; animation: emo-bal var(--bal-t) steps(1, end) forwards; }
+.emo-pop > i { position: absolute; left: 0; bottom: 0; width: var(--bal); height: var(--bal); background: center / 100% 100% no-repeat; image-rendering: pixelated; transform-origin: 41% 100%; animation: emo-bal 260ms steps(1, end) forwards, emo-shrink 190ms cubic-bezier(.55, 0, .8, .35) var(--bal-out) forwards; }
 .emo-pop { --bal: 32px; }
+.emo-pop.pop > i { animation: emo-bal 260ms steps(1, end) forwards, emo-burst 190ms linear var(--bal-out) forwards; }
+.emo-pop > i > b { position: absolute; left: 12.5%; top: 12.5%; width: 75%; height: 62.5%; background: center / 100% 100% no-repeat; image-rendering: pixelated; transform-origin: 50% 60%; animation: var(--bal-idle) var(--bal-idle-t, 700ms) steps(1, end) var(--bal-wait, 400ms) both; }
+.emo-pop > s { position: absolute; left: -1px; bottom: 15px; width: 2px; height: 2px; background: var(--pad-cream); opacity: 0; box-shadow: -12px -8px 0 var(--pad-cream), 12px -8px 0 var(--pad-gold), -14px 4px 0 var(--pad-gold), 14px 4px 0 var(--pad-cream), 0 -14px 0 var(--pad-gold), -6px 12px 0 var(--pad-cream), 6px 12px 0 var(--pad-gold); animation: emo-spark 240ms steps(4, end) var(--bal-spark) forwards; }
+.emo-pop:not(.pop) > s { display: none; }
 .emo-pop.typ > i { background-size: 300% 100%; animation: emo-in 240ms steps(1, end) forwards, emo-dots 900ms steps(1, end) infinite; }
+.emo-pop.typ.bye > i { animation: emo-shrink 190ms cubic-bezier(.55, 0, .8, .35) forwards; }
 .emo-pop.hide { visibility: hidden; }
-@keyframes emo-bal { 0% { transform: translateX(-50%) scale(.25); } 3% { transform: translateX(-50%) scale(.6); } 6% { transform: translate(-50%, -2px) scale(1.2); } 10% { transform: translate(-50%, -2px) scale(.9); } 13% { transform: translate(-50%, -1px) scale(1); opacity: 1; } 84% { opacity: 1; } 87% { opacity: 0; } 90% { opacity: 1; } 93% { opacity: 0; } 96% { opacity: 1; } 99% { opacity: 0; } 100% { transform: translate(-50%, -1px) scale(1); opacity: 0; } }
+@keyframes emo-bal { 0% { transform: translateX(-50%) scale(.25); } 23% { transform: translateX(-50%) scale(.6); } 46% { transform: translate(-50%, -2px) scale(1.2); } 77% { transform: translate(-50%, -2px) scale(.9); } 100% { transform: translate(-50%, -1px) scale(1); } }
 @keyframes emo-in { 0% { transform: translateX(-50%) scale(.3); } 30% { transform: translateX(-50%) scale(1.15); } 60% { transform: translateX(-50%) scale(.92); } 100% { transform: translateX(-50%) scale(1); } }
+@keyframes emo-shrink { 0% { transform: translate(-50%, -1px) scale(1); } 30% { transform: translate(-50%, -2px) scale(.96, 1.06); } 100% { transform: translate(-50%, -1px) scale(0); } }
+@keyframes emo-burst { 0% { transform: translate(-50%, -1px) scale(1); } 35% { transform: translate(-50%, -2px) scale(.96, 1.06); } 64% { transform: translate(-50%, -2px) scale(1.15); opacity: 1; } 65%, 100% { transform: translate(-50%, -2px) scale(1.15); opacity: 0; } }
+@keyframes emo-spark { 0% { opacity: 1; transform: scale(.5); } 60% { opacity: 1; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1.6); } }
 @keyframes emo-dots { 0% { background-position: 0 0; } 33.3% { background-position: 50% 0; } 66.6% { background-position: 100% 0; } }
+@keyframes emo-beat { 0% { transform: scale(1); } 12% { transform: scale(1.17); } 24% { transform: scale(1); } 36% { transform: scale(1.09); } 48%, 100% { transform: scale(1); } }
+@keyframes emo-jolt { 0% { transform: none; } 10% { transform: translateY(-2px); } 22% { transform: translate(2px, -2px); } 34% { transform: translateX(-2px); } 46%, 100% { transform: none; } }
+@keyframes emo-tilt { 0% { transform: none; } 15% { transform: rotate(-8deg); } 30%, 70% { transform: rotate(-14deg); } 85% { transform: rotate(5deg); } 100% { transform: none; } }
+@keyframes emo-throb { 0%, 40%, 80%, 100% { transform: none; } 20%, 60% { transform: scale(1.14); } }
+@keyframes emo-slide { 0% { transform: none; } 35% { transform: translateY(2px); } 70%, 100% { transform: translateY(4px); } }
+@keyframes emo-drift { 0% { transform: none; } 30% { transform: translate(2px, -2px); } 65% { transform: translate(0, -2px); } 100% { transform: none; } }
+@keyframes emo-laugh { 0%, 30%, 60%, 100% { transform: none; } 15%, 45% { transform: translateY(-2px); } }
+@keyframes emo-light { 0%, 100% { transform: none; filter: none; } 20% { transform: scale(1.08); filter: brightness(1.45); } 50% { transform: none; filter: brightness(1.2); } }
+@keyframes emo-wave { 0%, 100% { transform: none; } 15%, 55% { transform: rotate(-14deg); } 35%, 75% { transform: rotate(10deg); } }
+@keyframes emo-pump { 0%, 100% { transform: none; } 20%, 45% { transform: translateY(-2px); } }
+@keyframes emo-beckon { 0%, 40%, 100% { transform: none; } 20%, 60% { transform: translateX(-2px); } }
+@media (prefers-reduced-motion: reduce) { .emo-pop > i > b { animation: none; } .emo-pop > s { display: none; } .emo-pop > i, .emo-pop.pop > i { animation: emo-fade 190ms linear var(--bal-out) forwards; transform: translate(-50%, -1px); } @keyframes emo-fade { to { opacity: 0; } } }
 .emo-veil { position: absolute; z-index: 13; inset: 0; background: transparent; pointer-events: auto; touch-action: none; }
 .emo-pick { position: absolute; z-index: 14; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(380px, calc(100% - 2 * var(--s3))); background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--cream); font: 700 var(--fs-2) var(--pixel); animation: enter var(--t2) var(--ease); }
 body:not(.touch) .emo-pick { left: auto; right: max(24px, env(safe-area-inset-right)); bottom: auto; top: 132px; transform: none; }   /* (a desktop: under the nav row's emote button - clear of you in the middle) */
@@ -123,16 +159,22 @@ export function createEmotes(ctx) {
   // ---- the balloons over heads ----------------------------------------------------------------------------------------
   const pool = [], live = [];   // { el, i, eid, own, t0, typ }
   let raf = 0;
-  function mk() { const el = doc.createElement('div'), i = doc.createElement('i'); el.setAttribute('aria-hidden', 'true'); el.appendChild(i); return { el, i, eid: 0, own: false, t0: 0, typ: false }; }
+  function mk() { const el = doc.createElement('div'), i = doc.createElement('i'), b = doc.createElement('b'); el.setAttribute('aria-hidden', 'true'); i.appendChild(b); el.append(i, doc.createElement('s')); return { el, i, b, eid: 0, own: false, t0: 0, typ: false, out: 0 }; }
   function free(k) { const q = live.splice(k, 1)[0]; q.el.remove(); pool.push(q); }
   function show(eid, b, own, typ) {
     if (!pool.length && live.length >= POOL) free(0);   // (the oldest goes)
     const q = pool.pop() || mk();
-    q.eid = eid; q.own = !!own; q.t0 = performance.now(); q.typ = typ;
-    q.el.className = typ ? 'emo-pop typ' : 'emo-pop';
-    q.i.style.backgroundImage = `url(${balloonUrl(typ ? 'dots' : b)})`;
-    q.i.style.setProperty('--bal-t', `${LIFE}ms`);
-    q.i.style.animation = 'none'; void q.i.offsetWidth; q.i.style.animation = '';   // (the pop again from its start)
+    q.eid = eid; q.own = !!own; q.t0 = performance.now(); q.typ = typ; q.out = 0;
+    const M = (!typ && MOTION[b]) || ['', 'shrink'];
+    q.el.className = typ ? 'emo-pop typ' : M[1] === 'pop' ? 'emo-pop pop' : 'emo-pop';
+    q.i.style.backgroundImage = `url(${balloonUrl(typ ? 'dots' : b, typ ? '' : 'shell')})`;
+    q.b.style.backgroundImage = typ ? 'none' : `url(${balloonUrl(b, 'icon')})`;
+    // (its expression a little later each time, so two the same never move in step; the exit ends at LIFE)
+    q.el.style.setProperty('--bal-idle', M[0] ? `emo-${M[0]}` : 'none');
+    q.el.style.setProperty('--bal-wait', `${Math.round(BALLOON_MS.in + 120 + Math.random() * 380)}ms`);
+    q.el.style.setProperty('--bal-out', `${LIFE - BALLOON_MS.out}ms`);
+    q.el.style.setProperty('--bal-spark', `${LIFE - BALLOON_MS.out + 120}ms`);   // (as the balloon bursts)
+    for (const e of [q.i, q.b, q.el.lastChild]) { e.style.animation = 'none'; void e.offsetWidth; e.style.animation = ''; }   // (the pop again from its start)
     ctx.layer.appendChild(q.el);
     live.push(q);
     if (raf) cancelAnimationFrame(raf);
@@ -148,17 +190,18 @@ export function createEmotes(ctx) {
   function typing(eid, on) {
     if (!eid || !ctx.layer) return;
     const k = live.findIndex((q) => q.eid === eid && q.typ);
-    if (!on) { if (k >= 0) free(k); return; }
-    if (k >= 0) { live[k].t0 = performance.now(); return; }
+    if (!on) { if (k >= 0 && !live[k].out) { live[k].out = performance.now(); live[k].el.classList.add('bye'); } return; }   // (it shrinks away: place frees it)
+    if (k >= 0) { const q = live[k]; if (q.out) { q.out = 0; q.el.classList.remove('bye'); } q.t0 = performance.now(); return; }
     show(eid, null, false, true);
   }
-  const balloonOn = (eid) => live.some((q) => q.eid === eid && !q.typ);
+  const balloonOn = (eid) => live.some((q) => q.eid === eid && !q.typ && performance.now() - q.t0 < LIFE);
   function place() {
     raf = 0;
     const now = performance.now(), cr = ctx.canvas ? ctx.canvas.getBoundingClientRect() : { left: 0, top: 0 }, lr = ctx.layer.getBoundingClientRect();
     for (let k = live.length - 1; k >= 0; k--) {
       const q = live[k], t = now - q.t0;
-      if (t >= (q.typ ? CHAT.typingS * 1000 : LIFE)) { free(k); continue; }
+      if (q.typ && !q.out && t >= CHAT.typingS * 1000) { q.out = now; q.el.classList.add('bye'); }
+      if (q.out ? now - q.out >= BALLOON_MS.out : !q.typ && t >= LIFE + BALLOON_MS.tail) { free(k); continue; }
       const p = ctx.playing() ? ctx.headOf(q.eid) : null;
       // (the dots give way to an emote's balloon over the same head)
       if (!p || (q.typ && balloonOn(q.eid))) { q.el.classList.add('hide'); continue; }

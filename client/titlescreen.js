@@ -24,25 +24,29 @@ export const TIPS = [
   'Fishing rods are sold at tackle shops, the fish market and sports stores.',
 ];
 
-// the skyline: dark towers with lit windows and a few palms, on a transparent sky (CSS paints the dusk behind it)
-let skyUrl = null;
+// the skyline: dark towers with lit windows and a few palms, on a transparent sky (CSS paints the dusk behind it).
+// skyLayout(): where its windows are - every slot still in sight once it's drawn, lit or dark, and its tower's colour
+// (client/titlelife.js twinkles them)
+let skyUrl = null, skyWins = null;
+const SKY_COLS = ['#1d2a52', '#0e1631'];
+export function skyLayout() { skyline(); return { w: 320, h: 72, wins: skyWins || [], cols: SKY_COLS }; }
 export function skyline() {
   if (skyUrl) return skyUrl;
   try {
-    const W = 320, H = 72, c = document.createElement('canvas');
+    const W = 320, H = 72, c = document.createElement('canvas'), slots = [];
     c.width = W; c.height = H;
     const g = c.getContext('2d');
     let seed = 7;
     const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff);
     // two rows of towers: the far ones lighter, the near ones darker, windows lit warm
-    for (const [col, lo, hi, win] of [['#1d2a52', 20, 56, 0.18], ['#0e1631', 10, 40, 0.3]]) {
+    for (const [col, lo, hi, win] of [[SKY_COLS[0], 20, 56, 0.18], [SKY_COLS[1], 10, 40, 0.3]]) {
       let x = -4;
       while (x < W) {
         const w = 10 + Math.floor(rnd() * 18), h = lo + Math.floor(rnd() * (hi - lo));
         g.fillStyle = col; g.fillRect(x, H - h, w, h);
         if (rnd() < 0.3) g.fillRect(x + (w >> 1) - 1, H - h - 5, 2, 5);   // (an antenna)
         g.fillStyle = '#e2bd57';
-        for (let wy = H - h + 3; wy < H - 2; wy += 4) for (let wx = x + 2; wx < x + w - 2; wx += 3) if (rnd() < win) g.fillRect(wx, wy, 1, 2);
+        for (let wy = H - h + 3; wy < H - 2; wy += 4) for (let wx = x + 2; wx < x + w - 2; wx += 3) { const lit = rnd() < win; if (lit) g.fillRect(wx, wy, 1, 2); slots.push(wx, wy, lit ? 1 : 0, col === SKY_COLS[0] ? 0 : 1); }
         x += w + (rnd() < 0.4 ? 2 : 0);
       }
     }
@@ -53,6 +57,15 @@ export function skyline() {
       for (let y = 0; y < ph; y++) g.fillRect(px + Math.round(Math.sin(y / 9) * 1.5), H - y, 2, 1);
       const tx = px + 1, ty = H - ph;
       for (let a = 0; a < 6; a++) { const dx = Math.cos(a * 1.05), dy = Math.sin(a * 1.05) * 0.5; for (let r = 0; r < 9; r++) g.fillRect(Math.round(tx + dx * r), Math.round(ty + dy * r + (r * r) / 22), 2, 1); }
+    }
+    // (the slots a nearer tower or a palm covers are left out: a twinkle there would show through)
+    const px = g.getImageData(0, 0, W, H).data, hex = (i) => '#' + [px[i], px[i + 1], px[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+    skyWins = [];
+    for (let k = 0; k < slots.length; k += 4) {
+      const [wx, wy, lit, ci] = slots.slice(k, k + 4), i = (wy * W + wx) * 4, j = i + W * 4;
+      if (wx < 0 || wx >= W) continue;
+      const want = lit ? '#e2bd57' : SKY_COLS[ci];
+      if (hex(i) === want && hex(j) === want) skyWins.push(wx, wy, lit, ci);
     }
     skyUrl = c.toDataURL();
   } catch { skyUrl = ''; }

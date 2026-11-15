@@ -40,7 +40,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // (the kit's tokens only: test/uitokens.test.js reads this)
 const CSS = `
 #cht-bubs { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 3px; max-width: 240px; padding: 5px var(--s2) 6px; background: var(--pad-cream); color: var(--pad-ink); border: 2px solid var(--pad-ink); border-radius: var(--r1); box-shadow: inset 0 -3px 0 var(--cream-a), 0 3px 0 var(--pad-drop); font: 700 var(--fs-3) var(--pixel); line-height: 1.2; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transform-origin: 50% 100%; animation: cht-pop 220ms steps(1, end); transition: opacity var(--t3) var(--ease); }
+.cht-bub { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 3px; max-width: 240px; padding: 5px var(--s2) 6px; background: var(--pad-cream); color: var(--pad-ink); border: 2px solid var(--pad-ink); border-radius: var(--r1); box-shadow: inset 0 -3px 0 var(--cream-a), 0 3px 0 var(--pad-drop); font: 700 var(--fs-3) var(--pixel); line-height: 1.2; letter-spacing: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; transform-origin: 50% calc(100% + 10px); animation: cht-pop 220ms steps(1, end); transition: opacity var(--t3) var(--ease); }
 .cht-bub::before, .cht-bub::after { content: ''; position: absolute; left: 50%; border-style: solid; border-color: transparent; border-bottom: 0; }
 .cht-bub::before { bottom: -10px; margin-left: -7px; border-width: 9px 7px 0; border-top-color: var(--pad-ink); }
 .cht-bub::after { bottom: -6px; margin-left: -4px; border-width: 6px 4px 0; border-top-color: var(--pad-cream); }
@@ -48,7 +48,8 @@ const CSS = `
 .cht-bub > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .cht-bub > span + span { padding-top: 3px; border-top: 2px dotted var(--pad-line); }
 .cht-bub.me { opacity: .9; }
-.cht-bub.out { opacity: 0; }
+.cht-bub.bye { animation: cht-out 200ms cubic-bezier(.55, 0, .8, .35) forwards; }   /* (it goes like the emote balloons: a little squash up, then shrinks into its tail - not a fade) */
+@keyframes cht-out { 0% { transform: none; } 30% { transform: translateY(-2px) scale(.97, 1.05); } 100% { transform: scale(0); opacity: .4; } }
 body.touch .cht-bub { max-width: 190px; font-size: var(--fs-2); }
 body.cht-open .cht-bub:not(.me) { pointer-events: auto; cursor: pointer; }
 #cht-feed { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s1); width: min(30vw, 360px); pointer-events: none; }
@@ -210,7 +211,7 @@ export function createChat(ctx) {
     if (!b.l.length) { b.el.textContent = ''; b.goneAt = 0; }   // (one fading away: its last line goes, the new one comes)
     Object.assign(b, { me: !!me, id, n });
     b.el.classList.toggle('me', !!me);
-    b.el.classList.remove('out');
+    b.el.classList.remove('bye');
     const s = doc.createElement('span');
     if (em) s.className = 'em';
     s.textContent = text;
@@ -228,7 +229,7 @@ export function createChat(ctx) {
     for (const [eid, b] of bubbles) {
       while (b.l.length && now >= b.l[0].until) { const x = b.l.shift(); if (b.l.length) x.el.remove(); }
       if (!b.l.length) {   // (the last line fades with the bubble)
-        if (!b.goneAt) { b.goneAt = now + 260; b.el.classList.add('out'); }
+        if (!b.goneAt) { b.goneAt = now + 210; b.el.classList.add('bye'); }
         if (now >= b.goneAt) { b.el.remove(); bubbles.delete(eid); }
         continue;
       }

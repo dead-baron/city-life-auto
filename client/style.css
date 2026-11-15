@@ -60,7 +60,7 @@
   --pad-a: #3faa3f; --pad-b: #d8353b; --pad-x: #2f6fd8; --pad-y: #e8b022;
   --felt: #0f4a2c; --card: #fbfaf4; --card-red: #c0262d; --pocket-black: #161616; --pocket-green: #1d7a3a; --lotus: #d36aa8;
   --dusk-a: #3a2a5c; --dusk-b: #a8503e; --gold-d: #a8862e;
-  --night-0: #05080f; --night-a: #221a40; --night-b: #4a2a44; --halo-a: rgba(150, 60, 120, .3); --halo-b: rgba(70, 40, 110, .12); --navy-q: rgba(15, 24, 48, .55);   /* (the title's night under the neon sign, its halo; a quiet plate) */   /* (the title's dusk under the logo's sunset; the gold button's lower lip) */
+  --night-0: #05080f; --sky-base: #0e1631; --night-a: #221a40; --night-b: #4a2a44; --halo-a: rgba(150, 60, 120, .3); --halo-b: rgba(70, 40, 110, .12); --navy-q: rgba(15, 24, 48, .55);   /* (the title's night under the neon sign, its halo; a quiet plate) */   /* (the title's dusk under the logo's sunset; the gold button's lower lip) */
   --sea: #2f74c0; --rail-a: #efe6cf; --rail-b: #1a140e; --ferry: #e4f8ff;
   --neon: #5ae0ff; --cab: linear-gradient(#2a1a4a, #140c26);
   /* type: six sizes, 14 the smallest on a phone */
@@ -1233,7 +1233,7 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
 #creator .cc-turn { display: flex; align-items: center; gap: 10px; font: 600 var(--fs-2) var(--ui); color: var(--cream); }
 #creator .cc-turn button { width: 40px; height: 40px; border-radius: var(--r3); background: var(--navy); border: 2px solid var(--gold); color: var(--cream); font-size: var(--fs-3); cursor: pointer; }
 #creator .cc-turn .cc-zoom.on { background: var(--gold); color: var(--ink); }
-#creator .cc-pname { min-width: 120px; text-align: center; font: 700 var(--fs-2) var(--pixel); color: var(--cream); }
+#creator .cc-pname { min-width: 120px; min-height: 2.4em; line-height: 1.2; text-align: center; font: 700 var(--fs-2) var(--pixel); color: var(--cream); }   /* (two lines kept for it: a longer name - "Back right · Running" - never moves the preview) */
 #creator .cc-under { display: flex; flex-direction: column; align-items: stretch; gap: 6px; max-width: 100%; }   /* (the starting look's Play as / Customize, under the pick) */
 #creator .cc-under:empty { display: none; }
 #creator .cc-under .cc-btn { font-size: var(--fs-2); padding: 0 10px; }
@@ -1319,7 +1319,7 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #creator .cc-left { flex: 0 0 auto; flex-direction: row; gap: var(--s1); border-right: none; border-bottom: 2px solid var(--gold-a); padding: var(--s1) 6px; }
   #creator .cc-prev { width: auto; height: min(30vh, 236px); max-width: 70vw; }
   #creator .cc-turn { flex-direction: column; gap: 6px; }
-  #creator .cc-pname { min-width: 0; max-width: 90px; }
+  #creator .cc-pname { flex: none; width: 90px; min-width: 0; }   /* (a fixed width: the preview beside it never shifts as the view's name changes) */
   #creator.cc-start .cc-left { flex-wrap: wrap; justify-content: center; }
   #creator .cc-under { flex: 1 0 100%; flex-direction: row; justify-content: center; }
   #creator .cc-under .cc-btn { padding: 0 var(--s2); letter-spacing: 0; }
@@ -1391,7 +1391,9 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-gfxseg button.on i { display: none; }
   #t-tools button { padding: 0 var(--s3); }
   /* (upright, UIC-08: PLAY and the pair the width of the screen, your card then who's online along the foot) */
-  #title { padding-bottom: calc(148px + env(safe-area-inset-bottom)); background-size: auto 144px, auto, auto; }
+  /* (the city risen behind the lower menu - the owner, 11-14: "raise them higher up ... for mobile portrait": at 4 px a
+     pixel, its foot --sky-up over the screen's, the near towers' colour carried down under it behind your card) */
+  #title { --sky-up: 150px; padding-bottom: calc(148px + env(safe-area-inset-bottom)); background: var(--sky, none) repeat-x 50% calc(100% - var(--sky-up)) / auto 288px, linear-gradient(var(--sky-base), var(--sky-base)) 0 100% / 100% calc(var(--sky-up) + 1px) no-repeat, radial-gradient(ellipse min(46vw, 560px) min(30vh, 300px) at var(--halo-at), var(--halo-a), var(--halo-b) 55%, transparent 75%), linear-gradient(180deg, var(--night-0) 0%, var(--ink) 28%, var(--navy) 58%, var(--night-a) 86%, var(--night-b) 100%); }
   #title { --halo-at: 50% 18%; }
   #logo { width: min(320px, 86vw, 46vh); }   /* (by its height too: a short phone keeps room for the menu) */
   #play, #t-buttons, #t-row2, #t-load { width: 100%; min-width: 0; }

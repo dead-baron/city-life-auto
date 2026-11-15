@@ -56,9 +56,9 @@ out.balloonOn = [C.balloonOn(13), C.balloonOn(11)];
 out.typingDots = document.querySelectorAll('.emo-pop.typ').length;
 out.typingSprite = getComputedStyle(document.querySelector('.emo-pop.typ > i')).animationName;
 C.onMessage({ t: 'chat', ch: 'near', n: 'Lou', id: 'lou1', eid: 12, text: 'ok', at: 6 });
-out.typingAfterSay = document.querySelectorAll('.emo-pop.typ').length;
+out.typingAfterSay = document.querySelectorAll('.emo-pop.typ:not(.bye)').length; out.typingLeaving = document.querySelectorAll('.emo-pop.typ.bye').length;   // (it shrinks away into its tail first: 11-14)
 C.onMessage({ t: 'emote', eid: 12, e: 'dance', n: 'Lou', id: 'lou1', lg: 1 });
-out.popsAfterDance = document.querySelectorAll('#cht-bubs .emo-pop').length;
+out.popsAfterDance = document.querySelectorAll('#cht-bubs .emo-pop:not(.bye)').length;   // (the typing dots still shrinking away aside)
 // the emote picker (apart from chat): a grid, one tap sends and closes; a tap outside and the X close it
 C.emotes();
 await wait(30);
@@ -247,6 +247,7 @@ test('chat on a desktop: bubbles, the feed, the sheet, quick lines and emotes, m
   assert.equal(o.typingDots, 1, 'the typing dots over someone near who types');
   assert.match(o.typingSprite, /emo-dots/, '...the dots in turn');
   assert.equal(o.typingAfterSay, 0, 'said: the dots go');
+  assert.equal(o.typingLeaving, 1, '...shrinking away, not blinked off');
   assert.equal(o.popsAfterDance, 1, 'Dance: no balloon');
   assert.ok(o.logged.some((l) => l.includes('Lou') && l.includes('started dancing')), '"Lou started dancing" in the log');
   assert.ok(o.pickOpen, 'the picker');

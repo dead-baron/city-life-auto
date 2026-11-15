@@ -23915,3 +23915,43 @@ three on the tower beside it, two on each of the others), now each building's bl
 of that building (a letter may cover an end of it), its top row the same four px under every roof line, the same 2 x 2
 art px windows the same three px apart everywhere. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
 Before / after: the session's scratchpad `logo2/owner/windows2/`.
+
+## 2026-11-14 - Menu polish: the creator's stage stands still, the neon misbehaves, the title comes alive, balloons go out with style
+The owner (18:56, 18:59), three things:
+- **The character creator's stage** ("the stage seems to move but the stage should be stationary and the character
+  centered on the stage"). The stone and the size of an art pixel followed the sprite: the stone was 1.45 times the
+  figure's width (wide from the front, narrow from the side) and the scale shrank for a tall pose (the fishing rod). Now
+  `stageLayout` (client/creator.js) takes them from the canvas alone - the stone 26 art px wide, the scale the one that
+  fits a tall figure with a hat - and the figure stands on the stone's centre by the rig's anchor (the point between the
+  feet; seated, the ground under the hips), not its picture's box, so a cape, a hat, a bag, a turn or a pose never moves
+  it. The magnifier closes in on the face (it keeps its spot whatever the hat) with the stone where it was. The preview
+  itself had moved too on a phone upright (the view's name beside it changed width: "Front" / "Back right · Running"):
+  the name has a fixed width there and two lines kept for it on the other layouts. The starting looks' stages take the
+  same fixed stone.
+- **The neon** ("would be cool if the Auto subtly flickered from time to time but not on a loop that gets repetitive").
+  client/titlelogo.js: after the switch-on, a tube misbehaves every 8-25 s, a new random gap each time - "Auto" four
+  times in five, else the skyline, the swoosh or "City Life" - a blink or two, a sag and recover with a flutter, or one
+  letter of "Auto" stuttering (a mask over its section); never below 12%, over in well under a second, seldom the same
+  way twice running; a faint tick and the shortest hum of the neon's own sound (30% of the switch-on's, the sound
+  settings as ever). Reduced motion: none.
+- **The title's backdrop, alive** ("make the main menu more interesting", "a few subtle stars ... maybe some clouds ...
+  a helicopter flying over the skyline or a plane, but very subtle"). New client/titlelife.js, loaded by titlelogo.js
+  once the sign is lit (not in the page's first load): in the skyline's own art pixels, each piece on its own random
+  clock - a few faint stars dimming or flaring one at a time; one or two thin cloud bands, lit faintly by the city from
+  below, drifting a whole pixel at a time; the towers' windows going dark or lighting up one at a time (each copy of the
+  repeated skyline on its own; titlescreen.js `skyLayout` says where the visible ones are); now and then a car's
+  headlights or taillights along the foot of the towers; a slow searchlight sweep from a rooftop; and a helicopter low
+  over the rooftops (a blinking red light, a strobe, a faint searchlight) or a plane high up (wing lights, a strobe).
+  Small canvases redrawn only where something changes; the moving sprites moved by the compositor. Paused while the
+  tab is hidden or the title isn't showing; reduced motion: the stars alone, still. On a phone upright the city is
+  raised (the owner: "we can raise them higher up I think at least for mobile portrait"): the skyline at 4 px a pixel,
+  its foot 150 px up (`--sky-up`), the near towers' colour carried down under it behind your card.
+- **The emote balloons** ("it would be cool if it animated out a bit better with some expression and then popped or
+  shrank back ... it doesn't look great having it flicker off"). client/emotes.js: the balloon and its icon are drawn
+  apart, so the icon gives one small SNES-stepped expression while it holds (`MOTION`: the heart beats, the ! jolts, the
+  ? tilts, the Zzz drifts, the drop slides, the vein throbs, HAHA bounces, the bulb lights, the hand waves, the thumb
+  pumps, the beckon beckons - a little later each time, once); then it goes in 190 ms ending at `CHAT.balloonS`: a
+  little squash up, and the happy ones (heart, laugh, idea) burst into a puff of pixel sparkles, the rest shrink to
+  nothing into the tail's point. The typing dots shrink away into their tail when the typing stops, and the speech
+  bubbles (client/chat.js) go the same way instead of fading (their own `bye` class: the kit's `.out` utility fades).
+- test/menupolish.test.js. Proof (before/after and frame strips): the session's scratchpad `menupolish/owner/`.

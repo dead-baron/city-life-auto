@@ -5,7 +5,11 @@
 // Loaded with client/splash.js, which plays the entrance; nothing in the game depends on it.
 //   mountLogo()          the lit layers, added to #logo switched off (fetched now: 4 KB, after the first paint)
 //   neonIntro({ at })    the SNES-style switch-on: each layer buzzes on in turn with a short irregular flicker and a
-//                        soft tick and a low hum, then the sign idles - a soft glow breathing, now and then a tiny flicker.
+//                        soft tick and a low hum, then the sign idles - a soft glow breathing and, now and then, a tube
+//                        misbehaving (the owner, 11-14 18:56: "would be cool if the Auto subtly flickered from time to time
+//                        but not on a loop that gets repetitive"): mostly "Auto", now and then another piece, after 8-25 s
+//                        at random each time - a blink or two, a dim and recover, or one letter stuttering - with a faint
+//                        tick of the neon's sound. And the backdrop comes alive behind it (client/titlelife.js, loaded then).
 //                        Any tap, click, key or pad button skips to lit. Reduced motion: just lit, no flicker, no idle.
 //                        at: hold that moment (ms into the switch-on) - the captures (?neon=<ms>)
 //   showLit()            lit at once, then idle (the tests' captures, ?nosplash)
@@ -56,28 +60,71 @@ export function showLit() {
   idle();
 }
 
-// the soft glow breathing (client/style.css #logo.lg-idle), and now and then one layer gives a tiny flicker
+// the soft glow breathing (client/style.css #logo.lg-idle), and now and then a tube misbehaving (misbehave)
+let lifeP = null, lastKind = '';
 function idle() {
   const box = document.getElementById('logo');
+  // (the backdrop's life: the stars, the clouds, the city's windows and lights - its own module, after the sign is lit)
+  if (!lifeP) lifeP = import('./titlelife.js').then((m) => { m.startLife({ glitch: misbehave }); }).catch(() => {});
   if (!box || reduced()) return;
   box.classList.add('lg-idle');
   clearTimeout(idleT);
   const next = () => {
+    const g = nextGlitch(Math.random, lastKind);
     idleT = setTimeout(() => {
       const title = document.getElementById('title');
-      if (!document.hidden && title && !title.classList.contains('hidden') && els.length) {
-        const e = els[(Math.random() * els.length) | 0], dips = 1 + ((Math.random() * 3) | 0);
-        let t = 0;
-        for (let d = 0; d < dips; d++) {
-          const lo = 0.35 + Math.random() * 0.35, len = 35 + Math.random() * 45;
-          setTimeout(() => setOn(e, lo), t); t += len;
-          setTimeout(() => setOn(e, 1), t); t += 40 + Math.random() * 90;
-        }
-      }
+      if (!document.hidden && title && !title.classList.contains('hidden') && els.length) { lastKind = g.kind; misbehave(g.kind, g.layer, g.part); }
       next();
-    }, 6000 + Math.random() * 9000);
+    }, g.delay);
   };
   next();
+}
+
+// The tubes misbehaving. nextGlitch(rnd, last) -> { delay, layer, kind, part }: when (8-25 s after the last, at random:
+// never a beat you can count), which piece ("Auto" four times in five, else the skyline, "City Life" or the swoosh, the
+// rarer for being bigger) and how - 'blink' (one or two quick drops), 'dim' (sags and comes back with a flutter) or
+// 'stutter' (one letter of "Auto" on the blink, the rest steady); never the same way twice running.
+export const GLITCH = { min: 8000, max: 25000, auto: 0.8, others: ['sky', 'sky', 'swoosh', 'city'], kinds: ['blink', 'blink', 'dim', 'stutter'] };
+// "Auto"'s letters across its layer (% of its width: A with its speed lines, u, t, o - tools/neon_logo.py A3's grid)
+export const AUTO_PARTS = [[0, 35.6], [38, 59.4], [60.6, 77.6], [77.6, 100]];
+export function nextGlitch(rnd, last = '') {
+  const delay = Math.round(GLITCH.min + rnd() * (GLITCH.max - GLITCH.min));
+  const layer = rnd() < GLITCH.auto ? 'auto' : GLITCH.others[(rnd() * GLITCH.others.length) | 0];
+  let kind = GLITCH.kinds[(rnd() * GLITCH.kinds.length) | 0];
+  if (kind === last) kind = GLITCH.kinds[(rnd() * GLITCH.kinds.length) | 0];
+  if (kind === 'stutter' && layer !== 'auto') kind = 'blink';
+  return { delay, layer, kind, part: (rnd() * AUTO_PARTS.length) | 0 };
+}
+// its steps: [[ms, opacity, the letter's level (stutter: 1 = lit, below = dimmed)]...] - subtle: never below 0.12, over
+// in well under a second
+export function glitchSteps(kind, rnd) {
+  const out = [];
+  let t = 0;
+  if (kind === 'dim') {
+    const lo = 0.45 + rnd() * 0.2;
+    out.push([0, 0.8], [40, lo]); t = 40 + 150 + rnd() * 170;
+    out.push([t, 0.85], [t + 40, lo + 0.15], [t + 80, 1]);
+  } else if (kind === 'stutter') {
+    const n = 2 + ((rnd() * 2) | 0);
+    for (let k = 0; k < n; k++) { out.push([t, 1, 0.15 + rnd() * 0.15]); t += 40 + rnd() * 40; out.push([t, 1, 1]); t += 50 + rnd() * 70; }
+  } else {
+    const n = 1 + ((rnd() * 2) | 0);
+    for (let k = 0; k < n; k++) { out.push([t, 0.15 + rnd() * 0.25]); t += 35 + rnd() * 30; out.push([t, 1]); t += 70 + rnd() * 60; }
+  }
+  return out;
+}
+const sectionMask = (part, lv) => { const [a, b] = AUTO_PARTS[part] || AUTO_PARTS[0], d = `rgba(0,0,0,${lv})`; return lv >= 1 ? '' : `linear-gradient(90deg, #000 ${a}%, ${d} ${a}%, ${d} ${b}%, #000 ${b}%)`; };
+// play one (the captures call it too, holding a moment of it: client/titlelife.js window.__titleLife.glitch)
+export function misbehave(kind = 'blink', layer = 'auto', part = 0, holdAt = -1) {
+  const e = els && els.find((q) => q.L.k === layer);
+  if (!e || state !== 'lit') return;
+  const steps = glitchSteps(kind, holdAt >= 0 ? rng(7) : Math.random);
+  const apply = ([, o, lv]) => { setOn(e, o); const m = lv === undefined ? '' : sectionMask(part, lv); e.i.style.webkitMaskImage = m; e.i.style.maskImage = m; };
+  if (holdAt >= 0) { apply(steps.filter((q) => q[0] <= holdAt).pop() || [0, 1]); return; }
+  for (const q of steps) setTimeout(() => apply(q), q[0]);
+  // (a faint tick and the shortest hum, far under the switch-on's: the sound settings as ever)
+  const snd = hum(0.3);
+  if (snd) snd.blip(HUM[layer], false);
 }
 
 // a small seeded random (the captures hold a moment across page loads: the same flicker every time)
@@ -148,13 +195,13 @@ export function neonIntro({ at = -1 } = {}) {
 // piece strikes, a short tick of filtered noise (the starter), and under it a low hum near 120 Hz (the mains' doubled
 // buzz: a soft sine and a little of its second harmonic, muffled) that swells in and settles; the last strike of each
 // piece holds its hum a moment longer. Quiet: well under the game's own sounds.
-function hum() {
-  let vol = 1;
+function hum(gain = 1) {
+  let vol = gain;
   try {
     const s = JSON.parse(localStorage.getItem('cla.settings') || '{}').sound || {};
     if (s.on === false) return null;
     const m = typeof s.master === 'number' ? s.master : 0.8, f = typeof s.sfx === 'number' ? s.sfx : 0.8;
-    vol = m * m * f * f / 0.4096;   // (squared like the mixer's sliders; 1 at the defaults)
+    vol = gain * m * m * f * f / 0.4096;   // (squared like the mixer's sliders; 1 at the defaults)
   } catch { /* the defaults */ }
   if (vol < 0.02) return null;
   const AC = window.AudioContext || window.webkitAudioContext;
