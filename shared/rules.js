@@ -1464,4 +1464,22 @@ export const DIRECTOR = {
     tankerhideout: { on: false, weight: 1, cooldownS: 3600 },
     helipursuit: { on: false, weight: 1, cooldownS: 2400 },
   },
+  views: 200,   // the owner's saved views (the camera panel's "Save this view": server/systems/views.js) at most
+};
+// Racers (server/systems/racers.js: the director's street race and getaway car - the owner, 11-14: "they should be swerving
+// in and out of traffic and pedestrians should be jumping out of the way"). px and px/s.
+export const RACERS = {
+  wideW: 224,          // a street this wide or wider (its corridor, kerb to kerb and the pavements: World v3's avenues, boulevards, arterials) is a wide one: the race's and the chase's way
+  narrowK: 6,          // a narrower street costs this many times its length on the way (an alley is a last resort)
+  pace: 0.9,           // of the car's top speed, times its driver's skill (0.9 - 1.08 across the grid)
+  look: 150, lookMax: 380,   // how far down the road it steers for (and more the faster it goes: the corners cut)
+  width: 112, step: 16,      // the lines it may take across the road (either side of its route's) and their spacing
+  stick: 0.55,         // how much it keeps to the line it's on (per px across)
+  swing: 260,          // px/s it moves across to a new line
+  margin: 9,           // px it leaves past what it passes
+  brake: 900,          // px/s/s it counts on braking at
+  cornerMin: 230,      // px/s through the sharpest corner
+  shave: 34,           // px between their sides: a car it passes that close brakes and honks
+  startleS: 1.4,
+  stuckS: 1.2,         // s stopped against something before it backs off and takes another line
 };

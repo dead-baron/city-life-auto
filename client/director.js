@@ -41,12 +41,12 @@
 // main.js asks it each frame: holds() (the keys are the camera's), cam(cam, dt, tx, ty), zoomK, lt (the time of day's
 // loop time or null), wx (null | 'clear' | 'rain' | 'fog'), sky(sky), hideMe, clean, eye() (where the camera is, when
 // it's off you: the world's window follows it); key(k, down), pad(axes), follow(msg) (the server's { t: 'cinef' }).
-import { DAY_LOOP_S, DAY_PART_S, K } from '../shared/constants.js';
+import { DAY_LOOP_S, DAY_PART_S, K, gameClock, WEATHER } from '../shared/constants.js';
 import { CINE_KINDS, CINE_KIND } from '../shared/cinekinds.js';
 import { VEHICLE_BY_INDEX } from '../shared/vehicles.js';
 import { SHOWCASE, showcaseSpot } from './showcase.js';
 import { icon } from './touchicons.js';   // (the kit's close X)
-import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, SECTIONS, camAt } from '../shared/scenes/index.js';
+import { SCENES as DSCENES, SCENE_LIST as DSCENE_LIST, SECTIONS, camAt, isKept, viewScene } from '../shared/scenes/index.js';
 
 const ZOOMS = [0.55, 0.7, 0.85, 1, 1.2, 1.45, 1.75, 2.1];
 const nearZoom = (z) => ZOOMS.reduce((b, q, k) => (Math.abs(q - z) < Math.abs(ZOOMS[b] - z) ? k : b), 0);
@@ -54,8 +54,11 @@ const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], [
 const WXS = [['Live', null], ['Clear', 'clear'], ['Rain', 'rain'], ['Fog', 'fog'], ['Mist', 'mist']];
 const BOXES = [['Off', 0], ['2.39:1', 2.39], ['1.85:1', 1.85]];
 const HOLD_MAX = 9500, HOLD_MIN = 500, END_FADE = 600;   // ms: a shot's hold for the art at most / at least, the fade out at its end
-// the shot list's sections and their shots, in order (shared/scenes/: each scene's g)
-export const shotsOf = (sec) => DSCENE_LIST.filter((q) => (sec ? q.g === sec : SECTIONS.some((g) => g[0] === q.g))).map((q) => q.id);
+// the shot list's sections and their shots, in order (shared/scenes/: each scene's g) - the kept ones (shared/scenes KEPT:
+// they pass the sanity check); moreOf: the rest, under "More (unreviewed)"
+export const shotsOf = (sec) => DSCENE_LIST.filter((q) => isKept(q.id) && (sec ? q.g === sec : SECTIONS.some((g) => g[0] === q.g))).map((q) => q.id);
+export const moreOf = () => DSCENE_LIST.filter((q) => !isKept(q.id)).map((q) => q.id);
+const MORE = 'more';   // (the reel of the unreviewed ones: its sec)
 // does this key hand the camera back from a shot? (not the screen's own keys, the zoom, Next or the panel's)
 const KEEP_KEYS = new Set(['F2', 'F4', 'F8', 'KeyQ', 'KeyE', 'Minus', 'Equal', 'Digit0', 'KeyN', 'Tab', 'ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight']);
 export const handsBack = (k) => !KEEP_KEYS.has(k) && k !== 'Escape';
@@ -269,6 +272,8 @@ body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centr
 #cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
 #cine-panel .tip { margin: 6px 0 0; }
 #cine-panel input[type=range] { width: 100%; }
+#cine-panel .cine-in { display: block; width: 100%; box-sizing: border-box; min-height: 32px; margin: 2px 0; padding: 0 var(--s2); background: var(--pad-ink); color: var(--pad-cream); border: 2px solid var(--pad-line); border-radius: 0; font: 600 16px var(--ui); }
+.touch #cine-panel .cine-in { min-height: var(--tap); }
 #cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: var(--s2); max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; padding: 7px 10px; background: var(--glass); color: var(--cream); font: 600 var(--fs-2)/1.3 var(--ui); border: 2px solid var(--gold-a); border-radius: var(--r2); transition: opacity .4s ease; touch-action: none; user-select: none; }
 #cine-ctl .lbl { min-width: 56px; text-align: center; }
 #cine-ctl .who { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--gold); }
@@ -385,12 +390,12 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   }
   const zoomAt = () => (D.mode === 'script' ? L.sz : D.zi);
   function setTime(i) { D.ti = i; const m = TIMES[i][1]; D.lt = m === null ? null : loopOf(m); render(); }
-  function setWx(i) {
+  function setWx(i, quiet = false) {
     D.wi = i; const w = WXS[i][1];
     D.wx = w === 'mist' ? 'fog' : w;
     if (w === 'fog') S.fogForce = { k: 0.85, spread: 1 }; else if (w === 'mist') S.fogForce = { k: 0.45, spread: 0.45 }; else if (w === 'clear') S.fogForce = { k: 0, spread: 0 }; else S.fogForce = null;
     if (w === 'mist') D.wx = null;   // (mist: the fog's thinner veil over whatever the weather is)
-    render();
+    if (!quiet) render();
   }
   function setBox(i) { D.bi = i; D.box = BOXES[i][1]; setBars(); render(); }
 
@@ -422,14 +427,16 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     if (scene && scene.timer) clearTimeout(scene.timer);
     scene = null;
     if (!before) before = { ti: D.ti, lt: D.lt, wi: D.wi, hide: D.hideMe, clean: D.clean };
-    want = { id, at: performance.now() };
+    // (a saved view: 'view:' and its id - the server plays it as a shot there, views.js)
+    const vw = String(id).startsWith('view:') ? views.list.find((q) => `view:${q.id}` === id) : null;
+    want = vw ? { id: 'view', view: vw.id, n: vw.n, at: performance.now() } : { id, at: performance.now() };
     fadeTo(1);
     if (sct) sct.over = true;   // (the server ends it as the next starts: no word of ours needed)
-    api.send({ t: 'dev', c: 'scene', id, hold: 1 });
+    api.send(vw ? { t: 'dev', c: 'scene', view: vw.id, hold: 1 } : { t: 'dev', c: 'scene', id, hold: 1 });
     wake(); render();
   }
-  D.play = (sec = '', from = '') => {   // the reel: a section ('' all of them), from one of its shots
-    const ids = shotsOf(sec);
+  D.play = (sec = '', from = '') => {   // the reel: a section ('' all of them; MORE the unreviewed), from one of its shots
+    const ids = sec === MORE ? moreOf() : shotsOf(sec);
     if (!ids.length) return;
     reel = { ids, i: Math.max(0, ids.indexOf(from)), sec };
     playShot(reel.ids[reel.i]);
@@ -460,12 +467,15 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   // the hand-back (any key, touch or button but the camera's own): the shot stops, the camera's yours where it is
   function handBack() { if (!(reel || want || D.mode === 'script')) return false; stopReel(false); if (!D.clean) api.toast('Your camera - drag or WASD / the stick to fly it, Esc for your character.', 'info'); return true; }
   // a shot's own time of day and weather on this screen (its storm, the sea's sparkle)
-  function shotLook(sc, t) {
+  // - put on every frame the shot plays (the owner, 11-14 20:21: "They're all the same nighttime scene"): it had been set
+  // once, at the shot's start, and anything after that took the screen back to the world's own hour; and unless he picks
+  // a time or a weather in the panel during it (sct.own: his from then)
+  function shotLook(sc, t, first = false) {
     const m = shotMinutes(sc, t);
     if (m !== undefined) { D.ti = -1; D.lt = loopOf(m); }
-    const w = sc.weather || 'clear';
-    if (t === 0) { setWx(Math.max(0, WXS.findIndex((q) => q[1] === (w === 'storm' ? 'rain' : w)))); if (S.wx) S.wx.stormForce = w === 'storm' ? 3 : null; }
-    if (t === 0) S.bioForce = sc.bio ? [1, 0.5] : null;
+    const w = sc.weather || 'clear', wi = Math.max(0, WXS.findIndex((q) => q[1] === (w === 'storm' ? 'rain' : w)));
+    if (first || D.wi !== wi) setWx(wi, !first);
+    if (first) { if (S.wx) S.wx.stormForce = w === 'storm' ? 3 : null; S.bioForce = sc.bio ? [1, 0.5] : null; }
   }
 
   // ---- the staged scenes ----
@@ -546,6 +556,67 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     });
   }
 
+  // ---- the owner's saved views (server/systems/views.js: kept on the server; the owner, 11-14 - he scouts the places, the
+  // hero shots are refined from them) ----
+  // views: the list as the server last said, can (may save, rename, delete: an admin or the owner), draft (the name and
+  // note typed for the next save)
+  const views = { list: [], can: false, asked: 0, draft: { n: '', note: '' } };
+  D.views = (m) => { views.list = Array.isArray(m.list) ? m.list : []; views.can = !!m.can; if (m.saved) { views.draft = { n: '', note: '' }; } render(); };
+  D.viewList = () => views.list;
+  const askViews = () => { const t = performance.now(); if (dev() && t - views.asked > 30e3) { views.asked = t; api.send({ t: 'dev', c: 'views', k: 'list' }); } };
+  // where the camera is now: its middle, its zoom (the director's own: on a shot, without the panel's offset), the time of
+  // day and the weather on this screen
+  function curView() {
+    const [W, H] = api.size(), tall = (H || 1) > (W || 1);
+    const z = D.mode === 'script' ? D.zoomK / (tall ? 0.85 : 1) / ZOOMS[L.sz] : D.zoomK;
+    const w = S.wx && S.wx.stormForce ? 'storm' : D.wi > 0 ? WXS[D.wi][1] : S.weather === WEATHER.RAIN ? 'rain' : 'clear';
+    return { x: Math.round(S.cam.x), y: Math.round(S.cam.y), z: +z.toFixed(3), t: Math.round(gameClock(D.lt !== null ? D.lt : S.loopTime || 0).minutes) % 1440, w };
+  }
+  D.curView = curView;
+  function saveView() { api.send({ t: 'dev', c: 'views', k: 'save', n: views.draft.n, note: views.draft.note, ...curView() }); }
+  // go to one: the free camera there, at its zoom, its time and weather on this screen
+  function goView(v) {
+    stopReel(false);
+    setMode('drone');
+    x = v.x; y = v.y; D.vx = 0; D.vy = 0;
+    D.zi = nearZoom(v.z); D.zoomK = v.z;
+    D.ti = -1; D.lt = loopOf(v.t);
+    setWx(Math.max(0, WXS.findIndex((q) => q[1] === (v.w === 'storm' ? 'rain' : v.w))), true);
+    if (S.wx) S.wx.stormForce = v.w === 'storm' ? 3 : null;
+    render();
+  }
+  D.goView = goView;
+  D.playView = (v) => { reel = { ids: [`view:${v.id}`], i: 0, sec: null }; playShot(`view:${v.id}`); };
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+  function viewsPanel(panel, row, h, tip) {
+    askViews();
+    panel.append(h('Your saved views'));
+    if (views.can) {
+      const inp = (k, ph) => { const e = document.createElement('input'); e.type = 'text'; e.className = 'cine-in'; e.placeholder = ph; e.value = views.draft[k]; e.maxLength = k === 'n' ? 48 : 160; e.oninput = () => { views.draft[k] = e.value; }; return e; };
+      panel.append(inp('n', 'Name (optional)'), inp('note', 'A note (optional)'), row(btn('★ Save this view', false, () => saveView())));
+      panel.append(tip('Saves where the camera is, its zoom, the time and the weather - on the server.'));
+    }
+    if (!views.list.length) panel.append(tip(views.can ? 'None yet: frame a place (Free camera), set the time and weather, and save it.' : 'None yet.'));
+    for (const v of views.list) {
+      const go = btn('', false, () => goView(v), 'sc');
+      go.textContent = v.n;
+      const sm = document.createElement('small'); sm.textContent = ` - ${hhmm(v.t)}${v.w && v.w !== 'clear' ? `, ${v.w}` : ''}${v.note ? ` · ${v.note}` : ''}`;
+      go.append(sm);
+      go.title = 'Go there (the free camera)';
+      go.style.flex = '1';
+      const play = btn('▶', !!(want && want.view === v.id), () => D.playView(v));
+      play.title = 'Play it as a shot';
+      const r = row(go, play, ...(views.can ? [btn('✎', false, () => {
+        if (typeof prompt !== 'function') return;
+        const n = prompt('Name this view', v.n); if (n === null) return;
+        const note = prompt('A note', v.note || '');
+        api.send({ t: 'dev', c: 'views', k: 'rename', id: v.id, n, note: note === null ? v.note : note });
+      }), btn('✕', false, () => { if (typeof confirm === 'function' && !confirm(`Delete "${v.n}"?`)) return; api.send({ t: 'dev', c: 'views', k: 'delete', id: v.id }); })] : []));
+      r.style.flexWrap = 'nowrap';
+      panel.append(r);
+    }
+  }
+
   // ---- the panel ----
   const btn = (label, on, fn, cls = '') => { const b = document.createElement('button'); b.textContent = label; if (on) b.classList.add('on'); if (cls) b.classList.add(cls); b.onclick = (ev) => { ev.stopPropagation(); here(); wake(); fn(); b.blur(); }; return b; };
   // the drift's dial: its needle the way it goes; drag (or tap) it to point it anywhere
@@ -564,7 +635,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   const speedRow = () => [btn('◀', false, () => setDrift(dr.si - 1)), Object.assign(document.createElement('span'), { className: 'lbl', textContent: DRIFT_NAMES[dr.si] }), btn('▶', false, () => setDrift(dr.si + 1))];
   const zoomRow = () => [btn('－', false, () => setZoom(zoomAt() - 1)), btn('＋', false, () => setZoom(zoomAt() + 1))];
   // the bar along the bottom (drift / follow scenes / the shot playing): made again when what it shows changes
-  const shotName = () => { const id = want ? want.id : sct ? sct.sc.id : ''; const q = DSCENES[id]; return q ? `${q.n}${reel && reel.ids.length > 1 ? ` (${reel.i + 1}/${reel.ids.length})` : ''}` : ''; };
+  const shotName = () => { const q = want ? (want.view ? { n: want.n } : DSCENES[want.id]) : sct ? sct.sc : null; return q ? `${q.n}${reel && reel.ids.length > 1 ? ` (${reel.i + 1}/${reel.ids.length})` : ''}` : ''; };
   function barShow() {
     const shotOn = D.mode === 'script' || !!want, on0 = D.mode === 'drift' || D.mode === 'scene' || (shotOn && !(sct && sct.cap));
     document.body.classList.toggle('cine-bar', on0);   // (on a phone the bar takes the action buttons' corner: they do nothing while the camera has the controls)
@@ -598,7 +669,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     // the shot list (debug mode's: it runs the debug menu's scenes) - each a tap; a section's ▶ or Play all back to back
     if (dev()) {
       const playing = reel || want || D.mode === 'script';
-      panel.append(h('Shot list'), row(btn(`▶ Play all (${shotsOf('').length})`, !!(reel && reel.sec === ''), () => D.play('')), ...(playing ? [btn('⏭ Next', false, () => D.next(1)), btn('⏹ Stop', false, () => stopReel(true))] : [])));
+      panel.append(h('Shot list'), row(btn(`▶ Play all (${shotsOf('').length})`, !!(reel && reel.sec === ''), () => D.play('')), ...(playing ? [btn('⏭ Next', false, () => D.next(1)), btn('⏹ Stop', false, () => stopReel(true))] : []), ...(views.can ? [btn('★ Save this view', false, () => saveView())] : [])));
       if (playing) panel.append(tip(`Playing: ${shotName() || '...'}`, true));
       for (const [sec, name] of SECTIONS) {
         const ids = shotsOf(sec), open = L.open === sec;
@@ -614,7 +685,21 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
           panel.append(b);
         }
       }
+      // the rest: not through the sanity check yet - folded away, each still one tap (or all of them back to back)
+      const more = moreOf(), mo = L.open === MORE;
+      const mb = btn(`${mo ? '▾' : '▸'} More (unreviewed) · ${more.length}`, false, () => { L.open = mo ? '' : MORE; keep(); render(); }, 'sc');
+      mb.style.flex = '1';
+      const mr = row(mb, btn('▶', !!(reel && reel.sec === MORE), () => D.play(MORE)));
+      mr.style.flexWrap = 'nowrap';
+      panel.append(mr);
+      if (mo) for (const id of more) {
+        const q = DSCENES[id], b = btn('', !!((want && want.id === id) || (sct && sct.sc.id === id)), () => D.shot(id), 'sc');
+        b.innerHTML = `${q.n}${q.note ? ` <small>- ${q.note}</small>` : ''}`;
+        b.style.paddingLeft = '14px';
+        panel.append(b);
+      }
       panel.append(tip('One tap plays a shot: its place, time, weather, cast and camera move. Any key, touch or button hands you the camera where it is; Esc / B back to you.'));
+      viewsPanel(panel, row, h, tip);
     }
     panel.append(h('Free camera'), row(...[['Follow me', 'follow'], ['Smooth', 'smooth'], ['Free', 'drone'], ['Drift', 'drift'], ['On someone', 'target'], ...(dev() ? [['Follow scenes', 'scene']] : [])].map(([n, m]) => btn(n, D.mode === m, () => { stopReel(false); setMode(m); }))));
     if (D.mode === 'drift') {
@@ -646,8 +731,8 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       h('Letterbox'), row(...BOXES.map(([n], i) => btn(n, D.bi === i, () => setBox(i)))));
     // what's drawn (this screen only; kept in this browser)
     panel.append(h('Show'), row(...LAYERS.map(([k, n]) => btn(`${L[k] ? '☑' : '☐'} ${n}`, L[k], () => flip(k)))));
-    panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => setTime(i)))));
-    panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => setWx(i)))));
+    panel.append(h('Time of day'), row(...TIMES.map(([n], i) => btn(n, D.ti === i, () => { if (sct) sct.own = true; setTime(i); }))));
+    panel.append(h('Weather'), row(...WXS.map(([n], i) => btn(n, D.wi === i, () => { if (sct) sct.own = true; setWx(i); }))));
     if (!dev()) return;   // (the rest - the Showcase, the staged scenes - debug mode's: they move you and run its commands)
     panel.append(h('More'), row(btn(rec ? '⏺ Recording... (stop)' : '⏺ Record this screen', !!rec, () => toggleRec())));
     // the Showcase: the hand-crafted places, a press to fly the free camera there
@@ -838,7 +923,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       if (m.held === 0 && sct.held) { sct.held = false; fadeTo(0); }
       return;
     }
-    const sc = m.id && DSCENES[m.id];
+    const sc = m.view ? viewScene(m.view) : m.id && DSCENES[m.id];   // (m.view: a saved view played as a shot)
     if (!sc) return;
     if (!m.cap && dropId === m.id && !(want && want.id === m.id)) { dropId = ''; api.send({ t: 'dev', c: 'scene', k: 'stop', seq: m.seq }); return; }   // (stopped while it was being set up)
     dropId = '';
@@ -849,7 +934,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
     sct = { sc, seq: m.seq, tick0: m.tick0, cast: m.cast || {}, anchors: anchorsOf(m.anchors), bt: { ...(m.bt || {}) }, cap: !!m.cap, vel: new Map(), cam: null, shot: -2, held: !!m.held, heldAt: performance.now(), told: false };
     sct.hadHide = hadHide; D.hideMe = true;   // (your own character out of it)
     if (sct.cap) { setClean(true); D.noShake = true; D.tags = true; L.tags = true; document.body.classList.add('cine-cap'); }   // (the capture: the clean screen, the players' name tags, no close button)
-    if (!sct.cap) shotLook(sc, 0);
+    if (!sct.cap) shotLook(sc, 0, true);
     if (D.mode !== 'script') setMode('script');
     else { x = S.cam.x; y = S.cam.y; }
     fadeTo(sct.held && !sct.cap ? 1 : 0);   // (setMode clears it: black while held - a capture's frames never)
@@ -858,7 +943,10 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   D.scriptOn = () => !!sct;
   // where a walk-in's roof is lifted from (main.js interiorTick): the shot's camera - someone it follows inside a bar is
   // seen at the table, not under the roof (null: your own place, as ever)
-  D.roofAt = () => (D.mode === 'script' && sct ? { x, y } : null);
+  // - and false: no roof lifted at all. A shot keeps every roof drawn solid (the owner, 11-14 20:21: "It's toggling between
+  // interior and exterior shots" - its camera lifted each walk-in's roof as it passed over it), unless it's an interior
+  // (sc.interior: the pool shot's bar room)
+  D.roofAt = () => (D.mode === 'script' && sct ? (sct.sc.interior ? { x, y } : false) : null);
   function castEnt(cid) {
     const id = sct.cast[cid];
     let e = id ? S.ents.get(id) : null;
@@ -869,7 +957,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
   function scriptStep(dt) {
     if (!sct) return;
     const t = sct.held ? 0 : (S.renderTick - sct.tick0) / 20;
-    if (!sct.cap && sct.sc.tl) shotLook(sct.sc, Math.max(0.01, t));   // (a time-lapse: the clock on through the shot)
+    if (!sct.cap && !sct.own) shotLook(sct.sc, Math.max(0.01, t));   // (its own hour every frame - a time-lapse's clock on through it)
     // the cast's velocities, smoothed (a shot's lead: where they're going)
     const k = 1 - Math.exp(-3 * dt);
     for (const cid of Object.keys(sct.cast)) {

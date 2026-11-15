@@ -38,6 +38,24 @@ export const SECTIONS = [['city', 'City & Neon at night'], ['nature', 'Nature & 
 const ALL = [autochase, autorace, autoshootout, tankerhideout, helipursuit, bikerbrawl, autodust, ...SHOTS];
 export const SCENE_LIST = SECTIONS.flatMap(([g]) => ALL.filter((q) => q.g === g));
 export const SCENES = Object.fromEntries(SCENE_LIST.map((s) => [s.id, s]));
+// The shots kept on the list (the owner, 11-14 20:21, after the first list: "The cinematic shots really aren't good ...") -
+// the ones that pass the sanity check (test/world3scenes.test.js: on World v3 the subject in frame, over open ground at
+// street level - never a roof in the middle of it - at the time of day it says, people about): the panel's sections show
+// these, Play all plays these; the rest wait under "More (unreviewed)" for the owner to pass or drop (with his own saved
+// views: the next step is ~10 hero shots refined with him - docs/DECISIONS.md "Director and content").
+export const KEPT = ['shotmarina', 'shotdance', 'shotboardwalk', 'showpier', 'shotoasis', 'shotgreens', 'shotworkout', 'shotpeaks', 'shotcruise', 'shotnightmarket', 'shotcasinos', 'autorace', 'autochase', 'shotrain'];
+const KEPT_SET = new Set(KEPT);
+export const isKept = (id) => KEPT_SET.has(id);
+// A saved view played as a shot (the camera panel's "Your saved views": server/systems/views.js): the camera where it was
+// saved, at its zoom, its time of day and weather, pushing in slowly for 16 s. v: { n, x, y, z, t, w }
+export function viewScene(v) {
+  const z = Math.max(0.4, Math.min(2.5, +v.z || 1));
+  return {
+    id: 'view', n: String(v.n || 'Saved view'), g: 'views', note: 'your saved view · slow push-in', len: 17, linger: 0,
+    place: { k: 'xy', xy: [+v.x || 0, +v.y || 0] }, anchors: ['here'], time: Number.isFinite(+v.t) ? +v.t : 720, weather: ['clear', 'rain', 'fog', 'mist', 'storm'].includes(v.w) ? v.w : 'clear',
+    cast: [], beats: [{ do: 'wait', s: 16 }], cam: [{ at: 0, move: ['here', 'here'], dur: 16, z: [z, z * 1.15] }],
+  };
+}
 
 // each kind of beat: the fields it needs (who: a cast id; target / veh: a cast id; to / at: a point)
 export const BEATS = {
@@ -61,6 +79,7 @@ export const BEATS = {
   police: ['target'],                                 // units (cast ids of police cars) chase target - the police's own pursuit from then on
   heli: ['target'],                                   // the police air unit picks target up from the air
   dance: ['who'],                                     // dance where they are (s seconds)
+  race: ['who', 'to'],                                // flat out along the roads to a point, who and units (more racers): through the lights, weaving through the traffic (traffic: cars put along the way), past people diving clear (server/systems/racers.js)
   fly: ['who', 'to'],                                 // an aircraft (who: it or its pilot) flown along route (points) to `to` at alt px up, speed (of its top); spray: the crop duster's mist on
   wait: ['s'],                                        // a pause: s seconds at most - until: { stop: castId } / { hit: castId } over sooner when that vehicle's (nearly) stopped / has run into something
   release: ['who'],                                   // off the script: the city's own AI from now (who: a cast id or 'all')
@@ -68,7 +87,7 @@ export const BEATS = {
 // a line said in a scene: short and quick (the owner, 11-13: "too fast to read anyways" - the bubbles are off by default:
 // client/director.js's Speech bubbles)
 export const SAY_MAX = 40;
-const BEAT_KEYS = new Set(['id', 'who', 'do', 'at', 'after', 'wait', 'to', 'veh', 'target', 'text', 'emote', 'group', 'n', 'hits', 'until', 'max', 'speed', 'direct', 'straight', 'pass', 'alt', 'spray', 'size', 's', 'clubs', 'units', 'gun', 'route', 'note']);
+const BEAT_KEYS = new Set(['id', 'who', 'do', 'at', 'after', 'wait', 'to', 'veh', 'target', 'text', 'emote', 'group', 'n', 'hits', 'until', 'max', 'speed', 'direct', 'straight', 'pass', 'alt', 'spray', 'size', 's', 'clubs', 'units', 'gun', 'route', 'note', 'traffic', 'skill']);
 const CAM_KINDS = ['follow', 'move', 'hold', 'between', 'orbit'];
 
 export const pointRefs = (p) => (p && typeof p === 'object' && !Array.isArray(p) ? { a: p.a, who: p.who } : typeof p === 'string' ? { a: p } : {});

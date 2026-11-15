@@ -198,7 +198,7 @@ test('autoplay: the panel\'s staged scenes and Showcase spots name scripts that 
   }
   const shows = SHOWCASE.filter((q) => q.auto);
   assert.ok(shows.length >= 3);
-  for (const q of shows) { assert.ok(SCENES[q.auto], q.auto); assert.equal(SCENES[q.auto].place.k, 'named'); assert.equal(SCENES[q.auto].cast.length, 0, 'the camera alone'); }
+  for (const q of shows) { assert.ok(SCENES[q.auto], q.auto); assert.equal(SCENES[q.auto].place.k, 'named'); assert.ok(SCENES[q.auto].cast.every((c) => c.group !== undefined && !c.post), 'the camera on the place - its only cast the people about (extras)'); }
   const world = makeWorld({ npcBudget: 40 });
   const { p } = joinPlayer(world);
   for (const [id, subject] of [['autochase', 'car'], ['autorace', 'r1'], ['autoshootout', 'boss'], ['autodust', 'duster']]) {

@@ -475,7 +475,8 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
-    case 'dscene': dirScene(m); break;   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
+    case 'dscene': dirScene(m); break;
+    case 'views': if (DIR) DIR.views(m); else cine(null).then(() => { if (DIR) DIR.views(m); }); break;   // (the owner's saved views: client/director.js, server/systems/views.js)   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
     case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
@@ -3433,7 +3434,7 @@ function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
   S.boom.tick(F); if (!sub) S.camp.tick(F);   // (explosions' layers, wrecks in the air, hood riders; campfire embers)
   // walk-in shops: inside one, its roof fades away and the floor plan shows
-  if (!sub && !F.spec) F.insideB = interiorTick((DIR && DIR.roofAt()) || F.sp, F.roofArt);   // (a shot's camera inside a bar: its roof off - client/director.js)
+  if (!sub && !F.spec) { const ra = DIR ? DIR.roofAt() : null; F.insideB = interiorTick(ra === false ? null : ra || F.sp, F.roofArt); }   // (a shot's camera inside a bar: its roof off; any other shot: every roof on - client/director.js)
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
   if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
   // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land
@@ -4064,7 +4065,7 @@ function walkInAt(x, y) {
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
-  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59)
+  const b = sp && S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59; sp null: a shot's camera keeps every roof on)
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;

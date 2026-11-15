@@ -706,6 +706,7 @@ function steerTraffic(world, v, t) {
   // (reckless: a street racer, a getaway driver - flat out, through the lights, never pulling over: streetlife.js)
   const reckless = ai.reckless && !panic ? ai.reckless : 0;
   let desired = panic ? 520 : reckless ? Math.min(v.def.max * 0.92, reckless) : Math.min(ai.kindSpeed || 250, v.model === 'bus' ? 220 : 999);
+  if (ai.startleUntil > now && !panic) desired = Math.min(desired, 45);   // (a racer just shaved past it: on the brakes, the horn - racers.js)
   if (v.bus || v.taxi) desired = Math.min(desired, haltCap(world, v));   // (pulling up at a stop, or waiting there - shaken or not)
   if (v.def.pedal) desired = Math.min(desired, v.def.max * (panic ? 0.95 : 0.78));   // a cyclist pedals along at their own pace
   // slow for bends: how sharply the path ahead turns
