@@ -17,6 +17,7 @@ import { StageSound } from './stage.js';
 import { surfaceAt } from './surface.js';
 
 // How many one-shot voices and engine voices: few enough for a phone's audio thread (tools/sound/bench.py).
+export { prefetchTrack } from './track.js';   // (client/audio.js preloadAudio: the title's music fetched ahead)
 export const VOICES = Object.freeze({ phone: 12, computer: 22, enginesPhone: 2, enginesComputer: 4 });
 
 export function createSound(ctx, prefs, { mobile = false, timer = true } = {}) {

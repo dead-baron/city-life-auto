@@ -29,10 +29,25 @@ export function loopPoints(t) { return { start: t.margin, end: t.margin + t.loop
 // than its own reading)
 export function trackGain(t) { return Math.pow(10, (TARGET_LUFS - (t.lufs + (t.channels === 1 ? 3 : 0))) / 20); }
 
+// The title's music fetched ahead (the owner, 11-15: "it would be nice if the music actually started"): the browser
+// lets sound start only on a tap or a key, so the file comes down while the title screen shows (client/audio.js
+// preloadAudio) and the first tap only has to decode and play it. One fetch per track, its bytes kept here.
+const PRE = new Map();
+const trackUrl = (f) => new URL('../../' + f, import.meta.url).href;
+export function prefetchTrack(name, opus = canOpus()) {
+  const t = TRACKS[name];
+  if (!t || PRE.has(name)) return PRE.get(name) || null;
+  const file = opus ? t.opus : t.mp3;
+  const pre = { file, p: fetch(trackUrl(file)).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null) };
+  PRE.set(name, pre);
+  return pre;
+}
+
 export class Track {
   constructor(E, name, { fetchFn = null, opus = null } = {}) {
     this.E = E; this.ctx = E.ctx; this.name = name; this.t = TRACKS[name] || null;
     this.fetch = fetchFn || ((u) => fetch(u));
+    this.pre = !fetchFn;               // (the bytes prefetchTrack may already hold - not with a test's own fetch)
     this.opus = opus;                  // (null: ask the browser)
     this.bytes = null;                 // the compressed file, kept
     this.buf = null; this.src = null; this.g = null;
@@ -40,7 +55,7 @@ export class Track {
     this.want = 0; this.quietAt = null; this.loading = null; this.err = '';   // (quietAt: when it fell silent)
     this.file = '';
   }
-  url(f) { return new URL('../../' + f, import.meta.url).href; }
+  url(f) { return trackUrl(f); }
   decode(bytes) {
     const ctx = this.ctx;
     return new Promise((res, rej) => {
@@ -58,7 +73,12 @@ export class Track {
     this.loading = (async () => {
       let buf = null;
       if (this.bytes) buf = await this.decode(this.bytes);
-      else {
+      const pre = !buf && this.pre ? PRE.get(this.name) : null;
+      if (pre) {   // (fetched ahead while the title showed: decoded now, no download - the MP3 still if it won't decode)
+        const b = await pre.p;
+        if (b) { try { buf = await this.decode(b); this.bytes = b; this.file = pre.file; } catch { buf = null; } }
+      }
+      if (!buf) {
         const opus = this.opus ?? canOpus();
         if (opus) {
           try { const b = await this.get(this.t.opus); buf = await this.decode(b); this.bytes = b; this.file = this.t.opus; } catch { buf = null; }   // (it said it might, and it couldn't: the MP3)

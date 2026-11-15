@@ -16,7 +16,7 @@
 //   balloon or a log line (the rest the body says) · { t: 'typing', eid, on } (the people near, while someone types) · { t: 'chatstate', off, muted, strikes, guest, max, mutes, blocks,
 //   names ({ id: name } of the mutes and blocks), me, crew (in a crew), fac ('police' | 'gang' | null) }
 //   · { t: 'contacts', l: [{ id, n, how, on, crew }] } · { t: 'inbox', l: [...chat lines] } · { t: 'chatsay', ok, err }
-import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS, QUICK, emoteWire } from '../shared/chatdefs.js';
+import { CHAT, CHANNELS, EMOTES, REPORT_WHY, FACTIONS, QUICK, emoteWire, emoteId } from '../shared/chatdefs.js';
 import { keyedHash } from './auth.js';
 import { chatData, reporterWeight } from './moderation.js';
 import * as crews from './systems/crews.js';
@@ -295,7 +295,7 @@ export function createChat({ accounts, filter, mod, now = Date.now, onLine = nul
   function handle(world, p, msg) {
     switch (msg.t) {
       case 'chat': { const r = send(world, p, msg); return r.err ? { t: 'chatsay', ok: false, err: r.err } : null; }
-      case 'emote': emote(world, p, String(msg.e || ''), Number.isInteger(msg.m) ? msg.m : undefined); return null;
+      case 'emote': emote(world, p, emoteId(String(msg.e || '')), Number.isInteger(msg.m) ? msg.m : undefined); return null;
       case 'typing': typing(world, p, !!msg.on); return null;
       case 'chatset': {
         const c = cd(p);

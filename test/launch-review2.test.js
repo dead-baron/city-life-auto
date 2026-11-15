@@ -79,6 +79,9 @@ test('B. the previous characters: up to three, newest first, named; the switch-b
   assert.deepEqual(l.map((x) => x.name), ['Ann', 'Guest3333', 'BigAl']);
   l = keepPrev(l, { token: 't2', name: 'BigAl', at: 1 });
   assert.deepEqual(l.map((x) => x.token), ['t2', 't4', 't3'], 'no doubles');
+  // a sign-in gives the same account a new token: still one row (the owner, 11-14: his character twice)
+  l = keepPrev([{ token: 'a1', pid: 'P', name: 'Tasty', at: 0 }], { token: 'a2', pid: 'P', name: 'Tasty', at: 1 });
+  assert.deepEqual(l.map((x) => x.token), ['a2'], 'one row per account');
   const acc = read('client/account.js');
   assert.match(acc, /Switch back to \$\{esc\(p\.name\)\}/);
   assert.match(acc, /export function switchBack\(i\)/);

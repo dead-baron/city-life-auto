@@ -130,5 +130,5 @@ test('the cinematic Showcase: 25-40 hand-crafted places, each with a camera spot
   // the director loads it with itself, and finds the places only when the panel's open (devtp.js: a dynamic import)
   const dir = readFileSync(ROOT + 'client/director.js', 'utf8');
   assert.ok(dir.includes("from './showcase.js'") && dir.includes("import('./devtp.js')"));
-  assert.ok(dir.includes("'Showcase only'"), 'the tour can run the Showcase only');
+  assert.ok(dir.includes('function showcaseGo('), 'the Showcase\'s places can be gone to from the panel (the shot list replaced the old "Showcase only" tour)');
 });

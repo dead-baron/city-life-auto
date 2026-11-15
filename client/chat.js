@@ -25,7 +25,7 @@
 //   device() ('keyboard' | 'gamepad' | 'touch'), playing() (in the city, online), focus(on) (typing: the game's keys
 //   off), dot(on) (unread phone messages: the HUD's chat button and the phone's Messages app), openApp() (the phone's
 //   Messages app) }
-import { CHANNELS, CHAT, EMOTES, REPORT_WHY, REPORT_LABEL, QUICK } from '../shared/chatdefs.js';
+import { CHANNELS, CHAT, EMOTES, REPORT_WHY, REPORT_LABEL, QUICK, emoteId } from '../shared/chatdefs.js';
 import { glyph } from './touchicons.js';
 import { createEmotes } from './emotes.js';
 
@@ -326,7 +326,7 @@ export function createChat(ctx) {
     if (!text) { if (ctx.device() !== 'touch') close(); return; }
     // /me <emote> (or /wave), /c crew, /f faction, /n near
     const cmd = text.match(/^\/(\w+)\s*(.*)$/);
-    const e2 = cmd && (cmd[1] === 'me' ? cmd[2].trim().toLowerCase() : cmd[1].toLowerCase());
+    const e2 = cmd && emoteId(cmd[1] === 'me' ? cmd[2].trim().toLowerCase() : cmd[1].toLowerCase());   // (an old id too: /beckon)
     if (cmd && Object.hasOwn(EMOTES, e2)) { emote(e2); return; }
     if (cmd && (cmd[1] === 'c' || cmd[1] === 'f' || cmd[1] === 'n')) say(cmd[1] === 'c' ? 'crew' : cmd[1] === 'f' ? 'faction' : 'near', cmd[2]);
     else say(sayCh, text);

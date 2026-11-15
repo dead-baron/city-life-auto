@@ -50,6 +50,7 @@ import * as rescue from './systems/rescue.js';
 import * as revive from './systems/revive.js';
 import * as devplay from './devplay.js';
 import * as director from './systems/director.js';
+import * as views from './systems/views.js';
 import { kerbFor } from './systems/kerbdrive.js';
 import { nearestEdge } from '../shared/roadcore.js';
 import { Z } from '../shared/citylayout.js';
@@ -91,7 +92,7 @@ import * as golf from './systems/golf.js';
 import { parkPonds } from './systems/wildlife.js';
 const { clearSpot } = cruiser;
 
-export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup', 'contact', 'scene'];
+export const DEV_COMMANDS = ['god', 'godp', 'gunsp', 'healp', 'shootout', 'die', 'snatch', 'cargo', 'rain', 'clear', 'night', 'day', 'money', 'wanted', 'clean', 'record', 'cop', 'promote', 'samaritan', 'pet', 'car', 'guns', 'give', 'drop', 'heal', 'tp', 'train', 'calltrain', 'sky', 'goto', 'bring', 'grant', 'spectate', 'time', 'near', 'wxhold', 'clockhold', 'hunt', 'animal', 'wind', 'wanderer', 'bounty', 'hunter', 'revenge', 'packs', 'hot', 'blast', 'street', 'home', 'wardrobe', 'rescue', 'act', 'vdmg', 'burn', 'sar', 'coast', 'garden', 'farm', 'homein', 'policeair', 'airtraffic', 'firejob', 'medicjob', 'decor', 'lobby', 'cabjob', 'busjob', 'towjob', 'crazycab', 'haul', 'mailjob', 'cabhail', 'afoot', 'place', 'soccer', 'bath', 'forklift', 'fishboat', 'ranger', 'homeup', 'contact', 'scene', 'views'];
 
 // "Take me there": the places a test can start from, by key - a kind of place on the map (pois), a
 // landmark type, a designed nature place, a street-race start or a pitch / court. near() finds the
@@ -1035,13 +1036,16 @@ function run(world, p, c, msg) {
       if (msg.k === 'stop') { for (const r of director.runsOf(world).filter((q) => q.viewers.includes(p) && (!msg.seq || q.seq === msg.seq))) director.end(world, r, 'stopped'); director.unwatch(world, p, msg.seq | 0); break; }   // (msg.seq: that scene only - the page's word can come after the next began)
       if (msg.k === 'unwatch') { director.unwatch(world, p, msg.seq | 0); break; }
       if (msg.k === 'go') { for (const r of director.runsOf(world)) if (r.viewers.includes(p) && (!msg.seq || r.seq === msg.seq)) director.goRun(world, r); break; }   // (the page's art is in: the held scene on)
-      if (msg.k === 'list' || !msg.id) { world.notify(p, `[dev] Scenes: ${director.sceneList().map((q) => q.id).join(', ')}`, 'info'); break; }
+      const view = msg.view !== undefined ? views.get(msg.view) : null;   // (a saved view played as a shot: views.js)
+      if (msg.view !== undefined && !view) { world.notify(p, '[dev] No such saved view.', 'warn'); break; }
+      if (!view && (msg.k === 'list' || !msg.id)) { world.notify(p, `[dev] Scenes: ${director.sceneList().map((q) => q.id).join(', ')}`, 'info'); break; }
       if (msg.watch !== 0) afoot(world, p);   // (from wherever the last scene left you: out of the home, off the train, out of the vehicle)
       director.unwatch(world, p);
-      const r = director.start(world, String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p, hold: !!msg.hold && msg.watch !== 0 });
+      const r = director.start(world, view ? 'view' : String(msg.id), { mode: 'dev', ref: ped ? { x: ped.x, y: ped.y } : null, viewer: msg.watch === 0 ? null : p, hold: !!msg.hold && msg.watch !== 0, ...(view ? { view } : null) });
       world.notify(p, r.err ? `[dev] ${r.err}` : `[dev] Scene: ${r.run.sc.n}.`, r.err ? 'warn' : 'info');
       break;
     }
+    case 'views': views.command(world, p, msg); break;   // the camera panel's saved views (views.js): list, save, rename, delete
     case 'policeair': {   // the police air unit (H66): up after you now - its stars at least (POLICE_AIR.stars); msg.near: already in the air close by
       if (!ped) break;
       if ((p.wanted | 0) < POLICE_AIR.stars) law.addHeat(world, p, STAR_HEAT[POLICE_AIR.stars] - p.heat + 1, ped.x, ped.y);

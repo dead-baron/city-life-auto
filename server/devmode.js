@@ -22,6 +22,8 @@ let policy = { open: DEV_OPEN, may: () => false, onEnter: null };
 export function setPolicy(p) { policy = { ...policy, ...p }; }
 export const devOpen = () => !!policy.open;
 export const mayDev = (p) => !!(policy.open || policy.may(p));
+// an admin or the owner by role (open dev mode or not): the camera's saved views are theirs to keep (views.js)
+export const mayStaff = (p) => !!policy.may(p);
 
 export function tryPassword(world, p, pw) {
   if (policy.open) { enter(world, p, null); return true; }

@@ -24136,6 +24136,78 @@ test/wayout.test.js checks it (and its stale tour expectation is updated to the 
 The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
 starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
 
+## 2026-11-14 - The shot list, fixed at the root: each shot its own hour, roofs kept on, open ground, races that race, chases in view; Save this view
+The owner (20:21), after trying the shot list: "The cinematic shots really aren't good. They're all the same nighttime
+scene. It's toggling between interior and exterior shots. It's showing not interesting areas, usually tops of buildings or
+sides of buildings; there aren't interesting NPCs doing things; it's all at night and similar camera moves. Street racing:
+the cars just drive in a cluster then stop at stop lights ... The car chase scene just had a car driving in an alley but you
+couldn't see the alley because it was behind buildings, and the car ended up crashing into something." The plan agreed
+(docs/DECISIONS.md "Director and content"): fix the fundamentals, add "Save this view" so he scouts, then ~10 hero shots
+refined with him.
+
+### What was wrong
+- **Night**: 17 of the 46 shots were set at night - the whole City section, every action scene but the crop duster - and
+  the list's "dusk" (19:55 - 20:30) is this sky's blue hour into full night (render/atmos.js KEYS: night 0.8 at 20:05, 1
+  by 20:28), so those read as night too. And a shot's hour was put on the screen once, at its start: anything after that
+  (the panel's Live, a reset) gave the screen back the world's own hour. Now the times are bands that read as they say
+  (shared/scenes/shots.js TIME: noon 12:00, golden hour 18:30, dusk 19:32 - the sun just down, the sky still red - night
+  23:00) and the page puts the shot's time and weather on every frame it plays (client/director.js shotLook), unless he
+  picks a time or a weather himself during it. The server fills the city round the shot's camera with its own hour's crowd
+  (director.js shotNight -> npc.js: a noon shot on a server at night gets the day's people, not the night's few).
+- **Interior / exterior flicker**: a shot's camera lifted every walk-in's roof as it passed over it (main.js interiorTick
+  took the shot's camera for "where you are": DIR.roofAt), and the art rebaked those chunks cut away and back. A shot now
+  keeps every roof drawn (roofAt false) - only an interior shot (sc.interior: the pool shot's bar room) lifts its roof.
+- **Roofs in frame**: a place shot's camera centred on the place's middle - often a building. Its anchor is now nudged
+  (14 tiles at most) to where the camera's whole move frames the most open ground - streets, plazas, parks, water - its
+  middle never on a roof or the walls drawn up over the street (director.js openFrame, frameOpen).
+- **Nobody about**: place shots had no cast at all. Each kept one has extras - the city's own people put round the place
+  (shots.js extras): they wander, stop, chat.
+- **The street race** was four cars told to drive straight down a road at nearly the same speed, braking for whatever was
+  in their lane - the queue at the next red light. Now (server/systems/racers.js) racers race: through the lights, each at
+  its own pace (the back row quicker: overtakes), looking down the whole road - both directions' lanes - for the line with
+  the most room ahead and swinging out round the traffic (lane changes, near-misses), the corners cut; anyone on foot in
+  the way dives clear (npc.js diveFrom, the dive roll); a car they shave past brakes and honks (traffic.js startle). The
+  race puts traffic along its way (the city's own from then) and people crossing at its first junction; the camera holds
+  the junction as the pack comes through, then rides with them. The way: straight on down the street (a turn only where it
+  ends), else the wide streets' way (wideRoute: never an alley, a dirt track, a ramp or a deck while a wide way exists);
+  at its end it goes on - never into the end of a road at speed.
+- **The chase**: its getaway drove the road net's shortest way - alleys behind the blocks included - and braked for
+  whatever was in its lane until something hit it. It's a racer now, on a wide street (place.wide: avenues, boulevards,
+  arterials), in the afternoon, round whatever's in its way, a new way when it's boxed in.
+
+### The shot list now
+- **Kept** (shared/scenes/index.js KEPT): the shots that pass the sanity check on World v3 (tools/shotcheck.mjs,
+  test/world3scenes.test.js) - over open ground at street level with nothing roofed in the middle of the frame, the subject
+  in frame, people about, the time its note says. The panel's sections and Play all are these; the rest are folded under
+  **More (unreviewed)** (each still one tap, or ▶ for all of them). Kept (14): the Harbor marina at noon, dancing on Piazza
+  Vecchia (noon), a morning workout in Greenfield Park, Lakeside Greens in the afternoon, the police chase (afternoon), rain
+  on Midtown, Canyon Oasis, the boardwalk crowd and the motorcycle through Granite Peaks (golden hour), Sunset Beach Pier and
+  the convertible down the coast road and the street race (dusk), the Neon Strip night market and Lucky Mesa's casinos
+  (night). The check's word on the rest (`node tools/shotcheck.mjs`): most nature and coast shots have nobody about (no
+  extras yet - the owner's call which want them), the shootout and the tanker frame mostly roofs, the crop duster and the
+  wheat field lose their subject from the frame, the plane finds no runway on World v3.
+- **Save this view** (the Camera panel; the owner's and admins' - anyone on a private dev server): where the camera is, its
+  zoom, the time of day and weather on the screen, a name and a note (optional) - kept on the server with the world's own
+  state (server/systems/views.js: store.kept.views, saved with the profiles). ★ Save this view sits on the shot list's
+  first row (one tap on a phone; rename later), the name and note fields under **Your saved views**, where each is listed
+  with its time and weather: tap it to go there (the free camera, at its zoom, time and weather), ▶ to play it as a shot
+  (the camera there, pushing in slowly for 16 s at its time and weather: shared/scenes viewScene), ✎ rename, ✕ delete.
+- A shot's hold (black till the art at its place is in) also waits out the page's "Loading the area" veil after the
+  camera's jump (client/warmup.js warming): a shot no longer starts on the loading screen.
+- The Guide's Camera entry says so.
+
+Tests: test/directorcam.test.js (a shot's own time every frame - held, after 'go', after the clock's reset, into the
+next shot, a time-lapse running on; roofs kept on in a shot, lifted in the interior one; saved views: what's saved, go to,
+play), test/racers.test.js (new: the race through a junction red for them, with traffic - every racer through at speed,
+none stopped, overtakes, lines changed, someone diving clear, a honk; the chase's getaway on wide streets only and never
+stopped or wrecked; the way straight on, never back round the block), test/views.test.js (new: saved, cleaned, renamed,
+deleted, at most DIRECTOR.views, only the owner's and admins'; played as a shot at its time and weather), test/scenes.test.js, test/world3scenes.test.js (the
+kept shots' sanity check on World v3).
+Proof (World v3 on a dev server, the world's own clock set to 23:00, headless Chromium - SwiftShader, so the art comes in
+late and the frames are seconds apart; the session's scratchpad `director4/owner/`): the noon, golden-hour and night shots
+(first and a later frame each), the street race on the avenue and through a junction (cross traffic, a walker diving
+clear), and Save this view on a phone with two views saved. Budgets: perf test passes; the world's and the art's hashes
+unchanged.
 ## 2026-11-14 - The title's saves note clear of the Online frame
 The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
@@ -24213,3 +24285,66 @@ away too much from the front of buildings ... let's get rid of these kinds of ov
   stay off the map and the alleys and yards go into the region files (shared/regionpack.js REGIONAL), and the allowance
   is 1.25 MB now (a decision: the index was already within a few hundred bytes of 1.2).
 - Re-keys the world and the art (`world3`, `art3`, and today's `art`: statics.js, groundbake.js, alleys.js) once.
+## 2026-11-14 - A public About page for Google's branding check
+Google's consent-screen branding verification turned down the game page as the app's home page: behind a login (the age
+gate and sign-in on the title), no words saying what the app is, and no app name it could read. about/index.html
+(https://deadbaron.com/city-life-auto/about/) is a plain static page anyone can read: the name, the lit logo
+(assets/logo/full.webp, tools/neon_logo.py A3 at scale 3), what the game is, that guests never have to sign in, what
+Google and Discord sign-in ask for (an id only), the privacy policy and the terms, and PLAY NOW. It is the home page the
+OAuth consent screen names. Nothing in the game loads it.
+
+## 2026-11-14 - Sign-in: Google's own button, a sheet that scrolls, the owner's name
+The owner's first real Google sign-in. The sign-in sheet now leads with the standard provider buttons - "Continue with
+Google" in Google's own dark button with its G, "Continue with Discord" in blurple, "Sign in with a passkey" - and "or
+use your email" over the email and password tabs; the link row reads "Link Google" / "Google linked ✓" with the G
+(client/account.js PROV; client/style.css). The sheet now scrolls to its end: account.js pad() ran every frame the
+panel was up and scrolled its focused control back into view each time - the ring and the scroll now follow a pad press
+only (and a desktop's zoomed sheet is cut to the screen's height before the zoom). A rename answers in the panel, not
+only in a toast the sheet could cover, and the account state comes back after it. "Switch back to" shows each character
+once and never the one you're playing (a sign-in gives the same account a new token: the rows carry the account id now).
+The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
+The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
+role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.
+
+## 2026-11-14 - The faceplant stays down
+The owner: the faceplant went back to a half pose. It was a timed pose (3.5 s), so it got up on its own; it's a lasting
+pose now (shared/chatdefs.js hold, like Lie down): over onto the face and lying there, a twitch now and then, until you
+move.
+
+## 2026-11-14 - No postal-address placeholder on the privacy page
+The privacy policy's Contact line showed "[postal address - to be added before launch]" while CLA_MAIL_ADDRESS is unset.
+The owner has no address to publish yet and sends no news email until he does (the news footer, which US law wants an
+address in, still asks for it), so the page leaves the line out until it's set (server/legal.js).
+
+## 2026-11-14 - GA: Player type
+The owner asked for it while setting up GA: a user property player_type, guest or account, set from the account state
+(client/account.js) and kept until GA is granted (client/analytics.js uprops) - so GA can compare signed-in players
+with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.md section 5).
+
+## 2026-11-15 - The Discord on the About page
+The owner made the player Discord (invite https://discord.gg/zuVSkbfjg, never expires). about/index.html links it under
+PLAY NOW and in its footer; the game's own button comes with the bug reporter.
+
+## 2026-11-15 - The title's music starts on the first tap; no neon sound
+The owner: the neon sign's sounds weren't good, and the music didn't start right away or every time. A browser lets a
+page make sound only after a tap, a click or a key - but the game also waited for that tap to start downloading its
+sound code and the title track (360 KB), so the music came seconds late or not before the player had moved on.
+client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound modules and fetches the title track
+(client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
+tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
+silent.
+## 2026-11-14 - "Over here" replaces "Come here"
+The owner (20:46), on the beckon: "that doesn't read clearly ... Not sure we really need that emote. Maybe a point down
+motion or something?" The Poses tab's Come here is now Over here (shared/chatdefs.js `overhere`; "Ann points here" /
+"You point here"). The body (client/art2/poses.js emoverhere): the right arm out and down to the ground beside you, the
+hand flat to a point along it, the body leaning in and the eyes on the spot - two jabs (set, jab, set, jab), not a loop,
+then the point held with a look up at whoever it's for, and back to standing when its 1.6 s are up. The balloon
+(client/emotes.js `here`): a bold red down arrow in the balloons' pixel style that bounces down twice, landing with a
+little squash, then shrinks into its tail like the rest. The old id still works: EMOTE_ALIAS turns `beckon` (a page from
+before, a typed /beckon) into Over here (the server's emote message, the chat's / commands). The Guide's Emotes entry
+names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon and the alias.
+
+## 2026-11-15 - The character creator: Done wears it, "Add to Saved" keeps a copy
+The owner: a player might press Done before "Save look" and think the look was lost. Done (and the X, and Esc) always
+put the look on; "Save look" only kept a named copy in the Saved tab. It's "Add to Saved" now, and Done says so when the
+look changed: "New look on. (Add to Saved keeps a copy to switch back to.)" (client/creator.js; the Guide's Your look).

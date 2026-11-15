@@ -39,7 +39,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
-import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
+import { initAudio, preloadAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
@@ -107,6 +107,8 @@ import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch(
 import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e) => console.warn('[leisure]', e));   // (fireworks, campfires of your own, grapes for the ducks)
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+// the sound's code and the title's music fetched while the title shows, so the first tap plays it at once (audio.js)
+setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
@@ -475,7 +477,8 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
-    case 'dscene': dirScene(m); break;   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
+    case 'dscene': dirScene(m); break;
+    case 'views': if (DIR) DIR.views(m); else cine(null).then(() => { if (DIR) DIR.views(m); }); break;   // (the owner's saved views: client/director.js, server/systems/views.js)   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
     case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
@@ -2606,7 +2609,8 @@ $('s-code-use').onclick = () => {
 };
 // your name (the server checks it again, keeps it unique and says how it went: players.js rename)
 $('s-name-use').onclick = () => {
-  const r = cleanName($('s-name-in').value);
+  const st = S.launch && S.launch.acc && S.launch.acc.accountState ? S.launch.acc.accountState() : null;
+  const r = cleanName($('s-name-in').value, { owner: !!(st && st.role === 'owner') });
   if (r.err) { $('s-name-msg').textContent = r.err; return; }
   if (!S.playing) { $('s-name-msg').textContent = 'Play online first - then you can change it here.'; return; }
   send({ t: 'name', name: r.name });
@@ -3433,7 +3437,7 @@ function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
   S.boom.tick(F); if (!sub) S.camp.tick(F);   // (explosions' layers, wrecks in the air, hood riders; campfire embers)
   // walk-in shops: inside one, its roof fades away and the floor plan shows
-  if (!sub && !F.spec) F.insideB = interiorTick((DIR && DIR.roofAt()) || F.sp, F.roofArt);   // (a shot's camera inside a bar: its roof off - client/director.js)
+  if (!sub && !F.spec) { const ra = DIR ? DIR.roofAt() : null; F.insideB = interiorTick(ra === false ? null : ra || F.sp, F.roofArt); }   // (a shot's camera inside a bar: its roof off; any other shot: every roof on - client/director.js)
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
   if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
   // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land
@@ -4064,7 +4068,7 @@ function walkInAt(x, y) {
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
-  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59)
+  const b = sp && S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59; sp null: a shot's camera keeps every roof on)
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;
