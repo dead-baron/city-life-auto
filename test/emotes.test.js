@@ -248,3 +248,13 @@ test('the emotes on every device, and the Guide', () => {
   const c = guideSections().flatMap((s) => s.entries).find((x) => x.id === 'chat');
   assert.ok(!/hold it for the emotes/.test(c.b), 'chat no longer carries them');
 });
+
+test('lying flat straight up or down the screen is drawn on the diagonal (it read as standing - the owner, 11-15)', async () => {
+  const { flatDir, pedKey } = await import('../client/art2/game/peds.js');
+  for (const pose of ['emfaceplant', 'emlie', 'emsleep', 'downF', 'deadF']) {
+    assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map((d) => flatDir(pose, d)), [1, 1, 2, 3, 5, 5, 6, 7], pose);
+  }
+  assert.deepEqual([0, 4].map((d) => flatDir('idle', d)), [0, 4]);   // (standing poses keep every heading)
+  const app = { s: 2, h: 1, hc: '#3a2414', t: 4, tc: '#a02a2a', tc2: '#eee', l: '#2a3a5a', sh: '#eee', bd: 1 };
+  assert.equal(pedKey(app, 'emfaceplant', 0, 4, 0), pedKey(app, 'emfaceplant', 1, 4, 0));   // (one sprite for both)
+});

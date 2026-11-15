@@ -24473,3 +24473,11 @@ it's let go to pass as its holder; renaming over and over holds nothing more, si
 account keeps its names before (`acct.names`, the last `NAME.history`), shown on the staff Players page. Admins and the
 owner also have **Let them change their name now** (staff command `namefree`, in the admin log), which lifts the 10
 minutes or any wait set later. test/guestnames.test.js.
+
+## 2026-11-15 - Lying down reads as lying down, whichever way you face
+The owner: "Don't see faceplant in the game correctly." Off-line the faceplant was right sideways and on the diagonals,
+but seen from the game's 35-degree camera a body lying straight up or down the screen reads as someone standing (the
+head over the feet) or as a short stub - and up and down are the headings you face most on a street. The lying poses
+(faceplant, lie down, sleep, push-ups, knocked down on the face or the back, dead) facing straight up or down are now
+drawn turned an eighth, on the diagonal (client/art2/game/peds.js flatDir; the sprite key the same, so one sprite for
+both). The renderer only: the server's heading is unchanged. Test: emotes.

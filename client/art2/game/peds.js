@@ -272,9 +272,12 @@ export function appKey(app, opt = {}) {
   return art2Key(app || {});
 }
 const normPose = (p) => (p && p.startsWith('move') ? 'walk' + (p[4] || '0') : p || 'idle');
+// lying flat straight up/down the screen reads as standing: drawn on the diagonal (the owner, 11-15)
+const FLAT = new Set(['emfaceplant', 'emlie', 'emsleep', 'empushups', 'downF', 'downB', 'deadF', 'deadS', 'dead']);
+export const flatDir = (pose, dir8) => { const d = ((dir8 | 0) % 8 + 8) % 8; return (d & 3) === 0 && FLAT.has(pose) ? d + 1 : d; };
 export function pedKey(app, pose, dir8, frame, weapon, opt = {}) {
   const pn = normPose(pose), n = PED_POSES[pn] || 1, k = weaponItem(weapon);
-  return `${appKey(app, opt)}|${pn}|${((dir8 | 0) % 8 + 8) % 8}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
+  return `${appKey(app, opt)}|${pn}|${flatDir(pn, dir8)}|${(((frame | 0) % n) + n) % n}|${k || ''}${opt.bc && k === 'energyBlade' ? '|bc' + opt.bc : ''}${opt.cut ? '|cut' + opt.cut : ''}`;
 }
 // The plasma blade in another colour (the descriptor's bc): items.js draws it blue and glowing - the blade's pixels carry
 // its glow [70, 150, 255], the white-hot core's [210, 235, 255] (people.js keeps an item pixel's glow as it is, and gives
@@ -307,7 +310,7 @@ export function umbrellaTop(dir8, out = [0, 0, 0], k = 1) {
 }
 export function pedSprite(app, pose, dir8, frame, weapon, opt = {}) {
   const A = isServer(app) ? adaptApp(app, opt.ar || app.ar, opt) : app || {};
-  const d = ((8 - (dir8 | 0)) % 8 + 8) % 8;
+  const d = (8 - flatDir(normPose(pose), dir8)) % 8;
   const k = weaponItem(weapon);
   const G = person(A, d, normPose(pose), frame | 0, k ? { held: k, tight: true } : { tight: true });
   if (opt.bc && k === 'energyBlade') recolorBlade(G, opt.bc);
