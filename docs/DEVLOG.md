@@ -24382,7 +24382,8 @@ the concepts and making sure every place is beautifully crafted ... alive with i
 and decorations ... the designs and placements of things should be intentional." The first wave: the Neon Strip
 (district 7, shared/world3-neon.js) and the Pink Mile (17, shared/world3-pinkmile.js), from D8, SC4-B, WC238, WC046/WC047,
 WC237, AL1 and the handcraft research's signature places.
-- **The kit** (shared/world3-craft.js, for every district's pass after these): `canopy` - string lights as real
+- **The kit** (shared/world3-craft.js, for every district's pass after these; the hand kit's `lawn`: the shore band's
+  grass a plan may dress before landscape() plants it): `canopy` - string lights as real
   catenaries, rows of strings each hung between two posts (or the walls either side), no span over `span` tiles (a long
   run gets a post in the middle, shared by the strings either side), the rows evenly apart; `terrace` - a bar's or a
   food place's tables in a row, the menu board, planters at the ends, the canopy over it; `hang` - a knot of people on a
@@ -24428,9 +24429,10 @@ WC237, AL1 and the handcraft research's signature places.
   - **The waterfront promenade** (Harbor Walk, the marina): its palms lit up their trunks, the marina's terrace of eight
     tables under the lights with its menu board, couples at the rail between the jetties.
   - **The Garden at Afterdark** (new - the lawn behind the club, a big open space with trees dropped on it): a beer
-    garden - the Garden Bar at the head of a paved court, standing tables in front of it, three rows of long tables under
+    garden - the Garden Bar's thatched kiosk at the head of a paved court, standing tables in front of it, three rows of long tables under
     a canopy of lights, flower boxes along its sides, cherry trees and benches on the lawn behind; people at the tables
-    and round the bar. (The kit's `buildingOn`: a building on ground the plan laid out itself.)
+    and round the bar. The bar is a thatched kiosk (a set piece): no building or stop is added anywhere in this pass, so
+    no later building's, home's or business's number moves (no WORLD_VERSION bump).
   - **Waterfront Gardens** (lawn on a grid with trees dotted anywhere): walks two tiles wide with lit royal palms down both
     sides, a lamp every eight tiles, benches facing the walks with couples; the lawns' middles open with picnic blankets
     (activities.js picnic by day) or a flowering tree; **Bayside Court**, a public court for a pick-up game.
@@ -24438,8 +24440,8 @@ WC237, AL1 and the handcraft research's signature places.
   - Murals (MU1): about a third of the two-storey backs along Glow Alley and Neon Back Alley painted edge to edge (a
     tiger, koi, a skyline, waves, the geometric, flowers, a sunset) - the blank walls the alleys looked at.
   - Fixed: the lit row by Afterdark named every front after the first "Sushi Sora" (four of them), and the Bayview row
-    every front after the first "Seaglass Grill" - each its own name now (Bay Bento, Tidewater Tiki, Harbor Noodle Co,
-    Lucky Moon Bar; Pier 3 Oyster Bar).
+    every front after the first "Seaglass Grill" - each its own name now, food places as they were (Bay Bento, Tidewater
+    Tacos, Harbor Noodle Co, Lucky Moon Dumplings; Pier 3 Oyster Bar).
 - **The Pink Mile, place by place:** the Mile's and Neon Boulevard's median palms lit; Siren Square (WC046's small square
   with its tree and string lights: rows wall to wall, friends under them); Rose Plaza (the cafe's terrace with its canopy
   and menu board, lamps round the basin, friends at its rim, couples on its benches, a knot by the flower seller); Under

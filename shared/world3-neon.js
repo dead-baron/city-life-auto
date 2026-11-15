@@ -527,7 +527,8 @@ function eastHeadland(K, out, lit) {
     if (room < 6) return room >= 1 ? { gap: room, kind: 'plaza' } : null;
     const w = Math.min(room, k === 0 ? 14 : 9);
     // (Afterdark, then the bay's lit fronts - each its own name: the row once named all of them Sushi Sora)
-    const NEXT = [{ name: 'Bay Bento', store: 'diner', neon: 'diner', blade: 'SUSHI' }, { name: 'Tidewater Tiki', store: 'bar', neon: 'bar', blade: 'TIKI' }, { name: 'Harbor Noodle Co', store: 'diner', neon: 'diner', blade: 'NOODLE' }, { name: 'Lucky Moon Bar', store: 'bar', neon: 'lounge' }];
+    // (food places all, as they were: the same kind of stop at each - no business changes its trade)
+    const NEXT = [{ name: 'Bay Bento', store: 'diner', neon: 'diner', blade: 'SUSHI' }, { name: 'Tidewater Tacos', store: 'diner', neon: 'diner', blade: 'TACOS' }, { name: 'Harbor Noodle Co', store: 'diner', neon: 'diner', blade: 'NOODLE' }, { name: 'Lucky Moon Dumplings', store: 'diner', neon: 'diner' }];
     const L = k === 0 ? lit(x, yB, w, { name: 'Afterdark', key: 'club', store: 'bar', neon: 'club', blade: 'CLUB', floors: 3, poi: { kind: 'delivery', label: 'Afterdark' } }) : lit(x, yB, w, { ...NEXT[(k - 1) % NEXT.length], floors: 3 });
     k++;
     return { w, depth: 22, ...L };
@@ -557,7 +558,10 @@ function afterdarkGarden(K, x0, y0, x1, y1, out) {
   K.fill(x0, y0, x1 - x0, y1 - y0, T.GRASS); K.fill(x0 + 2, y0 + 2, x1 - x0 - 4, yC - y0 - 2, T.PLAZA);
   K.take(x0, y0, x1 - x0, y1 - y0);
   // the bar at the head of the court, standing tables in front of it with people round them
-  K.buildingOn({ x: mx - 5, y: y0 + 2, w: 10, h: 5, arch: 'beachbar', key: 'beachbar', name: 'Garden Bar', poi: { kind: 'coffee', label: 'The Garden at Afterdark' }, whole: true });
+  // (the bar a thatched kiosk - a set piece, not a building: no building or stop added, so no later building's, home's or
+  // business's number moves - shared/world3-openblocks.js keeps the same rule)
+  prop('tbar', mx, y0 + 5.5, 20);
+  prop('textsign', mx, y0 + 7.4, 0, { text: 'GARDEN BAR', bg: '#1e2a1e', fg: [255, 214, 120], z: 26, sx: 1, lit: true });
   for (const dx of [-9, -3.5, 3.5, 9]) { prop('cafetable', mx + dx, y0 + 9, 0); hang(K, mx + dx, y0 + 9.2, 3); }
   // the long tables: three rows of five under the lights strung post to post, people at them
   for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
