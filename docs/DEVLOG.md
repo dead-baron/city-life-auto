@@ -23741,7 +23741,7 @@ weather, at most 40 s; the brawl out front), test/world3scenes.test.js (every sh
 where it belongs; every vehicle, boat and aircraft a shot follows gets going and keeps going).
 Proof (World v3 on a dev server, headless Chromium - SwiftShader, so the art comes in late; the session's scratchpad
 `director3/owner/`): a strip of six shots across the sections (first, middle and last frame), the new panel on a desktop
-and a phone, and the tanker's blast before / after (the same 'explode' event, b 3, frame by frame). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
+and a phone, and the tanker's blast before / after (the same 'explode' event, b 3, frame by frame). Budgets: the renderer 409 of 410 KB, the page 525 of 540 (with main merged in); the world's and the
 art's hashes unchanged.
 =======
 ## 2026-11-14 - The final logo, in-engine, and the title screen rebuilt round it
