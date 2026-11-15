@@ -1,5 +1,6 @@
 // The owner's protected pages: the admin log (/admin/log), the analytics dashboard (/admin/dashboard), the review
-// list (/admin/reviews), the players (/admin/players: server/staffplayers.js) and the news list (/admin/news, owner
+// list (/admin/reviews), the players' bug reports (/admin/bugs, admins and up: server/bugreports.js - each with its
+// screenshot, marked done or open again with a POST like the players' actions), the players (/admin/players: server/staffplayers.js) and the news list (/admin/news, owner
 // only: its count and the opted-in addresses as a CSV, /admin/news.csv - every download in the admin log). Plain HTML and tables, no scripts, no
 // libraries. The way in: the game hands a signed-in owner
 // (or an admin, for the reviews) a one-time link (server/admin.js pagelink: a code good once for a minute); it sets an
@@ -19,7 +20,7 @@ const LINK_TTL_MS = 60e3, SESSION_TTL_MS = 3600e3;
 // texts: { perf() -> string, errors() -> string } - the devices' reports and the pages' errors (server/perfreports.js),
 // read at /admin/perf and /admin/clienterrors by admins and the owner (the owner's call, 11-04: not public any more)
 // world, store, act(actor, msg) -> the staff command's reply, said(p) -> their recent chat lines: the players page (none: off)
-export function createAdminHttp({ accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null }) {
+export function createAdminHttp({ bugs = null, accounts, log, mod, analytics, news = null, mailAddress = '', publicUrl, ip, now = Date.now, stats = null, texts = null, world = null, store = null, act = null, said = null }) {
   const links = new Map(), sessions = new Map();
   const rl = createRateLimiter(now);
   const secure = publicUrl.startsWith('https://');
@@ -40,7 +41,7 @@ export function createAdminHttp({ accounts, log, mod, analytics, news = null, ma
 
   const shell = (title, body, w, head = '') => `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">${head}<title>${esc(title)} - City Life Auto</title>
 <style>body{font:14px/1.4 system-ui,sans-serif;background:#14161a;color:#e8e8e8;margin:16px}a{color:#8cc8ff}table{border-collapse:collapse;margin:8px 0 20px;font-size:13px}td,th{border:1px solid #333;padding:3px 7px;text-align:left;vertical-align:top}th{background:#22252b}h1{font-size:20px}h2{font-size:16px;margin-top:24px}.n{text-align:right;font-variant-numeric:tabular-nums}.bad{color:#ff8a80}.ok{color:#9be29b}nav a{margin-right:14px}.bar{display:inline-block;height:9px;background:#5b9bd5;vertical-align:middle}.wide{overflow-x:auto}form.act{display:inline-block;margin:0 10px 10px 0;padding:6px 8px;border:1px solid #333;background:#1b1e23}form.act input,form.act select{background:#22252b;color:#e8e8e8;border:1px solid #444;padding:3px 5px;margin-right:6px}button{background:#2d4f73;color:#fff;border:0;padding:5px 11px;cursor:pointer;font:inherit}button.danger{background:#8a2b2b}</style>
-<nav>${allowed(w.role, 'players') ? '<a href="/admin/players">Players</a>' : ''}${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}${news && allowed(w.role, 'news') ? '<a href="/admin/news">News list</a>' : ''}${allowed(w.role, 'reviews') ? '<a href="/admin/reviews">Review list</a><a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a>' : ''} · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
+<nav>${allowed(w.role, 'players') ? '<a href="/admin/players">Players</a>' : ''}${allowed(w.role, 'dashboard') ? '<a href="/admin/dashboard">Dashboard</a>' : ''}${allowed(w.role, 'adminlog') ? '<a href="/admin/log">Admin log</a>' : ''}${news && allowed(w.role, 'news') ? '<a href="/admin/news">News list</a>' : ''}${allowed(w.role, 'reviews') ? '<a href="/admin/reviews">Review list</a>' + (bugs ? '<a href="/admin/bugs">Bug reports</a>' : '') + '<a href="/admin/perf">Devices</a><a href="/admin/clienterrors">Page errors</a>' : ''} · signed in as ${esc(w.name)} (${esc(w.role)})</nav><h1>${esc(title)}</h1>${body}`;
   const table = (head, rows) => `<table><tr>${head.map((h) => `<th>${esc(h)}</th>`).join('')}</tr>${rows.map((r) => `<tr>${r.map((c) => (typeof c === 'number' ? `<td class="n">${c.toLocaleString('en-US')}</td>` : `<td>${c}</td>`)).join('')}</tr>`).join('') || `<tr><td colspan="${head.length}">nothing yet</td></tr>`}</table>`;
   const when = (t) => (t ? new Date(t).toISOString().slice(0, 16).replace('T', ' ') : '');
   const j = (v) => (v === undefined ? '' : esc(typeof v === 'string' ? v : JSON.stringify(v)));
@@ -136,6 +137,38 @@ export function createAdminHttp({ accounts, log, mod, analytics, news = null, ma
     res.end();
   }
 
+  // ---- the players' bug reports (server/bugreports.js): newest first, the screenshot shown, mark done / open again ----
+  const BUG_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; base-uri 'none'";
+  function bugsPage(url, w) {
+    const all = bugs.list(), openOnly = url.searchParams.get('open') === '1', shown = (openOnly ? all.filter((r) => !r.done) : all).slice(0, 100);
+    const flash = w.s.flash; w.s.flash = null;
+    const card = (r) => `<div style="display:flex;gap:14px;flex-wrap:wrap;padding:10px;margin:0 0 12px;border:1px solid #333;background:${r.done ? '#17191d' : '#1b1e23'};${r.done ? 'opacity:.6' : ''}">`
+      + (r.shot ? `<a href="/admin/bugs/img?id=${esc(r.id)}"><img src="/admin/bugs/img?id=${esc(r.id)}" alt="screenshot" style="width:360px;max-width:100%;border:1px solid #444"></a>` : '<div style="width:360px;max-width:100%;color:#888">no screenshot</div>')
+      + `<div style="flex:1;min-width:260px"><b>${esc((r.text.split('\n')[0] || '').slice(0, 120) || '(' + r.kind + ')')}</b> <small>${esc(r.kind)}</small>`
+      + `<p style="white-space:pre-wrap;margin:6px 0">${esc(r.text)}</p>`
+      + table(['', ''], [
+        ['when (UTC)', when(r.at)], ['player', `${esc(r.name)}${r.guest ? ' (guest)' : ''} <small>${esc(r.pid)}</small>${SP ? ` · <a href="/admin/players?id=${encodeURIComponent(r.pid)}">their page</a>` : ''}`],
+        ['where', `${esc(r.region || '?')}${r.area ? ` · HUD: ${esc(r.area)}` : ''}${r.x !== null ? ` · ${r.x}, ${r.y}` : ''}${r.online ? '' : ' · <span class="bad">not in the city</span>'}`],
+        ['device', `${esc(r.device)} · ${esc(r.ua)}${r.screen ? ` · ${esc(r.screen)}` : ''}`], ['build', `${esc(r.build || '?')}${r.serverBuild && r.serverBuild !== r.build ? ` (server ${esc(r.serverBuild)})` : ''}`],
+        ['fps · graphics', `${r.fps || '?'} · ${esc(r.preset || '?')}`],
+        ['page errors', r.errors.length ? r.errors.map((e) => `${esc(when(e.at))} <b>${esc(e.where)}</b> ${esc(e.msg)}`).join('<br>') : 'none'],
+      ])
+      + `<form method="post" action="/admin/bugs"><input type="hidden" name="csrf" value="${esc(w.s.csrf)}"><input type="hidden" name="id" value="${esc(r.id)}"><input type="hidden" name="a" value="${r.done ? 'open' : 'done'}">`
+      + `${r.done ? `<small class="ok">done ${esc(when(r.done.at))} by ${esc(r.done.by)}</small> ` : ''}<button type="submit">${r.done ? 'Open again' : 'Mark done'}</button></form></div></div>`;
+    return `${flash ? `<p class="${flash.ok ? 'ok' : 'bad'}">${esc(flash.text)}</p>` : ''}<p>${bugs.count} report${bugs.count === 1 ? '' : 's'}, <b>${bugs.open}</b> open${bugs.webhookOn ? ' · each one is posted to the Discord too' : ' · no Discord webhook set (BUG_WEBHOOK_URL): kept here only'}. Newest first${openOnly ? ', open ones only - <a href="/admin/bugs">all</a>' : ' - <a href="/admin/bugs?open=1">open ones only</a>'}${shown.length < (openOnly ? bugs.open : bugs.count) ? `, the newest ${shown.length}` : ''}.</p>`
+      + (shown.map(card).join('') || '<p>No reports yet.</p>');
+  }
+  async function bugsPost(req, res, w) {
+    if (req.headers['sec-fetch-site'] === 'cross-site') { sendHTML(res, 403, 'Refused.'); return; }
+    const form = await readForm(req);
+    if (!form || typeof form.csrf !== 'string' || !w.s.csrf || !safeEqual(form.csrf, w.s.csrf)) { sendHTML(res, 403, 'This form is out of date - open the page again.'); return; }
+    const ok = bugs.mark(String(form.id || ''), form.a !== 'open', w.name);
+    if (ok) log.append({ who: { id: w.pid, n: w.name, role: w.role }, what: form.a === 'open' ? 'bug-open' : 'bug-done', note: String(form.id).slice(0, 24), ok: true });
+    w.s.flash = { ok, text: ok ? (form.a === 'open' ? 'Opened again.' : 'Marked done.') : 'No such report.' };
+    res.writeHead(303, { location: '/admin/bugs', 'cache-control': 'no-store' });
+    res.end();
+  }
+
   async function handle(req, res, url) {
     const path = url.pathname;
     if (!path.startsWith('/admin/')) return false;
@@ -159,6 +192,19 @@ export function createAdminHttp({ accounts, log, mod, analytics, news = null, ma
       if (!SP) { sendHTML(res, 404, 'No such page.'); return true; }
       if (!allowed(w.role, 'players')) { sendHTML(res, 403, 'Not for your role.'); return true; }
       if (req.method === 'POST') await playersPost(req, res, w); else playersGet(res, url, w);
+      return true;
+    }
+    if (page === 'bugs' || page === 'bugs/img') {
+      if (!bugs) { sendHTML(res, 404, 'No such page.'); return true; }
+      if (!allowed(w.role, 'reviews')) { sendHTML(res, 403, 'Not for your role.'); return true; }
+      if (page === 'bugs/img') {
+        const im = bugs.image(url.searchParams.get('id'));
+        if (!im) { res.writeHead(404, { 'cache-control': 'no-store' }); res.end(); return true; }
+        res.writeHead(200, { 'content-type': im.type, 'cache-control': 'private, max-age=3600', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" });
+        res.end(im.body);
+        return true;
+      }
+      if (req.method === 'POST') await bugsPost(req, res, w); else sendHTML(res, 200, shell('Bug reports', bugsPage(url, w), w), { 'content-security-policy': BUG_CSP });
       return true;
     }
     if (page === 'perf' || page === 'clienterrors') {

@@ -255,7 +255,7 @@ function hospital(K, m, ctx) {
   // the forecourt under the glass canopy, the ER bay beside it: three ambulances backed in, the sign
   const fy0 = hy0 + hh, fy1 = fy0 + 6;
   K.fill(x0, fy0, 24, fy1 - fy0, T.PLAZA); K.take(x0, fy0, 24, fy1 - fy0);
-  prop('canopy', door + 2, fy0 + 3.2, 0, { w: 15 * TILE, d: 4 * TILE, h: 46 });
+  for (const dx of [-2.5, 6.5]) prop('plamp', door + dx, fy0 + 0.05, 0, { wall: true, a: Math.PI / 2 });   // (the doors lit from the wall, no canopy over the forecourt: the owner, 11-14)
   for (const dx of [-2, 8]) prop('planter_g', door + dx, fy1 - 1, 10);
   prop('bench_m', door + 12, fy1 - 1.2, 0);
   const bx0 = x0 + 24;

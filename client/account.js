@@ -10,7 +10,7 @@
 //   forgotPassword(email)
 //   passkeyRegister() (add one to this account) · passkeySignIn() · pad(inp) / padActive() (gamepad: main.js)
 //   makeTransferCode() (asks the server: the code arrives in onMessage) · useTransferCode(code)
-//   pickUsername(name) · signOutEverywhere() · claimOwner(code) · staffPage('log' | 'dashboard' | 'reviews')
+//   pickUsername(name) · signOutEverywhere() · claimOwner(code) · staffPage('log' | 'dashboard' | 'reviews' | 'bugs')
 //   onMessage(m)            the server's 'acct', 'admin' and 'agegate' messages
 //   newsBox(el) / legal(el) Settings > Account's "Game news by email" and Settings > Legal's two pages (main.js slots)
 //   openPanel({ into })     a minimal working account panel, in a container of the page's or over everything (the
@@ -109,11 +109,15 @@ export function pad(inp) {
   if (!m) return false;
   padStyle();
   const items = [...m.querySelectorAll('button, input, select, a[href]')].filter((e) => !e.disabled && e.offsetParent !== null);
-  const r = padMove(items.length, padIdx, inp);
+  const r = padMove(items.length, padIdx, inp), moved = r.idx !== padIdx || !!(inp.nav || inp.lr);
   padIdx = r.idx;
-  for (const e of m.querySelectorAll('.' + FOCUS_CSS)) e.classList.remove(FOCUS_CSS);
   const cur = items[padIdx];
-  if (cur) { cur.classList.add(FOCUS_CSS); if (cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' }); }
+  // (this runs every frame the panel is up: the ring and the scroll follow a pad press only - scrolled every frame, the
+  // sheet snapped back to its focused control and a mouse wheel or a finger never reached the bottom; the owner, 11-14)
+  if (moved || r.act) {
+    for (const e of m.querySelectorAll('.' + FOCUS_CSS)) e.classList.remove(FOCUS_CSS);
+    if (cur) { cur.classList.add(FOCUS_CSS); if (cur.scrollIntoView) cur.scrollIntoView({ block: 'nearest' }); }
+  }
   if (r.act === 'press' && cur) { if (cur.tagName === 'INPUT' && cur.type !== 'checkbox') cur.focus(); else cur.click(); }
   else if (r.act === 'back' && m.onback) m.onback();
   return true;
@@ -197,15 +201,29 @@ export async function forgotPassword(email) { const j = await api('/auth/passwor
 // own Settings button goes back to.
 export function keepPrev(list, entry, max = PREV_MAX) {
   if (!entry || !entry.token) return Array.isArray(list) ? list.slice(0, max) : [];
-  return [entry, ...(Array.isArray(list) ? list : []).filter((x) => x && x.token && x.token !== entry.token)].slice(0, max);
+  // (one entry per character: a sign-in gives the same account a new token - the owner, 11-14, saw "Switch back to" his
+  // own character twice)
+  const same = (x) => x.token === entry.token || (entry.pid && x.pid === entry.pid);
+  return [entry, ...(Array.isArray(list) ? list : []).filter((x) => x && x.token && !same(x))].slice(0, max);
 }
-export function previousCharacters() { try { return (JSON.parse(ls.get(PREVS_KEY) || '[]') || []).filter((x) => x && x.token && x.token !== (C && C.token())); } catch { return []; } }
+// (never the character played now: its token, its account id, or - entries kept before ids were - its name)
+export function previousCharacters() {
+  let list = [];
+  try { list = JSON.parse(ls.get(PREVS_KEY) || '[]') || []; } catch { return []; }
+  const tok = C && C.token(), id = state && state.id, name = state && state.name, seen = new Set();
+  return list.filter((x) => {
+    if (!x || !x.token || x.token === tok || (id && x.pid === id) || (!x.pid && name && x.name === name)) return false;
+    const k = x.pid || `n:${x.name}`;
+    if (seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
 function takeToken(t) {
   const old = C.token();
   if (old && old !== t) {
     let list = [];
     try { list = JSON.parse(ls.get(PREVS_KEY) || '[]'); } catch { list = []; }
-    ls.set(PREVS_KEY, JSON.stringify(keepPrev(list, { token: old, name: (state && state.name) || 'your previous character', at: Date.now() })));
+    ls.set(PREVS_KEY, JSON.stringify(keepPrev(list, { token: old, pid: (state && state.id) || undefined, name: (state && state.name) || 'your previous character', at: Date.now() })));
     ls.set(PREV_KEY, old);
   }
   C.setToken(t);
@@ -303,9 +321,9 @@ export const accountState = () => state;
 export function onMessage(m) {
   if (m.t === 'acct') {
     if (m.a === 'transfer') { C.toast(`Your transfer code: ${m.code} - enter it on your other device within 10 minutes. It works once.`, 'info'); if (panel) panel.querySelector('#a-code').textContent = m.code; return; }
-    if (m.a === 'name') { C.toast(m.ok ? `You're ${m.name} now.` : m.err, m.ok ? 'good' : 'warn'); return; }
+    if (m.a === 'name') { const t = m.ok ? `You're ${m.name} now.` : m.err; C.toast(t, m.ok ? 'good' : 'warn'); const e = panel && panel.querySelector('#a-msg'); if (e) e.textContent = t; return; }
     if (m.a === 'news') { if (!m.ok) C.toast(m.err, 'warn'); return; }
-    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); }
+    if (!m.a) { state = m; if (panel) renderPanel(); if (newsEl) renderNews(); if (C && C.analytics && C.analytics.props) C.analytics.props({ player_type: m.guest ? 'guest' : 'account' }); }   // (GA's Player type: guest or signed in)
     return;
   }
   if (m.t === 'admin') { const r = pendingAdmin.get(m.a); if (r) { pendingAdmin.delete(m.a); r(m); } else if (!m.ok && m.err) C.toast(m.err, 'warn'); return; }
@@ -319,6 +337,16 @@ const inp = 'display:block;width:100%;box-sizing:border-box;margin:4px 0 8px;pad
 const tab = (on) => `flex:1;padding:8px;border:0;border-bottom:2px solid ${on ? '#ffd27f' : 'transparent'};background:none;color:${on ? '#ffd27f' : '#aab'};font:inherit;font-weight:700;cursor:pointer`;
 const linkBtn = 'border:0;background:none;color:#8cc8ff;font:inherit;font-size:14px;padding:4px 0;cursor:pointer;text-decoration:underline';
 let pwTab = 'in';
+// Google's sign-in button as its branding guidelines draw it (the dark theme: the four-colour G, "Continue with
+// Google"); Discord's blurple. The owner, 11-14: "should have like a google looking symbol ... just saying Google
+// doesn't seem legit"
+const G_SVG = '<svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true" style="flex:none"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+const PROV = {
+  google: { cls: 'a-pg', icon: G_SVG, style: 'background:#131314;color:#e3e3e3;border:1px solid #8e918f;font-family:Roboto,Arial,sans-serif' },
+  discord: { cls: 'a-pd', icon: '', style: 'background:#5865f2;color:#fff;border:1px solid #5865f2' },
+};
+const provBase = 'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:6px 0 0;padding:10px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer';
+const provBtn = (p, attr, label) => `<button ${attr} class="a-prov ${(PROV[p] || {}).cls || ''}" style="${provBase};${(PROV[p] || {}).style || ''}">${(PROV[p] || {}).icon || ''}<span>${label}</span></button>`;
 function renderPanel() {
   const s = state || {}, pr = (info && info.providers) || s.providers || {};
   const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && p !== 'password' && pr[p]);
@@ -327,6 +355,8 @@ function renderPanel() {
   const legalUrl = (k) => `${httpBase()}/legal/${k}`;
   inner.innerHTML = `
     <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    ${on.length || passkeysWork() ? `<div class="a-provs">${on.map((p) => provBtn(p, `data-in="${p}"`, `Continue with ${NAMES[p]}`)).join('')}${passkeysWork() ? `<button id="a-pks" class="a-prov" style="${provBase};${btn2}">Sign in with a passkey</button>` : ''}</div>
+    ${pwOn ? '<p class="a-or" style="text-align:center;color:#9aa0aa;margin:12px 0 4px">or use your email</p>' : ''}` : ''}
     ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" aria-selected="${pwTab === 'in'}" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" aria-selected="${pwTab === 'up'}" style="${tab(pwTab === 'up')}">Create account</button></div>
     <form id="a-fin" ${pwTab === 'in' ? '' : 'hidden'} autocomplete="on">
       <label>Email<input id="a-ine" name="email" type="email" autocomplete="username" inputmode="email" required style="${inp}"></label>
@@ -342,17 +372,16 @@ function renderPanel() {
       <button id="a-upgo" style="${btn};width:100%;margin:2px 0 0">Create account</button>
       <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept (drafts).</p>
     </form>` : ''}
-    ${on.length || passkeysWork() ? `<p style="margin:12px 0 2px">${pwOn ? 'Or sign in with' : 'Sign in (an account you have, on any device)'}:</p>
-    <div>${on.map((p) => `<button data-in="${p}" style="${btn}">${NAMES[p]}</button>`).join('')}${passkeysWork() ? `<button id="a-pks" style="${btn}">Passkey</button>` : ''}</div>
-    <p style="margin:10px 0 2px">Link to this account (${s.guest ? 'keeps this character’s progress on every device' : 'another way in'}):</p>
-    <div>${on.map((p) => `<button data-link="${p}" style="${btn2}">${NAMES[p]}${linked.has(p) ? ' ✓' : ''}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>` : ''}
+    ${on.length || passkeysWork() ? `<p style="margin:14px 0 2px">Link to this account (${s.guest ? 'keeps this character’s progress on every device' : 'another way in'}):</p>
+    <div class="a-links">${on.map((p) => `<button data-link="${p}" class="a-linkb" style="${btn2};display:inline-flex;align-items:center;gap:8px">${(PROV[p] || {}).icon || ''}${linked.has(p) ? `${NAMES[p]} linked ✓` : `Link ${NAMES[p]}`}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>` : ''}
     ${pwOn && !s.email ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0 0">Email and password: Create account asks whether to link it to ${s.guest ? 'this character' : 'this account'}.</p>` : ''}
     ${s.canRename ? `<p style="margin:12px 0 2px">${s.guest ? 'Name' : 'Username'}${s.renameIn ? ` (next change in ${Math.ceil(s.renameIn / 86400e3)} days)` : ''}${s.guest ? ' <small style="color:#9aa0aa">(sign in to keep it yours)</small>' : ''}:</p><input id="a-name" maxlength="16" value="${esc(s.name || '')}" style="padding:7px"> <button id="a-namego" style="${btn}">Save</button>` : ''}
     ${previousCharacters().map((p, i) => `<div><button data-back="${i}" style="${btn2}">Switch back to ${esc(p.name)}</button></div>`).join('')}
     <p style="margin:12px 0 2px">Move to another device:</p><button id="a-xfer" style="${btn2}">Make a transfer code</button> <code id="a-code" style="font-size:18px;margin-left:6px"></code>
     <div style="margin-top:6px"><input id="a-xin" placeholder="ABCDE-FGHJK" style="padding:7px;width:9em;text-transform:uppercase"> <button id="a-xuse" style="${btn2}">Use a code</button></div>
     ${s.claim ? `<p style="margin:12px 0 2px">Claim ownership (the code in the server log):</p><input id="a-claim" style="padding:7px"> <button id="a-claimgo" style="${btn2}">Claim</button>` : ''}
-    ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button><button data-page="news" style="${btn2}">News list</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button>` : ''}` : ''}
+    ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button><button data-page="news" style="${btn2}">News list</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button><button data-page="bugs" style="${btn2}">Bug reports</button>` : ''}` : ''}
+    ${s.id ? `<p style="margin:12px 0 0;font-size:14px;color:#9aa0aa">Account id: <code id="a-id" style="user-select:all">${esc(s.id)}</code> <button type="button" id="a-idcopy" class="a-link" style="${linkBtn}">Copy</button></p>` : ''}
     <p id="a-msg" style="min-height:1.2em;margin:10px 0 0;color:#ffd27f"></p>`;
   const msg = (t) => { inner.querySelector('#a-msg').textContent = t; };
   const tryIt = (f) => async () => { try { const r = await f(); if (typeof r === 'string') msg(r); } catch (e) { msg(e.message || String(e)); } };
@@ -386,6 +415,7 @@ function renderPanel() {
   });
   onc('#a-pk', async () => { await passkeyRegister(); return 'Passkey added - sign in with it on this device any time.'; });
   onc('#a-pks', async () => { await passkeySignIn(); location.reload(); return 'Signed in.'; });
+  onc('#a-idcopy', async () => { try { await navigator.clipboard.writeText(s.id); return 'Account id copied.'; } catch { return 'Select the id and copy it.'; } });
   onc('#a-namego', () => { pickUsername(inner.querySelector('#a-name').value); return 'Asked for it...'; });
   onc('#a-xfer', () => { makeTransferCode(); return 'Making a code...'; });
   onc('#a-xuse', async () => { await useTransferCode(inner.querySelector('#a-xin').value); location.reload(); return 'Moving...'; });

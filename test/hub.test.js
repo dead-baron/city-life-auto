@@ -28,7 +28,7 @@ test('the HUD row is PHONE · MAP · CHAT · EMOTES · MENU as icons, and the hu
   const bar = hubHtml.slice(0, hubHtml.indexOf('<div id="hub-body">'));
   assert.ok(bar.indexOf('id="hub-back"') < bar.indexOf('id="hub-title"') && bar.indexOf('id="hub-title"') < bar.indexOf('id="hub-close"'), 'back and the name top left, close top right');
   const body = hubHtml.slice(hubHtml.indexOf('<div id="hub-body">'));
-  assert.deepEqual([...body.matchAll(/data-p="([a-z]+)"/g)].map((m) => m[1]), ['resume', 'map', 'phone', 'bag', 'people', 'settings', 'logoff', 'leave']);
+  assert.deepEqual([...body.matchAll(/data-p="([a-z]+)"/g)].map((m) => m[1]), ['resume', 'map', 'phone', 'bag', 'people', 'settings', 'bug', 'logoff', 'leave']);   // (REPORT A BUG: 11-15)
   for (const id of ['pause', 'bigmap', 'phone', 'inv', 'players', 'settings']) assert.match(body, new RegExp(`<div id="${id}" class="hidden[^"]*hubtab`), `${id} is a screen inside the hub`);
   assert.match(MAIN, /const HUB_TABS = \{ pause: 'pause', map: 'bigmap', phone: 'phone', bag: 'inv', people: 'players', settings: 'settings' \};/);
   assert.ok(!/openOverlay\('pause'\)/.test(MAIN) && !/'controls'/.test(MAIN), 'no pause list or controls page left');
@@ -82,7 +82,7 @@ test('Esc, Start and MENU open the pause list; P, M, I a screen; back steps out;
   for (const a of ['hub', 'hubtab']) assert.ok(KB[a] && TOUCH[a] && PAD[a], a);
   assert.equal(KB.hub, 'ESC'); assert.equal(PAD.hub[0], 'MENU'); assert.match(PAD.hubtab[0], /LB \/ RB/);
   const readme = read('README.md');
-  assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Log off, Leave game\)/);
+  assert.match(readme, /\| Menu \(the pause list: Resume, Map, Phone, Bag, People, Settings, Report a bug, Log off, Leave game\)/);
   assert.match(readme, /\| Bag \(EQUIPMENT: [^\n]*\| tap ITEMS \|/);
 });
 

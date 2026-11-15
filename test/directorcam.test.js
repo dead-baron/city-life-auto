@@ -28,8 +28,9 @@ globalThis.localStorage = { getItem: () => null, setItem() {} };
 Object.defineProperty(globalThis, 'performance', { value: { now: () => now }, configurable: true, writable: true });
 const fire = (k, ev) => { for (const fn of listeners[k] || []) fn(ev); };
 
-const { makeDirector, loopOf, shotsOf, handsBack } = await import('../client/director.js');
-const { SCENES, SCENE_LIST, SECTIONS } = await import('../shared/scenes/index.js');
+const { makeDirector, loopOf, shotsOf, moreOf, handsBack } = await import('../client/director.js');
+const { SCENES, SCENE_LIST, SECTIONS, KEPT, viewScene } = await import('../shared/scenes/index.js');
+const { TOD } = await import('../shared/scenes/shots.js');
 const { camAt } = await import('../shared/scenes/index.js');
 
 function page() {
@@ -44,10 +45,18 @@ function page() {
 const begin = (id, seq, held, tick0 = 0, here = [5000, 3000]) => ({ t: 'dscene', id, seq, tick0, cast: {}, anchors: { here: [...here, 0], start: [here[0], here[1], 0], end: [here[0] + 2000, here[1], 0], mid: [here[0] + 1000, here[1], 0], far: [here[0] + 3000, here[1], 0], p0: [...here, 0], p1: [...here, 0], p2: [...here, 0], p3: [...here, 0], in: [...here, 0], field: [...here, 0], shore: [...here, 0], door: [...here, 0], lot: [...here, 0], table: [...here, 0] }, bt: {}, held: held ? 1 : 0 });
 const placeShots = SCENE_LIST.filter((q) => q.place.k === 'named' && !q.cast.length);
 
-test('the shot list: every section has shots, 30 or more in all, each 10-30 s with a camera move of its own', () => {
+test('the shot list: the kept shots in their sections (Play all plays them), the rest under More; each 10-30 s with a camera move of its own', () => {
   assert.ok(SCENE_LIST.length >= 30, `${SCENE_LIST.length} shots`);
-  for (const [g, n] of SECTIONS) assert.ok(shotsOf(g).length >= 4, `${n}: ${shotsOf(g).length}`);
-  assert.equal(shotsOf('').length, SCENE_LIST.length);
+  assert.ok(KEPT.length >= 10 && KEPT.every((id) => SCENES[id]), 'about ten hero shots, every one a scene');
+  assert.equal(shotsOf('').length, KEPT.length);
+  assert.equal(shotsOf('').length + moreOf().length, SCENE_LIST.length);
+  assert.ok(SECTIONS.filter(([g]) => shotsOf(g).length).length >= 5, 'kept shots across the sections');
+  // the kept list's times of day: noon, golden hour, dusk and night each, and rain - never most of them at night
+  const bands = KEPT.map((id) => TOD(SCENES[id].time));
+  for (const b of ['day', 'golden hour', 'dusk', 'night']) assert.ok(bands.includes(b), `a ${b} shot kept`);
+  assert.ok(bands.filter((b) => b === 'night').length <= KEPT.length / 3, `not all night: ${bands.join(', ')}`);
+  assert.ok(KEPT.some((id) => SCENES[id].weather === 'rain'), 'a rain shot kept');
+  for (const id of KEPT) assert.ok(!SCENES[id].note.includes('·') || SCENES[id].note.endsWith(TOD(SCENES[id].time)) || SCENES[id].note.includes(TOD(SCENES[id].time).split(' ')[0]) || /afternoon|noon|morning/.test(SCENES[id].note), `${SCENES[id].n}: says its time (${SCENES[id].note})`);
   for (const q of SCENE_LIST) {
     assert.ok(q.len >= 10 && q.len <= 31, `${q.n}: ${q.len} s`);
     assert.ok(q.note, `${q.n}: says what it is`);
@@ -98,9 +107,9 @@ test('switching shots: the old scene\'s end never takes the camera off the new o
 
 test('the reel: one after another, Next skips, a tap on a shot jumps there, Stop ends it and puts the screen back', async () => {
   const { D, sent, frame } = page();
-  const ids = shotsOf('city');
+  const ids = shotsOf('');
   const t0 = D.lt;
-  D.play('city');
+  D.play('');
   assert.equal(sent.at(-1).id, ids[0]);
   D.script(begin(ids[0], 1, false));
   frame(1 / 30, 5);
@@ -125,8 +134,8 @@ test('the reel: one after another, Next skips, a tap on a shot jumps there, Stop
 
 test('a shot that can\'t be set up here moves on (it never leaves the screen black)', () => {
   const { D, sent, frame } = page();
-  const ids = shotsOf('coast');
-  D.play('coast');
+  const ids = shotsOf('');
+  D.play('');
   frame(1 / 10, 130);   // (13 s: nothing from the server)
   assert.equal(sent.at(-1).id, ids[1]);
 });
@@ -166,4 +175,96 @@ test('Stop while a shot is still being set up: when it comes, it\'s let go - the
   D.script(begin('shotgull', 9, true));
   assert.deepEqual(sent.at(-1), { t: 'dev', c: 'scene', k: 'stop', seq: 9 });
   assert.equal(D.mode, 'follow');
+});
+
+// The owner, 11-14 20:21: "They're all the same nighttime scene" - a shot's time of day was put on the screen once, at its
+// start; now it is the screen's every frame the shot plays: held in black, after 'go', through a time-lapse, between shots
+// of a reel - whatever else set the screen's clock - unless he picks a time himself during it.
+test('a shot shows exactly its own time and weather, every frame: held, playing, after anything resets the clock, into the next shot', () => {
+  const { D, S, frame, setWarm } = page();
+  const want = (id) => loopOf(SCENES[id].time);
+  const ids = shotsOf('');
+  const noon = ids.find((id) => TOD(SCENES[id].time) === 'day'), night = ids.find((id) => TOD(SCENES[id].time) === 'night'), rain = ids.find((id) => SCENES[id].weather === 'rain');
+  D.play('', noon);
+  D.script(begin(noon, 11, true));
+  for (let k = 0; k < 20; k++) { frame(1 / 30); assert.ok(Math.abs(D.lt - want(noon)) < 1e-6, 'held: its time'); }
+  setWarm({ ok: true, scrHave: 9, scr: 9 });
+  frame(1 / 30, 3);
+  D.script({ t: 'dscene', seq: 11, held: 0, tick0: S.renderTick });
+  D.lt = null; D.ti = 0;   // (anything that puts the world's own hour back: the panel's Live, a stray reset)
+  frame(1 / 30, 1);
+  assert.ok(Math.abs(D.lt - want(noon)) < 1e-6, 'its time again the next frame');
+  assert.equal(D.wx, 'clear');
+  // the next shot of the reel: its own time from its first frame (never the world's between them)
+  D.shot(night);
+  assert.ok(D.lt !== null, 'never the world\'s hour while the next is coming');
+  D.script(begin(night, 12, false, S.renderTick));
+  frame(1 / 30, 2);
+  assert.ok(Math.abs(D.lt - want(night)) < 1e-6, 'the night shot\'s time');
+  D.shot(rain);
+  D.script(begin(rain, 13, false, S.renderTick));
+  frame(1 / 30, 2);
+  assert.equal(D.wx, 'rain', 'its weather');
+  // a time-lapse runs its clock on through the shot
+  const tl = SCENE_LIST.find((q) => q.tl);
+  D.shot(tl.id);
+  D.script(begin(tl.id, 14, false, S.renderTick));
+  frame(1 / 30, 3);
+  const a = D.lt;
+  frame(1 / 10, 60);
+  assert.ok(D.lt > a, 'the time-lapse on');
+  D.stop(true);
+});
+
+test('a shot keeps every roof drawn (no cutaway flicker as its camera passes over buildings) - but an interior shot lifts its roof', () => {
+  const { D, frame } = page();
+  assert.equal(D.roofAt(), null, 'your own camera: as ever');
+  D.shot('shotmarina');
+  D.script(begin('shotmarina', 21, false));
+  frame(1 / 30, 3);
+  assert.equal(D.roofAt(), false, 'a shot: no roof lifted');
+  D.shot('shotpool');
+  D.script(begin('shotpool', 22, false));
+  frame(1 / 30, 3);
+  assert.ok(D.roofAt() && Number.isFinite(D.roofAt().x), 'the pool shot inside the bar');
+  D.stop(true);
+  assert.equal(D.roofAt(), null);
+});
+
+test('saved views: where the camera is, the time and the weather saved to the server; listed, gone to, played as a shot', () => {
+  const { D, S, sent, frame } = page();
+  S.loopTime = loopOf(720); S.weather = 0;
+  D.views({ t: 'views', list: [], can: true });
+  const cur = D.curView();
+  assert.deepEqual([cur.x, cur.y, cur.t, cur.w], [0, 0, 720, 'clear']);
+  // it's the screen's own hour when the camera panel has set one
+  D.shot('shotboardwalk');
+  D.script(begin('shotboardwalk', 31, false, S.renderTick, [4000, 2500]));
+  frame(1 / 30, 10);
+  const v = D.curView();
+  assert.equal(v.t, SCENES.shotboardwalk.time, 'the shot\'s time');
+  assert.ok(Math.abs(v.x - S.cam.x) <= 1 && Math.abs(v.y - S.cam.y) <= 1);
+  D.saveView();
+  const sm = sent.at(-1);
+  assert.equal(sm.t, 'dev', 'a debug command (its time of day is m, never the message\'s t)');
+  assert.deepEqual([sm.c, sm.k, sm.m, sm.w], ['views', 'save', SCENES.shotboardwalk.time, 'clear']);
+  D.stop(true);
+  const saved = { id: 'vabc', n: 'Pier at golden hour', note: 'push in on the wheel', x: 4100, y: 2600, z: 1.2, t: 1110, w: 'rain' };
+  D.views({ t: 'views', list: [saved], can: true });
+  assert.equal(D.viewList().length, 1);
+  D.goView(saved);
+  assert.equal(D.mode, 'drone');
+  frame(1 / 30, 1);
+  assert.ok(Math.hypot(S.cam.x - 4100, S.cam.y - 2600) < 2, 'the free camera there');
+  assert.ok(Math.abs(D.lt - loopOf(1110)) < 1e-6 && D.wx === 'rain' && Math.abs(D.zoomK - 1.2) < 1e-6, 'its time, weather and zoom');
+  D.playView(saved);
+  assert.deepEqual(sent.at(-1), { t: 'dev', c: 'scene', view: 'vabc', hold: 1 });
+  D.script({ ...begin('view', 32, false, S.renderTick, [4100, 2600]), view: saved });
+  frame(1 / 30, 5);
+  assert.equal(D.mode, 'script');
+  assert.ok(Math.abs(D.lt - loopOf(1110)) < 1e-6, 'played at its time');
+  assert.ok(Math.hypot(S.cam.x - 4100, S.cam.y - 2600) < 60, 'and its place');
+  const sc = viewScene(saved);
+  assert.ok(sc.cam[0].z[1] > sc.cam[0].z[0], 'pushing in slowly');
+  D.stop(true);
 });

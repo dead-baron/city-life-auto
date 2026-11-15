@@ -25,15 +25,32 @@
 //                stand on a pavement, a promenade or a plaza, a lawn, the sand, a pier or a building (shared/parkcheck.js;
 //                the owner, 2026-11-14: "parked vehicles must never sit on a promenade or a sidewalk"). The parked cars
 //                leave such a space empty (server traffic.js badBay); the lint keeps the list so the data gets fixed
+//   bigCanopy   a canopy over a building's door wider than CANOPY_MAX[0] or deeper than CANOPY_MAX[1] (a porte-cochere, a
+//                hotel's or a hospital's canopy: the owner, 2026-11-14 - "these overhangs over building entrances ... just
+//                block the entrance and take away too much from the front of buildings"); a filling station's over its
+//                pumps is the station's own
+//   alleyBlocked an opened-up block's alley, lane or passage (shared/world3-openblocks.js m.openAlleys) with no way
+//                through on foot: somewhere along it, less than ALLEY_GAP px left clear between the solid props and walls
+//   nameCovered  a building's own name on its front - a plaque, its shop sign, a blade sign - half hidden: under another
+//                board on the same front (the owner, 11-14: Westside Clinic's name behind its EMERGENCY sign), or behind
+//                something standing in front of it (a canopy, a shelter, a sign on posts: its drawn pixels over the board)
+//   bladeBiz     a blade sign naming another business than the building's (the owner, 11-14: HOTEL over a paint shop):
+//                its words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS)
+//   plantOnPath  a plant (a yard's bed, the ground cover, a map prop) over a house's path or driveway - the paved strip
+//                across its lawn - or its door step (the owner, 11-14: shrubs and tall grass over a front path)
+//   atmStray     an ATM not set into a building's wall nor inside one (the owner, 11-14: "never standing alone
+//                mid-sidewalk")
 // spotWhy(M, e, def, want) is the same look for something put down while the game runs (a scene's vehicles and people)
 // lint(M) -> { rows: { kind: [{ what, x, y, why }] }, seen: { boats, signs, props } }
 //   node tools/placementlint.mjs   builds World v3 and prints the rows (the heavy lock)
 import { TILE, T } from '../shared/constants.js';
-import { wildAt, TIDY3 } from '../shared/world3-tidy.js';
+import { wildAt, TIDY3, homePaths3 } from '../shared/world3-tidy.js';
 import { VEHICLES } from '../shared/vehicles.js';
 import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK } from '../client/art2/game/statics.js';
+import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 export const LINT_ALLOW = {
@@ -44,7 +61,16 @@ export const LINT_ALLOW = {
   // parks drawn a tile off (Pine Hills' street, the airport motel's, the trades row's). (A golf cart's stand on its cart
   // path is its place: not counted.) Left empty at run time (traffic.js badBay); fix them in the data and bring this down - never up.
   parked: 124,
+  // the ATMs with no front wall in reach - the kiosks of the districts that are all houses or open ground (West Hills'
+  // and Pine Hills' streets of houses, Gull Harbor's and Egret Point's greens, the beaches, a park), left at the back of
+  // the pavement as their district's cash of its own, or where a move would leave a street out of the cash's reach
+  // (shared/world3-shops.js seatAtms3; world3server.test.js): a shop front there takes one in - bring this down, never up
+  atmStray: 53,
+  // a cash machine set in a one-storey self storage's front, its top a few px over the foot of the board above it
+  nameCovered: 1,
 };
+export const CANOPY_MAX = [4 * TILE, 2 * TILE], ALLEY_GAP = 26;
+const CANOPIES = new Set(['porte', 'canopy', 'pergola']);
 const DUP_R = 20 * TILE, DUP_B = 4.5 * TILE, FRONT_H = 64, START_R = 2.5 * TILE;   // (DUP_R: about a screen - two of one name in one glance)
 const ROCKS = { seastack: (p) => p.r || 24, sealrock: () => 22, boulder: (p) => (p.s || 52) * 0.5, outcrop: (p) => Math.max(24, p.r || 0), redstack: (p) => p.r || 24, rstack: (p) => p.r || 24 };
 const FLOATS = new Set(['swimbuoy', 'ringfloat', 'swimraft']);
@@ -66,7 +92,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -203,7 +229,173 @@ export function lint(M) {
   const space = (what, sp, model) => { const V = VEHICLES[model] || VEHICLES.sedan, why = parkWhy(M, sp.x, sp.y, sp.a || 0, V.L, V.W); seen.spaces = (seen.spaces || 0) + 1; if (why) rows.parked.push({ what, x: sp.x, y: sp.y, why }); };
   for (const sp of M.parking || []) if (!sp.drive && sp.model !== 'golfcart') space(`a parked ${sp.model || 'car'}${sp.kerb ? ' (kerb bay)' : ''}`, sp, sp.model);
   for (const L of M.dealerLots || []) for (const sp of L.slots || []) space('a car on a lot', sp, 'sedan');
+  // the canopies over the doors: none over CANOPY_MAX (a filling station's over its pumps is its own)
+  {
+    const doors = [];
+    for (const b of M.buildings) if (b && !b.gone && b.door) doors.push([(b.door.tx + 0.5) * TILE, (b.door.ty + 0.5) * TILE]);
+    for (const p of M.pois) if (p && p.b !== undefined && Number.isFinite(p.x)) doors.push([p.x, p.y]);
+    const pumps = [...(M.sitePumps || []), ...(M.pumps || [])];
+    for (const p of M.props) {
+      if (!p || !CANOPIES.has(p.t)) continue;
+      seen.canopies = (seen.canopies || 0) + 1;
+      const w = p.w || (p.t === 'porte' ? 300 : 150), d = p.d || (p.t === 'porte' ? 96 : 80);
+      if (w <= CANOPY_MAX[0] + 8 && d <= CANOPY_MAX[1] + 8) continue;
+      const x0 = p.x - w / 2, x1 = p.x + w / 2, y0 = p.y - d / 2, y1 = p.y + d / 2;
+      if (pumps.some((q) => q.x >= x0 && q.x <= x1 && q.y >= y0 && q.y <= y1)) continue;
+      const door = doors.find(([x, y]) => x >= x0 - TILE && x <= x1 + TILE && y >= y0 - 1.5 * TILE && y <= y1 + 1.5 * TILE);
+      if (door) rows.bigCanopy.push({ what: `a ${p.t} ${Math.round(w / TILE)} x ${Math.round(d / TILE)} tiles`, x: p.x, y: p.y, why: 'over a door' });
+    }
+  }
+  // the opened-up blocks' alleys: a way through on foot all along each (ALLEY_GAP px clear across it everywhere)
+  for (const a of M.openAlleys || []) {
+    seen.alleys = (seen.alleys || 0) + 1;
+    const ns = !!a.ns, len = (ns ? a.h : a.w) * TILE, A0 = (ns ? a.x : a.y) * TILE, A1 = A0 + (ns ? a.w : a.h) * TILE;
+    let bad = null;
+    for (let s = 4; s < len - 4 && !bad; s += 8) {
+      const along = (ns ? a.y : a.x) * TILE + s, cuts = [];
+      for (let c = Math.floor(A0 / TILE) - 1; c <= Math.floor(A1 / TILE); c++) {
+        const tx = ns ? c : Math.floor(along / TILE), ty = ns ? Math.floor(along / TILE) : c;
+        if (!M.inside(tx, ty)) continue;
+        for (const e of M.solidProps.get(M.idx(tx, ty)) || []) {
+          const da = Math.abs((ns ? e.y : e.x) - along);
+          if (da >= e.r) continue;
+          const half = Math.sqrt(e.r * e.r - da * da), cx = ns ? e.x : e.y;
+          cuts.push([cx - half, cx + half]);
+        }
+      }
+      cuts.sort((p, q) => p[0] - q[0]);
+      let at = A0, best = 0;
+      for (const [c0, c1] of cuts) { if (c0 > at) best = Math.max(best, Math.min(c0, A1) - at); at = Math.max(at, c1); }
+      best = Math.max(best, A1 - at);
+      if (best < ALLEY_GAP) bad = { x: ns ? (A0 + A1) / 2 : along, y: ns ? along : (A0 + A1) / 2, gap: Math.round(best) };
+    }
+    if (bad) rows.alleyBlocked.push({ what: `an opened-up block's ${ns ? 'alley' : 'lane'} (${a.w} x ${a.h})`, x: bad.x, y: bad.y, why: `${bad.gap} px clear` });
+  }
+  artRows(M, rows, seen);
+  atmRows(M, rows, seen);
   return { rows, seen };
+}
+
+// ---- what the bake draws: the fronts' boards, the plants by a house's path (client/art2/game/statics.js' index) -------
+// the words a blade may say by the trade of a place in the building (its POIs' kinds, its shop's kind; with no place of
+// its own, the building's kind)
+export const BLADE_WORDS = {
+  hotel: 'HOTEL INN MOTEL', casino: 'CASINO', bar: 'BAR PUB LIVE JAZZ LOUNGE CLUB DANCE OPEN GIRLS POOL SALOON', club: 'CLUB DANCE LIVE OPEN BAR LOUNGE',
+  arcade: 'ARCADE GAMES PLAY OPEN', diner: 'EAT DINER CAFE DELI FOOD NOODLES OYSTERS OPEN', cafe: 'CAFE COFFEE EAT', coffee: 'CAFE COFFEE EAT DINER DELI FOOD NOODLES OYSTERS OPEN',
+  mart: 'DELI SHOP OPEN MART LIQUOR BEER WINE', convenience: 'DELI SHOP OPEN MART', liquor: 'LIQUOR BEER WINE OPEN DELI', gallery: 'ART PRINTS POTTERY', clothes: 'VINTAGE TAILOR SKATE SHOP',
+  clothing: 'VINTAGE TAILOR SKATE SHOP', salon: 'HAIR', barber: 'HAIR', laundry: 'WASH', books: 'BOOKS', florist: 'FLOWERS', pawn: 'PAWN ANTIQUES', theatre: 'CINEMA THEATER SHOWS',
+  cinema: 'CINEMA THEATER SHOWS', grandstand: 'GO', fishmarket: 'FISH', market: 'FISH', fence: 'CLUB', sports: 'SHOP',
+};
+const NOT_PLACES = new Set(['home', 'atm', 'vending', 'reception', 'evidence', 'delivery']);
+function artRows(M, rows, seen) {
+  const I = staticIndex(M);
+  const hit2 = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  const words = (t) => up(t).split(/[ &]+/).filter(Boolean);
+  const placesOf = new Map();
+  for (const p of M.pois) if (p && p.b !== undefined && p.b !== null) { let l = placesOf.get(p.b); if (!l) placesOf.set(p.b, (l = [])); l.push(p); }
+  // the fronts: each building section's boards, in world px; their own overlaps; the blades' words
+  const faces = [];
+  seen.fronts = 0;
+  for (const [bi, items] of I.byB) {
+    const b = M.buildings[bi];
+    for (const it of items) {
+      const sp = it.recipe && it.recipe.t === 'b' && it.recipe.spec;
+      if (!sp || !sp.w) continue;
+      const H = buildingH(sp), bx = [], at = (r) => [it.x + r[0], it.y - r[3], it.x + r[2], it.y - r[1]];
+      for (const p of sp.plaques || []) if (p && p.text && p.v !== undefined) bx.push({ t: p.text, r: at(plaqueBox(p, sp.w)) });
+      for (const q of sp.blades || []) { const r = bladeBox(q, H); if (r) bx.push({ t: q.text, r: at(r), blade: true }); }
+      const sgn = sp.shop && sp.shop.sign && sp.shop.sign.text && !sp.shop.sign.moved ? sp.shop.sign : null;   // (a sign moved up onto what stands in front - a false front, a porte-cochere: statics.js)
+      if (!bx.length && !sgn) continue;
+      seen.fronts++;
+      for (let i = 0; i < bx.length; i++) for (let j = i + 1; j < bx.length; j++) if (hit2(bx[i].r, bx[j].r)) rows.nameCovered.push({ what: `"${bx[i].t}" and "${bx[j].t}" over each other on ${b.name || b.kind || 'a front'}`, x: it.x + sp.w / 2, y: it.y });
+      faces.push({ it, b, bi, sp, bx, sgn });
+      // a blade's words: the shop's sign, the building's names, the trade of its places
+      const bl = bx.filter((q) => q.blade);
+      if (!bl.length) continue;
+      const ok = new Set([...words(sp.shop && sp.shop.sign && sp.shop.sign.text), ...words(b.name), ...(b.signs || []).flatMap((q) => words(q.text)), ...(sp.plaques || []).flatMap((q) => words(q.text))]);
+      const pl = (placesOf.get(bi) || []).filter((p) => !NOT_PLACES.has(p.kind) || p.casino);
+      const kinds = pl.length ? pl.map((p) => (p.casino ? 'casino' : p.kind)) : [b.kind];
+      if (sp.shop && sp.shop.kind) kinds.push(sp.shop.kind);
+      for (const k of kinds) for (const w of words(BLADE_WORDS[k] || '')) ok.add(w);
+      for (const q of bl) if (words(q.t).some((w) => !ok.has(w))) rows.bladeBiz.push({ what: `a ${q.t} blade on ${b.name || b.kind} (${kinds.join(', ')}${sp.shop && sp.shop.sign ? `: ${sp.shop.sign.text}` : ''})`, x: q.r[0], y: it.y });
+    }
+  }
+  // the things standing in front of a front: their drawn pixels over its boards (the shop's sign found by drawing the front)
+  const SKIP = new Set(['b', 'f', 'flat']), THIN = new Set(['wire']);   // (an overhead wire across a sign: a line, not a cover)
+  const sprites = new Map(), spr = (it) => { let G = sprites.get(it.key); if (G === undefined) { try { G = makeStatic(it.recipe); } catch { G = null; } sprites.set(it.key, G); } return G; };
+  const chunks = new Map();
+  for (const f of faces) {
+    const { it, sp } = f;
+    for (let cy = Math.floor(it.y / STATIC_CHUNK); cy <= Math.floor((it.y + 260) / STATIC_CHUNK); cy++) for (let cx = Math.floor(it.x / STATIC_CHUNK); cx <= Math.floor((it.x + sp.w) / STATIC_CHUNK); cx++) { const k = cy * 4096 + cx; let l = chunks.get(k); if (!l) chunks.set(k, (l = [])); l.push(f); }
+  }
+  const hitOnce = new Set();
+  for (const [k, fl] of chunks) {
+    const cx = k % 4096, cy = Math.floor(k / 4096);
+    for (const o of staticItems(M, cx, cy, { noCover: true })) {
+      if (!o.recipe || SKIP.has(o.recipe.t) || THIN.has(o.recipe.m || o.recipe.t) || o.b !== undefined) continue;
+      for (const f of fl) {
+        const { it, sp, b } = f;
+        if (o.y <= it.y || o.y > it.y + 260 || o.x + o.ext[2] < it.x || o.x - o.ext[0] > it.x + sp.w) continue;
+        const box = [o.x - o.ext[0], o.y - (o.z0 || 0) - o.ext[1], o.x + o.ext[2], o.y - (o.z0 || 0) + o.ext[3]];
+        let bx = f.bx.filter((q) => hit2(q.r, box));
+        if (f.sgn && box[1] < it.y - 30) {
+          if (f.sign === undefined) { let sb = null; try { const G = makeBuilding(sp); if (G.signBox) sb = [it.x - G.ax + G.signBox.x, it.y - G.ay + G.signBox.y, it.x - G.ax + G.signBox.x + G.signBox.w, it.y - G.ay + G.signBox.y + G.signBox.h]; } catch { sb = null; } f.sign = sb; }
+          if (f.sign && hit2(f.sign, box)) bx = bx.concat([{ t: f.sgn.text, r: f.sign }]);
+        }
+        if (!bx.length) continue;
+        const G = spr(o);
+        if (!G) continue;
+        const ox = o.x - (G.ax || 0), oy = o.y - (o.z0 || 0) - (G.ay || 0);
+        for (const q of bx) {
+          const [X0, Y0, X1, Y1] = q.r, area = (X1 - X0) * (Y1 - Y0);
+          let n = 0;
+          for (let y = Math.max(0, Math.ceil(Y0 - oy)); y < Math.min(G.h, Math.floor(Y1 - oy)); y++) for (let x = Math.max(0, Math.ceil(X0 - ox)); x < Math.min(G.w, Math.floor(X1 - ox)); x++) if (G.col[(y * G.w + x) * 4 + 3] > 128) n++;
+          const id = `${f.bi}|${q.t}|${o.key}`;
+          if (n >= Math.max(12, area * 0.1) && !hitOnce.has(id)) { hitOnce.add(id); rows.nameCovered.push({ what: `${o.recipe.m || o.recipe.t} "${o.key}" in front of ${b.name || b.kind}'s "${q.t}"`, x: o.x, y: o.y, why: `${Math.round(100 * n / area)}% of it` }); }
+        }
+      }
+    }
+  }
+  plantRows(M, I, rows, seen);
+}
+
+// a house's path and driveway (shared/world3-tidy.js homePaths3: the strips from its door and its car's spot to the street)
+function plantRows(M, I, rows, seen) {
+  const path = homePaths3(M), chunks = new Set();
+  seen.paths = path.size;
+  for (const h of M.homes || []) { const b = h && h.kind === 'house' ? M.buildings[h.b] : null; if (b) chunks.add(Math.floor((b.ty + b.th) * TILE / STATIC_CHUNK) * 4096 + Math.floor((b.tx + b.tw / 2) * TILE / STATIC_CHUNK)); }
+  const over = (x, y, hw) => { for (let tx = Math.floor((x - hw) / TILE); tx <= Math.floor((x + hw) / TILE); tx++) for (const ty of [Math.floor((y - 4) / TILE), Math.floor((y + 4) / TILE)]) if (M.inside(tx, ty)) { const h = path.get(M.idx(tx, ty)); if (h) return h; } return null; };
+  const seenAt = new Set();
+  for (const k of chunks) {
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      for (const o of staticItems(M, (k % 4096) + i, Math.floor(k / 4096) + j)) {
+        if (!o.recipe || o.recipe.t !== 'f') continue;
+        const id = `${o.key}@${o.x},${o.y}`;
+        if (seenAt.has(id)) continue;
+        seenAt.add(id);
+        const h = over(o.x, o.y, Math.max(4, (o.ext[0] - 10) * 0.5));
+        if (h) rows.plantOnPath.push({ what: `a ${o.recipe.sp} on ${h.name}'s path`, x: o.x, y: o.y });
+      }
+    }
+  }
+  for (const p of M.props) if (p && TIDY3.PLANT.test(p.t)) { const h = over(p.x, p.y, 14); if (h) rows.plantOnPath.push({ what: `a ${p.t} (the map's) on ${h.name}'s path`, x: p.x, y: p.y }); }
+}
+
+// every ATM against a building's wall (its machine's back on the building) or inside one
+function atmRows(M, rows, seen) {
+  const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
+  const wall = (t) => t === T.BUILDING || t === T.WALL;
+  const props = M.props.filter((p) => p && p.t === 'atmw');
+  seen.atms = 0;
+  for (const a of M.pois) {
+    if (!a || a.kind !== 'atm') continue;
+    seen.atms++;
+    const pr = props.find((p) => Math.abs(p.x - a.x) < 6 && a.y - p.y > 10 && a.y - p.y < 40);
+    if (pr && pr.inside !== undefined) continue;
+    const wy = pr ? pr.y - 5 : a.y - 26;   // (a machine set in the wall: its foot 5 px out from it; a painted one: 26 px)
+    if ([-12, 0, 12].every((dx) => wall(tileAt(a.x + dx, wy - 8)))) continue;
+    rows.atmStray.push({ what: `an ATM${pr && pr.v ? ` (${pr.v})` : ''} on its own`, x: a.x, y: a.y, why: `behind it ${Object.keys(T).find((k) => T[k] === tileAt(a.x, wy - 8)) || 'nothing'}` });
+  }
 }
 
 // Where something a scene puts down stands (test/world3scenes.test.js: the cinematic mode's staged scenes and the scene

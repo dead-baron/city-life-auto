@@ -114,7 +114,7 @@ export function emoteAt(p, pose, now) {
 // ==== the gestures: four frames looped (and one on the way up) ===========================================================
 // a wave, both arms up, a laugh shaking the body, a thumbs up, a point, a shrug, a clap, a facepalm, a salute, a bow, a
 // stomp; love (the hands over the heart), huh? (scratching the head), wow! (a jump back), an idea (a finger up); and the
-// Poses tab's flex, cry, come here, the watch, air guitar, a stretch
+// Poses tab's flex, cry, over here (pointing at the spot twice), the watch, air guitar, a stretch
 function gesture(name, fps, fn, Q = {}) {
   const fr = [0, 1, 2, 3].map((f) => (D, P) => fn(D, P, f));
   def(name, [...fr, toward((D, P) => fn(D, P, 0), 0.5)], { in: [4], loop: Q.once ? null : [0, 1, 2, 3], fps, ...Q });
@@ -228,12 +228,17 @@ gesture('emcry', 4, (D, P, f) => {   // the face in the hands, the head down, th
   P.lean = 0.16; P.headPitch = 0.38; P.pel = [0, 0, D.pelZ - 0.4 - k * 0.6]; P.breath = k ? 0.7 : 0; P.tilt = (f < 2 ? 1 : -1) * 0.04;
   P.hands = (S) => { P.hL = HEAD(S, -1.4, 4.4, -0.8 - k * 0.4); P.hR = HEAD(S, 1.4, 4.4, -0.8 - k * 0.4); P.openL = P.openR = 1; P.elL = [-0.6, -0.2, -1]; P.elR = [0.6, -0.2, -1]; };
 });
-gesture('embeckon', 4, (D, P, f) => {   // come here: the right hand out in front, palm up - then pulled back in to the chest, curled
+gesture('emoverhere', 6, (D, P, f) => {   // over here (the owner, 11-14 20:46, for Come here: "a point down motion"): the right arm out and down at the ground beside you, the hand flat to a point along it, two jabs at the spot - the body leaning in, the eyes on it; then held, pointing, a look up at whoever it's for
   b0(P);
-  const k = f & 1;
-  P.headYaw = 0.08; P.tilt = -0.04; P.lean = k ? -0.04 : 0.06; P.headPitch = -0.06;
-  P.hands = (S) => { P.hR = k ? DCH(S, 3.2, 4.6, 0.6) : vadd(S.shR, [0.6, 10.2, 0.4]); P.openR = k ? 0 : 1; P.elR = [1, -0.3, -0.6]; P.hL = DHIP(D, S, -1); P.elL = [-1, -0.2, -0.3]; };
-});
+  const jab = f === 1, hold = f >= 2;
+  P.lean = jab ? 0.18 : 0.08; P.tilt = jab ? 0.16 : hold ? 0.1 : 0.06; P.headPitch = hold ? 0.1 : jab ? 0.36 : 0.3; P.headYaw = hold ? 0.06 : 0.3; P.twist = 0.04;
+  P.pel = [0.8, 0, D.pelZ - (jab ? 1.3 : 0.2)];
+  P.fL = [-D.hipX - 1.2, 0, D.ank]; P.fR = [D.hipX + 2.2, 0.6, D.ank]; P.kneeR = [0.4, 1, 0];
+  P.hands = (S) => {
+    P.hR = vadd(S.shR, jab ? [8.4, 4.4, -D.reach * 0.88] : hold ? [8.0, 4.2, -D.reach * 0.76] : [7.0, 4.0, -D.reach * 0.52]); P.openR = 1; P.elR = [1, 0.1, -0.1];
+    P.hL = DHIP(D, S, -1); P.elL = [-1, -0.2, -0.3];
+  };
+}, { once: [[0, 0.14], [1, 0.16], [0, 0.14], [1, 0.2]], base: 2 });   // (two jabs, not a loop; then the point held till its s is up - and back out)
 gesture('emwatch', 1.6, (D, P, f) => {   // the left wrist up in front of the face, the elbow out, a look down at it; tapping it
   b0(P);
   P.headPitch = 0.3; P.headYaw = -0.12; P.lean = 0.04;

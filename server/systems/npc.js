@@ -545,15 +545,21 @@ function checkDive(world, ped, now) {
     if (lx < v.def.L / 2 - 4 || lx > v.def.L / 2 + sp * 0.75) continue;
     if (Math.abs(ly) > v.def.W / 2 + 22) continue;
     n.diveCooldown = now + 2.5;
-    if (rng() < n.reflex) {
-      const side = ly >= 0 ? 1 : -1;
-      const ax = -s * side, ay = c * side;
-      ped.prevBits = 0;
-      pedStep(ped, { bits: IN.DIVE, mx: ax, my: ay, aim: ped.a }, 0.0001, world.map, walkMods(world, ped, 1));
-      world.emit(ped.x, ped.y, { e: 'yelp', x: ped.x, y: ped.y });
-    }
+    if (rng() < n.reflex) diveFrom(world, ped, v);
     return;
   }
+}
+// The dive roll itself: off to the side of v's way they're on (a racer bearing down: server/systems/racers.js makes
+// anyone in its path dive, reflex or not - the owner, 11-14, "pedestrians should be jumping out of the way")
+export function diveFrom(world, ped, v) {
+  if (!ped || ped.dead || ped.vehId || ped.rollT > 0 || (ped.downUntil || 0) > world.time) return false;
+  const c = Math.cos(v.a), s = Math.sin(v.a), ly = -(ped.x - v.x) * s + (ped.y - v.y) * c;
+  const side = ly >= 0 ? 1 : -1, ax = -s * side, ay = c * side;
+  ped.prevBits = 0;
+  pedStep(ped, { bits: IN.DIVE, mx: ax, my: ay, aim: ped.a }, 0.0001, world.map, walkMods(world, ped, 1));
+  world.emit(ped.x, ped.y, { e: 'yelp', x: ped.x, y: ped.y });
+  if (ped.npc) ped.npc.diveCooldown = world.time + 2.5;
+  return true;
 }
 
 function fight(world, ped, now) {
@@ -853,6 +859,7 @@ function manageDensity(world) {
   for (const e of world.entities.values()) {
     if (e.kind !== K.PED || !e.npc || e.vehId) continue;
     if (e.npc.keep || (e.npc.role === 'cop' && !e.npc.beat) || e.npc.role === 'medic' || e.npc.role === 'driver') continue;
+    if (e.npc.act && world.acts && world.acts.has(e.npc.act.g)) continue;   // (at an activity still on: its group goes as one - activities.js fillRound, ACT_DROP - not a casino's dealers one by one past 1500 px, the floor left dealing nothing)
     let near = false;
     for (const a of anchors) if ((a.x - e.x) ** 2 + (a.y - e.y) ** 2 < 1500 * 1500) { near = true; break; }
     if (!near && !(e.dead && world.bodies.has(e)) && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e);
@@ -862,7 +869,8 @@ function manageDensity(world) {
   for (const a of anchors) {
     // out in the open country it's quiet: a few people, where they belong (spawnCountry)
     const country = !!wildlife.wildStyle(world.map, a.x, a.y) || openGround(world.map, a.x, a.y);
-    const target = country ? (night ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : Math.round((night ? CIV_TARGET_NIGHT : CIV_TARGET_DAY) * crowdAt(world, a.x, a.y, night));
+    const an = a.cine && a.night !== undefined ? a.night : night;   // (a director's shot: the crowd of its own hour - director.js shotNight)
+    const target = country ? (an ? COUNTRY_TARGET_NIGHT : COUNTRY_TARGET_DAY) : Math.round((an ? CIV_TARGET_NIGHT : CIV_TARGET_DAY) * crowdAt(world, a.x, a.y, an));
     let count = 0;
     for (const e of world.query(a.x, a.y, 1200, K.PED)) if (e.npc && !e.dead) count++;
     if (count >= target) continue;

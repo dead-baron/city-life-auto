@@ -10,7 +10,7 @@ const shell = (title, body) => `<!doctype html><meta charset="utf-8"><meta name=
 <p class="draft"><b>DRAFT - not yet reviewed by a lawyer.</b> This is a plain-English draft of what the game does, for legal review before launch. It isn't legal advice and may change.</p>${body}</main>`;
 
 export function privacyPage(L, { ga = false } = {}) {
-  const pr = enabledProviders(L), contact = esc(L.contact || '[contact email - to be added before launch]'), post = esc(L.mailAddress || '[postal address - to be added before launch]');
+  const pr = enabledProviders(L), contact = esc(L.contact || '[contact email - to be added before launch]'), post = L.mailAddress ? esc(L.mailAddress) : '';   // (no postal address yet: the owner sends no news mail till he has one - 11-14)
   const signins = ['as a guest (no sign-up)', 'with an email and password', pr.google ? 'with Google' : null, pr.discord ? 'with Discord' : null, 'with a passkey (your device\'s fingerprint, face or PIN)'].filter(Boolean).join(', ');
   return shell('Privacy Policy', `
 <p>City Life Auto is an online game. This page says what we keep about you, why, and how to have it deleted. We keep as little as we can.</p>
@@ -47,7 +47,7 @@ export function privacyPage(L, { ga = false } = {}) {
 <h2>Deleting your account, unsubscribing</h2>
 <ul><li><b>Start fresh</b> (Settings) erases your character's progress at once.</li><li>To delete your whole account, write to us at ${contact} from the game's Settings, Account (it shows your account id) - we delete it and everything tied to it.</li><li>Unsubscribe from news with the link in any news email, or in Settings, Account.</li></ul>
 <h2>Contact</h2>
-<p>${contact}<br>${post}</p>
+<p>${contact}${post ? `<br>${post}` : ''}</p>
 <h2>Credits</h2>
 <p>Some icons are from <a href="https://game-icons.net">game-icons.net</a>, licensed under <a href="https://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>. Some UI icons are by <a href="https://kenney.nl">Kenney</a> (CC0).</p>`);
 }

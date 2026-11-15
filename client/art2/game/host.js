@@ -399,7 +399,7 @@ const SHOP_NEAR = 150, SHOP_FAR = 260, SHOP_SKIP = new Set(['home', 'atm', 'stat
 // never in the shop's sign, whose board sits on the shopfront from the window head up (client/art2/buildings.js
 // storefront: a door 50 px tall, the board's foot 48 px up). (doorX, doorY): the door tile's middle, as shopMarks has it;
 // the wall's foot is half a tile below. test/storeicons.test.js checks it against a baked front.
-export const BADGE = { doorH: 50, drop: 13, size: 16 };
+export const BADGE = { doorH: 50, drop: 13, size: 19 };   // (19: a little bigger again, still under the lintel - the owner, 11-14)
 export function badgeAt(doorX, doorY) { const foot = doorY + TILE / 2; return { x: doorX, y: foot - BADGE.doorH + BADGE.drop, size: BADGE.size }; }
 // a hospital's badge is the red H on white, a clinic's the white cross on green (the owner, 2026-10-18: never the red
 // cross); the names decide which, as the signs' do (client/art2/signfont.js tradeOf)

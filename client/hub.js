@@ -26,7 +26,8 @@ export function bindsHtml(dev) {
 export const devOf = (d) => (d === 'gamepad' ? 'pad' : d === 'touch' ? 'touch' : 'kbm');
 
 // ctx (client/main.js): { $, S, input, send, closeOverlay, topOverlay, refocus, unstuck, surrender(btn), cine, fullscreen,
-//   exitToTitle, openDebug, leaveDev, openInstall, repairInstall, openCreator, crew() (the Crew app's last message) }
+//   exitToTitle, openDebug, leaveDev, openInstall, repairInstall, openCreator, crew() (the Crew app's last message),
+//   bugReport() (the phone's Report bug) }
 export function createHub(ctx) {
   const { $ } = ctx;
   let sec = 'graphics', dev = null;
@@ -60,6 +61,7 @@ export function createHub(ctx) {
     look: () => { ctx.closeOverlay(); ctx.openCreator(); },
     devmode: () => { ctx.closeOverlay(); ctx.leaveDev(); },
     dev: () => { ctx.closeOverlay(); ctx.openDebug(); },
+    bug: () => ctx.bugReport(),   // (Report a bug: the phone's form - client/bugreport.js)
   };
   for (const b of $('settings').querySelectorAll('[data-h]')) b.onclick = () => help[b.dataset.h](b);
 

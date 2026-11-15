@@ -137,6 +137,18 @@ test('every shot that follows a vehicle on World v3: it gets going and keeps goi
   assert.deepEqual(bad, [], bad.join('\n'));
 });
 
+// the kept shots' sanity check (the owner, 11-14 20:21: "tops of buildings or sides of buildings; there aren't interesting
+// NPCs doing things; it's all at night"): each played as the panel plays it - over open ground at street level, never a
+// roof in the middle of the frame; its subject in the picture; people about; the time it says (tools/shotcheck.mjs)
+test('World v3: every kept shot passes the sanity check - open ground, its subject in frame, people about, its own time', async () => {
+  const director = await import('../server/systems/director.js');
+  const { SCENES, KEPT } = await import('../shared/scenes/index.js');
+  const { checkShot } = await import('../tools/shotcheck.mjs');
+  const bad = [];
+  for (const id of KEPT) { const r = checkShot(w, director, SCENES[id], p); if (!r.ok) bad.push(`${id}: ${r.why.join('; ')}`); }
+  assert.deepEqual(bad, [], bad.join('\n'));
+});
+
 test('World v3: search & rescue signs on at the Search & Rescue HQ\'s pad, never at a hospital', () => {
   const { p: q } = joinPlayer(w);
   steps(2);

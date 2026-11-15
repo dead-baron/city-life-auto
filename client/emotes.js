@@ -1,11 +1,11 @@
 // Emotes on the page (the owner, 2026-11-13; round 2 the same day: "emotes are body animations first" - our own pixel
 // balloons, not Unicode emoji). Loaded with chat (client/chat.js creates it), never in the page's first load.
 // - the balloons: 16x16 SNES-RPG emotion balloons in the game's palette (BALLOONS: a heart, !, ?, the anger vein, a
-//   sweat drop, HAHA, Zzz, a light bulb; 11-14 a waving hand, a thumbs up and a beckoning hand for the gestures - drawn here pixel by pixel after the Kenney Emotes Pack's pixel style, CC0,
+//   sweat drop, HAHA, Zzz, a light bulb; 11-14 a waving hand, a thumbs up and over here's down arrow for the gestures - drawn here pixel by pixel after the Kenney Emotes Pack's pixel style, CC0,
 //   www.kenney.nl; credited in client/emotes-LICENSE.txt), shown 2x, crisp. Over the head of whoever emoted, for an emote
 //   that has one (the server says which: the message's b) - it pops up and settles in place (a scale bounce, two px up
 //   at most), holds with a small expression of its own once (MOTION: the heart beats, the ! jolts, the ? tilts, the Zzz
-//   drifts, the drop slides...), then goes (the owner, 11-14 18:56: "animated out a bit better ... popped or shrank back
+//   drifts, the drop slides, the arrow jabs down twice...), then goes (the owner, 11-14 18:56: "animated out a bit better ... popped or shrank back
 //   ... subtle and polished", not the blink): a little squash up, then the happy ones (heart, laugh, idea) pop - a puff of
 //   pixel sparkles - and the rest shrink to nothing into the tail's point; CHAT.balloonS in all. Meanwhile the bounty
 //   skull there gives way (balloonOn: main.js).
@@ -32,7 +32,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 // The game's palette (client/style.css tokens: --pad-ink, --pad-cream, --pad-hp, --red-d, --pad-ar, --info-hi, --pad-x,
 // --navy3, --pad-gold, --gold-hi, --gold-d, --grey, --grey-d; the balloon's lower edge a shade of the cream)
 const C = { k: '#0b1020', w: '#f4ecd8', s: '#cdbf9e', r: '#e8434b', h: '#ff9585', d: '#8f2a22', b: '#4aa8ff', l: '#9ad2ff', x: '#2f6fd8', n: '#22325e', g: '#f6c945', y: '#f4d98a', o: '#a8862e', t: '#5d6478', u: '#2c3244', p: '#f2b98a', q: '#c47e52' };
-// (p, q: a hand's skin and its shade - the gesture balloons: wave, thumbs up, come here)
+// (p, q: a hand's skin and its shade - the gesture balloons: wave, thumbs up)
 // the balloon: an inked outline, the cream face, its lower edge in shade, the tail down to the head (the icon goes in
 // rows 2-11, columns 2-13)
 const SHELL = [
@@ -49,7 +49,7 @@ const ICONS = {
   zzz: ['......nnnnn.', '.........n..', '........n...', '.......n....', '......nnnnn.', '.nnnn.......', '...n........', '..n.........', '.nnnn.......', '............'],
   wave: ['....k.k.k...', '...kpkpkpk..', '.b.kpkpkpk.b', 'b..kpppppkkk', 'b..kpppppkpk', 'b..kppppppk.', '.b.kqpppppkb', '...kqqpppk..', '....kkkkk...', '............'],
   thumbs: ['.....kk.....', '....kpk.....', '....kpk.....', '...kppkkkk..', '.kkkppppppk.', '.kpkpkkkkk..', '.kpkppppppk.', '.kpkpkkkkk..', '.kqkqqqqqk..', '..k.kkkkk...'],
-  beckon: ['.....kkk....', '....kpppk...', '....kpkkpk..', 'b....k..kpk.', '.b.kkkkkkpk.', 'b.kppppppk..', '..kpkkkkk...', '..kppppppk..', '..kqqqqqk...', '...kkkkk....'],
+  here: ['....rrrr....', '....rhrr....', '....rhrr....', '....rhrd....', '.rrrrhrrrrd.', '..rrrrrrrd..', '...rrrrrd...', '....rrrd....', '.....rd.....', '............'],   // (over here: a bold arrow down at the spot - the owner, 11-14 20:46, for the beckoning hand that didn't read)
   idea: ['....gggg....', '...gyygggo..', '..gyyggggo..', '..gyggggggo.', '..gggggggo..', '...ggggggo..', '....gggo....', '....tttt....', '....uuuu....', '.....tt.....'],
 };
 function paint(g, rows, ox, oy) {
@@ -80,7 +80,7 @@ export function balloonUrl(id, part = '') {
 export const MOTION = {
   heart: ['beat', 'pop'], haha: ['laugh', 'pop'], idea: ['light', 'pop'],
   exclaim: ['jolt', 'shrink'], question: ['tilt', 'shrink'], anger: ['throb', 'shrink'], sweat: ['slide', 'shrink'],
-  zzz: ['drift', 'shrink'], wave: ['wave', 'shrink'], thumbs: ['pump', 'shrink'], beckon: ['beckon', 'shrink'],
+  zzz: ['drift', 'shrink'], wave: ['wave', 'shrink'], thumbs: ['pump', 'shrink'], here: ['here', 'shrink'],
 };
 export const BALLOON_MS = { in: 260, out: 190, tail: 150 };   // the pop-in, the exit (ending at CHAT.balloonS), the sparkles after it
 export const BALLOONS = Object.keys(ICONS);
@@ -113,7 +113,7 @@ const CSS = `
 @keyframes emo-light { 0%, 100% { transform: none; filter: none; } 20% { transform: scale(1.08); filter: brightness(1.45); } 50% { transform: none; filter: brightness(1.2); } }
 @keyframes emo-wave { 0%, 100% { transform: none; } 15%, 55% { transform: rotate(-14deg); } 35%, 75% { transform: rotate(10deg); } }
 @keyframes emo-pump { 0%, 100% { transform: none; } 20%, 45% { transform: translateY(-2px); } }
-@keyframes emo-beckon { 0%, 40%, 100% { transform: none; } 20%, 60% { transform: translateX(-2px); } }
+@keyframes emo-here { 0%, 34%, 72%, 100% { transform: none; } 12%, 50% { transform: translateY(2px); } 22%, 60% { transform: translateY(2px) scale(1.08, .9); } }   /* (down at the spot and a squash as it lands, twice) */
 @media (prefers-reduced-motion: reduce) { .emo-pop > i > b { animation: none; } .emo-pop > s { display: none; } .emo-pop > i, .emo-pop.pop > i { animation: emo-fade 190ms linear var(--bal-out) forwards; transform: translate(-50%, -1px); } @keyframes emo-fade { to { opacity: 0; } } }
 .emo-veil { position: absolute; z-index: 13; inset: 0; background: transparent; pointer-events: auto; touch-action: none; }
 .emo-pick { position: absolute; z-index: 14; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(380px, calc(100% - 2 * var(--s3))); background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--cream); font: 700 var(--fs-2) var(--pixel); animation: enter var(--t2) var(--ease); }

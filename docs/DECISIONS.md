@@ -26,6 +26,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
 - Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
 - Bug reporter: "Report a bug" in pause menu + phone (text, optional screenshot, location, device, build, fps, errors); stored on server, listed at /admin; optional Discord webhook. (11-14; queue)
+- Nightly backup of the server's data dir (~/cla-backups, the newest 14, owner-readable only); bug reports in /admin/bugs and the Discord's #bug-reports (webhook); the Discord invite a config value (`CLA_DISCORD_INVITE`). (11-14 23:54; queue)
 - Beta hardening: `CLA_DEV_OPEN=0`, full test run, worldmap picture rebuilt, a bot load test of the server, Discord/community links in Settings/title. (11-14; queue)
 - Open debug mode stays while testing; at launch it closes (`CLA_DEV_OPEN=0`) and admin mode takes over. (11-03; launch-plan 11-03)
 - Claim the owner account, then `CLA_DEV_OPEN=0` (strangers are already in the game). (11-12; queue)
@@ -56,6 +57,11 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Legal: ToS / privacy / in-game notice drafts (mature themes, online interactions not rated, never share personal info); a lawyer reviews before money changes hands. (11-03; launch-plan 11-03)
 - Safe exit: LOG OFF = 10 s still countdown; instant in your own property or a hotel room; not while wanted or within 60 s of combat. (11-03; launch-plan 11-03, DEVLOG 11-04)
 - Prison: an admin can send a misbehaving player there. (11-07; DEVLOG 11-07)
+- Google and Discord appear as the standard provider buttons ("Continue with Google" with Google's G, Discord's blurple), above email and password; Google is set up openid-only and in production, no branding verification for now (the consent screen shows the domain); deadbaron.com/city-life-auto/about/ is the public home page for when it's verified. (11-14; chat)
+- No postal address yet: no news emails until there is one (a PO box or a virtual mailbox, not his home); password resets and confirm emails don't need one. (11-14; chat)
+- The player Discord: https://discord.gg/zuVSkbfjg (never expires), linked from the title screen (a small button), Settings and the About page; bug reports post to its #bug-reports. Server plan: Claude Doc "City Life Auto Discord server plan". (11-15; chat)
+- The title screen has no neon sign sound; its music is fetched ahead so it starts on the first tap, click or key (browsers allow no sound before one). (11-15; chat)
+- The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).
 
@@ -74,6 +80,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Balloons go out with expression, not a blink: a small expression while they hold (heart beats, ! jolts, ? tilts...), then a squash up and a pop (heart, laugh, idea: pixel sparkles) or a shrink into the tail; the typing dots and speech bubbles shrink away too. (11-14 18:56; chat)
 - The bounty skull hides while a balloon shows, then comes back. (11-13; queue)
 - Emotes are body animations first; a balloon only where it adds meaning (laugh, angry, love, ?, !, sweat, sleep). (11-13; queue)
+- "Come here" reads as a beckon: the balloon a hand with its finger crooked toward you (motion ticks), the pose an arm out toward the camera, palm up, the fingers curling in twice - not a point or a pull. (11-14 19:27; queue) - SUPERSEDED 11-14 20:46 (below).
+- "Over here" replaces "Come here": the character points down at the spot beside them twice; the balloon a bold down arrow bouncing twice. (11-14 20:46; chat)
 - Picker tabs: Emotes / Dances / Poses; lasting poses hold until you move; only lasting poses log to nearby chat. (11-13; queue)
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
@@ -118,6 +126,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No "Police remember you" chip. (11-03; DEVLOG 11-03)
 - No see-through outline behind plants (10-09), on riders in the open (10-23), or behind people (11-14). (DEVLOG)
 - Shop symbols over doors when close: subtle, can be turned off. (10-08; DEVLOG 10-22)
+- The places' icons (minimap, big map, over doors) a little bigger again, simple and clearly visible - bigger, cleaner icons, not more of them. (11-14; queue)
 - The graphics row stays on the title screen. (10-11; DEVLOG 11-03)
 - Shop signs in a readable face. (11-03; DEVLOG 11-03)
 - Controls in text are `[[action]]` names from shared/controls.js (each device draws its glyph). (11-04; CLAUDE.md)
@@ -167,6 +176,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Claude's in-game music studio: PAUSED (10-10) - SUPERSEDED by the owner's own pipeline (11-12).
 - Title track: the owner's "Chill closer"; the first title track kept as the train arrival's music. (11-12; DEVLOG 11-12)
 - Sound effects synthesized, SNES-flavored. (10-08; DEVLOG 10-08)
+- The casino games make subtle sounds: a card flick, the roulette ball's rattle and click, slot reels ticking, a small win chime. (11-14; queue)
 
 ## World and places
 - World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)
@@ -178,6 +188,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Station forecourt loops carry no through-traffic (taxi rank / parked cars at most); the Metro lot enlargement dropped. (11-06; queue)
 - What's meant to be seen is seen: signs, doors, activities, interactables never hidden by roofs, trees, decks (visibility audit + test). (11-06; queue)
 - Placement lint: boats on clear water, signs not overlapping, no duplicate place signs, parked cars on road or lot only. (11-13; queue, DEVLOG 11-14)
+- Placement lint, more (fix the class, every hit): a building's own name (plaque, shop sign, blade) never half hidden by another board on its front or by a canopy, porch, porte-cochere or sign in front of it; a blade names only the business at street level; no plant on a house's path, driveway or door step; an ATM only set into a building's front wall or inside, never alone on a pavement. (11-14; queue - the owner's phone notes)
 - Fenced places have openings on at least two sides. (11-12; DEVLOG 11-12)
 - No fences across driveways; garden plots in sight, not behind the house. (10-17; DEVLOG 10-17, 10-24)
 - Walk-in interiors compact, near the entrance. (10-17; DEVLOG 10-17)
@@ -195,6 +206,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Chess tables out from behind trees, and more of them. (11-06; decisions-11-06)
 - Homes: going inside your own home is a separate space (its own little level). (10-11; decisions-10-11)
 - Open up the blocks (priority, before the beta and filming): big plain building footprints broken into smaller buildings with walkable, lived-in alleys and courtyards; varied roofs; landmarks and buildings with a reason kept whole. (11-14; chat)
+- No big overhangs over entrances: porte-cocheres and entrance canopies (over about 4 x 2 tiles) removed everywhere - the door lit by wall lamps either side, the name on the facade; small awnings stay; a filling station's canopy over its pumps stays. (11-14 20:33; chat)
 - Cinematics: fix the fundamentals (time of day, no roof flicker, real street racing, chases in view), add "Save this view" so the owner scouts the shots, then ~10 hero shots refined with him before adding more. (11-14; chat)
 
 ## Police and crime
@@ -271,6 +283,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The cinematics menu is a curated shot list in sections (city at night, nature, coast, action, people, vehicles, weather): one tap a shot - its place, time, weather, cast and its own camera move, 10-30 s - or a section / all back to back; the best-looking places and a diverse range of subjects. (11-14 15:11; chat, DEVLOG 11-14)
 - A shot owns the camera while it runs; any touch, key or button hands it back (the free camera stays for his own shots). Action stays outdoors and in view - nobody disappears into a building. (11-14 15:11; chat)
 - Explosions are the game's SNES-style pixel art (the explosion sprite, pixel flames and smoke), never gradient placeholders. (11-14 15:11; chat)
+- Cinematics, the plan after the first shot list ("The cinematic shots really aren't good ... all the same nighttime scene"): fix the fundamentals first - each shot exactly its own time and weather, roofs drawn solid in a shot (no interior/exterior flicker) unless it's an interior, frames over streets, plazas and open ground (never a roof in the middle), people about, street races that race (through the lights, weaving through traffic, people diving clear), chases on wide streets in view; then "Save this view" so he scouts; then ~10 hero shots refined with him. (11-14 20:21; chat, queue)
+- The shot list shows only the shots that pass the sanity check (subject in frame, open ground at street level, the right time, people present); the rest wait under "More (unreviewed)". Play all plays the kept ones. (11-14; queue)
+- Saved views live on the server (kept with the world's state); saving, renaming and deleting are the owner's and admins' (anyone on a private dev server); anyone in dev mode can go to and play them. (11-14; queue)
 
 ## FTUE and Guide
 - The tutorial IS the first goal: train arrival, one question ("What brings you to town?"), at most 3 steps, then first-time moments. "Short and sweet, general direction." (11-04; ftue-design 11-04, CLAUDE.md)

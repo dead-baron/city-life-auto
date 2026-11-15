@@ -613,3 +613,119 @@ export function stationAtms3(m, H) {
   m.atms = m.pois.filter((p) => p.kind === 'atm');
   return n;
 }
+
+// No ATM standing on its own (the owner, 2026-11-14: "ATMs in random spots ... integrated naturally: set into a building's
+// front wall ... inside interiors ... never standing alone mid-sidewalk"). The last pass of the build (world3-world.js
+// done): every cash machine is set into a front wall (its back on the building) or stands inside one; a kiosk - or any
+// machine with no wall behind it - moves to the nearest front it can be set into, within ATM_SEAT tiles: a shop's, a
+// gas station's, a station's, any building but a home, a church, a yard (map.js's own rules for a wall ATM: the wall
+// behind it whole, pavement under it, room to stand at it, clear of a door, another ATM, a prop, a pump). Moved in
+// place - its prop and its map point keep their numbers - so nothing after it in the lists shifts. Returns { moved, left }:
+// left, a kiosk with no wall near enough (the placement lint's atmStray counts them).
+export const ATM_SEAT = 32;   // (tiles: a cash machine stays within reach of the streets it served - world3server.test.js, SHOP_REACH.cash)
+const NO_ATM_WALL = /^(house|shanty|shack|farm|estate|church|school|park|construction|site|junkyard|pool|chapel)/;   // (a block of flats' street wall will do in town - not a house's)
+const AT_FOOT = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS]);
+export function seatAtms3(m, H = null) {
+  const out = { moved: 0, left: 0 };
+  const tileAt = (x, y) => m.tileAtPx(x, y), wallT = (t) => t === T.BUILDING || t === T.WALL;
+  const walled = (x, wy) => wallT(tileAt(x - 12, wy - 8)) && wallT(tileAt(x, wy - 8)) && wallT(tileAt(x + 12, wy - 8));
+  const pois = m.pois.filter((p) => p && p.kind === 'atm');
+  // the buildings by 16-tile cells, to look near a machine
+  const C = 16, cells = new Map();
+  m.buildings.forEach((b) => {
+    if (!b || b.gone || b.tw < 3 || (b.home !== undefined && !(m.homes[b.home] && m.homes[b.home].kind === 'apartment')) || NO_ATM_WALL.test(b.kind || '') || /Museum|Playhouse|Theat(?:re|er)|Chapel/.test(b.name || '')) return;
+    const k = `${Math.floor(b.tx / C)},${Math.floor((b.ty + b.th) / C)}`; let l = cells.get(k); if (!l) cells.set(k, (l = [])); l.push(b);
+  });
+  const PG = new Map();   // (the map points by 64 px cells)
+  for (const q of m.pois) if (q) { const k = Math.floor(q.x / 64) * 65536 + Math.floor(q.y / 64); let l = PG.get(k); if (!l) PG.set(k, (l = [])); l.push(q); }
+  const near = (x, y) => { const out2 = [], cx = Math.floor(x / TILE / C), cy = Math.floor(y / TILE / C), R = Math.ceil(ATM_SEAT / C) + 1; for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) for (const b of cells.get(`${cx + i},${cy + j}`) || []) out2.push(b); return out2; };
+  const propsNear = (x, y, self) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { if (!m.inside(tx + dx, ty + dy)) continue; for (const e of m.solidProps.get(m.idx(tx + dx, ty + dy)) || []) if (e !== self && !e.off && Math.abs(e.x - x) < 24 + e.r && Math.abs(e.y - y) < 18 + e.r) return true; } return false; };
+  const spotOk = (b, x, self, poi, d0) => {
+    const wy = (b.ty + b.th) * TILE;
+    if (x < b.tx * TILE + 22 || x > (b.tx + b.tw) * TILE - 22) return false;
+    for (const dx of [-18, 0, 18]) if (tileAt(x + dx, wy - 6) !== T.BUILDING || !AT_FOOT.has(tileAt(x + dx, wy + 8))) return false;
+    if (!AT_FOOT.has(tileAt(x, wy + 36))) return false;   // (room to stand at it)
+    const tx = Math.floor(x / TILE), ty = Math.floor((wy + 8) / TILE);
+    if (m.reserve[m.idx(tx, ty)] & 3 || m.deck[m.idx(tx, ty)] || (d0 >= 0 && m.dist[m.idx(tx, ty)] !== d0)) return false;   // (not on the railway, not under a deck; in its own district - a district's cash of its own: world3server.test.js)
+    for (let gy = Math.floor((wy - 8) / 64); gy <= Math.floor((wy + 60) / 64); gy++) for (let gx = Math.floor((x - 96) / 64); gx <= Math.floor((x + 96) / 64); gx++) for (const q of PG.get(gx * 65536 + gy) || []) if (q !== poi && Math.abs(q.x - x) < (q.kind === 'atm' ? 96 : 40) && q.y > wy - 8 && q.y < wy + 60) return false;   // (a door beside it, another ATM)
+    if (propsNear(x, wy + 5, self)) return false;
+    for (const pu of m.pumps || []) if (Math.hypot(pu.x - x, pu.y - wy) < 60) return false;
+    return true;
+  };
+  // (the cash it serves: the streets - a road or a pavement, not a highway's - within SHOP_REACH.cash of it, every third
+  // tile, that no other ATM or bank has in reach; a move keeps each of them in reach, a few tiles to spare -
+  // world3server.test.js measures every street tile's distance to its nearest cash)
+  const R = SHOP_REACH.cash, REACH2 = (R - 4) * (R - 4), cash = m.pois.filter((q) => q && (q.kind === 'atm' || q.kind === 'bank'));
+  const soleStreets = (me) => {
+    const ox = me.x / TILE, oy = me.y / TILE, others = cash.filter((q) => q !== me && Math.abs(q.x / TILE - ox) < 2 * R && Math.abs(q.y / TILE - oy) < 2 * R), out2 = [];
+    for (let ty = Math.floor(oy - R); ty <= oy + R; ty += 3) for (let tx = Math.floor(ox - R); tx <= ox + R; tx += 3) {
+      if (!m.inside(tx, ty) || (tx - ox) * (tx - ox) + (ty - oy) * (ty - oy) > R * R) continue;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      if ((t !== T.ROAD && t !== T.SIDEWALK) || (m.roadRank && m.roadRank[i] === 3)) continue;
+      if (others.some((q) => { const qx = q.x / TILE - tx, qy = q.y / TILE - ty; return qx * qx + qy * qy <= R * R; })) continue;
+      out2.push([tx + 0.5, ty + 0.5]);
+    }
+    return out2;
+  };
+  m.props.forEach((p, pi) => {
+    if (!p || p.t !== 'atmw' || p.inside !== undefined || walled(p.x, p.y - 5)) return;
+    const poi = pois.find((q) => Math.abs(q.x - p.x) < 6 && q.y - p.y > 10 && q.y - p.y < 40);
+    const self = m.propSolid && m.propSolid.get(pi);
+    let best = null, bd = ATM_SEAT * ATM_SEAT * TILE * TILE;
+    const ax = Math.floor(p.x / TILE), ay = Math.floor((poi ? poi.y : p.y + 22) / TILE), d0 = m.inside(ax, ay) ? m.dist[m.idx(ax, ay)] : -1;
+    // the spots it may go to, nearest first; the first that keeps every street it alone had in reach in reach
+    const spots = [];
+    for (const b of near(p.x, p.y)) {
+      const wy = (b.ty + b.th) * TILE;
+      for (let x = Math.round((b.tx * TILE + 24) / 16) * 16; x <= (b.tx + b.tw) * TILE - 24; x += 16) {
+        const d = (x - p.x) * (x - p.x) + (wy + 5 - p.y) * (wy + 5 - p.y);
+        if (d < bd && spotOk(b, x, self, poi, d0)) spots.push([d, x, wy]);
+      }
+    }
+    spots.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+    const sole = spots.length ? soleStreets(poi || { x: p.x, y: p.y + 22 }) : null;
+    for (const [, x, wy] of spots) {
+      const nx = x / TILE, ny = (wy + 28) / TILE;
+      if (sole.every(([sx, sy]) => (sx - nx) * (sx - nx) + (sy - ny) * (sy - ny) <= REACH2)) { best = { x, wy }; break; }
+    }
+    if (!best) { out.left++; return; }
+    // moved in place: the prop, its solid (to its new tile), its map point
+    if (self) {
+      const ok = m.idx(Math.floor(self.x / TILE), Math.floor(self.y / TILE)), arr = m.solidProps.get(ok);
+      if (arr) { const j = arr.indexOf(self); if (j >= 0) arr.splice(j, 1); }
+      self.x = best.x; self.y = best.wy + 5;
+      const nk = m.idx(Math.floor(self.x / TILE), Math.floor(self.y / TILE));
+      let na = m.solidProps.get(nk); if (!na) m.solidProps.set(nk, (na = [])); na.push(self);
+    }
+    p.x = best.x; p.y = best.wy + 5;
+    if (p.v === 'kiosk') p.v = ATM_LOOK[Math.floor(hash2(Math.floor(best.x / TILE), Math.floor(best.wy / TILE), 79) * ATM_LOOK.length)];
+    if (poi) {
+      const k0 = Math.floor(poi.x / 64) * 65536 + Math.floor(poi.y / 64), l0 = PG.get(k0); if (l0) l0.splice(l0.indexOf(poi), 1);
+      poi.x = best.x; poi.y = best.wy + 28; delete poi.b;
+      const k1 = Math.floor(poi.x / 64) * 65536 + Math.floor(poi.y / 64); let l1 = PG.get(k1); if (!l1) PG.set(k1, (l1 = [])); l1.push(poi);
+    }
+    out.moved++;
+  });
+  // a map point with no machine (a bank prefab's painted one: art v2 paints none) gets one, set in the nearest wall
+  if (H && H.addProp) for (const poi of pois) {
+    if (m.props.some((p) => p && p.t === 'atmw' && Math.abs(p.x - poi.x) < 6 && poi.y - p.y > 10 && poi.y - p.y < 40)) continue;
+    const ax = Math.floor(poi.x / TILE), ay = Math.floor(poi.y / TILE), d0 = m.inside(ax, ay) ? m.dist[m.idx(ax, ay)] : -1;
+    let best = null, bd = ATM_SEAT * ATM_SEAT * TILE * TILE;
+    for (const b of near(poi.x, poi.y)) {
+      const wy = (b.ty + b.th) * TILE;
+      for (let x = Math.round((b.tx * TILE + 24) / 16) * 16; x <= (b.tx + b.tw) * TILE - 24; x += 16) {
+        const d = (x - poi.x) * (x - poi.x) + (wy + 28 - poi.y) * (wy + 28 - poi.y);
+        if (d >= bd || !spotOk(b, x, null, poi, d0)) continue;
+        bd = d; best = { x, wy };
+      }
+    }
+    if (!best) { out.left++; continue; }
+    H.addProp(m, 'atmw', best.x, best.wy + 5, 11, { v: 'bank' });
+    const k0 = Math.floor(poi.x / 64) * 65536 + Math.floor(poi.y / 64), l0 = PG.get(k0); if (l0) l0.splice(l0.indexOf(poi), 1);
+    poi.x = best.x; poi.y = best.wy + 28; delete poi.b;
+    const k1 = Math.floor(poi.x / 64) * 65536 + Math.floor(poi.y / 64); let l1 = PG.get(k1); if (!l1) PG.set(k1, (l1 = [])); l1.push(poi);
+    out.given = (out.given || 0) + 1;
+  }
+  m.atms = m.pois.filter((p) => p.kind === 'atm');
+  return out;
+}

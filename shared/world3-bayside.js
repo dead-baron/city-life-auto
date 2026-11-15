@@ -262,7 +262,7 @@ function build(m, api, K) {
         for (let y = dy0 + 2; y <= dy1; y++) for (let x = x0 + 4; x < x0 + hw - 4; x++) { const e = ((x + 0.5 - cx) / 15) ** 2 + ((y + 0.5 - cy) / 6.5) ** 2; if (e < 1) m.tiles[y * m.w + x] = e < 0.32 ? T.GRASS : T.LOT; }
         prop('fountain', cx, cy + 0.5, 30);
         for (const dx of [-5, 5]) prop('palm_a', cx + dx, cy, 10, { sp: 'royal', k: 1.2 });
-        prop('canopy', cx, dy0 + 1.6, 0, { w: 200, d: 60, h: 52 });
+        for (const dx of [-3, 3]) prop('plamp', cx + dx, dy0 + 0.05, 0, { wall: true, a: Math.PI / 2 });   // (the door lit from its wall, no canopy over it: the owner, 11-14)
         m.parking.push({ x: (cx - 9) * TILE, y: (dy0 + 3) * TILE, a: 0, model: 'limo' }, { x: (cx + 8) * TILE, y: (dy0 + 3) * TILE, a: 0 });
         for (const dx of [-17, 17]) prop('plamp', cx + dx, dy1 - 1, 6);
         // the café terrace on the west side of the drop-off

@@ -93,6 +93,8 @@ Caddy already proxies everything on `play.deadbaron.com` to the server, includin
 | `CLA_CONTACT` | The contact the Privacy Policy and the Terms give (an email address). | unset (a placeholder) |
 | `GA_MEASUREMENT_ID` | Google Analytics 4 web stream id (`G-XXXXXXXXXX`). It's public and served to the page. | unset (off) |
 | `GA_API_SECRET` | GA4 Measurement Protocol secret, for server events. | unset (server events off) |
+| `CLA_DISCORD_INVITE` | The player Discord's invite: the title's DISCORD button and Settings → Help → Join our Discord (section 9). `off` hides them. | `https://discord.gg/zuVSkbfjg` |
+| `BUG_WEBHOOK_URL` | A Discord webhook (secret): every bug report is posted to #bug-reports (section 9). | unset (reports kept on the server only) |
 
 `CLA_SECRET` (already in use) signs the login tokens. Never change it once players exist: every token would stop
 working.
@@ -165,12 +167,21 @@ served at deadbaron.com). A passkey belongs to its domain: one made on `deadbaro
    | Dimension name | Scope | Event parameter / user property |
    |---|---|---|
    | Device class | User | `device_class` |
+   | Player type | User | `player_type` (guest / account) |
    | Graphics preset | User | `graphics_preset` |
    | Faction | Event | `faction` |
    | Region | Event | `region` |
-   | Source (money) | Event | `source` |
-   | Cause (death) | Event | `cause` |
+   | Money source | Event | `source` |
+   | Death cause | Event | `cause` |
    | Job | Event | `job` |
+   | Crime | Event | `crime` |
+   | FPS bucket | Event | `fps_bucket` |
+   | Load time bucket | Event | `load_bucket` |
+   | Perf stage | Event | `stage` |
+   | Error location | Event | `where` |
+
+   (GA's names take letters, numbers, spaces and underscores only - no brackets. Sign-in method, currency name, the
+   leisure activity (content_id) and money amounts (value) are GA's own dimensions and metrics: nothing to register.)
 
 6. **Admin → Events** (they appear after the first day): mark **sign_up** and **tutorial_complete** as key events.
 7. **Admin → Data settings → Data collection**: leave Google signals **off** (the game turns it off too).
@@ -223,6 +234,8 @@ How it behaves:
   - `/admin/log`: the admin log, owner only;
   - `/admin/news`: the news list, owner only (section 7);
   - `/admin/reviews`: reports, filter hits and cheat flags, admins and up;
+  - `/admin/bugs`: the players' bug reports, newest first, each with its screenshot, where, the device, the build, the
+    frame rate and the page's errors; Mark done / Open again (in the admin log). Admins and up (section 9);
   - `/admin/perf` and `/admin/clienterrors`: how devices load and run the game, and the pages' errors, admins and up.
     The old `/perf` and `/clienterrors` addresses redirect here.
 
@@ -246,3 +259,22 @@ How it behaves:
 4. Have a lawyer review the terms, the privacy policy and the in-game notice before any money changes hands. The
    drafts (`server/legal.js`, at `/legal/privacy` and `/legal/terms`) are marked DRAFT at the top. Set `CLA_CONTACT`
    and `CLA_MAIL_ADDRESS` so their placeholders are filled.
+
+## 9. The player Discord and bug reports
+
+- **The invite** (`CLA_DISCORD_INVITE`, default `https://discord.gg/zuVSkbfjg`, never expires): the page gets it in
+  `/launch.json` and shows a small DISCORD button on the title screen and Join our Discord in Settings → Help, each
+  opening a new tab. A `discord.gg/...` or `discord.com/invite/...` link; `off` hides both. Change it with
+  `sudo bash ~/city-life-auto/deploy/set-keys.sh` (`-` there goes back to the default).
+- **Bug reports**: players send them from the pause menu (REPORT A BUG), the phone's Report bug app or Settings → Help:
+  what happened (up to 1,000 characters) or a kind of problem, and a screenshot of the game (on by default, under
+  250 KB). The server adds the player's name, guest or account, where they are, the device class and a coarse browser
+  and system, the build, the frame rate, the graphics preset and the page's last errors - never an email, an IP address
+  or a token. Limits: 3 a player in 10 minutes, 30 an hour from everyone (`shared/rules.js` BUG_REPORT). Kept in
+  `<data>/reports/` (`reports.json` and `img/`), the newest 500 and 200 MB of screenshots; read them at `/admin/bugs`.
+- **Posting them to Discord** (optional): make a webhook for the #bug-reports channel - Discord → your server →
+  **Server Settings → Integrations → Webhooks → New Webhook** → name it (e.g. "Bug reports"), set its channel to
+  **#bug-reports** → **Copy Webhook URL**. Paste it into `set-keys.sh` as `BUG_WEBHOOK_URL` (it's a secret: anyone with it
+  can post to the channel). Each report then arrives as an embed - its first line the title; the player, where, the
+  device, the build, the frame rate and the kind as fields - with the screenshot attached. Mentions in a report never
+  ping anyone. If Discord is down or slow the report is still kept here (the log says it couldn't post it).

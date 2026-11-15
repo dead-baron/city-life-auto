@@ -16,7 +16,7 @@
 //     sent is round it (view.js) and the city comes alive round it as round a player; they're told the cast's entities
 //     ({ t: 'dscene' }) and their page flies the same camera (client/director.js).
 import { K, DT, TILE, DAY_LOOP_S, DAY_PART_S, WEATHER, T } from '../../shared/constants.js';
-import { DIRECTOR } from '../../shared/rules.js';
+import { DIRECTOR, RACERS } from '../../shared/rules.js';
 import { CHAT, emoteWire } from '../../shared/chatdefs.js';
 import { VEHICLES } from '../../shared/vehicles.js';
 import { PED_BLOCK, DISTRICTS } from '../../shared/mapcore.js';
@@ -24,7 +24,8 @@ import { blastSize } from '../../shared/explosions.js';
 import { randomLook, encodeLook, decodeLook, lookToApp } from '../../shared/look.js';
 import { pedStep } from '../../shared/physics.js';
 import { IN } from '../../shared/input.js';
-import { SCENES, SCENE_LIST, pointOf, camAt } from '../../shared/scenes/index.js';
+import { SCENES, SCENE_LIST, pointOf, camAt, viewScene } from '../../shared/scenes/index.js';
+import * as racers from './racers.js';
 import { inAnyView } from '../view.js';
 import { spawnNpc, despawnNpc, seek, footWay, startFight, onAttacked, onCarjacked } from './npc.js';
 import { planRoute, driveToward, joinTraffic } from './traffic.js';
@@ -132,10 +133,11 @@ export function straightRuns(map) {
 }
 // a stretch of road `len` long near (x, y) (its end at the point nearest it): anchors start and end (a: the way from
 // start to end), and mid
-function roadNear(map, x, y, len, maxD = 6000, avoid = null) {
+function roadNear(map, x, y, len, maxD = 6000, avoid = null, wide = false) {
   let best = null, bd = Infinity;
   for (const r of straightRuns(map)) {
     if (r.bridge || r.hi - r.lo < len + 160) continue;
+    if (wide && r.hw * 2 < RACERS.wideW) continue;   // (a wide street: the race's, the chase's - never an alley behind the blocks)
     const s = Math.max(r.lo, Math.min(r.hi, r.h ? x : y)), px = r.h ? s : r.c, py = r.h ? r.c : s, d = Math.hypot(px - x, py - y) - Math.min(30, r.hw) * 4;
     if (d > maxD || d >= bd) continue;
     if (avoid && avoid(px, py)) continue;
@@ -149,6 +151,20 @@ function roadNear(map, x, y, len, maxD = 6000, avoid = null) {
   const a0 = r.h ? (fwd ? 0 : Math.PI) : fwd ? Math.PI / 2 : -Math.PI / 2;
   const A = P(start), B = P(end), M = P((start + end) / 2);
   return { anchors: { start: { ...A, a: a0 }, end: { ...B, a: a0 }, mid: { ...M, a: a0 } }, hw: r.hw, run: r, at: M };
+}
+// the first junction (three ways or more, at ground level) along a stretch of road from its start, at least `from` px on
+// and before the end of its run: where the race meets the traffic crossing it (anchor 'cross', a: the stretch's way)
+function junctionOn(world, r, from = 600) {
+  const net = world.map.net, A = r.anchors.start, a = A.a, c = Math.cos(a), sn = Math.sin(a);
+  if (!net) return null;
+  let best = null;
+  for (const n of net.nodes) {
+    if (n.lvl || Object.keys(n.links).length < 3) continue;
+    const dx = n.x - A.x, dy = n.y - A.y, along = dx * c + dy * sn, across = Math.abs(-dx * sn + dy * c);
+    if (across > 40 || along < from || along > from + 2600) continue;
+    if (!best || along < best.along) best = { along, n };
+  }
+  return best ? { x: best.n.x, y: best.n.y, a } : null;
 }
 // a little way off a point, off the road, between buildings if there are any: where someone on foot ducks out of sight
 export function alleyNear(map, x, y) {
@@ -199,18 +215,22 @@ export const PLACES = {
   road(world, place, ref, opt = {}) {
     const m = world.map, P = ref || (place.near && named(m, place.near)) || named(m, 'Downtown') || named(m, 'Midtown');
     if (!P) return null;
-    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || place.maxD || 5000, opt.avoid || null);
+    const r = roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || place.maxD || 5000, opt.avoid || null, !!place.wide) || (place.wide ? roadNear(m, P.x, P.y, place.len || 1400, opt.maxD || place.maxD || 5000, opt.avoid || null) : null);
     if (!r) return null;
-    if (!place.far) return { ...r, clear: true };   // (no getaway: a shot along the road)
+    const clear = !place.traffic;   // (traffic: the city's cars left on it - the race weaves through them)
+    if (place.junction) { const j = junctionOn(world, r, place.junction === true ? 600 : place.junction); if (j) r.anchors.cross = j; }
+    if (!place.far) return { ...r, clear };   // (no getaway: a shot along the road)
     // where the getaway runs on to: a point well past the end, on the road net (it was the nearest open ground - a shop's
     // floor, a lawn: a car driven on into it)
     const a = r.anchors.end.a, fx = r.anchors.end.x + Math.cos(a) * (place.far || 2600), fy = r.anchors.end.y + Math.sin(a) * (place.far || 2600);
     const k = kerbFor(world, fx, fy), far = k.e && Math.hypot(k.x - fx, k.y - fy) < 900 ? { x: k.x, y: k.y } : standAt(m, fx, fy, 30);
-    return { ...r, anchors: { ...r.anchors, far: { ...far, a } }, clear: true };
+    return { ...r, anchors: { ...r.anchors, far: { ...far, a } }, clear };
   },
+  // a point on the map (a saved view's: server/systems/views.js) - just there, its anchor 'here'
+  xy(world, place) { const q = { x: place.xy[0], y: place.xy[1], a: 0 }; return { anchors: { here: q }, at: q }; },
   // a place by its names (the Showcase's: client/showcase.js q - the first found, exactly, then one starting with it)
-  named(world, place) {
-    const m = world.map, off = (p) => { const q = { x: p.x + (place.dx || 0) * TILE, y: p.y + (place.dy || 0) * TILE, a: place.a || 0 }; return { anchors: { here: q }, at: q }; };
+  named(world, place, ref, opt = {}) {
+    const m = world.map, off = (p) => { let q = { x: p.x + (place.dx || 0) * TILE, y: p.y + (place.dy || 0) * TILE, a: place.a || 0 }; if (place.open && opt.sc) q = openFrame(m, opt.sc, q); return { anchors: { here: q }, at: q }; };
     for (const n of place.q || [place.name]) { const p = named(m, n); if (p) return off(p); }
     const all = [];
     for (const H of Object.values(m.world3hand || {})) for (const pl of (H && H.places) || []) if (pl.name) all.push({ x: ((pl.x0 + pl.x1) / 2) * TILE, y: ((pl.y0 + pl.y1) / 2) * TILE, name: pl.name });
@@ -267,6 +287,47 @@ export const PLACES = {
   // wherever the reference is (or [x, y])
   here(world, place, ref) { const p = place.xy ? { x: place.xy[0], y: place.xy[1] } : ref; return p ? { anchors: { here: { ...standAt(world.map, p.x, p.y), a: 0 } }, at: p } : null; },
 };
+
+// ---- framing: a shot over open ground, not roofs -----------------------------------------------------------------------
+// (the owner, 11-14: "It's showing not interesting areas, usually tops of buildings or sides of buildings") A roof on screen:
+// a building's footprint, or the two rows above it its walls and roof are drawn up over (the art's three-quarter view).
+const ROOFT = new Set([T.BUILDING, T.WALL, T.FLOOR, T.COUNTER]);
+export function roofed(map, x, y) {
+  const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE);
+  for (let k = 0; k <= 2; k++) if (map.inside(tx, ty + k) && ROOFT.has(map.tiles[map.idx(tx, ty + k)])) return true;
+  return false;
+}
+// how much of a frame at (x, y), zoom z (a 1280 x 720 screen: the middle three quarters of it) is open ground - streets,
+// plazas, parks, water - 0..1; and whether its middle is
+export const FRAME = { w: 1280, h: 720 };
+export function frameOpen(map, x, y, z = 1) {
+  const hw = FRAME.w / 2 / z * 0.75, hh = FRAME.h / 2 / z * 0.75;
+  let n = 0, open = 0;
+  for (let j = -2; j <= 2; j++) for (let i = -3; i <= 3; i++) { n++; if (!roofed(map, x + (i / 3) * hw, y + (j / 2) * hh)) open++; }
+  return { open: open / n, mid: !roofed(map, x, y) && !roofed(map, x + 40, y) && !roofed(map, x - 40, y) };
+}
+// The anchor of a place shot moved (14 tiles at most) to where its camera's whole move frames the most open ground, its
+// middle never on a roof - a nudge, not another place: the nearer the better.
+function openFrame(map, sc, q) {
+  const T0 = [0, 0.2, 0.4, 0.6, 0.8, 1].map((u) => u * Math.max(1, sc.len - 1));
+  const score = (cx, cy) => {
+    const ctx = { anchors: { here: { x: cx, y: cy, a: q.a } }, ent: () => null };
+    let o = 0, mids = 0, prev = null;
+    for (const t of T0) { const c = camAt(sc, t, ctx, prev); if (!c) continue; prev = c; const f = frameOpen(map, c.x, c.y, c.z); o += f.open; if (f.mid) mids++; }
+    return o / T0.length + (mids === T0.length ? 0.6 : mids / T0.length * 0.3);
+  };
+  const base = score(q.x, q.y);
+  if (base >= 1.45) return q;
+  let best = { x: q.x, y: q.y, sc: base };
+  for (let dy = -14; dy <= 14; dy += 2) for (let dx = -14; dx <= 14; dx += 2) {
+    if (!dx && !dy) continue;
+    const x = q.x + dx * TILE, y = q.y + dy * TILE;
+    if (!map.inside(Math.floor(x / TILE), Math.floor(y / TILE))) continue;
+    const v = score(x, y) - Math.hypot(dx, dy) / 14 * 0.2;
+    if (v > best.sc) best = { x, y, sc: v };
+  }
+  return { x: best.x, y: best.y, a: q.a };
+}
 
 // ---- the cast ---------------------------------------------------------------------------------------------------------
 const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -335,7 +396,7 @@ function castOne(world, run, c) {
     const G = { ...standAt(m, P.x, P.y, 24), a: P.a };   // (a crowd gathers on dry ground: a park's middle can be its pond)
     for (let i = 0; i < c.group; i++) {
       const ang = (i / c.group) * Math.PI * 2 + 0.4, r = (c.spread || 50) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
-      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, 4);
+      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, c.post ? 4 : 10);   // (a crowd standing its ground: close in; people about: on dry ground a little further)
       out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (G.a || 0) + c.ra : Math.atan2(at.y - G.y, at.x - G.x), c.id));
     }
     return out;
@@ -367,14 +428,14 @@ function pickOne(world, run, c) {
 // ---- starting one -------------------------------------------------------------------------------------------------------
 // opts: { mode: 'live' | 'dev' | 'capture', ref: { x, y } (where to look for the place), viewer: a player to show it to }
 export function start(world, id, opts = {}) {
-  const sc = SCENES[id];
+  const sc = opts.view ? viewScene(opts.view) : SCENES[id];   // (opts.view: a saved view played as a shot - views.js)
   if (!sc) return { err: `No scene "${id}".` };
   const st = D(world), mode = opts.mode || 'dev';
   const resolve = PLACES[sc.place.k];
   // (where: live, near the player it's for; asked for - the shot list - at the scene's own place when it names one)
-  const pl = opts.place || (resolve ? resolve(world, sc.place, mode === 'live' || !sc.place.near ? opts.ref || null : null) : null);   // (opts.place: resolved already - the live scheduler's)
+  const pl = opts.place || (resolve ? resolve(world, sc.place, mode === 'live' || !sc.place.near ? opts.ref || null : null, { sc }) : null);   // (opts.place: resolved already - the live scheduler's)
   if (!pl) return { err: `No place for "${sc.n}" here (${sc.place.k}).` };
-  const run = { held: !!opts.hold, holdUntil: opts.hold && mode !== 'capture' ? world.time + DIRECTOR.holdS : 0, seq: ++st.seq, id, sc, mode, capture: mode === 'capture' || !!world.capture, tick0: world.tick, anchors: pl.anchors, at: pl.at || Object.values(pl.anchors)[0], cast: new Map(), groups: new Map(), beatAt: {}, beats: (sc.beats || []).map((b, i) => ({ b, i, st: 'wait', t0: 0, tEnd: 0, d: null })), viewers: [], over: false, endAt: 0, lastNear: world.time, camPrev: null, castVer: 0 };
+  const run = { held: !!opts.hold, holdUntil: opts.hold && mode !== 'capture' ? world.time + DIRECTOR.holdS : 0, seq: ++st.seq, id, sc, view: opts.view || null, mode, capture: mode === 'capture' || !!world.capture, tick0: world.tick, anchors: pl.anchors, at: pl.at || Object.values(pl.anchors)[0], cast: new Map(), groups: new Map(), beatAt: {}, beats: (sc.beats || []).map((b, i) => ({ b, i, st: 'wait', t0: 0, tEnd: 0, d: null })), viewers: [], over: false, endAt: 0, lastNear: world.time, camPrev: null, castVer: 0 };
   if (pl.clear && pl.run) clearRoad(world, run, pl);
   if (run.capture) setScene(world, sc);
   for (const c of sc.cast || []) castOne(world, run, c);
@@ -418,7 +479,7 @@ function tell(world, run, p) {
   if (!p.conn) return;
   const anchors = {};
   for (const [k, q] of Object.entries(run.anchors)) anchors[k] = [Math.round(q.x), Math.round(q.y), +(q.a || 0).toFixed(3)];
-  p.conn.sendJSON({ t: 'dscene', id: run.id, seq: run.seq, tick0: run.tick0, cast: castMsg(run), anchors, bt: run.beatAt, cap: run.capture ? 1 : 0, len: run.sc.len, held: run.held ? 1 : 0 });
+  p.conn.sendJSON({ t: 'dscene', id: run.id, seq: run.seq, tick0: run.tick0, cast: castMsg(run), anchors, bt: run.beatAt, cap: run.capture ? 1 : 0, len: run.sc.len, held: run.held ? 1 : 0, ...(run.view ? { view: run.view } : null) });
 }
 export function unwatch(world, p, seq = 0) {
   if (seq && p.dirRun && p.dirRun !== seq) return;   // (the page let go of a scene that's over: the one since stays on its camera)
@@ -475,6 +536,14 @@ function stepDrive(world, run, A, v) {
   const sp = r.length <= 1 && left < 260 && !c.through && !c.pass ? Math.max(70, left * 1.4) : c.speed;   // (pass: on through it at speed - the next leg follows)
   driveToward(world, v, wp.x, wp.y, sp, { ignoreObstacles: !!c.through, ignoreCrossings: true, ignore: run.vehIds || (run.vehIds = new Set([...run.cast.values()].filter((q) => q.kind === 'veh').map((q) => q.id))) });   // (not braking for the scene's own: racers side by side; never waiting at the lights - a shot's car stopped at a red one halfway)
   v.dirDrive = world.tick;   // (driveToward left its v.ai.ctl: vehicles.js re-trims to it between the sub-steps)
+}
+// a racer (racers.js), each tick: its line through the traffic, flat out; at the end of its way, on at speed (the shot ends first)
+function stepRace(world, A, v) {
+  const c = A.ctl;
+  if (!c || v.wreckAt || v.dead || !v.seats[0]) return;
+  if (!v.ai || v.ai.kind !== 'actor') v.ai = { kind: 'actor' };
+  racers.raceStep(world, v, c.R);
+  if (c.R.done) { driveToward(world, v, v.x + Math.cos(v.a) * 300, v.y + Math.sin(v.a) * 300, c.R.top * 0.8, { ignoreCrossings: true }); v.dirDrive = world.tick; }
 }
 // an aircraft along its route (the light planes' own stick: airtraffic.js - v.fin, v.autopilot): the nose on the next
 // point, its speed held, up or down to the height wanted; a crop duster's mist on while it's low over its field
@@ -555,6 +624,28 @@ function begin(world, run, B) {
       takeCtl(run, A, ctl);
       B.d = { A };
       return false;
+    }
+    case 'race': {   // who (and units): flat out along the roads to `to` - racers.js: weaving through the traffic, no lights
+      const to = pointOf(b.to, ctxOf(world, run));
+      const vs = [b.who, ...(b.units || [])].map((cid) => [cid, vehOf(world, run, cid)]).filter(([, v]) => v && !v.wreckAt && !v.dead);
+      if (!to || !vs.length) return true;
+      const lead = vs[0][1], route = racers.raceRoute(world, lead, to);
+      if (!route) return true;
+      // the traffic it weaves through (b.traffic cars along the way, both directions): the city's own from then - the scene's to
+      // put away at its end
+      for (const q of racers.trafficAlong(world, route, b.traffic || 0)) { const A = addActor(run, `traffic.${q.v.id}`, q.v, { veh: q.v.model }, false); A.own = true; }
+      B.d = { list: [] };
+      vs.forEach(([cid, v], k) => {
+        const A = run.cast.get(cid);
+        if (!A) return;
+        const own = racers.raceRoute(world, v, to) || route;   // (each from where it is: side by side on the grid)
+        v.ai = { kind: 'actor' }; v.parked = false; v.dirHold = true;
+        // each its own pace: the grid's back row the quicker (overtakes), within a few per cent (a strung-out pack)
+        const skill = b.skill ? b.skill[k % b.skill.length] : 1 + ((k * 37 + run.seq * 11) % 9 - 4) * 0.012 + (k >= vs.length / 2 ? 0.05 : 0);
+        const ctl = { k: 'race', R: racers.racer(world, v, own, { skill, goal: to }), beat: B, vid: v.id };
+        takeCtl(run, A, ctl); B.d.list.push(ctl);
+      });
+      return !B.d.list.length;
     }
     case 'fly': {
       const v = vehOf(world, run, b.who), A = run.cast.get(b.who);
@@ -724,6 +815,7 @@ function stepBeat(world, run, B) {
       return false;
     }
     case 'fly': { const A = B.d.A; return !A.ctl || A.ctl.beat !== B || !A.ctl.route.length; }
+    case 'race': return B.d.list.every((c) => { const v = world.get(c.vid); return !v || v.wreckAt || v.dead || !v.seats[0]; });   // (on to the shot's end: past the end of its way at speed - stepRace)
     case 'enter': {
       const { A, vid } = B.d, e = world.get(A.id), v = world.get(vid);
       if (!alive(e) || !v || v.wreckAt) return true;
@@ -885,12 +977,13 @@ function stepRun(world, run, dt) {
     if (A.scripted && A.spec.plot && A.kind === 'ped' && !e.dead) { e.downUntil = Math.min(e.downUntil || 0, world.time); e.stunUntil = Math.min(e.stunUntil || 0, world.time); e.staggerUntil = 0; if (e.hp < e.maxHp * 0.34) e.hp = e.maxHp * 0.34; }
     if (!A.scripted && !A.borrowed) { if (A.kind === 'veh' && e.runaway) stepRunaway(world, e); continue; }
     if (A.kind === 'ped') {
-      if (e.vehId) { const v = world.get(e.vehId); if (v && A.ctl && A.ctl.k === 'fly') stepFly(world, run, A, v); else if (v && A.ctl && A.ctl.k === 'drive') stepDrive(world, run, A, v); else if (v && v.def.kind === 'air') { /* (up in the air between beats: on as it was) */ } else if (v && v.seats[0] === e.id && v.ai && v.ai.kind === 'actor' && !v.runaway && v.dirDrive !== world.tick && !v.dead) v.input = { throttle: 0, steer: 0, hb: true }; }   // (at the wheel with nowhere to go: waiting, on the brake)
+      if (e.vehId) { const v = world.get(e.vehId); if (v && A.ctl && A.ctl.k === 'fly') stepFly(world, run, A, v); else if (v && A.ctl && A.ctl.k === 'drive') stepDrive(world, run, A, v); else if (v && A.ctl && A.ctl.k === 'race') stepRace(world, A, v); else if (v && v.def.kind === 'air') { /* (up in the air between beats: on as it was) */ } else if (v && v.seats[0] === e.id && v.ai && v.ai.kind === 'actor' && !v.runaway && v.dirDrive !== world.tick && !v.dead) v.input = { throttle: 0, steer: 0, hb: true }; }   // (at the wheel with nowhere to go: waiting, on the brake)
       else if (A.borrowed && A.ctl) stepFoot(world, run, A, e, dt);
       else if (A.scripted) stepFoot(world, run, A, e, dt);
     } else {
       if (e.runaway) stepRunaway(world, e);
       if (A.ctl && A.ctl.k === 'drive') stepDrive(world, run, A, e);
+      else if (A.ctl && A.ctl.k === 'race') stepRace(world, A, e);
       else if (A.ctl && A.ctl.k === 'fly') stepFly(world, run, A, e);
     }
   }
@@ -906,6 +999,14 @@ function stepRun(world, run, dt) {
   }
   viewCam(world, run, t, dt);
 }
+// is the shot's time of day night (its own clock - the page shows it; the world's may be another hour): as the world's
+// clock has it (shared/constants.js gameClock isNight: from half an hour before 20:00 to half an hour after 06:00)
+export function shotNight(sc, t = 0) {
+  if (!sc || (sc.time === undefined && !sc.tl)) return undefined;
+  const m = sc.tl ? sc.tl[0] + (sc.tl[1] - sc.tl[0]) * Math.max(0, Math.min(1, t / Math.max(1, sc.len))) : sc.time;
+  const mm = ((m % 1440) + 1440) % 1440;
+  return mm >= 1170 || mm < 390;
+}
 // the viewers' camera: the script's shot now (view.js sends them what's round it)
 function viewCam(world, run, t, dt) {
   const cam = camAt(run.sc, t, ctxOf(world, run), run.camPrev);
@@ -914,7 +1015,7 @@ function viewCam(world, run, t, dt) {
     run.camPrev = { x: cam.x, y: cam.y, z: cam.z };
     for (const p of run.viewers) {
       if (!p.ped) continue;
-      p.dirCam = { x: cam.x, y: cam.y, z: cam.z, vx: pv ? (cam.x - pv.x) / dt : 0, vy: pv ? (cam.y - pv.y) / dt : 0, player: p, cine: true };
+      p.dirCam = { x: cam.x, y: cam.y, z: cam.z, vx: pv ? (cam.x - pv.x) / dt : 0, vy: pv ? (cam.y - pv.y) / dt : 0, player: p, cine: true, night: shotNight(run.sc, t) };   // (night: the shot's own time - the city round it is that hour's crowd, npc.js)
       // the capture's page: its own character out of sight, where the camera is (the city's "near a player" is the camera)
       if (p.capView && p.ped && !p.ped.vehId) { p.ped.hidden = true; p.ped.x = cam.x; p.ped.y = cam.y; p.ped.vx = 0; p.ped.vy = 0; }
     }

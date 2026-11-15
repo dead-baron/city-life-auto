@@ -39,7 +39,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
-import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
+import { initAudio, preloadAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
@@ -107,6 +107,8 @@ import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch(
 import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e) => console.warn('[leisure]', e));   // (fireworks, campfires of your own, grapes for the ducks)
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+// the sound's code and the title's music fetched while the title shows, so the first tap plays it at once (audio.js)
+setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)
@@ -165,6 +167,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
+    acc.launchInfo().then((i) => discordLinks(i && i.discord)).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -475,7 +478,8 @@ function onText(m) {
     case 'mine': S.mineRing = m.dur ? { t0: performance.now(), dur: m.dur * 1000, x: m.x, y: m.y } : null; break;   // swinging a pickaxe at a vein: the progress ring
     case 'pong': S.rtt = performance.now() - m.ts; break;
     case 'cinef': if (DIR) DIR.follow(m); break;   // (the cinematic mode's follow scenes: whom the camera's on)
-    case 'dscene': dirScene(m); break;   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
+    case 'dscene': dirScene(m); break;
+    case 'views': if (DIR) DIR.views(m); else cine(null).then(() => { if (DIR) DIR.views(m); }); break;   // (the owner's saved views: client/director.js, server/systems/views.js)   // (the scene director's scene: the camera on its script - client/director.js, server/systems/director.js)
     case 'board': phone.on('Board', m); if (JC && (m.ok || m.err)) JC.jobTaken(m, jcCtx); break;
     case 'crazyend': loadJobCard().then((J) => { if (S.playing) J.showRunCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Crazy Taxi's run over: its summary (client/jobcard.js)
     case 'jobcard': loadJobCard().then((J) => { if (S.playing && !(S.me && S.me.dead)) J.showJobCard(m, jcCtx); }).catch((e) => console.warn('[jobcard]', e)); break;   // Act at a job's place: its card (client/jobcard.js)
@@ -2009,8 +2013,25 @@ const phoneCtx = {
   chatBack: () => !!(S.launch && S.launch.chat.appBack()),
   // the Emotes screen (client/emotes.js renderApp, with the launch code): one tap emotes and puts the phone away
   emoteApp: (el) => { if (S.practice) { el.innerHTML = '<p class="ph-empty">No emotes offline.</p>'; return; } if (!S.launch) el.innerHTML = '<p class="ph-empty">Loading…</p>'; launchCall('emoteapp', { el, api: { refocus: () => { if (topOverlay() === 'phone') { ovFocus = startFocus(); focusOverlay(); } }, close: () => closeHub() } }); },
+  bug: () => bugApi(),   // (Report a bug: client/bugreport.js)
   nextSeen: () => { S.nxSeen = S.nxSig; try { localStorage.setItem('cla.nxSeen', String(S.nxSig)); } catch { /* (no storage: the dot comes back next session) */ } nextDot(S.nxSig); },   // (a first-time tip's "More in your Guide": its section - client/ftue.js)
 };
+// Report a bug (the phone's app, the pause list's and Settings' rows: client/bugreport.js) - what the page knows that goes
+// with it; the server adds who and where. Cancel steps back to where it came from; Done puts the menu away.
+function bugApi() {
+  return {
+    grab: (fn) => { S.bugGrab = fn; }, token: () => S.token, base: () => (S.launch ? S.launch.acc.httpBase() : null), discord: () => S.discord || '',
+    page: () => ({ build: myBuild().v, fps: S.fps, preset: gfx.preset, input: input.device, w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, area: ($('district') || {}).textContent || '', online: !!(S.ws && S.ws.readyState === 1), errors: S.launch ? S.launch.er.recent() : [] }),
+    back: () => { if (hubFromPause && S.playing) openHub('pause'); else phone.back(); }, close: () => closeHub(), refocus: phoneCtx.refocus,
+  };
+}
+// The player Discord (/launch.json discord - server/config.js CLA_DISCORD_INVITE): the title's DISCORD and Settings' Join
+// our Discord, only when it's set; a new tab
+function discordLinks(url) {
+  if (!/^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\//.test(url || '')) return;
+  S.discord = url;
+  for (const id of ['t-discord', 's-discord']) { const b = $(id); if (b) { b.classList.remove('hidden'); b.onclick = () => window.open(url, '_blank', 'noopener'); } }
+}
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
 // on the phone's button (the owner's minimal HUD: a dot, nothing more). What you last saw is kept across a reload.
 function nextDot(sig) {
@@ -2120,6 +2141,7 @@ const PAUSE_GO = {
   resume: () => closeHub(),
   map: () => openHub('map', null, true), phone: () => openHub('phone', null, true), bag: () => openHub('bag', null, true),
   people: () => openHub('people', null, true), settings: () => openHub('settings', null, true),
+  bug: () => openHub('phone', 'bug', true),   // (REPORT A BUG: the phone's form - client/bugreport.js)
   logoff: () => logOff(),
   leave: () => { sfx('click', 0.8); exitToTitle(); },
 };
@@ -2161,6 +2183,7 @@ const hubCtx = {
   closeOverlay: () => closeHub(), topOverlay, refocus: () => { if (inHub()) { ovFocus = startFocus(); focusOverlay(); } },
   unstuck: () => send({ t: 'unstuck' }), surrender, cine: () => cine('F4'), fullscreen: () => toggleFullscreen(), exitToTitle, openDebug: () => { sfx('click', 0.8); openDebug(); },
   leaveDev: () => { sfx('click', 0.8); send({ t: 'devmode', leave: true }); }, openInstall: () => openInstall(), openCreator: () => openCreator('edit'), crew: () => S.crewMsg,
+  bugReport: () => openHub('phone', 'bug', hubFromPause),
 };
 const loadHub = () => (hubP ||= import('./hub.js').then((m) => (hubMod = m.createHub(hubCtx))).catch((e) => { hubP = null; throw e; }));
 $('hub-back').onclick = () => hubBack();
@@ -2606,7 +2629,8 @@ $('s-code-use').onclick = () => {
 };
 // your name (the server checks it again, keeps it unique and says how it went: players.js rename)
 $('s-name-use').onclick = () => {
-  const r = cleanName($('s-name-in').value);
+  const st = S.launch && S.launch.acc && S.launch.acc.accountState ? S.launch.acc.accountState() : null;
+  const r = cleanName($('s-name-in').value, { owner: !!(st && st.role === 'owner') });
   if (r.err) { $('s-name-msg').textContent = r.err; return; }
   if (!S.playing) { $('s-name-msg').textContent = 'Play online first - then you can change it here.'; return; }
   send({ t: 'name', name: r.name });
@@ -3172,6 +3196,7 @@ function render(dt) {
   F.mark('overlays');   // (the HUD, the radar, the name tags: in the perf readout's page ms too)
   const fk = 1 - (performance.now() - (S.subFadeAt ?? -1e9)) / 600;
   if (fk > 0) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = `rgba(0,0,0,${(fk * 0.9).toFixed(3)})`; g.fillRect(0, 0, canvas.width, canvas.height); }
+  if (S.bugGrab) { const f = S.bugGrab; S.bugGrab = null; f(world2Shown ? [worldCv, canvas] : [canvas]); }   // (a bug report's screenshot: the frame as drawn, before the browser clears it - client/bugreport.js)
 }
 
 // ---- under the ground: the sewers and the cave (client/underground/view.js, loaded the first time you go down) ------------
@@ -3433,7 +3458,7 @@ function tickVisuals(F) {
   const { dt, now, view, sky, sub, fx } = F;
   S.boom.tick(F); if (!sub) S.camp.tick(F);   // (explosions' layers, wrecks in the air, hood riders; campfire embers)
   // walk-in shops: inside one, its roof fades away and the floor plan shows
-  if (!sub && !F.spec) F.insideB = interiorTick((DIR && DIR.roofAt()) || F.sp, F.roofArt);   // (a shot's camera inside a bar: its roof off - client/director.js)
+  if (!sub && !F.spec) { const ra = DIR ? DIR.roofAt() : null; F.insideB = interiorTick(ra === false ? null : ra || F.sp, F.roofArt); }   // (a shot's camera inside a bar: its roof off; any other shot: every roof on - client/director.js)
   // grass, crops and bushes: trampled underfoot and flattened by wheels; trees shaken by cars (render/flora)
   if (!sub && S.flora) { S.flora.sky = sky; S.flora.update(dt, now, S.lastPeds || [], S.lastVehs || [], fx, sky); }
   // vehicles lean and sink, smoke, burn, skid, leave wakes, sound sirens; people bleed, spark, splash, land
@@ -4064,7 +4089,7 @@ function walkInAt(x, y) {
 function interiorTick(sp, art) {
   // (a balloon over a shop doesn't open it, nor a train under it; cuffed - custody.js walks you - it does)
   const cuffed = S.ctrlKind === CTRL.RIDER && !!S.ents.get(S.myPedId)?.d?.cf;
-  const b = S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59)
+  const b = sp && S.playing && (S.ctrlKind !== CTRL.RIDER || cuffed) && !(S.me && S.me.ride) && !(S.pred && S.pred.air) ? walkInAt(sp.x, sp.y) : null;   // (nor a helicopter down on its roof: H59; sp null: a shot's camera keeps every roof on)
   S.roofFade ??= {};
   for (const id of S.map.walkIns || []) {
     const want = b && b.id === id ? 1 : 0;

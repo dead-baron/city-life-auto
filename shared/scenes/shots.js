@@ -13,7 +13,16 @@
 //   wide   a locked wide shot, the faintest drift
 // Shared by the server and the page: no Math at load (shared/dmath.js's rule) - the directions are given as unit [x, y].
 const SPAN = { push: 'slow push-in', pan: 'pan along', orbit: 'orbit', crane: 'crane up', wide: 'locked wide' };
-const TOD = (m) => (m < 330 || m >= 1290 ? 'night' : m < 480 ? 'dawn' : m < 660 ? 'morning' : m < 1020 ? 'day' : m < 1170 ? 'golden hour' : 'dusk');
+// The times of day a shot is set at (minutes after midnight), each where the sky (client/render/atmos.js KEYS) reads as it
+// says - the owner, 11-14 20:21: "They're all the same nighttime scene ... it's all at night". The list had 17 of its 46
+// shots at night, and its "dusk" (19:55 - 20:30) is the sky's blue hour into full night (KEYS: night 0.8 at 20:05, 1 by
+// 20:28): on screen those were night too. Dusk is now 19:32 - the sun just down, the sky still red (night 0.2).
+export const TIME = { dawn: 400, morning: 560, noon: 720, afternoon: 900, golden: 1110, dusk: 1172, night: 1380 };
+// the band a time of day reads as (the shot's note; test/world3scenes.test.js checks a kept shot is the time it says)
+export const TOD = (m) => (m < 340 || m >= 1200 ? 'night' : m < 430 ? 'dawn' : m < 660 ? 'morning' : m < 1020 ? 'day' : m < 1160 ? 'golden hour' : 'dusk');
+// people about (the city's own: they wander, stop, chat - npc.js), put round a shot's place so it isn't empty (the owner:
+// "there aren't interesting NPCs doing things")
+export const extras = (n = 6, spread = 260, arch = 'casual', id = 'extras', at = 'here') => ({ id, group: n, arch, at, spread });
 export function move(kind, { z = 0.9, s = 16, dir = [1, 0], r = 420, a0 = -0.6, a1 = 0.9, at = 'here' } = {}) {
   const [c, sn] = dir, P = (k) => ({ a: at, dx: c * r * k, dy: sn * r * k });
   if (kind === 'pan') return [{ at: 0, move: [P(-1), P(1)], dur: s, z }];
@@ -24,8 +33,8 @@ export function move(kind, { z = 0.9, s = 16, dir = [1, 0], r = 420, a0 = -0.6, 
 }
 // a place shot: no cast, the camera's move over a named place (q: the names to look it up by, the first found)
 const place = (id, g, n, q, kind, o = {}) => ({
-  id, n, g, note: `${SPAN[kind]} · ${o.weather && o.weather !== 'clear' ? `${o.weather}, ` : ''}${o.tl ? 'time-lapse' : TOD(o.t ?? 1125)}`,
-  len: (o.s || 16) + 1, linger: 0, place: { k: 'named', q, dx: o.dx, dy: o.dy }, anchors: ['here'], time: o.t ?? 1125, weather: o.weather || 'clear',
+  id, n, g, note: `${SPAN[kind]} · ${o.weather && o.weather !== 'clear' ? `${o.weather}, ` : ''}${o.tl ? 'time-lapse' : TOD(o.t ?? TIME.golden)}`,
+  len: (o.s || 16) + 1, linger: 0, place: { k: 'named', q, dx: o.dx, dy: o.dy, ...(o.open === false ? null : { open: 1 }) }, anchors: ['here'], time: o.t ?? TIME.golden, weather: o.weather || 'clear',
   ...(o.tl ? { tl: o.tl } : null), ...(o.bio ? { bio: 1 } : null),
   cast: o.cast || [], beats: o.beats || [{ do: 'wait', s: o.s || 16 }], cam: o.cam || move(kind, o),
 });
@@ -34,8 +43,8 @@ const again = (who, emote, t0, step, n) => Array.from({ length: n }, (_, i) => (
 
 export const SHOTS = [
   // ---- City & Neon at night ----
-  place('shotnightmarket', 'city', 'The Neon Strip night market', ['Lantern Lane Night Market', 'Neon Strip'], 'push', { t: 1380, z: 0.8, dir: [0, 1], r: 600, s: 18 }),
-  place('shotcasinos', 'city', 'Lucky Mesa\'s casinos lit up', ['The Golden Lotus', 'The Strip'], 'crane', { t: 1390, z: 0.85, r: 700, s: 18 }),
+  place('shotnightmarket', 'city', 'The Neon Strip night market', ['Lantern Lane Night Market', 'Neon Strip'], 'push', { t: TIME.night, z: 0.85, dir: [0, 1], r: 520, s: 18, cast: [extras(8, 220), extras(4, 160, 'socialite', 'night')] }),
+  place('shotcasinos', 'city', 'Lucky Mesa\'s casinos lit up', ['The Golden Lotus', 'The Strip'], 'crane', { t: TIME.night, z: 0.85, r: 700, s: 18, cast: [extras(6, 240, 'socialite'), extras(4, 200, 'casual', 'more')] }),
   place('shotpinkmile', 'city', 'The Pink Mile motels', ['Siren Square', 'The Pink Mile'], 'pan', { t: 1395, z: 0.9, r: 600, s: 18 }),
   place('shottrestle', 'city', 'The El over Trestle Street', ['The Trestle Spot', 'Union Square', 'Midtown'], 'pan', { t: 1215, z: 0.9, dir: [0, 1], r: 560, s: 18 }),
   place('shotlanterns', 'city', 'Lantern Lane\'s lanterns', ['Lantern Lane', 'Old Quarter'], 'orbit', { t: 1380, z: 1.05, r: 300, s: 18, a0: -0.4, a1: 1.1 }),
@@ -44,10 +53,10 @@ export const SHOTS = [
   place('showfalls', 'nature', 'Redwood Creek Falls', ['Redwood Creek Falls'], 'push', { t: 450, z: 1.14, r: 600, s: 18, dir: [0, 1] }),
   place('shotsilverfalls', 'nature', 'Silver Thread Falls', ['Silver Thread Falls', 'Silver Thread Lake'], 'crane', { t: 540, z: 1.0, r: 600, s: 18 }),
   place('shottarn', 'nature', 'Summit Tarn and its falls at dawn', ['Summit Tarn Falls', 'Summit Tarn'], 'orbit', { t: 400, z: 0.9, r: 380, s: 18 }),
-  place('shotoasis', 'nature', 'Canyon Oasis at golden hour', ['Canyon Oasis'], 'pan', { t: 1125, z: 0.95, r: 520, s: 18 }),
+  place('shotoasis', 'nature', 'Canyon Oasis at golden hour', ['Canyon Oasis'], 'pan', { t: TIME.golden, z: 0.95, r: 520, s: 18, cast: [extras(4, 220, 'hiker')] }),
   place('shotlupines', 'nature', 'Wildflowers in Lupine Meadow', ['Lupine Meadow'], 'pan', { t: 1110, z: 1.1, r: 420, s: 16 }),
   place('shotjunglefalls', 'nature', 'Coral Cay\'s jungle falls', ['Coral Cay Falls'], 'push', { t: 600, z: 1.1, r: 480, s: 16, dir: [0, 1] }),
-  place('shotgreens', 'nature', 'Lakeside Greens', ['Lakeside Greens'], 'pan', { t: 930, z: 0.85, r: 600, s: 16, dir: [0, 1] }),
+  place('shotgreens', 'nature', 'Lakeside Greens in the afternoon', ['Lakeside Greens'], 'pan', { t: TIME.afternoon, z: 0.9, r: 520, s: 16, dir: [0, 1], cast: [extras(5, 260, 'athlete')] }),
   {   // a pickup straight across a ripe wheat field: the crop laid flat behind it (render/fx.js tracks), the camera alongside
     id: 'shotwheat', n: 'Wheat field: a pickup cuts a swath', g: 'nature', note: 'tracking alongside · golden hour', len: 18, linger: 1,
     place: { k: 'farm', near: 'Willow Valley' }, anchors: ['p0', 'p1', 'p2', 'p3', 'in', 'field'], time: 1120, weather: 'clear',
@@ -63,9 +72,9 @@ export const SHOTS = [
     cam: [{ at: 0, follow: 'horse', z: 1.35, lead: 0.3, s: 70 }, { at: 4, follow: 'horse', z: 1.0, lead: 0.7, s: 120, ease: 3 }],
   },
   // ---- Coast & Water ----
-  place('showpier', 'coast', 'Sunset Beach Pier at dusk', ['Sunset Beach Pier', 'Sunset Beach'], 'pan', { t: 1205, z: 1.02, r: 520, s: 16 }),
+  place('showpier', 'coast', 'Sunset Beach Pier at dusk', ['Sunset Beach Pier', 'Sunset Beach'], 'pan', { t: TIME.dusk, z: 1.02, r: 520, s: 16, cast: [extras(7, 240)] }),
   place('showlighthouse', 'coast', 'Egret Point Light', ['Egret Point Light', 'Egret Point'], 'orbit', { t: 1125, z: 1.02, r: 360, s: 16 }),   // (World v3 has no Lighthouse Rock: client/showcase.js)
-  place('shotmarina', 'coast', 'The Harbor marina', ['Harbor Marina', 'Ferry Square'], 'pan', { t: 1130, z: 0.95, r: 520, s: 18 }),
+  place('shotmarina', 'coast', 'The Harbor marina at noon', ['Harbor Marina', 'Ferry Square'], 'pan', { t: TIME.noon, z: 0.95, r: 520, s: 18, cast: [extras(7, 240)] }),
   place('shotcoralcay', 'coast', 'Coral Cay lagoon', ['Tiki Point', 'Coral Cay'], 'crane', { t: 930, z: 0.95, r: 600, s: 18 }),
   place('shotmacaw', 'coast', 'Macaw Cove', ['Macaw Cove'], 'push', { t: 560, z: 1.0, r: 520, s: 16, dir: [0, 1] }),
   place('shotgull', 'coast', 'Gull Harbor at dawn', ['Quay Street', 'Gull Harbor'], 'pan', { t: 400, z: 0.95, r: 480, s: 16 }),
@@ -78,18 +87,18 @@ export const SHOTS = [
   },
   // ---- People & Life ----
   place('shotdance', 'people', 'Dancing on Piazza Vecchia', ['Piazza Vecchia', 'Old Town'], 'orbit', {
-    t: 1215, z: 1.35, r: 170, s: 20, a0: 0.3, a1: 1.9,
-    cast: [{ id: 'crowd', group: 7, arch: 'socialite', at: 'here', spread: 70, post: true }, { id: 'band', arch: 'hustler', at: { a: 'here', dy: -95 }, a: 1.5708, post: true }],
+    t: TIME.noon, z: 1.25, r: 170, s: 20, a0: 0.3, a1: 1.9,
+    cast: [extras(6, 260), { id: 'crowd', group: 7, arch: 'socialite', at: 'here', spread: 70, post: true }, { id: 'band', arch: 'hustler', at: { a: 'here', dy: -95 }, a: 1.5708, post: true }],
     beats: [{ at: 0.2, who: 'crowd', do: 'dance', s: 19 }, ...again('band', 'guitar', 0.4, 3.2, 6), { do: 'wait', s: 20 }],
   }),
   place('shotboardwalk', 'people', 'The boardwalk crowd at sunset', ['Sunset Beach Pier', 'Sunset Beach'], 'push', {
-    t: 1170, z: 1.35, r: 260, s: 18, dir: [0, 1],
-    cast: [{ id: 'busker', arch: 'casual', at: { a: 'here', dy: -30 }, a: 1.5708, post: true }, { id: 'fans', group: 6, arch: 'casual', at: { a: 'here', dy: 40 }, spread: 55, post: true }],
+    t: TIME.golden, z: 1.3, r: 260, s: 18, dir: [0, 1],
+    cast: [extras(5, 240), { id: 'busker', arch: 'casual', at: { a: 'here', dy: -30 }, a: 1.5708, post: true }, { id: 'fans', group: 6, arch: 'casual', at: { a: 'here', dy: 40 }, spread: 55, post: true }],
     beats: [...again('busker', 'guitar', 0.3, 3.1, 6), ...again('fans.0', 'clap', 1, 3.5, 5), ...again('fans.1', 'cheer', 2, 4, 4), ...again('fans.2', 'wave', 1.5, 4, 4), { at: 5, who: 'fans.3', do: 'dance', s: 12 }, ...again('fans.4', 'love', 3, 5, 3), { do: 'wait', s: 18 }],
   }),
   place('shotworkout', 'people', 'Morning workout in Greenfield Park', ['Greenfield Park'], 'crane', {
-    t: 560, z: 1.1, r: 420, s: 18,
-    cast: [{ id: 'gym', group: 6, arch: 'athlete', at: 'here', spread: 80, post: true }],
+    t: TIME.morning, z: 1.1, r: 420, s: 18,
+    cast: [extras(4, 260, 'casual'), { id: 'gym', group: 6, arch: 'athlete', at: 'here', spread: 80, post: true }],
     beats: [...again('gym.0', 'pushups', 0.2, 4.2, 4), ...again('gym.1', 'stretch', 0.6, 3.4, 5), ...again('gym.2', 'flex', 1, 3.4, 5), ...again('gym.3', 'pushups', 1.5, 4.2, 4), ...again('gym.4', 'stretch', 0.3, 3.4, 5), ...again('gym.5', 'cheer', 2, 4, 4), { do: 'wait', s: 18 }],
   }),
   place('shotpicnic', 'people', 'Friends by Kestrel Lake', ['Kestrel Beach', 'Kestrel Lake'], 'orbit', {
@@ -98,7 +107,7 @@ export const SHOTS = [
     beats: [{ at: 0.2, who: 'pals.0', do: 'emote', emote: 'sit' }, { at: 0.3, who: 'pals.1', do: 'emote', emote: 'sit' }, { at: 0.4, who: 'pals.2', do: 'emote', emote: 'lie' }, ...again('pals.3', 'laugh', 1, 3.5, 4), ...again('pals.4', 'guitar', 0.5, 3.2, 5), ...again('pals.0', 'laugh', 4, 5, 3), { do: 'wait', s: 18 }],
   }),
   {   // the bar room with its roof off (the camera inside: client/director.js roofAt) - the table, the regulars round it
-    id: 'shotpool', n: 'Pool night at the Rusty Spur', g: 'people', note: 'slow push-in · night', len: 18, linger: 0,
+    id: 'shotpool', n: 'Pool night at the Rusty Spur', g: 'people', note: 'slow push-in · night', len: 18, linger: 0, interior: 1,   // (its camera inside: the bar's roof lifted - client/director.js roofAt)
     place: { k: 'roadhouse' }, anchors: ['door', 'doorIn', 'bar', 'lot', 'road', 'approach', 'porch', 'town', 'table'], time: 1290, weather: 'clear',
     cast: [{ id: 'regs', group: 4, arch: 'biker', role: 'gang', at: { a: 'table', dy: 46 }, spread: 70, post: true }],
     beats: [...again('regs.0', 'laugh', 1, 4.5, 3), ...again('regs.1', 'cheer', 2.5, 5, 3), ...again('regs.2', 'point', 3, 5, 3), ...again('regs.3', 'clap', 4, 5, 3), { do: 'wait', s: 17 }],
@@ -121,28 +130,28 @@ export const SHOTS = [
   },
   {   // a touring bike through the peaks at golden hour, the camera riding alongside
     id: 'shotpeaks', n: 'Motorcycle through Granite Peaks', g: 'vehicles', note: 'tracking alongside · golden hour', len: 18, linger: 0,
-    place: { k: 'road', len: 2200, near: 'Granite Peaks' }, anchors: ['start', 'end', 'mid'], time: 1125, weather: 'clear',
+    place: { k: 'road', len: 2200, near: 'Granite Peaks' }, anchors: ['start', 'end', 'mid'], time: TIME.golden, weather: 'clear',
     cast: [{ id: 'bike', veh: 'tourer', at: { a: 'start', s: 10 } }, { id: 'rider', arch: 'hiker', in: 'bike' }],
     beats: [{ id: 'go', at: 0.4, who: 'bike', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.45, max: 12 }, { who: 'bike', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.45, max: 10 }, { at: 0, do: 'wait', s: 17 }],
     cam: [{ at: 0, follow: 'bike', z: 1.3, lead: 0.2, s: 60 }, { at: 3, follow: 'bike', z: 1.05, lead: 0.6, s: 110, ease: 2.5 }, { at: 11, follow: 'bike', z: 0.85, lead: 0.9, ease: 3 }],
   },
   {   // a big rig rolling through Midtown at dusk, the El overhead
     id: 'shotsemi', n: 'A big rig through Midtown', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
-    place: { k: 'road', len: 2400, near: 'Midtown' }, anchors: ['start', 'end', 'mid'], time: 1200, weather: 'clear',
+    place: { k: 'road', len: 2400, near: 'Midtown', wide: 1 }, anchors: ['start', 'end', 'mid'], time: TIME.dusk, weather: 'clear',
     cast: [{ id: 'rig', veh: 'semi', at: { a: 'start', s: 10 }, paint: 6 }, { id: 'driver', arch: 'construction', in: 'rig' }],
     beats: [{ id: 'go', at: 0.4, who: 'rig', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.55, max: 12 }, { who: 'rig', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.5, max: 10 }, { at: 0, do: 'wait', s: 15 }],
     cam: [{ at: 0, follow: 'rig', z: 1.2, lead: 0.3, s: -90 }, { at: 4, follow: 'rig', z: 0.95, lead: 0.8, s: -50, ease: 3 }],
   },
   {   // a convertible down the coast road at dusk
     id: 'shotcruise', n: 'A convertible down the coast road', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
-    place: { k: 'road', len: 2000, near: 'Bayside Heights' }, anchors: ['start', 'end', 'mid'], time: 1195, weather: 'clear',
+    place: { k: 'road', len: 2000, near: 'Bayside Heights', wide: 1 }, anchors: ['start', 'end', 'mid'], time: TIME.dusk, weather: 'clear',
     cast: [{ id: 'car', veh: 'convertible', at: { a: 'start', s: 10 }, paint: 2 }, { id: 'driver', arch: 'socialite', in: 'car' }],
     beats: [{ id: 'go', at: 0.4, who: 'car', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.5, max: 12 }, { who: 'car', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.5, max: 10 }, { at: 0, do: 'wait', s: 15 }],
     cam: [{ at: 0, follow: 'car', z: 1.25, lead: 0.2, s: 70 }, { at: 3, follow: 'car', z: 1.0, lead: 0.7, s: 100, ease: 2.5 }],
   },
   place('shotballoons', 'vehicles', 'Balloons over Dry Creek at dawn', ['Dry Creek Balloon Field', 'Dry Creek'], 'crane', { t: 450, z: 0.95, r: 600, s: 18 }),
   // ---- Weather & Time-lapse ----
-  place('shotrain', 'weather', 'Rain on Midtown at night', ['The Trestle Spot', 'Union Square', 'Midtown'], 'push', { t: 1380, weather: 'rain', z: 1.0, r: 480, s: 18 }),
+  place('shotrain', 'weather', 'Rain on Midtown', ['The Trestle Spot', 'Union Square', 'Midtown'], 'push', { t: 960, weather: 'rain', z: 1.0, r: 480, s: 18, cast: [extras(8, 240)] }),
   place('shotstorm', 'weather', 'A thunderstorm over Downtown', ['Greenfield Park', 'Downtown'], 'crane', { t: 1300, weather: 'storm', z: 0.95, r: 700, s: 20 }),
   place('shotfog', 'weather', 'Fog over Redwood Cove', ['Redwood Cove'], 'pan', { t: 450, weather: 'fog', z: 0.85, r: 600, s: 18 }),
   place('shotharborlapse', 'weather', 'The Harbor, dusk into night', ['Ferry Square', 'Harbor Marina'], 'pan', { tl: [1140, 1420], z: 0.85, r: 520, s: 24 }),

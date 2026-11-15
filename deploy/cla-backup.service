@@ -1,0 +1,11 @@
+# The nightly backup of the game server's data (see deploy/backup.sh). Triggered by cla-backup.timer.
+[Unit]
+Description=City Life Auto nightly data backup
+
+[Service]
+Type=oneshot
+User=ubuntu
+Environment=CLA_DATA_DIR=/home/ubuntu/cla-data
+Nice=10
+IOSchedulingClass=idle
+ExecStart=/bin/bash /home/ubuntu/city-life-auto/deploy/backup.sh

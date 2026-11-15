@@ -8,6 +8,7 @@
 // roof is over them otherwise), at the art's own scale: a card is 3 x 4 px.
 import { floorByKey } from '../shared/cardfloors.js';
 import { TILE } from '../shared/constants.js';
+import { soundEvent } from './audio.js';
 
 const WHEEL = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
@@ -18,6 +19,32 @@ const TAU = 6.2832;
 
 export class CasinoView {
   constructor(S) { this.S = S; this.fl = new Map(); }
+  // the deal's sounds, on its timeline (client/sound/events.js cflick / crou / creel): heard while its floor is drawn -
+  // you're in the room - and only when their moment comes (a late one, a frame or two, still; a stale one dropped)
+  cue(f, t, ev) { const q = (f.q ||= []); q.push([t, ev]); if (q.length > 160) q.splice(0, q.length - 160); }
+  cues(f, now) {
+    if (!f.q || !f.q.length) return;
+    const keep = [];
+    for (const c of f.q) { if (c[0] > now) keep.push(c); else if (now - c[0] < 0.4) soundEvent(c[1], this.S); }
+    f.q = keep;
+  }
+  sounds(f, ev, P, now) {
+    const T = ev.g === 'slot' ? null : f.F.tables[ev.i];
+    if (ev.g === 'slot') {
+      const M = f.F.slots[ev.i];
+      if (!M) return;
+      const at = { x: M.sx, y: M.sy };
+      this.cue(f, now, { e: 'creel', ...at, s: 1.8 });
+      for (let k = 0; k < 3; k++) this.cue(f, now + 0.9 + k * 0.45, { e: 'creel', k: 'stop', ...at });
+      if (ev.x) this.cue(f, now + 2, { e: 'creel', k: 'win', ...at });
+      return;
+    }
+    if (!T || !P) return;
+    if (ev.g === 'rou') { const W = T.wheel; this.cue(f, P.t0 + LAND - 1.2, { e: 'crou', x: W.x, y: W.y, s: 1.15 }); this.cue(f, P.t0 + LAND, { e: 'crou', k: 1, x: W.x, y: W.y }); return; }
+    const from = T.dealer || T.dc;
+    for (const c of P.cards) { const t = P.t0 + c.at * DEAL; if (t >= now - 0.05) this.cue(f, t, { e: 'cflick', x: from.x, y: from.y }); }
+    if (P.flip !== undefined && P.t0 + P.flip * DEAL >= now - 0.05) this.cue(f, P.t0 + P.flip * DEAL, { e: 'cflick', x: from.x, y: from.y });
+  }
   floor(k) {
     let f = this.fl.get(k);
     if (!f) { const F = floorByKey(this.S.map, k, TILE); if (!F) return null; this.fl.set(k, (f = { F, t: F.tables.map(() => null), sl: new Map() })); }
@@ -31,9 +58,10 @@ export class CasinoView {
       for (const [j, r] of ev.sl || []) f.sl.set(j, { r, t0: now - 60, x: 0 });
       return;
     }
-    if (ev.g === 'slot') { f.sl.set(ev.i, { r: ev.r, t0: now, x: ev.x }); return; }
+    if (ev.g === 'slot') { f.sl.set(ev.i, { r: ev.r, t0: now, x: ev.x }); this.sounds(f, ev, null, now); return; }
     if (ev.i >= f.t.length) return;
     f.t[ev.i] = this.play(ev, now, f.t[ev.i]);
+    this.sounds(f, ev, f.t[ev.i], now);
   }
   // a deal's timeline: what lands where and when
   play(d, now, old) {
@@ -77,7 +105,8 @@ export class CasinoView {
     if (!b) return;
     const now = performance.now() / 1000;
     for (const f of this.fl.values()) {
-      if (this.S.map.buildings[f.F.b] !== b) continue;
+      if (this.S.map.buildings[f.F.b] !== b) { if (f.q) f.q.length = 0; continue; }
+      this.cues(f, now);
       g.save();
       f.F.tables.forEach((T, i) => { const P = f.t[i]; if (T.g === 'rou') this.wheel(g, T, P, now); else if (P) this.hand(g, T, P, now); });
       for (const [j, s] of f.sl) { const M = f.F.slots[j]; if (M) this.reels(g, M, s, now); }

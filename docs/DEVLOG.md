@@ -23961,6 +23961,73 @@ The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner 
 is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
 right a pale steel, the ink outline round it - no blue hollow and stripe.
 
+## 2026-11-14 - Polish from the owner's phone: names never half hidden, no plants on the drive, blades that agree, bigger map icons, ATMs in the walls, the casino floors and their sounds, a clear "come here"
+The owner's notes from his phone (three screenshots) and two from the lead. Each fixed as a class, with a placement lint
+row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
+- **A building's name half hidden** (Westside Clinic's WESTSIDE CLINIC half behind its EMERGENCY sign). Every clinic and
+  hospital stacked its EMERGENCY plaque (v 52) under its name (v 66) and the boards are 22 px tall. Now the EMERGENCY board
+  sits just over the doors, clear of the ambulance bay's canopy (v 58), and a new pass, client/art2/buildings.js
+  `unstackSigns`, lifts any plaque that overlaps one lower down clear above it on every front (a blade sign over a plaque
+  goes to the wall's other end, or goes). What stands in front was the bigger class: in the small towns every shop with a
+  false front over its porch had its name behind the boards (the lint found 25: Quick Mart, the Timber Bend lodge's four
+  shops, Sandpiper Bay's row...) - each shop's sign now goes up onto its stretch of the false front (statics.js
+  `falseFrontSigns`); a porte-cochere carries the casino's name on its roof's front edge (The Golden Lotus, Mesa Grande:
+  `coverFronts`), and a plaque under a canopy's roof line is lifted over it. Lint row `nameCovered`: boards over each other
+  on one front, and the drawn pixels of anything standing in front over a name (the sign found by drawing the front).
+- **Plants on the drive** (a house's front path with shrubs and tall grass over it). The yards' beds (statics.js
+  addYards) took a driveway's paving (LOT) for lawn and kept clear of a door and a garage door only - not of the drive,
+  the path or where the car stands; and the map's own yard plants were scattered without a look at the path. Now a bed
+  only goes on lawn, its spread and all, clear of the car's spot and the drive's parking; and the build takes the map's
+  plants off every house's path, drive and door step (shared/world3-tidy.js `homePaths3`, `clearHomePaths3`, in the done
+  hook after tidyProps3). Lint row `plantOnPath` (the same strips: from the door and from the car's spot across the lawn
+  to the street).
+- **A HOTEL blade over a paint shop.** The Spray & Go bays (map.js buildPaintShops) are carved into a building's front,
+  and its section kept the building archetype's blade (a hotel's HOTEL); the night rows picked their blade from a list
+  that had MOTEL, HOTEL and DINER over arcades and liquor stores. A bay now drops the blade and its neon; a night row's
+  blade and upper neon are its street floor's words (NIGHT_BLADE, NIGHT_NEON: a bar's, the arcade's, the liquor
+  store's); Lucky Mesa's old casinos say CASINO; a supper club in a theatre's building LIVE, not CINEMA. Lint row
+  `bladeBiz`: a blade's words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS).
+- **The places' icons had shrunk**: the touch minimap draws its 168 px canvas into 104 CSS px, so its 10 px icons were a
+  6 px speck. They are sized on screen now - a dark disc, the glyph in its colour, a thin ring of it, 13 CSS px across
+  (18 on the big map's radar); the big map's plates 2 px bigger (20 / 24 / 26 by zoom); the badges over doors 16 -> 19 px
+  (still under the lintel: test/storeicons.test.js). Nothing new on the HUD.
+- **ATMs on their own on the pavement.** The kiosks (an ATM put at the back edge of a pavement where no building front
+  was found when the shops were laid out, and by stations and gas stations) are moved, last thing in the build, into the
+  nearest front wall in the same district within 32 tiles that a wall ATM may use - a shop's, a block of flats' street
+  wall, never a house's (shared/world3-shops.js `seatAtms3`: map.js's rules - the wall behind it whole, pavement under
+  it, room to stand, clear of a door, another ATM, a prop, a pump), in place, so no prop's or place's number moves; the
+  banks' "painted" ATMs (a map point with no machine: art v2 paints none) get a machine in the nearest wall. A machine
+  moves only where every street it alone had within SHOP_REACH.cash stays in reach (a few tiles to spare), so every
+  district keeps its cash of its own and in reach (world3server.test.js). 52 moved, 7 given a machine; 53 left: the
+  kiosks of the districts that are all houses or open ground (West Hills' and Pine Hills' streets of houses, the
+  villages' greens, the beaches) or whose streets would fall out of reach - the lint lists them (LINT_ALLOW); a shop front
+  there would take one in. Lint row `atmStray`: an ATM neither in a wall nor inside.
+  (The pass and the paths' pass cost about 20 ms and 30 ms of the build.)
+- **The casino floor that emptied** (the Golden Lotus in a live capture). Three holes, each closed: a round fills at
+  most ACT_MAX groups round a player and the spots came in no order, so on the Strip the casinos either side, a pool
+  table, a busker took the places before the one you were walking into, and a floor never fills once you're in the room;
+  the regulars are now filled first for a floor within 640 px of you, past ACT_MAX, its kind's cap and the day's chance
+  (server/systems/activities.js FLOOR_FIRST). The NPC density pass despawned anyone over 1500 px from a player while the
+  floor's group lives to 1600 - the far tables' dealers went one by one and those tables never dealt again; an NPC whose
+  activity group is still on is left to it now (npc.js). And a page was told of the deals only while the floor's middle
+  was in its view (pooltables.js follow): a phone's view at one end of a grand floor missed them all - now any of the
+  room in view will do.
+- **The casino games' sounds** (client/sound/events.js `cdl` was data only): the page plays them on the deal's own
+  timeline as client/casinoview.js lays it out, heard while you're in the room - a card flicked onto the felt for each
+  card dealt and the hole card turned, the roulette ball's rattle as it drops in and its click into the pocket, a slot's
+  reels ticking round and each one stopping, a small chime on a win. New one-shot recipes (cardflick, ballrattle,
+  ballclick, reeltick, reelstop, slotwin) in the ambience category, measured and trimmed (tools/sound/bench.py --levels,
+  the others' trims kept as they were).
+- **"Come here"** (the owner, 19:27: "a rope? Or a finger?"): the balloon redrawn - a fist with its index finger up and
+  crooked toward you, two motion ticks, the icon tilting in twice as it holds; the pose an arm out toward the camera,
+  palm up, the fingers curling in and opening twice a loop (client/art2/poses.js embeckon), not a pull back to the chest.
+- The new lint rows on today's world before -> after: nameCovered 41 -> 1 (a cash machine's top a few px over a self
+  storage's board), bladeBiz 10 -> 0, plantOnPath 638 -> 0, atmStray 111 -> 53. The world
+  and the art re-key (stamped).
+- The Camera's way-out test (test/wayout.test.js) follows the shot list's rework: the tour is a follow kind, gated with
+  the follow scenes. And the Camera panel has its own close X in its header (the owner, 20:24: "Camera mode doesn't have
+  an X button to close it"): the kit's close, on every device, handing the camera back; Esc and B as before.
+
 ## 2026-11-14 - The touch prompt in the clear, no button on it, and room between the buttons
 The owner, on his phone upright at a house's door: "The UI button says LOOK when the popup says ACT, and it also looks
 like you're supposed to press the popup because it has a button in it, which is misleading if you're supposed to press the
@@ -24069,6 +24136,78 @@ test/wayout.test.js checks it (and its stale tour expectation is updated to the 
 The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
 starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
 
+## 2026-11-14 - The shot list, fixed at the root: each shot its own hour, roofs kept on, open ground, races that race, chases in view; Save this view
+The owner (20:21), after trying the shot list: "The cinematic shots really aren't good. They're all the same nighttime
+scene. It's toggling between interior and exterior shots. It's showing not interesting areas, usually tops of buildings or
+sides of buildings; there aren't interesting NPCs doing things; it's all at night and similar camera moves. Street racing:
+the cars just drive in a cluster then stop at stop lights ... The car chase scene just had a car driving in an alley but you
+couldn't see the alley because it was behind buildings, and the car ended up crashing into something." The plan agreed
+(docs/DECISIONS.md "Director and content"): fix the fundamentals, add "Save this view" so he scouts, then ~10 hero shots
+refined with him.
+
+### What was wrong
+- **Night**: 17 of the 46 shots were set at night - the whole City section, every action scene but the crop duster - and
+  the list's "dusk" (19:55 - 20:30) is this sky's blue hour into full night (render/atmos.js KEYS: night 0.8 at 20:05, 1
+  by 20:28), so those read as night too. And a shot's hour was put on the screen once, at its start: anything after that
+  (the panel's Live, a reset) gave the screen back the world's own hour. Now the times are bands that read as they say
+  (shared/scenes/shots.js TIME: noon 12:00, golden hour 18:30, dusk 19:32 - the sun just down, the sky still red - night
+  23:00) and the page puts the shot's time and weather on every frame it plays (client/director.js shotLook), unless he
+  picks a time or a weather himself during it. The server fills the city round the shot's camera with its own hour's crowd
+  (director.js shotNight -> npc.js: a noon shot on a server at night gets the day's people, not the night's few).
+- **Interior / exterior flicker**: a shot's camera lifted every walk-in's roof as it passed over it (main.js interiorTick
+  took the shot's camera for "where you are": DIR.roofAt), and the art rebaked those chunks cut away and back. A shot now
+  keeps every roof drawn (roofAt false) - only an interior shot (sc.interior: the pool shot's bar room) lifts its roof.
+- **Roofs in frame**: a place shot's camera centred on the place's middle - often a building. Its anchor is now nudged
+  (14 tiles at most) to where the camera's whole move frames the most open ground - streets, plazas, parks, water - its
+  middle never on a roof or the walls drawn up over the street (director.js openFrame, frameOpen).
+- **Nobody about**: place shots had no cast at all. Each kept one has extras - the city's own people put round the place
+  (shots.js extras): they wander, stop, chat.
+- **The street race** was four cars told to drive straight down a road at nearly the same speed, braking for whatever was
+  in their lane - the queue at the next red light. Now (server/systems/racers.js) racers race: through the lights, each at
+  its own pace (the back row quicker: overtakes), looking down the whole road - both directions' lanes - for the line with
+  the most room ahead and swinging out round the traffic (lane changes, near-misses), the corners cut; anyone on foot in
+  the way dives clear (npc.js diveFrom, the dive roll); a car they shave past brakes and honks (traffic.js startle). The
+  race puts traffic along its way (the city's own from then) and people crossing at its first junction; the camera holds
+  the junction as the pack comes through, then rides with them. The way: straight on down the street (a turn only where it
+  ends), else the wide streets' way (wideRoute: never an alley, a dirt track, a ramp or a deck while a wide way exists);
+  at its end it goes on - never into the end of a road at speed.
+- **The chase**: its getaway drove the road net's shortest way - alleys behind the blocks included - and braked for
+  whatever was in its lane until something hit it. It's a racer now, on a wide street (place.wide: avenues, boulevards,
+  arterials), in the afternoon, round whatever's in its way, a new way when it's boxed in.
+
+### The shot list now
+- **Kept** (shared/scenes/index.js KEPT): the shots that pass the sanity check on World v3 (tools/shotcheck.mjs,
+  test/world3scenes.test.js) - over open ground at street level with nothing roofed in the middle of the frame, the subject
+  in frame, people about, the time its note says. The panel's sections and Play all are these; the rest are folded under
+  **More (unreviewed)** (each still one tap, or ▶ for all of them). Kept (14): the Harbor marina at noon, dancing on Piazza
+  Vecchia (noon), a morning workout in Greenfield Park, Lakeside Greens in the afternoon, the police chase (afternoon), rain
+  on Midtown, Canyon Oasis, the boardwalk crowd and the motorcycle through Granite Peaks (golden hour), Sunset Beach Pier and
+  the convertible down the coast road and the street race (dusk), the Neon Strip night market and Lucky Mesa's casinos
+  (night). The check's word on the rest (`node tools/shotcheck.mjs`): most nature and coast shots have nobody about (no
+  extras yet - the owner's call which want them), the shootout and the tanker frame mostly roofs, the crop duster and the
+  wheat field lose their subject from the frame, the plane finds no runway on World v3.
+- **Save this view** (the Camera panel; the owner's and admins' - anyone on a private dev server): where the camera is, its
+  zoom, the time of day and weather on the screen, a name and a note (optional) - kept on the server with the world's own
+  state (server/systems/views.js: store.kept.views, saved with the profiles). ★ Save this view sits on the shot list's
+  first row (one tap on a phone; rename later), the name and note fields under **Your saved views**, where each is listed
+  with its time and weather: tap it to go there (the free camera, at its zoom, time and weather), ▶ to play it as a shot
+  (the camera there, pushing in slowly for 16 s at its time and weather: shared/scenes viewScene), ✎ rename, ✕ delete.
+- A shot's hold (black till the art at its place is in) also waits out the page's "Loading the area" veil after the
+  camera's jump (client/warmup.js warming): a shot no longer starts on the loading screen.
+- The Guide's Camera entry says so.
+
+Tests: test/directorcam.test.js (a shot's own time every frame - held, after 'go', after the clock's reset, into the
+next shot, a time-lapse running on; roofs kept on in a shot, lifted in the interior one; saved views: what's saved, go to,
+play), test/racers.test.js (new: the race through a junction red for them, with traffic - every racer through at speed,
+none stopped, overtakes, lines changed, someone diving clear, a honk; the chase's getaway on wide streets only and never
+stopped or wrecked; the way straight on, never back round the block), test/views.test.js (new: saved, cleaned, renamed,
+deleted, at most DIRECTOR.views, only the owner's and admins'; played as a shot at its time and weather), test/scenes.test.js, test/world3scenes.test.js (the
+kept shots' sanity check on World v3).
+Proof (World v3 on a dev server, the world's own clock set to 23:00, headless Chromium - SwiftShader, so the art comes in
+late and the frames are seconds apart; the session's scratchpad `director4/owner/`): the noon, golden-hour and night shots
+(first and a later frame each), the street race on the avenue and through a junction (cross traffic, a walker diving
+clear), and Save this view on a phone with two views saved. Budgets: perf test passes; the world's and the art's hashes
+unchanged.
 ## 2026-11-14 - The title's saves note clear of the Online frame
 The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
@@ -24149,3 +24288,164 @@ box was 24 s with lights and 24 s without, and the longest stuck at the head of 
 Tests: test/gridlock.test.js (World v3, heavy: the two four-ways ten minutes each, nothing standing in the box or stuck
 at the head of a queue 30 s, 18 a minute and more across; the owner's knot clear in 22 s), test/trafficbox.test.js (the
 knot on today's city). docs/DECISIONS.md: no blocking the box.
+## 2026-11-14 - Open up the blocks: the big plain footprints become buildings with alleys and courtyards; no big canopies over the doors
+The owner (11-14 20:24, his screenshot: one huge flat grey roof with a row of AC units, the street squeezed above it):
+"There are still so many huge buildings that take up so much space and don't add anything interesting and cover so much
+of the street view. We don't see very many cool alleys, or a lot of streets are covered because of unnecessarily huge
+buildings around the world." The earlier passes cut the plain slivers (11-06), split the big towers (11-07) and capped
+the heights over the street (11-12); none touched a big FOOTPRINT of a low or mid-rise building. And (20:33, the Golden
+Lotus's porte-cochere over its entrance): "these overhangs over building entrances ... just block the entrance and take
+away too much from the front of buildings ... let's get rid of these kinds of overhangs".
+- The survey (`node tools/bigroofs.mjs`; the measure shared/world3-openblocks.js `surveyOpen`): every building footprint
+  that is BIG - over 360 tiles of roof (19 x 19: about a seventh of a 1080p view, the old plain cap's 400 a little lower),
+  or a street front over 26 tiles (more than half the view's width as one wall) or a depth over 22 (no way through for
+  more than a screen's height), either with over 220 tiles of roof - and why it stays one building (`keepWhole`): a
+  walk-in, a trade, a place of its own (a station, a casino, a hospital, the police, a school: the POIs), a landmark, a
+  split tower's own tower and wings, a set piece with its own roof kit, neon or lights, a town's own look, a generator's
+  designed lot (the shop rows, the works), a warehouse, a factory, a church, a civic hall, a hotel, a mall, a district
+  built of big ones (the yards, the harbor, the airport, the prison). Before: 340 big footprints (211,231 tiles of
+  roof), 77 of them with no reason to be one building (63,949 tiles): Downtown 37 (43,285 tiles), Westport Center 7 (6,508), Midtown 9 (4,289), the Arts District 11 (3,714), the Old Quarter 7 (2,735), Southside 3 (2,430), the Civic Center 2 (598), Copper Gulch 1 (390). The worst: Civic Parking 65 x 61,
+  Westside Parking 50 x 55 (Downtown's car parks, one gravel roof each - the owner's grey roof with its row of six AC
+  units), the split towers' back blocks (Harborview Tower Court 65 x 37, Ellison Building Court 48 x 47...), Greenfield
+  Medical Building 48 x 36, Maple Hall 50 x 34, Bayview House 38 x 44, Midtown's 12 x 55 slivers. After: 264 big footprints (147,552 tiles of roof), every one with its reason; none without.
+- The pass (shared/world3-openblocks.js `openBlocks3`, World v3's last building pass, after the towers): each one in its
+  own footprint -
+  - columns 8-15 tiles along its street front with ALLEYS of 3-4 tiles between them, paved through from the front street
+    to the back (an alley never cuts the building's own front - its door, places, signs, home - nor opens behind an ATM
+    or a sign on the wall);
+  - deeper than 22 tiles: a front row 10-14 deep, a back lane of 5-7 behind it (wide enough to be seen: the row in front
+    of a lane stands 2-3 storeys, so its roof, drawn up over the lane, leaves the lane and the backs across it in view),
+    back rows of 10-14 with passages of 4-5; the rows come from the footprint's top and depth alone, so neighbours of one
+    depth (the old fill's slivers side by side) are cut at the same rows and their passages run through;
+  - the building keeps its front cell over its door: its id, name, art, sign, delivery stop and home where they were -
+    no home moves, so no WORLD_VERSION bump, nobody's flat bought back; the other cells are new plain buildings at the
+    end of the list (after the towers' parts: no other building's id, look, POI or home moves) of the district's own
+    kinds side by side (walk-ups, shop rows, old rows, townhouses, condos, a night row...), each its own height
+    (`b.fl`, which the art keeps: 2-5 storeys, never two alike side by side), their shopfronts and doors on the street; a
+    cell on a lane is a back now and then (b.back: its back door with a bare bulb, a drainpipe, a vent steaming, AC and
+    meter boxes, tags by the district's grit, a fire escape up a tall one - shared/alleys.js) or a small shop onto it;
+  - some cells left open: courtyards (paving, a tree, benches, planters, string lights, a wall lamp) and back lots (a
+    service yard's slabs, dumpsters, pallets, crates; tires and a drum in the rough districts); in a deep block a
+    dead-end alley (the back closed) ends in one (in a shallow one, at a back wall); a long single row gets a pocket courtyard on the street;
+  - the alleys come alive: a dumpster against a wall, pallets or crates, a steam vent, string lights across some (not
+    down the roughest), wall lamps over the lanes; the art dresses them as it dresses the city's own alleys
+    (shared/alleys.js `dressOpen`: bins, bags, boxes, pallets, crates, pots and a bike uptown, a stray cat, puddles, oil,
+    litter, cracks and weeds - decoration, nothing in map.props), and draws their ground as cracked concrete
+    (client/art2/game/groundbake.js), not a square's paving; street dice down three of the grittier districts' new
+    lanes and back lots (m.diceSpots; the crew's game: server/systems/activities.js). People walk them (paving): the
+    leaners find the alley walls (server/systems/personas.js wallSpot).
+  77 footprints opened up: +192 buildings, 175 alleys and lanes, 60 courtyards and back lots.
+- Roofs that stay big (client/art2/game/statics.js kitFor): a row of AC units is three at most (four of the small ones;
+  it was up to seven in one row), and a roof over about 150 tiles of section gets two of a water tank, a stairwell hut,
+  skylights, solar panels, a billboard, a terrace with umbrellas and string lights, a dish (the works: solar arrays,
+  skylights, ducts); about a fifth of the big flat roofs of offices, walk-ups, mixed blocks, condos and hotels are roof
+  gardens (by the building's hash, so nothing else on them moves); a helipad only on an office roof over about 195
+  tiles (it was on any over 70: the opened-up mid-rises had them).
+- No big canopies over the doors: the Strip's porte-cocheres and the adobe resort's pergola over the drives (10 x 3
+  tiles), the Golden Lotus's east block's, the Skyview Hotel's, the Bayside drop-off's, St. Neon General's forecourt
+  canopy (15 x 4), the Harborlight's and the airport terminal's row of curb canopies are gone; each door is lit by a wall
+  lamp either side (the casinos' facades keep their neon; the names stay on the facades: polish2's coverFronts has no
+  cover to move them onto). A small awning stays; a filling station's canopy over its pumps is the station's.
+- The placement lint (tools/placementlint.mjs): `bigCanopy` - a canopy over a door bigger than 4 x 2 tiles (a filling
+  station's over its pumps aside): none; `alleyBlocked` - an opened-up alley or lane with less than 26 px clear across
+  it anywhere between its solid props: none. test/plainblocks.test.js (the same world build): nothing big left without a
+  reason (but what's too narrow and too shallow to cut), the alleys paved through and reaching a street, the lanes
+  across, each kept building's door, places and home on its front, the new buildings after every other and small, their
+  kinds and heights varied, the courtyards, the dice games played.
+- Cost (tools/perf.mjs, this machine): the city 25.7x the yardstick to build (budget 40x), 39 MB as sent (budget 46);
+  the bakes 59.4x (budget 90x), the biggest kept chunk 758 KB (budget 1,000); the bake's code 1,010 KB of its 1,010 (the
+  alleys' dressing and ground, the roof kit: a few lines each - at its budget, not over). World v3's build: the pass is
+  one walk of the big footprints (77 of them). The region index (what the page downloads whole) was 1.2004 MB gzipped
+  against the 1.2 MB test/world3server.test.js allows - the alleys in the frame's coarse picture; the survey's lists
+  stay off the map and the alleys and yards go into the region files (shared/regionpack.js REGIONAL), and the allowance
+  is 1.25 MB now (a decision: the index was already within a few hundred bytes of 1.2).
+- Re-keys the world and the art (`world3`, `art3`, and today's `art`: statics.js, groundbake.js, alleys.js) once.
+## 2026-11-14 - A public About page for Google's branding check
+Google's consent-screen branding verification turned down the game page as the app's home page: behind a login (the age
+gate and sign-in on the title), no words saying what the app is, and no app name it could read. about/index.html
+(https://deadbaron.com/city-life-auto/about/) is a plain static page anyone can read: the name, the lit logo
+(assets/logo/full.webp, tools/neon_logo.py A3 at scale 3), what the game is, that guests never have to sign in, what
+Google and Discord sign-in ask for (an id only), the privacy policy and the terms, and PLAY NOW. It is the home page the
+OAuth consent screen names. Nothing in the game loads it.
+
+## 2026-11-14 - Sign-in: Google's own button, a sheet that scrolls, the owner's name
+The owner's first real Google sign-in. The sign-in sheet now leads with the standard provider buttons - "Continue with
+Google" in Google's own dark button with its G, "Continue with Discord" in blurple, "Sign in with a passkey" - and "or
+use your email" over the email and password tabs; the link row reads "Link Google" / "Google linked ✓" with the G
+(client/account.js PROV; client/style.css). The sheet now scrolls to its end: account.js pad() ran every frame the
+panel was up and scrolled its focused control back into view each time - the ring and the scroll now follow a pad press
+only (and a desktop's zoomed sheet is cut to the screen's height before the zoom). A rename answers in the panel, not
+only in a toast the sheet could cover, and the account state comes back after it. "Switch back to" shows each character
+once and never the one you're playing (a sign-in gives the same account a new token: the rows carry the account id now).
+The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
+The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
+role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.
+
+## 2026-11-14 - The faceplant stays down
+The owner: the faceplant went back to a half pose. It was a timed pose (3.5 s), so it got up on its own; it's a lasting
+pose now (shared/chatdefs.js hold, like Lie down): over onto the face and lying there, a twitch now and then, until you
+move.
+
+## 2026-11-14 - No postal-address placeholder on the privacy page
+The privacy policy's Contact line showed "[postal address - to be added before launch]" while CLA_MAIL_ADDRESS is unset.
+The owner has no address to publish yet and sends no news email until he does (the news footer, which US law wants an
+address in, still asks for it), so the page leaves the line out until it's set (server/legal.js).
+
+## 2026-11-14 - GA: Player type
+The owner asked for it while setting up GA: a user property player_type, guest or account, set from the account state
+(client/account.js) and kept until GA is granted (client/analytics.js uprops) - so GA can compare signed-in players
+with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.md section 5).
+
+## 2026-11-15 - The Discord on the About page
+The owner made the player Discord (invite https://discord.gg/zuVSkbfjg, never expires). about/index.html links it under
+PLAY NOW and in its footer; the game's own button comes with the bug reporter.
+
+## 2026-11-15 - The title's music starts on the first tap; no neon sound
+The owner: the neon sign's sounds weren't good, and the music didn't start right away or every time. A browser lets a
+page make sound only after a tap, a click or a key - but the game also waited for that tap to start downloading its
+sound code and the title track (360 KB), so the music came seconds late or not before the player had moved on.
+client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound modules and fetches the title track
+(client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
+tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
+silent.
+
+## 2026-11-15 - Report a bug; the Discord button; nightly backups
+The owner approved it for the beta (11-14). **Report a bug**: a REPORT A BUG row in the pause list, a Report bug app
+on the phone and a row in Settings → Help all open one form, in the phone (client/bugreport.js, loaded the first time):
+"What happened?" (up to BUG_REPORT.text characters), what kind of problem it was (Stuck, Graphics, Crash or freeze,
+Controls, Something else - a pad has no keys to type with, so a pick is enough), "Include a screenshot" (on, with a
+preview), Send / Cancel, then a thank-you with the Discord. The screenshot is the game's canvases as drawn the frame
+the form opened (main.js S.bugGrab at the end of the frame - a WebGL canvas is cleared after it's shown), no menus over
+it, at most 960 px wide, WebP (JPEG on Safari), stepped down until it's under 250 KB. With it: the build, the frame
+rate, the graphics preset, the input device, the screen, the HUD's area name and the page's last ten errors
+(client/errors.js recent). The server (server/bugreports.js, POST /report with the page's own token, guests too) adds
+the name, guest or account, the position and district, the device class and a coarse browser and system ("Android 14
+· Chrome 131") - never an email, the IP or a token; 3 a player in 10 minutes, 6 a network, 30 an hour from everyone;
+kept in <data>/reports/ (the newest 500, 200 MB of screenshots, the oldest dropped with their files). Staff read them
+at /admin/bugs (admins and up: the screenshot, where, the device, the errors; Mark done / Open again, in the admin log;
+Settings → Account → Staff tools → Bug reports). With BUG_WEBHOOK_URL set each one is posted to the Discord's
+#bug-reports as an embed with the screenshot attached (fire and forget, an 8 s timeout, no mentions can ping). The
+Guide's Activities has "Reporting a bug". test/bugreports.test.js.
+**The Discord**: CLA_DISCORD_INVITE (default the owner's never-expiring https://discord.gg/zuVSkbfjg; `off` hides it)
+goes to the page in /launch.json: a small DISCORD button with the title's INSTALL APP / FULLSCREEN (top left on a
+desktop and a phone on its side, under the menu upright) and Join our Discord in Settings → Help; test/titlebuttons
+now checks the button is on screen and clear of everything else, your card and who's online showing.
+**Backups**: deploy/backup.sh, nightly at 03:30 (cla-backup.service / .timer): the data dir as one tar.gz in
+~/cla-backups, owner-only, the newest 14 - without the baked art, the region files and the screenshots, which the
+server rebuilds or doesn't need. setup-oracle.sh installs the timer (the old profiles-only cron line goes); a server
+set up before gets it from auto-update.sh's next run. Restore steps in docs/DEPLOY.md. Both keys are in set-keys.sh.
+## 2026-11-14 - "Over here" replaces "Come here"
+The owner (20:46), on the beckon: "that doesn't read clearly ... Not sure we really need that emote. Maybe a point down
+motion or something?" The Poses tab's Come here is now Over here (shared/chatdefs.js `overhere`; "Ann points here" /
+"You point here"). The body (client/art2/poses.js emoverhere): the right arm out and down to the ground beside you, the
+hand flat to a point along it, the body leaning in and the eyes on the spot - two jabs (set, jab, set, jab), not a loop,
+then the point held with a look up at whoever it's for, and back to standing when its 1.6 s are up. The balloon
+(client/emotes.js `here`): a bold red down arrow in the balloons' pixel style that bounces down twice, landing with a
+little squash, then shrinks into its tail like the rest. The old id still works: EMOTE_ALIAS turns `beckon` (a page from
+before, a typed /beckon) into Over here (the server's emote message, the chat's / commands). The Guide's Emotes entry
+names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon and the alias.
+
+## 2026-11-15 - The character creator: Done wears it, "Add to Saved" keeps a copy
+The owner: a player might press Done before "Save look" and think the look was lost. Done (and the X, and Esc) always
+put the look on; "Save look" only kept a named copy in the Saved tab. It's "Add to Saved" now, and Done says so when the
+look changed: "New look on. (Add to Saved keeps a copy to switch back to.)" (client/creator.js; the Guide's Your look).

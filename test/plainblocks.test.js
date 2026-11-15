@@ -141,7 +141,7 @@ test('southside lots: the lots on the passages stay sheds and garages; Port West
 });
 
 test('southside lots: street dice down a passage or two (the existing street dice: server/systems/streetdice.js)', () => {
-  const D = M.diceSpots || [];
+  const D = (M.diceSpots || []).filter((q) => !q.open);   // (the opened-up blocks' own: below)
   assert.ok(D.length >= 1 && D.length <= 2, `dice spots: ${D.length}`);
   const S = spotsOf(M).list.filter((s) => s.k === 'dice');
   for (const q of D) {
@@ -263,4 +263,56 @@ test('filling stations: pumps on every forecourt, each one a prop that can go up
   assert.equal(props.length, M.pumps.length, 'a prop for every pump');
   for (const [p, i] of props) { const e = M.propSolid.get(i); assert.ok(e && e.x === p.x && e.y === p.y && e.r === 9, `pump ${i}: its solid is its own`); }
   for (const q of M.pumps) { const t = M.tiles[M.idx(Math.floor(q.x / TILE), Math.floor(q.y / TILE))]; assert.ok(t !== T.BUILDING && t !== T.ROAD, 'on the forecourt'); }
+});
+
+// ---- open up the blocks (the owner, 2026-11-14: "so many huge buildings that take up so much space and don't add anything
+// interesting and cover so much of the street view. We don't see very many cool alleys"): every big footprint with no
+// reason to be one building broken into buildings of their own with walkable alleys, lanes and courtyards between
+// (shared/world3-openblocks.js; tools/bigroofs.mjs prints the survey)
+const { surveyOpen, OPEN3 } = await import('../shared/world3-openblocks.js');
+const OB = M.world3 && M.world3.open;
+test('open blocks: no big footprint left without a reason to be one building', () => {
+  assert.ok(OB && OB.opened >= 40, `opened up: ${OB && OB.opened}`);
+  const left = surveyOpen(M).list.filter((q) => !q.why && !(q.tw < 19 && q.th <= OPEN3.rows));   // (too narrow and too shallow to cut)
+  assert.equal(left.length, 0, `big with no reason: ${left.slice(0, 8).map((q) => `#${q.id} ${q.name} ${q.tw}x${q.th} at ${q.tx},${q.ty}`).join('; ')}`);
+});
+test('open blocks: the alleys are paved through and reach the street; the lanes cross the block', () => {
+  const open = (x, y) => M.inside(x, y) && ![T.BUILDING, T.WALL, T.WATER, T.DEEP].includes(M.tiles[M.idx(x, y)]);
+  let ns = 0, street = 0;
+  for (const a of M.openAlleys) {
+    for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) assert.equal(M.tiles[M.idx(x, y)], T.PLAZA, `alley tile ${x},${y} paved`);
+    if (!a.ns) continue;
+    ns++;
+    const mx = a.x + (a.w >> 1);
+    if (open(mx, a.y - 1) || open(mx, a.y + a.h)) street++;
+    assert.ok(a.w >= 3 && a.w <= 4, `an alley 3-4 wide (${a.w})`);
+  }
+  assert.ok(ns >= 100, `${ns} alleys`);
+  assert.equal(street, ns, `${ns - street} alleys reach no street`);
+});
+test('open blocks: the building keeps its door, its places and its home; the new ones come after every other building', () => {
+  const inX = (b, x) => x >= b.tx * TILE - 2 && x <= (b.tx + b.tw) * TILE + 2;
+  for (const p of M.pois) { const b = p && p.b !== undefined ? M.buildings[p.b] : null; if (b && b.openKept) assert.ok(inX(b, p.x), `${p.kind} "${p.label}" before #${b.id} ${b.name}`); }
+  for (const h of M.homes) { const b = h && h.b != null ? M.buildings[h.b] : null; if (b && b.openKept) assert.ok(inX(b, h.x), `home ${h.id} in #${b.id} ${b.name}`); }
+  for (const b of M.buildings) if (b && b.openKept && b.door) assert.ok(b.door.tx >= b.tx && b.door.tx < b.tx + b.tw, `#${b.id} ${b.name}'s door on its front`);
+  const made = M.buildings.filter((b) => b && b.openOf !== undefined), first = Math.min(...made.map((b) => b.id));
+  assert.ok(made.length > 150, `${made.length} new buildings`);
+  assert.ok(M.buildings.every((b) => !b || b.openOf !== undefined || b.id < first), 'the new buildings after every other');
+  for (const b of made) for (let y = b.ty; y < b.ty + b.th; y++) for (let x = b.tx; x < b.tx + b.tw; x++) if (M.bld[M.idx(x, y)] !== b.id || M.tiles[M.idx(x, y)] !== T.BUILDING) assert.fail(`#${b.id} tile ${x},${y}`);
+});
+test('open blocks: the new buildings vary - kinds and heights side by side, low in front of a lane', () => {
+  const made = M.buildings.filter((b) => b && b.openOf !== undefined);
+  let same = 0, pairs = 0;
+  for (const b of made) {
+    assert.ok(b.tw <= 22 && b.th <= 24, `#${b.id} ${b.tw}x${b.th} small`);
+    assert.ok(b.fl[0] >= 2 && b.fl[1] <= 5, `#${b.id} ${b.fl} storeys`);
+    const n = made.find((q) => q.openOf === b.openOf && q.ty === b.ty && q.tx > b.tx && q.tx <= b.tx + b.tw + 4);
+    if (n) { pairs++; if (n.arch === b.arch && n.fl[0] === b.fl[0]) same++; }
+  }
+  assert.ok(pairs > 40 && same <= pairs * 0.1, `${same} of ${pairs} neighbours alike`);
+  assert.ok((M.openYards || []).length >= 30, `${(M.openYards || []).length} courtyards and back lots`);
+  // a few street dice games down the grittier districts' new lanes and back lots, where the crew plays
+  const dice = (M.diceSpots || []).filter((q) => q.open), S = spotsOf(M).list.filter((s) => s.k === 'dice');
+  assert.ok(dice.length >= 1 && dice.length <= 4, `${dice.length} dice games`);
+  assert.ok(dice.some((q) => S.some((s) => s.x === q.x && s.y === q.y)), 'the crew plays at one at least (another activity near takes the rest: activities.js spotsOf)');
 });

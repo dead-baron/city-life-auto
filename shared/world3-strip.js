@@ -1,9 +1,9 @@
 // World v3, handcrafted: The Strip (Lucky Mesa's district 60), from the owner's LuckyMesa-B2 (the Strip at street level
 // at dusk, two views: the six-lane boulevard with its planted median of palms, agaves and cactus and banners on its lamp
 // posts; the glass skybridge full of people across it; a gold glass resort tower in terraces with planted ledges and a
-// two-stage waterfall down a stone wall into a lagoon with cabanas and loungers, its porte-cochere over a drive loop
+// two-stage waterfall down a stone wall into a lagoon with cabanas and loungers, its drive loop
 // round a fountain, valets and taxis; a Pueblo-style adobe resort stepping back in terraces round a palm-island lagoon,
-// its timber pergola over the drive, a fountain loop with cactus beds; a neon casino with a tall green-and-red neon
+// a fountain loop with cactus beds; a neon casino with a tall green-and-red neon
 // cactus over its marquee, pink neon bands, a bar on its roof and a fountain loop in front; the multi-level car parks
 // beside them) and the casino city's first concepts (VG1, VG3: a lotus-crowned tower, glass towers, a white spire, a
 // lagoon resort behind its fountain lake):
@@ -16,7 +16,7 @@
 //   - south of it, fronting north: Starfall Tower, The Prism, Casa del Sol (the adobe resort round its lagoon) and its
 //     car park;
 //   - every resort a casino (a named place, GM3/GM4's gambling to come), its door on its podium's front, a drive loop
-//     round a fountain under its porte-cochere, valets' taxis waiting, a pool and loungers.
+//     round a fountain at its door, valets' taxis waiting, a pool and loungers.
 // Old Downtown (61) and Mesa Flats (62) are world3-mesa.js's (the generator builds them). The resorts' looks are their
 // buildings' art (art v2 statics.js) and their `resort` (the classic renderer's roofs). Names are invented; draws are
 // fixed by place (hash2); no trigonometry (shared code: the world comes out the same in every engine).
@@ -159,7 +159,7 @@ function build(m, api, K) {
     return [['hvac', w * TILE / 2, d * TILE / 2], ['ac', 60, 70], ['ac', w * TILE - 70, 70], ['vent', w * TILE - 60, d * TILE - 50]];
   }
   // A drive loop in the forecourt (fd 0-7) round a fountain island at fx cx: the drive in and out across the kerb at
-  // its ends, the island paved and planted round its fountain, the porte-cochere over the drive at the door (o.cover:
+  // its ends, the island paved and planted round its fountain, the door lit from its wall (o.cover: no longer drawn -
   // 'canopy' | 'pergola' | 'marquee'), palms along the kerb strip, two taxis waiting in the loop, lamps by the door
   function loop(R, cx, o = {}) {
     const { rect, at } = R, hw = o.hw || 9, fx0 = cx - hw, fx1 = cx + hw;
@@ -181,10 +181,10 @@ function build(m, api, K) {
     for (let fx = fx0 + 4; fx < fx1 - 3; fx += 4) { const [kx, ky] = at(fx + 0.5, 0.5); if (tile(Math.floor(kx), Math.floor(ky)) === T.PLAZA) { if ((fx - fx0) % 8 === 4) palm(kx, ky, 'royal', 1.25); else bed(kx, ky, rnd(fx, ky, 851)); } }
     // palms at the forecourt's ends
     for (const sx of [fx0 - 1.6, fx1 + 1.6]) for (const fd of [1.4, 4.4]) { const [kx, ky] = at(sx, fd); if (tile(Math.floor(kx), Math.floor(ky)) === T.PLAZA) palm(kx, ky, fd < 3 ? 'royal' : 'date', 1.2); }
-    // the porte-cochere over the drive at the door, its lamps; the taxis waiting
-    const [dx, dy] = at(cx, 6.6);
-    if (o.cover === 'pergola') prop('pergola', dx, dy, 0, { w: 12 * TILE, d: 3 * TILE, h: 60 });
-    else if (o.cover !== false) prop('porte', dx, dy, 0, { w: (o.cw || 10) * TILE, d: 3 * TILE, h: 58, k: o.cover === 'marquee' ? 1 : 0 });
+    // no porte-cochere or pergola over the drive at the door (the owner, 11-14: "these overhangs over building entrances
+    // ... just block the entrance and take away too much from the front of buildings"): the door lit by a lamp on the
+    // wall either side of it instead; the lamps at the forecourt's ends; the taxis waiting
+    for (const sx of [-(o.cw || 10) / 2, (o.cw || 10) / 2]) { const [wx, wy] = at(cx + sx, 7.95); prop('plamp', wx, wy, 0, { wall: true, a: R.S ? Math.PI / 2 : -Math.PI / 2 }); }
     for (const sx of [-hw - 1, hw + 1]) { const [lx, ly] = at(cx + sx + 0.5, 6.5); prop('lamp', lx, ly, 0); }
     for (const k of [0, 1]) { const [tx, ty] = at(cx - 4 + k * 8, 7.2 - k * 0.2); m.parking.push({ x: tx * TILE, y: ty * TILE, a: 0, model: k ? 'taxi' : pick(['sedan', 'taxi', 'sports'], rnd(cx, R.y0, 852)), kerb: true }); }
     out.loops++;
@@ -222,7 +222,7 @@ function build(m, api, K) {
   }
   // Mesa Grande: the gold glass tower in three terraces - the podium, the middle block and the tower, their ledges
   // planted with palms - its east wing; west of it the lagoon under the two-stage waterfall down its stone wall,
-  // cabanas and loungers round it; the fountain loop and the porte-cochere in front
+  // cabanas and loungers round it; the fountain loop in front
   function grande(R) {
     const gold = '#c08a3a', green = (w, d) => [['palm', 50, 50], ['bed|60|20|40|box|agave|0', w * TILE / 2 - 30, 40], ['palm', w * TILE - 50, 50], ['umb', w * TILE / 2 + 60, d * TILE - 60], ['lounge', w * TILE / 2 - 80, d * TILE - 50]];
     R.put(18, 8, 24, 12, R.name, { floors: 3, style: 'glass', glassTint: gold, parapet: 12, roofMat: 'green', lip: 8, rimW: 5 }, [...neon(24, 12, 200, C.gold, 3), [12 * TILE, -2, 60, 240, C.warm, 1.6, 'lamp']], { main: true, shop: lobby('MESA GRANDE', ['#2a1e0e', [255, 220, 140]], 3), kit: green(24, 12) });
@@ -268,7 +268,7 @@ function build(m, api, K) {
   }
   // The Silver Lagoon (north of the Strip, fronting it): the lake of fountains along the Strip behind its balustrade,
   // the promenade under the palms, the three cream blocks behind it (the casino in the middle), the drive past the
-  // lake's east end to the porte-cochere at the east block, the pool behind
+  // lake's east end to the east block, the pool behind
   function lagoon(R) {
     const st = (o) => ({ style: 'stucco', parapet: 12, roofMat: 'membrane', lip: 8, rimW: 4, cornice: 'bracket', ...o });
     K.fill(...R.rect(0, 0, R.LW, 19), T.PLAZA);
@@ -280,9 +280,9 @@ function build(m, api, K) {
     R.put(2, 19, 13, 16, `${R.name} West`, st({ floors: 7, wallColor: '#ecdcc0', windows: winRow(13), doors: [] }), neon(13, 16, 420, C.gold));
     R.put(15, 19, 16, 16, R.name, st({ floors: 8, wallColor: '#efe2c8' }), [...neon(16, 16, 470, C.gold), crown(16, 16, 500, C.gold)], { main: true, shop: lobby('SILVER LAGOON', ['#2a2418', [255, 226, 160]], 3) });
     R.put(31, 19, 13, 16, `${R.name} East`, st({ floors: 6, wallColor: '#e8d8bc', windows: winRow(13), doors: [] }), neon(13, 16, 360, C.gold));
-    // the drive in past the lake's east end to the porte-cochere at the east block, a taxi waiting
+    // the drive in past the lake's east end to the east block, a taxi waiting
     for (let fd = 0; fd < 19; fd++) for (let fx = 35; fx < R.LW - 1; fx++) { const [tx, ty] = R.cell(fx, fd); if (tile(tx, ty) === T.PLAZA) m.set(tx, ty, T.LOT); }
-    { const [cx, cy] = R.at(R.LW - 5, 17.5); prop('porte', cx, cy, 0, { w: 6 * TILE, d: 4 * TILE, h: 58, k: 0 }); m.parking.push({ x: cx * TILE, y: cy * TILE, a: Math.PI / 2, model: 'taxi', kerb: true }); }
+    { const [cx, cy] = R.at(R.LW - 5, 17.5); for (const sx of [-2.5, 2.5]) { const [wx, wy] = R.at(R.LW - 5 + sx, 18.95); prop('plamp', wx, wy, 0, { wall: true, a: R.S ? Math.PI / 2 : -Math.PI / 2 }); } m.parking.push({ x: cx * TILE, y: cy * TILE, a: Math.PI / 2, model: 'taxi', kerb: true }); }   // (no porte-cochere over it: the owner, 11-14)
     const [px, py] = R.rect(14, 37, 16, 7);
     pool(px, py, 16, 7, { round: true }); poolPalms(px, py, 16, 7);
     out.lake = 5;

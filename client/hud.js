@@ -618,15 +618,20 @@ export class HUD {
       g.strokeStyle = '#ffd34a'; g.lineWidth = big ? 4 : 2.6; g.stroke();
     }
     // POIs
-    g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    // (sized on screen, not on the canvas: the touch minimap draws its 168 px into 104 CSS px, and its icons had shrunk to
+    // a 6 px speck - the owner, 11-14: "a little bigger again ... simple and clearly visible". A dark disc, the place's
+    // glyph in its colour, a thin ring of it: 13 CSS px across on the minimap, 18 on the big one)
+    const css = (g.canvas && g.canvas.clientWidth) || size, kk = Math.max(1, size / css), ir = (big ? 9 : 6.5) * kk;
+    g.font = `700 ${Math.round((big ? 14 : 10.5) * kk)}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map), pois = this.map.pois, rr = (size / 2 + 10) / scale;
     for (const i of poiNear(this.map, cx, cy, big ? Infinity : rr)) {   // (the radar: only the cells round it - a window holds thousands, every frame)
       const p = pois[i], icon = p && POI_ICON[p.kind];
       if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
-      if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
-      g.fillStyle = '#000'; g.fillRect(x - (big ? 8 : 5), y - (big ? 8 : 5), big ? 16 : 10, big ? 16 : 10);
-      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
+      if (x < -ir || y < -ir || x > size + ir || y > size + ir) continue;
+      g.fillStyle = '#0b1020'; g.beginPath(); g.arc(x, y, ir, 0, 6.28); g.fill();
+      g.strokeStyle = icon[1]; g.lineWidth = Math.max(1, kk * 1.1); g.globalAlpha = 0.85; g.stroke(); g.globalAlpha = 1;
+      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + kk * 0.6);
     }
     if (me) {
       for (const h of me.homes || []) { const [x, y] = toR(h.x, h.y); mapIcon(g, 'home', x, y, big); }
