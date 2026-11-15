@@ -23633,6 +23633,51 @@ The owner: out to the menu from the hospital lobby, its tune went on under the t
 frame silenced the vehicles, the ambience and the stage but returned before places.js set the rooms' music (shop, lobby,
 club, the drive-in) - so whatever was playing kept playing. Now the title silences those too (client/sound/index.js).
 
+## 2026-11-14 - The owner's polish list: beaches, the pier, skate parks, people by fences, poses, the arcade scene, the hot springs, salmon, lockers, anglers
+- **No sliver of sea along a pier or a boardwalk over the beach** (the class): the ground bake took every DOCK tile for
+  water underneath, so where planks cross dry sand the coastline's smoothing drew a thin band of sea with waves along
+  both sides (Sunset Beach Pier's shaft, Sandpiper Bay's stepped boardwalk). shared/mapcore.js `deckOnDry` - planks with
+  no water beside them and the ground beside them (a pier head's middle stays over its water) - is ground now in
+  client/art2/game/groundbake.js (the
+  wetness the coast is smoothed from) and art2/water.js (the waves' distance to land). The placement lint's new
+  `beachWater` row finds any dry sand, grass or dirt with no water by it, side by side with planks still taken for
+  water - on every beach, the lakes' and the rivers' too.
+- **Sunset Beach Pier's sides open over the sand**: its rails (and their solid posts) start where the water does on each
+  side - you step on and off the shaft from the beach; over the water the rails stay. Sandpiper Bay's pier the same.
+- **Skate parks' ledges, grind boxes, flat bars, rails and benches are solid on foot** (shared/world3-skatesolids.js, at
+  the end of World v3's build): a row of posts along each, flagged `sk`. A rider in the air or grinding passes over them
+  (shared/physics.js `over`), so grinds work as before; rolling into one on the ground bumps you like a bench; the skate
+  crew's friend sitting on a ledge is let sit (mods.skateSeat: noProps 'sk'). Every skate spot checked (The Trestle
+  Spot, Overpass Skate Park, The Underpass, Sunset Skate Park: ledges and flat bars); the lint's `skateWalk` row.
+- **Nobody pinned against a court's chain-link fence**: a passer-by's next spot was picked with the walls, props and
+  cars in mind but not the fences, so the ones heading for a spot behind a park court's tall fence walked into it and
+  stayed there in a line. shared/fences.js `fenceCrossed`; server/systems/npc.js pickWaypoint never picks across a tall
+  fence (a low one they hop), and someone held fast who has stepped aside both ways three times gives up on that spot.
+- **Poses** (client/art2/poses.js): the faceplant stays down - no bounce on landing (the legs no longer kick up), and
+  only now and then a small twitch of a foot or the fingers of a hand curling, rarer and briefer; the phone is held well
+  out in front of the chest, the head bent to it, so it reads as scrolling.
+- **The director's "The arcade"** goes in through the nearest arcade's door onto its floor among the games (the
+  'arcade' command, devplay.js devArcade) - 'near' left you on the street outside Koi Arcade. Every arcade in World v3
+  checked: each door's action is "Into ... - the arcade".
+- **Granite Hot Springs**: the bake was real (not placeholder art), so: the paths and steps are granite flagstones with
+  moss in the joints (groundbake FLAGS, ground.js flagstone) rather than concrete pavers; the water warmer - a milky jade
+  with a sulphur-gold tint over the vents, lit low and warm from within after dark - a pale mineral crust at the rim and
+  wet dark stone at the very edge; more and bigger boulders round every rim, two more wisps of steam off each pool and
+  fuller steam (props-garden.js steam: every steam prop).
+- **Salmon climb a falls in stages** (client/art2/game/waterlife.js CLIMB): a leap in an arc, a splash into the falling
+  water, a rest there nosing into it, the next leap - 2 to 6 of them by the drop; some slip after a rest and tumble back
+  into the pool; the last carries them into the water above and on upstream.
+- **The bathhouse lockers count each round once**: a gun's rounds (profile.weapons, the magazine's among them) went in
+  with the magazine's added again; now as the home safe fixed it - the rounds alone, back with the magazine filled from
+  them (server/systems/bathhouse.js).
+- **Anglers each on their own spot** (the owner: NPC fishers stood right on top of each other): anyone fishing - a
+  persona fisher, an activity's anglers, the wilds' bank anglers, a player with a rod out - is at least ANGLER_GAP (40
+  px) from the next (server/systems/personas.js anglerRoom); the second of a pair is put that far along the rail or the
+  bank, where there's ground to stand on.
+- The world and art hashes change (the pier's rails, the skate posts; the bake's planks and springs).
+- Tests: placementlint (beachWater, skateWalk), fences (no spot across a chain-link fence), npcpeople (anglers spaced,
+  facing the water), waterlife (leaps, rests and drops), bathhouse (the locker's rounds), emotes.
+
 ## 2026-11-14 - The title card's avatar: a portrait, every face in the same spot
 The owner, on the whole-figure avatar: "not centered consistently ... the full body is too far out" - a portrait is
 fine. client/portrait.js frames the same game-size sprite (nearest-neighbour, a whole number of px an art px) as a

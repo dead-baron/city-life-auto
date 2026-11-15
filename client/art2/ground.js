@@ -817,6 +817,7 @@ const YARDC = RP('#3a3d44 #4b4f56 #5d626b #6f747e #80858f #9096a0 #a0a6b0');
 const WOOD = RP('#2e2420 #40322a #544234 #68523e #7a624a #8c7256 #9e8466');
 const WOODG = RP('#3a3836 #4e4a46 #625c56 #766e66 #8a8076 #9c9286 #aea496');
 const SCREE = RP('#2a2c32 #3a3c42 #4c4e52 #5e6064 #727476 #868886 #9a9a98');
+const FLAGS = RP('#3e3a36 #4c4741 #5b554d #6a6359 #797165 #887f71 #978d7d');   // (warm granite flagstones: the hot springs' paths)
 const SNOWR = RP('#7c8ca6 #98a8c0 #b4c2d4 #ccd6e4 #dfe6ef #edf1f6 #f8fafc');
 const QUAR = RP('#575a5c #6b6e6f #7f8181 #939494 #a5a6a5 #b4b6b3 #c4c4c2');
 const GRAIN = RP('#5e4218 #80601e #a07e28 #bc9632 #d2ae42 #e4c45a #f2d87c');   // (golden-hour ripe wheat: SC3-E)
@@ -1031,6 +1032,16 @@ export const GSHADE = {
     return sd(SLAB, t, x, y, 0.5);
   },
   slabCracked: (x, y, s) => slab(SLAB, x, y, s, 34, 1, 0),
+  flagstone(x, y, s) {                                         // irregular granite flagstones, moss and dark soil in the joints (the hot springs' paths - the owner, 11-14: not plain grey strips)
+    const w = worley(x + 0.5, y + 0.5, 15, s + 61, 0.9), gap = w.d2 - w.d1;
+    if (gap < 1.7) { GS.nx = GS.ny = 0; return vnc(x, y, 9, s + 63) > 0.55 ? at(MOSS, gap < 0.8 ? 0 : 1 + (hh(x, y, s) > 0.6 ? 1 : 0)) : at(FLAGS, 0); }
+    const r = 15, u = w.dx / r, v = w.dy / r;
+    GS.nx = u * 0.35 + (w.h - 0.5) * 0.12; GS.ny = v * 0.35;
+    let t = 0.5 + (w.h - 0.5) * 0.36 - (u + v) * 0.14 + (vnc(x, y, 5, s + 65) - 0.5) * 0.12 + (gap < 2.6 ? -0.1 : 0);
+    if (hh(x, y, s + 67) > 0.985) t += 0.18;   // (a fleck of mica)
+    if (vnc(x, y, 23, s + 69) > 0.74 && w.h > 0.5) return sd(MOSS, 0.6 + (w.h - 0.5) * 0.3, x, y, 0.4);   // (a mossy stone)
+    return sd(FLAGS, t, x, y, 0.4);
+  },
   slabStone(x, y, s) {                                         // pale limestone, long slabs in running bond
     const H = 28, Wd = 44, row = Math.floor(y / H), ox = (row & 1) * 22, col = Math.floor((x + ox) / Wd), lx = x + ox - col * Wd, ly = y - row * H, sh = hh(col, row, s + 23);
     if (lx === 0 || ly === 0) return at(STONE2, 1);

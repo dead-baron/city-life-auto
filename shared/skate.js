@@ -75,7 +75,7 @@ function mkSeg(x0, y0, x1, y1, h, k, pi = -1) {
 const tileOf = (map, tx, ty) => map.tileAt(tx, ty);
 // a bench's heading as its art draws it (client/art2/game/statics.js: set by the place, else back to the nearest road,
 // else by a hash): along x or along y
-function benchAlongX(map, p) {
+export function benchAlongX(map, p) {
   const q4 = (a) => (Math.round(((((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) / (Math.PI / 2))) % 4 + 4) % 4;
   if (p.a !== undefined) return q4(p.a) % 2 === 0;
   const tx = Math.floor(p.x / TILE), ty = Math.floor(p.y / TILE);

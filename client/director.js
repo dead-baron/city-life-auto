@@ -168,7 +168,7 @@ export const SCENES = [
   { g: 'Fun', n: 'Surfing a break', s: [[0, 'near', { k: 'surf' }]], t: 1125, cam: 'smooth', z: 1.1 },
   { g: 'Fun', n: 'Soccer on the field', s: [[0, 'near', { k: 'venue' }]], cam: 'follow', z: 0.9 },
   { g: 'Fun', n: 'Bowling', s: [[0, 'near', { k: 'bowling' }]], cam: 'follow', z: 1.2 },
-  { g: 'Fun', n: 'The arcade', s: [[0, 'near', { k: 'arcade' }]], cam: 'follow', z: 1.2 },
+  { g: 'Fun', n: 'The arcade', s: [[0, 'arcade', { k: 'in' }]], cam: 'follow', z: 1.2, note: 'on the floor among the games' },   // (in through the nearest arcade's door: server/devplay.js devArcade - 'near' left you on the street outside)
   { g: 'Fun', n: 'Golf at Lakeside Greens', s: [[0, 'place', { n: 'Lakeside Greens' }]], t: 930, cam: 'follow', z: 0.9 },
   { g: 'Fun', n: 'The pier and the Ferris wheel', s: [[0, 'place', { n: 'Sunset Beach Pier' }]], t: 1125, cam: 'follow', z: 0.9 },
   { g: 'Fun', n: 'The balloon field', s: [[0, 'place', { n: 'Dry Creek Balloon Field' }]], t: 450, cam: 'follow', z: 0.85 },

@@ -28,7 +28,8 @@ import * as music from './music.js';
 import * as activities from './activities.js';
 import * as burning from './burning.js';
 import { NPC_GRIT, NPC_CRITICAL, LIMP_SPEED, CRAWL_HP, BRAWL_AFTER_S, VEH_CRIME, CALM_STREETS, CROWD_CAP } from '../../shared/rules.js';
-import { FLY } from '../../shared/flight.js';   // (an aircraft up in the air: over all this, untouched)
+import { FLY } from '../../shared/flight.js';
+import { fenceCrossed } from '../../shared/fences.js';   // (an aircraft up in the air: over all this, untouched)
 
 const WALK_TILES = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.GRASS, T.DOCK, T.SAND, T.DIRT, T.FLOOR]); // FLOOR: people browse the shops too
 const PREFERRED = new Set([T.SIDEWALK, T.PLAZA]);
@@ -128,6 +129,9 @@ export function sidestep(world, ped, inp, dt) {
   if ((n.sideUntil || 0) > now && want > 0.1) { inp.mx = n.sideX; inp.my = n.sideY; return inp; }
   n.stuckT = want > 0.3 && moved < 40 * dt ? (n.stuckT || 0) + dt : 0;
   if (n.stuckT > STUCK_S) {
+    // (stepped aside both ways and still held - a fence, a corner: a wanderer gives up on that spot and picks another)
+    if (now - (n.sideAt || -99) < STUCK_S + SIDE_S * 2 + 0.2) { n.sideN = (n.sideN || 0) + 1; if (n.sideN >= 3 && n.state === 'wander') { n.sideN = 0; n.until = 0; } } else n.sideN = 0;
+    n.sideAt = now;
     n.stuckT = 0; n.sideSign = -(n.sideSign || -1);
     const fx = inp.mx / want, fy = inp.my / want, s = n.sideSign;
     n.sideX = -fy * s * 0.95 + fx * 0.3; n.sideY = fx * s * 0.95 + fy * 0.3; n.sideUntil = now + SIDE_S;
@@ -151,6 +155,8 @@ export function footWay(world, e, x, y) {
 function walkMods(world, ped, factor) {
   const m = players.pedMods(world, ped);
   m.speedMul *= ped.npc.speed * factor;
+  const a = ped.npc.act;
+  if (a && a.k === 'skaters' && !a.ride) m.skateSeat = true;   // (the crew's friend sat on a ledge: shared/world3-skatesolids.js)
   return m;
 }
 
@@ -448,6 +454,7 @@ function pickWaypoint(world, ped) {
     if (offSk && skateCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (round a skate park, not across it)
     if (world.map.rayTiles(ped.x, ped.y, x, y) < 1) continue;
     if (lineHits(world, ped, x, y)) continue;   // (not straight into a tree, a bench, a bin or a parked car: somewhere they can walk to)
+    if (fenceCrossed(world.map, ped.x, ped.y, x, y)) continue;   // (nor through a chain-link fence: they'd walk into it and stay there - fences.js)
     if (world.map.rail && trains.railBlocked(world, ped.x, ped.y, x, y)) continue; // not into (or across the line in front of) a train
     n.wx = x; n.wy = y;
     return;

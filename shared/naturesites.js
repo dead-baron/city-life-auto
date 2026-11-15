@@ -1337,14 +1337,15 @@ function hotSprings(m, H) {
   // boulders round every rim (solid, mossy granite), close-packed; steam over each pool
   let k = 0;
   for (const [px, py, rx, ry2] of POOLS) {
-    const n = Math.round((rx + ry2) * 2.4);
+    const n = Math.round((rx + ry2) * 3);   // (the owner, 11-14: rocky rims - more of them, and bigger)
     for (let j = 0; j < n; j++, k++) {
       const a = j / n * Math.PI * 2 + hash2(k, 1, 2501) * 0.3, rr = 1.12 + hash2(k, 2, 2501) * 0.18, tx = px + Math.cos(a) * rx * rr, ty = py + Math.sin(a) * ry2 * rr;
       if (isWet(tx, ty) || Math.abs(Math.sin(a)) > 0.92 && Math.sin(a) > 0 && px === CX + 1) continue;   // (a gap in the big pool's south rim: the way in)
-      const sz = 22 + Math.round(hash2(k, 3, 2501) * 16);
+      const sz = 28 + Math.round(hash2(k, 3, 2501) * 20);
       add('boulder', tx, ty, Math.round(sz * 0.5), { s: sz, style: 'basalt', moss: hash2(k, 4, 2501) < 0.25 ? 1 : 0 });   // (dark rocks round the hot water)
     }
     add('steam', px, py + ry2 * 0.4, 0, { w: Math.round(rx * TILE * 1.4), h: 46 + Math.round(rx * 3), s: Math.round(px + py) % 5 + 1 });
+    for (const [fx, fy, sk] of [[-0.45, -0.2, 2], [0.4, 0.1, 3]]) add('steam', px + rx * fx, py + ry2 * fy, 0, { w: Math.round(rx * TILE * 0.8), h: 38 + Math.round(rx * 2), s: (Math.round(px + py) + sk) % 5 + 1 });   // (wisps off the water as well - the owner, 11-14: steam you can see)
   }
   // the bath pavilion on the lower pool's west side, a bamboo fence round the baths (a gate on the south side)
   add('bathpav', CX - 12, CY + 5.4, 0);

@@ -146,7 +146,9 @@ export function pedStep(s, inp, dt, map, mods) {
   const rail = mods.canSwim && !swim && !(s.rollT > 0) && (tile === T.BRIDGE || tile === T.DOCK);
   // (rolling hard up the way a quarter pipe faces - north - its posts don't stop you short of its toe: up the face you go)
   const over = !!mods.board && (s.over || (s.airK === 2 && s.rollT > 0)), upQp = !!mods.board && s.vy < -120 && Math.abs(s.vx) < -s.vy;
-  collideCircle(s, PED_RADIUS, map, mods.canSwim && !rail ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, over || s.hop > 0 ? true : upQp ? 'qp' : false);   // (mods.rock: a sure-footed animal's)
+  // (mods.skateSeat: the skate crew's friend sat on a ledge - the skate parks' grind kit, solid on foot, lets them sit:
+  // shared/world3-skatesolids.js)
+  collideCircle(s, PED_RADIUS, map, mods.canSwim && !rail ? SWIM_BLOCK : mods.rock ? ROCK_BLOCK : PED_BLOCK, over || s.hop > 0 ? true : upQp ? 'qp' : mods.skateSeat ? 'sk' : false);   // (mods.rock: a sure-footed animal's)
   if (FEN && !up(s)) FEN.collide(s, inp, map, mods, swim);
   // on a board: how hard it ran into what it hit (a wall, a post, a tree: the push back out of it against the way it was
   // going) - hard enough and you're thrown off (s.boardHit: server skate.js bails you); a glancing touch just loses that
@@ -192,7 +194,7 @@ export function collideCircle(s, r, map, block, noProps = false) {
       }
       const props = noProps !== true && map.solidProps.size ? map.solidProps.get(map.idx(tx, ty)) : null;   // (none at all: a bare test map)
       if (props) for (const p of props) {
-        if (p.off || (p.qp && noProps === 'qp')) continue;   // (noProps 'qp': all but a quarter pipe's posts - shared/map.js qpipeSolids)
+        if (p.off || (p.qp && noProps === 'qp') || (p.sk && noProps === 'sk')) continue;   // (noProps 'qp': all but a quarter pipe's posts - shared/map.js qpipeSolids; 'sk': all but a skate park's ledges)
         const dx = s.x - p.x, dy = s.y - p.y, rr = r + p.r;
         const d2 = dx * dx + dy * dy;
         if (d2 < rr * rr && d2 > 1e-6) {

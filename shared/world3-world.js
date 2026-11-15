@@ -37,6 +37,7 @@ import { farmPonds3 } from './world3-farmponds.js';
 import { riverBanks3 } from './world3-banks.js';
 import { estuaries3 } from './world3-estuary.js';
 import { buildMarshBoardwalk3 } from './world3-marsh.js';
+import { skateSolids3 } from './world3-skatesolids.js';
 import { paintWest3, layWest3, buildWest, westDone } from './world3-west.js';
 import { wildSites3, wildDone, movedAt, wildDist, wildFarm3 } from './world3-wild.js';
 import { buildRelief3 } from './world3-relief.js';
@@ -327,6 +328,7 @@ export function worldOpts(asked) {
       if (H3 && city) m.world3.greens = streetGreens3(m, H3);   // (notes 2: the street trees off the signs, and not palms everywhere - world3-greens.js)
       if (city) m.world3.kerbBays = kerbBays3(m, (tx, ty) => !!handPlanAt(tx, ty));   // (notes 2: the parked cars' bays along those streets' kerbs - world3-kerbs.js)
       if (H3 && city) m.world3.clutter = clearClutter3(m, H3);   // (v3b: nothing blocking on the streets, the pavements, the tracks, the doors - world3-clutter.js)
+      m.world3.skateSolids = skateSolids3(m);   // (the skate parks' ledges, boxes, rails and benches solid on foot - the owner, 11-14: world3-skatesolids.js)
       m.world3.tidy = tidyProps3(m);   // (last: nothing that needs dry ground left standing in the water, no fence run across a road - world3-tidy.js)
       if (city) m.world3.fenceGaps = fenceGaps3(m);   // (then: the fences people can't walk through - shared/fences.js - leave every door, gate and path open: world3-fencegaps.js)
       if (city) m.world3.fenceExits = fenceExits3(m);   // (and every fenced place people go into - a court, a pitch, a dog run, a garden, a pier - a way out on two sides, near the corners: world3-fenceexits.js)
