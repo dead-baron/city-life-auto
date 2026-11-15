@@ -38,7 +38,7 @@ import * as policeair from './policeair.js';
 import * as police from './police.js';
 import { patchesOf } from './dusting.js';
 import { DUST } from '../../shared/rules.js';
-import { floorAt, FLY } from '../../shared/flight.js';
+import { floorAt, FLY, isHeli } from '../../shared/flight.js';
 import * as env from './environment.js';
 import { poolTable } from './pooltables.js';
 
@@ -473,7 +473,7 @@ function stepDrive(world, run, A, v) {
   while (r.length > 1 && Math.hypot(r[0].x - v.x, r[0].y - v.y) < 70) r.shift();
   const wp = r[0], left = Math.hypot(wp.x - v.x, wp.y - v.y);
   const sp = r.length <= 1 && left < 260 && !c.through && !c.pass ? Math.max(70, left * 1.4) : c.speed;   // (pass: on through it at speed - the next leg follows)
-  driveToward(world, v, wp.x, wp.y, sp, { ignoreObstacles: !!c.through, ignoreCrossings: !!c.through, ignore: run.vehIds || (run.vehIds = new Set([...run.cast.values()].filter((q) => q.kind === 'veh').map((q) => q.id))) });   // (not braking for the scene's own: racers side by side)
+  driveToward(world, v, wp.x, wp.y, sp, { ignoreObstacles: !!c.through, ignoreCrossings: true, ignore: run.vehIds || (run.vehIds = new Set([...run.cast.values()].filter((q) => q.kind === 'veh').map((q) => q.id))) });   // (not braking for the scene's own: racers side by side; never waiting at the lights - a shot's car stopped at a red one halfway)
   v.dirDrive = world.tick;   // (driveToward left its v.ai.ctl: vehicles.js re-trims to it between the sub-steps)
 }
 // an aircraft along its route (the light planes' own stick: airtraffic.js - v.fin, v.autopilot): the nose on the next
@@ -491,7 +491,7 @@ function stepFly(world, run, A, v) {
   if (r.length) fi.turn = clampN(wrapA(Math.atan2(r[0].y - v.y, r[0].x - v.x) - v.a) * 2, -1, 1);
   else fi.turn = 0;
   fi.fwd = fwd < c.speed - 30 ? 1 : fwd > c.speed + 40 ? -0.3 : 0.3;
-  fi.climb = clampN((c.alt - alt) / 60, -0.5, 0.6); fi.m = 1; fi.tank = false; fi.hb = false;
+  fi.climb = clampN((c.alt - alt) / 60, -0.5, 0.6); fi.m = 1; fi.tank = isHeli(v.def); fi.hb = false;   // (a helicopter flies along its nose on the 'tank' controls: it had hovered where it was)
   // the mist (the damage word's bit dusting.js sets for a player's contract): low and quick enough over the ground
   const over = alt - floorAt(world.map, v.x, v.y);
   v.dirSpray = c.spray;

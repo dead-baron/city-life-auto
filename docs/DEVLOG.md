@@ -23597,7 +23597,7 @@ of. I want good camera movement and the best areas to show off."
   seconds of bakes) came in after much of it had played - and the clean screen it turned on hid the toasts, so a scene
   that found no place ("No place for ...") just left a clean screen. Now a shot is held at its first moment (the server's
   hold, as the capture's) with this screen black until the art there is in (`warmth`), then the page says 'go'
-  (`DIRECTOR.holdS` at most on the server; 6.5 s on the page); a shot that never comes moves on to the next after 12 s.
+  (`DIRECTOR.holdS`, 10 s, at most on the server; 9.5 s on the page); a shot that never comes moves on to the next after 12 s.
 - **The time of day and the weather of a scene were never applied** outside the capture server: the "golden hour" Showcase
   moves played at whatever time it was. A shot's time, weather (clear, rain, fog, mist, a storm), time-lapse and the sea's
   sparkle are now this screen's while it plays, and put back after.

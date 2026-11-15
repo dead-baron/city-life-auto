@@ -34,7 +34,7 @@ const again = (who, emote, t0, step, n) => Array.from({ length: n }, (_, i) => (
 
 export const SHOTS = [
   // ---- City & Neon at night ----
-  place('shotnightmarket', 'city', 'The Neon Strip night market', ['Lantern Lane Night Market', 'Neon Strip'], 'push', { t: 1380, z: 0.95, dir: [0, 1], r: 520, s: 18 }),
+  place('shotnightmarket', 'city', 'The Neon Strip night market', ['Lantern Lane Night Market', 'Neon Strip'], 'push', { t: 1380, z: 0.8, dir: [0, 1], r: 600, s: 18 }),
   place('shotcasinos', 'city', 'Lucky Mesa\'s casinos lit up', ['The Golden Lotus', 'The Strip'], 'crane', { t: 1390, z: 0.85, r: 700, s: 18 }),
   place('shotpinkmile', 'city', 'The Pink Mile motels', ['Siren Square', 'The Pink Mile'], 'pan', { t: 1395, z: 0.9, r: 600, s: 18 }),
   place('shottrestle', 'city', 'The El over Trestle Street', ['The Trestle Spot', 'Union Square', 'Midtown'], 'pan', { t: 1215, z: 0.9, dir: [0, 1], r: 560, s: 18 }),
@@ -52,14 +52,14 @@ export const SHOTS = [
     id: 'shotwheat', n: 'Wheat field: a pickup cuts a swath', g: 'nature', note: 'tracking alongside · golden hour', len: 18, linger: 1,
     place: { k: 'farm', near: 'Willow Valley' }, anchors: ['p0', 'p1', 'p2', 'p3', 'in', 'field'], time: 1120, weather: 'clear',
     cast: [{ id: 'truck', veh: 'pickup', at: { a: 'p0', f: 120 }, paint: 4, offroad: true }, { id: 'farmer', arch: 'construction', in: 'truck' }],
-    beats: [{ id: 'go', at: 1.2, who: 'truck', do: 'drive', to: { a: 'p1', f: -140 }, direct: true, speed: 0.42, max: 14 }],
+    beats: [{ id: 'go', at: 1.2, who: 'truck', do: 'drive', to: { a: 'p1', f: -140 }, direct: true, speed: 0.42, max: 14 }, { at: 0, do: 'wait', s: 16 }],
     cam: [{ at: 0, follow: 'truck', z: 1.2, lead: 0.2, s: -110 }, { at: 2.5, follow: 'truck', z: 1.05, lead: 0.5, s: -150, ease: 2 }, { on: 'go', d: 9, hold: 'p0', z: 0.85, ease: 3, dx: 0 }],
   },
   {   // a rider at a canter along the field's edge, the valley behind
     id: 'shothorse', n: 'Horseback across the valley', g: 'nature', note: 'tracking alongside · golden hour', len: 18, linger: 1,
     place: { k: 'farm', near: 'Willow Valley' }, anchors: ['p0', 'p1', 'p2', 'p3', 'in', 'field'], time: 1140, weather: 'clear',
-    cast: [{ id: 'horse', veh: 'horse', at: { a: 'p3', f: -260, s: 140 }, offroad: true }, { id: 'rider', arch: 'hiker', in: 'horse' }],
-    beats: [{ id: 'go', at: 0.8, who: 'horse', do: 'drive', to: { a: 'p0', f: 900, s: -40 }, direct: true, speed: 0.55, max: 16 }],
+    cast: [{ id: 'horse', veh: 'horse', at: { a: 'p3', f: 100 }, offroad: true }, { id: 'rider', arch: 'hiker', in: 'horse' }],
+    beats: [{ id: 'go', at: 0.8, who: 'horse', do: 'drive', to: { a: 'p2', f: -100 }, direct: true, speed: 0.5, max: 16 }, { at: 0, do: 'wait', s: 16 }],
     cam: [{ at: 0, follow: 'horse', z: 1.35, lead: 0.3, s: 70 }, { at: 4, follow: 'horse', z: 1.0, lead: 0.7, s: 120, ease: 3 }],
   },
   // ---- Coast & Water ----
@@ -71,9 +71,9 @@ export const SHOTS = [
   place('shotgull', 'coast', 'Gull Harbor at dawn', ['Quay Street', 'Gull Harbor'], 'pan', { t: 400, z: 0.95, r: 480, s: 16 }),
   {   // a speedboat flat out across open water, the camera tracking alongside it
     id: 'shotspeedboat', n: 'Speedboat across the bay', g: 'coast', note: 'tracking alongside · golden hour', len: 16, linger: 1,
-    place: { k: 'water', near: 'Sunset Beach Pier', len: 1700 }, anchors: ['start', 'end', 'mid', 'shore'], time: 1125, weather: 'clear',
+    place: { k: 'water', near: 'Sunset Beach Pier', len: 2800 }, anchors: ['start', 'end', 'mid', 'shore'], time: 1125, weather: 'clear',
     cast: [{ id: 'boat', veh: 'speedboat', at: { a: 'start', f: 60 } }, { id: 'skipper', arch: 'hustler', in: 'boat' }],
-    beats: [{ id: 'go', at: 0.6, who: 'boat', do: 'drive', to: { a: 'end', f: -60 }, direct: true, pass: true, speed: 0.85, max: 14 }],
+    beats: [{ id: 'go', at: 0.6, who: 'boat', do: 'drive', to: { a: 'end', f: -60 }, direct: true, pass: true, speed: 0.42, max: 15 }, { at: 0, do: 'wait', s: 15 }],
     cam: [{ at: 0, follow: 'boat', z: 1.15, lead: 0.2, s: 90 }, { at: 3, follow: 'boat', z: 0.95, lead: 0.55, s: 150, ease: 2.5 }],
   },
   // ---- People & Life ----
@@ -104,40 +104,40 @@ export const SHOTS = [
     beats: [...again('regs.0', 'laugh', 1, 4.5, 3), ...again('regs.1', 'cheer', 2.5, 5, 3), ...again('regs.2', 'point', 3, 5, 3), ...again('regs.3', 'clap', 4, 5, 3), { do: 'wait', s: 17 }],
     cam: [{ at: 0, move: [{ a: 'table', dy: 120 }, { a: 'table', dy: 20 }], dur: 17, z: [1.25, 1.75] }],
   },
-  // ---- Vehicles & Flight ----
+  // ---- Vehicles & Flight ---- (each runs its length: a wait beside the drive, the road's own route on past its straight)
   {   // a helicopter low across Downtown's towers at golden hour, the camera alongside
     id: 'shotheli', n: 'Helicopter over Downtown', g: 'vehicles', note: 'tracking alongside · golden hour', len: 18, linger: 0,
     place: { k: 'named', q: ['Downtown'] }, anchors: ['here'], time: 1125, weather: 'clear',
-    cast: [{ id: 'heli', veh: 'heli', at: { a: 'here', dx: -1400, dy: 200 }, a: 0, air: 240 }, { id: 'pilot', arch: 'executive', in: 'heli' }],
-    beats: [{ id: 'fly', at: 0.2, who: 'heli', do: 'fly', to: { a: 'here', dx: 1500, dy: -200 }, route: [{ a: 'here', dx: -200, dy: 60 }], alt: 240, speed: 0.55, max: 18 }],
+    cast: [{ id: 'heli', veh: 'heli', at: { a: 'here', dx: -1700, dy: 220 }, a: 0, air: 700 }, { id: 'pilot', arch: 'executive', in: 'heli' }],
+    beats: [{ id: 'fly', at: 0.2, who: 'heli', do: 'fly', to: { a: 'here', dx: 2000, dy: -220 }, route: [{ a: 'here', dx: -200, dy: 60 }], alt: 700, speed: 0.33, max: 18 }, { at: 0, do: 'wait', s: 17 }],
     cam: [{ at: 0, follow: 'heli', z: 0.95, lead: 0.4, s: 120 }, { at: 6, follow: 'heli', z: 0.78, lead: 0.8, s: 60, ease: 4 }],
   },
-  {   // a plane low over the airport, on its way in
-    id: 'shotplane', n: 'A plane over Westport International', g: 'vehicles', note: 'locked wide, then follow · morning', len: 16, linger: 0,
+  {   // a plane low over the airport, on its way across
+    id: 'shotplane', n: 'A plane over Westport International', g: 'vehicles', note: 'locked wide, then follow · morning', len: 13, linger: 0,
     place: { k: 'near', kind: 'runway', near: 'Westport International' }, anchors: ['here'], time: 560, weather: 'clear',
-    cast: [{ id: 'plane', veh: 'plane', at: { a: 'here', dy: 1500 }, a: -1.5708, air: 260 }, { id: 'pilot', arch: 'executive', in: 'plane' }],
-    beats: [{ id: 'fly', at: 0.2, who: 'plane', do: 'fly', to: { a: 'here', dy: -2600 }, alt: 200, speed: 0.6, max: 16 }],
-    cam: [{ at: 0, hold: { a: 'here', dy: 200 }, z: 0.8 }, { at: 3.5, follow: 'plane', z: 0.8, lead: 0.5, s: -100, ease: 2.5 }],
+    cast: [{ id: 'plane', veh: 'plane', at: { a: 'here', dy: 2600 }, a: -1.5708, air: 260 }, { id: 'pilot', arch: 'executive', in: 'plane' }],
+    beats: [{ id: 'fly', at: 0.2, who: 'plane', do: 'fly', to: { a: 'here', dy: -4200 }, alt: 200, speed: 0.6, max: 13 }, { at: 0, do: 'wait', s: 12 }],
+    cam: [{ at: 0, hold: { a: 'here', dy: 300 }, z: 0.8 }, { at: 3, follow: 'plane', z: 0.8, lead: 0.5, s: -100, ease: 2.5 }],
   },
   {   // a touring bike through the peaks at golden hour, the camera riding alongside
     id: 'shotpeaks', n: 'Motorcycle through Granite Peaks', g: 'vehicles', note: 'tracking alongside · golden hour', len: 18, linger: 0,
     place: { k: 'road', len: 2200, near: 'Granite Peaks' }, anchors: ['start', 'end', 'mid'], time: 1125, weather: 'clear',
     cast: [{ id: 'bike', veh: 'tourer', at: { a: 'start', s: 10 } }, { id: 'rider', arch: 'hiker', in: 'bike' }],
-    beats: [{ id: 'go', at: 0.4, who: 'bike', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.6, max: 16 }],
+    beats: [{ id: 'go', at: 0.4, who: 'bike', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.45, max: 12 }, { who: 'bike', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.45, max: 10 }, { at: 0, do: 'wait', s: 17 }],
     cam: [{ at: 0, follow: 'bike', z: 1.3, lead: 0.2, s: 60 }, { at: 3, follow: 'bike', z: 1.05, lead: 0.6, s: 110, ease: 2.5 }, { at: 11, follow: 'bike', z: 0.85, lead: 0.9, ease: 3 }],
   },
-  {   // a pickup kicking up the desert road at sunset
-    id: 'shotdesert', n: 'A pickup on the desert road', g: 'vehicles', note: 'tracking alongside · golden hour', len: 16, linger: 0,
-    place: { k: 'road', len: 1300, near: 'Red Rock Desert', maxD: 14000 }, anchors: ['start', 'end', 'mid'], time: 1150, weather: 'clear',
-    cast: [{ id: 'truck', veh: 'pickup', at: { a: 'start', s: 10 }, paint: 6 }, { id: 'driver', arch: 'construction', in: 'truck' }],
-    beats: [{ id: 'go', at: 0.4, who: 'truck', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.7, max: 14 }],
-    cam: [{ at: 0, follow: 'truck', z: 1.2, lead: 0.3, s: -80 }, { at: 4, follow: 'truck', z: 0.9, lead: 0.8, s: -40, ease: 3 }],
+  {   // a big rig rolling through Midtown at dusk, the El overhead
+    id: 'shotsemi', n: 'A big rig through Midtown', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
+    place: { k: 'road', len: 2000, near: 'Midtown' }, anchors: ['start', 'end', 'mid'], time: 1200, weather: 'clear',
+    cast: [{ id: 'rig', veh: 'semi', at: { a: 'start', s: 10 }, paint: 6 }, { id: 'driver', arch: 'construction', in: 'rig' }],
+    beats: [{ id: 'go', at: 0.4, who: 'rig', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.55, max: 12 }, { who: 'rig', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.5, max: 10 }, { at: 0, do: 'wait', s: 15 }],
+    cam: [{ at: 0, follow: 'rig', z: 1.2, lead: 0.3, s: -90 }, { at: 4, follow: 'rig', z: 0.95, lead: 0.8, s: -50, ease: 3 }],
   },
   {   // a convertible down the coast road at dusk
-    id: 'shotcruise', n: 'Sports car down the coast road', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
+    id: 'shotcruise', n: 'A convertible down the coast road', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
     place: { k: 'road', len: 2000, near: 'Bayside Heights' }, anchors: ['start', 'end', 'mid'], time: 1195, weather: 'clear',
-    cast: [{ id: 'car', veh: 'sports', at: { a: 'start', s: 10 }, paint: 2 }, { id: 'driver', arch: 'socialite', in: 'car' }],
-    beats: [{ id: 'go', at: 0.4, who: 'car', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.7, max: 14 }],
+    cast: [{ id: 'car', veh: 'convertible', at: { a: 'start', s: 10 }, paint: 2 }, { id: 'driver', arch: 'socialite', in: 'car' }],
+    beats: [{ id: 'go', at: 0.4, who: 'car', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.5, max: 12 }, { who: 'car', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.5, max: 10 }, { at: 0, do: 'wait', s: 15 }],
     cam: [{ at: 0, follow: 'car', z: 1.25, lead: 0.2, s: 70 }, { at: 3, follow: 'car', z: 1.0, lead: 0.7, s: 100, ease: 2.5 }],
   },
   place('shotballoons', 'vehicles', 'Balloons over Dry Creek at dawn', ['Dry Creek Balloon Field', 'Dry Creek'], 'crane', { t: 450, z: 0.95, r: 600, s: 18 }),

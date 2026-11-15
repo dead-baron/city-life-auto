@@ -52,7 +52,7 @@ const nearZoom = (z) => ZOOMS.reduce((b, q, k) => (Math.abs(q - z) < Math.abs(ZO
 const TIMES = [['Live', null], ['Dawn', 390], ['Morning', 540], ['Noon', 720], ['Afternoon', 930], ['Golden hour', 1125], ['Dusk', 1205], ['Night', 1380], ['Small hours', 180]];
 const WXS = [['Live', null], ['Clear', 'clear'], ['Rain', 'rain'], ['Fog', 'fog'], ['Mist', 'mist']];
 const BOXES = [['Off', 0], ['2.39:1', 2.39], ['1.85:1', 1.85]];
-const HOLD_MAX = 6500, HOLD_MIN = 500, END_FADE = 600;   // ms: a shot's hold for the art at most / at least, the fade out at its end
+const HOLD_MAX = 9500, HOLD_MIN = 500, END_FADE = 600;   // ms: a shot's hold for the art at most / at least, the fade out at its end
 // the shot list's sections and their shots, in order (shared/scenes/: each scene's g)
 export const shotsOf = (sec) => DSCENE_LIST.filter((q) => (sec ? q.g === sec : SECTIONS.some((g) => g[0] === q.g))).map((q) => q.id);
 // does this key hand the camera back from a shot? (not the screen's own keys, the zoom, Next or the panel's)
@@ -870,7 +870,7 @@ body.touch.cine-bar #tbtns, body.dead #cine-ctl { display: none !important; }`;
       if (Math.hypot(ivx, ivy) < 3000) { q.vx += (ivx - q.vx) * k; q.vy += (ivy - q.vy) * k; }
       q.px = e.rx; q.py = e.ry;
     }
-    const ctx = { anchors: sct.anchors, beatAt: (id) => sct.bt[id], ent: (cid) => { const e = castEnt(cid); if (!e) return null; const q = sct.vel.get(e.id); return { x: e.rx, y: e.ry, a: e.ra || 0, vx: q ? q.vx : 0, vy: q ? q.vy : 0 }; } };
+    const ctx = { anchors: sct.anchors, beatAt: (id) => sct.bt[id], ent: (cid) => { const e = castEnt(cid); if (!e) return null; const q = sct.vel.get(e.id), [ex, ey] = subjectAt(e); return { x: ex, y: ey, a: e.ra || 0, vx: q ? q.vx : 0, vy: q ? q.vy : 0 }; } };   // (an aircraft where it's drawn: up by its height - subjectAt)
     const c = camAt(sct.sc, Math.max(0, t), ctx, sct.cam);
     // held at its first moment (black): once the camera's on its first shot and the art there is in - or HOLD_MAX - the
     // server's told to go on (the shot list's scenes; a capture's are the capture's to let go)
