@@ -189,6 +189,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Caves: no lost-in-the-dark arrow; the cave art is OK; the character must be the real sprite. (11-06; decisions-11-06)
 - Chess tables out from behind trees, and more of them. (11-06; decisions-11-06)
 - Homes: going inside your own home is a separate space (its own little level). (10-11; decisions-10-11)
+- Open up the blocks (priority, before the beta and filming): big plain building footprints broken into smaller buildings with walkable, lived-in alleys and courtyards; varied roofs; landmarks and buildings with a reason kept whole. (11-14; chat)
+- Cinematics: fix the fundamentals (time of day, no roof flicker, real street racing, chases in view), add "Save this view" so the owner scouts the shots, then ~10 hero shots refined with him before adding more. (11-14; chat)
 
 ## Police and crime
 - Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)
