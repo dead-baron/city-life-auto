@@ -23988,3 +23988,9 @@ The owner (the log full of "Dancing: the fist pump - move to stop", "Dancing: th
 emotes in the log like this". server/systems/dance.js now says so once, when you start dancing ("Dancing - press again
 for the next move, move to stop"); switching moves from the button or the picker's Dances tab says nothing, and running
 out of moves stops quietly.
+
+## 2026-11-14 - The debug menu doesn't ask for a password
+The owner: the debug button asked for a password, and pressing it again just worked. The server lets anyone in while
+testing (CLA_DEV_OPEN), but the page opened the old password prompt if the server's yes took over 2 s (a phone on a
+slow link). The prompt is no longer opened (client/main.js openDebug); a refusal is the server's own notice. At the beta
+the owner resets progress and turns the open mode off (CLA_DEV_OPEN=0): the debug menu for admins only.

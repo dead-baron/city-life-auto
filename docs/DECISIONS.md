@@ -296,6 +296,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - New features reachable from the debug menu while testing. (10-18; DEVLOG 10-18)
 - Concept art Claude needs goes in the general Concept Art Prompt Pack; the World Building pack is the owner's. (10-17; chat)
 - Offline practice: PAUSED - don't build on it until a plan is agreed. (10-20; CLAUDE.md)
+- Debug menu: open to all testers with no password until the beta; at the beta, progress is reset and the debug menu is admin-only (the owner and whoever he grants). (11-14; chat)
 
 ## Future features (noted, not scheduled)
 - Treasure hunting (map scraps, riddles, shovel, tiered chests as visible cargo). (11-03; launch-plan 11-03)

@@ -1557,7 +1557,7 @@ function openDebug() {
   if (!S.welcomed) return;
   S.openDevOnEnter = true;
   send({ t: 'devmode', pw: '' });
-  setTimeout(() => { if (!S.devMode && S.openDevOnEnter) { S.openDevOnEnter = false; openOverlay('devpw'); } }, 2000);
+  setTimeout(() => { S.openDevOnEnter = false; }, 15000);   // (no password prompt: a slow reply used to open it after 2 s though the server was letting you in - the owner, 11-14; refused, the server says so: devmode.js)
 }
 // the debug menu's sound line (client/audio.js soundStatus): on, off, loading, asleep or unavailable, and why
 setInterval(() => { const el = document.getElementById('dev-sound'); if (el && el.offsetParent) el.textContent = soundStatus(); }, 1000);
