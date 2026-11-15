@@ -272,7 +272,7 @@ body.cine-on #hud-tc { visibility: hidden; }   /* (the photo mode: the top centr
 #cine-panel .sc small, #cine-panel .tip { color: var(--dim); }
 #cine-panel .tip { margin: 6px 0 0; }
 #cine-panel input[type=range] { width: 100%; }
-#cine-panel .cine-in { display: block; width: 100%; box-sizing: border-box; min-height: 32px; margin: 2px 0; padding: 0 var(--s2); background: var(--pad-ink); color: var(--pad-cream); border: 2px solid var(--pad-line); border-radius: 0; font: 600 16px var(--ui); }
+#cine-panel .cine-in { display: block; width: 100%; box-sizing: border-box; min-height: 32px; margin: 2px 0; padding: 0 var(--s2); background: var(--pad-ink); color: var(--pad-cream); border: 2px solid var(--pad-line); border-radius: 0; font: 600 var(--fs-3) var(--ui); }
 .touch #cine-panel .cine-in { min-height: var(--tap); }
 #cine-ctl { position: fixed; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 69; display: none; align-items: center; gap: var(--s2); max-width: calc(100vw - 32px); flex-wrap: wrap; justify-content: center; padding: 7px 10px; background: var(--glass); color: var(--cream); font: 600 var(--fs-2)/1.3 var(--ui); border: 2px solid var(--gold-a); border-radius: var(--r2); transition: opacity .4s ease; touch-action: none; user-select: none; }
 #cine-ctl .lbl { min-width: 56px; text-align: center; }
