@@ -24176,3 +24176,7 @@ address in, still asks for it), so the page leaves the line out until it's set (
 The owner asked for it while setting up GA: a user property player_type, guest or account, set from the account state
 (client/account.js) and kept until GA is granted (client/analytics.js uprops) - so GA can compare signed-in players
 with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.md section 5).
+
+## 2026-11-15 - The Discord on the About page
+The owner made the player Discord (invite https://discord.gg/zuVSkbfjg, never expires). about/index.html links it under
+PLAY NOW and in its footer; the game's own button comes with the bug reporter.
