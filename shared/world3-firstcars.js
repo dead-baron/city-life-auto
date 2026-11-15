@@ -142,10 +142,12 @@ export function parkWest3(m, H3) {
   // end's bollards and hot dog cart. The lights are strung across the shops' pavement and the lane, from bracket on the
   // shops' fronts to posts on the station's side of the lane, to and fro (the owner, 11-14: "the lights don't act like
   // lanterns, they just look like random lights strung around" - each one a real catenary between two anchors)
-  for (let k = 0; k < 5; k++) {
-    const wx = P.shops[0][0] + 1.2 + k * 3.2, wy = P.shopRows[1] + 1.02, px = wx + 3.2, py = P.walk + 0.4;
-    if (k % 2 === 0) K.prop('festoon', wx, wy, 0, { tx: Math.round((px - wx) * TILE), ty: Math.round((py - wy) * TILE), h: 66, ends: ['wall', 'pole'] });
-    else K.prop('festoon', wx, py, 0, { tx: Math.round((px - wx) * TILE), ty: Math.round((wy - py) * TILE), h: 66, ends: ['pole', 'wall'] });
+  // (the posts on the lane's far kerb between the bought cars' spaces - never on the walk behind the platform: the
+  // arrival line's corridor keeps clear of anything standing within a tile of it - shared/world3-arrivals.js)
+  const zig = [P.shops[0][0] + 1, P.shops[0][0] + 5, P.shops[0][0] + 9, P.shops[0][0] + 13, P.shops[0][0] + 17], wy = P.shopRows[1] + 1.02, py = P.lane[1] + 0.75;
+  for (let k = 0; k + 1 < zig.length; k++) {
+    if (k % 2 === 0) K.prop('festoon', zig[k], wy, 0, { tx: Math.round((zig[k + 1] - zig[k]) * TILE), ty: Math.round((py - wy) * TILE), h: 66, ends: ['wall', 'pole'] });
+    else K.prop('festoon', zig[k], py, 0, { tx: Math.round((zig[k + 1] - zig[k]) * TILE), ty: Math.round((wy - py) * TILE), h: 66, ends: ['pole', 'wall'] });
   }
   for (const x of [P.x0 + 4.6, ax1 + 1.4, X1 - 1.6]) K.prop('lamp', x, P.front + 0.7, 0);
   K.prop('bench_m', ax1 + 3.2, P.front + 0.6, 0);

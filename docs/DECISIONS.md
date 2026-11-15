@@ -208,6 +208,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Open up the blocks (priority, before the beta and filming): big plain building footprints broken into smaller buildings with walkable, lived-in alleys and courtyards; varied roofs; landmarks and buildings with a reason kept whole. (11-14; chat)
 - No big overhangs over entrances: porte-cocheres and entrance canopies (over about 4 x 2 tiles) removed everywhere - the door lit by wall lamps either side, the name on the facade; small awnings stay; a filling station's canopy over its pumps stays. (11-14 20:33; chat)
 - Cinematics: fix the fundamentals (time of day, no roof flicker, real street racing, chases in view), add "Save this view" so the owner scouts the shots, then ~10 hero shots refined with him before adding more. (11-14; chat)
+- Every place crafted from the concepts, district by district (the craft passes): no oversized empty plazas or lots - an open space gets a purpose and edges; lights belong to things (lamp posts at a rhythm along kerbs and paths, strings of lights only as catenaries between two anchors - posts or walls, lit windows and signs; no light without a source); props in groups that tell a story; NPCs that fit the place. (11-14 20:28; chat)
 
 ## Police and crime
 - Lenient before the first star: lesser crimes seen go on a tally with a warning; an officer's sighting counts double. (11-07; DEVLOG 11-07)

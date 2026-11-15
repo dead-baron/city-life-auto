@@ -189,7 +189,7 @@ export function craftDowntown(K, m, D, out) {
     for (const x of [bank.tx + 2.5, bank.tx + bank.tw - 2.5]) put('lamp', x, dy + 0.55, 0, { style: 'cast' }, 1);
     const sx = bank.tx + 5.5;
     if (put('busstop', sx, dy + 1.1, 0, null, 1)) { tableau(m, { v: 'wait', x: sx, y: dy + 0.8, a: S }); for (let x = sx - 2; x <= sx + 2; x++) note(x, kerb); }
-    bollards(bank.tx + 1, bank.tx + bank.tw - 1, kerb);
+    bollards(dx - 7, dx + 7, kerb);   // (in front of its steps, SC2-A)
     const vx0 = bank.tx + bank.tw + 1;
     tableau(m, { v: 'guards', x: vx0 + 8.6, y: rn1 - 0.9, a: S, x2: vx0 + 5, y2: rn1 - 6.3, x3: vx0 + 1.2, y3: rn1 - 6.3 });
     put('handtruck', vx0 + 1.4, rn1 - 7.6, 0, null, 0); put('crates', vx0 + 1.2, rn1 - 4.6, 0, null, 0);
@@ -201,7 +201,7 @@ export function craftDowntown(K, m, D, out) {
   const jw = B('Brilliant & Co.'), jd = doorOf(jw);
   if (jd) {
     const [, dy] = jd, kerb = dy + 2.55, x0 = jw.tx, x1 = jw.tx + jw.tw;
-    bollards(x0 + 1, x1 - 1, kerb);
+    bollards(x0 + 1.5, x1 - 1, kerb, 2.6);
     put('trashcan', x0 + 1.2, dy + 0.6, 0, null, 0); put('news_b', x0 + 2.4, dy + 0.6, 0, null, 0); put('news_a', x0 + 3.2, dy + 0.6, 0, null, 0);
     put('hydrant', x0 - 1.4, kerb - 0.2, 6, null, 0);
     if (out.alley) {

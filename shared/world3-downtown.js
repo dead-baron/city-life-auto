@@ -356,6 +356,9 @@ function greenfieldPark(K, m, out) {
     tableau(m, { v: 'view', x: js + 6.2, y: JY + 1.5, a: 0 });   // (two at the jetty's end, looking out over the pond)
     prop('lamp', js + 7.5, JY - 0.4, 0);
     prop('foodcart', bx - 2.6, by + bh - 0.6, 14);   // (the ice-cream cart by the boathouse: a vendor comes to it - personas.js)
+    // (ducks paddling off the jetty's end, lilies by the bank - WC083)
+    for (const [dx, dy, a] of [[9.5, 5.5, 0.4], [11, 6.3, 0.9], [10.2, 7.4, 5.8]]) if (isW(Math.floor(js + dx), Math.floor(JY + dy))) prop('duck', js + dx, JY + dy, 0, { a });
+    if (isW(Math.floor(js + 4), Math.floor(JY + 8))) prop('lily', js + 4, JY + 8, 0, { v: 1 });
     if (boat) (out.places ||= []).push({ name: 'Greenfield Boathouse', x0: bx, y0: by, x1: js + 8, y1: by + bh });
   }
   // ---- the islands: rocks round them, trees, the gazebo on the east one; lilies, ducks and a swan on the water
