@@ -1,5 +1,6 @@
 // Professions & extraction loops: courier contracts, Dry Creek harvests (GDD §5),
 // contraband drops for the black market / evidence locker, and the deep-sea charter (the fishing itself: fishing.js).
+import { parkWhy } from '../../shared/parkcheck.js';
 import { K } from '../../shared/constants.js';
 import { ITEMS } from '../../shared/items.js';
 import { POACH_PAY, NET_TIME_S, DEEPSEA_CATCH, DEEPSEA_PAY, WORK_TRUCK, WORK_TRUCK_RETURN, RECALL } from '../../shared/rules.js';
@@ -116,7 +117,9 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
     if ((q.lz || 0) > 0.3) continue;
     v = q; break;
   }
-  for (let r = 70; !v && r <= WORK_TRUCK.searchR; r += 30) {
+  // (first on proper ground - the street, a car park: never up on the pavement or a promenade, shared/parkcheck.js - then,
+  // where there's none, anywhere it fits; a forklift works on the quays and the yards' paving)
+  for (const proper of model === 'forklift' ? [false] : [true, false]) for (let r = 70; !v && r <= WORK_TRUCK.searchR; r += 30) {
     const n = Math.max(12, Math.round(r / 20));
     for (let k = 0; k < n && !v; k++) {
       const a = (k / n) * Math.PI * 2;
@@ -126,7 +129,7 @@ export function workTruck(world, p, pad, model = 'flatbed', poi = null) {
         const px = x + Math.cos(heading) * def.L * f - Math.sin(heading) * def.W * g, py = y + Math.sin(heading) * def.L * f + Math.cos(heading) * def.W * g;
         return !CAR_SPAWN_BLOCK[world.map.tileAtPx(px, py)];
       }));
-      if (!ok || world.query(x, y, def.L, K.VEH).length) continue;
+      if (!ok || (proper && parkWhy(world.map, x, y, heading, def.L, def.W)) || world.query(x, y, def.L, K.VEH).length) continue;
       v = world.spawnVehicle(model, x, y, heading, { npcOwned: false });
     }
   }

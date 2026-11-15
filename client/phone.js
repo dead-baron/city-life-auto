@@ -61,6 +61,8 @@ export const ICON = {
   radio: P('<rect x="3" y="8" width="18" height="12" rx="2"/><circle cx="8" cy="14" r="3"/><path d="M14 12h4M14 16h4M6 8l12-5"/>'),
   clear: P('<path d="M6 6l12 12M18 6L6 18"/>'),
   cruiser: P('<path d="M3 15l2-6h14l2 6v4H3z"/><path d="M10 6h4M12 4v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>'),
+  stash: P('<rect x="4" y="5" width="16" height="15" rx="2"/><circle cx="12" cy="12.5" r="3"/><path d="M12 9.5v1M16 8h1M4 20v1M20 20v1"/>'),
+  valet: P('<path d="M4 15l2-5h12l2 5v3H4z"/><circle cx="8" cy="18" r="1.5"/><circle cx="16" cy="18" r="1.5"/><path d="M12 3v4M10 5l2 2 2-2"/>'),
 };
 // the apps, in the grid's order: [screen, name] (UI-10, UIC-04: the Guide last - the in-game wiki: client/guide.js)
 const APPS = [['next', "What's next"], ['jobs', 'Jobs'], ['places', 'Places'], ['transit', 'Transit'], ['feed', 'City feed'], ['bounties', 'Bounties'], ['homes', 'Homes'], ['skills', 'Skills'], ['crew', 'Crew'], ['msgs', 'Messages'], ['radio', 'Radio'], ['log', 'Log'], ['camera', 'Camera'], ['guide', 'Guide']];
@@ -115,7 +117,7 @@ export function createPhone(ctx) {
       const wp = ctx.waypoint();
       // crimes you saw (server law.js sawCrime): a minute to call each one in
       const saw = (board && board.saw) || [];
-      const quick = [['atm', 'Nearest ATM'], ['dance', 'Dance'], ['emote', 'Emote']];
+      const quick = [['atm', 'Nearest ATM'], ['stash', 'Find my weapons'], ['valet', 'Have my car delivered'], ['dance', 'Dance'], ['emote', 'Emote']];   // (your stash: server arms.js; the valet: server mycar.js)
       if (ctx.canCruiser && ctx.canCruiser()) quick.push(['cruiser', 'Call a cruiser']);
       if (wp) quick.push(['clearwp', 'Clear waypoint']);
       el.innerHTML = saw.map((q) => `<div class="ph-card saw"><b>You saw: ${esc(q.label)}</b> by ${esc(q.name)}<small>${esc(q.desc)}</small>${q.done ? '<em>Called in</em>' : `<button data-report="${q.id}">📞 Call it in (${q.left}s)</button>`}</div>`).join('')
@@ -294,6 +296,19 @@ export function createPhone(ctx) {
       ctx.toast(`Nearest ATM: ${m(bd)} away - follow the green $`, 'good');
       ctx.close();
     };
+    // Find my weapons: the nearest place to open your stash - a home of yours, a gun shop, a pawn shop (server arms.js)
+    for (const b of el.querySelectorAll('[data-act="stash"]')) b.onclick = () => {
+      const me = ctx.pos(), mine = ((ctx.me && ctx.me()) || {}).homes || [];
+      let best = null, bd = Infinity;
+      const see = (p, label) => { const d = Math.hypot(p.x - me.x, p.y - me.y); if (d < bd) { bd = d; best = { x: p.x, y: p.y, label }; } };
+      for (const p of ctx.map().places || ctx.map().pois) if (p && (p.kind === 'gunshop' || p.kind === 'pawn')) see(p, `Your stash: ${p.label}`);
+      for (const h of mine) see(h, `Your stash: ${h.name}`);
+      if (!best) { ctx.toast('Nowhere near to open your stash.', 'warn'); return; }
+      ctx.setWaypoint(best);
+      ctx.toast(`${best.label} - ${m(bd)} away`, 'good');
+      ctx.close();
+    };
+    for (const b of el.querySelectorAll('[data-act="valet"]')) b.onclick = () => { ctx.send({ t: 'phone', a: 'valet' }); ctx.close(); };   // (the server says what happens: mycar.js)
     for (const b of el.querySelectorAll('[data-group]')) b.onclick = () => { group = b.dataset.group; screen = 'group'; render(); };
     for (const b of el.querySelectorAll('[data-jf]')) b.onclick = () => { jobFilter = b.dataset.jf; render(); };
     for (const b of el.querySelectorAll('[data-grp]')) b.onclick = () => { group = group === b.dataset.grp ? null : b.dataset.grp; render(); };   // (Places: open a kind, or fold it)

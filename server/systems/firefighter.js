@@ -19,6 +19,7 @@
 //   callAt(world, p, k, site)       a call of kind k at a site { x, y, name } (tests, the dev menu)
 //   light(world, tx, ty, k, call)   a tile fire (0 grass, 1 dumpster, 2 kitchen)
 //   spray(world, ped, a, dt)        the water from ped along a -> its reach (px)
+import { parkWhy } from '../../shared/parkcheck.js';
 import { K, T, TILE, WEATHER } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
 import { DISTRICTS, PED_BLOCK } from '../../shared/mapcore.js';
@@ -279,7 +280,7 @@ export function callAt(world, p, k, site) {
     let spot = null;
     for (let r = 0; r <= 160 && !spot; r += 40) for (let a = 0; a < 6 && !spot; a++) {
       const x = site.x + Math.cos(a) * r, y = site.y + Math.sin(a) * r;
-      if (!CAR_SPAWN_BLOCK[m.tileAtPx(x, y)] && !world.query(x, y, 70, K.VEH).length) spot = { x, y };
+      if (!CAR_SPAWN_BLOCK[m.tileAtPx(x, y)] && !parkWhy(m, x, y, site.a || 0, 50, 24) && !world.query(x, y, 70, K.VEH).length) spot = { x, y };   // (on the street: never up on the pavement or a promenade - shared/parkcheck.js)
       if (!r) break;
     }
     if (!spot) { j.call = null; return null; }

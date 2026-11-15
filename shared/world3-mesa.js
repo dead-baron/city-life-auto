@@ -183,7 +183,7 @@ const C = { gold: [1, 0.8, 0.35], pink: [1, 0.3, 0.75], cyan: [0.3, 0.9, 1], whi
 // The old casinos, built on their kept lots (from the dress hook: props now have their pass).
 export function buildMesa(m, addProp) {
   const out = { old: [] };
-  const poi = (b, name, x, y) => { const p = { id: m.pois.length, kind: 'delivery', label: name, x, y, r: 48, b: b.id, fixed: true, casino: true }; m.pois.push(p); return p; };
+  const poi = (b, name, x, y) => { const p = { id: m.pois.length, kind: 'delivery', label: name, x, y, r: 48, b: b.id, fixed: true, casino: true, tier: 1 }; m.pois.push(p); return p; };
   // Old Downtown's covered street: lamps down its middle under the canopy, the old casinos either side fronting it
   const [cx0, cy0, cx1, cy1] = MESA.canopy;
   for (let x = cx0 + 3; x < cx1 - 2; x += 6) addProp(m, 'lamp', (x + 0.5) * TILE, (cy0 + cy1) / 2 * TILE, 5);

@@ -164,6 +164,8 @@ export const EVENT_SOUNDS = {
   chessmv: (ev, A) => A.at('clack', ev.x, ev.y, ev.c ? 0.5 : 0.35),
   pshot: (ev, A) => { if (ev.x !== undefined) A.at('clack', ev.x, ev.y, 0.45); },   // (the cue on the ball at a pool table near: server pooltables.js)
   ptab: null,   // (a pool table near, as it stands: client/poolview.js draws it)
+  cfl: null,   // (a casino floor near, as it stands: client/casinoview.js draws it)
+  cdl: null,   // (a deal at a casino or card table: client/casinoview.js plays it out)
   geyser: (ev, A) => A.at('gush', ev.x, ev.y),
   trainhorn: (ev, A) => A.at(ev.s === 2 ? 'trainhorn' : 'trainhornshort', ev.x, ev.y),
   xing: (ev, A) => { const c = A.S.map && A.S.map.rail && A.S.map.rail.crossings && A.S.map.rail.crossings[ev.i]; if (c) A.at('gatearm', c.x, c.y, 0.6); },

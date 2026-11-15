@@ -11,6 +11,7 @@ import { joinPlayer, teleport } from './helpers.js';
 import { World } from '../server/world.js';
 import { buildWorld3 } from '../server/world3.js';
 import { T, TILE, K } from '../shared/constants.js';
+import { GUN_PRICES } from '../shared/rules.js';
 import { DISTRICTS } from '../shared/mapcore.js';
 import { FRAME_W, FRAME_H, REGION_TILES, REGIONS_X, REGIONS_Y, REGION_COUNT } from '../shared/world3.js';
 import { CITY_SEEDS } from '../shared/world3-city.js';
@@ -229,8 +230,8 @@ test('the server\'s world on the v3 map: players downtown, at Port Westport, in 
   assert.ok(gun && hw && mart, 'new shops of each kind');
   at(gun);
   assert.equal(economy.buildMenu(w, buyer, gun).title, gun.label, 'the gun shop\'s own name over the counter');
-  economy.handleMenu(w, buyer, gun.id, 'w:pistol:450');
-  assert.ok(buyer.profile.weapons.pistol !== undefined && buyer.profile.cash === 4550, `bought a pistol (${buyer.profile.cash})`);
+  economy.handleMenu(w, buyer, gun.id, `w:pistol:${GUN_PRICES.pistol}`);
+  assert.ok(buyer.profile.weapons.pistol !== undefined && buyer.profile.cash === 5000 - GUN_PRICES.pistol, `bought a pistol (${buyer.profile.cash})`);
   at(hw);
   const fl = economy.buildMenu(w, buyer, hw).opts.find((o) => o.id.startsWith('i:flashlight:'));
   economy.handleMenu(w, buyer, hw.id, fl.id);

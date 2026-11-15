@@ -42,6 +42,7 @@ import * as skills from './skills.js';
 import * as reputation from './reputation.js';
 import * as workout from './workout.js';
 import * as crews from './crews.js';
+import * as mycar from './mycar.js';
 import { CAB, BUSJOB, TOWJOB, CRAZY, RIG, MAILJOB } from '../../shared/rules.js';
 import * as crazytaxi from './crazytaxi.js';
 import * as truckjob from './truckjob.js';
@@ -284,6 +285,7 @@ export function handle(world, p, msg) {
   if (a === 'next' || a === 'nextgo' || a === 'nextskip' || a === 'nextmain' || a === 'reroll' || a === 'boards') return whatsnext.handle(world, p, msg);   // the "What's next" app (whatsnext.js)
   if (a === 'feed') return { ...events.feedFor(world), cal: setCalendarListing.fn ? setCalendarListing.fn(world, p) : null };   // (and what's coming up: the event calendar - calendar.js)
   if (a === 'skills') return { ...skills.panel(world, p), rep: reputation.panel(world, p), seas: seasons.badges(p) };   // (and the season badges and titles kept: seasons.js)   // the Skills app (skills.js; your standing by district: reputation.js)
+  if (a === 'valet') { const err = mycar.request(world, p); if (err) world.notify(p, err, 'warn'); return null; }   // (Have it delivered: your car brought to a space near you - mycar.js)
   if (a === 'crew') return crews.panel(world, p);   // the Crew app (crews.js)
   if (a === 'crewsay' || a === 'crewleave' || a === 'crewkick' || a === 'crewfound' || a === 'crewput' || a === 'crewpay') return crews.phone(world, p, msg);   // (founding a crew of your own, its bank)
   if (a === 'workout') { phoneOut(world, p, false); const no = workout.start(world, p, String(msg.k || '')); if (no) world.notify(p, no, 'warn'); return null; }   // a set of push-ups or sit-ups (workout.js)

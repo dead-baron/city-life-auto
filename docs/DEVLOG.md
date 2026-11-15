@@ -23532,6 +23532,71 @@ three-tile kiosks too - got a neon OPEN in the window beside the door; on a kios
 was clamped onto the door and the door, drawn after, cut it in half. Now it's drawn only where it fits clear of the door
 (client/art2/buildings.js); the wider fronts keep theirs.
 
+## 2026-11-14 - Your weapons at risk, with one stash; your car on the map and the valet
+The owner's design (approved 2026-11-14): the guns you carry are what you can lose, kept safe in one stash; and your car
+where you left it, brought to you by a valet - no teleport. The numbers: shared/rules.js `ARMS`, `VALET`, `GUN_PRICES`.
+- **What's at risk** (server/systems/arms.js `atRisk`): every gun, bow, launcher and grenade, anything illegal, and the
+  dear blades (a melee weapon or tool selling for more than `ARMS.keepMax`, $300: the sword, the katana, the plasma
+  blade). Never your fists, police issue (the service pistol, the armory's long guns, the taser and baton), or a cheap
+  legal bat, knife, crowbar, sledgehammer, fishing pole, heavy flashlight or pepper spray - those stay with you.
+- **Down**: each gun falls on its own round where you lay (cargo.js dropEverything -> arms.dropOnDeath), a pickup anyone
+  can take for `ARMS.dropS` (60 s), blinking its last 15, then gone. The backpack keeps your things (and the cash its own
+  pile) as before; you wake with your fists and whatever wasn't at risk. The first-time moment for going down says so.
+- **Busted**: the illegal guns are taken for good (custody.js confiscate, as before); the legal ones now go to your stash
+  after the fine (arms.onBooked), not back into your hands.
+- **The stash**: one per character - `profile.stash.weapons` (id -> rounds), the home safe's own, so nothing to migrate:
+  what you carry stays carried, the stash starts as it was (empty for nearly everyone). It opens at your home's safe and
+  at every gun shop's and pawn shop's counter (a "Your stash" line - economy.js stashMenu). Rounds go with a gun both
+  ways; the old safe counted the magazine twice going in and left it short coming out (profile.weapons is every round,
+  the magazine's among them - combat.js counts them so): fixed.
+- **The loadout** (the owner's, claude/launch-plan-2026-11-03.md; `ARMS.carry`): 2 guns (bows, launchers and the
+  flamethrower count as guns), 1 melee weapon (the at-risk blades) and 1 throwable (grenades) carried - arms.js classOf;
+  fists, police issue and the cheap legal melee and tools don't count. A new one of a full kind - bought, picked up,
+  taken out of the stash, handed over - sends the one of that kind in your hand, else the oldest you carry of it
+  (profile.weapons keeps the order they came), to your stash (arms.js makeRoom). Loadouts from before over the limit
+  keep their extras until the next death (every gun drops), arrest (every gun leaves your hands) or stash visit (the
+  counter's stash or the home safe: arms.js fit keeps the one in your hand and the newest, the rest go in); a buy or a
+  pickup of a full kind meanwhile brings that kind down to the limit there and then. Carry upgrades to come (a
+  shoulder holster +1 gun, a back sling +1 long gun, a chest rig +1 melee +1 throwable; visible extra guns) are not
+  built: `profile.carryUp` raises a kind in arms.js carryOf, up to `ARMS.carryMax` (4 / 2 / 2).
+- **Buying to the stash**: every at-risk weapon at a counter (the gun shops, the pawn shops, the black market and the
+  Smuggler's Den, the lodges) has a "- to your stash" line: straight into the stash, one after another for several;
+  ammunition for a gun in your stash goes in with it.
+- **Dropped or handed over**: the bag's Drop puts a gun on the ground as a pickup (DROP_LIFE_S); its new "Hand to a
+  crewmate close by" (`ARMS.giveR`, about 4 m) is the same pickup, set at their feet and taken there and then
+  (`{ t: 'inv', a: 'give', id }`). Picking one up: "Pick up the Pistol" over it.
+- **The phone**: Find my weapons sets a waypoint to the nearest place to open your stash (a home of yours, a gun shop, a
+  pawn shop - worked out on the page from your homes and the map's places).
+- **Prices**: the basic pistol is cheaper now it can be lost - $250 at the gun shops (was $450), $180 at the pawn shops
+  (was $320) (`GUN_PRICES`, in shared/rules-base.js since shared/items.js reads it). Nothing else changed.
+- **Your car** (server/systems/mycar.js): the car you last took out stays where you left it - through a logoff (yours
+  again when you're back) and a restart (`profile.carAt`, saved every few seconds and at logoff, put back on its space
+  when you join if it's still free and proper ground; else it's in your garage as before) - and shows on your map and
+  radar while you're on foot (the self record's `car`, after the starter and first-car markers).
+- **Have my car delivered** (the phone's home screen; `{ t: 'phone', a: 'valet' }`): a valet parks it for you on the
+  nearest proper space `VALET.minD`-`maxD` px (about 7-40 m) from you (a kerb bay or a car park's bay - `map.parking`, not a home's
+  driveway - else a street's shoulder), never on a pavement, a promenade or a lawn, out of everyone's sight, about
+  `VALET.waitS` (12 s) later, for `VALET.fee` ($40); once every `VALET.cooldownS` (4 min). Wrecked (its insurance claim
+  brought it back: insurance.js marks the entry `wr`), `VALET.wreckFee` ($150): it comes from the body shop. Not while
+  you're wanted, not in a wild district, not with someone in it or cargo on it, and only on the piece of road network
+  the car is on (a garage's car: the mainland's) - an island no road reaches gets no valet (custody.js pieceAt, as the
+  police cars). If the space is gone when it's due, another is found or the fee comes back.
+- **Parked cars off the pavements** (the owner: a white van nosed into the Harbor Marina's boat hire kiosk on the
+  promenade). shared/parkcheck.js `parkWhy`: a vehicle's footprint off the pavements, plazas and promenades, lawns, sand,
+  piers and buildings. The parked cars leave a space that fails it empty (traffic.js badBay); a fire call's burning car,
+  the auto shop's customer and the job vehicles (jobs.js workTruck: the mail van, the ambulance, the fire truck - on
+  proper ground first, anywhere it fits only where there's none) are put on proper ground. No parking space lies within a dozen
+  tiles of the Harbor's kiosk (checked on the World v3 build), so the van wasn't a parked car: it was one of those put
+  down at run time, which took the first clear ground they found - a promenade too. Which one wasn't pinned down; all
+  of them now stand on proper ground. The placement lint's new `parked` row lists the spaces laid over a pavement or a
+  plaza in the data - 124 of about 8,300 (mostly on a pavement, then plazas, lawns, the sand, in a building, on a pier:
+  a few districts' kerb bays and car parks a tile off; a golf cart's stand on its cart path is its place and isn't
+  counted): LINT_ALLOW.parked holds that count, to bring down by fixing the data, never up.
+- Tests: test/arms.test.js (what's at risk, death's pickups and their minute, the slots, the stash at the counters,
+  buying to it, the arrest, dropping and handing over, the Guide from the data), test/mycar.test.js (where you left it
+  through a restart, on your map, the valet's space, wait, fee and cooldown, wanted, the wrecked fee), the death pack's
+  and the home stash's tests updated for the guns on their own and the rounds counted once.
+
 ## 2026-11-14 - Your character on the title card: the game's own sprite, whole and still
 The owner: the title card's avatar sat low and off-centre in its frame, showed only the head and shoulders, and
 breathed and looked round on an endless loop. (A finer, close-up render was tried first and turned down - "it looks
@@ -23607,3 +23672,69 @@ art - no black outlines, no traced AI pixels - and the title screen reworked aro
 - Tests: uitokens (the night's colours are tokens: --night-0/-a/-b, --halo-a/-b, --navy-q). Screenshots (the title at
   phone portrait, landscape and desktop, the intro's frames, the pause header, the polished "Auto" against D3's): the
   session's scratchpad `logo2/owner/final/`.
+
+## 2026-11-14 - Casinos you walk into; card tables in the bars; pool in more bars and diners
+
+The owner: casinos you walk into - a gaming floor with roulette, blackjack, poker and the slots, NPC patrons playing,
+the wheel spinning and the ball landing, the cards dealt, the reels turning; players can play and anyone near sees it;
+"If possible for casinos let's make sure the really fancy ones look that way". Then card tables in the saloons and bars,
+and pool tables in more bars and food places. The pool tables' plumbing is the model and is shared, not copied.
+
+- **The casinos are walk-ins** (shared/map.js buildInteriors): Lucky Mesa's thirteen - the Strip's seven resorts and Old
+  Downtown's six old casinos (their buildings have no prefab: walkInSouth now takes that as facing south) - each a room
+  as deep as a casino wants (`roomDepth` 'casino': 10-14 rows), the counter only the cashier's cage at its east end (the
+  rest of that row is floor), its place moved to the cage as any walk-in's. The tier rides on the place and its unit
+  (`u.casino`): 3 The Golden Lotus, Mesa Grande, Starfall Tower, The Silver Lagoon (shared/world3-strip.js `GRAND`); 2 the
+  other resorts; 1 Old Downtown's (world3-mesa.js).
+- **The floor** (shared/casinorooms.js `casinoRoom`, pure layout): a row of slots in banks of six along the back wall by
+  the cage; the floor between the counter's row and the front wall a grid of cells either side of the door's lane - a
+  roulette table (the wheel at its end), a blackjack half-moon, a poker oval, or two rows of slots - by a sequence per
+  tier (a narrow room - The Neon Saguaro - one column down the middle). Every seat, the dealer's spot and where each seat's
+  cards go come from `gameTable`, so the server seats people where the page draws the cards.
+- **The art** (client/art2/casinoart.js, from game/statics.js makeCut like the shops' and food places'): tier 3 a crimson
+  carpet with a gold lattice and rosettes, marble round the edge, a red runner with gold edges from the door, gilt
+  columns down the side walls, chandeliers (a gilt ring, crystals, drops - lit after dark) over the tables, gilt frames
+  on a damask wall above walnut panelling, gold trim on every table and machine; tier 2 a plum carpet with teal and
+  magenta rings, brass trim, a neon strip on the wall; tier 1 boards, a worn red runner, plain felt and wood, a marquee
+  of bulbs. The cage: its counter, brass bars, a lit plate over the window. Each table a top (the roulette layout's
+  numbers in red and black, the betting circles, the dealer's chip tray), an apron and its legs or pedestal; a stool at
+  every seat; the slots' cabinets with a lit topper, the reels' window, the buttons.
+- **The games** (server/systems/casinofloor.js): while the floor's regulars are there (activities.js 'cards': a dealer at
+  every table, one to three players at each, a few at the slots - `CASINO_FLOOR.most` at most; filled before you're in the
+  room, under its roof, gone when nobody's near) the wheel spins every 22-32 s, a blackjack hand goes round (the players
+  hit to their number, the dealer draws to 17) and a poker hand is played (hold'em: the best five of seven wins - a real
+  evaluator, `best7`), each slot player spins now and then. Every deal goes to the pages near the floor and nowhere else
+  (pooltables.js `follow` / `tell`, now shared by both): `{ e: 'cfl' }` the floor as it stands to a page coming near, then
+  `{ e: 'cdl', g, ... }` per deal - the pocket, the hands as card numbers, the board and the winner, the reels - a few
+  dozen bytes each. The numbers are in shared/rules-games.js `CASINO_FLOOR`.
+- **The page** (client/casinoview.js, loaded with the first floor the server tells it about - main.js `casinoEv`): the
+  wheel turning and slowing with its 37 pockets in the real order, the ball run the other way round the rim, dropping in
+  and bouncing into its pocket; chips on the layout while it spins, the dolly on the number after. The cards flown from
+  the dealer one at a time round the table, the hole card turned over, the dealer's draws; poker's holes face down, the
+  flop, turn and river, the hands shown, the winner's cards edged gold and the pot pushed to him. The reels a blur, then
+  stopping left to right, the topper flashing on a win.
+- **Playing** ([[action]] at a table or a machine: casinofloor.js `interaction`, before the counters in players.js): the
+  casino's own menu (casino.js) opens on that game - roulette, blackjack, video poker at a poker table, the slots - and
+  stays open at the table (economy.js `openMenu` `o.at`, as a race's hire). Each result is shown at the table you're at
+  for everyone near (casino.js calls `show`): your wheel, your hand dealt and hit card by card (the page keeps the cards
+  already down and adds the new ones), your five video poker cards, your reels; the regulars at that table wait for you
+  (`holdS`). The cage still opens the whole floor and the race book.
+- **Card tables in the bars** (shared/shoprooms.js `cardTable`: a 'cards' piece, drawn by shopart.js with the casino's
+  painter): a poker table in the taverns, saloons, pubs and sports bars that have room, a blackjack table in a lounge
+  wide enough; the Rusty Spur's card room's round table is one too (shared/cardfloors.js `spurTable` - its baked cards
+  are gone, the live ones dealt over it). The regulars play poker among themselves (a bar's chance: `CASINO_FLOOR.bar`);
+  [[action]] at it plays a hand of the house's games at the casinos' stakes - that game only, no floor to go back to
+  (casino.js `C.only`). World v3 has fifteen.
+- **Pool in more places** (C): a tavern with the room has a pool table in its first region (shoprooms.js FIT.tavern),
+  and a diner with an open middle one down it (shared/foodrooms.js `L.pool`, drawn by statics.js foodRoom) - both pick up
+  the pool tables' NPC games and broadcasts as they were (pooltables.js `tablesOf` reads the diners' too). World v3 went
+  from 4 tables out in the world to 15. (A home already has one: the games room upgrade, shared/homeups.js - a level of its own, its table the minigame's.)
+- The Guide: Casinos and Card tables entries (the stakes from rules-games.js `CASINO`, controls as [[action]]); Pool
+  says a bar's or a diner's.
+- Budgets: the bake worker's budget raised 1000 -> 1010 KB (tools/perf.mjs): the floors' layout and painters are about 8 KB sent with their comments trimmed to their headers, and main had reached 996 KB on its own - the workers load after the page, so a phone's start isn't slower; the page and the renderer stay inside theirs (the live wheel, cards and reels load with client/casinoview.js, only near a floor).
+- Tests: test/casinofloor.test.js - the floors by tier and orientation (every game on a grand floor, nothing overlapping,
+  inside the room, clear of the cage; chandeliers and columns only on tier 3; a bar's card piece holds its seats), the
+  hands (`score5` / `best7` order, the dealer to 17), the regulars' games dealt to a page near and nothing once they're
+  gone, a player's hand shown at his table with the regulars waiting, and the page's replay keeping the cards already
+  dealt. shoprooms.test.js: a small lounge keeps its booths (no card table under 9 tiles).
+- Hashes: the world (World v3: the casinos' rooms, the counters) and the art change; World v1's world doesn't.

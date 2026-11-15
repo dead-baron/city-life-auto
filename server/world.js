@@ -33,6 +33,7 @@ import * as station from './systems/station.js';
 import * as interiors from './systems/interiors.js';
 import * as dealer from './systems/dealer.js';
 import * as starter from './systems/starter.js';
+import * as mycar from './systems/mycar.js';
 import * as ftue from './systems/ftue.js';
 import * as careers from './systems/careers.js';
 import * as whatsnext from './systems/whatsnext.js';
@@ -67,6 +68,7 @@ import * as campfires from './systems/campfires.js';
 import * as chess from './systems/chess.js';
 import * as poolmatch from './systems/poolmatch.js';
 import * as pooltables from './systems/pooltables.js';
+import * as casinofloor from './systems/casinofloor.js';
 import * as hockeymatch from './systems/hockeymatch.js';
 import * as fireworks from './systems/fireworks.js';
 import * as lights from './systems/lights.js';
@@ -213,7 +215,8 @@ const SYSTEMS = [
   ['fireworks', fireworks.update],  // fireworks going off (fireworks.js)
   ['chess', chess.update],          // the park's chess games, the regular's thinking (chess.js)
   ['poolmatch', poolmatch.update],  // games of pool against someone: the computer's shots, the players still at their tables (poolmatch.js)
-  ['pooltables', pooltables.update],  // the pool tables out in the world: what's on them, to the pages near (pooltables.js)
+  ['pooltables', pooltables.update],
+  ['casinofloor', casinofloor.update],   // the casinos' floors, the bars' card tables: what's dealt, to the pages near (casinofloor.js)  // the pool tables out in the world: what's on them, to the pages near (pooltables.js)
   ['hockeymatch', hockeymatch.update],   // air hockey against someone: the puck played on, the players still at their tables (hockeymatch.js)
   ['lights', lights.update],        // lights to carry: batteries running down, flares and glow sticks burning out
   ['music', music.update],          // boomboxes, radios, the car radio, performances and their crowds (music.js)
@@ -228,6 +231,7 @@ const SYSTEMS = [
   ['contacts', contacts.update],    // the contacts' mission chains: their texts, missions checked, the repeatables (contacts.js)
   ['whatsnext', whatsnext.update],  // the "What's next" app's three cards, worked out again now and then; the session's one line (whatsnext.js)
   ['starter', starter.update],      // the starter cars: lost ones' cooldowns started, strayed ones left empty taken away (starter.js)
+  ['mycar', mycar.update],          // the valets due: your car parked for you near you (mycar.js)
   ['streetlife', streetlife.update], // street races at night, police chases, armored trucks' runs - now and then near someone
   ['calendar', calendar.update],    // the event calendar on the wall clock: the armored truck run, the dock shipment (calendar.js)
   ['bowling', bowling.update],      // Pinwheel Lanes: the balls rolling, the pins, the turns, the NPC groups

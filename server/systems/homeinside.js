@@ -24,6 +24,7 @@
 //   p.homeMenu: the menu of the thing you're using ('wardrobe' | 'safe' | 'fridge' | 'garage' | 'hall'), null for none
 import { DAY_PART_S, TICK_HZ } from '../../shared/constants.js';
 import { IN } from '../../shared/input.js';
+import * as arms from './arms.js';   // (your stash's carry limit: arms.js fit)
 import { HOME_IN, DECOR, MAIL } from '../../shared/rules.js';
 import { ITEMS } from '../../shared/items.js';
 import { VEHICLES } from '../../shared/vehicles.js';
@@ -452,6 +453,7 @@ function menuOf(world, p, h, what) {
 export function openMenu(world, p, what) {
   const h = homeOf(world, p.ped);
   if (!h || !p.conn) return;
+  if (what === 'safe' && !p.ped.home.guest && !p.ped.home.tour) { const over = arms.fit(p); if (over.length) world.notify(p, `More than you can carry: the ${over.join(' and the ')} went into the safe.`, 'info'); }   // (a loadout from before the limit: trimmed at the stash - arms.js)
   const m = menuOf(world, p, h, what);
   p.menu = { poi: m.poi };
   p.homeMenu = what;
