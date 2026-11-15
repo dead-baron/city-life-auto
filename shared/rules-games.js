@@ -24,6 +24,14 @@ export const CASINO = {
     BAR: { w: 4, three: 25, icon: 'BAR' }, SEVEN: { w: 2, three: 70, icon: '7' }, LOTUS: { w: 1, three: 300, icon: '❀' },
   },
 };
+// the gaming floors you walk into and the bars' card tables (server/systems/casinofloor.js, the owner 2026-11-14): how
+// likely the regulars are there when you come near (by day, after dark), how often a game at a table comes round with
+// them at it (s: the roulette's spins, a blackjack hand, a poker hand, a slot's spin), how long a table waits after a
+// player's game on it, and how near a table [[action]] plays it (px)
+export const CASINO_FLOOR = {
+  casino: { day: 0.9, night: 1 }, bar: { day: 0.3, night: 0.65 },
+  rouS: [22, 32], bjS: [12, 20], pkS: [28, 40], slotS: [5, 12], holdS: 14, reach: 26, most: 18,
+};
 
 // Tier-4 properties - the businesses (server/systems/biz.js; the owner's tracker, 10-06: "Tier-4 homes that are
 // businesses: farm, nightclub, criminal hideout with gang guards; auto shop, food truck etc."), kept here with the games'

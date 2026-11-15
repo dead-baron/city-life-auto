@@ -3160,7 +3160,7 @@ const HELPER_POIS = new Set(['reception', 'evidence', 'atm']);
 // floor) and the food places (their tables in front of the counter: shared/foodrooms.js) a little deeper; a footprint only
 // a little deeper than the room keeps the whole of it.
 export const WALKIN_ROOM = { perWide: 1.2, min: 6, max: 10, slack: 2 };
-const BIG_ROOM = { bank: [8, 12], courthouse: [8, 12], hospital: [8, 12], police: [10, 12], club: [6, 12], coffee: [8, 10] };
+const BIG_ROOM = { bank: [8, 12], courthouse: [8, 12], hospital: [8, 12], police: [10, 12], club: [6, 12], coffee: [8, 10], casino: [10, 14] };
 // kinds: the units' POI kinds; wide: the widest unit (tiles); full: the rows the footprint has inside its walls
 export function roomDepth(kinds, wide, full) {
   let lo = WALKIN_ROOM.min, hi = WALKIN_ROOM.max;
@@ -3180,7 +3180,7 @@ function buildInteriors(m) {
   const bays = new Set((m.bays || []).map((bay) => m.bld[bay.ty * m.w + bay.tx]));
   for (const [bid, list] of byB) {
     const b = m.buildings[bid];
-    if (!b || b.gone || b.prefab < 0 || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
+    if (!b || b.gone || (b.prefab < 0 && !list.some((p) => p.casino)) || b.tw < 5 || b.th < 5 || bays.has(bid)) continue;
     // (p.walk: a hand plan's shop you can walk into - its counter by its trade, p.store; b.hand: a flat over the shop
     // has its own door beside it - shared/world3-hand.js)
     const main = list.filter((p) => isWalk(p) || p.kind === 'delivery');
@@ -3188,7 +3188,7 @@ function buildInteriors(m) {
     walkInRoom(m, b, list, main, walkInSouth(m, b, b.tx + 1, b.tx + b.tw - 2));
   }
 }
-const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk;
+const isWalk = (p) => WALK_IN.has(p.kind) || !!p.walk || !!p.casino;   // (a casino: its gaming floor - shared/casinorooms.js)
 // A walk-in's room laid out in building b (buildInteriors; World v3's Southside shops on the plain blocks' lots, later:
 // shared/world3-lots.js): its units along the front from `main` (its doors' POIs, west to east), the floor, the doorways,
 // the counters, each unit's POI moved in front of its counter. south: the doorways in the south wall. -> false if no unit fits
@@ -3210,7 +3210,7 @@ function walkInRoom(m, b, list, main, south) {
     if (!spans.length) return false;
     // the room: just inside the front wall, as deep as the widest unit wants (roomDepth); behind it, a wall and the back
     // rooms, solid
-    const depth = roomDepth(spans.map((q) => q.p.kind), Math.max(...spans.map((q) => q.ux1 - q.ux0 + 1)), b.th - 2);
+    const depth = roomDepth(spans.map((q) => (q.p.casino ? 'casino' : q.p.kind)), Math.max(...spans.map((q) => q.ux1 - q.ux0 + 1)), b.th - 2);
     const y0 = south ? b.ty + b.th - 1 - depth : b.ty + 1, y1 = y0 + depth - 1; // the room (inclusive)
     const back = south ? y0 : y1, dir = south ? 1 : -1;
     const counterRow = back + dir * Math.max(1, Math.min(3, Math.floor(depth * 0.3)));
@@ -3229,12 +3229,14 @@ function walkInRoom(m, b, list, main, south) {
       m.set(dc, fy, T.FLOOR); if (d2 <= ux1) m.set(d2, fy, T.FLOOR);
       // the counter, with a gap at the far end so staff could get round (not on tiny units)
       const cw = ux1 - ux0 + 1;
-      for (let tx = ux0; tx <= ux1; tx++) if (cw < 4 || tx !== ux1) m.set(tx, counterRow, T.COUNTER);
-      const cx = (ux0 + ux1 + 1) / 2 * TILE;
+      // (a casino's: the cashier's cage at the east end, the rest of its row the gaming floor)
+      const cs = p.casino && cw >= 6, ca = cs ? Math.max(ux0, ux1 - 4) : ux0;
+      for (let tx = ca; tx <= ux1; tx++) if (cw < 4 || tx !== ux1) m.set(tx, counterRow, T.COUNTER);
+      const cx = cs ? (ca + ux1) / 2 * TILE : (ux0 + ux1 + 1) / 2 * TILE;
       const staffY = (counterRow - dir + 0.5) * TILE, frontY = (counterRow + dir + 0.55) * TILE;
       p.outside = { x: p.x, y: (p.y < b.ty * TILE) === !south ? p.y : (south ? fy + 1.7 : fy - 0.7) * TILE };   // (the door turned to the other side: out of it there)
       p.x = cx; p.y = frontY; p.r = Math.max(p.r || 40, 40);
-      units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 }, ...(p.walk ? { trade: p.store || 'mart' } : null) });
+      units.push({ poi: p.id, kind: p.kind, x0: ux0, x1: ux1, counterRow, clerk: { x: cx, y: staffY, a: south ? Math.PI / 2 : -Math.PI / 2 }, door: { tx: dx0, ty: fy, w: 2 }, ...(p.walk ? { trade: p.store || 'mart' } : null), ...(cs ? { casino: p.tier || 1 } : null) });
       if (p.kind === 'club') {
         // a roller shutter over the club's doors: down all day, up from dusk till dawn
         const gate = { x: (dx0 + 1) * TILE, y: (fy + 0.5) * TILE, w: 2 * TILE, props: [], rule: 'night', club: true, rect: { tx: b.tx, ty: b.ty, tw: b.tw, th: b.th } };
@@ -3258,7 +3260,7 @@ function walkInRoom(m, b, list, main, south) {
 // would open onto another building, or into a yard no street can be walked to from, gives way to the other side when
 // that one can (walkReach) - the walk-in, its POI and b.door all on that side.
 function walkInSouth(m, b, x0, x1) {
-  const rot0 = m.prefabs[b.prefab].rot === 0;
+  const rot0 = b.prefab >= 0 ? m.prefabs[b.prefab].rot === 0 : true;   // (no prefab - Old Downtown's casinos: drawn facing south)
   if (!WD) return rot0;
   const want = b.door ? b.door.ty >= b.ty + b.th : rot0;
   if (walkReach(m, x0, x1, want ? b.ty + b.th : b.ty - 1) >= 0) return want;

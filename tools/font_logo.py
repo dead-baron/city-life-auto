@@ -254,16 +254,25 @@ def button(d, box, label, f, primary=False):
     d.text(((x0 + x1 - tw) / 2, (y0 + y1) / 2 - f.size * 0.55), label, font=f, fill=INK if primary else CREAMUI)
 
 
-def desktop_mock(logo, pad, root):
+def desktop_mock(logo, pad, root, bg=None, halo=None):
     """1920 x 1080: the logo top centre (its height 40% of the screen at most), a clear gap, then RESUME / PLAY,
-    CHARACTER / SETTINGS, the graphics row, the card bottom left, who's online bottom right"""
+    CHARACTER / SETTINGS, the graphics row, the card bottom left, who's online bottom right. bg: the night to draw on
+    (the title's own by default); halo: a colour for a soft light behind the logo"""
     Wd, Hd = 1920, 1080
-    bg = night(Wd, Hd, 1)
+    bg = bg if bg is not None else night(Wd, Hd, 1)
     lw, lh = logo.width - 2 * pad, logo.height - 2 * pad
     s = min(560 / lw, Hd * 0.40 / lh)
     im = logo.resize((round(logo.width * s), round(logo.height * s)), Image.LANCZOS)
     p = round(pad * s)
     top = 70
+    if halo:
+        yy, xx = np.mgrid[0:Hd, 0:Wd].astype(np.float32)
+        r = np.hypot((xx - Wd / 2) / (lw * s * 0.75), (yy - top - lh * s * 0.5) / (lh * s * 0.85))
+        a = np.clip(1 - r, 0, 1) ** 2 * 0.32
+        h = np.zeros((Hd, Wd, 4), np.uint8)
+        h[..., :3] = halo
+        h[..., 3] = (a * 255).astype(np.uint8)
+        bg.alpha_composite(Image.fromarray(h, 'RGBA'))
     bg.alpha_composite(im, ((Wd - im.width) // 2, top - p))
     y = top + round(lh * s) + 56
     d = ImageDraw.Draw(bg)

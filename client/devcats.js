@@ -172,7 +172,7 @@ export const DEV_SECTIONS = [
     ['🎣 Anglers on a pier', 'act', { k: 'anglers' }], ['♟ Chess in the park', 'act', { k: 'chess' }], ['🧺 A picnic', 'act', { k: 'picnic' }],
     ['🎨 A street painter', 'act', { k: 'painter' }], ['🧽 Washing the car', 'act', { k: 'carwash' }], ['💬 Neighbors chatting', 'act', { k: 'chat' }],
     ['🍅 Pickers in a field', 'act', { k: 'pickers' }], ['⛏ Miners at the rock face', 'act', { k: 'miners' }],
-    ['🦺 A hunter and his dog', 'act', { k: 'hunter' }], ['🏀 A pickup game at the courts', 'act', { k: 'hoops' }], ['🎱 Pool at the Rusty Spur', 'act', { k: 'pool' }],
+    ['🦺 A hunter and his dog', 'act', { k: 'hunter' }], ['🏀 A pickup game at the courts', 'act', { k: 'hoops' }], ['🎱 Pool at a bar', 'act', { k: 'pool' }], ['🎰 A casino floor / a bar\'s card table', 'act', { k: 'cards' }],
     ['🍔 Eating at a diner (a cafe, a bistro)', 'act', { k: 'diners' }],
   ] },
   // the people of the wilds (Nature-C4: server/systems/wildfolk.js) - the nearest spot, filled, you a little way off

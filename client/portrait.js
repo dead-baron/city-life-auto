@@ -95,7 +95,6 @@ function backdrop(o, n) {
 }
 
 const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-let run = 0;   // (a new portrait() stops the last one's idles)
 
 // draw the look (its code: shared/lookcore.js encodeLook) into el, still, with an idle now and then while el is shown
 export function portrait(el, code) {
@@ -112,7 +111,8 @@ export function portrait(el, code) {
     el.style.overflow = 'hidden'; el.style.placeItems = 'center';
     el.setAttribute('role', 'img'); el.setAttribute('aria-label', 'Your character');
   }
-  const me = ++run;
+  const me = (el._ptRun = (el._ptRun || 0) + 1);   // (a new portrait() into the same element stops its last one's idles)
+  const live = () => me === el._ptRun;
   let shown = STILL, sz = '';
   const draw = (pose, f) => {
     if (!el.isConnected || !el.offsetParent) return false;
@@ -136,11 +136,11 @@ export function portrait(el, code) {
     shown = [pose, f];
     return true;
   };
-  const later = (fn, ms) => setTimeout(() => { if (me === run && el.isConnected) fn(); }, ms);
+  const later = (fn, ms) => setTimeout(() => { if (live() && el.isConnected) fn(); }, ms);
   // (the card not on screen yet - still loading: drawn as soon as it shows, and again when its size changes)
   const first = () => { if (!draw(...STILL)) later(first, 400); };
   first();
-  el._ptDraw = () => { if (me === run) draw(...shown); };
+  el._ptDraw = () => { if (live()) draw(...shown); };
   if (typeof ResizeObserver === 'function' && !el._ptRO) { el._ptRO = new ResizeObserver(() => { if (el.offsetParent && el._ptDraw) el._ptDraw(); }); el._ptRO.observe(el); }
   if (reduced()) return true;
   // the emotes' frames (the scratch, the phone), once the card is up
