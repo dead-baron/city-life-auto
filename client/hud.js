@@ -1,6 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
-import { logNote, noteLine, promptWords, promptFades } from './notelog.js';
+import { logNote, noteLine, promptWords, promptFades, fitPrompt } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -104,6 +104,8 @@ export class HUD {
     const pressed = () => { const pr = $('helpbox'); if (!pr || pr.classList.contains('off')) return; this.pressAt = performance.now(); pr.classList.remove('hit'); void pr.offsetWidth; pr.classList.add('hit'); };
     addEventListener('keydown', (e) => { if (!e.repeat && e.code === 'KeyE') pressed(); });
     document.querySelector('#tbtns [data-b="action"]')?.addEventListener('touchstart', pressed, { passive: true });
+    // the screen turned: the touch prompt's card fitted to its new room (after client/touchslots.js has placed the slots)
+    addEventListener('resize', () => setTimeout(() => { if (input.device === 'touch') fitPrompt($('helpbox')); }, 160));
   }
   // the prompt's tick: what Act offered is done (it went, or changed, within a moment of the press)
   promptDone(pr) {
@@ -177,9 +179,11 @@ export class HUD {
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         document.body.classList.toggle('p-act', fp.action === 'action');   // (ACT shows only with something for it to do: client/touchslots.js pact)
         if (this.actBtn) { this.actBtn.classList.add('pulse'); this.actBtn.dataset.tip = fp.words; }   // (its long press says the whole of it: client/touchslots.js)
-        // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip; a prompt no button does (a ride's
-        // note) keeps its chip
-        pr.classList.toggle('btn', !!(this.actBtn && this.actBtn.dataset.slot));   // (the button there to press: on touch its word says it)
+        // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip, the card only its words; a prompt no
+        // button does (a ride's note) keeps its chip. ACT always has its slot while a prompt names it (pact - placed on the
+        // next frame, so not asked of the button: the owner's 11-14 screenshot had the card with an ACT chip beside LOOK)
+        pr.classList.toggle('btn', fp.action === 'action' || !!(this.actBtn && this.actBtn.dataset.slot));
+        if (input.device === 'touch') fitPrompt(pr);   // (two lines at most, never cut in a word)
         actFace();
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays

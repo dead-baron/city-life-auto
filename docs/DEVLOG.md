@@ -23960,3 +23960,39 @@ The owner (18:56, 18:59), three things:
 The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner looking one in general". assets/ui/s-shield.png
 is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
 right a pale steel, the ink outline round it - no blue hollow and stripe.
+
+## 2026-11-14 - The touch prompt in the clear, no button on it, and room between the buttons
+The owner, on his phone upright at a house's door: "The UI button says LOOK when the popup says ACT, and it also looks
+like you're supposed to press the popup because it has a button in it, which is misleading if you're supposed to press the
+act button. Also the act or look button overlaps the other button so it's a little too close together" - and the card
+("ACT Look around Gu...") was under the BLOCK button, its words cut off.
+- **Why the card was under the buttons**: upright it hung from a fixed line under you and grew down, and the first goal's
+  line stayed in the low slot after it faded (invisible, still taking its room), pushing the card down onto the cluster.
+  Now upright the card stands on its foot: `client/touchslots.js` sets `--lo-b` above every button under it (BLOCK, ROLL,
+  FIRE) and `--lo-r` left of the columns up the edge (the weapon card, the vehicle button, C2, the switches); it grows up
+  toward you, never into the thumb's buttons, and sits by the cluster (right-aligned). The first goal's line leaves the
+  slot once its fade is done (`client/ftue.js` fadeLine). On its side the card was already clear (left of the arc).
+- **No button on the card on touch**: the gold ACT chip is gone from the prompt on touch - the ACT button itself says the
+  verb (LOOK, ENTER, TALK: touchicons.js actWord from the same words), so the card is only words and nothing on it looks
+  pressable. The chip was meant to go already (`.btn`), but hud.js asked whether the ACT button had a slot the moment the
+  prompt came, and pact only places it on the next frame - so the card kept an "ACT" chip beside a button saying LOOK
+  (and where it did work, the rule hid the whole card). Now ACT's chip always goes on touch and only the chip goes;
+  keyboard and pad keep their key tiles; a prompt no touch button does keeps its chip.
+- **Two lines at most, never cut in a word** (`client/notelog.js` fitPrompt, on each new prompt and when the screen
+  turns): the words as they are, else a size smaller (14 px), else cut after the last whole word that fits with an
+  ellipsis (the button's long press still says the whole prompt).
+- **Room between the buttons** (`client/touchslots.js` GEO): upright ACT over the stick and ROLL and BLOCK up the left of
+  the cluster over FIRE, re-spaced so every two buttons have 6 px or more between them and ACT 12 (its pulse ring stands
+  5 px out) - it was 2 px from ROLL; the vehicle button, C2, the weapon card and the switches above re-spaced the same way.
+  On its side C1 / C2 (they touched on a 740x360 phone) and the switches' row a little further apart. The sticks are
+  untouched. The switches and the weapon card may go down to 44 px on a 360-px phone (`MIN_SW`, the touch guideline's
+  44) so the cluster keeps its gaps as it scales down; the face buttons and C1 / C2 stay 48 or more.
+- On a 360-px phone upright the HUD's plate is a little narrower (the stars under the cash when both won't fit) so the
+  debug button beside the minimap no longer sits on it.
+- Tests: test/hudlayout.test.js - every two touch buttons 6 px apart (ACT 12) and the prompt's card as clear of every
+  one, no chip on it, its words whole on two lines, on the phones upright and on their sides; and a small phone upright
+  (360x740) checked for the cluster and the card. test/acticons.test.js (the chip goes on touch, only the chip).
+  Open: on a 360-px phone upright chat and the emotes (beside the move stick's ring) reach FIRE and AUTO - there's no
+  room between the ring and the middle; not changed here.
+- Proof (before / after at a door, upright 412x892, on its side 844x390, a 360x740 phone): the session's scratchpad
+  `hudprompt/owner/`.

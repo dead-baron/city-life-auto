@@ -101,6 +101,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The vehicle button: simple enter/exit door symbols; GET IN / ON / EXIT / OFF words only in tips and the Guide. (11-12 19:37; queue)
 - Button sizes 60 / 52 / 40 px, translucent navy with an accent rim, one word size, measured centering. (11-12; queue)
 - ACT shows only while a prompt names it. (11-13; DEVLOG 11-13)
+- On touch the prompt's card has no button chip (the ACT button says the verb; nothing on the card looks pressable), sits in clear space - upright above the cluster's buttons, never under one - and is two lines at most, never cut in a word. (11-14; chat: "it looks like you're supposed to press the popup because it has a button in it", DEVLOG 11-14)
+- Touch buttons never touch: 6 px clear between any two, 12 round ACT (its pulse ring), at every layout; the sticks unchanged. (11-14; chat: "the act or look button overlaps the other button so it's a little too close together", DEVLOG 11-14)
 - Right aim stick stays in the corner, action buttons on arcs round it; in portrait a tight thumb cluster. (11-12; queue, DEVLOG 11-06)
 - The Clean (Lucide) icon line kept; the pixel icon set does NOT ship (branch pixelicons unmerged). (11-06; queue)
 - HIT shows what you hit with (fist bare-handed, else the weapon). (11-05; DEVLOG 11-05)

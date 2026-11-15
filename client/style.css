@@ -415,6 +415,7 @@ body.touch.emo-open #b-emote { box-shadow: inset 0 0 0 2px var(--pad-cream), var
 .touch:not(.portrait) #hud:has(#vchip:not(.hidden)) #toasts { width: 100%; }   /* (the vehicle's readout is there) */
 @media (max-height: 430px) { body:not(.touch) #hud-stat { min-width: 0; grid-template-columns: 112px auto; padding: 4px 8px; } }
 body.portrait.touch #hud-stat { width: var(--trw); grid-template-columns: 1fr; row-gap: 4px; }
+@media (max-width: 380px) { body.portrait.touch #hud { --trw: 168px; } body.portrait.touch #purse { flex-wrap: wrap; row-gap: 4px; } }   /* (a 360-px phone upright: the plate a little narrower - the stars under the cash when both won't fit - so the debug button beside the minimap keeps off it) */
 /* (upright on touch the row first - three buttons, right of the top-centre band where a centred camera sits: UI-5 - and
    the plate under it, below the band) */
 body.portrait.touch #hud-tr > #hud-stat { order: 0; }
@@ -491,7 +492,7 @@ body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; righ
    a robbery's bar - bottom centre (on touch between the move stick and the cluster on its side, above the thumbs upright) */
 #hud-low { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); display: flex; flex-direction: column; align-items: center; gap: var(--s2); pointer-events: none; }
 .touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-r, 338px); bottom: var(--lo-b, 82px); max-width: none; }   /* (client/touchslots.js sets the room) */
-body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: calc(50% + 28px); bottom: auto; margin: 0; }
+body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); bottom: var(--lo-b, 300px); margin: 0; align-items: flex-end; }   /* (its foot above the buttons under it: client/touchslots.js) */
 #cruiser-hint { font: 700 var(--fs-3) var(--pixel); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
 .touch #cruiser-hint { font-size: var(--fs-2); }
 /* the prompt: the key (its prompt tile: client/glyphs.js) then what it does; in while you're in range, out when you
@@ -500,7 +501,12 @@ body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: 
 #helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; font: 700 var(--fs-3) var(--pixel); line-height: 1.2; color: var(--pad-cream); animation: prpop var(--t-pop) var(--ease);
   transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
 #helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; animation: none; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
-.touch #helpbox.btn { display: none; }
+/* (on touch the button the prompt names says the verb - the card has no chip there, nothing on it to press: the owner,
+   11-14, "it looks like you're supposed to press the popup because it has a button in it"; just its words, two lines at
+   most, a size down or cut at a word with an ellipsis when they don't fit - client/notelog.js fitPrompt) */
+.touch #helpbox.btn > :is(.g-touch, .g-ico, .pr-tick) { display: none; }
+.touch #helpbox.btn { padding-left: 12px; }
+.touch #helpbox.small { font-size: var(--fs-2); }
 /* (UIC-20 06: in at 90%, up to 100% in 120 ms; the key's ring fills as you press it; a green tick when it's done) */
 @keyframes prpop { from { opacity: 0; transform: scale(.9); } }
 #helpbox.hit > :is(.g-key, .g-touch, .g-pad, .g-tile) { animation: keyhit var(--t-pop) var(--ease); }
