@@ -903,7 +903,7 @@ function gardenKit(L, A, w, d, spec) {
   else if (nBeds > 2 && r() < 0.5) for (let i = 0, n = 2 + Math.floor(r() * 2); i < n; i++) put('lant', 6, 6, false, 2);
 }
 // the roof deck's material, parapet height and thickness by archetype (spec.roofMat, lip, rimW)
-const GARDENS = new Set(['mixed', 'walkup', 'oldrow', 'office', 'glass', 'condo', 'civicblock', 'nightrow', 'block', 'hotel']);
+const GARDENS = new Set(['mixed', 'walkup', 'oldrow', 'office', 'glass', 'condo', 'civicblock', 'nightrow', 'hotel']);
 function roofOf(A, D, rnd, spec) {
   if (spec.roofMat) return;
   const r = rnd(), rough = D.tier === 'rough';

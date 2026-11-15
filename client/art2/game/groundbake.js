@@ -112,6 +112,19 @@ TURFPAL[M_.LAWN] = 0; TURFPAL[M_.PARK] = 1; TURFPAL[M_.CLOVER] = 1; TURFPAL[M_.M
 TURFPAL[M_.ORCHARD] = 1;
 TURFCLOV[M_.PARK] = 0.12; TURFCLOV[M_.CLOVER] = 0.55; TURFCLOV[M_.PASTURE] = 0.15; TURFCLOV[M_.LAWN] = 0.05;
 const WALKS = { concrete: M_.WALKC, slate: M_.WALKS, brick: M_.WALKB }, PLAZAS = { concrete: M_.PLAZAC, slate: M_.PLAZAS, brick: M_.PLAZAB };
+// the opened-up blocks' alleys and lanes as a set of tiles (ty * 65536 + tx), once per map; null when there are none
+const LANES = new WeakMap();
+function openLanes(M) {
+  if (!M.openAlleys || !M.openAlleys.length) return null;
+  let S = LANES.get(M);
+  if (!S) {
+    S = new Set();
+    for (const a of M.openAlleys) for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(y * 65536 + x);
+    for (const a of M.openYards || []) if (a.k === 'lot') for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(-1 - (y * 65536 + x));   // (the back lots, negative)
+    LANES.set(M, S);
+  }
+  return S;
+}
 const isWater = (m) => KIND[m] === 2, isSoft = (m) => KIND[m] === 0, roadLike = (m) => KIND[m] === 3, raised = (m) => KIND[m] === 4;
 // land whose edge against the water is smoothed (soft ground, paving, lots - not roads, buildings or piers)
 const SMOOTH = new Uint8Array(NM);
@@ -241,6 +254,7 @@ function tileFacts(C) {
   const parks = M.parkGrounds || [];        // designed town parks (Lakeview Park): lawn and gravel paths whatever the district, the plaza paved
   const pools = M.pools || [];              // swimming pools (the Stadium Lido): tiled pool water, a pale concrete deck
   const springs = M.springs || [];          // hot spring pools: milky blue-green mineral water (ellipses)
+  const lanes = openLanes(M);                // the opened-up blocks' alleys and lanes (shared/world3-openblocks.js): cracked concrete, not a square's paving
   // the desert's waters (shared/world3-tinajas.js): a tinaja's bowl of bare slickrock round its water, a seep's ring of
   // cracked mud - out to its ring, ragged
   const tinas = (M.tinajas || []).filter((e) => e.x + e.r * 1.3 + e.ring + 64 >= TX0 * TILE && e.x - e.r * 1.3 - e.ring - 64 <= (TX0 + TN) * TILE && e.y + e.r * 1.3 + e.ring + 64 >= TY0 * TILE && e.y - e.r * 1.3 - e.ring - 64 <= (TY0 + TN) * TILE);
@@ -338,12 +352,14 @@ function tileFacts(C) {
       if (pools.length && pools.some((r) => r.deck && inRect(r.deck, X, Y))) m = M_.PLAZAC;
       else if (springs.length && springs.some((e) => Math.abs(X - e.x) < 26 * TILE && Math.abs(Y - e.y) < 18 * TILE)) m = M_.FLAGS;   // (the hot springs' stone steps and paths, the onsen's: flagstones)
       else if ((b.tres[k] & 4) && (st === 'beach' || st === 'park')) m = runAxis(M, tx, ty, T.PLAZA) ? M_.BOARDV : M_.BOARD;
+      else if (lanes && lanes.has(ty * 65536 + tx)) m = M_.WALKCR;
       else if (inRects(parks, X, Y) && !parks.some((r) => inRect(r.plaza, X, Y))) m = M_.PATH;
       else if (st === 'oldtown') m = M_.PLAZAO;
       else if (st === 'park') m = M_.PATH;
       else m = PLAZAS[D.plaza] ?? M_.PLAZAC;
     } else if (t === T.LOT) {
-      if (inRects(races, X, Y)) m = M_.TRACK;
+      if (lanes && lanes.has(-1 - (ty * 65536 + tx))) m = M_.YARD;   // (an opened-up block's back lot: a service yard's slabs)
+      else if (inRects(races, X, Y)) m = M_.TRACK;
       else if (airports.some((a) => inRect(a.runway, X, Y))) m = M_.RUNWAY;
       else if (airports.some((a) => inRect(a.taxi, X, Y))) m = M_.LOT;
       else if (st === 'airport') m = airports.some((a) => a.aprons && inRect(a.box, X, Y) && !a.aprons.some((r) => inRect(r, X, Y))) ? M_.LOT : M_.APRON;   // (a handcrafted airport's car parks and yards: asphalt - its aprons listed, shared/world3-airport.js)

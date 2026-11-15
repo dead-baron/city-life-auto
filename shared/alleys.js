@@ -139,8 +139,8 @@ function dressOpen(m, X, items) {
     let lastAt = -99;
     for (let s = MOUTH; s <= len - MOUTH; s += STEP) {
       const q = at(s), u = H0(s, 10);
-      if (u < 0.06 + 0.1 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2; push('puddle', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
-      else if (u < 0.1 + 0.16 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2, k = H0(s, 13); push(k < 0.3 * g ? 'oil' : k < 0.3 * g + 0.25 ? 'crack' : k < 0.5 + 0.25 * g ? 'litter' : 'leaves', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
+      if (u < 0.025 + 0.05 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2; push('puddle', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
+      else if (u < 0.07 + 0.14 * g) { const o = (H0(s, 11) - 0.5) * hw * 1.2, k = H0(s, 13); push(k < 0.3 * g ? 'oil' : k < 0.3 * g + 0.25 ? 'crack' : k < 0.5 + 0.25 * g ? 'litter' : 'leaves', q.x + (ns ? o : 0), q.y + (ns ? 0 : o), 0, 0, 0, Math.floor(H0(s, 12) * 6)); }
       for (const side of ns ? [-1, 1] : [-1]) {
         const nx = ns ? side : 0, ny = ns ? 0 : side;
         const wt = tile(Math.floor((q.x + nx * (hw + 10)) / TILE), Math.floor((q.y + ny * (hw + 10)) / TILE));
