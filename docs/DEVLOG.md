@@ -24140,3 +24140,11 @@ starts them (the drawing is kept for a later try); the stars, windows, car light
 The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
 (client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
+
+## 2026-11-14 - A public About page for Google's branding check
+Google's consent-screen branding verification turned down the game page as the app's home page: behind a login (the age
+gate and sign-in on the title), no words saying what the app is, and no app name it could read. about/index.html
+(https://deadbaron.com/city-life-auto/about/) is a plain static page anyone can read: the name, the lit logo
+(assets/logo/full.webp, tools/neon_logo.py A3 at scale 3), what the game is, that guests never have to sign in, what
+Google and Discord sign-in ask for (an id only), the privacy policy and the terms, and PLAY NOW. It is the home page the
+OAuth consent screen names. Nothing in the game loads it.
