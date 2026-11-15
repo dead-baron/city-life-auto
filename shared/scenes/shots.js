@@ -128,7 +128,7 @@ export const SHOTS = [
   },
   {   // a big rig rolling through Midtown at dusk, the El overhead
     id: 'shotsemi', n: 'A big rig through Midtown', g: 'vehicles', note: 'tracking alongside · dusk', len: 16, linger: 0,
-    place: { k: 'road', len: 2000, near: 'Midtown' }, anchors: ['start', 'end', 'mid'], time: 1200, weather: 'clear',
+    place: { k: 'road', len: 2400, near: 'Midtown' }, anchors: ['start', 'end', 'mid'], time: 1200, weather: 'clear',
     cast: [{ id: 'rig', veh: 'semi', at: { a: 'start', s: 10 }, paint: 6 }, { id: 'driver', arch: 'construction', in: 'rig' }],
     beats: [{ id: 'go', at: 0.4, who: 'rig', do: 'drive', to: { a: 'end', s: 10 }, straight: true, pass: true, speed: 0.55, max: 12 }, { who: 'rig', do: 'drive', to: { a: 'end', f: 3000 }, pass: true, speed: 0.5, max: 10 }, { at: 0, do: 'wait', s: 15 }],
     cam: [{ at: 0, follow: 'rig', z: 1.2, lead: 0.3, s: -90 }, { at: 4, follow: 'rig', z: 0.95, lead: 0.8, s: -50, ease: 3 }],

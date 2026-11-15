@@ -98,7 +98,16 @@ export class Booms {
     return b;
   }
   _on(arr) { for (const o of arr) if (!o.on) return o; return arr[0]; }
-  _flush() { const P = this.pend; if (!P || !P.length) return; for (let i = 0; i < P.length; i += 3) this.S.fx.spawn(11, P[i], P[i + 1], 0, 0, P[i + 2] > 60 ? 1.1 : 0.85, P[i + 2], '#fff'); P.length = 0; }
+  // (a big core is a cluster of them - a tanker's 5, a truck's 3 - a little apart and a beat out of step: one fireball rolling out)
+  _flush() {
+    const P = this.pend, fx = this.S.fx;
+    if (!P || !P.length) return;
+    for (let i = 0; i < P.length; i += 3) {
+      const x = P[i], y = P[i + 1], s1 = P[i + 2], n = s1 > 180 ? 5 : s1 > 90 ? 3 : 1;
+      for (let k = 0; k < n; k++) { const a = k * 2.4, d = k ? s1 * 0.34 : 0; fx.spawn(11, x + Math.cos(a) * d, y + Math.sin(a) * d * 0.7, 0, 0, (s1 > 60 ? 1.1 : 0.85) + k * 0.09, s1, '#fff'); }
+    }
+    P.length = 0;
+  }
 
   // The 'explode' event (a vehicle: ev.id/m/k/pc, its seed ev.s; a rocket: just x, y, r and the seed).
   explode(ev, now, near) {
