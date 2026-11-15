@@ -23907,3 +23907,11 @@ px apart both ways - its columns centred on the building's width, three px in fr
 neighbour), its rows from the same margin under the roof line down to the same margin over the foot; a narrow building
 gets one centred column; every window lit. Re-installed (assets/logo/sky.webp, unlit.webp) and the share card rebuilt;
 the one-line wordmark has no skyline. Before / after: the session's scratchpad `logo2/owner/windows/`.
+
+## 2026-11-14 - The logo's skyline: its few windows, only placed better
+The owner (18:45) on the window grid: too many - "I liked the 4 windows on the tall building, the other windows needed
+to be aligned better with the buildings they were on". Back to the counts he had (the tall tower's four as a 2 x 2,
+three on the tower beside it, two on each of the others), now each building's block of them centred across what shows
+of that building (a letter may cover an end of it), its top row the same four px under every roof line, the same 2 x 2
+art px windows the same three px apart everywhere. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
+Before / after: the session's scratchpad `logo2/owner/windows2/`.

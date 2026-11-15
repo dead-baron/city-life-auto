@@ -630,43 +630,25 @@ def sky_grid(src, letters, faces=True, windows=True):
 
     blocks = []
 
-    def block(xa, xb, top, peak=0):
+    def block(xa, xb, top, peak=0, cols=2, rows=1):
         fill[top:foot + 1, xa:xb + 1] = True
         for i in range(peak):   # a gable: 45-degree steps up to its ridge
             fill[top - 1 - i, xa + 1 + i:xb - i] = True
-        blocks.append((xa, xb, top))
+        blocks.append((xa, xb, top, cols, rows))
     w = x1 - x0
     hl = (x0, x0 + w * 16 // 100)                               # the house on the left
     tw = (hl[1] - 1, x0 + w * 33 // 100)                         # a tower
     md = (cx - w * 12 // 100, cx + w * 12 // 100)                # the middle tower
     gb = (md[1] - 1, x0 + w * 78 // 100)                         # the gabled block
     hr = (gb[1] - 1, x1)                                         # the house on the right
-    block(hl[0], hl[1], foot - 9, (hl[1] - hl[0]) // 2 - 1)
-    block(tw[0], tw[1], foot - 19, 0)
-    block(md[0], md[1], foot - 25, 0)
+    block(hl[0], hl[1], foot - 9, (hl[1] - hl[0]) // 2 - 1, 2, 1)
+    block(tw[0], tw[1], foot - 19, 0, 3, 1)
+    block(md[0], md[1], foot - 25, 0, 2, 2)
     fill[foot - 29:foot - 25, md[0] + 3:md[1] - 2] = True        # its steps
     fill[foot - 33:foot - 29, md[0] + 6:md[1] - 5] = True
     fill[foot - 41:foot - 33, cx:cx + 1] = True                  # the spire
-    block(gb[0], gb[1], foot - 14, (gb[1] - gb[0]) // 2 - 1)
-    block(hr[0], hr[1], foot - 8, (hr[1] - hr[0]) // 2 - 1)
-    # the lit windows (the owner, 18:35: "more consistently spaced ... centered on the buildings"): one grid for every
-    # building - 2 x 2 art px, WIN_GAP between them both ways - its columns centred on the building's width, inside a
-    # margin of WIN_EDGE from its walls (the tube on each wall is a px inside it: the windows never touch it, nor a
-    # neighbour's), its rows down from WIN_EDGE + 1 under the roof line to WIN_EDGE over the foot; a narrow building one
-    # centred column; every window lit (a full grid reads as the most regular)
-    WIN, WIN_GAP, WIN_EDGE = 2, 3, 3
-    pitch = WIN + WIN_GAP
-    for xa, xb, top in blocks:
-        lo, hi = xa + WIN_EDGE, xb - WIN_EDGE              # the columns windows may take (both inclusive)
-        avail = hi - lo + 1
-        if avail < WIN:
-            continue
-        n = max(1, (avail + WIN_GAP) // pitch)
-        wx0 = lo + (avail - (n * pitch - WIN_GAP)) // 2
-        rows = range(top + WIN_EDGE + 1, foot - WIN_EDGE - WIN + 2, pitch)
-        for wy in rows:
-            for c in range(n):
-                win[wy:wy + WIN, wx0 + c * pitch:wx0 + c * pitch + WIN] = True
+    block(gb[0], gb[1], foot - 14, (gb[1] - gb[0]) // 2 - 1, 2, 1)
+    block(hr[0], hr[1], foot - 8, (hr[1] - hr[0]) // 2 - 1, 2, 1)
     # the tube round the silhouette, not along the foot; taken before the letters' room is cleared (no tube on a cut)
     below = shift(fill, 0, 1) | (np.arange(GH)[:, None] >= foot)
     edge = fill & ~(shift(fill, 0, -1) & shift(fill, -1, 0) & shift(fill, 1, 0) & below)
@@ -674,6 +656,24 @@ def sky_grid(src, letters, faces=True, windows=True):
     for m in letters:
         clear |= m
     clear = dil(dil(clear))
+    # the lit windows (the owner, 18:45: the few he had - the tall tower's four, two or three on each of the others -
+    # only placed better): each building's own small block of them (cols x rows), the same 2 x 2 art px and the same
+    # 3 px apart everywhere, centred across what shows of that building (a letter may cover an end of it), its top row
+    # the same WIN_TOP under its roof line
+    WIN, WIN_GAP, WIN_TOP = 2, 3, 4
+    pitch = WIN + WIN_GAP
+    for xa, xb, top, cols, rows in blocks:
+        wy0 = top + WIN_TOP
+        band = ~clear[wy0:wy0 + (rows - 1) * pitch + WIN, xa:xb + 1].any(axis=0)
+        xs = np.nonzero(band)[0]
+        if not len(xs):
+            continue
+        va, vb = xa + xs.min(), xa + xs.max()
+        wx0 = va + (vb - va + 1 - (cols * pitch - WIN_GAP)) // 2
+        for r in range(rows):
+            for c in range(cols):
+                wy, wx = wy0 + r * pitch, wx0 + c * pitch
+                win[wy:wy + WIN, wx:wx + WIN] = True
     L = Layer('sky', CYAN)
     if faces:
         L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
