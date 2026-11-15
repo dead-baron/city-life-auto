@@ -24089,6 +24089,8 @@ refined with him.
   first row (one tap on a phone; rename later), the name and note fields under **Your saved views**, where each is listed
   with its time and weather: tap it to go there (the free camera, at its zoom, time and weather), ▶ to play it as a shot
   (the camera there, pushing in slowly for 16 s at its time and weather: shared/scenes viewScene), ✎ rename, ✕ delete.
+- A shot's hold (black till the art at its place is in) also waits out the page's "Loading the area" veil after the
+  camera's jump (client/warmup.js warming): a shot no longer starts on the loading screen.
 - The Guide's Camera entry says so.
 
 Tests: test/directorcam.test.js (a shot's own time every frame - held, after 'go', after the clock's reset, into the
@@ -24098,3 +24100,8 @@ none stopped, overtakes, lines changed, someone diving clear, a honk; the chase'
 stopped or wrecked; the way straight on, never back round the block), test/views.test.js (new: saved, cleaned, renamed,
 deleted, at most DIRECTOR.views, only the owner's and admins'; played as a shot at its time and weather), test/scenes.test.js, test/world3scenes.test.js (the
 kept shots' sanity check on World v3).
+Proof (World v3 on a dev server, the world's own clock set to 23:00, headless Chromium - SwiftShader, so the art comes in
+late and the frames are seconds apart; the session's scratchpad `director4/owner/`): the noon, golden-hour and night shots
+(first and a later frame each), the street race on the avenue and through a junction (cross traffic, a walker diving
+clear), and Save this view on a phone with two views saved. Budgets: perf test passes; the world's and the art's hashes
+unchanged.
