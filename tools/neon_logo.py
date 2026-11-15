@@ -6,7 +6,7 @@ colours, each tube a white-hot core (signfont.js hotOf) inside its colour, and a
 light.js, the bright parts blurred at half and quarter size and added back). No black outline.
 
 Usage:
-  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3|D4|D4N|D5 [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
+  python3 tools/neon_logo.py <logo_dir> --variant A|B|C|D|D2|D3|D4|D4N|D5|A1|A2|A3 [--mock] [--out DIR] [--scale N] [--preview] [--install] [--no-glow]
                              [--root .]
   python3 tools/neon_logo.py <logo_dir> --sheet [D,D2] [--name F.png] --out DIR   variants (A-C by default) and the
                                                                  current logo side by side
@@ -817,9 +817,110 @@ def paint_d4(src, windows=True, bold=False):
     return [Ls[k] for k in ORDER]
 
 
+# ---- "Auto" drawn new (2026-11-14, the owner on D5: "the auto still looks really bad ... just rebuild that entirely.
+# The black in the middle of the neon seems to really throw it off"): bold letters built from shapes on the art grid -
+# not traced - in the same box under the swoosh, one stroke width, square corners, clean counters, no dark face.
+#   A1 matching: solid cream letters with a gold rim (as "City Life" is cream with its red rim)
+#   A2 tube: gold neon tube letters, hollow - a hot white-gold core round each letter's outline, gold either side
+#   A3 italic: A1 leaning forward a touch, with two short speed lines trailing off the A
+def auto_face(box, slant=0.0, speed=False, S4=4):
+    """the letters' faces (a mask on the grid) filling box (x0, y0, x1, y1: the face's own box, rims outside it)"""
+    x0, y0, x1, y1 = box
+    base, Hc = y1, y1 - y0
+    Hx, Ht, S = round(Hc * 0.72), round(Hc * 0.9), max(4, round(Hc * 0.22))   # (counters wide enough to stay open inside the rims)
+    lead = round(Hc * 0.42) if speed else 0                  # (room for the speed lines left of the A)
+    wA, wU, wT, wO = round(Hc * 1.2), round(Hx * 1.12), round(Hx * 0.92), round(Hx * 1.18)
+    W = x1 - x0 - lead
+    gap = (W - (wA + wU + wT + wO)) / 3
+    if gap < 8:   # (too wide: narrower letters, the gaps kept clear of the rims)
+        k = (W - 24) / (wA + wU + wT + wO)
+        wA, wU, wT, wO = round(wA * k), round(wU * k), round(wT * k), round(wO * k)
+        gap = (W - (wA + wU + wT + wO)) / 3
+    Wd, Hd = GW * S4, GH * S4
+    im = Image.new('L', (Wd, Hd), 0)
+    d = ImageDraw.Draw(im)
+    q = lambda v: v * S4
+    R = lambda a, b, c, e, r=0, fill=255: d.rounded_rectangle((q(a), q(b), q(c) - 1, q(e) - 1), radius=q(r), fill=fill)
+    x = x0 + lead
+    # A: a flat-topped trapezoid, a triangle counter over its bar, the gap between its legs under it
+    cx = x + wA / 2
+    leg = 1.0 * S
+    d.polygon([(q(cx - 0.45 * S), q(base - Hc)), (q(cx + 0.45 * S), q(base - Hc)), (q(x + wA), q(base)), (q(x), q(base))], fill=255)
+    slope = (wA / 2 - 0.45 * S) / Hc
+    g = wA / 2 - leg
+    apex = base - g / slope
+    bar0, bar1 = base - 0.24 * Hc - 0.75 * S, base - 0.24 * Hc   # (the bar low: a tall triangle over it)
+    notch = Image.new('L', (Wd, Hd), 0)
+    ImageDraw.Draw(notch).polygon([(q(cx - g), q(base)), (q(cx + g), q(base)), (q(cx), q(apex))], fill=255)
+    ImageDraw.Draw(notch).rectangle((q(x), q(bar0), q(x + wA), q(bar1)), fill=0)
+    a = np.asarray(im).copy()
+    a[np.asarray(notch) > 0] = 0
+    im = Image.fromarray(a)
+    d = ImageDraw.Draw(im)
+    x += wA + gap
+    # u: a U with a square stem on its right
+    R(x, base - Hx, x + wU, base, wU * 0.42)
+    R(x, base - Hx, x + wU, base - Hx / 2)                   # (square top corners)
+    R(x + wU - S, base - Hx, x + wU, base)                   # (the stem)
+    R(x + S, base - Hx - 1, x + wU - S, base - S, (wU - 2 * S) * 0.42, fill=0)
+    R(x + S, base - Hx - 1, x + wU - S, base - Hx / 2, fill=0)
+    x += wU + gap
+    # t: a stem, its bar, a foot turned to the right
+    sx = x + round((wT - S) / 2) - 2
+    R(sx, base - Ht, sx + S, base - S * 0.6)
+    R(sx, base - S * 1.6, x + wT, base, S * 0.8)
+    R(sx + S, base - S * 1.6 - 1, x + wT + 1, base - S, 0, fill=0)
+    R(x, base - Hx, x + wT, base - Hx + 0.85 * S)
+    x += wT + gap
+    # o: a rounded box, its counter
+    R(x, base - Hx, x + wO, base, min(wO, Hx) * 0.45)
+    R(x + S, base - Hx + 0.85 * S, x + wO - S, base - 0.85 * S, S * 0.45, fill=0)
+    if speed:
+        # two short speed lines trailing off the A's left leg, about a third and half way up
+        for frac, ln in ((0.55, lead - 3), (0.3, lead * 0.6)):
+            yy = base - frac * Hc
+            R(x0 + lead - 3 - ln, yy - 1.5, x0 + lead + 4, yy + 1.5)
+    if slant:
+        # leaning forward: each row moved right by slant per px above the foot (sheared about the foot)
+        sh = slant
+        im = im.transform(im.size, Image.AFFINE, (1, sh, -sh * q(base), 0, 1, 0), resample=Image.BILINEAR)
+    face = np.asarray(im, np.float32).reshape(GH, S4, GW, S4).mean(axis=(1, 3)) >= 128
+    if slant:   # (sheared about the foot: the top leans right; back by half the lean, so it stays in its box)
+        face = np.roll(face, -int(round(slant * Hc / 2)), axis=1)
+    return clean_face(face, hole=0)
+
+
+def auto_new(box, style):
+    """the "Auto" layer for A1 / A2 / A3 in box (the old layer's box, its rims included)"""
+    x0, y0, x1, y1 = box
+    L = Layer('auto', COL['auto'])
+    if style == 'A2':
+        face = auto_face((x0 + 2, y0 + 2, x1 - 2, y1 - 2))
+        core = face & ~ero(ero(face, sq=False), sq=True)        # the tube's hot core: a 2 px line round each letter
+        side = dil(core, sq=False) & ~core                       # gold either side of it: the tube's walls
+        L.put(side, GOLD1, 0.85, COL['auto'], glass(GOLD1))
+        L.put(core, hot(GOLD1), 1.0, COL['auto'], mix((40, 36, 50), GOLD1, 0.35))
+        return L
+    face = auto_face((x0 + 3, y0 + 3, x1 - 3, y1 - 3), slant=0.18 if style == 'A3' else 0.0, speed=style == 'A3')
+    # the rim round the outside (gold two px, a darker one outside it); in the counters only a px of gold, so they
+    # stay open
+    outer = fill_holes(face)
+    (r1, r2), _ = rings(outer, [2, 1])
+    cring = outer & ~face & dil(face, sq=False)
+    L.put(r2, GOLD2, 0.6, COL['auto'], glass(GOLD2))
+    L.put(r1 | cring, GOLD1, 0.8, COL['auto'], glass(GOLD1))
+    L.put(face, CREAM, 0.95, COL['auto'], glass(CREAM))
+    return L
+
+
 def build(src, variant):
     if variant in ('D', 'D2'):
         return paint_faithful(src, thick=variant == 'D2')
+    if variant in ('A1', 'A2', 'A3'):
+        layers = paint_d4(src, windows=True, bold=True)
+        ys, xs = np.nonzero(layers[3].a)
+        layers[3] = auto_new((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1), variant)
+        return layers
     if variant in ('D4', 'D4N', 'D5'):
         return paint_d4(src, windows=variant != 'D4N', bold=variant == 'D5')
     if variant == 'D3':
@@ -1103,7 +1204,7 @@ def sheet(src, root, out, vs='ABC', name='contact-sheet.png', close_box=(0.02, 0
     return p
 
 
-NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline', 'D4': 'D3 cleaner, line-work skyline', 'D4N': 'D4, no windows', 'D5': 'the final: D4 + a bold Auto'}
+NAME = {'A': 'thin tubes', 'B': 'filled, neon rim', 'C': 'bold tubes, rich skyline', 'D': 'his logo, cleaned up', 'D2': 'D, a thicker red rim', 'D3': 'D2 clean, a grid skyline', 'D4': 'D3 cleaner, line-work skyline', 'D4N': 'D4, no windows', 'D5': 'the final: D4 + a bold Auto', 'A1': 'Auto new: cream, a gold rim', 'A2': 'Auto new: a gold tube', 'A3': 'Auto new: italic, speed lines'}
 
 
 def save_smallest(im, path_no_ext):
