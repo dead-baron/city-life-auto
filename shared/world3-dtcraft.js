@@ -57,7 +57,12 @@ export function foodTruckPlaza(K, m, x0, y0, x1, y1, out) {
   const fy = y0 + 13;
   prop('fountain', cx, fy, 36);
   for (const [dx, dy, face] of [[0, -3.6, S], [0, 3.6, N], [-4.4, 0, E], [4.4, 0, Wd]]) prop('bench_m', cx + dx, fy + dy, 0, { a: benchA(face) });
-  for (const [dx, dy] of [[-3.4, -2.8], [3.4, -2.8], [-3.4, 2.8], [3.4, 2.8]]) prop('planter_fl', cx + dx, fy + dy, 8);
+  // (four lawn beds on the diagonals, flowers and a shrub in each: the grey paving broken up - SK6's planting)
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const bx = Math.floor(cx + sx * 4.6 - 2), byy = Math.floor(fy + sy * 3.6 - 1.5);
+    K.paint(bx, byy, 4, 3, T.GRASS);
+    prop('flowers_big', bx + 1.2, byy + 1.5, 0); prop(sx < 0 ? 'shrub_a' : 'bush_c', bx + 2.9, byy + 1.4, 0);
+  }
   for (const [x, y] of [[x0 + 2.2, fy - 4.5], [x1 - 2.2, fy - 4.5], [x0 + 2.2, fy + 4.5], [x1 - 2.2, fy + 4.5]]) prop('tree_a', x, y, 10, { sp: pick(['streetPl', 'magnolia'], rnd(Math.floor(x), Math.floor(y), 41)), k: 1.1, grate: true });
   prop('bench_m', x0 + 1.3, fy, 0, { a: benchA(E) }); prop('bench_m', x1 - 1.3, fy, 0, { a: benchA(Wd) });
   for (const x of [x0 + 0.8, x1 - 0.8]) for (const dy of [-2.3, 2.3]) put('lamp', x, fy + dy);   // (the square's lamps, either side of each bench)

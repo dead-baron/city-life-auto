@@ -490,9 +490,13 @@ function eastBand(K, m, ctx) {
     out.hotelDrive = [dy0, dy1];
     K.fill(cx0, dy0, cx1 - cx0, dy1 - dy0, T.PLAZA);
     // (the drive: asphalt round the fountain's island, out to the street at both ends)
-    for (let y = dy0; y < dy1; y++) for (let x = hx - 6; x < hx + hw + 6; x++) { const d = Math.hypot((x + 0.5 - fx) / 22, (y + 0.5 - fy) / ((dy1 - dy0) / 2)); if (d > 0.45 && d < 1.05) m.set(x, y, T.LOT); }
+    // (the craft pass, 11-15: the drive a lane's width round a lawn - it was a 13-tile ring of asphalt round a small paved
+    // island; the island a garden now, flowers round its edge, the fountain on its paved circle)
+    const ry = (dy1 - dy0) / 2, ell = (x, y) => Math.hypot((x + 0.5 - fx) / 22, (y + 0.5 - fy) / ry);
+    for (let y = dy0; y < dy1; y++) for (let x = hx - 6; x < hx + hw + 6; x++) { const d = ell(x, y); if (d > 0.74 && d < 1.05) m.set(x, y, T.LOT); else if (d <= 0.74 && d > 0.3) m.set(x, y, T.GRASS); }
     prop('fountain', fx, fy, 36); prop('statue', fx, fy - 0.2, 0);
-    for (const dx of [-11, 11]) prop('flowers_big', fx + dx * 0.5, fy, 0);
+    for (let k = 0; k < 14; k++) { const t = k * Math.PI / 7, d = 0.6; prop(k % 2 ? 'flowers_a' : 'flowers_big', fx + Math.cos(t) * 22 * d, fy + Math.sin(t) * ry * d, 0, k % 2 ? { sp: ['tulips', 'rose', 'lavender'][k % 3], k: 1 } : null); }
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) prop('palm_a', fx + sx * 22 * 0.42, fy + sy * ry * 0.4, 10, { sp: 'royal', k: 1.05 });
     for (const dx of [-24, 24]) prop('palm_a', fx + dx, fy, 10, { sp: 'royal', k: 1.25 });
     for (const dx of [-14, -7, 7, 14]) prop('plamp', fx + dx, dy0 + 0.6, 6);
     m.parking.push({ x: (fx - 8) * TILE, y: (dy0 + 2.2) * TILE, a: 0, model: 'taxi' }, { x: (fx + 8) * TILE, y: (dy0 + 2.2) * TILE, a: 0, model: 'taxi' });

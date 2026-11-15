@@ -164,9 +164,15 @@ export function parkWest3(m, H3) {
   for (const y of [P.lane[0] + 0.6, P.lane[0] + 2.0, P.lane[0] + 3.4]) K.prop('bollard', X1 + 0.6, y, 4);
   K.prop('foodcart', X1 + 2.4, P.lane[0] + 1.6, 14);
   K.prop('bikerack', X1 + 2.0, P.front - 1.2, 0);
-  // the station's front: flower beds where the park's trees stood in front of it (low: the board and the platform in
-  // sight from the park), a bench or two
-  for (let x = cx + 8; x <= X1 - 8; x += 5) K.prop('flowers_big', x + 0.5, cy + 7.5, 0);
+  // the station's front: a station garden where the park's trees stood in front of it (low: the board and the platform
+  // in sight from the park) - a border of flowers along the line, benches turned to the station with a lamp between each
+  // pair (the craft pass, 11-15: it was a lawn with five flower beds on it)
+  const SP = ['tulips', 'lavender', 'rose', 'daffodils', 'hydrangea'];
+  for (let x = cx + 7, k = 0; x <= X1 - 7; x += 2.2, k++) K.prop(k % 3 === 1 ? 'flowers_big' : 'flowers_a', x + 0.5, cy + 5.7, 0, k % 3 === 1 ? null : { sp: SP[k % SP.length], k: 1 });
+  for (let x = cx + 9, k = 0; x <= X1 - 9; x += 5.5, k++) {
+    if (k % 2 === 0) K.prop('bench_m', x + 0.5, cy + 8.6, 0, { a: Math.PI });   // (its sitters facing north, to the platform)
+    else K.prop('lamp', x + 0.5, cy + 8.4, 0);
+  }
   // ---- the places (at the end of the list): the station's stop, the used lot, the shops
   const st = K.poi({ kind: 'delivery', label: 'Greenfield Park Station', x: Math.round((cx + 20.5) * TILE), y: Math.round((P.lane[0] + 0.6) * TILE), r: 40, arrival: 1 });
   const lot = K.poi({ kind: 'usedlot', label: 'Park West Motors', x: Math.round((office.door.tx + 0.5) * TILE), y: Math.round((oy + oh + 0.7) * TILE), b: office.id, lot: lotSpots, stn: st.id, stock: ['starter', 'rustpickup'], sub: 'Cheap wheels by Greenfield Park, sold as seen. Pick one off the lot or from the list - parked out on the lane for you.' });
