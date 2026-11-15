@@ -179,7 +179,12 @@ function openBlock(m, b, H3, roles, attach, opened) {
     else {
       rows.push([0, fd, gl]);
       let at = fd + gl, k = 3;
-      while (h - at > 22) { const rd = 10 + Math.floor(rr(k) * 5), pg = 4 + Math.floor(rr(k + 1) * 2); if (h - at - rd - pg < 8) break; rows.push([at, rd, pg]); at += rd + pg; k += 2; }
+      while (h - at > 22) {
+        const pg = 4 + Math.floor(rr(k + 1) * 2);
+        let rd = 10 + Math.floor(rr(k) * 5);
+        if (h - at - rd - pg < 8) rd = h - at - pg - 8;   // (the last row 8 deep at least, and never over 22)
+        rows.push([at, rd, pg]); at += rd + pg; k += 2;
+      }
       rows.push([at, h - at, 0]);
     }
   }
@@ -310,7 +315,7 @@ function diceDown(m, H3) {
     if (!D || gritOf(D) < 0.45 || byD.has(d)) continue;
     const x = (a.x + a.w / 2) * TILE, y = (a.y + a.h) * TILE - 14;
     if (spots.some((s) => Math.abs(s.x - x) < 60 * TILE && Math.abs(s.y - y) < 60 * TILE)) continue;
-    spots.push({ x: Math.round(x), y: Math.round(y), a: 0, ix: 0, iy: -1, name: D.name });
+    spots.push({ x: Math.round(x), y: Math.round(y), a: 0, ix: 0, iy: -1, name: D.name, open: true });
     prop(m, H3, 'crates', x / TILE + 2.2, a.y + a.h - 0.5, 0); prop(m, H3, 'crates', x / TILE - 2.4, a.y + a.h - 0.5, 0);
     prop(m, H3, 'bags', x / TILE + 4.2, a.y + a.h - 0.45, 0);
     prop(m, H3, 'plamp', x / TILE, a.y + 0.15, 0, { wall: true, a: Math.PI / 2 });
