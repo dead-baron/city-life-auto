@@ -24384,10 +24384,11 @@ step off the train (beside Greenfield Park, decisions 11-06), so it goes first. 
 number in those lists moves):
 - **D1 / SK6 - the food-truck plaza** (Station Plaza, the Greenfield Park subway stop's, between Pinnacle House and
   Larkspur Tower): was three carts, four tables and a string of lights hanging from nothing over 25 x 35 tiles of paving.
-  Now three parts. Off Crosstown Avenue the trucks' bay - Mr. Frosty's van parked on its asphalt, three hot dog carts in
-  a row, each cart's vendor behind it and a queue at each window (and at the van's). In the middle the fountain with four
-  benches turned to it, flower planters on the diagonals, trees in grates at the corners, a bench against each tower and
-  lamps either side of them, a few office workers talking. Down to 6th Street and the stop's kiosk, eight tables under
+  Now, north to south: in from Crosstown Avenue an allee of plane trees in grates over benches, bollards along the kerb;
+  the trucks' bay - Mr. Frosty's van parked on its asphalt, three hot dog carts in a row, each cart's vendor behind it and
+  a queue at each window (and at the van's); the fountain with four benches turned to it, two lawn beds of flowers and
+  shrubs, trees in grates at the corners, a bench against each tower and lamps either side of them, a few office
+  workers talking. Down to 6th Street and the stop's kiosk, eight tables under
   umbrellas in two blocks either side of a walk, people at lunch at them, and the strings of lights across each block
   between the rows - every one from a post to a post. Bins, bollards along the avenue (the bay's mouth open).
 - **WC083 - Greenfield Park's paths and pond**: the lamps were dropped at random along the paving (one in eleven paved
@@ -24400,7 +24401,7 @@ number in those lists moves):
   end looking out over the water, ducks off it and lilies by the bank, the ice-cream cart on the lawn beside it. The
   soccer stand's roof lights are on a post at each end.
 - **SC2-B / SC4-H - the jeweller's corner**: Brilliant & Co. moved onto the corner of Park East Avenue and 12th Street,
-  the bank beside it, so the two fronts are one view. Its lit skylight on the roof, bollards along its kerb, the bin and
+  the bank beside it, so the two fronts are one view (the slot between them paved). Its lit skylight on the roof, bollards along its kerb, the bin and
   the news boxes by the corner, the hydrant on it, and its back alley behind it off the avenue - the dumpster, bags,
   crates, a pallet, a lamp at the mouth.
 - **SC2-A / SC4-A - First Pixel Bank**: a guard at the door, planters either side, iron lamps at its ends, a row of
@@ -24408,9 +24409,10 @@ number in those lists moves):
   out of sight at its back), one guard watching the street, one carrying the cash boxes from a van's back to the bank's
   side; a hand truck and boxes by the wall. East of the bay to Civic Avenue: a pocket garden of trees and benches where a
   41 x 28 slab of paving was.
-- **CR2 / HO5 / WC356 - the Grand Neon Hotel's drop-off**: two doormen at the door, potted palms either side of it, the
-  hotel's flags (and the Stars) along its front, banner lamps on the drive's outer kerb, guests with their bags by the
-  cab rank.
+- **CR2 / HO5 / WC356 - the Grand Neon Hotel's drop-off**: the drive was a 13-tile ring of asphalt round a small paved
+  island; now a lane's width round a garden - lawn, four royal palms, a ring of flowers, the fountain on its paved
+  circle. Two doormen at the door, potted palms either side of it, the hotel's flags (and the Stars) along its front,
+  banner lamps on the drive's outer kerb, guests with their bags by the cab rank.
 - **SC2-C - the police headquarters**: two flags at its door, planters, bollards along its forecourt's edge.
 - **S1-A / I1-A / D1 - the street corners**: where two of Downtown's streets cross, a hydrant at one corner, news boxes
   at another, a bin, now and then a mailbox or a phone box. Someone waiting in the bus shelters on the east-west streets
@@ -24419,8 +24421,11 @@ number in those lists moves):
   workers out on it; Fountain Square two chess tables under its palms, Cafe Fontaine's customers at its tables.
 - **The arrival block** (shared/world3-firstcars.js): the lane's string of lights ran its whole length over nothing; now
   it is strung to and fro across the shops' pavement and the lane, from brackets on the shops' fronts to posts on the
-  walk behind the platform. The used lot's lights on posts at its corners. Someone at Park West Coffee's tables, a cab
-  waiting outside it for a fare off the train.
+  lane's far kerb between the bought cars' spaces (never on the walk behind the platform: the arrival line's corridor
+  keeps a tile clear of anything standing - a post there and the line isn't laid). The used lot's lights on posts at its
+  corners. Across the line from the platform, where a lawn held five flower beds, a station garden: a long border of
+  tulips, roses, lavender and daffodils along the line, benches turned to the platform, lamps between them. Someone at
+  Park West Coffee's tables, a cab waiting outside it for a fare off the train.
 - **The places' people** (server/systems/activities.js `tableau`): a handcrafted place lists the people it wants in it
   (m.tableaus - kept off the page's region files: shared/regionpack.js OMIT) - a queue at a window, someone at their post
   (a hotel's doormen, a cart's vendor: the cart `staffed`, so the street vendor persona leaves it be), the guards at an

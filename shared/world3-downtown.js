@@ -612,6 +612,7 @@ function southBand(K, m, ctx) {
     const jdep = rn[1] - by0 - 6;
     K.row(c2[0], bx - 1, by0, rn[1], (x, room) => room >= 10 && !jw++ ? { w: Math.min(room, jwW), depth: jdep, arch: 'mixed', name: 'Brilliant & Co.', poi: { kind: 'delivery', label: 'Brilliant & Co. Jewelers', walk: true, store: 'mart' }, whole: true,
       art: tower(x, rn[1], { name: 'Brilliant & Co.', sign: 'BRILLIANT & CO.', style: 'stone', wall: '#2a2a30', floors: 3, store: 'mart', awning: ['#16202c', '#16202c'], signC: ['#16202c', [236, 214, 150]], win: 'arch', kit: [['skyL', Math.round(Math.min(room, jwW) * TILE / 2), jdep * TILE - 190], ['ac', 44, 40], ['acs', Math.round(Math.min(room, jwW) * TILE) - 40, 60]] }) } : null);
+    K.fill(bx - 1, by0, 1, rn[1] - by0 + 1, T.PLAZA);   // (the slot between the jeweller and the bank paved, not a strip of lawn)
     const ah = rn[1] - by0 + 1 - jdep;
     if (jw && K.allFree(c2[0], by0, jwW, ah)) { K.fill(c2[0], by0, jwW, ah, T.LOT); out.alley = [c2[0], by0, c2[0] + jwW, by0 + ah]; }
     // (east of the bay to Civic Avenue: a pocket garden - a tree, a bench and flowers every eight tiles: hand.js 'garden')

@@ -39,26 +39,29 @@ export function foodTruckPlaza(K, m, x0, y0, x1, y1, out) {
   const { prop, rnd, pick } = K, open = opener(m), cx = (x0 + x1) / 2;
   const put = (t, x, y, solid = 0, extra = null) => (open(x, y) ? (prop(t, x, y, solid, extra), true) : false);
   // the trucks' bay: asphalt off the avenue's pavement, the van parked on it; the carts beside it, their umbrellas up
-  const bx0 = x0 + 2, bx1 = bx0 + 8, by = y0 + 1;
+  const bx0 = x0 + 2, bx1 = bx0 + 8, by = y0 + 7;
+  // (the way in from the avenue: an allee of plane trees in grates over a bench or two, bollards along the kerb)
+  for (let x = x0 + 3, k = 0; x < x1 - 2; x += 6, k++) { prop('tree_a', x, y0 + 3.2, 10, { sp: 'streetPl', k: 1.1, grate: true }); if (x + 3 < x1 - 2) prop('bench_m', x + 3, y0 + 3.4, 0, { a: benchA(S) }); }
+  for (let x = x0 + 1.2; x < x1 - 1; x += 1.7) put('bollard', x, y0 + 0.35, 4);
   K.paint(bx0, by, bx1 - bx0, 4, T.LOT);
   m.parking.push({ x: px(bx0 + 4), y: px(by + 1.9), a: E, model: 'icecream' });
   tableau(m, { v: 'queue', x: bx0 + 4.3, y: by + 3.9, a: N });
   // (each cart's vendor behind it, facing the line - p.staffed: no other vendor comes to it, server/systems/personas.js)
-  const carts = [cx - 0.5, cx + 4.5, cx + 9];
+  const carts = [cx - 3, cx + 2.5, cx + 8];
   for (const [k, x] of carts.entries()) {
     prop('foodcart', x, by + 2.4, 14, { staffed: 1 });
     tableau(m, { v: 'staff', look: 'vendor', x, y: by + 1.55, a: S });
     tableau(m, { v: 'queue', x: x + 0.1, y: by + 3.7 + (k % 2) * 0.3, a: N });
   }
   put('trashcan', bx1 + 0.8, by + 3.6); put('trashcan', x1 - 1.4, by + 4.6);
-  for (let x = bx1 + 1.2; x < x1 - 1; x += 1.7) put('bollard', x, y0 + 0.35, 4);   // (along the avenue: the bay's mouth left open)
   // the fountain in the middle: four benches facing it, flower planters on the diagonals, trees in grates at the
   // corners and a bench with its back to each tower
-  const fy = y0 + 13;
+  const fy = y0 + 17;
   prop('fountain', cx, fy, 36);
   for (const [dx, dy, face] of [[0, -3.6, S], [0, 3.6, N], [-4.4, 0, E], [4.4, 0, Wd]]) prop('bench_m', cx + dx, fy + dy, 0, { a: benchA(face) });
-  // (four lawn beds on the diagonals, flowers and a shrub in each: the grey paving broken up - SK6's planting)
-  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+  // (two lawn beds on the south diagonals, flowers and a shrub in each: the grey paving broken up - SK6's planting; the
+  // north side kept open for the queues)
+  for (const [sx, sy] of [[-1, 1], [1, 1]]) {
     const bx = Math.floor(cx + sx * 4.6 - 2), byy = Math.floor(fy + sy * 3.6 - 1.5);
     K.paint(bx, byy, 4, 3, T.GRASS);
     prop('flowers_big', bx + 1.2, byy + 1.5, 0); prop(sx < 0 ? 'shrub_a' : 'bush_c', bx + 2.9, byy + 1.4, 0);
@@ -68,7 +71,7 @@ export function foodTruckPlaza(K, m, x0, y0, x1, y1, out) {
   for (const x of [x0 + 0.8, x1 - 0.8]) for (const dy of [-2.3, 2.3]) put('lamp', x, fy + dy);   // (the square's lamps, either side of each bench)
   tableau(m, { v: 'chat', x: cx + 6.5, y: fy + 2.2 });
   // the tables: two blocks either side of the walk down the middle, strings of lights across each block between the rows
-  const ty = [y0 + 23, y0 + 28], cols = [[x0 + 4, x0 + 8.3], [x1 - 8.3, x1 - 4]];
+  const ty = [y0 + 24, y0 + 28], cols = [[x0 + 4, x0 + 8.3], [x1 - 8.3, x1 - 4]];
   for (const [b, xs] of cols.entries()) {
     const tables = [];
     for (const y of ty) for (const x of xs) if (open(x, y, 2) && open(x - 1, y) && open(x + 1, y)) { prop('cafetable', x, y, 0); prop(b ? (tables.length % 2 ? 'umbrella_y' : 'umbrella_r') : (tables.length % 2 ? 'umbrella_g' : 'umbrella_b'), x, y - 0.1, 0); tables.push([x, y]); }
