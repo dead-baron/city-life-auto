@@ -84,14 +84,19 @@ if (sc.st === 'air') b.classList.add('in-air');
 if (sc.st === 'police') b.classList.add('can-call');
 $('hud').classList.remove('hidden');
 if (sc.dev === 'touch') $('touch').classList.remove('hidden');
-const glyph = sc.dev === 'touch' ? '<span class="g-touch g-ico" role="img" aria-label="ACT">' + ICON('act') + '</span>' : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
-const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + (sc.st === 'rob' ? T.shop : T.prompt) + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
+const glyph = sc.dev === 'touch' ? faceChip('action', 'ACT') : sc.dev === 'pad' ? '<span class="g-pad g-y">Y</span>' : '<span class="g-key">F</span>';
+// (the words as client/hud.js puts them: a crime's less its name - promptWords; on touch the ACT button says the verb, so the
+// card has no chip - .btn - and is fitted to two lines - fitPrompt)
+const words = sc.st === 'rob' ? T.shop : sc.dev === 'touch' ? promptWords(T.prompt, 2) : T.prompt;
+const pr = $('helpbox'); pr.innerHTML = glyph + ' <span>' + words + '</span>'; pr.classList.remove('off'); if (sc.st !== 'rob') pr.classList.add('crime', 'felony');
+if (sc.dev === 'touch') pr.classList.add('btn');
 if (sc.st === 'custody') pr.classList.add('off');   // (held: nothing to Act on)
 // (the HUD's own markup for the status line, the job card and the hint strip: client/hudinfo.js; the notes as hud.js
 // lays them - one line each, the two newest; the touch slots as client/touchslots.js places them)
 import * as TS from '/client/touchslots.js';
 import * as HI from '/client/hudinfo.js';
-import { noteLine } from '/client/notelog.js';
+import { noteLine, promptWords, fitPrompt } from '/client/notelog.js';
+import { faceChip } from '/client/touchicons.js';
 import { paintIcons, icon } from '/client/touchicons.js';
 paintIcons(document);
 const slots = sc.dev === 'touch' ? TS.makeSlots($('tbtns')) : null;
@@ -124,7 +129,10 @@ const shown = (el) => { if (!el) return false; const cs = getComputedStyle(el); 
 const box = (el, name) => { const r = el.getBoundingClientRect(); return { name, x0: Math.round(r.left), y0: Math.round(r.top), x1: Math.round(r.right), y1: Math.round(r.bottom), clip: el.scrollWidth > el.clientWidth + 1 }; };
 function measure() {
   const read = [], keep = [];
-  if (shown(pr)) read.push(box(pr, 'prompt'));
+  // (the prompt's words: never more than two lines on touch, never cut in a word - lost; on touch no chip on it to press)
+  if (shown(pr)) { const sp = pr.lastElementChild, lh = parseFloat(getComputedStyle(sp).lineHeight), t = sp.textContent, full = sp.dataset.full || t;
+    const lines = Math.round(sp.getBoundingClientRect().height / lh), whole = t === full || (t.endsWith('…') && (full + ' ').startsWith(t.slice(0, -1).trimEnd() + ' '));
+    read.push({ ...box(pr, 'prompt'), lines, words: t, lost: sp.scrollHeight > sp.clientHeight + 1 || !whole || (sc.dev === 'touch' && lines > 2), chip: [...pr.children].some((c) => c.matches('.g-touch, .g-key, .g-pad, .g-tile') && shown(c)) }); }
   document.querySelectorAll('#toasts .toast').forEach((el, i) => { el.style.animation = 'none'; if (shown(el)) read.push({ ...box(el, 'note' + i), lines: Math.round(el.getBoundingClientRect().height / 20) }); });
   for (const id of ['job', 'cruiser-hint', 'rob', 'trainbar', 'hints', 'fishspot', 'fishbar']) if (shown($(id))) read.push({ ...box($(id), id), form: id === 'job' ? JOBF : undefined });
   keep.push(box($('radar'), 'minimap'));
@@ -147,7 +155,7 @@ function measure() {
   for (const el of document.querySelectorAll('#hud *, #touch *')) { if (!shown(el) || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue; const f = parseFloat(getComputedStyle(el).fontSize), at = (el.id || el.className || el.tagName) + ' "' + el.textContent.trim().slice(0, 20) + '"'; if (el.matches('#tbtns .w')) { if (f < minBtn) { minBtn = f; minBtnAt = at; } continue; } if (f < minFont) { minFont = f; minAt = at; } }
   parent.postMessage({ sc, read, keep, state: slots && slots.state, minFont, minAt, minBtn, minBtnAt }, '*');
 }
-document.fonts.ready.then(() => setTimeout(measure, 100));
+document.fonts.ready.then(() => setTimeout(() => { if (sc.dev === 'touch') fitPrompt(pr); measure(); }, 100));
 `;
 
 export function framePage() {

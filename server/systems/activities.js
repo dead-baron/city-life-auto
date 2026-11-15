@@ -66,6 +66,7 @@ export const ACT_NEAR = 1100;     // a spot this close to someone fills up (when
 export const ACT_DROP = 1600;     // ...and empties when nobody's this close (and nobody can see it)
 export const ACT_MAX = 4;         // groups round one player at most
 const GAP = 380;                  // never filled closer than this to anyone
+const FLOOR_FIRST = 640;          // a casino's floor or a bar's card table this close (px, round its room): filled first, past ACT_MAX and its kind's cap
 const CELL = 1024;
 const KINDS = {   // day / night: the chance a spot is on when someone comes near
   anglers: { day: 0.75, night: 0.35 },
@@ -611,23 +612,28 @@ function fillRound(world) {
     A.delete(id);
     (world.actRest ||= new Map()).set(id, now + (g.ids.length ? 30 : 240));   // (emptied by a scare: a good while before it's on again)
   }
-  if (!(world.npcBudget > 0) || world.npcCount >= world.npcBudget * 0.85) return;
+  if (!(world.npcBudget > 0) || world.npcCount >= world.npcBudget) return;   // (a floor you're at fills up to the whole budget; the rest to 85% of it - below)
   const night = !!(world.clock && world.clock.isNight), rest = (world.actRest ||= new Map()), rain = world.weather === WEATHER.RAIN;
   for (const a of anchors) {
     if (a.ug || a.hidden) continue;
     let have = 0;
     const kinds = {};
     for (const g of A.values()) if (Math.hypot(g.x - a.x, g.y - a.y) < ACT_DROP) { have++; kinds[g.k] = (kinds[g.k] || 0) + 1; }
-    if (have >= ACT_MAX) continue;
-    for (const s of spotsNear(world.map, a.x, a.y, ACT_NEAR)) {
-      if (A.has(s.id) || now < (rest.get(s.id) || 0) || (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2)) continue;   // (not the whole street washing its cars at once)
+    // (the floor you're walking up to comes first, whatever's on round you: on the Strip the other casinos' floors, a pool
+    // table, a busker took the round's places before it - spotsNear isn't in order - and the casino you walked into had
+    // nobody in it, never filled once you were inside: the owner's Golden Lotus capture, 11-14)
+    const all = spotsNear(world.map, a.x, a.y, ACT_NEAR), first = (s) => !!s.floor && a.x > s.floor.x0 - FLOOR_FIRST && a.x < s.floor.x1 + FLOOR_FIRST && a.y > s.floor.y0 - FLOOR_FIRST && a.y < s.floor.y1 + FLOOR_FIRST;
+    for (const s of all.filter(first).concat(all.filter((q) => !first(q)))) {
+      const pri = first(s);
+      if (!pri && (have >= ACT_MAX || world.npcCount >= world.npcBudget * 0.85)) break;
+      if (A.has(s.id) || now < (rest.get(s.id) || 0) || (!pri && (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2))) continue;   // (not the whole street washing its cars at once)
       if (s.floor ? inside(world, s.floor) : anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;   // (a floor's: not with someone in the room)
       const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : s.k === 'cards' ? CASINO_FLOOR[s.floor.casino ? 'casino' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
       if (rain && RAIN_OFF.has(s.k)) continue;
-      if (rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later)
+      if (!(pri && s.floor.casino) && rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later - a casino you're at the door of is always open)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
       kinds[s.k] = (kinds[s.k] || 0) + 1;
-      if (++have >= ACT_MAX) break;
+      have++;
     }
   }
 }

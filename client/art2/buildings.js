@@ -1254,12 +1254,49 @@ function portico(G, p, d, H, cornice) {
 // a plaque or lettered panel on the wall (p: { text, x | cx (its left, or its centre), v (its foot above the pavement),
 // face, pal | bg + fg, icon, glow, lit }): a small board in its face (Civic Sans at one art px by default; the neon
 // plaques in Neon Tube) as wide as its words, on two lines when the wall is narrow
-function plaque(G, p, yG, night) {
-  const fk = p.face || (p.bg === '#1c1a28' ? 'neon' : 'civic'), maxA = Math.floor(Math.min(G.w - 8, p.maxW || 1e9) / 2), opt = { face: fk, icon: p.icon || null, lines: p.lines || 2 };
+function plaqueLayout(p, W) {
+  const fk = p.face || (p.bg === '#1c1a28' ? 'neon' : 'civic'), maxA = Math.floor(Math.min(W - 8, p.maxW || 1e9) / 2), opt = { face: fk, icon: p.icon || null, lines: p.lines || 2 };
   const L0 = layoutSign(p.text, maxA, opt), tight = Math.min(maxA, L0.cw + 4 + (L0.icon ? 10 : 0)), L = layoutSign(p.text, Math.max(tight, p.w ? Math.floor(p.w / 2) : 0), opt);
-  const bw = L.w * 2, cx = p.cx ?? (p.x + (p.w || bw) / 2), x0 = Math.floor(clampI(p.cx === undefined && !p.w ? p.x : Math.round(cx - bw / 2), 4, G.w - 4 - bw) / 2) * 2, y0 = Math.floor((yG - p.v - L.h * 2) / 2) * 2;
+  const bw = L.w * 2, cx = p.cx ?? (p.x + (p.w || bw) / 2), x0 = Math.floor(clampI(p.cx === undefined && !p.w ? p.x : Math.round(cx - bw / 2), 4, W - 4 - bw) / 2) * 2;
+  return { fk, L, x0, bw };
+}
+function plaque(G, p, yG, night) {
+  const { fk, L, x0 } = plaqueLayout(p, G.w), y0 = Math.floor((yG - p.v - L.h * 2) / 2) * 2;
   const P = p.pal || (fk === 'neon' ? neonPal(p.fg || [255, 80, 200]) : paletteOf({ bg: p.bg || '#f4f2ea', fg: p.fg || [40, 36, 32] }));
   paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
+}
+// Where a facade's lettered boards stand on it, in its own px: [x0, v0, x1, v1] (v up from the pavement) - a plaque's
+// board (plaque above) and a blade sign (blade below; H the wall's height: the letters it has room for)
+export function plaqueBox(p, W) { const { L, x0, bw } = plaqueLayout(p, W); return [x0, p.v, x0 + bw, p.v + L.h * 2]; }
+export function bladeBox(b, H = 999) {
+  const n = Math.min(String(b.text || '').length, 8, Math.max(0, Math.floor((H - b.v - 10) / 16)));
+  return n ? [Math.floor(b.x / 2) * 2 - 4, b.v, Math.floor(b.x / 2) * 2 + 22, b.v + (n * 8 + 5) * 2] : null;
+}
+// No board over another on one front (the owner, 11-14: Westside Clinic's name half hidden behind its EMERGENCY sign):
+// a plaque that overlaps one lower down stands clear above it (4 px between); a blade sign over a plaque goes to the
+// other end of the wall, or down when neither end is clear. spec: a makeBuilding spec, changed in place.
+export function unstackSigns(spec) {
+  const P = (spec.plaques || []).filter((p) => p && p.text && p.v !== undefined).sort((a, b) => a.v - b.v), W = spec.w, gap = 4;
+  const hit = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+  const done = [];
+  for (const p of P) {
+    for (let k = 0; k < 8; k++) {
+      const r = plaqueBox(p, W), under = done.find((q) => hit(r, [q[0], q[1], q[2], q[3] + gap]));
+      if (!under) break;
+      p.v = under[3] + gap;
+    }
+    done.push(plaqueBox(p, W));
+  }
+  if (!spec.blades || !done.length) return spec;
+  const H = buildingH(spec);
+  spec.blades = spec.blades.filter((b) => {
+    const clear = (bb) => !bb || !done.some((q) => hit(bb, q));
+    if (clear(bladeBox(b, H))) return true;
+    const other = { ...b, x: b.x < W / 2 ? W - 32 : 10 };
+    if (W >= 90 && clear(bladeBox(other, H))) { b.x = other.x; return true; }
+    return false;
+  });
+  return spec;
 }
 const neonPal = (h) => ({ p: [22, 18, 30], i: h.map((q) => Math.min(255, Math.round(q * 0.35 + 170))), h, f: [40, 34, 48], neon: true, t: [[22, 18, 30], h, h, [10, 8, 14]] });
 // a vertical blade sign: letters stacked top to bottom (Civic Sans, 7 art px tall, 8 apart) in a dark frame with a lit
@@ -1269,7 +1306,7 @@ function blade(G, b, yG, night, H = 999) {
   const room = Math.floor((H - b.v - 10) / 16);
   const t = String(b.text || '').toUpperCase().slice(0, Math.max(0, Math.min(8, room)));
   if (!t) return;
-  const wA = 11, hA = t.length * 8 + 5, x0 = Math.floor(b.x / 2) * 2, y0 = Math.floor((yG - b.v - hA * 2) / 2) * 2, col = b.col || [255, 80, 200];
+  const wA = 11, hA = t.length * 8 + 5, x0 = Math.floor(b.x / 2) * 2, y0 = Math.floor((yG - b.v - hA * 2) / 2) * 2, col = b.col || [255, 80, 200];   // (bladeBox: where it stands)
   const bg = b.paint ? ramp(b.bg || '#2a3a5a', 5, 2) : null, fg = b.fg || [240, 232, 210];
   for (let k = 0; k < 2; k++) for (let x = -4; x < 2; x++) for (let q = 0; q < 2; q++) setC(G, x0 + x, y0 + 16 + q + k * (hA * 2 - 36), MAT.metalDark[1]);   // brackets
   const hot = col.map((v) => Math.min(255, Math.round(v * 0.45 + 140)));

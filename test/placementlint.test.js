@@ -10,6 +10,9 @@
 //   - in the wilds a board is a wooden trail sign, never a lit panel (the owner: "it should just be a more appropriate
 //     wooden sign")
 //   - a race's start buoy clear of the craft waiting for it (drawn over one, it hid it: the Redwood River Run)
+//   - (the owner, 11-14) a building's name never half hidden - by another board on its front or by what stands in front
+//     of it; a blade sign names the business at street level; no plant on a house's path, drive or door step; an ATM set
+//     in a wall or inside, never on its own on the pavement
 //   - no pier's or boardwalk's planks over a beach taken for water (a sliver of sea along them), and a skate park's
 //     ledges, boxes, rails and benches solid on foot (the owner, 11-14)
 // The checks are on the map's own data, so a failure names the thing and where: fix it in the data, not here.
@@ -31,5 +34,5 @@ for (const k of Object.keys(L.rows)) {
 }
 
 test('the lint looked at things (it isn\'t passing on an empty world)', () => {
-  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5, JSON.stringify(L.seen));
+  assert.ok(L.seen.boats > 200 && L.seen.signs > 150 && L.seen.props > 20000 && L.seen.decks > 500 && L.seen.beachWaterOld > 5 && L.seen.skateKit > 5 && L.seen.fronts > 1500 && L.seen.paths > 2000 && L.seen.atms > 300, JSON.stringify(L.seen));
 });

@@ -124,3 +124,45 @@ export function wildAt(m, x, y) {
   if (d && d.style === 'water') { d = null; for (let r = 1; r <= 6 && !d; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, -r], [r, -r], [-r, r]]) { const q = dAt(tx + dx, ty + dy), i = (ty + dy) * W + tx + dx; if (q && q.style !== 'water' && m.land[i]) { d = q; break; } } }
   return !!(d && d.tier === 'wild');
 }
+
+// A house's path and its drive (the owner, 2026-11-14: "Some driveways have plants growing on them ... keep plants off
+// driveways, paths and doors for all homes"): the paved strip from its door, and from where its car stands (its garage
+// spot, the drive's parking), down across its lawn to the street (only in a row with lawn in it - an all-paved row is
+// the pavement or a paved forecourt), and its door step. -> Map(tile index -> the home). tools/placementlint.mjs
+// plantOnPath reads the same strips.
+const PATH_PAVED = new Set([T.LOT, T.PLAZA, T.SIDEWALK]), PATH_LAWN = new Set([T.GRASS, T.DIRT]);
+export function homePaths3(m) {
+  const path = new Map(), drives = (m.parking || []).filter((sp) => sp && sp.drive);
+  for (const h of m.homes || []) {
+    const b = h && h.kind === 'house' ? m.buildings[h.b] : null;
+    if (!b || !b.door || b.door.ty < b.ty + b.th) continue;
+    const y1 = b.ty + b.th, X0 = (b.tx - 2) * TILE, X1 = (b.tx + b.tw + 2) * TILE, cols = new Set();
+    for (let k = 0; k < (b.door.w || 1); k++) cols.add(b.door.tx + k);
+    const car = (x, y) => { if (x > X0 && x < X1 && y > y1 * TILE - 8 && y < (y1 + 8) * TILE) { const tx = Math.floor(x / TILE); cols.add(tx - 1); cols.add(tx); } };
+    if (h.garage) car(h.garage.x, h.garage.y);
+    for (const sp of drives) car(sp.x, sp.y);
+    for (const tx of cols) for (let ty = y1; ty < y1 + 8; ty++) {
+      if (!m.inside(tx, ty)) break;
+      if (!PATH_PAVED.has(m.tiles[m.idx(tx, ty)])) { if (ty > y1) break; continue; }
+      let lawn = false;
+      for (let x = b.tx; x < b.tx + b.tw && !lawn; x++) if (m.inside(x, ty) && PATH_LAWN.has(m.tiles[m.idx(x, ty)])) lawn = true;
+      if (!lawn) break;
+      path.set(m.idx(tx, ty), h);
+    }
+    for (let k = 0; k < (b.door.w || 1); k++) if (m.inside(b.door.tx + k, y1)) path.set(m.idx(b.door.tx + k, y1), h);
+  }
+  return path;
+}
+// what stands over one of those strips: a plant whose foot (hw px either side of it) is on one
+export function onHomePath(m, path, x, y, hw) {
+  for (let tx = Math.floor((x - hw) / TILE); tx <= Math.floor((x + hw) / TILE); tx++) for (const ty of [Math.floor((y - 4) / TILE), Math.floor((y + 4) / TILE)]) if (m.inside(tx, ty)) { const h = path.get(m.idx(tx, ty)); if (h) return h; }
+  return null;
+}
+// the map's plants off the houses' paths and drives (the done hook, after tidyProps3): taken away. -> how many
+export function clearHomePaths3(m, removeProps) {
+  if (!removeProps || !Array.isArray(m.props)) return 0;
+  const path = homePaths3(m), gone = new Set();
+  for (const p of m.props) if (p && TIDY3.PLANT.test(p.t) && onHomePath(m, path, p.x, p.y, 14)) gone.add(p.x + ',' + p.y);
+  if (gone.size) removeProps(m, (x, y) => gone.has(x + ',' + y));
+  return gone.size;
+}
