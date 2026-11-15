@@ -23738,7 +23738,10 @@ skip, jump and stop, the screen's own time put back; a shot that can't be set up
 camera back where it is, the panel's own buttons don't; Stop while setting up lets it go; every section 4+ shots, 30+ in
 all, 10-30 s each, every place shot's camera moving), test/scenes.test.js (every shot's script whole - its section, its
 weather, at most 40 s; the brawl out front), test/world3scenes.test.js (every shot's place found on World v3, its cast
-where it belongs; every vehicle, boat and aircraft a shot follows gets going and keeps going). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
+where it belongs; every vehicle, boat and aircraft a shot follows gets going and keeps going).
+Proof (World v3 on a dev server, headless Chromium - SwiftShader, so the art comes in late; the session's scratchpad
+`director3/owner/`): a strip of six shots across the sections (first, middle and last frame), the new panel on a desktop
+and a phone, and the tanker's blast before / after (the same 'explode' event, b 3, frame by frame). Budgets: the renderer 409 of 410 KB, the page 524 of 540 (unchanged at the KB); the world's and the
 art's hashes unchanged.
 =======
 ## 2026-11-14 - The final logo, in-engine, and the title screen rebuilt round it
