@@ -24456,4 +24456,6 @@ WC237, AL1 and the handcraft research's signature places.
   stall); the playability check lets the boulevard's median hold its fountain and lamps.
 - Performance: the bake's code stays at its 1010 KB (the palm lights, the menu board prop and the wheel's lights paid for
   by trimming statics.js's header and roof-garden comments). The art hash moves (the palm lights): the chunks with lit
-  palms rebake; the rest carry over (server/artcdn.js).
+  palms rebake; the rest carry over (server/artcdn.js). The world map's picture rebaked (node tools/build-worldmap2.mjs).
+- Proof (before | after, live at street level, noon / dusk / night): the boulevard by Blossom Plaza, the crossroads,
+  Harbor Lights, the marina promenade, the Pink Mile by The Garter Room.
