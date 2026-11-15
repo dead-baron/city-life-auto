@@ -23993,9 +23993,16 @@ row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
   (still under the lintel: test/storeicons.test.js). Nothing new on the HUD.
 - **ATMs on their own on the pavement.** The kiosks (an ATM put at the back edge of a pavement where no building front
   was found when the shops were laid out, and by stations and gas stations) are moved, last thing in the build, into the
-  nearest front wall in the same district within 40 tiles that a wall ATM may use (shared/world3-shops.js `seatAtms3`:
-  map.js's rules - the wall behind it whole, pavement under it, room to stand, clear of a door, another ATM, a prop, a
-  pump), in place, so no prop's or place's number moves. Lint row `atmStray`: an ATM neither set in a wall nor inside.
+  nearest front wall in the same district within 32 tiles that a wall ATM may use - a shop's, a block of flats' street
+  wall, never a house's (shared/world3-shops.js `seatAtms3`: map.js's rules - the wall behind it whole, pavement under
+  it, room to stand, clear of a door, another ATM, a prop, a pump), in place, so no prop's or place's number moves; the
+  banks' "painted" ATMs (a map point with no machine: art v2 paints none) get a machine in the nearest wall. A machine
+  moves only where every street it alone had within SHOP_REACH.cash stays in reach (a few tiles to spare), so every
+  district keeps its cash of its own and in reach (world3server.test.js). 52 moved, 7 given a machine; 53 left: the
+  kiosks of the districts that are all houses or open ground (West Hills' and Pine Hills' streets of houses, the
+  villages' greens, the beaches) or whose streets would fall out of reach - the lint lists them (LINT_ALLOW); a shop front
+  there would take one in. Lint row `atmStray`: an ATM neither in a wall nor inside.
+  (The pass and the paths' pass cost about 20 ms and 30 ms of the build.)
 - **The casino floor that emptied** (the Golden Lotus in a live capture). Three holes, each closed: a round fills at
   most ACT_MAX groups round a player and the spots came in no order, so on the Strip the casinos either side, a pool
   table, a busker took the places before the one you were walking into, and a floor never fills once you're in the room;
@@ -24014,5 +24021,9 @@ row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
 - **"Come here"** (the owner, 19:27: "a rope? Or a finger?"): the balloon redrawn - a fist with its index finger up and
   crooked toward you, two motion ticks, the icon tilting in twice as it holds; the pose an arm out toward the camera,
   palm up, the fingers curling in and opening twice a loop (client/art2/poses.js embeckon), not a pull back to the chest.
+- The new lint rows on today's world before -> after: nameCovered 41 -> 1 (a cash machine's top a few px over a self
+  storage's board), bladeBiz 10 -> 0, plantOnPath 638 -> 0, atmStray 111 -> 53. The world
+  and the art re-key (stamped).
 - The Camera's way-out test (test/wayout.test.js) follows the shot list's rework: the tour is a follow kind, gated with
-  the follow scenes.
+  the follow scenes. And the Camera panel has its own close X in its header (the owner, 20:24: "Camera mode doesn't have
+  an X button to close it"): the kit's close, on every device, handing the camera back; Esc and B as before.

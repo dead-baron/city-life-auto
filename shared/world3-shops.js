@@ -622,7 +622,7 @@ export function stationAtms3(m, H) {
 // behind it whole, pavement under it, room to stand at it, clear of a door, another ATM, a prop, a pump). Moved in
 // place - its prop and its map point keep their numbers - so nothing after it in the lists shifts. Returns { moved, left }:
 // left, a kiosk with no wall near enough (the placement lint's atmStray counts them).
-export const ATM_SEAT = 40;
+export const ATM_SEAT = 32;   // (tiles: a cash machine stays within reach of the streets it served - world3server.test.js, SHOP_REACH.cash)
 const NO_ATM_WALL = /^(house|shanty|shack|farm|estate|church|school|park|construction|site|junkyard|pool|chapel)/;   // (a block of flats' street wall will do in town - not a house's)
 const AT_FOOT = new Set([T.SIDEWALK, T.PLAZA, T.LOT, T.DIRT, T.GRASS]);
 export function seatAtms3(m, H = null) {
@@ -652,26 +652,42 @@ export function seatAtms3(m, H = null) {
     for (const pu of m.pumps || []) if (Math.hypot(pu.x - x, pu.y - wy) < 60) return false;
     return true;
   };
-  // (cash of its own in each district - world3server.test.js: a machine with no wall in its district moves to the next
-  // district's only while its own keeps another)
-  const own = new Map();
-  for (const q of m.pois) if (q && (q.kind === 'atm' || q.kind === 'bank')) { const tx = Math.floor(q.x / TILE), ty = Math.floor(q.y / TILE); if (m.inside(tx, ty)) { const d = m.dist[m.idx(tx, ty)]; own.set(d, (own.get(d) || 0) + 1); } }
+  // (the cash it serves: the streets - a road or a pavement, not a highway's - within SHOP_REACH.cash of it, every third
+  // tile, that no other ATM or bank has in reach; a move keeps each of them in reach, a few tiles to spare -
+  // world3server.test.js measures every street tile's distance to its nearest cash)
+  const R = SHOP_REACH.cash, REACH2 = (R - 4) * (R - 4), cash = m.pois.filter((q) => q && (q.kind === 'atm' || q.kind === 'bank'));
+  const soleStreets = (me) => {
+    const ox = me.x / TILE, oy = me.y / TILE, others = cash.filter((q) => q !== me && Math.abs(q.x / TILE - ox) < 2 * R && Math.abs(q.y / TILE - oy) < 2 * R), out2 = [];
+    for (let ty = Math.floor(oy - R); ty <= oy + R; ty += 3) for (let tx = Math.floor(ox - R); tx <= ox + R; tx += 3) {
+      if (!m.inside(tx, ty) || (tx - ox) * (tx - ox) + (ty - oy) * (ty - oy) > R * R) continue;
+      const i = m.idx(tx, ty), t = m.tiles[i];
+      if ((t !== T.ROAD && t !== T.SIDEWALK) || (m.roadRank && m.roadRank[i] === 3)) continue;
+      if (others.some((q) => { const qx = q.x / TILE - tx, qy = q.y / TILE - ty; return qx * qx + qy * qy <= R * R; })) continue;
+      out2.push([tx + 0.5, ty + 0.5]);
+    }
+    return out2;
+  };
   m.props.forEach((p, pi) => {
     if (!p || p.t !== 'atmw' || p.inside !== undefined || walled(p.x, p.y - 5)) return;
     const poi = pois.find((q) => Math.abs(q.x - p.x) < 6 && q.y - p.y > 10 && q.y - p.y < 40);
     const self = m.propSolid && m.propSolid.get(pi);
     let best = null, bd = ATM_SEAT * ATM_SEAT * TILE * TILE;
     const ax = Math.floor(p.x / TILE), ay = Math.floor((poi ? poi.y : p.y + 22) / TILE), d0 = m.inside(ax, ay) ? m.dist[m.idx(ax, ay)] : -1;
-    const look = (dd) => { for (const b of near(p.x, p.y)) {
+    // the spots it may go to, nearest first; the first that keeps every street it alone had in reach in reach
+    const spots = [];
+    for (const b of near(p.x, p.y)) {
       const wy = (b.ty + b.th) * TILE;
       for (let x = Math.round((b.tx * TILE + 24) / 16) * 16; x <= (b.tx + b.tw) * TILE - 24; x += 16) {
         const d = (x - p.x) * (x - p.x) + (wy + 5 - p.y) * (wy + 5 - p.y);
-        if (d >= bd || !spotOk(b, x, self, poi, dd)) continue;
-        bd = d; best = { x, wy };
+        if (d < bd && spotOk(b, x, self, poi, d0)) spots.push([d, x, wy]);
       }
-    } };
-    look(d0);
-    if (!best && (own.get(d0) || 0) > 1) { look(-1); if (best) { own.set(d0, own.get(d0) - 1); } }
+    }
+    spots.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]);
+    const sole = spots.length ? soleStreets(poi || { x: p.x, y: p.y + 22 }) : null;
+    for (const [, x, wy] of spots) {
+      const nx = x / TILE, ny = (wy + 28) / TILE;
+      if (sole.every(([sx, sy]) => (sx - nx) * (sx - nx) + (sy - ny) * (sy - ny) <= REACH2)) { best = { x, wy }; break; }
+    }
     if (!best) { out.left++; return; }
     // moved in place: the prop, its solid (to its new tile), its map point
     if (self) {
