@@ -4,17 +4,15 @@
 // skyline, "City Life", the swoosh, "Auto" - each cropped to its own box (the tool makes them and prints LAYERS).
 // Loaded with client/splash.js, which plays the entrance; nothing in the game depends on it.
 //   mountLogo()          the lit layers, added to #logo switched off (fetched now: 4 KB, after the first paint)
-//   neonIntro({ at })    the SNES-style switch-on: each layer buzzes on in turn with a short irregular flicker and a
-//                        soft tick and a low hum, then the sign idles - a soft glow breathing and, now and then, a tube
+//   neonIntro({ at })    the SNES-style switch-on: each layer buzzes on in turn with a short irregular flicker, then
+//                        the sign idles - a soft glow breathing and, now and then, a tube
 //                        misbehaving (the owner, 11-14 18:56: "would be cool if the Auto subtly flickered from time to time
 //                        but not on a loop that gets repetitive"): mostly "Auto", now and then another piece, after 8-25 s
-//                        at random each time - a blink or two, a dim and recover, or one letter stuttering - with a faint
-//                        tick of the neon's sound. And the backdrop comes alive behind it (client/titlelife.js, loaded then).
+//                        at random each time - a blink or two, a dim and recover, or one letter stuttering. And the backdrop comes alive behind it (client/titlelife.js, loaded then).
 //                        Any tap, click, key or pad button skips to lit. Reduced motion: just lit, no flicker, no idle.
 //                        at: hold that moment (ms into the switch-on) - the captures (?neon=<ms>)
 //   showLit()            lit at once, then idle (the tests' captures, ?nosplash)
-// The sound is its own few oscillators (the game's sound loads on the first tap, after this has played): silent until
-// the page may play sound (a tap - skipping the studio sting counts), and never with the sound off in Settings.
+// Silent (the owner, 11-15: no neon sound - the title's music instead, from the first tap: client/audio.js preloadAudio).
 
 // the layers' boxes in % of the logo's box (1120 x 730: the sign's tubes, 5 px an art px; tools/neon_logo.py --variant
 // A3 --install --no-glow prints them) and each one's glow
@@ -24,8 +22,8 @@ const LAYERS = [
   { k: 'swoosh', f: 'swoosh.webp', x: 14.286, y: 61.644, w: 70.982, px: [795, 85], c: '#ff465a' },
   { k: 'auto', f: 'auto.webp', x: 14.286, y: 69.863, w: 69.196, px: [775, 220], c: '#ffbe3c' },
 ];
-// when each layer starts to buzz on (ms after the lit layers are in hand), and the hum's pitch for each
-const START = { sky: 450, city: 1000, swoosh: 1580, auto: 1960 }, HUM = { sky: 180, city: 120, swoosh: 150, auto: 100 };
+// when each layer starts to buzz on (ms after the lit layers are in hand)
+const START = { sky: 450, city: 1000, swoosh: 1580, auto: 1960 };
 
 let els = null, ready = null, state = 'off', idleT = 0;
 const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -122,9 +120,6 @@ export function misbehave(kind = 'blink', layer = 'auto', part = 0, holdAt = -1)
   const apply = ([, o, lv]) => { setOn(e, o); const m = lv === undefined ? '' : sectionMask(part, lv); e.i.style.webkitMaskImage = m; e.i.style.maskImage = m; };
   if (holdAt >= 0) { apply(steps.filter((q) => q[0] <= holdAt).pop() || [0, 1]); return; }
   for (const q of steps) setTimeout(() => apply(q), q[0]);
-  // (a faint tick and the shortest hum, far under the switch-on's: the sound settings as ever)
-  const snd = hum(0.3);
-  if (snd) snd.blip(HUM[layer], false);
 }
 
 // a small seeded random (the captures hold a moment across page loads: the same flicker every time)
@@ -159,13 +154,11 @@ export function neonIntro({ at = -1 } = {}) {
     ready.then(() => { for (const p of pats) setOn(p.e, levelAt(p.pat, at - p.start)); });
     return;
   }
-  const snd = hum();
   let raf = 0, t0 = 0, over = false;
   const finish = () => {
     if (over) return;
     over = true; cancelAnimationFrame(raf);
     for (const ev of SKIP) removeEventListener(ev, finish, true);
-    if (snd) snd.stop();
     state = 'off'; showLit();
   };
   const SKIP = ['pointerdown', 'keydown'];
@@ -179,8 +172,7 @@ export function neonIntro({ at = -1 } = {}) {
     for (const p of pats) {
       const lt = t - p.start;
       while (p.next < p.pat.length && lt >= p.pat[p.next][0]) {
-        const [, o, blip] = p.pat[p.next++];
-        if (blip && snd) snd.blip(HUM[p.e.L.k], p.next >= p.pat.length - 1);
+        p.next++;
       }
       setOn(p.e, levelAt(p.pat, lt));
     }
@@ -191,47 +183,5 @@ export function neonIntro({ at = -1 } = {}) {
   ready.then(() => { if (over) return; if (document.hidden) { finish(); return; } raf = requestAnimationFrame(frame); });
 }
 
-// the neon's sound (the owner liked the idea, not the first sound: "softer, a real tick and a low hum"): as each
-// piece strikes, a short tick of filtered noise (the starter), and under it a low hum near 120 Hz (the mains' doubled
-// buzz: a soft sine and a little of its second harmonic, muffled) that swells in and settles; the last strike of each
-// piece holds its hum a moment longer. Quiet: well under the game's own sounds.
-function hum(gain = 1) {
-  let vol = gain;
-  try {
-    const s = JSON.parse(localStorage.getItem('cla.settings') || '{}').sound || {};
-    if (s.on === false) return null;
-    const m = typeof s.master === 'number' ? s.master : 0.8, f = typeof s.sfx === 'number' ? s.sfx : 0.8;
-    vol = gain * m * m * f * f / 0.4096;   // (squared like the mixer's sliders; 1 at the defaults)
-  } catch { /* the defaults */ }
-  if (vol < 0.02) return null;
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return null;
-  let ac;
-  try { ac = new AC(); } catch { return null; }
-  if (ac.state !== 'running') { try { ac.close(); } catch { /* gone */ } return null; }   // (no tap yet: the browser keeps it silent anyway)
-  const out = ac.createGain(); out.gain.value = 0.03 * vol; out.connect(ac.destination);
-  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 0.5; lp.connect(out);
-  // the tick: a 25 ms burst of noise, falling away, through a band round 3.4 kHz
-  const noise = ac.createBuffer(1, Math.round(ac.sampleRate * 0.025), ac.sampleRate), nd = noise.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * (1 - i / nd.length) ** 2;
-  let closeT = 0;
-  return {
-    blip(hz, last) {
-      try {
-        const t = ac.currentTime, len = last ? 0.9 : 0.16, peak = last ? 0.8 : 0.45, f = 108 + (hz % 7) * 3;   // (each piece its own hum, near 120 Hz)
-        const n = ac.createBufferSource(), nb = ac.createBiquadFilter(), ng = ac.createGain();
-        n.buffer = noise; nb.type = 'bandpass'; nb.frequency.value = 3400; nb.Q.value = 2.2; ng.gain.value = last ? 0.9 : 0.6;
-        n.connect(nb); nb.connect(ng); ng.connect(out); n.start(t);
-        for (const [mul, k] of [[1, 1], [2, 0.25]]) {
-          const o = ac.createOscillator(), v = ac.createGain();
-          o.type = 'sine'; o.frequency.value = f * mul; o.detune.value = (Math.random() - 0.5) * 12;
-          v.gain.setValueAtTime(0, t); v.gain.linearRampToValueAtTime(peak * k, t + 0.06);
-          v.gain.setValueAtTime(peak * k, t + len * 0.5); v.gain.exponentialRampToValueAtTime(0.001, t + len);
-          o.connect(v); v.connect(lp); o.start(t); o.stop(t + len + 0.02);
-        }
-        clearTimeout(closeT); closeT = setTimeout(() => { try { ac.close(); } catch { /* gone */ } }, 2000);
-      } catch { /* silent */ }
-    },
-    stop() { try { out.gain.setTargetAtTime(0, ac.currentTime, 0.03); } catch { /* gone */ } clearTimeout(closeT); closeT = setTimeout(() => { try { ac.close(); } catch { /* gone */ } }, 400); },
-  };
-}
+// (the neon's sound - a tick and a hum as each piece struck - is gone: the owner, 11-15, would rather the title's
+// music start at once)

@@ -39,7 +39,7 @@ const loadFtue = () => (ftP ||= import('./ftue.js').then((m) => {
   FT = m;
   return m;
 }).catch((e) => { ftP = null; console.warn('[ftue]', e); throw e; }));
-import { initAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
+import { initAudio, preloadAudio, sfx, soundEvent, soundFrame, soundSettingsUi, soundStatus } from './audio.js';
 let drawStarView = null;   // (the observatory's eyepiece view, client/stargaze.js: loaded the first time you look through it)
 import { noteServerBuild, myBuild, onVisible, retryDelay, holdFrame, PROBE_MS } from './update.js';
 import { drawCrossing, drawStationClock, drawBoardingCue, drawTunnel, portalCovers, drawOnStairs } from './render/trains.js';
@@ -107,6 +107,8 @@ import('./music/stage.js').then((m) => { S.mus = new m.Stage(S, send); }).catch(
 import('./leisure/stage.js').then((m) => { S.fun = new m.Leisure(S); }).catch((e) => console.warn('[leisure]', e));   // (fireworks, campfires of your own, grapes for the ducks)
 S.fx.resolve = (id) => { const e = S.ents.get(id); return e && e.rx !== undefined ? e : null; }; // speech bubbles follow their speaker
 if (/[?&]debug\b/.test(location.search)) window.__S = S; // playtest inspection hook
+// the sound's code and the title's music fetched while the title shows, so the first tap plays it at once (audio.js)
+setTimeout(preloadAudio, 1500);
 // (and the screens, for the captures: UI-10)
 if (/[?&]debug\b/.test(location.search)) setTimeout(() => { window.__UI = { openHub, hubBack, closeHub, openSignIn, exitToTitle, phone: () => phone, openOverlay, closeOverlay, topOverlay, loggedOff }; }, 0);
 try { if (localStorage.getItem('cla.perfhud') === '1') import('./perfhud.js').then((m) => m.show(S, true)).catch(() => {}); } catch { /* blocked */ }   // (the debug menu's performance readout, left on)

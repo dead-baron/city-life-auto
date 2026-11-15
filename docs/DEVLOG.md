@@ -24180,3 +24180,12 @@ with guests. Registered as the Player type custom dimension (docs/LAUNCH-SETUP.m
 ## 2026-11-15 - The Discord on the About page
 The owner made the player Discord (invite https://discord.gg/zuVSkbfjg, never expires). about/index.html links it under
 PLAY NOW and in its footer; the game's own button comes with the bug reporter.
+
+## 2026-11-15 - The title's music starts on the first tap; no neon sound
+The owner: the neon sign's sounds weren't good, and the music didn't start right away or every time. A browser lets a
+page make sound only after a tap, a click or a key - but the game also waited for that tap to start downloading its
+sound code and the title track (360 KB), so the music came seconds late or not before the player had moved on.
+client/audio.js preloadAudio (main.js, 1.5 s after load) now imports the sound modules and fetches the title track
+(client/sound/track.js prefetchTrack) while the title shows - nothing with the sound or the music off - and the first
+tap only wakes the audio, decodes and plays. The neon sign's tick and hum are gone (client/titlelogo.js); the sign is
+silent.

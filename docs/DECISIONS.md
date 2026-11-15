@@ -59,6 +59,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Google and Discord appear as the standard provider buttons ("Continue with Google" with Google's G, Discord's blurple), above email and password; Google is set up openid-only and in production, no branding verification for now (the consent screen shows the domain); deadbaron.com/city-life-auto/about/ is the public home page for when it's verified. (11-14; chat)
 - No postal address yet: no news emails until there is one (a PO box or a virtual mailbox, not his home); password resets and confirm emails don't need one. (11-14; chat)
 - The player Discord: https://discord.gg/zuVSkbfjg (never expires), linked from the title screen (a small button), Settings and the About page; bug reports post to its #bug-reports. Server plan: Claude Doc "City Life Auto Discord server plan". (11-15; chat)
+- The title screen has no neon sign sound; its music is fetched ahead so it starts on the first tap, click or key (browsers allow no sound before one). (11-15; chat)
 - The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).

@@ -56,7 +56,7 @@ test('the logo: "Auto" misbehaves now and then - random gaps, mostly Auto, subtl
   assert.ok(kinds.blink && kinds.dim && kinds.stutter, 'a blink, a dim, a stutter');
   assert.ok(repeats / N < 0.25, 'seldom the same way twice running');
   const src = read('client/titlelogo.js');
-  assert.match(src, /const snd = hum\(0\.3\);/, 'a faint tick, through the same sound settings');
+  assert.ok(!/function hum\(|AudioContext/.test(src), "no neon sound: the title's music instead (the owner, 11-15)");
   assert.match(src, /if \(!box \|\| reduced\(\)\) return;/, 'reduced motion: none');
 });
 
