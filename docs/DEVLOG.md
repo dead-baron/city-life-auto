@@ -24166,3 +24166,8 @@ role) - he wanted DeadBaron. The owner also gets the claim from the server log: 
 The owner: the faceplant went back to a half pose. It was a timed pose (3.5 s), so it got up on its own; it's a lasting
 pose now (shared/chatdefs.js hold, like Lie down): over onto the face and lying there, a twitch now and then, until you
 move.
+
+## 2026-11-14 - No postal-address placeholder on the privacy page
+The privacy policy's Contact line showed "[postal address - to be added before launch]" while CLA_MAIL_ADDRESS is unset.
+The owner has no address to publish yet and sends no news email until he does (the news footer, which US law wants an
+address in, still asks for it), so the page leaves the line out until it's set (server/legal.js).
