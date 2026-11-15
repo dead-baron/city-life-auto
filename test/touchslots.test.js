@@ -22,22 +22,23 @@ test('each state fills the slots with what it needs, from shared/controls.js (it
   const st = (f) => touchSlots(f), acts = (f) => Object.fromEntries(Object.entries(st(f).slots).filter(([k]) => k !== 'stick' && k !== 'u4').map(([k, v]) => [k, `${v.a}:${v.label}`]));   // (the stick and FIRE ON: below)
   assert.deepEqual(acts({}), { fire: 'fire:HIT', roll: 'dive:ROLL' }, 'on foot, fists: no BLOCK without a guard, nothing in the bag, no light, no cop car - and no CAR with no vehicle near, no ACT with nothing to do');
   assert.equal(acts({ pact: true }).act, 'action:ACT', 'ACT while the prompt names it (pact: client/hud.js)');
-  assert.deepEqual(acts({ near: true, prompt: true }), { fire: 'fire:HIT', roll: 'dive:ROLL', car: 'vehicle:GET IN' }, 'by a car with nothing else there: the vehicle button alone - ACT and GET IN never double up (the owner, 11-13)');
-  assert.equal(acts({ near: true }).car, 'vehicle:GET IN', 'a vehicle near enough to get in: GET IN (the owner, 11-12: never the word CAR)');
-  assert.equal(acts({ near: true, on: true }).car, 'vehicle:GET ON', 'a bike, a horse, an open boat: GET ON');
+  assert.deepEqual(acts({ near: true, prompt: true }), { fire: 'fire:HIT', roll: 'dive:ROLL', act: 'vehicle:GET IN' }, 'by a car with nothing else there: the vehicle button alone, in ACT\'s spot over the stick - ACT and GET IN never double up (the owner, 11-13, 11-15)');
+  assert.equal(acts({ near: true }).act, 'vehicle:GET IN', 'a vehicle near enough to get in: GET IN (the owner, 11-12: never the word CAR)');
+  assert.equal(acts({ near: true, on: true }).act, 'vehicle:GET ON', 'a bike, a horse, an open boat: GET ON');
   assert.equal(acts({ items: true }).u1, 'use:ITEMS', 'ITEMS with something in the bag');
   assert.equal(acts({ guard: true, light: true, call: true }).c1, 'block:BLOCK');
   assert.deepEqual(acts({ armed: true, light: true, items: true, near: true, pact: true }), { fire: 'fire:FIRE', roll: 'dive:ROLL', act: 'action:ACT', car: 'vehicle:GET IN', c2: 'reload:RELOAD', u1: 'use:ITEMS', u2: 'light:LIGHT' }, 'armed, by a car');
   assert.equal(acts({ carrying: true, armed: true }).fire, 'throw:THROW', 'a crate: THROW in FIRE\'s slot');
-  assert.deepEqual(acts({ inVeh: true, driver: true, items: true }), { roll: 'dive:BRAKE', car: 'vehicle:EXIT', c1: 'horn:HORN', u1: 'use:ITEMS' }, 'at the wheel, unarmed: no FIRE, no ACT with nothing to do');
+  assert.deepEqual(acts({ inVeh: true, driver: true, items: true }), { roll: 'dive:BRAKE', act: 'vehicle:EXIT', c1: 'horn:HORN', u1: 'use:ITEMS' }, 'at the wheel, unarmed: no FIRE; EXIT in ACT\'s spot with nothing to act on');
   assert.deepEqual(acts({ inVeh: true, driver: true, armed: true, shoot: true, prompt: true, pact: true, siren: true, items: true }), { fire: 'fire:FIRE', roll: 'dive:BRAKE', act: 'action:ACT', car: 'vehicle:EXIT', c1: 'horn:SIREN', c2: 'reload:RELOAD', u1: 'use:ITEMS' }, 'a police car, a gun');
-  assert.deepEqual(acts({ air: true, inVeh: true, driver: true, items: true }), { car: 'vehicle:EXIT', c1: 'descend:DOWN', c2: 'climb:CLIMB', u1: 'use:ITEMS' }, 'flying: the rocker');
+  assert.deepEqual(acts({ air: true, inVeh: true, driver: true, items: true }), { act: 'vehicle:EXIT', c1: 'descend:DOWN', c2: 'climb:CLIMB', u1: 'use:ITEMS' }, 'flying: the rocker');
   assert.equal(acts({ inVeh: true, driver: true, horse: true }).c1, 'sprint:GALLOP');
-  assert.equal(acts({ inVeh: true, driver: true, horse: true }).car, 'vehicle:OFF');
+  assert.equal(acts({ inVeh: true, driver: true, horse: true }).act, 'vehicle:OFF');
   assert.deepEqual(acts({ board: true, items: true }), { fire: 'fire:TRICK', roll: 'dive:OLLIE', act: 'action:ACT', car: 'vehicle:OFF', u1: 'use:ITEMS' });
   assert.deepEqual(acts({ swim: true, armed: true, items: true }), { act: 'action:ACT', car: 'vehicle:GET IN', u1: 'use:ITEMS' }, 'swimming: no FIRE, no ROLL');
-  assert.equal(acts({ inVeh: true, driver: true, boat: true, on: true }).car, 'vehicle:OFF', 'aboard a jet ski: OFF');
-  assert.equal(acts({ inVeh: true, on: true }).car, 'vehicle:OFF', 'riding pillion: OFF');
+  assert.equal(acts({ inVeh: true, driver: true, boat: true, on: true }).act, 'vehicle:OFF', 'aboard a jet ski: OFF');
+  assert.equal(acts({ inVeh: true, on: true }).act, 'vehicle:OFF', 'riding pillion: OFF');
+  assert.equal(acts({ near: true, pact: true }).car, 'vehicle:GET IN', 'something to act on too: ACT keeps its spot, GET IN its own');
   assert.equal(touchState({ inVeh: true, driver: true, boat: true }), 'boat');
   assert.equal(touchState({ inVeh: true }), 'ride');
   // the weapon button (UI-6): in WP whenever the page has something to switch (wpn), in every state but at home

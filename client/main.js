@@ -1656,6 +1656,8 @@ const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], [
 function openSignIn() {
   const body = $('signin-body');
   if (topOverlay() !== 'signin') openOverlay('signin');
+  const as = S.launch && S.launch.acc && S.launch.acc.accountState && S.launch.acc.accountState();
+  $('signin-h').textContent = as && !as.guest ? 'ACCOUNT' : 'SIGN IN';   // (signed in: the panel is your account's - sign out, switch)
   if (accountUi && accountUi.signIn) { accountUi.signIn(body, () => closeOverlay('signin')); ovFocus = startFocus(); focusOverlay(); return; }
   body.innerHTML = '<p class="msub">Sign-in is coming soon. Until then your character lives in this browser - Settings › Account has a transfer code to move it to another device.</p>'
     + `<div class="m-opts">${SIGNIN_WAYS.map(([k, n, note]) => `<button class="opt" data-way="${k}" disabled><span class="t">${n}</span><span class="note">${note || 'coming soon'}</span></button>`).join('')}</div>`;

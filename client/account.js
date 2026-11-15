@@ -228,6 +228,19 @@ function takeToken(t) {
   }
   C.setToken(t);
 }
+// Sign out (the owner, 11-15: "an option to sign out or switch accounts"): this page forgets the account - kept in the
+// list above, so "Switch back to" or signing in again brings it back - and starts again as a new guest
+export function signOutHere() {
+  const old = C.token();
+  if (old) {
+    let list = [];
+    try { list = JSON.parse(ls.get(PREVS_KEY) || '[]'); } catch { list = []; }
+    ls.set(PREVS_KEY, JSON.stringify(keepPrev(list, { token: old, pid: (state && state.id) || undefined, name: (state && state.name) || 'your account', at: Date.now() })));
+    ls.set(PREV_KEY, old);
+  }
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* storage blocked */ }
+  location.reload();
+}
 // back to one of them (the one played now joins the list in its place)
 export function switchBack(i) {
   const p = previousCharacters()[i | 0];
@@ -347,6 +360,7 @@ const PROV = {
 };
 const provBase = 'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:6px 0 0;padding:10px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer';
 const provBtn = (p, attr, label) => `<button ${attr} class="a-prov ${(PROV[p] || {}).cls || ''}" style="${provBase};${(PROV[p] || {}).style || ''}">${(PROV[p] || {}).icon || ''}<span>${label}</span></button>`;
+let outAsk = false;
 function renderPanel() {
   const s = state || {}, pr = (info && info.providers) || s.providers || {};
   const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && p !== 'password' && pr[p]);
@@ -354,7 +368,10 @@ function renderPanel() {
   const inner = panel.querySelector('#a-body');
   const legalUrl = (k) => `${httpBase()}/legal/${k}`;
   inner.innerHTML = `
-    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : `signed in${linked.size ? ` with ${[...linked].map((p) => NAMES[p] || p).join(', ')}` : ''}`}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    ${s.guest ? '' : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px"><button type="button" id="a-out" style="${btn2}">${outAsk ? 'Sure? Sign out' : 'Sign out'}</button></div>
+    <p style="font-size:13px;color:#9aa0aa;margin:0 0 4px">${outAsk ? 'This device starts again as a new guest. Your account stays safe: sign in again any time.' : 'Your progress is saved to your account, on any device you sign in on.'}</p>
+    <p style="margin:14px 0 2px">Switch account:</p>`}
     ${on.length || passkeysWork() ? `<div class="a-provs">${on.map((p) => provBtn(p, `data-in="${p}"`, `Continue with ${NAMES[p]}`)).join('')}${passkeysWork() ? `<button id="a-pks" class="a-prov" style="${provBase};${btn2}">Sign in with a passkey</button>` : ''}</div>
     ${pwOn ? '<p class="a-or" style="text-align:center;color:#9aa0aa;margin:12px 0 4px">or use your email</p>' : ''}` : ''}
     ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" aria-selected="${pwTab === 'in'}" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" aria-selected="${pwTab === 'up'}" style="${tab(pwTab === 'up')}">Create account</button></div>
@@ -421,6 +438,8 @@ function renderPanel() {
   onc('#a-xuse', async () => { await useTransferCode(inner.querySelector('#a-xin').value); location.reload(); return 'Moving...'; });
   onc('#a-claimgo', async () => { const r = await claimOwner(inner.querySelector('#a-claim').value); return r.ok ? 'You are the owner.' : r.err; });
   for (const b of inner.querySelectorAll('[data-back]')) b.onclick = () => switchBack(Number(b.dataset.back));
+  const out = inner.querySelector('#a-out');
+  if (out) out.onclick = () => { if (outAsk) { outAsk = false; signOutHere(); } else { outAsk = true; renderPanel(); } };   // (two taps: the first says what happens)
   for (const b of inner.querySelectorAll('[data-page]')) b.onclick = tryIt(async () => { const r = await staffPage(b.dataset.page); return r.ok ? '' : r.err; });
 }
 

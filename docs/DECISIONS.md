@@ -61,6 +61,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No postal address yet: no news emails until there is one (a PO box or a virtual mailbox, not his home); password resets and confirm emails don't need one. (11-14; chat)
 - The player Discord: https://discord.gg/zuVSkbfjg (never expires), linked from the title screen (a small button), Settings and the About page; bug reports post to its #bug-reports. Server plan: Claude Doc "City Life Auto Discord server plan". (11-15; chat)
 - The title screen has no neon sign sound; its music is fetched ahead so it starts on the first tap, click or key (browsers allow no sound before one). (11-15; chat)
+- Touch: the right thumb's spot over the aim stick never sits empty - with nothing to act on, the vehicle button (GET IN / GET ON / EXIT / OFF) takes ACT's place there, in its own green; frequent buttons stay round the stick, rare ones at the edges. (11-15; chat)
+- Signed in, the title card says ACCOUNT (not SIGN IN) and the note says progress is saved to the account; the panel offers Sign out (this device becomes a new guest; the account kept in Switch back to) and Switch account. (11-15; chat)
 - The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).

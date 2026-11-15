@@ -71,7 +71,7 @@ export const TEXT = {
 const FRAME_JS = `
 const sc = JSON.parse(decodeURIComponent(location.hash.slice(1)));
 const { icon: ICON } = await import('/client/touchicons.js');
-const T = ${JSON.stringify(TEXT)}, FL = ${JSON.stringify(FLAGS)}[sc.st] || {};
+const T = ${JSON.stringify(TEXT)}, FL = ${JSON.stringify(FLAGS)}[sc.st] || {}; if (sc.fl) Object.assign(FL, sc.fl);
 const $ = (id) => document.getElementById(id);
 const b = document.body;
 b.classList.add(sc.dev);

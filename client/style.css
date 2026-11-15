@@ -681,9 +681,9 @@ body.portrait #zone-l { top: 50%; }
 #tbtns button[data-slot] { display: flex; }
 #tbtns button.face { border: 3px solid var(--acc); background: var(--disc); box-shadow: 0 2px 0 var(--pad-drop); --cut: var(--disc); }
 #tbtns [data-slot=fire] { --acc: var(--pad-fire); }
-#tbtns [data-slot=act] { --acc: var(--pad-act); }
+#tbtns [data-slot][data-b=action] { --acc: var(--pad-act); }
 #tbtns [data-slot=roll] { --acc: var(--pad-roll); }
-#tbtns [data-slot=car] { --acc: var(--pad-car); }
+#tbtns [data-slot][data-b=vehicle] { --acc: var(--pad-car); }   /* (by action: the vehicle button takes ACT's spot when there's nothing to act on - shared/touchcontrols.js) */
 #tbtns button.face:is(:active, .on) { background: var(--disc-on); }
 #tbtns .w { display: block; line-height: 1; letter-spacing: 0; white-space: nowrap; font: 700 var(--fs-w2) var(--pixel); color: var(--white); text-shadow: 1px 0 0 var(--pad-ink), -1px 0 0 var(--pad-ink), 0 1px 0 var(--pad-ink), 0 -1px 0 var(--pad-ink), 1px 1px 0 var(--pad-ink); pointer-events: none; }
 #tbtns .w[data-fs="10"] { font-size: var(--fs-w1); }

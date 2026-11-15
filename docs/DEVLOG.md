@@ -24449,3 +24449,19 @@ names the arrow; test/emotes.test.js checks the two jabs, the hold, the balloon 
 The owner: a player might press Done before "Save look" and think the look was lost. Done (and the X, and Esc) always
 put the look on; "Save look" only kept a named copy in the Saved tab. It's "Add to Saved" now, and Done says so when the
 look changed: "New look on. (Add to Saved keeps a copy to switch back to.)" (client/creator.js; the Guide's Your look).
+
+## 2026-11-15 - GET IN by the thumb; signed in looks signed in
+
+**Touch: the vehicle button by the thumb.** The owner's phone shot: "the act button moved really far away when it should
+be near the right joystick". It was GET IN, up the right edge, while ACT's spot over the stick sat empty (ACT only shows
+with something to act on). Now `touchSlots` (shared/touchcontrols.js) moves the vehicle button into ACT's slot whenever
+ACT has nothing: GET IN / GET ON on foot, EXIT / OFF at the wheel or on a bike or horse. With something to act on too,
+ACT keeps the spot and GET IN its own. The colors go by action now, not slot (style.css), so GET IN stays green there.
+test/touchslots.test.js.
+
+**The title card when signed in.** It said SIGN IN to a signed-in owner ("makes it feel like I'm not actually signed in").
+Signed in, the card's button reads ACCOUNT, the note under it "Signed in - your progress is saved to your account.", and
+the panel (titled ACCOUNT) says who you're signed in with, has **Sign out** (two taps; the first says what happens: this
+device starts again as a new guest, the account stays safe and sits in "Switch back to") and puts the sign-in buttons
+under **Switch account**. Guests see what they saw before.
+

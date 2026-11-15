@@ -78,6 +78,10 @@ export function touchSlots(f) {
     if (alt) for (const k in alt) if (f[k]) l = alt[k];
     slots[slot] = { a, label: l };
   }
+  // the thumb's spot (ACT's, over the aim stick) never sits empty while the vehicle button shows: with nothing to act
+  // on, GET IN / GET ON / EXIT / OFF moves into it (the owner, 11-15: "the act button moved really far away when it
+  // should be near the right joystick since it's used all the time") - it keeps its own color (style.css)
+  if (!slots.act && slots.car) { slots.act = slots.car; delete slots.car; }
   return { state, slots };
 }
 
