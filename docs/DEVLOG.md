@@ -23915,3 +23915,8 @@ three on the tower beside it, two on each of the others), now each building's bl
 of that building (a letter may cover an end of it), its top row the same four px under every roof line, the same 2 x 2
 art px windows the same three px apart everywhere. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
 Before / after: the session's scratchpad `logo2/owner/windows2/`.
+
+## 2026-11-14 - The BLOCK button's shield, cleaner and without the blue
+The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner looking one in general". assets/ui/s-shield.png
+is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
+right a pale steel, the ink outline round it - no blue hollow and stripe.
