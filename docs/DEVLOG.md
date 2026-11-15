@@ -24032,3 +24032,62 @@ test/wayout.test.js checks it (and its stale tour expectation is updated to the 
 ## 2026-11-14 - No clouds on the title
 The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
 starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
+
+## 2026-11-14 - The shot list, fixed at the root: each shot its own hour, roofs kept on, open ground, races that race, chases in view; Save this view
+The owner (20:21), after trying the shot list: "The cinematic shots really aren't good. They're all the same nighttime
+scene. It's toggling between interior and exterior shots. It's showing not interesting areas, usually tops of buildings or
+sides of buildings; there aren't interesting NPCs doing things; it's all at night and similar camera moves. Street racing:
+the cars just drive in a cluster then stop at stop lights ... The car chase scene just had a car driving in an alley but you
+couldn't see the alley because it was behind buildings, and the car ended up crashing into something." The plan agreed
+(docs/DECISIONS.md "Director and content"): fix the fundamentals, add "Save this view" so he scouts, then ~10 hero shots
+refined with him.
+
+### What was wrong
+- **Night**: 17 of the 46 shots were set at night - the whole City section, every action scene but the crop duster - and
+  the list's "dusk" (19:55 - 20:30) is this sky's blue hour into full night (render/atmos.js KEYS: night 0.8 at 20:05, 1
+  by 20:28), so those read as night too. And a shot's hour was put on the screen once, at its start: anything after that
+  (the panel's Live, a reset) gave the screen back the world's own hour. Now the times are bands that read as they say
+  (shared/scenes/shots.js TIME: noon 12:00, golden hour 18:30, dusk 19:32 - the sun just down, the sky still red - night
+  23:00) and the page puts the shot's time and weather on every frame it plays (client/director.js shotLook), unless he
+  picks a time or a weather himself during it. The server fills the city round the shot's camera with its own hour's crowd
+  (director.js shotNight -> npc.js: a noon shot on a server at night gets the day's people, not the night's few).
+- **Interior / exterior flicker**: a shot's camera lifted every walk-in's roof as it passed over it (main.js interiorTick
+  took the shot's camera for "where you are": DIR.roofAt), and the art rebaked those chunks cut away and back. A shot now
+  keeps every roof drawn (roofAt false) - only an interior shot (sc.interior: the pool shot's bar room) lifts its roof.
+- **Roofs in frame**: a place shot's camera centred on the place's middle - often a building. Its anchor is now nudged
+  (14 tiles at most) to where the camera's whole move frames the most open ground - streets, plazas, parks, water - its
+  middle never on a roof or the walls drawn up over the street (director.js openFrame, frameOpen).
+- **Nobody about**: place shots had no cast at all. Each kept one has extras - the city's own people put round the place
+  (shots.js extras): they wander, stop, chat.
+- **The street race** was four cars told to drive straight down a road at nearly the same speed, braking for whatever was
+  in their lane - the queue at the next red light. Now (server/systems/racers.js) racers race: through the lights, each at
+  its own pace (the back row quicker: overtakes), looking down the whole road - both directions' lanes - for the line with
+  the most room ahead and swinging out round the traffic (lane changes, near-misses), the corners cut; anyone on foot in
+  the way dives clear (npc.js diveFrom, the dive roll); a car they shave past brakes and honks (traffic.js startle). The
+  race puts traffic along its way (the city's own from then) and people crossing at its first junction; the camera holds
+  the junction as the pack comes through, then rides with them. The way: straight on down the street (a turn only where it
+  ends), else the wide streets' way (wideRoute: never an alley, a dirt track, a ramp or a deck while a wide way exists);
+  at its end it goes on - never into the end of a road at speed.
+- **The chase**: its getaway drove the road net's shortest way - alleys behind the blocks included - and braked for
+  whatever was in its lane until something hit it. It's a racer now, on a wide street (place.wide: avenues, boulevards,
+  arterials), in the afternoon, round whatever's in its way, a new way when it's boxed in.
+
+### The shot list now
+- **Kept** (shared/scenes/index.js KEPT): the shots that pass the sanity check on World v3 (tools/shotcheck.mjs,
+  test/world3scenes.test.js) - over open ground at street level with nothing roofed in the middle of the frame, the subject
+  in frame, people about, the time its note says. The panel's sections and Play all are these; the rest are folded under
+  **More (unreviewed)** (each still one tap, or ▶ for all of them).
+- **Save this view** (the Camera panel; the owner's and admins' - anyone on a private dev server): where the camera is, its
+  zoom, the time of day and weather on the screen, a name and a note (optional) - kept on the server with the world's own
+  state (server/systems/views.js: store.kept.views, saved with the profiles). ★ Save this view sits on the shot list's
+  first row (one tap on a phone; rename later), the name and note fields under **Your saved views**, where each is listed
+  with its time and weather: tap it to go there (the free camera, at its zoom, time and weather), ▶ to play it as a shot
+  (the camera there, pushing in slowly for 16 s at its time and weather: shared/scenes viewScene), ✎ rename, ✕ delete.
+- The Guide's Camera entry says so.
+
+Tests: test/directorcam.test.js (a shot's own time every frame - held, after 'go', after the clock's reset, into the
+next shot, a time-lapse running on; roofs kept on in a shot, lifted in the interior one; saved views: what's saved, go to,
+play), test/racers.test.js (new: the race through a junction red for them, with traffic - every racer through at speed,
+none stopped, overtakes, lines changed, someone diving clear, a honk; the chase's getaway on wide streets only and never
+stopped or wrecked; the way straight on, never back round the block), test/scenes.test.js, test/world3scenes.test.js (the
+kept shots' sanity check on World v3).
