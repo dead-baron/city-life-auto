@@ -23961,6 +23961,109 @@ The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner 
 is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
 right a pale steel, the ink outline round it - no blue hollow and stripe.
 
+## 2026-11-14 - Polish from the owner's phone: names never half hidden, no plants on the drive, blades that agree, bigger map icons, ATMs in the walls, the casino floors and their sounds, a clear "come here"
+The owner's notes from his phone (three screenshots) and two from the lead. Each fixed as a class, with a placement lint
+row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
+- **A building's name half hidden** (Westside Clinic's WESTSIDE CLINIC half behind its EMERGENCY sign). Every clinic and
+  hospital stacked its EMERGENCY plaque (v 52) under its name (v 66) and the boards are 22 px tall. Now the EMERGENCY board
+  sits just over the doors, clear of the ambulance bay's canopy (v 58), and a new pass, client/art2/buildings.js
+  `unstackSigns`, lifts any plaque that overlaps one lower down clear above it on every front (a blade sign over a plaque
+  goes to the wall's other end, or goes). What stands in front was the bigger class: in the small towns every shop with a
+  false front over its porch had its name behind the boards (the lint found 25: Quick Mart, the Timber Bend lodge's four
+  shops, Sandpiper Bay's row...) - each shop's sign now goes up onto its stretch of the false front (statics.js
+  `falseFrontSigns`); a porte-cochere carries the casino's name on its roof's front edge (The Golden Lotus, Mesa Grande:
+  `coverFronts`), and a plaque under a canopy's roof line is lifted over it. Lint row `nameCovered`: boards over each other
+  on one front, and the drawn pixels of anything standing in front over a name (the sign found by drawing the front).
+- **Plants on the drive** (a house's front path with shrubs and tall grass over it). The yards' beds (statics.js
+  addYards) took a driveway's paving (LOT) for lawn and kept clear of a door and a garage door only - not of the drive,
+  the path or where the car stands; and the map's own yard plants were scattered without a look at the path. Now a bed
+  only goes on lawn, its spread and all, clear of the car's spot and the drive's parking; and the build takes the map's
+  plants off every house's path, drive and door step (shared/world3-tidy.js `homePaths3`, `clearHomePaths3`, in the done
+  hook after tidyProps3). Lint row `plantOnPath` (the same strips: from the door and from the car's spot across the lawn
+  to the street).
+- **A HOTEL blade over a paint shop.** The Spray & Go bays (map.js buildPaintShops) are carved into a building's front,
+  and its section kept the building archetype's blade (a hotel's HOTEL); the night rows picked their blade from a list
+  that had MOTEL, HOTEL and DINER over arcades and liquor stores. A bay now drops the blade and its neon; a night row's
+  blade and upper neon are its street floor's words (NIGHT_BLADE, NIGHT_NEON: a bar's, the arcade's, the liquor
+  store's); Lucky Mesa's old casinos say CASINO; a supper club in a theatre's building LIVE, not CINEMA. Lint row
+  `bladeBiz`: a blade's words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS).
+- **The places' icons had shrunk**: the touch minimap draws its 168 px canvas into 104 CSS px, so its 10 px icons were a
+  6 px speck. They are sized on screen now - a dark disc, the glyph in its colour, a thin ring of it, 13 CSS px across
+  (18 on the big map's radar); the big map's plates 2 px bigger (20 / 24 / 26 by zoom); the badges over doors 16 -> 19 px
+  (still under the lintel: test/storeicons.test.js). Nothing new on the HUD.
+- **ATMs on their own on the pavement.** The kiosks (an ATM put at the back edge of a pavement where no building front
+  was found when the shops were laid out, and by stations and gas stations) are moved, last thing in the build, into the
+  nearest front wall in the same district within 32 tiles that a wall ATM may use - a shop's, a block of flats' street
+  wall, never a house's (shared/world3-shops.js `seatAtms3`: map.js's rules - the wall behind it whole, pavement under
+  it, room to stand, clear of a door, another ATM, a prop, a pump), in place, so no prop's or place's number moves; the
+  banks' "painted" ATMs (a map point with no machine: art v2 paints none) get a machine in the nearest wall. A machine
+  moves only where every street it alone had within SHOP_REACH.cash stays in reach (a few tiles to spare), so every
+  district keeps its cash of its own and in reach (world3server.test.js). 52 moved, 7 given a machine; 53 left: the
+  kiosks of the districts that are all houses or open ground (West Hills' and Pine Hills' streets of houses, the
+  villages' greens, the beaches) or whose streets would fall out of reach - the lint lists them (LINT_ALLOW); a shop front
+  there would take one in. Lint row `atmStray`: an ATM neither in a wall nor inside.
+  (The pass and the paths' pass cost about 20 ms and 30 ms of the build.)
+- **The casino floor that emptied** (the Golden Lotus in a live capture). Three holes, each closed: a round fills at
+  most ACT_MAX groups round a player and the spots came in no order, so on the Strip the casinos either side, a pool
+  table, a busker took the places before the one you were walking into, and a floor never fills once you're in the room;
+  the regulars are now filled first for a floor within 640 px of you, past ACT_MAX, its kind's cap and the day's chance
+  (server/systems/activities.js FLOOR_FIRST). The NPC density pass despawned anyone over 1500 px from a player while the
+  floor's group lives to 1600 - the far tables' dealers went one by one and those tables never dealt again; an NPC whose
+  activity group is still on is left to it now (npc.js). And a page was told of the deals only while the floor's middle
+  was in its view (pooltables.js follow): a phone's view at one end of a grand floor missed them all - now any of the
+  room in view will do.
+- **The casino games' sounds** (client/sound/events.js `cdl` was data only): the page plays them on the deal's own
+  timeline as client/casinoview.js lays it out, heard while you're in the room - a card flicked onto the felt for each
+  card dealt and the hole card turned, the roulette ball's rattle as it drops in and its click into the pocket, a slot's
+  reels ticking round and each one stopping, a small chime on a win. New one-shot recipes (cardflick, ballrattle,
+  ballclick, reeltick, reelstop, slotwin) in the ambience category, measured and trimmed (tools/sound/bench.py --levels,
+  the others' trims kept as they were).
+- **"Come here"** (the owner, 19:27: "a rope? Or a finger?"): the balloon redrawn - a fist with its index finger up and
+  crooked toward you, two motion ticks, the icon tilting in twice as it holds; the pose an arm out toward the camera,
+  palm up, the fingers curling in and opening twice a loop (client/art2/poses.js embeckon), not a pull back to the chest.
+- The new lint rows on today's world before -> after: nameCovered 41 -> 1 (a cash machine's top a few px over a self
+  storage's board), bladeBiz 10 -> 0, plantOnPath 638 -> 0, atmStray 111 -> 53. The world
+  and the art re-key (stamped).
+- The Camera's way-out test (test/wayout.test.js) follows the shot list's rework: the tour is a follow kind, gated with
+  the follow scenes. And the Camera panel has its own close X in its header (the owner, 20:24: "Camera mode doesn't have
+  an X button to close it"): the kit's close, on every device, handing the camera back; Esc and B as before.
+
+## 2026-11-14 - The touch prompt in the clear, no button on it, and room between the buttons
+The owner, on his phone upright at a house's door: "The UI button says LOOK when the popup says ACT, and it also looks
+like you're supposed to press the popup because it has a button in it, which is misleading if you're supposed to press the
+act button. Also the act or look button overlaps the other button so it's a little too close together" - and the card
+("ACT Look around Gu...") was under the BLOCK button, its words cut off.
+- **Why the card was under the buttons**: upright it hung from a fixed line under you and grew down, and the first goal's
+  line stayed in the low slot after it faded (invisible, still taking its room), pushing the card down onto the cluster.
+  Now upright the card stands on its foot: `client/touchslots.js` sets `--lo-b` above every button under it (BLOCK, ROLL,
+  FIRE) and `--lo-r` left of the columns up the edge (the weapon card, the vehicle button, C2, the switches); it grows up
+  toward you, never into the thumb's buttons, and sits by the cluster (right-aligned). The first goal's line leaves the
+  slot once its fade is done (`client/ftue.js` fadeLine). On its side the card was already clear (left of the arc).
+- **No button on the card on touch**: the gold ACT chip is gone from the prompt on touch - the ACT button itself says the
+  verb (LOOK, ENTER, TALK: touchicons.js actWord from the same words), so the card is only words and nothing on it looks
+  pressable. The chip was meant to go already (`.btn`), but hud.js asked whether the ACT button had a slot the moment the
+  prompt came, and pact only places it on the next frame - so the card kept an "ACT" chip beside a button saying LOOK
+  (and where it did work, the rule hid the whole card). Now ACT's chip always goes on touch and only the chip goes;
+  keyboard and pad keep their key tiles; a prompt no touch button does keeps its chip.
+- **Two lines at most, never cut in a word** (`client/notelog.js` fitPrompt, on each new prompt and when the screen
+  turns): the words as they are, else a size smaller (14 px), else cut after the last whole word that fits with an
+  ellipsis (the button's long press still says the whole prompt).
+- **Room between the buttons** (`client/touchslots.js` GEO): upright ACT over the stick and ROLL and BLOCK up the left of
+  the cluster over FIRE, re-spaced so every two buttons have 6 px or more between them and ACT 12 (its pulse ring stands
+  5 px out) - it was 2 px from ROLL; the vehicle button, C2, the weapon card and the switches above re-spaced the same way.
+  On its side C1 / C2 (they touched on a 740x360 phone) and the switches' row a little further apart. The sticks are
+  untouched. The switches and the weapon card may go down to 44 px on a 360-px phone (`MIN_SW`, the touch guideline's
+  44) so the cluster keeps its gaps as it scales down; the face buttons and C1 / C2 stay 48 or more.
+- On a 360-px phone upright the HUD's plate is a little narrower (the stars under the cash when both won't fit) so the
+  debug button beside the minimap no longer sits on it.
+- Tests: test/hudlayout.test.js - every two touch buttons 6 px apart (ACT 12) and the prompt's card as clear of every
+  one, no chip on it, its words whole on two lines, on the phones upright and on their sides; and a small phone upright
+  (360x740) checked for the cluster and the card. test/acticons.test.js (the chip goes on touch, only the chip).
+  Open: on a 360-px phone upright chat and the emotes (beside the move stick's ring) reach FIRE and AUTO - there's no
+  room between the ring and the middle; not changed here.
+- Proof (before / after at a door, upright 412x892, on its side 844x390, a 360x740 phone): the session's scratchpad
+  `hudprompt/owner/`.
+
 ## 2026-11-14 - The logo's windows placed by hand; the phone's skyline back to its scale
 - **The logo's lit windows** (the owner, 19:30: "not centered and consistent ... polish that with more intention"):
   placed by hand now, not computed - tools/neon_logo.py SKY_WINDOWS lists each building of the skyline with its walls
@@ -24105,3 +24208,28 @@ late and the frames are seconds apart; the session's scratchpad `director4/owner
 (first and a later frame each), the street race on the avenue and through a junction (cross traffic, a walker diving
 clear), and Save this view on a phone with two views saved. Budgets: perf test passes; the world's and the art's hashes
 unchanged.
+## 2026-11-14 - The title's saves note clear of the Online frame
+The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
+held upright the card and the Online frame now stand a line higher, the note under them in its own room
+(client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
+
+## 2026-11-14 - A public About page for Google's branding check
+Google's consent-screen branding verification turned down the game page as the app's home page: behind a login (the age
+gate and sign-in on the title), no words saying what the app is, and no app name it could read. about/index.html
+(https://deadbaron.com/city-life-auto/about/) is a plain static page anyone can read: the name, the lit logo
+(assets/logo/full.webp, tools/neon_logo.py A3 at scale 3), what the game is, that guests never have to sign in, what
+Google and Discord sign-in ask for (an id only), the privacy policy and the terms, and PLAY NOW. It is the home page the
+OAuth consent screen names. Nothing in the game loads it.
+
+## 2026-11-14 - Sign-in: Google's own button, a sheet that scrolls, the owner's name
+The owner's first real Google sign-in. The sign-in sheet now leads with the standard provider buttons - "Continue with
+Google" in Google's own dark button with its G, "Continue with Discord" in blurple, "Sign in with a passkey" - and "or
+use your email" over the email and password tabs; the link row reads "Link Google" / "Google linked ✓" with the G
+(client/account.js PROV; client/style.css). The sheet now scrolls to its end: account.js pad() ran every frame the
+panel was up and scrolled its focused control back into view each time - the ring and the scroll now follow a pad press
+only (and a desktop's zoomed sheet is cut to the screen's height before the zoom). A rename answers in the panel, not
+only in a toast the sheet could cover, and the account state comes back after it. "Switch back to" shows each character
+once and never the one you're playing (a sign-in gives the same account a new token: the rows carry the account id now).
+The account id shows at the foot with a Copy button (the privacy policy's deletion request and CLA_OWNER_ID ask for it).
+The owner's account may take the game's reserved names (shared/names.js cleanName owner; server/launch.js passes the
+role) - he wanted DeadBaron. The owner also gets the claim from the server log: set-keys.sh restarts print a new code.

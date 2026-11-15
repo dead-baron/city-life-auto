@@ -1,6 +1,6 @@
 // DOM HUD: health/stamina, money, wanted stars, chrono clock, faction, toasts, prompt,
 // job tracker, weapon panel, shop menus, death screen, radar + big map.
-import { logNote, noteLine, promptWords, promptFades } from './notelog.js';
+import { logNote, noteLine, promptWords, promptFades, fitPrompt } from './notelog.js';
 import { WEAPONS, ITEMS, PACK_TIERS } from '../shared/items.js';
 import { T, TILE, gameClock, WEATHER } from '../shared/constants.js';
 import { glyph, formatPrompt, localizeText, keyName } from './glyphs.js';
@@ -104,6 +104,8 @@ export class HUD {
     const pressed = () => { const pr = $('helpbox'); if (!pr || pr.classList.contains('off')) return; this.pressAt = performance.now(); pr.classList.remove('hit'); void pr.offsetWidth; pr.classList.add('hit'); };
     addEventListener('keydown', (e) => { if (!e.repeat && e.code === 'KeyE') pressed(); });
     document.querySelector('#tbtns [data-b="action"]')?.addEventListener('touchstart', pressed, { passive: true });
+    // the screen turned: the touch prompt's card fitted to its new room (after client/touchslots.js has placed the slots)
+    addEventListener('resize', () => setTimeout(() => { if (input.device === 'touch') fitPrompt($('helpbox')); }, 160));
   }
   // the prompt's tick: what Act offered is done (it went, or changed, within a moment of the press)
   promptDone(pr) {
@@ -177,9 +179,11 @@ export class HUD {
         this.actBtn = fp.action ? document.querySelector(`#tbtns [data-b="${fp.action}"]`) : null;
         document.body.classList.toggle('p-act', fp.action === 'action');   // (ACT shows only with something for it to do: client/touchslots.js pact)
         if (this.actBtn) { this.actBtn.classList.add('pulse'); this.actBtn.dataset.tip = fp.words; }   // (its long press says the whole of it: client/touchslots.js)
-        // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip; a prompt no button does (a ride's
-        // note) keeps its chip
-        pr.classList.toggle('btn', !!(this.actBtn && this.actBtn.dataset.slot));   // (the button there to press: on touch its word says it)
+        // on touch the button it names says it (ACT: ENTER, TALK, BUY...) - no chip, the card only its words; a prompt no
+        // button does (a ride's note) keeps its chip. ACT always has its slot while a prompt names it (pact - placed on the
+        // next frame, so not asked of the button: the owner's 11-14 screenshot had the card with an ACT chip beside LOOK)
+        pr.classList.toggle('btn', fp.action === 'action' || !!(this.actBtn && this.actBtn.dataset.slot));
+        if (input.device === 'touch') fitPrompt(pr);   // (two lines at most, never cut in a word)
         actFace();
         // up for PROMPT_FADE_S, then it fades (0.4 s); the touch button it lit stays lit, its long press still names it.
         // A new target, or this one again after leaving it, brings it back; one that counts down or asks stays
@@ -614,15 +618,20 @@ export class HUD {
       g.strokeStyle = '#ffd34a'; g.lineWidth = big ? 4 : 2.6; g.stroke();
     }
     // POIs
-    g.font = `700 ${big ? 14 : 10}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    // (sized on screen, not on the canvas: the touch minimap draws its 168 px into 104 CSS px, and its icons had shrunk to
+    // a 6 px speck - the owner, 11-14: "a little bigger again ... simple and clearly visible". A dark disc, the place's
+    // glyph in its colour, a thin ring of it: 13 CSS px across on the minimap, 18 on the big one)
+    const css = (g.canvas && g.canvas.clientWidth) || size, kk = Math.max(1, size / css), ir = (big ? 9 : 6.5) * kk;
+    g.font = `700 ${Math.round((big ? 14 : 10.5) * kk)}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const skipIc = iconSkip(this.map), pois = this.map.pois, rr = (size / 2 + 10) / scale;
     for (const i of poiNear(this.map, cx, cy, big ? Infinity : rr)) {   // (the radar: only the cells round it - a window holds thousands, every frame)
       const p = pois[i], icon = p && POI_ICON[p.kind];
       if (!icon || skipIc.has(p.id)) continue;
       const [x, y] = toR(p.x, p.y);
-      if (x < -10 || y < -10 || x > size + 10 || y > size + 10) continue;
-      g.fillStyle = '#000'; g.fillRect(x - (big ? 8 : 5), y - (big ? 8 : 5), big ? 16 : 10, big ? 16 : 10);
-      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + 1);
+      if (x < -ir || y < -ir || x > size + ir || y > size + ir) continue;
+      g.fillStyle = '#0b1020'; g.beginPath(); g.arc(x, y, ir, 0, 6.28); g.fill();
+      g.strokeStyle = icon[1]; g.lineWidth = Math.max(1, kk * 1.1); g.globalAlpha = 0.85; g.stroke(); g.globalAlpha = 1;
+      g.fillStyle = icon[1]; g.fillText(icon[0], x, y + kk * 0.6);
     }
     if (me) {
       for (const h of me.homes || []) { const [x, y] = toR(h.x, h.y); mapIcon(g, 'home', x, y, big); }

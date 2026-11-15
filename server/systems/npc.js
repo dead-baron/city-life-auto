@@ -859,6 +859,7 @@ function manageDensity(world) {
   for (const e of world.entities.values()) {
     if (e.kind !== K.PED || !e.npc || e.vehId) continue;
     if (e.npc.keep || (e.npc.role === 'cop' && !e.npc.beat) || e.npc.role === 'medic' || e.npc.role === 'driver') continue;
+    if (e.npc.act && world.acts && world.acts.has(e.npc.act.g)) continue;   // (at an activity still on: its group goes as one - activities.js fillRound, ACT_DROP - not a casino's dealers one by one past 1500 px, the floor left dealing nothing)
     let near = false;
     for (const a of anchors) if ((a.x - e.x) ** 2 + (a.y - e.y) ** 2 < 1500 * 1500) { near = true; break; }
     if (!near && !(e.dead && world.bodies.has(e)) && !inAnyView(world, e.x, e.y, 32)) despawnNpc(world, e);

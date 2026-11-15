@@ -261,7 +261,7 @@ class WorldMap {
 
     // the places: an icon on a plate per kind (the categories switched on; the busy little ones once zoomed in)
     const big = V.z >= 2.2;
-    const iconPx = V.z >= 3 ? 24 : V.z >= 1.6 ? 22 : 18;
+    const iconPx = V.z >= 3 ? 26 : V.z >= 1.6 ? 24 : 20;   // (a little bigger again: the owner, 11-14)
     const kindCat = catOfKind();
     // you and your waypoint keep their spots clear
     const [mx, my] = P(cx, cy);

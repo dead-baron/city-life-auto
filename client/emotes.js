@@ -49,7 +49,7 @@ const ICONS = {
   zzz: ['......nnnnn.', '.........n..', '........n...', '.......n....', '......nnnnn.', '.nnnn.......', '...n........', '..n.........', '.nnnn.......', '............'],
   wave: ['....k.k.k...', '...kpkpkpk..', '.b.kpkpkpk.b', 'b..kpppppkkk', 'b..kpppppkpk', 'b..kppppppk.', '.b.kqpppppkb', '...kqqpppk..', '....kkkkk...', '............'],
   thumbs: ['.....kk.....', '....kpk.....', '....kpk.....', '...kppkkkk..', '.kkkppppppk.', '.kpkpkkkkk..', '.kpkppppppk.', '.kpkpkkkkk..', '.kqkqqqqqk..', '..k.kkkkk...'],
-  beckon: ['.....kkk....', '....kpppk...', '....kpkkpk..', 'b....k..kpk.', '.b.kkkkkkpk.', 'b.kppppppk..', '..kpkkkkk...', '..kppppppk..', '..kqqqqqk...', '...kkkkk....'],
+  beckon: ['...kkkk.....', '..kppppk.b..', '..kqqkpk..b.', '...kkkpk.b..', '.b...kpk....', 'b.kkkkpkkk..', '.kpkpkpkpqk.', '.kpppppppqk.', '..kqqqqqqk..', '...kkkkkk...'],   // (a fist, its index finger up and crooked toward you, two motion ticks: the owner, 11-14, the old one read as a rope)
   idea: ['....gggg....', '...gyygggo..', '..gyyggggo..', '..gyggggggo.', '..gggggggo..', '...ggggggo..', '....gggo....', '....tttt....', '....uuuu....', '.....tt.....'],
 };
 function paint(g, rows, ox, oy) {
@@ -113,7 +113,7 @@ const CSS = `
 @keyframes emo-light { 0%, 100% { transform: none; filter: none; } 20% { transform: scale(1.08); filter: brightness(1.45); } 50% { transform: none; filter: brightness(1.2); } }
 @keyframes emo-wave { 0%, 100% { transform: none; } 15%, 55% { transform: rotate(-14deg); } 35%, 75% { transform: rotate(10deg); } }
 @keyframes emo-pump { 0%, 100% { transform: none; } 20%, 45% { transform: translateY(-2px); } }
-@keyframes emo-beckon { 0%, 40%, 100% { transform: none; } 20%, 60% { transform: translateX(-2px); } }
+@keyframes emo-beckon { 0%, 40%, 80%, 100% { transform: none; } 20%, 60% { transform: translate(-1px, 1px) rotate(-10deg); } }
 @media (prefers-reduced-motion: reduce) { .emo-pop > i > b { animation: none; } .emo-pop > s { display: none; } .emo-pop > i, .emo-pop.pop > i { animation: emo-fade 190ms linear var(--bal-out) forwards; transform: translate(-50%, -1px); } @keyframes emo-fade { to { opacity: 0; } } }
 .emo-veil { position: absolute; z-index: 13; inset: 0; background: transparent; pointer-events: auto; touch-action: none; }
 .emo-pick { position: absolute; z-index: 14; left: 50%; bottom: 96px; transform: translateX(-50%); width: min(380px, calc(100% - 2 * var(--s3))); background: var(--pad-navy); border: 2px solid var(--pad-ink); border-radius: 0; box-shadow: var(--pn-rim), var(--pn-drop); color: var(--cream); font: 700 var(--fs-2) var(--pixel); animation: enter var(--t2) var(--ease); }

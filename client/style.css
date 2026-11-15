@@ -415,6 +415,7 @@ body.touch.emo-open #b-emote { box-shadow: inset 0 0 0 2px var(--pad-cream), var
 .touch:not(.portrait) #hud:has(#vchip:not(.hidden)) #toasts { width: 100%; }   /* (the vehicle's readout is there) */
 @media (max-height: 430px) { body:not(.touch) #hud-stat { min-width: 0; grid-template-columns: 112px auto; padding: 4px 8px; } }
 body.portrait.touch #hud-stat { width: var(--trw); grid-template-columns: 1fr; row-gap: 4px; }
+@media (max-width: 380px) { body.portrait.touch #hud { --trw: 168px; } body.portrait.touch #purse { flex-wrap: wrap; row-gap: 4px; } }   /* (a 360-px phone upright: the plate a little narrower - the stars under the cash when both won't fit - so the debug button beside the minimap keeps off it) */
 /* (upright on touch the row first - three buttons, right of the top-centre band where a centred camera sits: UI-5 - and
    the plate under it, below the band) */
 body.portrait.touch #hud-tr > #hud-stat { order: 0; }
@@ -491,7 +492,7 @@ body.touch.multi-wpn #w-swap { display: grid; position: absolute; top: 50%; righ
    a robbery's bar - bottom centre (on touch between the move stick and the cluster on its side, above the thumbs upright) */
 #hud-low { position: absolute; left: 0; right: 0; bottom: var(--sb); margin: 0 auto; width: fit-content; max-width: min(720px, calc(100vw - 2 * (min(30vw, 440px) + var(--sl) + 16px))); display: flex; flex-direction: column; align-items: center; gap: var(--s2); pointer-events: none; }
 .touch #hud-low { left: calc(max(20px, env(safe-area-inset-left)) + 190px); right: var(--lo-r, 338px); bottom: var(--lo-b, 82px); max-width: none; }   /* (client/touchslots.js sets the room) */
-body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: calc(50% + 28px); bottom: auto; margin: 0; }
+body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); bottom: var(--lo-b, 300px); margin: 0; align-items: flex-end; }   /* (its foot above the buttons under it: client/touchslots.js) */
 #cruiser-hint { font: 700 var(--fs-3) var(--pixel); text-align: center; color: var(--info); text-shadow: var(--halo-s), 0 0 8px var(--ink); }
 .touch #cruiser-hint { font-size: var(--fs-2); }
 /* the prompt: the key (its prompt tile: client/glyphs.js) then what it does; in while you're in range, out when you
@@ -500,7 +501,12 @@ body.portrait.touch #hud-low { left: var(--sl); right: var(--lo-r, 114px); top: 
 #helpbox { display: flex; align-items: center; gap: 10px; max-width: 100%; box-sizing: border-box; min-height: 44px; padding: 4px 14px 4px 6px; font: 700 var(--fs-3) var(--pixel); line-height: 1.2; color: var(--pad-cream); animation: prpop var(--t-pop) var(--ease);
   transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s; }
 #helpbox.off { opacity: 0; transform: translateY(6px); visibility: hidden; animation: none; transition: opacity var(--t2) var(--ease), transform var(--t2) var(--ease), visibility 0s var(--t2); }
-.touch #helpbox.btn { display: none; }
+/* (on touch the button the prompt names says the verb - the card has no chip there, nothing on it to press: the owner,
+   11-14, "it looks like you're supposed to press the popup because it has a button in it"; just its words, two lines at
+   most, a size down or cut at a word with an ellipsis when they don't fit - client/notelog.js fitPrompt) */
+.touch #helpbox.btn > :is(.g-touch, .g-ico, .pr-tick) { display: none; }
+.touch #helpbox.btn { padding-left: 12px; }
+.touch #helpbox.small { font-size: var(--fs-2); }
 /* (UIC-20 06: in at 90%, up to 100% in 120 ms; the key's ring fills as you press it; a green tick when it's done) */
 @keyframes prpop { from { opacity: 0; transform: scale(.9); } }
 #helpbox.hit > :is(.g-key, .g-touch, .g-pad, .g-tile) { animation: keyhit var(--t-pop) var(--ease); }
@@ -984,6 +990,9 @@ body.kbm #t-fs { display: none; }
 /* the sign-in panel and the first-launch gate (slots for the launch work: main.js setAccountUi) */
 #signin, #gate { position: absolute; inset: 0; z-index: 46; display: flex; align-items: center; justify-content: center; padding: var(--s3); background: var(--scrim-hi); }
 #signin .panel, #gate .panel { width: min(460px, 100%); max-height: 100%; overflow: auto; }
+/* (a desktop zooms the sheet by --zk: its height cut to the screen's before the zoom, so the end of it - Claim, the
+   account id - scrolls into view; the owner, 11-14: "i cant scroll to the bottom of this sign in page") */
+body:not(.touch) :is(#signin, #gate) .panel { max-height: calc((100dvh - 2 * var(--s3)) / var(--zk, 1)); }
 #signin .mhead { justify-content: flex-start; }
 #signin .opt[disabled] { opacity: .55; }
 
@@ -1403,7 +1412,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #play { min-height: 64px; font-size: var(--fs-5); gap: var(--s4); padding: 0 var(--s4); }
   #t-row2 .btn { font-size: var(--fs-3); padding: 0 var(--s2); }
   #t-status { font-size: var(--fs-4); } #t-tip { font-size: var(--fs-3); }
-  #t-foot { flex-direction: column; align-items: stretch; gap: var(--s2); left: max(var(--s4), env(safe-area-inset-left)); right: max(var(--s4), env(safe-area-inset-right)); bottom: max(var(--s4), env(safe-area-inset-bottom)); }
+  #t-foot { flex-direction: column; align-items: stretch; gap: var(--s2); left: max(var(--s4), env(safe-area-inset-left)); right: max(var(--s4), env(safe-area-inset-right)); bottom: calc(max(var(--s2), env(safe-area-inset-bottom)) + var(--fs-1) + var(--s3)); }   /* (room under it for the saves note: it ran under the Online frame - the owner, 11-14) */
+  #t-note { bottom: max(var(--s2), env(safe-area-inset-bottom)); }
   #t-card { min-width: 0; } #t-online { justify-content: center; }
 }
 
@@ -1895,6 +1905,11 @@ body:not(.touch) #hub[data-tab=map] #hub-bar, body:not(.touch) #bm-panel, body:n
 #signin-body button[data-tab] { flex: 1; border: 0 !important; border-bottom: 3px solid transparent !important; border-radius: 0; background: none !important; color: var(--cream) !important; opacity: .62; }
 #signin-body button[data-tab][aria-selected=true] { border-bottom-color: var(--gold) !important; color: var(--gold) !important; opacity: 1; }
 #signin-body :is(#a-ingo, #a-upgo) { background: var(--gold) !important; border-color: var(--gold) !important; color: var(--ink) !important; }
+/* Google's own button (its branding guidelines' dark theme) and Discord's blurple - not the sheet's gold (client/account.js PROV) */
+#signin-body #a-body button.a-prov { display: flex !important; align-items: center; justify-content: center; gap: var(--s2); width: 100%; margin: var(--s1) 0 0 !important; }
+#signin-body #a-body button.a-pg { background: #131314 !important; border: 1px solid #8e918f !important; color: #e3e3e3 !important; font-family: Roboto, Arial, sans-serif !important; font-weight: 500 !important; }
+#signin-body #a-body button.a-pd { background: #5865f2 !important; border-color: #5865f2 !important; color: #fff !important; }
+#signin-body #a-body button.a-linkb { display: inline-flex !important; align-items: center; gap: var(--s2); }
 #signin-body button.a-link { min-height: 0 !important; padding: var(--s1) 0 !important; border: 0 !important; background: none !important; color: var(--cream) !important; font-weight: 500 !important; text-decoration: underline; }
 /* the title at a desktop's size (the 11-04 review: "all tiny at 1920"): its menu, card, tools and the plates over it
    zoomed with the screens (--zk), PLAY about a fifth of the screen at 1080; the logo sized by the height so it all fits */

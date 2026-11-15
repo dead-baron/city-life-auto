@@ -101,7 +101,9 @@ export function follow(world, L, get, msg) {
   for (const T of L) {
     let s = get(world, T, false);
     for (const p of world.players.values()) {
-      const on = !!(p.conn && p.ped && !p.ped.ug && !(p.ped.hidden && p.ped.home) && viewRect(world, p, tmp) && T.cx >= tmp.x0 - PAD && T.cx <= tmp.x1 + PAD && T.cy >= tmp.y0 - PAD && T.cy <= tmp.y1 + PAD);
+      // (in view: any of its room - a casino's floor is wider than a phone's view, and stood at one end of it its middle
+      // was out of view: nothing dealt came to the page - the owner's Golden Lotus capture, 11-14)
+      const on = !!(p.conn && p.ped && !p.ped.ug && !(p.ped.hidden && p.ped.home) && viewRect(world, p, tmp) && (T.x1 ?? T.cx) >= tmp.x0 - PAD && (T.x0 ?? T.cx) <= tmp.x1 + PAD && (T.y1 ?? T.cy) >= tmp.y0 - PAD && (T.y0 ?? T.cy) <= tmp.y1 + PAD);
       if (!on) { if (s && s.subs.has(p.pid)) s.subs.delete(p.pid); continue; }
       s ||= get(world, T, true);
       if (s.subs.get(p.pid) === p.conn) continue;

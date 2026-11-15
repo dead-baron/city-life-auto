@@ -23,14 +23,19 @@ export { iconOf } from './touchicons.js';
 // and C2 in a row above, the vehicle button and the switches in two short columns up the right edge (the left half is
 // the move stick's, the middle the view's: nothing wider fits). Kept clear of each other, of the left 40%, of the middle
 // (you) and inside the safe areas (test/touchslots.test.js, acticons.test.js; the HUD: test/hudlayout.test.js). wp, the
-// weapon button (UI-6): the HUD's weapon plate as a card.
+// weapon button (UI-6): the HUD's weapon plate as a card. The owner, 11-14 ("the act or look button overlaps the other
+// button so it's a little too close together"): no two touch - 6 px clear between any two at every size, 12 round ACT
+// (its pulse ring stands 5 px out); upright ROLL and BLOCK (C1) up the left of the cluster over FIRE, ACT over the stick
+// clear of ROLL, C2 and the vehicle button over it, the weapon card and the switches above; on its side C1, C2 and the
+// switches' row a little further apart (test/hudlayout.test.js).
 export const GEO = {
-  land: { stick: [88, 88, 132], fire: [196, 92, 64], act: [166, 172, 64], roll: [252, 40, 52], car: [282, 98, 52], c1: [200, 236, 48], c2: [150, 238, 48],
-    wp: [70, 214, 76, 44], u4: [32, 300, 48], u3: [88, 300, 48], u2: [144, 300, 48], u1: [200, 300, 48] },
-  port: { stick: [70, 80, 116], fire: [158, 128, 64], u4: [158, 40, 48], act: [82, 176, 64], roll: [140, 194, 52], car: [34, 236, 52], wp: [96, 256, 68, 48],
-    c1: [164, 252, 48], u3: [98, 308, 48], c2: [40, 308, 48], u1: [40, 362, 48], u2: [98, 362, 48] },
+  land: { stick: [88, 88, 132], fire: [196, 92, 64], act: [166, 172, 64], roll: [252, 40, 52], car: [282, 98, 52], c1: [204, 236, 48], c2: [144, 240, 48],
+    wp: [70, 214, 76, 44], u4: [32, 300, 48], u3: [92, 300, 48], u2: [152, 300, 48], u1: [212, 300, 48] },
+  port: { stick: [70, 80, 116], fire: [162, 118, 64], u4: [158, 40, 48], act: [66, 198, 64], roll: [138, 186, 52], c1: [164, 244, 48], car: [34, 264, 52], c2: [98, 264, 48],
+    wp: [96, 322, 64, 48], u3: [32, 322, 48], u1: [40, 378, 48], u2: [96, 378, 48] },
 };
 export const MIN_TAP = 48;   // (the smallest a button gets: on a 360-px phone a 52 is 48 - the room the cluster has, the middle kept clear)
+export const MIN_SW = 44;    // (the switches - ITEMS, LIGHT, COP CAR, FIRE ON - and the weapon card: the touch guideline's 44; on a 360-px phone a 48 is 44, so the cluster keeps its gaps as it scales down)
 export const LONG_MS = 450;        // (a long press: the button's name in a tip)
 export const NEAR_CAR_PX = 140;    // (how near a vehicle has to be for CAR to show on foot: a little past where you can get in)
 // what each button is called in its tip (its slot's label otherwise)
@@ -43,7 +48,7 @@ export function slotGeometry(W, H, safe = {}) {
   const R = W - (safe.r || 0), B = H - (safe.b || 0), out = {};
   const s = Math.min(1.3, Math.max(0.86, (port ? R - (safe.l || 0) : B - (safe.t || 0)) / 390));   // (by the room inside the safe areas)
   for (const [k, [dx, dy, w, h = w]] of Object.entries(G)) {
-    const bw = Math.max(MIN_TAP, Math.round(w * s)), bh = Math.max(MIN_TAP, Math.round(h * s));
+    const min = k[0] === 'u' || k === 'wp' ? MIN_SW : MIN_TAP, bw = Math.max(min, Math.round(w * s)), bh = Math.max(min, Math.round(h * s));
     out[k] = { x: Math.round(R - dx * s - bw / 2), y: Math.round(B - dy * s - bh / 2), w: bw, h: bh };
   }
   return out;
@@ -72,8 +77,13 @@ export function makeSlots(root = document.getElementById('tbtns'), { win = windo
     // the stars and the vehicle's readout keep left of the switches' row); upright
     // under you, left of the utility column
     const R = document.documentElement.style, X = (ks) => Math.min(...ks.map((k) => geo[k].x)), Y = (ks) => Math.min(...ks.map((k) => geo[k].y));
-    if (H > W) R.setProperty('--lo-r', `${W - X(['car', 'u1', 'u2', 'u3']) + 8}px`);   // (upright, under you: left of the two columns up the edge)
-    else { R.setProperty('--lo-r', `${W - X(['roll', 'car', 'c1', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['roll']) + 6}px`); R.setProperty('--u-l', `${W - X(['u1', 'u2', 'u3', 'u4']) + 8}px`); R.setProperty('--lo-c', `${W - X(['c1', 'roll', 'car']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1, ROLL and the vehicle button)
+    // (upright, under you - the owner, 11-14: the card was under BLOCK, its words cut off: it sits in the clear space left
+    // of the columns up the edge and its foot above every button under it - BLOCK, ROLL, FIRE - so nothing can push it onto
+    // them; it grows up toward you, never down into the thumb's buttons)
+    if (H > W) {
+      const r = X(['car', 'c2', 'wp', 'u1', 'u2', 'u3']) - 8, low = Object.values(geo).filter((g) => g.x < r);
+      R.setProperty('--lo-r', `${W - r}px`); R.setProperty('--lo-b', `${H - Math.min(...low.map((g) => g.y)) + 10}px`);
+    } else { R.setProperty('--lo-r', `${W - X(['roll', 'car', 'c1', 'c2', 'act']) + 8}px`); R.setProperty('--lo-b', `${H - Y(['roll']) + 6}px`); R.setProperty('--u-l', `${W - X(['u1', 'u2', 'u3', 'u4']) + 8}px`); R.setProperty('--lo-c', `${W - X(['c1', 'roll', 'car']) + 8}px`); }   // (--lo-c: the hint strip under it, left of C1, ROLL and the vehicle button)
     if (H > W) R.setProperty('--lo-c', `${W - X(['u4', 'fire', 'roll', 'c1', 'c2', 'wp']) + 8}px`);   // (upright: the hint strip left of the cluster, over the move stick)
     if (cur) place();
   }

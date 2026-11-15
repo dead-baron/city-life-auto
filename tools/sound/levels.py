@@ -28,7 +28,8 @@ UI = {'click', 'notify', 'good', 'bad', 'alert', 'phoneopen', 'phoneclose', 'coi
       'death', 'goal', 'racego', 'checkpoint', 'ridebell', 'bite', 'reloadout', 'reloadin'}
 STEP = {'step', 'stroke', 'leaves', 'twig', 'hoof'}
 AMB = {'cricket', 'owl', 'bird', 'gull', 'dog', 'farsiren', 'farhorn', 'drop', 'crackle', 'cavedrip', 'squeak', 'drip', 'slidingdoor',
-       'clack', 'trickle', 'flutter'}
+       'clack', 'trickle', 'flutter',
+       'cardflick', 'ballrattle', 'ballclick', 'reeltick', 'reelstop', 'slotwin'}   # (the casinos' deals: subtle, under the room - client/casinoview.js)
 GUN = {'gun_pistol', 'gun_revolver', 'gun_smg', 'gun_rifle', 'gun_shotgun', 'gun_sniper', 'gun_rocket'}
 BOOM = {'explosion', 'thunder', 'rockfall', 'treefall'}
 

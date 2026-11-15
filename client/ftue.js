@@ -105,9 +105,12 @@ function showLine(ctl, text, sec, sig, app = null) {
   void el.offsetWidth;
   el.classList.add('in');
   clearTimeout(lineT);
-  lineT = setTimeout(() => { if (lineSig === sig) el.classList.add('faded'); }, LINE_S * 1000);
+  lineT = setTimeout(() => { if (lineSig === sig) fadeLine(el); }, LINE_S * 1000);
 }
-function hideLine() { const el = $('ftue-line'); if (el) { el.classList.add('faded'); } clearTimeout(lineT); }
+// faded, then out of the low slot once the fade is done (style.css .6 s): kept there faded it pushed the prompt's card
+// down onto the touch buttons (the owner's 11-14 screenshot, BLOCK on the card)
+function fadeLine(el) { el.classList.add('faded'); lineT = setTimeout(() => { if (el.classList.contains('faded')) el.classList.add('off'); }, 700); }
+function hideLine() { const el = $('ftue-line'); clearTimeout(lineT); if (el) fadeLine(el); }
 // a new device in hand (a pad picked up): the line's glyph again
 export function redraw() { const me = C.S.me; if (me && me.ftue && me.ftue.st === 'goal') { lineSig = ''; onMe(me); } }
 

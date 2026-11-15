@@ -56,6 +56,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Legal: ToS / privacy / in-game notice drafts (mature themes, online interactions not rated, never share personal info); a lawyer reviews before money changes hands. (11-03; launch-plan 11-03)
 - Safe exit: LOG OFF = 10 s still countdown; instant in your own property or a hotel room; not while wanted or within 60 s of combat. (11-03; launch-plan 11-03, DEVLOG 11-04)
 - Prison: an admin can send a misbehaving player there. (11-07; DEVLOG 11-07)
+- Google and Discord appear as the standard provider buttons ("Continue with Google" with Google's G, Discord's blurple), above email and password; Google is set up openid-only and in production, no branding verification for now (the consent screen shows the domain); deadbaron.com/city-life-auto/about/ is the public home page for when it's verified. (11-14; chat)
+- The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).
 
@@ -74,6 +76,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Balloons go out with expression, not a blink: a small expression while they hold (heart beats, ! jolts, ? tilts...), then a squash up and a pop (heart, laugh, idea: pixel sparkles) or a shrink into the tail; the typing dots and speech bubbles shrink away too. (11-14 18:56; chat)
 - The bounty skull hides while a balloon shows, then comes back. (11-13; queue)
 - Emotes are body animations first; a balloon only where it adds meaning (laugh, angry, love, ?, !, sweat, sleep). (11-13; queue)
+- "Come here" reads as a beckon: the balloon a hand with its finger crooked toward you (motion ticks), the pose an arm out toward the camera, palm up, the fingers curling in twice - not a point or a pull. (11-14 19:27; queue)
 - Picker tabs: Emotes / Dances / Poses; lasting poses hold until you move; only lasting poses log to nearby chat. (11-13; queue)
 - Desktop gets an emote button by Chat; controller gets a hold-to-open radial for quick lines and emotes. (11-13; queue)
 - Emotes round 3 (LOL/LMAO/ROFL, new dances, NPC emotes): DEFERRED. (11-14; decisions-11-14*, queue)
@@ -102,6 +105,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The vehicle button: simple enter/exit door symbols; GET IN / ON / EXIT / OFF words only in tips and the Guide. (11-12 19:37; queue)
 - Button sizes 60 / 52 / 40 px, translucent navy with an accent rim, one word size, measured centering. (11-12; queue)
 - ACT shows only while a prompt names it. (11-13; DEVLOG 11-13)
+- On touch the prompt's card has no button chip (the ACT button says the verb; nothing on the card looks pressable), sits in clear space - upright above the cluster's buttons, never under one - and is two lines at most, never cut in a word. (11-14; chat: "it looks like you're supposed to press the popup because it has a button in it", DEVLOG 11-14)
+- Touch buttons never touch: 6 px clear between any two, 12 round ACT (its pulse ring), at every layout; the sticks unchanged. (11-14; chat: "the act or look button overlaps the other button so it's a little too close together", DEVLOG 11-14)
 - Right aim stick stays in the corner, action buttons on arcs round it; in portrait a tight thumb cluster. (11-12; queue, DEVLOG 11-06)
 - The Clean (Lucide) icon line kept; the pixel icon set does NOT ship (branch pixelicons unmerged). (11-06; queue)
 - HIT shows what you hit with (fist bare-handed, else the weapon). (11-05; DEVLOG 11-05)
@@ -116,6 +121,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No "Police remember you" chip. (11-03; DEVLOG 11-03)
 - No see-through outline behind plants (10-09), on riders in the open (10-23), or behind people (11-14). (DEVLOG)
 - Shop symbols over doors when close: subtle, can be turned off. (10-08; DEVLOG 10-22)
+- The places' icons (minimap, big map, over doors) a little bigger again, simple and clearly visible - bigger, cleaner icons, not more of them. (11-14; queue)
 - The graphics row stays on the title screen. (10-11; DEVLOG 11-03)
 - Shop signs in a readable face. (11-03; DEVLOG 11-03)
 - Controls in text are `[[action]]` names from shared/controls.js (each device draws its glyph). (11-04; CLAUDE.md)
@@ -165,6 +171,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Claude's in-game music studio: PAUSED (10-10) - SUPERSEDED by the owner's own pipeline (11-12).
 - Title track: the owner's "Chill closer"; the first title track kept as the train arrival's music. (11-12; DEVLOG 11-12)
 - Sound effects synthesized, SNES-flavored. (10-08; DEVLOG 10-08)
+- The casino games make subtle sounds: a card flick, the roulette ball's rattle and click, slot reels ticking, a small win chime. (11-14; queue)
 
 ## World and places
 - World v3: the whole world handcrafted, district by district; Claude has full creative control within the world's size and region placements. (10-17; chat)
@@ -176,6 +183,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Station forecourt loops carry no through-traffic (taxi rank / parked cars at most); the Metro lot enlargement dropped. (11-06; queue)
 - What's meant to be seen is seen: signs, doors, activities, interactables never hidden by roofs, trees, decks (visibility audit + test). (11-06; queue)
 - Placement lint: boats on clear water, signs not overlapping, no duplicate place signs, parked cars on road or lot only. (11-13; queue, DEVLOG 11-14)
+- Placement lint, more (fix the class, every hit): a building's own name (plaque, shop sign, blade) never half hidden by another board on its front or by a canopy, porch, porte-cochere or sign in front of it; a blade names only the business at street level; no plant on a house's path, driveway or door step; an ATM only set into a building's front wall or inside, never alone on a pavement. (11-14; queue - the owner's phone notes)
 - Fenced places have openings on at least two sides. (11-12; DEVLOG 11-12)
 - No fences across driveways; garden plots in sight, not behind the house. (10-17; DEVLOG 10-17, 10-24)
 - Walk-in interiors compact, near the entrance. (10-17; DEVLOG 10-17)

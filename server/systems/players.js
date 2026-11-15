@@ -468,8 +468,8 @@ function finalizeLogout(world, p, dropLoot) {
 // A name of your own (Settings' account section - the owner's M9 note: "a username"): a name may be (shared/names.js),
 // nobody else's (any case, separators aside: names.js nameKey), and changed once every NAME.gapS; over your head at once (the descriptor sent again).
 // yields(profile): a holder of the name who gives way (a guest's, to a member - server/launch.js; it renames them after)
-export function rename(world, p, raw, { yields = null } = {}) {
-  const prof = p.profile, r = cleanName(raw);
+export function rename(world, p, raw, { yields = null, owner = false } = {}) {
+  const prof = p.profile, r = cleanName(raw, { owner });
   if (r.err) { world.notify(p, r.err, 'warn'); return false; }
   if (r.name === p.name) return true;
   const wait = (prof.nameAt || 0) + NAME.gapS * 1000 - Date.now();

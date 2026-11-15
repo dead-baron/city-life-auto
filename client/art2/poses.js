@@ -228,11 +228,11 @@ gesture('emcry', 4, (D, P, f) => {   // the face in the hands, the head down, th
   P.lean = 0.16; P.headPitch = 0.38; P.pel = [0, 0, D.pelZ - 0.4 - k * 0.6]; P.breath = k ? 0.7 : 0; P.tilt = (f < 2 ? 1 : -1) * 0.04;
   P.hands = (S) => { P.hL = HEAD(S, -1.4, 4.4, -0.8 - k * 0.4); P.hR = HEAD(S, 1.4, 4.4, -0.8 - k * 0.4); P.openL = P.openR = 1; P.elL = [-0.6, -0.2, -1]; P.elR = [0.6, -0.2, -1]; };
 });
-gesture('embeckon', 4, (D, P, f) => {   // come here: the right hand out in front, palm up - then pulled back in to the chest, curled
+gesture('embeckon', 4, (D, P, f) => {   // come here (the owner, 11-14: "not sure what that pose is for"): the right forearm out toward the one it's for, palm up, the fingers curling in and opening again - twice a loop; not a point, not a pull back to the chest
   b0(P);
   const k = f & 1;
-  P.headYaw = 0.08; P.tilt = -0.04; P.lean = k ? -0.04 : 0.06; P.headPitch = -0.06;
-  P.hands = (S) => { P.hR = k ? DCH(S, 3.2, 4.6, 0.6) : vadd(S.shR, [0.6, 10.2, 0.4]); P.openR = k ? 0 : 1; P.elR = [1, -0.3, -0.6]; P.hL = DHIP(D, S, -1); P.elL = [-1, -0.2, -0.3]; };
+  P.headYaw = 0.06; P.headPitch = -0.08 + k * 0.05; P.tilt = -0.03 - k * 0.02; P.lean = 0.03;
+  P.hands = (S) => { P.hR = DCH(S, 5.2 - k * 0.6, 8.2 - k * 1.4, -3.2 + k * 2.4); P.openR = k ? 0 : 1; P.elR = [1, 0, -0.8]; P.hL = DHIP(D, S, -1); P.elL = [-1, -0.2, -0.3]; };
 });
 gesture('emwatch', 1.6, (D, P, f) => {   // the left wrist up in front of the face, the elbow out, a look down at it; tapping it
   b0(P);
