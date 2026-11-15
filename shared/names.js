@@ -1,7 +1,7 @@
 // Player names (the owner's M9 note, 10-03: "optional account: ... a username"): a new character is "Guest" and four
 // digits; Settings' account section changes it. What a name may be - the same check on the page (client/main.js) and on
 // the server (server/systems/players.js rename), which also keeps names unique and changes no more often than gapS.
-export const NAME = { min: 3, max: 16, gapS: 600, tryS: 2 };   // (tryS: a moment between attempts - each one looks through every profile)
+export const NAME = { min: 3, max: 16, gapS: 600, tryS: 2, holdH: 24, history: 50 };   // (holdH: a name just dropped stays its last holder's this long - nobody grabs it to pass as them - only the last one, so renaming over and over holds nothing more; history: the names before, kept for staff)   // (tryS: a moment between attempts - each one looks through every profile)
 
 // the game's own words, and someone else's guest number - looked for on the letters alone ("Admin_2", "Guest 1234"),
 // and the long ones at the start too ("ModeratorBob", "OfficialSupport")

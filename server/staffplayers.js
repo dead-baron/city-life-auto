@@ -144,7 +144,8 @@ export function createStaffPlayers({ accounts, mod, analytics, store, world, sai
       ['this session', x.p ? dur(x.session) : ''], ['played, all told', dur(x.played)], ['first seen', esc(ui.when(x.first))], ['sessions', `${x.sessions || '?'} (on ${days(x.days)})`],
       ['device', esc(x.device)], ['doing', esc(x.doing)], ['chat', strikeCell(x)],
       ['ban', x.ban ? `<span class="bad">${x.ban.until ? `until ${esc(ui.when(x.ban.until))}` : 'for good'}</span> since ${esc(ui.when(x.ban.at))}${x.ban.why ? `: ${esc(x.ban.why)}` : ''}${x.ban.by ? ` <small>by ${esc((store.get(x.ban.by) || {}).name || x.ban.by)}</small>` : ''}` : 'no'],
-      ['anti-cheat flags', flagCell(x) || 'none']];
+      ['anti-cheat flags', flagCell(x) || 'none'],
+      ['names before', (x.a.names || []).slice(-12).reverse().map((h) => `${esc(h.n)} <small>(till ${esc(ui.when(h.at))})</small>`).join(', ') || 'none']];
     out += `<table>${kv.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('')}</table>`;
     out += actionsHtml(role, csrf, x);
     const lines = x.p && said ? said(x.p) || [] : [];

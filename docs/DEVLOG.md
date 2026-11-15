@@ -24465,8 +24465,11 @@ the panel (titled ACCOUNT) says who you're signed in with, has **Sign out** (two
 device starts again as a new guest, the account stays safe and sits in "Switch back to") and puts the sign-in buttons
 under **Switch account**. Guests see what they saw before.
 
-**Name changes: a week, not a month.** The owner's son couldn't change his name for 26 more days. A signed-in player's
-username wait is now 7 days (`USERNAME_GAP_DAYS`, server/accounts.js; the first pick is still free, guests still wait 10
-minutes between changes). Admins and the owner get **Let them change their name now** on the Players page (staff command
-`namefree`, power admin, in the admin log): it lifts the wait at once and tells the player if they're online.
-
+**Name changes: free.** The owner's son couldn't change his name for 26 more days. The owner: free renames for now,
+with a history, and no way to claim and hold names by renaming over and over. So: members wait only the 10 minutes
+between changes everyone has (`USERNAME_GAP_DAYS` 0, server/accounts.js - a 7-day wait is one number away). An account
+holds only the name it has and, for `NAME.holdH` (24) hours, the one it just dropped, so nobody grabs a name the moment
+it's let go to pass as its holder; renaming over and over holds nothing more, since only the last one is held. Each
+account keeps its names before (`acct.names`, the last `NAME.history`), shown on the staff Players page. Admins and the
+owner also have **Let them change their name now** (staff command `namefree`, in the admin log), which lifts the 10
+minutes or any wait set later. test/guestnames.test.js.

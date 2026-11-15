@@ -23,7 +23,7 @@ import { browserOf } from './perfreports.js';
 import { createGA } from './ga.js';
 import { watch, settle, release } from './moneywatch.js';
 import { createRateLimiter } from './httputil.js';
-import { cleanName, lookKey } from '../shared/names.js';
+import { cleanName, lookKey, NAME } from '../shared/names.js';
 import { USERNAME_GAP_DAYS } from './accounts.js';
 import * as devmode from './devmode.js';
 import * as players from './systems/players.js';
@@ -113,7 +113,7 @@ export function createLaunch(opts) {
 
   function acctState(p) {
     const a = accounts.get(p.pid);
-    const gap = a.username && a.nameAt ? Math.max(0, a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) : 0;
+    const gap = USERNAME_GAP_DAYS > 0 && a.username && a.nameAt ? Math.max(0, a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) : 0;
     const pwl = accounts.passwordOf(p.pid), nw = news.byPid(p.pid);
     return { t: 'acct', id: p.pid, kind: a.kind, guest: a.kind !== 'member', name: p.name, username: !!a.username, renameIn: gap, canRename: true, role: a.role, logins: a.logins.map((l) => l.p), passkeys: a.passkeys.length, providers: enabledProviders(L), resets: resetsOn(L), email: !!pwl, verified: !!(pwl && pwl.vf), news: nw ? news.masked(nw) : '', ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, age17: a.age17 || 0, claim: accounts.claimOpen && !accounts.ownerExists() };
   }
@@ -133,6 +133,9 @@ export function createLaunch(opts) {
   // or links keeps their name unless a member owns it - and from then on it's protected. ----
   const isMember = (q) => !!(q && q.acct && q.acct.kind === 'member');
   function memberOwns(name, except) { const k = lookKey(name); for (const q of store.all()) if (q.pid !== except && isMember(q) && lookKey(q.name) === k) return true; return false; }
+  // a name someone else dropped in the last NAME.holdH hours (only their last one: renaming over and over holds no more
+  // than the name you have and the one before - the owner, 11-15: "people can't claim and permanently hold onto names")
+  function heldBy(name, except) { const k = lookKey(name), t = now(); for (const q of store.all()) { const h = q.pid !== except && q.acct && q.acct.prevName; if (h && h.k === k && h.until > t) return h; } return null; }
   const guestsHolding = (name, except) => { const k = lookKey(name), out = []; for (const q of store.all()) if (q.pid !== except && !isMember(q) && lookKey(q.name) === k) out.push(q); return out; };
   function guestNumber() {
     const taken = new Set(); for (const q of store.all()) taken.add(String(q.name).toLowerCase());
@@ -163,14 +166,22 @@ export function createLaunch(opts) {
     const owner = a.role === 'owner', r = cleanName(raw, { owner });
     if (r.err) return r.err;
     if (!loadFilter().nameOk(r.name)) return 'Pick another name.';
-    if (member && a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
+    const held = lookKey(r.name) !== lookKey(p.name) && heldBy(r.name, p.pid);
+    if (held) return `${r.name} was someone else's name until just now - it's free in ${Math.max(1, Math.ceil((held.until - now()) / 3600e3))} hours.`;
+    if (USERNAME_GAP_DAYS > 0 && member && a.username && a.nameAt && now() - a.nameAt < USERNAME_GAP_DAYS * 86400e3) return `You can change your username again in ${Math.ceil((a.nameAt + USERNAME_GAP_DAYS * 86400e3 - now()) / 86400e3)} days.`;
     if (!member && lookKey(r.name) !== lookKey(p.name) && memberOwns(r.name, p.pid)) return `${r.name} belongs to a signed-in player - pick another, or sign in to keep a name of your own.`;
     const yieldTo = member ? guestsHolding(r.name, p.pid) : [];
     const before = p.name;
     if (!players.rename(world, p, r.name, { owner, yields: (q) => yieldTo.includes(q) })) return 'That name didn\'t go through - try again in a moment, or pick another.';   // (players.rename noted why)
     if (p.name !== before) for (const q of yieldTo) toGuestNumber(q, (n) => `A signed-in player took the name ${r.name} - you're ${n} now. Pick another in Settings, Account (or sign in to keep a name of your own).`);
     if (member && (p.name !== before || !a.username)) { a.username = true; a.nameAt = now(); store.touch(); }
-    if (p.name !== before) note(a, 'name', `${before} -> ${p.name}`);
+    if (p.name !== before) {
+      note(a, 'name', `${before} -> ${p.name}`);
+      // (the names before, for staff - the Players page; the one just dropped held for you a while, not a GuestNNNN)
+      (a.names ||= []).push({ n: before, at: now() }); if (a.names.length > NAME.history) a.names.splice(0, a.names.length - NAME.history);
+      a.prevName = /^Guest\d+$/.test(before) ? null : { k: lookKey(before), n: before, until: now() + NAME.holdH * 3600e3 };
+      store.touch();
+    }
     return null;
   }
   // game news by email (Settings, Account; members): on with an address (theirs to give - Google and Discord are asked
