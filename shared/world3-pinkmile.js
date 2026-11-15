@@ -463,6 +463,7 @@ function build(m, api, K) {
     for (const [fx, fy] of [[x0 + 1, shoreAt(x0 + 1) + 4 + PROM + 1], [x1 - 1, shoreAt(x1 - 1) + 4 + PROM + 1], [x0 + 1, yS - 1], [x1 - 1, yS - 1]]) prop('lamp', fx, fy, 0);
     for (let r = 0; r < 2; r++) terrace(K, x0 + 2.5, yS - 3.5 - r * 3.4, 3, { step: 3.4, planters: false, menu: r === 0 });
     canopy(K, x0 + 1, yS - 8.2, x0 + 11.4, yS - 2.4, { gap: 3, span: 6, h: 52 });
+    for (const [dx, dy] of [[-10.5, 0.5], [10.5, 0.5], [0, -7.4], [0, 8.2]]) prop('lamp', cx + dx, cy + dy, 0);   // (the basin's walks lit where they meet its ring)
     // the people: friends round the basin's rim, couples on the benches, a knot by the flower seller
     for (const [dx, dy, q] of [[0, -6.4, 4], [-9, -5, 2], [9, -5, 2], [-9, 8, 2], [9, 8, 2], [5.5, 6.5, 3]]) hang(K, cx + dx, cy + dy, q);
     prop('foodcart', x0 + 3, cy - 4, 14);
@@ -691,10 +692,15 @@ function build(m, api, K) {
       const s0 = shoreAt(x) + SAND + PROM;
       let deep = 0;
       while (deep < 30 && K.free(x, s0 + deep)) deep++;
-      if (deep < 8) continue;
-      if (x % 8 === 0) for (const dy of [1.5, 6.5]) prop('palm_a', x + 0.5, s0 + dy, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0 + dy, 98) * 0.15 });
-      if (x % 16 === 4 && deep >= 10) { prop('picnic', x + 0.5, s0 + 4, 0); (m.terraceSpots ||= []).push({ x: Math.round((x + 0.5) * TILE), y: Math.round((s0 + 4) * TILE), seat: 16 }); g++; }
-      if (x % 16 === 12 && deep >= 14) prop('blanket', x + 0.5, s0 + 10, 0, { v: x % 2 });
+      if (deep < 12) continue;
+      // (the grove's band, twelve rows behind the promenade: a palm row, a walk under the palms, a second row offset,
+      // the tables; taken, so the lawn's own planting keeps to the rest)
+      K.fill(x, s0 + 3, 1, 2, T.PLAZA); K.take(x, s0, 1, 12);
+      if (x % 8 === 0) prop('palm_a', x + 0.5, s0 + 1.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0, 98) * 0.15 });
+      if (x % 8 === 4) prop('palm_a', x + 0.5, s0 + 6.5, 10, { sp: 'coconut', k: 1.2 + rnd(x, s0 + 6, 98) * 0.15 });
+      if (x % 16 === 10) prop('lamp', x + 0.5, s0 + 2.8, 0);
+      if (x % 16 === 2) { prop('picnic', x + 0.5, s0 + 9, 0); (m.terraceSpots ||= []).push({ x: Math.round((x + 0.5) * TILE), y: Math.round((s0 + 9) * TILE), seat: 16 }); g++; }
+      if (x % 16 === 10) prop('blanket', x + 0.5, s0 + 10, 0, { v: x % 2 });
     }
     const fx = 2612, fy = shoreAt(fx) + 5;
     prop('campfire', fx, fy, 10, { lit: 1 });

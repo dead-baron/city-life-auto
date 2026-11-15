@@ -286,6 +286,14 @@ function makeKit(m, api, P) {
       nb++;
       return handBuilding(m, { d: P.d, ...o });
     },
+    // (a building on ground the plan has laid out itself - taken already, lawn or paving, no building on it: a beer
+    // garden's bar - shared/world3-neon.js)
+    buildingOn(o) {
+      for (let yy = o.y; yy < o.y + o.h; yy++) for (let xx = o.x; xx < o.x + o.w; xx++) { const i = yy * W + xx; if (at(xx, yy) < 0 || m.bld[i] >= 0 || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.PLAZA)) return null; }
+      take(o.x, o.y, o.w, o.h);
+      nb++;
+      return handBuilding(m, { d: P.d, ...o });
+    },
     // the free extent of a column inside a band: [southmost free y, northmost free y] scanning north from yS (or null)
     column(x, y0, y1, mask = null) {
       const ok = mask ? (xx, yy) => free(xx, yy) && mask(xx, yy) : free;

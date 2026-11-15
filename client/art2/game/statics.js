@@ -1,37 +1,12 @@
-// Art v2 in the game: the static world of a chunk as G-buffer sprites (docs/art-v2/GAME-RENDERER.md,
-// "Statics: statics.js"). Everything that stands up off the ground and never moves:
-//   buildings    every map.buildings entry, styled by kind, prefab, district and wealth with art2's
-//                makeBuilding (storefronts carrying their business names, lit windows, signs, neon and blade
-//                signs, fire escapes, porticoes, pitched roofs), split into sections where a footprint is long
-//                (houses get a garage wing, paint shops their drive-in bay); flat roofs are decks of tar, gravel,
-//                membrane, standing-seam metal, pavers, planks or sedum sunk behind their parapets, some with a
-//                setback volume on top, and carry a laid-out rooftop kit (air handlers in rows with walkway pads,
-//                stair huts, tanks, chimneys, skylights, dishes, roof bars with umbrellas and festoon lights, neon
-//                roof signs) and roof gardens (raised beds, small trees in planters, seats: gardenKit); a cut-away
-//                variant (no roof, walls cut low, the shop floor) for walk-ins
-//   lot dressing gas canopies and pumps, house yards (fences, hedges, beds along the front wall, a yard tree,
-//                pools), shopfront pots, sandwich boards and cafe tables, parking wheel stops, motor pool fences
-//                and gate posts, construction cranes, barns and silos, brick walls, security camera poles
-//   props        all map.props kinds as voxel models (street furniture, street lights, poles and wires, signs,
-//                country set pieces), trees and plants chosen by biome, district and zone (flora.js), and a
-//                debris version of anything smashed; undergrowth, scrub and wild flowers the map does not place
-//                (decoration only: low enough to walk through, trees only away from every path)
-//   signals      mast arms with their head housings; the lit lamps are live (items carry `heads`)
-//   decks        the elevated ring and its ramps cut into per-chunk pieces with their true heights, pillars
-//   rail         platform canopies, benches, lamps, name boards; tunnel portals; crossing signal posts
-//   set pieces   airport towers, venues, quarry terraces, the Rock's walls and towers, Paradise Cay ...
-//
-//   staticItems(M, cx, cy, opt) -> [{ key, recipe, x, y, z0, ext, ... }]
-//        every static whose screen rectangle can overlap chunk (cx, cy) (screen y = Y - Z), sorted by ground y.
-//        ext = [left, up, right, down]: the sprite's extent round its anchor on screen. opt.cutaway = a
-//        building index: that walk-in's sections are swapped for their cut-away recipe. Extras: b (building
-//        index), pi (prop index), heads (signal lamps: [{ x, y, z, node, edge }]), xing (crossing posts).
-//   makeStatic(recipe) -> GBuf    anchor (.ax, .ay) = the item's ground point; z = true height above it
-//   staticLights(M, cx, cy) -> [{ x, y, z, r, col: [0..1 x3], k, kind, night }]   the lights of statics
-//        anchored in the chunk (street lights, lit windows, shopfronts, neon, signs, fires, runway lights)
-// M is the CityMap from shared/map.js generateCity(seed) or its structured clone (same fields, no methods).
-// Deterministic: every choice is hashed from positions and indices. The index over the whole map is built
-// once per M (a WeakMap); the worker caches sprites by key (identical keys = identical sprites).
+// Art v2 in the game: the static world of a chunk as G-buffer sprites (docs/art-v2/GAME-RENDERER.md, "Statics"):
+// the buildings (art2 makeBuilding by kind, prefab, district and wealth; their roofs, rooftop kits and gardens; a
+// cut-away variant for walk-ins), the lots' dressing, every map.props kind (street furniture, lights, signs, trees and
+// plants by biome and district: flora.js), signals, the decks, the rail's furniture and the set pieces.
+//   staticItems(M, cx, cy, opt) -> [{ key, recipe, x, y, z0, ext: [left, up, right, down], b, pi, heads, xing }]:
+//        every static whose screen rectangle can overlap chunk (cx, cy), sorted by ground y (opt.cutaway: a walk-in's
+//        cut-away); makeStatic(recipe) -> GBuf (anchor = the ground point, z = height); staticLights(M, cx, cy).
+// Deterministic: every choice is hashed from positions and indices; the index is built once per M (a WeakMap), the
+// worker caches sprites by key.
 import { GBuf, hash, mulberry32, bayer, vnoise, F_GROUND, F_WATER, F_NOCAST, F_WET, F_LEAF, F_GLASS, F_THIN } from '../gbuf.js';
 import { MAT, ramp, LIGHT } from '../palette.js';
 import { makeBuilding, buildingH, roofDeckZ, signLift, unstackSigns, plaqueBox } from '../buildings.js';
@@ -766,16 +741,9 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
   if (spec.garden || spec.roofMat === 'green') gardenKit(L, A, w, d, spec);
   return { kit: L.out, pads: L.pads };
 }
-// A roof garden (the owner, 2026-10-17: "rooftop gardens would be in raised garden beds with things growing in them or
-// pretty flowers or bushes or small trees and clearly a rooftop garden instead of what kind of looks like a random patch
-// of grass growing in the wrong place"): raised beds (props-garden.js roofBed) round what already stands on the roof -
-// its service kit and their walkway pads keep their places, nothing is planted over them - in one of a few plans: beds
-// along the parapets round a terrace, rows of beds like an allotment, beds framing a court, a grid of square beds; the
-// deck between them is the walkways (buildings.js: a 'green' roof's deck is the garden's paving with a gravel strip
-// along the parapets). What grows varies bed by bed with the garden's theme (flowers, a kitchen garden, a formal one, a
-// mix); then the furniture where there's room: a table under an umbrella or a pergola, a bench, small trees in big
-// planters, a shed, a water butt and a compost bin by the vegetables, festoon lights or lanterns. Scaled to the roof
-// (a small one: a few beds and a bench), seeded by the building - never Math.random - so it comes out the same.
+// A roof garden (the owner, 10-17: "clearly a rooftop garden", not a patch of lawn): raised beds (props-garden.js
+// roofBed) round the roof's kit in one of a few plans (beds along the parapets, allotment rows, a framed court, a grid),
+// what grows by the garden's theme, then the furniture where there's room; scaled to the roof, seeded by the building.
 const G_BOX = { brick: ['brick', 'timber', 'corten', 'sleeper', 'grey'], stone: ['stone', 'timber', 'concrete', 'sage'], glass: ['concrete', 'corten', 'char', 'timber'], concrete: ['concrete', 'char', 'corten', 'timber'] };
 const G_BOXES = ['timber', 'grey', 'sage', 'sleeper', 'corten', 'concrete', 'char', 'brick'];
 const G_THEME = {
@@ -2022,17 +1990,20 @@ function makeFestoon(r) {
 // crownshaft, warm bulbs along it every few px, only the turns on the camera's side (the trunk hides the rest). Drawn
 // over the palm (the item sits 1 px south of it); h: the trunk's height, w: the spiral's half width (px)
 function makePalmLights(r) {
-  const h = r.h, w = r.w, G = new GBuf(w * 2 + 8, h + 14); G.ax = w + 4; G.ay = h + 8;
+  const h = r.h, w = r.w, G = new GBuf(w * 2 + 22, h + 16); G.ax = w + 11; G.ay = h + 8;
   const P = (x, y, z, c, em) => { const px = Math.round(G.ax + x), py = Math.round(G.ay - 1 + y - z); if (G.inside(px, py)) G.put(px, py, c, [0, 0.3, 0.95], z, em, F_NOCAST); };
-  const pitch = 9, cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  const cols = [[255, 214, 140], [255, 190, 110], [255, 232, 170]];
+  const bulb = (X, Y, z, i) => { const c = cols[i % 3], e = [c[0], c[1], c[2], 255]; P(X, Y, z, c, e); P(X + 1, Y, z, c, e); P(X, Y, z + 1, c, e); P(X + 1, Y, z + 1, c, e); };
   let n = 0;
-  for (let z = 10; z < h; z += 0.5) {
-    const ph = (z / pitch) * TAU, cx = Math.cos(ph), sy = Math.sin(ph), wz = w * (1 - (z / h) * 0.25);
-    if (sy < -0.15) continue;   // (behind the trunk)
-    const X = cx * wz, Y = sy * wz * 0.4 + 0.5;
+  for (let z = 8; z < h; z += 0.5) {
+    const ph = (z / 7) * TAU, cx = Math.cos(ph), sy = Math.sin(ph), wz = w * (1 - (z / h) * 0.2);
+    if (sy < -0.1) continue;   // (behind the trunk)
+    const X = cx * wz - 0.5, Y = sy * wz * 0.4 + 0.5;
     P(X, Y, z, [44, 40, 36], null);
-    if (Math.round(z * 2) % 9 === 0) { const c = cols[n++ % 3]; P(X, Y, z + 0.5, c, [c[0], c[1], c[2], 255]); P(X + (cx > 0 ? -1 : 1), Y, z + 0.5, c, [c[0], c[1], c[2], 200]); }
+    if (Math.round(z * 2) % 5 === 0) bulb(X, Y, z, n++);
   }
+  // (strands looped round the crownshaft's foot: a ring of bulbs under the fronds)
+  for (let k = 0; k < 12; k++) { const a = (k / 12) * TAU, sy = Math.sin(a); if (sy < -0.2) continue; bulb(Math.cos(a) * (w + 5) - 0.5, sy * (w + 5) * 0.4 + 0.5, h + 1 - (k % 2), k); }
   return G;
 }
 // a beach towel laid on the sand
@@ -2389,7 +2360,7 @@ function propItems(c, p, pi, I) {
     put(I, fitem(`f:${sp}:${v}:${k}`, sp, 1000 + v * 37 + sp.length * 7, x, y, k, { pi }, tl !== T.SIDEWALK && tl !== T.PLAZA));
     // (p.lit: fairy lights wound up an upright palm's trunk - the nightlife districts' boulevards, SC4-B)
     const LH = p.lit && LIT_PALMS[sp];
-    if (LH) { const h = Math.round(LH * k), w = Math.max(3, Math.round(3 * Math.pow(k, 0.8))); put(I, { key: `plit:${h}:${w}`, recipe: { t: 'palmlights', h, w }, x, y: y + 1, ext: [w + 4, h + 10, w + 4, 6], pi }); lightAt(I, x, y + 4, Math.round(h * 0.45), 120, [1, 0.8, 0.5], 1.1, 'window'); }
+    if (LH) { const h = Math.round(LH * k), w = Math.max(4, Math.round(4 * Math.pow(k, 0.8))); put(I, { key: `plit:${h}:${w}`, recipe: { t: 'palmlights', h, w }, x, y: y + 1, ext: [w + 12, h + 12, w + 12, 8], pi }); lightAt(I, x, y + 4, Math.round(h * 0.5), 130, [1, 0.8, 0.5], 1.4, 'window'); }
     return;
   }
   switch (t) {
@@ -2635,7 +2606,7 @@ function propItems(c, p, pi, I) {
     case 'mstall': { const k = (p.v || 0) % 4, col = ['#c8343a', '#2f7a5c', '#2f6ab0', '#e8a030'][(p.c || 0) % 4], hd = qa(p.a || 0, 4); V(`mstall:${k}:${col}:${hd.toFixed(2)}`, 'marketStall', [k, col], hd); lightAt(I, x, y, 34, 110, [1, 0.78, 0.48], 1.1, 'lamp'); return; }   // (the bulb under its canopy, after dark)
     case 'seaarch': V(`sarch:${p.w || 150}:${qa(p.a || 0, 8).toFixed(2)}`, 'seaArch', [p.w || 150, p.d || 56, p.h || 96, 3], qa(p.a || 0, 8)); return;
     case 'mstone': { const w = p.w || 16, d = p.d || 9, h = p.h || 48, sd = (p.v || 0) % 8 + 1, ln = Math.round((p.lean || 0) * 20) / 20; V(`mst:${w}:${d}:${h}:${sd}:${ln}:${qa(p.a || 0, 8).toFixed(2)}`, 'standingStone', [w, d, h, sd, ln], qa(p.a || 0, 8)); return; }
-    case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 });
+    case 'ferris': V('ferris:0', 'ferrisWheel', [0.7, 0], 0, null, { z0: p.z ?? 4 }); for (const [z, r, c] of [[140, 260, [1, 0.45, 0.85]], [240, 170, [0.5, 0.8, 1]], [50, 170, [1, 0.8, 0.5]]]) lightAt(I, x, y + 2, z, r, c, 1.3, 'neon');   // (lit after dark: the craft pass)
     case 'rods': V(`rods:${qa(p.a || 0, 4).toFixed(2)}`, 'rodHolder', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
     case 'fishtable': V(`ftbl:${qa(p.a || 0, 4).toFixed(2)}`, 'fishTable', [], qa(p.a || 0, 4), null, { z0: p.z ?? 4 }); return;
     case 'creekrail': { const len = Math.max(40, Math.round((p.len || 120) / 8) * 8), hd = qa(p.a || 0, 32); V(`crail:${len}:${hd.toFixed(3)}`, 'creekRail', [len], hd, null, p.z ? { z0: p.z } : null); return; }

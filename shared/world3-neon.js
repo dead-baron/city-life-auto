@@ -440,6 +440,8 @@ function blossomPlaza(K, x, y, w, h, out) {
   for (let k = 0; k < 4; k++) { const [ax, ay] = posts[k], [bx, by] = posts[(k + 1) % 4]; fest(K, ax, ay, bx - ax, by - ay, 62, 'pole', 'pole'); }
   // people: a couple on each bench by the fountain, friends at the cross walk's ends
   for (const [dx, dy, q] of [[-6, -1.8, 2], [6, -1.8, 2], [-6, 5.4, 2], [6, 5.4, 2], [-13, 0.4, 4], [13, 0.4, 3], [0, -8, 4]]) hang(K, cx + dx, cy + dy, q);
+  // tables under the ring of lights, between the benches and the basin: people at them
+  for (const [dx, dy] of [[-3, -3.3], [3, -3.3], [-3, 3.7], [3, 3.7]]) { prop('cafetable', cx + dx, cy + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((cx + dx) * TILE), y: Math.round((cy + dy) * TILE) }); }
   // the billboard: the eye-patch woman at the plaza's north edge, facing the plaza and the boulevard
   prop('picboard', cx, y + 1.5, 0, { pic: 'lucy', z: 60, col: [255, 80, 200] });
   K.m.squares ||= []; K.m.squares.push({ x: Math.round(cx) - 7, y: Math.round(cy) - 6, w: 14, h: 12, name: 'Blossom Plaza' });
@@ -536,7 +538,7 @@ function eastHeadland(K, out, lit) {
   // strip just north of the tower stays plain paving: its height stands over it)
   shorePromenade(K, x0, 3240, 2149, out, 12);
   let kk = 0;
-  const lb = K.row(x0, 3236, 2104, 2128, (x, room) => { if (room < 8) return room >= 1 ? { gap: room, kind: 'plaza' } : null; const w = Math.min(room, kk === 0 ? 24 : 18); const L = kk++ === 0 ? lit(x, 2128, w, { name: 'Bayview Lounge', store: 'bar', neon: 'lounge', floors: 2, garden: true }) : lit(x, 2128, w, { name: 'Seaglass Grill', store: 'diner', neon: 'diner', blade: 'GRILL', floors: 2, garden: true }); return { w, depth: 99, ...L }; });
+  const lb = K.row(x0, 3236, 2104, 2128, (x, room) => { if (room < 8) return room >= 1 ? { gap: room, kind: 'plaza' } : null; const w = Math.min(room, kk === 0 ? 24 : 18); const L = lit(x, 2128, w, [{ name: 'Bayview Lounge', store: 'bar', neon: 'lounge', floors: 2, garden: true }, { name: 'Seaglass Grill', store: 'diner', neon: 'diner', blade: 'GRILL', floors: 2, garden: true }, { name: 'Pier 3 Oyster Bar', store: 'diner', neon: 'bar', blade: 'OYSTERS', floors: 2, garden: true }][Math.min(2, kk++)]); return { w, depth: 99, ...L }; });   // (each its own name: the row named the rest of it Seaglass Grill)
   // (the lounges' terrace: their tables in a row in front of them, the lights over them in two rows of short spans -
   // not one string the length of the terrace)
   terrace(K, x0 + 2, 2131.5, Math.floor((3232 - x0 - 2) / 5), { step: 5, lights: true, menu: true, h: 46 });
@@ -553,24 +555,25 @@ function afterdarkGarden(K, x0, y0, x1, y1, out) {
   const { prop } = K;
   // (the lawn the rows round it left: grass, no building on it - the rows' bands are taken, so not K.allFree)
   for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { const i = y * K.m.w + x; if (K.m.tiles[i] !== T.GRASS || K.m.bld[i] >= 0) return; }
-  K.fill(x0, y0, x1 - x0, y1 - y0, T.GRASS); K.fill(x0 + 2, y0 + 2, x1 - x0 - 4, y1 - y0 - 4, T.PLAZA);
+  const yC = y0 + 22, mx = Math.round((x0 + x1) / 2);   // (the court down to yC; the lawn behind it to the club's back)
+  K.fill(x0, y0, x1 - x0, y1 - y0, T.GRASS); K.fill(x0 + 2, y0 + 2, x1 - x0 - 4, yC - y0 - 2, T.PLAZA);
   K.take(x0, y0, x1 - x0, y1 - y0);
-  // the edge: flowering trees in its corners, hedges (flower boxes) along the sides, the gaps the ways in
-  for (const [tx, ty] of [[x0 + 1, y0 + 1], [x1 - 1, y0 + 1], [x0 + 1, y1 - 1], [x1 - 1, y1 - 1]]) prop('tree_a', tx, ty, 10, { sp: 'cherry', k: 1.2 });
-  const mx = Math.round((x0 + x1) / 2);
-  for (let x = x0 + 4; x < x1 - 3; x += 3) if (Math.abs(x - mx) > 3) { prop('planter_fl', x, y0 + 1, 0); prop('planter_fl', x, y1 - 1, 0); }
-  for (let y = y0 + 4; y < y1 - 3; y += 3) { prop('planter_fl', x0 + 1, y, 0); prop('planter_fl', x1 - 1, y, 0); }
-  // the bar at the head of the court
-  K.building({ x: mx - 5, y: y0 + 2, w: 10, h: 5, arch: 'beachbar', key: 'beachbar', name: 'Garden Bar', poi: { kind: 'coffee', label: 'The Garden at Afterdark' }, whole: true });
-  // the long tables: three rows of four, people at them; the lights over them post to post
-  const ty0 = y0 + 10, cols = 4, cw = (x1 - x0 - 8) / cols;
-  for (let r = 0; r < 3; r++) for (let c = 0; c < cols; c++) {
-    const tx = x0 + 4 + cw * (c + 0.5), ty = ty0 + r * 5;
+  // the bar at the head of the court, standing tables in front of it with people round them
+  K.buildingOn({ x: mx - 5, y: y0 + 2, w: 10, h: 5, arch: 'beachbar', key: 'beachbar', name: 'Garden Bar', poi: { kind: 'coffee', label: 'The Garden at Afterdark' }, whole: true });
+  for (const dx of [-9, -3.5, 3.5, 9]) { prop('cafetable', mx + dx, y0 + 9, 0); hang(K, mx + dx, y0 + 9.2, 3); }
+  // the long tables: three rows of five under the lights strung post to post, people at them
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 5; c++) {
+    const tx = x0 + 5 + c * 7.5, ty = y0 + 12 + r * 3.6;
     prop('picnic', tx, ty, 0);
     (K.m.terraceSpots ||= []).push({ x: Math.round(tx * TILE), y: Math.round(ty * TILE), seat: 16 });
   }
-  canopy(K, x0 + 3, ty0 - 2, x1 - 3, ty0 + 12, { gap: 2.5, span: 8, h: 54 });
-  for (const [dx, q] of [[-7, 4], [7, 3]]) hang(K, mx + dx, y0 + 8, q);
+  canopy(K, x0 + 3, y0 + 10.4, x1 - 3, y0 + 20.6, { gap: 2.5, span: 8.5, h: 54 });
+  // its edge: flower boxes along the court's sides, the gaps the ways in; the lawn behind with cherry trees in a row
+  // and benches facing the court
+  for (let x = x0 + 4; x < x1 - 3; x += 3) if (Math.abs(x - mx) > 3) prop('planter_fl', x, y0 + 1, 0);
+  for (let y = y0 + 4; y < yC - 1; y += 3) { prop('planter_fl', x0 + 1, y, 0); prop('planter_fl', x1 - 1, y, 0); }
+  for (let x = x0 + 3; x < x1 - 2; x += 6) prop('tree_a', x, y1 - 2.5, 10, { sp: 'cherry', k: 1.2 });
+  for (let x = x0 + 6; x < x1 - 4; x += 6) { prop('bench_m', x, yC + 1.6, 0, { a: Math.PI }); if (x % 12 === 0) hang(K, x, yC + 2.6, 2); }
   for (const xx of [x0 + 3, x1 - 3]) prop('lamp', xx, y0 + 3, 0);
   (out.places ||= []).push({ name: 'The Garden at Afterdark', x0, y0, x1, y1 });
 }
@@ -662,8 +665,11 @@ function harborLights(K, x0, out) {
   prop('textsign', 3501, 2227, 0, { text: 'HARBOR LIGHTS', bg: '#16121e', fg: [255, 110, 200], z: 96, sx: 2, lit: true });
   canopy(K, 3485, 2234, 3517, 2243, { gap: 3, span: 8, h: 58 });
   for (let y = 2233; y < 2243; y += 3) { prop('planter_fl', 3483, y, 0); prop('planter_fl', 3519, y, 0); }
-  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2238 * TILE), name: 'Harbor Lights' });
-  for (const [x, y, q] of [[3489, 2241, 4], [3513, 2241, 5], [3497, 2243, 3]]) hang(K, x, y, q);
+  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2235.6 * TILE), name: 'Harbor Lights' });
+  for (const [x, y, q] of [[3491, 2235.2, 4], [3511, 2235.2, 5], [3501, 2243.2, 3]]) hang(K, x, y, q);
+  // the seats at the back of the crowd: rows of benches facing the stage, an aisle down the middle; a cart either side
+  for (const y of [2238.6, 2241.4]) for (const x of [3489, 3494, 3508, 3513]) prop('bench_m', x, y, 0, { a: Math.PI });
+  prop('foodcart', 3485.5, 2236, 14); prop('foodcart', 3516.5, 2236, 14);
   // the night market: the stalls facing each other across the aisle, the lanterns across it, the gates and the sign
   {
     const yN = 2249.2, yS2 = 2256.8;
@@ -858,13 +864,16 @@ function dressing(K, out, poi0) {
   const yN = NY.blvd - EXT.blvd + 1.2, yS = NY.blvd + EXT.blvd - 1.2, FX = (PLAZA[0] + PLAZA[1]) / 2;
   const junction = (x, d) => [NX.parkW, NX.parkE, NX.civic, NX.bridgeW, NX.bridgeE].some((c) => Math.abs(x - c) < d);
   let lit = 0;
+  // (a lamp where the pavement has none within five tiles: the rhythm filled in, not a second row of poles)
+  const lampNear = (x, y) => m.lamps.some((l) => Math.abs(l.x - x * TILE) < 5 * TILE && Math.abs(l.y - y * TILE) < 2 * TILE);
+  const lamp = (x, y) => { if (!lampNear(x, y)) prop('lamp', x, y, 0); };
   for (let x = NX.westside + 10; x < 3410; x += 8) {
     if (junction(x, 10) || !onWalk(x, yN)) continue;
     prop('palm_a', x + 0.5, yN, 10, { sp: 'royal', k: 1.15, lit: 1 }); lit++;
-    if (!junction(x + 4, 9) && onWalk(x + 4, yN - 0.4)) prop('lamp', x + 4.5, yN - 0.4, 0);   // (a lamp between each two palms)
+    if (!junction(x + 4, 9) && onWalk(x + 4, yN - 0.4)) lamp(x + 4.5, yN - 0.4);   // (a lamp between each two palms)
   }
   // the south pavement: a lamp every eight tiles, kept off the junctions and the lantern walkway's mouth
-  for (let x = NX.westside + 12; x < 3410; x += 8) if (!junction(x, 9) && Math.abs(x - 3068) > 4 && onWalk(x, yS + 0.4)) prop('lamp', x + 0.5, yS + 0.4, 0);
+  for (let x = NX.westside + 12; x < 3410; x += 8) if (!junction(x, 9) && Math.abs(x - 3068) > 4 && onWalk(x, yS + 0.4)) lamp(x + 0.5, yS + 0.4);
   // the median: royal palms, lit, clear of the junctions (where it stops for the turns) and of the fountain
   for (let x = NX.westside + 14; x < 3408; x += 9) {
     if (junction(x, 14) || Math.abs(x + 0.5 - FX) < 7) continue;
