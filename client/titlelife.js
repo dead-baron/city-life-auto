@@ -4,10 +4,13 @@
 // Behind everything on the title, in the skyline's own pixels (its art pixel: the size the CSS draws the skyline at,
 // 2-4 screen px), each piece on its own random clock - nothing you could count a beat in:
 //   the stars        a few faint ones in the upper sky, one at a time dimming a moment and coming back
-//   the clouds       one or two thin bands, faintly lit by the city from below, drifting a pixel at a time
-//   the windows      in the skyline's towers, one at a time going dark or lighting up (each copy of the skyline its own)
+//   the clouds       a few full pixel clouds at two depths (the far ones smaller, fainter and slower), lit faintly
+//                    from below by the city, drifting across and round again
+//   the windows      in the skyline's towers, one at a time going dark or lighting up (each copy of the skyline its own);
+//                    the antennas' red lights blinking
 //   the street       now and then a car's headlights (or taillights) along the foot of the towers
-//   the searchlight  now and then a slow sweep across the sky from a rooftop, then gone
+//   the searchlight  now and then a slow sweep from a rooftop: a cone brightest at its foot, fading to nothing well
+//                    below the top, soft-edged in dithered steps, a brighter line down its middle, its lamp on the roof
 //   the aircraft     now and then a helicopter (a blinking red light, a strobe, a faint searchlight) or a plane high
 //                    over the city, crossing slowly
 // Paused while the tab is hidden or the title isn't showing; reduced motion: the stars alone, still. One small module,
@@ -18,7 +21,7 @@
 import { skyLayout } from './titlescreen.js';
 
 // the game's palette (client/style.css tokens): the sky's pieces in the night's own colours
-const P = { star: [243, 234, 210], starB: [154, 210, 255], gold: '#e2bd57', cloud: [46, 62, 108], glow: [92, 64, 104], head: [255, 241, 192], tail: [232, 67, 75], ink: '#1b2340', hi: '#33416e', rotor: '#3a4870', red: '#ff6b5a', green: '#6cd06c', white: '#f3ead2', beam: [226, 236, 255] };
+const P = { star: [243, 234, 210], starB: [154, 210, 255], gold: '#e2bd57', beacon: '#ff5a4a', head: [255, 241, 192], tail: [232, 67, 75], ink: '#1b2340', hi: '#33416e', rotor: '#3a4870', red: '#ff6b5a', green: '#6cd06c', white: '#f3ead2', beam: [226, 236, 255] };
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
 const R = Math.random, between = (a, b) => a + R() * (b - a);
 
@@ -75,7 +78,7 @@ function build() {
   if (reduced()) return;
   windows();
   beam();
-  cloud(0); if (G.aw > 260) cloud(1);
+  // (no clouds: the owner, 11-14 - "Clouds on the menu don't look good, let's just leave out clouds for now"; cloud() kept for later)
   after(between(6000, 20000), function air(on) { if (on) aircraft(); after(between(40000, 110000), air); });
   after(between(4000, 14000), function car(on) { if (on) street(); after(between(9000, 30000), car); });
   after(between(12000, 30000), function sweep(on) { if (on) beamSweep(); after(between(25000, 70000), sweep); });
@@ -121,11 +124,22 @@ function windows() {
         if (j && L.wins[i + 1] !== L.wins[k * 4 + 1]) break;   // (the same floor)
         const key = tile * 100000 + (k + j), now = city.state.has(key) ? city.state.get(key) : !!was, lit = !now;
         city.state.set(key, lit);
-        g.fillStyle = lit ? P.gold : L.cols[ci];
+        g.fillStyle = lit ? L.lit[ci] : L.cols[ci];
         g.fillRect(tile * L.w + wx, wy, 1, 2);
       }
     }
     after(between(600, 2800), tw);
+  });
+  // the antennas' red lights: on a moment, off a while, each copy of the skyline a little out of step
+  const B = L.beacons || [];
+  let on = false;
+  after(400, function blink(show) {
+    on = !on;
+    if (show) for (let t = 0; t < G.tiles; t++) for (let k = 0; k < B.length; k += 2) {
+      const x = t * L.w + B[k], y = B[k + 1];
+      if ((t + k / 2) % 2 === (on ? 0 : 1)) { g.fillStyle = P.beacon; g.fillRect(x, y, 1, 1); } else g.clearRect(x, y, 1, 1);
+    }
+    after(on ? 500 : 1100, blink);
   });
 }
 function street() {
@@ -149,53 +163,102 @@ function street() {
 }
 
 // ---- the searchlight: a slow sweep from a rooftop, on a canvas of its own, drawn a dozen times a second -----------------------
+// The cone (the owner, 11-14: "more detailed ... a gradient and the light should fade off before reaching the top"): its
+// light falls off along it to nothing well below the top of the screen and across it to its soft edges, a brighter line
+// down its middle - in the art's own pixels, the gradient set in four steps through an ordered dither; its lamp a bright
+// point on the roof it stands on.
 let beamC = null;
 function beam() { beamC = canvas(G.aw, G.ah, `width:${G.aw * G.s}px;height:${G.ah * G.s}px`); }
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 function beamSweep() {
   if (!beamC) return;
-  const g = beamC.getContext('2d'), bx = Math.round(G.aw * between(0.12, 0.88)), by = G.skyTop + 2, len = G.ah * 1.4;
-  const a0 = between(-0.55, -0.15) * (R() < 0.5 ? 1 : -1), a1 = -a0 * between(0.6, 1.1), dur = between(8000, 14000);
-  let t0 = 0, last = -1;
+  // its roof: one of the tallest in sight
+  const L = G.L, rs = [];
+  for (let t = 0; t < G.tiles; t++) for (let k = 0; k < (L.roofs || []).length; k += 2) {
+    const x = Math.round((G.left + (t * L.w + L.roofs[k]) * G.s) / G.s), y = Math.round((G.H - G.up - (L.h - L.roofs[k + 1]) * G.s) / G.s);
+    if (x > 8 && x < G.aw - 8) rs.push([x, y]);
+  }
+  rs.sort((p, q) => p[1] - q[1]);
+  const pick = rs.length ? rs[(R() * Math.min(4, rs.length)) | 0] : [Math.round(G.aw * between(0.15, 0.85)), G.skyTop + 2];
+  const g = beamC.getContext('2d'), bx = pick[0], by = pick[1] - 1, len = Math.max(30, by * 0.62), half = 0.15;
+  const a0 = between(0.25, 0.55) * (R() < 0.5 ? 1 : -1), a1 = -a0 * between(0.5, 1), dur = between(16000, 24000);
+  const C = P.beam, steps = [0, 0.08, 0.16, 0.27, 0.4];
+  let t0 = 0, last = -1, box = null;
   const step = (now) => {
     if (!t0) t0 = now;
     const p = Math.min(1, (now - t0) / dur), f = Math.floor((now - t0) / 80);
     if (f !== last) {
       last = f;
-      const e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p), a = a0 + (a1 - a0) * e, fade = Math.min(1, p * 6, (1 - p) * 6), half = 0.035;
-      g.clearRect(0, 0, beamC.width, beamC.height);
-      const grad = g.createLinearGradient(bx, by, bx + Math.sin(a) * len, by - Math.cos(a) * len);
-      grad.addColorStop(0, rgba(P.beam, 0.075 * fade)); grad.addColorStop(0.6, rgba(P.beam, 0.03 * fade)); grad.addColorStop(1, rgba(P.beam, 0));
-      g.fillStyle = grad;
-      g.beginPath(); g.moveTo(bx, by);
-      g.lineTo(bx + Math.sin(a - half) * len, by - Math.cos(a - half) * len); g.lineTo(bx + Math.sin(a + half) * len, by - Math.cos(a + half) * len);
-      g.closePath(); g.fill();
+      const e = p < 0.5 ? 2 * p * p : 1 - 2 * (1 - p) * (1 - p), a = a0 + (a1 - a0) * e, fade = Math.min(1, p * 6, (1 - p) * 6);
+      const dx = Math.sin(a), dy = -Math.cos(a), tipX = bx + dx * len, tipY = by + dy * len, wid = len * Math.tan(half) + 2;
+      if (box) g.clearRect(box[0], box[1], box[2], box[3]);
+      const x0 = Math.max(0, Math.floor(Math.min(bx, tipX) - wid)), x1 = Math.min(beamC.width, Math.ceil(Math.max(bx, tipX) + wid));
+      const y0 = Math.max(0, Math.floor(tipY - wid)), y1 = Math.min(beamC.height, by + 3);
+      box = [x0, y0, x1 - x0, y1 - y0];
+      if (box[2] <= 0 || box[3] <= 0) { box = null; } else {
+        const id = g.createImageData(box[2], box[3]), o = id.data;
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+          const rx = x + 0.5 - bx, ry = y + 0.5 - by, along = rx * dx + ry * dy;
+          if (along < 0 || along > len) continue;
+          const t = along / len, across = Math.abs(rx * dy - ry * dx), w = t * len * Math.tan(half) + 0.8, u = across / w;
+          if (u >= 1) continue;
+          let v = 0.3 * (1 - t) ** 1.4 * (1 - u * u) * (0.55 + 0.45 * (1 - u));
+          if (across < 0.9) v += 0.14 * (1 - t) ** 1.3;   // (the brighter line down its middle)
+          v *= fade;
+          // four steps of it, the dither between them (the art's own pixels)
+          const lv = Math.min(4, Math.floor(v / 0.075 + BAYER[(y & 3) * 4 + (x & 3)] / 16));
+          if (!lv) continue;
+          const j = ((y - y0) * box[2] + (x - x0)) * 4;
+          o[j] = C[0]; o[j + 1] = C[1]; o[j + 2] = C[2]; o[j + 3] = Math.round(steps[lv] * 255);
+        }
+        g.putImageData(id, x0, y0);
+        // its lamp on the roof
+        g.fillStyle = rgba([255, 248, 220], 0.95 * fade); g.fillRect(bx - 1, by, 2, 1);
+        g.fillStyle = rgba(C, 0.35 * fade); g.fillRect(bx - 2, by, 1, 1); g.fillRect(bx + 1, by, 1, 1); g.fillRect(bx - 1, by - 1, 2, 1);
+      }
     }
     if (p < 1 && shown()) requestAnimationFrame(step); else g.clearRect(0, 0, beamC.width, beamC.height);
   };
   requestAnimationFrame(step);
 }
 
-// ---- the clouds: thin bands lit from below by the city, drifting a pixel at a time --------------------------------------
+// ---- the clouds: full pixel clouds at two depths, lit faintly from below by the city, drifting across ---------------------
+// (the owner, 11-14: "make them look better and less thin and have them moving") - a flat-bottomed body under a few
+// round puffs, three tones: its top a touch lighter (the moon), the body, the underside warm with the city's glow; the
+// far ones (depth 0) smaller, fainter and slower, the near ones (1) bigger and quicker; off one side and round again.
+const CLOUD = [{ body: [58, 72, 116], top: [96, 112, 160], glow: [118, 84, 124], a: 0.5, w: [36, 56], h: [10, 14], ms: [650, 900] },
+  { body: [66, 82, 130], top: [112, 128, 176], glow: [138, 96, 132], a: 0.66, w: [64, 104], h: [15, 21], ms: [300, 420] }];
 function cloud(k, enter = false) {
   if (!G) return;
-  const w = Math.round(between(60, 120)), h = Math.round(between(4, 7)), c = canvas(w, h, ''), g = c.getContext('2d');
-  // a few long thin streaks, the ends broken into a dither, the lower edge warmer (the city's light)
-  for (let r = 0; r < h; r++) {
-    const span = w * (1 - Math.abs(r - h * 0.55) / h) * between(0.6, 1), x0 = Math.round(between(0, w - span));
-    for (let x = x0; x < x0 + span; x++) {
-      const edge = Math.min(x - x0, x0 + span - x);
-      if (edge < 6 && (x + r) % 2) continue;
-      g.fillStyle = rgba(r >= h - 2 ? P.glow : P.cloud, r >= h - 2 ? 0.32 : 0.38);
-      g.fillRect(x, r, 1, 1);
-    }
+  const D = CLOUD[k], w = Math.round(between(D.w[0], D.w[1])), h = Math.round(between(D.h[0], D.h[1])), c = canvas(w, h, ''), g = c.getContext('2d');
+  const puffs = [];
+  // (the puffs a dome, each overlapping the next, the middle ones biggest, reaching nearly to the top; under them a row
+  // of small lobes, so the underside is soft and bumpy - no straight base)
+  const n = Math.max(3, Math.round((w * 0.74) / (h * 0.55 * 1.25))), d = (w * 0.74) / n;
+  for (let i = 0; i < n; i++) { const r = Math.min(h * 0.62, Math.max(d * 0.62, h * (0.3 + 0.3 * Math.sin(Math.PI * (i + 0.5) / n)) * between(0.88, 1.1))); puffs.push([w * 0.13 + d * (i + 0.5), h - 2.6 - r * 0.75, r]); }
+  const m = n + 1, rb = Math.max(2, h * 0.26), db = (w * 0.66) / m;
+  for (let i = 0; i < m; i++) puffs.push([w * 0.17 + db * (i + 0.5), h - 1 - rb * between(0.9, 1.05), rb * between(0.9, 1.15)]);
+  const inside = (x, y) => {
+    if (y < 0 || y >= h || x < 0 || x >= w) return false;
+    const fx = x + 0.5, fy = y + 0.5;
+    for (const [px, py, r] of puffs) if ((fx - px) ** 2 + ((fy - py) * 1.1) ** 2 < r * r) return true;
+    return false;
+  };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (!inside(x, y)) continue;
+    // (its top rim catching the light, two px, dithered on the second; the underside warm with the city's glow)
+    const under = !inside(x, y + 1), under2 = !inside(x, y + 2), over = !inside(x, y - 1), over2 = !inside(x, y - 2);
+    const col = under || (under2 && (x + y) % 2) ? D.glow : over || (over2 && (x + y) % 2) ? D.top : D.body;
+    g.fillStyle = rgba(col, D.a); g.fillRect(x, y, 1, 1);
   }
-  const y = Math.round(between(G.skyTop * 0.12, G.skyTop * 0.62)), dir = R() < 0.6 ? 1 : -1;
-  const from = enter ? (dir > 0 ? -w : G.aw) : Math.round(between(-w * 0.5, G.aw - w * 0.5)), to = dir > 0 ? G.aw : -w, dist = Math.abs(to - from);
-  c.style.cssText = `top:${y * G.s}px;left:0;width:${w * G.s}px;height:${h * G.s}px`;
-  const a = c.animate([{ transform: `translateX(${from * G.s}px)` }, { transform: `translateX(${to * G.s}px)` }], { duration: dist * between(380, 620), easing: `steps(${Math.max(1, dist)}, end)`, fill: 'forwards' });
+  // (high in the sky, over the menu; the first ones start out to either side of the sign, not behind it)
+  const y = Math.round(k ? between(G.skyTop * 0.15, G.skyTop * 0.4) : between(G.skyTop * 0.05, G.skyTop * 0.25));
+  const from = enter ? -w : Math.round((R() < 0.5 ? between(0.02, 0.22) : between(0.66, 0.86)) * G.aw - w / 2), to = G.aw, dist = Math.abs(to - from);
+  c.style.cssText = `top:${y * G.s}px;left:0;width:${w * G.s}px;height:${h * G.s}px;z-index:${k}`;
+  const a = c.animate([{ transform: `translateX(${from * G.s}px)` }, { transform: `translateX(${to * G.s}px)` }], { duration: dist * between(D.ms[0], D.ms[1]), easing: `steps(${Math.max(1, dist)}, end)`, fill: 'forwards' });
   anims.push(a);
   if (!live) a.pause();
-  a.onfinish = () => { drop(a); c.remove(); after(between(4000, 30000), () => cloud(k, true)); };
+  a.onfinish = () => { drop(a); c.remove(); after(between(1000, 9000), () => cloud(k, true)); };
 }
 
 // ---- the aircraft: a helicopter or a plane, now and then, high over the city -------------------------------------------

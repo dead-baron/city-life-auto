@@ -24027,3 +24027,116 @@ row that finds it (tools/placementlint.mjs, test/placementlint.test.js).
 - The Camera's way-out test (test/wayout.test.js) follows the shot list's rework: the tour is a follow kind, gated with
   the follow scenes. And the Camera panel has its own close X in its header (the owner, 20:24: "Camera mode doesn't have
   an X button to close it"): the kit's close, on every device, handing the camera back; Esc and B as before.
+
+## 2026-11-14 - The touch prompt in the clear, no button on it, and room between the buttons
+The owner, on his phone upright at a house's door: "The UI button says LOOK when the popup says ACT, and it also looks
+like you're supposed to press the popup because it has a button in it, which is misleading if you're supposed to press the
+act button. Also the act or look button overlaps the other button so it's a little too close together" - and the card
+("ACT Look around Gu...") was under the BLOCK button, its words cut off.
+- **Why the card was under the buttons**: upright it hung from a fixed line under you and grew down, and the first goal's
+  line stayed in the low slot after it faded (invisible, still taking its room), pushing the card down onto the cluster.
+  Now upright the card stands on its foot: `client/touchslots.js` sets `--lo-b` above every button under it (BLOCK, ROLL,
+  FIRE) and `--lo-r` left of the columns up the edge (the weapon card, the vehicle button, C2, the switches); it grows up
+  toward you, never into the thumb's buttons, and sits by the cluster (right-aligned). The first goal's line leaves the
+  slot once its fade is done (`client/ftue.js` fadeLine). On its side the card was already clear (left of the arc).
+- **No button on the card on touch**: the gold ACT chip is gone from the prompt on touch - the ACT button itself says the
+  verb (LOOK, ENTER, TALK: touchicons.js actWord from the same words), so the card is only words and nothing on it looks
+  pressable. The chip was meant to go already (`.btn`), but hud.js asked whether the ACT button had a slot the moment the
+  prompt came, and pact only places it on the next frame - so the card kept an "ACT" chip beside a button saying LOOK
+  (and where it did work, the rule hid the whole card). Now ACT's chip always goes on touch and only the chip goes;
+  keyboard and pad keep their key tiles; a prompt no touch button does keeps its chip.
+- **Two lines at most, never cut in a word** (`client/notelog.js` fitPrompt, on each new prompt and when the screen
+  turns): the words as they are, else a size smaller (14 px), else cut after the last whole word that fits with an
+  ellipsis (the button's long press still says the whole prompt).
+- **Room between the buttons** (`client/touchslots.js` GEO): upright ACT over the stick and ROLL and BLOCK up the left of
+  the cluster over FIRE, re-spaced so every two buttons have 6 px or more between them and ACT 12 (its pulse ring stands
+  5 px out) - it was 2 px from ROLL; the vehicle button, C2, the weapon card and the switches above re-spaced the same way.
+  On its side C1 / C2 (they touched on a 740x360 phone) and the switches' row a little further apart. The sticks are
+  untouched. The switches and the weapon card may go down to 44 px on a 360-px phone (`MIN_SW`, the touch guideline's
+  44) so the cluster keeps its gaps as it scales down; the face buttons and C1 / C2 stay 48 or more.
+- On a 360-px phone upright the HUD's plate is a little narrower (the stars under the cash when both won't fit) so the
+  debug button beside the minimap no longer sits on it.
+- Tests: test/hudlayout.test.js - every two touch buttons 6 px apart (ACT 12) and the prompt's card as clear of every
+  one, no chip on it, its words whole on two lines, on the phones upright and on their sides; and a small phone upright
+  (360x740) checked for the cluster and the card. test/acticons.test.js (the chip goes on touch, only the chip).
+  Open: on a 360-px phone upright chat and the emotes (beside the move stick's ring) reach FIRE and AUTO - there's no
+  room between the ring and the middle; not changed here.
+- Proof (before / after at a door, upright 412x892, on its side 844x390, a 360x740 phone): the session's scratchpad
+  `hudprompt/owner/`.
+
+## 2026-11-14 - The logo's windows placed by hand; the phone's skyline back to its scale
+- **The logo's lit windows** (the owner, 19:30: "not centered and consistent ... polish that with more intention"):
+  placed by hand now, not computed - tools/neon_logo.py SKY_WINDOWS lists each building of the skyline with its walls
+  (art px) and the inner span its windows centre in (two px in from the walls it shows: the tube's inner px, then a px
+  of dark), and its block: the tall middle tower a 2 x 2, every other building two side by side, all 2 x 2 art px and
+  three px apart, each block centred exactly (sky_grid refuses one that can't be, and a building whose walls moved),
+  its top row four px under its own roof line (the eaves for the gabled ones). The right house's span stops where
+  "Life" covers it. Re-installed (sky.webp, unlit.webp) and the share card rebuilt.
+- **The title's city on a phone upright** (the owner: the menu polish's raise "scaled the buildings up ... it was cool
+  to see it so far away as a big city skyline"): back to its 2 px an art px (144 px tall) and only lifted - its foot
+  120 px over the screen's (was 288 px tall, 150 px up); client/titlelife.js reads the scale from the CSS, so its
+  windows, cars, aircraft, stars and clouds follow. test/menupolish.test.js.
+- Screenshots (a 6x close-up of the windows with each building's margins measured, the title upright): the session's
+  scratchpad `logo2/owner/windows3/`.
+
+## 2026-11-14 - The logo's windows: one on each end house, a light out on the tall tower
+The owner (19:40): "one window on the far left building and one on the far right building, and maybe one set of
+windows has 3 windows instead of 4 (still in the same grid)". SKY_WINDOWS: the two end houses one window each, centred
+exactly (the left house's wall a px in - its span now even; the right house's span to where "Life" covers it), and the
+tall tower's 2 x 2 keeps its places with its lower right window's lights out - an unlit pane, not a gap. Re-installed
+and the share card rebuilt. Close-up and the title upright: the session's scratchpad `logo2/owner/windows4/`.
+
+## 2026-11-14 - The title's backdrop: a bigger city far off, real clouds, a searchlight that fades
+The owner (19:45) on the title backdrop. client/titlescreen.js skyline() and client/titlelife.js:
+- **The city** (the skyline art, the same 320 x 72 at the same far-away scale): a hazier back row and a darker front
+  row; setbacks, stepped towers with a spire, a water tower on a roof, rooftop antennas whose red lights blink
+  (titlelife, each copy of the skyline a little out of step), a lit billboard or two, tiny neon strips by the street,
+  windows lit a floor at a time, more or less (irregular, still windows; they keep twinkling). No palm trees.
+  skyLayout() now also gives the antennas' tips and the tall roofs, and each row's lit colour.
+- **The clouds**: full pixel clouds - a dome of overlapping puffs on a soft base, three tones (a lighter top, the body,
+  an underside warm with the city's glow) - at two depths: the far ones smaller, fainter and about half as fast; they
+  drift across, a pixel at a time, and come round again.
+- **The searchlight**: a cone from a lamp on one of the tallest roofs in sight, brightest at its foot, its light falling
+  off along it to nothing well below the top of the screen and across it to soft edges, a brighter line down its
+  middle - in the art's own pixels, four steps through an ordered dither; it sweeps slowly (16-24 s).
+- Still paused with the title hidden or the tab asleep; reduced motion: the stars alone. docs/DECISIONS.md: the
+  backdrop's look. Before / after: the session's scratchpad `logo2/owner/backdrop/`.
+
+## 2026-11-14 - The title's clouds and searchlight, again; four lit windows on the tall tower
+- **The clouds** (the coordinator's review: they read as flat dark slabs): lighter, partly see-through, puffy tops with a
+  two-px rim catching the light, a slightly lighter body, the underside soft and bumpy (a row of small lobes, no
+  straight base) and warm with the city's glow; fewer - two on a phone, three on a wider screen - high in the sky, the
+  first ones starting out to either side of the sign rather than behind it.
+- **The searchlight** reads now: a wider cone (its half-angle 0.15), brighter at its rooftop lamp with a clear core line,
+  soft dithered edges, fading out about 60% of the way up.
+- **The logo's tall tower** has its four windows lit again (the owner, 20:05: the dark pane read as a black void); the
+  end houses keep their one centred window each. Re-installed, the share card rebuilt.
+- RESUME | PLAY over CHARACTER | SETTINGS was never broken: the captures had shown RESUME by style while it still had
+  its `hidden` class, so the page laid PLAY across the row. test/titlebuttons.test.js now measures the real layout in
+  headless Chromium - with and without RESUME, on a desktop, a phone upright and on its side.
+
+## 2026-11-14 - Dancing: one line when you start, not one per move
+The owner (the log full of "Dancing: the fist pump - move to stop", "Dancing: the sway - ..."): "We don't need all the
+emotes in the log like this". server/systems/dance.js now says so once, when you start dancing ("Dancing - press again
+for the next move, move to stop"); switching moves from the button or the picker's Dances tab says nothing, and running
+out of moves stops quietly.
+
+## 2026-11-14 - The debug menu doesn't ask for a password
+The owner: the debug button asked for a password, and pressing it again just worked. The server lets anyone in while
+testing (CLA_DEV_OPEN), but the page opened the old password prompt if the server's yes took over 2 s (a phone on a
+slow link). The prompt is no longer opened (client/main.js openDebug); a refusal is the server's own notice. At the beta
+the owner resets progress and turns the open mode off (CLA_DEV_OPEN=0): the debug menu for admins only.
+
+## 2026-11-14 - The Camera panel has a close X
+The owner: "Camera mode doesn't have an X button to close it." The shot-list panel's header gets the kit's close (.x,
+`cine-close`) on every device: it closes the panel and hands the camera back; Esc and the pad's B still close it.
+test/wayout.test.js checks it (and its stale tour expectation is updated to the shot-list rework).
+
+## 2026-11-14 - No clouds on the title
+The owner: "Clouds on the menu don't look good, let's just leave out clouds for now." client/titlelife.js no longer
+starts them (the drawing is kept for a later try); the stars, windows, car lights, searchlight and aircraft stay.
+
+## 2026-11-14 - The title's saves note clear of the Online frame
+The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
+held upright the card and the Online frame now stand a line higher, the note under them in its own room
+(client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).

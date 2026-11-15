@@ -33,6 +33,21 @@ export function clearLog() { log = []; save(); }
 export const PROMPT_KEEP = /\d+\s*s\b|\?|\bhold\b|\bagain\b/i;
 export function promptFades(p, armed = false) { return !armed && !PROMPT_KEEP.test(String(p || '')); }
 export function promptWords(p, pcr) { const t = String(p || ''), i = pcr > 0 ? t.lastIndexOf(' - ') : -1; return i > 0 ? t.slice(0, i) : t; }
+// On touch the prompt's card (#helpbox) is two lines at most, never cut in a word (the owner, 11-14: "Look around Gu" under
+// a button): its words as they are, else a size smaller, else cut after the last whole word that fits, with an ellipsis
+// (the button's long press still says the whole of it). el: the card, its words the last <span>; called as it changes.
+export function fitPrompt(el) {
+  const sp = el && el.lastElementChild;
+  el?.classList.remove('small');
+  if (!sp || sp.tagName !== 'SPAN') return;
+  const full = sp.dataset.full || sp.textContent;
+  sp.dataset.full = full; sp.textContent = full;
+  const over = () => sp.scrollHeight > sp.clientHeight + 1 || sp.scrollWidth > sp.clientWidth + 1;
+  if (!over()) return;
+  el.classList.add('small');
+  const words = full.split(/\s+/);
+  for (let n = words.length - 1; over() && n > 0; n--) sp.textContent = words.slice(0, n).join(' ').replace(/[\s,;:.(-]+$/, '') + '…';
+}
 // The one line the HUD shows of a note (UI-4: notes are one line, the whole of them in the Log): a short one as it is,
 // a long one its first sentence or clause - the server can name the line itself (world.notify's short)
 export const NOTE_LINE = 64;

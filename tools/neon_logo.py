@@ -619,6 +619,23 @@ def paint_faithful(src, thick=False, clean=False, sky=None):
 # ---- D3's skyline: rectangles on the art grid, his silhouette and size (2026-11-14, the owner: the traced blue city
 # outline was the most unclean part) - a gabled house each end, a tower, the stepped middle tower with its spire, a
 # gabled block; dark faces, a clean cyan tube round the silhouette (open along its foot), lit windows 2 x 2 art px ------
+# the skyline's lit windows, by hand (art px on the grid). Each building: its walls (the tube's columns: sky_grid checks
+# them), the inner span its windows are centred in - between the inner sides of the walls it shows, two px in from each
+# wall column (the tube is a px wide inside it, then a px of dark); where a neighbour's wall is the one you see, that
+# one - and its block: cols x rows of 2 x 2 windows, gap px apart both ways. Every block centres exactly (its inner
+# width less the block's width is even) and sits WIN_TOP under its own roof line (the eaves, for the gabled ones);
+# dark: (row, col) of a window with its lights out - drawn as an unlit pane, its place in the grid kept.
+WIN_DARK = (44, 56, 92)
+WIN, WIN_TOP = 2, 4
+SKY_WINDOWS = {
+    'hl': {'walls': (86, 98), 'inner': (88, 95), 'cols': 1, 'rows': 1, 'gap': 3},     # the left house: its wall, the tower's (97)
+    'tw': {'walls': (97, 113), 'inner': (99, 111), 'cols': 2, 'rows': 1, 'gap': 3},   # the tower
+    'md': {'walls': (118, 138), 'inner': (120, 136), 'cols': 2, 'rows': 2, 'gap': 3}, # the tall middle tower: its 2 x 2, all lit
+    'gb': {'walls': (137, 152), 'inner': (140, 150), 'cols': 2, 'rows': 1, 'gap': 3}, # the gabled block: the tall tower's wall (138), its own
+    'hr': {'walls': (151, 171), 'inner': (154, 163), 'cols': 1, 'rows': 1, 'gap': 3}, # the right house: the block's wall (152); "Life" covers it from 164
+}
+
+
 def sky_grid(src, letters, faces=True, windows=True):
     a = np.asarray(Image.open(os.path.join(src, FILES['sky'])).convert('RGBA'))
     ys, xs = np.nonzero(a[..., 3] >= 128)
@@ -636,7 +653,7 @@ def sky_grid(src, letters, faces=True, windows=True):
             fill[top - 1 - i, xa + 1 + i:xb - i] = True
         blocks.append((xa, xb, top, cols, rows))
     w = x1 - x0
-    hl = (x0, x0 + w * 16 // 100)                               # the house on the left
+    hl = (x0 + 1, x0 + w * 16 // 100)                           # the house on the left (its wall a px in: its one window centres exactly)
     tw = (hl[1] - 1, x0 + w * 33 // 100)                         # a tower
     md = (cx - w * 12 // 100, cx + w * 12 // 100)                # the middle tower
     gb = (md[1] - 1, x0 + w * 78 // 100)                         # the gabled block
@@ -656,30 +673,28 @@ def sky_grid(src, letters, faces=True, windows=True):
     for m in letters:
         clear |= m
     clear = dil(dil(clear))
-    # the lit windows (the owner, 18:45: the few he had - the tall tower's four, two or three on each of the others -
-    # only placed better): each building's own small block of them (cols x rows), the same 2 x 2 art px and the same
-    # 3 px apart everywhere, centred across what shows of that building (a letter may cover an end of it), its top row
-    # the same WIN_TOP under its roof line
-    WIN, WIN_GAP, WIN_TOP = 2, 3, 4
-    pitch = WIN + WIN_GAP
-    for xa, xb, top, cols, rows in blocks:
-        wy0 = top + WIN_TOP
-        band = ~clear[wy0:wy0 + (rows - 1) * pitch + WIN, xa:xb + 1].any(axis=0)
-        xs = np.nonzero(band)[0]
-        if not len(xs):
-            continue
-        va, vb = xa + xs.min(), xa + xs.max()
-        wx0 = va + (vb - va + 1 - (cols * pitch - WIN_GAP)) // 2
-        for r in range(rows):
-            for c in range(cols):
-                wy, wx = wy0 + r * pitch, wx0 + c * pitch
-                win[wy:wy + WIN, wx:wx + WIN] = True
+    # the lit windows, placed by hand (the owner, 19:30: "polish that with more intention"): SKY_WINDOWS, each
+    # building's windows centred exactly between the walls it shows, its top row WIN_TOP under its own roof line
+    names = ['hl', 'tw', 'md', 'gb', 'hr']
+    unlit = np.zeros((GH, GW), bool)
+    for name, (xa, xb, top, _, _) in zip(names, blocks):
+        W_ = SKY_WINDOWS[name]
+        assert W_['walls'] == (xa, xb), f'{name}: its walls moved ({xa}, {xb}): place its windows again'
+        ia, ib = W_['inner']
+        bw = W_['cols'] * WIN + (W_['cols'] - 1) * W_['gap']
+        assert (ib - ia + 1 - bw) % 2 == 0, f'{name}: its windows can\'t be centred exactly'
+        wx0, wy0 = ia + (ib - ia + 1 - bw) // 2, top + WIN_TOP
+        for r in range(W_['rows']):
+            for c in range(W_['cols']):
+                wy, wx = wy0 + r * (WIN + W_['gap']), wx0 + c * (WIN + W_['gap'])
+                (unlit if (r, c) in W_.get('dark', ()) else win)[wy:wy + WIN, wx:wx + WIN] = True
     L = Layer('sky', CYAN)
     if faces:
         L.put(fill & ~clear, TOWER, 0.0, None, mul(TOWER, 0.9))
     tube(L, edge & ~clear, CYAN, 1)
     if windows:
         L.put(win & ~dil(edge) & ~clear, WINDOW, 0.7, WINDOW, (60, 52, 40))
+        L.put(unlit & ~dil(edge) & ~clear, WIN_DARK, 0.0, None, mul(WIN_DARK, 0.8))
     L.a &= ~clear
     L.emi[clear] = 0
     return L

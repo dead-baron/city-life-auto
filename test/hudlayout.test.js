@@ -8,9 +8,35 @@
 // skipped when there's none - set CLA_CHROME to one).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { problems, scenarios, findChrome, measureAll, FLAGS, SIZES } from './hudpage.js';
+import { problems, scenarios, findChrome, measureAll, FLAGS, SIZES, STATES, TOUCH_STATES } from './hudpage.js';
 import { touchSlots } from '../shared/touchcontrols.js';
 
+// the clear space between two touch controls (px): discs by their circles, a box (the weapon card, the move stick's
+// zone, chat, the prompt's card) by its edges
+const GAP = 6, ACT_GAP = 12;
+const isDisc = (a) => (a.name.startsWith('tb.') && a.name !== 'tb.nextw') || a.name === 'stick-l';   // (the move stick's rest: its ring)
+function gapOf(a, b) {
+  const c = (q) => [(q.x0 + q.x1) / 2, (q.y0 + q.y1) / 2, (q.x1 - q.x0) / 2];
+  if (isDisc(a) && isDisc(b)) { const [ax, ay, ar] = c(a), [bx, by, br] = c(b); return Math.hypot(ax - bx, ay - by) - ar - br; }
+  if (isDisc(a) || isDisc(b)) { const [d, q] = isDisc(a) ? [a, b] : [b, a], [x, y, r] = c(d); return Math.hypot(x - Math.max(q.x0, Math.min(x, q.x1)), y - Math.max(q.y0, Math.min(y, q.y1))) - r; }
+  const dx = Math.max(a.x0 - b.x1, b.x0 - a.x1), dy = Math.max(a.y0 - b.y1, b.y0 - a.y1);
+  return dx < 0 && dy < 0 ? Math.max(dx, dy) : Math.hypot(Math.max(dx, 0), Math.max(dy, 0));
+}
+// the buttons apart and the prompt's card clear of them (ks: the touch controls measured - the buttons, the move stick's
+// ring, chat and the emotes); the move stick's ring only not under anything
+function spacing(r, ks) {
+  const out = [], { w, h, st } = r.sc, tag = `${w}x${h} ${st}`;
+  const need = (a, b) => (a.name === 'stick-l' || b.name === 'stick-l' ? 0 : a.name === 'tb.action' || b.name === 'tb.action' ? ACT_GAP : GAP);
+  for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) { const g = gapOf(a, b), n = need(a, b); if (g < n) out.push(`${tag}: ${a.name} ${g < 0 ? 'on' : Math.round(g) + ' px from'} ${b.name} (${n} at least)`); }
+  const pc = r.read.find((q) => q.name === 'prompt');
+  if (pc) {
+    for (const k of ks) { const g = gapOf({ ...pc, name: 'card' }, k), n = need({ name: 'card' }, k); if (g < n) out.push(`${tag}: the prompt's card ${g < 0 ? 'under' : Math.round(g) + ' px from'} ${k.name} (${pc.x0},${pc.y0}-${pc.x1},${pc.y1} vs ${k.x0},${k.y0}-${k.x1},${k.y1})`); }
+    // (nothing on it to press: the ACT button says the verb - no chip on the card; two lines at most - problems() 'lost')
+    if (pc.chip) out.push(`${tag}: a button chip on the prompt's card`);
+    if (pc.lost) out.push(`${tag}: the prompt's words cut (${pc.lines} lines: "${pc.words}")`);
+  }
+  return out;
+}
 test('the prompt, the notes, the job line, the cruiser hint and the bars are readable and clear of the buttons on every screen', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
   const all = await measureAll();
   assert.equal(all.length, scenarios().length, 'every scenario measured');
@@ -31,11 +57,11 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
   for (const r of all.filter((q) => q.sc.dev === 'touch')) {
     const { w, h, st } = r.sc, tag = `${w}x${h} ${st}`, ks = r.keep.filter((k) => k.name.startsWith('tb.') || k.name === 'stick-l' || k.name === 'talk' || k.name === 'emote'), tb = ks.filter((k) => k.name.startsWith('tb.'));
     const mid = { x0: w / 2 - w / 6, x1: w / 2 + w / 6, y0: h / 2 - h / 8, y1: h / 2 + h / 8 };
-    // (the buttons are discs since 11-03, as test/touchslots.test.js has them: two apart when their circles are - the weapon
-    // card and the move stick's zone boxes)
-    const disc = (a) => a.name.startsWith('tb.') && a.name !== 'tb.nextw';
-    const hit = (a, b) => (disc(a) && disc(b) ? Math.hypot((a.x0 + a.x1 - b.x0 - b.x1) / 2, (a.y0 + a.y1 - b.y0 - b.y1) / 2) < (a.x1 - a.x0 + b.x1 - b.x0) / 2 - 2 : on(a, b));
-    for (const [i, a] of ks.entries()) for (const b of ks.slice(i + 1)) if (hit(a, b)) ctl.push(`${tag}: ${a.name} on ${b.name}`);
+    // (the buttons are discs since 11-03, as test/touchslots.test.js has them - the weapon card and the move stick's zone
+    // boxes. The owner, 11-14: "the act or look button overlaps the other button so it's a little too close together":
+    // no two of them touch - GAP px of clear space between any two, ACT_GAP round ACT, whose pulse ring stands 5 px out -
+    // and the prompt's card as clear of every one of them)
+    ctl.push(...spacing(r, ks));
     for (const a of tb) {
       if (a.x1 - a.x0 < 44 || a.y1 - a.y0 < 44) ctl.push(`${tag}: ${a.name} ${a.x1 - a.x0}x${a.y1 - a.y0}`);
       if (a.x0 < w * 0.4) ctl.push(`${tag}: ${a.name} in the move stick's left 40% (x ${a.x0})`);
@@ -223,6 +249,27 @@ test('the prompt, the notes, the job line, the cruiser hint and the bars are rea
 
 // the prompt's crime marks (hud.js crimeMarks: the key chip red with a "!", a felony ringed; the touch button red - no
 // warning plate): the server says what Act would be
+// The owner, 2026-11-14, on his phone upright at a house's door: the prompt's card ("ACT Look around Gull Harbor House")
+// under the BLOCK button, its words cut off; the ACT button (LOOK) on ROLL; and an ACT chip on the card while the button said
+// LOOK. The card in clear space - its foot above the buttons under it, left of the columns up the edge - two lines at most
+// and never cut in a word, no chip on it to press; every button GAP px clear of the next (ACT's pulse ring ACT_GAP).
+// Upright on a 360-px phone (360x740) as on the bigger phones and on their sides above (the move stick's ring, chat and the
+// emotes left out here: on a phone this narrow chat and the emotes don't fit between the ring and the middle - open).
+test('a small phone upright: the cluster\'s buttons apart, the prompt\'s card clear of them, whole and with no chip', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
+  const list = [...STATES.filter((st) => st !== 'custody'), ...TOUCH_STATES].map((st) => ({ w: 360, h: 740, dev: 'touch', st }));
+  const all = await measureAll(list), bad = [];
+  assert.equal(all.length, list.length, 'every state measured');
+  for (const r of all) {
+    const tb = r.keep.filter((k) => k.name.startsWith('tb.')), pc = r.read.find((q) => q.name === 'prompt');
+    if (!pc) { bad.push(`${r.sc.st}: no prompt`); continue; }
+    bad.push(...spacing(r, tb));
+    if (pc.y0 < r.sc.h / 2 || pc.x0 < 0 || pc.x1 > r.sc.w) bad.push(`${r.sc.st}: the card isn't low between the thumbs (${pc.x0},${pc.y0}-${pc.x1},${pc.y1})`);
+    const you = r.keep.find((k) => k.name === 'you');
+    if (gapOf(pc, you) < 0 && r.sc.st !== 'rob') bad.push(`${r.sc.st}: the card on you`);   // (a robbery's bar under it can lift it to your feet here, as the notes may reach your head on a 740x360)
+  }
+  assert.deepEqual(bad, [], bad.slice(0, 30).join('\n'));
+});
+
 test('the prompt says when what Act would do is a crime, and when a felony', async () => {
   const { makeWorld, joinPlayer, run, teleport } = await import('./helpers.js');
   const players = await import('../server/systems/players.js');
