@@ -112,15 +112,16 @@ TURFPAL[M_.LAWN] = 0; TURFPAL[M_.PARK] = 1; TURFPAL[M_.CLOVER] = 1; TURFPAL[M_.M
 TURFPAL[M_.ORCHARD] = 1;
 TURFCLOV[M_.PARK] = 0.12; TURFCLOV[M_.CLOVER] = 0.55; TURFCLOV[M_.PASTURE] = 0.15; TURFCLOV[M_.LAWN] = 0.05;
 const WALKS = { concrete: M_.WALKC, slate: M_.WALKS, brick: M_.WALKB }, PLAZAS = { concrete: M_.PLAZAC, slate: M_.PLAZAS, brick: M_.PLAZAB };
-// the opened-up blocks' alleys and lanes as a set of tiles (ty * 65536 + tx), once per map; null when there are none
+// the opened-up blocks' alleys and lanes as a set of tiles (ty * 65536 + tx), once per map; null when there are none (a
+// window's lists have holes where their regions aren't loaded: shared/regionpack.js REGIONAL)
 const LANES = new WeakMap();
 function openLanes(M) {
   if (!M.openAlleys || !M.openAlleys.length) return null;
   let S = LANES.get(M);
   if (!S) {
     S = new Set();
-    for (const a of M.openAlleys) for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(y * 65536 + x);
-    for (const a of M.openYards || []) if (a.k === 'lot') for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(-1 - (y * 65536 + x));   // (the back lots, negative)
+    for (const a of M.openAlleys) if (a) for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(y * 65536 + x);
+    for (const a of M.openYards || []) if (a && a.k === 'lot') for (let y = a.y; y < a.y + a.h; y++) for (let x = a.x; x < a.x + a.w; x++) S.add(-1 - (y * 65536 + x));   // (the back lots, negative)
     LANES.set(M, S);
   }
   return S;

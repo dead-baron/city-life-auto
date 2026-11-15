@@ -24140,3 +24140,69 @@ starts them (the drawing is kept for a later try); the stars, windows, car light
 The owner (phone upright): "Online progress saves automatically to this browser" ran under the Online frame. On a phone
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
 (client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
+
+## 2026-11-14 - Open up the blocks: the big plain footprints become buildings with alleys and courtyards; no big canopies over the doors
+The owner (11-14 20:24, his screenshot: one huge flat grey roof with a row of AC units, the street squeezed above it):
+"There are still so many huge buildings that take up so much space and don't add anything interesting and cover so much
+of the street view. We don't see very many cool alleys, or a lot of streets are covered because of unnecessarily huge
+buildings around the world." The earlier passes cut the plain slivers (11-06), split the big towers (11-07) and capped
+the heights over the street (11-12); none touched a big FOOTPRINT of a low or mid-rise building. And (20:33, the Golden
+Lotus's porte-cochere over its entrance): "these overhangs over building entrances ... just block the entrance and take
+away too much from the front of buildings ... let's get rid of these kinds of overhangs".
+- The survey (`node tools/bigroofs.mjs`; the measure shared/world3-openblocks.js `surveyOpen`): every building footprint
+  that is BIG - over 360 tiles of roof (19 x 19: about a seventh of a 1080p view, the old plain cap's 400 a little lower),
+  or a street front over 26 tiles (more than half the view's width as one wall) or a depth over 22 (no way through for
+  more than a screen's height), either with over 220 tiles of roof - and why it stays one building (`keepWhole`): a
+  walk-in, a trade, a place of its own (a station, a casino, a hospital, the police, a school: the POIs), a landmark, a
+  split tower's own tower and wings, a set piece with its own roof kit, neon or lights, a town's own look, a generator's
+  designed lot (the shop rows, the works), a warehouse, a factory, a church, a civic hall, a hotel, a mall, a district
+  built of big ones (the yards, the harbor, the airport, the prison). Before: {{BIG}} big footprints ({{BIGT}} tiles of
+  roof), {{OPEN}} of them with no reason to be one building ({{OPENT}} tiles): {{BYD}}. The worst: Civic Parking 65 x 61,
+  Westside Parking 50 x 55 (Downtown's car parks, one gravel roof each - the owner's grey roof with its row of six AC
+  units), the split towers' back blocks (Harborview Tower Court 65 x 37, Ellison Building Court 48 x 47...), Greenfield
+  Medical Building 48 x 36, Maple Hall 50 x 34, Bayview House 38 x 44, Midtown's 12 x 55 slivers. After: {{LEFT}}.
+- The pass (shared/world3-openblocks.js `openBlocks3`, World v3's last building pass, after the towers): each one in its
+  own footprint -
+  - columns 8-15 tiles along its street front with ALLEYS of 3-4 tiles between them, paved through from the front street
+    to the back (an alley never cuts the building's own front - its door, places, signs, home - nor opens behind an ATM
+    or a sign on the wall);
+  - deeper than 22 tiles: a front row 10-14 deep, a back lane of 5-7 behind it (wide enough to be seen: the row in front
+    of a lane stands 2-3 storeys, so its roof, drawn up over the lane, leaves the lane and the backs across it in view),
+    back rows of 10-14 with passages of 4-5; the rows come from the footprint's top and depth alone, so neighbours of one
+    depth (the old fill's slivers side by side) are cut at the same rows and their passages run through;
+  - the building keeps its front cell over its door: its id, name, art, sign, delivery stop and home where they were -
+    no home moves, so no WORLD_VERSION bump, nobody's flat bought back; the other cells are new plain buildings at the
+    end of the list (after the towers' parts: no other building's id, look, POI or home moves) of the district's own
+    kinds side by side (walk-ups, shop rows, old rows, townhouses, condos, a night row...), each its own height
+    (`b.fl`, which the art keeps: 2-5 storeys, never two alike side by side), their shopfronts and doors on the street; a
+    cell on a lane is a back now and then (b.back: its back door with a bare bulb, a drainpipe, a vent steaming, AC and
+    meter boxes, tags by the district's grit, a fire escape up a tall one - shared/alleys.js) or a small shop onto it;
+  - some cells left open: courtyards (paving, a tree, benches, planters, string lights, a wall lamp) and back lots (a
+    service yard's slabs, dumpsters, pallets, crates; tires and a drum in the rough districts); a dead-end alley (the
+    back closed) ends in one; a long single row gets a pocket courtyard on the street;
+  - the alleys come alive: a dumpster against a wall, pallets or crates, a steam vent, string lights across some (not
+    down the roughest), wall lamps over the lanes; the art dresses them as it dresses the city's own alleys
+    (shared/alleys.js `dressOpen`: bins, bags, boxes, pallets, crates, pots and a bike uptown, a stray cat, puddles, oil,
+    litter, cracks and weeds - decoration, nothing in map.props), and draws their ground as cracked concrete
+    (client/art2/game/groundbake.js), not a square's paving; street dice down {{DICE}} of the grittier districts' new
+    lanes and back lots (m.diceSpots; the crew's game: server/systems/activities.js). People walk them (paving): the
+    leaners find the alley walls (server/systems/personas.js wallSpot).
+  {{MADE}}
+- Roofs that stay big (client/art2/game/statics.js kitFor): a row of AC units is three at most (four of the small ones;
+  it was up to seven in one row), and a roof over about 150 tiles of section gets two of a water tank, a stairwell hut,
+  skylights, solar panels, a billboard, a terrace with umbrellas and string lights, a dish (the works: solar arrays,
+  skylights, ducts); about a fifth of the big flat roofs of offices, walk-ups, mixed blocks, condos and hotels are roof
+  gardens (by the building's hash, so nothing else on them moves).
+- No big canopies over the doors: the Strip's porte-cocheres and the adobe resort's pergola over the drives (10 x 3
+  tiles), the Golden Lotus's east block's, the Skyview Hotel's, the Bayside drop-off's, St. Neon General's forecourt
+  canopy (15 x 4), the Harborlight's and the airport terminal's row of curb canopies are gone; each door is lit by a wall
+  lamp either side (the casinos' facades keep their neon; the names stay on the facades: polish2's coverFronts has no
+  cover to move them onto). A small awning stays; a filling station's canopy over its pumps is the station's.
+- The placement lint (tools/placementlint.mjs): `bigCanopy` - a canopy over a door bigger than 4 x 2 tiles (a filling
+  station's over its pumps aside): none; `alleyBlocked` - an opened-up alley or lane with less than 26 px clear across
+  it anywhere between its solid props: none. test/plainblocks.test.js (the same world build): nothing big left without a
+  reason (but what's too narrow and too shallow to cut), the alleys paved through and reaching a street, the lanes
+  across, each kept building's door, places and home on its front, the new buildings after every other and small, their
+  kinds and heights varied, the courtyards, the dice games played.
+- Cost: {{COST}}
+- Re-keys the world and the art (`world3`, `art3`, and today's `art`: statics.js, groundbake.js, alleys.js) once.

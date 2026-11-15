@@ -750,7 +750,7 @@ function kitFor(A, w, d, rnd, tier, spec, avoid = null, plain = false) {
   // works' and sheds' their solar arrays, skylights and ducts)
   if (area > 150000 && !spec.garden && spec.roofMat !== 'green') {
     const works = A === 'warehouse' || A === 'factory' || A === 'shed' || A === 'hangar' || A === 'pits';
-    const V = works ? ['solar', 'skyL', 'duct', 'solar'] : ['tank', 'hut', 'skyL', 'solar', 'bill', 'terrace', 'dish', 'tank'];
+    const V = works ? ['solar', 'skyL', 'duct', 'solar'] : A === 'block' || A === 'garage' ? ['solar', 'hut', 'tank', 'solar'] : ['tank', 'hut', 'skyL', 'solar', 'bill', 'terrace', 'dish', 'tank'];   // (a car park's top deck: no terrace)
     const a = Math.floor(r() * V.length), b = (a + 1 + Math.floor(r() * (V.length - 1))) % V.length;
     for (const v of V[a] === V[b] ? [V[a]] : [V[a], V[b]]) {
       if (v === 'tank' || v === 'hut') L.corner(v);

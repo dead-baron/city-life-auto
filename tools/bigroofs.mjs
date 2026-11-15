@@ -20,7 +20,7 @@ const { DISTRICTS } = await imp('shared/mapcore.js');
 const t0 = Date.now();
 const { map: m } = await buildWorld3(1337, { log: () => {} });
 console.log(`World v3 built in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
-const O = m.world3.open, F = O.full;
+const O0 = m.world3.open, F = O0.full, O = { ...O0, before: F.by.before, after: F.by.after };
 const sum = (by, k) => Object.values(by).reduce((a, q) => a + q[k], 0);
 const why = (L) => { const w = {}; for (const q of L) { const k = q.why || 'NONE (opened up)'; w[k] = (w[k] || 0) + 1; } return w; };
 console.log(`big footprints before: ${F.before.length} (${sum(O.before, 'tiles')} roof tiles); with no reason to be one building: ${sum(O.before, 'open')} (${sum(O.before, 'openTiles')} tiles)`);

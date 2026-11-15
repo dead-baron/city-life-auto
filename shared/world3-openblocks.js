@@ -123,9 +123,10 @@ export function openBlocks3(m, H3) {
   OWN.clear();
   out.dice = diceDown(m, H3);
   out.after = surveyOpen(m);
-  // (the map keeps the counts by district; the lists - tools/bigroofs.mjs, the tests - only on this build's own object)
-  const full = { before: out.before.list, after: out.after.list, opened: out.list };
-  out.before = out.before.by; out.after = out.after.by; delete out.list;
+  // (the map keeps the totals; the lists and the counts by district - tools/bigroofs.mjs, the tests - only on this build's own object)
+  const full = { before: out.before.list, after: out.after.list, opened: out.list, by: { before: out.before.by, after: out.after.by } };
+  const tot = (S) => ({ n: S.list.length, tiles: S.list.reduce((a, q) => a + q.area, 0), open: S.list.filter((q) => !q.why).length, openTiles: S.list.filter((q) => !q.why).reduce((a, q) => a + q.area, 0) });
+  out.before = tot(out.before); out.after = tot(out.after); delete out.list;
   Object.defineProperty(out, 'full', { value: full, enumerable: false });
   return out;
 }
@@ -208,8 +209,8 @@ function openBlock(m, b, H3, roles, attach, opened) {
   // ---- the ground: the alleys, the lanes and passages paved (people walk them: shared/map.js T.PLAZA), the yards
   const pave = (tx, ty, tw, th, t) => { for (let yy = ty; yy < ty + th; yy++) for (let xx = tx; xx < tx + tw; xx++) { const i = m.idx(xx, yy); m.tiles[i] = t; m.bld[i] = -1; opened.add(i); } };
   const g0 = gritOf(D);
-  for (const [ax, g] of alleys) { pave(ax, y, g, h, T.PLAZA); m.openAlleys.push({ x: ax, y, w: g, h, ns: 1, d: d0, b: b.id }); }
-  for (const [dd, rd, gap] of rows) if (gap) { const ty = frontN ? y + dd + rd : y + h - dd - rd - gap; pave(x, ty, w, gap, T.PLAZA); m.openAlleys.push({ x, y: ty, w, h: gap, ns: 0, d: d0, b: b.id }); }
+  for (const [ax, g] of alleys) { pave(ax, y, g, h, T.PLAZA); m.openAlleys.push({ x: ax, y, w: g, h, ns: 1, d: d0 }); }
+  for (const [dd, rd, gap] of rows) if (gap) { const ty = frontN ? y + dd + rd : y + h - dd - rd - gap; pave(x, ty, w, gap, T.PLAZA); m.openAlleys.push({ x, y: ty, w, h: gap, ns: 0, d: d0 }); }
   // ---- the cells
   const RK = st === 'oldtown' || st === 'arts' ? ['tar', 'gravel', 'tar'] : ['tar', 'gravel'];
   const arches = ARCHES[st] || ARCHES.commercial;

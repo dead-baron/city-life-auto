@@ -54,6 +54,7 @@ export const REGIONAL = {
   props: 'px', solidProps: 'key', pois: 'px', buildings: 'tile', prefabs: 'tile', roofs: 'tile', blocks: 'tile', lamps: 'px', parking: 'px',
   stalls: 'px', pillars: 'px', cameras: 'px', signals: 'px', pickables: 'px', forage: 'px', atms: 'px', seaPoints: 'px', offshore: 'px',
   brickWalls: 'tile', marina: 'px', wayside: 'px', restSpots: 'px',
+  openAlleys: 'tile', openYards: 'tile',   // (the opened-up blocks' alleys, lanes and yards: shared/world3-openblocks.js)
   // (format 2: the railway's points; a list inside a field, by its path - the levels' deck segments, by their middle)
   railPts: 'px', 'levels.segs': 'seg',
   // (World v3's main line: each loop's points - m.rail is the first loop, the others are m.rails'; today's rail.pts is

@@ -110,7 +110,7 @@ function helpers(m) {
   };
   // the opened-up blocks' alleys, lanes and yards (shared/world3-openblocks.js: m.openAlleys, m.openYards - paving)
   const open = new Set();
-  for (const a of [...(m.openAlleys || []), ...(m.openYards || [])]) for (let ty = a.y; ty < a.y + a.h; ty++) for (let tx = a.x; tx < a.x + a.w; tx++) if (m.inside(tx, ty)) open.add(m.idx(tx, ty));
+  for (const a of [...(m.openAlleys || []), ...(m.openYards || [])]) if (a) for (let ty = a.y; ty < a.y + a.h; ty++) for (let tx = a.x; tx < a.x + a.w; tx++) if (m.inside(tx, ty)) open.add(m.idx(tx, ty));
   const isOpen = (tx, ty) => m.inside(tx, ty) && open.has(m.idx(tx, ty));
   return { W, H, tile, isAlley, isOpen, distAt, nearDoor, nearSolid };
 }
@@ -129,6 +129,7 @@ function build(m) {
 function dressOpen(m, X, items) {
   const { tile, isOpen, distAt, nearDoor, nearSolid } = X;
   (m.openAlleys || []).forEach((a, ai) => {
+    if (!a) return;   // (a window's hole: shared/regionpack.js REGIONAL)
     const ns = !!a.ns, len = (ns ? a.h : a.w) * TILE, hw = (ns ? a.w : a.h) * TILE / 2, e = -1 - ai;
     if (len < MOUTH * 2 + 20) return;
     const cx = (a.x + a.w / 2) * TILE, cy = (a.y + a.h / 2) * TILE, g = gritOf(distAt(cx, cy));
