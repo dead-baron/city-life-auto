@@ -23955,3 +23955,8 @@ The owner (18:56, 18:59), three things:
   nothing into the tail's point. The typing dots shrink away into their tail when the typing stops, and the speech
   bubbles (client/chat.js) go the same way instead of fading (their own `bye` class: the kit's `.out` utility fades).
 - test/menupolish.test.js. Proof (before/after and frame strips): the session's scratchpad `menupolish/owner/`.
+
+## 2026-11-14 - The BLOCK button's shield, cleaner and without the blue
+The owner: "a shield symbol in the icon that doesn't have blue in it, a cleaner looking one in general". assets/ui/s-shield.png
+is redrawn on the face symbols' 16 px grid in their own two colours: a solid heater shield, its left half white and its
+right a pale steel, the ink outline round it - no blue hollow and stripe.
