@@ -33,7 +33,7 @@ export default {
     { at: 0, hold: { a: 'start', f: 300, s: 30 }, z: 1.3 },
     { at: 1.8, between: ['r1', 'r4'], z: 1.15, ease: 1.2 },
     { on: 'go', d: 0.8, hold: { a: 'cross', f: -120 }, z: 0.82, ease: 1.6 },
-    { on: 'go', d: 5.5, follow: 'r3', z: 0.9, lead: 0.5, s: 60, ease: 2 },
-    { on: 'go', d: 12, follow: 'r1', z: 0.86, lead: 0.7, ease: 2.5 },
+    { on: 'go', d: 5, follow: 'r3', z: 0.88, lead: 0.25, s: 50, ease: 2 },   // (a short lead: at 700 px/s up a street the screen's short way, a long one runs the car off the frame)
+    { on: 'go', d: 12, follow: 'r1', z: 0.84, lead: 0.3, ease: 2.5 },
   ],
 };

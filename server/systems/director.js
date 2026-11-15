@@ -396,7 +396,7 @@ function castOne(world, run, c) {
     const G = { ...standAt(m, P.x, P.y, 24), a: P.a };   // (a crowd gathers on dry ground: a park's middle can be its pond)
     for (let i = 0; i < c.group; i++) {
       const ang = (i / c.group) * Math.PI * 2 + 0.4, r = (c.spread || 50) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
-      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, 4);
+      const at = standAt(m, G.x + Math.cos(ang) * r, G.y + Math.sin(ang) * r, c.post ? 4 : 10);   // (a crowd standing its ground: close in; people about: on dry ground a little further)
       out.push(spawnPerson(world, run, `${c.id}.${i}`, c, at, c.ra !== undefined ? (G.a || 0) + c.ra : Math.atan2(at.y - G.y, at.x - G.x), c.id));
     }
     return out;
