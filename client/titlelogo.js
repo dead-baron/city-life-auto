@@ -19,7 +19,7 @@
 // the layers' boxes in % of the logo's box (1120 x 730: the sign's tubes, 5 px an art px; tools/neon_logo.py --variant
 // A3 --install --no-glow prints them) and each one's glow
 const LAYERS = [
-  { k: 'sky', f: 'sky.webp', x: 29.464, y: 0, w: 39.286, px: [440, 220], c: '#46e6ff' },
+  { k: 'sky', f: 'sky.webp', x: 29.911, y: 0, w: 38.839, px: [435, 220], c: '#46e6ff' },
   { k: 'city', f: 'city.webp', x: 0, y: 23.288, w: 100, px: [1120, 345], c: '#ff465a' },
   { k: 'swoosh', f: 'swoosh.webp', x: 14.286, y: 61.644, w: 70.982, px: [795, 85], c: '#ff465a' },
   { k: 'auto', f: 'auto.webp', x: 14.286, y: 69.863, w: 69.196, px: [775, 220], c: '#ffbe3c' },
