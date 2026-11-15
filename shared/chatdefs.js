@@ -31,8 +31,8 @@ export const CHAT = {
 // client/art2/dances.js and poses.js pose it) for s seconds (CHAT.emoteS when not given), or - hold - until you move.
 // tab: the picker's tab ('emote' | 'pose'; the Dances tab is DANCES below; none: not in the picker). b: the pixel
 // balloon over the head (client/emotes.js BALLOONS) - only where it adds meaning: a laugh, anger, love, ?, !, sorry,
-// sleep, an idea; and a gesture a symbol says better at game size (11-14: a waving hand, a thumbs up, come here, a
-// shrug's ?). log: a line in the log of the people near ("Ann sat down") - dancing and the lasting poses only, no
+// sleep, an idea; and a gesture a symbol says better at game size (11-14: a waving hand, a thumbs up, over here's down
+// arrow, a shrug's ?). log: a line in the log of the people near ("Ann sat down") - dancing and the lasting poses only, no
 // log spam for the rest. text / me: that line for the people near and your own. The server decides who's sent what
 // (server/chat.js emote: emoteWire).
 export const EMOTES = {
@@ -63,11 +63,14 @@ export const EMOTES = {
   pushups: { n: 'Push-ups', tab: 'pose', s: 4, text: 'does push-ups', me: 'do push-ups' },
   flex: { n: 'Flex', tab: 'pose', s: 3, text: 'flexes', me: 'flex' },
   cry: { n: 'Cry', tab: 'pose', s: 3, text: 'cries', me: 'cry' },
-  beckon: { n: 'Come here', tab: 'pose', s: 2.5, b: 'beckon', text: 'beckons', me: 'beckon' },
+  overhere: { n: 'Over here', tab: 'pose', s: 1.6, b: 'here', text: 'points here', me: 'point here' },   // (the owner, 11-14 20:46: replaces Come here - two jabs of a finger at the spot beside you, a down arrow)
   watch: { n: 'Check watch', tab: 'pose', s: 2.5, text: 'checks the time', me: 'check the time' },
   guitar: { n: 'Air guitar', tab: 'pose', s: 3, text: 'plays air guitar', me: 'play air guitar' },
   stretch: { n: 'Stretch', tab: 'pose', s: 3, text: 'stretches', me: 'stretch' },
 };
+// an emote's old ids, still taken (a page from before, a typed /beckon): the emote it became
+export const EMOTE_ALIAS = { beckon: 'overhere' };
+export const emoteId = (e) => (Object.hasOwn(EMOTE_ALIAS, e) ? EMOTE_ALIAS[e] : e);
 // the picker's Dances tab: the dance button's moves (shared/dance.js DANCE_PLAYER), one each - { t: 'emote', e = 'dance',
 // m: its index here } starts that very move (server/systems/dance.js start)
 export const DANCES = ['Two-step', 'Bounce', 'Fist pump', 'Disco point', 'Spin', 'Toprock', 'Robot', 'Freeze', 'Sway', 'Jump'];
