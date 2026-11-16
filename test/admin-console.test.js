@@ -21,6 +21,8 @@ import { createLaunch } from '../server/launch.js';
 import { createAnalytics, ROLL } from '../server/analytics.js';
 import { createGeo, packTable, parseIp } from '../server/geo.js';
 import { founderSync } from '../server/founder.js';
+import { descriptor } from '../server/net.js';
+import { K } from '../shared/constants.js';
 import { allowed } from '../server/roles.js';
 import { GIFT, COSMETICS } from '../shared/rules.js';
 import * as cosmetics from '../server/systems/cosmetics.js';
@@ -178,8 +180,11 @@ test('the founder: the owner\'s crown for everyone; his Dead Baron look only in 
   assert.equal(T.adm(admin, 'founder', { on: true }).ok, false, 'an admin can\'t wear it');
   T.adm(owner, 'founder', { on: true });
   // the descriptor: fo for the crown, app.fd for the look (net.js)
-  const src = readFileSync(new URL('../server/net.js', import.meta.url), 'utf8');
-  assert.match(src, /e\.player\.founderLook \? \{ \.\.\.\(e\.app && e\.app\.lk/); assert.match(src, /e\.player\.founder \? \{ fo: 1 \}/);
+  owner.ped.kind = K.PED; owner.ped.player = owner; owner.ped.app = { lk: 'abc' };
+  const d = descriptor(owner.ped);
+  assert.equal(d.fo, 1); assert.deepEqual(d.app, { lk: 'abc', fd: 1 });
+  owner.devMode = false; founderSync(owner);
+  assert.deepEqual(descriptor(owner.ped).app, { lk: 'abc' }, 'out of admin mode: his own look'); assert.equal(descriptor(owner.ped).fo, 1, 'the crown stays');
   // the art: one figure, the game's own people renderer, its own sprite key
   assert.equal(adaptApp({ fd: 1, lk: 'whatever' }), FOUNDER); assert.equal(appKey({ fd: 1, lk: 'x' }), 'F');
   const G = person(FOUNDER, 0, 'idle', 0, { tight: true });
