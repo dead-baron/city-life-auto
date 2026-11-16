@@ -151,7 +151,7 @@ export function badges(p) {
   return {
     n: SEASON.n, name: SEASON.name, theme: SEASON.theme,
     played: [...C.sb],
-    titles: [...C.tops.map((t) => `${careers.rankName(t.c, TOP(t.c))} (S${t.s})`), ...C.bp.map((q) => cosmetics.plateText(cosmetics.boardPlateId(q.s, q.c), p.profile))],
+    titles: [...(C.gifts.beta ? ['Beta (the gold plate on your card)'] : []), ...C.tops.map((t) => `${careers.rankName(t.c, TOP(t.c))} (S${t.s})`), ...C.bp.map((q) => cosmetics.plateText(cosmetics.boardPlateId(q.s, q.c), p.profile))],
   };
 }
 

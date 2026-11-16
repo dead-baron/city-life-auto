@@ -146,7 +146,8 @@ function launchHello() {   // (in the hello: this browser's device marker, and w
     if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
     age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
   } catch { /* storage blocked */ }
-  return { dm, age17, restore: !!S.restore };
+  let tz = null; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* no Intl */ }
+  return { dm, age17, restore: !!S.restore, tz, dk: getDevice().kind };   // (tz, dk: the owner's console - the country when the address can't say, the device kind)
 }
 function launchCall(k, a) {
   if (S.practice) return;
@@ -183,7 +184,7 @@ function launchCall(k, a) {
     if (k === 'msg') {
       // (a new session's account state: GA's ids again - the server forgets them with a session - and any errors queued
       // while offline go now)
-      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); } L.acc.onMessage(a); } else L.chat.onMessage(a);
+      if (a.t === 'acct' || a.t === 'admin' || a.t === 'agegate') { if (a.t === 'acct' && !a.a) { L.ga.setId(a.ga); L.ga.resend(); L.er.flush(); S.role = a.role || null; } L.acc.onMessage(a); } else L.chat.onMessage(a);
     } else if (k === 'play') { L.ga.event('play_click'); send({ t: 'ftue', s: 'title_play' }); }
     else if (k === 'world') { L.ga.event('in_world'); send({ t: 'ftue', s: 'in_world' }); }
     else if (k === 'perf') L.ga.perf(a);
@@ -1363,7 +1364,7 @@ function keepWindow(job) {
   clearInterval(S.winTimer);
   S.winTimer = setInterval(() => {
     if (!S.welcomed || !S.map || !S.win) return;
-    const me = selfPos(), eye = (DIR && DIR.eye()) || me;   // (the cinematic mode's camera off you: the window goes with it)
+    const me = selfPos(), eye = (DIR && DIR.eye()) || (S.watch ? { x: S.cam.x, y: S.cam.y } : null) || me;   // (the cinematic mode's camera off you, or an admin watching someone: the window goes with it)
     if (!me || !Number.isFinite(me.x)) return;
     const at = [Math.floor(me.x / TILE), Math.floor(me.y / TILE)];
     try { job.worker.postMessage({ where: [Math.floor(eye.x / TILE), Math.floor(eye.y / TILE)] }); } catch { /* gone */ }
@@ -1610,7 +1611,7 @@ function renderPlayers() {
   el.innerHTML = '';
   for (const q of ps) {
     const row = document.createElement('div'); row.className = 'pl-row';
-    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm ? ' <i>dev</i>' : ''}<small>${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
+    row.innerHTML = `<span class="pl-ic">${q.me ? '★' : ROLE_ICON[q.r] || '•'}</span><span class="pl-nm">${esc(q.n)}${q.me ? ' (you)' : ''}${q.dm && !q.fo ? ' <i>dev</i>' : ''}<small>${q.fo ? '<b style="color:var(--gold)">♛ Founder</b> · ' : ''}${q.gu ? 'Guest · ' : ''}${esc(ROLE_NAME[q.r] || '')}${q.w ? ' ' + '★'.repeat(q.w) : ''}${q.d ? ' · ' + esc(q.d) : ''}${q.dead ? ' · down' : ''}</small></span>`;
     if (S.plist.dev && !q.me && q.id) for (const [c, label] of [['goto', 'Go to'], ['bring', 'Bring'], ...(q.dm ? [] : [['grant', 'Give dev']])]) {
       const b = document.createElement('button'); b.className = 'pl-btn'; b.textContent = label;
       b.onclick = () => { send({ t: 'dev', c, pid: q.id }); if (c !== 'grant') closeHub(); setTimeout(requestPlayers, 300); };
@@ -3415,6 +3416,7 @@ function prepFrame(dt) {
   // keep the camera over the world: the sea runs on past the map's edge as far as you can go (shared/border.js),
   // so it follows you out there; never past where nothing can go (the world's frame: the map's m.frame, a window's too)
   if (S.map) clampCam(S.cam, S.map.frame);
+  if (S.watch) watchCam();   // (an admin watching a player: the camera on them - client/adminpanel.js, server admin.js watch)
   if (S.specArt) { const st = S.spec.state; S.cam.x = st.x; S.cam.y = st.y; S.cam.zoom = st.z; S.cam.shake = 0; } // (the spectator's camera)
   else if (DIR) DIR.cam(S.cam, dt, tx, ty);   // (the cinematic mode's: smooth, free, on someone, the tour - client/director.js)
   S.cam.shake *= Math.exp(-6 * dt);
@@ -5225,6 +5227,16 @@ function drawMyCar(c, view, now, z, vehs) {
   g.fillStyle = '#fff'; g.fillText(plate, x, ty + u);
   g.restore();
 }
+// watching a player (the admin panel): the camera on them - their vehicle when they're in one; gone a few seconds (they left,
+// the server stopped it), back to you
+function watchCam() {
+  const W = S.watch, e = S.ents.get(W.eid);
+  if (!e || e.rx === undefined) { if (performance.now() - W.at > 5000) { S.watch = null; S.hud.toast('Stopped watching - they left the city.', 'info'); } return; }
+  W.at = performance.now();
+  let x = e.rx, y = e.ry - (e.rz ? liftOf(e.rz) : 0);
+  if (e.flags & PF.INVEH) { let bd = 90 * 90; for (const v of S.ents.values()) { if (v.kind !== K.VEH || v.rx === undefined) continue; const d = (v.rx - e.rx) ** 2 + (v.ry - e.ry) ** 2; if (d < bd) { bd = d; x = v.rx; y = v.ry; } } }
+  S.cam.x = x; S.cam.y = y;
+}
 // A player in a vehicle: the name tag over the vehicle they're in (the nearest one under them) - an aircraft drawn up
 // by its height carries it up there, over its nose (the owner, 11-12: "BETA Claw16" on the grass under a helicopter)
 function tagY(p, vehs, py, z) {
@@ -5246,6 +5258,14 @@ function dimHex(c) {
   d = '#' + [0, 2, 4].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.7 + 0x80 * 0.3 * 0.9).toString(16).padStart(2, '0')).join('');
   dimMemo.set(c, d);
   return d;
+}
+// the founder's mark (the owner's account: server net.js fo): a small gold pixel crown, centred on (x, y), with a dark edge
+const CROWN = ['1.1.1', '11111', '11111', '.111.'];
+function founderMark(x, y, z) {
+  const u = 1.5 / z, w = 5 * u, h = 4 * u, x0 = x - w / 2, y0 = y - h / 2;
+  g.fillStyle = 'rgba(8,10,20,.92)';
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') g.fillRect(x0 + (i - 1) * u, y0 + (j - 1) * u, 3 * u, 3 * u);
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) if (CROWN[j][i] === '1') { g.fillStyle = j === 0 ? '#fff2b0' : j === 3 ? '#c89220' : '#ffcc33'; g.fillRect(x0 + i * u, y0 + j * u, u, u); }
 }
 function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the camera's { tags, marks, rest } - what of it's drawn)
   const fs = 12 / z;
@@ -5274,8 +5294,10 @@ function drawWorldLabels(peds, vehs, now, z, only = null) {   // (only: the came
     if ((!only || only.tags) && p.d.pl && p.d.n && p.id !== S.myPedId) {
       const y = py - 26 / z;
       const np = p.d.np, nm = np && np.k ? `[${np.k}] ${p.d.n}` : p.d.n;   // (their name color, title plate and crew tag: server cosmetics.js)
-      const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade - no tag; members in white)
-      g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z);
+      const gu = p.d.gu;   // (a guest: the name a soft grey, the role and title colors a dimmer shade, a faint shadow and no edge; members bright, with a dark edge all round - told apart by lightness and the edge, no word: the owner, 11-16)
+      if (gu) { g.fillStyle = 'rgba(0,0,0,.45)'; g.fillText(nm, p.rx + 1 / z, y + 1 / z); }
+      else { g.lineJoin = 'round'; g.lineWidth = 3 / z; g.strokeStyle = 'rgba(8,10,20,.92)'; g.strokeText(nm, p.rx, y); }
+      if (p.d.fo) founderMark(p.rx - g.measureText(nm).width / 2 - 7 / z, y - 4.5 / z, z);   // (the founder's gold crown by his name, for everyone: server net.js fo)
       g.fillStyle = S.me && S.me.crew && S.me.crew.ids.includes(p.id) ? (gu ? '#5fb879' : '#7dffa0') : p.flags & PF.BADGE ? (gu ? '#5c82b8' : '#7ab0ff') : np && np.c ? (gu ? dimHex(np.c) : np.c) : gu ? '#a3a8b0' : '#fff'; g.fillText(nm, p.rx, y);   // (your crew's: green - crews.js)
       if (np && np.t) { const t = np.t.toUpperCase(); g.font = `700 ${9 / z}px "CLA Pixel", "Barlow Condensed", sans-serif`; g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(t, p.rx + 1 / z, y - 10 / z); g.fillStyle = gu ? dimHex(np.g ? '#ffcc33' : '#d8dee9') : np.g ? '#ffcc33' : '#d8dee9'; g.fillText(t, p.rx, y - 11 / z); g.font = `700 ${fs}px "CLA Pixel", "Barlow Condensed", sans-serif`; }
       if (p.hp < 0.999 && !(p.flags & PF.DEAD)) { g.fillStyle = '#000'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z, 3 / z); g.fillStyle = '#ff4d5e'; g.fillRect(p.rx - 14 / z, y + 3 / z, 28 / z * p.hp, 3 / z); }

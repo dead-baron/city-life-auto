@@ -1121,7 +1121,8 @@ export const INSURANCE = { premium: 0.06, minPremium: 60, fee: 0.1, minFee: 50, 
 // colors: { id, name, hex, cash | tok }; plates: { id, t (the text), cash | tok | gift }, plus each career's ranks (a rank's
 // title on your plate while you hold it; the top rank's for good, with its season); paint: a color of your choice at a Fresh
 // Coat garage (shared/vehicles.js PAINTS) for cash or a token. beta: the gift of Season 0 (SEASON.beta) to every account
-// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate.
+// that plays during it - the Founding Citizen jacket (shared/lookcore.js, a gift piece: never sold) and the gold Beta plate
+// (card: 1 - on the player's own card only, never over their name: the owner, 11-16).
 export const COSMETICS = {
   colors: [
     { id: 'sky', name: 'Sky blue', hex: '#8fd3ff', cash: 2500 },
@@ -1143,12 +1144,16 @@ export const COSMETICS = {
     { id: 'grinder', t: 'Grinder', tok: 1 },
     { id: 'regular', t: 'Regular', tok: 2 },
     { id: 'legend', t: 'Legend', tok: 4 },
-    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1 },
+    { id: 'beta', t: 'Beta', gift: 'beta', gold: 1, card: 1 },
   ],
   rankPlatesFrom: 1,   // a career's ranks from this one up are plates (rank 0 - Corner Kid, Recruit, Vendor - isn't)
   paint: { cash: 600, tok: 1 },
   beta: { season: 0, jacket: 'Founding Citizen jacket', plate: 'beta' },
 };
+// The admin panel's gifts (server/admin.js gift; the owner, 11-16: "gift things to people"): money into the bank (the
+// panel's quick amounts; maxMoney at most a gift), items and weapons (maxItems at most: of an item, or magazines of a gun),
+// and the bought cosmetics (never a season's gift). Every one in the admin log.
+export const GIFT = { money: [500, 2500, 10000, 50000], maxMoney: 1000000, maxItems: 50 };
 // Existing fees scale gently with rank (your highest rank in any career, 0-7): bail, the arrest fine, felony fines, the
 // hospital and the ambulance cost x this. (The fence's cut already moves with rank the other way - the crime ladder's
 // smaller cut: careers.js fenceCut - so it's left alone.)

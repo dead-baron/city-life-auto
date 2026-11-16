@@ -92,7 +92,7 @@ export function createSession(world, conn, opts) {
         // city worker picks its first window of World v3 round it, not round where the page guessed (client/worldgen.js)
         if (player.ped && Number.isFinite(player.ped.x)) conn.sendJSON({ t: 'spawnat', x: Math.round(player.ped.x), y: Math.round(player.ped.y) });
         conn.sendJSON(looks.stateMsg(player));   // your look, whether you've picked one yet, your saved looks (client/creator.js)
-        if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17 }, res);
+        if (hooks) hooks.join(player, { dm: typeof msg.dm === 'string' ? msg.dm.slice(0, 64) : null, age17: !!msg.age17, ip: conn.remoteAddress || null, tz: typeof msg.tz === 'string' ? msg.tz.slice(0, 48) : null, dk: typeof msg.dk === 'string' ? msg.dk.slice(0, 12) : null }, res);   // (ip: only for the country, server/geo.js - not kept)
         return;
       }
       if (!player) return;
