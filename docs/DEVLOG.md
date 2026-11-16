@@ -24753,3 +24753,31 @@ WC237, AL1 and the handcraft research's signature places.
   Rose Plaza.
 - test/prison.test.js (the weapon back after prison) and test/scenes.test.js (live events in the FTUE) fail on the
   base commit too (6eb49506): not this pass's.
+
+## 2026-11-16 - Hanging lights: bistro bulbs and red paper lanterns, made fast at both ends, with slack
+The owner (11-16, chat): "hanging lights are okay when they had something to hang from. They don't need to be straight
+across either it would be better if they had some slack and maybe larger light bulbs instead of strings of lights, so
+more like bistro lights than Christmas lights. And lanterns could look more like lanterns, like the red lanterns in the
+concepts. Also not strung straight across but with a little slack in the line and larger lights/lanterns." A class fix,
+every run in the world (docs/DECISIONS.md, World and places).
+- One place says what a run hangs from and how it hangs: shared/festoon.js. Every run of lights is a 'festoon' prop
+  (the hand plans' `fest` / `string` / `canopy`, the parks', the camps', the harbors', the market lanes' ...). The world
+  build's last word on the lights (`hangLights3`, the done hook after every pass that strings any): each end made fast
+  to what stands there - a building's face or awning (a bracket, the end moved onto the face), a lamp post, a tree or
+  palm, a stall's, pergola's, gazebo's or gate's frame (the end moved onto it) - else a post of its own where the ground
+  takes one (iron, a finial and the line's hook); never a post in the road, so a run across a road hangs only between
+  buildings, posts or lamps on both sides, and one with an end in the road and nothing there comes down. A run longer
+  than 10 tiles is cut into equal spans with a post at each cut; a run whose slack would hang into people's heads is
+  raised (80 px at most).
+- Slack: the line sags at its middle by 8, 10 or 12% of its span (by where it hangs: a little variety, few sprites),
+  drawn in the view - it drops on screen as it sags; a run going up the screen bows a little to one side.
+- Bistro bulbs: one every 22 px - a dark socket on a dark wire, a round glass bulb 4 px wide under it, off-white by
+  day, a warm glow after dark (and the warm pools on the ground under the line as before, now where it hangs). The roof
+  terraces' and gardens' strings (client/art2/props.js stringLights) and the beach bar's eave (props-tropic.js) the
+  same: bigger bulbs, fewer, on a slack line.
+- Red paper lanterns (concept WC422): one every 30 px, 9 wide and 10 tall - the red body with darker ribs and shaded
+  sides, a black-rimmed gold cap above and below on a short cord, a red tassel; lit from within (red-orange) at night.
+- The lint (owner rule: a class fix comes with a lint row): tools/placementlint.mjs `festoons` - an end made fast to
+  nothing, a bracket with no wall, a post in the road, no tree / lamp / stall where an end says one, a sag outside
+  8-12%, a low point under a head, a span over 10 tiles with no post; allowed 0. test/festoon.test.js on a small map and
+  the art (the line sags, a handful of big bulbs or lanterns, not a dense string).

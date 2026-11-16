@@ -375,7 +375,9 @@ function lanes(K, m) {
     for (let k = 0; k < n; k++) {
       const u = (k + 0.5) / n, x = ax + (bx - ax) * u, y = ay + (by - ay) * u;
       const r = rnd(Math.round(x), Math.round(y), 91);
-      if (r < 0.3) prop('festoon', x - 2.5, y, 0, { tx: 5 * TILE, ty: 0, h: 44 });
+      // (across the lane, not along it: kerb to kerb at a right angle to its line, made fast to the walls or posts either
+      // side - shared/festoon.js; the owner, 11-16)
+      if (r < 0.3) { const L = Math.hypot(bx - ax, by - ay) || 1, px = -(by - ay) / L * 2.5, py = (bx - ax) / L * 2.5; prop('festoon', x - px, y - py, 0, { tx: Math.round(2 * px * TILE), ty: Math.round(2 * py * TILE), h: 50 }); }
       else if (r < 0.55) prop(pick(['potted', 'planter_g', 'flowers_a'], rnd(x, y, 92)), x + 3.2, y + 0.5, 6);
     }
   }

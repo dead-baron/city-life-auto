@@ -22,20 +22,23 @@ export const FESTOON = {
   CLEAR: 38,                // px: the line's lowest point at least this high - its bulbs over people's heads
   CLEAR_LANTERN: 50,        // ... a lantern line's: the lanterns hang LANTERN_DROP under it
   H_MAX: 80,                // px: a run is raised to at most this to keep its slack over people's heads
-  SPAN_MAX: 8 * TILE,       // px: a longer run is cut into equal spans, a post at each cut
+  SPAN_MAX: 10 * TILE,      // px: a longer run is cut into equal spans, a post at each cut
   END_R: 20,                // px: a tree, a lamp post, a stall this near an end holds it
   WALL_R: 18,               // px: a building's face (its tiles) this near an end takes a bracket
   BULB_GAP: 22,             // px along the run between two bistro bulbs (the art: statics.js makeFestoon)
   LANTERN_GAP: 30,          // ... between two paper lanterns
   LANTERN_DROP: 19,         // px a lantern hangs under its line, tassel and all
 };
-// the things a line can be made fast to, by prop type -> the end's name
+// the things a line can be made fast to, by prop type -> the end's name (tall enough to hold a line over people's heads:
+// not a bollard, a lantern on its short post or a food cart - an end there gets a post of its own beside it)
 export const ANCHOR_OF = (t) => (/^(tree_[ab]|redwood|deadtree)$/.test(t) ? 'tree'
   : /^palm(_[abcds])?$/.test(t) ? 'palm'
-  : /^(lamp|plamp|bannerpole|upole|flagpole|sigpole|post|lantern)$/.test(t) ? 'lamp'
-  : /^(stall|mstall|foodcart|tent|pergola|perg|gazebo|pavilion|bathpav|gatearch|gatepier|bandstand|tbar|stilthut|cottage)$/.test(t) ? 'stall'
+  : /^(lamp|plamp|bannerpole|upole|flagpole|sigpole)$/.test(t) ? 'lamp'
+  : /^(stall|mstall|tent|pergola|perg|gazebo|pavilion|bathpav|gatearch|gatepier|bandstand|tbar|stilthut|cottage)$/.test(t) ? 'stall'
   : null);
-export const HELD = new Set(['wall', 'pole', 'tree', 'palm', 'lamp', 'stall']);
+// ... and by the prop itself: a tall timber post (p.h, the hand plans' market posts) holds one too
+export const anchorOf = (p) => ANCHOR_OF(p.t) || (p.t === 'post' && (p.h || 0) >= 40 ? 'post' : null);
+export const HELD = new Set(['wall', 'pole', 'tree', 'palm', 'lamp', 'stall', 'post']);
 
 const hashXY = (x, y) => { let h = Math.imul(Math.round(x) | 0, 73856093) ^ Math.imul(Math.round(y) | 0, 19349663); h = Math.imul(h ^ (h >>> 13), 1274126177); return (h ^ (h >>> 16)) >>> 0; };
 export const festoonSpan = (f) => Math.hypot(f.tx || 0, f.ty || 0);
@@ -50,7 +53,7 @@ export const festoonEnds = (f) => [{ x: f.x, y: f.y }, { x: f.x + (f.tx || 0), y
 // The world's look-ups the checks need: tiles, buildings, the anchoring props near a point
 export function festoonWorld(m) {
   const C = 64, grid = new Map();
-  (m.props || []).forEach((p) => { if (!p || !ANCHOR_OF(p.t)) return; const k = Math.floor(p.x / C) * 65536 + Math.floor(p.y / C); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(p); });
+  (m.props || []).forEach((p) => { if (!p || !anchorOf(p)) return; const k = Math.floor(p.x / C) * 65536 + Math.floor(p.y / C); let l = grid.get(k); if (!l) grid.set(k, (l = [])); l.push(p); });
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return m.inside(tx, ty) ? m.tiles[m.idx(tx, ty)] : -1; };
   const bldAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); if (!m.inside(tx, ty)) return false; const i = m.idx(tx, ty); return (m.bld && m.bld[i] >= 0) || m.tiles[i] === T.BUILDING || m.tiles[i] === T.WALL; };
   const wallNear = (x, y) => { const r = FESTOON.WALL_R; return [[0, 0], [0, -r], [0, r], [-r, 0], [r, 0]].some(([dx, dy]) => bldAt(x + dx, y + dy)); };
@@ -61,7 +64,7 @@ export function festoonWorld(m) {
       const d = Math.hypot(p.x - x, p.y - y);
       if (d < bd) { bd = d; best = p; }
     }
-    return best ? { p: best, kind: ANCHOR_OF(best.t) } : null;
+    return best ? { p: best, kind: anchorOf(best) } : null;
   };
   // a post can stand here: open ground, not a road, the water, a building or the rails' bed
   const postOk = (x, y) => { const t = tileAt(x, y); return t >= 0 && t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP && t !== T.BUILDING && t !== T.WALL && !bldAt(x, y); };
@@ -94,14 +97,21 @@ export function hangLights3(m, H) {
   const out = { runs: 0, posts: 0, walls: 0, held: 0, split: 0, raised: 0, dropped: 0 };
   if (!Array.isArray(m.props)) return out;
   const W = festoonWorld(m), gone = [], add = [];
+  // what holds end i (p: where it is) -> { k, x, y }: the end moved onto what holds it - the wall's face, the trunk, the
+  // lamp post - so the line meets it; null if nothing can
+  const face = (x, y) => {   // (the nearest point on a building's face within WALL_R: along the four ways, 2 px steps)
+    let best = null;
+    for (const [dx, dy] of [[0, -1], [0, 1], [-1, 0], [1, 0]]) for (let d = 0; d <= FESTOON.WALL_R; d += 2) if (W.bldAt(x + dx * d, y + dy * d)) { if (!best || d < best.d) best = { d, x: x + dx * Math.max(0, d - 3), y: y + dy * Math.max(0, d - 3) }; break; }
+    return best;
+  };
   const endOf = (f, i, p) => {
-    const want = (f.ends || [])[i];
-    if (want === 'wall' && W.wallNear(p.x, p.y)) return 'wall';
+    const want = (f.ends || [])[i], w = W.wallNear(p.x, p.y) ? face(p.x, p.y) : null;
+    if (want === 'wall' && w) return { k: 'wall', x: w.x, y: w.y };
     const a = W.anchorNear(p.x, p.y);
-    if (a) return a.kind;   // (the lamp, the tree, the stall there holds it: no post beside it)
-    if (want !== 'pole' && W.wallNear(p.x, p.y)) return 'wall';
-    if (W.postOk(p.x, p.y)) return 'pole';
-    return W.wallNear(p.x, p.y) ? 'wall' : null;
+    if (a) return { k: a.kind, x: a.p.x, y: a.p.y };   // (the lamp, the tree, the stall there holds it: no post beside it)
+    if (want !== 'pole' && w) return { k: 'wall', x: w.x, y: w.y };
+    if (W.postOk(p.x, p.y)) return { k: 'pole', x: p.x, y: p.y };
+    return w ? { k: 'wall', x: w.x, y: w.y } : null;
   };
   for (const f of m.props) {
     if (!f || f.t !== 'festoon') continue;
@@ -132,9 +142,11 @@ export function hangLights3(m, H) {
   for (const s of add) { if (H && H.addProp) { const { t, x, y, ...extra } = s; H.addProp(m, t, x, y, 0, extra); } else m.props.push(s); }   // (at the end of the list: no other prop's number moves)
   for (const f of m.props) {
     if (!f || f.t !== 'festoon') continue;
-    const P = festoonEnds(f), e = [endOf(f, 0, P[0]), endOf(f, 1, P[1])];
-    if (!e[0] || !e[1]) { gone.push(f); continue; }
-    f.ends = e;
+    const P = festoonEnds(f), q = [endOf(f, 0, P[0]), endOf(f, 1, P[1])];
+    if (!q[0] || !q[1]) { gone.push(f); continue; }
+    const e = q.map((a) => a.k);
+    f.ends = e; f.x = Math.round(q[0].x); f.y = Math.round(q[0].y); f.tx = Math.round(q[1].x) - f.x; f.ty = Math.round(q[1].y) - f.y;
+    if (festoonSpan(f) < TILE) { gone.push(f); continue; }   // (both ends on the one thing: no run)
     for (const k of e) { if (k === 'pole') out.posts++; else if (k === 'wall') out.walls++; else out.held++; }
     if (f.k === 'cable') continue;
     // its slack over people's heads: raised as far as H_MAX; past that, a run this long and this low comes down

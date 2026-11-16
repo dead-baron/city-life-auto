@@ -46,7 +46,7 @@ test('never a post in the road: a run ending in the road with nothing there come
 
 test('slack: 8-12% of the span at the middle, a little variety, over people\'s heads; a long run cut into spans with posts', () => {
   const m = world();
-  m.props.push(fest(6, 6, 20, 0, 50));           // 20 tiles over the plaza: cut
+  m.props.push(fest(6, 6, 30, 0, 50));           // 30 tiles over the plaza: cut
   m.props.push(fest(8, 8, 7, 0, 40, null, 'lantern'));   // a low lantern line: raised
   hangLights3(m, H);
   const runs = m.props.filter((p) => p.t === 'festoon');
