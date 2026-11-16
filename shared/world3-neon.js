@@ -499,6 +499,8 @@ function lanternLane(K, x0, x1, out) {
   for (const dx of [-2, 6, 14]) prop('foodcart', PLAZA[0] + 6 + dx, y0 + 3, 14);
   terrace(K, PLAZA[0] + 5, mid + 3.5, 6, { step: 6, lights: true, planters: false });
   for (const [dx, dy, q] of [[3, -1.5, 4], [24, 0, 5], [40, -1.5, 3]]) hang(K, PLAZA[0] + dx, mid + dy, q);
+  // (shoppers down both aisles, every dozen tiles)
+  for (let x = x0 + 8; x < x1 - 8; x += 12) if (x < PLAZA[0] - 4 || x > PLAZA[1] + 3) { hang(K, x, (sN + cN) / 2 + 0.3, 2 + (x % 2)); hang(K, x + 6, (cS + sS) / 2 - 0.3, 2 + ((x + 1) % 2)); }
   (out.places ||= []).push({ name: 'Lantern Lane Night Market', x0, y0, x1, y1 });
   out.stalls = (out.stalls || 0) + n;
   K.m.marketSpots ||= [];
@@ -707,7 +709,7 @@ function harborLights(K, x0, out) {
     }
     for (const gx of [3525, 3576]) prop('gatearch', gx, 2253, 0, { w: Math.round(9 * TILE), a: Math.PI / 2 });
     prop('textsign', 3529, 2251, 0, { text: 'NIGHT MARKET', bg: '#7a1e2a', fg: [255, 214, 120], z: 58, sx: 2, lit: true });
-    for (const [x, q] of [[3540, 3], [3560, 4]]) hang(K, x, 2253, q);
+    for (let x = 3532; x < 3572; x += 7) hang(K, x, 2253 + ((x / 7) % 2 ? 0.8 : -0.8), 2 + (x % 3));   // (shoppers along the aisle)
   }
   // the food trucks: three carts along the court's north side, the long tables under the lights in front of them
   for (const x of [3581, 3586.5, 3592, 3597.5, 3602]) prop('foodcart', x, 2250.4, 14);   // (round two: five trucks, the tables close)

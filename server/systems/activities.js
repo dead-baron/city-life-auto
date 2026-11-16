@@ -97,9 +97,9 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
   // (the district craft pass, 11-14: the hand plans' own life - map.terraceSpots, map.hangSpots. street: not counted
   // against ACT_MAX, their own cap round a player - a nightlife street wants its terraces and its corners full)
-  terrace: { day: 0.55, night: 0.8, cap: 5, street: 1 },
-  hang: { day: 0.2, night: 0.9, cap: 6, street: 1 },
-  vendor: { day: 0.75, night: 0.85, cap: 8, street: 1 },
+  terrace: { day: 0.6, night: 0.85, cap: 8, street: 1 },
+  hang: { day: 0.35, night: 0.95, cap: 10, street: 1 },
+  vendor: { day: 0.8, night: 0.9, cap: 14, street: 1 },
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
