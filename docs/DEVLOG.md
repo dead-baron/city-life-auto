@@ -24648,3 +24648,108 @@ number in those lists moves):
   captures of the arrival, the pond, the food-truck plaza, the jeweller and the bank, the hotel's drop-off at noon, dusk
   and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
   hashes stay (chunks baked the same carry over: server/artcdn.js).
+
+## 2026-11-15 - The district craft pass, first wave: the Neon Strip and the Pink Mile
+The owner (11-14 20:28): "Big open spaces (like in the Neon Strip) are way too big and open and the lights don't act like
+lanterns, they just look like random lights strung around. We should be looking at every area and going back through
+the concepts and making sure every place is beautifully crafted ... alive with interesting things and details and NPCs
+and decorations ... the designs and placements of things should be intentional." The first wave: the Neon Strip
+(district 7, shared/world3-neon.js) and the Pink Mile (17, shared/world3-pinkmile.js), from D8, SC4-B, WC238, WC046/WC047,
+WC237, AL1 and the handcraft research's signature places.
+- **The kit** (shared/world3-craft.js, for every district's pass after these; the hand kit's `lawn`: the shore band's
+  grass a plan may dress before landscape() plants it): `canopy` - string lights as real
+  catenaries, rows of strings each hung between two posts (or the walls either side), no span over `span` tiles (a long
+  run gets a post in the middle, shared by the strings either side), the rows evenly apart; `terrace` - a bar's or a
+  food place's tables in a row, the menu board, planters at the ends, the canopy over it; `hang` - a knot of people on a
+  corner, or a queue; `vendor` - a stallholder behind a stall; `frontLife` - a knot by about half the bars' and food
+  places' doors, a queue along a picture house's front; `fest` (moved here from the Strip's plan).
+- **People** (server/systems/activities.js, the existing activity system - no parallel one): three new kinds filled from
+  the hand plans' lists, `terrace` (one or two sat at a terrace's table, day and night, busiest after dark), `hang` (three
+  to five stood talking in a loose ring, dressed for a night out - glam, streetwear, punk, dancer - or a queue facing a
+  door; mostly after dark) and `vendor` (the stallholder facing the aisle). They count against their own caps round a
+  player, not ACT_MAX, so a nightlife street fills its corners and terraces as well as its diners and shops. The lists
+  are regional (shared/regionpack.js REGIONAL: the server's people, kept out of the page's index).
+- **Lights that belong to something** (SC4-B): no string looped palm to palm any more - the royal palms down the
+  boulevards' medians and pavements have **fairy lights wound up their trunks** and round the crownshaft's foot (new art:
+  client/art2/game/statics.js 'palmlights', drawn over a palm with `p.lit`, its warm pool of light); every string in both
+  districts hangs between two anchors, none longer than twelve tiles. Fixed: Blossom Plaza's strings out to its corner
+  lamps (on the slant over the lawns, to nothing in particular - gone; the ring round the fountain keeps a post halfway
+  along each long side); the Bayview terrace's one 70-tile string (now two rows of short spans over its tables); Harbor
+  Lights' 16-30 tile strings; the Box Bar's 14-tile string; the Pink Mile's Siren Square (two strings crossed corner to
+  corner, made fast to nothing: now rows strung wall to wall across it), Rose Plaza (strings from the corner lamps that
+  stopped in the air three quarters of the way to the basin: now the cafe terrace's canopy on posts, lamps round the
+  basin's ring) and Under the Loop (two 24-tile strings: now a canopy of short spans over the tables). The big wheel is
+  lit after dark (pink at the hub, blue at the top).
+- **The Neon Strip, place by place:**
+  - **Neon Boulevard** (WC238, SC4-B): the median's palms lit, and on Blossom Plaza's line a little fountain in its flower
+    beds with a lamp at each end (WC238's fountain roundabout); twin lamps at a steady rhythm along both pavements where
+    there was none within five tiles; a knot of people on every corner of its crossings (D8's four corners).
+  - **The crossroads** (boulevard x Park East Avenue, D8): the 24/7's car park keeps its bays, the three by the corner a
+    taxi rank (taxis waiting, the TAXI sign) - the clubs' way home; the corners peopled.
+  - **Lantern Lane night market** (AL1 - it was a 20-tile plaza with stalls along its two edges): four rows of stalls,
+    one down each side facing in and two back to back down the middle, so two close aisles of stalls facing each other
+    (a cross aisle every five stalls), a stallholder at most of them, red lanterns across each aisle post to post; at the
+    mouth on Blossom Plaza the food carts and a terrace of six tables under strings of lights, friends standing about.
+  - **Blossom Plaza:** tables under the ring of lights round the fountain, couples on its benches, knots at the cross
+    walk's ends.
+  - **Harbor Lights** (the biggest open space - a lawn of scattered palms with a screen and a few stalls lost on it): laid
+    out as places with edges - the shore's promenade with lit palms, lamps between them and benches facing the bay; the
+    stage, its screen and speakers at the head of a paved forecourt, the lights strung over the crowd in rows, benches
+    at the back in rows with an aisle, a cart either side, the dancing crowd after dark (partySpots, moved onto the
+    forecourt - it stood inside a building); a night-market street of stalls facing each other under lanterns with its
+    gates and sign; the food trucks - three carts and long tables under a canopy; the big wheel on its pad with a queue
+    at its foot; the bandstand on the lawn with blankets and cherry trees round it; Harbor Lights Parking (three rows of
+    bays) filling the empty lawn down by The Docks.
+  - **The waterfront promenade** (Harbor Walk, the marina): its palms lit up their trunks, the marina's terrace of eight
+    tables under the lights with its menu board, couples at the rail between the jetties.
+  - **The Garden at Afterdark** (new - the lawn behind the club, a big open space with trees dropped on it): a beer
+    garden - the Garden Bar's thatched kiosk at the head of a paved court, standing tables in front of it, three rows of long tables under
+    a canopy of lights, flower boxes along its sides, cherry trees and benches on the lawn behind; people at the tables
+    and round the bar. The bar is a thatched kiosk (a set piece): no building or stop is added anywhere in this pass, so
+    no later building's, home's or business's number moves (no WORLD_VERSION bump).
+  - **Waterfront Gardens** (lawn on a grid with trees dotted anywhere): walks two tiles wide with lit royal palms down both
+    sides, a lamp every eight tiles, benches facing the walks with couples; the lawns' middles open with picnic blankets
+    (activities.js picnic by day) or a flowering tree; **Bayside Court**, a public court for a pick-up game.
+  - The Box Bar's deck: its tables a terrace under two rows of short spans, its regulars.
+  - Murals (MU1): about a third of the two-storey backs along Glow Alley and Neon Back Alley painted edge to edge (a
+    tiger, koi, a skyline, waves, the geometric, flowers, a sunset) - the blank walls the alleys looked at.
+  - Fixed: the lit row by Afterdark named every front after the first "Sushi Sora" (four of them), and the Bayview row
+    every front after the first "Seaglass Grill" - each its own name now, food places as they were (Bay Bento, Tidewater
+    Tacos, Harbor Noodle Co, Lucky Moon Dumplings; Pier 3 Oyster Bar).
+- **The Pink Mile, place by place:** the Mile's and Neon Boulevard's median palms lit; Siren Square (WC046's small square
+  with its tree and string lights: rows wall to wall, friends under them); Rose Plaza (the cafe's terrace with its canopy
+  and menu board, lamps round the basin, friends at its rim, couples on its benches, a knot by the flower seller); Under
+  the Loop's food court (two rows of tables under a canopy, people at them and round the carts); **Mile Beach's grove**
+  (the lawn behind the motels: two rows of coconut palms, lamps, picnic tables with people at
+  them, blankets) and a **bonfire on the sand** with friends round it after dark; knots by the lounges' and bars' doors
+  along the Mile (frontLife); murals on about a third of the two-storey backs along Rose Alley (not Sideshow Street's
+  rough ones: tagged).
+- Tests: test/neonstrip.test.js - every string made fast at both ends and none over twelve tiles, no string palm to palm,
+  the palms lit; the craft pass (Lantern Lane in four rows, Harbor Lights' pieces, the stage's crowd on its forecourt,
+  the terraces, knots and stallholders in both districts, each kind filling with its people: sat, talking, behind the
+  stall); the playability check lets the boulevard's median hold its fountain and lamps.
+- Performance: the bake's code stays at its 1010 KB (the palm lights, the menu board prop and the wheel's lights paid for
+  by trimming statics.js's header and roof-garden comments). The art hash moves (the palm lights): the chunks with lit
+  palms rebake; the rest carry over (server/artcdn.js). The world map's picture rebaked (node tools/build-worldmap2.mjs).
+- **Round two** (the lead's review: the open spaces still read as empty lots in the wide view):
+  - Harbor Lights: the stage's forecourt cut to a paved apron in front of the screen (the crowd, the lights strung over
+    it in rows, planters along its edge, banner poles, potted palms and tiki torches at the stage's wings), the rest a
+    picnic lawn with blankets in loose rows facing the stage and a pergola bar with tables at each side; the food-truck
+    court tighter, five trucks, eight long tables under the canopy, potted palms along its edge; shoppers down the
+    night-market street.
+  - Blossom Plaza: four planted beds inside the fountain's ring between the walks (flowers in drifts, a shrub at each
+    bed's heart), potted palms between the ring's cherry trees, a food cart and tables under a short canopy on each
+    arm of the cross walk, more people about the ring.
+  - Rose Plaza: a second terrace on its east side under a canopy, a flower market of four stalls with their sellers
+    between the basin and the promenade, a rose bed with a cherry in its south half, potted palms along the walks.
+  - Lantern Lane: shoppers down both aisles.
+  - People: the street-life kinds' caps round a player up (terraces 8, knots 10, stallholders 14) - the nightlife
+    streets fill as well as their diners and shops.
+- Proof (scratchpad/craft-neon/owner/): before | after live at street level, noon / dusk / night, art v2 baked and dry
+  (the capture waits for every chunk on screen and stops the rain before each frame): the boulevard by Blossom Plaza,
+  the crossroads, Harbor Lights, the marina promenade, the Pink Mile by The Garter Room; live wide shots of Harbor
+  Lights (the stage, the market street, the food trucks) and Lantern Lane; and before | after layouts of each open
+  space from above (area-shot): Harbor Lights, Lantern Lane, the Garden at Afterdark, Mile Beach, Blossom Plaza and
+  Rose Plaza.
+- test/prison.test.js (the weapon back after prison) and test/scenes.test.js (live events in the FTUE) fail on the
+  base commit too (6eb49506): not this pass's.
