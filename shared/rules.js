@@ -234,7 +234,11 @@ export const BREAK_HEADSTART = { grace: [0, 4.5, 4.5, 2.5, 2.5, 2.5], startle: [
 // going nowhere, it always works. Pressed while it's too fast, you brace for it: the kick comes the moment it slows
 // (custody.js arm). (11-14: at 1-2 stars it was 50% / 35% under 60 px/s, the button there only then - with the siren on
 // the traffic pulls over, the car was that slow about 3% of the ride, and the owner never got out.)
-export const BREAK_CAR = { speed: [0, 190, 180, 60, 60, 60], chance: [0, 0.85, 0.7, 0.12, 0.03, 0.01] };
+// (11-15, the owner: "trying to run when the car slows down doesn't ever seem to work": a slow-down was over before a
+// phone's press reached the server - now the chance stays open windowS seconds after the car was last that slow, the
+// action button red and saying ESCAPE all that time (client/hud.js); and 3 stars, among the easier police since 11-07,
+// gets a car slow often enough and a fair kick)
+export const BREAK_CAR = { speed: [0, 190, 180, 150, 60, 60], chance: [0, 0.85, 0.7, 0.4, 0.05, 0.01], windowS: 2 };
 // How hard the police come at you, by stars (server/systems/police.js; design notes 2026-10-08): 1-2 they chase you
 // down and tackle you; 3 tasers, a few officers with pistols (and all of them once you shoot at the police); 4 they open
 // fire, still diving at you up close; 5 the FBI, SWAT and now and then the army.

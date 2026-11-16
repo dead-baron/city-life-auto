@@ -1111,6 +1111,33 @@ export function sameName(a, b) {
   const p = nameKey(a), q = nameKey(b);
   return !!p && !!q && (p === q || (p.length >= 5 && (' ' + q + ' ').includes(' ' + p + ' ')) || (q.length >= 5 && (' ' + p + ' ').includes(' ' + q + ' ')));
 }
+// The boards on a front that say a name, in the order they win: the shop's sign, the portico's lettering (when it fits
+// in the stone: buildings.js portico draws none otherwise), then the plaques (a neon name is a plaque too) - each { t, k }
+const porticoFits = (p) => !!(p && p.text) && Math.min(lineMask(p.text, 'serif').w, lineMask(p.text, 'civic').w) * 2 <= p.w - 8;
+export function frontNames(spec) {
+  const L = [];
+  if (spec.shop && spec.shop.sign && spec.shop.sign.text) L.push({ t: spec.shop.sign.text, k: 'sign' });
+  if (porticoFits(spec.portico)) L.push({ t: spec.portico.text, k: 'portico' });
+  for (const pq of spec.plaques || []) if (pq && pq.text) L.push({ t: pq.text, k: 'plaque' });
+  return L;
+}
+// One name on a front: the first board to say it keeps it, a later one saying it again goes (the owner, 11-12: "OLD TOWN
+// INFIRMARY" twice, one under the other; 11-15: Canvas Savings Bank's portico cut CANVAS SAVINGS and a CANVAS SAVINGS BANK
+// board under it - the bank archetype's name plaque, kept when the hand plan put its own name in the portico). A portico
+// saying the shop sign's name loses its lettering. tools/placementlint.mjs nameTwice checks every front of the world.
+export function oneName(spec) {
+  const said = [];
+  if (spec.shop && spec.shop.sign && spec.shop.sign.text) said.push(spec.shop.sign.text);
+  if (porticoFits(spec.portico)) { if (said.some((t) => sameName(t, spec.portico.text))) spec.portico = { ...spec.portico, text: null }; else said.push(spec.portico.text); }
+  if (!spec.plaques || !spec.plaques.length) return spec;
+  spec.plaques = spec.plaques.filter((pq) => {
+    if (!pq || !pq.text) return true;
+    if (said.some((t) => sameName(t, pq.text))) return false;
+    said.push(pq.text);
+    return true;
+  });
+  return spec;
+}
 // a plaque styled: its trade's face and palette when it has one (a clinic's white and green, the fire station's red), its
 // own colours made legible otherwise, in the small face
 function stylePlaque(pq, A, seed) {
@@ -1471,7 +1498,7 @@ function specOf(c, b, A, s, D) {
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
   // (one name on a front: a hand plan's shop sign says the building's name, so the trade's own name plaque - a clinic's,
   // a police station's, painted over the door - goes; the owner, 11-12: "OLD TOWN INFIRMARY" twice, one under the other)
-  if (spec.plaques && spec.plaques.length && spec.shop && spec.shop.sign && spec.shop.sign.text) spec.plaques = spec.plaques.filter((pq) => !sameName(pq.text, spec.shop.sign.text));
+  oneName(spec);
   if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
   unstackSigns(spec);   // (no board over another on the front: buildings.js)
   const capped = streetCap(c, b, s, spec, pitched, lights);

@@ -92,7 +92,24 @@ test('one name on a front: a hand plan\'s sign drops the trade\'s plaque that sa
   assert.ok(!sameName('EMERGENCY', 'OLD TOWN INFIRMARY'));
   assert.ok(!sameName('BAR', 'BARBER SHOP'));
   const src = readFileSync(ROOT + 'client/art2/game/statics.js', 'utf8');
-  assert.ok(/spec\.plaques = spec\.plaques\.filter\(\(pq\) => !sameName\(pq\.text, spec\.shop\.sign\.text\)\)/.test(src));
+  assert.ok(/\n  oneName\(spec\);/.test(src), 'every front through oneName');
+});
+
+test('one name on a front, every board (the owner, 11-15: Canvas Savings Bank - CANVAS SAVINGS in the portico and a CANVAS SAVINGS BANK board under it)', async () => {
+  const { oneName, frontNames } = await import('../client/art2/game/statics.js');
+  const texts = (sp) => frontNames(sp).map((q) => `${q.k}:${q.t}`);
+  // the bank: the hand plan's portico lettering keeps the name, the archetype's plaque goes
+  assert.deepEqual(texts(oneName({ w: 360, portico: { x: 40, w: 280, cols: 6, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['portico:CANVAS SAVINGS']);
+  // a portico too narrow for its words draws none: the plaque stays the name
+  assert.deepEqual(texts(oneName({ w: 200, portico: { x: 40, w: 60, cols: 4, text: 'CANVAS SAVINGS' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })), ['plaque:CANVAS SAVINGS BANK']);
+  // BANK in the stone with the name beside it: two different words, both stay
+  assert.equal(frontNames(oneName({ w: 300, portico: { x: 70, w: 140, cols: 4, text: 'BANK' }, plaques: [{ text: 'CANVAS SAVINGS BANK', x: 6, v: 70 }] })).length, 2);
+  // the shop's sign first; a plaque, a neon name, a second plaque saying it again go; EMERGENCY stays
+  const sp = oneName({ w: 300, shop: { sign: { text: 'Old Town Infirmary' } }, plaques: [{ text: 'OLD TOWN INFIRMARY', cx: 150, v: 66 }, { text: 'EMERGENCY', cx: 150, v: 58 }, { text: 'TOPAZ', face: 'neon', v: 72 }, { text: 'TOPAZ', v: 90 }] });
+  assert.deepEqual(texts(sp), ['sign:Old Town Infirmary', 'plaque:EMERGENCY', 'plaque:TOPAZ']);
+  // a portico that says the shop sign's name loses its lettering, not its columns
+  const pc = oneName({ w: 360, shop: { sign: { text: 'MUSEUM' } }, portico: { x: 40, w: 280, cols: 6, text: 'MUSEUM' } });
+  assert.ok(pc.portico && !pc.portico.text, 'the columns stay, the words go');
 });
 
 test('a player\'s name tag rides on the vehicle they\'re in - an aircraft drawn up by its height carries it up there', () => {

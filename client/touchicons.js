@@ -483,7 +483,7 @@ const VERBS = new Set(('ENTER EXIT LEAVE TALK ASK CHAT GREET HAIL BOARD MOOR PAD
   + 'SERVE CLIMB JUMP LOOK WATCH READ CHECK SIGN JOIN PLANT PICK DIG WATER CHOP FELL MINE LIGHT SWITCH WEAR DRESS ADOPT FEED PET '
   + 'DANCE SPIN TAKE GRAB LOOT PUT LOAD UNLOAD STASH HAND GIVE DROP PLACE STACK BUY SELL PAY RENT SHOP ORDER TRADE BET CUFF '
   + 'FRISK OPEN CLOSE CALL USE RING STEAL KNOCK PRAY VOTE TIP COUNT FILL PUMP CHARGE SEARCH SHOOT KICK THROW HIDE SPRAY PULL PUSH').split(' '));
-export const KIND_WORD = { interact: 'ACT', wait: 'WAIT', arrest: 'CUFF', run: 'RUN', job: 'JOB', door: 'ENTER', talk: 'TALK', hail: 'HAIL',
+export const KIND_WORD = { interact: 'ACT', wait: 'WAIT', arrest: 'CUFF', run: 'ESCAPE', job: 'JOB', door: 'ENTER', talk: 'TALK', hail: 'HAIL',
   transit: 'BOARD', boat: 'BOARD', getin: 'GET IN', bank: 'BANK', rob: 'ROB', unlock: 'UNLOCK', home: 'LOOK', buy: 'BUY', revive: 'REVIVE',
   rest: 'REST', sit: 'SIT', eat: 'EAT', wash: 'WASH', repair: 'FIX', build: 'BUILD', paint: 'PAINT', casino: 'PLAY', fish: 'FISH', play: 'PLAY',
   climb: 'CLIMB', down: 'DOWN', look: 'LOOK', sign: 'SIGN', plant: 'PLANT', chop: 'CHOP', mine: 'MINE', fire: 'LIGHT', lights: 'SWITCH',

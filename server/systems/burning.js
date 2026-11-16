@@ -35,6 +35,7 @@ const span = (world, [a, b]) => a + (b - a) * world.rand();
 // Set someone alight: by who did it (a ped, or null), secs how long it burns if left alone. False if they can't catch
 // (in a vehicle, in the water, an animal, indoors). Already burning: it burns on at least that long.
 export function ignite(world, ped, by = null, secs = BURN.secs) {
+  if (process.env.CLA_TRACE_IGNITE && ped && !ped.dead && !ped.burnT) console.log('IGNITE', ped.id, ped.player ? 'player' : ped.npc && ped.npc.role, new Error().stack.split('\n').slice(2, 7).join(' | '));
   if (!ped || ped.kind !== K.PED || ped.dead || ped.wild || ped.pet || ped.hidden || ped.interior || ped.vehId || ped.onTrain || ped.cellSafe) return false;
   if (isSwimming(world.map, ped) || world.time < (ped.protectUntil || 0)) return false;   // (spawn and step-out protection: no fire either)
   if (by && by !== ped && ped.player && by.player && crews.mates(ped.player, by.player)) return false;   // (a crewmate's fire: no friendly fire - crews.js)
