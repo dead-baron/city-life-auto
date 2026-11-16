@@ -30,6 +30,10 @@
 //             counter, sat in the barber's chair, at the bar
 //   dice      three shooting dice down an alley in a rough part of town, crouched against the wall over the dice and
 //             the money - mostly after dark; a player can get in on it (streetdice.js)
+//   tableau   the people a handcrafted place puts in it (map.tableaus: shared/world3-downtown.js) - TABLEAU's: a queue at
+//             a food truck's hatch, a cart's vendor, the doormen at a hotel's door, guards loading an armored van, office workers at
+//             lunch at a plaza's tables, people at a rail looking out over the water, a word on a square, someone
+//             waiting at a bus stop. Counted apart from the other groups round a player (TAB_MAX): a busy place stays busy
 // and each is filled with its people when someone comes near (spawned out of everyone's sight, a few groups round a
 // player at most), and emptied when nobody's near any more. They stand (sit) and loop a pose: the descriptor's gt (the
 // client's personaPose: 'sit', 'sitlow') and prop (pp: 'easel', 'cooler', 'chess': client/art2/people.js), the anglers'
@@ -92,7 +96,8 @@ const KINDS = {   // day / night: the chance a spot is on when someone comes nea
   market: { day: 0.95, night: 0.75, cap: 2 },   // (a market lane's stall keepers and shoppers - the craft pass, 11-15)
   terrace: { day: 0.8, night: 0.6, cap: 3 },   // (diners at a cafe's tables out on the pavement or a square)
   delivery: { day: 0.8, night: 0.1, cap: 1 },   // (a van unloading at a shop's kerb)
-  dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)   // (IN8: eating at a food place's tables, the cook at the line)
+  dice: { day: 0.3, night: 0.8, cap: 1 },   // (street dice down an alley: streetdice.js)
+  tableau: { day: 1, night: 1, cap: 8 },   // (a handcrafted place's people: TABLEAU says how likely by what they are)   // (IN8: eating at a food place's tables, the cook at the line)
   ...WILD_KINDS,   // (the people of the wilds: wildfolk.js)
 };
 // a hunter's look: the blaze-orange vest and cap, outdoor clothes, boots
@@ -104,6 +109,12 @@ const MY_LOOKS = {
       L.outfit.bottoms = item('Cargo pants', pk(r, ['olive', 'khaki', 'charcoal'])); L.outfit.shoes = item('Hiking boots', pk(r, ['brown', 'tan']));
       L.outfit.hat = item(r() < 0.6 ? 'Trucker cap' : 'Beanie', 'orange'); L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
     } },
+  guard: { styles: [['casual', 1]], fem: 0.25, age: [1, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,   // (security: a bank's door, an armored van's crew)
+    fix(L, r) {
+      L.outfit.set = null; L.outfit.top = item('Button-up shirt', 'white'); L.outfit.jacket = item('Waistcoat', 'navy');
+      L.outfit.bottoms = item('Uniform pants', 'navy'); L.outfit.shoes = item('Oxfords', 'black');
+      L.outfit.hat = null; L.outfit.glasses = r() < 0.4 ? item('Sunglasses') : null; L.outfit.jewel = null; L.outfit.bag = null;
+    } },
   cook: { styles: [['casual', 1]], fem: 0.4, age: [1, 3, 3, 2, 1, 0], shade: 0, builds: 'casual', pool: 6,   // (IN8: whites and an apron at the kitchen line)
     fix(L, r) {
       L.outfit.set = null; L.outfit.top = item('Plain tee', 'white'); L.outfit.jacket = item('Apron', 'white', 'cream');
@@ -111,6 +122,19 @@ const MY_LOOKS = {
       L.outfit.hat = null; L.outfit.glasses = null; L.outfit.jewel = null; L.outfit.bag = null;
     } },
 };
+// a handcrafted place's people (map.tableaus { x, y, a, v, look, x2, y2, x3, y3, seats }): how likely they're there by day and
+// by night, whether rain sends them in
+const TABLEAU = {
+  queue: { day: 0.95, night: 0.55 },   // at a food truck's (a cart's, a coffee hatch's) window, in a line back from it
+  staff: { day: 0.92, night: 0.85 },   // someone at their post (look: valet, vendor...): a hotel's doormen (two: x2, y2), a cart's vendor
+  guards: { day: 0.85, night: 0.25 },  // an armored van loading: one on watch, one carrying the crates to the door (x2 -> x3)
+  sit: { day: 0.85, night: 0.45, rain: 1 },   // one to three of the seats taken (seats [[x, y, a]]) - lunch at the plaza's tables
+  view: { day: 0.65, night: 0.3, rain: 1 },   // two side by side at a rail, looking out (the pond, the water)
+  chat: { day: 0.6, night: 0.35 },     // two or three stood talking on a square
+  wait: { day: 0.8, night: 0.5 },      // at a bus stop: one sat in the shelter, now and then one stood by with a phone
+};
+const TAB_MAX = 6;
+const PHONE = 'phone';   // (a passer-by's phone in hand: drawn with the person, as the personas' - not one of actprops.js's)   // tableau groups round one player at most (apart from ACT_MAX's)
 const ANCHOR = { pierrail: 'anglers', pier: 'anglers', fishtable: 'anglers', rods: 'anglers', picnic: 'chess', cafetable: 'chess', blanket: 'picnic', fountain: 'painter', statue: 'painter', gazebo: 'painter', mapboard: 'painter', ferris: 'painter' };
 
 const walkable = (map, x, y) => { const t = map.tileAtPx(x, y); return !PED_BLOCK[t] && t !== T.ROAD && t !== T.BRIDGE && t !== T.WATER && t !== T.DEEP; };
@@ -252,6 +276,7 @@ export function spotsOf(map) {
   for (const q of map.marketLanes || []) { list.push({ k: 'market', x: q.x, y: q.y, a: 0, lane: q, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.terraceSpots || []) if (walkable(map, q.x - TERRACE_SEAT, q.y) && walkable(map, q.x + TERRACE_SEAT, q.y)) { list.push({ k: 'terrace', x: q.x, y: q.y, a: 0, wild: false }); taken.push({ x: q.x, y: q.y }); }
   for (const q of map.deliverySpots || []) if (walkable(map, q.x, q.y) && walkable(map, q.dx, q.dy)) { list.push({ k: 'delivery', x: q.x, y: q.y, a: Math.atan2(q.dy - q.y, q.dx - q.x), door: { x: q.dx, y: q.dy }, van: q.van || null, wild: false }); taken.push({ x: q.x, y: q.y }); }
+  for (const q of map.tableaus || []) if (TABLEAU[q.v]) list.push({ ...q, k: 'tableau', a: q.a || 0, wild: false });   // (a handcrafted place's people: where it put them - not kept clear of)
   // the building sites (a building of kind 'construction': the frame going up) - a crew at work out front (batch 8)
   for (const b of map.buildings || []) {
     if (!b || b.kind !== 'construction') continue;
@@ -431,6 +456,8 @@ function members(s) {
     if (rng() < 0.6) out.push({ x: s.x - 22, y: s.y - 4, a: s.a, arche: 'casual', look: 'courier', watch: s.van || { x: s.x, y: s.y + 40 } });
   } else if (s.k === 'cards') {     // the dealers at their tables, players in some of the seats, some at the slots
     out.push(...casinofloor.members(s.floor, rng));
+  } else if (s.k === 'tableau') {
+    tableau(s, c, sn, out);
   } else if (s.k === 'pool') {      // the breaker bent over the cue at the head of the table, the other off its far end, cue up; watchers
     const T = s.table, b = poolnpc.breakSpot(T), w0 = { x: T.x1 + 18, y: T.cy + 8, a: Math.PI };
     out.push({ x: b.x, y: b.y, a: b.a, arche: rng() < 0.5 ? 'hustler' : 'casual', pool: 0, gt: 'cue' });
@@ -439,6 +466,31 @@ function members(s) {
     for (let i = 0; i < w; i++) { const x = T.x0 - 14 - i * 12, y = T.y1 + 10 + i * 8; out.push({ x, y, a: Math.atan2(T.cy - y, T.cx - x), arche: rng() < 0.5 ? 'hustler' : 'casual', watch: true }); }
   }
   return out;
+}
+// a handcrafted place's people (TABLEAU): c, sn - the way they face
+function tableau(s, c, sn, out) {
+  const who = (k = 0.35) => (rng() < k ? 'executive' : rng() < 0.15 ? 'senior' : 'casual');
+  if (s.v === 'queue') {   // in a line back from the window, a little ragged; one on their phone, now and then a word
+    const n = 2 + Math.floor(rng() * 3);
+    for (let i = 0; i < n; i++) { const d = i * 17 + (i ? rng() * 4 : 0), j = (rng() - 0.5) * 7; out.push({ x: s.x - c * d - sn * j, y: s.y - sn * d + c * j, a: s.a, arche: who(), pp: i && rng() < 0.3 ? PHONE : null }); }
+  } else if (s.v === 'staff') {
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: s.look || 'valet' });
+    if (s.x2 !== undefined) out.push({ x: s.x2, y: s.y2, a: s.a, arche: 'casual', look: s.look || 'valet' });
+  } else if (s.v === 'guards') {
+    out.push({ x: s.x, y: s.y, a: s.a, arche: 'casual', look: 'guard' });
+    if (s.x2 !== undefined) out.push({ x: s.x2, y: s.y2, a: Math.atan2(s.y3 - s.y2, s.x3 - s.x2), arche: 'casual', look: 'guard', pp: 'crate', patrol: [{ x: s.x2, y: s.y2 }, { x: s.x3, y: s.y3 }] });
+  } else if (s.v === 'sit') {
+    const seats = (s.seats || []).map((q) => [rng(), q]).sort((p, q) => p[0] - q[0]).map((q) => q[1]), n = Math.min(seats.length, 1 + Math.floor(rng() * 3));
+    for (let i = 0; i < n; i++) { const [x, y, a] = seats[i]; out.push({ x, y, a, arche: who(0.55), gt: 'sit' }); }
+  } else if (s.v === 'view') {
+    for (const k of [-1, 1]) out.push({ x: s.x - sn * 11 * k, y: s.y + c * 11 * k, a: s.a, arche: who(0.2), chat: true });
+  } else if (s.v === 'chat') {
+    const n = 2 + (rng() < 0.4 ? 1 : 0);
+    for (let i = 0; i < n; i++) { const a = s.a + (i / n) * Math.PI * 2, x = s.x + Math.cos(a) * 13, y = s.y + Math.sin(a) * 10; out.push({ x, y, a: Math.atan2(s.y - y, s.x - x), arche: who(0.5), chat: true }); }
+  } else if (s.v === 'wait') {
+    out.push({ x: s.x, y: s.y, a: s.a, arche: who(), gt: 'sit' });
+    if (rng() < 0.5) out.push({ x: s.x + c * 30 - sn * 14, y: s.y + sn * 30 + c * 14, a: s.a + Math.PI / 2, arche: who(), pp: PHONE });
+  }
 }
 // where the i-th of n stands round the key (shooting around: a new spot after each shot), facing the rim
 function hoopSpot(s, i, n, turn = 0) {
@@ -662,24 +714,26 @@ function fillRound(world) {
   const night = !!(world.clock && world.clock.isNight), rest = (world.actRest ||= new Map()), rain = world.weather === WEATHER.RAIN;
   for (const a of anchors) {
     if (a.ug || a.hidden) continue;
-    let have = 0;
+    let have = 0, tabs = 0;
     const kinds = {};
-    for (const g of A.values()) if (Math.hypot(g.x - a.x, g.y - a.y) < ACT_DROP) { have++; kinds[g.k] = (kinds[g.k] || 0) + 1; }
+    for (const g of A.values()) if (Math.hypot(g.x - a.x, g.y - a.y) < ACT_DROP) { if (g.k === 'tableau') tabs++; else have++; kinds[g.k] = (kinds[g.k] || 0) + 1; }
     // (the floor you're walking up to comes first, whatever's on round you: on the Strip the other casinos' floors, a pool
     // table, a busker took the round's places before it - spotsNear isn't in order - and the casino you walked into had
     // nobody in it, never filled once you were inside: the owner's Golden Lotus capture, 11-14)
     const all = spotsNear(world.map, a.x, a.y, ACT_NEAR), first = (s) => !!s.floor && a.x > s.floor.x0 - FLOOR_FIRST && a.x < s.floor.x1 + FLOOR_FIRST && a.y > s.floor.y0 - FLOOR_FIRST && a.y < s.floor.y1 + FLOOR_FIRST;
     for (const s of all.filter(first).concat(all.filter((q) => !first(q)))) {
       const pri = first(s);
-      if (!pri && (have >= ACT_MAX || world.npcCount >= world.npcBudget * 0.85)) break;
+      if (!pri && world.npcCount >= world.npcBudget * 0.85) break;
+      const tab = s.k === 'tableau';
+      if (!pri && (tab ? tabs >= TAB_MAX : have >= ACT_MAX)) continue;
       if (A.has(s.id) || now < (rest.get(s.id) || 0) || (!pri && (kinds[s.k] || 0) >= (KINDS[s.k].cap || 2))) continue;   // (not the whole street washing its cars at once)
       if (s.floor ? inside(world, s.floor) : anchors.some((b) => Math.hypot(b.x - s.x, b.y - s.y) < GAP)) continue;   // (a floor's: not with someone in the room)
-      const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : s.k === 'cards' ? CASINO_FLOOR[s.floor.casino ? 'casino' : 'bar'] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
-      if (rain && RAIN_OFF.has(s.k)) continue;
+      const P = s.k === 'pool' ? POOL_NPC[s.table.spur ? 'spur' : 'bar'] : s.k === 'cards' ? CASINO_FLOOR[s.floor.casino ? 'casino' : 'bar'] : tab ? TABLEAU[s.v] : KINDS[s.k];   // (pool: by the table - the Spur's most nights, a bar's now and then)
+      if (rain && (RAIN_OFF.has(s.k) || (tab && P.rain))) continue;
       if (!(pri && s.floor.casino) && rng() >= (night ? P.night : P.day)) { rest.set(s.id, now + (s.k === 'pool' ? POOL_NPC.retryS[0] + rng() * (POOL_NPC.retryS[1] - POOL_NPC.retryS[0]) : 120 + rng() * 180)); continue; }   // (not today: try again later - a casino you're at the door of is always open)
       if (!fill(world, s)) { rest.set(s.id, now + 15); continue; }   // (in sight just now, no car in the driveway: a little later)
       kinds[s.k] = (kinds[s.k] || 0) + 1;
-      have++;
+      if (tab) tabs++; else have++;
     }
   }
 }

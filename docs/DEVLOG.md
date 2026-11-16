@@ -24581,3 +24581,70 @@ The owner: "we don't need to have a list of old accounts here, maybe one button"
 back to ..." button for every character the device played before a sign-in or a code (up to three: a guest the device
 had before signing in, say). Now one button, "Other characters on this device (n)", opens the list with a line saying
 what they are (account.js prevOpen); entries kept without a name read "an earlier character". Test: launch-review2.
+## 2026-11-15 - Downtown's craft pass: the city's arrival round Greenfield Park, crafted from the concepts
+The owner (11-14 20:28): "Big open spaces ... are way too big and open and the lights don't act like lanterns, they just
+look like random lights strung around ... every place beautifully crafted ... alive with interesting things and details
+and NPCs and decorations ... the designs and placements of things should be intentional." Downtown is where new players
+step off the train (beside Greenfield Park, decisions 11-06), so it goes first. The concepts read again, place by place
+(shared/world3-dtcraft.js, called from shared/world3-downtown.js; nothing adds a building, a place or a home, so no
+number in those lists moves):
+- **D1 / SK6 - the food-truck plaza** (Station Plaza, the Greenfield Park subway stop's, between Pinnacle House and
+  Larkspur Tower): was three carts, four tables and a string of lights hanging from nothing over 25 x 35 tiles of paving.
+  Now, north to south: in from Crosstown Avenue an allee of plane trees in grates over benches, bollards along the kerb;
+  the trucks' bay - Mr. Frosty's van parked on its asphalt, three hot dog carts in a row, each cart's vendor behind it and
+  a queue at each window (and at the van's); the fountain with four benches turned to it, two lawn beds of flowers and
+  shrubs, trees in grates at the corners, a bench against each tower and lamps either side of them, a few office
+  workers talking. Down to 6th Street and the stop's kiosk, eight tables under
+  umbrellas in two blocks either side of a walk, people at lunch at them, and the strings of lights across each block
+  between the rows - every one from a post to a post. Bins, bollards along the avenue (the bay's mouth open).
+- **WC083 - Greenfield Park's paths and pond**: the lamps were dropped at random along the paving (one in eleven paved
+  tiles, a bench or a lamp). Now they stand at a rhythm: along the pond's ring a lamp every 11 tiles of path on its outer
+  edge, the benches between them on the water's side turned to the water, a bin by every other one, a flower bed half
+  way between every other pair of lamps; along the loop inside the railings a lamp every 12 tiles outside it, the benches
+  inside it turned to it; along the ways in from the gates a lamp every 10 tiles either side by turns; a lamp at each
+  corner of the footbridges (`parkLights`: each line of path traced in order and walked). The trees keep off them. At the
+  boathouse: rowing boats tied up along the jetty (a canoe at its end), people at the cafe's tables, two at the jetty's
+  end looking out over the water, ducks off it and lilies by the bank, the ice-cream cart on the lawn beside it. The
+  soccer stand's roof lights are on a post at each end.
+- **SC2-B / SC4-H - the jeweller's corner**: Brilliant & Co. moved onto the corner of Park East Avenue and 12th Street,
+  the bank beside it, so the two fronts are one view (the slot between them paved). Its lit skylight on the roof, bollards along its kerb, the bin and
+  the news boxes by the corner, the hydrant on it, and its back alley behind it off the avenue - the dumpster, bags,
+  crates, a pallet, a lamp at the mouth.
+- **SC2-A / SC4-A - First Pixel Bank**: a guard at the door, planters either side, iron lamps at its ends, a row of
+  bollards along the kerb and a bus shelter with someone waiting. The armored vans moved up to the bay's gate (they were
+  out of sight at its back), one guard watching the street, one carrying the cash boxes from a van's back to the bank's
+  side; a hand truck and boxes by the wall. East of the bay to Civic Avenue: a pocket garden of trees and benches where a
+  41 x 28 slab of paving was.
+- **CR2 / HO5 / WC356 - the Grand Neon Hotel's drop-off**: the drive was a 13-tile ring of asphalt round a small paved
+  island; now a lane's width round a garden - lawn, four royal palms, a ring of flowers, the fountain on its paved
+  circle. Two doormen at the door, potted palms either side of it, the hotel's flags (and the Stars) along its front,
+  banner lamps on the drive's outer kerb, guests with their bags by the cab rank.
+- **SC2-C - the police headquarters**: two flags at its door, planters, bollards along its forecourt's edge.
+- **S1-A / I1-A / D1 - the street corners**: where two of Downtown's streets cross, a hydrant at one corner, news boxes
+  at another, a bin, now and then a mailbox or a phone box. Someone waiting in the bus shelters on the east-west streets
+  (the one on Fountain Avenue's south pavement turned to the street). The fountain courts between the towers on 23rd and
+  12th Streets get benches turned to their fountains, trees in grates and people talking; Greenfield Tower's plaza office
+  workers out on it; Fountain Square two chess tables under its palms, Cafe Fontaine's customers at its tables.
+- **The arrival block** (shared/world3-firstcars.js): the lane's string of lights ran its whole length over nothing; now
+  it is strung to and fro across the shops' pavement and the lane, from brackets on the shops' fronts to posts on the
+  lane's far kerb between the bought cars' spaces (never on the walk behind the platform: the arrival line's corridor
+  keeps a tile clear of anything standing - a post there and the line isn't laid). The used lot's lights on posts at its
+  corners. Across the line from the platform, where a lawn held five flower beds, a station garden: a long border of
+  tulips, roses, lavender and daffodils along the line, benches turned to the platform, lamps between them. Someone at
+  Park West Coffee's tables, a cab waiting outside it for a fare off the train.
+- **The places' people** (server/systems/activities.js `tableau`): a handcrafted place lists the people it wants in it
+  (m.tableaus - kept off the page's region files: shared/regionpack.js OMIT) - a queue at a window, someone at their post
+  (a hotel's doormen, a cart's vendor: the cart `staffed`, so the street vendor persona leaves it be), the guards at an
+  armored van (one carrying the boxes to and fro), people sat at a plaza's tables, two at a rail looking out, a word on a
+  square, someone waiting at a bus stop. They fill like the other activities - out of sight, near a player, by day and
+  by night as each kind says - counted apart from them (six groups round a player besides the other activities' four).
+  A security guard's look (white shirt, navy waistcoat and trousers). test/tableau.test.js.
+- Buses keep off the roads the traffic keeps off (server/systems/transit.js busRoad: not a `notraffic` edge - a station's
+  own road, a wild track): the bank's new shelter on 12th Street joined a line that ran down Metro Central's station road.
+- Decisions: the owner's rule of 11-14 20:28 is in docs/DECISIONS.md (World and places).
+- Checked: the placement lint clean in Downtown (its totals as before), the arrival line laid at Greenfield Park, the
+  FTUE's lot and alley as they were; the city 136 s to build here (as before); perf, world3server (the region index),
+  dmath, mapwindow, regions within their budgets - nothing in the page's or the bake's code changed. Live before/after
+  captures of the arrival, the pond, the food-truck plaza, the jeweller and the bank, the hotel's drop-off at noon, dusk
+  and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
+  hashes stay (chunks baked the same carry over: server/artcdn.js).

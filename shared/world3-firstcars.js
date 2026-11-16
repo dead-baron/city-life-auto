@@ -105,8 +105,9 @@ export function parkWest3(m, H3) {
   for (const x of [3003.5, 3006.5, 3009.5]) slots.push({ x: Math.round(x * TILE), y: Math.round(2457.6 * TILE), a: Math.PI / 2 });
   const lotSpots = [];   // (the bought cars' spaces: along the lane's south kerb, nose to tail)
   for (const x of [3003, 3007, 3011, 3021, 3025, 3029, 3033]) lotSpots.push({ x: Math.round(x * TILE), y: Math.round((P.lane[1] - 0.1) * TILE), a: 0 });
-  K.prop('festoon', lx0 + 0.3, ly1 + 0.7, 0, { tx: Math.round((lx1 - lx0 + 0.4) * TILE), ty: 0, h: 44 });
-  K.prop('festoon', lx1 - 0.5, oy + 0.4, 0, { tx: 0, ty: Math.round((ly1 - oy - 0.2) * TILE), h: 44 });
+  // (the lot's lights strung on their own poles at its corners - a light belongs to something: the craft pass, 11-15)
+  K.prop('festoon', lx0 + 0.3, ly1 + 0.7, 0, { tx: Math.round((lx1 - lx0 + 0.4) * TILE), ty: 0, h: 44, ends: ['pole', 'pole'] });
+  K.prop('festoon', lx1 - 0.5, oy + 0.4, 0, { tx: 0, ty: Math.round((ly1 - oy - 0.2) * TILE), h: 44, ends: ['pole', null] });
   K.prop('textsign', lx0 + 1.6, ly1 + 0.4, 0, { text: 'USED CARS', bg: '#c8503a', fg: [255, 246, 220], z: 30, sx: 1, lit: true });
   K.prop('chainfence', lx1 + 0.9, ly0, 0, { tx: 0, ty: Math.round((ly1 - ly0 + 0.6) * TILE) });
   K.prop('planter_g', ox + ow + 1, oy + 1.2, 0);
@@ -138,20 +139,40 @@ export function parkWest3(m, H3) {
     shops.push({ b, S, door: dtx });
   });
   // ---- the lane's life: strung lights over it, lamps and benches, the cafe's tables, the florist's buckets, the dead
-  // end's bollards and hot dog cart
-  K.prop('festoon', P.x0 + 5, P.lane[0] + 0.2, 0, { tx: Math.round((X1 - P.x0 - 7) * TILE), ty: 0, h: 64 });
+  // end's bollards and hot dog cart. The lights are strung across the shops' pavement and the lane, from bracket on the
+  // shops' fronts to posts on the station's side of the lane, to and fro (the owner, 11-14: "the lights don't act like
+  // lanterns, they just look like random lights strung around" - each one a real catenary between two anchors)
+  // (the posts on the lane's far kerb between the bought cars' spaces - never on the walk behind the platform: the
+  // arrival line's corridor keeps clear of anything standing within a tile of it - shared/world3-arrivals.js)
+  const zig = [P.shops[0][0] + 1, P.shops[0][0] + 5, P.shops[0][0] + 9, P.shops[0][0] + 13, P.shops[0][0] + 17], wy = P.shopRows[1] + 1.02, py = P.lane[1] + 0.75;
+  for (let k = 0; k + 1 < zig.length; k++) {
+    if (k % 2 === 0) K.prop('festoon', zig[k], wy, 0, { tx: Math.round((zig[k + 1] - zig[k]) * TILE), ty: Math.round((py - wy) * TILE), h: 66, ends: ['wall', 'pole'] });
+    else K.prop('festoon', zig[k], py, 0, { tx: Math.round((zig[k + 1] - zig[k]) * TILE), ty: Math.round((wy - py) * TILE), h: 66, ends: ['pole', 'wall'] });
+  }
   for (const x of [P.x0 + 4.6, ax1 + 1.4, X1 - 1.6]) K.prop('lamp', x, P.front + 0.7, 0);
   K.prop('bench_m', ax1 + 3.2, P.front + 0.6, 0);
   const cafe = shops[1];
   for (const dx of [1.6, 4.6]) { K.prop('cafetable', cafe.b.tx + dx, P.front + 0.5, 0); K.prop(dx < 3 ? 'umbrella_r' : 'umbrella_g', cafe.b.tx + dx, P.front + 0.4, 0); }
+  // (someone at the cafe's tables most days - server/systems/activities.js 'tableau'; a cab waiting outside it for a
+  // fare off the train - parked)
+  const seats = [];
+  for (const dx of [1.6, 4.6]) for (const s of [-1, 1]) seats.push([Math.round((cafe.b.tx + dx + s * 0.47) * TILE), Math.round((P.front + 0.55) * TILE), s < 0 ? 0 : Math.PI]);
+  (m.tableaus ||= []).push({ v: 'sit', x: Math.round((cafe.b.tx + 3.1) * TILE), y: Math.round((P.front + 0.55) * TILE), seats });
+  m.parking.push({ x: Math.round((cafe.b.tx + 3.5) * TILE), y: Math.round((P.lane[0] + 0.95) * TILE), a: Math.PI, model: 'taxi' });
   const flo = shops[2];
   for (const dx of [2.6, 3.8, 5.0]) K.prop('flowers_big', flo.b.tx + dx, P.front + 0.5, 0);
   for (const y of [P.lane[0] + 0.6, P.lane[0] + 2.0, P.lane[0] + 3.4]) K.prop('bollard', X1 + 0.6, y, 4);
   K.prop('foodcart', X1 + 2.4, P.lane[0] + 1.6, 14);
   K.prop('bikerack', X1 + 2.0, P.front - 1.2, 0);
-  // the station's front: flower beds where the park's trees stood in front of it (low: the board and the platform in
-  // sight from the park), a bench or two
-  for (let x = cx + 8; x <= X1 - 8; x += 5) K.prop('flowers_big', x + 0.5, cy + 7.5, 0);
+  // the station's front: a station garden where the park's trees stood in front of it (low: the board and the platform
+  // in sight from the park) - a border of flowers along the line, benches turned to the station with a lamp between each
+  // pair (the craft pass, 11-15: it was a lawn with five flower beds on it)
+  const SP = ['tulips', 'lavender', 'rose', 'daffodils', 'hydrangea'];
+  for (let x = cx + 7, k = 0; x <= X1 - 7; x += 2.2, k++) K.prop(k % 3 === 1 ? 'flowers_big' : 'flowers_a', x + 0.5, cy + 5.7, 0, k % 3 === 1 ? null : { sp: SP[k % SP.length], k: 1 });
+  for (let x = cx + 9, k = 0; x <= X1 - 9; x += 5.5, k++) {
+    if (k % 2 === 0) K.prop('bench_m', x + 0.5, cy + 8.6, 0, { a: Math.PI });   // (its sitters facing north, to the platform)
+    else K.prop('lamp', x + 0.5, cy + 8.4, 0);
+  }
   // ---- the places (at the end of the list): the station's stop, the used lot, the shops
   const st = K.poi({ kind: 'delivery', label: 'Greenfield Park Station', x: Math.round((cx + 20.5) * TILE), y: Math.round((P.lane[0] + 0.6) * TILE), r: 40, arrival: 1 });
   const lot = K.poi({ kind: 'usedlot', label: 'Park West Motors', x: Math.round((office.door.tx + 0.5) * TILE), y: Math.round((oy + oh + 0.7) * TILE), b: office.id, lot: lotSpots, stn: st.id, stock: ['starter', 'rustpickup'], sub: 'Cheap wheels by Greenfield Park, sold as seen. Pick one off the lot or from the list - parked out on the lane for you.' });
