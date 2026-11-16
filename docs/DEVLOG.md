@@ -24709,6 +24709,9 @@ avatar as a character he plays in admin mode, with his presence known; the admin
   server/data/tzcountry.json), which also gives the region. The address is looked up and dropped: never stored, logged or
   shown. The console shows no address, email or account id: a player is a ref good for the session (/admin/go). The
   privacy page says so (server/legal.js).
+- Budget: the bake workers' code 1010 -> 1012 KB (tools/perf.mjs) - the founder figure lives in the people renderer
+  the workers draw with (+1.1 KB gzipped, its comments trimmed first: 1011.5; the bake was at 1010.4 on its own). The
+  renderer stays at 410.
 - Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
   the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
   Beta plate off the tags); sinks and seasons updated for the card plate.

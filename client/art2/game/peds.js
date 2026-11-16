@@ -99,8 +99,8 @@ export function adaptApp(app, ar = null, opt = {}) {
   const a = app || {};
   ar = ar || a.ar || 'casual';
   if (typeof ar === 'string' && ar.startsWith('pet:')) return { pet: ar.slice(4), seed: 1 };
-  // the founder's own look (the owner's account in admin mode: server net.js app.fd) over whatever he's wearing
-  if (a.fd) return FOUNDER;   // (bones only: nothing for the censored setting to cover)
+  // the founder's look (server net.js app.fd)
+  if (a.fd) return FOUNDER;
   // a player's look (shared/look.js): its code says it all
   if (a.lk) { const L = decodeLook(a.lk); if (L) return lookArt(L, { code: a.lk, censored: !!opt.censored }); }
   const H = seedOf(a, ar), r = (k) => hash(H & 0xfffff, k, 131), pick = (arr, k) => arr[Math.floor(r(k) * arr.length) % arr.length];
@@ -257,7 +257,7 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
-  if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }   // (the founder's look, with whatever's put on it since: a prop, the takings' bag, a lamp)
+  if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }
   if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
   for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {

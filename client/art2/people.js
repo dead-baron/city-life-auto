@@ -793,34 +793,28 @@ function statueApp(A) {
   const re = (o, k) => (o ? { ...o, color: BRONZE[k], color2: BRONZE[(k + 1) % 4], inner: BRONZE[(k + 2) % 4], trim: BRONZE[(k + 3) % 4], tie: BRONZE[3], sleeve: o.sleeve ? BRONZE[k] : o.sleeve, pattern: null } : o);
   return { ...A, bronze: true, top: re(A.top, 0), bottom: re(A.bottom, 1), hat: re(A.hat, 2), shoes: BRONZE[3], shoeTrim: BRONZE[2], hair: { ...(A.hair || {}), color: BRONZE[0] }, chain: null, jewel: null, glassColor: BRONZE[3], bagColor: BRONZE[1], backColor: BRONZE[1], tattoo: 0 };
 }
-// The founder (the owner's account, in admin mode: the ped's descriptor app.fd - server net.js; game/peds.js adaptApp):
-// his Dead Baron avatar as a figure of the game's own people - a skeleton (bone all over: a skull's face, a rib cage over
-// a hollow middle, a spine, the pelvis), round pink glasses, blue angel wings off the shoulder blades. Only his account
-// wears it (the server decides); everyone sees it.
+// The founder's look (server/founder.js; game/peds.js adaptApp: app.fd): a skeleton, pink glasses, blue wings
 export const FOUNDER = Object.freeze({ seed: 7, skin: 0, founder: 1, fem: false, body: { h: 1.02, w: 0.8, limb: 0.74 }, hair: { style: 'bald', color: '#e9dfc4' }, top: { kind: 'none' }, bottom: { kind: 'none' }, shoes: '#e9dfc4', shoeKind: 'barefoot', glasses: 'round', glassForm: 'founder', glassColor: '#ff3fae', lens: '#ffd2f2', fmask: { k: 'skull', c: '#ece2c8', t: '#2a2024' }, wings: '#5ccbf0' });
-const BONE = [[96, 84, 92], [158, 146, 140], [206, 198, 182], [236, 230, 214], [252, 249, 240]], BONE_GAP = cloth('#2c2230'), WING_TIP = cloth('#c8f2ff');   // (bone: a cool ivory, its shadow leaning violet - not the warm skin ramps)
-// the rib cage: bars of bone round the chest with dark gaps between, the sternum down the front, the spine down the back;
-// below the ribs the hollow middle, the spine alone
+const BONE = [[96, 84, 92], [158, 146, 140], [206, 198, 182], [236, 230, 214], [252, 249, 240]], BONE_GAP = cloth('#2c2230'), WING_TIP = cloth('#c8f2ff');
 function boneTorso(Q, D, au, z, front, back) {
   const r0 = D.waistUp + 0.6, r1 = D.chestUp + 2.6;
-  if (z > r1) return BONE;                                       // (the collarbones and shoulders)
+  if (z > r1) return BONE;
   if (z < r0) { if ((front || back) && au < 0.13) { if ((Math.floor(z * 1.4) & 1)) Q.k -= 0.18; return BONE; } return BONE_GAP; }
-  if (front && au < 0.08) return BONE;                           // the sternum
+  if (front && au < 0.08) return BONE;
   if (back && au < 0.1) { if ((Math.floor(z * 1.4) & 1)) Q.k -= 0.18; return BONE; }
   const t = (z - r0) / 2.1, bar = t - Math.floor(t) < 0.5;
   if (!bar) return BONE_GAP;
-  if (front && au < 0.2) Q.k -= 0.12;                            // (the ribs' cartilage, a little darker where they meet)
+  if (front && au < 0.2) Q.k -= 0.12;
   return BONE;
 }
-// blue angel wings off the shoulder blades, swept up and out either side: feathered bands, the tips pale, a scalloped edge
 function founderWings(E, A, D, S, P) {
   const wc = cloth(A.wings), flap = P && P.gait ? Math.sin(2 * Math.PI * (P.ph || 0)) * 0.08 : 0;
   for (const s of [-1, 1]) {
     const F = mmul(S.SP, ry(s * (0.98 + flap)));
     const at = vadd(S.chest, mv(S.SP, [s * (D.chestR[0] + 3.8), -(D.chestR[1] + 1.6), 5.6]));
     E(at, F, [9.2, 1.0, 4.8], GR.ACC, 'wing', (Q) => {
-      const along = (Q.l0 * s + 1) / 2;                          // (0 at the shoulder, 1 at the tip)
-      if (Math.abs(Q.l2 - 0.2) < 0.07 || (Q.l2 < 0.15 && Math.abs(((along * 6) % 1) - 0.5) < 0.12)) Q.k -= 0.26;   // (the feathers' rows)
+      const along = (Q.l0 * s + 1) / 2;
+      if (Math.abs(Q.l2 - 0.2) < 0.07 || (Q.l2 < 0.15 && Math.abs(((along * 6) % 1) - 0.5) < 0.12)) Q.k -= 0.26;
       return along > 0.8 || Q.l2 > 0.6 ? WING_TIP : wc;
     }, (a, b, c) => c > -0.95 + 0.42 * Math.abs(Math.sin((a + 1) * Math.PI * 3)));
   }
@@ -970,7 +964,7 @@ function wardrobe(A, D, TF, seed) {
     const hemZ = T.tuck ? 2.4 : T.bare || T.bikini || T.towel || T.crop ? 9 : T.tank ? 0.4 : -0.9;
     if (z > hemZ + (T.tuck ? 0.9 : 0)) return W.torso(Q);
     if (T.tuck && z > hemZ - 0.2) { if (front && au < 0.12) { Q.gloss = 1; return T.duty ? silver : gold; } return T.duty ? black : cloth('#3a2a22'); }
-    if (A.founder) return z > 1.6 ? (au < 0.12 ? BONE : BONE_GAP) : (front && au < 0.16 && z < 0.4) || au > 0.86 ? BONE_GAP : BONE;   // (the founder: the spine down to the pelvis's wings)
+    if (A.founder) return z > 1.6 ? (au < 0.12 ? BONE : BONE_GAP) : (front && au < 0.16 && z < 0.4) || au > 0.86 ? BONE_GAP : BONE;
     if (bk === 'none') return skin;
     if (bk === 'bikini') return z > 1.3 || (au > 0.5 && z > -1.5) ? skin : bot;
     if (bk === 'trunks' && z > 2.4) return skin;
@@ -1015,7 +1009,7 @@ function wardrobe(A, D, TF, seed) {
     if (gl && along > 0.88) return gl;
     if (jw && jw.cuffband && Q.part === 'fa' && along > 0.78 && along < 0.9) return jwR;
     if (jw && Q.part === 'fa' && ((jw.watch && along > 0.82 && along < 0.88) || (jw.bangles && ((along > 0.8 && along < 0.83) || (along > 0.85 && along < 0.88))))) { Q.gloss = 1; return jwR; }
-    if (A.founder) { if (Math.abs(along - 0.5) < 0.06 || along > 0.93) Q.k -= 0.2; else if (Q.part === 'fa' && Math.abs(Q.l1) < 0.12) Q.k -= 0.32; return skin; }   // (bones: the elbow's knob, two bones down the forearm)
+    if (A.founder) { if (Math.abs(along - 0.5) < 0.06 || along > 0.93) Q.k -= 0.2; else if (Q.part === 'fa' && Math.abs(Q.l1) < 0.12) Q.k -= 0.32; return skin; }
     if ((tat & 1) && along > 0.25 && along < 0.85 && hash(Math.floor(along * 14), Math.floor((Q.l1 + 2) * 2.4), seed) > 0.55) return ink;
     return skin;
   };
@@ -1025,7 +1019,7 @@ function wardrobe(A, D, TF, seed) {
   W.leg = (Q) => {
     const along = Q.part === 'th' ? Q.l0 * 0.5 : 0.5 + Q.l0 * 0.5, side = Q.l1 * Q.side;
     if (T.bib) return along > 0.94 ? dark(top) : top;
-    if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }   // (the knee's knob)
+    if (A.founder) { if (Math.abs(along - 0.5) < 0.07) Q.k -= 0.22; return skin; }
     if (legSkin || (bk === 'shorts' && along > 0.33) || (bk === 'trunks' && along > 0.18)) {
       if (bk === 'shorts' && along < 0.37) Q.k -= 0.2;
       if ((tat & 2) && along < 0.4 && side > 0.3 && hash(Math.floor(along * 16), Math.floor((Q.l2 + 2) * 2), seed + 1) > 0.6) return ink;
@@ -1073,7 +1067,7 @@ function wardrobe(A, D, TF, seed) {
   const bandana = A.bandana ? cloth(typeof A.bandana === 'string' ? A.bandana : 'red') : null, maskR = cloth(typeof A.mask === 'string' ? A.mask : '#24242a');
   W.head = (Q) => {
     const a = Q.l0, b = Q.l1, c = Q.l2;
-    if (A.founder) return Q.part === 'nose' ? BONE_GAP : (Q.part !== 'head' && b > 0.3 && c < -0.5) ? (Math.abs(a) < 0.5 && ((Q.x >> 1) & 1) ? BONE_GAP : skin) : skin;   // (the skull: bone, the nose a hole)
+    if (A.founder) return Q.part === 'nose' ? BONE_GAP : (Q.part !== 'head' && b > 0.3 && c < -0.5) ? (Math.abs(a) < 0.5 && ((Q.x >> 1) & 1) ? BONE_GAP : skin) : skin;
     if (fm) {
       if (fmHead) return fmC;
       if (fm === 'clown' || fm === 'skull') { if (Q.part === 'nose') return fm === 'clown' ? cloth(A.fmask.t) : dark(fmC); if (b > 0.2 && c < 0.62) return fmC; }
