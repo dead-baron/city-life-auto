@@ -24546,7 +24546,17 @@ shop's counter, and the custody panel over the whole screen with an escape that 
   FreshHub Grocery, Stadium Megastore, Westport Galleria three times along one front. `oneNameAcross` keeps the name on
   the middle section of a face and drops it (with its sign glow) from the others. The placement lint has a new row,
   **nameTwice**, over every front of the built world (one section, or several along the same face; allowed 0);
-  test/fixwave.test.js checks oneName and oneNameAcross themselves. Rekeys the art hash (statics.js); the world hash is unchanged.
+  test/fixwave.test.js checks oneName and oneNameAcross themselves.
+- **First Pixel Bank's BANK, whole or not at all** (the owner, 11-15: it read BAN, and ANK on the craft-downtown branch;
+  and it's the name twice with the FIRST PIXEL BANK board). The portico's stone and lettering were painted with setC,
+  which left the glow buffer alone: a lit top-floor window behind the entablature shone through a letter at night.
+  buildings.js portico now paints over what's behind it, glow and all (facePx). A one-word portico (BANK, MUSEUM) that
+  is a word of a board on the same front gives up its letters - the board says the name; a name cut in the stone
+  (CANVAS SAVINGS) still wins over a plaque. A portico running off its front's edge loses its letters. New lint row
+  **textClipped**: every lettered board and inscription on every front, drawn as the bake draws it at night
+  (buildings.js textAudit) - off the facade's edge, painted over by something drawn after it, or a glow through stone
+  lettering fails it (the old portico failed 7 of 8 seeds). Checked on main and on craft-combo (where the craft pass
+  moved the bank). Rekeys the art hash (statics.js); the world hash is unchanged.
 - **Cops round the counter.** A walk-in's counter blocks people but not sight, so the foot chase's straight line
   (npc.js footWay: `m.los` clear) ran officers into it and sidestep only slid them along it. footWay now walks round
   whatever stands in the room (npc.js `roomWay`: a breadth-first search over the walk-in's floor, the doorway row

@@ -195,6 +195,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Station forecourt loops carry no through-traffic (taxi rank / parked cars at most); the Metro lot enlargement dropped. (11-06; queue)
 - What's meant to be seen is seen: signs, doors, activities, interactables never hidden by roofs, trees, decks (visibility audit + test). (11-06; queue)
 - Placement lint: boats on clear water, signs not overlapping, no duplicate place signs, parked cars on road or lot only. (11-13; queue, DEVLOG 11-14)
+- A sign's words fit its board or pediment, whole, or the sign isn't drawn (lint textClipped); a bank's BANK in the stone over its name board is the name twice. (11-15; chat, First Pixel Bank)
 - One name sign per building frontage: a front's portico lettering, shop sign, plaques and neon never say the same name twice (lint nameTwice). (11-15; chat: "Some signs still have duplicates")
 - Placement lint, more (fix the class, every hit): a building's own name (plaque, shop sign, blade) never half hidden by another board on its front or by a canopy, porch, porte-cochere or sign in front of it; a blade names only the business at street level; no plant on a house's path, driveway or door step; an ATM only set into a building's front wall or inside, never alone on a pavement. (11-14; queue - the owner's phone notes)
 - Fenced places have openings on at least two sides. (11-12; DEVLOG 11-12)
