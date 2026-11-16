@@ -460,11 +460,11 @@ export function duct(len = 64) {
   return m;
 }
 // bistro lights over a roof terrace or a garden's seats: two iron poles and a line slung between them with some slack
-// (about a tenth of its span), larger warm bulbs hung along it - off-white glass by day, glowing after dark (the owner,
+// (about a tenth of its span), larger warm bulbs hung along it - cream glass by day, glowing after dark (the owner,
 // 11-16: "more like bistro lights than Christmas lights"; no shadow)
 export function stringLights(len = 60, on = 1) {
   const m = new Vox(len, 4, 32), p = m.mat({ ramp: MAT.metalDark, k: 2 }), w = m.mat({ ramp: R('#242226'), k: 1, flag: F_NOCAST });
-  const b = m.mat({ ramp: R('#f0e8d0', 5, 3), k: 4, emi: on ? [255, 198, 116, 255] : null, flag: F_NOCAST }), sk = m.mat({ ramp: R('#262424'), k: 1, flag: F_NOCAST });
+  const b = m.mat({ ramp: R('#f2d9a0', 5, 3), k: 4, emi: on ? [255, 198, 116, 255] : null, flag: F_NOCAST }), sk = m.mat({ ramp: R('#262424'), k: 1, flag: F_NOCAST });
   m.box(0, 1, 0, 2, 3, 31, p); m.box(len - 2, 1, 0, len, 3, 31, p);
   const sag = Math.max(4, Math.round(len * 0.1)), zAt = (x) => { const t = (x - 1) / (len - 2); return 28 - sag * 4 * t * (1 - t); };
   for (let x = 2; x < len - 2; x++) { const z = Math.round(zAt(x)); m.box(x, 2, z, x + 1, 3, z + 1, w); }

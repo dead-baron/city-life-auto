@@ -2007,9 +2007,9 @@ function makeFestoon(r) {
       for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 18, blk);
       P(x, y, z - 19, [200, 44, 34]); P(x, y, z - 20, [176, 34, 30]); P(x - 1, y, z - 21, [150, 28, 26]); P(x + 1, y, z - 21, [150, 28, 26]);   // (the tassel)
     } else {
-      // a bistro bulb: a dark socket on the wire, a round glass bulb 4 wide and 5 tall hanging under it, off-white by day (a pale
-      // highlight), a warm glow after dark
-      const glass = [238, 232, 208], hi = [253, 251, 240], tip = [212, 202, 170], sock = [26, 24, 24];
+      // a bistro bulb: a dark socket on the wire, a round glass bulb 4 wide and 5 tall hanging under it, warm cream glass by
+      // day with an amber rim and a pale highlight, a warm glow after dark
+      const glass = [246, 228, 176], hi = [255, 250, 230], tip = [186, 146, 84], sock = [26, 24, 24];   // (warm glass with an amber rim: reads on pale paving by day)
       const glow = (a) => [255, 198, 116, a];
       P(x, y, z - 1, sock); P(x + 1, y, z - 1, sock); P(x, y, z - 2, sock); P(x + 1, y, z - 2, sock);
       for (let r = 0; r < 4; r++) for (let dx = -1; dx <= 2; dx++) { const ed = dx === -1 || dx === 2; P(x + dx, y, z - 3 - r, r < 2 && dx === 0 ? hi : ed ? tip : glass, glow(ed ? 180 : 255)); }

@@ -24768,16 +24768,31 @@ every run in the world (docs/DECISIONS.md, World and places).
   takes one (iron, a finial and the line's hook); never a post in the road, so a run across a road hangs only between
   buildings, posts or lamps on both sides, and one with an end in the road and nothing there comes down. A run longer
   than 10 tiles is cut into equal spans with a post at each cut; a run whose slack would hang into people's heads is
-  raised (80 px at most).
+  raised (80 px at most). Each end is moved onto what holds it (the face, the trunk, the post), so the line meets it.
+  Tall timber posts the plans already stood (Old Town Market's) hold a line; Old Town's lane lights now hang across
+  each lane kerb to kerb (they ran along it, over the road, and came down).
 - Slack: the line sags at its middle by 8, 10 or 12% of its span (by where it hangs: a little variety, few sprites),
   drawn in the view - it drops on screen as it sags; a run going up the screen bows a little to one side.
-- Bistro bulbs: one every 22 px - a dark socket on a dark wire, a round glass bulb 4 px wide under it, off-white by
-  day, a warm glow after dark (and the warm pools on the ground under the line as before, now where it hangs). The roof
+- Bistro bulbs: one every 22 px - a dark socket on a dark wire, a round glass bulb 4 x 5 px under it, warm cream
+  glass with an amber rim by day (it reads on pale paving), a warm glow after dark (and the warm pools on the ground under the line as before, now where it hangs). The roof
   terraces' and gardens' strings (client/art2/props.js stringLights) and the beach bar's eave (props-tropic.js) the
   same: bigger bulbs, fewer, on a slack line.
-- Red paper lanterns (concept WC422): one every 30 px, 9 wide and 10 tall - the red body with darker ribs and shaded
+- Red paper lanterns (concept WC422): one every 34 px, 11 wide and 12 tall - the red body with darker ribs and shaded
   sides, a black-rimmed gold cap above and below on a short cord, a red tassel; lit from within (red-orange) at night.
-- The lint (owner rule: a class fix comes with a lint row): tools/placementlint.mjs `festoons` - an end made fast to
+- The world's runs (World v3, seed 1337): 613 strung by the plans -> 679 after the long ones were cut (54); 691 ends
+  on posts of their own, 424 on walls, 243 on palms, lamps, stalls and the market's posts; 398 raised to clear heads;
+  7 came down (Bayside Heights' palm-to-palm chains down the boulevard: the last span of each ran on over the road to
+  no palm). Most runs by district: the Neon Strip 202, Bayside Heights 100, Downtown 91, Midtown 66, the Arts District
+  41, Old Downtown 33, Harbor 27, the Pink Mile 25, Westport Center 25, Old Town 23. The pass takes about 0.1 s of the
+  build (in the done hook, after the last pass that strings lights).
+- The lint (owner rule: a class fix comes with a lint row): tools/placementlint.mjs `festoons` (0 found) - an end made fast to
   nothing, a bracket with no wall, a post in the road, no tree / lamp / stall where an end says one, a sag outside
   8-12%, a low point under a head, a span over 10 tiles with no post; allowed 0. test/festoon.test.js on a small map and
   the art (the line sags, a handful of big bulbs or lanterns, not a dense string).
+- Not changed: the fairy lights wound up the boulevards' palm trunks (SC4-B: not a hanging run), the old concept-sheet
+  scenes (client/art2/districts2.js, roadscenes.js, props-park.js stringLights: not in the game). Re-keys the `world3`
+  hash and the art hashes (`art`, `art3`: the bake's statics.js, props.js); chunks with no hanging lights in them carry over
+  (server/artcdn.js), the others rebake.
+- Proof (scratchpad/lights/owner/): before | after live, noon and night, at the owner's zoom: Downtown's food-truck
+  plaza and its tables, Harbor Lights' stage square, the Neon food trucks, Lantern Lane, Westport Center's food carts,
+  Old Town's lane lights, Midtown's Market Square lanterns.
