@@ -159,3 +159,16 @@ test('the cinematic Showcase: 25-40 hand-crafted places, each with a camera spot
   assert.ok(dir.includes("from './showcase.js'") && dir.includes("import('./devtp.js')"));
   assert.ok(dir.includes('function showcaseGo('), 'the Showcase\'s places can be gone to from the panel (the shot list replaced the old "Showcase only" tour)');
 });
+
+test('a sign\'s words whole on its front (the owner, 11-15: First Pixel Bank\'s portico read BAN, then ANK): the stone over a lit window, the boards over a cross or a cup, a plaque lifted clear of the shop\'s sign', async () => {
+  const { textAudit } = await import('../client/art2/buildings.js');
+  for (let seed = 1; seed <= 8; seed++) {
+    const bank = { w: 512, d: 160, floors: 3, style: 'stone', parapet: 8, seed, night: 1, portico: { x: 176, w: 160, cols: 4, text: 'BANK' }, windows: [40, 80, 420] };
+    assert.deepEqual(textAudit(bank), [], `no glow through the portico's letters (seed ${seed})`);
+  }
+  for (const v of [40, 58, 66]) {
+    const clinic = { w: 300, d: 120, floors: 3, style: 'concrete', parapet: 6, seed: 4, night: 1, cross: { x: 14, v: 80, s: 22, k: 'clinic' }, shop: { kind: 'lobby', sign: { text: 'OLD TOWN INFIRMARY' } }, plaques: [{ text: 'EMERGENCY', cx: 150, v, bg: '#c8343a', fg: [250, 246, 240], lit: true, face: 'civic' }] };
+    assert.deepEqual(textAudit(clinic), [], `the name and EMERGENCY both whole (EMERGENCY at ${v})`);
+  }
+  assert.equal(textAudit({ w: 300, d: 120, floors: 3, style: 'stone', parapet: 8, seed: 2, night: 1, portico: { x: 200, w: 160, cols: 4, text: 'BANK' } })[0].why, 'off the edge of its front', 'and the check sees a cut one');
+});

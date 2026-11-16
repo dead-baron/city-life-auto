@@ -401,8 +401,18 @@ export function makeBuilding(spec) {
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
   // the boards with the words last, over everything else on the front: a name is never cut by a clinic's cross, a cup
   // sign or a blade drawn after it (the placement lint's textClipped - 21 shop signs a few % painted over, 11-15)
-  for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
-  if (shopAt && spec.shop.sign && spec.shop.sign.text) signBoard(G, spec.shop.sign, spec.shop.sign.x ?? 4, shopAt.winTop - 2, spec.shop.sign.w ?? w - 8, night);
+  // (a plaque where the shop's sign goes - a hospital's EMERGENCY, a motel's VACANCY, RESTROOMS on a car park: up clear
+  // of it while the wall has room, else not drawn - the sign keeps the name whole: textClipped)
+  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text ? spec.shop.sign : null;
+  const sbox = sgn ? signBox(sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8) : null;
+  for (const pq of spec.plaques || []) {
+    if (!sbox || !pq || !pq.text) { plaque(G, pq, d + H, night); continue; }
+    const r = plaqueBox(pq, w), top = d + H - r[3], bot = d + H - r[1];
+    if (!(r[0] < sbox.x + sbox.w && sbox.x < r[2] && top < sbox.y + sbox.h + 2 && sbox.y - 2 < bot)) { plaque(G, pq, d + H, night); continue; }
+    const v = d + H - sbox.y + 4, up = { ...pq, v };
+    if (v + (r[3] - r[1]) <= H - cornice - 2) plaque(G, up, d + H, night);
+  }
+  if (sgn) signBoard(G, sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8, night);
   if (!spec.pitch) return G;
   // (a roof raised over the face adds rows above it: an even number, so the face's letters stay on the art grid)
   let R = pitched(G, spec, w, d, H, seed);
@@ -1217,12 +1227,16 @@ function mural(G, m, yGround, seed) {
 // a shop's sign board (wave A1, signfont.js): the trade's face and palette (statics.js signStyle) or a plain bg / fg
 // pair made legible, the icon's tile beside the words, one line or two - every letter whole art pixels; lit after dark
 // by how the trade's sign is lit (a lightbox, lit letters, tubes, lamps on it). yBot: the row under the board.
+function signBox(sign, x0, yBot, w) {   // (where signBoard puts it: { x, y, w, h })
+  const L = boardFor(sign, w), y0 = Math.floor((yBot - L.h * 2) / 2) * 2;
+  return paintBoard(() => {}, L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: false, night: 0 });
+}
 function signBoard(G, sign, x0, yBot, w, night) {
   const L = boardFor(sign, w), y0 = Math.floor((yBot - L.h * 2) / 2) * 2;
   const mode = sign.lit === false ? false : sign.glow || (sign.neon ? 'neon' : 'ink');
   const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: mode, night, bulbs: sign.bulbs });
   G.signBox = { ...box, lay: L };   // (where it went: test/signs.test.js reads it back through the bake)
-  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, !!mode);
+  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, true);   // (its own glow, lit or not: a lit icon tile)
 }
 
 // The lettering on a front, whole and clear (the placement lint's textClipped: tools/placementlint.mjs; the owner, 11-15:
