@@ -167,7 +167,7 @@ function launchCall(k, a) {
     // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
-    acc.launchInfo().then((i) => discordLinks(i && i.discord)).catch(() => {});
+    acc.launchInfo().then((i) => { discordLinks(i && i.discord); supportLinks(i && i.support); }).catch(() => {});
     // the title's slots (UI-10): SIGN IN opens the account panel in the sign-in screen, the gate shows in the gate's -
     // with no sign-in provider switched on (today), the panel still has the transfer code and the name
     setAccountUi({
@@ -2058,6 +2058,15 @@ function discordLinks(url) {
   if (!/^https:\/\/(discord\.gg|(www\.)?discord\.com\/invite)\//.test(url || '')) return;
   S.discord = url;
   for (const id of ['t-discord', 's-discord']) { const b = $(id); if (b) { b.classList.remove('hidden'); b.onclick = () => window.open(url, '_blank', 'noopener'); } }
+}
+// The Ko-fi page (/launch.json support - server/config.js CLA_SUPPORT_URL, the owner 11-16): the title's SUPPORT and
+// Settings' Support the game, only when it's set; a new tab, tagged so the analytics can tell where the visit came from
+function supportLinks(url) {
+  if (!/^https:\/\/ko-fi\.com\/\w{2,40}$/.test(url || '')) return;
+  for (const [id, from] of [['t-support', 'title'], ['s-support', 'settings']]) {
+    const b = $(id); if (!b) continue;
+    b.classList.remove('hidden'); b.onclick = () => window.open(`${url}?utm_source=game&utm_medium=${from}&utm_campaign=support`, '_blank', 'noopener');
+  }
 }
 // The "What's next" cards' signature (the self record's nx: server whatsnext.js) - new cards since you last looked: a dot
 // on the phone's button (the owner's minimal HUD: a dot, nothing more). What you last saw is kept across a reload.

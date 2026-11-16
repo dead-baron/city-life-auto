@@ -1403,6 +1403,8 @@ body.portrait .arr-led { font-size: var(--fs-3); letter-spacing: 2px; }
   #t-gfxseg button.on { padding-left: 1px; }
   #t-gfxseg button.on i { display: none; }
   #t-tools button { padding: 0 var(--s3); }
+  #t-tools { gap: var(--s1); } #t-tools .btn { padding: 0 var(--s2); letter-spacing: 0; }
+  #t-support > span { display: none; } #t-support .ic { margin: 0; }   /* (upright: SUPPORT is its heart alone, so the row stays one line - its title says what it is) */
   /* (upright, UIC-08: PLAY and the pair the width of the screen, your card then who's online along the foot) */
   /* (the city risen behind the lower menu - the owner, 11-14: "raise them higher up ... for mobile portrait" - at the
      scale it had, 2 px a pixel: "it was cool to see it so far away as a big city skyline"; its foot --sky-up over the

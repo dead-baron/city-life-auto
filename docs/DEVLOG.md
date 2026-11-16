@@ -24801,3 +24801,13 @@ every run in the world (docs/DECISIONS.md, World and places).
 - Proof (scratchpad/lights/owner/): before | after live, noon and night, at the owner's zoom: Downtown's food-truck
   plaza and its tables, Harbor Lights' stage square, the Neon food trucks, Lantern Lane, Westport Center's food carts,
   Old Town's lane lights, Midtown's Market Square lanterns.
+## 2026-11-16 - Support the game: the Ko-fi buttons
+
+- The owner set up Ko-fi (ko-fi.com/deadbaron: "Buy a ❤️ for Dead Baron", $3 a heart). The title's small buttons get a
+  ❤ SUPPORT beside DISCORD, and Settings a "Support the game" under Join our Discord; each opens the page in a new tab,
+  tagged (`utm_source=game`, `utm_medium=title|settings`) so Analytics can tell the visits from inside the game.
+- The page comes from the server (server/config.js `supportUrl`, `CLA_SUPPORT_URL`, default the studio's page; "off" or
+  anything not a ko-fi.com page hides the buttons - a portal build that forbids outside payment links) through
+  /launch.json `support`, like the Discord invite.
+- Tests: titlebuttons (SUPPORT on the screen and clear of everything on the title, desktop and phones), bugreports
+  (/launch.json carries it). Decisions: Monetization (docs/DECISIONS.md).

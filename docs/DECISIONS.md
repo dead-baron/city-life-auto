@@ -101,7 +101,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - Plan of 11-13: Job Center computer (watch ads for in-game cash, capped a day); pause ads at death screen / safe exit, none in a first session; Supporter pack; cosmetics + season pass; ad-free upgrade; donations. (11-13; monetization-plan 11-13*) - OPEN: owner still weighing the model per platform.
 - 11-03's "one death-screen interstitial per 15-20 min" is folded into the 11-13 pause-ad plan. (11-13; monetization-plan 11-13*)
 - Free on every platform; order web beta -> web game portals -> Android/iOS -> Steam/Epic -> Xbox, each only once the last retains players. (11-13; monetization-plan 11-13*) - plan.
-- Donate / tip button "Support Dead Baron" on title and Settings. (11-03; launch-plan 11-03) - OPEN: which platform.
+- Donate / tip button "Support Dead Baron" on title and Settings. (11-03; launch-plan 11-03) - SETTLED 11-16: Ko-fi.
+- Donations through Ko-fi (ko-fi.com/deadbaron, 0% on donations): "Buy a ❤️ for Dead Baron", $3 a heart; a SUPPORT button on the title and "Support the game" in Settings (CLA_SUPPORT_URL, "off" hides them for portal builds). Ads: apply now, no interrupting ads in the beta (opt-in rewarded ads only once approved). (11-16; chat)
+- Supporters get a Discord role through Ko-fi's Discord rewards (one-time supporters included); cosmetic thanks only, never gameplay. (11-16; chat)
 - Ads account (AdSense / Ad Placement API) is the owner's sign-up. (11-03; launch-plan 11-03) - OPEN: when.
 
 ## HUD and controls
