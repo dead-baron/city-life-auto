@@ -24434,3 +24434,9 @@ number in those lists moves):
   by night as each kind says - counted apart from them (six groups round a player besides the other activities' four).
   A security guard's look (white shirt, navy waistcoat and trousers). test/tableau.test.js.
 - Decisions: the owner's rule of 11-14 20:28 is in docs/DECISIONS.md (World and places).
+- Checked: the placement lint clean in Downtown (its totals as before), the arrival line laid at Greenfield Park, the
+  FTUE's lot and alley as they were; the city 136 s to build here (as before); perf, world3server (the region index),
+  dmath, mapwindow, regions within their budgets - nothing in the page's or the bake's code changed. Live before/after
+  captures of the arrival, the pond, the food-truck plaza, the jeweller and the bank, the hotel's drop-off at noon, dusk
+  and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
+  hashes stay (chunks baked the same carry over: server/artcdn.js).
