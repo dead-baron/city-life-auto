@@ -24648,3 +24648,14 @@ number in those lists moves):
   captures of the arrival, the pond, the food-truck plaza, the jeweller and the bank, the hotel's drop-off at noon, dusk
   and night (the owner's folder of the job). Re-keys World v3's hashes (`world3`, `art3`) once; today's world and art
   hashes stay (chunks baked the same carry over: server/artcdn.js).
+
+## 2026-11-16 - Support the game: the Ko-fi buttons
+
+- The owner set up Ko-fi (ko-fi.com/deadbaron: "Buy a ❤️ for Dead Baron", $3 a heart). The title's small buttons get a
+  ❤ SUPPORT beside DISCORD, and Settings a "Support the game" under Join our Discord; each opens the page in a new tab,
+  tagged (`utm_source=game`, `utm_medium=title|settings`) so Analytics can tell the visits from inside the game.
+- The page comes from the server (server/config.js `supportUrl`, `CLA_SUPPORT_URL`, default the studio's page; "off" or
+  anything not a ko-fi.com page hides the buttons - a portal build that forbids outside payment links) through
+  /launch.json `support`, like the Discord invite.
+- Tests: titlebuttons (SUPPORT on the screen and clear of everything on the title, desktop and phones), bugreports
+  (/launch.json carries it). Decisions: Monetization (docs/DECISIONS.md).

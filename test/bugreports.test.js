@@ -220,4 +220,6 @@ test('the staff page /admin/bugs: admins and up, the screenshot shown, mark done
   // the invite
   r = await S.h({ url: '/launch.json' });
   assert.equal(r.json().discord, 'https://discord.gg/zuVSkbfjg');
+  // the Ko-fi page (11-16): on by default, at the studio's page
+  assert.equal(r.json().support, 'https://ko-fi.com/deadbaron');
 });
