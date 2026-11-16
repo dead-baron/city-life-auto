@@ -286,6 +286,13 @@ function makeKit(m, api, P) {
       nb++;
       return handBuilding(m, { d: P.d, ...o });
     },
+    // one building laid last (handLate): its ground taken now, the building at the end of the list
+    late(o) {
+      if (!allFree(o.x, o.y, o.w, o.h)) return null;
+      take(o.x, o.y, o.w, o.h);
+      (m.handLate ||= []).push({ d: P.d, ...o });
+      return o;
+    },
     // (lawn the plan may dress: free, or the shore band's grass landscape() keeps as lawn - not taken yet)
     lawn(x, y) { const k = at(x, y), i = y * W + x; return free(x, y) || (k >= 0 && !used[k] && m.tiles[i] === T.GRASS && (m.reserve[i] & 4) && m.land[i] && m.bld[i] < 0); },
     // the free extent of a column inside a band: [southmost free y, northmost free y] scanning north from yS (or null)
@@ -452,6 +459,21 @@ function makeKit(m, api, P) {
     },
   };
   return K;
+}
+
+// The buildings a plan lays last (K.late: the Neon Strip's rebuild, 11-16 - its open lots filled): at the end of the
+// list, after every other building pass (world3-world.js, after the blocks are opened up), so no other building's,
+// home's or business's number moves (no WORLD_VERSION bump). Their ground is kept free till then (taken, sealed as
+// lawn); whatever a later pass stood on it is cleared. Not walk-ins (the interiors are built before): fronts, signs
+// and a delivery stop.
+export function handLate(m, H3) {
+  const L = m.handLate || [];
+  delete m.handLate;
+  const ok = (o) => { for (let y = o.y; y < o.y + o.h; y++) for (let x = o.x; x < o.x + o.w; x++) { const i = m.idx(x, y); if (m.bld[i] >= 0 || (m.tiles[i] !== T.GRASS && m.tiles[i] !== T.PLAZA)) return false; } return true; };
+  const keep = L.filter(ok), on = (x, y) => keep.some((o) => x >= o.x * TILE && x < (o.x + o.w) * TILE && y >= o.y * TILE && y < (o.y + o.h) * TILE);
+  if (H3 && H3.removeProps && m.props.some((p) => on(p.x, p.y))) H3.removeProps(m, on);
+  for (const o of keep) handBuilding(m, o);
+  return { laid: keep.length, lost: L.length - keep.length };
 }
 
 // ---------------------------------------------------------------------------------------------------------------

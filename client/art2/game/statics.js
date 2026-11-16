@@ -561,7 +561,7 @@ function sectionsOf(c, b, A) {
 const KITS = { ac: [30, 22, 16], acs: [18, 14, 11], hvac: [44, 30, 22], vent: [10, 10, 12], pipe: [8, 8, 22], sky: [24, 18, 7], dish: [18, 14, 18], tank: [26, 26, 44],
   plant: [30, 12, 10], palm: [22, 22, 40], solar: [30, 20, 8], heli: [82, 82, 3], hut: [34, 26, 36], ant: [14, 14, 63], stack: [18, 18, 72], bill: [130, 12, 118],
   hatch: [16, 16, 9], chim: [12, 12, 39], line: [60, 4, 30], umb: [30, 30, 30], table: [14, 14, 12], lounge: [34, 14, 16], cool: [36, 36, 36], duct: [64, 10, 11],
-  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48], npic: [110, 6, 130],
+  skyL: [24, 18, 7], string: [60, 4, 30], neon: [110, 6, 48], npic: [110, 6, 130], rpool: [96, 60, 10], vid: [330, 14, 200],
   // a roof garden's (gardenKit): 'bed|w|d|h|box|plant|v' a raised bed of any size (its height here: the tallest planting's top), 'tree|kind|box|v'
   bed: [48, 20, 44], tree: [24, 24, 78], perg: [44, 34, 36], bench: [32, 10, 14], shed: [30, 24, 40], butt: [12, 12, 17], comp: [18, 16, 13], lant: [6, 6, 16], dome: [190, 190, 174], gdome: [100, 100, 102], cdome: [94, 94, 97] };
 // 'neon|TEXT|c' is a lit sign standing at the roof's front edge (c: its NEONC colour)
@@ -573,7 +573,7 @@ function kitModel(k) {
     case 'solar': return TW.solarPanel(30, 20); case 'heli': return U.helipad(40); case 'hut': return P.roofHut(34, 26, 30); case 'ant': return P.antennaMast(60); case 'stack': return P.smokeStack(70, 7);
     case 'hatch': return P.roofHatch(); case 'chim': return P.chimney(34); case 'line': return P.laundryLine(60); case 'umb': return P.umbrella('#f0ece4', '#2f7a5c'); case 'table': return P.cafeTable();
     case 'lounge': return D.lounger('#f0eee8'); case 'cool': return P.coolingTower(36, 30); case 'duct': return P.duct(64);
-    case 'skyL': return P.skylight(1); case 'string': return P.stringLights(60, 1);
+    case 'skyL': return P.skylight(1); case 'string': return P.stringLights(60, 1); case 'rpool': return roofPool();
     case 'perg': return GD.pergola(); case 'bench': return P.bench(); case 'shed': return GD.gardenShed(30, 24, 26, '#3a6a8a'); case 'butt': return GD.waterButt();
     case 'comp': return GD.compostBin(); case 'lant': return GD.gardenLantern(); case 'dome': return obsDome(180, 1); case 'gdome': return obsDome(90, 2); case 'cdome': return obsDome(84, 1);   // (cdome: a copper cupola - Midtown's flatiron)
     default: return P.roofVent();
@@ -582,6 +582,7 @@ function kitModel(k) {
 // (a roof garden's bed is painted for its roof alone - props-garden.js roofBed, about a millisecond - so it isn't kept)
 const kitSprite = (k) => (kitBase(k) === 'bed' ? GD.roofBed(...k.split('|').slice(1).map((q, i) => (i === 3 || i === 4 ? q : +q))) : memo('kit:' + k, () => {
   if (kitBase(k) === 'neon') { const [, text, ci] = k.split('|'); return makeSignBoard({ t: 'sign', text, face: 'neon', bg: '#16141e', fg: NEONC[+ci % NEONC.length], lit: true, z: 22, posts: true }); }
+  if (kitBase(k) === 'vid') return makeVid({ w: 320, h: 150, z: 22 });   // (a video billboard on the roof's front edge: WC421)
   if (kitBase(k) === 'npic') return makeSignBoard({ t: 'sign', k: 'pic', pic: k.split('|')[1], z: 14 });   // ('npic|key': a picture sign on posts at the roof's edge - neonpics.js)
   if (kitBase(k) === 'tree') { const a = k.split('|'); return GD.roofTree(a[1], a[2], +a[3]); }
   return voxSprite(kitModel(kitBase(k)), k.endsWith('@') ? PI / 2 : 0);
@@ -1462,6 +1463,8 @@ function specOf(c, b, A, s, D) {
       if (b === 'string') lights.push([X, Y, z + 26, 110, [1, 0.76, 0.42], 1.1, 'lamp']);
       else if (b === 'neon') lights.push([X, Y + 6, z + 40, 160, NEONC[+k.split('|')[2] % NEONC.length].map((q) => q / 255), 1.4, 'neon']);
       else if (b === 'npic') lights.push([X, Y + 6, z + 60, 220, picGlow(k.split('|')[1]).map((q) => q / 255), 1.4, 'neon']);
+      else if (b === 'vid') lights.push([X, Y + 8, z + 100, 380, [1, 0.5, 0.72], 2.2, 'neon']);
+      else if (b === 'rpool') lights.push([X, Y, z + 6, 90, [0.35, 0.85, 1], 1.2, 'window']);
       else if (b === 'skyL') lights.push([X, Y, z + 8, 56, [1, 0.84, 0.6], 0.45, 'window']);
       else if (b === 'perg') lights.push([X, Y, z + 26, 96, [1, 0.76, 0.42], 1, 'lamp']);
       else if (b === 'lant') lights.push([X, Y, z + 13, 44, [1, 0.78, 0.48], 0.7, 'lamp']); } };
@@ -1769,7 +1772,7 @@ function voxModel(m, a) {
     case 'trough': return U.trough(); case 'stocktank': return U.stockTank(a[0] || 26); case 'cattleGrid': return U.cattleGrid(a[0] || 64, a[1] || 28); case 'woodpile': return U.woodpile(); case 'propane': return U.propaneTank(); case 'barrierArm': return U.barrierArm(a[0], a[1]); case 'gantryCrane': return X.gantryCrane(a[0], a[1], a[2]);
     case 'cabana': return D.cabana(a[0] || 0); case 'skySpan': return D.skySpan(a[0] || 150); case 'skyTower': return D.skyTower(a[0] || 144); case 'porte': return D.porte(a[0] || 300, a[1] || 96, a[2] || 58, a[3] || 0);
     case 'timberPergola': return D.timberPergola(a[0] || 380, a[1] || 96, a[2] || 60); case 'bannerPole': return D.bannerPole(a[0] || 0);
-    case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
+    case 'dome': return obsDome(a[0] || 90); case 'marquee': return marquee(); case 'carousel': return carousel(); case 'arcRib': return arcRib(a[0], a[1]); case 'roofPool': return roofPool(); case 'speaker': return speakerPost(); case 'portal': return portal(a[0] || 100); case 'wheelStop': return wheelStop();
     case 'gravel': return gravelPile(a[0] || 1); case 'rubble': return rubblePile(a[0] || 1); case 'trashPile': return trashPile(a[0] || 1); case 'pipes': return pipeStack(a[0] || 1); case 'lumber': return lumberStack(a[0] || 1, a[1] || 0);
     case 'crates': return crateStack(a[0] || 1); case 'signal': return signalModel(a[0], a[1] || []); case 'spanPole': return spanPole(); case 'silo': return silo(a[0] || 90); case 'craneTower': return towerCrane(a[0] || 200, a[1] || 120);
     case 'bbframe': return TW.billboardFrame(a[0] || 132, a[1] || 54, a[2] || 36); case 'cctv': return P.cctvPole(a[0] || 64);
@@ -1842,7 +1845,7 @@ function vdim(m, a) {
     case 'topiary': return [16, 16, 30]; case 'trough': return [36, 16, 12]; case 'stocktank': return [(a[0] || 26) * 2 + 6, (a[0] || 26) * 2 + 6, 19]; case 'cattleGrid': return [a[0] || 64, a[1] || 28, 3]; case 'woodpile': return [30, 12, 16]; case 'propane': return [60, 24, 30]; case 'barrierArm': return [a[0] || 70, 10, 30];
     case 'cabana': return [44, 40, 50]; case 'skySpan': return [64, a[0] || 150, 46]; case 'skyTower': return [60, 60, (a[0] || 144) + 4]; case 'porte': return [a[0] || 300, a[1] || 96, (a[2] || 58) + 16];
     case 'timberPergola': return [a[0] || 380, a[1] || 96, (a[2] || 60) + 14]; case 'bannerPole': return [32, 8, 100];
-    case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'speaker': return [10, 10, 22];
+    case 'gantryCrane': return [70, a[0] || 170, (a[1] || 200) + 6]; case 'dome': return [(a[0] || 90) + 10, (a[0] || 90) + 10, (a[0] || 90) * 0.8 + 30]; case 'marquee': return [84, 10, 80]; case 'carousel': return [100, 100, 92]; case 'arcRib': return [a[0] || 160, 8, 106]; case 'roofPool': return [96, 60, 10]; case 'speaker': return [10, 10, 22];
     case 'portal': return [74, (a[0] || 100) + 4, 48]; case 'wheelStop': return [26, 6, 4]; case 'gravel': case 'rubble': return [40, 32, 14]; case 'trashPile': return [38, 28, 16]; case 'pipes': return [48, 24, 16];
     case 'fallenLog': return [(a[0] || 110) + 4, (a[1] || 11) * 2 + 6, (a[1] || 11) * 2 + 10];
     case 'creekRail': return [a[0] || 200, 10, 26]; case 'footbridge': return [a[0] || 140, a[1] || 26, (a[2] || 8) + 22];
@@ -2145,6 +2148,62 @@ function marquee() {
   m.box(2, 3, 34, 82, 8, 64, face); for (let x = 2; x < 82; x += 4) { m.box(x, 2, 64, x + 2, 3, 66, bulbs); m.box(x, 2, 32, x + 2, 3, 34, bulbs); }
   m.box(0, 3, 64, 84, 9, 70, p);
   return m;
+}
+// The Neon Strip's rebuild (11-16, WC421): the fairground's carousel - a turning deck of horses on brass poles under a
+// striped tent roof, bulbs round its eave; the covered arcade's rib - an arch over the walk with a neon tube along it
+// (v: cyan or pink), set every two tiles it reads as a lit vault and leaves the walk in view; a hotel's rooftop pool
+function carousel() {
+  const m = new Vox(100, 100, 92), c = 50, ang = (x, y) => Math.atan2(y - c, x - c);
+  const deck = m.mat({ ramp: ramp('#2a6a78', 6, 3), k: 3 }), gold = m.mat({ ramp: ramp('#e0b048', 6, 3), k: 4 }), horse = m.mat({ ramp: ramp('#f2ece0', 6, 3), k: 3 });
+  const tent = m.mat({ ramp: ramp('#f0e8dc', 6, 3), k: 3, shade: (x, y) => (Math.round(ang(x, y) * 4 / Math.PI + 8) % 2 ? -2.6 : 0) }), bulb = m.mat({ ramp: ramp('#ffd070', 5, 3), k: 4, emi: [255, 214, 120, 255], flag: F_NOCAST });
+  const red = m.mat({ ramp: ramp('#c8303a', 6, 3), k: 3 });
+  m.cyl('z', c, c, 0, 46, 0, 6, deck); m.cyl('z', c, c, 0, 8, 6, 64, gold);
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, x = c + Math.cos(a) * 32, y = c + Math.sin(a) * 32, z = k % 2 ? 22 : 30; m.box(x - 1, y - 1, 6, x + 1, y + 1, 60, gold); m.box(x - 6, y - 2, z, x + 6, y + 2, z + 7, horse); m.box(x + 4, y - 1.5, z + 6, x + 7, y + 1.5, z + 12, horse); }
+  m.fill((x, y, z) => { const r = Math.hypot(x - c, y - c), top = 60 + (48 - r) * 0.55; if (r > 48 || z > top || z < top - 3) return -1; return r > 46 ? red : tent; }, 0, 0, 56, 100, 100, 88);
+  for (let k = 0; k < 24; k++) { const a = k * Math.PI / 12, x = c + Math.cos(a) * 47, y = c + Math.sin(a) * 47; m.box(x - 1, y - 1, 56, x + 1, y + 1, 58, bulb); }
+  m.box(c - 1, c - 1, 86, c + 1, c + 1, 92, gold);
+  return m;
+}
+function arcRib(w = 160, v = 0) {
+  const m = new Vox(w, 8, 106), st = m.mat({ ramp: ramp('#26222e', 6, 3), k: 3 }), tube = m.mat({ ramp: ramp(v ? '#ff60c8' : '#60e0ff', 5, 2), k: 4, emi: v ? [255, 90, 210, 255] : [90, 230, 255, 255], flag: F_NOCAST });
+  const glass = m.mat({ ramp: ramp('#6a7ab8', 5, 2), k: 2, flag: F_GLASS, emi: v ? [255, 120, 220, 60] : [120, 220, 255, 60] });
+  for (const x0 of [0, w - 6]) m.box(x0, 1, 0, x0 + 6, 7, 66, st);
+  for (let x = 0; x < w; x++) { const q = (x + 0.5 - w / 2) / (w / 2), z = 64 + Math.round(38 * Math.sqrt(Math.max(0, 1 - q * q))); m.box(x, 2, z - 5, x + 1, 7, z, st); m.box(x, 1, z - 3, x + 1, 2, z - 1, tube); if (Math.abs(q) < 0.8) m.box(x, 4, z, x + 1, 6, z + 2, glass); }
+  return m;
+}
+function roofPool() {
+  const m = new Vox(96, 60, 10), rim = m.mat({ ramp: ramp('#e6e0d4', 6, 3), k: 3 }), tile = m.mat({ ramp: ramp('#2a8ab8', 5, 3), k: 3 });
+  const wat = m.mat({ ramp: ramp('#38c0d8', 5, 3), k: 3, emi: [70, 220, 255, 70], flag: F_WATER | F_NOCAST, shade: (x, y) => (hash(Math.round(x / 3), Math.round(y / 2), 7) > 0.86 ? 1.5 : 0) });
+  m.fill((x, y, z) => (x < 4 || y < 4 || x >= 92 || y >= 56 ? (z < 8 ? rim : -1) : z < 5 ? tile : z < 7 ? wat : -1), 0, 0, 0, 96, 60, 8);
+  return m;
+}
+// The video billboard (WC421's giant screen): a palm-beach sunset - the sky from violet to orange, a striped sun on the
+// sea, its light down the water, two palms black against it - lit from within; on the frame, legs to a roof or the
+// ground. A still (the bake's).
+function vidFace(w, h) {
+  const F = new GBuf(w, h), aw = w >> 1, ah = h >> 1, hz = Math.round(ah * 0.62), sx = aw / 2, sr = Math.round(ah * 0.3);
+  const mix = (a, b, t) => a.map((q, i) => Math.round(q + (b[i] - q) * t));
+  const art = (x, y) => {
+    if (x < 2 || y < 2 || x >= aw - 2 || y >= ah - 2) return [[24, 22, 30], 0];
+    const t = y / hz, sky = t < 0.5 ? mix([52, 18, 98], [214, 58, 160], t * 2) : mix([214, 58, 160], [255, 150, 70], (t - 0.5) * 2);
+    // the palms: a leaning trunk and its fronds, left and right
+    for (const [px, lean, s] of [[aw * 0.16, 0.22, 1], [aw * 0.86, -0.18, -1]]) {
+      const ty = y - ah * 0.22, tx = px + lean * (ah - y);
+      if (y > ah * 0.24 && Math.abs(x - tx) < 1.3 + (y / ah) * 1.2) return [[22, 10, 34], 120];
+      for (let k = 0; k < 6; k++) { const a = -2.9 + k * 0.62 + s * 0.1, d = Math.hypot(x - (px + lean * ah * 0.76), ty); const ax = Math.cos(a), ay = Math.sin(a) * 0.55 + d * 0.012; const u = (x - (px + lean * ah * 0.76)) * ax + ty * ay; if (u > 0 && u < ah * 0.26 && Math.abs((x - (px + lean * ah * 0.76)) * ay - ty * ax) < 1.1 + u * 0.05) return [[22, 10, 34], 120]; }
+    }
+    const ds = Math.hypot(x - sx, y - hz);
+    if (y < hz) { if (ds < sr && !(y > hz - sr * 0.55 && (hz - y) % 4 < 1)) return [mix([255, 236, 120], [255, 90, 140], (y - (hz - sr)) / sr), 230]; return [sky, 170]; }
+    const ref = Math.abs(x - sx) < sr * (1 - (y - hz) / (ah - hz) * 0.4) && (y + (x >> 2)) % 3 === 0;
+    return [ref ? [255, 170, 120] : mix([70, 30, 110], [24, 16, 60], (y - hz) / (ah - hz)), ref ? 210 : 120];
+  };
+  for (let y = 0; y < ah; y++) for (let x = 0; x < aw; x++) { const [c, e] = art(x, y); for (let q = 0; q < 4; q++) F.put(x * 2 + (q & 1), y * 2 + (q >> 1), c, [0, 1, 0.1], 0, e ? [c[0], c[1], c[2], e] : null, 0); }
+  return F;
+}
+function makeVid(r) {
+  const w = r.w || 320, h = r.h || 150, z = r.z || 0, S = upright(vidFace(w, h), z);
+  const leg = memo('vidleg:' + z, () => { const m = new Vox(6, 6, z + 4), p = m.mat({ ramp: MAT.metalDark, k: 2 }); m.box(1, 1, 0, 5, 5, z + 4, p); return voxSprite(m); });
+  return group([[S, 0, 0, 0], [leg, -Math.round(w * 0.3), -1, 0], [leg, Math.round(w * 0.3), -1, 0]]);
 }
 // (civ: a civic dome on a roof - 1 copper green on a colonnaded drum, 2 glass - with its lantern; the Civic Center's
 // city hall and library: rooftop kits 'dome', 'gdome'; 'cdome' the flatiron's copper cupola)
@@ -2503,6 +2562,9 @@ function propItems(c, p, pi, I) {
     case 'porte': { const w = Math.round((p.w || 300) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 58, k = p.k ? 1 : 0; V(`porte:${w}:${d}:${h}:${k}`, 'porte', [w, d, h, k]); lightAt(I, x, y, h - 6, 150, k ? [1, 0.45, 0.85] : [1, 0.85, 0.6], k ? 2 : 1.4, k ? 'neon' : 'lamp'); return; }
     case 'pergola': { const w = Math.round((p.w || 380) / 8) * 8, d = Math.round((p.d || 96) / 8) * 8, h = p.h || 60; V(`tperg:${w}:${d}:${h}`, 'timberPergola', [w, d, h]); if (!p.dark) lightAt(I, x, y, h - 14, 140, [1, 0.76, 0.45], 1.3, 'lamp'); return; }   // (p.dark: a desert pull-off's shade ramada, no lamp)
     case 'bannerpole': V(`bpole:${(p.v || 0) % 2}`, 'bannerPole', [(p.v || 0) % 2]); lightAt(I, x, y, 92, 100, [1, 0.86, 0.62], 1.2, 'lamp'); return;
+    case 'carousel': V('crsl', 'carousel', []); lightAt(I, x, y, 58, 190, [1, 0.8, 0.5], 1.8, 'neon'); return;
+    case 'arcrib': { const w = Math.round((p.w || 160) / 8) * 8, v = (p.v || 0) % 2; V(`arib:${w}:${v}`, 'arcRib', [w, v]); lightAt(I, x, y + 4, 80, 120, v ? [1, 0.4, 0.85] : [0.4, 0.85, 1], 1.4, 'neon'); return; }
+    case 'vidboard': { const w = p.w || 320, h = p.h || 150, z = p.z || 40; put(I, { key: `vid:${w}:${h}:${z}`, recipe: { t: 'sign', k: 'vid', w, h, z }, x, y, ext: [w / 2 + 10, h + z + 20, w / 2 + 10, 10], pi }); lightAt(I, x, y + 12, z + h / 2, w * 1.1, [1, 0.5, 0.72], 2.2, 'neon'); return; }
     case 'marquee': V('mrq', 'marquee', []); lightAt(I, x, y + 6, 50, 110, [1, 0.84, 0.5], 1.6, 'neon'); return;
     case 'dspeaker': V('spk', 'speaker', []); return;
     case 'upole': {
@@ -2957,6 +3019,7 @@ function makeFlat(r) {
 }
 // upright boards: billboard adverts, station name boards, price signs
 function makeSignBoard(r) {
+  if (r.k === 'vid') return makeVid(r);
   if (r.k === 'ad') return upright(adFace(r.w, r.h, ADS[r.ad % ADS.length], r.ad), r.z || 0);
   if (r.k === 'pic') {
     const [pw, ph] = picSize(r.pic, 2), w = pw + 8, h = ph + 8, F = new GBuf(w, h);

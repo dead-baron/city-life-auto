@@ -80,7 +80,7 @@ import { buildNorth, NORTH_STYLES } from './world3-north.js';   // (v3b, WORLD-V
 import { arrivalLines3 } from './world3-arrivals.js';
 import { parkWest3, firstCars3 } from './world3-firstcars.js';   // (the first cars: the used lots and steal alleys by the arrival stations; the city's arrival by Greenfield Park)   // (the arrival lines: a short line of its own beside each station new players choose from)
 import { paintCity3, layCity3, CITY_FRAME, CITY_PARKS, CITY_AIRPORT, CITY_SEEDS, CITY_SPOTS } from './world3-city.js';
-import { buildHand, handPlanAt, HAND_PLANS } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
+import { buildHand, handPlanAt, HAND_PLANS, handLate } from './world3-hand.js';   // (2026-10-17: the handcrafted districts - Midtown first)   // (H48, 8.22: the land's relief - its heights, cliff bands and the hillshade's layer)
 import { shops3, stationAtms3, seatAtms3 } from './world3-shops.js';   // (v3b: the stores and ATMs where you need them)
 import { lots3, lotPoisLast } from './world3-lots.js';
 import { towers3 } from './world3-towers.js';
@@ -341,6 +341,7 @@ export function worldOpts(asked) {
       m.world3.arrivals = arrivalLines3(m, H3);   // (last: the new players' arrival lines beside four stations, on ground nothing else uses - world3-arrivals.js)
       if (H3 && city) m.world3.firstCars = firstCars3(m, H3);   // (and by the other three: a small used lot and a back alley each - world3-firstcars.js)
       if (city) { m.world3.towers = towers3(m); Object.defineProperty(m.world3, 'open', { value: openBlocks3(m, H3), enumerable: false }); if (H3) m.world3.towers.greens = streetGreens3(m, H3); }   // (then the big plain footprints opened up: buildings of their own with walkable alleys, lanes and courtyards between - their new buildings after the towers' parts: world3-openblocks.js)   // (the very last building: the big plain towers split into a tower, wings, podiums of shops, a back block - their new parts at the end of the list, so no other building's number moves: world3-towers.js; then the street trees kept off the slimmer towers' and the new shops' signs again - world3-greens.js)
+      if (city) m.world3.handLate = handLate(m, H3);   // (then the plans' last buildings - the Neon Strip's filled lots - at the very end of the list: world3-hand.js)
       if (city) m.world3.sightlinesLate = sightlines3(m);   // (and again, for what came after the first pass: the park block's and the used lots' trees and boards, the split towers' new parts and their shops' street trees - nothing earlier moves again, as it hides nothing now)
       m.world3.festoons = hangLights3(m, H3);   // (last of the lights: every run of bistro bulbs or lanterns made fast at both ends, slack, over people's heads - the owner, 11-16: shared/festoon.js)
       m.world3.lowByPlatforms = lowByPlatforms(m);

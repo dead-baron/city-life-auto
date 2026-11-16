@@ -19,6 +19,7 @@
 // (b.art.neon: handNeon).
 import { TILE, T } from './constants.js';
 import { fest, canopy, terrace, hang, vendor, frontLife } from './world3-craft.js';
+import { tableau } from './world3-dtcraft.js';
 
 const D = 7;   // the Neon Strip's district id (shared/mapcore.js DISTRICTS)
 // the street centre lines (tiles); the two bridges' arterials come down to the boulevard at bridgeW and bridgeE (the
@@ -247,7 +248,7 @@ function build(m, api, K) {
   // cherry trees either side of it, the terraces behind it to Harbor Walk planted (landscape(), below)
   {
     const hw = 28, hx = Math.round((PLAZA[0] + PLAZA[1]) / 2 - hw / 2);
-    place({ x: hx, y: ly1 - 13, w: hw, h: 14, ...lit(hx, ly1, hw, { name: 'Lantern Hall', store: 'diner', neon: 'diner', blade: 'FOOD HALL', sign: 'LANTERN HALL', floors: 2, key: 'market', poi: { kind: 'coffee', label: 'Lantern Hall', food: true }, home: null }) });
+    place({ x: hx, y: ly1 - 13, w: hw, h: 14, ...lit(hx, ly1, hw, { name: 'Lantern Hall', store: 'diner', neon: 'diner', blade: 'FOOD HALL', sign: 'LANTERN HALL', floors: 2, key: 'market', poi: { kind: 'coffee', label: 'Lantern Hall', food: true }, home: null, kit: [['vid', Math.round(hw * TILE / 2), -14], ['ac', 110, 110], ['hvac', hw * TILE - 150, 130], ['vent', 300, 70], ['acs', hw * TILE - 300, 80]] }) });   // (the rebuild, 11-16: WC421's giant video billboard on its roof, over the plaza - the palm-beach sunset)
     for (const [gx0, gx1] of [[PLAZA[0], hx], [hx + hw, PLAZA[1]]]) {
       K.fill(gx0, ly0, gx1 - gx0, ly1 - ly0 + 1, T.GRASS);
       for (let ty = ly0 + 2; ty < ly1 - 1; ty += 6) prop('tree_a', (gx0 + gx1) / 2, ty + 1, 10, { sp: 'cherry', k: 1.2 });
@@ -275,7 +276,7 @@ function build(m, api, K) {
   // the west end of the boulevard's north side (Westside Avenue to the point): a row of lit fronts, the shore walk
   // behind them
   shorePromenade(K, NX.westside + EXT.ave + 1, 2941, by1 - 16, out, 8);
-  litRow(NX.westside + EXT.ave + 1, 2941, by1 - 17, by1, [{ w: 12, name: 'Hotel Halo', store: 'lobby', neon: 'hotel', blade: 'ROOMS', floors: 5, key: 'hotel', poi: { kind: 'delivery', label: 'Hotel Halo' } }], { depth: 18, floors: 3 });
+  litRow(NX.westside + EXT.ave + 1, 2941, by1 - 17, by1, [{ w: 12, name: 'Hotel Halo', store: 'lobby', neon: 'hotel', blade: 'ROOMS', floors: 5, key: 'hotel', poi: { kind: 'delivery', label: 'Hotel Halo' }, kit: [['rpool', 192, 150], ['lounge', 140, 230], ['lounge', 196, 230], ['umb', 262, 224], ['palm', 40, 56], ['palm', 344, 56], ['ac', 70, 330]] }], { depth: 18, floors: 3 });
 
   // ===========================================================================================================
   // The west point (the shore to the Midtown Bridge): the beach and its rocks, the Neon Palms Hotel's tower over them
@@ -286,9 +287,13 @@ function build(m, api, K) {
   // promenade along the shore, a row of fronts on the boulevard
   {
     const x0 = 3240, x1 = 3416;
-    shorePromenade(K, x0, x1, by1 - 14, out, 8);
-    litRow(x0, x1, by1 - 21, by1, [{ w: 16, lot: clubLot('club', 'Volt', 4, 'club', null, 'DANCE'), depth: 22 }, { w: 14, name: 'Moonlight Spa 24', sign: 'MOONLIGHT SPA', store: 'lobby', neon: 'hotel', blade: 'SAUNA', floors: 4, poi: { kind: 'delivery', label: 'Moonlight Spa 24', bath: 'kr' } }], { depth: 22, floors: 4, passages: false });   // (nat5: the jjimjilbang, open all night - server/systems/bathhouse.js)
-    waterGardens(K, x0, x1, by1 - 22, out);
+    shorePromenade(K, x0, x1, by1 - 14, out, 6);
+    // (the rebuild, 11-16: the row 16 deep and three storeys - Marina Lane behind it stays in view - Volt's four)
+    litRow(x0, x1, by1 - 15, by1, [{ w: 16, lot: clubLot('club', 'Volt', 4, 'club', null, 'DANCE'), depth: 16 }, { w: 14, name: 'Moonlight Spa 24', sign: 'MOONLIGHT SPA', store: 'lobby', neon: 'hotel', blade: 'SAUNA', floors: 3, poi: { kind: 'delivery', label: 'Moonlight Spa 24', bath: 'kr' } }], { depth: 16, floors: 3, passages: false });   // (nat5: the jjimjilbang, open all night - server/systems/bathhouse.js)
+    // (the rebuild, 11-16 - "just seemed like a large open area": the gardens' lawns behind the row were the Strip's
+    // biggest open ground after Harbor Lights) Marina Lane: the hotel towers with their rooftop pools over the bay,
+    // lit fronts between them facing a lane of terraces under the lights - WC421's waterfront
+    marinaQuarter(x0, x1);
   }
 
   // ===========================================================================================================
@@ -301,12 +306,12 @@ function build(m, api, K) {
   // (the owner, 10-25: "lantern alleyways") two walkways through the blocks, red lanterns strung wall to wall over them:
   // Lantern Alley from the boulevard (facing Blossom Plaza across it) through to Lantern Street, Red Lantern Row from
   // Lantern Street to Crosstown Avenue
-  const walks = [lanternAlley(K, 3066, ay0, ay1, 'Lantern Alley', out), lanternAlley(K, 3250, cy0, cy1, 'Red Lantern Row', out)];
+  const walks = [{ ...lanternAlley(K, 3066, ay0, ay1, 'Glow Arcade', out), arcade: true }, lanternAlley(K, 3250, cy0, cy1, 'Red Lantern Row', out)];
   const rows = [];
   for (const [a, ka, b, kb] of blocks) {
     const [x0, x1] = span(a, ka, b, kb);
     // (the crossroads' south-west corner: the 24/7 mart's car park on the boulevard, its vending machines - D8)
-    if (a === NX.parkW) crossroadsLot(K, x1 - 26, ay0, 26, AL.a - 2 - ay0 + 1, out);
+    if (a === NX.parkW) crossroads(x1 - 26, ay0, 26, AL.a - 2 - ay0 + 1);
     backRow(x0, x1, ay0, AL.a - 2);
     rows.push(litRow(x0, x1, AL.a + 2, ay1, [], { depth: 99, floors: a === NX.parkE ? 3 : 2 + (rnd(x0, ay1, 80) < 0.5 ? 1 : 0) }));
     backRow(x0, x1, cy0, AL.b - 2);
@@ -316,10 +321,12 @@ function build(m, api, K) {
   // and the passages between fronts, wall to wall
   for (const ya of [AL.a, AL.b]) alleyLanterns(K, ya, NX.westside + EXT.ave + 1, NX.harborview - EXT.ave, out);
   for (const W of walks) dressWalk(K, W, out);
+  // (the crossroads' south-east corner, the back across the avenue: its roof's signs big over the crossing - the rebuild)
+  { const i = m.bld[m.idx(NX.parkE + EXT.ave + 3, ay0 + 3)], b = i >= 0 ? m.buildings[i] : null; if (b && b.art && b.back) b.art.kit = [['npic|nightclub', Math.round(b.tw * TILE * 0.36), 12], ['neon|LIVE|3', Math.round(b.tw * TILE * 0.8), 12], ['ac', 70, 150], ['vent', Math.round(b.tw * TILE * 0.6), 200]]; }
   for (const made of rows) passageLanterns(K, made, out);
   // Harbor Lights, the festival ground where the boulevard meets the water (NE3-NE8's waterfront festival): the big
   // wheel, the stage and its screen, food stalls, a lawn under strings of lights, the pier out into the bay
-  harborLights(K, 3422, out);
+  harborLights(K, 3422, out, lateLit);
   // The Docks: east of Harborview Avenue down to the Gulf Loop - a warehouse club, the container bar, stacked containers
   docks(K, NX.harborview + EXT.ave + 1, out, lit);
 
@@ -344,6 +351,118 @@ function build(m, api, K) {
     const [p0, ...more] = deck.deal(name, neonKind === 'arcade' ? 'arcade' : 'club', floors >= 4 ? 2 : 1, rnd(floors, name.length, 92), pic);
     return { spec: { floors, ...f, win: pick(WINS, rnd(name.length, floors, 91)), parapet: 12, grime: 0.2, roofMat: 'rubber', lip: 10, rimW: 4, blades: [] }, shop: { kind: store, door: 'right', open: true, people, sign: null, awning: ['#16121e', '#16121e'] },
       neon: { name, kind: neonKind, col: (ci++ * 3) % 7, pic: p0, ...(more.length ? { pics: more } : {}), ...(blade ? { blade } : {}), dress: true, flick: 1 } };
+  }
+  // D8's crossroads (the rebuild, 11-16 - the owner: "they look about the same but a street light is moved and a taxi
+  // sign went up"): the south-west corner of the boulevard and Park East Avenue was the 24/7's car park (its mart never
+  // stood: the bays' asphalt went down first). Now the taxi rank at the corner (the clubs' way home - taxis waiting,
+  // scooters parked at its end), a corner pitch with a food cart and its line, and two fronts on the boulevard laid
+  // last with big signs on their roofs over the crossing - the Hi Score arcade and the Lucky Seven bar; across the
+  // avenue the back's roof over the corner gets its LIVE sign. The Violet Room's door is on the corner (its line and its
+  // bouncers there after dark - server/systems/nightclubs.js), Afterdark's across the avenue
+  function crossroads(x, y, w, h) {
+    const { m } = K;
+    if (!K.allFree(x, y, w, h)) return;
+    const rx = x + w - 11;   // (the rank: three bays nose in off the pavement, a scooter bay at its end)
+    K.fill(rx, y, 11, 4, T.LOT); K.take(rx, y, 11, 4);
+    for (let k = 0; k < 3; k++) { const sx = rx + k * 3; m.stalls.push({ x: sx * TILE, y: y * TILE, w: 3 * TILE, h: 4 * TILE }); m.parking.push({ x: (sx + 1.5) * TILE, y: (y + 2) * TILE, a: -Math.PI / 2, model: 'taxi' }); }
+    for (const dx of [9.6, 10.5]) m.parking.push({ x: Math.round((rx + dx) * TILE), y: (y + 2) * TILE, a: -Math.PI / 2, model: 'scooter' });
+    prop('textsign', rx + 4.5, y + 0.4, 0, { text: 'TAXI', bg: '#e0b030', fg: [30, 30, 30], z: 34, sx: 2, lit: true });
+    // (the corner pitch: the cart, its line, a busker's crowd)
+    K.fill(x, y, 5, 4, T.PLAZA); K.take(x, y, 5, 4);
+    prop('foodcart', x + 2.5, y + 1.6, 14); tableau(m, { v: 'queue', x: x + 2.5, y: y + 0.4, a: Math.PI / 2 });
+    hang(K, x + 1, y + 3, 4);
+    lateBack(x + 5, y, rx - x - 5, h, { name: 'Hi Score Arcade', floors: 2, kit: [['npic|gamezone', Math.round((rx - x - 5) * TILE * 0.3), 12], ['neon|ARCADE|1', Math.round((rx - x - 5) * TILE * 0.74), 12], ['ac', 90, 160], ['vent', 200, 220], ['acs', 260, 120]] });
+    lateBack(rx, y + 4, 11, h - 4, { name: 'Lucky Seven Bar', floors: 2, kit: [['npic|cocktailv', Math.round(5.5 * TILE), 12], ['ac', 80, 150], ['vent', 260, 200]] });
+    (out.places ||= []).push({ name: 'The Crossroads', x0: x, y0: y, x1: x + w, y1: y + h });
+  }
+  // ---- the rebuild (11-16): fronts laid last (K.late - shared/world3-hand.js handLate: at the end of the list, so no
+  // other building's, home's or business's number moves); a delivery stop each, no home, no walk-in
+  function lateLit(x, y, w, h, o) {
+    used.add(o.name);
+    if (o.deck && !o.kit && w >= 8 && h >= 10) o = { ...o, kit: roofDeck(w, h, deck.deal(null, null, 0, rnd(x, y, 164), null, ROOF_PICS)[0]) };
+    const L = lit(x, y + h - 1, w, { walk: false, home: null, ...o });
+    return K.late({ x, y, w, h, ...L, key: o.key || 'apt1', poi: { kind: 'delivery', label: o.name } });
+  }
+  // a back laid last: its front and door on the street to its north (face N), its sign on its roof over that street
+  function lateBack(x, y, w, h, o) {
+    const B = back(x, y, w, { floors: o.floors });
+    if (o.kit) B.art.kit = o.kit;
+    used.add(o.name);
+    return K.late({ x, y, w, h, ...B, name: o.name, home: null, face: 'N', poi: { kind: 'delivery', label: o.name } });
+  }
+  // a hotel tower's roof: the pool and its loungers, an umbrella, potted palms, the plant (WC421's rooftop pools)
+  function hotelKit(w) { const c = Math.round(w * TILE / 2); return [['rpool', c, 150], ['lounge', c - 60, 228], ['lounge', c + 2, 228], ['umb', c + 70, 222], ['palm', 40, 56], ['palm', w * TILE - 40, 56], ['ac', 70, 330], ['hvac', w * TILE - 80, 340]]; }
+  // a roof bar on a low front's roof (WC421's lit roofs, not a plain dark deck): strings of lights over its tables and
+  // umbrellas, planters, the plant at the back, its picture sign at the front edge over the street
+  function roofDeck(w, h, pic) {
+    const c = Math.round(w * TILE / 2), D = h * TILE;
+    return [[`npic|${pic}`, c, -26], ['string', c, 100], ['string', c, 170], ['umb', c - 86, 136], ['umb', c + 86, 136], ['table', c - 34, 140], ['table', c + 34, 140], ['plant', 34, 50], ['plant', w * TILE - 34, 50], ['ac', 64, D - 150], ['vent', w * TILE - 60, D - 170]];
+  }
+  // one of the strip's mix not used yet, as a lot of the rebuild's lists
+  function mixLot(x, y) {
+    const r = rnd(x, y, 160), cat = r < 0.42 ? 'bar' : r < 0.74 ? 'food' : 'shop';
+    const q = composeNeon(used, cat, (k) => rnd(x + k, y, 161)) || composeNeon(used, 'shop', (k) => rnd(x, y + k, 162));
+    return q ? { w: 8 + Math.floor(rnd(x, y, 163) * 3), name: q[0], store: q[1], neon: q[2] } : null;
+  }
+
+  // Marina Lane (the rebuild, 11-16): where the waterfront gardens' lawns were, between the shore's promenade and the
+  // boulevard row's backs - a row of fronts facing south onto a lane ten tiles wide: two hotel towers with their pools
+  // on the roof (the bay behind them, so they hide no street), a casino front, the bars, the food places and an arcade
+  // between, passages through to the promenade under lanterns; the lane's terraces, food carts and their queues, the
+  // doormen at the hotels, the lights strung across it from the fronts
+  function marinaQuarter(x0, x1) {
+    const yF = 2160, yL0 = yF + 1, yL1 = by1 - 16;
+    K.fill(x0, yL0, x1 - x0, yL1 - yL0 + 1, T.PLAZA);
+    const LOTS = [
+      { w: 18, name: 'Marina Bay Hotel', store: 'lobby', neon: 'hotel', blade: 'HOTEL', sign: 'MARINA BAY', floors: 8, key: 'hotel', face: { style: 'glass' }, pic: 'hotelv', hotel: 1 },
+      { w: 9, name: 'Coral Lounge', store: 'bar', neon: 'lounge', blade: 'LOUNGE' }, { w: 8, name: 'Tide Ramen', store: 'diner', neon: 'diner', blade: 'RAMEN' }, { gap: 4 },
+      { w: 10, name: 'Lucky Koi Karaoke', store: 'bar', neon: 'lounge', blade: 'KARAOKE', floors: 3 },
+      { w: 16, name: 'Skyline Suites Hotel', store: 'lobby', neon: 'hotel', blade: 'HOTEL', sign: 'SKYLINE SUITES', floors: 9, key: 'hotel', face: { style: 'glass' }, hotel: 1 },
+      { w: 8, name: 'Pearl Oyster Bar', store: 'diner', neon: 'bar', blade: 'OYSTERS' }, { w: 10, name: 'Club Riptide', store: 'bar', neon: 'club', blade: 'DANCE', floors: 3 }, { gap: 4 },
+      { w: 18, name: 'Golden Koi Casino', store: 'lobby', neon: 'club', sign: 'GOLDEN KOI', blade: 'CASINO', floors: 4, pic: 'maneki' },
+      { w: 9, name: 'Starfish Bar', store: 'bar', neon: 'bar', blade: 'BAR' }, { w: 8, name: 'Moon Tea House', store: 'cafe', neon: 'diner', blade: 'TEA' },
+      { w: 9, name: 'Wave Arcade', store: 'arcade', neon: 'arcade', blade: 'GAMES' }, { gap: 4 }, { w: 8, name: 'Ink Wave Tattoo', store: 'salon', neon: 'club' },
+    ];
+    // (the shore band's grass the kit keeps as lawn - m.reserve bit 4 - is the row's ground here: the shore curves in)
+    for (let y = yF - 13; y <= yF; y++) for (let xx = x0; xx < x1; xx++) { const i = m.idx(xx, y); if (K.lawn(xx, y) && !K.free(xx, y) && m.tiles[i] === T.GRASS && (m.reserve[i] & ~4) === 0) m.reserve[i] = 0; }
+    const made = [];
+    let x = x0 + 1, k = 0;
+    while (x < x1 - 7 && k < 60) {
+      const L = k < LOTS.length ? LOTS[k] : mixLot(x, yF);
+      k++;
+      if (!L) break;
+      if (L.gap) { K.fill(x, yF - 16, L.gap, 17, T.PLAZA); for (const dy of [1.6, 4.4, 7.2]) fest(K, x, yF + 1 - dy, L.gap, k % 2 ? 0.5 : -0.5, 52, 'wall', 'wall', 'lantern'); x += L.gap; continue; }
+      const w = Math.min(L.w, x1 - 1 - x);
+      if (w < 6) break;
+      let top = yF - 13;
+      for (let xx = x; xx < x + w; xx++) { let y = yF; while (y >= top && K.free(xx, y)) y--; top = Math.max(top, y + 1); }
+      if (yF - top + 1 < 7) { x += 2; continue; }   // (the shore comes in close: no lot here)
+      const B = lateLit(x, top, w, yF - top + 1, { ...L, kit: L.hotel ? hotelKit(w) : undefined, deck: rnd(x, yF, 4) < 0.6, floors: L.floors ?? 2 + (rnd(x, yF, 3) < 0.5 ? 1 : 0) });
+      if (B) made.push({ ...B, kind: L.store, hotel: !!L.hotel });
+      x += w;
+    }
+    // behind the row to the promenade: paved
+    K.fill(x0, yF - 30, x1 - x0, 30, T.PLAZA);
+    dressLane(made, yL0, yL1, x0, x1);
+    (out.places ||= []).push({ name: 'Marina Lane', x0, y0: yF - 14, x1, y1: yL1 + 1 });
+    out.marina = made.length;
+  }
+  // a lane in front of a row of late fronts (made: their lots), from row yL0 to yL1: the lights across it from the
+  // fronts, a terrace at the bars' and food places' fronts, friends by their doors, carts and their queues down its far
+  // side, the doormen at a hotel's door, potted palms along its edge
+  function dressLane(made, yL0, yL1, x0, x1, o = {}) {
+    const step = o.step || 4, span = Math.min(9.4, yL1 - yL0 + 0.4);
+    for (let x = x0 + 2; x < x1 - 2; x += step) fest(K, x + 0.5, yL0 + 0.05, 0, span, 64, 'wall', 'pole', o.k || null);
+    for (const B of made) {
+      const door = B.door + 0.5, side = door > B.x + B.w / 2 ? -1 : 1;
+      if (B.hotel) { tableau(K.m, { v: 'staff', x: door - 0.9, y: yL0 + 0.7, a: Math.PI / 2, x2: door + 0.9, y2: yL0 + 0.7, look: 'valet' }); continue; }
+      if (B.kind === 'bar' || B.kind === 'diner' || B.kind === 'cafe') {
+        for (let tx = B.x + 1.5; tx < B.x + B.w - 1; tx += 3) { if (Math.abs(tx - door) < 1.8) continue; prop('cafetable', tx, yL0 + 1.8, 0); (K.m.terraceSpots ||= []).push({ x: Math.round(tx * TILE), y: Math.round((yL0 + 1.8) * TILE) }); }
+        hang(K, door + side * 1.2, yL0 + 3.6, B.kind === 'bar' ? 4 : 3);
+      } else if (rnd(B.x, B.y, 170) < 0.6) hang(K, door + side * 1.6, yL0 + 1.4, 3);
+    }
+    if (o.carts !== false) for (let x = x0 + 12; x < x1 - 8; x += 26) { prop('foodcart', x, yL0 + 6.4, 14); tableau(K.m, { v: 'queue', x, y: yL0 + 5.2, a: Math.PI / 2 }); }
+    for (let x = x0 + 6; x < x1 - 4; x += 8) if (rnd(x, yL1, 171) < 0.7) prop('potted', x + 0.5, yL1 - 0.5, 0);
   }
 }
 
@@ -398,6 +517,10 @@ function waterfront(K, x0, x1, yS, out) {
     for (let i = 0; i < len; i++) for (let o = -1; o <= 1; o++) { const t = m.tileAt(x + o, y - i); if (t === T.WATER || t === T.DEEP) m.set(x + o, y - i, T.DOCK); }
     for (let i = 2; i < len - 1; i += 3) { m.marina.push({ x: (x + 2.6) * TILE, y: (y - i) * TILE, a: -Math.PI / 2, kind: i % 2 ? 'speedboat' : 'dinghy' }); m.marina.push({ x: (x - 1.8) * TILE, y: (y - i - 1) * TILE, a: Math.PI / 2, kind: 'jetski' }); }
     if (k === 1) m.marina.push({ x: (x + 4.2) * TILE, y: (y - len + 4) * TILE, a: -Math.PI / 2, kind: 'waterbus', party: true });
+    // (the rebuild, 11-16 - WC421's lit marina with its yachts: a cruiser or a sailboat off the outer jetties' heads, a
+    // yacht moored between each two jetties)
+    else m.marina.push({ x: (x - 2.4) * TILE, y: (y - len + 2) * TILE, a: -Math.PI / 2, kind: k === 0 ? 'cabincruiser' : 'sailboat' });
+    if (k < 2) prop('yacht', x + 10.5, y - 7, 26, { a: -Math.PI / 2 });
     prop('lamp', x + 0.5, y - len + 1.5, 0);
   });
   // (its own name: the Harbor's marina is Harbor Marina - two places of one name, two of its signs)
@@ -478,7 +601,7 @@ function lanternLane(K, x0, x1, out) {
   const rows = [[sN, 0, -0.75], [cN, Math.PI, 0.7], [cS, 0, -0.7], [sS, Math.PI, 0.75]];   // [y, facing (0 south, PI north), the stallholder's side]
   let n = 0, k = 0;
   for (let x = x0 + 4; x < x1 - 4; x += 3, k++) {
-    if (x >= PLAZA[0] - 3 && x <= PLAZA[1] + 2) { k = -1; continue; }
+    if (Math.abs(x + 1.5 - (PLAZA[0] + PLAZA[1]) / 2) < 4) { k = -1; continue; }   // (the rebuild: the market runs on across the plaza's mouth - it was an empty paved square - an aisle left open on the plaza's axis, the hall's door at its head)
     if (k % 6 === 5) continue;   // (a cross aisle)
     rows.forEach(([y, a, dv], r) => {
       if ((r === 1 || r === 2) && k % 6 === 0) return;   // (the spine starts a stall in from each cross aisle)
@@ -490,15 +613,17 @@ function lanternLane(K, x0, x1, out) {
     if (rnd(x, y0, 3) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'crates'], rnd(x, y0, 4)), x + 2.4, sN - 1.4, 0);
     if (rnd(x, y1, 5) < 0.4) prop(pick(['crates', 'cooler', 'fruitcrate', 'bags'], rnd(x, y1, 6)), x + 2.4, sS + 1.6, 0);
     // the lanterns: across each aisle, from the outer row's stall front to the spine's, every other stall
-    if (k % 2 === 0) { fest(K, x + 1.5, sN + 0.7, 0, cN - sN - 1.4, 50, 'pole', 'pole', 'lantern'); fest(K, x + 1.5, cS + 0.7, 0, sS - cS - 1.4, 50, 'pole', 'pole', 'lantern'); }
+    // (the rebuild, 11-16 - WC422: rows of lanterns ACROSS the lane from wall to wall, dense, overhead: at every stall a
+    // line from the north row's wall to the outer stall, across the aisle to the spine, across the other aisle, on to
+    // the south row's wall - four runs end to end, each made fast to the wall or the stall's frame)
+    fest(K, x + 1.5, sN + 0.7, 0, cN - sN - 1.4, 54, 'pole', 'pole', 'lantern'); fest(K, x + 1.5, cS + 0.7, 0, sS - cS - 1.4, 54, 'pole', 'pole', 'lantern');
+    fest(K, x + 1.5, y0 + 0.05, 0, sN - 0.75 - y0, 58, 'wall', 'pole', 'lantern'); fest(K, x + 1.5, sS + 0.75, 0, y1 + 0.95 - sS - 0.75, 58, 'pole', 'wall', 'lantern');
   }
   // a gate at each end (where the lane meets the bridges' avenues), the market's sign over the west one
   for (const gx of [x0 + 1, x1 - 1]) prop('gatearch', gx, (y0 + y1) / 2, 0, { w: Math.round((y1 - y0 - 2) * TILE), a: Math.PI / 2 });
   prop('textsign', x0 + 5, (y0 + y1) / 2 - 2, 0, { text: 'NIGHT MARKET', bg: '#7a1e2a', fg: [255, 214, 120], z: 58, sx: 2, lit: true });
   // the mouth on the plaza: food carts along its north side, the terrace of tables under the lights, people about
-  for (const dx of [-2, 6, 14]) prop('foodcart', PLAZA[0] + 6 + dx, y0 + 3, 14);
-  terrace(K, PLAZA[0] + 5, mid + 3.5, 6, { step: 6, lights: true, planters: false });
-  for (const [dx, dy, q] of [[3, -1.5, 4], [24, 0, 5], [40, -1.5, 3]]) hang(K, PLAZA[0] + dx, mid + dy, q);
+  for (const [dx, dy, q] of [[0, -3, 4], [-1.4, 2.5, 5], [1.6, 6, 3]]) hang(K, (PLAZA[0] + PLAZA[1]) / 2 + dx, mid + dy, q);
   // (shoppers down both aisles, every dozen tiles)
   for (let x = x0 + 8; x < x1 - 8; x += 12) if (x < PLAZA[0] - 4 || x > PLAZA[1] + 3) { hang(K, x, (sN + cN) / 2 + 0.3, 2 + (x % 2)); hang(K, x + 6, (cS + sS) / 2 - 0.3, 2 + ((x + 1) % 2)); }
   (out.places ||= []).push({ name: 'Lantern Lane Night Market', x0, y0, x1, y1 });
@@ -525,7 +650,7 @@ function westPoint(K, out, lit) {
   K.building({ x: x0, y: 2160, w, h: yB - 2160 + 1, arch: 'hotel', key: 'hotel', name: 'Neon Palms Hotel', poi: { kind: 'delivery', label: 'Neon Palms Hotel' }, whole: true,
     art: { spec: { floors: 10, style: 'glass', parapet: 14, roofMat: 'paver', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'lobby', door: 'right', open: true, people: 3, sign: null, awning: ['#16121e', '#16121e'] },
       neon: { name: 'NEON PALMS', kind: 'hotel', col: 5, blade: 'HOTEL', pic: 'panther', picV: 200, pics: ['hotelv', 'rooftop', 'nightlifev'], dress: true },
-      kit: [['palm', 60, 60], ['palm', 200, 60], ['lounge', 100, 130], ['lounge', 150, 130], ['umb', 240, 140], ['plant', 40, 200], ['plant', 300, 200], ['string', 160, 90], ['hut', 300, 300], ['ac', 80, 400]] } });
+      kit: [['palm', 60, 60], ['palm', 200, 60], ['lounge', 100, 130], ['lounge', 150, 130], ['umb', 240, 140], ['plant', 40, 200], ['plant', 300, 200], ['string', 160, 90], ['hut', 300, 300], ['ac', 80, 400], ['rpool', 480, 140], ['lounge', 430, 214], ['lounge', 490, 214], ['umb', 560, 210], ['palm', 620, 70]] } });   // (the rebuild: its pool on the roof, lit after dark - WC421)
   void lit; (out.places ||= []).push({ name: 'Glow Beach', x0, y0: 2088, x1, y1: 2158 });
 }
 
@@ -534,8 +659,8 @@ function westPoint(K, out, lit) {
 function eastHeadland(K, out, lit) {
   const { prop } = K;
   const x0 = NX.bridgeE + EXT.art + 1, yB = NY.blvd - EXT.blvd - 1;
-  K.building({ x: x0, y: 2150, w: 22, h: yB - 2150 + 1, arch: 'club', key: 'club', name: 'The Violet Room', poi: { kind: 'delivery', label: 'The Violet Room' }, whole: true,
-    art: { spec: { floors: 7, style: 'concrete', wallColor: '#2a2436', win: 'tall', parapet: 14, grime: 0.15, roofMat: 'rubber', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'bar', door: 'left', open: true, people: 4, sign: null, awning: ['#16121e', '#16121e'] },
+  K.building({ x: x0, y: 2150, w: 22, h: yB - 2150 + 1, door: x0 + 20, arch: 'club', key: 'club', name: 'The Violet Room', poi: { kind: 'delivery', label: 'The Violet Room' }, whole: true,
+    art: { spec: { floors: 7, style: 'concrete', wallColor: '#2a2436', win: 'tall', parapet: 14, grime: 0.15, roofMat: 'rubber', lip: 10, rimW: 5, blades: [] }, shop: { kind: 'bar', door: 'right', open: true, people: 4, sign: null, awning: ['#16121e', '#16121e'] },
       neon: { name: 'VIOLET ROOM', kind: 'club', col: 3, pic: 'lucy', picV: 150, blade: 'DANCE', pics: ['clubv', 'nightclub', 'sake'], dress: true } } });
   out.clubs++;
   // beside it on the boulevard: Afterdark, then a lit front or two
@@ -597,70 +722,44 @@ function afterdarkGarden(K, x0, y0, x1, y1, out) {
   (out.places ||= []).push({ name: 'The Garden at Afterdark', x0, y0, x1, y1 });
 }
 
-// The gardens between the waterfront's promenade and its row on the boulevard, where the Harbor Footbridge comes
-// down. The craft pass (11-14): they were lawn on a grid with trees dotted anywhere; now walks two tiles wide with royal
-// palms down both sides of them (lit after dark), a lamp every eight tiles, benches along them facing in with
-// couples on them; the lawns between open - picnic blankets on them by day - and in one of them a public court
-// (a pick-up game: server/systems/activities.js 'hoops') behind its chain-link
-function waterGardens(K, x0, x1, yS, out) {
-  const { m, prop, rnd } = K;
-  const walk = (x, y) => (x - x0) % 16 < 2 || (yS - y) % 12 < 2;
-  let n = 0;
-  for (let x = x0; x < x1; x++) for (let y = yS - 60; y <= yS; y++) if (K.free(x, y)) { m.tiles[y * m.w + x] = walk(x, y) ? T.PLAZA : T.GRASS; K.take(x, y, 1, 1); n++; }
-  const g = (x, y) => m.tiles[y * m.w + x] === T.GRASS, pv = (x, y) => m.tiles[y * m.w + x] === T.PLAZA;
-  for (let x = x0; x < x1; x++) for (let y = yS - 60; y <= yS; y++) {
-    if (!pv(x, y) || !walk(x, y)) continue;
-    const vx = (x - x0) % 16 === 0, hy = (yS - y) % 12 === 0;
-    // (down a north-south walk: palms either side every six tiles, a lamp every eight, a bench every twelve)
-    if (vx && !hy && (yS - y) % 6 === 3) { if (g(x - 1, y)) prop('palm_a', x - 0.6, y + 0.5, 10, { sp: 'royal', k: 1.15, lit: 1 }); if (g(x + 2, y)) prop('palm_a', x + 2.6, y + 0.5, 10, { sp: 'royal', k: 1.15, lit: 1 }); }
-    if (vx && (yS - y) % 8 === 5 && !hy) prop('lamp', x + 1, y + 0.5, 0);
-    // (along an east-west walk: a lamp every eight, benches facing the walk with a couple on some)
-    if (hy && !walk(x - 2, y + 4) && (x - x0) % 8 === 6) prop('lamp', x + 0.5, y + 1, 0);
-    if (hy && (x - x0) % 16 === 9 && g(x, y - 1)) { prop('bench_m', x + 0.5, y - 0.4, 0, { a: 0 }); if (rnd(x, y, 7) < 0.6) hang(K, x + 0.5, y + 1.2, 2); }
-  }
-  // the lawns' middles: open, a blanket or two on some by day (activities.js 'picnic'), a flowering tree in others
-  for (let cx = x0 + 2; cx + 14 <= x1; cx += 16) for (let cy = yS - 58; cy + 10 <= yS; cy += 12) {
-    if (![[0, 0], [13, 0], [0, 9], [13, 9]].every(([dx, dy]) => g(cx + dx, cy + dy))) continue;
-    const r = rnd(cx, cy, 11);
-    if (r < 0.45) { prop('blanket', cx + 4.5, cy + 4.5, 0, { v: Math.floor(r * 4) % 2 }); if (r < 0.2) prop('blanket', cx + 9, cy + 6, 0, { v: 1 }); }
-    else if (r < 0.8) prop('tree_a', cx + 7, cy + 4.5, 10, { sp: rnd(cx, cy, 12) < 0.5 ? 'cherry' : 'magnolia', k: 1.15 });
-    else prop('flowers_big', cx + 7, cy + 5, 0);
-  }
-  // the court: in the first cell from the footbridge's end wide and deep enough for it
-  for (let cx = x0 + 2; cx + 14 <= x1; cx += 16) {
-    const cy = yS - 10;
-    if (![[0, 0], [13, 0], [0, 9], [13, 9], [7, 5]].every(([dx, dy]) => g(cx + dx, cy + dy))) continue;
-    K.gap('court', cx, cy, 14, 10, { courtName: 'Bayside Court' });
-    break;
-  }
-  (out.places ||= []).push({ name: 'Waterfront Gardens', x0, y0: yS - 60, x1, y1: yS });
-  void n;
-}
 
-// Harbor Lights, the festival ground east of where the boulevard meets the water (NE3-NE8's waterfront festival). The
-// craft pass (11-14: the biggest open space of the Strip - a lawn of scattered palms with a screen and a few stalls
-// lost on it) lays it out as places with edges, each with its purpose and its people:
-//   - the shore: the sand, then a paved promenade along it - palms lit up their trunks, a lamp between each two,
-//     benches facing the bay with couples on them; the pier out into the bay
-//   - the stage: its screen and speakers at the head of a paved forecourt, the lights strung over the crowd in rows on
-//     posts, planters down its sides; the crowd in front of it at night (map.partySpots: activities.js 'party')
-//   - the night market: a street of stalls facing each other, a stallholder at each, red lanterns across it post to
-//     post, a gate at each end
-//   - the food trucks: three carts in a row, long tables in front of them under a canopy of lights, people eating
-//   - the big wheel on its pad by the water, a queue at its foot
-//   - the bandstand on the lawn between them, picnic blankets round it by day
-//   - the car park behind it all, down by The Docks
-function harborLights(K, x0, out) {
+// Harbor Lights, the headland east of where the boulevard meets the water (NE3-NE8's waterfront festival; the rebuild of
+// 11-16 after WC421 - the owner: "a large open area"; the lead: "a huge dark lawn with a few lights round its edge and a
+// big car park"). Every part of it a place with edges and its people:
+//   - the shore: the sand, a paved promenade along it - palms lit up their trunks, a lamp between each two, benches
+//     facing the bay; the pier out into the bay and the pier club on its deck at the end, boats moored alongside
+//   - the stage: the video screen (the palm-beach sunset) and its speakers at the head of its apron, the lights strung
+//     over the crowd in rows on posts; the crowd at night (map.partySpots: activities.js 'party'); the standing ground
+//     behind it paved, a pergola bar each side
+//   - the fair (WC421's busy fairground, where the bandstand's lawn was): the carousel in the middle under its striped
+//     roof, game stalls in two rows facing it with their keepers, lights strung over the midway, the gate and its sign
+//     off the walk, the queue at the carousel, friends about
+//   - the night market's street of stalls under lanterns, the food trucks and their tables, the big wheel and its queue
+//   - Dock Lane (laid last: K.late): a row of lit fronts between the walk and Dock 9, facing a lane with lanterns across
+//     it to the club's wall; where the car park was, a row of lit fronts on the forecourt to the south - a casino front,
+//     bars, an arcade
+function harborLights(K, x0, out, lateLit) {
   const { m, prop, rnd } = K;
   const y0 = 2196, y1 = 2259, yLow = 2292;   // (the ground; and east of The Docks' yard down to the street)
   const isLand = (x, y) => m.land[y * m.w + x] && m.tiles[y * m.w + x] !== T.WATER && m.tiles[y * m.w + x] !== T.DEEP;
   let n = 0;
-  const mineT = (x, y) => (y <= y1 || x >= 3550) && K.free(x, y);
-  // the ground: lawn, the shore's sand and promenade, the zones' paving
-  const ZONES = [[3484, 2226, 3518, 2236], [3482, 2244, 3606, 2247], [3524, 2247, 3577, 2259], [3578, 2249, 3604, 2260], [3574, 2224, 3596, 2242]]   // (round two: the stage's apron paved, the crowd's lawn green behind it; the trucks' court tighter);
+  const mineT = (x, y) => (y <= y1 + 2 || x >= 3550) && K.free(x, y);
+  // the ground: the shore's sand and promenade, the places' paving (the stage's apron and standing ground, the walk in,
+  // the fair, the market street, the food trucks' court, the wheel's pad, Dock Lane and the south row's forecourt)
+  const ZONES = [[3484, 2226, 3520, 2244], [3482, 2244, 3606, 2248], [3520, 2225, 3574, 2244], [3524, 2247, 3577, 2260], [3578, 2249, 3604, 2268], [3574, 2224, 3596, 2242], [3488, 2258, 3524, 2262], [3550, 2290, 3606, 2292]];
   const zone = (x, y) => ZONES.some(([a, b, c, d]) => x >= a && y >= b && x < c && y < d);
   const shore = new Map();   // (each column's first land row)
   for (let x = x0; x < 3640; x++) { let y = 2190; while (y < yLow && !isLand(x, y)) y++; if (y < yLow) shore.set(x, y); }
+  // (the rows laid last first take their ground: the fronts between the walk and Dock 9, the south row where the car
+  // park was - their lots kept free of the paving)
+  const dock = [{ w: 12, name: 'Tiki Tide Bar', store: 'bar', neon: 'bar', blade: 'BAR' }, { w: 12, name: 'Harbor Karaoke', store: 'bar', neon: 'lounge', blade: 'KARAOKE' }, { w: 11, name: 'Night Market Noodles', store: 'diner', neon: 'diner', blade: 'NOODLES' }];
+  const south = [{ w: 20, name: 'Lucky Harbor Casino', store: 'lobby', neon: 'club', sign: 'LUCKY HARBOR', blade: 'CASINO', floors: 3, pic: 'luckypaw' }, { w: 10, name: 'Pearl Diver Bar', store: 'bar', neon: 'bar', blade: 'BAR' },
+    { w: 9, name: 'Ramen Wave', store: 'diner', neon: 'diner', blade: 'RAMEN' }, { w: 11, name: 'Harbor Arcade', store: 'arcade', neon: 'arcade', blade: 'GAMES', floors: 2 }];
+  const made = { dock: [], south: [] };
+  for (const [list, xa, ya, d, key] of [[dock, 3488, 2248, 10, 'dock'], [south, 3554, 2268, 22, 'south']]) {
+    let x = xa;
+    for (const L of list) { const B = lateLit(x, ya, L.w, d, { floors: 2, deck: key === 'south', ...L }); if (B) made[key].push({ ...B, kind: L.store }); x += L.w; }
+  }
   for (let y = y0; y <= yLow; y++) for (let x = x0; x < 3640; x++) {
     if (!mineT(x, y)) continue;
     const top = shore.get(x) ?? 9999, d = y - top;
@@ -678,25 +777,38 @@ function harborLights(K, x0, out) {
     if (x % 8 === 4) prop('lamp', x + 0.5, top + 6.6, 0);
     if (x % 16 === 10) { prop('bench_m', x + 0.5, top + 4.4, 0, { a: Math.PI }); if (rnd(x, top, 3) < 0.6) hang(K, x + 0.5, top + 5.6, 2); }
   }
-  // the stage: the screen and its speakers at the head of the forecourt, the sign over it; the lights over the crowd;
-  // planters down the forecourt's sides
-  prop('dscreen', 3501, 2229, 0); prop('dspeaker', 3490, 2230, 0); prop('dspeaker', 3512, 2230, 0);
-  prop('textsign', 3501, 2227, 0, { text: 'HARBOR LIGHTS', bg: '#16121e', fg: [255, 110, 200], z: 96, sx: 2, lit: true });
-  canopy(K, 3486, 2230.5, 3516, 2235.5, { gap: 2.5, span: 7.5, h: 58 });
-  for (let x = 3486; x <= 3516; x += 3) if (Math.abs(x - 3501) > 2) prop('planter_fl', x, 2235.6, 0);   // (the apron's edge onto the lawn, a gap in the middle)
-  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2232.6 * TILE), name: 'Harbor Lights' });
-  // (the lawn behind the apron: picnic blankets in loose rows facing the stage - people on them by day)
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) prop('blanket', 3490.5 + c * 7 + (r ? 3.5 : 0), 2238.4 + r * 3.4, 0, { v: (r + c) % 2 });
-  // (round two: the forecourt read as an empty paved lot) - the stage's wings: banner poles and potted palms either side
-  // of the screen, tiki torches at its front corners; a pergola bar at each side of the lawn with its tables under it;
-  // the crowd thick in front of the stage
+  // the stage: the video screen and its speakers at the head of the apron, the sign over it; the lights over the crowd
+  prop('vidboard', 3501, 2229, 0, { w: 288, h: 136, z: 34 }); prop('dspeaker', 3488, 2230, 0); prop('dspeaker', 3514, 2230, 0);
+  prop('textsign', 3501, 2224.6, 0, { text: 'HARBOR LIGHTS', bg: '#16121e', fg: [255, 110, 200], z: 190, sx: 2, lit: true });
+  canopy(K, 3486, 2231.5, 3516, 2236.5, { gap: 2.5, span: 7.5, h: 58 });
+  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2233.6 * TILE), name: 'Harbor Lights' });
   for (const x of [3484.5, 3517.5]) { prop('bannerpole', x, 2229.2, 0, { v: x < 3500 ? 0 : 1 }); prop('potted', x, 2231.4, 0); prop('potted', x, 2233.2, 0); }
   for (const x of [3489.5, 3512.5]) prop('torch', x, 2231.6, 6);
+  // (the standing ground behind the apron, paved: a pergola bar each side with its tables, carts along the back)
   for (const [px, s] of [[3485.6, 1], [3516.4, -1]]) {
-    prop('pergola', px + s * 1.8, 2242.6, 0, { w: 4 * TILE, d: 3 * TILE, h: 58 });
-    for (const dy of [0, 1.6]) { prop('cafetable', px + s * 1.8, 2241.8 + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((px + s * 1.8) * TILE), y: Math.round((2241.8 + dy) * TILE) }); }
+    prop('pergola', px + s * 1.8, 2241.6, 0, { w: 4 * TILE, d: 3 * TILE, h: 58 });
+    for (const dy of [0, 1.6]) { prop('cafetable', px + s * 1.8, 2240.8 + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((px + s * 1.8) * TILE), y: Math.round((2240.8 + dy) * TILE) }); }
   }
-  for (const [x, y, q] of [[3494, 2233.2, 5], [3501, 2234.2, 5], [3508, 2233.2, 5], [3501, 2231.2, 4], [3489, 2232, 3], [3513, 2232, 4]]) hang(K, x, y, q);
+  for (const x of [3496, 3506]) { prop('foodcart', x, 2242.2, 14); tableau(m, { v: 'queue', x, y: 2240.9, a: Math.PI / 2 }); }
+  for (const [x, y, q] of [[3494, 2234.2, 5], [3501, 2235.2, 5], [3508, 2234.2, 5], [3501, 2232.2, 4], [3489, 2233, 3], [3513, 2233, 4], [3500, 2238.6, 5], [3510, 2239, 4]]) hang(K, x, y, q);
+  // the fair: the carousel in the middle, the game stalls in two rows facing it, the lights over the midway, the gate
+  {
+    const cx = 3547, cy = 2234.6;
+    prop('carousel', cx, cy, 44);
+    // (four rows of game stalls - two midways - the middle two back to back, broken round the carousel; the south row
+    // open in the middle, the way in off the walk)
+    for (let x = 3524, k = 0; x <= 3571; x += 3.6, k++) {
+      const st = (y, a, open) => { if (!open) return; prop('mstall', x, y, 0, { v: k % 4, c: (k + (a ? 1 : 3)) % 4, a }); if (rnd(Math.round(x * 2), Math.round(y), 9) < 0.8) vendor(K, x, y + (a ? 0.75 : -0.75), a ? -Math.PI / 2 : Math.PI / 2); };
+      st(2227.4, 0, true); st(2233.1, Math.PI, Math.abs(x - cx) > 6); st(2236.3, 0, Math.abs(x - cx) > 6); st(2242.2, Math.PI, Math.abs(x - cx) > 3);
+    }
+    for (const [a, b] of [[3521.5, 3540.5], [3553.5, 3572.5]]) for (const y of [2230.25, 2239.3]) canopy(K, a, y, b, y, { span: 9.5, h: 62 });
+    hang(K, cx - 3.4, cy + 3, 6, [-0.75, 0]);   // (the queue for the carousel)
+    for (const [x, y, q] of [[3530, 2230.2, 4], [3564, 2230.4, 4], [3538, 2239.4, 3], [3557, 2230, 3], [3527, 2239.6, 2], [3568, 2239.2, 3], [3547, 2240.2, 4]]) hang(K, x, y, q);
+    prop('gatearch', 3520.6, 2234.8, 0, { w: Math.round(9 * TILE), a: Math.PI / 2 });
+    prop('textsign', 3523.5, 2232.6, 0, { text: 'HARBOR LIGHTS FAIR', bg: '#7a1e4a', fg: [255, 220, 120], z: 64, sx: 2, lit: true });
+    for (const x of [3521.4, 3572.6]) for (const y of [2226.4, 2243]) prop('bannerpole', x, y, 0, { v: x < 3540 ? 0 : 1 });
+    (out.places ||= []).push({ name: 'Harbor Lights Fair', x0: 3520, y0: 2225, x1: 3574, y1: 2244 });
+  }
   // the night market: the stalls facing each other across the aisle, the lanterns across it, the gates and the sign
   {
     const yN = 2249.2, yS2 = 2256.8;
@@ -705,55 +817,58 @@ function harborLights(K, x0, out) {
       prop('mstall', x + 1, yN, 0, { v: k % 4, c: (k + 1) % 4, a: 0 }); prop('mstall', x + 1, yS2, 0, { v: (k + 2) % 4, c: k % 4, a: Math.PI });
       if (rnd(x, yN, 4) < 0.7) vendor(K, x + 1, yN - 0.75, Math.PI / 2);
       if (rnd(x, yS2, 4) < 0.7) vendor(K, x + 1, yS2 + 0.75, -Math.PI / 2);
-      if (k % 2 === 0) fest(K, x + 1.5, yN + 0.7, 0, yS2 - yN - 1.4, 50, 'pole', 'pole', 'lantern');
+      fest(K, x + 1.5, yN + 0.7, 0, yS2 - yN - 1.4, 54, 'pole', 'pole', 'lantern');
     }
     for (const gx of [3525, 3576]) prop('gatearch', gx, 2253, 0, { w: Math.round(9 * TILE), a: Math.PI / 2 });
     prop('textsign', 3529, 2251, 0, { text: 'NIGHT MARKET', bg: '#7a1e2a', fg: [255, 214, 120], z: 58, sx: 2, lit: true });
     for (let x = 3532; x < 3572; x += 7) hang(K, x, 2253 + ((x / 7) % 2 ? 0.8 : -0.8), 2 + (x % 3));   // (shoppers along the aisle)
   }
-  // the food trucks: three carts along the court's north side, the long tables under the lights in front of them
-  for (const x of [3581, 3586.5, 3592, 3597.5, 3602]) prop('foodcart', x, 2250.4, 14);   // (round two: five trucks, the tables close)
+  // the food trucks: carts along the court's north side, the long tables under the lights in front of them
+  for (const x of [3581, 3586.5, 3592, 3597.5, 3602]) prop('foodcart', x, 2250.4, 14);
+  for (const x of [3584, 3595]) tableau(m, { v: 'queue', x, y: 2251.7, a: -Math.PI / 2 });
   for (const y of [2254, 2256.6]) for (const x of [3582, 3587.5, 3593, 3598.5]) { prop('picnic', x, y, 0); (K.m.terraceSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), seat: 16 }); }
   canopy(K, 3579, 2253, 3602.5, 2257.6, { gap: 2.3, span: 8, h: 54 });
-  for (let x = 3580; x <= 3602; x += 4) prop('potted', x, 2259.2, 0);   // (the court's south edge)
+  for (let x = 3580; x <= 3602; x += 4) prop('potted', x, 2259.2, 0);
   prop('textsign', 3591, 2249, 0, { text: 'FOOD TRUCKS', bg: '#1a1420', fg: [255, 200, 80], z: 44, sx: 2, lit: true });
-  for (const x of [3580, 3602]) prop('trashcan', x, 2263, 0);
   hang(K, 3587, 2252.8, 3);
   // the big wheel on its pad, the queue at its foot, planters round the pad
   prop('ferris', 3585, 2233, 60);
   hang(K, 3580, 2240.6, 6, [-0.75, 0]);
   for (const [x, y] of [[3575, 2226], [3575, 2241], [3595, 2241]]) if (at(x, y) === T.PLAZA) prop('planter_fl', x, y, 0);
   for (const x of [3576, 3594]) if (at(x, 2243) === T.PLAZA) prop('lamp', x, 2243, 0);
-  // the bandstand on the lawn between the stage and the wheel: blankets round it by day, cherry trees in a ring
-  if (at(3547, 2233) === T.GRASS) {
-    prop('gazebo', 3547, 2233, 20);
-    for (const [dx, dy] of [[-9, 4], [8, 5], [-6, -6]]) if (at(3547 + dx, 2233 + dy) === T.GRASS) prop('blanket', 3547 + dx, 2233 + dy, 0, { v: (dx & 1) });
-    for (const [dx, dy] of [[-13, -2], [13, -2], [-12, 8], [12, 8]]) if (at(3547 + dx, 2233 + dy) === T.GRASS) prop('tree_a', 3547 + dx, 2233 + dy, 10, { sp: 'cherry', k: 1.2 });
-    hang(K, 3547, 2239.5, 2);
-  }
   // palms along Harborview Avenue's side of the ground (lit), the way in from the boulevard's end
   for (let y = 2228; y < 2258; y += 6) if (at(3486, y) === T.GRASS) prop('palm_a', 3486.5, y + 0.5, 10, { sp: 'royal', k: 1.15, lit: 1 });
-  // the car park down by The Docks: three rows of bays off its aisles, a lamp at each row's end
-  {
-    const cx0 = 3554, cx1 = 3604;
-    let ok = true;
-    for (let y = 2266; y < 2290 && ok; y++) for (let x = cx0; x < cx1; x++) if (at(x, y) !== T.GRASS) { ok = false; break; }
-    if (ok) {
-      for (let y = 2266; y < 2290; y++) for (let x = cx0; x < cx1; x++) m.tiles[y * m.w + x] = T.LOT;
-      for (const [ry, a] of [[2266, -Math.PI / 2], [2274, Math.PI / 2], [2280, -Math.PI / 2]]) for (let sx = cx0 + 1; sx + 3 <= cx1 - 1; sx += 3) {
-        m.stalls.push({ x: sx * TILE, y: ry * TILE, w: 3 * TILE, h: 4 * TILE });
-        if (rnd(sx, ry, 6) < 0.6) m.parking.push({ x: (sx + 1.5) * TILE, y: (ry + 2) * TILE, a });
-      }
-      for (const ry of [2266, 2280]) { prop('lamp', cx0 + 0.5, ry + 0.5, 0); prop('lamp', cx1 - 0.5, ry + 0.5, 0); }
-      (out.places ||= []).push({ name: 'Harbor Lights Parking', x0: cx0, y0: 2266, x1: cx1, y1: 2290 });
-    }
+  // Dock Lane: the lane between the fronts and Dock 9 - lanterns across it to the club's wall, the fronts' life
+  for (let x = 3490; x < 3522; x += 3) fest(K, x + 0.5, 2258.05, 0, 3.9, 56, 'wall', 'wall', 'lantern');
+  for (const B of made.dock) { const door = B.door + 0.5, side = door > B.x + B.w / 2 ? -1 : 1; hang(K, door + side * 1.6, 2259.6, B.kind === 'bar' ? 4 : 3); }
+  // the south row's forecourt: the casino's doormen, friends by the bars' doors, palms in pots along its edge
+  for (const B of made.south) {
+    const door = B.door + 0.5, side = door > B.x + B.w / 2 ? -1 : 1;
+    if (/Casino/.test(B.name)) tableau(m, { v: 'staff', x: door - 0.9, y: 2290.7, a: Math.PI / 2, x2: door + 0.9, y2: 2290.7, look: 'valet' });
+    else hang(K, door + side * 1.8, 2291, B.kind === 'bar' ? 4 : 3);
   }
-  // the pier: north-east into the bay from the shore
+  for (let x = 3552; x < 3606; x += 6) if (at(x, 2291) === T.PLAZA) prop('potted', x + 0.5, 2291.4, 0);
+  if (made.dock.length) (out.places ||= []).push({ name: 'Dock Lane', x0: 3488, y0: 2248, x1: 3524, y1: 2262 });
+  // the pier: north-east into the bay from the shore; at its end the pier club - a deck, the bar's kiosk, its tables
+  // under the lights, the sign - and boats moored alongside (WC421's pier club)
   let px = 3470, py = 2214;
   while (py > 2190 && m.land[py * m.w + px] && m.tiles[py * m.w + px] !== T.WATER) py--;
-  for (let i = 0; i < 18; i++) for (let o = -1; o <= 1; o++) { const t = m.tileAt(px + o, py - i); if (t === T.WATER || t === T.DEEP) m.set(px + o, py - i, T.DOCK); }
-  for (let i = 4; i < 16; i += 4) prop('lamp', px + 0.5 + 1.6, py - i, 0);
-  m.marina.push({ x: (px + 4) * TILE, y: (py - 12) * TILE, a: -Math.PI / 2, kind: 'speedboat' });
+  const wet = (x, y) => { const t = m.tileAt(x, y); return t === T.WATER || t === T.DEEP; };
+  for (let i = 0; i < 18; i++) for (let o = -1; o <= 1; o++) if (wet(px + o, py - i)) m.set(px + o, py - i, T.DOCK);
+  for (let i = 4; i < 14; i += 4) prop('lamp', px + 0.5 + 1.6, py - i, 0);
+  {
+    const dy = py - 18, ok = [...Array(7)].every((_, j) => [...Array(11)].every((__, i) => wet(px - 5 + i, dy - j) || m.tileAt(px - 5 + i, dy - j) === T.DOCK));
+    if (ok) {
+      for (let j = 0; j < 7; j++) for (let i = 0; i < 11; i++) m.set(px - 5 + i, dy - j, T.DOCK);
+      prop('tbar', px + 0.5, dy - 4.6, 20);
+      prop('textsign', px + 0.5, dy - 2.6, 0, { text: 'PIER CLUB', bg: '#16121e', fg: [90, 230, 255], z: 40, sx: 2, lit: true });
+      for (const dx of [-3.5, 4.5]) for (const dyy of [-1.6, -0.2]) { prop('cafetable', px + dx, dy + dyy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((px + dx) * TILE), y: Math.round((dy + dyy) * TILE) }); }
+      canopy(K, px - 4.5, dy - 2.4, px + 5.5, dy + 0.4, { gap: 2.8, span: 5, h: 54 });
+      hang(K, px - 1, dy - 3.2, 4); hang(K, px + 2.5, dy - 3.4, 3);
+      for (const [dx, k, a] of [[-7.5, 'cabincruiser', -Math.PI / 2], [8.5, 'sailboat', -Math.PI / 2], [-2.6, 'speedboat', -Math.PI / 2]]) m.marina.push({ x: (px + dx) * TILE, y: (dx === -2.6 ? py - 10 : dy - 3) * TILE, a, kind: k });
+      (out.places ||= []).push({ name: 'The Pier Club', x0: px - 5, y0: dy - 7, x1: px + 6, y1: dy });
+    } else m.marina.push({ x: (px + 4) * TILE, y: (py - 12) * TILE, a: -Math.PI / 2, kind: 'speedboat' });
+  }
   (out.places ||= []).push({ name: 'Harbor Lights', x0, y0, x1: 3640, y1 });
 }
 
@@ -771,7 +886,10 @@ const bldAt = (m, x, y) => x >= 0 && y >= 0 && x < m.w && y < m.h && m.bld[y * m
 function dressWalk(K, W, out) {
   const { m, prop, rnd } = K, { x, y0, y1 } = W;
   let n = 0;
-  for (let y = y0 + 1; y < y1; y += 2) {
+  // (the Glow Arcade - the rebuild, 11-16, WC421's covered arcade: an arch over the walk every two tiles, a neon tube
+  // along each, cyan and pink by turns - a lit vault you walk through; shoppers and friends under it)
+  if (W.arcade) for (let y = y0 + 2; y < y1 - 1; y += 2) { prop('arcrib', x + 2.5, y + 0.5, 0, { w: 5 * TILE, v: n % 2 }); if (n % 4 === 1) hang(K, x + (n % 8 === 1 ? 1.2 : 3.8), y + 1.4, 3); n++; }
+  for (let y = y0 + 1; y < y1 && !W.arcade; y += 2) {
     if (!bldAt(m, x - 1, y) || !bldAt(m, x + 5, y) || !bldAt(m, x - 1, y + 1) || !bldAt(m, x + 5, y + 1)) continue;
     const dy = n % 2 ? 0.8 : -0.8;
     fest(K, x, y + 0.6, 5, dy, 54 + (n % 3) * 4, 'wall', 'wall', 'lantern');
@@ -836,24 +954,6 @@ function shorePromenade(K, x0, x1, yS, out, deep = 99) {
   void out;
 }
 
-// D8's crossroads, the south-west corner of the boulevard and Park East Avenue: the 24/7 mart and its car park, the
-// vending machines by its door, the ramen bar under red lanterns beside it
-function crossroadsLot(K, x, y, w, h, out) {
-  const { m, prop } = K;
-  if (!K.allFree(x, y, w, h)) return;
-  K.fill(x, y, w, h, T.LOT); K.take(x, y, w, h);
-  // (its bays nose in off the boulevard's side; the three by the corner the taxi rank - the clubs' way home - their
-  // TAXI sign on the pavement at the corner)
-  let k = 0;
-  for (let sx = x + 1; sx + 3 <= x + w - 10; sx += 3, k++) { m.stalls.push({ x: sx * TILE, y: (y + 2) * TILE, w: 3 * TILE, h: 4 * TILE }); const taxi = sx + 3 > x + w - 19; m.parking.push({ x: (sx + 1.5) * TILE, y: (y + 4) * TILE, a: -Math.PI / 2, ...(taxi ? { model: 'taxi' } : {}) }); }
-  prop('textsign', x + w - 11, y + 0.6, 0, { text: 'TAXI', bg: '#e0b030', fg: [30, 30, 30], z: 34, sx: 2, lit: true });
-  K.building({ x: x + w - 9, y: y + 1, w: 9, h: h - 1, arch: 'mart', name: '24/7 Corner', poi: { kind: 'convenience', label: 'Strip 24/7' }, whole: true, face: 'N' });
-  for (const dx of [1.5, 3]) prop('vend_cola', x + dx, y + 0.8, 8);
-  prop('lamp', x + 0.8, y + h - 0.8, 0);
-  void k;
-  (out.places ||= []).push({ name: 'The Crossroads', x0: x, y0: y, x1: x + w, y1: y + h });
-}
-
 // The Docks (NE2's warehouses and containers at the edge): east of Harborview Avenue - Dock 9, a club in a warehouse
 // (its roller doors, the neon over them), the container bar (containers stacked into a bar, a deck on top), stacks of
 // containers along the fence by the Gulf Loop, a food truck
@@ -876,6 +976,9 @@ function docks(K, x0, out, lit) {
   prop('foodcart', x0 + 30, 2285, 14);
   for (let y = 2280; y < y1 - 1; y++) for (let x = x0; x < x0 + 60; x++) if (K.free(x, y)) { m.tiles[y * m.w + x] = T.LOT; K.take(x, y, 1, 1); }
   for (let k = 0; k < 5; k++) prop('container', x0 + 4 + k * 6.5, y1 - 3, 30, { v: k + 6, c: k % 5 });
+  // (the rebuild, 11-16: the yard a yard - a second row of containers along it, not an empty lot; the Box Bar's ground paved)
+  for (let k = 0; k < 7; k++) prop('container', x0 + 4 + k * 7, y1 - 7.5, 30, { v: k + 11, c: (k + 2) % 5 });
+  K.fill(x0 + 27, 2262, 34, 18, T.PLAZA);
   void y0; void lit;
   (out.places ||= []).push({ name: 'The Docks', x0, y0: 2258, x1: x0 + 60, y1 });
 }

@@ -91,8 +91,8 @@ test('the picture signs: many designs, the owner\'s, spread over the district - 
   assert.ok(pairs >= 80, `the neighbours compared (${pairs})`);
 });
 
-test('the lantern alleys: walkways through the blocks from street to street, lanterns over them, their mouths open', () => {
-  for (const [x, name, y0, y1] of [[3066, 'Lantern Alley', 2208, 2244], [3250, 'Red Lantern Row', 2257, 2293]]) {
+test('the lantern alleys and the Glow Arcade: walkways through the blocks from street to street, lanterns or the arcade\'s lit arches over them, their mouths open', () => {
+  for (const [x, name, y0, y1] of [[3066, 'Glow Arcade', 2208, 2244], [3250, 'Red Lantern Row', 2257, 2293]]) {
     // (a column of paving 5 wide from street to street, buildings either side along most of it, never built over)
     let paved = 0, walled = 0, built = 0;
     for (let y = y0; y < y1; y++) {
@@ -103,8 +103,10 @@ test('the lantern alleys: walkways through the blocks from street to street, lan
     }
     assert.equal(built, 0, `${name}: nothing built on it`);
     assert.ok(paved >= 25 && walled >= 14, `${name}: paved (${paved} rows) between walls (${walled})`);
-    const over = M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x >= x * TILE - 4 && p.x <= (x + 5) * TILE + 4 && p.y > y0 * TILE && p.y < y1 * TILE && Math.abs((p.tx || 0) - 5 * TILE) < 2);
-    assert.ok(over.length >= 6, `${name}: lanterns strung across it (${over.length})`);
+    // (the Glow Arcade - the rebuild, 11-16, WC421's covered arcade: a lit arch over the walk every two tiles)
+    const over = name === 'Glow Arcade' ? M.props.filter((p) => p.t === 'arcrib' && Math.abs(p.x - (x + 2.5) * TILE) < 2 && p.y > y0 * TILE && p.y < y1 * TILE)
+      : M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x >= x * TILE - 4 && p.x <= (x + 5) * TILE + 4 && p.y > y0 * TILE && p.y < y1 * TILE && Math.abs((p.tx || 0) - 5 * TILE) < 2);
+    assert.ok(over.length >= (name === 'Glow Arcade' ? 14 : 6), `${name}: lanterns or arches across it (${over.length})`);
     // nothing solid across it: a way through every row (three tiles of it clear at least)
     for (let y = y0; y < y1; y++) {
       if (![0, 1, 2, 3, 4].every((dx) => M.tiles[M.idx(x + dx, y)] === T.PLAZA)) continue;
@@ -175,7 +177,7 @@ test('the craft pass: Lantern Lane four rows of stalls, Harbor Lights laid out, 
   assert.ok(lane.length >= 60 && rows.size === 4, `the night market's stalls (${lane.length}) in four rows (${rows.size})`);
   // Harbor Lights: the stage's crowd, the market street, the food trucks' tables, the wheel, the car park
   const HL = [3478, 2214, 3640, 2296];
-  for (const [t, n] of [['mstall', 20], ['picnic', 6], ['foodcart', 3], ['ferris', 1], ['gazebo', 1], ['dscreen', 1]]) assert.ok(M.props.filter((p) => p.t === t && inR(HL, p.x, p.y)).length >= n, `Harbor Lights: ${t}`);
+  for (const [t, n] of [['mstall', 36], ['picnic', 6], ['foodcart', 5], ['ferris', 1], ['carousel', 1], ['vidboard', 1]]) assert.ok(M.props.filter((p) => p.t === t && inR(HL, p.x, p.y)).length >= n, `Harbor Lights: ${t}`);
   assert.ok((M.partySpots || []).some((q) => inR(HL, q.x, q.y) && M.tileAtPx(q.x, q.y) === T.PLAZA), 'the crowd at the stage stands on its forecourt');
   // the people's places, in both districts
   for (const [name, r, t, h, v] of [['the Neon Strip', NEON.rect, 40, 40, 60], ['the Pink Mile', PM, 20, 15, 0]]) {
@@ -197,4 +199,39 @@ test('the craft pass: Lantern Lane four rows of stalls, Harbor Lights laid out, 
     if (k === 'terrace') assert.equal(ped.gt, 'sit', 'sat at the table');
     if (k === 'hang') assert.ok(g.ids.length >= 2 && ped.npc.act.chat, 'friends talking');
   }
+});
+
+// The rebuild (the owner, 11-16: "Not sure it's turning out like the concepts - just seemed like a large open area with
+// one sign of the girl with the eye patch ... Not sure it's looking very cyberpunk neon night life kind of vibe"): the
+// open lots filled with lit fronts laid last (no other number moves), WC421's landmarks, WC422's lanterns across the lane
+test('the rebuild: the open lots filled with lit fronts at the end of the list, the hotels\' pools, the screen, the fair, the lanes', () => {
+  const inR = (r, x, y) => x >= r[0] * TILE && x < r[2] * TILE && y >= r[1] * TILE && y < r[3] * TILE;
+  // the fronts laid last: after every building of the hand plans, the towers' parts and the opened-up blocks - none
+  // with a home (no home's number moves)
+  const late = M.buildings.map((b, i) => [b, i]).filter(([b]) => b && b.hand && b.name && inRect((b.tx + 0.5) * TILE, (b.ty + 0.5) * TILE) && b.id >= M.buildings.findIndex((q) => q && q.openOf !== undefined));
+  const names = new Set(late.map(([b]) => b.name));
+  for (const n of ['Marina Bay Hotel', 'Skyline Suites Hotel', 'Golden Koi Casino', 'Lucky Harbor Casino', 'Hi Score Arcade', 'Lucky Seven Bar', 'Tiki Tide Bar']) assert.ok(names.has(n), `${n} laid last`);
+  assert.ok(late.length >= 20, `the late fronts (${late.length})`);
+  for (const [b] of late) assert.ok(b.home === undefined, `${b.name}: no home`);
+  // the hotel towers' pools on their roofs; the video billboard on Lantern Hall's roof over the plaza
+  const pools = M.buildings.filter((b) => b && (b.art?.kit || []).some(([k]) => k === 'rpool'));
+  assert.ok(pools.length >= 4, `rooftop pools (${pools.length})`);
+  assert.ok(pools.every((b) => (b.art.spec?.floors || 0) >= 5 || b.kind === 'hotel'), 'on the hotels');
+  const hall = M.buildings.find((b) => b && b.name === 'Lantern Hall');
+  assert.ok(hall && hall.art.kit.some(([k]) => k === 'vid'), 'the video billboard on Lantern Hall');
+  // Harbor Lights: no lawn of any size left on the headland's middle, no car park
+  const HL = [3482, 2222, 3606, 2292];
+  let grass = 0, lot = 0, all = 0;
+  for (let ty = HL[1]; ty < HL[3]; ty++) for (let tx = HL[0]; tx < HL[2]; tx++) { const t = M.tiles[M.idx(tx, ty)]; all++; if (t === T.GRASS) grass++; if (t === T.LOT) lot++; }
+  assert.ok(grass < all * 0.12, `Harbor Lights' lawn ${grass} of ${all} tiles`);
+  assert.ok(lot < all * 0.12, `Harbor Lights' asphalt ${lot} of ${all} tiles`);
+  assert.ok(M.props.some((p) => p.t === 'carousel' && inR(HL, p.x, p.y)), 'the carousel');
+  // Lantern Lane (WC422): the lanterns across it wall to wall at every stall - four runs end to end
+  const across = M.props.filter((p) => p.t === 'festoon' && p.k === 'lantern' && p.x > 2983 * TILE && p.x < 3154 * TILE && p.y >= 2140 * TILE && p.y < 2161 * TILE && !p.tx);
+  assert.ok(across.length >= 140, `the lanterns across Lantern Lane (${across.length})`);
+  assert.ok(across.filter((p) => (p.ends || []).includes('wall')).length >= 50, 'made fast to the rows\' walls');
+  // the crossroads: the taxis waiting, the Violet Room's door on the corner
+  assert.ok(M.parking.filter((p) => p.model === 'taxi' && inR([3150, 2205, 3180, 2216], p.x, p.y)).length >= 3, 'the taxi rank');
+  const vr = M.buildings.find((b) => b && b.name === 'The Violet Room');
+  assert.ok(vr.door.tx >= vr.tx + vr.tw - 3, 'the Violet Room\'s door on the corner');
 });
