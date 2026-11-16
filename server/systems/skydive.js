@@ -1,7 +1,7 @@
 // Jumping out of an aircraft (the owner, 10-16: "Jumping out of an aircraft: fall all the way down (splat or bounce); a
 // parachute to equip"). Out of a helicopter or a plane up in the air you fall - you used to land at once, hurt by how
 // high you'd been. Now you fall all the way down, steering as you go (ped.sky: { z, vz, open, mx, my }):
-//   - with a parachute in your bag (shared/items.js parachute: the sports shops, the pawn shops), the action button
+//   - with a parachute in your inventory (shared/items.js parachute: the sports shops, the pawn shops), the action button
 //     opens it: the canopy fills over a second, and you float down slowly, steering where to land - a soft landing,
 //     a roll if you come in fast. It's used up.
 //   - without one, or never opened: a long fall. Onto hard ground from high up that's the end of you (a splat); into

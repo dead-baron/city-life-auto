@@ -64,7 +64,7 @@ export function sit(world, p, ri, s) {
   p.cine = { room: ri, seat: s, film: S.film, x: q.x, y: q.y };
   p.meDirty = true;
   const left = Math.max(1, Math.round(S.t0 + CINE.FILM_S - world.time));
-  world.notify(p, `Screen ${ri + 1}: "${FILMS[S.film].title}" - ${FILMS[S.film].tag}. ${left < CINE.FILM_S - 2 ? `${left}s to go. ` : ''}Popcorn's eaten from your bag; get up to leave.`, 'good');
+  world.notify(p, `Screen ${ri + 1}: "${FILMS[S.film].title}" - ${FILMS[S.film].tag}. ${left < CINE.FILM_S - 2 ? `${left}s to go. ` : ''}Popcorn's eaten from your inventory; get up to leave.`, 'good');
   return null;
 }
 export function leave(world, p, say) {

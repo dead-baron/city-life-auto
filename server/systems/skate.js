@@ -1,6 +1,6 @@
 // Skateboarding. Part 1 (the owner, 2026-10-17): riding a board. Since 2026-10-24 (the owner: "people will always be
 // using skateboards to get around faster ... just making it like other vehicles would work best") a skateboard is a
-// vehicle lying in the world (shared/vehicles.js 'skateboard'), not a thing in your bag: a rack of them at each skate
+// vehicle lying in the world (shared/vehicles.js 'skateboard'), not a thing in your inventory: a rack of them at each skate
 // park, one or two by the skate shops, the surf shops and the boardwalks (boardSpots - free to take, like the shopping
 // carts), and your own board, bought at a skate, surf or sports shop and set down beside the door (shop). The vehicle
 // button by one steps you on (vehicles.js tryEnter -> mount: the board taken up off the ground), and again steps you off
@@ -24,11 +24,11 @@
 // (shared/physics.js boardOut) and the score in its 'me' (meInfo). A board on the ground is a vehicle like any other.
 // Since 2026-11-04 (the owner, 11-03: "things you find, keep or carry, and lose"): a skate park's rack board is borrowed -
 // it only serves the park (ridden out past its edge it goes back on its rack: after); your own board is yours to carry
-// (in your hand or in your bag: server/systems/gear.js) and wears with each bail till it snaps - gone until you buy
+// (in your hand or in your inventory: server/systems/gear.js) and wears with each bail till it snaps - gone until you buy
 // another (bail; in a skate session a fresh one lands where it stopped instead).
 //   ped.board.deck: the board under you - { owner, ownerName, paint, variant, spot (its rack's place), park (a park's
 //   borrowed board: the skate spot's index), wear (0..1: snaps at 1), stolen }
-//   profile.board: { paint, variant, wear, at } - you own a board (at 'bag': in your bag - gear.js keeps it in step with
+//   profile.board: { paint, variant, wear, at } - you own a board (at 'bag': in your inventory - gear.js keeps it in step with
 //   the bag's skateboard; otherwise out in the world, in your hand or at home)
 import { T, TILE, K } from '../../shared/constants.js';
 import { WATER_T } from '../../shared/mapcore.js';
@@ -337,7 +337,7 @@ function tidy(world) {
 // Bought at a skate shop, a surf shop or a sports shop (economy.js buildMenu: shopOptions), it's set down by the door
 // (outside a walk-in shop); one at a time. Owned, you bring it out free there or at home (the home menu): wherever it
 // was, it's back by the door - one board, never two (someone riding off on it: it's theirs to keep then). Not while it's
-// in your bag or your hand (gear.js): it's with you.
+// in your inventory or your hand (gear.js): it's with you.
 const withYou = (p) => !!(p.profile.board && p.profile.board.at === 'bag') || !!(p.ped && p.ped.held && p.ped.held.k === 'skate');
 export function shopOptions(p, opts, home = false) {
   if (owns(p)) { if (!withYou(p)) opts.push({ id: 'bd:out', label: home ? 'Take your skateboard out' : 'Your skateboard - bring it out', note: 'set down by the door', shut: true }); return; }

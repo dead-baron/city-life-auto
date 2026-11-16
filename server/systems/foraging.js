@@ -2,7 +2,7 @@
 // finds (Nature-D1: berries, herbs, wild honey, truffles, geodes, fossils, arrowheads, river mussels and pearls, gold
 // panned from the creeks, shed antlers, eagle feathers), laid out with the map (map.forage). Some take a tool (a
 // pickaxe, a trowel, a gold pan: FIND_TOOLS - you're told which), some now and then give something better (a find's rare
-// and extra), and a hive's bees may sting by day. Stand by a spot and press the action button: a few go in your bag, and the spot is bare until it
+// and extra), and a hive's bees may sting by day. Stand by a spot and press the action button: a few go in your inventory, and the spot is bare until it
 // grows back (rules.js FORAGE_REGROW_S, by kind). Everyone sees which spots are bare: a pick and a regrowth are
 // broadcast ({ e: 'forage', i, up }), and the welcome carries the bare ones (gone()). Ghostglass is contraband: only
 // the Back-Alley Exchange buys it (items.js), and an arrest takes it (law.js).
@@ -80,7 +80,7 @@ export function pick(world, p, i) {
   world.broadcast({ e: 'forage', i, up: 0 });
   ped.a = Math.atan2(f.y - ped.y, f.x - ped.x);
   const name = ITEMS[item] ? ITEMS[item].name : item, xn = extra && ITEMS[extra] ? ITEMS[extra].name : extra;
-  world.notify(p, `${rare ? `${name}!` : n > 1 ? `${n} ${name}` : name}${xn ? ` - and a ${xn}!` : ''} in your bag. ${K.tip}`, f.k === 'ghostglass' || f.k === 'redcap' ? 'warn' : 'good');
+  world.notify(p, `${rare ? `${name}!` : n > 1 ? `${n} ${name}` : name}${xn ? ` - and a ${xn}!` : ''} in your inventory. ${K.tip}`, f.k === 'ghostglass' || f.k === 'redcap' ? 'warn' : 'good');
   p.meDirty = true;
   store.touch();
   return n;

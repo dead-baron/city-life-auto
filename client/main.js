@@ -10,12 +10,13 @@ import { smashProps, geyserDrag, isHydrant, GEYSER_S } from '../shared/smash.js'
 import { decodeSnapshot, encodeInput, MSG_SNAPSHOT, CTRL } from '../shared/protocol.js';
 import { IN, quantizeAngle, quantizeAxis, dequantizeAxis, dequantizeAngle } from '../shared/input.js';
 import { VEHICLE_BY_INDEX, vehicleWord } from '../shared/vehicles.js';
-import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb } from '../shared/items.js';
+import { WEAPONS, WEAPON_BY_INDEX, BLADE_COLORS, hexRgb as bladeRgb, ITEMS } from '../shared/items.js';
+import { loadout } from '../shared/loadout.js';
 import { edgeInfo, clampCam, EDGE_SLOW } from '../shared/border.js';
 import { lerp, lerpAngle, localToWorld, circleVsObb } from '../shared/math.js';
 import { serverUrl, TOKEN_KEY } from './config.js';
 import { createWheel, createWeaponPicker, createWeaponWheel } from './inventory.js';
-import { initInput, sample, input, takeNumberPick, settings, saveSettings, detectDevice, touchAimState, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
+import { initInput, sample, input, takeNumberPick, tabHeld, tabDown, cancelTabTap, settings, saveSettings, detectDevice, touchAimState, virtualTap, setTouchAim, tapHold, pollPadForMenus, mouseScreen, IS_CONSOLE, deviceStats } from './input.js';
 import { GroundCache, drawOverheadProp, debrisColors, lampHead, interiorArt, drawShopDoor } from './render/tiles.js';
 import { PROP_SIZES } from '../shared/prefab-data.js';
 import { atlas, loadAtlas, loadGlowSheets, loadInteriorArt, drawVehicle, drawVehicleShadow, drawVehicleWreck, drawCrate, drawBag, pedSprite, PED_BOX, vehicleSide } from './render/sprites.js';
@@ -475,7 +476,7 @@ function onText(m) {
       if (!S.playing) requestPlayers();   // (who's online, on the title)
       break;
     case 'sp': for (const d of m.e) { const e = ent(d.id, d.k); if (d.app && d.app.lk && d.app.t === undefined) lookApp(d); e.d = d; } break;
-    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
+    case 'looks': S.looks = m; if (S.creator) S.creator.onState(m); bag.refresh(); if (m.open) openCreator(m.open); else if (!m.picked && S.playing && topOverlay() !== 'creator') openCreator('start'); break;   // (a new player picks a starting look first; the home's wardrobe opens the wheel or the mirror)
     case 'ds': for (const id of m.ids) S.ents.delete(id); break;
     case 'ev': for (const ev of m.l) onEvent(ev); break;
     case 'fish': fishGo(m); break;   // (a catch landed: its card)
@@ -513,6 +514,7 @@ function onText(m) {
     case 'crew': phone.on('Crew', m); S.crewMsg = m; if (hubMod && topOverlay() === 'players') hubMod.people(); break;   // the Crew app and the People tab (server crews.js)
     case 'arcade':   // a credit at an arcade's cabinet (server arcade.js): the game on its own screen, loaded the first time (client/arcade.js)
       if (m.close) { if (topOverlay() === 'arcade') closeOverlay('arcade'); break; }   // (quit from the server - activityquit.js: the score so far goes in as Esc's does)
+      if ((m.game === 'jam' || m.game === 'rhythm') && inHub()) closeHub();   // (an instrument out of the Inventory: the pad and your character in view - the owner, 11-16)
       openOverlay('arcade');
       $('arc-hint').textContent = input.device === 'touch' ? 'Tap ✕ to leave' : 'Esc / B to leave';
       (m.game === 'race' ? import('./racebook.js') : m.game === 'rhythm' || m.game === 'jam' ? import('./music/play.js') : m.game === 'pool' ? import('./pool.js') : m.game === 'skee' ? import('./skeeball.js') : m.game === 'hockey' ? import('./airhockey.js') : m.game === 'pinball' ? import('./pinball.js') : m.game === 'chess' ? import('./leisure/chess.js') : import('./arcade.js')).then((mod) => { S.arcadeMod = mod; if (topOverlay() === 'arcade') mod.start({ ...m, send, close: () => closeOverlay('arcade'), sfx }); else send(m.game === 'chess' ? { t: 'chess', a: 'leave' } : m.mp ? { t: 'pool', a: 'leave' } : { t: 'arcade', id: m.id, score: 0, secs: 0 }); }).catch((e) => { console.warn('[arcade]', e); closeOverlay('arcade'); });
@@ -691,7 +693,13 @@ function fixedStep() {
   if (!spec && !ch && input.wheelHold < 0 && canWheel() && !wheel.open && !wpick.open && rad) rad.open();
   else if (!spec && !ch && input.wheelHold > 0 && canWheel() && !wheel.open && !wpick.open) wwheel.show();
   if (rad && rad.isOpen) { if (input.wheelRelease < 0) rad.release(); else if (input.wheelHeld >= 0 || !canWheel()) rad.close(); else if (input.padAxes) rad.point(input.padAxes.lx, input.padAxes.ly, input.padAxes.rx, input.padAxes.ry); }
-  if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
+  // the keyboard's: hold Tab (a tap is the next weapon - input.js), point with the mouse, let go
+  if (!spec && !ch && !S.kbWheel && tabHeld() && canWheel() && !wheel.open && !wpick.open && !wwheel.open && wwheel.show()) { S.kbWheel = true; cancelTabTap(); }
+  if (S.kbWheel) {
+    if (!wwheel.open) S.kbWheel = false;
+    else if (!canWheel()) { wwheel.close(); S.kbWheel = false; }
+    else { const ms = mouseScreen(); wwheel.point({ lx: 0, ly: 0, rx: (ms.x - innerWidth / 2) / 90, ry: (ms.y - innerHeight / 2) / 90 }); if (!tabDown()) { wwheel.pick(); S.kbWheel = false; } }
+  } else if (wwheel.open) { if (input.wheelRelease) wwheel.pick(); else if (!input.wheelHeld || !canWheel()) wwheel.close(); else wwheel.point(input.padAxes); }
   const menuUp = !S.playing || S.hud.menuOpen || S.bigmap || S.chatUp || (S.launch && S.launch.chat.isOpen && input.device === 'touch') || inOverlay || wheel.open || wpick.open || wwheel.open || (S.launch && S.launch.chat.radial.isOpen) || spec || !!(DIR && DIR.holds());   // (DIR: the cinematic mode's free camera has the keys)
   // the button that closed a menu (B / Esc / Enter...) is still held when the menu goes away -
   // ignore the action buttons until they're released, or B would instantly reopen the shop menu
@@ -729,7 +737,8 @@ function fixedStep() {
   const n = takeNumberPick();
   if (n !== null && !spec) {
     if (S.hud.menuOpen) S.hud.pickMenu(n);
-    else if (S.me && S.me.weapons[n]) send({ t: 'weapon', id: S.me.weapons[n].id });
+    else if (topOverlay() === 'inv') { if (bagMod) bagMod.numberKey(n); }
+    else if (!topOverlay()) quickKey(n);
   }
 }
 
@@ -1806,7 +1815,11 @@ function deathPad() {
 let bagMod = null, bagP = null;
 const bag = {
   show() {
-    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); } }))))
+    (bagP ||= import('./bag.js').then((m) => (bagMod = m.createBag({ el: $('inv'), send: (o) => send(o), me: () => S.me, refocus: () => { if (topOverlay() === 'inv') focusOverlay(); },
+      looks: () => S.looks, look: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.app && e.d.app.lk) || (S.looks && S.looks.cur) || null; },
+      pp: () => { const e = S.me && S.ents.get(S.me.pedId); return (e && e.d && e.d.pp) || null; },
+      stamina: () => (S.pred && S.pred.kind === 'ped' ? [S.pred.s.stamina, (S.pred.mods && S.pred.mods.staminaMax) || 100] : null),
+      close: () => closeHub() }))))
       .then((b) => { if (topOverlay() === 'inv') b.show(); }).catch((e) => { bagP = null; console.warn('[bag]', e); });
   },
   hide() { if (bagMod) bagMod.hide(); },
@@ -1820,6 +1833,20 @@ const wpick = createWeaponPicker({ el: $('wpick'), send: (o) => send(o), me: () 
 const wwheel = createWeaponWheel({ el: $('wwheel'), send: (o) => send(o), me: () => S.me });
 function openWeaponPick() { if (wpick.open) { wpick.close(); return; } if (canWheel() && S.me.weapons && S.me.weapons.length > 1) { if (wheel.open) wheel.close(); wpick.show(); } }
 function canWheel() { return S.playing && S.me && !S.me.dead && !(S.spec && S.spec.on) && !topOverlay() && !(S.hud && S.hud.menuOpen) && !S.bigmap; }
+// the quick keys (the Inventory's quick bar): 1-4 your weapon slots - Gun 1, Gun 2, Melee, Thrown (shared/loadout.js; the
+// one in your hands again puts it away), 5-8 the four things to use, 9 your fists
+function quickKey(n) {
+  const m = S.me;
+  if (!m || m.dead || !S.playing) return;
+  if (n < 4) { const id = loadout((m.weapons || []).map((w) => w.id))[n]; if (id) send({ t: 'weapon', id: m.weapon === id ? 'fists' : id }); else if (S.hud) S.hud.toast(`Nothing in slot ${n + 1} - your Inventory shows your weapons.`, 'info'); return; }
+  if (n < 8) {
+    const id = (m.quick || [])[n - 4];
+    if (id && ((m.inv || {})[id] || 0) > 0) send({ t: 'inv', a: 'use', id });
+    else if (S.hud) S.hud.toast(id && ITEMS[id] ? `No ${ITEMS[id].name} left.` : `Quick bar slot ${n + 1} is empty - put a thing on it in your Inventory.`, 'info');
+    return;
+  }
+  if (m.weapon !== 'fists') send({ t: 'weapon', id: 'fists' });
+}
 function toggleBag() {
   if (topOverlay() === 'inv') { closeHub(); return; }
   if (!S.playing || !S.me || S.me.dead) return;
@@ -2099,7 +2126,7 @@ const mapwp = createMapWaypoints({
   job: () => S.me && S.me.job,
   center: (x, y) => S.hud && S.hud.centerMap(x, y),
 });
-// ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, BAG, PEOPLE, SETTINGS, LOG OFF,
+// ---- the hub (UI-3; UI-10 after UIC-07): the pause list first - RESUME, MAP, PHONE, INVENTORY, PEOPLE, SETTINGS, LOG OFF,
 // LEAVE GAME - opened by Esc, Start and the HUD's MENU; P / M / I (D-pad left / right, the HUD's PHONE and MAP) open a
 // screen straight away. Every screen has the same head: back and its name top left (Esc, B), close top right. Back
 // steps out of an app or a detail first, then to the pause list if that's where you came from, else to the game. Each
@@ -2148,7 +2175,7 @@ function hubToggle(tab) { if (topOverlay() === HUB_TABS[tab]) closeHub(); else o
 function hubStep(d) { const i = STEP_TABS.indexOf(hubTab), n = STEP_TABS.length; openHub(STEP_TABS[i < 0 ? (d > 0 ? 0 : n - 1) : (i + d + n) % n], null, hubFromPause); }
 // the frame shows while a screen is in the stack (an install help or a password box may sit over it); on the title
 // screen Settings shows on its own. Its name in the head (an app's, in the phone), and #hub[data-tab] shapes the frame
-const HUB_NAMES = { pause: 'PAUSED', map: 'MAP', phone: 'HOME', bag: 'BAG', people: 'PEOPLE', settings: 'SETTINGS' };
+const HUB_NAMES = { pause: 'PAUSED', map: 'MAP', phone: 'HOME', bag: 'INVENTORY', people: 'PEOPLE', settings: 'SETTINGS' };
 function syncHub() {
   const id = [...overlays].reverse().find((o) => HUB_IDS.includes(o));
   $('hub').classList.toggle('hidden', !id);
@@ -2566,6 +2593,7 @@ function overlayPad() {
   const el = f[ovFocus];
   if (HUB_IDS.includes(topOverlay()) && input.menuTab && S.playing) { hubStep(input.menuTab); return true; }   // (LB / RB: the hub's screens)
   if (HUB_IDS.includes(topOverlay()) && input.menuBack) { hubBack(); return true; }   // (B: one step back, as Esc and the head's back)
+  if (topOverlay() === 'inv' && bagMod && bagMod.pad(input)) return true;   // (the Inventory: LT / RT its tabs, X equip or wear, Y drop - client/bag.js)
   if (topOverlay() === 'gate' && input.menuBack) return true;   // (the first-launch gate is answered, not backed out of)
   if (topOverlay() === 'bigmap' && input.padY) { mapMarkCentre(); return true; }
   if (topOverlay() === 'bigmap' && input.menuLR && el && (el.classList.contains('bm-catname') || el.classList.contains('bm-chip'))) { const id = el.dataset.group || el.dataset.toggle; mapwp.toggle(id); return true; }

@@ -5,7 +5,7 @@
 // what a mission counts is an event some system already notes, or one of the few this module checks itself -
 //   'visit'    be at the contact's place (placeOf: their kind of place, in their district, by name)
 //   'handover' a stolen car driven up to their place, handed over at the wheel (vehicleInteraction)
-//   'have'     an item in your bag; 'duty' also counts being on duty already
+//   'have'     an item in your inventory; 'duty' also counts being on duty already
 //   'stakeout' at the dock shipment's quay (calendar.js dockSite) while a shipment is on (once a shipment)
 // The contact texts you (a line in the HUD's notes, kept with the rank-up calls in the What's next app: careers' calls)
 // when they first meet you (CONTACTS[].meet: metOk), when a mission is offered, when the next one waits for a rank, and
@@ -341,7 +341,7 @@ function progressRep(world, p, C, r, n) {
 }
 
 // ---- each second ----------------------------------------------------------------------------------------------------------
-// what this module checks itself: being at their place, an item in your bag, already on duty; a repeatable run out of time
+// what this module checks itself: being at their place, an item in your inventory, already on duty; a repeatable run out of time
 function check(world, p, C, r) {
   const S = stepOf(C, r);
   if (S && r.acc) {

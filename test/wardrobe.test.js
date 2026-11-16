@@ -292,3 +292,55 @@ test('debug wardrobe: any piece (the issued kit too) and any hair, worn or saved
   assert.ok(!(r.prof.wardrobe || []).includes(cap.i), 'no issued cap for a player not in dev mode');
   assert.deepEqual(r.prof.wardrobe || [], own0);
 });
+
+// The Inventory's clothes (the owner, 11-16: "I can't change my clothes or take off clothes ... even to just unequip it
+// all or change clothes I have on me"): from the inventory anywhere - a piece off, everything off (down to the underwear
+// the renderer draws), a piece you own on, a saved look's clothes - each through the creator's own checks, so changing
+// out in the street is never a free way to shed the police (no disguise; refused while wanted, as before).
+test('the Inventory\'s clothes: a piece off, all off, a piece you own on, a saved look - and no free disguise', () => {
+  const w = makeWorld();
+  const a = picked(w);
+  const cur = () => LK.decodeLook(a.prof.look);
+  const tee = LK.PIECE_IDS['Plain tee'], jeans = LK.PIECE_IDS.Jeans;
+  // one piece off: the top (a dress or a set with it), the ped wears it at once (everyone sees it)
+  looks.handle(w, a.p, { t: 'look', a: 'off', s: 'top' });
+  assert.equal(cur().outfit.top, null); assert.equal(cur().outfit.set, null);
+  assert.equal(a.p.ped.app.lk, a.prof.look, 'worn by the ped');
+  run(w, 1.1);
+  // a piece of yours on: the plain tee (a basic everyone owns)
+  looks.handle(w, a.p, { t: 'look', a: 'wear', id: tee });
+  assert.equal(cur().outfit.top.id, tee);
+  run(w, 1.1);
+  // everything off: every slot empty - the body, face and hair kept
+  const before = cur();
+  looks.handle(w, a.p, { t: 'look', a: 'off', s: 'all' });
+  for (const s of LK.SLOTS) assert.equal(cur().outfit[s], null, s);
+  assert.deepEqual(cur().hair, before.hair); assert.deepEqual(cur().body, before.body);
+  run(w, 1.1);
+  // a piece you don't own: refused, nothing changes
+  const gown = LK.PIECES.find((P) => P && P.slot === 'set' && P.price > 0 && !W.owns(a.prof.wardrobe, P.i)).i;
+  const was = a.prof.look;
+  looks.handle(w, a.p, { t: 'look', a: 'wear', id: gown });
+  assert.equal(a.prof.look, was, 'not yours: not worn');
+  // a saved look's clothes: on, over your own body and hair
+  a.prof.wardrobe.push(gown);
+  const S = cur(); S.outfit.set = LK.item(LK.PIECES[gown].name); S.outfit.shoes = LK.item('Sneakers');
+  looks.handle(w, a.p, { t: 'look', a: 'save', n: 'Night out', c: LK.encodeLook(S) });
+  run(w, 1.1);
+  looks.handle(w, a.p, { t: 'look', a: 'outfit', i: a.prof.looks.length - 1 });
+  assert.equal(cur().outfit.set.id, gown); assert.deepEqual(cur().hair, before.hair);
+  run(w, 1.1);
+  // a top over the dress: the dress comes off and bottoms of yours go on with it
+  looks.handle(w, a.p, { t: 'look', a: 'wear', id: tee });
+  assert.equal(cur().outfit.set, null); assert.equal(cur().outfit.top.id, tee); assert.ok(cur().outfit.bottoms, 'bottoms of yours with it');
+  assert.equal(LK.PIECES[cur().outfit.bottoms.id].slot, 'bottoms');
+  run(w, 1.1);
+  // wanted, out in the street: no change at all - and the heat stays (a fresh look counts only at home or in a store)
+  a.p.wanted = 2; a.p.seenAt = w.time - 10;
+  const hot = a.prof.look;
+  looks.handle(w, a.p, { t: 'look', a: 'off', s: 'all' });
+  looks.handle(w, a.p, { t: 'look', a: 'wear', id: jeans });
+  assert.equal(a.prof.look, hot, 'no change while wanted');
+  assert.equal(a.p.wanted, 2, 'the heat stays');
+  assert.ok(!a.p.disguised);
+});

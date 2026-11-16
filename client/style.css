@@ -735,6 +735,14 @@ body.portrait #zone-l { top: 50%; }
 #wpick .wp-w.on { border-color: var(--gold); background: var(--pick), var(--navy2); }
 #wpick .wp-w canvas { width: 44px; height: auto; image-rendering: pixelated; }
 #wpick .wp-w small { display: block; color: var(--dim); font-size: var(--fs-1); }
+/* (2-12 weapons: a ring in the middle - client/inventory.js; the title in its hole, the close at its corner) */
+#wpick.ringed { align-items: center; background: radial-gradient(circle at 50% 50%, var(--scrim) 0, var(--ink-a) 60%); }
+#wpick .wp-box.ring { max-width: 100vw; max-height: 100vh; padding: 0; overflow: visible; background: radial-gradient(circle, var(--navy) 0 26%, var(--glass) 27% 58%, transparent 59%); border: 0; border-radius: var(--r3); box-shadow: none; }
+#wpick .wp-box.ring .wp-h { position: absolute; left: 50%; top: 50%; width: 110px; margin: 0; transform: translate(-50%, -50%); text-align: center; line-height: 1.2; }
+#wpick .wp-box.ring .wp-x { top: auto; bottom: 0; right: 0; }
+#wpick .wp-box.ring .wp-row { display: block; }
+#wpick .wp-box.ring .wp-w { position: absolute; width: 100px; min-height: 56px; }
+#wpick .wp-box.ring .wp-w span { max-width: 96px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: center; font-size: var(--fs-1); }
 
 /* ==== the panels over the game ==== */
 /* the interaction menu (a shop, a counter, an ATM, someone to talk to - UI-10, UIC-16 / UIC-18): docked at the foot,
@@ -1692,65 +1700,83 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .rc-go { display: flex; gap: var(--s2); padding: var(--s3); } .rc-go .btn { flex: 1; min-height: var(--tap); }
 @media (max-height: 430px) { .jc-pop .jc-t small { display: none; } .jc-pop .jc { padding: var(--s2) var(--s3); } .jc.offer .jc-ic { width: 56px; height: 56px; } .jc-box { min-height: 48px; } #jobcard { padding-top: var(--s2); padding-bottom: var(--s2); } }
 
-/* the Bag (client/bag.js; UI-10 after UIC-19): EQUIPMENT on the left - the carried slots (2 guns, a melee weapon, a
-   throwable) and the carry gear's locked ones; the bag's grid of tiles in the middle; what's picked on the right with
-   USE / DROP / EQUIP; the quick bar's four slots along the foot */
-.bag { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: 280px minmax(0, 1fr) 300px; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "eq tools detail" "eq grid detail" "eq wheel detail"; gap: var(--s3) var(--s4); padding: var(--s3) var(--s4); }
-.bag h3 { margin: 0; font: 700 var(--fs-4) var(--pixel); color: var(--gold); letter-spacing: 2px; }
-.bag-eq { grid-area: eq; display: flex; flex-direction: column; gap: var(--s2); min-height: 0; overflow-y: auto; padding-right: var(--s4); border-right: 1px solid var(--gold-a); }
-.bag-slots { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
-.bag-gear { display: grid; grid-template-columns: 1fr; gap: var(--s1); margin-top: var(--s2); }
-.bag-gear > small, .bag-caps { color: var(--dim); font: 600 var(--fs-2) var(--ui); }
-.bag-gear > small { font: 700 var(--fs-2) var(--pixel); letter-spacing: 1px; }
-.bag-caps { margin: var(--s1) 0 0; line-height: 1.35; }
-.bag-slot2 { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 92px; padding: var(--s2) var(--s1); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-2) var(--ui); cursor: pointer; touch-action: manipulation; }
-.bag-slot2 small { font: 700 var(--fs-1) var(--pixel); color: var(--dim); letter-spacing: 1px; }
-.bag-slot2 b { max-width: 100%; font: 600 var(--fs-2) var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bag-slot2 .bc-ic { height: 36px; }
-.bag-slot2.sel, .bag-slot2.pfocus, .bag-slot2:hover:not(.empty):not(.locked) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
-.bag-slot2.on { background: var(--pick), var(--navy); }
-.bag-slot2.empty { border-style: dashed; color: var(--dim); cursor: default; }
-.bag-slot2.locked { flex-direction: row; justify-content: space-between; min-height: 40px; padding: 0 var(--s2); border-style: dashed; border-color: var(--edge); background: transparent; color: var(--dim); cursor: default; }
-.bag-tools { grid-area: tools; display: flex; align-items: center; gap: var(--s3); min-width: 0; }
-.bag-cash { flex: none; display: flex; align-items: baseline; gap: var(--s2); font: 600 var(--fs-2) var(--ui); color: var(--dim); }
-.bag-cash b { font: 700 var(--fs-4) var(--pixel); color: var(--money); }
-.bag-cats { flex: 1; display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-.bag-cats::-webkit-scrollbar { display: none; }
-.bag-cats { touch-action: pan-x; -webkit-mask-image: linear-gradient(90deg, var(--ink) calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, var(--ink) calc(100% - 32px), transparent); padding-right: 28px; }   /* (more chips than room: they scroll, the edge fades to say so) */
-.bc-gl { display: grid; place-items: center; color: var(--cream); }   /* (a weapon's line glyph where its sprite is a thin bar: client/bag.js wIcon) */
-.bc-ic .gl { width: 30px; height: 30px; color: var(--cream); } .bd-ic .gl { width: 44px; height: 44px; color: var(--cream); } .bq-gl .gl { width: 20px; height: 20px; }   /* (the bag's line icons, client/bag.js itemGlyph: one size per place) */
-@media (max-height: 560px) { .bd-ic .gl { width: 30px; height: 30px; } }
-.bag-cats .chip { flex: none; height: var(--tap); padding: 0 14px; border: 2px solid var(--edge); background: transparent; color: var(--dim); font-size: var(--fs-3); cursor: pointer; white-space: nowrap; touch-action: manipulation; }
+/* the Inventory (client/bag.js; the owner's overhaul 11-16 after U6, U14, U15, UIC-19): your character and what they
+   wear on the left - the slots round the figure, each with an X; the grid under its tabs in the middle with the quick
+   bar's eight slots under it (1-4 your weapon slots, 5-8 things to use); what's picked on the right with USE / DROP /
+   EQUIP. Upright: the character on top, the grid under it, the details a sheet from the bottom. Nothing is cut off: the
+   tabs wrap, each column scrolls on its own. */
+.bag { position: relative; display: grid; width: 100%; height: 100%; grid-template-columns: minmax(250px, 290px) minmax(0, 1fr) minmax(240px, 290px); grid-template-rows: minmax(0, 1fr); grid-template-areas: "eq items detail"; gap: var(--s3); padding: var(--s3); }
+.bag h3 { margin: 0; font: 700 var(--fs-3) var(--pixel); color: var(--gold); letter-spacing: 2px; }
+.iv-me { grid-area: eq; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; min-height: 0; overflow-y: auto; padding: var(--s2) var(--s3) var(--s3); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy); }
+.iv-doll { display: grid; grid-template-columns: 62px minmax(0, 1fr) 62px; gap: var(--s1); }
+.iv-col { display: flex; flex-direction: column; gap: 6px; }
+.iv-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1px; width: 60px; margin: 0 auto; }
+.iv-slot > small { max-width: 100%; overflow: hidden; font: 700 var(--fs-1) var(--ui); color: var(--dim); letter-spacing: .5px; white-space: nowrap; }
+.iv-sb { position: relative; display: grid; place-items: center; width: 56px; height: 48px; padding: 0; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy2); color: var(--cream); cursor: pointer; touch-action: manipulation; }
+.iv-sb .gl { width: 26px; height: 26px; }
+.iv-sb em { padding: 2px; font: 600 var(--fs-1)/1 var(--ui); font-style: normal; line-height: 1.1; color: var(--dim); text-align: center; }
+.iv-slot.empty .iv-sb { border-style: dashed; color: var(--edge); cursor: default; }
+.iv-slot.sel .iv-sb, .iv-sb.pfocus, .iv-sb:hover:not([disabled]) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.iv-off { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border-radius: var(--r1); border: 2px solid var(--danger); background: var(--navy); color: var(--danger); font: 700 var(--fs-1) var(--ui); line-height: 1; cursor: pointer; touch-action: manipulation; }
+.iv-off:hover, .iv-off.pfocus { background: var(--danger); color: var(--ink); }
+.iv-dot { position: absolute; right: 4px; top: 4px; width: 10px; height: 10px; border-radius: var(--r3); background: var(--c); box-shadow: 0 0 0 2px var(--t), 0 0 0 3px var(--ink); }
+.bag-cell .iv-dot { right: 6px; top: 6px; }
+.iv-fig { position: relative; min-width: 0; min-height: 200px; border-radius: var(--r2); background: radial-gradient(ellipse at 50% 85%, var(--gold-t), transparent 60%), var(--navy2); }
+.iv-cv { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; cursor: grab; touch-action: pan-y; }
+.iv-turn { position: absolute; left: 4px; right: 4px; bottom: 4px; display: flex; justify-content: space-between; pointer-events: none; }
+.iv-turn .btn { width: 32px; min-height: 32px; height: 32px; padding: 0; font: 700 var(--fs-4) var(--ui); line-height: 1; pointer-events: auto; }
+.iv-dacts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.iv-dacts .btn { min-height: 38px; padding: 0 var(--s1); font: 700 var(--fs-2) var(--ui); letter-spacing: .5px; white-space: nowrap; }
+.iv-dacts .btn.on { background: var(--gold); color: var(--ink); }
+.iv-stats { display: grid; gap: 4px; }
+.iv-stat { display: grid; grid-template-columns: 82px minmax(0, 1fr) 34px; align-items: center; gap: var(--s2); font: 700 var(--fs-1) var(--ui); color: var(--cream); letter-spacing: .5px; }
+.iv-sl { display: inline-flex; align-items: center; gap: 4px; } .iv-sl .gl { width: 14px; height: 14px; }
+.iv-bar { height: 8px; border-radius: var(--r1); background: var(--ink); overflow: hidden; } .iv-bar i { display: block; height: 100%; }
+.iv-stat b { text-align: right; font: 700 var(--fs-2) var(--pixel); }
+.iv-items { grid-area: items; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; min-height: 0; }
+.bag-tools { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); min-width: 0; }
+.bag-cats { flex: 1 1 320px; display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.bag-cats .chip { flex: none; height: 34px; padding: 0 12px; border: 2px solid var(--edge); background: transparent; color: var(--dim); font-size: var(--fs-2); cursor: pointer; white-space: nowrap; touch-action: manipulation; }
 .bag-cats .chip.on { background: var(--gold); border-color: var(--gold); color: var(--ink); font-weight: 700; }
 .bag-cats .chip.pfocus { box-shadow: 0 0 0 2px var(--cream); }
 .bag-sort { flex: none; display: flex; align-items: center; gap: 6px; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
-.bag-sort select { min-height: var(--tap); padding: 0 var(--s2); border-radius: var(--r1); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-3) var(--ui); }
-.bag-grid { grid-area: grid; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); align-content: start; gap: var(--s2); padding: 2px; }
-.bag-h { grid-column: 1 / -1; margin: 6px 0 0; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
-.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 96px; min-height: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
+.bag-sort select { min-height: 34px; padding: 0 var(--s2); border-radius: var(--r1); border: 2px solid var(--gold-a); background: var(--navy); color: var(--cream); font: 600 var(--fs-2) var(--ui); }
+.bag-cash { flex: none; display: flex; align-items: baseline; gap: var(--s2); font: 600 var(--fs-2) var(--ui); color: var(--dim); }
+.bag-cash b { font: 700 var(--fs-3) var(--pixel); color: var(--money); }
+.bc-gl { display: grid; place-items: center; color: var(--cream); }   /* (a weapon's line glyph where its sprite is a thin bar: client/bag.js wIcon) */
+.bc-ic .gl { width: 30px; height: 30px; color: var(--cream); } .bd-ic .gl { width: 44px; height: 44px; color: var(--cream); } .bq-gl .gl { width: 20px; height: 20px; }   /* (the bag's line icons, client/bag.js itemGlyph: one size per place) */
+.bag-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); align-content: start; gap: var(--s2); padding: 2px; }
+.bag-h { grid-column: 1 / -1; margin: 4px 0 0; font: 700 var(--fs-1) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.bag-cell { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; height: 86px; min-width: 0; padding: var(--s2) 4px 4px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; touch-action: manipulation; transition: border-color var(--t1) var(--ease); }
 .bag-cell:hover { border-color: var(--gold-a); }
 .bag-cell.sel, .bag-cell.pfocus { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 2px var(--gold-a); }
 .bag-cell.on { background: var(--pick), var(--navy); }
-.bc-ic { display: grid; place-items: center; height: 40px; font-size: var(--fs-5); line-height: 1; }
+.bc-ic { display: grid; place-items: center; height: 36px; font-size: var(--fs-5); line-height: 1; }
 .bc-ic canvas { max-width: 64px; max-height: 36px; image-rendering: pixelated; }
-.bc-nm { max-width: 100%; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
-.bc-n { position: absolute; right: 4px; bottom: 2px; font: 700 var(--fs-2) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
-.bag-cell .bc-nm { margin-bottom: 8px; }
-.bc-tag { position: absolute; left: 4px; top: 4px; padding: 1px 4px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-1) var(--pixel); }
-.bag-detail { grid-area: detail; overflow-y: auto; padding: var(--s4); border-radius: var(--r2); background: var(--navy); border: 2px solid var(--gold-a); }
-.bag-hint { margin: 0; color: var(--dim); font: 500 var(--fs-3) var(--ui); line-height: 1.4; }
+.bc-nm { max-width: 100%; margin-bottom: 8px; text-align: center; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
+.bc-n { position: absolute; right: 4px; bottom: 2px; font: 700 var(--fs-1) var(--pixel); color: var(--cream); text-shadow: var(--halo-s); }
+.bc-tag { position: absolute; left: 3px; top: 3px; padding: 0 4px; border-radius: var(--r1); background: var(--gold); color: var(--ink); font: 700 var(--fs-1) var(--ui); }
+.iv-looks { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--s2); }
+.iv-looks .bag-hint { grid-column: 1 / -1; }
+.iv-look { display: flex; flex-direction: column; align-items: center; gap: 2px; height: 112px; padding: 4px; border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy2); color: var(--cream); font: 600 var(--fs-1) var(--ui); cursor: pointer; }
+.iv-look:hover, .iv-look.pfocus { border-color: var(--gold); }
+.iv-look span { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.iv-lcv { flex: 1; width: 100%; min-height: 0; image-rendering: pixelated; }
+.bag-detail { grid-area: detail; min-height: 0; overflow-y: auto; padding: var(--s3); border-radius: var(--r2); background: var(--navy); border: 2px solid var(--gold-a); }
+.bag-detail > h3 { margin-bottom: var(--s2); }
+.bag-hint { margin: 0 0 var(--s2); color: var(--dim); font: 500 var(--fs-2) var(--ui); line-height: 1.4; }
 .bd-head { display: flex; align-items: center; gap: var(--s3); }
 .bd-head > div { flex: 1; min-width: 0; }
-.bd-head h3 { margin: 0; font: 700 var(--fs-4) var(--pixel); color: var(--cream); line-height: 1.15; letter-spacing: 1px; text-transform: uppercase; }
+.bd-head h3 { margin: 0; font: 700 var(--fs-3) var(--pixel); color: var(--cream); line-height: 1.15; letter-spacing: 1px; text-transform: uppercase; overflow-wrap: anywhere; }
 .bd-head small { color: var(--info); font: 600 var(--fs-2) var(--ui); }
-.bd-ic { display: grid; place-items: center; flex: none; width: 72px; height: 72px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy3); font-size: var(--fs-6); line-height: 1; }
-.bd-ic canvas { max-width: 64px; max-height: 40px; image-rendering: pixelated; }
+.bd-ic { position: relative; display: grid; place-items: center; flex: none; width: 68px; height: 68px; border-radius: var(--r2); border: 2px solid var(--gold); background: var(--navy3); font-size: var(--fs-6); line-height: 1; }
+.bd-ic canvas { max-width: 60px; max-height: 40px; image-rendering: pixelated; }
 .bd-x { display: none; }
-.bd-what { margin: var(--s3) 0 var(--s1); font: 500 var(--fs-3) var(--ui); line-height: 1.4; }
+.bd-what { margin: var(--s3) 0 var(--s1); font: 500 var(--fs-2) var(--ui); line-height: 1.4; }
 .bd-n { margin: 0 0 var(--s3); color: var(--dim); font: 600 var(--fs-2) var(--ui); }
 .bd-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .bd-three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); width: 100%; }
-.bd-three .btn { padding: 0 var(--s1); font: 700 var(--fs-3) var(--pixel); letter-spacing: 1px; }
+.bd-three .btn { min-width: 0; padding: 0 2px; font: 700 var(--fs-1) var(--pixel); letter-spacing: .5px; white-space: normal; line-height: 1.1; }
 .bd-all { width: 100%; }
 .bag-pins, .bag-blade { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
 .bag-pins small, .bag-blade small { width: 100%; color: var(--dim); font: 600 var(--fs-2) var(--ui); }
@@ -1758,40 +1784,64 @@ body.portrait .jc.offer .jc-ic { width: 72px; height: 72px; } body.portrait .jc.
 .bag-pin.on { background: var(--gold); color: var(--ink); }
 .bag-blade .sw { width: var(--tap); height: var(--tap); padding: 0; border-radius: var(--r3); border: 2px solid var(--cream-a); background: radial-gradient(circle, var(--swc) 0 30%, var(--sw) 60%); cursor: pointer; }
 .bag-blade .sw.on { border-color: var(--cream); box-shadow: 0 0 0 2px var(--gold); }
-.bag-wheel { grid-area: wheel; display: flex; align-items: center; gap: var(--s2); min-width: 0; padding: var(--s2); border: 2px solid var(--gold-a); border-radius: var(--r2); background: var(--navy); }
-.bag-wheel > small { flex: none; font: 700 var(--fs-2) var(--pixel); color: var(--gold); letter-spacing: 1px; }
-.bag-slot { position: relative; flex: 1; min-width: 0; min-height: var(--tap-l); display: flex; align-items: center; gap: 6px; padding: 0 var(--s2); border-radius: var(--r2); border: 2px solid var(--gold-a); background: var(--navy2); color: var(--cream); font: 600 var(--fs-2) var(--ui); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.bag-slot b { font: 700 var(--fs-2) var(--pixel); color: var(--gold); }
-.bag-slot.empty { border-style: dashed; color: var(--dim); cursor: default; }
-.bag-slot.pfocus { border-color: var(--gold); }
+.bag-wheel { flex: none; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px var(--s2) var(--s2); border: 2px solid var(--gold-a); border-radius: var(--r2); background: var(--navy); }
+.bag-wheel > small { font: 700 var(--fs-1) var(--pixel); color: var(--gold); letter-spacing: 1px; }
+.iv-qb { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.bag-slot { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 0; height: 58px; padding: 2px; border-radius: var(--r2); border: 2px solid var(--edge); background: var(--navy2); color: var(--cream); cursor: pointer; touch-action: manipulation; }
+.bag-slot > b { position: absolute; left: 3px; top: 1px; font: 700 var(--fs-1) var(--pixel); color: var(--gold); }
+.bag-slot > small { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font: 600 var(--fs-1) var(--ui); color: var(--dim); }
+.bag-slot.iv-w > small { font-weight: 700; letter-spacing: .5px; }
+.bag-slot .bq-gl { display: grid; place-items: center; height: 24px; } .bag-slot .bq-gl canvas, .bag-slot .bq-gl .bc-gl svg { max-height: 22px; }
+.bag-slot .bq-n { position: absolute; right: 3px; top: 1px; font: 700 var(--fs-1) var(--ui); font-style: normal; color: var(--cream); }
+.iv-qb > .bag-slot:nth-child(4) { margin-right: 6px; }   /* (the weapons, then the things to use) */
+.bag-slot.iv-w { border-color: var(--gold-a); }
+.bag-slot.on { background: var(--pick), var(--navy2); border-color: var(--gold); }
+.bag-slot.sel, .bag-slot.pfocus, .bag-slot.drop { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.bag-slot.empty { border-style: dashed; cursor: default; }
+.bag-slot.none .bq-gl { opacity: .4; }
+.iv-keys { margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dim); font: 600 var(--fs-1) var(--ui); }
 .bag-craft { grid-area: craft; }   /* (crafting's place, for later) */
 .cue-down { -webkit-mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); mask-image: linear-gradient(var(--ink) calc(100% - 36px), transparent); }
-@media (max-width: 1100px) { .bag { grid-template-columns: 220px minmax(0, 1fr) 260px; } }
+@media (max-width: 1100px) { .bag { grid-template-columns: 236px minmax(0, 1fr) 236px; } }
+/* a phone on its side: everything a size down, the slots' words and the stats' bars tucked away */
 @media (max-height: 560px) {
-  .bag { grid-template-columns: 200px minmax(0, 1fr) 240px; padding: var(--s2) var(--s3); gap: var(--s2) var(--s3); }
-  .bag h3 { font-size: var(--fs-3); }
-  .bag-cash span { display: none; }
-  .bag-wheel > small { display: none; }
-  .bag-slot2 { min-height: 64px; padding: var(--s1); } .bag-slot2 .bc-ic { height: 24px; } .bag-gear, .bag-caps { display: none; }
-  .bc-ic { height: 28px; font-size: var(--fs-4); }
+  .bag { grid-template-columns: 196px minmax(0, 1fr) 210px; padding: 6px; gap: 6px; }
+  .iv-me { padding: 4px 6px 6px; gap: 6px; }
+  .iv-me > h3, .iv-keys, .bag-wheel > small, .bag-sort > span { display: none; }
+  .iv-doll { grid-template-columns: 46px minmax(0, 1fr) 46px; }
+  .iv-col { gap: 4px; } .iv-slot { width: 44px; } .iv-slot > small { display: none; }
+  .iv-sb { width: 44px; height: 40px; } .iv-sb .gl { width: 22px; height: 22px; }
+  .iv-fig { min-height: 150px; }
+  .iv-dacts .btn { min-height: 34px; }
+  .iv-stat { grid-template-columns: 70px minmax(0, 1fr) 28px; }
+  .bag-cats .chip { height: 32px; padding: 0 10px; font-size: var(--fs-1); }
+  .bag-grid { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+  .bag-cell { height: 70px; padding-top: 4px; } .bc-ic { height: 28px; } .bc-nm { margin-bottom: 6px; }
+  .bag-wheel { padding: 4px; } .bag-slot { height: 44px; } .bag-slot > small { display: none; }
   .bag-detail { padding: var(--s2); }
-  .bd-ic { width: 48px; height: 48px; font-size: var(--fs-5); }
-  .bd-what { margin-top: var(--s2); font-size: var(--fs-2); }
+  .bd-ic { width: 48px; height: 48px; } .bd-ic .gl { width: 30px; height: 30px; }
+  .bd-what { margin-top: var(--s2); }
 }
-body.portrait .bag { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr) auto; grid-template-areas: "eq" "tools" "grid" "wheel"; }
-body.portrait .bag-eq { padding: 0 0 var(--s2); border-right: 0; border-bottom: 1px solid var(--gold-a); overflow: visible; }
-body.portrait .bag-eq > h3, body.portrait .bag-gear, body.portrait .bag-caps { display: none; }
-body.portrait .bag-slots { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-body.portrait .bag-slot2 { min-height: 72px; } body.portrait .bag-slot2 b { display: none; }
-body.portrait .bag-tools { flex-wrap: wrap; }
-body.portrait .bag-tools h3 { display: none; }
-body.portrait .bag-cats { order: 3; flex-basis: 100%; }
-body.portrait .bag-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } body.portrait .bag-cell { height: 84px; }   /* (a fixed height: an aspect-ratio tile in the scrolling grid let the rows collapse onto each other) */
+/* upright: the character on top (the figure between its slots), the grid under it; the details a sheet from the bottom */
+body.portrait .bag { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "eq" "items"; gap: var(--s2); padding: var(--s2); }
+body.portrait .iv-me { flex: none; overflow: visible; padding: 4px var(--s2) var(--s2); }
+body.portrait .iv-me > h3, body.portrait .iv-stats, body.portrait .iv-keys, body.portrait .bag-wheel > small { display: none; }
+body.portrait .iv-doll { grid-template-columns: 66px minmax(0, 1fr) 66px; }
+body.portrait .iv-col { gap: 4px; } body.portrait .iv-slot { width: 64px; }
+body.portrait .iv-sb { width: 52px; height: 38px; } body.portrait .iv-sb .gl { width: 22px; height: 22px; }
+body.portrait .iv-fig { min-height: 0; }
+body.portrait .iv-dacts .btn { min-height: 36px; }
+body.portrait .bag-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+body.portrait .bag-cell { height: 76px; }   /* (a fixed height: an aspect-ratio tile in the scrolling grid let the rows collapse onto each other) */
+body.portrait .bag-cats .chip { height: 34px; padding: 0 10px; font-size: var(--fs-1); }
+body.portrait .bag-slot { height: 46px; } body.portrait .bag-slot > small { display: none; }
+body.portrait .iv-qb { gap: 4px; } body.portrait .iv-qb > .bag-slot:nth-child(4) { margin-right: 3px; }
 body.portrait .bag-detail { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 64%; display: none; padding: var(--s4) var(--s4) max(var(--s4), env(safe-area-inset-bottom)); border-radius: var(--r2) var(--r2) 0 0; border: 0; border-top: 2px solid var(--gold); box-shadow: var(--shadow); }
 body.portrait .bag.has-sel .bag-detail { display: block; animation: sheet-up var(--t2) var(--ease); }
 body.portrait .bd-x { display: inline-grid; width: var(--tap); height: var(--tap); }
-body.portrait .bag-wheel > small { display: none; }
-body.portrait .bag-slot { flex: 1 1 22%; padding: 0 var(--s1); font-size: var(--fs-1); }
+/* touch: bigger things to press */
+.touch .iv-off { width: 28px; height: 28px; right: -7px; bottom: -7px; }
+.touch .iv-turn .btn { width: 40px; height: 40px; min-height: 40px; }
 
 /* the People tab: who's online, your crew */
 .people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); width: 100%; padding: var(--s4); overflow-y: auto; align-content: start; }
@@ -1886,10 +1936,7 @@ body:not(.touch) .pz { width: min(300px, 100%); }
 body:not(.touch) #hub[data-tab=settings] .hub-frame { width: min(440px, 100%); }
 body:not(.touch) #set-nav { flex-wrap: wrap; row-gap: var(--s1); }
 body:not(.touch) #hub[data-tab=phone] .hub-frame { width: min(340px, 100%); }
-body:not(.touch) #hub[data-tab=bag] .hub-frame { width: min(720px, 100%); }
-body:not(.touch) .bag { grid-template-columns: 196px minmax(0, 1fr) 196px; }
-body:not(.touch) .bag-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
-body:not(.touch) .bag-cell { height: 84px; }
+body:not(.touch) #hub[data-tab=bag] .hub-frame { width: min(1240px, 100%); height: min(720px, 100%); }   /* (the Inventory uses the screen: the owner, 11-16 - "all squished to the side") */
 body:not(.touch) #hub[data-tab=people] .hub-frame { width: min(760px, 100%); }
 body:not(.touch) .jc-pop { width: min(480px, 100%); }
 body:not(.touch) #menu .panel { width: min(900px, 100%); max-height: 60%; }

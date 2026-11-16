@@ -451,7 +451,7 @@ export function menuOf(world, p, s) {
   if (T0.home) {
     const use = cookPick(prof);
     opts.push(use ? { id: 'cook', label: `Cook a meal in the kitchen: ${use.map((id) => ITEMS[id].name).join(', ')}`, note: `a ${ITEMS.homeMeal.name} (+${ITEMS.homeMeal.heal} health, hearty)` }
-      : { id: 'cook', label: `Cook a meal in the kitchen - ${HOME_IN.cookN} things to cook in your bag first`, note: 'fruit, crops, fish, game...', dis: true });
+      : { id: 'cook', label: `Cook a meal in the kitchen - ${HOME_IN.cookN} things to cook in your inventory first`, note: 'fruit, crops, fish, game...', dis: true });
     opts.push({ id: 'rest', label: 'Rest in the back room', note: 'full health' }); opts.push({ id: 'spawn', label: 'Wake up here after you die', dis: prof.lastSpawn === `biz:${s.id}` }); }
   opts.push({ id: 'sell', label: `Sell ${s.t === 'truck' ? 'the food truck' : s.name}`, price: -Math.round((e.paid || 0) * BIZ.sellBack) });
   opts.push({ id: 'close', label: 'Close' });
@@ -530,11 +530,11 @@ function run(world, p, s, opt, atTruck) {
     case 'rest': { const ped = p.ped; ped.hp = ped.maxHp; ped.bleeding = false; ped.stamina = skills.staminaFull(world, ped); world.emit(ped.x, ped.y, { e: 'heal', x: ped.x, y: ped.y }); world.notify(p, 'You rested up in the back room. Full health.', 'good'); return null; }
     case 'cook': {
       const use = cookPick(prof);
-      if (!use) return `${HOME_IN.cookN} things to cook in your bag first.`;
+      if (!use) return `${HOME_IN.cookN} things to cook in your inventory first.`;
       for (const id of use) { prof.inventory[id]--; if (prof.inventory[id] <= 0) delete prof.inventory[id]; }
       prof.inventory.homeMeal = (prof.inventory.homeMeal || 0) + 1;
       store.touch();
-      world.notify(p, `You cook up a ${ITEMS.homeMeal.name} in ${s.name}'s kitchen - it's in your bag.`, 'good');
+      world.notify(p, `You cook up a ${ITEMS.homeMeal.name} in ${s.name}'s kitchen - it's in your inventory.`, 'good');
       return null;
     }
     case 'spawn': prof.lastSpawn = `biz:${s.id}`; store.touch(); world.notify(p, `You'll wake up at ${s.name} after you die.`, 'good'); return null;
@@ -615,7 +615,7 @@ export function forfeit(world, p, s) {
   return { paid: e.paid || 0, till: s.t === 'hideout' ? 0 : till };
 }
 
-// what a meal in a business's kitchen is cooked from: HOME_IN.cookN things to eat from your bag - the plainest first, never
+// what a meal in a business's kitchen is cooked from: HOME_IN.cookN things to eat from your inventory - the plainest first, never
 // a meal already cooked nor a prize (as a home's stove: homeinside.js cookPick, from the bag instead of the fridge)
 function cookPick(prof) {
   const units = [];

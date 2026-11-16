@@ -716,7 +716,7 @@ export const SKATE_SCORE = { comboGap: 0.6, specialPts: 2500, specialMul: 3, spe
 export const CART = { hit: 70, hard: 230, driverP: 0.55, hurt: [3, 14] };
 // a session at a skate spot: s seconds, each goal pays goalPay
 export const SKATE_SESSION = { s: 120, goalPay: 40, goals: [['bank', 3000, 'Bank a 3,000-point combo'], ['tricks', 5, 'Land a 5-trick combo'], ['gap', 1, 'Hit a gap'], ['score', 15000, 'Score 15,000']] };
-export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your bag and never wears out
+export { FLASHLIGHT_PRICE } from './rules-base.js';        // hardware stores, corner stores and gas stations; it goes in your inventory and never wears out
 
 // Lost pets (server/systems/pets.js)
 export const PET_EVERY_S = 480;            // about how often one goes missing near a player

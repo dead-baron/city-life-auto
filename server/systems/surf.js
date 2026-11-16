@@ -1,7 +1,7 @@
 // Surfing (the owner's #312, 10-08). A surfboard (shared/items.js surfboard: the surf shops and the sports shops) and the
 // sea: you lie on it and paddle, faster than you swim (rules.js SURF_PADDLE). Since 2026-11-04 (the owner, 11-03: it was
 // slower than swimming, and you couldn't swim while you carried one) it's a ride you own and carry (server gear.js): in
-// your bag or your hand you swim like anyone, the action button in the sea sets it down and you're on it, and off it
+// your inventory or your hand you swim like anyone, the action button in the sea sets it down and you're on it, and off it
 // (the action button, up the beach) it's in your hand. At a surf break (shared/surf.js findBreaks: a
 // straight sandy beach facing the open sea) the waves roll in, in sets; paddle for the beach as one comes and you're up
 // on it (ped.surf.st 'ride'). Then ride it: the stick carves you along the face - left or right along the beach - while
@@ -20,7 +20,7 @@ import { SURF, wavesAt, onBreak, breakPt, broken, findBreaks, crestD, heightAt, 
 import { store } from '../store.js';
 import * as skills from './skills.js';
 import { moved } from '../movemark.js';   // (a move the server made: not a teleport to the audit)
-import * as gear from './gear.js';   // (the board in your bag, your hand, under you: gear.js)
+import * as gear from './gear.js';   // (the board in your inventory, your hand, under you: gear.js)
 
 export const hasBoard = (p) => !!(p && p.profile && (p.profile.surfboard || (p.profile.inventory.surfboard || 0) > 0));
 const GRID = 2048;
@@ -64,7 +64,7 @@ export function seaAt(map, x, y) {
 }
 const descOn = (ped, st) => { const sf = st === 'pad' ? 1 : st === 'ride' ? 2 : st === 'air' ? 3 : st === 'wipe' ? 4 : 0; if (ped.surfSf !== sf) { ped.surfSf = sf; ped.appVer = (ped.appVer || 0) + 1; } };
 
-// on the board (gear.js paddleOut: the board set down in the sea from your hand or your bag)
+// on the board (gear.js paddleOut: the board set down in the sea from your hand or your inventory)
 export function start(world, p) {
   const ped = p.ped;
   ped.surf = { st: 'pad', b: -1, mx: 0, my: 0, w: -1, a: 0, va: 0, pts: 0, until: 0, carveAt: 0, sign: 0 };
@@ -129,7 +129,7 @@ export function update(world, dt) {
     const ped = p.ped;
     if (!ped) continue;
     const s = ped.surf;
-    if (!s) continue;   // (in the water with a board in your bag or your hand: you swim - the action button puts you on it: gear.js)
+    if (!s) continue;   // (in the water with a board in your inventory or your hand: you swim - the action button puts you on it: gear.js)
     if (ped.dead || ped.vehId || ped.hidden || ped.onTrain || ped.sky || ped.cuffed || ped.ride) { stop(world, p, ped.dead ? 'home' : 'bag'); continue; }
     try { step(world, p, ped, s, dt); } catch (e) { world.reportError('surf', e); stop(world, p, 'bag'); }
   }

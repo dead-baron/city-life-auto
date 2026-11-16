@@ -185,7 +185,7 @@ function cook(world, p) {
     inv[out] = (inv[out] || 0) + n;
     done.push(`${n} ${ITEMS[out].name.toLowerCase()}`);
   }
-  world.notify(p, `Cooked: ${done.join(', ')}. Eat it from your bag for health - the big game makes a hearty meal - or sell it at the lodge.`, 'good');
+  world.notify(p, `Cooked: ${done.join(', ')}. Eat it from your inventory for health - the big game makes a hearty meal - or sell it at the lodge.`, 'good');
 }
 
 // wildlife.onKilled: a protected animal shot by a player brings the wardens' fine; a legend brought down is news

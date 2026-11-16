@@ -1,12 +1,12 @@
 // Rides you own and carry (the owner, 11-03: skateboards, rollerblades and surfboards should be "things you find, keep or
 // carry, and lose" - "not something you can just equip and go faster on"; and the surfboard was slower than swimming, and
 // you couldn't swim while you carried one). Three of them, each its own way:
-//   - A skateboard of your own (skate.js: bought at a skate, surf or sports shop) is in your bag, in your hand, under your
+//   - A skateboard of your own (skate.js: bought at a skate, surf or sports shop) is in your inventory, in your hand, under your
 //     feet, lying on the ground or at home. In your hand (the bag's Use, the quick wheel, or the action button by it
 //     lying on the ground) it takes a hand: no fighting or shooting with it. The vehicle button rides it from your hand;
 //     the action button puts it back in the bag. A skate park's rack boards are only borrowed (skate.js after), and a
 //     board wears with each bail till it snaps (skate.js wearOut).
-//   - A surfboard (surf.js) the same: in your bag or your hand you swim like anyone; in the sea the action button (or
+//   - A surfboard (surf.js) the same: in your inventory or your hand you swim like anyone; in the sea the action button (or
 //     the vehicle button with it in hand) sets it down and you're on it, paddling - faster than you swim. The action
 //     button slides you off again (it's in your hand), and up the beach you walk out with it. Set down on dry land (the
 //     vehicle button with it in hand) it stays a while (rules.js RIDE_GEAR surfLieS), then goes home: take it out at
@@ -149,7 +149,7 @@ export function pickUp(world, p, v) {
   return true;
 }
 // The vehicle button with a board in your hand (players.js applyInput): a vehicle in reach first (into it, the board in
-// your bag: tryEnter); else a skateboard - on it; a surfboard - in the sea on it, on land set down. true: done here.
+// your inventory: tryEnter); else a skateboard - on it; a surfboard - in the sea on it, on land set down. true: done here.
 export function vehicleButton(world, p, ped) {
   if (!ped.held) return false;
   if (vehicles.nearestVehicle(world, ped, 56, true)) return false;
@@ -225,11 +225,11 @@ function tidy(world) {
     if (q && q.profile.surfboard && q.profile.surfboard.at === 'out') goHome(world, q, !!q.conn);
   }
 }
-// your surfboard at home: out at home or at a surf shop, into your bag (economy.js: 'sb:out')
+// your surfboard at home: out at home or at a surf shop, into your inventory (economy.js: 'sb:out')
 export function surfOptions(p, opts, home = false) {
   const S = p.profile.surfboard;
   if (!S || S.at === 'bag' || holding(p.ped, 'surf') || (p.ped && p.ped.surf)) return;
-  opts.push({ id: 'sb:out', label: home ? 'Take your surfboard' : 'Your surfboard - take it', note: 'into your bag', shut: true });
+  opts.push({ id: 'sb:out', label: home ? 'Take your surfboard' : 'Your surfboard - take it', note: 'into your inventory', shut: true });
 }
 export function surfExecute(world, p) {
   const S = p.profile.surfboard;
@@ -237,7 +237,7 @@ export function surfExecute(world, p) {
   removeLying(world, p, 'surf');
   p.profile.surfboard = { at: 'bag' }; p.profile.inventory.surfboard = 1;
   store.touch(); p.meDirty = true;
-  world.notify(p, 'Your surfboard, in your bag.', 'good');
+  world.notify(p, 'Your surfboard, in your inventory.', 'good');
   return null;
 }
 
@@ -272,7 +272,7 @@ function laced(world, p, ped) {
   ped.blades = on;
   look(ped);
   store.touch(); p.meDirty = true;
-  world.notify(p, on ? 'Rollerblades on: quicker than walking, no sprinting, no vehicles - and keep off the grass. Take them off at a bench.' : 'Rollerblades off, in your bag.', 'good');
+  world.notify(p, on ? 'Rollerblades on: quicker than walking, no sprinting, no vehicles - and keep off the grass. Take them off at a bench.' : 'Rollerblades off, in your inventory.', 'good');
 }
 // the blading walk (the descriptor's gt: client/art2/people.js blade) - whenever nothing else has the walk
 function look(ped) {
@@ -326,7 +326,7 @@ export function lateInteraction(world, p) {
   const ped = p.ped;
   if (!ped || ped.vehId || ped.dead) return null;
   if (ped.surf) return ped.surf.st === 'pad' ? { label: 'Slide off your surfboard', run: () => surf.stop(world, p, 'hand') } : null;
-  if (ped.held) return { label: `Put the ${NAME[ped.held.k]} in your bag`, run: () => stow(world, p) };
+  if (ped.held) return { label: `Put the ${NAME[ped.held.k]} in your inventory`, run: () => stow(world, p) };
   return null;
 }
 // The bag's Use, the quick wheel (economy.js useItem): a board into your hand; your rollerblades on at a bench
@@ -344,7 +344,7 @@ export function useFromBag(world, p, id) {
   }
   return false;
 }
-// Into a vehicle (vehicles.js tryEnter): not on rollerblades; a board in your hand goes in your bag
+// Into a vehicle (vehicles.js tryEnter): not on rollerblades; a board in your hand goes in your inventory
 export function canEnter(world, p, ped) {
   if (wearing(ped)) { note(world, p, 'veh', 'Not on rollerblades - take them off at a bench first.', 'warn'); return false; }
   if (ped.held) stow(world, p);
