@@ -20,14 +20,14 @@ import { TILE, T } from './constants.js';
 export const FESTOON = {
   SAG: [0.08, 0.1, 0.12],   // the sag at the middle, a share of the span (by festoonSag's hash)
   CLEAR: 38,                // px: the line's lowest point at least this high - its bulbs over people's heads
-  CLEAR_LANTERN: 50,        // ... a lantern line's: the lanterns hang LANTERN_DROP under it
+  CLEAR_LANTERN: 54,        // ... a lantern line's: the lanterns hang LANTERN_DROP under it
   H_MAX: 80,                // px: a run is raised to at most this to keep its slack over people's heads
   SPAN_MAX: 10 * TILE,      // px: a longer run is cut into equal spans, a post at each cut
   END_R: 20,                // px: a tree, a lamp post, a stall this near an end holds it
   WALL_R: 18,               // px: a building's face (its tiles) this near an end takes a bracket
   BULB_GAP: 22,             // px along the run between two bistro bulbs (the art: statics.js makeFestoon)
-  LANTERN_GAP: 30,          // ... between two paper lanterns
-  LANTERN_DROP: 19,         // px a lantern hangs under its line, tassel and all
+  LANTERN_GAP: 34,          // ... between two paper lanterns
+  LANTERN_DROP: 21,         // px a lantern hangs under its line, tassel and all
 };
 // the things a line can be made fast to, by prop type -> the end's name (tall enough to hold a line over people's heads:
 // not a bollard, a lantern on its short post or a food cart - an end there gets a post of its own beside it)

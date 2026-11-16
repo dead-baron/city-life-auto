@@ -1987,33 +1987,33 @@ function makeFestoon(r) {
   for (let i = 1; i < n; i++) {
     const [X, Y, Z] = at(i / n), x = Math.round(X), y = Math.round(Y), z = Math.round(Z);
     if (k === 1) {
-      // a red paper lantern (WC422): a short cord, a black-rimmed gold cap, the round red body 9 wide and 10 tall with
+      // a red paper lantern (WC422): a short cord, a black-rimmed gold cap, the round red body 11 wide and 12 tall with
       // darker ribs across it and its sides in shade, a gold cap under it and a short red tassel - lit within after dark
       const red = [204, 36, 30], shade = [146, 22, 24], rib = [120, 16, 20], lite = [236, 78, 50], gold = [216, 164, 58], blk = [34, 26, 22];
       const glow = (a, c = [255, 92, 44]) => [c[0], c[1], c[2], a];
       P(x, y, z - 1, blk); P(x, y, z - 2, blk);
-      for (let dx = -1; dx <= 1; dx++) P(x + dx, y, z - 3, blk);
-      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 4, gold, [255, 180, 80, 60]);
-      const W = [2, 3, 4, 4, 4, 4, 4, 4, 3, 2];
+      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 3, blk);
+      for (let dx = -3; dx <= 3; dx++) P(x + dx, y, z - 4, gold, [255, 180, 80, 60]);
+      const W = [3, 4, 5, 5, 5, 5, 5, 5, 5, 5, 4, 3];
       for (let row = 0; row < W.length; row++) {
         const zz = z - 5 - row, hw = W[row];
         for (let dx = -hw; dx <= hw; dx++) {
-          const edge = Math.abs(dx) === hw, ribbed = row === 2 || row === 5 || row === 8, core = Math.abs(dx) <= 1 && row >= 3 && row <= 6;
-          const c = ribbed ? rib : edge ? shade : (dx === -2 || dx === -1) && row > 0 && row < 5 ? lite : red;
+          const edge = Math.abs(dx) >= hw - (row > 1 && row < 10 ? 0 : 0), ribbed = row === 3 || row === 6 || row === 9, core = Math.abs(dx) <= 2 && row >= 3 && row <= 8;
+          const c = ribbed ? rib : edge ? shade : (dx === -3 || dx === -2) && row > 0 && row < 6 ? lite : red;
           P(x + dx, y, zz, c, core && !ribbed ? glow(255, [255, 150, 70]) : glow(edge || ribbed ? 140 : 225));
         }
       }
-      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 15, gold, [255, 180, 80, 60]);
-      for (let dx = -1; dx <= 1; dx++) P(x + dx, y, z - 16, blk);
-      P(x, y, z - 17, [200, 44, 34]); P(x, y, z - 18, [176, 34, 30]); P(x, y, z - 19, [150, 28, 26]);   // (the tassel)
+      for (let dx = -3; dx <= 3; dx++) P(x + dx, y, z - 17, gold, [255, 180, 80, 60]);
+      for (let dx = -2; dx <= 2; dx++) P(x + dx, y, z - 18, blk);
+      P(x, y, z - 19, [200, 44, 34]); P(x, y, z - 20, [176, 34, 30]); P(x - 1, y, z - 21, [150, 28, 26]); P(x + 1, y, z - 21, [150, 28, 26]);   // (the tassel)
     } else {
-      // a bistro bulb: a dark socket on the wire, a round glass bulb 4 wide hanging under it, off-white by day (a pale
+      // a bistro bulb: a dark socket on the wire, a round glass bulb 4 wide and 5 tall hanging under it, off-white by day (a pale
       // highlight), a warm glow after dark
       const glass = [238, 232, 208], hi = [253, 251, 240], tip = [212, 202, 170], sock = [26, 24, 24];
       const glow = (a) => [255, 198, 116, a];
       P(x, y, z - 1, sock); P(x + 1, y, z - 1, sock); P(x, y, z - 2, sock); P(x + 1, y, z - 2, sock);
-      for (let r = 0; r < 3; r++) for (let dx = -1; dx <= 2; dx++) { const ed = dx === -1 || dx === 2; P(x + dx, y, z - 3 - r, r === 0 && dx === 0 ? hi : ed ? tip : glass, glow(ed ? 180 : 255)); }
-      P(x, y, z - 6, tip, glow(200)); P(x + 1, y, z - 6, tip, glow(200));
+      for (let r = 0; r < 4; r++) for (let dx = -1; dx <= 2; dx++) { const ed = dx === -1 || dx === 2; P(x + dx, y, z - 3 - r, r < 2 && dx === 0 ? hi : ed ? tip : glass, glow(ed ? 180 : 255)); }
+      P(x, y, z - 7, tip, glow(200)); P(x + 1, y, z - 7, tip, glow(200));
     }
   }
   return G;
