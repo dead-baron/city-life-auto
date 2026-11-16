@@ -474,6 +474,10 @@ function build(m, api, K) {
     for (let k = 0; k < 4; k++) { const sx = cx - 7.5 + k * 5; prop('mstall', sx, cy - 10.5, 0, { v: (k + 1) % 4, c: (k + 2) % 4, a: 0 }); vendor(K, sx, cy - 11.25, Math.PI / 2); }
     hang(K, cx - 5, cy - 8.6, 3); hang(K, cx + 5, cy - 8.6, 2);
     for (const [dx, dy] of [[-4.2, -3.4], [4.2, -3.4], [-4.2, 4.6], [4.2, 4.6], [-13.5, 2], [13.5, 2]]) prop('potted', cx + dx, cy + dy, 0);
+    // a bed of roses in the plaza's south half between the two terraces, a cherry at its heart
+    for (let y = yS - 8; y < yS - 3; y++) for (let x = Math.round(cx - 5); x < Math.round(cx + 5); x++) if (m.tiles[y * m.w + x] === T.PLAZA && m.bld[y * m.w + x] < 0) m.tiles[y * m.w + x] = T.GRASS;
+    prop('tree_a', cx, yS - 5.5, 10, { sp: 'cherry', k: 1.2 });
+    for (const dx of [-3.4, 3.4]) { prop('flowers_big', cx + dx, yS - 6.6, 0); prop('flowers_big', cx + dx, yS - 4.2, 0); }
     // the people: friends round the basin's rim, couples on the benches, a knot by the flower seller
     for (const [dx, dy, q] of [[0, -6.4, 4], [-9, -5, 2], [9, -5, 2], [-9, 8, 2], [9, 8, 2], [5.5, 6.5, 3]]) hang(K, cx + dx, cy + dy, q);
     prop('foodcart', x0 + 3, cy - 4, 14);

@@ -415,7 +415,9 @@ function blossomPlaza(K, x, y, w, h, out) {
   // a margin along the boulevard; the four corners lawn under the cherry trees, their beds)
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
     const ex = (tx + 0.5 - cx) / Math.min(w / 2 - 3, 14), ey = (ty + 0.5 - cy) / Math.min(h / 2 - 4, 9), e = ex * ex + ey * ey;
-    const paved = Math.abs(tx + 0.5 - cx) < 3.5 || Math.abs(ty + 0.5 - cy) < 2 || e < 1.25 || ty >= y + h - 3 || ty < y + 2;
+    // (round two: inside the ring, four planted beds between the walks - the paving no longer one big oval)
+    const walk = Math.abs(tx + 0.5 - cx) < 3.5 || Math.abs(ty + 0.5 - cy) < 2;
+    const paved = walk || (e < 1.25 && !(e > 0.4 && e < 0.86)) || ty >= y + h - 3 || ty < y + 2;
     K.fill(tx, ty, 1, 1, paved ? T.PLAZA : T.GRASS);
   }
   K.take(x, y, w, h);
@@ -427,6 +429,8 @@ function blossomPlaza(K, x, y, w, h, out) {
     prop('tree_a', tx, ty, 10, { sp: 'cherry', k: 1.25 }); void a;
   }
   for (const [dx, dy] of [[-6, -3], [6, -3], [-6, 3.6], [6, 3.6]]) prop('pbench', cx + dx, cy + dy, 0);
+  // (the beds: flowers in drifts, a flowering shrub at each bed's heart)
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { prop('flowers_big', cx + sx * 8.6, cy + sy * 4.6, 0); prop('flowers_big', cx + sx * 5.2, cy + sy * 6.4, 0); prop('shrub_a', cx + sx * 10.4, cy + sy * 2.8, 0); }
   prop('foodcart', x + 3, y + h - 3, 14);
   prop('flowers_big', x + 2, cy, 0); prop('flowers_big', x + w - 2, cy, 0);
   for (const [fx, fy] of [[0.06, 0.4], [0.94, 0.4], [0.06, 0.95], [0.94, 0.95], [0.3, 0.12], [0.7, 0.12]]) prop('lamp', x + w * fx, y + h * fy, 0);
@@ -651,7 +655,7 @@ function harborLights(K, x0, out) {
   let n = 0;
   const mineT = (x, y) => (y <= y1 || x >= 3550) && K.free(x, y);
   // the ground: lawn, the shore's sand and promenade, the zones' paving
-  const ZONES = [[3482, 2226, 3520, 2244], [3482, 2244, 3606, 2247], [3524, 2247, 3577, 2259], [3578, 2249, 3604, 2264], [3574, 2224, 3596, 2242]];
+  const ZONES = [[3484, 2226, 3518, 2236], [3482, 2244, 3606, 2247], [3524, 2247, 3577, 2259], [3578, 2249, 3604, 2260], [3574, 2224, 3596, 2242]]   // (round two: the stage's apron paved, the crowd's lawn green behind it; the trucks' court tighter);
   const zone = (x, y) => ZONES.some(([a, b, c, d]) => x >= a && y >= b && x < c && y < d);
   const shore = new Map();   // (each column's first land row)
   for (let x = x0; x < 3640; x++) { let y = 2190; while (y < yLow && !isLand(x, y)) y++; if (y < yLow) shore.set(x, y); }
@@ -676,15 +680,13 @@ function harborLights(K, x0, out) {
   // planters down the forecourt's sides
   prop('dscreen', 3501, 2229, 0); prop('dspeaker', 3490, 2230, 0); prop('dspeaker', 3512, 2230, 0);
   prop('textsign', 3501, 2227, 0, { text: 'HARBOR LIGHTS', bg: '#16121e', fg: [255, 110, 200], z: 96, sx: 2, lit: true });
-  canopy(K, 3485, 2234, 3517, 2243, { gap: 3, span: 8, h: 58 });
-  for (let y = 2233; y < 2243; y += 3) { prop('planter_fl', 3483, y, 0); prop('planter_fl', 3519, y, 0); }
-  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2235.6 * TILE), name: 'Harbor Lights' });
-  for (const [x, y, q] of [[3491, 2235.2, 4], [3511, 2235.2, 5], [3501, 2243.2, 3]]) hang(K, x, y, q);
-  // the seats at the back of the crowd: rows of benches facing the stage, an aisle down the middle; a cart either side
-  for (const y of [2238.6, 2241.4]) for (const x of [3489, 3494, 3508, 3513]) prop('bench_m', x, y, 0, { a: Math.PI });
-  prop('foodcart', 3485.5, 2236, 14); prop('foodcart', 3516.5, 2236, 14);
+  canopy(K, 3486, 2230.5, 3516, 2235.5, { gap: 2.5, span: 7.5, h: 58 });
+  for (let x = 3486; x <= 3516; x += 3) if (Math.abs(x - 3501) > 2) prop('planter_fl', x, 2235.6, 0);   // (the apron's edge onto the lawn, a gap in the middle)
+  (K.m.partySpots ||= []).push({ x: Math.round(3501 * TILE), y: Math.round(2232.6 * TILE), name: 'Harbor Lights' });
+  // (the lawn behind the apron: picnic blankets in loose rows facing the stage - people on them by day)
+  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) prop('blanket', 3490.5 + c * 7 + (r ? 3.5 : 0), 2238.4 + r * 3.4, 0, { v: (r + c) % 2 });
   // (round two: the forecourt read as an empty paved lot) - the stage's wings: banner poles and potted palms either side
-  // of the screen, tiki torches at its front corners; a pergola bar at each side of the seats with its tables under it;
+  // of the screen, tiki torches at its front corners; a pergola bar at each side of the lawn with its tables under it;
   // the crowd thick in front of the stage
   for (const x of [3484.5, 3517.5]) { prop('bannerpole', x, 2229.2, 0, { v: x < 3500 ? 0 : 1 }); prop('potted', x, 2231.4, 0); prop('potted', x, 2233.2, 0); }
   for (const x of [3489.5, 3512.5]) prop('torch', x, 2231.6, 6);
@@ -692,7 +694,7 @@ function harborLights(K, x0, out) {
     prop('pergola', px + s * 1.8, 2242.6, 0, { w: 4 * TILE, d: 3 * TILE, h: 58 });
     for (const dy of [0, 1.6]) { prop('cafetable', px + s * 1.8, 2241.8 + dy, 0); (K.m.terraceSpots ||= []).push({ x: Math.round((px + s * 1.8) * TILE), y: Math.round((2241.8 + dy) * TILE) }); }
   }
-  for (const [x, y, q] of [[3496, 2233.2, 5], [3506, 2233.2, 5], [3501, 2231.6, 4], [3492, 2236.8, 3], [3510, 2236.8, 4]]) hang(K, x, y, q);
+  for (const [x, y, q] of [[3494, 2233.2, 5], [3501, 2234.2, 5], [3508, 2233.2, 5], [3501, 2231.2, 4], [3489, 2232, 3], [3513, 2232, 4]]) hang(K, x, y, q);
   // the night market: the stalls facing each other across the aisle, the lanterns across it, the gates and the sign
   {
     const yN = 2249.2, yS2 = 2256.8;
@@ -708,9 +710,10 @@ function harborLights(K, x0, out) {
     for (const [x, q] of [[3540, 3], [3560, 4]]) hang(K, x, 2253, q);
   }
   // the food trucks: three carts along the court's north side, the long tables under the lights in front of them
-  for (const x of [3583, 3591, 3599]) prop('foodcart', x, 2250.6, 14);
-  for (const y of [2255, 2259.5]) for (const x of [3583, 3591, 3599]) { prop('picnic', x, y, 0); (K.m.terraceSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), seat: 16 }); }
-  canopy(K, 3579, 2253.4, 3603, 2261.6, { gap: 2.7, span: 8, h: 54 });
+  for (const x of [3581, 3586.5, 3592, 3597.5, 3602]) prop('foodcart', x, 2250.4, 14);   // (round two: five trucks, the tables close)
+  for (const y of [2254, 2256.6]) for (const x of [3582, 3587.5, 3593, 3598.5]) { prop('picnic', x, y, 0); (K.m.terraceSpots ||= []).push({ x: Math.round(x * TILE), y: Math.round(y * TILE), seat: 16 }); }
+  canopy(K, 3579, 2253, 3602.5, 2257.6, { gap: 2.3, span: 8, h: 54 });
+  for (let x = 3580; x <= 3602; x += 4) prop('potted', x, 2259.2, 0);   // (the court's south edge)
   prop('textsign', 3591, 2249, 0, { text: 'FOOD TRUCKS', bg: '#1a1420', fg: [255, 200, 80], z: 44, sx: 2, lit: true });
   for (const x of [3580, 3602]) prop('trashcan', x, 2263, 0);
   hang(K, 3587, 2252.8, 3);
