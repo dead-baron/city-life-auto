@@ -24527,3 +24527,9 @@ closed retried every few seconds (in the background too) and took it over again,
   either (connectFailed off: update.js onVisible). The title says "Playing in another tab or on another device." with a
   **PLAY HERE** button that takes the character over in turn - so the tab you're playing in is the one that plays.
 - Test: launch-review (4000 doesn't retry; PLAY HERE).
+
+## 2026-11-15 - Account: the earlier characters behind one button
+The owner: "we don't need to have a list of old accounts here, maybe one button". Settings > Account showed a "Switch
+back to ..." button for every character the device played before a sign-in or a code (up to three: a guest the device
+had before signing in, say). Now one button, "Other characters on this device (n)", opens the list with a line saying
+what they are (account.js prevOpen); entries kept without a name read "an earlier character". Test: launch-review2.
