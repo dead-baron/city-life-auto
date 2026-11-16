@@ -10,7 +10,7 @@ import { pedStep, PED } from '../../shared/physics.js';
 import { isTurf, PED_BLOCK } from '../../shared/map.js';
 import { localToWorld } from '../../shared/math.js';
 import { mulberry32, hash2 } from '../../shared/rng.js';
-import { spawnNpc, despawnNpc, seek, startFight, footWay, walkInAt, sidestep, flee, backOff, markBrawl, holding } from './npc.js';
+import { spawnNpc, despawnNpc, seek, startFight, footWay, clearWalk, walkInAt, sidestep, flee, backOff, markBrawl, holding } from './npc.js';
 import { driveToward, planRoute } from './traffic.js';
 import * as players from './players.js';
 import * as combat from './combat.js';
@@ -846,6 +846,7 @@ function runUnit(world, v, dt) {
       if (crew.every((q) => q.vehId)) { ai.mode = 'drive'; if (!v.seats[0]) { const q = crew[0]; const i = v.seats.indexOf(q.id); v.seats[i] = 0; v.seats[0] = q.id; q.seat = 0; } }
     } else {
       const los = world.map.los(c.x, c.y, t.x, t.y);
+      const open = los && clearWalk(world.map, c.x, c.y, t.x, t.y);   // (a dive needs the floor clear to them: not over a shop's counter - npc.js roomWay walks round it)
       const aimAt = (q) => { q.aim = Math.atan2(t.y - c.y, t.x - c.x); q.bits |= IN.AIMING; return q; };
       const shoot = (q) => { aimAt(q); if (now > (n.nextShot || 0)) { q.bits |= IN.FIRE; n.nextShot = now + 0.25 + rng() * 0.6; } return q; };
       const after = (x, y) => { const wp = footWay(world, c, x, y); return seek(c, wp.x, wp.y, true); };   // (in through a door)
@@ -866,7 +867,7 @@ function runUnit(world, v, dt) {
         // open fire - up close (not at 5 stars), still a dive to bring them down (not while a colleague's wrestling them:
         // then over to help)
         if (p.wanted <= 4 && !down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);
-        else if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && now > (n.nextDive || 0)) inp = dive(c, t, now);
+        else if (p.wanted <= 4 && !down && d < TACKLE_PX && d > 22 && open && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else inp = shoot(d > 180 ? seek(c, t.x, t.y, true) : { bits: 0, mx: 0, my: 0, aim: 0 });
       } else if (n.tactic === 'taser') {
         inp = aimAt(after(t.x, t.y));
@@ -876,7 +877,7 @@ function runUnit(world, v, dt) {
       } else if (n.tactic === 'tackle') {
         // run them down and dive at them; a shove with the baton if they're right there on their feet
         if (!down && d <= 22 && now > (n.nextDive || 0)) inp = grab(world, c, t, now);   // (right on them: no room to dive - wrestled down)
-        else if (!down && d < TACKLE_PX && d > 22 && los && now > (n.nextDive || 0)) inp = dive(c, t, now);
+        else if (!down && d < TACKLE_PX && d > 22 && open && now > (n.nextDive || 0)) inp = dive(c, t, now);
         else {
           // (at 1-2 stars they come on at a walk to someone on the ground: a moment to get up and run - the owner's note)
           if (down && p.wanted <= 2) { const wp = footWay(world, c, t.x, t.y); inp = seek(c, wp.x, wp.y, false, TACKLE_APPROACH); } else inp = after(t.x, t.y);

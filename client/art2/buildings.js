@@ -393,14 +393,24 @@ export function makeBuilding(spec) {
   if (spec.mural) mural(G, spec.mural, d + H, seed);
   if (spec.dress) dressFacade(G, spec, WL, w, d, H, gH, fy, seed);
   // the shop's sign over the dirt, the ivy and the tags: the words stay clean and whole (signfont.js)
-  if (shopAt && spec.shop.sign && spec.shop.sign.text) signBoard(G, spec.shop.sign, spec.shop.sign.x ?? 4, shopAt.winTop - 2, spec.shop.sign.w ?? w - 8, night);
   if (spec.portico) portico(G, spec.portico, d, H, cornice);
   for (const a of spec.arches || []) arch(G, a, d + H, night, seed);
   if (spec.rose) rose(G, spec.rose.x, d + H - spec.rose.v, spec.rose.r || 14, night);
-  for (const pq of spec.plaques || []) plaque(G, pq, d + H, night);
   for (const bl of spec.blades || []) blade(G, bl, d + H, night, H);
   if (spec.cross) medSign(G, spec.cross.x, d + H - spec.cross.v, spec.cross.s || 22, night, spec.cross.k);
   if (spec.neon) neonIcon(G, spec.neon.x ?? Math.floor(w / 2) - 14, d - 6 + (spec.neon.y || 0), spec.neon.icon || 'cup', spec.neon.col, night);
+  // (the boards with words last: never cut by a cross, a cup, a blade - textClipped)
+  // (a plaque where the shop's sign goes: up clear of it while there's room, else none)
+  const sgn = shopAt && spec.shop.sign && spec.shop.sign.text ? spec.shop.sign : null;
+  const sbox = sgn ? signBox(sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8) : null;
+  for (const pq of spec.plaques || []) {
+    if (!sbox || !pq || !pq.text) { plaque(G, pq, d + H, night); continue; }
+    const r = plaqueBox(pq, w), top = d + H - r[3], bot = d + H - r[1];
+    if (!(r[0] < sbox.x + sbox.w && sbox.x < r[2] && top < sbox.y + sbox.h + 2 && sbox.y - 2 < bot)) { plaque(G, pq, d + H, night); continue; }
+    const v = d + H - sbox.y + 4, up = { ...pq, v };
+    if (v + (r[3] - r[1]) <= H - cornice - 2) plaque(G, up, d + H, night);
+  }
+  if (sgn) signBoard(G, sgn, sgn.x ?? 4, shopAt.winTop - 2, sgn.w ?? w - 8, night);
   if (!spec.pitch) return G;
   // (a roof raised over the face adds rows above it: an even number, so the face's letters stay on the art grid)
   let R = pitched(G, spec, w, d, H, seed);
@@ -1215,16 +1225,27 @@ function mural(G, m, yGround, seed) {
 // a shop's sign board (wave A1, signfont.js): the trade's face and palette (statics.js signStyle) or a plain bg / fg
 // pair made legible, the icon's tile beside the words, one line or two - every letter whole art pixels; lit after dark
 // by how the trade's sign is lit (a lightbox, lit letters, tubes, lamps on it). yBot: the row under the board.
+function signBox(sign, x0, yBot, w) {   // (where signBoard puts it: { x, y, w, h })
+  const L = boardFor(sign, w), y0 = Math.floor((yBot - L.h * 2) / 2) * 2;
+  return paintBoard(() => {}, L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: false, night: 0 });
+}
 function signBoard(G, sign, x0, yBot, w, night) {
   const L = boardFor(sign, w), y0 = Math.floor((yBot - L.h * 2) / 2) * 2;
   const mode = sign.lit === false ? false : sign.glow || (sign.neon ? 'neon' : 'ink');
   const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, paletteOf(sign), Math.floor(x0 / 2) * 2, y0, { lit: mode, night, bulbs: sign.bulbs });
   G.signBox = { ...box, lay: L };   // (where it went: test/signs.test.js reads it back through the bake)
+  audit(G, 'sign', sign.text, box.x, box.y, box.x + box.w, box.y + box.h, true);
 }
 
+// (the lint's ear on the lettering: tools/textaudit.mjs, textClipped)
+let TAP = null;
+export const tapText = (f) => { TAP = f; };
+const audit = (...a) => TAP && TAP(...a);
 // a classical portico on the facade: columns standing proud of a shaded recess, an entablature with an
 // inscription and a pediment above (p: { x, w, cols, text })
 function portico(G, p, d, H, cornice) {
+  // (over what's behind it, a lit window's glow too: BAN K at First Pixel Bank, 11-15)
+  const setC = (G2, x, y, c) => facePx(G2, x, y, c, null);
   const yG = d + H, top = H - cornice, entH = p.text ? 20 : 16, pedH = Math.min(30, Math.floor(p.w * 0.16)), ent0 = top - pedH - entH;
   const S = ramp('#d8cfbc', 6, 3);
   // recess behind the columns
@@ -1246,7 +1267,7 @@ function portico(G, p, d, H, cornice) {
   // when even that won't fit
   if (p.text) {
     const fk = lineMask(p.text, 'serif').w * 2 <= p.w - 8 ? 'serif' : lineMask(p.text, 'civic').w * 2 <= p.w - 8 ? 'civic' : null;
-    if (fk) { const M = lineMask(p.text, fk); paintLine((x, y, c) => setC(G, x, y, c), p.text, fk, p.x + Math.floor((p.w - M.w * 2) / 2), yG - ent0 - entH + Math.floor((entH - M.h * 2) / 2), { 1: S[0], 5: S[5] }); }
+    if (fk) { const M = lineMask(p.text, fk), tx = p.x + Math.floor((p.w - M.w * 2) / 2), ty = yG - ent0 - entH + Math.floor((entH - M.h * 2) / 2); paintLine((x, y, c) => setC(G, x, y, c), p.text, fk, tx, ty, { 1: S[0], 5: S[5] }); audit(G, 'portico', p.text, tx, ty, tx + M.w * 2, ty + M.h * 2); }
   }
   // pediment
   for (let v = ent0 + entH; v < top; v++) { const t = (v - ent0 - entH) / pedH, half = (p.w / 2) * (1 - t); for (let x = Math.round(p.x + p.w / 2 - half); x < p.x + p.w / 2 + half; x++) { const edge = x < p.x + p.w / 2 - half + 3 || x > p.x + p.w / 2 + half - 3 || v === ent0 + entH; setC(G, x, yG - v, step(S, edge ? 0.75 : 0.45, x, v, 0.3)); } }
@@ -1263,7 +1284,8 @@ function plaqueLayout(p, W) {
 function plaque(G, p, yG, night) {
   const { fk, L, x0 } = plaqueLayout(p, G.w), y0 = Math.floor((yG - p.v - L.h * 2) / 2) * 2;
   const P = p.pal || (fk === 'neon' ? neonPal(p.fg || [255, 80, 200]) : paletteOf({ bg: p.bg || '#f4f2ea', fg: p.fg || [40, 36, 32] }));
-  paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
+  const box = paintBoard((x, y, c, e) => facePx(G, x, y, c, e), L, P, x0, y0, { lit: p.lit ? p.glow || (fk === 'neon' ? 'neon' : 'panel') : false, night, bulbs: p.bulbs });
+  if (box) audit(G, 'plaque', p.text, box.x, box.y, box.x + box.w, box.y + box.h, !!p.lit);
 }
 // Where a facade's lettered boards stand on it, in its own px: [x0, v0, x1, v1] (v up from the pavement) - a plaque's
 // board (plaque above) and a blade sign (blade below; H the wall's height: the letters it has room for)

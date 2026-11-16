@@ -34,6 +34,14 @@
 //   nameCovered  a building's own name on its front - a plaque, its shop sign, a blade sign - half hidden: under another
 //                board on the same front (the owner, 11-14: Westside Clinic's name behind its EMERGENCY sign), or behind
 //                something standing in front of it (a canopy, a shelter, a sign on posts: its drawn pixels over the board)
+//   nameTwice    a building's name said twice on its fronts: two of its boards - its shop's sign, the portico's lettering,
+//                a plaque, a neon name - saying the same name, on one front or on two sections of it (the owner, 11-15:
+//                Canvas Savings Bank's portico CANVAS SAVINGS with a CANVAS SAVINGS BANK board under it). One name, one
+//                board: statics.js oneName keeps the first
+//   textClipped  a sign's words not whole on its front as the bake draws it at night: run off the facade's edge, painted
+//                over by something drawn after it, or a glow showing through stone lettering (the owner, 11-15: First
+//                Pixel Bank's portico BANK read BAN, then ANK - a lit window behind it). A sign whose words don't fit isn't
+//                drawn at all (buildings.js portico; statics.js oneName: a portico off its front's edge loses its words)
 //   bladeBiz     a blade sign naming another business than the building's (the owner, 11-14: HOTEL over a paint shop):
 //                its words from the shop's sign, the building's names, or the trade of its places (BLADE_WORDS)
 //   plantOnPath  a plant (a yard's bed, the ground cover, a map prop) over a house's path or driveway - the paved strip
@@ -53,8 +61,9 @@ import { layoutSign } from '../client/art2/signfont.js';
 import { deckOnDry } from '../shared/mapcore.js';
 import { parkWhy } from '../shared/parkcheck.js';
 import { festoonWorld, festoonWhy } from '../shared/world3-festoons.js';
-import { staticIndex, staticItems, makeStatic, STATIC_CHUNK } from '../client/art2/game/statics.js';
+import { staticIndex, staticItems, makeStatic, STATIC_CHUNK, frontNames, sameName } from '../client/art2/game/statics.js';
 import { makeBuilding, buildingH, plaqueBox, bladeBox } from '../client/art2/buildings.js';
+import { textAudit } from './textaudit.mjs';
 
 // what the test lets by, each explained (else what the lint found is fixed in the data)
 export const LINT_ALLOW = {
@@ -96,7 +105,7 @@ function boardOf(p) {
 const hit = (a, b, pad = 0) => a[0] < b[2] - pad && b[0] < a[2] - pad && a[1] < b[3] - pad && b[1] < a[3] - pad;
 
 export function lint(M) {
-  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [] };
+  const rows = { boats: [], floats: [], signOverSign: [], signOverFront: [], dupName: [], inBuilding: [], wildNeon: [], startOnCraft: [], beachWater: [], skateWalk: [], parked: [], nameCovered: [], nameTwice: [], textClipped: [], bladeBiz: [], plantOnPath: [], atmStray: [], bigCanopy: [], alleyBlocked: [], festoons: [] };
   const seen = { boats: 0, signs: 0, props: 0 };
   const tileAt = (x, y) => { const tx = Math.floor(x / TILE), ty = Math.floor(y / TILE); return M.inside(tx, ty) ? M.tiles[M.idx(tx, ty)] : -1; };
   const wet = (x, y) => { const t = tileAt(x, y); return t === T.WATER || t === T.DEEP; };
@@ -311,9 +320,19 @@ function artRows(M, rows, seen) {
   seen.fronts = 0;
   for (const [bi, items] of I.byB) {
     const b = M.buildings[bi];
+    const named = [];   // (the names its fronts' boards say, each with its section: nameTwice)
     for (const it of items) {
       const sp = it.recipe && it.recipe.t === 'b' && it.recipe.spec;
       if (!sp || !sp.w) continue;
+      for (const q of frontNames(sp)) {
+        const twin = named.find((o) => sameName(o.t, q.t) && (o.it === it || Math.abs(o.it.y - it.y) < 8));   // (one front: the same section, or another along the same face)
+        if (twin) rows.nameTwice.push({ what: `${b.name || b.kind}: its ${twin.k} "${twin.t}" and its ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y });
+        else named.push({ ...q, it });
+      }
+      if ((sp.portico && sp.portico.text) || (sp.plaques && sp.plaques.length) || (sp.shop && sp.shop.sign && sp.shop.sign.text)) {
+        seen.texts = (seen.texts || 0) + 1;
+        for (const q of textAudit({ ...sp, night: 1 })) rows.textClipped.push({ what: `${b.name || b.kind}'s ${q.k} "${q.t}"`, x: it.x + sp.w / 2, y: it.y, why: q.why });
+      }
       const H = buildingH(sp), bx = [], at = (r) => [it.x + r[0], it.y - r[3], it.x + r[2], it.y - r[1]];
       for (const p of sp.plaques || []) if (p && p.text && p.v !== undefined) bx.push({ t: p.text, r: at(plaqueBox(p, sp.w)) });
       for (const q of sp.blades || []) { const r = bladeBox(q, H); if (r) bx.push({ t: q.text, r: at(r), blade: true }); }

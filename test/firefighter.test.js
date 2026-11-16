@@ -296,4 +296,20 @@ test('a job given up mid-call lets its fire go: the car is the traffic\'s again,
   w.players.delete(p2.pid);   // (gone)
   run(w, 1.1);
   assert.ok(q.removed, 'the one waiting for the crew is gone');
+  // a kitchen fire left when the shift's given up, or when the call runs out: out with it - a spot fire never burns out
+  // by itself, and one left on a shop's floor lit whoever crossed it (the owner, 11-15: "caught on fire" in a store)
+  const { p: p3 } = onShift();
+  const c3 = ff.callAt(w, p3, 'kitchen', S.food[5]);
+  assert.ok(ff.burningTiles(w, c3.id).length, 'the kitchen alight');
+  phone.handle(w, p3, { a: 'cancel' });
+  run(w, 1.1);
+  assert.equal(ff.burningTiles(w, c3.id).length, 0, 'given up: out with the call');
+  const { p: p4 } = onShift();
+  const c4 = ff.callAt(w, p4, 'dumpster', S.shops.find((s) => s.dump) || S.shops[3]);
+  assert.ok(ff.burningTiles(w, c4.id).length, 'the dumpster alight');
+  c4.at = w.time - FIRE.callS - 1;   // (nobody came in time)
+  run(w, 0.3);
+  assert.ok(p4.job.call !== c4, 'too late: the call is over');
+  assert.equal(ff.burningTiles(w, c4.id).length, 0, 'and its fire with it');
+  phone.handle(w, p4, { a: 'cancel' });
 });

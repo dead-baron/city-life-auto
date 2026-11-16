@@ -866,7 +866,8 @@ export function findInteraction(world, p) {
   if (p.struggle) return null;   // (fighting an officer off: the struggle bar says what to press - client/hud.js)
   // (the action button there the whole time a break can be had - now, or once the car slows or you've your breath back)
   const brk = ped && ped.cuffed && !ped.dead ? custody.breakable(world, p) : null;
-  if (brk) return { label: brk === 'now' ? 'Make a break for it!' : brk === 'slow' ? 'Make a break for it (when the car slows)' : 'Make a break for it (in a moment)', run: () => { if (custody.breakable(world, p) === 'now') custody.breakOut(world, p); } };
+  // (the words name what the button does: ESCAPE on a phone while the chance is there, WAIT till then - client/touchicons.js)
+  if (brk) return { label: brk === 'now' ? 'Escape - make a break for it!' : brk === 'slow' ? 'Not yet - make a break for it when the car slows' : 'Not yet - make a break for it in a moment', run: () => { if (custody.breakable(world, p) === 'now') custody.breakOut(world, p); } };
   if (ped && !ped.dead && !ped.cuffed && custody.inCell(p)) return cells.interaction(world, p);   // (the bench, the toilet, the bars)
   if (!ped || ped.dead || ped.cuffed || custody.inCell(p)) return null;
   if (ped.sky) return skydive.interaction(world, p);   // (up in the sky: the parachute)

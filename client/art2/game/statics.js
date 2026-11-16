@@ -1081,6 +1081,38 @@ export function sameName(a, b) {
   const p = nameKey(a), q = nameKey(b);
   return !!p && !!q && (p === q || (p.length >= 5 && (' ' + q + ' ').includes(' ' + p + ' ')) || (q.length >= 5 && (' ' + p + ' ').includes(' ' + q + ' ')));
 }
+// One name per front (11-12: OLD TOWN INFIRMARY twice; 11-15: Canvas Savings Bank, FreshHub Grocery along its sections,
+// BANK over the FIRST PIXEL BANK board - the lint's nameTwice): the shop's sign, the portico's lettering (when it fits),
+// the plaques - a later board saying a name again goes; a one-word portico (BANK) that's a word of a board's name too;
+// a portico off its front's edge has no letters. The middle section of a face first.
+const porticoFits = (p) => !!(p && p.text) && Math.min(lineMask(p.text, 'serif').w, lineMask(p.text, 'civic').w) * 2 <= p.w - 8;
+const oneWord = (t) => !nameKey(t).includes(' '), wordOf = (w, t) => (' ' + nameKey(t) + ' ').includes(' ' + nameKey(w) + ' ');
+export function frontNames(spec) {
+  const L = spec.shop && spec.shop.sign && spec.shop.sign.text ? [{ t: spec.shop.sign.text, k: 'sign' }] : [];
+  if (porticoFits(spec.portico)) L.push({ t: spec.portico.text, k: 'portico' });
+  for (const pq of spec.plaques || []) if (pq && pq.text) L.push({ t: pq.text, k: 'plaque' });
+  return L;
+}
+function names(L) {
+  const said = [], dup = (t) => said.some((q) => sameName(q, t));
+  const face = L.flatMap(({ spec: s }) => [s.shop && s.shop.sign && s.shop.sign.text, ...(s.plaques || []).map((q) => q && q.text)]).filter(Boolean);
+  for (const { spec: s, lights } of L) {
+    if (s.portico && s.portico.text && !(s.portico.x >= 0 && s.portico.x + s.portico.w <= s.w)) s.portico = { ...s.portico, text: null };
+    const sg = s.shop && s.shop.sign;
+    if (sg && sg.text) { if (dup(sg.text)) { delete s.shop.sign; if (lights) for (let j = lights.length - 1; j >= 0; j--) if (lights[j][6] === 'sign') lights.splice(j, 1); } else said.push(sg.text); }
+    const pt = porticoFits(s.portico) && s.portico.text;
+    if (pt) { if (dup(pt) || (oneWord(pt) && face.some((t) => wordOf(pt, t)))) s.portico = { ...s.portico, text: null }; else said.push(pt); }
+    if (s.plaques) s.plaques = s.plaques.filter((q) => !q || !q.text || (!dup(q.text) && said.push(q.text)));
+  }
+}
+export function oneName(spec) { names([{ spec }]); return spec; }
+// list: a building's sections [{ s, spec, lights }] -> list, one name along each face
+export function oneNameAcross(list) {
+  const faces = new Map();
+  for (const e of list) { if (!e.spec || e.s.vox || e.s.frame) continue; const k = e.s.ty + e.s.th; let l = faces.get(k); if (!l) faces.set(k, (l = [])); l.push(e); }
+  for (const L of faces.values()) if (L.length > 1) names([...L.filter((e) => e.s.mid), ...L.filter((e) => !e.s.mid)]);
+  return list;
+}
 // a plaque styled: its trade's face and palette when it has one (a clinic's white and green, the fire station's red), its
 // own colours made legible otherwise, in the small face
 function stylePlaque(pq, A, seed) {
@@ -1441,7 +1473,7 @@ function specOf(c, b, A, s, D) {
   if (s.turned) { delete spec.shop; delete spec.portico; Object.assign(spec, { blank: true, doors: [], plaques: [] }); }
   // (one name on a front: a hand plan's shop sign says the building's name, so the trade's own name plaque - a clinic's,
   // a police station's, painted over the door - goes; the owner, 11-12: "OLD TOWN INFIRMARY" twice, one under the other)
-  if (spec.plaques && spec.plaques.length && spec.shop && spec.shop.sign && spec.shop.sign.text) spec.plaques = spec.plaques.filter((pq) => !sameName(pq.text, spec.shop.sign.text));
+  oneName(spec);
   if (spec.plaques) for (const pq of spec.plaques) stylePlaque(pq, A, (b.id * 7 + s.k) | 0);
   unstackSigns(spec);   // (no board over another on the front: buildings.js)
   const capped = streetCap(c, b, s, spec, pitched, lights);
@@ -1570,8 +1602,8 @@ function addBuildings(c, I) {
     const A = archOf(c, b);
     const D = c.dist((b.tx + b.tw / 2) * TILE, (b.ty + b.th / 2) * TILE);
     const secs = sectionsOf(c, b, A);
-    for (const s of secs) {
-      const { spec, kit, lights, up } = specOf(c, b, A, s, D);
+    const built = oneNameAcross(secs.map((s) => ({ s, ...specOf(c, b, A, s, D) })));   // (one name along a front, however many sections it's drawn in)
+    for (const { s, spec, kit, lights, up } of built) {
       const x0 = s.tx * TILE, y1 = (s.ty + s.th) * TILE, w = s.tw * TILE, d = s.th * TILE;
       if (!s.vox && !s.frame && s.south) dressPlan(spec, { id: b.id, k: s.k, st: D.style, tier: D.tier, A, H: buildingH(spec), w, walkIn: !!s.walk });   // (the facade's dressing by the district: facadedress.js)
       let it;

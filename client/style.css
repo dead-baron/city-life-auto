@@ -635,7 +635,6 @@ body:not(.touch) #hud:has(#b-dev.on) #net { display: block; }   /* (the frame ra
 #trainbar.ferry { border-color: var(--info); color: var(--info); }
 #trainbar.warn { border-color: var(--heat); color: var(--heat); }
 #trainbar.custody { border-color: var(--danger); color: var(--danger); }   /* (arrested: server custody.js) */
-#trainbar.custody.brk { border-color: var(--gold); color: var(--gold); animation: brk-pulse 1.2s ease-in-out infinite; }
 #trainbar.custody.fight { border-color: var(--heat); color: var(--heat); animation: brk-pulse .6s ease-in-out infinite; }   /* (fighting an officer off: server struggle.js) */
 #trainbar.fight #tb-fill { background: linear-gradient(90deg, var(--danger), var(--gold) 70%, var(--cream)); transition: width .1s; } #trainbar.fight .rob-bar { width: 140px; height: 10px; }
 @keyframes brk-pulse { 50% { box-shadow: 0 0 14px var(--gold-a); } }
@@ -707,6 +706,12 @@ body.portrait #zone-l { top: 50%; }
 #tbtns #firetog.lit::before { border-color: var(--pad-gold); background: var(--disc-on); }
 #tbtns #firetog.lit .w { color: var(--pad-gold); }
 #tbtns button.pulse.felony { outline-width: 5px; outline-style: double; }
+/* in custody, the moment a break for it can be had (client/hud.js body.escape - server custody.js breakable 'now'): the
+   action button red and beating fast, ESCAPE on it; the prompt's card red on a keyboard or a pad (the owner, 11-15: "the
+   act button could change state to show you have a chance to make a break for it") */
+body.escape #tbtns button[data-b="action"] { outline: 4px solid var(--danger); outline-offset: 2px; animation: pulsebad .45s ease-in-out infinite; box-shadow: inset 0 0 0 4px var(--danger), 0 3px 0 var(--pad-drop); }
+body.escape #tbtns button[data-b="action"] .w { color: var(--danger); }
+body.escape #helpbox { box-shadow: inset 0 0 0 2px var(--danger), var(--pn-drop); animation: pulsebad .45s ease-in-out infinite; }
 #tbtns button.pulse.armed { animation-duration: .4s; }
 #tbtns button[disabled], #tbtns button.dis { opacity: .5; }
 #tbtns :is(.lit, #b-light.lit, #firetog.lit) { box-shadow: inset 0 0 0 4px var(--pad-gold), 0 3px 0 var(--pad-drop); }   /* (a switch that's on: lit gold) */

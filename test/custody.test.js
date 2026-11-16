@@ -6,6 +6,7 @@
 // roads from where you're cuffed (an island), the fade at once and no car at all.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { makeWorld, joinPlayer, teleport } from './helpers.js';
 import { T } from '../shared/constants.js';
 import { IN } from '../shared/input.js';
@@ -39,7 +40,7 @@ test('a break for it from the back seat while the car is stopped: a head start -
     const crew = police.crewOf(w, v);
     assert.ok(until(w, () => crew.every((c) => c.vehId === v.id), 12) && crew.length >= 1, 'the crew aboard');
     // moving: no try (only a stopped car's door can be kicked open)
-    w.time = Math.max(w.time, p.custody.tryAt || 0);
+    w.time = Math.max(w.time, p.custody.tryAt || 0); p.custody.slowTill = 0;   // (pulling away it was slow: that chance gone)
     v.vx = Math.cos(v.a) * 300; v.vy = Math.sin(v.a) * 300;
     assert.ok(!custody.canBreak(p, w), 'not while it\'s moving');
     v.vx = 0; v.vy = 0;
@@ -76,7 +77,7 @@ test('the back seat at 1-2 stars: the action button there the whole ride - too f
   const { p, v } = inTheBack(w, 2);
   const crew = police.crewOf(w, v);
   assert.ok(until(w, () => crew.every((c) => c.vehId === v.id), 12), 'the crew aboard');
-  w.time = Math.max(w.time, p.custody.tryAt || 0);
+  w.time = Math.max(w.time, p.custody.tryAt || 0); p.custody.slowTill = 0;   // (pulling away it was slow: that chance gone)
   v.vx = Math.cos(v.a) * 400; v.vy = Math.sin(v.a) * 400;
   assert.equal(custody.breakable(w, p), 'slow', 'flat out: not yet');
   assert.match(players.findInteraction(w, p).label, /break for it.*slows/i, 'the action button stays (ACT on a phone), saying when');
@@ -98,6 +99,50 @@ test('the back seat at 1-2 stars: the action button there the whole ride - too f
   assert.equal(p.wanted, 2, 'a 2-star escape keeps you on 2 (the gentler police)');
   assert.ok(p.heat >= STAR_HEAT[3] - 12 && p.heat < STAR_HEAT[3], `the heat up near 3 (${Math.round(p.heat)})`);
   assert.deepEqual([1, 2, 3, 4, 5].map(law.escapeStars), [2, 2, 4, 5, 5], 'getting away: a star more, but from 1-2 never past 2');
+});
+
+test('the back seat at 3 stars (the owner, 11-15: "trying to run when the car slows down doesn\'t ever seem to work"): the chance held open a moment, the button says so, and a press in it gets out', () => {
+  const w = makeWorld();
+  const { p, v } = inTheBack(w, 3);
+  const crew = police.crewOf(w, v);
+  assert.ok(until(w, () => crew.every((c) => c.vehId === v.id), 12), 'the crew aboard');
+  w.time = Math.max(w.time, p.custody.tryAt || 0); p.custody.slowTill = 0;   // (pulling away it was slow: that chance gone)
+  const go = (sp) => { v.vx = Math.cos(v.a) * sp; v.vy = Math.sin(v.a) * sp; };
+  go(500);
+  custody.update(w, 0.05);
+  assert.equal(custody.breakable(w, p), 'slow', 'flat out: not yet');
+  assert.match(players.findInteraction(w, p).label, /^not yet.*slows/i, 'WAIT on the action button (client/touchicons.js: the wait kind)');
+  assert.equal(players.buildMe(w, p).custody.brk, 2);
+  // the car slows a moment (a corner, the lights) and is off again: the chance stays open BREAK_CAR.windowS
+  go(BREAK_CAR.speed[3] - 10);
+  custody.update(w, 0.05);
+  go(500);
+  assert.equal(custody.breakable(w, p), 'now', 'the chance, the moment it slowed');
+  assert.match(players.findInteraction(w, p).label, /^escape/i, 'ESCAPE on the action button - red, beating (client/hud.js body.escape)');
+  assert.equal(players.buildMe(w, p).custody.brk, 1, 'the page told: brk 1');
+  w.time += BREAK_CAR.windowS * 0.75;   // (a thumb on a phone, the press a round trip away)
+  assert.equal(custody.breakable(w, p), 'now', 'still open a moment after it sped up again');
+  const r0 = w.rand; w.rand = () => 0;
+  p.inputQ.push({ seq: p.ack + 1, bits: 0, mx: 0, my: 0, aim: 0 }); players.processInputs(w, 0.05);
+  p.inputQ.push({ seq: p.ack + 1, bits: IN.ACTION, mx: 0, my: 0, aim: 0 }); players.processInputs(w, 0.05);
+  w.rand = r0;
+  assert.ok(!p.custody && !p.ped.vehId, 'out of the car');
+  assert.ok(BREAK_CAR.chance[3] >= 0.3 && BREAK_CAR.speed[3] >= 120, `3 stars among the easier police (11-07): a fair kick (${BREAK_CAR.chance[3]}) at a crawl, not only standing still (${BREAK_CAR.speed[3]} px/s)`);
+  // and closed again once the moment's gone
+  const w2 = makeWorld();
+  const b = inTheBack(w2, 3);
+  assert.ok(until(w2, () => police.crewOf(w2, b.v).every((c) => c.vehId === b.v.id), 12));
+  w2.time = Math.max(w2.time, b.p.custody.tryAt || 0); b.p.custody.slowTill = 0;
+  b.v.vx = Math.cos(b.v.a) * 20; b.v.vy = Math.sin(b.v.a) * 20; custody.update(w2, 0.05);
+  b.v.vx = Math.cos(b.v.a) * 500; b.v.vy = Math.sin(b.v.a) * 500;
+  w2.time += BREAK_CAR.windowS + 0.1;
+  assert.equal(custody.breakable(w2, b.p), 'slow', 'closed again after windowS');
+});
+
+test('no custody bar over the screen (the owner, 11-15): the page draws no IN CUSTODY panel - one fading line, and the action button', () => {
+  const src = readFileSync(new URL('../client/hud.js', import.meta.url), 'utf8');
+  assert.ok(!/IN CUSTODY/.test(src), 'no IN CUSTODY bar');
+  assert.ok(/classList\.toggle\('escape'/.test(src), 'the action button\'s escape state');
 });
 
 test('the ride: to the nearest station on its roads, the siren on; stuck for good, a fade to black and the cells', () => {

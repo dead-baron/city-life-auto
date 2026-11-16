@@ -89,7 +89,7 @@ test('the face buttons: FIRE and ROLL symbols while they attack and roll, the ve
   assert.deepEqual(faceOf('cruiser', 'COP CAR'), { word: 'CALL' });
   setHose(true); assert.deepEqual(faceOf('fire', 'HIT'), { word: 'HOSE' }); setHose(false);
   const cases = { 'Enter St. Neon General': 'ENTER', 'Go inside (hide)': 'ENTER', 'Talk to the bartender': 'TALK', 'Buy Coffee ($4)': 'BUY', 'Sell the catch': 'SELL',
-    'Pick up the crate': 'PICK', 'Take a shower': 'WASH', 'Empty the till': 'ROB', 'Make a break for it!': 'RUN', 'Hold to revive Sam': 'REVIVE', 'Sit on the bench': 'SIT',
+    'Pick up the crate': 'PICK', 'Take a shower': 'WASH', 'Empty the till': 'ROB', 'Make a break for it!': 'ESCAPE', 'Escape - make a break for it!': 'ESCAPE', 'Not yet - make a break for it when the car slows': 'WAIT', 'Hold to revive Sam': 'REVIVE', 'Sit on the bench': 'SIT',
     'Get up': 'GET UP', 'Read the plaque': 'READ', 'Board the ferry': 'BOARD', 'Use ATM': 'USE', 'Going inside... (stand still)': 'WAIT', 'Waypoint set': 'ACT', '': 'ACT' };
   for (const [w, v] of Object.entries(cases)) assert.equal(actWord(w), v, w);
   for (const k of Object.keys(KIND_ICON)) assert.ok(KIND_WORD[k] && KIND_WORD[k].length <= WORD_MAX, `${k}: a word of ${WORD_MAX} letters or fewer`);
