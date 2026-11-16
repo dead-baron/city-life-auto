@@ -24213,6 +24213,81 @@ The owner (phone upright): "Online progress saves automatically to this browser"
 held upright the card and the Online frame now stand a line higher, the note under them in its own room
 (client/style.css: #t-foot's bottom leaves the note's line; the note keeps clear of the home bar).
 
+## 2026-11-14 - No knotted junctions: the box's order, room to get out, knots untied
+The owner (20:31, a screenshot): "Looks like traffic jams are still happening" - a city four-way knotted solid, a box
+truck, a delivery van, a dump truck, a long bus and cars wedged across it at all angles, nobody able to move. The
+earlier passes (10-15/17, 11-03, 11-06) fixed ramming and the station jams, not this.
+
+### The harness (test/gridlocksim.js, tools/gridlocksim.mjs)
+World v3, headless. The busy four-way nearest Midtown station, with lights and without (a lane each way, like the
+owner's), a player standing just off its corner (so nothing is cleared away out of sight), and traffic fed into all four roads with a
+heavy mix (the trucks three times as often, buses among them) for ten in-game minutes. It reports how many got across a
+minute, the longest anything stood still in the box, and the longest anything stood stuck in the box or at the head of
+a queue with nothing to wait for (not held for room out, not behind a police car or an ambulance at work, not at a red).
+`--knot` builds the owner's knot in the box (four vehicles off the four roads turning across each other, a queue behind
+each); `--amb` an ambulance at work in a junction's mouth with a flatbed stuck behind it. `--save` / `--load` keep the
+built world in a file between runs for working on traffic (the final numbers below are from the same harness).
+`flock /tmp/cla-heavy.lock node --max-old-space-size=2048 --expose-gc tools/gridlocksim.mjs [--seed 7] [--knot]`.
+
+### What knotted it
+1. **"Go anyway."** junctionClear let a driver waiting at its line into the box after 6 s whatever was crossing it, and
+   into a road backed up past the junction after 20 s. Under heavy traffic everyone at all four lines had waited 6 s:
+   they all went in together and met in the middle.
+2. **A long vehicle turning** sweeps the lanes either side of its way, and nothing kept the others out while it did.
+3. **Nobody to break it.** breakRing only looked for a ring of cars each stopped for the next. In a box, each one is
+   stopped for a different one, and nobody has room behind (their queues are right up to their bumpers). Nothing
+   cleared it while anyone watched, so the knot stood for minutes.
+4. **Two left turns from facing roads at once** meet nose to nose in a box a lane wide each way.
+5. **An ambulance at work** could pull up inside a junction's box.
+
+### What changed (server/systems/junctionbox.js, traffic.js)
+- **The box's books.** Each vehicle that crosses its line is entered in its junction's box: where from, where to, how it
+  turns, whether it's long (`LONG_L` 120 px: the trucks, a bus). One waiting at its line goes in only when nothing in
+  there crosses its way (`conflict`). There's no "go anyway" any more. One already through the crossing, lined up with its
+  road out, holds up only what's going its way.
+- **Who goes first** is whoever came up to their line first and is ready, like an all-way stop. Nobody is shut out for
+  good, and nobody pushes in. Only the first car in each lane counts as waiting.
+- **Room to get out.** It goes in only when its road out has room past the mouth for the whole of it, and for each one
+  in the box already bound that way. Kept waiting 8 s (`EXIT_SWAP_S`), it takes another road out that has room (not a bus or a
+  taxi on its route).
+- **Long vehicles turning** wait for the box to be clear of anything they could catch, and keep it to themselves while
+  they turn.
+- **Knots (`untie`).** When anything in a box has stood still 4 s with something in its way, one vehicle goes first:
+  the leader, the one with the fewest vehicles in its way, all of which can back off. It goes along its own way or,
+  realigned, out by whichever road it can reach from the way it faces. Whatever stands in its way backs straight off
+  out of it, and if that one has no room behind, the car queued behind it backs off first. The rest in the box hold
+  still until the leader is out, then the next goes. A leader stopped by something after all has that vehicle back off
+  out of its way, and one getting nowhere is replaced.
+- **The safety valve.** A driver ready at its line for 12 s whose whole way across the box is clear of everything right
+  now goes (`pathClear`), whatever the box's books say. This covers a car in the box stuck behind a police car, for
+  example.
+- **Back into its lane (e).** A car squeezed out of its lane, nose to nose with the queue coming the other way, edges
+  back over into its own lane (`backToLane`, the sidestep's crawl). Backing off for a knot's leader is straight back.
+- **An ambulance at work** pulls up clear of junction boxes (ems.js parkSpot).
+- **The last resort (d)** is unchanged: a traffic car stood still 50 s and off every player's screen is cleared away
+  (traffic.js manage). The knots above are untied on screen.
+
+### The numbers (the harness, ten in-game minutes, seeds 7 / 3 / 11; before = live main e37858d3)
+| | before | after |
+|---|---|---|
+| with lights, across a minute | 12.3 / 23.1 / 15.4 | 26.8 / 26.5 / 26.6 |
+| with lights, longest stood still in the box | 234 / 65 / 256 s | 4.5 / 7 / 4 s |
+| without lights, across a minute | 6.8 / 9.7 / 10.6 | 25.2 / 33.0 / 31.7 |
+| without lights, longest stood still in the box | 367 / 215 / 230 s | 8 / 5.5 / 11 s |
+| the owner's knot built in the box (no lights / lights) | - | clear in 10.6 / 11.8 s |
+| an ambulance in the mouth, a flatbed stuck behind it (no lights / lights) | - | all through in 20.4 / 30.4 s |
+| tick, mean (traffic's share) | 5.2-6.1 ms (0.70-0.98 ms) | 5.2-5.9 ms (0.71-0.81 ms) |
+
+The waits that are left are further up a road: behind an ambulance or a police car at work, or held for room out of a
+junction whose road out is backed up from the next junction, which is "don't block the box" doing its job.
+
+In the test's own runs (a fresh build: the runs vary a little from one to the next) the longest anything stood in the
+box was 24 s with lights and 24 s without, and the longest stuck at the head of a queue with nothing to wait for was
+18.5 s and 22.5 s, with 24.6 and 19.6 across a minute.
+
+Tests: test/gridlock.test.js (World v3, heavy: the two four-ways ten minutes each, nothing standing in the box or stuck
+at the head of a queue 30 s, 18 a minute and more across; the owner's knot clear in 22 s), test/trafficbox.test.js (the
+knot on today's city). docs/DECISIONS.md: no blocking the box.
 ## 2026-11-14 - Open up the blocks: the big plain footprints become buildings with alleys and courtyards; no big canopies over the doors
 The owner (11-14 20:24, his screenshot: one huge flat grey roof with a row of AC units, the street squeezed above it):
 "There are still so many huge buildings that take up so much space and don't add anything interesting and cover so much
@@ -24422,3 +24497,87 @@ hour, noon and on a rainy night, Market Square by day and night, the Pier Street
 locked frame exactly there (`xy`).
 Tests: test/world3server.test.js (Holly Street's lamps even and iron, the market lanes, terraces and deliveries),
 test/world3world.test.js (the square's 16 stalls, every garland between two posts, its two lanes).
+
+## 2026-11-15 - GET IN by the thumb; signed in looks signed in
+
+**Touch: the vehicle button by the thumb.** The owner's phone shot: "the act button moved really far away when it should
+be near the right joystick". It was GET IN, up the right edge, while ACT's spot over the stick sat empty (ACT only shows
+with something to act on). Now `touchSlots` (shared/touchcontrols.js) moves the vehicle button into ACT's slot whenever
+ACT has nothing: GET IN / GET ON on foot, EXIT / OFF at the wheel or on a bike or horse. With something to act on too,
+ACT keeps the spot and GET IN its own. The colors go by action now, not slot (style.css), so GET IN stays green there.
+test/touchslots.test.js.
+
+**The title card when signed in.** It said SIGN IN to a signed-in owner ("makes it feel like I'm not actually signed in").
+Signed in, the card's button reads ACCOUNT, the note under it "Signed in - your progress is saved to your account.", and
+the panel (titled ACCOUNT) says who you're signed in with, has **Sign out** (two taps; the first says what happens: this
+device starts again as a new guest, the account stays safe and sits in "Switch back to") and puts the sign-in buttons
+under **Switch account**. Guests see what they saw before.
+
+**Name changes: free.** The owner's son couldn't change his name for 26 more days. The owner: free renames for now,
+with a history, and no way to claim and hold names by renaming over and over. So: members wait only the 10 minutes
+between changes everyone has (`USERNAME_GAP_DAYS` 0, server/accounts.js - a 7-day wait is one number away). An account
+holds only the name it has and, for `NAME.holdH` (24) hours, the one it just dropped, so nobody grabs a name the moment
+it's let go to pass as its holder; renaming over and over holds nothing more, since only the last one is held. Each
+account keeps its names before (`acct.names`, the last `NAME.history`), shown on the staff Players page. Admins and the
+owner also have **Let them change their name now** (staff command `namefree`, in the admin log), which lifts the 10
+minutes or any wait set later. test/guestnames.test.js.
+
+## 2026-11-15 - Lying down reads as lying down, whichever way you face
+The owner: "Don't see faceplant in the game correctly." Off-line the faceplant was right sideways and on the diagonals,
+but seen from the game's 35-degree camera a body lying straight up or down the screen reads as someone standing (the
+head over the feet) or as a short stub - and up and down are the headings you face most on a street. The lying poses
+(faceplant, lie down, sleep, push-ups, knocked down on the face or the back, dead) facing straight up or down are now
+drawn turned an eighth, on the diagonal (client/art2/game/peds.js flatDir; the sprite key the same, so one sprite for
+both). The renderer only: the server's heading is unchanged. Test: emotes.
+
+## 2026-11-15 - No DRAFT banner on the legal pages
+The owner, during Google's brand review: take the "DRAFT - not yet reviewed by a lawyer" line off the privacy policy for
+now. It was one banner shared by both pages (server/legal.js), so it's gone from the Privacy Policy and the Terms; the
+wording is unchanged and a lawyer still reviews it before full launch. Test: signin-password.
+
+## 2026-11-15 - 13 and older, under 18 with a parent's permission
+The owner (11-15): an open, easy beta - 13+, under 18 with a parent or guardian's permission, the content described
+plainly, the game itself unchanged. The first-launch gate now reads "I'm 13 or older (under 18: with a parent or
+guardian's permission)" and describes what's in the game (client/account.js; the stored field is still age17, which
+browsers and accounts already hold - it means the age floor was confirmed). The Terms say 13+ and get a "What's in the
+game" paragraph (crime, shooting, cartoon pixel blood, police chases, chat with strangers that has a filter, report,
+block and moderators) and a line for parents on deleting a child's account; the Privacy Policy says it isn't for
+children under 13 and how to tell us; the About page says 13 and older; launch.json and the gate's refusal say 13.
+Tests: signin-password, uiscreens, launch-*.
+
+## 2026-11-15 - Delete account (the player's own), analytics kept longer, no credits on the privacy page
+The owner: "I dont want to make a manual process to delete accounts ... like they hit delete but it is stored on our
+server for a while and we can undelete it for them manually but otherwise it will eventually fully delete on its own".
+- **Delete account** (Settings > Account, at the bottom; two taps, the first says what happens): the session closes
+  (4017) and the character leaves the world at once, as with Start fresh (no ghost, nothing dropped, bounties on their
+  head off, out of their crew - players.js leaveForGood), and the account is marked deleted (accounts.js markDeleted:
+  `acct.deleted = { at, until }`, ACCOUNT.deleteDays = 30 in shared/rules.js) and taken off the news list; nothing else
+  changes yet. Coming back (the same token, or signing in) the title says when it will be erased and offers
+  **RESTORE** (the hello's restore: launch.js login brings it back with everything). Staff can restore it too (the
+  Players page: "deleted" row and "Restore their deleted account" - admin.js undelete, roles.js). Every five minutes
+  (launch.js purgeDeleted) accounts whose days are up are erased (players.js purgeAccount): homes back on the market,
+  cars gone, their name out of other players' contacts, the profile deleted; the admin log notes the delete and the
+  erase. The owner's account can't be deleted this way. Test: acctdelete.
+- **The privacy page** says how Delete account works (and that reports in the review list and the staff audit log keep
+  their lines); the Terms' parents' line points at Delete account first, the contact address only if they can't get in.
+- **Analytics**: the server's daily totals are kept two years (analytics.js DAYS_KEPT, was 90 days); the privacy page
+  says so and that Google Analytics keeps its data 14 months (its retention setting).
+- **Credits** gone from the privacy page: game-icons.net isn't used, and Kenney's input prompt tiles (still the key and
+  pad glyphs) are CC0 - no credit needed; the LICENSE files in the code stay. The Create account note no longer says
+  "(drafts)".
+- Also: launch-auth and launch-review pinned the old age (17) and the refusal codes - updated.
+
+## 2026-11-15 - Another tab took over: the old one stops, PLAY HERE takes it back
+The owner, on his phone: "Playing in another tab" every few seconds - a desktop tab left open kept taking the character
+back. The server already lets the newest connection win (players.js closes the old one with 4000), but the page it
+closed retried every few seconds (in the background too) and took it over again, back and forth.
+- **The page that's taken over stops** (main.js takenOver): no retry timer, and coming back into view doesn't reconnect
+  either (connectFailed off: update.js onVisible). The title says "Playing in another tab or on another device." with a
+  **PLAY HERE** button that takes the character over in turn - so the tab you're playing in is the one that plays.
+- Test: launch-review (4000 doesn't retry; PLAY HERE).
+
+## 2026-11-15 - Account: the earlier characters behind one button
+The owner: "we don't need to have a list of old accounts here, maybe one button". Settings > Account showed a "Switch
+back to ..." button for every character the device played before a sign-in or a code (up to three: a guest the device
+had before signing in, say). Now one button, "Other characters on this device (n)", opens the list with a line saying
+what they are (account.js prevOpen); entries kept without a name read "an earlier character". Test: launch-review2.

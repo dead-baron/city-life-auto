@@ -156,7 +156,7 @@ test('7. no guest limit unless set, its refusal has its own code; the page stops
   const r = L.login(null, {}, '5.5.5.5');
   assert.equal(r.code, 4013);
   const main = read('client/main.js');
-  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014\]\)/);
+  assert.match(main, /const REFUSED = new Set\(\[4009, 4010, 4011, 4012, 4013, 4014, 4017\]\)/);
   assert.match(main, /if \(ev && REFUSED\.has\(ev\.code\)\) \{ refusedAtDoor\(ev\.code\); return; \}/);
   assert.match(main, /if \(S\.refused\) \{/, 'PLAY tries again');
 });
@@ -299,4 +299,14 @@ test('10. the movement audit doesn\'t flag the server\'s own moves (seats, doors
     assert.ok((src.match(/moved\(ped\)/g) || []).length >= n, `${f}.js marks its moves`);
   }
   void fakeConn;
+});
+
+test('another tab or device taking the character over (4000): this page stops - no retrying it back - and PLAY HERE takes it again', () => {
+  const src = read('client/main.js');
+  assert.match(src, /ev\.code === 4000\) \{ takenOver\(\); return; \}/);
+  const body = src.slice(src.indexOf('function takenOver()'), src.indexOf('function scheduleReconnect('));
+  assert.ok(body.length > 0 && !/setTimeout|scheduleReconnect/.test(body), 'no retry timer');
+  assert.match(body, /S\.connectFailed = false/, 'coming back into view doesn\'t reconnect either (update.js onVisible)');
+  assert.match(body, /PLAY HERE/);
+  assert.match(read('server/systems/players.js'), /close\(4000, 'replaced'\)/, 'the newest connection wins on the server');
 });

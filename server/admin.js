@@ -11,6 +11,7 @@
 //   restore { id, item, n }                    -> an item (or a weapon, with n rounds) given back (helper)
 //   kick { id, why } · ban { id, hours (0: for good), why } · unban { id }               (admin)
 //   mute { id, hours } · unmute { id } · strike { id, why } · unstrike { id, i }         (admin)
+//   namefree { id }: lift their username wait                                          (admin)
 //   prison { id, mins, why }                   -> sent to Prison Island for mins (0: let out), no bail, no way over the wall (admin)
 //   reviews · resolve { rid, note }                                                     (admin)
 //   role { id, role: 'admin' | 'helper' | null }                                        (owner)
@@ -193,6 +194,20 @@ export function createAdmin({ accounts, log, mod, store, pageLink = null, now = 
         if (a === 'strike') mod.strike(t.acct, String(msg.why || 'by a moderator').slice(0, 120), p.pid);
         else if (!mod.unstrike(t.acct, msg.i)) return reply(a, false, { err: 'No such strike.' });
         done({ what: a, before: { strikes: before }, after: { strikes: mod.activeStrikes(t.acct), muteUntil: chatData(t.acct).muteUntil || 0 } });
+        return reply(a, true);
+      }
+      case 'undelete': {   // (a deleted account brought back before it's erased: Delete account - the owner, 11-15)
+        const before = t.acct && t.acct.deleted;
+        if (!accounts.restoreDeleted(t.pid)) return reply(a, false, { err: 'Not deleted.' });
+        done({ what: 'undelete', before, after: null });
+        return reply(a, true);
+      }
+      case 'namefree': {   // (a signed-in player's username wait lifted: they can change it now - the owner, 11-15)
+        const before = (t.acct && t.acct.nameAt) || 0;
+        if (t.acct) t.acct.nameAt = 0;
+        t.prof.nameAt = 0;
+        if (t.p) world.notify(t.p, 'You can change your name again now (Settings > Account).', 'good');
+        done({ what: 'namefree', before: { nameAt: before }, after: { nameAt: 0 } });
         return reply(a, true);
       }
       case 'prison': {

@@ -160,6 +160,14 @@ export function createTitle(ctx) {
       $('t-xp').textContent = `Criminal XP ${(me.cexp | 0).toLocaleString('en-US')}`;
       $('t-sam').textContent = `Samaritan ${(me.sam | 0).toLocaleString('en-US')}`;
     }
+    // signed in or a guest (the owner, 11-15: SIGN IN on the card of someone signed in "makes it feel like I'm not
+    // actually signed in"): signed in, the button is ACCOUNT (the panel: sign out, switch account) and the note says
+    // where the progress lives; a guest keeps SIGN IN
+    const as = S.launch && S.launch.acc && S.launch.acc.accountState && S.launch.acc.accountState(), inAcc = !!(as && !as.guest);
+    const sb = $('t-signin'), sl = inAcc ? 'ACCOUNT' : 'SIGN IN';
+    if (sb.textContent !== sl) { sb.textContent = sl; sb.setAttribute('aria-label', inAcc ? 'Your account: sign out or switch' : 'Sign in'); }
+    const nt = inAcc ? 'Signed in - your progress is saved to your account.' : 'Online progress saves automatically to this browser.';
+    if ($('t-note').textContent !== nt) $('t-note').textContent = nt;
     // (the avatar: your own character, drawn by client/portrait.js - loaded the first time there's a look to show - on
     // the card and on CHARACTER, in place of the person icon)
     const lk = me && S.looks && S.looks.cur;

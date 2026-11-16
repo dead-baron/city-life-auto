@@ -395,7 +395,7 @@ export function createAuthHttp(opts) {
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return true; }
     try {
       if (path === '/launch.json') {
-        sendJSON(res, 200, { providers: providers(), passkeys: true, guests: true, resets: resetsOn(L), password: { min: ACCOUNT.pwMin, max: ACCOUNT.pwMax }, ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, requireAge: !!L.requireAge, age: 17, discord: L.discordInvite || '' }, { 'cache-control': 'max-age=60' });
+        sendJSON(res, 200, { providers: providers(), passkeys: true, guests: true, resets: resetsOn(L), password: { min: ACCOUNT.pwMin, max: ACCOUNT.pwMax }, ga: L.gaMeasurementId || '', devOpen: !!L.devOpen, requireAge: !!L.requireAge, age: 13, discord: L.discordInvite || '' }, { 'cache-control': 'max-age=60' });
         return true;
       }
       const m = path.match(/^\/auth\/(google|discord)\/(start|callback)$/);

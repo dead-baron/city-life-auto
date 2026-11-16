@@ -22,7 +22,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - A season ends only when the owner ends it (admin `season` command), never by itself. (11-08; DEVLOG 11-08)
 - Season length about 10 weeks. (11-07; PROGRESSION.md)
 - Beta gift: "Founding Citizen" jacket + gold "Beta" plate, tied to the account, survives the wipe. (11-07; PROGRESSION.md)
-- The game is rated 17+: a 17+ gate at first launch (`CLA_REQUIRE_AGE`). (11-04; DEVLOG 11-04, chat) - settles launch-plan's 13+/17+ question.
+- The game is for players 13+ (under 18 with a parent or guardian's permission): the age gate at first launch says so (`CLA_REQUIRE_AGE`; the stored field keeps its name age17), the Terms describe the content plainly (crime, shooting, cartoon blood, chases, chat with strangers) with a parents' contact line, the Privacy Policy says not for under-13s. An open, easy beta: no new gates, game content unchanged; age checks and platform rules revisited before full launch. The Discord is 13+ too, no age-restricted channels for now. (11-15; chat, DEVLOG 11-15) - SUPERSEDES "rated 17+" (11-04).
 - No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
 - Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
 - Bug reporter: "Report a bug" in pause menu + phone (text, optional screenshot, location, device, build, fps, errors); stored on server, listed at /admin; optional Discord webhook. (11-14; queue)
@@ -61,6 +61,13 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No postal address yet: no news emails until there is one (a PO box or a virtual mailbox, not his home); password resets and confirm emails don't need one. (11-14; chat)
 - The player Discord: https://discord.gg/zuVSkbfjg (never expires), linked from the title screen (a small button), Settings and the About page; bug reports post to its #bug-reports. Server plan: Claude Doc "City Life Auto Discord server plan". (11-15; chat)
 - The title screen has no neon sign sound; its music is fetched ahead so it starts on the first tap, click or key (browsers allow no sound before one). (11-15; chat)
+- Touch: the right thumb's spot over the aim stick never sits empty - with nothing to act on, the vehicle button (GET IN / GET ON / EXIT / OFF) takes ACT's place there, in its own green; frequent buttons stay round the stick, rare ones at the edges. (11-15; chat)
+- Signed in, the title card says ACCOUNT (not SIGN IN) and the note says progress is saved to the account; the panel offers Sign out (this device becomes a new guest; the account kept in Switch back to) and Switch account. (11-15; chat)
+- The Privacy Policy and the Terms show no "DRAFT - not yet reviewed by a lawyer" banner for now (Google's brand review); a lawyer still looks them over before full launch. (11-15; DEVLOG 11-15)
+- Players delete their own account (Settings > Account > Delete account, two taps): out of the game at once, restorable for ACCOUNT.deleteDays (30) - RESTORE on the title, or staff's undelete - then erased automatically. No deleting by email; the contact address stays only as a fallback for parents who can't get in. The owner's account can't be deleted this way. (11-15; chat, DEVLOG 11-15)
+- The server's analytics daily totals are kept two years (was 90 days); the privacy page says GA keeps 14 months (the owner sets GA's retention to 14 months). (11-15; chat)
+- No Credits section on the privacy page (game-icons.net isn't used; Kenney's prompt tiles are CC0, credit not required - their LICENSE files stay in the code). (11-15; chat)
+- Usernames: free renames for everyone (only the 10 minutes between changes; was 30 days for members - a 7-day wait maybe later, `USERNAME_GAP_DAYS`). No hoarding: you hold only the name you have, plus the one you just dropped for 24 hours (nobody grabs it to pass as you). Every account keeps its name history, shown to staff on the Players page; admins and the owner also have "Let them change their name now". (11-15; chat)
 - The owner's account may use the game's reserved names (DeadBaron); everyone else can't. (11-14; chat)
 - Guests can't lead or create crews or post bounties - enforced once a sign-in provider is enabled. (11-04; decisions-11-04)
 - An email sign-in link attaches a sign-in to an account only in the browser that asked for it. (11-04; decisions-11-04) - SUPERSEDED by email+password, magic links removed (11-12).
@@ -256,6 +263,7 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - No skipping a taxi or rideshare ride. (10-06; DESIGN-NOTES.md)
 - Traffic: pedestrian hits stay rare (about once per 110 h of driving); cars on minor roads wait at the line; a working ambulance is a blocker cars go around. (11-04; decisions-11-04)
 - No traffic jam at arrival: NPC traffic never drives into station forecourt loops. (11-06; decisions-11-06)
+- No blocking the box: NPC traffic goes into a junction only when nothing in it crosses its way and its road out has room for it; whoever waited first goes first; a long vehicle turning has the box to itself; a knot in a box is untied on screen (one goes, the ones in its way back off) - no more "go anyway" after a wait. (11-14; DEVLOG 11-14)
 
 ## Economy, jobs and progression
 - The progression plan approved as written, every default included: 3 careers x 8 ranks, "What's next", daily/weekly goals, contacts, extraction payouts, the event calendar, district reputation, sinks, seasons. (11-07; PROGRESSION.md)

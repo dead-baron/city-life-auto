@@ -522,6 +522,30 @@ export function wipeAccount(world, p) {
   return false;
 }
 
+// Delete account (the owner, 11-15; server/accounts.js markDeleted): out of the world at once, as with Start fresh - no
+// ghost, nothing dropped, the officers on them let go, the bounties on their head off, out of their crew - but the
+// profile kept as it is (homes, cars, progress) for ACCOUNT.deleteDays, so RESTORE gives everything back.
+export function leaveForGood(world, p) {
+  if (p.devMode) devmode.exit(world, p, true);
+  struggle.onLeave(world, p); custody.onLeave(world, p);
+  revive.clearDown(world, p);
+  bounties.onWipe(world, p);
+  crews.leave(world, p);
+  p.conn = null; p.ghostUntil = 0; p.logoff = null;
+  if (world.players.get(p.pid) === p) finalizeLogout(world, p, false);
+}
+// ...and when its time is up (launch.js, every few minutes): erased for good - its homes back on the market, its cars
+// gone, its name out of everyone's contacts, the profile deleted (the next save leaves it out: file-store.js).
+export function purgeAccount(world, prof) {
+  const pid = prof.pid, on = world.players.get(pid);
+  if (on) leaveForGood(world, on);
+  for (const [id, owner] of [...(world.homeOwner || [])]) if (owner === pid) world.homeOwner.delete(id);
+  for (const v of [...world.entities.values()]) if (v.kind === K.VEH && v.owner === pid) { if (!v.seats.some((s) => s)) world.remove(v); else { v.owner = null; v.ownerName = null; v.despawnable = true; v.descVer = (v.descVer || 0) + 1; } }
+  starter.forget(world, pid);
+  for (const q of store.all()) { const c = q.acct && q.acct.chat; if (c && c.contacts && c.contacts[pid]) delete c.contacts[pid]; }
+  store.remove(pid);
+}
+
 // A season's end (seasons.js endSeason, the owner's command): out of the world at once, as with Start fresh - no ghost,
 // nothing dropped, the officers on them let go, the bounties on their head off - and the page back at the title with
 // why (4009: no reconnecting by itself; PLAY brings them into the new season). The profile's reset is the season's.

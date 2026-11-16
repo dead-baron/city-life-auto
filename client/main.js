@@ -139,14 +139,14 @@ try { S.token = localStorage.getItem(TOKEN_KEY); } catch { S.token = null; }
 // (client/account.js, chat.js, analytics.js, errors.js) - loaded once the page is up, never in its first load. launchCall
 // hands it what happens: the server's messages for it, play pressed, in the city, a perf report, an error, the chat key.
 let launchP = null;
-function launchHello() {   // (in the hello: this browser's device marker, and whether the 17+ gate was confirmed here)
+function launchHello() {   // (in the hello: this browser's device marker, and whether the age gate was confirmed here)
   let dm = null, age17 = false;
   try {
     dm = localStorage.getItem('cla.dm');
     if (!dm || !/^[a-f0-9]{32}$/.test(dm)) { const b = new Uint8Array(16); crypto.getRandomValues(b); dm = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); localStorage.setItem('cla.dm', dm); }
     age17 = !!(JSON.parse(localStorage.getItem('cla.gate') || 'null') || {}).age17;
   } catch { /* storage blocked */ }
-  return { dm, age17 };
+  return { dm, age17, restore: !!S.restore };
 }
 function launchCall(k, a) {
   if (S.practice) return;
@@ -164,7 +164,7 @@ function launchCall(k, a) {
       openApp: () => openHub('phone', 'msgs'),
     });
     er.init({ send: (m) => { if (!S.ws || S.ws.readyState !== 1) return false; send(m); return true; }, build: () => myBuild().v, note: errNote, analytics: ga });
-    // (noGate: the title shows the 17+ gate itself, in its own slot, before the first PLAY - withGate)
+    // (noGate: the title shows the age gate itself, in its own slot, before the first PLAY - withGate)
     acc.boot({ send, toast, serverUrl, analytics: ga, noGate: true, token: () => S.token, setToken: (t) => { S.token = t; try { localStorage.setItem(TOKEN_KEY, t); } catch { /* private mode */ } } });
     S.launch = { acc, ga, chat, er };
     acc.launchInfo().then((i) => discordLinks(i && i.discord)).catch(() => {});
@@ -208,8 +208,9 @@ function launchPad() {
 }
 // Refused at the door (server/launch.js login, admin.js kick): no reconnecting on these - the reason stays on the title,
 // and PLAY tries again. 4009 kicked, 4010 banned, 4011 the age gate, 4012 moved to another device, 4013 too many new
-// guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest).
-const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014]);
+// guests from this network, 4014 signed out on this device (the token goes: PLAY plays as a new guest), 4017 a deleted
+// account (RESTORE brings it back: the hello's restore - server/launch.js login).
+const REFUSED = new Set([4009, 4010, 4011, 4012, 4013, 4014, 4017]);
 function refusedAtDoor(code) {
   clearTimeout(S.reconnectT);
   S.ws = null; S.welcomed = false; S.refused = code;
@@ -219,8 +220,14 @@ function refusedAtDoor(code) {
   $('hud').classList.add('hidden');
   $('t-resume').classList.add('hidden');
   $('play').disabled = false;
-  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 17 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
-  $('t-status').textContent = `${why} ${code === 4010 ? '' : 'Press PLAY to try again.'}`.trim();
+  const why = (code !== 4011 && S.refusedWhy) || ({ 4009: 'You were kicked.', 4010: 'This account is banned.', 4011: 'Confirm you\'re 13 or older first.', 4012: 'This character moved to another device.', 4013: 'Too many new characters from your network this hour.', 4014: 'You were signed out on this device.' })[code];
+  $('t-status').textContent = `${why} ${code === 4010 || code === 4017 ? '' : 'Press PLAY to try again.'}`.trim();
+  if (code === 4017) {   // (Delete account's grace days: RESTORE - the same connection, asking for the account back)
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = 'RESTORE'; b.className = 't-restore';
+    b.onclick = () => { S.restore = true; playGo(); };
+    $('t-status').append(' ', b);
+  }
   S.playing = false;
 }
 
@@ -282,7 +289,7 @@ function connect() {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
     onText(m);
   };
-  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } if (ev && ev.code === 4016) { loggedOff(S.offSummary); return; } scheduleReconnect(ev && ev.code === 4000 ? 'Playing in another tab' : 'Connection lost', ev && ev.code === 4000); };   // (4000: another tab took over - the title, as before)
+  ws.onclose = (ev) => { if (S.ws !== ws) return; if (ev && ev.code === 4006) { idleOut(); return; } if (ev && REFUSED.has(ev.code)) { refusedAtDoor(ev.code); return; } if (ev && ev.code === 4016) { loggedOff(S.offSummary); return; } if (ev && ev.code === 4000) { takenOver(); return; } scheduleReconnect('Connection lost'); };
   ws.onerror = () => {};
 }
 
@@ -320,6 +327,23 @@ function idleOut() {
   const b = $('play');
   b.disabled = false; b.textContent = 'RECONNECT';
   b.onclick = () => location.reload();
+}
+// Another tab or device took this character over (server players.js: the newest connection wins, the old one closes with
+// 4000). This page stops here - no retrying, which took the character back every few seconds while the other was played
+// (the owner, 11-15) - and PLAY HERE takes it over in turn. connectFailed off: coming back into view doesn't either.
+function takenOver() {
+  clearTimeout(S.reconnectT);
+  S.ws = null; S.welcomed = false; S.connectFailed = false; S.refusedWhy = null; S.lostAt = 0;
+  reconnecting(false);
+  $('title').classList.remove('hidden');
+  $('hud').classList.add('hidden');
+  $('t-resume').classList.add('hidden');
+  $('play').disabled = true;
+  $('t-status').textContent = 'Playing in another tab or on another device.';
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = 'PLAY HERE'; b.className = 't-restore';
+  b.onclick = () => { b.remove(); $('t-status').textContent = 'Connecting...'; S.reconnectIn = 1000; connect(); };
+  $('t-status').append(' ', b);
 }
 function scheduleReconnect(why, toTitle = false) {
   if (S.practice) return;
@@ -398,7 +422,7 @@ function onText(m) {
       else if (worldChanged(m)) break;   // (the server runs another world than the one this page asked its city worker for)
       else if (holdForCity(m)) break;   // (the city is still being built: this and what follows wait for it)
       try { localStorage.setItem('cla.seed', String(m.seed >>> 0)); } catch { /* storage blocked */ }
-      S.welcomed = true; S.pid = m.pid; S.dev = !!m.dev;
+      S.welcomed = true; S.restore = false; S.pid = m.pid; S.dev = !!m.dev;
       S.day = Number(m.day) || 0; S.snapLoop = undefined;   // (the day: the server's count of the loop's turns; onBinary counts on)
       if (!m.practice) S.everConnected = true;
       if (m.token && !m.practice) { S.token = m.token; try { localStorage.setItem(TOKEN_KEY, m.token); } catch { /* private mode */ } }
@@ -504,6 +528,7 @@ function onText(m) {
     case 'full': $('t-status').textContent = `City is full (${m.max} players). Retrying soon...`; break;
     case 'build': noteServerBuild(m.v, m.at); break; // a new build went live: update this page (client/update.js)
     case 'wiped': freshDone(m.keep); break;   // Start fresh: the character is gone (server players.js wipeAccount)
+    case 'acctdeleted': S.ws = null; location.replace(location.pathname + location.search); break;   // (Delete account: back to the title, which says it's deleted and offers RESTORE - refusedAtDoor 4017)
     case 'home': (S.homeP ||= import('./render/homeview.js')).then((mod) => mod.onMsg(S, m)).catch((e) => console.warn('[home]', e)); break;   // inside your home: its rooms (H62: server/systems/homeinside.js)
     case 'soc': (S.socP ||= import('./carsoccer.js')).then((mod) => mod.onMsg(S, m)).catch((e) => { S.socP = null; console.warn('[soc]', e); }); break;   // car soccer at an arena near you (server carsoccer.js)
     case 'fires': S.fires = m; fireJob(); break;
@@ -1639,7 +1664,7 @@ $('s-signin').onclick = () => openSignIn();
 // ---- the sign-in panel and the first-launch gate: slots for the launch work (client/account.js) ----------------------
 // The launch code hands its screens over with setAccountUi({ signIn(el, close), gate(el, done), gateNeeded() }):
 //   signIn(el, close)  fills the SIGN IN panel's body (#signin-body: Guest / email and password / Google / Discord / passkey);
-//   gate(el, done)     fills the first-launch gate (#gate-body: the 17+ confirmation and the analytics choice) and calls
+//   gate(el, done)     fills the first-launch gate (#gate-body: the 13+ confirmation and the analytics choice) and calls
 //                      done() once it's answered; gateNeeded() says whether it's still to be answered in this browser;
 //   chat(el), legal(el), news(el) fill Settings > Chat (#s-chatbox: the channel toggles), Settings > Legal (#s-legalbox:
 //                      the terms and the privacy policy open) and Settings > Account's game news by email (#s-newsbox).
@@ -1656,6 +1681,8 @@ const SIGNIN_WAYS = [['guest', 'Guest', 'playing now: saved in this browser'], [
 function openSignIn() {
   const body = $('signin-body');
   if (topOverlay() !== 'signin') openOverlay('signin');
+  const as = S.launch && S.launch.acc && S.launch.acc.accountState && S.launch.acc.accountState();
+  $('signin-h').textContent = as && !as.guest ? 'ACCOUNT' : 'SIGN IN';   // (signed in: the panel is your account's - sign out, switch)
   if (accountUi && accountUi.signIn) { accountUi.signIn(body, () => closeOverlay('signin')); ovFocus = startFocus(); focusOverlay(); return; }
   body.innerHTML = '<p class="msub">Sign-in is coming soon. Until then your character lives in this browser - Settings › Account has a transfer code to move it to another device.</p>'
     + `<div class="m-opts">${SIGNIN_WAYS.map(([k, n, note]) => `<button class="opt" data-way="${k}" disabled><span class="t">${n}</span><span class="note">${note || 'coming soon'}</span></button>`).join('')}</div>`;
@@ -1672,7 +1699,7 @@ for (const b of document.querySelectorAll('.overlay [data-back]')) b.onclick = (
 
 initInput(canvas, {
   onKey(k) {
-    if (document.querySelector('[data-cla-modal]')) return;   // (the 17+ gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
+    if (document.querySelector('[data-cla-modal]')) return;   // (the age gate, a sign-in question, the account panel: the keys are theirs, not the title's - Enter used to press PLAY under the gate)
     if (k === 'F2' || k === 'F4' || k === 'F8') { cine(k); return; }   // (the cinematic mode: client/director.js)
     if (DIR && !topOverlay() && DIR.key(k, true)) return;
     if (S.spec && S.spec.on && !topOverlay() && specKey(k)) return;

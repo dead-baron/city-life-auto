@@ -1,7 +1,7 @@
 // Accounts on the page (the launch foundation; the server does the deciding: server/launch.js, authhttp.js). Loaded
 // after the page is up (main.js launchCall), never at startup. What the UI's next stage wires into the title screen,
 // settings and the phone:
-//   boot(ctx)               the first-launch gate (17+ and the analytics choice), a sign-in coming back (#cla_login),
+//   boot(ctx)               the first-launch gate (13+ and the analytics choice), a sign-in coming back (#cla_login),
 //                           then Google Analytics if it was accepted (client/analytics.js)
 //   gateNeeded() / showGate(onDone) / gate() / setConsent('all' | 'essential')
 //   launchInfo()            what the server has switched on (/launch.json: providers, passkeys, the GA id)
@@ -51,7 +51,8 @@ export function deviceMarker() {
   return d;
 }
 
-// ---- the first-launch gate: 17+ and the analytics choice, kept in this browser ----
+// ---- the first-launch gate: 13+ (under 18 with a parent's permission - the owner, 11-15; was 17+) and the analytics
+// choice, kept in this browser. The field is still called age17 (stored in browsers and accounts): it means the age floor was confirmed ----
 export function gate() { try { return JSON.parse(ls.get(GATE_KEY) || 'null'); } catch { return null; } }
 export const gateNeeded = () => { const g = gate(); return !g || !g.age17 || !g.consent; };
 export function setConsent(v) {
@@ -127,8 +128,8 @@ export function showGate(onDone, { into = null } = {}) {
   const g = gate() || {};
   const ov = el(`<div style="${into ? '' : css}" role="dialog" aria-modal="${into ? 'false' : 'true'}" data-cla-modal="1"><div style="${box}">
     <h2 style="margin:0 0 8px">Before you play</h2>
-    <p>City Life Auto has mature themes: crime, violence, and online play with other people that isn't rated. Never share personal information in chat.</p>
-    <label style="display:block;margin:10px 0"><input type="checkbox" id="g-age" ${g.age17 ? 'checked' : ''}> I'm 17 or older</label>
+    <p>City Life Auto has crime, shooting, cartoon blood and police chases, and online play and chat with other players who are strangers. Never share personal information in chat.</p>
+    <label style="display:block;margin:10px 0"><input type="checkbox" id="g-age" ${g.age17 ? 'checked' : ''}> I'm 13 or older (under 18: with a parent or guardian's permission)</label>
     <p style="margin:12px 0 4px">We'd like to use Google Analytics to see how people find and play the game. Essential only keeps it off.</p>
     <div><button id="g-all" style="${btn}">Accept</button><button id="g-ess" style="${btn2}">Essential only</button></div>
     <p id="g-msg" style="color:#ff8a80;min-height:1.2em;margin:8px 0 0"></p></div></div>`);
@@ -136,7 +137,7 @@ export function showGate(onDone, { into = null } = {}) {
   modals.push(ov); padIdx = 0;
   keyboardDialog(ov);
   const go = (consent) => {
-    if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 17 or older to play.'; return; }
+    if (!ov.querySelector('#g-age').checked) { ov.querySelector('#g-msg').textContent = 'You need to be 13 or older to play.'; return; }
     const v = { age17: g.age17 || Date.now(), consent, at: Date.now(), v: 1 };
     ls.set(GATE_KEY, JSON.stringify(v));
     closeModal(ov);
@@ -227,6 +228,19 @@ function takeToken(t) {
     ls.set(PREV_KEY, old);
   }
   C.setToken(t);
+}
+// Sign out (the owner, 11-15: "an option to sign out or switch accounts"): this page forgets the account - kept in the
+// list above, so "Switch back to" or signing in again brings it back - and starts again as a new guest
+export function signOutHere() {
+  const old = C.token();
+  if (old) {
+    let list = [];
+    try { list = JSON.parse(ls.get(PREVS_KEY) || '[]'); } catch { list = []; }
+    ls.set(PREVS_KEY, JSON.stringify(keepPrev(list, { token: old, pid: (state && state.id) || undefined, name: (state && state.name) || 'your account', at: Date.now() })));
+    ls.set(PREV_KEY, old);
+  }
+  try { localStorage.removeItem(TOKEN_KEY); } catch { /* storage blocked */ }
+  location.reload();
 }
 // back to one of them (the one played now joins the list in its place)
 export function switchBack(i) {
@@ -347,14 +361,18 @@ const PROV = {
 };
 const provBase = 'display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin:6px 0 0;padding:10px 12px;border-radius:6px;font:inherit;font-weight:600;cursor:pointer';
 const provBtn = (p, attr, label) => `<button ${attr} class="a-prov ${(PROV[p] || {}).cls || ''}" style="${provBase};${(PROV[p] || {}).style || ''}">${(PROV[p] || {}).icon || ''}<span>${label}</span></button>`;
+let outAsk = false, delAsk = false, prevOpen = false;
 function renderPanel() {
   const s = state || {}, pr = (info && info.providers) || s.providers || {};
   const linked = new Set(s.logins || []), on = Object.keys(NAMES).filter((p) => p !== 'passkey' && p !== 'password' && pr[p]);
   const pwOn = !!pr.password, min = (info && info.password && info.password.min) || 10;
-  const inner = panel.querySelector('#a-body');
+  const inner = panel.querySelector('#a-body'), prevs = previousCharacters();
   const legalUrl = (k) => `${httpBase()}/legal/${k}`;
   inner.innerHTML = `
-    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : 'account'}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    <p><b>${esc(s.name || 'You')}</b> · ${s.guest ? 'guest (progress saved on this device)' : `signed in${linked.size ? ` with ${[...linked].map((p) => NAMES[p] || p).join(', ')}` : ''}`}${s.role ? ` · <b>${esc(s.role)}</b>` : ''}${s.email ? ` · email${s.verified ? ' ✓' : ' (not confirmed yet)'}` : ''}</p>
+    ${s.guest ? '' : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 6px"><button type="button" id="a-out" style="${btn2}">${outAsk ? 'Sure? Sign out' : 'Sign out'}</button></div>
+    <p style="font-size:13px;color:#9aa0aa;margin:0 0 4px">${outAsk ? 'This device starts again as a new guest. Your account stays safe: sign in again any time.' : 'Your progress is saved to your account, on any device you sign in on.'}</p>
+    <p style="margin:14px 0 2px">Switch account:</p>`}
     ${on.length || passkeysWork() ? `<div class="a-provs">${on.map((p) => provBtn(p, `data-in="${p}"`, `Continue with ${NAMES[p]}`)).join('')}${passkeysWork() ? `<button id="a-pks" class="a-prov" style="${provBase};${btn2}">Sign in with a passkey</button>` : ''}</div>
     ${pwOn ? '<p class="a-or" style="text-align:center;color:#9aa0aa;margin:12px 0 4px">or use your email</p>' : ''}` : ''}
     ${pwOn ? `<div style="display:flex;margin:4px 0 8px;border-bottom:1px solid #333"><button type="button" data-tab="in" aria-selected="${pwTab === 'in'}" style="${tab(pwTab === 'in')}">Sign in</button><button type="button" data-tab="up" aria-selected="${pwTab === 'up'}" style="${tab(pwTab === 'up')}">Create account</button></div>
@@ -370,18 +388,21 @@ function renderPanel() {
       <label>The same again<input id="a-upc" type="password" autocomplete="new-password" minlength="${min}" required style="${inp}"></label>
       <label style="display:flex;gap:8px;align-items:center;margin:2px 0 8px"><input id="a-news" type="checkbox"> Email me game news and updates</label>
       <button id="a-upgo" style="${btn};width:100%;margin:2px 0 0">Create account</button>
-      <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept (drafts).</p>
+      <p style="font-size:13px;color:#9aa0aa;margin:6px 0 0">Making an account means you accept the <a href="${legalUrl('terms')}" target="_blank" rel="noopener" style="color:#8cc8ff">Terms</a>; the <a href="${legalUrl('privacy')}" target="_blank" rel="noopener" style="color:#8cc8ff">Privacy Policy</a> says what's kept.</p>
     </form>` : ''}
     ${on.length || passkeysWork() ? `<p style="margin:14px 0 2px">Link to this account (${s.guest ? 'keeps this character’s progress on every device' : 'another way in'}):</p>
     <div class="a-links">${on.map((p) => `<button data-link="${p}" class="a-linkb" style="${btn2};display:inline-flex;align-items:center;gap:8px">${(PROV[p] || {}).icon || ''}${linked.has(p) ? `${NAMES[p]} linked ✓` : `Link ${NAMES[p]}`}</button>`).join('')}${passkeysWork() ? `<button id="a-pk" style="${btn2}">${s.passkeys ? `Passkey (${s.passkeys}) - add one` : 'Add a passkey'}</button>` : ''}</div>` : ''}
     ${pwOn && !s.email ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0 0">Email and password: Create account asks whether to link it to ${s.guest ? 'this character' : 'this account'}.</p>` : ''}
     ${s.canRename ? `<p style="margin:12px 0 2px">${s.guest ? 'Name' : 'Username'}${s.renameIn ? ` (next change in ${Math.ceil(s.renameIn / 86400e3)} days)` : ''}${s.guest ? ' <small style="color:#9aa0aa">(sign in to keep it yours)</small>' : ''}:</p><input id="a-name" maxlength="16" value="${esc(s.name || '')}" style="padding:7px"> <button id="a-namego" style="${btn}">Save</button>` : ''}
-    ${previousCharacters().map((p, i) => `<div><button data-back="${i}" style="${btn2}">Switch back to ${esc(p.name)}</button></div>`).join('')}
+    ${prevs.length ? `<p style="margin:12px 0 2px"><button type="button" id="a-prevs" style="${btn2}">Other characters on this device (${prevs.length}) ${prevOpen ? '▴' : '▾'}</button></p>
+    ${prevOpen ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0">Characters this device played before you signed in or used a code.</p>${prevs.map((p, i) => `<div><button data-back="${i}" style="${btn2}">Switch back to ${esc(p.name === 'your previous character' || p.name === 'your account' ? 'an earlier character' : p.name)}</button></div>`).join('')}` : ''}` : ''}
     <p style="margin:12px 0 2px">Move to another device:</p><button id="a-xfer" style="${btn2}">Make a transfer code</button> <code id="a-code" style="font-size:18px;margin-left:6px"></code>
     <div style="margin-top:6px"><input id="a-xin" placeholder="ABCDE-FGHJK" style="padding:7px;width:9em;text-transform:uppercase"> <button id="a-xuse" style="${btn2}">Use a code</button></div>
     ${s.claim ? `<p style="margin:12px 0 2px">Claim ownership (the code in the server log):</p><input id="a-claim" style="padding:7px"> <button id="a-claimgo" style="${btn2}">Claim</button>` : ''}
     ${s.role ? `<p style="margin:12px 0 2px">Staff tools:</p><button data-page="players" style="${btn2}">Players</button>${s.role === 'owner' ? `<button data-page="dashboard" style="${btn2}">Dashboard</button><button data-page="log" style="${btn2}">Admin log</button><button data-page="news" style="${btn2}">News list</button>` : ''}${s.role !== 'helper' ? `<button data-page="reviews" style="${btn2}">Review list</button><button data-page="bugs" style="${btn2}">Bug reports</button>` : ''}` : ''}
     ${s.id ? `<p style="margin:12px 0 0;font-size:14px;color:#9aa0aa">Account id: <code id="a-id" style="user-select:all">${esc(s.id)}</code> <button type="button" id="a-idcopy" class="a-link" style="${linkBtn}">Copy</button></p>` : ''}
+    ${s.deleteDays ? `<p style="margin:14px 0 2px">Delete account:</p><button type="button" id="a-del" style="${btn2}${delAsk ? ';color:#ff8a80;border-color:#ff8a80' : ''}">${delAsk ? 'Sure? Delete my account' : 'Delete account'}</button>
+    ${delAsk ? `<p style="font-size:13px;color:#9aa0aa;margin:4px 0 0">Your account and character leave the game now. For ${s.deleteDays} days you can change your mind: open the game and press RESTORE. After that they're erased for good.</p>` : ''}` : ''}
     <p id="a-msg" style="min-height:1.2em;margin:10px 0 0;color:#ffd27f"></p>`;
   const msg = (t) => { inner.querySelector('#a-msg').textContent = t; };
   const tryIt = (f) => async () => { try { const r = await f(); if (typeof r === 'string') msg(r); } catch (e) { msg(e.message || String(e)); } };
@@ -421,6 +442,13 @@ function renderPanel() {
   onc('#a-xuse', async () => { await useTransferCode(inner.querySelector('#a-xin').value); location.reload(); return 'Moving...'; });
   onc('#a-claimgo', async () => { const r = await claimOwner(inner.querySelector('#a-claim').value); return r.ok ? 'You are the owner.' : r.err; });
   for (const b of inner.querySelectorAll('[data-back]')) b.onclick = () => switchBack(Number(b.dataset.back));
+  const pv = inner.querySelector('#a-prevs');   // (one button, the list behind it - the owner, 11-15: "we don't need so many options here")
+  if (pv) pv.onclick = () => { prevOpen = !prevOpen; renderPanel(); };
+  const out = inner.querySelector('#a-out');
+  if (out) out.onclick = () => { if (outAsk) { outAsk = false; signOutHere(); } else { outAsk = true; renderPanel(); } };   // (two taps: the first says what happens)
+  // Delete account (the owner, 11-15: players delete their own; kept deleteDays for RESTORE - server/accounts.js): two taps
+  const del = inner.querySelector('#a-del');
+  if (del) del.onclick = () => { if (!delAsk) { delAsk = true; renderPanel(); return; } delAsk = false; if (C) C.send({ t: 'delacct' }); msg('Deleting...'); };
   for (const b of inner.querySelectorAll('[data-page]')) b.onclick = tryIt(async () => { const r = await staffPage(b.dataset.page); return r.ok ? '' : r.err; });
 }
 

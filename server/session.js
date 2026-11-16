@@ -78,7 +78,7 @@ export function createSession(world, conn, opts) {
         const online = [...world.players.values()].filter((p) => p.conn).length;
         if (online >= opts.maxPlayers) { conn.sendJSON({ t: 'full', max: opts.maxPlayers }); conn.close(4001, 'full'); return; }
         const res = opts.login(msg.token, msg);
-        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 17 } : { t: 'kicked', reason: res.refused, code: res.code }); conn.close(res.code || 4003, 'refused'); return; }
+        if (res.refused) { conn.sendJSON(res.refused === 'agegate' ? { t: 'agegate', age: 13 } : { t: 'kicked', reason: res.refused, code: res.code, until: res.until }); conn.close(res.code || 4003, 'refused'); return; }
         const { profile, token } = res;
         myToken = token;
         // build / built: the build this server runs - a page on an older one reloads into it (client/update.js)
@@ -165,6 +165,18 @@ export function createSession(world, conn, opts) {
         const kept = players.wipeAccount(world, p);
         conn.sendJSON(kept ? { t: 'wiped', keep: myToken } : { t: 'wiped' });   // (keep: the account stays - the page keeps its token)
         conn.close(4005, 'wiped');
+        return;
+      }
+      // Delete account (Settings > Account, pressed twice): this session's own account - never anyone else's - out of the
+      // game and kept ACCOUNT.deleteDays for RESTORE, then erased (server/accounts.js markDeleted, launch.js purge)
+      if (msg.t === 'delacct' && hooks && hooks.deleteAccount) {
+        const p = player, err = hooks.deleteAccount(p);
+        if (err) { world.notify(p, err, 'warn'); return; }
+        player = null;
+        hooks.leave(p);
+        players.leaveForGood(world, p);
+        conn.sendJSON({ t: 'acctdeleted', until: hooks.deletedUntil(p.pid) });
+        conn.close(4017, 'deleted');
         return;
       }
       if (msg.t === 'intro') { ftue.handle(world, player, msg); return; }   // the first-time experience: skip, the arrival played, the Guide's replay and tips (systems/ftue.js)

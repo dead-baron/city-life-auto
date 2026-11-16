@@ -83,7 +83,9 @@ test('B. the previous characters: up to three, newest first, named; the switch-b
   l = keepPrev([{ token: 'a1', pid: 'P', name: 'Tasty', at: 0 }], { token: 'a2', pid: 'P', name: 'Tasty', at: 1 });
   assert.deepEqual(l.map((x) => x.token), ['a2'], 'one row per account');
   const acc = read('client/account.js');
-  assert.match(acc, /Switch back to \$\{esc\(p\.name\)\}/);
+  assert.match(acc, /Switch back to \$\{esc\(p\.name/);
+  assert.match(acc, /Other characters on this device \(\$\{prevs\.length\}\)/, 'one button, the list behind it (the owner, 11-15)');
+  assert.match(acc, /\$\{prevOpen \? `[^`]*\$\{prevs\.map/, 'the list only when opened');
   assert.match(acc, /export function switchBack\(i\)/);
   assert.ok(!/stays on this device as your previous one/.test(acc), 'the choice\'s text is true now');
 });
@@ -122,7 +124,7 @@ test('D. the update wipe (CLA_FRESH_ON_UPDATE=all) keeps the account, as Start f
   assert.match(reset, /if \(prof\.acct\) \{ keep\.acct = prof\.acct;/);
 });
 
-test('E. the keyboard on the 17+ gate: Enter doesn\'t start the game under it; Tab, Enter and Space work inside it', () => {
+test('E. the keyboard on the age gate: Enter doesn\'t start the game under it; Tab, Enter and Space work inside it', () => {
   const main = read('client/main.js'), input = read('client/input.js'), acc = read('client/account.js');
   const i = main.indexOf('initInput(canvas, {'), onKey = main.slice(i, i + 600);
   assert.match(onKey, /if \(document\.querySelector\('\[data-cla-modal\]'\)\) return;/, 'no game keys while it\'s up');

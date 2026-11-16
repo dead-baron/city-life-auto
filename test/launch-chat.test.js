@@ -37,7 +37,7 @@ test('the filter: hate and sexual terms masked through leetspeak, spacing, separ
   assert.ok(F.check('you n1gg3r').hate && !F.check('nice c0ck').hate, 'hate is told apart from sexual');
   const fine = ['nice cocktail', 'my therapist', 'the cockpit', 'Scunthorpe', 'analysis paralysis', 'grape juice', 'a classic assassin', 'pass the glass', 'hello shell', 'cucumber', 'Dickens', 'peacock', 'spicy food', 'go go go', 'damn that was close', 'what the hell'];
   for (const s of fine) assert.deepEqual(F.check(s).hits, [], `${s} left alone`);
-  assert.equal(F.check('fuck yeah').text, 'fuck yeah', 'plain swearing is a 17+ game\'s: only usernames refuse it');
+  assert.equal(F.check('fuck yeah').text, 'fuck yeah', 'plain swearing is allowed (the owner kept the filter as it was): only usernames refuse it');
 });
 
 test('the filter on usernames: profane, hateful, sexual run together refused; ordinary names kept', () => {

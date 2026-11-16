@@ -555,6 +555,7 @@ function parkSpot(world, v, k, body, route) {
   const b0 = at(bp.s), bl = across(b0, body.x, body.y), kl = across(at(k.s), k.x, k.y);
   const onIt = vp.d < band;   // (already on the street: nowhere behind it)
   const others = lyingNear(world, v, body.x, body.y, PARK_BACK + 260);
+  const net = world.map.net, box0 = (net && net.nodes[e.a] && net.nodes[e.a].edges.length >= 3 ? net.nodes[e.a].trim[e.id] || 0 : 0) + 6, box1 = (net && net.nodes[e.b] && net.nodes[e.b].edges.length >= 3 ? net.nodes[e.b].trim[e.id] || 0 : 0) + 6;
   let best = null;
   for (let l = -room; l <= room + 0.1; l += 8) {
     const beside = Math.abs(l - bl) >= hw + CLEAR;
@@ -562,6 +563,7 @@ function parkSpot(world, v, k, body, route) {
     for (let a = (beside ? 8 : -CLEAR) - hl; a >= -hl - PARK_BACK; a -= 16) {
       const s = bp.s + sg * a;
       if (s < hl * 0.6 || s > e.len - hl * 0.6) break;     // (off the end of the street)
+      if (s < box0 + hl || s > e.len - box1 - hl) continue;   // (in a junction's box: the cross traffic locked behind it - the owner's knotted four-way, 11-14)
       if (onIt && sg * (s - vp.s) < 20) break;              // (behind it)
       const p = at(s), x = p.x - p.ty * l, y = p.y + p.tx * l, ang = Math.atan2(p.ty, p.tx);
       if (!standOk(world, v, x, y, ang, others)) continue;

@@ -126,7 +126,10 @@ test('chat through the session; guests pick a name a member doesn\'t own, member
   assert.equal(a.p.name, 'BigAl');
   a.p.renameTryAt = 0; a.p.acRate = null;
   a.say({ t: 'acct', a: 'name', name: 'BigAlTwo' });
-  assert.match(a.last('acct').err, /30 days/);
+  assert.match(a.last('acct').err, /didn't go through/, 'free renames (the owner, 11-15) - but the ten minutes between them still hold');
+  a.p.profile.nameAt = 0; a.p.renameTryAt = 0; a.p.acRate = null;
+  a.say({ t: 'acct', a: 'name', name: 'BigAlTwo' });
+  assert.equal(a.p.name, 'BigAlTwo', 'no month (or week) to wait for a member');
   B.L.stop();
 });
 

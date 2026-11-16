@@ -118,3 +118,22 @@ test('guests still can\'t start or lead a crew or post a bounty while a sign-in 
   assert.equal(crews.invite(S.world, g, m), false);
   assert.equal(bounties.place(S.world, g, m.pid, 1000), bounties.GUEST_BOUNTY);
 });
+
+test('free renames (the owner, 11-15): no wait for members but the ten minutes; the name just dropped held a day for its last holder, only that one; the names before kept for staff', () => {
+  const S = setup();
+  const a = S.member(), b = S.member();
+  assert.equal(S.name(a, 'Ace'), null);
+  assert.equal(S.name(a, 'Bolt'), null, 'a member renames again - no week or month to wait');
+  assert.equal(S.L.acctState(a).renameIn, 0);
+  assert.match(S.name(b, 'Ace'), /someone else's name until just now - it's free in 24 hours/, 'nobody grabs a name just dropped to pass as its holder');
+  assert.match(S.name(b, 'Ac3'), /someone else's name/, 'nor its lookalike');
+  assert.equal(S.name(a, 'Ace'), null, 'its holder can go back to it');
+  assert.equal(S.name(a, 'Bolt'), null);
+  // renaming over and over holds nothing more: only the last name dropped
+  for (const n of ['Comet', 'Dash', 'Echo', 'Flint']) assert.equal(S.name(a, n), null);
+  assert.equal(S.name(b, 'Bolt'), null, 'an older one of theirs is free at once');
+  assert.match(S.name(b, 'Echo'), /someone else's name/, 'the last one dropped: held');
+  S.c.add(24 * 3600e3 + 1);
+  assert.equal(S.name(b, 'Echo'), null, 'a day on: free');
+  assert.deepEqual(a.profile.acct.names.slice(-5).map((h) => h.n), ['Ace', 'Bolt', 'Comet', 'Dash', 'Echo'], 'the names before, oldest first (staff: the Players page)');
+});

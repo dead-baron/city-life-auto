@@ -136,7 +136,7 @@ test('/launch.json: what is switched on (providers without keys are off)', async
   assert.equal(j.resets, true, 'a Resend key: password resets by email');
   assert.equal(j.password.min, 10);
   assert.equal(j.passkeys, true);
-  assert.equal(j.age, 17);
+  assert.equal(j.age, 13);
 });
 
 // a provider that answers like Google / Discord do

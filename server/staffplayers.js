@@ -22,6 +22,8 @@ export const ACTIONS = {
   strike: { power: 'strike', confirm: true, label: 'Give a chat strike' },
   rescue: { power: 'rescue', confirm: false, label: 'Rescue (move to the street)' },
   prison: { power: 'prison', confirm: true, label: 'Send to prison' },
+  namefree: { power: 'namefree', confirm: false, label: 'Let them change their name now' },
+  undelete: { power: 'undelete', confirm: true, label: 'Restore their deleted account' },
 };
 const BAN_HOURS = [[1, '1 hour'], [24, '1 day'], [72, '3 days'], [168, '1 week'], [720, '30 days'], [0, 'for good']];
 const MUTE_HOURS = [[1, '1 hour'], [6, '6 hours'], [24, '1 day'], [168, '1 week']];
@@ -125,6 +127,8 @@ export function createStaffPlayers({ accounts, mod, analytics, store, world, sai
     if (may('ban')) f.push(x.ban ? (may('unban') ? actionForm(csrf, x, 'unban') : '') : actionForm(csrf, x, 'ban', select('hours', BAN_HOURS, 24) + why('reason (they see it)')));
     if (may('mute')) f.push(x.muted ? (may('unmute') ? actionForm(csrf, x, 'unmute') : '') : actionForm(csrf, x, 'mute', select('hours', MUTE_HOURS, 24)));
     if (may('strike')) f.push(actionForm(csrf, x, 'strike', why('what for')));
+    if (may('namefree')) f.push(actionForm(csrf, x, 'namefree'));
+    if (may('undelete') && x.a && x.a.deleted) f.push(actionForm(csrf, x, 'undelete'));
     if (may('prison')) f.push(actionForm(csrf, x, 'prison', select('mins', PRISON_MINS, 15) + why('reason')));
     const l = f.filter(Boolean);
     return l.length ? `<h2>Actions</h2><p><small>Each goes through the staff command itself: your role is checked and it's written to the admin log. Kick, ban, mute, strike and prison ask again first.</small></p>${l.join('')}` : '<p><small>Your role has no actions on players here.</small></p>';
@@ -142,7 +146,9 @@ export function createStaffPlayers({ accounts, mod, analytics, store, world, sai
       ['this session', x.p ? dur(x.session) : ''], ['played, all told', dur(x.played)], ['first seen', esc(ui.when(x.first))], ['sessions', `${x.sessions || '?'} (on ${days(x.days)})`],
       ['device', esc(x.device)], ['doing', esc(x.doing)], ['chat', strikeCell(x)],
       ['ban', x.ban ? `<span class="bad">${x.ban.until ? `until ${esc(ui.when(x.ban.until))}` : 'for good'}</span> since ${esc(ui.when(x.ban.at))}${x.ban.why ? `: ${esc(x.ban.why)}` : ''}${x.ban.by ? ` <small>by ${esc((store.get(x.ban.by) || {}).name || x.ban.by)}</small>` : ''}` : 'no'],
-      ['anti-cheat flags', flagCell(x) || 'none']];
+      ['anti-cheat flags', flagCell(x) || 'none'],
+      ['deleted', x.a && x.a.deleted ? `<span class="bad">by the player ${esc(ui.when(x.a.deleted.at))}</span> - erased for good ${esc(ui.when(x.a.deleted.until))}` : 'no'],
+      ['names before', (x.a.names || []).slice(-12).reverse().map((h) => `${esc(h.n)} <small>(till ${esc(ui.when(h.at))})</small>`).join(', ') || 'none']];
     out += `<table>${kv.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${v}</td></tr>`).join('')}</table>`;
     out += actionsHtml(role, csrf, x);
     const lines = x.p && said ? said(x.p) || [] : [];
