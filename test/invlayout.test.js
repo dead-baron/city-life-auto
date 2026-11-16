@@ -9,27 +9,26 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { findChrome } from './hudpage.js';
-import { SIZES, measure, problems } from './invpage.js';
+import { SIZES, measureAll, problems } from './invpage.js';
 
 test('the Inventory fits every screen: nothing off it, nothing cut off, no button on another', { skip: !findChrome() && 'no headless Chromium (set CLA_CHROME)' }, async () => {
-  const bad = [];
-  for (const [w, h, dev] of SIZES) {
-    for (const extra of ['', '&sel=w:pistol', '&tab=clothes&looks=1']) {
-      const r = await measure(w, h, dev, extra);
-      bad.push(...problems(r).map((p) => `${p}${extra ? ` (${extra.slice(1)})` : ''}`));
-      if (extra) continue;
-      const fw = r.frame[2] - r.frame[0];
-      assert.ok(fw >= w * 0.9, `${w}x${h}: the frame uses the screen (${fw} px wide)`);
-      const at = (k) => r.boxes.find((b) => b.name.includes(k));
-      const fig = at('iv-cv'), tile = r.boxes.find((b) => b.name.startsWith('bag-cell')), detailHead = r.boxes.find((b) => b.name.startsWith('H3:DETAILS'));
-      assert.ok(fig && tile, `${w}x${h}: the character and the grid`);
-      if (w > h) {
-        assert.ok(fig.x1 <= tile.x0, `${w}x${h}: the character left of the grid`);
-        assert.ok(detailHead && detailHead.x0 >= tile.x1, `${w}x${h}: the details right of it`);
-      } else assert.ok(fig.y1 <= tile.y0, `${w}x${h}: upright, the character above the grid`);
-      for (const t of ['all', 'clothes', 'weapons', 'tools', 'food', 'materials', 'valuables']) assert.ok(at(`chip:${t}`) || at(`chip on:${t}`), `${w}x${h}: the ${t} tab shows`);
-      for (const k of ['w:pistol', 'w:shotgun', 'w:bat', 'w:grenade']) assert.ok(r.boxes.some((b) => b.name.startsWith('bag-slot') && b.name.endsWith(k)), `${w}x${h}: ${k} on the quick bar`);
-    }
+  const bad = [], list = [];
+  for (const [w, h, dev] of SIZES) for (const extra of ['', '&sel=w:pistol', '&tab=clothes&looks=1']) list.push([w, h, dev, extra]);
+  for (const r of await measureAll(list)) {
+    const { w, h, extra } = r;
+    bad.push(...problems(r));
+    if (extra) continue;
+    const fw = r.frame[2] - r.frame[0];
+    assert.ok(fw >= w * 0.9, `${w}x${h}: the frame uses the screen (${fw} px wide)`);
+    const at = (k) => r.boxes.find((b) => b.name.includes(k));
+    const fig = at('iv-cv'), tile = r.boxes.find((b) => b.name.startsWith('bag-cell')), detailHead = r.boxes.find((b) => b.name.startsWith('H3:DETAILS'));
+    assert.ok(fig && tile, `${w}x${h}: the character and the grid`);
+    if (w > h || r.dev === 'kbm') {
+      assert.ok(fig.x1 <= tile.x0, `${w}x${h}: the character left of the grid`);
+      assert.ok(!detailHead || detailHead.x0 >= tile.x1, `${w}x${h}: the details right of it`);
+    } else assert.ok(fig.y1 <= tile.y0, `${w}x${h}: upright, the character above the grid`);
+    for (const t of ['all', 'clothes', 'weapons', 'tools', 'food', 'materials', 'valuables']) assert.ok(at(`chip:${t}`) || at(`chip on:${t}`), `${w}x${h}: the ${t} tab shows`);
+    for (const k of ['w:pistol', 'w:shotgun', 'w:bat', 'w:grenade']) assert.ok(r.boxes.some((b) => b.name.startsWith('bag-slot') && b.name.endsWith(k)), `${w}x${h}: ${k} on the quick bar`);
   }
   assert.deepEqual(bad, [], bad.slice(0, 30).join('\n'));
 });

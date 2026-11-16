@@ -35,7 +35,7 @@ export function looksFor(LK) {
 // the page: ?w=&h=&dev=kbm|touch|pad&sel=<k>&tab=<tab>&looks=1 (the saved looks open)
 export function page() {
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/client/style.css">
-<style>body{background:#2a3a2a;margin:0}</style></head><body>${HUB}<pre id="out" hidden></pre><script type="module">
+<style>body{background:#2a3a2a;margin:0}*,*::before,*::after{animation:none!important;transition:none!important}</style></head><body>${HUB}<pre id="out" hidden></pre><script type="module">
 const q = new URL(location.href).searchParams, dev = q.get('dev') || 'kbm', W = innerWidth, H = innerHeight;
 document.body.classList.toggle('touch', dev === 'touch'); document.body.classList.toggle('pad', dev === 'pad'); document.body.classList.toggle('portrait', H > W);
 document.documentElement.style.setProperty('--zk', String(Math.round(Math.min(1.6, Math.max(1, Math.min(H / 615, W / 1090))) * 20) / 20));
@@ -58,15 +58,18 @@ const boxes = [];
 for (const el of inv.querySelectorAll('button, select, .bc-nm, .bag-slot > small, .iv-slot > small, h3, h4, .bag-hint, .iv-stat, .bag-cash, .iv-keys, canvas.iv-cv')) {
   if (!el.offsetParent) continue;
   const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
-  const scroller = el.closest('.bag-grid, .bag-detail, .iv-me');
+  const scroller = el.closest('.bag-grid, .bag-detail, .iv-me, .bag-tools');
   const sr = scroller ? scroller.getBoundingClientRect() : null;
-  const hidden = sr && (r.bottom <= sr.top + 1 || r.top >= sr.bottom - 1);   // (scrolled out of its column's view: reachable, not shown)
+  // (in a column that scrolls: only the part in its view counts - the rest is reachable by scrolling, not on show)
+  const x0 = sr ? Math.max(r.left, sr.left) : r.left, y0 = sr ? Math.max(r.top, sr.top) : r.top, x1 = sr ? Math.min(r.right, sr.right) : r.right, y1 = sr ? Math.min(r.bottom, sr.bottom) : r.bottom;
+  const hidden = x1 - x0 < 2 || y1 - y0 < 2;
   const clip = (el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).textOverflow !== 'ellipsis') && !/canvas|select/i.test(el.tagName);
-  boxes.push({ name: (el.className || el.tagName) + ':' + (el.dataset.k || el.dataset.cat || el.dataset.q || el.dataset.a || el.dataset.s || el.dataset.off || el.textContent.trim().slice(0, 18)), x0: Math.round(r.left), y0: Math.round(r.top), x1: Math.round(r.right), y1: Math.round(r.bottom), hidden, clip, par: el.parentElement && el.parentElement.className, tag: el.tagName, off: el.classList.contains('iv-off'), sheet: H > W && !!el.closest('.bag-detail') });
+  boxes.push({ name: (el.className || el.tagName) + ':' + (el.dataset.k || el.dataset.cat || el.dataset.q || el.dataset.a || el.dataset.s || el.dataset.off || el.textContent.trim().slice(0, 18)), x0: Math.round(x0), y0: Math.round(y0), x1: Math.round(x1), y1: Math.round(y1), hidden, clip, par: el.parentElement && el.parentElement.className, tag: el.tagName, off: el.classList.contains('iv-off'), sheet: H > W && !!el.closest('.bag-detail') });
 }
 const fr = hub.querySelector('.hub-frame').getBoundingClientRect();
-document.getElementById('out').textContent = JSON.stringify({ w: W, h: H, dev, frame: [fr.left, fr.top, fr.right, fr.bottom].map(Math.round), boxes });
-document.getElementById('out').hidden = false; document.getElementById('out').style.display = 'none';
+const res = { w: W, h: H, dev, extra: q.get('x') || '', frame: [fr.left, fr.top, fr.right, fr.bottom].map(Math.round), boxes };
+if (parent !== window) parent.postMessage(res, '*');
+document.getElementById('out').textContent = JSON.stringify(res);
 </script></body></html>`;
 }
 const TYPES = { '.css': 'text/css', '.woff': 'font/woff', '.woff2': 'font/woff2', '.png': 'image/png', '.webp': 'image/webp', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.json': 'application/json' };
@@ -74,6 +77,7 @@ export function serve(port = 0) {
   const srv = createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
     if (u.pathname === '/__inv.html') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(page()); }
+    if (u.pathname === '/__invall.html') { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(allPage()); }
     try {
       const p = decodeURIComponent(u.pathname).replace(/^\/+/, '');
       if (p.includes('..')) throw new Error('no');
@@ -83,23 +87,37 @@ export function serve(port = 0) {
   });
   return new Promise((ok) => srv.listen(port, '127.0.0.1', () => ok({ port: srv.address().port, close: () => srv.close() })));
 }
-// one size measured in headless Chrome (null without one)
-export async function measure(w, h, dev, extra = '') {
+// every size in one headless page: each in a frame of exactly its size, one after another (?list=[[w, h, dev, extra]...])
+export function allPage() {
+  return `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><pre id="out"></pre><script type="module">
+const list = JSON.parse(new URL(location.href).searchParams.get('list')), out = [];
+for (const [w, h, dev, extra] of list) {
+  const f = document.createElement('iframe'); f.style.cssText = 'border:0;display:block;width:' + w + 'px;height:' + h + 'px';
+  const got = new Promise((ok) => { const on = (e) => { if (e.source === f.contentWindow) { removeEventListener('message', on); ok(e.data); } }; addEventListener('message', on); setTimeout(() => ok({ w, h, dev, extra, err: 'timeout', boxes: [], frame: [0, 0, 0, 0] }), 15000); });
+  f.src = '/__inv.html?dev=' + dev + extra + '&x=' + encodeURIComponent(extra);
+  document.body.appendChild(f);
+  out.push(await got); f.remove();
+}
+document.getElementById('out').textContent = JSON.stringify(out);
+</script></body></html>`;
+}
+export async function measureAll(list) {
   const chrome = findChrome();
   if (!chrome) return null;
   const srv = await serve();
   try {
-    const url = `http://127.0.0.1:${srv.port}/__inv.html?dev=${dev}${extra}`;
+    const url = `http://127.0.0.1:${srv.port}/__invall.html?list=${encodeURIComponent(JSON.stringify(list))}`;
     const out = await new Promise((ok, no) => execFile(chrome, ['--headless', '--no-sandbox', '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1', '--js-flags=--max-old-space-size=1024',
-      '--virtual-time-budget=20000', `--window-size=${w},${h}`, '--dump-dom', url], { maxBuffer: 64 << 20, timeout: 90000 }, (e, so) => (e ? no(e) : ok(so))));
-    const m = /<pre id="out"[^>]*>(\{.*?)<\/pre>/s.exec(out);
-    if (!m) throw new Error(`${w}x${h}: the page gave no measurements`);
+      '--virtual-time-budget=120000', '--window-size=2000,2000', '--dump-dom', url], { maxBuffer: 64 << 20, timeout: 240000 }, (e, so) => (e ? no(e) : ok(so))));
+    const m = /<pre id="out">(\[.*?)<\/pre>/s.exec(out);
+    if (!m) throw new Error('the page gave no measurements');
     return JSON.parse(m[1].replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/&quot;/g, '"'));
   } finally { srv.close(); }
 }
 // what's wrong at a size: off the screen, cut off, on top of another (a slot's ✕ sits on its slot's corner by design)
 export function problems(r) {
-  const out = [], tag = `${r.w}x${r.h} ${r.dev}`, B = r.boxes.filter((b) => !b.hidden);
+  const out = [], tag = `${r.w}x${r.h} ${r.dev}${r.extra ? ' ' + r.extra.slice(1) : ''}`, B = r.boxes.filter((b) => !b.hidden);
+  if (r.err) out.push(`${tag}: ${r.err}`);
   const over = (a, b) => a.x0 < b.x1 - 1 && b.x0 < a.x1 - 1 && a.y0 < b.y1 - 1 && b.y0 < a.y1 - 1;
   const inside = (a, b) => a.x0 >= b.x0 && a.x1 <= b.x1 && a.y0 >= b.y0 && a.y1 <= b.y1;
   for (const a of B) {

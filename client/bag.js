@@ -242,7 +242,7 @@ function drawFigure(cv, code, dir, f, pp) {
   const g = cv.getContext('2d');
   g.imageSmoothingEnabled = false;
   g.clearRect(0, 0, W, H);
-  const s = Math.max(1, Math.floor(Math.min(H * 0.86 / FIG_H, W * 0.9 / 22))), cx = Math.round(W / 2), feet = Math.round(H * 0.9);
+  const s = Math.max(1, Math.floor(Math.min(H * 0.86 / FIG_H, W * 0.94 / 18))), cx = Math.round(W / 2), feet = Math.round(H * 0.9);
   // the stand: a soft ellipse of light under the feet
   g.fillStyle = 'rgba(255,236,180,.10)'; g.beginPath(); g.ellipse(cx, feet, s * 11, s * 3, 0, 0, Math.PI * 2); g.fill();
   g.fillStyle = 'rgba(8,10,24,.45)'; g.beginPath(); g.ellipse(cx, feet, s * 5, s * 1.4, 0, 0, Math.PI * 2); g.fill();
@@ -324,7 +324,8 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     if (t.kind === 'i' && usable(t.id)) { b.draggable = true; b.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); e.dataTransfer.effectAllowed = 'move'; }; }
     return b;
   }
-  const portrait = () => document.body.classList.contains('portrait');
+  // upright on a phone or in a narrow window: stacked, the details a sheet (a tall desktop window keeps three columns)
+  const portrait = () => document.body.classList.contains('portrait') && (document.body.classList.contains('touch') || innerWidth < 820);
 
   // the paper doll: each slot what you wear there (a dress or a set in the top's, its bottoms' slot says so), an X to
   // take it off; a tap shows the piece in the details
@@ -343,7 +344,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
   }
   function stats(m) {
     const st = stamina(), arm = m.arm, row = (ic, name, v, max, col) => `<div class="iv-stat"><span class="iv-sl">${glyph(ic, 16)}${name}</span><span class="iv-bar"><i style="width:${max ? Math.round(Math.max(0, Math.min(1, v / max)) * 100) : 0}%;background:${col}"></i></span><b>${max ? Math.round(v) : '-'}</b></div>`;
-    $q('.iv-stats').innerHTML = row('heart', 'HEALTH', m.hp || 0, m.maxHp || 100, 'var(--danger)') + row('shield', 'ARMOR', arm ? arm[0] : 0, arm ? arm[1] : 0, 'var(--info)') + row('sprint', 'STAMINA', st ? st[0] : 0, st ? st[1] : 0, 'var(--money)');
+    $q('.iv-stats').innerHTML = row('heart-pulse', 'HEALTH', m.hp || 0, m.maxHp || 100, 'var(--danger)') + row('shield', 'ARMOR', arm ? arm[0] : 0, arm ? arm[1] : 0, 'var(--info)') + row('footprints', 'STAMINA', st ? st[0] : 0, st ? st[1] : 0, 'var(--money)');
   }
 
   function detail(t, m) {
@@ -445,6 +446,7 @@ export function createBag({ el, send, me, refocus, looks = () => null, look = ()
     const m = me();
     if (!open || !m) return;
     const all = things(m);
+    el.querySelector('.bag').classList.toggle('stack', portrait());
     const cb = $q('.bag-cats');
     cb.innerHTML = TABS.map(([c, n]) => `<button class="chip${c === tab ? ' on' : ''}" role="tab" aria-selected="${c === tab}" data-cat="${c}">${n}</button>`).join('');
     for (const b of cb.querySelectorAll('[data-cat]')) b.onclick = () => { tab = b.dataset.cat; savePref('tab', tab); if (tab !== 'clothes') showLooks = false; render(); };
