@@ -24533,3 +24533,32 @@ The owner: "we don't need to have a list of old accounts here, maybe one button"
 back to ..." button for every character the device played before a sign-in or a code (up to three: a guest the device
 had before signing in, say). Now one button, "Other characters on this device (n)", opens the list with a line saying
 what they are (account.js prevOpen); entries kept without a name read "an earlier character". Test: launch-review2.
+
+## 2026-11-15 - Phone bug batch: one name per front, cops round the counter, custody's escape, no fire from a blow
+The owner, playing on his phone: duplicate signs, a crowbar and a cop's punch setting people alight, cops stuck on a
+shop's counter, and the custody panel over the whole screen with an escape that never worked.
+- **One name per frontage.** Canvas Savings Bank said its name twice: the hand plan cut CANVAS SAVINGS in its portico,
+  and the bank archetype's name plaque (CANVAS SAVINGS BANK, put up when the archetype's portico would say BANK) stayed
+  under it. statics.js `oneName` now goes over every board that says a name on a front - the shop's sign, the portico's
+  lettering (when it fits in the stone), the plaques and neon names - and keeps the first; a later one saying the same
+  name goes (a portico saying the shop sign's name keeps its columns, loses its words). The placement lint has a new
+  row, **nameTwice**, over every front of the built world (also across the sections of one face); test/fixwave.test.js
+  checks oneName itself. Rekeys the art hash (statics.js); the world hash is unchanged.
+- **Cops round the counter.** A walk-in's counter blocks people but not sight, so the foot chase's straight line
+  (npc.js footWay: `m.los` clear) ran officers into it and sidestep only slid them along it. footWay now walks round
+  whatever stands in the room (npc.js `roomWay`: a breadth-first search over the walk-in's floor, the doorway row
+  included, then the furthest tile along it in a clear straight line) - for the police, the clerks, the escorts, the
+  medics and everyone else who uses it. A dive needs the floor clear to its target (police.js: `clearWalk`), so no
+  more tackles into the counter. test/indoorchase.test.js: in every walk-in with a way round its counter, an officer
+  in front reaches someone behind it within 6 s (and the straight line doesn't - the check checks something).
+- **Custody.** No IN CUSTODY panel over the screen any more (hud.js): the BUSTED moment, one fading line as you're put
+  in the car ("when it slows, press E to make a break for it", localized per device), and the action button. While a
+  break for it can be had right now (me.custody.brk 1) the button turns red and beats fast and says ESCAPE on a phone
+  (the run kind's word, was RUN - which didn't match the old panel's "ACT"); till then it says WAIT ("Not yet - ...").
+  On a keyboard or a pad the prompt's card goes red. Why it "never worked": the kick was only offered while the car was
+  under BREAK_CAR.speed - at 3 stars 60 px/s, about walking pace, with a 12% kick - and a slow-down at a corner lasted
+  a few ticks, gone before a phone's press got to the server. Now the chance stays open BREAK_CAR.windowS (2 s) after
+  the car was last that slow (custody.js slowWatch), and 3 stars - with the easier police since 11-07 - gets 150 px/s
+  and a 40% kick (4-5 stars unchanged in spirit: 5% / 1% at 60 px/s). test/custody.test.js: at 3 stars the window
+  opens as it slows, stays open as it speeds off, a press in it gets out, and it closes after windowS; and hud.js has no
+  IN CUSTODY bar. The Guide's Busted entry says the button turns red and for how long (BREAK_CAR.windowS).
