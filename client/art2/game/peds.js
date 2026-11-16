@@ -257,7 +257,7 @@ const KEYS = new WeakMap();
 function art2Key(A) {
   let k = KEYS.get(A);
   if (k) return k;
-  if (A.founder) { k = 'F'; KEYS.set(A, k); return k; }
+  if (A.founder) { k = 'F' + Object.keys(A).filter((f) => A[f] !== FOUNDER[f]).sort().map((f) => `;${f}=${JSON.stringify(A[f])}`).join(''); KEYS.set(A, k); return k; }   // (the founder's look, with whatever's put on it since: a prop, the takings' bag, a lamp)
   if (A.lk) { k = 'L' + A.lk + (A.censored ? 'c' : '') + (A.pp ? '+' + A.pp : '') + (A.back === 'moneybag' ? '$' : ''); KEYS.set(A, k); return k; }
   const parts = [];
   for (const f of ['seed', 'skin', 'fem', 'build', 'body', 'hair', 'beard', 'top', 'bottom', 'shoes', 'shoeKind', 'hat', 'glasses', 'mask', 'bandana', 'chain', 'carry', 'held', 'back', 'backColor', 'gloves', 'tattoo', 'censored', 'pet']) {

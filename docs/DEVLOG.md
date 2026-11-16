@@ -24659,3 +24659,56 @@ number in those lists moves):
   /launch.json `support`, like the Discord invite.
 - Tests: titlebuttons (SUPPORT on the screen and clear of everything on the title, desktop and phones), bugreports
   (/launch.json carries it). Decisions: Monetization (docs/DECISIONS.md).
+
+## 2026-11-16 - The owner's console, the founder, an admin panel in the game, clean name tags
+
+The owner (chat, 11-16): no "beta" tag on every player, just the name, guests told apart without the word; his Dead Baron
+avatar as a character he plays in admin mode, with his presence known; the admin tools in one place - a live dashboard
+(now, the last hours, days), who's on, what they're doing, where from - good on a phone and a desktop, for him only.
+
+- **Name tags.** The gold Beta plate is off everyone's name: it's a card plate now (shared/rules.js COSMETICS `card: 1`,
+  server/systems/cosmetics.js `cardPlate`) - still theirs, listed with the Season badges in the Skills app, never over a
+  head; anyone wearing it loses it from the tag on their next session, and the style counter no longer offers it. The
+  Founding Citizen jacket is unchanged. Over heads: a member's name bright white with a dark edge all round, a guest's a
+  softer grey with only a faint shadow (lightness and the edge, not hue - readable at night and colorblind-safe; client/main.js
+  drawWorldLabels). Guide: "Names over heads", "The beta gift".
+- **The founder** (server/founder.js): the owner's account (the role `owner`) gets a small gold pixel crown by his name for
+  everyone (the descriptor's `fo`, client/main.js founderMark) and "♛ Founder" in the players list. In admin mode his
+  character is his Dead Baron avatar, built in the game's own people renderer (client/art2/people.js `FOUNDER`): a
+  skeleton - ivory bone with a violet-leaning shadow, a skull's face, a rib cage over a hollow middle, the spine - round pink
+  glasses, blue angel wings off the shoulder blades that sway with his stride. The descriptor carries `app.fd` while it's on
+  (server/net.js; client/art2/game/peds.js adaptApp, its own sprite key `F`); the admin panel's switch turns it off (kept on
+  the account: `acct.founderOff`); out of admin mode he's his normal character. Only the server decides; nobody else can wear it.
+  Note: people.js is part of the chunk bake's code, so the `art` hash moves with this change (chunks come out the same and
+  carry over).
+- **The admin panel in the game** (client/adminpanel.js, the debug menu's first tile "🛡 Admin" for admins and the owner,
+  lazy-loaded): the founder switch, the console link, the free camera; everyone online as a card (name, guest, role, district,
+  what they're doing, health, down / wanted / custody); a card's actions: Watch (the camera and what the server sends follow
+  them, you invincible where you stand: server/view.js focusOf, client/main.js watchCam), Go to, Bring, Send to a place,
+  Heal or Revive, Unstick, End job, Gift (money to the bank, an item, a weapon, a name color, a title plate - within
+  shared/rules.js `GIFT`), Mute, Prison, Kick, Ban (the harsh ones ask on a second press). All of it staff commands on the
+  server (server/admin.js roster, watch, tpto, bring, send, heal, revive, endjob, gift, founder; server/roles.js powers),
+  each in the admin log.
+- **The console** (/admin/: server/adminconsole.js page, server/adminconsole-page.js its script, server/adminhttp.js
+  `/admin/api`): tabs Now (who's on - guest or member, district, doing, session length, device, country; what everyone's
+  doing, where in the city, devices), Trends (1 h, 6 h, 24 h, 3 days, 7 days: players, peak and average online, new and
+  returning players, sessions and their length, sign-ups, jobs, crimes, deaths, chat lines, page errors; an online chart and
+  bar charts of players and sessions, every window side by side), Where from (countries, regions, who's on now), Moderation
+  (the review list, player reports, bug reports, the admin log's latest), Server (uptime, tick, memory, entities, accounts,
+  build, page errors, GA, the IP table), Tools (the older pages one tap away; each of them links back to the console). It
+  polls every 5 s (the heavier parts every 30 s or when a tab or window is picked), draws its charts as inline SVG with no
+  library, one column and big tabs on a phone, a grid on a desktop, in the game's navy and gold. Admins and the owner (the
+  new `console` power); the admin log section is the owner's. Settings > Account > Staff tools: Console.
+- **The data** (server/analytics.js `roll`, `trends`, `places`): a bucket a minute for 6 hours and a bucket an hour for
+  7 days, bounded, saved with analytics.json (a restart keeps the week). Players in them are a salted hash, never the
+  account id.
+- **Privacy / where from** (server/geo.js): the country from the connecting address through DB-IP's IP to Country Lite
+  (CC BY 4.0, credited on the console and the privacy page) packed into `<data>/ipcountry.bin` - the server fetches this
+  month's edition by itself a minute after starting when it's missing or over 40 days old (in the background, never on the
+  start's path), or tools/ipcountry.mjs packs one by hand - else from the page's time zone (the IANA zone table,
+  server/data/tzcountry.json), which also gives the region. The address is looked up and dropped: never stored, logged or
+  shown. The console shows no address, email or account id: a player is a ref good for the session (/admin/go). The
+  privacy page says so (server/legal.js).
+- Tests: admin-console (the console's access, CSP, its JSON's privacy, the refs; the buckets, their bounds and a restart;
+  the IP table and the time zones; the panel's commands - powers, limits, the log; the founder's crown, switch and art; the
+  Beta plate off the tags); sinks and seasons updated for the card plate.

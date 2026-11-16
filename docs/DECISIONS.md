@@ -21,7 +21,8 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The beta is a testing phase: progress-safety measures can wait for the official launch. (11-08; chat)
 - A season ends only when the owner ends it (admin `season` command), never by itself. (11-08; DEVLOG 11-08)
 - Season length about 10 weeks. (11-07; PROGRESSION.md)
-- Beta gift: "Founding Citizen" jacket + gold "Beta" plate, tied to the account, survives the wipe. (11-07; PROGRESSION.md)
+- Beta gift: "Founding Citizen" jacket + gold "Beta" plate, tied to the account, survives the wipe. (11-07; PROGRESSION.md) - the plate by the name SUPERSEDED 11-16: no Beta plate on name tags; the plate stays on the player's own card (Skills badges), the jacket unchanged.
+- Name tags show just the name (no "beta" tag); guests told apart without the word - members bright white with a dark edge, guests softer grey without it (lightness, not hue). (11-16; chat: "we don't need to have the 'beta' tag on every player like that")
 - The game is for players 13+ (under 18 with a parent or guardian's permission): the age gate at first launch says so (`CLA_REQUIRE_AGE`; the stored field keeps its name age17), the Terms describe the content plainly (crime, shooting, cartoon blood, chases, chat with strangers) with a parents' contact line, the Privacy Policy says not for under-13s. An open, easy beta: no new gates, game content unchanged; age checks and platform rules revisited before full launch. The Discord is 13+ too, no age-restricted channels for now. (11-15; chat, DEVLOG 11-15) - SUPERSEDES "rated 17+" (11-04).
 - No kids in the game at all; no schools or colleges. (10-16; chat, DEVLOG 10-17)
 - Beta plan: after the running jobs - polish fixes, a bug reporter, the character polish pass, beta hardening - then FEATURE FREEZE. (11-14; beta-checklist 11-14*, queue)
@@ -52,6 +53,9 @@ The owner's standing decisions, one line each: the decision, its date, its sourc
 - The owner wants to be able to email (opted-in) players. (11-12; queue)
 - Roles: owner (grants admin/helper), admin (debug powers, kick, ban, mute), helper (refund, rescue, restore); every privileged action in an append-only, hash-chained admin log. (11-03; launch-plan 11-03)
 - Admin angel: opt-in arrival (beam, wings), can't hurt or be hurt while in it; incognito admins are normal players with logged powers. (11-03; launch-plan 11-03) - not built.
+- The founder (the owner's account only): a gold crown by his name for everyone and "Founder" on his card; in admin mode his character is his Dead Baron avatar (skeleton, blue angel wings, round pink glasses) in the game's own people art, switchable in the admin panel; out of admin mode his normal character. (11-16; chat)
+- Admin tools in one place: an in-game admin panel (admin mode, the debug menu's first tile) - watch a player or the free camera, go to / bring / send a player to a place, heal, revive, unstick, end a stuck job, gift money / items / weapons / bought cosmetics, mute / prison / kick / ban - every power server-checked and in the admin log. (11-16; chat)
+- The owner's console at /admin/ (admins and the owner): live Now, Trends (1 h to 7 days), Where from, Moderation, Server and the older tools as one page, phone and desktop; no IP, email or account id on it; country from the address (DB-IP Lite, CC BY 4.0) or the device's time zone, the address never stored. (11-16; chat: "a real-time look at what's currently happening ... for me only")
 - Analytics: self-hosted, server events, a private owner dashboard; consent asked at first launch. (11-03; launch-plan 11-03, DEVLOG 11-04)
 - Anti-cheat: server authority plus movement audits, rate limits, economy anomaly flags, bans; no client obfuscation. (11-03; launch-plan 11-03)
 - Legal: ToS / privacy / in-game notice drafts (mature themes, online interactions not rated, never share personal info); a lawyer reviews before money changes hands. (11-03; launch-plan 11-03)
